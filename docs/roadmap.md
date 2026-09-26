@@ -383,10 +383,7 @@ in the police chance; hiding the cops from AC's HUD leaderboard. Any other car c
 - **Rivals remember you:** a grudge rematch after a pink-slip loss, with talk lines to match. `StaticTalkService` today; the LLM talk planned in `docs/ai-integration.md` later.
 - **Newspaper articles written from race history** (the processed race sessions are already saved).
 - **Car history:** every car keeps its odometer, previous owners and wins, and its price reflects them.
-- **From `docs/ideas.txt` (2026-09-26), not yet planned:** main screen tweaks (smaller buttons set lower, the fade
-  starting lower, the cars less of the focus); an **engine stand**, where the internals are worked on in the proper
-  order (rods and pistons out before the crankshaft), while peripherals, manifolds and heads can be done in the car;
-  the **Chevrolet Corvair**, whose engine is in the back.
+- **From `docs/ideas.txt` (2026-09-26):** planned as the polish PR and steps 16–19 below.
 - **Parts that fail in the race:** an over-revved engine throws a rod in AC, and you find the damaged part on the workbench afterwards. Since step 2 the whole rotating assembly takes the damage together (the parts view shows it); singling out the one part that failed is still open.
 
 ## Step 7: career gaps (done, PR #22, merged as `6aa3d39`)
@@ -708,6 +705,116 @@ garage showroom is not licensed for the public repo.
   `sfx\_streetrod_keep`), since a restore still pending from an older build finds its files by them;
   `CarProfile.StreetRodEra` (a catalog field); "Street Rod" where it means the original game; the dated audit
   findings.
+
+## Steps 16–19: from `docs/ideas.txt` (planned 2026-09-26)
+
+The second batch of the user's ideas (idea 2, the street, was step 13). **The user decided (2026-09-26):** a small
+polish PR first, then the modding foundation before the features, so the engine stand and the gas station are built
+mod-ready instead of retrofitted. One step at a time, in this order.
+
+### Polish: main screen tweaks and parts scale (next)
+- **Main screen** (idea 1): smaller menu badges (160 px in `Styles/Buttons.xaml` `MenuButtonStyle`, to about 110–120),
+  set a little lower; the fade (rows 20*/26* of `MainMenuScreenView.xaml`) starting lower; the cars less of the focus,
+  e.g. the showroom slightly dimmed behind the menu.
+- **Parts 20% bigger** (idea 5). The converter scales nothing beyond SLRR's cm to m (`SlrrMesh.UnitsToMetres`), so the
+  parts are as big as SLRR made them. First measure a block against the real thing (a small block is about 0.66 m long,
+  0.53 m wide) to find the true error. Try it at runtime: a scale in `CarPartsLayout.EnginePlacement` and `BySlot`
+  (`CreateScale(s) * frame`, with `crankLocal`/`slotLocal` times `s`); children, candidates, bounds, picking and
+  placement nudges all follow from the parent world, and `slot_shifts.json` stays in pack units. Never scale the whole
+  prop (`SetProp`/`LocalMatrix`): it scales about the car's origin and the parts leave the hubs. Not scaled with it:
+  the hub constants (a bigger engine may need to sit further back), `PlaceholderMesh.HalfSize`, `PartTravel`,
+  `PartsMinRadius`. If it looks right, make it permanent in the converter (mesh and cfg positions together).
+
+### Step 16: everything moddable
+Idea 7. The game goes open source: the community should be able to drop a mod into a folder and have the game pick it
+up, and saves must survive mods coming and going.
+
+**Research (2026-09-26):**
+- Picked up by themselves today: cars and tracks (AC's `content`), engine sounds (`Assets/Sounds/<folder>`, plus banks
+  harvested from AC cars), part packs (`Assets/Parts/**/pack.json`; the later pack wins a clashing id, only logged).
+- One shared file to edit: `engine_builds.json`, `part_aliases.json`, `slot_shifts.json`, `Assets/Dealers/dealers.json`,
+  `Assets/Opponents/opponent_definitions.json` (new racers do join old saves, `EnsureNewcomers`),
+  `Assets/Showcase/scenes.json`.
+- Written in C#: events, milestones and victory paths (`RaceEventService.CreateDefaultEvents`), the newspaper
+  (`NewsWriter`), the talk (`StaticTalkService`).
+- Streets: only the first folder of `Assets/Streets` is ever used (`StreetScenes.LoadFirst`).
+- No mods folder, no merging of several roots; every path is fixed under `Assets` or the AC install.
+- Saves: unknown part ids are kept and skipped (they may come back), renamed ones follow `part_aliases.json`; removed
+  cars become `Legacy`; racers live whole in the save. A dropped dealer leaves listings pointing at nothing; events and
+  streets have no handling.
+
+**Design to discuss when the step starts:**
+- `Mods/<mod>/mod.json` (id, name, version, author), one subfolder per content type (parts, builds, dealers, racers,
+  events, streets, gas stations, sounds, showrooms, text).
+- The base game is loaded through the same loader as the first mod, so the path is always exercised.
+- One file per entry instead of a shared list; the shared files (builds, aliases, dealers, racers) merged from every
+  mod.
+- Ids namespaced by mod so two mods cannot clash; clashes reported, not silently overwritten.
+- Events, milestones, newspaper and talk lines move from C# to data.
+- A save records the mods (and versions) it was made with; loading warns about missing ones, and every content type
+  handles a missing id the way parts and cars already do.
+- Open: where the folder lives (next to the game or in Documents), and whether streets get picked at random or by
+  the clock.
+
+### Step 17: the engine stand
+Idea 3. Peripherals, manifolds and even the heads can be worked on in the car; the internals only on a stand, and in
+the proper order: no crankshaft before the rods and pistons are out.
+
+**The user decided (2026-09-26):** strict order for the internals, part by part. Peripherals can still come off as an
+assembly (a manifold with its carb).
+
+**Research (2026-09-26):**
+- Nothing enforces an order today: `Workbench.Remove` takes a part off with its whole subtree (pulling the crank takes
+  the rods, pistons, flywheel and clutch), and the workbench only warns how many parts come with it.
+- The tree (GM small block): the block holds the crank (rods, then pistons; flywheel, clutch; gear; damper), the
+  camshaft, both heads (valve covers, headers), the oil pan, the intake (carb, air filter, distributor), the
+  transmission, the timing cover (water pump, fan), alternator, oil filter. The heads and the pan are the rods'
+  neighbours, not their parents: blocking by neighbours needs a small rule table ("rods and pistons need the heads
+  and the pan off").
+- The whole engine can already be pulled to the shelf, but nothing mounts onto a shelf part (`FindPlaces` searches the
+  car only) and there is no stand. `PartKinds` has no internal/peripheral split. Work costs 5 min a part (at most 30),
+  no money.
+
+**Design:** `PartKinds` gets an internal group (crankshafts, rods, pistons, camshafts; the rest are peripherals); a
+stand in the garage holds one engine (a simple model of our own); pulling and refitting the engine is a big job (about
+`GarageWorkMajor`); internals come off one at a time, only with nothing on them and their neighbours off; the
+workbench mounts onto the engine on the stand as it does onto a car. Ordering rules are data, so mods can supply
+them for their blocks.
+
+### Step 18: engine layout, and the Chevrolet Corvair
+Idea 4. The Corvair's engine is in the back.
+
+**The user decided (2026-09-26):** the Corvair keeps a V8 as now (the matcher gave it a GM 283), but drawn in the
+back; a flat six will be modded later.
+
+**Research (2026-09-26):** both `chevrolet_corvair_69` and `_s1` are installed and in the catalog, RWD,
+`CG_LOCATION=0.38`. No flat or boxer block exists in any pack (25 `Block_Vee_OHV`, 2 `Block_Inline_OHV`).
+`CarPartsLayout` puts every engine 0.18 m behind the front axle, facing forward; nothing reads the engine's place from
+AC's data, and `StockEngineMatcher` ignores layout and cylinder count.
+
+**Design:** engine layout as a general car property (front, mid, rear), guessed from the car's data (front weight
+share, drive) and set in the Car Catalog Editor; `CarPartsLayout` places the engine by it (behind the rear axle,
+transmission forward, for a rear engine), and so do the x-ray view and the mount candidates. No Corvair special
+case: any rear- or mid-engined car works the same. When a flat-six pack exists, the matcher should prefer it by
+layout and cylinders.
+
+### Step 19: the gas station
+Idea 6. The player drives to the gas station, as in Street Rod, with its "cruising in town" view from inside the car.
+
+**The user decided (2026-09-26):** filling up only at the station (the garage's fill-up goes); the car washes move
+there too.
+
+**Research (2026-09-26):** no AC track mod was found with a period gas station. The way is the street's: our own KN5.
+Candidates (CC-BY, credit needed; check each page again before shipping): WardsterSAW's "Vintage Gas Station"
+(50s–60s, about 6k faces), IcaroArrigoni's "50's Abandoned Desert Tank Station", NickSamarin's "Vintage Gas Station",
+Rescue3D's "Vintage Gas Pump"; CC0 dressing from Poly Haven (`metal_jerrycan`, `oil_tin`, `barrel_03`, `old_tyre`,
+`tire_pump`). Oil-company logos must be repainted with made-up brands: CC-BY does not cover trademarks. No CC0
+gas-station HDRI exists.
+
+**Design:** a new place built on the street's renderer (`StreetViewport3D`, `RivalDrive`, the two-channel
+`EngineAudio`): the cruise there seen from the driver's seat, the car rolling in to the pump, filling up and washing
+there. A station is a mod content type (step 16). Open: an empty tank on the way (a tow, as after a crash?), and
+what else the station sells (oil, a quick check-up).
 
 ## Testing in AC without driving
 
