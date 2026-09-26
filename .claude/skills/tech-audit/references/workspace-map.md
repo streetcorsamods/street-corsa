@@ -6,14 +6,14 @@
 
 | # | Unit | Path | Classification | TFM | Flags |
 | - | ---- | ---- | -------------- | --- | ----- |
-| 1 | Street Rod AC | `Street Rod AC/Street Rod AC.csproj` | WPF desktop app | net10.0-windows | Nullable, WPF + WinForms, x64, AllowUnsafeBlocks |
-| 2 | StreetRodAC.Tests | `tests/StreetRodAC.Tests/StreetRodAC.Tests.csproj` | Test project (xUnit 2.9.3) | net10.0-windows | Nullable, WPF, ProjectReference → game |
+| 1 | Street Corsa | `Street Corsa/Street Corsa.csproj` | WPF desktop app | net10.0-windows | Nullable, WPF + WinForms, x64, AllowUnsafeBlocks |
+| 2 | StreetCorsa.Tests | `tests/StreetCorsa.Tests/StreetCorsa.Tests.csproj` | Test project (xUnit 2.9.3) | net10.0-windows | Nullable, WPF, ProjectReference → game |
 | 3 | EngineBench | `tools/EngineBench/EngineBench.csproj` | CLI tool | net10.0 | Nullable |
 | 4 | SlrrPartsConverter | `tools/SlrrPartsConverter/SlrrPartsConverter.csproj` | CLI tool | net10.0 | Nullable, x64 |
-| 5 | sr_race | `apps/new-modes/sr_race` (`manifest.ini`, `mode.lua`, `siren.wav`) | CSP new mode | — | installed by `SrRaceMode` |
+| 5 | sc_race | `apps/new-modes/sc_race` (`manifest.ini`, `mode.lua`, `siren.wav`) | CSP new mode | — | installed by `ScRaceMode` |
 | 6 | convert-parts.ps1 | `tools/convert-parts.ps1` | Build/ops script | — | drives SlrrPartsConverter |
 | 7 | make_siren.py | `tools/siren/make_siren.py` | Build/ops script (Python) | — | generates `siren.wav` |
-| 8 | sr_race_harness | `tools/sr_race_harness/test_chase.py` | Test harness (Python) | — | exercises the chase logic of `mode.lua` offline |
+| 8 | sc_race_harness | `tools/sc_race_harness/test_chase.py` | Test harness (Python) | — | exercises the chase logic of `mode.lua` offline |
 
 `apps/lua` and `apps/python` do not exist (the Python app was removed 2026-09-24).
 
@@ -56,7 +56,7 @@ Services 99 (17.0k lines) · Parts 52 (7.6k) · Screens 48 (7.7k) · Models 46 (
 
 | Signal | Game | EngineBench | Converter | Lua |
 | ------ | ---- | ----------- | --------- | --- |
-| writes_ac_install | yes (`CarDataOverlay`, `AcConfigBackup`, `IniModificationService`, `SrRaceMode`) | writes to a given output folder | writes `Assets\Parts` | writes `Documents\Assetto Corsa\out` |
+| writes_ac_install | yes (`CarDataOverlay`, `AcConfigBackup`, `IniModificationService`, `ScRaceMode`) | writes to a given output folder | writes `Assets\Parts` | writes `Documents\Assetto Corsa\out` |
 | parses_untrusted | AC car folders, ACD, KN5 (AcTools), pack.json, sound banks, result JSON | pack.json | SCX/RPK/cfg, script bytecode | — |
 | runs_script_vm | yes | yes | yes | — |
 | native_interop | FMOD (`LibraryImport`), D3D9 (Vortice, SlimDX, AcTools.Render), user32, kernel32 | — | — | — |

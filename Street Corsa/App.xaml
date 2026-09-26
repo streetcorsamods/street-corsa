@@ -1,0 +1,160 @@
+﻿<Application x:Class="StreetCorsa.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:StreetCorsa"
+             xmlns:converters="clr-namespace:StreetCorsa.Converters"
+             xmlns:init="clr-namespace:StreetCorsa.Screens.Init"
+             xmlns:mainMenu="clr-namespace:StreetCorsa.Screens.MainMenu"
+             xmlns:newGame="clr-namespace:StreetCorsa.Screens.NewGame"
+             xmlns:loadGame="clr-namespace:StreetCorsa.Screens.LoadGame"
+             xmlns:newspaper="clr-namespace:StreetCorsa.Screens.Newspaper"
+             xmlns:usedCarMarket="clr-namespace:StreetCorsa.Screens.UsedCarMarket"
+             xmlns:dealerMap="clr-namespace:StreetCorsa.Screens.DealerMap"
+             xmlns:dealerLot="clr-namespace:StreetCorsa.Screens.DealerLot"
+             xmlns:usedParts="clr-namespace:StreetCorsa.Screens.UsedParts"
+             xmlns:garage="clr-namespace:StreetCorsa.Screens.Garage"
+             xmlns:carSelection="clr-namespace:StreetCorsa.Screens.CarSelection"
+             xmlns:diner="clr-namespace:StreetCorsa.Screens.Diner"
+             xmlns:cruise="clr-namespace:StreetCorsa.Screens.Cruise"
+             xmlns:settings="clr-namespace:StreetCorsa.Screens.Settings"
+             xmlns:carCatalogEditor="clr-namespace:StreetCorsa.Screens.CarCatalogEditor"
+             xmlns:raceLoading="clr-namespace:StreetCorsa.Screens.RaceLoading"
+             xmlns:career="clr-namespace:StreetCorsa.Screens.Career"
+             xmlns:confirmation="clr-namespace:StreetCorsa.Dialogs.Confirmation"
+             xmlns:information="clr-namespace:StreetCorsa.Dialogs.Information"
+             xmlns:eventEntry="clr-namespace:StreetCorsa.Dialogs.EventEntry"
+             xmlns:timeslip="clr-namespace:StreetCorsa.Dialogs.Timeslip"
+             xmlns:dialIn="clr-namespace:StreetCorsa.Dialogs.DialIn"
+             xmlns:repairShop="clr-namespace:StreetCorsa.Dialogs.RepairShop"
+             xmlns:sellCar="clr-namespace:StreetCorsa.Dialogs.SellCar"
+             xmlns:victory="clr-namespace:StreetCorsa.Dialogs.Victory"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Styles/Colors.xaml"/>
+                <ResourceDictionary Source="Styles/Brushes.xaml"/>
+                <ResourceDictionary Source="Styles/Typography.xaml"/>
+                <ResourceDictionary Source="Styles/Buttons.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- Converters -->
+            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+            <converters:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter"/>
+            <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
+            <converters:GaragePanelToVisibilityConverter x:Key="GaragePanelToVisibilityConverter"/>
+            <converters:PercentageToWidthConverter x:Key="PercentageToWidthConverter"/>
+            <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+
+            <!-- Effects -->
+            <DropShadowEffect x:Key="DropShadowEffect"
+                            Color="Black"
+                            Direction="270"
+                            ShadowDepth="5"
+                            BlurRadius="15"
+                            Opacity="0.5"/>
+
+            <!-- Screen DataTemplates -->
+            <DataTemplate DataType="{x:Type init:InitScreenViewModel}">
+                <init:InitScreenView/>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type mainMenu:MainMenuScreenViewModel}">
+                <mainMenu:MainMenuScreenView/>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type newGame:NewGameScreenViewModel}">
+                <newGame:NewGameScreenView/>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type loadGame:LoadGameScreenViewModel}">
+                <loadGame:LoadGameScreenView/>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type newspaper:NewspaperScreenViewModel}">
+                <newspaper:NewspaperScreenView/>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type dealerMap:DealerMapScreenViewModel}">
+                <dealerMap:DealerMapScreenView/>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type dealerLot:DealerLotScreenViewModel}">
+                <dealerLot:DealerLotScreenView/>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type usedCarMarket:UsedCarMarketScreenViewModel}">
+                <usedCarMarket:UsedCarMarketScreenView/>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type usedParts:UsedPartsScreenViewModel}">
+                <usedParts:UsedPartsScreenView/>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type garage:GarageScreenViewModel}">
+                <garage:GarageScreenView/>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type carSelection:CarSelectionScreenViewModel}">
+                <carSelection:CarSelectionScreenView/>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type diner:DinerScreenViewModel}">
+                <diner:DinerScreenView/>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type cruise:CruiseScreenViewModel}">
+                <cruise:CruiseScreenView/>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type settings:SettingsScreenViewModel}">
+                <settings:SettingsScreenView/>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type carCatalogEditor:CarCatalogEditorScreenViewModel}">
+                <carCatalogEditor:CarCatalogEditorScreenView/>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type raceLoading:RaceLoadingScreenViewModel}">
+                <raceLoading:RaceLoadingScreenView/>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type career:CareerScreenViewModel}">
+                <career:CareerScreenView/>
+            </DataTemplate>
+
+            <!-- Dialog DataTemplates -->
+            <DataTemplate DataType="{x:Type confirmation:ConfirmationDialogViewModel}">
+                <confirmation:ConfirmationDialogView/>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type information:InformationDialogViewModel}">
+                <information:InformationDialogView/>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type eventEntry:EventEntryDialogViewModel}">
+                <eventEntry:EventEntryDialogView/>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type timeslip:TimeslipDialogViewModel}">
+                <timeslip:TimeslipDialogView/>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type dialIn:DialInDialogViewModel}">
+                <dialIn:DialInDialogView/>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type repairShop:RepairShopDialogViewModel}">
+                <repairShop:RepairShopDialogView/>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type sellCar:SellCarDialogViewModel}">
+                <sellCar:SellCarDialogView/>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type victory:VictoryDialogViewModel}">
+                <victory:VictoryDialogView/>
+            </DataTemplate>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

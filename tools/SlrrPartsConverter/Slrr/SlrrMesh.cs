@@ -2,7 +2,7 @@ using System.IO;
 using System.Numerics;
 using System.Text;
 
-namespace Street_Rod_AC.Slrr;
+namespace StreetCorsa.Slrr;
 
 public struct SlrrVertex
 {

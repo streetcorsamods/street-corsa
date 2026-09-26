@@ -1,6 +1,6 @@
 # Career UI Implementation Plan
 
-This document details the implementation of the Career screen and Events integration for Street Rod AC.
+This document details the implementation of the Career screen and Events integration for Street Corsa.
 
 ## Overview
 
@@ -125,7 +125,7 @@ public class MilestoneDisplayViewModel : INotifyPropertyChanged
 ### Career Screen Layout (XAML Structure)
 
 ```xml
-<UserControl x:Class="Street_Rod_AC.Screens.Career.CareerScreenView">
+<UserControl x:Class="StreetCorsa.Screens.Career.CareerScreenView">
     <Grid Background="{StaticResource MainBackgroundBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>  <!-- Header -->

@@ -91,7 +91,7 @@ Findings go under **DUPLICATION**, one entry per clone cluster (not per pair): t
 - Layout at different window sizes / DPI: fixed pixel sizes where the screen is meant to scale
 - Images: `DecodePixelWidth` on large backgrounds; frozen brushes/geometries in resources
 
-Key files: `Street Rod AC/Styles/*.xaml`, `Street Rod AC/App.xaml`, `Street Rod AC/Screens/**/*.xaml`, `Street Rod AC/Dialogs/**/*.xaml`
+Key files: `Street Corsa/Styles/*.xaml`, `Street Corsa/App.xaml`, `Street Corsa/Screens/**/*.xaml`, `Street Corsa/Dialogs/**/*.xaml`
 
 ## SECURITY
 
@@ -120,7 +120,7 @@ Moved to [`security-checklist.md`](./security-checklist.md).
 
 ### Infrastructure
 
-- Suggest a `tests/` folder with one test project per production project, added to `Street Rod AC.slnx`; note the `net10.0-windows` + WPF constraint for tests that reference the game project, and that linked-source files can be tested from a plain `net10.0` project the way the tools do
+- Suggest a `tests/` folder with one test project per production project, added to `Street Corsa.slnx`; note the `net10.0-windows` + WPF constraint for tests that reference the game project, and that linked-source files can be tested from a plain `net10.0` project the way the tools do
 
 ## PERFORMANCE
 

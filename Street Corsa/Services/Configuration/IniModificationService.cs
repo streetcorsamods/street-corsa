@@ -1,0 +1,632 @@
+using System.IO;
+using System.Text;
+using StreetCorsa.Configuration;
+using StreetCorsa.Helpers;
+using StreetCorsa.Logging;
+using StreetCorsa.Models.Race;
+using StreetCorsa.Parts.Export;
+using StreetCorsa.Services.Configuration.Models;
+
+namespace StreetCorsa.Services.Configuration
+{
+    /// <summary>
+    /// Central service for all Assetto Corsa INI file modifications.
+    /// Implements the Read -> Intent -> Apply model, with one way to write: the file's original is kept first
+    /// (<see cref="AcConfigBackup"/>, under %AppData%\StreetCorsa\AcRestore), then the new text is written through
+    /// <see cref="SafeFile"/> (temp file, flushed, renamed over the old one). An edited file keeps its encoding and
+    /// every line but the ones changed (<see cref="IniText"/>); race.ini, which a race rewrites whole, is written as
+    /// UTF-8 without a BOM. Everything written goes back with <see cref="RestoreAll"/> once AC has exited.
+    /// </summary>
+    public class IniModificationService : IIniModificationService
+    {
+        /// <summary>The CSP mode a race runs in: race.ini selects it by its folder name under extension\lua\new-modes</summary>
+        public const string RaceModeId = "sc_race";
+
+        /// <summary>AC's assists file, where the damage, fuel and tyre wear rates are</summary>
+        public const string AssistsFile = "assists.ini";
+
+        /// <summary>Mechanical and body damage in a race, in percent: AC's full rate, which an easy game turns down</summary>
+        public const int RaceDamage = 100;
+
+        /// <summary>Tyre wear in a race: 1 is AC's normal rate</summary>
+        public const int RaceTyreWear = 1;
+
+        /// <summary>Fuel use in a race: 1 is AC's normal rate. The fuel a race burns stays burned (Car.FuelLitres).</summary>
+        public const int RaceFuelRate = 1;
+
+        /// <summary>The most passes one test-and-tune runs</summary>
+        public const int MaxTunePasses = 20;
+
+        /// <summary>A test-and-tune's laps: more than its passes ever cross the line, so AC never ends the session</summary>
+        public const int TuneLaps = 50;
+
+        private readonly string _cfgDirectory;
+        private readonly AcConfigBackup _backup;
+        private readonly IAppLogger _logger;
+
+        public IniModificationService() : this(DefaultCfgDirectory, AppSettings.AcRestorePath)
+        {
+        }
+
+        /// <summary>AC's Documents\Assetto Corsa\cfg</summary>
+        public static string DefaultCfgDirectory =>
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Assetto Corsa", "cfg");
+
+        /// <param name="cfgDirectory">AC's Documents\Assetto Corsa\cfg</param>
+        /// <param name="restoreRoot">Where the originals wait (%AppData%\StreetCorsa\AcRestore)</param>
+        public IniModificationService(string cfgDirectory, string restoreRoot)
+        {
+            _cfgDirectory = cfgDirectory;
+            _backup = new AcConfigBackup(cfgDirectory, restoreRoot);
+            _logger = AppLoggerFactory.CreateLogger("IniModification");
+
+            // Ensure cfg directory exists
+            if (!Directory.Exists(_cfgDirectory))
+            {
+                _logger.Warning("AC cfg directory not found: {CfgDirectory}", _cfgDirectory);
+            }
+            else
+            {
+                _logger.Information("INI Modification Service initialized. CFG directory: {CfgDirectory}", _cfgDirectory);
+            }
+        }
+
+        public bool ApplyIntent(ModificationIntent intent)
+        {
+            _logger.Information("Applying intent: {Description}", intent.Description);
+
+            try
+            {
+                return intent switch
+                {
+                    ShowroomIntent showroomIntent => ApplyShowroomIntent(showroomIntent),
+                    DragRaceIntent dragRaceIntent => ApplyDragRaceIntent(dragRaceIntent),
+                    RaceConfigIntent raceIntent => ApplyRaceConfigIntent(raceIntent),
+                    FreeRunIntent freeRunIntent => ApplyFreeRunIntent(freeRunIntent),
+                    _ => throw new NotSupportedException($"Intent type not supported: {intent.GetType().Name}")
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to apply intent: {Description}", intent.Description);
+                return false;
+            }
+        }
+
+        public int RestoreAll() => _backup.RestoreAll();
+
+        public bool HasPendingRestore => _backup.HasPending;
+
+        public IniText? ReadIniFile(string fileName)
+        {
+            var filePath = GetIniFilePath(fileName);
+            if (!File.Exists(filePath)) return null;
+
+            return new IniText(Decode(File.ReadAllBytes(filePath), out _));
+        }
+
+        public bool FileExists(string fileName)
+        {
+            var filePath = GetIniFilePath(fileName);
+            return File.Exists(filePath);
+        }
+
+        public string GetIniFilePath(string fileName)
+        {
+            // If already absolute path, return as-is
+            if (Path.IsPathRooted(fileName))
+            {
+                return fileName;
+            }
+
+            // Otherwise, resolve relative to cfg directory
+            return Path.Combine(_cfgDirectory, fileName);
+        }
+
+        // ===== THE ONE WAY AN INI FILE IS WRITTEN =====
+
+        /// <summary>
+        /// Changes some values of a cfg file and leaves the rest as it was: comments, order and the encoding (a BOM
+        /// stays if there was one, none is added). Lines are written back with CRLF, as AC writes them.
+        /// </summary>
+        private void EditIni(string filePath, Action<IniText> edit)
+        {
+            Encoding encoding = SafeFile.Utf8NoBom;
+            var hadBom = false;
+            string? text = null;
+            if (File.Exists(filePath))
+            {
+                var bytes = File.ReadAllBytes(filePath);
+                hadBom = HasUtf8Bom(bytes);
+                text = Decode(bytes, out encoding);
+            }
+
+            var ini = new IniText(text);
+            edit(ini);
+
+            // IniText marks every Set as a change, even one to the value already there
+            var content = ini.ToString();
+            if (text != null && content == new IniText(text).ToString()) return;
+
+            WriteIni(filePath, content, encoding, hadBom);
+        }
+
+        /// <summary>The original is kept, then the file is replaced in one rename</summary>
+        private void WriteIni(string filePath, string content, Encoding encoding, bool bom = false)
+        {
+            _backup.Keep(filePath);
+
+            var bytes = encoding.GetBytes(content);
+            if (bom) bytes = [.. Utf8Bom, .. bytes];
+            if (File.Exists(filePath)) File.SetAttributes(filePath, File.GetAttributes(filePath) & ~FileAttributes.ReadOnly);
+            SafeFile.WriteAllBytes(filePath, bytes);
+        }
+
+        private static readonly byte[] Utf8Bom = [0xEF, 0xBB, 0xBF];
+
+        private static bool HasUtf8Bom(byte[] bytes) =>
+            bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF;
+
+        /// <summary>
+        /// The text of a cfg file and the encoding that writes it back byte for byte: UTF-8 when it is valid UTF-8
+        /// (plain ASCII is), else Latin-1, which maps every byte to one character and back, so an ANSI file's
+        /// accented names survive an edit of another key unchanged
+        /// </summary>
+        internal static string Decode(byte[] bytes, out Encoding encoding)
+        {
+            var offset = HasUtf8Bom(bytes) ? 3 : 0;
+            try
+            {
+                var text = new UTF8Encoding(false, throwOnInvalidBytes: true).GetString(bytes, offset, bytes.Length - offset);
+                encoding = SafeFile.Utf8NoBom;
+                return text;
+            }
+            catch (DecoderFallbackException)
+            {
+                encoding = Encoding.Latin1;
+                return Encoding.Latin1.GetString(bytes, offset, bytes.Length - offset);
+            }
+        }
+
+        // ===== VALUES THAT GO INTO AN INI FILE =====
+
+        /// <summary>
+        /// An id (car, skin, track, layout) as it goes into a cfg file. Ids are folder names; one that could end its
+        /// line, open a section or start a comment is refused rather than written, since it would change what the
+        /// file says (a new [REMOTE] section, a key of ours overwritten). Null is an empty value.
+        /// </summary>
+        internal static string IniId(string? value, string what)
+        {
+            var id = value ?? string.Empty;
+            if (id.Any(c => char.IsControl(c) || c is '[' or ']' or '=' or ';'))
+                throw new ArgumentException($"The {what} id '{IniName(id)}' has characters that cannot go into an INI file");
+            return id;
+        }
+
+        /// <summary>
+        /// A name (a driver's) as it goes into a cfg file: free text, so what would break the line is replaced
+        /// rather than refused. Line breaks and other control characters become spaces, [ ] become ( ), = becomes -,
+        /// and ; (a comment to AC, which would cut the name) becomes ,
+        /// </summary>
+        internal static string IniName(string? value)
+        {
+            var name = new StringBuilder(value?.Length ?? 0);
+            foreach (var c in value ?? string.Empty)
+            {
+                name.Append(c switch
+                {
+                    '[' => '(',
+                    ']' => ')',
+                    '=' => '-',
+                    ';' => ',',
+                    _ when char.IsControl(c) => ' ',
+                    _ => c
+                });
+            }
+
+            return name.ToString().Trim();
+        }
+
+        // ===== INTENT APPLICATION METHODS =====
+
+        private bool ApplyShowroomIntent(ShowroomIntent intent)
+        {
+            var filePath = GetIniFilePath(intent.TargetFile);
+            var carId = IniId(intent.CarId, "car");
+            var skinId = IniId(intent.SkinId, "skin");
+            var track = IniId(intent.Track, "showroom");
+
+            EditIni(filePath, ini =>
+            {
+                ini.Set("SHOWROOM", "CAR", carId);
+                ini.Set("SHOWROOM", "SKIN", skinId);
+                ini.Set("SHOWROOM", "SELECTED_SKIN", skinId);
+                ini.Set("SHOWROOM", "TRACK", track);
+            });
+
+            _logger.Information("Applied showroom intent: Car={CarId}, Skin={SkinId}",
+                intent.CarId, intent.SkinId);
+
+            return true;
+        }
+
+        private bool ApplyRaceConfigIntent(RaceConfigIntent intent)
+        {
+            var filePath = GetIniFilePath(intent.TargetFile);
+            var carId = IniId(intent.CarId, "car");
+            var skinId = IniId(intent.SkinId, "skin");
+            var trackId = IniId(intent.TrackId, "track");
+            var trackConfig = IniId(intent.TrackConfig, "track layout");
+
+            EditIni(filePath, ini =>
+            {
+                // Configure [RACE] section
+                ini.Set("RACE", "MODEL", carId);
+                ini.Set("RACE", "SKIN", skinId);
+                ini.Set("RACE", "TRACK", trackId);
+                ini.Set("RACE", "CONFIG_TRACK", trackConfig);
+
+                // Configure [SESSION_0] section
+                ini.Set("SESSION_0", "NAME", "Quick Race");
+            });
+
+            _logger.Information("Applied race config intent: Car={CarId}, Skin={SkinId}, Track={TrackId}, Config={TrackConfig}",
+                intent.CarId, intent.SkinId, intent.TrackId, intent.TrackConfig ?? "(none)");
+
+            return true;
+        }
+
+        private bool ApplyDragRaceIntent(DragRaceIntent intent)
+        {
+            var filePath = GetIniFilePath(intent.TargetFile);
+
+            _logger.Information("Applying drag race intent (generating INI from code)");
+
+            // Build the race.ini content from scratch
+            var content = BuildDragRaceIni(intent);
+
+            // Write to race.ini; the user's own is kept until AC exits
+            WriteIni(filePath, content, SafeFile.Utf8NoBom);
+
+            ApplyRaceDamage(intent.DamagePercent);
+
+            _logger.Information("Applied drag race intent: Player={PlayerName} ({PlayerCarId}), Opponent={OpponentName} ({OpponentCarId}), AI={AILevel}/{AIAggression}, Context={ContextId}",
+                intent.PlayerName, intent.PlayerCarId, intent.OpponentName, intent.OpponentCarId, intent.OpponentAILevel, intent.OpponentAIAggression,
+                intent.ContextId?.ToString("D") ?? "(none)");
+
+            return true;
+        }
+
+        /// <summary>
+        /// Builds the complete drag race INI file content with all required sections
+        /// </summary>
+        private string BuildDragRaceIni(DragRaceIntent intent)
+        {
+            var sb = new System.Text.StringBuilder();
+            AppendCommonSections(sb, SunAngle(intent.RaceTime));
+
+            // The police go on the grid after the two racers, as many as the track has room for; the race mode
+            // keeps them out of sight until the patrol shows up
+            var police = intent.Police is { Count: > 0 } sent && intent.RaceType != RaceType.DragRace ? sent : null;
+
+            // A test-and-tune is the player alone, pass after pass, in a race session that never ends at its line: the
+            // race mode runs the passes and ends it
+            var tune = intent.TunePasses is { } passes ? Math.Clamp(passes, 1, MaxTunePasses) : (int?)null;
+            var laps = tune != null ? TuneLaps : 1;
+
+            // [RACE] - Player car info and track
+            sb.AppendLine("[RACE]");
+            sb.AppendLine("AI_LEVEL=100");
+            sb.AppendLine($"CARS={(tune != null ? 1 : 2 + (police?.Count ?? 0))}");
+            sb.AppendLine($"CONFIG_TRACK={IniId(intent.TrackConfig, "track layout")}");
+            sb.AppendLine("DRIFT_MODE=0");
+            sb.AppendLine("FIXED_SETUP=0");
+            sb.AppendLine("JUMP_START_PENALTY=0");  // the race mode judges false starts; AC's penalty teleports the car
+            sb.AppendLine($"MODEL={IniId(intent.PlayerCarId, "car")}");
+            sb.AppendLine("MODEL_CONFIG=");
+            sb.AppendLine("PENALTIES=0");
+            sb.AppendLine($"RACE_LAPS={laps}");
+            sb.AppendLine($"SKIN={IniId(intent.PlayerSkin, "skin")}");
+            sb.AppendLine($"TRACK={IniId(intent.TrackId, "track")}");
+            sb.AppendLine($"__CM_CUSTOM_MODE={RaceModeId}");  // the CSP mode that runs the race (see ScRaceMode)
+            sb.AppendLine();
+
+            AppendTailSections(sb);
+
+            // [SESSION_0] - Race session. A drag race is a one-lap race too, on the strip: AC's own drag session
+            // (TYPE=7) disqualifies for lanes, resets jump starts and runs matches, all by teleporting the cars,
+            // and the race mode owns those calls. On ks_drag both cars start side by side, one per lane, and the
+            // lap ends at the strip's finish line (checked in the game 2026-09-24).
+            var isDrag = intent.RaceType == RaceType.DragRace;
+            sb.AppendLine("[SESSION_0]");
+            sb.AppendLine("STARTING_POSITION=1");
+            sb.AppendLine(tune != null ? "NAME=Test and Tune" : isDrag ? "NAME=Drag Race" : "NAME=Quick Race");
+            sb.AppendLine("TYPE=3");
+            sb.AppendLine($"LAPS={laps}");
+            sb.AppendLine("DURATION_MINUTES=0");
+            sb.AppendLine("SPAWN_SET=START");
+            sb.AppendLine();
+
+            // [CAR_0] - Player
+            sb.AppendLine("[CAR_0]");
+            sb.AppendLine("MODEL=-");
+            sb.AppendLine("MODEL_CONFIG=");
+            sb.AppendLine($"SKIN={IniId(intent.PlayerSkin, "skin")}");
+            sb.AppendLine($"DRIVER_NAME={IniName(intent.PlayerName)}");
+            sb.AppendLine("NATIONALITY=");
+            sb.AppendLine("NATION_CODE=");
+            sb.AppendLine();
+
+            // [CAR_1] - Opponent (AI); none on a test-and-tune
+            if (tune == null)
+            {
+                sb.AppendLine("[CAR_1]");
+                sb.AppendLine($"MODEL={IniId(intent.OpponentCarId, "car")}");
+                sb.AppendLine("MODEL_CONFIG=");
+                sb.AppendLine($"AI_LEVEL={intent.OpponentAILevel}");
+                sb.AppendLine($"AI_AGGRESSION={intent.OpponentAIAggression}");
+                sb.AppendLine($"SKIN={IniId(intent.OpponentSkin, "skin")}");
+                sb.AppendLine($"DRIVER_NAME={IniName(intent.OpponentName)}");
+                sb.AppendLine("NATIONALITY=");
+                sb.AppendLine("NATION_CODE=");
+            }
+
+            // [CAR_2]... - The police
+            for (var i = 0; i < (police?.Count ?? 0); i++)
+            {
+                sb.AppendLine();
+                sb.AppendLine($"[CAR_{2 + i}]");
+                sb.AppendLine($"MODEL={IniId(police!.CarId, "car")}");
+                sb.AppendLine("MODEL_CONFIG=");
+                sb.AppendLine($"AI_LEVEL={PoliceAILevel}");
+                sb.AppendLine($"AI_AGGRESSION={PoliceAIAggression}");
+                sb.AppendLine($"SKIN={IniId(police.Skins[i], "skin")}");
+                sb.AppendLine($"DRIVER_NAME={PoliceDriverName}");
+                sb.AppendLine("NATIONALITY=");
+                sb.AppendLine("NATION_CODE=");
+            }
+
+            // [STREET_CORSA] - What the race mode needs to know: the kind of race (a drag race has lanes and
+            // timeslips), which race this is, which it writes into the result so a result is only ever applied
+            // to the race it came from, and the damage each car carries into it
+            sb.AppendLine();
+            sb.AppendLine("[STREET_CORSA]");
+            sb.AppendLine(tune != null ? $"RACE_TYPE={RaceTypes.TestAndTune}" : isDrag ? $"RACE_TYPE={RaceTypes.Drag}" : $"RACE_TYPE={RaceTypes.Road}");
+            if (tune != null) sb.AppendLine($"TUNE_PASSES={tune}");
+
+            // A bracket race: both dial-ins, and how the rival leaves and takes the stripe
+            if (intent.Bracket is { } bracket && isDrag && tune == null)
+            {
+                var ac = System.Globalization.CultureInfo.InvariantCulture;
+                sb.AppendLine($"DIAL_IN={bracket.PlayerDialIn.ToString("0.00", ac)},{bracket.OpponentDialIn.ToString("0.00", ac)}");
+                sb.AppendLine($"BRACKET_RIVAL={bracket.RivalReaction.ToString("0.000", ac)},{bracket.RivalMargin.ToString("0.000", ac)}");
+            }
+            if (intent.ContextId is { } contextId)
+            {
+                sb.AppendLine($"CONTEXT_ID={contextId:D}");
+            }
+
+            // The police cars' indices, and how far round the lap the patrol shows up
+            if (police != null)
+            {
+                sb.AppendLine($"POLICE={string.Join(",", Enumerable.Range(2, police.Count))}");
+                sb.AppendLine($"POLICE_SPOT={police.SpotShare.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture)}");
+                sb.AppendLine(police.Traps ? "POLICE_MODE=TRAPS" : "POLICE_MODE=PATROL");
+            }
+
+            // The shape each car goes in, from its earlier races: the mode puts it into AC before the green
+            foreach (var (index, start) in new[] { (0, intent.PlayerStart), (1, intent.OpponentStart) })
+            {
+                if (start == null || (tune != null && index > 0)) continue;
+                foreach (var (key, value) in start.IniKeys(index)) sb.AppendLine($"{key}={value}");
+            }
+
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// A race is run with Assetto Corsa's damage, tyre wear and fuel use on, whatever the player last picked in AC:
+        /// the engine can blow, the body takes what it hits and the tank runs down. The rest of the assists (and visual
+        /// damage) stay the player's. Kept and put back like race.ini.
+        /// </summary>
+        private void ApplyRaceDamage(int damagePercent)
+        {
+            var damage = Math.Clamp(damagePercent, 0, RaceDamage);
+            EditIni(GetIniFilePath(AssistsFile), ini =>
+            {
+                ini.Set("ASSISTS", "DAMAGE", damage.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                ini.Set("ASSISTS", "TYRE_WEAR", RaceTyreWear.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                ini.Set("ASSISTS", "FUEL_RATE", RaceFuelRate.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            });
+            _logger.Information("Race assists: DAMAGE={Damage}, TYRE_WEAR={TyreWear}, FUEL_RATE={FuelRate}", damage, RaceTyreWear, RaceFuelRate);
+        }
+
+        private bool ApplyFreeRunIntent(FreeRunIntent intent)
+        {
+            var filePath = GetIniFilePath(intent.TargetFile);
+            WriteIni(filePath, BuildFreeRunIni(intent), SafeFile.Utf8NoBom);
+
+            _logger.Information("Applied free run intent: Car={CarId}, Track={TrackId}, Config={TrackConfig}",
+                intent.CarId, intent.TrackId, intent.TrackConfig ?? "(none)");
+            return true;
+        }
+
+        /// <summary>
+        /// The player alone on a track: a practice session without the sc_race mode, so nothing starts the
+        /// clock or closes the game; the player leaves when they are done, and no results are read
+        /// </summary>
+        private string BuildFreeRunIni(FreeRunIntent intent)
+        {
+            var sb = new System.Text.StringBuilder();
+            AppendCommonSections(sb);
+
+            sb.AppendLine("[RACE]");
+            sb.AppendLine("AI_LEVEL=100");
+            sb.AppendLine("CARS=1");
+            sb.AppendLine($"CONFIG_TRACK={IniId(intent.TrackConfig, "track layout")}");
+            sb.AppendLine("DRIFT_MODE=0");
+            sb.AppendLine("FIXED_SETUP=0");
+            sb.AppendLine("JUMP_START_PENALTY=0");
+            sb.AppendLine($"MODEL={IniId(intent.CarId, "car")}");
+            sb.AppendLine("MODEL_CONFIG=");
+            sb.AppendLine("PENALTIES=0");
+            sb.AppendLine("RACE_LAPS=0");
+            sb.AppendLine($"SKIN={IniId(intent.Skin, "skin")}");
+            sb.AppendLine($"TRACK={IniId(intent.TrackId, "track")}");
+            sb.AppendLine();
+
+            AppendTailSections(sb);
+
+            sb.AppendLine("[SESSION_0]");
+            sb.AppendLine("NAME=Free Run");
+            sb.AppendLine("TYPE=1");
+            sb.AppendLine("DURATION_MINUTES=0");
+            sb.AppendLine("SPAWN_SET=PIT");
+            sb.AppendLine();
+
+            sb.AppendLine("[CAR_0]");
+            sb.AppendLine("MODEL=-");
+            sb.AppendLine("MODEL_CONFIG=");
+            sb.AppendLine($"SKIN={IniId(intent.Skin, "skin")}");
+            sb.AppendLine($"DRIVER_NAME={IniName(intent.PlayerName)}");
+            sb.AppendLine("NATIONALITY=");
+            sb.AppendLine("NATION_CODE=");
+
+            return sb.ToString();
+        }
+
+        /// <summary>How the police drive: flat out, and not shy of contact (the race mode takes them to 150% once they are out)</summary>
+        public const int PoliceAILevel = 100;
+        public const int PoliceAIAggression = 100;
+        public const string PoliceDriverName = "Police";
+
+        /// <summary>Noon, which a launch without a time of day races at</summary>
+        public const double NoonSunAngle = -16.0;
+
+        /// <summary>
+        /// AC's sun for a time of day ([LIGHTING] SUN_ANGLE): Content Manager's formula, 0 at 13:00 and 16 degrees an
+        /// hour, so -80 is 08:00 and 80 is 18:00. AC alone stops there; with Custom Shaders Patch the angle goes on
+        /// through the evening and the night (CM writes it up to 23:59), which is how a race after dark is dark.
+        /// </summary>
+        public static double SunAngle(DateTime? time) =>
+            time is { } t ? Math.Round(16.0 * (t.TimeOfDay.TotalSeconds - 13 * 3600) / 3600.0, 2) : NoonSunAngle;
+
+        /// <summary>Everything before [RACE] that every launch shares, the sun where <paramref name="sunAngle"/> puts it</summary>
+        private static void AppendCommonSections(System.Text.StringBuilder sb, double sunAngle = NoonSunAngle)
+        {
+
+            // [BENCHMARK]
+            sb.AppendLine("[BENCHMARK]");
+            sb.AppendLine("ACTIVE=0");
+            sb.AppendLine();
+
+            // [DYNAMIC_TRACK]
+            sb.AppendLine("[DYNAMIC_TRACK]");
+            sb.AppendLine("LAP_GAIN=1");
+            sb.AppendLine("RANDOMNESS=0");
+            sb.AppendLine("SESSION_START=100");
+            sb.AppendLine("SESSION_TRANSFER=100");
+            sb.AppendLine("PRESET=5");
+            sb.AppendLine();
+
+            // [GHOST_CAR]
+            sb.AppendLine("[GHOST_CAR]");
+            sb.AppendLine("ENABLED=0");
+            sb.AppendLine("FILE=");
+            sb.AppendLine("LOAD=0");
+            sb.AppendLine("PLAYING=0");
+            sb.AppendLine("RECORDING=0");
+            sb.AppendLine("SECONDS_ADVANTAGE=0");
+            sb.AppendLine();
+
+            // [GROOVE]
+            sb.AppendLine("[GROOVE]");
+            sb.AppendLine("VIRTUAL_LAPS=10");
+            sb.AppendLine("MAX_LAPS=30");
+            sb.AppendLine("STARTING_LAPS=0");
+            sb.AppendLine();
+
+            // [HEADER]
+            sb.AppendLine("[HEADER]");
+            sb.AppendLine("VERSION=1");
+            sb.AppendLine("__CM_FEATURE_SET=2");
+            sb.AppendLine();
+
+            // [LAP_INVALIDATOR]
+            sb.AppendLine("[LAP_INVALIDATOR]");
+            sb.AppendLine("ALLOWED_TYRES_OUT=-1");
+            sb.AppendLine();
+
+            // [LIGHTING]
+            sb.AppendLine("[LIGHTING]");
+            sb.AppendLine("CLOUD_SPEED=0.200");
+            sb.AppendLine($"SUN_ANGLE={sunAngle.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}");
+            sb.AppendLine("TIME_MULT=1.0");
+            sb.AppendLine("__CM_WEATHER_TYPE=19");
+            sb.AppendLine("__TRACK_GEOTAG_LONG=0.231944444444444");
+            sb.AppendLine("__TRACK_TIMEZONE_BASE_OFFSET=3600");
+            sb.AppendLine("__TRACK_TIMEZONE_DTS=0");
+            sb.AppendLine("__TRACK_TIMEZONE_OFFSET=3600");
+            sb.AppendLine("__TRACK_GEOTAG_LAT=47.9602777777778");
+            sb.AppendLine("__CM_WEATHER_CONTROLLER=base");
+            sb.AppendLine();
+
+            // [OPTIONS]
+            sb.AppendLine("[OPTIONS]");
+            sb.AppendLine("USE_MPH=0");
+            sb.AppendLine();
+
+        }
+
+        /// <summary>The sections between [RACE] and the sessions that every launch shares</summary>
+        private static void AppendTailSections(System.Text.StringBuilder sb)
+        {
+            // [REMOTE]
+            sb.AppendLine("[REMOTE]");
+            sb.AppendLine("ACTIVE=0");
+            sb.AppendLine("GUID=");
+            sb.AppendLine("NAME=");
+            sb.AppendLine("PASSWORD=");
+            sb.AppendLine("REQUESTED_CAR=");
+            sb.AppendLine("SERVER_IP=");
+            sb.AppendLine("SERVER_PORT=");
+            sb.AppendLine("TEAM=");
+            sb.AppendLine();
+
+            // [REPLAY]
+            sb.AppendLine("[REPLAY]");
+            sb.AppendLine("ACTIVE=0");
+            sb.AppendLine("FILENAME=");
+            sb.AppendLine();
+
+            // [RESTART]
+            sb.AppendLine("[RESTART]");
+            sb.AppendLine("ACTIVE=0");
+            sb.AppendLine();
+
+            // [TEMPERATURE]
+            sb.AppendLine("[TEMPERATURE]");
+            sb.AppendLine("AMBIENT=12");
+            sb.AppendLine("ROAD=13");
+            sb.AppendLine();
+
+            // [WEATHER]
+            sb.AppendLine("[WEATHER]");
+            sb.AppendLine("NAME=4_mid_clear");
+            sb.AppendLine();
+
+            // [WIND]
+            sb.AppendLine("[WIND]");
+            sb.AppendLine("DIRECTION_DEG=-1");
+            sb.AppendLine("SPEED_KMH_MAX=40");
+            sb.AppendLine("SPEED_KMH_MIN=2");
+            sb.AppendLine();
+
+            // [__PREVIEW_GENERATION]
+            sb.AppendLine("[__PREVIEW_GENERATION]");
+            sb.AppendLine("ACTIVE=0");
+            sb.AppendLine();
+
+        }
+    }
+}

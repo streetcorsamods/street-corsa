@@ -1,7 +1,7 @@
 using AcTools.Kn5File;
 using AcTools.Numerics;
 
-namespace Street_Rod_AC.Slrr;
+namespace StreetCorsa.Slrr;
 
 /// <summary>
 /// Keeps one of the identical items a model draws in a row along the engine axis (a dual-quad set of carburettors,

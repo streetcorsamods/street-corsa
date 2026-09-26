@@ -1,6 +1,6 @@
-using Street_Rod_AC.Parts.Scripting;
+using StreetCorsa.Parts.Scripting;
 
-namespace Street_Rod_AC.Slrr;
+namespace StreetCorsa.Slrr;
 
 /// <summary>What a part script says about its part once its constructor chain has run</summary>
 public sealed class SlrrPartScript

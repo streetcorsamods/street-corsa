@@ -10,13 +10,13 @@ param(
 $ErrorActionPreference = 'Stop'
 $root = Join-Path $PSScriptRoot ".."
 
-dotnet build (Join-Path $root "Street Rod AC.slnx") -c $Configuration -v q -clp:NoSummary
+dotnet build (Join-Path $root "Street Corsa.slnx") -c $Configuration -v q -clp:NoSummary
 if ($LASTEXITCODE -ne 0) {
     [Console]::Error.WriteLine("check: the solution does not build")
     exit 1
 }
 
-dotnet test --project (Join-Path $root "tests\StreetRodAC.Tests\StreetRodAC.Tests.csproj") -c $Configuration --no-build
+dotnet test --project (Join-Path $root "tests\StreetCorsa.Tests\StreetCorsa.Tests.csproj") -c $Configuration --no-build
 if ($LASTEXITCODE -ne 0) {
     [Console]::Error.WriteLine("check: tests failed")
     exit 1

@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
-    <RootNamespace>Street_Rod_AC</RootNamespace>
+    <RootNamespace>StreetCorsa</RootNamespace>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <PlatformTarget>x64</PlatformTarget>
@@ -21,17 +21,17 @@
 
   <!-- The converted part format is owned by the game; the converter only writes it -->
   <ItemGroup>
-    <Compile Include="..\..\Street Rod AC\Parts\PartDefinition.cs" Link="Parts\PartDefinition.cs" />
-    <Compile Include="..\..\Street Rod AC\Parts\EngineBuild.cs" Link="Parts\EngineBuild.cs" />
-    <Compile Include="..\..\Street Rod AC\Parts\SlotShifts.cs" Link="Parts\SlotShifts.cs" />
-    <Compile Include="..\..\Street Rod AC\Parts\Kn5Bitmap.cs" Link="Parts\Kn5Bitmap.cs" />
-    <Compile Include="..\..\Street Rod AC\Parts\Scripting\*.cs" Link="Parts\Scripting\%(Filename)%(Extension)" />
+    <Compile Include="..\..\Street Corsa\Parts\PartDefinition.cs" Link="Parts\PartDefinition.cs" />
+    <Compile Include="..\..\Street Corsa\Parts\EngineBuild.cs" Link="Parts\EngineBuild.cs" />
+    <Compile Include="..\..\Street Corsa\Parts\SlotShifts.cs" Link="Parts\SlotShifts.cs" />
+    <Compile Include="..\..\Street Corsa\Parts\Kn5Bitmap.cs" Link="Parts\Kn5Bitmap.cs" />
+    <Compile Include="..\..\Street Corsa\Parts\Scripting\*.cs" Link="Parts\Scripting\%(Filename)%(Extension)" />
   </ItemGroup>
 
   <!-- The game's plain-BCL helpers the linked part code uses (and the tool itself): atomic writes, paths kept inside a root -->
   <ItemGroup>
-    <Compile Include="..\..\Street Rod AC\Helpers\SafeFile.cs" Link="Helpers\SafeFile.cs" />
-    <Compile Include="..\..\Street Rod AC\Helpers\PathNames.cs" Link="Helpers\PathNames.cs" />
+    <Compile Include="..\..\Street Corsa\Helpers\SafeFile.cs" Link="Helpers\SafeFile.cs" />
+    <Compile Include="..\..\Street Corsa\Helpers\PathNames.cs" Link="Helpers\PathNames.cs" />
   </ItemGroup>
 
 </Project>

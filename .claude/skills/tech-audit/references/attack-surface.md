@@ -1,6 +1,6 @@
 # Trust-Surface Inventory
 
-> Overwritten by Phase 3 of each security/all run. Generated 2026-09-25 @ 6aa3d39 (diff window 965c642..6aa3d39 touched almost every source file, so this is a full re-inventory). Paths relative to repo root; game paths under `Street Rod AC/`. Previous snapshot: `git show 965c642:.claude/skills/tech-audit/references/attack-surface.md`.
+> Overwritten by Phase 3 of each security/all run. Generated 2026-09-25 @ 6aa3d39 (diff window 965c642..6aa3d39 touched almost every source file, so this is a full re-inventory). Paths relative to repo root; game paths under `Street Corsa/`. Previous snapshot: `git show 965c642:.claude/skills/tech-audit/references/attack-surface.md`.
 
 ## 1. Writes outside the app's own folders
 
@@ -10,7 +10,7 @@
 | AC car sound bank + GUIDs swap | `CarDataOverlay.cs:282-310` (`File.Move` original to keep) | `CarDataOverlay.cs:494-501` |
 | Same-model clone folders in `content\cars` | `CarDataOverlay.cs:554-598` (marker file first, then copy) | `CarDataOverlay.cs:627-632` deletes marked clones only |
 | AC `cfg\*.ini` (race, assists, …) | `Services/Configuration/IniModificationService.cs:151,278,418` via `SafeFile` | `Services/Configuration/AcConfigBackup.cs` keep folder + manifest (:89-216), restore :176-182 |
-| CSP new mode install `apps\lua\…\sr_race` in the AC install | `Services/Assetto Corsa/SrRaceMode.cs:51-92` (`SafeFile`, stale files deleted) | reinstalled on each launch; not restored (app-owned folder) |
+| CSP new mode install `apps\lua\…\sc_race` in the AC install | `Services/Assetto Corsa/ScRaceMode.cs:51-92` (`SafeFile`, stale files deleted) | reinstalled on each launch; not restored (app-owned folder) |
 | Race result archive / quarantine in `Documents\Assetto Corsa\out` | `Services/Race/RaceResultIngestionService.cs:464-715` | n/a (app-owned subfolders) |
 | Saves `saves\*.db` + rotated backups | `Services/Storage/SaveDatabase.cs:39-204`, `GameStateRepository.cs:100-205` | n/a |
 | Settings JSON | `Services/Settings/GameSettingsService.cs:49,129` (`SafeFile`) | n/a |
@@ -61,7 +61,7 @@ None (`HttpClient`/`WebClient` absent). Planned local LLM integration (`docs/ai-
 
 ## 7. Cross-unit trust boundaries
 
-- Race mode (`apps/new-modes/sr_race`) → `Documents\Assetto Corsa\out\…\*.json` → `RaceResultIngestionService` / `RaceResultValidator` → saves
-- Game → `SrRaceMode` installs the mode into the AC install before each race
-- Converter → `Street Rod AC\Assets\Parts\**` (pack.json, KN5, aliases, builds) → `PartsCatalog` at runtime; EngineBench reads the same
+- Race mode (`apps/new-modes/sc_race`) → `Documents\Assetto Corsa\out\…\*.json` → `RaceResultIngestionService` / `RaceResultValidator` → saves
+- Game → `ScRaceMode` installs the mode into the AC install before each race
+- Converter → `Street Corsa\Assets\Parts\**` (pack.json, KN5, aliases, builds) → `PartsCatalog` at runtime; EngineBench reads the same
 - Game ↔ AC process: `CarDataOverlay` + `AcConfigBackup`/INI changes applied before launch, restored after `acs.exe` exits and at start-up

@@ -1,0 +1,41 @@
+﻿<Window x:Class="StreetCorsa.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:StreetCorsa"
+        mc:Ignorable="d"
+        Title="Street Corsa"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        WindowState="Maximized"
+        Background="{StaticResource BgDarkBrush}"
+        x:Name="MainWindowRoot">
+    <Grid>
+        <!-- Screen Host -->
+        <ContentControl Content="{Binding NavigationService.CurrentScreen, RelativeSource={RelativeSource AncestorType=Window}}"/>
+
+        <!-- Dialog Host Overlay -->
+        <Grid x:Name="DialogHost"
+              Background="{StaticResource OverlayBrush}"
+              Visibility="{Binding DialogService.IsDialogOpen, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Border Background="{StaticResource BgMediumBrush}"
+                    BorderBrush="{StaticResource BorderLightBrush}"
+                    BorderThickness="2"
+                    CornerRadius="8"
+                    MaxWidth="750"
+                    Margin="40"
+                    Padding="0"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Effect="{StaticResource DropShadowEffect}">
+                <!-- As tall as the window allows, and scrolling beyond that: a long message or the event entry's
+                     car list is never cut off on a small or high-DPI screen -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <ContentControl Content="{Binding DialogService.CurrentDialog, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>

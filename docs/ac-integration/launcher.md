@@ -95,7 +95,7 @@ What user wants to do:
 - ShowroomLaunchIntent
 - DragRaceLaunchIntent
 - FreeRunLaunchIntent: the selected car alone on a track of the player's choosing (garage "Free Run" button, track
-  remembered in `GameSettings.FreeRunTrack`). A practice session without the `sr_race` mode (a race installs the mode first, `SrRaceMode`, and fails with a message when CSP or the mode is missing): nothing auto-starts or
+  remembered in `GameSettings.FreeRunTrack`). A practice session without the `sc_race` mode (a race installs the mode first, `ScRaceMode`, and fails with a message when CSP or the mode is missing): nothing auto-starts or
   auto-quits and no results are read; the player leaves when done and an hour of game time goes by. The car's parts
   data is applied and restored like a race's.
 
@@ -115,14 +115,14 @@ ALWAYS restore original config after AC exits:
 
 race.ini is backed up before it is changed and put back like the cars' data: in the launcher's `finally`, at start-up,
 when the game exits and from the fatal-exception handler, but never while an AC process still runs (then the next
-start does it, waiting for AC to close first; see [INI Modification](ini-modification.md), "Backup and restore"). A race writes `[STREET_ROD] CONTEXT_ID=<race context id>` into it, which the Lua app copies into its result
+start does it, waiting for AC to close first; see [INI Modification](ini-modification.md), "Backup and restore"). A race writes `[STREET_CORSA] CONTEXT_ID=<race context id>` into it, which the Lua app copies into its result
 file, so a result is only ever applied to the race (and the save) it belongs to (see [CSP Lua Scripts](csp-lua-scripts.md)).
 
 ## The cars' own data
 A race is driven on what the cars' parts make of them: `RaceCarDataService.Prepare(car)` turns the player's and the
 opponent's parts into data files (see `docs/systems/parts-system.md`, "Assetto Corsa export"), they ride on the
 `LaunchIntent.CarData`, and `CarDataOverlay` puts them into `content\cars\<car>\data` after the race config and
-before `acs.exe`: originals kept under `%APPDATA%\StreetRodAC\AcRestore` with a manifest first, then the change.
+before `acs.exe`: originals kept under `%APPDATA%\StreetCorsa\AcRestore` with a manifest first, then the change.
 A packed car (`data.acd` only) is unpacked for the race and the folder removed after. `RestoreAll` runs in the
 launcher's `finally` and again at start-up (a crash leaves a manifest behind); a manifest that could not be restored is
 put back before that car's data is changed again. The Assetto Corsa folder is a setting (`GameSettings.AssettoCorsaPath`,

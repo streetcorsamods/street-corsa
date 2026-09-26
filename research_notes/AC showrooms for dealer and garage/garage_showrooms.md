@@ -1,4 +1,4 @@
-# AC showrooms that look like a home garage / workshop (for Street Rod AC's garage scene)
+# AC showrooms that look like a home garage / workshop (for Street Corsa's garage scene)
 
 Scope: Assetto Corsa showroom mods (content/showroom, loaded by CM Custom Showroom / AcTools Dark renderer) that look like a private garage, tuning shop, workshop, lock-up, barn or hot-rod shop. Researched 2026-09-23. Nothing was downloaded; the looks come from listing text and search snippets, not from inspecting files.
 

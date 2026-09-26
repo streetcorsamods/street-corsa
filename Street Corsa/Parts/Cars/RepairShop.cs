@@ -1,0 +1,165 @@
+using StreetCorsa.Models.GameState;
+using StreetCorsa.Services.Time;
+
+namespace StreetCorsa.Parts.Cars;
+
+/// <summary>One piece of work the garage can do on a car: what it costs, how long it takes, and doing it</summary>
+public sealed class RepairJob
+{
+    public RepairJob(string name, string detail, decimal cost, GameAction time, Action apply, bool isChore = false)
+    {
+        IsChore = isChore;
+        Name = name;
+        Detail = detail;
+        Cost = cost;
+        Time = time;
+        _apply = apply;
+    }
+
+    private readonly Action _apply;
+
+    public string Name { get; }
+
+    /// <summary>Filling up or a wash: looking after the car, not fixing damage</summary>
+    public bool IsChore { get; }
+
+    /// <summary>What is wrong, in a few words</summary>
+    public string Detail { get; }
+
+    public decimal Cost { get; }
+
+    /// <summary><see cref="GameAction.GarageWorkMinor"/> or <see cref="GameAction.GarageWorkMajor"/></summary>
+    public GameAction Time { get; }
+
+    /// <summary>Does the work on the car; money and time are the caller's</summary>
+    public void Apply() => _apply();
+}
+
+/// <summary>
+/// Repairs: what takes damage (<c>Tear</c>, and the body) off a car. Mileage (<c>Wear</c>) is not repaired: a worn
+/// part is replaced, in the parts view. A job costs a share of the damaged parts' new price, as much of it as the
+/// damage goes, plus the labour; the body shop charges by how hard the body was hit. Small jobs take half an hour,
+/// big ones two hours. The garage also fills the tank (by the litre) and washes the car, a quarter of an hour each.
+/// </summary>
+public static class RepairShop
+{
+    /// <summary>Share of a part's new price a repair of a fully wrecked part costs</summary>
+    public const double PartShare = 0.6;
+
+    public const decimal Labour = 15m;
+
+    /// <summary>Body work, per km/h of collision the body took</summary>
+    public const decimal BodyCostPerKmh = 8m;
+
+    /// <summary>Less damage than this on a body is a small job</summary>
+    public const double SmallBodyJobKmh = 40;
+
+    /// <summary>A part at this or better needs nothing done</summary>
+    private const double Straight = 0.995;
+
+    /// <summary>Premium, 1970: about 40 cents a gallon</summary>
+    public const decimal FuelPerLitre = 0.11m;
+
+    /// <summary>A wash, at the car wash down the road</summary>
+    public const decimal Wash = 3m;
+
+    /// <summary>A body this dirty is worth a wash</summary>
+    public const double DirtyFrom = 0.1;
+
+    /// <summary>A tank this short of full is worth filling</summary>
+    private const double FillFromLitres = 0.5;
+
+    /// <param name="catalog">Null when there are no parts: only the body can be done</param>
+    /// <param name="priceMultiplier">The save's <see cref="GameRules.PartPriceMultiplier"/>, on the whole bill</param>
+    public static List<RepairJob> Jobs(Car car, PartsCatalog? catalog, double priceMultiplier = 1.0)
+    {
+        var prices = GameRules.Sane(priceMultiplier);
+        var jobs = new List<RepairJob>();
+        Func<string, string?>? groupOf = catalog == null ? null : CarCondition.Groups(catalog);
+        void Refresh()
+        {
+            if (groupOf != null) CarCondition.RefreshFigures(car, groupOf);
+            else car.BodyCondition = CarCondition.BodyCondition(car);
+        }
+
+        var litres = CarCondition.LitresToFill(car);
+        if (litres >= FillFromLitres)
+        {
+            jobs.Add(new RepairJob("Fill up", $"{CarCondition.FuelLeft(car):0.#} of {car.FuelTankLitres:0} litres in the tank",
+                PartPricing.Round((double)FuelPerLitre * litres * prices), GameAction.GarageChore, () => car.FuelLitres = null, isChore: true));
+        }
+
+        if (car.BodyDirt >= DirtyFrom)
+        {
+            jobs.Add(new RepairJob("Wash", car.BodyDirt >= 0.5 ? "Filthy" : "Dusty", PartPricing.Round((double)Wash * prices),
+                GameAction.GarageChore, () => car.BodyDirt = 0, isChore: true));
+        }
+
+        var body = CarCondition.BodyTotal(car);
+        if (body > 0.5)
+        {
+            var detail = CarCondition.IsTotaled(car) ? "Totaled: the whole body needs redoing" : $"Dents and scratches ({body:0} km/h of hits)";
+            jobs.Add(new RepairJob("Body work", detail, LabourAt(prices) + Math.Round(BodyCostPerKmh * (decimal)body * (decimal)prices),
+                body < SmallBodyJobKmh ? GameAction.GarageWorkMinor : GameAction.GarageWorkMajor,
+                () => { car.BodyDamageKmh = new double[CarCondition.Zones]; Refresh(); }));
+        }
+
+        if (catalog == null || groupOf == null) return jobs;
+
+        var gearbox = CarCondition.Transmission(car, groupOf);
+        if (car.Engine is { } engine)
+        {
+            var torn = engine.SelfAndDescendants().Where(p => !ReferenceEquals(p, gearbox) && p.Tear < Straight).ToList();
+            if (torn.Count > 0)
+            {
+                var life = CarCondition.EngineLife(car, groupOf) / CarCondition.NewEngineLife;
+                var weakest = CarCondition.FailedPart(car, groupOf);
+                var failed = weakest == null ? null : catalog.Get(weakest.DefinitionId) is { } definition ? definition.DisplayName ?? definition.Name : null;
+                var detail = life <= 0
+                    ? failed == null ? "Blown" : $"Blown: the {failed} let go"
+                    : failed == null ? $"Damaged internals ({life * 100:0}% of its life left)"
+                    : $"Damaged internals, worst the {failed} ({life * 100:0}% of its life left)";
+                jobs.Add(PartsJob("Engine rebuild", detail, torn, catalog, prices, GameAction.GarageWorkMajor, Refresh));
+            }
+        }
+
+        if (gearbox is { Tear: < Straight })
+        {
+            var detail = gearbox.Tear < CarCondition.BrokenBelow ? "Wrecked" : $"Worn by missed shifts ({gearbox.Tear * 100:0}%)";
+            jobs.Add(PartsJob("Gearbox rebuild", detail, new[] { gearbox }, catalog, prices,
+                gearbox.Tear < 0.5 ? GameAction.GarageWorkMajor : GameAction.GarageWorkMinor, Refresh));
+        }
+
+        var corners = RunningGear.Mounted(car.Parts);
+        for (var i = 0; i < corners.Length; i++)
+        {
+            var name = RunningGear.CornerNames[i];
+            var bent = new[] { corners[i].Spring, corners[i].Shock }.Where(p => p is { Tear: < Straight }).Select(p => p!).ToList();
+            if (bent.Count > 0)
+                jobs.Add(PartsJob($"Straighten the {name} corner", "Bent in a hit", bent, catalog, prices, GameAction.GarageWorkMinor, Refresh));
+
+            if (corners[i].Tyre is { Tear: < Straight } tyre && catalog.Get(tyre.DefinitionId) is { } tyreDefinition)
+            {
+                // A blown tyre is not patched: the same tyre, new, goes on
+                jobs.Add(new RepairJob($"New {name} tyre", "Blown", LabourAt(prices) + PartPricing.Round(PartPricing.NewPrice(tyreDefinition) * prices),
+                    GameAction.GarageWorkMinor, () => { tyre.Tear = 1; tyre.Wear = 1; Refresh(); }));
+            }
+        }
+
+        return jobs;
+    }
+
+    private static decimal LabourAt(double prices) => PartPricing.Round((double)Labour * prices);
+
+    private static RepairJob PartsJob(string name, string detail, IReadOnlyList<PartInstance> parts, PartsCatalog catalog, double prices, GameAction time, Action refresh)
+    {
+        var cost = parts.Sum(p => catalog.Get(p.DefinitionId) is { } definition
+            ? PartPricing.NewPrice(definition) * PartShare * (1 - Math.Clamp(p.Tear, 0, 1))
+            : 0);
+        return new RepairJob(name, detail, LabourAt(prices) + PartPricing.Round(cost * prices), time, () =>
+        {
+            foreach (var part in parts) part.Tear = 1;
+            refresh();
+        });
+    }
+}

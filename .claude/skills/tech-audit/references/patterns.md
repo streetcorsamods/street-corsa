@@ -13,7 +13,7 @@ Don't flag a deviation when the code comments why it differs, or when the contex
 
 ## Concerns and census greps
 
-Run from the repo root; scope with `-- 'Street Rod AC/*.cs'` etc.
+Run from the repo root; scope with `-- 'Street Corsa/*.cs'` etc.
 
 | Concern                  | Norm (baseline 2026-09-23; rows marked 2026-09-24 re-based after that audit)        | Census greps                                                                                          |
 | ------------------------ | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
@@ -22,7 +22,7 @@ Run from the repo root; scope with `-- 'Street Rod AC/*.cs'` etc.
 | Screen/dialog base       | `BaseScreenViewModel` / `BaseDialogViewModel` (17 screens)                           | classes under `Screens/` or `Dialogs/` implementing `INotifyPropertyChanged` directly                  |
 | Commands                 | `RelayCommand` / `RelayCommand<T>` (≈60 uses)                                       | `Click="` handlers in `.xaml` whose code-behind does more than view work; `ICommand` implemented ad hoc |
 | Async commands           | (2026-09-24) `ViewModels/AsyncRelayCommand` exists and is the norm for async work behind a command (Diner, Garage at 965c642); its `Execute` must catch and log. The rest still runs from `async void` handlers (21 at 965c642) | `async void` sites; each must catch and log, or it's a stability finding; `new AsyncRelayCommand` whose delegate lets exceptions out |
-| Logging                  | (2026-09-24) `IAppLogger` with a category (≈50 files at 965c642); `Console.WriteLine` is not a norm anywhere in the game (11 at 965c642, in `AssettoCorsaContentService` and the dead `MainWindowViewModel`; the fix wave targets 0). The CLI tools (`tools/`) print to the console by design | `Console\.WriteLine` under `Street Rod AC/`, `Debug\.WriteLine`, `Trace\.`, bare `Log\.` outside `Logging/` |
+| Logging                  | (2026-09-24) `IAppLogger` with a category (≈50 files at 965c642); `Console.WriteLine` is not a norm anywhere in the game (11 at 965c642, in `AssettoCorsaContentService` and the dead `MainWindowViewModel`; the fix wave targets 0). The CLI tools (`tools/`) print to the console by design | `Console\.WriteLine` under `Street Corsa/`, `Debug\.WriteLine`, `Trace\.`, bare `Log\.` outside `Logging/` |
 | Settings access          | `AppSettings.Instance` (34) — static singleton                                      | `AppSettings` passed in (2) vs read statically; new code should follow one                             |
 | Service construction     | composed in `App.xaml.cs` / `NavigationService` and injected (0 `new …Service(` in VMs) | `new \w+(Service|Repository)\(` under `Screens/`, `Dialogs/`, `ViewModels/`, `Controls/`              |
 | JSON                     | **split-brain**: Newtonsoft (10 files) and System.Text.Json (7 files)               | `System\.Text\.Json` vs `Newtonsoft` per file; note which reads which asset                            |

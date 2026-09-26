@@ -1,5 +1,5 @@
 """
-Makes the police siren the race mode plays (apps/new-modes/sr_race/siren.wav): a 1970s wail, synthesized here so
+Makes the police siren the race mode plays (apps/new-modes/sc_race/siren.wav): a 1970s wail, synthesized here so
 the game ships no recording it has no licence for.
 
 A wail is a tone swept up and down between two pitches, a few seconds a cycle. The electronic sirens of the time
@@ -27,7 +27,7 @@ HARMONICS = (1, 3, 5, 7, 9)
 AMPLITUDE = 0.8
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUT = os.path.join(HERE, '..', '..', 'apps', 'new-modes', 'sr_race', 'siren.wav')
+OUT = os.path.join(HERE, '..', '..', 'apps', 'new-modes', 'sc_race', 'siren.wav')
 
 
 def pitch(t):

@@ -2,7 +2,7 @@
 
 What nobody has seen in the game yet (see `docs/roadmap.md`, "Step 8"). Tick a box when it works. When it doesn't,
 write what happened under it: what you did, what you expected, what you saw. A screenshot or the time helps: the logs
-are `%AppData%\StreetRodAC\Logs` and `Documents\Assetto Corsa\logs\custom_shaders_patch.log` (lines tagged
+are `%AppData%\StreetCorsa\Logs` and `Documents\Assetto Corsa\logs\custom_shaders_patch.log` (lines tagged
 `[Street Corsa]`).
 
 Already tested (2026-09-25): collisions, a police chase. Left for the first release: the end of the game (victory
@@ -78,7 +78,7 @@ Car prices were all $5,000 until the 2026-09-25 audit, so this is the first time
 
 ## 6. Strip extras (after the first release)
 
-Step 11 (PR #25), run so far only in the harness (`tools/sr_race_harness/test_strip.py`). The user tests these after
+Step 11 (PR #25), run so far only in the harness (`tools/sc_race_harness/test_strip.py`). The user tests these after
 the first release (decided 2026-09-25).
 
 - [ ] **Test & Tune.** From the garage: the car is held until AC's start, then "stage up", the tree on the right, a

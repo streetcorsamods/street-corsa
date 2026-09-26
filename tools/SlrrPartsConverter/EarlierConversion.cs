@@ -1,8 +1,8 @@
 using Newtonsoft.Json;
-using Street_Rod_AC.Parts;
-using Street_Rod_AC.Slrr;
+using StreetCorsa.Parts;
+using StreetCorsa.Slrr;
 
-namespace Street_Rod_AC;
+namespace StreetCorsa;
 
 /// <summary>
 /// The content an earlier run made (normally what the game runs on): what its parts were converted from, and the

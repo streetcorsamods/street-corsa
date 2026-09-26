@@ -4,22 +4,22 @@
 Custom Shaders Patch (CSP) Lua scripts extend Assetto Corsa's functionality. These scripts run inside AC and are located in `C:\GAMES\Street Rod AC\extension\lua\`.
 
 **Important**: These scripts are in the AC installation, NOT the C# project. The one exception is the game's race
-mode, which lives in the repo (`apps/new-modes/sr_race/`), is installed into the AC install before every race and
+mode, which lives in the repo (`apps/new-modes/sc_race/`), is installed into the AC install before every race and
 writes the race results the launcher reads (see "Integration with C# Launcher").
 
 ## Street Corsa Scripts
 
-### 1. Street Corsa race mode (`apps/new-modes/sr_race/`, installed as `extension/lua/new-modes/sr_race/`)
+### 1. Street Corsa race mode (`apps/new-modes/sc_race/`, installed as `extension/lua/new-modes/sc_race/`)
 
 **Purpose**: Runs every race: starts it, judges crashes and false starts, writes the result file, quits AC.
 A mode and not an app since 2026-09-24: `ALLOW_PHYSICS_ALTERATIONS=1` in its manifest grants the `physics.*` API,
 which an app only gets from a track that opts in through its `surfaces.ini` (none of ours do). As an app, the
 control lock on a crash did nothing.
 
-**Files**: `mode.lua`, `manifest.ini`, `siren.wav`. Edit them in the repo: `SrRaceMode` writes the repo's copy (shipped next to
-the game under `AcModes\sr_race`) over the installed one before every race.
+**Files**: `mode.lua`, `manifest.ini`, `siren.wav`. Edit them in the repo: `ScRaceMode` writes the repo's copy (shipped next to
+the game under `AcModes\sc_race`) over the installed one before every race.
 
-**Selected by** `[RACE] __CM_CUSTOM_MODE=sr_race` in race.ini (the key CSP reads; `MODE=` and
+**Selected by** `[RACE] __CM_CUSTOM_MODE=sc_race` in race.ini (the key CSP reads; `MODE=` and
 `__CM_NEW_MODE_USED` are not). The manifest has **no `BASE_MODE`**, so race.ini's session stands. Checked in the
 game 2026-09-24: `physics.allowed()` true, `physics.setCarBodyDamage` and `setCarEngineLife` take and read back.
 
@@ -28,7 +28,7 @@ game 2026-09-24: `physics.allowed()` true, `physics.setCarBodyDamage` and `setCa
 mode owns those calls. On `ks_drag` both cars start side by side, one per lane (10.8 m apart), AC's start lights
 give the green (the rival leaves on it), and the lap ends at the layout's finish line. The mode also blocks pit
 teleports (`physics.blockTeleportingToPits`) and switches car recovery off (`ac.disableCarRecovery`). race.ini
-`[STREET_ROD] RACE_TYPE=DRAG|ROAD` tells the mode which kind of race it is. The rival AI drifts up to about 2 m off
+`[STREET_CORSA] RACE_TYPE=DRAG|ROAD` tells the mode which kind of race it is. The rival AI drifts up to about 2 m off
 its lane on the strip, well inside the 10.8 m between lanes.
 
 **Drag race contact**: crossing lanes is fine (nobody judges lanes on the street), but when the two cars touch
@@ -37,7 +37,7 @@ lane (measured sideways from where it stood on the line) is disqualified. The pl
 (`DISQUALIFIED`); a disqualified rival is held where it is and the player finishes to win, even when the hit crashed
 the player.
 
-**Bracket races** (step 11): race.ini `[STREET_ROD] DIAL_IN=player,rival` makes a drag race a bracket race.
+**Bracket races** (step 11): race.ini `[STREET_CORSA] DIAL_IN=player,rival` makes a drag race a bracket race.
 - **The trees:** each lane gets its own, a sportsman's tree: three ambers 0.5 s apart, the green 0.5 s after the
   last. The slower dial-in's tree starts 2 s after AC's start, and the other lane's comes later by the difference in
   dial-ins. CSP can't hide AC's own start lights, so the mode tells the player to wait for their own tree, drawn on
@@ -98,7 +98,7 @@ putting the car back (`ac.onCarJumped`) before it has gone 20 m. With AC's own p
 is the rule; the second stays for a car AC moves anyway. Put back after 20 m is `ABANDONED`.
 
 **The police chase** (road races only, since step 6). race.ini lists the police as `[CAR_2]` and `[CAR_3]`, after the
-two racers. `[STREET_ROD]` tells the mode:
+two racers. `[STREET_CORSA]` tells the mode:
 - `POLICE=2,3`: which cars they are;
 - `POLICE_MODE`: `TRAPS` (two patrols in three) or `PATROL`;
 - `POLICE_SPOT`: for a patrol, how far round the lap it shows up.
@@ -182,8 +182,8 @@ gets away mid-race and still wins at the line. 21:00 is full night. Speed traps:
 player going past, pulled out and chased, a bust; the light bar lights the player's cockpit blue at night. With the
 Hemi and one cop for each racer (2026-09-25): a 140 hp Bel Air and a 130 hp Packard were both overtaken and busted,
 the Bel Air pulled over by the autopilot; a 450 hp Chevelle kept its lead to the line and the race ended there. The chase logic runs
-outside the game in `tools/sr_race_harness/test_chase.py` (lupa, a stub round track). The bracket races and the
-test-and-tune run in `tools/sr_race_harness/test_strip.py`, on the same stub laid out as a straight strip.
+outside the game in `tools/sc_race_harness/test_chase.py` (lupa, a stub round track). The bracket races and the
+test-and-tune run in `tools/sc_race_harness/test_strip.py`, on the same stub laid out as a straight strip.
 Neither has been driven in the game yet.
 
 **Time of day**: race.ini's `[LIGHTING] SUN_ANGLE` follows the game's clock when the race starts (Content Manager's
@@ -282,11 +282,11 @@ Located in the extension folder but NOT Street Rod specific:
 ## Integration with C# Launcher
 
 ### Current State
-The `sr_race` mode runs the race and reports it. The C# launcher:
-1. Installs the mode (`SrRaceMode`) and writes race.ini with `__CM_CUSTOM_MODE=sr_race`, and assists.ini with damage,
+The `sc_race` mode runs the race and reports it. The C# launcher:
+1. Installs the mode (`ScRaceMode`) and writes race.ini with `__CM_CUSTOM_MODE=sc_race`, and assists.ini with damage,
    tyre wear and fuel use on
 2. Launches AC and waits for the process to exit
-3. Reads the result the mode wrote to `Documents/Assetto Corsa/out/sr_race_manager/*.json`
+3. Reads the result the mode wrote to `Documents/Assetto Corsa/out/sc_race/*.json`
 
 ### Damage
 
@@ -369,25 +369,26 @@ and boiled over at 90 s; its factory-rated rival stayed at 90 °C and lost nothi
 |--------|--------|-------|
 | `ac.shutdownAssettoCorsa()` | Working | The mode quits AC once the result is written |
 | Signal files | Removed | Was in Python app, didn't work reliably |
-| race.ini `[STREET_ROD] CONTEXT_ID` | Working | Launcher to the mode: which race this is (see below) |
-| race.ini `[STREET_ROD] CAR_n_*` | Working | Launcher to the mode: the damage, fuel, dirt and cooling car n carries into the race (see below) |
-| race.ini `[STREET_ROD] POLICE`, `POLICE_SPOT` | Working | Launcher to the mode: which cars are the police, and how far round the lap they show up |
-| race.ini `[STREET_ROD] DIAL_IN`, `BRACKET_RIVAL` | Working (harness) | Launcher to the mode: a bracket race's dial-ins, and how the rival leaves and takes the stripe |
-| race.ini `[STREET_ROD] RACE_TYPE=TUNE`, `TUNE_PASSES` | Working (harness) | Launcher to the mode: a test-and-tune, and how many passes |
+| race.ini `[STREET_CORSA] CONTEXT_ID` | Working | Launcher to the mode: which race this is (see below) |
+| race.ini `[STREET_CORSA] CAR_n_*` | Working | Launcher to the mode: the damage, fuel, dirt and cooling car n carries into the race (see below) |
+| race.ini `[STREET_CORSA] POLICE`, `POLICE_SPOT` | Working | Launcher to the mode: which cars are the police, and how far round the lap they show up |
+| race.ini `[STREET_CORSA] DIAL_IN`, `BRACKET_RIVAL` | Working (harness) | Launcher to the mode: a bracket race's dial-ins, and how the rival leaves and takes the stripe |
+| race.ini `[STREET_CORSA] RACE_TYPE=TUNE`, `TUNE_PASSES` | Working (harness) | Launcher to the mode: a test-and-tune, and how many passes |
 | Result JSON | Working | The mode to the launcher, one file per race |
 
 ### Race Result File
-The mode writes one file per race to `Documents\Assetto Corsa\out\sr_race_manager\<session_id>.json`: AC's own
+The mode writes one file per race to `Documents\Assetto Corsa\out\sc_race\<session_id>.json`: AC's own
 Documents folder (`ac.getFolder(ac.FolderID.ACDocuments)`), which is the known Documents folder the launcher reads even
 where Documents is redirected (OneDrive). The file is written as `<name>.tmp` and then renamed, so a file under the
-final name is always whole; the launcher ignores names that are not a UUID. `metadata.source` is still
-`sr_race_manager`, the id the launcher checks. Script version 3.0.0.
+final name is always whole; the launcher ignores names that are not a UUID. `metadata.source` is `sc_race`, the
+id the launcher checks (the launcher still takes `sr_race_manager`, the id before the rename to Street Corsa,
+and moves files left in the old `out\sr_race_manager` folder over at start-up). Script version 3.8.0.
 
 Schema 1.1 added three fields to what 1.0 had (the launcher still reads 1.0 files, without them):
 
 | Field | Type | Meaning |
 |-------|------|---------|
-| `session.context_id` | string, may be absent | The race's `RaceContext.ContextId`, copied from race.ini `[STREET_ROD] CONTEXT_ID` (read with `ac.INIConfig.raceConfig()`); absent when race.ini had none |
+| `session.context_id` | string, may be absent | The race's `RaceContext.ContextId`, copied from race.ini `[STREET_CORSA] CONTEXT_ID` (read with `ac.INIConfig.raceConfig()`); absent when race.ini had none |
 | `participants[].car_index` | int | AC's index of the car; 0 is the player's |
 | `participants[].is_player` | bool | True for the player's car (car index 0 in AC) |
 
@@ -445,7 +446,7 @@ Schema 1.7 added (step 14):
 
 ```json
 {
-  "metadata": { "schema_version": "1.7", "script_version": "3.7.0", "source": "sr_race_manager", "generated_at": "ISO8601" },
+  "metadata": { "schema_version": "1.7", "script_version": "3.8.0", "source": "sc_race", "generated_at": "ISO8601" },
   "session": { "session_id": "UUID", "context_id": "UUID of the race context", "track_id": "...", "duration_seconds": 12.3, "end_reason": "FINISHED" },
   "participants": [
     { "driver_name": "...", "car_name": "...", "car_index": 0, "is_player": true, "false_start": false,
@@ -480,8 +481,8 @@ A copy of `mode.lua` in the install with a few lines appended that call `physics
 moves (the rival AI waits for the green; an autopilot switched on earlier jumps the start) drives the player's car
 unattended. On `ks_drag` as a race session the autopilot steers into the wall by the stands and crawls, and AC then
 retires it as an AI and ends the race: fine for checking the start, the rival and the log, not for a finish.
-Screenshots of a windowed AC can be taken from PowerShell (`Graphics.CopyFromScreen`) while it runs. Back up `cfg\race.ini` and `cfg\assists.ini`, write a drag race.ini with `__CM_CUSTOM_MODE=sr_race`, run
-`acs.exe` from the install, then restore the cfg files, delete the result file from `out\sr_race_manager` and put the
+Screenshots of a windowed AC can be taken from PowerShell (`Graphics.CopyFromScreen`) while it runs. Back up `cfg\race.ini` and `cfg\assists.ini`, write a drag race.ini with `__CM_CUSTOM_MODE=sc_race`, run
+`acs.exe` from the install, then restore the cfg files, delete the result file from `out\sc_race` and put the
 repo's `mode.lua` back. `physics.allowed()` in the log line "Session started" says whether the physics API is there.
 
 ---
@@ -502,6 +503,6 @@ function script.sessionEnd() -- Cleanup
 - View in `Documents/Assetto Corsa/logs/`
 
 ### Testing Changes
-1. Edit Lua file in `C:\GAMES\Street Rod AC\extension\lua\...` (the race mode: in the repo, `apps\new-modes\sr_race`; the next race installs it)
+1. Edit Lua file in `C:\GAMES\Street Rod AC\extension\lua\...` (the race mode: in the repo, `apps\new-modes\sc_race`; the next race installs it)
 2. Restart AC session (scripts reload on session start)
 3. Check AC logs for errors

@@ -1,6 +1,6 @@
 # AC track/map mods with dealership, car-lot, garage, parking or workshop areas
 
-Scope: AC (original, not EVO) track mods usable as a drive-to location or as a source of a showroom-style backdrop for Street Rod AC's garage/dealer scenes (AcTools "Dark" renderer loading a KN5). Researched 2026-09-23. No files were downloaded. Several aggregator sites (assettoworld.com, modland.net) returned HTTP 403 to the fetcher; those details are unverified. No links found dead, but aggregator mirrors (acmods.net, modland, assettocorsamods.io) are often reposts of OverTake originals and are not the authors' own pages.
+Scope: AC (original, not EVO) track mods usable as a drive-to location or as a source of a showroom-style backdrop for Street Corsa's garage/dealer scenes (AcTools "Dark" renderer loading a KN5). Researched 2026-09-23. No files were downloaded. Several aggregator sites (assettoworld.com, modland.net) returned HTTP 403 to the fetcher; those details are unverified. No links found dead, but aggregator mirrors (acmods.net, modland, assettocorsamods.io) are often reposts of OverTake originals and are not the authors' own pages.
 
 ## Which AC maps include dealerships, used-car lots, gas stations, parking garages or open garage interiors?
 

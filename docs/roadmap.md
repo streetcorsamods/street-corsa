@@ -1,8 +1,8 @@
 # Street Corsa roadmap
 
-The game's official name is **Street Corsa** (decided 2026-09-24). The repo, namespaces (`Street_Rod_AC`), the
-AppData folder (`StreetRodAC`) and ids like `sr_race` still carry the old name. The full rename is planned for later.
-Until then, use the new name in player-facing text and docs, and leave ids and paths alone.
+The game's official name is **Street Corsa** (decided 2026-09-24, and everything renamed in step 15: the repo, the
+project and namespaces (`StreetCorsa`), the AppData folder (`%AppData%\StreetCorsa`) and the race mode (`sc_race`)).
+"Street Rod" alone still means the original game this one follows.
 
 Written 2026-09-24 after an analysis of the project and the user's answers (their original notes:
 `docs/next_steps.txt`, untracked). Each step below lists what the user decided, what the research found, and the
@@ -11,11 +11,11 @@ design. Steps are meant to be vertical slices, one PR each, to `dev` (remote `gi
 ## Where things stand
 
 **Done: step 1, the race mode** (PR #17, merged as `a83683e`). See `docs/ac-integration/csp-lua-scripts.md`.
-- **The race script is a CSP mode.** `apps/new-modes/sr_race` (was the Lua app `apps/lua/sr_race_manager`) runs with `ALLOW_PHYSICS_ALTERATIONS=1`, which grants the physics API. `SrRaceMode` installs it into the AC install before every race.
-- **`race.ini` selects it** with `[RACE] __CM_CUSTOM_MODE=sr_race`. `assists.ini` gets `DAMAGE=100` and `TYRE_WEAR=1` for the race, and both files are restored afterwards.
+- **The race script is a CSP mode.** `apps/new-modes/sc_race` (was the Lua app `apps/lua/sr_race_manager`) runs with `ALLOW_PHYSICS_ALTERATIONS=1`, which grants the physics API. `ScRaceMode` installs it into the AC install before every race.
+- **`race.ini` selects it** with `[RACE] __CM_CUSTOM_MODE=sc_race`. `assists.ini` gets `DAMAGE=100` and `TYRE_WEAR=1` for the race, and both files are restored afterwards.
 - **Every race, drag races too, is a one-lap race session (`TYPE=3`).**
   - `JUMP_START_PENALTY=0`, pit teleports blocked, car recovery off: AC never moves a car.
-  - `[STREET_ROD] RACE_TYPE=DRAG|ROAD` tells the mode which kind of race it is.
+  - `[STREET_CORSA] RACE_TYPE=DRAG|ROAD` tells the mode which kind of race it is.
 - **Crash:** a collision with a change of velocity of 15 g or more over one frame.
   - A crashed player is stopped and the race ends.
   - A crashed rival is held where it stopped.
@@ -48,7 +48,7 @@ on 2026-09-24 as one PR, the user's choice). See `docs/ac-integration/csp-lua-sc
   - a little mileage `Wear` on the engine.
   `Car.EngineHealth` and the other car figures are worked out from the parts after every race and repair. Old result
   files without `condition` still get the flat wear of before.
-- **The next race starts where the last left off.** `race.ini [STREET_ROD]` gets `CAR_n_BODY`, `ENGINE_LIFE`,
+- **The next race starts where the last left off.** `race.ini [STREET_CORSA]` gets `CAR_n_BODY`, `ENGINE_LIFE`,
   `GEARBOX` and `SUSPENSION`. The mode sets body and engine life. The car's data carries the rest (`AcDamageData`):
   slower shifts for a worn gearbox, toe for a bent axle. AC's tyre km are deliberately not carried: the tyre's wear
   already lowers its grip in `tyres.ini`.
@@ -188,7 +188,7 @@ things stand".
    - `suspension_damage` to that corner's suspension parts;
    - tyre wear to the tyres.
 2. **The car keeps its AC state for the next race:** body zones, engine life and tyre km, stored on the car or its parts.
-3. **`RaceCarData`/`race.ini` carry the start state to the mode.** A new `[STREET_ROD]` key or a small JSON file next to `race.ini`. At the start, the mode calls `setCarBodyDamage`, `setCarEngineLife`, `setTyresVirtualKM` and `setBodyDirt`. The rival's car carries its own state the same way.
+3. **`RaceCarData`/`race.ini` carry the start state to the mode.** A new `[STREET_CORSA]` key or a small JSON file next to `race.ini`. At the start, the mode calls `setCarBodyDamage`, `setCarEngineLife`, `setTyresVirtualKM` and `setBodyDirt`. The rival's car carries its own state the same way.
 4. **Breakdowns:** the mode checks every frame for a dead engine (`engineLifeLeft <= 0`), a gearbox near 1, or a blown tyre. That car is out:
    - a player breakdown ends the race, `end_reason` `BROKE_DOWN`;
    - a rival's breakdown holds it where it stopped;
@@ -288,7 +288,7 @@ ported is the daily life cycle:
     - the cars: two, one for each racer, on a track with four pit boxes or more.
   - The police car is the installed car with liveries marked `"street_corsa_police": true` in `ui_skin.json`, a
     Monaco first (`PoliceCars.Find`). Without one, no police come and the diner shows no risk.
-  - race.ini gets the cops as `[CAR_2]`… and `[STREET_ROD] POLICE`/`POLICE_SPOT`, and `SUN_ANGLE` from the game's
+  - race.ini gets the cops as `[CAR_2]`… and `[STREET_CORSA] POLICE`/`POLICE_SPOT`, and `SUN_ANGLE` from the game's
     clock for every race.
 - **The race mode** runs the chase and writes `pursuit` (schema 1.5):
   - speed traps or a patrol;
@@ -356,7 +356,7 @@ in the police chance; hiding the cops from AC's HUD leaderboard. Any other car c
   - or a black-and-white skin on a Galaxie 500 four-door, Impala 1962, Belvedere 1965, Fury 1958, Coronet 1967 or Montego 1970, all already installed;
   - no police car is installed today.
 - **Tracks:**
-  - in the Street Rod AC install: Black Cat County (rural US) and Highlands. Both are loops with one AI line.
+  - in the Street Corsa install: Black Cat County (rural US) and Highlands. Both are loops with one AI line.
   - in the main AC install, tracks with `traffic.json`: `new_plymouth` (a real town grid), `tripoli`, `mecheria` and others.
   - chases don't suit the drag strip.
 
@@ -540,7 +540,7 @@ Also chosen (not asked): the best ET shows in the garage and in the car's histor
 - **Timeslip dialog:** any number of columns (lanes or passes), a DIAL row in a bracket race, "RL" on a red light,
   and a note line.
 - **Tests:**
-  - `tools/sr_race_harness/test_strip.py`: the chase stub laid out as a straight strip, 8 scenarios, and golden
+  - `tools/sc_race_harness/test_strip.py`: the chase stub laid out as a straight strip, 8 scenarios, and golden
     files for a bracket race and a test-and-tune.
   - The C# contract test checks that the career and the mode pick the same bracket winner.
 
@@ -682,25 +682,43 @@ not yet tried in the game.**
   whole bottom end instead of naming a rod; a swapped block is cooled for its own power; a missing water pump counts;
   the fan stays when a radiator goes on; the mode counts only life it took (physics off: nothing) and its heat report
   cannot lose the result; fuel lines are not a "Damage Report"; cooling cached per stock build, not rated for a free run.
-- Tests: `DeeperSimulationTests` (on the real catalog too), `tools/sr_race_harness/test_heat.py` (11 scenarios);
+- Tests: `DeeperSimulationTests` (on the real catalog too), `tools/sc_race_harness/test_heat.py` (11 scenarios);
   797 in all. **Checked in the game** unattended on Black Cat County (a car rated 0.30 boiled over at 90 s, its
   factory-rated rival stayed at 90 °C); **not yet seen by the user.**
 
 ### Step 15: the rename to Street Corsa
-Namespaces (`Street_Rod_AC`), the AppData folder (`StreetRodAC`, with a migration), ids like `sr_race`, and the repo.
+Namespaces (`StreetCorsa`), the AppData folder (`StreetCorsa`, with a migration), ids like `sc_race`, and the repo.
 Before a release, check the licence of every shipped asset: the icons in `Assets/Icons` are of unknown origin, and the
 garage showroom is not licensed for the public repo.
+
+**Done on `feature/rename-street-corsa` (2026-09-26):**
+- The project is `Street Corsa/Street Corsa.csproj` (assembly "Street Corsa"), namespace `StreetCorsa`, the solution
+  `Street Corsa.slnx`, the tests `tests/StreetCorsa.Tests`. Saves still load: `SaveTypeNames` maps the old
+  assembly-qualified `_type` names by class name.
+- The race mode is `sc_race` (repo `apps/new-modes/sc_race`, script 3.8.0): race.ini section `[STREET_CORSA]`,
+  outbox `Documents\Assetto Corsa\out\sc_race` (and `sc_race_quarantine`), `metadata.source` `sc_race`. The launcher
+  still takes `sr_race_manager` as a source, and `ScRaceMode` deletes the old
+  `extension\lua\new-modes\sr_race`.
+- `LegacyRename` runs first at start-up, before the log opens: `%AppData%\StreetRodAC` and the old outbox and
+  quarantine move to the new names, entry by entry, never over something already there.
+- The init screen's title is text ("STREET CORSA / POWERED BY ASSETTO CORSA") until the logo art exists; the old
+  "Street Rod" image is gone.
+- **Kept on purpose:** the AC install folder `C:\GAMES\Street Rod AC` (a folder on the user's machine, the default
+  AC path while the settings name none); the markers the game leaves in AC car folders (`streetrod_clone.json`,
+  `sfx\_streetrod_keep`), since a restore still pending from an older build finds its files by them;
+  `CarProfile.StreetRodEra` (a catalog field); "Street Rod" where it means the original game; the dated audit
+  findings.
 
 ## Testing in AC without driving
 
 See `docs/ac-integration/csp-lua-scripts.md`, "Testing the race mode without driving". In short:
 1. back up `Documents\Assetto Corsa\cfg\race.ini` and `assists.ini`;
-2. write a `race.ini` with `__CM_CUSTOM_MODE=sr_race`;
+2. write a `race.ini` with `__CM_CUSTOM_MODE=sc_race`;
 3. append a shim to the installed `mode.lua` (logging, autopilot, quit after N seconds);
 4. run `C:\GAMES\Street Rod AC\acs.exe`;
 5. read `Documents\Assetto Corsa\logs\custom_shaders_patch.log` (the lines tagged `[Street Corsa]`) and `log.txt`;
 6. screenshot the windowed AC from PowerShell (`Graphics.CopyFromScreen`) while it runs;
-7. afterwards, restore the cfg files, delete the result from `out\sr_race_manager`, and copy the repo's `mode.lua` back.
+7. afterwards, restore the cfg files, delete the result from `out\sc_race`, and copy the repo's `mode.lua` back.
 
 **Hard-won facts:**
 - CSP reads `[RACE] __CM_CUSTOM_MODE`; `MODE=` and `__CM_NEW_MODE_USED` do nothing.
@@ -708,4 +726,4 @@ See `docs/ac-integration/csp-lua-scripts.md`, "Testing the race mode without dri
 - AC's drag session starts about 14 s before the tree goes green, and its jump-start rule put the car back after about 17 m. It is no longer used.
 - On `ks_drag` as a race session, the autopilot steers into the wall. Once it stops, AC retires it as an AI and ends the race, so a finish can't be tested unattended.
 - AC's drag reset teleported the cars without firing `ac.onCarJumped`.
-- The cfg folder is shared by the Street Rod AC install (`C:\GAMES\Street Rod AC`) and the main AC install (`C:\GAMES\Assetto Corsa`). Test Drive, race-explorer's CSP mode, is deployed in the main install.
+- The cfg folder is shared by the Street Corsa install (`C:\GAMES\Street Rod AC`) and the main AC install (`C:\GAMES\Assetto Corsa`). Test Drive, race-explorer's CSP mode, is deployed in the main install.

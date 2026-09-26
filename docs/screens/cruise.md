@@ -144,7 +144,7 @@ Two throwaway harnesses (in a session's scratchpad, not the repo) did the checki
   capturing frames with `RenderTargetBitmap` (it draws the D3DImage too). Wait for `Stage.IsShown` before `Arrive`.
 - **screen:** the real `CruiseScreenViewModel` through `NavigationService.NavigateToCruise`, the services put together
   as `App` does (the ones it never touches passed as null), on a **copy** of a save (`new SaveDatabase(copyFolder)`,
-  `SaveName` cleared so nothing is written), with the styles merged from `pack://application:,,,/Street Rod AC;component/Styles/*.xaml`
+  `SaveName` cleared so nothing is written), with the styles merged from `pack://application:,,,/Street Corsa;component/Styles/*.xaml`
   and `ContentService.LoadTracksAsync()` called first (the app does that at start-up). It sat through two rivals,
   waved the first off and captured the offer card.
 

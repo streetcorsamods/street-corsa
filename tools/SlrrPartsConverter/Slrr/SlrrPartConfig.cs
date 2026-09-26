@@ -2,7 +2,7 @@ using System.Globalization;
 using System.IO;
 using System.Numerics;
 
-namespace Street_Rod_AC.Slrr;
+namespace StreetCorsa.Slrr;
 
 /// <summary>Attachment point of a part. Position is in metres, rotation is yaw/pitch/roll in radians.</summary>
 public sealed class SlrrSlot

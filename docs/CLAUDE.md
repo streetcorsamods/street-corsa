@@ -1,4 +1,4 @@
-# Street Rod AC - AI Context
+# Street Corsa - AI Context
 
 ## Project Summary
 Street Rod-style career mode manager for Assetto Corsa. WPF app manages game logic, economy, progression. AC is physics engine only - never modified directly.
@@ -11,15 +11,15 @@ Street Rod-style career mode manager for Assetto Corsa. WPF app manages game log
 ## Architecture Layers
 1. **Meta-Game Layer** - Player progression, economy, car ownership, saves
 2. **AC Integration Layer** - Launch via acs.exe, INI modification, result ingestion
-3. **Data Layer** - Dual-database: catalog.db (static) + saves/*.db (dynamic), both under `%AppData%\StreetRodAC` (`Catalog\catalog.db`, `Saves\{name}.db`, next to `settings.json`; see `docs/architecture/data-storage.md`)
+3. **Data Layer** - Dual-database: catalog.db (static) + saves/*.db (dynamic), both under `%AppData%\StreetCorsa` (`Catalog\catalog.db`, `Saves\{name}.db`, next to `settings.json`; see `docs/architecture/data-storage.md`)
 
 ## Key Architectural Rules
 - **Navigation**: Single `NavigationService` with typed factory methods. Screens never instantiate other screens. Screens get their services through NavigationService (constructor parameters), never from `(App)Application.Current`.
 - **Dialogs**: Modal overlays, never nested. One dialog at a time: one requested while another is open is queued and shows after it, never replacing it. A dialog closes before it runs its callback.
-- **INI Files**: Declare intent, apply minimally, always restore after AC exits. Every cfg INI write goes through `IniModificationService` (`IniText`, line- and encoding-preserving, written atomically by `SafeFile`); the original is kept first under `%AppData%\StreetRodAC\AcRestore\~cfg` (`AcConfigBackup`) and put back in the launcher's `finally`, at start-up, on exit and on the fatal path, never while an AC process runs.
+- **INI Files**: Declare intent, apply minimally, always restore after AC exits. Every cfg INI write goes through `IniModificationService` (`IniText`, line- and encoding-preserving, written atomically by `SafeFile`); the original is kept first under `%AppData%\StreetCorsa\AcRestore\~cfg` (`AcConfigBackup`) and put back in the launcher's `finally`, at start-up, on exit and on the fatal path, never while an AC process runs.
 - **Saves**: One open save database at a time (`SaveDatabase`), shared by the game state and race session repositories; the Load screen lists saves by header without switching it.
 - **Errors**: Global handlers (dispatcher, AppDomain, unobserved tasks) in `App.xaml.cs`. A recoverable UI exception is logged and shown in a dialog; a fatal one runs the fatal path once (save the game, restore the AC install if AC is not running, shut FMOD down, close the save database, flush the log). Screens guard their own `async` paths; `AsyncRelayCommand` logs what escapes.
-- **AC Content**: Import to catalog, never modify AC installation. Two exceptions. The game's own race mode (`apps\new-modes\sr_race`) is installed into `extension\lua\new-modes\sr_race` before every race (`SrRaceMode`: written when it differs, left there, the old `apps\lua\sr_race_manager` app removed). And a race: a car's data files and engine sound, as its parts make them, go in through `CarDataOverlay` (originals kept with a manifest, put back in the launcher's `finally` and at start-up, once no AC process runs), and an opponent in the player's model races in a marked copy of the car folder that the same cleanup deletes. Anything that scans `content\cars` skips folders with the copy marker (`AcCarFolder.IsClone`).
+- **AC Content**: Import to catalog, never modify AC installation. Two exceptions. The game's own race mode (`apps\new-modes\sc_race`) is installed into `extension\lua\new-modes\sc_race` before every race (`ScRaceMode`: written when it differs, left there, the old `apps\lua\sr_race_manager` app removed). And a race: a car's data files and engine sound, as its parts make them, go in through `CarDataOverlay` (originals kept with a manifest, put back in the launcher's `finally` and at start-up, once no AC process runs), and an opponent in the player's model races in a marked copy of the car folder that the same cleanup deletes. Anything that scans `content\cars` skips folders with the copy marker (`AcCarFolder.IsClone`).
 - **Logging**: Structured, via `IAppLogger`. Categories: App, Import, Market, Navigation, etc.
 - **Before a merge or push**: `tools/check.ps1` builds the whole solution (the tools compile game files by link, so a game change can break them) and runs the tests.
 
@@ -52,7 +52,7 @@ Street Rod-style career mode manager for Assetto Corsa. WPF app manages game log
 
 ## File Structure
 ```
-Street Rod AC/
+Street Corsa/
 ├── Models/           # Data models (Catalog/, GameState/)
 ├── Services/         # Business logic (Catalog/, Market/, Scheduler/, etc.)
 ├── Screens/          # UI screens (ViewModel + View per screen)
@@ -87,15 +87,15 @@ NavigationService.NavigateTo[ScreenName](dependencies) : bool
 
 | Component | Location | Purpose |
 |-----------|----------|---------|
-| Street Corsa race mode | `apps\new-modes\sr_race\` (installed to `extension\lua\new-modes\sr_race\` by `SrRaceMode`) | Auto-start, crash and false-start judging, race results JSON, auto-quit; physics API via `ALLOW_PHYSICS_ALTERATIONS` |
+| Street Corsa race mode | `apps\new-modes\sc_race\` (installed to `extension\lua\new-modes\sc_race\` by `ScRaceMode`) | Auto-start, crash and false-start judging, race results JSON, auto-quit; physics API via `ALLOW_PHYSICS_ALTERATIONS` |
 | Crash Penalty Mode | `C:\GAMES\Street Rod AC\extension\lua\new-modes\crash-penalty-tournament\` | Penalty tracking (unused) |
 | FFB Limiter | `C:\GAMES\Street Rod AC\extension\lua\ffb-postprocess\upper-limit\` | Direct drive protection |
-| SR Race Manager (Lua app, removed) | was `apps\lua\sr_race_manager\` | Became the race mode 2026-09-24 (an app gets no physics API); `SrRaceMode` deletes it from the install |
+| SR Race Manager (Lua app, removed) | was `apps\lua\sr_race_manager\` | Became the race mode 2026-09-24 (an app gets no physics API); `ScRaceMode` deletes it from the install |
 | Python Race App (removed) | was `apps\python\StreetRodRaceApp\` | Superseded by SR Race Manager; deleted 2026-09-24, in git history only |
 
 **Key Integration Points**:
-- Every race, drag races too, is a one-lap race session (`TYPE=3`, never AC's drag session, whose rules teleport the cars) in the `sr_race` CSP mode; a test-and-tune is the same race session with the player alone (`CARS=1`) and `TuneLaps` (50) laps, so AC never ends it and the mode ends it after its passes (never read `lapsCompleted >= 1` as finished there): `[RACE] __CM_CUSTOM_MODE=sr_race` and `[STREET_ROD] RACE_TYPE` in race.ini (`IniModificationService`), with AC's damage and tyre wear on in assists.ini for the race (kept and restored like race.ini)
-- The mode writes results to `Documents/Assetto Corsa/out/sr_race_manager/*.json` (schema 1.7: `end_reason`, `false_start`, `disqualified`, the car's `condition` (with its fuel, dirt and engine `heat`), breakdowns and timeslips, the police chase's `pursuit` (the police cars are never participants), bracket dial-ins and breakouts, and a test-and-tune's `passes`) and quits via `ac.shutdownAssettoCorsa()`
+- Every race, drag races too, is a one-lap race session (`TYPE=3`, never AC's drag session, whose rules teleport the cars) in the `sc_race` CSP mode; a test-and-tune is the same race session with the player alone (`CARS=1`) and `TuneLaps` (50) laps, so AC never ends it and the mode ends it after its passes (never read `lapsCompleted >= 1` as finished there): `[RACE] __CM_CUSTOM_MODE=sc_race` and `[STREET_CORSA] RACE_TYPE` in race.ini (`IniModificationService`), with AC's damage and tyre wear on in assists.ini for the race (kept and restored like race.ini)
+- The mode writes results to `Documents/Assetto Corsa/out/sc_race/*.json` (schema 1.7: `end_reason`, `false_start`, `disqualified`, the car's `condition` (with its fuel, dirt and engine `heat`), breakdowns and timeslips, the police chase's `pursuit` (the police cars are never participants), bracket dial-ins and breakouts, and a test-and-tune's `passes`) and quits via `ac.shutdownAssettoCorsa()`
 - Launcher reads JSON results after AC process exits
 
 ## Quick Reference - Adding Features

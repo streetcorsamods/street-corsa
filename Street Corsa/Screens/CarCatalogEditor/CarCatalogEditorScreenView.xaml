@@ -1,0 +1,374 @@
+<UserControl x:Class="StreetCorsa.Screens.CarCatalogEditor.CarCatalogEditorScreenView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="600" d:DesignWidth="900">
+    <Grid Background="{StaticResource SettingsBackgroundBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Back Button -->
+        <Button x:Name="BackButton"
+                Grid.Row="0"
+                Style="{StaticResource ExitButtonStyle}"
+                Background="{StaticResource BackButtonBrush}"
+                Command="{Binding BackCommand}"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                Margin="20,20,0,0"/>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Top"
+                    Margin="0,30,0,20">
+            <TextBlock Text="CAR CATALOG EDITOR"
+                       FontSize="{StaticResource FontSizeScreenTitle}"
+                       FontWeight="Bold"
+                       Foreground="{StaticResource TextPrimaryBrush}"
+                       HorizontalAlignment="Center"
+                       Margin="0,0,0,10"/>
+        </StackPanel>
+
+        <!-- Filter Bar -->
+        <Grid Grid.Row="1"
+              Margin="40,10,40,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Search Box -->
+            <StackPanel Grid.Column="0"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Left">
+                <TextBlock Text="Search:"
+                           FontSize="{StaticResource FontSizeBody}"
+                           Foreground="{StaticResource TextPrimaryBrush}"
+                           VerticalAlignment="Center"
+                           Margin="0,0,10,0"/>
+                <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                         Width="250"
+                         Height="30"
+                         FontSize="{StaticResource FontSizeBody}"
+                         Padding="5,3"
+                         VerticalContentAlignment="Center"/>
+            </StackPanel>
+
+            <!-- Brand Filter -->
+            <StackPanel Grid.Column="1"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right">
+                <TextBlock Text="Brand:"
+                           FontSize="{StaticResource FontSizeBody}"
+                           Foreground="{StaticResource TextPrimaryBrush}"
+                           VerticalAlignment="Center"
+                           Margin="0,0,10,0"/>
+                <ComboBox ItemsSource="{Binding BrandOptions}"
+                          SelectedItem="{Binding SelectedBrand}"
+                          Width="200"
+                          Height="30"
+                          FontSize="{StaticResource FontSizeBody}"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Car Listings: virtualized, so only the rows on screen are built (each carries a ranked engine list) -->
+        <ListBox Grid.Row="2"
+                 ItemsSource="{Binding CatalogView}"
+                 Background="Transparent"
+                 BorderThickness="0"
+                 Margin="40,10,40,10"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                 ScrollViewer.CanContentScroll="True"
+                 VirtualizingPanel.IsVirtualizing="True"
+                 VirtualizingPanel.VirtualizationMode="Recycling"
+                 VirtualizingPanel.ScrollUnit="Pixel">
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        <Setter Property="Focusable" Value="False"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ListBoxItem">
+                                    <ContentPresenter/>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </ListBox.ItemContainerStyle>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="{StaticResource BgMediumBrush}"
+                                BorderThickness="2"
+                                CornerRadius="5"
+                                Margin="0,5"
+                                Padding="15">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="BorderBrush" Value="{StaticResource BorderLightBrush}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsDirty}" Value="True">
+                                            <Setter Property="BorderBrush" Value="{StaticResource GoldBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <!-- Factory engine: a build of the parts catalog, best matches first -->
+                                <StackPanel Grid.Row="1"
+                                            Grid.ColumnSpan="4"
+                                            Orientation="Horizontal"
+                                            Margin="0,10,0,0"
+                                            Visibility="{Binding HasEngineOptions, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <TextBlock Text="Factory engine:"
+                                               FontSize="{StaticResource FontSizeBody}"
+                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                               VerticalAlignment="Center"
+                                               Margin="0,0,10,0"/>
+                                    <ComboBox ItemsSource="{Binding EngineOptions}"
+                                              SelectedItem="{Binding StockEngine}"
+                                              DisplayMemberPath="Label"
+                                              Width="460"
+                                              Height="28"
+                                              FontSize="{StaticResource FontSizeCompact}"
+                                              VerticalContentAlignment="Center"/>
+                                </StackPanel>
+
+                                <!-- Car Info -->
+                                <StackPanel Grid.Column="0"
+                                            VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding DisplayName}"
+                                               FontSize="{StaticResource FontSizeSubheading}"
+                                               FontWeight="Bold"
+                                               Foreground="{StaticResource TextPrimaryBrush}"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding YearDisplay}"
+                                                   FontSize="{StaticResource FontSizeSmall}"
+                                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                                   Margin="0,0,15,0"/>
+                                        <TextBlock Text="{Binding BrandDisplay}"
+                                                   FontSize="{StaticResource FontSizeSmall}"
+                                                   Foreground="{StaticResource TextSecondaryBrush}"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- Base Price -->
+                                <StackPanel Grid.Column="1"
+                                            Orientation="Horizontal"
+                                            VerticalAlignment="Center"
+                                            Margin="20,0">
+                                    <TextBlock Text="Base Price: $"
+                                               FontSize="{StaticResource FontSizeBody}"
+                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                               VerticalAlignment="Center"
+                                               Margin="0,0,5,0"/>
+                                    <TextBox Text="{Binding BasePrice, StringFormat=N0, UpdateSourceTrigger=PropertyChanged}"
+                                             Width="100"
+                                             Height="28"
+                                             FontSize="{StaticResource FontSizeBody}"
+                                             Padding="5,3"
+                                             VerticalContentAlignment="Center"
+                                             HorizontalContentAlignment="Right"/>
+                                </StackPanel>
+
+                                <!-- Dealer Precedence -->
+                                <StackPanel Grid.Column="2"
+                                            Orientation="Horizontal"
+                                            VerticalAlignment="Center"
+                                            Margin="20,0">
+                                    <TextBlock Text="Spawn Rate:"
+                                               FontSize="{StaticResource FontSizeBody}"
+                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                               VerticalAlignment="Center"
+                                               Margin="0,0,10,0"/>
+                                    <Slider Value="{Binding DealerPrecedencePercent}"
+                                            Minimum="0"
+                                            Maximum="100"
+                                            Width="100"
+                                            VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding DealerPrecedencePercent, StringFormat={}{0}%}"
+                                               FontSize="{StaticResource FontSizeBody}"
+                                               Foreground="{StaticResource TextPrimaryBrush}"
+                                               VerticalAlignment="Center"
+                                               Width="40"
+                                               Margin="5,0,0,0"/>
+                                </StackPanel>
+
+                                <!-- Reset Button -->
+                                <Button Grid.Column="3"
+                                        Content="Reset"
+                                        Command="{Binding DataContext.ResetItemCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                        CommandParameter="{Binding}"
+                                        Width="60"
+                                        Height="28"
+                                        FontSize="{StaticResource FontSizeSmall}"
+                                        Margin="10,0,0,0"
+                                        VerticalAlignment="Center">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Background" Value="{StaticResource Gray50Brush}"/>
+                                            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                                            <Setter Property="BorderBrush" Value="{StaticResource TextDisabledBrush}"/>
+                                            <Setter Property="BorderThickness" Value="1"/>
+                                            <Setter Property="Cursor" Value="Hand"/>
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border Background="{TemplateBinding Background}"
+                                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                                BorderThickness="{TemplateBinding BorderThickness}"
+                                                                CornerRadius="3">
+                                                            <ContentPresenter HorizontalAlignment="Center"
+                                                                              VerticalAlignment="Center"/>
+                                                        </Border>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                            <Style.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Background" Value="{StaticResource TextDisabledBrush}"/>
+                                                </Trigger>
+                                                <Trigger Property="IsPressed" Value="True">
+                                                    <Setter Property="Background" Value="{StaticResource Gray70Brush}"/>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+        </ListBox>
+
+        <!-- The catalog is read off the UI thread -->
+        <TextBlock Grid.Row="2"
+                   Text="Loading the catalog..."
+                   FontSize="{StaticResource FontSizeSubheading}"
+                   Foreground="{StaticResource TextSecondaryBrush}"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+        <!-- Bottom Bar -->
+        <Border Grid.Row="3"
+                Background="{StaticResource BgPanelBrush}"
+                BorderBrush="{StaticResource Gray33Brush}"
+                BorderThickness="0,1,0,0"
+                Padding="20,15">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Dirty indicator -->
+                <TextBlock Grid.Column="0"
+                           Text="* Unsaved changes"
+                           FontSize="{StaticResource FontSizeBody}"
+                           Foreground="{StaticResource GoldBrush}"
+                           VerticalAlignment="Center"
+                           Visibility="{Binding HasDirtyItems, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+                <!-- Reset All Button -->
+                <Button Grid.Column="1"
+                        Content="Reset All to Defaults"
+                        Command="{Binding ResetAllCommand}"
+                        Width="150"
+                        Height="35"
+                        FontSize="{StaticResource FontSizeBody}"
+                        Margin="0,0,15,0">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Background" Value="{StaticResource Gray50Brush}"/>
+                            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                            <Setter Property="BorderBrush" Value="{StaticResource TextDisabledBrush}"/>
+                            <Setter Property="BorderThickness" Value="1"/>
+                            <Setter Property="Cursor" Value="Hand"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border Background="{TemplateBinding Background}"
+                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                BorderThickness="{TemplateBinding BorderThickness}"
+                                                CornerRadius="3">
+                                            <ContentPresenter HorizontalAlignment="Center"
+                                                              VerticalAlignment="Center"/>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource TextDisabledBrush}"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource Gray70Brush}"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+
+                <!-- Save Button -->
+                <Button Grid.Column="2"
+                        Content="Save Changes"
+                        Command="{Binding SaveCommand}"
+                        Width="120"
+                        Height="35"
+                        FontSize="{StaticResource FontSizeBody}"
+                        FontWeight="Bold"
+                        Background="{StaticResource AccentPrimaryBrush}"
+                        Foreground="{StaticResource TextPrimaryBrush}"
+                        BorderBrush="{StaticResource BorderDarkBrush}"
+                        BorderThickness="1">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Cursor" Value="Hand"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border Background="{TemplateBinding Background}"
+                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                BorderThickness="{TemplateBinding BorderThickness}"
+                                                CornerRadius="3">
+                                            <ContentPresenter HorizontalAlignment="Center"
+                                                              VerticalAlignment="Center"/>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource AccentHoverBrush}"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource AccentPressedBrush}"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

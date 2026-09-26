@@ -1,0 +1,57 @@
+<UserControl x:Class="StreetCorsa.Screens.RaceLoading.RaceLoadingScreenView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="720" d:DesignWidth="1280"
+             Background="{StaticResource BgPanelBrush}">
+
+    <Grid>
+        <!-- Dark overlay background -->
+        <Rectangle Fill="{StaticResource BgPanelBrush}" Opacity="0.95"/>
+
+        <!-- Centered content -->
+        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+            <!-- Loading spinner (simple animation) -->
+            <Border Width="60" Height="60"
+                    Margin="0,0,0,30"
+                    Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <Border.RenderTransform>
+                    <RotateTransform x:Name="SpinnerRotation" CenterX="30" CenterY="30"/>
+                </Border.RenderTransform>
+                <Border.Triggers>
+                    <EventTrigger RoutedEvent="Loaded">
+                        <BeginStoryboard>
+                            <Storyboard RepeatBehavior="Forever">
+                                <DoubleAnimation
+                                    Storyboard.TargetName="SpinnerRotation"
+                                    Storyboard.TargetProperty="Angle"
+                                    From="0" To="360"
+                                    Duration="0:0:1"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </EventTrigger>
+                </Border.Triggers>
+                <Ellipse Stroke="{StaticResource SpinnerOrangeBrush}" StrokeThickness="4"
+                         StrokeDashArray="3 2"
+                         Fill="Transparent"/>
+            </Border>
+
+            <!-- Status message -->
+            <TextBlock Text="{Binding StatusMessage}"
+                       FontSize="{StaticResource FontSizeScreenTitle}"
+                       FontWeight="Bold"
+                       Foreground="{StaticResource TextPrimaryBrush}"
+                       HorizontalAlignment="Center"/>
+
+            <!-- The way out when AC hangs -->
+            <Button Content="STOP RACE"
+                    Command="{Binding StopRaceCommand}"
+                    Style="{StaticResource DialogSecondaryButtonStyle}"
+                    Margin="0,40,0,0"
+                    HorizontalAlignment="Center"
+                    Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+        </StackPanel>
+    </Grid>
+</UserControl>

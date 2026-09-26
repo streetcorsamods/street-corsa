@@ -1,6 +1,6 @@
 # Building or sourcing our own AC showroom (garage interior, car dealership) from generic assets
 
-Scope: what an AC showroom is technically, how the AcTools "Dark" renderer (CM Custom Showroom, which Street Rod AC hosts in-process via `GarageRenderer` in `Street Rod AC/Controls/DealerLotViewport3D.cs`) treats it, how to author one, where to get permissively licensed assets, and whether a panorama-only showroom is a cheap option. Researched 2026-09-23. No files were downloaded.
+Scope: what an AC showroom is technically, how the AcTools "Dark" renderer (CM Custom Showroom, which Street Corsa hosts in-process via `GarageRenderer` in `Street Corsa/Controls/DealerLotViewport3D.cs`) treats it, how to author one, where to get permissively licensed assets, and whether a panorama-only showroom is a cheap option. Researched 2026-09-23. No files were downloaded.
 
 ## 1. What an AC showroom folder is, and how the Dark renderer lights it
 
@@ -15,7 +15,7 @@ A showroom is just `content/showroom/<id>/` holding `<id>.kn5` (a track-style kn
 - The renderer inspects showroom materials with `ksDiffuse.ValueA == 0f && ksAmbient.ValueA >= 1f`; when the showroom's materials are all like that (fully self-illuminated, as panorama showrooms are) shadows are disabled — same source
 - The flat-mirror floor option (`FlatMirror`, `FlatMirrorBlurred`, `FlatMirrorReflectiveness`) is skipped whenever a showroom node exists, so a showroom must supply its own floor — same source
 - Ambient is a two-colour hemisphere: shader gets `AmbientDown * AmbientBrightness` and `(AmbientUp - AmbientDown) * AmbientBrightness`; there is also `CubemapAmbient` (ambient from per-car light probes), `LightColor`/`LightBrightness` (the single sun/key light), `BackgroundColor`/`BackgroundBrightness`, `MaterialsReflectiveness`, `CustomReflectionBrightness`, and `UseCustomReflectionCubemap` (a fixed cubemap centred at origin instead of a dynamic one at the car) — same source (property list as extracted by fetch; exact defaults not verified)
-- The existing Street Rod AC lot viewport already sets `EnableShadows`, `UsePcss`, `UseSslr`, `UseAo`, `UseBloom` on `GarageRenderer` and notes `CubemapAmbient = 0` as the first knob if a full lot is slow — local code `Street Rod AC/Controls/DealerLotViewport3D.cs` lines 374-400
+- The existing Street Corsa lot viewport already sets `EnableShadows`, `UsePcss`, `UseSslr`, `UseAo`, `UseBloom` on `GarageRenderer` and notes `CubemapAmbient = 0` as the first knob if a full lot is slow — local code `Street Corsa/Controls/DealerLotViewport3D.cs` lines 374-400
 - Lights added in CM Custom Showroom are scene lights of the showroom session only (not stored in the kn5) — [OverTake.gg: Content Manager Lights](https://www.overtake.gg/threads/content-manager-lights.188508/)
 - CM stores look settings as presets in `%LOCALAPPDATA%\AcTools Content Manager\Presets\Custom Showroom` (and `...\Custom Previews` for preview generation); community showrooms often ship a matching preset — [OverTake.gg: simple black showroom](https://www.overtake.gg/threads/just-a-simple-black-showroom-including-reflection-for-cm.184015/); [acstuff.club: Custom Showroom presets](https://acstuff.club/f/d/23-content-manager-custom-showroom-presets/16)
 
@@ -45,7 +45,7 @@ The standard route is: model/assemble in Blender or Max, export FBX (scale 0.01 
 - Panorama-retexture route used by a community author: take ~100 screenshots, stitch a 360 panorama with Autostitch, and replace the texture of an existing showroom in 3DSimED — [assettocorsamods.net: Custom Showroom Scene](https://assettocorsamods.net/threads/custom-showroom-scene.1283/)
 
 ### Inferences
-- Street Rod AC already has its own kn5 writer in the parts converter (see memory "Parts conversion pipeline"), so the most self-contained path is: Blender -> FBX/glTF -> our converter tool -> showroom kn5, reusing that writer with track-style (non-skinned) nodes. ksEditor stays the fallback for shader tuning.
+- Street Corsa already has its own kn5 writer in the parts converter (see memory "Parts conversion pipeline"), so the most self-contained path is: Blender -> FBX/glTF -> our converter tool -> showroom kn5, reusing that writer with track-style (non-skinned) nodes. ksEditor stays the fallback for shader tuning.
 - Keep shader set to what the Dark renderer implements well: ksPerPixel (diffuse), ksPerPixelMultiMap (spec/reflection mask), ksPerPixelNM (normal maps), plus self-lit materials (ksAmbient=1, ksDiffuse=0) for signs, light panels and panorama backdrops.
 
 ### Gaps
@@ -123,7 +123,7 @@ There is no published Kunos budget for showrooms. Evidence points to keeping the
 - High-quality showrooms with many CSP lights can perform very poorly (the Dark renderer ignores CSP anyway) — [AC Supply performance guide](https://www.acsupply.cx/guides/performance-optimization)
 - Kunos pipeline doc stresses optimising draw calls and materials and using LODs (car guidance: high-res LOD used for showroom view) — [AC Pipeline Rev2.0 (Scribd)](https://www.scribd.com/document/501206878/AC-Pipeline-PUB-Rev2-0)
 - Community polycount discussion thread — [assettocorsamods.net: Polycounts?](https://assettocorsamods.net/threads/polycounts.944/)
-- Street Rod AC's own comment notes some existing showrooms are "a few hundred MB" and take seconds to load — local code `Street Rod AC/Controls/DealerLotViewport3D.cs` line ~360
+- Street Corsa's own comment notes some existing showrooms are "a few hundred MB" and take seconds to load — local code `Street Corsa/Controls/DealerLotViewport3D.cs` line ~360
 - Example of the range on Sketchfab: 7M-triangle dealership vs. 132-triangle low-poly one — [Sketchfab f03456b](https://sketchfab.com/3d-models/garage-dealership-showroom-f03456bd287d4d13966157dd02d95c75); [Sketchfab bb07901](https://sketchfab.com/3d-models/car-dealership-bb07901c912a43e1a5c2e9f6c74ee4c6)
 
 ### Inferences

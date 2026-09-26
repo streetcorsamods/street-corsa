@@ -60,7 +60,7 @@ Never modify untouched keys.
 The cfg files (`race.ini`, `showroom_start.ini`) are restored the way the cars' data is (`CarDataOverlay`):
 
 - **Keep first** (`AcConfigBackup.Keep`): before the first byte of a file changes, its original bytes (or the fact
-  that it did not exist) go to `%AppData%\StreetRodAC\AcRestore\~cfg`, with a manifest (`ini-manifest.json`)
+  that it did not exist) go to `%AppData%\StreetCorsa\AcRestore\~cfg`, with a manifest (`ini-manifest.json`)
   flushed to disk. Only files under `Documents\Assetto Corsa\cfg` are ever kept or written.
 - **Once per race**: a file already kept (a second launch after a restore that failed) is not kept again, so what
   goes back is always the user's own file, never ours.
@@ -75,7 +75,7 @@ The cfg files (`race.ini`, `showroom_start.ini`) are restored the way the cars' 
   next call and is logged, and the others go back anyway. The `~cfg` folder has no car manifest, so the car-data
   restore never takes it for a car.
 
-After a race the user's race.ini is what it was before: no `__CM_CUSTOM_MODE=sr_race`, none of our cars, and a normal
+After a race the user's race.ini is what it was before: no `__CM_CUSTOM_MODE=sc_race`, none of our cars, and a normal
 AC or Content Manager session is not affected.
 
 A race also edits assists.ini: `DAMAGE=100` and `TYRE_WEAR=1` (`IniModificationService.RaceDamage`, `RaceTyreWear`), so
@@ -86,7 +86,7 @@ player's other assists and `VISUALDAMAGE` stay. Kept and put back like race.ini.
 A race's race.ini carries its context id, which the race mode copies into its result file:
 
 ```ini
-[STREET_ROD]
+[STREET_CORSA]
 CONTEXT_ID=<RaceContext.ContextId, "D" format>
 ```
 

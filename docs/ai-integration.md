@@ -2,7 +2,7 @@
 
 ## Overview
 
-Street Rod AC integrates with local Large Language Models (LLMs) via Ollama or LM Studio to provide dynamic, contextual content generation. This is an **optional** feature - the game functions fully without AI, falling back to static/procedural content.
+Street Corsa integrates with local Large Language Models (LLMs) via Ollama or LM Studio to provide dynamic, contextual content generation. This is an **optional** feature - the game functions fully without AI, falling back to static/procedural content.
 
 ## Vision
 

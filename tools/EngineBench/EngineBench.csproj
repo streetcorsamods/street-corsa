@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
-    <RootNamespace>Street_Rod_AC</RootNamespace>
+    <RootNamespace>StreetCorsa</RootNamespace>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
@@ -14,25 +14,25 @@
 
   <!-- The part logic is the game's; the bench only drives it from the command line -->
   <ItemGroup>
-    <Compile Include="..\..\Street Rod AC\Parts\PartDefinition.cs" Link="Parts\PartDefinition.cs" />
-    <Compile Include="..\..\Street Rod AC\Parts\EngineBuild.cs" Link="Parts\EngineBuild.cs" />
-    <Compile Include="..\..\Street Rod AC\Parts\PartsCatalog.cs" Link="Parts\PartsCatalog.cs" />
-    <Compile Include="..\..\Street Rod AC\Parts\SlotShifts.cs" Link="Parts\SlotShifts.cs" />
-    <Compile Include="..\..\Street Rod AC\Parts\PartKinds.cs" Link="Parts\PartKinds.cs" />
-    <Compile Include="..\..\Street Rod AC\Parts\Cars\*.cs" Exclude="..\..\Street Rod AC\Parts\Cars\CarCondition.cs;..\..\Street Rod AC\Parts\Cars\RepairShop.cs" Link="Parts\Cars\%(Filename)%(Extension)" />
-    <Compile Include="..\..\Street Rod AC\Models\Race\RaceStartState.cs" Link="Models\RaceStartState.cs" />
-    <Compile Include="..\..\Street Rod AC\Models\GameState\PartInstance.cs" Link="Models\PartInstance.cs" />
-    <Compile Include="..\..\Street Rod AC\Parts\Scripting\*.cs" Link="Parts\Scripting\%(Filename)%(Extension)" />
-    <Compile Include="..\..\Street Rod AC\Parts\Logic\*.cs" Link="Parts\Logic\%(Filename)%(Extension)" />
-    <Compile Include="..\..\Street Rod AC\Parts\Export\*.cs" Link="Parts\Export\%(Filename)%(Extension)" />
-    <Compile Include="..\..\Street Rod AC\Parts\Sounds\*.cs" Link="Parts\Sounds\%(Filename)%(Extension)" />
+    <Compile Include="..\..\Street Corsa\Parts\PartDefinition.cs" Link="Parts\PartDefinition.cs" />
+    <Compile Include="..\..\Street Corsa\Parts\EngineBuild.cs" Link="Parts\EngineBuild.cs" />
+    <Compile Include="..\..\Street Corsa\Parts\PartsCatalog.cs" Link="Parts\PartsCatalog.cs" />
+    <Compile Include="..\..\Street Corsa\Parts\SlotShifts.cs" Link="Parts\SlotShifts.cs" />
+    <Compile Include="..\..\Street Corsa\Parts\PartKinds.cs" Link="Parts\PartKinds.cs" />
+    <Compile Include="..\..\Street Corsa\Parts\Cars\*.cs" Exclude="..\..\Street Corsa\Parts\Cars\CarCondition.cs;..\..\Street Corsa\Parts\Cars\RepairShop.cs" Link="Parts\Cars\%(Filename)%(Extension)" />
+    <Compile Include="..\..\Street Corsa\Models\Race\RaceStartState.cs" Link="Models\RaceStartState.cs" />
+    <Compile Include="..\..\Street Corsa\Models\GameState\PartInstance.cs" Link="Models\PartInstance.cs" />
+    <Compile Include="..\..\Street Corsa\Parts\Scripting\*.cs" Link="Parts\Scripting\%(Filename)%(Extension)" />
+    <Compile Include="..\..\Street Corsa\Parts\Logic\*.cs" Link="Parts\Logic\%(Filename)%(Extension)" />
+    <Compile Include="..\..\Street Corsa\Parts\Export\*.cs" Link="Parts\Export\%(Filename)%(Extension)" />
+    <Compile Include="..\..\Street Corsa\Parts\Sounds\*.cs" Link="Parts\Sounds\%(Filename)%(Extension)" />
   </ItemGroup>
 
   <!-- The game's plain-BCL helpers the linked part code uses (and the tool itself): atomic writes, paths kept inside a root, the career's multipliers -->
   <ItemGroup>
-    <Compile Include="..\..\Street Rod AC\Helpers\SafeFile.cs" Link="Helpers\SafeFile.cs" />
-    <Compile Include="..\..\Street Rod AC\Helpers\PathNames.cs" Link="Helpers\PathNames.cs" />
-    <Compile Include="..\..\Street Rod AC\Helpers\Multiplier.cs" Link="Helpers\Multiplier.cs" />
+    <Compile Include="..\..\Street Corsa\Helpers\SafeFile.cs" Link="Helpers\SafeFile.cs" />
+    <Compile Include="..\..\Street Corsa\Helpers\PathNames.cs" Link="Helpers\PathNames.cs" />
+    <Compile Include="..\..\Street Corsa\Helpers\Multiplier.cs" Link="Helpers\Multiplier.cs" />
   </ItemGroup>
 
 </Project>

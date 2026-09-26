@@ -1,4 +1,4 @@
-namespace Street_Rod_AC;
+namespace StreetCorsa;
 
 /// <summary>
 /// How a run puts its output in place without leaving the content broken when it stops half way (an exception, a

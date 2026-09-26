@@ -1,14 +1,14 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Text;
-using Street_Rod_AC.Models.GameState;
-using Street_Rod_AC.Parts;
-using Street_Rod_AC.Parts.Cars;
-using Street_Rod_AC.Parts.Export;
-using Street_Rod_AC.Parts.Logic;
-using Street_Rod_AC.Parts.Sounds;
+using StreetCorsa.Models.GameState;
+using StreetCorsa.Parts;
+using StreetCorsa.Parts.Cars;
+using StreetCorsa.Parts.Export;
+using StreetCorsa.Parts.Logic;
+using StreetCorsa.Parts.Sounds;
 
-namespace Street_Rod_AC;
+namespace StreetCorsa;
 
 /// <summary>
 /// Puts engine builds of the converted parts on the dyno from the command line:

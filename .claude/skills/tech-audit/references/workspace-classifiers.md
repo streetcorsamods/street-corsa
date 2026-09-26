@@ -15,13 +15,13 @@ Used by Phase 1 of the tech-audit skill to classify each discovered unit by **si
 | 7   | `*.ps1` under `tools/`                                                        | **Build/ops script**      |                                                                       |
 | 8   | (none of the above)                                                           | **Unknown**               | Manual classification needed; flag in findings                        |
 
-AC-side components that live in the AC install (the `sr_race` new-mode, FFB limiter under `C:\GAMES\Street Rod AC\extension\...`) are **out of scope** — they are not in the repo. List them under Coverage gaps if the diff window touches the code that configures them.
+AC-side components that live in the AC install (the `sc_race` new-mode, FFB limiter under `C:\GAMES\Street Rod AC\extension\...`) are **out of scope** — they are not in the repo. List them under Coverage gaps if the diff window touches the code that configures them.
 
 ## What to capture per unit
 
 ```yaml
-- name: 'Street Rod AC'
-  path: 'Street Rod AC/Street Rod AC.csproj'
+- name: 'Street Corsa'
+  path: 'Street Corsa/Street Corsa.csproj'
   classification: WPF desktop app
   target_framework: 'net10.0-windows'
   flags: { nullable: true, unsafe: true, wpf: true, winforms: true, platform: x64 }

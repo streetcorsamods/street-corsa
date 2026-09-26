@@ -2,7 +2,7 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 
-namespace Street_Rod_AC.Slrr;
+namespace StreetCorsa.Slrr;
 
 /// <summary>
 /// One record of an SLRR resource database. The payload is a small text script

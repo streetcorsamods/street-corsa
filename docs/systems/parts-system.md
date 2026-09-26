@@ -23,7 +23,7 @@ Car.Parts ──RunningGear.Mounted──▶ AcRunningGearData ─┐
 Car.Engine ──EngineEvaluator──▶ AcEngineData ──────────┘     all files      per car of a race     apply, race, restore
 ```
 
-The converted content lives in the repo, `Street Rod AC\Assets\Parts` (187 MB), and is copied next to the exe at build;
+The converted content lives in the repo, `Street Corsa\Assets\Parts` (187 MB), and is copied next to the exe at build;
 `AppSettings.PartsPath` reads it from there. It is made from a commercial game and community mods: the repo stays
 private.
 
@@ -600,7 +600,7 @@ whose engine does not run does not race.
 
 The rule for every change to the Assetto Corsa install: the originals are kept aside first, the change is the
 smallest that does the job, and whatever happens the originals go back. `CarDataOverlay.Apply(carId, files)` keeps the
-car's originals under `%APPDATA%\StreetRodAC\AcRestore\<car>\files` with a `manifest.json` (which files, whether
+car's originals under `%APPDATA%\StreetCorsa\AcRestore\<car>\files` with a `manifest.json` (which files, whether
 each existed), written before anything in the install changes, then writes the files into the car's `data` folder.
 A car that ships packed (`data.acd`, no folder: the GT500) gets the whole of its data unpacked into a `data` folder
 for the race, since the game reads the folder when there is one, and the folder removed after. `Restore`/`RestoreAll`

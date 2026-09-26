@@ -1,0 +1,178 @@
+using StreetCorsa.Models.Career.Filters;
+using StreetCorsa.Models.Race;
+
+namespace StreetCorsa.Models.Career.Events
+{
+    /// <summary>
+    /// Defines a race event/invitation that can appear in the game.
+    /// Events have entry requirements and rewards.
+    /// </summary>
+    public class RaceEventDefinition
+    {
+        /// <summary>
+        /// Unique identifier for this event type
+        /// </summary>
+        public string Id { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Display name of the event
+        /// </summary>
+        public string Name { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Description/flavor text for the event
+        /// </summary>
+        public string Description { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Type of race (drag, circuit, sprint)
+        /// </summary>
+        public RaceType RaceType { get; set; }
+
+        /// <summary>
+        /// Car filter for entry requirements (null = any car allowed)
+        /// </summary>
+        public ICarFilter? EntryRequirements { get; set; }
+
+        /// <summary>
+        /// Minimum reputation required to enter
+        /// </summary>
+        public int MinReputation { get; set; }
+
+        /// <summary>
+        /// Milestone IDs that must be completed to unlock this event
+        /// </summary>
+        public List<string> RequiredMilestones { get; set; } = [];
+
+        /// <summary>
+        /// Reward for winning the event
+        /// </summary>
+        public EventReward Reward { get; set; } = new();
+
+        /// <summary>
+        /// How this event is scheduled
+        /// </summary>
+        public EventSchedule Schedule { get; set; } = EventSchedule.Weekly;
+
+        /// <summary>
+        /// Track ID for this event (null = random appropriate track)
+        /// </summary>
+        public string? TrackId { get; set; }
+
+        /// <summary>
+        /// Optional opponent name for special event matchups
+        /// </summary>
+        public string? SpecificOpponent { get; set; }
+
+        /// <summary>
+        /// Whether this is a pink slip event
+        /// </summary>
+        public bool IsPinkSlip { get; set; }
+
+        /// <summary>
+        /// A bracket race (a drag race only): dial-ins, a staggered start, a breakout loses (<see cref="Services.Race.BracketRules"/>)
+        /// </summary>
+        public bool IsBracket { get; set; }
+
+        /// <summary>Run as a bracket race: <see cref="IsBracket"/> on a drag race, the only kind that can be one</summary>
+        public bool IsBracketRace => IsBracket && RaceType == RaceType.DragRace;
+
+        /// <summary>
+        /// Special opponents for this event (if set, uses these instead of pool)
+        /// </summary>
+        public List<EventOpponent>? SpecialOpponents { get; set; }
+
+        /// <summary>
+        /// If true, only use special opponents (no pool mixing)
+        /// </summary>
+        public bool ExclusiveOpponents { get; set; }
+
+        /// <summary>
+        /// Get a human-readable entry requirements description
+        /// </summary>
+        public string GetEntryRequirementsDescription()
+        {
+            var requirements = new List<string>();
+
+            if (EntryRequirements != null)
+                requirements.Add(EntryRequirements.DisplayDescription);
+
+            if (MinReputation > 0)
+                requirements.Add($"{MinReputation}+ reputation");
+
+            if (RequiredMilestones.Count > 0)
+                requirements.Add($"Requires: {string.Join(", ", RequiredMilestones)}");
+
+            return requirements.Count > 0
+                ? string.Join(", ", requirements)
+                : "Open to all";
+        }
+    }
+
+    /// <summary>
+    /// How often an event can appear
+    /// </summary>
+    public enum EventSchedule
+    {
+        /// <summary>
+        /// Appears once and can only be completed once
+        /// </summary>
+        OneTime,
+
+        /// <summary>
+        /// Can appear once per day
+        /// </summary>
+        Daily,
+
+        /// <summary>
+        /// Can appear once per week
+        /// </summary>
+        Weekly,
+
+        /// <summary>
+        /// Always available
+        /// </summary>
+        Permanent
+    }
+
+    /// <summary>
+    /// Special opponent for events only - not tracked in game state
+    /// </summary>
+    public class EventOpponent
+    {
+        /// <summary>
+        /// Display name of the opponent
+        /// </summary>
+        public string Name { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Nickname/title for the opponent
+        /// </summary>
+        public string? Nickname { get; set; }
+
+        /// <summary>
+        /// AC AI skill level (90-100; Opponent clamps to it)
+        /// </summary>
+        public int Skill { get; set; } = 90;
+
+        /// <summary>
+        /// AC AI aggression level (0-100)
+        /// </summary>
+        public int Aggression { get; set; } = 50;
+
+        /// <summary>
+        /// Car definition ID for the opponent's car
+        /// </summary>
+        public string CarDefinitionId { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Car skin ID (optional)
+        /// </summary>
+        public string? CarSkin { get; set; }
+
+        /// <summary>
+        /// Path to opponent portrait (optional)
+        /// </summary>
+        public string? PortraitPath { get; set; }
+    }
+}

@@ -2,13 +2,13 @@ using System.Diagnostics;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Street_Rod_AC.Helpers;
-using Street_Rod_AC.Parts;
-using Street_Rod_AC.Parts.Scripting;
-using Street_Rod_AC.Slrr;
-using static Street_Rod_AC.ConverterOptions;
+using StreetCorsa.Helpers;
+using StreetCorsa.Parts;
+using StreetCorsa.Parts.Scripting;
+using StreetCorsa.Slrr;
+using static StreetCorsa.ConverterOptions;
 
-namespace Street_Rod_AC;
+namespace StreetCorsa;
 
 /// <summary>
 /// Converts the parts of a Street Legal Racing: Redline install into the game's own part format:

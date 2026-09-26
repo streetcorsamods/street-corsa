@@ -1,0 +1,60 @@
+using StreetCorsa.Models.Career.Victory;
+using StreetCorsa.Models.GameState;
+
+namespace StreetCorsa.Services.Career
+{
+    /// <summary>
+    /// Service for managing victory conditions and tracking progress
+    /// </summary>
+    public interface IVictoryConditionService
+    {
+        /// <summary>
+        /// Get all available victory conditions
+        /// </summary>
+        IEnumerable<IVictoryCondition> GetAllVictoryConditions();
+
+        /// <summary>
+        /// Get victory conditions that are currently unlocked for pursuit
+        /// </summary>
+        IEnumerable<IVictoryCondition> GetUnlockedVictoryConditions(CareerState career);
+
+        /// <summary>
+        /// Get a specific victory condition by type
+        /// </summary>
+        IVictoryCondition? GetVictoryCondition(string victoryType);
+
+        /// <summary>
+        /// The victory the game has reached: the path the player picked (<see cref="CareerState.ActiveVictoryType"/>)
+        /// once it is achieved, or with none picked the first one achieved. Null when none is.
+        /// </summary>
+        IVictoryCondition? CheckForVictory(GameState gameState);
+
+        /// <summary>
+        /// Marks the game won when <see cref="CheckForVictory"/> finds a victory and it was not won already, and
+        /// returns that victory; null otherwise. A won game goes on: the player can keep racing.
+        /// </summary>
+        IVictoryCondition? ClaimVictory(GameState gameState);
+
+        /// <summary>
+        /// Get progress for a specific victory condition
+        /// </summary>
+        VictoryProgress GetProgress(string victoryType, CareerState career);
+
+        /// <summary>
+        /// Get progress for all victory conditions
+        /// </summary>
+        Dictionary<string, VictoryProgress> GetAllProgress(CareerState career);
+
+        /// <summary>
+        /// Check for newly unlocked victory conditions and update career state
+        /// </summary>
+        List<IVictoryCondition> CheckForNewUnlocks(CareerState career);
+
+        /// <summary>
+        /// Works out what the victories need from the whole game (how many racers there are, whether the player has
+        /// the most wins, the King's name) and keeps it on the career, where their progress reads it. Done on every
+        /// check for a victory; a screen that shows the victories may do it first to show them as of now.
+        /// </summary>
+        void RefreshStanding(GameState gameState);
+    }
+}

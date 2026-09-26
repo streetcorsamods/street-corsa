@@ -2,9 +2,9 @@ using System.IO;
 using System.Numerics;
 using AcTools.Kn5File;
 using AcTools.Numerics;
-using Street_Rod_AC.Parts;
+using StreetCorsa.Parts;
 
-namespace Street_Rod_AC.Slrr;
+namespace StreetCorsa.Slrr;
 
 /// <summary>
 /// Turns an SLRR part mesh into a KN5 so the AcTools renderer can draw it

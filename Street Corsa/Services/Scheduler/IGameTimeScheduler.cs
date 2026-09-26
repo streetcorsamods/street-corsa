@@ -1,0 +1,24 @@
+using StreetCorsa.Models.GameState;
+
+namespace StreetCorsa.Services.Scheduler
+{
+    /// <summary>
+    /// Scheduler that executes tasks based on game time progression
+    /// </summary>
+    public interface IGameTimeScheduler
+    {
+        /// <summary>
+        /// Register a task to be executed on schedule
+        /// </summary>
+        void RegisterTask(IScheduledTask task);
+
+        /// <summary>
+        /// Called when game time advances. Executes any due tasks.
+        /// </summary>
+        /// <param name="gameState">Current game state</param>
+        /// <param name="previousDate">Date before advancement</param>
+        /// <param name="newDate">Date after advancement</param>
+        /// <returns>The ids of the due tasks that failed; they are tried again on the next day</returns>
+        Task<IReadOnlyList<string>> OnTimeAdvancedAsync(GameState gameState, DateTime previousDate, DateTime newDate);
+    }
+}

@@ -4,7 +4,7 @@
 Import AC content into normalized catalog. Game logic reads catalog, never AC files directly.
 
 ## Where It Lives
-`%AppData%\StreetRodAC\Catalog\catalog.db` (`CatalogDatabase.DefaultPath`), apart from the saves. An older
+`%AppData%\StreetCorsa\Catalog\catalog.db` (`CatalogDatabase.DefaultPath`), apart from the saves. An older
 `Saves\catalog.db` (and its side files) is moved there once, under the catalog lock; if both exist the old one is
 renamed `catalog.db.old`. One opener at a time: a wait longer than 60 s is an error (`TimeoutException`), not a frozen
 window, and the same thread opening twice gets an exception instead of a deadlock. A catalog.db that cannot be opened
@@ -27,7 +27,7 @@ is set aside as `catalog.db.bad` and a new one made (a file in use is not taken 
   - cars with an **encrypted model** (`EncryptedCars`). Some mods scramble the KN5's vertex normals, which only CSP
     undoes, so the car races fine in AC but draws as shattered glass in the game's viewers. The tell: normals that
     average a cosine of about 0 against their own faces, with half facing backwards (real models average about 0.95).
-    The answer is cached per model file (path, size, time) in `%AppData%\StreetRodAC\encrypted_cars.json`, so only
+    The answer is cached per model file (path, size, time) in `%AppData%\StreetCorsa\encrypted_cars.json`, so only
     the first scan reads the models (about 7.5 s for 167 cars).
 
 ### 2. Materialization

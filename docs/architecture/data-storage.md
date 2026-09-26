@@ -1,7 +1,9 @@
 # Data Storage
 
 ## Where Things Live
-Everything the game writes is under `%AppData%\StreetRodAC`, never next to the exe (a build folder, or Program Files):
+Everything the game writes is under `%AppData%\StreetCorsa`, never next to the exe (a build folder, or Program Files).
+Before the rename it was `%AppData%\StreetRodAC`: `LegacyRename` moves it over at the first start, before the log opens.
+
 
 | Path | What |
 |------|------|
@@ -17,7 +19,7 @@ first time the new version needs it: `catalog.db` from `Saves\` (under the catal
 
 ## Dual-Database Strategy
 
-### Catalog Database (`%AppData%\StreetRodAC\Catalog\catalog.db`)
+### Catalog Database (`%AppData%\StreetCorsa\Catalog\catalog.db`)
 **Purpose:** Static game rules and content definitions
 **Access:** Read-only during gameplay; one opener at a time (`CatalogDatabase.Open`)
 
@@ -27,7 +29,7 @@ first time the new version needs it: `catalog.db` from `Saves\` (under the catal
 | carprofiles | CarProfile | Gameplay properties (price, precedence) |
 | tracks | TrackDefinition | Imported AC track identity |
 
-### Save Database (`%AppData%\StreetRodAC\Saves\{name}.db`)
+### Save Database (`%AppData%\StreetCorsa\Saves\{name}.db`)
 **Purpose:** Dynamic player progress
 **Access:** Read/Write, through one open database (`SaveDatabase`)
 

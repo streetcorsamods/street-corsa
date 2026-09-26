@@ -1,9 +1,9 @@
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
-using Street_Rod_AC.Parts;
+using StreetCorsa.Parts;
 
-namespace Street_Rod_AC.Slrr;
+namespace StreetCorsa.Slrr;
 
 /// <summary>
 /// Collects complete engines as part lists: the stock_parts_list_E of every car chassis script

@@ -1,6 +1,6 @@
 # AC showrooms (and showroom-like tracks) for car dealership / used-car lot / street scenes
 
-Scope: scenes usable as a dealer backdrop for the AcTools "Dark" renderer in Street Rod AC. Researched 2026-09-23 via web search and page fetches; nothing downloaded. Several hosts (Patreon, nexusmods, assettoworld, assettocorsamods.io) returned HTTP 403 to the fetch tool, so details from those come from search snippets only and are marked as such.
+Scope: scenes usable as a dealer backdrop for the AcTools "Dark" renderer in Street Corsa. Researched 2026-09-23 via web search and page fetches; nothing downloaded. Several hosts (Patreon, nexusmods, assettoworld, assettocorsamods.io) returned HTTP 403 to the fetch tool, so details from those come from search snippets only and are marked as such.
 
 Important distinction found during research: true `content/showroom` mods (a single KN5 + ui folder that CM Custom Showroom loads) are almost all photo studios or 360-degree panoramas. Nearly everything that actually looks like a dealer lot, parking lot, gas station or street is published as a **track** (content/tracks, often multi-KN5 via models.ini, CSP-dependent ext_config). Those would need converting or loading as a track scene, not dropping into content/showroom.
 

@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Street_Rod_AC.Slrr;
+namespace StreetCorsa.Slrr;
 
 /// <summary>
 /// Takes triangles out of a mesh that has far more than its shape needs (a hood scoop exported from a CAD

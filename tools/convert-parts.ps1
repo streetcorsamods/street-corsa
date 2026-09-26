@@ -10,7 +10,7 @@
 # the end of its output).
 param(
     [string]$Slrr = $env:SRAC_SLRR,
-    [string]$Output = (Join-Path $PSScriptRoot "..\Street Rod AC\Assets\Parts"),
+    [string]$Output = (Join-Path $PSScriptRoot "..\Street Corsa\Assets\Parts"),
     [string]$Notes = $env:SRAC_SLRR_NOTES,
     [string]$Converter = "",
     # Part id patterns to measure (slots against mesh bounds) instead of converting: the joint conventions of a pack
@@ -503,13 +503,13 @@ $shift = @(
 # writes them next to the content it runs on, which is a build folder: those files are folded in and taken away
 # One --absorb per file: a path may hold a comma. None at all when there are none (an empty argument is dropped on the
 # way to the converter, which would then read --absorb as the pack filter)
-$absorbArgs = @(Get-ChildItem (Join-Path $PSScriptRoot "..\Street Rod AC\bin") -Recurse -Filter slot_shifts.json -ErrorAction SilentlyContinue |
+$absorbArgs = @(Get-ChildItem (Join-Path $PSScriptRoot "..\Street Corsa\bin") -Recurse -Filter slot_shifts.json -ErrorAction SilentlyContinue |
     ForEach-Object { "--absorb"; $_.FullName })
 $measureArgs = if ($Measure) { @("--measure", $Measure) } else { @() }
 
 # The content in the repo is what saves were made with: ids it had that this run does not produce any more stay
 # answered (a mod release that renamed its files, aliases of earlier runs), whatever folder this run writes to
-$previous = Join-Path $PSScriptRoot "..\Street Rod AC\Assets\Parts"
+$previous = Join-Path $PSScriptRoot "..\Street Corsa\Assets\Parts"
 
 & $Converter $Slrr $Output --notes $Notes --replace $replace --twin $twin --rename $rename --drop $drop --merge $merge --model $model --single $single --name $name --pads $pads --fit $fit --shift $shift --shifts (Join-Path $PSScriptRoot "slot_shifts.json") --previous $previous @absorbArgs @measureArgs
 exit $LASTEXITCODE

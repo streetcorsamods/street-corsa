@@ -8,3 +8,9 @@
 	We don't have a bank for the engine modeled but I want the work in the engine be in there: for working on peripherals, manifolds and even cylinder heads, we allow the player to do it with the engine installed in the car. But engine internals should be worked on the bank and in the proper order. You can't take the crankshaft before you remove the connecting rods and the pistons, and you can't do it with the engine installed (in most cases).
 	
 4. We have a special case: the Chevrolet Corvair, which has the engine in the back. Think what we can do about it.
+
+5. Parts scale: the parts ported from SLRR seems a little bit small. Can we scale up them by a 20% and see how it goes?
+
+6. Gas Station: search for mods of gas stations, preferably from the 60's or 70's. I want to add the full animation like Street Rod did where the player goes to get some fuel to the gas station. The original SR had a 'Cruising in town' scene from inside the car as if the player drives to the gas station. Let's try to recreate that! Maybe you find a gas station mod that have a street where the car can come running.
+
+7. Everything should be moddable: parts, dealers, gas stations, etc. This game will be open source so the members of the community should be able to create any mod and drop it in the proper game folder and the game should pick it up. Think of what we need to modify for this feature and keep in mind saved games.

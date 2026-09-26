@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 
-namespace Street_Rod_AC.Slrr;
+namespace StreetCorsa.Slrr;
 
 /// <summary>What tells a part apart from the others of its pack, whatever it is called or numbered</summary>
 public sealed class SlrrPartTraits

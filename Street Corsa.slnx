@@ -1,0 +1,11 @@
+<Solution>
+  <Project Path="Street Corsa/Street Corsa.csproj" />
+  <Folder Name="/tests/">
+    <Project Path="tests/StreetCorsa.Tests/StreetCorsa.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/EngineBench/EngineBench.csproj" />
+    <Project Path="tools/SlrrPartsConverter/SlrrPartsConverter.csproj" />
+    <Project Path="tools/StreetScene/StreetSceneBuilder/StreetSceneBuilder.csproj" />
+  </Folder>
+</Solution>

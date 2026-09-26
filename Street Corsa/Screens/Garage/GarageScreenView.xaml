@@ -1,0 +1,707 @@
+<UserControl x:Class="StreetCorsa.Screens.Garage.GarageScreenView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:controls="clr-namespace:StreetCorsa.Controls"
+             xmlns:local="clr-namespace:StreetCorsa.Screens.Garage"
+             xmlns:helpers="clr-namespace:StreetCorsa.Helpers"
+             mc:Ignorable="d"
+             d:DesignHeight="450" d:DesignWidth="800">
+    <UserControl.Resources>
+        <Style x:Key="ViewportToggleStyle" TargetType="ToggleButton">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+            <Setter Property="FontSize" Value="{StaticResource FontSizeCompact}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="6,0,0,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="border"
+                                Background="{StaticResource BgPanelAABrush}"
+                                BorderBrush="{StaticResource BorderLightBrush}"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Padding="12,5">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Gray80Brush}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{StaticResource AccentPrimaryBrush}"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource AccentPrimaryBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+    <Grid x:Name="RootGrid">
+        <!-- Everything lives in ContentLayer, which stays invisible until the 3D garage has rendered its
+             first frame; then the whole screen (garage, car, overlay) fades in at once -->
+        <Grid x:Name="ContentLayer"
+              Opacity="0"
+              IsHitTestVisible="False">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 3D Garage (whole screen background; renders the empty garage when no car is selected) -->
+        <controls:CarViewport3D x:Name="Viewport3D"
+                                Grid.Row="0"
+                                CarDirectory="{Binding SelectedCar.CarDirectory}"
+                                SkinId="{Binding SelectedCar.SkinId}"
+                                ShowroomKn5="{Binding GarageShowroomKn5}"
+                                PartsCatalog="{Binding Workbench.Catalog}"
+                                PartsVisible="{Binding Workbench.IsOpen}"
+                                Engine="{Binding Workbench.Engine}"
+                                Gear="{Binding Workbench.Gear}"
+                                Candidates="{Binding Workbench.Candidates}"
+                                SelectedPart="{Binding Workbench.SelectedPart}"
+                                RunningEngine="{Binding Runner, ElementName=EnginePanel}"
+                                FadeInOnReady="False"/>
+
+        <!-- Back Button -->
+        <Button x:Name="BackButton"
+                Grid.Row="0"
+                Style="{StaticResource ExitButtonStyle}"
+                Background="{StaticResource BackButtonBrush}"
+                Command="{Binding BackCommand}"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                Margin="20,20,0,0"/>
+
+        <!-- Exit Button -->
+        <Button x:Name="ExitButton"
+                Grid.Row="0"
+                Style="{StaticResource ExitButtonStyle}"
+                Background="{StaticResource ExitButtonBrush}"
+                Command="{Binding ExitCommand}"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                Margin="20,94,0,0"/>
+
+        <!-- Main Content: 800 wide at most, narrower on a small or high-DPI screen so it keeps clear of the side buttons -->
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="4*" MaxWidth="800"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Center Content (Car Name + Preview) -->
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Selected Car Display Bar (Clickable) -->
+                <Button x:Name="CarDisplayButton"
+                    Grid.Row="0"
+                    Command="{Binding SelectCarCommand}"
+                    HorizontalAlignment="Stretch"
+                    Margin="0,80,0,20"
+                    Cursor="Hand">
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="CarDisplayBorder"
+                                           Background="{StaticResource BgMediumBrush}"
+                                           BorderBrush="{StaticResource BorderLightBrush}"
+                                           BorderThickness="2"
+                                           CornerRadius="5"
+                                           Padding="30,15"
+                                           MaxWidth="800">
+                                        <Border.Effect>
+                                            <DropShadowEffect Color="Black"
+                                                            Direction="270"
+                                                            ShadowDepth="3"
+                                                            BlurRadius="10"
+                                                            Opacity="0.5"/>
+                                        </Border.Effect>
+                                        <TextBlock Text="{Binding SelectedCarDisplay}"
+                                                  FontSize="{StaticResource FontSizeTitleSmall}"
+                                                  FontWeight="Bold"
+                                                  Foreground="{StaticResource TextPrimaryBrush}"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="CarDisplayBorder" Property="BorderBrush" Value="{StaticResource TextDisabledBrush}"/>
+                                            <Setter TargetName="CarDisplayBorder" Property="Background" Value="{StaticResource Gray33Brush}"/>
+                                        </Trigger>
+                                        <Trigger Property="IsPressed" Value="True">
+                                            <Setter TargetName="CarDisplayBorder" Property="BorderBrush" Value="{StaticResource Gray80Brush}"/>
+                                            <Setter TargetName="CarDisplayBorder" Property="Background" Value="{StaticResource BgLightBrush}"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Button.Style>
+            </Button>
+
+            <!-- Car Preview Container -->
+            <Border x:Name="PreviewContainer"
+                    Grid.Row="1"
+                    Background="{StaticResource BgPanelBrush}"
+                    BorderBrush="{StaticResource BorderLightBrush}"
+                    BorderThickness="2"
+                    CornerRadius="5"
+                    HorizontalAlignment="Stretch"
+                    MaxWidth="800"
+                    Margin="0,0,0,40">
+                <!-- Shown for the calendar, or as the 2D fallback when the 3D garage could not start -->
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding ActivePanel}" Value="Calendar">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding HasFailed, ElementName=Viewport3D}" Value="True">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Border.Effect>
+                    <DropShadowEffect Color="Black"
+                                    Direction="270"
+                                    ShadowDepth="5"
+                                    BlurRadius="15"
+                                    Opacity="0.6"/>
+                </Border.Effect>
+
+                <Grid>
+                    <!-- ==================== CAR PREVIEW PANEL ==================== -->
+                    <Grid Visibility="{Binding ActivePanel, Converter={StaticResource GaragePanelToVisibilityConverter}, ConverterParameter=CarPreview}">
+                        <!-- Car Preview Image -->
+                        <Image Source="{Binding SelectedCar.PreviewImagePath}"
+                              Stretch="Uniform"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center"
+                              Visibility="{Binding SelectedCar.HasPreviewImage, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+                        <!-- Placeholder when no image -->
+                        <StackPanel VerticalAlignment="Center"
+                                   HorizontalAlignment="Center"
+                                   Visibility="{Binding SelectedCar.HasPreviewImage, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                            <TextBlock Text="NO PREVIEW IMAGE"
+                                      FontSize="{StaticResource FontSizeScreenTitle}"
+                                      FontWeight="Bold"
+                                      Foreground="{StaticResource BorderLightBrush}"
+                                      HorizontalAlignment="Center"
+                                      Margin="0,0,0,10"/>
+                            <TextBlock Text="(preview.jpg not found)"
+                                      FontSize="{StaticResource FontSizeSubheading}"
+                                      Foreground="{StaticResource TextDisabledBrush}"
+                                      HorizontalAlignment="Center"/>
+                        </StackPanel>
+
+                    </Grid>
+
+                    <!-- ==================== CALENDAR PANEL ==================== -->
+                    <Grid Visibility="{Binding ActivePanel, Converter={StaticResource GaragePanelToVisibilityConverter}, ConverterParameter=Calendar}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Calendar Images (Top) -->
+                        <StackPanel Grid.Row="0"
+                                    Orientation="Horizontal"
+                                    HorizontalAlignment="Center"
+                                    Margin="0,5,0,5">
+                            <Image Source="{Binding CalendarImage1}"
+                                   Stretch="Uniform"
+                                   Height="120"
+                                   Margin="5,0"/>
+                            <Image Source="{Binding CalendarImage2}"
+                                   Stretch="Uniform"
+                                   Height="120"
+                                   Margin="5,0"/>
+                            <Image Source="{Binding CalendarImage3}"
+                                   Stretch="Uniform"
+                                   Height="120"
+                                   Margin="5,0"/>
+                        </StackPanel>
+
+                        <!-- Bottom: Date/Time and Calendar Grid -->
+                        <Grid Grid.Row="1" Margin="20,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Month/Year Header -->
+                            <TextBlock Grid.Row="0"
+                                       Text="{Binding CurrentMonthYear}"
+                                       FontSize="{StaticResource FontSizeTitle}"
+                                       FontWeight="Bold"
+                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,0,0,5"/>
+
+                            <!-- Current Time Display -->
+                            <StackPanel Grid.Row="1"
+                                        Orientation="Horizontal"
+                                        HorizontalAlignment="Center"
+                                        Margin="0,0,0,10">
+                                <TextBlock Text="{Binding CurrentDayOfWeek}"
+                                           FontSize="{StaticResource FontSizeSubheading}"
+                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                           Margin="0,0,15,0"/>
+                                <TextBlock Text="{Binding CurrentTimeDisplay}"
+                                           FontSize="{StaticResource FontSizeSubheading}"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource AccentPrimaryBrush}"
+                                           VerticalAlignment="Center"/>
+                                <Button Content="End Day"
+                                        Command="{Binding EndDayCommand}"
+                                        Style="{StaticResource DialogSecondaryButtonStyle}"
+                                        ToolTip="Call it a day: the game picks up tomorrow morning"
+                                        Height="30"
+                                        Padding="14,0"
+                                        Margin="20,0,0,0"
+                                        VerticalAlignment="Center"/>
+                            </StackPanel>
+
+                            <!-- Calendar Grid -->
+                            <Grid Grid.Row="2"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Top">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Day of Week Headers -->
+                            <ItemsControl Grid.Row="0">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <UniformGrid Rows="1" Columns="7"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <TextBlock Text="Sun" Width="70" TextAlignment="Center" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" Margin="3"/>
+                                <TextBlock Text="Mon" Width="70" TextAlignment="Center" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" Margin="3"/>
+                                <TextBlock Text="Tue" Width="70" TextAlignment="Center" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" Margin="3"/>
+                                <TextBlock Text="Wed" Width="70" TextAlignment="Center" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" Margin="3"/>
+                                <TextBlock Text="Thu" Width="70" TextAlignment="Center" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" Margin="3"/>
+                                <TextBlock Text="Fri" Width="70" TextAlignment="Center" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" Margin="3"/>
+                                <TextBlock Text="Sat" Width="70" TextAlignment="Center" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" Margin="3"/>
+                            </ItemsControl>
+
+                            <!-- Days Grid -->
+                            <ItemsControl Grid.Row="1"
+                                          ItemsSource="{Binding CalendarDays}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <UniformGrid Rows="6" Columns="7"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Width="70"
+                                                Height="45"
+                                                Margin="3"
+                                                CornerRadius="5"
+                                                BorderThickness="2">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Background" Value="{StaticResource BgMediumBrush}"/>
+                                                    <Setter Property="BorderBrush" Value="{StaticResource BorderLightBrush}"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsCurrentDay}" Value="True">
+                                                            <Setter Property="Background" Value="{StaticResource AccentPrimaryBrush}"/>
+                                                            <Setter Property="BorderBrush" Value="{StaticResource AccentPrimaryBrush}"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding IsEmpty}" Value="True">
+                                                            <Setter Property="Background" Value="Transparent"/>
+                                                            <Setter Property="BorderBrush" Value="Transparent"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <TextBlock Text="{Binding Day}"
+                                                       FontSize="{StaticResource FontSizeHeading}"
+                                                       FontWeight="SemiBold"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsCurrentDay}" Value="True">
+                                                                <Setter Property="Foreground" Value="White"/>
+                                                                <Setter Property="FontWeight" Value="Bold"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding IsEmpty}" Value="True">
+                                                                <Setter Property="Visibility" Value="Hidden"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Grid>
+                    </Grid>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <!-- Floating Car Bar (3D controls + car details) -->
+            <StackPanel x:Name="CarInfoBar"
+                        Grid.Row="1"
+                        MaxWidth="800"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Bottom"
+                        Margin="0,0,0,42"
+                        Visibility="{Binding ActivePanel, Converter={StaticResource GaragePanelToVisibilityConverter}, ConverterParameter=CarPreview}">
+                <!-- 3D Viewport Controls: the engine on the left, the view toggles on the right -->
+                <Grid Margin="0,0,0,8"
+                      Visibility="{Binding HasCar, ElementName=Viewport3D, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <!-- The engine takes 340 when there is room and gives way to the toggles when there is not -->
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="10*" MaxWidth="340"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <controls:EnginePanel x:Name="EnginePanel"
+                                      Grid.Column="0"
+                                      VerticalAlignment="Bottom"
+                                      Engine="{Binding SelectedEngine}"/>
+                <StackPanel Grid.Column="2"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Bottom">
+                    <ToggleButton Content="Lights"
+                                  Style="{StaticResource ViewportToggleStyle}"
+                                  IsChecked="{Binding HeadlightsOn, ElementName=Viewport3D, Mode=TwoWay}"/>
+                    <ToggleButton Content="Doors"
+                                  Style="{StaticResource ViewportToggleStyle}"
+                                  Visibility="{Binding HasDoors, ElementName=Viewport3D, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                  IsChecked="{Binding DoorsOpen, ElementName=Viewport3D, Mode=TwoWay}"/>
+                    <ToggleButton Content="Parts"
+                                  Style="{StaticResource ViewportToggleStyle}"
+                                  Visibility="{Binding Workbench.IsAvailable, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                  IsChecked="{Binding Workbench.IsOpen, Mode=TwoWay}"/>
+                    <ToggleButton Content="Rotate"
+                                  Style="{StaticResource ViewportToggleStyle}"
+                                  IsChecked="{Binding AutoRotate, ElementName=Viewport3D, Mode=TwoWay}"/>
+                </StackPanel>
+                </Grid>
+
+                <!-- The police impound: the selected car is held there until it is collected -->
+                <Border Background="{StaticResource WarningBgBrush}"
+                        BorderBrush="{StaticResource WarningBrush}"
+                        BorderThickness="1"
+                        CornerRadius="5"
+                        Padding="20,8"
+                        Margin="0,0,0,6"
+                        Visibility="{Binding IsSelectedCarImpounded, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <DockPanel LastChildFill="True">
+                        <Button DockPanel.Dock="Right"
+                                Content="{Binding CollectButtonText}"
+                                Command="{Binding CollectCommand}"
+                                Style="{StaticResource DialogPrimaryButtonStyle}"
+                                Padding="15,5"
+                                FontSize="{StaticResource FontSizeBody}"
+                                VerticalAlignment="Center"
+                                ToolTip="Pay the impound and bring the car home"/>
+                        <TextBlock Text="{Binding ImpoundNote}"
+                                   FontSize="{StaticResource FontSizeBody}"
+                                   Foreground="{StaticResource WarningBrush}"
+                                   TextWrapping="Wrap"
+                                   Margin="0,0,20,0"
+                                   VerticalAlignment="Center"/>
+                    </DockPanel>
+                </Border>
+
+                <!-- Car Details -->
+                <Border Background="{StaticResource BgPanelCCBrush}"
+                       BorderBrush="{StaticResource BorderLightBrush}"
+                       BorderThickness="1"
+                       CornerRadius="5"
+                       Padding="20,8"
+                       Visibility="{Binding HasCars, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Condition -->
+                        <TextBlock Grid.Column="0"
+                                  Text="Condition:"
+                                  FontSize="{StaticResource FontSizeBody}"
+                                  Foreground="{StaticResource TextSecondaryBrush}"
+                                  Margin="0,0,10,0"
+                                  VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="1"
+                                  Text="{Binding SelectedCar.ConditionDisplay}"
+                                  FontSize="{StaticResource FontSizeBody}"
+                                  Foreground="{StaticResource TextPrimaryBrush}"
+                                  Margin="0,0,20,0"
+                                  VerticalAlignment="Center"/>
+
+                        <!-- Mileage -->
+                        <TextBlock Grid.Column="2"
+                                  Text="Mileage:"
+                                  FontSize="{StaticResource FontSizeBody}"
+                                  Foreground="{StaticResource TextSecondaryBrush}"
+                                  Margin="0,0,10,0"
+                                  VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="3"
+                                  Text="{Binding SelectedCar.MileageDisplay}"
+                                  ToolTip="{Binding SelectedCar.HistoryDisplay}"
+                                  FontSize="{StaticResource FontSizeBody}"
+                                  Foreground="{StaticResource TextPrimaryBrush}"
+                                  Margin="0,0,20,0"
+                                  VerticalAlignment="Center"/>
+
+                        <!-- Fuel: what the last race left in the tank -->
+                        <TextBlock Grid.Column="4"
+                                  Text="Fuel:"
+                                  FontSize="{StaticResource FontSizeBody}"
+                                  Foreground="{StaticResource TextSecondaryBrush}"
+                                  Margin="0,0,10,0"
+                                  VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="5"
+                                  Text="{Binding SelectedCar.FuelDisplay}"
+                                  ToolTip="The Repairs button fills it up"
+                                  FontSize="{StaticResource FontSizeBody}"
+                                  Foreground="{StaticResource TextPrimaryBrush}"
+                                  Margin="0,0,20,0"
+                                  VerticalAlignment="Center"/>
+
+                        <!-- Repairs: what the races did to the car, and fixing it -->
+                        <Button Grid.Column="6"
+                                Content="Repairs"
+                                Command="{Binding RepairsCommand}"
+                                Style="{StaticResource DialogPrimaryButtonStyle}"
+                                Padding="15,5"
+                                Margin="0,0,10,0"
+                                FontSize="{StaticResource FontSizeBody}"
+                                VerticalAlignment="Center"
+                                ToolTip="What the races did to the car and what fixing it costs; the fill-up and the wash are here too"/>
+
+                        <!-- Sell: to a dealer at once, or through an ad in the paper -->
+                        <Button Grid.Column="7"
+                                Content="{Binding SellButtonText}"
+                                Command="{Binding SellCommand}"
+                                Style="{StaticResource DialogPrimaryButtonStyle}"
+                                Padding="15,5"
+                                Margin="0,0,10,0"
+                                FontSize="{StaticResource FontSizeBody}"
+                                VerticalAlignment="Center"
+                                ToolTip="Trade the car in at a dealer, or put it in the paper"/>
+
+                        <!-- Showroom Button -->
+                        <Button Grid.Column="8"
+                                Content="Preview in Showroom"
+                                Command="{Binding LaunchShowroomCommand}"
+                                Style="{StaticResource DialogPrimaryButtonStyle}"
+                                Padding="15,5"
+                                FontSize="{StaticResource FontSizeBody}"
+                                VerticalAlignment="Center"/>
+
+                        <!-- Free run: the car alone on a track of the player's choosing -->
+                        <ComboBox Grid.Column="9"
+                                  ItemsSource="{Binding FreeRunTracks}"
+                                  SelectedItem="{Binding FreeRunTrack}"
+                                  DisplayMemberPath="Name"
+                                  Width="230"
+                                  Height="30"
+                                  FontSize="{StaticResource FontSizeCompact}"
+                                  Margin="20,0,8,0"
+                                  VerticalAlignment="Center"
+                                  VerticalContentAlignment="Center"
+                                  ToolTip="Where to take the car"
+                                  Visibility="{Binding HasFreeRunTracks, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                        <Button Grid.Column="10"
+                                Content="Free Run"
+                                Command="{Binding FreeRunCommand}"
+                                Style="{StaticResource DialogPrimaryButtonStyle}"
+                                Padding="15,5"
+                                FontSize="{StaticResource FontSizeBody}"
+                                VerticalAlignment="Center"
+                                ToolTip="Take the car out on your own, on what its parts make of it. An hour goes by."/>
+
+                        <!-- Test-and-tune: passes at the strip for timeslips -->
+                        <Button Grid.Column="11"
+                                Content="Test &amp; Tune"
+                                Command="{Binding TestAndTuneCommand}"
+                                Style="{StaticResource DialogPrimaryButtonStyle}"
+                                Padding="15,5"
+                                Margin="10,0,0,0"
+                                FontSize="{StaticResource FontSizeBody}"
+                                VerticalAlignment="Center"
+                                ToolTip="An hour at the drag strip on your own: pass after pass, each with its own tree and timeslip. Nothing at stake but the car's wear."/>
+                    </Grid>
+                </Border>
+            </StackPanel>
+            </Grid>
+        </Grid>
+
+        <!-- Parts workbench (engine sheet, picked part, shelf) around the 3D view while the parts are on show;
+             its cards come and go by themselves -->
+        <local:PartsWorkbenchView Grid.Row="0"
+                                  DataContext="{Binding Workbench}"/>
+
+        <!-- ==================== OVERLAY NAVIGATION ==================== -->
+
+        <!-- Hit the Streets (mid left) -->
+        <Button x:Name="HitTheStreetsButton"
+                Grid.Row="0"
+                Style="{StaticResource OverlayTileButtonStyle}"
+                Background="{StaticResource HitTheStreetsButtonBrush}"
+                Command="{Binding HitTheStreetsCommand}"
+                Tag="Hit the streets"
+                helpers:Reveal.IsShown="{Binding ShowNavigation}"
+                helpers:Reveal.OffsetX="-60"
+                Width="112"
+                Height="112"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Center"
+                Margin="30,0,0,0"/>
+
+        <!-- Car dealers (left, above the newspaper) -->
+        <Button x:Name="CarDealersButton"
+                Grid.Row="0"
+                Style="{StaticResource OverlayTileButtonStyle}"
+                Command="{Binding CarDealersCommand}"
+                Tag="Car dealers"
+                helpers:Reveal.IsShown="{Binding ShowNavigation}"
+                helpers:Reveal.OffsetX="-60"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Bottom"
+                Margin="30,0,0,134">
+            <Button.Background>
+                <ImageBrush ImageSource="/Assets/Images/Buttons/used_cars.png" Stretch="Uniform"/>
+            </Button.Background>
+        </Button>
+
+        <!-- Newspaper (bottom left) -->
+        <Button x:Name="NewspaperButton"
+                Grid.Row="0"
+                Style="{StaticResource OverlayTileButtonStyle}"
+                Background="{StaticResource NewspaperButtonBrush}"
+                Command="{Binding NewspaperCommand}"
+                Tag="Newspaper"
+                helpers:Reveal.IsShown="{Binding ShowNavigation}"
+                helpers:Reveal.OffsetX="-60"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Bottom"
+                Margin="30,0,0,30"/>
+
+        <!-- Career + Calendar (top right) -->
+        <StackPanel x:Name="RightButtons"
+                    Grid.Row="0"
+                    helpers:Reveal.IsShown="{Binding ShowNavigation}"
+                    helpers:Reveal.OffsetX="60"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    Margin="0,30,30,0">
+            <Button Style="{StaticResource OverlayTileButtonStyle}"
+                    Background="{StaticResource CareerButtonBrush}"
+                    Command="{Binding CareerCommand}"
+                    Tag="Career stats"/>
+            <Button x:Name="CalendarButton"
+                    Style="{StaticResource OverlayTileButtonStyle}"
+                    Command="{Binding ShowCalendarCommand}"
+                    Tag="Calendar"
+                    Margin="0,16,0,0">
+                <Button.Background>
+                    <ImageBrush ImageSource="/Assets/Images/Buttons/calendar.png" Stretch="Uniform"/>
+                </Button.Background>
+            </Button>
+        </StackPanel>
+
+        <!-- Bottom Nav Bar -->
+        <Border Grid.Row="1"
+                Background="{StaticResource BorderLightBrush}"
+                BorderBrush="{StaticResource Gray30Brush}"
+                BorderThickness="0,1,0,0"
+                Height="40">
+            <Grid Margin="20,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Bankroll Display -->
+                <StackPanel Grid.Column="0"
+                           Orientation="Horizontal"
+                           VerticalAlignment="Center">
+                    <TextBlock Text="Bankroll:"
+                              Foreground="{StaticResource TextPrimaryBrush}"
+                              FontSize="{StaticResource FontSizeSubheading}"
+                              FontWeight="Bold"
+                              Margin="0,0,10,0"/>
+                    <TextBlock Text="{Binding BankrollDisplay}"
+                              Foreground="{StaticResource AccentSuccessBrush}"
+                              FontSize="{StaticResource FontSizeSubheading}"
+                              FontWeight="Bold"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+        </Grid>
+
+        <!-- Loading Layer (shown until the 3D garage is ready) -->
+        <StackPanel x:Name="LoadingLayer"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Center"
+                    IsHitTestVisible="False">
+            <Border Width="60" Height="60" Margin="0,0,0,30">
+                <Border.RenderTransform>
+                    <RotateTransform x:Name="SpinnerRotation" CenterX="30" CenterY="30"/>
+                </Border.RenderTransform>
+                <Border.Triggers>
+                    <EventTrigger RoutedEvent="Loaded">
+                        <BeginStoryboard>
+                            <Storyboard RepeatBehavior="Forever">
+                                <DoubleAnimation Storyboard.TargetName="SpinnerRotation"
+                                                 Storyboard.TargetProperty="Angle"
+                                                 From="0" To="360"
+                                                 Duration="0:0:1"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </EventTrigger>
+                </Border.Triggers>
+                <Ellipse Stroke="{StaticResource SpinnerOrangeBrush}" StrokeThickness="4"
+                         StrokeDashArray="3 2"
+                         Fill="Transparent"/>
+            </Border>
+            <TextBlock Text="Opening the garage..."
+                       FontSize="{StaticResource FontSizeTitleSmall}"
+                       FontWeight="Bold"
+                       Foreground="{StaticResource TextPrimaryBrush}"
+                       HorizontalAlignment="Center"/>
+        </StackPanel>
+    </Grid>
+</UserControl>

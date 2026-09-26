@@ -1,7 +1,7 @@
 using System.IO;
-using Street_Rod_AC.Helpers;
+using StreetCorsa.Helpers;
 
-namespace Street_Rod_AC.Slrr;
+namespace StreetCorsa.Slrr;
 
 /// <summary>
 /// Read-only view over a Street Legal Racing: Redline install: loads rpk files on demand

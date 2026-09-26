@@ -1,6 +1,6 @@
 # Career System Architecture
 
-This document describes the polymorphic career system implementation for Street Rod AC. It provides context for understanding how victory conditions, milestones, events, and car filters work together.
+This document describes the polymorphic career system implementation for Street Corsa. It provides context for understanding how victory conditions, milestones, events, and car filters work together.
 
 ## Overview
 

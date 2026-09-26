@@ -1,4 +1,4 @@
-# Street Rod AC
+# Street Corsa
 
 Street Rod-style career mode manager for Assetto Corsa.
 
@@ -8,7 +8,7 @@ External WPF application that manages game logic, economy, and progression. Asse
 ## Tech Stack
 - .NET 10 / WPF / MVVM
 - LiteDB for persistence
-- CSP race mode (`apps/new-modes/sr_race`) for in-race judging, telemetry and results
+- CSP race mode (`apps/new-modes/sc_race`) for in-race judging, telemetry and results
 
 ## Documentation
 See [docs/CLAUDE.md](docs/CLAUDE.md) for AI context and architecture overview.

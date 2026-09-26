@@ -1,7 +1,7 @@
 ---
 name: tech-audit
 description: >
-  Use when the user wants a deep audit of Street Rod AC against current official documentation
+  Use when the user wants a deep audit of Street Corsa against current official documentation
   (.NET / WPF / LiteDB / Newtonsoft / FMOD / CSP Lua), defaults to a security-and-integrity sweep
   across every project in the solution plus the AC-side apps, and writes findings to a dated file.
   Also audits pattern deviations (code that departs from the repo's own conventions), duplicated
@@ -26,7 +26,7 @@ user-invocable: true
 
 # Tech Audit Skill
 
-Solution-aware, autonomous audit of Street Rod AC. Discovers the audit units from the solution file and the repo layout, fetches current official docs for what is actually referenced, and reports findings — by default with a security-and-integrity focus.
+Solution-aware, autonomous audit of Street Corsa. Discovers the audit units from the solution file and the repo layout, fetches current official docs for what is actually referenced, and reports findings — by default with a security-and-integrity focus.
 
 **Announce at start:** `Running tech-audit — section: <section> — units: <N>`
 
@@ -56,16 +56,16 @@ This is a single-user Windows desktop game, not a web service. There is no login
 
 ```bash
 # .NET projects in the solution (works with .slnx on the .NET 10 SDK)
-dotnet sln "Street Rod AC.slnx" list
+dotnet sln "Street Corsa.slnx" list
 
 # Packages per project (top-level + transitive), machine readable
-dotnet list "Street Rod AC.slnx" package --include-transitive --format json
+dotnet list "Street Corsa.slnx" package --include-transitive --format json
 
 # Non-.NET units: AC-side apps and scripts
 ls apps/new-modes apps/lua tools/*.ps1   # apps/python was removed 2026-09-24; list it too if it ever comes back
 ```
 
-For every .NET project capture from its `.csproj`: path, `OutputType`, `TargetFramework`, `Nullable`, `AllowUnsafeBlocks`, `UseWPF`/`UseWindowsForms`, `PackageReference`s (id + version), `Reference`s with `HintPath` (local DLLs — note path and whether it exists on disk), and **linked `<Compile Include="..\..\Street Rod AC\...">` items**. The tools compile game source by link: those files belong to the game project and must be audited once, under the game — a tool's audit covers only its own files plus how it uses the linked ones.
+For every .NET project capture from its `.csproj`: path, `OutputType`, `TargetFramework`, `Nullable`, `AllowUnsafeBlocks`, `UseWPF`/`UseWindowsForms`, `PackageReference`s (id + version), `Reference`s with `HintPath` (local DLLs — note path and whether it exists on disk), and **linked `<Compile Include="..\..\Street Corsa\...">` items**. The tools compile game source by link: those files belong to the game project and must be audited once, under the game — a tool's audit covers only its own files plus how it uses the linked ones.
 
 For every non-.NET unit capture: language, entry file, manifest (`manifest.ini`), and which C# code consumes its output (e.g. the Lua app's result JSON → `AssettoCorsaLauncher`).
 
@@ -78,10 +78,10 @@ This is the **unit matrix** every later phase reads from.
 Run these before any model review; their output is evidence, and findings drawn from them are high-confidence.
 
 ```bash
-dotnet build "Street Rod AC.slnx" -c Debug -v q -clp:NoSummary 2>&1 | tee "$WORK/build.txt"
-dotnet list "Street Rod AC.slnx" package --vulnerable --include-transitive 2>&1 | tee "$WORK/vulnerable.txt"
-dotnet list "Street Rod AC.slnx" package --deprecated 2>&1 | tee "$WORK/deprecated.txt"
-dotnet list "Street Rod AC.slnx" package --outdated 2>&1 | tee "$WORK/outdated.txt"
+dotnet build "Street Corsa.slnx" -c Debug -v q -clp:NoSummary 2>&1 | tee "$WORK/build.txt"
+dotnet list "Street Corsa.slnx" package --vulnerable --include-transitive 2>&1 | tee "$WORK/vulnerable.txt"
+dotnet list "Street Corsa.slnx" package --deprecated 2>&1 | tee "$WORK/deprecated.txt"
+dotnet list "Street Corsa.slnx" package --outdated 2>&1 | tee "$WORK/outdated.txt"
 git ls-files | grep -iE '\.(db|pfx|snk|key|pem)$|secrets|\.env'   # things that should not be tracked
 ```
 
@@ -272,7 +272,7 @@ The chat output is the executive summary only — point the user to the findings
 - **Be concrete.** Show the problematic snippet and the recommended fix.
 - **Acknowledge good patterns.** Not just a fault-finding exercise.
 - **Don't duplicate `docs/CLAUDE.md` rules.** If a convention is already documented, only flag it when violated.
-- **Audit linked source once.** Files compiled into the tools by `<Compile Include="..\..\Street Rod AC\...">` belong to the game slice.
+- **Audit linked source once.** Files compiled into the tools by `<Compile Include="..\..\Street Corsa\...">` belong to the game slice.
 - **Respect deliberate decisions.** The project's memory and docs record choices that look odd out of context (running SLRR's compiled scripts in a VM instead of porting them, carbs of different packs never merged, re-implementing AC's FMOD DSP plugins). Flag how they are implemented, not that they were chosen. Opponent skill never goes below 90 (`Opponent.MinSkill`): AC's AI drives too badly under that. A doc that says otherwise is the thing to fix.
 - **No interactive prompts in autonomous mode.** Default to `security` and proceed.
 - **Cap subagent output.** Slices × 40 findings × 1 sentence is readable; unbounded prose is not.
