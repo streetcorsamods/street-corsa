@@ -387,10 +387,10 @@ namespace Street_Rod_AC.Services.Race
                     $"{context.OpponentName} hit you in your own lane. That's a DQ, and the race is yours."));
             else if (outcome.WinCondition == WinCondition.PlayerBrokeDown)
                 messages.Add(new PlayerMessage("Broke Down",
-                    $"Your {Breakdowns.Describe(outcome.Player?.Breakdown)} gave out before the line. The race is {context.OpponentName}'s."));
+                    $"Your {Breakdowns.WhatHappened(outcome.Player?.Breakdown)} before the line. The race is {context.OpponentName}'s."));
             else if (outcome.WinCondition == WinCondition.OpponentBrokeDown)
                 messages.Add(new PlayerMessage("Rival Broke Down",
-                    $"{context.OpponentName}'s {Breakdowns.Describe(outcome.Opponent?.Breakdown)} gave out before the line. The race is yours."));
+                    $"{context.OpponentName}'s {Breakdowns.WhatHappened(outcome.Opponent?.Breakdown)} before the line. The race is yours."));
             else if (outcome.WinCondition == WinCondition.BothOut)
                 messages.Add(new PlayerMessage("Nobody Finished",
                     "Neither car made it to the line. It's a draw, and nothing changes hands."));
@@ -813,21 +813,26 @@ namespace Street_Rod_AC.Services.Race
 
         /// <summary>
         /// What the player hears about their car after the session: towed home when it crashed (the player goes with
-        /// it to see what the crash did), else the damage report; null when there is nothing to tell
+        /// it to see what the crash did), else the damage report, or the fuel alone when nothing was damaged; null
+        /// when there is nothing to tell
         /// </summary>
-        private static PlayerMessage? CarReport(IReadOnlyList<string> damage, bool towed)
+        private static PlayerMessage? CarReport(IReadOnlyList<string> lines, bool towed)
         {
+            var damage = lines.Where(CarCondition.IsDamage).ToList();
+            var notes = lines.Where(l => !CarCondition.IsDamage(l)).ToList();
+            var after = notes.Count == 0 ? "" : "\n\n" + string.Join("\n", notes);
             if (towed)
             {
-                return new PlayerMessage("Towed Home", damage.Count == 0
+                return new PlayerMessage("Towed Home", (damage.Count == 0
                     ? "Your car was towed back to the garage."
-                    : "Your car was towed back to the garage. Here's what the crash did:\n\n" + string.Join("\n", damage))
+                    : "Your car was towed back to the garage. Here's what the crash did:\n\n" + string.Join("\n", damage)) + after)
                 {
                     TowedToGarage = true
                 };
             }
 
-            return damage.Count > 0 ? new PlayerMessage("Damage Report", string.Join("\n", damage)) : null;
+            if (damage.Count > 0) return new PlayerMessage("Damage Report", string.Join("\n", damage) + after);
+            return notes.Count > 0 ? new PlayerMessage("Fuel", string.Join("\n", notes)) : null;
         }
 
         /// <summary>
@@ -866,7 +871,7 @@ namespace Street_Rod_AC.Services.Race
             var opponentCar = opponent?.Cars.FirstOrDefault(c => c.InstanceId == context.OpponentCarInstanceId);
             if (opponentCar != null)
             {
-                ApplyCarDegradation(opponentCar, outcome.Opponent, groupOf, gameState.Rules.CarWearMultiplier);
+                ApplyCarDegradation(opponentCar, outcome.Opponent, groupOf, gameState.Rules.CarWearMultiplier, rival: true);
                 opponentCar.OdometerKM += RaceDistance(outcome.Opponent);
                 opponentCar.History.RecordQuarter(outcome.Opponent.Timeslip?.QuarterMileSeconds, outcome.Opponent.Timeslip?.QuarterMileMph, gameState.Date);
                 _logger.Debug("Opponent car updated: Odometer={Odometer}km",
@@ -898,11 +903,12 @@ namespace Street_Rod_AC.Services.Race
         /// What the race did to one car. AC's report of the car (schema 1.2 on) goes onto its parts; an older file,
         /// which has none, takes the flat wear of before. Returns the report's lines for the player.
         /// </summary>
-        private List<string> ApplyCarDegradation(Car car, RaceParticipant participant, Func<string, string?>? groupOf, double wearMultiplier)
+        /// <param name="rival">A rival's car: they fill up before every race, so its tank is not kept (<see cref="CarCondition.ApplyRace"/>)</param>
+        private List<string> ApplyCarDegradation(Car car, RaceParticipant participant, Func<string, string?>? groupOf, double wearMultiplier, bool rival = false)
         {
             if (participant.Condition is { } condition)
             {
-                var report = CarCondition.ApplyRace(car, condition, RaceDistance(participant), groupOf, wearMultiplier);
+                var report = CarCondition.ApplyRace(car, condition, RaceDistance(participant), groupOf, wearMultiplier, keepsFuelAndDirt: !rival);
                 _logger.Information("{Car}: {Report}", car.DefinitionId, report.Count == 0 ? "no damage" : string.Join(" ", report));
                 return report;
             }

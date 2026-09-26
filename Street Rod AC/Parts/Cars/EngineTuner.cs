@@ -36,6 +36,10 @@ public sealed record TuneResult(PartInstance Engine, EngineReport Report, IReadO
 /// (<see cref="UsedPartOffer"/>) is bought used when it asks less. What comes off is traded in, or sold on by whoever
 /// does the work (<see cref="TuneUpgrade.Removed"/>).
 ///
+/// A tuner who is told how the engine is cooled (<see cref="EngineCooling"/>) keeps it cool: once the power outgrows
+/// the radiator, a performance radiator or water pump goes on with the upgrade, and an upgrade that cannot be kept
+/// cool within the budget is not made. Keeping it cool does not count as one of the upgrades.
+///
 /// The GameMaker version's rules (scr_get_car_upgrades, StructCar.tuneUp) on the part tree and the real dyno.
 /// </summary>
 public static class EngineTuner
@@ -52,6 +56,15 @@ public static class EngineTuner
     public const double UsedEngineCondition = 0.75;
 
     public const string BlockGroup = "Engine blocks";
+
+    /// <summary>The group of a radiator or water pump put on to keep a tuned engine cool</summary>
+    public const string CoolingGroup = "Cooling";
+
+    /// <summary>Cooled this well (<see cref="Models.Race.EngineCoolingRating.Cooling"/>), an engine keeps its temperature at full throttle</summary>
+    public const double CoolEnough = 1.0;
+
+    /// <summary>Cooled less than this, an engine goes flat at full throttle: a tuner does not make that upgrade</summary>
+    public const double RunsHotBelow = 0.85;
 
     /// <summary>How much a racer cares about each kind of part; kinds not listed are not tuned</summary>
     public static int Priority(string group) => group switch
@@ -76,8 +89,10 @@ public static class EngineTuner
     /// </summary>
     /// <param name="maxTrials">Most dyno runs spent on looking; each takes a few milliseconds</param>
     /// <param name="used">Parts and whole engines in the paper; each is bought at most once</param>
+    /// <param name="coolingOf">How well an engine is cooled at a power, in the car it goes in; null leaves the cooling alone</param>
     public static TuneResult? TuneUp(PartsCatalog catalog, EngineBuildIndex builds, PartInstance engine, decimal budget,
-        double priceMultiplier, Random random, int maxUpgrades = 2, int maxTrials = 60, IReadOnlyList<UsedPartOffer>? used = null)
+        double priceMultiplier, Random random, int maxUpgrades = 2, int maxTrials = 60, IReadOnlyList<UsedPartOffer>? used = null,
+        Func<PartInstance, double, double>? coolingOf = null)
     {
         var report = EngineFactory.Evaluate(catalog, engine);
         if (report is not { Runs: true }) return null;
@@ -87,20 +102,120 @@ public static class EngineTuner
         var trials = maxTrials;
         var root = engine;
 
-        while (upgrades.Count < maxUpgrades && trials > 0)
+        // An engine already past its radiator is seen to first
+        if (coolingOf != null && coolingOf(root, report.Dyno!.MaxPowerHp) < CoolEnough
+            && Cool(catalog, root, report.Dyno.MaxPowerHp, budget, priceMultiplier, coolingOf) is { } cooled)
+        {
+            root = cooled.Engine;
+            budget -= cooled.Upgrade.Cost;
+            upgrades.Add(cooled.Upgrade);
+        }
+
+        while (upgrades.Count(u => u.Group != CoolingGroup) < maxUpgrades && trials > 0)
         {
             var offers = (used ?? []).Where(o => upgrades.All(u => u.UsedAdId != o.AdId)).ToList();
             var best = FindBest(catalog, builds, root, report, budget, priceMultiplier, random, doneGroups, offers, ref trials);
             if (best == null) break;
-
-            root = best.Engine;
-            report = best.Report;
-            budget -= best.Upgrade.Cost;
             doneGroups.Add(best.Upgrade.Group);
+
+            // More power than the radiator carries off: a better one goes on with it, or the upgrade is not made
+            var left = budget - best.Upgrade.Cost;
+            var power = best.Report.Dyno!.MaxPowerHp;
+            (PartInstance Engine, TuneUpgrade Upgrade)? cooling = null;
+            if (coolingOf != null && coolingOf(best.Engine, power) < CoolEnough)
+            {
+                cooling = Cool(catalog, best.Engine, power, left, priceMultiplier, coolingOf);
+                if (coolingOf(cooling?.Engine ?? best.Engine, power) < RunsHotBelow) continue;
+            }
+
+            root = cooling?.Engine ?? best.Engine;
+            report = best.Report;
+            budget = left - (cooling?.Upgrade.Cost ?? 0);
             upgrades.Add(best.Upgrade);
+            if (cooling is { } fitted) upgrades.Add(fitted.Upgrade);
         }
 
         return upgrades.Count == 0 ? null : new TuneResult(root, report, upgrades);
+    }
+
+    /// <summary>
+    /// A performance radiator or water pump in place of a stock one, or a radiator where the engine has room for one
+    /// and none: of those within the budget that cool the engine better, the one that cools it most (enough counts as
+    /// most), the cheapest of those. The pump goes on after the radiator when one is not enough. Null when nothing
+    /// cools it better.
+    /// </summary>
+    private static (PartInstance Engine, TuneUpgrade Upgrade)? Cool(PartsCatalog catalog, PartInstance root, double powerHp, decimal budget,
+        double priceMultiplier, Func<PartInstance, double, double> coolingOf)
+    {
+        var now = coolingOf(root, powerHp);
+        (PartInstance Engine, TuneUpgrade Upgrade, double Cooling)? best = null;
+
+        void Consider(PartInstance tuned, PartDefinition part, decimal cost, decimal tradeIn, IReadOnlyList<PartInstance> removed)
+        {
+            if (cost > budget) return;
+            var cooling = coolingOf(tuned, powerHp);
+            if (cooling <= now + 1e-3) return;
+            var reach = Math.Min(cooling, CoolEnough);
+            var better = best is not { } b
+                || reach > Math.Min(b.Cooling, CoolEnough) + 1e-3
+                || reach >= Math.Min(b.Cooling, CoolEnough) - 1e-3 && cost < b.Upgrade.Cost;
+            if (better) best = (tuned, new TuneUpgrade(Name(part), CoolingGroup, powerHp, powerHp, cost, tradeIn, removed), cooling);
+        }
+
+        static bool Performance(PartDefinition part, EngineCooling.Kind kind) =>
+            kind == EngineCooling.Kind.Radiator ? EngineCooling.IsPerformanceRadiator(part) : EngineCooling.IsPerformancePump(part);
+
+        foreach (var parent in root.SelfAndDescendants().ToList())
+        {
+            if (catalog.Get(parent.DefinitionId) is not { } parentDefinition) continue;
+            foreach (var slot in parentDefinition.Slots.Where(s => s.Id != parent.OwnSlot))
+            {
+                // A stock radiator or pump to replace, or an empty place a radiator may go
+                var old = parent.Children.FirstOrDefault(c => c.ParentSlot == slot.Id);
+                PartDefinition? oldDefinition = null;
+                if (old != null && (oldDefinition = catalog.Get(old.DefinitionId)) == null) continue;
+                var kind = oldDefinition == null ? EngineCooling.Kind.Radiator : EngineCooling.KindOf(oldDefinition);
+                if (kind is not (EngineCooling.Kind.Radiator or EngineCooling.Kind.WaterPump)) continue;
+                if (oldDefinition != null && Performance(oldDefinition, kind)) continue;
+
+                var alternatives = catalog.FindMountable(parentDefinition, slot)
+                    .Where(c => EngineCooling.KindOf(c.Part) == kind && Performance(c.Part, kind))
+                    .OrderBy(c => NewPrice(c.Part, priceMultiplier))
+                    .Take(3)
+                    .ToList();
+                foreach (var (definition, ownSlot) in alternatives)
+                {
+                    var extra = 0m;
+                    var replaced = new List<PartInstance>();
+                    var replacement = old == null
+                        ? new PartInstance(definition.Id) { ParentSlot = slot.Id, OwnSlot = ownSlot.Id }
+                        : Rebuild(catalog, definition, ownSlot.Id, old, priceMultiplier, 0, replaced, ref extra);
+                    if (replacement == null) continue;
+
+                    var tuned = PartTrees.Clone(root, keepIds: true);
+                    var tunedParent = tuned.SelfAndDescendants().First(p => p.InstanceId == parent.InstanceId);
+                    if (old == null) tunedParent.Children.Add(replacement);
+                    else tunedParent.Children[tunedParent.Children.FindIndex(c => c.InstanceId == old.InstanceId)] = replacement;
+
+                    List<PartInstance> removed = old == null ? [] : [Loose(old), .. replaced.Select(p => Loose(p))];
+                    var tradeIn = old == null ? 0m : TradeIn(catalog, old) + replaced.Sum(p => TradeIn(catalog, p));
+                    Consider(tuned, definition, NewPrice(definition, priceMultiplier) + extra, tradeIn, removed);
+                }
+            }
+        }
+
+        if (best is not { } found) return null;
+        if (found.Cooling >= CoolEnough) return (found.Engine, found.Upgrade);
+
+        var more = Cool(catalog, found.Engine, powerHp, budget - found.Upgrade.Cost, priceMultiplier, coolingOf);
+        if (more is not { } then) return (found.Engine, found.Upgrade);
+        return (then.Engine, found.Upgrade with
+        {
+            Change = $"{found.Upgrade.Change} and a {then.Upgrade.Change}",
+            Cost = found.Upgrade.Cost + then.Upgrade.Cost,
+            TradeIn = found.Upgrade.TradeIn + then.Upgrade.TradeIn,
+            Removed = [.. found.Upgrade.Removed, .. then.Upgrade.Removed]
+        });
     }
 
     private sealed record Candidate(PartInstance Engine, EngineReport Report, TuneUpgrade Upgrade, double Score);

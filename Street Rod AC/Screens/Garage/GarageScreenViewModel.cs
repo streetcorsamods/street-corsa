@@ -509,7 +509,7 @@ namespace Street_Rod_AC.Screens.Garage
                         return;
                     }
 
-                    data = await Task.Run(() => _raceCarDataService.Prepare(car));
+                    data = await Task.Run(() => _raceCarDataService.Prepare(car, rateCooling: false));
                 }
 
                 if (data is { CanDrive: false })
@@ -990,6 +990,11 @@ namespace Street_Rod_AC.Screens.Garage
         /// <summary>What is worst about the car, or its overall shape: the one condition the market prices it by</summary>
         public string ConditionDisplay => Shared.ConditionDisplay.Of(CarInstance).Percent;
         public string MileageDisplay => $"{CarInstance.OdometerKM:N0} km";
+
+        /// <summary>What is in the tank: "Full" until a race says otherwise, then "12 of 60 l" ("1.4 of 60 l" when too low to race on)</summary>
+        public string FuelDisplay => Parts.Cars.CarCondition.FuelLeft(CarInstance) is { } left && Parts.Cars.CarCondition.TankLitres(CarInstance) is { } tank
+            ? left < 10 ? $"{left:0.0} of {tank:0} l" : $"{left:0} of {tank:0} l"
+            : "Full";
 
         /// <summary>Who had the car before, how it came to the player, and how it has raced</summary>
         public string HistoryDisplay => Shared.CarHistoryDisplay.Summary(CarInstance.History, forSale: false);

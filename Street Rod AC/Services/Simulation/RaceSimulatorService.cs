@@ -428,7 +428,7 @@ namespace Street_Rod_AC.Services.Simulation
         {
             var mileage = isRoadRace ? _random.Next(20, 50) : _random.Next(5, 15);
             var condition = SimulatedCondition(car, isRoadRace, won, rulesWear, crashed, groupOf, _random);
-            CarCondition.ApplyRace(car, condition, mileage, groupOf, rulesWear);
+            CarCondition.ApplyRace(car, condition, mileage, groupOf, rulesWear, keepsFuelAndDirt: false);
             car.OdometerKM += mileage;
         }
 

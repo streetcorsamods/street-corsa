@@ -639,11 +639,52 @@ the street redrawing at full rate forever, a first rival arriving already stoppe
 their portraits now come from one place (`RacersOut`) for the diner and the street. 751 tests pass; **the fixes are
 not yet tried in the game.**
 
-### Step 14: deeper simulation and police extras
-Research first: CSP limits much of it (it fills oil figures only for scripted cars).
-- Overheating and oil starvation modelled by the game, fuel carried between races, body dirt.
-- Test Drive mode (race-explorer), rivals busted in their own races, the difficulty's say in the police chance,
-  hiding the cops from AC's HUD leaderboard.
+### Step 14: deeper simulation (built on `feature/deeper-simulation`)
+**The user decided (2026-09-26):**
+- this step is heat and oil (overheating and oil starvation, modelled by the game) and fuel and dirt carried between
+  races, in one PR;
+- an engine that overheats or runs short of oil fades, wears and can blow in the race;
+- the car keeps the fuel a race leaves, filling up costs money, and running dry puts the car out;
+- **left for later:** the police extras (rivals busted in their own races, the difficulty's say in the police chance,
+  the cops off AC's HUD leaderboard; CSP's `ac.setRaceScore` can only sink them to the bottom) and chases in Test
+  Drive, which is race-explorer's mode in the main AC install, another project.
+
+**Research (CSP 0.2.11 SDK, checked in the game):**
+- Nothing ever overheated: results showed water and oil at about 80 °C. AC's water temperature is an estimate that
+  changes nothing.
+- The mode can set the water gauge (`physics.setWaterTemperature`), fade the power (`physics.setCarRestrictor`, which
+  takes torque at high rpm: 100 took 9% at 5000 rpm on the Nova, 200 took 28%), set the fuel (`physics.setCarFuel`)
+  and the dirt (`ac.setBodyDirt`); it reads `car.maxFuel` and `car.dirt`. All took in the game.
+- The player's assists had `FUEL_RATE=0`: AC burned no fuel at all. A race now sets it to 1.
+- The radiators, fans and water pumps of the source game have no figures; oil pans have a capacity (GM only).
+- The cars pull 1 to 1.4 g in corners. A 0.9 g sump starved the AI on every lap; 1.05 g held for 3 s does not.
+- `mode.lua` is at Lua's limit of 200 locals: the new code is one local, a module made by a function.
+
+**As built** (see `docs/ac-integration/csp-lua-scripts.md`, "Heat and oil", and `docs/systems/parts-system.md`):
+- **The career rates each car** (`EngineCooling`): its cooling against what its engine makes (sized for the car's
+  factory power, or the block's after a swap; a racing radiator +35%, a performance water pump +10%, none 0.15), its
+  fan, and the g its oil pan holds. race.ini `CAR_n_COOLING`, `CAR_n_FUEL`, `CAR_n_DIRT`.
+- **The race mode runs the heat** for both racers: the gauge climbs as the radiator falls behind, the engine goes flat
+  from 110 °C, cooks from 118 °C and boils over at 135 °C; a stock sump runs dry in a long sweeper at the limit and
+  wears the bottom end under throttle. The player is warned. Breakdowns `OVERHEAT`, `OIL`, `FUEL`. Schema 1.7.
+- **Fuel and dirt carry over**: `Car.FuelLitres` (null is full), `Car.FuelTankLitres`, `Car.BodyDirt`. The garage
+  shows the fuel; its Repairs list fills up ($0.11 a litre) and washes ($3), 15 minutes each (`GameAction.GarageChore`).
+  Under 2 litres keeps the car home. The rivals always race full and clean: their races leave the tank alone.
+- **The report says what would help**: "A bigger radiator would keep it cool", "A deeper oil pan would hold it".
+- **Rivals keep their engines cool**: their tuner fits a performance radiator or pump when the power outgrows the
+  radiator, and makes no upgrade it cannot keep cool.
+  **The user decided (2026-09-26):** every engine will have the cooling parts it needs (performance radiators, water
+  pumps, fans). The game is to go open source and the community is expected to mod in parts, so every make should end
+  up with similar possibilities. Design on that assumption: don't add workarounds for a make that has no performance
+  radiator today (Ford rivals may stop tuning at about 1.18x their factory power until those parts exist); the fix is
+  the missing parts, not the rule.
+- **Review fixes (2026-09-26, /code-review):** fuel kept only against a known tank size; heat and oil damage wear the
+  whole bottom end instead of naming a rod; a swapped block is cooled for its own power; a missing water pump counts;
+  the fan stays when a radiator goes on; the mode counts only life it took (physics off: nothing) and its heat report
+  cannot lose the result; fuel lines are not a "Damage Report"; cooling cached per stock build, not rated for a free run.
+- Tests: `DeeperSimulationTests` (on the real catalog too), `tools/sr_race_harness/test_heat.py` (11 scenarios);
+  797 in all. **Checked in the game** unattended on Black Cat County (a car rated 0.30 boiled over at 90 s, its
+  factory-rated rival stayed at 90 °C); **not yet seen by the user.**
 
 ### Step 15: the rename to Street Corsa
 Namespaces (`Street_Rod_AC`), the AppData folder (`StreetRodAC`, with a migration), ids like `sr_race`, and the repo.

@@ -505,6 +505,45 @@ public sealed class CarConditionTests : IDisposable
     private static readonly Lazy<PartsCatalog> Catalog = new(() => PartsCatalog.Load(RepoPaths.PartsFolder));
 
     /// <summary>A real Mopar 340 in a car, its tree as the factory puts one in</summary>
+    [Fact]
+    public void Life_the_heat_took_wears_the_whole_bottom_end_and_blames_no_one_part()
+    {
+        var car = NewCar();
+        var report = CarCondition.ApplyRace(car, new RaceCarCondition
+        {
+            EngineLife = 0,
+            Heat = new RaceHeatReport { PeakWaterC = 136, HeatLifeLost = 1000 }
+        }, 5, GroupOf);
+
+        Assert.Contains("Engine: the heat finished it. It needs a rebuild before it runs again.", report);
+        Assert.DoesNotContain(report, l => l.Contains("let go", StringComparison.Ordinal));
+        foreach (var id in new[] { "crank", "rod", "piston", "cam" }) Assert.Equal(0, Part(car, id).Tear);
+        Assert.Null(CarCondition.FailedPart(car, GroupOf));
+        Assert.Contains("the engine is blown", CarCondition.WhyCannotRace(car, GroupOf));
+    }
+
+    [Fact]
+    public void Oil_starvation_that_took_some_life_wears_the_bottom_end_evenly()
+    {
+        var car = NewCar();
+        var report = CarCondition.ApplyRace(car, new RaceCarCondition
+        {
+            EngineLife = 900,
+            Heat = new RaceHeatReport { PeakWaterC = 95, OilLifeLost = 100 }
+        }, 5, GroupOf);
+
+        Assert.Contains(report, l => l.StartsWith("Engine: running without oil wore the whole bottom end", StringComparison.Ordinal));
+        foreach (var id in new[] { "crank", "rod", "piston", "cam" }) Assert.Equal(0.9, Part(car, id).Tear, 6);
+    }
+
+    [Fact]
+    public void An_over_rev_still_names_the_part_that_let_go()
+    {
+        var car = NewCar();
+        CarCondition.ApplyRace(car, Report(life: 0), 1, GroupOf);
+        Assert.Equal("rod", CarCondition.FailedPart(car, GroupOf)?.DefinitionId);
+    }
+
     private static Car CarWithRealEngine(PartsCatalog catalog)
     {
         var build = catalog.EngineBuilds.Single(b => b.Id.EndsWith("chrysler-v8-pack/chrysler-la-340-275-hp", StringComparison.Ordinal));

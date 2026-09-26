@@ -6,8 +6,9 @@ namespace Street_Rod_AC.Parts.Cars;
 /// <summary>One piece of work the garage can do on a car: what it costs, how long it takes, and doing it</summary>
 public sealed class RepairJob
 {
-    public RepairJob(string name, string detail, decimal cost, GameAction time, Action apply)
+    public RepairJob(string name, string detail, decimal cost, GameAction time, Action apply, bool isChore = false)
     {
+        IsChore = isChore;
         Name = name;
         Detail = detail;
         Cost = cost;
@@ -18,6 +19,9 @@ public sealed class RepairJob
     private readonly Action _apply;
 
     public string Name { get; }
+
+    /// <summary>Filling up or a wash: looking after the car, not fixing damage</summary>
+    public bool IsChore { get; }
 
     /// <summary>What is wrong, in a few words</summary>
     public string Detail { get; }
@@ -35,7 +39,7 @@ public sealed class RepairJob
 /// Repairs: what takes damage (<c>Tear</c>, and the body) off a car. Mileage (<c>Wear</c>) is not repaired: a worn
 /// part is replaced, in the parts view. A job costs a share of the damaged parts' new price, as much of it as the
 /// damage goes, plus the labour; the body shop charges by how hard the body was hit. Small jobs take half an hour,
-/// big ones two hours.
+/// big ones two hours. The garage also fills the tank (by the litre) and washes the car, a quarter of an hour each.
 /// </summary>
 public static class RepairShop
 {
@@ -53,6 +57,18 @@ public static class RepairShop
     /// <summary>A part at this or better needs nothing done</summary>
     private const double Straight = 0.995;
 
+    /// <summary>Premium, 1970: about 40 cents a gallon</summary>
+    public const decimal FuelPerLitre = 0.11m;
+
+    /// <summary>A wash, at the car wash down the road</summary>
+    public const decimal Wash = 3m;
+
+    /// <summary>A body this dirty is worth a wash</summary>
+    public const double DirtyFrom = 0.1;
+
+    /// <summary>A tank this short of full is worth filling</summary>
+    private const double FillFromLitres = 0.5;
+
     /// <param name="catalog">Null when there are no parts: only the body can be done</param>
     /// <param name="priceMultiplier">The save's <see cref="GameRules.PartPriceMultiplier"/>, on the whole bill</param>
     public static List<RepairJob> Jobs(Car car, PartsCatalog? catalog, double priceMultiplier = 1.0)
@@ -64,6 +80,19 @@ public static class RepairShop
         {
             if (groupOf != null) CarCondition.RefreshFigures(car, groupOf);
             else car.BodyCondition = CarCondition.BodyCondition(car);
+        }
+
+        var litres = CarCondition.LitresToFill(car);
+        if (litres >= FillFromLitres)
+        {
+            jobs.Add(new RepairJob("Fill up", $"{CarCondition.FuelLeft(car):0.#} of {car.FuelTankLitres:0} litres in the tank",
+                PartPricing.Round((double)FuelPerLitre * litres * prices), GameAction.GarageChore, () => car.FuelLitres = null, isChore: true));
+        }
+
+        if (car.BodyDirt >= DirtyFrom)
+        {
+            jobs.Add(new RepairJob("Wash", car.BodyDirt >= 0.5 ? "Filthy" : "Dusty", PartPricing.Round((double)Wash * prices),
+                GameAction.GarageChore, () => car.BodyDirt = 0, isChore: true));
         }
 
         var body = CarCondition.BodyTotal(car);
@@ -84,7 +113,7 @@ public static class RepairShop
             if (torn.Count > 0)
             {
                 var life = CarCondition.EngineLife(car, groupOf) / CarCondition.NewEngineLife;
-                var weakest = CarCondition.WeakestRotatingPart(car, groupOf);
+                var weakest = CarCondition.FailedPart(car, groupOf);
                 var failed = weakest == null ? null : catalog.Get(weakest.DefinitionId) is { } definition ? definition.DisplayName ?? definition.Name : null;
                 var detail = life <= 0
                     ? failed == null ? "Blown" : $"Blown: the {failed} let go"

@@ -156,9 +156,10 @@ namespace Street_Rod_AC.Screens.Shared
             if (playerData != null) carData.Add(playerData);
             if (sharedData != null) carData.Add(sharedData);
 
+            // The race mode runs each engine's heat from how its car is cooled
             var intent = BuildIntent(entry, opponentRacesAs, carData);
-            intent.PlayerStart = playerStart;
-            intent.OpponentStart = opponentStart;
+            intent.PlayerStart = playerStart with { Cooling = playerData?.Cooling };
+            intent.OpponentStart = opponentStart == null ? null : opponentStart with { Cooling = opponentData?.Cooling };
             return new RaceSetupResult { Intent = intent };
         }
 
@@ -174,7 +175,7 @@ namespace Street_Rod_AC.Screens.Shared
             var cloneId = AcCarFolder.CloneIdFor(opponentCarId);
             var data = opponentData == null
                 ? RaceCarData.AsAuthored(opponentCarId, cloneId)
-                : new RaceCarData(opponentData.CarId, opponentData.Build) { CloneId = cloneId };
+                : new RaceCarData(opponentData.CarId, opponentData.Build) { CloneId = cloneId, Cooling = opponentData.Cooling };
             return (cloneId, data);
         }
 

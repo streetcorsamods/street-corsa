@@ -32,6 +32,9 @@ namespace Street_Rod_AC.Services.Race
 
         public CarBuildResult Build { get; }
 
+        /// <summary>How the car's engine is cooled and oiled, for the race mode; null leaves it a factory car's</summary>
+        public Models.Race.EngineCoolingRating? Cooling { get; init; }
+
         public bool CanDrive => Build.CanDrive;
 
         /// <summary>Why the car cannot go, for the player</summary>
@@ -56,8 +59,9 @@ namespace Street_Rod_AC.Services.Race
         }
 
         /// <param name="damage">The damage the car goes in with; null takes what its parts carry</param>
+        /// <param name="rateCooling">False for a free run: only the race mode runs the heat</param>
         /// <returns>The files to race with; null when the car has no parts to speak of and races as it is</returns>
-        public RaceCarData? Prepare(Car car, Models.Race.RaceStartState? damage = null)
+        public RaceCarData? Prepare(Car car, Models.Race.RaceStartState? damage = null, bool rateCooling = true)
         {
             if (!_parts.IsAvailable || !car.HasPartsAssigned) return null;
 
@@ -98,10 +102,26 @@ namespace Street_Rod_AC.Services.Race
 
             var result = AcCarBuild.Generate(catalog, build, readFile);
             if (result.CanDrive) result.Sound = ChooseSound(car, build.Engine);
-            _logger.Information("{Car}: {Power:0} hp, {Files} file(s) to change{Sound}{Problems}", car.DefinitionId, build.Engine?.Dyno?.MaxPowerHp ?? 0,
+            var cooling = rateCooling ? RateCooling(car, build.Engine) : null;
+            _logger.Information("{Car}: {Power:0} hp, {Files} file(s) to change{Sound}{Problems}{Cooling}", car.DefinitionId, build.Engine?.Dyno?.MaxPowerHp ?? 0,
                 result.Files.Count, result.Sound == null ? "" : ", the sound of " + result.Sound.DonorId,
-                result.Problems.Count == 0 ? "" : ", cannot drive: " + string.Join("; ", result.Problems));
-            return new RaceCarData(car.DefinitionId, result);
+                result.Problems.Count == 0 ? "" : ", cannot drive: " + string.Join("; ", result.Problems),
+                cooling == null ? "" : $", cooling {cooling.Cooling:0.00}, fan {cooling.Fan:0.00}, sump {cooling.OilG:0.00} g");
+            return new RaceCarData(car.DefinitionId, result) { Cooling = cooling };
+        }
+
+        // The heat is the race mode's to run: whatever goes wrong rating it, the car races cooled like a factory car
+        private Models.Race.EngineCoolingRating? RateCooling(Car car, EngineReport? engine)
+        {
+            try
+            {
+                return _parts.RateCooling(car, engine);
+            }
+            catch (Exception ex)
+            {
+                _logger.Warning("{Car}: its cooling could not be rated, it races cooled like a factory car: {Error}", car.DefinitionId, ex.Message);
+                return null;
+            }
         }
 
         // The sound is the least of a build: whatever goes wrong choosing it, the car races on its parts with its own

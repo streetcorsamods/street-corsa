@@ -69,7 +69,8 @@ namespace Street_Rod_AC.Dialogs.RepairShop
             var problems = CarCondition.WhyCannotRace(_car, _catalog == null ? null : CarCondition.Groups(_catalog));
             Status = problems.Count > 0
                 ? "Not fit to race: " + string.Join("; ", problems) + "."
-                : Jobs.Count > 0 ? "It races as it is, with its damage." : "Nothing to fix: the car is in good shape.";
+                : Jobs.Any(j => !j.IsChore) ? "It races as it is, with its damage."
+                : Jobs.Count > 0 ? "It races as it is." : "Nothing to fix: the car is in good shape.";
 
             OnPropertyChanged(nameof(HasJobs));
             OnPropertyChanged(nameof(MoneyDisplay));
@@ -106,6 +107,7 @@ namespace Street_Rod_AC.Dialogs.RepairShop
         {
             Name = job.Name;
             Detail = job.Detail;
+            IsChore = job.IsChore;
             CostDisplay = $"${job.Cost:N0}";
             TimeDisplay = job.Time.GetTimeDescription();
             Command = command;
@@ -113,6 +115,9 @@ namespace Street_Rod_AC.Dialogs.RepairShop
 
         public string Name { get; }
         public string Detail { get; }
+
+        /// <summary>Filling up or a wash, not a repair</summary>
+        public bool IsChore { get; }
         public string CostDisplay { get; }
         public string TimeDisplay { get; }
         public AsyncRelayCommand Command { get; }

@@ -15,7 +15,8 @@ namespace Street_Rod_AC.Parts.Cars;
 /// Before a race the same parts give AC its start (<see cref="StartState"/>): the engine's life is its weakest
 /// rotating part's, the gearbox's wear is the transmission's, each corner is as bent as its most damaged spring or
 /// shock. The tyres go in as the data makes them (their wear lowers the grip in tyres.ini), and AC wears them from
-/// new: carrying AC's tyre kilometres too would count the old wear twice.
+/// new: carrying AC's tyre kilometres too would count the old wear twice. The fuel left in the tank and the body's
+/// dirt go in as the last race left them too.
 ///
 /// Group names come from <see cref="PartKinds.GroupOf"/>, handed in as a lookup so the rules can be tested
 /// without a catalog.
@@ -43,6 +44,27 @@ public static class CarCondition
     /// a drag race costs a few thousandths of a percent.
     /// </summary>
     public const double MileageWearPerKm = 1.0 / 40000;
+
+    /// <summary>Dirt a body picks up per km of racing, on top of what AC gives it (on dirt, in the wet)</summary>
+    public const double DirtPerKm = 0.01;
+
+    /// <summary>Less fuel than this, in litres, and the tank is dry</summary>
+    public const double EmptyTankLitres = 0.25;
+
+    /// <summary>Less fuel than this, in litres, and the car does not go racing: it would run dry within the first minute</summary>
+    public const double TooLittleToRaceLitres = 2;
+
+    /// <summary>What a fuel line in the report starts with: it tells, it is not damage</summary>
+    public const string FuelNote = "Fuel: ";
+
+    /// <summary>The report says the tank is low below this share of it</summary>
+    public const double LowTankShare = 0.15;
+
+    /// <summary>Engine life, as AC counts it, that the heat or the oil must take for the report to say so</summary>
+    private const double TellLifeLost = 5;
+
+    /// <summary>The water got this hot, and the engine went flat at the top</summary>
+    private const double TellHotC = 110;
 
     public const string TransmissionGroup = "Transmissions";
 
@@ -115,9 +137,27 @@ public static class CarCondition
             BodyKmh = Body(car),
             EngineLife = withParts ? EngineLife(car, groupOf!) : NewEngineLife * Clamp01(car.EngineHealth),
             GearboxWear = withParts ? GearboxWear(car, groupOf!) : 1 - Clamp01(car.TransmissionHealth),
-            SuspensionBend = groupOf != null && car.HasRunningGearAssigned ? SuspensionBend(car) : new double[4]
+            SuspensionBend = groupOf != null && car.HasRunningGearAssigned ? SuspensionBend(car) : new double[4],
+            FuelLitres = FuelLeft(car),
+            Dirt = Unit.Clamp01(car.BodyDirt, ifNotFinite: 0)
         };
     }
+
+    /// <summary>
+    /// The fuel in the tank, litres; null when it is full. A tank whose size is not known counts as full: what is left
+    /// in it can be neither shown against it nor topped up.
+    /// </summary>
+    public static double? FuelLeft(Car car) =>
+        car.FuelLitres is { } fuel && double.IsFinite(fuel) && TankLitres(car) is { } tank ? Math.Clamp(fuel, 0, tank) : null;
+
+    /// <summary>What the tank holds, litres; null until a race says</summary>
+    public static double? TankLitres(Car car) => car.FuelTankLitres is { } tank && double.IsFinite(tank) && tank > 0 ? tank : null;
+
+    /// <summary>The litres a fill-up takes; 0 for a full tank</summary>
+    public static double LitresToFill(Car car) => FuelLeft(car) is { } left && TankLitres(car) is { } tank ? tank - left : 0;
+
+    /// <summary>A line of <see cref="ApplyRace"/>'s report that is damage, not a note on the fuel</summary>
+    public static bool IsDamage(string line) => !line.StartsWith(FuelNote, StringComparison.Ordinal);
 
     /// <summary>What keeps the car from racing, in words for the player; empty when it can go</summary>
     public static List<string> WhyCannotRace(Car car, Func<string, string?>? groupOf)
@@ -125,6 +165,7 @@ public static class CarCondition
         var problems = new List<string>();
         if (car.IsImpounded) problems.Add("it's in the police impound");
         if (IsTotaled(car)) problems.Add("the body is wrecked: the car is totaled");
+        if (FuelLeft(car) is { } fuel && fuel < TooLittleToRaceLitres) problems.Add(fuel < EmptyTankLitres ? "the tank is empty" : "there's hardly any fuel in the tank");
 
         if (groupOf != null && car.HasPartsAssigned)
         {
@@ -160,10 +201,14 @@ public static class CarCondition
     /// <param name="groupOf">Null when there is no parts catalog: the car's own figures take it all</param>
     /// <param name="wearMultiplier">The save's <see cref="GameRules.CarWearMultiplier"/>, on the mileage wear. AC's own
     /// damage is already the difficulty's (<see cref="GameRules.RaceDamagePercent"/>)</param>
-    public static List<string> ApplyRace(Car car, RaceCarCondition condition, double distanceKm, Func<string, string?>? groupOf, double wearMultiplier = 1.0)
+    /// <param name="keepsFuelAndDirt">False for a rival's car: the racers fill up and wash before every race, so the
+    /// tank and the dirt a race leaves are not kept</param>
+    public static List<string> ApplyRace(Car car, RaceCarCondition condition, double distanceKm, Func<string, string?>? groupOf,
+        double wearMultiplier = 1.0, bool keepsFuelAndDirt = true)
     {
         var report = new List<string>();
         ApplyBody(car, condition, report);
+        ApplyHeat(condition, report);
 
         if (groupOf != null && car.HasPartsAssigned)
         {
@@ -181,7 +226,46 @@ public static class CarCondition
         if (groupOf != null) RefreshFigures(car, groupOf);
         else car.BodyCondition = BodyCondition(car);
 
+        if (keepsFuelAndDirt) ApplyFuelAndDirt(car, condition, distanceKm, report);
         return report;
+    }
+
+    /// <summary>What the engine's heat and oil did, and what would help; the life they took is in the engine's</summary>
+    private static void ApplyHeat(RaceCarCondition condition, List<string> report)
+    {
+        if (condition.Heat is not { } heat) return;
+
+        var cooked = Clean(heat.HeatLifeLost ?? 0);
+        var peak = heat.PeakWaterC is { } p && double.IsFinite(p) ? p : 0;
+        if (cooked >= TellLifeLost)
+            report.Add($"Engine: it overheated ({peak:0} °C) and cooked some of its life away. A bigger radiator would keep it cool.");
+        else if (peak >= TellHotC)
+            report.Add($"Engine: it ran hot ({peak:0} °C) and went flat at the top. A bigger radiator would keep it cool.");
+
+        if (Clean(heat.OilLifeLost ?? 0) >= TellLifeLost)
+            report.Add("Engine: the oil surged off the pickup and the bearings ran dry. A deeper oil pan would hold it.");
+    }
+
+    /// <summary>
+    /// The fuel left and the tank's size as AC reported them; dirt from the race and the road. Fuel is kept only
+    /// against a known tank: without its size a car could be left too dry to race with nothing to fill it up to.
+    /// </summary>
+    private static void ApplyFuelAndDirt(Car car, RaceCarCondition condition, double distanceKm, List<string> report)
+    {
+        if (condition.MaxFuelLitres is { } tank && double.IsFinite(tank) && tank > 0) car.FuelTankLitres = tank;
+        if (condition.FuelLitres is { } fuel && double.IsFinite(fuel) && TankLitres(car) is { } size)
+        {
+            var left = Math.Clamp(fuel, 0, size);
+            car.FuelLitres = left;
+            if (left < EmptyTankLitres) report.Add(FuelNote + "the tank is dry. Fill it up before the next race.");
+            else if (left < TooLittleToRaceLitres) report.Add(FuelNote + $"{left:0.0} litres left, too little to race on. Fill it up.");
+            else if (left < size * LowTankShare) report.Add(FuelNote + $"{left:0} litres left. Time to fill up.");
+        }
+
+        // AC starts the body as dirty as the car went in: what it reports is the whole of it
+        var dirt = Unit.Clamp01(car.BodyDirt, ifNotFinite: 0);
+        if (condition.Dirt is { } reported && double.IsFinite(reported)) dirt = Math.Max(dirt, Unit.Clamp01(reported, ifNotFinite: 0));
+        car.BodyDirt = Math.Min(1, dirt + Clean(distanceKm) * DirtPerKm);
     }
 
     private static void ApplyBody(Car car, RaceCarCondition condition, List<string> report)
@@ -209,7 +293,8 @@ public static class CarCondition
 
         // AC reports the life left, having started from the car's (its weakest rotating part's). The weakest part is
         // the one that gave: it takes the whole of the loss, down to what AC left, and the rest of the rotating
-        // assembly a share of it.
+        // assembly a share of it. Life the heat or the oil took (the race mode's, at least half the loss) is no one
+        // part's: the whole assembly comes down to what is left.
         // AC was given the life to a tenth (RaceStartState) and reports it to a tenth: an engine it left alone comes
         // back as it went in, and any loss below that counts
         var left = Clamp01(life / NewEngineLife);
@@ -218,15 +303,25 @@ public static class CarCondition
         if (WeakestRotatingPart(car, groupOf) is not { } failed) return;
 
         var loss = before - left;
+        var heat = Clean(condition.Heat?.HeatLifeLost ?? 0);
+        var oil = Clean(condition.Heat?.OilLifeLost ?? 0);
+        var cooked = heat + oil >= loss * NewEngineLife * 0.5;
         foreach (var part in LifeParts(car, groupOf))
         {
-            part.Tear = ReferenceEquals(part, failed)
+            part.Tear = cooked || ReferenceEquals(part, failed)
                 ? Math.Min(Clamp01(part.Tear), left)
                 : Math.Max(left, Clamp01(part.Tear) - loss * SharedEngineDamage);
         }
 
         var group = groupOf(failed.DefinitionId);
-        if (left <= 0 && before > 0) report.Add($"Engine: {FailedPartName(group)} let go. It needs a rebuild before it runs again.");
+        var blown = left <= 0 && before > 0;
+        if (cooked)
+        {
+            var what = heat >= oil ? "the heat" : "running without oil";
+            if (blown) report.Add($"Engine: {what} finished it. It needs a rebuild before it runs again.");
+            else if (loss > 0.005) report.Add($"Engine: {what} wore the whole bottom end ({before * 100:0}% → {left * 100:0}%).");
+        }
+        else if (blown) report.Add($"Engine: {FailedPartName(group)} let go. It needs a rebuild before it runs again.");
         else if (loss > 0.005) report.Add($"Engine: {DamagedPartName(group)} took a beating ({before * 100:0}% → {left * 100:0}%).");
     }
 
@@ -246,6 +341,18 @@ public static class CarCondition
             .OrderBy(p => Math.Round(Clamp01(p.Tear), 4))
             .ThenBy(p => Array.IndexOf(FailureOrder, groupOf(p.DefinitionId)) is var i and >= 0 ? i : FailureOrder.Length)
             .FirstOrDefault();
+
+    /// <summary>
+    /// The rotating part that gave, when one did: the weakest, worse off than the rest. Null when the weakest are as
+    /// worn as each other (an engine the heat or the oil wore down whole, or a new one) or there is no engine.
+    /// </summary>
+    public static PartInstance? FailedPart(Car car, Func<string, string?> groupOf)
+    {
+        var parts = LifeParts(car, groupOf);
+        if (WeakestRotatingPart(car, groupOf) is not { } weakest) return null;
+        var tear = Math.Round(Clamp01(weakest.Tear), 4);
+        return parts.Count == 1 || parts.Where(p => !ReferenceEquals(p, weakest)).All(p => Math.Round(Clamp01(p.Tear), 4) > tear) ? weakest : null;
+    }
 
     /// <summary>The part of a group that let go, as the report says it: "a connecting rod"</summary>
     public static string FailedPartName(string? group) => group switch

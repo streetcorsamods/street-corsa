@@ -119,6 +119,7 @@ namespace Street_Rod_AC.Services.Opponents
             try
             {
                 CollectFromImpound(racer, date, talk);
+                LookAfter(racer);
                 PickBestCar(racer, groupOf);
                 ReviewAds(gameState, racer, date, talk);
                 SellSpares(gameState, racer, date, groupOf, talk);
@@ -484,6 +485,19 @@ namespace Street_Rod_AC.Services.Opponents
             return true;
         }
 
+        /// <summary>
+        /// A rival's car races full and clean: their races leave its tank alone (<see cref="CarCondition.ApplyRace"/>),
+        /// and a car that came to them from the player is filled up and washed the next morning
+        /// </summary>
+        private static void LookAfter(Opponent racer)
+        {
+            foreach (var car in racer.Cars)
+            {
+                car.FuelLitres = null;
+                car.BodyDirt = 0;
+            }
+        }
+
         /// <summary>The whole bill or nothing: half a repair doesn't get a car racing</summary>
         private bool TryRepair(GameState gameState, Opponent racer, Car car, Func<string, string?>? groupOf, List<string> talk)
         {
@@ -592,7 +606,9 @@ namespace Street_Rod_AC.Services.Opponents
                 .Select(r => new TuneJob(r.Racer, r.Racer.Cars[0], r.Racer.Cars[0].Engine!.InstanceId, PartTrees.Clone(r.Racer.Cars[0].Engine!, keepIds: true),
                     r.Budget, _random.Next(),
                     // The paper as it is this morning, copied: the tuner reads it off this thread
-                    RivalPartAds.OffersFor(gameState, r.Racer).Select(o => o with { Part = PartTrees.Clone(o.Part, keepIds: true) }).ToList()))
+                    RivalPartAds.OffersFor(gameState, r.Racer).Select(o => o with { Part = PartTrees.Clone(o.Part, keepIds: true) }).ToList(),
+                    // A racer keeps the engine cool as it makes more: the radiator goes up with the power
+                    _parts.EngineCoolingOf(r.Racer.Cars[0])))
                 .ToList();
             if (jobs.Count == 0) return;
 
@@ -604,7 +620,8 @@ namespace Street_Rod_AC.Services.Opponents
                 try
                 {
                     // One thing at a time: a racer works on the car over the weeks, not in a day
-                    return EngineTuner.TuneUp(catalog, builds, job.Engine, job.Budget, prices, new Random(job.Seed), maxUpgrades: 1, used: job.Used);
+                    return EngineTuner.TuneUp(catalog, builds, job.Engine, job.Budget, prices, new Random(job.Seed), maxUpgrades: 1, used: job.Used,
+                        coolingOf: job.CoolingOf);
                 }
                 catch (Exception ex)
                 {
@@ -615,7 +632,7 @@ namespace Street_Rod_AC.Services.Opponents
 
             for (var i = 0; i < jobs.Count; i++)
             {
-                var (racer, car, engineId, _, _, _, _) = jobs[i];
+                var (racer, car, engineId, _, _, _, _, _) = jobs[i];
                 var result = results[i];
                 if (result == null) continue;
 
@@ -647,9 +664,12 @@ namespace Street_Rod_AC.Services.Opponents
 
                 foreach (var upgrade in result.Upgrades)
                 {
-                    talk.Add(upgrade.Group == EngineTuner.BlockGroup
-                        ? $"{racer.Name} dropped {upgrade.Change} into {OpponentRules.Possessive(racer)} {CarName(car)} ({upgrade.PowerBefore:0} → {upgrade.PowerAfter:0} hp)."
-                        : $"{racer.Name} put a {upgrade.Change} on {OpponentRules.Possessive(racer)} {CarName(car)} ({upgrade.PowerBefore:0} → {upgrade.PowerAfter:0} hp).");
+                    talk.Add(upgrade.Group switch
+                    {
+                        EngineTuner.BlockGroup => $"{racer.Name} dropped {upgrade.Change} into {OpponentRules.Possessive(racer)} {CarName(car)} ({upgrade.PowerBefore:0} → {upgrade.PowerAfter:0} hp).",
+                        EngineTuner.CoolingGroup => $"{racer.Name} put a {upgrade.Change} on {OpponentRules.Possessive(racer)} {CarName(car)} to keep it cool.",
+                        _ => $"{racer.Name} put a {upgrade.Change} on {OpponentRules.Possessive(racer)} {CarName(car)} ({upgrade.PowerBefore:0} → {upgrade.PowerAfter:0} hp)."
+                    });
                 }
 
                 _logger.Information("{Racer} tuned the {Car}: {Upgrades}; ${Cost} spent, ${Money} left",
@@ -657,7 +677,8 @@ namespace Street_Rod_AC.Services.Opponents
             }
         }
 
-        private sealed record TuneJob(Opponent Racer, Car Car, Guid EngineId, PartInstance Engine, decimal Budget, int Seed, List<UsedPartOffer> Used);
+        private sealed record TuneJob(Opponent Racer, Car Car, Guid EngineId, PartInstance Engine, decimal Budget, int Seed, List<UsedPartOffer> Used,
+            Func<PartInstance, double, double>? CoolingOf);
 
         // ----- the parts and the dyno -----
 
