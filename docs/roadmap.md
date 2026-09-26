@@ -639,7 +639,7 @@ the street redrawing at full rate forever, a first rival arriving already stoppe
 their portraits now come from one place (`RacersOut`) for the diner and the street. 751 tests pass; **the fixes are
 not yet tried in the game.**
 
-### Step 14: deeper simulation (built on `feature/deeper-simulation`)
+### Step 14: deeper simulation (done, PR #28, merged as `5930d9c`)
 **The user decided (2026-09-26):**
 - this step is heat and oil (overheating and oil starvation, modelled by the game) and fuel and dirt carried between
   races, in one PR;
