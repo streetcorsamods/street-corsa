@@ -686,7 +686,7 @@ not yet tried in the game.**
   797 in all. **Checked in the game** unattended on Black Cat County (a car rated 0.30 boiled over at 90 s, its
   factory-rated rival stayed at 90 °C); **not yet seen by the user.**
 
-### Step 15: the rename to Street Corsa
+### Step 15: the rename to Street Corsa (done, PR #29, merged as `bc65528`)
 Namespaces (`StreetCorsa`), the AppData folder (`StreetCorsa`, with a migration), ids like `sc_race`, and the repo.
 Before a release, check the licence of every shipped asset: the icons in `Assets/Icons` are of unknown origin, and the
 garage showroom is not licensed for the public repo.
