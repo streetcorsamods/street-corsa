@@ -101,10 +101,18 @@ says so, else the first kind of the work orders listing one of its script classe
 the first kind with a word its name holds (`"names": ["timing chain cover", "timing cover"]`, whole words, a plural s
 allowed). A mod's kinds are tried before the base game's. A rule says, for a kind, what has to be off the engine first
 (`"after"`, the parts on this very part included), whether it comes out only on the engine stand (`"stand_only"`) and
-whether it goes by itself with nothing on it (`"bare"`). The rules work both ways: what has to be off before a part comes
-off has to be off before it goes back on. `"stand_strips"` is what comes off an engine as it goes on the stand (the
+whether it goes by itself with nothing on it (`"bare"`), and what has to be on the engine before it goes on
+(`"needs"`: a drive belt needs the water pump and the fan whose pulley it runs on; only where the engine has a place
+for one and one may go on there, and what a part needs stays on while the part does). A kind's `"serves"` names kinds
+whose job it does for a part that needs them: the base game's radiator with an electric fan (`radiator_fan`) serves as
+the fan. It is only for needs: the rules of the kinds it serves are not its own. The rules work both ways: what has to
+be off before a part comes off has to be off before it goes back on, and an engine that comes into the game with a part
+lacking what it needs (a build short of its water pump, an old save) has that part taken off first. A kind that is in
+the way on one engine and not on another is two kinds: a distributor goes down through the intake on a V8, so the
+intake waits for it; the Ford six's sits on the side of its block (`"kind": "side_distributor"` in its pack) and leaves
+the intake alone. `"stand_strips"` is what comes off an engine as it goes on the stand (the
 radiator, and what is in the way of its bellhousing face), in that order: the garage shows them coming off one after
-another before the hoist lifts the engine out. A kind's `"comes_off"` is how the garage shows it
+another before the hoist lifts the engine out. None of them goes back on while the engine is on the stand. A kind's `"comes_off"` is how the garage shows it
 coming off, leg by leg, in the engine's own directions: `up`, `down`, `forward` (towards the crankshaft's nose),
 `back`, `out` (away from the engine, on the side the part is on); `[ "back", "down" ]` for a gearbox. What is on the
 part goes along. A later mod's `"comes_off"` for a kind replaces the earlier one's.
@@ -113,12 +121,15 @@ part goes along. A later mod's `"comes_off"` for a kind replaces the earlier one
 {
   "kinds": [ { "id": "timing_cover", "name": "timing cover", "names": [ "timing chain cover", "timing cover" ] } ],
   "rules": [ { "kind": "crankshaft", "stand_only": true, "bare": true, "after": [ "oil_pan", "timing_cover" ] } ],
-  "stand_strips": [ "radiator", "transmission", "clutch", "flywheel" ]
+  "stand_strips": [ "radiator", "starter", "transmission", "clutch", "flywheel" ]
 }
 ```
 
-A rule for a kind that already has one is left out and reported, unless it says `"replace": true`. A kind of the same
-id adds its classes and words to the kind; the name the player reads is the first mod's. The base game's kinds and
+A rule for a kind that already has one adds to it (more to wait for, more it needs; `"stand_only"` and `"bare"` once
+set stay set), so a mod's rule still counts when a later base game rules the same kind. To take any of it back, say
+`"replace": true`: the rule is then yours alone. Rules that lock (kinds waiting for each other to be off, or needing each
+other on, or a rule needing a kind it waits for) are reported. A kind of the same id adds its classes, words and
+`"serves"` to the kind; the name the player reads is the first mod's. The base game's kinds and
 rules are in `Content\streetcorsa\parts\work_order.json`.
 
 A part mounts by what its slots name (`attaches_to`, `compatible_with`: a part id and a slot, a reference as above)

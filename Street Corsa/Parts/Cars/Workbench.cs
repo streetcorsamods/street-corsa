@@ -82,18 +82,29 @@ public static class Workbench
     private static IEnumerable<MountPlace> PlacesOn(PartsCatalog catalog, IEnumerable<PartInstance> roots, PartInstance loose,
         PartDefinition looseDefinition, string looseGroup, List<PartSlot> looseSlots)
     {
+        foreach (var (parent, parentDefinition, slot) in FreeSlots(catalog, roots))
+        {
+            if (PartKinds.NeverStacks(looseGroup) && PartKinds.GroupOf(parentDefinition) == looseGroup) continue;
+
+            var own = looseSlots.FirstOrDefault(s => catalog.CanMate(looseDefinition, s, parentDefinition, slot));
+            if (own != null) yield return new MountPlace(parent, slot.Id, own.Id);
+        }
+    }
+
+    /// <summary>
+    /// The slots of the parts that nothing is on and that a loose part could go on: not the slot a part hangs by, nor
+    /// the running gear's (a wheel takes its tyre by <see cref="FindPlaces"/>' own rules)
+    /// </summary>
+    internal static IEnumerable<(PartInstance Parent, PartDefinition Definition, PartSlot Slot)> FreeSlots(PartsCatalog catalog, IEnumerable<PartInstance> roots)
+    {
         foreach (var parent in roots.SelectMany(p => p.SelfAndDescendants()))
         {
-            if (catalog.Get(parent.DefinitionId) is not { } parentDefinition) continue;
-            if (PartKinds.NeverStacks(looseGroup) && PartKinds.GroupOf(parentDefinition) == looseGroup) continue;
-            if (RunningGear.IsRunningGear(PartKinds.GroupOf(parentDefinition))) continue;
+            if (catalog.Get(parent.DefinitionId) is not { } definition) continue;
+            if (RunningGear.IsRunningGear(PartKinds.GroupOf(definition))) continue;
 
-            foreach (var slot in parentDefinition.Slots)
+            foreach (var slot in definition.Slots)
             {
-                if (slot.Id == parent.OwnSlot || parent.Children.Any(c => c.ParentSlot == slot.Id)) continue;
-
-                var own = looseSlots.FirstOrDefault(s => catalog.CanMate(looseDefinition, s, parentDefinition, slot));
-                if (own != null) yield return new MountPlace(parent, slot.Id, own.Id);
+                if (slot.Id != parent.OwnSlot && parent.Children.All(c => c.ParentSlot != slot.Id)) yield return (parent, definition, slot);
             }
         }
     }

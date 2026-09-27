@@ -93,8 +93,15 @@ public static class EngineFactory
     public static EngineReport? Evaluate(PartsCatalog catalog, PartInstance root) =>
         PartTrees.ToInstalled(catalog, root) is { } live ? EngineEvaluator.Evaluate(catalog, live.AsPartTree()) : null;
 
-    private static PartInstance? Assemble(PartsCatalog catalog, RatedBuild build) =>
-        PartTreeBuilder.BuildEngine(catalog, build.Build) is { } tree ? PartTrees.FromInstalled(tree.Root, PartInstance.CarEngineSlot) : null;
+    /// <remarks>A part the build puts on without what it needs (a belt, on a mod's build without a water pump) is left off</remarks>
+    private static PartInstance? Assemble(PartsCatalog catalog, RatedBuild build)
+    {
+        if (PartTreeBuilder.BuildEngine(catalog, build.Build) is not { } tree) return null;
+
+        var root = PartTrees.FromInstalled(tree.Root, PartInstance.CarEngineSlot);
+        EngineWork.TakeOffWhatLacksItsNeeds(catalog, root);
+        return root;
+    }
 
     private static void ApplyWear(PartInstance root, double condition, Random random)
     {

@@ -19,14 +19,18 @@
     { "id": "oil_pan", "name": "oil pan", "classes": [ "OilPan" ], "comes_off": [ "down" ] },
     { "id": "crank_pulley", "name": "crankshaft pulley", "classes": [ "Pulley" ], "comes_off": [ "forward" ] },
 
+    { "id": "charger_belt", "name": "supercharger belt", "names": [ "supercharger drive belt", "supercharger belt" ], "comes_off": [ "forward" ] },
+    { "id": "steering_belt", "name": "power steering belt", "names": [ "steering pump belt", "steering pomp belt", "belt power steering" ], "comes_off": [ "forward" ] },
     { "id": "belt", "name": "drive belt", "names": [ "drive belt", "belt" ], "comes_off": [ "forward" ] },
+    { "id": "radiator_fan", "name": "radiator", "names": [ "electric fan" ], "serves": [ "fan" ], "comes_off": [ "up" ] },
     { "id": "radiator", "name": "radiator", "names": [ "radiator" ], "comes_off": [ "up" ] },
     { "id": "timing_cover", "name": "timing cover", "names": [ "timing chain cover", "timing gear cover", "timing cover" ], "comes_off": [ "forward" ] },
     { "id": "timing_chain", "name": "timing chain", "names": [ "timing chain" ], "comes_off": [ "forward" ] },
     { "id": "timing_gear", "name": "timing gear", "names": [ "timing gear", "driving gear" ], "comes_off": [ "forward" ] },
     { "id": "damper", "name": "harmonic damper", "names": [ "harmonic damper", "harmonic balancer", "damper", "balancer" ], "comes_off": [ "forward" ] },
     { "id": "distributor", "name": "distributor", "names": [ "distributor" ], "comes_off": [ "up" ] },
-    { "id": "fan", "name": "fan", "names": [ "fan" ], "comes_off": [ "up" ] },
+    { "id": "side_distributor", "name": "distributor", "comes_off": [ "out" ] },
+    { "id": "fan", "name": "fan", "names": [ "fan" ], "comes_off": [ "forward" ] },
     { "id": "water_pump", "name": "water pump", "names": [ "water pump", "water pomp", "water electric pump" ], "comes_off": [ "forward" ] },
     { "id": "alternator", "name": "alternator", "names": [ "alternator" ], "comes_off": [ "out" ] },
     { "id": "steering_pump", "name": "power steering pump", "names": [ "steering pump", "steering pomp" ], "comes_off": [ "out" ] },
@@ -43,9 +47,9 @@
 
   "rules": [
     { "kind": "pistons", "stand_only": true, "bare": true, "after": [ "cylinder_head", "oil_pan" ] },
-    { "kind": "connecting_rods", "stand_only": true, "bare": true, "after": [ "cylinder_head", "oil_pan", "bearing_bridge" ] },
+    { "kind": "connecting_rods", "stand_only": true, "bare": true, "after": [ "cylinder_head", "oil_pan" ] },
     { "kind": "crankshaft", "stand_only": true, "bare": true, "after": [ "oil_pan", "timing_cover", "bearing_bridge" ] },
-    { "kind": "camshaft", "stand_only": true, "bare": true, "after": [ "timing_cover", "timing_chain", "intake_manifold", "block_cover", "distributor", "fuel_pump" ] },
+    { "kind": "camshaft", "stand_only": true, "bare": true, "after": [ "timing_cover", "timing_chain", "intake_manifold", "block_cover", "distributor", "side_distributor", "fuel_pump" ] },
 
     { "kind": "cylinder_head", "after": [ "intake_manifold", "valve_cover", "exhaust_header" ] },
     { "kind": "intake_manifold", "after": [ "distributor", "charger" ] },
@@ -54,18 +58,22 @@
 
     { "kind": "flywheel", "after": [ "transmission", "clutch" ] },
     { "kind": "clutch", "after": [ "transmission" ] },
+    { "kind": "transmission", "after": [ "starter" ] },
 
-    { "kind": "timing_cover", "after": [ "damper", "crank_pulley", "water_pump" ] },
+    { "kind": "timing_cover", "after": [ "damper", "crank_pulley" ] },
     { "kind": "timing_chain", "after": [ "timing_cover" ] },
     { "kind": "timing_gear", "after": [ "timing_cover", "timing_chain" ] },
-    { "kind": "damper", "after": [ "belt" ] },
-    { "kind": "crank_pulley", "after": [ "belt" ] },
+    { "kind": "damper", "after": [ "belt", "steering_belt", "charger_belt" ] },
+    { "kind": "crank_pulley", "after": [ "belt", "steering_belt", "charger_belt" ] },
     { "kind": "pulley", "after": [ "belt" ] },
-    { "kind": "water_pump", "after": [ "fan", "belt" ] },
+    { "kind": "water_pump", "after": [ "fan", "belt", "alternator" ] },
     { "kind": "fan", "after": [ "belt" ] },
+    { "kind": "belt", "needs": [ "water_pump", "fan" ] },
+    { "kind": "charger", "after": [ "charger_belt" ] },
     { "kind": "alternator", "after": [ "belt" ] },
-    { "kind": "steering_pump", "after": [ "belt" ] }
+    { "kind": "steering_pump", "after": [ "belt", "steering_belt" ] },
+    { "kind": "steering_belt", "needs": [ "steering_pump" ] }
   ],
 
-  "stand_strips": [ "radiator", "transmission", "clutch", "flywheel" ]
+  "stand_strips": [ "radiator", "radiator_fan", "starter", "transmission", "clutch", "flywheel" ]
 }

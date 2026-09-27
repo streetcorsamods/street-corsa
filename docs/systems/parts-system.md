@@ -503,7 +503,8 @@ jump after 3 m) is off until the target reaches `GarageRenderer.FramedTarget`, w
 Everything else works as in the car: picking, the card, the shelf's places (`Workbench.FindPlacesOnStand`). "Pull the engine" takes a car's engine
 onto the stand when it is free (else to the shelf), "Off the stand" puts it on the shelf, "Put it in the car" into the
 selected car's empty bay. Going on the stand, `EngineWork.StripForStand` takes off the work order's `stand_strips`
-(transmission, clutch, flywheel: in the way of the stand's head; the radiator stays with the car) onto the shelf.
+(radiator, starter, transmission, clutch, flywheel: in the way of the stand's head; the radiator stays with the car, the
+starter is bolted to the bellhousing) onto the shelf, and none of them goes back on while the engine is on the stand.
 
 **The work order** (`WorkOrder`, `Content\streetcorsa\parts\work_order.json`, one per mod; see
 [modding.md](../modding.md)). Every part has a kind: its pack's `"kind"`, else a script class (the big parts), else
@@ -512,9 +513,16 @@ alike across makes). 1055 of the 1107 engine parts get one (2026-09-26); the res
 bottles. `EngineWork.WhyNotOff`/`WhyNotOn` give the reason in the player's words ("Take off the cylinder heads and the
 oil pan first.", shown on the card and as the shelf hint): the crankshaft, rods, pistons and camshaft only on the stand,
 one at a time with nothing on them, and the peripherals in their order (the belt before the fan, the fan before the
-water pump, the distributor before the intake, the intake before the heads, the transmission before the flywheel).
-The rules hold both ways, so an engine taken apart goes back together in the opposite order: `EngineStandTests` takes
-every one of the 161 builds down to its bare block on the stand and back.
+water pump, the alternator before the water pump, the intake before the heads, the starter before the transmission,
+the transmission before the flywheel, the distributor before the intake). A drive belt goes on only over the water
+pump and the fan (`"needs"`; a radiator with an electric fan serves as the fan), a power steering belt (`steering_belt`)
+only over its pump. The Ford six's distributor sits on the side of the block: its pack makes it a `side_distributor`,
+which waits for nothing but holds the camshaft in. The timing cover and the water pump come off each on their own.
+The rules hold both ways, so an engine taken apart goes back together in the opposite order. A part that lacks what it
+needs could come off but never go back on, so it is taken off as the engine comes into the game
+(`EngineWork.TakeOffWhatLacksItsNeeds`: in `EngineFactory` for a build, in `SavedParts.BringUpToDate` for a save, onto
+the shelf). `EngineStandTests` takes every one of the 161 builds, those short of parts too, down to its bare block on
+the stand and back, and checks the builds that run lose nothing that way.
 
 Nothing pops. The cards and the navigation tiles they replace slide and fade through `Helpers/Reveal`
 (`Reveal.IsShown` in place of a Visibility binding, `OffsetX/Y` for where an element comes from). Parts move too: a tree

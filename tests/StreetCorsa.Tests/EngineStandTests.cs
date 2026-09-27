@@ -12,6 +12,7 @@ namespace StreetCorsa.Tests;
 public sealed class EngineStandTests : IDisposable
 {
     private static readonly Lazy<PartsCatalog> Catalog = new(() => PartsCatalog.Load(RepoPaths.PartsFolder));
+    private static readonly Lazy<EngineBuildIndex> Rated = new(() => EngineBuildIndex.Create(Catalog.Value));
 
     private readonly TempDir _temp = new();
 
@@ -106,6 +107,213 @@ public sealed class EngineStandTests : IDisposable
         Assert.DoesNotContain(engine.SelfAndDescendants(), p => taken.Contains(p));
     }
 
+    /// <summary>
+    /// The inline six: its distributor is on the side of the block, not through the intake; the timing cover and the water pump
+    /// come off each on their own; the alternator hangs on the water pump; the starter is bolted to the bellhousing
+    /// </summary>
+    [Fact]
+    public void The_ford_six_comes_apart_in_its_own_order()
+    {
+        var catalog = Catalog.Value;
+        var engine = Engine("script-ford-l6/ford-221-132-hp");
+
+        Assert.Equal("side_distributor", catalog.WorkOrder.KindOf(catalog.Get("engines/ford_six/ford_stock_distributor")!));
+        Assert.Null(EngineWork.WhyNotOff(catalog, engine, Find(engine, "intake_manifold"), onStand: false));
+        Assert.Equal("Take off the crankshaft pulley first.", EngineWork.WhyNotOff(catalog, engine, Find(engine, "timing_cover"), onStand: false));
+        Assert.Contains("the alternator", EngineWork.WhyNotOff(catalog, engine, Find(engine, "water_pump"), onStand: false));
+        Assert.Equal("Take off the starter first.", EngineWork.WhyNotOff(catalog, engine, Find(engine, "transmission"), onStand: false));
+        Assert.Equal(new[] { PartWay.Forward }, catalog.WorkOrder.WayOf(catalog.Get(Find(engine, "fan").DefinitionId)!));
+
+        var taken = EngineWork.StripForStand(catalog, engine);
+        Assert.Equal(new[] { "radiator", "starter", "transmission", "clutch", "flywheel" }, taken.Select(p => catalog.WorkOrder.KindOf(catalog.Get(p.DefinitionId)!)));
+
+        // What came off for the stand does not go back on while the engine is on it
+        var gearbox = taken.Single(p => catalog.WorkOrder.KindOf(catalog.Get(p.DefinitionId)!) == "transmission");
+        Assert.Equal("The transmission goes on with the engine in the car, not on the stand.", EngineWork.WhyNotOn(catalog, engine, gearbox, onStand: true));
+        Assert.Null(EngineWork.WhyNotOn(catalog, engine, taken.Single(p => catalog.WorkOrder.KindOf(catalog.Get(p.DefinitionId)!) == "flywheel"), onStand: false));
+
+        // The rods have bearings of their own: the main bearing bridge only holds the crankshaft
+        foreach (var kind in new[] { "cylinder_head", "oil_pan" })
+        {
+            var part = Find(engine, kind);
+            PartTrees.FindParent(engine, part)!.Children.Remove(part);
+        }
+
+        Assert.Contains(engine.SelfAndDescendants(), p => catalog.WorkOrder.KindOf(catalog.Get(p.DefinitionId)!) == "bearing_bridge");
+        Assert.DoesNotContain("bearing", EngineWork.WhyNotOff(catalog, engine, Find(engine, "connecting_rods"), onStand: true) ?? string.Empty);
+        Assert.Contains("main bearing bridge", EngineWork.WhyNotOff(catalog, engine, Find(engine, "crankshaft"), onStand: true));
+    }
+
+    /// <summary>The belt runs on the fan's pulley: it goes on after the water pump and the fan, and holds them on</summary>
+    [Fact]
+    public void The_drive_belt_needs_the_water_pump_and_the_fan()
+    {
+        var catalog = Catalog.Value;
+        var engine = Engine("script-ford-l6/ford-221-132-hp");
+
+        var belt = Find(engine, "belt");
+        PartTrees.FindParent(engine, belt)!.Children.Remove(belt);
+        var fan = Find(engine, "fan");
+        Assert.Null(EngineWork.WhyNotOff(catalog, engine, fan, onStand: false));
+        var pump = PartTrees.FindParent(engine, fan)!;
+        pump.Children.Remove(fan);
+        Assert.Equal("Put on the fan first.", EngineWork.WhyNotOn(catalog, engine, belt, onStand: false));
+
+        Assert.Contains("the alternator", EngineWork.WhyNotOff(catalog, engine, pump, onStand: false));
+        var alternator = Find(engine, "alternator");
+        PartTrees.FindParent(engine, alternator)!.Children.Remove(alternator);
+        PartTrees.FindParent(engine, pump)!.Children.Remove(pump);
+        // No place for a fan without the pump: the pump first, then the fan
+        Assert.Equal("Put on the water pump first.", EngineWork.WhyNotOn(catalog, engine, belt, onStand: false));
+    }
+
+    /// <summary>
+    /// An engine that comes into the game with a belt and nothing for it to run on (a build short of its water pump,
+    /// a save from before the fan was needed) has the belt taken off: it could come off but never go back on
+    /// </summary>
+    [Fact]
+    public void A_belt_with_nothing_to_run_on_comes_off_as_the_engine_comes_into_the_game()
+    {
+        var catalog = Catalog.Value;
+
+        // The build is short of its water pump and fan (on the to-mod list): the belt is left off
+        var engine = Engine("cars/Amazon/0006/stock");
+        Assert.Contains(engine.SelfAndDescendants(), p => catalog.WorkOrder.KindOf(catalog.Get(p.DefinitionId)!) == "belt");
+        var taken = EngineWork.TakeOffWhatLacksItsNeeds(catalog, engine);
+        Assert.Equal("belt", catalog.WorkOrder.KindOf(catalog.Get(Assert.Single(taken).DefinitionId)!));
+        Assert.DoesNotContain(engine.SelfAndDescendants(), p => taken.Contains(p));
+        Assert.Empty(EngineWork.TakeOffWhatLacksItsNeeds(catalog, engine));
+
+        // A Charger 383 saved when its build's fan did not fit the pump: the belt goes on the shelf
+        var saved = Engine("charge/0006/stock");
+        var fan = Find(saved, "fan");
+        PartTrees.FindParent(saved, fan)!.Children.Remove(fan);
+        var loose = new List<PartInstance>();
+        Assert.True(SavedParts.BringUpToDate(catalog, saved, loose));
+        Assert.Equal("belt", catalog.WorkOrder.KindOf(catalog.Get(Assert.Single(loose).DefinitionId)!));
+        Assert.Null(EngineWork.WhyNotOn(catalog, saved, fan, onStand: false));
+    }
+
+    /// <summary>The engines the game makes have every part they need: nothing is left off them</summary>
+    [Fact]
+    public void The_builds_that_run_have_all_that_their_parts_need()
+    {
+        var catalog = Catalog.Value;
+        foreach (var build in Rated.Value.Runnable)
+        {
+            var engine = PartTrees.FromInstalled(PartTreeBuilder.BuildEngine(catalog, build.Build)!.Root, PartInstance.CarEngineSlot);
+            Assert.True(EngineWork.TakeOffWhatLacksItsNeeds(catalog, engine).Count == 0, build.Build.Id);
+        }
+    }
+
+    /// <summary>
+    /// A power steering belt runs on the steering pump, not the water pump; a radiator with an electric fan does the
+    /// fan's job for the drive belt
+    /// </summary>
+    [Fact]
+    public void Steering_belts_and_electric_fans_are_kinds_of_their_own()
+    {
+        var catalog = Catalog.Value;
+        var order = catalog.WorkOrder;
+        Assert.Equal("steering_belt", order.KindOf(catalog.Get("engines/ford/Ford_stock_steering_pump_belt")!));
+        Assert.Equal("steering_belt", order.KindOf(catalog.Get("engines/chrysler/Belt_Steering_pump")!));
+        Assert.Equal("steering_pump", order.KindOf(catalog.Get("engines/chrysler/Power_Steering_pump")!));
+        Assert.Equal("radiator_fan", order.KindOf(catalog.Get("engines/chrysler/Radiator_big_Paxton_Kit")!));
+        Assert.True(order.DoesJobOf("radiator_fan", "fan"));
+        Assert.False(order.DoesJobOf("fan", "radiator_fan"));
+        Assert.Equal("the radiator, the starter, the transmission, the clutch and the flywheel", EngineWork.StandStripsDisplay(catalog));
+
+        // The Charger's 383 with the electric-fan radiator in place of its own: the belt goes on without a fan
+        var engine = Engine("charge/0006/stock");
+        var belt = Find(engine, "belt");
+        var fan = Find(engine, "fan");
+        var radiator = Find(engine, "radiator");
+        foreach (var part in new[] { belt, fan, radiator }) PartTrees.FindParent(engine, part)!.Children.Remove(part);
+        Assert.Equal("Put on the fan first.", EngineWork.WhyNotOn(catalog, engine, belt, onStand: false));
+
+        var electric = new PartInstance { DefinitionId = "engines/chrysler/Radiator_big_Paxton_Kit" };
+        Workbench.Mount(new List<PartInstance> { engine }, Workbench.FindPlacesOnStand(catalog, engine, electric).First(), electric);
+        Assert.Null(EngineWork.WhyNotOn(catalog, engine, belt, onStand: false));
+
+        // It goes on the stand's way, as a radiator does
+        Assert.Contains(electric, EngineWork.StripForStand(catalog, engine));
+    }
+
+    /// <summary>
+    /// What a part needs holds it on even where no rule says so the other way round, and a need that may not go on
+    /// where the engine is does not hold up what needs it
+    /// </summary>
+    [Fact]
+    public void A_mod_needs_rule_holds_by_itself()
+    {
+        _temp.File("base/work_order.json", """
+            { "kinds": [ { "id": "fan", "names": [ "fan" ] }, { "id": "belt", "name": "drive belt", "names": [ "belt" ] },
+                         { "id": "water_pump", "names": [ "water pump", "water pomp" ] } ],
+              "rules": [ { "kind": "belt", "needs": [ "fan" ] } ],
+              "stand_strips": [ "fan" ] }
+            """);
+        var catalog = PartsCatalog.Load(RepoPaths.PartsFolder);
+        catalog.WorkOrder = WorkOrder.Load(new[] { ("streetcorsa", true, Path.Combine(_temp.Path, "base")) }, new List<string>());
+
+        var engine = Engine("charge/0006/stock");
+        var fan = Find(engine, "fan");
+        Assert.Equal("Take off the drive belt first.", EngineWork.WhyNotOff(catalog, engine, fan, onStand: false));
+        var pump = PartTrees.FindParent(engine, fan)!;
+
+        // On the stand the fan stays off (it is one of the stand strips), so the belt does not wait for it
+        var belt = Find(engine, "belt");
+        PartTrees.FindParent(engine, belt)!.Children.Remove(belt);
+        pump.Children.Remove(fan);
+        Assert.Equal("Put on the fan first.", EngineWork.WhyNotOn(catalog, engine, belt, onStand: false));
+        Assert.Null(EngineWork.WhyNotOn(catalog, engine, belt, onStand: true));
+    }
+
+    [Fact]
+    public void A_mod_rule_for_a_ruled_kind_adds_to_it_and_rules_that_lock_are_reported()
+    {
+        _temp.File("base/work_order.json", """
+            { "kinds": [ { "id": "fan" }, { "id": "belt" }, { "id": "pump" }, { "id": "head" }, { "id": "cover" } ],
+              "rules": [ { "kind": "belt", "after": [ "pump" ] }, { "kind": "fan", "after": [ "belt" ] } ] }
+            """);
+        _temp.File("mod/work_order.json", """
+            { "kinds": [ { "id": "fan", "serves": [ "cooling" ] } ],
+              "rules": [ { "kind": "belt", "stand_only": true, "after": [ "cover" ], "needs": [ "fan" ] },
+                         { "kind": "pump", "after": [ "fan" ] },
+                         { "kind": "head", "after": [ "head" ] },
+                         { "kind": "cover", "needs": [ "head", "cover" ], "after": [ "head" ] } ] }
+            """);
+
+        var problems = new List<string>();
+        var order = WorkOrder.Load(new[] { ("streetcorsa", true, Path.Combine(_temp.Path, "base")), ("mymod", false, Path.Combine(_temp.Path, "mod")) }, problems);
+
+        // Written before the base game had a rule for the belt, the mod's still counts: added to the base game's
+        var belt = order.RuleFor("belt")!;
+        Assert.True(belt.StandOnly);
+        Assert.Equal(new[] { "pump", "cover" }, belt.After);
+        Assert.Equal(new[] { "fan" }, belt.Needs);
+        Assert.True(order.DoesJobOf("fan", "cooling"));
+
+        Assert.Equal(3, problems.Count);
+        Assert.Contains("work_order.json: belt, pump, fan wait for each other to be off: none of them would come off", problems);
+        Assert.Contains("work_order.json: head wait for each other to be off: none of them would come off", problems);
+        Assert.Contains("work_order.json: the rule of cover both needs head and waits for it to be off: cover would never go on", problems);
+    }
+
+    [Fact]
+    public void A_rule_needing_a_kind_no_work_order_lists_is_reported()
+    {
+        _temp.File("base/work_order.json", """
+            { "kinds": [ { "id": "fan", "names": [ "fan" ] }, { "id": "belt", "names": [ "belt" ] } ],
+              "rules": [ { "kind": "belt", "needs": [ "fan", "pulley" ] } ] }
+            """);
+
+        var problems = new List<string>();
+        var order = WorkOrder.Load(new[] { ("streetcorsa", true, Path.Combine(_temp.Path, "base")) }, problems);
+
+        Assert.Equal(new[] { "fan", "pulley" }, order.Rules.Single().Needs);
+        Assert.Equal("work_order.json: the rule of belt needs pulley, a kind no work order lists", Assert.Single(problems));
+    }
+
     [Fact]
     public void A_loose_part_goes_on_only_with_its_way_clear()
     {
@@ -125,6 +333,9 @@ public sealed class EngineStandTests : IDisposable
         Assert.Equal("The pistons only go in on the engine stand.", EngineWork.WhyNotOn(catalog, engine, pistons, onStand: false));
     }
 
+    /// <summary>
+    /// Every build, those that do not run too: one short of parts is what a mod's build or an old save may bring in
+    /// </summary>
     public static TheoryData<string> Builds() => new(Catalog.Value.EngineBuilds.Select(b => b.Id));
 
     /// <summary>
@@ -139,7 +350,9 @@ public sealed class EngineStandTests : IDisposable
         var build = catalog.EngineBuilds.Single(b => b.Id == buildId);
         if (PartTreeBuilder.BuildEngine(catalog, build) is not { } tree) return;
 
+        // As the game makes an engine: a part without what it needs is left off
         var engine = PartTrees.FromInstalled(tree.Root);
+        EngineWork.TakeOffWhatLacksItsNeeds(catalog, engine);
         EngineWork.StripForStand(catalog, engine);
 
         var removed = new List<(PartInstance Parent, PartInstance Part)>();
@@ -179,6 +392,7 @@ public sealed class EngineStandTests : IDisposable
         if (PartTreeBuilder.BuildEngine(catalog, build) is not { } tree) return;
 
         var engine = PartTrees.FromInstalled(tree.Root, PartInstance.CarEngineSlot);
+        EngineWork.TakeOffWhatLacksItsNeeds(catalog, engine);
         foreach (var part in engine.SelfAndDescendants().Skip(1).ToList())
         {
             if (EngineWork.WhyNotOff(catalog, engine, part, onStand: false) != null) continue;
@@ -263,7 +477,7 @@ public sealed class EngineStandTests : IDisposable
     }
 
     [Fact]
-    public void A_mod_names_its_own_kinds_and_may_change_a_rule_only_on_purpose()
+    public void A_mod_names_its_own_kinds_and_may_take_back_a_rule_only_on_purpose()
     {
         _temp.File("base/work_order.json", """
             { "kinds": [ { "id": "fan", "name": "fan", "names": [ "fan" ] }, { "id": "belt", "names": [ "belt" ] } ],
@@ -288,9 +502,7 @@ public sealed class EngineStandTests : IDisposable
         Assert.Empty(order.Rules.Single(r => r.Kind == "fan").After);
         Assert.Equal(new[] { "fan" }, order.Rules.Single(r => r.Kind == "belt").After);
         Assert.Equal(new[] { "belt" }, order.StandStrips);
-        Assert.Equal(2, problems.Count);
-        Assert.Contains(problems, p => p.StartsWith("mymod/work_order.json: fan has a rule already", StringComparison.Ordinal));
-        Assert.Contains(problems, p => p.Contains("without a kind", StringComparison.Ordinal));
+        Assert.Contains("without a kind", Assert.Single(problems), StringComparison.Ordinal);
     }
 
     [Fact]

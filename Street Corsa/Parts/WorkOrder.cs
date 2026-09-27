@@ -6,7 +6,8 @@ namespace StreetCorsa.Parts;
 
 /// <summary>
 /// What kind of job a part is on an engine, and what has to be off before it comes off (or goes back on): the
-/// crankshaft only on the stand, with nothing on it and the oil pan off; the intake with the distributor out.
+/// crankshaft only on the stand, with nothing on it and the oil pan off; the intake with the distributor out; the belt
+/// only over the water pump and the fan.
 /// Read from <see cref="FileName"/> in every mod's parts folder, so a mod's blocks get rules of their own.
 /// </summary>
 /// <remarks>
@@ -23,6 +24,7 @@ public sealed class WorkOrder
     private readonly List<WorkKind> _kinds = new();
     private readonly Dictionary<string, WorkKind> _kindsById = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, WorkRule> _rules = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, HashSet<string>> _serves = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, IReadOnlyList<PartWay>> _ways = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> _standStrips = new();
     private readonly ConcurrentDictionary<PartDefinition, string?> _kindOf = new(ReferenceEqualityComparer.Instance);
@@ -47,7 +49,17 @@ public sealed class WorkOrder
     /// <summary>The kind of a part; null for one none of the kinds takes in, which has no rules</summary>
     public string? KindOf(PartDefinition part) => _kindOf.GetOrAdd(part, FindKind);
 
-    public WorkRule? RuleOf(PartDefinition part) => KindOf(part) is { } kind ? _rules.GetValueOrDefault(kind) : null;
+    public WorkRule? RuleOf(PartDefinition part) => KindOf(part) is { } kind ? RuleFor(kind) : null;
+
+    /// <summary>The rule of a kind; null for one without</summary>
+    public WorkRule? RuleFor(string kind) => _rules.GetValueOrDefault(kind);
+
+    /// <summary>
+    /// A part of the kind does the job a part that needs <paramref name="needed"/> is after: a fan, or a radiator
+    /// with an electric fan of its own (<see cref="WorkKind.Serves"/>)
+    /// </summary>
+    public bool DoesJobOf(string kind, string needed) =>
+        kind.Equals(needed, StringComparison.OrdinalIgnoreCase) || _serves.TryGetValue(kind, out var serves) && serves.Contains(needed);
 
     /// <summary>The way a part comes off the engine, leg by leg; empty for a kind that does not say</summary>
     public IReadOnlyList<PartWay> WayOf(PartDefinition part) =>
@@ -141,6 +153,14 @@ public sealed class WorkOrder
                 // The first mod to name a kind names it for the player; a later one may only add ways to tell it
                 if (!order._kindsById.ContainsKey(kind.Id)) order._kindsById[kind.Id] = kind;
 
+                // The jobs it does add up: a later mod may find it another
+                kind.Serves = PartDefinition.NonNull(kind.Serves);
+                if (kind.Serves.Count > 0)
+                {
+                    if (!order._serves.TryGetValue(kind.Id, out var serves)) order._serves[kind.Id] = serves = new(StringComparer.OrdinalIgnoreCase);
+                    serves.UnionWith(kind.Serves);
+                }
+
                 // Which way it comes off is only looks: the last mod to say so says so
                 if (kind.ComesOff is { } legs)
                 {
@@ -167,13 +187,20 @@ public sealed class WorkOrder
                     continue;
                 }
 
-                if (order._rules.ContainsKey(rule.Kind) && !rule.Replace)
+                rule.After = PartDefinition.NonNull(rule.After);
+                rule.Needs = PartDefinition.NonNull(rule.Needs);
+
+                // A rule for a kind that has one already only adds to it: more to wait for, more it needs. Taking any
+                // of it back is on purpose ("replace"), so a mod written before the base game ruled a kind still counts
+                if (order._rules.TryGetValue(rule.Kind, out var ruled) && !rule.Replace)
                 {
-                    problems.Add($"{label}: {rule.Kind} has a rule already; say \"replace\": true to change it. Left out");
+                    ruled.StandOnly |= rule.StandOnly;
+                    ruled.Bare |= rule.Bare;
+                    ruled.After = ruled.After.Union(rule.After, StringComparer.OrdinalIgnoreCase).ToList();
+                    ruled.Needs = ruled.Needs.Union(rule.Needs, StringComparer.OrdinalIgnoreCase).ToList();
                     continue;
                 }
 
-                rule.After = PartDefinition.NonNull(rule.After);
                 order._rules[rule.Kind] = rule;
             }
 
@@ -192,9 +219,52 @@ public sealed class WorkOrder
         {
             foreach (var after in rule.After.Where(a => !order._kindsById.ContainsKey(a)))
                 problems.Add($"{FileName}: the rule of {rule.Kind} waits for {after}, a kind no work order lists");
+            foreach (var need in rule.Needs.Where(n => !order._kindsById.ContainsKey(n)))
+                problems.Add($"{FileName}: the rule of {rule.Kind} needs {need}, a kind no work order lists");
+            foreach (var both in rule.Needs.Intersect(rule.After, StringComparer.OrdinalIgnoreCase))
+                problems.Add($"{FileName}: the rule of {rule.Kind} both needs {both} and waits for it to be off: {rule.Kind} would never go on");
         }
 
+        foreach (var loop in Loops(order._rules.Values, r => r.After, withItself: true))
+            problems.Add($"{FileName}: {string.Join(", ", loop)} wait for each other to be off: none of them would come off");
+        foreach (var loop in Loops(order._rules.Values, r => r.Needs, withItself: false))
+            problems.Add($"{FileName}: {string.Join(", ", loop)} need each other on: none of them would go on");
+
         return order;
+    }
+
+    /// <summary>
+    /// Kinds whose rules lead from one to the next and back to the first, each loop once, in the order they lead. A
+    /// rule waiting for its own kind is a loop (two cylinder heads, each in the other's way); one needing its own kind
+    /// is not (the part is of that kind itself).
+    /// </summary>
+    private static List<List<string>> Loops(IEnumerable<WorkRule> rules, Func<WorkRule, List<string>> next, bool withItself)
+    {
+        var leads = rules.ToDictionary(r => r.Kind, next, StringComparer.OrdinalIgnoreCase);
+        var loops = new List<List<string>>();
+        var path = new List<string>();
+        foreach (var start in leads.Keys) Walk(start, start);
+
+        return loops;
+
+        // Only through kinds that sort after the first, so each loop is found once: from its first kind
+        void Walk(string start, string kind)
+        {
+            path.Add(kind);
+            foreach (var to in leads.GetValueOrDefault(kind) ?? new List<string>())
+            {
+                if (to.Equals(start, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (path.Count > 1 || withItself) loops.Add(path.ToList());
+                }
+                else if (string.Compare(to, start, StringComparison.OrdinalIgnoreCase) > 0 && !path.Contains(to, StringComparer.OrdinalIgnoreCase))
+                {
+                    Walk(start, to);
+                }
+            }
+
+            path.RemoveAt(path.Count - 1);
+        }
     }
 
     /// <summary>
@@ -247,6 +317,13 @@ public sealed class WorkKind
     public List<string> Names { get; set; } = new();
 
     /// <summary>
+    /// Kinds whose job it does for a part that needs them (<see cref="WorkRule.Needs"/>): a radiator with an electric
+    /// fan of its own serves as the fan a belt needs. Only for needs: the rules of the kinds it serves are not its own.
+    /// </summary>
+    [JsonProperty("serves")]
+    public List<string> Serves { get; set; } = new();
+
+    /// <summary>
     /// How the part is seen to come off, leg by leg, in the engine's own directions (a <see cref="PartWay"/> each):
     /// ["back", "down"] for a gearbox. Parts mounted on it go along. Null leaves it to the kind as another mod says.
     /// </summary>
@@ -285,7 +362,14 @@ public sealed class WorkRule
     [JsonProperty("after")]
     public List<string> After { get; set; } = new();
 
-    /// <summary>A mod changing a rule it did not write: on purpose, or it is reported and left out</summary>
+    /// <summary>
+    /// Kinds that must be on the engine before this goes on, and stay on while it is: a belt needs the pulleys it runs
+    /// on. Only where the engine takes one, so a block without a place for a fan needs none.
+    /// </summary>
+    [JsonProperty("needs")]
+    public List<string> Needs { get; set; } = new();
+
+    /// <summary>A mod taking back some of a rule it did not write: on purpose, or its rule only adds to it</summary>
     [JsonProperty("replace")]
     public bool Replace { get; set; }
 }

@@ -6,7 +6,8 @@ namespace StreetCorsa.Parts.Cars;
 /// Keeps saved part trees in step with the catalog. When a pack is replaced by a later release its parts go
 /// by new ids (<see cref="PartsCatalog.CurrentId"/>), and the new release may have renumbered slots: the oil
 /// pan that hung by slot 9 now hangs by slot 10. Saved parts get their current ids, and every joint the
-/// catalog no longer agrees with is made again the way the workbench would.
+/// catalog no longer agrees with is made again the way the workbench would. An engine's part that lacks what it
+/// needs by the work order comes off too (<see cref="EngineWork.TakeOffWhatLacksItsNeeds"/>).
 /// </summary>
 public static class SavedParts
 {
@@ -17,7 +18,16 @@ public static class SavedParts
         // Joints are looked at whether or not ids changed: a part may keep its id and lose a slot (a set of
         // carburettors that became one carburettor keeps its id, and what sat on the set moves over the row)
         var renamed = root.SelfAndDescendants().Any(p => catalog.CurrentId(p.DefinitionId) != p.DefinitionId);
-        return Renew(catalog, root, loose) || renamed;
+        var changed = Renew(catalog, root, loose) || renamed;
+
+        // A belt saved on an engine without its water pump could come off but never go back on
+        if (catalog.Get(root.DefinitionId) is { } block && PartKinds.IsBlock(block) && EngineWork.TakeOffWhatLacksItsNeeds(catalog, root) is { Count: > 0 } lacking)
+        {
+            loose.AddRange(lacking);
+            changed = true;
+        }
+
+        return changed;
     }
 
     /// <param name="parent">What <paramref name="part"/> hangs on, when it hangs on something</param>

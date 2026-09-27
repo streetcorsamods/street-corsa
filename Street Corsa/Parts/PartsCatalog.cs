@@ -49,7 +49,7 @@ public sealed class PartsCatalog
     public IReadOnlyList<EngineBuild> EngineBuilds { get; private set; } = Array.Empty<EngineBuild>();
 
     /// <summary>What has to come off an engine before what, and what only comes off on the stand</summary>
-    public WorkOrder WorkOrder { get; private set; } = WorkOrder.Empty;
+    public WorkOrder WorkOrder { get; internal set; } = WorkOrder.Empty;
 
     /// <summary>A catalog without parts, for when the parts under the folder cannot be read</summary>
     public static PartsCatalog Empty(string root) => new(root, new[] { Path.Combine(root, PartScripts.Folder) });

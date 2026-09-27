@@ -5891,6 +5891,7 @@
       "id": "engines/ford_six/ford_stock_distributor",
       "name": "ford_stock_distributor",
       "display_name": "Ford stock distributor",
+      "kind": "side_distributor",
       "base_class": "java.game.parts.EnginePart",
       "class_chain": [
         "java.game.parts.EnginePart",

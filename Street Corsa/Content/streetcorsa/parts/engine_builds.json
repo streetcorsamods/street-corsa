@@ -3358,10 +3358,10 @@
         "source": "parts\\engines\\Mopar.rpk#0x0043"
       },
       {
-        "part": "engines/chrysler/Fan_HEMI",
+        "part": "engines/chrysler/Fan_5_blade",
         "name": null,
         "conditional": false,
-        "source": "parts\\engines\\Mopar.rpk#0x4B24"
+        "source": "parts\\engines\\Chrysler_V8_pak.rpk#0x0E09"
       },
       {
         "part": "engines/chrysler/Radiator_big",
@@ -3973,10 +3973,10 @@
         "source": "parts\\engines\\Mopar.rpk#0x0043"
       },
       {
-        "part": "engines/chrysler/Fan_HEMI",
+        "part": "engines/chrysler/Fan_5_blade",
         "name": null,
         "conditional": false,
-        "source": "parts\\engines\\Mopar.rpk#0x4B24"
+        "source": "parts\\engines\\Chrysler_V8_pak.rpk#0x0E09"
       },
       {
         "part": "engines/chrysler/Radiator_big",
@@ -12658,10 +12658,10 @@
         "source": "parts\\engines\\Mopar.rpk#0x0043"
       },
       {
-        "part": "engines/chrysler/Fan_HEMI",
+        "part": "engines/chrysler/Fan_5_blade",
         "name": null,
         "conditional": false,
-        "source": "parts\\engines\\Mopar.rpk#0x4B24"
+        "source": "parts\\engines\\Chrysler_V8_pak.rpk#0x0E09"
       },
       {
         "part": "engines/chrysler/Radiator_big",
@@ -16165,10 +16165,10 @@
         "source": "parts\\engines\\Mopar.rpk#0x0043"
       },
       {
-        "part": "engines/chrysler/Fan_HEMI",
+        "part": "engines/chrysler/Fan_5_blade",
         "name": null,
         "conditional": false,
-        "source": "parts\\engines\\Mopar.rpk#0x4B24"
+        "source": "parts\\engines\\Chrysler_V8_pak.rpk#0x0E09"
       },
       {
         "part": "engines/chrysler/Radiator_big",
@@ -26923,10 +26923,10 @@
         "source": "parts\\engines\\MOPAR.rpk#0x0043"
       },
       {
-        "part": "engines/chrysler/Fan_HEMI",
-        "name": "MOPAR HEMI_426_fan",
+        "part": "engines/chrysler/Fan_5_blade",
+        "name": "Fan_5_blade",
         "conditional": false,
-        "source": "parts\\engines\\MOPAR.rpk#0x4B24"
+        "source": "parts\\engines\\Chrysler_V8_pak.rpk#0x0E09"
       },
       {
         "part": "engines/chrysler/Radiator_big",
