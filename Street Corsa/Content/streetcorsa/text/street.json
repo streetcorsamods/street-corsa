@@ -1,0 +1,43 @@
+{
+  "_comment": [
+    "The word on the street at the diner: what the rivals did today. Each pool gives one line at random.",
+    "{name} is the racer, {nickname} their nickname as it is said (' \"Flathead\"', or nothing), {possessive}",
+    "his/her/their, {car} the car. Other values are named in the lines that use them."
+  ],
+  "lines": {
+    "street.broke_quit": "{name} went broke one time too many and quit the scene.",
+    "street.broke": "{name} is broke and scraped ${cash:N0} together to get back on the street.",
+    "street.king_out": "{name} has heard about you. He's at the diner, and he only races for pink slips.",
+    "street.back_on_street": "{name} is back on the street.",
+    "street.no_car": "{name} has no car and is sitting it out.",
+    "street.car_impounded": "The police have {name}'s {car} in the impound; {name} is sitting it out.",
+    "street.car_laid_up": "{name}'s {car} is laid up; {name} is sitting it out.",
+    "street.gave_up": "{name} gave up on {possessive} {car} and quit the scene.",
+    "street.left_town": "{name}{nickname} sold up and left town.",
+    "street.impound_collected": "{name} got {possessive} {car} back from the police impound.",
+    "street.impound_auctioned": "{name} never collected {possessive} {car}: the police auctioned it off.",
+    "street.advertised": "{name} put {possessive} {car} in the paper for ${price:N0}.",
+    "street.ad_unanswered": "Nobody called about {name}'s {car}.",
+    "street.sold_scrap": "{name} sold the wreck of {possessive} {car} for scrap.",
+    "street.sold_dealer": "{name} sold {possessive} {car} to a dealer for ${price:N0}.",
+    "street.bought_ad": "{name} bought {seller}'s {car} out of the paper for ${price:N0}.",
+    "street.bought_dealer": "{name} bought a {car} off {dealer}'s lot for ${price:N0}.",
+    "street.bought": "{name} bought a {car} for ${price:N0}.",
+    "street.repaired": "{name} had {possessive} {car} fixed up for ${price:N0}.",
+    "street.tuned_block": "{name} dropped {change} into {possessive} {car} ({hpBefore:0} → {hpAfter:0} hp).",
+    "street.tuned_cooling": "{name} put a {change} on {possessive} {car} to keep it cool.",
+    "street.tuned": "{name} put a {change} on {possessive} {car} ({hpBefore:0} → {hpAfter:0} hp).",
+    "street.back_in_town": "{name}{nickname} is back in town.",
+    "street.new_face_car": "A new face at the diner: {name}{nickname}, in a {car}.",
+    "street.new_face": "A new face at the diner: {name}{nickname}.",
+
+    "street.grudge": "{name} wants {possessive} {car} back from {player}, and tells anyone who'll listen.",
+    "street.grudge_settled": "{name} got even with {player} in a pink-slip rematch.",
+    "street.grudge_dropped": "{name} has stopped talking about getting {possessive} {car} back.",
+    "street.bought_players_car": "{name} bought {player}'s car out of the paper.",
+
+    "street.rivals.pink_wreck": "{loser} wrecked the {car} racing {winner} for pink slips; {winner} towed away what's left of it.",
+    "street.rivals.pink": "{winner} took {loser}'s {car} in a pink slip race.",
+    "street.rivals.wreck": "{loser} wrecked the {car} in a {raceType} race against {winner}."
+  }
+}

@@ -2,6 +2,7 @@ using StreetCorsa.Models.Career.Events;
 using StreetCorsa.Models.Catalog;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Services.Catalog;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Services.Career
 {
@@ -139,14 +140,11 @@ namespace StreetCorsa.Services.Career
             var car = (fitting.Count > 0 ? fitting : cars)[_random.Next(fitting.Count > 0 ? fitting.Count : cars.Count)];
             var skin = car.AvailableSkins is { Count: > 0 } skins ? skins[_random.Next(skins.Count)] : "default";
 
-            var names = new[] { "Speed Demon", "Road Runner", "Night Rider", "Street King", "Drag Master" };
-            var nicknames = new[] { "The Flash", "Quick Draw", "Burnout", "Smokey", "Rev Head" };
-
             // Rolled once: the opponent that races and the one the result is about are the same one
             var opponent = new EventOpponent
             {
-                Name = names[_random.Next(names.Length)],
-                Nickname = nicknames[_random.Next(nicknames.Length)],
+                Name = GameText.Installed.Pick("names.event_racers", _random),
+                Nickname = GameText.Installed.Pick("names.event_nicknames", _random),
                 Skill = _random.Next(Opponent.MinSkill, Opponent.MaxSkill + 1),
                 Aggression = 40 + _random.Next(30),
                 CarDefinitionId = car.Id,

@@ -2,6 +2,7 @@ using System.IO;
 using System.Security.Cryptography;
 using Newtonsoft.Json;
 using StreetCorsa.Helpers;
+using StreetCorsa.Mods;
 using StreetCorsa.Parts.Cars;
 using StreetCorsa.Parts.Export;
 
@@ -73,8 +74,8 @@ public sealed class SoundOverrides
 public delegate (int? Cylinders, string Family)? CarEngineFacts(string carId, string brand, string name, double? bhp);
 
 /// <summary>
-/// Every sound the game can put on an engine. Two sources, the same rules for both: a folder under the game's
-/// <c>Assets\Sounds</c> is a sound (a bank, a <c>GUIDs.txt</c>, an optional <c>sound.json</c>; drop one in and the
+/// Every sound the game can put on an engine. Two sources, the same rules for both: a folder under a mod's
+/// <c>sounds</c> (the base game's is <c>Content\streetcorsa\sounds</c>) is a sound (a bank, a <c>GUIDs.txt</c>, an optional <c>sound.json</c>; drop one in and the
 /// game has it), and every installed car's own bank is a sound too, harvested with what the car says about it
 /// (its rev limiter, and the engine the parts would give it). Banks that are the same bytes are one sound with
 /// several carriers, so a car already on that bank is left alone.
@@ -124,52 +125,84 @@ public sealed class SoundLibrary
 
     public static SoundLibrary Empty(string root) => new(root, new SoundOverrides());
 
-    /// <summary>The library folder: one sound per subfolder. A folder that is not there is an empty library.</summary>
+    /// <summary>The library folder alone, as the base game's: one sound per subfolder. A folder that is not there is an empty library.</summary>
+    public static SoundLibrary Load(string root) =>
+        Load(new[] { (new ModInfo { Id = ModIds.BaseId, Name = "Street Corsa" }, root) });
+
+    /// <summary>The sounds of every mod that has any, in load order; the first folder is the base game's</summary>
+    /// <param name="partExists">Whether a part id is known, to find what a mod's pins name (its own block first, then the base game's)</param>
     /// <remarks>
+    /// Each mod's sounds folder is laid out as the base game's: one sound per subfolder, and a sounds.json whose pins
+    /// and car facts join those of the mods before it (a later mod's pin for the same block wins). A mod's sound ids
+    /// get its namespace.
     /// A sounds.json that does not read is no pins and no facts, a sound folder that does not read is not a sound: each
     /// is one line in <see cref="Problems"/>, and the rest of the library stands.
     /// </remarks>
-    public static SoundLibrary Load(string root)
+    public static SoundLibrary Load(IReadOnlyList<(ModInfo Mod, string Dir)> roots, Func<string, bool>? partExists = null)
     {
-        var problems = new List<string>();
-        var overrides = new SoundOverrides();
-        var overridesPath = Path.Combine(root, SoundsJson);
-        try
-        {
-            if (File.Exists(overridesPath)) overrides = JsonConvert.DeserializeObject<SoundOverrides>(File.ReadAllText(overridesPath)) ?? overrides;
-        }
-        catch (Exception ex)
-        {
-            problems.Add($"{SoundsJson}: {ex.Message}; no pins and no car facts");
-        }
+        partExists ??= _ => false;
+        var baseRoot = roots.FirstOrDefault(r => r.Mod.IsBase).Dir ?? roots.FirstOrDefault().Dir ?? string.Empty;
+        var library = new SoundLibrary(baseRoot, new SoundOverrides());
+        var pins = new List<(ModInfo Mod, string Block, string Sound)>();
 
-        // "pins": null in the file is no pins, and a dictionary the file made is given back its case-blind keys
-        overrides.Pins = new Dictionary<string, string>(overrides.Pins ?? new(), StringComparer.OrdinalIgnoreCase);
-        overrides.Cars = new Dictionary<string, SoundFacts>((overrides.Cars ?? new()).Where(c => c.Value != null), StringComparer.OrdinalIgnoreCase);
-
-        var library = new SoundLibrary(root, overrides);
-        library._problems.AddRange(problems);
-        if (!Directory.Exists(root)) return library;
-
-        foreach (var folder in Directory.GetDirectories(root).OrderBy(f => f, StringComparer.OrdinalIgnoreCase))
+        foreach (var (mod, root) in roots)
         {
+            var label = mod.IsBase ? string.Empty : mod.Id + "/";
+            var overrides = new SoundOverrides();
+            var overridesPath = Path.Combine(root, SoundsJson);
             try
             {
-                var entry = library.ReadSoundFolder(folder);
-                if (entry != null) library.Add(entry);
+                if (File.Exists(overridesPath)) overrides = JsonConvert.DeserializeObject<SoundOverrides>(File.ReadAllText(overridesPath)) ?? overrides;
             }
             catch (Exception ex)
             {
-                library._problems.Add($"{Path.GetFileName(folder)}: {ex.Message}");
+                library._problems.Add($"{label}{SoundsJson}: {ex.Message}; no pins and no car facts from it");
             }
+
+            // "pins": null in the file is no pins
+            foreach (var (block, sound) in overrides.Pins ?? new())
+            {
+                if (!string.IsNullOrWhiteSpace(block) && !string.IsNullOrWhiteSpace(sound)) pins.Add((mod, block, sound));
+            }
+
+            foreach (var (car, facts) in overrides.Cars ?? new())
+            {
+                if (facts != null) library.Overrides.Cars[car] = facts;
+            }
+
+            if (!Directory.Exists(root)) continue;
+
+            foreach (var folder in Directory.GetDirectories(root).OrderBy(f => f, StringComparer.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    var entry = library.ReadSoundFolder(folder, mod);
+                    // The id is the mod's and the folder's name: never there twice
+                    if (entry != null) library.Add(entry);
+                }
+                catch (Exception ex)
+                {
+                    library._problems.Add($"{label}{Path.GetFileName(folder)}: {ex.Message}");
+                }
+            }
+        }
+
+        // A pin names a block and a sound as its mod wrote them: each is the mod's own first, then the base game's
+        foreach (var (mod, block, sound) in pins)
+        {
+            var blockId = ModIds.Resolve(mod.Id, block, partExists);
+            var soundId = sound.StartsWith(CarPrefix, StringComparison.OrdinalIgnoreCase)
+                ? sound
+                : ModIds.Resolve(mod.Id, sound, library._byId.ContainsKey);
+            library.Overrides.Pins[blockId] = soundId;
         }
 
         return library;
     }
 
-    private SoundEntry? ReadSoundFolder(string folder)
+    private SoundEntry? ReadSoundFolder(string folder, ModInfo mod)
     {
-        var id = Path.GetFileName(folder);
+        var id = ModIds.Qualify(mod.Id, Path.GetFileName(folder));
         var factsPath = Path.Combine(folder, SoundJson);
         var facts = File.Exists(factsPath) ? JsonConvert.DeserializeObject<SoundFacts>(File.ReadAllText(factsPath)) ?? new SoundFacts() : new SoundFacts();
 

@@ -13,7 +13,9 @@
     "lights: the renderer's light for each light of the day; colours are r, g, b 0-255. cubemapAmbient is the fill",
     "the renderer lights cars with from its reflections: anything over 0 is a bright white fill whatever the hour, so",
     "dusk and night have 0, and the cars take the ambient colours instead. lamps are street lights lit at night,",
-    "at x, y, z."
+    "at x, y, z.",
+    "times (left out here): the lights of the day the street is used in, e.g. [\"night\"]; without it, every light it",
+    "has a model for. The Cruise screen picks among the streets that fit the hour."
   ],
   "id": "pretville",
   "title": "Pretville Street",

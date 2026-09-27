@@ -6,7 +6,7 @@ const http = require("http");
 const COMFYUI_HOST = "127.0.0.1";
 const COMFYUI_PORT = 8000;
 // Portraits go straight to the game's assets, named by opponent id (drv_031.png, king.png)
-const OUTPUT_DIR = path.join(__dirname, "..", "..", "Assets", "Opponents");
+const OUTPUT_DIR = path.join(__dirname, "..", "..", "Content", "streetcorsa", "racers");
 const PROMPTS_FILE = path.join(__dirname, "opponent_prompts.json");
 const WORKFLOW_FILE = path.join(__dirname, "comfyui-workflow.json");
 

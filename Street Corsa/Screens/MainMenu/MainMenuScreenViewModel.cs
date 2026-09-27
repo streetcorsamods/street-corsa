@@ -158,7 +158,7 @@ namespace StreetCorsa.Screens.MainMenu
                     var installed = InstalledCars.Only(_catalog.GetCarsByStatus(ContentStatus.Active), out _);
                     return (
                         ShowcaseContent.Cars(installed, settings.CarsPath),
-                        ShowcaseContent.LoadScenes(ShowcaseContent.ScenesFile, settings.GaragesPath, settings.ShowroomsPath));
+                        ShowcaseContent.LoadScenes(Mods.ModSet.Installed, settings.ShowroomsPath));
                 });
 
                 if (_left) return;

@@ -81,7 +81,7 @@ three-quarter until the player drags, at which point the camera is theirs and th
 
 ### Data
 
-`Assets/Dealers/dealers.json`, read by `Services/Dealers/DealerCatalog`. It holds the map position, the
+`Content/streetcorsa/dealers/dealers.json`, read by `Services/Dealers/DealerCatalog`. It holds the map position, the
 showroom, how much stock the lot carries, and the kind of car it deals in. **There are no parking bays to
 author** — see below.
 
@@ -92,7 +92,7 @@ for.
 
 ### Lots are laid out to fit the room
 
-`Assets/Dealers/showrooms.json` carries each showroom's floor extent and wall radius, **measured off the
+`Content/streetcorsa/dealers/showrooms.json` carries each showroom's floor extent and wall radius, **measured off the
 .kn5 rather than guessed**:
 
 | Showroom | Floor | Walls | Holds |
@@ -193,7 +193,7 @@ The daily refresh tops each lot back up to its own target, for the same reason.
 - `Controls/SharedTextureBridge.cs` — DX11-to-WPF presentation, shared with `CarViewport3D`
 - `Helpers/MapPanel.cs` — the full-bleed map with the pins held on their places
 - `Services/Dealers/LotLayout.cs` — works the bays out from the room
-- `Assets/Dealers/showrooms.json` — measured showroom floors
+- `Content/streetcorsa/dealers/showrooms.json` — measured showroom floors
 - `Services/Dealers/` — dealer definitions
 - `Services/Market/CarPurchaseService.cs` — buying, shared with the listings screen
-- `Assets/Dealers/dealers.json` — the data
+- `Content/streetcorsa/dealers/dealers.json` — the data

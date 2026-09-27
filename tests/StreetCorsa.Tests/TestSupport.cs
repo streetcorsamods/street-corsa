@@ -77,7 +77,12 @@ public static class RepoPaths
 
     public static string GameProject => Path.Combine(Root, "Street Corsa");
 
-    public static string PartsFolder => Path.Combine(GameProject, "Assets", "Parts");
+    /// <summary>The Content folder in the source tree: the base game and nothing else</summary>
+    public static string Content => Path.Combine(GameProject, Mods.ModSet.FolderName);
+
+    public static string BaseContent => Path.Combine(Content, Mods.ModIds.BaseId);
+
+    public static string PartsFolder => Path.Combine(BaseContent, Mods.ContentTypes.Parts);
 
     private static string FindRoot([CallerFilePath] string here = "")
     {

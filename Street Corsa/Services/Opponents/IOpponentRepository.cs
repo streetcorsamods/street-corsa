@@ -19,11 +19,5 @@ namespace StreetCorsa.Services.Opponents
         /// <param name="opponentId">The opponent ID (e.g., "drv_001")</param>
         /// <returns>The opponent, or null if not found</returns>
         Opponent? LoadOpponent(string opponentId);
-
-        /// <summary>
-        /// Check if opponent definitions file exists
-        /// </summary>
-        /// <returns>True if the definitions file exists</returns>
-        bool DefinitionsFileExists();
     }
 }

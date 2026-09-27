@@ -72,7 +72,7 @@ namespace StreetCorsa.Services.Parts
             {
                 if (!IsAvailable)
                 {
-                    _logger.Warning("No converted parts under {Path}: cars go without part trees", AppSettings.Instance.PartsPath);
+                    _logger.Warning("No converted parts in the mods (base game: {Path}): cars go without part trees", AppSettings.Instance.PartsPath);
                     return;
                 }
 
@@ -253,20 +253,34 @@ namespace StreetCorsa.Services.Parts
             foreach (var racer in racers)
             {
                 // An engine the catalog no longer knows (its parts were left out of the content) is gone from the
-                // car, which gets its factory engine the next time it is looked at, worn like the car
+                // car, which gets its factory engine the next time it is looked at, worn like the car. One of a mod
+                // that is not installed goes on the owner's shelf whole: it is back in the game with the mod.
+                var keep = new List<PartInstance>();
                 foreach (var car in racer.Cars)
                 {
                     if (car.Engine is not { } engine || Catalog.Get(engine.DefinitionId) != null) continue;
 
-                    _logger.Information("{Car} had a {Block} the catalog no longer has: gets its factory engine again", car.DefinitionId, engine.DefinitionId);
                     car.Parts.Remove(engine);
                     car.HasPartsAssigned = false;
                     changed++;
+                    if (!Mods.ModIds.IsQualified(engine.DefinitionId))
+                    {
+                        _logger.Information("{Car} had a {Block} the catalog no longer has: gets its factory engine again", car.DefinitionId, engine.DefinitionId);
+                        continue;
+                    }
+
+                    engine.ParentSlot = 0;
+                    engine.OwnSlot = 0;
+                    keep.Add(engine);
+                    _logger.Information("{Car} had a {Block} of a mod that is not installed: it waits on the shelf, the car gets its factory engine",
+                        car.DefinitionId, engine.DefinitionId);
                 }
 
-                // What comes off a car goes on its owner's shelf, once the shelf itself has been gone through
+                // What comes off a car goes on its owner's shelf, once the shelf itself has been gone through. A mod's
+                // part the catalog does not know stays there (the workbench does not show it) till the mod is back.
                 var shelf = new List<PartInstance>();
-                changed += racer.Parts.RemoveAll(part => Catalog.Get(part.DefinitionId) == null);
+                changed += racer.Parts.RemoveAll(part => Catalog.Get(part.DefinitionId) == null && !Mods.ModIds.IsQualified(part.DefinitionId));
+                racer.Parts.AddRange(keep);
                 changed += Renew(racer.Cars.SelectMany(c => c.Parts).Concat(racer.Parts), shelf);
                 racer.Parts.AddRange(shelf);
             }
@@ -388,7 +402,7 @@ namespace StreetCorsa.Services.Parts
             try
             {
                 var started = DateTime.Now;
-                var catalog = PartsCatalog.Load(AppSettings.Instance.PartsPath);
+                var catalog = PartsCatalog.Load(Mods.ModSet.Installed.Folders(Mods.ContentTypes.Parts).ToList());
                 _logger.Information("Parts catalog: {Parts} parts, {Builds} engine builds in {Ms} ms", catalog.Parts.Count,
                     catalog.EngineBuilds.Count, (int)(DateTime.Now - started).TotalMilliseconds);
                 foreach (var problem in catalog.Problems) _logger.Warning("Parts catalog: {Problem}", problem);
@@ -409,9 +423,9 @@ namespace StreetCorsa.Services.Parts
             try
             {
                 var started = DateTime.Now;
-                var library = SoundLibrary.Load(settings.SoundsPath);
+                var library = SoundLibrary.Load(Mods.ModSet.Installed.Folders(Mods.ContentTypes.Sounds).ToList(), id => Catalog.Get(id) != null);
                 var cars = library.Harvest(settings.CarsPath, settings.SfxGuidsPath, SoundLibrary.StockFacts(Builds, Catalog));
-                _logger.Information("Sound library: {Curated} sound(s) under {Path}, {Harvested} more off {Cars} installed car(s), in {Ms} ms",
+                _logger.Information("Sound library: {Curated} sound(s) from the mods (base game: {Path}), {Harvested} more off {Cars} installed car(s), in {Ms} ms",
                     library.Curated.Count, settings.SoundsPath, library.Harvested.Count, cars, (int)(DateTime.Now - started).TotalMilliseconds);
                 foreach (var problem in library.Problems) _logger.Warning("Sound library: {Problem}", problem);
                 return library;

@@ -100,7 +100,7 @@ public static class Program
                 return Sound(args[2], args[3], args.Length > 4 ? args[4] : null);
 
             case "sounds" when args.Length > 2:
-                return Sounds(catalog, args[2], args.Length > 3 ? args[3] : Path.Combine(args[0], "..", "Sounds"));
+                return Sounds(catalog, args[2], args.Length > 3 ? args[3] : Path.Combine(args[0], "..", "sounds"));
 
             default:
                 Console.WriteLine("Unknown command");
@@ -517,7 +517,7 @@ public static class Program
 
         // The sound the car would race with, from the library next to the parts and the cars next to this one
         var carsFolder = Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(carFolder)) ?? carFolder;
-        var library = SoundLibrary.Load(Path.GetFullPath(Path.Combine(catalog.Root, "..", "Sounds")));
+        var library = SoundLibrary.Load(Path.GetFullPath(Path.Combine(catalog.Root, "..", "sounds")));
         library.Harvest(carsFolder, Path.GetFullPath(Path.Combine(carsFolder, "..", "sfx", AcCarSound.GuidsFileName)), SoundLibrary.StockFacts(EngineBuildIndex.Create(catalog), catalog));
         var carId = Path.GetFileName(Path.TrimEndingDirectorySeparator(carFolder));
         var sound = SoundMatcher.ForCar(library, SoundMatcher.RequestFor(catalog, tree.Root.Definition.Id, report), carId, out var choice);

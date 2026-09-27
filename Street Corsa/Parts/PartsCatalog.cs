@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.IO;
 using Newtonsoft.Json;
 using StreetCorsa.Helpers;
+using StreetCorsa.Mods;
 using StreetCorsa.Parts.Scripting;
 
 namespace StreetCorsa.Parts;
@@ -26,16 +27,16 @@ public sealed class PartsCatalog
 
     private readonly List<string> _problems = new();
 
-    private PartsCatalog(string root)
+    private PartsCatalog(string root, IReadOnlyList<string> scriptRoots)
     {
         _root = root;
-        Scripts = new ScriptClassLoader(Path.Combine(root, PartScripts.Folder));
+        Scripts = new ScriptClassLoader(scriptRoots);
         _mating = new Lazy<MatingIndex>(() => new MatingIndex(this));
     }
 
     public IReadOnlyDictionary<string, PartDefinition> Parts => _parts;
 
-    /// <summary>Folder the catalog was loaded from</summary>
+    /// <summary>The base game's parts folder: where the slot shifts are written</summary>
     public string Root => _root;
 
     /// <summary>
@@ -48,117 +49,186 @@ public sealed class PartsCatalog
     public IReadOnlyList<EngineBuild> EngineBuilds { get; private set; } = Array.Empty<EngineBuild>();
 
     /// <summary>A catalog without parts, for when the parts under the folder cannot be read</summary>
-    public static PartsCatalog Empty(string root) => new(root);
+    public static PartsCatalog Empty(string root) => new(root, new[] { Path.Combine(root, PartScripts.Folder) });
 
     /// <summary>What could not be read, or was left out and why: one line each, for the log</summary>
     public IReadOnlyList<string> Problems => _problems;
 
+    /// <summary>The base game's parts alone, from one folder (tests, tools)</summary>
+    public static PartsCatalog Load(string root) =>
+        Load(new[] { (new ModInfo { Id = ModIds.BaseId, Name = "Street Corsa" }, root) });
+
+    /// <summary>The parts of every mod that has any, in load order; the first folder is the base game's</summary>
     /// <remarks>
+    /// Every mod's parts folder is laid out as the base game's: packs (a pack.json with its models) anywhere under
+    /// it, and next to them <c>_scripts</c>, <see cref="EngineBuild.FileName"/>, <see cref="PartPack.AliasesFileName"/>
+    /// and <see cref="PartPack.ModelScalesFileName"/>, each about the mod's own parts. A mod's ids get its namespace,
+    /// and what its files name (the parts a slot attaches to, the parts of a build, an alias) is found in the mod
+    /// first, then in the base game (<see cref="ModIds.Resolve"/>).
     /// A pack that does not read is a pack that is not there, and a part without an id is no part: each is one line
     /// in <see cref="Problems"/>, and the rest of the catalog stands (one bad pack.json used to cost every car its parts).
     /// </remarks>
-    public static PartsCatalog Load(string root)
+    public static PartsCatalog Load(IReadOnlyList<(ModInfo Mod, string Dir)> roots)
     {
-        var catalog = new PartsCatalog(root);
-        if (!Directory.Exists(root)) return catalog;
+        var baseRoot = roots.FirstOrDefault(r => r.Mod.IsBase).Dir ?? roots.FirstOrDefault().Dir ?? string.Empty;
+        var catalog = new PartsCatalog(baseRoot, roots.Select(r => Path.Combine(r.Dir, PartScripts.Folder)).ToList());
+        var registry = new ContentRegistry<PartDefinition>("part");
+        var builds = new ContentRegistry<EngineBuild>("engine build");
+        var aliases = new List<(ModInfo Mod, string Gone, string Current)>();
 
-        // Which pack each part came from, to tell when a later one has it too
-        var owners = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var file in Directory.EnumerateFiles(root, PartPack.FileName, SearchOption.AllDirectories))
+        foreach (var (mod, root) in roots)
         {
-            var packName = Path.GetRelativePath(root, file);
-            PartPack? pack;
-            try
-            {
-                pack = JsonConvert.DeserializeObject<PartPack>(File.ReadAllText(file));
-            }
-            catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
-            {
-                catalog._problems.Add($"{packName}: {ex.Message}; its parts are left out");
-                continue;
-            }
+            if (!Directory.Exists(root)) continue;
 
-            if (pack?.Parts == null) continue;
-
-            foreach (var part in pack.Parts)
+            var label = mod.IsBase ? string.Empty : mod.Id + "/";
+            var scales = ReadModelScales(catalog, root, label);
+            foreach (var file in Directory.EnumerateFiles(root, PartPack.FileName, SearchOption.AllDirectories).Order(StringComparer.OrdinalIgnoreCase))
             {
-                if (part == null || string.IsNullOrWhiteSpace(part.Id))
+                var packName = label + Path.GetRelativePath(root, file);
+                PartPack? pack;
+                try
                 {
-                    catalog._problems.Add($"{packName}: a part without an id is left out");
+                    pack = JsonConvert.DeserializeObject<PartPack>(File.ReadAllText(file));
+                }
+                catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+                {
+                    catalog._problems.Add($"{packName}: {ex.Message}; its parts are left out");
                     continue;
                 }
 
-                if (owners.TryGetValue(part.Id, out var earlier))
-                    catalog._problems.Add($"{part.Id} is in {earlier} and in {packName}: the one in {packName} is used");
+                if (pack?.Parts == null) continue;
 
-                owners[part.Id] = packName;
-                catalog._parts[part.Id] = part;
-            }
-        }
-
-        var aliasesFile = Path.Combine(root, PartPack.AliasesFileName);
-        try
-        {
-            if (File.Exists(aliasesFile))
-            {
-                foreach (var (gone, current) in JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText(aliasesFile)) ?? new())
+                foreach (var part in pack.Parts)
                 {
-                    // An alias to nothing would leave a saved part with no id at all
-                    if (string.IsNullOrWhiteSpace(current))
-                    {
-                        catalog._problems.Add($"{PartPack.AliasesFileName}: {gone} leads nowhere; left out");
-                        continue;
-                    }
+                    if (part == null) continue;
 
-                    catalog._aliases[gone] = current;
+                    part.ModId = mod.Id;
+                    part.LocalId = part.Id;
+                    part.PackFolder = Path.GetDirectoryName(file);
+                    part.ScriptRoot = Path.Combine(root, PartScripts.Folder);
+                    if (registry.Add(mod, part.Id, part.Replaces, part, packName) is { } id) part.Id = id;
                 }
             }
-        }
-        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
-        {
-            catalog._problems.Add($"{PartPack.AliasesFileName}: {ex.Message}; parts that changed ids are not found by their old ones");
+
+            ApplyModelScales(registry.Entries.Where(e => e.Mod == mod).Select(e => e.Entry), scales);
+            ReadAliases(catalog, root, label, mod, aliases);
+            ReadBuilds(catalog, root, label, mod, builds);
         }
 
-        var buildsFile = Path.Combine(root, EngineBuild.FileName);
-        try
+        catalog._problems.AddRange(registry.Problems);
+        catalog._problems.AddRange(builds.Problems);
+        foreach (var (id, part, _) in registry.Entries) catalog._parts[id] = part;
+
+        // What the files name, now that every id is known: a mod's own part first, then the base game's
+        foreach (var part in catalog._parts.Values.Where(p => !ModIds.IsBase(p.ModId)))
         {
-            if (File.Exists(buildsFile))
+            foreach (var slot in part.Slots)
             {
-                // A build without an id can't be found again (cars and saves name builds by it): left out, the rest stand
-                var builds = JsonConvert.DeserializeObject<List<EngineBuild?>>(File.ReadAllText(buildsFile)) ?? new();
-                var named = builds.Where(b => b != null && !string.IsNullOrWhiteSpace(b.Id)).Select(b => b!).ToList();
-                if (named.Count < builds.Count)
-                    catalog._problems.Add($"{EngineBuild.FileName}: {builds.Count - named.Count} build(s) without an id are left out");
-                catalog.EngineBuilds = named;
+                foreach (var target in slot.AttachesTo.Concat(slot.CompatibleWith).Where(t => t.Part != null))
+                    target.Part = Resolve(part.ModId, target.Part!);
             }
-        }
-        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
-        {
-            catalog._problems.Add($"{EngineBuild.FileName}: {ex.Message}; no engine builds");
+
+            foreach (var stock in part.StockParts.Where(s => s.Part != null)) stock.Part = Resolve(part.ModId, stock.Part!);
         }
 
-        var scalesFile = Path.Combine(root, PartPack.ModelScalesFileName);
-        try
+        foreach (var (id, build, mod) in builds.Entries)
         {
-            if (File.Exists(scalesFile))
-            {
-                var scales = JsonConvert.DeserializeObject<Dictionary<string, float>>(File.ReadAllText(scalesFile)) ?? new();
-                foreach (var (prefix, scale) in scales.Where(s => !IsModelScale(s.Value)))
-                    catalog._problems.Add($"{PartPack.ModelScalesFileName}: {prefix} at {scale} is out of 0.5 to 2; left out");
-                ApplyModelScales(catalog._parts.Values, scales.Where(s => IsModelScale(s.Value)));
-            }
-        }
-        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
-        {
-            catalog._problems.Add($"{PartPack.ModelScalesFileName}: {ex.Message}; every part drawn at its own size");
+            build.Id = id;
+            if (mod.IsBase) continue;
+
+            foreach (var entry in build.Parts.Where(p => p.Part != null)) entry.Part = Resolve(mod.Id, entry.Part!);
         }
 
-        // Slots nudged into place in the garage since the last conversion
-        catalog.Shifts = SlotShifts.Load(root);
+        catalog.EngineBuilds = builds.All.ToList();
+
+        foreach (var (mod, gone, current) in aliases)
+        {
+            // An alias names a part that was: it has no entry to find, so it is the mod's own unless written in full
+            var from = ModIds.IsQualified(gone) ? ModIds.Normalize(gone) : ModIds.Qualify(mod.Id, gone);
+            catalog._aliases[from] = Resolve(mod.Id, current);
+        }
+
+        // Slots nudged into place in the garage since the last conversion, by full id: the file is the base game's
+        catalog.Shifts = SlotShifts.Load(baseRoot);
         if (catalog.Shifts.Problem != null) catalog._problems.Add(catalog.Shifts.Problem);
         catalog.Shifts.ApplyTo(catalog._parts);
 
         return catalog;
+
+        string Resolve(string modId, string reference) => ModIds.Resolve(modId, reference, catalog._parts.ContainsKey);
+    }
+
+    private static List<KeyValuePair<string, float>> ReadModelScales(PartsCatalog catalog, string root, string label)
+    {
+        var scalesFile = Path.Combine(root, PartPack.ModelScalesFileName);
+        try
+        {
+            if (!File.Exists(scalesFile)) return new();
+
+            var scales = JsonConvert.DeserializeObject<Dictionary<string, float>>(File.ReadAllText(scalesFile)) ?? new();
+            foreach (var (prefix, scale) in scales.Where(s => !IsModelScale(s.Value)))
+                catalog._problems.Add($"{label}{PartPack.ModelScalesFileName}: {prefix} at {scale} is out of 0.5 to 2; left out");
+            return scales.Where(s => IsModelScale(s.Value)).ToList();
+        }
+        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+        {
+            catalog._problems.Add($"{label}{PartPack.ModelScalesFileName}: {ex.Message}; every part drawn at its own size");
+            return new();
+        }
+    }
+
+    private static void ReadAliases(PartsCatalog catalog, string root, string label, ModInfo mod, List<(ModInfo, string, string)> aliases)
+    {
+        var aliasesFile = Path.Combine(root, PartPack.AliasesFileName);
+        try
+        {
+            if (!File.Exists(aliasesFile)) return;
+
+            foreach (var (gone, current) in JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText(aliasesFile)) ?? new())
+            {
+                // An alias to nothing would leave a saved part with no id at all
+                if (string.IsNullOrWhiteSpace(current))
+                {
+                    catalog._problems.Add($"{label}{PartPack.AliasesFileName}: {gone} leads nowhere; left out");
+                    continue;
+                }
+
+                aliases.Add((mod, gone, current));
+            }
+        }
+        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+        {
+            catalog._problems.Add($"{label}{PartPack.AliasesFileName}: {ex.Message}; parts that changed ids are not found by their old ones");
+        }
+    }
+
+    private static void ReadBuilds(PartsCatalog catalog, string root, string label, ModInfo mod, ContentRegistry<EngineBuild> builds)
+    {
+        var buildsFile = Path.Combine(root, EngineBuild.FileName);
+        try
+        {
+            if (!File.Exists(buildsFile)) return;
+
+            // A build without an id can't be found again (cars and saves name builds by it): left out, the rest stand
+            var read = JsonConvert.DeserializeObject<List<EngineBuild?>>(File.ReadAllText(buildsFile)) ?? new();
+            var unnamed = 0;
+            foreach (var build in read)
+            {
+                if (build == null || (string.IsNullOrWhiteSpace(build.Id) && string.IsNullOrWhiteSpace(build.Replaces)))
+                {
+                    unnamed++;
+                    continue;
+                }
+
+                builds.Add(mod, build.Id, build.Replaces, build, label + EngineBuild.FileName);
+            }
+
+            if (unnamed > 0) catalog._problems.Add($"{label}{EngineBuild.FileName}: {unnamed} build(s) without an id are left out");
+        }
+        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+        {
+            catalog._problems.Add($"{label}{EngineBuild.FileName}: {ex.Message}; no engine builds from it");
+        }
     }
 
     private static bool IsModelScale(float scale) => float.IsFinite(scale) && scale >= 0.5f && scale <= 2f;
@@ -169,7 +239,8 @@ public sealed class PartsCatalog
         var byLength = scales.OrderByDescending(s => s.Key.Length).ToList();
         foreach (var part in parts)
         {
-            var match = byLength.FirstOrDefault(s => part.Id.StartsWith(s.Key, StringComparison.OrdinalIgnoreCase));
+            // By the id its pack gave it: a mod's scales are about its own parts
+            var match = byLength.FirstOrDefault(s => part.LocalId.StartsWith(s.Key, StringComparison.OrdinalIgnoreCase));
             part.ModelScale = match.Key == null ? 1f : match.Value;
         }
     }
@@ -340,12 +411,15 @@ public sealed class PartsCatalog
 
     /// <summary>Full path of the part's model, null if it has none</summary>
     /// <remarks>
-    /// The id and the model name are pack.json content: an id with no pack in it has no folder to look in, and a
-    /// path that leads out of the parts folder is no model
+    /// The model is named in pack.json and sits next to it; a part not loaded from a pack (made in a test) is looked
+    /// for where its id says, under the parts folder. A path that leads out of that folder is no model.
     /// </remarks>
     public string? GetModelPath(PartDefinition part)
     {
         if (part.Model == null) return null;
+
+        if (part.PackFolder != null)
+            return PathNames.TryCombineUnder(part.PackFolder, part.Model, out var own) ? own : null;
 
         var packEnd = part.Id.LastIndexOf('/');
         if (packEnd <= 0) return null;

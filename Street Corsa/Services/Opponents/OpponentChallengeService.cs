@@ -5,6 +5,7 @@ using StreetCorsa.Parts.Cars;
 using StreetCorsa.Services.Catalog;
 using StreetCorsa.Services.Market;
 using StreetCorsa.Services.Parts;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Services.Opponents
 {
@@ -411,125 +412,28 @@ namespace StreetCorsa.Services.Opponents
 
         #region Message Generation
 
-        private string GetAcceptanceMessage(Opponent opponent)
+        // The words are the mods' ("replies.*" in their text); which answer is the game's
+        private string Reply(string pool) => GameText.Installed.Pick(pool, _random);
+
+        private string GetAcceptanceMessage(Opponent opponent) => Reply(opponent.Aggression switch
         {
-            var messages = opponent.Aggression switch
-            {
-                >= 70 => new[]
-                {
-                    "You're on! Let's see what you got!",
-                    "Finally, some action! Let's race!",
-                    "Hope you're ready to lose!",
-                    "This'll be fun. Let's go!"
-                },
-                <= 40 => new[]
-                {
-                    "Alright, I accept your challenge.",
-                    "Let's do this. Good luck.",
-                    "Fair enough. See you at the track.",
-                    "Okay, I'll race you."
-                },
-                _ => new[]
-                {
-                    "You're on. Let's race.",
-                    "Alright, let's settle this on the track.",
-                    "Challenge accepted. Let's go.",
-                    "Deal. May the best racer win."
-                }
-            };
+            >= 70 => "replies.accept.aggressive",
+            <= 40 => "replies.accept.calm",
+            _ => "replies.accept"
+        });
 
-            return messages[_random.Next(messages.Length)];
-        }
+        private string GetPinkSlipDeclineMessage(Opponent opponent) => Reply("replies.no_pink_slips");
 
-        private string GetPinkSlipDeclineMessage(Opponent opponent)
-        {
-            var messages = new[]
-            {
-                "Pink slips? That's too much for me. Not tonight.",
-                "I'm not risking my ride. Lower the stakes.",
-                "My car means too much to me. Cash only.",
-                "That's a bet I can't afford to lose. Pass."
-            };
+        private string GetCarValueMismatchMessage(Opponent opponent, bool isPlayerCarCheaper) =>
+            Reply(isPlayerCarCheaper ? "replies.your_car_is_worth_less" : "replies.your_car_is_worth_more");
 
-            return messages[_random.Next(messages.Length)];
-        }
+        private string GetInsufficientFundsMessage(Opponent opponent) => Reply("replies.no_money");
 
-        private string GetCarValueMismatchMessage(Opponent opponent, bool isPlayerCarCheaper)
-        {
-            if (isPlayerCarCheaper)
-            {
-                var messages = new[]
-                {
-                    "Pink slips? Your bucket of bolts isn't worth my ride.",
-                    "I'm not risking my car for that heap. Bring something better.",
-                    "Come back with a car that's actually worth something.",
-                    "That's not a fair trade. My car's worth way more than yours."
-                };
-                return messages[_random.Next(messages.Length)];
-            }
-            else
-            {
-                var messages = new[]
-                {
-                    "Your car's too nice. I can't match that stake.",
-                    "That's out of my league. Find someone with a better ride.",
-                    "I'd love to, but my car isn't worth that much."
-                };
-                return messages[_random.Next(messages.Length)];
-            }
-        }
+        private string GetBetTooHighMessage(Opponent opponent) => Reply("replies.bet_too_high");
 
-        private string GetInsufficientFundsMessage(Opponent opponent)
-        {
-            var messages = new[]
-            {
-                "That's more than I've got on me. Lower the stakes.",
-                "I don't have that kind of cash. Make it smaller.",
-                "I'm not that flush right now. Can't cover that bet.",
-                "That's too rich for my blood. I don't have it."
-            };
+        private string GetReputationTooLowMessage(Opponent opponent) => Reply("replies.reputation_too_low");
 
-            return messages[_random.Next(messages.Length)];
-        }
-
-        private string GetBetTooHighMessage(Opponent opponent)
-        {
-            var messages = new[]
-            {
-                "That's way too steep for me. Not worth the risk.",
-                "Lower the bet and maybe we can talk.",
-                "That's not a bet, that's my rent money. No thanks.",
-                "I'm not gambling that much. Make it reasonable."
-            };
-
-            return messages[_random.Next(messages.Length)];
-        }
-
-        private string GetReputationTooLowMessage(Opponent opponent)
-        {
-            var messages = new[]
-            {
-                "Come back when you've proven yourself, rookie.",
-                "I don't race amateurs. Win a few more races first.",
-                "Beat some other racers before challenging me.",
-                "You need more street cred before I'll race you."
-            };
-
-            return messages[_random.Next(messages.Length)];
-        }
-
-        private string GetGenericDeclineMessage(Opponent opponent)
-        {
-            var messages = new[]
-            {
-                "Not feeling it tonight. Maybe another time.",
-                "I'm gonna pass on this one. Ask me later.",
-                "Nah, I'm not in the mood right now.",
-                "Maybe later. I need a break."
-            };
-
-            return messages[_random.Next(messages.Length)];
-        }
+        private string GetGenericDeclineMessage(Opponent opponent) => Reply("replies.decline");
 
         #endregion
     }

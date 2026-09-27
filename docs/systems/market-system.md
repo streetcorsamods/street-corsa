@@ -57,7 +57,7 @@ A listing's price is that times the dealer's random variation of ±20%, then tim
 ask, never on what a car is worth: a car the player sells fetches a share of its worth whatever the difficulty.
 
 ## Dealer Locations
-Ten dealers, defined in `Assets/Dealers/dealers.json` and read by `DealerCatalog`: Downtown Motors,
+Ten dealers, defined in `Content/streetcorsa/dealers/dealers.json` and read by `DealerCatalog`: Downtown Motors,
 Sunset Motors, Colorado Motors, Suburban Autos, Ocean Park Autos, Riverside Cars, Vermont Auto Sales,
 Industrial Motors, Harbor Auto and Eastside Garage. `GetDefaultDealers()` still hands out the original five
 when the file cannot be read.
@@ -155,7 +155,7 @@ seller's engine summary and whether it has been worked on. A pink-slipped car go
 - `Dialogs/SellCar/SellCarDialogViewModel.cs`
 - `Services/Market/CarValuation.cs`
 - `Services/Dealers/DealerCatalog.cs`
-- `Assets/Dealers/dealers.json`
+- `Content/streetcorsa/dealers/dealers.json`
 - `Services/Market/IUsedCarMarketService.cs`
 - `Models/GameState/UsedCarListing.cs`
 - `Models/GameState/DealerLocation.cs`

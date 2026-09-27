@@ -1,318 +1,96 @@
+using StreetCorsa.Services.Text;
+
 namespace StreetCorsa.Services.Talk
 {
     /// <summary>
-    /// Static talk service using preset dialogue lines based on context
+    /// What racers say, from the mods' text (<see cref="GameText"/>, the "talk.*" pools): which pool fits the moment and
+    /// the racer is decided here, the lines are the mods'
     /// </summary>
     public class StaticTalkService : ITalkService
     {
+        /// <summary>Reputation apart for a racer to talk up or down to the player; pink slips are talked of at 15</summary>
+        private const int RepGap = 20;
+        private const int PinkSlipRepGap = 15;
+
+        /// <summary>Aggression of a hothead; a bold one takes pink slips at 60</summary>
+        private const int Aggressive = 70;
+        private const int Bold = 60;
+
         private readonly Random _random = new();
+        private readonly GameText _text;
+
+        public StaticTalkService(GameText? text = null)
+        {
+            _text = text ?? GameText.Installed;
+        }
 
         public bool IsAvailable => true;
 
         public Task<string> GetMessageAsync(TalkContext context)
         {
-            var messages = GetMessagesForContext(context);
-            var message = messages[_random.Next(messages.Count)];
-            return Task.FromResult(message);
-        }
-
-        private List<string> GetMessagesForContext(TalkContext context)
-        {
-            return context.Trigger switch
+            var lines = PoolsFor(context).SelectMany(_text.Lines).ToList();
+            var values = new TextValues
             {
-                TalkTrigger.OpponentSelected when context.Grudge != null => GetGrudgeMessages(context),
-                TalkTrigger.PulledUp when context.Grudge != null => GetGrudgeMessages(context),
-                TalkTrigger.PulledUp => GetPulledUpMessages(context),
-                TalkTrigger.BetTypeChanged when context.IsPinkSlipBet && context.Grudge != null => GetRematchMessages(context),
-                TalkTrigger.OpponentSelected => GetGreetingMessages(context),
-                TalkTrigger.TrackSelected => GetTrackSelectedMessages(context),
-                TalkTrigger.BetTypeChanged when context.IsPinkSlipBet => GetPinkSlipMessages(context),
-                TalkTrigger.ChallengeAccepted => GetAcceptedMessages(context),
-                TalkTrigger.ChallengeRejected => GetRejectedMessages(context),
-                _ => GetGreetingMessages(context)
+                ["car"] = CarOf(context),
+                ["trackName"] = context.SelectedTrackName ?? "that track"
             };
+            return Task.FromResult(lines.Count == 0 ? string.Empty : GameText.Fill(lines[_random.Next(lines.Count)], values));
         }
 
-        private List<string> GetGreetingMessages(TalkContext context)
+        /// <summary>The car a line talks about: the grudge's, else the player's</summary>
+        private static string CarOf(TalkContext context) =>
+            context.Grudge != null
+                ? context.GrudgeCarName ?? "car"
+                : context.PlayerCar is { } playerCar ? Catalog.CarNames.Short(playerCar) : "car";
+
+        /// <summary>The pools the lines are drawn from, all of them together</summary>
+        private static List<string> PoolsFor(TalkContext context)
         {
             var repDiff = context.Opponent.Stats.Reputation - context.Player.Stats.Reputation;
-            var aggression = context.Opponent.Aggression;
+            var aggressive = context.Opponent.Aggression >= Aggressive;
 
-            // High reputation opponent (cocky/dismissive)
-            if (repDiff > 20)
+            return context.Trigger switch
             {
-                if (aggression >= 70)
-                {
-                    return new List<string>
-                    {
-                        "You got some nerve walking up to me.",
-                        "Beat it, kid. I don't race amateurs.",
-                        "You sure you're in the right place?",
-                        "I've scraped better competition off my tires.",
-                        "This ain't a kiddie ride, pal."
-                    };
-                }
-                return new List<string>
-                {
-                    "You sure you want to do this?",
-                    "I've got a reputation to maintain, you know.",
-                    "Don't waste my time unless you're serious.",
-                    "Look, I respect the hustle, but you're outmatched.",
-                    "Maybe come back when you've got some wins under your belt."
-                };
-            }
-
-            // Lower reputation opponent (defensive/eager)
-            if (repDiff < -20)
-            {
-                if (aggression >= 70)
-                {
-                    return new List<string>
-                    {
-                        "Yeah, I know who you are. So what?",
-                        "Your reputation don't scare me!",
-                        "I've got nothing to lose and everything to prove.",
-                        "Everyone's gotta fall sometime. Today's your day.",
-                        "Don't let my record fool you. I'm ready."
-                    };
-                }
-                return new List<string>
-                {
-                    "I've been waiting for a shot like this.",
-                    "People underestimate me. Big mistake.",
-                    "I'm faster than my record shows.",
-                    "Ready to be surprised?",
-                    "This could be my big break."
-                };
-            }
-
-            // Matched reputation (competitive/respectful)
-            if (aggression >= 70)
-            {
-                return new List<string>
-                {
-                    "Finally, some real competition!",
-                    "I've heard about you. Let's see what you've got.",
-                    "This is gonna be good.",
-                    "You and me, we're cut from the same cloth.",
-                    "I've been looking for a challenge."
-                };
-            }
-            return new List<string>
-            {
-                "This should be a good race.",
-                "May the best driver win.",
-                "You look like you know what you're doing.",
-                "I respect your skills. Let's race.",
-                "Two evenly matched racers. I like it."
+                TalkTrigger.OpponentSelected when context.Grudge != null => Grudge(context, aggressive),
+                TalkTrigger.PulledUp when context.Grudge != null => Grudge(context, aggressive),
+                TalkTrigger.PulledUp => PulledUp(context, aggressive),
+                TalkTrigger.BetTypeChanged when context.IsPinkSlipBet && context.Grudge != null =>
+                    ["talk.rematch", context.PlayerHasGrudgeCar ? "talk.rematch.has_car" : "talk.rematch.lost_car"],
+                TalkTrigger.OpponentSelected => [Greeting(repDiff, aggressive)],
+                TalkTrigger.TrackSelected => [aggressive ? "talk.track.aggressive" : "talk.track"],
+                TalkTrigger.BetTypeChanged when context.IsPinkSlipBet => [PinkSlip(repDiff, context.Opponent.Aggression >= Bold)],
+                TalkTrigger.ChallengeAccepted => [aggressive ? "talk.accepted.aggressive" : "talk.accepted"],
+                TalkTrigger.ChallengeRejected => [repDiff > RepGap ? "talk.rejected.stronger" : "talk.rejected"],
+                _ => [Greeting(repDiff, aggressive)]
             };
+        }
+
+        private static string Greeting(int repDiff, bool aggressive)
+        {
+            var standing = repDiff > RepGap ? "stronger" : repDiff < -RepGap ? "weaker" : "even";
+            return $"talk.greeting.{standing}" + (aggressive ? ".aggressive" : "");
         }
 
         /// <summary>A rival who has pulled up beside the player's car in the street, window down</summary>
-        private List<string> GetPulledUpMessages(TalkContext context)
+        private static List<string> PulledUp(TalkContext context, bool aggressive)
         {
-            if (context.Opponent.IsKing)
-            {
-                return
-                [
-                    "Heard you've been making noise. Pink slips. Right now.",
-                    "You wanted the King? Here I am. Your car against mine.",
-                    "Nobody sits on my street without paying. Pink slips."
-                ];
-            }
+            if (context.Opponent.IsKing) return ["talk.pulled_up.king"];
+            if (context.IsPinkSlipBet) return ["talk.pulled_up.pink_slip"];
 
-            var car = context.PlayerCar is { } playerCar ? Catalog.CarNames.Short(playerCar) : "car";
-            if (context.IsPinkSlipBet)
-            {
-                return
-                [
-                    $"Nice {car}. Be a shame to lose it. Pinks?",
-                    "Winner drives home in both. You in?",
-                    $"I like that {car}. I'll like it more in my garage."
-                ];
-            }
-
-            var lines = new List<string>
-            {
-                $"Nice {car}. What's it got?",
-                "You gonna sit there all night, or you wanna run?",
-                "Light's about to change. Let's see what you've got.",
-                "Hey! You racing, or just parked?",
-                $"That {car} as quick as it looks?"
-            };
-
-            if (context.Opponent.Aggression >= 70)
-            {
-                lines.Add("I'll blow your doors off. Put your money where your mouth is.");
-                lines.Add("Pull up to the line if you've got the guts.");
-            }
-
-            return lines;
+            return aggressive ? ["talk.pulled_up", "talk.pulled_up.aggressive"] : ["talk.pulled_up"];
         }
 
         /// <summary>A rival who lost a pink slip to the player, and wants a rematch</summary>
-        private List<string> GetGrudgeMessages(TalkContext context)
+        private static List<string> Grudge(TalkContext context, bool aggressive)
         {
-            var car = context.GrudgeCarName ?? "car";
-            var lines = new List<string>
-            {
-                "You and me aren't done. Pink slips, whenever you're ready.",
-                "I've been waiting for you. Rematch. Pink slips.",
-                "You got lucky last time. Let's go again, for the pinks."
-            };
-
-            if (context.PlayerHasGrudgeCar)
-            {
-                lines.Add($"That's my {car} you're driving around. I want it back.");
-                lines.Add($"Enjoying my {car}? Put its pink slip on the table and we'll see how long you keep it.");
-            }
-            else
-            {
-                lines.Add($"You took my {car}. I'll take whatever you're driving now.");
-            }
-
-            if (context.Opponent.Aggression >= 70)
-                lines.Add("Everybody at this diner knows what you did. Race me.");
-
-            return lines;
+            var pools = new List<string> { "talk.grudge", context.PlayerHasGrudgeCar ? "talk.grudge.has_car" : "talk.grudge.lost_car" };
+            if (aggressive) pools.Add("talk.grudge.aggressive");
+            return pools;
         }
 
-        /// <summary>The same rival, when the player puts the pink slip on the table</summary>
-        private List<string> GetRematchMessages(TalkContext context) =>
-        [
-            "Now we're talking. I've been waiting for this.",
-            "Pink slips. Just like last time, except this time I win.",
-            "That's what I wanted to hear.",
-            context.PlayerHasGrudgeCar ? $"Say goodbye to my {context.GrudgeCarName ?? "car"}. It's coming home." : "Your turn to walk home."
-        ];
-
-        private List<string> GetTrackSelectedMessages(TalkContext context)
-        {
-            var aggression = context.Opponent.Aggression;
-            var trackName = context.SelectedTrackName ?? "that track";
-
-            if (aggression >= 70)
-            {
-                return new List<string>
-                {
-                    $"You picked {trackName}? Bold choice.",
-                    "That's my kind of track. You're gonna regret this.",
-                    "Good pick. I'll enjoy beating you there.",
-                    "I know every inch of that strip.",
-                    "You just made this easier for me."
-                };
-            }
-            return new List<string>
-            {
-                $"{trackName}, huh? I can work with that.",
-                "Fair choice. Let's do this.",
-                "I've had some good runs there.",
-                "Solid pick. Should be a good race.",
-                "That works for me."
-            };
-        }
-
-        private List<string> GetPinkSlipMessages(TalkContext context)
-        {
-            var repDiff = context.Opponent.Stats.Reputation - context.Player.Stats.Reputation;
-            var aggression = context.Opponent.Aggression;
-
-            // Higher rep opponent - confident about pink slips
-            if (repDiff > 15)
-            {
-                return new List<string>
-                {
-                    "Pink slips? Ha! I'll take that ride off your hands.",
-                    "You're betting your car? This is gonna be fun.",
-                    "Bold move. I respect that. Stupid, but respectable.",
-                    "Your car's gonna look great in my garage.",
-                    "Finally someone with guts. Let's do this."
-                };
-            }
-
-            // Lower rep opponent - nervous but trying to be brave
-            if (repDiff < -15)
-            {
-                if (aggression >= 60)
-                {
-                    return new List<string>
-                    {
-                        "Pink slips? You're on! I ain't scared!",
-                        "If you're willing to lose your car, who am I to stop you?",
-                        "High stakes? That's how I like it!",
-                        "You want my car? Come and take it!",
-                        "This is my chance to upgrade. Let's go!"
-                    };
-                }
-                return new List<string>
-                {
-                    "Pink slips... you sure about this?",
-                    "That's a big bet. But okay, I'm in.",
-                    "I hope you know what you're doing...",
-                    "Alright, but don't say I didn't warn you.",
-                    "This just got real serious."
-                };
-            }
-
-            // Matched reputation
-            return new List<string>
-            {
-                "Pink slips it is. Winner takes all.",
-                "Now we're talking! High stakes racing!",
-                "You've got guts. I like that.",
-                "This is what real street racing is about.",
-                "May the best car win... literally."
-            };
-        }
-
-        private List<string> GetAcceptedMessages(TalkContext context)
-        {
-            var aggression = context.Opponent.Aggression;
-
-            if (aggression >= 70)
-            {
-                return new List<string>
-                {
-                    "You're on! Don't chicken out now!",
-                    "See you at the line. Try not to embarrass yourself.",
-                    "Let's settle this on the strip!",
-                    "I'm gonna enjoy this.",
-                    "Time to put up or shut up!"
-                };
-            }
-            return new List<string>
-            {
-                "You're on. Good luck out there.",
-                "Alright, let's do this.",
-                "See you at the starting line.",
-                "May the best driver win.",
-                "Let's race!"
-            };
-        }
-
-        private List<string> GetRejectedMessages(TalkContext context)
-        {
-            var repDiff = context.Opponent.Stats.Reputation - context.Player.Stats.Reputation;
-
-            if (repDiff > 20)
-            {
-                return new List<string>
-                {
-                    "Not worth my time. Come back when you're somebody.",
-                    "I don't race nobodies.",
-                    "Maybe if you had something worth betting...",
-                    "Pass. I've got better things to do.",
-                    "You're not in my league, kid."
-                };
-            }
-            return new List<string>
-            {
-                "Not today. The terms aren't right.",
-                "I'll pass on this one.",
-                "That's not a fair bet. Try again.",
-                "Nah, I'm not feeling it.",
-                "Maybe another time."
-            };
-        }
+        private static string PinkSlip(int repDiff, bool bold) =>
+            repDiff > PinkSlipRepGap ? "talk.pink_slip.stronger"
+            : repDiff < -PinkSlipRepGap ? bold ? "talk.pink_slip.weaker.bold" : "talk.pink_slip.weaker"
+            : "talk.pink_slip.even";
     }
 }

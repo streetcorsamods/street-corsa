@@ -63,5 +63,5 @@ None (`HttpClient`/`WebClient` absent). Planned local LLM integration (`docs/ai-
 
 - Race mode (`apps/new-modes/sc_race`) → `Documents\Assetto Corsa\out\…\*.json` → `RaceResultIngestionService` / `RaceResultValidator` → saves
 - Game → `ScRaceMode` installs the mode into the AC install before each race
-- Converter → `Street Corsa\Assets\Parts\**` (pack.json, KN5, aliases, builds) → `PartsCatalog` at runtime; EngineBench reads the same
+- Converter → `Street Corsa\Content\streetcorsa\parts\**` (pack.json, KN5, aliases, builds) → `PartsCatalog` at runtime; EngineBench reads the same
 - Game ↔ AC process: `CarDataOverlay` + `AcConfigBackup`/INI changes applied before launch, restored after `acs.exe` exits and at start-up

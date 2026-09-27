@@ -1,6 +1,7 @@
 using StreetCorsa.Controls.Street;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Models.Race;
+using StreetCorsa.Mods;
 using StreetCorsa.Services.Street;
 
 namespace StreetCorsa.Tests;
@@ -43,9 +44,8 @@ public class StreetEncounterTests
     [Fact]
     public void The_shipped_street_loads_with_a_model_for_every_light()
     {
-        var scene = StreetScenes.LoadFirst(Path.Combine(RepoPaths.GameProject, "Assets", "Streets"));
+        var scene = Assert.Single(StreetScenes.LoadAll(ModSet.Load(RepoPaths.Content)));
 
-        Assert.NotNull(scene);
         Assert.Equal("pretville", scene.Id);
         foreach (var light in Enum.GetValues<StreetLight>())
         {
@@ -59,17 +59,32 @@ public class StreetEncounterTests
     }
 
     [Fact]
-    public void A_street_with_a_model_missing_is_left_out()
+    public void A_street_is_used_at_the_lights_it_has_a_model_for_and_left_out_when_one_it_names_is_missing()
     {
         using var dir = new TempDir();
-        var folder = Path.Combine(dir.Path, "half");
-        Directory.CreateDirectory(folder);
-        File.WriteAllText(Path.Combine(folder, "street.json"),
-            """{ "id": "half", "player": { "x": 0, "z": 0, "heading": 0 }, "laneOffset": 3, "rivalStop": 0, "approachFrom": 40, "leaveTo": 60 }""");
-        File.WriteAllText(Path.Combine(folder, "street_day.kn5"), "");
+        const string Street = """{ "id": "half", "player": { "x": 0, "z": 0, "heading": 0 }, "laneOffset": 3, "rivalStop": 0, "approachFrom": 40, "leaveTo": 60 """;
+        dir.File("half/street.json", Street + "}");
+        dir.File("half/street_night.kn5", "");
+        dir.File("named/street.json", Street + """, "times": [ "day", "night" ] }""");
+        dir.File("named/street_night.kn5", "");
+        dir.File("none/street.json", Street + "}");
 
-        Assert.Null(StreetScenes.Load(folder));
-        Assert.Null(StreetScenes.LoadFirst(dir.Path));
+        Assert.Equal([StreetLight.Night], StreetScenes.Load(dir.Combine("half"))!.Times);
+        Assert.Null(StreetScenes.Load(dir.Combine("named")));
+        Assert.Null(StreetScenes.Load(dir.Combine("none")));
+    }
+
+    [Fact]
+    public void A_street_not_used_at_a_light_stays_in_the_nearest_it_has()
+    {
+        var street = new StreetScene("s", "S", "", new StreetSpot(0, 0, 0), 3, 0, 40, 60, [0, 1, 0], new Dictionary<StreetLight, StreetLighting>())
+        {
+            Times = new HashSet<StreetLight> { StreetLight.Day, StreetLight.Dusk }
+        };
+
+        Assert.Equal(StreetLight.Dusk, street.NearestTime(StreetLight.Night));
+        Assert.Equal(StreetLight.Day, street.NearestTime(StreetLight.Day));
+        Assert.Equal(StreetLight.Night, (street with { Times = new HashSet<StreetLight> { StreetLight.Day, StreetLight.Night } }).NearestTime(StreetLight.Dusk));
     }
 
     [Fact]

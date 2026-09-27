@@ -21,6 +21,7 @@ Street Rod-style career mode manager for Assetto Corsa. WPF app manages game log
 - **Errors**: Global handlers (dispatcher, AppDomain, unobserved tasks) in `App.xaml.cs`. A recoverable UI exception is logged and shown in a dialog; a fatal one runs the fatal path once (save the game, restore the AC install if AC is not running, shut FMOD down, close the save database, flush the log). Screens guard their own `async` paths; `AsyncRelayCommand` logs what escapes.
 - **AC Content**: Import to catalog, never modify AC installation. Two exceptions. The game's own race mode (`apps\new-modes\sc_race`) is installed into `extension\lua\new-modes\sc_race` before every race (`ScRaceMode`: written when it differs, left there, the old `apps\lua\sr_race_manager` app removed). And a race: a car's data files and engine sound, as its parts make them, go in through `CarDataOverlay` (originals kept with a manifest, put back in the launcher's `finally` and at start-up, once no AC process runs), and an opponent in the player's model races in a marked copy of the car folder that the same cleanup deletes. Anything that scans `content\cars` skips folders with the copy marker (`AcCarFolder.IsClone`).
 - **Logging**: Structured, via `IAppLogger`. Categories: App, Import, Market, Navigation, etc.
+- **Content**: never add game content in C# or under `Assets` (the UI's own pictures only). It is a mod's: the base game's goes in `Content\streetcorsa`, read through `ModSet.Installed` like any mod's, so a mod can add to it or replace an entry (`"replaces"`). A save stamps the mods it was played with (`GameState.Mods`); what needs the content of a mod that is not installed is tidied on load (`ModsInSave`). The tests get the base game's JSON (not its models) copied into their output, so the services' defaults work there.
 - **Before a merge or push**: `tools/check.ps1` builds the whole solution (the tools compile game files by link, so a game change can break them) and runs the tests.
 
 ## Data Models
@@ -48,7 +49,9 @@ Street Rod-style career mode manager for Assetto Corsa. WPF app manages game log
 | Parts | PartsCatalog, PartScriptRuntime, EngineDyno, AcEngineData, AcRunningGearData | SLRR parts: run their scripts on the player's build, dyno, AC data (see `docs/systems/parts-system.md`) |
 | Cars' parts | CarPartsService, PartsShopService, Workbench, EngineFactory, RunningGearFactory | Factory engine and running gear per car, part trees on cars, plausibly tuned used cars, garage workbench (parts picked in 3D), parts shop |
 | Race data | RaceCarDataService, CarDataOverlay | What the parts make of a car goes into its AC data for a race and comes out after (see `docs/systems/parts-system.md`, "Apply and restore") |
-| Engine sounds | SoundLibrary, SoundMatcher, AcCarSound | A sound per engine block: `Assets\Sounds` folders plus every installed car's bank, swapped in for the race by `CarDataOverlay` |
+| Engine sounds | SoundLibrary, SoundMatcher, AcCarSound | A sound per engine block: every mod's `sounds` folders plus every installed car's bank, swapped in for the race by `CarDataOverlay` |
+| Mods | ModSet, ModIds, ContentRegistry, ModJson | All game content (parts, sounds, dealers, racers, events, milestones, victory paths, streets, rooms, words) comes from `Content\<mod>`, the base game (`Content\streetcorsa`) first; ids namespaced by mod, the base game's without (see `docs/modding.md`) |
+| Career and words as data | CareerContent, DataVictory, GameText | Events, milestones and victory paths from the mods' `events`/`milestones`/`victories`; everything the game says (paper, talk, street talk, names) from their `text` pools, the when-to-say-what in code |
 
 ## File Structure
 ```
@@ -117,6 +120,7 @@ NavigationService.NavigateTo[ScreenName](dependencies) : bool
 4. Show via `DialogService.ShowDialog(viewModel)` (queued if another dialog is open)
 
 ## Documentation Index
+- [Modding](modding.md): the Content folder, mod.json, ids and `replaces`, every content type's format
 - [Roadmap](roadmap.md): next steps (damage, timeslips, economy, living opponents, police), decisions and research
 - [Architecture Overview](architecture/overview.md)
 - [Data Storage](architecture/data-storage.md)

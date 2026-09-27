@@ -461,7 +461,6 @@ public class NewcomerTests
         }).ToList();
 
         public Opponent? LoadOpponent(string opponentId) => null;
-        public bool DefinitionsFileExists() => true;
     }
 
     [Fact]

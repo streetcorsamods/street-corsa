@@ -4,6 +4,7 @@ using StreetCorsa.Services.Catalog;
 using StreetCorsa.Services.News;
 using StreetCorsa.Services.Opponents;
 using StreetCorsa.Services.Simulation;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Services.Scheduler.Tasks
 {
@@ -48,13 +49,11 @@ namespace StreetCorsa.Services.Scheduler.Tasks
                 if (race.IsPinkSlip)
                 {
                     _logger.Information("Pink slip race! {Winner} won {Loser}'s car", race.WinnerName, race.LoserName);
-                    talk.Add(race.LoserCrashed
-                        ? $"{race.LoserName} wrecked the {car} racing {race.WinnerName} for pink slips; {race.WinnerName} towed away what's left of it."
-                        : $"{race.WinnerName} took {race.LoserName}'s {car} in a pink slip race.");
+                    talk.Add(GameText.Installed.Pick(race.LoserCrashed ? "street.rivals.pink_wreck" : "street.rivals.pink", Random.Shared, Values(race, car)));
                 }
                 else if (race.LoserCrashed)
                 {
-                    talk.Add($"{race.LoserName} wrecked the {car} in a {race.RaceType.ToLowerInvariant()} race against {race.WinnerName}.");
+                    talk.Add(GameText.Installed.Pick("street.rivals.wreck", Random.Shared, Values(race, car)));
                 }
 
                 var loserPossessive = gameState.Racers.Find(race.LoserName) is { } loser ? OpponentRules.Possessive(loser) : "their";
@@ -67,5 +66,13 @@ namespace StreetCorsa.Services.Scheduler.Tasks
             NewsWriter.Add(gameState, currentDate, news);
             return Task.CompletedTask;
         }
+
+        private static TextValues Values(Simulation.SimulatedRaceResult race, string car) => new()
+        {
+            ["winner"] = race.WinnerName,
+            ["loser"] = race.LoserName,
+            ["car"] = car,
+            ["raceType"] = race.RaceType.ToLowerInvariant()
+        };
     }
 }

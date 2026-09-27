@@ -319,7 +319,7 @@ internal sealed class ConverterOptions
                               "[--single <part id pattern>=<count>@<spacing>,...] [--pads <part id pattern>:<slot>=<fitting>*<count>@<spacing>@<dx>/<dy>/<dz>[@<air fitting>],...] " +
                               "[--name <part id pattern>=<display name>,...] [--shifts <slot_shifts.json kept for good>] [--absorb <slot_shifts.json written by the game>]... " +
                               "[--previous <earlier conversion>] [--twin <old part id>=<new part id or ->,...] [--measure <part id pattern>,...]");
-            Console.WriteLine(@"  e.g. SlrrPartsConverter ""D:\Games\SLRR"" ""Street Corsa\Assets\Parts"" engines/Mopar  (the full run: tools\convert-parts.ps1)");
+            Console.WriteLine(@"  e.g. SlrrPartsConverter ""D:\Games\SLRR"" ""Street Corsa\Content\streetcorsa\parts"" engines/Mopar  (the full run: tools\convert-parts.ps1)");
             return null;
         }
 

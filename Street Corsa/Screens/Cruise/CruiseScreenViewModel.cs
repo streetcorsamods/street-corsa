@@ -140,6 +140,8 @@ namespace StreetCorsa.Screens.Cruise
 
         public StreetScene? Scene { get; private set; }
 
+        private IReadOnlyList<StreetScene> _streets = [];
+
         private StreetLight _light;
 
         public StreetLight Light
@@ -343,11 +345,11 @@ namespace StreetCorsa.Screens.Cruise
                 _tracks = [];
             }
 
-            Scene = StreetScenes.LoadFirst(StreetScenes.StreetsFolder);
-            Light = StreetLights.At(_gameState.Date);
+            // Every street the mods have; the one the player is in is picked by the light of the day
+            _streets = StreetScenes.LoadAll(Mods.ModSet.Installed);
+            FollowTheLight();
             PlayerCar = new StreetCar(Path.Combine(AppSettings.Instance.CarsPath, playerCar.DefinitionId),
                 string.IsNullOrEmpty(playerCar.SkinId) ? null : playerCar.SkinId);
-            OnPropertyChanged(nameof(Scene));
             OnPropertyChanged(nameof(PlayerCar));
             RefreshClock();
             StartStreet(playerCar);
@@ -497,8 +499,9 @@ namespace StreetCorsa.Screens.Cruise
                     return;
                 }
 
-                // The light moves on while nobody is about; the street is loaded again for it
-                Light = StreetLights.At(_gameState.Date);
+                // The light moves on while nobody is about; the street is loaded again for it, or another street
+                // taken when this one is not used at that time of day
+                FollowTheLight();
 
                 if (_gameState.Date >= _dueAt && IsStreetUp()) await SomebodyPullsUpAsync();
             }
@@ -510,6 +513,21 @@ namespace StreetCorsa.Screens.Cruise
             {
                 _spending = false;
             }
+        }
+
+        /// <summary>
+        /// The light of the hour, and a street used at it: the one the player is in while it fits. When no street is
+        /// used at that light, the street stays in the nearest light it has a model for.
+        /// </summary>
+        private void FollowTheLight()
+        {
+            var light = StreetLights.At(_gameState.Date);
+            var street = StreetScenes.Pick(_streets, light, Random.Shared, Scene) ?? Scene ?? _streets.FirstOrDefault();
+            Light = street == null ? light : street.NearestTime(light);
+            if (ReferenceEquals(street, Scene)) return;
+
+            Scene = street;
+            OnPropertyChanged(nameof(Scene));
         }
 
         private void RefreshClock()

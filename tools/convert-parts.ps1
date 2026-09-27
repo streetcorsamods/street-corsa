@@ -10,7 +10,7 @@
 # the end of its output).
 param(
     [string]$Slrr = $env:SRAC_SLRR,
-    [string]$Output = (Join-Path $PSScriptRoot "..\Street Corsa\Assets\Parts"),
+    [string]$Output = (Join-Path $PSScriptRoot "..\Street Corsa\Content\streetcorsa\parts"),
     [string]$Notes = $env:SRAC_SLRR_NOTES,
     [string]$Converter = "",
     # Part id patterns to measure (slots against mesh bounds) instead of converting: the joint conventions of a pack
@@ -509,7 +509,7 @@ $measureArgs = if ($Measure) { @("--measure", $Measure) } else { @() }
 
 # The content in the repo is what saves were made with: ids it had that this run does not produce any more stay
 # answered (a mod release that renamed its files, aliases of earlier runs), whatever folder this run writes to
-$previous = Join-Path $PSScriptRoot "..\Street Corsa\Assets\Parts"
+$previous = Join-Path $PSScriptRoot "..\Street Corsa\Content\streetcorsa\parts"
 
 & $Converter $Slrr $Output --notes $Notes --replace $replace --twin $twin --rename $rename --drop $drop --merge $merge --model $model --single $single --name $name --pads $pads --fit $fit --shift $shift --shifts (Join-Path $PSScriptRoot "slot_shifts.json") --previous $previous @absorbArgs @measureArgs
 exit $LASTEXITCODE

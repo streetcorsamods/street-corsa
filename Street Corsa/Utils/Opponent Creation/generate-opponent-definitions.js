@@ -4,7 +4,7 @@ const path = require("path");
 // Configuration
 const PROMPTS_FILE = path.join(__dirname, "opponent_prompts.json");
 // The game's definitions: racers already in it keep their traits, only new prompts are added
-const OUTPUT_FILE = path.join(__dirname, "..", "..", "Assets", "Opponents", "opponent_definitions.json");
+const OUTPUT_FILE = path.join(__dirname, "..", "..", "Content", "streetcorsa", "racers", "opponent_definitions.json");
 
 /**
  * Generate random integer between min (inclusive) and max (inclusive)
@@ -174,7 +174,7 @@ function generateOpponentDefinition(driver) {
     gender: normalizeGender(driver.gender),
     skill: traits.skill,
     aggression: traits.aggression,
-    portraitPath: `/Assets/Opponents/${driver.id}.png`,
+    portraitPath: `${driver.id}.png`,
     location: location,
     biography: biography,
     _generationDetails: {

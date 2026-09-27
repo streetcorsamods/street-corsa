@@ -168,6 +168,25 @@ public sealed class ScriptVmTests : IDisposable
     }
 
     [Fact]
+    public void A_mods_scripts_find_its_own_shared_class_first_and_the_base_games_theirs()
+    {
+        const string Shared = "java.game.parts.shared.Block";
+        TufaWriter.Write(_temp.Combine("base", "parts", "scripts", "shared", "Block.class"), [Shared, "x", "java.lang.Object"], [], [], []);
+        TufaWriter.Write(_temp.Combine("mod", "parts", "scripts", "shared", "Block.class"), [Shared, "x", "java.lang.Object"], [], [], []);
+        TufaWriter.Write(_temp.Combine("base", "parts", "theirs", "scripts", "P.class"), ["java.game.parts.theirs.P", "x", Shared], [], [], []);
+        TufaWriter.Write(_temp.Combine("mod", "parts", "mine", "scripts", "P.class"), ["java.game.parts.mine.P", "x", Shared], [], [], []);
+        var loader = new ScriptClassLoader([_temp.Combine("base"), _temp.Combine("mod")]);
+
+        // Either order: what one asked for first must not be what the other gets
+        var mine = loader.Chain("java.game.parts.mine.P", _temp.Combine("mod", "parts", "mine", "scripts"))!;
+        var theirs = loader.Chain("java.game.parts.theirs.P", _temp.Combine("base", "parts", "theirs", "scripts"))!;
+
+        Assert.Equal(_temp.Combine("mod", "parts", "scripts", "shared"), mine[1].Folder);
+        Assert.Equal(_temp.Combine("base", "parts", "scripts", "shared"), theirs[1].Folder);
+        Assert.Equal(_temp.Combine("base", "parts", "scripts", "shared"), loader.Find(Shared)!.Folder);
+    }
+
+    [Fact]
     public void A_class_file_cut_short_or_with_nonsense_is_no_class()
     {
         var file = TufaWriter.Write(_temp.Combine("x", "Broken.class"), ["java.game.x.Broken", "m", "java.lang.Object"],

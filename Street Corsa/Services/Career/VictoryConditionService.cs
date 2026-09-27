@@ -12,22 +12,19 @@ namespace StreetCorsa.Services.Career
         private readonly Func<GameState, int>? _getTotalOpponents;
         private readonly Func<GameState, bool>? _playerHasMostWins;
 
+        /// <param name="content">The victory paths the mods define; the installed mods' when null</param>
         public VictoryConditionService(
             Func<GameState, int>? getTotalOpponents = null,
-            Func<GameState, bool>? playerHasMostWins = null)
+            Func<GameState, bool>? playerHasMostWins = null,
+            CareerContent? content = null)
         {
             _getTotalOpponents = getTotalOpponents;
             _playerHasMostWins = playerHasMostWins;
 
-            // Register all victory conditions
-            _victoryConditions = new Dictionary<string, IVictoryCondition>
-            {
-                ["Reputation"] = new ReputationVictory(),
-                ["King"] = new KingVictory(),
-                ["PinkSlipCollector"] = new PinkSlipCollectorVictory(),
-                ["SeasonChampion"] = new SeasonChampionVictory(),
-                ["Domination"] = new DominationVictory()
-            };
+            // In the order the mods list them: with no path picked, the first reached wins
+            _victoryConditions = new Dictionary<string, IVictoryCondition>(StringComparer.OrdinalIgnoreCase);
+            foreach (var victory in (content ?? CareerContent.Installed).Victories)
+                _victoryConditions[victory.Id] = new DataVictory(victory);
         }
 
         public IEnumerable<IVictoryCondition> GetAllVictoryConditions()

@@ -1,16 +1,18 @@
-using System.IO;
-using System.Text.Json;
 using StreetCorsa.Logging;
+using StreetCorsa.Mods;
 using StreetCorsa.Models.GameState;
 
 namespace StreetCorsa.Services.Dealers
 {
     /// <summary>
-    /// Reads Assets/Dealers/dealers.json once and hands the definitions out.
+    /// The dealers of every mod (their <c>dealers</c> folder: lists of <c>dealers</c> and <c>showrooms</c>; a file that is
+    /// one entry or a bare list is dealers), read once.
+    /// A mod's dealers get its namespace; a showroom is measured by its folder name (an AC showroom or a mod's
+    /// garage), and a later mod's measurements of the same room win.
     ///
-    /// A missing or broken file is not fatal: the game falls back to the five dealers the market service has
-    /// always made, without map positions. The map screen then has nothing to show and says so, but the
-    /// listing screen and everything else carries on.
+    /// No dealers at all is not fatal: the game falls back to the five dealers the market service has always made,
+    /// without map positions. The map screen then has nothing to show and says so, but the listing screen and
+    /// everything else carries on.
     /// </summary>
     public class DealerCatalog : IDealerCatalog
     {
@@ -19,84 +21,48 @@ namespace StreetCorsa.Services.Dealers
         private readonly Dictionary<string, DealerDefinition> _byId = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, ShowroomSpec> _showrooms = new(StringComparer.OrdinalIgnoreCase);
 
-        private static readonly JsonSerializerOptions Options = new()
+        public DealerCatalog() : this(ModSet.Installed)
         {
-            PropertyNameCaseInsensitive = true
-        };
+        }
 
-        public DealerCatalog()
+        public DealerCatalog(ModSet mods)
         {
-            LoadShowrooms(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "Dealers", "showrooms.json"));
-
-            var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "Dealers", "dealers.json");
-
+            var problems = new List<string>();
             try
             {
-                if (!File.Exists(path))
+                // Showrooms share the folder: only what a "showrooms" list holds is one, the rest is the dealers'
+                foreach (var entry in ModJson.Entries(mods, ContentTypes.Dealers, "showrooms", problems, listOnly: true))
                 {
-                    _logger.Warning("Dealer definitions not found: {Path}", path);
-                    return;
+                    try
+                    {
+                        var spec = entry.As<ShowroomSpec>();
+                        if (spec == null || string.IsNullOrWhiteSpace(spec.Id)) continue;
+                        _showrooms[spec.Id] = spec;
+                    }
+                    catch (Exception ex) when (ex is not OutOfMemoryException)
+                    {
+                        problems.Add($"{entry.Source}: showroom {entry.Id}: {ex.Message}; left out");
+                    }
                 }
 
-                using var document = JsonDocument.Parse(File.ReadAllText(path));
-                if (!document.RootElement.TryGetProperty("dealers", out var array))
+                var dealers = ModJson.Load(mods, ContentTypes.Dealers, "dealers", "dealer", problems, entry =>
+                    entry.Id == null && entry.Replaces == null ? null : entry.As<DealerDefinition>(), otherLists: ["showrooms"]);
+                foreach (var (id, dealer, _) in dealers.Entries)
                 {
-                    _logger.Error("No 'dealers' array in {Path}", path);
-                    return;
-                }
-
-                foreach (var element in array.EnumerateArray())
-                {
-                    var dealer = element.Deserialize<DealerDefinition>(Options);
-                    if (dealer == null || string.IsNullOrWhiteSpace(dealer.Id))
-                    {
-                        _logger.Warning("Skipped a dealer with no id");
-                        continue;
-                    }
-
-                    if (!_byId.TryAdd(dealer.Id, dealer))
-                    {
-                        _logger.Warning("Two dealers share the id {Id}; keeping the first", dealer.Id);
-                        continue;
-                    }
-
+                    dealer.Id = id;
+                    _byId[id] = dealer;
                     _dealers.Add(dealer);
                 }
 
-                _logger.Information("Loaded {Count} dealers", _dealers.Count);
+                foreach (var line in dealers.Replaced) _logger.Information("{Line}", line);
+                _logger.Information("Loaded {Count} dealers and {Showrooms} showroom measurements", _dealers.Count, _showrooms.Count);
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Could not read dealer definitions from {Path}", path);
+                _logger.Error(ex, "Could not read the dealers");
             }
-        }
 
-        private void LoadShowrooms(string path)
-        {
-            try
-            {
-                if (!File.Exists(path))
-                {
-                    _logger.Warning("Showroom measurements not found: {Path}", path);
-                    return;
-                }
-
-                using var document = JsonDocument.Parse(File.ReadAllText(path));
-                if (!document.RootElement.TryGetProperty("showrooms", out var array)) return;
-
-                foreach (var element in array.EnumerateArray())
-                {
-                    var spec = element.Deserialize<ShowroomSpec>(Options);
-                    if (spec == null || string.IsNullOrWhiteSpace(spec.Id)) continue;
-                    _showrooms[spec.Id] = spec;
-                }
-
-                _logger.Information("Loaded {Count} showroom measurements", _showrooms.Count);
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Could not read showroom measurements from {Path}", path);
-            }
+            foreach (var problem in problems) _logger.Warning("Dealers: {Problem}", problem);
         }
 
         public ShowroomSpec GetShowroom(string id)

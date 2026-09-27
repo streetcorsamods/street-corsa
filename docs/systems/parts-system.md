@@ -9,13 +9,13 @@ Scope: mechanical parts only: engine, transmission and running gear (tyres, rims
 stay Assetto Corsa's.
 
 ```
-SLRR install ──SlrrPartsConverter──▶ Assets\Parts\                         (one-off, offline)
+SLRR install ──SlrrPartsConverter──▶ Content\streetcorsa\parts\                         (one-off, offline)
                                        <kind>\<pack>\pack.json + *.kn5      part definitions + models
                                        engine_builds.json                   complete engines as part lists
                                        script_constants.json                statics of the shared script classes
                                        _scripts\...\*.class                 the compiled scripts the parts need
 
-Assets\Parts ──PartsCatalog──▶ PartTreeBuilder ──▶ PartScriptRuntime ──▶ EngineDyno ──▶ EngineReport ──▶ AcEngineData
+Content\streetcorsa\parts ──PartsCatalog──▶ PartTreeBuilder ──▶ PartScriptRuntime ──▶ EngineDyno ──▶ EngineReport ──▶ AcEngineData
                 definitions     build → tree        scripts run on it     torque curve    verdict+figures   AC data files
 
 Car.Parts ──RunningGear.Mounted──▶ AcRunningGearData ─┐
@@ -23,7 +23,7 @@ Car.Parts ──RunningGear.Mounted──▶ AcRunningGearData ─┐
 Car.Engine ──EngineEvaluator──▶ AcEngineData ──────────┘     all files      per car of a race     apply, race, restore
 ```
 
-The converted content lives in the repo, `Street Corsa\Assets\Parts` (187 MB), and is copied next to the exe at build;
+The converted content lives in the repo, `Street Corsa\Content\streetcorsa\parts` (187 MB), and is copied next to the exe at build;
 `AppSettings.PartsPath` reads it from there. It is made from a commercial game and community mods: the repo stays
 private.
 
@@ -344,7 +344,7 @@ A release of a mod that keeps its rpk but renames its files (the Ford six: `Baie
 `Ford_188_Block.cfg`, same resource `0x41`) changes part ids without there being two packs to pair. Part ids are the
 cfg names, but the SLRR game knows a part by its rpk resource id alone, and the converted parts keep it
 (`source_type_id`, the pack's `source` says the rpk). `--previous <folder>` names an earlier conversion, normally the
-content the game runs on: `convert-parts.ps1` passes the repo's `Assets\Parts` whatever folder the run writes to, so a
+content the game runs on: `convert-parts.ps1` passes the repo's `Content\streetcorsa\parts` whatever folder the run writes to, so a
 scratch run sees the same. Read before anything is written, it adds to `part_aliases.json`:
 
 - every part it had whose id the run no longer produces, pointed at the part its resource is now (a pack fed by
@@ -651,7 +651,7 @@ as its author made it. Checked with a dry-run console on full car folders (the C
 own folder hashes the same after the copy, after the player's changes next to it, after `RestoreAll`, after a crash.
 
 **Sound library and matcher** (`Parts/Sounds`, `CarPartsService.Sounds`/`ChooseSound`). Two sources, one list
-(`SoundLibrary`): a folder under `Assets\Sounds` is a sound (a bank, a `GUIDs.txt`, an optional `sound.json` with
+(`SoundLibrary`): a folder under `Content\streetcorsa\sounds` is a sound (a bank, a `GUIDs.txt`, an optional `sound.json` with
 name, donor id, cylinders, family, rev ceiling, tags; drop one in and the game has it, see the README there), and
 every installed car's own bank is a sound too, harvested in the parts warm-up (`Harvest`): banks that are the same bytes
 (size plus the first 64 KB) are one sound with those cars as carriers, its rev ceiling the highest `LIMITER` among
@@ -756,7 +756,7 @@ manifest was lost, a donor bank that is gone, read-only donors, and the library'
 
 ## Not done yet
 
-- Engine sounds: `Assets\Sounds` holds no curated sound yet, so every choice is a harvested bank; the first ones
+- Engine sounds: `Content\streetcorsa\sounds` holds no curated sound yet, so every choice is a harvested bank; the first ones
   to curate are the Kunos V8s of the full install (GT40 289, Cobra 427, Corvette C7, Mustang 2015, C4 with Borla)
   and the best mod banks, one per engine class. The harvest tags a bank with the stock engine the parts would give
   its car, so a slant-six Valiant carrying a V8 bank is tagged 8 cylinders; `sounds.json` corrects that per car.

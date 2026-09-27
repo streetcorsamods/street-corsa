@@ -1,12 +1,14 @@
 using StreetCorsa.Helpers;
 using StreetCorsa.Logging;
 using StreetCorsa.Models.Career.Victory;
+using StreetCorsa.Services.Career;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Parts.Cars;
 using StreetCorsa.Services.Catalog;
 using StreetCorsa.Services.Market;
 using StreetCorsa.Services.Parts;
 using StreetCorsa.Services.Police;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Services.Opponents
 {
@@ -140,13 +142,13 @@ namespace StreetCorsa.Services.Opponents
                     racer.IsBroke = true;
                     if (racer.TimesBroke >= OpponentRules.MaxTimesBroke && CanLeave(gameState, racer))
                     {
-                        Leave(gameState, racer, date, $"{racer.Name} went broke one time too many and quit the scene.", talk);
+                        Leave(gameState, racer, date, Say("street.broke_quit", racer), talk);
                         return;
                     }
 
                     var cash = OpponentRules.CashInjection(CheapestCar(gameState), _random.NextDouble());
                     racer.Money += cash;
-                    talk.Add($"{racer.Name} is broke and scraped ${cash:N0} together to get back on the street.");
+                    talk.Add(Say("street.broke", racer, values: new TextValues { ["cash"] = cash }));
                     _logger.Information("{Racer} is broke: ${Cash} injected, now ${Money}", racer.Name, cash, racer.Money);
                 }
                 else
@@ -170,11 +172,20 @@ namespace StreetCorsa.Services.Opponents
             }
         }
 
+        /// <summary>The path that ends at the King ("King" in the victory paths the mods define)</summary>
+        private static readonly Lazy<DataVictory?> KingPath = new(() =>
+            CareerContent.Installed.Victories.FirstOrDefault(v => v.Id == KingPathId) is { } path ? new DataVictory(path) : null);
+
+        public const string KingPathId = "King";
+
+        /// <summary>The King comes out once his victory path is open; with no such path, from the start</summary>
+        private static bool KingPathOpen(CareerState career) => KingPath.Value?.IsUnlocked(career) ?? true;
+
         private void MoveToWhereTheyBelong(GameState gameState, Opponent racer, DateTime date, Func<string, string?>? groupOf, List<string> talk)
         {
             var ready = IsReady(racer, groupOf);
             var target = racer.IsKing
-                ? ready && new KingVictory().IsUnlocked(gameState.Career) ? RacerStatus.ReadyToRace : RacerStatus.Inactive
+                ? ready && KingPathOpen(gameState.Career) ? RacerStatus.ReadyToRace : RacerStatus.Inactive
                 : ready ? RacerStatus.ReadyToRace : RacerStatus.Retired;
 
             // How long they have been sitting out, for whether they give up (OpponentRules.Leaves)
@@ -186,19 +197,17 @@ namespace StreetCorsa.Services.Opponents
 
             if (racer.IsKing)
             {
-                if (target == RacerStatus.ReadyToRace) talk.Add($"{racer.Name} has heard about you. He's at the diner, and he only races for pink slips.");
+                if (target == RacerStatus.ReadyToRace) talk.Add(Say("street.king_out", racer));
             }
             else if (target == RacerStatus.ReadyToRace && from == RacerStatus.Retired)
             {
-                talk.Add($"{racer.Name} is back on the street.");
+                talk.Add(Say("street.back_on_street", racer));
             }
             else if (target == RacerStatus.Retired)
             {
                 talk.Add(racer.Cars.Count == 0
-                    ? $"{racer.Name} has no car and is sitting it out."
-                    : racer.Cars[0].IsImpounded
-                        ? $"The police have {racer.Name}'s {CarName(racer.Cars[0])} in the impound; {racer.Name} is sitting it out."
-                        : $"{racer.Name}'s {CarName(racer.Cars[0])} is laid up; {racer.Name} is sitting it out.");
+                    ? Say("street.no_car", racer)
+                    : Say(racer.Cars[0].IsImpounded ? "street.car_impounded" : "street.car_laid_up", racer, racer.Cars[0]));
             }
 
             _logger.Information("{Racer}: {From} -> {To}", racer.Name, from, target);
@@ -215,8 +224,8 @@ namespace StreetCorsa.Services.Opponents
             if (!OpponentRules.Leaves(racer.TimesBroke, sittingOut, _random.NextDouble()) || !CanLeave(gameState, racer)) return;
 
             var why = sittingOut >= OpponentRules.LaidUpDays && racer.Cars.FirstOrDefault() is { } car
-                ? $"{racer.Name} gave up on {OpponentRules.Possessive(racer)} {CarName(car)} and quit the scene."
-                : $"{racer.Name}{Nickname(racer)} sold up and left town.";
+                ? Say("street.gave_up", racer, car)
+                : Say("street.left_town", racer);
             Leave(gameState, racer, date, why, talk);
         }
 
@@ -269,13 +278,13 @@ namespace StreetCorsa.Services.Opponents
                     racer.Money -= car.ImpoundFee;
                     _logger.Information("{Racer} collected the {Car} from the impound for ${Fee}", racer.Name, car.DefinitionId, car.ImpoundFee);
                     PoliceRules.Release(car);
-                    talk.Add($"{racer.Name} got {OpponentRules.Possessive(racer)} {CarName(car)} back from the police impound.");
+                    talk.Add(Say("street.impound_collected", racer, car));
                 }
                 else if (PoliceRules.IsForAuction(car, date))
                 {
                     racer.Cars.Remove(car);
                     _logger.Information("{Racer} never paid to collect the {Car}: the police auctioned it off", racer.Name, car.DefinitionId);
-                    talk.Add($"{racer.Name} never collected {OpponentRules.Possessive(racer)} {CarName(car)}: the police auctioned it off.");
+                    talk.Add(Say("street.impound_auctioned", racer, car));
                 }
             }
         }
@@ -335,7 +344,7 @@ namespace StreetCorsa.Services.Opponents
             // What the seller says about the engine, as a lot would: the ad keeps it, the paper's page reads it from there
             var engine = _market.DescribeEngine(car);
             RivalCarAds.Post(gameState, racer, car, asking, date, engine?.Summary, engine?.IsModified ?? false);
-            talk.Add($"{racer.Name} put {OpponentRules.Possessive(racer)} {CarName(car)} in the paper for ${asking:N0}.");
+            talk.Add(Say("street.advertised", racer, car, new TextValues { ["price"] = asking }));
             _logger.Information("{Racer} advertised the {Car} for ${Asking}", racer.Name, car.DefinitionId, asking);
         }
 
@@ -351,7 +360,7 @@ namespace StreetCorsa.Services.Opponents
                 var days = (date.Date - ad.PostedDate.Date).Days;
                 if (days >= CarSaleService.AdDays)
                 {
-                    talk.Add($"Nobody called about {racer.Name}'s {CarName(car)}.");
+                    talk.Add(Say("street.ad_unanswered", racer, car));
                     Sell(gameState, racer, car, talk);
                 }
                 else if (days >= OpponentRules.AskReducedAfterDays && !ad.Reduced)
@@ -381,9 +390,7 @@ namespace StreetCorsa.Services.Opponents
                     _market.TradeInLocation(gameState.DealerLocations), gameState.Date));
             }
 
-            talk.Add(totaled
-                ? $"{racer.Name} sold the wreck of {OpponentRules.Possessive(racer)} {CarName(car)} for scrap."
-                : $"{racer.Name} sold {OpponentRules.Possessive(racer)} {CarName(car)} to a dealer for ${paid:N0}.");
+            talk.Add(Say(totaled ? "street.sold_scrap" : "street.sold_dealer", racer, car, new TextValues { ["price"] = paid }));
             _logger.Information("{Racer} sold the {Car} for ${Paid}{Scrap}", racer.Name, car.DefinitionId, paid, totaled ? " (scrap)" : "");
             return paid;
         }
@@ -451,7 +458,7 @@ namespace StreetCorsa.Services.Opponents
                 racer.Stats.CarsOwned++;
                 Grudges.CarBack(racer, bought);
 
-                talk.Add($"{racer.Name} bought {seller.Name}'s {CarName(bought)} out of the paper for ${offer.Ad.AskingPrice:N0}.");
+                talk.Add(Say("street.bought_ad", racer, bought, new TextValues { ["seller"] = seller.Name, ["price"] = offer.Ad.AskingPrice }));
                 _logger.Information("{Racer} bought {Seller}'s {Car} for ${Price} ({Hp:0} hp), ${Money} left",
                     racer.Name, seller.Name, bought.DefinitionId, offer.Ad.AskingPrice, bought.PowerHp ?? 0, racer.Money);
                 return true;
@@ -480,7 +487,7 @@ namespace StreetCorsa.Services.Opponents
             Grudges.CarBack(racer, car);
 
             var dealer = gameState.DealerLocations?.FirstOrDefault(d => d.Id == listing.DealerLocation)?.Name;
-            talk.Add($"{racer.Name} bought a {CarName(car)}{(dealer == null ? "" : $" off {dealer}'s lot")} for ${listing.Price:N0}.");
+            talk.Add(Say(dealer == null ? "street.bought" : "street.bought_dealer", racer, car, new TextValues { ["dealer"] = dealer, ["price"] = listing.Price }));
             _logger.Information("{Racer} bought the {Car} for ${Price} ({Hp:0} hp), ${Money} left", racer.Name, car.DefinitionId, listing.Price, car.PowerHp ?? 0, racer.Money);
             return true;
         }
@@ -508,7 +515,7 @@ namespace StreetCorsa.Services.Opponents
             foreach (var job in jobs) job.Apply();
             racer.Money -= bill;
 
-            talk.Add($"{racer.Name} had {OpponentRules.Possessive(racer)} {CarName(car)} fixed up for ${bill:N0}.");
+            talk.Add(Say("street.repaired", racer, car, new TextValues { ["price"] = bill }));
             _logger.Information("{Racer} repaired the {Car}: {Jobs} for ${Bill}", racer.Name, car.DefinitionId, string.Join(", ", jobs.Select(j => j.Name)), bill);
             return CanRace(car, groupOf);
         }
@@ -545,21 +552,22 @@ namespace StreetCorsa.Services.Opponents
             foreach (var back in comebacks)
             {
                 racers.MoveRacer(back.Name, RacerStatus.Inactive);
-                talk.Add($"{back.Name}{Nickname(back)} is back in town.");
+                talk.Add(Say("street.back_in_town", back));
             }
 
             foreach (var racer in newcomers.Concat(comebacks))
             {
                 racers.MoveRacer(racer.Name, RacerStatus.Retired);
                 ReviewRacer(gameState, racer, date, groupOf, talk);
-                talk.RemoveAll(t => t == $"{racer.Name} is back on the street.");
+                var backOnTheStreet = Said("street.back_on_street", racer);
+                talk.RemoveAll(backOnTheStreet.Contains);
 
                 // One who came back was announced as that: not a new face
                 if (racer.Status == RacerStatus.ReadyToRace && !comebacks.Contains(racer))
                 {
                     talk.Add(racer.Cars.FirstOrDefault() is { } car
-                        ? $"A new face at the diner: {racer.Name}{Nickname(racer)}, in a {CarName(car)}."
-                        : $"A new face at the diner: {racer.Name}{Nickname(racer)}.");
+                        ? Say("street.new_face_car", racer, car)
+                        : Say("street.new_face", racer));
                 }
             }
         }
@@ -664,12 +672,14 @@ namespace StreetCorsa.Services.Opponents
 
                 foreach (var upgrade in result.Upgrades)
                 {
-                    talk.Add(upgrade.Group switch
+                    var key = upgrade.Group switch
                     {
-                        EngineTuner.BlockGroup => $"{racer.Name} dropped {upgrade.Change} into {OpponentRules.Possessive(racer)} {CarName(car)} ({upgrade.PowerBefore:0} → {upgrade.PowerAfter:0} hp).",
-                        EngineTuner.CoolingGroup => $"{racer.Name} put a {upgrade.Change} on {OpponentRules.Possessive(racer)} {CarName(car)} to keep it cool.",
-                        _ => $"{racer.Name} put a {upgrade.Change} on {OpponentRules.Possessive(racer)} {CarName(car)} ({upgrade.PowerBefore:0} → {upgrade.PowerAfter:0} hp)."
-                    });
+                        EngineTuner.BlockGroup => "street.tuned_block",
+                        EngineTuner.CoolingGroup => "street.tuned_cooling",
+                        _ => "street.tuned"
+                    };
+                    talk.Add(Say(key, racer, car,
+                        new TextValues { ["change"] = upgrade.Change, ["hpBefore"] = upgrade.PowerBefore, ["hpAfter"] = upgrade.PowerAfter }));
                 }
 
                 _logger.Information("{Racer} tuned the {Car}: {Upgrades}; ${Cost} spent, ${Money} left",
@@ -781,6 +791,24 @@ namespace StreetCorsa.Services.Opponents
         private string CarName(Car car) => _carNames?.Invoke(car.DefinitionId) ?? CarNames.Of(_catalogRepo, car.DefinitionId);
 
         private static string Nickname(Opponent racer) => string.IsNullOrWhiteSpace(racer.Nickname) ? "" : $" \"{racer.Nickname}\"";
+
+        /// <summary>A line of the street's talk about a racer (the mods' "street.*" text), and their car when it is about one</summary>
+        private string Say(string key, Opponent racer, Car? car = null, TextValues? values = null) =>
+            GameText.Installed.Pick(key, _random, With(racer, car, values));
+
+        /// <summary>Every way a line can come out for this racer: to take back what was said</summary>
+        private HashSet<string> Said(string key, Opponent racer, Car? car = null) =>
+            GameText.Installed.Lines(key).Select(line => GameText.Fill(line, With(racer, car, null))).ToHashSet();
+
+        private TextValues With(Opponent racer, Car? car, TextValues? values)
+        {
+            values ??= new TextValues();
+            values["name"] = racer.Name;
+            values["nickname"] = Nickname(racer);
+            values["possessive"] = OpponentRules.Possessive(racer);
+            if (car != null) values["car"] = CarName(car);
+            return values;
+        }
 
         /// <summary>The day's talk after what was said before; a week later nobody talks about it any more</summary>
         public static void AddTalk(GameState gameState, DateTime date, IEnumerable<string> lines)

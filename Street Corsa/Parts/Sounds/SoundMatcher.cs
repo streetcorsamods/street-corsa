@@ -138,10 +138,10 @@ public static class SoundMatcher
         return choice.Sound.ToCarSound();
     }
 
-    // "engines/gm/GM_327_block" -> "gm"
+    // "engines/gm/GM_327_block" -> "gm", and so for a mod's "mymod:engines/gm/x"
     private static string PackOf(string partId)
     {
-        var parts = partId.Split('/');
+        var parts = Mods.ModIds.Local(partId).Split('/');
         return parts.Length > 2 ? parts[1] : "";
     }
 

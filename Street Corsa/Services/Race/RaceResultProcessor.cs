@@ -1390,6 +1390,9 @@ namespace StreetCorsa.Services.Race
         /// </summary>
         private string GiveSpecialItem(GameState gameState, RaceContext context, string item)
         {
+            if (item.StartsWith(Career.CareerContent.PartPrizePrefix, StringComparison.OrdinalIgnoreCase))
+                return GivePartPrize(gameState, item[Career.CareerContent.PartPrizePrefix.Length..]);
+
             if (item != "rare_camshaft")
             {
                 _logger.Warning("Event reward: special item '{Item}' is nothing the game knows; not given", item);
@@ -1417,6 +1420,25 @@ namespace StreetCorsa.Services.Race
             gameState.Player.Stats.TotalEarnings += cash;
             _logger.Information("Event reward: no better camshaft fits {Car}; ${Cash} instead", car?.DefinitionId ?? "(no car)", cash);
             return $"${cash:N0} for a camshaft (none better fits your engine)";
+        }
+
+        /// <summary>
+        /// A part an event gives, onto the shelf: the event's mod's own part by that id, else the base game's
+        /// </summary>
+        private string GivePartPrize(GameState gameState, string partId)
+        {
+            var part = _parts is { IsAvailable: true } parts
+                ? parts.Catalog.Get(partId) ?? parts.Catalog.Get(Mods.ModIds.Local(partId))
+                : null;
+            if (part == null)
+            {
+                _logger.Warning("Event reward: part {Part} is in no mod; not given", partId);
+                return string.Empty;
+            }
+
+            gameState.Player.Parts.Add(new PartInstance(part.Id));
+            _logger.Information("Event reward: {Part} on the shelf", part.Id);
+            return $"{part.DisplayName ?? part.Name} (on your shelf)";
         }
 
         /// <summary>

@@ -4,6 +4,7 @@ using StreetCorsa.Parts.Cars;
 using StreetCorsa.Services.Opponents;
 using StreetCorsa.Services.Storage;
 using StreetCorsa.Services.Time;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Services.Market
 {
@@ -78,12 +79,6 @@ namespace StreetCorsa.Services.Market
 
         /// <summary>The chance the buyer who calls is one of the rivals, when one of them wants the car and can pay</summary>
         public const double RivalBuyerChance = 0.4;
-
-        private static readonly string[] Buyers =
-        {
-            "Gary", "Denise", "Tommy", "Earl", "Linda", "Vince", "Carl", "Donna", "Rick", "Sal", "Marge", "Butch",
-            "Norm", "Wanda", "Lenny", "a kid from the high school", "a man from out of town"
-        };
 
         private readonly IUsedCarMarketService _market = market;
         private readonly IGameTimeService _gameTimeService = gameTimeService;
@@ -213,7 +208,8 @@ namespace StreetCorsa.Services.Market
                 rival.Stats.CarsOwned++;
                 car.History.ChangeHands(rival.Name, gameState.Date, CarAcquisition.PrivateSale);
                 Grudges.CarBack(rival, car);
-                OpponentLifeService.AddTalk(gameState, gameState.Date, [$"{rival.Name} bought {gameState.Player.Name}'s car out of the paper."]);
+                OpponentLifeService.AddTalk(gameState, gameState.Date,
+                    [GameText.Installed.Pick("street.bought_players_car", Random.Shared, new TextValues { ["name"] = rival.Name, ["player"] = gameState.Player.Name })]);
             }
 
             // Anybody else drives it away: it leaves the game
@@ -266,7 +262,7 @@ namespace StreetCorsa.Services.Market
                 var rival = RivalBuyer(gameState, car, amount, random);
                 ad.Offer = new CarOffer
                 {
-                    BuyerName = rival?.Name ?? Buyers[random.Next(Buyers.Length)],
+                    BuyerName = rival?.Name ?? GameText.Installed.Pick("names.car_buyers", random),
                     RivalName = rival?.Name,
                     Amount = amount,
                     Expires = currentDate.Date.AddDays(OfferDays).AddHours(GameState.DayEndHour)

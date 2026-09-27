@@ -58,6 +58,12 @@ namespace StreetCorsa.Models.GameState
         /// </summary>
         public Models.Race.RaceContext? PendingRace { get; set; }
 
+        /// <summary>
+        /// The mods the game was last saved with (stamped on every save): loading it without one of them is warned of
+        /// (<c>ModsInSave</c>)
+        /// </summary>
+        public List<Mods.ModRef> Mods { get; set; } = [];
+
         // Metadata
         public int CatalogVersion { get; set; }
         public DateTime CreatedDate { get; set; }

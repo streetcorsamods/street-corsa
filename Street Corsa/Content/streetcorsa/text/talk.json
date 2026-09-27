@@ -1,0 +1,232 @@
+{
+  "_comment": [
+    "What racers say at the diner and in the street. The game picks the pool by the moment and the racer, and one",
+    "line of it at random; some pools add up (pulled_up and pulled_up.aggressive for a hothead). stronger/weaker is",
+    "the racer's reputation against the player's (20 apart; 15 for pink slips), aggressive is aggression 70 and up",
+    "(bold: 60 and up). {car} is the player's car, or the car a grudge is about; {trackName} the track picked.",
+    "replies.* are the answers to a challenge the player puts to a racer."
+  ],
+  "lines": {
+    "talk.greeting.stronger.aggressive": [
+      "You got some nerve walking up to me.",
+      "Beat it, kid. I don't race amateurs.",
+      "You sure you're in the right place?",
+      "I've scraped better competition off my tires.",
+      "This ain't a kiddie ride, pal."
+    ],
+    "talk.greeting.stronger": [
+      "You sure you want to do this?",
+      "I've got a reputation to maintain, you know.",
+      "Don't waste my time unless you're serious.",
+      "Look, I respect the hustle, but you're outmatched.",
+      "Maybe come back when you've got some wins under your belt."
+    ],
+    "talk.greeting.weaker.aggressive": [
+      "Yeah, I know who you are. So what?",
+      "Your reputation don't scare me!",
+      "I've got nothing to lose and everything to prove.",
+      "Everyone's gotta fall sometime. Today's your day.",
+      "Don't let my record fool you. I'm ready."
+    ],
+    "talk.greeting.weaker": [
+      "I've been waiting for a shot like this.",
+      "People underestimate me. Big mistake.",
+      "I'm faster than my record shows.",
+      "Ready to be surprised?",
+      "This could be my big break."
+    ],
+    "talk.greeting.even.aggressive": [
+      "Finally, some real competition!",
+      "I've heard about you. Let's see what you've got.",
+      "This is gonna be good.",
+      "You and me, we're cut from the same cloth.",
+      "I've been looking for a challenge."
+    ],
+    "talk.greeting.even": [
+      "This should be a good race.",
+      "May the best driver win.",
+      "You look like you know what you're doing.",
+      "I respect your skills. Let's race.",
+      "Two evenly matched racers. I like it."
+    ],
+
+    "talk.pulled_up.king": [
+      "Heard you've been making noise. Pink slips. Right now.",
+      "You wanted the King? Here I am. Your car against mine.",
+      "Nobody sits on my street without paying. Pink slips."
+    ],
+    "talk.pulled_up.pink_slip": [
+      "Nice {car}. Be a shame to lose it. Pinks?",
+      "Winner drives home in both. You in?",
+      "I like that {car}. I'll like it more in my garage."
+    ],
+    "talk.pulled_up": [
+      "Nice {car}. What's it got?",
+      "You gonna sit there all night, or you wanna run?",
+      "Light's about to change. Let's see what you've got.",
+      "Hey! You racing, or just parked?",
+      "That {car} as quick as it looks?"
+    ],
+    "talk.pulled_up.aggressive": [
+      "I'll blow your doors off. Put your money where your mouth is.",
+      "Pull up to the line if you've got the guts."
+    ],
+
+    "talk.grudge": [
+      "You and me aren't done. Pink slips, whenever you're ready.",
+      "I've been waiting for you. Rematch. Pink slips.",
+      "You got lucky last time. Let's go again, for the pinks."
+    ],
+    "talk.grudge.has_car": [
+      "That's my {car} you're driving around. I want it back.",
+      "Enjoying my {car}? Put its pink slip on the table and we'll see how long you keep it."
+    ],
+    "talk.grudge.lost_car": [
+      "You took my {car}. I'll take whatever you're driving now."
+    ],
+    "talk.grudge.aggressive": [
+      "Everybody at this diner knows what you did. Race me."
+    ],
+
+    "talk.rematch": [
+      "Now we're talking. I've been waiting for this.",
+      "Pink slips. Just like last time, except this time I win.",
+      "That's what I wanted to hear."
+    ],
+    "talk.rematch.has_car": [ "Say goodbye to my {car}. It's coming home." ],
+    "talk.rematch.lost_car": [ "Your turn to walk home." ],
+
+    "talk.track.aggressive": [
+      "You picked {trackName}? Bold choice.",
+      "That's my kind of track. You're gonna regret this.",
+      "Good pick. I'll enjoy beating you there.",
+      "I know every inch of that strip.",
+      "You just made this easier for me."
+    ],
+    "talk.track": [
+      "{trackName}, huh? I can work with that.",
+      "Fair choice. Let's do this.",
+      "I've had some good runs there.",
+      "Solid pick. Should be a good race.",
+      "That works for me."
+    ],
+
+    "talk.pink_slip.stronger": [
+      "Pink slips? Ha! I'll take that ride off your hands.",
+      "You're betting your car? This is gonna be fun.",
+      "Bold move. I respect that. Stupid, but respectable.",
+      "Your car's gonna look great in my garage.",
+      "Finally someone with guts. Let's do this."
+    ],
+    "talk.pink_slip.weaker.bold": [
+      "Pink slips? You're on! I ain't scared!",
+      "If you're willing to lose your car, who am I to stop you?",
+      "High stakes? That's how I like it!",
+      "You want my car? Come and take it!",
+      "This is my chance to upgrade. Let's go!"
+    ],
+    "talk.pink_slip.weaker": [
+      "Pink slips... you sure about this?",
+      "That's a big bet. But okay, I'm in.",
+      "I hope you know what you're doing...",
+      "Alright, but don't say I didn't warn you.",
+      "This just got real serious."
+    ],
+    "talk.pink_slip.even": [
+      "Pink slips it is. Winner takes all.",
+      "Now we're talking! High stakes racing!",
+      "You've got guts. I like that.",
+      "This is what real street racing is about.",
+      "May the best car win... literally."
+    ],
+
+    "talk.accepted.aggressive": [
+      "You're on! Don't chicken out now!",
+      "See you at the line. Try not to embarrass yourself.",
+      "Let's settle this on the strip!",
+      "I'm gonna enjoy this.",
+      "Time to put up or shut up!"
+    ],
+    "talk.accepted": [
+      "You're on. Good luck out there.",
+      "Alright, let's do this.",
+      "See you at the starting line.",
+      "May the best driver win.",
+      "Let's race!"
+    ],
+    "talk.rejected.stronger": [
+      "Not worth my time. Come back when you're somebody.",
+      "I don't race nobodies.",
+      "Maybe if you had something worth betting...",
+      "Pass. I've got better things to do.",
+      "You're not in my league, kid."
+    ],
+    "talk.rejected": [
+      "Not today. The terms aren't right.",
+      "I'll pass on this one.",
+      "That's not a fair bet. Try again.",
+      "Nah, I'm not feeling it.",
+      "Maybe another time."
+    ],
+
+    "replies.accept.aggressive": [
+      "You're on! Let's see what you got!",
+      "Finally, some action! Let's race!",
+      "Hope you're ready to lose!",
+      "This'll be fun. Let's go!"
+    ],
+    "replies.accept.calm": [
+      "Alright, I accept your challenge.",
+      "Let's do this. Good luck.",
+      "Fair enough. See you at the track.",
+      "Okay, I'll race you."
+    ],
+    "replies.accept": [
+      "You're on. Let's race.",
+      "Alright, let's settle this on the track.",
+      "Challenge accepted. Let's go.",
+      "Deal. May the best racer win."
+    ],
+    "replies.no_pink_slips": [
+      "Pink slips? That's too much for me. Not tonight.",
+      "I'm not risking my ride. Lower the stakes.",
+      "My car means too much to me. Cash only.",
+      "That's a bet I can't afford to lose. Pass."
+    ],
+    "replies.your_car_is_worth_less": [
+      "Pink slips? Your bucket of bolts isn't worth my ride.",
+      "I'm not risking my car for that heap. Bring something better.",
+      "Come back with a car that's actually worth something.",
+      "That's not a fair trade. My car's worth way more than yours."
+    ],
+    "replies.your_car_is_worth_more": [
+      "Your car's too nice. I can't match that stake.",
+      "That's out of my league. Find someone with a better ride.",
+      "I'd love to, but my car isn't worth that much."
+    ],
+    "replies.no_money": [
+      "That's more than I've got on me. Lower the stakes.",
+      "I don't have that kind of cash. Make it smaller.",
+      "I'm not that flush right now. Can't cover that bet.",
+      "That's too rich for my blood. I don't have it."
+    ],
+    "replies.bet_too_high": [
+      "That's way too steep for me. Not worth the risk.",
+      "Lower the bet and maybe we can talk.",
+      "That's not a bet, that's my rent money. No thanks.",
+      "I'm not gambling that much. Make it reasonable."
+    ],
+    "replies.reputation_too_low": [
+      "Come back when you've proven yourself, rookie.",
+      "I don't race amateurs. Win a few more races first.",
+      "Beat some other racers before challenging me.",
+      "You need more street cred before I'll race you."
+    ],
+    "replies.decline": [
+      "Not feeling it tonight. Maybe another time.",
+      "I'm gonna pass on this one. Ask me later.",
+      "Nah, I'm not in the mood right now.",
+      "Maybe later. I need a break."
+    ]
+  }
+}

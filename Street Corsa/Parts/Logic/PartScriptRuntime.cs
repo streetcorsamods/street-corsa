@@ -40,8 +40,8 @@ public sealed class PartScriptRuntime
         {
             if (part.Definition.SourceScript == null) continue;
 
-            // The script's path is pack.json content: it has to stay among the converted scripts
-            var script = PathNames.TryCombineUnder(loader.Root, part.Definition.SourceScript, out var scriptFile) ? loader.Load(scriptFile) : null;
+            // The script's path is pack.json content: it has to stay among the converted scripts of the part's mod
+            var script = PathNames.TryCombineUnder(part.Definition.ScriptRoot ?? loader.Root, part.Definition.SourceScript, out var scriptFile) ? loader.Load(scriptFile) : null;
             if (script == null)
             {
                 MissingScripts.Add(part);

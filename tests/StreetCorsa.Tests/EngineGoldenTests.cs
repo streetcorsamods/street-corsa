@@ -4,8 +4,8 @@ using StreetCorsa.Parts.Logic;
 namespace StreetCorsa.Tests;
 
 /// <summary>
-/// Real part scripts from Assets/Parts/_scripts still evaluate, through the API EngineBench uses. The figures are
-/// what `EngineBench "Street Corsa/Assets/Parts" rated` printed for these builds on 2026-09-24 (after the VM fixes).
+/// Real part scripts from Content/streetcorsa/parts/_scripts still evaluate, through the API EngineBench uses. The figures are
+/// what `EngineBench "Street Corsa/Content/streetcorsa/parts" rated` printed for these builds on 2026-09-24 (after the VM fixes).
 /// </summary>
 public class EngineGoldenTests
 {

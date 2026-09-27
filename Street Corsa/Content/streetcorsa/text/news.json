@@ -1,0 +1,68 @@
+{
+  "_comment": [
+    "The paper's race pages. Which story a race makes is the game's to decide (the police first, then the King,",
+    "rematches, pink slips, an event won, wrecks, upsets, big money, a first win); the words are here. Each headline",
+    "pool gives one line at random. In the player's races: {p} the player, {r} the rival, {pPossessive} and",
+    "{rPossessive} (\"Rex's\"), {rivalPossessive} (his/her/their), {where} (the where.* lines), {playerCar}, {rivalCar}",
+    "and their {playerCarShort}/{rivalCarShort} (no year), {eventName}, {wager}, {winner}, and for a wreck {who},",
+    "{whoPossessive}, {whose}, {car}, {carShort}. The suffixes are added to a body when they apply.",
+    "In the rivals' races: {winner}, {loser}, {loserPossessive} (\"Rex's\"), {whose} (His/Her/Their), {loserCar},",
+    "{loserCarShort}, {where}, {record} (the record line, when the car had 5 wins or more), {carWins}."
+  ],
+  "lines": {
+    "news.where.strip": "at the strip",
+    "news.where.road": "on the road course",
+    "news.where.rivals_road": "on the road",
+
+    "news.busted.headline": [ "{p} Nabbed After Street Race", "Police Break Up Race; {p} Arrested" ],
+    "news.busted.body": "Officers broke up a race between {p} and {r} and took {p} in. The {playerCar} went to the police impound.",
+    "news.busted.rival_busted": " {r} didn't get away either.",
+    "news.busted.rival_escaped": " {r} got away.",
+
+    "news.escaped.headline": [ "{p} Gives Police the Slip", "Racer Outruns Patrol Cars" ],
+    "news.escaped.body": "Patrol cars chased {p}'s {playerCar} after a race against {r}, and came back empty-handed.",
+    "news.escaped.rival_busted": " {r} was not so lucky.",
+
+    "news.king_beaten.headline": [ "The King Is Dead", "{p} Dethrones the King", "A New King on the Street" ],
+    "news.king_beaten.body": "{r} lost for the first time in anybody's memory. {p} beat him {where} and drove off with his {rivalCar}.",
+    "news.king_won.headline": [ "The King Keeps His Crown", "{r} Sends {p} Home on Foot" ],
+    "news.king_won.body": "{p} took a shot at {r} and lost, and the {playerCar} went with it. The King's record grows.",
+
+    "news.rematch_won.headline": [ "{r} Loses Again", "No Revenge for {r}" ],
+    "news.rematch_won.body": "{r} wanted a rematch with {p} and got one. It went the same way: {p} won {where} and took the {rivalCar} too.",
+    "news.rematch_lost.headline": [ "{r} Gets Even", "Sweet Revenge on the Street", "{r} Settles the Score" ],
+    "news.rematch_lost.body": "{r} had been waiting for a rematch since {p} took {rivalPossessive} car. {r} won it {where}, and now drives off in {pPossessive} {playerCar}.",
+
+    "news.pink_won.headline": [ "{p} Takes {rPossessive} Pink Slip", "{r} Walks Home", "Pink Slips Change Hands" ],
+    "news.pink_won.body": "{p} raced {r} for pink slips {where} and won. {r} signed over the {rivalCar}.",
+    "news.pink_lost.headline": [ "{p} Loses {playerCarShort} to {r}", "{r} Takes {pPossessive} Car" ],
+    "news.pink_lost.body": "{p} put the {playerCar} up against {r} for pink slips {where}, and lost. The car is {rPossessive} now.",
+    "news.suffix.player_crashed": " The {playerCar} left in pieces.",
+    "news.suffix.rival_crashed": " What's left of the {rivalCar}, that is.",
+    "news.suffix.revenge": " {r} was heard saying this isn't over.",
+
+    "news.event_won.headline": [ "{p} Wins the {eventName}", "{eventName} Goes to {p}" ],
+    "news.event_won.body": "{p} beat {r} {where} in the {playerCar} to win the {eventName}.",
+    "news.event_won.rival_crashed": " {r} finished it off the road.",
+
+    "news.wreck.headline": [ "{who} Wrecks {whose} {carShort}", "Race Ends in a Wreck" ],
+    "news.wreck.body": "A race between {p} and {r} ended with {whoPossessive} {car} off the road. {winner} took the win.",
+
+    "news.upset.headline": [ "Upset: {p} Beats {r}", "Nobody Saw {p} Coming" ],
+    "news.upset.body": "{r} was supposed to win this one. {p}'s {playerCar} had other ideas {where}.",
+
+    "news.big_money.headline": [ "${wager:N0} Race Goes to {winner}", "Big Money on the Street" ],
+    "news.big_money.body": "{p} and {r} raced {where} for ${wager:N0}. {winner} collected.",
+
+    "news.first_win.headline": [ "New Face on the Street", "{p} Gets a First Win" ],
+    "news.first_win.body": "A newcomer, {p}, beat {r} {where} in a {playerCar}. Keep an eye on this one.",
+
+    "news.rivals.record": " The car had {carWins} wins to its name.",
+    "news.rivals.pink_wreck.headline": [ "{winner} Tows Away {loserPossessive} Wreck", "Pink-Slip Race Ends in a Wreck" ],
+    "news.rivals.pink_wreck.body": "{loser} wrecked the {loserCar} racing {winner} for pink slips {where}. {winner} towed away what was left.{record}",
+    "news.rivals.pink.headline": [ "{winner} Takes {loserPossessive} {loserCarShort}", "{loser} Loses {whose} Ride" ],
+    "news.rivals.pink.body": "{winner} beat {loser} for pink slips {where}, and drives the {loserCar} home.{record}",
+    "news.rivals.wreck.headline": [ "{loser} Wrecks {whose} {loserCarShort}", "Another Wreck on the Street" ],
+    "news.rivals.wreck.body": "{loser} put the {loserCar} into something hard racing {winner} {where}."
+  }
+}

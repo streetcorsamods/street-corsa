@@ -8,6 +8,7 @@ using StreetCorsa.Services.Parts;
 using StreetCorsa.Services.Storage;
 using StreetCorsa.ViewModels;
 using System.Collections.ObjectModel;
+using StreetCorsa.Services.Career;
 
 namespace StreetCorsa.Screens.LoadGame
 {
@@ -135,8 +136,36 @@ namespace StreetCorsa.Screens.LoadGame
                     return;
                 }
 
-                // Parts saved under ids of a pack that has been replaced since
-                if (_partsService.BringUpToDate(gameState)) _repository.Save(gameState, saveInfo.SaveName);
+                // Played with mods that are not here now: the player says whether to go on without them
+                var missing = ModsInSave.Missing(gameState, Mods.ModSet.Installed);
+                if (missing.Count > 0)
+                {
+                    _logger.Warning("Save {SaveName} was played with mods that are not installed: {Mods}", saveInfo.SaveName, string.Join(", ", missing));
+                    _dialogService.ShowDialog(new ConfirmationDialogViewModel(_dialogService, ModsInSave.Warning(missing), "Mods Missing",
+                        confirmed =>
+                        {
+                            if (confirmed) Open(saveInfo, gameState);
+                        }));
+                    return;
+                }
+
+                Open(saveInfo, gameState);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not load save {SaveName}", saveInfo.SaveName);
+                ErrorMessage = $"Failed to load game: {ex.Message}";
+            }
+        }
+
+        private void Open(SaveGameInfo saveInfo, GameState gameState)
+        {
+            try
+            {
+                // Parts saved under ids of a pack that has been replaced since, and what no mod holds any more
+                var changed = _partsService.BringUpToDate(gameState);
+                changed |= ModsInSave.Tidy(gameState, CareerContent.Installed, Mods.ModSet.Installed);
+                if (changed) _repository.Save(gameState, saveInfo.SaveName);
 
                 // Store current game state in App for saving on exit
                 _setCurrentGame(gameState);

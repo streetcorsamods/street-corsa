@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using StreetCorsa.Logging;
+using StreetCorsa.Mods;
 
 namespace StreetCorsa.Services.Street
 {
@@ -59,8 +60,9 @@ namespace StreetCorsa.Services.Street
         float CubemapAmbient, IReadOnlyList<StreetLamp> Lamps);
 
     /// <summary>
-    /// A street the Cruise screen is set in, as Assets/Streets/&lt;id&gt;/street.json describes it: its models for
-    /// each light, where the player's car is parked and the lane the rivals drive up in.
+    /// A street the Cruise screen is set in, as a mod's streets/&lt;folder&gt;/street.json describes it: its models for
+    /// each light, where the player's car is parked and the lane the rivals drive up in, and the lights of the day it
+    /// is used in (<see cref="Times"/>).
     /// </summary>
     public sealed record StreetScene(
         string Id,
@@ -74,6 +76,16 @@ namespace StreetCorsa.Services.Street
         float[] Sun,
         IReadOnlyDictionary<StreetLight, StreetLighting> Lights)
     {
+        /// <summary>
+        /// The lights of the day the street is used in: what its street.json says ("times": ["day", "dusk"]), else
+        /// every light it has a model for. Never one it has no model for.
+        /// </summary>
+        public IReadOnlySet<StreetLight> Times { get; init; } = new HashSet<StreetLight>(Enum.GetValues<StreetLight>());
+
+        /// <summary>The light itself when the street is used at it, else the nearest one it is (the later on a tie)</summary>
+        public StreetLight NearestTime(StreetLight light) =>
+            Times.Contains(light) || Times.Count == 0 ? light : Times.OrderBy(t => Math.Abs(t - light)).ThenByDescending(t => t).First();
+
         /// <summary>The model of the street in that light: street_day.kn5 and so on</summary>
         public string Kn5For(StreetLight light) => Path.Combine(Folder, $"street_{StreetLights.Describe(light)}.kn5");
 
@@ -92,7 +104,6 @@ namespace StreetCorsa.Services.Street
 
         internal static readonly StreetLighting DefaultLighting = new(1.5f, [200, 180, 180], 2f, [150, 180, 180], [150, 180, 180], 0.5f, []);
 
-        public static string StreetsFolder => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "Streets");
 
         private sealed record SpotEntry(float X, float Z, float Heading);
 
@@ -102,25 +113,46 @@ namespace StreetCorsa.Services.Street
             float? CubemapAmbient, List<LampEntry>? Lamps);
 
         private sealed record SceneEntry(string? Id, string? Title, SpotEntry? Player, float LaneOffset, float RivalStop,
-            float ApproachFrom, float LeaveTo, float[]? Sun, Dictionary<string, LightEntry>? Lights);
+            float ApproachFrom, float LeaveTo, float[]? Sun, Dictionary<string, LightEntry>? Lights, List<string>? Times);
 
-        /// <summary>The first street under <paramref name="root"/> with a street.json and a model for every light; null when there is none (logged)</summary>
-        public static StreetScene? LoadFirst(string root)
+        /// <summary>
+        /// Every street of every mod (a folder under a mod's <c>streets</c>) that loads, by full id: a mod's streets get
+        /// its namespace. Empty when there is none (logged).
+        /// </summary>
+        public static IReadOnlyList<StreetScene> LoadAll(ModSet mods)
         {
-            if (!Directory.Exists(root))
-            {
-                Logger.Warning("No streets folder: {Path}", root);
-                return null;
-            }
-
-            foreach (var folder in Directory.GetDirectories(root).OrderBy(f => f, StringComparer.OrdinalIgnoreCase))
+            var streets = new List<StreetScene>();
+            var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var (mod, folder) in mods.SubFolders(ContentTypes.Streets))
             {
                 var scene = Load(folder);
-                if (scene != null) return scene;
+                if (scene == null) continue;
+
+                // A street's own id is written without its mod, like every id in a mod's files
+                var id = ModIds.IsQualified(scene.Id) ? null : ModIds.Qualify(mod.Id, scene.Id);
+                if (id == null || !ids.Add(id))
+                {
+                    Logger.Warning("Streets: {Mod}/{Folder} has the id {Id}, which is taken or has a ':' in it; left out", mod.Id, Path.GetFileName(folder), scene.Id);
+                    continue;
+                }
+
+                streets.Add(scene with { Id = id });
             }
 
-            Logger.Warning("No street under {Path} could be loaded", root);
-            return null;
+            if (streets.Count == 0) Logger.Warning("No street in the mods could be loaded");
+            return streets;
+        }
+
+        /// <summary>
+        /// The street for a light of the day: the one the player is in while it still fits, else one of those that fit,
+        /// at random; null when none does
+        /// </summary>
+        public static StreetScene? Pick(IReadOnlyList<StreetScene> streets, StreetLight light, Random random, StreetScene? current = null)
+        {
+            if (current != null && current.Times.Contains(light)) return current;
+
+            var fitting = streets.Where(s => s.Times.Contains(light)).ToList();
+            return fitting.Count == 0 ? null : fitting[random.Next(fitting.Count)];
         }
 
         /// <summary>The street in <paramref name="folder"/>; null when its file is missing or broken, or a model is (logged)</summary>
@@ -159,14 +191,35 @@ namespace StreetCorsa.Services.Street
                 new StreetSpot(entry.Player.X, entry.Player.Z, entry.Player.Heading), entry.LaneOffset, entry.RivalStop,
                 entry.ApproachFrom, entry.LeaveTo, sun, lights);
 
-            var missing = Enum.GetValues<StreetLight>().Select(scene.Kn5For).FirstOrDefault(p => !File.Exists(p));
-            if (missing != null)
+            // Used at the lights it names, each of which needs its model; else at every light it has a model for
+            var times = new HashSet<StreetLight>();
+            if (entry.Times == null)
             {
-                Logger.Warning("The street {Id} has no model {Path}", scene.Id, missing);
+                times.UnionWith(Enum.GetValues<StreetLight>().Where(l => File.Exists(scene.Kn5For(l))));
+            }
+            else
+            {
+                foreach (var name in entry.Times)
+                {
+                    if (Enum.TryParse<StreetLight>(name, ignoreCase: true, out var time)) times.Add(time);
+                    else Logger.Warning("The street {Id} names \"{Time}\" among its times, which is no light of the day (day, dusk, night)", scene.Id, name);
+                }
+
+                var missing = times.Select(scene.Kn5For).FirstOrDefault(p => !File.Exists(p));
+                if (missing != null)
+                {
+                    Logger.Warning("The street {Id} has no model {Path}", scene.Id, missing);
+                    return null;
+                }
+            }
+
+            if (times.Count == 0)
+            {
+                Logger.Warning("The street {Id} is used at no time of day", scene.Id);
                 return null;
             }
 
-            return scene;
+            return scene with { Times = times };
         }
 
         // JSON numbers, not the base64 a byte[] is read from

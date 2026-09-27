@@ -1,6 +1,7 @@
 using System.Numerics;
 using StreetCorsa.Controls.Showcase;
 using StreetCorsa.Models.Catalog;
+using StreetCorsa.Mods;
 using StreetCorsa.Services.Showcase;
 
 namespace StreetCorsa.Tests;
@@ -248,12 +249,11 @@ public class MainScreenTests
     public void Scenes_are_found_in_the_games_own_garages_first_then_in_the_installed_showrooms()
     {
         using var dir = new TempDir();
-        var garages = dir.Combine("Garages");
         var showrooms = dir.Combine("showroom");
-        dir.File("Garages/garage/garage.kn5", "own");
+        dir.File("Content/streetcorsa/garages/garage/garage.kn5", "own");
         dir.File("showroom/garage/garage.kn5", "ac");
         dir.File("showroom/Hangar/hangar_v2.kn5", "spelled otherwise");
-        var file = dir.File("scenes.json", """
+        dir.File("Content/streetcorsa/showcase/scenes.json", """
             { "scenes": [
                 { "id": "garage", "wallRadius": 12 },
                 { "id": "Hangar", "wallRadius": 14.4 },
@@ -263,21 +263,38 @@ public class MainScreenTests
             ] }
             """);
 
-        var scenes = ShowcaseContent.LoadScenes(file, garages, showrooms);
+        var scenes = ShowcaseContent.LoadScenes(ModSet.Load(dir.Combine("Content")), showrooms);
 
         Assert.Equal(["garage", "Hangar"], scenes.Select(s => s.Id));
-        Assert.Equal(dir.Combine("Garages", "garage", "garage.kn5"), scenes[0].Kn5);
+        Assert.Equal(dir.Combine("Content", "streetcorsa", "garages", "garage", "garage.kn5"), scenes[0].Kn5);
         Assert.Equal(dir.Combine("showroom", "Hangar", "hangar_v2.kn5"), scenes[1].Kn5);
         Assert.Equal(14.4f, scenes[1].WallRadius);
     }
 
     [Fact]
-    public void A_missing_or_broken_scene_list_leaves_nothing_to_show()
+    public void A_broken_scene_list_or_a_bad_scene_leaves_out_only_itself()
     {
         using var dir = new TempDir();
+        dir.File("showroom/garage/garage.kn5", "");
+        dir.File("showroom/beach/beach.kn5", "");
+        dir.File("Content/streetcorsa/showcase/scenes.json", """{ "scenes": [ { "id": "garage", "wallRadius": 12 } ] }""");
+        dir.File("Content/mymod/mod.json", """{ "id": "mymod" }""");
+        dir.File("Content/mymod/showcase/broken.json", "{ scenes: [");
+        dir.File("Content/mymod/showcase/odd.json", """{ "scenes": [ { "id": "garage", "wallRadius": "12" }, { "id": "beach", "wallRadius": 20 } ] }""");
 
-        Assert.Empty(ShowcaseContent.LoadScenes(dir.Combine("none.json"), dir.Path, dir.Path));
-        Assert.Empty(ShowcaseContent.LoadScenes(dir.File("broken.json", "{ scenes: ["), dir.Path, dir.Path));
+        var scenes = ShowcaseContent.LoadScenes(ModSet.Load(dir.Combine("Content")), dir.Combine("showroom"));
+
+        Assert.Equal(["garage", "beach"], scenes.Select(s => s.Id));
+        Assert.Equal(12f, scenes[0].WallRadius);
+    }
+
+    [Fact]
+    public void No_scene_list_leaves_nothing_to_show()
+    {
+        using var dir = new TempDir();
+        dir.File("Content/streetcorsa/readme.txt", "");
+
+        Assert.Empty(ShowcaseContent.LoadScenes(ModSet.Load(dir.Combine("Content")), dir.Path));
     }
 
     [Fact]
@@ -286,7 +303,7 @@ public class MainScreenTests
         using var dir = new TempDir();
         foreach (var id in new[] { "garage", "Hangar", "showroom", "industrial", "beach" }) dir.File($"{id}/{id}.kn5", "");
 
-        var scenes = ShowcaseContent.LoadScenes(Path.Combine(RepoPaths.GameProject, "Assets", "Showcase", "scenes.json"), dir.Path, dir.Path);
+        var scenes = ShowcaseContent.LoadScenes(ModSet.Load(RepoPaths.Content), dir.Path);
 
         Assert.Equal(5, scenes.Count);
         Assert.All(scenes, s => Assert.True(s.WallRadius >= 10f));

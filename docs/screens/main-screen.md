@@ -40,8 +40,8 @@ MainMenu ──▶ card: New Game ──▶ Garage
   the catalog's `AvailableSkins`, or its default skin when that folder is missing. It is titled "Year Name" unless
   the name already has the year. The player's own cars are not used, since no save is loaded at this point (the
   user's decision).
-- **Rooms:** `Assets/Showcase/scenes.json` lists them with the radius of their nearest wall. Each id is looked for as
-  the game's own garage first (`Assets/Garages/<id>`), then as an installed AC showroom. The list: `garage` (Rob
+- **Rooms:** `Content/streetcorsa/showcase/scenes.json` lists them with the radius of their nearest wall. Each id is looked for as
+  the game's own garage first (`Content/streetcorsa/garages/<id>`), then as an installed AC showroom. The list: `garage` (Rob
   Taylor's, see the showroom note in the memory), `Hangar`, `showroom`, `industrial` and `beach`. `at_previews` (a
   black stage with stray white panels) and `studio_white` (bare) are left out.
 - **Lineups** (`ShowcasePlaylist`, `ShowcaseLineup`): each room gets three cars, or four where the nearest wall is

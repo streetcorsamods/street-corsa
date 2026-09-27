@@ -34,7 +34,7 @@ Run from the repo root; scope with `-- 'Street Corsa/*.cs'` etc.
 | Threading to UI          | `Dispatcher.InvokeAsync` (1 use)                                                    | `Dispatcher\.Invoke\(` (sync), `BeginInvoke`, `Application\.Current\.Dispatcher` in services           |
 | Disposal                 | (establish on first run) — only 2 types implement `IDisposable` despite D3D/FMOD/LiteDB owners | types holding `LiteDatabase`, FMOD handles, D3D objects, `Timer`, `CancellationTokenSource` without `IDisposable` |
 | Error handling           | catch, log via `IAppLogger`, degrade (120 `catch` sites, 1 empty)                   | `catch\s*\{\s*\}`, `catch \(Exception\) \{ \}`, catch-and-rethrow `throw ex;`                           |
-| Part data access         | through `PartsCatalog` / `CarPartsService`                                          | direct reads of `Assets\Parts\**\pack.json` elsewhere                                                  |
+| Part data access         | through `PartsCatalog` / `CarPartsService`                                          | direct reads of `Content\streetcorsa\parts\**\pack.json` elsewhere                                                  |
 | Nullable                 | annotations honoured                                                                | `#nullable disable`, `null!`, `!` on values that come from files/content                               |
 | Naming                   | .NET conventions; `_camelCase` fields; `Async` suffix on awaitables                 | public fields, `async Task` methods without `Async` suffix in services                                 |
 

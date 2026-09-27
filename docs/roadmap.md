@@ -736,7 +736,7 @@ mod-ready instead of retrofitted. One step at a time, in this order.
   converter: `Assets/Parts/model_scales.json` scales parts by id prefix (`engines/`, `exhaust/`, `suspension/` 1.2,
   `brakes/` 1.35); each part keeps its own scale, so an unscaled mod part on a scaled block stays its size.
 
-### Step 16: everything moddable (next)
+### Step 16: everything moddable (built on `feature/everything-moddable`, not merged)
 Idea 7. The game goes open source: the community should be able to drop a mod into a folder and have the game pick it
 up, and saves must survive mods coming and going.
 
@@ -766,6 +766,50 @@ up, and saves must survive mods coming and going.
   handles a missing id the way parts and cars already do.
 - Open: where the folder lives (next to the game or in Documents), and whether streets get picked at random or by
   the clock.
+
+**The user decided (2026-09-26):** the folder is `<game>\Content` ("like AC"); one PR for all of it, events,
+milestones, victory paths, newspaper and talk included; ids namespaced by mod with an explicit override
+(`"replaces"`); streets picked by the clock.
+
+**As built (2026-09-26)** (for modders: `docs/modding.md`):
+- `Mods/`: `ModSet` finds `Content\<mod>\mod.json` (the base game `Content\streetcorsa` first, then by `order` and id;
+  `_`/`.` folders off; bad ids, `car`, duplicates left out and logged); `ModIds` (qualify, resolve: a mod's own entry
+  first, then the base game's; a full id means exactly that); `ContentRegistry` (merge by full id, `replaces` on
+  purpose, problems per line); `ModJson` (a file is a list under its name, a list, or one entry).
+- All of `Assets\{Parts,Sounds,Dealers,Opponents,Showcase,Streets,Garages}` moved to `Content\streetcorsa\{parts,
+  sounds,dealers,racers,showcase,streets,garages}`; `Assets` keeps the UI's pictures. The csproj copies `Content\**`.
+- Parts: `PartsCatalog.Load(roots)` reads every mod's parts folder (packs, `_scripts`, builds, aliases, model scales,
+  each about the mod's own parts); `PartDefinition` knows its `ModId`, `LocalId`, `PackFolder` (the model is found
+  next to its pack.json, no longer from the id) and `ScriptRoot`; `ScriptClassLoader` searches several roots. The
+  shop's `engines/` check and the sound matcher's family go by `LocalId`. Slot shifts stay one base-game file by full id.
+- Sounds: every mod's sound folders, namespaced; pins resolved against the parts. Dealers, racers, showcase scenes
+  merge from every mod. Racer portraits are saved as a path under Content; a save's `/Assets/Opponents/...` still
+  resolves (`Portraits`). Base racers keep their GUIDs (unprefixed ids).
+- **A new dealer no longer respawns the whole market** (it did: `IsMarketStale`); only its lot is stocked.
+- Streets: every mod's; `"times"` in street.json (default: the lights it has models for); `StreetScenes.Pick` keeps
+  the street while it fits the light, else a random one that fits.
+- Career as data (`CareerContent`): `events/events.json` (car filters by `type`), `milestones/milestones.json`,
+  `victories/victories.json` (`DataVictory`: unlock/goal steps `counter`, `beatKing`, `beatAll`, `mostWins`, text
+  templates). The five victory classes are gone; the King comes out when the "King" path opens (none: from the
+  start). Event prizes may be `part:<id>`.
+- Words as data (`GameText`, `text/*.json`: `lines` add to a pool, `replace` rewrites it): the paper (`news.*`),
+  talk and challenge replies (`talk.*`, `replies.*`), street talk (`street.*`), names (`names.*`). The rules picking a
+  pool stay in C#. A pool of one draws no random number, so the base game reads the same for a seed as before.
+- Saves: `GameState.Mods` stamped on every save; loading without one asks first (`ModsInSave.Warning`), then
+  `ModsInSave.Tidy` drops the invitations, dealers and lots of mods that are not installed (never what an installed
+  mod merely failed to read). Portraits are saved by mod id, not folder. The log lists the mods at start-up.
+- Tests: the test project copies the base game's JSON into its output (`Content\streetcorsa`), so the services'
+  installed defaults work; `ModsTests.cs` covers the loader, parts/sounds/dealers/racers/streets of two mods, the
+  career and text, and saves. 825 tests pass; the game started on the moved content with the same counts (1521
+  parts, 161 builds, 8 sounds, 10 dealers, 61 racers, 5 main-screen rooms).
+- Review fixes (/code-review xhigh, 2026-09-26): a `null` or a bad value in a mod's entry leaves out only that entry
+  (it crashed start-up, or dropped every dealer or scene); showrooms only from `showrooms` lists; one-entry files may
+  use `id`; a street without `times` needs no model for every light, and the Cruise screen keeps a street in its
+  nearest light when none fits; a mod's scripts find its own shared classes first; a locked path's goals are never
+  done (progress stays the average of all steps); victory texts use `GameText.Fill`; the old single-folder loaders and
+  `AppSettings.GaragesPath` are gone. 832 tests pass.
+- Not done: the dealer map picture is still a compiled resource (a mod's dealers need pins on the LA map); the
+  garage's `slot_shifts.json` is one base-game file; mod problems are in the log only, not shown in the game.
 
 ### Step 17: the engine stand
 Idea 3. Peripherals, manifolds and even the heads can be worked on in the car; the internals only on a stand, and in

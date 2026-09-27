@@ -45,10 +45,10 @@ public class VictoryTests
     [Fact]
     public void The_King_is_known_by_his_mark_not_by_his_name()
     {
-        var state = Career(KingVictory.REQUIRED_WINS, KingVictory.REQUIRED_REPUTATION);
+        var state = Career(10, 50);
         state.Racers.AddRacer(new Opponent("Elvis", 40, Gender.Male, 99, 60) { IsKing = true, Status = RacerStatus.ReadyToRace });
         state.Career.RecordDefeatedOpponent("Elvis");
-        var king = new KingVictory();
+        var king = new VictoryConditionService().GetVictoryCondition("King")!;
 
         Assert.False(king.IsAchieved(state.Career)); // not looked up yet: his usual name counts
 
@@ -61,16 +61,16 @@ public class VictoryTests
     [Fact]
     public void An_older_save_that_beat_the_King_by_his_usual_name_still_has()
     {
-        var state = Career(KingVictory.REQUIRED_WINS, KingVictory.REQUIRED_REPUTATION);
-        state.Career.RecordDefeatedOpponent(KingVictory.KING_NAME);
+        var state = Career(10, 50);
+        state.Career.RecordDefeatedOpponent(DataVictory.DefaultKingName);
 
-        Assert.True(new KingVictory().IsAchieved(state.Career));
+        Assert.True(new VictoryConditionService().GetVictoryCondition("King")!.IsAchieved(state.Career));
     }
 
     [Fact]
     public void Progress_read_from_the_career_alone_shows_the_standing_worked_out_from_the_game()
     {
-        var state = Career(0, DominationVictory.REQUIRED_REPUTATION);
+        var state = Career(0, 75);
         var service = new VictoryConditionService(getTotalOpponents: _ => 4, playerHasMostWins: _ => true);
         state.Career.RecordDefeatedOpponent("A");
 

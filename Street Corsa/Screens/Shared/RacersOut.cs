@@ -54,9 +54,8 @@ namespace StreetCorsa.Screens.Shared
         {
             if (string.IsNullOrEmpty(opponent.PortraitPath)) return null;
 
-            // Kept relative to the app's folder, sometimes with a leading slash
-            var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, opponent.PortraitPath.TrimStart('/', '\\'));
-            if (File.Exists(path)) return path;
+            var path = Services.Opponents.Portraits.Resolve(Mods.ModSet.Installed, opponent.PortraitPath);
+            if (path != null && File.Exists(path)) return path;
 
             logger?.Warning("Portrait not found for opponent {Name}: {Path}", opponent.Name, path);
             return null;

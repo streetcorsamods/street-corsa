@@ -69,10 +69,8 @@ public class AppSettings
     /// </summary>
     public string ShowroomsPath => Path.Combine(AssettoCorsaPath, "content", "showroom");
 
-    /// <summary>
-    /// The game's own garage scenes: showroom-style folders shipped next to it, like the parts
-    /// </summary>
-    public string GaragesPath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "Garages");
+    /// <summary>The base game's content: the first mod (see <see cref="Mods.ModSet"/>)</summary>
+    public static string BaseContentPath => Mods.ModSet.Installed.Base.Folder;
 
     /// <summary>
     /// Showroom used as the 3D garage environment
@@ -80,25 +78,30 @@ public class AppSettings
     public string GarageShowroomId { get; set; } = "garage";
 
     /// <summary>
-    /// Full path to the garage showroom model: the game's own garage if it has one by that id, else the AC
-    /// install's showroom of that name
+    /// Full path to the garage showroom model: a mod's garage by that id if one has it (the last mod to have it wins,
+    /// so a mod can dress the garage), else the AC install's showroom of that name
     /// </summary>
     public string GarageShowroomKn5
     {
         get
         {
-            var own = Path.Combine(GaragesPath, GarageShowroomId, GarageShowroomId + ".kn5");
-            return File.Exists(own) ? own : Path.Combine(ShowroomsPath, GarageShowroomId, GarageShowroomId + ".kn5");
+            foreach (var (_, dir) in Mods.ModSet.Installed.Folders(Mods.ContentTypes.Garages).Reverse())
+            {
+                var own = Path.Combine(dir, GarageShowroomId, GarageShowroomId + ".kn5");
+                if (File.Exists(own)) return own;
+            }
+
+            return Path.Combine(ShowroomsPath, GarageShowroomId, GarageShowroomId + ".kn5");
         }
     }
 
     /// <summary>
-    /// Path to the converted part packs: the game's own content, shipped next to it (see tools/convert-parts.ps1)
+    /// The base game's converted part packs (see tools/convert-parts.ps1); the catalog reads every mod's
     /// </summary>
-    public string PartsPath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "Parts");
+    public string PartsPath => Path.Combine(BaseContentPath, Mods.ContentTypes.Parts);
 
-    /// <summary>The engine sound library: a folder per sound, next to the parts</summary>
-    public string SoundsPath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "Sounds");
+    /// <summary>The base game's engine sounds: a folder per sound; the library reads every mod's</summary>
+    public string SoundsPath => Path.Combine(BaseContentPath, Mods.ContentTypes.Sounds);
 
     /// <summary>The install's master GUIDs, where Kunos cars name their sound events</summary>
     public string SfxGuidsPath => Path.Combine(AssettoCorsaPath, "content", "sfx", "GUIDs.txt");

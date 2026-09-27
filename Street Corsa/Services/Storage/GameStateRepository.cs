@@ -55,6 +55,7 @@ namespace StreetCorsa.Services.Storage
                     state.NewspaperAds.RivalCars ??= [];
                     state.Racers.Departed ??= [];
                     state.StreetTalk ??= [];
+                    state.Mods ??= [];
                     HistoryUpgrade.BringUpToDate(state);
                 }
 
@@ -78,6 +79,9 @@ namespace StreetCorsa.Services.Storage
                 BackUpOnce(saveName, dbPath);
 
                 state.LastPlayedDate = DateTime.Now;
+
+                // Played with these from now on: a mod the player took out is warned of once, at the load before
+                state.Mods = Mods.ModSet.Installed.References();
                 Database.InTransaction(saveName, db =>
                 {
                     db.GetCollection<GameState>(Collection).Upsert(state);

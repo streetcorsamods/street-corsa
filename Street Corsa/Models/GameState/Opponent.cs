@@ -19,7 +19,7 @@ namespace StreetCorsa.Models.GameState
         public string DefinitionId { get; set; } = string.Empty;
 
         /// <summary>
-        /// The boss at the top of the ladder (<see cref="Models.Career.Victory.KingVictory"/>): he only races for pink
+        /// The boss at the top of the ladder (the "King" victory path): he only races for pink
         /// slips, only once the player has earned the right, and never in the races nobody watches
         /// </summary>
         public bool IsKing { get; set; }

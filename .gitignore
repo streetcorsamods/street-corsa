@@ -367,7 +367,10 @@ tmpclaude-*
 .aider*
 
 # Third-party garage showroom (Rob Taylor, no redistribution licence) - local only until we build our own
-Street Corsa/Assets/Garages/garage/
+Street Corsa/Content/streetcorsa/garages/garage/
 
 # The converter builds its output here and swaps it in only when a run completes
-**/.Parts.converting/
+# (a dot in front, then the output's name: .parts.converting, .parts.committing, .parts.old)
+**/.[Pp]arts.converting/
+**/.[Pp]arts.committing
+**/.[Pp]arts.old/

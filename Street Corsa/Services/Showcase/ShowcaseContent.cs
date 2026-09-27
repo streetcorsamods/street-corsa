@@ -1,52 +1,68 @@
 using System.IO;
-using System.Text.Json;
+using StreetCorsa.Configuration;
 using StreetCorsa.Controls.Showcase;
+using StreetCorsa.Helpers;
 using StreetCorsa.Logging;
 using StreetCorsa.Models.Catalog;
+using StreetCorsa.Mods;
 
 namespace StreetCorsa.Services.Showcase
 {
     /// <summary>
-    /// What the main screen has to show: the rooms listed in Assets/Showcase/scenes.json that are there to be loaded,
-    /// and the installed cars of the catalog.
+    /// What the main screen has to show: the rooms the mods list in their <c>showcase</c> folder (scenes.json) that
+    /// are there to be loaded, and the installed cars of the catalog.
     /// </summary>
     public static class ShowcaseContent
     {
         private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger("Showcase");
 
-        private static readonly JsonSerializerOptions Options = new() { PropertyNameCaseInsensitive = true };
+        /// <summary>
+        /// The scenes every mod lists, in load order; a later mod listing a scene again sets its wall radius. A scene
+        /// is a room by its folder name: a mod's garage (see <see cref="FindKn5(string, IEnumerable{string}, string)"/>)
+        /// or an AC showroom.
+        /// </summary>
+        public static IReadOnlyList<ShowcaseScene> LoadScenes(ModSet mods, string showroomsPath)
+        {
+            var problems = new List<string>();
+            var entries = new List<SceneEntry>();
+            foreach (var entry in ModJson.Entries(mods, ContentTypes.Showcase, "scenes", problems))
+            {
+                SceneEntry? scene;
+                try
+                {
+                    scene = entry.As<SceneEntry>();
+                }
+                catch (Exception ex) when (ex is not OutOfMemoryException)
+                {
+                    problems.Add($"{entry.Source}: scene {entry.Id}: {ex.Message}; left out");
+                    continue;
+                }
 
-        public static string ScenesFile => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "Showcase", "scenes.json");
+                if (scene == null) continue;
+
+                var earlier = entries.FindIndex(e => string.Equals(e.Id, scene.Id, StringComparison.OrdinalIgnoreCase));
+                if (earlier >= 0) entries[earlier] = scene;
+                else entries.Add(scene);
+            }
+
+            foreach (var problem in problems) Logger.Warning("Main screen scenes: {Problem}", problem);
+            return Found(entries, GaragesOf(mods), showroomsPath);
+        }
+
+        /// <summary>The mods' garage folders, the last mod first: a later mod's room of the same name wins</summary>
+        public static List<string> GaragesOf(ModSet mods) =>
+            mods.Folders(ContentTypes.Garages).Select(f => f.Dir).Reverse().ToList();
+
+        /// <summary>A room's model by its folder name: a mod's garage, else the AC install's showroom</summary>
+        public static string? FindScene(string id) =>
+            FindKn5(id, GaragesOf(ModSet.Installed), AppSettings.Instance.ShowroomsPath);
 
         private sealed record SceneEntry(string? Id, float WallRadius);
 
-        private sealed record SceneFile(List<SceneEntry>? Scenes);
-
-        /// <summary>
-        /// The scenes the file lists and that can be found, in its order. Empty when the file is missing or broken
-        /// (logged): the main screen falls back to its picture.
-        /// </summary>
-        public static IReadOnlyList<ShowcaseScene> LoadScenes(string file, string garagesPath, string showroomsPath)
+        private static List<ShowcaseScene> Found(IEnumerable<SceneEntry> entries, IEnumerable<string> garagesPaths, string showroomsPath)
         {
-            SceneFile? parsed;
-            try
-            {
-                if (!File.Exists(file))
-                {
-                    Logger.Warning("Main screen scenes not found: {Path}", file);
-                    return [];
-                }
-
-                parsed = JsonSerializer.Deserialize<SceneFile>(File.ReadAllText(file), Options);
-            }
-            catch (Exception ex)
-            {
-                Logger.Error(ex, "Could not read the main screen scenes from {Path}", file);
-                return [];
-            }
-
             var scenes = new List<ShowcaseScene>();
-            foreach (var entry in parsed?.Scenes ?? [])
+            foreach (var entry in entries)
             {
                 if (string.IsNullOrWhiteSpace(entry.Id) || entry.WallRadius <= 0f)
                 {
@@ -54,7 +70,7 @@ namespace StreetCorsa.Services.Showcase
                     continue;
                 }
 
-                var kn5 = FindKn5(entry.Id, garagesPath, showroomsPath);
+                var kn5 = FindKn5(entry.Id, garagesPaths, showroomsPath);
                 if (kn5 == null)
                 {
                     Logger.Information("Main screen scene {Id} is not installed; left out", entry.Id);
@@ -71,9 +87,12 @@ namespace StreetCorsa.Services.Showcase
         /// The model of a scene: the game's own garage by that id, else the AC showroom, whose model is not always
         /// spelled like its folder
         /// </summary>
-        public static string? FindKn5(string id, string garagesPath, string showroomsPath)
+        public static string? FindKn5(string id, IEnumerable<string> garagesPaths, string showroomsPath)
         {
-            foreach (var root in new[] { garagesPath, showroomsPath })
+            // The id is content (a mod's file): it has to be one folder name, not a path out of the room folders
+            if (!PathNames.IsSafeSegment(id)) return null;
+
+            foreach (var root in garagesPaths.Append(showroomsPath))
             {
                 var folder = Path.Combine(root, id);
                 if (!Directory.Exists(folder)) continue;

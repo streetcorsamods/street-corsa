@@ -21,7 +21,7 @@ Diner ──[CRUISE THE STREETS]──▶ Cruise ──[DINER] / [GARAGE]──�
 
 ## The street
 
-`Assets/Streets/pretville/`: `street_day.kn5`, `street_dusk.kn5`, `street_night.kn5` and `street.json`. It is Poly
+`Content/streetcorsa/streets/pretville/`: `street_day.kn5`, `street_dusk.kn5`, `street_night.kn5` and `street.json`. It is Poly
 Haven's **Pretville Street** (Dimitrios Savva and Jarod Guest, CC0: free to ship, no credit asked; it is given in
 `street.json` all the same), a 1950s American film-set street.
 

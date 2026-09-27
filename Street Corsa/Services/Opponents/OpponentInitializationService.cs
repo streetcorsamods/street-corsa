@@ -126,11 +126,12 @@ namespace StreetCorsa.Services.Opponents
             var racers = gameState.Racers;
             var known = racers.All.Concat(racers.Departed.Values).OfType<Opponent>().ToList();
 
-            // Portraits drawn after the save began (the King's). A save from before empty strings were kept may hold
-            // a racer without a definition id at all.
-            foreach (var racer in known.Where(r => string.IsNullOrEmpty(r.PortraitPath) && !string.IsNullOrEmpty(r.DefinitionId)))
+            // The portrait is the definition's: drawn after the save began (the King's), or moved by its mod. A save
+            // from before empty strings were kept may hold a racer without a definition id at all.
+            foreach (var racer in known.Where(r => !string.IsNullOrEmpty(r.DefinitionId)))
             {
-                racer.PortraitPath = definitions.FirstOrDefault(d => d.DefinitionId == racer.DefinitionId)?.PortraitPath;
+                var portrait = definitions.FirstOrDefault(d => d.DefinitionId == racer.DefinitionId)?.PortraitPath;
+                if (!string.IsNullOrEmpty(portrait)) racer.PortraitPath = portrait;
             }
 
             // Known by definition, and by name for racers from before definitions were remembered

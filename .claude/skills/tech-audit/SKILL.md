@@ -48,7 +48,7 @@ This is a single-user Windows desktop game, not a web service. There is no login
 - Bundles: `quality` = `stability` + `patterns` + `duplication`. `all` = every section. A bundle shares Phases 0–3 and writes one combined findings file named after the bundle.
 - Output is durable: a dated findings file under `references/findings/`. Chat output is the executive summary only.
 - Diff-aware: if `references/analysis-log.md` records a prior run, scope code review to files changed since the last logged commit (`git diff --name-only <sha>..HEAD`), but still run the deterministic checks (Phase 0b) in full. Pass `full` as a second arg (e.g. `security full`) to force a full sweep.
-- **Read-only against the world.** Never launch the game or AC, never run `SlrrPartsConverter` or `tools/convert-parts.ps1` (they rewrite `Assets\Parts`), never run an `EngineBench` mode that writes, never touch the AC install (`C:\GAMES\...`) or `saves\*.db`. `tools/slot_shifts.json` is the user's work in progress — read it, never "fix" it.
+- **Read-only against the world.** Never launch the game or AC, never run `SlrrPartsConverter` or `tools/convert-parts.ps1` (they rewrite `Content\streetcorsa\parts`), never run an `EngineBench` mode that writes, never touch the AC install (`C:\GAMES\...`) or `saves\*.db`. `tools/slot_shifts.json` is the user's work in progress — read it, never "fix" it.
 
 ## Phase 0 — Discovery (deterministic, no model judgment)
 
@@ -138,7 +138,7 @@ Before reading code, build an inventory per unit. `Grep` for the patterns in `re
 - **Script VM**: instruction budget, call-depth limit, array/heap bounds, what host functions the scripts can call (file/process access?)
 - **Native interop**: `DllImport`/`LibraryImport` sites, handle ownership, `unsafe` blocks and their pointer bounds, COM/D3D object disposal
 - **Network**: `HttpClient` sites (the planned Ollama/LM Studio integration in `docs/ai-integration.md`) — endpoint source, timeouts, what content leaves the machine
-- **Cross-unit trust boundaries**: Lua app → result JSON → launcher; converter → `Assets\Parts` → runtime catalog; game ↔ AC process
+- **Cross-unit trust boundaries**: Lua app → result JSON → launcher; converter → `Content\streetcorsa\parts` → runtime catalog; game ↔ AC process
 
 Write the inventory to `references/attack-surface.md` (overwrite each run; in diff mode, list only new/changed surfaces and point to the prior snapshot via `git show <sha>:<path>`). Subsequent code review uses it as the worklist.
 

@@ -2,7 +2,7 @@
 # Set default behavior to automatically normalize line endings.
 ###############################################################################
 * text=auto
-# Converted part models and the compiled part scripts they run on (Street Corsa/Assets/Parts)
+# Converted part models and the compiled part scripts they run on (Street Corsa/Content/streetcorsa/parts)
 *.kn5   binary
 *.class binary
 ###############################################################################

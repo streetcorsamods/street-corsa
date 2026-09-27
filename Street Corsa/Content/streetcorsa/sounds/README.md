@@ -3,7 +3,7 @@
 A folder here is a sound. Drop one in and the game has it; nothing else to edit.
 
 ```
-Assets\Sounds\
+Content\streetcorsa\sounds\
   sounds.json                 pins and facts about installed cars (optional)
   ford_smallblock_289\        one sound
     ford_smallblock_289.bank  the FMOD bank, as its author built it

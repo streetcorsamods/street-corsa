@@ -45,6 +45,35 @@ public class PartDefinition
     [JsonProperty("id")]
     public string Id { get; set; } = string.Empty;
 
+    /// <summary>
+    /// In a mod: the full id of a part of another mod this one takes the place of, on purpose (it gets that id).
+    /// Null for a part of its own.
+    /// </summary>
+    [JsonProperty("replaces", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Replaces { get; set; }
+
+    /// <summary>The mod the part came from</summary>
+    [JsonIgnore]
+    public string ModId { get; set; } = Mods.ModIds.BaseId;
+
+    /// <summary>The id as its pack wrote it, without the mod's namespace</summary>
+    [JsonIgnore]
+    public string LocalId
+    {
+        get => string.IsNullOrEmpty(_localId) ? Id : _localId;
+        set => _localId = value;
+    }
+
+    private string? _localId;
+
+    /// <summary>The folder of the pack.json the part came from: its model is found there</summary>
+    [JsonIgnore]
+    public string? PackFolder { get; set; }
+
+    /// <summary>The compiled scripts of the part's mod: its <see cref="SourceScript"/> is found there</summary>
+    [JsonIgnore]
+    public string? ScriptRoot { get; set; }
+
     [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 

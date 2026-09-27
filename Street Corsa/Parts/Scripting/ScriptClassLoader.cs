@@ -33,12 +33,20 @@ public sealed class ScriptClassLoader
     private readonly Dictionary<string, ScriptClass?> _classes = new(StringComparer.OrdinalIgnoreCase);
     private readonly object _lock = new();
 
-    public ScriptClassLoader(string root)
+    public ScriptClassLoader(string root) : this(new[] { root })
     {
-        Root = root;
     }
 
-    public string Root { get; }
+    /// <summary>A loader over several roots (each mod's scripts): a class is looked for in them in order, the first found wins</summary>
+    public ScriptClassLoader(IReadOnlyList<string> roots)
+    {
+        Roots = roots.Count > 0 ? roots : new[] { string.Empty };
+    }
+
+    /// <summary>The first root: the base game's scripts</summary>
+    public string Root => Roots[0];
+
+    public IReadOnlyList<string> Roots { get; }
 
     /// <summary>Every class file read so far</summary>
     public IEnumerable<string> LoadedFiles
@@ -76,7 +84,11 @@ public sealed class ScriptClassLoader
             if (sibling?.ClassName == className) return sibling;
         }
 
-        if (_classes.TryGetValue(className, out var cached)) return cached;
+        // A class a mod's script names is the mod's own first, then the base game's, then the other mods': the
+        // search, and so what is cached, depends on whose root the asking class is under
+        var own = nearFolder == null ? 0 : Math.Max(0, RootOf(nearFolder));
+        var key = own == 0 ? className : $"{own}|{className}";
+        if (_classes.TryGetValue(key, out var cached)) return cached;
 
         ScriptClass? result = null;
         if (className.StartsWith(ClassPrefix, StringComparison.Ordinal)
@@ -85,18 +97,46 @@ public sealed class ScriptClassLoader
             var package = segments[..^1];
             var file = segments[^1] + ".class";
 
-            for (var level = package.Length; level >= 0 && result == null; level--)
+            foreach (var root in Roots.Skip(own).Take(1).Concat(Roots.Where((_, i) => i != own)))
             {
-                result = Load(Path.Combine(new[] { Root }
-                    .Concat(package[..level]).Append(ScriptsFolder).Concat(package[level..]).Append(file).ToArray()));
+                for (var level = package.Length; level >= 0 && result == null; level--)
+                {
+                    result = Load(Path.Combine(new[] { root }
+                        .Concat(package[..level]).Append(ScriptsFolder).Concat(package[level..]).Append(file).ToArray()));
+                }
+
+                if (result != null) break;
             }
         }
 
-        if (result == null && StandIns.TryGetValue(className, out var standIn) && FindLocked(standIn.CopiedFrom, null) is { } original)
+        if (result == null && StandIns.TryGetValue(className, out var standIn) && FindLocked(standIn.CopiedFrom, nearFolder) is { } original)
             result = original.DerivedAs(className, standIn.BaseClass, standIn.DroppedMethods);
 
-        return _classes[className] = result;
+        return _classes[key] = result;
     }
+
+    /// <summary>The root <paramref name="folder"/> is under, by index; -1 when none. The longest wins: a root may sit inside another.</summary>
+    private int RootOf(string folder)
+    {
+        if (_rootOf.TryGetValue(folder, out var known)) return known;
+
+        _rootPaths ??= Roots.Select(r => string.IsNullOrEmpty(r) ? null : Path.TrimEndingDirectorySeparator(Path.GetFullPath(r))).ToArray();
+        var full = Path.GetFullPath(folder);
+        int best = -1, bestLength = -1;
+        for (var i = 0; i < _rootPaths.Length; i++)
+        {
+            if (_rootPaths[i] is not { } root) continue;
+
+            var under = full.Equals(root, StringComparison.OrdinalIgnoreCase)
+                || full.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+            if (under && root.Length > bestLength) (best, bestLength) = (i, root.Length);
+        }
+
+        return _rootOf[folder] = best;
+    }
+
+    private readonly Dictionary<string, int> _rootOf = new(StringComparer.OrdinalIgnoreCase);
+    private string?[]? _rootPaths;
 
     /// <summary>The class and everything it extends, own class first</summary>
     public List<ScriptClass> Chain(ScriptClass type)

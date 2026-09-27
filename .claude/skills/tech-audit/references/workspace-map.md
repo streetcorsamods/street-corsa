@@ -56,7 +56,7 @@ Services 99 (17.0k lines) · Parts 52 (7.6k) · Screens 48 (7.7k) · Models 46 (
 
 | Signal | Game | EngineBench | Converter | Lua |
 | ------ | ---- | ----------- | --------- | --- |
-| writes_ac_install | yes (`CarDataOverlay`, `AcConfigBackup`, `IniModificationService`, `ScRaceMode`) | writes to a given output folder | writes `Assets\Parts` | writes `Documents\Assetto Corsa\out` |
+| writes_ac_install | yes (`CarDataOverlay`, `AcConfigBackup`, `IniModificationService`, `ScRaceMode`) | writes to a given output folder | writes `Content\streetcorsa\parts` | writes `Documents\Assetto Corsa\out` |
 | parses_untrusted | AC car folders, ACD, KN5 (AcTools), pack.json, sound banks, result JSON | pack.json | SCX/RPK/cfg, script bytecode | — |
 | runs_script_vm | yes | yes | yes | — |
 | native_interop | FMOD (`LibraryImport`), D3D9 (Vortice, SlimDX, AcTools.Render), user32, kernel32 | — | — | — |

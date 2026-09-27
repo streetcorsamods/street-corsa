@@ -135,15 +135,33 @@ namespace StreetCorsa.Screens.DealerMap
                     IsLoading = false;
                 }
             }
+            else if (NeverStocked() is { Count: > 0 } newcomers)
+            {
+                // A dealer the save has never heard of (a mod put in since) gets a lot of its own; the other lots,
+                // the player's and the rivals' cars among them, stay as they are
+                IsLoading = true;
+                try
+                {
+                    var fresh = await _marketService.SpawnListingsAsync(newcomers, _gameState.Date, _gameState.Rules.CarPriceMultiplier);
+                    _gameState.UsedCarMarket.AddRange(fresh);
+                    _logger.Information("Stocked {Count} cars on the lots of {Dealers}", fresh.Count, string.Join(", ", newcomers.Select(d => d.Name)));
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "Could not stock the new dealers");
+                }
+                finally
+                {
+                    IsLoading = false;
+                }
+            }
 
             BuildPins();
         }
 
         /// <summary>
-        /// Whether the market on the save belongs to a different set of dealers than the one in front of us.
-        /// A save made before a dealer existed has nothing on its lot, and one made when lots were stocked
-        /// differently can be carrying far more cars than a lot has room to stand. Either way the cars for
-        /// sale are worth nothing to anybody, so they are thrown out and drawn again.
+        /// Whether the market on the save was stocked for lots of another size: one carrying far more cars than it
+        /// has room to stand. The cars for sale are then worth nothing to anybody, so they are thrown out and drawn again.
         /// </summary>
         private bool IsMarketStale()
         {
@@ -152,16 +170,6 @@ namespace StreetCorsa.Screens.DealerMap
 
             foreach (var dealer in _dealerCatalog.All)
             {
-                // Sold listings count here: a lot the player has just bought out still has its sold cars on
-                // the books until the next refresh, and that is not the same as a dealer the save has never
-                // heard of. Throwing the whole market away over a sale would clear every other lot as well.
-                var everStocked = listings.Any(l => l.DealerLocation == dealer.Id);
-                if (!everStocked)
-                {
-                    _logger.Information("{Dealer} has never been stocked; restocking the whole market", dealer.Name);
-                    return true;
-                }
-
                 var onTheLot = listings.Count(l => !l.IsSold && l.DealerLocation == dealer.Id);
 
                 if (onTheLot > dealer.StockHigh * 2)
@@ -173,6 +181,18 @@ namespace StreetCorsa.Screens.DealerMap
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// The dealers with nothing on the books: a save made before they existed. Sold listings count here: a lot
+        /// the player has just bought out still has its sold cars on the books until the next refresh.
+        /// </summary>
+        private List<DealerLocation> NeverStocked()
+        {
+            var listings = _gameState.UsedCarMarket ?? [];
+            return _gameState.DealerLocations
+                .Where(d => !listings.Any(l => l.DealerLocation == d.Id))
+                .ToList();
         }
 
         private void BuildPins()

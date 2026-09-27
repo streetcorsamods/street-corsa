@@ -179,6 +179,9 @@ namespace StreetCorsa
             // The settings before anything that reads the install: they name the AC folder
             GameSettingsService = new GameSettingsService();
 
+            // The game's content is the mods under Content, the base game first: what each kind of content is read from
+            LogMods();
+
             ContentService = new AssettoCorsaContentService();
             IniModificationService = new IniModificationService();
             DialogService = new DialogService();
@@ -269,6 +272,14 @@ namespace StreetCorsa
                 GameTimeService, CarPartsService, PartsShopService, RaceCarDataService, RaceEventService, CarFilterService,
                 EventOpponentService, VictoryConditionService, MilestoneService,
                 game => CurrentGameState = game);
+        }
+
+        private static void LogMods()
+        {
+            var logger = AppLoggerFactory.CreateLogger(LogCategory.Startup);
+            var mods = Mods.ModSet.Installed;
+            logger.Information("Content: {Mods} from {Root}", string.Join(", ", mods.Mods), mods.Root);
+            foreach (var problem in mods.Problems) logger.Warning("Mods: {Problem}", problem);
         }
 
         protected override async void OnStartup(StartupEventArgs e)

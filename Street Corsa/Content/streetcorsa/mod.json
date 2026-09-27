@@ -1,0 +1,7 @@
+{
+  "id": "streetcorsa",
+  "name": "Street Corsa",
+  "version": "0.1.0",
+  "author": "Street Corsa",
+  "description": "The base game: its parts, sounds, dealers, racers, events, milestones, victory paths, streets and words. Loaded first, through the same loader as any mod; its ids go without a namespace."
+}

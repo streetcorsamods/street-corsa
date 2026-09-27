@@ -2,6 +2,7 @@ using StreetCorsa.Logging;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Parts;
 using StreetCorsa.Parts.Cars;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Services.Parts
 {
@@ -21,12 +22,6 @@ namespace StreetCorsa.Services.Parts
 
         // Now and then somebody sells a whole engine instead of its parts
         private const double CompleteEngineChance = 0.08;
-
-        private static readonly string[] Sellers =
-        {
-            "Al's Speed Shop", "Frank", "Eddie's Salvage", "Bobby", "Route 9 Wreckers", "Hank", "Mel's Machine Shop",
-            "Ray", "Lou", "Valley Auto Parts", "Skip", "Dutch", "Big Jim", "Walt", "Southside Garage"
-        };
 
         private readonly ICarPartsService _parts;
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger(LogCategory.Parts);
@@ -175,7 +170,7 @@ namespace StreetCorsa.Services.Parts
             // Private sellers ask around what a shop would, some more, some less, and more in a harder game
             var asking = PartPricing.WorthOfAssembly(catalog, part) * PartPricing.UsedShopFactor * (0.8 + random.NextDouble() * 0.4)
                          * GameRules.Sane(priceMultiplier);
-            return new PartAd(part, PartPricing.Round(asking), Sellers[random.Next(Sellers.Length)])
+            return new PartAd(part, PartPricing.Round(asking), GameText.Installed.Pick("names.part_sellers", random))
             {
                 PostedDate = currentDate.AddDays(-random.Next(0, 4))
             };
@@ -198,7 +193,7 @@ namespace StreetCorsa.Services.Parts
 
             return catalog.Parts.Values
                 .Where(p => usedByBuilds.Contains(p.Id) ||
-                            (p.Id.StartsWith(EnginePacks, StringComparison.OrdinalIgnoreCase) && p.IsScripted) ||
+                            (p.LocalId.StartsWith(EnginePacks, StringComparison.OrdinalIgnoreCase) && p.IsScripted) ||
                             (p.IsScripted && RunningGear.IsRunningGear(PartKinds.GroupOf(p))))
                 .OrderBy(p => p.DisplayName ?? p.Name, StringComparer.OrdinalIgnoreCase)
                 .ToList();

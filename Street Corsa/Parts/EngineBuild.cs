@@ -19,6 +19,10 @@ public class EngineBuild
     [JsonProperty("id")]
     public string Id { get; set; } = string.Empty;
 
+    /// <summary>In a mod: the full id of another mod's build this one takes the place of, on purpose</summary>
+    [JsonProperty("replaces", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Replaces { get; set; }
+
     [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 

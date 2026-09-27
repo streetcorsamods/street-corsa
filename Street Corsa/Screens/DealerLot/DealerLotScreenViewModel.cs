@@ -160,23 +160,12 @@ namespace StreetCorsa.Screens.DealerLot
             var id = _dealer?.ShowroomId;
             if (string.IsNullOrWhiteSpace(id)) return;
 
-            var path = Path.Combine(AppSettings.Instance.ShowroomsPath, id, id + ".kn5");
-            if (File.Exists(path))
+            // A mod's garage by that name, else the AC showroom (whose model is not always spelled like its folder)
+            var found = Services.Showcase.ShowcaseContent.FindScene(id);
+            if (found != null)
             {
-                ShowroomKn5 = path;
+                ShowroomKn5 = found;
                 return;
-            }
-
-            // Folder and model are not always spelled the same way; take whatever .kn5 the folder holds
-            var folder = Path.Combine(AppSettings.Instance.ShowroomsPath, id);
-            if (Directory.Exists(folder))
-            {
-                var found = Directory.EnumerateFiles(folder, "*.kn5", SearchOption.TopDirectoryOnly).FirstOrDefault();
-                if (found != null)
-                {
-                    ShowroomKn5 = found;
-                    return;
-                }
             }
 
             _logger.Warning("Showroom {Showroom} is not installed; the lot will have no scene", id);

@@ -29,6 +29,18 @@
     <ProjectReference Include="..\..\Street Corsa\Street Corsa.csproj" />
   </ItemGroup>
 
+  <!-- The base game's data (not its models, sounds or pictures): the services that read the installed mods by default
+       (the career, the words, the dealers, the racers) find it in the test output as the game finds it next to itself -->
+  <ItemGroup>
+    <None Include="..\..\Street Corsa\Content\streetcorsa\mod.json" Link="Content\streetcorsa\mod.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\Street Corsa\Content\streetcorsa\text\*.json" LinkBase="Content\streetcorsa\text" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\Street Corsa\Content\streetcorsa\events\*.json" LinkBase="Content\streetcorsa\events" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\Street Corsa\Content\streetcorsa\milestones\*.json" LinkBase="Content\streetcorsa\milestones" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\Street Corsa\Content\streetcorsa\victories\*.json" LinkBase="Content\streetcorsa\victories" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\Street Corsa\Content\streetcorsa\dealers\*.json" LinkBase="Content\streetcorsa\dealers" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\Street Corsa\Content\streetcorsa\racers\*.json" LinkBase="Content\streetcorsa\racers" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup>
     <Using Include="Xunit" />
     <!-- The WPF SDK leaves System.IO out of the implicit usings; nearly every test here works on files -->

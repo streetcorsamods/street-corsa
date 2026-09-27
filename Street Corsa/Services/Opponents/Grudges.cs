@@ -1,4 +1,5 @@
 using StreetCorsa.Models.GameState;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Services.Opponents
 {
@@ -27,7 +28,7 @@ namespace StreetCorsa.Services.Opponents
                 CarInstanceId = car.InstanceId,
                 CarDefinitionId = car.DefinitionId
             };
-            return $"{rival.Name} wants {OpponentRules.Possessive(rival)} {carName} back from {playerName}, and tells anyone who'll listen.";
+            return Say("street.grudge", rival, carName, playerName);
         }
 
         /// <summary>
@@ -39,7 +40,7 @@ namespace StreetCorsa.Services.Opponents
             if (rival.Grudge == null) return null;
 
             rival.Grudge = null;
-            return rivalWon ? $"{rival.Name} got even with {playerName} in a pink-slip rematch." : null;
+            return rivalWon ? Say("street.grudge_settled", rival, null, playerName) : null;
         }
 
         /// <summary>
@@ -71,8 +72,17 @@ namespace StreetCorsa.Services.Opponents
                 if (grudge.Until >= date) continue;
 
                 rival.Grudge = null;
-                talk.Add($"{rival.Name} has stopped talking about getting {OpponentRules.Possessive(rival)} {carName(grudge.CarDefinitionId)} back.");
+                talk.Add(Say("street.grudge_dropped", rival, carName(grudge.CarDefinitionId), null));
             }
         }
+
+        private static string Say(string key, Opponent rival, string? car, string? playerName) =>
+            GameText.Installed.Pick(key, Random.Shared, new TextValues
+            {
+                ["name"] = rival.Name,
+                ["possessive"] = OpponentRules.Possessive(rival),
+                ["car"] = car,
+                ["player"] = playerName
+            });
     }
 }
