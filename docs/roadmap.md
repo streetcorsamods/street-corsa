@@ -712,7 +712,7 @@ The second batch of the user's ideas (idea 2, the street, was step 13). **The us
 polish PR first, then the modding foundation before the features, so the engine stand and the gas station are built
 mod-ready instead of retrofitted. One step at a time, in this order.
 
-### Polish: main screen tweaks and parts scale (next)
+### Polish: main screen tweaks and parts scale (done, PR #30, merged as `9acb8d0`)
 - **Main screen** (idea 1): smaller menu badges (160 px in `Styles/Buttons.xaml` `MenuButtonStyle`, to about 110–120),
   set a little lower; the fade (rows 20*/26* of `MainMenuScreenView.xaml`) starting lower; the cars less of the focus,
   e.g. the showroom slightly dimmed behind the menu.
@@ -725,7 +725,7 @@ mod-ready instead of retrofitted. One step at a time, in this order.
   the hub constants (a bigger engine may need to sit further back), `PlaceholderMesh.HalfSize`, `PartTravel`,
   `PartsMinRadius`. If it looks right, make it permanent in the converter (mesh and cfg positions together).
 
-**Built on `feature/polish` (2026-09-26):**
+**As built (2026-09-26), seen by the user in the game:**
 - The main screen: 116 px badges (were 160), 60 px from the top (were 28), closer together; the fade reaches 56% of
   the height (was 46%); the cars under it 15% darker. See `docs/screens/main-screen.md`.
 - **Measured: the parts are about real size**, not small. GM small blocks 0.74 × 0.54 × 0.34 m (a real one is about
@@ -736,7 +736,7 @@ mod-ready instead of retrofitted. One step at a time, in this order.
   converter: `Assets/Parts/model_scales.json` scales parts by id prefix (`engines/`, `exhaust/`, `suspension/` 1.2,
   `brakes/` 1.35); each part keeps its own scale, so an unscaled mod part on a scaled block stays its size.
 
-### Step 16: everything moddable
+### Step 16: everything moddable (next)
 Idea 7. The game goes open source: the community should be able to drop a mod into a folder and have the game pick it
 up, and saves must survive mods coming and going.
 
