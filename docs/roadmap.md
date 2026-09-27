@@ -736,7 +736,7 @@ mod-ready instead of retrofitted. One step at a time, in this order.
   converter: `Assets/Parts/model_scales.json` scales parts by id prefix (`engines/`, `exhaust/`, `suspension/` 1.2,
   `brakes/` 1.35); each part keeps its own scale, so an unscaled mod part on a scaled block stays its size.
 
-### Step 16: everything moddable (built on `feature/everything-moddable`, not merged)
+### Step 16: everything moddable (done, PR #31, merged as `05d5231`)
 Idea 7. The game goes open source: the community should be able to drop a mod into a folder and have the game pick it
 up, and saves must survive mods coming and going.
 
@@ -771,7 +771,7 @@ up, and saves must survive mods coming and going.
 milestones, victory paths, newspaper and talk included; ids namespaced by mod with an explicit override
 (`"replaces"`); streets picked by the clock.
 
-**As built (2026-09-26)** (for modders: `docs/modding.md`):
+**As built (2026-09-26), tested by the user in the game before the review fixes** (for modders: `docs/modding.md`):
 - `Mods/`: `ModSet` finds `Content\<mod>\mod.json` (the base game `Content\streetcorsa` first, then by `order` and id;
   `_`/`.` folders off; bad ids, `car`, duplicates left out and logged); `ModIds` (qualify, resolve: a mod's own entry
   first, then the base game's; a full id means exactly that); `ContentRegistry` (merge by full id, `replaces` on
@@ -811,7 +811,7 @@ milestones, victory paths, newspaper and talk included; ids namespaced by mod wi
 - Not done: the dealer map picture is still a compiled resource (a mod's dealers need pins on the LA map); the
   garage's `slot_shifts.json` is one base-game file; mod problems are in the log only, not shown in the game.
 
-### Step 17: the engine stand
+### Step 17: the engine stand (next)
 Idea 3. Peripherals, manifolds and even the heads can be worked on in the car; the internals only on a stand, and in
 the proper order: no crankshaft before the rods and pistons are out.
 
