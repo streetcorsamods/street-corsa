@@ -94,6 +94,29 @@ anywhere under the folder (a `pack.json` with the parts' `.kn5` models next to i
   in full.
 - `model_scales.json` — `{ "id prefix": scale }` for the mod's own parts (by the ids its packs give them). Ship parts
   at AC's scale and you need none.
+- `work_order.json` — what comes off an engine before what (see below). Most mods need none: the base game's covers
+  every kind of engine part there is.
+
+**The work order.** Every engine part has a *kind*: `"kind": "timing_cover"` on the part in its `pack.json` if the pack
+says so, else the first kind of the work orders listing one of its script classes (`"classes": ["Crankshaft"]`), else
+the first kind with a word its name holds (`"names": ["timing chain cover", "timing cover"]`, whole words, a plural s
+allowed). A mod's kinds are tried before the base game's. A rule says, for a kind, what has to be off the engine first
+(`"after"`, the parts on this very part included), whether it comes out only on the engine stand (`"stand_only"`) and
+whether it goes by itself with nothing on it (`"bare"`). The rules work both ways: what has to be off before a part comes
+off has to be off before it goes back on. `"stand_strips"` is what comes off an engine as it goes on the stand (what
+is in the way of its bellhousing face, and the radiator), in that order.
+
+```json
+{
+  "kinds": [ { "id": "timing_cover", "name": "timing cover", "names": [ "timing chain cover", "timing cover" ] } ],
+  "rules": [ { "kind": "crankshaft", "stand_only": true, "bare": true, "after": [ "oil_pan", "timing_cover" ] } ],
+  "stand_strips": [ "transmission", "clutch", "flywheel", "radiator" ]
+}
+```
+
+A rule for a kind that already has one is left out and reported, unless it says `"replace": true`. A kind of the same
+id adds its classes and words to the kind; the name the player reads is the first mod's. The base game's kinds and
+rules are in `Content\streetcorsa\parts\work_order.json`.
 
 A part mounts by what its slots name (`attaches_to`, `compatible_with`: a part id and a slot, a reference as above)
 or by a standard fitting (`fits`/`takes`, e.g. `carb:4bbl`), which works across mods with no ids at all.

@@ -52,6 +52,11 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     private static readonly Glow HoverGlow = new(1f, 0.9f, 0.55f);
 
     private Kn5RenderableFile? _prop;
+    private Kn5RenderableFile? _scenery;
+    private List<IKn5RenderableObject> _sceneryMeshes = new();
+    private bool _sceneryHovered;
+    private bool _carHovered;
+    private bool _standActive;
     private Kn5RenderableFile? _candidates;
     private List<PartNode> _propNodes = new();
     private List<PartNode> _candidateNodes = new();
@@ -89,6 +94,36 @@ public class GarageRenderer : DarkKn5ObjectRenderer
 
     public bool HasProp => _prop != null;
 
+    /// <summary>
+    /// Where <c>AutoAdjustTarget</c> would settle the camera's target for an orbit, starting from a point: it moves a
+    /// third of the way to the point that centres the car in the picture every frame, which is a jump after a long
+    /// way. The viewport eases there instead and hands over once there. The camera is left as it was.
+    /// </summary>
+    public Vector3 FramedTarget(float alpha, float beta, float radius, Vector3 start)
+    {
+        var orbit = CameraOrbit;
+        if (orbit == null) return start;
+
+        var (oldAlpha, oldBeta, oldRadius, oldTarget) = (orbit.Alpha, orbit.Beta, orbit.Radius, orbit.Target);
+        try
+        {
+            (orbit.Alpha, orbit.Beta, orbit.Radius, orbit.Target) = (alpha, beta, radius, start);
+            for (var i = 0; i < 40; i++)
+            {
+                var next = orbit.Target + (AutoAdjustedTarget - orbit.Target) / 3f;
+                if ((next - orbit.Target).LengthSquared() < 1e-8f) break;
+                orbit.Target = next;
+            }
+
+            return orbit.Target;
+        }
+        finally
+        {
+            (orbit.Alpha, orbit.Beta, orbit.Radius, orbit.Target) = (oldAlpha, oldBeta, oldRadius, oldTarget);
+            orbit.UpdateViewMatrix();
+        }
+    }
+
     private Matrix _bodyLean = Matrix.Identity;
 
     /// <summary>
@@ -101,10 +136,44 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         set
         {
             _bodyLean = value;
+            if (_standActive) return;
+
             if (_prop != null) _prop.LocalMatrix = value;
             if (_candidates != null) _candidates.LocalMatrix = value;
             IsDirty = true;
         }
+    }
+
+    /// <summary>
+    /// The prop is the engine on the stand beside the car, not the car's parts: they are picked and glow with the car
+    /// solid, and do not lean with the car's body
+    /// </summary>
+    public bool StandActive
+    {
+        get => _standActive;
+        set
+        {
+            if (_standActive == value) return;
+            _standActive = value;
+            _hovered = null;
+            IsDirty = true;
+        }
+    }
+
+    /// <summary>True while the parts can be picked and glow: the car is a ghost, or the stand is being worked on</summary>
+    private bool IsWorking => IsGhosting || _standActive;
+
+    /// <summary>
+    /// A model that is always there and never picked: the engine stand beside the car, with the engine on it.
+    /// Must be called on the thread that draws.
+    /// </summary>
+    public void SetScenery(IKn5? kn5)
+    {
+        _scenery?.Dispose();
+        _scenery = kn5 == null ? null : new Kn5RenderableFile(kn5, Matrix.Identity, asyncTexturesLoading: false);
+        _sceneryMeshes = _scenery?.GetAllChildren().OfType<IKn5RenderableObject>().ToList() ?? new();
+        SetShadowsDirty();
+        IsDirty = true;
     }
 
     /// <summary>
@@ -316,8 +385,11 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     public void SetProp(IKn5? kn5, Matrix placement)
     {
         _prop?.Dispose();
-        _prop = kn5 == null ? null : new Kn5RenderableFile(kn5, placement * _bodyLean, asyncTexturesLoading: false);
+        _prop = kn5 == null ? null : new Kn5RenderableFile(kn5, _standActive ? placement : placement * _bodyLean, asyncTexturesLoading: false);
         _propNodes = PartNode.Of(_prop);
+
+        // A new prop is not the one a fade back to solid was going to drop
+        _removePropWhenSolid = false;
         _motions.Clear();
         _hovered = null;
         _selected = null;
@@ -329,11 +401,91 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     public void SetCandidates(IKn5? kn5)
     {
         _candidates?.Dispose();
-        _candidates = kn5 == null ? null : new Kn5RenderableFile(kn5, _bodyLean, asyncTexturesLoading: false);
+        _candidates = kn5 == null ? null : new Kn5RenderableFile(kn5, _standActive ? Matrix.Identity : _bodyLean, asyncTexturesLoading: false);
         _candidateNodes = PartNode.Of(_candidates);
         if (_hovered?.Layer == PartLayer.Candidate) _hovered = null;
         SetShadowsDirty();
         IsDirty = true;
+    }
+
+    /// <summary>The pointer is on the scenery (the engine stand): it glows, a click on it goes to the stand</summary>
+    public bool SceneryHovered
+    {
+        get => _sceneryHovered;
+        set
+        {
+            if (_sceneryHovered == value) return;
+            _sceneryHovered = value;
+            IsDirty = true;
+        }
+    }
+
+    /// <summary>The pointer is on the car while the stand is worked on: it glows, a click on it goes back to the car</summary>
+    public bool CarHovered
+    {
+        get => _carHovered;
+        set
+        {
+            if (_carHovered == value) return;
+            _carHovered = value;
+            IsDirty = true;
+        }
+    }
+
+    /// <summary>
+    /// True when a point of the picture is on the car, and neither the stand nor the engine on it (the prop, while the
+    /// stand is worked on) is in front of it there
+    /// </summary>
+    public bool HitsCar(float x, float y)
+    {
+        if (CarNode == null || Camera == null) return false;
+
+        var ray = Camera.GetPickingRay(new Vector2(x * ActualWidth, y * ActualHeight), new Vector2(ActualWidth, ActualHeight));
+        if (CarDistance(ray) is not { } car) return false;
+
+        var cover = new[] { Nearest(ray, _sceneryMeshes), _standActive ? Nearest(_propNodes, ray) : null }.Min();
+        return cover == null || cover > car;
+    }
+
+    private static float? Nearest(List<PartNode> nodes, Ray ray) =>
+        nodes.Select(n => n.Intersect(ray)).Where(d => d != null).Min();
+
+    /// <summary>
+    /// True when a point of the picture is on the scenery (the engine stand, or the engine on it), and the car is not
+    /// in front of it there. A ghost car is no cover.
+    /// </summary>
+    public bool HitsScenery(float x, float y)
+    {
+        if (_scenery == null || Camera == null) return false;
+
+        var ray = Camera.GetPickingRay(new Vector2(x * ActualWidth, y * ActualHeight), new Vector2(ActualWidth, ActualHeight));
+        if (Nearest(ray, _sceneryMeshes) is not { } scenery) return false;
+        if (IsGhosting || CarNode == null) return true;
+
+        return CarDistance(ray) is not { } car || car > scenery;
+    }
+
+    /// <summary>
+    /// Distance along the ray to the car's bounding box; null when it misses. Near enough to aim at the car, or to
+    /// stand in the way of what is behind it, and cheap enough for every move of the pointer: the car's own
+    /// triangles run to the hundred thousand.
+    /// </summary>
+    private float? CarDistance(Ray ray) =>
+        CarNode != null && MainSlot.GetCarBoundingBox() is { } box && Ray.Intersects(ray, box, out float distance) ? distance : null;
+
+    /// <summary>Distance along the ray to the nearest of the meshes; null when it misses them all</summary>
+    private static float? Nearest(Ray ray, IEnumerable<IKn5RenderableObject> meshes)
+    {
+        float? nearest = null;
+        foreach (var mesh in meshes)
+        {
+            // Triangle tests run per vertex on the CPU: only for meshes whose box the ray goes through
+            if (mesh.BoundingBox is { } box && !Ray.Intersects(ray, box, out float _)) continue;
+
+            if (mesh.CheckIntersection(ray) is { } hit && (nearest == null || hit < nearest)) nearest = hit;
+        }
+
+        return nearest;
     }
 
     /// <summary>The part the pointer is on, glowing so it can be told from its neighbours</summary>
@@ -364,27 +516,31 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     /// The part under a point of the picture: the nearest place shown for a loose part, else the nearest
     /// mounted part. The places glow through whatever is in front of them, and some sit inside another part
     /// (a fuel rail in its manifold), so they are reached through the mounted parts.
-    /// The car itself is never hit: in the parts view it is a ghost one reaches through.
+    /// The car itself is never hit: in the parts view it is a ghost one reaches through. On the stand it is solid, and
+    /// hides what is behind it.
     /// </summary>
     /// <param name="x">0 at the left edge, 1 at the right</param>
     /// <param name="y">0 at the top, 1 at the bottom</param>
     public PartHit? Pick(float x, float y)
     {
-        if (!IsGhosting || Camera == null) return null;
+        if (!IsWorking || Camera == null) return null;
 
         var ray = Camera.GetPickingRay(new Vector2(x * ActualWidth, y * ActualHeight), new Vector2(ActualWidth, ActualHeight));
-        return Nearest(PartLayer.Candidate, _candidateNodes) ?? Nearest(PartLayer.Mounted, _propNodes);
+        if ((Nearest(PartLayer.Candidate, _candidateNodes) ?? Nearest(PartLayer.Mounted, _propNodes)) is not { } found) return null;
 
-        PartHit? Nearest(PartLayer layer, List<PartNode> nodes)
+        var carInTheWay = _standActive && !IsGhosting && CarDistance(ray) is { } car && car < found.Distance;
+        return carInTheWay ? null : found.Hit;
+
+        (PartHit Hit, float Distance)? Nearest(PartLayer layer, List<PartNode> nodes)
         {
-            PartHit? nearest = null;
+            (PartHit, float)? nearest = null;
             var distance = float.MaxValue;
             for (var i = 0; i < nodes.Count; i++)
             {
                 if (nodes[i].Intersect(ray) is { } hit && hit < distance)
                 {
                     distance = hit;
-                    nearest = new PartHit(layer, i);
+                    nearest = (new PartHit(layer, i), hit);
                 }
             }
 
@@ -425,27 +581,18 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         }
 
         /// <summary>Distance along the ray to the part's surface; null when the ray misses it</summary>
-        public float? Intersect(Ray ray)
-        {
-            float? nearest = null;
-            foreach (var mesh in _meshes)
-            {
-                // Triangle tests run per vertex on the CPU: only for meshes whose box the ray goes through
-                if (mesh.BoundingBox is { } box && !Ray.Intersects(ray, box, out float _)) continue;
-
-                if (mesh.CheckIntersection(ray) is { } hit && (nearest == null || hit < nearest)) nearest = hit;
-            }
-
-            return nearest;
-        }
+        public float? Intersect(Ray ray) => Nearest(ray, _meshes);
     }
 
     protected override void DrawCars(DeviceContextHolder holder, ICamera camera, SpecialRenderMode mode)
     {
+        _scenery?.Draw(holder, camera, mode);
+
         if (!IsGhosting)
         {
             base.DrawCars(holder, camera, mode);
             _prop?.Draw(holder, camera, mode);
+            if (_standActive) _candidates?.Draw(holder, camera, mode);
             return;
         }
 
@@ -463,15 +610,24 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     {
         base.DrawPrepare();
         Array.Clear(_glowDrawn);
-        if (!IsGhosting || CarNode == null) return;
+        var sceneryGlow = _sceneryHovered && _scenery != null;
+        if (!IsWorking && !sceneryGlow) return;
 
         var holder = DeviceContextHolder;
         _outlineDepth ??= TargetResourceDepthTexture.Create();
         _outlineDepth.Resize(holder, Width, Height, null);
 
-        // Everything comes in with the transition
-        var fade = Ease(_ghostProgress);
-        DrawGlow(0, CarGlow, fade, () => base.DrawCars(holder, ActualCamera, SpecialRenderMode.Outline));
+        if (sceneryGlow) DrawGlow(3, HoverGlow, 1f, () => _scenery!.Draw(holder, ActualCamera, SpecialRenderMode.Outline));
+        if (!IsWorking) return;
+
+        // The solid car beside the stand, pointed at: the way back to it
+        if (_standActive && _carHovered && !IsGhosting && CarNode != null)
+            DrawGlow(0, CarGlow, 1f, () => base.DrawCars(holder, ActualCamera, SpecialRenderMode.Outline));
+
+        // Everything comes in with the transition; the stand's parts have none, but the car's outline fades with the
+        // car even then, on its way back to solid
+        var fade = _standActive ? 1f : Ease(_ghostProgress);
+        if (IsGhosting && CarNode != null) DrawGlow(0, CarGlow, Ease(_ghostProgress), () => base.DrawCars(holder, ActualCamera, SpecialRenderMode.Outline));
 
         if (_candidates != null)
             DrawGlow(1, CandidateGlow, fade, () => _candidates.Draw(holder, ActualCamera, SpecialRenderMode.Outline));
@@ -573,7 +729,10 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         context.ClearDepthStencilView(_ghostDepth.DepthView, DepthStencilClearFlags.Depth | DepthStencilClearFlags.Stencil, 1f, 0);
         context.OutputMerger.SetTargets(_ghostDepth.DepthView, _ghostBuffer.TargetView);
 
+        // The scenery first, for its depth: where the stand is in front of the car, the ghost buffer holds the stand
+        // as the scene does, and blending changes nothing there
         context.OutputMerger.DepthStencilState = holder.States.LessEqualDepthState;
+        _scenery?.Draw(holder, camera, SpecialRenderMode.Simple);
         base.DrawCars(holder, camera, SpecialRenderMode.Simple);
         context.OutputMerger.DepthStencilState = holder.States.ReadOnlyDepthState;
         base.DrawCars(holder, camera, SpecialRenderMode.SimpleTransparent);
@@ -632,6 +791,8 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     {
         _prop?.Dispose();
         _prop = null;
+        _scenery?.Dispose();
+        _scenery = null;
         _candidates?.Dispose();
         _candidates = null;
         _ghostBuffer?.Dispose();

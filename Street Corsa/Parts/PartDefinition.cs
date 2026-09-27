@@ -93,6 +93,13 @@ public class PartDefinition
     public List<string> ClassChain { get; set; } = new();
 
     /// <summary>
+    /// What job the part is on an engine, for a mod whose part names do not say it: a kind of
+    /// <see cref="WorkOrder.FileName"/> ("timing_cover"). Null leaves it to the work order to tell.
+    /// </summary>
+    [JsonProperty("kind", NullValueHandling = NullValueHandling.Ignore)]
+    public string? WorkKind { get; set; }
+
+    /// <summary>
     /// Whether the part has a script of its own that was run: the base game's root entries (what mods declare their
     /// fit against) have none, so no properties and no classes. A script whose parent class is missing still counts:
     /// it has no chain, but it was constructed.

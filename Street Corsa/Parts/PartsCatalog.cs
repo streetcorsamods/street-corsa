@@ -48,6 +48,9 @@ public sealed class PartsCatalog
     /// <summary>Complete engines as part lists: factory builds of the source game's cars and written-down builds</summary>
     public IReadOnlyList<EngineBuild> EngineBuilds { get; private set; } = Array.Empty<EngineBuild>();
 
+    /// <summary>What has to come off an engine before what, and what only comes off on the stand</summary>
+    public WorkOrder WorkOrder { get; private set; } = WorkOrder.Empty;
+
     /// <summary>A catalog without parts, for when the parts under the folder cannot be read</summary>
     public static PartsCatalog Empty(string root) => new(root, new[] { Path.Combine(root, PartScripts.Folder) });
 
@@ -140,6 +143,7 @@ public sealed class PartsCatalog
         }
 
         catalog.EngineBuilds = builds.All.ToList();
+        catalog.WorkOrder = WorkOrder.Load(roots.Select(r => (r.Mod.Id, r.Mod.IsBase, r.Dir)), catalog._problems);
 
         foreach (var (mod, gone, current) in aliases)
         {

@@ -137,6 +137,14 @@
                                 Style="{StaticResource DialogSecondaryButtonStyle}"
                                 Padding="12,4"
                                 FontSize="{StaticResource FontSizeCompact}"/>
+                        <Button Content="Put on the stand"
+                                Command="{Binding PutOnStandCommand}"
+                                Visibility="{Binding IsShelfEngine, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                ToolTip="Bolt it to the engine stand to take it apart. What is in the way of the stand, and the radiator, come off onto the shelf."
+                                Style="{StaticResource DialogPrimaryButtonStyle}"
+                                Padding="12,4"
+                                FontSize="{StaticResource FontSizeCompact}"
+                                Margin="8,0,0,0"/>
                         <Button Content="Take apart"
                                 Command="{Binding TakeApartCommand}"
                                 Visibility="{Binding CanTakeApart, Converter={StaticResource BooleanToVisibilityConverter}}"
@@ -159,7 +167,7 @@
                     Margin="0,30,20,0">
             <Border Style="{StaticResource PanelStyle}">
                 <StackPanel>
-                    <TextBlock Text="ENGINE" Style="{StaticResource PanelTitleStyle}"/>
+                    <TextBlock Text="{Binding EngineTitle}" Style="{StaticResource PanelTitleStyle}"/>
                     <TextBlock Text="{Binding EngineName}"
                                FontSize="{StaticResource FontSizeSubheading}"
                                FontWeight="SemiBold"
@@ -245,13 +253,29 @@
                         <TextBlock Text="{Binding PlacementDisplay}" FontSize="{StaticResource FontSizeCaption}" FontFamily="Consolas" Foreground="{StaticResource PaleYellowBrush}" TextWrapping="Wrap"/>
                     </Border>
 
-                    <Button Content="Take it off"
-                            Command="{Binding RemoveSelectedCommand}"
-                            Style="{StaticResource DialogPrimaryButtonStyle}"
-                            Padding="15,5"
-                            FontSize="{StaticResource FontSizeBody}"
-                            HorizontalAlignment="Left"
-                            Margin="0,10,0,0"/>
+                    <!-- What the work order says is in the way -->
+                    <TextBlock Text="{Binding SelectedBlockedDisplay}"
+                               FontSize="{StaticResource FontSizeCompact}"
+                               Foreground="{StaticResource SalmonBrush}"
+                               TextWrapping="Wrap"
+                               Margin="0,6,0,0"
+                               Visibility="{Binding SelectedBlockedDisplay, Converter={StaticResource StringToVisibilityConverter}}"/>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                        <Button Content="{Binding RemoveButtonText}"
+                                Command="{Binding RemoveSelectedCommand}"
+                                Style="{StaticResource DialogPrimaryButtonStyle}"
+                                Padding="15,5"
+                                FontSize="{StaticResource FontSizeBody}"/>
+                        <Button Content="Put it in the car"
+                                Command="{Binding InstallFromStandCommand}"
+                                Visibility="{Binding CanInstallFromStand, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                ToolTip="A big job: the engine goes in the selected car's empty engine bay"
+                                Style="{StaticResource DialogSecondaryButtonStyle}"
+                                Padding="15,5"
+                                FontSize="{StaticResource FontSizeBody}"
+                                Margin="8,0,0,0"/>
+                    </StackPanel>
                 </StackPanel>
             </Border>
 

@@ -811,7 +811,7 @@ milestones, victory paths, newspaper and talk included; ids namespaced by mod wi
 - Not done: the dealer map picture is still a compiled resource (a mod's dealers need pins on the LA map); the
   garage's `slot_shifts.json` is one base-game file; mod problems are in the log only, not shown in the game.
 
-### Step 17: the engine stand (next)
+### Step 17: the engine stand (done, PR #32)
 Idea 3. Peripherals, manifolds and even the heads can be worked on in the car; the internals only on a stand, and in
 the proper order: no crankshaft before the rods and pistons are out.
 
@@ -835,6 +835,52 @@ stand in the garage holds one engine (a simple model of our own); pulling and re
 `GarageWorkMajor`); internals come off one at a time, only with nothing on them and their neighbours off; the
 workbench mounts onto the engine on the stand as it does onto a car. Ordering rules are data, so mods can supply
 them for their blocks.
+
+**The user decided (2026-09-26, when the step started):** the stand is a view of its own in the garage ("Stand",
+next to "Parts": the car goes, the engine sits alone on the stand, the same click-to-select and click-to-mount);
+the internals are the crankshaft, the rods, the pistons and the camshaft (stand only, one at a time, nothing on
+them); full realism for the peripherals too (a rule table: the intake needs the distributor off, the heads the
+intake, the flywheel the transmission...); a block on the shelf cannot be taken apart, only put on the stand (other
+assemblies still come apart there); every garage has a stand from the start, free.
+
+**Findings (2026-09-26):** only the big parts have a framework class; timing covers, chains and gears, dampers,
+distributors, water pumps, fans, belts, alternators, valve covers are plain `EnginePart`/`Part` in every pack, but
+their names are consistent across GM, Ford and Chrysler. So the rules go by a **work kind**: a mod's own `"kind"`
+on the part first, then the framework class, then name keywords (longest first), all data. A stand holds a block
+by its bellhousing face, so the transmission, clutch and flywheel come off (to the shelf) when an engine goes on it.
+The rules work both ways: what has to be off before a part comes off has to be off before it goes back on.
+
+**As built (2026-09-26), not yet seen by the user in the game** (docs: `docs/systems/parts-system.md` "The engine
+stand" and "The work order", `docs/modding.md` "The work order"):
+- `WorkOrder` (`Content\streetcorsa\parts\work_order.json`, merged from every mod): 38 kinds (classes first, then
+  name words in list order, whole words, plural s allowed; a pack's `"kind"` wins), 20 rules, `stand_strips`
+  (transmission, clutch, flywheel, and the radiator, which stays with the car). `EngineWork.WhyNotOff`/`WhyNotOn`
+  give the reason in words; `StripForStand`.
+- `Player.EngineStand` (the save); `CarPartsService.BringUpToDate` renews it like a car's engine (a missing mod's block
+  waits on the shelf).
+- Workbench: Stand toggle next to Parts (`IsCarView`/`IsStandView`), "Pull the engine" (onto the stand when free,
+  else the shelf, 2 h), "Off the stand" (20 min), "Put it in the car" (2 h), shelf "Put on the stand" (20 min, not
+  "Take apart" for blocks); the card shows why a part cannot come off, the shelf hint why a part cannot go on.
+- 3D: `EngineStandLayout` (crank 0.78 m up, front to +Z, head at the block model's rear bound, a stand of red square
+  tube boxes on casters, no part node). **The user asked (2026-09-27)** for the stand to be always visible beside the
+  car, 3 m to its left, with the engine on it as it is, and the camera to turn to it when the stand is picked: so the
+  stand is scenery (`SetScenery`), the car stays solid in the Stand view, the engine on it becomes the pickable prop.
+  Works in an empty garage too. Checked with an offscreen harness (GM 350 beside the Camaro: front, side, stand view).
+  Then (2026-09-27): a click on the stand or its engine opens the Stand view (hover glow and label), and the camera
+  glides back from the stand to the car without the renderer's framing jump (checked tick by tick in the harness);
+  in the Stand view a click on the car opens the car's Parts view (the user's "the other way around").
+- Tests: `EngineStandTests` (kinds of a GM 350, car vs stand, strip, mount reasons, mod kinds and `replace`, the
+  workbench flow, and every one of the 161 builds down to the bare block on the stand and back). 1000 tests pass.
+- Not done: the engine can still be started (and rocks the stand) from the engine panel while the stand is shown.
+- Review fixes (2026-09-27, /code-review xhigh, 15 findings): stand work and view toggles no longer re-evaluate the
+  car or stop its running engine (`CarEngineChanged` event, raised only for work on the car); `WhyNotOff` asks the
+  rules of the whole subtree, as `WhyNotOn` does (a head with a stand-only camshaft on it stays in the car); blockers
+  named once; the stand's tree is cached and only rebuilt when the stand changed, and a stand that fails to build no
+  longer stops the car's view; the engine moves between scenery and prop in one frame (`LeaveStandAsync`, the stand's
+  scenery built with the prop); the solid car hides stand parts from picking; the ghost car is drawn against the
+  stand's depth; the car's outline fades back with it; car hit tests use its bounding box; `BoundsOf` skips textures
+  and catches any read failure; the stand's boxes and materials are built by `PlaceholderMesh`. 1162 tests pass. The
+  3D changes are not checked in the game or the harness.
 
 ### Step 18: engine layout, and the Chevrolet Corvair
 Idea 4. The Corvair's engine is in the back.

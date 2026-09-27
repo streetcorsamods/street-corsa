@@ -10,13 +10,18 @@ using StreetCorsa.ViewModels;
 namespace StreetCorsa.Screens.Garage
 {
     /// <summary>
-    /// Working on the selected car in the garage's parts view: what the engine comes to, the part that is
-    /// clicked on and taking it off, the shelf of loose parts and putting one of them on.
-    /// Parts are picked in the 3D view; this is everything around it.
+    /// Working on the selected car in the garage's parts view, or on the engine on the stand: what the engine comes
+    /// to, the part that is clicked on and taking it off, the shelf of loose parts and putting one of them on.
+    /// Parts are picked in the 3D view; this is everything around it. What may come off an engine, and go on, and
+    /// in what order, is the catalog's work order (<see cref="EngineWork"/>).
     /// </summary>
     public class PartsWorkbenchViewModel : ObservableObject
     {
         private const int MinutesPerPart = 5;
+
+        // An engine in or out of a car is a big job; bolting one to the stand, or taking it off, a smaller one
+        private const int EngineInOutMinutes = 120;
+        private const int StandMinutes = 20;
 
         private readonly ICarPartsService _parts;
         private readonly Models.GameState.GameState _gameState;
@@ -26,6 +31,13 @@ namespace StreetCorsa.Screens.Garage
 
         private Car? _car;
         private LiveTree? _live;
+
+        // The stand's engine as last built, and what from: built again only when the stand has another engine, or
+        // work was done on it, so that work on the car does not rebuild the stand in the 3D view
+        private LiveTree? _standLive;
+        private PartInstance? _standSource;
+        private PartsCatalog? _standCatalog;
+        private bool _standStale;
         private readonly List<(int CarSlot, LiveTree Tree)> _gearTrees = new();
         private int _evaluation;
 
@@ -36,13 +48,21 @@ namespace StreetCorsa.Screens.Garage
             _save = save;
             _spendMinutes = spendMinutes;
 
-            RemoveSelectedCommand = new RelayCommand(RemoveSelected, () => SelectedPart != null);
+            RemoveSelectedCommand = new RelayCommand(RemoveSelected, () => SelectedPart != null && string.IsNullOrEmpty(SelectedBlockedDisplay));
             CancelMountCommand = new RelayCommand(() => SelectedShelfItem = null, () => SelectedShelfItem != null);
             TakeApartCommand = new RelayCommand(TakeApart, () => CanTakeApart);
+            PutOnStandCommand = new RelayCommand(PutOnStand, () => CanPutOnStand);
+            InstallFromStandCommand = new RelayCommand(InstallFromStand, () => CanInstallFromStand);
         }
 
         /// <summary>Raised when money or time moved, for the screen around the workbench</summary>
         public event Action? StateChanged;
+
+        /// <summary>
+        /// Parts went on or came off the car (not the engine on the stand): its engine is another one to start.
+        /// Not raised for a new car: whoever set the car knows.
+        /// </summary>
+        public event Action? CarEngineChanged;
 
         /// <summary>The work is done but the game could not be saved; the screen around the workbench says so</summary>
         public event Action<Exception>? SaveFailed;
@@ -50,6 +70,8 @@ namespace StreetCorsa.Screens.Garage
         public RelayCommand RemoveSelectedCommand { get; }
         public RelayCommand CancelMountCommand { get; }
         public RelayCommand TakeApartCommand { get; }
+        public RelayCommand PutOnStandCommand { get; }
+        public RelayCommand InstallFromStandCommand { get; }
 
         #region What the 3D view shows
 
@@ -67,7 +89,59 @@ namespace StreetCorsa.Screens.Garage
                 {
                     SelectedPart = null;
                     SelectedShelfItem = null;
+                    IsStand = false;
                 }
+
+                OnPropertyChanged(nameof(IsCarView));
+                OnPropertyChanged(nameof(IsStandView));
+            }
+        }
+
+        private bool _isStand;
+
+        /// <summary>The engine stand is on show instead of the car: the work is on the engine bolted to it</summary>
+        public bool IsStand
+        {
+            get => _isStand;
+            private set
+            {
+                if (!SetProperty(ref _isStand, value)) return;
+
+                SelectedPart = null;
+                SelectedShelfItem = null;
+                OnPropertyChanged(nameof(IsCarView));
+                OnPropertyChanged(nameof(IsStandView));
+                Refresh();
+            }
+        }
+
+        /// <summary>The "Parts" toggle: the car's parts are on show</summary>
+        public bool IsCarView
+        {
+            get => _isOpen && !_isStand;
+            set
+            {
+                if (value)
+                {
+                    IsStand = false;
+                    IsOpen = true;
+                }
+                else if (!_isStand) IsOpen = false;
+            }
+        }
+
+        /// <summary>The "Stand" toggle: the engine stand is on show</summary>
+        public bool IsStandView
+        {
+            get => _isOpen && _isStand;
+            set
+            {
+                if (value)
+                {
+                    IsStand = true;
+                    IsOpen = true;
+                }
+                else if (_isStand) IsOpen = false;
             }
         }
 
@@ -92,6 +166,18 @@ namespace StreetCorsa.Screens.Garage
         {
             get => _engine;
             private set => SetProperty(ref _engine, value);
+        }
+
+        private InstalledPart? _standEngine;
+
+        /// <summary>
+        /// The engine on the stand beside the car, shown whatever view is on; while the stand is worked on, the very
+        /// tree of <see cref="Engine"/>
+        /// </summary>
+        public InstalledPart? StandEngine
+        {
+            get => _standEngine;
+            private set => SetProperty(ref _standEngine, value);
         }
 
         private IReadOnlyList<CarPart>? _gear;
@@ -136,6 +222,9 @@ namespace StreetCorsa.Screens.Garage
                 OnPropertyChanged(nameof(SelectedConditionDisplay));
                 OnPropertyChanged(nameof(SelectedWorthDisplay));
                 OnPropertyChanged(nameof(SelectedAttachedDisplay));
+                OnPropertyChanged(nameof(SelectedBlockedDisplay));
+                OnPropertyChanged(nameof(RemoveButtonText));
+                OnPropertyChanged(nameof(CanInstallFromStand));
                 RelayCommand.RaiseCanExecuteChanged();
             }
         }
@@ -143,6 +232,8 @@ namespace StreetCorsa.Screens.Garage
         #endregion
 
         #region Engine sheet
+
+        public string EngineTitle => _isStand ? "ENGINE STAND" : "ENGINE";
 
         private EngineReport? _report;
 
@@ -166,7 +257,7 @@ namespace StreetCorsa.Screens.Garage
 
         /// <summary>Why the engine does not run, in the part scripts' own words; empty when it does</summary>
         public string StatusDisplay => _engine == null
-            ? "The engine bay is empty."
+            ? _isStand ? "The stand is empty. Pull an engine out of a car, or put one from the shelf on it." : "The engine bay is empty."
             : _report == null
                 ? "Checking the engine..."
                 : _report.Runs ? string.Empty : Capitalize(_report.Problem ?? "the engine does not run.");
@@ -187,10 +278,34 @@ namespace StreetCorsa.Screens.Garage
             ? $"${PartPricing.Round(PartPricing.Worth(_selectedPart.Definition, saved)):N0}"
             : string.Empty;
 
+        /// <summary>Why the picked part cannot come off now, in the work order's words; empty when it can</summary>
+        public string SelectedBlockedDisplay =>
+            _selectedPart != null && Catalog is { } catalog && SavedOf(_selectedPart) is { } saved && CurrentEngine is { } engine
+            && engine.SelfAndDescendants().Contains(saved)
+                ? EngineWork.WhyNotOff(catalog, engine, saved, _isStand) ?? string.Empty
+                : string.Empty;
+
+        private bool SelectedIsEngine => _selectedPart != null && ReferenceEquals(_selectedPart, _engine);
+
+        public string RemoveButtonText => !SelectedIsEngine
+            ? "Take it off"
+            : _isStand ? "Off the stand" : "Pull the engine";
+
         public string SelectedAttachedDisplay
         {
             get
             {
+                if (SelectedIsEngine)
+                {
+                    return _isStand
+                        ? "It goes on the shelf as it is."
+                        : _gameState.Player.EngineStand == null
+                            ? "A big job. It goes on the engine stand" + (Catalog is { } catalog && EngineWork.StandStripsDisplay(catalog) is { Length: > 0 } strips
+                                ? $"; {strips} come off onto the shelf."
+                                : ".")
+                            : "A big job. The stand is taken, so it goes on the shelf as it is.";
+                }
+
                 var attached = _selectedPart == null ? 0 : _selectedPart.SelfAndDescendants().Count() - 1;
                 return attached switch
                 {
@@ -221,13 +336,23 @@ namespace StreetCorsa.Screens.Garage
 
                 if (value != null) SelectedPart = null;
                 OnPropertyChanged(nameof(CanTakeApart));
+                OnPropertyChanged(nameof(CanPutOnStand));
+                OnPropertyChanged(nameof(IsShelfEngine));
                 UpdateCandidates();
                 RelayCommand.RaiseCanExecuteChanged();
             }
         }
 
-        /// <summary>The picked shelf part has parts on it that can come off right there on the shelf</summary>
-        public bool CanTakeApart => _selectedShelfItem is { Part.Children.Count: > 0 };
+        /// <summary>The picked shelf part has parts on it that can come off right there on the shelf; an engine comes apart on the stand</summary>
+        public bool CanTakeApart => _selectedShelfItem is { Part.Children.Count: > 0, IsEngine: false };
+
+        /// <summary>The picked shelf part is an engine, and the stand is free for it</summary>
+        public bool CanPutOnStand => _selectedShelfItem is { IsEngine: true } && _gameState.Player.EngineStand == null;
+
+        public bool IsShelfEngine => _selectedShelfItem is { IsEngine: true };
+
+        /// <summary>The engine on the stand, picked, can go in the car: there is one, with its engine bay empty</summary>
+        public bool CanInstallFromStand => _isStand && SelectedIsEngine && _car != null && _car.Engine == null;
 
         private string _shelfHint = string.Empty;
 
@@ -288,6 +413,14 @@ namespace StreetCorsa.Screens.Garage
                 : Trees.SelectMany(t => t.Root.SelfAndDescendants()).FirstOrDefault(p => p.InstanceId == part.InstanceId);
         }
 
+        /// <summary>The engine being worked on: the one on the stand, or the car's</summary>
+        private PartInstance? CurrentEngine => _isStand ? _gameState.Player.EngineStand : _car?.Engine;
+
+        /// <summary>What <see cref="Workbench"/> mounts on and takes off: the car's own parts, or the stand's engine alone</summary>
+        private List<PartInstance>? CurrentRoots => _isStand
+            ? _gameState.Player.EngineStand is { } stand ? new List<PartInstance> { stand } : null
+            : _car?.Parts;
+
         /// <summary>Every tree on the car: the engine and the running gear</summary>
         private IEnumerable<LiveTree> Trees => (_live == null ? Enumerable.Empty<LiveTree>() : new[] { _live }).Concat(_gearTrees.Select(g => g.Tree));
 
@@ -296,30 +429,107 @@ namespace StreetCorsa.Screens.Garage
 
         public void OnCandidateClicked(MountCandidate candidate)
         {
-            if (_car == null || candidate.Tag is not MountPlace place || SelectedShelfItem is not { } item) return;
+            if (CurrentRoots is not { } roots || candidate.Tag is not MountPlace place || SelectedShelfItem is not { } item) return;
 
             // The 3D view shows the places of the part picked before until those of this one are built:
             // a place is only good for the part it was found for
             if (_candidates?.Any(c => ReferenceEquals(c, candidate)) != true) return;
 
-            Workbench.Mount(_car.Parts, place, item.Part);
+            Workbench.Mount(roots, place, item.Part);
             _gameState.Player.Parts.Remove(item.Part);
-            _logger.Information("Mounted {Part} on {Car}", item.Part.DefinitionId, _car.DefinitionId);
+            _logger.Information("Mounted {Part} on {Where}", item.Part.DefinitionId, _isStand ? "the engine on the stand" : _car?.DefinitionId);
 
             SelectedShelfItem = null;
-            Finish(item.Part.SelfAndDescendants().Count());
+            var engineIn = place.Parent == null && place.ParentSlot == PartInstance.CarEngineSlot;
+            Finish(item.Part.SelfAndDescendants().Count(), engineIn ? EngineInOutMinutes : null);
         }
 
         private void RemoveSelected()
         {
-            if (_car == null || _selectedPart == null || SavedOf(_selectedPart) is not { } saved) return;
-            if (!Workbench.Remove(_car.Parts, saved)) return;
+            if (CurrentRoots is not { } roots || _selectedPart == null || SavedOf(_selectedPart) is not { } saved) return;
+            if (!string.IsNullOrEmpty(SelectedBlockedDisplay)) return;
+
+            if (SelectedIsEngine)
+            {
+                RemoveEngine(roots, saved);
+                return;
+            }
+
+            if (!Workbench.Remove(roots, saved)) return;
 
             _gameState.Player.Parts.Add(saved);
-            _logger.Information("Took {Part} off {Car}", saved.DefinitionId, _car.DefinitionId);
+            _logger.Information("Took {Part} off {Where}", saved.DefinitionId, _isStand ? "the engine on the stand" : _car?.DefinitionId);
 
             SelectedPart = null;
             Finish(saved.SelfAndDescendants().Count());
+        }
+
+        /// <summary>The engine itself: off the stand to the shelf, or out of the car, onto the stand when it is free</summary>
+        private void RemoveEngine(List<PartInstance> roots, PartInstance engine)
+        {
+            if (_isStand)
+            {
+                _gameState.Player.EngineStand = null;
+                _gameState.Player.Parts.Add(engine);
+                _logger.Information("Took {Block} off the engine stand", engine.DefinitionId);
+                SelectedPart = null;
+                Finish(1, StandMinutes);
+                return;
+            }
+
+            if (!Workbench.Remove(roots, engine)) return;
+
+            var stripped = 0;
+            if (_gameState.Player.EngineStand == null && Catalog is { } catalog)
+            {
+                var off = EngineWork.StripForStand(catalog, engine);
+                _gameState.Player.Parts.AddRange(off);
+                _gameState.Player.EngineStand = engine;
+                stripped = off.Count;
+                _logger.Information("Pulled {Block} out of {Car} onto the engine stand ({Count} part(s) off to bolt it on)",
+                    engine.DefinitionId, _car?.DefinitionId, stripped);
+            }
+            else
+            {
+                _gameState.Player.Parts.Add(engine);
+                _logger.Information("Pulled {Block} out of {Car} onto the shelf", engine.DefinitionId, _car?.DefinitionId);
+            }
+
+            SelectedPart = null;
+            Finish(1, EngineInOutMinutes + stripped * MinutesPerPart);
+        }
+
+        /// <summary>The engine picked on the shelf goes on the stand, what is in the way of its bellhousing face off onto the shelf</summary>
+        private void PutOnStand()
+        {
+            if (!CanPutOnStand || _selectedShelfItem is not { } item || Catalog is not { } catalog) return;
+
+            var shelf = _gameState.Player.Parts;
+            var index = shelf.IndexOf(item.Part);
+            shelf.Remove(item.Part);
+
+            var off = EngineWork.StripForStand(catalog, item.Part);
+            shelf.InsertRange(Math.Clamp(index, 0, shelf.Count), off);
+            _gameState.Player.EngineStand = item.Part;
+            _logger.Information("Put {Block} on the engine stand ({Count} part(s) off to bolt it on)", item.Part.DefinitionId, off.Count);
+
+            SelectedShelfItem = null;
+            IsStandView = true;
+            Finish(1, StandMinutes + off.Count * MinutesPerPart);
+        }
+
+        /// <summary>The engine on the stand goes in the selected car's empty engine bay</summary>
+        private void InstallFromStand()
+        {
+            if (!CanInstallFromStand || _car == null || _gameState.Player.EngineStand is not { } engine) return;
+
+            _gameState.Player.EngineStand = null;
+            Workbench.Mount(_car.Parts, new MountPlace(null, PartInstance.CarEngineSlot, 0), engine);
+            _logger.Information("Put {Block} from the engine stand in {Car}", engine.DefinitionId, _car.DefinitionId);
+
+            SelectedPart = null;
+            IsCarView = true;
+            Finish(1, EngineInOutMinutes);
         }
 
         /// <summary>What is mounted on the picked shelf part comes off and lies next to it, each piece with what is on it in turn</summary>
@@ -341,18 +551,34 @@ namespace StreetCorsa.Screens.Garage
 
             _logger.Information("Took {Count} part(s) off {Part} on the shelf", pieces.Count, item.Part.DefinitionId);
             SelectedShelfItem = null;
-            Finish(pieces.Count);
+            Finish(pieces.Count, carChanged: false);
         }
 
         /// <summary>After the car changed: show it, let the clock run for the work, and save it all</summary>
-        private async void Finish(int partsHandled)
+        /// <param name="minutes">What the job took, when it is more than a few parts</param>
+        /// <param name="carChanged">The car itself was worked on, not only the stand or the shelf</param>
+        private async void Finish(int partsHandled, int? minutes = null, bool? carChanged = null)
         {
+            // The stand's engine changed when the work was on it; one put on or taken off is another engine anyway
+            if (_isStand) _standStale = true;
             Refresh();
+
+            if (carChanged ?? !_isStand)
+            {
+                try
+                {
+                    CarEngineChanged?.Invoke();
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "The garage could not catch up with the car's new engine");
+                }
+            }
 
             try
             {
                 // Before saving: the time the work took belongs in the save, and so does the new day it may end in
-                await _spendMinutes(MinutesPerPart * Math.Min(partsHandled, 6));
+                await _spendMinutes(minutes ?? MinutesPerPart * Math.Min(partsHandled, 6));
             }
             catch (Exception ex)
             {
@@ -393,12 +619,13 @@ namespace StreetCorsa.Screens.Garage
             try
             {
                 var catalog = Catalog;
-                _live = catalog != null && _car?.Engine is { } engine ? PartTrees.ToInstalled(catalog, engine) : null;
+                _live = _isStand ? StandLive(catalog) : catalog != null && _car?.Engine is { } engine ? PartTrees.ToInstalled(catalog, engine) : null;
                 Engine = _live?.Root;
+                StandEngine = _isStand ? _live?.Root : StandBesideTheCar(catalog);
                 _report = null;
 
                 _gearTrees.Clear();
-                if (catalog != null && _car != null)
+                if (catalog != null && _car != null && !_isStand)
                 {
                     foreach (var part in _car.Parts.Where(p => RunningGear.CornerOf(p.ParentSlot) >= 0))
                     {
@@ -418,13 +645,20 @@ namespace StreetCorsa.Screens.Garage
                 }
 
                 OnPropertyChanged(nameof(HasShelfItems));
+                OnPropertyChanged(nameof(CanPutOnStand));
+                OnPropertyChanged(nameof(CanInstallFromStand));
+                OnPropertyChanged(nameof(SelectedBlockedDisplay));
+                OnPropertyChanged(nameof(SelectedAttachedDisplay));
+                RelayCommand.RaiseCanExecuteChanged();
                 NotifySheet();
 
                 var live = _live;
                 if (catalog == null || live == null) return;
 
                 var evaluation = ++_evaluation;
-                var car = _car;
+
+                // The engine on the stand is no car's: its dyno figure is nobody's
+                var car = _isStand ? null : _car;
 
                 // On a tree of its own: the one on screen belongs to the UI thread
                 var saved = live.Saved[live.Root];
@@ -443,18 +677,77 @@ namespace StreetCorsa.Screens.Garage
             }
         }
 
+        /// <summary>The stand's engine brought to life, the one built before while nothing changed on it</summary>
+        private LiveTree? StandLive(PartsCatalog? catalog)
+        {
+            var stand = _gameState.Player.EngineStand;
+            if (_standStale || !ReferenceEquals(stand, _standSource) || !ReferenceEquals(catalog, _standCatalog))
+            {
+                // Forgotten first: a stand that fails to build is built again next time, not taken for the one before
+                _standLive = null;
+                _standSource = null;
+                _standLive = catalog != null && stand != null ? PartTrees.ToInstalled(catalog, stand) : null;
+                _standSource = stand;
+                _standCatalog = catalog;
+                _standStale = false;
+            }
+
+            return _standLive;
+        }
+
+        /// <summary>The stand's engine, for the car's view: whatever goes wrong with it is the stand's, not the car's</summary>
+        private InstalledPart? StandBesideTheCar(PartsCatalog? catalog)
+        {
+            try
+            {
+                return StandLive(catalog)?.Root;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not show the engine on the stand");
+                return null;
+            }
+        }
+
         private void UpdateCandidates()
         {
             var catalog = Catalog;
             var item = SelectedShelfItem;
-            if (catalog == null || item == null || _car == null)
+            if (catalog == null || item == null)
             {
                 Candidates = null;
                 ShelfHint = string.Empty;
                 return;
             }
 
-            var places = Workbench.FindPlaces(catalog, _car.Parts, item.Part);
+            // An engine on the stand's view goes on the stand, not on the engine there
+            var stand = _gameState.Player.EngineStand;
+            if (_isStand && (item.IsEngine || stand == null))
+            {
+                Candidates = null;
+                ShelfHint = !item.IsEngine ? "The stand is empty. Put an engine on it first."
+                    : stand == null ? "Put it on the stand to take it apart."
+                    : "The stand is taken. Take its engine off first.";
+                return;
+            }
+
+            if (!_isStand && _car == null)
+            {
+                Candidates = null;
+                ShelfHint = "There is no car here to put it on.";
+                return;
+            }
+
+            var places = _isStand ? Workbench.FindPlacesOnStand(catalog, stand!, item.Part) : Workbench.FindPlaces(catalog, _car!.Parts, item.Part);
+
+            // Where it fits, but the work order says not yet: the reason is the hint, and the place is no place
+            var engine = CurrentEngine;
+            var fitting = places.Count;
+            var onEngine = engine == null ? null : new HashSet<PartInstance>(engine.SelfAndDescendants(), ReferenceEqualityComparer.Instance);
+            var blocked = onEngine != null && places.Any(p => Workbench.IsOnEngine(onEngine, p))
+                ? EngineWork.WhyNotOn(catalog, engine!, item.Part, _isStand)
+                : null;
+            if (blocked != null) places = places.Where(p => !Workbench.IsOnEngine(onEngine!, p)).ToList();
             var installedOf = Trees.SelectMany(t => t.Saved).ToDictionary(p => p.Value, p => p.Key);
 
             var candidates = new List<MountCandidate>();
@@ -471,6 +764,9 @@ namespace StreetCorsa.Screens.Garage
             Candidates = candidates;
             ShelfHint = candidates.Count switch
             {
+                0 when fitting > 0 && blocked != null => blocked,
+                0 when item.IsEngine => "The engine bay is taken. Pull that engine first, or put this one on the stand.",
+                0 when _isStand => "It does not fit anywhere on this engine as it is.",
                 0 => "It does not fit anywhere on this car as it is.",
                 1 => "Click the glowing part in the car to mount it.",
                 _ => $"It fits in {candidates.Count} places: click the one you want."
@@ -480,6 +776,7 @@ namespace StreetCorsa.Screens.Garage
         private void NotifySheet()
         {
             OnPropertyChanged(nameof(HasEngine));
+            OnPropertyChanged(nameof(EngineTitle));
             OnPropertyChanged(nameof(EngineName));
             OnPropertyChanged(nameof(PowerDisplay));
             OnPropertyChanged(nameof(TorqueDisplay));
@@ -500,6 +797,7 @@ namespace StreetCorsa.Screens.Garage
             Part = part;
             Name = definition.DisplayName ?? definition.Name;
             Kind = PartKinds.GroupOf(definition);
+            IsEngine = PartKinds.IsBlock(definition);
 
             Detail = PartTrees.Describe(part);
             WorthDisplay = $"${PartPricing.Round(PartPricing.WorthOfAssembly(catalog, part)):N0}";
@@ -508,6 +806,10 @@ namespace StreetCorsa.Screens.Garage
         public PartInstance Part { get; }
         public string Name { get; }
         public string Kind { get; }
+
+        /// <summary>An engine block: it comes apart on the stand, not on the shelf</summary>
+        public bool IsEngine { get; }
+
         public string Detail { get; }
         public string WorthDisplay { get; }
     }

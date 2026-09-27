@@ -483,8 +483,38 @@ built on first use: slots by the slots they name, and slots by the slots they st
   card with condition and worth, "Take it off"). Hidden parts are reached the way they are in a workshop: take off what
   is in the way;
 - the shelf: picking a loose part shows it, glowing green, in every place it fits; a click on one mounts it.
-  "Take apart" splits what is mounted on a shelf part off it (a manifold from its carburettor), piece by piece.
-Every change is saved and costs game time (5 minutes a part, 30 at most).
+  "Take apart" splits what is mounted on a shelf part off it (a manifold from its carburettor), piece by piece; not an
+  engine block, which comes apart on the stand only ("Put on the stand").
+Every change is saved and costs game time (5 minutes a part, 30 at most; an engine in or out of a car 2 hours, onto
+the stand or off it 20 minutes).
+
+**The engine stand** (step 17). The stand is always in the garage, 3 m to the car's left (`EngineStandLayout.Spot`;
+AC cars face +Z, left towards +X), with `Player.EngineStand` on it as it is: `CarViewport3D.StandEngine`, drawn as
+`GarageRenderer.SetScenery`, a model that is never picked. The engine hangs by its bellhousing face, crankshaft 0.78 m
+up, front towards +Z (the head sits at the rear of the block model's bounds; the stand is boxes of our own under a
+node that is no part's). The Stand toggle, next to Parts, turns the camera to the stand and leaves the car solid: the
+engine moves from the scenery into the prop (`GarageRenderer.StandActive`: picked and glowing without a ghost car, no
+body lean), the scenery keeps the stand alone. A click on the stand or its engine does what the toggle does (hover:
+glow and "Engine stand"; `GarageRenderer.HitsScenery`, the solid car in front of it counts as cover); in the Stand view a click on the car goes
+back to the car's Parts view the same way (`HitsCar`: the stand and its engine in front count as cover, the car
+glows under the pointer). Back from the
+stand the camera glides to the car in one ease: the renderer's `AutoAdjustTarget` (a third of the way every frame, a
+jump after 3 m) is off until the target reaches `GarageRenderer.FramedTarget`, where that framing would settle.
+Everything else works as in the car: picking, the card, the shelf's places (`Workbench.FindPlacesOnStand`). "Pull the engine" takes a car's engine
+onto the stand when it is free (else to the shelf), "Off the stand" puts it on the shelf, "Put it in the car" into the
+selected car's empty bay. Going on the stand, `EngineWork.StripForStand` takes off the work order's `stand_strips`
+(transmission, clutch, flywheel: in the way of the stand's head; the radiator stays with the car) onto the shelf.
+
+**The work order** (`WorkOrder`, `Content\streetcorsa\parts\work_order.json`, one per mod; see
+[modding.md](../modding.md)). Every part has a kind: its pack's `"kind"`, else a script class (the big parts), else
+words of its name (timing covers, dampers, distributors, belts... are plain `EnginePart`/`Part` in every pack, but named
+alike across makes). 1055 of the 1107 engine parts get one (2026-09-26); the rest are SLRR's scriptless root entries, batteries, scoops and
+bottles. `EngineWork.WhyNotOff`/`WhyNotOn` give the reason in the player's words ("Take off the cylinder heads and the
+oil pan first.", shown on the card and as the shelf hint): the crankshaft, rods, pistons and camshaft only on the stand,
+one at a time with nothing on them, and the peripherals in their order (the belt before the fan, the fan before the
+water pump, the distributor before the intake, the intake before the heads, the transmission before the flywheel).
+The rules hold both ways, so an engine taken apart goes back together in the opposite order: `EngineStandTests` takes
+every one of the 161 builds down to its bare block on the stand and back.
 
 Nothing pops. The cards and the navigation tiles they replace slide and fade through `Helpers/Reveal`
 (`Reveal.IsShown` in place of a Visibility binding, `OffsetX/Y` for where an element comes from). Parts move too: a tree

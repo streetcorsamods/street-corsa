@@ -55,7 +55,34 @@ public static class Workbench
             return places;
         }
 
-        foreach (var parent in carParts.SelectMany(p => p.SelfAndDescendants()))
+        places.AddRange(PlacesOn(catalog, carParts, loose, looseDefinition, looseGroup, looseSlots));
+        return places;
+    }
+
+    /// <summary>Where a loose part could go on the engine on the stand. A block goes in a car, never on another engine.</summary>
+    public static List<MountPlace> FindPlacesOnStand(PartsCatalog catalog, PartInstance engine, PartInstance loose)
+    {
+        if (catalog.Get(loose.DefinitionId) is not { } looseDefinition || PartKinds.IsBlock(looseDefinition)) return new();
+
+        var looseGroup = PartKinds.GroupOf(looseDefinition);
+        if (looseGroup == PartKinds.Tyres || RunningGear.IsRunningGear(looseGroup)) return new();
+
+        var looseSlots = looseDefinition.Slots.Where(s => loose.Children.All(c => c.ParentSlot != s.Id)).ToList();
+        return PlacesOn(catalog, new[] { engine }, loose, looseDefinition, looseGroup, looseSlots).ToList();
+    }
+
+    /// <summary>
+    /// The place is on the engine, so the work order (<see cref="EngineWork.WhyNotOn"/>) has a say in it; a place on
+    /// the car's own slots or its running gear has no rules
+    /// </summary>
+    /// <param name="engineParts">The engine's parts, the block itself among them</param>
+    public static bool IsOnEngine(IReadOnlySet<PartInstance> engineParts, MountPlace place) =>
+        place.Parent != null && engineParts.Contains(place.Parent);
+
+    private static IEnumerable<MountPlace> PlacesOn(PartsCatalog catalog, IEnumerable<PartInstance> roots, PartInstance loose,
+        PartDefinition looseDefinition, string looseGroup, List<PartSlot> looseSlots)
+    {
+        foreach (var parent in roots.SelectMany(p => p.SelfAndDescendants()))
         {
             if (catalog.Get(parent.DefinitionId) is not { } parentDefinition) continue;
             if (PartKinds.NeverStacks(looseGroup) && PartKinds.GroupOf(parentDefinition) == looseGroup) continue;
@@ -66,11 +93,9 @@ public static class Workbench
                 if (slot.Id == parent.OwnSlot || parent.Children.Any(c => c.ParentSlot == slot.Id)) continue;
 
                 var own = looseSlots.FirstOrDefault(s => catalog.CanMate(looseDefinition, s, parentDefinition, slot));
-                if (own != null) places.Add(new MountPlace(parent, slot.Id, own.Id));
+                if (own != null) yield return new MountPlace(parent, slot.Id, own.Id);
             }
         }
-
-        return places;
     }
 
     public static void Mount(List<PartInstance> carParts, MountPlace place, PartInstance loose)

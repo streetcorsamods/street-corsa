@@ -248,6 +248,27 @@ namespace StreetCorsa.Services.Parts
             if (!IsAvailable) return false;
 
             var changed = 0;
+
+            // The engine on the stand as the engines in the cars: one of a mod that is not installed waits on the
+            // shelf, one the catalog has lost for good is gone, and what no longer fits on it comes off to the shelf
+            if (game.Player.EngineStand is { } stand)
+            {
+                if (Catalog.Get(stand.DefinitionId) == null)
+                {
+                    game.Player.EngineStand = null;
+                    changed++;
+                    if (Mods.ModIds.IsQualified(stand.DefinitionId)) game.Player.Parts.Add(stand);
+                    _logger.Information("The {Block} on the engine stand is not in the catalog: {Where}", stand.DefinitionId,
+                        Mods.ModIds.IsQualified(stand.DefinitionId) ? "it waits on the shelf for its mod" : "it is gone");
+                }
+                else
+                {
+                    var off = new List<PartInstance>();
+                    changed += Renew(new[] { stand }, off);
+                    game.Player.Parts.AddRange(off);
+                }
+            }
+
             var racers = new[] { game.Player }
                 .Concat(game.Racers.Inactive.Values).Concat(game.Racers.Retired.Values).Concat(game.Racers.ReadyToRace.Values);
             foreach (var racer in racers)

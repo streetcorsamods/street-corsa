@@ -59,6 +59,8 @@
                                 ShowroomKn5="{Binding GarageShowroomKn5}"
                                 PartsCatalog="{Binding Workbench.Catalog}"
                                 PartsVisible="{Binding Workbench.IsOpen}"
+                                StandMode="{Binding Workbench.IsStand}"
+                                StandEngine="{Binding Workbench.StandEngine}"
                                 Engine="{Binding Workbench.Engine}"
                                 Gear="{Binding Workbench.Gear}"
                                 Candidates="{Binding Workbench.Candidates}"
@@ -399,7 +401,12 @@
                     <ToggleButton Content="Parts"
                                   Style="{StaticResource ViewportToggleStyle}"
                                   Visibility="{Binding Workbench.IsAvailable, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                  IsChecked="{Binding Workbench.IsOpen, Mode=TwoWay}"/>
+                                  IsChecked="{Binding Workbench.IsCarView, Mode=TwoWay}"/>
+                    <ToggleButton Content="Stand"
+                                  Style="{StaticResource ViewportToggleStyle}"
+                                  ToolTip="The engine stand: where engines come apart"
+                                  Visibility="{Binding Workbench.IsAvailable, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                  IsChecked="{Binding Workbench.IsStandView, Mode=TwoWay}"/>
                     <ToggleButton Content="Rotate"
                                   Style="{StaticResource ViewportToggleStyle}"
                                   IsChecked="{Binding AutoRotate, ElementName=Viewport3D, Mode=TwoWay}"/>

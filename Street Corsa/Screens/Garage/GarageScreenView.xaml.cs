@@ -34,6 +34,14 @@ namespace StreetCorsa.Screens.Garage
 
             // Parts are picked in the 3D view; what a pick means is the workbench's business
             Viewport3D.PartClicked += part => (DataContext as GarageScreenViewModel)?.Workbench.OnPartClicked(part);
+            Viewport3D.StandClicked += () =>
+            {
+                if (DataContext is GarageScreenViewModel { Workbench.IsAvailable: true } viewModel) viewModel.Workbench.IsStandView = true;
+            };
+            Viewport3D.CarClicked += () =>
+            {
+                if (DataContext is GarageScreenViewModel { Workbench.IsAvailable: true } viewModel) viewModel.Workbench.IsCarView = true;
+            };
             Viewport3D.CandidateClicked += candidate => (DataContext as GarageScreenViewModel)?.Workbench.OnCandidateClicked(candidate);
             Viewport3D.PlacementChanged += text =>
             {

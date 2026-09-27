@@ -1,0 +1,71 @@
+{
+  "kinds": [
+    { "id": "block", "name": "engine block", "classes": [ "Block" ] },
+    { "id": "crankshaft", "name": "crankshaft", "classes": [ "Crankshaft" ] },
+    { "id": "connecting_rods", "name": "connecting rods", "classes": [ "ConnectingRod" ] },
+    { "id": "pistons", "name": "pistons", "classes": [ "Piston" ] },
+    { "id": "camshaft", "name": "camshaft", "classes": [ "Camshaft" ] },
+    { "id": "cylinder_head", "name": "cylinder head", "classes": [ "CylinderHead" ] },
+    { "id": "flywheel", "name": "flywheel", "classes": [ "Flywheel" ] },
+    { "id": "clutch", "name": "clutch", "plural": "clutches", "classes": [ "Clutch" ] },
+    { "id": "transmission", "name": "transmission", "classes": [ "Transmission" ] },
+    { "id": "intake_manifold", "name": "intake manifold", "classes": [ "IntakeManifold" ] },
+    { "id": "charger", "name": "supercharger", "classes": [ "SuperCharger", "TurboCharger" ] },
+    { "id": "nitrous", "name": "nitrous kit", "classes": [ "NOSInjectorSystem", "Canister" ] },
+    { "id": "carburettor", "name": "carburettor", "classes": [ "FuelInjectorSystem" ] },
+    { "id": "air_filter", "name": "air filter", "classes": [ "AirFilter" ], "names": [ "air filter", "air cleaner" ] },
+    { "id": "exhaust_header", "name": "exhaust header", "classes": [ "ExhaustHeader" ] },
+    { "id": "exhaust", "name": "exhaust", "plural": "exhaust parts", "classes": [ "ExhaustPipe", "ExhaustTip" ] },
+    { "id": "oil_pan", "name": "oil pan", "classes": [ "OilPan" ] },
+    { "id": "crank_pulley", "name": "crankshaft pulley", "classes": [ "Pulley" ] },
+
+    { "id": "belt", "name": "drive belt", "names": [ "drive belt", "belt" ] },
+    { "id": "radiator", "name": "radiator", "names": [ "radiator" ] },
+    { "id": "timing_cover", "name": "timing cover", "names": [ "timing chain cover", "timing gear cover", "timing cover" ] },
+    { "id": "timing_chain", "name": "timing chain", "names": [ "timing chain" ] },
+    { "id": "timing_gear", "name": "timing gear", "names": [ "timing gear", "driving gear" ] },
+    { "id": "damper", "name": "harmonic damper", "names": [ "harmonic damper", "harmonic balancer", "damper", "balancer" ] },
+    { "id": "distributor", "name": "distributor", "names": [ "distributor" ] },
+    { "id": "fan", "name": "fan", "names": [ "fan" ] },
+    { "id": "water_pump", "name": "water pump", "names": [ "water pump", "water pomp", "water electric pump" ] },
+    { "id": "alternator", "name": "alternator", "names": [ "alternator" ] },
+    { "id": "steering_pump", "name": "power steering pump", "names": [ "steering pump", "steering pomp" ] },
+    { "id": "fuel_pump", "name": "fuel pump", "names": [ "fuel pump" ] },
+    { "id": "block_cover", "name": "valley cover", "names": [ "block cover" ] },
+    { "id": "valve_cover", "name": "valve cover", "names": [ "valve cover", "head cover", "righthead cover" ] },
+    { "id": "breather", "name": "breather", "names": [ "breather" ] },
+    { "id": "oil_filter", "name": "oil filter", "names": [ "oil filter" ] },
+    { "id": "bearing_bridge", "name": "main bearing bridge", "names": [ "bearing bridge" ] },
+    { "id": "pulley", "name": "pulley", "names": [ "pulley" ] },
+    { "id": "ignition", "name": "ignition coil", "names": [ "spark plug", "ignition coil" ] },
+    { "id": "starter", "name": "starter", "names": [ "starter" ] }
+  ],
+
+  "rules": [
+    { "kind": "pistons", "stand_only": true, "bare": true, "after": [ "cylinder_head", "oil_pan" ] },
+    { "kind": "connecting_rods", "stand_only": true, "bare": true, "after": [ "cylinder_head", "oil_pan", "bearing_bridge" ] },
+    { "kind": "crankshaft", "stand_only": true, "bare": true, "after": [ "oil_pan", "timing_cover", "bearing_bridge" ] },
+    { "kind": "camshaft", "stand_only": true, "bare": true, "after": [ "timing_cover", "timing_chain", "intake_manifold", "block_cover", "distributor", "fuel_pump" ] },
+
+    { "kind": "cylinder_head", "after": [ "intake_manifold", "valve_cover", "exhaust_header" ] },
+    { "kind": "intake_manifold", "after": [ "distributor", "charger" ] },
+    { "kind": "block_cover", "after": [ "intake_manifold" ] },
+    { "kind": "bearing_bridge", "after": [ "oil_pan" ] },
+
+    { "kind": "flywheel", "after": [ "transmission", "clutch" ] },
+    { "kind": "clutch", "after": [ "transmission" ] },
+
+    { "kind": "timing_cover", "after": [ "damper", "crank_pulley", "water_pump" ] },
+    { "kind": "timing_chain", "after": [ "timing_cover" ] },
+    { "kind": "timing_gear", "after": [ "timing_cover", "timing_chain" ] },
+    { "kind": "damper", "after": [ "belt" ] },
+    { "kind": "crank_pulley", "after": [ "belt" ] },
+    { "kind": "pulley", "after": [ "belt" ] },
+    { "kind": "water_pump", "after": [ "fan", "belt" ] },
+    { "kind": "fan", "after": [ "belt" ] },
+    { "kind": "alternator", "after": [ "belt" ] },
+    { "kind": "steering_pump", "after": [ "belt" ] }
+  ],
+
+  "stand_strips": [ "transmission", "clutch", "flywheel", "radiator" ]
+}

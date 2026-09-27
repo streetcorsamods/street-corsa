@@ -21,6 +21,12 @@ namespace StreetCorsa.Models.GameState
     {
         public Guid? SelectedCarInstanceId { get; set; }
 
+        /// <summary>
+        /// The engine on the garage's engine stand, block and all that is on it; null while the stand is empty.
+        /// The internals come out only here (<see cref="Parts.Cars.EngineWork"/>).
+        /// </summary>
+        public PartInstance? EngineStand { get; set; }
+
         /// <summary>What a new player starts with; enough for several cars while the game is being built</summary>
         public const decimal StartingMoney = 1_000_000m;
 

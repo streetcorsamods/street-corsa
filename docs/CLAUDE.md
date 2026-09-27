@@ -32,7 +32,7 @@ Street Rod-style career mode manager for Assetto Corsa. WPF app manages game log
 | CarProfile | catalog.db | Gameplay properties: BasePrice, DealerPrecedence |
 | UsedCarListing | saves/*.db | Car for sale in market |
 | CarInstance | saves/*.db | Player-owned car |
-| PartInstance | saves/*.db | A part somebody owns, with what is mounted on it: `Car.Parts` (engine on car slot 1), `Player.Parts` (shelf), `UsedCarListing.Parts`, `NewspaperAds.Parts` |
+| PartInstance | saves/*.db | A part somebody owns, with what is mounted on it: `Car.Parts` (engine on car slot 1), `Player.Parts` (shelf), `Player.EngineStand` (the engine on the stand), `UsedCarListing.Parts`, `NewspaperAds.Parts` |
 | Opponent | saves/*.db | AI racer with Skill/Aggression traits |
 | GameState | saves/*.db | Player money, date, cars, market |
 

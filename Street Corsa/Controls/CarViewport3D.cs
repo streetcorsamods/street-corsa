@@ -32,6 +32,12 @@ public class CarViewport3D : D3DViewportBase
     // With the parts on show there is something worth a closer look
     private const float PartsMinRadius = 1.6f;
 
+    // The engine stand: the camera close in on the engine, the car gone
+    private const float StandRadius = 2.6f;
+    private const float StandMinRadius = 1.0f;
+    private const float StandAlpha = 0.9f;
+    private const float StandBeta = 0.32f;
+
     /// <summary>
     /// How quickly the camera settles on a new framing, as the share of the remaining distance it covers per
     /// second. The first car of a session is put in place at once; after that the camera moves rather than
@@ -49,6 +55,10 @@ public class CarViewport3D : D3DViewportBase
     private float _betaGoal = DefaultBeta;
     private SlimDX.Vector3? _targetGoal;
 
+    // Back from the stand the camera glides to the car itself; the renderer's own framing, which jumps a third of the
+    // way every frame, takes over once it is there
+    private bool _autoAdjustWhenSettled;
+
     private string? _loadedCarDirectory;
     private System.Windows.Point _lastMouse;
     private bool _isDragging;
@@ -57,6 +67,15 @@ public class CarViewport3D : D3DViewportBase
     private string? _partsCarDirectory;
     private InstalledPart? _partsEngine;
     private IReadOnlyList<CarPart>? _partsGear;
+    private bool _partsOnStand;
+    private bool _applySceneryQueued;
+    private bool _isLoadingScenery;
+    private GarageRenderer? _sceneryRenderer;
+    private (InstalledPart? Engine, bool WithEngine, PartsCatalog? Catalog)? _sceneryKey;
+
+    // Counts the sceneries put up: a scenery built from what was bound before the parts view put up one of its own is
+    // out of date by the time it is ready
+    private int _sceneryVersion;
     private bool _isLoadingCandidates;
 
     // What the part models on screen are made of: node index to part, and where every part sits
@@ -84,6 +103,12 @@ public class CarViewport3D : D3DViewportBase
 
     /// <summary>One of the places shown for a loose part was clicked</summary>
     public event Action<MountCandidate>? CandidateClicked;
+
+    /// <summary>The engine stand beside the car, or the engine on it, was clicked while the stand is not being worked on</summary>
+    public event Action? StandClicked;
+
+    /// <summary>The car was clicked while the stand is being worked on</summary>
+    public event Action? CarClicked;
 
     /// <summary>
     /// Fade the viewport in by itself when the first frame is ready.
@@ -156,7 +181,13 @@ public class CarViewport3D : D3DViewportBase
 
     public static readonly DependencyProperty PartsVisibleProperty = DependencyProperty.Register(
         nameof(PartsVisible), typeof(bool), typeof(CarViewport3D),
-        new PropertyMetadata(false, (d, _) => ((CarViewport3D)d).QueueApplyParts()));
+        new PropertyMetadata(false, (d, _) =>
+        {
+            var viewport = (CarViewport3D)d;
+            if (viewport.StandMode) viewport.ResetCamera();
+            viewport.QueueApplyParts();
+            viewport.QueueApplyScenery();
+        }));
 
     /// <summary>X-ray view: the car fades to a shell and its parts show in their places</summary>
     public bool PartsVisible
@@ -165,9 +196,51 @@ public class CarViewport3D : D3DViewportBase
         set => SetValue(PartsVisibleProperty, value);
     }
 
+    public static readonly DependencyProperty StandModeProperty = DependencyProperty.Register(
+        nameof(StandMode), typeof(bool), typeof(CarViewport3D),
+        new PropertyMetadata(false, (d, _) => ((CarViewport3D)d).OnStandModeChanged()));
+
+    /// <summary>
+    /// With <see cref="PartsVisible"/>: the work is on the engine stand beside the car. The car stays as it is, the
+    /// camera goes over to the stand, and <see cref="Engine"/> (the one on the stand) is picked and mounted on there.
+    /// </summary>
+    public bool StandMode
+    {
+        get => (bool)GetValue(StandModeProperty);
+        set => SetValue(StandModeProperty, value);
+    }
+
+    private bool IsOnStand => PartsVisible && StandMode;
+
+    private void OnStandModeChanged()
+    {
+        ResetCamera();
+        QueueApplyParts();
+        QueueApplyScenery();
+    }
+
+    public static readonly DependencyProperty StandEngineProperty = DependencyProperty.Register(
+        nameof(StandEngine), typeof(InstalledPart), typeof(CarViewport3D),
+        new PropertyMetadata(null, (d, _) => ((CarViewport3D)d).QueueApplyScenery()));
+
+    /// <summary>
+    /// The engine on the stand beside the car, with everything on it; null for an empty stand. The stand is always in
+    /// the garage while there is a <see cref="PartsCatalog"/>.
+    /// </summary>
+    public InstalledPart? StandEngine
+    {
+        get => (InstalledPart?)GetValue(StandEngineProperty);
+        set => SetValue(StandEngineProperty, value);
+    }
+
     public static readonly DependencyProperty PartsCatalogProperty = DependencyProperty.Register(
         nameof(PartsCatalog), typeof(PartsCatalog), typeof(CarViewport3D),
-        new PropertyMetadata(null, (d, _) => ((CarViewport3D)d).QueueApplyParts()));
+        new PropertyMetadata(null, (d, _) =>
+        {
+            var viewport = (CarViewport3D)d;
+            viewport.QueueApplyParts();
+            viewport.QueueApplyScenery();
+        }));
 
     /// <summary>Where the part models come from; without it the parts view stays off</summary>
     public PartsCatalog? PartsCatalog
@@ -304,6 +377,7 @@ public class CarViewport3D : D3DViewportBase
         ApplySkin();
         ApplyCarState();
         ApplyParts();
+        ApplyScenery();
         Invalidate();
 
         Logger.Information("Loaded {Car} in {Ms} ms", hasCar ? Path.GetFileName(carDirectory) : "(empty garage)",
@@ -323,14 +397,31 @@ public class CarViewport3D : D3DViewportBase
         _alphaGoal = DefaultAlpha;
         _betaGoal = DefaultBeta;
         _targetGoal = null;
+        _autoAdjustWhenSettled = false;
 
-        if (Renderer!.CarNode == null)
+        if (IsOnStand)
+        {
+            // Close in on the engine on the stand, a little above the crankshaft
+            Renderer!.AutoAdjustTarget = false;
+            var spot = EngineStandLayout.Spot;
+            _targetGoal = new SlimDX.Vector3(spot.X, EngineStandLayout.CrankHeight - 0.05f, spot.Z - 0.1f);
+            _radiusGoal = StandRadius;
+            _alphaGoal = StandAlpha;
+            _betaGoal = StandBeta;
+        }
+        else if (Renderer!.CarNode == null)
         {
             // Empty garage: nothing to frame, so look across the room at eye level instead of at the floor
             Renderer.AutoAdjustTarget = false;
             _targetGoal = new SlimDX.Vector3(0f, EmptyGarageEyeHeight, 0f);
             _radiusGoal = MaxRadius;
             _betaGoal = MinBeta;
+        }
+        else if (!immediate && !Renderer.AutoAdjustTarget && Renderer.MainSlot.GetCarBoundingBox() is { } box)
+        {
+            // Coming back from the stand, or from an empty garage
+            _targetGoal = Renderer.FramedTarget(_alphaGoal, _betaGoal, _radiusGoal, (box.Minimum + box.Maximum) / 2f);
+            _autoAdjustWhenSettled = true;
         }
         else
         {
@@ -398,6 +489,12 @@ public class CarViewport3D : D3DViewportBase
                 orbit.Target += toTarget * k;
                 moving = true;
             }
+            else if (_autoAdjustWhenSettled && !moving)
+            {
+                _autoAdjustWhenSettled = false;
+                _targetGoal = null;
+                Renderer.AutoAdjustTarget = true;
+            }
         }
 
         return moving;
@@ -443,8 +540,23 @@ public class CarViewport3D : D3DViewportBase
         var carDirectory = _loadedCarDirectory;
         var carNode = renderer.CarNode;
         var catalog = PartsCatalog;
+        if (IsOnStand && catalog != null)
+        {
+            await ApplyStandAsync(renderer, catalog);
+            return;
+        }
+
+        // Off the stand, whatever comes next: the engine on it goes back into the scenery first
+        if (_partsOnStand)
+        {
+            await LeaveStandAsync(renderer);
+            if (Renderer != null) ApplyParts();
+            return;
+        }
+
         if (!PartsVisible || carNode == null || catalog == null || string.IsNullOrEmpty(carDirectory))
         {
+
             // Without a car there is nothing to dissolve back into
             if (carNode == null)
             {
@@ -504,7 +616,7 @@ public class CarViewport3D : D3DViewportBase
             for (var waited = 0; waited < 1500 && renderer == Renderer && renderer.IsMovingParts; waited += 30) await Task.Delay(30);
 
             // The renderer or the car may have been replaced, or the toggle flipped back, while loading
-            if (renderer == Renderer && PartsVisible && _loadedCarDirectory == carDirectory)
+            if (renderer == Renderer && PartsVisible && !IsOnStand && _loadedCarDirectory == carDirectory)
             {
                 renderer.SetProp(model.Kn5, SlimDX.Matrix.Identity);
 
@@ -545,7 +657,237 @@ public class CarViewport3D : D3DViewportBase
 
         // Catch up with whatever changed in the meantime, a renderer rebuilt under it included (device lost, or a
         // quick unload and load): its own load found this run in progress and left the parts to it
-        if (Renderer != null && (renderer != Renderer || !PartsVisible || _loadedCarDirectory != carDirectory || !ReferenceEquals(Engine, engine) || !ReferenceEquals(Gear, gear))) ApplyParts();
+        if (Renderer != null && (renderer != Renderer || !PartsVisible || IsOnStand || _loadedCarDirectory != carDirectory || !ReferenceEquals(Engine, engine) || !ReferenceEquals(Gear, gear))) ApplyParts();
+    }
+
+    /// <summary>
+    /// The stand's parts view: <see cref="Engine"/>, the one on the stand, becomes the prop to pick and mount on, and
+    /// leaves the scenery in the same frame, so that it is never gone nor there twice. The car stays solid.
+    /// </summary>
+    private async Task ApplyStandAsync(GarageRenderer renderer, PartsCatalog catalog)
+    {
+        var engine = Engine;
+        if (_partsOnStand && renderer.StandActive && ReferenceEquals(_partsEngine, engine)) return;
+
+        _isLoadingParts = true;
+        try
+        {
+            var started = DateTime.Now;
+
+            // Same stand, other parts: what is no longer there lifts off while the new model is put together
+            var before = renderer.HasProp && _partsOnStand ? IdsOf(_partNodes) : null;
+            var after = engine == null ? new HashSet<Guid>() : engine.SelfAndDescendants().Select(p => p.InstanceId).Where(id => id != Guid.Empty).ToHashSet();
+            var leaving = before == null ? new List<int>() : NodesWhere(_partNodes, id => !after.Contains(id));
+            if (leaving.Count > 0)
+            {
+                renderer.MoveParts(leaving, arriving: false);
+                AnimateFor(AnimationWindow);
+            }
+
+            // The engine alone, and the stand without it as the scenery to go with it
+            var (placed, kn5, nodes, scenery) = await Task.Run(() =>
+            {
+                var standAlone = BuildScenery(catalog, engine, withEngine: false);
+                var parts = EngineStandLayout.Build(catalog, engine);
+                if (parts.Count == 0) return (parts, (AcTools.Kn5File.IKn5?)null, (IReadOnlyList<PlacedPart>)Array.Empty<PlacedPart>(), standAlone);
+
+                var model = PartAssembler.BuildModel(catalog, "stand", parts);
+                return (parts, model.Kn5, model.Nodes, standAlone);
+            });
+
+            for (var waited = 0; waited < 1500 && renderer == Renderer && renderer.IsMovingParts; waited += 30) await Task.Delay(30);
+
+            if (renderer == Renderer && IsOnStand)
+            {
+                // The car stays solid: the work is beside it
+                renderer.StandActive = true;
+                renderer.GhostCar = false;
+                renderer.SetProp(kn5, SlimDX.Matrix.Identity);
+                if (before != null) renderer.MoveParts(NodesWhere(nodes, id => !before.Contains(id)), arriving: true);
+                PutScenery(renderer, scenery, (engine, false, catalog));
+                _partsOnStand = true;
+                _partsCarDirectory = null;
+                _partsEngine = engine;
+                _partsGear = null;
+                _anchors = null;
+                _partNodes = nodes;
+                _partWorlds = placed.Where(p => p.Source != null).ToDictionary(p => p.Source!, p => p.World);
+                AnimateFor(AnimationWindow);
+
+                if (_placing != null && !_partWorlds.ContainsKey(_placing))
+                {
+                    _placing = null;
+                    PlacementChanged?.Invoke(null);
+                }
+
+                Logger.Information("Engine stand laid out in {Ms} ms ({Count} parts, engine {Engine})",
+                    (int)(DateTime.Now - started).TotalMilliseconds, placed.Count, engine?.Definition.Id ?? "none");
+
+                ApplySelection();
+                ApplyCandidates();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error(ex, "Could not lay out the engine stand");
+        }
+        finally
+        {
+            _isLoadingParts = false;
+        }
+
+        if (Renderer != null && (renderer != Renderer || !IsOnStand || !ReferenceEquals(Engine, engine))) ApplyParts();
+
+        // The stand's engine may not be the one worked on here yet (the two are bound one after the other)
+        QueueApplyScenery();
+    }
+
+    /// <summary>
+    /// Out of the stand's parts view: the engine goes back into the scenery, and leaves the prop, in the same frame.
+    /// The caller lays out whatever comes next.
+    /// </summary>
+    private async Task LeaveStandAsync(GarageRenderer renderer)
+    {
+        var catalog = PartsCatalog;
+        var engine = StandEngine;
+        AcTools.Kn5File.IKn5? scenery = null;
+        var built = false;
+        _isLoadingParts = true;
+        try
+        {
+            if (catalog != null) scenery = await Task.Run(() => BuildScenery(catalog, engine, withEngine: true));
+            built = true;
+        }
+        catch (Exception ex)
+        {
+            // The scenery catches up by itself once the prop has let go
+            Logger.Error(ex, "Could not put the engine back on the stand");
+        }
+        finally
+        {
+            _isLoadingParts = false;
+        }
+
+        // Back on the stand in the meantime, or another renderer: the next run sorts it out
+        if (renderer != Renderer || IsOnStand) return;
+
+        renderer.StandActive = false;
+        renderer.SetProp(null, SlimDX.Matrix.Identity);
+        ClearCandidates(renderer);
+        if (built && ReferenceEquals(catalog, PartsCatalog)) PutScenery(renderer, scenery, (engine, true, catalog));
+        _partsOnStand = false;
+        _partsEngine = null;
+        _partNodes = Array.Empty<PlacedPart>();
+        _partWorlds = new();
+        if (_placing != null)
+        {
+            _placing = null;
+            PlacementChanged?.Invoke(null);
+        }
+
+        ShowPartLabel(null, default);
+        AnimateFor(AnimationWindow);
+        QueueApplyScenery();
+    }
+
+    private void QueueApplyScenery()
+    {
+        if (_applySceneryQueued) return;
+
+        _applySceneryQueued = true;
+        Dispatcher.InvokeAsync(() =>
+        {
+            _applySceneryQueued = false;
+            ApplyScenery();
+        });
+    }
+
+    /// <summary>Runs from property callbacks, so nothing may escape it: the garage goes on without the stand</summary>
+    private async void ApplyScenery()
+    {
+        try
+        {
+            await ApplySceneryAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error(ex, "Could not put the engine stand in the garage");
+        }
+    }
+
+    /// <summary>
+    /// The engine stand beside the car, with the engine on it but while the stand's parts view has it as the prop to
+    /// pick (<see cref="ApplyStandAsync"/>, which swaps it over with a scenery of its own)
+    /// </summary>
+    private async Task ApplySceneryAsync()
+    {
+        var renderer = Renderer;
+        if (renderer == null || _isLoadingScenery) return;
+
+        var key = SceneryKey;
+        if (ReferenceEquals(renderer, _sceneryRenderer) && _sceneryKey == key) return;
+
+        var (engine, withEngine, catalog) = key;
+        var version = _sceneryVersion;
+        _isLoadingScenery = true;
+        try
+        {
+            var kn5 = catalog == null ? null : await Task.Run(() => BuildScenery(catalog, engine, withEngine));
+
+            // The parts view put up a scenery of its own in the meantime: this one is out of date
+            if (renderer == Renderer && version == _sceneryVersion)
+            {
+                PutScenery(renderer, kn5, key);
+                AnimateFor(AnimationWindow);
+            }
+        }
+        finally
+        {
+            _isLoadingScenery = false;
+        }
+
+        if (Renderer != null && (Renderer != _sceneryRenderer || _sceneryKey != SceneryKey)) ApplyScenery();
+    }
+
+    /// <summary>What the scenery is to show now: the engine is in it unless the stand's parts view has it as the prop</summary>
+    private (InstalledPart? Engine, bool WithEngine, PartsCatalog? Catalog) SceneryKey => (StandEngine, !_partsOnStand, PartsCatalog);
+
+    private void PutScenery(GarageRenderer renderer, AcTools.Kn5File.IKn5? kn5, (InstalledPart? Engine, bool WithEngine, PartsCatalog? Catalog) key)
+    {
+        _sceneryVersion++;
+        renderer.SetScenery(kn5);
+        _sceneryRenderer = renderer;
+        _sceneryKey = key;
+    }
+
+    /// <summary>The stand, with the engine on it or not, as one model; off the UI thread</summary>
+    private static AcTools.Kn5File.IKn5 BuildScenery(PartsCatalog catalog, InstalledPart? engine, bool withEngine)
+    {
+        var headZ = EngineStandLayout.HeadZ(catalog, engine);
+        var parts = withEngine ? EngineStandLayout.Build(catalog, engine) : new List<PlacedPart>();
+        if (parts.Count == 0) return EngineStandLayout.CreateModel(headZ);
+
+        AssemblyModel model;
+        try
+        {
+            model = PartAssembler.BuildModel(catalog, "stand", parts);
+        }
+        catch (InvalidOperationException)
+        {
+            // No part of the engine has a model: the stand alone
+            return EngineStandLayout.CreateModel(headZ);
+        }
+
+        EngineStandLayout.AddTo(model.Kn5, headZ);
+        return model.Kn5;
+    }
+
+    /// <summary>Every mounted part where it belongs now: on the stand, or in the car by its hubs</summary>
+    private List<PlacedPart>? LayOut(PartsCatalog catalog)
+    {
+        if (_partsOnStand) return EngineStandLayout.Build(catalog, Engine);
+
+        return _anchors is { } anchors ? CarPartsLayout.Build(catalog, anchors, Engine, Gear) : null;
     }
 
     private static HashSet<Guid> IdsOf(IReadOnlyList<PlacedPart> nodes) =>
@@ -677,10 +1019,8 @@ public class CarViewport3D : D3DViewportBase
     {
         var renderer = Renderer;
         var catalog = PartsCatalog;
-        var anchors = _anchors;
-        if (renderer == null || catalog == null || anchors == null || !renderer.HasProp) return;
+        if (renderer == null || catalog == null || !renderer.HasProp || LayOut(catalog) is not { } placed) return;
 
-        var placed = CarPartsLayout.Build(catalog, anchors, Engine, Gear);
         var worlds = placed.Where(p => p.Source != null).ToDictionary(p => p.Source!, p => p.World);
         var moves = new List<(int Node, SlimDX.Matrix World)>();
         for (var i = 0; i < _partNodes.Count; i++)
@@ -736,7 +1076,7 @@ public class CarViewport3D : D3DViewportBase
 
         var catalog = PartsCatalog;
         var anchors = _anchors;
-        if (candidates == null || candidates.Count == 0 || catalog == null || anchors == null || !renderer.HasProp)
+        if (candidates == null || candidates.Count == 0 || catalog == null || (anchors == null && !_partsOnStand) || !renderer.HasProp)
         {
             ClearCandidates(renderer);
             return;
@@ -759,7 +1099,7 @@ public class CarViewport3D : D3DViewportBase
                     if (candidate.Parent == null && Parts.Cars.RunningGear.IsWheelSlot(candidate.ParentSlot)) continue;
 
                     var world = candidate.Parent == null
-                        ? CarPartsLayout.EnginePlacement(anchors, candidate.Part.Definition)
+                        ? anchors == null ? null : CarPartsLayout.EnginePlacement(anchors, candidate.Part.Definition)
                         : worlds.TryGetValue(candidate.Parent, out var parentWorld)
                             ? PartAssembler.ChildWorld(candidate.Parent.Definition, candidate.ParentSlot, candidate.Part.Definition, candidate.OwnSlot, parentWorld)
                             : null;
@@ -929,6 +1269,9 @@ public class CarViewport3D : D3DViewportBase
 
     protected override void OnRendererDisposed()
     {
+        _sceneryRenderer = null;
+        _sceneryKey = null;
+        _partsOnStand = false;
         _loadedCarDirectory = null;
         HasCar = false;
         HasDoors = false;
@@ -986,7 +1329,14 @@ public class CarViewport3D : D3DViewportBase
     protected override void OnMouseLeave(System.Windows.Input.MouseEventArgs e)
     {
         base.OnMouseLeave(e);
-        if (Renderer != null) Renderer.HoveredPart = null;
+        if (Renderer != null)
+        {
+            Renderer.HoveredPart = null;
+            Renderer.SceneryHovered = false;
+            Renderer.CarHovered = false;
+        }
+
+        Cursor = null;
         InvalidateIfDirty();
         ShowPartLabel(null, default);
     }
@@ -998,24 +1348,75 @@ public class CarViewport3D : D3DViewportBase
 
     private void UpdateHover(System.Windows.Point position)
     {
-        if (Renderer is not { HasProp: true } || !PartsVisible) return;
+        if (Renderer == null) return;
 
         // Picking tests triangles on the CPU; the pointer moves more often than it needs to be asked
         var now = DateTime.Now;
         if (now - _lastHoverPick < HoverInterval) return;
         _lastHoverPick = now;
 
-        var hit = PickAt(position);
+        var hit = Renderer.HasProp && PartsVisible ? PickAt(position) : null;
+
+        // The stand beside the car, while it is not the one being worked on, and the car while the stand is: a way over
+        var onStand = hit == null && !IsOnStand && HitsStand(position);
+        var onCar = hit == null && IsOnStand && HitsCar(position);
+        Renderer.SceneryHovered = onStand;
+        Renderer.CarHovered = onCar;
+        Cursor = onStand || onCar ? System.Windows.Input.Cursors.Hand : null;
+        if (onStand || onCar)
+        {
+            Renderer.HoveredPart = null;
+            InvalidateIfDirty();
+            ShowLabel(onStand ? "Engine stand" : "Back to the car", position);
+            return;
+        }
+
+        if (Renderer is not { HasProp: true } || !PartsVisible)
+        {
+            InvalidateIfDirty();
+            ShowPartLabel(null, default);
+            return;
+        }
+
         Renderer.HoveredPart = hit;
         InvalidateIfDirty();
         ShowPartLabel(hit == null ? null : DefinitionOf(hit.Value), position);
     }
 
+    private bool HitsStand(System.Windows.Point position) =>
+        Renderer != null && ActualWidth > 0 && ActualHeight > 0
+        && Renderer.HitsScenery((float)(position.X / ActualWidth), (float)(position.Y / ActualHeight));
+
+    private bool HitsCar(System.Windows.Point position) =>
+        Renderer != null && ActualWidth > 0 && ActualHeight > 0
+        && Renderer.HitsCar((float)(position.X / ActualWidth), (float)(position.Y / ActualHeight));
+
     private void OnClick(System.Windows.Point position)
     {
+        if (Renderer == null) return;
+
+        var partHit = Renderer.HasProp && PartsVisible ? PickAt(position) : null;
+        if (partHit == null && !IsOnStand && HitsStand(position))
+        {
+            Renderer.SceneryHovered = false;
+            Cursor = null;
+            ShowPartLabel(null, default);
+            StandClicked?.Invoke();
+            return;
+        }
+
+        if (partHit == null && IsOnStand && HitsCar(position))
+        {
+            Renderer.CarHovered = false;
+            Cursor = null;
+            ShowPartLabel(null, default);
+            CarClicked?.Invoke();
+            return;
+        }
+
         if (Renderer is not { HasProp: true } || !PartsVisible) return;
 
-        var hit = PickAt(position);
+        var hit = partHit;
         if (hit is { Layer: PartLayer.Candidate } candidate && candidate.Node < _candidateNodes.Count)
         {
             if (ReferenceEquals(_shownCandidates, Candidates)) CandidateClicked?.Invoke(_candidateNodes[candidate.Node]);
@@ -1043,7 +1444,7 @@ public class CarViewport3D : D3DViewportBase
         var orbit = Renderer?.CameraOrbit;
         if (orbit == null) return;
 
-        var minRadius = Renderer!.HasProp ? PartsMinRadius : MinRadius;
+        var minRadius = IsOnStand ? StandMinRadius : Renderer!.HasProp ? PartsMinRadius : MinRadius;
         orbit.Radius = Math.Clamp(orbit.Radius - e.Delta * 0.002f, minRadius, MaxRadius);
         _radiusGoal = orbit.Radius;
         Invalidate();

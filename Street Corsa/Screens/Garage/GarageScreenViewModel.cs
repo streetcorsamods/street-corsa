@@ -345,11 +345,9 @@ namespace StreetCorsa.Screens.Garage
                     if (!string.IsNullOrEmpty(_gameState.SaveName)) gameStateRepo.Save(_gameState, _gameState.SaveName);
                 },
                 spendMinutes: minutes => _timeService.SpendTimeAsync(_gameState, minutes));
-            // A new engine tree is a new engine to start: parts went on or came off
-            Workbench.PropertyChanged += (_, e) =>
-            {
-                if (e.PropertyName == nameof(PartsWorkbenchViewModel.Engine)) RefreshEngine();
-            };
+            // Parts went on or came off the car: its engine is another one to start. Work on the stand's engine,
+            // and switching between the views, leave the car's engine alone
+            Workbench.CarEngineChanged += RefreshEngine;
             Workbench.StateChanged += () =>
             {
                 RefreshCalendarDisplay();
