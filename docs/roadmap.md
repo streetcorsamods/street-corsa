@@ -811,7 +811,7 @@ milestones, victory paths, newspaper and talk included; ids namespaced by mod wi
 - Not done: the dealer map picture is still a compiled resource (a mod's dealers need pins on the LA map); the
   garage's `slot_shifts.json` is one base-game file; mod problems are in the log only, not shown in the game.
 
-### Step 17: the engine stand (done, PR #32)
+### Step 17: the engine stand (done, PR #32, merged as `86daf2f`)
 Idea 3. Peripherals, manifolds and even the heads can be worked on in the car; the internals only on a stand, and in
 the proper order: no crankshaft before the rods and pistons are out.
 
