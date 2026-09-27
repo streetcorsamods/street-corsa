@@ -46,22 +46,28 @@ public static class PartAssembler
         }
     }
 
-    /// <summary>Where a part ends up when one of its slots is brought onto a slot of a placed part; null when either slot is not there</summary>
+    /// <summary>
+    /// Where a part ends up when one of its slots is brought onto a slot of a placed part; null when either slot is not
+    /// there. Each part is drawn at its own <see cref="PartDefinition.ModelScale"/>: the parent's scale moves its slot,
+    /// it does not grow the child, so a part made at the right size stays that size on a scaled one.
+    /// </summary>
     public static Matrix4x4? ChildWorld(PartDefinition parent, int parentSlotId, PartDefinition child, int childSlotId, Matrix4x4 parentWorld)
     {
         var parentSlot = parent.Slots.FirstOrDefault(s => s.Id == parentSlotId);
         var childSlot = child.Slots.FirstOrDefault(s => s.Id == childSlotId);
-        if (parentSlot == null || childSlot == null || !Matrix4x4.Invert(SlotMatrix(childSlot), out var childSlotInverse)) return null;
+        if (parentSlot == null || childSlot == null || !Matrix4x4.Invert(SlotMatrix(childSlot, child.ModelScale), out var childSlotInverse)) return null;
 
-        return childSlotInverse * SlotMatrix(parentSlot) * parentWorld;
+        var parentPose = Matrix4x4.CreateScale(1f / parent.ModelScale) * parentWorld;
+        return Matrix4x4.CreateScale(child.ModelScale) * childSlotInverse * SlotMatrix(parentSlot, parent.ModelScale) * parentPose;
     }
 
     /// <summary>Name of the node a part gets in a merged model</summary>
     public static string NodeName(int index) => $"part{index}";
 
-    public static Matrix4x4 SlotMatrix(PartSlot slot) =>
+    /// <param name="scale">The scale the slot's part is drawn at: it moves the slot, it does not turn it</param>
+    public static Matrix4x4 SlotMatrix(PartSlot slot, float scale = 1f) =>
         Matrix4x4.CreateFromYawPitchRoll(slot.Rotation[0], slot.Rotation[1], slot.Rotation[2]) *
-        Matrix4x4.CreateTranslation(slot.Position[0], slot.Position[1], slot.Position[2]);
+        Matrix4x4.CreateTranslation(slot.Position[0] * scale, slot.Position[1] * scale, slot.Position[2] * scale);
 
     public static AssemblyModel BuildModel(PartsCatalog catalog, string name, IEnumerable<PlacedPart> parts)
     {

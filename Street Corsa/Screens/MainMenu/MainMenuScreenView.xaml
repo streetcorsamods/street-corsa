@@ -13,8 +13,8 @@
     <Grid Background="Black">
         <Grid.RowDefinitions>
             <RowDefinition Height="20*"/>
-            <RowDefinition Height="26*"/>
-            <RowDefinition Height="54*"/>
+            <RowDefinition Height="36*"/>
+            <RowDefinition Height="44*"/>
         </Grid.RowDefinitions>
 
         <!-- The picture the screen had before, only when there is no showroom to show: while one loads the screen is black -->
@@ -28,6 +28,9 @@
                                      Grid.RowSpan="2"
                                      Cars="{Binding ShowcaseCars}"
                                      Scenes="{Binding ShowcaseScenes}"/>
+
+        <!-- The cars a shade darker, so they stay behind the menu -->
+        <Rectangle Grid.Row="1" Grid.RowSpan="2" Fill="#26000000" IsHitTestVisible="False"/>
 
         <!-- The fade to black the menu stands in -->
         <Rectangle Grid.Row="0" Fill="Black" IsHitTestVisible="False"/>
@@ -75,7 +78,7 @@
                     Orientation="Horizontal"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Top"
-                    Margin="0,28,0,0"
+                    Margin="0,60,0,0"
                     Opacity="0">
             <StackPanel.RenderTransform>
                 <TranslateTransform/>
@@ -84,12 +87,12 @@
                     Background="{StaticResource LoadGameButtonBrush}"
                     Command="{Binding LoadGameCommand}"
                     Content="LOAD GAME"
-                    Margin="0,0,50,0"/>
+                    Margin="0,0,36,0"/>
             <Button Style="{StaticResource MenuButtonStyle}"
                     Background="{StaticResource NewGameButtonBrush}"
                     Command="{Binding NewGameCommand}"
                     Content="NEW GAME"
-                    Margin="0,0,50,0"/>
+                    Margin="0,0,36,0"/>
             <Button Style="{StaticResource MenuButtonStyle}"
                     Background="{StaticResource SettingsButtonBrush}"
                     Command="{Binding SettingsCommand}"

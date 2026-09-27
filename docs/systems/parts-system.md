@@ -515,6 +515,14 @@ by mail order (the engine packs plus whatever else the builds use), and selling 
 goes on any slot of the selected car's tree, taken slots included). New price is the script's `value`; a used part is
 worth `value x tear x (0.3 + 0.7 x wear)` as in SLRR, ads ask around 60% of that, a trade-in pays 40%.
 `AppSettings.PartsPriceScale` (0.2) brings the scripts' early-2000s dollars to the game's 1970 ones.
+`model_scales.json`, next to the packs, draws some part models bigger in the garage, by part id prefix (the longest
+that fits wins, 0.5 to 2): the ported SLRR packs at 1.2 and their brakes at 1.35 (the user's call, 2026-09-26: the parts
+looked small next to AC's cars, the discs most). A part it does not name, like a mod's made at the right size, is drawn
+as made. The scale is the part's own (`PartDefinition.ModelScale`): the engine grows around its crankshaft, a
+wheel-side part around its slot, and a scaled part moves the slots on it without growing what is mounted there
+(`PartAssembler.ChildWorld`). Slot shifts stay in the part's own units. Measured on 2026-09-26, the models are about real size: the GM small blocks 0.74 × 0.54 × 0.34 m, the big
+Mopar and Ford blocks 0.75 × 0.63 m, the stock disc 0.265 m, a four-barrel 0.26 × 0.17 m; only the stock coil spring
+(0.28 m tall, 0.095 m across) is small.
 
 `catalog.db` is opened per call and exclusively; with parts work running in the background the two catalog repositories
 now take turns through `CatalogDatabase.Open` (a semaphore, given back when the connection is disposed, whatever

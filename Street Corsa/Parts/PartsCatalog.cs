@@ -137,12 +137,41 @@ public sealed class PartsCatalog
             catalog._problems.Add($"{EngineBuild.FileName}: {ex.Message}; no engine builds");
         }
 
+        var scalesFile = Path.Combine(root, PartPack.ModelScalesFileName);
+        try
+        {
+            if (File.Exists(scalesFile))
+            {
+                var scales = JsonConvert.DeserializeObject<Dictionary<string, float>>(File.ReadAllText(scalesFile)) ?? new();
+                foreach (var (prefix, scale) in scales.Where(s => !IsModelScale(s.Value)))
+                    catalog._problems.Add($"{PartPack.ModelScalesFileName}: {prefix} at {scale} is out of 0.5 to 2; left out");
+                ApplyModelScales(catalog._parts.Values, scales.Where(s => IsModelScale(s.Value)));
+            }
+        }
+        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+        {
+            catalog._problems.Add($"{PartPack.ModelScalesFileName}: {ex.Message}; every part drawn at its own size");
+        }
+
         // Slots nudged into place in the garage since the last conversion
         catalog.Shifts = SlotShifts.Load(root);
         if (catalog.Shifts.Problem != null) catalog._problems.Add(catalog.Shifts.Problem);
         catalog.Shifts.ApplyTo(catalog._parts);
 
         return catalog;
+    }
+
+    private static bool IsModelScale(float scale) => float.IsFinite(scale) && scale >= 0.5f && scale <= 2f;
+
+    /// <summary>Each part gets the scale of the longest id prefix that fits it; one that none fits keeps its own size</summary>
+    public static void ApplyModelScales(IEnumerable<PartDefinition> parts, IEnumerable<KeyValuePair<string, float>> scales)
+    {
+        var byLength = scales.OrderByDescending(s => s.Key.Length).ToList();
+        foreach (var part in parts)
+        {
+            var match = byLength.FirstOrDefault(s => part.Id.StartsWith(s.Key, StringComparison.OrdinalIgnoreCase));
+            part.ModelScale = match.Key == null ? 1f : match.Value;
+        }
     }
 
     /// <summary>Slots moved after conversion (the garage's placement mode); already applied to the parts</summary>

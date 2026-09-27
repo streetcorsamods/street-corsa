@@ -15,9 +15,12 @@ MainMenu ──▶ card: New Game ──▶ Garage
 - **The cars** fill the bottom 80% of the window (`ShowcaseViewport3D`, rows 1–2 of the view's grid). The frame is
   wide, about 2.2:1 on a 16:9 screen, so the car on show sits in the lower middle of the screen, clear of the menu.
 - **The fade to black** is at the top (user's change, 2026-09-25): solid black down to 20% of the height, then fading
-  out by 46%. The menu and the cards stand in it.
+  out by 56% (46% until the user's tweak of 2026-09-26). The menu and the cards stand in it. Below it the cars are
+  a shade darker (15% black), so they stay behind the menu.
 - **The menu** is the three round badges (Load Game, New Game, Settings) in a row, each labelled under it
-  (`MenuButtonStyle` in `Styles/Buttons.xaml`). A badge lifts and glows gold under the pointer.
+  (`MenuButtonStyle` in `Styles/Buttons.xaml`), 60 px from the top. A badge lifts and glows gold under the pointer.
+  The badges are 116 px (160 px, 28 px from the top, until the user's tweak of 2026-09-26: "the cars should not take
+  all the attention").
 - **A card** (`MenuCardStyle`) is dark glass with a thin edge. It hangs from the top, over the fade, and a tall card
   (New Game) reaches down over the cars. The menu fades out and lifts away, then the card drops in. Back or Esc reverses it (Esc is caught at the
   window, since the clicked badge is hidden and takes the focus out of the screen; not while a dialog is up). Only one

@@ -725,6 +725,17 @@ mod-ready instead of retrofitted. One step at a time, in this order.
   the hub constants (a bigger engine may need to sit further back), `PlaceholderMesh.HalfSize`, `PartTravel`,
   `PartsMinRadius`. If it looks right, make it permanent in the converter (mesh and cfg positions together).
 
+**Built on `feature/polish` (2026-09-26):**
+- The main screen: 116 px badges (were 160), 60 px from the top (were 28), closer together; the fade reaches 56% of
+  the height (was 46%); the cars under it 15% darker. See `docs/screens/main-screen.md`.
+- **Measured: the parts are about real size**, not small. GM small blocks 0.74 × 0.54 × 0.34 m (a real one is about
+  0.6 × 0.5 × 0.33 m, so a little large already), the big Mopar and Ford blocks 0.75 × 0.63 m, the stock disc 0.265 m
+  (about 11"), a four-barrel 0.26 × 0.17 m. Only the stock coil spring is small (0.28 m tall, 0.095 m across; real
+  about 0.35 × 0.13 m). The user tried 1.2 and liked it, the discs still small, and decided (2026-09-26) the rule is
+  for the ported models only: modders are expected to ship parts at the right size for AC. So it is data, not the
+  converter: `Assets/Parts/model_scales.json` scales parts by id prefix (`engines/`, `exhaust/`, `suspension/` 1.2,
+  `brakes/` 1.35); each part keeps its own scale, so an unscaled mod part on a scaled block stays its size.
+
 ### Step 16: everything moddable
 Idea 7. The game goes open source: the community should be able to drop a mod into a folder and have the game pick it
 up, and saves must survive mods coming and going.

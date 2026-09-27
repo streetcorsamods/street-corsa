@@ -16,6 +16,13 @@ public class PartPack
     /// </summary>
     public const string AliasesFileName = "part_aliases.json";
 
+    /// <summary>
+    /// Next to the packs: how big the models of some parts are drawn, by part id prefix (the longest that fits wins),
+    /// e.g. <c>{ "engines/": 1.2, "brakes/stock/disc_brake": 1.35 }</c>. For the ported SLRR packs, which look small
+    /// in AC's cars; a part it does not name is drawn at the size it was made.
+    /// </summary>
+    public const string ModelScalesFileName = "model_scales.json";
+
     /// <summary>Pack id, also its folder under the parts root, e.g. "engines/Mopar"</summary>
     [JsonProperty("id")]
     public string Id { get; set; } = string.Empty;
@@ -112,6 +119,13 @@ public class PartDefinition
 
     [JsonProperty("slots")]
     public List<PartSlot> Slots { get; set; } = new();
+
+    /// <summary>
+    /// How big the model is drawn against the size it was made at, slot positions with it
+    /// (<see cref="PartPack.ModelScalesFileName"/>); what is mounted on the part keeps its own
+    /// </summary>
+    [JsonIgnore]
+    public float ModelScale { get; set; } = 1f;
 
     /// <summary>Remaining cfg lines by keyword (category, damage, wing, wheel, ...), kept verbatim for the part logic</summary>
     [JsonProperty("config")]
