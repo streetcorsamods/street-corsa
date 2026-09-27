@@ -147,7 +147,6 @@ public class ModContentTests : IDisposable
                 { "id": "engines/gm/carb", "name": "mod carb" },
                 { "id": "engines/gm/better_block", "name": "block remade", "replaces": "engines/gm/block" } ] }
             """);
-        _temp.File("mymod/parts/model_scales.json", """{ "engines/": 1.5 }""");
         _temp.File("mymod/parts/part_aliases.json", """{ "engines/gm/old_intake": "engines/gm/intake" }""");
         _temp.File("mymod/parts/engine_builds.json", """[ { "id": "kits/hot", "name": "Hot", "parts": [ { "part": "engines/gm/block" }, { "part": "engines/gm/intake" } ] } ]""");
 
@@ -158,11 +157,9 @@ public class ModContentTests : IDisposable
         Assert.Equal("engines/gm/intake", intake.LocalId);
         Assert.Equal("engines/gm/block", intake.Slots[0].AttachesTo[0].Part); // not the mod's: it has none by that id
         Assert.Equal("mymod:engines/gm/carb", intake.Slots[1].CompatibleWith[0].Part); // the mod's own first
-        Assert.Equal(1.5f, intake.ModelScale);
         Assert.Equal(_temp.Combine("mymod", "parts", "whatever", "folder", "intake.kn5"), catalog.GetModelPath(intake));
 
         Assert.Equal("block remade", catalog.Get("engines/gm/block")!.Name);
-        Assert.Equal(1f, catalog.Get("engines/gm/carb")!.ModelScale); // the mod's scales are about its own parts
         Assert.Same(intake, catalog.Get("mymod:engines/gm/old_intake"));
         Assert.Equal(["engines/gm/block", "mymod:engines/gm/intake"], catalog.EngineBuilds.Single(b => b.Id == "mymod:kits/hot").Parts.Select(p => p.Part));
         Assert.Contains(Path.Combine(_temp.Path, "mymod", "parts", "_scripts"), catalog.Scripts.Roots);

@@ -64,8 +64,8 @@ public sealed class PartsCatalog
     /// <summary>The parts of every mod that has any, in load order; the first folder is the base game's</summary>
     /// <remarks>
     /// Every mod's parts folder is laid out as the base game's: packs (a pack.json with its models) anywhere under
-    /// it, and next to them <c>_scripts</c>, <see cref="EngineBuild.FileName"/>, <see cref="PartPack.AliasesFileName"/>
-    /// and <see cref="PartPack.ModelScalesFileName"/>, each about the mod's own parts. A mod's ids get its namespace,
+    /// it, and next to them <c>_scripts</c>, <see cref="EngineBuild.FileName"/>, and
+    /// <see cref="PartPack.AliasesFileName"/>, each about the mod's own parts. A mod's ids get its namespace,
     /// and what its files name (the parts a slot attaches to, the parts of a build, an alias) is found in the mod
     /// first, then in the base game (<see cref="ModIds.Resolve"/>).
     /// A pack that does not read is a pack that is not there, and a part without an id is no part: each is one line
@@ -84,7 +84,6 @@ public sealed class PartsCatalog
             if (!Directory.Exists(root)) continue;
 
             var label = mod.IsBase ? string.Empty : mod.Id + "/";
-            var scales = ReadModelScales(catalog, root, label);
             foreach (var file in Directory.EnumerateFiles(root, PartPack.FileName, SearchOption.AllDirectories).Order(StringComparer.OrdinalIgnoreCase))
             {
                 var packName = label + Path.GetRelativePath(root, file);
@@ -113,7 +112,6 @@ public sealed class PartsCatalog
                 }
             }
 
-            ApplyModelScales(registry.Entries.Where(e => e.Mod == mod).Select(e => e.Entry), scales);
             ReadAliases(catalog, root, label, mod, aliases);
             ReadBuilds(catalog, root, label, mod, builds);
         }
@@ -160,25 +158,6 @@ public sealed class PartsCatalog
         return catalog;
 
         string Resolve(string modId, string reference) => ModIds.Resolve(modId, reference, catalog._parts.ContainsKey);
-    }
-
-    private static List<KeyValuePair<string, float>> ReadModelScales(PartsCatalog catalog, string root, string label)
-    {
-        var scalesFile = Path.Combine(root, PartPack.ModelScalesFileName);
-        try
-        {
-            if (!File.Exists(scalesFile)) return new();
-
-            var scales = JsonConvert.DeserializeObject<Dictionary<string, float>>(File.ReadAllText(scalesFile)) ?? new();
-            foreach (var (prefix, scale) in scales.Where(s => !IsModelScale(s.Value)))
-                catalog._problems.Add($"{label}{PartPack.ModelScalesFileName}: {prefix} at {scale} is out of 0.5 to 2; left out");
-            return scales.Where(s => IsModelScale(s.Value)).ToList();
-        }
-        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
-        {
-            catalog._problems.Add($"{label}{PartPack.ModelScalesFileName}: {ex.Message}; every part drawn at its own size");
-            return new();
-        }
     }
 
     private static void ReadAliases(PartsCatalog catalog, string root, string label, ModInfo mod, List<(ModInfo, string, string)> aliases)
@@ -232,20 +211,6 @@ public sealed class PartsCatalog
         catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
         {
             catalog._problems.Add($"{label}{EngineBuild.FileName}: {ex.Message}; no engine builds from it");
-        }
-    }
-
-    private static bool IsModelScale(float scale) => float.IsFinite(scale) && scale >= 0.5f && scale <= 2f;
-
-    /// <summary>Each part gets the scale of the longest id prefix that fits it; one that none fits keeps its own size</summary>
-    public static void ApplyModelScales(IEnumerable<PartDefinition> parts, IEnumerable<KeyValuePair<string, float>> scales)
-    {
-        var byLength = scales.OrderByDescending(s => s.Key.Length).ToList();
-        foreach (var part in parts)
-        {
-            // By the id its pack gave it: a mod's scales are about its own parts
-            var match = byLength.FirstOrDefault(s => part.LocalId.StartsWith(s.Key, StringComparison.OrdinalIgnoreCase));
-            part.ModelScale = match.Key == null ? 1f : match.Value;
         }
     }
 

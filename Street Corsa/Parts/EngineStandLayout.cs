@@ -41,7 +41,7 @@ public static class EngineStandLayout
         var crankLocal = crank == null ? Vector3.Zero : new Vector3(crank.Position[0], crank.Position[1], 0f);
 
         // Turned round about Y, as in a car: part models have their front towards -Z
-        var frame = Matrix4x4.CreateScale(block.ModelScale) * Matrix4x4.CreateRotationY(MathF.PI);
+        var frame = Matrix4x4.CreateRotationY(MathF.PI);
         var origin = Spot + new Vector3(0f, CrankHeight, 0f) - Vector3.TransformNormal(crankLocal, frame);
         return frame * Matrix4x4.CreateTranslation(origin);
     }

@@ -95,10 +95,8 @@ public static class CarPartsLayout
         var crankLocal = crank == null ? DefaultCrankPosition : new Vector3(crank.Position[0], crank.Position[1], 0f);
         var crankTarget = anchors.FrontAxle - anchors.Forward * EngineBehindFrontAxle + Vector3.UnitY * CrankAboveHubs;
 
-        // A bigger model grows around its crankshaft
-        var scaled = Matrix4x4.CreateScale(block.ModelScale) * frame;
-        var origin = crankTarget - Vector3.TransformNormal(crankLocal, scaled);
-        return scaled * Matrix4x4.CreateTranslation(origin);
+        var origin = crankTarget - Vector3.TransformNormal(crankLocal, frame);
+        return frame * Matrix4x4.CreateTranslation(origin);
     }
 
     /// <summary>Places a part so that its first slot (where it meets the car) lands on a point</summary>
@@ -106,9 +104,8 @@ public static class CarPartsLayout
     {
         var slot = part.Slots.FirstOrDefault(s => s.Id == 1) ?? part.Slots.FirstOrDefault();
         var slotLocal = slot == null ? Vector3.Zero : new Vector3(slot.Position[0], slot.Position[1], slot.Position[2]);
-        var scaled = Matrix4x4.CreateScale(part.ModelScale) * frame;
-        var origin = target - Vector3.TransformNormal(slotLocal, scaled);
-        return scaled * Matrix4x4.CreateTranslation(origin);
+        var origin = target - Vector3.TransformNormal(slotLocal, frame);
+        return frame * Matrix4x4.CreateTranslation(origin);
     }
 
     /// <summary>Rotation that turns a part model (front towards -Z) to face the way the car does</summary>

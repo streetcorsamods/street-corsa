@@ -735,6 +735,7 @@ mod-ready instead of retrofitted. One step at a time, in this order.
   for the ported models only: modders are expected to ship parts at the right size for AC. So it is data, not the
   converter: `Assets/Parts/model_scales.json` scales parts by id prefix (`engines/`, `exhaust/`, `suspension/` 1.2,
   `brakes/` 1.35); each part keeps its own scale, so an unscaled mod part on a scaled block stays its size.
+  Taken out again on 2026-09-27: the user checked and the models are well sized, so every part is drawn as made.
 
 ### Step 16: everything moddable (done, PR #31, merged as `05d5231`)
 Idea 7. The game goes open source: the community should be able to drop a mod into a folder and have the game pick it

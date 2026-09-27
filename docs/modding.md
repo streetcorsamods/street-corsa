@@ -92,8 +92,7 @@ anywhere under the folder (a `pack.json` with the parts' `.kn5` models next to i
 - `engine_builds.json` — complete engines; build ids are namespaced like parts.
 - `part_aliases.json` — `{ "old id": "new id" }` for parts the mod renamed; the old id is the mod's own unless written
   in full.
-- `model_scales.json` — `{ "id prefix": scale }` for the mod's own parts (by the ids its packs give them). Ship parts
-  at AC's scale and you need none.
+- Part models are drawn at the size they were made: ship them at AC's scale (metres).
 - `work_order.json` — what comes off an engine before what (see below). Most mods need none: the base game's covers
   every kind of engine part there is.
 
