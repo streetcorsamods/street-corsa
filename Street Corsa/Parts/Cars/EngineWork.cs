@@ -68,8 +68,9 @@ public static class EngineWork
     }
 
     /// <summary>
-    /// Takes off what is in the way of bolting the engine to the stand by its bellhousing face (the transmission,
-    /// then the clutch, then the flywheel), each with whatever is on it. Returns them in that order.
+    /// Takes off what comes off an engine as it goes on the stand, kind by kind in the order of
+    /// <see cref="WorkOrder.StandStrips"/> (the radiator, then what is in the way of bolting it on by its bellhousing
+    /// face: the transmission, the clutch, the flywheel), each with whatever is on it. Returns them in that order.
     /// </summary>
     public static List<PartInstance> StripForStand(PartsCatalog catalog, PartInstance engine)
     {

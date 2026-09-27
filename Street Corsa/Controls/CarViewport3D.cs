@@ -38,6 +38,23 @@ public class CarViewport3D : D3DViewportBase
     private const float StandAlpha = 0.9f;
     private const float StandBeta = 0.32f;
 
+    // An engine on the hoist, between the car and the stand: the camera follows it from a little further out and above
+    private const float CarryRadius = 3.6f;
+    private const float CarryBeta = 0.3f;
+
+    // What comes off before the engine goes on the hoist: one part after another, each starting this long after the
+    // one before, while that one is still on its way
+    private const float StripStagger = 0.45f;
+
+    // A load on the hoist goes across with its bottom over the car's wings: this share of the car's height
+    private const float WingLine = 0.72f;
+
+    // How long into the lift the hoist has the engine's weight off the springs
+    private const float LiftTakesWeight = 0.25f;
+
+    // Parts on their way that have not got any further for this long are not waited on any more
+    private const int MotionPatienceMs = 1500;
+
     /// <summary>
     /// How quickly the camera settles on a new framing, as the share of the remaining distance it covers per
     /// second. The first car of a session is put in place at once; after that the camera moves rather than
@@ -58,6 +75,38 @@ public class CarViewport3D : D3DViewportBase
     // Back from the stand the camera glides to the car itself; the renderer's own framing, which jumps a third of the
     // way every frame, takes over once it is there
     private bool _autoAdjustWhenSettled;
+
+    // Off the stand: the camera holds on it until the car's parts say where it goes next
+    private bool _cameraWaitsOnStand;
+
+    // The camera goes after the engine on the hoist
+    private bool _followCarryValue;
+
+    private bool _followCarry
+    {
+        get => _followCarryValue;
+        set
+        {
+            _followCarryValue = value;
+            IsMovingEngine = value || _carryFromStand != null;
+        }
+    }
+
+    // The stand's engine is on its way there, on the hoist or down from above: the stand is shown without it
+    private bool _standKeptEmpty;
+
+    // The engine that has just left the stand for the car, and where it was on the stand: it goes over on the hoist
+    private (Guid Id, SlimDX.Matrix From)? _carryFromStandValue;
+
+    private (Guid Id, SlimDX.Matrix From)? _carryFromStand
+    {
+        get => _carryFromStandValue;
+        set
+        {
+            _carryFromStandValue = value;
+            IsMovingEngine = value != null || _followCarry;
+        }
+    }
 
     private string? _loadedCarDirectory;
     private System.Windows.Point _lastMouse;
@@ -109,6 +158,9 @@ public class CarViewport3D : D3DViewportBase
 
     /// <summary>The car was clicked while the stand is being worked on</summary>
     public event Action? CarClicked;
+
+    /// <summary>The engine pulled out of the car is down on the stand: the work goes on there</summary>
+    public event Action? EngineOnStand;
 
     /// <summary>
     /// Fade the viewport in by itself when the first frame is ready.
@@ -214,7 +266,10 @@ public class CarViewport3D : D3DViewportBase
 
     private void OnStandModeChanged()
     {
-        ResetCamera();
+        // Off the stand with its engine in hand: the camera stays until it is known whether that engine is going in
+        // the car, and goes after it on the hoist then, not to the car and back (LeaveStandAsync)
+        if (!StandMode && _partsOnStand) _cameraWaitsOnStand = true;
+        else ResetCamera();
         QueueApplyParts();
         QueueApplyScenery();
     }
@@ -320,6 +375,21 @@ public class CarViewport3D : D3DViewportBase
         private set => SetValue(HasDoorsPropertyKey, value);
     }
 
+    private static readonly DependencyPropertyKey IsMovingEnginePropertyKey = DependencyProperty.RegisterReadOnly(
+        nameof(IsMovingEngine), typeof(bool), typeof(CarViewport3D), new PropertyMetadata(false));
+
+    public static readonly DependencyProperty IsMovingEngineProperty = IsMovingEnginePropertyKey.DependencyProperty;
+
+    /// <summary>
+    /// True while an engine goes between the car and the stand: from the first part that comes off for it until it is
+    /// down. Nothing is to be done in the garage in the meantime.
+    /// </summary>
+    public bool IsMovingEngine
+    {
+        get => (bool)GetValue(IsMovingEngineProperty);
+        private set => SetValue(IsMovingEnginePropertyKey, value);
+    }
+
     #endregion
 
     #region Loading
@@ -398,6 +468,8 @@ public class CarViewport3D : D3DViewportBase
         _betaGoal = DefaultBeta;
         _targetGoal = null;
         _autoAdjustWhenSettled = false;
+        _followCarry = false;
+        _cameraWaitsOnStand = false;
 
         if (IsOnStand)
         {
@@ -542,6 +614,7 @@ public class CarViewport3D : D3DViewportBase
         var catalog = PartsCatalog;
         if (IsOnStand && catalog != null)
         {
+            _carryFromStand = null;
             await ApplyStandAsync(renderer, catalog);
             return;
         }
@@ -556,6 +629,8 @@ public class CarViewport3D : D3DViewportBase
 
         if (!PartsVisible || carNode == null || catalog == null || string.IsNullOrEmpty(carDirectory))
         {
+            _carryFromStand = null;
+            if (_cameraWaitsOnStand) ResetCamera();
 
             // Without a car there is nothing to dissolve back into
             if (carNode == null)
@@ -582,16 +657,24 @@ public class CarViewport3D : D3DViewportBase
         var gear = Gear;
         if (renderer.HasProp && _partsCarDirectory == carDirectory && ReferenceEquals(_partsEngine, engine) && ReferenceEquals(_partsGear, gear)) return;
 
-        var anchors = GetAnchors(carNode);
-        if (anchors == null)
-        {
-            Logger.Warning("Car has no wheel nodes to place the parts by: {Car}", carDirectory);
-            return;
-        }
+        // What this run does about an engine going between the car and the stand. The garage is locked from the moment
+        // one sets off; whatever way the run ends, the lock is let go of here unless the carry is really under way.
+        var keptStandProp = _carryFromStand != null;
+        var pulling = false;
+        var pulledDown = false;
+        var carryingIn = false;
+        var propReplaced = false;
 
         _isLoadingParts = true;
         try
         {
+            var anchors = GetAnchors(carNode);
+            if (anchors == null)
+            {
+                Logger.Warning("Car has no wheel nodes to place the parts by: {Car}", carDirectory);
+                return;
+            }
+
             var started = DateTime.Now;
 
             // Same car, other parts: what is no longer there lifts off while the new model is put together
@@ -600,28 +683,81 @@ public class CarViewport3D : D3DViewportBase
             var roots = (gear ?? Array.Empty<CarPart>()).Select(g => g.Root).Concat(engine == null ? Array.Empty<InstalledPart>() : new[] { engine });
             var after = roots.SelectMany(r => r.SelfAndDescendants()).Select(p => p.InstanceId).Where(id => id != Guid.Empty).ToHashSet();
             var leaving = before == null ? new List<int>() : NodesWhere(_partNodes, id => !after.Contains(id));
-            if (leaving.Count > 0)
+
+            // The engine pulled onto the stand: what is in the way of bolting it on comes off first, one part after
+            // another, then the hoist lifts the engine out and takes it over. The stand stays empty until it is there.
+            var pulled = before != null && _partsEngine is { } pulledEngine && StandEngine is { } standEngine && standEngine.InstanceId == pulledEngine.InstanceId
+                         && pulledEngine.InstanceId != Guid.Empty && _partWorlds.TryGetValue(pulledEngine, out var bayWorld)
+                ? (Engine: standEngine, Bay: ToSlim(bayWorld), Ids: standEngine.SelfAndDescendants().Select(p => p.InstanceId).ToHashSet())
+                : ((InstalledPart Engine, SlimDX.Matrix Bay, HashSet<Guid> Ids)?)null;
+            if (pulled is { } pull)
             {
-                renderer.MoveParts(leaving, arriving: false);
+                var strips = MovesOf(catalog, _partNodes, leaving.Where(n => !pull.Ids.Contains(_partNodes[n].Source!.InstanceId)).ToList(), StripStagger);
+                renderer.MoveParts(strips, arriving: false, NodeOf(_partNodes, _partsEngine));
+                var carriedFor = renderer.CarryParts(NodesWhere(_partNodes, pull.Ids.Contains), pull.Bay, pull.Bay,
+                    ToSlim(EngineStandLayout.EnginePlacement(catalog, pull.Engine.Definition)), ClearHeight(renderer), strips.Count * StripStagger);
+                _standKeptEmpty = true;
+                pulling = true;
+                _followCarry = true;
+                QueueApplyScenery();
+                AnimateFor(TimeSpan.FromSeconds(carriedFor) + AnimationWindow);
+
+                // The car comes up on its springs as the hoist takes the engine's weight off them
+                BumpCar(lighter: true, strips.Count * StripStagger + LiftTakesWeight);
+            }
+            else if (leaving.Count > 0)
+            {
+                renderer.MoveParts(MovesOf(catalog, _partNodes, leaving), arriving: false, NodeOf(_partNodes, _partsEngine));
                 AnimateFor(AnimationWindow);
+                if (_partsEngine is { InstanceId: var outId } && outId != Guid.Empty && !after.Contains(outId)) BumpCar(lighter: true);
             }
 
-            var (placed, model) = await Task.Run(() =>
+            var (placed, model, landed) = await Task.Run(() =>
             {
                 var parts = CarPartsLayout.Build(catalog, anchors, engine, gear);
-                return (parts, PartAssembler.BuildModel(catalog, "parts", parts));
+                return (parts, PartAssembler.BuildModel(catalog, "parts", parts), pulled is { } p ? BuildScenery(catalog, p.Engine, withEngine: true) : null);
             });
 
-            // The renderer only moves things while it draws: never wait on it for long
-            for (var waited = 0; waited < 1500 && renderer == Renderer && renderer.IsMovingParts; waited += 30) await Task.Delay(30);
+            await WaitForMotionsAsync(renderer, () => PartsVisible && !IsOnStand);
 
             // The renderer or the car may have been replaced, or the toggle flipped back, while loading
             if (renderer == Renderer && PartsVisible && !IsOnStand && _loadedCarDirectory == carDirectory)
             {
                 renderer.SetProp(model.Kn5, SlimDX.Matrix.Identity);
+                propReplaced = true;
 
-                // And what is new comes flying in
-                if (before != null) renderer.MoveParts(NodesWhere(model.Nodes, id => !before.Contains(id)), arriving: true);
+                // The engine off the hoist and onto the stand, in the same frame
+                if (pulled is { } down && landed != null && ReferenceEquals(StandEngine, down.Engine))
+                {
+                    _standKeptEmpty = false;
+                    PutScenery(renderer, landed, SceneryKey);
+                }
+
+                pulledDown = pulling;
+
+                // And what is new comes flying in, or over from the stand on the hoist
+                if (before != null)
+                {
+                    renderer.MoveParts(MovesOf(catalog, model.Nodes, NodesWhere(model.Nodes, id => !before.Contains(id))), arriving: true, NodeOf(model.Nodes, engine));
+
+                    // An engine put in settles the car on its springs as it gets there
+                    if (engine is { InstanceId: var inId } && inId != Guid.Empty && !before.Contains(inId)) BumpCar(lighter: false, GarageRenderer.PartMotionSeconds);
+                }
+                else if (_carryFromStand is { } fromStand && engine?.InstanceId == fromStand.Id && placed.FirstOrDefault(p => ReferenceEquals(p.Source, engine)) is { } block)
+                {
+                    var ids = engine.SelfAndDescendants().Select(p => p.InstanceId).ToHashSet();
+                    var bay = ToSlim(block.World);
+                    var landsIn = renderer.CarryParts(NodesWhere(model.Nodes, ids.Contains), bay, fromStand.From, bay, ClearHeight(renderer), 0f);
+                    if (landsIn > 0f)
+                    {
+                        BumpCar(lighter: false, landsIn);
+                        _cameraWaitsOnStand = false;
+                        _followCarry = true;
+                        carryingIn = true;
+                        FollowUntilDown(renderer);
+                    }
+                }
+
                 renderer.GhostCar = true;
                 _partsCarDirectory = carDirectory;
                 _partsEngine = engine;
@@ -647,18 +783,101 @@ public class CarViewport3D : D3DViewportBase
         }
         catch (Exception ex)
         {
-            // The garage works fine without the parts view, so just leave it off
+            // The garage works fine without the parts view, so just leave it off. What is on screen is the layout from
+            // before, maybe with an engine on its way out of it: it goes too, and the next change lays the parts out anew.
             Logger.Error(ex, "Could not lay out the parts");
+            if (renderer == Renderer)
+            {
+                renderer.SetProp(null, SlimDX.Matrix.Identity);
+                propReplaced = true;
+                ForgetParts();
+            }
+
+            pulledDown = false;
+            carryingIn = false;
         }
         finally
         {
             _isLoadingParts = false;
+            _carryFromStand = null;
+
+            // The engine from the stand was kept in sight for a carry that never came: nothing is to show it there now
+            if (keptStandProp && !propReplaced && renderer == Renderer && !IsOnStand) renderer.SetProp(null, SlimDX.Matrix.Identity);
+
+            // The engine from the stand did not go over on the hoist after all: the camera goes to the car
+            if (_cameraWaitsOnStand) ResetCamera();
+            if (_standKeptEmpty)
+            {
+                // Put down short of the stand: the stand gets its engine back all the same
+                _standKeptEmpty = false;
+                QueueApplyScenery();
+            }
         }
+
+        // Down on the stand: the work goes over there, the camera already is
+        if (pulledDown && _partsEngine == null && PartsVisible && !IsOnStand)
+        {
+            _followCarry = false;
+            EngineOnStand?.Invoke();
+            if (!IsOnStand) ResetCamera();
+        }
+
+        // Anything else that set off with the engine let go of it on the way (the parts view shut, the layout failed,
+        // another car): back to the car, and the garage is free again. A carry into the car lets go once it is down.
+        else if (pulling && !carryingIn) ResetCamera();
 
         // Catch up with whatever changed in the meantime, a renderer rebuilt under it included (device lost, or a
         // quick unload and load): its own load found this run in progress and left the parts to it
         if (Renderer != null && (renderer != Renderer || !PartsVisible || IsOnStand || _loadedCarDirectory != carDirectory || !ReferenceEquals(Engine, engine) || !ReferenceEquals(Gear, gear))) ApplyParts();
     }
+
+    /// <summary>The parts on screen are none: whatever is bound next is laid out from scratch</summary>
+    private void ForgetParts()
+    {
+        _partsCarDirectory = null;
+        _partsEngine = null;
+        _partsGear = null;
+        _partNodes = Array.Empty<PlacedPart>();
+        _partWorlds = new();
+        ShowPartLabel(null, default);
+        if (_placing != null)
+        {
+            _placing = null;
+            PlacementChanged?.Invoke(null);
+        }
+    }
+
+    /// <summary>
+    /// Waits for the parts on their way to get there, while <paramref name="stillWanted"/> and the renderer is the same.
+    /// They move only while the renderer draws, and slower than the clock when the frames come slowly: the wait is
+    /// given up on only once they have stopped getting anywhere for a while (the viewport out of sight).
+    /// </summary>
+    private async Task WaitForMotionsAsync(GarageRenderer renderer, Func<bool> stillWanted)
+    {
+        var left = renderer.MotionSecondsLeft;
+        for (var stalled = 0; stalled < MotionPatienceMs && renderer == Renderer && renderer.IsMovingParts && stillWanted(); )
+        {
+            await Task.Delay(30);
+            var now = renderer.MotionSecondsLeft;
+            stalled = now < left ? 0 : stalled + 30;
+            left = now;
+        }
+    }
+
+    /// <summary>The camera goes after the engine on the hoist until it is down in the car, then frames the car again</summary>
+    private async void FollowUntilDown(GarageRenderer renderer)
+    {
+        while (renderer == Renderer && _followCarry && renderer.IsMovingParts) await Task.Delay(30);
+
+        if (renderer != Renderer || !_followCarry) return;
+
+        _followCarry = false;
+        ResetCamera();
+    }
+
+    /// <summary>How high the bottom of a load on the hoist has to be to go over the car</summary>
+    private static float ClearHeight(GarageRenderer renderer) =>
+        renderer.MainSlot.GetCarBoundingBox() is { } box ? box.Maximum.Y * WingLine : 1f;
 
     /// <summary>
     /// The stand's parts view: <see cref="Engine"/>, the one on the stand, becomes the prop to pick and mount on, and
@@ -677,10 +896,15 @@ public class CarViewport3D : D3DViewportBase
             // Same stand, other parts: what is no longer there lifts off while the new model is put together
             var before = renderer.HasProp && _partsOnStand ? IdsOf(_partNodes) : null;
             var after = engine == null ? new HashSet<Guid>() : engine.SelfAndDescendants().Select(p => p.InstanceId).Where(id => id != Guid.Empty).ToHashSet();
+
+            // An engine the stand did not have (off the shelf) comes down onto it from above: the stand stays empty
+            // until it does
+            var dropIn = before == null && engine != null && _sceneryKey is { } shown && shown.Engine?.InstanceId != engine.InstanceId;
+            if (dropIn) _standKeptEmpty = true;
             var leaving = before == null ? new List<int>() : NodesWhere(_partNodes, id => !after.Contains(id));
             if (leaving.Count > 0)
             {
-                renderer.MoveParts(leaving, arriving: false);
+                renderer.MoveParts(MovesOf(catalog, _partNodes, leaving), arriving: false, NodeOf(_partNodes, _partsEngine));
                 AnimateFor(AnimationWindow);
             }
 
@@ -695,7 +919,7 @@ public class CarViewport3D : D3DViewportBase
                 return (parts, model.Kn5, model.Nodes, standAlone);
             });
 
-            for (var waited = 0; waited < 1500 && renderer == Renderer && renderer.IsMovingParts; waited += 30) await Task.Delay(30);
+            await WaitForMotionsAsync(renderer, () => true);
 
             if (renderer == Renderer && IsOnStand)
             {
@@ -703,7 +927,8 @@ public class CarViewport3D : D3DViewportBase
                 renderer.StandActive = true;
                 renderer.GhostCar = false;
                 renderer.SetProp(kn5, SlimDX.Matrix.Identity);
-                if (before != null) renderer.MoveParts(NodesWhere(nodes, id => !before.Contains(id)), arriving: true);
+                if (before != null) renderer.MoveParts(MovesOf(catalog, nodes, NodesWhere(nodes, id => !before.Contains(id))), arriving: true, NodeOf(nodes, engine));
+                else if (dropIn) renderer.MoveParts(new[] { new PartMove(Enumerable.Range(0, nodes.Count).ToList(), new[] { PartWay.Up }) }, arriving: true, NodeOf(nodes, engine));
                 PutScenery(renderer, scenery, (engine, false, catalog));
                 _partsOnStand = true;
                 _partsCarDirectory = null;
@@ -734,6 +959,7 @@ public class CarViewport3D : D3DViewportBase
         finally
         {
             _isLoadingParts = false;
+            _standKeptEmpty = false;
         }
 
         if (Renderer != null && (renderer != Renderer || !IsOnStand || !ReferenceEquals(Engine, engine))) ApplyParts();
@@ -750,6 +976,10 @@ public class CarViewport3D : D3DViewportBase
     {
         var catalog = PartsCatalog;
         var engine = StandEngine;
+
+        // Only an engine going in the car keeps the camera on the stand: it goes after it once the hoist has it
+        var installing = _partsEngine is { InstanceId: var goingId } && goingId != Guid.Empty && engine == null && Engine?.InstanceId == goingId && PartsVisible && catalog != null;
+        if (_cameraWaitsOnStand && !installing) ResetCamera();
         AcTools.Kn5File.IKn5? scenery = null;
         var built = false;
         _isLoadingParts = true;
@@ -771,8 +1001,14 @@ public class CarViewport3D : D3DViewportBase
         // Back on the stand in the meantime, or another renderer: the next run sorts it out
         if (renderer != Renderer || IsOnStand) return;
 
+        // The engine on the stand has gone in the car: it stays in sight until the car's parts are ready, and goes
+        // over on the hoist from where it is
+        _carryFromStand = null;
+        if (_partsEngine is { InstanceId: var id } standEngine && id != Guid.Empty && StandEngine == null && Engine?.InstanceId == id && PartsVisible && catalog != null)
+            _carryFromStand = (id, ToSlim(EngineStandLayout.EnginePlacement(catalog, standEngine.Definition)));
+
         renderer.StandActive = false;
-        renderer.SetProp(null, SlimDX.Matrix.Identity);
+        if (_carryFromStand == null) renderer.SetProp(null, SlimDX.Matrix.Identity);
         ClearCandidates(renderer);
         if (built && ReferenceEquals(catalog, PartsCatalog)) PutScenery(renderer, scenery, (engine, true, catalog));
         _partsOnStand = false;
@@ -850,7 +1086,7 @@ public class CarViewport3D : D3DViewportBase
     }
 
     /// <summary>What the scenery is to show now: the engine is in it unless the stand's parts view has it as the prop</summary>
-    private (InstalledPart? Engine, bool WithEngine, PartsCatalog? Catalog) SceneryKey => (StandEngine, !_partsOnStand, PartsCatalog);
+    private (InstalledPart? Engine, bool WithEngine, PartsCatalog? Catalog) SceneryKey => (StandEngine, !_partsOnStand && !_standKeptEmpty, PartsCatalog);
 
     private void PutScenery(GarageRenderer renderer, AcTools.Kn5File.IKn5? kn5, (InstalledPart? Engine, bool WithEngine, PartsCatalog? Catalog) key)
     {
@@ -898,6 +1134,47 @@ public class CarViewport3D : D3DViewportBase
         Enumerable.Range(0, nodes.Count)
             .Where(i => nodes[i].Source is { } source && source.InstanceId != Guid.Empty && test(source.InstanceId))
             .ToList();
+
+    /// <summary>
+    /// Nodes on their way, as the moves they make: a part comes off the way its kind does, and what is on it goes
+    /// along, so an engine lifts out whole. With a <paramref name="stagger"/> they go one after another, in the order
+    /// an engine is stripped for the stand.
+    /// </summary>
+    private static List<PartMove> MovesOf(PartsCatalog catalog, IReadOnlyList<PlacedPart> nodes, List<int> moving, float stagger = 0f)
+    {
+        var order = catalog.WorkOrder;
+        var ids = moving.Select(i => nodes[i].Source!.InstanceId).ToHashSet();
+        return moving
+            .GroupBy(i => TopOf(nodes[i].Source!))
+            .OrderBy(g => order.KindOf(g.Key.Definition) is { } kind ? order.StandStripTurnOf(kind) : int.MaxValue)
+            .Select((g, turn) => new PartMove(g.ToList(), order.WayOf(g.Key.Definition), turn * stagger))
+            .ToList();
+
+        InstalledPart TopOf(InstalledPart part)
+        {
+            while (part.Parent is { } parent && ids.Contains(parent.InstanceId)) part = parent;
+            return part;
+        }
+    }
+
+    private static SlimDX.Matrix ToSlim(System.Numerics.Matrix4x4 m) => new()
+    {
+        M11 = m.M11, M12 = m.M12, M13 = m.M13, M14 = m.M14,
+        M21 = m.M21, M22 = m.M22, M23 = m.M23, M24 = m.M24,
+        M31 = m.M31, M32 = m.M32, M33 = m.M33, M34 = m.M34,
+        M41 = m.M41, M42 = m.M42, M43 = m.M43, M44 = m.M44
+    };
+
+    /// <summary>The node of a part; null when it has none, or there is no part</summary>
+    private static int? NodeOf(IReadOnlyList<PlacedPart> nodes, InstalledPart? part)
+    {
+        for (var i = 0; part != null && i < nodes.Count; i++)
+        {
+            if (ReferenceEquals(nodes[i].Source, part)) return i;
+        }
+
+        return null;
+    }
 
     #region Placement mode
 
@@ -1027,13 +1304,7 @@ public class CarViewport3D : D3DViewportBase
         {
             if (_partNodes[i].Source is { } source && worlds.TryGetValue(source, out var m))
             {
-                moves.Add((i, new SlimDX.Matrix
-                {
-                    M11 = m.M11, M12 = m.M12, M13 = m.M13, M14 = m.M14,
-                    M21 = m.M21, M22 = m.M22, M23 = m.M23, M24 = m.M24,
-                    M31 = m.M31, M32 = m.M32, M33 = m.M33, M34 = m.M34,
-                    M41 = m.M41, M42 = m.M42, M43 = m.M43, M44 = m.M44
-                }));
+                moves.Add((i, ToSlim(m)));
             }
         }
 
@@ -1256,6 +1527,16 @@ public class CarViewport3D : D3DViewportBase
 
     protected override bool StepFrame(GarageRenderer renderer, float dt)
     {
+        if (_followCarry && renderer.CarriedCentre is { } load)
+        {
+            renderer.AutoAdjustTarget = false;
+            _autoAdjustWhenSettled = false;
+            _targetGoal = load;
+            _radiusGoal = CarryRadius;
+            _alphaGoal = StandAlpha;
+            _betaGoal = CarryBeta;
+        }
+
         // The renderer turns the car by itself a little further every tick: it has to keep drawing for that
         var cameraMoving = StepCamera(dt);
         return cameraMoving || renderer.AutoRotate;
@@ -1269,6 +1550,8 @@ public class CarViewport3D : D3DViewportBase
 
     protected override void OnRendererDisposed()
     {
+        _followCarry = false;
+        _carryFromStand = null;
         _sceneryRenderer = null;
         _sceneryKey = null;
         _partsOnStand = false;

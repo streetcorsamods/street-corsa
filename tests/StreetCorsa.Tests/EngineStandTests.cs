@@ -101,7 +101,7 @@ public sealed class EngineStandTests : IDisposable
         var taken = EngineWork.StripForStand(catalog, engine);
 
         // One at a time, in the order they come off a real engine; the radiator stays with the car
-        Assert.Equal(new[] { "transmission", "clutch", "flywheel", "radiator" }, taken.Select(p => catalog.WorkOrder.KindOf(catalog.Get(p.DefinitionId)!)));
+        Assert.Equal(new[] { "radiator", "transmission", "clutch", "flywheel" }, taken.Select(p => catalog.WorkOrder.KindOf(catalog.Get(p.DefinitionId)!)));
         Assert.All(taken, p => Assert.Empty(p.Children));
         Assert.DoesNotContain(engine.SelfAndDescendants(), p => taken.Contains(p));
     }
@@ -291,5 +291,79 @@ public sealed class EngineStandTests : IDisposable
         Assert.Equal(2, problems.Count);
         Assert.Contains(problems, p => p.StartsWith("mymod/work_order.json: fan has a rule already", StringComparison.Ordinal));
         Assert.Contains(problems, p => p.Contains("without a kind", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Every_kind_says_which_way_it_comes_off()
+    {
+        var order = Catalog.Value.WorkOrder;
+        var engine = Engine("camaro_mk2/0006/stock");
+
+        foreach (var part in engine.SelfAndDescendants().Select(p => Catalog.Value.Get(p.DefinitionId)!).Where(d => order.KindOf(d) != null))
+            Assert.NotEmpty(order.WayOf(part));
+
+        // The gearbox slides off the input shaft before it drops; the engine lifts out
+        Assert.Equal(new[] { PartWay.Back, PartWay.Down }, order.WayOf(Catalog.Value.Get(Find(engine, "transmission").DefinitionId)!));
+        Assert.Equal(new[] { PartWay.Up }, order.WayOf(Catalog.Value.Get(engine.DefinitionId)!));
+    }
+
+    [Fact]
+    public void A_mod_may_change_the_way_a_kind_comes_off()
+    {
+        _temp.File("base/work_order.json", """
+            { "kinds": [ { "id": "fan", "names": [ "fan" ], "comes_off": [ "up" ] }, { "id": "belt", "names": [ "belt" ], "comes_off": [ "forward" ] } ] }
+            """);
+        _temp.File("mod/work_order.json", """
+            { "kinds": [ { "id": "fan", "names": [ "propeller" ], "comes_off": [ "Back", "sideways" ] }, { "id": "belt", "names": [ "fan belt" ] } ] }
+            """);
+
+        var problems = new List<string>();
+        var order = WorkOrder.Load(new[] { ("streetcorsa", true, Path.Combine(_temp.Path, "base")), ("mymod", false, Path.Combine(_temp.Path, "mod")) }, problems);
+
+        Assert.Equal(new[] { PartWay.Back }, order.WayOf(new PartDefinition { Name = "Cooling fan" }));
+        Assert.Equal(new[] { PartWay.Forward }, order.WayOf(new PartDefinition { Name = "Drive belt" }));
+        Assert.Empty(order.WayOf(new PartDefinition { Name = "Fantastic widget" }));
+        Assert.Contains(problems, p => p.StartsWith("mymod/work_order.json: fan comes off \"sideways\"", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void A_way_that_does_not_read_leaves_the_way_as_it_was()
+    {
+        _temp.File("base/work_order.json", """
+            { "kinds": [ { "id": "fan", "names": [ "fan" ], "comes_off": [ "up" ] }, { "id": "belt", "names": [ "belt" ], "comes_off": [ "forward" ] },
+                         { "id": "pump", "names": [ "pump" ], "comes_off": [ "out" ] } ] }
+            """);
+        _temp.File("mod/work_order.json", """
+            { "kinds": [ { "id": "fan", "comes_off": [ "backwards" ] }, { "id": "belt", "comes_off": [ "down, forward", "2" ] },
+                         { "id": "pump", "comes_off": [] } ] }
+            """);
+
+        var problems = new List<string>();
+        var order = WorkOrder.Load(new[] { ("streetcorsa", true, Path.Combine(_temp.Path, "base")), ("mymod", false, Path.Combine(_temp.Path, "mod")) }, problems);
+
+        // A list of names in one string, or a number, is no way: never the sum of the ways the enum would make of it
+        Assert.Equal(new[] { PartWay.Up }, order.WayOf(new PartDefinition { Name = "Cooling fan" }));
+        Assert.Equal(new[] { PartWay.Forward }, order.WayOf(new PartDefinition { Name = "Drive belt" }));
+        Assert.Contains(problems, p => p.Contains("\"down, forward\"", StringComparison.Ordinal));
+        Assert.Contains(problems, p => p.Contains("\"2\"", StringComparison.Ordinal));
+        Assert.Contains(problems, p => p == "mymod/work_order.json: fan keeps the way it comes off as before");
+
+        // An empty list on purpose is the way away from what stays
+        Assert.Empty(order.WayOf(new PartDefinition { Name = "Water pump" }));
+    }
+
+    [Fact]
+    public void The_stand_strips_are_told_apart_in_any_case()
+    {
+        _temp.File("base/work_order.json", """
+            { "kinds": [ { "id": "radiator", "names": [ "radiator" ] }, { "id": "transmission", "names": [ "gearbox" ] } ],
+              "stand_strips": [ "Radiator", "transmission" ] }
+            """);
+
+        var order = WorkOrder.Load(new[] { ("streetcorsa", true, Path.Combine(_temp.Path, "base")) }, new List<string>());
+
+        Assert.Equal(0, order.StandStripTurnOf("radiator"));
+        Assert.Equal(1, order.StandStripTurnOf("Transmission"));
+        Assert.Equal(int.MaxValue, order.StandStripTurnOf("fan"));
     }
 }

@@ -23,14 +23,22 @@ public sealed class WorkOrder
     private readonly List<WorkKind> _kinds = new();
     private readonly Dictionary<string, WorkKind> _kindsById = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, WorkRule> _rules = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, IReadOnlyList<PartWay>> _ways = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> _standStrips = new();
     private readonly ConcurrentDictionary<PartDefinition, string?> _kindOf = new(ReferenceEqualityComparer.Instance);
 
     /// <summary>
-    /// Kinds that come off an engine as it goes on the stand, in that order: what is in the way of bolting it on by its
-    /// bellhousing face, and what stays with the car (the radiator)
+    /// Kinds that come off an engine as it goes on the stand, in that order: what stays with the car (the radiator), and
+    /// what is in the way of bolting it on by its bellhousing face
     /// </summary>
     public IReadOnlyList<string> StandStrips => _standStrips;
+
+    /// <summary>Where a kind comes in <see cref="StandStrips"/>, any case; <see cref="int.MaxValue"/> for one not there</summary>
+    public int StandStripTurnOf(string kind)
+    {
+        var turn = _standStrips.FindIndex(k => k.Equals(kind, StringComparison.OrdinalIgnoreCase));
+        return turn < 0 ? int.MaxValue : turn;
+    }
 
     public IReadOnlyCollection<WorkRule> Rules => _rules.Values;
 
@@ -40,6 +48,10 @@ public sealed class WorkOrder
     public string? KindOf(PartDefinition part) => _kindOf.GetOrAdd(part, FindKind);
 
     public WorkRule? RuleOf(PartDefinition part) => KindOf(part) is { } kind ? _rules.GetValueOrDefault(kind) : null;
+
+    /// <summary>The way a part comes off the engine, leg by leg; empty for a kind that does not say</summary>
+    public IReadOnlyList<PartWay> WayOf(PartDefinition part) =>
+        KindOf(part) is { } kind && _ways.TryGetValue(kind, out var way) ? way : Array.Empty<PartWay>();
 
     /// <summary>How a kind is named to the player: "oil pan", "cylinder heads" for more than one</summary>
     public string NameOf(string kind, int count = 1)
@@ -128,6 +140,21 @@ public sealed class WorkOrder
 
                 // The first mod to name a kind names it for the player; a later one may only add ways to tell it
                 if (!order._kindsById.ContainsKey(kind.Id)) order._kindsById[kind.Id] = kind;
+
+                // Which way it comes off is only looks: the last mod to say so says so
+                if (kind.ComesOff is { } legs)
+                {
+                    var way = new List<PartWay>();
+                    foreach (var leg in legs)
+                    {
+                        if (WayNamed(leg) is { } parsed) way.Add(parsed);
+                        else problems.Add($"{label}: {kind.Id} comes off \"{leg}\", which is none of up, down, forward, back, out; left out");
+                    }
+
+                    // Not one leg that reads: the way it came off before stands, rather than none at all
+                    if (way.Count > 0 || legs.Count == 0) order._ways[kind.Id] = way;
+                    else if (order._ways.ContainsKey(kind.Id)) problems.Add($"{label}: {kind.Id} keeps the way it comes off as before");
+                }
             }
 
             kindsByMod.Add(kinds);
@@ -170,6 +197,20 @@ public sealed class WorkOrder
         return order;
     }
 
+    /// <summary>
+    /// One way by its name, any case: not a number, nor a list of names, which the enum would read as the sum of them
+    /// </summary>
+    private static PartWay? WayNamed(string? name)
+    {
+        var trimmed = name?.Trim();
+        foreach (var way in Enum.GetValues<PartWay>())
+        {
+            if (way.ToString().Equals(trimmed, StringComparison.OrdinalIgnoreCase)) return way;
+        }
+
+        return null;
+    }
+
     private sealed class WorkOrderFile
     {
         [JsonProperty("kinds")]
@@ -204,6 +245,26 @@ public sealed class WorkKind
     /// <summary>Words the part's name holds, lower case ("timing chain cover")</summary>
     [JsonProperty("names")]
     public List<string> Names { get; set; } = new();
+
+    /// <summary>
+    /// How the part is seen to come off, leg by leg, in the engine's own directions (a <see cref="PartWay"/> each):
+    /// ["back", "down"] for a gearbox. Parts mounted on it go along. Null leaves it to the kind as another mod says.
+    /// </summary>
+    [JsonProperty("comes_off")]
+    public List<string?>? ComesOff { get; set; }
+}
+
+/// <summary>
+/// A direction a part comes off in, as the engine stands: up and down, forward towards the crankshaft's nose, back
+/// towards the gearbox, out away from the engine on the side the part is on
+/// </summary>
+public enum PartWay
+{
+    Up,
+    Down,
+    Forward,
+    Back,
+    Out
 }
 
 /// <summary>What has to be the case before a part of a kind comes off an engine, or goes on one</summary>

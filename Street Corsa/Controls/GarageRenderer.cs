@@ -29,6 +29,12 @@ public enum PartLayer
 public readonly record struct PartHit(PartLayer Layer, int Node);
 
 /// <summary>
+/// Part nodes that move as one, off the car or onto it, the way the part they are on comes off
+/// (<see cref="WorkOrder.WayOf"/>), after <paramref name="Delay"/> seconds. An empty way is away from what stays.
+/// </summary>
+public sealed record PartMove(IReadOnlyList<int> Nodes, IReadOnlyList<PartWay> Way, float Delay = 0f);
+
+/// <summary>
 /// Dark renderer with one extra model (the car's parts) in the scene, and an x-ray mode for the car.
 /// The base renderer only knows about the showroom and car slots, so the prop rides along with the cars:
 /// every pass that draws them (shadows, g-buffer, opaque, transparent) draws the prop too.
@@ -37,12 +43,28 @@ public class GarageRenderer : DarkKn5ObjectRenderer
 {
     // Dissolving the car also reveals the parts: at full opacity the solid car simply covers them
     private const float GhostTransitionSeconds = 0.8f;
-    private const float MaxTickSeconds = 0.05f;
 
-    // A part on its way off the car or onto it: it travels this far from its place, and is small at the far end
-    private const float PartMotionSeconds = 0.55f;
-    private const float PartTravel = 0.45f;
-    private const float PartFarScale = 0.35f;
+    /// <summary>
+    /// The most a frame moves anything on: the viewport only draws on demand, so the first tick after a pause can span
+    /// seconds. Below 20 frames a second things go slower than the clock; whatever waits on them goes by them too.
+    /// </summary>
+    public const float MaxTickSeconds = 0.05f;
+
+    // A part on its way off the car or onto it: it travels this far from its place, all its legs together, and
+    // is gone at the far end
+    public const float PartMotionSeconds = 0.7f;
+    private const float PartTravel = 0.5f;
+
+    // Opacities a fade is drawn at: fine enough not to be seen stepping
+    private const float FadeSteps = 32f;
+
+    // The hoist: slow up and down on the chain, quicker across the floor; the hook is this far above the block, and the
+    // load swings on it by this share of what a free pendulum would as it speeds up and slows down
+    private const float HoistLiftSpeed = 0.8f;
+    private const float HoistTravelSpeed = 1.5f;
+    private const float HoistMinLegSeconds = 0.6f;
+    private const float HoistHookAbove = 0.7f;
+    private const float HoistSwing = 0.25f;
 
     private readonly record struct Glow(float Red, float Green, float Blue, float Strength = 1f);
 
@@ -62,7 +84,15 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     private List<PartNode> _candidateNodes = new();
     private PartHit? _hovered;
     private int? _selected;
-    private readonly List<PartMotion> _motions = new();
+    private readonly List<Motion> _motions = new();
+
+    // The part nodes drawn see-through over the scene right now, and the filter that leaves them out of every other pass
+    private HashSet<RenderableList>? _fading;
+    private Func<IRenderableObject, bool>? _settled;
+
+    // Whether the prop and the candidates lean with the car's body: not the ones made for the stand
+    private bool _propLeans;
+    private bool _candidatesLean;
     private bool _ghostCar;
     private bool _removePropWhenSolid;
     private float _ghostProgress;
@@ -70,6 +100,9 @@ public class GarageRenderer : DarkKn5ObjectRenderer
 
     // Scene copy with the solid car drawn over it, blended back at GhostOpacity
     private TargetResourceTexture? _ghostBuffer;
+
+    // Scene copy with parts on their way drawn over it, blended back at how far gone they are
+    private TargetResourceTexture? _fadeBuffer;
     private TargetResourceDepthTexture? _ghostDepth;
     private BlendState? _ghostBlend;
     private BlendState? _scaleBlend;
@@ -128,7 +161,7 @@ public class GarageRenderer : DarkKn5ObjectRenderer
 
     /// <summary>
     /// How the running engine leans the body right now. The parts sit in the car without being part of its model, so
-    /// they are leaned along with it here.
+    /// they are leaned along with it here; the stand's are not, nor is a load hanging on the hoist.
     /// </summary>
     public Matrix BodyLean
     {
@@ -136,13 +169,25 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         set
         {
             _bodyLean = value;
-            if (_standActive) return;
+            var leaned = false;
+            if (_prop != null && _propLeans)
+            {
+                _prop.LocalMatrix = value;
+                leaned = true;
+            }
 
-            if (_prop != null) _prop.LocalMatrix = value;
-            if (_candidates != null) _candidates.LocalMatrix = value;
-            IsDirty = true;
+            if (_candidates != null && _candidatesLean)
+            {
+                _candidates.LocalMatrix = value;
+                leaned = true;
+            }
+
+            if (leaned) IsDirty = true;
         }
     }
+
+    /// <summary>What undoes the body's lean for a node of the prop: a load off the car's springs hangs still</summary>
+    private Matrix OffBody => _propLeans ? Matrix.Invert(_bodyLean) : Matrix.Identity;
 
     /// <summary>
     /// The prop is the engine on the stand beside the car, not the car's parts: they are picked and glow with the car
@@ -228,47 +273,133 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     /// <summary>True while parts are on their way off the car or onto it</summary>
     public bool IsMovingParts => _motions.Count > 0;
 
+    /// <summary>Seconds until every part on its way is there</summary>
+    public float MotionSecondsLeft => _motions.Count == 0 ? 0f : _motions.Max(m => m.SecondsLeft);
+
     /// <summary>
-    /// Sets mounted parts in motion, given by node: arriving parts start away from the engine and settle into their
-    /// place, leaving parts lift off and are gone at the end (until the model is replaced by one without them).
+    /// Sets mounted parts in motion, given by node: arriving parts start away from their place, see-through, and settle
+    /// into it; leaving parts fade out on their way off and are gone at the end (until the model is replaced by one
+    /// without them). Each move goes its own way, all its nodes together.
     /// </summary>
-    public void MoveParts(IEnumerable<int> nodes, bool arriving)
+    /// <param name="frameNode">The engine block, whose axes the ways are along; null for the car's</param>
+    public void MoveParts(IReadOnlyList<PartMove> moves, bool arriving, int? frameNode)
     {
         if (_prop == null) return;
 
         _prop.UpdateBoundingBox();
-        var moving = nodes.Where(n => n >= 0 && n < _propNodes.Count).Select(n => _propNodes[n]).ToList();
-        if (moving.Count == 0) return;
+        var groups = moves
+            .Select(m => (Move: m, Nodes: m.Nodes.Where(n => n >= 0 && n < _propNodes.Count).Select(n => _propNodes[n]).Distinct().ToList()))
+            .Where(g => g.Nodes.Count > 0)
+            .ToList();
+        if (groups.Count == 0) return;
 
-        // Everything that moves together goes the same way: away from the middle of what stays
-        var staying = _propNodes.Except(moving).Select(n => n.List.BoundingBox).Where(b => b.HasValue).Select(b => b!.Value.GetCenter()).ToList();
-        var centres = moving.Select(n => n.List.BoundingBox).Where(b => b.HasValue).Select(b => b!.Value.GetCenter()).ToList();
-        if (centres.Count == 0) return;
+        var moving = groups.SelectMany(g => g.Nodes).ToHashSet();
+        var staying = CentreOf(_propNodes.Where(n => !moving.Contains(n)));
+        var frame = frameNode is { } f && f >= 0 && f < _propNodes.Count ? _propNodes[f] : null;
 
-        var centre = centres.Aggregate(Vector3.Zero, (sum, c) => sum + c) / centres.Count;
-        var direction = Vector3.UnitY;
-        if (staying.Count > 0)
+        // Part models face -Z; with no block to go by, one set in the car the way the car faces (+Z)
+        var axes = frame?.List.LocalMatrix ?? Matrix.RotationY((float)Math.PI);
+        var right = Direction(Vector3.TransformNormal(Vector3.UnitX, axes), Vector3.UnitX);
+        var up = Direction(Vector3.TransformNormal(Vector3.UnitY, axes), Vector3.UnitY);
+        var forward = Direction(Vector3.TransformNormal(-Vector3.UnitZ, axes), Vector3.UnitZ);
+
+        foreach (var (move, nodes) in groups)
         {
-            var away = centre - staying.Aggregate(Vector3.Zero, (sum, c) => sum + c) / staying.Count;
+            if (CentreOf(nodes) is not { } centre) continue;
 
-            // Mostly up and out, never far down: the floor is right there
-            away.Y = Math.Max(away.Y, 0f) + 0.15f;
-            if (away.LengthSquared() > 1e-6f) direction = Vector3.Normalize(away);
-        }
+            // Out is to the side of the engine the part is on; the block itself has none, so it goes by what stays
+            var middle = frame == null || nodes.Contains(frame) ? staying : CentreOf(new[] { frame });
+            var outward = middle is { } m && Vector3.Dot(centre - m, right) < 0f ? -right : right;
 
-        foreach (var node in moving)
-        {
-            _motions.RemoveAll(m => ReferenceEquals(m.Node, node));
-            var motion = new PartMotion(node, node.List.LocalMatrix, centre, direction, arriving);
-            _motions.Add(motion);
-            motion.Apply();
+            var legs = move.Way.Count == 0
+                ? new[] { AwayFrom(centre) * PartTravel }
+                : move.Way.Select(way => PartTravel / move.Way.Count * way switch
+                {
+                    PartWay.Up => up,
+                    PartWay.Down => -up,
+                    PartWay.Forward => forward,
+                    PartWay.Back => -forward,
+                    _ => outward
+                }).ToArray();
+
+            foreach (var node in nodes)
+            {
+                _motions.RemoveAll(motion => ReferenceEquals(motion.Node, node));
+                var motion = new PartMotion(node, node.List.LocalMatrix, legs, arriving, move.Delay);
+                _motions.Add(motion);
+                motion.Apply();
+            }
         }
 
         if (!arriving && _selected is { } selected && selected < _propNodes.Count && moving.Contains(_propNodes[selected])) _selected = null;
         _hovered = null;
+
+        // Parts on their way are drawn on their own, without a shadow
         SetShadowsDirty();
+        UpdateFading();
         IsDirty = true;
+
+        // A part of no known kind goes away from the middle of what stays: mostly up and out, never far down, the
+        // floor is right there
+        Vector3 AwayFrom(Vector3 centre)
+        {
+            if (staying is not { } middle) return Vector3.UnitY;
+
+            var away = centre - middle;
+            away.Y = Math.Max(away.Y, 0f) + 0.15f;
+            return away.LengthSquared() > 1e-6f ? Vector3.Normalize(away) : Vector3.UnitY;
+        }
     }
+
+    /// <summary>
+    /// Carries part nodes on the hoist: an engine out of its bay onto the stand, or back. The nodes are where
+    /// <paramref name="home"/> puts the block now; they go from <paramref name="from"/> to <paramref name="to"/> and
+    /// stay there, whole and solid, until the model is replaced.
+    /// </summary>
+    /// <param name="clearHeight">How high the bottom of the load has to be on the way across: over the car's wings</param>
+    /// <param name="delay">Seconds to wait first: what comes off before the engine does</param>
+    /// <returns>Seconds until the load is down; 0 when there is nothing to carry</returns>
+    public float CarryParts(IReadOnlyList<int> nodes, Matrix home, Matrix from, Matrix to, float clearHeight, float delay)
+    {
+        if (_prop == null) return 0f;
+
+        _prop.UpdateBoundingBox();
+        var carried = nodes.Where(n => n >= 0 && n < _propNodes.Count).Select(n => _propNodes[n]).Distinct().ToList();
+        var boxes = carried.Select(n => n.List.BoundingBox).Where(b => b.HasValue).Select(b => b!.Value).ToList();
+        if (boxes.Count == 0) return 0f;
+
+        var box = boxes.Aggregate(BoundingBox.Merge);
+        var origin = new Vector3(home.M41, home.M42, home.M43);
+        var height = Math.Max(Math.Max(from.M42, to.M42), clearHeight + origin.Y - box.Minimum.Y);
+        var hoist = new Hoist(home, from, to, height, (box.Minimum + box.Maximum) / 2f - origin);
+
+        foreach (var node in carried)
+        {
+            _motions.RemoveAll(m => ReferenceEquals(m.Node, node));
+            var motion = new CarryMotion(this, node, node.List.LocalMatrix, hoist, delay);
+            _motions.Add(motion);
+            motion.Apply();
+        }
+
+        if (_selected is { } selected && selected < _propNodes.Count && carried.Contains(_propNodes[selected])) _selected = null;
+        _hovered = null;
+        SetShadowsDirty();
+        UpdateFading();
+        IsDirty = true;
+        return delay + hoist.Seconds;
+    }
+
+    /// <summary>The middle of what the hoist is carrying right now; null while it carries nothing, or waits to</summary>
+    public Vector3? CarriedCentre => _motions.OfType<CarryMotion>().FirstOrDefault(m => m.HasStarted && !m.IsDone)?.Centre;
+
+    private static Vector3? CentreOf(IEnumerable<PartNode> nodes)
+    {
+        var centres = nodes.Select(n => n.List.BoundingBox).Where(b => b.HasValue).Select(b => b!.Value.GetCenter()).ToList();
+        return centres.Count == 0 ? null : centres.Aggregate(Vector3.Zero, (sum, c) => sum + c) / centres.Count;
+    }
+
+    private static Vector3 Direction(Vector3 vector, Vector3 fallback) =>
+        vector.LengthSquared() > 1e-6f ? Vector3.Normalize(vector) : fallback;
 
     /// <summary>
     /// Puts mounted parts' nodes where they now belong, at once: the placement mode nudging a part. One pass over
@@ -292,6 +423,7 @@ public class GarageRenderer : DarkKn5ObjectRenderer
 
         _prop.UpdateBoundingBox();
         SetShadowsDirty();
+        UpdateFading();
         IsDirty = true;
     }
 
@@ -299,60 +431,250 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     {
         if (_motions.Count == 0) return;
 
-        var step = Math.Min(dt, MaxTickSeconds) / PartMotionSeconds;
+        var step = Math.Min(dt, MaxTickSeconds);
         foreach (var motion in _motions) motion.Advance(step);
-        _motions.RemoveAll(m => m.IsDone);
+
+        // A load on the hoist casts its shadow all the way; the shadows change otherwise only as a part gets somewhere,
+        // or starts or stops fading (UpdateFading)
+        var carrying = _motions.Any(m => m is CarryMotion && m.HasStarted);
+        if (_motions.RemoveAll(m => m.IsDone) > 0 || carrying) SetShadowsDirty();
+        UpdateFading();
 
         _prop?.UpdateBoundingBox();
-        SetShadowsDirty();
         IsDirty = true;
     }
 
-    /// <summary>One part node travelling between its place and a point away from the engine</summary>
-    private sealed class PartMotion
+    /// <summary>
+    /// Works out which nodes are drawn see-through now, once a frame rather than for every pass. A part that starts to
+    /// fade drops its shadow then, not when it is gone.
+    /// </summary>
+    private void UpdateFading()
     {
-        private readonly Matrix _home;
-        private readonly Vector3 _centre;
-        private readonly Vector3 _direction;
-        private readonly bool _arriving;
-        private float _progress;
+        var fading = _motions.Count == 0 ? null : _motions.Where(IsSeeThrough).Select(m => m.Node.List).ToHashSet();
+        if (fading is { Count: 0 }) fading = null;
+        if (fading == null ? _fading == null : _fading != null && _fading.SetEquals(fading)) return;
 
-        public PartMotion(PartNode node, Matrix home, Vector3 centre, Vector3 direction, bool arriving)
+        _fading = fading;
+        _settled = fading == null ? null : o => o is not RenderableList list || !fading.Contains(list);
+        SetShadowsDirty();
+    }
+
+    /// <summary>Whether a motion is drawn see-through over the scene, not with the rest (<see cref="DrawFading"/>)</summary>
+    private static bool IsSeeThrough(Motion motion) =>
+        motion is PartMotion part && part.Node.List.IsEnabled && Math.Round(part.Opacity * FadeSteps) < FadeSteps;
+
+    /// <summary>A part node on its way somewhere, once it has waited its turn</summary>
+    private abstract class Motion
+    {
+        private readonly float _delay;
+        private readonly float _seconds;
+        private float _elapsed;
+
+        protected Motion(PartNode node, Matrix home, float delay, float seconds)
         {
             Node = node;
-            _home = home;
-            _centre = centre;
-            _direction = direction;
-            _arriving = arriving;
+            Home = home;
+            _delay = Math.Max(0f, delay);
+            _seconds = seconds;
         }
 
         public PartNode Node { get; }
 
-        public bool IsDone => _progress >= 1f;
+        /// <summary>The node where it was put</summary>
+        protected Matrix Home { get; }
 
-        public void Advance(float step)
+        public bool HasStarted => _elapsed > _delay;
+
+        public bool IsDone => _elapsed >= _delay + _seconds;
+
+        public float SecondsLeft => Math.Max(0f, _delay + _seconds - _elapsed);
+
+        /// <summary>Seconds on its way: 0 while it waits</summary>
+        protected float Time => Math.Clamp(_elapsed - _delay, 0f, _seconds);
+
+        /// <summary>0 while it waits, 1 when it is there</summary>
+        protected float Progress => _seconds > 0f ? Time / _seconds : 1f;
+
+        public void Advance(float dt)
         {
-            _progress = Math.Min(1f, _progress + step);
+            _elapsed += dt;
             Apply();
         }
 
-        public void Apply()
+        public abstract void Apply();
+    }
+
+    /// <summary>One part node travelling between its place and a point away from it, leg by leg, fading as it goes</summary>
+    private sealed class PartMotion : Motion
+    {
+        private readonly Vector3[] _legs;
+        private readonly float _length;
+        private readonly bool _arriving;
+
+        public PartMotion(PartNode node, Matrix home, Vector3[] legs, bool arriving, float delay)
+            : base(node, home, delay, PartMotionSeconds)
         {
-            // 0 = in its place, 1 = away
-            var away = _arriving ? 1f - Ease(_progress) : Ease(_progress);
+            _legs = legs;
+            _length = legs.Sum(l => l.Length());
+            _arriving = arriving;
+        }
+
+        /// <summary>1 in its place, 0 at the far end</summary>
+        public float Opacity { get; private set; }
+
+        public override void Apply()
+        {
+            // 0 = in its place, 1 = away. An arriving part comes in the way a leaving one goes, backwards.
+            var away = _arriving ? 1f - Ease(Progress) : Ease(Progress);
+            Opacity = 1f - away;
             if (IsDone)
             {
-                Node.List.LocalMatrix = _home;
+                Node.List.LocalMatrix = Home;
                 Node.List.IsEnabled = _arriving;
                 return;
             }
 
-            var scale = 1f + (PartFarScale - 1f) * away;
             Node.List.IsEnabled = true;
-            Node.List.LocalMatrix = _home
-                                    * Matrix.Translation(-_centre)
-                                    * Matrix.Scaling(scale, scale, scale)
-                                    * Matrix.Translation(_centre + _direction * (PartTravel * away));
+            Node.List.LocalMatrix = Home * Matrix.Translation(Along(away * _length));
+        }
+
+        /// <summary>The point that far along the legs, from the part's place</summary>
+        private Vector3 Along(float distance)
+        {
+            var offset = Vector3.Zero;
+            foreach (var leg in _legs)
+            {
+                var length = leg.Length();
+                if (distance < length)
+                {
+                    offset += leg * (distance / length);
+                    break;
+                }
+
+                offset += leg;
+                distance -= length;
+            }
+
+            return offset;
+        }
+    }
+
+    /// <summary>One part node of a load on the hoist</summary>
+    private sealed class CarryMotion : Motion
+    {
+        private readonly GarageRenderer _owner;
+        private readonly Hoist _hoist;
+
+        public CarryMotion(GarageRenderer owner, PartNode node, Matrix home, Hoist hoist, float delay) : base(node, home, delay, hoist.Seconds)
+        {
+            _owner = owner;
+            _hoist = hoist;
+        }
+
+        public Vector3 Centre => _hoist.CentreAt(Time);
+
+        public override void Apply()
+        {
+            Node.List.IsEnabled = true;
+            var pose = Home * _hoist.OffsetAt(Time);
+
+            // In the car it goes with the body; on the chain, and on the stand, the car's bouncing is none of its business
+            var inCar = IsDone ? _hoist.EndsHome : !HasStarted && _hoist.StartsHome;
+            Node.List.LocalMatrix = inCar ? pose : pose * _owner.OffBody;
+        }
+    }
+
+    /// <summary>
+    /// The way a load goes on the hoist: straight up out of where it sits, across at a height clear of the car, and
+    /// straight down into its new place, each leg from a standstill to a standstill. It turns to its new heading on the
+    /// way across, and swings back a little on the chain as it speeds up, forward as it slows down.
+    /// </summary>
+    private sealed class Hoist
+    {
+        private readonly Vector3[] _points;
+        private readonly float[] _seconds;
+        private readonly Quaternion _from;
+        private readonly Quaternion _to;
+        private readonly Matrix _inverseHome;
+        private readonly Vector3 _centre;
+
+        /// <param name="home">Where the block is as the nodes are placed</param>
+        /// <param name="centre">The middle of the load, from the block's origin</param>
+        public Hoist(Matrix home, Matrix from, Matrix to, float height, Vector3 centre)
+        {
+            _inverseHome = Matrix.Invert(home);
+            _centre = centre;
+            _from = Quaternion.RotationMatrix(from);
+            _to = Quaternion.RotationMatrix(to);
+
+            var start = new Vector3(from.M41, from.M42, from.M43);
+            var end = new Vector3(to.M41, to.M42, to.M43);
+            _points = new[] { start, new Vector3(start.X, height, start.Z), new Vector3(end.X, height, end.Z), end };
+            _seconds = new[]
+            {
+                Math.Max(HoistMinLegSeconds, (height - start.Y) / HoistLiftSpeed),
+                Math.Max(HoistMinLegSeconds, Vector3.Distance(_points[1], _points[2]) / HoistTravelSpeed),
+                Math.Max(HoistMinLegSeconds, (height - end.Y) / HoistLiftSpeed)
+            };
+            Seconds = _seconds.Sum();
+            StartsHome = from.Equals(home);
+            EndsHome = to.Equals(home);
+        }
+
+        public float Seconds { get; }
+
+        /// <summary>The load starts where the nodes are placed (in the car, for the parts in it)</summary>
+        public bool StartsHome { get; }
+
+        /// <summary>The load ends where the nodes are placed</summary>
+        public bool EndsHome { get; }
+
+        /// <summary>What to put after a node's own placement to have the block where the hoist has it</summary>
+        public Matrix OffsetAt(float time)
+        {
+            var (position, turn, leg, share) = At(time);
+            var pose = Matrix.RotationQuaternion(Quaternion.Slerp(_from, _to, turn)) * Matrix.Translation(position);
+
+            // Across, the load lags behind the hook as it speeds up and runs ahead of it as it slows down. The ease
+            // speeds up then slows down, so it is swung by its second derivative: 6 (1 - 2u) D / T^2.
+            if (leg == 1)
+            {
+                var direction = _points[2] - _points[1];
+                var distance = direction.Length();
+                if (distance > 1e-3f)
+                {
+                    direction /= distance;
+                    var acceleration = 6f * (1f - 2f * share) * distance / (_seconds[1] * _seconds[1]);
+                    var angle = HoistSwing * (float)Math.Atan(acceleration / 9.81f);
+                    var hook = position + Vector3.UnitY * HoistHookAbove;
+                    pose *= Matrix.Translation(-hook) * Matrix.RotationAxis(Vector3.Cross(Vector3.UnitY, direction), angle) * Matrix.Translation(hook);
+                }
+            }
+
+            return _inverseHome * pose;
+        }
+
+        /// <summary>The middle of the load, for the camera to follow</summary>
+        public Vector3 CentreAt(float time) => At(time).Position + _centre;
+
+        /// <summary>Where the block is, how far it has turned, on which leg and how far along it</summary>
+        private (Vector3 Position, float Turn, int Leg, float Share) At(float time)
+        {
+            for (var leg = 0; leg < _seconds.Length; leg++)
+            {
+                if (time > _seconds[leg] && leg < _seconds.Length - 1)
+                {
+                    time -= _seconds[leg];
+                    continue;
+                }
+
+                var share = Math.Clamp(time / _seconds[leg], 0f, 1f);
+                var eased = Ease(share);
+                var turn = leg == 0 ? 0f : leg == 1 ? eased : 1f;
+                return (Vector3.Lerp(_points[leg], _points[leg + 1], eased), turn, leg, share);
+            }
+
+            return (_points[^1], 1f, _seconds.Length - 1, 1f);
         }
     }
 
@@ -385,12 +707,14 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     public void SetProp(IKn5? kn5, Matrix placement)
     {
         _prop?.Dispose();
-        _prop = kn5 == null ? null : new Kn5RenderableFile(kn5, _standActive ? placement : placement * _bodyLean, asyncTexturesLoading: false);
+        _propLeans = !_standActive;
+        _prop = kn5 == null ? null : new Kn5RenderableFile(kn5, _propLeans ? placement * _bodyLean : placement, asyncTexturesLoading: false);
         _propNodes = PartNode.Of(_prop);
 
         // A new prop is not the one a fade back to solid was going to drop
         _removePropWhenSolid = false;
         _motions.Clear();
+        UpdateFading();
         _hovered = null;
         _selected = null;
         SetShadowsDirty();
@@ -401,7 +725,8 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     public void SetCandidates(IKn5? kn5)
     {
         _candidates?.Dispose();
-        _candidates = kn5 == null ? null : new Kn5RenderableFile(kn5, _standActive ? Matrix.Identity : _bodyLean, asyncTexturesLoading: false);
+        _candidatesLean = !_standActive;
+        _candidates = kn5 == null ? null : new Kn5RenderableFile(kn5, _candidatesLean ? _bodyLean : Matrix.Identity, asyncTexturesLoading: false);
         _candidateNodes = PartNode.Of(_candidates);
         if (_hovered?.Layer == PartLayer.Candidate) _hovered = null;
         SetShadowsDirty();
@@ -588,22 +913,75 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     {
         _scenery?.Draw(holder, camera, mode);
 
+        // Parts on their way are left out of every pass, shadows included, and drawn over the scene see-through
         if (!IsGhosting)
         {
             base.DrawCars(holder, camera, mode);
-            _prop?.Draw(holder, camera, mode);
+            _prop?.Draw(holder, camera, mode, _settled);
             if (_standActive) _candidates?.Draw(holder, camera, mode);
-            return;
         }
-
-        // Shadows, g-buffer (AO, reflections) and the rest see the parts only
-        _prop?.Draw(holder, camera, mode);
-        _candidates?.Draw(holder, camera, mode);
-
-        if (mode == SpecialRenderMode.Simple)
+        else
         {
-            DrawGhost(holder, camera);
+            // Shadows, g-buffer (AO, reflections) and the rest see the parts only
+            _prop?.Draw(holder, camera, mode, _settled);
+            _candidates?.Draw(holder, camera, mode);
         }
+
+        // Once every surface is in the scene, glass included: the depth the parts on their way leave behind hides
+        // nothing drawn after them then. They go before the shell, so they are inside it as the rest are.
+        if (mode != SpecialRenderMode.SimpleTransparent) return;
+
+        DrawFading(holder, camera);
+        if (IsGhosting) DrawGhost(holder, camera);
+        holder.DeviceContext.OutputMerger.DepthStencilState = holder.States.ReadOnlyDepthState;
+    }
+
+    /// <summary>
+    /// Parts on their way, at how far gone they are. As with the ghost car, materials force their own blend state:
+    /// the parts go over a copy of the scene, blended back at their opacity. Parts that move together fade together,
+    /// so there is a pass for each step of the fade there is: one mostly, two or three while an engine is stripped for
+    /// the stand, one part starting before the one ahead of it is gone.
+    /// </summary>
+    private void DrawFading(DeviceContextHolder holder, ICamera camera)
+    {
+        if (_prop == null || _fading == null) return;
+
+        var context = holder.DeviceContext;
+        var scene = InnerBuffer;
+        var copy = holder.GetHelper<CopyHelper>();
+        _fadeBuffer ??= TargetResourceTexture.Create(scene.Format);
+        _fadeBuffer.Resize(holder, Width, Height, null);
+        _ghostBlend ??= CreateGhostBlend(holder.Device);
+
+        foreach (var group in _motions.Where(IsSeeThrough).Cast<PartMotion>().GroupBy(m => (float)Math.Round(m.Opacity * FadeSteps)))
+        {
+            var opacity = group.Key / FadeSteps;
+            if (opacity <= 0f) continue;
+
+            var lists = group.Select(m => m.Node.List).ToHashSet();
+            var siblings = group.First().Node.Siblings;
+            bool Only(IRenderableObject o) => o is not RenderableList list || !siblings.Contains(list) || lists.Contains(list);
+
+            // In the scene's depth, so what is in front of them still is
+            copy.Draw(holder, scene.View, _fadeBuffer.TargetView);
+            context.OutputMerger.SetTargets(DepthStencilView, _fadeBuffer.TargetView);
+            context.OutputMerger.BlendState = null;
+            context.OutputMerger.DepthStencilState = holder.States.LessEqualDepthState;
+            _prop.Draw(holder, camera, SpecialRenderMode.Simple, Only);
+            context.OutputMerger.DepthStencilState = holder.States.ReadOnlyDepthState;
+            _prop.Draw(holder, camera, SpecialRenderMode.SimpleTransparent, Only);
+
+            context.OutputMerger.BlendState = _ghostBlend;
+            context.OutputMerger.BlendFactor = new Color4(opacity, opacity, opacity, opacity);
+            context.OutputMerger.DepthStencilState = holder.States.DisabledDepthState;
+            context.Rasterizer.State = null;
+            copy.Draw(holder, _fadeBuffer.View, scene.TargetView);
+        }
+
+        // Back to what the scene pass expects
+        context.OutputMerger.BlendState = null;
+        context.OutputMerger.SetTargets(DepthStencilView, scene.TargetView);
+        context.OutputMerger.DepthStencilState = holder.States.LessEqualDepthState;
     }
 
     protected override void DrawPrepare()
@@ -796,6 +1174,7 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         _candidates?.Dispose();
         _candidates = null;
         _ghostBuffer?.Dispose();
+        _fadeBuffer?.Dispose();
         _ghostDepth?.Dispose();
         _ghostBlend?.Dispose();
         _scaleBlend?.Dispose();

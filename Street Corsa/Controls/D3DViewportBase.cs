@@ -78,6 +78,11 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     private Audio.EngineRunner? _poseSource;
     private CarBodyRock? _rock;
 
+    // Kicks to the body that ring out on the springs, by how long they have been going (less than 0 while they wait):
+    // +1 lifts the nose (an engine coming out), -1 dips it (one going in). They go by the frames the renderer moves
+    // the parts by, not by the clock, so a bump lands with the engine however slowly the frames come.
+    private readonly List<(float Age, float Sign)> _bumps = new();
+
     /// <summary>How the label next to the pointer looks, and where it sits from the pointer</summary>
     protected readonly record struct LabelLook(double FontSize, byte BackgroundAlpha, byte BorderAlpha, Thickness Padding, Vector Offset);
 
@@ -479,6 +484,15 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
 
         var moving = StepFrame(renderer, dt);
 
+        // A bump rings out frame by frame, on top of whatever the running engine does
+        if (_bumps.Count > 0)
+        {
+            var step = Math.Min(dt, GarageRenderer.MaxTickSeconds);
+            for (var i = 0; i < _bumps.Count; i++) _bumps[i] = (_bumps[i].Age + step, _bumps[i].Sign);
+            OnPoseChanged();
+            moving = true;
+        }
+
         var now = DateTime.Now;
         if (renderer.IsDirty && _animateUntil < now + SettleWindow)
         {
@@ -585,6 +599,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         _resizeTimer.Stop();
         _firstFrameTimer.Stop();
         _rock = null;
+        _bumps.Clear();
 
         var renderer = _renderer;
         _renderer = null;
@@ -692,12 +707,50 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     /// <summary>The engine moved the body, or the engine changed: the viewport says which car it rocks</summary>
     protected abstract void OnPoseChanged();
 
-    /// <summary>Rocks <paramref name="carNode"/> the way the running engine has it; null or an engine at rest lets it settle</summary>
+    // A bump: how far the nose goes and the body drops at first, how quickly it swings and how soon it settles. Small:
+    // a car shrugging off a load, not a car hitting a kerb.
+    private const float BumpPitch = 0.012f;
+    private const float BumpHeave = 0.008f;
+    private const float BumpHertz = 1.8f;
+    private const float BumpSettleSeconds = 0.35f;
+    private const float BumpSeconds = 1.6f;
+
+    /// <summary>
+    /// The car bounces once on its springs, <paramref name="delaySeconds"/> from now: a heavy load leaving the front
+    /// (<paramref name="lighter"/>, the nose comes up first) or landing in it (the nose dips first)
+    /// </summary>
+    protected void BumpCar(bool lighter, float delaySeconds = 0f)
+    {
+        _bumps.Add((-Math.Max(0f, delaySeconds), lighter ? 1f : -1f));
+        AnimateFor(TimeSpan.FromSeconds(Math.Max(0f, delaySeconds) + BumpSeconds));
+    }
+
+    /// <summary>What the bumps under way add to the body's pose now, the ones that have rung out dropped</summary>
+    private Audio.BodyPose BumpPose()
+    {
+        _bumps.RemoveAll(b => b.Age >= BumpSeconds);
+
+        var swing = 0f;
+        foreach (var (t, sign) in _bumps)
+        {
+            if (t > 0f) swing += sign * (float)(Math.Exp(-t / BumpSettleSeconds) * Math.Sin(2 * Math.PI * BumpHertz * t));
+        }
+
+        // The nose leads; the whole body follows a little
+        return new Audio.BodyPose(0f, BumpPitch * swing, BumpHeave * swing);
+    }
+
+    /// <summary>
+    /// Rocks <paramref name="carNode"/> the way the running engine has it, and any bump with it; null, or an engine at
+    /// rest and no bump, lets it settle
+    /// </summary>
     protected void RockCar(Kn5RenderableCar? carNode)
     {
         var renderer = _renderer;
-        var pose = RunningEngine?.Pose ?? Audio.BodyPose.Rest;
-        if (renderer == null || carNode == null || (pose.IsRest && RunningEngine?.IsActive != true))
+        var running = RunningEngine?.Pose ?? Audio.BodyPose.Rest;
+        var bump = BumpPose();
+        var pose = new Audio.BodyPose(running.Roll + bump.Roll, running.Pitch + bump.Pitch, running.Heave + bump.Heave);
+        if (renderer == null || carNode == null || (pose.IsRest && RunningEngine?.IsActive != true && _bumps.Count == 0))
         {
             ReleaseRock();
             return;

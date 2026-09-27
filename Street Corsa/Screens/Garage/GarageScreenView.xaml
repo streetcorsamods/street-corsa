@@ -42,10 +42,12 @@
     </UserControl.Resources>
     <Grid x:Name="RootGrid">
         <!-- Everything lives in ContentLayer, which stays invisible until the 3D garage has rendered its
-             first frame; then the whole screen (garage, car, overlay) fades in at once -->
+             first frame; then the whole screen (garage, car, overlay) fades in at once. While an engine goes between
+             the car and the stand, nothing in it can be used. -->
         <Grid x:Name="ContentLayer"
               Opacity="0"
-              IsHitTestVisible="False">
+              IsHitTestVisible="False"
+              IsEnabled="{Binding IsMovingEngine, ElementName=Viewport3D, Converter={StaticResource InverseBooleanConverter}}">
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>

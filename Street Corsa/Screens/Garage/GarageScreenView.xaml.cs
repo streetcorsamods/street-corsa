@@ -34,10 +34,8 @@ namespace StreetCorsa.Screens.Garage
 
             // Parts are picked in the 3D view; what a pick means is the workbench's business
             Viewport3D.PartClicked += part => (DataContext as GarageScreenViewModel)?.Workbench.OnPartClicked(part);
-            Viewport3D.StandClicked += () =>
-            {
-                if (DataContext is GarageScreenViewModel { Workbench.IsAvailable: true } viewModel) viewModel.Workbench.IsStandView = true;
-            };
+            Viewport3D.StandClicked += ShowStand;
+            Viewport3D.EngineOnStand += ShowStand;
             Viewport3D.CarClicked += () =>
             {
                 if (DataContext is GarageScreenViewModel { Workbench.IsAvailable: true } viewModel) viewModel.Workbench.IsCarView = true;
@@ -53,6 +51,12 @@ namespace StreetCorsa.Screens.Garage
         }
 
         private Window? _window;
+
+        /// <summary>The work goes over to the engine stand, when there is a workbench to work at</summary>
+        private void ShowStand()
+        {
+            if (DataContext is GarageScreenViewModel { Workbench.IsAvailable: true } viewModel) viewModel.Workbench.IsStandView = true;
+        }
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
@@ -89,6 +93,10 @@ namespace StreetCorsa.Screens.Garage
         private void OnWindowKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
             if (!IsLoaded) return;
+
+            // An engine on its way between the car and the stand: no placement until it is down (the screen itself is
+            // disabled meanwhile)
+            if (Viewport3D.IsMovingEngine) return;
 
             if (e.Key == System.Windows.Input.Key.F5)
             {
