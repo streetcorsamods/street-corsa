@@ -108,8 +108,9 @@ public sealed class EngineStandTests : IDisposable
     }
 
     /// <summary>
-    /// The inline six: its distributor is on the side of the block, not through the intake; the timing cover and the water pump
-    /// come off each on their own; the alternator hangs on the water pump; the starter is bolted to the bellhousing
+    /// The inline six: its distributor is on the side of the block, not through the intake; its intake manifold comes off to
+    /// the side of the head and its alternator upwards; the timing cover and the water pump come off each on their own; the
+    /// alternator hangs on the water pump; the starter is bolted to the bellhousing
     /// </summary>
     [Fact]
     public void The_ford_six_comes_apart_in_its_own_order()
@@ -118,7 +119,11 @@ public sealed class EngineStandTests : IDisposable
         var engine = Engine("script-ford-l6/ford-221-132-hp");
 
         Assert.Equal("side_distributor", catalog.WorkOrder.KindOf(catalog.Get("engines/ford_six/ford_stock_distributor")!));
+        // The intake and the alternator stay of their kinds, rules and all; only the way they come off is their own
         Assert.Null(EngineWork.WhyNotOff(catalog, engine, Find(engine, "intake_manifold"), onStand: false));
+        Assert.Equal(new[] { PartWay.Out }, catalog.WorkOrder.WayOf(catalog.Get(Find(engine, "intake_manifold").DefinitionId)!));
+        Assert.Contains("the intake manifold", EngineWork.WhyNotOff(catalog, engine, Find(engine, "cylinder_head"), onStand: false));
+        Assert.Equal(new[] { PartWay.Up }, catalog.WorkOrder.WayOf(catalog.Get(Find(engine, "alternator").DefinitionId)!));
         Assert.Equal("Take off the crankshaft pulley first.", EngineWork.WhyNotOff(catalog, engine, Find(engine, "timing_cover"), onStand: false));
         Assert.Contains("the alternator", EngineWork.WhyNotOff(catalog, engine, Find(engine, "water_pump"), onStand: false));
         Assert.Equal("Take off the starter first.", EngineWork.WhyNotOff(catalog, engine, Find(engine, "transmission"), onStand: false));
@@ -536,6 +541,32 @@ public sealed class EngineStandTests : IDisposable
         Assert.Equal(new[] { PartWay.Forward }, order.WayOf(new PartDefinition { Name = "Drive belt" }));
         Assert.Empty(order.WayOf(new PartDefinition { Name = "Fantastic widget" }));
         Assert.Contains(problems, p => p.StartsWith("mymod/work_order.json: fan comes off \"sideways\"", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void A_part_may_come_off_its_own_way_and_keep_the_rules_of_its_kind()
+    {
+        _temp.File("base/work_order.json", """
+            { "kinds": [ { "id": "intake_manifold", "names": [ "intake" ], "comes_off": [ "up" ] }, { "id": "distributor", "names": [ "distributor" ] } ],
+              "rules": [ { "kind": "intake_manifold", "after": [ "distributor" ] } ] }
+            """);
+
+        var problems = new List<string>();
+        var order = WorkOrder.Load(new[] { ("streetcorsa", true, Path.Combine(_temp.Path, "base")) }, problems);
+        var side = new PartDefinition { Id = "mymod/side_intake", Name = "Side intake", ComesOff = new List<string?> { "out" } };
+
+        Assert.Equal("intake_manifold", order.KindOf(side));
+        Assert.Equal(new[] { "distributor" }, order.RuleOf(side)!.After);
+        Assert.Equal(new[] { PartWay.Out }, order.WayOf(side));
+        Assert.Equal(new[] { PartWay.Up }, order.WayOf(new PartDefinition { Name = "Stock intake" }));
+
+        // Not one leg that reads: the kind's way; an empty list on purpose: none
+        var misspelt = new PartDefinition { Id = "mymod/odd_intake", Name = "Odd intake", ComesOff = new List<string?> { "sideways" } };
+        Assert.Equal(new[] { PartWay.Up }, order.WayOf(misspelt));
+        Assert.Empty(order.WayOf(new PartDefinition { Name = "Fixed intake", ComesOff = new List<string?>() }));
+
+        WorkOrder.CheckWays(new[] { side, misspelt }, problems);
+        Assert.Equal(new[] { "mymod/odd_intake comes off \"sideways\", which is none of up, down, forward, back, out; left out" }, problems);
     }
 
     [Fact]

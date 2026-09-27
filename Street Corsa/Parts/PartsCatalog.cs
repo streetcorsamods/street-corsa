@@ -142,6 +142,7 @@ public sealed class PartsCatalog
 
         catalog.EngineBuilds = builds.All.ToList();
         catalog.WorkOrder = WorkOrder.Load(roots.Select(r => (r.Mod.Id, r.Mod.IsBase, r.Dir)), catalog._problems);
+        WorkOrder.CheckWays(catalog._parts.Values, catalog._problems);
 
         foreach (var (mod, gone, current) in aliases)
         {

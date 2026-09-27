@@ -4083,6 +4083,7 @@
       "id": "engines/ford_six/sprint_intake_manifold",
       "name": "sprint_intake_manifold",
       "display_name": "Sprint intake manifold",
+      "comes_off": [ "out" ],
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.IntakeManifold",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.IntakeManifold",
@@ -4257,6 +4258,7 @@
       "id": "engines/ford_six/ford_stock_intake_manifold",
       "name": "ford_stock_intake_manifold",
       "display_name": "Ford stock intake manifold",
+      "comes_off": [ "out" ],
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.IntakeManifold",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.IntakeManifold",
@@ -4421,6 +4423,7 @@
       "id": "engines/ford_six/ford_triple_intake_manifold",
       "name": "ford_triple_intake_manifold",
       "display_name": "Ford tri-carb intake manifold",
+      "comes_off": [ "out" ],
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.IntakeManifold",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.IntakeManifold",
@@ -4627,6 +4630,7 @@
       "id": "engines/ford_six/ford_stock_alternator",
       "name": "ford_stock_alternator",
       "display_name": "Indiel-Lucas stock alternator",
+      "comes_off": [ "up" ],
       "base_class": "java.game.parts.EnginePart",
       "class_chain": [
         "java.game.parts.EnginePart",

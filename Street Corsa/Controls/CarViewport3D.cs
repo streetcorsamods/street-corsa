@@ -116,6 +116,7 @@ public class CarViewport3D : D3DViewportBase
     private string? _partsCarDirectory;
     private InstalledPart? _partsEngine;
     private IReadOnlyList<CarPart>? _partsGear;
+    private EngineLayout _partsLayout;
     private bool _partsOnStand;
     private bool _applySceneryQueued;
     private bool _isLoadingScenery;
@@ -327,6 +328,17 @@ public class CarViewport3D : D3DViewportBase
     {
         get => (IReadOnlyList<CarPart>?)GetValue(GearProperty);
         set => SetValue(GearProperty, value);
+    }
+
+    public static readonly DependencyProperty EngineLayoutProperty = DependencyProperty.Register(
+        nameof(EngineLayout), typeof(EngineLayout), typeof(CarViewport3D),
+        new PropertyMetadata(EngineLayout.Front, (d, _) => ((CarViewport3D)d).QueueApplyParts()));
+
+    /// <summary>Where the car carries its engine: where <see cref="Engine"/> and the candidates for its place are drawn</summary>
+    public EngineLayout EngineLayout
+    {
+        get => (EngineLayout)GetValue(EngineLayoutProperty);
+        set => SetValue(EngineLayoutProperty, value);
     }
 
     public static readonly DependencyProperty CandidatesProperty = DependencyProperty.Register(
@@ -655,7 +667,8 @@ public class CarViewport3D : D3DViewportBase
         // The layout depends on the car and on what is in it, so either changing rebuilds it
         var engine = Engine;
         var gear = Gear;
-        if (renderer.HasProp && _partsCarDirectory == carDirectory && ReferenceEquals(_partsEngine, engine) && ReferenceEquals(_partsGear, gear)) return;
+        var layout = EngineLayout;
+        if (renderer.HasProp && _partsCarDirectory == carDirectory && ReferenceEquals(_partsEngine, engine) && ReferenceEquals(_partsGear, gear) && _partsLayout == layout) return;
 
         // What this run does about an engine going between the car and the stand. The garage is locked from the moment
         // one sets off; whatever way the run ends, the lock is let go of here unless the carry is really under way.
@@ -703,18 +716,18 @@ public class CarViewport3D : D3DViewportBase
                 AnimateFor(TimeSpan.FromSeconds(carriedFor) + AnimationWindow);
 
                 // The car comes up on its springs as the hoist takes the engine's weight off them
-                BumpCar(lighter: true, strips.Count * StripStagger + LiftTakesWeight);
+                BumpCar(lighter: true, strips.Count * StripStagger + LiftTakesWeight, InFront(_partsLayout));
             }
             else if (leaving.Count > 0)
             {
                 renderer.MoveParts(MovesOf(catalog, _partNodes, leaving), arriving: false, NodeOf(_partNodes, _partsEngine));
                 AnimateFor(AnimationWindow);
-                if (_partsEngine is { InstanceId: var outId } && outId != Guid.Empty && !after.Contains(outId)) BumpCar(lighter: true);
+                if (_partsEngine is { InstanceId: var outId } && outId != Guid.Empty && !after.Contains(outId)) BumpCar(lighter: true, atFront: InFront(_partsLayout));
             }
 
             var (placed, model, landed) = await Task.Run(() =>
             {
-                var parts = CarPartsLayout.Build(catalog, anchors, engine, gear);
+                var parts = CarPartsLayout.Build(catalog, anchors, engine, gear, layout);
                 return (parts, PartAssembler.BuildModel(catalog, "parts", parts), pulled is { } p ? BuildScenery(catalog, p.Engine, withEngine: true) : null);
             });
 
@@ -741,7 +754,7 @@ public class CarViewport3D : D3DViewportBase
                     renderer.MoveParts(MovesOf(catalog, model.Nodes, NodesWhere(model.Nodes, id => !before.Contains(id))), arriving: true, NodeOf(model.Nodes, engine));
 
                     // An engine put in settles the car on its springs as it gets there
-                    if (engine is { InstanceId: var inId } && inId != Guid.Empty && !before.Contains(inId)) BumpCar(lighter: false, GarageRenderer.PartMotionSeconds);
+                    if (engine is { InstanceId: var inId } && inId != Guid.Empty && !before.Contains(inId)) BumpCar(lighter: false, GarageRenderer.PartMotionSeconds, InFront(layout));
                 }
                 else if (_carryFromStand is { } fromStand && engine?.InstanceId == fromStand.Id && placed.FirstOrDefault(p => ReferenceEquals(p.Source, engine)) is { } block)
                 {
@@ -750,7 +763,7 @@ public class CarViewport3D : D3DViewportBase
                     var landsIn = renderer.CarryParts(NodesWhere(model.Nodes, ids.Contains), bay, fromStand.From, bay, ClearHeight(renderer), 0f);
                     if (landsIn > 0f)
                     {
-                        BumpCar(lighter: false, landsIn);
+                        BumpCar(lighter: false, landsIn, InFront(layout));
                         _cameraWaitsOnStand = false;
                         _followCarry = true;
                         carryingIn = true;
@@ -762,6 +775,7 @@ public class CarViewport3D : D3DViewportBase
                 _partsCarDirectory = carDirectory;
                 _partsEngine = engine;
                 _partsGear = gear;
+                _partsLayout = layout;
                 _anchors = anchors;
                 _partNodes = model.Nodes;
                 _partWorlds = placed.Where(p => p.Source != null).ToDictionary(p => p.Source!, p => p.World);
@@ -828,7 +842,7 @@ public class CarViewport3D : D3DViewportBase
 
         // Catch up with whatever changed in the meantime, a renderer rebuilt under it included (device lost, or a
         // quick unload and load): its own load found this run in progress and left the parts to it
-        if (Renderer != null && (renderer != Renderer || !PartsVisible || IsOnStand || _loadedCarDirectory != carDirectory || !ReferenceEquals(Engine, engine) || !ReferenceEquals(Gear, gear))) ApplyParts();
+        if (Renderer != null && (renderer != Renderer || !PartsVisible || IsOnStand || _loadedCarDirectory != carDirectory || !ReferenceEquals(Engine, engine) || !ReferenceEquals(Gear, gear) || EngineLayout != layout)) ApplyParts();
     }
 
     /// <summary>The parts on screen are none: whatever is bound next is laid out from scratch</summary>
@@ -1123,8 +1137,11 @@ public class CarViewport3D : D3DViewportBase
     {
         if (_partsOnStand) return EngineStandLayout.Build(catalog, Engine);
 
-        return _anchors is { } anchors ? CarPartsLayout.Build(catalog, anchors, Engine, Gear) : null;
+        return _anchors is { } anchors ? CarPartsLayout.Build(catalog, anchors, Engine, Gear, _partsLayout) : null;
     }
+
+    /// <summary>An engine the nose carries, rather than the tail</summary>
+    private static bool InFront(EngineLayout layout) => layout == EngineLayout.Front;
 
     private static HashSet<Guid> IdsOf(IReadOnlyList<PlacedPart> nodes) =>
         nodes.Select(n => n.Source?.InstanceId ?? Guid.Empty).Where(id => id != Guid.Empty).ToHashSet();
@@ -1347,6 +1364,9 @@ public class CarViewport3D : D3DViewportBase
 
         var catalog = PartsCatalog;
         var anchors = _anchors;
+
+        // The layout the parts on screen were built with: the candidates hang off them
+        var layout = _partsLayout;
         if (candidates == null || candidates.Count == 0 || catalog == null || (anchors == null && !_partsOnStand) || !renderer.HasProp)
         {
             ClearCandidates(renderer);
@@ -1363,14 +1383,12 @@ public class CarViewport3D : D3DViewportBase
                 var ownerOf = new Dictionary<InstalledPart, MountCandidate>();
                 foreach (var candidate in candidates)
                 {
-                    // A loose rim is a car-level candidate, and car-level candidates are placed in the engine
-                    // bay - so a rim on the shelf used to glow green in there. Rims and tyres are not drawn at
-                    // all now (see CarPartsLayout.Build), so their ghosts go too. A loose tyre drops out on its
-                    // own: its parent is the rim, which no longer has a world to hang off.
+                    // Rims and tyres are not drawn (see CarPartsLayout.Build), so their ghosts go too. A loose tyre
+                    // drops out on its own: its parent is the rim, which no longer has a world to hang off.
                     if (candidate.Parent == null && Parts.Cars.RunningGear.IsWheelSlot(candidate.ParentSlot)) continue;
 
                     var world = candidate.Parent == null
-                        ? anchors == null ? null : CarPartsLayout.EnginePlacement(anchors, candidate.Part.Definition)
+                        ? anchors == null ? null : CarPartsLayout.CarLevelPlacement(catalog, anchors, candidate.Part.Definition, candidate.ParentSlot, layout)
                         : worlds.TryGetValue(candidate.Parent, out var parentWorld)
                             ? PartAssembler.ChildWorld(candidate.Parent.Definition, candidate.ParentSlot, candidate.Part.Definition, candidate.OwnSlot, parentWorld)
                             : null;
@@ -1520,6 +1538,8 @@ public class CarViewport3D : D3DViewportBase
 
     /// <summary>The engine moved the body: the car leans, and the parts in it with it</summary>
     protected override void OnPoseChanged() => RockCar(Renderer?.CarNode);
+
+    protected override bool EngineTurnedRound => EngineLayout == EngineLayout.Rear;
 
     #endregion
 

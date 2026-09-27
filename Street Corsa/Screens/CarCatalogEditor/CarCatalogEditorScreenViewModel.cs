@@ -127,6 +127,10 @@ namespace StreetCorsa.Screens.CarCatalogEditor
                 .ToList();
         }
 
+        /// <summary>Where the car's own data says its engine is; in the front without the parts service to read it</summary>
+        private Parts.EngineLayout GuessLayout(CarDefinition car) =>
+            _partsService == null ? Parts.EngineLayout.Front : Parts.EngineLayouts.Guess(_partsService.Specs(car.Id));
+
         /// <summary>What the list is made from, read off the UI thread</summary>
         private sealed record CatalogSnapshot(List<CarDefinition> Cars, Dictionary<string, CarProfile> Profiles, bool HasEngines);
 
@@ -183,7 +187,7 @@ namespace StreetCorsa.Screens.CarCatalogEditor
                     }
 
                     var definition = carDef;
-                    var itemVm = new CatalogItemViewModel(definition, profile, snapshot.HasEngines, () => EngineOptionsFor(definition));
+                    var itemVm = new CatalogItemViewModel(definition, profile, snapshot.HasEngines, () => EngineOptionsFor(definition), () => GuessLayout(definition));
                     itemVm.PropertyChanged += OnItemPropertyChanged;
                     _catalogItems.Add(itemVm);
                 }

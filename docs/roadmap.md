@@ -896,9 +896,16 @@ AC's data, and `StockEngineMatcher` ignores layout and cylinder count.
 
 **Design:** engine layout as a general car property (front, mid, rear), guessed from the car's data (front weight
 share, drive) and set in the Car Catalog Editor; `CarPartsLayout` places the engine by it (behind the rear axle,
-transmission forward, for a rear engine), and so do the x-ray view and the mount candidates. No Corvair special
+transmission forward, for a rear engine), and so do the x-ray view and the mount candidates. **The user decided
+(2026-09-27):** a mid engine sits ahead of the rear axle facing the same way as a front engine, transmission pointing
+back; only a rear engine is turned around. No Corvair special
 case: any rear- or mid-engined car works the same. When a flat-six pack exists, the matcher should prefer it by
 layout and cylinders.
+
+**Built (2026-09-27, `feature/engine-layout`):** see `docs/systems/parts-system.md` "Engine layout". The guess is
+front-wheel drive or 44%+ on the front axle = front, else rear (mid can't be told from the weight: set by hand); of
+the 167 installed cars only the two Corvairs come out rear. Checked in an offscreen render of the Corvair in all
+three layouts; not yet seen in the game. Left for later: the matcher preferring a flat six by layout and cylinders.
 
 ### Step 19: the gas station
 Idea 6. The player drives to the gas station, as in Street Rod, with its "cruising in town" view from inside the car.

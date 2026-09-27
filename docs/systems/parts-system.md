@@ -457,6 +457,19 @@ words the names share (a 427 is a 427), and how close the power comes to the car
 some cars get the nearest relative rather than their engine (no slant six: the Valiant gets a 318).
 Check: `EngineBench <parts> cars <AC cars folder>`.
 
+**Engine layout.** Where a car carries its engine (`EngineLayout`: front, mid, rear) is guessed from its own data,
+since AC's data never says (`EngineLayouts.Guess`): front-wheel drive, or 44% or more of the weight on the front axle,
+is a front engine; anything else is taken for a rear one, not a mid one, as the weight alone does not tell them apart
+and the rear engine is the one of the game's era. `CarProfile.EngineLayout` overrules the guess, set in the Car
+Catalog Editor ("Guessed: ..." keeps the guess; a reset to defaults goes back to it). The layout only moves the engine
+in the garage's 3D view (`CarPartsLayout.EnginePlacement`, the mount candidates too): a front engine behind the front
+axle facing forward; a mid one facing forward too, its rear face 0.4 m ahead of the rear axle so the gearbox reaches
+back to it; a rear one turned around, its rear face at the rear axle and the gearbox reaching forward past it. The
+block's model is measured for its rear face (`PartModelBounds`). Of the installed cars only the Corvairs come out as
+rear-engined; they keep the V8 the matcher gives them until a flat-six pack exists, and the matcher does not look at
+layout or cylinders yet.
+Check: `EngineBench <parts> layout <AC cars folder>`.
+
 **Cars that have been around** (`EngineFactory.CreateTuned`). Used car listings carry their actual engine
 (`UsedCarListing.Parts`, moved onto the car when it is bought) and about a third of them have been worked on, only the
 way somebody plausibly would have: an engine of the same family with 5-50% more power, and bolt-on parts (air filter,
@@ -517,7 +530,10 @@ water pump, the alternator before the water pump, the intake before the heads, t
 the transmission before the flywheel, the distributor before the intake). A drive belt goes on only over the water
 pump and the fan (`"needs"`; a radiator with an electric fan serves as the fan), a power steering belt (`steering_belt`)
 only over its pump. The Ford six's distributor sits on the side of the block: its pack makes it a `side_distributor`,
-which waits for nothing but holds the camshaft in. The timing cover and the water pump come off each on their own.
+which waits for nothing but holds the camshaft in. Its intake manifold bolts to the side of the head and comes off
+sideways, its alternator sits on top and comes off upwards: they stay an `intake_manifold` and an `alternator`, rules
+and all, and only the way they come off is their own (`"comes_off"` on the part, `PartDefinition.ComesOff`, read by
+`WorkOrder.WayOf` before the kind's). The timing cover and the water pump come off each on their own.
 The rules hold both ways, so an engine taken apart goes back together in the opposite order. A part that lacks what it
 needs could come off but never go back on, so it is taken off as the engine comes into the game
 (`EngineWork.TakeOffWhatLacksItsNeeds`: in `EngineFactory` for a build, in `SavedParts.BringUpToDate` for a save, onto
@@ -773,6 +789,7 @@ EngineBench <parts folder> tune <build id> [count]     engines a used car of tha
 EngineBench <parts folder> bench <build id>            every part comes off and has to find its way back
 EngineBench <parts folder> renew <older parts folder>  engines as a save made with an older conversion holds them, brought up to date
 EngineBench <parts folder> gear <AC cars folder>       factory running gear chosen for every car, against its own data
+EngineBench <parts folder> layout <AC cars folder>     where every car carries its engine, guessed from its weight and driven wheels
 EngineBench <parts folder> car <AC car folder> <build id> [output folder]   every data file the car's parts change
 EngineBench <parts folder> sound <AC car folder> <car id> [output folder]   the car's sound written for another car id, with the engine events it lacks
 EngineBench <parts folder> sounds <AC cars folder> [sounds folder]        the sound library (curated, then harvested with carriers), and the sound every build gets, with the reason

@@ -28,6 +28,7 @@ public sealed class WorkOrder
     private readonly Dictionary<string, IReadOnlyList<PartWay>> _ways = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> _standStrips = new();
     private readonly ConcurrentDictionary<PartDefinition, string?> _kindOf = new(ReferenceEqualityComparer.Instance);
+    private readonly ConcurrentDictionary<PartDefinition, IReadOnlyList<PartWay>?> _ownWayOf = new(ReferenceEqualityComparer.Instance);
 
     /// <summary>
     /// Kinds that come off an engine as it goes on the stand, in that order: what stays with the car (the radiator), and
@@ -61,9 +62,43 @@ public sealed class WorkOrder
     public bool DoesJobOf(string kind, string needed) =>
         kind.Equals(needed, StringComparison.OrdinalIgnoreCase) || _serves.TryGetValue(kind, out var serves) && serves.Contains(needed);
 
-    /// <summary>The way a part comes off the engine, leg by leg; empty for a kind that does not say</summary>
-    public IReadOnlyList<PartWay> WayOf(PartDefinition part) =>
-        KindOf(part) is { } kind && _ways.TryGetValue(kind, out var way) ? way : Array.Empty<PartWay>();
+    /// <summary>
+    /// The way a part comes off the engine, leg by leg: its own (<see cref="PartDefinition.ComesOff"/>), or else its
+    /// kind's; empty for a kind that does not say
+    /// </summary>
+    public IReadOnlyList<PartWay> WayOf(PartDefinition part)
+    {
+        if (part.ComesOff != null && _ownWayOf.GetOrAdd(part, p => ReadWay(p.ComesOff!, null, null)) is { } own) return own;
+
+        return KindOf(part) is { } kind && _ways.TryGetValue(kind, out var way) ? way : Array.Empty<PartWay>();
+    }
+
+    /// <summary>
+    /// Every part that says how it comes off, told in <paramref name="problems"/> of a way it says that is no way;
+    /// a part with not one leg that reads comes off the way its kind does
+    /// </summary>
+    public static void CheckWays(IEnumerable<PartDefinition> parts, List<string> problems)
+    {
+        foreach (var part in parts.Where(p => p.ComesOff != null)) ReadWay(part.ComesOff!, part.Id, problems);
+    }
+
+    /// <summary>
+    /// A way to come off read leg by leg, the legs that are none of the ways left out and told of; null when there
+    /// were legs but not one of them read, an empty list only for no legs at all
+    /// </summary>
+    private static List<PartWay>? ReadWay(IEnumerable<string?> legs, string? label, List<string>? problems)
+    {
+        var way = new List<PartWay>();
+        var any = false;
+        foreach (var leg in legs)
+        {
+            any = true;
+            if (WayNamed(leg) is { } parsed) way.Add(parsed);
+            else problems?.Add($"{label} comes off \"{leg}\", which is none of up, down, forward, back, out; left out");
+        }
+
+        return way.Count > 0 || !any ? way : null;
+    }
 
     /// <summary>How a kind is named to the player: "oil pan", "cylinder heads" for more than one</summary>
     public string NameOf(string kind, int count = 1)
@@ -164,15 +199,8 @@ public sealed class WorkOrder
                 // Which way it comes off is only looks: the last mod to say so says so
                 if (kind.ComesOff is { } legs)
                 {
-                    var way = new List<PartWay>();
-                    foreach (var leg in legs)
-                    {
-                        if (WayNamed(leg) is { } parsed) way.Add(parsed);
-                        else problems.Add($"{label}: {kind.Id} comes off \"{leg}\", which is none of up, down, forward, back, out; left out");
-                    }
-
                     // Not one leg that reads: the way it came off before stands, rather than none at all
-                    if (way.Count > 0 || legs.Count == 0) order._ways[kind.Id] = way;
+                    if (ReadWay(legs, $"{label}: {kind.Id}", problems) is { } way) order._ways[kind.Id] = way;
                     else if (order._ways.ContainsKey(kind.Id)) problems.Add($"{label}: {kind.Id} keeps the way it comes off as before");
                 }
             }

@@ -59,6 +59,12 @@ namespace StreetCorsa.Models.Catalog
         /// <summary>True when somebody picked the engine by hand; suggestions leave it alone then</summary>
         public bool StockEngineIsManual { get; set; }
 
+        /// <summary>
+        /// Where the car carries its engine, set by hand in the catalog editor; null to go by the guess from the car's
+        /// data (<see cref="StreetCorsa.Parts.EngineLayouts.Guess"/>)
+        /// </summary>
+        public StreetCorsa.Parts.EngineLayout? EngineLayout { get; set; }
+
         // Future enrichment properties (optional, not used initially)
         public string? StreetRodEra { get; set; }
         public string? PerformanceTier { get; set; }

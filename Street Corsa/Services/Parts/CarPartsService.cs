@@ -213,6 +213,21 @@ namespace StreetCorsa.Services.Parts
             return specs;
         }
 
+        public EngineLayout EngineLayoutOf(string carDefinitionId)
+        {
+            try
+            {
+                if (_profileRepo.GetProfile(carDefinitionId)?.EngineLayout is { } set) return set;
+            }
+            catch (Exception ex)
+            {
+                // A catalog that can't be read now still leaves the guess: better than the last car's layout
+                _logger.Warning("Could not read where {Car} was set to carry its engine: {Error}", carDefinitionId, ex.Message);
+            }
+
+            return EngineLayouts.Guess(Specs(carDefinitionId));
+        }
+
         private AcCarSpecs? ReadSpecs(string id)
         {
             try

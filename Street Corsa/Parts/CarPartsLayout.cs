@@ -29,9 +29,10 @@ public sealed record CarAnchors(Vector3 WheelLF, Vector3 WheelRF, Vector3 WheelL
 }
 
 /// <summary>
-/// Estimates where a car's parts sit from its wheel hubs alone, since AC cars know nothing about
-/// engine bays or suspension mounts: a front, longitudinal engine with the gearbox behind it, the wheel
-/// and the brake on the hub, a coil spring and a shock next to every wheel.
+/// Estimates where a car's parts sit from its wheel hubs and its <see cref="EngineLayout"/> alone, since AC cars know
+/// nothing about engine bays or suspension mounts: a longitudinal engine with the gearbox bolted to its back (in the
+/// front or ahead of the rear axle facing forward, behind the rear axle turned around), the wheel and the brake on the
+/// hub, a coil spring and a shock next to every wheel.
 /// Part models have their front towards -Z while AC cars face +Z, hence the frames below.
 /// </summary>
 public static class CarPartsLayout
@@ -41,6 +42,14 @@ public static class CarPartsLayout
     private const float EngineBehindFrontAxle = 0.18f;
     private static readonly Vector3 DefaultCrankPosition = new(0f, -0.18f, 0f);
 
+    // Engine behind the driver: placed by the block's rear face, where the gearbox bolts on. A mid engine's gearbox
+    // reaches back to the rear axle; a rear engine's rear face is at the axle, its gearbox reaching forward past it.
+    private const float MidRearFaceAheadOfRearAxle = 0.4f;
+    private const float RearRearFaceBehindRearAxle = 0.05f;
+
+    /// <summary>Half a block's length, for a block whose model can't be measured</summary>
+    private const float DefaultBlockHalfLength = 0.3f;
+
     // Running gear, relative to a hub: towards the car's centre line and up
     private const float BrakeInboard = 0.06f;
     private const float SpringInboard = 0.24f;
@@ -48,56 +57,86 @@ public static class CarPartsLayout
 
     /// <param name="engine">The car's engine block with everything on it; null for an empty engine bay</param>
     /// <param name="gear">What sits on the car's wheel slots, each with what is on it (the tyre on the rim)</param>
-    public static List<PlacedPart> Build(PartsCatalog catalog, CarAnchors anchors, InstalledPart? engine, IReadOnlyList<CarPart>? gear = null)
+    public static List<PlacedPart> Build(PartsCatalog catalog, CarAnchors anchors, InstalledPart? engine, IReadOnlyList<CarPart>? gear = null,
+        EngineLayout layout = EngineLayout.Front)
     {
         var result = new List<PlacedPart>();
-        var forward = anchors.Forward;
 
-        if (engine != null) result.AddRange(PartAssembler.Assemble(engine, EnginePlacement(anchors, engine.Definition)));
+        if (engine != null) result.AddRange(PartAssembler.Assemble(engine, EnginePlacement(catalog, anchors, engine.Definition, layout)));
 
         foreach (var part in gear ?? Array.Empty<CarPart>())
         {
-            var corner = RunningGear.CornerOf(part.CarSlot);
-            if (corner < 0) continue;
-
-            var hub = anchors.Hub(corner);
-            var inboard = anchors.Axle(corner) - hub;
-            inboard.Y = 0f;
-            if (inboard.LengthSquared() < 1e-6f) continue;
-            inboard = Vector3.Normalize(inboard);
-
-            // Every wheel-side part is modelled for one side; turning it around the vertical axis gives the other
-            var side = SideFrame(forward, inboard);
-            var slot = part.CarSlot;
-
             // Rims and tyres are not drawn: the Assetto Corsa model brings its own wheels, and the part ones
             // land on the very same WHEEL_* dummies, so both show at once. They are still parts - mounted,
             // bought, sold and exported to the car's physics as before - they just have no model here.
-            if (slot == RunningGear.WheelSlot(corner)) continue;
+            if (RunningGear.IsWheelSlot(part.CarSlot)) continue;
 
-            if (slot == RunningGear.BrakeSlot(corner)) result.AddRange(PartAssembler.Assemble(part.Root, BySlot(part.Root.Definition, side, hub + inboard * BrakeInboard)));
-            else
-            {
-                var springSeat = hub + inboard * SpringInboard - Vector3.UnitY * SpringSeatBelowHub;
-                result.AddRange(PartAssembler.Assemble(part.Root, BySlot(part.Root.Definition, side, springSeat)));
-            }
+            if (CornerPlacement(anchors, part.Root.Definition, part.CarSlot) is { } world) result.AddRange(PartAssembler.Assemble(part.Root, world));
         }
 
         return result;
     }
 
-    /// <summary>Where an engine block sits in the car: crankshaft at the hubs' height, block behind the front axle line</summary>
-    public static Matrix4x4 EnginePlacement(CarAnchors anchors, PartDefinition block)
+    /// <summary>
+    /// Where a part goes on the car itself, by the car slot it takes: running gear at its wheel's hub, anything else
+    /// (an engine) in the engine's place. Null for a slot of a wheel's corner whose hubs don't tell which way is in.
+    /// </summary>
+    public static Matrix4x4? CarLevelPlacement(PartsCatalog catalog, CarAnchors anchors, PartDefinition part, int carSlot, EngineLayout layout) =>
+        RunningGear.CornerOf(carSlot) < 0 ? EnginePlacement(catalog, anchors, part, layout) : CornerPlacement(anchors, part, carSlot);
+
+    /// <summary>A wheel-side part on its hub: the brake on it, a spring or a shock next to it; null for a slot of no corner</summary>
+    private static Matrix4x4? CornerPlacement(CarAnchors anchors, PartDefinition part, int carSlot)
     {
-        var frame = CarFrame(anchors.Forward);
+        var corner = RunningGear.CornerOf(carSlot);
+        if (corner < 0) return null;
+
+        var hub = anchors.Hub(corner);
+        var inboard = anchors.Axle(corner) - hub;
+        inboard.Y = 0f;
+        if (inboard.LengthSquared() < 1e-6f) return null;
+        inboard = Vector3.Normalize(inboard);
+
+        // Every wheel-side part is modelled for one side; turning it around the vertical axis gives the other
+        var side = SideFrame(anchors.Forward, inboard);
+        if (carSlot == RunningGear.BrakeSlot(corner)) return BySlot(part, side, hub + inboard * BrakeInboard);
+
+        var springSeat = hub + inboard * SpringInboard - Vector3.UnitY * SpringSeatBelowHub;
+        return BySlot(part, side, springSeat);
+    }
+
+    /// <summary>Where an engine block sits in the car by the car's layout, its model measured through the catalog</summary>
+    public static Matrix4x4 EnginePlacement(PartsCatalog catalog, CarAnchors anchors, PartDefinition block, EngineLayout layout) =>
+        EnginePlacement(anchors, block, layout, layout == EngineLayout.Front ? null : PartModelBounds.Of(catalog, block));
+
+    /// <summary>
+    /// Where an engine block sits in the car, crankshaft a little above the hubs: a front engine behind the front axle
+    /// line; a mid one facing forward with its rear face ahead of the rear axle; a rear one turned around, its rear
+    /// face at the rear axle
+    /// </summary>
+    /// <param name="bounds">The block model's box, to find its rear face by; null for a block of the usual length</param>
+    public static Matrix4x4 EnginePlacement(CarAnchors anchors, PartDefinition block, EngineLayout layout = EngineLayout.Front, (Vector3 Min, Vector3 Max)? bounds = null)
+    {
+        var forward = anchors.Forward;
+        var frame = CarFrame(layout == EngineLayout.Rear ? -forward : forward);
 
         var crank = block.Slots.FirstOrDefault(s => s.Name.Contains("crank", StringComparison.OrdinalIgnoreCase));
         var crankLocal = crank == null ? DefaultCrankPosition : new Vector3(crank.Position[0], crank.Position[1], 0f);
-        var crankTarget = anchors.FrontAxle - anchors.Forward * EngineBehindFrontAxle + Vector3.UnitY * CrankAboveHubs;
+        var lift = Vector3.UnitY * CrankAboveHubs;
 
-        var origin = crankTarget - Vector3.TransformNormal(crankLocal, frame);
+        // What lands on the target: the crankshaft's line, at the block's origin in front, at its rear face behind the driver
+        var (local, target) = layout switch
+        {
+            EngineLayout.Mid => (crankLocal with { Z = RearFaceZ(bounds) }, anchors.RearAxle + forward * MidRearFaceAheadOfRearAxle + lift),
+            EngineLayout.Rear => (crankLocal with { Z = RearFaceZ(bounds) }, anchors.RearAxle - forward * RearRearFaceBehindRearAxle + lift),
+            _ => (crankLocal, anchors.FrontAxle - forward * EngineBehindFrontAxle + lift)
+        };
+
+        var origin = target - Vector3.TransformNormal(local, frame);
         return frame * Matrix4x4.CreateTranslation(origin);
     }
+
+    /// <summary>Z of a block's rear face in its own space: part models have their front towards -Z</summary>
+    private static float RearFaceZ((Vector3 Min, Vector3 Max)? bounds) => bounds?.Max.Z ?? DefaultBlockHalfLength;
 
     /// <summary>Places a part so that its first slot (where it meets the car) lands on a point</summary>
     private static Matrix4x4 BySlot(PartDefinition part, Matrix4x4 frame, Vector3 target)

@@ -39,12 +39,16 @@ public static class Program
             Console.WriteLine("       EngineBench <parts folder> bench <build id>            take every part off and find where it goes back");
             Console.WriteLine("       EngineBench <parts folder> renew <older parts folder>  engines saved with an older conversion, brought up to date");
             Console.WriteLine("       EngineBench <parts folder> gear <AC cars folder>       factory running gear chosen for every car");
+            Console.WriteLine("       EngineBench <parts folder> layout <AC cars folder>     where every car carries its engine, guessed from its data");
             Console.WriteLine("       EngineBench <parts folder> car <AC car folder> <build id> [output folder]   every data file the car's parts change");
             Console.WriteLine("       EngineBench <parts folder> sound <AC car folder> <car id> [output folder]   the car's sound written for another car id");
             Console.WriteLine("       EngineBench <parts folder> sounds <AC cars folder> [sounds folder]        the sound library, and the sound every build gets");
             Console.WriteLine("A <build id> is the exact id or a part of one; a part that more than one build's id holds is refused with a list of them");
             return 1;
         }
+
+        // The one command that needs no parts: the catalog is not loaded for it
+        if (args[1] == "layout" && args.Length > 2) return Layout(args[2]);
 
         var catalog = PartsCatalog.Load(args[0]);
         Console.WriteLine($"{catalog.Parts.Count} parts, {catalog.EngineBuilds.Count} engine builds");
@@ -385,8 +389,8 @@ public static class Program
         return failures == 0 ? 0 : 1;
     }
 
-    /// <summary>The running gear every car leaves the factory with, matched to its own data</summary>
-    private static int Gear(PartsCatalog catalog, string carsFolder)
+    /// <summary>Every installed car with a ui_car.json and the data it reads; one line for each car whose data does not read</summary>
+    private static IEnumerable<(string Folder, AcCarSpecs Specs)> InstalledCarSpecs(string carsFolder)
     {
         foreach (var folder in AcCarFolder.InstalledCars(carsFolder))
         {
@@ -396,6 +400,26 @@ public static class Program
             try { specs = AcCarSpecs.Read(AcCarDataReader.ForCar(folder)); }
             catch (Exception ex) { Console.WriteLine($"{Path.GetFileName(folder)}: {ex.Message}"); continue; }
 
+            yield return (folder, specs);
+        }
+    }
+
+    /// <summary>Where every car carries its engine, as guessed from its weight and the wheels it drives</summary>
+    private static int Layout(string carsFolder)
+    {
+        foreach (var (folder, specs) in InstalledCarSpecs(carsFolder))
+        {
+            Console.WriteLine($"{EngineLayouts.Guess(specs),-5}  {specs.FrontWeightShare,5:0.000} front  {specs.Traction ?? "?",-4}  {Path.GetFileName(folder)}");
+        }
+
+        return 0;
+    }
+
+    /// <summary>The running gear every car leaves the factory with, matched to its own data</summary>
+    private static int Gear(PartsCatalog catalog, string carsFolder)
+    {
+        foreach (var (folder, specs) in InstalledCarSpecs(carsFolder))
+        {
             Console.WriteLine($"{Path.GetFileName(folder)}: {specs.TotalMass:0} kg, {specs.FrontWeightShare:0%} front");
             if (RunningGearFactory.Choose(catalog, specs) is not var (front, rear))
             {

@@ -42,6 +42,7 @@ internal sealed class CatalogParts : ICarPartsService
     public CarSound? ChooseSound(Car car, EngineReport? report) => null;
     public double? FactoryEngineMass(Car car) => null;
     public AcCarSpecs? Specs(string carDefinitionId) => null;
+    public EngineLayout EngineLayoutOf(string carDefinitionId) => EngineLayout.Front;
     public (RunningGearFactory.AxleParts Front, RunningGearFactory.AxleParts Rear)? FactoryRunningGear(Car car) => null;
 }
 

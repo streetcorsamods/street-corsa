@@ -20,6 +20,7 @@
     <Compile Include="..\..\Street Corsa\Parts\SlotShifts.cs" Link="Parts\SlotShifts.cs" />
     <Compile Include="..\..\Street Corsa\Parts\PartKinds.cs" Link="Parts\PartKinds.cs" />
     <Compile Include="..\..\Street Corsa\Parts\WorkOrder.cs" Link="Parts\WorkOrder.cs" />
+    <Compile Include="..\..\Street Corsa\Parts\EngineLayout.cs" Link="Parts\EngineLayout.cs" />
     <Compile Include="..\..\Street Corsa\Parts\Cars\*.cs" Exclude="..\..\Street Corsa\Parts\Cars\CarCondition.cs;..\..\Street Corsa\Parts\Cars\RepairShop.cs" Link="Parts\Cars\%(Filename)%(Extension)" />
     <Compile Include="..\..\Street Corsa\Models\Race\RaceStartState.cs" Link="Models\RaceStartState.cs" />
     <Compile Include="..\..\Street Corsa\Models\GameState\PartInstance.cs" Link="Models\PartInstance.cs" />

@@ -93,6 +93,14 @@ public class PartDefinition
     public string? WorkKind { get; set; }
 
     /// <summary>
+    /// How this part comes off, leg by leg, where it is mounted otherwise than its kind usually is: an intake manifold
+    /// on the side of the head comes off ["out"], not up. It stays of its kind, rules and all. Null goes by the kind
+    /// (<see cref="Parts.WorkKind.ComesOff"/>).
+    /// </summary>
+    [JsonProperty("comes_off", NullValueHandling = NullValueHandling.Ignore)]
+    public List<string?>? ComesOff { get; set; }
+
+    /// <summary>
     /// Whether the part has a script of its own that was run: the base game's root entries (what mods declare their
     /// fit against) have none, so no properties and no classes. A script whose parent class is missing still counts:
     /// it has no chain, but it was constructed.

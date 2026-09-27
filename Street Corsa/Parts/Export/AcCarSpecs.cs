@@ -32,6 +32,9 @@ public sealed record AcCarSpecs
     /// <summary>Share of the mass on the front axle</summary>
     public double FrontWeightShare { get; init; }
 
+    /// <summary>drivetrain.ini's [TRACTION] TYPE: RWD, FWD, AWD or AWD2; null when the car does not say</summary>
+    public string? Traction { get; init; }
+
     public AcAxleSpecs Front { get; init; } = new();
     public AcAxleSpecs Rear { get; init; } = new();
 
@@ -44,6 +47,7 @@ public sealed record AcCarSpecs
         var tyres = new IniText(readFile("tyres.ini"));
         var brakes = new IniText(readFile("brakes.ini"));
         var suspensions = new IniText(readFile("suspensions.ini"));
+        var drivetrain = new IniText(readFile("drivetrain.ini"));
 
         var mass = car.GetNumber("BASIC", "TOTALMASS") ?? 0;
         var frontShare = suspensions.GetNumber("BASIC", "CG_LOCATION") ?? 0.5;
@@ -71,6 +75,7 @@ public sealed record AcCarSpecs
         {
             TotalMass = mass,
             FrontWeightShare = frontShare,
+            Traction = drivetrain.Get("TRACTION", "TYPE")?.Trim().ToUpperInvariant() is { Length: > 0 } traction ? traction : null,
             Front = Axle("FRONT", true),
             Rear = Axle("REAR", false)
         };

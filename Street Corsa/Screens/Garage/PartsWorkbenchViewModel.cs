@@ -189,6 +189,15 @@ namespace StreetCorsa.Screens.Garage
             private set => SetProperty(ref _gear, value);
         }
 
+        private EngineLayout _engineLayout;
+
+        /// <summary>Where the car carries its engine, which is where the 3D view draws it</summary>
+        public EngineLayout EngineLayout
+        {
+            get => _engineLayout;
+            private set => SetProperty(ref _engineLayout, value);
+        }
+
         private IReadOnlyList<MountCandidate>? _candidates;
 
         public IReadOnlyList<MountCandidate>? Candidates
@@ -371,6 +380,10 @@ namespace StreetCorsa.Screens.Garage
             SelectedPart = null;
             SelectedShelfItem = null;
 
+            // Where the car carries its engine, looked up alongside the parts rather than after them: guessing it may
+            // read the car's data off the disk, and the car's parts should not wait for that
+            var layoutLookup = car == null ? Task.FromResult(EngineLayout.Front) : Task.Run(() => LayoutOf(car));
+
             try
             {
                 // The first call loads the catalog: keep that off the UI thread. The car and the save file
@@ -378,8 +391,11 @@ namespace StreetCorsa.Screens.Garage
                 var available = await Task.Run(() => _parts.IsAvailable);
                 if (available && car != null && await _parts.EnsurePartsAsync(car)) Save();
 
+                var layout = await layoutLookup;
+
                 if (!ReferenceEquals(_car, car)) return;
 
+                EngineLayout = layout;
                 Catalog = available ? _parts.Catalog : null;
                 if (!available) IsOpen = false;
             }
@@ -389,6 +405,20 @@ namespace StreetCorsa.Screens.Garage
             }
 
             Refresh();
+        }
+
+        /// <summary>The car's engine layout; in the front when even the guess fails, never the last car's</summary>
+        private EngineLayout LayoutOf(Car car)
+        {
+            try
+            {
+                return _parts.EngineLayoutOf(car.DefinitionId);
+            }
+            catch (Exception ex)
+            {
+                _logger.Warning("Could not tell where {Car} carries its engine: {Error}", car.DefinitionId, ex.Message);
+                return EngineLayout.Front;
+            }
         }
 
         public void OnPartClicked(InstalledPart? part)

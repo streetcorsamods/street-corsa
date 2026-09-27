@@ -79,9 +79,10 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     private CarBodyRock? _rock;
 
     // Kicks to the body that ring out on the springs, by how long they have been going (less than 0 while they wait):
-    // +1 lifts the nose (an engine coming out), -1 dips it (one going in). They go by the frames the renderer moves
-    // the parts by, not by the clock, so a bump lands with the engine however slowly the frames come.
-    private readonly List<(float Age, float Sign)> _bumps = new();
+    // +1 lifts the body (an engine coming out), -1 drops it (one going in); the nose goes with it for an engine in the
+    // front, against it for one behind the driver (Front false). They go by the frames the renderer moves the parts by,
+    // not by the clock, so a bump lands with the engine however slowly the frames come.
+    private readonly List<(float Age, float Sign, bool Front)> _bumps = new();
 
     /// <summary>How the label next to the pointer looks, and where it sits from the pointer</summary>
     protected readonly record struct LabelLook(double FontSize, byte BackgroundAlpha, byte BorderAlpha, Thickness Padding, Vector Offset);
@@ -488,7 +489,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         if (_bumps.Count > 0)
         {
             var step = Math.Min(dt, GarageRenderer.MaxTickSeconds);
-            for (var i = 0; i < _bumps.Count; i++) _bumps[i] = (_bumps[i].Age + step, _bumps[i].Sign);
+            for (var i = 0; i < _bumps.Count; i++) _bumps[i] = _bumps[i] with { Age = _bumps[i].Age + step };
             OnPoseChanged();
             moving = true;
         }
@@ -716,12 +717,13 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     private const float BumpSeconds = 1.6f;
 
     /// <summary>
-    /// The car bounces once on its springs, <paramref name="delaySeconds"/> from now: a heavy load leaving the front
-    /// (<paramref name="lighter"/>, the nose comes up first) or landing in it (the nose dips first)
+    /// The car bounces once on its springs, <paramref name="delaySeconds"/> from now: a heavy load leaving it
+    /// (<paramref name="lighter"/>, its end comes up first) or landing in it (its end dips first). The load is in the
+    /// front, so the nose moves, or else behind the driver (<paramref name="atFront"/> false), so the tail does.
     /// </summary>
-    protected void BumpCar(bool lighter, float delaySeconds = 0f)
+    protected void BumpCar(bool lighter, float delaySeconds = 0f, bool atFront = true)
     {
-        _bumps.Add((-Math.Max(0f, delaySeconds), lighter ? 1f : -1f));
+        _bumps.Add((-Math.Max(0f, delaySeconds), lighter ? 1f : -1f, atFront));
         AnimateFor(TimeSpan.FromSeconds(Math.Max(0f, delaySeconds) + BumpSeconds));
     }
 
@@ -730,15 +732,26 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     {
         _bumps.RemoveAll(b => b.Age >= BumpSeconds);
 
-        var swing = 0f;
-        foreach (var (t, sign) in _bumps)
+        var pitch = 0f;
+        var heave = 0f;
+        foreach (var (t, sign, front) in _bumps)
         {
-            if (t > 0f) swing += sign * (float)(Math.Exp(-t / BumpSettleSeconds) * Math.Sin(2 * Math.PI * BumpHertz * t));
+            if (t <= 0f) continue;
+
+            var swing = sign * (float)(Math.Exp(-t / BumpSettleSeconds) * Math.Sin(2 * Math.PI * BumpHertz * t));
+            pitch += front ? swing : -swing;
+            heave += swing;
         }
 
-        // The nose leads; the whole body follows a little
-        return new Audio.BodyPose(0f, BumpPitch * swing, BumpHeave * swing);
+        // The loaded end leads; the whole body follows a little
+        return new Audio.BodyPose(0f, BumpPitch * pitch, BumpHeave * heave);
     }
+
+    /// <summary>
+    /// The car's engine faces backwards (a rear engine): its crankshaft turns the other way under the body, so the
+    /// body leans the other way as it revs
+    /// </summary>
+    protected virtual bool EngineTurnedRound => false;
 
     /// <summary>
     /// Rocks <paramref name="carNode"/> the way the running engine has it, and any bump with it; null, or an engine at
@@ -748,6 +761,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     {
         var renderer = _renderer;
         var running = RunningEngine?.Pose ?? Audio.BodyPose.Rest;
+        if (EngineTurnedRound) running = running with { Roll = -running.Roll };
         var bump = BumpPose();
         var pose = new Audio.BodyPose(running.Roll + bump.Roll, running.Pitch + bump.Pitch, running.Heave + bump.Heave);
         if (renderer == null || carNode == null || (pose.IsRest && RunningEngine?.IsActive != true && _bumps.Count == 0))

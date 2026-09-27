@@ -65,6 +65,7 @@
                                 StandEngine="{Binding Workbench.StandEngine}"
                                 Engine="{Binding Workbench.Engine}"
                                 Gear="{Binding Workbench.Gear}"
+                                EngineLayout="{Binding Workbench.EngineLayout}"
                                 Candidates="{Binding Workbench.Candidates}"
                                 SelectedPart="{Binding Workbench.SelectedPart}"
                                 RunningEngine="{Binding Runner, ElementName=EnginePanel}"

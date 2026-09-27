@@ -1,5 +1,3 @@
-using System.Collections.Concurrent;
-using System.IO;
 using System.Numerics;
 using AcTools.Kn5File;
 using AcTools.Numerics;
@@ -27,9 +25,6 @@ public static class EngineStandLayout
     /// <summary>Where the head sits, from <see cref="Spot"/>, when there is no engine to hang off it</summary>
     private const float EmptyHeadZ = -0.35f;
 
-    // A block's bounds, by model file: read once, the stand asks on every layout
-    private static readonly ConcurrentDictionary<string, (Vector3 Min, Vector3 Max)?> Bounds = new(StringComparer.OrdinalIgnoreCase);
-
     /// <summary>The engine's parts in their places on the stand; empty when there is none</summary>
     public static List<PlacedPart> Build(PartsCatalog catalog, InstalledPart? engine) =>
         engine == null ? new List<PlacedPart>() : PartAssembler.Assemble(engine, EnginePlacement(catalog, engine.Definition));
@@ -49,46 +44,11 @@ public static class EngineStandLayout
     /// <summary>Z of the block's rear face on the stand, where the stand's head bolts on, in the garage's space</summary>
     public static float HeadZ(PartsCatalog catalog, InstalledPart? engine)
     {
-        if (engine == null || BoundsOf(catalog, engine.Definition) is not { } bounds) return Spot.Z + EmptyHeadZ;
+        if (engine == null || PartModelBounds.Of(catalog, engine.Definition) is not { } bounds) return Spot.Z + EmptyHeadZ;
 
         // The rear is the model's +Z, turned to -Z on the stand
         var world = EnginePlacement(catalog, engine.Definition);
         return Vector3.Transform(new Vector3(0f, 0f, bounds.Max.Z), world).Z;
-    }
-
-    private static (Vector3 Min, Vector3 Max)? BoundsOf(PartsCatalog catalog, PartDefinition part)
-    {
-        var path = catalog.GetModelPath(part);
-        if (path == null) return null;
-
-        return Bounds.GetOrAdd(path, file =>
-        {
-            try
-            {
-                if (!File.Exists(file)) return null;
-
-                // Only the vertices are wanted: textures and materials are skipped
-                var model = Kn5.FromFile(file, SkippingTextureLoader.Instance, SkippingMaterialLoader.Instance);
-                var min = new Vector3(float.MaxValue);
-                var max = new Vector3(float.MinValue);
-                foreach (var mesh in model.RootNode.Children.Where(n => n.NodeClass == Kn5NodeClass.Mesh))
-                {
-                    foreach (var vertex in mesh.Vertices)
-                    {
-                        var p = new Vector3(vertex.Position.X, vertex.Position.Y, vertex.Position.Z);
-                        min = Vector3.Min(min, p);
-                        max = Vector3.Max(max, p);
-                    }
-                }
-
-                return min.X <= max.X ? (min, max) : null;
-            }
-            catch (Exception ex) when (ex is not OutOfMemoryException)
-            {
-                // A model that can't be read is as good as none: the stand stands at its empty spot, and the file is not read again
-                return null;
-            }
-        });
     }
 
     /// <summary>

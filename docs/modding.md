@@ -110,12 +110,14 @@ be off before a part comes off has to be off before it goes back on, and an engi
 lacking what it needs (a build short of its water pump, an old save) has that part taken off first. A kind that is in
 the way on one engine and not on another is two kinds: a distributor goes down through the intake on a V8, so the
 intake waits for it; the Ford six's sits on the side of its block (`"kind": "side_distributor"` in its pack) and leaves
-the intake alone. `"stand_strips"` is what comes off an engine as it goes on the stand (the
+the intake alone. A part that only comes off another way than its kind stays of its kind, rules and all, and says so
+itself: `"comes_off"` on the part in its pack, as for a kind below (the Ford six's intake manifolds have
+`"comes_off": [ "out" ]`, its alternator `[ "up" ]`). `"stand_strips"` is what comes off an engine as it goes on the stand (the
 radiator, and what is in the way of its bellhousing face), in that order: the garage shows them coming off one after
 another before the hoist lifts the engine out. None of them goes back on while the engine is on the stand. A kind's `"comes_off"` is how the garage shows it
 coming off, leg by leg, in the engine's own directions: `up`, `down`, `forward` (towards the crankshaft's nose),
 `back`, `out` (away from the engine, on the side the part is on); `[ "back", "down" ]` for a gearbox. What is on the
-part goes along. A later mod's `"comes_off"` for a kind replaces the earlier one's.
+part goes along. A later mod's `"comes_off"` for a kind replaces the earlier one's, and a part's own beats its kind's.
 
 ```json
 {

@@ -86,6 +86,9 @@ namespace StreetCorsa.Services.Parts
         /// <summary>What the car's own Assetto Corsa data says about its running gear; null when it cannot be read</summary>
         AcCarSpecs? Specs(string carDefinitionId);
 
+        /// <summary>Where the car carries its engine: as set in the catalog editor, or else guessed from its data</summary>
+        EngineLayout EngineLayoutOf(string carDefinitionId);
+
         /// <summary>The running gear the car left the factory with, matched to its data; null without a catalog or data</summary>
         (RunningGearFactory.AxleParts Front, RunningGearFactory.AxleParts Rear)? FactoryRunningGear(Car car);
     }
