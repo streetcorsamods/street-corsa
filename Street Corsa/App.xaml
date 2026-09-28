@@ -16,6 +16,7 @@
              xmlns:carSelection="clr-namespace:StreetCorsa.Screens.CarSelection"
              xmlns:diner="clr-namespace:StreetCorsa.Screens.Diner"
              xmlns:cruise="clr-namespace:StreetCorsa.Screens.Cruise"
+             xmlns:station="clr-namespace:StreetCorsa.Screens.Station"
              xmlns:settings="clr-namespace:StreetCorsa.Screens.Settings"
              xmlns:carCatalogEditor="clr-namespace:StreetCorsa.Screens.CarCatalogEditor"
              xmlns:raceLoading="clr-namespace:StreetCorsa.Screens.RaceLoading"
@@ -105,6 +106,10 @@
 
             <DataTemplate DataType="{x:Type cruise:CruiseScreenViewModel}">
                 <cruise:CruiseScreenView/>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type station:GasStationScreenViewModel}">
+                <station:GasStationScreenView/>
             </DataTemplate>
 
             <DataTemplate DataType="{x:Type settings:SettingsScreenViewModel}">

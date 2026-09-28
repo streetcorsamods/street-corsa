@@ -60,6 +60,23 @@ public static class CarCondition
     /// <summary>The report says the tank is low below this share of it</summary>
     public const double LowTankShare = 0.15;
 
+    /// <summary>
+    /// Oil an engine in good shape burns, share of a full sump: at every start (the drive there, the warm-up) and per km
+    /// of racing. A worn engine burns up to <see cref="WornOilBurn"/> times as much: rings and valve guides let it by.
+    /// </summary>
+    public const double OilBurnPerRace = 0.004;
+    public const double OilBurnPerKm = 0.004;
+    public const double WornOilBurn = 5;
+
+    /// <summary>The report says the oil is low below this, and the attendant would top it up</summary>
+    public const double LowOil = 0.75;
+
+    /// <summary>What a sump holds its oil to at 0 oil, share of what it holds full: a low sump surges sooner</summary>
+    public const double DrySumpShare = 0.4;
+
+    /// <summary>What an oil line in the report starts with: it tells, it is not damage</summary>
+    public const string OilNote = "Oil: ";
+
     /// <summary>Engine life, as AC counts it, that the heat or the oil must take for the report to say so</summary>
     private const double TellLifeLost = 5;
 
@@ -156,16 +173,44 @@ public static class CarCondition
     /// <summary>The litres a fill-up takes; 0 for a full tank</summary>
     public static double LitresToFill(Car car) => FuelLeft(car) is { } left && TankLitres(car) is { } tank ? tank - left : 0;
 
-    /// <summary>A line of <see cref="ApplyRace"/>'s report that is damage, not a note on the fuel</summary>
-    public static bool IsDamage(string line) => !line.StartsWith(FuelNote, StringComparison.Ordinal);
+    /// <summary>The oil in the engine, 1 full to 0 dry</summary>
+    public static double OilLeft(Car car) => car.OilLevel is { } level && double.IsFinite(level) ? Math.Clamp(level, 0, 1) : 1;
+
+    /// <summary>
+    /// What the sump holds its oil to with this much oil in it, share of what it holds full: a quart down it surges a
+    /// little sooner, near dry at the first hard launch
+    /// </summary>
+    public static double SumpShare(Car car) => DrySumpShare + (1 - DrySumpShare) * OilLeft(car);
+
+    /// <summary>
+    /// How worn the engine is, 0 new to 1 worn out: the mileage of the parts that seal the combustion (the pistons, the
+    /// heads) or, without them, of every engine part
+    /// </summary>
+    public static double EngineWornness(Car car, Func<string, string?>? groupOf)
+    {
+        if (car.Engine is not { } engine) return 0;
+        var parts = engine.SelfAndDescendants().ToList();
+        var sealing = groupOf == null ? [] : parts.Where(p => groupOf(p.DefinitionId) is "Pistons" or "Cylinder heads").ToList();
+        var wear = (sealing.Count > 0 ? sealing : parts).Select(p => Clamp01(p.Wear)).DefaultIfEmpty(1).Average();
+        return 1 - wear;
+    }
+
+    /// <summary>The oil a race of this length burns, share of a full sump</summary>
+    public static double OilBurned(Car car, double distanceKm, Func<string, string?>? groupOf) =>
+        (OilBurnPerRace + Clean(distanceKm) * OilBurnPerKm) * (1 + (WornOilBurn - 1) * EngineWornness(car, groupOf));
+
+    /// <summary>A line of <see cref="ApplyRace"/>'s report that is damage, not a note on the fuel or the oil</summary>
+    public static bool IsDamage(string line) =>
+        !line.StartsWith(FuelNote, StringComparison.Ordinal) && !line.StartsWith(OilNote, StringComparison.Ordinal);
 
     /// <summary>What keeps the car from racing, in words for the player; empty when it can go</summary>
-    public static List<string> WhyCannotRace(Car car, Func<string, string?>? groupOf)
+    /// <param name="counting">False leaves the tank out: what keeps the car off the road whatever is in it</param>
+    public static List<string> WhyCannotRace(Car car, Func<string, string?>? groupOf, bool counting = true)
     {
         var problems = new List<string>();
         if (car.IsImpounded) problems.Add("it's in the police impound");
         if (IsTotaled(car)) problems.Add("the body is wrecked: the car is totaled");
-        if (FuelLeft(car) is { } fuel && fuel < TooLittleToRaceLitres) problems.Add(fuel < EmptyTankLitres ? "the tank is empty" : "there's hardly any fuel in the tank");
+        if (counting && FuelLeft(car) is { } fuel && fuel < TooLittleToRaceLitres) problems.Add(fuel < EmptyTankLitres ? "the tank is empty" : "there's hardly any fuel in the tank");
 
         if (groupOf != null && car.HasPartsAssigned)
         {
@@ -201,8 +246,8 @@ public static class CarCondition
     /// <param name="groupOf">Null when there is no parts catalog: the car's own figures take it all</param>
     /// <param name="wearMultiplier">The save's <see cref="GameRules.CarWearMultiplier"/>, on the mileage wear. AC's own
     /// damage is already the difficulty's (<see cref="GameRules.RaceDamagePercent"/>)</param>
-    /// <param name="keepsFuelAndDirt">False for a rival's car: the racers fill up and wash before every race, so the
-    /// tank and the dirt a race leaves are not kept</param>
+    /// <param name="keepsFuelAndDirt">False for a rival's car: the racers fill up, top up the oil and wash before every
+    /// race, so the tank, the oil and the dirt a race leaves are not kept</param>
     public static List<string> ApplyRace(Car car, RaceCarCondition condition, double distanceKm, Func<string, string?>? groupOf,
         double wearMultiplier = 1.0, bool keepsFuelAndDirt = true)
     {
@@ -226,8 +271,25 @@ public static class CarCondition
         if (groupOf != null) RefreshFigures(car, groupOf);
         else car.BodyCondition = BodyCondition(car);
 
-        if (keepsFuelAndDirt) ApplyFuelAndDirt(car, condition, distanceKm, report);
+        if (keepsFuelAndDirt)
+        {
+            ApplyFuelAndDirt(car, condition, distanceKm, report);
+            ApplyOil(car, distanceKm, groupOf, report);
+        }
+
         return report;
+    }
+
+    /// <summary>The oil the race burned; the report tells when it runs low, once</summary>
+    private static void ApplyOil(Car car, double distanceKm, Func<string, string?>? groupOf, List<string> report)
+    {
+        if (car.Engine == null) return;
+
+        var before = OilLeft(car);
+        var left = Math.Max(0, before - OilBurned(car, distanceKm, groupOf));
+        car.OilLevel = left;
+        if (left < 0.4 && before >= 0.4) report.Add(OilNote + "the oil light flickers at idle. It needs oil before it runs dry.");
+        else if (left < LowOil && before >= LowOil) report.Add(OilNote + "it's burning oil. Have the level checked at the gas station.");
     }
 
     /// <summary>What the engine's heat and oil did, and what would help; the life they took is in the engine's</summary>

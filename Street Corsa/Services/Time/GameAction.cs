@@ -54,7 +54,13 @@ namespace StreetCorsa.Services.Time
         TestAndTune,
 
         /// <summary>A quick job on a car: filling it up, a wash (15 min)</summary>
-        GarageChore
+        GarageChore,
+
+        /// <summary>Drive to the gas station (20 min)</summary>
+        DriveToStation,
+
+        /// <summary>Wait for the tow truck and ride in it to the gas station, or home from it (1 hour)</summary>
+        TowToStation
     }
 
     /// <summary>
@@ -86,6 +92,8 @@ namespace StreetCorsa.Services.Time
                 GameAction.CollectFromImpound => 60,
                 GameAction.TestAndTune => 60,
                 GameAction.GarageChore => 15,
+                GameAction.DriveToStation => 20,
+                GameAction.TowToStation => 60,
                 _ => 30 // Default fallback
             };
         }

@@ -169,7 +169,10 @@ namespace StreetCorsa.Services.Parts
         public Models.Race.EngineCoolingRating? RateCooling(Car car, EngineReport? engine)
         {
             if (!IsAvailable || !car.HasPartsAssigned) return null;
-            return _cooling.Value.Rate(car.Parts.SelectMany(p => p.SelfAndDescendants()), engine?.Dyno?.MaxPowerHp ?? 0, FactoryCoolingOf(car));
+            var rating = _cooling.Value.Rate(car.Parts.SelectMany(p => p.SelfAndDescendants()), engine?.Dyno?.MaxPowerHp ?? 0, FactoryCoolingOf(car));
+
+            // A sump low on oil surges sooner
+            return rating with { OilG = Math.Round(rating.OilG * CarCondition.SumpShare(car), 3) };
         }
 
         public Func<PartInstance, double, double>? EngineCoolingOf(Car car)

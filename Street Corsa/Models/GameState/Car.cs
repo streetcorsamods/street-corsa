@@ -22,7 +22,7 @@ namespace StreetCorsa.Models.GameState
 
         /// <summary>
         /// The fuel in the tank, litres, as its last race left it; null for a full tank (a car that has not raced since
-        /// it was bought or filled up). It goes into the next race as it is, and the garage fills it up for money.
+        /// it was bought or filled up). It goes into the next race as it is, and the gas station fills it up for money.
         /// </summary>
         public double? FuelLitres { get; set; }
 
@@ -31,6 +31,13 @@ namespace StreetCorsa.Models.GameState
 
         /// <summary>The body's dirt, 0 clean to 1 filthy: it builds up race after race, and a wash takes it off</summary>
         public double BodyDirt { get; set; }
+
+        /// <summary>
+        /// The oil in the engine, 1 full to 0 dry; null for full (a car that has not raced since it was bought or topped
+        /// up). Every race burns a little, a worn engine more; the gas station tops it up
+        /// (<see cref="Parts.Cars.CarCondition.OilLeft"/>).
+        /// </summary>
+        public double? OilLevel { get; set; }
 
         /// <summary>
         /// Parts mounted on the car itself, each with everything that is mounted on it in turn.

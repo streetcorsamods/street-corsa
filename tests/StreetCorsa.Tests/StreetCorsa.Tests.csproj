@@ -39,6 +39,7 @@
     <None Include="..\..\Street Corsa\Content\streetcorsa\victories\*.json" LinkBase="Content\streetcorsa\victories" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\Street Corsa\Content\streetcorsa\dealers\*.json" LinkBase="Content\streetcorsa\dealers" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\Street Corsa\Content\streetcorsa\racers\*.json" LinkBase="Content\streetcorsa\racers" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\Street Corsa\Content\streetcorsa\stations\*\station.json" LinkBase="Content\streetcorsa\stations" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

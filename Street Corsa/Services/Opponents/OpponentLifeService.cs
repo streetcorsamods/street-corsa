@@ -493,14 +493,15 @@ namespace StreetCorsa.Services.Opponents
         }
 
         /// <summary>
-        /// A rival's car races full and clean: their races leave its tank alone (<see cref="CarCondition.ApplyRace"/>),
-        /// and a car that came to them from the player is filled up and washed the next morning
+        /// A rival's car races full and clean: their races leave its tank and its oil alone (<see cref="CarCondition.ApplyRace"/>),
+        /// and a car that came to them from the player is filled up, topped up with oil and washed the next morning
         /// </summary>
         private static void LookAfter(Opponent racer)
         {
             foreach (var car in racer.Cars)
             {
                 car.FuelLitres = null;
+                car.OilLevel = null;
                 car.BodyDirt = 0;
             }
         }

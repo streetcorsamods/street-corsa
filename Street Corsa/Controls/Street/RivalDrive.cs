@@ -31,8 +31,8 @@ public sealed class RivalDrive
     private const float ShiftSeconds = 0.25f;
 
     // Overall ratios (gear times final drive) of a four-speed with a 3.55 rear, and the tyre's radius
-    private static readonly float[] Ratios = [2.52f * 3.55f, 1.88f * 3.55f, 1.46f * 3.55f, 1.0f * 3.55f];
-    private const float TyreRadius = 0.33f;
+    internal static readonly float[] Ratios = [2.52f * 3.55f, 1.88f * 3.55f, 1.46f * 3.55f, 1.0f * 3.55f];
+    internal const float TyreRadius = 0.33f;
 
     private readonly bool _leaving;
     private readonly float _from;

@@ -1,7 +1,7 @@
 # Modding Street Corsa
 
 Everything the game knows beyond Assetto Corsa's cars and tracks is **content in mods**: parts, engine sounds, dealers,
-racers, events, milestones, victory paths, streets, the main screen's rooms, garages and the words the game says. The
+racers, events, milestones, victory paths, streets, gas stations, the main screen's rooms, garages and the words the game says. The
 base game is itself a mod, `Content\streetcorsa`, loaded through the same loader as any other, first.
 
 Cars and tracks stay AC's: install them in AC's `content` folder as usual.
@@ -15,7 +15,7 @@ Content\
   streetcorsa\          the base game (loaded first)
   mymod\
     mod.json
-    parts\  sounds\  dealers\  racers\  events\  milestones\  victories\  streets\  showcase\  garages\  text\
+    parts\  sounds\  dealers\  racers\  events\  milestones\  victories\  streets\  stations\  showcase\  garages\  text\
 ```
 
 `mod.json`:
@@ -232,6 +232,17 @@ One folder per street, as the base game's `streets\pretville`: a `street.json` a
 out: every light it has a model for). The Cruise screen picks a street at random among those that fit the hour, and
 keeps it while it still fits. When no street fits the hour, the one in view stays, in the nearest light it has.
 
+### stations
+
+One folder per gas station, as the base game's `stations\tomwixon`: a `station.json` and its model (`"model"`, a KN5
+with a sky dome for each light of the day named `STATION_SKY_DAY`, `_DUSK` and `_NIGHT`) and, next to it, the ground's
+height (`ground.bin`). `tools/StationScene` writes both from a scene cut out of an AC track (see
+[screens/gas-station.md](screens/gas-station.md)). The file gives the way in (`arrive`, off the road to the pump, the car
+stopping at the last point) and out (`leave`), as `[x, z]` points in metres; where the driver looks at the pump
+(`lookAtPump`, degrees to the left); the lights of the day as a street's; and what the station charges (`prices`:
+`fuelPerLitre`, `oilPerLitre`, `wash`, `tow`; left out, the base game's). The garage's Gas Station button drives to one
+of them at random. A station without its model still works, without the picture.
+
 ### showcase and garages
 
 `showcase` lists the main screen's rooms: `{ "scenes": [ { "id": "mygarage", "wallRadius": 12 } ] }`. A room is a
@@ -251,4 +262,4 @@ random and fills in its `{placeholders}`:
 ```
 
 `lines` add to a pool, `replace` rewrites it. The base game's files (`news.json`, `talk.json`, `street.json`,
-`names.json`) list every key and, in their `_comment`, the placeholders each takes. When to say what stays in the game.
+`station.json`, `names.json`) list every key and, in their `_comment`, the placeholders each takes. When to say what stays in the game.

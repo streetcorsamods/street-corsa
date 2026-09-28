@@ -925,6 +925,23 @@ gas-station HDRI exists.
 there. A station is a mod content type (step 16). Open: an empty tank on the way (a tow, as after a crash?), and
 what else the station sells (oil, a quick check-up).
 
+**The user decided (2026-09-27):** a car too dry to get there is towed in; the station sells oil too, and the attendant
+gives plausible hints about the car's condition ("your radiator would need a replacement shortly"); the scene is a gas
+station out of an installed AC track, not shipped ("we won't publish it"): Bannochbrae's, by the start line.
+
+**Built (2026-09-27, `feature/gas-station`):** see `docs/screens/gas-station.md`. `tools/StationScene` cuts the station
+out of the player's Bannochbrae (250 m round its gas-station sound, race-day dressing left out) with a Poly Haven sky
+per light and a ground-height grid; the KN5 and the grid are gitignored, `station.json` is ours. The car drives in off
+the road from the driver's seat (`PathDrive`: a curve through the station's points, slow in the bends, braking to the
+pump) and out again. At the pump: fill up, top up the oil (by the quart), wash, a quarter of an hour each; the
+attendant checks the oil and names up to three worn parts he'd notice. A tank under 0.8 l brings the tow truck (25
+dollars, an hour). The garage lost its fill-up and wash; engines now burn oil race by race (more when worn), and a low
+sump surges sooner in the race mode. Cars now sit on the road as AC has them (a model's origin is not always on the
+road: the GTO's tyres were half in it), the driver's eyes placed by the steering wheel for every car (the mods' own seat some
+drivers on the wheel), through AC's onboard lens; the street too. After the user's first look: fades in and out, a progress bar while the pump runs, the engine off at the pump and
+started to drive off, smoother (centripetal) curves. Checked in offscreen renders and a viewport harness; not yet seen in
+the game.
+
 ## Testing in AC without driving
 
 See `docs/ac-integration/csp-lua-scripts.md`, "Testing the race mode without driving". In short:

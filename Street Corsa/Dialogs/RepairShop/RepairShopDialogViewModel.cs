@@ -67,10 +67,11 @@ namespace StreetCorsa.Dialogs.RepairShop
             }
 
             var problems = CarCondition.WhyCannotRace(_car, _catalog == null ? null : CarCondition.Groups(_catalog));
+            // The tank is the gas station's to fill, not the garage's
+            var dry = CarCondition.FuelLeft(_car) is < CarCondition.TooLittleToRaceLitres;
             Status = problems.Count > 0
-                ? "Not fit to race: " + string.Join("; ", problems) + "."
-                : Jobs.Any(j => !j.IsChore) ? "It races as it is, with its damage."
-                : Jobs.Count > 0 ? "It races as it is." : "Nothing to fix: the car is in good shape.";
+                ? "Not fit to race: " + string.Join("; ", problems) + "." + (dry ? " Fill it up at the gas station." : "")
+                : Jobs.Count > 0 ? "It races as it is, with its damage." : "Nothing to fix: the car is in good shape.";
 
             OnPropertyChanged(nameof(HasJobs));
             OnPropertyChanged(nameof(MoneyDisplay));
@@ -107,7 +108,6 @@ namespace StreetCorsa.Dialogs.RepairShop
         {
             Name = job.Name;
             Detail = job.Detail;
-            IsChore = job.IsChore;
             CostDisplay = $"${job.Cost:N0}";
             TimeDisplay = job.Time.GetTimeDescription();
             Command = command;
@@ -116,8 +116,6 @@ namespace StreetCorsa.Dialogs.RepairShop
         public string Name { get; }
         public string Detail { get; }
 
-        /// <summary>Filling up or a wash, not a repair</summary>
-        public bool IsChore { get; }
         public string CostDisplay { get; }
         public string TimeDisplay { get; }
         public AsyncRelayCommand Command { get; }

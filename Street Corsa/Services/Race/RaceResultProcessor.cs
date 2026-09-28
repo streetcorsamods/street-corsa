@@ -813,7 +813,7 @@ namespace StreetCorsa.Services.Race
 
         /// <summary>
         /// What the player hears about their car after the session: towed home when it crashed (the player goes with
-        /// it to see what the crash did), else the damage report, or the fuel alone when nothing was damaged; null
+        /// it to see what the crash did), else the damage report, or the fuel and oil alone when nothing was damaged; null
         /// when there is nothing to tell
         /// </summary>
         private static PlayerMessage? CarReport(IReadOnlyList<string> lines, bool towed)
@@ -832,7 +832,8 @@ namespace StreetCorsa.Services.Race
             }
 
             if (damage.Count > 0) return new PlayerMessage("Damage Report", string.Join("\n", damage) + after);
-            return notes.Count > 0 ? new PlayerMessage("Fuel", string.Join("\n", notes)) : null;
+            return notes.Count > 0 ? new PlayerMessage(notes.All(n => n.StartsWith(CarCondition.OilNote, StringComparison.Ordinal)) ? "Oil"
+                : notes.Any(n => n.StartsWith(CarCondition.OilNote, StringComparison.Ordinal)) ? "Fuel and Oil" : "Fuel", string.Join("\n", notes)) : null;
         }
 
         /// <summary>

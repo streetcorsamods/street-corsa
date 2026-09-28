@@ -503,7 +503,7 @@
                                   VerticalAlignment="Center"/>
                         <TextBlock Grid.Column="5"
                                   Text="{Binding SelectedCar.FuelDisplay}"
-                                  ToolTip="The Repairs button fills it up"
+                                  ToolTip="Filled up at the gas station"
                                   FontSize="{StaticResource FontSizeBody}"
                                   Foreground="{StaticResource TextPrimaryBrush}"
                                   Margin="0,0,20,0"
@@ -518,7 +518,7 @@
                                 Margin="0,0,10,0"
                                 FontSize="{StaticResource FontSizeBody}"
                                 VerticalAlignment="Center"
-                                ToolTip="What the races did to the car and what fixing it costs; the fill-up and the wash are here too"/>
+                                ToolTip="What the races did to the car and what fixing it costs"/>
 
                         <!-- Sell: to a dealer at once, or through an ad in the paper -->
                         <Button Grid.Column="7"
@@ -648,6 +648,16 @@
                     Margin="0,16,0,0">
                 <Button.Background>
                     <ImageBrush ImageSource="/Assets/Images/Buttons/calendar.png" Stretch="Uniform"/>
+                </Button.Background>
+            </Button>
+            <!-- The gas station: filling up, the oil and the wash are done there -->
+            <Button x:Name="GasStationButton"
+                    Style="{StaticResource OverlayTileButtonStyle}"
+                    Command="{Binding GasStationCommand}"
+                    Tag="Gas station"
+                    Margin="0,16,0,0">
+                <Button.Background>
+                    <ImageBrush ImageSource="/Assets/Images/Buttons/gas_station.png" Stretch="Uniform"/>
                 </Button.Background>
             </Button>
         </StackPanel>

@@ -82,6 +82,7 @@ namespace StreetCorsa.Screens.Garage
         public RelayCommand NewspaperCommand { get; }
         public RelayCommand CarDealersCommand { get; }
         public RelayCommand HitTheStreetsCommand { get; }
+        public AsyncRelayCommand GasStationCommand { get; }
         public RelayCommand CareerCommand { get; }
 
         /// <summary>The parts view of the selected car: its engine, the part clicked on, the shelf of loose parts</summary>
@@ -327,6 +328,7 @@ namespace StreetCorsa.Screens.Garage
             NewspaperCommand = new RelayCommand(() => LeaveTo(() => _navigationService.NavigateToNewspaper(_gameState)));
             CarDealersCommand = new RelayCommand(() => LeaveTo(() => _navigationService.NavigateToDealerMap(_gameState)));
             HitTheStreetsCommand = new RelayCommand(() => LeaveTo(() => _navigationService.NavigateToDiner(_gameState)));
+            GasStationCommand = new AsyncRelayCommand(OnGasStation, () => SelectedCarHere);
             CareerCommand = new RelayCommand(() => LeaveTo(() => _navigationService.NavigateToCareer(_gameState)));
 
             // The garage is the game's home screen: make sure a car is selected if the player owns any
@@ -502,7 +504,7 @@ namespace StreetCorsa.Screens.Garage
                     {
                         _dialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(
                             _dialogService,
-                            $"The car is not going anywhere: {string.Join("; ", damage)}.\n\nThe Repairs button sorts it out.",
+                            $"The car is not going anywhere: {string.Join("; ", damage)}.\n\n{WhereToSortOut(car)}",
                             "Car Won't Run"));
                         return;
                     }
@@ -596,7 +598,7 @@ namespace StreetCorsa.Screens.Garage
                 {
                     _dialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(
                         _dialogService,
-                        $"The car is not going anywhere: {setup.PlayerCarProblem}.\n\nThe Repairs button sorts it out.",
+                        $"The car is not going anywhere: {setup.PlayerCarProblem}.\n\n{WhereToSortOut(car)}",
                         "Car Won't Run"));
                     return;
                 }
@@ -772,6 +774,57 @@ namespace StreetCorsa.Screens.Garage
             // No fade here: garage <-> car list is an instant swap in both directions
             _logger.Information("Navigating to car selection screen");
             _navigationService.NavigateToCarSelection(_gameState);
+        }
+
+        /// <summary>
+        /// Where a car that will not go is sorted out: an empty tank at the gas station (the garage only has a can of
+        /// gas, to get it there), the damage with the Repairs button
+        /// </summary>
+        private string WhereToSortOut(Car car)
+        {
+            var dry = Parts.Cars.CarCondition.FuelLeft(car) is < Parts.Cars.CarCondition.TooLittleToRaceLitres;
+            if (!dry) return "The Repairs button sorts it out.";
+
+            var groupOf = _partsService.IsAvailable ? Parts.Cars.CarCondition.Groups(_partsService.Catalog) : null;
+            var damaged = Parts.Cars.CarCondition.WhyCannotRace(car, groupOf, counting: false).Count > 0;
+            return damaged ? "The Repairs button sorts out the rest; fill it up at the gas station." : "Fill it up at the gas station.";
+        }
+
+        /// <summary>
+        /// To the gas station, in a car that gets there: one without an engine, or with one that will not run, stays in
+        /// (an empty tank is the tow truck's, the station's own business)
+        /// </summary>
+        private async Task OnGasStation()
+        {
+            if (SelectedCar is not { } selected) return;
+            var car = selected.CarInstance;
+
+            try
+            {
+                if (_partsService.IsAvailable)
+                {
+                    if (await _partsService.EnsurePartsAsync(car) && !string.IsNullOrEmpty(_gameState.SaveName)) _gameStateRepo.Save(_gameState, _gameState.SaveName);
+
+                    var spec = car.Engine == null ? null : await EngineSpecs.ForAsync(_partsService, car, selected.DisplayName);
+                    var problem = car.HasPartsAssigned && car.Engine == null ? "there's no engine in it"
+                        : spec is { Runs: false } ? $"the engine won't run ({spec.Problem})"
+                        : null;
+                    if (!ReferenceEquals(_navigationService.CurrentScreen, this)) return;
+                    if (problem != null)
+                    {
+                        _dialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(
+                            _dialogService, $"Your car won't make it to the gas station: {problem}.", "Car Won't Run"));
+                        return;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // The engine could not be worked out: the station finds out for itself
+                _logger.Warning(ex, "Could not check {Car} before the gas station", car.DefinitionId);
+            }
+
+            LeaveTo(() => _navigationService.NavigateToGasStation(_gameState));
         }
 
         /// <summary>

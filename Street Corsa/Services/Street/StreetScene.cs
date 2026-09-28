@@ -107,9 +107,10 @@ namespace StreetCorsa.Services.Street
 
         private sealed record SpotEntry(float X, float Z, float Heading);
 
-        private sealed record LampEntry(float X, float Y, float Z, int[]? Color, float Brightness, float Range);
+        internal sealed record LampEntry(float X, float Y, float Z, int[]? Color, float Brightness, float Range);
 
-        private sealed record LightEntry(float Brightness, int[]? Color, float Ambient, int[]? AmbientUp, int[]? AmbientDown,
+        /// <summary>A light of the day as a scene's file gives it (a street's street.json, a gas station's station.json)</summary>
+        internal sealed record LightEntry(float Brightness, int[]? Color, float Ambient, int[]? AmbientUp, int[]? AmbientDown,
             float? CubemapAmbient, List<LampEntry>? Lamps);
 
         private sealed record SceneEntry(string? Id, string? Title, SpotEntry? Player, float LaneOffset, float RivalStop,
@@ -119,29 +120,8 @@ namespace StreetCorsa.Services.Street
         /// Every street of every mod (a folder under a mod's <c>streets</c>) that loads, by full id: a mod's streets get
         /// its namespace. Empty when there is none (logged).
         /// </summary>
-        public static IReadOnlyList<StreetScene> LoadAll(ModSet mods)
-        {
-            var streets = new List<StreetScene>();
-            var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var (mod, folder) in mods.SubFolders(ContentTypes.Streets))
-            {
-                var scene = Load(folder);
-                if (scene == null) continue;
-
-                // A street's own id is written without its mod, like every id in a mod's files
-                var id = ModIds.IsQualified(scene.Id) ? null : ModIds.Qualify(mod.Id, scene.Id);
-                if (id == null || !ids.Add(id))
-                {
-                    Logger.Warning("Streets: {Mod}/{Folder} has the id {Id}, which is taken or has a ':' in it; left out", mod.Id, Path.GetFileName(folder), scene.Id);
-                    continue;
-                }
-
-                streets.Add(scene with { Id = id });
-            }
-
-            if (streets.Count == 0) Logger.Warning("No street in the mods could be loaded");
-            return streets;
-        }
+        public static IReadOnlyList<StreetScene> LoadAll(ModSet mods) =>
+            ModScenes.LoadAll(mods, ContentTypes.Streets, "Streets", Logger, Load, s => s.Id, (s, id) => s with { Id = id });
 
         /// <summary>
         /// The street for a light of the day: the one the player is in while it still fits, else one of those that fit,
@@ -177,15 +157,7 @@ namespace StreetCorsa.Services.Street
                 return null;
             }
 
-            var lights = new Dictionary<StreetLight, StreetLighting>();
-            foreach (var (name, light) in entry.Lights ?? [])
-            {
-                if (!Enum.TryParse<StreetLight>(name, ignoreCase: true, out var which)) continue;
-                lights[which] = new StreetLighting(light.Brightness, Rgb(light.Color, 200), light.Ambient,
-                    Rgb(light.AmbientUp, 150), Rgb(light.AmbientDown, 150), light.CubemapAmbient ?? 0.5f,
-                    (light.Lamps ?? []).Select(l => new StreetLamp(l.X, l.Y, l.Z, Rgb(l.Color, 255), l.Brightness, l.Range)).ToList());
-            }
-
+            var lights = ReadLights(entry.Lights);
             var sun = entry.Sun is { Length: 3 } s ? s : [0.2f, 1f, 0.8f];
             var scene = new StreetScene(entry.Id ?? Path.GetFileName(folder), entry.Title ?? entry.Id ?? "The street", folder,
                 new StreetSpot(entry.Player.X, entry.Player.Z, entry.Player.Heading), entry.LaneOffset, entry.RivalStop,
@@ -220,6 +192,21 @@ namespace StreetCorsa.Services.Street
             }
 
             return scene with { Times = times };
+        }
+
+        /// <summary>The renderer's light for each light of the day a scene's file names ("day", "dusk", "night")</summary>
+        internal static Dictionary<StreetLight, StreetLighting> ReadLights(Dictionary<string, LightEntry>? entries)
+        {
+            var lights = new Dictionary<StreetLight, StreetLighting>();
+            foreach (var (name, light) in entries ?? [])
+            {
+                if (!Enum.TryParse<StreetLight>(name, ignoreCase: true, out var which)) continue;
+                lights[which] = new StreetLighting(light.Brightness, Rgb(light.Color, 200), light.Ambient,
+                    Rgb(light.AmbientUp, 150), Rgb(light.AmbientDown, 150), light.CubemapAmbient ?? 0.5f,
+                    (light.Lamps ?? []).Select(l => new StreetLamp(l.X, l.Y, l.Z, Rgb(l.Color, 255), l.Brightness, l.Range)).ToList());
+            }
+
+            return lights;
         }
 
         // JSON numbers, not the base64 a byte[] is read from

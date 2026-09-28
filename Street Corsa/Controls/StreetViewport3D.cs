@@ -2,7 +2,6 @@ using System.IO;
 using System.Windows;
 using System.Windows.Input;
 using AcTools.Render.Kn5Specific.Objects;
-using AcTools.Render.Kn5SpecificForwardDark.Lights;
 using StreetCorsa.Audio;
 using StreetCorsa.Controls.Street;
 using StreetCorsa.Services.Catalog;
@@ -27,10 +26,8 @@ public class StreetViewport3D : D3DViewportBase
     private const float MaxLookYaw = 160f;
     private const float MaxLookPitch = 20f;
     private const float LookDegreesPerPixel = 0.18f;
-    private const float FieldOfView = 56f;
-
-    // Where the eyes are in a car that does not say: a little left of the middle, over the seat
-    private static readonly Sx.Vector3 FallbackEye = new(0.36f, 1.05f, -0.15f);
+    // AC's own onboard lens, as the player set it
+    private float _fieldOfView = 56f;
 
     // Loud beside the window, fading as it goes up the street
     private const float RivalFullVolumeWithin = 5f;
@@ -47,9 +44,16 @@ public class StreetViewport3D : D3DViewportBase
     private StreetStage? _stageListened;
 
     // The player's eyes in their car's own space
-    private Sx.Vector3 _eye = FallbackEye;
+    private Sx.Vector3 _eye = SceneLights.FallbackEye;
     private float _lookYaw = DefaultLookYaw;
-    private float _lookPitch = -2f;
+    private float _lookPitch;
+
+    // How the player's car sits and where its driver looks, from its data (AcCarFrame); the rival's car's lift
+    private AcCarFrame _frame = new(SceneLights.FallbackEye, 0f);
+    private float _rivalLift;
+
+    // The player's dashboard needles
+    private CarInstruments? _instruments;
     private System.Windows.Point? _dragFrom;
     private float _aimedAspect;
 
@@ -162,10 +166,12 @@ public class StreetViewport3D : D3DViewportBase
 
         if (!await StartRendererAsync(renderer)) return;
 
-        ApplyLighting(renderer, scene, light);
+        SceneLights.Apply(renderer, scene.LightingFor(light), scene.Sun);
 
         var skin = SkinOrDefault(player.Directory, player.Skin);
-        var placement = Placement(scene, scene.Player, 0f);
+        var data = SceneLights.DataOf(player.Directory, ex => Logger.Warning(ex, "The data of {Car} could not be read: it sits and looks as most cars do", player.Directory));
+        var frame = SceneLights.FrameOf(data);
+        var placement = Placement(scene, scene.Player, 0f, lift: frame.Lift);
         renderer.MainSlot.LocalMatrix = placement;
         await TrackDeviceWork(renderer.MainSlot.SetCarAsync(CarDescription.FromDirectory(player.Directory), skin));
         if (Renderer != renderer || !IsLoaded) return;
@@ -173,13 +179,20 @@ public class StreetViewport3D : D3DViewportBase
         renderer.MainSlot.LocalMatrix = placement;
         renderer.MainSlot.ResetCarBoundingBox();
         if (renderer.CarNode is { } car && light == StreetLight.Night) car.HeadlightsEnabled = true;
+        _instruments = CarInstruments.TryRead(renderer.CarNode, data, player.Directory, Logger);
 
         _kn5 = kn5;
         _player = player;
         _scene = scene;
-        _eye = EyeOf(renderer, placement);
+        _frame = frame;
+
+        // Read off the car as it stands, placement taken out
+        renderer.MainSlot.LocalMatrix = Sx.Matrix.Identity;
+        _eye = SceneLights.DriverEye(renderer, frame);
+        renderer.MainSlot.LocalMatrix = placement;
+        _fieldOfView = SceneLights.OnboardFieldOfView();
         _lookYaw = DefaultLookYaw;
-        _lookPitch = -2f;
+        _lookPitch = SceneLights.SeatPitch;
 
         renderer.UseFpsCamera = true;
         AimCamera(renderer);
@@ -200,65 +213,24 @@ public class StreetViewport3D : D3DViewportBase
         Invalidate();
     }
 
-    private static void ApplyLighting(GarageRenderer renderer, StreetScene scene, StreetLight light)
-    {
-        var lighting = scene.LightingFor(light);
-        renderer.Light = new Sx.Vector3(scene.Sun[0], scene.Sun[1], scene.Sun[2]);
-        renderer.LightBrightness = lighting.Brightness;
-        renderer.LightColor = Color(lighting.Color);
-        renderer.AmbientBrightness = lighting.Ambient;
-        renderer.AmbientUp = Color(lighting.AmbientUp);
-        renderer.AmbientDown = Color(lighting.AmbientDown);
-        renderer.CubemapAmbient = lighting.CubemapAmbient;
-
-        foreach (var lamp in lighting.Lamps)
-        {
-            renderer.AddLight(new DarkPointLight
-            {
-                Position = new Sx.Vector3(lamp.X, lamp.Y, lamp.Z),
-                Color = Color(lamp.Color),
-                Brightness = lamp.Brightness,
-                Range = lamp.Range,
-                UseShadows = false,
-                IsVisibleInUi = false
-            });
-        }
-    }
-
-    private static System.Drawing.Color Color(byte[] rgb) => System.Drawing.Color.FromArgb(rgb[0], rgb[1], rgb[2]);
-
-    /// <summary>Where the player's eyes are, in their car's own space: the car's driver camera, or about there</summary>
-    private Sx.Vector3 EyeOf(GarageRenderer renderer, Sx.Matrix placement)
-    {
-        try
-        {
-            if (renderer.CarNode?.GetDriverCamera() is { } camera)
-            {
-                return Sx.Vector3.TransformCoordinate(camera.Position, Sx.Matrix.Invert(placement));
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.Warning(ex, "The driver's eyes of {Car} could not be read; guessed", _player?.Directory);
-        }
-
-        return FallbackEye;
-    }
-
-    /// <summary>A car standing at <paramref name="spot"/>, moved <paramref name="along"/> metres ahead of it</summary>
-    private static Sx.Matrix Placement(StreetScene scene, StreetSpot spot, float along, float aside = 0f)
+    /// <summary>
+    /// A car standing at <paramref name="spot"/>, moved <paramref name="along"/> metres ahead of it, its model's origin
+    /// <paramref name="lift"/> over the road (<see cref="AcCarFrame.Lift"/>)
+    /// </summary>
+    private static Sx.Matrix Placement(StreetScene scene, StreetSpot spot, float along, float aside = 0f, float lift = 0f)
     {
         var heading = spot.Heading * MathF.PI / 180f;
         var forward = new Sx.Vector3(MathF.Sin(heading), 0f, MathF.Cos(heading));
 
         // A car's own +x is its left (its driver's side, in the cars of the day)
         var left = new Sx.Vector3(MathF.Cos(heading), 0f, -MathF.Sin(heading));
-        var at = new Sx.Vector3(spot.X, 0f, spot.Z) + forward * along + left * aside;
+        var at = new Sx.Vector3(spot.X, lift, spot.Z) + forward * along + left * aside;
         return Sx.Matrix.RotationY(heading) * Sx.Matrix.Translation(at);
     }
 
     protected override void OnRendererDisposed()
     {
+        _instruments = null;
         if (_stageListened != null) _stageListened.IsShown = false;
         _kn5 = null;
         _player = null;
@@ -346,6 +318,7 @@ public class StreetViewport3D : D3DViewportBase
                 if (Renderer != renderer || load != _rivalLoad) return;
 
                 _rivalShown = car;
+                _rivalLift = SceneLights.FrameOf(car.Directory).Lift;
                 if (_rivalSlot.CarNode is { } node && Light == StreetLight.Night) node.HeadlightsEnabled = true;
             }
         }
@@ -426,7 +399,7 @@ public class StreetViewport3D : D3DViewportBase
     {
         if (_rivalSlot?.CarNode is not { } node || _scene is not { } scene) return;
 
-        var placement = Placement(scene, scene.Player, _rivalPosition, scene.LaneOffset);
+        var placement = Placement(scene, scene.Player, _rivalPosition, scene.LaneOffset, _rivalLift);
         var engine = _stageListened?.RivalEngine;
         var pose = engine?.Pose ?? BodyPose.Rest;
         var body = new BodyPose(pose.Roll, pose.Pitch + _pitch.Pitch, pose.Heave);
@@ -505,7 +478,7 @@ public class StreetViewport3D : D3DViewportBase
     {
         if (renderer.Camera is not { } camera || _scene is not { } scene) return;
 
-        var placement = Placement(scene, scene.Player, 0f);
+        var placement = Placement(scene, scene.Player, 0f, lift: _frame.Lift);
         var lean = CarLean;
 
         // In the car's own space: +z ahead, +x to the left, where the lane is
@@ -517,7 +490,7 @@ public class StreetViewport3D : D3DViewportBase
         var direction = Sx.Vector3.TransformNormal(Sx.Vector3.TransformNormal(look, placement), lean);
         var up = Sx.Vector3.TransformNormal(Sx.Vector3.UnitY, lean);
 
-        camera.FovY = FieldOfView * MathF.PI / 180f;
+        camera.FovY = _fieldOfView * MathF.PI / 180f;
         camera.LookAt(eye, eye + direction, up);
         camera.SetLens(renderer.AspectRatio);
         _aimedAspect = renderer.AspectRatio;
@@ -531,7 +504,7 @@ public class StreetViewport3D : D3DViewportBase
         if (e.ClickCount == 2)
         {
             _lookYaw = DefaultLookYaw;
-            _lookPitch = -2f;
+            _lookPitch = SceneLights.SeatPitch;
             if (Renderer is { } renderer) AimCamera(renderer);
             Invalidate();
             e.Handled = true;
@@ -575,6 +548,9 @@ public class StreetViewport3D : D3DViewportBase
         if (renderer.AspectRatio != _aimedAspect) AimCamera(renderer);
 
         var moving = StepRival(dt);
+
+        // The tachometer follows the player's engine; the car stands, warm
+        _instruments?.Show(RunningEngine?.Rpm ?? 0, 0f, null, 85f, 0f);
         return moving || RunningEngine is { IsActive: true };
     }
 

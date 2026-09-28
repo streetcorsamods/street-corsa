@@ -319,6 +319,16 @@ namespace StreetCorsa.Navigation
                 _raceSetup,
                 _carPartsService));
 
+        public bool NavigateToGasStation(GameState gameState) => SafeNavigate("gas station", () =>
+            new Screens.Station.GasStationScreenViewModel(
+                this,
+                _dialogService,
+                gameState,
+                _catalogRepository,
+                _timeService,
+                _gameStateRepository,
+                _carPartsService));
+
         public bool NavigateToNewspaper(GameState gameState, bool skipAnimation = false) => SafeNavigate("newspaper", () =>
             new Screens.Newspaper.NewspaperScreenViewModel(
                 this,
