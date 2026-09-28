@@ -27,6 +27,12 @@ namespace StreetCorsa.Models.GameState
         /// </summary>
         public PartInstance? EngineStand { get; set; }
 
+        /// <summary>Parts ordered by mail and not here yet (<c>NewspaperPartsService.BuyNew</c>)</summary>
+        public List<PartOrder> PartOrders { get; set; } = [];
+
+        /// <summary>Names of the mail-order parts that came since the player was last in the garage, to be told of there</summary>
+        public List<string> Delivered { get; set; } = [];
+
         /// <summary>What a new player starts with; enough for several cars while the game is being built</summary>
         public const decimal StartingMoney = 1_000_000m;
 

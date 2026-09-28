@@ -3,8 +3,12 @@ using StreetCorsa.Parts;
 
 namespace StreetCorsa.Services.Parts
 {
-    /// <summary>Buying and selling parts; everything bought goes to the player's shelf</summary>
-    public interface IPartsShopService
+    /// <summary>
+    /// The newspaper's parts pages: used parts from the ads, new ones by mail order, and the player's own sold to
+    /// whoever takes them. Everything bought goes to the player's shelf. The shops on the map are
+    /// <see cref="PartShops.IPartShopService"/>.
+    /// </summary>
+    public interface INewspaperPartsService
     {
         /// <summary>False when there are no converted parts: nothing to sell</summary>
         bool IsAvailable { get; }
@@ -12,7 +16,7 @@ namespace StreetCorsa.Services.Parts
         /// <summary>Every part that can be ordered new, by name</summary>
         IReadOnlyList<PartDefinition> Assortment { get; }
 
-        /// <summary>What the shop asks for the part new</summary>
+        /// <summary>What the mail order asks for the part new, its premium in</summary>
         /// <param name="priceMultiplier">The save's <see cref="GameRules.PartPriceMultiplier"/></param>
         decimal NewPrice(PartDefinition part, double priceMultiplier);
 
@@ -28,8 +32,14 @@ namespace StreetCorsa.Services.Parts
         /// <summary>Ids of the parts that go somewhere on a car as it stands, taken slots included</summary>
         HashSet<string> FindFittingParts(Car? car);
 
-        /// <summary>False when the player cannot pay</summary>
-        bool BuyNew(GameState gameState, PartDefinition part);
+        /// <summary>
+        /// Orders the part by mail: paid now, on the shelf in <see cref="NewspaperPartsService.MailOrderDays"/> days
+        /// (<see cref="Deliver"/>). Null when the player cannot pay.
+        /// </summary>
+        PartOrder? BuyNew(GameState gameState, PartDefinition part);
+
+        /// <summary>The mail order that has come by <paramref name="currentDate"/>, put on the player's shelf; run each morning</summary>
+        List<PartOrder> Deliver(GameState gameState, DateTime currentDate);
 
         /// <summary>False when the player cannot pay, or the ad has left the paper in the meantime</summary>
         bool BuyUsed(GameState gameState, PartAd ad);

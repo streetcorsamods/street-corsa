@@ -7,6 +7,7 @@ using StreetCorsa.Models.GameState;
 using StreetCorsa.Navigation;
 using StreetCorsa.Services.Dealers;
 using StreetCorsa.Services.Market;
+using StreetCorsa.Services.PartShops;
 using StreetCorsa.Services.Text;
 using StreetCorsa.Services.Time;
 using StreetCorsa.ViewModels;
@@ -14,7 +15,8 @@ using StreetCorsa.ViewModels;
 namespace StreetCorsa.Screens.DealerMap
 {
     /// <summary>
-    /// The city with the dealers on it. Picking one goes to its lot.
+    /// The city with the car dealers on it, or with the part shops (the garage has a button for each). Picking one drives
+    /// out to its lot or its counter.
     /// </summary>
     public class DealerMapScreenViewModel : BaseScreenViewModel
     {
@@ -34,6 +36,7 @@ namespace StreetCorsa.Screens.DealerMap
         private readonly IDealerCatalog _dealerCatalog;
         private readonly IUsedCarMarketService _marketService;
         private readonly IGameTimeService _timeService;
+        private readonly IPartShopService _partShops;
         private readonly IAppLogger _logger;
 
         // A drive under way: the trip is paid for once, and the map is not left while the time is spent
@@ -41,6 +44,19 @@ namespace StreetCorsa.Screens.DealerMap
 
         public RelayCommand BackCommand { get; }
         public RelayCommand<DealerPinViewModel> VisitDealerCommand { get; }
+
+        /// <summary>The part shops' map: their pins and their counters, no car lots</summary>
+        public bool IsPartsMap { get; }
+
+        public string Title => IsPartsMap ? "PARTS DEALERS" : "WHERE TO LOOK";
+
+        public string Subtitle => IsPartsMap
+            ? "Pick a shop and drive out to see what's on the shelves"
+            : "Pick a lot and drive out to see what they have";
+
+        public string EmptyText => IsPartsMap ? "No part shops could be found on the map." : "No dealers could be found on the map.";
+
+        public string LoadingText => IsPartsMap ? "The shops are stocking their shelves..." : "The dealers are putting their cars out...";
 
         public ObservableCollection<DealerPinViewModel> Pins { get; } = [];
 
@@ -85,7 +101,9 @@ namespace StreetCorsa.Screens.DealerMap
             Models.GameState.GameState gameState,
             IDealerCatalog dealerCatalog,
             IUsedCarMarketService marketService,
-            IGameTimeService timeService)
+            IGameTimeService timeService,
+            IPartShopService partShops,
+            bool partShopsMap = false)
         {
             _navigationService = navigationService;
             _dialogService = dialogService;
@@ -93,6 +111,8 @@ namespace StreetCorsa.Screens.DealerMap
             _dealerCatalog = dealerCatalog;
             _marketService = marketService;
             _timeService = timeService;
+            _partShops = partShops;
+            IsPartsMap = partShopsMap;
             _logger = AppLoggerFactory.CreateLogger("DealerMap");
 
             (MapImage, MapAnchor, MapImageWidth, MapImageHeight) = LoadMap(dealerCatalog.Map);
@@ -141,6 +161,34 @@ namespace StreetCorsa.Screens.DealerMap
         }
 
         private async Task InitializeAsync()
+        {
+            if (IsPartsMap) await LoadShopsAsync();
+            else await LoadDealersAsync();
+
+            ShowPins(IsPartsMap ? ShopPins() : DealerPins());
+        }
+
+        /// <summary>The part shops, brought up to the mods' files, and stocked if no morning has got round to it yet</summary>
+        private async Task LoadShopsAsync()
+        {
+            IsLoading = true;
+            try
+            {
+                PartShopRoster.Sync(_gameState, _partShops.Catalog);
+                await _partShops.RestockAsync(_gameState, _gameState.Date, Random.Shared, firstOnly: true);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not stock the part shops");
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+
+        /// <summary>The dealers, brought up to the mods' files, and their lots stocked if the market needs it</summary>
+        private async Task LoadDealersAsync()
         {
             // The dealers the save carries are whatever the files say today, each keeping how its business is going:
             // a save made before a dealer existed still gets it, and one dropped from the files goes away
@@ -195,8 +243,6 @@ namespace StreetCorsa.Screens.DealerMap
                     IsLoading = false;
                 }
             }
-
-            BuildPins();
         }
 
         /// <summary>
@@ -235,19 +281,25 @@ namespace StreetCorsa.Screens.DealerMap
                 .ToList();
         }
 
-        private void BuildPins()
+        private void ShowPins(IEnumerable<DealerPinViewModel> pins)
         {
             Pins.Clear();
+            foreach (var pin in pins) Pins.Add(pin);
 
+            OnPropertyChanged(nameof(HasDealers));
+            _logger.Information("Map showing {Count} {What}", Pins.Count, IsPartsMap ? "part shops" : "dealers");
+        }
+
+        /// <summary>The lots in business: open, or selling off their stock. The rest are closed, or not open yet.</summary>
+        private IEnumerable<DealerPinViewModel> DealerPins()
+        {
             var remainingToday = _timeService.GetRemainingMinutesToday(_gameState);
-
-            // The lots in business: open, or selling off their stock. The rest are closed, or not open yet.
             foreach (var location in DealerRoster.Trading(_gameState))
             {
                 if (_dealerCatalog.Get(location.Id) is not { } dealer) continue;
                 var stock = _marketService.GetListingsByDealer(_gameState.UsedCarMarket ?? [], dealer.Id);
 
-                Pins.Add(new DealerPinViewModel
+                yield return new DealerPinViewModel
                 {
                     Id = dealer.Id,
                     Name = dealer.Name,
@@ -267,11 +319,40 @@ namespace StreetCorsa.Screens.DealerMap
                     DaysLeft = DealerRules.DaysLeft(location, _gameState.Date),
                     Discount = DealerRules.DiscountOn(location, _gameState.Date),
                     IsNew = location.OpenedOn is { } opened && (_gameState.Date.Date - opened.Date).TotalDays < NewForDays
-                });
+                };
             }
+        }
 
-            OnPropertyChanged(nameof(HasDealers));
-            _logger.Information("Map showing {Count} dealers", Pins.Count);
+        /// <summary>The part shops in business, as the lots are</summary>
+        private IEnumerable<DealerPinViewModel> ShopPins()
+        {
+            var remainingToday = _timeService.GetRemainingMinutesToday(_gameState);
+            foreach (var location in PartShopRoster.Trading(_gameState))
+            {
+                if (_partShops.Catalog.Get(location.Id) is not { } shop) continue;
+
+                yield return new DealerPinViewModel
+                {
+                    Id = shop.Id,
+                    Name = shop.Name,
+                    Region = shop.Region,
+                    Blurb = shop.Blurb,
+                    IsPartShop = true,
+                    KindLabel = GameText.Installed.Get($"partshop.kind.{shop.KindOf.ToString().ToLowerInvariant()}"),
+
+                    MapX = shop.MapX,
+                    MapY = shop.MapY,
+
+                    StockCount = shop.KindOf == PartShopKind.Junkyard ? location.Yard.Count : location.Shelves.Sum(s => Math.Max(0, s.Count)),
+                    TravelHours = shop.TravelHours,
+                    MinutesLeftToday = remainingToday,
+
+                    ClosesOn = location.Status == DealerStatus.ClosingDown ? location.ClosesOn : null,
+                    DaysLeft = DealerRules.DaysLeft(location, _gameState.Date),
+                    Discount = DealerRules.DiscountOn(location, _gameState.Date),
+                    IsNew = location.OpenedOn is { } opened && (_gameState.Date.Date - opened.Date).TotalDays < NewForDays
+                };
+            }
         }
 
         /// <summary>A lot that opened during the game is marked new on the map for this long</summary>
@@ -337,7 +418,8 @@ namespace StreetCorsa.Screens.DealerMap
                 }
 
                 // Guarded by the navigation service: a lot that will not open is reported and the map stays
-                _navigationService.NavigateToDealerLot(_gameState, pin.Id);
+                if (pin.IsPartShop) _navigationService.NavigateToPartShop(_gameState, pin.Id);
+                else _navigationService.NavigateToDealerLot(_gameState, pin.Id);
             }
             catch (Exception ex)
             {
@@ -374,9 +456,15 @@ namespace StreetCorsa.Screens.DealerMap
         }
     }
 
-    /// <summary>One dealer's pin on the map</summary>
+    /// <summary>One dealer's or part shop's pin on the map</summary>
     public class DealerPinViewModel
     {
+        /// <summary>A part shop, not a car lot: its own pin, and its counter when picked</summary>
+        public bool IsPartShop { get; set; }
+
+        /// <summary>What sort of part shop ("Speed shop"); empty for a car lot</summary>
+        public string KindLabel { get; set; } = string.Empty;
+
         public string Id { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string Region { get; set; } = string.Empty;
@@ -405,11 +493,15 @@ namespace StreetCorsa.Screens.DealerMap
             ? "You would be back before the day is out"
             : "You would not be back today";
 
-        public string StockDisplay => StockCount == 1 ? "1 car" : $"{StockCount} cars";
+        public string StockDisplay => IsPartShop
+            ? StockCount == 1 ? "1 part" : $"{StockCount} parts"
+            : StockCount == 1 ? "1 car" : $"{StockCount} cars";
 
-        public string PriceDisplay => StockCount == 0
-            ? "Nothing on the lot"
-            : $"${CheapestPrice:N0} - ${DearestPrice:N0}";
+        public string PriceDisplay => IsPartShop
+            ? KindLabel
+            : StockCount == 0
+                ? "Nothing on the lot"
+                : $"${CheapestPrice:N0} - ${DearestPrice:N0}";
 
         /// <summary>The last day of its closing-down sale; null when it is not closing down</summary>
         public DateTime? ClosesOn { get; set; }
@@ -433,8 +525,11 @@ namespace StreetCorsa.Screens.DealerMap
         /// <summary>The card's line on the sale</summary>
         public string NoticeDetail => IsClosingDown
             // The cut still to come, until it has come
-            ? Text(DaysLeft >= DealerRules.FinalDays ? "dealer.detail.closing" : "dealer.detail.closing_final")
-            : IsNew ? Text("dealer.detail.new") : string.Empty;
+            ? Text($"{Words}.detail.{(DaysLeft >= DealerRules.FinalDays ? "closing" : "closing_final")}")
+            : IsNew ? Text($"{Words}.detail.new") : string.Empty;
+
+        /// <summary>The card's words are a lot's or a shop's: "every car" or "everything"</summary>
+        private string Words => IsPartShop ? "partshop" : "dealer";
 
         private string Text(string key) => GameText.Installed.Get(key, new TextValues
         {

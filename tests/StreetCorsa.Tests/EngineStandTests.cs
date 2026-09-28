@@ -149,6 +149,33 @@ public sealed class EngineStandTests : IDisposable
         Assert.Contains("main bearing bridge", EngineWork.WhyNotOff(catalog, engine, Find(engine, "crankshaft"), onStand: true));
     }
 
+    /// <summary>
+    /// A head waits for the valve cover and the exhaust header on it, not for the other head's: of a V8 one head comes
+    /// off (and goes back on) with the other bank still dressed
+    /// </summary>
+    [Fact]
+    public void A_cylinder_head_waits_only_for_its_own_valve_cover_and_header()
+    {
+        var catalog = Catalog.Value;
+        var engine = Engine("camaro_mk2/0006/stock");
+        string? KindOf(PartInstance p) => catalog.WorkOrder.KindOf(catalog.Get(p.DefinitionId)!);
+        void Remove(PartInstance p) => PartTrees.FindParent(engine, p)!.Children.Remove(p);
+
+        Remove(Find(engine, "intake_manifold"));
+        var heads = engine.SelfAndDescendants().Where(p => KindOf(p) == "cylinder_head").ToList();
+        Assert.Equal(2, heads.Count);
+        var (head, other) = (heads[0], heads[1]);
+        Assert.Equal("Take off the valve cover and the exhaust header first.", EngineWork.WhyNotOff(catalog, engine, head, onStand: false));
+
+        foreach (var dressing in head.Children.Where(p => KindOf(p) is "valve_cover" or "exhaust_header").ToList()) head.Children.Remove(dressing);
+        Assert.Contains(other.Children, p => KindOf(p) == "valve_cover");
+        Assert.Contains(other.Children, p => KindOf(p) == "exhaust_header");
+        Assert.Null(EngineWork.WhyNotOff(catalog, engine, head, onStand: false));
+
+        Remove(head);
+        Assert.Null(EngineWork.WhyNotOn(catalog, engine, head, onStand: false));
+    }
+
     /// <summary>The belt runs on the fan's pulley: it goes on after the water pump and the fan, and holds them on</summary>
     [Fact]
     public void The_drive_belt_needs_the_water_pump_and_the_fan()

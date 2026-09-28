@@ -89,6 +89,9 @@ namespace StreetCorsa.Models.GameState
         public DateTime PostedDate { get; set; }
         public int DaysActive { get; set; }
 
+        /// <summary>A junkyard's part the player has haggled over already: the owner does not come down twice</summary>
+        public bool Haggled { get; set; }
+
         public PartAd()
         {
             AdId = Guid.NewGuid();

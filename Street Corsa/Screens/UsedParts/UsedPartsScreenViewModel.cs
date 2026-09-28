@@ -31,60 +31,37 @@ namespace StreetCorsa.Screens.UsedParts
     /// The parts pages of the newspaper: used parts from the ads, new ones by mail order, and selling what is
     /// on the shelf. Whatever is bought goes to the shelf in the garage.
     /// </summary>
-    public class UsedPartsScreenViewModel : BaseScreenViewModel
+    public class UsedPartsScreenViewModel : PartsListScreenViewModel
     {
-        public const string AllGroups = "All parts";
-
-        // A full page of rows, not the catalog's two thousand at once
-        private const int MaxRows = 250;
-
         private readonly NavigationService _navigationService;
         private readonly DialogService _dialogService;
-        private readonly Models.GameState.GameState _gameState;
-        private readonly ICarPartsService _partsService;
-        private readonly IPartsShopService _shopService;
-        private readonly IGameStateRepository _gameStateRepo;
-        private readonly IContentCatalogRepository _catalogRepo;
+        private readonly INewspaperPartsService _shopService;
         private readonly IGameTimeService _timeService;
-        private readonly IAppLogger _logger;
-
-        private HashSet<string> _fitting = new(StringComparer.OrdinalIgnoreCase);
 
         public RelayCommand BackCommand { get; }
         public RelayCommand<string> ShowTabCommand { get; }
         public RelayCommand<PartOfferViewModel> BuyCommand { get; }
-
-        public string BankrollDisplay => $"${_gameState.Player.Money:N0}";
-
-        public ObservableCollection<PartOfferViewModel> Offers { get; } = new();
-        public ObservableCollection<string> Groups { get; } = new();
 
         public UsedPartsScreenViewModel(
             NavigationService navigationService,
             DialogService dialogService,
             Models.GameState.GameState gameState,
             ICarPartsService partsService,
-            IPartsShopService shopService,
+            INewspaperPartsService shopService,
             IGameStateRepository gameStateRepo,
             IContentCatalogRepository catalogRepo,
             IGameTimeService timeService)
+            : base(gameState, partsService, gameStateRepo, catalogRepo, "UsedParts", onlyFitting: true)
         {
             _navigationService = navigationService;
             _dialogService = dialogService;
-            _gameState = gameState;
-            _partsService = partsService;
             _shopService = shopService;
-            _gameStateRepo = gameStateRepo;
-            _catalogRepo = catalogRepo;
             _timeService = timeService;
-            _logger = AppLoggerFactory.CreateLogger("UsedParts");
 
             BackCommand = new RelayCommand(OnBack);
             ShowTabCommand = new RelayCommand<string>(tab => Tab = Enum.Parse<PartsShopTab>(tab ?? nameof(PartsShopTab.Used)));
             BuyCommand = new RelayCommand<PartOfferViewModel>(OnOfferAction);
         }
-
-        #region Filters
 
         private PartsShopTab _tab = PartsShopTab.Used;
 
@@ -95,84 +72,18 @@ namespace StreetCorsa.Screens.UsedParts
             {
                 if (!SetProperty(ref _tab, value)) return;
 
-                // Every page starts out unfiltered: a kind picked among the new parts would hide half the shelf
-                _selectedGroup = AllGroups;
-                _searchText = string.Empty;
-                OnPropertyChanged(nameof(SelectedGroup));
-                OnPropertyChanged(nameof(SearchText));
                 OnPropertyChanged(nameof(IsUsedTab));
                 OnPropertyChanged(nameof(IsNewTab));
                 OnPropertyChanged(nameof(IsSellTab));
-                OnPropertyChanged(nameof(CanFilterByFit));
-                LoadOffers();
+                TabChanged();
             }
         }
 
         public bool IsUsedTab => _tab == PartsShopTab.Used;
         public bool IsNewTab => _tab == PartsShopTab.New;
-        public bool IsSellTab => _tab == PartsShopTab.Sell;
-
-        private string _selectedGroup = AllGroups;
-
-        public string SelectedGroup
-        {
-            get => _selectedGroup;
-            set
-            {
-                if (SetProperty(ref _selectedGroup, value ?? AllGroups)) LoadOffers();
-            }
-        }
-
-        private string _searchText = string.Empty;
-
-        public string SearchText
-        {
-            get => _searchText;
-            set
-            {
-                if (SetProperty(ref _searchText, value ?? string.Empty)) LoadOffers();
-            }
-        }
-
-        private bool _onlyFitting = true;
-
-        /// <summary>Show only what goes somewhere on the car that is selected in the garage</summary>
-        public bool OnlyFitting
-        {
-            get => _onlyFitting;
-            set
-            {
-                if (SetProperty(ref _onlyFitting, value)) LoadOffers();
-            }
-        }
-
-        public bool CanFilterByFit => SelectedCar != null && !IsSellTab;
-
-        public string FitFilterLabel => SelectedCar == null ? "Only what fits my car" : $"Only what fits my {CarName}";
-
-        private string _statusText = string.Empty;
-
-        public string StatusText
-        {
-            get => _statusText;
-            private set => SetProperty(ref _statusText, value);
-        }
+        public override bool IsSellTab => _tab == PartsShopTab.Sell;
 
         public bool IsAvailable => _shopService.IsAvailable;
-
-        #endregion
-
-        private Car? SelectedCar =>
-            _gameState.Player.Cars.FirstOrDefault(c => c.InstanceId == _gameState.Player.SelectedCarInstanceId);
-
-        private string CarName
-        {
-            get
-            {
-                var definition = SelectedCar == null ? null : _catalogRepo.GetCar(SelectedCar.DefinitionId);
-                return definition?.Name ?? "car";
-            }
-        }
 
         public override async void Enter()
         {
@@ -192,14 +103,7 @@ namespace StreetCorsa.Screens.UsedParts
                 }
 
                 OnPropertyChanged(nameof(IsAvailable));
-                OnPropertyChanged(nameof(CanFilterByFit));
-                OnPropertyChanged(nameof(FitFilterLabel));
-
-                Groups.Clear();
-                Groups.Add(AllGroups);
-                foreach (var group in _shopService.Assortment.Select(PartKinds.GroupOf).Distinct().OrderBy(g => g)) Groups.Add(group);
-
-                LoadOffers();
+                ShowFirst();
             }
             catch (Exception ex)
             {
@@ -216,7 +120,7 @@ namespace StreetCorsa.Screens.UsedParts
                 if (spent.NewDayStarted) LoadOffers();
 
                 // The time spent, and the new day it may end in, belong in the save
-                if (!string.IsNullOrEmpty(_gameState.SaveName)) _gameStateRepo.Save(_gameState, _gameState.SaveName);
+                Save("the time for the parts pages");
             }
             catch (Exception ex)
             {
@@ -224,35 +128,12 @@ namespace StreetCorsa.Screens.UsedParts
             }
         }
 
-        /// <summary>
-        /// The rows for the page, kind and search picked. Called from property setters bound to the view, so
-        /// nothing may escape: a page that cannot be listed says so and stays empty.
-        /// </summary>
-        private void LoadOffers()
-        {
-            try
-            {
-                FillOffers();
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Could not list the parts for the {Tab} page", _tab);
-                Offers.Clear();
-                StatusText = "The parts could not be listed.";
-            }
-        }
+        protected override bool CanList => _shopService.IsAvailable;
 
-        private void FillOffers()
+        protected override IEnumerable<PartOfferViewModel> TabOffers()
         {
-            Offers.Clear();
-            if (!_shopService.IsAvailable)
-            {
-                StatusText = "No parts catalog is installed.";
-                return;
-            }
-
             var catalog = _partsService.Catalog;
-            IEnumerable<PartOfferViewModel> offers = _tab switch
+            return _tab switch
             {
                 PartsShopTab.Used => _gameState.NewspaperAds.Parts
                     .Where(ad => catalog.Get(ad.Part.DefinitionId) != null)
@@ -262,27 +143,13 @@ namespace StreetCorsa.Screens.UsedParts
                     .Where(p => catalog.Get(p.DefinitionId) != null)
                     .Select(p => PartOfferViewModel.ForSale(p, catalog.Get(p.DefinitionId)!, _shopService.TradeInPrice(p)))
             };
-
-            if (_selectedGroup != AllGroups) offers = offers.Where(o => o.Group == _selectedGroup);
-            if (_searchText.Length > 0) offers = offers.Where(o => o.Name.Contains(_searchText, StringComparison.OrdinalIgnoreCase));
-            if (_onlyFitting && CanFilterByFit) offers = offers.Where(o => _fitting.Contains(o.Definition.Id));
-
-            var matching = offers.ToList();
-            foreach (var offer in matching.Take(MaxRows))
-            {
-                offer.Fits = _fitting.Contains(offer.Definition.Id);
-                offer.CanAfford = IsSellTab || offer.Price <= _gameState.Player.Money;
-                Offers.Add(offer);
-            }
-
-            StatusText = matching.Count switch
-            {
-                0 when IsSellTab => "Your shelf is empty.",
-                0 => "Nothing like that on offer.",
-                > MaxRows => $"Showing {MaxRows} of {matching.Count}: narrow it down by kind or name.",
-                _ => $"{matching.Count} part{(matching.Count == 1 ? "" : "s")}"
-            };
         }
+
+        /// <summary>What is ordered and not here yet: the mail order's page says so, so nothing is ordered twice by mistake</summary>
+        protected override string StatusNote =>
+            IsNewTab && _gameState.Player.PartOrders.Count is > 0 and var onTheWay
+                ? $"  ·  {onTheWay} part{(onTheWay == 1 ? "" : "s")} on the way"
+                : string.Empty;
 
         private void OnOfferAction(PartOfferViewModel? offer)
         {
@@ -292,7 +159,7 @@ namespace StreetCorsa.Screens.UsedParts
             {
                 { Ad: { } ad } => _shopService.BuyUsed(_gameState, ad),
                 { Owned: { } owned } => _shopService.Sell(_gameState, owned),
-                _ => _shopService.BuyNew(_gameState, offer.Definition)
+                _ => _shopService.BuyNew(_gameState, offer.Definition) != null
             };
 
             if (!done)
@@ -304,24 +171,14 @@ namespace StreetCorsa.Screens.UsedParts
                     _ => ("You don't have enough money for this part.", "Insufficient Funds")
                 };
                 _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, message, title));
-
-                // Whatever went wrong, the rows are out of date
-                OnPropertyChanged(nameof(BankrollDisplay));
-                LoadOffers();
-                return;
             }
-
-            try
+            else
             {
-                if (!string.IsNullOrEmpty(_gameState.SaveName)) _gameStateRepo.Save(_gameState, _gameState.SaveName);
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Failed to save game state after a parts deal");
+                Save("a parts deal");
             }
 
-            OnPropertyChanged(nameof(BankrollDisplay));
-            LoadOffers();
+            // Whatever went wrong, the rows are out of date
+            Refresh();
         }
 
         private void OnBack()
@@ -337,7 +194,10 @@ namespace StreetCorsa.Screens.UsedParts
         }
     }
 
-    /// <summary>One row of the parts pages: a used part from an ad, a new part, or one of the player's own</summary>
+    /// <summary>
+    /// One row of the parts pages and the part shops: a used part from an ad or a junkyard, a new part by mail or off a
+    /// shop's shelf, or one of the player's own
+    /// </summary>
     public class PartOfferViewModel
     {
         private PartOfferViewModel(PartDefinition definition, decimal price, string action)
@@ -353,6 +213,18 @@ namespace StreetCorsa.Screens.UsedParts
         public PartAd? Ad { get; private init; }
         public PartInstance? Owned { get; private init; }
 
+        /// <summary>A new part on a shop's shelf</summary>
+        public ShopShelf? Shelf { get; private init; }
+
+        /// <summary>What it cost before today's sale and the regulars' discount; null when nothing is off</summary>
+        public decimal? WasPrice { get; private init; }
+
+        public string WasPriceDisplay => WasPrice is { } was ? $"${was:N0}" : string.Empty;
+        public bool HasWasPrice => WasPrice != null;
+
+        /// <summary>A junkyard's part the owner may still come down on</summary>
+        public bool CanHaggle { get; private init; }
+
         public string Name { get; }
         public string Group { get; }
         public decimal Price { get; }
@@ -365,13 +237,33 @@ namespace StreetCorsa.Screens.UsedParts
         public bool Fits { get; set; }
         public bool CanAfford { get; set; }
 
-        public static PartOfferViewModel ForNew(PartDefinition definition, decimal price) => new(definition, price, "Order");
+        public static PartOfferViewModel ForNew(PartDefinition definition, decimal price) =>
+            new(definition, price, "Order") { Detail = $"New, by mail: comes in {NewspaperPartsService.MailOrderDays} days" };
 
         public static PartOfferViewModel ForAd(PartAd ad, PartDefinition definition) =>
             new(definition, ad.AskingPrice, "Buy")
             {
                 Ad = ad,
                 Detail = $"{PartTrees.Describe(ad.Part)}  ·  {ad.SellerName}"
+            };
+
+        /// <summary>A new part on a shop's shelf, at the shop's price today</summary>
+        public static PartOfferViewModel ForShelf(ShopShelf shelf, PartDefinition definition, decimal price, decimal? was) =>
+            new(definition, price, "Buy")
+            {
+                Shelf = shelf,
+                WasPrice = was > price ? was : null,
+                Detail = shelf.Count == 1 ? "New  ·  the last one" : $"New  ·  {shelf.Count} on the shelf"
+            };
+
+        /// <summary>A used part in a junkyard's yard, at the yard's price today</summary>
+        public static PartOfferViewModel ForYard(PartAd item, PartDefinition definition, decimal price, decimal? was) =>
+            new(definition, price, "Buy")
+            {
+                Ad = item,
+                WasPrice = was > price ? was : null,
+                CanHaggle = !item.Haggled,
+                Detail = PartTrees.Describe(item.Part) + (item.Haggled ? "  ·  as low as it goes" : string.Empty)
             };
 
         public static PartOfferViewModel ForSale(PartInstance part, PartDefinition definition, decimal price) =>

@@ -17,6 +17,20 @@ namespace StreetCorsa.Models.GameState
     }
 
     /// <summary>
+    /// What a car dealer's and a part shop's definitions have in common: what the save's roster of them is kept up to
+    /// (<c>DealerChurn.Merge</c>)
+    /// </summary>
+    public interface ILocationDefinition<out TLocation> where TLocation : DealerLocation
+    {
+        string Id { get; }
+        string Name { get; }
+        string Region { get; }
+
+        /// <summary>The business as a save that has never had it starts it</summary>
+        TLocation ToLocation();
+    }
+
+    /// <summary>
     /// Everything about a dealer that never changes: where it is on the map, what it looks like inside,
     /// and the kind of cars it keeps.
     ///
@@ -24,7 +38,7 @@ namespace StreetCorsa.Models.GameState
     /// so adding a field here does not have to reach into everybody's saved game: the definitions are the
     /// truth and are merged over the save on load (<c>DealerCatalog</c>).
     /// </summary>
-    public class DealerDefinition
+    public class DealerDefinition : ILocationDefinition<DealerLocation>
     {
         public string Id { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;

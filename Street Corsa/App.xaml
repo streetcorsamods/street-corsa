@@ -11,6 +11,7 @@
              xmlns:dealerMap="clr-namespace:StreetCorsa.Screens.DealerMap"
              xmlns:dealerLot="clr-namespace:StreetCorsa.Screens.DealerLot"
              xmlns:usedParts="clr-namespace:StreetCorsa.Screens.UsedParts"
+             xmlns:partShop="clr-namespace:StreetCorsa.Screens.PartShop"
              xmlns:garage="clr-namespace:StreetCorsa.Screens.Garage"
              xmlns:carSelection="clr-namespace:StreetCorsa.Screens.CarSelection"
              xmlns:diner="clr-namespace:StreetCorsa.Screens.Diner"
@@ -85,6 +86,9 @@
 
             <DataTemplate DataType="{x:Type usedParts:UsedPartsScreenViewModel}">
                 <usedParts:UsedPartsScreenView/>
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type partShop:PartShopScreenViewModel}">
+                <partShop:PartShopScreenView/>
             </DataTemplate>
 
             <DataTemplate DataType="{x:Type garage:GarageScreenViewModel}">

@@ -32,7 +32,8 @@ Street Rod-style career mode manager for Assetto Corsa. WPF app manages game log
 | CarProfile | catalog.db | Gameplay properties: BasePrice, DealerPrecedence |
 | UsedCarListing | saves/*.db | Car for sale in market |
 | CarInstance | saves/*.db | Player-owned car |
-| PartInstance | saves/*.db | A part somebody owns, with what is mounted on it: `Car.Parts` (engine on car slot 1), `Player.Parts` (shelf), `Player.EngineStand` (the engine on the stand), `UsedCarListing.Parts`, `NewspaperAds.Parts` |
+| PartInstance | saves/*.db | A part somebody owns, with what is mounted on it: `Car.Parts` (engine on car slot 1), `Player.Parts` (shelf), `Player.EngineStand` (the engine on the stand), `Player.PartOrders` (mail order on its way), `UsedCarListing.Parts`, `NewspaperAds.Parts`, a junkyard's `PartShopLocation.Yard` |
+| PartShopLocation | saves/*.db | A part shop's business (a `DealerLocation`), its shelves or yard, what the player has spent there |
 | Opponent | saves/*.db | AI racer with Skill/Aggression traits |
 | GameState | saves/*.db | Player money, date, cars, market |
 
@@ -43,15 +44,16 @@ Street Rod-style career mode manager for Assetto Corsa. WPF app manages game log
 | Catalog | ContentCatalogRepository, CarProfileService | Car import, profiles |
 | Market | UsedCarMarketService, CarValuation | Spawn listings, refresh, purchases; one formula for what a car is worth |
 | Dealers | DealerCatalog, DealerRoster, DealerLifeService | The dealers of the mods on their map; about 60% open, now and then one closes (closing-down sale the rivals shop) or opens (the `dealer_review` task; see `docs/systems/market-system.md`) |
+| Part shops | PartShopCatalog, PartShopRoster, PartShopService, PartShopLifeService | Make specialists, speed shops, wheel shops and junkyards on their own map (the garage's Parts dealers button), each with its own stock and prices, a regulars' discount, coming and going as the dealers do (the `partshop_review` task); the rivals tune from their shelves (see `docs/systems/parts-system.md`, "Part shops") |
 | Opponents | OpponentInitializationService, OpponentLifeService, EngineTuner, OpponentEvolutionService | Rivals on the street: daily review (buy, repair, tune, go broke, come back), the King (see `docs/systems/opponent-system.md`) |
 | Time | GameTimeScheduler, IScheduledTask | Time-based task execution |
 | Race | AssettoCorsaLauncher, IniModificationService, RaceResultIngestionService | Launch AC, modify and restore configs, stop a race, read results (`LaunchResult.Outcome`, `PlayerMessages`) |
 | Dialogs | DialogService | Modal overlays |
 | Parts | PartsCatalog, PartScriptRuntime, EngineDyno, AcEngineData, AcRunningGearData | SLRR parts: run their scripts on the player's build, dyno, AC data (see `docs/systems/parts-system.md`) |
-| Cars' parts | CarPartsService, PartsShopService, Workbench, EngineFactory, RunningGearFactory | Factory engine and running gear per car, part trees on cars, plausibly tuned used cars, garage workbench (parts picked in 3D), parts shop |
+| Cars' parts | CarPartsService, NewspaperPartsService, Workbench, EngineFactory, RunningGearFactory | Factory engine and running gear per car, part trees on cars, plausibly tuned used cars, garage workbench (parts picked in 3D), the newspaper's parts pages (used ads, mail order with a premium and three days' delivery) |
 | Race data | RaceCarDataService, CarDataOverlay | What the parts make of a car goes into its AC data for a race and comes out after (see `docs/systems/parts-system.md`, "Apply and restore") |
 | Engine sounds | SoundLibrary, SoundMatcher, AcCarSound | A sound per engine block: every mod's `sounds` folders plus every installed car's bank, swapped in for the race by `CarDataOverlay` |
-| Mods | ModSet, ModIds, ContentRegistry, ModJson | All game content (parts, sounds, dealers, racers, events, milestones, victory paths, streets, gas stations, rooms, words) comes from `Content\<mod>`, the base game (`Content\streetcorsa`) first; ids namespaced by mod, the base game's without (see `docs/modding.md`) |
+| Mods | ModSet, ModIds, ContentRegistry, ModJson | All game content (parts, sounds, dealers, part shops, racers, events, milestones, victory paths, streets, gas stations, rooms, words) comes from `Content\<mod>`, the base game (`Content\streetcorsa`) first; ids namespaced by mod, the base game's without (see `docs/modding.md`) |
 | Career and words as data | CareerContent, DataVictory, GameText | Events, milestones and victory paths from the mods' `events`/`milestones`/`victories`; everything the game says (paper, talk, street talk, names) from their `text` pools, the when-to-say-what in code |
 
 ## File Structure

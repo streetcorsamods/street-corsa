@@ -110,6 +110,11 @@
                                         </Border>
                                     </StackPanel>
                                     <ControlTemplate.Triggers>
+                                        <!-- A part shop: a gold square, not a red dot, so it reads apart from the lots -->
+                                        <DataTrigger Binding="{Binding IsPartShop}" Value="True">
+                                            <Setter TargetName="Dot" Property="Background" Value="{StaticResource GoldBrush}"/>
+                                            <Setter TargetName="Dot" Property="CornerRadius" Value="3"/>
+                                        </DataTrigger>
                                         <!-- Too far to get back from today: still there to be clicked, but greyed so the
                                              cost is visible before the click, not sprung by the dialog after it -->
                                         <DataTrigger Binding="{Binding FitsToday}" Value="False">
@@ -125,6 +130,15 @@
                                             <Setter TargetName="Plate" Property="BorderBrush" Value="{StaticResource AccentHoverBrush}"/>
                                             <Setter TargetName="Root" Property="Opacity" Value="1"/>
                                         </Trigger>
+                                        <!-- A part shop keeps its corners when hovered -->
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding IsPartShop}" Value="True"/>
+                                                <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter TargetName="Dot" Property="CornerRadius" Value="4"/>
+                                            <Setter TargetName="Dot" Property="Background" Value="{StaticResource GoldCCBrush}"/>
+                                        </MultiDataTrigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>
                             </Button.Template>
@@ -198,7 +212,7 @@
         <StackPanel HorizontalAlignment="Center"
                     VerticalAlignment="Top"
                     Margin="0,28,0,0">
-            <TextBlock Text="WHERE TO LOOK"
+            <TextBlock Text="{Binding Title}"
                        FontSize="{StaticResource FontSizeTitleLarge}"
                        FontWeight="Bold"
                        Foreground="{StaticResource TextPrimaryBrush}"
@@ -207,7 +221,7 @@
                     <DropShadowEffect BlurRadius="12" ShadowDepth="0" Color="Black" Opacity="1"/>
                 </TextBlock.Effect>
             </TextBlock>
-            <TextBlock Text="Pick a lot and drive out to see what they have"
+            <TextBlock Text="{Binding Subtitle}"
                        FontSize="{StaticResource FontSizeCompact}"
                        Foreground="{StaticResource TextSecondaryBrush}"
                        HorizontalAlignment="Center"
@@ -216,6 +230,7 @@
                     <DropShadowEffect BlurRadius="10" ShadowDepth="0" Color="Black" Opacity="1"/>
                 </TextBlock.Effect>
             </TextBlock>
+
         </StackPanel>
 
         <!-- Back -->
@@ -255,7 +270,7 @@
 
         <!-- Nothing to show: the definitions file did not load. Drawn under the loading overlay, so the
              first market of a game does not read as an empty map on the way past -->
-        <TextBlock Text="No dealers could be found on the map."
+        <TextBlock Text="{Binding EmptyText}"
                    FontSize="{StaticResource FontSizeSubheading}"
                    Foreground="{StaticResource TextSecondaryBrush}"
                    HorizontalAlignment="Center"
@@ -265,7 +280,7 @@
         <!-- The first market of a game takes a few seconds to put together -->
         <Border Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}"
                 Background="{StaticResource BlackB0Brush}">
-            <TextBlock Text="The dealers are putting their cars out..."
+            <TextBlock Text="{Binding LoadingText}"
                        FontSize="{StaticResource FontSizeHeading}"
                        Foreground="{StaticResource TextPrimaryBrush}"
                        HorizontalAlignment="Center"

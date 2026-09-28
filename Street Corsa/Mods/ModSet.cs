@@ -9,6 +9,7 @@ public static class ContentTypes
     public const string Parts = "parts";
     public const string Sounds = "sounds";
     public const string Dealers = "dealers";
+    public const string PartShops = "partshops";
     public const string Racers = "racers";
     public const string Events = "events";
     public const string Milestones = "milestones";

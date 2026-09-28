@@ -170,7 +170,7 @@ public class NavigationServiceTests
     // The services only go to the screens the typed factories build; SafeNavigate is given its screen here
     private static NavigationService NewService(DialogService dialogs) => new(
         dialogs, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!,
-        null!, null!, null!, null!, null!, null!, null!, null!, _ => { });
+        null!, null!, null!, null!, null!, null!, null!, null!, null!, _ => { });
 
     [Fact]
     public void A_screen_that_enters_becomes_the_current_one()

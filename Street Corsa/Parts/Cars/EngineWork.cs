@@ -38,7 +38,8 @@ public static class EngineWork
         foreach (var (ruledPart, rule) in ruled)
         {
             if (rule!.Bare) blocking.UnionWith(ruledPart.Children.SelfAndDescendantsOf());
-            blocking.UnionWith(all.Where(p => !ReferenceEquals(p, ruledPart) && IsOneOf(catalog, p, rule.After)));
+            var elsewhere = OnOthersOfItsKind(catalog, all, ruledPart);
+            blocking.UnionWith(all.Where(p => !ReferenceEquals(p, ruledPart) && IsOneOf(catalog, p, rule.After) && !elsewhere.Contains(p)));
         }
 
         // What stays on and needs a kind that would leave with the last part doing its job: the belt when the fan
@@ -82,7 +83,8 @@ public static class EngineWork
             if (rule.Bare && part.Children.Count > 0)
                 return $"Take {List(catalog, part.Children.SelfAndDescendantsOf())} off the {order.NameOf(rule.Kind)} first: {(IsPlural(order, rule.Kind) ? "they go" : "it goes")} in by {(IsPlural(order, rule.Kind) ? "themselves" : "itself")}.";
 
-            var blockers = whole.Where(p => !ReferenceEquals(p, part) && IsOneOf(catalog, p, rule.After)).ToList();
+            var elsewhere = OnOthersOfItsKind(catalog, whole, part);
+            var blockers = whole.Where(p => !ReferenceEquals(p, part) && IsOneOf(catalog, p, rule.After) && !elsewhere.Contains(p)).ToList();
             if (blockers.Count > 0) return $"Take off {List(catalog, blockers)} first.";
 
             var missing = rule.Needs.Where(kind => !whole.Any(p => DoesJobOf(catalog, p, kind)) && MayGoOn(order, kind, onStand) && Takes(catalog, engine, kind))
@@ -178,6 +180,40 @@ public static class EngineWork
         catalog.Get(part.DefinitionId) is { } definition ? catalog.WorkOrder.RuleOf(definition) : null;
 
     private static bool IsKind(string? kind, string wanted) => kind != null && kind.Equals(wanted, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// What sits on the engine's other parts of the part's kind, in places the part has its own of: the other head's
+    /// valve cover and exhaust header (with what is on them) are not in this head's way, though they are of kinds a
+    /// head waits for, as this head takes its own. What one of them carries for both (an intake on one head of a pair,
+    /// a belt on one of two pulleys) the part has no place of its own for, and it stays in the way.
+    /// </summary>
+    private static HashSet<PartInstance> OnOthersOfItsKind(PartsCatalog catalog, IEnumerable<PartInstance> all, PartInstance part)
+    {
+        var elsewhere = new HashSet<PartInstance>(ReferenceEqualityComparer.Instance);
+        if (KindOf(catalog, part) is not { } kind || catalog.Get(part.DefinitionId) is not { } definition) return elsewhere;
+
+        var ownPlaces = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+        bool HasOwnPlaceFor(string childKind)
+        {
+            if (!ownPlaces.TryGetValue(childKind, out var has))
+            {
+                has = definition.Slots.Where(s => s.Id != part.OwnSlot)
+                    .Any(s => catalog.FindMountable(definition, s).Any(m => IsKind(catalog.WorkOrder.KindOf(m.Part), childKind)));
+                ownPlaces[childKind] = has;
+            }
+
+            return has;
+        }
+
+        foreach (var other in all)
+        {
+            if (ReferenceEquals(other, part) || !IsKind(KindOf(catalog, other), kind)) continue;
+            foreach (var child in other.Children)
+                if (KindOf(catalog, child) is { } childKind && HasOwnPlaceFor(childKind)) elsewhere.UnionWith(child.SelfAndDescendants());
+        }
+
+        return elsewhere;
+    }
 
     private static bool IsOneOf(PartsCatalog catalog, PartInstance part, IReadOnlyCollection<string> kinds) =>
         kinds.Count > 0 && KindOf(catalog, part) is { } kind && kinds.Contains(kind, StringComparer.OrdinalIgnoreCase);

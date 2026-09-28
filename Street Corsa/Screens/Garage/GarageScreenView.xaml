@@ -600,6 +600,22 @@
                 VerticalAlignment="Center"
                 Margin="30,0,0,0"/>
 
+        <!-- Parts dealers (beside the car dealers): the part shops' own map -->
+        <Button x:Name="PartDealersButton"
+                Grid.Row="0"
+                Style="{StaticResource OverlayTileButtonStyle}"
+                Command="{Binding PartDealersCommand}"
+                Tag="Parts dealers"
+                helpers:Reveal.IsShown="{Binding ShowNavigation}"
+                helpers:Reveal.OffsetX="-60"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Bottom"
+                Margin="134,0,0,134">
+            <Button.Background>
+                <ImageBrush ImageSource="/Assets/Images/Buttons/parts_dealers.png" Stretch="Uniform"/>
+            </Button.Background>
+        </Button>
+
         <!-- Car dealers (left, above the newspaper) -->
         <Button x:Name="CarDealersButton"
                 Grid.Row="0"

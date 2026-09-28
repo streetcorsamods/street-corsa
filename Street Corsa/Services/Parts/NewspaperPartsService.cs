@@ -7,11 +7,16 @@ using StreetCorsa.Services.Text;
 namespace StreetCorsa.Services.Parts
 {
     /// <summary>
-    /// Buying and selling parts: new ones by mail order at the part's own price, used ones from the ads, and
-    /// the player's own to whoever takes them. Everything bought goes to the player's shelf.
+    /// Buying and selling parts: new ones by mail order (the part's own price and a premium, and a few days to come),
+    /// used ones from the ads, and the player's own to whoever takes them. Everything bought goes to the player's shelf,
+    /// the mail order's when it comes (<see cref="Deliver"/>).
     /// </summary>
-    public class PartsShopService : IPartsShopService
+    public class NewspaperPartsService : INewspaperPartsService
     {
+        /// <summary>The mail order sells everything there is, for this much over list, and it takes <see cref="MailOrderDays"/> to come</summary>
+        public const double MailOrderPremium = 1.2;
+        public const int MailOrderDays = 3;
+
         private const string EnginePacks = "engines/";
 
         private const int MinAds = 25;
@@ -27,7 +32,7 @@ namespace StreetCorsa.Services.Parts
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger(LogCategory.Parts);
         private readonly Lazy<IReadOnlyList<PartDefinition>> _assortment;
 
-        public PartsShopService(ICarPartsService parts)
+        public NewspaperPartsService(ICarPartsService parts)
         {
             _parts = parts;
             _assortment = new Lazy<IReadOnlyList<PartDefinition>>(FindAssortment);
@@ -37,8 +42,11 @@ namespace StreetCorsa.Services.Parts
 
         public IReadOnlyList<PartDefinition> Assortment => _assortment.Value;
 
-        public decimal NewPrice(PartDefinition part, double priceMultiplier) =>
-            PartPricing.Round(PartPricing.NewPrice(part) * GameRules.Sane(priceMultiplier));
+        public decimal NewPrice(PartDefinition part, double priceMultiplier) => MailOrderPrice(part, priceMultiplier);
+
+        /// <summary>What the mail order asks for a part: the list price and its premium, in the save's difficulty</summary>
+        public static decimal MailOrderPrice(PartDefinition part, double priceMultiplier) =>
+            PartPricing.Round(PartPricing.NewPrice(part) * MailOrderPremium * GameRules.Sane(priceMultiplier));
 
         public decimal TradeInPrice(PartInstance part) => PartPricing.TradeIn(_parts.Catalog, part);
 
@@ -115,15 +123,38 @@ namespace StreetCorsa.Services.Parts
             return fitting;
         }
 
-        public bool BuyNew(Models.GameState.GameState gameState, PartDefinition part)
+        public PartOrder? BuyNew(Models.GameState.GameState gameState, PartDefinition part)
         {
             var price = NewPrice(part, gameState.Rules.PartPriceMultiplier);
-            if (gameState.Player.Money < price) return false;
+            if (gameState.Player.Money < price) return null;
 
+            var order = new PartOrder
+            {
+                Part = new PartInstance(part.Id),
+                Paid = price,
+                OrderedOn = gameState.Date,
+                ArrivesOn = gameState.Date.Date.AddDays(MailOrderDays)
+            };
             gameState.Player.Money -= price;
-            gameState.Player.Parts.Add(new PartInstance(part.Id));
-            _logger.Information("Bought new {Part} for ${Price}", part.Id, price);
-            return true;
+            gameState.Player.PartOrders.Add(order);
+            _logger.Information("Ordered {Part} by mail for ${Price}, to come on {Day:d}", part.Id, price, order.ArrivesOn);
+            return order;
+        }
+
+        public List<PartOrder> Deliver(Models.GameState.GameState gameState, DateTime currentDate)
+        {
+            var come = gameState.Player.PartOrders.Where(o => o.ArrivesOn.Date <= currentDate.Date).ToList();
+            foreach (var order in come)
+            {
+                gameState.Player.PartOrders.Remove(order);
+                gameState.Player.Parts.Add(order.Part);
+
+                var name = _parts.Catalog.Get(order.Part.DefinitionId) is { } definition ? definition.DisplayName ?? definition.Name : order.Part.DefinitionId;
+                gameState.Player.Delivered.Add(name);
+            }
+
+            if (come.Count > 0) _logger.Information("The mail order brought {Count} part(s)", come.Count);
+            return come;
         }
 
         public bool BuyUsed(Models.GameState.GameState gameState, PartAd ad)

@@ -40,12 +40,12 @@ namespace StreetCorsa.Services.Parts
 
         /// <summary>
         /// The paper's parts a rival could buy for their engine: everybody's ads but their own, and none that ran out
-        /// and waits for the shops to take it (<see cref="PartsShopService.RefreshAdsAsync"/> pays its seller the trade-in)
+        /// and waits for the shops to take it (<see cref="NewspaperPartsService.RefreshAdsAsync"/> pays its seller the trade-in)
         /// </summary>
         public static List<UsedPartOffer> OffersFor(GameState gameState, Racer buyer) =>
             gameState.NewspaperAds.Parts
                 .Where(a => a.AskingPrice > 0 && !string.Equals(a.SellerRival, buyer.Name, StringComparison.Ordinal)
-                            && !PartsShopService.IsExpired(a, gameState.Date))
+                            && !NewspaperPartsService.IsExpired(a, gameState.Date))
                 .Select(a => new UsedPartOffer(a.AdId, a.Part, a.AskingPrice))
                 .ToList();
 

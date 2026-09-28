@@ -132,9 +132,7 @@ namespace StreetCorsa.Services.Dealers
 
         private void StartSale(GameState gameState, DealerLocation dealer, DateTime date, List<string> talk, List<NewsArticle> news)
         {
-            var last = date.Date.AddDays(DealerRules.SaleDays - 1);
-            dealer.Status = DealerStatus.ClosingDown;
-            dealer.ClosesOn = last;
+            var last = DealerChurn.StartSale(dealer, date);
             MarkDown(gameState, dealer, DealerRules.DiscountFor(DealerRules.SaleDays - 1));
 
             var values = Values(dealer, DealerRules.SaleDiscount, last);
@@ -155,12 +153,7 @@ namespace StreetCorsa.Services.Dealers
         private void Close(GameState gameState, DealerLocation dealer, DateTime date, List<string> talk, List<NewsArticle> news)
         {
             var left = gameState.UsedCarMarket?.RemoveAll(l => !l.IsSold && l.DealerLocation == dealer.Id) ?? 0;
-
-            dealer.Status = DealerStatus.Closed;
-            dealer.ClosedOn = date.Date;
-            dealer.ClosesOn = null;
-            dealer.Trade = 0;
-            dealer.TradeCountedTo = null;
+            DealerChurn.Close(dealer, date);
 
             var values = Values(dealer, 0, date);
             news.Add(new NewsArticle
@@ -179,59 +172,27 @@ namespace StreetCorsa.Services.Dealers
 
         private void Change(GameState gameState, List<DealerLocation> dealers, DateTime date, List<string> talk, List<NewsArticle> news)
         {
-            var open = dealers.Where(d => d.Status == DealerStatus.Open).ToList();
-            var mayClose = open.Where(d => d.OpenedOn is not { } opened || (date.Date - opened.Date).TotalDays >= DealerRules.NewDealerGraceDays).ToList();
-            var mayOpen = MayOpen(dealers, date);
-
-            var change = DealerRules.Direction(open.Count, dealers.Count, mayOpen.Count > 0, mayClose.Count > 0, _random.NextDouble());
+            var (change, mayClose, mayOpen) = DealerChurn.Decide(dealers, date, _random);
             switch (change)
             {
                 case DealerRules.Change.Close:
-                    StartSale(gameState, PickToClose(gameState, mayClose, date), date, talk, news);
+                    // The one that goes under is picked by how it is doing: what it sells, and the cars standing unsold
+                    var closing = DealerChurn.PickWeighted(mayClose, d => DealerRules.CloseWeight(d.Trade, StaleShare(gameState, d, date)), _random);
+                    StartSale(gameState, closing, date, talk, news);
                     break;
                 case DealerRules.Change.Open:
-                    Open(mayOpen, date, talk, news);
+                    Open(mayOpen[_random.Next(mayOpen.Count)], date, talk, news);
                     break;
                 default:
-                    _logger.Information("A dealer would have closed or opened today, but none can: {Open} of {Total} open", open.Count, dealers.Count);
+                    _logger.Information("A dealer would have closed or opened today, but none can: {Open} of {Total} open",
+                        dealers.Count(d => d.Status == DealerStatus.Open), dealers.Count);
                     break;
             }
         }
 
-        /// <summary>Dealers that have never opened; once there are none, premises that have stood empty long enough</summary>
-        private static List<DealerLocation> MayOpen(List<DealerLocation> dealers, DateTime date)
+        private void Open(DealerLocation dealer, DateTime date, List<string> talk, List<NewsArticle> news)
         {
-            var waiting = dealers.Where(d => d.Status == DealerStatus.Waiting).ToList();
-            if (waiting.Count > 0) return waiting;
-
-            return dealers.Where(d => d.Status == DealerStatus.Closed
-                                      && (d.ClosedOn is not { } closed || (date.Date - closed.Date).TotalDays >= DealerRules.ReopenAfterDays)).ToList();
-        }
-
-        private DealerLocation PickToClose(GameState gameState, List<DealerLocation> candidates, DateTime date)
-        {
-            var weights = candidates.Select(d => DealerRules.CloseWeight(d.Trade, StaleShare(gameState, d, date))).ToList();
-            var roll = _random.NextDouble() * weights.Sum();
-            for (var i = 0; i < candidates.Count; i++)
-            {
-                roll -= weights[i];
-                if (roll < 0) return candidates[i];
-            }
-
-            return candidates[^1];
-        }
-
-        private void Open(List<DealerLocation> candidates, DateTime date, List<string> talk, List<NewsArticle> news)
-        {
-            var dealer = candidates[_random.Next(candidates.Count)];
-            var reopened = dealer.Status == DealerStatus.Closed;
-
-            dealer.Status = DealerStatus.Open;
-            dealer.OpenedOn = date.Date;
-            dealer.ClosedOn = null;
-            dealer.ClosesOn = null;
-            dealer.Trade = DealerRules.OpeningTrade;
-            dealer.TradeCountedTo = date;
+            var reopened = DealerChurn.Open(dealer, date);
 
             var values = Values(dealer, 0, date);
             var story = reopened ? "dealer_reopened" : "dealer_opened";

@@ -88,7 +88,8 @@ the mail-order price of parts, what a dealer or the scrapyard pays, a car's wort
 fallbacks for an empty market. Changing the prices changes what the rivals can do; the numbers below need no tuning
 with them.
 
-**Tuning** (`EngineTuner`): a few racers a day (`TuneChance` 15%, at most 3) keep a quarter of their car's worth back
+**Tuning** (`EngineTuner`): a few racers a day (`TuneChance` 15%, 30% while a part shop holds its closing-down sale;
+at most 3) keep a quarter of their car's worth back
 and spend up to 30% of the rest on one upgrade: the one with the best `gain% / cost × priority` (block swap 10, blower 8,
 carbs/injection 7, exhaust 6, manifold and camshaft 5, air 3), at least 3% more power on the dyno. A part the new one
 leaves without a place is replaced by the cheapest that fits (depth 5). The block swap is a bigger engine of the same

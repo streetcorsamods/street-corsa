@@ -56,6 +56,9 @@ namespace StreetCorsa.Services.Storage
                     state.Racers.Departed ??= [];
                     state.StreetTalk ??= [];
                     state.Mods ??= [];
+                    state.PartShops ??= [];
+                    state.Player.PartOrders ??= [];
+                    state.Player.Delivered ??= [];
                     HistoryUpgrade.BringUpToDate(state);
                 }
 

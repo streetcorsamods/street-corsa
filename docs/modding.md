@@ -15,7 +15,7 @@ Content\
   streetcorsa\          the base game (loaded first)
   mymod\
     mod.json
-    parts\  sounds\  dealers\  racers\  events\  milestones\  victories\  streets\  stations\  showcase\  garages\  text\
+    parts\  sounds\  dealers\  partshops\  racers\  events\  milestones\  victories\  streets\  stations\  showcase\  garages\  text\
 ```
 
 `mod.json`:
@@ -95,6 +95,9 @@ anywhere under the folder (a `pack.json` with the parts' `.kn5` models next to i
 - Part models are drawn at the size they were made: ship them at AC's scale (metres).
 - `work_order.json` — what comes off an engine before what (see below). Most mods need none: the base game's covers
   every kind of engine part there is.
+- `"make"` in a `pack.json` (`"make": "gm"`) says which make the pack's parts are for: every part shop specialising in
+  that make stocks them (see `partshops` below). The base game's makes are `mopar`, `ford` and `gm`; a pack of parts
+  for any make (the universal-fit carburettors and air cleaners) has none.
 
 **The work order.** Every engine part has a *kind*: `"kind": "timing_cover"` on the part in its `pack.json` if the pack
 says so, else the first kind of the work orders listing one of its script classes (`"classes": ["Crankshaft"]`), else
@@ -171,6 +174,34 @@ that must be on screen, as fractions of the picture; the screen grows out of it 
 map is the one shown, so a mod with its own map re-reads every pin off it, the base game's too (`"replaces"`).
 `showroomId` is a room by its folder name: a mod's `garages` folder, else an AC showroom. A save that never had a
 dealer gets its lot stocked the first time the map is opened; the other lots stay as they are.
+
+### partshops
+
+A list of `shops` (or a file that is one shop, or a bare list), pinned on the part shops' own map (the garage's
+Parts dealers button). It is drawn on the dealers' map picture, without the car lots:
+
+```json
+{
+  "shops": [
+    { "id": "valley_speed", "name": "Valley Speed", "region": "The Valley", "blurb": "…", "kind": "speed",
+      "mapX": 0.41, "mapY": 0.25, "travelHours": 1.5 },
+    { "id": "stovebolt", "name": "Stovebolt Supply", "region": "Downtown", "blurb": "…", "kind": "specialist",
+      "makes": [ "gm" ], "mapX": 0.3, "mapY": 0.5, "travelHours": 1, "startsOpen": false }
+  ]
+}
+```
+
+`kind` is `specialist` (new parts of every pack whose `"make"` is one of its `makes`, a mod's packs too), `speed` (new
+performance parts for any make, or its `makes`: carburettors, blowers, cams, manifolds, heads, headers, nitrous, none that
+a car came with), `wheels` (new tyres, rims, brakes, springs and shocks) or `junkyard` (used parts and whole engines;
+buys the player's parts for a little more than a trade-in, and can be haggled with, though never down to less than
+10% over what it would pay for the part). `groups` narrows a shop to kinds of part as
+the shops list them (`"Camshafts"`). `priceFactor`, `buyFactor`, `stockLow`/`stockHigh` and `restockDays` are optional
+(the kind's own otherwise; see `PartShopRules`). `"startsOpen": false` keeps a shop out of business when a game starts:
+the shops come and go as the dealers do. Keep a pin about 0.055 across or 0.035 down from every other shop's pin, or the
+name plates overlap; the dealers' pins are on their own map. `kind` is one of the four names; anything else (a number
+too) makes a specialist. A make with no specialist of its own is still sold by the speed shops (its hot
+parts), the junkyards and the mail order.
 
 ### racers
 

@@ -1,5 +1,6 @@
 {
   "id": "engines/ford_six",
+  "make": "ford",
   "source": "parts\\engines\\ford_l6.rpk",
   "parts": [
     {

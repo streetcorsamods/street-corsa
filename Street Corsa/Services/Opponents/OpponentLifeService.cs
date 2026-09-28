@@ -7,6 +7,7 @@ using StreetCorsa.Parts.Cars;
 using StreetCorsa.Services.Catalog;
 using StreetCorsa.Services.Market;
 using StreetCorsa.Services.Parts;
+using StreetCorsa.Services.PartShops;
 using StreetCorsa.Services.Police;
 using StreetCorsa.Services.Text;
 
@@ -46,13 +47,20 @@ namespace StreetCorsa.Services.Opponents
         IUsedCarMarketService market,
         IContentCatalogRepository catalogRepo,
         IOpponentInitializationService? initialization = null,
-        Random? random = null) : IOpponentLifeService
+        Random? random = null,
+        IPartShopService? partShops = null) : IOpponentLifeService
     {
         /// <summary>At most this many racers tune their engines in a day (each is a few dozen dyno runs)</summary>
         public const int MaxTunersPerDay = 3;
 
         /// <summary>The chance a racer with money to spare works on the engine on a given day: now and then, not daily</summary>
         public const double TuneChance = 0.15;
+
+        /// <summary>
+        /// The same while a shop the tuners buy at (<see cref="PartShopRules.SellsToTuners"/>) holds its closing-down
+        /// sale: the racers go after the bargains
+        /// </summary>
+        public const double SaleTuneChance = 0.3;
 
         /// <summary>How long the street keeps talking about something</summary>
         public const int StreetTalkDays = 7;
@@ -65,6 +73,7 @@ namespace StreetCorsa.Services.Opponents
         private readonly IOpponentInitializationService? _initialization = initialization;
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger("OpponentLife");
         private readonly Random _random = random ?? new();
+        private readonly IPartShopService? _partShops = partShops;
 
         // The day's catalog lookups: each model valued and named from the catalog once per review, not per car and line
         private Func<Car, decimal>? _valueOf;
@@ -704,10 +713,13 @@ namespace StreetCorsa.Services.Opponents
             if (!_parts.IsAvailable) return;
 
             // Whether a part is affordable is the tuner's to find out, part by part at the shop's prices
+            var bargains = (gameState.PartShops ?? []).Any(s => s.Status == DealerStatus.ClosingDown
+                                                             && _partShops?.Catalog.Get(s.Id) is { } shop && PartShopRules.SellsToTuners(shop));
+            var chance = bargains ? SaleTuneChance : TuneChance;
             var jobs = gameState.Racers.ReadyToRace.Values
                 .Concat(gameState.Racers.Inactive.Values.Where(r => r is Opponent { IsKing: true }))
                 .OfType<Opponent>()
-                .Where(r => r.Cars.FirstOrDefault() is { Engine: not null } car && CanRace(car, groupOf) && _random.NextDouble() < TuneChance)
+                .Where(r => r.Cars.FirstOrDefault() is { Engine: not null } car && CanRace(car, groupOf) && _random.NextDouble() < chance)
                 .Select(r => (Racer: r, Budget: OpponentRules.TuningBudget(r.Money, ValueOf(r.Cars[0]))))
                 .Where(r => r.Budget > 0)
                 .OrderBy(_ => _random.Next())
@@ -724,13 +736,18 @@ namespace StreetCorsa.Services.Opponents
             var catalog = _parts.Catalog;
             var builds = _parts.Builds;
             var prices = gameState.Rules.PartPriceMultiplier;
+
+            // New parts from the shops' shelves as they stand this morning, the cheapest that has each; else by mail
+            var shelves = _partShops?.RivalPrices(gameState);
+            Func<StreetCorsa.Parts.PartDefinition, decimal>? newPrice = shelves == null ? null : shelves.PriceOf;
+
             var results = await Task.Run(() => jobs.Select(job =>
             {
                 try
                 {
                     // One thing at a time: a racer works on the car over the weeks, not in a day
                     return EngineTuner.TuneUp(catalog, builds, job.Engine, job.Budget, prices, new Random(job.Seed), maxUpgrades: 1, used: job.Used,
-                        coolingOf: job.CoolingOf);
+                        coolingOf: job.CoolingOf, newPrice: newPrice);
                 }
                 catch (Exception ex)
                 {
@@ -753,6 +770,7 @@ namespace StreetCorsa.Services.Opponents
 
                 car.Parts[index] = result.Engine;
                 racer.Money -= result.Cost;
+                if (shelves != null) TakeFromShelves(gameState, racer, car, jobs[i], result, shelves, talk);
                 foreach (var upgrade in result.Upgrades)
                 {
                     if (upgrade.UsedAdId is { } adId) RivalPartAds.Take(gameState, adId);
@@ -785,6 +803,31 @@ namespace StreetCorsa.Services.Opponents
 
                 _logger.Information("{Racer} tuned the {Car}: {Upgrades}; ${Cost} spent, ${Money} left",
                     racer.Name, car.DefinitionId, string.Join(", ", result.Upgrades.Select(u => u.Change)), result.Cost, racer.Money);
+            }
+        }
+
+        /// <summary>
+        /// The new parts a tuned engine got (<see cref="TuneUpgrade.Fitted"/>) came off the shops' shelves: one fewer of
+        /// each at the shop it was cheapest at. A part bought used, or a swapped-in engine (bought used whole), took
+        /// nothing off a shelf, though a radiator put on with the swap did; one the shop ran out of this morning came by
+        /// mail at no more than was paid.
+        /// </summary>
+        private void TakeFromShelves(GameState gameState, Opponent racer, Car car, TuneJob job, TuneResult result, RivalPriceList shelves, List<string> talk)
+        {
+            if (_partShops == null) return;
+
+            var used = job.Used.SelectMany(o => o.Part.SelfAndDescendants()).Select(p => p.InstanceId).ToHashSet();
+            foreach (var part in result.Upgrades.SelectMany(u => u.Fitted).Where(p => !used.Contains(p.InstanceId)))
+            {
+                if (!shelves.TryGetShop(part.DefinitionId, out var shopId, out var price)) continue;
+                if (!_partShops.TakeForRival(gameState, shopId, part.DefinitionId)) continue;
+
+                // A bargain at a closing-down sale is worth a word on the street
+                if (PartShopRoster.Find(gameState, shopId) is { Status: DealerStatus.ClosingDown } shop)
+                {
+                    var name = _parts.Catalog.Get(part.DefinitionId) is { } definition ? definition.DisplayName ?? definition.Name : part.DefinitionId;
+                    talk.Add(Say("street.partshop_bargain", racer, car, new TextValues { ["part"] = name, ["shop"] = shop.Name, ["price"] = price }));
+                }
             }
         }
 

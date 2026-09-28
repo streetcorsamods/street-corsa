@@ -36,6 +36,9 @@ namespace StreetCorsa.Models.GameState
         public List<UsedCarListing> UsedCarMarket { get; set; }
         public List<DealerLocation> DealerLocations { get; set; }
 
+        /// <summary>The part shops, each with how its business is going and what is on its shelves (<c>PartShopLifeService</c>)</summary>
+        public List<PartShopLocation> PartShops { get; set; } = [];
+
         // Scheduled Tasks
         public List<ScheduledTaskState> ScheduledTasks { get; set; }
 

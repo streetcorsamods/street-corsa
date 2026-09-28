@@ -331,7 +331,7 @@ public class RivalPartAdsTests
     public void The_player_buying_a_rivals_part_pays_the_rival()
     {
         var ad = RivalPartAds.Post(_state, _parts.Catalog, _seller, SomePart(), _state.Date, 0.5)!;
-        var shop = new PartsShopService(_parts);
+        var shop = new NewspaperPartsService(_parts);
 
         Assert.True(shop.BuyUsed(_state, ad));
         Assert.Equal(ad.AskingPrice, _seller.Money);
@@ -343,7 +343,7 @@ public class RivalPartAdsTests
     {
         var part = SomePart();
         var ad = RivalPartAds.Post(_state, _parts.Catalog, _seller, part, _state.Date, 0.5)!;
-        var shop = new PartsShopService(_parts);
+        var shop = new NewspaperPartsService(_parts);
 
         await shop.RefreshAdsAsync(_state, _state.Date.AddDays(30));
 

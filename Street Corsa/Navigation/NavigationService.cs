@@ -48,7 +48,8 @@ namespace StreetCorsa.Navigation
         private readonly ICarSaleService _saleService;
         private readonly IGameTimeService _timeService;
         private readonly ICarPartsService _carPartsService;
-        private readonly IPartsShopService _partsShopService;
+        private readonly INewspaperPartsService _partsShopService;
+        private readonly Services.PartShops.IPartShopService _partShopService;
         private readonly RaceCarDataService _raceCarDataService;
         private readonly IRaceEventService _raceEventService;
         private readonly ICarFilterService _carFilterService;
@@ -84,7 +85,8 @@ namespace StreetCorsa.Navigation
             ICarSaleService saleService,
             IGameTimeService timeService,
             ICarPartsService carPartsService,
-            IPartsShopService partsShopService,
+            INewspaperPartsService partsShopService,
+            Services.PartShops.IPartShopService partShopService,
             RaceCarDataService raceCarDataService,
             IRaceEventService raceEventService,
             ICarFilterService carFilterService,
@@ -110,6 +112,7 @@ namespace StreetCorsa.Navigation
             _timeService = timeService;
             _carPartsService = carPartsService;
             _partsShopService = partsShopService;
+            _partShopService = partShopService;
             _raceCarDataService = raceCarDataService;
             _raceEventService = raceEventService;
             _carFilterService = carFilterService;
@@ -394,7 +397,32 @@ namespace StreetCorsa.Navigation
                 gameState,
                 _dealerCatalog,
                 _marketService,
-                _timeService));
+                _timeService,
+                _partShopService));
+
+        /// <summary>The same map with the part shops on it instead of the car lots</summary>
+        public bool NavigateToPartShopMap(GameState gameState) => SafeNavigate("part shops map", () =>
+            new Screens.DealerMap.DealerMapScreenViewModel(
+                this,
+                _dialogService,
+                gameState,
+                _dealerCatalog,
+                _marketService,
+                _timeService,
+                _partShopService,
+                partShopsMap: true));
+
+        public bool NavigateToPartShop(GameState gameState, string shopId) => SafeNavigate("part shop", () =>
+            new Screens.PartShop.PartShopScreenViewModel(
+                this,
+                _dialogService,
+                gameState,
+                shopId,
+                _partShopService,
+                _carPartsService,
+                _partsShopService,
+                _gameStateRepository,
+                _catalogRepository));
 
         public bool NavigateToDealerLot(GameState gameState, string dealerId) => SafeNavigate("dealer's lot", () =>
             new Screens.DealerLot.DealerLotScreenViewModel(

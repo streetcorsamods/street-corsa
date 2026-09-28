@@ -562,9 +562,11 @@ about 0.2 ms; a place for a loose part wins over a mounted part in front of it, 
 and some sit inside another part) and draws the glows: depth of the thing alone, `EffectPpOutline`, then scaled to a tint with a
 blend-factor pass, one buffer per glow (car, candidates, selected, hovered).
 
-**Shop** (`PartsShopService`, the Used Parts screen of the newspaper). Three pages: used parts from the ads
+**Shop** (`NewspaperPartsService`, the Used Parts screen of the newspaper). Three pages: used parts from the ads
 (`NewspaperAds.Parts`, 25-40 ads turned over daily by `PartsAdsRefreshTask`, now and then a complete engine), new parts
-by mail order (the engine packs plus whatever else the builds use), and selling from the shelf. Filters: kind
+by mail order (the engine packs plus whatever else the builds use: everything there is, at the list price and 20% more,
+`NewspaperPartsService.MailOrderPremium`, paid when ordered and on the shelf three days later: `Player.PartOrders`, brought by
+`PartsAdsRefreshTask` each morning, told of in the garage from `Player.Delivered`), and selling from the shelf. Filters: kind
 (`PartKinds.GroupOf`, from the script classes), name, and "only what fits my car" (`FindFittingParts`: everything that
 goes on any slot of the selected car's tree, taken slots included). New price is the script's `value`; a used part is
 worth `value x tear x (0.3 + 0.7 x wear)` as in SLRR, ads ask around 60% of that, a trade-in pays 40%.
@@ -573,6 +575,42 @@ Every part model is drawn at the size it was made. A `model_scales.json` that dr
 1.35x) came in on 2026-09-26 and went out on 2026-09-27: the user checked and the models are well sized. Measured on 2026-09-26, the models are about real size: the GM small blocks 0.74 × 0.54 × 0.34 m, the big
 Mopar and Ford blocks 0.75 × 0.63 m, the stock disc 0.265 m, a four-barrel 0.26 × 0.17 m; only the stock coil spring
 (0.28 m tall, 0.095 m across) is small.
+
+**Part shops** (step 21: `Services/PartShops`, content in each mod's `partshops` folder). Shops on the dealer map's
+picture, reached by their own button in the garage (Parts dealers, beside Car dealers: `NavigateToPartShopMap`, the
+dealer map with `partShopsMap`, gold square pins and no car lots), driven out to like a lot, each with its own stock:
+- **Kinds** (`PartShopRules.Deals`): a *specialist* sells the new parts of every pack whose `"make"` (in `pack.json`,
+  `PartDefinition.Make`) is one of its `makes`, running gear aside; a *speed shop* the new parts of the kinds that make
+  power (carburettors, manifolds, blowers, cams, heads, exhaust, air, nitrous) that no car came with (no part of an
+  `origin: car` build), any make; a *wheel shop* the running gear; a *junkyard* anything, used.
+- **Stock**: the save carries it (`PartShopLocation`, a `DealerLocation` with `Shelves`, `Yard`, `RestockedOn`,
+  `PlayerSpent`). A delivery (`PartShopService.Deliver`, every `RestockDays`: 7 days a specialist, 10 a speed shop, 5 a
+  wheel shop) keeps most of what is left, may top each line up, and adds lines up to 40-60 different parts (a speed shop 25-35,
+  one or two of each, its dear parts rarer). A junkyard's yard holds 20-35 parts (15% of them whole engines of a runnable
+  build), 15-75% worn, gone after 21 days; wrecks come in every three days, taken apart off the UI thread. A shop never
+  stocked (a game just begun, a shop just opened) is stocked when the map or the shop is opened, whatever the rules.
+- **Prices**: the list price × the shop's factor (specialist 1.0, speed 1.1, wheels 0.9) × the difficulty; a junkyard
+  asks 55% of what the used part is worth (the paper's sellers about 60%). Less a closing-down sale (the dealers' 20%,
+  35% in the last three days) and, for the player, the regulars' discount: 5% after $500 spent at that shop, 10% after
+  $2,000. A junkyard's part can be haggled over once: half the time the owner takes 10-25% off. Nothing takes a yard's
+  part under 10% over what the yard would pay for it (`PartShopRules.JunkyardMargin`), so nothing bought there sells
+  straight back at a profit. A shop that closes forgets its regulars: new owners start from nothing.
+- **Selling**: every shop buys the player's parts at a trade-in (40% of worth); a junkyard pays 42% and puts the part in
+  its yard at its own price. 42% is under what any shop's new part costs a good customer in the last days of a
+  closing-down sale in the easy game (a wheel shop's: about 45% of list), so no new part sells to a junkyard at a profit
+  either.
+- **Their business** (`PartShopLifeService`, the daily `partshop_review` task, after the dealers' and before the rivals'):
+  the dealers' rules (`DealerRules`): about 60% open (6 of the base game's 10), a change about every two months, a
+  closing-down sale of seven days in which the bargain hunters take a fifth of what is left each day. Every day the town's
+  other customers buy 3% of what is on the shelves and in the yard, and a delivery drops about a third of its lines for
+  others, so what a shop carries changes and scarce parts sell out. A shop goes under by its trade alone: the town's
+  custom, the same for every shop (0.2 a day), and half a car's for every part the player or a rival buys there, fading
+  as a dealer's does. A new shop is of a kind the town has none of open, when one is waiting. The paper and the diner
+  hear of it (`text/partshops.json`). A two-year run of the base game (`ShopSim`, scratch): about six open, closings
+  spread over the kinds, a specialist carrying 140-220 parts and a yard about 30.
+- **The rivals** tune (`EngineTuner.TuneUp`'s `newPrice`) at the cheapest shop that has a part in stock
+  (`RivalPrices`, sales counted, else the mail order), and the parts they bought new come off that shelf
+  (`TakeForRival`); they tune twice as often while a part shop's sale is on, and a bargain there is street talk.
 
 `catalog.db` is opened per call and exclusively; with parts work running in the background the two catalog repositories
 now take turns through `CatalogDatabase.Open` (a semaphore, given back when the connection is disposed, whatever

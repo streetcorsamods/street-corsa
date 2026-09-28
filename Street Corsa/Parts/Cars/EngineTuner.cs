@@ -11,7 +11,14 @@ namespace StreetCorsa.Parts.Cars;
 /// bought from, when it was bought used out of the paper.
 /// </summary>
 public sealed record TuneUpgrade(string Change, string Group, double PowerBefore, double PowerAfter, decimal Cost, decimal TradeIn,
-    IReadOnlyList<PartInstance> Removed, Guid? UsedAdId = null);
+    IReadOnlyList<PartInstance> Removed, Guid? UsedAdId = null)
+{
+    /// <summary>
+    /// The parts that went on the engine with it and were not there before, as they sit on the tuned engine: what
+    /// was bought for it. None for a block swap, whose engine was bought used and whole.
+    /// </summary>
+    public IReadOnlyList<PartInstance> Fitted { get; init; } = [];
+}
 
 /// <summary>A part or a whole engine for sale in the paper, as a tuner weighs it against a new one</summary>
 public sealed record UsedPartOffer(Guid AdId, PartInstance Part, decimal Price);
@@ -32,7 +39,8 @@ public sealed record TuneResult(PartInstance Engine, EngineReport Report, IReadO
 /// per kind of part. Every upgrade is checked on the dyno and has to gain at least <see cref="MinGain"/>. A part the
 /// new one leaves without a place (a carburettor the new manifold does not take) is replaced by the cheapest that
 /// fits, to a depth of <see cref="MaxReplacementDepth"/>. The block swap is a bigger engine of the same family,
-/// bought used out of the paper. New parts cost what the mail order asks; a part in the ads
+/// bought used out of the paper. New parts cost what the tuner is told they cost (the cheapest part shop that has
+/// them), else what the mail order lists them at; a part in the ads
 /// (<see cref="UsedPartOffer"/>) is bought used when it asks less. What comes off is traded in, or sold on by whoever
 /// does the work (<see cref="TuneUpgrade.Removed"/>).
 ///
@@ -90,10 +98,13 @@ public static class EngineTuner
     /// <param name="maxTrials">Most dyno runs spent on looking; each takes a few milliseconds</param>
     /// <param name="used">Parts and whole engines in the paper; each is bought at most once</param>
     /// <param name="coolingOf">How well an engine is cooled at a power, in the car it goes in; null leaves the cooling alone</param>
+    /// <param name="newPrice">What a new part costs the tuner (the cheapest shop that has it); null: the mail order's list price</param>
     public static TuneResult? TuneUp(PartsCatalog catalog, EngineBuildIndex builds, PartInstance engine, decimal budget,
         double priceMultiplier, Random random, int maxUpgrades = 2, int maxTrials = 60, IReadOnlyList<UsedPartOffer>? used = null,
-        Func<PartInstance, double, double>? coolingOf = null)
+        Func<PartInstance, double, double>? coolingOf = null, Func<PartDefinition, decimal>? newPrice = null)
     {
+        var newPriceOf = newPrice ?? (part => NewPrice(part, priceMultiplier));
+
         var report = EngineFactory.Evaluate(catalog, engine);
         if (report is not { Runs: true }) return null;
 
@@ -104,17 +115,17 @@ public static class EngineTuner
 
         // An engine already past its radiator is seen to first
         if (coolingOf != null && coolingOf(root, report.Dyno!.MaxPowerHp) < CoolEnough
-            && Cool(catalog, root, report.Dyno.MaxPowerHp, budget, priceMultiplier, coolingOf) is { } cooled)
+            && Cool(catalog, root, report.Dyno.MaxPowerHp, budget, newPriceOf, coolingOf) is { } cooled)
         {
+            upgrades.Add(WithFitted(cooled.Upgrade, root, cooled.Engine));
             root = cooled.Engine;
             budget -= cooled.Upgrade.Cost;
-            upgrades.Add(cooled.Upgrade);
         }
 
         while (upgrades.Count(u => u.Group != CoolingGroup) < maxUpgrades && trials > 0)
         {
             var offers = (used ?? []).Where(o => upgrades.All(u => u.UsedAdId != o.AdId)).ToList();
-            var best = FindBest(catalog, builds, root, report, budget, priceMultiplier, random, doneGroups, offers, ref trials);
+            var best = FindBest(catalog, builds, root, report, budget, priceMultiplier, newPriceOf, random, doneGroups, offers, ref trials);
             if (best == null) break;
             doneGroups.Add(best.Upgrade.Group);
 
@@ -124,18 +135,34 @@ public static class EngineTuner
             (PartInstance Engine, TuneUpgrade Upgrade)? cooling = null;
             if (coolingOf != null && coolingOf(best.Engine, power) < CoolEnough)
             {
-                cooling = Cool(catalog, best.Engine, power, left, priceMultiplier, coolingOf);
+                cooling = Cool(catalog, best.Engine, power, left, newPriceOf, coolingOf);
                 if (coolingOf(cooling?.Engine ?? best.Engine, power) < RunsHotBelow) continue;
             }
 
+            upgrades.Add(WithFitted(best.Upgrade, root, best.Engine));
+            if (cooling is { } fitted) upgrades.Add(WithFitted(fitted.Upgrade, best.Engine, fitted.Engine));
             root = cooling?.Engine ?? best.Engine;
             report = best.Report;
             budget = left - (cooling?.Upgrade.Cost ?? 0);
-            upgrades.Add(best.Upgrade);
-            if (cooling is { } fitted) upgrades.Add(fitted.Upgrade);
         }
 
-        return upgrades.Count == 0 ? null : new TuneResult(root, report, upgrades);
+        if (upgrades.Count == 0) return null;
+
+        // Each upgrade's parts as they sit on the finished engine: a later upgrade may have moved them over (same ids),
+        // or taken them off again
+        var final = root.SelfAndDescendants().DistinctBy(p => p.InstanceId).ToDictionary(p => p.InstanceId);
+        return new TuneResult(root, report, upgrades
+            .Select(u => u with { Fitted = u.Fitted.Where(p => final.ContainsKey(p.InstanceId)).Select(p => final[p.InstanceId]).ToList() })
+            .ToList());
+    }
+
+    /// <summary>The upgrade with the parts on <paramref name="after"/> that were not on <paramref name="before"/>; none for a block swap</summary>
+    private static TuneUpgrade WithFitted(TuneUpgrade upgrade, PartInstance before, PartInstance after)
+    {
+        if (upgrade.Group == BlockGroup) return upgrade;
+
+        var had = before.SelfAndDescendants().Select(p => p.InstanceId).ToHashSet();
+        return upgrade with { Fitted = after.SelfAndDescendants().Where(p => !had.Contains(p.InstanceId)).ToList() };
     }
 
     /// <summary>
@@ -145,7 +172,7 @@ public static class EngineTuner
     /// cools it better.
     /// </summary>
     private static (PartInstance Engine, TuneUpgrade Upgrade)? Cool(PartsCatalog catalog, PartInstance root, double powerHp, decimal budget,
-        double priceMultiplier, Func<PartInstance, double, double> coolingOf)
+        Func<PartDefinition, decimal> newPriceOf, Func<PartInstance, double, double> coolingOf)
     {
         var now = coolingOf(root, powerHp);
         (PartInstance Engine, TuneUpgrade Upgrade, double Cooling)? best = null;
@@ -180,7 +207,7 @@ public static class EngineTuner
 
                 var alternatives = catalog.FindMountable(parentDefinition, slot)
                     .Where(c => EngineCooling.KindOf(c.Part) == kind && Performance(c.Part, kind))
-                    .OrderBy(c => NewPrice(c.Part, priceMultiplier))
+                    .OrderBy(c => newPriceOf(c.Part))
                     .Take(3)
                     .ToList();
                 foreach (var (definition, ownSlot) in alternatives)
@@ -189,7 +216,7 @@ public static class EngineTuner
                     var replaced = new List<PartInstance>();
                     var replacement = old == null
                         ? new PartInstance(definition.Id) { ParentSlot = slot.Id, OwnSlot = ownSlot.Id }
-                        : Rebuild(catalog, definition, ownSlot.Id, old, priceMultiplier, 0, replaced, ref extra);
+                        : Rebuild(catalog, definition, ownSlot.Id, old, newPriceOf, 0, replaced, ref extra);
                     if (replacement == null) continue;
 
                     var tuned = PartTrees.Clone(root, keepIds: true);
@@ -199,7 +226,7 @@ public static class EngineTuner
 
                     List<PartInstance> removed = old == null ? [] : [Loose(old), .. replaced.Select(p => Loose(p))];
                     var tradeIn = old == null ? 0m : TradeIn(catalog, old) + replaced.Sum(p => TradeIn(catalog, p));
-                    Consider(tuned, definition, NewPrice(definition, priceMultiplier) + extra, tradeIn, removed);
+                    Consider(tuned, definition, newPriceOf(definition) + extra, tradeIn, removed);
                 }
             }
         }
@@ -207,7 +234,7 @@ public static class EngineTuner
         if (best is not { } found) return null;
         if (found.Cooling >= CoolEnough) return (found.Engine, found.Upgrade);
 
-        var more = Cool(catalog, found.Engine, powerHp, budget - found.Upgrade.Cost, priceMultiplier, coolingOf);
+        var more = Cool(catalog, found.Engine, powerHp, budget - found.Upgrade.Cost, newPriceOf, coolingOf);
         if (more is not { } then) return (found.Engine, found.Upgrade);
         return (then.Engine, found.Upgrade with
         {
@@ -221,7 +248,8 @@ public static class EngineTuner
     private sealed record Candidate(PartInstance Engine, EngineReport Report, TuneUpgrade Upgrade, double Score);
 
     private static Candidate? FindBest(PartsCatalog catalog, EngineBuildIndex builds, PartInstance root, EngineReport report,
-        decimal budget, double priceMultiplier, Random random, HashSet<string> doneGroups, List<UsedPartOffer> used, ref int trials)
+        decimal budget, double priceMultiplier, Func<PartDefinition, decimal> newPriceOf, Random random, HashSet<string> doneGroups,
+        List<UsedPartOffer> used, ref int trials)
     {
         var power = report.Dyno!.MaxPowerHp;
         Candidate? best = null;
@@ -235,7 +263,7 @@ public static class EngineTuner
             usedParts.TryGetValue(part.Id, out var offer) && offer.Price < newPrice ? offer : null;
         decimal Price(PartDefinition part)
         {
-            var newPrice = NewPrice(part, priceMultiplier);
+            var newPrice = newPriceOf(part);
             return UsedFor(part, newPrice)?.Price ?? newPrice;
         }
 
@@ -280,11 +308,11 @@ public static class EngineTuner
 
                 var extra = 0m;
                 var replaced = new List<PartInstance>();
-                var replacement = Rebuild(catalog, newDefinition, newOwnSlot.Id, old, priceMultiplier, 0, replaced, ref extra);
+                var replacement = Rebuild(catalog, newDefinition, newOwnSlot.Id, old, newPriceOf, 0, replaced, ref extra);
                 if (replacement == null) continue;
 
                 // Out of the paper when it asks less than new: that very part, worn as it is
-                var newPrice = NewPrice(newDefinition, priceMultiplier);
+                var newPrice = newPriceOf(newDefinition);
                 var offer = UsedFor(newDefinition, newPrice);
                 if (offer != null)
                 {
@@ -382,7 +410,7 @@ public static class EngineTuner
     /// something finds no place.
     /// </summary>
     private static PartInstance? Rebuild(PartsCatalog catalog, PartDefinition definition, int ownSlot, PartInstance old,
-        double priceMultiplier, int depth, List<PartInstance> replaced, ref decimal extraCost)
+        Func<PartDefinition, decimal> newPriceOf, int depth, List<PartInstance> replaced, ref decimal extraCost)
     {
         var replacement = new PartInstance(definition.Id) { ParentSlot = old.ParentSlot, OwnSlot = ownSlot };
 
@@ -413,7 +441,7 @@ public static class EngineTuner
             var options = free
                 .SelectMany(s => catalog.FindMountable(definition, s).Select(c => (Slot: s, c.Part, OwnSlot: c.Slot)))
                 .Where(c => PartKinds.GroupOf(c.Part) == group)
-                .OrderBy(c => NewPrice(c.Part, priceMultiplier));
+                .OrderBy(c => newPriceOf(c.Part));
 
             PartInstance? substitute = null;
             foreach (var option in options)
@@ -421,10 +449,10 @@ public static class EngineTuner
                 var deeper = 0m;
                 var deeperReplaced = new List<PartInstance>();
                 var stub = new PartInstance(child.DefinitionId) { ParentSlot = option.Slot.Id, OwnSlot = child.OwnSlot, Children = child.Children };
-                substitute = Rebuild(catalog, option.Part, option.OwnSlot.Id, stub, priceMultiplier, depth + 1, deeperReplaced, ref deeper);
+                substitute = Rebuild(catalog, option.Part, option.OwnSlot.Id, stub, newPriceOf, depth + 1, deeperReplaced, ref deeper);
                 if (substitute == null) continue;
 
-                extraCost += NewPrice(option.Part, priceMultiplier) + deeper;
+                extraCost += newPriceOf(option.Part) + deeper;
                 replaced.Add(child);
                 replaced.AddRange(deeperReplaced);
                 break;

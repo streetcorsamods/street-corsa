@@ -9,36 +9,14 @@ namespace StreetCorsa.Services.Dealers
     public static class DealerRoster
     {
         /// <summary>
-        /// The save's dealers brought up to the definitions: a dealer defined since the save began joins it (open or
-        /// waiting, as its <see cref="DealerDefinition.StartsOpen"/> says), one no longer defined goes, and the rest keep
-        /// how their business is going under the name the definition gives them. No definitions at all leave the save as it is.
+        /// The save's dealers brought up to the definitions (<see cref="DealerChurn.Merge"/>): a dealer defined since the
+        /// save began joins it (open or waiting, as its <see cref="DealerDefinition.StartsOpen"/> says), one no longer
+        /// defined goes, and the rest keep how their business is going under the name the definition gives them. No
+        /// definitions at all leave the save as it is.
         /// </summary>
         public static void Sync(GameState gameState, IDealerCatalog catalog)
         {
-            var defined = catalog.All;
-            if (defined.Count == 0) return;
-
-            var saved = (gameState.DealerLocations ?? [])
-                .GroupBy(d => d.Id, StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
-
-            var roster = new List<DealerLocation>(defined.Count);
-            foreach (var definition in defined)
-            {
-                if (saved.TryGetValue(definition.Id, out var known))
-                {
-                    known.Id = definition.Id;
-                    known.Name = definition.Name;
-                    known.Region = definition.Region;
-                    roster.Add(known);
-                }
-                else
-                {
-                    roster.Add(definition.ToLocation());
-                }
-            }
-
-            gameState.DealerLocations = roster;
+            if (DealerChurn.Merge(gameState.DealerLocations, catalog.All) is { } roster) gameState.DealerLocations = roster;
         }
 
         /// <summary>The dealers selling cars: open, or in their closing-down sale. The map shows these.</summary>

@@ -81,6 +81,7 @@ namespace StreetCorsa.Screens.Garage
         public RelayCommand EndDayCommand { get; }
         public RelayCommand NewspaperCommand { get; }
         public RelayCommand CarDealersCommand { get; }
+        public RelayCommand PartDealersCommand { get; }
         public RelayCommand HitTheStreetsCommand { get; }
         public AsyncRelayCommand GasStationCommand { get; }
         public RelayCommand CareerCommand { get; }
@@ -327,6 +328,7 @@ namespace StreetCorsa.Screens.Garage
             EndDayCommand = new RelayCommand(OnEndDay, () => !_endingDay && !_launcher.IsExecutionLocked);
             NewspaperCommand = new RelayCommand(() => LeaveTo(() => _navigationService.NavigateToNewspaper(_gameState)));
             CarDealersCommand = new RelayCommand(() => LeaveTo(() => _navigationService.NavigateToDealerMap(_gameState)));
+            PartDealersCommand = new RelayCommand(() => LeaveTo(() => _navigationService.NavigateToPartShopMap(_gameState)));
             HitTheStreetsCommand = new RelayCommand(() => LeaveTo(() => _navigationService.NavigateToDiner(_gameState)));
             GasStationCommand = new AsyncRelayCommand(OnGasStation, () => SelectedCarHere);
             CareerCommand = new RelayCommand(() => LeaveTo(() => _navigationService.NavigateToCareer(_gameState)));
@@ -913,6 +915,9 @@ namespace StreetCorsa.Screens.Garage
                     // The night may have brought an offer for a car in the paper, or the impound's release date
                     OnPropertyChanged(nameof(SellButtonText));
                     RaiseImpoundChanged();
+
+                    // And the mail order, the morning after
+                    TellOfDeliveries();
                 }
                 catch (Exception ex)
                 {
@@ -982,10 +987,33 @@ namespace StreetCorsa.Screens.Garage
                 OnPropertyChanged(nameof(BankrollDisplay));
 
                 LoadPlayerCars();
+                TellOfDeliveries();
             }
             catch (Exception ex)
             {
                 _logger.Error(ex, "Could not set up the garage");
+            }
+        }
+
+        /// <summary>What the mail order brought while the player was out: on the shelf already, told of once</summary>
+        private void TellOfDeliveries()
+        {
+            var delivered = _gameState.Player.Delivered;
+            if (delivered is not { Count: > 0 }) return;
+
+            var lines = delivered.GroupBy(n => n).Select(g => g.Count() == 1 ? g.Key : $"{g.Key} (x{g.Count()})");
+            var message = "The mailman brought what you ordered. It's on your shelf:" + Environment.NewLine + Environment.NewLine +
+                          string.Join(Environment.NewLine, lines.Select(l => "  •  " + l));
+            delivered.Clear();
+            _dialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(_dialogService, message, "Delivery"));
+
+            try
+            {
+                if (!string.IsNullOrEmpty(_gameState.SaveName)) _gameStateRepo.Save(_gameState, _gameState.SaveName);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not save after telling of the deliveries");
             }
         }
 

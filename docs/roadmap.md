@@ -260,7 +260,7 @@ ported is the daily life cycle:
 
   Build it on the part tree's slot fittings (`FindFittingParts`), paid from the opponent's money.
 - **Changes this needs in Street Corsa:**
-  - `CarPurchaseService.PurchaseAsync` and `PartsShopService.BuyNew/BuyUsed` are wired to `gameState.Player` and spend game time: they need a buyer and a path that costs no time.
+  - `CarPurchaseService.PurchaseAsync` and `NewspaperPartsService.BuyNew/BuyUsed` are wired to `gameState.Player` and spend game time: they need a buyer and a path that costs no time.
   - `RaceSimulatorService` fakes horsepower as `100 + PurchasePrice/50` (line ~501) and only uses `Cars[0]`. It needs the real dyno figure cached on the `Car` and refreshed when parts change, or tuning won't change who wins.
   - `OpponentInitializationService.GenerateOpponentCar` invents cars instead of buying listings. Opponents start with $2000–5000 here, against $200–800 in the GameMaker version.
   - `OpponentEvolutionService` and `OpponentGenerationService` are never instantiated. The docs say evolution runs after each race; it doesn't. The pool only shrinks.
@@ -964,7 +964,7 @@ Aiming the sharp cascade at the car looked at would need a patched actools (`Sha
 - **Dealer overlap** (idea 2, first half): Eastside Garage overlaps Downtown, Industrial Motors overlaps Vermont, on
   the dealer map (`Content\streetcorsa\dealers\dealers.json`); move them apart.
 
-### Step 20: dealers come and go
+### Step 20: dealers come and go (done, PR #39, merged as `a16fc7e`)
 Idea 2, second half. More dealers, and now and then one goes out of business or a new one opens; most stay in
 business all game. Built like the opponents' churn (step 12). Needs the dealer map moddable, which step 16 left out
 (the map picture is still a compiled resource), so a mod's dealers get pins on the map.
@@ -991,6 +991,40 @@ Come and Go".
 ### Step 21: part dealers
 Idea 1. Parts shops on the map like the car dealers, specialised by make (a Mopar shop, a Ford shop) or by kind
 (speed shop, junkyard with used parts), each with its own prices and stock. After step 20: it reuses its map and churn.
+
+**The user decided (2026-09-27), started on `feature/part-dealers`:** all four kinds of shop, pinned on the dealer map
+with their own pin style and a car dealers / part shops / both toggle:
+- **Make specialists** (a Mopar shop, a Ford shop, a GM shop): new parts for the makes listed in the shop's data (no
+  make-specific code, so a mod's make gets its own shop), about list price, deep stock, weekly restock.
+- **Speed shop**: performance parts for any make (carbs, blowers, cams, headers, intakes), above list, thin stock with
+  the odd top-end part.
+- **Wheel and brake shop**: running gear (tyres, rims, brakes, springs, shocks), under mail order, wide stock.
+- **Junkyard**: used parts at any wear, whole engines and cores, cheap; buys the player's old parts above trade-in.
+- **Stock is limited** and each shop restocks on its own schedule; the rivals buy from the shops too.
+- **Mail order stays, at a premium and with a few days' delivery**; the newspaper's used-part ads stay as they are.
+- Proposed with it and built: a regulars' discount, shops opening and closing with step 20's cycle (closing sales the
+  rivals shop), shops as content in `Content\streetcorsa\partshops\`; about 10 shops, 6 open.
+
+**Built (2026-09-27, `feature/part-dealers`), not seen in the game yet:** see `docs/systems/parts-system.md` "Part shops".
+- Ten shops in `Content/streetcorsa/partshops/partshops.json`: Hemi Hut (Mopar), Blue Oval Parts (Ford), Bowtie Supply
+  (GM), Bellflower Speed & Custom, Foothill Tire & Brake and San Pedro Auto Wreckers open from the start; South Bay Speed,
+  Inland Tire & Brake, Sun Valley Salvage and Fontana Wrecking wait to open. Pins checked on a render of the map.
+- A pack says its make (`"make"` in `pack.json`: the base game's chrysler `mopar`, ford and ford_six `ford`, gm `gm`); a
+  specialist stocks every pack of its makes, a mod's too.
+- `PartShopService`: stock (shelves of new parts that run down; a junkyard's yard of used parts and whole engines, each
+  priced), the shop's prices, the regulars' discount (5% from $500 spent there, 10% from $2,000), haggling at a
+  junkyard (once a part, half the time 10-25% off), selling to a shop (a junkyard pays 42% of worth and sells it on, never under 10% over that).
+- `PartShopLifeService` (the `partshop_review` task, after the dealers', before the rivals'): deliveries, and the
+  dealers' open/close rules; a closing-down sale takes 20%/35% off and the bargain hunters clear out a fifth a day. The
+  town's other customers buy a little every day and a delivery changes a third of the lines; a shop's trade is the town's
+  custom (the same for all) plus what the player and the rivals buy, so a junkyard only the player shops at is no likelier
+  to go under than any other. Two simulated years: about six open, closings spread over the kinds.
+- The mail order costs 20% over list and comes in three days (`Player.PartOrders`); the garage says what came.
+- The rivals tune at the cheapest shop that has a part (`EngineTuner.TuneUp`'s `newPrice`), take it off that shelf, and
+  tune twice as often while a part shop's sale is on.
+- The shops have their own map (the dealer map's picture, gold square pins), from a Parts dealers button beside Car
+  dealers in the garage (the user's call, 2026-09-28: car and part dealers kept apart; the button's picture made with
+  ComfyUI, juggernautXL, seed 101, and PIL lettering). `Screens/PartShop` is the counter.
 
 ### Step 22: flip the engine on the stand
 Idea 5. The engine turns upside down on the stand with an animation, to fit the crankshaft, bearings and oil pan; the

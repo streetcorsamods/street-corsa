@@ -42,7 +42,8 @@ namespace StreetCorsa
         public ICarPurchaseService PurchaseService { get; private set; }
         public ICarSaleService SaleService { get; private set; }
         public Services.Parts.ICarPartsService CarPartsService { get; private set; }
-        public Services.Parts.IPartsShopService PartsShopService { get; private set; }
+        public Services.Parts.INewspaperPartsService NewspaperPartsService { get; private set; }
+        public Services.PartShops.IPartShopService PartShopService { get; private set; }
         public IIniModificationService IniModificationService { get; private set; }
         public Services.Race.IRaceResultIngestionService RaceResultIngestionService { get; private set; }
         public CarDataOverlay CarDataOverlay { get; private set; }
@@ -189,8 +190,9 @@ namespace StreetCorsa
             ProfileRepository = new CarProfileRepository();
             ProfileService = new CarProfileService(CatalogRepository, ProfileRepository);
             CarPartsService = new Services.Parts.CarPartsService(CatalogRepository, ProfileRepository);
-            PartsShopService = new Services.Parts.PartsShopService(CarPartsService);
+            NewspaperPartsService = new Services.Parts.NewspaperPartsService(CarPartsService);
             DealerCatalog = new Services.Dealers.DealerCatalog();
+            PartShopService = new Services.PartShops.PartShopService(new Services.PartShops.PartShopCatalog(), CarPartsService, NewspaperPartsService);
             MarketService = new UsedCarMarketService(CatalogRepository, ProfileRepository, CarPartsService, DealerCatalog);
 
             // Scheduler and Time Service
@@ -203,10 +205,13 @@ namespace StreetCorsa
             OpponentRepository = new OpponentRepository();
             OpponentInitializationService = new OpponentInitializationService(OpponentRepository, CatalogRepository, ProfileRepository, CarPartsService);
 
-            // The dealers' morning first (a sale marked down, a lot closing or opening), then the rivals' (cars bought,
-            // fixed, tuned, the sales shopped), then their races against each other
+            // The dealers' morning first (a sale marked down, a lot closing or opening), then the part shops' (the same, and
+            // the deliveries), then the rivals' (cars bought, fixed, tuned from the shops' shelves, the sales shopped), then
+            // their races against each other
             Scheduler.RegisterTask(new Services.Scheduler.Tasks.DealerReviewTask(new Services.Dealers.DealerLifeService(DealerCatalog)));
-            Scheduler.RegisterTask(new OpponentReviewTask(new OpponentLifeService(CarPartsService, MarketService, CatalogRepository, OpponentInitializationService)));
+            Scheduler.RegisterTask(new Services.Scheduler.Tasks.PartShopReviewTask(new Services.PartShops.PartShopLifeService(PartShopService)));
+            Scheduler.RegisterTask(new OpponentReviewTask(new OpponentLifeService(CarPartsService, MarketService, CatalogRepository, OpponentInitializationService,
+                partShops: PartShopService)));
             Scheduler.RegisterTask(new Services.Scheduler.Tasks.RaceSimulatorTask(new Services.Simulation.RaceSimulatorService(MarketService, CarPartsService), CatalogRepository));
             OpponentChallengeService = new OpponentChallengeService(CatalogRepository, ProfileRepository, CarPartsService);
 
@@ -241,7 +246,7 @@ namespace StreetCorsa
             // Last: these two put engines together on a worker thread and hand the day back before they are
             // done. What comes before them is finished by the time whoever spent the time carries on.
             Scheduler.RegisterTask(new MarketRefreshTask(MarketService));
-            Scheduler.RegisterTask(new PartsAdsRefreshTask(PartsShopService));
+            Scheduler.RegisterTask(new PartsAdsRefreshTask(NewspaperPartsService));
 
             // Race result services
             var raceResultValidator = new Services.Race.Validation.RaceResultValidator();
@@ -270,7 +275,7 @@ namespace StreetCorsa
                 DialogService, CatalogRepository, ProfileRepository, Launcher, ContentService, OpponentChallengeService,
                 GameStateRepository, MarketService, GameSettingsService, ProfileService, TalkService, DealerCatalog,
                 PurchaseService, SaleService,
-                GameTimeService, CarPartsService, PartsShopService, RaceCarDataService, RaceEventService, CarFilterService,
+                GameTimeService, CarPartsService, NewspaperPartsService, PartShopService, RaceCarDataService, RaceEventService, CarFilterService,
                 EventOpponentService, VictoryConditionService, MilestoneService,
                 game => CurrentGameState = game);
         }

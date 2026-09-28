@@ -24,6 +24,13 @@ public class PartPack
     [JsonProperty("source")]
     public string Source { get; set; } = string.Empty;
 
+    /// <summary>
+    /// The make the pack's parts are for, as the part shops name it ("mopar", "ford", "gm"): a make specialist stocks
+    /// every pack of its makes, a mod's too. None for parts of no make (the universal-fit parts, the running gear).
+    /// </summary>
+    [JsonProperty("make", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Make { get; set; }
+
     [JsonProperty("parts")]
     public List<PartDefinition> Parts { get; set; } = new();
 }
@@ -62,6 +69,10 @@ public class PartDefinition
     /// <summary>The folder of the pack.json the part came from: its model is found there</summary>
     [JsonIgnore]
     public string? PackFolder { get; set; }
+
+    /// <summary>The make of the part's pack (<see cref="PartPack.Make"/>); null for a part of no make</summary>
+    [JsonIgnore]
+    public string? Make { get; set; }
 
     /// <summary>The compiled scripts of the part's mod: its <see cref="SourceScript"/> is found there</summary>
     [JsonIgnore]

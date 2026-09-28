@@ -107,6 +107,7 @@ public sealed class PartsCatalog
                     part.ModId = mod.Id;
                     part.LocalId = part.Id;
                     part.PackFolder = Path.GetDirectoryName(file);
+                    part.Make = string.IsNullOrWhiteSpace(pack.Make) ? null : pack.Make.Trim();
                     part.ScriptRoot = Path.Combine(root, PartScripts.Folder);
                     if (registry.Add(mod, part.Id, part.Replaces, part, packName) is { } id) part.Id = id;
                 }
