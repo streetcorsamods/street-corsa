@@ -11,4 +11,7 @@ public static class Unit
     /// <summary><paramref name="value"/> held to 0..1; <paramref name="ifNotFinite"/> when it is not a number</summary>
     public static double Clamp01(double value, double ifNotFinite) =>
         double.IsFinite(value) ? Math.Clamp(value, 0, 1) : ifNotFinite;
+
+    /// <summary>A count or a weight that cannot be under nothing (horsepower, a dealer's trade): not a number counts as nothing</summary>
+    public static double NonNegative(double value) => double.IsFinite(value) ? Math.Max(0, value) : 0;
 }

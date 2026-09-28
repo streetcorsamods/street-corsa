@@ -93,6 +93,17 @@
                     <DropShadowEffect BlurRadius="10" ShadowDepth="0" Color="Black" Opacity="1"/>
                 </TextBlock.Effect>
             </TextBlock>
+            <TextBlock Text="{Binding SaleNotice}"
+                       Visibility="{Binding HasSaleNotice, Converter={StaticResource BooleanToVisibilityConverter}}"
+                       FontSize="{StaticResource FontSizeCompact}"
+                       FontWeight="Bold"
+                       Foreground="{StaticResource GoldBrush}"
+                       HorizontalAlignment="Center"
+                       Margin="0,3,0,0">
+                <TextBlock.Effect>
+                    <DropShadowEffect BlurRadius="10" ShadowDepth="0" Color="Black" Opacity="1"/>
+                </TextBlock.Effect>
+            </TextBlock>
         </StackPanel>
 
         <!-- Back to the map -->
@@ -155,6 +166,11 @@
                            Foreground="{StaticResource TextSecondaryBrush}"
                            Margin="0,0,0,14"/>
 
+                <TextBlock Text="{Binding WasPriceDisplay}"
+                           Visibility="{Binding IsOnSale, Converter={StaticResource BooleanToVisibilityConverter}}"
+                           FontSize="{StaticResource FontSizeCompact}"
+                           TextDecorations="Strikethrough"
+                           Foreground="{StaticResource TextSecondaryBrush}"/>
                 <TextBlock Text="{Binding PriceDisplay}"
                            FontSize="{StaticResource FontSizeTitle}"
                            FontWeight="Bold"

@@ -1,0 +1,51 @@
+{
+  "_comment": [
+    "What the paper and the diner say when a dealer closes or opens (DealerLifeService), and when a racer shops a",
+    "closing-down sale (OpponentLifeService). For the dealers: {dealer} its name, {region} where it is, {blurb} its line",
+    "on the map, {discount} the sale's cut in whole percent, {day} a date ({day:dddd} is the weekday: the sale's last",
+    "day, or today). For the racers, as in street.json, plus {dealer} and {price}.",
+    "The dealer map and lot (dealer.*) say it one way: {dealer}, {discount} and {day} (the sale's last day) as above,",
+    "{finalDays} how many days the last, deeper cut runs, {time} the time now."
+  ],
+  "lines": {
+    "news.dealer_closing.headline": [ "{dealer} Closing Its Doors", "Everything Must Go at {dealer}", "{dealer} Calls It a Day" ],
+    "news.dealer_closing.body": [
+      "{dealer} of {region} is going out of business. Every car on the lot is marked down {discount}% until {day:dddd}, and the prices drop again for the last three days.",
+      "After years on the corner, {dealer} is closing down. The whole lot is {discount}% off through {day:dddd, MMMM d}, and the owner says whatever is left by then goes cheaper still."
+    ],
+    "news.dealer_closed.headline": [ "The Lights Go Out at {dealer}", "{dealer} Shuts for Good" ],
+    "news.dealer_closed.body": "{dealer} in {region} has closed. Whatever was still on the lot went to the wholesalers.",
+    "news.dealer_opened.headline": [ "New Car Lot Opens in {region}", "{dealer} Opens Its Doors" ],
+    "news.dealer_opened.body": "{dealer} has opened in {region}. {blurb}",
+    "news.dealer_reopened.headline": [ "{dealer} Is Back", "Lights On Again at {dealer}" ],
+    "news.dealer_reopened.body": "The old {dealer} lot in {region} is selling cars again, under new owners and the old name. {blurb}",
+
+    "street.dealer_closing": [
+      "Word is {dealer} is closing down. Everything on the lot is {discount}% off till {day:dddd}.",
+      "{dealer} is going out of business. Get over to {region} before the good ones go."
+    ],
+    "street.dealer_last_days": "Last days at {dealer}: everything's {discount}% off, and it shuts after {day:dddd}.",
+    "street.dealer_closed": "{dealer} has shut for good.",
+    "street.dealer_opened": [ "There's a new lot in {region}: {dealer}.", "{dealer} just opened in {region}. Somebody should go and look." ],
+    "street.dealer_reopened": "Somebody opened the old {dealer} lot in {region} again.",
+
+    "dealer.notice.closing": "CLOSING DOWN · {discount}% OFF",
+    "dealer.notice.new": "NEW",
+    "dealer.detail.closing": "Closing-down sale: {discount}% off every car, and less still in the last {finalDays} days. Last day {day:dddd, MMMM d}.",
+    "dealer.detail.closing_final": "Closing-down sale: {discount}% off every car, as low as it goes. Last day {day:dddd, MMMM d}.",
+    "dealer.detail.new": "Newly opened.",
+    "dealer.lot.sale": "CLOSING DOWN · {discount}% OFF EVERYTHING · last day {day:dddd}",
+    "dealer.lot.sale_last_day": "CLOSING DOWN · {discount}% OFF EVERYTHING · today is the last day",
+    "dealer.drive.too_late.title": "The doors will be shut",
+    "dealer.drive.too_late": "Today is the last day of {dealer}'s closing-down sale, and it is {time:h:mm tt}. You would not get there before it shut for good.",
+
+    "street.bargain": [
+      "{name} picked up a {car} at {dealer}'s closing-down sale for ${price:N0}.",
+      "{name} got a {car} for ${price:N0} at {dealer}'s closing-down sale."
+    ],
+    "street.bargain_flip": [
+      "{name} snapped up a {car} at {dealer}'s closing-down sale for ${price:N0}, and it's already in the paper.",
+      "{name} bought a {car} off {dealer}'s sale for ${price:N0} just to sell it on."
+    ]
+  }
+}

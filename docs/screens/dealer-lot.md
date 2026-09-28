@@ -11,8 +11,10 @@ The garage stays the hub. The map is somewhere you go from it, not a new top lev
 
 ## DealerMap
 
-A crop of `Assets/Images/Backgrounds/los_angeles_map.jpg` — the Automobile Club of Southern California's
-"Los Angeles and Vicinity", 2444 x 1560 — with a pin per dealer. Hovering a pin shows what the lot has, what
+A crop of the dealer map — the base game's is `Content/streetcorsa/dealers/los_angeles_map.jpg`, the Automobile Club
+of Southern California's "Los Angeles and Vicinity", 2444 x 1560, named with its crop anchor in `map.json`; a mod's
+`maps` list replaces it (the last mod's wins) — with a pin per dealer in business. A lot in its closing-down sale says
+so on its pin and card; one opened in the last three weeks is marked new. Hovering a pin shows what the lot has, what
 the drive costs and whether you would be back today; clicking drives out to it.
 
 The map is **full-bleed** — no bars, nothing letterboxed — and the pins still sit exactly on their towns.

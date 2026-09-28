@@ -5,6 +5,7 @@ using StreetCorsa.Models.GameState;
 using StreetCorsa.Navigation;
 using StreetCorsa.Screens.Shared;
 using StreetCorsa.Services.Catalog;
+using StreetCorsa.Services.Dealers;
 using StreetCorsa.Services.Market;
 using StreetCorsa.Services.Opponents;
 using StreetCorsa.Services.Storage;
@@ -135,7 +136,7 @@ namespace StreetCorsa.Screens.UsedCarMarket
                 IsLoading = true;
                 try
                 {
-                    var listings = await _marketService.SpawnListingsAsync(_gameState.DealerLocations, _gameState.Date, _gameState.Rules.CarPriceMultiplier);
+                    var listings = await _marketService.SpawnListingsAsync(DealerRoster.Restocking(_gameState), _gameState.Date, _gameState.Rules.CarPriceMultiplier);
                     _gameState.UsedCarMarket = listings;
                     _logger.Information("Spawned {ListingCount} initial listings", listings.Count);
                 }
@@ -152,7 +153,7 @@ namespace StreetCorsa.Screens.UsedCarMarket
             // Load dealer options, and the racers selling their own cars
             if (_gameState.DealerLocations != null)
             {
-                foreach (var dealer in _gameState.DealerLocations)
+                foreach (var dealer in DealerRoster.Trading(_gameState))
                 {
                     DealerOptions.Add(dealer.Name);
                 }
@@ -326,6 +327,12 @@ namespace StreetCorsa.Screens.UsedCarMarket
         public string DisplayName => $"{CarDefinition.Brand} {CarDefinition.Name}";
         public string YearDisplay => CarDefinition.Year?.ToString() ?? "Unknown";
         public string PriceDisplay => $"${Listing.Price:N0}";
+
+        /// <summary>Marked down in its dealer's closing-down sale</summary>
+        public bool IsOnSale => Listing.PriceBeforeSale is { } was && was > Listing.Price;
+
+        /// <summary>What it was marked at before the sale</summary>
+        public string WasPriceDisplay => IsOnSale ? $"${Listing.PriceBeforeSale:N0}" : string.Empty;
         public string ConditionDisplay => Shared.ConditionDisplay.Of(Listing.Condition).Percent;
         public string MileageDisplay => $"{Listing.Mileage:N0} km";
 

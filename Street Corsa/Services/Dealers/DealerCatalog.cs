@@ -1,3 +1,5 @@
+using System.IO;
+using StreetCorsa.Helpers;
 using StreetCorsa.Logging;
 using StreetCorsa.Mods;
 using StreetCorsa.Models.GameState;
@@ -5,8 +7,8 @@ using StreetCorsa.Models.GameState;
 namespace StreetCorsa.Services.Dealers
 {
     /// <summary>
-    /// The dealers of every mod (their <c>dealers</c> folder: lists of <c>dealers</c> and <c>showrooms</c>; a file that is
-    /// one entry or a bare list is dealers), read once.
+    /// The dealers of every mod (their <c>dealers</c> folder: lists of <c>dealers</c>, <c>showrooms</c> and <c>maps</c>; a
+    /// file that is one entry or a bare list is dealers), read once.
     /// A mod's dealers get its namespace; a showroom is measured by its folder name (an AC showroom or a mod's
     /// garage), and a later mod's measurements of the same room win.
     ///
@@ -31,7 +33,7 @@ namespace StreetCorsa.Services.Dealers
             try
             {
                 // Showrooms share the folder: only what a "showrooms" list holds is one, the rest is the dealers'
-                foreach (var entry in ModJson.Entries(mods, ContentTypes.Dealers, "showrooms", problems, listOnly: true))
+                foreach (var entry in ModJson.Entries(mods, ContentTypes.Dealers, ShowroomsList, problems, listOnly: true))
                 {
                     try
                     {
@@ -45,8 +47,39 @@ namespace StreetCorsa.Services.Dealers
                     }
                 }
 
-                var dealers = ModJson.Load(mods, ContentTypes.Dealers, "dealers", "dealer", problems, entry =>
-                    entry.Id == null && entry.Replaces == null ? null : entry.As<DealerDefinition>(), otherLists: ["showrooms"]);
+                // The map the pins stand on: the last mod's, its picture next to its dealer files. Only what a "maps"
+                // list holds is one: a file that is one entry, or a bare list, is dealers.
+                foreach (var entry in ModJson.Entries(mods, ContentTypes.Dealers, MapsList, problems, listOnly: true))
+                {
+                    try
+                    {
+                        var map = entry.As<DealerMapSpec>();
+                        if (map == null) continue;
+                        if (entry.Id is not { Length: > 0 } id || string.IsNullOrWhiteSpace(id))
+                        {
+                            problems.Add($"{entry.Source}: a map with no id; left out");
+                            continue;
+                        }
+
+                        var folder = Path.Combine(entry.Mod.Folder, ContentTypes.Dealers);
+                        if (!PathNames.TryCombineUnder(folder, map.Image, out var image) || !File.Exists(image))
+                        {
+                            problems.Add($"{entry.Source}: map {entry.Id}: no picture \"{map.Image}\" next to it; left out");
+                            continue;
+                        }
+
+                        map.ImagePath = image;
+                        map.Id = ModIds.Qualify(entry.Mod.Id, id);
+                        Map = map;
+                    }
+                    catch (Exception ex) when (ex is not OutOfMemoryException)
+                    {
+                        problems.Add($"{entry.Source}: map {entry.Id}: {ex.Message}; left out");
+                    }
+                }
+
+                var dealers = ModJson.Load(mods, ContentTypes.Dealers, DealersList, "dealer", problems, entry =>
+                    entry.Id == null && entry.Replaces == null ? null : entry.As<DealerDefinition>(), otherLists: [ShowroomsList, MapsList]);
                 foreach (var (id, dealer, _) in dealers.Entries)
                 {
                     dealer.Id = id;
@@ -55,7 +88,8 @@ namespace StreetCorsa.Services.Dealers
                 }
 
                 foreach (var line in dealers.Replaced) _logger.Information("{Line}", line);
-                _logger.Information("Loaded {Count} dealers and {Showrooms} showroom measurements", _dealers.Count, _showrooms.Count);
+                _logger.Information("Loaded {Count} dealers and {Showrooms} showroom measurements, on {Map}", _dealers.Count, _showrooms.Count,
+                    Map?.Id ?? "no map");
             }
             catch (Exception ex)
             {
@@ -64,6 +98,12 @@ namespace StreetCorsa.Services.Dealers
 
             foreach (var problem in problems) _logger.Warning("Dealers: {Problem}", problem);
         }
+
+        private const string DealersList = "dealers";
+        private const string ShowroomsList = "showrooms";
+        private const string MapsList = "maps";
+
+        public DealerMapSpec? Map { get; private set; }
 
         public ShowroomSpec GetShowroom(string id)
         {

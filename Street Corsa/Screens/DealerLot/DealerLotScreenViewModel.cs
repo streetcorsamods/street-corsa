@@ -13,6 +13,7 @@ using StreetCorsa.Services.Dealers;
 using StreetCorsa.Services.Market;
 using StreetCorsa.Services.Parts;
 using StreetCorsa.Services.Storage;
+using StreetCorsa.Services.Text;
 using StreetCorsa.ViewModels;
 
 namespace StreetCorsa.Screens.DealerLot
@@ -51,6 +52,25 @@ namespace StreetCorsa.Screens.DealerLot
         public string DealerName => _dealer?.Name ?? "Dealer";
         public string DealerRegion => _dealer?.Region ?? string.Empty;
         public string DealerBlurb => _dealer?.Blurb ?? string.Empty;
+
+        /// <summary>The closing-down sale, when this lot is holding one: a line under the name</summary>
+        public string SaleNotice
+        {
+            get
+            {
+                if (DealerRoster.Find(_gameState, _dealer?.Id) is not { Status: DealerStatus.ClosingDown, ClosesOn: { } last } dealer) return string.Empty;
+
+                var daysLeft = DealerRules.DaysLeft(dealer, _gameState.Date);
+                return GameText.Installed.Get(daysLeft == 0 ? "dealer.lot.sale_last_day" : "dealer.lot.sale", new TextValues
+                {
+                    ["dealer"] = dealer.Name,
+                    ["discount"] = (int)Math.Round(DealerRules.DiscountOn(dealer, _gameState.Date) * 100),
+                    ["day"] = last
+                });
+            }
+        }
+
+        public bool HasSaleNotice => SaleNotice.Length > 0;
         public string BankrollDisplay => $"${_gameState.Player.Money:N0}";
 
         /// <summary>The clock, so the hours the drive cost are in front of the player when they arrive</summary>

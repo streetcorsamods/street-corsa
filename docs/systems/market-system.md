@@ -36,8 +36,9 @@ catalog order starves whole dealers.
 
 ## Daily Refresh
 1. Remove sold listings older than 7 days
-2. Remove unsold listings older than 14 days
-3. Top each dealer back up to its own target
+2. Remove unsold listings older than 14 days, except a car in a closing-down sale (`PriceBeforeSale` set): it stays
+   until its lot shuts. A full respawn of the market (the map's stale-market check) keeps those cars too.
+3. Top each open dealer back up to its own target (not one in its closing-down sale, closed or not open yet)
 
 The save's rules can turn the daily refresh off (`GameRules.MarketRefreshEnabled`): the lots then keep what they have.
 
@@ -57,14 +58,43 @@ A listing's price is that times the dealer's random variation of ±20%, then tim
 ask, never on what a car is worth: a car the player sells fetches a share of its worth whatever the difficulty.
 
 ## Dealer Locations
-Ten dealers, defined in `Content/streetcorsa/dealers/dealers.json` and read by `DealerCatalog`: Downtown Motors,
-Sunset Motors, Colorado Motors, Suburban Autos, Ocean Park Autos, Riverside Cars, Vermont Auto Sales,
-Industrial Motors, Harbor Auto and Eastside Garage. `GetDefaultDealers()` still hands out the original five
-when the file cannot be read.
+Twenty dealers, defined in `Content/streetcorsa/dealers/dealers.json` and read by `DealerCatalog`. Twelve are open
+when a game starts (Downtown Motors, Sunset Motors, Colorado Motors, Suburban Autos, Ocean Park Autos, Riverside Cars,
+Vermont Auto Sales, Industrial Motors, Harbor Auto, Eastside Garage, Fairplex Auto Mart, Firestone Boulevard Motors);
+the other eight (`"startsOpen": false`) wait to open. `GetDefaultDealers()` still hands out the original five when the
+file cannot be read.
 
-The save holds only `DealerLocation` (Id, Name, Region). Map position, showroom, parking bays and stock
-character live in the JSON and are merged over the save on load, so new fields reach old saves. See
-`docs/screens/dealer-lot.md`.
+The save holds `DealerLocation`: Id, Name, Region, and how the business is going (`Status`, `OpenedOn`, `ClosesOn`,
+`ClosedOn`, `Trade`). Map position, showroom, parking bays and stock character live in the JSON and are merged over the
+save (`DealerRoster.Sync`), so new fields reach old saves; a save from before step 20 reads its dealers as open and
+gets the new ones as the JSON says. See `docs/screens/dealer-lot.md`.
+
+## Dealers Come and Go
+`DealerLifeService` (the `dealer_review` task, daily, before the rivals' review) keeps about 60% of the dealers open
+(`DealerRules`):
+- **About every two months** (`DaysPerChange` 60, and not while a sale is on) a lot goes under or one opens, toward
+  the target (12 of 20), never away from it and never under 40% open: short of lots with no premises free, or over
+  with nobody allowed to close, nothing changes. A two-year run of the base game gives about five of each.
+- **Who goes under** is weighted by how the lot is doing (`CloseWeight`): `Trade` counts the cars sold off it and
+  halves every 30 days. A count runs from the last review up to, not including, this morning's: the rivals and the
+  player buy after the review, at the time it counted to, so their sales count the next day. Cars standing unsold 10
+  days or more count against a lot; a lot sold out has none standing. A lot that opened during the game gets
+  120 days before it can close.
+- **The closing-down sale:** the paper and the diner announce it; the lot takes 20% off every car (the listing keeps
+  `PriceBeforeSale`), 35% in its last three days, and restocks nothing. The morning after its seventh day it closes and
+  what is unsold goes with it. The map pin and the lot's header show the sale; the price card shows the old price
+  struck through.
+- **The rivals shop it** (`OpponentLifeService.ShopTheSales`): a racer with money goes round a sale on 35% of days,
+  buys a car 10% stronger than theirs and puts the old one in the paper, or, in the last days, buys the deepest cut to
+  sell on in the paper (`OpponentRules.WorthFlipping`: the least they would ask for it there, from what the car is
+  worth, not the lot's marked price, beats the price by 5%). A flip needs a car of their own and room for a second;
+  they keep driving their own and the flipped car goes in the paper. Two cars a day at most go to the rivals.
+- **A drive that does not fit the day** to a lot on the last day of its sale is refused: the doors would be shut when
+  the player got there. The words of the pin, the card and the lot header are in `text/dealers.json` (`dealer.*`).
+- **Who opens:** a dealer that has never opened; once there are none, premises empty for 180 days open again under the
+  old name. The market's refresh stocks the new lot the same morning.
+- A game whose market does not refresh (`MarketRefreshEnabled`) keeps its dealers as they are; a sale under way still
+  runs out. Trade-ins only go to an open lot.
 
 ## Which Dealer Gets a Car
 Not random. Each dealer claims a slice of the market's price range (`priceBandLow`/`priceBandHigh`); a car
@@ -155,6 +185,8 @@ seller's engine summary and whether it has been worked on. A pink-slipped car go
 - `Dialogs/SellCar/SellCarDialogViewModel.cs`
 - `Services/Market/CarValuation.cs`
 - `Services/Dealers/DealerCatalog.cs`
+- `Services/Dealers/DealerRoster.cs`, `DealerRules.cs`, `DealerLifeService.cs`
+- `Services/Scheduler/Tasks/DealerReviewTask.cs`
 - `Content/streetcorsa/dealers/dealers.json`
 - `Services/Market/IUsedCarMarketService.cs`
 - `Models/GameState/UsedCarListing.cs`

@@ -1,3 +1,4 @@
+using StreetCorsa.Helpers;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Services.Market;
 
@@ -65,6 +66,33 @@ namespace StreetCorsa.Services.Opponents
         /// <summary>A better car is one with this much more power: less is not worth the trouble of a sale</summary>
         public const double TradeUpGain = 1.2;
 
+        /// <summary>
+        /// The chance a racer with money goes round a dealer's closing-down sale on a given day: far more than they look
+        /// for a better car (<see cref="TradeUpChance"/>), because a bargain does not wait
+        /// </summary>
+        public const double BargainChance = 0.35;
+
+        /// <summary>At most this many cars go off the sale lots to the rivals in a day: the player still gets a look</summary>
+        public const int MaxBargainsPerDay = 2;
+
+        /// <summary>At a sale price a smaller step up is worth taking than <see cref="TradeUpGain"/></summary>
+        public const double BargainTradeUpGain = 1.1;
+
+        /// <summary>What a flipped car has to make in the paper over what it cost: less is not worth the bother</summary>
+        public const decimal FlipMargin = 1.05m;
+
+        /// <summary>
+        /// Whether a car the sale marks at <paramref name="price"/> is worth buying to put straight back in the paper:
+        /// the least the racer would ask for it there (<paramref name="leastAsked"/>, see <see cref="AskingPrice"/>, from
+        /// what the car is worth, not what the lot marked it at) beats the price by <see cref="FlipMargin"/>. The sale's
+        /// first cut is not deep enough for that; its last days are.
+        /// </summary>
+        public static bool WorthFlipping(decimal price, decimal leastAsked) =>
+            price > 0 && leastAsked > 0 && price * FlipMargin <= leastAsked;
+
+        /// <summary>A car bought with a reserve left over, as for a trade-up: the same share of its price a tuner keeps back</summary>
+        public static bool Affordable(decimal price, decimal money) => price > 0 && money - price >= price * TuningReserveShare;
+
         /// <summary>What a rival asks for a car in the paper, as a share of the lot price: under what a lot asks, over what a dealer pays</summary>
         public const double MinAskShare = 0.75;
         public const double MaxAskShare = 0.9;
@@ -90,7 +118,7 @@ namespace StreetCorsa.Services.Opponents
         /// car's price a tuner keeps back of theirs)
         /// </summary>
         public static bool WorthTradingUp(double currentHp, double hp, decimal price, decimal money) =>
-            price > 0 && Sane(hp) >= Math.Max(1, Sane(currentHp)) * TradeUpGain && money - price >= price * TuningReserveShare;
+            price > 0 && Unit.NonNegative(hp) >= Math.Max(1, Unit.NonNegative(currentHp)) * TradeUpGain && money - price >= price * TuningReserveShare;
 
         /// <summary>
         /// What a rival asks in the paper for a car worth <paramref name="lotPrice"/> on a lot, <paramref name="roll"/>
@@ -117,7 +145,7 @@ namespace StreetCorsa.Services.Opponents
         /// </summary>
         /// <param name="condition">0 to 1</param>
         public static double CarScore(double hp, double condition, bool canRace, decimal value) =>
-            Sane(hp) * 10 + Math.Clamp(Sane(condition), 0, 1) * 100 * 5 + (canRace ? RacingCarBonus : 0) + (double)value * 0.1;
+            Unit.NonNegative(hp) * 10 + Math.Clamp(Unit.NonNegative(condition), 0, 1) * 100 * 5 + (canRace ? RacingCarBonus : 0) + (double)value * 0.1;
 
         /// <summary>More than any power, shape and worth add up to</summary>
         private const double RacingCarBonus = 1_000_000;
@@ -128,8 +156,8 @@ namespace StreetCorsa.Services.Opponents
         /// </summary>
         public static double PurchaseScore(double hp, double condition, bool runs, decimal price, decimal budget)
         {
-            var score = Sane(hp) * 2 + Math.Clamp(Sane(condition), 0, 1) * 100 * 3 + (runs ? 500 : 0);
-            if (price > 0) score += Sane(hp) / (double)price * 1000;
+            var score = Unit.NonNegative(hp) * 2 + Math.Clamp(Unit.NonNegative(condition), 0, 1) * 100 * 3 + (runs ? 500 : 0);
+            if (price > 0) score += Unit.NonNegative(hp) / (double)price * 1000;
 
             if (budget > 0)
             {
@@ -162,7 +190,5 @@ namespace StreetCorsa.Services.Opponents
         public static string Possessive(Racer racer) => racer is Opponent { Gender: var gender }
             ? gender switch { Gender.Male => "his", Gender.Female => "her", _ => "their" }
             : "their";
-
-        private static double Sane(double value) => double.IsFinite(value) ? Math.Max(0, value) : 0;
     }
 }

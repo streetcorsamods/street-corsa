@@ -97,10 +97,33 @@ namespace StreetCorsa.Models.GameState
         /// and on listings from before it was kept.
         /// </summary>
         public Guid? CarInstanceId { get; set; }
+
+        /// <summary>
+        /// What the car was marked at before its dealer's closing-down sale cut it (<see cref="DealerStatus.ClosingDown"/>);
+        /// null when it is not on sale. <see cref="Price"/> is what it sells for.
+        /// </summary>
+        public decimal? PriceBeforeSale { get; set; }
+    }
+
+    /// <summary>Where a dealer is in its life: open, holding its closing-down sale, gone, or not open yet</summary>
+    public enum DealerStatus
+    {
+        /// <summary>Selling and restocking. First, so the dealers of a save from before this was kept are open.</summary>
+        Open = 0,
+
+        /// <summary>The closing-down sale: selling off at a discount, restocking nothing, until <see cref="DealerLocation.ClosesOn"/></summary>
+        ClosingDown,
+
+        /// <summary>Gone out of business; the premises may open again, a long while later</summary>
+        Closed,
+
+        /// <summary>Not in business yet: opens some day (<see cref="DealerDefinition.StartsOpen"/> false)</summary>
+        Waiting
     }
 
     /// <summary>
-    /// Represents a dealer location in the game
+    /// A dealer as the save knows it: its name, and how its business is going (see <c>DealerLifeService</c>).
+    /// Everything that never changes is the dealer's definition's (<see cref="DealerDefinition"/>).
     /// </summary>
     public class DealerLocation
     {
@@ -108,5 +131,29 @@ namespace StreetCorsa.Models.GameState
         public string Name { get; set; } = string.Empty;
         public string Region { get; set; } = string.Empty;
         public string? Specialization { get; set; } // "Imports", "Classics", "Performance", etc.
+
+        public DealerStatus Status { get; set; }
+
+        /// <summary>When it opened during this game; null for a dealer that was there from the start</summary>
+        public DateTime? OpenedOn { get; set; }
+
+        /// <summary>The last day of its closing-down sale</summary>
+        public DateTime? ClosesOn { get; set; }
+
+        /// <summary>When it went out of business</summary>
+        public DateTime? ClosedOn { get; set; }
+
+        /// <summary>
+        /// How much it has been selling lately: one for every car sold off the lot, fading day by day
+        /// (<c>DealerRules.TradeFade</c>). A lot that sells nothing is the one that goes under.
+        /// </summary>
+        public double Trade { get; set; }
+
+        /// <summary>Up to when <see cref="Trade"/> has counted the sales</summary>
+        public DateTime? TradeCountedTo { get; set; }
+
+        /// <summary>Selling cars: open, or in its closing-down sale</summary>
+        [LiteDB.BsonIgnore]
+        public bool IsTrading => Status is DealerStatus.Open or DealerStatus.ClosingDown;
     }
 }

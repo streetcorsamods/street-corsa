@@ -147,7 +147,7 @@ README). The sound's id is its folder's name, namespaced. `sounds.json` pins blo
 
 ### dealers
 
-Lists of `dealers` and of `showrooms`:
+Lists of `dealers`, of `showrooms` and of `maps`:
 
 ```json
 {
@@ -160,8 +160,15 @@ Lists of `dealers` and of `showrooms`:
 }
 ```
 
-Showrooms are only read from a `showrooms` list; a file that is one entry, or a bare list, is dealers.
+Showrooms and maps are only read from a `showrooms` or `maps` list; a file that is one entry, or a bare list, is
+dealers. `"startsOpen": false` keeps a dealer out of business when a game starts: it opens some day, when the market has
+room for another lot (about 60% of all the dealers are open at a time, and now and then one goes out of business).
 `mapX`/`mapY` are fractions of the dealer map picture (see the base game's `dealers.json` for how they are measured).
+
+The map the pins stand on is a `maps` entry: `{ "maps": [ { "id": "city", "image": "city.jpg", "anchorX": 0.05,
+"anchorY": 0.28, "anchorWidth": 0.62, "anchorHeight": 0.55 } ] }`, the picture next to the file. The anchor is the part
+that must be on screen, as fractions of the picture; the screen grows out of it to the window's shape. The last mod's
+map is the one shown, so a mod with its own map re-reads every pin off it, the base game's too (`"replaces"`).
 `showroomId` is a room by its folder name: a mod's `garages` folder, else an AC showroom. A save that never had a
 dealer gets its lot stocked the first time the map is opened; the other lots stay as they are.
 

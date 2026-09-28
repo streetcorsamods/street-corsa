@@ -62,12 +62,19 @@ namespace StreetCorsa.Models.GameState
         public int StockLow { get; set; } = 8;
         public int StockHigh { get; set; } = 12;
 
-        /// <summary>The save only ever needs the name and the region</summary>
+        /// <summary>
+        /// In business when a game starts. False: it waits to open some day, when the market has room for another lot
+        /// (<c>DealerLifeService</c>). A save made before the dealer existed gets it the same way.
+        /// </summary>
+        public bool StartsOpen { get; set; } = true;
+
+        /// <summary>The save only ever needs the name and the region, and how the business is going</summary>
         public DealerLocation ToLocation() => new()
         {
             Id = Id,
             Name = Name,
-            Region = Region
+            Region = Region,
+            Status = StartsOpen ? DealerStatus.Open : DealerStatus.Waiting
         };
     }
 }

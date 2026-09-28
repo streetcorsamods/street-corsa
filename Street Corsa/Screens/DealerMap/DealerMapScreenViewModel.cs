@@ -1,11 +1,13 @@
 using System.Collections.ObjectModel;
 using StreetCorsa.Dialogs;
 using StreetCorsa.Dialogs.Confirmation;
+using StreetCorsa.Dialogs.Information;
 using StreetCorsa.Logging;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Navigation;
 using StreetCorsa.Services.Dealers;
 using StreetCorsa.Services.Market;
+using StreetCorsa.Services.Text;
 using StreetCorsa.Services.Time;
 using StreetCorsa.ViewModels;
 
@@ -17,24 +19,14 @@ namespace StreetCorsa.Screens.DealerMap
     public class DealerMapScreenViewModel : BaseScreenViewModel
     {
         /// <summary>
-        /// The part of los_angeles_map.jpg that must be on screen, as fractions of the whole image.
-        ///
-        /// The map is the Auto Club's "Los Angeles and Vicinity", which reaches out to Victorville and
-        /// Joshua Tree - most of it desert with nothing to sell a car in. This is the inhabited corner: the
-        /// valley and the coast across to Riverside.
-        ///
-        /// An anchor rather than a fixed crop: the map fills the window, so what is actually shown grows out
-        /// of this to whatever shape the window is, and a wider screen simply sees more country. MapPanel
-        /// does that and places the pins against the result.
+        /// The sheet the pins stand on when no mod has a map (or its picture does not read): the whole of it on screen,
+        /// in a map's usual shape, so the pins at least keep their places against each other
         /// </summary>
-        private const double AnchorX = 0.05;
-        private const double AnchorY = 0.28;
-        private const double AnchorWidth = 0.62;
-        private const double AnchorHeight = 0.55;
+        private const double BlankSheetWidth = 1600;
+        private const double BlankSheetHeight = 1000;
 
-        /// <summary>The map image as shipped, in pixels, so the crop can keep its shape on screen</summary>
-        private const double MapPixelWidth = 2444;
-        private const double MapPixelHeight = 1560;
+        /// <summary>The map's picture, read once: it is a big one, and the map is opened over and over</summary>
+        private static (string Path, System.Windows.Media.Imaging.BitmapSource Image)? _mapCache;
 
         private readonly NavigationService _navigationService;
         private readonly DialogService _dialogService;
@@ -52,12 +44,18 @@ namespace StreetCorsa.Screens.DealerMap
 
         public ObservableCollection<DealerPinViewModel> Pins { get; } = [];
 
-        /// <summary>The part of the map worth seeing; the screen grows out from it to fill the window</summary>
-        public System.Windows.Rect MapAnchor { get; } = new(AnchorX, AnchorY, AnchorWidth, AnchorHeight);
+        /// <summary>
+        /// The part of the map worth seeing (the map's anchor, see <see cref="DealerMapSpec"/>); the screen grows out from
+        /// it to fill the window
+        /// </summary>
+        public System.Windows.Rect MapAnchor { get; }
+
+        /// <summary>The map's picture: the last mod's (<see cref="IDealerCatalog.Map"/>); null when there is none to show</summary>
+        public System.Windows.Media.ImageSource? MapImage { get; }
 
         /// <summary>The map's own size, so a crop measured in fractions can be given a shape</summary>
-        public double MapImageWidth => MapPixelWidth;
-        public double MapImageHeight => MapPixelHeight;
+        public double MapImageWidth { get; }
+        public double MapImageHeight { get; }
 
         public string BankrollDisplay => $"${_gameState.Player.Money:N0}";
 
@@ -97,22 +95,57 @@ namespace StreetCorsa.Screens.DealerMap
             _timeService = timeService;
             _logger = AppLoggerFactory.CreateLogger("DealerMap");
 
+            (MapImage, MapAnchor, MapImageWidth, MapImageHeight) = LoadMap(dealerCatalog.Map);
+
             BackCommand = new RelayCommand(OnBack, () => !_isDriving);
             VisitDealerCommand = new RelayCommand<DealerPinViewModel>(OnVisitDealer, _ => !_isDriving);
 
             // The map is filled in Enter, after the screen before it has been left
         }
 
+        /// <summary>The map's picture, read whole and frozen so the file is not held open, and kept for the next time</summary>
+        private (System.Windows.Media.ImageSource?, System.Windows.Rect, double, double) LoadMap(DealerMapSpec? map)
+        {
+            if (map?.ImagePath is { } path)
+            {
+                if (_mapCache is { } cached && string.Equals(cached.Path, path, StringComparison.OrdinalIgnoreCase))
+                {
+                    return (cached.Image, map.Anchor, cached.Image.PixelWidth, cached.Image.PixelHeight);
+                }
+
+                try
+                {
+                    var image = new System.Windows.Media.Imaging.BitmapImage();
+                    image.BeginInit();
+                    image.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                    image.UriSource = new Uri(path, UriKind.Absolute);
+                    image.EndInit();
+                    image.Freeze();
+                    if (image.PixelWidth > 0 && image.PixelHeight > 0)
+                    {
+                        _mapCache = (path, image);
+                        return (image, map.Anchor, image.PixelWidth, image.PixelHeight);
+                    }
+                }
+                catch (Exception ex) when (ex is not OutOfMemoryException)
+                {
+                    _logger.Error(ex, "Could not read the dealer map {Path}", path);
+                }
+            }
+            else
+            {
+                _logger.Warning("No mod has a dealer map: the pins stand on a blank sheet");
+            }
+
+            return (null, new DealerMapSpec().Anchor, BlankSheetWidth, BlankSheetHeight);
+        }
+
         private async Task InitializeAsync()
         {
-            // The dealers the save carries are whatever the file says today: a save made before a dealer
-            // existed still gets it, and one dropped from the file goes away
-            var known = _dealerCatalog.ToLocations();
-            if (known.Count > 0)
-            {
-                _gameState.DealerLocations = known;
-            }
-            else if (_gameState.DealerLocations == null || _gameState.DealerLocations.Count == 0)
+            // The dealers the save carries are whatever the files say today, each keeping how its business is going:
+            // a save made before a dealer existed still gets it, and one dropped from the files goes away
+            DealerRoster.Sync(_gameState, _dealerCatalog);
+            if (_gameState.DealerLocations == null || _gameState.DealerLocations.Count == 0)
             {
                 _gameState.DealerLocations = _marketService.GetDefaultDealers();
             }
@@ -122,9 +155,16 @@ namespace StreetCorsa.Screens.DealerMap
                 IsLoading = true;
                 try
                 {
-                    _gameState.UsedCarMarket = await _marketService.SpawnListingsAsync(
-                        _gameState.DealerLocations, _gameState.Date, _gameState.Rules.CarPriceMultiplier);
-                    _logger.Information("Spawned {Count} listings for the map", _gameState.UsedCarMarket.Count);
+                    // A lot in its closing-down sale restocks nothing: what it has left is what it sells, so it keeps it
+                    var closing = DealerRoster.ClosingDown(_gameState).Select(d => d.Id).ToHashSet();
+                    var onSale = (_gameState.UsedCarMarket ?? []).Where(l => !l.IsSold && closing.Contains(l.DealerLocation)).ToList();
+
+                    var spawned = await _marketService.SpawnListingsAsync(
+                        DealerRoster.Restocking(_gameState), _gameState.Date, _gameState.Rules.CarPriceMultiplier);
+                    spawned.AddRange(onSale);
+                    _gameState.UsedCarMarket = spawned;
+                    _logger.Information("Spawned {Count} listings for the map, kept {OnSale} in closing-down sales",
+                        spawned.Count - onSale.Count, onSale.Count);
                 }
                 catch (Exception ex)
                 {
@@ -190,7 +230,7 @@ namespace StreetCorsa.Screens.DealerMap
         private List<DealerLocation> NeverStocked()
         {
             var listings = _gameState.UsedCarMarket ?? [];
-            return _gameState.DealerLocations
+            return DealerRoster.Restocking(_gameState)
                 .Where(d => !listings.Any(l => l.DealerLocation == d.Id))
                 .ToList();
         }
@@ -201,8 +241,10 @@ namespace StreetCorsa.Screens.DealerMap
 
             var remainingToday = _timeService.GetRemainingMinutesToday(_gameState);
 
-            foreach (var dealer in _dealerCatalog.All)
+            // The lots in business: open, or selling off their stock. The rest are closed, or not open yet.
+            foreach (var location in DealerRoster.Trading(_gameState))
             {
+                if (_dealerCatalog.Get(location.Id) is not { } dealer) continue;
                 var stock = _marketService.GetListingsByDealer(_gameState.UsedCarMarket ?? [], dealer.Id);
 
                 Pins.Add(new DealerPinViewModel
@@ -219,13 +261,21 @@ namespace StreetCorsa.Screens.DealerMap
                     CheapestPrice = stock.Count > 0 ? stock.Min(l => l.Price) : 0m,
                     DearestPrice = stock.Count > 0 ? stock.Max(l => l.Price) : 0m,
                     TravelHours = dealer.TravelHours,
-                    MinutesLeftToday = remainingToday
+                    MinutesLeftToday = remainingToday,
+
+                    ClosesOn = location.Status == DealerStatus.ClosingDown ? location.ClosesOn : null,
+                    DaysLeft = DealerRules.DaysLeft(location, _gameState.Date),
+                    Discount = DealerRules.DiscountOn(location, _gameState.Date),
+                    IsNew = location.OpenedOn is { } opened && (_gameState.Date.Date - opened.Date).TotalDays < NewForDays
                 });
             }
 
             OnPropertyChanged(nameof(HasDealers));
             _logger.Information("Map showing {Count} dealers", Pins.Count);
         }
+
+        /// <summary>A lot that opened during the game is marked new on the map for this long</summary>
+        private const int NewForDays = 21;
 
         private void OnVisitDealer(DealerPinViewModel? pin)
         {
@@ -234,6 +284,16 @@ namespace StreetCorsa.Screens.DealerMap
             // A drive that does not fit in what is left of the day costs the rest of it: the player gets
             // there, looks round, and comes back tomorrow morning. That is a fair trade for a long trip to
             // a lot with something good on it, but it is not one to make by accident.
+            // The last day of a sale, and too far to get there today: the doors will have shut by the morning
+            if (!pin.FitsToday && pin.IsClosingDown && pin.DaysLeft == 0)
+            {
+                _dialogService.ShowDialog(new InformationDialogViewModel(
+                    _dialogService,
+                    GameText.Installed.Get("dealer.drive.too_late", new TextValues { ["dealer"] = pin.Name, ["time"] = _gameState.Date }),
+                    GameText.Installed.Get("dealer.drive.too_late.title")));
+                return;
+            }
+
             if (!pin.FitsToday)
             {
                 var message = $"{pin.Name} is {pin.TravelDisplay.ToLowerInvariant()}, and it is " +
@@ -350,6 +410,39 @@ namespace StreetCorsa.Screens.DealerMap
         public string PriceDisplay => StockCount == 0
             ? "Nothing on the lot"
             : $"${CheapestPrice:N0} - ${DearestPrice:N0}";
+
+        /// <summary>The last day of its closing-down sale; null when it is not closing down</summary>
+        public DateTime? ClosesOn { get; set; }
+
+        /// <summary>What its closing-down sale takes off today</summary>
+        public decimal Discount { get; set; }
+
+        /// <summary>The days before the sale's doors shut: 0 on its last day</summary>
+        public int DaysLeft { get; set; }
+
+        /// <summary>Opened during the game, not long ago</summary>
+        public bool IsNew { get; set; }
+
+        public bool IsClosingDown => ClosesOn != null;
+
+        /// <summary>A word on the pin: the sale, or a lot that is new</summary>
+        public string Notice => IsClosingDown ? Text("dealer.notice.closing") : IsNew ? Text("dealer.notice.new") : string.Empty;
+
+        public bool HasNotice => Notice.Length > 0;
+
+        /// <summary>The card's line on the sale</summary>
+        public string NoticeDetail => IsClosingDown
+            // The cut still to come, until it has come
+            ? Text(DaysLeft >= DealerRules.FinalDays ? "dealer.detail.closing" : "dealer.detail.closing_final")
+            : IsNew ? Text("dealer.detail.new") : string.Empty;
+
+        private string Text(string key) => GameText.Installed.Get(key, new TextValues
+        {
+            ["dealer"] = Name,
+            ["discount"] = (int)Math.Round(Discount * 100),
+            ["finalDays"] = DealerRules.FinalDays,
+            ["day"] = ClosesOn
+        });
 
         public string TravelDisplay => TravelHours <= 1f
             ? "About an hour away"

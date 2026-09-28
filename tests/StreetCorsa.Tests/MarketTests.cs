@@ -113,6 +113,21 @@ public class MarketTests
     }
 
     [Fact]
+    public async Task A_car_in_a_closing_down_sale_stays_until_its_lot_shuts()
+    {
+        var today = new DateTime(1971, 6, 30, 8, 0, 0);
+        var listings = new List<UsedCarListing>
+        {
+            new() { Id = "stale", DealerLocation = "open", ListedDate = today.AddDays(-20) },
+            new() { Id = "on_sale", DealerLocation = "closing", ListedDate = today.AddDays(-20), Price = 8000m, PriceBeforeSale = 10000m }
+        };
+
+        var kept = await _market.RefreshMarketAsync(listings, [], today, 1.0);
+
+        Assert.Equal(new[] { "on_sale" }, kept.Select(l => l.Id));
+    }
+
+    [Fact]
     public void A_zone_out_of_a_hand_edited_save_is_capped_and_the_repair_bill_is_a_number()
     {
         var car = new Car("car_a") { BodyDamageKmh = [1e29, double.NaN, -5, double.PositiveInfinity] };

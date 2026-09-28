@@ -99,6 +99,7 @@ namespace StreetCorsa.Services.Opponents
                 .ToList();
             RivalCarAds.Tidy(gameState);
             foreach (var racer in racers) ReviewRacer(gameState, racer, currentDate, groupOf, talk);
+            ShopTheSales(gameState, currentDate, groupOf, talk);
             RivalCarAds.Tidy(gameState);
 
             Activate(gameState, currentDate, groupOf, talk);
@@ -329,12 +330,16 @@ namespace StreetCorsa.Services.Opponents
             foreach (var spare in spares) Advertise(gameState, racer, spare, date, talk);
         }
 
+        /// <summary>What a racer asks in the paper for a car worth <paramref name="value"/>, <paramref name="roll"/> 0 to 1 picking where in the range</summary>
+        private static decimal AskingFor(GameState gameState, decimal value, double roll) =>
+            OpponentRules.AskingPrice(GameRules.Scale(value, gameState.Rules.CarPriceMultiplier),
+                Math.Round(value * (decimal)CarSaleService.DealerShare), roll);
+
         /// <summary>The car in the paper, asking less than a lot would and more than a dealer pays</summary>
-        private void Advertise(GameState gameState, Opponent racer, Car car, DateTime date, List<string> talk)
+        /// <param name="quiet">Nothing said about the ad: what was said about the car already told it</param>
+        private void Advertise(GameState gameState, Opponent racer, Car car, DateTime date, List<string> talk, bool quiet = false)
         {
-            var value = ValueOf(car);
-            var asking = OpponentRules.AskingPrice(GameRules.Scale(value, gameState.Rules.CarPriceMultiplier),
-                Math.Round(value * (decimal)CarSaleService.DealerShare), _random.NextDouble());
+            var asking = AskingFor(gameState, ValueOf(car), _random.NextDouble());
             if (asking <= 0)
             {
                 Sell(gameState, racer, car, talk);
@@ -344,7 +349,7 @@ namespace StreetCorsa.Services.Opponents
             // What the seller says about the engine, as a lot would: the ad keeps it, the paper's page reads it from there
             var engine = _market.DescribeEngine(car);
             RivalCarAds.Post(gameState, racer, car, asking, date, engine?.Summary, engine?.IsModified ?? false);
-            talk.Add(Say("street.advertised", racer, car, new TextValues { ["price"] = asking }));
+            if (!quiet) talk.Add(Say("street.advertised", racer, car, new TextValues { ["price"] = asking }));
             _logger.Information("{Racer} advertised the {Car} for ${Asking}", racer.Name, car.DefinitionId, asking);
         }
 
@@ -445,7 +450,102 @@ namespace StreetCorsa.Services.Opponents
             if (RivalCarAds.AdFor(gameState, current) == null && !current.IsImpounded) Advertise(gameState, racer, current, date, talk);
         }
 
-        private bool Buy(GameState gameState, Opponent racer, ForSale pick, DateTime date, List<string> talk)
+        // ----- closing-down sales -----
+
+        /// <summary>
+        /// A dealer's closing-down sale draws the racers with money (<see cref="OpponentRules.BargainChance"/>): one buys
+        /// a stronger car cheap and puts the old one in the paper, another buys one to put straight back in the paper
+        /// for more (<see cref="OpponentRules.WorthFlipping"/>, in the sale's last days). A few a day at most
+        /// (<see cref="OpponentRules.MaxBargainsPerDay"/>), so there is something left when the player gets there.
+        /// </summary>
+        private void ShopTheSales(GameState gameState, DateTime date, Func<string, string?>? groupOf, List<string> talk)
+        {
+            if (!AnyOnSale(gameState)) return;
+
+            var shoppers = gameState.Racers.ReadyToRace.Values.OfType<Opponent>()
+                .Where(r => !r.IsKing && !r.IsBroke && r.Money > 0)
+                .OrderBy(_ => _random.Next())
+                .ToList();
+
+            var bought = 0;
+            foreach (var racer in shoppers)
+            {
+                if (bought >= OpponentRules.MaxBargainsPerDay || !AnyOnSale(gameState)) break;
+
+                // One car a day is enough for anybody, and most days they have other things to do
+                if (racer.Cars.Any(c => c.PurchaseDate.Date == date.Date) || _random.NextDouble() >= OpponentRules.BargainChance) continue;
+
+                try
+                {
+                    if (TryBargain(gameState, racer, date, groupOf, talk)) bought++;
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "{Racer} could not shop the closing-down sale", racer.Name);
+                }
+            }
+        }
+
+        private static bool AnyOnSale(GameState gameState) => OnSale(gameState).Any();
+
+        /// <summary>The cars marked down on the lots of the dealers closing down</summary>
+        private static IEnumerable<UsedCarListing> OnSale(GameState gameState)
+        {
+            var closing = Services.Dealers.DealerRoster.ClosingDown(gameState).Select(d => d.Id).ToHashSet();
+            return closing.Count == 0
+                ? []
+                : (gameState.UsedCarMarket ?? []).Where(l => !l.IsSold && l.PriceBeforeSale != null && closing.Contains(l.DealerLocation));
+        }
+
+        private bool TryBargain(GameState gameState, Opponent racer, DateTime date, Func<string, string?>? groupOf, List<string> talk)
+        {
+            var current = racer.Cars.FirstOrDefault();
+            var currentHp = current?.PowerHp ?? 0;
+            var affordable = OnSale(gameState).Where(l => OpponentRules.Affordable(l.Price, racer.Money)).ToList();
+            if (affordable.Count == 0) return false;
+
+            // A stronger car than theirs, cheap
+            var step = affordable
+                .Where(l => (l.PowerHp ?? 0) >= Math.Max(1, currentHp) * OpponentRules.BargainTradeUpGain)
+                .OrderByDescending(l => OpponentRules.PurchaseScore(l.PowerHp ?? 0, l.Condition, (l.PowerHp ?? 0) > 0, l.Price, racer.Money))
+                .FirstOrDefault();
+            if (step != null)
+            {
+                if (!Buy(gameState, racer, ForSaleOf(step), date, talk, "street.bargain")) return false;
+
+                PickBestCar(racer, groupOf);
+                if (current != null && !ReferenceEquals(racer.Cars[0], current) && RivalCarAds.AdFor(gameState, current) == null && !current.IsImpounded)
+                {
+                    Advertise(gameState, racer, current, date, talk);
+                }
+
+                return true;
+            }
+
+            // Or one to sell on, with a car of their own to keep driving and room for another: the deepest cut first
+            if (current == null || racer.Cars.Count >= OpponentRules.MaxCars) return false;
+            var flip = affordable
+                .Where(l => OpponentRules.WorthFlipping(l.Price, LeastAsked(gameState, l, date)))
+                .OrderByDescending(l => (l.PriceBeforeSale ?? 0) - l.Price)
+                .FirstOrDefault();
+            if (flip == null || !Buy(gameState, racer, ForSaleOf(flip), date, talk, "street.bargain_flip")) return false;
+
+            // Bought to sell, as the street was told: they keep driving their own, and this one goes in the paper
+            var bought = racer.Cars[0];
+            racer.Cars.RemoveAt(0);
+            racer.Cars.Add(bought);
+            Advertise(gameState, racer, bought, date, talk, quiet: true);
+            return true;
+        }
+
+        /// <summary>The least a racer would ask in the paper for a car on a lot: what a flip has to beat</summary>
+        private decimal LeastAsked(GameState gameState, UsedCarListing listing, DateTime date) =>
+            AskingFor(gameState, ValueOf(CarPurchaseService.CarFrom(listing, date, string.Empty)), 0);
+
+        private static ForSale ForSaleOf(UsedCarListing listing) => new(listing.Price, listing.PowerHp ?? 0, listing.Condition, listing, null);
+
+        /// <param name="lotLine">What the street says about a car off a lot, when not the usual (a bargain at a sale)</param>
+        private bool Buy(GameState gameState, Opponent racer, ForSale pick, DateTime date, List<string> talk, string? lotLine = null)
         {
             if (pick.Ad is { } offer)
             {
@@ -487,7 +587,7 @@ namespace StreetCorsa.Services.Opponents
             Grudges.CarBack(racer, car);
 
             var dealer = gameState.DealerLocations?.FirstOrDefault(d => d.Id == listing.DealerLocation)?.Name;
-            talk.Add(Say(dealer == null ? "street.bought" : "street.bought_dealer", racer, car, new TextValues { ["dealer"] = dealer, ["price"] = listing.Price }));
+            talk.Add(Say(dealer == null ? "street.bought" : lotLine ?? "street.bought_dealer", racer, car, new TextValues { ["dealer"] = dealer, ["price"] = listing.Price }));
             _logger.Information("{Racer} bought the {Car} for ${Price} ({Hp:0} hp), ${Money} left", racer.Name, car.DefinitionId, listing.Price, car.PowerHp ?? 0, racer.Money);
             return true;
         }

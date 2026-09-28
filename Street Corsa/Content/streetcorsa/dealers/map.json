@@ -1,0 +1,21 @@
+{
+  "_comment": [
+    "The picture the dealers' pins stand on. Every dealer's mapX/mapY is a fraction of this picture, measured from",
+    "its top left, so replacing the picture means re-reading every pin off it. The last mod's map is the one shown.",
+    "",
+    "The picture is the Automobile Club of Southern California's road map of Los Angeles and Vicinity, 2444 x 1560.",
+    "It reaches out to Victorville and Joshua Tree, most of it desert with nothing to sell a car in, so the anchor",
+    "is the inhabited corner: the valley and the coast across to Riverside. The anchor is what must be on screen, as",
+    "fractions of the whole picture; the screen grows out of it to the window's shape, so a wider window sees more."
+  ],
+  "maps": [
+    {
+      "id": "los_angeles",
+      "image": "los_angeles_map.jpg",
+      "anchorX": 0.05,
+      "anchorY": 0.28,
+      "anchorWidth": 0.62,
+      "anchorHeight": 0.55
+    }
+  ]
+}

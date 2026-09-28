@@ -19,9 +19,12 @@ namespace StreetCorsa.Services.Dealers
         /// </summary>
         ShowroomSpec GetShowroom(string id);
 
+        /// <summary>The picture the pins stand on (the last mod's); null when no mod has one</summary>
+        DealerMapSpec? Map { get; }
+
         /// <summary>
-        /// The dealers a saved game should carry. Call on load: a save made before a dealer existed gets it,
-        /// and a dealer dropped from the file goes away.
+        /// Every dealer as a new game carries it (open, or waiting to open). A game under way is brought up to the
+        /// dealers with <see cref="DealerRoster.Sync"/>, which keeps how each one's business is going.
         /// </summary>
         List<DealerLocation> ToLocations();
     }

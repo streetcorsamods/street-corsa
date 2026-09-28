@@ -203,7 +203,9 @@ namespace StreetCorsa
             OpponentRepository = new OpponentRepository();
             OpponentInitializationService = new OpponentInitializationService(OpponentRepository, CatalogRepository, ProfileRepository, CarPartsService);
 
-            // The rivals' morning first (cars bought, fixed, tuned), then their races against each other
+            // The dealers' morning first (a sale marked down, a lot closing or opening), then the rivals' (cars bought,
+            // fixed, tuned, the sales shopped), then their races against each other
+            Scheduler.RegisterTask(new Services.Scheduler.Tasks.DealerReviewTask(new Services.Dealers.DealerLifeService(DealerCatalog)));
             Scheduler.RegisterTask(new OpponentReviewTask(new OpponentLifeService(CarPartsService, MarketService, CatalogRepository, OpponentInitializationService)));
             Scheduler.RegisterTask(new Services.Scheduler.Tasks.RaceSimulatorTask(new Services.Simulation.RaceSimulatorService(MarketService, CarPartsService), CatalogRepository));
             OpponentChallengeService = new OpponentChallengeService(CatalogRepository, ProfileRepository, CarPartsService);

@@ -225,10 +225,11 @@ namespace StreetCorsa.Services.Market
                 _logger.Information("Removed {Count} old sold listings", removedSold);
             }
 
-            // Despawn old unsold listings (older than 14 days)
+            // Despawn old unsold listings (older than 14 days). Not a car in a closing-down sale: it stays until its lot
+            // shuts, and goes with it (DealerLifeService)
             var unsoldCutoff = currentDate.AddDays(-14);
             var kept = filtered.Where(l =>
-                l.IsSold || l.ListedDate > unsoldCutoff).ToList();
+                l.IsSold || l.PriceBeforeSale != null || l.ListedDate > unsoldCutoff).ToList();
 
             var removedUnsold = filtered.Count - kept.Count;
             if (removedUnsold > 0)
@@ -397,7 +398,10 @@ namespace StreetCorsa.Services.Market
 
         public string TradeInLocation(IReadOnlyList<DealerLocation>? dealers)
         {
-            var known = dealers is { Count: > 0 } ? dealers : GetDefaultDealers();
+            // Only a lot that is open takes a car in: not one selling off its stock, closed, or not open yet
+            var all = dealers is { Count: > 0 } ? dealers : GetDefaultDealers();
+            var open = DealerRoster.Restocking(all);
+            var known = open.Count > 0 ? open : all;
 
             // The lot that keeps the roughest stock takes the cars nobody asked about: the trade-ins
             var roughest = known

@@ -969,6 +969,25 @@ Idea 2, second half. More dealers, and now and then one goes out of business or 
 business all game. Built like the opponents' churn (step 12). Needs the dealer map moddable, which step 16 left out
 (the map picture is still a compiled resource), so a mod's dealers get pins on the map.
 
+**The user decided (2026-09-27):** 20 dealers, about 12 open at a time; a change about every two months; a closing
+dealer holds a closing-down sale announced about a week ahead, and the other racers are eager to get the bargains; which
+lot goes under depends on how it is doing (cars sitting unsold, sales to the player and the rivals), still with chance.
+
+**Built (2026-09-27, `feature/dealer-churn`), played by the user:** see `docs/systems/market-system.md` "Dealers
+Come and Go".
+- Ten new dealers in `dealers.json` (Fairplex Auto Mart in Pomona and Firestone Boulevard Motors in Downey open from the
+  start, the other eight `"startsOpen": false`), placed so no pins overlap.
+- The save's `DealerLocation` carries the business (`Status` Open/ClosingDown/Closed/Waiting, `OpenedOn`, `ClosesOn`,
+  `ClosedOn`, `Trade`); `DealerRoster.Sync` merges the definitions over it instead of replacing the list.
+- `DealerLifeService` (the daily `dealer_review` task, first): trade counting, the sale (20% off, 35% in the last three
+  days, no restocking, shut after seven days), a change about every 60 days toward 60% open, never under 40%. The paper
+  and the diner report it (`Content/streetcorsa/text/dealers.json`).
+- The rivals shop the sales (`OpponentLifeService.ShopTheSales`): trade-ups at 10% more power, flips at the deep cut,
+  at most two cars a day.
+- The map pin and lot header show the sale; the price card strikes through the old price. Trade-ins only go to open lots.
+- The dealer map is content: `Content/streetcorsa/dealers/map.json` (a `maps` list: picture and crop anchor) with the
+  picture moved there from `Assets`; the last mod's map wins.
+
 ### Step 21: part dealers
 Idea 1. Parts shops on the map like the car dealers, specialised by make (a Mopar shop, a Ford shop) or by kind
 (speed shop, junkyard with used parts), each with its own prices and stock. After step 20: it reuses its map and churn.

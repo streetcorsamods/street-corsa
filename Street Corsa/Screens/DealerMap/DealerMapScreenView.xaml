@@ -20,7 +20,7 @@
             <!-- Stretch=Fill is right here: the viewbox is already the shape of the panel -->
             <Rectangle>
                 <Rectangle.Fill>
-                    <ImageBrush ImageSource="pack://application:,,,/Assets/Images/Backgrounds/los_angeles_map.jpg"
+                    <ImageBrush ImageSource="{Binding MapImage}"
                                 Viewbox="{Binding EffectiveCrop, ElementName=Map}"
                                 ViewboxUnits="RelativeToBoundingBox"
                                 Stretch="Fill"/>
@@ -99,6 +99,13 @@
                                                            FontSize="{StaticResource FontSizeCaption}"
                                                            Foreground="{StaticResource TextSecondaryBrush}"
                                                            HorizontalAlignment="Center"/>
+                                                <!-- The closing-down sale, or a lot that is new: worth the drive -->
+                                                <TextBlock Text="{Binding Notice}"
+                                                           Visibility="{Binding HasNotice, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                           FontSize="{StaticResource FontSizeCaption}"
+                                                           FontWeight="Bold"
+                                                           Foreground="{StaticResource GoldBrush}"
+                                                           HorizontalAlignment="Center"/>
                                             </StackPanel>
                                         </Border>
                                     </StackPanel>
@@ -137,6 +144,13 @@
                                                    TextWrapping="Wrap"
                                                    FontStyle="Italic"
                                                    Foreground="{StaticResource TextSecondaryBrush}"
+                                                   Margin="0,0,0,8"/>
+                                        <TextBlock Text="{Binding NoticeDetail}"
+                                                   Visibility="{Binding HasNotice, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                   FontSize="{StaticResource FontSizeSmall}"
+                                                   TextWrapping="Wrap"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{StaticResource GoldBrush}"
                                                    Margin="0,0,0,8"/>
                                         <TextBlock Text="{Binding PriceDisplay}"
                                                    FontSize="{StaticResource FontSizeCompact}"

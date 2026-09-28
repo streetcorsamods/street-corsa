@@ -42,6 +42,7 @@ Street Rod-style career mode manager for Assetto Corsa. WPF app manages game log
 |--------|---------|---------|
 | Catalog | ContentCatalogRepository, CarProfileService | Car import, profiles |
 | Market | UsedCarMarketService, CarValuation | Spawn listings, refresh, purchases; one formula for what a car is worth |
+| Dealers | DealerCatalog, DealerRoster, DealerLifeService | The dealers of the mods on their map; about 60% open, now and then one closes (closing-down sale the rivals shop) or opens (the `dealer_review` task; see `docs/systems/market-system.md`) |
 | Opponents | OpponentInitializationService, OpponentLifeService, EngineTuner, OpponentEvolutionService | Rivals on the street: daily review (buy, repair, tune, go broke, come back), the King (see `docs/systems/opponent-system.md`) |
 | Time | GameTimeScheduler, IScheduledTask | Time-based task execution |
 | Race | AssettoCorsaLauncher, IniModificationService, RaceResultIngestionService | Launch AC, modify and restore configs, stop a race, read results (`LaunchResult.Outcome`, `PlayerMessages`) |
@@ -83,7 +84,7 @@ NavigationService.NavigateTo[ScreenName](dependencies) : bool
 
 ## Market System
 - `CarProfile.DealerPrecedence` controls spawn probability (0.0=rare, 1.0=common)
-- Daily refresh: remove old listings, spawn new based on precedence
+- Daily refresh: remove old listings, spawn new based on precedence, on the open lots only (`DealerRoster.Restocking`)
 - Condition affects price (better condition = higher price)
 
 ## AC-Side Components (Outside C# Project)

@@ -1,5 +1,6 @@
 using StreetCorsa.Logging;
 using StreetCorsa.Models.GameState;
+using StreetCorsa.Services.Dealers;
 using StreetCorsa.Services.Market;
 
 namespace StreetCorsa.Services.Scheduler.Tasks
@@ -48,7 +49,8 @@ namespace StreetCorsa.Services.Scheduler.Tasks
 
             var refreshed = await _marketService.RefreshMarketAsync(
                 live,
-                gameState.DealerLocations,
+                // A lot in its closing-down sale sells off what it has; one closed or not open yet has nothing
+                DealerRoster.Restocking(gameState),
                 currentDate,
                 gameState.Rules.CarPriceMultiplier);
 
