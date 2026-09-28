@@ -314,12 +314,14 @@ public class ShowcaseViewport3D : D3DViewportBase
         // The main slot takes the middle, the others the rest in the order they came in
         var main = Renderer?.MainSlot;
         var cars = _lineup.OrderBy(c => c.Slot == main ? 0 : 1).ToList();
+        for (var i = 0; i < cars.Count; i++) Place(cars[i].Slot, layout[i]);
+
+        // Where the cars now stand, before anything reads a box: the shadows and reflections go by them
+        Renderer?.RefreshBounds();
+
         _lineup.Clear();
         for (var i = 0; i < cars.Count; i++)
-        {
-            Place(cars[i].Slot, layout[i]);
             _lineup.Add(cars[i] with { Placement = layout[i], Frame = FrameOf(cars[i].Slot) });
-        }
     }
 
     private static void Place(CarSlot slot, CarPlacement placement)

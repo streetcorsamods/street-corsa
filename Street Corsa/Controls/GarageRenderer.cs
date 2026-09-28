@@ -125,6 +125,18 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     /// </summary>
     public void RefreshShadows() => SetShadowsDirty();
 
+    /// <summary>
+    /// Works the scene's boxes out again after cars were moved by hand. Setting a slot's matrix leaves its box where
+    /// the car was, and the shadows (centred on the main slot's box, drawn only for cars whose box a shadow cascade
+    /// takes in) and the reflections follow the boxes: a moved car can end up casting no shadow at all.
+    /// </summary>
+    public void RefreshBounds()
+    {
+        Scene.UpdateBoundingBox();
+        foreach (var slot in CarSlots) slot.ResetCarBoundingBox();
+        SetShadowsDirty();
+    }
+
     public bool HasProp => _prop != null;
 
     /// <summary>

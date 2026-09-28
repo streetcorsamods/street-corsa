@@ -948,7 +948,15 @@ the game.
 The third batch of the user's ideas. **The user decided (2026-09-27):** as before, a small polish PR first, then one
 step per idea, one at a time, in this order. Details of each are settled when it starts.
 
-### Polish 2: init screen, shadows and dealer pins
+### Polish 2: init screen, shadows and dealer pins (done, PRs #37 and #38)
+**Built (2026-09-27), user tested in game:** the init screen is now the main screen's title (`IntroView`), shown at
+least 4 s and until the first room fades up behind it (15 s at most). Eastside Garage moved toward Montebello,
+Industrial Motors to the City of Industry. Shadows: the main screen's cars kept their bounding boxes where they first
+loaded, so the shadow cascades (centred on the main slot's box, drawing only cars whose box they take in) missed some
+cars; `GarageRenderer.RefreshBounds()` after the layout fixes it. The dealer lots had no bug: a roofed showroom shades
+its whole floor, and the shadows soften away from the main slot (sharp cascade about 10 m, none past about 23 m).
+Aiming the sharp cascade at the car looked at would need a patched actools (`ShadowsPosition` is not virtual).
+
 - **Init screen** (idea 3): shown for a fixed time before the main screen, and the main screen's cars and scene load
   behind it, so the menu never shows over a black screen while the cars render.
 - **Shadows** (idea 4): some cars have no shadow, or a bad one, at the dealers and in the main screen's cinematics;
