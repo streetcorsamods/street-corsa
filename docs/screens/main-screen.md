@@ -28,6 +28,10 @@ MainMenu ──▶ card: New Game ──▶ Garage
   that fails to build or open is reported like a screen (`NavigationService.SafeOpenCard`). If starting or loading a
   game fails, the main screen is resumed with the card the player was using open again.
 - **The name of the car the camera is on** shows small, in italics, at the bottom right, with a shadow.
+- **The game opens on its title** (`IntroView`, the old init screen, laid over the main screen): it stays at least 4 s
+  and until the first scene is fading up behind it, at most 15 s, then fades out as the menu drops in, so the menu
+  never stands on black while the cars load (user's idea, 2026-09-27). A click takes it away sooner. Only at startup
+  (`NavigationService.NavigateToStart`); coming back from a game opens the main screen straight away.
 - **The screen opens black** and the first scene fades up in it (user's change: the old picture used to hold the
   screen while it loaded). The old picture (`Backgrounds/main.png`) only comes up when there is nothing to show: no
   Assetto Corsa folder, no installed catalog cars or no scene found (`MainMenuScreenViewModel.NothingToShow`), or a

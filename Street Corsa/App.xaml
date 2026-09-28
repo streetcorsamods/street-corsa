@@ -3,7 +3,6 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:StreetCorsa"
              xmlns:converters="clr-namespace:StreetCorsa.Converters"
-             xmlns:init="clr-namespace:StreetCorsa.Screens.Init"
              xmlns:mainMenu="clr-namespace:StreetCorsa.Screens.MainMenu"
              xmlns:newGame="clr-namespace:StreetCorsa.Screens.NewGame"
              xmlns:loadGame="clr-namespace:StreetCorsa.Screens.LoadGame"
@@ -56,10 +55,6 @@
                             Opacity="0.5"/>
 
             <!-- Screen DataTemplates -->
-            <DataTemplate DataType="{x:Type init:InitScreenViewModel}">
-                <init:InitScreenView/>
-            </DataTemplate>
-
             <DataTemplate DataType="{x:Type mainMenu:MainMenuScreenViewModel}">
                 <mainMenu:MainMenuScreenView/>
             </DataTemplate>

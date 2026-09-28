@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:controls="clr-namespace:StreetCorsa.Controls"
+             xmlns:local="clr-namespace:StreetCorsa.Screens.MainMenu"
              mc:Ignorable="d"
              d:DesignHeight="720" d:DesignWidth="1280">
     <!--
@@ -117,5 +118,11 @@
                             VerticalAlignment="Top"
                             Focusable="False"/>
         </ScrollViewer>
+
+        <!-- The title the game opens on, over everything while the showroom loads behind it -->
+        <local:IntroView x:Name="Intro"
+                         Grid.RowSpan="3"
+                         Visibility="Collapsed"
+                         MouseDown="Intro_MouseDown"/>
     </Grid>
 </UserControl>

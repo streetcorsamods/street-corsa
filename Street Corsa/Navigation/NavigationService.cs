@@ -247,8 +247,9 @@ namespace StreetCorsa.Navigation
         // Each method encapsulates the creation of a specific screen
         // ============================================================
 
-        public bool NavigateToInit() => SafeNavigate("start screen", () =>
-            new Screens.Init.InitScreenViewModel(this, _dialogService));
+        /// <summary>Where the game opens: the main screen, under its title while the cars load behind it</summary>
+        public bool NavigateToStart() => SafeNavigate("main menu", () =>
+            new Screens.MainMenu.MainMenuScreenViewModel(this, _dialogService, _catalogRepository, showIntro: true));
 
         /// <param name="card">A card to open on arrival: the car catalog editor goes back to the settings it came from</param>
         public bool NavigateToMainMenu(Screens.MainMenu.MainMenuCard card = Screens.MainMenu.MainMenuCard.None) =>

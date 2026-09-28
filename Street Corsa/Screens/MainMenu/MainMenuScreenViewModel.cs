@@ -53,16 +53,22 @@ namespace StreetCorsa.Screens.MainMenu
         /// <summary>Esc: back to the menu from whichever card is open</summary>
         public RelayCommand CloseCardCommand { get; }
 
+        /// <summary>The game's title covers the screen when it opens, while the showroom loads behind it</summary>
+        public bool ShowIntro { get; }
+
         /// <param name="openCard">A card to open straight away</param>
+        /// <param name="showIntro">The game is starting: the title first</param>
         public MainMenuScreenViewModel(
             NavigationService navigationService,
             DialogService dialogService,
             IContentCatalogRepository catalog,
-            MainMenuCard openCard = MainMenuCard.None)
+            MainMenuCard openCard = MainMenuCard.None,
+            bool showIntro = false)
         {
             _navigationService = navigationService;
             _dialogService = dialogService;
             _catalog = catalog;
+            ShowIntro = showIntro;
 
             NewGameCommand = new RelayCommand(() => Open(MainMenuCard.NewGame));
             LoadGameCommand = new RelayCommand(() => Open(MainMenuCard.LoadGame));

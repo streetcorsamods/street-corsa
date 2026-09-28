@@ -8,7 +8,6 @@ using StreetCorsa.Configuration;
 using StreetCorsa.Dialogs;
 using StreetCorsa.Logging;
 using StreetCorsa.Navigation;
-using StreetCorsa.Screens.Init;
 using StreetCorsa.Services;
 using StreetCorsa.Services.Catalog;
 using StreetCorsa.Services.Configuration;
@@ -407,7 +406,7 @@ namespace StreetCorsa
 
             // Navigate to initial screen
             logger.Information("Navigating to initial screen");
-            NavigationService.NavigateToInit();
+            NavigationService.NavigateToStart();
 
             // Closing the window during a race asks first: the race is stopped and the install put back before the app goes
             if (MainWindow != null) MainWindow.Closing += OnMainWindowClosing;

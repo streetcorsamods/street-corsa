@@ -126,6 +126,9 @@ public class ShowcaseViewport3D : D3DViewportBase
 
     #endregion
 
+    /// <summary>Raised when a room starts to fade up: the first one is when the main screen has something to show</summary>
+    public event EventHandler? SceneShown;
+
     #region Loading
 
     private void OnContentChanged()
@@ -478,7 +481,10 @@ public class ShowcaseViewport3D : D3DViewportBase
         if (_fadeInAfter < 0) return;
         if (_fadeInAfter-- > 0) return;
 
-        if (IsPictureHidden) FadeIn(SceneFadeIn);
+        if (!IsPictureHidden) return;
+
+        FadeIn(SceneFadeIn);
+        SceneShown?.Invoke(this, EventArgs.Empty);
     }
 
     protected override void OnRendererDisposed()

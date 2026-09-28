@@ -4,8 +4,7 @@
 
 | Screen | Path | Purpose |
 |--------|------|---------|
-| Init | `Screens/Init/` | App startup, catalog loading |
-| MainMenu | `Screens/MainMenu/` | Main screen: cars filmed in the showrooms, the menu over them (see `main-screen.md`) |
+| MainMenu | `Screens/MainMenu/` | Main screen: the game's title while it loads, then cars filmed in the showrooms with the menu over them (see `main-screen.md`) |
 | NewGame | `Screens/NewGame/` | Create new save (a card on the main screen) |
 | LoadGame | `Screens/LoadGame/` | Load existing save (a card on the main screen) |
 | Settings | `Screens/Settings/` | App settings (a card on the main screen) |
@@ -24,7 +23,7 @@
 ## Navigation Flow
 
 ```
-Init → MainMenu (NewGame, LoadGame and Settings are cards on it, not screens)
+MainMenu (opens under the title; NewGame, LoadGame and Settings are cards on it, not screens)
          ├── NewGame card → Garage
          ├── LoadGame card → Garage
          └── Settings card → CarCatalogEditor → MainMenu with the Settings card open
@@ -52,7 +51,7 @@ Each screen folder contains:
 
 | Method | Target Screen |
 |--------|---------------|
-| NavigateToInit() | Init |
+| NavigateToStart() | MainMenu under the title, at startup |
 | NavigateToMainMenu(card) | MainMenu, optionally with a card open |
 | CreateNewGameCard(back) | NewGame card (not a navigation) |
 | CreateLoadGameCard(back) | LoadGame card (not a navigation) |
