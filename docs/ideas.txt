@@ -1,16 +1,17 @@
-1. New Main Screen Tweaks
-	Make the buttons smaller and place them a little bit below they are now. The degrade start below. The cars should not take all the attention.
-
-2. New Streets environment
-	Again, I want a 3D streets experience. SLRR had Valo City where the player drives around and engages an opponent to race. I don't want that but maybe render the player's car with the camera in the driver's seat pointing to the left and then an opponent shows up driving and the race dialog pops up, more like Street Rod behavior. The cars should have the engine's sound and a proper animation with body movement when bracking and throttling.
+1. Part dealers
+	Just like the car dealers in the map, I want also part dealers. Maybe specialized in brands or part types. Propose something nice, my man!
 	
-3. Engine stand and manipulation
-	We don't have a bank for the engine modeled but I want the work in the engine be in there: for working on peripherals, manifolds and even cylinder heads, we allow the player to do it with the engine installed in the car. But engine internals should be worked on the bank and in the proper order. You can't take the crankshaft before you remove the connecting rods and the pistons, and you can't do it with the engine installed (in most cases).
+2. Raise the dealer number and check the overlapping
+	Eastside Garage and Industrial Motors overlaps with Downtown and Vermont, respectively.
+	It would be nice to rotate the dealers and make new ones appear. Not too often, they might be in business all along the game, but sometimes a dealer brokes and some other times a new one gets in the business.
+
+3. Init screen
+	Give it a fixed time before moving to the main screen. Preload the car rendering because it shows the buttons in a black screen and after a few seconds the cars and the scene are rendered.
+
+4. Take a look at the shadows in the dealers and in the cinematics of the main screen. Some cars don't have it or it's bad.
+
+5. Engine rotation in the stand
+	It would be nice to be able to flip the engine upside down to install the crankshaft, bearings and oil pan. Just cosmetic, don't prevent the player to do it if it isn't flipped. Give it a nice animation. Keep in mind that the installation animation would flip too.
 	
-4. We have a special case: the Chevrolet Corvair, which has the engine in the back. Think what we can do about it.
-
-5. Parts scale: the parts ported from SLRR seems a little bit small. Can we scale up them by a 20% and see how it goes?
-
-6. Gas Station: search for mods of gas stations, preferably from the 60's or 70's. I want to add the full animation like Street Rod did where the player goes to get some fuel to the gas station. The original SR had a 'Cruising in town' scene from inside the car as if the player drives to the gas station. Let's try to recreate that! Maybe you find a gas station mod that have a street where the car can come running.
-
-7. Everything should be moddable: parts, dealers, gas stations, etc. This game will be open source so the members of the community should be able to create any mod and drop it in the proper game folder and the game should pick it up. Think of what we need to modify for this feature and keep in mind saved games.
+6. Player's Car Lot
+	Instead of a list, I want a 3D scene. Maybe we can build something like a parking lot or a warehouse. Propose something.

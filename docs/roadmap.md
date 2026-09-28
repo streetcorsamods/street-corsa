@@ -384,6 +384,7 @@ in the police chance; hiding the cops from AC's HUD leaderboard. Any other car c
 - **Newspaper articles written from race history** (the processed race sessions are already saved).
 - **Car history:** every car keeps its odometer, previous owners and wins, and its price reflects them.
 - **From `docs/ideas.txt` (2026-09-26):** planned as the polish PR and steps 16–19 below.
+- **From `docs/ideas.txt` (2026-09-27, batch 3):** planned as the polish PR and steps 20–23 below.
 - **Parts that fail in the race:** an over-revved engine throws a rod in AC, and you find the damaged part on the workbench afterwards. Since step 2 the whole rotating assembly takes the damage together (the parts view shows it); singling out the one part that failed is still open.
 
 ## Step 7: career gaps (done, PR #22, merged as `6aa3d39`)
@@ -883,7 +884,7 @@ stand" and "The work order", `docs/modding.md` "The work order"):
   and catches any read failure; the stand's boxes and materials are built by `PlaceholderMesh`. 1162 tests pass. The
   3D changes are not checked in the game or the harness.
 
-### Step 18: engine layout, and the Chevrolet Corvair
+### Step 18: engine layout, and the Chevrolet Corvair (done, PR #35, merged as `b89bf7e`)
 Idea 4. The Corvair's engine is in the back.
 
 **The user decided (2026-09-26):** the Corvair keeps a V8 as now (the matcher gave it a GM 283), but drawn in the
@@ -907,7 +908,7 @@ front-wheel drive or 44%+ on the front axle = front, else rear (mid can't be tol
 the 167 installed cars only the two Corvairs come out rear. Checked in an offscreen render of the Corvair in all
 three layouts; not yet seen in the game. Left for later: the matcher preferring a flat six by layout and cylinders.
 
-### Step 19: the gas station
+### Step 19: the gas station (done, PR #36, merged as `e328923`)
 Idea 6. The player drives to the gas station, as in Street Rod, with its "cruising in town" view from inside the car.
 
 **The user decided (2026-09-26):** filling up only at the station (the garage's fill-up goes); the car washes move
@@ -941,6 +942,36 @@ road: the GTO's tyres were half in it), the driver's eyes placed by the steering
 drivers on the wheel), through AC's onboard lens; the street too. After the user's first look: fades in and out, a progress bar while the pump runs, the engine off at the pump and
 started to drive off, smoother (centripetal) curves. Checked in offscreen renders and a viewport harness; not yet seen in
 the game.
+
+## Steps 20–23: from `docs/ideas.txt`, batch 3 (planned 2026-09-27)
+
+The third batch of the user's ideas. **The user decided (2026-09-27):** as before, a small polish PR first, then one
+step per idea, one at a time, in this order. Details of each are settled when it starts.
+
+### Polish 2: init screen, shadows and dealer pins
+- **Init screen** (idea 3): shown for a fixed time before the main screen, and the main screen's cars and scene load
+  behind it, so the menu never shows over a black screen while the cars render.
+- **Shadows** (idea 4): some cars have no shadow, or a bad one, at the dealers and in the main screen's cinematics;
+  find out why and fix it.
+- **Dealer overlap** (idea 2, first half): Eastside Garage overlaps Downtown, Industrial Motors overlaps Vermont, on
+  the dealer map (`Content\streetcorsa\dealers\dealers.json`); move them apart.
+
+### Step 20: dealers come and go
+Idea 2, second half. More dealers, and now and then one goes out of business or a new one opens; most stay in
+business all game. Built like the opponents' churn (step 12). Needs the dealer map moddable, which step 16 left out
+(the map picture is still a compiled resource), so a mod's dealers get pins on the map.
+
+### Step 21: part dealers
+Idea 1. Parts shops on the map like the car dealers, specialised by make (a Mopar shop, a Ford shop) or by kind
+(speed shop, junkyard with used parts), each with its own prices and stock. After step 20: it reuses its map and churn.
+
+### Step 22: flip the engine on the stand
+Idea 5. The engine turns upside down on the stand with an animation, to fit the crankshaft, bearings and oil pan; the
+part moves turn with it. Cosmetic only: nothing is refused when the engine isn't flipped.
+
+### Step 23: the player's car lot in 3D
+Idea 6. A 3D scene instead of the list. Options to propose when the step starts: a warehouse with the cars parked in
+rows under lights (the showroom's renderer), or an outdoor lot with a fence, lit by the time of day (the street's).
 
 ## Testing in AC without driving
 
