@@ -11,7 +11,7 @@
             <TextBlock Text="LOAD GAME" Style="{StaticResource MenuCardTitleStyle}"/>
 
             <!-- Save Games List -->
-            <Border Background="#80000000"
+            <Border Background="{StaticResource ScrimBrush}"
                     BorderBrush="{StaticResource BorderLightBrush}"
                     BorderThickness="1"
                     CornerRadius="6"

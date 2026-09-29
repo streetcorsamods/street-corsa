@@ -113,8 +113,7 @@ namespace StreetCorsa.Screens.DealerLot
             BackToLotCommand = new RelayCommand(() => SelectedIndex = -1);
             PurchaseCarCommand = new RelayCommand<UsedCarListingViewModel>(OnPurchaseCar, CanPurchaseCar);
 
-            ResolveShowroom();
-            LoadStock();
+            // The showroom and the stock are loaded in Enter, once the screen before has been left
         }
 
         private int _selectedIndex = -1;
@@ -185,6 +184,7 @@ namespace StreetCorsa.Screens.DealerLot
             if (found != null)
             {
                 ShowroomKn5 = found;
+                OnPropertyChanged(nameof(ShowroomKn5));
                 return;
             }
 
@@ -280,8 +280,10 @@ namespace StreetCorsa.Screens.DealerLot
                 }
 
                 // The car is bought and it is in the garage; that is where the player wants to be, not stood on
-                // a lot looking at the gap where it was.
+                // a lot looking at the gap where it was. Unless they have gone meanwhile (the purchase takes a moment):
+                // then they stay where they went.
                 OnPropertyChanged(nameof(BankrollDisplay));
+                if (!ReferenceEquals(_navigationService.CurrentScreen, this)) return;
                 _navigationService.NavigateToGarage(_gameState, skipAnimation: true);
             });
         }
@@ -306,6 +308,9 @@ namespace StreetCorsa.Screens.DealerLot
         {
             base.Enter();
             _logger.Information("Entered {Dealer}", DealerName);
+
+            ResolveShowroom();
+            LoadStock();
         }
 
         public override void Exit()

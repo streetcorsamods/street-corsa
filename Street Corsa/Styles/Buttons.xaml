@@ -79,8 +79,8 @@
 
     <!-- A card laid over the main screen's cars: dark glass, a thin edge, a soft shadow -->
     <Style x:Key="MenuCardStyle" TargetType="Border">
-        <Setter Property="Background" Value="#D8101114"/>
-        <Setter Property="BorderBrush" Value="#38FFFFFF"/>
+        <Setter Property="Background" Value="{StaticResource MenuGlassD8Brush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource White38Brush}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="10"/>
         <Setter Property="Padding" Value="32,26"/>

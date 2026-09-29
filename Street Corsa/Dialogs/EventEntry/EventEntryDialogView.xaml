@@ -10,14 +10,8 @@
             BorderThickness="2"
             CornerRadius="10"
             Padding="30"
-            MaxWidth="550">
-        <Border.Effect>
-            <DropShadowEffect Color="Black"
-                            Direction="270"
-                            ShadowDepth="10"
-                            BlurRadius="20"
-                            Opacity="0.7"/>
-        </Border.Effect>
+            MaxWidth="550"
+            Effect="{StaticResource DropShadowEffect}">
 
         <Grid>
             <Grid.RowDefinitions>

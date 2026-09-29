@@ -38,7 +38,8 @@ namespace StreetCorsa.Screens.Cruise
 
         private void OnWindowKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
-            if (e.Key != Key.Space || e.OriginalSource is System.Windows.Controls.Primitives.TextBoxBase) return;
+            // A key meant for a dialog in front is not the throttle
+            if (e.Key != Key.Space || e.OriginalSource is System.Windows.Controls.Primitives.TextBoxBase || Dialogs.ModalState.IsOpen) return;
             ViewModel?.Rev(true);
             e.Handled = true;
         }

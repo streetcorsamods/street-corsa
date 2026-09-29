@@ -121,6 +121,13 @@ namespace StreetCorsa.Screens.UsedParts
         /// <summary>Added to the status line: what else the page has to say</summary>
         protected virtual string StatusNote => string.Empty;
 
+        /// <summary>
+        /// Set while the page opens (<c>Enter</c>): the catalog is first loaded on a worker then, and a filter or a tab
+        /// picked meanwhile must not load it again on the UI thread. <see cref="ShowFirst"/> lists the rows as they then
+        /// stand.
+        /// </summary>
+        protected bool Entering { get; set; }
+
         /// <summary>A tab was picked: it starts unfiltered, with the kinds of what is on it</summary>
         protected void TabChanged()
         {
@@ -129,6 +136,7 @@ namespace StreetCorsa.Screens.UsedParts
             OnPropertyChanged(nameof(SelectedGroup));
             OnPropertyChanged(nameof(SearchText));
             OnPropertyChanged(nameof(CanFilterByFit));
+            if (Entering) return;
             RefillGroups();
             LoadOffers();
         }
@@ -136,6 +144,7 @@ namespace StreetCorsa.Screens.UsedParts
         /// <summary>After the page is opened: the fit filter's label, the kinds and the rows</summary>
         protected void ShowFirst()
         {
+            Entering = false;
             OnPropertyChanged(nameof(CanFilterByFit));
             OnPropertyChanged(nameof(FitFilterLabel));
             RefillGroups();
@@ -166,6 +175,8 @@ namespace StreetCorsa.Screens.UsedParts
         /// </summary>
         protected void LoadOffers()
         {
+            if (Entering) return;
+
             try
             {
                 FillOffers();

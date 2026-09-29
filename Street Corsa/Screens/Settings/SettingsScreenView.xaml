@@ -11,7 +11,7 @@
             <TextBlock Text="SETTINGS" Style="{StaticResource MenuCardTitleStyle}"/>
 
             <!-- Assetto Corsa folder: read at start-up, so a change asks for a restart -->
-            <Border Background="#80000000"
+            <Border Background="{StaticResource ScrimBrush}"
                     BorderBrush="{StaticResource BorderLightBrush}"
                     BorderThickness="1"
                     CornerRadius="5"

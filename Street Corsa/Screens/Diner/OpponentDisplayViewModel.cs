@@ -43,6 +43,15 @@ namespace StreetCorsa.Screens.Diner
 
         public bool HasPortrait => !string.IsNullOrEmpty(PortraitPath);
 
+        /// <summary>
+        /// Width the portrait is decoded at: the largest place it is shown is 150 px, and twice that keeps it sharp on a
+        /// high-DPI screen
+        /// </summary>
+        private const int PortraitDecodeWidth = 300;
+
+        /// <summary>The portrait, decoded small and shared (<see cref="Shared.Thumbnails"/>); null without one</summary>
+        public System.Windows.Media.ImageSource? PortraitImage => Shared.Thumbnails.Load(PortraitPath, PortraitDecodeWidth);
+
         // Additional record stats
         public string WinRateDisplay
         {

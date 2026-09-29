@@ -45,6 +45,11 @@
     <Color x:Key="Glass14D0">#D0141414</Color>
     <Color x:Key="Glass14E0">#E0141414</Color>
     <Color x:Key="Glass15E8">#E8151515</Color>
+    <Color x:Key="Glass10C0">#C0101010</Color>
+    <!-- The main screen's cards: dark glass with a touch of blue -->
+    <Color x:Key="MenuGlassD8">#D8101114</Color>
+    <!-- The edge of the glass panels seen from the driver's seat (street, gas station) -->
+    <Color x:Key="PaleGold60">#60FFE68C</Color>
 
     <!-- Black and white veils (suffix = alpha byte). BlackTransparent is not WPF's Transparent (#00FFFFFF):
          a gradient that fades to it stays black instead of greying through white -->
@@ -58,6 +63,12 @@
     <Color x:Key="White20">#20FFFFFF</Color>
     <Color x:Key="White30">#30FFFFFF</Color>
     <Color x:Key="WhiteB0">#B0FFFFFF</Color>
+    <Color x:Key="White38">#38FFFFFF</Color>
+    <Color x:Key="White90">#90FFFFFF</Color>
+    <!-- Dims the background art behind a list (load game, settings) -->
+    <Color x:Key="Scrim">#80000000</Color>
+    <!-- Print on paper: the timeslip, the dial-in board -->
+    <Color x:Key="Ink">#000000</Color>
 
     <!-- Status Colors -->
     <Color x:Key="Gold">#FFD700</Color>
