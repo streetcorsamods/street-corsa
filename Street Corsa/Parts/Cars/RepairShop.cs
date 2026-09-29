@@ -1,3 +1,4 @@
+using StreetCorsa.Helpers;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Services.Time;
 
@@ -145,7 +146,7 @@ public static class RepairShop
     private static RepairJob PartsJob(string name, string detail, IReadOnlyList<PartInstance> parts, PartsCatalog catalog, double prices, GameAction time, Action refresh)
     {
         var cost = parts.Sum(p => catalog.Get(p.DefinitionId) is { } definition
-            ? PartPricing.NewPrice(definition) * PartShare * (1 - Math.Clamp(p.Tear, 0, 1))
+            ? PartPricing.NewPrice(definition) * PartShare * (1 - Unit.Clamp01(p.Tear, 1))
             : 0);
         return new RepairJob(name, detail, LabourAt(prices) + PartPricing.Round(cost * prices), time, () =>
         {

@@ -106,11 +106,18 @@ public static class EngineWork
         while (true)
         {
             var all = engine.SelfAndDescendants().ToList();
+
+            // The kinds the engine has a free place for, once a round and only when a part needs one
+            HashSet<string>? takes = null;
+            bool TakesKind(string kind) => (takes ??= FreeKinds(catalog, engine)).Contains(kind);
+
             var lacking = all.Skip(1).FirstOrDefault(p => RuleOf(catalog, p) is { Needs.Count: > 0 } rule
-                                                          && rule.Needs.Any(kind => !all.Any(q => DoesJobOf(catalog, q, kind)) && Takes(catalog, engine, kind)));
+                                                          && rule.Needs.Any(kind => !all.Any(q => DoesJobOf(catalog, q, kind)) && TakesKind(kind)));
             if (lacking == null) return taken;
 
-            TakeOff(engine, lacking);
+            // A part that will not come off (one the tree holds twice, under two parents) would be found again every
+            // round: what could be taken off is what there is
+            if (!TakeOff(engine, lacking)) return taken;
             taken.Add(lacking);
         }
     }
@@ -129,6 +136,14 @@ public static class EngineWork
     private static bool Takes(PartsCatalog catalog, PartInstance engine, string kind) =>
         Workbench.FreeSlots(catalog, new[] { engine })
             .Any(free => catalog.FindMountable(free.Definition, free.Slot).Any(m => IsKind(catalog.WorkOrder.KindOf(m.Part), kind)));
+
+    /// <summary>Every kind the engine has a free place for, each once: <see cref="Takes"/> for many kinds at a time</summary>
+    private static HashSet<string> FreeKinds(PartsCatalog catalog, PartInstance engine) =>
+        Workbench.FreeSlots(catalog, new[] { engine })
+            .SelectMany(free => catalog.FindMountable(free.Definition, free.Slot))
+            .Select(m => catalog.WorkOrder.KindOf(m.Part))
+            .OfType<string>()
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Takes off what comes off an engine as it goes on the stand, kind by kind in the order of

@@ -382,15 +382,27 @@ all 12 engines of the old pack up to date, nothing came off.
 - Statics belong to the class: initializers run once per VM, instances see the values. The holder exists before its
   initializers run, so `static Foo instance = new Foo()` ends; construction depth carries through initializers.
 - Method parameters are numbered backwards (last parameter = local 1, local 0 = this).
-- One `ScriptClassLoader` per catalog (`PartsCatalog.Scripts`, thread-safe): classes are read and parsed once.
+- One `ScriptClassLoader` per catalog (`PartsCatalog.Scripts`, thread-safe, no lock: two caches, class files by path and
+  classes by name, each a `ConcurrentDictionary`): classes are read and parsed once, outside any lock; two threads
+  parsing the same cold class get the one that was cached first.
 - **Limits.** Class files are mod content, so the VM cannot be driven out of bounds; for valid content nothing changes
   (EngineBench output identical for all builds).
-  - Call depth 24 (`MaxDepth`), static initializers included: past it a static read gets a stand-in that is not cached.
-  - 500 000 steps per VM (`MaxSteps`). Running out sets the sticky `ScriptVm.BudgetExhausted`
-    (`PartScriptRuntime.BudgetExhausted`), and the engine does not run, with that as its Problem.
+  - Call depth 24 (`MaxDepth`); static initializers nest up to 64 classes deep on their own (`MaxStaticsNesting`),
+    apart from the call depth. Past either a static read gets a stand-in that is not cached.
+  - 1 000 000 steps per entry (`MaxSteps`: one `Instantiate` or `Call`; the heaviest catalog entry takes 39 167),
+    and 5 000 000 for all the entries of one VM together (`MaxTotalSteps`: one engine's parts; the heaviest catalog
+    build takes 52 471). A host native counts as the work it does: `calcDyno` is 10 000 steps
+    (`PartScriptRuntime.DynoSteps`, `ScriptVm.Charge`). Running out of either sets the sticky
+    `ScriptVm.BudgetExhausted` (`PartScriptRuntime.BudgetExhausted`); once the total is spent every later entry stops
+    at its first step. The engine does not run, with that as its Problem.
+  - 1 000 000 array elements stored per VM (`MaxArrayElements`, new ones counted): arrays outlive the entry that filled
+    them. Past it no element is stored, and the budget counts as exhausted.
   - Jump targets are range-checked: one before the start or past the end ends that tree, not the class.
-  - A string built by `+` longer than 64 K characters is unknown. A negative argument count is clamped. printf
-    precision is clamped to 0..20.
+  - A string built by `+` longer than 64 K characters (`ScriptVm.MaxTextLength`) is unknown, and what
+    `Float.toString` prints is cut there. A negative argument count is clamped. printf precision is clamped to 0..20.
+  - What the scripts hand the report is held to what an engine could be (`EngineEvaluator`): an rpm past 30 000, a
+    ratio past 100 or another figure past a million is no figure (0), and a dyno past 20 000 hp or 50 000 Nm is a
+    Problem, so none of it reaches AC's data.
   - Class and package names must be safe path segments, and a part's `source_script` must stay under the scripts root;
     anything else counts as a missing script.
 
@@ -545,8 +557,11 @@ and all, and only the way they come off is their own (`"comes_off"` on the part,
 The rules hold both ways, so an engine taken apart goes back together in the opposite order. A part that lacks what it
 needs could come off but never go back on, so it is taken off as the engine comes into the game
 (`EngineWork.TakeOffWhatLacksItsNeeds`: in `EngineFactory` for a build, in `SavedParts.BringUpToDate` for a save, onto
-the shelf). `EngineStandTests` takes every one of the 161 builds, those short of parts too, down to its bare block on
-the stand and back, and checks the builds that run lose nothing that way.
+the shelf; a part that will not come off ends it). `EngineStandTests` takes every one of the 161 builds, those short of parts too, down to its bare block on
+the stand and back, and checks the builds that run lose nothing that way. A loop among the rules (kinds that wait for
+each other, or need each other) is told once per set of kinds that lead to each other (Tarjan's strongly connected
+components, linear and without recursion): a work order is any mod's, and listing every simple loop of a dense one would
+not end.
 
 Nothing pops. The cards and the navigation tiles they replace slide and fade through `Helpers/Reveal`
 (`Reveal.IsShown` in place of a Visibility binding, `OffsetX/Y` for where an element comes from). Parts move too: a tree
@@ -560,7 +575,10 @@ change), `Candidates` (`MountCandidate`: a loose tree, the part and slot it woul
 `PartClicked` and `CandidateClicked`. `PartAssembler.Assemble` places a tree by its slots, `BuildModel` merges it into
 one KN5 with a node per part (`NodeName(i)`, `AssemblyModel.Nodes[i]`), which is how a pick finds its part.
 A part without a model (a handful of fuel rails and injectors) goes into the model as a small grey box
-(`PlaceholderMesh`): parts are mounted and taken off by clicking them, so every part needs something to click.
+(`PlaceholderMesh`): parts are mounted and taken off by clicking them, so every part needs something to click. So
+does a part whose model file does not read. The part models are cached for the session by path while their file is
+unchanged (emptied past 256 MB of model files), and a texture of the same name as another mod's but other content goes
+into the merged model under a name of its own (`body~1.dds`), its part's materials pointed at it.
 The model on screen lags behind the tree while parts fly off and the next model is built, so whatever comes out of a
 click is checked against what counts now: the workbench finds a clicked part again by its `InstanceId` in the current
 tree, and a clicked place only counts if it belongs to the `Candidates` of the shelf part that is picked (the viewport
@@ -815,7 +833,12 @@ wear.
 ## Cooling and oil (`Parts/Cars/EngineCooling`)
 
 What the race mode's heat and oil work from (race.ini `CAR_n_COOLING`, see `docs/ac-integration/csp-lua-scripts.md`,
-"Heat and oil"). The radiators, fans and water pumps are plain parts with no figures, known by name (`KindOf`). A car's
+"Heat and oil"). The radiators, fans and water pumps are plain parts with no figures. What one is comes from data when a
+mod says so: a work order kind's `"cooling"` (`"radiator"`, `"water_pump"`, `"fan"` or `"none"`, `WorkKind.Cooling`,
+stamped on the parts as `PartDefinition.CoolingRole` when the catalog loads; a radiator kind that `serves` a fan kind has
+its own fan), and a part's `"performance": true|false` in its pack.json (`PartDefinition.Performance`: a performance
+radiator, water pump or fan, a deep race oil pan). Parts that say nothing, the source game's among them, are known by
+the words of their name (`KindOf`), whole words only ("race" is not in "brace"). A car's
 cooling was sized for its engine as it left the factory (`FactoryCooling`, read once per stock build): the car's
 factory power with its own block, or a swapped-in block's least powerful factory build, since the radiator goes with the
 engine. A performance radiator carries off 35% more, a performance water pump 10% more, and tuning past the factory's

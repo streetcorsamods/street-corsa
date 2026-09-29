@@ -65,6 +65,14 @@ public static class EngineEvaluator
     private const int ReverseGearIndex = 7;
     private const int MaxForwardGears = 6;
 
+    // Figures past any engine the game could hold: a script (anyone's) or a pack.json can make them, finite and absurd,
+    // and AC would be handed them. Each is well above anything real, so a real build never meets one.
+    private const double MaxRpm = 30_000;
+    private const double MaxPowerHp = 20_000;
+    private const double MaxTorqueNm = 50_000;
+    private const double MaxRatio = 100;
+    private const double MaxFigure = 1e6;
+
     /// <remarks>
     /// Never throws for what the content does: a part script that faults is a part left out, and the engine's
     /// problem says so (the scripts are third-party code, one bad class must not take every build down with it).
@@ -107,6 +115,8 @@ public static class EngineEvaluator
             problem = $"a part script failed: {faults[0]}{(faults.Count > 1 ? $" ({faults.Count} faults in all)" : "")}.";
 
         if (problem == null && dyno == null) problem = "the engine could not be evaluated.";
+        if (problem == null && dyno is { } made && !(made.MaxPowerHp <= MaxPowerHp && made.MaxTorque <= MaxTorqueNm))
+            problem = $"the dyno makes {made.MaxPowerHp:0} hp and {made.MaxTorque:0} Nm, past any engine: a part's figures are not what they should be.";
 
         // The scripts hold the compression against what the fuel system allows. With no carburettor or injection
         // that limit is 0, and what they say ("too high, not more than 0.0:1") points away from what is wrong.
@@ -116,9 +126,9 @@ public static class EngineEvaluator
 
         // Figures come out of script math (a square root of a negative, a float overflow) and pack.json: what is not
         // a number is no figure, so nothing that is not one ever reaches the car's data
-        var gears = (int)Finite(chassis?.Number("gears"));
+        var gears = (int)Finite(chassis?.Number("gears"), MaxFigure);
         var ratios = chassis?.Fields.GetValueOrDefault("ratio") as ScriptArray;
-        double Ratio(int index) => ratios != null && ratios.Items.GetValueOrDefault(index) is ScriptNumber ratio ? Finite(ratio.Amount) : 0;
+        double Ratio(int index) => ratios != null && ratios.Items.GetValueOrDefault(index) is ScriptNumber ratio ? Finite(ratio.Amount, MaxRatio) : 0;
 
         var parts = tree.Root.SelfAndDescendants().ToList();
         var clutch = parts.FirstOrDefault(p => p.Is("Clutch"));
@@ -127,24 +137,27 @@ public static class EngineEvaluator
             Problem = problem,
             Inputs = inputs,
             Dyno = dyno,
-            IdleRpm = Finite(block?.Number("rpm_idle")),
-            LimiterRpm = Finite(block?.Number("RPM_limit")),
-            Inertia = Finite(block?.Number("inertia")),
+            IdleRpm = Finite(block?.Number("rpm_idle"), MaxRpm),
+            LimiterRpm = Finite(block?.Number("RPM_limit"), MaxRpm),
+            Inertia = Finite(block?.Number("inertia"), MaxFigure),
             GearRatios = Enumerable.Range(1, Math.Clamp(gears, 0, MaxForwardGears)).Select(Ratio).Where(r => r > 0).ToList(),
             ReverseRatio = Math.Abs(Ratio(ReverseGearIndex)),
-            FinalRatio = Finite(chassis?.Number("rearend_ratio")),
-            DriveType = gears > 0 ? (int)Finite(chassis?.Number("drive_type")) : 0,
-            DiffLock = Finite(chassis?.Number("diff_lock")),
-            Friction = Finite(chassis?.Number("engine_friction_fwd")),
-            ClutchCapacity = clutch == null ? 0 : Finite(runtime.ObjectOf(clutch)?.Number("maxF") ?? clutch.Definition.Number("maxF")),
+            FinalRatio = Finite(chassis?.Number("rearend_ratio"), MaxRatio),
+            DriveType = gears > 0 ? (int)Finite(chassis?.Number("drive_type"), MaxFigure) : 0,
+            DiffLock = Finite(chassis?.Number("diff_lock"), MaxFigure),
+            Friction = Finite(chassis?.Number("engine_friction_fwd"), MaxFigure),
+            ClutchCapacity = clutch == null ? 0 : Finite(runtime.ObjectOf(clutch)?.Number("maxF") ?? clutch.Definition.Number("maxF"), MaxFigure * 100),
             Turbocharged = parts.Any(p => p.Is("TurboCharger")),
-            Mass = Finite(parts.Sum(p => (double)p.Definition.Mass)),
-            Value = Finite(parts.Sum(p => PartPricing.NewPrice(p.Definition))),
+            Mass = Finite(parts.Sum(p => (double)p.Definition.Mass), MaxFigure),
+            Value = Finite(parts.Sum(p => PartPricing.NewPrice(p.Definition)), MaxFigure * 1000),
             ScriptFaults = faults,
             Unplaced = tree.Unplaced
         };
     }
 
-    /// <summary>A figure as the report may carry it: missing, NaN and infinities are 0 (no figure)</summary>
-    private static double Finite(double? value) => value is { } number && double.IsFinite(number) ? number : 0;
+    /// <summary>
+    /// A figure as the report may carry it: missing, NaN, infinities and anything larger either way than
+    /// <paramref name="max"/> are 0 (no figure)
+    /// </summary>
+    private static double Finite(double? value, double max) => value is { } number && double.IsFinite(number) && Math.Abs(number) <= max ? number : 0;
 }

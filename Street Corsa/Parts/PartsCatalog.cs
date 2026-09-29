@@ -84,7 +84,7 @@ public sealed class PartsCatalog
             if (!Directory.Exists(root)) continue;
 
             var label = mod.IsBase ? string.Empty : mod.Id + "/";
-            foreach (var file in Directory.EnumerateFiles(root, PartPack.FileName, SearchOption.AllDirectories).Order(StringComparer.OrdinalIgnoreCase))
+            foreach (var file in PackFiles(catalog, root, label))
             {
                 var packName = label + Path.GetRelativePath(root, file);
                 PartPack? pack;
@@ -144,6 +144,16 @@ public sealed class PartsCatalog
         catalog.EngineBuilds = builds.All.ToList();
         catalog.WorkOrder = WorkOrder.Load(roots.Select(r => (r.Mod.Id, r.Mod.IsBase, r.Dir)), catalog._problems);
         WorkOrder.CheckWays(catalog._parts.Values, catalog._problems);
+
+        // What each part does for the cooling, where its kind says: the cooling reads it off the part
+        if (catalog.WorkOrder.TellsCooling)
+        {
+            foreach (var part in catalog._parts.Values)
+            {
+                part.CoolingRole = catalog.WorkOrder.CoolingOf(part);
+                part.CoolingOwnFan = part.CoolingRole != null && catalog.WorkOrder.HasOwnFan(part);
+            }
+        }
         PartOverrides.Apply(catalog.Scripts, catalog._parts.Values, catalog._problems);
 
         foreach (var (mod, gone, current) in aliases)
@@ -161,6 +171,25 @@ public sealed class PartsCatalog
         return catalog;
 
         string Resolve(string modId, string reference) => ModIds.Resolve(modId, reference, catalog._parts.ContainsKey);
+    }
+
+    /// <summary>
+    /// Every pack.json under a mod's parts folder, by path. A folder the game may not read is passed over; one that
+    /// cannot be listed at all costs that mod its packs, with a line in the problems, never the other mods theirs.
+    /// </summary>
+    private static List<string> PackFiles(PartsCatalog catalog, string root, string label)
+    {
+        try
+        {
+            // Hidden and system folders are read as they always were: only the inaccessible are passed over
+            var options = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = 0 };
+            return Directory.EnumerateFiles(root, PartPack.FileName, options).Order(StringComparer.OrdinalIgnoreCase).ToList();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            catalog._problems.Add($"{label}{PartPack.FileName}: the parts folder could not be read ({ex.Message}); its parts are left out");
+            return new List<string>();
+        }
     }
 
     private static void ReadAliases(PartsCatalog catalog, string root, string label, ModInfo mod, List<(ModInfo, string, string)> aliases)

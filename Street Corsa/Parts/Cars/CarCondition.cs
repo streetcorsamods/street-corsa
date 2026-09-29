@@ -174,7 +174,7 @@ public static class CarCondition
     public static double LitresToFill(Car car) => FuelLeft(car) is { } left && TankLitres(car) is { } tank ? tank - left : 0;
 
     /// <summary>The oil in the engine, 1 full to 0 dry</summary>
-    public static double OilLeft(Car car) => car.OilLevel is { } level && double.IsFinite(level) ? Math.Clamp(level, 0, 1) : 1;
+    public static double OilLeft(Car car) => car.OilLevel is { } level ? Unit.Clamp01(level, 1) : 1;
 
     /// <summary>
     /// What the sump holds its oil to with this much oil in it, share of what it holds full: a quart down it surges a

@@ -16,6 +16,12 @@ public sealed class PartScriptRuntime
     private const string DynoDataClass = "java.game.parts.DynoData";
     private const int ChassisEngineSlot = 1;
 
+    /// <summary>
+    /// What a dyno run costs the scripts, in VM steps: a hundred-odd points of the engine model, each far more than an
+    /// instruction. A script that calls it in a loop runs out of steps within a hundred runs an entry.
+    /// </summary>
+    internal const int DynoSteps = 10_000;
+
     private readonly ScriptVm _vm;
     private readonly Dictionary<InstalledPart, ScriptObject> _objects = new();
     private readonly Dictionary<ScriptObject, DynoResult> _dynoResults = new();
@@ -94,6 +100,9 @@ public sealed class PartScriptRuntime
 
     /// <summary>Most steps one script entry took here: how close these parts come to the budget</summary>
     public int PeakSteps => _vm.PeakSteps;
+
+    /// <summary>Steps the scripts of these parts took in all, the dyno runs charged</summary>
+    public long TotalSteps => _vm.TotalSteps;
 
     public ScriptObject? ObjectOf(InstalledPart part) => _objects.GetValueOrDefault(part);
 
@@ -177,7 +186,7 @@ public sealed class PartScriptRuntime
 
         public override ScriptValue? CallNative(ScriptVm vm, ScriptObject self, string method, ScriptValue[] arguments, bool uncertain)
         {
-            if (self.Is(DynoDataClass)) return Dyno(self, method, arguments);
+            if (self.Is(DynoDataClass)) return Dyno(vm, self, method, arguments);
 
             var part = self.Tag as InstalledPart;
             var isChassis = ReferenceEquals(self, _runtime.Chassis);
@@ -250,7 +259,7 @@ public sealed class PartScriptRuntime
             }
         }
 
-        private ScriptValue? Dyno(ScriptObject data, string method, ScriptValue[] arguments)
+        private ScriptValue? Dyno(ScriptVm vm, ScriptObject data, string method, ScriptValue[] arguments)
         {
             switch (method)
             {
@@ -259,6 +268,7 @@ public sealed class PartScriptRuntime
 
                 case "calcDyno":
                 {
+                    vm.Charge(DynoSteps);
                     var result = EngineDyno.Run(DynoInputs.From(data));
                     _runtime._dynoResults[data] = result;
 

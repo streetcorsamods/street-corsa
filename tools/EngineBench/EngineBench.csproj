@@ -31,14 +31,16 @@
     <Compile Include="..\..\Street Corsa\Parts\Sounds\*.cs" Link="Parts\Sounds\%(Filename)%(Extension)" />
   </ItemGroup>
 
-  <!-- The game's plain-BCL helpers the linked part code uses (and the tool itself): atomic writes, paths kept inside a root, the career's multipliers -->
+  <!-- The game's plain-BCL helpers the linked part code uses (and the tool itself): atomic writes, paths kept inside a root, the career's multipliers, figures held to 0..1 -->
   <ItemGroup>
     <Compile Include="..\..\Street Corsa\Helpers\SafeFile.cs" Link="Helpers\SafeFile.cs" />
     <Compile Include="..\..\Street Corsa\Mods\ModIds.cs" Link="Mods\ModIds.cs" />
     <Compile Include="..\..\Street Corsa\Mods\ModSet.cs" Link="Mods\ModSet.cs" />
+    <Compile Include="..\..\Street Corsa\Mods\ModJson.cs" Link="Mods\ModJson.cs" />
     <Compile Include="..\..\Street Corsa\Mods\ContentRegistry.cs" Link="Mods\ContentRegistry.cs" />
     <Compile Include="..\..\Street Corsa\Helpers\PathNames.cs" Link="Helpers\PathNames.cs" />
     <Compile Include="..\..\Street Corsa\Helpers\Multiplier.cs" Link="Helpers\Multiplier.cs" />
+    <Compile Include="..\..\Street Corsa\Helpers\Unit.cs" Link="Helpers\Unit.cs" />
   </ItemGroup>
 
 </Project>
