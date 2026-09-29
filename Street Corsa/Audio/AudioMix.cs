@@ -53,4 +53,11 @@ public static class AudioMix
     /// </summary>
     public static float FadeTarget(bool racing, bool focused, bool muteInBackground) =>
         racing || (!focused && muteInBackground) ? 0f : 1f;
+
+    /// <summary>
+    /// Where the radio's fade is headed: as the rest behind another window, but heard in a race, where AC has the focus
+    /// and the player may put it on (it is off unless they do)
+    /// </summary>
+    public static float RadioFadeTarget(bool racing, bool focused, bool muteInBackground) =>
+        !racing && !focused && muteInBackground ? 0f : 1f;
 }

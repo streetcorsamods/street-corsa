@@ -60,8 +60,12 @@ public sealed partial class AudioHub
     private volatile bool _racing;
     private volatile bool _focused = true;
 
-    // Only the pump moves it
+    // Only the pump moves them: the game's own sounds, and the radio's (which plays on in a race when the player wants it)
     private volatile float _fade = 1f;
+    private volatile float _radioFade = 1f;
+
+    // The radio is playing: in a race the mixer stays awake for it
+    private volatile bool _radioActive;
     private readonly float[] _applied = Enumerable.Repeat(-1f, Enum.GetValues<AudioBus>().Length).ToArray();
 
     private DispatcherTimer? _pump;
@@ -98,8 +102,9 @@ public sealed partial class AudioHub
     public void SetFocused(bool focused) => _focused = focused;
 
     /// <summary>
-    /// A race (or AC's showroom) starts or has ended: everything fades out and the mixer rests until it is over, as the
-    /// game has the sound device to itself. Any thread.
+    /// A race (or AC's showroom) starts or has ended: the game's own sounds fade out, and the mixer rests until it is
+    /// over, as AC has the sound device to itself; unless the player puts the radio on in the race, which then plays
+    /// over AC (and the mixer stays awake for it). Any thread.
     /// </summary>
     public void SetRacing(bool racing)
     {
@@ -108,8 +113,11 @@ public sealed partial class AudioHub
         _logger.Information(racing ? "Assetto Corsa runs: the game's sound fades out" : "Assetto Corsa is done: the game's sound is back");
     }
 
+    /// <summary>The radio plays (or has stopped): in a race, the mixer is kept awake for it. Any thread.</summary>
+    public void SetRadioActive(bool active) => _radioActive = active;
+
     /// <summary>What <paramref name="bus"/> plays at now, the fade in it</summary>
-    public float Gain(AudioBus bus) => AudioMix.Gain(_settings, bus, _fade);
+    public float Gain(AudioBus bus) => AudioMix.Gain(_settings, bus, bus == AudioBus.Radio ? _radioFade : _fade);
 
     /// <summary>The group sounds of <paramref name="bus"/> play into; zero while there is no system, and for the engines</summary>
     internal IntPtr Group(AudioBus bus) => _system == IntPtr.Zero ? IntPtr.Zero : _groups[(int)bus];
@@ -174,6 +182,8 @@ public sealed partial class AudioHub
         var settings = _settings;
         var racing = _racing;
         _fade = AudioMix.StepFade(_fade, AudioMix.FadeTarget(racing, _focused, settings.MuteInBackground), elapsed);
+        _radioFade = AudioMix.StepFade(_radioFade, AudioMix.RadioFadeTarget(racing, _focused, settings.MuteInBackground), elapsed);
+        var radioActive = _radioActive;
 
         if (_system == IntPtr.Zero || _shutDown) return;
 
@@ -183,12 +193,12 @@ public sealed partial class AudioHub
         {
             if (_system == IntPtr.Zero || _shutDown) return;
 
-            // Awake before the fade in is heard; asleep once the fade out is over
-            if (!racing) ResumeMixer();
+            // Awake before the fade in is heard (or the radio comes on in a race); asleep once the fade out is over
+            if (!racing || radioActive) ResumeMixer();
 
             foreach (var bus in GroupBuses)
             {
-                var gain = AudioMix.Gain(settings, bus, _fade);
+                var gain = AudioMix.Gain(settings, bus, bus == AudioBus.Radio ? _radioFade : _fade);
                 if (Math.Abs(gain - _applied[(int)bus]) < 1e-4f) continue;
                 if (Warn(FMOD_ChannelGroup_SetVolume(_groups[(int)bus], gain), "set bus volume")) _applied[(int)bus] = gain;
             }
@@ -196,7 +206,7 @@ public sealed partial class AudioHub
             if (_mixerSuspended) return;
             TickAmbience();
             Update();
-            if (racing && _fade <= 0f) SuspendMixer();
+            if (racing && _fade <= 0f && !radioActive) SuspendMixer();
         }
         finally
         {

@@ -59,6 +59,15 @@ public class AudioMixTests
     [Theory]
     [InlineData(false, true, true, 1f)]
     [InlineData(false, false, true, 0f)]
+    [InlineData(true, false, true, 1f)]
+    [InlineData(true, true, false, 1f)]
+    [InlineData(false, false, false, 1f)]
+    public void The_radio_is_heard_over_a_race_but_not_behind_other_windows_when_asked(bool racing, bool focused, bool mute, float target) =>
+        Assert.Equal(target, AudioMix.RadioFadeTarget(racing, focused, mute));
+
+    [Theory]
+    [InlineData(false, true, true, 1f)]
+    [InlineData(false, false, true, 0f)]
     [InlineData(false, false, false, 1f)]
     [InlineData(true, true, false, 0f)]
     [InlineData(true, false, false, 0f)]

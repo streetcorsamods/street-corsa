@@ -8,8 +8,8 @@ using StreetCorsa.ViewModels;
 namespace StreetCorsa.Audio.Radio;
 
 /// <summary>
-/// The radio: the player's own music, out of any folders on the PC, on every screen but a race (the hub fades it out
-/// and rests the mixer then) and on through screen changes. In the car (<see cref="Navigation.IScreen.InCar"/>) it
+/// The radio: the player's own music, out of any folders on the PC, on every screen and on through screen changes; in a
+/// race it goes off, and the player's keys (<see cref="RaceKeys"/>) put it on over AC. In the car (<see cref="Navigation.IScreen.InCar"/>) it
 /// sounds like an AM car radio, with its static. Songs are read into memory before they play, so their files are never
 /// held open; the next one is read while this one ends. Lives on the UI thread.
 /// </summary>
@@ -54,6 +54,13 @@ public sealed class RadioPlayer : ObservableObject
 
     // A pause waits for its fade out before it holds the song; a play in between calls it off
     private int _pauseVersion;
+
+    // In a race: its keys listened for, and how the radio was before, to put back unless the player changed it
+    private RaceKeys? _raceKeys;
+    private bool _racing;
+    private bool _onBeforeRace;
+    private bool _screenInCar;
+    private bool _changedInRace;
     private CancellationTokenSource? _scanCancel;
 
     private IReadOnlyList<RadioSong> _songs = [];
@@ -108,7 +115,9 @@ public sealed class RadioPlayer : ObservableObject
         get => _isOn;
         private set
         {
-            if (SetProperty(ref _isOn, value)) OnPropertyChanged(nameof(IsPlaying));
+            if (!SetProperty(ref _isOn, value)) return;
+            OnPropertyChanged(nameof(IsPlaying));
+            AudioHub.Shared.SetRadioActive(IsPlaying);
         }
     }
 
@@ -117,7 +126,9 @@ public sealed class RadioPlayer : ObservableObject
         get => _isPaused;
         private set
         {
-            if (SetProperty(ref _isPaused, value)) OnPropertyChanged(nameof(IsPlaying));
+            if (!SetProperty(ref _isPaused, value)) return;
+            OnPropertyChanged(nameof(IsPlaying));
+            AudioHub.Shared.SetRadioActive(IsPlaying);
         }
     }
 
@@ -187,20 +198,7 @@ public sealed class RadioPlayer : ObservableObject
         }
     }
 
-    /// <summary>The radio comes on by itself at start-up if it was on when the game was left</summary>
-    public bool AutoStart
-    {
-        get => _state.AutoStart;
-        set
-        {
-            if (_state.AutoStart == value) return;
-            _state.AutoStart = value;
-            OnPropertyChanged();
-            Save();
-        }
-    }
-
-    /// <summary>Reads what was saved, lists the songs on a worker and, when asked to, comes on where it was left</summary>
+    /// <summary>Reads what was saved, lists the songs on a worker and comes back as it was left: on where it was playing, or off and ready there</summary>
     public void Start()
     {
         if (_started) return;
@@ -224,7 +222,6 @@ public sealed class RadioPlayer : ObservableObject
         foreach (var list in _state.Playlists) Playlists.Add(list);
         OnPropertyChanged(nameof(Shuffle));
         OnPropertyChanged(nameof(Repeat));
-        OnPropertyChanged(nameof(AutoStart));
 
         // The default folder is made for the player to drop music into
         try
@@ -236,7 +233,8 @@ public sealed class RadioPlayer : ObservableObject
             _logger.Warning("The radio's folder {Folder} could not be made: {Error}", RadioState.DefaultFolder, ex.Message);
         }
 
-        Rescan(resume: _state.AutoStart && _state.WasOn);
+        _raceKeys = new RaceKeys(Dispatcher.CurrentDispatcher);
+        Rescan(resume: _state.WasOn);
     }
 
     #region Library
@@ -460,6 +458,7 @@ public sealed class RadioPlayer : ObservableObject
     /// </summary>
     public void TogglePower()
     {
+        _changedInRace |= _racing;
         if (IsOn) Stop();
         else PowerOn();
     }
@@ -474,6 +473,7 @@ public sealed class RadioPlayer : ObservableObject
     /// <summary>Play and pause (the panel's button, the media key): an off radio comes on; a paused song goes on where it was</summary>
     public void TogglePlay()
     {
+        _changedInRace |= _racing;
         if (!IsOn)
         {
             PowerOn();
@@ -520,6 +520,7 @@ public sealed class RadioPlayer : ObservableObject
     public void Next()
     {
         if (!IsOn && _queue.Current == null) return;
+        _changedInRace |= _racing;
         var fadeIn = !IsOn;
         _queue.Next(playedOut: false);
         _failures = 0;
@@ -529,6 +530,7 @@ public sealed class RadioPlayer : ObservableObject
     public void Previous()
     {
         if (!IsOn && _queue.Current == null) return;
+        _changedInRace |= _racing;
         if (_playing is { } playing && playing.PositionMs > RestartAfterMs)
         {
             PlayCurrent(0);
@@ -727,10 +729,54 @@ public sealed class RadioPlayer : ObservableObject
 
     #endregion
 
+    #region The race
+
+    /// <summary>
+    /// A race (or AC's showroom) starts or is over. At the start the radio goes off (fading) and its keys are listened
+    /// for over AC, the radio sounding as the car's, AM. At the end the keys are let go of, the screen's sound comes
+    /// back, and the radio is as it was before the race, unless the player switched it in the race: then as they left it.
+    /// UI thread.
+    /// </summary>
+    public void SetRacing(bool racing)
+    {
+        if (_racing == racing) return;
+
+        if (racing)
+        {
+            _onBeforeRace = IsOn && !IsPaused;
+            _changedInRace = false;
+            _screenInCar = _inCar;
+            if (IsOn) Stop();
+            _racing = true;
+            ApplyInCar(true);
+            _raceKeys?.Start();
+            return;
+        }
+
+        _racing = false;
+        _raceKeys?.Stop();
+        ApplyInCar(_screenInCar);
+        if (!_changedInRace && _onBeforeRace && !IsOn) PowerOn();
+    }
+
+    #endregion
+
     #region The car
 
     /// <summary>In the car (the Cruise screen, the gas station) the radio is the car's: AM, and its static</summary>
     public void SetInCar(bool inCar)
+    {
+        // In a race the radio is the car's whatever screen is behind it; the screen's own comes back after
+        if (_racing)
+        {
+            _screenInCar = inCar;
+            return;
+        }
+
+        ApplyInCar(inCar);
+    }
+
+    private void ApplyInCar(bool inCar)
     {
         if (_inCar == inCar) return;
         _inCar = inCar;

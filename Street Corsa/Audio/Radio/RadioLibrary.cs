@@ -31,10 +31,7 @@ public sealed class RadioState
     [JsonProperty("shuffle")] public bool Shuffle { get; set; } = true;
     [JsonProperty("repeat"), JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))] public RadioRepeat Repeat { get; set; } = RadioRepeat.All;
 
-    /// <summary>The radio comes on by itself when the game starts, where it was left</summary>
-    [JsonProperty("autostart")] public bool AutoStart { get; set; }
-
-    /// <summary>Whether it was on at the end of the last session</summary>
+    /// <summary>Whether it was on at the end of the last session: it comes back so</summary>
     [JsonProperty("on")] public bool WasOn { get; set; }
 
     /// <summary>The list that was playing (null: every song), the song and how far into it</summary>

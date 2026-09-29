@@ -285,9 +285,10 @@ namespace StreetCorsa
             // A game that outlived its launch (or the app) has closed: its race can be settled now
             Launcher.AssettoCorsaExited += OnAssettoCorsaExited;
 
-            // A race has the sound device: the game's own sound fades out for it and comes back after
-            Launcher.ExecutionStarted += (_, _) => Audio.AudioHub.Shared.SetRacing(true);
-            Launcher.ExecutionEnded += (_, _) => Audio.AudioHub.Shared.SetRacing(false);
+            // A race has the sound device: the game's own sound fades out for it and comes back after; the radio goes off,
+            // and the player's keys put it on over AC (on the UI thread, where the radio and its key hook live)
+            Launcher.ExecutionStarted += (_, _) => OnRacing(true);
+            Launcher.ExecutionEnded += (_, _) => OnRacing(false);
 
             // NavigationService (must be created after all its dependencies)
             NavigationService = new NavigationService(
@@ -297,6 +298,12 @@ namespace StreetCorsa
                 GameTimeService, CarPartsService, NewspaperPartsService, PartShopService, RaceCarDataService, RaceEventService, CarFilterService,
                 EventOpponentService, VictoryConditionService, MilestoneService,
                 game => CurrentGameState = game);
+        }
+
+        private void OnRacing(bool racing)
+        {
+            Audio.AudioHub.Shared.SetRacing(racing);
+            Dispatcher.BeginInvoke(() => Audio.Radio.RadioPlayer.Shared.SetRacing(racing));
         }
 
         private static void LogMods()
