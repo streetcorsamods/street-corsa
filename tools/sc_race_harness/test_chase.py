@@ -14,15 +14,22 @@ json.lua) does: an empty table is [], strings are escaped, a sparse array or a k
     python -m pip install -r tools/sc_race_harness/requirements.txt
     python tools/sc_race_harness/test_chase.py
     python tools/sc_race_harness/test_chase.py --golden   (writes the C# contract fixture again, see golden_file)
+    python tools/sc_race_harness/test_chase.py --allow-plain-lua   (no LuaJIT here: a quick look only, not CSP's Lua)
 """
 
 import json
 import os
 import sys
 
+# LuaJIT 2.1 or nothing: plain Lua (5.4 in lupa) is not the language CSP runs (integers, how numbers print, the
+# libraries there are), so a pass there says little about the game. --allow-plain-lua runs anyway, for a quick look. The siblings
+# (test_heat.py, test_strip.py) import this module, so the rule and the switch hold for them too
 try:
     import lupa.luajit21 as lupa
 except ImportError:
+    if '--allow-plain-lua' not in sys.argv:
+        sys.exit('lupa has no LuaJIT 2.1 runtime here (pip install -r tools/sc_race_harness/requirements.txt): '
+                 'CSP runs the mode on LuaJIT. Pass --allow-plain-lua to run on plain Lua anyway')
     import lupa
     print('WARNING: lupa has no LuaJIT 2.1 runtime here: running on plain Lua, which is not what CSP runs')
 

@@ -157,6 +157,11 @@ public static class Program
     /// <summary>What the scripts feed the engine model, side by side</summary>
     private static int Inputs(PartsCatalog catalog, IEnumerable<EngineBuild> builds)
     {
+        // BENCH_JSON=<file>: one JSON object per build, for fitting the engine model outside. A run's file holds that
+        // run's builds only: an earlier run's lines would be fitted twice
+        var jsonFile = Environment.GetEnvironmentVariable("BENCH_JSON");
+        if (!string.IsNullOrEmpty(jsonFile)) File.WriteAllText(jsonFile, string.Empty);
+
         Console.WriteLine($"{"build",-30} {"hp",4} {"inMax",6} {"inMin",6} {"exMax",6} {"inDur",5} {"exDur",5} {"inOpn",5} {"exOpn",5} {"lead0",5} {"lead1",5} {"burn ms",7} {"Tloss",5} {"A/F",5} {"H MJ",5} {"air",6} {"fuel",6} {"maxRpm",6} {"boost",5}");
         foreach (var build in builds)
         {
@@ -164,8 +169,7 @@ public static class Program
             var i = tree == null ? null : EngineEvaluator.Evaluate(catalog, tree).Inputs;
             if (i == null) continue;
 
-            // BENCH_JSON=<file>: one JSON object per build, for fitting the engine model outside
-            if (Environment.GetEnvironmentVariable("BENCH_JSON") is { } jsonFile)
+            if (!string.IsNullOrEmpty(jsonFile))
                 File.AppendAllText(jsonFile, Newtonsoft.Json.JsonConvert.SerializeObject(new { build.Id, build.RatedPower, Inputs = i }) + Environment.NewLine);
 
             double Span(double open, double close) => (close - open < 0 ? close - open + 1 : close - open) * 720;

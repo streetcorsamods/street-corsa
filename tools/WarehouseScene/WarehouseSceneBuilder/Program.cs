@@ -3,6 +3,9 @@ using AcTools.Kn5File;
 using AcTools.Numerics;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using StreetCorsa.Helpers;
+using StreetCorsa.Tools;
+using static StreetCorsa.Tools.Kn5SceneWriter;
 
 namespace WarehouseSceneBuilder;
 
@@ -45,7 +48,6 @@ internal static class Program
     private const float SteelTile = 1.5f;
 
     private const float LampHeight = 4.3f;
-    private const int MaxVerticesPerMesh = ushort.MaxValue;
 
     private static bool _flip;
 
@@ -107,11 +109,11 @@ internal static class Program
 
         Directory.CreateDirectory(output);
         var path = Path.Combine(output, "warehouse.kn5");
-        kn5.Save(path);
+        Kn5SceneWriter.Save(kn5, path);
         Console.WriteLine($"{path}: {new FileInfo(path).Length / 1024} KB");
 
         var json = Path.Combine(output, "warehouse.json");
-        File.WriteAllText(json, Description().ToString(Formatting.Indented) + Environment.NewLine);
+        SafeFile.WriteAllText(json, Description().ToString(Formatting.Indented) + Environment.NewLine);
         Console.WriteLine(json);
         return 0;
     }
@@ -555,69 +557,10 @@ internal static class Program
 
     #region Writing
 
-    private static void AddTexture(IKn5 kn5, string file)
-    {
-        var data = File.ReadAllBytes(file);
-        var key = Path.GetFileName(file).ToLowerInvariant();
-        kn5.Textures[key] = new Kn5Texture { Name = key, Active = true, Length = data.Length };
-        kn5.TexturesData[key] = data;
-    }
-
-    private static uint AddMaterial(IKn5 kn5, string name, string texture, float ambient, float diffuse, float specular = 0f,
-        float specularExp = 1f, float emissive = 0f)
-    {
-        if (!kn5.Textures.ContainsKey(texture)) throw new InvalidOperationException($"{name}: no picture {texture}");
-
-        kn5.Materials[name] = new Kn5Material
-        {
-            Name = name,
-            ShaderName = "ksPerPixel",
-            ShaderProperties =
-            [
-                Property("ksAmbient", ambient),
-                Property("ksDiffuse", diffuse),
-                Property("ksSpecular", specular),
-                Property("ksSpecularEXP", specularExp),
-                new Kn5Material.ShaderProperty { Name = "ksEmissive", ValueC = new Vec3(emissive, emissive, emissive) },
-                Property("ksAlphaRef", 0f)
-            ],
-            TextureMappings = [new Kn5Material.TextureMapping { Name = "txDiffuse", Texture = texture, Slot = 0 }]
-        };
-        return (uint)(kn5.Materials.Count - 1);
-    }
-
-    private static Kn5Material.ShaderProperty Property(string name, float value) => new() { Name = name, ValueA = value };
-
-    private static void AddMesh(IKn5 kn5, string name, Mesh mesh, uint material)
-    {
-        if (mesh.Vertices.Count > MaxVerticesPerMesh) throw new InvalidOperationException($"{name}: too many vertices");
-
-        var min = new Vec3(float.MaxValue, float.MaxValue, float.MaxValue);
-        var max = new Vec3(float.MinValue, float.MinValue, float.MinValue);
-        foreach (var v in mesh.Vertices)
-        {
-            min = new Vec3(Math.Min(min.X, v.Position.X), Math.Min(min.Y, v.Position.Y), Math.Min(min.Z, v.Position.Z));
-            max = new Vec3(Math.Max(max.X, v.Position.X), Math.Max(max.Y, v.Position.Y), Math.Max(max.Z, v.Position.Z));
-        }
-
-        var size = max - min;
-        kn5.RootNode.Children.Add(new Kn5Node
-        {
-            NodeClass = Kn5NodeClass.Mesh,
-            Name = name,
-            Active = true,
-            Children = [],
-            // The key light comes in from overhead, through the roof: nothing of the building may stand in its way
-            CastShadows = false,
-            IsVisible = true,
-            IsRenderable = true,
-            Vertices = mesh.Vertices.ToArray(),
-            Indices = mesh.Indices.Select(i => (ushort)i).ToArray(),
-            MaterialId = material,
-            BoundingSphereCenter = (min + max) / 2f,
-            BoundingSphereRadius = size.Length() / 2f
-        });
-    }
+    // The key light comes in from overhead, through the roof: nothing of the building may stand in its way, and
+    // Kn5SceneWriter.AddMesh makes every mesh shadowless
+    private static void AddMesh(IKn5 kn5, string name, Mesh mesh, uint material) =>
+        Kn5SceneWriter.AddMesh(kn5, name, mesh.Vertices, mesh.Indices, material);
 
     #endregion
 }

@@ -1,6 +1,7 @@
 using System.Globalization;
 using AcTools.Kn5File;
 using AcTools.Numerics;
+using StreetCorsa.Tools;
 
 namespace StationSceneBuilder;
 
@@ -23,14 +24,26 @@ internal static class Program
     private const int SkySegments = 128;
     private const int SkyRings = 48;
 
+    private const string Usage = "StationSceneBuilder <track folder> <out.kn5> --at <node name | x,y,z> [--radius 300] [--models a.kn5,b.kn5] [--exclude word,word] [--ground-half 150] [--sky day=a.jpg,dusk=b.jpg,night=c.jpg] [--sky-radius 900]";
+
     private static int Main(string[] args)
     {
         var positional = args.Where((a, i) => !a.StartsWith("--") && (i == 0 || !args[i - 1].StartsWith("--"))).ToList();
         var at = Option(args, "--at");
         if (positional.Count < 2 || at == null)
         {
-            Console.Error.WriteLine("StationSceneBuilder <track folder> <out.kn5> --at <node name | x,y,z> [--radius 300] [--models a.kn5,b.kn5] [--exclude word,word] [--ground-half 150] [--sky day=a.jpg,dusk=b.jpg,night=c.jpg] [--sky-radius 900]");
+            Console.Error.WriteLine(Usage);
             return 1;
+        }
+
+        foreach (var option in NumberOptions)
+        {
+            if (Option(args, option) is { } text && Number(text) == null)
+            {
+                Console.Error.WriteLine($"{option} takes a number of metres, not {text}");
+                Console.Error.WriteLine(Usage);
+                return 1;
+            }
         }
 
         var track = positional[0];
@@ -109,7 +122,7 @@ internal static class Program
             }
         }
 
-        scene.Save(output);
+        Kn5SceneWriter.Save(scene, output);
         Console.WriteLine($"{output}: {new FileInfo(output).Length / 1024 / 1024} MB, {scene.Textures.Count} textures, {scene.Materials.Count} materials");
         return 0;
     }
@@ -120,7 +133,11 @@ internal static class Program
         return i >= 0 && i + 1 < args.Length ? args[i + 1] : null;
     }
 
-    private static float? Number(string? text) => text == null ? null : float.Parse(text, CultureInfo.InvariantCulture);
+    private static readonly string[] NumberOptions = ["--radius", "--sky-radius", "--ground-half"];
+
+    /// <summary>A number as the command line gives it; null when there is none, or it is no number (checked up front)</summary>
+    private static float? Number(string? text) =>
+        text != null && float.TryParse(text, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out var value) ? value : null;
 
     private static Vec3? ParsePoint(string text)
     {
@@ -248,66 +265,10 @@ internal static class Program
     /// <summary>A dome round the scene drawn with an equirectangular panorama, lit by itself: STATION_SKY_&lt;LIGHT&gt;</summary>
     private static void AddSky(IKn5 scene, string light, string panorama, float radius)
     {
-        var data = File.ReadAllBytes(panorama);
-        var key = $"station_sky_{light}{Path.GetExtension(panorama).ToLowerInvariant()}";
-        scene.Textures[key] = new Kn5Texture { Name = key, Active = true, Length = data.Length };
-        scene.TexturesData[key] = data;
-        scene.Materials["station_sky_" + light] = new Kn5Material
-        {
-            Name = "station_sky_" + light,
-            ShaderName = "ksPerPixel",
-            ShaderProperties =
-            [
-                new Kn5Material.ShaderProperty { Name = "ksAmbient", ValueA = 0f },
-                new Kn5Material.ShaderProperty { Name = "ksDiffuse", ValueA = 0f },
-                new Kn5Material.ShaderProperty { Name = "ksSpecular", ValueA = 0f },
-                new Kn5Material.ShaderProperty { Name = "ksSpecularEXP", ValueA = 1f },
-                new Kn5Material.ShaderProperty { Name = "ksEmissive", ValueC = new Vec3(1f, 1f, 1f) },
-                new Kn5Material.ShaderProperty { Name = "ksAlphaRef", ValueA = 0f }
-            ],
-            TextureMappings = [new Kn5Material.TextureMapping { Name = "txDiffuse", Texture = key, Slot = 0 }]
-        };
+        var key = Kn5SceneWriter.AddTexture(scene, panorama, $"station_sky_{light}{Path.GetExtension(panorama).ToLowerInvariant()}");
+        var material = Kn5SceneWriter.AddMaterial(scene, "station_sky_" + light, key, ambient: 0f, diffuse: 0f, emissive: 1f);
 
-        // From a little below the horizon to the top; u = 0.5 - atan2(x, z) / 2pi as the street's
-        var vertices = new List<Kn5Node.Vertex>();
-        var indices = new List<ushort>();
-        const float below = -0.08f;
-        for (var ring = 0; ring <= SkyRings; ring++)
-        {
-            var elevation = below + (MathF.PI / 2f - below) * ring / SkyRings;
-            for (var column = 0; column <= SkySegments; column++)
-            {
-                var azimuth = MathF.PI - 2f * MathF.PI * column / SkySegments;
-                var direction = new Vec3(MathF.Cos(elevation) * MathF.Sin(azimuth), MathF.Sin(elevation), MathF.Cos(elevation) * MathF.Cos(azimuth));
-                var uv = new Vec2((float)column / SkySegments, 0.5f - elevation / MathF.PI);
-                vertices.Add(new Kn5Node.Vertex(direction * radius, -direction, uv, new Vec3(1f, 0f, 0f)));
-            }
-        }
-
-        var stride = SkySegments + 1;
-        for (var ring = 0; ring < SkyRings; ring++)
-        {
-            for (var column = 0; column < SkySegments; column++)
-            {
-                var a = ring * stride + column;
-                indices.AddRange([(ushort)a, (ushort)(a + 1), (ushort)(a + stride), (ushort)(a + 1), (ushort)(a + stride + 1), (ushort)(a + stride)]);
-            }
-        }
-
-        scene.RootNode.Children.Add(new Kn5Node
-        {
-            NodeClass = Kn5NodeClass.Mesh,
-            Name = "STATION_SKY_" + light.ToUpperInvariant(),
-            Active = true,
-            Children = [],
-            CastShadows = false,
-            IsVisible = true,
-            IsRenderable = true,
-            Vertices = vertices.ToArray(),
-            Indices = indices.ToArray(),
-            MaterialId = (uint)(scene.Materials.Count - 1),
-            BoundingSphereCenter = new Vec3(0f, 0f, 0f),
-            BoundingSphereRadius = radius
-        });
+        // From a little below the horizon to the top
+        Kn5SceneWriter.SkyDome(scene, "STATION_SKY_" + light.ToUpperInvariant(), material, radius, SkySegments, SkyRings, below: -0.08f);
     }
 }

@@ -2,19 +2,30 @@
 # engines/rims/tyres/exhaust/suspension/brakes, fictional, modern and non-mechanical parts left out.
 # See docs/systems/parts-system.md for what each rule is there for.
 #
-# The SLRR install and the folder of build notes are this machine's: pass -Slrr and -Notes, or set SRAC_SLRR and
-# SRAC_SLRR_NOTES once. A folder that is not there stops the run (the notes' engine builds would silently go).
+# !! The conversion was one-time: the content in the repo is HAND-MAINTAINED since (2026-09-27). A run rewrites every
+# !! pack.json and engine_builds.json from SLRR and loses what was added by hand: the "make" fields the part shops read,
+# !! comes_off/kind/overrides in ford_six, the hand-fixed builds (only display names are carried over). Every run that
+# !! writes first copies the whole output folder to %LOCALAPPDATA%\StreetCorsa\parts-backups\<date-time> (it says
+# !! where) and stops if it cannot: that copy is where hand edits are recovered from. Prefer a scratch -Output and a
+# !! diff (see the converter re-run notes) to a run over the repo content.
+#
+# The SLRR install and the folder of build notes are this machine's: pass -Slrr and -Notes, or set SC_SLRR and
+# SC_SLRR_NOTES once (the older SRAC_SLRR and SRAC_SLRR_NOTES are still read). A folder that is not there stops the run
+# (the notes' engine builds would silently go).
 # The converter is built (Release) from the sources first, so a stale build never makes the content; -Converter runs
 # a given exe instead. The exit code is the converter's: 0 clean, 1 a rule or folder it refused (or a commit that
-# stopped part way, which it says), 2 parts or packs left out, or packs of unreadable rpks kept as they were (listed at
-# the end of its output).
+# stopped part way, which it says, or a backup that could not be made), 2 parts or packs left out, or packs of
+# unreadable rpks kept as they were (listed at the end of its output).
 param(
-    [string]$Slrr = $env:SRAC_SLRR,
+    [string]$Slrr = "",
     [string]$Output = (Join-Path $PSScriptRoot "..\Street Corsa\Content\streetcorsa\parts"),
-    [string]$Notes = $env:SRAC_SLRR_NOTES,
+    [string]$Notes = "",
     [string]$Converter = "",
     # Part id patterns to measure (slots against mesh bounds) instead of converting: the joint conventions of a pack
-    [string]$Measure = ""
+    [string]$Measure = "",
+    # Folds the slots nudged in the garage (the bin folders' slot_shifts.json, which it then deletes) into
+    # tools\slot_shifts.json. Those nudges are work in progress: only on request, and only for a run into the repo content
+    [switch]$AbsorbGarageShifts
 )
 
 $ErrorActionPreference = 'Stop'
@@ -33,14 +44,17 @@ function Trim-Folder([string]$folder) {
     if ($trimmed -match '^[A-Za-z]:$') { return "$trimmed\." }
     return $trimmed
 }
+# SC_* since the rename to Street Corsa; the SRAC_* names this machine may still have set are read after them
+if (-not $Slrr) { $Slrr = if ($env:SC_SLRR) { $env:SC_SLRR } else { $env:SRAC_SLRR } }
+if (-not $Notes) { $Notes = if ($env:SC_SLRR_NOTES) { $env:SC_SLRR_NOTES } else { $env:SRAC_SLRR_NOTES } }
 $Slrr = Trim-Folder $Slrr
 $Output = Trim-Folder $Output
 $Notes = Trim-Folder $Notes
 
-if (-not $Slrr) { Fail "no SLRR folder: pass -Slrr <folder> or set SRAC_SLRR" }
+if (-not $Slrr) { Fail "no SLRR folder: pass -Slrr <folder> or set SC_SLRR" }
 # Not Join-Path: on a drive that is not there it throws before Fail can say what is wrong
 if (-not (Test-Path -LiteralPath "$Slrr\parts" -PathType Container)) { Fail "$Slrr is not an SLRR install (no 'parts' folder)" }
-if (-not $Notes) { Fail "no build notes folder: pass -Notes <folder> or set SRAC_SLRR_NOTES" }
+if (-not $Notes) { Fail "no build notes folder: pass -Notes <folder> or set SC_SLRR_NOTES" }
 if (-not (Test-Path -LiteralPath $Notes -PathType Container)) { Fail "the build notes folder is not there: $Notes" }
 
 if (-not $Converter) {
@@ -500,16 +514,48 @@ $shift = @(
 ) -join ','
 
 # Slots nudged into place in the garage (F5 in the workbench) are kept in tools\slot_shifts.json for good. The game
-# writes them next to the content it runs on, which is a build folder: those files are folded in and taken away
+# writes them next to the content it runs on, which is a build folder: with -AbsorbGarageShifts those files are folded
+# in and taken away. A scratch run never takes them: they would go into the repo's file for content it did not make.
 # One --absorb per file: a path may hold a comma. None at all when there are none (an empty argument is dropped on the
 # way to the converter, which would then read --absorb as the pack filter)
-$absorbArgs = @(Get-ChildItem (Join-Path $PSScriptRoot "..\Street Corsa\bin") -Recurse -Filter slot_shifts.json -ErrorAction SilentlyContinue |
-    ForEach-Object { "--absorb"; $_.FullName })
+$repoContent = Join-Path $PSScriptRoot "..\Street Corsa\Content\streetcorsa\parts"
+# Resolved the way PowerShell resolves a relative -Output: from its location, not the process's
+function Full-Path([string]$path) { $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($path).TrimEnd('\', '/') }
+$intoRepo = (Full-Path $Output) -eq (Full-Path $repoContent)
+$absorbArgs = @()
+if ($AbsorbGarageShifts) {
+    if (-not $intoRepo) { Fail "-AbsorbGarageShifts is for a run into the repo content, not $Output" }
+    $absorbArgs = @(Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot "..\Street Corsa\bin") -Recurse -Filter slot_shifts.json -ErrorAction SilentlyContinue |
+        ForEach-Object { "--absorb"; $_.FullName })
+}
 $measureArgs = if ($Measure) { @("--measure", $Measure) } else { @() }
 
 # The content in the repo is what saves were made with: ids it had that this run does not produce any more stay
 # answered (a mod release that renamed its files, aliases of earlier runs), whatever folder this run writes to
-$previous = Join-Path $PSScriptRoot "..\Street Corsa\Content\streetcorsa\parts"
+$previous = $repoContent
+
+# The whole output as it is, hand edits and models, goes to a dated folder outside the repo before the converter
+# writes anything. -Measure writes nothing and takes none. A copy that is not whole stops the run
+if (-not $Measure -and (Test-Path -LiteralPath $Output -PathType Container)) {
+    if (-not $env:LOCALAPPDATA) { Fail "no LOCALAPPDATA to back the output up into; nothing was converted" }
+    $backupRoot = Join-Path $env:LOCALAPPDATA "StreetCorsa\parts-backups"
+    $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+    $backup = Join-Path $backupRoot $stamp
+    for ($n = 2; Test-Path -LiteralPath $backup; $n++) { $backup = Join-Path $backupRoot "$stamp-$n" }
+    try {
+        $null = [IO.Directory]::CreateDirectory($backup)
+        Get-ChildItem -LiteralPath $Output -Force | Copy-Item -Destination $backup -Recurse -Force
+        $from = @(Get-ChildItem -LiteralPath $Output -Recurse -File -Force) | Measure-Object -Property Length -Sum
+        $to = @(Get-ChildItem -LiteralPath $backup -Recurse -File -Force) | Measure-Object -Property Length -Sum
+        if ($from.Count -ne $to.Count -or $from.Sum -ne $to.Sum) {
+            throw "copied $($to.Count) files ($($to.Sum) bytes) of $($from.Count) ($($from.Sum) bytes)"
+        }
+    }
+    catch {
+        Fail "could not back $Output up into ${backup}: $($_.Exception.Message); nothing was converted"
+    }
+    Write-Host "convert-parts: $Output backed up to $backup ($($from.Count) files, $([math]::Round($from.Sum / 1MB)) MB)"
+}
 
 & $Converter $Slrr $Output --notes $Notes --replace $replace --twin $twin --rename $rename --drop $drop --merge $merge --model $model --single $single --name $name --pads $pads --fit $fit --shift $shift --shifts (Join-Path $PSScriptRoot "slot_shifts.json") --previous $previous @absorbArgs @measureArgs
 exit $LASTEXITCODE

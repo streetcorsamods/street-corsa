@@ -704,8 +704,14 @@ public static class Program
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
             if (Directory.Exists(output))
             {
-                stale = Directory.EnumerateFiles(output, PartPack.FileName, SearchOption.AllDirectories)
-                    .Select(f => Path.GetFullPath(Path.GetDirectoryName(f)!)).Where(f => !current.Contains(f)).ToList();
+                // Only a pack a conversion made goes: one whose source names SLRR rpks. Anything else under the
+                // output (a pack made by hand, a mod's) is no conversion's to take away; it is named and left alone
+                foreach (var folder in Directory.EnumerateFiles(output, PartPack.FileName, SearchOption.AllDirectories)
+                    .Select(f => Path.GetFullPath(Path.GetDirectoryName(f)!)).Where(f => !current.Contains(f)))
+                {
+                    if (IsConvertedPack(run, folder)) stale.Add(folder);
+                    else Console.WriteLine($"  left {Path.GetRelativePath(output, folder)} alone: not converted from SLRR");
+                }
             }
 
             constants = Constants(run);
@@ -1733,6 +1739,31 @@ public static class Program
         foreach (var file in Directory.EnumerateFiles(folder, "*.kn5")) File.Delete(file);
         File.Delete(packFile);
         if (!Directory.EnumerateFileSystemEntries(folder).Any()) Directory.Delete(folder);
+    }
+
+    /// <summary>
+    /// Whether the pack in the folder is a conversion's: its source names rpks inside the SLRR install (whether they
+    /// are still there or not), as every pack the converter writes does. The --previous content is no list of its own
+    /// to go by: it is normally this very output, hand-made packs and all. A pack that does not read, or whose source
+    /// is anything else, is not
+    /// </summary>
+    private static bool IsConvertedPack(Run run, string folder)
+    {
+        PartPack? pack;
+        try
+        {
+            pack = JsonConvert.DeserializeObject<PartPack>(File.ReadAllText(Path.Combine(folder, PartPack.FileName)));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+        {
+            return false;
+        }
+
+        if (pack == null) return false;
+
+        var rpks = (pack.Source ?? string.Empty).Split(',').Select(s => s.Trim()).Where(s => s.Length > 0).ToList();
+        return rpks.Count > 0 && rpks.All(rpk => rpk.EndsWith(".rpk", StringComparison.OrdinalIgnoreCase)
+                                                 && PathNames.TryCombineUnder(run.Game.Root, rpk, out _));
     }
 
     /// <summary>Whether a pack may be converted into the folder: one it converted before, an empty one or none; nothing else is touched</summary>

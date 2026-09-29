@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using StreetCorsa.Helpers;
 
 namespace StreetCorsa;
 
@@ -274,7 +275,7 @@ internal sealed class ConverterOptions
             {
                 foreach (var pair in args[++i].Split(',').Select(p => p.Split('=')))
                 {
-                    if (pair.Length != 2)
+                    if (pair.Length != 2 || !IsPackId(pair[0].Trim()) || !IsPackId(pair[1].Trim()))
                     {
                         Console.WriteLine($"{ReplaceOption} takes <old pack>=<new pack>, e.g. engines/Mopar=engines/chrysler");
                         return null;
@@ -288,7 +289,8 @@ internal sealed class ConverterOptions
                 foreach (var pair in args[++i].Split(',').Select(p => p.Split('=')))
                 {
                     var source = pair.Length == 2 ? pair[0].Trim().Split(':') : Array.Empty<string>();
-                    if (source.Length is < 1 or > 2)
+                    // The pack id becomes a folder of the output: every part of it must be one plain folder name
+                    if (source.Length is < 1 or > 2 || !IsPackId(pair[1].Trim()))
                     {
                         Console.WriteLine($"{RenameOption} takes <rpk pack>[:<class, category or part name>]=<pack id>, " +
                                           "e.g. engines/Chrysler_V8_pak=engines/chrysler or wheels:Tyre=tyres/sl_tuners");
@@ -339,6 +341,9 @@ internal sealed class ConverterOptions
         options.Previous = previous;
         return options;
     }
+
+    /// <summary>A pack id that stays a folder inside the output: "/"-separated names, none of them "..", rooted or empty</summary>
+    internal static bool IsPackId(string id) => id.Split('/').All(PathNames.IsSafeSegment);
 
     /// <summary>"&lt;part id pattern&gt;:&lt;slot&gt;=&lt;value&gt;", the shape of --fit, --shift and --pads rules</summary>
     private static bool TrySlotRule(string rule, out string pattern, out int slot, out string value)
