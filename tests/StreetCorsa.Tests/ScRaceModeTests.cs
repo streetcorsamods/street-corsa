@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using StreetCorsa.Services;
 
 namespace StreetCorsa.Tests;
@@ -86,5 +87,18 @@ public sealed class ScRaceModeTests : IDisposable
 
         Assert.NotNull(problem);
         Assert.False(Directory.Exists(ScRaceMode.InstalledFolder(_ac)));
+    }
+
+    [Fact]
+    public void The_manifest_version_is_the_scripts_version()
+    {
+        // In step by a comment only, and they drifted before: CSP shows the manifest's, the result file carries the script's
+        var mode = Path.Combine(RepoPaths.Root, "apps", "new-modes", "sc_race");
+        var manifest = Regex.Match(File.ReadAllText(Path.Combine(mode, "manifest.ini")), @"^\s*VERSION\s*=\s*(\S+)\s*$", RegexOptions.Multiline);
+        var script = Regex.Match(File.ReadAllText(Path.Combine(mode, "mode.lua")), @"^local SCRIPT_VERSION = ""([^""]+)""", RegexOptions.Multiline);
+
+        Assert.True(manifest.Success, "no VERSION in manifest.ini");
+        Assert.True(script.Success, "no SCRIPT_VERSION in mode.lua");
+        Assert.Equal(script.Groups[1].Value, manifest.Groups[1].Value);
     }
 }

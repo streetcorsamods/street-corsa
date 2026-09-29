@@ -324,18 +324,7 @@ public sealed class CarDataOverlayTests : IDisposable
     private string MakePackedCar(string id)
     {
         var folder = CarFolder(id);
-        var key = Encoding.ASCII.GetBytes(AcdFile.KeyFor(id));
-        using var data = new MemoryStream();
-        var w = new BinaryWriter(data);
-        foreach (var (name, content) in new[] { ("engine.ini", EngineBytes), ("car.ini", CarIniBytes) })
-        {
-            w.Write(name.Length);
-            w.Write(Encoding.ASCII.GetBytes(name));
-            w.Write(content.Length);
-            for (var i = 0; i < content.Length; i++) w.Write((int)(byte)(content[i] + key[i % key.Length]));
-        }
-
-        _temp.Bytes(Path.Combine(folder, AcdFile.FileName), data.ToArray());
+        AcdFixture.Write(folder, id, ("engine.ini", EngineBytes), ("car.ini", CarIniBytes));
         _temp.File(Path.Combine(folder, "ui", "ui_car.json"), "{}");
         return folder;
     }

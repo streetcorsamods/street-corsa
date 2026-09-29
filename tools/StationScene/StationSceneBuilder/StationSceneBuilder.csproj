@@ -19,4 +19,10 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>
 
+  <!-- What the scene builders share, and the game's atomic writes: a builder stopped half way leaves the shipped scene as it was -->
+  <ItemGroup>
+    <Compile Include="..\..\Shared\Kn5SceneWriter.cs" Link="Shared\Kn5SceneWriter.cs" />
+    <Compile Include="..\..\..\Street Corsa\Helpers\SafeFile.cs" Link="Helpers\SafeFile.cs" />
+  </ItemGroup>
+
 </Project>

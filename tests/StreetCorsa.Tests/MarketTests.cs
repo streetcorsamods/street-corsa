@@ -7,21 +7,6 @@ using StreetCorsa.Services.Time;
 
 namespace StreetCorsa.Tests;
 
-/// <summary>Time that passes without a scheduler behind it</summary>
-internal sealed class QuietTime : IGameTimeService
-{
-    public int DayStartHour => GameState.DayStartHour;
-    public int DayEndHour => GameState.DayEndHour;
-    public Task<TimeSpendResult> SpendTimeAsync(GameState gameState, GameAction action) => Task.FromResult(new TimeSpendResult());
-    public Task<TimeSpendResult> SpendTimeAsync(GameState gameState, int minutes) => Task.FromResult(new TimeSpendResult());
-    public int GetRemainingMinutesToday(GameState gameState) => 600;
-    public double GetRemainingHoursToday(GameState gameState) => 10;
-    public string GetFormattedTime(GameState gameState) => string.Empty;
-    public string GetFormattedDate(GameState gameState) => string.Empty;
-    public bool HasTimeFor(GameState gameState, GameAction action) => true;
-    public Task<TimeSpendResult> EndDayAsync(GameState gameState) => Task.FromResult(new TimeSpendResult());
-}
-
 public class MarketTests
 {
     private readonly MemoryCatalog _catalog = new();

@@ -47,6 +47,13 @@
     <None Include="..\..\Street Corsa\Content\streetcorsa\stations\*\station.json" LinkBase="Content\streetcorsa\stations" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <!-- The converter's plain-BCL code, tried on temp folders and made-up files: its commit and its SCX and RPK readers -->
+  <ItemGroup>
+    <Compile Include="..\..\tools\SlrrPartsConverter\ConversionOutput.cs" Link="Converter\ConversionOutput.cs" />
+    <Compile Include="..\..\tools\SlrrPartsConverter\Slrr\SlrrMesh.cs" Link="Converter\SlrrMesh.cs" />
+    <Compile Include="..\..\tools\SlrrPartsConverter\Slrr\SlrrRpk.cs" Link="Converter\SlrrRpk.cs" />
+  </ItemGroup>
+
   <ItemGroup>
     <Using Include="Xunit" />
     <!-- The WPF SDK leaves System.IO out of the implicit usings; nearly every test here works on files -->

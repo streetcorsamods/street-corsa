@@ -471,6 +471,7 @@ public sealed class EngineStandTests : IDisposable
         });
         workbench.SetCar(car);
         for (var waited = 0; workbench.Engine == null && waited < 10_000; waited += 20) await Task.Delay(20, TestContext.Current.CancellationToken);
+        Assert.NotNull(workbench.Engine);
         workbench.IsCarView = true;
 
         InstalledPart Live(string kind) => workbench.Engine!.SelfAndDescendants().First(p => catalog.WorkOrder.KindOf(p.Definition) == kind);
@@ -532,6 +533,7 @@ public sealed class EngineStandTests : IDisposable
         var workbench = new Screens.Garage.PartsWorkbenchViewModel(new CatalogParts(), state, () => { }, _ => Task.CompletedTask);
         workbench.SetCar(car);
         for (var waited = 0; workbench.Engine == null && waited < 10_000; waited += 20) await Task.Delay(20, TestContext.Current.CancellationToken);
+        Assert.NotNull(workbench.Engine);
         workbench.IsCarView = true;
 
         InstalledPart Live(string kind) => workbench.Engine!.SelfAndDescendants().First(p => catalog.WorkOrder.KindOf(p.Definition) == kind);

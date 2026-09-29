@@ -76,15 +76,6 @@ public class OpponentRulesTests
 
 public class OpponentLifeServiceTests
 {
-    private sealed class NoCatalog : IContentCatalogRepository
-    {
-        public void UpsertCar(CarDefinition car) { }
-        public void UpsertCars(IEnumerable<CarDefinition> cars) { }
-        public CarDefinition? GetCar(string id) => null;
-        public List<CarDefinition> GetAllCars() => [];
-        public List<CarDefinition> GetCarsByStatus(ContentStatus status) => [];
-    }
-
     private readonly FakeMarket _market = new(1000m);
     private readonly OpponentLifeService _life;
     private readonly GameState _state;
@@ -92,7 +83,7 @@ public class OpponentLifeServiceTests
     public OpponentLifeServiceTests()
     {
         TestLogging.SilenceLogging();
-        _life = new OpponentLifeService(new NoParts(), _market, new NoCatalog(), random: new FixedRandom(0.99));
+        _life = new OpponentLifeService(new NoParts(), _market, new NoCars(), random: new FixedRandom(0.99));
         _state = GameState.CreateNew("P");
     }
 

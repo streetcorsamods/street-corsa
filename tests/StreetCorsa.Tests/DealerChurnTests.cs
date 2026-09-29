@@ -40,16 +40,6 @@ internal sealed class FakeDealers(params DealerDefinition[] dealers) : IDealerCa
     ]);
 }
 
-/// <summary>A catalog without a car in it</summary>
-internal sealed class NoCars : IContentCatalogRepository
-{
-    public void UpsertCar(CarDefinition car) { }
-    public void UpsertCars(IEnumerable<CarDefinition> cars) { }
-    public CarDefinition? GetCar(string id) => null;
-    public List<CarDefinition> GetAllCars() => [];
-    public List<CarDefinition> GetCarsByStatus(ContentStatus status) => [];
-}
-
 public class DealerRulesTests
 {
     [Fact]
