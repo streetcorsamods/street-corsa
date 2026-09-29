@@ -38,6 +38,18 @@ namespace StreetCorsa.Screens.LoadGame
             set => SetProperty(ref _errorMessage, value);
         }
 
+        private bool _isBusy;
+
+        /// <summary>A save is being read or brought up to date, off the UI thread: nothing else is loaded or deleted meanwhile</summary>
+        public bool IsBusy
+        {
+            get => _isBusy;
+            private set
+            {
+                if (SetProperty(ref _isBusy, value)) RelayCommand.RaiseCanExecuteChanged();
+            }
+        }
+
         public RelayCommand<SaveGameInfo> LoadSaveCommand { get; }
         public RelayCommand<SaveGameInfo> DeleteSaveCommand { get; }
         public RelayCommand BackCommand { get; }
@@ -62,8 +74,8 @@ namespace StreetCorsa.Screens.LoadGame
 
             SavedGames = new ObservableCollection<SaveGameInfo>();
 
-            LoadSaveCommand = new RelayCommand<SaveGameInfo>(OnLoadSave);
-            DeleteSaveCommand = new RelayCommand<SaveGameInfo>(OnDeleteSave);
+            LoadSaveCommand = new RelayCommand<SaveGameInfo>(OnLoadSave, _ => !IsBusy);
+            DeleteSaveCommand = new RelayCommand<SaveGameInfo>(OnDeleteSave, _ => !IsBusy);
             BackCommand = new RelayCommand(OnBack);
 
             // The saves are listed in Enter, once: the screen is always entered right after it is made
@@ -121,14 +133,25 @@ namespace StreetCorsa.Screens.LoadGame
             return lastPlayed.ToString("MMM d, yyyy");
         }
 
-        private void OnLoadSave(SaveGameInfo? saveInfo)
+        /// <summary>Reads the save off the UI thread (a whole game can take a moment), then opens it</summary>
+        private async void OnLoadSave(SaveGameInfo? saveInfo)
         {
-            if (saveInfo == null)
+            if (saveInfo == null || IsBusy)
                 return;
 
+            // Nothing may escape an async void
             try
             {
-                var gameState = _repository.Load(saveInfo.SaveName);
+                GameState? gameState;
+                IsBusy = true;
+                try
+                {
+                    gameState = await Task.Run(() => _repository.Load(saveInfo.SaveName));
+                }
+                finally
+                {
+                    IsBusy = false;
+                }
 
                 if (gameState == null)
                 {
@@ -158,31 +181,43 @@ namespace StreetCorsa.Screens.LoadGame
             }
         }
 
-        private void Open(SaveGameInfo saveInfo, GameState gameState)
+        /// <summary>
+        /// Brings the save up to date off the UI thread (the parts catalog may load for it; nothing else has the game
+        /// yet), then goes to its garage. Only a garage that opened makes it the game the app saves and races with.
+        /// </summary>
+        private async void Open(SaveGameInfo saveInfo, GameState gameState)
         {
+            if (IsBusy) return;
+            IsBusy = true;
+
+            // Nothing may escape an async void
             try
             {
-                // Parts saved under ids of a pack that has been replaced since, and what no mod holds any more
-                var changed = _partsService.BringUpToDate(gameState);
-                changed |= ModsInSave.Tidy(gameState, CareerContent.Installed, Mods.ModSet.Installed);
-                if (changed) _repository.Save(gameState, saveInfo.SaveName);
+                await Task.Run(() =>
+                {
+                    // Parts saved under ids of a pack that has been replaced since, and what no mod holds any more
+                    var changed = _partsService.BringUpToDate(gameState);
+                    changed |= ModsInSave.Tidy(gameState, CareerContent.Installed, Mods.ModSet.Installed);
+                    if (changed) _repository.Save(gameState, saveInfo.SaveName);
+                });
 
-                // Store current game state in App for saving on exit
-                _setCurrentGame(gameState);
-
-                // Navigate to game screen with loaded state
-                _navigationService.NavigateToGarage(gameState);
+                // Navigate to game screen with loaded state, then store it in App for saving on exit
+                if (_navigationService.NavigateToGarage(gameState)) _setCurrentGame(gameState);
             }
             catch (Exception ex)
             {
                 _logger.Error(ex, "Could not load save {SaveName}", saveInfo.SaveName);
                 ErrorMessage = $"Failed to load game: {ex.Message}";
             }
+            finally
+            {
+                IsBusy = false;
+            }
         }
 
         private void OnDeleteSave(SaveGameInfo? saveInfo)
         {
-            if (saveInfo == null)
+            if (saveInfo == null || IsBusy)
                 return;
 
             var confirmDialog = new ConfirmationDialogViewModel(

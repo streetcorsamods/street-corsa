@@ -31,7 +31,7 @@
                     HorizontalAlignment="Center"
                     MinWidth="320">
                 <StackPanel TextElement.FontFamily="Consolas"
-                            TextElement.Foreground="Black"
+                            TextElement.Foreground="{StaticResource InkBrush}"
                             TextElement.FontSize="{StaticResource FontSizeBody}">
                     <Grid Margin="0,0,0,6">
                         <Grid.ColumnDefinitions>

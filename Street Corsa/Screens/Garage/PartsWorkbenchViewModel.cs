@@ -728,8 +728,9 @@ namespace StreetCorsa.Screens.Garage
                 // The engine on the stand is no car's: its dyno figure is nobody's
                 var car = _isStand ? null : _car;
 
-                // On a tree of its own: the one on screen belongs to the UI thread
-                var saved = live.Saved[live.Root];
+                // On a tree of its own, copied here: the one on screen, and the saved tree behind it, belong to the UI
+                // thread, which may change them while the worker evaluates
+                var saved = PartTrees.Clone(live.Saved[live.Root], keepIds: true);
                 var report = await Task.Run(() => EngineFactory.Evaluate(catalog, saved));
                 if (evaluation != _evaluation) return;
 

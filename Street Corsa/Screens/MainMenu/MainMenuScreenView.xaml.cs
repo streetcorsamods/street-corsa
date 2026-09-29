@@ -149,7 +149,8 @@ namespace StreetCorsa.Screens.MainMenu
 
         private void OnWindowKeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Key != Key.Escape || !IsLoaded || _viewModel?.CloseCardCommand is not { } close) return;
+            // Escape with a dialog in front is the dialog's, not the card's behind it
+            if (e.Key != Key.Escape || !IsLoaded || StreetCorsa.Dialogs.ModalState.IsOpen || _viewModel?.CloseCardCommand is not { } close) return;
             if (!close.CanExecute(null)) return;
 
             close.Execute(null);

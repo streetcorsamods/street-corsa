@@ -177,7 +177,7 @@
                                                                            CornerRadius="5"
                                                                            Margin="0,0,10,0">
                                                                         <Grid>
-                                                                            <Image Source="{Binding PortraitPath}"
+                                                                            <Image Source="{Binding PortraitImage}"
                                                                                   Stretch="UniformToFill"
                                                                                   Visibility="{Binding HasPortrait, Converter={StaticResource BooleanToVisibilityConverter}}"/>
 
@@ -348,7 +348,7 @@
                                        BorderThickness="2"
                                        CornerRadius="5">
                                     <Grid>
-                                        <Image Source="{Binding SelectedOpponent.PortraitPath}"
+                                        <Image Source="{Binding SelectedOpponent.PortraitImage}"
                                               Stretch="UniformToFill"
                                               Visibility="{Binding SelectedOpponent.HasPortrait, Converter={StaticResource BooleanToVisibilityConverter}}"/>
 
@@ -651,7 +651,7 @@
                                                                         </Border.BorderBrush>
                                                                         <Grid>
                                                                             <!-- Preview Image -->
-                                                                            <Image Source="{Binding PreviewPath}"
+                                                                            <Image Source="{Binding PreviewImage}"
                                                                                   Stretch="UniformToFill"
                                                                                   Opacity="0.6"
                                                                                   Visibility="{Binding HasPreview, Converter={StaticResource BooleanToVisibilityConverter}}"/>
@@ -762,7 +762,7 @@
                                                                         </Border.BorderBrush>
                                                                         <Grid>
                                                                             <!-- Preview Image -->
-                                                                            <Image Source="{Binding PreviewPath}"
+                                                                            <Image Source="{Binding PreviewImage}"
                                                                                   Stretch="UniformToFill"
                                                                                   Opacity="0.6"
                                                                                   Visibility="{Binding HasPreview, Converter={StaticResource BooleanToVisibilityConverter}}"/>
@@ -982,8 +982,10 @@
                                                CornerRadius="5"
                                                Padding="12"
                                                Margin="0,0,5,0"
-                                               Cursor="Hand"
-                                               MouseLeftButtonUp="CashBetBorder_MouseLeftButtonUp">
+                                               Cursor="Hand">
+                                            <Border.InputBindings>
+                                                <MouseBinding MouseAction="LeftClick" Command="{Binding CashBetCommand}"/>
+                                            </Border.InputBindings>
                                             <Border.Style>
                                                 <Style TargetType="Border">
                                                     <Setter Property="BorderBrush" Value="{StaticResource BorderLightBrush}"/>
@@ -1068,8 +1070,10 @@
                                                CornerRadius="5"
                                                Padding="12"
                                                Margin="5,0,0,0"
-                                               Cursor="Hand"
-                                               MouseLeftButtonUp="PinkSlipBorder_MouseLeftButtonUp">
+                                               Cursor="Hand">
+                                            <Border.InputBindings>
+                                                <MouseBinding MouseAction="LeftClick" Command="{Binding PinkSlipBetCommand}"/>
+                                            </Border.InputBindings>
                                             <Border.Style>
                                                 <Style TargetType="Border">
                                                     <Setter Property="BorderBrush" Value="{StaticResource BorderLightBrush}"/>

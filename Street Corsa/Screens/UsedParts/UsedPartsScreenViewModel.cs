@@ -90,6 +90,7 @@ namespace StreetCorsa.Screens.UsedParts
             base.Enter();
             _logger.Information("Entered used parts screen");
 
+            Entering = true;
             try
             {
                 // Catalog, first ads and the fit check take a moment the first time: not on the UI thread.
@@ -110,6 +111,13 @@ namespace StreetCorsa.Screens.UsedParts
                 _logger.Error(ex, "Could not open the parts pages");
                 StatusText = "The parts pages could not be opened.";
             }
+            finally
+            {
+                Entering = false;
+            }
+
+            // The first look took a moment: a player who backed out meanwhile never stayed to spend the time
+            if (!ReferenceEquals(_navigationService.CurrentScreen, this)) return;
 
             try
             {

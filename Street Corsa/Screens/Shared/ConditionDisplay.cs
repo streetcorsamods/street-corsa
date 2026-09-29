@@ -28,7 +28,7 @@ namespace StreetCorsa.Screens.Shared
         /// <summary>An overall condition, 0 to 1</summary>
         public static ConditionText Of(double condition)
         {
-            var clamped = double.IsFinite(condition) ? Math.Clamp(condition, 0, 1) : 0;
+            var clamped = Helpers.Unit.Clamp01(condition, ifNotFinite: 0);
             return new ConditionText($"{(int)(clamped * 100)}%", LabelFor(clamped));
         }
 

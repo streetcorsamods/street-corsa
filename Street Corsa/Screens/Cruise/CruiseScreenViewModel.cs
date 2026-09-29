@@ -429,10 +429,8 @@ namespace StreetCorsa.Screens.Cruise
 
         private void SendHome(string message, string title)
         {
-            _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, message, title));
-            // Not from inside Enter: the navigation that brought the player here is still going on
             _leaving = true;
-            _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(() => _navigationService.NavigateToGarage(_gameState));
+            Shared.SendHome.ToGarage(_dialogService, _navigationService, _gameState, message, title);
         }
 
         private async void Leave(bool toGarage)

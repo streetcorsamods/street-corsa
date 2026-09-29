@@ -142,6 +142,9 @@ namespace StreetCorsa.Screens.NewGame
                 // Generate initial race events, for the reputation the player starts with
                 gameState.Career.SyncStanding(gameState.Player);
                 _raceEventService.GenerateEvents(gameState.Career, gameState.Date, gameState.Rules.PinkSlipFactor);
+
+                // Saved again with them: a game that ends before its first save would otherwise start with no invitations
+                _repository.Save(gameState, saveName);
             }
             catch (Exception ex)
             {
@@ -149,11 +152,9 @@ namespace StreetCorsa.Screens.NewGame
                 return;
             }
 
-            // Store current game state in App for saving on exit
-            _setCurrentGame(gameState);
-
-            // Navigate to game screen
-            _navigationService.NavigateToGarage(gameState);
+            // Navigate to game screen, then store the game in App for saving on exit: only a garage that opened makes it
+            // the game the app saves and races with
+            if (_navigationService.NavigateToGarage(gameState)) _setCurrentGame(gameState);
         }
 
         private void ReportFailure(Exception ex, string saveName)

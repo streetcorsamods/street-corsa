@@ -125,6 +125,7 @@ namespace StreetCorsa.Screens.PartShop
             base.Enter();
             _logger.Information("Walked into {Shop}", Definition.Name);
 
+            Entering = true;
             try
             {
                 var car = SelectedCar;
@@ -146,6 +147,10 @@ namespace StreetCorsa.Screens.PartShop
             {
                 _logger.Error(ex, "Could not open {Shop}", Definition.Name);
                 StatusText = "The shop could not be looked round.";
+            }
+            finally
+            {
+                Entering = false;
             }
         }
 
