@@ -10,7 +10,7 @@
 | Settings | `Screens/Settings/` | App settings (a card on the main screen) |
 | CarCatalogEditor | `Screens/CarCatalogEditor/` | Edit car prices/precedence |
 | Garage | `Screens/Garage/` | In-game hub: 3D garage with the selected car, overlay buttons to every other in-game screen |
-| CarSelection | `Screens/CarSelection/` | Select car for activity |
+| CarLot | `Screens/CarLot/` | The player's cars parked in their warehouses in 3D: look them over and take one to the garage (see `car-lot.md`) |
 | Diner | `Screens/Diner/` | Meet opponents, accept challenges |
 | Cruise | `Screens/Cruise/` | Sit at the curb in your car; rivals pull up with an offer (see `cruise.md`) |
 | GasStation | `Screens/Station/` | Drive to the gas station: fill up, top up the oil, a wash, the attendant's remarks (see `gas-station.md`) |
@@ -29,7 +29,7 @@ MainMenu (opens under the title; NewGame, LoadGame and Settings are cards on it,
          ├── LoadGame card → Garage
          └── Settings card → CarCatalogEditor → MainMenu with the Settings card open
 
-Garage (hub) ←→ CarSelection
+Garage (hub) ←→ CarLot
   │
   ├──→ Diner (challenges)      [Hit the streets]
   │      └──→ Cruise ──→ RaceLoading ──→ Cruise   [Cruise the streets]
@@ -60,7 +60,7 @@ Each screen folder contains:
 | CreateSettingsCard(back) | Settings card (not a navigation) |
 | NavigateToCarCatalogEditor() | CarCatalogEditor |
 | NavigateToGarage(gameState) | Garage |
-| NavigateToCarSelection(gameState) | CarSelection |
+| NavigateToCarLot(gameState) | CarLot |
 | NavigateToDiner(gameState) | Diner |
 | NavigateToCruise(gameState) | Cruise |
 | NavigateToGasStation(gameState) | GasStation |

@@ -8,5 +8,6 @@
     <Project Path="tools/SlrrPartsConverter/SlrrPartsConverter.csproj" />
     <Project Path="tools/StationScene/StationSceneBuilder/StationSceneBuilder.csproj" />
     <Project Path="tools/StreetScene/StreetSceneBuilder/StreetSceneBuilder.csproj" />
+    <Project Path="tools/WarehouseScene/WarehouseSceneBuilder/WarehouseSceneBuilder.csproj" />
   </Folder>
 </Solution>

@@ -4,9 +4,13 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using AcTools.Render.Kn5Specific.Objects;
+using AcTools.Numerics;
 using AcTools.Render.Kn5SpecificForward;
+using AcTools.Render.Kn5SpecificForwardDark.Lights;
+using StreetCorsa.Controls.Street;
 using StreetCorsa.Logging;
 using StreetCorsa.Services.Catalog;
+using StreetCorsa.Services.Street;
 using CarSlot = AcTools.Render.Kn5SpecificForward.ForwardKn5ObjectRenderer.CarSlot;
 using Sx = SlimDX;
 
@@ -21,15 +25,36 @@ public readonly record struct LotCarPlacement(
     float Heading,
     string Label);
 
+/// <summary>Where the camera looks at the whole lot from: orbiting a point <paramref name="TargetHeight"/> over the middle of the floor</summary>
+public sealed record LotView(float Alpha, float Beta, float TargetHeight);
+
 /// <summary>
-/// A dealer's lot: several cars parked in a showroom, seen from a camera that either takes in the whole lot
-/// or sits on one car.
+/// The inside of the room a lot stands in, which the camera does not leave: the walls <paramref name="HalfLength"/>
+/// either side of the middle along x and <paramref name="HalfWidth"/> along z, the roof <paramref name="Height"/> up
+/// </summary>
+public readonly record struct LotRoom(float HalfLength, float HalfWidth, float Height);
+
+/// <summary>
+/// How a lot's room is dressed: the renderer's light, the picture each material wears ("wh_wall" -> a picture in the
+/// model) and how bright the self-lit ones glow
+/// </summary>
+public sealed record LotDressing(
+    StreetLighting Lighting,
+    float[] Sun,
+    IReadOnlyDictionary<string, string> Pictures,
+    IReadOnlyDictionary<string, float> Glow);
+
+/// <summary>
+/// A lot: several cars parked in a room, seen from a camera that either takes in the whole lot or sits on one
+/// car. A dealer's lot stands in one of AC's showrooms as it comes; the player's warehouse (the car lot screen)
+/// in a scene of its own, which it dresses for each warehouse (<see cref="Dressing"/>) and looks down from where
+/// the scene says (<see cref="LotView"/>).
 ///
 /// The renderer is the same one the garage uses. It holds a slot per car and draws them all in one scene, so
 /// the work here is placing them, moving the camera between the two views, and working out which car the
 /// pointer is on.
 /// </summary>
-public class DealerLotViewport3D : D3DViewportBase
+public class LotViewport3D : D3DViewportBase
 {
     // Taking in the whole lot, and standing on one car
     private const float DefaultLotRadius = 19f;
@@ -55,6 +80,12 @@ public class DealerLotViewport3D : D3DViewportBase
 
     private const float MinBeta = 0.02f;
     private const float MaxBeta = 1.1f;
+
+    /// <summary>How far short of a wall or the roof the camera stops, in a room that says where they are</summary>
+    private const float WallMargin = 0.4f;
+
+    /// <summary>The camera is not pushed nearer its target than this by a wall: better a wall than a lens in a car</summary>
+    private const float MinRoomRadius = 2.5f;
 
     /// <summary>
     /// Added to every bay's heading. AC car models are not all built facing the same way; if a lot comes out
@@ -88,6 +119,12 @@ public class DealerLotViewport3D : D3DViewportBase
     /// <summary>The showroom the standing scene was built from: a new one means starting the scene again</summary>
     private string? _loadedShowroom;
 
+    /// <summary>
+    /// The <see cref="ShowroomKn5"/> the standing scene was loaded for. Not always <see cref="_loadedShowroom"/>: a
+    /// showroom whose file is missing is loaded as none.
+    /// </summary>
+    private string? _showroomAskedFor;
+
     private System.Windows.Point _lastMouse;
     private System.Windows.Point _pressedAt;
     private bool _isDragging;
@@ -100,12 +137,15 @@ public class DealerLotViewport3D : D3DViewportBase
     private float _betaGoal = LotBeta;
     private float? _alphaGoal;
 
-    public DealerLotViewport3D()
-        : base("DealerLot", new LabelLook(14, 0xD8, 0x90, new Thickness(9, 5, 9, 5), new Vector(18, 18)))
+    /// <summary>The lamps <see cref="Dressing"/> hung, taken down again when the scene is dressed differently</summary>
+    private readonly List<DarkLightBase> _lamps = [];
+
+    public LotViewport3D()
+        : base("Lot", new LabelLook(14, 0xD8, 0x90, new Thickness(9, 5, 9, 5), new Vector(18, 18)))
     {
     }
 
-    protected override string ViewportName => "Dealer lot viewport";
+    protected override string ViewportName => "Lot viewport";
 
     /// <summary>A car on the lot was clicked, by its index in <see cref="Cars"/></summary>
     public event Action<int>? CarClicked;
@@ -116,8 +156,8 @@ public class DealerLotViewport3D : D3DViewportBase
     #region Dependency properties
 
     public static readonly DependencyProperty ShowroomKn5Property = DependencyProperty.Register(
-        nameof(ShowroomKn5), typeof(string), typeof(DealerLotViewport3D),
-        new PropertyMetadata(null, (d, _) => ((DealerLotViewport3D)d).RequestLoad()));
+        nameof(ShowroomKn5), typeof(string), typeof(LotViewport3D),
+        new PropertyMetadata(null, (d, _) => ((LotViewport3D)d).RequestLoad()));
 
     /// <summary>Full path to the showroom .kn5 the lot stands in</summary>
     public string? ShowroomKn5
@@ -127,8 +167,8 @@ public class DealerLotViewport3D : D3DViewportBase
     }
 
     public static readonly DependencyProperty CarsProperty = DependencyProperty.Register(
-        nameof(Cars), typeof(IReadOnlyList<LotCarPlacement>), typeof(DealerLotViewport3D),
-        new PropertyMetadata(null, (d, _) => ((DealerLotViewport3D)d).RequestLoad()));
+        nameof(Cars), typeof(IReadOnlyList<LotCarPlacement>), typeof(LotViewport3D),
+        new PropertyMetadata(null, (d, _) => ((LotViewport3D)d).RequestLoad()));
 
     /// <summary>The cars standing on the lot, each with the bay it stands in</summary>
     public IReadOnlyList<LotCarPlacement>? Cars
@@ -138,8 +178,8 @@ public class DealerLotViewport3D : D3DViewportBase
     }
 
     public static readonly DependencyProperty LotRadiusProperty = DependencyProperty.Register(
-        nameof(LotRadius), typeof(double), typeof(DealerLotViewport3D),
-        new PropertyMetadata((double)DefaultLotRadius, (d, _) => ((DealerLotViewport3D)d).OnLotRadiusChanged()));
+        nameof(LotRadius), typeof(double), typeof(LotViewport3D),
+        new PropertyMetadata((double)DefaultLotRadius, (d, _) => ((LotViewport3D)d).OnLotRadiusChanged()));
 
     /// <summary>
     /// How far back to stand to take the whole lot in. Worked out from the room the lot is in, because a
@@ -151,9 +191,53 @@ public class DealerLotViewport3D : D3DViewportBase
         set => SetValue(LotRadiusProperty, value);
     }
 
+    public static readonly DependencyProperty LotViewProperty = DependencyProperty.Register(
+        nameof(LotView), typeof(LotView), typeof(LotViewport3D),
+        new PropertyMetadata(null, (d, _) => ((LotViewport3D)d).OnLotRadiusChanged()));
+
+    /// <summary>
+    /// Where the camera looks at the whole lot from, when the room says (the warehouse's view down its aisle); its
+    /// radius is <see cref="LotRadius"/>'s. Without one the camera looks at the middle of the lot from wherever the
+    /// player swung it to.
+    /// </summary>
+    public LotView? LotView
+    {
+        get => (LotView?)GetValue(LotViewProperty);
+        set => SetValue(LotViewProperty, value);
+    }
+
+    public static readonly DependencyProperty RoomProperty = DependencyProperty.Register(
+        nameof(Room), typeof(LotRoom?), typeof(LotViewport3D),
+        new PropertyMetadata(null, (d, _) => ((LotViewport3D)d).Invalidate()));
+
+    /// <summary>
+    /// The walls and roof the camera stays inside, whichever way it is swung or wheeled out. Null where the room does
+    /// not say (a dealer's showroom): the camera then goes as far as the wheel lets it.
+    /// </summary>
+    public LotRoom? Room
+    {
+        get => (LotRoom?)GetValue(RoomProperty);
+        set => SetValue(RoomProperty, value);
+    }
+
+    public static readonly DependencyProperty DressingProperty = DependencyProperty.Register(
+        nameof(Dressing), typeof(LotDressing), typeof(LotViewport3D),
+        new PropertyMetadata(null, (d, _) => ((LotViewport3D)d).ApplyDressing()));
+
+    /// <summary>
+    /// How the room is dressed: its light, which picture each of its materials wears and how bright the self-lit ones
+    /// glow. Changed on a standing scene without loading it again. Null leaves the room as its model has it, in the
+    /// renderer's own light (a dealer's showroom).
+    /// </summary>
+    public LotDressing? Dressing
+    {
+        get => (LotDressing?)GetValue(DressingProperty);
+        set => SetValue(DressingProperty, value);
+    }
+
     public static readonly DependencyProperty SelectedIndexProperty = DependencyProperty.Register(
-        nameof(SelectedIndex), typeof(int), typeof(DealerLotViewport3D),
-        new PropertyMetadata(-1, (d, _) => ((DealerLotViewport3D)d).OnSelectionChanged()));
+        nameof(SelectedIndex), typeof(int), typeof(LotViewport3D),
+        new PropertyMetadata(-1, (d, _) => ((LotViewport3D)d).OnSelectionChanged()));
 
     /// <summary>Which car the camera sits on, or -1 to take in the whole lot</summary>
     public int SelectedIndex
@@ -163,7 +247,7 @@ public class DealerLotViewport3D : D3DViewportBase
     }
 
     private static readonly DependencyPropertyKey IsLotReadyPropertyKey = DependencyProperty.RegisterReadOnly(
-        nameof(IsLotReady), typeof(bool), typeof(DealerLotViewport3D), new PropertyMetadata(false));
+        nameof(IsLotReady), typeof(bool), typeof(LotViewport3D), new PropertyMetadata(false));
 
     public static readonly DependencyProperty IsLotReadyProperty = IsLotReadyPropertyKey.DependencyProperty;
 
@@ -178,7 +262,7 @@ public class DealerLotViewport3D : D3DViewportBase
     }
 
     private static readonly DependencyPropertyKey LoadedCountPropertyKey = DependencyProperty.RegisterReadOnly(
-        nameof(LoadedCount), typeof(int), typeof(DealerLotViewport3D), new PropertyMetadata(0));
+        nameof(LoadedCount), typeof(int), typeof(LotViewport3D), new PropertyMetadata(0));
 
     public static readonly DependencyProperty LoadedCountProperty = LoadedCountPropertyKey.DependencyProperty;
 
@@ -196,7 +280,7 @@ public class DealerLotViewport3D : D3DViewportBase
 
     #region Loading
 
-    protected override bool IsUpToDate => Renderer != null && SameCars(Cars ?? [], _loaded);
+    protected override bool IsUpToDate => Renderer != null && ShowroomKn5 == _showroomAskedFor && SameCars(Cars ?? [], _loaded);
 
     protected override Task LoadAsync() => LoadLotAsync(Cars ?? []);
 
@@ -212,7 +296,8 @@ public class DealerLotViewport3D : D3DViewportBase
 
     private async Task LoadLotAsync(IReadOnlyList<LotCarPlacement> cars)
     {
-        var showroom = ShowroomKn5;
+        var asked = ShowroomKn5;
+        var showroom = asked;
         if (showroom != null && !File.Exists(showroom))
         {
             Logger.Warning("Showroom not found, rendering the lot without it: {Showroom}", showroom);
@@ -232,6 +317,7 @@ public class DealerLotViewport3D : D3DViewportBase
         // reading a showroom of a few hundred MB again for nothing, so only the cars are swapped.
         if (Renderer != null && showroom == _loadedShowroom)
         {
+            _showroomAskedFor = asked;
             await UpdateCarsAsync(cars);
             return;
         }
@@ -259,10 +345,12 @@ public class DealerLotViewport3D : D3DViewportBase
         if (!await StartRendererAsync(renderer)) return;
 
         _loadedShowroom = showroom;
+        _showroomAskedFor = asked;
         _loaded = cars;
         _slots.Clear();
         LoadedCount = 0;
         IsLotReady = false;
+        ApplyDressing();
 
         ApplyLotCamera(immediate: true);
         if (SelectedIndex >= 0) OnSelectionChanged();
@@ -290,6 +378,10 @@ public class DealerLotViewport3D : D3DViewportBase
         // Restocking after a sale moves several cars at once. Cover the lot for that too, rather than let
         // the player watch cars blink out and back in around the one they just bought.
         IsLotReady = false;
+
+        // A car picked before these cars arrived (the next warehouse, gone to straight onto one of its cars) was
+        // looked for among the ones leaving: go to it in its bay now, and onto the car itself once it stands there
+        if (SelectedIndex >= 0) OnSelectionChanged();
 
         var budget = CarByteBudget;
 
@@ -360,6 +452,7 @@ public class DealerLotViewport3D : D3DViewportBase
         LoadedCount = _standing.Count(c => c != null);
         renderer.RefreshShadows();
         IsLotReady = true;
+        if (IsCarView) OnSelectionChanged();
         Invalidate();
 
         Logger.Information("Lot restocked: {Loaded} of {Total} cars out front", LoadedCount, cars.Count);
@@ -462,6 +555,9 @@ public class DealerLotViewport3D : D3DViewportBase
         {
             loaded.RefreshShadows();
             IsLotReady = true;
+
+            // Framed on the car's own box now it has one, not the bay's
+            if (IsCarView) OnSelectionChanged();
             Invalidate();
         }
 
@@ -503,6 +599,60 @@ public class DealerLotViewport3D : D3DViewportBase
 
     #endregion
 
+    #region Dressing
+
+    /// <summary>
+    /// Dresses the standing room as <see cref="Dressing"/> says: its light and lamps, then each material pointed at its
+    /// picture (every picture a look can wear is in the model already, so this is a pointer changed, not a texture
+    /// loaded) and the self-lit ones set glowing
+    /// </summary>
+    private void ApplyDressing()
+    {
+        var renderer = Renderer;
+        var dressing = Dressing;
+
+        // A dressing for a room still to be loaded waits for it: the load dresses the room when it is up
+        if (renderer == null || dressing == null || ShowroomKn5 != _showroomAskedFor) return;
+
+        foreach (var lamp in _lamps) renderer.RemoveLight(lamp);
+        _lamps.Clear();
+        _lamps.AddRange(SceneLights.Apply(renderer, dressing.Lighting, dressing.Sun));
+
+        if (renderer.ShowroomNode?.OriginalFile is { } kn5)
+        {
+            var ids = kn5.Materials.Keys.Select((name, i) => (name, i)).ToDictionary(p => p.name, p => (uint)p.i, StringComparer.Ordinal);
+
+            foreach (var (material, picture) in dressing.Pictures)
+            {
+                if (!ids.TryGetValue(material, out var id) || kn5.Materials[material].GetMappingByName("txDiffuse") is not { } mapping)
+                {
+                    Logger.Warning("The lot's room has no material {Material} to dress", material);
+                    continue;
+                }
+
+                if (kn5.Textures.Count > 0 && !kn5.Textures.ContainsKey(picture))
+                {
+                    Logger.Warning("The lot's room has no picture {Picture} for {Material}", picture, material);
+                    continue;
+                }
+
+                if (mapping.Texture == picture) continue;
+                mapping.Texture = picture;
+                renderer.RefreshMaterial(kn5, id);
+            }
+
+            foreach (var (material, glow) in dressing.Glow)
+            {
+                if (ids.TryGetValue(material, out var id))
+                    renderer.UpdateMaterialPropertyC(kn5, id, "ksEmissive", new Vec3(glow, glow, glow));
+            }
+        }
+
+        Invalidate();
+    }
+
+    #endregion
+
     #region Camera
 
     private void OnLotRadiusChanged()
@@ -524,9 +674,10 @@ public class DealerLotViewport3D : D3DViewportBase
         }
 
         var car = _loaded[index];
-        var slot = index < _slots.Count ? _slots[index] : null;
+        var standing = index < _standing.Count && _standing[index] is { } s && s.Equals(car);
+        var slot = standing && index < _slots.Count ? _slots[index] : null;
 
-        // Stand where the car can be seen whole: its own box if it has one, else where its bay is
+        // Stand where the car can be seen whole: its own box if it is standing there, else where its bay is
         var center = slot?.GetCarBoundingBox() is { } box
             ? (box.Minimum + box.Maximum) / 2f
             : new Sx.Vector3(car.X, NominalCarSize.Y / 2f, car.Z);
@@ -543,10 +694,12 @@ public class DealerLotViewport3D : D3DViewportBase
 
     private void ApplyLotCamera(bool immediate)
     {
-        _targetGoal = new Sx.Vector3(0f, LotEyeHeight, 0f);
+        // The room's own view comes back round to where it looks from; a plain lot stays swung where it was
+        var view = LotView;
+        _targetGoal = new Sx.Vector3(0f, view?.TargetHeight ?? LotEyeHeight, 0f);
         _radiusGoal = (float)LotRadius;
-        _betaGoal = LotBeta;
-        _alphaGoal = null;
+        _betaGoal = view?.Beta ?? LotBeta;
+        _alphaGoal = view?.Alpha;
 
         var orbit = Renderer?.CameraOrbit;
         if (orbit == null) return;
@@ -556,7 +709,7 @@ public class DealerLotViewport3D : D3DViewportBase
             orbit.Target = _targetGoal;
             orbit.Radius = _radiusGoal;
             orbit.Beta = _betaGoal;
-            orbit.Alpha = 0.9f;
+            orbit.Alpha = view?.Alpha ?? 0.9f;
         }
 
         Invalidate();
@@ -588,12 +741,6 @@ public class DealerLotViewport3D : D3DViewportBase
             orbit.Target = _targetGoal;
         }
 
-        if (Math.Abs(_radiusGoal - orbit.Radius) > CameraSettled)
-        {
-            orbit.Radius += (_radiusGoal - orbit.Radius) * k;
-            moving = true;
-        }
-
         if (Math.Abs(_betaGoal - orbit.Beta) > CameraSettled)
         {
             orbit.Beta += (_betaGoal - orbit.Beta) * k;
@@ -615,7 +762,47 @@ public class DealerLotViewport3D : D3DViewportBase
             }
         }
 
+        // Last, once the camera has swung: how far back it can stand depends on which way it looks from. Eased out to
+        // the goal, but never let through a wall, not even for a frame.
+        var limit = RoomLimit(orbit.Alpha, orbit.Beta, orbit.Target);
+        var radiusGoal = Math.Min(_radiusGoal, limit);
+        if (Math.Abs(radiusGoal - orbit.Radius) > CameraSettled)
+        {
+            orbit.Radius += (radiusGoal - orbit.Radius) * k;
+            moving = true;
+        }
+
+        orbit.Radius = Math.Min(orbit.Radius, limit);
+
         return moving;
+    }
+
+    /// <summary>
+    /// How far from <paramref name="target"/> the camera can stand, looking from <paramref name="alpha"/> and
+    /// <paramref name="beta"/>, and still be inside <see cref="Room"/>, short of its walls and roof; no limit without one.
+    /// The orbit stands the camera at target + radius * (cos beta cos alpha, sin beta, cos beta sin alpha).
+    /// </summary>
+    private float RoomLimit(float alpha, float beta, Sx.Vector3 target)
+    {
+        if (Room is not { } room) return float.MaxValue;
+
+        var level = MathF.Cos(beta);
+        var limit = Math.Min(
+            Reach(target.X, level * MathF.Cos(alpha), room.HalfLength),
+            Reach(target.Z, level * MathF.Sin(alpha), room.HalfWidth));
+
+        var up = MathF.Sin(beta);
+        if (up > 1e-4f) limit = Math.Min(limit, (room.Height - WallMargin - target.Y) / up);
+
+        return Math.Max(MinRoomRadius, limit);
+
+        // Along one axis, from a point between walls at -half and +half
+        static float Reach(float from, float step, float half)
+        {
+            if (Math.Abs(step) < 1e-4f) return float.MaxValue;
+            var wall = step > 0f ? half - WallMargin : -half + WallMargin;
+            return Math.Max(0f, (wall - from) / step);
+        }
     }
 
     private bool IsCarView => SelectedIndex >= 0 && SelectedIndex < _loaded.Count;
@@ -820,6 +1007,8 @@ public class DealerLotViewport3D : D3DViewportBase
     protected override void OnRendererDisposed()
     {
         _loadedShowroom = null;
+        _showroomAskedFor = null;
+        _lamps.Clear();
         _slots.Clear();
         _standing.Clear();
         _loaded = [];

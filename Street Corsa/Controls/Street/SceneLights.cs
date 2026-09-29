@@ -12,8 +12,11 @@ internal static class SceneLights
     /// <summary>Where the eyes are in a car that does not say: a little left of the middle, over the seat</summary>
     public static readonly Sx.Vector3 FallbackEye = new(0.36f, 1.05f, -0.15f);
 
-    /// <summary>The renderer lit for a light of the day: the sun from <paramref name="sun"/>, the ambient, the lamps</summary>
-    public static void Apply(GarageRenderer renderer, StreetLighting lighting, float[] sun)
+    /// <summary>
+    /// The renderer lit for a light of the day: the sun from <paramref name="sun"/>, the ambient, the lamps. Returns the
+    /// lamps it hung, for a scene that is lit again later to take them down first.
+    /// </summary>
+    public static IReadOnlyList<DarkLightBase> Apply(GarageRenderer renderer, StreetLighting lighting, float[] sun)
     {
         renderer.Light = new Sx.Vector3(sun[0], sun[1], sun[2]);
         renderer.LightBrightness = lighting.Brightness;
@@ -23,9 +26,10 @@ internal static class SceneLights
         renderer.AmbientDown = Color(lighting.AmbientDown);
         renderer.CubemapAmbient = lighting.CubemapAmbient;
 
+        var lamps = new List<DarkLightBase>();
         foreach (var lamp in lighting.Lamps)
         {
-            renderer.AddLight(new DarkPointLight
+            var light = new DarkPointLight
             {
                 Position = new Sx.Vector3(lamp.X, lamp.Y, lamp.Z),
                 Color = Color(lamp.Color),
@@ -33,8 +37,12 @@ internal static class SceneLights
                 Range = lamp.Range,
                 UseShadows = false,
                 IsVisibleInUi = false
-            });
+            };
+            renderer.AddLight(light);
+            lamps.Add(light);
         }
+
+        return lamps;
     }
 
     private static System.Drawing.Color Color(byte[] rgb) => System.Drawing.Color.FromArgb(rgb[0], rgb[1], rgb[2]);

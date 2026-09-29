@@ -1000,6 +1000,7 @@ namespace StreetCorsa.Services.Race
                     if (opponentCar != null)
                     {
                         opponent.Cars.Remove(opponentCar);
+                        opponentCar.ClearPlace();
                         gameState.Player.Cars.Add(opponentCar);
                         gameState.Player.Stats.CarsOwned++;
                         opponentCar.History.ChangeHands(gameState.Player.Name, gameState.Date, CarAcquisition.PinkSlip);
@@ -1021,6 +1022,7 @@ namespace StreetCorsa.Services.Race
                     if (playerCar != null)
                     {
                         gameState.Player.Cars.Remove(playerCar);
+                        playerCar.ClearPlace();
                         opponent.Cars.Add(playerCar);
                         playerCar.History.ChangeHands(opponent.Name, gameState.Date, CarAcquisition.PinkSlip);
                         carMoved = true;

@@ -1,8 +1,9 @@
 # Modding Street Corsa
 
 Everything the game knows beyond Assetto Corsa's cars and tracks is **content in mods**: parts, engine sounds, dealers,
-racers, events, milestones, victory paths, streets, gas stations, the main screen's rooms, garages and the words the game says. The
-base game is itself a mod, `Content\streetcorsa`, loaded through the same loader as any other, first.
+racers, events, milestones, victory paths, streets, gas stations, warehouses, the main screen's rooms, garages and the
+words the game says. The base game is itself a mod, `Content\streetcorsa`, loaded through the same loader as any other,
+first.
 
 Cars and tracks stay AC's: install them in AC's `content` folder as usual.
 
@@ -15,7 +16,7 @@ Content\
   streetcorsa\          the base game (loaded first)
   mymod\
     mod.json
-    parts\  sounds\  dealers\  partshops\  racers\  events\  milestones\  victories\  streets\  stations\  showcase\  garages\  text\
+    parts\  sounds\  dealers\  partshops\  racers\  events\  milestones\  victories\  streets\  stations\  warehouses\  showcase\  garages\  text\
 ```
 
 `mod.json`:
@@ -341,6 +342,18 @@ stopping at the last point) and out (`leave`), as `[x, z]` points in metres; whe
 (`lookAtPump`, degrees to the left); the lights of the day as a street's; and what the station charges (`prices`:
 `fuelPerLitre`, `oilPerLitre`, `wash`, `tow`; left out, the base game's). The garage's Gas Station button drives to one
 of them at random. A station without its model still works, without the picture.
+
+### warehouses
+
+One folder per warehouse the player's cars are kept in, as the base game's `warehouses\warehouse`: a `warehouse.json`
+and its model (`"model"`, default `warehouse.kn5`). The file gives the `bays` (`x`, `z`, `heading`: as many cars as it
+has bays go in one warehouse), the `camera` the lot opens on (`alpha`, `beta`, `radius`, `targetHeight`), the `sun`,
+the `lights` of the day as a street's plus `lampScale`, the `lamps` (always lit, coloured by the look), how bright the
+material `wh_skylight` glows at each light (`skylight`), and the `looks`: for each, the picture each material wears
+(`"surfaces": { "wh_wall": "wall_red_brick_03.jpg" }`; every picture must be in the model) and its `lampColor`. Warehouse
+n wears the looks in turn; `digits` names the two materials that show its number and the pictures they take
+(`"picture": "sign_digit_{0}.jpg"`). With several warehouse scenes installed, warehouse n is in the scenes in turn.
+`tools/WarehouseScene` builds the base game's (see [screens/car-lot.md](screens/car-lot.md)).
 
 ### showcase and garages
 

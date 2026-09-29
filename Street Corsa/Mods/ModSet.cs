@@ -18,6 +18,7 @@ public static class ContentTypes
     public const string Stations = "stations";
     public const string Showcase = "showcase";
     public const string Garages = "garages";
+    public const string Warehouses = "warehouses";
     public const string Text = "text";
 }
 

@@ -348,6 +348,7 @@ namespace StreetCorsa.Services.Market
         {
             var player = gameState.Player;
             player.Cars.Remove(car);
+            car.ClearPlace();
             gameState.NewspaperAds.PlayerCars.RemoveAll(ad => ad.CarInstanceId == car.InstanceId);
             player.Stats.CarsSold++;
             gameState.Career.SyncStanding(player);

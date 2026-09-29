@@ -285,10 +285,9 @@ namespace StreetCorsa.Navigation
                 _saleService,
                 skipAnimation));
 
-        public bool NavigateToCarSelection(GameState gameState) => SafeNavigate("car list", () =>
-            new Screens.CarSelection.CarSelectionScreenViewModel(
+        public bool NavigateToCarLot(GameState gameState) => SafeNavigate("car lot", () =>
+            new Screens.CarLot.CarLotScreenViewModel(
                 this,
-                _dialogService,
                 gameState,
                 _catalogRepository,
                 _gameStateRepository,

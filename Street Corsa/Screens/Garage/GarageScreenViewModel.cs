@@ -773,9 +773,9 @@ namespace StreetCorsa.Screens.Garage
 
         private void OnSelectCar()
         {
-            // No fade here: garage <-> car list is an instant swap in both directions
-            _logger.Information("Navigating to car selection screen");
-            _navigationService.NavigateToCarSelection(_gameState);
+            // No fade here: garage <-> car lot is an instant swap in both directions
+            _logger.Information("Navigating to the car lot");
+            _navigationService.NavigateToCarLot(_gameState);
         }
 
         /// <summary>

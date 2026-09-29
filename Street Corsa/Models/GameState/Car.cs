@@ -85,6 +85,26 @@ namespace StreetCorsa.Models.GameState
         /// </summary>
         public DateTime PurchaseDate { get; set; }
 
+        /// <summary>
+        /// Which of the player's warehouses the car is kept in, from 1, and its bay there, from 0; null until the car lot
+        /// has found it a place (a car just bought, an older save). A car keeps its place until it changes hands
+        /// (<see cref="ClearPlace"/>, <see cref="Services.CarLot.CarStorage"/>).
+        /// </summary>
+        public int? Warehouse { get; set; }
+
+        /// <inheritdoc cref="Warehouse"/>
+        public int? Bay { get; set; }
+
+        /// <summary>
+        /// The car changes hands, and gives up its place in the warehouses: a car that comes back to the player later
+        /// takes the first free bay like any other, not the one it had before
+        /// </summary>
+        public void ClearPlace()
+        {
+            Warehouse = null;
+            Bay = null;
+        }
+
         /// <summary>Who has owned the car and how it has raced; see <see cref="CarHistory"/></summary>
         public CarHistory History { get; set; } = new();
 

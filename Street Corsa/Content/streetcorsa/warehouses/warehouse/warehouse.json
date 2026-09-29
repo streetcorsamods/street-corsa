@@ -1,0 +1,290 @@
+{
+  "_comment": [
+    "The warehouse the player's cars are kept in (the car lot screen). warehouse.kn5 and this file are written by",
+    "tools/WarehouseScene (prepare_warehouse.py, then WarehouseSceneBuilder): change the builder, not these files.",
+    "x runs down the aisle (the roller door at +x), z across it, y up; the middle of the floor is the origin.",
+    "bays: where a car stands, heading in degrees about the vertical (0 faces +z). The warehouse holds as many cars",
+    "as it has bays; more cars fill a second warehouse, and so on.",
+    "camera: the view down the aisle, orbiting a point targetHeight over the middle (alpha 0 = the camera on +x,",
+    "radians; beta up from level; radius metres).",
+    "room: the inside the camera stays in, however it is swung or wheeled out: the walls halfLength either side of the",
+    "middle along x and halfWidth along z, the roof height up at its lowest (the eaves).",
+    "sun: the key light's direction, from overhead through the skylights; its shadows are the cars' on the floor.",
+    "lights: the renderer's light for each light of the day. The lamps are lit at every hour, each colour its look's;",
+    "lampScale is how bright they are against their own brightness then. skylight is how bright the glass is.",
+    "looks: what a warehouse wears, the picture on each surface; warehouse n (from 1) wears look (n - 1) mod count.",
+    "Textures: Poly Haven (CC0), the rest drawn by prepare_warehouse.py."
+  ],
+  "id": "warehouse",
+  "title": "The warehouse",
+  "credit": "Surface textures by Poly Haven (CC0): blue_metal_plate, box_profile_metal_sheet, concrete_block_wall, concrete_floor_worn_001, corrugated_iron_02, factory_brick, garage_floor, green_metal_rust, hangar_concrete_floor, metal_plate, painted_metal_shutter, red_brick_03, rusty_corrugated_iron, rusty_metal_shutter, rusty_painted_metal, smooth_concrete_floor, weathered_plank_siding, whitewashed_brick, wooden_garage_door, yellow_brick",
+  "bays": [
+    {
+      "x": -9.2,
+      "z": -6.2,
+      "heading": 0.0
+    },
+    {
+      "x": -4.6,
+      "z": -6.2,
+      "heading": 0.0
+    },
+    {
+      "x": 0.0,
+      "z": -6.2,
+      "heading": 0.0
+    },
+    {
+      "x": 4.6,
+      "z": -6.2,
+      "heading": 0.0
+    },
+    {
+      "x": 9.2,
+      "z": -6.2,
+      "heading": 0.0
+    },
+    {
+      "x": -9.2,
+      "z": 6.2,
+      "heading": 180.0
+    },
+    {
+      "x": -4.6,
+      "z": 6.2,
+      "heading": 180.0
+    },
+    {
+      "x": 0.0,
+      "z": 6.2,
+      "heading": 180.0
+    },
+    {
+      "x": 4.6,
+      "z": 6.2,
+      "heading": 180.0
+    },
+    {
+      "x": 9.2,
+      "z": 6.2,
+      "heading": 180.0
+    }
+  ],
+  "camera": {
+    "alpha": 0.0,
+    "beta": 0.16,
+    "radius": 12.5,
+    "targetHeight": 1.6
+  },
+  "room": {
+    "halfLength": 14.0,
+    "halfWidth": 12.0,
+    "height": 5.5
+  },
+  "sun": [
+    0.25,
+    1.0,
+    0.35
+  ],
+  "lights": {
+    "day": {
+      "brightness": 0.8,
+      "color": [
+        235,
+        235,
+        225
+      ],
+      "ambient": 1.0,
+      "ambientUp": [
+        170,
+        180,
+        190
+      ],
+      "ambientDown": [
+        120,
+        115,
+        105
+      ],
+      "cubemapAmbient": 0.0,
+      "lampScale": 0.7
+    },
+    "dusk": {
+      "brightness": 0.45,
+      "color": [
+        255,
+        190,
+        150
+      ],
+      "ambient": 1.0,
+      "ambientUp": [
+        130,
+        115,
+        125
+      ],
+      "ambientDown": [
+        95,
+        85,
+        75
+      ],
+      "cubemapAmbient": 0.0,
+      "lampScale": 1.0
+    },
+    "night": {
+      "brightness": 0.15,
+      "color": [
+        140,
+        160,
+        220
+      ],
+      "ambient": 0.7,
+      "ambientUp": [
+        70,
+        80,
+        105
+      ],
+      "ambientDown": [
+        65,
+        58,
+        50
+      ],
+      "cubemapAmbient": 0.0,
+      "lampScale": 1.15
+    }
+  },
+  "skylight": {
+    "day": 1.1,
+    "dusk": 0.55,
+    "night": 0.08
+  },
+  "lamps": [
+    {
+      "x": -9.2,
+      "y": 4.2,
+      "z": -5.2,
+      "brightness": 0.8,
+      "range": 14.0
+    },
+    {
+      "x": 0.0,
+      "y": 4.2,
+      "z": -5.2,
+      "brightness": 0.8,
+      "range": 14.0
+    },
+    {
+      "x": 9.2,
+      "y": 4.2,
+      "z": -5.2,
+      "brightness": 0.8,
+      "range": 14.0
+    },
+    {
+      "x": -9.2,
+      "y": 4.2,
+      "z": 5.2,
+      "brightness": 0.8,
+      "range": 14.0
+    },
+    {
+      "x": 0.0,
+      "y": 4.2,
+      "z": 5.2,
+      "brightness": 0.8,
+      "range": 14.0
+    },
+    {
+      "x": 9.2,
+      "y": 4.2,
+      "z": 5.2,
+      "brightness": 0.8,
+      "range": 14.0
+    }
+  ],
+  "looks": [
+    {
+      "id": "red_brick",
+      "surfaces": {
+        "wh_floor": "floor_concrete_floor_worn_001.jpg",
+        "wh_wall": "wall_red_brick_03.jpg",
+        "wh_upper": "upper_corrugated_iron_02.jpg",
+        "wh_roof": "upper_corrugated_iron_02.jpg",
+        "wh_door": "door_painted_metal_shutter.jpg",
+        "wh_steel": "steel_blue_metal_plate.jpg"
+      },
+      "lampColor": [
+        255,
+        214,
+        170
+      ]
+    },
+    {
+      "id": "old_factory",
+      "surfaces": {
+        "wh_floor": "floor_hangar_concrete_floor.jpg",
+        "wh_wall": "wall_factory_brick.jpg",
+        "wh_upper": "upper_rusty_corrugated_iron.jpg",
+        "wh_roof": "upper_rusty_corrugated_iron.jpg",
+        "wh_door": "door_rusty_metal_shutter.jpg",
+        "wh_steel": "steel_rusty_painted_metal.jpg"
+      },
+      "lampColor": [
+        255,
+        190,
+        130
+      ]
+    },
+    {
+      "id": "whitewashed",
+      "surfaces": {
+        "wh_floor": "floor_garage_floor.jpg",
+        "wh_wall": "wall_whitewashed_brick.jpg",
+        "wh_upper": "upper_box_profile_metal_sheet.jpg",
+        "wh_roof": "upper_corrugated_iron_02.jpg",
+        "wh_door": "door_wooden_garage_door.jpg",
+        "wh_steel": "steel_green_metal_rust.jpg"
+      },
+      "lampColor": [
+        235,
+        240,
+        255
+      ]
+    },
+    {
+      "id": "block_shed",
+      "surfaces": {
+        "wh_floor": "floor_smooth_concrete_floor.jpg",
+        "wh_wall": "wall_concrete_block_wall.jpg",
+        "wh_upper": "upper_weathered_plank_siding.jpg",
+        "wh_roof": "upper_corrugated_iron_02.jpg",
+        "wh_door": "door_rusty_metal_shutter.jpg",
+        "wh_steel": "steel_metal_plate.jpg"
+      },
+      "lampColor": [
+        230,
+        245,
+        255
+      ]
+    },
+    {
+      "id": "yellow_brick",
+      "surfaces": {
+        "wh_floor": "floor_concrete_floor_worn_001.jpg",
+        "wh_wall": "wall_yellow_brick.jpg",
+        "wh_upper": "upper_corrugated_iron_02.jpg",
+        "wh_roof": "upper_rusty_corrugated_iron.jpg",
+        "wh_door": "door_painted_metal_shutter.jpg",
+        "wh_steel": "steel_rusty_painted_metal.jpg"
+      },
+      "lampColor": [
+        255,
+        205,
+        150
+      ]
+    }
+  ],
+  "digits": {
+    "tens": "wh_digit_tens",
+    "units": "wh_digit_units",
+    "picture": "sign_digit_{0}.jpg"
+  }
+}

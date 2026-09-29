@@ -60,7 +60,7 @@ So a full tour does not fit in a day, and a tour with a purchase in it fits abou
 
 ## DealerLot
 
-`Controls/DealerLotViewport3D` renders the dealer's showroom with its cars standing in it. There are two
+`Controls/LotViewport3D` renders the dealer's showroom with its cars standing in it. There are two
 camera states and no free roam:
 
 | View | Camera | What the screen shows |
@@ -191,7 +191,7 @@ The daily refresh tops each lot back up to its own target, for the same reason.
 
 - `Screens/DealerMap/` — map screen
 - `Screens/DealerLot/` — lot screen
-- `Controls/DealerLotViewport3D.cs` — the 3D lot
+- `Controls/LotViewport3D.cs` — the 3D lot
 - `Controls/SharedTextureBridge.cs` — DX11-to-WPF presentation, shared with `CarViewport3D`
 - `Helpers/MapPanel.cs` — the full-bleed map with the pins held on their places
 - `Services/Dealers/LotLayout.cs` — works the bays out from the room

@@ -1026,7 +1026,7 @@ with their own pin style and a car dealers / part shops / both toggle:
   dealers in the garage (the user's call, 2026-09-28: car and part dealers kept apart; the button's picture made with
   ComfyUI, juggernautXL, seed 101, and PIL lettering). `Screens/PartShop` is the counter.
 
-### Step 22: flip the engine on the stand
+### Step 22: flip the engine on the stand (done, PR #41, merged as `dda3a18`)
 Idea 5. The engine turns upside down on the stand with an animation, to fit the crankshaft, bearings and oil pan; the
 part moves turn with it. Cosmetic only: nothing is refused when the engine isn't flipped.
 
@@ -1074,6 +1074,38 @@ turn about the crankshaft's line.
 ### Step 23: the player's car lot in 3D
 Idea 6. A 3D scene instead of the list. Options to propose when the step starts: a warehouse with the cars parked in
 rows under lights (the showroom's renderer), or an outdoor lot with a fence, lit by the time of day (the street's).
+
+**The user decided (2026-09-29), built on `feature/car-lot`:** the warehouse; our own scene, written as a KN5 (not an AC
+showroom); the car's card takes the car (the old list's pick, 15 minutes, back to the garage), starts and revs its
+engine, sells or advertises it (the garage's Sell, without taking the car first) and tells everything about it. A
+warehouse holds a fixed number of cars and there is no limit: more cars fill a second warehouse, and so on; the player
+moves between them and can jump to the warehouse a wanted car is in. Warehouses look different from one another by
+changing the one scene's pictures, not by building more scenes.
+
+**As built** (see [screens/car-lot.md](screens/car-lot.md)):
+- `tools/WarehouseScene`: `prepare_warehouse.py` downloads Poly Haven CC0 textures and draws the enamel sign, its
+  digits, the bay paint and the skylights; `WarehouseSceneBuilder` models a 28 x 24 m brick shed on steel trusses
+  (ten bays, five a side, noses to the aisle; a roller door, six hanging lamps, skylights) and writes
+  `Content/streetcorsa/warehouses/warehouse/warehouse.kn5` (3.8 MB, every look's pictures in it) and `warehouse.json`.
+- Five looks (red brick, old factory, whitewashed, block shed, yellow brick), each with its lamps' colour; warehouse n
+  wears look n - 1 in turn, and its number goes up on the far wall's sign by pointing two digit plates at other
+  pictures. Light by the game's clock (day, dusk, night): the skylights' glow and the key light change, the lamps are
+  always lit.
+- `LotViewport3D` (was `DealerLotViewport3D`) takes a `Dressing` (materials pointed at pictures, glow, light and
+  lamps, applied on the standing scene) and a `LotView` (the scene's view down the aisle, which the camera comes back
+  to). Going to another warehouse swaps the cars and the dressing, not the scene.
+- The card was dropped (user, 2026-09-29): with a car picked, one button at the bottom middle, Take this car; selling
+  and starting it stay the garage's.
+- The car the player drives is in the garage, not in a warehouse (user, 2026-09-29): taking a car out parks the one from
+  the garage in the bay it leaves (`CarStorage.TakeOut`).
+- `Car.Warehouse` / `Car.Bay` keep a car's place (`CarStorage`): new cars take the first free bay from warehouse 1; a
+  car coming back keeps its old bay if it is free; of two cars in one bay the one had longer keeps it. New places are
+  saved when the lot opens.
+- `Screens/CarLot` replaces `Screens/CarSelection`: the warehouse, arrows to the others, every car in a list down the
+  side (a click goes to its warehouse and onto it), Take this car at the bottom.
+- Mods: a `warehouses` folder, one scene per folder; with several, warehouse n is in scene (n - 1) mod count.
+- Checked with offscreen harnesses (the scene through the renderer; the real screen with fake services), not yet in
+  the game.
 
 ## Testing in AC without driving
 

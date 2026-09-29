@@ -139,6 +139,7 @@ namespace StreetCorsa.Services.Market
 
             gameState.Player.Money -= price;
             gameState.Player.Cars ??= [];
+            car.ClearPlace();
             gameState.Player.Cars.Add(car);
             gameState.Player.Stats.CarsOwned++;
             gameState.Career.SyncStanding(gameState.Player);

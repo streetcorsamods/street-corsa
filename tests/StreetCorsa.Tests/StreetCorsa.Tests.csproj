@@ -27,6 +27,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Street Corsa\Street Corsa.csproj" />
+    <!-- Reads the scenes the game ships (CarLotTests), as the game does -->
+    <Reference Include="AcTools">
+      <HintPath>..\..\..\actools\Output\x64\Debug\AcTools.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
   <!-- The base game's data (not its models, sounds or pictures): the services that read the installed mods by default

@@ -11,7 +11,7 @@
     <Grid Background="{StaticResource BgDarkBrush}">
 
         <!-- The lot itself, behind everything -->
-        <controls:DealerLotViewport3D x:Name="Viewport"
+        <controls:LotViewport3D x:Name="Viewport"
                                       ShowroomKn5="{Binding ShowroomKn5}"
                                       Cars="{Binding LotCars}"
                                       SelectedIndex="{Binding SelectedIndex, Mode=TwoWay}"
