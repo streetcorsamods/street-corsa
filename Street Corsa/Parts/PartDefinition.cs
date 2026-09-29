@@ -1,5 +1,6 @@
 using System.Runtime.Serialization;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace StreetCorsa.Parts;
 
@@ -125,6 +126,15 @@ public class PartDefinition
     /// </summary>
     [JsonProperty("properties")]
     public Dictionary<string, object> Properties { get; set; } = new();
+
+    /// <summary>
+    /// Script fields a mod sets over what the part's script constructs, before the player's tuning: a number
+    /// ("stroke": 76.2), a number for one element of an array field ("ratio[2]": 1.0), or a list of numbers for an
+    /// array field from its first element on ("ratio": [0, 1.76, 1.0]; null keeps an element). This is how a part
+    /// sharing a stock script gets its own figures; <see cref="Properties"/> is only a record of the constructed fields.
+    /// </summary>
+    [JsonProperty("overrides", NullValueHandling = NullValueHandling.Ignore)]
+    public Dictionary<string, JToken>? Overrides { get; set; }
 
     /// <summary>
     /// Fields the script recomputes in updatevariables(), as they come out for a brand new part on its own.

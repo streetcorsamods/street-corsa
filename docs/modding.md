@@ -140,6 +140,19 @@ other on, or a rule needing a kind it waits for) are reported. A kind of the sam
 `"serves"` to the kind; the name the player reads is the first mod's. The base game's kinds and
 rules are in `Content\streetcorsa\parts\work_order.json`.
 
+**A part's figures.** A part's stats come from its SLRR script (`source_script`): the game builds the script and runs it,
+and `"properties"` in the pack is only a record of what it built. A part that shares a stock script but has figures of
+its own says so in `"overrides"`: script fields set over what the script built, before the player's tuning. A number
+(`"stroke": 76.2`), one element of an array field (`"ratio[2]": 1.0`), or a list for an array field from its first
+element on (`"ratio": [0, 1.76, 1.0, 0, 0, 0, 0, -1.76]`, `null` keeps an element); anything else is left alone.
+Units are the script's own (mm, cc). The engine takes the bore from the block, the stroke from the crankshaft, the
+combustion space from the heads, the deck and the pistons' `crown_volume`, and the gearing from the transmission
+(`gears`, `ratio`: element 0 unused, the last one reverse).
+
+```json
+{ "id": "engines/l79/CV8_crank_283", "source_script": "...V8_small_block_crank.class", "overrides": { "stroke": 76.2 } }
+```
+
 A part mounts by what its slots name (`attaches_to`, `compatible_with`: a part id and a slot, a reference as above)
 or by a standard fitting (`fits`/`takes`, e.g. `carb:4bbl`), which works across mods with no ids at all.
 `tools\SlrrPartsConverter` makes packs from SLRR `.rpk` files.

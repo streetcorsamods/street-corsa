@@ -1,4 +1,5 @@
 using System.Globalization;
+using Newtonsoft.Json.Linq;
 using StreetCorsa.Helpers;
 using StreetCorsa.Parts.Scripting;
 
@@ -55,6 +56,9 @@ public sealed class PartScriptRuntime
                 instance.Tag = part;
                 _objects[part] = instance;
 
+                // The part's own figures over its script's (a mod part sharing a stock script), then the player's tuning
+                if (part.Definition.Overrides != null)
+                    foreach (var (field, value) in part.Definition.Overrides) Override(instance, field, value);
                 foreach (var (field, value) in part.Tuning) Tune(instance, field, value);
             }
             catch (Exception ex)
@@ -149,6 +153,29 @@ public sealed class PartScriptRuntime
                  && array.Holds(index))
         {
             array.Items[index] = new ScriptNumber(value, false);
+        }
+    }
+
+    /// <summary>
+    /// A part definition's override put on its script, as <see cref="Tune"/> puts a saved setting: a number, or a list
+    /// of numbers for an array field from its first element (null keeps one). Anything else is left alone.
+    /// </summary>
+    private static void Override(ScriptObject instance, string field, JToken value)
+    {
+        switch (value)
+        {
+            case JValue { Type: JTokenType.Integer or JTokenType.Float } number:
+                Tune(instance, field, number.ToObject<double>());
+                break;
+
+            case JArray items when field.IndexOf('[') < 0:
+                for (var i = 0; i < items.Count; i++)
+                {
+                    if (items[i] is JValue { Type: JTokenType.Integer or JTokenType.Float } item)
+                        Tune(instance, $"{field}[{i.ToString(CultureInfo.InvariantCulture)}]", item.ToObject<double>());
+                }
+
+                break;
         }
     }
 
