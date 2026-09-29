@@ -89,14 +89,30 @@ public class GaragePropsTests : IDisposable
     }
 
     [Fact]
-    public void The_base_game_puts_its_radio_in_its_garage()
+    public void The_published_radio_mod_puts_its_radio_in_the_garage_and_credits_its_maker()
     {
-        var folder = Path.Combine(RepoPaths.BaseContent, ContentTypes.Props, "radio");
+        var folder = Path.Combine(RepoPaths.Content, "bushradio", ContentTypes.Props, "radio");
         Assert.True(File.Exists(Path.Combine(folder, "radio.kn5")));
         Assert.True(File.Exists(Path.Combine(folder, "CREDITS.txt")));
+        Assert.True(File.Exists(Path.Combine(RepoPaths.Content, "bushradio", ModSet.ManifestFileName)));
 
+        // Whichever radio mod wins on this machine (a private one may), it stands in the garage and names its maker
         var radio = GarageProps.Find(ModSet.Load(RepoPaths.Content), "radio", Path.Combine("x", "garage", "garage.kn5"));
         Assert.NotNull(radio);
         Assert.InRange(radio.Position.Y, 0.5f, 2f);
+        Assert.False(string.IsNullOrWhiteSpace(radio.Credit));
+    }
+
+    [Fact]
+    public void A_prop_names_its_maker()
+    {
+        BaseRadio();
+        _temp.File("credited/mod.json", """{ "id": "credited" }""");
+        _temp.File("credited/props/radio/radio.kn5", "x");
+        _temp.File("credited/props/radio/prop.json", """
+            { "credit": "\"Radio\" by Someone, CC BY 4.0", "places": { "garage": { "position": [0, 1, 0] } } }
+            """);
+
+        Assert.Equal("\"Radio\" by Someone, CC BY 4.0", GarageProps.Find(ModSet.Load(_temp.Path), "radio", Showroom("garage"))!.Credit);
     }
 }

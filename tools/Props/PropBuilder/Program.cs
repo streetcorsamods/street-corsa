@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json;
 using AcTools.Kn5File;
 using AcTools.Numerics;
 using StreetCorsa.Tools;
@@ -8,13 +9,15 @@ namespace PropBuilder;
 
 /// <summary>
 /// A prop for a scene (the garage's radio) as a KN5, out of what a prepare script left (tools/Props/prepare_*.py): an
-/// OBJ (Y up, facing -Z, triangles) and its three pictures, &lt;name&gt;_diffuse.jpg, &lt;name&gt;_normal.png and
-/// &lt;name&gt;_maps.png, drawn with AC's ksPerPixelMultiMap. The model comes out in metres, stood on its base: its
-/// origin the middle of its footprint, on the floor. Where it stands in a scene is the game's to say (prop.json).
+/// OBJ (Y up, facing -Z, triangles) and its pictures, drawn with AC's ksPerPixelMultiMap. With a materials.json
+/// (prepare_prop.py) each of the OBJ's materials is one of it, its pictures named there; without, the model is one
+/// material of &lt;name&gt;_diffuse.jpg, &lt;name&gt;_normal.png and &lt;name&gt;_maps.png (prepare_radio.py). The model
+/// comes out in metres, stood on its base: its origin the middle of its footprint, on the floor. Where it stands in a
+/// scene is the game's to say (prop.json).
 ///
 ///   PropBuilder &lt;prepared folder&gt; &lt;name&gt; &lt;out folder&gt; --scale 0.112 [--turn degrees] [--mirror]
 ///
-/// The garage's radio: PropBuilder &lt;prepared&gt; radio "Street Corsa/Content/streetcorsa/props/radio" --scale 0.112
+/// The Bush radio: PropBuilder &lt;prepared&gt; radio "Street Corsa/Content/bushradio/props/radio" --scale 0.112
 /// </summary>
 internal static class Program
 {
@@ -31,19 +34,31 @@ internal static class Program
         var mirror = args.Contains("--mirror");
         var (prepared, name, output) = (positional[0], positional[1], positional[2]);
 
-        var (vertices, indices) = ReadObj(Path.Combine(prepared, name + ".obj"), scale, turn, mirror);
-        Console.WriteLine($"{name}: {vertices.Count} vertices, {indices.Count / 3} triangles");
+        var groups = ReadObj(Path.Combine(prepared, name + ".obj"), scale, turn, mirror);
+        Console.WriteLine($"{name}: {groups.Values.Sum(g => g.Vertices.Count)} vertices, {groups.Values.Sum(g => g.Indices.Count) / 3} triangles, {groups.Count} material group(s)");
 
         var kn5 = Kn5.CreateEmpty();
         kn5.RootNode.Name = name;
-        var diffuse = AddTexture(kn5, Path.Combine(prepared, name + "_diffuse.jpg"));
-        var normal = AddTexture(kn5, Path.Combine(prepared, name + "_normal.png"));
-        var maps = AddTexture(kn5, Path.Combine(prepared, name + "_maps.png"));
-        var material = AddMultiMapMaterial(kn5, name, diffuse, normal, maps);
 
-        // One mesh as long as 16-bit indices reach, in pieces beyond
-        foreach (var (piece, part) in Split(vertices, indices).Select((p, i) => (p, i)))
-            AddMesh(kn5, part == 0 ? name.ToUpperInvariant() : $"{name.ToUpperInvariant()}_{part}", piece.Vertices, piece.Indices, material, castShadows: true);
+        var manifest = Path.Combine(prepared, "materials.json");
+        var materialOf = File.Exists(manifest)
+            ? AddMaterials(kn5, prepared, manifest)
+            : new Dictionary<string, uint>
+            {
+                [""] = AddMultiMapMaterial(kn5, name, AddTexture(kn5, Path.Combine(prepared, name + "_diffuse.jpg")),
+                    AddTexture(kn5, Path.Combine(prepared, name + "_normal.png")), AddTexture(kn5, Path.Combine(prepared, name + "_maps.png")), 0f)
+            };
+
+        // A mesh a material, the OBJ's groups of one material together; as long as 16-bit indices reach, in pieces beyond.
+        // A group of a material the manifest left out (glass) is dropped; without a manifest, all is the one material
+        var kept = File.Exists(manifest) ? groups.Where(g => materialOf.ContainsKey(g.Key)) : groups;
+        foreach (var byMaterial in kept.GroupBy(g => materialOf.TryGetValue(g.Key, out var m) ? m : materialOf.Values.First()))
+        {
+            var (vertices, indices) = Merge(byMaterial.Select(g => g.Value));
+            var mesh = kn5.Materials.Keys.ElementAt((int)byMaterial.Key).ToUpperInvariant();
+            foreach (var (piece, part) in Split(vertices, indices).Select((p, i) => (p, i)))
+                AddMesh(kn5, part == 0 ? mesh : $"{mesh}_{part}", piece.Vertices, piece.Indices, byMaterial.Key, castShadows: true);
+        }
 
         var path = Path.Combine(output, name + ".kn5");
         Save(kn5, path);
@@ -59,11 +74,15 @@ internal static class Program
     }
 
     /// <summary>
-    /// ksPerPixelMultiMap: the picture, its normal map, and the maps (red specular, green gloss, blue reflection), lit
-    /// as a car's plastics and paint are in AC
+    /// ksPerPixelMultiMap: the picture, its normal map (when it has one), and the maps (red specular, green gloss, blue
+    /// reflection), lit as a car's plastics and paint are in AC; <paramref name="emissive"/> for a part that glows
     /// </summary>
-    private static uint AddMultiMapMaterial(IKn5 kn5, string name, string diffuse, string normal, string maps)
+    private static uint AddMultiMapMaterial(IKn5 kn5, string name, string diffuse, string? normal, string maps, float emissive)
     {
+        var textures = new List<Kn5Material.TextureMapping> { new() { Name = "txDiffuse", Texture = diffuse, Slot = 0 } };
+        if (normal != null) textures.Add(new Kn5Material.TextureMapping { Name = "txNormal", Texture = normal, Slot = 1 });
+        textures.Add(new Kn5Material.TextureMapping { Name = "txMaps", Texture = maps, Slot = 2 });
+
         kn5.Materials[name] = new Kn5Material
         {
             Name = name,
@@ -74,7 +93,7 @@ internal static class Program
                 Property("ksDiffuse", 0.45f),
                 Property("ksSpecular", 0.4f),
                 Property("ksSpecularEXP", 60f),
-                new Kn5Material.ShaderProperty { Name = "ksEmissive", ValueC = new Vec3(0f, 0f, 0f) },
+                new Kn5Material.ShaderProperty { Name = "ksEmissive", ValueC = new Vec3(emissive, emissive, emissive) },
                 Property("ksAlphaRef", 0f),
                 Property("fresnelC", 0.04f),
                 Property("fresnelEXP", 3f),
@@ -86,31 +105,64 @@ internal static class Program
                 Property("sunSpecularEXP", 400f),
                 Property("nmObjectSpace", 0f)
             ],
-            TextureMappings =
-            [
-                new Kn5Material.TextureMapping { Name = "txDiffuse", Texture = diffuse, Slot = 0 },
-                new Kn5Material.TextureMapping { Name = "txNormal", Texture = normal, Slot = 1 },
-                new Kn5Material.TextureMapping { Name = "txMaps", Texture = maps, Slot = 2 }
-            ]
+            TextureMappings = textures.ToArray()
         };
         return MaterialIndex(kn5, name);
     }
 
     private static Kn5Material.ShaderProperty Property(string name, float value) => new() { Name = name, ValueA = value };
 
+    private sealed record MaterialJson(string Name, string Diffuse, string? Normal, string Maps, float Emissive);
+
+    private sealed record ManifestJson(List<MaterialJson> Materials, Dictionary<string, string?> Aliases);
+
     /// <summary>
-    /// The OBJ's triangles as KN5 vertices: scaled to metres, turned about the vertical by <paramref name="turn"/>
-    /// degrees, stood on its base with its footprint's middle at the origin, tangents worked out from the UVs for the
-    /// normal map. AC's space is the OBJ's (Y up, right-handed: a car faces +Z with its left towards +X), so the model goes
-    /// in as it is; <paramref name="mirror"/> is for one that comes out back to front (its lettering reads backwards),
-    /// and turns the winding round with it.
+    /// materials.json's materials, and each of the OBJ's material names to the one it is; a name to none (glass the
+    /// prepare script left out) is not in the list, and its triangles are dropped
     /// </summary>
-    private static (List<Kn5Node.Vertex> Vertices, List<int> Indices) ReadObj(string path, float scale, float turn, bool mirror)
+    private static Dictionary<string, uint> AddMaterials(IKn5 kn5, string prepared, string manifest)
+    {
+        var json = JsonSerializer.Deserialize<ManifestJson>(File.ReadAllText(manifest), new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
+                   ?? throw new InvalidDataException("materials.json is empty");
+        var index = new Dictionary<string, uint>();
+        foreach (var m in json.Materials)
+        {
+            index[m.Name] = AddMultiMapMaterial(kn5, m.Name, AddTexture(kn5, Path.Combine(prepared, m.Diffuse)),
+                m.Normal == null ? null : AddTexture(kn5, Path.Combine(prepared, m.Normal)), AddTexture(kn5, Path.Combine(prepared, m.Maps)), m.Emissive);
+        }
+
+        return json.Aliases.Where(a => a.Value != null).ToDictionary(a => a.Key, a => index[a.Value!]);
+    }
+
+    /// <summary>Several groups' triangles as one list</summary>
+    private static (List<Kn5Node.Vertex> Vertices, List<int> Indices) Merge(IEnumerable<(List<Kn5Node.Vertex> Vertices, List<int> Indices)> groups)
+    {
+        var vertices = new List<Kn5Node.Vertex>();
+        var indices = new List<int>();
+        foreach (var (v, i) in groups)
+        {
+            var offset = vertices.Count;
+            vertices.AddRange(v);
+            indices.AddRange(i.Select(x => x + offset));
+        }
+
+        return (vertices, indices);
+    }
+
+    /// <summary>
+    /// The OBJ's triangles as KN5 vertices, by the material they are of: scaled to metres, turned about the vertical by
+    /// <paramref name="turn"/> degrees, stood on its base with its footprint's middle at the origin, tangents worked out
+    /// from the UVs for the normal map. AC's space is the OBJ's (Y up, right-handed: a car faces +Z with its left
+    /// towards +X), so the model goes in as it is; <paramref name="mirror"/> is for one that comes out back to front (its
+    /// lettering reads backwards), and turns the winding round with it.
+    /// </summary>
+    private static Dictionary<string, (List<Kn5Node.Vertex> Vertices, List<int> Indices)> ReadObj(string path, float scale, float turn, bool mirror)
     {
         var positions = new List<Vec3>();
         var uvs = new List<Vec2>();
         var normals = new List<Vec3>();
-        var corners = new List<(int P, int T, int N)>();
+        var corners = new List<(int P, int T, int N, string Material)>();
+        var material = "";
 
         foreach (var raw in File.ReadLines(path))
         {
@@ -127,12 +179,15 @@ internal static class Program
                 case "vn":
                     normals.Add(new Vec3(F(parts[1]), F(parts[2]), F(parts[3])));
                     break;
+                case "usemtl":
+                    material = raw.Trim()["usemtl".Length..].Trim();
+                    break;
                 case "f" when parts.Length == 4:
                     foreach (var corner in parts.Skip(1))
                     {
                         var ids = corner.Split('/');
                         corners.Add((int.Parse(ids[0]) - 1, ids.Length > 1 && ids[1].Length > 0 ? int.Parse(ids[1]) - 1 : -1,
-                            ids.Length > 2 ? int.Parse(ids[2]) - 1 : -1));
+                            ids.Length > 2 ? int.Parse(ids[2]) - 1 : -1, material));
                     }
                     break;
                 case "f":
@@ -151,32 +206,38 @@ internal static class Program
         var midZ = (placed.Min(p => p.Z) + placed.Max(p => p.Z)) / 2f;
         placed = placed.Select(p => new Vec3(p.X - midX, p.Y - minY, p.Z - midZ)).ToList();
 
-        var vertices = new List<Kn5Node.Vertex>();
-        var indices = new List<int>();
-        var known = new Dictionary<(int, int, int), int>();
-        foreach (var corner in corners)
+        var groups = new Dictionary<string, (List<Kn5Node.Vertex> Vertices, List<int> Indices)>();
+        foreach (var byMaterial in corners.GroupBy(c => c.Material))
         {
-            if (!known.TryGetValue(corner, out var index))
+            var vertices = new List<Kn5Node.Vertex>();
+            var indices = new List<int>();
+            var known = new Dictionary<(int, int, int), int>();
+            foreach (var (p, t, n, _) in byMaterial)
             {
-                index = vertices.Count;
-                known[corner] = index;
-                var normal = corner.N >= 0 ? Turn(normals[corner.N]) : new Vec3(0f, 1f, 0f);
+                if (!known.TryGetValue((p, t, n), out var index))
+                {
+                    index = vertices.Count;
+                    known[(p, t, n)] = index;
+                    var normal = n >= 0 ? Turn(normals[n]) : new Vec3(0f, 1f, 0f);
 
-                // OBJ's V runs up, a DirectX texture's down
-                var uv = corner.T >= 0 ? new Vec2(uvs[corner.T].X, 1f - uvs[corner.T].Y) : new Vec2(0f, 0f);
-                vertices.Add(new Kn5Node.Vertex(placed[corner.P], normal, uv, new Vec3(1f, 0f, 0f)));
+                    // OBJ's V runs up, a DirectX texture's down
+                    var uv = t >= 0 ? new Vec2(uvs[t].X, 1f - uvs[t].Y) : new Vec2(0f, 0f);
+                    vertices.Add(new Kn5Node.Vertex(placed[p], normal, uv, new Vec3(1f, 0f, 0f)));
+                }
+
+                indices.Add(index);
             }
 
-            indices.Add(index);
+            // Mirrored: every triangle the other way round, so it still faces out
+            if (mirror)
+            {
+                for (var i = 0; i + 2 < indices.Count; i += 3) (indices[i + 1], indices[i + 2]) = (indices[i + 2], indices[i + 1]);
+            }
+
+            groups[byMaterial.Key] = (WithTangents(vertices, indices), indices);
         }
 
-        // Mirrored: every triangle the other way round, so it still faces out
-        if (mirror)
-        {
-            for (var i = 0; i + 2 < indices.Count; i += 3) (indices[i + 1], indices[i + 2]) = (indices[i + 2], indices[i + 1]);
-        }
-
-        return (WithTangents(vertices, indices), indices);
+        return groups;
     }
 
     private static float F(string text) => float.Parse(text, NumberStyles.Float, CultureInfo.InvariantCulture);

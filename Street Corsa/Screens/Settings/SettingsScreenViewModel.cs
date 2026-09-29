@@ -28,6 +28,28 @@ namespace StreetCorsa.Screens.Settings
 
         public GameSettings Settings => _settingsService.Current;
 
+        /// <summary>
+        /// The credits the licences of what the game plays and shows ask for: FMOD, and whoever made the garage's
+        /// radio in use (a mod's own radio names its own maker)
+        /// </summary>
+        public string Credits { get; } = MakeCredits();
+
+        private static string MakeCredits()
+        {
+            var credits = "Sound by FMOD Studio, Firelight Technologies Pty Ltd.";
+            try
+            {
+                var radio = Services.Garage.GarageProps.Find(Mods.ModSet.Installed, "radio", AppSettings.Instance.GarageShowroomKn5);
+                if (radio?.Credit is { Length: > 0 } credit) credits += " · Garage radio: " + credit + ".";
+            }
+            catch (Exception)
+            {
+                // Only a line of thanks: the settings open without it
+            }
+
+            return credits;
+        }
+
         // Volumes are saved a moment after the last slider move, not on every step of a drag
         private static readonly TimeSpan AudioSaveDelay = TimeSpan.FromMilliseconds(600);
         private readonly DispatcherTimer _audioSave;

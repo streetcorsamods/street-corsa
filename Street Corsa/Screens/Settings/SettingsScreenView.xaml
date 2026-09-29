@@ -140,7 +140,10 @@
                     FontSize="{StaticResource FontSizeSubheading}"/>
 
             <!-- FMOD's licence asks for this line wherever the game credits its tools -->
-            <TextBlock Text="Sound by FMOD Studio, Firelight Technologies Pty Ltd. · Garage radio: &quot;1950 Bush DAC10 Vintage Radio&quot; by Fishboe, CC BY 4.0."
+            <TextBlock Text="{Binding Credits}"
+                       TextWrapping="Wrap"
+                       TextAlignment="Center"
+                       MaxWidth="560"
                        Foreground="{StaticResource TextDisabledBrush}"
                        FontSize="{StaticResource FontSizeCaption}"
                        HorizontalAlignment="Center"

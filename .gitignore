@@ -377,3 +377,6 @@ Street Corsa/Content/streetcorsa/stations/*/ground.bin
 **/.[Pp]arts.converting/
 **/.[Pp]arts.committing
 **/.[Pp]arts.old/
+
+# A private mod: the Void Frame Studio radio is CC BY-NC-ND, not to be shared in any adapted form
+Street Corsa/Content/vfsradio/

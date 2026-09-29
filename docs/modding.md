@@ -234,10 +234,12 @@ it; the base game's cues are in `streetcorsa\sfx\sfx.json` (`ui.click`, `part.ra
 
 Things set into a garage, one folder each: a model (KN5) and a `prop.json` naming it and, by garage (the showroom's
 folder name), where it stands and which way it faces: `{ "name": "Radio", "model": "radio.kn5", "places": { "garage":
-{ "position": [2.62, 1.29, -8.6], "heading": 67 } } }` (metres, the car at the origin; degrees about the vertical). A
+{ "position": [2.62, 1.29, -8.6], "heading": 67 } }, "credit": "..." }` (metres, the car at the origin; degrees about the vertical). A
 mod's prop of an id the base game has replaces it, so a mod can swap the radio for another set or put it elsewhere in
-its own garage; one without a place in a garage takes it out of that garage. The base game has `radio`, the set on the
-welder: clicking it opens the radio. `tools\Props` makes a prop's KN5 out of an OBJ and its PBR pictures.
+its own garage; one without a place in a garage takes it out of that garage. `credit` names the model's maker where
+the game shows its credits (Settings), as a CC BY licence asks. The published `bushradio` mod has `radio`, the set on the
+welder: clicking it opens the radio. `tools\Props` makes a prop's KN5: `prepare_prop.py` takes any model with PBR
+materials (a Sketchfab .glb, a .blend) through Blender, `PropBuilder` writes the KN5.
 
 ### dealers
 

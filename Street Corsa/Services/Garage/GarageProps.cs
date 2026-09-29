@@ -7,7 +7,7 @@ using StreetCorsa.Mods;
 namespace StreetCorsa.Services.Garage
 {
     /// <summary>A prop set into a garage: its model, and where it stands there (on the floor or on a bench top)</summary>
-    public sealed record PlacedProp(string Id, string Name, string Model, Vector3 Position, float Heading)
+    public sealed record PlacedProp(string Id, string Name, string Model, Vector3 Position, float Heading, string? Credit = null)
     {
         /// <summary>Where the model goes, as the renderer takes it: turned about the vertical, then moved to its spot</summary>
         public Matrix4x4 Placement => Matrix4x4.CreateRotationY(Heading * MathF.PI / 180f) * Matrix4x4.CreateTranslation(Position);
@@ -18,7 +18,7 @@ namespace StreetCorsa.Services.Garage
     /// (the showroom's folder name), where it stands in it. A later mod's prop of an id replaces an earlier one's, so a
     /// mod can swap the radio for another set, or put it somewhere else in its own garage.
     /// <code>
-    /// { "name": "Radio", "model": "radio.kn5", "places": { "garage": { "position": [2.62, 1.29, -8.6], "heading": -23 } } }
+    /// { "name": "Radio", "model": "radio.kn5", "credit": "...", "places": { "garage": { "position": [2.62, 1.29, -8.6], "heading": 67 } } }
     /// </code>
     /// </summary>
     public static class GarageProps
@@ -29,6 +29,9 @@ namespace StreetCorsa.Services.Garage
         {
             [JsonPropertyName("name")] public string? Name { get; set; }
             [JsonPropertyName("model")] public string? Model { get; set; }
+
+            /// <summary>Who made the model, as its licence wants them named in the game</summary>
+            [JsonPropertyName("credit")] public string? Credit { get; set; }
             [JsonPropertyName("places")] public Dictionary<string, PlaceJson>? Places { get; set; }
         }
 
@@ -63,7 +66,7 @@ namespace StreetCorsa.Services.Garage
 
                     // A prop of this id without a place in this garage takes the earlier one's out of it too
                     found = prop?.Places?.FirstOrDefault(p => string.Equals(p.Key, garage, StringComparison.OrdinalIgnoreCase)).Value is { Position: { Length: 3 } at } place
-                        ? new PlacedProp(id, prop.Name ?? id, model, new Vector3(at[0], at[1], at[2]), place.Heading)
+                        ? new PlacedProp(id, prop.Name ?? id, model, new Vector3(at[0], at[1], at[2]), place.Heading, prop.Credit)
                         : null;
                 }
                 catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
