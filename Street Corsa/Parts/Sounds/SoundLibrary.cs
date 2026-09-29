@@ -191,9 +191,9 @@ public sealed class SoundLibrary
                     // The id is the mod's and the folder's name: never there twice
                     if (entry != null) library.Add(entry);
                 }
-                catch (Exception ex) when (IsBadContent(ex))
+                catch (Exception ex) when (ex is not OutOfMemoryException)
                 {
-                    library._problems.Add($"{label}{Path.GetFileName(folder)}: {ex.Message}");
+                    library._problems.Add($"{label}{Path.GetFileName(folder)}: {Describe(ex)}");
                 }
             }
         }
@@ -301,9 +301,9 @@ public sealed class SoundLibrary
             {
                 car = ReadCar(folder, () => master.Value, facts);
             }
-            catch (Exception ex) when (IsBadContent(ex))
+            catch (Exception ex) when (ex is not OutOfMemoryException)
             {
-                _problems.Add($"{Path.GetFileName(folder)}: {ex.Message}; its bank is left out");
+                _problems.Add($"{Path.GetFileName(folder)}: {Describe(ex)}; its bank is left out");
                 continue;
             }
 
@@ -370,6 +370,13 @@ public sealed class SoundLibrary
     private static bool IsBadContent(Exception ex) =>
         ex is IOException or UnauthorizedAccessException or JsonException or InvalidDataException or ArgumentException
             or NotSupportedException or FormatException or OverflowException;
+
+    /// <summary>
+    /// A problem line for one folder or car that failed. Anything it throws leaves only that one out (one bad mod car
+    /// must not cost every car its sound), but what is no bad content is named as the bug it is.
+    /// </summary>
+    private static string Describe(Exception ex) =>
+        IsBadContent(ex) ? ex.Message : $"failed to read ({ex.GetType().Name}: {ex.Message})";
 
     private sealed record HarvestedCar(string Id, string Name, string BankPath, string GuidsText, long Size, string Checksum,
         double? Limiter, int? Cylinders, string Family);

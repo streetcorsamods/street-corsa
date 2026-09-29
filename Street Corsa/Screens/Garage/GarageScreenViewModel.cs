@@ -313,7 +313,7 @@ namespace StreetCorsa.Screens.Garage
             SkipEnterAnimation = skipAnimation;
 
             BackCommand = new RelayCommand(OnBack, CanLeave);
-            ExitCommand = new RelayCommand(OnExit);
+            ExitCommand = new RelayCommand(OnExit, CanLeave);
             LaunchShowroomCommand = new AsyncRelayCommand(OnLaunchShowroom, CanLaunchShowroom);
             FreeRunCommand = new AsyncRelayCommand(OnFreeRun, () => SelectedCarHere && FreeRunTrack != null && !_launcher.IsExecutionLocked && CanLeave());
             TestAndTuneCommand = new AsyncRelayCommand(OnTestAndTune, () => SelectedCarHere && !_launcher.IsExecutionLocked && CanLeave());
@@ -980,7 +980,8 @@ namespace StreetCorsa.Screens.Garage
                 "Exit Game?",
                 confirmed =>
                 {
-                    if (confirmed)
+                    // Not while the night is being worked out: the exit saves, and a half-ended day would be saved
+                    if (confirmed && CanLeave())
                     {
                         System.Windows.Application.Current.Shutdown();
                     }
@@ -1064,6 +1065,8 @@ namespace StreetCorsa.Screens.Garage
         {
             base.Exit();
             RememberFreeRunTrack();
+            // The part models are the garage's: the lots, the menus and a race have no use for them in memory
+            StreetCorsa.Parts.PartAssembler.ClearModelCache();
             _logger.Information("Exited garage screen");
         }
 

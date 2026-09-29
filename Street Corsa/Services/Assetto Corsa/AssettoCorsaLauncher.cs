@@ -491,14 +491,28 @@ namespace StreetCorsa.Services
                     // What the parts make of each car goes into the install now and comes out in the finally,
                     // whatever happens in between. A second car of a model already in the race races in a copy of the
                     // folder, made first, from the originals, before the other car's changes go in.
+                    // The seal is checked again before each change and before the start: the crash path seals the
+                    // install from another thread while this stretch runs, then waits for the gate to put it all back
                     foreach (var car in intent.CarData.Where(c => c.CloneId != null))
                     {
+                        if (AcInstallGate.IsSealed)
+                        {
+                            prepareError = "Street Corsa is closing";
+                            return;
+                        }
+
                         _logger.Information("PHASE: Copy of {Car} as {Clone}", car.CarId, car.CloneId);
                         _carData.CreateClone(car.CarId, car.CloneId!, car.Build.Files, car.Build.Sound);
                     }
 
                     foreach (var car in intent.CarData.Where(c => c.CloneId == null))
                     {
+                        if (AcInstallGate.IsSealed)
+                        {
+                            prepareError = "Street Corsa is closing";
+                            return;
+                        }
+
                         _logger.Information("PHASE: Car data for {Car}", car.CarId);
                         if (!_carData.Apply(car.CarId, car.Build.Files, car.Build.Sound))
                             _logger.Warning("{Car}: its data was already changed for this race, so it races on the other car's", car.CarId);
@@ -511,6 +525,10 @@ namespace StreetCorsa.Services
                     if (!File.Exists(exePath))
                     {
                         prepareError = $"Executable not found: {exePath}";
+                    }
+                    else if (AcInstallGate.IsSealed)
+                    {
+                        prepareError = "Street Corsa is closing";
                     }
                     else if (!_stopRequested) // the last moment a stop can call the launch off: after this, AC runs
                     {

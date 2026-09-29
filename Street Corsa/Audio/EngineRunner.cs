@@ -277,6 +277,8 @@ public sealed class EngineRunner : INotifyPropertyChanged
         if (_ticking) return;
         _ticking = true;
         _lastFrame = TimeSpan.Zero;
+        // Started again after a failed frame: the next failure, maybe another bug, is logged too
+        _tickFailedLogged = false;
         CompositionTarget.Rendering += OnFrame;
     }
 

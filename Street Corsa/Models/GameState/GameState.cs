@@ -112,13 +112,15 @@ namespace StreetCorsa.Models.GameState
             LastPlayedDate = now;
         }
 
-        public static GameState CreateNew(string playerName, GameRules? rules = null)
+        /// <param name="openFromStart">The victory paths open from the start (<see cref="CareerState.CreateNew"/>)</param>
+        public static GameState CreateNew(string playerName, GameRules? rules = null, IEnumerable<string>? openFromStart = null)
         {
             var state = new GameState
             {
                 Player = new Player(playerName),
                 Date = GetStartingDateTime(),
-                Rules = rules ?? new GameRules()
+                Rules = rules ?? new GameRules(),
+                Career = CareerState.CreateNew(openFromStart)
             };
 
             return state;

@@ -546,8 +546,7 @@ namespace StreetCorsa.Services.Simulation
         /// </summary>
         public static double GetCarHP(Car car, Models.Catalog.CarDefinition? definition = null)
         {
-            if (car.PowerHp is { } hp && double.IsFinite(hp) && hp <= 0) return 0;
-            return CarPower.Of(car, definition) ?? 100 + (double)car.PurchasePrice / 50;
+            return CarPower.Racing(car, definition) ?? 100 + (double)car.PurchasePrice / 50;
         }
 
         /// <summary>A racer's skill; one who is not an opponent drives like the least skilled of them</summary>

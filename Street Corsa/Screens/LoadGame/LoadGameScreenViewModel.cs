@@ -201,6 +201,13 @@ namespace StreetCorsa.Screens.LoadGame
                     if (changed) _repository.Save(gameState, saveInfo.SaveName);
                 });
 
+                // Backed out of (Back, Escape, another card) while it loaded: the player no longer wants this game
+                if (_closed)
+                {
+                    _logger.Information("Save {SaveName} loaded after its card was closed; not opened", saveInfo.SaveName);
+                    return;
+                }
+
                 // Navigate to game screen with loaded state, then store it in App for saving on exit
                 if (_navigationService.NavigateToGarage(gameState)) _setCurrentGame(gameState);
             }
@@ -250,15 +257,20 @@ namespace StreetCorsa.Screens.LoadGame
             _back();
         }
 
+        /// <summary>True once the card has closed: a save still loading then goes nowhere</summary>
+        private bool _closed;
+
         public override void Enter()
         {
             base.Enter();
+            _closed = false;
             // Refresh the list when entering the screen
             LoadSavedGames();
         }
 
         public override void Exit()
         {
+            _closed = true;
             base.Exit();
         }
     }

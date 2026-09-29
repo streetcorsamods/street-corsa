@@ -45,8 +45,9 @@ namespace StreetCorsa.Models.Career.Filters
 
         public bool Matches(CarDefinition car, Car? instance = null)
         {
-            // The car's own dyno figure when it has one (an engine swap counts), else its spec sheet's power
-            var bhp = CarPower.Of(instance, car);
+            // The car's own dyno figure when it has one (an engine swap counts), else its spec sheet's power; a car
+            // whose engine does not run has none, as the race simulator sees it
+            var bhp = CarPower.Racing(instance, car);
             if (!bhp.HasValue)
                 return false; // Cars without power data don't match power-based filters
 

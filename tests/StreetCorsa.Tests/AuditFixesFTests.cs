@@ -231,7 +231,7 @@ public class AuditFixesFTests
     [Fact]
     public void A_new_career_opens_the_paths_that_ask_nothing_to_unlock()
     {
-        var career = CareerState.CreateNew();
+        var career = CareerState.CreateNew(CareerContent.Installed.OpenFromStart);
         var open = CareerContent.Installed.Victories.Where(v => v.Unlock.Count == 0).Select(v => v.Id).ToList();
 
         Assert.NotEmpty(open);
@@ -239,6 +239,8 @@ public class AuditFixesFTests
         Assert.Contains("Reputation", career.UnlockedVictories.Keys);
 
         Assert.Equal(["mod:path"], CareerState.CreateNew(["mod:path"]).UnlockedVictories.Keys);
+        // The model alone opens nothing: it never reads the mods (a save being loaded builds one only to replace it)
+        Assert.Empty(new GameState().Career.UnlockedVictories);
     }
 
     [Fact]

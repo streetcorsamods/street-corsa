@@ -33,6 +33,15 @@ public class AuditFollowUpsTests
     }
 
     [Fact]
+    public void A_car_that_does_not_run_passes_no_power_filter()
+    {
+        var filter = new StreetCorsa.Models.Career.Filters.PowerFilter(minHP: 200, maxHP: null);
+        Assert.False(filter.Matches(Rated("250 bhp"), new Car("a") { PowerHp = 0 }));
+        Assert.True(filter.Matches(Rated("250 bhp"), new Car("a")));
+        Assert.Equal(0, CarPower.Racing(new Car("a") { PowerHp = 0 }, Rated("250 bhp")));
+    }
+
+    [Fact]
     public void Without_either_there_is_no_power()
     {
         Assert.Null(CarPower.Of((Car?)null, null));

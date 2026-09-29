@@ -35,6 +35,9 @@ namespace StreetCorsa.Services.Career
         /// <summary>In the order the mods list them: with no path picked, the first reached wins</summary>
         public IReadOnlyList<VictoryDefinition> Victories { get; private init; } = [];
 
+        /// <summary>The victory paths a new game has open from the start: those with nothing to unlock</summary>
+        public IEnumerable<string> OpenFromStart => Victories.Where(v => v.Unlock.Count == 0).Select(v => v.Id);
+
         public IReadOnlyList<string> Problems { get; private init; } = [];
 
         /// <summary>The career of the mods next to the game</summary>

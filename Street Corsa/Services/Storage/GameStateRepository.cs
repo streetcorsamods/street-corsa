@@ -189,7 +189,7 @@ namespace StreetCorsa.Services.Storage
                 Delete(saveName);
             }
 
-            var state = GameState.CreateNew(playerName, rules);
+            var state = GameState.CreateNew(playerName, rules, Career.CareerContent.Installed.OpenFromStart);
             state.SaveName = saveName;
 
             // Initialize opponents if service is available

@@ -35,6 +35,17 @@ public class IniTextTests
     }
 
     [Fact]
+    public void Slash_comments_are_comments_too_and_stay_on_a_set()
+    {
+        var ini = new IniText("[GRAPHICS]\r\nDRIVEREYES=0.35,1.05,-0.20 // eyes\r\nRADIUS=0.33// tyre ; old\r\n");
+        Assert.Equal("0.35,1.05,-0.20", ini.Get("GRAPHICS", "DRIVEREYES"));
+        Assert.Equal(0.33, ini.GetNumber("GRAPHICS", "RADIUS"));
+
+        ini.Set("GRAPHICS", "RADIUS", "0.34");
+        Assert.Equal("[GRAPHICS]\r\nDRIVEREYES=0.35,1.05,-0.20 // eyes\r\nRADIUS=0.34\t\t\t// tyre ; old\r\n", ini.ToString());
+    }
+
+    [Fact]
     public void Get_reads_values_without_the_comment_and_by_occurrence()
     {
         var ini = new IniText(Tyres);

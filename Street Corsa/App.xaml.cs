@@ -796,8 +796,9 @@ namespace StreetCorsa
         }
 
         /// <summary>
-        /// What must happen before the process dies: the game saved, the AC install put back (only when no game
-        /// runs), FMOD released, the save's database closed, the log flushed. Once, whichever handler gets here
+        /// What must happen before the process dies: the AC install put back (only when no game runs), FMOD
+        /// released, the save's database closed, the log flushed. The game is not saved: it goes on from its last save
+        /// (<see cref="ShutDownCleanly"/> says why). Once, whichever handler gets here
         /// first; every step on its own, and it never throws.
         /// </summary>
         private void RunFatalPath(Exception? exception)
@@ -808,7 +809,7 @@ namespace StreetCorsa
             try
             {
                 logger = AppLoggerFactory.CreateLogger(LogCategory.App);
-                logger.Critical(exception ?? new Exception("(no exception object)"), "Fatal error: saving the game and putting Assetto Corsa back before the app ends");
+                logger.Critical(exception ?? new Exception("(no exception object)"), "Fatal error: putting Assetto Corsa back before the app ends (the game is not saved: it goes on from its last save)");
             }
             catch (Exception)
             {

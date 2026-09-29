@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows.Media.Imaging;
 using StreetCorsa.Logging;
 
@@ -11,8 +12,15 @@ namespace StreetCorsa.Screens.Shared
     /// </summary>
     public static class Thumbnails
     {
-        /// <summary>The pictures once decoded, by file and width; null for a file that could not be read</summary>
-        private static readonly Dictionary<(string Path, int Width), BitmapImage?> Cache = new();
+        /// <summary>
+        /// The pictures once decoded, by file, width and when the file was last written (a picture edited on disk is
+        /// read again). A file that could not be read is not kept: it is tried again the next time it is shown, as a
+        /// portrait locked for a moment by a scanner or still being written must not stay blank all session.
+        /// </summary>
+        private static readonly Dictionary<(string Path, int Width, DateTime Written), BitmapImage> Cache = new();
+
+        /// <summary>The files already warned about, so a picture that never reads is logged once, not on every visit</summary>
+        private static readonly HashSet<string> Warned = new(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// The picture at <paramref name="path"/>, decoded <paramref name="decodeWidth"/> pixels wide (about twice the
@@ -22,29 +30,28 @@ namespace StreetCorsa.Screens.Shared
         {
             if (string.IsNullOrEmpty(path)) return null;
 
-            var key = (path, decodeWidth);
-            if (Cache.TryGetValue(key, out var cached)) return cached;
-
-            BitmapImage? image = null;
             try
             {
-                image = new BitmapImage();
+                var key = (path, decodeWidth, File.GetLastWriteTimeUtc(path));
+                if (Cache.TryGetValue(key, out var cached)) return cached;
+
+                var image = new BitmapImage();
                 image.BeginInit();
                 image.UriSource = new Uri(path, UriKind.RelativeOrAbsolute);
                 image.DecodePixelWidth = decodeWidth;
                 image.CacheOption = BitmapCacheOption.OnLoad;
                 image.EndInit();
                 image.Freeze();
+                Cache[key] = image;
+                return image;
             }
             catch (Exception ex)
             {
                 // The logger only now: a test that touches this class first must not need the logging set up
-                AppLoggerFactory.CreateLogger(LogCategory.UI).Warning("The picture {Path} could not be read: {Error}", path, ex.Message);
-                image = null;
+                if (Warned.Add(path))
+                    AppLoggerFactory.CreateLogger(LogCategory.UI).Warning("The picture {Path} could not be read: {Error}", path, ex.Message);
+                return null;
             }
-
-            Cache[key] = image;
-            return image;
         }
     }
 }

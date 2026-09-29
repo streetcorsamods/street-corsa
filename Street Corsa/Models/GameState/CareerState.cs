@@ -93,8 +93,9 @@ namespace StreetCorsa.Models.GameState
         /// <summary>
         /// Initialize default career state for a new game
         /// </summary>
-        /// <param name="openFromStart">The victory paths open from the start; the installed mods' when null (those
-        /// with nothing to unlock)</param>
+        /// <param name="openFromStart">The victory paths open from the start (a new game's are the installed mods'
+        /// with nothing to unlock, <see cref="Services.Career.CareerContent.OpenFromStart"/>); none when null. The model
+        /// does not read the mods itself: a save being loaded builds a GameState, and its career, only to replace it.</param>
         public static CareerState CreateNew(IEnumerable<string>? openFromStart = null)
         {
             var state = new CareerState();
@@ -106,10 +107,7 @@ namespace StreetCorsa.Models.GameState
             }
 
             // The paths open from the start are open already, not unlocked by the first race (base game: Reputation)
-            openFromStart ??= Services.Career.CareerContent.Installed.Victories
-                .Where(v => v.Unlock.Count == 0)
-                .Select(v => v.Id);
-            foreach (var id in openFromStart) state.UnlockedVictories[id] = true;
+            foreach (var id in openFromStart ?? []) state.UnlockedVictories[id] = true;
 
             return state;
         }
