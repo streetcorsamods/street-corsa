@@ -47,7 +47,7 @@ public class AssettoCorsaContentService : IAssettoCorsaContentService
         return _tracks;
     }
 
-    private List<TrackInfo> LoadTracks(string tracksPath)
+    internal List<TrackInfo> LoadTracks(string tracksPath)
     {
         var tracks = new List<TrackInfo>();
         var trackFolders = Directory.GetDirectories(tracksPath);
@@ -111,33 +111,10 @@ public class AssettoCorsaContentService : IAssettoCorsaContentService
         if (!Directory.Exists(uiFolder))
             return;
 
-        // Look for layout-specific JSON files (e.g., ui_gp.json, ui_national.json)
-        var configFiles = Directory.GetFiles(uiFolder, "ui_*.json")
-            .Where(f => !f.EndsWith(TrackJson, StringComparison.OrdinalIgnoreCase));
-
-        foreach (var configFile in configFiles)
-        {
-            try
-            {
-                var configName = Path.GetFileNameWithoutExtension(configFile)
-                    .Replace("ui_", "", StringComparison.OrdinalIgnoreCase);
-
-                var jsonContent = File.ReadAllText(configFile);
-                var configData = JsonSerializer.Deserialize<TrackConfiguration>(jsonContent, JsonOptions);
-
-                if (configData != null)
-                {
-                    configData.FolderName = configName;
-                    trackInfo.Configurations.Add(configData);
-                }
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
-            {
-                _logger.Warning(ex, "Track {TrackId}: layout file {File} skipped", trackInfo.TrackId, configFile);
-            }
-        }
-
-        // Look for variant subfolders (e.g., ui/drag200/ui_track.json, ui/drag400/ui_track.json)
+        // A layout is a subfolder with its own ui_track.json (ui/drag200/ui_track.json): the folder's name is what
+        // race.ini's CONFIG_TRACK names, and AC knows no other kind. Loose ui_*.json files next to them (Content
+        // Manager's leftovers, translations) are not layouts: one taken for a layout would name a CONFIG_TRACK
+        // that AC cannot load, or list a layout twice.
         foreach (var subDir in Directory.GetDirectories(uiFolder))
         {
             var variantJsonPath = Path.Combine(subDir, TrackJson);

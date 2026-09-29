@@ -53,6 +53,12 @@ namespace StreetCorsa.Services
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger("ACLauncher");
         private readonly SemaphoreSlim _executionLock = new(1, 1);
 
+        /// <summary>
+        /// What a restore after the launch had ended (the wait for AC to exit) could not put back: nobody waits on that
+        /// restore, so the player hears of it with the next launch's result
+        /// </summary>
+        private readonly List<string> _laterRestoreProblems = new();
+
         private volatile Process? _currentProcess;
         private volatile string? _currentProcessName;
         private CancellationTokenSource? _monitorCts;
@@ -193,7 +199,12 @@ namespace StreetCorsa.Services
                     await Task.Delay(ExitPoll, cancellationToken);
                 }
 
-                restored = RestoreInstall();
+                var problems = new List<string>();
+                restored = await Task.Run(() => RestoreInstall(problems));
+                if (problems.Count > 0)
+                {
+                    lock (_laterRestoreProblems) _laterRestoreProblems.AddRange(problems);
+                }
             }
             finally
             {
@@ -241,6 +252,19 @@ namespace StreetCorsa.Services
                 return busy;
             }
 
+            // The lock only knows the launches made here: a game opened from Content Manager or Steam (or one the app
+            // lost track of) is on the install too, and nothing goes in or back under it. Not knowing counts as running.
+            var acBefore = AcProcesses.QueryAnyRunning();
+            if (acBefore != false)
+            {
+                _executionLock.Release();
+                _logger.Warning("Cannot launch: Assetto Corsa {State}", acBefore == true ? "is already running" : "may be running (the processes could not be listed)");
+                var running = Failure(intent, "Assetto Corsa is already running", startTime);
+                running.PlayerMessages.Add(new PlayerMessage("Assetto Corsa Is Busy",
+                    "Assetto Corsa is already running (opened from Content Manager or Steam, or still closing). Close it, then try again."));
+                return running;
+            }
+
             _isExecutionLocked = true;
             _launchInProgress = true;
             _stopRequested = false;
@@ -260,6 +284,7 @@ namespace StreetCorsa.Services
             LaunchResult result;
             var raceCompleted = false;
             var handedOver = false;
+            var restoreProblems = new List<string>();
 
             try
             {
@@ -302,7 +327,8 @@ namespace StreetCorsa.Services
                 }
                 else
                 {
-                    RestoreInstall();
+                    // Off the UI thread: removing race copies and putting data back can take a while on a big car
+                    await Task.Run(() => RestoreInstall(restoreProblems));
                 }
 
                 var process = _currentProcess;
@@ -324,6 +350,16 @@ namespace StreetCorsa.Services
                     _executionLock.Release();
                 }
             }
+
+            // What could not be put back stays changed in the player's own AC: they hear of it, not only the log
+            lock (_laterRestoreProblems)
+            {
+                restoreProblems.InsertRange(0, _laterRestoreProblems);
+                _laterRestoreProblems.Clear();
+            }
+
+            if (restoreProblems.Count > 0)
+                result.PlayerMessages.Add(RestoreProblemsMessage(restoreProblems));
 
             // Subscribers hear of it once everything is back and unlocked; one that throws spoils neither the result
             // nor the other subscribers
@@ -389,26 +425,30 @@ namespace StreetCorsa.Services
 
             // Under the install's gate: a restore from another thread (the crash path) never falls between a kept
             // original and the write it is kept for. (Never held across an await: failures leave the block first.)
+            // On a worker, so the loading screen does not freeze: the gate is a monitor taken and let go in that one block.
             string? prepareError = null;
-            using (AcInstallGate.Hold())
+            await Task.Run(() =>
             {
-                // A race runs in the game's own CSP mode: without it nothing starts the race or reports it
-                if (intent is DragRaceLaunchIntent)
+                using (AcInstallGate.Hold())
                 {
-                    prepareError = _raceMode.Install(AppSettings.Instance.AssettoCorsaPath);
-                }
-
-                foreach (var configIntent in prepareError == null ? configIntents : [])
-                {
-                    _logger.Debug("Applying: {Description}", configIntent.Description);
-
-                    if (!_iniService.ApplyIntent(configIntent))
+                    // A race runs in the game's own CSP mode: without it nothing starts the race or reports it
+                    if (intent is DragRaceLaunchIntent)
                     {
-                        prepareError = $"Failed to apply configuration intent: {configIntent.Description}";
-                        break;
+                        prepareError = _raceMode.Install(AppSettings.Instance.AssettoCorsaPath);
+                    }
+
+                    foreach (var configIntent in prepareError == null ? configIntents : [])
+                    {
+                        _logger.Debug("Applying: {Description}", configIntent.Description);
+
+                        if (!_iniService.ApplyIntent(configIntent))
+                        {
+                            prepareError = $"Failed to apply configuration intent: {configIntent.Description}";
+                            break;
+                        }
                     }
                 }
-            }
+            });
 
             if (prepareError != null)
             {
@@ -427,53 +467,58 @@ namespace StreetCorsa.Services
 
             RaiseSafely("ExecutionStarted", () => ExecutionStarted?.Invoke(this, intent));
 
-            // From the cars' data to the start of the game, one synchronous stretch under the install's gate
-            using (AcInstallGate.Hold())
+            // From the cars' data to the start of the game, one synchronous stretch under the install's gate, on a worker:
+            // copying a car folder and unpacking its data must not freeze the loading screen. The gate is a monitor, taken
+            // and let go on that one thread.
+            await Task.Run(() =>
             {
-                // PHASE 2.5: THE CARS' OWN DATA AND SOUND
-                // What the parts make of each car goes into the install now and comes out in the finally,
-                // whatever happens in between. A second car of a model already in the race races in a copy of the
-                // folder, made first, from the originals, before the other car's changes go in.
-                foreach (var car in intent.CarData.Where(c => c.CloneId != null))
+                using (AcInstallGate.Hold())
                 {
-                    _logger.Information("PHASE: Copy of {Car} as {Clone}", car.CarId, car.CloneId);
-                    _carData.CreateClone(car.CarId, car.CloneId!, car.Build.Files, car.Build.Sound);
-                }
-
-                foreach (var car in intent.CarData.Where(c => c.CloneId == null))
-                {
-                    _logger.Information("PHASE: Car data for {Car}", car.CarId);
-                    if (!_carData.Apply(car.CarId, car.Build.Files, car.Build.Sound))
-                        _logger.Warning("{Car}: its data was already changed for this race, so it races on the other car's", car.CarId);
-                }
-
-                // PHASE 3: VALIDATE EXECUTABLE
-                _logger.Information("PHASE: Validate Executable");
-                var exePath = GetExecutablePath(intent.Executable);
-
-                if (!File.Exists(exePath))
-                {
-                    prepareError = $"Executable not found: {exePath}";
-                }
-                else if (!_stopRequested) // the last moment a stop can call the launch off: after this, AC runs
-                {
-                    _logger.Information("Executable validated: {ExePath}", exePath);
-
-                    // PHASE 4: EXECUTE
-                    _logger.Information("PHASE: Execute");
-                    _logger.Information("Launching: {Executable}", intent.Executable);
-
-                    var processStartInfo = new ProcessStartInfo
+                    // PHASE 2.5: THE CARS' OWN DATA AND SOUND
+                    // What the parts make of each car goes into the install now and comes out in the finally,
+                    // whatever happens in between. A second car of a model already in the race races in a copy of the
+                    // folder, made first, from the originals, before the other car's changes go in.
+                    foreach (var car in intent.CarData.Where(c => c.CloneId != null))
                     {
-                        FileName = exePath,
-                        WorkingDirectory = AppSettings.Instance.AssettoCorsaPath,
-                        UseShellExecute = true
-                    };
+                        _logger.Information("PHASE: Copy of {Car} as {Clone}", car.CarId, car.CloneId);
+                        _carData.CreateClone(car.CarId, car.CloneId!, car.Build.Files, car.Build.Sound);
+                    }
 
-                    _currentProcessName = AcProcesses.NameOf(intent.Executable);
-                    _currentProcess = Process.Start(processStartInfo);
+                    foreach (var car in intent.CarData.Where(c => c.CloneId == null))
+                    {
+                        _logger.Information("PHASE: Car data for {Car}", car.CarId);
+                        if (!_carData.Apply(car.CarId, car.Build.Files, car.Build.Sound))
+                            _logger.Warning("{Car}: its data was already changed for this race, so it races on the other car's", car.CarId);
+                    }
+
+                    // PHASE 3: VALIDATE EXECUTABLE
+                    _logger.Information("PHASE: Validate Executable");
+                    var exePath = GetExecutablePath(intent.Executable);
+
+                    if (!File.Exists(exePath))
+                    {
+                        prepareError = $"Executable not found: {exePath}";
+                    }
+                    else if (!_stopRequested) // the last moment a stop can call the launch off: after this, AC runs
+                    {
+                        _logger.Information("Executable validated: {ExePath}", exePath);
+
+                        // PHASE 4: EXECUTE
+                        _logger.Information("PHASE: Execute");
+                        _logger.Information("Launching: {Executable}", intent.Executable);
+
+                        var processStartInfo = new ProcessStartInfo
+                        {
+                            FileName = exePath,
+                            WorkingDirectory = AppSettings.Instance.AssettoCorsaPath,
+                            UseShellExecute = true
+                        };
+
+                        _currentProcessName = AcProcesses.NameOf(intent.Executable);
+                        _currentProcess = Process.Start(processStartInfo);
+                    }
                 }
-            }
+            });
 
             if (prepareError != null)
             {
@@ -744,7 +789,14 @@ namespace StreetCorsa.Services
             return lastExit;
         }
 
-        private int RestoreInstall() => RestoreInstall(_carData, _iniService, _logger);
+        private int RestoreInstall(ICollection<string> problems) => RestoreInstall(_carData, _iniService, _logger, problems);
+
+        /// <summary>What the player is told when part of the install stayed changed after a race</summary>
+        internal static PlayerMessage RestoreProblemsMessage(IReadOnlyCollection<string> problems) =>
+            new("Assetto Corsa Not Put Back",
+                "Some of what the race changed in Assetto Corsa could not be put back as it was:\n\n"
+                + string.Join("\n", problems.Select(p => "- " + p))
+                + $"\n\nThe game tries again at its next start. The originals it still has are under {AppSettings.AcRestorePath}.");
 
         /// <summary>
         /// Car data, copies and cfg files back as they were: the cars first, then the cfg files, each part on its own
@@ -752,29 +804,36 @@ namespace StreetCorsa.Services
         /// and the app's start-up and exit paths all put the install back through here; only call it when no AC
         /// process runs.
         /// </summary>
-        public static int RestoreInstall(CarDataOverlay? carData, IIniModificationService? iniService, IAppLogger? logger)
+        /// <param name="problems">
+        /// Gets a line for the player about each car, copy or cfg file that stayed changed; empty when everything went
+        /// back. <see cref="RestoreProblemsMessage"/> turns them into what the player is told.
+        /// </param>
+        public static int RestoreInstall(CarDataOverlay? carData, IIniModificationService? iniService, IAppLogger? logger,
+            ICollection<string>? problems = null)
         {
             var restored = 0;
             try
             {
-                var cars = carData?.RestoreAll() ?? 0;
+                var cars = carData?.RestoreAll(problems) ?? 0;
                 if (cars > 0) logger?.Information("Data of {Count} car(s) put back, copies taken away", cars);
                 restored += cars;
             }
             catch (Exception ex)
             {
                 logger?.Error(ex, "Could not put the cars' data back");
+                problems?.Add($"The cars' data could not be put back ({ex.Message}).");
             }
 
             try
             {
-                var files = iniService?.RestoreAll() ?? 0;
+                var files = iniService?.RestoreAll(problems) ?? 0;
                 if (files > 0) logger?.Information("{Count} cfg file(s) put back", files);
                 restored += files;
             }
             catch (Exception ex)
             {
                 logger?.Error(ex, "Could not put the cfg files back");
+                problems?.Add($"The cfg files could not be put back ({ex.Message}).");
             }
 
             return restored;

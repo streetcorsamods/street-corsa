@@ -1,5 +1,6 @@
 using LiteDB;
 using Newtonsoft.Json;
+using StreetCorsa.Helpers;
 using StreetCorsa.Logging;
 using StreetCorsa.Models.Career.Milestones;
 using StreetCorsa.Models.GameState;
@@ -938,11 +939,15 @@ namespace StreetCorsa.Services.Race
             transDeg *= rate;
             tireDeg *= rate;
             bodyDeg *= rate;
-            car.EngineHealth = Math.Clamp(car.EngineHealth - engineDeg, 0.0, 1.0);
-            car.TransmissionHealth = Math.Clamp(car.TransmissionHealth - transDeg, 0.0, 1.0);
-            car.TireCondition = Math.Clamp(car.TireCondition - tireDeg, 0.0, 1.0);
-            car.BodyCondition = Math.Clamp(car.BodyCondition - bodyDeg, 0.0, 1.0);
+            car.EngineHealth = Worn(car.EngineHealth, engineDeg);
+            car.TransmissionHealth = Worn(car.TransmissionHealth, transDeg);
+            car.TireCondition = Worn(car.TireCondition, tireDeg);
+            car.BodyCondition = Worn(car.BodyCondition, bodyDeg);
             return new List<string>();
+
+            // A figure that is not a number (a damaged save) counts as new before the race's wear comes off it
+            static double Worn(double health, double wear) =>
+                Unit.Clamp01(Unit.Clamp01(health, ifNotFinite: 1) - wear, ifNotFinite: 0);
         }
 
         /// <summary>
@@ -1291,8 +1296,9 @@ namespace StreetCorsa.Services.Race
                     career.IncrementCounter(MilestoneTrigger.PinkSlipWins);
                 }
 
-                // Track defeated opponent
-                if (!string.IsNullOrEmpty(context.OpponentName))
+                // Track defeated opponent. Only a racer of the scene counts: "beat everyone" is measured against the
+                // scene's racers, and a newspaper event's one-off opponent is not one of them
+                if (!string.IsNullOrEmpty(context.OpponentName) && !context.IsEventOnlyOpponent)
                 {
                     career.RecordDefeatedOpponent(context.OpponentName);
                 }

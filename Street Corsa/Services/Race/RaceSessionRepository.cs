@@ -45,7 +45,7 @@ namespace StreetCorsa.Services.Race
         public void Save(LiteDatabase database, ProcessedRaceSession session)
         {
             // SessionId is the document's _id: the upsert is keyed on it
-            database.GetCollection<ProcessedRaceSession>(Collection).Upsert(session);
+            Sessions(database).Upsert(session);
             _logger.Debug("Saved processed session {SessionId} to database", session.SessionId);
         }
 
@@ -57,7 +57,19 @@ namespace StreetCorsa.Services.Race
 
         public Task<bool> IsContextSettledAsync(string saveName, Guid contextId) =>
             Task.Run(() => Read(saveName, db =>
-                db.GetCollection<ProcessedRaceSession>(Collection).Exists(Query.EQ(nameof(ProcessedRaceSession.RaceContextId), contextId))));
+                Sessions(db).Exists(Query.EQ(nameof(ProcessedRaceSession.RaceContextId), contextId))));
+
+        /// <summary>
+        /// The sessions, with the race context indexed: "is this race settled" is asked for every result file on
+        /// every pass, and without the index each ask reads every session the save has. LiteDB makes the index once
+        /// and finds it there after that.
+        /// </summary>
+        private static ILiteCollection<ProcessedRaceSession> Sessions(LiteDatabase database)
+        {
+            var sessions = database.GetCollection<ProcessedRaceSession>(Collection);
+            sessions.EnsureIndex(x => x.RaceContextId);
+            return sessions;
+        }
 
         public async Task<List<ProcessedRaceSession>> GetAllAsync(string saveName)
         {
