@@ -4,8 +4,6 @@ namespace StreetCorsa.Models.GameState
 {
     public class RacerCollection
     {
-        private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger("Racers");
-
         public Dictionary<string, Racer> Inactive { get; set; }
         public Dictionary<string, Racer> Retired { get; set; }
         public Dictionary<string, Racer> ReadyToRace { get; set; }
@@ -48,7 +46,9 @@ namespace StreetCorsa.Models.GameState
                 while (FindIgnoringCase($"{original} ({number})") != null) number++;
                 racer.Name = $"{original} ({number})";
 
-                Logger.Warning("Two racers are called {Name}; the second one races as {NewName}", original, racer.Name);
+                // The logger only now, not in a static field: a save loaded before the log is up (a tool, a test)
+                // must not fail on it
+                AppLoggerFactory.CreateLogger("Racers").Warning("Two racers are called {Name}; the second one races as {NewName}", original, racer.Name);
             }
 
             collection[racer.Name] = racer;

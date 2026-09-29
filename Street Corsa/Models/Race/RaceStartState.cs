@@ -1,4 +1,5 @@
 using System.Globalization;
+using StreetCorsa.Helpers;
 
 namespace StreetCorsa.Models.Race
 {
@@ -57,13 +58,14 @@ namespace StreetCorsa.Models.Race
         {
             var prefix = $"CAR_{carIndex}_";
             yield return (prefix + "BODY", List(BodyKmh, "0.0"));
-            yield return (prefix + "ENGINE_LIFE", EngineLife.ToString("0.0", CultureInfo.InvariantCulture));
-            yield return (prefix + "GEARBOX", GearboxWear.ToString("0.000", CultureInfo.InvariantCulture));
+            // Not a number is a car nothing is known to be wrong with: a new engine, a gearbox in good shape
+            yield return (prefix + "ENGINE_LIFE", Math.Clamp(double.IsFinite(EngineLife) ? EngineLife : 1000, 0, 1000).ToString("0.0", CultureInfo.InvariantCulture));
+            yield return (prefix + "GEARBOX", Unit.Clamp01(GearboxWear, ifNotFinite: 0).ToString("0.000", CultureInfo.InvariantCulture));
             yield return (prefix + "SUSPENSION", List(SuspensionBend, "0.000"));
             yield return (prefix + "FUEL", FuelLitres is { } fuel && double.IsFinite(fuel)
                 ? Math.Max(0, fuel).ToString("0.00", CultureInfo.InvariantCulture)
                 : "-1");
-            yield return (prefix + "DIRT", Math.Clamp(double.IsFinite(Dirt) ? Dirt : 0, 0, 1).ToString("0.000", CultureInfo.InvariantCulture));
+            yield return (prefix + "DIRT", Unit.Clamp01(Dirt, ifNotFinite: 0).ToString("0.000", CultureInfo.InvariantCulture));
             if (Cooling is { } cooling)
                 yield return (prefix + "COOLING", List([cooling.Cooling, cooling.Fan, cooling.OilG], "0.000"));
         }

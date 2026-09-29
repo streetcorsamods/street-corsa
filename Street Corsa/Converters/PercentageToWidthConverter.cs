@@ -9,27 +9,26 @@ namespace StreetCorsa.Converters
     /// </summary>
     public class PercentageToWidthConverter : IMultiValueConverter
     {
+        /// <summary>What the bar's border takes off the container's width</summary>
+        private const double BorderMargin = 4;
+
         public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
         {
-            if (values.Length < 2)
+            // First value is the percentage (a float or a double), second the container's width
+            if (values.Length < 2 || values[1] is not double containerWidth)
                 return 0.0;
 
-            // First value is percentage (0-100)
-            // Second value is container width
-            if (values[0] is float percentage && values[1] is double containerWidth)
+            double? percentage = values[0] switch
             {
-                // Subtract some margin for the border
-                var availableWidth = containerWidth - 4;
-                return Math.Max(0, (percentage / 100.0) * availableWidth);
-            }
+                float f => f,
+                double d => d,
+                _ => null
+            };
+            if (percentage is not { } share || !double.IsFinite(share) || !double.IsFinite(containerWidth))
+                return 0.0;
 
-            if (values[0] is double percentageDouble && values[1] is double containerWidth2)
-            {
-                var availableWidth = containerWidth2 - 4;
-                return Math.Max(0, (percentageDouble / 100.0) * availableWidth);
-            }
-
-            return 0.0;
+            // Held to the bar: under 0 or over 100 would draw it outside its border
+            return Math.Clamp(share, 0, 100) / 100.0 * Math.Max(0, containerWidth - BorderMargin);
         }
 
         public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)

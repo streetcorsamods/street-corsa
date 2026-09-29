@@ -22,6 +22,12 @@ public static class SafeFile
 
     private const string TempExtension = ".tmp";
 
+    /// <summary>
+    /// Told when a write had to clear a target's read-only mark (some AC guides tell players to make race.ini or
+    /// video.ini read-only). The game points it at its log at start-up; the tools leave it unset.
+    /// </summary>
+    public static Action<string>? ReadOnlyCleared { get; set; }
+
     public static void WriteAllText(string path, string contents, Encoding? encoding = null) =>
         WriteAllBytes(path, (encoding ?? Utf8NoBom).GetBytes(contents));
 
@@ -54,6 +60,9 @@ public static class SafeFile
     /// </summary>
     private static void MoveIntoPlace(string temp, string path)
     {
+        // A read-only target refuses the rename every time, so it is not waited out like a reader: the mark goes first
+        ClearReadOnly(path);
+
         for (var attempt = 1; ; attempt++)
         {
             try
@@ -65,6 +74,32 @@ public static class SafeFile
             {
                 Thread.Sleep(Math.Min(50 * attempt, 100));
             }
+        }
+    }
+
+    /// <summary>Takes the read-only mark off an existing file, and says so; a file that is not there or not marked is left alone</summary>
+    private static void ClearReadOnly(string path)
+    {
+        FileAttributes attributes;
+        try
+        {
+            attributes = File.GetAttributes(path);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return; // not there yet, or not ours to look at: the rename tells
+        }
+
+        if ((attributes & FileAttributes.ReadOnly) == 0 || (attributes & FileAttributes.Directory) != 0) return;
+
+        File.SetAttributes(path, attributes & ~FileAttributes.ReadOnly);
+        try
+        {
+            ReadOnlyCleared?.Invoke(path);
+        }
+        catch (Exception)
+        {
+            // Whoever listens must not stop the write
         }
     }
 
