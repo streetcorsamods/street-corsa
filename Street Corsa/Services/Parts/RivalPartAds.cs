@@ -1,3 +1,4 @@
+using StreetCorsa.Helpers;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Parts;
 using StreetCorsa.Parts.Cars;
@@ -21,7 +22,7 @@ namespace StreetCorsa.Services.Parts
         /// </summary>
         public static PartAd? Post(GameState gameState, PartsCatalog catalog, Racer seller, PartInstance part, DateTime date, double roll)
         {
-            roll = Math.Clamp(double.IsFinite(roll) ? roll : 0, 0, 1);
+            roll = Unit.Clamp01(roll, ifNotFinite: 0);
             var asking = PartPricing.Round(PartPricing.WorthOfAssembly(catalog, part) * PartPricing.UsedShopFactor
                                            * (MinAskShare + roll * (MaxAskShare - MinAskShare)) * GameRules.Sane(gameState.Rules.PartPriceMultiplier));
             if (asking <= 0) return null;
@@ -42,10 +43,11 @@ namespace StreetCorsa.Services.Parts
         /// The paper's parts a rival could buy for their engine: everybody's ads but their own, and none that ran out
         /// and waits for the shops to take it (<see cref="NewspaperPartsService.RefreshAdsAsync"/> pays its seller the trade-in)
         /// </summary>
-        public static List<UsedPartOffer> OffersFor(GameState gameState, Racer buyer) =>
+        /// <param name="date">The day the rival reads the paper; the save's date when null</param>
+        public static List<UsedPartOffer> OffersFor(GameState gameState, Racer buyer, DateTime? date = null) =>
             gameState.NewspaperAds.Parts
                 .Where(a => a.AskingPrice > 0 && !string.Equals(a.SellerRival, buyer.Name, StringComparison.Ordinal)
-                            && !NewspaperPartsService.IsExpired(a, gameState.Date))
+                            && !NewspaperPartsService.IsExpired(a, date ?? gameState.Date))
                 .Select(a => new UsedPartOffer(a.AdId, a.Part, a.AskingPrice))
                 .ToList();
 

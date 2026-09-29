@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using StreetCorsa.Helpers;
 using StreetCorsa.Logging;
 using StreetCorsa.Mods;
 using StreetCorsa.Parts.Cars;
@@ -27,10 +28,13 @@ namespace StreetCorsa.Services.Station
         IReadOnlyDictionary<StreetLight, StreetLighting> Lights,
         StationPrices Prices)
     {
-        /// <summary>The station's model, a KN5; the screen works without it (no 3D), the drive and all</summary>
-        public string Kn5 => Path.Combine(Folder, Model);
+        /// <summary>
+        /// The station's model, a KN5 in its folder; the screen works without it (no 3D), the drive and all. Empty when
+        /// the file names a model outside the folder: the game reads no file a mod points it to elsewhere.
+        /// </summary>
+        public string Kn5 => PathNames.TryCombineUnder(Folder, Model, out var kn5) ? kn5 : string.Empty;
 
-        public bool HasModel => File.Exists(Kn5);
+        public bool HasModel => Kn5.Length > 0 && File.Exists(Kn5);
 
         /// <summary>The ground's height file next to the model (<see cref="StationGround"/>)</summary>
         public string GroundFile => Path.Combine(Folder, "ground.bin");
@@ -38,10 +42,7 @@ namespace StreetCorsa.Services.Station
         /// <summary>The sky dome drawn at a light of the day; the others are hidden</summary>
         public static string SkyNode(StreetLight light) => "STATION_SKY_" + StreetLights.Describe(light).ToUpperInvariant();
 
-        public StreetLighting LightingFor(StreetLight light) =>
-            Lights.TryGetValue(light, out var lighting) ? lighting
-            : Lights.TryGetValue(StreetLight.Day, out var day) ? day
-            : StreetScenes.DefaultLighting;
+        public StreetLighting LightingFor(StreetLight light) => SceneLighting.For(Lights, light);
     }
 
     public static class StationScenes
@@ -53,28 +54,33 @@ namespace StreetCorsa.Services.Station
         private sealed record PricesEntry(decimal? FuelPerLitre, decimal? OilPerLitre, decimal? Wash, decimal? Tow);
 
         private sealed record SceneEntry(string? Id, string? Title, string? Model, List<float[]>? Arrive, List<float[]>? Leave,
-            float? LookAtPump, float[]? Sun, Dictionary<string, StreetScenes.LightEntry>? Lights, PricesEntry? Prices);
+            float? LookAtPump, float[]? Sun, Dictionary<string, SceneLighting.LightEntry?>? Lights, PricesEntry? Prices);
 
         /// <summary>Every gas station of every mod that loads, by full id (a mod's get its namespace); empty when none does</summary>
         public static IReadOnlyList<StationScene> LoadAll(ModSet mods) =>
             ModScenes.LoadAll(mods, ContentTypes.Stations, "Stations", Logger, Load, s => s.Id, (s, id) => s with { Id = id });
 
-        /// <summary>The station in <paramref name="folder"/>; null when its file is missing or broken (logged)</summary>
+        /// <summary>
+        /// The station in <paramref name="folder"/>; null when its file is missing or broken (logged). A mod's file is not
+        /// trusted to be whole: a light or a lamp left empty is skipped, and a model outside the folder is not read.
+        /// </summary>
         public static StationScene? Load(string folder)
         {
             var file = Path.Combine(folder, "station.json");
-            SceneEntry? entry;
             try
             {
                 if (!File.Exists(file)) return null;
-                entry = JsonSerializer.Deserialize<SceneEntry>(File.ReadAllText(file), Options);
+                return Build(folder, file, JsonSerializer.Deserialize<SceneEntry>(File.ReadAllText(file), Options));
             }
             catch (Exception ex)
             {
                 Logger.Error(ex, "Could not read the gas station {Path}", file);
                 return null;
             }
+        }
 
+        private static StationScene? Build(string folder, string file, SceneEntry? entry)
+        {
             var arrive = Points(entry?.Arrive);
             var leave = Points(entry?.Leave);
             if (entry == null || !GoesSomewhere(arrive) || !GoesSomewhere(leave))
@@ -90,8 +96,11 @@ namespace StreetCorsa.Services.Station
 
             var station = new StationScene(entry.Id ?? Path.GetFileName(folder), entry.Title ?? entry.Id ?? "The gas station", folder,
                 entry.Model ?? "station.kn5", arrive, leave, entry.LookAtPump ?? 72f, entry.Sun is { Length: 3 } sun ? sun : [0.2f, 1f, 0.8f],
-                StreetScenes.ReadLights(entry.Lights), prices);
-            if (!station.HasModel) Logger.Warning("The gas station {Id} has no model {Path}: it is shown without its picture", station.Id, station.Kn5);
+                SceneLighting.Read(entry.Lights, entry.Id ?? Path.GetFileName(folder), Logger), prices);
+            if (station.Kn5.Length == 0)
+                Logger.Warning("The gas station {Id} names a model outside its folder ({Model}): it is shown without its picture", station.Id, station.Model);
+            else if (!station.HasModel)
+                Logger.Warning("The gas station {Id} has no model {Path}: it is shown without its picture", station.Id, station.Kn5);
             return station;
         }
 

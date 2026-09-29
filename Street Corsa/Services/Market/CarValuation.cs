@@ -130,7 +130,42 @@ namespace StreetCorsa.Services.Market
             Func<CarDefinition, RatedBuild?>? stockBuildOf = null)
         {
             var condition = ConditionOf(car);
-            return Value(basePrice, condition, ModificationsOf(car, condition, parts, definition, stockBuildOf), HistoryFactor(car));
+            var whole = Math.Max(0m, basePrice) * (1m - MissingShare(car));
+            return Value(whole, condition, ModificationsOf(car, condition, parts, definition, stockBuildOf), HistoryFactor(car));
+        }
+
+        /// <summary>Share of the base price a car without its engine loses: the engine is what most of a car's worth is</summary>
+        public const decimal MissingEngineShare = 0.4m;
+
+        /// <summary>Share of the base price a corner loses without its rim and tyre (a car on blocks)</summary>
+        public const decimal MissingWheelShare = 0.03m;
+
+        /// <summary>Share of the base price a corner loses for each of its brake, spring and shock that is missing</summary>
+        public const decimal MissingCornerPartShare = 0.01m;
+
+        /// <summary>
+        /// How much of its base price a car is short for the parts taken off it: its engine (on the stand, on the shelf,
+        /// sold) and the running gear off its corners. The car's own figures (<see cref="ConditionOf"/>) only follow the
+        /// parts that are there, so without this a stripped car was worth as much as a whole one. A car that never had
+        /// parts given to it (an older save) is short of nothing. At most the whole base price.
+        /// </summary>
+        public static decimal MissingShare(Car car)
+        {
+            var share = 0m;
+            if (car.HasPartsAssigned && car.Engine == null) share += MissingEngineShare;
+
+            if (car.HasRunningGearAssigned)
+            {
+                foreach (var corner in RunningGear.Mounted(car.Parts))
+                {
+                    if (corner.Rim == null || corner.Tyre == null) share += MissingWheelShare;
+                    if (corner.Brake == null) share += MissingCornerPartShare;
+                    if (corner.Spring == null) share += MissingCornerPartShare;
+                    if (corner.Shock == null) share += MissingCornerPartShare;
+                }
+            }
+
+            return Math.Min(1m, share);
         }
 
         /// <summary>Worked on: the engine is not made of the factory build's parts</summary>

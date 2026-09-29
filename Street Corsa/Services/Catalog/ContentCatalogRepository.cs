@@ -69,57 +69,5 @@ namespace StreetCorsa.Services.Catalog
             var collection = db.GetCollection<CarDefinition>(CarsCollection);
             return collection.Find(x => x.Status == status).ToList();
         }
-
-        public bool CarExists(string id)
-        {
-            using var db = CatalogDatabase.Open(_databasePath);
-            var collection = db.GetCollection<CarDefinition>(CarsCollection);
-            return collection.Exists(x => x.Id == id);
-        }
-
-        public void UpdateCarStatus(string id, ContentStatus status)
-        {
-            using var db = CatalogDatabase.Open(_databasePath);
-            var collection = db.GetCollection<CarDefinition>(CarsCollection);
-
-            var car = collection.FindById(id);
-            if (car != null)
-            {
-                car.Status = status;
-                car.LastUpdatedDate = DateTime.Now;
-                collection.Update(car);
-            }
-        }
-
-        public void MarkAllCarsAsLegacy()
-        {
-            using var db = CatalogDatabase.Open(_databasePath);
-            var collection = db.GetCollection<CarDefinition>(CarsCollection);
-
-            var allCars = collection.FindAll().ToList();
-            foreach (var car in allCars)
-            {
-                if (car.Status == ContentStatus.Active)
-                {
-                    car.Status = ContentStatus.Legacy;
-                    car.LastUpdatedDate = DateTime.Now;
-                }
-            }
-            collection.Update(allCars);
-        }
-
-        public void DeleteBrokenCars()
-        {
-            using var db = CatalogDatabase.Open(_databasePath);
-            var collection = db.GetCollection<CarDefinition>(CarsCollection);
-            collection.DeleteMany(x => x.Status == ContentStatus.Broken);
-        }
-
-        public int GetCarCount()
-        {
-            using var db = CatalogDatabase.Open(_databasePath);
-            var collection = db.GetCollection<CarDefinition>(CarsCollection);
-            return collection.Count();
-        }
     }
 }

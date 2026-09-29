@@ -29,6 +29,12 @@ namespace StreetCorsa.Services.Opponents
         /// <summary>The King's car is one of the this many strongest from the factory</summary>
         private const int KingCarChoices = 5;
 
+        /// <summary>
+        /// Where a racer's skill counts from for their money and their car's shape: ten under the floor
+        /// (<see cref="Opponent.MinSkill"/>), so the least skilled racer counts 10 and the most skilled 20
+        /// </summary>
+        private const int SkillBaseline = Opponent.MinSkill - 10;
+
         /// <param name="parts">
         /// Gives the rivals' cars their engines and running gear (a used engine, now and then worked on); null, or no
         /// parts, and the cars get them the first time they are looked at
@@ -257,7 +263,7 @@ namespace StreetCorsa.Services.Opponents
             var baseMoney = 2000m + (_random.Next(0, 3001));
 
             // Skill bonus: Higher skill = more money (up to +$3,000)
-            var skillBonus = (opponent.Skill - 80) * 150m; // 1500 to 3000 (skills run 90-100)
+            var skillBonus = (opponent.Skill - SkillBaseline) * 150m; // 1500 to 3000 (skills run 90-100)
 
             // Age bonus: Older opponents have had more time to earn (up to +$4,000)
             decimal ageBonus;
@@ -331,7 +337,7 @@ namespace StreetCorsa.Services.Opponents
             // Generate condition based on opponent's skill and age
             // Higher skill opponents tend to have better maintained cars
             // Younger opponents might have more worn cars (less money for maintenance)
-            var baseCondition = 0.5f + (opponent.Skill - 80) / 100f; // 0.6 to 0.7 (skills run 90-100)
+            var baseCondition = 0.5f + (opponent.Skill - SkillBaseline) / 100f; // 0.6 to 0.7 (skills run 90-100)
             var ageAdjustment = opponent.Age > 35 ? 0.1f : -0.05f; // Older opponents have better cars
             var condition = Math.Clamp(baseCondition + ageAdjustment + ((float)_random.NextDouble() * 0.2f - 0.1f), 0.4f, 0.9f);
 

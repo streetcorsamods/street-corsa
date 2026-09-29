@@ -83,11 +83,6 @@ public class OpponentLifeServiceTests
         public CarDefinition? GetCar(string id) => null;
         public List<CarDefinition> GetAllCars() => [];
         public List<CarDefinition> GetCarsByStatus(ContentStatus status) => [];
-        public bool CarExists(string id) => false;
-        public void UpdateCarStatus(string id, ContentStatus status) { }
-        public void MarkAllCarsAsLegacy() { }
-        public void DeleteBrokenCars() { }
-        public int GetCarCount() => 0;
     }
 
     private readonly FakeMarket _market = new(1000m);

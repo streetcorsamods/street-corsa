@@ -45,7 +45,7 @@ namespace StreetCorsa.Services.Catalog
                 name = name[definition.Brand.Length..].Trim();
 
             var words = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            var year = Array.FindIndex(words, w => w.Length == 4 && (w.StartsWith("19") || w.StartsWith("20")) && w.All(char.IsDigit));
+            var year = Array.FindIndex(words, w => w.Length == 4 && (w.StartsWith("19", StringComparison.Ordinal) || w.StartsWith("20", StringComparison.Ordinal)) && w.All(char.IsDigit));
             var kept = year > 0 ? string.Join(' ', words.Take(year)) : name;
             return kept.Length > 0 ? kept : definition.Name;
         }

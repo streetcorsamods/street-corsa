@@ -92,12 +92,22 @@ namespace StreetCorsa.Services.Catalog
             }
         }
 
-        /// <summary>Writes what was learnt this scan, if anything was. Called once at the end of an import.</summary>
+        /// <summary>
+        /// Writes what was learnt this scan, if anything was. Called once at the end of an import. The models that are
+        /// gone (a car deleted or its model renamed) are forgotten first, or the file would only ever grow.
+        /// </summary>
         public static void SaveCache()
         {
             lock (Lock)
             {
-                if (!_dirty || _cache == null) return;
+                if (_cache == null) return;
+                if (_cache.Keys.Where(model => !File.Exists(model)).ToList() is { Count: > 0 } gone)
+                {
+                    foreach (var model in gone) _cache.Remove(model);
+                    _dirty = true;
+                }
+
+                if (!_dirty) return;
                 try
                 {
                     Directory.CreateDirectory(Path.GetDirectoryName(CachePath)!);

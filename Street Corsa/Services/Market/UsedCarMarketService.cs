@@ -39,8 +39,8 @@ namespace StreetCorsa.Services.Market
 
         public async Task<List<UsedCarListing>> SpawnListingsAsync(List<DealerLocation> dealers, DateTime currentDate, double priceMultiplier)
         {
-            var listings = CreateListings(dealers, currentDate);
-            await AddEnginesAsync(listings);
+            var (listings, pool) = CreateListings(dealers, currentDate);
+            await AddEnginesAsync(listings, pool);
             ApplyPriceMultiplier(listings, priceMultiplier);
             return listings;
         }
@@ -62,7 +62,7 @@ namespace StreetCorsa.Services.Market
         /// down. Cutting a list built in catalog order kept whichever cars happened to come first and starved
         /// every dealer whose kind of car came later - a lot with nothing on it, while another held a hundred.
         /// </summary>
-        private List<UsedCarListing> CreateListings(List<DealerLocation> dealers, DateTime currentDate)
+        private (List<UsedCarListing> Listings, List<PoolEntry> Pool) CreateListings(List<DealerLocation> dealers, DateTime currentDate)
         {
             _logger.Information("Spawning used car market listings for date {Date}", currentDate);
 
@@ -73,7 +73,7 @@ namespace StreetCorsa.Services.Market
             if (pool.Count == 0)
             {
                 _logger.Warning("No car has a profile to price it; the market stays empty");
-                return [];
+                return ([], pool);
             }
 
             var listings = new List<UsedCarListing>();
@@ -86,7 +86,7 @@ namespace StreetCorsa.Services.Market
             _logger.Information("Spawned {ListingCount} listings across {DealerCount} dealers",
                 listings.Count, dealers.Count);
 
-            return listings;
+            return (listings, pool);
         }
 
         /// <summary>A car that may turn up for sale, and where it sits in the market</summary>
@@ -256,7 +256,7 @@ namespace StreetCorsa.Services.Market
 
                 if (fresh.Count > 0)
                 {
-                    await AddEnginesAsync(fresh);
+                    await AddEnginesAsync(fresh, pool);
                     ApplyPriceMultiplier(fresh, priceMultiplier);
                     kept.AddRange(fresh);
                 }
@@ -454,15 +454,22 @@ namespace StreetCorsa.Services.Market
 
         /// <summary>
         /// A worked-on engine is tried out on the dyno a couple of dozen times: not on the caller's thread.
-        /// The listings are new and nobody else's yet, so they can be filled in from there.
+        /// The listings are new and nobody else's yet, so they can be filled in from there. The cars' catalog entries
+        /// come from the pool they were drawn from, and each model's factory build is looked up once: not a visit to
+        /// the catalog per listing.
         /// </summary>
-        private Task AddEnginesAsync(List<UsedCarListing> listings) => Task.Run(() =>
+        private Task AddEnginesAsync(List<UsedCarListing> listings, List<PoolEntry> pool) => Task.Run(() =>
         {
-            if (_partsService is not { IsAvailable: true }) return;
+            if (_partsService is not { IsAvailable: true } parts) return;
+
+            var definitions = new Dictionary<string, CarDefinition>(StringComparer.OrdinalIgnoreCase);
+            foreach (var entry in pool) definitions.TryAdd(entry.Car.Id, entry.Car);
+            var stockBuilds = new Dictionary<string, RatedBuild?>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var listing in listings)
             {
-                if (_catalogRepo.GetCar(listing.CarDefinitionId) is { } carDef) AddEngine(_partsService, listing, carDef);
+                if (definitions.TryGetValue(listing.CarDefinitionId, out var carDef))
+                    AddEngine(parts, listing, carDef, () => Remembered(stockBuilds, carDef.Id, _ => parts.GetStockBuild(carDef)));
             }
         });
 
@@ -470,7 +477,8 @@ namespace StreetCorsa.Services.Market
         /// The car is sold with the engine it has: mostly the factory one, now and then worked on.
         /// What was put into it shows in the price, though never in full.
         /// </summary>
-        private void AddEngine(ICarPartsService parts, UsedCarListing listing, CarDefinition carDef)
+        /// <param name="stockBuildOf">The model's factory build (<see cref="ICarPartsService.GetStockBuild"/>)</param>
+        private void AddEngine(ICarPartsService parts, UsedCarListing listing, CarDefinition carDef, Func<RatedBuild?> stockBuildOf)
         {
             try
             {
@@ -482,7 +490,7 @@ namespace StreetCorsa.Services.Market
                 listing.PowerHp = PowerOf(engine.Report);
 
                 // Worked on, and what that adds, by the same rules the car is valued by once it is somebody's
-                if (parts.GetStockBuild(carDef) is { } stockBuild)
+                if (stockBuildOf() is { } stockBuild)
                 {
                     listing.IsModified = CarValuation.IsModified(engine.Root, stockBuild);
                     if (listing.IsModified)
@@ -541,13 +549,10 @@ namespace StreetCorsa.Services.Market
 
         private decimal CalculatePrice(decimal basePrice, float condition, decimal history)
         {
-            // What the car is worth (the one condition curve every price in the game uses, and a little for its
-            // past), and then what this dealer makes of it on the day: a random variation of ±20%
-            var price = basePrice * CarValuation.ConditionFactor(condition) * history;
+            // What the car is worth (the one formula every price in the game uses: its condition and a little for its
+            // past), at what this dealer makes of the car on the day: a random variation of ±20%
             var variation = 1.0m + ((decimal)_random.NextDouble() * (decimal)PriceVariationPercent * 2) - (decimal)PriceVariationPercent;
-            price *= variation;
-
-            return CarValuation.RoundToHundred(price);
+            return CarValuation.Value(basePrice * variation, condition, history: history);
         }
     }
 }

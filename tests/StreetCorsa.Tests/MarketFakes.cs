@@ -110,11 +110,6 @@ internal sealed class MemoryCatalog : IContentCatalogRepository
     public CarDefinition? GetCar(string id) { Reads++; return Cars.GetValueOrDefault(id); }
     public List<CarDefinition> GetAllCars() { Reads++; return [.. Cars.Values]; }
     public List<CarDefinition> GetCarsByStatus(ContentStatus status) { Reads++; return [.. Cars.Values.Where(c => c.Status == status)]; }
-    public bool CarExists(string id) => Cars.ContainsKey(id);
-    public void UpdateCarStatus(string id, ContentStatus status) { if (Cars.TryGetValue(id, out var car)) car.Status = status; }
-    public void MarkAllCarsAsLegacy() { }
-    public void DeleteBrokenCars() { }
-    public int GetCarCount() => Cars.Count;
 }
 
 /// <summary>Car profiles held in memory; counts its reads</summary>

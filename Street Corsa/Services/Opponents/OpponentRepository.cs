@@ -62,17 +62,6 @@ namespace StreetCorsa.Services.Opponents
         }
 
         /// <summary>
-        /// Load a specific opponent by ID: the definition's own id ("drv_001") or the Guid made from it
-        /// </summary>
-        public Opponent? LoadOpponent(string opponentId)
-        {
-            var allOpponents = LoadAllOpponents();
-            return allOpponents.FirstOrDefault(o =>
-                string.Equals(o.DefinitionId, opponentId, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(o.OpponentId.ToString(), opponentId, StringComparison.OrdinalIgnoreCase));
-        }
-
-        /// <summary>
         /// The same Guid for the same definition id on every load and every machine, so an opponent is the same
         /// opponent from one game to the next. A definition id that already is a Guid is taken as it is.
         /// </summary>
@@ -101,8 +90,8 @@ namespace StreetCorsa.Services.Opponents
                 var skill = json.GetProperty("skill").GetInt32();
                 var aggression = json.GetProperty("aggression").GetInt32();
 
-                // Parse gender enum
-                if (!Enum.TryParse<Gender>(genderStr, out var gender))
+                // Parse gender enum: TryParse takes any number ("7"), which is no gender
+                if (!Enum.TryParse<Gender>(genderStr, out var gender) || !Enum.IsDefined(gender))
                 {
                     gender = Gender.Male;
                 }

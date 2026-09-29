@@ -90,10 +90,7 @@ namespace StreetCorsa.Services.Street
         public string Kn5For(StreetLight light) => Path.Combine(Folder, $"street_{StreetLights.Describe(light)}.kn5");
 
         /// <summary>The light of the day as the renderer gets it; the day's when the file leaves one out</summary>
-        public StreetLighting LightingFor(StreetLight light) =>
-            Lights.TryGetValue(light, out var lighting) ? lighting
-            : Lights.TryGetValue(StreetLight.Day, out var day) ? day
-            : StreetScenes.DefaultLighting;
+        public StreetLighting LightingFor(StreetLight light) => SceneLighting.For(Lights, light);
     }
 
     public static class StreetScenes
@@ -102,19 +99,10 @@ namespace StreetCorsa.Services.Street
 
         private static readonly JsonSerializerOptions Options = new() { PropertyNameCaseInsensitive = true };
 
-        internal static readonly StreetLighting DefaultLighting = new(1.5f, [200, 180, 180], 2f, [150, 180, 180], [150, 180, 180], 0.5f, []);
-
-
         private sealed record SpotEntry(float X, float Z, float Heading);
 
-        internal sealed record LampEntry(float X, float Y, float Z, int[]? Color, float Brightness, float Range);
-
-        /// <summary>A light of the day as a scene's file gives it (a street's street.json, a gas station's station.json)</summary>
-        internal sealed record LightEntry(float Brightness, int[]? Color, float Ambient, int[]? AmbientUp, int[]? AmbientDown,
-            float? CubemapAmbient, List<LampEntry>? Lamps);
-
         private sealed record SceneEntry(string? Id, string? Title, SpotEntry? Player, float LaneOffset, float RivalStop,
-            float ApproachFrom, float LeaveTo, float[]? Sun, Dictionary<string, LightEntry>? Lights, List<string>? Times);
+            float ApproachFrom, float LeaveTo, float[]? Sun, Dictionary<string, SceneLighting.LightEntry?>? Lights, List<string?>? Times);
 
         /// <summary>
         /// Every street of every mod (a folder under a mod's <c>streets</c>) that loads, by full id: a mod's streets get
@@ -135,29 +123,34 @@ namespace StreetCorsa.Services.Street
             return fitting.Count == 0 ? null : fitting[random.Next(fitting.Count)];
         }
 
-        /// <summary>The street in <paramref name="folder"/>; null when its file is missing or broken, or a model is (logged)</summary>
+        /// <summary>
+        /// The street in <paramref name="folder"/>; null when its file is missing or broken, or a model is (logged). A
+        /// mod's file is not trusted to be whole: a light or a lamp left empty is skipped.
+        /// </summary>
         public static StreetScene? Load(string folder)
         {
             var file = Path.Combine(folder, "street.json");
-            SceneEntry? entry;
             try
             {
                 if (!File.Exists(file)) return null;
-                entry = JsonSerializer.Deserialize<SceneEntry>(File.ReadAllText(file), Options);
+                return Build(folder, file, JsonSerializer.Deserialize<SceneEntry>(File.ReadAllText(file), Options));
             }
             catch (Exception ex)
             {
                 Logger.Error(ex, "Could not read the street {Path}", file);
                 return null;
             }
+        }
 
+        private static StreetScene? Build(string folder, string file, SceneEntry? entry)
+        {
             if (entry?.Player == null || entry.LaneOffset <= 0f || entry.ApproachFrom <= 0f || entry.LeaveTo <= 0f)
             {
                 Logger.Warning("The street {Path} has no parking spot or no lane", file);
                 return null;
             }
 
-            var lights = ReadLights(entry.Lights);
+            var lights = SceneLighting.Read(entry.Lights, entry.Id ?? Path.GetFileName(folder), Logger);
             var sun = entry.Sun is { Length: 3 } s ? s : [0.2f, 1f, 0.8f];
             var scene = new StreetScene(entry.Id ?? Path.GetFileName(folder), entry.Title ?? entry.Id ?? "The street", folder,
                 new StreetSpot(entry.Player.X, entry.Player.Z, entry.Player.Heading), entry.LaneOffset, entry.RivalStop,
@@ -173,7 +166,7 @@ namespace StreetCorsa.Services.Street
             {
                 foreach (var name in entry.Times)
                 {
-                    if (Enum.TryParse<StreetLight>(name, ignoreCase: true, out var time)) times.Add(time);
+                    if (SceneLighting.TryParse(name, out var time)) times.Add(time);
                     else Logger.Warning("The street {Id} names \"{Time}\" among its times, which is no light of the day (day, dusk, night)", scene.Id, name);
                 }
 
@@ -193,24 +186,5 @@ namespace StreetCorsa.Services.Street
 
             return scene with { Times = times };
         }
-
-        /// <summary>The renderer's light for each light of the day a scene's file names ("day", "dusk", "night")</summary>
-        internal static Dictionary<StreetLight, StreetLighting> ReadLights(Dictionary<string, LightEntry>? entries)
-        {
-            var lights = new Dictionary<StreetLight, StreetLighting>();
-            foreach (var (name, light) in entries ?? [])
-            {
-                if (!Enum.TryParse<StreetLight>(name, ignoreCase: true, out var which)) continue;
-                lights[which] = new StreetLighting(light.Brightness, Rgb(light.Color, 200), light.Ambient,
-                    Rgb(light.AmbientUp, 150), Rgb(light.AmbientDown, 150), light.CubemapAmbient ?? 0.5f,
-                    (light.Lamps ?? []).Select(l => new StreetLamp(l.X, l.Y, l.Z, Rgb(l.Color, 255), l.Brightness, l.Range)).ToList());
-            }
-
-            return lights;
-        }
-
-        // JSON numbers, not the base64 a byte[] is read from
-        private static byte[] Rgb(int[]? color, byte fallback) =>
-            color is { Length: 3 } ? color.Select(c => (byte)Math.Clamp(c, 0, 255)).ToArray() : [fallback, fallback, fallback];
     }
 }
