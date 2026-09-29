@@ -20,6 +20,9 @@ namespace StreetCorsa.Navigation
         /// <inheritdoc cref="IScreen.Ambience"/>
         public virtual string? Ambience => null;
 
+        /// <inheritdoc cref="IScreen.InCar"/>
+        public virtual bool InCar => false;
+
         /// <summary>The player's money as the screens' headers show it, whole dollars ("$12,500")</summary>
         protected static string Bankroll(decimal money) => $"${money:N0}";
 

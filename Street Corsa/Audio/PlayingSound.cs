@@ -11,12 +11,20 @@ public sealed class PlayingSound
     private IntPtr _sound;
     private IntPtr _channel;
 
+    // A song out of memory: its memory goes when it does
+    private SongSound? _song;
+
     internal PlayingSound(IntPtr sound, IntPtr channel, string path)
     {
         _sound = sound;
         _channel = channel;
         Path = path;
         LengthMs = FMOD_Sound_GetLength(sound, out var length, TimeUnitMs) == ResultOk ? length : 0;
+    }
+
+    internal PlayingSound(SongSound song, IntPtr channel) : this(song.Sound, channel, song.Path)
+    {
+        _song = song;
     }
 
     public string Path { get; }
@@ -56,6 +64,11 @@ public sealed class PlayingSound
         if (_sound != IntPtr.Zero && !AudioHub.Shared.IsShutDown) Warn(FMOD_Channel_SetPaused(_channel, 0), "unpause");
     }
 
+    public void SetPaused(bool paused)
+    {
+        if (_sound != IntPtr.Zero && !AudioHub.Shared.IsShutDown) Warn(FMOD_Channel_SetPaused(_channel, paused ? 1 : 0), "pause");
+    }
+
     public void SetVolume(float volume)
     {
         if (_sound != IntPtr.Zero && !AudioHub.Shared.IsShutDown) Warn(FMOD_Channel_SetVolume(_channel, volume), "set volume");
@@ -80,13 +93,14 @@ public sealed class PlayingSound
 
     public void Stop()
     {
-        var (sound, channel) = (_sound, _channel);
+        var (sound, channel, song) = (_sound, _channel, _song);
         Forget();
         if (sound == IntPtr.Zero || AudioHub.Shared.IsShutDown) return;
 
         // A channel that played out already answers with a stale handle: nothing to stop
         FMOD_Channel_Stop(channel);
-        Warn(FMOD_Sound_Release(sound), "release sound");
+        if (song != null) song.Release();
+        else Warn(FMOD_Sound_Release(sound), "release sound");
     }
 
     /// <summary>Drops the handles without a word to FMOD (after the exit, the system frees them); false, for "not playing"</summary>
@@ -94,6 +108,7 @@ public sealed class PlayingSound
     {
         _sound = IntPtr.Zero;
         _channel = IntPtr.Zero;
+        _song = null;
         return false;
     }
 }

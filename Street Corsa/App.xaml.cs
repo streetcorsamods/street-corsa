@@ -422,6 +422,10 @@ namespace StreetCorsa
             // The sound: the pump here, FMOD on a worker. Muted behind other windows if the player wants it
             Audio.AudioHub.Shared.Start(GameSettingsService.Current.Audio);
             Audio.Sfx.RegisterClicks();
+
+            // The radio: its lists and folders read, the music listed on a worker, on again if the player asked
+            Audio.Radio.RadioPanelViewModel.Settings = GameSettingsService;
+            Audio.Radio.RadioPlayer.Shared.Start();
             Activated += (_, _) => Audio.AudioHub.Shared.SetFocused(true);
             Deactivated += (_, _) => Audio.AudioHub.Shared.SetFocused(false);
 
@@ -893,9 +897,11 @@ namespace StreetCorsa
                 logger?.Error(ex, "Could not put Assetto Corsa back on exit");
             }
 
-            // FMOD's threads call back into this assembly: they stop before the runtime goes
+            // Where the radio was, for the next start; then FMOD's threads, which call back into this assembly, stop
+            // before the runtime goes
             try
             {
+                Audio.Radio.RadioPlayer.Shared.Save();
                 Audio.FmodLifetime.Shutdown();
             }
             catch (Exception ex)

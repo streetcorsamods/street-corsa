@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:audio="clr-namespace:StreetCorsa.Audio"
+             xmlns:radio="clr-namespace:StreetCorsa.Audio.Radio"
              xmlns:controls="clr-namespace:StreetCorsa.Controls"
              xmlns:local="clr-namespace:StreetCorsa.Screens.Garage"
              xmlns:helpers="clr-namespace:StreetCorsa.Helpers"
@@ -682,6 +683,16 @@
                     Margin="0,16,0,0">
                 <Button.Background>
                     <ImageBrush ImageSource="/Assets/Images/Buttons/gas_station.png" Stretch="Uniform"/>
+                </Button.Background>
+            </Button>
+            <!-- The radio on the bench: the player's own music, on every screen but a race (F2 anywhere) -->
+            <Button x:Name="RadioButton"
+                    Style="{StaticResource OverlayTileButtonStyle}"
+                    Command="{x:Static radio:RadioPanelViewModel.ToggleCommand}"
+                    Tag="Radio"
+                    Margin="0,16,0,0">
+                <Button.Background>
+                    <ImageBrush ImageSource="{StaticResource RadioArt}" Stretch="Uniform"/>
                 </Button.Background>
             </Button>
         </StackPanel>

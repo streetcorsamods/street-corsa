@@ -35,6 +35,9 @@ namespace StreetCorsa.Screens.Station
         /// <summary>The sound of the place</summary>
         public override string? Ambience => "ambience.station";
 
+        /// <summary>At the wheel: the radio is the car's</summary>
+        public override bool InCar => true;
+
         // A station that is loading is waited on this long at most before the car is simply there
         private static readonly TimeSpan StationLoadWait = TimeSpan.FromSeconds(25);
 

@@ -70,6 +70,7 @@ namespace StreetCorsa.Navigation
 
                 // The place's air follows the screen on show, a screen gone back to after a failed navigation too
                 Audio.AudioHub.Shared.SetAmbience(value?.Ambience);
+                Audio.Radio.RadioPlayer.Shared.SetInCar(value?.InCar == true);
             }
         }
 

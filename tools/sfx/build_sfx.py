@@ -157,13 +157,28 @@ def rms_to(x, db, ceiling_db=-1.0):
     return np.tanh(x / ceiling) * ceiling
 
 
+def decoded(path):
+    try:
+        return sf.read(path, always_2d=True, dtype="float32")[0]
+    except Exception:
+        return None
+
+
 def write(rel, x, rate):
     path = os.path.join(OUT, rel)
     os.makedirs(os.path.dirname(path), exist_ok=True)
+    temp = path + ".new"
     # In blocks: libsndfile's Vorbis encoder crashes the process on a long file written in one go
-    with sf.SoundFile(path, "w", rate, x.shape[1], format="OGG", subtype="VORBIS") as fh:
+    with sf.SoundFile(temp, "w", rate, x.shape[1], format="OGG", subtype="VORBIS") as fh:
         for i in range(0, len(x), 8192):
             fh.write(np.ascontiguousarray(x[i:i + 8192]))
+    # Vorbis files differ byte for byte on every encode (a random stream serial): a file that already decodes to the
+    # same sound is left alone, so a rebuild only changes what it changes
+    old, new = decoded(path), decoded(temp)
+    if old is not None and new is not None and old.shape == new.shape and np.array_equal(old, new):
+        os.remove(temp)
+    else:
+        os.replace(temp, path)
     return rel.replace("\\", "/")
 
 
@@ -192,10 +207,10 @@ def takes_of(folder, candidate, count, **kw):
     return files
 
 
-def ambience(rel, candidate, start_s, seconds):
+def ambience(rel, candidate, start_s, seconds, xfade_s=3.0):
     path = find(candidate)
     x, rate = load(path, mono=False)
-    y = rms_to(loop(x, rate, start_s, seconds), LOOP_RMS_DB)
+    y = rms_to(loop(x, rate, start_s, seconds, xfade_s), LOOP_RMS_DB)
     sources[write(rel, y, rate)] = [path]
     return rel
 
@@ -258,6 +273,11 @@ def build():
     # The driveway bell as a car rolls over the hose
     bells = takes_of("station/bell", "465381", 2, gap_ms=300, floor_db=-30.0, min_s=0.3, max_s=3.0)
     cue("station.bell", "effects", bells, 0.5)
+
+    # The radio: static under the music in the car (AM), the dial swept as the song changes, the knob
+    cue("radio.static", "radio", [ambience("radio/static.ogg", "684896", 0.3, 4.5, xfade_s=1.5)], 0.1, loop=True)
+    cue("radio.tune", "radio", [one_shot("radio/tune_1.ogg", "261873"), one_shot("radio/tune_2.ogg", "812929")], 0.3, pitch=0.05)
+    cue("radio.knob", "interface", [one_shot("radio/knob_1.ogg", "369964"), one_shot("radio/knob_2.ogg", "257948")], 0.5, pitch=0.03)
 
     with open(os.path.join(OUT, "sfx.json"), "w", encoding="utf-8", newline="\n") as fh:
         json.dump({"cues": cues}, fh, indent=2)

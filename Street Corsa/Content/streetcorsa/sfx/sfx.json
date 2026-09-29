@@ -159,6 +159,32 @@
         "station/bell/bell_465381_1.ogg",
         "station/bell/bell_465381_2.ogg"
       ]
+    },
+    "radio.static": {
+      "bus": "radio",
+      "volume": 0.1,
+      "files": [
+        "radio/static.ogg"
+      ],
+      "loop": true
+    },
+    "radio.tune": {
+      "bus": "radio",
+      "volume": 0.3,
+      "files": [
+        "radio/tune_1.ogg",
+        "radio/tune_2.ogg"
+      ],
+      "pitch": 0.05
+    },
+    "radio.knob": {
+      "bus": "interface",
+      "volume": 0.5,
+      "files": [
+        "radio/knob_1.ogg",
+        "radio/knob_2.ogg"
+      ],
+      "pitch": 0.03
     }
   }
 }

@@ -295,6 +295,66 @@ internal static partial class FmodStudio
     [LibraryImport(CoreDll)]
     public static partial int FMOD_Channel_RemoveFadePoints(IntPtr channel, ulong start, ulong end);
 
+    // FMOD_OPENMEMORY: the sound is read out of memory (copied by FMOD), the file never opened; FMOD_OPENONLY: opened
+    // to read what it is (length, tags), not decoded
+    public const uint ModeOpenMemory = 0x800;
+    public const uint ModeOpenOnly = 0x2000;
+
+    /// <summary>FMOD_CREATESOUNDEXINFO of 1.08 on x64: its size first, the length of the data in memory after it</summary>
+    public const int CreateSoundExInfoSize = 216;
+
+    /// <summary>A sound out of memory: <paramref name="data"/> points at the file's bytes, <paramref name="exInfo"/> says how many</summary>
+    [LibraryImport(CoreDll, EntryPoint = "FMOD_System_CreateSound")]
+    public static partial int FMOD_System_CreateSoundFromMemory(IntPtr system, IntPtr data, uint mode, IntPtr exInfo, out IntPtr sound);
+
+    [LibraryImport(CoreDll)]
+    public static partial int FMOD_Channel_SetPosition(IntPtr channel, uint position, uint unit);
+
+    /// <summary>FMOD_TAG: its type, how its data is written (<see cref="TagString"/> and on), its name, the data</summary>
+    [StructLayout(LayoutKind.Sequential)]
+    public struct Tag
+    {
+        public int Type;
+        public int DataType;
+        public IntPtr Name;
+        public IntPtr Data;
+        public uint DataLength;
+        public int Updated;
+    }
+
+    // FMOD_TAGDATATYPE
+    public const int TagInt = 1;
+    public const int TagString = 3;
+    public const int TagStringUtf16 = 4;
+    public const int TagStringUtf16BigEndian = 5;
+    public const int TagStringUtf8 = 6;
+
+    [LibraryImport(CoreDll)]
+    public static partial int FMOD_Sound_GetNumTags(IntPtr sound, out int tags, out int updated);
+
+    [LibraryImport(CoreDll)]
+    public static partial int FMOD_Sound_GetTag(IntPtr sound, IntPtr name, int index, out Tag tag);
+
+    // FMOD_DSP_TYPE of 1.08 (not 2.x's numbers): what the AM radio is made of
+    public const int DspLowpass = 3;
+    public const int DspHighpass = 5;
+    public const int DspDistortion = 9;
+    public const int DspParamEq = 12;
+    public const int DspCompressor = 18;
+    public const int DspChannelMix = 33;
+
+    [LibraryImport(CoreDll)]
+    public static partial int FMOD_System_CreateDSPByType(IntPtr system, int type, out IntPtr dsp);
+
+    [LibraryImport(CoreDll)]
+    public static partial int FMOD_DSP_SetParameterFloat(IntPtr dsp, int index, float value);
+
+    [LibraryImport(CoreDll)]
+    public static partial int FMOD_DSP_SetParameterInt(IntPtr dsp, int index, int value);
+
+    [LibraryImport(CoreDll)]
+    public static partial int FMOD_DSP_SetBypass(IntPtr dsp, int bypass);
+
     [LibraryImport(CoreDll)]
     public static partial int FMOD_System_GetSoftwareFormat(IntPtr system, out int sampleRate, out int speakerMode, out int rawSpeakers);
 
