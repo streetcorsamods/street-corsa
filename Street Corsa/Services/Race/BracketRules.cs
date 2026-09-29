@@ -58,10 +58,15 @@ namespace StreetCorsa.Services.Race
             return new BracketOutcome(won, playerOut, opponentOut);
         }
 
-        /// <summary>When the car crossed the quarter, in seconds from AC's start, and its elapsed time; null when it didn't</summary>
+        /// <summary>
+        /// When the car crossed the quarter, in seconds from AC's start, and its elapsed time; null when it didn't. The
+        /// slip comes from the result file, which is not trusted: an elapsed time no car runs (0, negative, minutes) is
+        /// read as no quarter at all, with the same bounds the car's history keeps its quarters in.
+        /// </summary>
         public static (double At, double Et)? FinishOf(Timeslip? slip)
         {
-            if (slip?.QuarterMileSeconds is not { } et || !double.IsFinite(et)) return null;
+            if (slip?.QuarterMileSeconds is not { } et || !double.IsFinite(et)
+                || et < CarHistory.MinQuarterSeconds || et > CarHistory.MaxQuarterSeconds) return null;
             var green = slip.GreenSeconds is { } g && double.IsFinite(g) ? g : 0;
             var reaction = slip.ReactionSeconds is { } r && double.IsFinite(r) ? r : 0;
             return (green + reaction + et, et);

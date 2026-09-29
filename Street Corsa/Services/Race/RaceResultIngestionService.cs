@@ -377,7 +377,7 @@ namespace StreetCorsa.Services.Race
                 var context = raceContext ?? gameState.PendingRace;
 
                 // Step 1: Folder enumeration
-                var inboxPath = GetInboxPath();
+                var inboxPath = _inboxPath;
                 if (!Directory.Exists(inboxPath))
                 {
                     _logger.Information("Inbox directory does not exist: {Path}", inboxPath);
@@ -784,7 +784,7 @@ namespace StreetCorsa.Services.Race
                 case ValidationFailureReason.ZeroSize:
                 case ValidationFailureReason.WrongSource:
                     // Completely ignore - not our file
-                    _logger.Debug("Ignoring file {FileName} (not a Street Rod result file)", file.Name);
+                    _logger.Debug("Ignoring file {FileName} (not a Street Corsa result file)", file.Name);
                     result.FilesIgnored++;
                     break;
 
@@ -832,7 +832,7 @@ namespace StreetCorsa.Services.Race
         {
             try
             {
-                var quarantinePath = GetQuarantinePath();
+                var quarantinePath = _quarantinePath;
                 Directory.CreateDirectory(quarantinePath);
 
                 var quarantineFilePath = Path.Combine(quarantinePath, file.Name);
@@ -859,9 +859,6 @@ namespace StreetCorsa.Services.Race
             }
         }
 
-        /// <summary>The inbox path (Lua app output folder)</summary>
-        private string GetInboxPath() => _inboxPath;
-
         /// <summary>
         /// Get the archive path for a processed session
         /// Organized by player name: %AppData%\StreetCorsa\RaceResults\{PlayerName}\{session_id}.json
@@ -873,10 +870,5 @@ namespace StreetCorsa.Services.Race
 
             return Path.Combine(_archiveRoot, safePlayerName, $"{sessionId}.json");
         }
-
-        /// <summary>
-        /// Get the quarantine folder path
-        /// </summary>
-        private string GetQuarantinePath() => _quarantinePath;
     }
 }

@@ -195,8 +195,8 @@ public sealed class PoliceTests : IDisposable
         Assert.Contains("POLICE=2,3", lines);
         Assert.Contains("POLICE_SPOT=0.400", lines);
         Assert.Contains("POLICE_MODE=PATROL", lines);
-        // 21:00: 16 degrees an hour past 13:00
-        Assert.Contains("SUN_ANGLE=128.00", lines);
+        // 21:00 in early June, in the street's seasons (AuditFixesATests has the model)
+        Assert.Contains($"SUN_ANGLE={IniModificationService.SunAngle(Night).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}", lines);
     }
 
     [Fact]

@@ -99,7 +99,7 @@ namespace StreetCorsa.Services.Configuration
                 };
 
                 // The original first, then the manifest that names it; the caller changes the file after this returns
-                if (entry.Existed) SafeFile.WriteAllBytes(Path.Combine(_keep, entry.Kept), File.ReadAllBytes(full));
+                if (entry.Existed) KeptFile.Keep(full, Path.Combine(_keep, entry.Kept));
                 manifest.Files.Add(entry);
                 WriteManifest(manifest);
 
@@ -109,10 +109,13 @@ namespace StreetCorsa.Services.Configuration
 
         /// <summary>
         /// Puts every kept file back; returns how many went back. A file that cannot go back stays in the manifest
-        /// for the next time and is logged; the others go back anyway. A manifest that cannot be read puts nothing
-        /// back and deletes nothing: its folder is set aside for the user (see <see cref="ReadManifestOrSetAside"/>).
+        /// for the next time and is logged; the others go back anyway. A file whose kept copy is gone (a cleaner or a
+        /// scanner removed it) can never go back: it is logged as lost and dropped, not tried again forever. A manifest
+        /// that cannot be read puts nothing back and deletes nothing: its folder is set aside for the user (see
+        /// <see cref="ReadManifestOrSetAside"/>).
         /// </summary>
-        public int RestoreAll()
+        /// <param name="problems">Gets a line for the player about each file that stayed changed</param>
+        public int RestoreAll(ICollection<string>? problems = null)
         {
             using var gate = AcInstallGate.Hold();
             lock (_lock)
@@ -125,12 +128,20 @@ namespace StreetCorsa.Services.Configuration
                 {
                     try
                     {
-                        RestoreOne(entry);
-                        restored++;
+                        if (RestoreOne(entry))
+                        {
+                            restored++;
+                        }
+                        else
+                        {
+                            _logger.Error("The kept original of {File} is gone (deleted outside the game?); what the race wrote stays in it", entry.Path);
+                            problems?.Add($"{entry.Path}: its original is no longer kept under {_keep}, so what the race wrote stays in it.");
+                        }
                     }
                     catch (Exception ex)
                     {
                         _logger.Error(ex, "Could not put {File} back; the original stays kept under {Keep}", entry.Path, _keep);
+                        problems?.Add($"{entry.Path} could not be put back ({ex.Message}); the original is kept under {_keep} and goes back at the next start.");
                         left.Add(entry);
                     }
                 }
@@ -160,7 +171,8 @@ namespace StreetCorsa.Services.Configuration
             }
         }
 
-        private void RestoreOne(Manifest.Entry entry)
+        /// <summary>One file back as it was; false when its kept copy is gone, so it never can be</summary>
+        private bool RestoreOne(Manifest.Entry entry)
         {
             // A manifest is ours, but it is a file on disk: it never makes us write outside the cfg folder
             if (!PathNames.IsUnder(_cfgDirectory, entry.Path))
@@ -168,20 +180,19 @@ namespace StreetCorsa.Services.Configuration
 
             if (entry.Existed)
             {
-                var kept = Path.Combine(_keep, entry.Kept);
-                if (!PathNames.IsSafeSegment(entry.Kept) || !File.Exists(kept))
-                    throw new FileNotFoundException($"The kept copy of {entry.Path} is gone", kept);
-
-                if (File.Exists(entry.Path)) File.SetAttributes(entry.Path, File.GetAttributes(entry.Path) & ~FileAttributes.ReadOnly);
-                SafeFile.WriteAllBytes(entry.Path, File.ReadAllBytes(kept));
-                if (entry.ReadOnly) File.SetAttributes(entry.Path, File.GetAttributes(entry.Path) | FileAttributes.ReadOnly);
+                // A kept name that is not one file name cannot be ours: nothing is read through it
+                if (!PathNames.IsSafeSegment(entry.Kept)) return false;
+                if (!KeptFile.PutBack(Path.Combine(_keep, entry.Kept), entry.Path, entry.ReadOnly)) return false;
                 _logger.Information("{File}: the original is back", entry.Path);
             }
             else if (File.Exists(entry.Path))
             {
+                KeptFile.ClearReadOnly(entry.Path);
                 File.Delete(entry.Path);
                 _logger.Information("{File}: removed again, it was not there before", entry.Path);
             }
+
+            return true;
         }
 
         /// <summary>

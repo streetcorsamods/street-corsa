@@ -26,8 +26,9 @@ namespace StreetCorsa.Services.Configuration
         /// exited (the launcher's finally, start-up, exit, a crash). Idempotent; a file that cannot go back stays
         /// kept for the next call and is logged, the others go back anyway.
         /// </summary>
+        /// <param name="problems">Gets a line for the player about each file that stayed changed</param>
         /// <returns>How many files went back</returns>
-        int RestoreAll();
+        int RestoreAll(ICollection<string>? problems = null);
 
         /// <summary>Whether a changed cfg file is waiting to go back</summary>
         bool HasPendingRestore { get; }
@@ -46,7 +47,8 @@ namespace StreetCorsa.Services.Configuration
         bool FileExists(string fileName);
 
         /// <summary>
-        /// Get the full path to an INI file in the cfg directory
+        /// The full path of an INI file in the cfg directory. Only a file name is taken: a path (rooted, or with
+        /// folders or "..") throws, so nothing outside the cfg folder is ever read or written through here.
         /// </summary>
         /// <param name="fileName">File name</param>
         string GetIniFilePath(string fileName);

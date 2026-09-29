@@ -131,7 +131,7 @@ namespace StreetCorsa.Services.Storage
 
             // Only real saves: not the catalog, not LiteDB's "-log"/"-tmp" side files, not backups
             return Directory.GetFiles(Database.SavesDirectory, "*.db")
-                .Where(f => !f.Contains(".backup"))
+                .Where(f => !Path.GetFileName(f).Contains(".backup", StringComparison.OrdinalIgnoreCase))
                 .Select(f => Path.GetFileNameWithoutExtension(f))
                 .Where(SaveDatabase.IsValidSaveName)
                 .OrderByDescending(f => File.GetLastWriteTime(Path.Combine(Database.SavesDirectory, f + ".db")))
