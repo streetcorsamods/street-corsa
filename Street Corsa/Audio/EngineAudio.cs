@@ -564,15 +564,31 @@ public sealed class EngineVoice : IDisposable
         if (!Usable || _engineInstance != IntPtr.Zero) return;
         if (!Warn(FMOD_Studio_EventDescription_CreateInstance(_engine, out var instance), "create engine")) return;
 
-        _engineInstance = instance;
-        if (_disposed)
-        {
-            ReleaseNow(ref _engineInstance, "engine");
-            return;
-        }
+        if (!Publish(ref _engineInstance, instance, "engine")) return;
 
         Set(rpm, throttle);
         Warn(FMOD_Studio_EventInstance_Start(instance), "start engine");
+    }
+
+    /// <summary>
+    /// Puts a new instance in <paramref name="field"/>, where <see cref="Dispose"/> looks for it; false when it was
+    /// released at once instead. The exchange is a full fence: a plain store before the read of the disposed flag
+    /// could be reordered after it, past Dispose's own flag and exchange, and the instance would be left to hold the
+    /// bank. With the fence on both sides one of the two always sees the other.
+    /// </summary>
+    private bool Publish(ref IntPtr field, IntPtr instance, string what)
+    {
+        if (Interlocked.CompareExchange(ref field, instance, IntPtr.Zero) != IntPtr.Zero)
+        {
+            // Another one is there already: this one is not wanted
+            Warn(FMOD_Studio_EventInstance_Release(instance), "release " + what);
+            return false;
+        }
+
+        if (!_disposed) return true;
+
+        ReleaseNow(ref field, what);
+        return false;
     }
 
     /// <summary>Stops and releases the instance in <paramref name="field"/> if it is still there to take</summary>
@@ -633,14 +649,10 @@ public sealed class EngineVoice : IDisposable
 
         if (on)
         {
-            if (_limiterInstance == IntPtr.Zero && Warn(FMOD_Studio_EventDescription_CreateInstance(_limiter, out var instance), "create limiter"))
+            if (_limiterInstance == IntPtr.Zero && Warn(FMOD_Studio_EventDescription_CreateInstance(_limiter, out var instance), "create limiter")
+                && !Publish(ref _limiterInstance, instance, "limiter"))
             {
-                _limiterInstance = instance;
-                if (_disposed)
-                {
-                    ReleaseNow(ref _limiterInstance, "limiter");
-                    return;
-                }
+                return;
             }
             if (_limiterInstance != IntPtr.Zero) Warn(FMOD_Studio_EventInstance_Start(_limiterInstance), "start limiter");
         }
