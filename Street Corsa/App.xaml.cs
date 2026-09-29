@@ -285,6 +285,10 @@ namespace StreetCorsa
             // A game that outlived its launch (or the app) has closed: its race can be settled now
             Launcher.AssettoCorsaExited += OnAssettoCorsaExited;
 
+            // A race has the sound device: the game's own sound fades out for it and comes back after
+            Launcher.ExecutionStarted += (_, _) => Audio.AudioHub.Shared.SetRacing(true);
+            Launcher.ExecutionEnded += (_, _) => Audio.AudioHub.Shared.SetRacing(false);
+
             // NavigationService (must be created after all its dependencies)
             NavigationService = new NavigationService(
                 DialogService, CatalogRepository, ProfileRepository, Launcher, ContentService, OpponentChallengeService,
@@ -414,6 +418,11 @@ namespace StreetCorsa
                 Shutdown();
                 return;
             }
+
+            // The sound: the pump here, FMOD on a worker. Muted behind other windows if the player wants it
+            Audio.AudioHub.Shared.Start(GameSettingsService.Current.Audio);
+            Activated += (_, _) => Audio.AudioHub.Shared.SetFocused(true);
+            Deactivated += (_, _) => Audio.AudioHub.Shared.SetFocused(false);
 
             // Orphaned race results are processed once a game is loaded (see CurrentGameState): a result can only
             // be applied to the save whose race it is

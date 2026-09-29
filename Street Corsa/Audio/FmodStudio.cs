@@ -221,6 +221,16 @@ internal static partial class FmodStudio
     [LibraryImport(CoreDll)]
     public static partial int FMOD_ChannelGroup_AddDSP(IntPtr channelGroup, int index, IntPtr dsp);
 
+    /// <summary>A new group, mixed into the master group</summary>
+    [LibraryImport(CoreDll)]
+    public static partial int FMOD_System_CreateChannelGroup(IntPtr system, byte[] nameUtf8, out IntPtr channelGroup);
+
+    [LibraryImport(CoreDll)]
+    public static partial int FMOD_ChannelGroup_SetVolume(IntPtr channelGroup, float volume);
+
+    [LibraryImport(CoreDll)]
+    public static partial int FMOD_ChannelGroup_Release(IntPtr channelGroup);
+
     #region Calls 1.08 may not have
 
     // Looked up by name rather than imported: an import that is not there only fails when it is called, and each

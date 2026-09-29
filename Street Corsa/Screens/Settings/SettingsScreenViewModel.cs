@@ -1,4 +1,6 @@
 using System.IO;
+using System.Windows.Threading;
+using StreetCorsa.Audio;
 using StreetCorsa.Configuration;
 using StreetCorsa.Dialogs;
 using StreetCorsa.Dialogs.Information;
@@ -24,6 +26,26 @@ namespace StreetCorsa.Screens.Settings
         public RelayCommand BrowseAssettoCorsaFolderCommand { get; }
 
         public GameSettings Settings => _settingsService.Current;
+
+        // Volumes are saved a moment after the last slider move, not on every step of a drag
+        private static readonly TimeSpan AudioSaveDelay = TimeSpan.FromMilliseconds(600);
+        private readonly DispatcherTimer _audioSave;
+
+        /// <summary>The master volume and one for each kind of sound; heard as they move, saved a moment later</summary>
+        public IReadOnlyList<VolumeSlider> Volumes { get; private set; } = [];
+
+        /// <summary>The game goes quiet while another window has the focus</summary>
+        public bool MuteInBackground
+        {
+            get => Settings.Audio.MuteInBackground;
+            set
+            {
+                if (Settings.Audio.MuteInBackground == value) return;
+                Settings.Audio.MuteInBackground = value;
+                OnPropertyChanged();
+                OnAudioChanged();
+            }
+        }
 
         private string _assettoCorsaFolder;
 
@@ -65,6 +87,49 @@ namespace StreetCorsa.Screens.Settings
             BrowseAssettoCorsaFolderCommand = new RelayCommand(OnBrowseAssettoCorsaFolder);
 
             _assettoCorsaFolder = SavedAssettoCorsaFolder;
+
+            _audioSave = new DispatcherTimer { Interval = AudioSaveDelay };
+            _audioSave.Tick += (_, _) => SaveAudio();
+            Volumes = MakeVolumes();
+        }
+
+        private IReadOnlyList<VolumeSlider> MakeVolumes()
+        {
+            var audio = Settings.Audio;
+            return
+            [
+                new VolumeSlider("Master", null, audio.Master, OnVolumeChanged),
+                new VolumeSlider("Engines", AudioBus.Engine, audio.Engine, OnVolumeChanged),
+                new VolumeSlider("Radio", AudioBus.Radio, audio.Radio, OnVolumeChanged),
+                new VolumeSlider("Tools and parts", AudioBus.Effects, audio.Effects, OnVolumeChanged),
+                new VolumeSlider("Surroundings", AudioBus.Ambience, audio.Ambience, OnVolumeChanged),
+                new VolumeSlider("Menus and buttons", AudioBus.Interface, audio.Interface, OnVolumeChanged)
+            ];
+        }
+
+        private void OnVolumeChanged(VolumeSlider slider)
+        {
+            if (slider.Bus is { } bus) Settings.Audio.Set(bus, slider.Value);
+            else Settings.Audio.Master = slider.Value;
+            OnAudioChanged();
+        }
+
+        /// <summary>Heard at once; on disk once the player has let go of the slider for a moment</summary>
+        private void OnAudioChanged()
+        {
+            AudioHub.Shared.Apply(Settings.Audio);
+            _audioSave.Stop();
+            _audioSave.Start();
+        }
+
+        /// <summary>
+        /// The volumes to disk, with whatever else the settings in use hold (the AC folder only changes there on Save).
+        /// A volume that did not reach the disk is still heard: the service logs it, and the next move tries again.
+        /// </summary>
+        private void SaveAudio()
+        {
+            _audioSave.Stop();
+            if (_settingsService.Save()) _logger.Information("Volumes saved");
         }
 
         /// <summary>The folder the settings name, or the default when they name none</summary>
@@ -79,6 +144,7 @@ namespace StreetCorsa.Screens.Settings
 
         private void OnBack()
         {
+            if (_audioSave.IsEnabled) SaveAudio();
             _back();
         }
 
@@ -171,6 +237,13 @@ namespace StreetCorsa.Screens.Settings
 
             OnPropertyChanged(nameof(Settings));
             AssettoCorsaFolder = SavedAssettoCorsaFolder;
+
+            // The defaults' volumes, heard and shown; the pending save of the old ones would put them back
+            _audioSave.Stop();
+            AudioHub.Shared.Apply(Settings.Audio);
+            Volumes = MakeVolumes();
+            OnPropertyChanged(nameof(Volumes));
+            OnPropertyChanged(nameof(MuteInBackground));
             _logger.Information("Settings reset to defaults");
 
             // The defaults name the default folder: a player whose install is elsewhere needs to know

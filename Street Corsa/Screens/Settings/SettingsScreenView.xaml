@@ -56,6 +56,57 @@
                 </StackPanel>
             </Border>
 
+            <!-- Sound: heard as the sliders move, saved a moment after -->
+            <Border Background="{StaticResource ScrimBrush}"
+                    BorderBrush="{StaticResource BorderLightBrush}"
+                    BorderThickness="1"
+                    CornerRadius="5"
+                    Padding="15"
+                    Width="560"
+                    Margin="0,0,0,24">
+                <StackPanel>
+                    <TextBlock Text="Sound"
+                               FontWeight="Bold"
+                               Foreground="{StaticResource TextPrimaryBrush}"
+                               Margin="0,0,0,8"/>
+                    <ItemsControl ItemsSource="{Binding Volumes}" Focusable="False">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="150"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="48"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0"
+                                               Text="{Binding Label}"
+                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                               VerticalAlignment="Center"/>
+                                    <Slider Grid.Column="1"
+                                            Minimum="0"
+                                            Maximum="1"
+                                            SmallChange="0.05"
+                                            LargeChange="0.1"
+                                            IsMoveToPointEnabled="True"
+                                            Value="{Binding Value}"
+                                            VerticalAlignment="Center"
+                                            AutomationProperties.Name="{Binding Label}"/>
+                                    <TextBlock Grid.Column="2"
+                                               Text="{Binding Percent}"
+                                               Foreground="{StaticResource TextPrimaryBrush}"
+                                               HorizontalAlignment="Right"
+                                               VerticalAlignment="Center"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <CheckBox Content="Mute when the game is in the background"
+                              IsChecked="{Binding MuteInBackground}"
+                              Foreground="{StaticResource TextSecondaryBrush}"
+                              Margin="0,10,0,0"/>
+                </StackPanel>
+            </Border>
+
             <!-- Edit Car Catalog Button -->
             <Button Content="Edit Car Catalog"
                     Command="{Binding OpenCatalogEditorCommand}"
@@ -73,6 +124,13 @@
                     HorizontalAlignment="Center"
                     Margin="0,16,0,0"
                     FontSize="{StaticResource FontSizeSubheading}"/>
+
+            <!-- FMOD's licence asks for this line wherever the game credits its tools -->
+            <TextBlock Text="Sound by FMOD Studio, Firelight Technologies Pty Ltd."
+                       Foreground="{StaticResource TextDisabledBrush}"
+                       FontSize="{StaticResource FontSizeCaption}"
+                       HorizontalAlignment="Center"
+                       Margin="0,16,0,0"/>
         </StackPanel>
     </Border>
 </UserControl>
