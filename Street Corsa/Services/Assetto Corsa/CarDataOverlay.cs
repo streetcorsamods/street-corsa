@@ -6,6 +6,7 @@ using StreetCorsa.Configuration;
 using StreetCorsa.Helpers;
 using StreetCorsa.Logging;
 using StreetCorsa.Parts.Export;
+using StreetCorsa.Services.Configuration;
 
 namespace StreetCorsa.Services
 {
@@ -231,13 +232,8 @@ namespace StreetCorsa.Services
                         var original = DataFile(dataDirectory, name);
                         var existed = File.Exists(original);
                         var readOnly = existed && File.GetAttributes(original).HasFlag(FileAttributes.ReadOnly);
-                        if (existed)
-                        {
-                            // The kept copy is ours to delete after the restore: it must not carry the flag along
-                            var kept = Path.Combine(keepFiles, name);
-                            File.Copy(original, kept, true);
-                            ClearReadOnly(kept);
-                        }
+                        // The kept copy is ours to delete after the restore: it does not carry the flag along
+                        if (existed) KeptFile.Keep(original, Path.Combine(keepFiles, name));
 
                         manifest.Files.Add(new Manifest.Entry { Name = name, Existed = existed, ReadOnly = readOnly });
                     }
@@ -269,12 +265,10 @@ namespace StreetCorsa.Services
                 _logger.Information("{Car}: data unpacked from {Acd} for the race", carId, AcdFile.FileName);
             }
 
+            // Each file whole, in one rename, never changed in place: a data file hard-linked to another name (a mod
+            // manager, a second install) must not take the race's values to that name too
             foreach (var (name, content) in files)
-            {
-                var target = DataFile(dataDirectory, name);
-                if (File.Exists(target)) ClearReadOnly(target);
-                File.WriteAllText(target, content, Encoding.Latin1);
-            }
+                KeptFile.Replace(DataFile(dataDirectory, name), Encoding.Latin1.GetBytes(content));
             if (files.Count > 0)
                 _logger.Information("{Car}: {Count} data file(s) changed for the race: {Files}", carId, files.Count, string.Join(", ", files.Keys));
 
@@ -293,6 +287,9 @@ namespace StreetCorsa.Services
             Keep(carId, guids, Path.Combine(keepFolder, AcCarSound.GuidsFileName));
 
             var linked = LinkOrCopy(sound.BankPath, bank);
+
+            // A plain write is enough: the car's own GUIDs were moved into the keep folder just now, so this is a new
+            // file of ours, linked to nothing, and the restore moves the car's own back over it
             File.WriteAllText(guids, sound.GuidsFor(carId), Encoding.ASCII);
 
             _logger.Information("{Car}: races on the sound of {Donor} ({Bank}, {How})", carId, sound.DonorId, sound.BankPath, linked ? "linked" : "copied");
@@ -336,10 +333,17 @@ namespace StreetCorsa.Services
             return bank == sound.BankPath ? sound : sound with { BankPath = bank };
         }
 
-        /// <summary>What an earlier race could not put back goes back before anything else goes in or is copied</summary>
+        /// <summary>
+        /// What an earlier race could not put back goes back before anything else goes in or is copied. Never while AC
+        /// runs (the game may be on that data): then the car cannot be changed or copied either, since that would
+        /// start from the earlier race's data and throw away the originals kept from it, and this throws.
+        /// </summary>
         private void RestoreLeftover(string carId)
         {
             if (!IsApplied(carId) || _appliedNow.Contains(carId)) return;
+            if (AcProcesses.AnyRunning())
+                throw new InvalidOperationException($"{carId} still has data from an earlier race, and Assetto Corsa is running: it cannot go back, or be changed again, until the game has closed");
+
             _logger.Warning("{Car} still had changed data from an earlier race: putting it back first", carId);
             Restore(carId);
         }
@@ -350,7 +354,8 @@ namespace StreetCorsa.Services
         /// them went back; what failed stays in the manifest for the next try, and this throws to say so. A manifest
         /// that reads as nothing (0 bytes after a power cut, "null") throws too and deletes nothing.
         /// </summary>
-        public bool Restore(string carId)
+        /// <param name="problems">Gets a line for the player about each file whose original is lost for good</param>
+        public bool Restore(string carId, ICollection<string>? problems = null)
         {
             using var gate = AcInstallGate.Hold();
             var keep = KeepDirectory(carId);
@@ -399,7 +404,7 @@ namespace StreetCorsa.Services
                 {
                     try
                     {
-                        RestoreFile(carId, keep, dataDirectory, entry);
+                        RestoreFile(carId, keep, dataDirectory, entry, problems);
                     }
                     catch (Exception ex)
                     {
@@ -443,31 +448,26 @@ namespace StreetCorsa.Services
         /// One data file back from its kept copy (or deleted, when the car did not have it), with its read-only flag as
         /// it was. A kept copy that is gone cannot ever go back: that is logged as lost and not retried forever.
         /// </summary>
-        private void RestoreFile(string carId, string keep, string dataDirectory, Manifest.Entry entry)
+        private void RestoreFile(string carId, string keep, string dataDirectory, Manifest.Entry entry, ICollection<string>? problems)
         {
             var target = DataFile(dataDirectory, entry.Name);
             if (!entry.Existed)
             {
                 if (File.Exists(target))
                 {
-                    ClearReadOnly(target);
+                    KeptFile.ClearReadOnly(target);
                     File.Delete(target);
                 }
 
                 return;
             }
 
-            var kept = Path.Combine(keep, FilesFolder, entry.Name);
-            if (!File.Exists(kept))
+            // Written whole or not at all: a restore cut short never leaves the car a truncated file
+            if (!KeptFile.PutBack(Path.Combine(keep, FilesFolder, entry.Name), target, entry.ReadOnly))
             {
                 _logger.Error("{Car}: the kept original of {File} is gone (deleted outside the game?); the race version stays in {Target}", carId, entry.Name, target);
-                return;
+                problems?.Add($"{carId}: the original of {entry.Name} is no longer kept, so the race version stays in {target}.");
             }
-
-            // Written whole or not at all: a restore cut short never leaves the car a truncated file
-            if (File.Exists(target)) ClearReadOnly(target);
-            SafeFile.WriteAllBytes(target, File.ReadAllBytes(kept));
-            if (entry.ReadOnly) File.SetAttributes(target, File.GetAttributes(target) | FileAttributes.ReadOnly);
         }
 
         /// <summary>A data file's path, for a name that is one file name inside the data folder</summary>
@@ -475,12 +475,6 @@ namespace StreetCorsa.Services
         {
             if (!PathNames.IsSafeSegment(name)) throw new InvalidDataException($"'{name}' is not a data file name");
             return Path.Combine(dataDirectory, name);
-        }
-
-        private static void ClearReadOnly(string file)
-        {
-            var attributes = File.GetAttributes(file);
-            if (attributes.HasFlag(FileAttributes.ReadOnly)) File.SetAttributes(file, attributes & ~FileAttributes.ReadOnly);
         }
 
         private static void WriteManifest(string keep, Manifest manifest) =>
@@ -514,7 +508,8 @@ namespace StreetCorsa.Services
         /// Puts every car back and takes away every copy made for a race; at start-up this undoes what a crash left
         /// behind. A car that cannot be put back keeps its manifest, and the next Apply to it tries again first.
         /// </summary>
-        public int RestoreAll()
+        /// <param name="problems">Gets a line for the player about each car or copy that stayed changed</param>
+        public int RestoreAll(ICollection<string>? problems = null)
         {
             using var gate = AcInstallGate.Hold();
             var restored = 0;
@@ -522,16 +517,17 @@ namespace StreetCorsa.Services
             {
                 try
                 {
-                    if (Restore(carId)) restored++;
+                    if (Restore(carId, problems)) restored++;
                 }
                 catch (Exception ex)
                 {
                     _logger.Error(ex, "Could not put the data of {Car} back; the originals are kept under {Path}", carId, Path.Combine(_keepPath, carId));
+                    problems?.Add($"{carId}: its data could not all be put back; the originals are kept under {Path.Combine(_keepPath, carId)} and go back at the next start.");
                 }
             }
 
             _appliedNow.Clear();
-            return restored + RemoveClones();
+            return restored + RemoveClones(problems);
         }
 
         /// <summary>
@@ -561,6 +557,8 @@ namespace StreetCorsa.Services
             }
 
             // Recorded before the folder exists: whatever becomes of the settings, the copy is found again
+            // The copy's own files are plain writes: the folder is ours (made just now, deleted after the race), and
+            // what is written in it is new, never a link to the car's own
             RecordClone(target);
             Directory.CreateDirectory(target);
             File.WriteAllText(Path.Combine(target, AcCarFolder.CloneMarker),
@@ -656,7 +654,8 @@ namespace StreetCorsa.Services
         /// Every copy in the install, whichever race made it, and every recorded copy in an install the game ran on
         /// before (the AC folder in the settings changed since)
         /// </summary>
-        public int RemoveClones()
+        /// <param name="problems">Gets a line for the player about each copy that could not be deleted</param>
+        public int RemoveClones(ICollection<string>? problems = null)
         {
             using var gate = AcInstallGate.Hold();
             var removed = 0;
@@ -671,11 +670,12 @@ namespace StreetCorsa.Services
                     catch (Exception ex)
                     {
                         _logger.Error(ex, "Could not delete the copy {Folder}; the next start tries again", folder);
+                        problems?.Add($"The race copy {folder} could not be deleted; the next start tries again.");
                     }
                 }
             }
 
-            return removed + RemoveRecordedClones();
+            return removed + RemoveRecordedClones(problems);
         }
 
         /// <summary>
@@ -683,7 +683,7 @@ namespace StreetCorsa.Services
         /// (named as a copy, in a "cars" folder, with the marker or empty). What is gone or not ours drops off the
         /// record; what could not be deleted stays on it for the next try.
         /// </summary>
-        private int RemoveRecordedClones()
+        private int RemoveRecordedClones(ICollection<string>? problems)
         {
             var recorded = ReadClones();
             if (recorded.Count == 0) return 0;
@@ -709,6 +709,7 @@ namespace StreetCorsa.Services
                 {
                     left.Add(folder);
                     _logger.Error(ex, "Could not delete the copy {Folder}; the next start tries again", folder);
+                    problems?.Add($"The race copy {folder} could not be deleted; the next start tries again.");
                 }
             }
 
@@ -806,7 +807,8 @@ namespace StreetCorsa.Services
         /// <summary>
         /// What a packed car's data.acd holds, written out as a data folder. The archive comes with a mod and is not
         /// trusted: every entry must be one file name, and one that is not (a path, "..") refuses the whole archive
-        /// before anything is written.
+        /// before anything is written. Plain writes: the folder is one the game makes (for the race, or in a copy of
+        /// its own) and deletes after it, so every file is new and linked to nothing.
         /// </summary>
         private static void UnpackAcd(string carId, string carDirectory, string dataDirectory)
         {

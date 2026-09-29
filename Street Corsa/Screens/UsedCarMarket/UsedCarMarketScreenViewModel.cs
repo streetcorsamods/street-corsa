@@ -70,7 +70,7 @@ namespace StreetCorsa.Screens.UsedCarMarket
 
         public ObservableCollection<string> DealerOptions { get; set; }
 
-        public string BankrollDisplay => $"${_gameState.Player.Money:N0}";
+        public string BankrollDisplay => Bankroll(_gameState.Player.Money);
 
         public UsedCarMarketScreenViewModel(
             NavigationService navigationService,

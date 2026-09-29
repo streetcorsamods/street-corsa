@@ -53,6 +53,9 @@
     <SolidColorBrush x:Key="Glass14D0Brush" Color="{StaticResource Glass14D0}"/>
     <SolidColorBrush x:Key="Glass14E0Brush" Color="{StaticResource Glass14E0}"/>
     <SolidColorBrush x:Key="Glass15E8Brush" Color="{StaticResource Glass15E8}"/>
+    <SolidColorBrush x:Key="Glass10C0Brush" Color="{StaticResource Glass10C0}"/>
+    <SolidColorBrush x:Key="MenuGlassD8Brush" Color="{StaticResource MenuGlassD8}"/>
+    <SolidColorBrush x:Key="PaleGold60Brush" Color="{StaticResource PaleGold60}"/>
 
     <!-- Veil brushes (Overlay dims the screen behind a dialog) -->
     <SolidColorBrush x:Key="OverlayBrush" Color="{StaticResource Overlay}"/>
@@ -62,6 +65,10 @@
     <SolidColorBrush x:Key="White20Brush" Color="{StaticResource White20}"/>
     <SolidColorBrush x:Key="White30Brush" Color="{StaticResource White30}"/>
     <SolidColorBrush x:Key="WhiteB0Brush" Color="{StaticResource WhiteB0}"/>
+    <SolidColorBrush x:Key="White38Brush" Color="{StaticResource White38}"/>
+    <SolidColorBrush x:Key="White90Brush" Color="{StaticResource White90}"/>
+    <SolidColorBrush x:Key="ScrimBrush" Color="{StaticResource Scrim}"/>
+    <SolidColorBrush x:Key="InkBrush" Color="{StaticResource Ink}"/>
 
     <!-- Status brushes -->
     <SolidColorBrush x:Key="GoldBrush" Color="{StaticResource Gold}"/>

@@ -14,6 +14,12 @@ namespace StreetCorsa.Logging
         private static bool _isShutDown = false;
         private static readonly object _lock = new();
 
+        /// <summary>Where the log files go: %AppData%\StreetCorsa\Logs</summary>
+        public static string LogDirectory => Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "StreetCorsa",
+            "Logs");
+
         /// <summary>
         /// Initializes the global logging infrastructure.
         /// Must be called once at application startup.
@@ -26,10 +32,7 @@ namespace StreetCorsa.Logging
                     return;
 
                 // Configure log file path
-                var logDirectory = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                    "StreetCorsa",
-                    "Logs");
+                var logDirectory = LogDirectory;
 
                 Directory.CreateDirectory(logDirectory);
 
@@ -56,8 +59,9 @@ namespace StreetCorsa.Logging
         }
 
         /// <summary>
-        /// For the tests: loggers write to Serilog's silent default, and no log folder is made under the user's
-        /// %AppData%. Does nothing once the real logging is up.
+        /// For the tests, and the game's fallback when the log folder cannot be made (an unwritable %AppData%):
+        /// loggers write to Serilog's silent default, and no log folder is made under the user's %AppData%. Does
+        /// nothing once the real logging is up.
         /// </summary>
         internal static void InitializeSilent()
         {

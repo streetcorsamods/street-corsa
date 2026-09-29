@@ -85,22 +85,27 @@ namespace StreetCorsa.Models.Career.Victory
             // A goal step of a locked path is still to do, however the career stands
             var steps = _definition.Unlock.Select(s => (Step: s, Counts: true))
                 .Concat(_definition.Goal.Select(s => (Step: s, Counts: unlocked))).ToList();
+
+            // The counters once for the whole path; each step only puts its own figures over them
+            var values = Values(career);
             foreach (var (step, counts) in steps)
             {
+                SetStepValues(values, step, career);
                 if (counts && IsDone(step, career))
                 {
-                    progress.CompletedSteps.Add(GameText.Fill(step.Step, Values(step, career)));
+                    progress.CompletedSteps.Add(GameText.Fill(step.Step, values));
                 }
                 else
                 {
-                    var todo = GameText.Fill(step.Todo ?? step.Step, Values(step, career));
+                    var todo = GameText.Fill(step.Todo ?? step.Step, values);
                     progress.RemainingSteps.Add(counts ? todo : "(Locked) " + todo);
                 }
             }
 
             progress.Percentage = steps.Count == 0 ? 0f : 100f * steps.Average(s => s.Counts ? Share(s.Step, career) : 0f);
             var text = IsAchieved(career) ? _definition.Progress.Achieved : unlocked ? _definition.Progress.Unlocked : _definition.Progress.Locked;
-            progress.ProgressDescription = GameText.Fill(text, Values(null, career));
+            foreach (var key in StepKeys) values.Remove(key);
+            progress.ProgressDescription = GameText.Fill(text, values);
             return progress;
         }
 
@@ -125,11 +130,11 @@ namespace StreetCorsa.Models.Career.Victory
             };
         }
 
-        /// <summary>
-        /// What a path's texts are filled with: every counter by name, {defeated} and {total}; for a step, its
-        /// {target}, {current} and {remaining} too
-        /// </summary>
-        private static TextValues Values(VictoryStep? step, CareerState career)
+        /// <summary>What only a step's texts are filled with, not the path's line</summary>
+        private static readonly string[] StepKeys = ["target", "current", "remaining"];
+
+        /// <summary>What a path's texts are filled with: every counter by name, {defeated} and {total}</summary>
+        private static TextValues Values(CareerState career)
         {
             var values = new TextValues
             {
@@ -137,21 +142,21 @@ namespace StreetCorsa.Models.Career.Victory
                 ["total"] = career.TotalOpponents
             };
             foreach (var counter in Enum.GetValues<MilestoneTrigger>()) values[counter.ToString()] = career.GetCounter(counter);
-
-            if (step != null)
-            {
-                var (current, target) = step.Type switch
-                {
-                    VictoryStep.BeatAllType => (career.DefeatedOpponentIds.Count, career.TotalOpponents),
-                    VictoryStep.CounterType when step.Counter is { } counter => (career.GetCounter(counter), step.AtLeast),
-                    _ => (0, 0)
-                };
-                values["target"] = target;
-                values["current"] = current;
-                values["remaining"] = Math.Max(0, target - current);
-            }
-
             return values;
+        }
+
+        /// <summary>A step's {target}, {current} and {remaining}, over the last step's</summary>
+        private static void SetStepValues(TextValues values, VictoryStep step, CareerState career)
+        {
+            var (current, target) = step.Type switch
+            {
+                VictoryStep.BeatAllType => (career.DefeatedOpponentIds.Count, career.TotalOpponents),
+                VictoryStep.CounterType when step.Counter is { } counter => (career.GetCounter(counter), step.AtLeast),
+                _ => (0, 0)
+            };
+            values["target"] = target;
+            values["current"] = current;
+            values["remaining"] = Math.Max(0, target - current);
         }
     }
 }

@@ -128,7 +128,20 @@ namespace StreetCorsa.Navigation
         /// </summary>
         public void NavigateTo(IScreen screen)
         {
-            CurrentScreen?.Exit();
+            // A screen that fails to leave does not keep the player on it: it is left as far as it went, and the new
+            // one comes. Stopping here would leave the old screen half-exited and the new one built but never shown.
+            if (CurrentScreen is { } leaving)
+            {
+                try
+                {
+                    leaving.Exit();
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "The {Screen} screen could not be left cleanly; going on", leaving.GetType().Name);
+                }
+            }
+
             CurrentScreen = screen;
             CurrentScreen?.Enter();
         }
@@ -268,6 +281,13 @@ namespace StreetCorsa.Navigation
 
         public Screens.LoadGame.LoadGameScreenViewModel CreateLoadGameCard(Action back) =>
             new(this, _dialogService, _gameStateRepository, _carPartsService, _setCurrentGame, back);
+
+        /// <summary>
+        /// The garage, once what runs on the UI thread now is over: for a screen that sends the player home from its
+        /// <c>Enter</c>, while the navigation that brought them there is still going on
+        /// </summary>
+        public void NavigateToGarageLater(GameState gameState) =>
+            _ = System.Windows.Threading.Dispatcher.CurrentDispatcher.InvokeAsync(() => NavigateToGarage(gameState));
 
         public bool NavigateToGarage(GameState gameState, bool skipAnimation = false) => SafeNavigate("garage", () =>
             new Screens.Garage.GarageScreenViewModel(

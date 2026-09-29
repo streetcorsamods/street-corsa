@@ -1,3 +1,4 @@
+using StreetCorsa.Helpers;
 using StreetCorsa.Logging;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Parts.Cars;
@@ -285,6 +286,8 @@ namespace StreetCorsa.Services.Market
             var wanting = gameState.Racers.ReadyToRace.Values.Concat(gameState.Racers.Retired.Values)
                 .OfType<Opponent>()
                 .Where(o => !o.IsKing && o.Money >= amount && o.Cars.Count < OpponentRules.MaxCars
+                            // A rival whose race with the player is still to be settled keeps their garage as it is
+                            && !Opponents.OpponentLifeService.HasPendingRace(gameState, o)
                             && (o.Cars.Count == 0 || Simulation.RaceSimulatorService.GetCarHP(o.Cars[0]) < power))
                 .OrderBy(o => o.Name, StringComparer.Ordinal)
                 .ToList();
@@ -312,7 +315,7 @@ namespace StreetCorsa.Services.Market
         {
             if (askingPrice <= value) return askingPrice;
 
-            var haggled = RoundToTen((double)askingPrice * (0.85 + 0.15 * Math.Clamp(roll, 0, 1)));
+            var haggled = RoundToTen((double)askingPrice * (0.85 + 0.15 * Unit.Clamp01(roll, ifNotFinite: 0)));
             return Math.Clamp(haggled, Math.Max(0m, value), askingPrice);
         }
 

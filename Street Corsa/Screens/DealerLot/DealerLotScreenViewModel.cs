@@ -71,11 +71,11 @@ namespace StreetCorsa.Screens.DealerLot
         }
 
         public bool HasSaleNotice => SaleNotice.Length > 0;
-        public string BankrollDisplay => $"${_gameState.Player.Money:N0}";
+        public string BankrollDisplay => Bankroll(_gameState.Player.Money);
 
         /// <summary>The clock, so the hours the drive cost are in front of the player when they arrive</summary>
-        public string DateDisplay => _gameState.Date.ToString("dddd, MMMM d, yyyy");
-        public string TimeDisplay => _gameState.Date.ToString("h:mm tt");
+        public string DateDisplay => HeaderDate(_gameState.Date);
+        public string TimeDisplay => HeaderTime(_gameState.Date);
 
         /// <summary>The lot's 3D scene, or null when the showroom is not installed</summary>
         public string? ShowroomKn5 { get; private set; }
@@ -113,8 +113,7 @@ namespace StreetCorsa.Screens.DealerLot
             BackToLotCommand = new RelayCommand(() => SelectedIndex = -1);
             PurchaseCarCommand = new RelayCommand<UsedCarListingViewModel>(OnPurchaseCar, CanPurchaseCar);
 
-            ResolveShowroom();
-            LoadStock();
+            // The showroom and the stock are loaded in Enter, once the screen before has been left
         }
 
         private int _selectedIndex = -1;
@@ -185,6 +184,7 @@ namespace StreetCorsa.Screens.DealerLot
             if (found != null)
             {
                 ShowroomKn5 = found;
+                OnPropertyChanged(nameof(ShowroomKn5));
                 return;
             }
 
@@ -280,8 +280,10 @@ namespace StreetCorsa.Screens.DealerLot
                 }
 
                 // The car is bought and it is in the garage; that is where the player wants to be, not stood on
-                // a lot looking at the gap where it was.
+                // a lot looking at the gap where it was. Unless they have gone meanwhile (the purchase takes a moment):
+                // then they stay where they went.
                 OnPropertyChanged(nameof(BankrollDisplay));
+                if (!ReferenceEquals(_navigationService.CurrentScreen, this)) return;
                 _navigationService.NavigateToGarage(_gameState, skipAnimation: true);
             });
         }
@@ -306,6 +308,9 @@ namespace StreetCorsa.Screens.DealerLot
         {
             base.Enter();
             _logger.Information("Entered {Dealer}", DealerName);
+
+            ResolveShowroom();
+            LoadStock();
         }
 
         public override void Exit()

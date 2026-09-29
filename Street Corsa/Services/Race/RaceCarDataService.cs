@@ -78,6 +78,15 @@ namespace StreetCorsa.Services.Race
                 return null;
             }
 
+            // A leftover that could not go back (Assetto Corsa is running, or it is still listed as changed from a race
+            // whose restore failed) is still in the car's folder: the car races as it is rather than on data built
+            // from data that is not its own
+            if (_overlay.IsApplied(car.DefinitionId))
+            {
+                _logger.Warning("{Car}: data left changed by an earlier race is still in place, racing as it is", car.DefinitionId);
+                return null;
+            }
+
             var catalog = _parts.Catalog;
             var carDirectory = Path.Combine(AppSettings.Instance.CarsPath, car.DefinitionId);
             Func<string, string?> readFile;

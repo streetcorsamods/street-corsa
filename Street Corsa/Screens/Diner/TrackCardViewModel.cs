@@ -38,6 +38,15 @@ namespace StreetCorsa.Screens.Diner
         public bool HasPreview => !string.IsNullOrEmpty(PreviewPath);
 
         /// <summary>
+        /// Width the preview is decoded at: the card is 110 x 90 and fills it, so a wide picture is drawn about 160 px
+        /// wide; twice that keeps it sharp on a high-DPI screen
+        /// </summary>
+        private const int PreviewDecodeWidth = 320;
+
+        /// <summary>The preview, decoded small and shared (<see cref="Shared.Thumbnails"/>); null without one</summary>
+        public System.Windows.Media.ImageSource? PreviewImage => Shared.Thumbnails.Load(PreviewPath, PreviewDecodeWidth);
+
+        /// <summary>
         /// Race type this track supports
         /// </summary>
         public RaceType RaceType { get; set; }

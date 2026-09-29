@@ -73,11 +73,11 @@ namespace StreetCorsa.Screens.DealerMap
         public double MapImageWidth { get; }
         public double MapImageHeight { get; }
 
-        public string BankrollDisplay => $"${_gameState.Player.Money:N0}";
+        public string BankrollDisplay => Bankroll(_gameState.Player.Money);
 
         /// <summary>The day, so a drive that costs half of it reads as a cost</summary>
-        public string DateDisplay => _gameState.Date.ToString("dddd, MMMM d, yyyy");
-        public string TimeDisplay => _gameState.Date.ToString("h:mm tt");
+        public string DateDisplay => HeaderDate(_gameState.Date);
+        public string TimeDisplay => HeaderTime(_gameState.Date);
 
         private bool _isLoading;
 

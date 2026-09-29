@@ -113,6 +113,10 @@ ALWAYS restore original config after AC exits:
 - On error: restore
 - On crash: restore
 
+The launcher does not start while any AC process runs, one it did not start included (or when it can't tell): it
+returns "Assetto Corsa Is Busy". A car, copy or cfg file that could not be put back is named to the player ("Assetto
+Corsa Not Put Back", with the launch's result, or once the main window is up after the start-up restore).
+
 race.ini is backed up before it is changed and put back like the cars' data: in the launcher's `finally`, at start-up,
 when the game exits and from the fatal-exception handler, but never while an AC process still runs (then the next
 start does it, waiting for AC to close first; see [INI Modification](ini-modification.md), "Backup and restore"). A race writes `[STREET_CORSA] CONTEXT_ID=<race context id>` into it, which the Lua app copies into its result

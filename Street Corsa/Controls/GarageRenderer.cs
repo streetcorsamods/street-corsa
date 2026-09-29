@@ -918,10 +918,15 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     /// <summary>Replaces the prop; pass null to remove it. Must be called on the thread that draws.</summary>
     public void SetProp(IKn5? kn5, Matrix placement)
     {
+        // The parts first shown in the car are put in while it is still solid and only seen as it fades to a ghost
+        // (GhostTransitionSeconds): their textures can load off this thread meanwhile rather than hold up the frame.
+        // A prop that replaces one, or goes on the stand, is in plain sight at once and must come with its textures.
+        var hiddenAtFirst = _prop == null && !_standActive && !IsGhosting;
+
         _prop?.Dispose();
         _propLeans = !_standActive;
         _propPlacement = placement;
-        _prop = kn5 == null ? null : new Kn5RenderableFile(kn5, placement * (_propLeans ? _bodyLean : Matrix.Identity), asyncTexturesLoading: false);
+        _prop = kn5 == null ? null : new Kn5RenderableFile(kn5, placement * (_propLeans ? _bodyLean : Matrix.Identity), asyncTexturesLoading: hiddenAtFirst);
         _propNodes = PartNode.Of(_prop);
 
         // An engine for the stand: how far it can turn over is worked out upright, then it is turned as far as the one

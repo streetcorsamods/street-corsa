@@ -66,9 +66,7 @@ namespace StreetCorsa.Screens.Garage
             {
                 if (!SetProperty(ref _freeRunTrack, value) || value == null) return;
 
-                // Remembered for next time, across saves
-                _settingsService.Current.FreeRunTrack = value.Key;
-                _settingsService.Save();
+                // Remembered for next time on a free run or when the garage is left, not on every step through the list
                 FreeRunCommand.RaiseCanExecuteChanged();
             }
         }
@@ -180,7 +178,7 @@ namespace StreetCorsa.Screens.Garage
 
         public bool HasCars => Cars.Count > 0;
 
-        public string BankrollDisplay => $"${_gameState.Player.Money:N0}";
+        public string BankrollDisplay => Bankroll(_gameState.Player.Money);
 
         /// <summary>Showroom model used as the environment of the 3D viewport</summary>
         public string GarageShowroomKn5 => AppSettings.Instance.GarageShowroomKn5;
@@ -207,7 +205,7 @@ namespace StreetCorsa.Screens.Garage
         public string CurrentMonthYear => _gameState.Date.ToString("MMMM yyyy");
         public int CurrentDay => _gameState.Date.Day;
         public string CurrentDayOfWeek => _gameState.Date.ToString("dddd");
-        public string CurrentTimeDisplay => _gameState.Date.ToString("h:mm tt");
+        public string CurrentTimeDisplay => HeaderTime(_gameState.Date);
         public BitmapImage CalendarImage1 => GetRandomCalendarImage(0);
         public BitmapImage CalendarImage2 => GetRandomCalendarImage(1);
         public BitmapImage CalendarImage3 => GetRandomCalendarImage(2);
@@ -314,24 +312,28 @@ namespace StreetCorsa.Screens.Garage
             _logger = AppLoggerFactory.CreateLogger("Garage");
             SkipEnterAnimation = skipAnimation;
 
-            BackCommand = new RelayCommand(OnBack);
-            ExitCommand = new RelayCommand(OnExit);
+            BackCommand = new RelayCommand(OnBack, CanLeave);
+            ExitCommand = new RelayCommand(OnExit, CanLeave);
             LaunchShowroomCommand = new AsyncRelayCommand(OnLaunchShowroom, CanLaunchShowroom);
-            FreeRunCommand = new AsyncRelayCommand(OnFreeRun, () => SelectedCarHere && FreeRunTrack != null && !_launcher.IsExecutionLocked);
-            TestAndTuneCommand = new AsyncRelayCommand(OnTestAndTune, () => SelectedCarHere && !_launcher.IsExecutionLocked);
+            FreeRunCommand = new AsyncRelayCommand(OnFreeRun, () => SelectedCarHere && FreeRunTrack != null && !_launcher.IsExecutionLocked && CanLeave());
+            TestAndTuneCommand = new AsyncRelayCommand(OnTestAndTune, () => SelectedCarHere && !_launcher.IsExecutionLocked && CanLeave());
             LoadFreeRunTracks();
-            RepairsCommand = new RelayCommand(OnRepairs, () => SelectedCarHere);
-            SellCommand = new RelayCommand(OnSell, () => SelectedCarHere && !_launcher.IsExecutionLocked);
+            // Not while the night runs: its tasks read and change the cars and the money these spend
+            RepairsCommand = new RelayCommand(OnRepairs, () => SelectedCarHere && !_endingDay);
+            SellCommand = new RelayCommand(OnSell, () => SelectedCarHere && !_endingDay && !_launcher.IsExecutionLocked);
             CollectCommand = new RelayCommand(OnCollect, CanCollect);
-            SelectCarCommand = new RelayCommand(OnSelectCar);
+            SelectCarCommand = new RelayCommand(OnSelectCar, CanLeave);
             ShowCalendarCommand = new RelayCommand(OnShowCalendar);
             EndDayCommand = new RelayCommand(OnEndDay, () => !_endingDay && !_launcher.IsExecutionLocked);
-            NewspaperCommand = new RelayCommand(() => LeaveTo(() => _navigationService.NavigateToNewspaper(_gameState)));
-            CarDealersCommand = new RelayCommand(() => LeaveTo(() => _navigationService.NavigateToDealerMap(_gameState)));
-            PartDealersCommand = new RelayCommand(() => LeaveTo(() => _navigationService.NavigateToPartShopMap(_gameState)));
-            HitTheStreetsCommand = new RelayCommand(() => LeaveTo(() => _navigationService.NavigateToDiner(_gameState)));
-            GasStationCommand = new AsyncRelayCommand(OnGasStation, () => SelectedCarHere);
-            CareerCommand = new RelayCommand(() => LeaveTo(() => _navigationService.NavigateToCareer(_gameState)));
+
+            // While the night's work runs nothing leads out of the garage: the screens out there are built from the day
+            // that is ending, and a race launched now would be stamped with it
+            NewspaperCommand = new RelayCommand(() => LeaveTo(() => _navigationService.NavigateToNewspaper(_gameState)), CanLeave);
+            CarDealersCommand = new RelayCommand(() => LeaveTo(() => _navigationService.NavigateToDealerMap(_gameState)), CanLeave);
+            PartDealersCommand = new RelayCommand(() => LeaveTo(() => _navigationService.NavigateToPartShopMap(_gameState)), CanLeave);
+            HitTheStreetsCommand = new RelayCommand(() => LeaveTo(() => _navigationService.NavigateToDiner(_gameState)), CanLeave);
+            GasStationCommand = new AsyncRelayCommand(OnGasStation, () => SelectedCarHere && CanLeave());
+            CareerCommand = new RelayCommand(() => LeaveTo(() => _navigationService.NavigateToCareer(_gameState)), CanLeave);
 
             // The garage is the game's home screen: make sure a car is selected if the player owns any
             if (_gameState.Player.SelectedCarInstanceId == null && _gameState.Player.Cars?.Count > 0)
@@ -411,7 +413,7 @@ namespace StreetCorsa.Screens.Garage
 
         private bool CanLaunchShowroom()
         {
-            return SelectedCar != null && !_launcher.IsExecutionLocked;
+            return SelectedCar != null && !_launcher.IsExecutionLocked && CanLeave();
         }
 
         private async Task OnLaunchShowroom()
@@ -491,6 +493,7 @@ namespace StreetCorsa.Screens.Garage
 
             var car = selected.CarInstance;
             _logger.Information("Free run: {Car} on {Track}", car.DefinitionId, track.Key);
+            RememberFreeRunTrack();
 
             try
             {
@@ -511,7 +514,9 @@ namespace StreetCorsa.Screens.Garage
                         return;
                     }
 
-                    data = await Task.Run(() => _raceCarDataService.Prepare(car, rateCooling: false));
+                    // On a copy made here: the workbench may change the car's own parts while the worker reads them
+                    var snapshot = car.Snapshot();
+                    data = await Task.Run(() => _raceCarDataService.Prepare(snapshot, rateCooling: false));
                 }
 
                 if (data is { CanDrive: false })
@@ -532,6 +537,9 @@ namespace StreetCorsa.Screens.Garage
                     TrackConfig = track.Configuration
                 };
                 if (data != null) intent.CarData.Add(data);
+
+                // Checking the car takes a moment: a player who left meanwhile has called it off
+                if (!ReferenceEquals(_navigationService.CurrentScreen, this)) return;
 
                 FreeRunCommand.RaiseCanExecuteChanged();
                 var result = await _launcher.LaunchRaceAsync(intent);
@@ -628,8 +636,9 @@ namespace StreetCorsa.Screens.Garage
                 {
                     if (_gameState.Player.Money < job.Cost) return;
 
-                    _gameState.Player.Money -= job.Cost;
+                    // The work first: a job that fails to go on costs nothing
                     job.Apply();
+                    _gameState.Player.Money -= job.Cost;
                     _logger.Information("Repaired {Car}: {Job} for ${Cost}", car.DefinitionId, job.Name, job.Cost);
 
                     try
@@ -681,7 +690,7 @@ namespace StreetCorsa.Screens.Garage
         public string CollectButtonText => SelectedCar?.CarInstance is { IsImpounded: true } car ? $"Collect (${car.ImpoundFee:N0})" : "Collect";
 
         private bool CanCollect() =>
-            SelectedCar?.CarInstance is { } car && PoliceRules.CanCollect(car, _gameState.Date) && _gameState.Player.Money >= car.ImpoundFee;
+            !_endingDay && SelectedCar?.CarInstance is { } car && PoliceRules.CanCollect(car, _gameState.Date) && _gameState.Player.Money >= car.ImpoundFee;
 
         /// <summary>Pays the impound, brings the car home and saves; an hour goes by getting there and back</summary>
         private async void OnCollect()
@@ -826,6 +835,9 @@ namespace StreetCorsa.Screens.Garage
                 _logger.Warning(ex, "Could not check {Car} before the gas station", car.DefinitionId);
             }
 
+            // Out here too: a check that threw never got to it, and the player may have left meanwhile
+            if (!ReferenceEquals(_navigationService.CurrentScreen, this)) return;
+
             LeaveTo(() => _navigationService.NavigateToGasStation(_gameState));
         }
 
@@ -834,7 +846,7 @@ namespace StreetCorsa.Screens.Garage
         /// </summary>
         private async void LeaveTo(Func<bool> navigate)
         {
-            if (_isLeaving) return;
+            if (_isLeaving || !CanLeave()) return;
             _isLeaving = true;
 
             try
@@ -866,6 +878,9 @@ namespace StreetCorsa.Screens.Garage
         }
 
         private bool _endingDay;
+
+        /// <summary>Nothing leads out of the garage, nor launches a race, while the day is being ended</summary>
+        private bool CanLeave() => !_endingDay;
 
         /// <summary>Asks, then ends the day: the night's scheduled work runs, and the new day is saved</summary>
         private void OnEndDay()
@@ -907,6 +922,7 @@ namespace StreetCorsa.Screens.Garage
             finally
             {
                 _endingDay = false;
+                RelayCommand.RaiseCanExecuteChanged();
                 // Nothing may escape an async void, the refresh included
                 try
                 {
@@ -964,7 +980,8 @@ namespace StreetCorsa.Screens.Garage
                 "Exit Game?",
                 confirmed =>
                 {
-                    if (confirmed)
+                    // Not while the night is being worked out: the exit saves, and a half-ended day would be saved
+                    if (confirmed && CanLeave())
                     {
                         System.Windows.Application.Current.Shutdown();
                     }
@@ -1047,7 +1064,26 @@ namespace StreetCorsa.Screens.Garage
         public override void Exit()
         {
             base.Exit();
+            RememberFreeRunTrack();
+            // The part models are the garage's: the lots, the menus and a race have no use for them in memory
+            StreetCorsa.Parts.PartAssembler.ClearModelCache();
             _logger.Information("Exited garage screen");
+        }
+
+        /// <summary>The free run's track, kept in the settings for next time, across saves; written only when it changed</summary>
+        private void RememberFreeRunTrack()
+        {
+            if (_freeRunTrack is not { } track || track.Key == _settingsService.Current.FreeRunTrack) return;
+
+            try
+            {
+                _settingsService.Current.FreeRunTrack = track.Key;
+                _settingsService.Save();
+            }
+            catch (Exception ex)
+            {
+                _logger.Warning("Could not remember the free run's track: {Error}", ex.Message);
+            }
         }
     }
 

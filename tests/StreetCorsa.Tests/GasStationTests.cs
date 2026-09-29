@@ -15,30 +15,15 @@ namespace StreetCorsa.Tests;
 /// <summary>Step 19: the gas station, the oil the engines burn, and what the attendant notices</summary>
 public class GasStationTests
 {
-    private static readonly Lazy<PartsCatalog> Catalog = new(() => PartsCatalog.Load(RepoPaths.PartsFolder));
+    private static Lazy<PartsCatalog> Catalog => TestCars.Catalog;
 
-    private static Car CarWithRealEngine(PartsCatalog catalog)
-    {
-        var build = catalog.EngineBuilds.Single(b => b.Id.EndsWith("chrysler-v8-pack/chrysler-la-340-275-hp", StringComparison.Ordinal));
-        var tree = PartTreeBuilder.BuildEngine(catalog, build)!;
-        var car = new Car("car_a") { HasPartsAssigned = true };
-        car.Parts.Add(PartTrees.FromInstalled(tree.Root, PartInstance.CarEngineSlot));
-        return car;
-    }
+    private static Car CarWithRealEngine(PartsCatalog catalog) => TestCars.WithRealEngine(catalog);
 
     private static Car CarWithEngineAndWheels(double wear = 1)
     {
         var car = new Car("car_a") { HasPartsAssigned = true, HasRunningGearAssigned = true };
         car.Parts.Add(new PartInstance("block") { ParentSlot = PartInstance.CarEngineSlot, Wear = wear });
-        for (var i = 0; i < RunningGear.Corners; i++)
-        {
-            var rim = new PartInstance("rim") { ParentSlot = RunningGear.WheelSlot(i) };
-            rim.Children.Add(new PartInstance("tyre") { ParentSlot = RunningGear.TyreSlotOnRim });
-            car.Parts.Add(rim);
-            car.Parts.Add(new PartInstance("brake") { ParentSlot = RunningGear.BrakeSlot(i) });
-            car.Parts.Add(new PartInstance("shock") { ParentSlot = RunningGear.ShockSlot(i) });
-        }
-
+        TestCars.AddRunningGear(car, springs: false);
         return car;
     }
 
@@ -397,11 +382,7 @@ public class GasStationTests
     {
         using var temp = new TempDir();
         var car = Path.Combine(temp.Path, "some_car_nobody_has");
-        Directory.CreateDirectory(Path.Combine(car, "data"));
-        File.WriteAllText(Path.Combine(car, "data", "car.ini"),
-            "[BASIC]\nGRAPHICS_OFFSET=0,-0.165,-0.25\n[GRAPHICS]\nDRIVEREYES=0.37,0.889,-0.178\nON_BOARD_PITCH_ANGLE=-2.7\n");
-        File.WriteAllText(Path.Combine(car, "data", "suspensions.ini"), "[FRONT]\nBASEY=-0.145\n[REAR]\nBASEY=-0.155\n");
-        File.WriteAllText(Path.Combine(car, "data", "tyres.ini"), "[FRONT]\nRADIUS=0.34\n[REAR]\nRADIUS=0.34\n");
+        TestCars.WriteData(car, "[BASIC]\nGRAPHICS_OFFSET=0,-0.165,-0.25\n[GRAPHICS]\nDRIVEREYES=0.37,0.889,-0.178\nON_BOARD_PITCH_ANGLE=-2.7\n");
 
         var frame = StreetCorsa.Controls.Street.AcCarFrame.Read(car)!;
 
@@ -488,10 +469,7 @@ public class GasStationTests
     {
         using var temp = new TempDir();
         var car = Path.Combine(temp.Path, "some_car_without_eyes");
-        Directory.CreateDirectory(Path.Combine(car, "data"));
-        File.WriteAllText(Path.Combine(car, "data", "car.ini"), "[BASIC]\nGRAPHICS_OFFSET=0,-0.165,-0.25\n[GRAPHICS]\nDRIVEREYES=0,0,0\n");
-        File.WriteAllText(Path.Combine(car, "data", "suspensions.ini"), "[FRONT]\nBASEY=-0.145\n[REAR]\nBASEY=-0.155\n");
-        File.WriteAllText(Path.Combine(car, "data", "tyres.ini"), "[FRONT]\nRADIUS=0.34\n[REAR]\nRADIUS=0.34\n");
+        TestCars.WriteData(car, "[BASIC]\nGRAPHICS_OFFSET=0,-0.165,-0.25\n[GRAPHICS]\nDRIVEREYES=0,0,0\n");
 
         var frame = StreetCorsa.Controls.Street.AcCarFrame.Read(car)!;
         Assert.Equal((0.485f + 0.495f) / 2f - 0.165f, frame.Lift, 4);

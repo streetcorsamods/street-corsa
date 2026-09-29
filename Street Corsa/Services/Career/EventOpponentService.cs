@@ -50,12 +50,13 @@ namespace StreetCorsa.Services.Career
             if (eventDef.IsPinkSlip)
                 return null;
 
-            // Fall back to special opponents
-            if (eventDef.SpecialOpponents?.Count > 0)
+            // Fall back to special opponents: those whose car is installed, as for everybody else, or AC is handed a car it does not have
+            var specials = (eventDef.SpecialOpponents ?? [])
+                .Where(s => s != null && !string.IsNullOrEmpty(s.CarDefinitionId) && installed.ContainsKey(s.CarDefinitionId))
+                .ToList();
+            if (specials.Count > 0)
             {
-                var special = eventDef.SpecialOpponents[
-                    _random.Next(eventDef.SpecialOpponents.Count)
-                ];
+                var special = specials[_random.Next(specials.Count)];
 
                 return new EventOpponentResult
                 {

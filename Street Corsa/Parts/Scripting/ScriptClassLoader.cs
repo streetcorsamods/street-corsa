@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.IO;
 using StreetCorsa.Helpers;
 
@@ -30,8 +31,15 @@ public sealed class ScriptClassLoader
                     new[] { "getLeftCylinderHead", "getRightCylinderHead" })
         };
 
-    private readonly Dictionary<string, ScriptClass?> _classes = new(StringComparer.OrdinalIgnoreCase);
-    private readonly object _lock = new();
+    // Class files by path, and classes by name as they were looked for (see Find): two caches, as a path and a class
+    // name are two things. Neither is locked while a file is read and parsed: two threads asking for the same cold
+    // class may both parse it, and the first to finish is the one both get, so a class is one object everywhere
+    // (chains and statics go by the object).
+    private readonly ConcurrentDictionary<string, ScriptClass?> _byFile = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, ScriptClass?> _byName = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, byte> _files = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, int> _rootOf = new(StringComparer.OrdinalIgnoreCase);
+    private readonly string?[] _rootPaths;
 
     public ScriptClassLoader(string root) : this(new[] { root })
     {
@@ -41,6 +49,7 @@ public sealed class ScriptClassLoader
     public ScriptClassLoader(IReadOnlyList<string> roots)
     {
         Roots = roots.Count > 0 ? roots : new[] { string.Empty };
+        _rootPaths = Roots.Select(r => string.IsNullOrEmpty(r) ? null : Path.TrimEndingDirectorySeparator(Path.GetFullPath(r))).ToArray();
     }
 
     /// <summary>The first root: the base game's scripts</summary>
@@ -49,31 +58,19 @@ public sealed class ScriptClassLoader
     public IReadOnlyList<string> Roots { get; }
 
     /// <summary>Every class file read so far</summary>
-    public IEnumerable<string> LoadedFiles
-    {
-        get { lock (_lock) return _files.ToList(); }
-    }
-
-    private readonly HashSet<string> _files = new(StringComparer.OrdinalIgnoreCase);
+    public IEnumerable<string> LoadedFiles => _files.Keys.ToList();
 
     public ScriptClass? Load(string file)
     {
-        lock (_lock)
-        {
-            if (_classes.TryGetValue(file, out var cached)) return cached;
+        if (_byFile.TryGetValue(file, out var cached)) return cached;
 
-            var loaded = File.Exists(file) ? ScriptClass.Load(file) : null;
-            if (loaded != null) _files.Add(Path.GetFullPath(file));
-            return _classes[file] = loaded;
-        }
+        var loaded = File.Exists(file) ? ScriptClass.Load(file) : null;
+        var kept = _byFile.GetOrAdd(file, loaded);
+        if (kept != null) _files.TryAdd(Path.GetFullPath(file), 0);
+        return kept;
     }
 
     public ScriptClass? Find(string className, string? nearFolder = null)
-    {
-        lock (_lock) return FindLocked(className, nearFolder);
-    }
-
-    private ScriptClass? FindLocked(string className, string? nearFolder)
     {
         // Class names come from the constant pools of the class files: every piece that becomes a folder or a file
         // name has to be one ("java.game.C:\x" is a rooted path, and Path.Combine would drop the scripts folder for it)
@@ -88,7 +85,7 @@ public sealed class ScriptClassLoader
         // search, and so what is cached, depends on whose root the asking class is under
         var own = nearFolder == null ? 0 : Math.Max(0, RootOf(nearFolder));
         var key = own == 0 ? className : $"{own}|{className}";
-        if (_classes.TryGetValue(key, out var cached)) return cached;
+        if (_byName.TryGetValue(key, out var cached)) return cached;
 
         ScriptClass? result = null;
         if (className.StartsWith(ClassPrefix, StringComparison.Ordinal)
@@ -109,19 +106,16 @@ public sealed class ScriptClassLoader
             }
         }
 
-        if (result == null && StandIns.TryGetValue(className, out var standIn) && FindLocked(standIn.CopiedFrom, nearFolder) is { } original)
+        if (result == null && StandIns.TryGetValue(className, out var standIn) && Find(standIn.CopiedFrom, nearFolder) is { } original)
             result = original.DerivedAs(className, standIn.BaseClass, standIn.DroppedMethods);
 
-        return _classes[key] = result;
+        return _byName.GetOrAdd(key, result);
     }
 
     /// <summary>The root <paramref name="folder"/> is under, by index; -1 when none. The longest wins: a root may sit inside another.</summary>
-    private int RootOf(string folder)
+    private int RootOf(string folder) => _rootOf.GetOrAdd(folder, f =>
     {
-        if (_rootOf.TryGetValue(folder, out var known)) return known;
-
-        _rootPaths ??= Roots.Select(r => string.IsNullOrEmpty(r) ? null : Path.TrimEndingDirectorySeparator(Path.GetFullPath(r))).ToArray();
-        var full = Path.GetFullPath(folder);
+        var full = Path.GetFullPath(f);
         int best = -1, bestLength = -1;
         for (var i = 0; i < _rootPaths.Length; i++)
         {
@@ -132,11 +126,8 @@ public sealed class ScriptClassLoader
             if (under && root.Length > bestLength) (best, bestLength) = (i, root.Length);
         }
 
-        return _rootOf[folder] = best;
-    }
-
-    private readonly Dictionary<string, int> _rootOf = new(StringComparer.OrdinalIgnoreCase);
-    private string?[]? _rootPaths;
+        return best;
+    });
 
     /// <summary>The class and everything it extends, own class first</summary>
     public List<ScriptClass> Chain(ScriptClass type)

@@ -6,11 +6,6 @@
              xmlns:controls="clr-namespace:StreetCorsa.Controls"
              mc:Ignorable="d"
              d:DesignHeight="720" d:DesignWidth="1280">
-    <UserControl.Resources>
-        <SolidColorBrush x:Key="GlassBrush" Color="#C0101010"/>
-        <SolidColorBrush x:Key="GlassBorderBrush" Color="#60FFE68C"/>
-    </UserControl.Resources>
-
     <Grid Background="Black">
         <!-- The station, from the driver's seat -->
         <controls:StationViewport3D x:Name="StationView"
@@ -28,8 +23,8 @@
                    Visibility="{Binding HasFailed, ElementName=StationView, Converter={StaticResource BooleanToVisibilityConverter}}"/>
 
         <!-- Where, when, and the money -->
-        <Border Background="{StaticResource GlassBrush}"
-                BorderBrush="{StaticResource GlassBorderBrush}"
+        <Border Background="{StaticResource Glass10C0Brush}"
+                BorderBrush="{StaticResource PaleGold60Brush}"
                 BorderThickness="1"
                 CornerRadius="5"
                 Padding="18,12"
@@ -54,8 +49,8 @@
         </Border>
 
         <!-- What is going on -->
-        <Border Background="{StaticResource GlassBrush}"
-                BorderBrush="{StaticResource GlassBorderBrush}"
+        <Border Background="{StaticResource Glass10C0Brush}"
+                BorderBrush="{StaticResource PaleGold60Brush}"
                 BorderThickness="1"
                 CornerRadius="5"
                 Padding="14,10"
@@ -73,7 +68,7 @@
         <!-- Drag to look round -->
         <TextBlock Text="Drag to look around · double-click to look back"
                    FontSize="{StaticResource FontSizeTiny}"
-                   Foreground="#90FFFFFF"
+                   Foreground="{StaticResource White90Brush}"
                    HorizontalAlignment="Center"
                    VerticalAlignment="Bottom"
                    Margin="0,0,0,8"
@@ -81,7 +76,7 @@
 
         <!-- The attendant at the window, and what he can do -->
         <Border Width="420"
-                Background="{StaticResource GlassBrush}"
+                Background="{StaticResource Glass10C0Brush}"
                 BorderBrush="{StaticResource GoldBrush}"
                 BorderThickness="2"
                 CornerRadius="6"
@@ -143,7 +138,7 @@
                     <Border Height="12"
                             CornerRadius="3"
                             Background="{StaticResource BgMediumBrush}"
-                            BorderBrush="{StaticResource GlassBorderBrush}"
+                            BorderBrush="{StaticResource PaleGold60Brush}"
                             BorderThickness="1"
                             Margin="0,8,0,6"
                             ClipToBounds="True">

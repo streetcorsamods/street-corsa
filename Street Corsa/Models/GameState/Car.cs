@@ -125,5 +125,37 @@ namespace StreetCorsa.Models.GameState
         {
             DefinitionId = definitionId;
         }
+
+        /// <summary>
+        /// The car copied for a worker thread: its figures and a copy of its part tree (the parts' ids kept). Made on the
+        /// UI thread before the car goes to <c>Task.Run</c>, because the workbench may change the car's own parts while
+        /// the worker reads them. Only the history is shared, for reading: nothing else written to the copy reaches the car.
+        /// </summary>
+        public Car Snapshot() => new(DefinitionId)
+        {
+            InstanceId = InstanceId,
+            SkinId = SkinId,
+            OdometerKM = OdometerKM,
+            EngineHealth = EngineHealth,
+            TransmissionHealth = TransmissionHealth,
+            BodyCondition = BodyCondition,
+            TireCondition = TireCondition,
+            BodyDamageKmh = BodyDamageKmh?.ToArray() ?? new double[4],
+            FuelLitres = FuelLitres,
+            FuelTankLitres = FuelTankLitres,
+            BodyDirt = BodyDirt,
+            OilLevel = OilLevel,
+            Parts = Parts.Select(p => StreetCorsa.Parts.Cars.PartTrees.Clone(p, keepIds: true)).ToList(),
+            HasPartsAssigned = HasPartsAssigned,
+            HasRunningGearAssigned = HasRunningGearAssigned,
+            PowerHp = PowerHp,
+            PurchasePrice = PurchasePrice,
+            ImpoundedUntil = ImpoundedUntil,
+            ImpoundFee = ImpoundFee,
+            PurchaseDate = PurchaseDate,
+            Warehouse = Warehouse,
+            Bay = Bay,
+            History = History
+        };
     }
 }

@@ -1,5 +1,6 @@
 using AcTools.Kn5File;
 using AcTools.Numerics;
+using StreetCorsa.Helpers;
 
 namespace StationSceneBuilder;
 
@@ -65,16 +66,22 @@ internal static class Ground
             for (var i = 0; i < Heights.Length; i++) Heights[i] -= by;
         }
 
+        /// <summary>Whole or not at all (SafeFile): a builder stopped half way leaves the shipped ground as it was</summary>
         public void Write(string file)
         {
-            using var writer = new BinaryWriter(File.Create(file));
-            writer.Write("SCG1"u8);
-            writer.Write(Cell);
-            writer.Write(Size);
-            writer.Write(Size);
-            writer.Write(-Half);
-            writer.Write(-Half);
-            foreach (var height in Heights) writer.Write(height);
+            using var bytes = new MemoryStream();
+            using (var writer = new BinaryWriter(bytes, System.Text.Encoding.UTF8, leaveOpen: true))
+            {
+                writer.Write("SCG1"u8);
+                writer.Write(Cell);
+                writer.Write(Size);
+                writer.Write(Size);
+                writer.Write(-Half);
+                writer.Write(-Half);
+                foreach (var height in Heights) writer.Write(height);
+            }
+
+            SafeFile.WriteAllBytes(file, bytes.ToArray());
         }
     }
 

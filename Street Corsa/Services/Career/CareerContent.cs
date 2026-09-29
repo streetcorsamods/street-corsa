@@ -16,7 +16,11 @@ namespace StreetCorsa.Services.Career
     /// </summary>
     public sealed class CareerContent
     {
-        private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger("Career");
+        // The logger only when the content is read, not in a static field: a save loaded before the log is up (a tool,
+        // a test) makes a new career, which touches this type
+        private static IAppLogger Logger => LazyLogger.Value;
+
+        private static readonly Lazy<IAppLogger> LazyLogger = new(() => AppLoggerFactory.CreateLogger("Career"));
 
         private static readonly Lazy<CareerContent> InstalledContent = new(() => Load(ModSet.Installed));
 
@@ -30,6 +34,9 @@ namespace StreetCorsa.Services.Career
 
         /// <summary>In the order the mods list them: with no path picked, the first reached wins</summary>
         public IReadOnlyList<VictoryDefinition> Victories { get; private init; } = [];
+
+        /// <summary>The victory paths a new game has open from the start: those with nothing to unlock</summary>
+        public IEnumerable<string> OpenFromStart => Victories.Where(v => v.Unlock.Count == 0).Select(v => v.Id);
 
         public IReadOnlyList<string> Problems { get; private init; } = [];
 

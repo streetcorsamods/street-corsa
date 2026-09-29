@@ -43,17 +43,21 @@ namespace StreetCorsa.Services.Dealers
             var talk = new List<string>();
             var news = new List<NewsArticle>();
 
-            CountTrade(gameState, dealers, date);
-            RunSales(gameState, dealers, date, talk, news);
-
-            if (gameState.Rules.MarketRefreshEnabled && !dealers.Any(d => d.Status == DealerStatus.ClosingDown)
-                && DealerRules.ChangeToday(_random.NextDouble()))
+            try
             {
-                Change(gameState, dealers, date, talk, news);
-            }
+                CountTrade(gameState, dealers, date);
+                RunSales(gameState, dealers, date, talk, news);
 
-            if (news.Count > 0) NewsWriter.Add(gameState, date, news);
-            if (talk.Count > 0) OpponentLifeService.AddTalk(gameState, date, talk);
+                if (gameState.Rules.MarketRefreshEnabled && !dealers.Any(d => d.Status == DealerStatus.ClosingDown)
+                    && DealerRules.ChangeToday(_random.NextDouble()))
+                {
+                    Change(gameState, dealers, date, talk, news);
+                }
+            }
+            finally
+            {
+                DealerChurn.Tell(gameState, date, talk, news);
+            }
         }
 
         // ----- trade -----
@@ -135,15 +139,7 @@ namespace StreetCorsa.Services.Dealers
             var last = DealerChurn.StartSale(dealer, date);
             MarkDown(gameState, dealer, DealerRules.DiscountFor(DealerRules.SaleDays - 1));
 
-            var values = Values(dealer, DealerRules.SaleDiscount, last);
-            news.Add(new NewsArticle
-            {
-                Date = date,
-                Weight = 25,
-                Headline = GameText.Installed.Pick("news.dealer_closing.headline", _random, values),
-                Body = GameText.Installed.Pick("news.dealer_closing.body", _random, values)
-            });
-            talk.Add(GameText.Installed.Pick("street.dealer_closing", _random, values));
+            DealerChurn.Announce("dealer_closing", 25, Values(dealer, DealerRules.SaleDiscount, last), date, _random, talk, news);
 
             _logger.Information("{Dealer} is going out of business: closing-down sale until {Last:d} (trade {Trade:0.0})",
                 dealer.Name, last, dealer.Trade);
@@ -155,15 +151,7 @@ namespace StreetCorsa.Services.Dealers
             var left = gameState.UsedCarMarket?.RemoveAll(l => !l.IsSold && l.DealerLocation == dealer.Id) ?? 0;
             DealerChurn.Close(dealer, date);
 
-            var values = Values(dealer, 0, date);
-            news.Add(new NewsArticle
-            {
-                Date = date,
-                Weight = 10,
-                Headline = GameText.Installed.Pick("news.dealer_closed.headline", _random, values),
-                Body = GameText.Installed.Pick("news.dealer_closed.body", _random, values)
-            });
-            talk.Add(GameText.Installed.Pick("street.dealer_closed", _random, values));
+            DealerChurn.Announce("dealer_closed", 10, Values(dealer, 0, date), date, _random, talk, news);
 
             _logger.Information("{Dealer} has closed; {Count} unsold cars went with it", dealer.Name, left);
         }
@@ -194,16 +182,7 @@ namespace StreetCorsa.Services.Dealers
         {
             var reopened = DealerChurn.Open(dealer, date);
 
-            var values = Values(dealer, 0, date);
-            var story = reopened ? "dealer_reopened" : "dealer_opened";
-            news.Add(new NewsArticle
-            {
-                Date = date,
-                Weight = 20,
-                Headline = GameText.Installed.Pick($"news.{story}.headline", _random, values),
-                Body = GameText.Installed.Pick($"news.{story}.body", _random, values)
-            });
-            talk.Add(GameText.Installed.Pick($"street.{story}", _random, values));
+            DealerChurn.Announce(reopened ? "dealer_reopened" : "dealer_opened", 20, Values(dealer, 0, date), date, _random, talk, news);
 
             _logger.Information("{Dealer} has {Opened} in {Region}", dealer.Name, reopened ? "opened again" : "opened", dealer.Region);
         }

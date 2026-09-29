@@ -1,3 +1,4 @@
+using StreetCorsa.Logging;
 using StreetCorsa.ViewModels;
 
 namespace StreetCorsa.Dialogs
@@ -26,6 +27,7 @@ namespace StreetCorsa.Dialogs
                 if (_currentDialog != value)
                 {
                     _currentDialog = value;
+                    ModalState.IsOpen = value != null;
                     OnPropertyChanged();
                     OnPropertyChanged(nameof(IsDialogOpen));
                 }
@@ -82,7 +84,23 @@ namespace StreetCorsa.Dialogs
         private void Open(IDialog dialog)
         {
             CurrentDialog = dialog;
-            dialog.OnOpened();
+            RunHook(dialog, d => d.OnOpened(), nameof(IDialog.OnOpened));
+        }
+
+        /// <summary>
+        /// A dialog's own open or close hook, guarded: one that throws is logged, and the queue goes on. Letting it
+        /// through would leave the dialogs waiting behind it never shown.
+        /// </summary>
+        private static void RunHook(IDialog dialog, Action<IDialog> hook, string name)
+        {
+            try
+            {
+                hook(dialog);
+            }
+            catch (Exception ex)
+            {
+                AppLoggerFactory.CreateLogger(LogCategory.Dialog).Error(ex, "{Hook} of the {Dialog} dialog failed", name, dialog.GetType().Name);
+            }
         }
 
         private bool IsAlreadyAsked(IDialog dialog)
@@ -108,7 +126,7 @@ namespace StreetCorsa.Dialogs
 
             var closing = CurrentDialog;
             CurrentDialog = null;
-            closing.OnClosed();
+            RunHook(closing, d => d.OnClosed(), nameof(IDialog.OnClosed));
 
             if (_waiting.Count > 0)
             {

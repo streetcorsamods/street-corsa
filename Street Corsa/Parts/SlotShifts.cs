@@ -106,6 +106,10 @@ public sealed class SlotShifts
     /// Reads the file again after it failed to read: the shifts made since were added onto nothing, so the file's
     /// own offsets are added onto them. False while it still does not read.
     /// </summary>
+    /// <remarks>
+    /// Only the record of the shifts: the loaded parts' slots are not moved by what the file held (the catalog applied
+    /// nothing from it when it did not read). They are at the next catalog load, which applies the whole file.
+    /// </remarks>
     private bool Recover()
     {
         var folder = System.IO.Path.GetDirectoryName(Path);

@@ -65,8 +65,12 @@ internal static partial class FmodStudio
     private static readonly object LoadLock = new();
     private static bool _resolverSet;
     private static string? _folder;
-    private static IntPtr _studioHandle;
-    private static IntPtr _coreHandle;
+
+    // The optional exports (see "Calls 1.08 may not have"), resolved once as the DLLs load; zero when missing
+    private static IntPtr _flushCommands;
+    private static IntPtr _bankGetLoadingState;
+    private static IntPtr _mixerSuspend;
+    private static IntPtr _mixerResume;
 
     /// <summary>
     /// Points the imports at the AC install. The core DLL goes in first by its full path: the studio DLL links
@@ -107,8 +111,11 @@ internal static partial class FmodStudio
                 _resolverSet = true;
             }
 
-            _studioHandle = handle;
-            _coreHandle = coreHandle;
+            // The calls 1.08 may not have, looked up once: zero where the DLL has no such export
+            _flushCommands = ExportOrZero(handle, "FMOD_Studio_System_FlushCommands");
+            _bankGetLoadingState = ExportOrZero(handle, "FMOD_Studio_Bank_GetLoadingState");
+            _mixerSuspend = ExportOrZero(coreHandle, "FMOD_System_MixerSuspend");
+            _mixerResume = ExportOrZero(coreHandle, "FMOD_System_MixerResume");
             _folder = folder;
         }
     }
@@ -219,40 +226,31 @@ internal static partial class FmodStudio
     // Looked up by name rather than imported: an import that is not there only fails when it is called, and each
     // of these has a way round it
 
-    private static bool TryGetExport(IntPtr library, string name, out IntPtr function)
-    {
-        function = IntPtr.Zero;
-        return library != IntPtr.Zero && NativeLibrary.TryGetExport(library, name, out function);
-    }
+    private static IntPtr ExportOrZero(IntPtr library, string name) =>
+        NativeLibrary.TryGetExport(library, name, out var function) ? function : IntPtr.Zero;
 
     /// <summary>Runs every command queued so far, and waits for it; null when the DLL does not have it</summary>
     public static unsafe int? TryFlushCommands(IntPtr system) =>
-        TryGetExport(_studioHandle, "FMOD_Studio_System_FlushCommands", out var function)
-            ? ((delegate* unmanaged<IntPtr, int>)function)(system)
-            : null;
+        _flushCommands != IntPtr.Zero ? ((delegate* unmanaged<IntPtr, int>)_flushCommands)(system) : null;
 
     /// <summary>Where a bank is in loading or unloading; null when the DLL cannot say</summary>
     public static unsafe int? TryGetBankLoadingState(IntPtr bank, out int state)
     {
         state = LoadingStateError;
-        if (!TryGetExport(_studioHandle, "FMOD_Studio_Bank_GetLoadingState", out var function)) return null;
+        if (_bankGetLoadingState == IntPtr.Zero) return null;
 
         int value = LoadingStateError;
-        var result = ((delegate* unmanaged<IntPtr, int*, int>)function)(bank, &value);
+        var result = ((delegate* unmanaged<IntPtr, int*, int>)_bankGetLoadingState)(bank, &value);
         state = value;
         return result;
     }
 
     /// <summary>Stops the mixer and its output thread for as long as nothing is to be heard; null when the DLL does not have it</summary>
     public static unsafe int? TryMixerSuspend(IntPtr coreSystem) =>
-        TryGetExport(_coreHandle, "FMOD_System_MixerSuspend", out var function)
-            ? ((delegate* unmanaged<IntPtr, int>)function)(coreSystem)
-            : null;
+        _mixerSuspend != IntPtr.Zero ? ((delegate* unmanaged<IntPtr, int>)_mixerSuspend)(coreSystem) : null;
 
     public static unsafe int? TryMixerResume(IntPtr coreSystem) =>
-        TryGetExport(_coreHandle, "FMOD_System_MixerResume", out var function)
-            ? ((delegate* unmanaged<IntPtr, int>)function)(coreSystem)
-            : null;
+        _mixerResume != IntPtr.Zero ? ((delegate* unmanaged<IntPtr, int>)_mixerResume)(coreSystem) : null;
 
     #endregion
 

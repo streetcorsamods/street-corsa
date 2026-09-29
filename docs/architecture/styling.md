@@ -29,9 +29,9 @@ with it, as a `<Name>Brush`. Name conventions:
 | Accent | `AccentPrimary` #D32F2F, `AccentHover` #F44336, `AccentPressed` #B71C1C, `AccentSuccess` #90EE90 |
 | Borders | `BorderDark` #101010, `BorderLight` #404040 |
 | Greys | `Gray26`, `Gray30`, `Gray33`, `Gray50`, `Gray70`, `Gray80`, `GrayA0`, `White` #FFFFFF |
-| Translucent panels | `BgPanelAA`, `BgPanelCC`, `BgPanelF2`, `BgDarkDF`, `Glass12C0`, `Glass12D0`, `Glass14D0`, `Glass14E0`, `Glass15E8` (`GlassNN` = `#NNNNNN` under the alpha) |
-| Veils | `Overlay` #99000000 (behind dialogs), `BlackTransparent` #00000000, `BlackHitTest` #01000000, `Black77`, `BlackB0`, `BlackCC`, `BlackE6`, `White20`, `White30`, `WhiteB0` |
-| Status | `Gold` #FFD700 (+`GoldCC`, `Gold33`), `Amber` #FFC107, `Warning` #FFA500, `WarningStrong` #FF8C00, `WarningBg` #3D2F1F, `Danger` #FF6B6B, `DangerStrong` #CC0000, `DangerBg` #3D1F1F, `SuccessBg` #2A3A2A, `GoldBg` #3A3A2A, `Salmon` #FF8C6B, `SuccessStrong` #00AA00, `SuccessHover` #7CCD7C, `Fit` #59FF73 (+`Fit30`), `PaleYellow` #FFE8A0, `Info` #4A90D9, `InfoBg` #1A2A3A, `RoyalBlue` #4169E1, `SpinnerOrange` #FF6B00, `RedZone` #60C02020 |
+| Translucent panels | `BgPanelAA`, `BgPanelCC`, `BgPanelF2`, `BgDarkDF`, `Glass12C0`, `Glass12D0`, `Glass14D0`, `Glass14E0`, `Glass15E8`, `Glass10C0`, `MenuGlassD8` #D8101114 (the main menu's buttons) (`GlassNN` = `#NNNNNN` under the alpha) |
+| Veils | `Overlay` #99000000 (behind dialogs), `BlackTransparent` #00000000, `BlackHitTest` #01000000, `Black77`, `BlackB0`, `BlackCC`, `BlackE6`, `White20`, `White30`, `White38`, `White90`, `WhiteB0`, `Scrim` #80000000 (behind the load and settings panels), `Ink` #000000 (print on the paper dial-in and timeslip cards) |
+| Status | `Gold` #FFD700 (+`GoldCC`, `Gold33`), `PaleGold60` #60FFE68C, `Amber` #FFC107, `Warning` #FFA500, `WarningStrong` #FF8C00, `WarningBg` #3D2F1F, `Danger` #FF6B6B, `DangerStrong` #CC0000, `DangerBg` #3D1F1F, `SuccessBg` #2A3A2A, `GoldBg` #3A3A2A, `Salmon` #FF8C6B, `SuccessStrong` #00AA00, `SuccessHover` #7CCD7C, `Fit` #59FF73 (+`Fit30`), `PaleYellow` #FFE8A0, `Info` #4A90D9, `InfoBg` #1A2A3A, `RoyalBlue` #4169E1, `SpinnerOrange` #FF6B00, `RedZone` #60C02020 |
 | Dealer map and lot | `Cream` #F5E6C8 (+`Cream50`, `Cream60`, `Cream70`), `MapSepia` #6B4A1E, `MapDotFar` #6E6A60, `MapDotFarBorder` #A09A8C, `MapFarText` #E8A15A |
 | License input | `LicenseBrown` #2C1810 |
 

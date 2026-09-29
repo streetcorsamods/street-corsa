@@ -1,4 +1,5 @@
 using StreetCorsa.Models.Catalog;
+using StreetCorsa.Models.GameState;
 using StreetCorsa.Models.Race;
 using StreetCorsa.Parts.Cars;
 
@@ -112,8 +113,7 @@ namespace StreetCorsa.Screens.Diner
             return stats;
         }
 
-        private static double PowerOf(double? dyno, CarDefinition car) =>
-            dyno is { } hp && hp > 0 && double.IsFinite(hp) ? hp : AcSpecs.ParsePower(car.Specs?.Bhp) ?? 0;
+        private static double PowerOf(double? dyno, CarDefinition car) => CarPower.Of(dyno, car) ?? 0;
 
         /// <summary>-1 opponent ahead, 0 level, 1 player ahead; flipped when lower is better</summary>
         public static int AdvantageOf(double playerValue, double opponentValue, bool higherIsBetter)

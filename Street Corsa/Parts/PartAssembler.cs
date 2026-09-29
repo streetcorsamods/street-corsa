@@ -26,6 +26,15 @@ public static class PartAssembler
 {
     private const int MaxDepth = 8;
 
+    // Part models read this session, by path, while the file is as it was: the garage builds the same engine again
+    // every time a part comes or goes. Emptied when it would hold more than this of model files, so a long session
+    // through many engines keeps the ones it is on.
+    private const long MaxCachedBytes = 256L * 1024 * 1024;
+
+    private static readonly object CacheLock = new();
+    private static readonly Dictionary<string, (IKn5 Model, DateTime Written, long Length)> Models = new(StringComparer.OrdinalIgnoreCase);
+    private static long _cachedBytes;
+
     /// <summary>Places the parts of a real assembly: every part goes where the slot it is mounted on puts it</summary>
     public static List<PlacedPart> Assemble(InstalledPart root, Matrix4x4 rootWorld)
     {
@@ -73,7 +82,7 @@ public static class PartAssembler
 
         var min = new Vector3(float.MaxValue);
         var max = new Vector3(float.MinValue);
-        var models = new Dictionary<string, IKn5>(StringComparer.OrdinalIgnoreCase);
+        var models = new Dictionary<string, IKn5?>(StringComparer.OrdinalIgnoreCase);
         var nodes = new List<PlacedPart>();
         var index = 0;
 
@@ -86,13 +95,25 @@ public static class PartAssembler
                 continue;
             }
 
-            if (!models.TryGetValue(modelPath, out var model)) models[modelPath] = model = Kn5.FromFile(modelPath);
+            // A model that does not read is a part without one: a box for it, as for a part that has none
+            if (!models.TryGetValue(modelPath, out var model)) models[modelPath] = model = ReadModel(modelPath);
+            if (model == null)
+            {
+                if (placed.Source != null) AddPlaceholder(placed);
+                continue;
+            }
 
-            // Texture names are unique across packs, so equal names mean equal content
+            // Two mods may each have a texture of the same name ("body.dds") and other content: the later one goes
+            // in under a name of its own, and this part's materials are pointed at it. Equal content is one texture.
+            var renamed = new Dictionary<string, string>();
             foreach (var (textureName, texture) in model.Textures)
             {
-                kn5.Textures[textureName] = texture;
-                kn5.TexturesData[textureName] = model.TexturesData[textureName];
+                if (!model.TexturesData.TryGetValue(textureName, out var data)) continue;
+
+                var merged = TextureNameFor(kn5, textureName, data);
+                if (merged != textureName) renamed[textureName] = merged;
+                kn5.Textures[merged] = merged == textureName ? texture : new Kn5Texture { Name = merged, Active = texture.Active, Length = texture.Length };
+                kn5.TexturesData[merged] = data;
             }
 
             // Materials are per placed part: the same model may appear more than once
@@ -102,6 +123,11 @@ public static class PartAssembler
             {
                 var clone = (Kn5Material)material.Clone();
                 clone.Name = $"{index}:{material.Name}";
+                foreach (var mapping in clone.TextureMappings ?? [])
+                {
+                    if (mapping.Texture != null && renamed.TryGetValue(mapping.Texture, out var merged)) mapping.Texture = merged;
+                }
+
                 kn5.Materials[clone.Name] = clone;
                 materialIds[sourceMaterialId++] = (uint)(kn5.Materials.Count - 1);
             }
@@ -146,6 +172,79 @@ public static class PartAssembler
             var centre = placed.World.Translation;
             min = Vector3.Min(min, centre - new Vector3(PlaceholderMesh.HalfSize));
             max = Vector3.Max(max, centre + new Vector3(PlaceholderMesh.HalfSize));
+        }
+    }
+
+    /// <summary>
+    /// The name a texture goes into a merged model under: its own, unless a texture of other content has it already
+    /// (another mod's), then its own with a number, the extension kept
+    /// </summary>
+    private static string TextureNameFor(IKn5 kn5, string textureName, byte[] data)
+    {
+        for (var n = 0; ; n++)
+        {
+            var name = n == 0 ? textureName : $"{Path.GetFileNameWithoutExtension(textureName)}~{n}{Path.GetExtension(textureName)}";
+            if (!kn5.TexturesData.TryGetValue(name, out var existing) || ReferenceEquals(existing, data) || existing.AsSpan().SequenceEqual(data))
+                return name;
+        }
+    }
+
+    /// <summary>
+    /// A part's model, from the session's cache while its file is unchanged; null when it does not read (a corrupt
+    /// or foreign file in a mod), as <see cref="PartModelBounds"/> takes it
+    /// </summary>
+    private static IKn5? ReadModel(string path)
+    {
+        DateTime written;
+        long length;
+        try
+        {
+            var file = new FileInfo(path);
+            (written, length) = (file.LastWriteTimeUtc, file.Length);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+
+        lock (CacheLock)
+        {
+            if (Models.TryGetValue(path, out var cached) && cached.Written == written && cached.Length == length) return cached.Model;
+        }
+
+        IKn5 model;
+        try
+        {
+            model = Kn5.FromFile(path);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            return null;
+        }
+
+        lock (CacheLock)
+        {
+            if (Models.Remove(path, out var old)) _cachedBytes -= old.Length;
+            if (_cachedBytes + length > MaxCachedBytes)
+            {
+                Models.Clear();
+                _cachedBytes = 0;
+            }
+
+            Models[path] = (model, written, length);
+            _cachedBytes += length;
+        }
+
+        return model;
+    }
+
+    /// <summary>Forgets the part models read so far: the next assembly reads them from disk</summary>
+    public static void ClearModelCache()
+    {
+        lock (CacheLock)
+        {
+            Models.Clear();
+            _cachedBytes = 0;
         }
     }
 

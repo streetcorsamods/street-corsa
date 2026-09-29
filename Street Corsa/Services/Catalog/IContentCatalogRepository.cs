@@ -13,14 +13,5 @@ namespace StreetCorsa.Services.Catalog
         CarDefinition? GetCar(string id);
         List<CarDefinition> GetAllCars();
         List<CarDefinition> GetCarsByStatus(ContentStatus status);
-        bool CarExists(string id);
-        void UpdateCarStatus(string id, ContentStatus status);
-
-        // Bulk operations
-        void MarkAllCarsAsLegacy();
-        void DeleteBrokenCars();
-
-        // Utility
-        int GetCarCount();
     }
 }

@@ -6,11 +6,6 @@
              xmlns:controls="clr-namespace:StreetCorsa.Controls"
              mc:Ignorable="d"
              d:DesignHeight="720" d:DesignWidth="1280">
-    <UserControl.Resources>
-        <SolidColorBrush x:Key="GlassBrush" Color="#C0101010"/>
-        <SolidColorBrush x:Key="GlassBorderBrush" Color="#60FFE68C"/>
-    </UserControl.Resources>
-
     <Grid Background="Black">
         <!-- The street, from the driver's seat -->
         <controls:StreetViewport3D x:Name="Street"
@@ -29,8 +24,8 @@
                    Visibility="{Binding HasFailed, ElementName=Street, Converter={StaticResource BooleanToVisibilityConverter}}"/>
 
         <!-- The clock -->
-        <Border Background="{StaticResource GlassBrush}"
-                BorderBrush="{StaticResource GlassBorderBrush}"
+        <Border Background="{StaticResource Glass10C0Brush}"
+                BorderBrush="{StaticResource PaleGold60Brush}"
                 BorderThickness="1"
                 CornerRadius="5"
                 Padding="18,12"
@@ -75,8 +70,8 @@
         </StackPanel>
 
         <!-- What is going on, and the player's own throttle -->
-        <Border Background="{StaticResource GlassBrush}"
-                BorderBrush="{StaticResource GlassBorderBrush}"
+        <Border Background="{StaticResource Glass10C0Brush}"
+                BorderBrush="{StaticResource PaleGold60Brush}"
                 BorderThickness="1"
                 CornerRadius="5"
                 Padding="14,10"
@@ -106,7 +101,7 @@
         <!-- Drag to look round -->
         <TextBlock Text="Drag to look around · double-click to look back out"
                    FontSize="{StaticResource FontSizeTiny}"
-                   Foreground="#90FFFFFF"
+                   Foreground="{StaticResource White90Brush}"
                    HorizontalAlignment="Center"
                    VerticalAlignment="Bottom"
                    Margin="0,0,0,8"
@@ -114,7 +109,7 @@
 
         <!-- The rival at the window, and their offer -->
         <Border Width="400"
-                Background="{StaticResource GlassBrush}"
+                Background="{StaticResource Glass10C0Brush}"
                 BorderBrush="{StaticResource GoldBrush}"
                 BorderThickness="2"
                 CornerRadius="6"

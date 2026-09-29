@@ -2204,7 +2204,10 @@ local function updateChase(dt)
   end
 end
 
-local _glowTo = vec3()
+-- The lamps' colours, made once (draw3D runs every frame, two lamps a cop), and where a glow faces. One table: the main
+-- chunk is at Lua's 200 locals, and a local more stops the mode from loading
+local COP_LAMP = { glowTo = vec3(), RED_LIT = rgbm(40, 0, 0, 1), RED_DIM = rgbm(0.4, 0, 0, 1),
+  BLUE_LIT = rgbm(0, 6, 60, 1), BLUE_DIM = rgbm(0, 0.1, 0.6, 1) }
 
 -- The lamps as the eye sees them: a bright dot on each side of the roof, the lit one glowing
 function script.draw3D()
@@ -2215,10 +2218,11 @@ function script.draw3D()
     if car then
       for n = 1, 2 do
         local at = lampPosition(car, n, _lamp)
-        _glowTo:set(camera):sub(at)
+        COP_LAMP.glowTo:set(camera):sub(at)
         local lit = lampLit(cop, n)
-        local colour = n == 1 and rgbm(lit and 40 or 0.4, 0, 0, 1) or rgbm(0, lit and 6 or 0.1, lit and 60 or 0.6, 1)
-        render.circle(at, _glowTo, lit and 0.16 or 0.08, colour)
+        local colour
+        if n == 1 then colour = lit and COP_LAMP.RED_LIT or COP_LAMP.RED_DIM else colour = lit and COP_LAMP.BLUE_LIT or COP_LAMP.BLUE_DIM end
+        render.circle(at, COP_LAMP.glowTo, lit and 0.16 or 0.08, colour)
       end
     end
   end
@@ -2375,10 +2379,15 @@ local COLOR_DIM = rgbm(0, 0, 0, 0.5)
 local COLOR_BOX = rgbm(0, 0, 0, 0.85)
 local COLOR_BORDER = rgbm(1, 1, 1, 0.3)
 local COLOR_TEXT = rgbm(1, 1, 1, 1)
-local BOX_SIZE = vec2(600, 200)
 
 local LAMP = { OFF = rgbm(0.15, 0.15, 0.15, 1), AMBER = rgbm(1, 0.65, 0, 1), GREEN = rgbm(0.1, 1, 0.2, 1),
   RED = rgbm(1, 0.1, 0.1, 1), RADIUS = 16 }
+
+-- What the overlays draw with: the result box's size, alignments, and scratch points for the tree and the slip, which
+-- draw every frame (set just before each call that takes them, which reads them there and then; never kept). One
+-- table, as COP_LAMP
+local DRAW = { BOX_SIZE = vec2(600, 200), ALIGN_TOP_LEFT = vec2(0, 0), ALIGN_TOP_CENTRE = vec2(0.5, 0), from = vec2(),
+  to = vec2(), box = vec2(), topLeft = vec2() }
 
 -- The player's own tree, when the mode gives the green (a bracket race, a test-and-tune pass): three ambers coming on
 -- half a second apart, then the green, or the red of a car that left early. Shown from a second before the first
@@ -2391,12 +2400,12 @@ local function drawTree(size)
 
   local x = size.x - 70
   local y = size.y * 0.3
-  ui.drawRectFilled(vec2(x - 30, y - 30), vec2(x + 30, y + (STRIP.TREE_AMBERS + 1) * 44 + 4), COLOR_BOX, 8)
+  ui.drawRectFilled(DRAW.from:set(x - 30, y - 30), DRAW.to:set(x + 30, y + (STRIP.TREE_AMBERS + 1) * 44 + 4), COLOR_BOX, 8)
   for n = 1, STRIP.TREE_AMBERS do
     local lit = raceClock >= firstAmber + (n - 1) * STRIP.TREE_STEP and raceClock < data.greenAt
-    ui.drawCircleFilled(vec2(x, y + (n - 1) * 44), LAMP.RADIUS, lit and LAMP.AMBER or LAMP.OFF, 24)
+    ui.drawCircleFilled(DRAW.from:set(x, y + (n - 1) * 44), LAMP.RADIUS, lit and LAMP.AMBER or LAMP.OFF, 24)
   end
-  local bottom = vec2(x, y + STRIP.TREE_AMBERS * 44)
+  local bottom = DRAW.from:set(x, y + STRIP.TREE_AMBERS * 44)
   if data.redLight then
     ui.drawCircleFilled(bottom, LAMP.RADIUS, LAMP.RED, 24)
   else
@@ -2404,8 +2413,8 @@ local function drawTree(size)
   end
   if bracket then
     ui.pushFont(ui.Font.Main)
-    ui.drawTextClipped(string.format('Dial-in\n%.2f', bracket.dialIn[0]), vec2(x - 60, y + (STRIP.TREE_AMBERS + 1) * 44 + 8),
-      vec2(x + 30, y + (STRIP.TREE_AMBERS + 1) * 44 + 60), COLOR_TEXT, vec2(0.5, 0))
+    ui.drawTextClipped(string.format('Dial-in\n%.2f', bracket.dialIn[0]), DRAW.from:set(x - 60, y + (STRIP.TREE_AMBERS + 1) * 44 + 8),
+      DRAW.to:set(x + 30, y + (STRIP.TREE_AMBERS + 1) * 44 + 60), COLOR_TEXT, DRAW.ALIGN_TOP_CENTRE)
     ui.popFont()
   end
 end
@@ -2432,12 +2441,14 @@ local function drawPassSlip(size)
   lines[#lines + 1] = ''
   lines[#lines + 1] = string.format('Back to the line in %d s. Go to the pits to leave the strip.', left)
 
-  local box = vec2(460, 40 + #lines * 22)
-  local topLeft = vec2((size.x - box.x) / 2, size.y * 0.15)
-  ui.drawRectFilled(topLeft, topLeft + box, COLOR_BOX, 10)
-  ui.drawRect(topLeft, topLeft + box, COLOR_BORDER, 10, nil, 2)
+  local box = DRAW.box:set(460, 40 + #lines * 22)
+  local topLeft = DRAW.topLeft:set((size.x - box.x) / 2, size.y * 0.15)
+  local bottomRight = DRAW.to:set(topLeft.x + box.x, topLeft.y + box.y)
+  ui.drawRectFilled(topLeft, bottomRight, COLOR_BOX, 10)
+  ui.drawRect(topLeft, bottomRight, COLOR_BORDER, 10, nil, 2)
   ui.pushFont(ui.Font.Monospace)
-  ui.drawTextClipped(table.concat(lines, '\n'), topLeft + vec2(20, 20), topLeft + box - vec2(20, 20), COLOR_TEXT, vec2(0, 0))
+  ui.drawTextClipped(table.concat(lines, '\n'), DRAW.from:set(topLeft.x + 20, topLeft.y + 20),
+    DRAW.to:set(topLeft.x + box.x - 20, topLeft.y + box.y - 20), COLOR_TEXT, DRAW.ALIGN_TOP_LEFT)
   ui.popFont()
 end
 
@@ -2451,8 +2462,8 @@ function script.drawUI()
 
   ui.drawRectFilled(vec2(0, 0), size, COLOR_DIM)
 
-  local topLeft = vec2((size.x - BOX_SIZE.x) / 2, (size.y - BOX_SIZE.y) / 2 - 50)
-  local bottomRight = topLeft + BOX_SIZE
+  local topLeft = vec2((size.x - DRAW.BOX_SIZE.x) / 2, (size.y - DRAW.BOX_SIZE.y) / 2 - 50)
+  local bottomRight = topLeft + DRAW.BOX_SIZE
   ui.drawRectFilled(topLeft, bottomRight, COLOR_BOX, 10)
   ui.drawRect(topLeft, bottomRight, COLOR_BORDER, 10, nil, 2)
 

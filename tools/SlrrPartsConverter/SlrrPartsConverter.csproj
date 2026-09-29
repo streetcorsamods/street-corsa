@@ -11,7 +11,7 @@
 
   <ItemGroup>
     <Reference Include="AcTools">
-      <HintPath>..\..\..\actools\Output\x64\Debug\AcTools.dll</HintPath>
+      <HintPath>..\..\..\actools\AcTools\bin\x64\Release\AcTools.dll</HintPath>
     </Reference>
   </ItemGroup>
 
@@ -29,11 +29,12 @@
     <Compile Include="..\..\Street Corsa\Parts\Scripting\*.cs" Link="Parts\Scripting\%(Filename)%(Extension)" />
   </ItemGroup>
 
-  <!-- The game's plain-BCL helpers the linked part code uses (and the tool itself): atomic writes, paths kept inside a root -->
+  <!-- The game's plain-BCL helpers the linked part code uses (and the tool itself): atomic writes, paths kept inside a root, figures held to 0..1 -->
   <ItemGroup>
     <Compile Include="..\..\Street Corsa\Helpers\SafeFile.cs" Link="Helpers\SafeFile.cs" />
     <Compile Include="..\..\Street Corsa\Mods\ModIds.cs" Link="Mods\ModIds.cs" />
     <Compile Include="..\..\Street Corsa\Helpers\PathNames.cs" Link="Helpers\PathNames.cs" />
+    <Compile Include="..\..\Street Corsa\Helpers\Unit.cs" Link="Helpers\Unit.cs" />
   </ItemGroup>
 
 </Project>

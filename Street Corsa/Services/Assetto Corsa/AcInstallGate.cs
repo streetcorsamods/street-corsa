@@ -10,6 +10,24 @@ namespace StreetCorsa.Services
     public static class AcInstallGate
     {
         private static readonly object Sync = new();
+        private static volatile bool _sealed;
+
+        /// <summary>
+        /// True once the app is ending: nothing more goes into the install, only back out of it. The crash path shows
+        /// its message box after it has put the install back, and that box pumps messages: a launch still under way
+        /// would otherwise go on inside it, change the cars' data and start the game after the restore.
+        /// </summary>
+        public static bool IsSealed => _sealed;
+
+        /// <summary>
+        /// Refuses every change from now on (<see cref="IsSealed"/>). A change already going in holds the gate and
+        /// finishes first, so the restore that follows (under the gate) puts it back; the launcher checks the seal
+        /// under the gate before each change.
+        /// </summary>
+        public static void Seal()
+        {
+            _sealed = true;
+        }
 
         /// <summary>Holds the gate until the returned scope is disposed; waits as long as it takes</summary>
         public static Scope Hold()

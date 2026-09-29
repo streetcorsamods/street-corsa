@@ -45,7 +45,7 @@ namespace StreetCorsa.Screens.Newspaper
         public RelayCommand UsedPartsCommand { get; }
         public RelayCommand<EventInvitationViewModel> EnterEventCommand { get; }
 
-        public string BankrollDisplay => $"${_gameState.Player.Money:N0}";
+        public string BankrollDisplay => Bankroll(_gameState.Player.Money);
         public bool SkipEnterAnimation { get; }
 
         // Race Invitations
@@ -170,20 +170,35 @@ namespace StreetCorsa.Screens.Newspaper
             _dialogService.ShowDialog(new ConfirmationDialogViewModel(_dialogService,
                 $"Sell the {carName} to {offer.BuyerName} for ${offer.Amount:N0}? The car is gone once it's sold.",
                 "Sell the Car",
-                async yes =>
+                yes =>
                 {
-                    if (!yes) return;
-                    try
-                    {
-                        var result = await _saleService.AcceptOfferAsync(_gameState, ad);
-                        ShowSaleResult(result, result.Succeeded ? "Car Sold" : "No Sale");
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.Error(ex, "Could not sell the car");
-                        ShowSaleResult(new SaleResult(SaleOutcome.Refused, $"The car could not be sold:\n\n{ex.Message}"), "No Sale");
-                    }
+                    if (yes) SellToBuyer(ad);
                 }));
+        }
+
+        /// <summary>The offer taken up: the car goes to the buyer, and the player is told how it went</summary>
+        private async void SellToBuyer(CarSaleAd ad)
+        {
+            // Nothing may escape an async void, the telling included
+            try
+            {
+                SaleResult result;
+                try
+                {
+                    result = await _saleService.AcceptOfferAsync(_gameState, ad);
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "Could not sell the car");
+                    result = new SaleResult(SaleOutcome.Refused, $"The car could not be sold:\n\n{ex.Message}");
+                }
+
+                ShowSaleResult(result, result.Succeeded ? "Car Sold" : "No Sale");
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not show how the sale went");
+            }
         }
 
         private void OnDeclineOffer(CarSaleAd ad)

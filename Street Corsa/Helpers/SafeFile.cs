@@ -22,6 +22,12 @@ public static class SafeFile
 
     private const string TempExtension = ".tmp";
 
+    /// <summary>
+    /// Told when a write had to clear a target's read-only mark (some AC guides tell players to make race.ini or
+    /// video.ini read-only). The game points it at its log at start-up; the tools leave it unset.
+    /// </summary>
+    public static Action<string>? ReadOnlyCleared { get; set; }
+
     public static void WriteAllText(string path, string contents, Encoding? encoding = null) =>
         WriteAllBytes(path, (encoding ?? Utf8NoBom).GetBytes(contents));
 
@@ -54,18 +60,59 @@ public static class SafeFile
     /// </summary>
     private static void MoveIntoPlace(string temp, string path)
     {
+        // A read-only target refuses the rename every time, so it is not waited out like a reader: the mark goes first,
+        // and comes back when the write fails after all (a file that was not written keeps its protection)
+        var readOnly = ClearReadOnly(path);
+
         for (var attempt = 1; ; attempt++)
         {
             try
             {
                 File.Move(temp, path, overwrite: true);
-                return;
+                break;
             }
             catch (Exception ex) when ((ex is IOException or UnauthorizedAccessException) && attempt < MoveAttempts)
             {
                 Thread.Sleep(Math.Min(50 * attempt, 100));
             }
+            catch when (readOnly is { } attributes)
+            {
+                try { File.SetAttributes(path, attributes); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+                throw;
+            }
         }
+
+        if (readOnly == null) return;
+        try
+        {
+            ReadOnlyCleared?.Invoke(path);
+        }
+        catch (Exception)
+        {
+            // Whoever listens must not stop the write
+        }
+    }
+
+    /// <summary>
+    /// Takes the read-only mark off an existing file and returns its attributes as they were; null for a file that is
+    /// not there or not marked, which is left alone
+    /// </summary>
+    private static FileAttributes? ClearReadOnly(string path)
+    {
+        FileAttributes attributes;
+        try
+        {
+            attributes = File.GetAttributes(path);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return null; // not there yet, or not ours to look at: the rename tells
+        }
+
+        if ((attributes & FileAttributes.ReadOnly) == 0 || (attributes & FileAttributes.Directory) != 0) return null;
+
+        File.SetAttributes(path, attributes & ~FileAttributes.ReadOnly);
+        return attributes;
     }
 
     /// <summary>

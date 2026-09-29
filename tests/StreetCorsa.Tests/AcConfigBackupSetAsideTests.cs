@@ -81,14 +81,21 @@ public sealed class AcConfigBackupSetAsideTests : IDisposable
     {
         var path = _temp.File("race.ini", "old");
         var reader = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-        var release = Task.Run(async () =>
+        // The reader lets go once the write has its temp file, which it makes before it tries the rename: from then on
+        // the write is in its tries, whatever the load. A thread of its own, not the pool's, which a busy test run
+        // can keep waiting past them
+        var released = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var watcher = new Thread(() =>
         {
-            await Task.Delay(60, TestContext.Current.CancellationToken);
+            var until = DateTime.UtcNow.AddSeconds(10);
+            while (Directory.GetFiles(_temp.Path, ".race.ini.*.tmp").Length == 0 && DateTime.UtcNow < until) Thread.Sleep(1);
             reader.Dispose();
-        }, TestContext.Current.CancellationToken);
+            released.SetResult();
+        }) { IsBackground = true };
+        watcher.Start();
 
         SafeFile.WriteAllText(path, "new");
-        await release;
+        await released.Task.WaitAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal("new", File.ReadAllText(path));
         Assert.Empty(Directory.GetFiles(_temp.Path, "*.tmp"));

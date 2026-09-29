@@ -1,7 +1,5 @@
 using System.IO;
 using System.Windows;
-using System.Windows.Input;
-using AcTools.Render.Kn5Specific.Objects;
 using StreetCorsa.Audio;
 using StreetCorsa.Controls.Street;
 using StreetCorsa.Services.Station;
@@ -15,16 +13,10 @@ namespace StreetCorsa.Controls;
 /// pump, and pulls out onto the road again, as the screen's <see cref="StationStage"/> says. The car sits on the
 /// scene's ground (<see cref="StationGround"/>), its wheels turn, its body dives on the brakes, its engine follows the
 /// revs, and the view goes with it: ahead while it drives, at the pump while it stands. Dragging with the mouse looks
-/// round; a double click looks back where the driver would.
+/// round; a double click turns the head back where the driver would look.
 /// </summary>
-public class StationViewport3D : D3DViewportBase
+public class StationViewport3D : OnboardViewport3D
 {
-    private const float MaxLookYaw = 160f;
-    private const float MaxLookPitch = 20f;
-    private const float LookDegreesPerPixel = 0.18f;
-    // AC's own onboard lens, as the player set it
-    private float _fieldOfView = 56f;
-
     // The driver's head turns towards the pump over about a second, and looks a little into a bend while driving
     private const float LookSeconds = 0.9f;
     private const float LookIntoBend = 0.35f;
@@ -35,10 +27,6 @@ public class StationViewport3D : D3DViewportBase
 
     // A car driving off is gone for the screen this long before its drive ends: the curtain comes down on it moving
     private const float GoneBeforeTheEnd = 1.2f;
-
-    private const int SettleFrames = 4;
-    private static readonly TimeSpan SceneFadeOut = TimeSpan.FromMilliseconds(600);
-    private static readonly TimeSpan SceneFadeIn = TimeSpan.FromMilliseconds(900);
 
     // What stands in the scene
     private string? _kn5;
@@ -61,8 +49,7 @@ public class StationViewport3D : D3DViewportBase
     private readonly ChassisPitch _pitch = new();
     private CarBodyRock? _rock;
 
-    // The dashboard's needles and the steering wheel; what they show
-    private CarInstruments? _instruments;
+    // What the dashboard's needles and the steering wheel show
     private float _speed;
     private float _steer;
 
@@ -73,24 +60,13 @@ public class StationViewport3D : D3DViewportBase
     // Warm, as a car that drove over is
     private const float WaterC = 85f;
 
-    // The driver's eyes in their car's own space, and where they look: degrees from straight ahead, to the left positive
-    private Sx.Vector3 _eye = SceneLights.FallbackEye;
-    private float _lookYaw;
-    private float _lookPitch;
-
-    // How the car sits and where its driver looks, from its data (AcCarFrame)
-    private AcCarFrame _frame = new(SceneLights.FallbackEye, 0f);
+    // A drag holds where the driver looks; how far the head turns into a bend
     private bool _lookHeld;
-    private System.Windows.Point? _dragFrom;
     private float _bend;
 
-    private int _fadeInAfter = -1;
-
     public StationViewport3D()
-        : base("Station", new LabelLook(13, 0xD8, 0x90, new Thickness(8, 4, 8, 4), new Vector(16, 16)))
+        : base("Station")
     {
-        Cursor = System.Windows.Input.Cursors.Hand;
-
         // A viewport that cannot show the station says so at once: the screen does not wait on it
         Failed += (_, _) =>
         {
@@ -110,27 +86,6 @@ public class StationViewport3D : D3DViewportBase
     {
         get => (StationScene?)GetValue(StationProperty);
         set => SetValue(StationProperty, value);
-    }
-
-    public static readonly DependencyProperty LightProperty = DependencyProperty.Register(
-        nameof(Light), typeof(StreetLight), typeof(StationViewport3D),
-        new PropertyMetadata(StreetLight.Day, (d, _) => ((StationViewport3D)d).RequestLoad()));
-
-    /// <summary>Day, dusk or night: another sky, and another light</summary>
-    public StreetLight Light
-    {
-        get => (StreetLight)GetValue(LightProperty);
-        set => SetValue(LightProperty, value);
-    }
-
-    public static readonly DependencyProperty PlayerCarProperty = DependencyProperty.Register(
-        nameof(PlayerCar), typeof(StreetCar), typeof(StationViewport3D),
-        new PropertyMetadata(null, (d, _) => ((StationViewport3D)d).RequestLoad()));
-
-    public StreetCar? PlayerCar
-    {
-        get => (StreetCar?)GetValue(PlayerCarProperty);
-        set => SetValue(PlayerCarProperty, value);
     }
 
     public static readonly DependencyProperty StageProperty = DependencyProperty.Register(
@@ -166,33 +121,18 @@ public class StationViewport3D : D3DViewportBase
             return;
         }
 
-        if (Renderer != null && !IsPictureHidden)
-        {
-            await FadeOutAsync(SceneFadeOut);
-            if (!IsLoaded) return;
-        }
-
-        DisposeRenderer(releaseDevice: false);
-
         var light = Light;
-        var renderer = NewRenderer(null, kn5);
-        renderer.AutoAdjustTarget = false;
-        renderer.LoadCarLights = light == StreetLight.Night;
-        renderer.TryToGuessCarLights = light == StreetLight.Night;
+        var renderer = await StartSceneAsync(kn5, light);
+        if (renderer == null) return;
 
         var ground = await Task.Run(() => StationGround.Load(station.GroundFile));
-        if (!await StartRendererAsync(renderer)) return;
+        if (Renderer != renderer || !IsLoaded) return;
 
-        var lighting = station.LightingFor(light);
-        SceneLights.Apply(renderer, lighting, station.Sun);
+        LightScene(renderer, station.LightingFor(light), station.Sun);
         ShowSky(renderer, light);
 
-        // What the reflections see past the sky's reach (a chrome mirror): the sky's colour, not the renderer's white
-        renderer.BackgroundColor = System.Drawing.Color.FromArgb(lighting.AmbientUp[0], lighting.AmbientUp[1], lighting.AmbientUp[2]);
-
-        var skin = SkinOrDefault(player.Directory, player.Skin);
-        await TrackDeviceWork(renderer.MainSlot.SetCarAsync(CarDescription.FromDirectory(player.Directory), skin));
-        if (Renderer != renderer || !IsLoaded) return;
+        // The car stands where the drive puts it (CarBodyRock), not where its slot is
+        if (!await LoadPlayerCarAsync(renderer, player, light, placementOf: null)) return;
 
         _kn5 = kn5;
         _light = light;
@@ -200,21 +140,11 @@ public class StationViewport3D : D3DViewportBase
         _station = station;
         _ground = ground;
 
-        renderer.MainSlot.ResetCarBoundingBox();
-        var data = SceneLights.DataOf(player.Directory, ex => Logger.Warning(ex, "The data of {Car} could not be read: it sits and looks as most cars do", player.Directory));
-        _frame = SceneLights.FrameOf(data);
-        _eye = SceneLights.DriverEye(renderer, _frame);
-        _lookPitch = SceneLights.SeatPitch;
-        _fieldOfView = SceneLights.OnboardFieldOfView();
-        if (renderer.CarNode is { } car && light == StreetLight.Night) car.HeadlightsEnabled = true;
-        _instruments = CarInstruments.TryRead(renderer.CarNode, data, player.Directory, Logger);
-
-        renderer.UseFpsCamera = true;
         StartFromStage();
         Logger.Information("Station {Station} up at {Light} with {Car}", station.Id, light, Path.GetFileName(player.Directory));
 
         if (Stage is { } stage) stage.IsShown = true;
-        _fadeInAfter = SettleFrames;
+        FadeInOnceSettled();
         AnimateFor(TimeSpan.FromSeconds(1));
         Invalidate();
     }
@@ -235,12 +165,12 @@ public class StationViewport3D : D3DViewportBase
     /// <summary>The needles and the steering wheel as the car is now</summary>
     private void ShowInstruments()
     {
-        _instruments?.Show(_engineListened?.Rpm ?? 0, _speed * 3.6f, _stageListened?.FuelLitres ?? 0f, WaterC, _steer);
+        Instruments?.Show(_engineListened?.Rpm ?? 0, _speed * 3.6f, _stageListened?.FuelLitres ?? 0f, WaterC, _steer);
     }
 
     protected override void OnRendererDisposed()
     {
-        _instruments = null;
+        base.OnRendererDisposed();
         if (_stageListened != null) _stageListened.IsShown = false;
         _kn5 = null;
         _light = null;
@@ -248,7 +178,6 @@ public class StationViewport3D : D3DViewportBase
         _station = null;
         _rock = null;
         _pumpPose = null;
-        _fadeInAfter = -1;
 
         // Whatever the car was doing, it is done at once: nobody sees it
         var drive = _drive;
@@ -267,15 +196,29 @@ public class StationViewport3D : D3DViewportBase
 
     private void OnStageChanged()
     {
+        if (IsLoaded) ListenTo(Stage);
+    }
+
+    protected override void ListenToStage(bool listen) => ListenTo(listen ? Stage : null);
+
+    /// <summary>
+    /// Listens to <paramref name="stage"/> and no other: only while the control is loaded, so a stage that outlives it
+    /// does not keep it alive through its events, and neither does the engine it listens to
+    /// </summary>
+    private void ListenTo(StationStage? stage)
+    {
+        if (ReferenceEquals(stage, _stageListened)) return;
+
         if (_stageListened != null)
         {
             _stageListened.Changed -= OnStageAction;
             _stageListened.FuelChanged -= OnFuelChanged;
             _stageListened.IsShown = false;
             _stageListened.CannotShow = false;
+            ListenToEngine(null);
         }
 
-        _stageListened = Stage;
+        _stageListened = stage;
         if (_stageListened != null)
         {
             _stageListened.Changed += OnStageAction;
@@ -332,7 +275,7 @@ public class StationViewport3D : D3DViewportBase
             default:
                 // Waiting to drive in: at the start of the way in, out on the road
                 Place(PathDrive.Arrive(_station!.Arrive, IdleRpm()).At(0f));
-                _lookYaw = 0f;
+                LookYaw = 0f;
                 AimCamera();
                 break;
         }
@@ -371,7 +314,7 @@ public class StationViewport3D : D3DViewportBase
         }
 
         Place(pose);
-        _lookYaw = station.LookAtPump;
+        LookYaw = station.LookAtPump;
         _lookHeld = false;
         AimCamera();
         Invalidate();
@@ -420,7 +363,7 @@ public class StationViewport3D : D3DViewportBase
             M11 = xAxis.X, M12 = xAxis.Y, M13 = xAxis.Z,
             M21 = y.X, M22 = y.Y, M23 = y.Z,
             M31 = z.X, M32 = z.Y, M33 = z.Z,
-            M41 = state.X, M42 = height + _frame.Lift, M43 = state.Z, M44 = 1f
+            M41 = state.X, M42 = height + Frame.Lift, M43 = state.Z, M44 = 1f
         };
 
         _wheelAngle += RivalDrive.WheelAngle(state.Distance - _lastDistance);
@@ -483,66 +426,28 @@ public class StationViewport3D : D3DViewportBase
     #region Camera
 
     /// <summary>Where the driver looks now: ahead while driving, at the pump while standing; a drag holds it</summary>
-    private float TargetYaw() => _lookHeld ? _lookYaw
+    private float TargetYaw() => _lookHeld ? LookYaw
         : _stageListened?.Phase == StationPhase.AtPump && _drive == null ? _station?.LookAtPump ?? 0f
         : _bend;
 
+    /// <summary>From the driver's eyes, the car where the drive has it and its body as it leans</summary>
     private void AimCamera()
     {
-        if (Renderer is not { } renderer || renderer.Camera is not { } camera) return;
-
-        var lean = _rock?.WorldLean ?? Sx.Matrix.Identity;
-        var yaw = _lookYaw * MathF.PI / 180f;
-        var pitch = _lookPitch * MathF.PI / 180f;
-
-        // In the car's own space: +z ahead, +x to the left
-        var look = new Sx.Vector3(MathF.Sin(yaw) * MathF.Cos(pitch), MathF.Sin(pitch), MathF.Cos(yaw) * MathF.Cos(pitch));
-        var eye = Sx.Vector3.TransformCoordinate(Sx.Vector3.TransformCoordinate(_eye, _placement), lean);
-        var direction = Sx.Vector3.TransformNormal(Sx.Vector3.TransformNormal(look, _placement), lean);
-        var up = Sx.Vector3.TransformNormal(Sx.Vector3.TransformNormal(Sx.Vector3.UnitY, _placement), lean);
-
-        camera.FovY = _fieldOfView * MathF.PI / 180f;
-        camera.LookAt(eye, eye + direction, up);
-        camera.SetLens(renderer.AspectRatio);
-        renderer.IsDirty = true;
+        if (Renderer is { } renderer) AimCamera(renderer, _placement, _rock?.WorldLean ?? Sx.Matrix.Identity);
     }
 
-    protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
+    /// <summary>The head turns back over a moment to where the driver would look</summary>
+    protected override void LookBack()
     {
-        base.OnMouseLeftButtonDown(e);
-        if (e.ClickCount == 2)
-        {
-            _lookHeld = false;
-            _lookPitch = SceneLights.SeatPitch;
-            AnimateFor(TimeSpan.FromSeconds(LookSeconds * 3));
-            e.Handled = true;
-            return;
-        }
-
-        _dragFrom = e.GetPosition(this);
-        CaptureMouse();
-        e.Handled = true;
+        _lookHeld = false;
+        LookPitch = SceneLights.SeatPitch;
+        AnimateFor(TimeSpan.FromSeconds(LookSeconds * 3));
     }
 
-    protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
+    protected override void OnLookDragged()
     {
-        base.OnMouseLeftButtonUp(e);
-        _dragFrom = null;
-        ReleaseMouseCapture();
-    }
-
-    protected override void OnMouseMove(System.Windows.Input.MouseEventArgs e)
-    {
-        base.OnMouseMove(e);
-        if (_dragFrom is not { } from || e.LeftButton != MouseButtonState.Pressed) return;
-
-        var now = e.GetPosition(this);
         _lookHeld = true;
-        _lookYaw = Math.Clamp(_lookYaw + (float)(from.X - now.X) * LookDegreesPerPixel, -MaxLookYaw, MaxLookYaw);
-        _lookPitch = Math.Clamp(_lookPitch + (float)(from.Y - now.Y) * LookDegreesPerPixel, -MaxLookPitch, MaxLookPitch);
-        _dragFrom = now;
         AimCamera();
-        Invalidate();
     }
 
     #endregion
@@ -563,19 +468,11 @@ public class StationViewport3D : D3DViewportBase
 
         // The head turns towards where the driver would look
         var target = TargetYaw();
-        var turning = MathF.Abs(target - _lookYaw) > 0.05f;
-        if (turning) _lookYaw += (target - _lookYaw) * (1f - MathF.Exp(-dt / (LookSeconds / 3f)));
+        var turning = MathF.Abs(target - LookYaw) > 0.05f;
+        if (turning) LookYaw += (target - LookYaw) * (1f - MathF.Exp(-dt / (LookSeconds / 3f)));
         AimCamera();
 
         return moving || turning || !_pitch.IsSettled || _engineListened is { IsActive: true };
-    }
-
-    protected override void OnFramePresented()
-    {
-        if (_fadeInAfter < 0) return;
-        if (_fadeInAfter-- > 0) return;
-
-        if (IsPictureHidden) FadeIn(SceneFadeIn);
     }
 
     // The station's own engine listener rocks the car; the base's is not used

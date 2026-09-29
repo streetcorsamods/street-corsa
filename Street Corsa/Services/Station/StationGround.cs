@@ -48,6 +48,12 @@ namespace StreetCorsa.Services.Station
                 var minZ = reader.ReadSingle();
                 if (!(cell > 0) || columns is <= 0 or > 10000 || rows is <= 0 or > 10000) throw new InvalidDataException("a grid that makes no sense");
 
+                // The heights the header asks for must be what the file holds, before room is made for them: a mod's
+                // 24-byte file can ask for a hundred million
+                var stream = reader.BaseStream;
+                if (stream.Length - stream.Position != 4L * columns * rows)
+                    throw new InvalidDataException($"a {columns} x {rows} grid in a file of {stream.Length} bytes");
+
                 var heights = new float[columns * rows];
                 for (var i = 0; i < heights.Length; i++) heights[i] = reader.ReadSingle();
                 return new StationGround(cell, columns, rows, minX, minZ, heights);

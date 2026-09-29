@@ -113,7 +113,7 @@ internal static unsafe class FmodPlugins
     {
         if (_meter == null)
         {
-            var d = NewDescription("Street Rod Meter", null, 0);
+            var d = NewDescription("Street Corsa Meter", null, 0);
             d->Read = (IntPtr)(delegate* unmanaged<IntPtr, float*, float*, uint, int, int*, int>)&MeterRead;
             _meter = d;
         }

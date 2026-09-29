@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:bottomBar="clr-namespace:StreetCorsa.Components.BottomBar"
+             xmlns:controls="clr-namespace:StreetCorsa.Controls"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="800">
     <Grid Background="{StaticResource NewspaperBackgroundBrush}">
@@ -61,186 +62,192 @@
                    VerticalAlignment="Center"
                    Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}"/>
 
-        <!-- Car Listings -->
-        <ScrollViewer Grid.Row="1"
-                     VerticalScrollBarVisibility="Auto"
-                     HorizontalScrollBarVisibility="Disabled"
-                     Margin="40,120,40,20">
-            <ItemsControl ItemsSource="{Binding ListingsView}">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <WrapPanel Orientation="Horizontal"
-                                  HorizontalAlignment="Center"/>
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
+        <!-- Car Listings: only the cards in view are made, a market can run to hundreds of them -->
+        <ItemsControl Grid.Row="1"
+                      Margin="40,120,40,20"
+                      ItemsSource="{Binding ListingsView}">
+            <ItemsControl.Template>
+                <ControlTemplate TargetType="ItemsControl">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  CanContentScroll="True">
+                        <ItemsPresenter/>
+                    </ScrollViewer>
+                </ControlTemplate>
+            </ItemsControl.Template>
 
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Border Background="{StaticResource BgMediumBrush}"
-                               BorderBrush="{StaticResource BorderLightBrush}"
-                               BorderThickness="2"
-                               CornerRadius="5"
-                               Margin="10"
-                               Width="350"
-                               Height="250">
-                            <Border.Effect>
-                                <DropShadowEffect Color="Black"
-                                                Direction="270"
-                                                ShadowDepth="3"
-                                                BlurRadius="10"
-                                                Opacity="0.5"/>
-                            </Border.Effect>
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <controls:VirtualizingUniformWrapPanel/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
 
-                            <Grid Margin="15">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="*"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Border Background="{StaticResource BgMediumBrush}"
+                           BorderBrush="{StaticResource BorderLightBrush}"
+                           BorderThickness="2"
+                           CornerRadius="5"
+                           Margin="10"
+                           Width="350"
+                           Height="250">
+                        <Border.Effect>
+                            <DropShadowEffect Color="Black"
+                                            Direction="270"
+                                            ShadowDepth="3"
+                                            BlurRadius="10"
+                                            Opacity="0.5"/>
+                        </Border.Effect>
 
-                                <!-- Car Name -->
-                                <TextBlock Grid.Row="0"
-                                          Text="{Binding DisplayName}"
-                                          FontSize="{StaticResource FontSizeHeadingLarge}"
-                                          FontWeight="Bold"
-                                          Foreground="{StaticResource TextPrimaryBrush}"
-                                          TextWrapping="Wrap"
-                                          Margin="0,0,0,5"/>
+                        <Grid Margin="15">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
 
-                                <!-- Year & Dealer -->
-                                <StackPanel Grid.Row="1"
-                                          Orientation="Horizontal"
-                                          Margin="0,0,0,10">
-                                    <TextBlock Text="{Binding YearDisplay}"
+                            <!-- Car Name -->
+                            <TextBlock Grid.Row="0"
+                                      Text="{Binding DisplayName}"
+                                      FontSize="{StaticResource FontSizeHeadingLarge}"
+                                      FontWeight="Bold"
+                                      Foreground="{StaticResource TextPrimaryBrush}"
+                                      TextWrapping="Wrap"
+                                      Margin="0,0,0,5"/>
+
+                            <!-- Year & Dealer -->
+                            <StackPanel Grid.Row="1"
+                                      Orientation="Horizontal"
+                                      Margin="0,0,0,10">
+                                <TextBlock Text="{Binding YearDisplay}"
+                                          FontSize="{StaticResource FontSizeBody}"
+                                          Foreground="{StaticResource TextSecondaryBrush}"
+                                          Margin="0,0,15,0"/>
+                                <TextBlock Text="{Binding DealerName}"
+                                          FontSize="{StaticResource FontSizeBody}"
+                                          Foreground="{StaticResource TextSecondaryBrush}"/>
+                            </StackPanel>
+
+                            <!-- Car Details -->
+                            <StackPanel Grid.Row="2"
+                                      Margin="0,0,0,10">
+                                <!-- Price -->
+                                <StackPanel Orientation="Horizontal"
+                                          Margin="0,0,0,5">
+                                    <TextBlock Text="Price:"
                                               FontSize="{StaticResource FontSizeBody}"
                                               Foreground="{StaticResource TextSecondaryBrush}"
-                                              Margin="0,0,15,0"/>
-                                    <TextBlock Text="{Binding DealerName}"
+                                              Width="80"/>
+                                    <TextBlock Text="{Binding PriceDisplay}"
                                               FontSize="{StaticResource FontSizeBody}"
-                                              Foreground="{StaticResource TextSecondaryBrush}"/>
+                                              FontWeight="Bold"
+                                              Foreground="{StaticResource AccentSuccessBrush}"/>
                                 </StackPanel>
 
-                                <!-- Car Details -->
-                                <StackPanel Grid.Row="2"
-                                          Margin="0,0,0,10">
-                                    <!-- Price -->
-                                    <StackPanel Orientation="Horizontal"
-                                              Margin="0,0,0,5">
-                                        <TextBlock Text="Price:"
-                                                  FontSize="{StaticResource FontSizeBody}"
-                                                  Foreground="{StaticResource TextSecondaryBrush}"
-                                                  Width="80"/>
-                                        <TextBlock Text="{Binding PriceDisplay}"
-                                                  FontSize="{StaticResource FontSizeBody}"
-                                                  FontWeight="Bold"
-                                                  Foreground="{StaticResource AccentSuccessBrush}"/>
-                                    </StackPanel>
-
-                                    <!-- Condition -->
-                                    <StackPanel Orientation="Horizontal"
-                                              Margin="0,0,0,5">
-                                        <TextBlock Text="Condition:"
-                                                  FontSize="{StaticResource FontSizeBody}"
-                                                  Foreground="{StaticResource TextSecondaryBrush}"
-                                                  Width="80"/>
-                                        <TextBlock Text="{Binding ConditionDisplay}"
-                                                  FontSize="{StaticResource FontSizeBody}"
-                                                  Foreground="{StaticResource TextPrimaryBrush}"/>
-                                    </StackPanel>
-
-                                    <!-- Mileage -->
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="Mileage:"
-                                                  FontSize="{StaticResource FontSizeBody}"
-                                                  Foreground="{StaticResource TextSecondaryBrush}"
-                                                  Width="80"/>
-                                        <TextBlock Text="{Binding MileageDisplay}"
-                                                  FontSize="{StaticResource FontSizeBody}"
-                                                  Foreground="{StaticResource TextPrimaryBrush}"/>
-                                    </StackPanel>
-
-                                    <!-- History -->
-                                    <StackPanel Orientation="Horizontal"
-                                                Margin="0,5,0,0">
-                                        <TextBlock Text="History:"
-                                                  FontSize="{StaticResource FontSizeBody}"
-                                                  Foreground="{StaticResource TextSecondaryBrush}"
-                                                  Width="80"/>
-                                        <TextBlock Text="{Binding HistoryDisplay}"
-                                                  FontSize="{StaticResource FontSizeBody}"
-                                                  Foreground="{StaticResource TextPrimaryBrush}"
-                                                  TextWrapping="Wrap"
-                                                  MaxWidth="320"/>
-                                    </StackPanel>
-
-                                    <!-- Engine -->
-                                    <StackPanel Orientation="Horizontal"
-                                                Margin="0,5,0,0"
-                                                Visibility="{Binding EngineDisplay, Converter={StaticResource StringToVisibilityConverter}}">
-                                        <TextBlock Text="Engine:"
-                                                  FontSize="{StaticResource FontSizeBody}"
-                                                  Foreground="{StaticResource TextSecondaryBrush}"
-                                                  Width="80"/>
-                                        <TextBlock Text="{Binding EngineDisplay}"
-                                                  FontSize="{StaticResource FontSizeBody}"
-                                                  Foreground="{StaticResource TextPrimaryBrush}"
-                                                  TextWrapping="Wrap"
-                                                  MaxWidth="220"/>
-                                    </StackPanel>
+                                <!-- Condition -->
+                                <StackPanel Orientation="Horizontal"
+                                          Margin="0,0,0,5">
+                                    <TextBlock Text="Condition:"
+                                              FontSize="{StaticResource FontSizeBody}"
+                                              Foreground="{StaticResource TextSecondaryBrush}"
+                                              Width="80"/>
+                                    <TextBlock Text="{Binding ConditionDisplay}"
+                                              FontSize="{StaticResource FontSizeBody}"
+                                              Foreground="{StaticResource TextPrimaryBrush}"/>
                                 </StackPanel>
 
-                                <!-- Purchase Button -->
-                                <Button Grid.Row="3"
-                                       Content="Purchase"
-                                       Command="{Binding DataContext.PurchaseCarCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                       CommandParameter="{Binding}"
-                                       Height="35"
-                                       FontSize="{StaticResource FontSizeBody}"
-                                       FontWeight="Bold"
-                                       Background="{StaticResource AccentPrimaryBrush}"
-                                       Foreground="{StaticResource TextPrimaryBrush}"
-                                       BorderBrush="{StaticResource BorderDarkBrush}"
-                                       BorderThickness="1">
-                                    <Button.Style>
-                                        <Style TargetType="Button">
-                                            <Setter Property="Cursor" Value="Hand"/>
-                                            <Setter Property="Template">
-                                                <Setter.Value>
-                                                    <ControlTemplate TargetType="Button">
-                                                        <Border Background="{TemplateBinding Background}"
-                                                               BorderBrush="{TemplateBinding BorderBrush}"
-                                                               BorderThickness="{TemplateBinding BorderThickness}"
-                                                               CornerRadius="3">
-                                                            <ContentPresenter HorizontalAlignment="Center"
-                                                                            VerticalAlignment="Center"/>
-                                                        </Border>
-                                                    </ControlTemplate>
-                                                </Setter.Value>
-                                            </Setter>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding CanAfford}" Value="False">
-                                                    <Setter Property="Background" Value="{StaticResource Gray50Brush}"/>
-                                                    <Setter Property="Foreground" Value="{StaticResource Gray80Brush}"/>
-                                                    <Setter Property="IsEnabled" Value="False"/>
-                                                    <Setter Property="Cursor" Value="Arrow"/>
-                                                </DataTrigger>
-                                                <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter Property="Background" Value="{StaticResource AccentHoverBrush}"/>
-                                                </Trigger>
-                                                <Trigger Property="IsPressed" Value="True">
-                                                    <Setter Property="Background" Value="{StaticResource AccentPressedBrush}"/>
-                                                </Trigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Button.Style>
-                                </Button>
-                            </Grid>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
+                                <!-- Mileage -->
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Mileage:"
+                                              FontSize="{StaticResource FontSizeBody}"
+                                              Foreground="{StaticResource TextSecondaryBrush}"
+                                              Width="80"/>
+                                    <TextBlock Text="{Binding MileageDisplay}"
+                                              FontSize="{StaticResource FontSizeBody}"
+                                              Foreground="{StaticResource TextPrimaryBrush}"/>
+                                </StackPanel>
+
+                                <!-- History -->
+                                <StackPanel Orientation="Horizontal"
+                                            Margin="0,5,0,0">
+                                    <TextBlock Text="History:"
+                                              FontSize="{StaticResource FontSizeBody}"
+                                              Foreground="{StaticResource TextSecondaryBrush}"
+                                              Width="80"/>
+                                    <TextBlock Text="{Binding HistoryDisplay}"
+                                              FontSize="{StaticResource FontSizeBody}"
+                                              Foreground="{StaticResource TextPrimaryBrush}"
+                                              TextWrapping="Wrap"
+                                              MaxWidth="320"/>
+                                </StackPanel>
+
+                                <!-- Engine -->
+                                <StackPanel Orientation="Horizontal"
+                                            Margin="0,5,0,0"
+                                            Visibility="{Binding EngineDisplay, Converter={StaticResource StringToVisibilityConverter}}">
+                                    <TextBlock Text="Engine:"
+                                              FontSize="{StaticResource FontSizeBody}"
+                                              Foreground="{StaticResource TextSecondaryBrush}"
+                                              Width="80"/>
+                                    <TextBlock Text="{Binding EngineDisplay}"
+                                              FontSize="{StaticResource FontSizeBody}"
+                                              Foreground="{StaticResource TextPrimaryBrush}"
+                                              TextWrapping="Wrap"
+                                              MaxWidth="220"/>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <!-- Purchase Button -->
+                            <Button Grid.Row="3"
+                                   Content="Purchase"
+                                   Command="{Binding DataContext.PurchaseCarCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                   CommandParameter="{Binding}"
+                                   Height="35"
+                                   FontSize="{StaticResource FontSizeBody}"
+                                   FontWeight="Bold"
+                                   Background="{StaticResource AccentPrimaryBrush}"
+                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                   BorderBrush="{StaticResource BorderDarkBrush}"
+                                   BorderThickness="1">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Setter Property="Cursor" Value="Hand"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="{TemplateBinding Background}"
+                                                           BorderBrush="{TemplateBinding BorderBrush}"
+                                                           BorderThickness="{TemplateBinding BorderThickness}"
+                                                           CornerRadius="3">
+                                                        <ContentPresenter HorizontalAlignment="Center"
+                                                                        VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding CanAfford}" Value="False">
+                                                <Setter Property="Background" Value="{StaticResource Gray50Brush}"/>
+                                                <Setter Property="Foreground" Value="{StaticResource Gray80Brush}"/>
+                                                <Setter Property="IsEnabled" Value="False"/>
+                                                <Setter Property="Cursor" Value="Arrow"/>
+                                            </DataTrigger>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="{StaticResource AccentHoverBrush}"/>
+                                            </Trigger>
+                                            <Trigger Property="IsPressed" Value="True">
+                                                <Setter Property="Background" Value="{StaticResource AccentPressedBrush}"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
 
         <!-- Bottom Nav Bar -->
         <bottomBar:BottomBarView Grid.Row="2"

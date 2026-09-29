@@ -432,7 +432,7 @@ public class PathNamesReservedTests
     [InlineData("COM1", "COM1_")]
     [InlineData("lpt9", "lpt9_")]
     [InlineData("CON .txt", "CON_.txt")]
-    [InlineData("COM0", "COM0")] // not a device
+    [InlineData("COM0", "COM0_")] // a device too, as COM1 is
     [InlineData("COM10", "COM10")]
     [InlineData("Connor", "Connor")]
     [InlineData("icon", "icon")]

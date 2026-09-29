@@ -39,14 +39,25 @@ Stored in `GameState.ScheduledTasks`:
 
 ## Current Tasks
 
-| Task | Interval | Purpose |
-|------|----------|---------|
-| OpponentReviewTask | 1 day | Rivals buy, repair, tune, go broke and come back |
-| RaceSimulatorTask | 1 day | Rivals race each other |
-| EventGenerationTask | 1 day | Clears expired invitations and opens new ones; counts `DaysPlayed` |
-| CarAdsReviewTask | 1 day | Buyers answer the player's car ads |
-| MarketRefreshTask | 1 day | Refresh used car market |
-| PartsAdsRefreshTask | 1 day | Refresh the used parts ads |
+In the order they run each morning, which is the order `App.xaml.cs` registers them in. The order matters: the
+businesses open, close and restock before the rivals shop, the rivals shop and tune before they race each other,
+and the two that put engines together on a worker thread come last, so whatever comes before them is done by the
+time the player carries on.
+
+| Task | Id | Interval | Purpose |
+|------|----|----------|---------|
+| DealerReviewTask | `dealer_review` | 1 day | Closing-down sales mark down or shut; now and then a lot closes or opens (`DealerLifeService`) |
+| PartShopReviewTask | `partshop_review` | 1 day | The same for the part shops, and their deliveries come in (`PartShopLifeService`) |
+| OpponentReviewTask | `opponent_review` | 1 day | Rivals buy, repair, tune, go broke and come back (`OpponentLifeService`) |
+| RaceSimulatorTask | `race_simulator` | 1 day | Rivals race each other |
+| EventGenerationTask | `event_generation` | 1 day | Clears expired invitations and opens new ones; counts `DaysPlayed` |
+| CarAdsReviewTask | `car_ads_review` | 1 day | Buyers answer the player's car ads |
+| MarketRefreshTask | `market_refresh` | 1 day | Tops the open lots back up |
+| PartsAdsRefreshTask | `parts_ads_refresh` | 1 day | Turns over the used parts ads, and brings what the player ordered by mail |
+
+A task works on the day it is given (`ExecuteAsync`'s `date`), not on `GameState.Date`: when several days turn
+over at once, each day's run is stamped with its own morning. What a task says (the paper, the diner's talk) is
+written even when a later step of its day fails, and a task that throws is due again the next day.
 
 ## Adding a New Task
 

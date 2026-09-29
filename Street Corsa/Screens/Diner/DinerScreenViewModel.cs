@@ -49,6 +49,10 @@ namespace StreetCorsa.Screens.Diner
         public RelayCommand<TrackCardViewModel> SelectTrackCommand { get; }
         public AsyncRelayCommand ChallengeCommand { get; }
 
+        /// <summary>The bet: cash, or the cars' pink slips</summary>
+        public RelayCommand CashBetCommand { get; }
+        public RelayCommand PinkSlipBetCommand { get; }
+
         private ObservableCollection<OpponentDisplayViewModel> _opponents;
         public ObservableCollection<OpponentDisplayViewModel> Opponents
         {
@@ -322,7 +326,7 @@ namespace StreetCorsa.Screens.Diner
             }
         }
 
-        public string BankrollDisplay => $"${_gameState.Player.Money:N0}";
+        public string BankrollDisplay => Bankroll(_gameState.Player.Money);
 
         public DinerScreenViewModel(
             NavigationService navigationService,
@@ -358,6 +362,8 @@ namespace StreetCorsa.Screens.Diner
             SelectTrackCommand = new RelayCommand<TrackCardViewModel>(OnSelectTrack);
             // Async: preparing the cars' data takes a moment, and a second click meanwhile must not start a second race
             ChallengeCommand = new AsyncRelayCommand(OnChallenge, CanChallenge);
+            CashBetCommand = new RelayCommand(() => IsCashBet = true);
+            PinkSlipBetCommand = new RelayCommand(() => IsPinkSlipBet = true);
 
             _opponents = new ObservableCollection<OpponentDisplayViewModel>();
 
@@ -656,9 +662,13 @@ namespace StreetCorsa.Screens.Diner
             OnPropertyChanged(nameof(InsufficientFundsMessage));
         }
 
+        // The visit is being paid for: the day may turn over meanwhile, and the racers at the tables with it
+        private bool _entering;
+
         private bool CanChallenge()
         {
-            return SelectedOpponent != null &&
+            return !_entering &&
+                   SelectedOpponent != null &&
                    SelectedTrack != null &&
                    _gameState.Player.Cars.Count > 0 &&
                    _gameState.Player.SelectedCarInstanceId != null;
@@ -775,6 +785,10 @@ namespace StreetCorsa.Screens.Diner
 
             if (_returning) return;
 
+            // Nobody is challenged until the visit is paid for: a race set up against a racer who left with the old day
+            // would stay against them
+            _entering = true;
+            RelayCommand.RaiseCanExecuteChanged();
             try
             {
                 // Spend time for visiting the diner (30 min). Late in the evening that is the next morning, when
@@ -788,6 +802,11 @@ namespace StreetCorsa.Screens.Diner
             catch (Exception ex)
             {
                 _logger.Error(ex, "Could not spend and save the time for the diner");
+            }
+            finally
+            {
+                _entering = false;
+                RelayCommand.RaiseCanExecuteChanged();
             }
         }
 

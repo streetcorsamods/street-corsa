@@ -14,6 +14,9 @@ namespace StreetCorsa.Screens.Garage
         private static readonly TimeSpan QuickFadeInDuration = TimeSpan.FromSeconds(0.25);
         private static readonly TimeSpan FadeOutDuration = TimeSpan.FromSeconds(0.35);
 
+        // The fade-out is waited on this long at most
+        private static readonly TimeSpan FadeOutTimeout = TimeSpan.FromSeconds(2);
+
         // Let the renderer draw a few frames (reflections, shadows) before showing it
         private static readonly TimeSpan SettleDelay = TimeSpan.FromMilliseconds(200);
 
@@ -27,7 +30,7 @@ namespace StreetCorsa.Screens.Garage
         {
             InitializeComponent();
             Loaded += OnLoaded;
-            Unloaded += (_, _) => _revealTimer?.Stop();
+            Unloaded += OnUnloaded;
 
             Viewport3D.Ready += (_, _) => RevealAfter(SettleDelay);
             Viewport3D.Failed += (_, _) => RevealAfter(TimeSpan.Zero);
@@ -51,6 +54,20 @@ namespace StreetCorsa.Screens.Garage
         }
 
         private Window? _window;
+
+        /// <summary>
+        /// Off screen: the view model no longer waits on this view's fade (a garage that is shown again is loaded again,
+        /// and sets them anew)
+        /// </summary>
+        private void OnUnloaded(object sender, RoutedEventArgs e)
+        {
+            _revealTimer?.Stop();
+            if (DataContext is GarageScreenViewModel viewModel)
+            {
+                if (Equals(viewModel.ExitTransition, (Func<Task>)FadeOutAsync)) viewModel.ExitTransition = null;
+                if (Equals(viewModel.ExitCancelled, (Action)CancelFadeOut)) viewModel.ExitCancelled = null;
+            }
+        }
 
         /// <summary>The work goes over to the engine stand, when there is a workbench to work at</summary>
         private void ShowStand()
@@ -92,7 +109,8 @@ namespace StreetCorsa.Screens.Garage
         /// </summary>
         private void OnWindowKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
-            if (!IsLoaded) return;
+            // The keys of a dialog in front are the dialog's
+            if (!IsLoaded || StreetCorsa.Dialogs.ModalState.IsOpen) return;
 
             // An engine on its way between the car and the stand: no placement until it is down (the screen itself is
             // disabled meanwhile)
@@ -179,6 +197,10 @@ namespace StreetCorsa.Screens.Garage
         /// </summary>
         private Task FadeOutAsync()
         {
+            // A view no longer on screen plays nothing: its animation would never complete, and the garage would wait
+            // on it for good with every tile dead
+            if (!IsLoaded) return Task.CompletedTask;
+
             var completion = new TaskCompletionSource();
 
             // Block clicks while leaving
@@ -191,7 +213,8 @@ namespace StreetCorsa.Screens.Garage
             fadeOut.Completed += (_, _) => completion.TrySetResult();
             RootGrid.BeginAnimation(OpacityProperty, fadeOut);
 
-            return completion.Task;
+            // And one that never reports back is not waited on past its time
+            return Task.WhenAny(completion.Task, Task.Delay(FadeOutTimeout));
         }
 
         /// <summary>The garage stays after all (the next screen would not open): back in full view and clickable</summary>

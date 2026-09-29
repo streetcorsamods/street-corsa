@@ -3,6 +3,7 @@ using StreetCorsa.Logging;
 using StreetCorsa.Models.Race;
 using StreetCorsa.Services.Storage;
 using System.IO;
+using System.Runtime.CompilerServices;
 
 namespace StreetCorsa.Services.Race
 {
@@ -45,7 +46,7 @@ namespace StreetCorsa.Services.Race
         public void Save(LiteDatabase database, ProcessedRaceSession session)
         {
             // SessionId is the document's _id: the upsert is keyed on it
-            database.GetCollection<ProcessedRaceSession>(Collection).Upsert(session);
+            Sessions(database).Upsert(session);
             _logger.Debug("Saved processed session {SessionId} to database", session.SessionId);
         }
 
@@ -57,7 +58,29 @@ namespace StreetCorsa.Services.Race
 
         public Task<bool> IsContextSettledAsync(string saveName, Guid contextId) =>
             Task.Run(() => Read(saveName, db =>
-                db.GetCollection<ProcessedRaceSession>(Collection).Exists(Query.EQ(nameof(ProcessedRaceSession.RaceContextId), contextId))));
+                // A save with no sessions yet has none settled: the read does not create the collection for that
+                db.CollectionExists(Collection)
+                && Sessions(db).Exists(Query.EQ(nameof(ProcessedRaceSession.RaceContextId), contextId))));
+
+        // The open databases whose index has been made sure of: EnsureIndex takes the collection's write lock every
+        // time it is called, so it is called once per database opened, not on every ask
+        private static readonly ConditionalWeakTable<LiteDatabase, object> Indexed = new();
+
+        /// <summary>
+        /// The sessions, with the race context indexed: "is this race settled" is asked for every result file on
+        /// every pass, and without the index each ask reads every session the save has
+        /// </summary>
+        private static ILiteCollection<ProcessedRaceSession> Sessions(LiteDatabase database)
+        {
+            var sessions = database.GetCollection<ProcessedRaceSession>(Collection);
+            if (!Indexed.TryGetValue(database, out _))
+            {
+                sessions.EnsureIndex(x => x.RaceContextId);
+                Indexed.AddOrUpdate(database, Indexed);
+            }
+
+            return sessions;
+        }
 
         public async Task<List<ProcessedRaceSession>> GetAllAsync(string saveName)
         {

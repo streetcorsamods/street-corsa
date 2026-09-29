@@ -42,12 +42,31 @@ namespace StreetCorsa.Models.GameState
             DefinitionId = definitionId;
         }
 
+        /// <summary>
+        /// Parts mounted one on another no deeper than this: a real engine is a dozen deep (block, head, intake, carb,
+        /// cleaner). A save is anyone's file: what hangs deeper is left out. <c>PartTrees</c> keeps to the same depth.
+        /// </summary>
+        public const int MaxDepth = 64;
+
+        /// <summary>
+        /// This part and everything on it, each part before what is on it and in the order they are mounted. Walked
+        /// without recursion, so a save of any depth cannot overflow the stack: what hangs deeper than
+        /// <see cref="MaxDepth"/> is left out, as are parts a save left null.
+        /// </summary>
         public IEnumerable<PartInstance> SelfAndDescendants()
         {
-            yield return this;
-            foreach (var child in Children)
+            var stack = new Stack<(PartInstance Part, int Depth)>();
+            stack.Push((this, 0));
+            while (stack.Count > 0)
             {
-                foreach (var part in child.SelfAndDescendants()) yield return part;
+                var (part, depth) = stack.Pop();
+                yield return part;
+                if (depth >= MaxDepth || part.Children is not { } children) continue;
+
+                for (var i = children.Count - 1; i >= 0; i--)
+                {
+                    if (children[i] != null) stack.Push((children[i], depth + 1));
+                }
             }
         }
     }

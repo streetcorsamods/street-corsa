@@ -196,6 +196,17 @@ decides what a part does as much as its script:
   `Chevy 327-396 V8`), except after `small`, `big`, `bare` or `short`, which stay with it (`Chevy 350 small block`
   keeps its name). Its first make word (chevy, ford, mopar, hemi...) picks the family of its sound.
 
+A mod can say it outright instead. On a kind in `work_order.json`, `"cooling"` is what every part of that kind does
+for the engine's cooling: `"radiator"`, `"water_pump"`, `"fan"`, or `"none"` for a kind whose name only sounds like one
+(a later mod's wins; any other value is reported and left out). A radiator kind that `"serves"` a kind whose cooling is
+`"fan"` has its own electric fan. On a part in its `pack.json`, `"performance": true` (or `false`) says whether it is a
+performance radiator, water pump or fan, or an oil pan that holds its oil like a race sump. Left out, the words above
+decide. The base game declares neither.
+
+```json
+{ "kinds": [ { "id": "aux_cooler", "name": "auxiliary cooler", "names": [ "aux cooler" ], "cooling": "radiator" } ] }
+```
+
 The base game's reading of every part is held in `tests/StreetCorsa.Tests/Fixtures/part_roles.txt`: a rename that
 changes what a part does fails `PartRolesSnapshotTests`.
 
@@ -355,6 +366,12 @@ n wears the looks in turn; `digits` names the two materials that show its number
 (`"picture": "sign_digit_{0}.jpg"`). With several warehouse scenes installed, warehouse n is in the scenes in turn.
 `tools/WarehouseScene` builds the base game's (see [screens/car-lot.md](screens/car-lot.md)).
 
+**What a scene file may name.** A station's or warehouse's `"model"` stays inside its folder: one that points out of
+it (`..\`, a full path) is not read, so the station goes on without its picture and the warehouse is left out. A
+picture a warehouse names (`surfaces`, `digits`) is a plain file name with no folder in it; any other is left out and
+logged. The lights of the day in `lights` are named `day`, `dusk` and `night` (any case): a number or another name is
+logged and ignored, and a light written as `null` is skipped, as if it were not there.
+
 ### showcase and garages
 
 `showcase` lists the main screen's rooms: `{ "scenes": [ { "id": "mygarage", "wallRadius": 12 } ] }`. A room is a
@@ -374,4 +391,8 @@ random and fills in its `{placeholders}`:
 ```
 
 `lines` add to a pool, `replace` rewrites it. The base game's files (`news.json`, `talk.json`, `street.json`,
-`station.json`, `names.json`) list every key and, in their `_comment`, the placeholders each takes. When to say what stays in the game.
+`station.json`, `names.json`) list every key and, in their `_comment`, the placeholders each takes. The answers to a
+challenge are the `replies.*` pools in `talk.json`, among them `replies.car_laid_up` and `replies.car_unknown` (the
+racer's car can't race today, or the game can't tell), `replies.king.pink_slips` and `replies.king.no_pink_slip` (the
+King takes a pink-slip race, or turns down one for money), `replies.rematch` (a racer out for a rematch) and
+`replies.always_accept` (`{name}`, when the testing switch makes everybody accept). When to say what stays in the game.

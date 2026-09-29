@@ -1,12 +1,16 @@
 using StreetCorsa.Models.GameState;
+using StreetCorsa.Services.News;
+using StreetCorsa.Services.Opponents;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Services.Dealers
 {
     /// <summary>
     /// How a business in town comes and goes, the same for the car dealers (<see cref="DealerLifeService"/>) and the
     /// part shops (<c>PartShopLifeService</c>): the roster kept up to the mods' files, which may close and which may
-    /// open, the one picked, and what closing down, shutting and opening do to it. What each sells, and what the paper
-    /// and the street say, are the services' own. No state, so the rules can be checked on their own.
+    /// open, the one picked, what closing down, shutting and opening do to it, and how the paper and the street hear of
+    /// it. What each sells, and the words and weights of its stories, are the services' own. No state, so the rules can
+    /// be checked on their own.
     /// </summary>
     public static class DealerChurn
     {
@@ -119,6 +123,35 @@ namespace StreetCorsa.Services.Dealers
             location.Trade = DealerRules.OpeningTrade;
             location.TradeCountedTo = date.Date;
             return reopened;
+        }
+
+        // ----- what the town hears -----
+
+        /// <summary>
+        /// A change the paper and the street hear of: an article of <paramref name="weight"/> from the
+        /// <c>news.{story}.headline</c>/<c>.body</c> pools, and a line from <c>street.{story}</c>, each with <paramref name="values"/>
+        /// </summary>
+        public static void Announce(string story, int weight, TextValues values, DateTime date, Random random,
+            List<string> talk, List<NewsArticle> news)
+        {
+            news.Add(new NewsArticle
+            {
+                Date = date,
+                Weight = weight,
+                Headline = GameText.Installed.Pick($"news.{story}.headline", random, values),
+                Body = GameText.Installed.Pick($"news.{story}.body", random, values)
+            });
+            talk.Add(GameText.Installed.Pick($"street.{story}", random, values));
+        }
+
+        /// <summary>
+        /// The day's articles into the paper and lines into the diner's talk. The services call it in a <c>finally</c>:
+        /// what happened before a later step of the day failed did happen, and the town hears of it all the same.
+        /// </summary>
+        public static void Tell(GameState gameState, DateTime date, List<string> talk, List<NewsArticle> news)
+        {
+            if (news.Count > 0) NewsWriter.Add(gameState, date, news);
+            if (talk.Count > 0) OpponentLifeService.AddTalk(gameState, date, talk);
         }
     }
 }

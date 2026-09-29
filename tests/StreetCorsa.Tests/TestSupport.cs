@@ -1,5 +1,11 @@
 using System.Runtime.CompilerServices;
+using System.Text;
 using StreetCorsa.Logging;
+using StreetCorsa.Models.GameState;
+using StreetCorsa.Parts;
+using StreetCorsa.Parts.Cars;
+using StreetCorsa.Parts.Export;
+using StreetCorsa.Parts.Logic;
 
 namespace StreetCorsa.Tests;
 
@@ -92,5 +98,73 @@ public static class RepoPaths
         }
 
         throw new DirectoryNotFoundException($"No Street Corsa.slnx above {here}");
+    }
+}
+
+/// <summary>A car's data.acd as AC packs it: each entry's name, then its bytes shifted by the key made from the car id</summary>
+public static class AcdFixture
+{
+    /// <summary>Writes the car folder's data.acd holding the entries (and the folder); returns the file</summary>
+    public static string Write(string carFolder, string carId, params (string Name, byte[] Content)[] entries)
+    {
+        var key = Encoding.ASCII.GetBytes(AcdFile.KeyFor(carId));
+        using var data = new MemoryStream();
+        var w = new BinaryWriter(data);
+        foreach (var (name, content) in entries)
+        {
+            w.Write(name.Length);
+            w.Write(Encoding.ASCII.GetBytes(name));
+            w.Write(content.Length);
+            for (var i = 0; i < content.Length; i++) w.Write((int)(byte)(content[i] + key[i % key.Length]));
+        }
+
+        Directory.CreateDirectory(carFolder);
+        var file = Path.Combine(carFolder, AcdFile.FileName);
+        File.WriteAllBytes(file, data.ToArray());
+        return file;
+    }
+}
+
+/// <summary>The cars the condition and gas station tests take apart: part trees and AC data folders</summary>
+public static class TestCars
+{
+    /// <summary>The parts the game ships, read once</summary>
+    public static readonly Lazy<PartsCatalog> Catalog = new(() => PartsCatalog.Load(RepoPaths.PartsFolder));
+
+    /// <summary>A real Mopar 340 in a car, its tree as the factory puts one in</summary>
+    public static Car WithRealEngine(PartsCatalog catalog)
+    {
+        var build = catalog.EngineBuilds.Single(b => b.Id.EndsWith("chrysler-v8-pack/chrysler-la-340-275-hp", StringComparison.Ordinal));
+        var tree = PartTreeBuilder.BuildEngine(catalog, build)!;
+        var car = new Car("car_a") { HasPartsAssigned = true };
+        car.Parts.Add(PartTrees.FromInstalled(tree.Root, PartInstance.CarEngineSlot));
+        return car;
+    }
+
+    /// <summary>A rim with its tyre, a brake and a shock on every corner, and a spring when asked (made-up part ids)</summary>
+    public static void AddRunningGear(Car car, bool springs)
+    {
+        for (var i = 0; i < RunningGear.Corners; i++)
+        {
+            var rim = new PartInstance("rim") { ParentSlot = RunningGear.WheelSlot(i) };
+            rim.Children.Add(new PartInstance("tyre") { ParentSlot = RunningGear.TyreSlotOnRim });
+            car.Parts.Add(rim);
+            car.Parts.Add(new PartInstance("brake") { ParentSlot = RunningGear.BrakeSlot(i) });
+            if (springs) car.Parts.Add(new PartInstance("spring") { ParentSlot = RunningGear.SpringSlot(i) });
+            car.Parts.Add(new PartInstance("shock") { ParentSlot = RunningGear.ShockSlot(i) });
+        }
+    }
+
+    /// <summary>
+    /// An AC car's data folder: the car.ini given, and suspensions and tyres that put its centre of gravity
+    /// (0.485 + 0.495) / 2 m over the road
+    /// </summary>
+    public static void WriteData(string carFolder, string carIni)
+    {
+        var data = Path.Combine(carFolder, "data");
+        Directory.CreateDirectory(data);
+        File.WriteAllText(Path.Combine(data, "car.ini"), carIni);
+        File.WriteAllText(Path.Combine(data, "suspensions.ini"), "[FRONT]\nBASEY=-0.145\n[REAR]\nBASEY=-0.155\n");
+        File.WriteAllText(Path.Combine(data, "tyres.ini"), "[FRONT]\nRADIUS=0.34\n[REAR]\nRADIUS=0.34\n");
     }
 }

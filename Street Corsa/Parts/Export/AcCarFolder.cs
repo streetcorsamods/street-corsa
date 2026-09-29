@@ -11,6 +11,7 @@ namespace StreetCorsa.Parts.Export;
 /// </summary>
 public static class AcCarFolder
 {
+    // The game's old name (Street Rod), kept on purpose: installs in the field have clones marked so, never rename them
     public const string CloneMarker = "streetrod_clone.json";
     public const string CloneSuffix = "__sr_opponent";
 

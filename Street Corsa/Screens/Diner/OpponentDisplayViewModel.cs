@@ -43,6 +43,15 @@ namespace StreetCorsa.Screens.Diner
 
         public bool HasPortrait => !string.IsNullOrEmpty(PortraitPath);
 
+        /// <summary>
+        /// Width the portrait is decoded at: the largest place it is shown is 150 px, and twice that keeps it sharp on a
+        /// high-DPI screen
+        /// </summary>
+        private const int PortraitDecodeWidth = 300;
+
+        /// <summary>The portrait, decoded small and shared (<see cref="Shared.Thumbnails"/>); null without one</summary>
+        public System.Windows.Media.ImageSource? PortraitImage => Shared.Thumbnails.Load(PortraitPath, PortraitDecodeWidth);
+
         // Additional record stats
         public string WinRateDisplay
         {
@@ -68,12 +77,15 @@ namespace StreetCorsa.Screens.Diner
         // Car stats
         public string CarYear => CarDefinition.Year.HasValue ? CarDefinition.Year.Value.ToString() : "";
 
-        /// <summary>The car's stated power; read by <see cref="AcSpecs"/>, the one parser for ui_car.json numbers</summary>
+        /// <summary>
+        /// The car's power: its dyno figure when it has one, else its spec sheet's (<see cref="Models.GameState.CarPower"/>),
+        /// the same figure the matchup beside it shows
+        /// </summary>
         public string CarPower
         {
             get
             {
-                var power = AcSpecs.ParsePower(CarDefinition.Specs?.Bhp) ?? 0;
+                var power = Models.GameState.CarPower.Of(Opponent.Cars.FirstOrDefault(), CarDefinition) ?? 0;
                 return power > 0 ? $"{power:N0} HP" : "";
             }
         }

@@ -36,10 +36,6 @@ namespace StreetCorsa.Services.Catalog
         public Task<ImportResult> ImportCarsAsync(IProgress<ImportProgress>? progress = null) =>
             Task.Run(() => ImportCars(progress));
 
-        /// <summary>The same as <see cref="ImportCarsAsync"/>, which now also retires the cars that are gone</summary>
-        public Task<ImportResult> IncrementalUpdateAsync(IProgress<ImportProgress>? progress = null) =>
-            ImportCarsAsync(progress);
-
         private ImportResult ImportCars(IProgress<ImportProgress>? progress)
         {
             _logger.Information("Starting car import from {CarsPath}", _settings.CarsPath);
@@ -194,6 +190,9 @@ namespace StreetCorsa.Services.Catalog
                 .ToList();
         }
 
+        /// <summary>The largest ui_car.json or ui_skin.json read: a real one is a few kilobytes</summary>
+        public const long MaxUiJsonBytes = 1024 * 1024;
+
         private CarDefinition? ImportCar(string carFolder, string carId)
         {
             var uiJsonPath = AcCarUi.PathIn(carFolder);
@@ -203,6 +202,11 @@ namespace StreetCorsa.Services.Catalog
 
             try
             {
+                // A ui_car.json is a few kilobytes: one of megabytes is no car's, and is not read whole on start-up
+                var length = new FileInfo(uiJsonPath).Length;
+                if (length > MaxUiJsonBytes)
+                    throw new InvalidDataException($"ui_car.json is {length:N0} bytes, more than a car's description ever is");
+
                 // Read and parse ui_car.json, the lenient way every reader of it in the game does (comments,
                 // trailing commas, a year as 1969.0 or "1969", tags as a single string)
                 var jsonContent = File.ReadAllText(uiJsonPath);
@@ -263,7 +267,7 @@ namespace StreetCorsa.Services.Catalog
 
             foreach (var prefix in KunosPrefix)
             {
-                if (lowerCarId.StartsWith(prefix))
+                if (lowerCarId.StartsWith(prefix, StringComparison.Ordinal))
                 {
                     // Further check: Kunos cars typically don't have author field or author is "Kunos Simulazioni"
                     var author = AcCarUi.GetString(root, "author");
@@ -275,7 +279,7 @@ namespace StreetCorsa.Services.Catalog
             }
 
             // Check if it's DLC (has ks_ prefix but might have specific tags or in dlc folders)
-            if (lowerCarId.StartsWith("ks_"))
+            if (lowerCarId.StartsWith("ks_", StringComparison.Ordinal))
             {
                 // Could be DLC if it's in a DLC folder or has DLC tags
                 // For now, treat all ks_ as Kunos, can be refined later
@@ -324,7 +328,7 @@ namespace StreetCorsa.Services.Catalog
 
                     // Only include directories that aren't empty and have valid names. A police livery is the
                     // police's, not something a car on a lot or a rival's car comes in (PoliceCars).
-                    if (!string.IsNullOrEmpty(skinId) && !skinId.StartsWith(".") && !PoliceCars.IsPoliceSkin(skinFolder))
+                    if (!string.IsNullOrEmpty(skinId) && !skinId.StartsWith('.') && !PoliceCars.IsPoliceSkin(skinFolder))
                     {
                         skins.Add(skinId);
                     }

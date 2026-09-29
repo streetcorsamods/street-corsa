@@ -112,6 +112,8 @@ namespace StreetCorsa.Services.Simulation
         {
             return gameState.Racers.ReadyToRace.Values
                 .Where(r => r.Type == RacerType.AI && r is not Opponent { IsKing: true } && ShouldRaceAgain(r))
+                // The rival of the player's race that has not been settled yet keeps the car it is settled on
+                .Where(r => !OpponentLifeService.HasPendingRace(gameState, r))
                 .ToList();
         }
 
@@ -344,9 +346,9 @@ namespace StreetCorsa.Services.Simulation
             if (avgHp > 300) roadRaceProbability = 0.7;
             else if (avgHp < 150) roadRaceProbability = 0.3;
 
-            // Skilled racers prefer road races
+            // Skilled racers prefer road races: up to a quarter either way, even at the middle of the skill range
             var avgSkill = (GetRacerSkill(racer1) + GetRacerSkill(racer2)) / 2.0;
-            roadRaceProbability += (avgSkill - 50) / 200.0;
+            roadRaceProbability += (OpponentRules.SkillShare(avgSkill) - 0.5) / 2.0;
 
             // Money factor - broke racers prefer higher stakes
             var avgMoney = (double)(racer1.Money + racer2.Money) / 2;
@@ -538,19 +540,17 @@ namespace StreetCorsa.Services.Simulation
 
         /// <summary>
         /// The car's dyno horsepower, as the rivals' morning review put it on the dyno (<see cref="Car.PowerHp"/>).
-        /// A car never put on one races on a rough figure from what it cost.
+        /// A dyno figure of 0 or less stays 0: the car has no engine that runs, and does not race. A car never put on
+        /// one races on its spec sheet's power when the caller has its definition (<see cref="CarPower"/>), else on a
+        /// rough figure from what it cost.
         /// </summary>
-        public static double GetCarHP(Car car)
+        public static double GetCarHP(Car car, Models.Catalog.CarDefinition? definition = null)
         {
-            return car.PowerHp is { } hp && double.IsFinite(hp) ? Math.Max(0, hp) : 100 + (double)car.PurchasePrice / 50;
+            return CarPower.Racing(car, definition) ?? 100 + (double)car.PurchasePrice / 50;
         }
 
-        private int GetRacerSkill(Racer racer)
-        {
-            if (racer is Opponent opponent)
-                return opponent.Skill;
-            return 85; // Default skill
-        }
+        /// <summary>A racer's skill; one who is not an opponent drives like the least skilled of them</summary>
+        private static int GetRacerSkill(Racer racer) => racer is Opponent opponent ? opponent.Skill : Opponent.MinSkill;
 
         private static double GetOverallCarCondition(Car car) => CarValuation.ConditionOf(car);
     }

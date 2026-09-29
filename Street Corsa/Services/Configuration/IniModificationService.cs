@@ -93,7 +93,7 @@ namespace StreetCorsa.Services.Configuration
             }
         }
 
-        public int RestoreAll() => _backup.RestoreAll();
+        public int RestoreAll(ICollection<string>? problems = null) => _backup.RestoreAll(problems);
 
         public bool HasPendingRestore => _backup.HasPending;
 
@@ -113,13 +113,10 @@ namespace StreetCorsa.Services.Configuration
 
         public string GetIniFilePath(string fileName)
         {
-            // If already absolute path, return as-is
-            if (Path.IsPathRooted(fileName))
-            {
-                return fileName;
-            }
+            // Every cfg file the game touches is one file name in the cfg folder; no caller needs anything else
+            if (!PathNames.IsSafeSegment(fileName))
+                throw new ArgumentException($"'{fileName}' is not the name of a file in the cfg folder", nameof(fileName));
 
-            // Otherwise, resolve relative to cfg directory
             return Path.Combine(_cfgDirectory, fileName);
         }
 
@@ -504,12 +501,10 @@ namespace StreetCorsa.Services.Configuration
         public const double NoonSunAngle = -16.0;
 
         /// <summary>
-        /// AC's sun for a time of day ([LIGHTING] SUN_ANGLE): Content Manager's formula, 0 at 13:00 and 16 degrees an
-        /// hour, so -80 is 08:00 and 80 is 18:00. AC alone stops there; with Custom Shaders Patch the angle goes on
-        /// through the evening and the night (CM writes it up to 23:59), which is how a race after dark is dark.
+        /// AC's sun for a time of the game ([LIGHTING] SUN_ANGLE), in the season the street screens are lit by: see
+        /// <see cref="SeasonalSun"/>
         /// </summary>
-        public static double SunAngle(DateTime? time) =>
-            time is { } t ? Math.Round(16.0 * (t.TimeOfDay.TotalSeconds - 13 * 3600) / 3600.0, 2) : NoonSunAngle;
+        public static double SunAngle(DateTime? time) => time is { } t ? SeasonalSun.AcSunAngle(t) : NoonSunAngle;
 
         /// <summary>Everything before [RACE] that every launch shares, the sun where <paramref name="sunAngle"/> puts it</summary>
         private static void AppendCommonSections(System.Text.StringBuilder sb, double sunAngle = NoonSunAngle)

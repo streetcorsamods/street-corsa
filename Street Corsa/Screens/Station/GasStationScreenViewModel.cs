@@ -105,7 +105,7 @@ namespace StreetCorsa.Screens.Station
 
         public string ClockDisplay => _gameState.Date.ToString("h:mm tt", CultureInfo.GetCultureInfo("en-US"));
 
-        public string BankrollDisplay => $"${_gameState.Player.Money:N0}";
+        public string BankrollDisplay => Bankroll(_gameState.Player.Money);
 
         private string _statusText = string.Empty;
 
@@ -223,6 +223,16 @@ namespace StreetCorsa.Screens.Station
                 return;
             }
 
+            // The scene first: a station that fails to set up sends the player home before the trip is paid for
+            Light = StreetLights.At(_gameState.Date);
+            PlayerCar = new StreetCar(Path.Combine(AppSettings.Instance.CarsPath, _car.DefinitionId), string.IsNullOrEmpty(_car.SkinId) ? null : _car.SkinId);
+            OnPropertyChanged(nameof(Station));
+            OnPropertyChanged(nameof(Title));
+            OnPropertyChanged(nameof(Light));
+            OnPropertyChanged(nameof(PlayerCar));
+            PlayerEngine.Place(null, StreetStage.OwnEngineVolume);
+
+            // Then the trip: the tow truck's charge, or the gas the drive takes
             if (towed)
             {
                 _gameState.Player.Money -= tow;
@@ -238,15 +248,8 @@ namespace StreetCorsa.Screens.Station
             // The trip's time goes by while the car rolls in; saving and going home wait for it (the day may roll over)
             _trip = SpendAsync(towed ? GameAction.TowToStation : GameAction.DriveToStation);
 
-            Light = StreetLights.At(_gameState.Date);
-            PlayerCar = new StreetCar(Path.Combine(AppSettings.Instance.CarsPath, _car.DefinitionId), string.IsNullOrEmpty(_car.SkinId) ? null : _car.SkinId);
-            OnPropertyChanged(nameof(Station));
-            OnPropertyChanged(nameof(Title));
-            OnPropertyChanged(nameof(Light));
-            OnPropertyChanged(nameof(PlayerCar));
+            // The jobs are priced on what the trip left in the tank
             Refresh();
-
-            PlayerEngine.Place(null, StreetStage.OwnEngineVolume);
             _ = StartOwnEngineAsync(_car, running: !towed);
 
             Stage.FuelLitres = FuelInTank();
@@ -309,10 +312,10 @@ namespace StreetCorsa.Screens.Station
 
         private void SendHome(string message, string title)
         {
-            _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, message, title));
-            // Not from inside Enter: the navigation that brought the player here is still going on
+            // It says why and takes the player back to the garage, once the navigation that brought them here is over
             _leaving = true;
-            _ = System.Windows.Application.Current.Dispatcher.InvokeAsync(() => _navigationService.NavigateToGarage(_gameState));
+            _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, message, title));
+            _navigationService.NavigateToGarageLater(_gameState);
         }
 
         #endregion
@@ -357,7 +360,7 @@ namespace StreetCorsa.Screens.Station
             if (_car != null && Station != null)
             {
                 foreach (var job in GasStation.Jobs(_car, _catalog, Station.Prices, _gameState.Rules.PartPriceMultiplier))
-                    Jobs.Add(new StationJobRow(job, new AsyncRelayCommand(() => DoAsync(job), () => IsAtPump && !_busy && !_leaving && _gameState.Player.Money >= job.Cost)));
+                    Jobs.Add(new StationJobRow(job, new AsyncRelayCommand(() => DoAsync(job), () => IsAtPump && !_busy && !_leaving && _gameState.Player.Money >= job.Cost, name: "StationJob")));
             }
 
             OnPropertyChanged(nameof(HasJobs));
@@ -377,8 +380,9 @@ namespace StreetCorsa.Screens.Station
                 await WatchAsync(job);
                 if (!_active) return;
 
-                _gameState.Player.Money -= job.Cost;
+                // The work first: a job that fails to go on costs nothing
                 job.Apply();
+                _gameState.Player.Money -= job.Cost;
                 Stage.FuelLitres = FuelInTank();
                 _logger.Information("{Car} at the gas station: {Job} for ${Cost}", _car.DefinitionId, job.Name, job.Cost);
                 Say(job.Name switch
@@ -481,40 +485,53 @@ namespace StreetCorsa.Screens.Station
             _leaving = true;
             RaiseAll();
 
-            // Left dry: the tow truck takes it home, for what it charged to bring it (or all the player has left), and an
-            // hour; there is nothing to watch
-            if (GasStation.NeedsTow(_car))
-            {
-                if (!_towHomePaid)
-                {
-                    var tow = Math.Min(TowPrice(), Math.Max(0, _gameState.Player.Money));
-                    _gameState.Player.Money -= tow;
-                    _towHomePaid = true;
-                    _logger.Information("{Car} towed home from {Station} for ${Tow}", _car.DefinitionId, Station?.Id, tow);
-                    StatusText = $"The tow truck hauls you home (${tow:N0}).";
-                    OnPropertyChanged(nameof(BankrollDisplay));
-                    await _trip;
-                    await SpendAsync(GameAction.TowToStation);
-                }
-
-                if (_active) GoHome();
-                return;
-            }
-
-            Say("station.goodbye");
-            StatusText = "You start her up...";
+            // Nothing may escape an async void; a throw (a line missing from a mod's words) leaves the player at the
+            // pump with DRIVE OFF to try again, not stuck there with it disabled
             try
             {
-                await StartUpAsync();
+                // Left dry: the tow truck takes it home, for what it charged to bring it (or all the player has left),
+                // and an hour; there is nothing to watch
+                if (GasStation.NeedsTow(_car))
+                {
+                    if (!_towHomePaid)
+                    {
+                        var tow = Math.Min(TowPrice(), Math.Max(0, _gameState.Player.Money));
+                        _gameState.Player.Money -= tow;
+                        _towHomePaid = true;
+                        _logger.Information("{Car} towed home from {Station} for ${Tow}", _car.DefinitionId, Station?.Id, tow);
+                        StatusText = $"The tow truck hauls you home (${tow:N0}).";
+                        OnPropertyChanged(nameof(BankrollDisplay));
+                        await _trip;
+                        await SpendAsync(GameAction.TowToStation);
+                    }
+
+                    if (_active) GoHome();
+                    return;
+                }
+
+                Say("station.goodbye");
+                StatusText = "You start her up...";
+                try
+                {
+                    await StartUpAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger.Warning(ex, "The engine could not be started to drive off");
+                }
+
+                if (!_active) return;
+                StatusText = "You pull out onto the road and head home.";
+                Stage.Leave();
             }
             catch (Exception ex)
             {
-                _logger.Warning(ex, "The engine could not be started to drive off");
+                _logger.Error(ex, "Could not drive off from the gas station");
+                if (!_active) return;
+                StatusText = "You're still at the pump.";
+                _leaving = false;
+                RaiseAll();
             }
-
-            if (!_active) return;
-            StatusText = "You pull out onto the road and head home.";
-            Stage.Leave();
         }
 
         /// <summary>

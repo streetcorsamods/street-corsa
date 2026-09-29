@@ -93,7 +93,10 @@ namespace StreetCorsa.Models.GameState
         /// <summary>
         /// Initialize default career state for a new game
         /// </summary>
-        public static CareerState CreateNew()
+        /// <param name="openFromStart">The victory paths open from the start (a new game's are the installed mods'
+        /// with nothing to unlock, <see cref="Services.Career.CareerContent.OpenFromStart"/>); none when null. The model
+        /// does not read the mods itself: a save being loaded builds a GameState, and its career, only to replace it.</param>
+        public static CareerState CreateNew(IEnumerable<string>? openFromStart = null)
         {
             var state = new CareerState();
 
@@ -103,8 +106,8 @@ namespace StreetCorsa.Models.GameState
                 state.MilestoneCounters[trigger] = 0;
             }
 
-            // Reputation victory is always available from the start
-            state.UnlockedVictories["Reputation"] = true;
+            // The paths open from the start are open already, not unlocked by the first race (base game: Reputation)
+            foreach (var id in openFromStart ?? []) state.UnlockedVictories[id] = true;
 
             return state;
         }
@@ -164,7 +167,9 @@ namespace StreetCorsa.Models.GameState
     }
 
     /// <summary>
-    /// Represents an active race event instance
+    /// An event the paper has open or had, as the save keeps it. What the game shows of one is a
+    /// <see cref="Career.Events.RaceEventInstance"/>, which is this state and what its definition adds; only this
+    /// part is stored.
     /// </summary>
     public class RaceEventState
     {
@@ -219,6 +224,21 @@ namespace StreetCorsa.Models.GameState
         public bool IsAvailable(DateTime currentTime)
         {
             return !IsCompleted && !IsExpired(currentTime) && currentTime >= AvailableFrom;
+        }
+
+        /// <summary>
+        /// Copies <paramref name="state"/>'s stored fields onto this one. <see cref="CareerState.ActiveEvents"/> holds
+        /// plain states only: a derived instance stored there would put its type and its extra fields into the save.
+        /// </summary>
+        protected void CopyFrom(RaceEventState state)
+        {
+            InstanceId = state.InstanceId;
+            EventDefinitionId = state.EventDefinitionId;
+            AvailableFrom = state.AvailableFrom;
+            ExpiresAt = state.ExpiresAt;
+            IsCompleted = state.IsCompleted;
+            PlayerWon = state.PlayerWon;
+            CompletedAt = state.CompletedAt;
         }
     }
 }

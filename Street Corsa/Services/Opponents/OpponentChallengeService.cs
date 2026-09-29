@@ -76,7 +76,7 @@ namespace StreetCorsa.Services.Opponents
                 return new ChallengeResponse
                 {
                     Accepted = true,
-                    Message = $"{opponent.Name}: You're on! Let's race!",
+                    Message = Reply("replies.always_accept", new TextValues { ["name"] = opponent.Name }),
                     DeclineReason = null
                 };
             }
@@ -86,7 +86,7 @@ namespace StreetCorsa.Services.Opponents
                 return new ChallengeResponse
                 {
                     Accepted = false,
-                    Message = "My car's laid up. Come back when it's running.",
+                    Message = Reply("replies.car_laid_up"),
                     DeclineReason = ChallengeDeclineReason.CarNotAvailable
                 };
             }
@@ -95,11 +95,11 @@ namespace StreetCorsa.Services.Opponents
             if (opponent.IsKing)
             {
                 return isPinkSlip
-                    ? new ChallengeResponse { Accepted = true, Message = "Pink slips it is. Hope you said goodbye to that car." }
+                    ? new ChallengeResponse { Accepted = true, Message = Reply("replies.king.pink_slips") }
                     : new ChallengeResponse
                     {
                         Accepted = false,
-                        Message = "I don't race for pocket money. Put your pink slip on the table, or go home.",
+                        Message = Reply("replies.king.no_pink_slip"),
                         DeclineReason = ChallengeDeclineReason.NotInterested
                     };
             }
@@ -114,7 +114,7 @@ namespace StreetCorsa.Services.Opponents
                 return new ChallengeResponse
                 {
                     Accepted = false,
-                    Message = "I need to check my car first. Try again later.",
+                    Message = Reply("replies.car_unknown"),
                     DeclineReason = ChallengeDeclineReason.CarNotAvailable
                 };
             }
@@ -200,7 +200,7 @@ namespace StreetCorsa.Services.Opponents
             if (Grudges.WantsRematch(opponent))
             {
                 _logger.Information("{Name} wants the rematch: pink slips accepted", opponent.Name);
-                return new ChallengeResponse { Accepted = true, Message = "About time. Let's settle this." };
+                return new ChallengeResponse { Accepted = true, Message = Reply("replies.rematch") };
             }
 
             // Calculate acceptance chance based on multiple factors
@@ -232,9 +232,8 @@ namespace StreetCorsa.Services.Opponents
                 acceptanceChance -= 0.1;
             }
 
-            // Skill confidence factor
-            var skillDiff = opponent.Skill - 90; // How much better than average
-            acceptanceChance += skillDiff * 0.01; // ±0.1 max
+            // Skill confidence factor: ±0.1 from the least to the most skilled
+            acceptanceChance += (OpponentRules.SkillShare(opponent.Skill) - 0.5) * 0.2;
 
             // Pink slip history factor
             if (opponent.Stats.PinkSlipsLost > opponent.Stats.PinkSlipsWon)
@@ -413,7 +412,7 @@ namespace StreetCorsa.Services.Opponents
         #region Message Generation
 
         // The words are the mods' ("replies.*" in their text); which answer is the game's
-        private string Reply(string pool) => GameText.Installed.Pick(pool, _random);
+        private string Reply(string pool, TextValues? values = null) => GameText.Installed.Pick(pool, _random, values);
 
         private string GetAcceptanceMessage(Opponent opponent) => Reply(opponent.Aggression switch
         {

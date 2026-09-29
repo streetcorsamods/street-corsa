@@ -1,5 +1,3 @@
-using System.Configuration;
-using System.Data;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Markup;
@@ -157,21 +155,37 @@ namespace StreetCorsa
                 typeof(FrameworkElement),
                 new FrameworkPropertyMetadata(XmlLanguage.GetLanguage(englishCulture.IetfLanguageTag)));
 
+            // The last line of defence before anything that can fail: the rename and the log's folder below touch
+            // %AppData%, and one that throws must still end with a message rather than a silent exit
+            AppDomain.CurrentDomain.UnhandledException += OnDomainUnhandledException;
+
             // What the game wrote under its old name goes to the new folders first: the log opens its file there
             var renamed = Services.Storage.LegacyRename.Run();
 
-            // Initialize logging FIRST
-            AppLoggerFactory.Initialize();
-            if (renamed.Count > 0)
+            // Initialize logging FIRST. A log folder that cannot be made (an unwritable %AppData%) leaves the game
+            // without a log, not without a start: the loggers write nowhere.
+            Exception? logFailure = null;
+            try
             {
-                var renameLogger = AppLoggerFactory.CreateLogger(LogCategory.Startup);
-                foreach (var note in renamed) renameLogger.Information("Rename to Street Corsa: {Note}", note);
+                AppLoggerFactory.Initialize();
+            }
+            catch (Exception ex)
+            {
+                logFailure = ex;
+                AppLoggerFactory.InitializeSilent();
             }
 
-            // Then the last line of defence, a backstop behind the handlers' own guards: an exception nobody catches
-            // must not end the app with the AC install still changed for a race and the game unsaved
+            var startLogger = AppLoggerFactory.CreateLogger(LogCategory.Startup);
+            if (logFailure != null) startLogger.Error(logFailure, "The log could not be opened; the game runs without one");
+            foreach (var note in renamed) startLogger.Information("Rename to Street Corsa: {Note}", note);
+
+            // A write that had to take a read-only mark off a file (race.ini, video.ini) says so in the log
+            Helpers.SafeFile.ReadOnlyCleared = path =>
+                AppLoggerFactory.CreateLogger(LogCategory.ACIntegration).Warning("{Path} was read-only; the mark was taken off to write it", path);
+
+            // Then the rest of the backstop behind the handlers' own guards: an exception nobody catches must not end
+            // the app with the AC install still changed for a race
             DispatcherUnhandledException += OnDispatcherUnhandledException;
-            AppDomain.CurrentDomain.UnhandledException += OnDomainUnhandledException;
             TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
 
             InitializeComponent();
@@ -185,6 +199,7 @@ namespace StreetCorsa
             ContentService = new AssettoCorsaContentService();
             IniModificationService = new IniModificationService();
             DialogService = new DialogService();
+            ViewModels.AsyncRelayCommand.ReportFailure = ShowSomethingWentWrong;
             CatalogRepository = new ContentCatalogRepository();
             CarImportService = new CarImportService(CatalogRepository);
             ProfileRepository = new CarProfileRepository();
@@ -226,8 +241,8 @@ namespace StreetCorsa
             CarFilterService = new CarFilterService(car => MarketService.ValueOf(car));
             MilestoneService = new MilestoneService();
             VictoryConditionService = new VictoryConditionService(
-                getTotalOpponents: OpponentsToDominate,
-                playerHasMostWins: gs => IsPlayerSeasonChampion(gs)
+                getTotalOpponents: Services.Career.VictoryConditionService.OpponentsToDominate,
+                playerHasMostWins: Services.Career.VictoryConditionService.IsPlayerSeasonChampion
             );
             RaceEventService = new RaceEventService(
                 CarFilterService,
@@ -303,16 +318,7 @@ namespace StreetCorsa
             catch (Exception ex)
             {
                 logger.Critical(ex, "Start-up failed");
-                try
-                {
-                    System.Windows.MessageBox.Show($"Street Corsa could not start:\n{ex.Message}\n\nThe details are in the log.",
-                        "Street Corsa", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-                catch (Exception)
-                {
-                    // No window to show it in either; the log has it
-                }
-
+                ShowStartupError($"Street Corsa could not start:\n{ex.Message}\n\nThe details are in the log.", "Street Corsa");
                 Shutdown();
             }
         }
@@ -341,6 +347,7 @@ namespace StreetCorsa
             // that data, so it goes back once the game has closed.
             var acRunning = AcProcesses.AnyRunning();
             var acStillRunning = acRunning && HasLeftoversToRestore(logger);
+            var restoreProblems = new List<string>();
             if (acStillRunning)
             {
                 logger.Warning("Assetto Corsa is running: what an earlier race changed in it goes back once it closes");
@@ -352,7 +359,7 @@ namespace StreetCorsa
             }
             else
             {
-                RestoreInstall(logger);
+                RestoreInstall(logger, restoreProblems);
             }
 
             SweepTempFiles(logger);
@@ -426,19 +433,79 @@ namespace StreetCorsa
                     "The cars' data and race settings it was started with go back once it closes; races can start after that.",
                     "Assetto Corsa Is Running"));
             }
+
+            // What stayed changed in AC after the start-up restore: the player is told once, the next start tries again
+            if (restoreProblems.Count > 0)
+            {
+                var message = AssettoCorsaLauncher.RestoreProblemsMessage(restoreProblems);
+                DialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(
+                    DialogService, message.Text, message.Title));
+            }
         }
 
         /// <summary>A start-up failure the app closes on, in a message box that waits for the player; never throws</summary>
-        private static void ShowStartupError(string message, string title)
+        private void ShowStartupError(string message, string title) => ShowMessage(message, title, MessageBoxImage.Error);
+
+        /// <summary>
+        /// A message box that waits for the player, owned by the main window when it is up: one without an owner can
+        /// come up behind the maximized borderless window, and the game looks hung. From another thread it goes
+        /// through the UI thread; when that does not take it up in time (stuck, or it is what crashed), it goes up on
+        /// its own, over every window. Never throws.
+        /// </summary>
+        private void ShowMessage(string message, string title, MessageBoxImage image)
         {
             try
             {
-                System.Windows.MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Error);
+                var dispatcher = Dispatcher;
+                if (dispatcher.CheckAccess())
+                {
+                    ShowOwned();
+                    return;
+                }
+
+                if (!dispatcher.HasShutdownStarted)
+                {
+                    var shown = false;
+                    try
+                    {
+                        // The time limit is for the UI thread to take it up, not for the player to read it
+                        dispatcher.Invoke(() => { shown = true; ShowOwned(); }, DispatcherPriority.Send, CancellationToken.None, FatalPathWait);
+                    }
+                    catch (TimeoutException)
+                    {
+                        // The UI thread did not answer: the box goes up from here
+                    }
+
+                    if (shown) return;
+                }
+
+                System.Windows.MessageBox.Show(message, title, MessageBoxButton.OK, image, MessageBoxResult.OK, System.Windows.MessageBoxOptions.DefaultDesktopOnly);
             }
             catch (Exception)
             {
                 // No window to show it in either; the log has it
             }
+
+            void ShowOwned()
+            {
+                if (MainWindow is { IsVisible: true } owner)
+                    System.Windows.MessageBox.Show(owner, message, title, MessageBoxButton.OK, image);
+                else
+                    System.Windows.MessageBox.Show(message, title, MessageBoxButton.OK, image);
+            }
+        }
+
+        /// <summary>
+        /// The game's "Something went wrong" dialog, for a failure the game carries on after (a command that threw).
+        /// Over whatever is up, so a failed sale in the sell dialog is told there and then; the dialog it covers comes
+        /// back once this one is read.
+        /// </summary>
+        private void ShowSomethingWentWrong(Exception exception)
+        {
+            DialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(
+                DialogService,
+                $"Something went wrong:\n{exception.Message}\n\nThe game carries on; the details are in the log.",
+                "Error"), jumpQueue: true);
         }
 
         // ===== THE AC INSTALL: PUT BACK =====
@@ -465,10 +532,16 @@ namespace StreetCorsa
         /// Car data, race copies and cfg INI files back as they were before a race. Each part on its own (one that
         /// fails does not stop the other), logged, never throws. Only call it when no AC process runs.
         /// </summary>
-        private void RestoreInstall(IAppLogger? logger)
+        /// <param name="problems">
+        /// Gets a line about each car, copy or cfg file that stayed changed, for start-up to tell the player; the exit
+        /// and fatal paths leave it out and only log
+        /// </param>
+        private void RestoreInstall(IAppLogger? logger, ICollection<string>? problems = null)
         {
-            var restored = AssettoCorsaLauncher.RestoreInstall(CarDataOverlay, IniModificationService, logger);
+            var found = problems ?? new List<string>();
+            var restored = AssettoCorsaLauncher.RestoreInstall(CarDataOverlay, IniModificationService, logger, found);
             if (restored > 0) logger?.Warning("{Count} car(s) and file(s) put back from an earlier race", restored);
+            if (found.Count > 0) logger?.Warning("{Count} thing(s) an earlier race changed stayed changed in Assetto Corsa", found.Count);
         }
 
         /// <summary>
@@ -723,8 +796,9 @@ namespace StreetCorsa
         }
 
         /// <summary>
-        /// What must happen before the process dies: the game saved, the AC install put back (only when no game
-        /// runs), FMOD released, the save's database closed, the log flushed. Once, whichever handler gets here
+        /// What must happen before the process dies: the AC install put back (only when no game runs), FMOD
+        /// released, the save's database closed, the log flushed. The game is not saved: it goes on from its last save
+        /// (<see cref="ShutDownCleanly"/> says why). Once, whichever handler gets here
         /// first; every step on its own, and it never throws.
         /// </summary>
         private void RunFatalPath(Exception? exception)
@@ -735,7 +809,7 @@ namespace StreetCorsa
             try
             {
                 logger = AppLoggerFactory.CreateLogger(LogCategory.App);
-                logger.Critical(exception ?? new Exception("(no exception object)"), "Fatal error: saving the game and putting Assetto Corsa back before the app ends");
+                logger.Critical(exception ?? new Exception("(no exception object)"), "Fatal error: putting Assetto Corsa back before the app ends (the game is not saved: it goes on from its last save)");
             }
             catch (Exception)
             {
@@ -743,6 +817,15 @@ namespace StreetCorsa
             }
 
             ShutDownCleanly(logger, fatal: true);
+
+            // Last, once everything that must reach the disk has: the player learns why the game is gone
+            ShowMessage(
+                "Street Corsa ran into an error it cannot recover from and has to close.\n\n" +
+                (_currentGameState != null
+                    ? "The game was not saved on the way out: it goes on from its last save, as it was before the error.\n\n"
+                    : "") +
+                $"The details are in the log:\n{AppLoggerFactory.LogDirectory}",
+                "Street Corsa", MessageBoxImage.Error);
         }
 
         /// <summary>
@@ -752,11 +835,20 @@ namespace StreetCorsa
         /// </summary>
         private void ShutDownCleanly(IAppLogger? logger, bool fatal = false)
         {
-            // Save current game state if one is loaded. On the UI thread, which owns the state: the crash path can
-            // run on any thread (a pool thread, an FMOD callback) while the UI thread is changing the game. A UI
-            // thread that does not get to it in time (stuck, or it is what crashed) means no save rather than a hang.
+            // Nothing more goes into the AC install from here on: a launch still under way (on a worker, or inside the
+            // crash path's message box) stops at its next change instead of going in after the restore below
+            AcInstallGate.Seal();
+
+            // The crash path does not save: whatever the UI thread was in the middle of when it threw (the money
+            // taken, the car not yet added) would be written over the last good save. The game saves as it goes
+            // (a purchase, a race, a new day), so the last save is a whole one, and the next load goes on from there.
             var state = _currentGameState;
-            if (state != null && !string.IsNullOrEmpty(state.SaveName) && GameStateRepository != null)
+            if (fatal && state != null)
+                logger?.Warning("Not saving {SaveName} on the crash path: the game goes on from its last save", state.SaveName);
+
+            // Save current game state if one is loaded. On the UI thread, which owns the state; a UI thread that
+            // does not get to it in time (stuck) means no save rather than a hang.
+            if (!fatal && state != null && !string.IsNullOrEmpty(state.SaveName) && GameStateRepository != null)
             {
                 try
                 {
@@ -859,31 +951,6 @@ namespace StreetCorsa
             }
 
             return ran;
-        }
-
-        /// <summary>
-        /// How many racers Total Domination asks the player to have beaten: everybody on the scene, and those who left
-        /// after the player beat them (they stay among the beaten, so they stay in the count). One who left unbeaten
-        /// is not asked for until they come back.
-        /// </summary>
-        private static int OpponentsToDominate(Models.GameState.GameState gameState) =>
-            gameState.Racers.TotalCount + gameState.Racers.Departed.Keys.Count(gameState.Career.DefeatedOpponentIds.Contains);
-
-        /// <summary>
-        /// Check if the player has the most wins for Season Champion victory
-        /// </summary>
-        private static bool IsPlayerSeasonChampion(Models.GameState.GameState gameState)
-        {
-            var playerWins = gameState.Player.Stats.Wins;
-
-            // Every racer of the street, the King aside (his record is from before the season); those who left
-            // town too, or the champion would be whoever is left the day the best of them is away
-            return gameState.Racers.ReadyToRace.Values
-                .Concat(gameState.Racers.Inactive.Values)
-                .Concat(gameState.Racers.Retired.Values)
-                .Concat(gameState.Racers.Departed.Values)
-                .Where(racer => racer is not Models.GameState.Opponent { IsKing: true })
-                .All(racer => racer.Stats.Wins <= playerWins);
         }
 
         protected override void OnExit(ExitEventArgs e)

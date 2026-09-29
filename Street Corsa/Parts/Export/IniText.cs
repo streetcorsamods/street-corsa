@@ -49,8 +49,17 @@ public sealed class IniText
     private static string ValueOnLine(string line)
     {
         var value = line[(line.IndexOf('=') + 1)..];
-        var comment = value.IndexOf(';');
+        var comment = CommentStart(value);
         return (comment < 0 ? value : value[..comment]).Trim();
+    }
+
+    /// <summary>Where a trailing comment starts: ';' or '//', as AC and AcTools read them; -1 when there is none</summary>
+    private static int CommentStart(string text)
+    {
+        var semicolon = text.IndexOf(';');
+        var slashes = text.IndexOf("//", StringComparison.Ordinal);
+        if (semicolon < 0) return slashes;
+        return slashes < 0 ? semicolon : Math.Min(semicolon, slashes);
     }
 
     public double? GetNumber(string section, string key, int occurrence = 0) =>
@@ -79,7 +88,9 @@ public sealed class IniText
 
             // Keep the comment that explains the key
             Changed = true;
-            var comment = _lines[i].IndexOf(';');
+            var equals = _lines[i].IndexOf('=');
+            var comment = CommentStart(_lines[i][(equals + 1)..]);
+            if (comment >= 0) comment += equals + 1;
             _lines[i] = comment < 0 ? $"{key}={value}" : $"{key}={value}\t\t\t{_lines[i][comment..]}";
             return;
         }

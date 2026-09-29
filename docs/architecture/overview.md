@@ -41,9 +41,19 @@ Street Rod-style career mode for Assetto Corsa. External WPF manager handles all
 
 ## Build Dependencies
 The game and the parts converter reference AcTools (`AcTools.dll`, `AcTools.Render.dll`) and SlimDX from a sibling
-checkout of [gro-ove/actools](https://github.com/gro-ove/actools), not from a package: `..\actools\Output\x64\Debug`
-next to this repo. The DLLs are not versioned here, so a build is only reproducible with the same actools commit,
-built in Debug x64. Known good: actools `effa0e131a44ced7bbce24d8953cfc7db09faef7` (2025-10-02, "Update SimuCube.cs").
+checkout of [gro-ove/actools](https://github.com/gro-ove/actools), not from a package: `..\actools` next to this repo,
+built **Release x64** (`AcTools\bin\x64\Release`, `AcTools.Render\bin\x64\Release`; SlimDX from `Libraries\SlimDX-x64`).
+The DLLs are not versioned here, so a build is only reproducible with the same actools commit.
+Known good: actools `effa0e131a44ced7bbce24d8953cfc7db09faef7` (2025-10-02, "Update SimuCube.cs"). To build it:
+
+```
+git clone https://github.com/gro-ove/actools ..\actools
+git -C ..\actools checkout effa0e131a44ced7bbce24d8953cfc7db09faef7
+MSBuild ..\actools\AcTools.Render\AcTools.Render.csproj -p:Configuration=Release -p:Platform=x64
+```
+
+(MSBuild from Visual Studio, with the .NET Framework 4.5.2 targeting pack.) Not the Debug build: its
+`CarSlot.SetCarAsync` shows a raw exception MessageBox for any car that fails to load, and it is unoptimized.
 A different commit may change the KN5 reader or the renderer under the game without a line of this repo changing;
 check the commit (`git -C ..\actools rev-parse HEAD`) first when a build or a render differs between machines.
 

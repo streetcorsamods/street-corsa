@@ -45,7 +45,7 @@
                                FontFamily="Consolas"
                                FontSize="{StaticResource FontSizeTitle}"
                                FontWeight="Bold"
-                               Foreground="Black"
+                               Foreground="{StaticResource InkBrush}"
                                TextAlignment="Center"/>
                 </Border>
                 <Button Content="+" Command="{Binding UpCommand}" Style="{StaticResource DialogSecondaryButtonStyle}" Width="40" Height="36"/>

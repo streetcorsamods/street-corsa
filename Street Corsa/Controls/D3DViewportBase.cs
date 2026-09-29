@@ -66,6 +66,10 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     // Device calls a car load is still making on the current renderer: it is disposed only once they are done
     private Task _deviceWork = Task.CompletedTask;
 
+    // Cancelled as the current renderer goes: a car still loading into it stops at its next step rather than
+    // finishing a model nobody will see while the old renderer waits on it (see TrackDeviceWork)
+    private CancellationTokenSource _rendererGone = new();
+
     private bool _isLoading;
     private bool _reloadRequested;
     private bool _failed;
@@ -77,6 +81,9 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
 
     private Audio.EngineRunner? _poseSource;
     private CarBodyRock? _rock;
+
+    // The lean the shadows were last worked out for (CarBodyRock.ShadowsDue)
+    private Audio.BodyPose _shadowedPose = Audio.BodyPose.Rest;
 
     // Kicks to the body that ring out on the springs, by how long they have been going (less than 0 while they wait):
     // +1 lifts the body (an engine coming out), -1 drops it (one going in); the nose goes with it for an engine in the
@@ -351,6 +358,12 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     }
 
     /// <summary>
+    /// Cancelled when the current renderer goes, for <c>SetCarAsync</c>: a load cancelled this way ends quietly
+    /// without a car, so the caller checks the renderer is still the one it loaded into, as it does after every await
+    /// </summary>
+    protected CancellationToken RendererToken => _rendererGone.Token;
+
+    /// <summary>
     /// Device work done for the current renderer that may still be running when the control goes: a car being put
     /// in a slot ends with device calls made from a worker thread, outside the renderer's lock. The renderer waits
     /// for it before it is disposed.
@@ -483,31 +496,32 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
             return;
         }
 
-        var moving = StepFrame(renderer, dt);
-
-        // A bump rings out frame by frame, on top of whatever the running engine does
-        if (_bumps.Count > 0)
-        {
-            var step = Math.Min(dt, GarageRenderer.MaxTickSeconds);
-            for (var i = 0; i < _bumps.Count; i++) _bumps[i] = _bumps[i] with { Age = _bumps[i].Age + step };
-            OnPoseChanged();
-            moving = true;
-        }
-
-        var now = DateTime.Now;
-        if (renderer.IsDirty && _animateUntil < now + SettleWindow)
-        {
-            _animateUntil = now + SettleWindow;
-        }
-
-        if (!moving && now >= _animateUntil && _bridge.BoundTarget != IntPtr.Zero)
-        {
-            StopPump(idle: true);
-            return;
-        }
-
         try
         {
+            // The frame's own steps too: whatever throws in them would otherwise reach the dispatcher every frame
+            var moving = StepFrame(renderer, dt);
+
+            // A bump rings out frame by frame, on top of whatever the running engine does
+            if (_bumps.Count > 0)
+            {
+                var step = Math.Min(dt, GarageRenderer.MaxTickSeconds);
+                for (var i = 0; i < _bumps.Count; i++) _bumps[i] = _bumps[i] with { Age = _bumps[i].Age + step };
+                OnPoseChanged();
+                moving = true;
+            }
+
+            var now = DateTime.Now;
+            if (renderer.IsDirty && _animateUntil < now + SettleWindow)
+            {
+                _animateUntil = now + SettleWindow;
+            }
+
+            if (!moving && now >= _animateUntil && _bridge.BoundTarget != IntPtr.Zero)
+            {
+                StopPump(idle: true);
+                return;
+            }
+
             renderer.Draw();
             _bridge.Present(renderer.GetRenderTarget());
 
@@ -604,6 +618,13 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
 
         var renderer = _renderer;
         _renderer = null;
+
+        // A car still loading into it stops where it is. Not disposed: the load may still be looking at the token.
+        if (renderer != null)
+        {
+            _rendererGone.Cancel();
+            _rendererGone = new CancellationTokenSource();
+        }
 
         // The target belongs to the renderer: let go of it before the renderer goes
         _bridge.ReleaseSurface();
@@ -774,12 +795,20 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         {
             ReleaseRock();
             _rock = new CarBodyRock(carNode);
+            _shadowedPose = Audio.BodyPose.Rest;
         }
 
         if (!_rock.Apply(pose)) return;
 
         if (LeansParts) renderer.BodyLean = _rock.WorldLean;
-        renderer.RefreshShadows();
+
+        // The shadow maps are drawn again only for a lean that shows in them, not for every shake at idle
+        if (CarBodyRock.ShadowsDue(_shadowedPose, pose))
+        {
+            renderer.RefreshShadows();
+            _shadowedPose = pose;
+        }
+
         Invalidate();
     }
 
@@ -790,6 +819,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
 
         _rock.Release();
         _rock = null;
+        _shadowedPose = Audio.BodyPose.Rest;
         if (_renderer != null)
         {
             if (LeansParts) _renderer.BodyLean = SlimDX.Matrix.Identity;

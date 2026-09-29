@@ -127,7 +127,8 @@ public partial class EnginePanel : System.Windows.Controls.UserControl
 
     private void OnWindowKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
-        if (!IsVisible || !Runner.HasEngine || !IsThrottleKey(e.Key) || IsTyping()) return;
+        // A dialog in front has the keys: Space there presses its button, it does not rev the engine behind it
+        if (!IsVisible || !Runner.HasEngine || !IsThrottleKey(e.Key) || IsTyping() || Dialogs.ModalState.IsOpen) return;
 
         Runner.SetKey(true);
 
@@ -139,8 +140,9 @@ public partial class EnginePanel : System.Windows.Controls.UserControl
     {
         if (!IsThrottleKey(e.Key)) return;
 
+        // Let go even behind a dialog: the key may have gone down before it opened
         Runner.SetKey(false);
-        if (IsVisible && Runner.HasEngine) e.Handled = true;
+        if (IsVisible && Runner.HasEngine && !Dialogs.ModalState.IsOpen) e.Handled = true;
     }
 
     private void OnWindowDeactivated(object? sender, EventArgs e)

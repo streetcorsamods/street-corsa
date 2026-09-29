@@ -1,3 +1,4 @@
+using StreetCorsa.Helpers;
 using StreetCorsa.Models.GameState;
 
 namespace StreetCorsa.Parts.Cars;
@@ -88,7 +89,7 @@ public static class AttendantCheck
     /// <summary>The most worn of the parts, when it is worn enough to mention</summary>
     private static void Worn(List<AttendantHint> hints, string key, IEnumerable<PartInstance> parts, string? where = null)
     {
-        var worst = parts.Select(p => double.IsFinite(p.Wear) ? Math.Clamp(p.Wear, 0, 1) : 1).DefaultIfEmpty(1).Min();
+        var worst = parts.Select(p => Unit.Clamp01(p.Wear, 1)).DefaultIfEmpty(1).Min();
         if (worst < SoonBelow) hints.Add(new AttendantHint(key, worst >= NowBelow, worst, where));
     }
 }

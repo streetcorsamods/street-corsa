@@ -24,7 +24,7 @@ namespace StreetCorsa.Services.Parts
         {
             // The worker gets a copy made here, on the caller's thread: the car's own parts may be changed on the
             // workbench while the dyno runs
-            var copy = Snapshot(car);
+            var copy = car.Snapshot();
             return Task.Run(() =>
             {
                 try
@@ -38,23 +38,6 @@ namespace StreetCorsa.Services.Parts
                 }
             });
         }
-
-        /// <summary>The car with copies of its parts (their ids kept), for a worker thread to evaluate</summary>
-        private static Car Snapshot(Car car) => new(car.DefinitionId)
-        {
-            InstanceId = car.InstanceId,
-            SkinId = car.SkinId,
-            OdometerKM = car.OdometerKM,
-            EngineHealth = car.EngineHealth,
-            TransmissionHealth = car.TransmissionHealth,
-            BodyCondition = car.BodyCondition,
-            TireCondition = car.TireCondition,
-            BodyDamageKmh = car.BodyDamageKmh?.ToArray() ?? new double[4],
-            Parts = car.Parts.Select(p => PartTrees.Clone(p, keepIds: true)).ToList(),
-            HasPartsAssigned = car.HasPartsAssigned,
-            HasRunningGearAssigned = car.HasRunningGearAssigned,
-            PowerHp = car.PowerHp
-        };
 
         /// <summary>
         /// A car for sale, as it is: its own parts, or the factory's when the offer came without any (an older save)

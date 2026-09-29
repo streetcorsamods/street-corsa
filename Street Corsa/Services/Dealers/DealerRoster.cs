@@ -13,10 +13,17 @@ namespace StreetCorsa.Services.Dealers
         /// save began joins it (open or waiting, as its <see cref="DealerDefinition.StartsOpen"/> says), one no longer
         /// defined goes, and the rest keep how their business is going under the name the definition gives them. No
         /// definitions at all leave the save as it is.
+        ///
+        /// A dealer that goes (its mod was taken out) takes the cars still on its lot with it: nobody can drive there to
+        /// buy them, and the rivals must not buy off a lot that is not there. What was sold there stays on the books.
         /// </summary>
         public static void Sync(GameState gameState, IDealerCatalog catalog)
         {
-            if (DealerChurn.Merge(gameState.DealerLocations, catalog.All) is { } roster) gameState.DealerLocations = roster;
+            if (DealerChurn.Merge(gameState.DealerLocations, catalog.All) is not { } roster) return;
+
+            gameState.DealerLocations = roster;
+            var known = roster.Select(d => d.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            gameState.UsedCarMarket?.RemoveAll(l => !l.IsSold && !known.Contains(l.DealerLocation));
         }
 
         /// <summary>The dealers selling cars: open, or in their closing-down sale. The map shows these.</summary>

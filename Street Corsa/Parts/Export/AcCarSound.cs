@@ -33,6 +33,7 @@ public static class AcCarSound
     private static readonly Regex Line = new(@"^\s*\{([0-9a-fA-F-]{36})\}\s+([a-z]+):/(.*?)\s*$", RegexOptions.Compiled);
 
     /// <summary>Where a car's own bank and GUIDs wait inside its sfx folder while a race runs on another sound</summary>
+    // The game's old name, kept on purpose: installs in the field may have a car's own sound waiting in it, never rename it
     public const string KeepFolder = "_streetrod_keep";
 
     /// <summary>

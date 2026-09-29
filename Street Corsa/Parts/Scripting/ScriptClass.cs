@@ -107,19 +107,21 @@ public sealed class ScriptClass
 
     public string? Text(int index) => index >= 0 && index < Pool.Count ? Pool[index].Text : null;
 
-    private Dictionary<string, string>? _fieldSignatures;
+    // Built on first use, from any thread, as the method index below is: published whole, never changed after
+    private volatile Dictionary<string, string>? _fieldSignatures;
 
     /// <summary>Declared type of a field of this class; null when the class has no such field</summary>
     public string? FieldSignature(string name)
     {
-        if (_fieldSignatures == null)
+        var signatures = _fieldSignatures;
+        if (signatures == null)
         {
-            var signatures = new Dictionary<string, string>();
+            signatures = new Dictionary<string, string>();
             foreach (var field in Fields) signatures.TryAdd(field.Name, field.Signature);
             _fieldSignatures = signatures;
         }
 
-        return _fieldSignatures.GetValueOrDefault(name);
+        return signatures.GetValueOrDefault(name);
     }
 
     // Method lookups of the VM, made once: a class is complete when it is loaded (or derived) and never changes

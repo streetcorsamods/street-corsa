@@ -21,6 +21,11 @@ namespace StreetCorsa.Parts.Cars;
 /// g in corners (Black Cat County, 2026-09-26), so a stock pan runs short only in a long sweeper at the limit, and
 /// stickier tyres ask for a deeper pan.
 ///
+/// A mod says what its parts are instead of leaving it to their names: a kind in its work order says what it does for
+/// the cooling (<see cref="WorkKind.Cooling"/>), and a part in its pack.json whether it is a performance one
+/// (<see cref="PartDefinition.Performance"/>). The names are read only for parts that say nothing, as the source
+/// game's do.
+///
 /// Linked into EngineBench: works from parts, never from a <c>Car</c>.
 /// </summary>
 public sealed class EngineCooling
@@ -58,16 +63,24 @@ public sealed class EngineCooling
 
     public const string OilPansGroup = "Oil pans";
 
+    // Whole words, a plural s allowed, as the work order reads names (WorkOrder.HasWord): "race" is not in "brace",
+    // "fan" not in "fantastic". A letter on either side ends a match, an underscore, a digit or a space does not, so
+    // "Water_pomp_small_B" is read as the words it is. Only for parts that do not say what they are (PartDefinition.
+    // CoolingRole, PartDefinition.Performance); a few stems stay open at the end: "alumin" is aluminium and aluminum,
+    // "hardware" is also the source game's "hardwarer".
     private const RegexOptions Words_ = RegexOptions.IgnoreCase | RegexOptions.CultureInvariant;
-    private static readonly Regex RadiatorWord = new(@"radiator", Words_);
-    private static readonly Regex FanWord = new(@"(^|[^a-z])fan($|[^a-z])", Words_);
-    private static readonly Regex WaterPumpWords = new(@"water.*p[ou]mp", Words_);
-    private static readonly Regex HardwareWords = new(@"hardware|bracket|pulley|gasket|bolt", Words_);
-    private static readonly Regex PerformanceRadiatorWords = new(@"alumin|racing|race|champion|be cool|electric fan", Words_);
-    private static readonly Regex ElectricFanWords = new(@"electric fan", Words_);
-    private static readonly Regex PerformancePumpWords = new(@"edelbrock|weiand|summit|high-flow|meziere|electric|march|paxton", Words_);
-    private static readonly Regex PerformanceFanWords = new(@"flex|7[ -]blade|seven[ -]blade|electric|high-performance|edelbrock|march|performance", Words_);
-    private static readonly Regex RaceSumpWords = new(@"deep|milodon|moroso|canton|race|drag|hamburger|stef", Words_);
+    private static readonly Regex RadiatorWord = Word("radiator");
+    private static readonly Regex FanWord = Word("fan");
+    private static readonly Regex WaterPumpWords = new(@"(?<![a-z])water.*p[ou]mps?(?![a-z])", Words_);
+    private static readonly Regex HardwareWords = Word(@"hardware[a-z]*|bracket|pulley|gasket|bolt");
+    private static readonly Regex PerformanceRadiatorWords = Word(@"alumin[a-z]*|racing|race|champion|be cool|electric fan");
+    private static readonly Regex ElectricFanWords = Word("electric fan");
+    private static readonly Regex PerformancePumpWords = Word("edelbrock|weiand|summit|high-flow|meziere|electric|march|paxton");
+    private static readonly Regex PerformanceFanWords = Word("flex|7[ -]blade|seven[ -]blade|electric|high-performance|edelbrock|march|performance");
+    private static readonly Regex RaceSumpWords = Word("deep|milodon|moroso|canton|race|drag|hamburger|stef");
+
+    /// <summary>Any of the alternatives as a whole word, a plural s allowed</summary>
+    private static Regex Word(string alternatives) => new($"(?<![a-z])(?:{alternatives})s?(?![a-z])", Words_);
 
     private readonly PartsCatalog _catalog;
     private readonly Dictionary<string, double> _blockFactoryHp = new(StringComparer.OrdinalIgnoreCase);
@@ -89,9 +102,20 @@ public sealed class EngineCooling
         return cooling;
     }
 
-    /// <summary>What a part does for the cooling, by its name (the source game gave these parts no figures)</summary>
+    /// <summary>
+    /// What a part does for the cooling: what its kind in the work order says (<see cref="PartDefinition.CoolingRole"/>),
+    /// else what its name says (the source game gave these parts no figures)
+    /// </summary>
     public static Kind KindOf(PartDefinition part)
     {
+        switch (part.CoolingRole)
+        {
+            case WorkOrder.CoolingRadiator: return Kind.Radiator;
+            case WorkOrder.CoolingWaterPump: return Kind.WaterPump;
+            case WorkOrder.CoolingFan: return Kind.Fan;
+            case WorkOrder.CoolingNone: return Kind.Other;
+        }
+
         var text = Words(part);
         if (HardwareWords.IsMatch(text)) return Kind.Other;
         if (PartKinds.Is(part, "Radiator") || part.SourceScript?.EndsWith(".Radiator", StringComparison.Ordinal) == true
@@ -101,17 +125,18 @@ public sealed class EngineCooling
         return Kind.Other;
     }
 
-    /// <summary>A radiator that carries off more than a factory one</summary>
-    public static bool IsPerformanceRadiator(PartDefinition radiator) => PerformanceRadiatorWords.IsMatch(Words(radiator));
+    /// <summary>A radiator that carries off more than a factory one: as the part says (<see cref="PartDefinition.Performance"/>), else by its name</summary>
+    public static bool IsPerformanceRadiator(PartDefinition radiator) => radiator.Performance ?? PerformanceRadiatorWords.IsMatch(Words(radiator));
 
-    /// <summary>A water pump that moves more than a factory one</summary>
-    public static bool IsPerformancePump(PartDefinition pump) => PerformancePumpWords.IsMatch(Words(pump));
+    /// <summary>A water pump that moves more than a factory one: as the part says, else by its name</summary>
+    public static bool IsPerformancePump(PartDefinition pump) => pump.Performance ?? PerformancePumpWords.IsMatch(Words(pump));
 
-    /// <summary>A fan that moves more air standing still than a factory one</summary>
-    public static bool IsPerformanceFan(PartDefinition fan) => PerformanceFanWords.IsMatch(Words(fan));
+    /// <summary>A fan that moves more air standing still than a factory one: as the part says, else by its name</summary>
+    public static bool IsPerformanceFan(PartDefinition fan) => fan.Performance ?? PerformanceFanWords.IsMatch(Words(fan));
 
-    /// <summary>A radiator with an electric fan of its own</summary>
-    public static bool HasElectricFan(PartDefinition radiator) => ElectricFanWords.IsMatch(Words(radiator));
+    /// <summary>A radiator with an electric fan of its own: as its kind says (<see cref="PartDefinition.CoolingOwnFan"/>), else by its name</summary>
+    public static bool HasElectricFan(PartDefinition radiator) =>
+        radiator.CoolingRole != null ? radiator.CoolingOwnFan : ElectricFanWords.IsMatch(Words(radiator));
 
     /// <summary>The least a block made as it left the factory, horsepower; null for a block no build rates</summary>
     public double? BlockFactoryHp(string blockId) => _blockFactoryHp.TryGetValue(blockId, out var hp) ? hp : null;
@@ -176,11 +201,11 @@ public sealed class EngineCooling
         return new EngineCoolingRating(Math.Round(Math.Clamp(cooling, 0.05, 3), 3), fan, SumpG(pan));
     }
 
-    /// <summary>The g an oil pan holds its oil to</summary>
+    /// <summary>The g an oil pan holds its oil to: a performance one (as it says, else by its name) longer</summary>
     public static double SumpG(PartDefinition? pan)
     {
         if (pan == null) return NoSumpG;
-        if (!RaceSumpWords.IsMatch(Words(pan))) return StockSumpG;
+        if (!(pan.Performance ?? RaceSumpWords.IsMatch(Words(pan)))) return StockSumpG;
         return pan.Number("capacity") >= BigSumpLitres ? BigSumpG : RaceSumpG;
     }
 

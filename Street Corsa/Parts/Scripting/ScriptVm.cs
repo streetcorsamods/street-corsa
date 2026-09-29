@@ -19,12 +19,26 @@ public sealed class ScriptVm
 
     // Steps one Instantiate or Call may take. Only a stop for scripts that loop: running out fails the engine, so
     // it sits far above real work. The heaviest of the 161 catalog builds takes 29,227 in one entry (the GTO 389,
-    // 2026-09-24, PeakSteps); a player's tree bigger than any catalog build still has over 30 times that.
+    // 2026-09-24, PeakSteps; 39,167 since a dyno run is charged as steps, 2026-09-29); a player's tree bigger than any
+    // catalog build still has over 25 times that.
     private const int MaxSteps = 1_000_000;
 
-    // Text a script builds by adding strings together: a label or a message is a few dozen characters, and
-    // s = s + s in a loop would double past any memory well inside the step budget
-    private const int MaxTextLength = 64 * 1024;
+    // Steps all the entries of one VM may take together: one engine's parts, made, tuned and asked. Each entry has
+    // the budget above, so without this a pack of N parts could spend N of them (and keep what each built). The
+    // heaviest catalog build takes 52,471 in all, its dyno run charged (the GTO 65, 2026-09-29, TotalSteps); this is
+    // over 90 times that. Sticky: once spent, every entry after stops at its first step.
+    private const long MaxTotalSteps = 5_000_000;
+
+    // Array elements the scripts of one VM may store, new ones counted: a part's arrays hold gear ratios and the
+    // like, a few dozen elements. Arrays outlive the entry that filled them, so this is what bounds their memory
+    // (each element is a store, and a step, but the steps alone would allow five times as many).
+    private const int MaxArrayElements = 1_000_000;
+
+    /// <summary>
+    /// Text a script builds by adding strings together, or has printed (Float.toString): a label or a message is a
+    /// few dozen characters, and s = s + s in a loop would double past any memory well inside the step budget
+    /// </summary>
+    internal const int MaxTextLength = 64 * 1024;
     private const string Constructor = "<init>";
     private const string PartConstructorSignature = "(I)";
 
@@ -34,6 +48,8 @@ public sealed class ScriptVm
     // What one Run works with, handed on from run to run: runs nest (a call inside a call), so one set per level
     private readonly Stack<RunScratch> _scratch = new();
     private int _steps;
+    private long _totalSteps;
+    private int _arrayElements;
 
     // Classes whose static initializers are running, one inside another (a static that reads a static of another
     // class). Kept apart from the call depth, so a class first touched deep in a call still initializes as it
@@ -67,6 +83,22 @@ public sealed class ScriptVm
 
     /// <summary>Most steps one Instantiate or Call has taken on this VM: how close the scripts come to the budget</summary>
     public int PeakSteps { get; private set; }
+
+    /// <summary>Steps every Instantiate and Call on this VM has taken together, what the host charged included</summary>
+    public long TotalSteps => _totalSteps;
+
+    /// <summary>
+    /// Counts work a host native does against the running entry's steps and the VM's, as that many steps: the dyno
+    /// is far more than one instruction, and a script calling it in a loop must run out as soon as one looping on
+    /// plain arithmetic would
+    /// </summary>
+    public void Charge(int steps)
+    {
+        if (steps <= 0) return;
+
+        _steps = (int)Math.Min((long)_steps + steps, int.MaxValue);
+        _totalSteps += steps;
+    }
 
     /// <summary>
     /// For reading parts out of scripts with no game around: lists of parts are often filled inside branches nobody
@@ -104,7 +136,7 @@ public sealed class ScriptVm
         }
     }
 
-    // Each entry has the whole budget. A host may enter again from inside a native (none does today): what the
+    // Each entry has the whole budget of its own, and draws on the VM's total. A host may enter again from inside a native (none does today): what the
     // outer entry was doing is put back when the inner one is done, a throw included
     private (int StaticsNesting, string? Entry) Enter(ScriptClass? type, string method)
     {
@@ -335,10 +367,16 @@ public sealed class ScriptVm
 
         for (var index = 0; index < tree.Length; index++)
         {
-            if (++_steps > MaxSteps)
+            if (++_steps > MaxSteps || ++_totalSteps > MaxTotalSteps || _arrayElements > MaxArrayElements)
             {
                 // Told once, where it first ran out: the runs above it stop at once and add nothing
-                if (!BudgetExhausted) BudgetExhaustedIn = $"{_entry} after {MaxSteps} steps";
+                if (!BudgetExhausted)
+                {
+                    BudgetExhaustedIn = _steps > MaxSteps ? $"{_entry} after {MaxSteps} steps"
+                        : _totalSteps > MaxTotalSteps ? $"{_entry}, with {MaxTotalSteps} steps taken by the parts in all"
+                        : $"{_entry}, with {MaxArrayElements} array elements stored by the parts in all";
+                }
+
                 BudgetExhausted = true;
                 return null;
             }
@@ -754,7 +792,11 @@ public sealed class ScriptVm
                 // A store outside the array (Java would throw) is not made, as other operations the VM can't do are not
                 if (Resolve(element.Array, locals) is ScriptArray array && Resolve(element.Index, locals) is ScriptNumber { IsInteger: true } position
                     && array.Holds(position.Amount) && (!unsure || !array.Items.ContainsKey((int)position.Amount)))
+                {
+                    // A new element is memory kept until the VM goes: counted, and past the cap no longer stored
+                    if (!array.Items.ContainsKey((int)position.Amount) && ++_arrayElements > MaxArrayElements) break;
                     array.Items[(int)position.Amount] = ScriptTypes.Convert(original, array.ElementType);
+                }
                 break;
         }
     }
