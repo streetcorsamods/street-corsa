@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:controls="clr-namespace:StreetCorsa.Controls"
+             xmlns:radio="clr-namespace:StreetCorsa.Audio.Radio"
              mc:Ignorable="d"
              d:DesignHeight="720" d:DesignWidth="1280">
     <Grid Background="Black">
@@ -97,6 +98,12 @@
                            MaxWidth="440"/>
             </StackPanel>
         </Border>
+
+        <!-- The car's radio, in reach while driving: an AM set here (the radio's in-car sound) -->
+        <radio:CarRadio Width="380"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Bottom"
+                        Margin="0,0,20,20"/>
 
         <!-- Drag to look round -->
         <TextBlock Text="Drag to look around · double-click to look back out"

@@ -75,8 +75,12 @@ public static class RadioLibrary
 
     public sealed record ScanResult(IReadOnlyList<RadioSong> Songs, int NotPlayable, IReadOnlyList<string> MissingFolders);
 
+    // What the tags are read into: an entry of an older reading is read again
+    private const int CacheVersion = 2;
+
     private sealed class CacheEntry
     {
+        [JsonProperty("v")] public int Version { get; set; }
         [JsonProperty("size")] public long Size { get; set; }
         [JsonProperty("written")] public long Written { get; set; }
         [JsonProperty("title")] public string? Title { get; set; }
@@ -127,24 +131,42 @@ public static class RadioLibrary
                 }
 
                 var written = info.LastWriteTimeUtc.Ticks;
-                if (!cache.TryGetValue(file, out var entry) || entry.Size != info.Length || entry.Written != written)
+                if (!cache.TryGetValue(file, out var entry) || entry.Version != CacheVersion || entry.Size != info.Length || entry.Written != written)
                 {
                     var tags = read(file);
                     entry = new CacheEntry
                     {
-                        Size = info.Length, Written = written, Title = tags?.Title, Artist = tags?.Artist, Album = tags?.Album,
-                        LengthMs = tags?.LengthMs ?? 0
+                        Version = CacheVersion, Size = info.Length, Written = written, Title = tags?.Title, Artist = tags?.Artist,
+                        Album = tags?.Album, LengthMs = tags?.LengthMs ?? 0
                     };
                 }
 
                 fresh[file] = entry;
-                songs.Add(new RadioSong(file, entry.Title ?? TitleFromName(file), entry.Artist, entry.Album, entry.LengthMs));
+
+                // Untagged: "Artist - Title" is often in the name
+                var named = FromName(file);
+                songs.Add(new RadioSong(file, entry.Title ?? named.Title, entry.Artist ?? (entry.Title == null ? named.Artist : null), entry.Album, entry.LengthMs));
             }
         }
 
         SaveCache(cachePath, fresh);
         songs.Sort((a, b) => string.Compare(a.Display, b.Display, StringComparison.CurrentCultureIgnoreCase));
         return new ScanResult(songs, notPlayable, missing);
+    }
+
+    /// <summary>
+    /// A title, and the artist when the name has one, out of a file name: "BEN E. KING - Stand By Me.mp3" as "Stand By
+    /// Me" by "BEN E. KING"; "03 - Surf City.mp3" as "Surf City" (a track number is not an artist)
+    /// </summary>
+    public static (string Title, string? Artist) FromName(string path)
+    {
+        var name = TitleFromName(path);
+        var dash = name.IndexOf(" - ", StringComparison.Ordinal);
+        if (dash <= 0) return (name, null);
+
+        var artist = name[..dash].Trim();
+        var title = name[(dash + 3)..].Trim();
+        return artist.Length == 0 || title.Length == 0 || artist.All(char.IsDigit) ? (name, null) : (title, artist);
     }
 
     /// <summary>A title out of a file name: "03 - Surf City.mp3" as "Surf City", underscores as spaces</summary>

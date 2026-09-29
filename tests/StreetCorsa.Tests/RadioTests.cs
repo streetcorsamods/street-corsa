@@ -139,6 +139,15 @@ public class RadioLibraryTests : IDisposable
     [InlineData(@"C:\m\12.mp3", "12")]
     public void A_song_without_tags_is_named_after_its_file(string path, string title) => Assert.Equal(title, RadioLibrary.TitleFromName(path));
 
+    [Theory]
+    [InlineData(@"D:\Oldies\BEN E. KING - Stand By Me.mp3", "Stand By Me", "BEN E. KING")]
+    [InlineData(@"D:\Oldies\The Chantays - Pipeline - 1963.flac", "Pipeline - 1963", "The Chantays")]
+    [InlineData(@"C:\m\03 - Surf City.mp3", "Surf City", null)]
+    [InlineData(@"C:\m\1964 - Hits.mp3", "1964 - Hits", null)]
+    [InlineData(@"C:\m\Misirlou.flac", "Misirlou", null)]
+    public void An_untagged_songs_name_gives_its_artist_when_it_has_one(string path, string title, string? artist) =>
+        Assert.Equal((title, artist), RadioLibrary.FromName(path));
+
     [Fact]
     public void A_scan_finds_the_songs_in_every_folder_reads_tags_once_and_counts_what_it_cannot_play()
     {

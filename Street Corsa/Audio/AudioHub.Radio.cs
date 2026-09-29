@@ -106,8 +106,11 @@ public sealed partial class AudioHub
         }
     }
 
-    /// <summary>Plays an opened song on the radio's bus, from <paramref name="positionMs"/>; null when it cannot</summary>
-    public PlayingSound? PlaySong(SongSound song, uint positionMs = 0)
+    /// <summary>
+    /// Plays an opened song on the radio's bus, from <paramref name="positionMs"/>, coming up over
+    /// <paramref name="fadeInSeconds"/> when given (the radio switched on); null when it cannot
+    /// </summary>
+    public PlayingSound? PlaySong(SongSound song, uint positionMs = 0, float fadeInSeconds = 0f)
     {
         var core = _core;
         if (_system == IntPtr.Zero || core == IntPtr.Zero || _shutDown || song.Sound == IntPtr.Zero) return null;
@@ -117,6 +120,7 @@ public sealed partial class AudioHub
         var playing = new PlayingSound(song, channel);
         playing.SetLoop(false);
         if (positionMs > 0) Warn(FMOD_Channel_SetPosition(channel, positionMs, TimeUnitMs), "seek song");
+        if (fadeInSeconds > 0f) playing.Fade(0f, 1f, fadeInSeconds, _mixRate, stopAtEnd: false);
         playing.Resume();
         return playing;
     }
@@ -158,8 +162,12 @@ public sealed partial class AudioHub
         }
     }
 
+    /// <summary>
+    /// The longest of what the tags say under these names: an MP3 often has both an ID3v1 tag, which cuts a title at 30
+    /// characters, and an ID3v2 one with all of it
+    /// </summary>
     private static string? First(Dictionary<string, string> tags, params string[] names) =>
-        names.Select(n => tags.GetValueOrDefault(n)).FirstOrDefault(v => v != null);
+        names.Select(n => tags.GetValueOrDefault(n)).Where(v => v != null).OrderByDescending(v => v!.Length).FirstOrDefault();
 
     /// <summary>A tag's text however it is written; null for data that is not text</summary>
     private static string? TagText(Tag tag)

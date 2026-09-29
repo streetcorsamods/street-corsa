@@ -38,6 +38,9 @@ namespace StreetCorsa
             };
             RadioPlayer.Shared.SongStarted += ShowNowPlaying;
             PreviewKeyDown += OnRadioKeys;
+
+            // After the screens have had it: the garage's part placement takes R for its own
+            KeyDown += OnRadioPowerKey;
             UpdateHosts();
         }
 
@@ -65,7 +68,8 @@ namespace StreetCorsa
         }
 
         /// <summary>
-        /// F2 opens and closes the radio, Esc closes it; the keyboard's media keys work it from anywhere. Left alone
+        /// F2 opens and closes the radio, Esc closes it (R, its power, is <see cref="OnRadioPowerKey"/>); the keyboard's
+        /// media keys work it from anywhere. Left alone
         /// while a dialog is up, and F2 while typing in the panel's boxes is still F2.
         /// </summary>
         private void OnRadioKeys(object sender, System.Windows.Input.KeyEventArgs e)
@@ -97,6 +101,19 @@ namespace StreetCorsa
                     return;
             }
 
+            e.Handled = true;
+        }
+
+        /// <summary>
+        /// R switches the radio on and off, wherever the player is, unless they are typing, a dialog is up, or a screen
+        /// took the key for itself first (the garage's part placement)
+        /// </summary>
+        private void OnRadioPowerKey(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Handled || e.Key != Key.R || Keyboard.Modifiers != ModifierKeys.None || DialogService.IsDialogOpen) return;
+            if (Keyboard.FocusedElement is System.Windows.Controls.Primitives.TextBoxBase) return;
+
+            RadioPlayer.Shared.TogglePower();
             e.Handled = true;
         }
 

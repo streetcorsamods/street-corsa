@@ -897,10 +897,11 @@ namespace StreetCorsa
                 logger?.Error(ex, "Could not put Assetto Corsa back on exit");
             }
 
-            // Where the radio was, for the next start; then FMOD's threads, which call back into this assembly, stop
-            // before the runtime goes
+            // Where the radio was, for the next start, and the settings (a volume turned a moment ago is still waiting
+            // for its save); then FMOD's threads, which call back into this assembly, stop before the runtime goes
             try
             {
+                GameSettingsService?.Save();
                 Audio.Radio.RadioPlayer.Shared.Save();
                 Audio.FmodLifetime.Shutdown();
             }

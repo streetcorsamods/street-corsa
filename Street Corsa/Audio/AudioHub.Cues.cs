@@ -24,6 +24,9 @@ public sealed partial class AudioHub
     private readonly Random _random = new();
     private int _mixRate = 48000;
 
+    /// <summary>Samples a second of the mixer's clock, what fades are timed in</summary>
+    internal int MixRate => _mixRate;
+
     // The place's air: the cue asked for, the one playing, and the ones still fading out. Only the pump touches them
     private volatile string? _wantedAmbience;
     private string? _ambienceName;

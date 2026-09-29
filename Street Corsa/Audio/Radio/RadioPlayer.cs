@@ -45,6 +45,15 @@ public sealed class RadioPlayer : ObservableObject
     private int _version;
     private int _failures;
     private bool _inCar;
+
+    // How long the radio takes to come up when it is switched on, and to die away when it is switched off or paused
+    private const float PowerFadeSeconds = 0.25f;
+
+    // Where the song was when the radio went off: switched on again, it goes on from there
+    private uint _resumeAtMs;
+
+    // A pause waits for its fade out before it holds the song; a play in between calls it off
+    private int _pauseVersion;
     private CancellationTokenSource? _scanCancel;
 
     private IReadOnlyList<RadioSong> _songs = [];
@@ -126,6 +135,15 @@ public sealed class RadioPlayer : ObservableObject
         get => _status;
         private set => SetProperty(ref _status, value);
     }
+
+    /// <summary>How far into the song, 0..1: the dial's needle</summary>
+    public double PositionFraction
+    {
+        get => _positionFraction;
+        private set => SetProperty(ref _positionFraction, value);
+    }
+
+    private double _positionFraction;
 
     /// <summary>"1:23 / 3:45" while on</summary>
     public string Position
@@ -254,6 +272,7 @@ public sealed class RadioPlayer : ObservableObject
             _logger.Information("Radio: {Songs} songs in {Folders} folder(s), {NotPlayable} it cannot play", result.Songs.Count, folders.Count, result.NotPlayable);
 
             if (resume) Resume();
+            else if (!IsOn) Prime();
         }
         catch (OperationCanceledException)
         {
@@ -419,7 +438,7 @@ public sealed class RadioPlayer : ObservableObject
     #region Playing
 
     /// <summary>Plays a list (null: every song), from <paramref name="from"/> or, shuffling, anywhere</summary>
-    public void PlayList(string? listName, RadioSong? from = null, uint positionMs = 0)
+    public void PlayList(string? listName, RadioSong? from = null, uint positionMs = 0, bool fadeIn = false)
     {
         var songs = SongsOf(listName);
         if (songs.Count == 0)
@@ -432,32 +451,79 @@ public sealed class RadioPlayer : ObservableObject
         _queue.Load(songs.Select(s => s.Path), from?.Path, _state.Shuffle);
         DropPreload();
         _failures = 0;
-        PlayCurrent(positionMs);
+        PlayCurrent(positionMs, fadeIn || !IsOn);
     }
 
-    /// <summary>On and off at the knob: a paused radio plays on, an off one starts its list</summary>
-    public void TogglePlay()
+    /// <summary>
+    /// The power knob (R, the car radio's left knob): off where it was, song and place remembered and saved, or on
+    /// again from there, the sound coming up and dying away over a moment rather than cut
+    /// </summary>
+    public void TogglePower()
+    {
+        if (IsOn) Stop();
+        else PowerOn();
+    }
+
+    private void PowerOn()
     {
         AudioHub.Shared.PlayCue("radio.knob");
+        if (_queue.Current != null) PlayCurrent(_resumeAtMs, fadeIn: true);
+        else PlayList(ListName, positionMs: 0, fadeIn: true);
+    }
+
+    /// <summary>Play and pause (the panel's button, the media key): an off radio comes on; a paused song goes on where it was</summary>
+    public void TogglePlay()
+    {
         if (!IsOn)
         {
-            if (_queue.Current != null) PlayCurrent(0);
-            else PlayList(ListName);
+            PowerOn();
             return;
         }
 
+        AudioHub.Shared.PlayCue("radio.knob");
         IsPaused = !IsPaused;
-        _playing?.SetPaused(IsPaused);
+        var version = ++_pauseVersion;
+        if (_playing is { } playing)
+        {
+            if (IsPaused)
+            {
+                // Dies away, then holds
+                playing.Fade(1f, 0f, PowerFadeSeconds, AudioHub.Shared.MixRate, stopAtEnd: false);
+                After(PowerFadeSeconds, () =>
+                {
+                    if (version == _pauseVersion && ReferenceEquals(_playing, playing)) playing.SetPaused(true);
+                });
+            }
+            else
+            {
+                playing.Fade(0f, 1f, PowerFadeSeconds, AudioHub.Shared.MixRate, stopAtEnd: false);
+                playing.SetPaused(false);
+            }
+        }
+
         UpdateStatic();
         Save();
+    }
+
+    /// <summary>Something done a moment from now, on the UI thread</summary>
+    private static void After(float seconds, Action action)
+    {
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(seconds + 0.05) };
+        timer.Tick += (_, _) =>
+        {
+            timer.Stop();
+            action();
+        };
+        timer.Start();
     }
 
     public void Next()
     {
         if (!IsOn && _queue.Current == null) return;
+        var fadeIn = !IsOn;
         _queue.Next(playedOut: false);
         _failures = 0;
-        PlayCurrent(0);
+        PlayCurrent(0, fadeIn);
     }
 
     public void Previous()
@@ -469,23 +535,60 @@ public sealed class RadioPlayer : ObservableObject
             return;
         }
 
+        var fadeIn = !IsOn;
         _queue.Previous();
         _failures = 0;
-        PlayCurrent(0);
+        PlayCurrent(0, fadeIn);
     }
 
-    /// <summary>Off: the song stops, the list stays where it was</summary>
+    /// <summary>
+    /// Off: the song dies away and stops, the list and the place in the song stay where they were (saved at once), for
+    /// the radio to go on from when it is switched on again
+    /// </summary>
     public void Stop()
     {
-        if (IsOn) AudioHub.Shared.PlayCue("radio.knob");
+        if (!IsOn) return;
+        AudioHub.Shared.PlayCue("radio.knob");
         _version++;
-        ReleasePlaying();
+        _pauseVersion++;
+
+        if (_playing is { } playing)
+        {
+            _resumeAtMs = playing.PositionMs;
+            _playing = null;
+            if (IsPaused)
+            {
+                // Silent already
+                playing.Stop();
+            }
+            else
+            {
+                playing.Fade(1f, 0f, PowerFadeSeconds, AudioHub.Shared.MixRate, stopAtEnd: true);
+                After(PowerFadeSeconds, playing.Stop);
+            }
+        }
+
         DropPreload();
         IsOn = false;
         IsPaused = false;
         Position = "";
         UpdateStatic();
         Save();
+    }
+
+    /// <summary>
+    /// Off, but ready where the last session left it: the list and the song set, the place in it kept, for the power
+    /// knob to go on from there
+    /// </summary>
+    private void Prime()
+    {
+        if (_state.Song is not { } path || !_byPath.TryGetValue(path, out var song)) return;
+
+        var list = SongsOf(_state.List).Count > 0 ? _state.List : null;
+        ListName = list;
+        _queue.Load(SongsOf(list).Select(s => s.Path), path, _state.Shuffle);
+        Current = song;
+        _resumeAtMs = _state.PositionMs;
     }
 
     private void Resume()
@@ -497,14 +600,16 @@ public sealed class RadioPlayer : ObservableObject
     }
 
     /// <summary>Plays the queue's song, out of the preload when it is there, read in on a worker when not</summary>
-    private async void PlayCurrent(uint positionMs)
+    private async void PlayCurrent(uint positionMs, bool fadeIn = false)
     {
         var version = ++_version;
+        _pauseVersion++;
         ReleasePlaying();
 
         if (_queue.Current is not { } path)
         {
             // The end of the list
+            _resumeAtMs = 0;
             IsOn = false;
             IsPaused = false;
             Position = "";
@@ -535,7 +640,7 @@ public sealed class RadioPlayer : ObservableObject
             return;
         }
 
-        var playing = song == null ? null : AudioHub.Shared.PlaySong(song, positionMs);
+        var playing = song == null ? null : AudioHub.Shared.PlaySong(song, positionMs, fadeIn ? PowerFadeSeconds : 0f);
         if (playing == null)
         {
             song?.Release();
@@ -555,6 +660,7 @@ public sealed class RadioPlayer : ObservableObject
         }
 
         _failures = 0;
+        _resumeAtMs = 0;
         _playing = playing;
         if (_inCar) AudioHub.Shared.PlayCue("radio.tune");
         UpdateStatic();
@@ -592,6 +698,7 @@ public sealed class RadioPlayer : ObservableObject
         var at = playing.PositionMs;
         var length = playing.LengthMs;
         Position = length > 0 ? $"{Time(at)} / {Time(length)}" : Time(at);
+        PositionFraction = length > 0 ? Math.Clamp(at / (double)length, 0, 1) : 0;
 
         // The next song read in while this one ends, so it follows at once
         if (length > 0 && length - Math.Min(at, length) < PreloadMs && _preload == null && _queue.Upcoming is { } upcoming
@@ -639,7 +746,12 @@ public sealed class RadioPlayer : ObservableObject
 
         if (!wanted)
         {
-            _static?.Stop();
+            // The static dies away with the song
+            if (_static is { } leaving)
+            {
+                leaving.Fade(1f, 0f, PowerFadeSeconds, AudioHub.Shared.MixRate, stopAtEnd: true);
+                After(PowerFadeSeconds, leaving.Stop);
+            }
             _static = null;
             return;
         }
@@ -648,6 +760,7 @@ public sealed class RadioPlayer : ObservableObject
         var sound = AudioHub.Shared.Play(cue.Bus, cue.Files[0], loop: true, paused: true);
         if (sound == null) return;
         sound.SetVolume(cue.Volume);
+        sound.Fade(0f, 1f, PowerFadeSeconds, AudioHub.Shared.MixRate, stopAtEnd: false);
         sound.Resume();
         _static = sound;
     }
@@ -661,7 +774,7 @@ public sealed class RadioPlayer : ObservableObject
         _state.WasOn = IsOn;
         _state.List = ListName;
         _state.Song = _current?.Path;
-        _state.PositionMs = _playing?.PositionMs ?? 0;
+        _state.PositionMs = _playing?.PositionMs ?? _resumeAtMs;
 
         try
         {
