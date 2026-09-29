@@ -9,5 +9,6 @@
     <Project Path="tools/StationScene/StationSceneBuilder/StationSceneBuilder.csproj" />
     <Project Path="tools/StreetScene/StreetSceneBuilder/StreetSceneBuilder.csproj" />
     <Project Path="tools/WarehouseScene/WarehouseSceneBuilder/WarehouseSceneBuilder.csproj" />
+    <Project Path="tools/Props/PropBuilder/PropBuilder.csproj" />
   </Folder>
 </Solution>

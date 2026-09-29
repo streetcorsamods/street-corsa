@@ -83,6 +83,11 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     private Kn5RenderableFile? _prop;
     private Kn5RenderableFile? _scenery;
     private List<IKn5RenderableObject> _sceneryMeshes = new();
+
+    // A prop set into the garage for good (the radio on the welder): drawn with the rest, and picked on its own
+    private Kn5RenderableFile? _fixture;
+    private List<IKn5RenderableObject> _fixtureMeshes = new();
+    private bool _fixtureHovered;
     private bool _sceneryHovered;
     private bool _carHovered;
     private bool _standActive;
@@ -1011,6 +1016,45 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         IsDirty = true;
     }
 
+    /// <summary>
+    /// A prop that stays in the garage whatever the car and the stand do (the radio), put where
+    /// <paramref name="placement"/> says; null takes it away. Must be called on the thread that draws.
+    /// </summary>
+    public void SetFixture(IKn5? kn5, Matrix placement)
+    {
+        _fixture?.Dispose();
+        _fixture = kn5 == null ? null : new Kn5RenderableFile(kn5, placement, asyncTexturesLoading: false);
+        _fixture?.UpdateBoundingBox();
+        _fixtureMeshes = _fixture?.GetAllChildren().OfType<IKn5RenderableObject>().ToList() ?? new();
+        _fixtureHovered = false;
+        SetShadowsDirty();
+        IsDirty = true;
+    }
+
+    /// <summary>True when a point of the picture is on the fixture, and nothing solid of the car or the stand is in front of it</summary>
+    public bool HitsFixture(float x, float y)
+    {
+        if (_fixture == null || Camera == null) return false;
+
+        var ray = Camera.GetPickingRay(new Vector2(x * ActualWidth, y * ActualHeight), new Vector2(ActualWidth, ActualHeight));
+        if (Nearest(ray, _fixtureMeshes) is not { } fixture) return false;
+        if (Nearest(ray, _sceneryMeshes) is { } scenery && scenery < fixture) return false;
+
+        return IsGhosting || CarNode == null || CarDistance(ray) is not { } car || car > fixture;
+    }
+
+    /// <summary>The pointer is on the fixture: it glows, a click on it is the viewport's to answer</summary>
+    public bool FixtureHovered
+    {
+        get => _fixtureHovered;
+        set
+        {
+            if (_fixtureHovered == value) return;
+            _fixtureHovered = value;
+            IsDirty = true;
+        }
+    }
+
     /// <summary>The pointer is on the scenery (the engine stand): it glows, a click on it goes to the stand</summary>
     public bool SceneryHovered
     {
@@ -1046,7 +1090,7 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         var ray = Camera.GetPickingRay(new Vector2(x * ActualWidth, y * ActualHeight), new Vector2(ActualWidth, ActualHeight));
         if (CarDistance(ray) is not { } car) return false;
 
-        var cover = new[] { Nearest(ray, _sceneryMeshes), _standActive ? Nearest(_propNodes, ray) : null }.Min();
+        var cover = new[] { Nearest(ray, _sceneryMeshes), Nearest(ray, _fixtureMeshes), _standActive ? Nearest(_propNodes, ray) : null }.Min();
         return cover == null || cover > car;
     }
 
@@ -1190,6 +1234,7 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     protected override void DrawCars(DeviceContextHolder holder, ICamera camera, SpecialRenderMode mode)
     {
         _scenery?.Draw(holder, camera, mode);
+        _fixture?.Draw(holder, camera, mode);
 
         // Parts on their way are left out of every pass, shadows included, and drawn over the scene see-through
         if (!IsGhosting)
@@ -1267,13 +1312,17 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         base.DrawPrepare();
         Array.Clear(_glowDrawn);
         var sceneryGlow = _sceneryHovered && _scenery != null;
-        if (!IsWorking && !sceneryGlow) return;
+        var fixtureGlow = _fixtureHovered && _fixture != null;
+        if (!IsWorking && !sceneryGlow && !fixtureGlow) return;
 
         var holder = DeviceContextHolder;
         _outlineDepth ??= TargetResourceDepthTexture.Create();
         _outlineDepth.Resize(holder, Width, Height, null);
 
         if (sceneryGlow) DrawGlow(3, HoverGlow, 1f, () => _scenery!.Draw(holder, ActualCamera, SpecialRenderMode.Outline));
+
+        // The fixture shares the stand's glow: the pointer is only ever on one of them
+        else if (fixtureGlow) DrawGlow(3, HoverGlow, 1f, () => _fixture!.Draw(holder, ActualCamera, SpecialRenderMode.Outline));
         if (!IsWorking) return;
 
         // The solid car beside the stand, pointed at: the way back to it
@@ -1389,6 +1438,7 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         // as the scene does, and blending changes nothing there
         context.OutputMerger.DepthStencilState = holder.States.LessEqualDepthState;
         _scenery?.Draw(holder, camera, SpecialRenderMode.Simple);
+        _fixture?.Draw(holder, camera, SpecialRenderMode.Simple);
         base.DrawCars(holder, camera, SpecialRenderMode.Simple);
         context.OutputMerger.DepthStencilState = holder.States.ReadOnlyDepthState;
         base.DrawCars(holder, camera, SpecialRenderMode.SimpleTransparent);
@@ -1449,6 +1499,8 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         _prop = null;
         _scenery?.Dispose();
         _scenery = null;
+        _fixture?.Dispose();
+        _fixture = null;
         _candidates?.Dispose();
         _candidates = null;
         _ghostBuffer?.Dispose();

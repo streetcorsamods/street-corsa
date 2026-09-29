@@ -1,0 +1,5 @@
+radio.kn5 is made from "1950 Bush DAC10 Vintage Radio" by Fishboe (https://sketchfab.com/ministephen),
+licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/):
+https://sketchfab.com/3d-models/1c293fc092734e0190b0ffc6072b5014
+
+Changes: converted to KN5 (tools/Props), textures scaled to 1024 and the PBR maps turned into AC's txMaps.

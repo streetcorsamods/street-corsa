@@ -1,0 +1,7 @@
+{
+  "name": "Radio",
+  "model": "radio.kn5",
+  "places": {
+    "garage": { "position": [2.62, 1.29, -8.6], "heading": 67 }
+  }
+}

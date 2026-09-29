@@ -16,7 +16,7 @@ Content\
   streetcorsa\          the base game (loaded first)
   mymod\
     mod.json
-    parts\  sounds\  sfx\  dealers\  partshops\  racers\  events\  milestones\  victories\  streets\  stations\  warehouses\  showcase\  garages\  text\
+    parts\  sounds\  sfx\  props\  dealers\  partshops\  racers\  events\  milestones\  victories\  streets\  stations\  warehouses\  showcase\  garages\  text\
 ```
 
 `mod.json`:
@@ -229,6 +229,15 @@ same twice in a row), and optionally `volume` (0..2), `pitch` (how far each play
 `loop` (a place's air) and `cooldown` (seconds before it plays again). A mod's cue of a name the base game has replaces
 it; the base game's cues are in `streetcorsa\sfx\sfx.json` (`ui.click`, `part.ratchet`, `ambience.garage`, ...).
 `.ogg`, `.wav`, `.mp3` and `.flac` play. A button can name a cue of its own (`audio:Sfx.Click="ui.lights"`).
+
+### props
+
+Things set into a garage, one folder each: a model (KN5) and a `prop.json` naming it and, by garage (the showroom's
+folder name), where it stands and which way it faces: `{ "name": "Radio", "model": "radio.kn5", "places": { "garage":
+{ "position": [2.62, 1.29, -8.6], "heading": 67 } } }` (metres, the car at the origin; degrees about the vertical). A
+mod's prop of an id the base game has replaces it, so a mod can swap the radio for another set or put it elsewhere in
+its own garage; one without a place in a garage takes it out of that garage. The base game has `radio`, the set on the
+welder: clicking it opens the radio. `tools\Props` makes a prop's KN5 out of an OBJ and its PBR pictures.
 
 ### dealers
 
