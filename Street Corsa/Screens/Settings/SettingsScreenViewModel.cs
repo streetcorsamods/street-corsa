@@ -23,6 +23,7 @@ namespace StreetCorsa.Screens.Settings
         public RelayCommand SaveCommand { get; }
         public RelayCommand ResetCommand { get; }
         public RelayCommand OpenCatalogEditorCommand { get; }
+        public RelayCommand OpenSoundBrowserCommand { get; }
         public RelayCommand BrowseAssettoCorsaFolderCommand { get; }
 
         public GameSettings Settings => _settingsService.Current;
@@ -84,6 +85,7 @@ namespace StreetCorsa.Screens.Settings
             SaveCommand = new RelayCommand(OnSave);
             ResetCommand = new RelayCommand(OnReset);
             OpenCatalogEditorCommand = new RelayCommand(OnOpenCatalogEditor);
+            OpenSoundBrowserCommand = new RelayCommand(OnOpenSoundBrowser);
             BrowseAssettoCorsaFolderCommand = new RelayCommand(OnBrowseAssettoCorsaFolder);
 
             _assettoCorsaFolder = SavedAssettoCorsaFolder;
@@ -248,6 +250,12 @@ namespace StreetCorsa.Screens.Settings
 
             // The defaults name the default folder: a player whose install is elsewhere needs to know
             ShowRestartNoticeIfFolderChanged();
+        }
+
+        private void OnOpenSoundBrowser()
+        {
+            if (_audioSave.IsEnabled) SaveAudio();
+            _navigationService.NavigateToSoundBrowser();
         }
 
         private void OnOpenCatalogEditor()

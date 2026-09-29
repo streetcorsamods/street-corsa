@@ -390,6 +390,10 @@ namespace StreetCorsa.Navigation
                 _catalogRepository,
                 _timeService));
 
+        /// <summary>Every sound file and engine sound, to be heard one by one; back goes to the settings</summary>
+        public bool NavigateToSoundBrowser() => SafeNavigate("sound library", () =>
+            new Screens.SoundBrowser.SoundBrowserScreenViewModel(this, _carPartsService));
+
         public bool NavigateToCarCatalogEditor() => SafeNavigate("car catalog editor", () =>
             new Screens.CarCatalogEditor.CarCatalogEditorScreenViewModel(
                 this,

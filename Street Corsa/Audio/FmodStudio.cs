@@ -231,6 +231,44 @@ internal static partial class FmodStudio
     [LibraryImport(CoreDll)]
     public static partial int FMOD_ChannelGroup_Release(IntPtr channelGroup);
 
+    // FMOD_MODE: looping (the channel's loop count then says how often), no 3D, read from disk as it plays, and an
+    // mp3's length found by reading it through rather than guessed from its first frames
+    public const uint ModeLoopNormal = 0x2;
+    public const uint Mode2D = 0x8;
+    public const uint ModeCreateStream = 0x80;
+    public const uint ModeAccurateTime = 0x4000;
+
+    // FMOD_TIMEUNIT_MS
+    public const uint TimeUnitMs = 1;
+
+    [LibraryImport(CoreDll)]
+    public static partial int FMOD_System_CreateSound(IntPtr system, byte[] nameUtf8, uint mode, IntPtr exInfo, out IntPtr sound);
+
+    [LibraryImport(CoreDll)]
+    public static partial int FMOD_System_PlaySound(IntPtr system, IntPtr sound, IntPtr channelGroup, int paused, out IntPtr channel);
+
+    [LibraryImport(CoreDll)]
+    public static partial int FMOD_Sound_Release(IntPtr sound);
+
+    [LibraryImport(CoreDll)]
+    public static partial int FMOD_Sound_GetLength(IntPtr sound, out uint length, uint unit);
+
+    [LibraryImport(CoreDll)]
+    public static partial int FMOD_Channel_Stop(IntPtr channel);
+
+    [LibraryImport(CoreDll)]
+    public static partial int FMOD_Channel_SetPaused(IntPtr channel, int paused);
+
+    [LibraryImport(CoreDll)]
+    public static partial int FMOD_Channel_IsPlaying(IntPtr channel, out int playing);
+
+    [LibraryImport(CoreDll)]
+    public static partial int FMOD_Channel_GetPosition(IntPtr channel, out uint position, uint unit);
+
+    /// <summary>-1 loops for ever, 0 plays once</summary>
+    [LibraryImport(CoreDll)]
+    public static partial int FMOD_Channel_SetLoopCount(IntPtr channel, int loopCount);
+
     #region Calls 1.08 may not have
 
     // Looked up by name rather than imported: an import that is not there only fails when it is called, and each

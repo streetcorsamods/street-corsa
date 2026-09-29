@@ -110,6 +110,35 @@ public sealed class AudioHub
     /// <summary>The group sounds of <paramref name="bus"/> play into; zero while there is no system, and for the engines</summary>
     internal IntPtr Group(AudioBus bus) => _system == IntPtr.Zero ? IntPtr.Zero : _groups[(int)bus];
 
+    /// <summary>The exit has begun: nothing is to touch FMOD's handles any more, the system frees them all</summary>
+    internal bool IsShutDown => _shutDown;
+
+    /// <summary>
+    /// Plays a sound file on <paramref name="bus"/>, streamed from disk, once or round and round. Null when there is no
+    /// system (yet), or FMOD cannot read the file (logged). UI thread.
+    /// </summary>
+    public PlayingSound? Play(AudioBus bus, string path, bool loop)
+    {
+        var core = _core;
+        if (_system == IntPtr.Zero || core == IntPtr.Zero || _shutDown) return null;
+
+        var group = _groups[(int)bus];
+        if (!Warn(FMOD_System_CreateSound(core, Utf8(path), ModeLoopNormal | Mode2D | ModeCreateStream | ModeAccurateTime, IntPtr.Zero, out var sound), "open " + Path.GetFileName(path)))
+            return null;
+
+        // Paused until the loop count is set: a short sound could otherwise be over before it is told to loop
+        if (!Warn(FMOD_System_PlaySound(core, sound, group, 1, out var channel), "play " + Path.GetFileName(path)))
+        {
+            Warn(FMOD_Sound_Release(sound), "release sound");
+            return null;
+        }
+
+        var playing = new PlayingSound(sound, channel, path);
+        playing.SetLoop(loop);
+        Warn(FMOD_Channel_SetPaused(channel, 0), "unpause");
+        return playing;
+    }
+
     /// <summary>
     /// The Studio system, made on the first call; zero when FMOD cannot run here (no AC folder, no device). Blocks for
     /// as long as the system takes to start: never on the UI thread.
