@@ -66,6 +66,12 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     private const float HoistHookAbove = 0.7f;
     private const float HoistSwing = 0.25f;
 
+    // The engine on the stand turns over on the stand's spindle, by hand: a half turn takes this long, a shorter one
+    // less. It stays this far above the stand's base, looked for at every one of this many steps of the half turn.
+    private const float EngineTurnSeconds = 1.6f;
+    private const float TurnClearance = 0.02f;
+    private const int TurnLimitSteps = 90;
+
     private readonly record struct Glow(float Red, float Green, float Blue, float Strength = 1f);
 
     private static readonly Glow CarGlow = new(1f, 1f, 1f);
@@ -97,6 +103,26 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     private bool _removePropWhenSolid;
     private float _ghostProgress;
     private float _ghostOpacity = 0.3f;
+    private bool _engineTurnedOver;
+
+    // Where the prop was put, before the body's lean or the stand's turn
+    private Matrix _propPlacement = Matrix.Identity;
+
+    // How far the engine on the stand is turned over, in radians, and the leg of the turn it is on: from where, to where,
+    // how long it has been on it and how long it takes
+    private float _turnAngle;
+    private float _turnFrom;
+    private float _turnTo;
+    private float _turnElapsed;
+    private float _turnSeconds;
+
+    // As far as the engine on the stand turns before any of it would go into the stand's base: a blown one only goes over
+    // on its side
+    private float _turnLimit = System.MathF.PI;
+
+    // The stand's head in the scenery, which the engine is bolted to and turns with, and where it is upright
+    private RenderableList? _standHead;
+    private Matrix _standHeadHome = Matrix.Identity;
 
     // Scene copy with the solid car drawn over it, blended back at GhostOpacity
     private TargetResourceTexture? _ghostBuffer;
@@ -184,7 +210,7 @@ public class GarageRenderer : DarkKn5ObjectRenderer
             var leaned = false;
             if (_prop != null && _propLeans)
             {
-                _prop.LocalMatrix = value;
+                _prop.LocalMatrix = _propPlacement * value;
                 leaned = true;
             }
 
@@ -211,10 +237,169 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         set
         {
             if (_standActive == value) return;
+
+            // Off the stand the engine is upright at once, whatever was asked of it: a prop kept for the hoist goes from
+            // there. This is the one place that holds to it; everything else only asks.
+            if (!value && _turnAngle != 0f)
+            {
+                _turnAngle = _turnFrom = _turnTo = 0f;
+                ApplyEngineTurn();
+            }
+
             _standActive = value;
             _hovered = null;
             IsDirty = true;
         }
+    }
+
+    /// <summary>
+    /// The engine on the stand is to be upside down, its oil pan up: it turns over on the stand's spindle, the
+    /// crankshaft's line, with whatever is on it and the stand's head it is bolted to. As far as the stand's base lets
+    /// it, and only while the stand is worked on; off it, the engine is upright at once.
+    /// </summary>
+    public bool EngineTurnedOver
+    {
+        get => _engineTurnedOver;
+        set
+        {
+            if (_engineTurnedOver == value) return;
+            _engineTurnedOver = value;
+            IsDirty = true;
+        }
+    }
+
+    /// <summary>How far the engine on the stand is to be turned, in radians</summary>
+    private float TurnTarget => _engineTurnedOver && _standActive ? _turnLimit : 0f;
+
+    /// <summary>True while the engine on the stand is turning over, or back, or waits for parts to come off first</summary>
+    public bool IsTurningEngine => _turnAngle != TurnTarget;
+
+    /// <summary>Seconds of drawing until the engine on the stand is turned where it is to be; 0 once it is</summary>
+    public float TurnSecondsLeft
+    {
+        get
+        {
+            var target = TurnTarget;
+            if (_turnAngle == target) return 0f;
+
+            var leg = target == _turnTo ? Math.Max(0f, _turnSeconds - _turnElapsed) : TurnSeconds(_turnAngle, target);
+            return leg + (IsHoldingTurn ? MotionSecondsLeft : 0f);
+        }
+    }
+
+    /// <summary>The engine on the stand where it is to be, without turning it there: a stand laid out anew</summary>
+    public void SettleEngineTurn()
+    {
+        _turnAngle = _turnFrom = _turnTo = TurnTarget;
+        ApplyEngineTurn();
+    }
+
+    /// <summary>
+    /// How far the engine on the stand is turned, as a matrix for the stand's models: about the spindle, which runs
+    /// along the crankshaft through the stand's head
+    /// </summary>
+    private Matrix StandTurn
+    {
+        get
+        {
+            if (_turnAngle == 0f) return Matrix.Identity;
+
+            var spindle = Spindle;
+            return Matrix.Translation(-spindle) * Matrix.RotationZ(_turnAngle) * Matrix.Translation(spindle);
+        }
+    }
+
+    private static Vector3 Spindle => new(EngineStandLayout.Spindle.X, EngineStandLayout.Spindle.Y, EngineStandLayout.Spindle.Z);
+
+    private static float TurnSeconds(float from, float to) => EngineTurnSeconds * Math.Abs(to - from) / System.MathF.PI;
+
+    /// <summary>
+    /// Parts coming off the engine on the stand go their way from where it is: it does not turn under them, or their up
+    /// would become down on the way
+    /// </summary>
+    private bool IsHoldingTurn => _motions.Any(m => m is PartMotion { IsArriving: false });
+
+    private void TickEngineTurn(float dt)
+    {
+        // Asked for somewhere else: a new leg from where it is, eased at both ends
+        var target = TurnTarget;
+        if (target != _turnTo)
+        {
+            _turnFrom = _turnAngle;
+            _turnTo = target;
+            _turnElapsed = 0f;
+            _turnSeconds = TurnSeconds(_turnFrom, _turnTo);
+        }
+
+        if (_turnAngle == _turnTo || IsHoldingTurn) return;
+
+        _turnElapsed += Math.Min(dt, MaxTickSeconds);
+        _turnAngle = _turnElapsed >= _turnSeconds ? _turnTo : _turnFrom + (_turnTo - _turnFrom) * Ease(_turnElapsed / _turnSeconds);
+        ApplyEngineTurn();
+    }
+
+    /// <summary>The stand's models turned as far as the engine is; the car's parts never are</summary>
+    private void ApplyEngineTurn()
+    {
+        var turn = StandTurn;
+        var turned = false;
+        if (_prop != null && !_propLeans)
+        {
+            _prop.LocalMatrix = _propPlacement * turn;
+
+            // Parts on their way work the box out again this tick anyway
+            if (_motions.Count == 0) _prop.UpdateBoundingBox();
+            turned = true;
+        }
+
+        if (_candidates != null && !_candidatesLean)
+        {
+            _candidates.LocalMatrix = turn;
+            _candidates.UpdateBoundingBox();
+            turned = true;
+        }
+
+        if (_standHead != null)
+        {
+            _standHead.LocalMatrix = _standHeadHome * turn;
+            _scenery?.UpdateBoundingBox();
+            turned = true;
+        }
+
+        if (!turned) return;
+
+        SetShadowsDirty();
+        IsDirty = true;
+    }
+
+    /// <summary>
+    /// How far the engine on the stand, upright now, can turn over before any of its parts would go into the stand's
+    /// base or the floor, on its way or at the end: all the way for most, on its side for one with a blower on top.
+    /// Goes by the parts' boxes, so it errs on the safe side.
+    /// </summary>
+    private float TurnLimit()
+    {
+        if (_prop == null) return System.MathF.PI;
+
+        _prop.UpdateBoundingBox();
+        var spindle = Spindle;
+        var floor = EngineStandLayout.BaseTop + TurnClearance - spindle.Y;
+        var corners = new List<(float X, float Y)>();
+        foreach (var box in _propNodes.Select(n => n.List.BoundingBox).Where(b => b.HasValue).Select(b => b!.Value))
+        {
+            foreach (var x in new[] { box.Minimum.X, box.Maximum.X })
+            foreach (var y in new[] { box.Minimum.Y, box.Maximum.Y })
+                corners.Add((x - spindle.X, y - spindle.Y));
+        }
+
+        // Turned by an angle about Z, a point is x sin + y cos above the spindle
+        for (var step = 1; step <= TurnLimitSteps; step++)
+        {
+            var (sin, cos) = System.MathF.SinCos(System.MathF.PI * step / TurnLimitSteps);
+            if (corners.Any(c => c.X * sin + c.Y * cos < floor)) return System.MathF.PI * (step - 1) / TurnLimitSteps;
+        }
+
+        return System.MathF.PI;
     }
 
     /// <summary>True while the parts can be picked and glow: the car is a ghost, or the stand is being worked on</summary>
@@ -229,6 +414,16 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         _scenery?.Dispose();
         _scenery = kn5 == null ? null : new Kn5RenderableFile(kn5, Matrix.Identity, asyncTexturesLoading: false);
         _sceneryMeshes = _scenery?.GetAllChildren().OfType<IKn5RenderableObject>().ToList() ?? new();
+
+        // The stand's head turns with the engine bolted to it
+        _standHead = _scenery?.GetDummyByName(EngineStandLayout.HeadNode);
+        _standHeadHome = _standHead?.LocalMatrix ?? Matrix.Identity;
+        if (_standHead != null && _turnAngle != 0f)
+        {
+            _standHead.LocalMatrix = _standHeadHome * StandTurn;
+            _scenery!.UpdateBoundingBox();
+        }
+
         SetShadowsDirty();
         IsDirty = true;
     }
@@ -305,6 +500,9 @@ public class GarageRenderer : DarkKn5ObjectRenderer
             .ToList();
         if (groups.Count == 0) return;
 
+        // The ways are in the prop's own space, as the nodes' matrices are, the boxes in the garage's: an engine turned
+        // over on the stand has its oil pan come off upwards, and out still on the side the part is on
+        var toProp = Matrix.Invert(_prop.LocalMatrix);
         var moving = groups.SelectMany(g => g.Nodes).ToHashSet();
         var staying = CentreOf(_propNodes.Where(n => !moving.Contains(n)));
         var frame = frameNode is { } f && f >= 0 && f < _propNodes.Count ? _propNodes[f] : null;
@@ -321,7 +519,7 @@ public class GarageRenderer : DarkKn5ObjectRenderer
 
             // Out is to the side of the engine the part is on; the block itself has none, so it goes by what stays
             var middle = frame == null || nodes.Contains(frame) ? staying : CentreOf(new[] { frame });
-            var outward = middle is { } m && Vector3.Dot(centre - m, right) < 0f ? -right : right;
+            var outward = middle is { } m && Vector3.Dot(Vector3.TransformNormal(centre - m, toProp), right) < 0f ? -right : right;
 
             var legs = move.Way.Count == 0
                 ? new[] { AwayFrom(centre) * PartTravel }
@@ -352,14 +550,13 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         IsDirty = true;
 
         // A part of no known kind goes away from the middle of what stays: mostly up and out, never far down, the
-        // floor is right there
+        // floor is right there. Up is the garage's, whichever way the engine is turned: it does not turn while parts come
+        // off (IsHoldingTurn).
         Vector3 AwayFrom(Vector3 centre)
         {
-            if (staying is not { } middle) return Vector3.UnitY;
-
-            var away = centre - middle;
+            var away = staying is { } middle ? centre - middle : Vector3.Zero;
             away.Y = Math.Max(away.Y, 0f) + 0.15f;
-            return away.LengthSquared() > 1e-6f ? Vector3.Normalize(away) : Vector3.UnitY;
+            return Direction(Vector3.TransformNormal(Vector3.Normalize(away), toProp), Vector3.UnitY);
         }
     }
 
@@ -531,6 +728,8 @@ public class GarageRenderer : DarkKn5ObjectRenderer
             _arriving = arriving;
         }
 
+        public bool IsArriving => _arriving;
+
         /// <summary>1 in its place, 0 at the far end</summary>
         public float Opacity { get; private set; }
 
@@ -693,6 +892,7 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     protected override void OnTickOverride(float dt)
     {
         base.OnTickOverride(dt);
+        TickEngineTurn(dt);
         TickPartMotions(dt);
 
         var target = _ghostCar ? 1f : 0f;
@@ -720,8 +920,14 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     {
         _prop?.Dispose();
         _propLeans = !_standActive;
-        _prop = kn5 == null ? null : new Kn5RenderableFile(kn5, _propLeans ? placement * _bodyLean : placement, asyncTexturesLoading: false);
+        _propPlacement = placement;
+        _prop = kn5 == null ? null : new Kn5RenderableFile(kn5, placement * (_propLeans ? _bodyLean : Matrix.Identity), asyncTexturesLoading: false);
         _propNodes = PartNode.Of(_prop);
+
+        // An engine for the stand: how far it can turn over is worked out upright, then it is turned as far as the one
+        // before it was, and goes on from there to where it can
+        _turnLimit = _propLeans ? System.MathF.PI : TurnLimit();
+        if (_prop != null && !_propLeans) _prop.LocalMatrix = placement * StandTurn;
 
         // A new prop is not the one a fade back to solid was going to drop
         _removePropWhenSolid = false;
@@ -738,7 +944,7 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     {
         _candidates?.Dispose();
         _candidatesLean = !_standActive;
-        _candidates = kn5 == null ? null : new Kn5RenderableFile(kn5, _candidatesLean ? _bodyLean : Matrix.Identity, asyncTexturesLoading: false);
+        _candidates = kn5 == null ? null : new Kn5RenderableFile(kn5, _candidatesLean ? _bodyLean : StandTurn, asyncTexturesLoading: false);
         _candidateNodes = PartNode.Of(_candidates);
         if (_hovered?.Layer == PartLayer.Candidate) _hovered = null;
         SetShadowsDirty();

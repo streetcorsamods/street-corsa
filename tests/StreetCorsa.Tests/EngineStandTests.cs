@@ -474,8 +474,10 @@ public sealed class EngineStandTests : IDisposable
 
         InstalledPart Live(string kind) => workbench.Engine!.SelfAndDescendants().First(p => catalog.WorkOrder.KindOf(p.Definition) == kind);
 
-        // In the car the crankshaft stays in
+        // In the car the crankshaft stays in, and there is no turning the engine over
         workbench.OnPartClicked(Live("crankshaft"));
+        Assert.False(workbench.CanTurnEngineOver);
+        Assert.False(workbench.IsEngineTurnedOver);
         Assert.Contains("engine stand", workbench.SelectedBlockedDisplay);
         Assert.False(workbench.RemoveSelectedCommand.CanExecute(null));
 
@@ -494,18 +496,111 @@ public sealed class EngineStandTests : IDisposable
         Assert.Same(engine, state.Player.EngineStand);
         workbench.OnPartClicked(Live("pistons"));
         Assert.Equal("Take off the cylinder heads and the oil pan first.", workbench.SelectedBlockedDisplay);
+        Assert.True(workbench.CanTurnEngineOver);
+        Assert.False(workbench.IsEngineTurnedOver);
         workbench.OnPartClicked(Live("oil_pan"));
         Assert.Empty(workbench.SelectedBlockedDisplay);
+
+        // The pan is worked on from below: the engine turns over for it, and stays so while the block is picked
+        Assert.True(workbench.IsEngineTurnedOver);
         workbench.RemoveSelectedCommand.Execute(null);
         Assert.Equal(5, state.Player.Parts.Count);
+        Assert.True(workbench.IsEngineTurnedOver);
 
-        // The pan does not go back on the car's empty bay; the engine from the stand does
+        // The pan does not go back on the car's empty bay; the engine from the stand does, right way up
         workbench.OnPartClicked(workbench.Engine);
+        Assert.True(workbench.IsEngineTurnedOver);
         Assert.True(workbench.CanInstallFromStand);
         workbench.InstallFromStandCommand.Execute(null);
         Assert.Null(state.Player.EngineStand);
         Assert.Same(engine, car.Engine);
         Assert.True(workbench.IsCarView);
+        Assert.False(workbench.IsEngineTurnedOver);
+        Assert.False(workbench.CanTurnEngineOver);
+    }
+
+    [Fact]
+    public async Task An_engine_taken_off_the_stand_turned_over_is_upright()
+    {
+        var catalog = Catalog.Value;
+        var state = new GameState();
+        var engine = Engine("camaro_mk2/0006/stock");
+        var car = new Car { DefinitionId = "camaro", Parts = [engine], HasPartsAssigned = true };
+        state.Player.Cars.Add(car);
+
+        var workbench = new Screens.Garage.PartsWorkbenchViewModel(new CatalogParts(), state, () => { }, _ => Task.CompletedTask);
+        workbench.SetCar(car);
+        for (var waited = 0; workbench.Engine == null && waited < 10_000; waited += 20) await Task.Delay(20, TestContext.Current.CancellationToken);
+        workbench.IsCarView = true;
+
+        InstalledPart Live(string kind) => workbench.Engine!.SelfAndDescendants().First(p => catalog.WorkOrder.KindOf(p.Definition) == kind);
+
+        workbench.OnPartClicked(workbench.Engine);
+        workbench.RemoveSelectedCommand.Execute(null);
+        workbench.IsStandView = true;
+        workbench.OnPartClicked(Live("oil_pan"));
+        Assert.True(workbench.IsEngineTurnedOver);
+
+        // Off the stand onto the shelf: nothing is left on it to be turned over
+        workbench.OnPartClicked(workbench.Engine);
+        Assert.Equal("Off the stand", workbench.RemoveButtonText);
+        workbench.RemoveSelectedCommand.Execute(null);
+        Assert.Null(state.Player.EngineStand);
+        Assert.True(workbench.IsStandView);
+        Assert.False(workbench.IsEngineTurnedOver);
+        Assert.False(workbench.CanTurnEngineOver);
+
+        // Nor can it be asked for with the stand empty
+        workbench.IsEngineTurnedOver = true;
+        Assert.False(workbench.IsEngineTurnedOver);
+    }
+
+    [Fact]
+    public void The_stand_turns_the_engine_about_its_crankshaft()
+    {
+        var catalog = Catalog.Value;
+        var block = catalog.Get(Engine("camaro_mk2/0006/stock").DefinitionId)!;
+        var crank = block.Slots.First(s => s.Name.Contains("crank", StringComparison.OrdinalIgnoreCase));
+
+        // The crankshaft's slot lands on the spindle
+        var onStand = System.Numerics.Vector3.Transform(new System.Numerics.Vector3(crank.Position[0], crank.Position[1], 0f), EngineStandLayout.EnginePlacement(catalog, block));
+        Assert.Equal(EngineStandLayout.Spindle.X, onStand.X, 3);
+        Assert.Equal(EngineStandLayout.Spindle.Y, onStand.Y, 3);
+        Assert.Equal(EngineStandLayout.CrankHeight, EngineStandLayout.Spindle.Y - EngineStandLayout.Spot.Y, 3);
+    }
+
+    [Fact]
+    public void The_engine_turns_over_for_the_parts_worked_on_from_below()
+    {
+        var order = Catalog.Value.WorkOrder;
+        var engine = Engine("camaro_mk2/0006/stock");
+        EngineSide? SideOf(string kind) => order.SideOf(Catalog.Value.Get(Find(engine, kind).DefinitionId)!);
+
+        Assert.Equal(EngineSide.Below, SideOf("crankshaft"));
+        Assert.Equal(EngineSide.Below, SideOf("oil_pan"));
+        Assert.Equal(EngineSide.Above, SideOf("cylinder_head"));
+        Assert.Equal(EngineSide.Above, SideOf("pistons"));
+        Assert.Null(SideOf("water_pump"));
+        Assert.Null(SideOf("block"));
+    }
+
+    [Fact]
+    public void A_mod_may_say_which_side_a_kind_is_worked_from()
+    {
+        _temp.File("base/work_order.json", """
+            { "kinds": [ { "id": "sump", "names": [ "sump" ], "worked_from": "below" }, { "id": "head", "names": [ "head" ], "worked_from": "above" } ] }
+            """);
+        _temp.File("mod/work_order.json", """
+            { "kinds": [ { "id": "head", "names": [ "top end" ], "worked_from": "Below" }, { "id": "sump", "worked_from": "sideways" } ] }
+            """);
+
+        var problems = new List<string>();
+        var order = WorkOrder.Load(new[] { ("streetcorsa", true, Path.Combine(_temp.Path, "base")), ("mymod", false, Path.Combine(_temp.Path, "mod")) }, problems);
+
+        Assert.Equal(EngineSide.Below, order.SideOf(new PartDefinition { Name = "Cast head" }));
+        Assert.Equal(EngineSide.Below, order.SideOf(new PartDefinition { Name = "Deep sump" }));
+        Assert.Null(order.SideOf(new PartDefinition { Name = "Fantastic widget" }));
+        Assert.Equal(new[] { "mymod/work_order.json: sump is worked from \"sideways\", which is neither above nor below; left out" }, problems);
     }
 
     [Fact]

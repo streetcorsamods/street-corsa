@@ -63,6 +63,7 @@
                                 PartsVisible="{Binding Workbench.IsOpen}"
                                 StandMode="{Binding Workbench.IsStand}"
                                 StandEngine="{Binding Workbench.StandEngine}"
+                                EngineTurnedOver="{Binding Workbench.IsEngineTurnedOver}"
                                 Engine="{Binding Workbench.Engine}"
                                 Gear="{Binding Workbench.Gear}"
                                 EngineLayout="{Binding Workbench.EngineLayout}"
@@ -410,6 +411,11 @@
                                   ToolTip="The engine stand: where engines come apart"
                                   Visibility="{Binding Workbench.IsAvailable, Converter={StaticResource BooleanToVisibilityConverter}}"
                                   IsChecked="{Binding Workbench.IsStandView, Mode=TwoWay}"/>
+                    <ToggleButton Content="Turn over"
+                                  Style="{StaticResource ViewportToggleStyle}"
+                                  ToolTip="Turn the engine upside down on the stand, to get at the crankshaft and the oil pan"
+                                  Visibility="{Binding Workbench.CanTurnEngineOver, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                  IsChecked="{Binding Workbench.IsEngineTurnedOver, Mode=TwoWay}"/>
                     <ToggleButton Content="Rotate"
                                   Style="{StaticResource ViewportToggleStyle}"
                                   IsChecked="{Binding AutoRotate, ElementName=Viewport3D, Mode=TwoWay}"/>

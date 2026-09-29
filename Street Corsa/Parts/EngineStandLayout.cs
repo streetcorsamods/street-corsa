@@ -22,6 +22,22 @@ public static class EngineStandLayout
     /// </summary>
     public static readonly Vector3 Spot = new(3f, 0f, 0.3f);
 
+    /// <summary>A point on the spindle the engine turns over on, the crankshaft's line: it runs along Z</summary>
+    public static Vector3 Spindle => Spot + new Vector3(0f, CrankHeight, 0f);
+
+    /// <summary>Height of the top of the stand's base above the floor: an engine turned over has to stay above it</summary>
+    public const float BaseTop = BaseHeight + BaseHalfHeight;
+
+    /// <summary>
+    /// The node of the stand's head, which the engine is bolted to: it turns on the spindle with the engine. The rest of
+    /// the stand is <see cref="StandNode"/>.
+    /// </summary>
+    public const string HeadNode = "engine_stand_head";
+
+    private const string StandNode = "engine_stand";
+    private const float BaseHeight = 0.1f;
+    private const float BaseHalfHeight = 0.032f;
+
     /// <summary>Where the head sits, from <see cref="Spot"/>, when there is no engine to hang off it</summary>
     private const float EmptyHeadZ = -0.35f;
 
@@ -37,7 +53,7 @@ public static class EngineStandLayout
 
         // Turned round about Y, as in a car: part models have their front towards -Z
         var frame = Matrix4x4.CreateRotationY(MathF.PI);
-        var origin = Spot + new Vector3(0f, CrankHeight, 0f) - Vector3.TransformNormal(crankLocal, frame);
+        var origin = Spindle - Vector3.TransformNormal(crankLocal, frame);
         return frame * Matrix4x4.CreateTranslation(origin);
     }
 
@@ -58,45 +74,56 @@ public static class EngineStandLayout
     public static IKn5 CreateModel(float headZ)
     {
         var kn5 = Kn5.CreateEmpty();
-        kn5.RootNode.Name = "engine_stand";
+        kn5.RootNode.Name = StandNode;
         AddTo(kn5, headZ);
         return kn5;
     }
 
-    /// <summary>The stand added to a model of parts, as a node of its own that is no part's</summary>
+    /// <summary>The stand added to a model of parts, as nodes of its own that are no part's: the head, and the rest</summary>
     public static void AddTo(IKn5 kn5, float headZ)
     {
         const float h = CrankHeight;
+        const float b = BaseHeight;
+        const float bh = BaseHalfHeight;
         var post = headZ - 0.27f;
 
-        var steel = new List<(Vector3 Centre, Vector3 Half)>
+        // Head: plate, a cross of arms to the bolt holes, the spindle back to the post
+        var head = new List<(Vector3 Centre, Vector3 Half)>
         {
-            // Head: plate, a cross of arms to the bolt holes, the spindle back to the post
             (new(0f, h, headZ - 0.015f), new(0.12f, 0.12f, 0.012f)),
             (new(0f, h, headZ - 0.006f), new(0.25f, 0.022f, 0.01f)),
             (new(0f, h, headZ - 0.006f), new(0.022f, 0.21f, 0.01f)),
-            (new(0f, h, (headZ - 0.03f + post) / 2f), new(0.036f, 0.036f, (headZ - 0.03f - post) / 2f)),
+            (new(0f, h, (headZ - 0.03f + post) / 2f), new(0.036f, 0.036f, (headZ - 0.03f - post) / 2f))
+        };
 
+        var steel = new List<(Vector3 Centre, Vector3 Half)>
+        {
             // Post, and the collar the spindle turns in
             (new(0f, (h + 0.05f) / 2f, post), new(0.042f, (h + 0.05f) / 2f, 0.042f)),
             (new(0f, h, post), new(0.06f, 0.06f, 0.06f)),
 
             // Base: a crossbar at the post, two legs forward under the engine, one back to keep it from tipping
-            (new(0f, 0.1f, post), new(0.36f, 0.032f, 0.036f)),
-            (new(-0.33f, 0.1f, post + 0.44f), new(0.036f, 0.032f, 0.44f)),
-            (new(0.33f, 0.1f, post + 0.44f), new(0.036f, 0.032f, 0.44f)),
-            (new(0f, 0.1f, post - 0.2f), new(0.036f, 0.032f, 0.2f))
+            (new(0f, b, post), new(0.36f, bh, 0.036f)),
+            (new(-0.33f, b, post + 0.44f), new(0.036f, bh, 0.44f)),
+            (new(0.33f, b, post + 0.44f), new(0.036f, bh, 0.44f)),
+            (new(0f, b, post - 0.2f), new(0.036f, bh, 0.2f))
         };
 
         var casters = new[] { new Vector3(-0.33f, 0f, post + 0.84f), new Vector3(0.33f, 0f, post + 0.84f), new Vector3(-0.33f, 0f, post), new Vector3(0.33f, 0f, post), new Vector3(0f, 0f, post - 0.36f) }
             .Select(c => (new Vector3(c.X, 0.034f, c.Z), new Vector3(0.028f, 0.034f, 0.03f)))
             .ToList();
 
-        var node = Kn5Node.CreateBaseNode("engine_stand");
-        node.Children.Add(PlaceholderMesh.Boxes("stand_steel", steel, PlaceholderMesh.SolidMaterial(kn5, "stand_paint", 0xA8, 0x1E, 0x14, 0.4f, 0.55f, 0.35f, 60f)));
+        var paint = PlaceholderMesh.SolidMaterial(kn5, "stand_paint", 0xA8, 0x1E, 0x14, 0.4f, 0.55f, 0.35f, 60f);
+        var node = Kn5Node.CreateBaseNode(StandNode);
+        node.Children.Add(PlaceholderMesh.Boxes("stand_steel", steel, paint));
         node.Children.Add(PlaceholderMesh.Boxes("stand_casters", casters, PlaceholderMesh.SolidMaterial(kn5, "stand_rubber", 0x1C, 0x1C, 0x1C, 0.4f, 0.55f, 0.05f, 8f)));
         node.Transform = Translation(Spot.X);
         kn5.RootNode.Children.Add(node);
+
+        var headNode = Kn5Node.CreateBaseNode(HeadNode);
+        headNode.Children.Add(PlaceholderMesh.Boxes("stand_head", head, paint));
+        headNode.Transform = Translation(Spot.X);
+        kn5.RootNode.Children.Add(headNode);
     }
 
     /// <summary>The stand's boxes are laid out on the car's centre line; the node moves them over to <see cref="Spot"/></summary>

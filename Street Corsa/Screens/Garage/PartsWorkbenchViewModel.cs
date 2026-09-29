@@ -38,6 +38,9 @@ namespace StreetCorsa.Screens.Garage
         private PartInstance? _standSource;
         private PartsCatalog? _standCatalog;
         private bool _standStale;
+
+        // The engine on the stand when the view last looked, turned over or not: another one there comes upright
+        private Guid? _lastStandEngine;
         private readonly List<(int CarSlot, LiveTree Tree)> _gearTrees = new();
         private int _evaluation;
 
@@ -94,6 +97,7 @@ namespace StreetCorsa.Screens.Garage
 
                 OnPropertyChanged(nameof(IsCarView));
                 OnPropertyChanged(nameof(IsStandView));
+                OnPropertyChanged(nameof(CanTurnEngineOver));
             }
         }
 
@@ -111,6 +115,7 @@ namespace StreetCorsa.Screens.Garage
                 SelectedShelfItem = null;
                 OnPropertyChanged(nameof(IsCarView));
                 OnPropertyChanged(nameof(IsStandView));
+                OnPropertyChanged(nameof(CanTurnEngineOver));
                 Refresh();
             }
         }
@@ -143,6 +148,30 @@ namespace StreetCorsa.Screens.Garage
                 }
                 else if (_isStand) IsOpen = false;
             }
+        }
+
+        private bool _isEngineTurnedOver;
+
+        /// <summary>
+        /// The "Turn over" toggle: the engine on the stand is upside down, its crankshaft and oil pan up. Only looks,
+        /// nothing is refused either way. Picking a part worked on from below turns it over by itself, one worked on
+        /// from above back (<see cref="WorkOrder.SideOf"/>).
+        /// </summary>
+        public bool IsEngineTurnedOver
+        {
+            get => _isEngineTurnedOver;
+            set => SetProperty(ref _isEngineTurnedOver, value && CanTurnEngineOver);
+        }
+
+        /// <summary>The stand is on show with an engine on it: there is something to turn over</summary>
+        public bool CanTurnEngineOver => _isOpen && _isStand && _gameState.Player.EngineStand != null;
+
+        /// <summary>The engine on the stand turned the side up a part is worked on from; one that does not say leaves it</summary>
+        private void TurnFor(PartDefinition? part)
+        {
+            if (part == null || !CanTurnEngineOver || Catalog?.WorkOrder.SideOf(part) is not { } side) return;
+
+            IsEngineTurnedOver = side == EngineSide.Below;
         }
 
         private PartsCatalog? _catalog;
@@ -224,6 +253,7 @@ namespace StreetCorsa.Screens.Garage
             {
                 if (!SetProperty(ref _selectedPart, value)) return;
 
+                TurnFor(value?.Definition);
                 OnPropertyChanged(nameof(HasSelection));
                 OnPropertyChanged(nameof(SelectedName));
                 OnPropertyChanged(nameof(SelectedKind));
@@ -344,6 +374,7 @@ namespace StreetCorsa.Screens.Garage
                 if (!SetProperty(ref _selectedShelfItem, value)) return;
 
                 if (value != null) SelectedPart = null;
+                TurnFor(value == null ? null : Catalog?.Get(value.Part.DefinitionId));
                 OnPropertyChanged(nameof(CanTakeApart));
                 OnPropertyChanged(nameof(CanPutOnStand));
                 OnPropertyChanged(nameof(IsShelfEngine));
@@ -652,6 +683,13 @@ namespace StreetCorsa.Screens.Garage
                 _live = _isStand ? StandLive(catalog) : catalog != null && _car?.Engine is { } engine ? PartTrees.ToInstalled(catalog, engine) : null;
                 Engine = _live?.Root;
                 StandEngine = _isStand ? _live?.Root : StandBesideTheCar(catalog);
+
+                // The one place the engine comes upright: the work has left the stand, which it has as soon as the stand is
+                // not on show (Refresh follows every change to that), or another engine is on it, or none
+                var standId = _gameState.Player.EngineStand?.InstanceId;
+                if (!CanTurnEngineOver || standId != _lastStandEngine) IsEngineTurnedOver = false;
+                _lastStandEngine = standId;
+                OnPropertyChanged(nameof(CanTurnEngineOver));
                 _report = null;
 
                 _gearTrees.Clear();

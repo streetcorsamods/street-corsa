@@ -121,6 +121,9 @@ another before the hoist lifts the engine out. None of them goes back on while t
 coming off, leg by leg, in the engine's own directions: `up`, `down`, `forward` (towards the crankshaft's nose),
 `back`, `out` (away from the engine, on the side the part is on); `[ "back", "down" ]` for a gearbox. What is on the
 part goes along. A later mod's `"comes_off"` for a kind replaces the earlier one's, and a part's own beats its kind's.
+A kind's `"worked_from"`, `"above"` or `"below"`, is the side of the engine it goes on from: picking one on the stand turns
+the engine that side up (an oil pan turns it over, a cylinder head back). Only looks; a later mod's replaces the earlier
+one's, and a kind without one leaves the engine as it is.
 
 ```json
 {

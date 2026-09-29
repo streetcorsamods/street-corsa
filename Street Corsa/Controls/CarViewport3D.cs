@@ -88,7 +88,7 @@ public class CarViewport3D : D3DViewportBase
         set
         {
             _followCarryValue = value;
-            IsMovingEngine = value || _carryFromStand != null;
+            UpdateMovingEngine();
         }
     }
 
@@ -104,9 +104,24 @@ public class CarViewport3D : D3DViewportBase
         set
         {
             _carryFromStandValue = value;
-            IsMovingEngine = value != null || _followCarry;
+            UpdateMovingEngine();
         }
     }
+
+    // The engine on the stand turns back upright before it leaves the stand: the garage waits with it
+    private bool _turningBackValue;
+
+    private bool _turningBack
+    {
+        get => _turningBackValue;
+        set
+        {
+            _turningBackValue = value;
+            UpdateMovingEngine();
+        }
+    }
+
+    private void UpdateMovingEngine() => IsMovingEngine = _followCarry || _carryFromStand != null || _turningBack;
 
     private string? _loadedCarDirectory;
     private System.Windows.Point _lastMouse;
@@ -287,6 +302,29 @@ public class CarViewport3D : D3DViewportBase
     {
         get => (InstalledPart?)GetValue(StandEngineProperty);
         set => SetValue(StandEngineProperty, value);
+    }
+
+    public static readonly DependencyProperty EngineTurnedOverProperty = DependencyProperty.Register(
+        nameof(EngineTurnedOver), typeof(bool), typeof(CarViewport3D),
+        new PropertyMetadata(false, (d, _) => ((CarViewport3D)d).OnEngineTurnedOverChanged()));
+
+    /// <summary>
+    /// The engine on the stand is upside down, to get at its crankshaft and oil pan: it turns over on the stand's
+    /// spindle, whatever is on it with it. Only while the stand is worked on; it turns back before it leaves the stand.
+    /// </summary>
+    public bool EngineTurnedOver
+    {
+        get => (bool)GetValue(EngineTurnedOverProperty);
+        set => SetValue(EngineTurnedOverProperty, value);
+    }
+
+    private void OnEngineTurnedOverChanged()
+    {
+        if (Renderer is not { } renderer) return;
+
+        // Only the stand being worked on turns it: the renderer holds to that
+        renderer.EngineTurnedOver = EngineTurnedOver;
+        AnimateFor(AnimationWindow);
     }
 
     public static readonly DependencyProperty PartsCatalogProperty = DependencyProperty.Register(
@@ -866,13 +904,21 @@ public class CarViewport3D : D3DViewportBase
     /// They move only while the renderer draws, and slower than the clock when the frames come slowly: the wait is
     /// given up on only once they have stopped getting anywhere for a while (the viewport out of sight).
     /// </summary>
-    private async Task WaitForMotionsAsync(GarageRenderer renderer, Func<bool> stillWanted)
+    private Task WaitForMotionsAsync(GarageRenderer renderer, Func<bool> stillWanted) =>
+        WaitForRendererAsync(renderer, () => renderer.MotionSecondsLeft, stillWanted);
+
+    /// <summary>Waits for the engine on the stand to be turned where it is to be, as <see cref="WaitForMotionsAsync"/> does</summary>
+    private Task WaitForTurnAsync(GarageRenderer renderer, Func<bool> stillWanted) =>
+        WaitForRendererAsync(renderer, () => renderer.TurnSecondsLeft, stillWanted);
+
+    /// <summary>Waits while the renderer has <paramref name="secondsLeft"/> of drawing to go and keeps getting through it</summary>
+    private async Task WaitForRendererAsync(GarageRenderer renderer, Func<float> secondsLeft, Func<bool> stillWanted)
     {
-        var left = renderer.MotionSecondsLeft;
-        for (var stalled = 0; stalled < MotionPatienceMs && renderer == Renderer && renderer.IsMovingParts && stillWanted(); )
+        var left = secondsLeft();
+        for (var stalled = 0; stalled < MotionPatienceMs && left > 0f && renderer == Renderer && stillWanted(); )
         {
             await Task.Delay(30);
-            var now = renderer.MotionSecondsLeft;
+            var now = secondsLeft();
             stalled = now < left ? 0 : stalled + 30;
             left = now;
         }
@@ -916,9 +962,12 @@ public class CarViewport3D : D3DViewportBase
             var dropIn = before == null && engine != null && _sceneryKey is { } shown && shown.Engine?.InstanceId != engine.InstanceId;
             if (dropIn) _standKeptEmpty = true;
             var leaving = before == null ? new List<int>() : NodesWhere(_partNodes, id => !after.Contains(id));
+            // An engine turning, over or back upright (off the stand), gets there before parts come off it: their ways
+            // are the engine's
             if (leaving.Count > 0)
             {
-                renderer.MoveParts(MovesOf(catalog, _partNodes, leaving), arriving: false, NodeOf(_partNodes, _partsEngine));
+                await WaitForTurnAsync(renderer, () => IsOnStand);
+                if (renderer == Renderer && IsOnStand) renderer.MoveParts(MovesOf(catalog, _partNodes, leaving), arriving: false, NodeOf(_partNodes, _partsEngine));
                 AnimateFor(AnimationWindow);
             }
 
@@ -934,13 +983,16 @@ public class CarViewport3D : D3DViewportBase
             });
 
             await WaitForMotionsAsync(renderer, () => true);
+            await WaitForTurnAsync(renderer, () => IsOnStand);
 
             if (renderer == Renderer && IsOnStand)
             {
-                // The car stays solid: the work is beside it
+                // The car stays solid: the work is beside it. An engine new to the view is shown turned as it is.
                 renderer.StandActive = true;
                 renderer.GhostCar = false;
+                renderer.EngineTurnedOver = EngineTurnedOver;
                 renderer.SetProp(kn5, SlimDX.Matrix.Identity);
+                if (before == null) renderer.SettleEngineTurn();
                 if (before != null) renderer.MoveParts(MovesOf(catalog, nodes, NodesWhere(nodes, id => !before.Contains(id))), arriving: true, NodeOf(nodes, engine));
                 else if (dropIn) renderer.MoveParts(new[] { new PartMove(Enumerable.Range(0, nodes.Count).ToList(), new[] { PartWay.Up }) }, arriving: true, NodeOf(nodes, engine));
                 PutScenery(renderer, scenery, (engine, false, catalog));
@@ -999,7 +1051,17 @@ public class CarViewport3D : D3DViewportBase
         _isLoadingParts = true;
         try
         {
-            if (catalog != null) scenery = await Task.Run(() => BuildScenery(catalog, engine, withEngine: true));
+            // An engine turned over turns back first: it goes into the scenery, and on the hoist, the right way up. The
+            // garage is locked while it does, as it is for the hoist after it.
+            var building = catalog == null ? Task.FromResult<AcTools.Kn5File.IKn5?>(null) : Task.Run<AcTools.Kn5File.IKn5?>(() => BuildScenery(catalog, engine, withEngine: true));
+            if (renderer.IsTurningEngine)
+            {
+                _turningBack = true;
+                AnimateFor(AnimationWindow);
+                await WaitForTurnAsync(renderer, () => !IsOnStand);
+            }
+
+            scenery = await building;
             built = true;
         }
         catch (Exception ex)
@@ -1013,13 +1075,18 @@ public class CarViewport3D : D3DViewportBase
         }
 
         // Back on the stand in the meantime, or another renderer: the next run sorts it out
-        if (renderer != Renderer || IsOnStand) return;
+        if (renderer != Renderer || IsOnStand)
+        {
+            _turningBack = false;
+            return;
+        }
 
         // The engine on the stand has gone in the car: it stays in sight until the car's parts are ready, and goes
-        // over on the hoist from where it is
+        // over on the hoist from where it is. The garage stays locked from the turn back on to that.
         _carryFromStand = null;
         if (_partsEngine is { InstanceId: var id } standEngine && id != Guid.Empty && StandEngine == null && Engine?.InstanceId == id && PartsVisible && catalog != null)
             _carryFromStand = (id, ToSlim(EngineStandLayout.EnginePlacement(catalog, standEngine.Definition)));
+        _turningBack = false;
 
         renderer.StandActive = false;
         if (_carryFromStand == null) renderer.SetProp(null, SlimDX.Matrix.Identity);
@@ -1559,7 +1626,7 @@ public class CarViewport3D : D3DViewportBase
 
         // The renderer turns the car by itself a little further every tick: it has to keep drawing for that
         var cameraMoving = StepCamera(dt);
-        return cameraMoving || renderer.AutoRotate;
+        return cameraMoving || renderer.AutoRotate || renderer.IsTurningEngine;
     }
 
     protected override void OnFirstFrame()
@@ -1572,6 +1639,7 @@ public class CarViewport3D : D3DViewportBase
     {
         _followCarry = false;
         _carryFromStand = null;
+        _turningBack = false;
         _sceneryRenderer = null;
         _sceneryKey = null;
         _partsOnStand = false;

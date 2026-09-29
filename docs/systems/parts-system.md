@@ -518,6 +518,14 @@ onto the stand when it is free (else to the shelf), "Off the stand" puts it on t
 selected car's empty bay. Going on the stand, `EngineWork.StripForStand` takes off the work order's `stand_strips`
 (radiator, starter, transmission, clutch, flywheel: in the way of the stand's head; the radiator stays with the car, the
 starter is bolted to the bellhousing) onto the shelf, and none of them goes back on while the engine is on the stand.
+The "Turn over" toggle turns the engine on the stand upside down on the stand's spindle (the crankshaft's line), with
+whatever is on it and on its way: `PartsWorkbenchViewModel.IsEngineTurnedOver` → `CarViewport3D.EngineTurnedOver` →
+`GarageRenderer.EngineTurnedOver`, which turns the stand's prop, its candidates and the stand's head
+(`EngineStandLayout.HeadNode`) as whole models, as far as the engine clears the stand's base (a blown engine only goes
+onto its side), and never while parts are coming off it. Picking a part whose
+kind is worked on from below (`"worked_from"` in the work order: crankshaft, bearing bridge, oil pan) turns it over by
+itself, one from above (heads, intake, covers...) back. Only looks: nothing is refused either way. It is upright again
+off the stand, turning back before it goes onto the hoist or into the scenery.
 
 **The work order** (`WorkOrder`, `Content\streetcorsa\parts\work_order.json`, one per mod; see
 [modding.md](../modding.md)). Every part has a kind: its pack's `"kind"`, else a script class (the big parts), else

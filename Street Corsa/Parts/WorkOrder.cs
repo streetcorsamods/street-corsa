@@ -26,6 +26,7 @@ public sealed class WorkOrder
     private readonly Dictionary<string, WorkRule> _rules = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, HashSet<string>> _serves = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, IReadOnlyList<PartWay>> _ways = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, EngineSide> _sides = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> _standStrips = new();
     private readonly ConcurrentDictionary<PartDefinition, string?> _kindOf = new(ReferenceEqualityComparer.Instance);
     private readonly ConcurrentDictionary<PartDefinition, IReadOnlyList<PartWay>?> _ownWayOf = new(ReferenceEqualityComparer.Instance);
@@ -74,6 +75,12 @@ public sealed class WorkOrder
     }
 
     /// <summary>
+    /// Which side of the engine a part is worked on from, which turns the engine on the stand that side up
+    /// (<see cref="WorkKind.WorkedFrom"/>); null for a kind that does not say, which leaves the engine as it is
+    /// </summary>
+    public EngineSide? SideOf(PartDefinition part) => KindOf(part) is { } kind && _sides.TryGetValue(kind, out var side) ? side : null;
+
+    /// <summary>
     /// Every part that says how it comes off, told in <paramref name="problems"/> of a way it says that is no way;
     /// a part with not one leg that reads comes off the way its kind does
     /// </summary>
@@ -93,7 +100,7 @@ public sealed class WorkOrder
         foreach (var leg in legs)
         {
             any = true;
-            if (WayNamed(leg) is { } parsed) way.Add(parsed);
+            if (Named<PartWay>(leg) is { } parsed) way.Add(parsed);
             else problems?.Add($"{label} comes off \"{leg}\", which is none of up, down, forward, back, out; left out");
         }
 
@@ -203,6 +210,13 @@ public sealed class WorkOrder
                     if (ReadWay(legs, $"{label}: {kind.Id}", problems) is { } way) order._ways[kind.Id] = way;
                     else if (order._ways.ContainsKey(kind.Id)) problems.Add($"{label}: {kind.Id} keeps the way it comes off as before");
                 }
+
+                // Which side it is worked from is only looks too
+                if (kind.WorkedFrom is { } from)
+                {
+                    if (Named<EngineSide>(from) is { } side) order._sides[kind.Id] = side;
+                    else problems.Add($"{label}: {kind.Id} is worked from \"{from}\", which is neither above nor below; left out");
+                }
             }
 
             kindsByMod.Add(kinds);
@@ -296,14 +310,15 @@ public sealed class WorkOrder
     }
 
     /// <summary>
-    /// One way by its name, any case: not a number, nor a list of names, which the enum would read as the sum of them
+    /// One value of an enum by its name, any case: not a number, nor a list of names, which the enum would read as the
+    /// sum of them
     /// </summary>
-    private static PartWay? WayNamed(string? name)
+    private static T? Named<T>(string? name) where T : struct, Enum
     {
         var trimmed = name?.Trim();
-        foreach (var way in Enum.GetValues<PartWay>())
+        foreach (var value in Enum.GetValues<T>())
         {
-            if (way.ToString().Equals(trimmed, StringComparison.OrdinalIgnoreCase)) return way;
+            if (value.ToString().Equals(trimmed, StringComparison.OrdinalIgnoreCase)) return value;
         }
 
         return null;
@@ -357,6 +372,21 @@ public sealed class WorkKind
     /// </summary>
     [JsonProperty("comes_off")]
     public List<string?>? ComesOff { get; set; }
+
+    /// <summary>
+    /// The side of the engine the part goes on from, <c>"above"</c> or <c>"below"</c> (an <see cref="EngineSide"/>):
+    /// the engine on the stand turns over for a crankshaft or an oil pan, and back for a cylinder head. Only looks,
+    /// nothing is refused either way. Null leaves it to another mod, or the engine as it is.
+    /// </summary>
+    [JsonProperty("worked_from")]
+    public string? WorkedFrom { get; set; }
+}
+
+/// <summary>The side of the engine a part is worked on from, as the engine sits in a car</summary>
+public enum EngineSide
+{
+    Above,
+    Below
 }
 
 /// <summary>

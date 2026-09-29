@@ -988,7 +988,7 @@ Come and Go".
 - The dealer map is content: `Content/streetcorsa/dealers/map.json` (a `maps` list: picture and crop anchor) with the
   picture moved there from `Assets`; the last mod's map wins.
 
-### Step 21: part dealers
+### Step 21: part dealers (done, PR #40, merged as `738a19d`)
 Idea 1. Parts shops on the map like the car dealers, specialised by make (a Mopar shop, a Ford shop) or by kind
 (speed shop, junkyard with used parts), each with its own prices and stock. After step 20: it reuses its map and churn.
 
@@ -1029,6 +1029,47 @@ with their own pin style and a car dealers / part shops / both toggle:
 ### Step 22: flip the engine on the stand
 Idea 5. The engine turns upside down on the stand with an animation, to fit the crankshaft, bearings and oil pan; the
 part moves turn with it. Cosmetic only: nothing is refused when the engine isn't flipped.
+
+**The user decided (2026-09-28), built on `feature/engine-flip`:** a "Turn over" toggle beside Parts and Stand, shown
+while the stand is worked on with an engine on it; picking a part worked on from below (on the engine, or from the
+shelf) turns the engine over by itself, one worked on from above turns it back; the camera stays put; a plain half
+turn about the crankshaft's line.
+- Which side a kind is worked from is data: `"worked_from": "below"` (crankshaft, main bearing bridge, oil pan) or
+  `"above"` (pistons, heads, intake, carb, air filter, blower, valley and valve covers, breather, distributor,
+  ignition) on the kind in `work_order.json` (`WorkKind.WorkedFrom`, `WorkOrder.SideOf`); the last mod to say so says
+  so. A kind that does not say leaves the engine as it is, so the block, rods, camshaft and the front of the engine
+  never turn it.
+- `PartsWorkbenchViewModel.IsEngineTurnedOver`: false again when the work leaves the stand, and when another engine (or
+  none) is on it.
+- `GarageRenderer.EngineTurnedOver` turns the stand's prop and its candidates (their `LocalMatrix`) about the spindle
+  (x = `EngineStandLayout.Spot.X`, y = `CrankHeight`, along Z) in 1.6 s; the nodes' own matrices are untouched, so
+  part moves, picking, the placement mode and the parts' world places all work as before, in the prop's space.
+  `MoveParts` now works "out" and the unknown kinds' "away" in the prop's space too (it mixed the garage's and the
+  prop's, which was harmless while the only prop matrix was the running engine's small lean).
+- Off the stand the engine is upright: `LeaveStandAsync` turns it back (while the scenery is built) before it goes
+  back into the scenery or onto the hoist, and `StandActive = false` snaps it upright whatever happened.
+- Seen in the offscreen harness (small block: upright, half way, over; the air cleaner hangs just clear of the stand's
+  legs). Not seen in the game yet.
+- Review fixes (`/code-review xhigh`, 13 findings, all fixed):
+  - The turn is eased legs toward an angle (`_turnAngle`), no longer a 0..1 progress. It goes only as far as the
+    engine clears the stand's base (`TurnLimit`, from the part nodes' boxes swept about the spindle, worked out on every
+    `SetProp`): a blown engine only goes over onto its side. A limit that drops (a blower put on while it is over) turns
+    it back from where it is.
+  - The engine does not turn while parts come off it (`IsHoldingTurn`), and `ApplyStandAsync` waits for a turn to end
+    before parts come off or the new model goes up. So "Off the stand" while it is over turns it upright first, then
+    lifts it off, and a part's way is never turned under it.
+  - Waits go by progress with a stall patience (`WaitForRendererAsync`, shared with the part motions,
+    `GarageRenderer.TurnSecondsLeft`), no fixed 2.5 s window. The garage is locked (`IsMovingEngine`) while the engine
+    turns back before the hoist.
+  - The stand's head (plate, cross, spindle) is its own node, `EngineStandLayout.HeadNode`, turned with the engine;
+    `EngineStandLayout.Spindle` is the one place the axis is; the prop's placement is kept through the turn and the
+    body's lean.
+  - One rule for upright each way: the view model resets in `Refresh` only (the stand not on show, or another engine),
+    and the renderer turns only while `StandActive`, snapping upright when it goes off. `IsTurningEngine` uses the same
+    target, so a flag left on off the stand no longer keeps the viewport drawing.
+  - `WorkOrder.Named<T>` serves both the ways and the sides.
+  - Harness: the head turns with the engine, and the small block still goes the full half turn. A blown engine was not
+    rendered, because no build has a blower.
 
 ### Step 23: the player's car lot in 3D
 Idea 6. A 3D scene instead of the list. Options to propose when the step starts: a warehouse with the cars parked in
