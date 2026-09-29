@@ -318,8 +318,9 @@ namespace StreetCorsa.Screens.Garage
             FreeRunCommand = new AsyncRelayCommand(OnFreeRun, () => SelectedCarHere && FreeRunTrack != null && !_launcher.IsExecutionLocked && CanLeave());
             TestAndTuneCommand = new AsyncRelayCommand(OnTestAndTune, () => SelectedCarHere && !_launcher.IsExecutionLocked && CanLeave());
             LoadFreeRunTracks();
-            RepairsCommand = new RelayCommand(OnRepairs, () => SelectedCarHere);
-            SellCommand = new RelayCommand(OnSell, () => SelectedCarHere && !_launcher.IsExecutionLocked);
+            // Not while the night runs: its tasks read and change the cars and the money these spend
+            RepairsCommand = new RelayCommand(OnRepairs, () => SelectedCarHere && !_endingDay);
+            SellCommand = new RelayCommand(OnSell, () => SelectedCarHere && !_endingDay && !_launcher.IsExecutionLocked);
             CollectCommand = new RelayCommand(OnCollect, CanCollect);
             SelectCarCommand = new RelayCommand(OnSelectCar, CanLeave);
             ShowCalendarCommand = new RelayCommand(OnShowCalendar);
@@ -689,7 +690,7 @@ namespace StreetCorsa.Screens.Garage
         public string CollectButtonText => SelectedCar?.CarInstance is { IsImpounded: true } car ? $"Collect (${car.ImpoundFee:N0})" : "Collect";
 
         private bool CanCollect() =>
-            SelectedCar?.CarInstance is { } car && PoliceRules.CanCollect(car, _gameState.Date) && _gameState.Player.Money >= car.ImpoundFee;
+            !_endingDay && SelectedCar?.CarInstance is { } car && PoliceRules.CanCollect(car, _gameState.Date) && _gameState.Player.Money >= car.ImpoundFee;
 
         /// <summary>Pays the impound, brings the car home and saves; an hour goes by getting there and back</summary>
         private async void OnCollect()

@@ -153,6 +153,21 @@ public class AuditFixesBTests
     }
 
     [Fact]
+    public void The_rival_of_a_race_not_settled_yet_does_not_answer_the_players_ad()
+    {
+        var state = GameState.CreateNew("P");
+        Racer(state, "Pat", RacerStatus.ReadyToRace);
+        state.PendingRace = new RaceContext { OpponentName = "Pat" };
+        var forSale = new Car("car_a") { PowerHp = 300 };
+
+        // Pat is the only rival with the money and room, and a roll of 0 always brings a rival buyer
+        Assert.Null(CarSaleService.RivalBuyer(state, forSale, 1000m, new FixedRandom(0)));
+
+        state.PendingRace = null;
+        Assert.Equal("Pat", CarSaleService.RivalBuyer(state, forSale, 1000m, new FixedRandom(0))?.Name);
+    }
+
+    [Fact]
     public void An_ad_found_earlier_stands_only_while_the_seller_still_has_the_car_spare()
     {
         var state = GameState.CreateNew("P");

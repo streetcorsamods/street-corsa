@@ -286,6 +286,8 @@ namespace StreetCorsa.Services.Market
             var wanting = gameState.Racers.ReadyToRace.Values.Concat(gameState.Racers.Retired.Values)
                 .OfType<Opponent>()
                 .Where(o => !o.IsKing && o.Money >= amount && o.Cars.Count < OpponentRules.MaxCars
+                            // A rival whose race with the player is still to be settled keeps their garage as it is
+                            && !Opponents.OpponentLifeService.HasPendingRace(gameState, o)
                             && (o.Cars.Count == 0 || Simulation.RaceSimulatorService.GetCarHP(o.Cars[0]) < power))
                 .OrderBy(o => o.Name, StringComparer.Ordinal)
                 .ToList();

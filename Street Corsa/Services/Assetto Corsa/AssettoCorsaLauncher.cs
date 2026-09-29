@@ -431,6 +431,13 @@ namespace StreetCorsa.Services
             {
                 using (AcInstallGate.Hold())
                 {
+                    // The app is ending (the crash path has put the install back): nothing more goes in
+                    if (AcInstallGate.IsSealed)
+                    {
+                        prepareError = "Street Corsa is closing";
+                        return;
+                    }
+
                     // A race runs in the game's own CSP mode: without it nothing starts the race or reports it
                     if (intent is DragRaceLaunchIntent)
                     {
@@ -474,6 +481,12 @@ namespace StreetCorsa.Services
             {
                 using (AcInstallGate.Hold())
                 {
+                    if (AcInstallGate.IsSealed)
+                    {
+                        prepareError = "Street Corsa is closing";
+                        return;
+                    }
+
                     // PHASE 2.5: THE CARS' OWN DATA AND SOUND
                     // What the parts make of each car goes into the install now and comes out in the finally,
                     // whatever happens in between. A second car of a model already in the race races in a copy of the

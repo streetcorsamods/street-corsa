@@ -834,6 +834,10 @@ namespace StreetCorsa
         /// </summary>
         private void ShutDownCleanly(IAppLogger? logger, bool fatal = false)
         {
+            // Nothing more goes into the AC install from here on: a launch still under way (on a worker, or inside the
+            // crash path's message box) stops at its next change instead of going in after the restore below
+            AcInstallGate.Seal();
+
             // The crash path does not save: whatever the UI thread was in the middle of when it threw (the money
             // taken, the car not yet added) would be written over the last good save. The game saves as it goes
             // (a purchase, a race, a new day), so the last save is a whole one, and the next load goes on from there.
