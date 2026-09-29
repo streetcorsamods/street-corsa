@@ -112,34 +112,37 @@ public class AuditFixesETests
     }
 
     [Fact]
-    public void A_new_game_whose_garage_will_not_open_is_not_the_apps_game()
+    public void A_new_game_becomes_the_apps_game_only_once_its_garage_is_up()
     {
         var events = new CountingEvents();
         var saves = new MemorySaves(() => events.Generated);
         var dialogs = new DialogService();
         var navigation = Navigation(dialogs);
         navigation.SafeNavigate("stuck", () => new StuckScreen());
-        var current = new List<GameState?>();
-        var newGame = new NewGameScreenViewModel(navigation, dialogs, saves, events, current.Add, () => { }) { PlayerName = "Tester" };
+        var screensWhenSet = new List<IScreen?>();
+        var newGame = new NewGameScreenViewModel(navigation, dialogs, saves, events, _ => screensWhenSet.Add(navigation.CurrentScreen), () => { })
+            { PlayerName = "Tester" };
 
         newGame.StartGameCommand.Execute(null);
 
-        Assert.Empty(current);
-        Assert.IsType<StuckScreen>(navigation.CurrentScreen);
+        // A screen that throws on the way out no longer keeps the player on it (the navigation goes on), so the
+        // garage opens here; the game is the app's only from then on, never while the old screen is still up
+        var screen = Assert.Single(screensWhenSet);
+        Assert.IsType<Screens.Garage.GarageScreenViewModel>(screen);
     }
 
     // ---- loading a game ----
 
     [Fact]
-    public async Task A_loaded_game_whose_garage_will_not_open_is_not_the_apps_game()
+    public async Task A_loaded_game_becomes_the_apps_game_only_once_its_garage_is_up()
     {
         var saves = new MemorySaves(() => 0) { Stored = new GameState { SaveName = "tester" } };
         var dialogs = new DialogService();
         var navigation = Navigation(dialogs);
         var stuck = new StuckScreen();
         navigation.SafeNavigate("stuck", () => stuck);
-        var current = new List<GameState?>();
-        var loadGame = new LoadGameScreenViewModel(navigation, dialogs, saves, new NoParts(), current.Add, () => { });
+        var screensWhenSet = new List<IScreen?>();
+        var loadGame = new LoadGameScreenViewModel(navigation, dialogs, saves, new NoParts(), _ => screensWhenSet.Add(navigation.CurrentScreen), () => { });
 
         loadGame.LoadSaveCommand.Execute(new SaveGameInfo { SaveName = "tester", PlayerName = "Tester" });
 
@@ -150,7 +153,8 @@ public class AuditFixesETests
 
         Assert.True(stuck.LeaveTried);
         Assert.False(loadGame.IsBusy);
-        Assert.Empty(current);
+        var screen = Assert.Single(screensWhenSet);
+        Assert.IsType<Screens.Garage.GarageScreenViewModel>(screen);
     }
 
     // ---- the car handed to a worker ----
