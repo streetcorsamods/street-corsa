@@ -1,5 +1,9 @@
+using System.Buffers;
+using System.Globalization;
 using System.IO;
-using Newtonsoft.Json;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace StreetCorsa.Mods;
 
@@ -22,26 +26,36 @@ public static class ContentTypes
     public const string Text = "text";
 }
 
-/// <summary>A mod's mod.json, and the folder it was found in</summary>
+/// <summary>
+/// A mod's mod.json, and the folder it was found in. Read as every other file of a mod is (<see cref="ModJson.Options"/>:
+/// any case, comments, trailing commas), and as forgiving as it always was: a number where text goes (<c>"version": 1.1</c>)
+/// is that text, a whole number in quotes (<c>"order": "10"</c>) that number.
+/// </summary>
 public sealed class ModInfo
 {
-    [JsonProperty("id")]
+    [JsonPropertyName("id")]
+    [JsonConverter(typeof(TextOrNumber))]
     public string Id { get; set; } = string.Empty;
 
-    [JsonProperty("name")]
+    [JsonPropertyName("name")]
+    [JsonConverter(typeof(TextOrNumber))]
     public string Name { get; set; } = string.Empty;
 
-    [JsonProperty("version")]
+    [JsonPropertyName("version")]
+    [JsonConverter(typeof(TextOrNumber))]
     public string Version { get; set; } = string.Empty;
 
-    [JsonProperty("author")]
+    [JsonPropertyName("author")]
+    [JsonConverter(typeof(TextOrNumber))]
     public string Author { get; set; } = string.Empty;
 
-    [JsonProperty("description")]
+    [JsonPropertyName("description")]
+    [JsonConverter(typeof(TextOrNumber))]
     public string Description { get; set; } = string.Empty;
 
     /// <summary>Mods load in this order after the base game, lowest first; ties by id</summary>
-    [JsonProperty("order")]
+    [JsonPropertyName("order")]
+    [JsonConverter(typeof(WholeNumber))]
     public int Order { get; set; }
 
     [JsonIgnore]
@@ -58,6 +72,42 @@ public sealed class ModInfo
     }
 
     public override string ToString() => string.IsNullOrEmpty(Version) ? Id : $"{Id} {Version}";
+
+    /// <summary>Text as written, or a number or true/false as the text it reads as; null is empty</summary>
+    private sealed class TextOrNumber : JsonConverter<string>
+    {
+        public override bool HandleNull => true;
+
+        public override string Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => reader.TokenType switch
+        {
+            JsonTokenType.String => reader.GetString() ?? string.Empty,
+            JsonTokenType.Number => Encoding.UTF8.GetString(reader.HasValueSequence ? reader.ValueSequence.ToArray() : reader.ValueSpan),
+            JsonTokenType.True => "true",
+            JsonTokenType.False => "false",
+            JsonTokenType.Null => string.Empty,
+            _ => throw new JsonException($"expected text, found {reader.TokenType}")
+        };
+
+        public override void Write(Utf8JsonWriter writer, string value, JsonSerializerOptions options) => writer.WriteStringValue(value);
+    }
+
+    /// <summary>A whole number, written as one, as one with nothing after the point (10.0), or in quotes</summary>
+    private sealed class WholeNumber : JsonConverter<int>
+    {
+        public override int Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            double value;
+            if (reader.TokenType == JsonTokenType.Number) value = reader.GetDouble();
+            else if (reader.TokenType == JsonTokenType.String
+                     && double.TryParse(reader.GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)) value = parsed;
+            else throw new JsonException($"expected a whole number, found {reader.TokenType}");
+
+            if (value != Math.Floor(value) || value < int.MinValue || value > int.MaxValue) throw new JsonException($"{value} is not a whole number");
+            return (int)value;
+        }
+
+        public override void Write(Utf8JsonWriter writer, int value, JsonSerializerOptions options) => writer.WriteNumberValue(value);
+    }
 }
 
 /// <summary>
@@ -75,6 +125,10 @@ public sealed class ModSet
     private static readonly Lazy<ModSet> InstalledSet = new(() => Load(DefaultRoot));
 
     private readonly List<string> _problems = new();
+
+    // A mod's folders are listed as its content is read, from any thread: one the game may not open is passed over,
+    // one that cannot be listed at all is a line in the problems once, and the rest of the mods stand
+    private static readonly EnumerationOptions Listing = new() { IgnoreInaccessible = true, AttributesToSkip = 0, MatchType = MatchType.Win32 };
 
     private ModSet(string root, List<ModInfo> mods)
     {
@@ -98,7 +152,13 @@ public sealed class ModSet
         ?? new ModInfo { Id = ModIds.BaseId, Name = "Street Corsa", Folder = Path.Combine(Root, ModIds.BaseId) };
 
     /// <summary>Mods that could not be read or were left out, and why: one line each</summary>
-    public IReadOnlyList<string> Problems => _problems;
+    public IReadOnlyList<string> Problems
+    {
+        get
+        {
+            lock (_problems) return _problems.ToList();
+        }
+    }
 
     public ModInfo? Get(string id) => Mods.FirstOrDefault(m => m.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
 
@@ -121,7 +181,7 @@ public sealed class ModSet
         if (Directory.Exists(root))
         {
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var folder in Directory.EnumerateDirectories(root).Order(StringComparer.OrdinalIgnoreCase))
+            foreach (var folder in List(root, dirs: true, "*", problems).Order(StringComparer.OrdinalIgnoreCase))
             {
                 var name = Path.GetFileName(folder);
                 if (name.StartsWith('_') || name.StartsWith('.')) continue;
@@ -190,7 +250,7 @@ public sealed class ModSet
 
         try
         {
-            return JsonConvert.DeserializeObject<ModInfo>(File.ReadAllText(file)) ?? new ModInfo();
+            return JsonSerializer.Deserialize<ModInfo>(File.ReadAllText(file), ModJson.Options) ?? new ModInfo();
         }
         catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
         {
@@ -213,7 +273,7 @@ public sealed class ModSet
     {
         foreach (var (mod, dir) in Folders(type))
         {
-            foreach (var file in Directory.EnumerateFiles(dir, "*.json").Order(StringComparer.OrdinalIgnoreCase))
+            foreach (var file in List(dir, dirs: false, "*.json", _problems).Order(StringComparer.OrdinalIgnoreCase))
                 yield return (mod, file);
         }
     }
@@ -223,11 +283,33 @@ public sealed class ModSet
     {
         foreach (var (mod, dir) in Folders(type))
         {
-            foreach (var sub in Directory.EnumerateDirectories(dir).Order(StringComparer.OrdinalIgnoreCase))
+            foreach (var sub in List(dir, dirs: true, "*", _problems).Order(StringComparer.OrdinalIgnoreCase))
             {
                 var name = Path.GetFileName(sub);
                 if (!name.StartsWith('_') && !name.StartsWith('.')) yield return (mod, sub);
             }
+        }
+    }
+
+    /// <summary>
+    /// The folders or files directly in a folder, whole; none for a folder that cannot be listed, told once in
+    /// <paramref name="problems"/> (locked: the set's own are added to from any thread)
+    /// </summary>
+    private static List<string> List(string folder, bool dirs, string pattern, List<string> problems)
+    {
+        try
+        {
+            return (dirs ? Directory.EnumerateDirectories(folder, pattern, Listing) : Directory.EnumerateFiles(folder, pattern, Listing)).ToList();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            var line = $"{folder}: could not be read ({ex.Message}); left out";
+            lock (problems)
+            {
+                if (!problems.Contains(line)) problems.Add(line);
+            }
+
+            return new List<string>();
         }
     }
 

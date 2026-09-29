@@ -1,3 +1,4 @@
+using StreetCorsa.Helpers;
 using StreetCorsa.Models.Race;
 
 namespace StreetCorsa.Parts.Export;
@@ -35,14 +36,14 @@ public static class AcDamageData
             var ini = new IniText(suspensions);
             foreach (var (section, left, right) in new[] { ("FRONT", 0, 1), ("REAR", 2, 3) })
             {
-                var toe = (Clamp01(bend[left]) + Clamp01(bend[right])) / 2 * RaceStartState.MaxSuspensionBendMetres;
+                var toe = (Unit.Clamp01(bend[left], 0) + Unit.Clamp01(bend[right], 0)) / 2 * RaceStartState.MaxSuspensionBendMetres;
                 if (toe > 0 && ini.GetNumber(section, "TOE_OUT") is { } toeOut) ini.Set(section, "TOE_OUT", toeOut + toe, "0.000000");
             }
 
             if (ini.Changed) files[SuspensionsFile] = ini.ToString();
         }
 
-        var wear = Clamp01(damage.GearboxWear);
+        var wear = Unit.Clamp01(damage.GearboxWear, 0);
         if (wear > 0 && readFile(DrivetrainFile) is { } drivetrain)
         {
             var ini = new IniText(drivetrain);
@@ -55,10 +56,4 @@ public static class AcDamageData
 
         return files;
     }
-
-    /// <remarks>
-    /// Helpers.Unit.Clamp01 with ifNotFinite 0, kept here because EngineBench links this file without the helpers:
-    /// a bend or a wear that is not a number counts as none, so the data is left as the car had it
-    /// </remarks>
-    private static double Clamp01(double value) => double.IsFinite(value) ? Math.Clamp(value, 0, 1) : 0;
 }

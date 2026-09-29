@@ -113,6 +113,28 @@ public class PartDefinition
     public List<string?>? ComesOff { get; set; }
 
     /// <summary>
+    /// Whether the part does its job better than a factory one: a performance radiator, water pump or fan, a deep race
+    /// oil pan. Null leaves it to the words of the part's name, as the source game's parts are read.
+    /// </summary>
+    [JsonProperty("performance", NullValueHandling = NullValueHandling.Ignore)]
+    public bool? Performance { get; set; }
+
+    /// <summary>
+    /// What the part does for the engine's cooling as its kind in the work order says (<see cref="Parts.WorkKind.Cooling"/>):
+    /// "radiator", "water_pump", "fan" or "none". Null when its kind does not say, which leaves it to the words of
+    /// its name. Set by the catalog as it loads.
+    /// </summary>
+    [JsonIgnore]
+    public string? CoolingRole { get; set; }
+
+    /// <summary>
+    /// A radiator with a fan of its own: its kind in the work order serves a kind that is a fan
+    /// (<see cref="Parts.WorkKind.Serves"/>). Only read with <see cref="CoolingRole"/>; set by the catalog as it loads.
+    /// </summary>
+    [JsonIgnore]
+    public bool CoolingOwnFan { get; set; }
+
+    /// <summary>
     /// Whether the part has a script of its own that was run: the base game's root entries (what mods declare their
     /// fit against) have none, so no properties and no classes. A script whose parent class is missing still counts:
     /// it has no chain, but it was constructed.

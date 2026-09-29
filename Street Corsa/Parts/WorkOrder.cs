@@ -21,12 +21,21 @@ public sealed class WorkOrder
 {
     public const string FileName = "work_order.json";
 
+    /// <summary>What a kind can do for the engine's cooling (<see cref="WorkKind.Cooling"/>); "none" says it does nothing</summary>
+    public static readonly IReadOnlyList<string> CoolingRoles = [CoolingRadiator, CoolingWaterPump, CoolingFan, CoolingNone];
+
+    public const string CoolingRadiator = "radiator";
+    public const string CoolingWaterPump = "water_pump";
+    public const string CoolingFan = "fan";
+    public const string CoolingNone = "none";
+
     private readonly List<WorkKind> _kinds = new();
     private readonly Dictionary<string, WorkKind> _kindsById = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, WorkRule> _rules = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, HashSet<string>> _serves = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, IReadOnlyList<PartWay>> _ways = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, EngineSide> _sides = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, string> _cooling = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> _standStrips = new();
     private readonly ConcurrentDictionary<PartDefinition, string?> _kindOf = new(ReferenceEqualityComparer.Instance);
     private readonly ConcurrentDictionary<PartDefinition, IReadOnlyList<PartWay>?> _ownWayOf = new(ReferenceEqualityComparer.Instance);
@@ -73,6 +82,20 @@ public sealed class WorkOrder
 
         return KindOf(part) is { } kind && _ways.TryGetValue(kind, out var way) ? way : Array.Empty<PartWay>();
     }
+
+    /// <summary>Whether any kind says what it does for the cooling (<see cref="WorkKind.Cooling"/>)</summary>
+    public bool TellsCooling => _cooling.Count > 0;
+
+    /// <summary>
+    /// What a part does for the engine's cooling, as its kind says (<see cref="WorkKind.Cooling"/>): one of
+    /// <see cref="CoolingRoles"/>; null for a kind that does not say
+    /// </summary>
+    public string? CoolingOf(PartDefinition part) => KindOf(part) is { } kind ? _cooling.GetValueOrDefault(kind) : null;
+
+    /// <summary>A part of a cooling kind that does the job of a fan too: its kind serves a kind that is a fan (a radiator with an electric fan)</summary>
+    public bool HasOwnFan(PartDefinition part) =>
+        KindOf(part) is { } kind && _serves.TryGetValue(kind, out var serves)
+        && serves.Any(served => _cooling.GetValueOrDefault(served) == CoolingFan);
 
     /// <summary>
     /// Which side of the engine a part is worked on from, which turns the engine on the stand that side up
@@ -211,6 +234,14 @@ public sealed class WorkOrder
                     else if (order._ways.ContainsKey(kind.Id)) problems.Add($"{label}: {kind.Id} keeps the way it comes off as before");
                 }
 
+                // What it does for the cooling: the last mod to say so says so
+                if (kind.Cooling is { } cooling)
+                {
+                    var role = cooling.Trim().ToLowerInvariant();
+                    if (CoolingRoles.Contains(role)) order._cooling[kind.Id] = role;
+                    else problems.Add($"{label}: {kind.Id} does \"{cooling}\" for the cooling, which is none of {string.Join(", ", CoolingRoles)}; left out");
+                }
+
                 // Which side it is worked from is only looks too
                 if (kind.WorkedFrom is { } from)
                 {
@@ -276,37 +307,105 @@ public sealed class WorkOrder
     }
 
     /// <summary>
-    /// Kinds whose rules lead from one to the next and back to the first, each loop once, in the order they lead. A
-    /// rule waiting for its own kind is a loop (two cylinder heads, each in the other's way); one needing its own kind
-    /// is not (the part is of that kind itself).
+    /// Kinds whose rules lead from one to the next and back to the first: each set of kinds that lead to each other
+    /// once (a strongly connected component, Tarjan's way), its kinds from the first by name on, in the order they
+    /// lead. A rule waiting for its own kind is a loop (two cylinder heads, each in the other's way); one needing its
+    /// own kind is not (the part is of that kind itself).
     /// </summary>
+    /// <remarks>
+    /// Linear in the rules and what they name, and without recursion: a work order is any mod's file, and listing
+    /// every simple loop of a dense one would take for ever at catalog load.
+    /// </remarks>
     private static List<List<string>> Loops(IEnumerable<WorkRule> rules, Func<WorkRule, List<string>> next, bool withItself)
     {
-        var leads = rules.ToDictionary(r => r.Kind, next, StringComparer.OrdinalIgnoreCase);
-        var loops = new List<List<string>>();
-        var path = new List<string>();
-        foreach (var start in leads.Keys) Walk(start, start);
+        var leads = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var rule in rules) leads[rule.Kind] = next(rule);
 
-        return loops;
+        // Every kind by the one spelling its rule has, so a kind named in another case is the same kind
+        var kindOf = leads.Keys.ToDictionary(k => k, k => k, StringComparer.OrdinalIgnoreCase);
+        var edges = leads.ToDictionary(l => l.Key, l => l.Value.Select(to => kindOf.GetValueOrDefault(to)).OfType<string>().ToList(),
+            StringComparer.OrdinalIgnoreCase);
+        List<string> To(string kind) => edges[kind];
 
-        // Only through kinds that sort after the first, so each loop is found once: from its first kind
-        void Walk(string start, string kind)
+        var number = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var low = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var open = new Stack<string>();
+        var onOpen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var components = new List<List<string>>();
+
+        foreach (var first in leads.Keys)
         {
-            path.Add(kind);
-            foreach (var to in leads.GetValueOrDefault(kind) ?? new List<string>())
+            if (number.ContainsKey(first)) continue;
+
+            var work = new Stack<(string Kind, int Edge)>();
+            Visit(first);
+            while (work.Count > 0)
             {
-                if (to.Equals(start, StringComparison.OrdinalIgnoreCase))
+                var (kind, edge) = work.Pop();
+                var leadsTo = To(kind);
+                if (edge < leadsTo.Count)
                 {
-                    if (path.Count > 1 || withItself) loops.Add(path.ToList());
+                    work.Push((kind, edge + 1));
+                    var to = leadsTo[edge];
+                    if (!number.ContainsKey(to)) Visit(to);
+                    else if (onOpen.Contains(to)) low[kind] = Math.Min(low[kind], number[to]);
+                    continue;
                 }
-                else if (string.Compare(to, start, StringComparison.OrdinalIgnoreCase) > 0 && !path.Contains(to, StringComparer.OrdinalIgnoreCase))
+
+                if (work.Count > 0)
                 {
-                    Walk(start, to);
+                    var parent = work.Peek().Kind;
+                    low[parent] = Math.Min(low[parent], low[kind]);
                 }
+
+                if (low[kind] != number[kind]) continue;
+
+                var component = new List<string>();
+                string member;
+                do
+                {
+                    member = open.Pop();
+                    onOpen.Remove(member);
+                    component.Add(member);
+                } while (!member.Equals(kind, StringComparison.OrdinalIgnoreCase));
+
+                components.Add(component);
             }
 
-            path.RemoveAt(path.Count - 1);
+            void Visit(string kind)
+            {
+                number[kind] = low[kind] = number.Count;
+                open.Push(kind);
+                onOpen.Add(kind);
+                work.Push((kind, 0));
+            }
         }
+
+        var loops = new List<List<string>>();
+        foreach (var component in components)
+        {
+            var members = new HashSet<string>(component, StringComparer.OrdinalIgnoreCase);
+            var head = component.Order(StringComparer.OrdinalIgnoreCase).First();
+            if (component.Count == 1 && !(withItself && To(head).Contains(head, StringComparer.OrdinalIgnoreCase))) continue;
+
+            // From the first by name, along the rules, each kind once
+            var ordered = new List<string>();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var walk = new Stack<string>();
+            walk.Push(head);
+            while (walk.Count > 0)
+            {
+                var kind = walk.Pop();
+                if (!seen.Add(kind)) continue;
+
+                ordered.Add(kind);
+                foreach (var to in Enumerable.Reverse(To(kind)).Where(members.Contains)) walk.Push(to);
+            }
+
+            loops.Add(ordered);
+        }
+
+        return loops.OrderBy(l => l[0], StringComparer.OrdinalIgnoreCase).ToList();
     }
 
     /// <summary>
@@ -380,6 +479,16 @@ public sealed class WorkKind
     /// </summary>
     [JsonProperty("worked_from")]
     public string? WorkedFrom { get; set; }
+
+    /// <summary>
+    /// What a part of the kind does for the engine's cooling: <c>"radiator"</c>, <c>"water_pump"</c>, <c>"fan"</c>, or
+    /// <c>"none"</c> for a kind whose name only sounds like one (a water pump's mounting hardware). A radiator kind that
+    /// serves a fan kind (<see cref="Serves"/>) has a fan of its own. Null leaves it to another mod, or to the words of
+    /// the part's name (<see cref="Cars.EngineCooling"/>); whether one is a performance part is the part's own
+    /// <see cref="PartDefinition.Performance"/>.
+    /// </summary>
+    [JsonProperty("cooling")]
+    public string? Cooling { get; set; }
 }
 
 /// <summary>The side of the engine a part is worked on from, as the engine sits in a car</summary>

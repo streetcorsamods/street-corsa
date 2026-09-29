@@ -62,6 +62,9 @@ public class ScriptHost : IScriptHost
         var position = 0;
         foreach (Match match in Format.Matches(format))
         {
+            // A format of thousands of %f is script text too: what it prints is held to what a script may build
+            if (result.Length > ScriptVm.MaxTextLength) break;
+
             result.Append(format, position, match.Index - position);
             // The precision is script text: "%.999999999f" would ask for a billion digits, more than ten overflow
             var precision = !match.Groups["precision"].Success ? 6
@@ -73,6 +76,8 @@ public class ScriptHost : IScriptHost
             position = match.Index + match.Length;
         }
 
-        return result.Append(format, position, format.Length - position).Replace("%%", "%").ToString();
+        if (result.Length <= ScriptVm.MaxTextLength) result.Append(format, position, format.Length - position);
+        result.Replace("%%", "%");
+        return result.Length > ScriptVm.MaxTextLength ? result.ToString(0, ScriptVm.MaxTextLength) : result.ToString();
     }
 }

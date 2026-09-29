@@ -113,11 +113,13 @@ public static class EngineTuner
         var trials = maxTrials;
         var root = engine;
 
-        // An engine already past its radiator is seen to first
+        // An engine already past its radiator is seen to first. It counts as work done on this engine: a block swap
+        // after it would throw the new radiator away with the old engine, and bill it all the same
         if (coolingOf != null && coolingOf(root, report.Dyno!.MaxPowerHp) < CoolEnough
             && Cool(catalog, root, report.Dyno.MaxPowerHp, budget, newPriceOf, coolingOf) is { } cooled)
         {
             upgrades.Add(WithFitted(cooled.Upgrade, root, cooled.Engine));
+            doneGroups.Add(CoolingGroup);
             root = cooled.Engine;
             budget -= cooled.Upgrade.Cost;
         }
@@ -338,7 +340,7 @@ public static class EngineTuner
         }
 
         // The block swap: a bigger engine of the same family, used, with what goes with it. Only on an engine not yet
-        // tuned: the swap throws away the old engine's parts, and a bolt-on bought this round would go with them
+        // tuned: the swap throws away the old engine's parts, and a bolt-on or a radiator bought before it would go with them
         if (doneGroups.Count == 0 && trials > 0 && builds.Runnable.FirstOrDefault(b => b.BlockId.Equals(root.DefinitionId, StringComparison.OrdinalIgnoreCase)) is { Family.Length: > 0 } current)
         {
             var bigger = builds.Runnable

@@ -154,7 +154,7 @@ public sealed class SoundLibrary
             {
                 if (File.Exists(overridesPath)) overrides = JsonConvert.DeserializeObject<SoundOverrides>(File.ReadAllText(overridesPath)) ?? overrides;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (IsBadContent(ex))
             {
                 library._problems.Add($"{label}{SoundsJson}: {ex.Message}; no pins and no car facts from it");
             }
@@ -172,7 +172,18 @@ public sealed class SoundLibrary
 
             if (!Directory.Exists(root)) continue;
 
-            foreach (var folder in Directory.GetDirectories(root).OrderBy(f => f, StringComparer.OrdinalIgnoreCase))
+            string[] folders;
+            try
+            {
+                folders = Directory.GetDirectories(root);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                library._problems.Add($"{label}sounds: the folder could not be read ({ex.Message}); no sounds from it");
+                continue;
+            }
+
+            foreach (var folder in folders.OrderBy(f => f, StringComparer.OrdinalIgnoreCase))
             {
                 try
                 {
@@ -180,7 +191,7 @@ public sealed class SoundLibrary
                     // The id is the mod's and the folder's name: never there twice
                     if (entry != null) library.Add(entry);
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (IsBadContent(ex))
                 {
                     library._problems.Add($"{label}{Path.GetFileName(folder)}: {ex.Message}");
                 }
@@ -290,7 +301,7 @@ public sealed class SoundLibrary
             {
                 car = ReadCar(folder, () => master.Value, facts);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (IsBadContent(ex))
             {
                 _problems.Add($"{Path.GetFileName(folder)}: {ex.Message}; its bank is left out");
                 continue;
@@ -350,6 +361,15 @@ public sealed class SoundLibrary
 
         return read;
     }
+
+    /// <summary>
+    /// What a sound folder or a car of somebody else's throws when it is not what it should be: a file that does not
+    /// read or parse, a path in it that is no path. A bug of the game's own (a null, a bad cast) is none of these,
+    /// and is not passed off as a bad sound.
+    /// </summary>
+    private static bool IsBadContent(Exception ex) =>
+        ex is IOException or UnauthorizedAccessException or JsonException or InvalidDataException or ArgumentException
+            or NotSupportedException or FormatException or OverflowException;
 
     private sealed record HarvestedCar(string Id, string Name, string BankPath, string GuidsText, long Size, string Checksum,
         double? Limiter, int? Cylinders, string Family);

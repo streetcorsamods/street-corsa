@@ -1,3 +1,4 @@
+using StreetCorsa.Helpers;
 using StreetCorsa.Models.GameState;
 
 namespace StreetCorsa.Parts.Cars;
@@ -46,9 +47,9 @@ public static class PartPricing
         return (value > 0 && double.IsFinite(value) ? value : ValueWithoutScript) * Scale;
     }
 
-    /// <summary>Worth of one part in its condition, nothing mounted on it counted</summary>
+    /// <summary>Worth of one part in its condition, nothing mounted on it counted; a wear or damage that is no number is as new</summary>
     public static double Worth(PartDefinition part, PartInstance instance) =>
-        NewPrice(part) * Math.Clamp(instance.Tear, 0, 1) * (WearFloor + (1 - WearFloor) * Math.Clamp(instance.Wear, 0, 1));
+        NewPrice(part) * Unit.Clamp01(instance.Tear, 1) * (WearFloor + (1 - WearFloor) * Unit.Clamp01(instance.Wear, 1));
 
     /// <summary>Worth of a part with everything that is mounted on it</summary>
     public static double WorthOfAssembly(PartsCatalog catalog, PartInstance root) =>
