@@ -1,6 +1,5 @@
 using System.IO;
 using System.Windows;
-using System.Windows.Input;
 using AcTools.Render.Kn5Specific.Objects;
 using StreetCorsa.Audio;
 using StreetCorsa.Controls.Street;
@@ -16,26 +15,16 @@ namespace StreetCorsa.Controls;
 /// at the lane beside it. A rival drives up that lane and stops alongside, or pulls away, as the screen's
 /// <see cref="StreetStage"/> says: its wheels turn, its body dives on the brakes and squats as it leaves, its brake
 /// lights come on, and its engine is heard from where the car is. The player's own engine rocks the car they sit in,
-/// and the view with it. Dragging with the mouse looks round.
+/// and the view with it. Dragging with the mouse looks round; a double click looks back out of the window at once.
 /// </summary>
-public class StreetViewport3D : D3DViewportBase
+public class StreetViewport3D : OnboardViewport3D
 {
-    // Where the driver looks: degrees from straight ahead towards the lane, and how far they can turn
+    // Where the driver looks: degrees from straight ahead towards the lane
     private const float DefaultLookYaw = 72f;
-    private const float MinLookYaw = -35f;
-    private const float MaxLookYaw = 160f;
-    private const float MaxLookPitch = 20f;
-    private const float LookDegreesPerPixel = 0.18f;
-    // AC's own onboard lens, as the player set it
-    private float _fieldOfView = 56f;
 
     // Loud beside the window, fading as it goes up the street
     private const float RivalFullVolumeWithin = 5f;
     private const float RivalQuietest = 0.06f;
-
-    private const int SettleFrames = 4;
-    private static readonly TimeSpan SceneFadeOut = TimeSpan.FromMilliseconds(600);
-    private static readonly TimeSpan SceneFadeIn = TimeSpan.FromMilliseconds(900);
 
     // What stands in the scene
     private string? _kn5;
@@ -43,24 +32,16 @@ public class StreetViewport3D : D3DViewportBase
     private StreetScene? _scene;
     private StreetStage? _stageListened;
 
-    // The player's eyes in their car's own space
-    private Sx.Vector3 _eye = SceneLights.FallbackEye;
-    private float _lookYaw = DefaultLookYaw;
-    private float _lookPitch;
-
-    // How the player's car sits and where its driver looks, from its data (AcCarFrame); the rival's car's lift
-    private AcCarFrame _frame = new(SceneLights.FallbackEye, 0f);
+    // The rival's car's lift over the road (AcCarFrame)
     private float _rivalLift;
-
-    // The player's dashboard needles
-    private CarInstruments? _instruments;
-    private System.Windows.Point? _dragFrom;
-    private float _aimedAspect;
 
     // The rival's car
     private CarSlot? _rivalSlot;
     private StreetCar? _rivalShown;
     private int _rivalLoad;
+
+    // Rival loads run one after another: two into the one slot at once would draw on the device from two workers
+    private Task _rivalLoads = Task.CompletedTask;
     private bool _rivalReady;
     private RivalDrive? _drive;
     private float _driveTime;
@@ -69,12 +50,10 @@ public class StreetViewport3D : D3DViewportBase
     private readonly ChassisPitch _pitch = new();
     private CarBodyRock? _rivalRock;
 
-    private int _fadeInAfter = -1;
-
     public StreetViewport3D()
-        : base("Street", new LabelLook(13, 0xD8, 0x90, new Thickness(8, 4, 8, 4), new Vector(16, 16)))
+        : base("Street")
     {
-        Cursor = System.Windows.Input.Cursors.Hand;
+        LookYaw = DefaultLookYaw;
     }
 
     protected override string ViewportName => "Street viewport";
@@ -90,28 +69,6 @@ public class StreetViewport3D : D3DViewportBase
     {
         get => (StreetScene?)GetValue(SceneProperty);
         set => SetValue(SceneProperty, value);
-    }
-
-    public static readonly DependencyProperty LightProperty = DependencyProperty.Register(
-        nameof(Light), typeof(StreetLight), typeof(StreetViewport3D),
-        new PropertyMetadata(StreetLight.Day, (d, _) => ((StreetViewport3D)d).RequestLoad()));
-
-    /// <summary>Day, dusk or night: another model of the street, and another light</summary>
-    public StreetLight Light
-    {
-        get => (StreetLight)GetValue(LightProperty);
-        set => SetValue(LightProperty, value);
-    }
-
-    public static readonly DependencyProperty PlayerCarProperty = DependencyProperty.Register(
-        nameof(PlayerCar), typeof(StreetCar), typeof(StreetViewport3D),
-        new PropertyMetadata(null, (d, _) => ((StreetViewport3D)d).RequestLoad()));
-
-    /// <summary>The car the player sits in</summary>
-    public StreetCar? PlayerCar
-    {
-        get => (StreetCar?)GetValue(PlayerCarProperty);
-        set => SetValue(PlayerCarProperty, value);
     }
 
     public static readonly DependencyProperty StageProperty = DependencyProperty.Register(
@@ -148,53 +105,20 @@ public class StreetViewport3D : D3DViewportBase
             return;
         }
 
-        if (Renderer != null && !IsPictureHidden)
-        {
-            await FadeOutAsync(SceneFadeOut);
-            if (!IsLoaded) return;
-        }
-
-        DisposeRenderer(releaseDevice: false);
-
         var light = Light;
-        var renderer = NewRenderer(null, kn5);
-        renderer.AutoAdjustTarget = false;
+        var renderer = await StartSceneAsync(kn5, light);
+        if (renderer == null) return;
 
-        // Headlights only at night; by day a car's light sources are only more for the shader to go through
-        renderer.LoadCarLights = light == StreetLight.Night;
-        renderer.TryToGuessCarLights = light == StreetLight.Night;
+        LightScene(renderer, scene.LightingFor(light), scene.Sun);
 
-        if (!await StartRendererAsync(renderer)) return;
-
-        SceneLights.Apply(renderer, scene.LightingFor(light), scene.Sun);
-
-        var skin = SkinOrDefault(player.Directory, player.Skin);
-        var data = SceneLights.DataOf(player.Directory, ex => Logger.Warning(ex, "The data of {Car} could not be read: it sits and looks as most cars do", player.Directory));
-        var frame = SceneLights.FrameOf(data);
-        var placement = Placement(scene, scene.Player, 0f, lift: frame.Lift);
-        renderer.MainSlot.LocalMatrix = placement;
-        await TrackDeviceWork(renderer.MainSlot.SetCarAsync(CarDescription.FromDirectory(player.Directory), skin));
-        if (Renderer != renderer || !IsLoaded) return;
-
-        renderer.MainSlot.LocalMatrix = placement;
-        renderer.MainSlot.ResetCarBoundingBox();
-        if (renderer.CarNode is { } car && light == StreetLight.Night) car.HeadlightsEnabled = true;
-        _instruments = CarInstruments.TryRead(renderer.CarNode, data, player.Directory, Logger);
+        // Parked where the scene has the player, lifted onto the road as the car's own data says
+        if (!await LoadPlayerCarAsync(renderer, player, light, frame => Placement(scene, scene.Player, 0f, lift: frame.Lift))) return;
 
         _kn5 = kn5;
         _player = player;
         _scene = scene;
-        _frame = frame;
+        LookYaw = DefaultLookYaw;
 
-        // Read off the car as it stands, placement taken out
-        renderer.MainSlot.LocalMatrix = Sx.Matrix.Identity;
-        _eye = SceneLights.DriverEye(renderer, frame);
-        renderer.MainSlot.LocalMatrix = placement;
-        _fieldOfView = SceneLights.OnboardFieldOfView();
-        _lookYaw = DefaultLookYaw;
-        _lookPitch = SceneLights.SeatPitch;
-
-        renderer.UseFpsCamera = true;
         AimCamera(renderer);
         renderer.RefreshShadows();
 
@@ -205,11 +129,11 @@ public class StreetViewport3D : D3DViewportBase
             stage.IsShown = true;
 
             // A rival already there comes back into the new scene where the stage has it
-            if (stage.Phase != RivalPhase.None) _ = ShowRivalAsync(renderer, stage);
+            if (stage.Phase != RivalPhase.None) QueueRival(renderer, stage);
         }
 
         OnPoseChanged();
-        _fadeInAfter = SettleFrames;
+        FadeInOnceSettled();
         Invalidate();
     }
 
@@ -230,7 +154,7 @@ public class StreetViewport3D : D3DViewportBase
 
     protected override void OnRendererDisposed()
     {
-        _instruments = null;
+        base.OnRendererDisposed();
         if (_stageListened != null) _stageListened.IsShown = false;
         _kn5 = null;
         _player = null;
@@ -240,7 +164,6 @@ public class StreetViewport3D : D3DViewportBase
         _rivalReady = false;
         _rivalRock = null;
         _rivalLoad++;
-        _fadeInAfter = -1;
 
         // Whatever the rival was doing, it has no car to do it in: the stage hears of it as if at once
         if (_stageListened is { Phase: RivalPhase.Arriving }) _stageListened.ReportAlongside();
@@ -254,13 +177,23 @@ public class StreetViewport3D : D3DViewportBase
 
     private void OnStageChanged()
     {
+        if (IsLoaded) ListenTo(Stage);
+    }
+
+    protected override void ListenToStage(bool listen) => ListenTo(listen ? Stage : null);
+
+    /// <summary>Listens to <paramref name="stage"/> and no other: only while the control is loaded, so a stage that outlives it does not keep it alive through its event</summary>
+    private void ListenTo(StreetStage? stage)
+    {
+        if (ReferenceEquals(stage, _stageListened)) return;
+
         if (_stageListened != null)
         {
             _stageListened.Changed -= OnStageAction;
             _stageListened.IsShown = false;
         }
 
-        _stageListened = Stage;
+        _stageListened = stage;
         if (_stageListened != null)
         {
             _stageListened.Changed += OnStageAction;
@@ -277,7 +210,7 @@ public class StreetViewport3D : D3DViewportBase
         switch (stage.Phase)
         {
             case RivalPhase.Arriving:
-                _ = ShowRivalAsync(renderer, stage);
+                QueueRival(renderer, stage);
                 break;
             case RivalPhase.Leaving:
                 StartLeaving(stage);
@@ -289,16 +222,42 @@ public class StreetViewport3D : D3DViewportBase
     }
 
     /// <summary>
+    /// Shows the rival once the loads asked for before are done (<see cref="ShowRivalAsync"/>). The newest ask is the
+    /// one that counts: one overtaken while it waited, or hidden meanwhile, does nothing.
+    /// </summary>
+    private void QueueRival(GarageRenderer renderer, StreetStage stage)
+    {
+        var load = ++_rivalLoad;
+        var before = _rivalLoads;
+        _rivalLoads = After(before, () => ShowRivalAsync(renderer, stage, load));
+
+        static async Task After(Task before, Func<Task> next)
+        {
+            try
+            {
+                await before;
+            }
+            catch
+            {
+                // The load before has said how it ended; this one goes ahead all the same
+            }
+
+            await next();
+        }
+    }
+
+    /// <summary>
     /// Puts the rival's car in its slot, if it is not the one there already, and starts it up the lane. A car that
     /// will not load is not seen: the stage hears it arrived all the same, so the screen goes on.
     /// </summary>
-    private async Task ShowRivalAsync(GarageRenderer renderer, StreetStage stage)
+    private async Task ShowRivalAsync(GarageRenderer renderer, StreetStage stage, int load)
     {
+        if (load != _rivalLoad || Renderer != renderer) return;
+
         var car = stage.RivalCar;
         var scene = _scene;
         if (car == null || scene == null) return;
 
-        var load = ++_rivalLoad;
         _drive = null;
         _rivalReady = false;
 
@@ -314,7 +273,7 @@ public class StreetViewport3D : D3DViewportBase
                 _rivalSlot.LocalMatrix = hidden;
 
                 var skin = SkinOrDefault(car.Directory, car.Skin);
-                await TrackDeviceWork(_rivalSlot.SetCarAsync(CarDescription.FromDirectory(car.Directory), skin));
+                await TrackDeviceWork(_rivalSlot.SetCarAsync(CarDescription.FromDirectory(car.Directory), skin, RendererToken));
                 if (Renderer != renderer || load != _rivalLoad) return;
 
                 _rivalShown = car;
@@ -474,67 +433,29 @@ public class StreetViewport3D : D3DViewportBase
 
     #region Camera
 
+    /// <summary>From the driver's eyes in the parked car, as its body leans with the running engine</summary>
     private void AimCamera(GarageRenderer renderer)
     {
-        if (renderer.Camera is not { } camera || _scene is not { } scene) return;
+        if (_scene is not { } scene) return;
 
-        var placement = Placement(scene, scene.Player, 0f, lift: _frame.Lift);
-        var lean = CarLean;
-
-        // In the car's own space: +z ahead, +x to the left, where the lane is
-        var yaw = _lookYaw * MathF.PI / 180f;
-        var pitch = _lookPitch * MathF.PI / 180f;
-        var look = new Sx.Vector3(MathF.Sin(yaw) * MathF.Cos(pitch), MathF.Sin(pitch), MathF.Cos(yaw) * MathF.Cos(pitch));
-
-        var eye = Sx.Vector3.TransformCoordinate(Sx.Vector3.TransformCoordinate(_eye, placement), lean);
-        var direction = Sx.Vector3.TransformNormal(Sx.Vector3.TransformNormal(look, placement), lean);
-        var up = Sx.Vector3.TransformNormal(Sx.Vector3.UnitY, lean);
-
-        camera.FovY = _fieldOfView * MathF.PI / 180f;
-        camera.LookAt(eye, eye + direction, up);
-        camera.SetLens(renderer.AspectRatio);
-        _aimedAspect = renderer.AspectRatio;
-        renderer.IsDirty = true;
+        AimCamera(renderer, Placement(scene, scene.Player, 0f, lift: Frame.Lift), CarLean);
     }
 
-    /// <summary>Dragging looks round; a double click looks back out of the window</summary>
-    protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
+    /// <summary>A little way round from straight ahead: the lane is to the left, the far side of the street not far to the right</summary>
+    protected override float MinLookYaw => -35f;
+
+    /// <summary>The view snaps back to looking out of the window</summary>
+    protected override void LookBack()
     {
-        base.OnMouseLeftButtonDown(e);
-        if (e.ClickCount == 2)
-        {
-            _lookYaw = DefaultLookYaw;
-            _lookPitch = SceneLights.SeatPitch;
-            if (Renderer is { } renderer) AimCamera(renderer);
-            Invalidate();
-            e.Handled = true;
-            return;
-        }
-
-        _dragFrom = e.GetPosition(this);
-        CaptureMouse();
-        e.Handled = true;
-    }
-
-    protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
-    {
-        base.OnMouseLeftButtonUp(e);
-        _dragFrom = null;
-        ReleaseMouseCapture();
-    }
-
-    protected override void OnMouseMove(System.Windows.Input.MouseEventArgs e)
-    {
-        base.OnMouseMove(e);
-        if (_dragFrom is not { } from || e.LeftButton != MouseButtonState.Pressed) return;
-
-        var now = e.GetPosition(this);
-        _lookYaw = Math.Clamp(_lookYaw + (float)(from.X - now.X) * LookDegreesPerPixel, MinLookYaw, MaxLookYaw);
-        _lookPitch = Math.Clamp(_lookPitch + (float)(from.Y - now.Y) * LookDegreesPerPixel, -MaxLookPitch, MaxLookPitch);
-        _dragFrom = now;
-
+        LookYaw = DefaultLookYaw;
+        LookPitch = SceneLights.SeatPitch;
         if (Renderer is { } renderer) AimCamera(renderer);
         Invalidate();
+    }
+
+    protected override void OnLookDragged()
+    {
+        if (Renderer is { } renderer) AimCamera(renderer);
     }
 
     #endregion
@@ -545,21 +466,13 @@ public class StreetViewport3D : D3DViewportBase
     {
         // The player's engine shakes the car, and the view with it (OnPoseChanged aims the camera as it does); a
         // viewport that changed shape is aimed again for its new lens
-        if (renderer.AspectRatio != _aimedAspect) AimCamera(renderer);
+        if (renderer.AspectRatio != AimedAspect) AimCamera(renderer);
 
         var moving = StepRival(dt);
 
         // The tachometer follows the player's engine; the car stands, warm
-        _instruments?.Show(RunningEngine?.Rpm ?? 0, 0f, null, 85f, 0f);
+        Instruments?.Show(RunningEngine?.Rpm ?? 0, 0f, null, 85f, 0f);
         return moving || RunningEngine is { IsActive: true };
-    }
-
-    protected override void OnFramePresented()
-    {
-        if (_fadeInAfter < 0) return;
-        if (_fadeInAfter-- > 0) return;
-
-        if (IsPictureHidden) FadeIn(SceneFadeIn);
     }
 
     protected override void OnPoseChanged()
