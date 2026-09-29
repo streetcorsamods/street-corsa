@@ -140,17 +140,33 @@ other on, or a rule needing a kind it waits for) are reported. A kind of the sam
 `"serves"` to the kind; the name the player reads is the first mod's. The base game's kinds and
 rules are in `Content\streetcorsa\parts\work_order.json`.
 
-**A part's figures.** A part's stats come from its SLRR script (`source_script`): the game builds the script and runs it,
-and `"properties"` in the pack is only a record of what it built. A part that shares a stock script but has figures of
-its own says so in `"overrides"`: script fields set over what the script built, before the player's tuning. A number
-(`"stroke": 76.2`), one element of an array field (`"ratio[2]": 1.0`), or a list for an array field from its first
-element on (`"ratio": [0, 1.76, 1.0, 0, 0, 0, 0, -1.76]`, `null` keeps an element); anything else is left alone.
-Units are the script's own (mm, cc). The engine takes the bore from the block, the stroke from the crankshaft, the
-combustion space from the heads, the deck and the pistons' `crown_volume`, and the gearing from the transmission
-(`gears`, `ratio`: element 0 unused, the last one reverse).
+**A part's figures.** A part's stats come from its SLRR script (`source_script`): the game builds the script and runs it
+to work the engine out. The rest is read from the pack: `"class_chain"` says what the part is (a crankshaft, a clutch:
+without it the work order and the engine can't tell), and `"properties"` holds the script's
+fields as it built them, which is where the price (`value`), the running gear's figures (tyres, springs, shocks,
+brakes), an oil pan's `capacity` and a block's `cylinders` for its sound are read; a part with neither is a bare
+fitting with no script of its own, left out of the shops and the running gear. `tools\SlrrPartsConverter` writes
+both; a part made by hand copies them from the part whose script it shares.
+
+A part that shares a stock script but has figures of its own says so in `"overrides"`: script fields set over what the
+script built, before the player's tuning, and over `"properties"` too, so the price and the running gear get them as
+well. A number (`"stroke": 76.2`), one element of an array field (`"ratio[2]": 1.0`), or a list for an array field from
+its first element on (`"ratio": [0, 1.76, 1.0, 0, 0, 0, 0, -1.76]`, `null` keeps an element). A list goes on before
+the single elements, whatever order they are written in, so `"ratio[3]"` wins over the list's fourth number. Names are
+the script's, case and all, and units its own (mm, cc); a field that holds whole numbers takes the whole part of what
+it is given. An override the game can't use is reported in the log and left out: a field the script doesn't have, one
+that holds something other than numbers, a number for an array field or a list for a number, an element past the
+end of the array (and a list's numbers past it), anything not a finite number, and a field the script works out itself
+from others (the part's `"derived"`, such as a camshaft's `time_in_open`). The engine takes the bore from the block,
+the stroke from the crankshaft, the combustion space from the heads, the deck and the pistons' `crown_volume`, and
+the gearing from the transmission (`gears`, `ratio`: element 0 unused, the last one reverse).
 
 ```json
-{ "id": "engines/l79/CV8_crank_283", "source_script": "...V8_small_block_crank.class", "overrides": { "stroke": 76.2 } }
+{
+  "id": "engines/l79/CV8_crank_283", "source_script": "...V8_small_block_crank.class",
+  "class_chain": [ "...", "java.game.parts.Part" ], "properties": { "value": 180.0, "stroke": 82.55, "...": "..." },
+  "overrides": { "stroke": 76.2, "value": 150 }
+}
 ```
 
 A part mounts by what its slots name (`attaches_to`, `compatible_with`: a part id and a slot, a reference as above)

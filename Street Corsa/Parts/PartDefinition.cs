@@ -122,7 +122,9 @@ public class PartDefinition
 
     /// <summary>
     /// The part's script fields once constructed (bore, stroke, ratio, value, max_wear...), in the script's
-    /// own names and units. Values are numbers, strings, "rpk path#0xID" resources or lists of those.
+    /// own names and units, with the pack's <see cref="Overrides"/> over them. Values are numbers, strings,
+    /// "rpk path#0xID" resources or lists of those. What is read from the pack about the part (its price, running
+    /// gear, sump) is read here; the engine is worked out by running the script itself.
     /// </summary>
     [JsonProperty("properties")]
     public Dictionary<string, object> Properties { get; set; } = new();
@@ -131,10 +133,17 @@ public class PartDefinition
     /// Script fields a mod sets over what the part's script constructs, before the player's tuning: a number
     /// ("stroke": 76.2), a number for one element of an array field ("ratio[2]": 1.0), or a list of numbers for an
     /// array field from its first element on ("ratio": [0, 1.76, 1.0]; null keeps an element). This is how a part
-    /// sharing a stock script gets its own figures; <see cref="Properties"/> is only a record of the constructed fields.
+    /// sharing a stock script gets its own figures. As written in the pack; what is used is <see cref="FieldOverrides"/>.
     /// </summary>
     [JsonProperty("overrides", NullValueHandling = NullValueHandling.Ignore)]
     public Dictionary<string, JToken>? Overrides { get; set; }
+
+    /// <summary>
+    /// <see cref="Overrides"/> as the catalog read them (<see cref="PartOverrides"/>): checked against the script's
+    /// fields, whole fields cut to whole numbers, lists before single elements. Also put in <see cref="Properties"/>.
+    /// </summary>
+    [JsonIgnore]
+    public IReadOnlyList<PartOverride> FieldOverrides { get; internal set; } = Array.Empty<PartOverride>();
 
     /// <summary>
     /// Fields the script recomputes in updatevariables(), as they come out for a brand new part on its own.

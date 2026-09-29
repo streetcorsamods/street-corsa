@@ -1,5 +1,4 @@
 using System.Globalization;
-using Newtonsoft.Json.Linq;
 using StreetCorsa.Helpers;
 using StreetCorsa.Parts.Scripting;
 
@@ -57,8 +56,7 @@ public sealed class PartScriptRuntime
                 _objects[part] = instance;
 
                 // The part's own figures over its script's (a mod part sharing a stock script), then the player's tuning
-                if (part.Definition.Overrides != null)
-                    foreach (var (field, value) in part.Definition.Overrides) Override(instance, field, value);
+                foreach (var entry in part.Definition.FieldOverrides) Set(instance, entry.Field, entry.Index, entry.Value);
                 foreach (var (field, value) in part.Tuning) Tune(instance, field, value);
             }
             catch (Exception ex)
@@ -143,39 +141,28 @@ public sealed class PartScriptRuntime
     private static void Tune(ScriptObject instance, string field, double value)
     {
         var bracket = field.IndexOf('[');
-        if (bracket < 0)
-        {
-            var isInteger = instance.Fields.GetValueOrDefault(field) is ScriptNumber { IsInteger: true };
-            instance.Fields[field] = new ScriptNumber(value, isInteger);
-        }
-        else if (instance.Fields.GetValueOrDefault(field[..bracket]) is ScriptArray array
-                 && int.TryParse(field[(bracket + 1)..].TrimEnd(']'), NumberStyles.Integer, CultureInfo.InvariantCulture, out var index)
-                 && array.Holds(index))
-        {
-            array.Items[index] = new ScriptNumber(value, false);
-        }
+        if (bracket < 0) Set(instance, field, null, value);
+        else if (int.TryParse(field[(bracket + 1)..].TrimEnd(']'), NumberStyles.Integer, CultureInfo.InvariantCulture, out var index))
+            Set(instance, field[..bracket], index, value);
     }
 
     /// <summary>
-    /// A part definition's override put on its script, as <see cref="Tune"/> puts a saved setting: a number, or a list
-    /// of numbers for an array field from its first element (null keeps one). Anything else is left alone.
+    /// A number put on a field of the script, or on one element of an array field, stored as its declared type as
+    /// the script's own store would (a whole type drops the fraction). An element the array doesn't have is left alone.
     /// </summary>
-    private static void Override(ScriptObject instance, string field, JToken value)
+    private static void Set(ScriptObject instance, string field, int? index, double value)
     {
-        switch (value)
+        var number = ScriptValue.Of(value);
+        if (index == null)
         {
-            case JValue { Type: JTokenType.Integer or JTokenType.Float } number:
-                Tune(instance, field, number.ToObject<double>());
-                break;
-
-            case JArray items when field.IndexOf('[') < 0:
-                for (var i = 0; i < items.Count; i++)
-                {
-                    if (items[i] is JValue { Type: JTokenType.Integer or JTokenType.Float } item)
-                        Tune(instance, $"{field}[{i.ToString(CultureInfo.InvariantCulture)}]", item.ToObject<double>());
-                }
-
-                break;
+            // A field no class declares (a saved key the script lost) keeps the kind of number it held
+            var signature = instance.FieldSignature(field)
+                            ?? (instance.Fields.GetValueOrDefault(field) is ScriptNumber { IsInteger: true } ? "I" : null);
+            instance.Fields[field] = ScriptTypes.Convert(number, signature);
+        }
+        else if (instance.Fields.GetValueOrDefault(field) is ScriptArray array && array.Holds(index.Value))
+        {
+            array.Items[index.Value] = ScriptTypes.Convert(number, array.ElementType);
         }
     }
 
