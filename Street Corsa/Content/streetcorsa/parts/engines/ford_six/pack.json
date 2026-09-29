@@ -6,7 +6,7 @@
     {
       "id": "engines/ford_six/ford_188_block",
       "name": "ford_188_block",
-      "display_name": "Ford 188 cu.in. engine block",
+      "display_name": "Ford 188 Falcon six block",
       "base_class": "java.game.parts.enginepart.block.block_inline.Block_Inline_OHV",
       "class_chain": [
         "java.game.parts.enginepart.block.block_inline.Block_Inline_OHV",
@@ -435,7 +435,7 @@
     {
       "id": "engines/ford_six/ford_221_block",
       "name": "ford_221_block",
-      "display_name": "Ford 221 cu.in. engine block",
+      "display_name": "Ford 221 Falcon six block",
       "base_class": "java.game.parts.enginepart.block.block_inline.Block_Inline_OHV",
       "class_chain": [
         "java.game.parts.enginepart.block.block_inline.Block_Inline_OHV",
@@ -864,7 +864,7 @@
     {
       "id": "engines/ford_six/ford_racing_camshaft_2",
       "name": "ford_racing_camshaft_2",
-      "display_name": "Ford racing mid-rpm camshaft",
+      "display_name": "Ford competition mid-range camshaft (Falcon six)",
       "base_class": "java.game.parts.enginepart.slidingenginepart.reciprocatingenginepart.camshaft.OHV_Camshaft",
       "class_chain": [
         "java.game.parts.enginepart.slidingenginepart.reciprocatingenginepart.camshaft.OHV_Camshaft",
@@ -1016,7 +1016,7 @@
     {
       "id": "engines/ford_six/ford_racing_camshaft_1",
       "name": "ford_racing_camshaft_1",
-      "display_name": "Ford racing high-torque camshaft",
+      "display_name": "Ford competition high-torque camshaft (Falcon six)",
       "base_class": "java.game.parts.enginepart.slidingenginepart.reciprocatingenginepart.camshaft.OHV_Camshaft",
       "class_chain": [
         "java.game.parts.enginepart.slidingenginepart.reciprocatingenginepart.camshaft.OHV_Camshaft",
@@ -1168,7 +1168,7 @@
     {
       "id": "engines/ford_six/ford_188_air_filter",
       "name": "ford_188_air_filter",
-      "display_name": "Ford 188 stock air filter",
+      "display_name": "Ford 188 stock air cleaner",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
@@ -1583,7 +1583,7 @@
     {
       "id": "engines/ford_six/ford_racing_camshaft_3",
       "name": "ford_racing_camshaft_3",
-      "display_name": "Ford racing high-rpm camshaft",
+      "display_name": "Ford competition high-rpm camshaft (Falcon six)",
       "base_class": "java.game.parts.enginepart.slidingenginepart.reciprocatingenginepart.camshaft.OHV_Camshaft",
       "class_chain": [
         "java.game.parts.enginepart.slidingenginepart.reciprocatingenginepart.camshaft.OHV_Camshaft",
@@ -2073,7 +2073,7 @@
     {
       "id": "engines/ford_six/ford_stock_crankshaft_bearing_bridge",
       "name": "ford_stock_crankshaft_bearing_bridge",
-      "display_name": "Ford stock crankshaft bearing bridge",
+      "display_name": "Ford Falcon six stock crankshaft bearing bridge",
       "base_class": "java.game.parts.enginepart.SlidingEnginePart",
       "class_chain": [
         "java.game.parts.enginepart.SlidingEnginePart",
@@ -2363,7 +2363,7 @@
     {
       "id": "engines/ford_six/ford_racing_cylinder_head",
       "name": "ford_racing_cylinder_head",
-      "display_name": "Ford racing cylinder head",
+      "display_name": "Ford competition cylinder head (Falcon six)",
       "base_class": "java.game.parts.enginepart.slidingenginepart.reciprocatingenginepart.cylinderhead.OHV_CylinderHead",
       "class_chain": [
         "java.game.parts.enginepart.slidingenginepart.reciprocatingenginepart.cylinderhead.OHV_CylinderHead",
@@ -2561,7 +2561,7 @@
     {
       "id": "engines/ford_six/sprint_cylinder_head",
       "name": "sprint_cylinder_head",
-      "display_name": "Sprint cylinder head",
+      "display_name": "Ford 221 Sprint cylinder head",
       "base_class": "java.game.parts.enginepart.slidingenginepart.reciprocatingenginepart.cylinderhead.OHV_CylinderHead",
       "class_chain": [
         "java.game.parts.enginepart.slidingenginepart.reciprocatingenginepart.cylinderhead.OHV_CylinderHead",
@@ -2759,7 +2759,7 @@
     {
       "id": "engines/ford_six/ford_stock_cylinder_head_cover",
       "name": "ford_stock_cylinder_head_cover",
-      "display_name": "Ford stock cylinder head cover (for inline 6)",
+      "display_name": "Ford Falcon six stock valve cover",
       "base_class": "java.game.parts.Part",
       "class_chain": [
         "java.game.parts.Part"
@@ -2858,7 +2858,7 @@
     {
       "id": "engines/ford_six/ford_stock_cylinder_head",
       "name": "ford_stock_cylinder_head",
-      "display_name": "Ford stock cylinder head (188 and 221)",
+      "display_name": "Ford 188/221 stock cylinder head",
       "base_class": "java.game.parts.enginepart.slidingenginepart.reciprocatingenginepart.cylinderhead.OHV_CylinderHead",
       "class_chain": [
         "java.game.parts.enginepart.slidingenginepart.reciprocatingenginepart.cylinderhead.OHV_CylinderHead",
@@ -3056,7 +3056,7 @@
     {
       "id": "engines/ford_six/ford_racing_cylinder_head_1",
       "name": "ford_racing_cylinder_head_1",
-      "display_name": "Ford Racing cylinder head - Extreme alluminium version",
+      "display_name": "Ford competition aluminum cylinder head (Falcon six)",
       "base_class": "java.game.parts.enginepart.slidingenginepart.reciprocatingenginepart.cylinderhead.OHV_CylinderHead",
       "class_chain": [
         "java.game.parts.enginepart.slidingenginepart.reciprocatingenginepart.cylinderhead.OHV_CylinderHead",
@@ -3254,7 +3254,7 @@
     {
       "id": "engines/ford_six/ford_stock_cylinder_head_cover_chrome",
       "name": "ford_stock_cylinder_head_cover_chrome",
-      "display_name": "Ford chromic cylinder head cover (for inline 6)",
+      "display_name": "Ford Falcon six valve cover (chrome)",
       "base_class": "java.game.parts.Part",
       "class_chain": [
         "java.game.parts.Part"
@@ -3353,7 +3353,7 @@
     {
       "id": "engines/ford_six/ford_stock_oil_pan",
       "name": "ford_stock_oil_pan",
-      "display_name": "Ford stock oil pan",
+      "display_name": "Ford Falcon six stock oil pan",
       "base_class": "java.game.parts.enginepart.OilPan",
       "class_chain": [
         "java.game.parts.enginepart.OilPan",
@@ -3698,7 +3698,7 @@
     {
       "id": "engines/ford_six/ford_188_221_pistons",
       "name": "ford_188_221_pistons",
-      "display_name": "Ford stock pistons (188 and 221)",
+      "display_name": "Ford 188/221 stock pistons",
       "base_class": "java.game.parts.enginepart.slidingenginepart.reciprocatingenginepart.Piston",
       "class_chain": [
         "java.game.parts.enginepart.slidingenginepart.reciprocatingenginepart.Piston",
@@ -3800,7 +3800,7 @@
     {
       "id": "engines/ford_six/carb_holley_2300",
       "name": "carb_holley_2300",
-      "display_name": "Holley 2300 two barrel Carburetor",
+      "display_name": "Holley 2300 2-bbl carburetor",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
@@ -3934,7 +3934,7 @@
     {
       "id": "engines/ford_six/carb_holley_1946",
       "name": "carb_holley_1946",
-      "display_name": "Holley 1946 single barrel carburetor",
+      "display_name": "Holley 1946 1-bbl carburetor",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
@@ -4083,7 +4083,7 @@
     {
       "id": "engines/ford_six/sprint_intake_manifold",
       "name": "sprint_intake_manifold",
-      "display_name": "Sprint intake manifold",
+      "display_name": "Ford 221 Sprint intake manifold",
       "comes_off": [ "out" ],
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.IntakeManifold",
       "class_chain": [
@@ -4258,7 +4258,7 @@
     {
       "id": "engines/ford_six/ford_stock_intake_manifold",
       "name": "ford_stock_intake_manifold",
-      "display_name": "Ford stock intake manifold",
+      "display_name": "Ford Falcon six stock intake manifold",
       "comes_off": [ "out" ],
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.IntakeManifold",
       "class_chain": [
@@ -4423,7 +4423,7 @@
     {
       "id": "engines/ford_six/ford_triple_intake_manifold",
       "name": "ford_triple_intake_manifold",
-      "display_name": "Ford tri-carb intake manifold",
+      "display_name": "Ford Falcon six 3x1-bbl intake manifold",
       "comes_off": [ "out" ],
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.IntakeManifold",
       "class_chain": [
@@ -4754,7 +4754,7 @@
     {
       "id": "engines/ford_six/ford_stock_alternator_drive_belt",
       "name": "ford_stock_alternator_drive_belt",
-      "display_name": "Ford stock alternator drive belt",
+      "display_name": "Ford Falcon six stock alternator drive belt",
       "base_class": "java.game.parts.Part",
       "class_chain": [
         "java.game.parts.Part"
@@ -4843,7 +4843,7 @@
     {
       "id": "engines/ford_six/sprint_exhaust_header",
       "name": "sprint_exhaust_header",
-      "display_name": "Sprint exhaust header",
+      "display_name": "Ford 221 Sprint exhaust header",
       "base_class": "java.game.parts.enginepart.ExhaustHeader",
       "class_chain": [
         "java.game.parts.enginepart.ExhaustHeader",
@@ -4945,7 +4945,7 @@
     {
       "id": "engines/ford_six/ford_stock_exhaust_header",
       "name": "ford_stock_exhaust_header",
-      "display_name": "Ford stock exhaust header",
+      "display_name": "Ford Falcon six stock exhaust header",
       "base_class": "java.game.parts.enginepart.ExhaustHeader",
       "class_chain": [
         "java.game.parts.enginepart.ExhaustHeader",
@@ -5032,7 +5032,7 @@
     {
       "id": "engines/ford_six/ford_stock_clutch",
       "name": "ford_stock_clutch",
-      "display_name": "Ford stock clutch",
+      "display_name": "Ford Falcon six stock clutch",
       "base_class": "java.game.parts.enginepart.slidingenginepart.reciprocatingenginepart.Clutch",
       "class_chain": [
         "java.game.parts.enginepart.slidingenginepart.reciprocatingenginepart.Clutch",
@@ -5131,7 +5131,7 @@
     {
       "id": "engines/ford_six/ford_stock_flywheel",
       "name": "ford_stock_flywheel",
-      "display_name": "Ford stock flywheel",
+      "display_name": "Ford Falcon six stock flywheel",
       "base_class": "java.game.parts.enginepart.slidingenginepart.reciprocatingenginepart.Flywheel",
       "class_chain": [
         "java.game.parts.enginepart.slidingenginepart.reciprocatingenginepart.Flywheel",
@@ -5268,7 +5268,7 @@
     {
       "id": "engines/ford_six/saginaw_4spd_gearbox",
       "name": "saginaw_4spd_gearbox",
-      "display_name": "Saginaw four speed transmission",
+      "display_name": "Saginaw 4-speed transmission",
       "base_class": "java.game.parts.enginepart.slidingenginepart.reciprocatingenginepart.Transmission",
       "class_chain": [
         "java.game.parts.enginepart.slidingenginepart.reciprocatingenginepart.Transmission",
@@ -5405,7 +5405,7 @@
     {
       "id": "engines/ford_six/ford_stock_timing_cover",
       "name": "ford_stock_timing_cover",
-      "display_name": "Ford stock timing cover",
+      "display_name": "Ford Falcon six stock timing cover",
       "base_class": "java.game.parts.EnginePart",
       "class_chain": [
         "java.game.parts.EnginePart",
@@ -5496,7 +5496,7 @@
     {
       "id": "engines/ford_six/ford_stock_timing_chain",
       "name": "ford_stock_timing_chain",
-      "display_name": "Ford stock timing chain (for inline 6)",
+      "display_name": "Ford Falcon six stock timing chain",
       "base_class": "java.game.parts.EnginePart",
       "class_chain": [
         "java.game.parts.EnginePart",
@@ -5581,7 +5581,7 @@
     {
       "id": "engines/ford_six/ford_stock_camshaft_timing_gear",
       "name": "ford_stock_camshaft_timing_gear",
-      "display_name": "Ford stock camshaft timing gear (for inline 6)",
+      "display_name": "Ford Falcon six stock camshaft timing gear",
       "base_class": "java.game.parts.EnginePart",
       "class_chain": [
         "java.game.parts.EnginePart",
@@ -5713,7 +5713,7 @@
     {
       "id": "engines/ford_six/ford_stock_crankshaft_timing_gear",
       "name": "ford_stock_crankshaft_timing_gear",
-      "display_name": "Ford stock crankshaft timing gear (for inline 6)",
+      "display_name": "Ford Falcon six stock crankshaft timing gear",
       "base_class": "java.game.parts.EnginePart",
       "class_chain": [
         "java.game.parts.EnginePart",
@@ -5804,7 +5804,7 @@
     {
       "id": "engines/ford_six/ford_stock_fuel_pump",
       "name": "ford_stock_fuel_pump",
-      "display_name": "Ford stock fuel pump",
+      "display_name": "Ford Falcon six stock fuel pump",
       "base_class": "java.game.parts.EnginePart",
       "class_chain": [
         "java.game.parts.EnginePart",
@@ -5895,7 +5895,7 @@
     {
       "id": "engines/ford_six/ford_stock_distributor",
       "name": "ford_stock_distributor",
-      "display_name": "Ford stock distributor",
+      "display_name": "Ford Falcon six stock distributor",
       "kind": "side_distributor",
       "base_class": "java.game.parts.EnginePart",
       "class_chain": [
@@ -6009,7 +6009,7 @@
     {
       "id": "engines/ford_six/ford_stock_plugs_and_wires",
       "name": "ford_stock_plugs_and_wires",
-      "display_name": "Ford stock spark plugs and high voltage wires",
+      "display_name": "Ford Falcon six stock spark plugs and wires",
       "base_class": "java.game.parts.EnginePart",
       "class_chain": [
         "java.game.parts.EnginePart",
@@ -6095,7 +6095,7 @@
     {
       "id": "engines/ford_six/ford_stock_ignition_coil",
       "name": "ford_stock_ignition_coil",
-      "display_name": "Ford stock 28000 volt ignition coil",
+      "display_name": "Ford Falcon six stock ignition coil (28,000 volt)",
       "base_class": "java.game.parts.EnginePart",
       "class_chain": [
         "java.game.parts.EnginePart",
@@ -6186,7 +6186,7 @@
     {
       "id": "engines/ford_six/ford_stock_water_pump",
       "name": "ford_stock_water_pump",
-      "display_name": "Ford stock water pump",
+      "display_name": "Ford Falcon six stock water pump",
       "base_class": "java.game.parts.EnginePart",
       "class_chain": [
         "java.game.parts.EnginePart",
@@ -6294,7 +6294,7 @@
     {
       "id": "engines/ford_six/ford_stock_drive_pulley",
       "name": "ford_stock_drive_pulley",
-      "display_name": "Ford stock drive pulley",
+      "display_name": "Ford Falcon six stock crankshaft pulley",
       "base_class": "java.game.parts.enginepart.slidingenginepart.reciprocatingenginepart.Pulley",
       "class_chain": [
         "java.game.parts.enginepart.slidingenginepart.reciprocatingenginepart.Pulley",
@@ -6394,7 +6394,7 @@
     {
       "id": "engines/ford_six/ford_stock_cooling_fan",
       "name": "ford_stock_cooling_fan",
-      "display_name": "Ford stock eight blade fan with pulley",
+      "display_name": "Ford Falcon six stock 8-blade fan",
       "base_class": "java.game.parts.EnginePart",
       "class_chain": [
         "java.game.parts.EnginePart",
@@ -6480,7 +6480,7 @@
     {
       "id": "engines/ford_six/ford_three_line_radiator",
       "name": "ford_three_line_radiator",
-      "display_name": "Ford stock three-line radiator",
+      "display_name": "Ford Falcon six stock 3-row radiator",
       "base_class": "java.game.parts.EnginePart",
       "class_chain": [
         "java.game.parts.EnginePart",
@@ -6571,7 +6571,7 @@
     {
       "id": "engines/ford_six/ford_stock_starter",
       "name": "ford_stock_starter",
-      "display_name": "Ford stock starter",
+      "display_name": "Ford Falcon six stock starter",
       "base_class": "java.game.parts.EnginePart",
       "class_chain": [
         "java.game.parts.EnginePart",
@@ -6662,7 +6662,7 @@
     {
       "id": "engines/ford_six/ford_221_air_filter",
       "name": "ford_221_air_filter",
-      "display_name": "Ford 221 stock air filter",
+      "display_name": "Ford 221 stock air cleaner",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
@@ -6773,7 +6773,7 @@
     {
       "id": "engines/ford_six/sprint_air_filter",
       "name": "sprint_air_filter",
-      "display_name": "Ford 221 Sprint air filter",
+      "display_name": "Ford 221 Sprint air cleaner",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",

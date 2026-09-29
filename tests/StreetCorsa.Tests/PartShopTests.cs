@@ -266,6 +266,38 @@ public class PartShopServiceTests
         }
     }
 
+    [Theory]
+    [InlineData(1)]
+    [InlineData(4)]
+    [InlineData(9)]
+    [InlineData(19)]
+    [InlineData(20)]
+    [InlineData(45)]
+    [InlineData(1000)]
+    public void A_junkyard_asks_more_than_it_paid_on_the_price_grid(int paid)
+    {
+        var floor = PartShopService.JunkyardFloor(paid);
+
+        Assert.True(floor > paid, $"paid ${paid}, asks ${floor}");
+        Assert.Equal(PartPricing.Round((double)floor), floor);
+        Assert.True(floor >= PartPricing.Round(paid * (1 + PartShopRules.JunkyardMargin)));
+    }
+
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(4, 5)]
+    [InlineData(4.5, 5)]
+    [InlineData(19, 20)]
+    [InlineData(19.5, 20)]
+    [InlineData(20, 25)]
+    [InlineData(22, 25)]
+    [InlineData(995, 1000)]
+    public void The_next_price_up_is_the_next_one_round_gives(double price, int above)
+    {
+        Assert.Equal(above, PartPricing.Above((decimal)price));
+        Assert.Equal(above, PartPricing.Round(above));
+    }
+
     [Fact]
     public async Task A_new_part_bought_cheapest_sells_to_a_junkyard_for_less()
     {

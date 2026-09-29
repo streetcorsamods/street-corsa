@@ -372,10 +372,10 @@ namespace StreetCorsa.Services.Parts
         }
 
         /// <summary>
-        /// "Chrysler LA 340 engine Block" is a "Chrysler LA 340": the part's kind at the end of the name goes.
-        /// A "GM 327-396 small block" keeps it, that is what the engine is called.
+        /// A "Chrysler 426 Hemi V8 block" is a "Chrysler 426 Hemi V8": the part's kind at the end of the name goes.
+        /// A "Chevy 350 small block" (a mod's) keeps it, that is what the engine is called.
         /// </summary>
-        private static string ShortBlockName(string name)
+        public static string ShortBlockName(string name)
         {
             foreach (var kind in new[] { " engine block", " block" })
             {

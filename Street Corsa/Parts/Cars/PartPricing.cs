@@ -62,6 +62,19 @@ public static class PartPricing
     {
         // A decimal holds up to 7.9e28 and nothing that is not a number: the cast would throw
         price = double.IsFinite(price) ? Math.Clamp(price, 0, MaxPrice) : 0;
-        return price < 20 ? Math.Max(1, Math.Round((decimal)price)) : Math.Round((decimal)price / 5) * 5;
+        var step = Step((decimal)price);
+        return Math.Max(1, Math.Round((decimal)price / step) * step);
     }
+
+    /// <summary>The first price over this one that <see cref="Round"/> can give: a dollar over below $20, a five over from there</summary>
+    public static decimal Above(decimal price)
+    {
+        if (price < 1) return 1;
+
+        var step = Step(price);
+        return Math.Floor(price / step) * step + step;
+    }
+
+    /// <summary>How far apart the prices are around this one: whole dollars below $20, fives from there</summary>
+    private static decimal Step(decimal price) => price < 20 ? 1 : 5;
 }

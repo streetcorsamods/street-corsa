@@ -5,7 +5,7 @@
     {
       "id": "rims/goodyear_eagle/rim_1",
       "name": "rim_1",
-      "display_name": "GE PACK 10.0x15 ET-0 rim",
+      "display_name": "Mag wheel 15x10 (style 1)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -132,7 +132,7 @@
     {
       "id": "rims/goodyear_eagle/rim_2",
       "name": "rim_2",
-      "display_name": "GE PACK 10.0x15 ET-0 rim",
+      "display_name": "Mag wheel 15x10 (style 2)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -259,7 +259,7 @@
     {
       "id": "rims/goodyear_eagle/rim_3",
       "name": "rim_3",
-      "display_name": "GE PACK 10.0x15 ET-0 rim",
+      "display_name": "Mag wheel 15x10 (style 3)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -386,7 +386,7 @@
     {
       "id": "rims/goodyear_eagle/rim_4",
       "name": "rim_4",
-      "display_name": "GE PACK 10.0x15 ET-0 rim",
+      "display_name": "Mag wheel 15x10 (style 4)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -513,7 +513,7 @@
     {
       "id": "rims/goodyear_eagle/rim_5",
       "name": "rim_5",
-      "display_name": "GE PACK 10.0x15 ET-0 rim",
+      "display_name": "Mag wheel 15x10 (style 5)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",

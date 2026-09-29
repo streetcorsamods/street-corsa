@@ -138,9 +138,15 @@ namespace StreetCorsa.Services.PartShops
         public decimal PriceOfUsed(GameState gameState, PartShopLocation shop, PartAd item)
         {
             var price = Discounted(item.AskingPrice, DealerRules.DiscountOn(shop, gameState.Date), PartShopRules.RegularDiscountFor(shop.PlayerSpent));
-            var floor = PartPricing.Round((double)BuyingPrice(shop, item.Part) * (1 + PartShopRules.JunkyardMargin));
-            return Math.Max(price, floor);
+            return Math.Max(price, JunkyardFloor(BuyingPrice(shop, item.Part)));
         }
+
+        /// <summary>
+        /// The least a junkyard sells a used part for, against what it pays for one: its margin, and never less than the
+        /// next price up, as the margin of a cheap part rounds away ($4 and 10% is $4)
+        /// </summary>
+        public static decimal JunkyardFloor(decimal paid) =>
+            Math.Max(PartPricing.Round((double)paid * (1 + PartShopRules.JunkyardMargin)), PartPricing.Above(paid));
 
         public decimal BuyingPrice(PartShopLocation shop, PartInstance part)
         {
@@ -214,7 +220,7 @@ namespace StreetCorsa.Services.PartShops
             {
                 var asking = PartPricing.Round(PartPricing.WorthOfAssembly(_parts.Catalog, part) * PartShopRules.PriceFactor(definition)
                                                * GameRules.Sane(gameState.Rules.PartPriceMultiplier));
-                shop.Yard.Add(new PartAd(part, Math.Max(asking, price + 5), shop.Name) { PostedDate = gameState.Date });
+                shop.Yard.Add(new PartAd(part, Math.Max(asking, JunkyardFloor(price)), shop.Name) { PostedDate = gameState.Date });
             }
 
             _logger.Information("Sold {Part} to {Shop} for ${Price}", part.DefinitionId, shop.Name, price);

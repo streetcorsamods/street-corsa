@@ -82,7 +82,7 @@ public class PartDefinition
     [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>Human readable name taken from the part script, e.g. "Chrysler LA 340 engine Block"</summary>
+    /// <summary>The name the player reads, e.g. "Chrysler 340 V8 block": the script's at conversion, written for the game since (docs/modding.md)</summary>
     [JsonProperty("display_name")]
     public string? DisplayName { get; set; }
 

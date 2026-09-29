@@ -5,7 +5,7 @@
     {
       "id": "tyres/mopar/ww_Tyre_15_11",
       "name": "ww_Tyre_15_11",
-      "display_name": "Winston Winner 15x11 tire",
+      "display_name": "Winston Winner tire 15x11",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
@@ -163,7 +163,7 @@
     {
       "id": "tyres/mopar/Tyre_15_8",
       "name": "Tyre_15_8",
-      "display_name": "Hurst 15x8 tire",
+      "display_name": "Hurst tire 15x8",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
@@ -321,7 +321,7 @@
     {
       "id": "tyres/mopar/Tyre_15_8_2",
       "name": "Tyre_15_8_2",
-      "display_name": "Hurst 15x8 tire(white wall)",
+      "display_name": "Hurst tire 15x8 (whitewall)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
@@ -479,7 +479,7 @@
     {
       "id": "tyres/mopar/ww_Tyre_15_8",
       "name": "ww_Tyre_15_8",
-      "display_name": "Winston Winner 15x8 tire",
+      "display_name": "Winston Winner tire 15x8",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
@@ -637,7 +637,7 @@
     {
       "id": "tyres/mopar/Tyre_15_11_slick",
       "name": "Tyre_15_11_slick",
-      "display_name": "Cheater slick radial 15x11 tire",
+      "display_name": "Cheater slick 15x11",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
@@ -795,7 +795,7 @@
     {
       "id": "tyres/mopar/Tyre_15_13_slick",
       "name": "Tyre_15_13_slick",
-      "display_name": "Cheater slick radial 15x13 tire",
+      "display_name": "Cheater slick 15x13",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
@@ -953,7 +953,7 @@
     {
       "id": "tyres/mopar/Tyre_15_5",
       "name": "Tyre_15_5",
-      "display_name": "Hurst 15x5 tire",
+      "display_name": "Hurst tire 15x5",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
@@ -1111,7 +1111,7 @@
     {
       "id": "tyres/mopar/Tyre_15_5_2",
       "name": "Tyre_15_5_2",
-      "display_name": "Hurst 15x5 tire(white wall)",
+      "display_name": "Hurst tire 15x5 (whitewall)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
@@ -1269,7 +1269,7 @@
     {
       "id": "tyres/mopar/Tyre_stock_8",
       "name": "Tyre_stock_8",
-      "display_name": "Goodyear 15x8 tire",
+      "display_name": "Goodyear tire 15x8",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
@@ -1427,7 +1427,7 @@
     {
       "id": "tyres/mopar/Firestone_13_slick_black",
       "name": "Firestone_13_slick_black",
-      "display_name": "Firestone Bias Ply 15x13 tire(black wall)",
+      "display_name": "Firestone bias-ply tire 15x13 (blackwall)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
@@ -1585,7 +1585,7 @@
     {
       "id": "tyres/mopar/Firestone_11_slick_black",
       "name": "Firestone_11_slick_black",
-      "display_name": "Firestone Bias Ply 15x11 tire(black wall)",
+      "display_name": "Firestone bias-ply tire 15x11 (blackwall)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
@@ -1743,7 +1743,7 @@
     {
       "id": "tyres/mopar/Firestone_11_slick_white",
       "name": "Firestone_11_slick_white",
-      "display_name": "Firestone Bias Ply 15x11 tire(white wall)",
+      "display_name": "Firestone bias-ply tire 15x11 (whitewall)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
@@ -1901,7 +1901,7 @@
     {
       "id": "tyres/mopar/Firestone_13_slick_white",
       "name": "Firestone_13_slick_white",
-      "display_name": "Firestone Bias Ply 15x13 tire(white wall)",
+      "display_name": "Firestone bias-ply tire 15x13 (whitewall)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
@@ -2059,7 +2059,7 @@
     {
       "id": "tyres/mopar/Firestone_11_slick_triple",
       "name": "Firestone_11_slick_triple",
-      "display_name": "Firestone Bias Ply 15x11 tire(triple white strip)",
+      "display_name": "Firestone bias-ply tire 15x11 (triple whitewall)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
@@ -2217,7 +2217,7 @@
     {
       "id": "tyres/mopar/Firestone_13_slick_triple",
       "name": "Firestone_13_slick_triple",
-      "display_name": "Firestone Bias Ply 15x13 tire(triple white strip)",
+      "display_name": "Firestone bias-ply tire 15x13 (triple whitewall)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
@@ -2375,7 +2375,7 @@
     {
       "id": "tyres/mopar/Firestone_11_slick_rw",
       "name": "Firestone_11_slick_rw",
-      "display_name": "Firestone Bias Ply 15x11 tire(red and white strips)",
+      "display_name": "Firestone bias-ply tire 15x11 (red and white stripes)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
@@ -2533,7 +2533,7 @@
     {
       "id": "tyres/mopar/Firestone_13_slick_rw",
       "name": "Firestone_13_slick_rw",
-      "display_name": "Firestone Bias Ply 15x13 tire(red and white strips)",
+      "display_name": "Firestone bias-ply tire 15x13 (red and white stripes)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
@@ -2691,7 +2691,7 @@
     {
       "id": "tyres/mopar/Tyre_15_8_3",
       "name": "Tyre_15_8_3",
-      "display_name": "Firestone DRAG 500 15x8 tire",
+      "display_name": "Firestone Drag 500 tire 15x8",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
@@ -2849,7 +2849,7 @@
     {
       "id": "tyres/mopar/Tyre_15_5_3",
       "name": "Tyre_15_5_3",
-      "display_name": "Firestone DRAG 500 15x5 tire",
+      "display_name": "Firestone Drag 500 tire 15x5",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
@@ -3007,7 +3007,7 @@
     {
       "id": "tyres/mopar/Firestone_13_slick_5",
       "name": "Firestone_13_slick_5",
-      "display_name": "Firestone DRAG 500 15x13 tire",
+      "display_name": "Firestone Drag 500 tire 15x13",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
@@ -3165,7 +3165,7 @@
     {
       "id": "tyres/mopar/Firestone_13_slick_4",
       "name": "Firestone_13_slick_4",
-      "display_name": "Firestone Bias Ply 15x13 tire",
+      "display_name": "Firestone bias-ply tire 15x13 (No. 2)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
@@ -3323,7 +3323,7 @@
     {
       "id": "tyres/mopar/Firestone_13_slick_3",
       "name": "Firestone_13_slick_3",
-      "display_name": "Firestone Bias Ply 15x13 tire",
+      "display_name": "Firestone bias-ply tire 15x13 (No. 1)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
@@ -3481,7 +3481,7 @@
     {
       "id": "tyres/mopar/Firestone_11_slick_5",
       "name": "Firestone_11_slick_5",
-      "display_name": "Firestone DRAG 500 15x11 tire",
+      "display_name": "Firestone Drag 500 tire 15x11",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
@@ -3639,7 +3639,7 @@
     {
       "id": "tyres/mopar/Firestone_11_slick_4",
       "name": "Firestone_11_slick_4",
-      "display_name": "Firestone Bias Ply 15x11 tire",
+      "display_name": "Firestone bias-ply tire 15x11 (No. 2)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
@@ -3797,7 +3797,7 @@
     {
       "id": "tyres/mopar/Firestone_11_slick_3",
       "name": "Firestone_11_slick_3",
-      "display_name": "Firestone Bias Ply 15x11 tire",
+      "display_name": "Firestone bias-ply tire 15x11 (No. 1)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",

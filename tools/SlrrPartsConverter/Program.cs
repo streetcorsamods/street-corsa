@@ -607,12 +607,46 @@ public static class Program
 
     private static void ApplyNames(Run run)
     {
+        KeepNames(run);
+
         foreach (var rule in run.Options.NameRules)
         {
             var named = run.Definitions.Values.Where(d => rule.Pattern.IsMatch(d.Id)).ToList();
             if (named.Count == 0) Console.WriteLine($"    {NameOption} {rule.Pattern}: no part has it");
             foreach (var definition in named) definition.DisplayName = rule.Name;
         }
+    }
+
+    /// <summary>
+    /// The names the parts go by in the content there is (the output, then the --previous content): they were written
+    /// by hand for the game (docs/modding.md, "A part's name"), the scripts' own are SLRR's. A part new to the content
+    /// keeps its script's name, and a --name rule goes over both
+    /// </summary>
+    private static void KeepNames(Run run)
+    {
+        var names = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var root in ContentRoots(run))
+        {
+            foreach (var file in Directory.EnumerateFiles(root, PartPack.FileName, SearchOption.AllDirectories))
+            {
+                var pack = ReadJson<PartPack>(file);
+                foreach (var part in pack?.Parts ?? [])
+                {
+                    if (!string.IsNullOrWhiteSpace(part.DisplayName)) names.TryAdd(part.Id, part.DisplayName);
+                }
+            }
+        }
+
+        var kept = 0;
+        foreach (var definition in run.Definitions.Values)
+        {
+            if (!names.TryGetValue(definition.Id, out var name) || name == definition.DisplayName) continue;
+
+            definition.DisplayName = name;
+            kept++;
+        }
+
+        if (kept > 0) Console.WriteLine($"  {kept} part names kept from the content");
     }
 
     /// <summary>

@@ -5,7 +5,7 @@
     {
       "id": "brakes/stock/disc_brake",
       "name": "disc_brake",
-      "display_name": "Baiern CoupeSport 2.5 285mm 4 piston disc brake",
+      "display_name": "11.2-inch 4-piston disc brake (No. 1)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -105,7 +105,7 @@
     {
       "id": "brakes/stock/disc_brake_00D7",
       "name": "disc_brake_00D7",
-      "display_name": "Baiern CoupeSport 2.5 285mm 2 piston disc brake",
+      "display_name": "11.2-inch 2-piston disc brake",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -205,7 +205,7 @@
     {
       "id": "brakes/stock/disc_brake_00D8",
       "name": "disc_brake_00D8",
-      "display_name": "Baiern DevilSport 305mm 6 piston disc brake",
+      "display_name": "12.0-inch 6-piston disc brake",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -305,7 +305,7 @@
     {
       "id": "brakes/stock/disc_brake_00D9",
       "name": "disc_brake_00D9",
-      "display_name": "Baiern DevilSport 305mm 4 piston disc brake",
+      "display_name": "12.0-inch 4-piston disc brake",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -405,7 +405,7 @@
     {
       "id": "brakes/stock/disc_brake_00DA",
       "name": "disc_brake_00DA",
-      "display_name": "Baiern CoupeSport GT III 265mm 4 piston disc brake",
+      "display_name": "10.4-inch 4-piston disc brake (No. 3)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -505,7 +505,7 @@
     {
       "id": "brakes/stock/disc_brake_00DB",
       "name": "disc_brake_00DB",
-      "display_name": "Baiern CoupeSport GT III 235mm 4 piston disc brake",
+      "display_name": "9.3-inch 4-piston disc brake (No. 5)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -605,7 +605,7 @@
     {
       "id": "brakes/stock/disc_brake_0167",
       "name": "disc_brake_0167",
-      "display_name": "Duhen SunStrip 1.5 DVC 245mm 4 piston disc brake",
+      "display_name": "9.6-inch 4-piston disc brake (No. 1)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -705,7 +705,7 @@
     {
       "id": "brakes/stock/disc_brake_0168",
       "name": "disc_brake_0168",
-      "display_name": "Duhen SunStrip 1.5 DVC 215mm 4 piston disc brake",
+      "display_name": "8.5-inch 4-piston disc brake",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -805,7 +805,7 @@
     {
       "id": "brakes/stock/disc_brake_0169",
       "name": "disc_brake_0169",
-      "display_name": "Duhen SunStrip 1.8 DVC 255mm 4 piston disc brake",
+      "display_name": "10.0-inch 4-piston disc brake (No. 3)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -905,7 +905,7 @@
     {
       "id": "brakes/stock/disc_brake_016A",
       "name": "disc_brake_016A",
-      "display_name": "Duhen SunStrip 1.8 DVC 235mm 4 piston disc brake",
+      "display_name": "9.3-inch 4-piston disc brake (No. 3)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -1005,7 +1005,7 @@
     {
       "id": "brakes/stock/disc_brake_016D",
       "name": "disc_brake_016D",
-      "display_name": "Duhen Racing SunStrip 2.0 CDVC 275mm 4 piston disc brake",
+      "display_name": "Competition 10.8-inch 4-piston disc brake",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -1105,7 +1105,7 @@
     {
       "id": "brakes/stock/disc_brake_016E",
       "name": "disc_brake_016E",
-      "display_name": "Duhen Racing SunStrip 2.0 CDVC 235mm 4 piston disc brake",
+      "display_name": "Competition 9.3-inch 4-piston disc brake",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -1205,7 +1205,7 @@
     {
       "id": "brakes/stock/disc_brake_016B",
       "name": "disc_brake_016B",
-      "display_name": "Duhen SunStrip 2.2 DVC 255mm 4 piston disc brake",
+      "display_name": "10.0-inch 4-piston disc brake (No. 5)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -1305,7 +1305,7 @@
     {
       "id": "brakes/stock/disc_brake_016C",
       "name": "disc_brake_016C",
-      "display_name": "Duhen SunStrip 2.2 DVC 255mm 4 piston disc brake",
+      "display_name": "10.0-inch 4-piston disc brake (No. 4)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -1405,7 +1405,7 @@
     {
       "id": "brakes/stock/disc_brake_0151",
       "name": "disc_brake_0151",
-      "display_name": "Einvagen 110 GT 255mm 4 piston disc brake",
+      "display_name": "10.0-inch 4-piston disc brake (No. 1)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -1505,7 +1505,7 @@
     {
       "id": "brakes/stock/disc_brake_0150",
       "name": "disc_brake_0150",
-      "display_name": "Einvagen 110 GT 235mm 4 piston disc brake",
+      "display_name": "9.3-inch 4-piston disc brake (No. 1)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -1605,7 +1605,7 @@
     {
       "id": "brakes/stock/disc_brake_014F",
       "name": "disc_brake_014F",
-      "display_name": "Einvagen 110 GTK 255mm 4 piston disc brake",
+      "display_name": "10.0-inch 4-piston disc brake (No. 2)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -1705,7 +1705,7 @@
     {
       "id": "brakes/stock/disc_brake_0141",
       "name": "disc_brake_0141",
-      "display_name": "Einvagen 110 GTK 235mm 4 piston disc brake",
+      "display_name": "9.3-inch 4-piston disc brake (No. 2)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -1805,7 +1805,7 @@
     {
       "id": "brakes/stock/disc_brake_0140",
       "name": "disc_brake_0140",
-      "display_name": "Einvagen 140 GTA 265mm 4 piston disc brake",
+      "display_name": "10.4-inch 4-piston disc brake (No. 1)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -1905,7 +1905,7 @@
     {
       "id": "brakes/stock/disc_brake_013D",
       "name": "disc_brake_013D",
-      "display_name": "Einvagen 140 GTA 255mm 2 piston disc brake",
+      "display_name": "10.0-inch 2-piston disc brake",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -2005,7 +2005,7 @@
     {
       "id": "brakes/stock/disc_brake_0152",
       "name": "disc_brake_0152",
-      "display_name": "Emer Nonus StreetGT 275mm 6 piston disc brake",
+      "display_name": "10.8-inch 6-piston disc brake",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -2105,7 +2105,7 @@
     {
       "id": "brakes/stock/disc_brake_0153",
       "name": "disc_brake_0153",
-      "display_name": "Emer Nonus StreetGT 285mm 4 piston disc brake",
+      "display_name": "11.2-inch 4-piston disc brake (No. 3)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -2205,7 +2205,7 @@
     {
       "id": "brakes/stock/disc_brake_0155",
       "name": "disc_brake_0155",
-      "display_name": "Emer Motorsport Nonus GT2 315mm 4 piston disc brake",
+      "display_name": "Competition 12.4-inch 4-piston disc brake",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -2305,7 +2305,7 @@
     {
       "id": "brakes/stock/disc_brake_0156",
       "name": "disc_brake_0156",
-      "display_name": "Emer Motorsport Nonus GT2 285mm 4 piston disc brake",
+      "display_name": "Competition 11.2-inch 4-piston disc brake",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -2405,7 +2405,7 @@
     {
       "id": "brakes/stock/disc_brake_0157",
       "name": "disc_brake_0157",
-      "display_name": "Hauler's SuperDuty 500 335mm 6 piston disc brake",
+      "display_name": "Heavy-duty 13.2-inch 6-piston disc brake",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -2505,7 +2505,7 @@
     {
       "id": "brakes/stock/disc_brake_0158",
       "name": "disc_brake_0158",
-      "display_name": "Hauler's SuperDuty 500 325mm 6 piston disc brake",
+      "display_name": "Heavy-duty 12.8-inch 6-piston disc brake",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -2605,7 +2605,7 @@
     {
       "id": "brakes/stock/disc_brake_0159",
       "name": "disc_brake_0159",
-      "display_name": "Hauler's SuperDuty Extra 750 365mm 6 piston disc brake",
+      "display_name": "Heavy-duty 14.4-inch 6-piston disc brake",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -2705,7 +2705,7 @@
     {
       "id": "brakes/stock/disc_brake_015D",
       "name": "disc_brake_015D",
-      "display_name": "Hauler's SuperDuty Extra 750 345mm 4 piston disc brake",
+      "display_name": "Heavy-duty 13.6-inch 4-piston disc brake",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -2805,7 +2805,7 @@
     {
       "id": "brakes/stock/disc_brake_0161",
       "name": "disc_brake_0161",
-      "display_name": "Ishima Enula WR SuperTurizmo 265mm 4 piston disc brake",
+      "display_name": "10.4-inch 4-piston disc brake (No. 2)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -2905,7 +2905,7 @@
     {
       "id": "brakes/stock/disc_brake_0162",
       "name": "disc_brake_0162",
-      "display_name": "Ishima Enula WR SuperTurizmo 235mm 4 piston disc brake",
+      "display_name": "9.3-inch 4-piston disc brake (No. 4)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -3005,7 +3005,7 @@
     {
       "id": "brakes/stock/disc_brake_0100",
       "name": "disc_brake_0100",
-      "display_name": "Ishima Enula WRY 275mm 4 piston disc brake",
+      "display_name": "10.8-inch 4-piston disc brake (No. 1)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -3105,7 +3105,7 @@
     {
       "id": "brakes/stock/disc_brake_0101",
       "name": "disc_brake_0101",
-      "display_name": "Ishima Enula WRY 255mm 4 piston disc brake",
+      "display_name": "10.0-inch 4-piston disc brake (No. 7)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -3205,7 +3205,7 @@
     {
       "id": "brakes/stock/disc_brake_015F",
       "name": "disc_brake_015F",
-      "display_name": "Ishima Enula WRZ 275mm 4 piston disc brake",
+      "display_name": "10.8-inch 4-piston disc brake (No. 2)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -3305,7 +3305,7 @@
     {
       "id": "brakes/stock/disc_brake_0160",
       "name": "disc_brake_0160",
-      "display_name": "Ishima Enula WRZ 255mm 4 piston disc brake",
+      "display_name": "10.0-inch 4-piston disc brake (No. 8)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -3405,7 +3405,7 @@
     {
       "id": "brakes/stock/disc_brake_015E",
       "name": "disc_brake_015E",
-      "display_name": "MC GT 245mm 4 piston disc brake",
+      "display_name": "9.6-inch 4-piston disc brake (No. 2)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -3505,7 +3505,7 @@
     {
       "id": "brakes/stock/disc_brake_016F",
       "name": "disc_brake_016F",
-      "display_name": "MC GT 315mm 4 piston disc brake",
+      "display_name": "12.4-inch 4-piston disc brake (No. 1)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -3605,7 +3605,7 @@
     {
       "id": "brakes/stock/disc_brake_0170",
       "name": "disc_brake_0170",
-      "display_name": "MC GT-B 255mm 4 piston disc brake",
+      "display_name": "10.0-inch 4-piston disc brake (No. 9)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -3705,7 +3705,7 @@
     {
       "id": "brakes/stock/disc_brake_0171",
       "name": "disc_brake_0171",
-      "display_name": "MC GT-B 335mm 4 piston disc brake",
+      "display_name": "13.2-inch 4-piston disc brake",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -3805,7 +3805,7 @@
     {
       "id": "brakes/stock/disc_brake_0172",
       "name": "disc_brake_0172",
-      "display_name": "MC GTLE 275mm 4 piston disc brake",
+      "display_name": "10.8-inch 4-piston disc brake (No. 3)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -3905,7 +3905,7 @@
     {
       "id": "brakes/stock/disc_brake_0173",
       "name": "disc_brake_0173",
-      "display_name": "MC GTLE 315mm 6 piston disc brake",
+      "display_name": "12.4-inch 6-piston disc brake",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -4005,7 +4005,7 @@
     {
       "id": "brakes/stock/disc_brake_0174",
       "name": "disc_brake_0174",
-      "display_name": "Prime DLH 500 315mm 4 piston disc brake",
+      "display_name": "12.4-inch 4-piston disc brake (No. 2)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -4105,7 +4105,7 @@
     {
       "id": "brakes/stock/disc_brake_0175",
       "name": "disc_brake_0175",
-      "display_name": "Prime DLH 500 245mm 4 piston disc brake",
+      "display_name": "9.6-inch 4-piston disc brake (No. 3)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -4205,7 +4205,7 @@
     {
       "id": "brakes/stock/disc_brake_0176",
       "name": "disc_brake_0176",
-      "display_name": "Shimutshibu Focer 200 285mm 4 piston disc brake",
+      "display_name": "11.2-inch 4-piston disc brake (No. 2)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -4305,7 +4305,7 @@
     {
       "id": "brakes/stock/disc_brake_0177",
       "name": "disc_brake_0177",
-      "display_name": "Shimutshibu Focer 200 255mm 4 piston disc brake",
+      "display_name": "10.0-inch 4-piston disc brake (No. 6)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -4405,7 +4405,7 @@
     {
       "id": "brakes/stock/disc_brake_0178",
       "name": "disc_brake_0178",
-      "display_name": "Shimutshibu Focer 300 285mm 6 piston disc brake",
+      "display_name": "11.2-inch 6-piston disc brake",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -4505,7 +4505,7 @@
     {
       "id": "brakes/stock/disc_brake_0179",
       "name": "disc_brake_0179",
-      "display_name": "Shimutshibu Focer 300 255mm 6 piston disc brake",
+      "display_name": "10.0-inch 6-piston disc brake",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -4605,7 +4605,7 @@
     {
       "id": "brakes/stock/disc_brake_017A",
       "name": "disc_brake_017A",
-      "display_name": "Shimutshibu Focer WRC 265mm 6 piston disc brake",
+      "display_name": "10.4-inch 6-piston disc brake",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
@@ -4705,7 +4705,7 @@
     {
       "id": "brakes/stock/disc_brake_017B",
       "name": "disc_brake_017B",
-      "display_name": "Shimutshibu Focer WRC 285mm 4 piston disc brake",
+      "display_name": "11.2-inch 4-piston disc brake (No. 4)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.brake.DiscBrake",

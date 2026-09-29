@@ -66,7 +66,7 @@ public sealed class EngineCooling
     private static readonly Regex PerformanceRadiatorWords = new(@"alumin|racing|race|champion|be cool|electric fan", Words_);
     private static readonly Regex ElectricFanWords = new(@"electric fan", Words_);
     private static readonly Regex PerformancePumpWords = new(@"edelbrock|weiand|summit|high-flow|meziere|electric|march|paxton", Words_);
-    private static readonly Regex PerformanceFanWords = new(@"flex|7 blade|seven blade|electric|high-performance|edelbrock|march|performance", Words_);
+    private static readonly Regex PerformanceFanWords = new(@"flex|7[ -]blade|seven[ -]blade|electric|high-performance|edelbrock|march|performance", Words_);
     private static readonly Regex RaceSumpWords = new(@"deep|milodon|moroso|canton|race|drag|hamburger|stef", Words_);
 
     private readonly PartsCatalog _catalog;
@@ -106,6 +106,12 @@ public sealed class EngineCooling
 
     /// <summary>A water pump that moves more than a factory one</summary>
     public static bool IsPerformancePump(PartDefinition pump) => PerformancePumpWords.IsMatch(Words(pump));
+
+    /// <summary>A fan that moves more air standing still than a factory one</summary>
+    public static bool IsPerformanceFan(PartDefinition fan) => PerformanceFanWords.IsMatch(Words(fan));
+
+    /// <summary>A radiator with an electric fan of its own</summary>
+    public static bool HasElectricFan(PartDefinition radiator) => ElectricFanWords.IsMatch(Words(radiator));
 
     /// <summary>The least a block made as it left the factory, horsepower; null for a block no build rates</summary>
     public double? BlockFactoryHp(string blockId) => _blockFactoryHp.TryGetValue(blockId, out var hp) ? hp : null;
@@ -162,9 +168,9 @@ public sealed class EngineCooling
         if (pumps.Count == 0 && factory.WaterPump) cooling *= NoPump;
 
         double fan;
-        if (radiators.Any(r => ElectricFanWords.IsMatch(Words(r)))) fan = ElectricFan;
+        if (radiators.Any(HasElectricFan)) fan = ElectricFan;
         else if (fans.Count == 0) fan = factory.Fan ? NoFan : StockFan;
-        else fan = fans.Any(f => PerformanceFanWords.IsMatch(Words(f))) ? PerformanceFan : StockFan;
+        else fan = fans.Any(IsPerformanceFan) ? PerformanceFan : StockFan;
 
         var pan = parts.Select(p => p.Part).FirstOrDefault(p => PartKinds.GroupOf(p) == OilPansGroup);
         return new EngineCoolingRating(Math.Round(Math.Clamp(cooling, 0.05, 3), 3), fan, SumpG(pan));

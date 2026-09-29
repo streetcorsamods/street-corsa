@@ -5,7 +5,7 @@
     {
       "id": "engines/stock/stock_battery_black",
       "name": "stock_battery_black",
-      "display_name": null,
+      "display_name": "12-volt battery (black)",
       "base_class": null,
       "class_chain": [],
       "properties": {},
@@ -62,7 +62,7 @@
     {
       "id": "engines/stock/stock_battery_blue",
       "name": "stock_battery_blue",
-      "display_name": null,
+      "display_name": "12-volt battery (blue)",
       "base_class": null,
       "class_chain": [],
       "properties": {},
@@ -119,7 +119,7 @@
     {
       "id": "engines/stock/stock_battery_silver",
       "name": "stock_battery_silver",
-      "display_name": null,
+      "display_name": "12-volt battery (silver)",
       "base_class": null,
       "class_chain": [],
       "properties": {},
@@ -176,7 +176,7 @@
     {
       "id": "engines/stock/N2o_Rail",
       "name": "N2o_Rail",
-      "display_name": "'Golden Edition' 4 channel ported N2O system",
+      "display_name": "4-nozzle port nitrous oxide system",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.NOSInjectorSystem",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.NOSInjectorSystem",
@@ -308,7 +308,7 @@
     {
       "id": "engines/stock/nos_canister_12pds",
       "name": "nos_canister_12pds",
-      "display_name": null,
+      "display_name": "Nitrous bottle (12 lb)",
       "base_class": null,
       "class_chain": [],
       "properties": {},
@@ -365,7 +365,7 @@
     {
       "id": "engines/stock/nos_canister_24pds",
       "name": "nos_canister_24pds",
-      "display_name": null,
+      "display_name": "Nitrous bottle (24 lb)",
       "base_class": null,
       "class_chain": [],
       "properties": {},
@@ -422,7 +422,7 @@
     {
       "id": "engines/stock/Botle",
       "name": "Botle",
-      "display_name": "'Golden Edition' DMC-Tuners 32.0 pounds N2O canister",
+      "display_name": "Nitrous oxide bottle (32 lb)",
       "base_class": "java.game.parts.enginepart.canister.n2o.LargeCanister",
       "class_chain": [
         "java.game.parts.enginepart.canister.n2o.LargeCanister",
@@ -508,7 +508,7 @@
     {
       "id": "engines/stock/Double_Botle",
       "name": "Double_Botle",
-      "display_name": "'Golden Edition' DMC-Tuners 2x32.0 pounds N2O canister",
+      "display_name": "Twin nitrous oxide bottles (2x32 lb)",
       "base_class": "java.game.parts.enginepart.canister.n2o.LargeCanister",
       "class_chain": [
         "java.game.parts.enginepart.canister.n2o.LargeCanister",

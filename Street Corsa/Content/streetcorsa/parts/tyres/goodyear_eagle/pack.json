@@ -5,7 +5,7 @@
     {
       "id": "tyres/goodyear_eagle/tyre_1",
       "name": "tyre_1",
-      "display_name": "SL Tuners \n Goodyear Eagle Clean 255/50 R15 medium compound sport tyre",
+      "display_name": "Goodyear Eagle 255/50 R15 tire (plain sidewall)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
@@ -159,7 +159,7 @@
     {
       "id": "tyres/goodyear_eagle/tyre_2",
       "name": "tyre_2",
-      "display_name": "SL Tuners \n Goodyear Eagle 255/50 R15 medium compound sport tyre",
+      "display_name": "Goodyear Eagle 255/50 R15 tire",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",

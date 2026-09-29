@@ -5,7 +5,7 @@
     {
       "id": "rims/falcon/rim_01",
       "name": "rim_01",
-      "display_name": "falcon_rim",
+      "display_name": "Ford Falcon steel wheel 15x8",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",

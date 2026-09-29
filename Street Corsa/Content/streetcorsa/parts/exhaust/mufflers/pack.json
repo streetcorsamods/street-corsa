@@ -5,7 +5,7 @@
     {
       "id": "exhaust/mufflers/muffler_01",
       "name": "muffler_01",
-      "display_name": "SL Tuners muffler type 01",
+      "display_name": "Muffler (style 1)",
       "base_class": "java.game.parts.enginepart.ExhaustTip",
       "class_chain": [
         "java.game.parts.enginepart.ExhaustTip",
@@ -89,7 +89,7 @@
     {
       "id": "exhaust/mufflers/muffler_02",
       "name": "muffler_02",
-      "display_name": "SL Tuners muffler type 02",
+      "display_name": "Muffler (style 2)",
       "base_class": "java.game.parts.enginepart.ExhaustTip",
       "class_chain": [
         "java.game.parts.enginepart.ExhaustTip",
@@ -173,7 +173,7 @@
     {
       "id": "exhaust/mufflers/muffler_03",
       "name": "muffler_03",
-      "display_name": "SL Tuners muffler type 03",
+      "display_name": "Muffler (style 3)",
       "base_class": "java.game.parts.enginepart.ExhaustTip",
       "class_chain": [
         "java.game.parts.enginepart.ExhaustTip",
@@ -257,7 +257,7 @@
     {
       "id": "exhaust/mufflers/muffler_04",
       "name": "muffler_04",
-      "display_name": "SL Tuners muffler type 04",
+      "display_name": "Muffler (style 4)",
       "base_class": "java.game.parts.enginepart.ExhaustTip",
       "class_chain": [
         "java.game.parts.enginepart.ExhaustTip",
@@ -342,7 +342,7 @@
     {
       "id": "exhaust/mufflers/muffler_05",
       "name": "muffler_05",
-      "display_name": "SL Tuners muffler type 05",
+      "display_name": "Muffler (style 5)",
       "base_class": "java.game.parts.enginepart.ExhaustTip",
       "class_chain": [
         "java.game.parts.enginepart.ExhaustTip",
@@ -426,7 +426,7 @@
     {
       "id": "exhaust/mufflers/muffler_06",
       "name": "muffler_06",
-      "display_name": "SL Tuners muffler type 06",
+      "display_name": "Muffler (style 6)",
       "base_class": "java.game.parts.enginepart.ExhaustTip",
       "class_chain": [
         "java.game.parts.enginepart.ExhaustTip",
@@ -511,7 +511,7 @@
     {
       "id": "exhaust/mufflers/muffler_07",
       "name": "muffler_07",
-      "display_name": "SL Tuners muffler type 07",
+      "display_name": "Muffler (style 7)",
       "base_class": "java.game.parts.enginepart.ExhaustTip",
       "class_chain": [
         "java.game.parts.enginepart.ExhaustTip",
@@ -596,7 +596,7 @@
     {
       "id": "exhaust/mufflers/muffler_08",
       "name": "muffler_08",
-      "display_name": "SL Tuners muffler type 08",
+      "display_name": "Muffler (style 8)",
       "base_class": "java.game.parts.enginepart.ExhaustTip",
       "class_chain": [
         "java.game.parts.enginepart.ExhaustTip",
@@ -680,7 +680,7 @@
     {
       "id": "exhaust/mufflers/muffler_09",
       "name": "muffler_09",
-      "display_name": "SL Tuners muffler type 09",
+      "display_name": "Muffler (style 9)",
       "base_class": "java.game.parts.enginepart.ExhaustTip",
       "class_chain": [
         "java.game.parts.enginepart.ExhaustTip",
@@ -764,7 +764,7 @@
     {
       "id": "exhaust/mufflers/muffler_10",
       "name": "muffler_10",
-      "display_name": "SL Tuners muffler type 10",
+      "display_name": "Muffler (style 10)",
       "base_class": "java.game.parts.enginepart.ExhaustTip",
       "class_chain": [
         "java.game.parts.enginepart.ExhaustTip",
@@ -848,7 +848,7 @@
     {
       "id": "exhaust/mufflers/muffler_11",
       "name": "muffler_11",
-      "display_name": "SL Tuners muffler type 11",
+      "display_name": "Muffler (style 11)",
       "base_class": "java.game.parts.enginepart.ExhaustTip",
       "class_chain": [
         "java.game.parts.enginepart.ExhaustTip",
@@ -932,7 +932,7 @@
     {
       "id": "exhaust/mufflers/muffler_12",
       "name": "muffler_12",
-      "display_name": "SL Tuners muffler type 12",
+      "display_name": "Muffler (style 12)",
       "base_class": "java.game.parts.enginepart.ExhaustTip",
       "class_chain": [
         "java.game.parts.enginepart.ExhaustTip",
@@ -1016,7 +1016,7 @@
     {
       "id": "exhaust/mufflers/muffler_13",
       "name": "muffler_13",
-      "display_name": "SL Tuners muffler type 13",
+      "display_name": "Muffler (style 13)",
       "base_class": "java.game.parts.enginepart.ExhaustTip",
       "class_chain": [
         "java.game.parts.enginepart.ExhaustTip",
@@ -1101,7 +1101,7 @@
     {
       "id": "exhaust/mufflers/muffler_14",
       "name": "muffler_14",
-      "display_name": "SL Tuners muffler type 14",
+      "display_name": "Muffler (style 14)",
       "base_class": "java.game.parts.enginepart.ExhaustTip",
       "class_chain": [
         "java.game.parts.enginepart.ExhaustTip",
@@ -1186,7 +1186,7 @@
     {
       "id": "exhaust/mufflers/muffler_15",
       "name": "muffler_15",
-      "display_name": "SL Tuners muffler type 15",
+      "display_name": "Muffler (style 15)",
       "base_class": "java.game.parts.enginepart.ExhaustTip",
       "class_chain": [
         "java.game.parts.enginepart.ExhaustTip",
@@ -1271,7 +1271,7 @@
     {
       "id": "exhaust/mufflers/muffler_16",
       "name": "muffler_16",
-      "display_name": "SL Tuners muffler type 16",
+      "display_name": "Muffler (style 16)",
       "base_class": "java.game.parts.enginepart.ExhaustTip",
       "class_chain": [
         "java.game.parts.enginepart.ExhaustTip",
@@ -1357,7 +1357,7 @@
     {
       "id": "exhaust/mufflers/muffler_17",
       "name": "muffler_17",
-      "display_name": "SL Tuners muffler type 17",
+      "display_name": "Muffler (style 17)",
       "base_class": "java.game.parts.enginepart.ExhaustTip",
       "class_chain": [
         "java.game.parts.enginepart.ExhaustTip",
@@ -1442,7 +1442,7 @@
     {
       "id": "exhaust/mufflers/muffler_18",
       "name": "muffler_18",
-      "display_name": "SL Tuners muffler type 18",
+      "display_name": "Muffler (style 18)",
       "base_class": "java.game.parts.enginepart.ExhaustTip",
       "class_chain": [
         "java.game.parts.enginepart.ExhaustTip",
@@ -1527,7 +1527,7 @@
     {
       "id": "exhaust/mufflers/muffler_19",
       "name": "muffler_19",
-      "display_name": "SL Tuners muffler type 19",
+      "display_name": "Muffler (style 19)",
       "base_class": "java.game.parts.enginepart.ExhaustTip",
       "class_chain": [
         "java.game.parts.enginepart.ExhaustTip",
@@ -1612,7 +1612,7 @@
     {
       "id": "exhaust/mufflers/muffler_20L",
       "name": "muffler_20L",
-      "display_name": "SL Tuners muffler type 20L",
+      "display_name": "Muffler (style 20, left)",
       "base_class": "java.game.parts.enginepart.ExhaustTip",
       "class_chain": [
         "java.game.parts.enginepart.ExhaustTip",
@@ -1698,7 +1698,7 @@
     {
       "id": "exhaust/mufflers/muffler_20R",
       "name": "muffler_20R",
-      "display_name": "SL Tuners muffler type 20R",
+      "display_name": "Muffler (style 20, right)",
       "base_class": "java.game.parts.enginepart.ExhaustTip",
       "class_chain": [
         "java.game.parts.enginepart.ExhaustTip",

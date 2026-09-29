@@ -5,7 +5,7 @@
     {
       "id": "suspension/stock/swaybar",
       "name": "swaybar",
-      "display_name": "Baiern CoupeSport 2.5\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 11)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -94,7 +94,7 @@
     {
       "id": "suspension/stock/swaybar_021A",
       "name": "swaybar_021A",
-      "display_name": "Baiern CoupeSport 2.5\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 14)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -183,7 +183,7 @@
     {
       "id": "suspension/stock/swaybar_021B",
       "name": "swaybar_021B",
-      "display_name": "Baiern DevilSport\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 23)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -272,7 +272,7 @@
     {
       "id": "suspension/stock/swaybar_021C",
       "name": "swaybar_021C",
-      "display_name": "Baiern DevilSport\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 24)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -361,7 +361,7 @@
     {
       "id": "suspension/stock/swaybar_021D",
       "name": "swaybar_021D",
-      "display_name": "Baiern CoupeSport GT III\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 41)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -450,7 +450,7 @@
     {
       "id": "suspension/stock/swaybar_021E",
       "name": "swaybar_021E",
-      "display_name": "Baiern CoupeSport GT III\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 42)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -539,7 +539,7 @@
     {
       "id": "suspension/stock/swaybar_41FF",
       "name": "swaybar_41FF",
-      "display_name": "Duhen SunStrip 1.5 DVC\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 4)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -628,7 +628,7 @@
     {
       "id": "suspension/stock/swaybar_017C",
       "name": "swaybar_017C",
-      "display_name": "Duhen SunStrip 1.5 DVC\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 1)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -717,7 +717,7 @@
     {
       "id": "suspension/stock/swaybar_017D",
       "name": "swaybar_017D",
-      "display_name": "Duhen SunStrip 1.5 DVC\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 7)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -806,7 +806,7 @@
     {
       "id": "suspension/stock/swaybar_017E",
       "name": "swaybar_017E",
-      "display_name": "Duhen SunStrip 1.5 DVC\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 8)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -895,7 +895,7 @@
     {
       "id": "suspension/stock/swaybar_0182",
       "name": "swaybar_0182",
-      "display_name": "Duhen SunStrip 1.5 DVC\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 31)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -984,7 +984,7 @@
     {
       "id": "suspension/stock/swaybar_0184",
       "name": "swaybar_0184",
-      "display_name": "Duhen SunStrip 1.5 DVC\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 32)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -1073,7 +1073,7 @@
     {
       "id": "suspension/stock/swaybar_017F",
       "name": "swaybar_017F",
-      "display_name": "Duhen SunStrip 1.5 DVC\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 9)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -1162,7 +1162,7 @@
     {
       "id": "suspension/stock/swaybar_0180",
       "name": "swaybar_0180",
-      "display_name": "Duhen SunStrip 1.5 DVC\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 10)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -1251,7 +1251,7 @@
     {
       "id": "suspension/stock/swaybar_0185",
       "name": "swaybar_0185",
-      "display_name": "Einvagen 110 GT\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 2)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -1340,7 +1340,7 @@
     {
       "id": "suspension/stock/swaybar_0186",
       "name": "swaybar_0186",
-      "display_name": "Einvagen 110 GT\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 3)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -1429,7 +1429,7 @@
     {
       "id": "suspension/stock/swaybar_0189",
       "name": "swaybar_0189",
-      "display_name": "Einvagen 140 GTA\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 12)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -1518,7 +1518,7 @@
     {
       "id": "suspension/stock/swaybar_0187",
       "name": "swaybar_0187",
-      "display_name": "Einvagen 110 GTK\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 5)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -1607,7 +1607,7 @@
     {
       "id": "suspension/stock/swaybar_0188",
       "name": "swaybar_0188",
-      "display_name": "Einvagen 110 GTK\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 6)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -1696,7 +1696,7 @@
     {
       "id": "suspension/stock/swaybar_018A",
       "name": "swaybar_018A",
-      "display_name": "Einvagen 140 GTA\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 13)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -1785,7 +1785,7 @@
     {
       "id": "suspension/stock/swaybar_018D",
       "name": "swaybar_018D",
-      "display_name": "Emer Motorsport Nonus GT2\n 25000 N/m \n anti-roll bar",
+      "display_name": "Competition sway bar (143 lb/in, No. 1)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -1874,7 +1874,7 @@
     {
       "id": "suspension/stock/swaybar_018B",
       "name": "swaybar_018B",
-      "display_name": "Emer Nonus StreetGT\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 25)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -1963,7 +1963,7 @@
     {
       "id": "suspension/stock/swaybar_018C",
       "name": "swaybar_018C",
-      "display_name": "Emer Nonus StreetGT\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 26)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -2052,7 +2052,7 @@
     {
       "id": "suspension/stock/swaybar_018E",
       "name": "swaybar_018E",
-      "display_name": "Emer Motorsport Nonus GT2\n 25000 N/m \n anti-roll bar",
+      "display_name": "Competition sway bar (143 lb/in, No. 2)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -2141,7 +2141,7 @@
     {
       "id": "suspension/stock/swaybar_018F",
       "name": "swaybar_018F",
-      "display_name": "Hauler's SuperDuty 500\n 25000 N/m \n anti-roll bar",
+      "display_name": "Heavy-duty sway bar (143 lb/in, No. 1)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -2230,7 +2230,7 @@
     {
       "id": "suspension/stock/swaybar_0190",
       "name": "swaybar_0190",
-      "display_name": "Hauler's SuperDuty 500\n 25000 N/m \n anti-roll bar",
+      "display_name": "Heavy-duty sway bar (143 lb/in, No. 2)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -2319,7 +2319,7 @@
     {
       "id": "suspension/stock/swaybar_0191",
       "name": "swaybar_0191",
-      "display_name": "Hauler's SuperDuty Extra 750\n 25000 N/m \n anti-roll bar",
+      "display_name": "Heavy-duty sway bar (143 lb/in, No. 3)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -2408,7 +2408,7 @@
     {
       "id": "suspension/stock/swaybar_0192",
       "name": "swaybar_0192",
-      "display_name": "Hauler's SuperDuty Extra 750\n 25000 N/m \n anti-roll bar",
+      "display_name": "Heavy-duty sway bar (143 lb/in, No. 4)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -2497,7 +2497,7 @@
     {
       "id": "suspension/stock/swaybar_0197",
       "name": "swaybar_0197",
-      "display_name": "Duhen SunStrip 1.5 DVC\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 37)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -2586,7 +2586,7 @@
     {
       "id": "suspension/stock/swaybar_0193",
       "name": "swaybar_0193",
-      "display_name": "Duhen SunStrip 1.5 DVC\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 17)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -2675,7 +2675,7 @@
     {
       "id": "suspension/stock/swaybar_0194",
       "name": "swaybar_0194",
-      "display_name": "Duhen SunStrip 1.5 DVC\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 18)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -2764,7 +2764,7 @@
     {
       "id": "suspension/stock/swaybar_0195",
       "name": "swaybar_0195",
-      "display_name": "Duhen SunStrip 1.5 DVC\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 21)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -2853,7 +2853,7 @@
     {
       "id": "suspension/stock/swaybar_0196",
       "name": "swaybar_0196",
-      "display_name": "Duhen SunStrip 1.5 DVC\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 22)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -2942,7 +2942,7 @@
     {
       "id": "suspension/stock/swaybar_0198",
       "name": "swaybar_0198",
-      "display_name": "Duhen SunStrip 1.5 DVC\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 38)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -3031,7 +3031,7 @@
     {
       "id": "suspension/stock/swaybar_0199",
       "name": "swaybar_0199",
-      "display_name": "MC GT\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 29)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -3120,7 +3120,7 @@
     {
       "id": "suspension/stock/swaybar_019A",
       "name": "swaybar_019A",
-      "display_name": "MC GT\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 30)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -3209,7 +3209,7 @@
     {
       "id": "suspension/stock/swaybar_019B",
       "name": "swaybar_019B",
-      "display_name": "MC GT-B\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 27)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -3298,7 +3298,7 @@
     {
       "id": "suspension/stock/swaybar_019C",
       "name": "swaybar_019C",
-      "display_name": "MC GT-B\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 28)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -3387,7 +3387,7 @@
     {
       "id": "suspension/stock/swaybar_019D",
       "name": "swaybar_019D",
-      "display_name": "MC GTLE\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 33)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -3476,7 +3476,7 @@
     {
       "id": "suspension/stock/swaybar_019F",
       "name": "swaybar_019F",
-      "display_name": "MC GTLE\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 34)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -3565,7 +3565,7 @@
     {
       "id": "suspension/stock/swaybar_01A0",
       "name": "swaybar_01A0",
-      "display_name": "Prime DLH 500\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 35)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -3654,7 +3654,7 @@
     {
       "id": "suspension/stock/swaybar_01A1",
       "name": "swaybar_01A1",
-      "display_name": "Prime DLH 500\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 36)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -3743,7 +3743,7 @@
     {
       "id": "suspension/stock/swaybar_01A2",
       "name": "swaybar_01A2",
-      "display_name": "Shimutshibu Focer 200\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 15)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -3832,7 +3832,7 @@
     {
       "id": "suspension/stock/swaybar_01A3",
       "name": "swaybar_01A3",
-      "display_name": "Shimutshibu Focer 200\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 16)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -3921,7 +3921,7 @@
     {
       "id": "suspension/stock/swaybar_01A4",
       "name": "swaybar_01A4",
-      "display_name": "Shimutshibu Focer 300\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 19)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -4010,7 +4010,7 @@
     {
       "id": "suspension/stock/swaybar_01A6",
       "name": "swaybar_01A6",
-      "display_name": "Shimutshibu Focer 300\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 20)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -4099,7 +4099,7 @@
     {
       "id": "suspension/stock/swaybar_01A7",
       "name": "swaybar_01A7",
-      "display_name": "Shimutshibu Focer WRC\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 39)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -4188,7 +4188,7 @@
     {
       "id": "suspension/stock/swaybar_01A9",
       "name": "swaybar_01A9",
-      "display_name": "Shimutshibu Focer WRC\n 25000 N/m \n anti-roll bar",
+      "display_name": "Sway bar (143 lb/in, No. 40)",
       "base_class": "java.game.parts.rgearpart.Swaybar",
       "class_chain": [
         "java.game.parts.rgearpart.Swaybar",
@@ -4577,7 +4577,7 @@
     {
       "id": "suspension/stock/shock_absorber",
       "name": "shock_absorber",
-      "display_name": "Baiern CoupeSport 2.5 3500 N/m/s gas shock",
+      "display_name": "Firm shock absorber (20.0 lb-s/in, No. 2)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -4681,7 +4681,7 @@
     {
       "id": "suspension/stock/shock_absorber_00E6",
       "name": "shock_absorber_00E6",
-      "display_name": "Baiern CoupeSport 2.5 3400 N/m/s gas shock",
+      "display_name": "Firm shock absorber (19.4 lb-s/in)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -4785,7 +4785,7 @@
     {
       "id": "suspension/stock/shock_absorber_00E7",
       "name": "shock_absorber_00E7",
-      "display_name": "Baiern DevilSport 4300 N/m/s gas shock",
+      "display_name": "Heavy-duty shock absorber (24.6 lb-s/in)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -4889,7 +4889,7 @@
     {
       "id": "suspension/stock/shock_absorber_00EB",
       "name": "shock_absorber_00EB",
-      "display_name": "Baiern DevilSport 4600 N/m/s gas shock",
+      "display_name": "Heavy-duty shock absorber (26.3 lb-s/in)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -4993,7 +4993,7 @@
     {
       "id": "suspension/stock/shock_absorber_00EC",
       "name": "shock_absorber_00EC",
-      "display_name": "Baiern CoupeSport GT III 6100 N/m/s gas shock",
+      "display_name": "Competition shock absorber (34.8 lb-s/in, No. 3)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -5097,7 +5097,7 @@
     {
       "id": "suspension/stock/shock_absorber_00ED",
       "name": "shock_absorber_00ED",
-      "display_name": "Baiern CoupeSport GT III 5700 N/m/s gas shock",
+      "display_name": "Competition shock absorber (32.5 lb-s/in, No. 5)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -5201,7 +5201,7 @@
     {
       "id": "suspension/stock/shock_absorber_005F",
       "name": "shock_absorber_005F",
-      "display_name": "Duhen SunStrip 1.5 DVC 3300 N/m/s gas shock",
+      "display_name": "Firm shock absorber (18.8 lb-s/in, No. 1)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -5305,7 +5305,7 @@
     {
       "id": "suspension/stock/shock_absorber_0062",
       "name": "shock_absorber_0062",
-      "display_name": "Duhen SunStrip 1.8 DVC 3900 N/m/s gas shock",
+      "display_name": "Firm shock absorber (22.3 lb-s/in)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -5409,7 +5409,7 @@
     {
       "id": "suspension/stock/shock_absorber_0063",
       "name": "shock_absorber_0063",
-      "display_name": "Duhen SunStrip 1.8 DVC 3600 N/m/s gas shock",
+      "display_name": "Firm shock absorber (20.6 lb-s/in)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -5513,7 +5513,7 @@
     {
       "id": "suspension/stock/shock_absorber_006B",
       "name": "shock_absorber_006B",
-      "display_name": "Duhen Racing SunStrip 2.0 CDVC 6000 N/m/s gas shock",
+      "display_name": "Competition shock absorber (34.3 lb-s/in)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -5617,7 +5617,7 @@
     {
       "id": "suspension/stock/shock_absorber_006C",
       "name": "shock_absorber_006C",
-      "display_name": "Duhen Racing SunStrip 2.0 CDVC 5700 N/m/s gas shock",
+      "display_name": "Competition shock absorber (32.5 lb-s/in, No. 2)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -5721,7 +5721,7 @@
     {
       "id": "suspension/stock/shock_absorber_0069",
       "name": "shock_absorber_0069",
-      "display_name": "Duhen SunStrip 2.2 DVC 4100 N/m/s gas shock",
+      "display_name": "Firm shock absorber (23.4 lb-s/in, No. 1)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -5825,7 +5825,7 @@
     {
       "id": "suspension/stock/shock_absorber_011E",
       "name": "shock_absorber_011E",
-      "display_name": "Einvagen 110 GT 3100 N/m/s gas shock",
+      "display_name": "Standard shock absorber (17.7 lb-s/in, No. 1)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -5929,7 +5929,7 @@
     {
       "id": "suspension/stock/shock_absorber_011B",
       "name": "shock_absorber_011B",
-      "display_name": "Einvagen 110 GT 2950 N/m/s gas shock",
+      "display_name": "Standard shock absorber (16.8 lb-s/in)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -6033,7 +6033,7 @@
     {
       "id": "suspension/stock/shock_absorber_011A",
       "name": "shock_absorber_011A",
-      "display_name": "Einvagen 110 GTK 3500 N/m/s gas shock",
+      "display_name": "Firm shock absorber (20.0 lb-s/in, No. 1)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -6137,7 +6137,7 @@
     {
       "id": "suspension/stock/shock_absorber_0112",
       "name": "shock_absorber_0112",
-      "display_name": "Einvagen 110 GTK 3250 N/m/s gas shock",
+      "display_name": "Standard shock absorber (18.6 lb-s/in)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -6241,7 +6241,7 @@
     {
       "id": "suspension/stock/shock_absorber_0111",
       "name": "shock_absorber_0111",
-      "display_name": "Einvagen 140 GTA 5200 N/m/s gas shock",
+      "display_name": "Competition shock absorber (29.7 lb-s/in, No. 2)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -6345,7 +6345,7 @@
     {
       "id": "suspension/stock/shock_absorber_01AA",
       "name": "shock_absorber_01AA",
-      "display_name": "Emer Nonus StreetGT 3300 N/m/s gas shock",
+      "display_name": "Firm shock absorber (18.8 lb-s/in, No. 4)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -6449,7 +6449,7 @@
     {
       "id": "suspension/stock/shock_absorber_01AC",
       "name": "shock_absorber_01AC",
-      "display_name": "Emer Nonus StreetGT 3200 N/m/s gas shock",
+      "display_name": "Standard shock absorber (18.3 lb-s/in)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -6553,7 +6553,7 @@
     {
       "id": "suspension/stock/shock_absorber_01AD",
       "name": "shock_absorber_01AD",
-      "display_name": "Emer Motorsport Nonus GT2 6300 N/m/s gas shock",
+      "display_name": "Competition shock absorber (36.0 lb-s/in)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -6657,7 +6657,7 @@
     {
       "id": "suspension/stock/shock_absorber_01AE",
       "name": "shock_absorber_01AE",
-      "display_name": "Emer Motorsport Nonus GT2 6100 N/m/s gas shock",
+      "display_name": "Competition shock absorber (34.8 lb-s/in, No. 2)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -6761,7 +6761,7 @@
     {
       "id": "suspension/stock/shock_absorber_01B0",
       "name": "shock_absorber_01B0",
-      "display_name": "Hauler's SuperDuty 500 3500 N/m/s gas shock",
+      "display_name": "Firm shock absorber (20.0 lb-s/in, No. 3)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -6865,7 +6865,7 @@
     {
       "id": "suspension/stock/shock_absorber_01B1",
       "name": "shock_absorber_01B1",
-      "display_name": "Hauler's SuperDuty 500 3700 N/m/s gas shock",
+      "display_name": "Firm shock absorber (21.1 lb-s/in, No. 2)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -6969,7 +6969,7 @@
     {
       "id": "suspension/stock/shock_absorber_01B2",
       "name": "shock_absorber_01B2",
-      "display_name": "Hauler's SuperDuty Extra 750 5500 N/m/s gas shock",
+      "display_name": "Competition shock absorber (31.4 lb-s/in)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -7073,7 +7073,7 @@
     {
       "id": "suspension/stock/shock_absorber_01B3",
       "name": "shock_absorber_01B3",
-      "display_name": "Hauler's SuperDuty Extra 750 5700 N/m/s gas shock",
+      "display_name": "Competition shock absorber (32.5 lb-s/in, No. 1)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -7177,7 +7177,7 @@
     {
       "id": "suspension/stock/shock_absorber_0163",
       "name": "shock_absorber_0163",
-      "display_name": "Ishima Enula WR SuperTurizmo 5600 N/m/s gas shock",
+      "display_name": "Competition shock absorber (32.0 lb-s/in)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -7281,7 +7281,7 @@
     {
       "id": "suspension/stock/shock_absorber_00FD",
       "name": "shock_absorber_00FD",
-      "display_name": "Ishima Enula WRY 3300 N/m/s gas shock",
+      "display_name": "Firm shock absorber (18.8 lb-s/in, No. 3)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -7385,7 +7385,7 @@
     {
       "id": "suspension/stock/shock_absorber_00FC",
       "name": "shock_absorber_00FC",
-      "display_name": "Ishima Enula WRY 3000 N/m/s gas shock",
+      "display_name": "Standard shock absorber (17.1 lb-s/in)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -7489,7 +7489,7 @@
     {
       "id": "suspension/stock/shock_absorber_0154",
       "name": "shock_absorber_0154",
-      "display_name": "Ishima Enula WRZ 4200 N/m/s gas shock",
+      "display_name": "Heavy-duty shock absorber (24.0 lb-s/in)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -7593,7 +7593,7 @@
     {
       "id": "suspension/stock/shock_absorber_015A",
       "name": "shock_absorber_015A",
-      "display_name": "Ishima Enula WRZ 4000 N/m/s gas shock",
+      "display_name": "Firm shock absorber (22.8 lb-s/in, No. 1)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -7697,7 +7697,7 @@
     {
       "id": "suspension/stock/shock_absorber_0164",
       "name": "shock_absorber_0164",
-      "display_name": "Ishima Enula WR SuperTurizmo 5200 N/m/s gas shock",
+      "display_name": "Competition shock absorber (29.7 lb-s/in, No. 3)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -7801,7 +7801,7 @@
     {
       "id": "suspension/stock/shock_absorber_01B4",
       "name": "shock_absorber_01B4",
-      "display_name": "MC GT 3100 N/m/s gas shock",
+      "display_name": "Standard shock absorber (17.7 lb-s/in, No. 3)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -7905,7 +7905,7 @@
     {
       "id": "suspension/stock/shock_absorber_01B5",
       "name": "shock_absorber_01B5",
-      "display_name": "MC GT 3700 N/m/s gas shock",
+      "display_name": "Firm shock absorber (21.1 lb-s/in, No. 3)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -8009,7 +8009,7 @@
     {
       "id": "suspension/stock/shock_absorber_01B7",
       "name": "shock_absorber_01B7",
-      "display_name": "MC GT-B 3500 N/m/s gas shock",
+      "display_name": "Firm shock absorber (20.0 lb-s/in, No. 4)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -8113,7 +8113,7 @@
     {
       "id": "suspension/stock/shock_absorber_01B8",
       "name": "shock_absorber_01B8",
-      "display_name": "MC GT-B 3800 N/m/s gas shock",
+      "display_name": "Firm shock absorber (21.7 lb-s/in)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -8217,7 +8217,7 @@
     {
       "id": "suspension/stock/shock_absorber_01B9",
       "name": "shock_absorber_01B9",
-      "display_name": "MC GTLE 3750 N/m/s gas shock",
+      "display_name": "Firm shock absorber (21.4 lb-s/in)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -8321,7 +8321,7 @@
     {
       "id": "suspension/stock/shock_absorber_01BA",
       "name": "shock_absorber_01BA",
-      "display_name": "MC GTLE 4000 N/m/s gas shock",
+      "display_name": "Firm shock absorber (22.8 lb-s/in, No. 2)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -8425,7 +8425,7 @@
     {
       "id": "suspension/stock/shock_absorber_01BB",
       "name": "shock_absorber_01BB",
-      "display_name": "Prime DLH 500 4900 N/m/s gas shock",
+      "display_name": "Heavy-duty shock absorber (28.0 lb-s/in)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -8529,7 +8529,7 @@
     {
       "id": "suspension/stock/shock_absorber_01BD",
       "name": "shock_absorber_01BD",
-      "display_name": "Prime DLH 500 5700 N/m/s gas shock",
+      "display_name": "Competition shock absorber (32.5 lb-s/in, No. 3)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -8633,7 +8633,7 @@
     {
       "id": "suspension/stock/shock_absorber_01BE",
       "name": "shock_absorber_01BE",
-      "display_name": "Shimutshibu Focer 200 3100 N/m/s gas shock",
+      "display_name": "Standard shock absorber (17.7 lb-s/in, No. 2)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -8737,7 +8737,7 @@
     {
       "id": "suspension/stock/shock_absorber_01C0",
       "name": "shock_absorber_01C0",
-      "display_name": "Shimutshibu Focer 200 2900 N/m/s gas shock",
+      "display_name": "Standard shock absorber (16.6 lb-s/in)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -8841,7 +8841,7 @@
     {
       "id": "suspension/stock/shock_absorber_01C6",
       "name": "shock_absorber_01C6",
-      "display_name": "Shimutshibu Focer 300 4100 N/m/s gas shock",
+      "display_name": "Firm shock absorber (23.4 lb-s/in, No. 3)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -8945,7 +8945,7 @@
     {
       "id": "suspension/stock/shock_absorber_01D3",
       "name": "shock_absorber_01D3",
-      "display_name": "Shimutshibu Focer 300 3700 N/m/s gas shock",
+      "display_name": "Firm shock absorber (21.1 lb-s/in, No. 1)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -9049,7 +9049,7 @@
     {
       "id": "suspension/stock/shock_absorber_01D4",
       "name": "shock_absorber_01D4",
-      "display_name": "Shimutshibu Focer WRC 6100 N/m/s gas shock",
+      "display_name": "Competition shock absorber (34.8 lb-s/in, No. 1)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -9153,7 +9153,7 @@
     {
       "id": "suspension/stock/shock_absorber_01D5",
       "name": "shock_absorber_01D5",
-      "display_name": "Shimutshibu Focer WRC 5700 N/m/s gas shock",
+      "display_name": "Competition shock absorber (32.5 lb-s/in, No. 4)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -9257,7 +9257,7 @@
     {
       "id": "suspension/stock/spring",
       "name": "spring",
-      "display_name": "Baiern CoupeSport 2.5 71613 N/m 8.5\" spring",
+      "display_name": "409 lb/in coil spring (8.5 in.)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -9353,7 +9353,7 @@
     {
       "id": "suspension/stock/spring_00EF",
       "name": "spring_00EF",
-      "display_name": "Baiern CoupeSport 2.5 73575 N/m 8.5\" spring",
+      "display_name": "420 lb/in coil spring (8.5 in.)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -9449,7 +9449,7 @@
     {
       "id": "suspension/stock/spring_00F0",
       "name": "spring_00F0",
-      "display_name": "Baiern DevilSport 79461 N/m 8.0\" spring",
+      "display_name": "454 lb/in coil spring (8.0 in., No. 1)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -9545,7 +9545,7 @@
     {
       "id": "suspension/stock/spring_00F2",
       "name": "spring_00F2",
-      "display_name": "Baiern CoupeSport GT III 122625 N/m 6.5\" spring",
+      "display_name": "700 lb/in coil spring (6.5 in.)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -9641,7 +9641,7 @@
     {
       "id": "suspension/stock/spring_0002",
       "name": "spring_0002",
-      "display_name": "Duhen SunStrip 1.5 DVC 44145 N/m 8.5\" spring",
+      "display_name": "252 lb/in coil spring (8.5 in., No. 2)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -9737,7 +9737,7 @@
     {
       "id": "suspension/stock/spring_0009",
       "name": "spring_0009",
-      "display_name": "Duhen SunStrip 1.8 DVC 59841 N/m 8.5\" spring",
+      "display_name": "342 lb/in coil spring (8.5 in., No. 1)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -9833,7 +9833,7 @@
     {
       "id": "suspension/stock/spring_000E",
       "name": "spring_000E",
-      "display_name": "Duhen SunStrip 1.8 DVC 53955 N/m 8.5\" spring",
+      "display_name": "308 lb/in coil spring (8.5 in., No. 1)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -9929,7 +9929,7 @@
     {
       "id": "suspension/stock/spring_0015",
       "name": "spring_0015",
-      "display_name": "Duhen Racing SunStrip 2.0 CDVC 103005 N/m 6.5\" spring",
+      "display_name": "Competition 588 lb/in coil spring (6.5 in., No. 1)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -10025,7 +10025,7 @@
     {
       "id": "suspension/stock/spring_000F",
       "name": "spring_000F",
-      "display_name": "Duhen SunStrip 2.2 DVC 60822 N/m 8.0\" spring",
+      "display_name": "347 lb/in coil spring (8.0 in.)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -10121,7 +10121,7 @@
     {
       "id": "suspension/stock/spring_0011",
       "name": "spring_0011",
-      "display_name": "Duhen SunStrip 2.2 DVC 58860 N/m 8.0\" spring",
+      "display_name": "336 lb/in coil spring (8.0 in.)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -10217,7 +10217,7 @@
     {
       "id": "suspension/stock/spring_0125",
       "name": "spring_0125",
-      "display_name": "Einvagen 110 GT 45126 N/m 9.5\" spring",
+      "display_name": "258 lb/in coil spring (9.5 in.)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -10313,7 +10313,7 @@
     {
       "id": "suspension/stock/spring_0123",
       "name": "spring_0123",
-      "display_name": "Einvagen 110 GT 44145 N/m 8.5\" spring",
+      "display_name": "252 lb/in coil spring (8.5 in., No. 1)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -10409,7 +10409,7 @@
     {
       "id": "suspension/stock/spring_0120",
       "name": "spring_0120",
-      "display_name": "Einvagen 140 GTA 70632 N/m 8.5\" spring",
+      "display_name": "403 lb/in coil spring (8.5 in., No. 2)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -10505,7 +10505,7 @@
     {
       "id": "suspension/stock/spring_0122",
       "name": "spring_0122",
-      "display_name": "Einvagen 110 GTK 54936 N/m 8.5\" spring",
+      "display_name": "314 lb/in coil spring (8.5 in., No. 2)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -10601,7 +10601,7 @@
     {
       "id": "suspension/stock/spring_01D8",
       "name": "spring_01D8",
-      "display_name": "Emer Motorsport Nonus GT2 117720 N/m 7.0\" spring",
+      "display_name": "Competition 672 lb/in coil spring (7.0 in., No. 1)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -10697,7 +10697,7 @@
     {
       "id": "suspension/stock/spring_01D6",
       "name": "spring_01D6",
-      "display_name": "Emer Nonus StreetGT 70632 N/m 8.0\" spring",
+      "display_name": "403 lb/in coil spring (8.0 in., No. 1)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -10793,7 +10793,7 @@
     {
       "id": "suspension/stock/spring_01D7",
       "name": "spring_01D7",
-      "display_name": "Emer Nonus StreetGT 74556 N/m 8.0\" spring",
+      "display_name": "426 lb/in coil spring (8.0 in.)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -10889,7 +10889,7 @@
     {
       "id": "suspension/stock/spring_01DA",
       "name": "spring_01DA",
-      "display_name": "Hauler's SuperDuty 500 70632 N/m 8.0\" spring",
+      "display_name": "Heavy-duty 403 lb/in coil spring (8.0 in., No. 1)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -10985,7 +10985,7 @@
     {
       "id": "suspension/stock/spring_01DC",
       "name": "spring_01DC",
-      "display_name": "Hauler's SuperDuty Extra 750 83385 N/m 8.0\" spring",
+      "display_name": "Heavy-duty 476 lb/in coil spring (8.0 in., No. 1)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -11081,7 +11081,7 @@
     {
       "id": "suspension/stock/spring_0165",
       "name": "spring_0165",
-      "display_name": "Ishima Enula WR SuperTurizmo 76518 N/m 7.5\" spring",
+      "display_name": "437 lb/in coil spring (7.5 in.)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -11177,7 +11177,7 @@
     {
       "id": "suspension/stock/spring_0166",
       "name": "spring_0166",
-      "display_name": "Ishima Enula WR SuperTurizmo 70632 N/m 7.0\" spring",
+      "display_name": "403 lb/in coil spring (7.0 in.)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -11273,7 +11273,7 @@
     {
       "id": "suspension/stock/spring_00FE",
       "name": "spring_00FE",
-      "display_name": "Ishima Enula WRY 51993 N/m 8.5\" spring",
+      "display_name": "297 lb/in coil spring (8.5 in.)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -11369,7 +11369,7 @@
     {
       "id": "suspension/stock/spring_00FF",
       "name": "spring_00FF",
-      "display_name": "Ishima Enula WRY 49050 N/m 7.0\" spring",
+      "display_name": "280 lb/in coil spring (7.0 in.)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -11465,7 +11465,7 @@
     {
       "id": "suspension/stock/spring_015B",
       "name": "spring_015B",
-      "display_name": "Ishima Enula WRZ 57879 N/m 8.5\" spring",
+      "display_name": "330 lb/in coil spring (8.5 in.)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -11561,7 +11561,7 @@
     {
       "id": "suspension/stock/spring_015C",
       "name": "spring_015C",
-      "display_name": "Ishima Enula WRZ 51993 N/m 7.0\" spring",
+      "display_name": "297 lb/in coil spring (7.0 in.)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -11657,7 +11657,7 @@
     {
       "id": "suspension/stock/spring_01DE",
       "name": "spring_01DE",
-      "display_name": "MC GT 51012 N/m 8.5\" spring",
+      "display_name": "291 lb/in coil spring (8.5 in.)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -11753,7 +11753,7 @@
     {
       "id": "suspension/stock/spring_01DF",
       "name": "spring_01DF",
-      "display_name": "MC GT 41202 N/m 8.5\" spring",
+      "display_name": "235 lb/in coil spring (8.5 in.)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -11849,7 +11849,7 @@
     {
       "id": "suspension/stock/spring_01E0",
       "name": "spring_01E0",
-      "display_name": "MC GT-B 53955 N/m 8.5\" spring",
+      "display_name": "308 lb/in coil spring (8.5 in., No. 2)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -11945,7 +11945,7 @@
     {
       "id": "suspension/stock/spring_01E1",
       "name": "spring_01E1",
-      "display_name": "MC GT-B 43164 N/m 8.5\" spring",
+      "display_name": "246 lb/in coil spring (8.5 in.)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -12041,7 +12041,7 @@
     {
       "id": "suspension/stock/spring_01E2",
       "name": "spring_01E2",
-      "display_name": "MC GTLE 59841 N/m 8.5\" spring",
+      "display_name": "342 lb/in coil spring (8.5 in., No. 2)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -12137,7 +12137,7 @@
     {
       "id": "suspension/stock/spring_01E4",
       "name": "spring_01E4",
-      "display_name": "Prime DLH 500 68670 N/m 8.0\" spring",
+      "display_name": "392 lb/in coil spring (8.0 in.)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -12233,7 +12233,7 @@
     {
       "id": "suspension/stock/spring_01E6",
       "name": "spring_01E6",
-      "display_name": "Shimutshibu Focer 200 46107 N/m 8.5\" spring",
+      "display_name": "263 lb/in coil spring (8.5 in.)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -12329,7 +12329,7 @@
     {
       "id": "suspension/stock/spring_01E7",
       "name": "spring_01E7",
-      "display_name": "Shimutshibu Focer 200 42183 N/m 7.0\" spring",
+      "display_name": "241 lb/in coil spring (7.0 in.)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -12425,7 +12425,7 @@
     {
       "id": "suspension/stock/spring_01E8",
       "name": "spring_01E8",
-      "display_name": "Shimutshibu Focer 300 66708 N/m 8.5\" spring",
+      "display_name": "381 lb/in coil spring (8.5 in.)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -12521,7 +12521,7 @@
     {
       "id": "suspension/stock/spring_01E9",
       "name": "spring_01E9",
-      "display_name": "Shimutshibu Focer 300 63765 N/m 7.0\" spring",
+      "display_name": "364 lb/in coil spring (7.0 in.)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -12617,7 +12617,7 @@
     {
       "id": "suspension/stock/spring_01EA",
       "name": "spring_01EA",
-      "display_name": "Shimutshibu Focer WRC 70632 N/m 8.0\" spring",
+      "display_name": "403 lb/in coil spring (8.0 in., No. 2)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -12713,7 +12713,7 @@
     {
       "id": "suspension/stock/spring_01EB",
       "name": "spring_01EB",
-      "display_name": "Shimutshibu Focer WRC 68670 N/m 7.0\" spring",
+      "display_name": "392 lb/in coil spring (7.0 in.)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -12809,7 +12809,7 @@
     {
       "id": "suspension/stock/shock_absorber_0061",
       "name": "shock_absorber_0061",
-      "display_name": "Duhen SunStrip 1.5 DVC 3300 N/m/s gas shock",
+      "display_name": "Firm shock absorber (18.8 lb-s/in, No. 2)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -12913,7 +12913,7 @@
     {
       "id": "suspension/stock/shock_absorber_006A",
       "name": "shock_absorber_006A",
-      "display_name": "Duhen SunStrip 2.2 DVC 4100 N/m/s gas shock",
+      "display_name": "Firm shock absorber (23.4 lb-s/in, No. 2)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -13017,7 +13017,7 @@
     {
       "id": "suspension/stock/shock_absorber_0110",
       "name": "shock_absorber_0110",
-      "display_name": "Einvagen 140 GTA 5200 N/m/s gas shock",
+      "display_name": "Competition shock absorber (29.7 lb-s/in, No. 1)",
       "base_class": "java.game.parts.rgearpart.ShockAbsorber",
       "class_chain": [
         "java.game.parts.rgearpart.ShockAbsorber",
@@ -13121,7 +13121,7 @@
     {
       "id": "suspension/stock/spring_00F1",
       "name": "spring_00F1",
-      "display_name": "Baiern DevilSport 79461 N/m 8.0\" spring",
+      "display_name": "454 lb/in coil spring (8.0 in., No. 2)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -13217,7 +13217,7 @@
     {
       "id": "suspension/stock/spring_00F3",
       "name": "spring_00F3",
-      "display_name": "Baiern CoupeSport GT III 122625 N/m 7.5\" spring",
+      "display_name": "700 lb/in coil spring (7.5 in.)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -13313,7 +13313,7 @@
     {
       "id": "suspension/stock/spring_0005",
       "name": "spring_0005",
-      "display_name": "Duhen SunStrip 1.5 DVC 44145 N/m 8.5\" spring",
+      "display_name": "252 lb/in coil spring (8.5 in., No. 3)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -13409,7 +13409,7 @@
     {
       "id": "suspension/stock/spring_005D",
       "name": "spring_005D",
-      "display_name": "Duhen Racing SunStrip 2.0 CDVC 103005 N/m 6.5\" spring",
+      "display_name": "Competition 588 lb/in coil spring (6.5 in., No. 2)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -13505,7 +13505,7 @@
     {
       "id": "suspension/stock/spring_011F",
       "name": "spring_011F",
-      "display_name": "Einvagen 140 GTA 70632 N/m 8.5\" spring",
+      "display_name": "403 lb/in coil spring (8.5 in., No. 1)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -13601,7 +13601,7 @@
     {
       "id": "suspension/stock/spring_0121",
       "name": "spring_0121",
-      "display_name": "Einvagen 110 GTK 54936 N/m 8.5\" spring",
+      "display_name": "314 lb/in coil spring (8.5 in., No. 1)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -13697,7 +13697,7 @@
     {
       "id": "suspension/stock/spring_01D9",
       "name": "spring_01D9",
-      "display_name": "Emer Motorsport Nonus GT2 117720 N/m 7.0\" spring",
+      "display_name": "Competition 672 lb/in coil spring (7.0 in., No. 2)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -13793,7 +13793,7 @@
     {
       "id": "suspension/stock/spring_01DB",
       "name": "spring_01DB",
-      "display_name": "Hauler's SuperDuty 500 70632 N/m 8.0\" spring",
+      "display_name": "Heavy-duty 403 lb/in coil spring (8.0 in., No. 2)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -13889,7 +13889,7 @@
     {
       "id": "suspension/stock/spring_01DD",
       "name": "spring_01DD",
-      "display_name": "Hauler's SuperDuty Extra 750 83385 N/m 8.0\" spring",
+      "display_name": "Heavy-duty 476 lb/in coil spring (8.0 in., No. 2)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -13985,7 +13985,7 @@
     {
       "id": "suspension/stock/spring_01E3",
       "name": "spring_01E3",
-      "display_name": "MC GTLE 59841 N/m 8.5\" spring",
+      "display_name": "342 lb/in coil spring (8.5 in., No. 3)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -14081,7 +14081,7 @@
     {
       "id": "suspension/stock/spring_01E5",
       "name": "spring_01E5",
-      "display_name": "Prime DLH 500 83385 N/m 8.0\" spring",
+      "display_name": "476 lb/in coil spring (8.0 in.)",
       "base_class": "java.game.parts.rgearpart.Spring",
       "class_chain": [
         "java.game.parts.rgearpart.Spring",
@@ -14177,7 +14177,7 @@
     {
       "id": "suspension/stock/FL_McPherson_strut",
       "name": "FL_McPherson_strut",
-      "display_name": "Baiern CoupeSport 2.5 front left McPherson strut",
+      "display_name": "Front left MacPherson strut (No. 11)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -14273,7 +14273,7 @@
     {
       "id": "suspension/stock/FR_McPherson_strut",
       "name": "FR_McPherson_strut",
-      "display_name": "Baiern CoupeSport 2.5 front right McPherson strut",
+      "display_name": "Front right MacPherson strut (No. 11)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -14369,7 +14369,7 @@
     {
       "id": "suspension/stock/RL_trailing_arm",
       "name": "RL_trailing_arm",
-      "display_name": "Baiern CoupeSport 2.5 rear left trailing-arm",
+      "display_name": "Rear left trailing arm (No. 11)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -14466,7 +14466,7 @@
     {
       "id": "suspension/stock/RR_trailing_arm",
       "name": "RR_trailing_arm",
-      "display_name": "Baiern CoupeSport 2.5 rear right trailing-arm",
+      "display_name": "Rear right trailing arm (No. 11)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -14563,7 +14563,7 @@
     {
       "id": "suspension/stock/FL_McPherson_strut_010C",
       "name": "FL_McPherson_strut_010C",
-      "display_name": "Baiern DevilSport front left McPherson strut",
+      "display_name": "Front left MacPherson strut (No. 17)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -14659,7 +14659,7 @@
     {
       "id": "suspension/stock/FR_McPherson_strut_010D",
       "name": "FR_McPherson_strut_010D",
-      "display_name": "Baiern DevilSport front right McPherson strut",
+      "display_name": "Front right MacPherson strut (No. 17)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -14755,7 +14755,7 @@
     {
       "id": "suspension/stock/RL_trailing_arm_010E",
       "name": "RL_trailing_arm_010E",
-      "display_name": "Baiern DevilSport rear left trailing-arm",
+      "display_name": "Rear left trailing arm (No. 17)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -14852,7 +14852,7 @@
     {
       "id": "suspension/stock/RR_trailing_arm_010F",
       "name": "RR_trailing_arm_010F",
-      "display_name": "Baiern DevilSport rear right trailing-arm",
+      "display_name": "Rear right trailing arm (No. 17)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -14949,7 +14949,7 @@
     {
       "id": "suspension/stock/FL_McPherson_strut_00F4",
       "name": "FL_McPherson_strut_00F4",
-      "display_name": "Baiern CoupeSport GT III front left McPherson strut",
+      "display_name": "Front left MacPherson strut (No. 21)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -15045,7 +15045,7 @@
     {
       "id": "suspension/stock/FR_McPherson_strut_00F5",
       "name": "FR_McPherson_strut_00F5",
-      "display_name": "Baiern CoupeSport GT III front right McPherson strut",
+      "display_name": "Front right MacPherson strut (No. 21)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -15141,7 +15141,7 @@
     {
       "id": "suspension/stock/RL_trailing_arm_00F6",
       "name": "RL_trailing_arm_00F6",
-      "display_name": "Baiern CoupeSport GT III rear left trailing-arm",
+      "display_name": "Rear left trailing arm (No. 20)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -15238,7 +15238,7 @@
     {
       "id": "suspension/stock/RR_trailing_arm_00F7",
       "name": "RR_trailing_arm_00F7",
-      "display_name": "Baiern CoupeSport GT III rear right trailing-arm",
+      "display_name": "Rear right trailing arm (No. 20)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -15335,7 +15335,7 @@
     {
       "id": "suspension/stock/FL_McPherson_strut_30FC",
       "name": "FL_McPherson_strut_30FC",
-      "display_name": "Duhen SunStrip 1.5 DVC front left McPherson strut",
+      "display_name": "Front left MacPherson strut (No. 1)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -15431,7 +15431,7 @@
     {
       "id": "suspension/stock/FR_McPherson_strut_3147",
       "name": "FR_McPherson_strut_3147",
-      "display_name": "Duhen SunStrip 1.5 DVC front right McPherson strut",
+      "display_name": "Front right MacPherson strut (No. 1)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -15527,7 +15527,7 @@
     {
       "id": "suspension/stock/RL_trailing_arm_314A",
       "name": "RL_trailing_arm_314A",
-      "display_name": "Duhen SunStrip 1.5 DVC rear left trailing-arm",
+      "display_name": "Rear left trailing arm (No. 4)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -15624,7 +15624,7 @@
     {
       "id": "suspension/stock/RR_trailing_arm_315D",
       "name": "RR_trailing_arm_315D",
-      "display_name": "Duhen SunStrip 1.5 DVC rear right trailing-arm",
+      "display_name": "Rear right trailing arm (No. 4)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -15721,7 +15721,7 @@
     {
       "id": "suspension/stock/FL_McPherson_strut_3124",
       "name": "FL_McPherson_strut_3124",
-      "display_name": "Duhen SunStrip 1.8 DVC front left McPherson strut",
+      "display_name": "Front left MacPherson strut (No. 7)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -15817,7 +15817,7 @@
     {
       "id": "suspension/stock/FR_McPherson_strut_3163",
       "name": "FR_McPherson_strut_3163",
-      "display_name": "Duhen SunStrip 1.8 DVC front right McPherson strut",
+      "display_name": "Front right MacPherson strut (No. 7)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -15913,7 +15913,7 @@
     {
       "id": "suspension/stock/RL_trailing_arm_3164",
       "name": "RL_trailing_arm_3164",
-      "display_name": "Duhen SunStrip 1.8 DVC rear left trailing-arm",
+      "display_name": "Rear left trailing arm (No. 7)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -16010,7 +16010,7 @@
     {
       "id": "suspension/stock/RR_trailing_arm_3165",
       "name": "RR_trailing_arm_3165",
-      "display_name": "Duhen SunStrip 1.8 DVC rear right trailing-arm",
+      "display_name": "Rear right trailing arm (No. 7)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -16107,7 +16107,7 @@
     {
       "id": "suspension/stock/FL_McPherson_strut_316A",
       "name": "FL_McPherson_strut_316A",
-      "display_name": "Duhen Racing SunStrip 2.0 CDVC front left McPherson strut",
+      "display_name": "Front left MacPherson strut (No. 19)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -16203,7 +16203,7 @@
     {
       "id": "suspension/stock/FR_McPherson_strut_316B",
       "name": "FR_McPherson_strut_316B",
-      "display_name": "Duhen Racing SunStrip 2.0 CDVC front right McPherson strut",
+      "display_name": "Front right MacPherson strut (No. 19)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -16299,7 +16299,7 @@
     {
       "id": "suspension/stock/RL_trailing_arm_316C",
       "name": "RL_trailing_arm_316C",
-      "display_name": "Duhen Racing SunStrip 2.0 CDVC rear left trailing-arm",
+      "display_name": "Rear left trailing arm (No. 10)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -16396,7 +16396,7 @@
     {
       "id": "suspension/stock/RR_trailing_arm_316D",
       "name": "RR_trailing_arm_316D",
-      "display_name": "Duhen Racing SunStrip 2.0 CDVC rear right trailing-arm",
+      "display_name": "Rear right trailing arm (No. 10)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -16493,7 +16493,7 @@
     {
       "id": "suspension/stock/FL_McPherson_strut_3166",
       "name": "FL_McPherson_strut_3166",
-      "display_name": "Duhen SunStrip 2.2 DVC front left McPherson strut",
+      "display_name": "Front left MacPherson strut (No. 8)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -16589,7 +16589,7 @@
     {
       "id": "suspension/stock/FR_McPherson_strut_3167",
       "name": "FR_McPherson_strut_3167",
-      "display_name": "Duhen SunStrip 2.2 DVC front right McPherson strut",
+      "display_name": "Front right MacPherson strut (No. 8)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -16685,7 +16685,7 @@
     {
       "id": "suspension/stock/RL_trailing_arm_3168",
       "name": "RL_trailing_arm_3168",
-      "display_name": "Duhen SunStrip 2.2 DVC rear left trailing-arm",
+      "display_name": "Rear left trailing arm (No. 9)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -16782,7 +16782,7 @@
     {
       "id": "suspension/stock/RR_trailing_arm_3169",
       "name": "RR_trailing_arm_3169",
-      "display_name": "Duhen SunStrip 2.2 DVC rear right trailing-arm",
+      "display_name": "Rear right trailing arm (No. 8)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -16879,7 +16879,7 @@
     {
       "id": "suspension/stock/FL_McPherson_strut_013C",
       "name": "FL_McPherson_strut_013C",
-      "display_name": "Einvagen 110 GT front left McPherson strut",
+      "display_name": "Front left MacPherson strut (No. 2)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -16975,7 +16975,7 @@
     {
       "id": "suspension/stock/FR_McPherson_strut_013A",
       "name": "FR_McPherson_strut_013A",
-      "display_name": "Einvagen 110 GT front right McPherson strut",
+      "display_name": "Front right MacPherson strut (No. 2)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -17071,7 +17071,7 @@
     {
       "id": "suspension/stock/RL_trailing_arm_0139",
       "name": "RL_trailing_arm_0139",
-      "display_name": "Einvagen 110 GT rear left trailing-arm",
+      "display_name": "Rear left trailing arm (No. 1)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -17168,7 +17168,7 @@
     {
       "id": "suspension/stock/RR_trailing_arm_0138",
       "name": "RR_trailing_arm_0138",
-      "display_name": "Einvagen 110 GT rear right trailing-arm",
+      "display_name": "Rear right trailing arm (No. 1)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -17265,7 +17265,7 @@
     {
       "id": "suspension/stock/FL_McPherson_strut_0137",
       "name": "FL_McPherson_strut_0137",
-      "display_name": "Einvagen 110 GTK front left McPherson strut",
+      "display_name": "Front left MacPherson strut (No. 9)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -17361,7 +17361,7 @@
     {
       "id": "suspension/stock/FR_McPherson_strut_012E",
       "name": "FR_McPherson_strut_012E",
-      "display_name": "Einvagen 110 GTK front right McPherson strut",
+      "display_name": "Front right MacPherson strut (No. 9)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -17457,7 +17457,7 @@
     {
       "id": "suspension/stock/RL_trailing_arm_012C",
       "name": "RL_trailing_arm_012C",
-      "display_name": "Einvagen 110 GTK rear left trailing-arm",
+      "display_name": "Rear left trailing arm (No. 8)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -17554,7 +17554,7 @@
     {
       "id": "suspension/stock/RR_trailing_arm_012B",
       "name": "RR_trailing_arm_012B",
-      "display_name": "Einvagen 110 GTK rear right trailing-arm",
+      "display_name": "Rear right trailing arm (No. 9)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -17651,7 +17651,7 @@
     {
       "id": "suspension/stock/FL_McPherson_strut_012A",
       "name": "FL_McPherson_strut_012A",
-      "display_name": "Einvagen 140 GTA front left McPherson strut",
+      "display_name": "Front left MacPherson strut (No. 18)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -17747,7 +17747,7 @@
     {
       "id": "suspension/stock/FR_McPherson_strut_0128",
       "name": "FR_McPherson_strut_0128",
-      "display_name": "Einvagen 140 GTA front right McPherson strut",
+      "display_name": "Front right MacPherson strut (No. 18)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -17843,7 +17843,7 @@
     {
       "id": "suspension/stock/RL_trailing_arm_0127",
       "name": "RL_trailing_arm_0127",
-      "display_name": "Einvagen 140 GTA rear left trailing-arm",
+      "display_name": "Rear left trailing arm (No. 16)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -17940,7 +17940,7 @@
     {
       "id": "suspension/stock/RR_trailing_arm_0126",
       "name": "RR_trailing_arm_0126",
-      "display_name": "Einvagen 140 GTA rear right trailing-arm",
+      "display_name": "Rear right trailing arm (No. 16)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -18037,7 +18037,7 @@
     {
       "id": "suspension/stock/FL_McPherson_strut_01EC",
       "name": "FL_McPherson_strut_01EC",
-      "display_name": "Emer Nonus StreetGT front left McPherson strut",
+      "display_name": "Front left MacPherson strut (No. 12)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -18133,7 +18133,7 @@
     {
       "id": "suspension/stock/FR_McPherson_strut_01ED",
       "name": "FR_McPherson_strut_01ED",
-      "display_name": "Emer Nonus StreetGT front right McPherson strut",
+      "display_name": "Front right MacPherson strut (No. 12)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -18229,7 +18229,7 @@
     {
       "id": "suspension/stock/RL_trailing_arm_01EE",
       "name": "RL_trailing_arm_01EE",
-      "display_name": "Emer Nonus StreetGT rear left trailing-arm",
+      "display_name": "Rear left trailing arm (No. 13)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -18326,7 +18326,7 @@
     {
       "id": "suspension/stock/RR_trailing_arm_01EF",
       "name": "RR_trailing_arm_01EF",
-      "display_name": "Emer Nonus StreetGT rear right trailing-arm",
+      "display_name": "Rear right trailing arm (No. 13)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -18423,7 +18423,7 @@
     {
       "id": "suspension/stock/FL_McPherson_strut_01F0",
       "name": "FL_McPherson_strut_01F0",
-      "display_name": "Emer Motorsport Nonus GT2 front left McPherson strut",
+      "display_name": "Front left MacPherson strut (No. 24)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -18519,7 +18519,7 @@
     {
       "id": "suspension/stock/FR_McPherson_strut_01F1",
       "name": "FR_McPherson_strut_01F1",
-      "display_name": "Emer Motorsport Nonus GT2 front right McPherson strut",
+      "display_name": "Front right MacPherson strut (No. 24)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -18615,7 +18615,7 @@
     {
       "id": "suspension/stock/RL_trailing_arm_01F2",
       "name": "RL_trailing_arm_01F2",
-      "display_name": "Emer Motorsport Nonus GT2 rear left trailing-arm",
+      "display_name": "Rear left trailing arm (No. 22)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -18712,7 +18712,7 @@
     {
       "id": "suspension/stock/RR_trailing_arm_01F3",
       "name": "RR_trailing_arm_01F3",
-      "display_name": "Emer Motorsport Nonus GT2 rear right trailing-arm",
+      "display_name": "Rear right trailing arm (No. 22)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -18873,7 +18873,7 @@
     {
       "id": "suspension/stock/FL_McPherson_strut_01F4",
       "name": "FL_McPherson_strut_01F4",
-      "display_name": "Hauler's SuperDuty 500 front left McPherson strut",
+      "display_name": "Front left MacPherson strut (No. 10)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -18969,7 +18969,7 @@
     {
       "id": "suspension/stock/FR_McPherson_strut_01F5",
       "name": "FR_McPherson_strut_01F5",
-      "display_name": "Hauler's SuperDuty 500 front right McPherson strut",
+      "display_name": "Front right MacPherson strut (No. 10)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -19065,7 +19065,7 @@
     {
       "id": "suspension/stock/RL_trailing_arm_01F6",
       "name": "RL_trailing_arm_01F6",
-      "display_name": "Hauler's SuperDuty 500 rear left trailing-arm",
+      "display_name": "Rear left trailing arm (No. 12)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -19162,7 +19162,7 @@
     {
       "id": "suspension/stock/RR_trailing_arm_01F7",
       "name": "RR_trailing_arm_01F7",
-      "display_name": "Hauler's SuperDuty 500 rear right trailing-arm",
+      "display_name": "Rear right trailing arm (No. 12)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -19259,7 +19259,7 @@
     {
       "id": "suspension/stock/FL_McPherson_strut_01F8",
       "name": "FL_McPherson_strut_01F8",
-      "display_name": "Hauler's SuperDuty Extra 750 front left McPherson strut",
+      "display_name": "Front left MacPherson strut (No. 13)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -19355,7 +19355,7 @@
     {
       "id": "suspension/stock/FR_McPherson_strut_01F9",
       "name": "FR_McPherson_strut_01F9",
-      "display_name": "Hauler's SuperDuty Extra 750 front right McPherson strut",
+      "display_name": "Front right MacPherson strut (No. 13)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -19451,7 +19451,7 @@
     {
       "id": "suspension/stock/RL_trailing_arm_01FA",
       "name": "RL_trailing_arm_01FA",
-      "display_name": "Hauler's SuperDuty Extra 750 rear left trailing-arm",
+      "display_name": "Rear left trailing arm (No. 15)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -19548,7 +19548,7 @@
     {
       "id": "suspension/stock/RR_trailing_arm_01FB",
       "name": "RR_trailing_arm_01FB",
-      "display_name": "Hauler's SuperDuty Extra 750 rear right trailing-arm",
+      "display_name": "Rear right trailing arm (No. 15)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -19645,7 +19645,7 @@
     {
       "id": "suspension/stock/FL_McPherson_strut_4194",
       "name": "FL_McPherson_strut_4194",
-      "display_name": "Ishima Enula WR SuperTurizmo front left McPherson strut",
+      "display_name": "Front left MacPherson strut (No. 22)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -19741,7 +19741,7 @@
     {
       "id": "suspension/stock/FR_McPherson_strut_4195",
       "name": "FR_McPherson_strut_4195",
-      "display_name": "Ishima Enula WR SuperTurizmo front right McPherson strut",
+      "display_name": "Front right MacPherson strut (No. 22)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -19837,7 +19837,7 @@
     {
       "id": "suspension/stock/RL_trailing_arm_4196",
       "name": "RL_trailing_arm_4196",
-      "display_name": "Ishima Enula WR SuperTurizmo rear left trailing-arm",
+      "display_name": "Rear left trailing arm (No. 24)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -19934,7 +19934,7 @@
     {
       "id": "suspension/stock/RR_trailing_arm_4197",
       "name": "RR_trailing_arm_4197",
-      "display_name": "Ishima Enula WR SuperTurizmo rear right trailing-arm",
+      "display_name": "Rear right trailing arm (No. 24)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -20031,7 +20031,7 @@
     {
       "id": "suspension/stock/FL_McPherson_strut_4009",
       "name": "FL_McPherson_strut_4009",
-      "display_name": "Ishima Enula WRY front left McPherson strut",
+      "display_name": "Front left MacPherson strut (No. 5)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -20127,7 +20127,7 @@
     {
       "id": "suspension/stock/FR_McPherson_strut_40FC",
       "name": "FR_McPherson_strut_40FC",
-      "display_name": "Ishima Enula WRY front right McPherson strut",
+      "display_name": "Front right MacPherson strut (No. 5)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -20223,7 +20223,7 @@
     {
       "id": "suspension/stock/RL_trailing_arm_40FD",
       "name": "RL_trailing_arm_40FD",
-      "display_name": "Ishima Enula WRY rear left trailing-arm",
+      "display_name": "Rear left trailing arm (No. 5)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -20320,7 +20320,7 @@
     {
       "id": "suspension/stock/RR_trailing_arm_40FE",
       "name": "RR_trailing_arm_40FE",
-      "display_name": "Ishima Enula WRY rear right trailing-arm",
+      "display_name": "Rear right trailing arm (No. 5)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -20417,7 +20417,7 @@
     {
       "id": "suspension/stock/FL_McPherson_strut_40FF",
       "name": "FL_McPherson_strut_40FF",
-      "display_name": "Ishima Enula WRZ front left McPherson strut",
+      "display_name": "Front left MacPherson strut (No. 6)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -20513,7 +20513,7 @@
     {
       "id": "suspension/stock/FR_McPherson_strut_4189",
       "name": "FR_McPherson_strut_4189",
-      "display_name": "Ishima Enula WRZ front right McPherson strut",
+      "display_name": "Front right MacPherson strut (No. 6)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -20609,7 +20609,7 @@
     {
       "id": "suspension/stock/RL_trailing_arm_4192",
       "name": "RL_trailing_arm_4192",
-      "display_name": "Ishima Enula WRZ rear left trailing-arm",
+      "display_name": "Rear left trailing arm (No. 6)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -20706,7 +20706,7 @@
     {
       "id": "suspension/stock/RR_trailing_arm_4193",
       "name": "RR_trailing_arm_4193",
-      "display_name": "Ishima Enula WRZ rear right trailing-arm",
+      "display_name": "Rear right trailing arm (No. 6)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -20803,7 +20803,7 @@
     {
       "id": "suspension/stock/FL_McPherson_strut_01FC",
       "name": "FL_McPherson_strut_01FC",
-      "display_name": "MC GT front left McPherson strut",
+      "display_name": "Front left MacPherson strut (No. 14)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -20899,7 +20899,7 @@
     {
       "id": "suspension/stock/FR_McPherson_strut_01FD",
       "name": "FR_McPherson_strut_01FD",
-      "display_name": "MC GT front right McPherson strut",
+      "display_name": "Front right MacPherson strut (No. 14)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -20995,7 +20995,7 @@
     {
       "id": "suspension/stock/RL_trailing_arm_01FE",
       "name": "RL_trailing_arm_01FE",
-      "display_name": "MC GT rear left trailing-arm",
+      "display_name": "Rear left trailing arm (No. 14)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -21092,7 +21092,7 @@
     {
       "id": "suspension/stock/RR_trailing_arm_01FF",
       "name": "RR_trailing_arm_01FF",
-      "display_name": "MC GT rear right trailing-arm",
+      "display_name": "Rear right trailing arm (No. 14)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -21189,7 +21189,7 @@
     {
       "id": "suspension/stock/FL_McPherson_strut_0201",
       "name": "FL_McPherson_strut_0201",
-      "display_name": "MC GT-B front left McPherson strut",
+      "display_name": "Front left MacPherson strut (No. 15)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -21285,7 +21285,7 @@
     {
       "id": "suspension/stock/FR_McPherson_strut_0202",
       "name": "FR_McPherson_strut_0202",
-      "display_name": "MC GT-B front right McPherson strut",
+      "display_name": "Front right MacPherson strut (No. 15)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -21381,7 +21381,7 @@
     {
       "id": "suspension/stock/RL_trailing_arm_0203",
       "name": "RL_trailing_arm_0203",
-      "display_name": "MC GT-B rear left trailing-arm",
+      "display_name": "Rear left trailing arm (No. 18)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -21478,7 +21478,7 @@
     {
       "id": "suspension/stock/RR_trailing_arm_0204",
       "name": "RR_trailing_arm_0204",
-      "display_name": "MC GT-B rear right trailing-arm",
+      "display_name": "Rear right trailing arm (No. 18)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -21575,7 +21575,7 @@
     {
       "id": "suspension/stock/FL_McPherson_strut_0205",
       "name": "FL_McPherson_strut_0205",
-      "display_name": "MC GTLE front left McPherson strut",
+      "display_name": "Front left MacPherson strut (No. 16)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -21671,7 +21671,7 @@
     {
       "id": "suspension/stock/FR_McPherson_strut_0206",
       "name": "FR_McPherson_strut_0206",
-      "display_name": "MC GTLE front right McPherson strut",
+      "display_name": "Front right MacPherson strut (No. 16)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -21767,7 +21767,7 @@
     {
       "id": "suspension/stock/RL_trailing_arm_0207",
       "name": "RL_trailing_arm_0207",
-      "display_name": "MC GTLE rear left trailing-arm",
+      "display_name": "Rear left trailing arm (No. 19)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -21864,7 +21864,7 @@
     {
       "id": "suspension/stock/RR_trailing_arm_0208",
       "name": "RR_trailing_arm_0208",
-      "display_name": "MC GTLE rear right trailing-arm",
+      "display_name": "Rear right trailing arm (No. 19)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -21961,7 +21961,7 @@
     {
       "id": "suspension/stock/FL_McPherson_strut_0209",
       "name": "FL_McPherson_strut_0209",
-      "display_name": "Prime DLH 500 front left McPherson strut",
+      "display_name": "Front left MacPherson strut (No. 23)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -22057,7 +22057,7 @@
     {
       "id": "suspension/stock/FR_McPherson_strut_020A",
       "name": "FR_McPherson_strut_020A",
-      "display_name": "Prime DLH 500 front right McPherson strut",
+      "display_name": "Front right MacPherson strut (No. 23)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -22153,7 +22153,7 @@
     {
       "id": "suspension/stock/RL_trailing_arm_020B",
       "name": "RL_trailing_arm_020B",
-      "display_name": "Prime DLH 500 rear left trailing-arm",
+      "display_name": "Rear left trailing arm (No. 23)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -22250,7 +22250,7 @@
     {
       "id": "suspension/stock/RR_trailing_arm_020C",
       "name": "RR_trailing_arm_020C",
-      "display_name": "Prime DLH 500 rear right trailing-arm",
+      "display_name": "Rear right trailing arm (No. 23)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -22411,7 +22411,7 @@
     {
       "id": "suspension/stock/FL_McPherson_strut_020D",
       "name": "FL_McPherson_strut_020D",
-      "display_name": "Shimutshibu Focer 200 front left McPherson strut",
+      "display_name": "Front left MacPherson strut (No. 3)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -22507,7 +22507,7 @@
     {
       "id": "suspension/stock/FR_McPherson_strut_020E",
       "name": "FR_McPherson_strut_020E",
-      "display_name": "Shimutshibu Focer 200 front right McPherson strut",
+      "display_name": "Front right MacPherson strut (No. 3)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -22603,7 +22603,7 @@
     {
       "id": "suspension/stock/RL_trailing_arm_020F",
       "name": "RL_trailing_arm_020F",
-      "display_name": "Shimutshibu Focer 200 rear left trailing-arm",
+      "display_name": "Rear left trailing arm (No. 2)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -22700,7 +22700,7 @@
     {
       "id": "suspension/stock/RR_trailing_arm_0210",
       "name": "RR_trailing_arm_0210",
-      "display_name": "Shimutshibu Focer 200 rear right trailing-arm",
+      "display_name": "Rear right trailing arm (No. 2)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -22797,7 +22797,7 @@
     {
       "id": "suspension/stock/FL_McPherson_strut_0211",
       "name": "FL_McPherson_strut_0211",
-      "display_name": "Shimutshibu Focer 300 front left McPherson strut",
+      "display_name": "Front left MacPherson strut (No. 4)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -22893,7 +22893,7 @@
     {
       "id": "suspension/stock/FR_McPherson_strut_0212",
       "name": "FR_McPherson_strut_0212",
-      "display_name": "Shimutshibu Focer 300 front right McPherson strut",
+      "display_name": "Front right MacPherson strut (No. 4)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -22989,7 +22989,7 @@
     {
       "id": "suspension/stock/RL_trailing_arm_0213",
       "name": "RL_trailing_arm_0213",
-      "display_name": "Shimutshibu Focer 300 rear left trailing-arm",
+      "display_name": "Rear left trailing arm (No. 3)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -23086,7 +23086,7 @@
     {
       "id": "suspension/stock/RR_trailing_arm_0214",
       "name": "RR_trailing_arm_0214",
-      "display_name": "Shimutshibu Focer 300 rear right trailing-arm",
+      "display_name": "Rear right trailing arm (No. 3)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -23183,7 +23183,7 @@
     {
       "id": "suspension/stock/FL_McPherson_strut_0215",
       "name": "FL_McPherson_strut_0215",
-      "display_name": "Shimutshibu Focer WRC front left McPherson strut",
+      "display_name": "Front left MacPherson strut (No. 20)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -23279,7 +23279,7 @@
     {
       "id": "suspension/stock/FR_McPherson_strut_0216",
       "name": "FR_McPherson_strut_0216",
-      "display_name": "Shimutshibu Focer WRC front right McPherson strut",
+      "display_name": "Front right MacPherson strut (No. 20)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -23375,7 +23375,7 @@
     {
       "id": "suspension/stock/RL_trailing_arm_0217",
       "name": "RL_trailing_arm_0217",
-      "display_name": "Shimutshibu Focer WRC rear left trailing-arm",
+      "display_name": "Rear left trailing arm (No. 21)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",
@@ -23472,7 +23472,7 @@
     {
       "id": "suspension/stock/RR_trailing_arm_0218",
       "name": "RR_trailing_arm_0218",
-      "display_name": "Shimutshibu Focer WRC rear right trailing-arm",
+      "display_name": "Rear right trailing arm (No. 21)",
       "base_class": "java.game.parts.rgearpart.Suspension",
       "class_chain": [
         "java.game.parts.rgearpart.Suspension",

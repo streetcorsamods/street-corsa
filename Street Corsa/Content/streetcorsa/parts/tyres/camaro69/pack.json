@@ -5,7 +5,7 @@
     {
       "id": "tyres/camaro69/tire11",
       "name": "tire11",
-      "display_name": "Chevrolet Camaro69 front tyre",
+      "display_name": "Wide 255 tire, 19-inch (front)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
@@ -158,7 +158,7 @@
     {
       "id": "tyres/camaro69/tire13",
       "name": "tire13",
-      "display_name": "Chevrolet Camaro rear tyre",
+      "display_name": "Wide 295 tire, 21-inch (rear)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Tyre",

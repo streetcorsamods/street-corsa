@@ -5,7 +5,7 @@
     {
       "id": "rims/opala/gringa_style",
       "name": "gringa_style",
-      "display_name": "Roda Repolho Estilo Gringa Opala",
+      "display_name": "Chevrolet Opala steel wheel 15x8 (export style)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -135,7 +135,7 @@
     {
       "id": "rims/opala/pintable",
       "name": "pintable",
-      "display_name": "Roda Repolho Pintavel Opala",
+      "display_name": "Chevrolet Opala steel wheel 15x8 (painted)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -265,7 +265,7 @@
     {
       "id": "rims/opala/ralinho",
       "name": "ralinho",
-      "display_name": "Roda Ralinho Opala",
+      "display_name": "Chevrolet Opala slotted wheel 15x8",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -395,7 +395,7 @@
     {
       "id": "rims/opala/repolho",
       "name": "repolho",
-      "display_name": "Roda Repolho Opala",
+      "display_name": "Chevrolet Opala steel wheel 15x8",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -525,7 +525,7 @@
     {
       "id": "rims/opala/roda_diplo",
       "name": "roda_diplo",
-      "display_name": "Roda Opala Diplomata 92",
+      "display_name": "Chevrolet Opala Diplomata wheel 15x8",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",

@@ -169,6 +169,35 @@ the gearing from the transmission (`gears`, `ratio`: element 0 unused, the last 
 }
 ```
 
+**A part's name.** `"display_name"` is what the player reads in the shops, the junkyard, the workbench and the paper.
+The base game names its parts as a 1960s American speed shop's counter would: maker, line, what it is, what it fits,
+e.g. `Edelbrock Performer RPM camshaft (Chevy 327-396)`, `Holley 4-bbl air cleaner`, `Mopar 440 RB big-block left
+exhaust header`. Carburettors as `4-bbl`/`2x4-bbl`, left/right and front/rear as plain words, a variant in brackets
+(`(chrome)`), inches and lb/in for the running gear. No two parts share a name: parts alike but for their figures say
+the figure, alike but for what they fit say that (`Edelbrock 5-blade fan (Ford V8)`), and alike in all the player can
+see get a number (`(No. 2)`). The makers are the period's, named to say what a part is like; the names are their
+owners' trademarks, and the game is not tied to any of them. A mod may name its own makers.
+
+The game reads words in names (the cooling and the oil pans read the part's `name` and id with them), so a name
+decides what a part does as much as its script:
+
+- a part whose script class doesn't tell its kind gets it from its name (the work order's `"names"`, above);
+- the cooling: `radiator` makes a radiator, `water` then `pump` (or `pomp`) a water pump, `fan` as a word a fan; but
+  `hardware`, `bracket`, `pulley`, `gasket` or `bolt` anywhere makes the part none of them (`fan with pulley` is no
+  fan). A radiator with `alumin`, `racing`, `race`, `champion`, `be cool` or `electric fan` carries off a third more
+  (with `electric fan` it keeps up standing still); a water pump with `edelbrock`, `weiand`, `summit`, `high-flow`,
+  `meziere`, `electric`, `march` or `paxton` moves a tenth more; a fan with `flex`, `7 blade`/`7-blade`,
+  `seven blade`, `electric`, `high-performance`, `edelbrock`, `march` or `performance` cools better standing still.
+  A part that is not a water pump must not say `water ... pump` (`timing cover with built-in pump`);
+- an oil pan with `deep`, `milodon`, `moroso`, `canton`, `race`, `drag`, `hamburger` or `stef` holds its oil like a race
+  sump;
+- a block's name ends in `block`: the words before it are the engine's name on the car (`Chevy 327-396 V8 block` is a
+  `Chevy 327-396 V8`), except after `small`, `big`, `bare` or `short`, which stay with it (`Chevy 350 small block`
+  keeps its name). Its first make word (chevy, ford, mopar, hemi...) picks the family of its sound.
+
+The base game's reading of every part is held in `tests/StreetCorsa.Tests/Fixtures/part_roles.txt`: a rename that
+changes what a part does fails `PartRolesSnapshotTests`.
+
 A part mounts by what its slots name (`attaches_to`, `compatible_with`: a part id and a slot, a reference as above)
 or by a standard fitting (`fits`/`takes`, e.g. `carb:4bbl`), which works across mods with no ids at all.
 `tools\SlrrPartsConverter` makes packs from SLRR `.rpk` files.

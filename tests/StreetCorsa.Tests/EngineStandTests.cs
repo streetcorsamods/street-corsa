@@ -33,29 +33,30 @@ public sealed class EngineStandTests : IDisposable
     {
         var catalog = Catalog.Value;
         var engine = Engine("camaro_mk2/0006/stock");
-        var kinds = engine.SelfAndDescendants()
-            .Select(p => catalog.Get(p.DefinitionId)!)
-            .DistinctBy(d => d.Id)
-            .ToDictionary(d => d.DisplayName ?? d.Name, d => catalog.WorkOrder.KindOf(d));
+        var parts = engine.SelfAndDescendants().Select(p => catalog.Get(p.DefinitionId)!).DistinctBy(d => d.Id).ToList();
 
-        Assert.Equal("block", kinds["GM 327-396 small block"]);
-        Assert.Equal("crankshaft", kinds["GM 350 cui small block crankshaft"]);
-        Assert.Equal("connecting_rods", kinds["GM 350 cui small block stock connecting rods"]);
-        Assert.Equal("pistons", kinds["GM 327-396 cui small block stock pistons"]);
-        Assert.Equal("damper", kinds["1963 Corvette stock harmonic damper"]);
-        Assert.Equal("timing_gear", kinds["GM small block stock crankshaft timing gear (327-396)"]);
-        Assert.Equal("timing_chain", kinds["GM small block stock timing chain (327-396)"]);
-        Assert.Equal("timing_cover", kinds["GM small block stock timing chain cover (327-396)"]);
-        Assert.Equal("water_pump", kinds["GM small block stock water pump (327-396)"]);
-        Assert.Equal("fan", kinds["GM small block stock fan (327-396)"]);
-        Assert.Equal("belt", kinds["GM small block stock alternator drive belt (327-396)"]);
-        Assert.Equal("alternator", kinds["GM small block stock alternator (327-396)"]);
-        Assert.Equal("distributor", kinds["GM 283-396 stock ignition distributor"]);
-        Assert.Equal("valve_cover", kinds["MOROSO aluminium left valve cover (327-396, paintable)"]);
-        Assert.Equal("cylinder_head", kinds["GM small block stock left cylinder head (350-396)"]);
-        Assert.Equal("radiator", kinds["GM stock radiator (all GM, modern type)"]);
-        Assert.Equal("oil_pan", kinds["GM small block stock oil pan (327-396)"]);
-        Assert.Equal("transmission", kinds["Richmond Gear Super T-10 Plus 4-Speed (GM 283-396)"]);
+        // The part on this engine whose id ends so, in whichever pack it is
+        string? Kind(string localId) =>
+            catalog.WorkOrder.KindOf(Assert.Single(parts, d => d.Id.EndsWith("/" + localId, StringComparison.Ordinal)));
+
+        Assert.Equal("block", Kind("GM_327_block"));
+        Assert.Equal("crankshaft", Kind("GM_350_crank"));
+        Assert.Equal("connecting_rods", Kind("GM_350_rods"));
+        Assert.Equal("pistons", Kind("GM_327_pistons"));
+        Assert.Equal("damper", Kind("Vette_63_dumper"));
+        Assert.Equal("timing_gear", Kind("GM_small_block_crank_gear"));
+        Assert.Equal("timing_chain", Kind("GM_small_block_chain"));
+        Assert.Equal("timing_cover", Kind("GM_small_block_timing_cover"));
+        Assert.Equal("water_pump", Kind("GM_small_block_pump"));
+        Assert.Equal("fan", Kind("GM_small_block_fan"));
+        Assert.Equal("belt", Kind("GM_small_block_alternator_belt"));
+        Assert.Equal("alternator", Kind("GM_small_block_alternator"));
+        Assert.Equal("distributor", Kind("Stock_ignition_distributor"));
+        Assert.Equal("valve_cover", Kind("MOROSO_L_cover"));
+        Assert.Equal("cylinder_head", Kind("GM_small_block_L_head_2"));
+        Assert.Equal("radiator", Kind("GM_427_radiator"));
+        Assert.Equal("oil_pan", Kind("GM_small_block_oil_pan"));
+        Assert.Equal("transmission", Kind("RG_4spd_plus_tranny"));
     }
 
     [Fact]

@@ -5,7 +5,7 @@
     {
       "id": "rims/mopar/rim_8_5",
       "name": "rim_8_5",
-      "display_name": "ET 8x5 rim",
+      "display_name": "E-T mag wheel 15x5",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -145,7 +145,7 @@
     {
       "id": "rims/mopar/rim_steel_back_13",
       "name": "rim_steel_back_13",
-      "display_name": "Mopar steel factory Max wedge rim 15x13",
+      "display_name": "Mopar Max Wedge steel wheel 15x13",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -302,7 +302,7 @@
     {
       "id": "rims/mopar/rim_steel_back",
       "name": "rim_steel_back",
-      "display_name": "Mopar steel factory Max wedge rim 15x11",
+      "display_name": "Mopar Max Wedge steel wheel 15x11",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -459,7 +459,7 @@
     {
       "id": "rims/mopar/rim_steel_front",
       "name": "rim_steel_front",
-      "display_name": "Mopar steel factory Max wedge rim 15x8",
+      "display_name": "Mopar Max Wedge steel wheel 15x8",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -616,7 +616,7 @@
     {
       "id": "rims/mopar/cragar_13",
       "name": "cragar_13",
-      "display_name": "Cragar Torq Thrust rim 15x13",
+      "display_name": "Cragar Torq-Thrust wheel 15x13",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -756,7 +756,7 @@
     {
       "id": "rims/mopar/cragar_11",
       "name": "cragar_11",
-      "display_name": "Cragar Torq Thrust 15x11 rim",
+      "display_name": "Cragar Torq-Thrust wheel 15x11",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -896,7 +896,7 @@
     {
       "id": "rims/mopar/cragar_8",
       "name": "cragar_8",
-      "display_name": "Cragar Torq Thrust 15x8 rim",
+      "display_name": "Cragar Torq-Thrust wheel 15x8",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -1036,7 +1036,7 @@
     {
       "id": "rims/mopar/cragar_gt_13",
       "name": "cragar_gt_13",
-      "display_name": "Cragar G/T rim 15x13 (black)",
+      "display_name": "Cragar G/T wheel 15x13 (black)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -1176,7 +1176,7 @@
     {
       "id": "rims/mopar/cragar_gt_11",
       "name": "cragar_gt_11",
-      "display_name": "Cragar G/T 15x11 rim (black)",
+      "display_name": "Cragar G/T wheel 15x11 (black)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -1316,7 +1316,7 @@
     {
       "id": "rims/mopar/cragar_gt_8",
       "name": "cragar_gt_8",
-      "display_name": "Cragar G/T 15x8 rim (black)",
+      "display_name": "Cragar G/T wheel 15x8 (black)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -1456,7 +1456,7 @@
     {
       "id": "rims/mopar/cragar_gt_13_l",
       "name": "cragar_gt_13_l",
-      "display_name": "Cragar G/T rim 15x13 (grey)",
+      "display_name": "Cragar G/T wheel 15x13 (gray)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -1596,7 +1596,7 @@
     {
       "id": "rims/mopar/cragar_gt_11_l",
       "name": "cragar_gt_11_l",
-      "display_name": "Cragar G/T 15x11 rim (grey)",
+      "display_name": "Cragar G/T wheel 15x11 (gray)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -1736,7 +1736,7 @@
     {
       "id": "rims/mopar/cragar_gt_8_l",
       "name": "cragar_gt_8_l",
-      "display_name": "Cragar G/T 15x8 rim (grey)",
+      "display_name": "Cragar G/T wheel 15x8 (gray)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -1876,7 +1876,7 @@
     {
       "id": "rims/mopar/AMracing_13",
       "name": "AMracing_13",
-      "display_name": "American Racing 5 spokes 15x13 rim",
+      "display_name": "American Racing five-spoke wheel 15x13",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -2016,7 +2016,7 @@
     {
       "id": "rims/mopar/AMracing_11",
       "name": "AMracing_11",
-      "display_name": "American Racing 5 spokes 15x11 rim",
+      "display_name": "American Racing five-spoke wheel 15x11",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -2156,7 +2156,7 @@
     {
       "id": "rims/mopar/AMracing_8",
       "name": "AMracing_8",
-      "display_name": "American Racing 5 spokes 15x8 rim",
+      "display_name": "American Racing five-spoke wheel 15x8",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -2296,7 +2296,7 @@
     {
       "id": "rims/mopar/ARslot_13",
       "name": "ARslot_13",
-      "display_name": "American Racing Slot Mags 15x13 rim",
+      "display_name": "American Racing slot mag 15x13",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -2436,7 +2436,7 @@
     {
       "id": "rims/mopar/ARslot_11",
       "name": "ARslot_11",
-      "display_name": "American Racing Slot Mags 15x11 rim",
+      "display_name": "American Racing slot mag 15x11",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -2576,7 +2576,7 @@
     {
       "id": "rims/mopar/ARslot_8",
       "name": "ARslot_8",
-      "display_name": "American Racing Slot Mags 15x8 rim",
+      "display_name": "American Racing slot mag 15x8",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -2716,7 +2716,7 @@
     {
       "id": "rims/mopar/ARslot_5",
       "name": "ARslot_5",
-      "display_name": "American Racing Slot Mags 15x5 rim",
+      "display_name": "American Racing slot mag 15x5",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -2856,7 +2856,7 @@
     {
       "id": "rims/mopar/centerline_13",
       "name": "centerline_13",
-      "display_name": "ACenterline alluminium 15x13 rim",
+      "display_name": "Center Line aluminum wheel 15x13",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -2996,7 +2996,7 @@
     {
       "id": "rims/mopar/centerline_11",
       "name": "centerline_11",
-      "display_name": "Centerline alluminium 15x11 rim",
+      "display_name": "Center Line aluminum wheel 15x11",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -3136,7 +3136,7 @@
     {
       "id": "rims/mopar/centerline_8",
       "name": "centerline_8",
-      "display_name": "Centerline alluminium 15x8 rim",
+      "display_name": "Center Line aluminum wheel 15x8",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -3276,7 +3276,7 @@
     {
       "id": "rims/mopar/centerline_5",
       "name": "centerline_5",
-      "display_name": "Centerline alluminium 8x5 rim",
+      "display_name": "Center Line aluminum wheel 15x5",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -3416,7 +3416,7 @@
     {
       "id": "rims/mopar/stock_8",
       "name": "stock_8",
-      "display_name": "Chrysler steel 15x8 rim",
+      "display_name": "Chrysler steel wheel 15x8",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -3573,7 +3573,7 @@
     {
       "id": "rims/mopar/cragar_black_13",
       "name": "cragar_black_13",
-      "display_name": "Cragar Keystone Black rim 15x13",
+      "display_name": "Keystone Klassic wheel 15x13 (black)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -3713,7 +3713,7 @@
     {
       "id": "rims/mopar/cragar_black_11",
       "name": "cragar_black_11",
-      "display_name": "Cragar Keystone Black 15x11 rim",
+      "display_name": "Keystone Klassic wheel 15x11 (black)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -3853,7 +3853,7 @@
     {
       "id": "rims/mopar/cragar_black_8",
       "name": "cragar_black_8",
-      "display_name": "Cragar Keystone Black 15x8 rim",
+      "display_name": "Keystone Klassic wheel 15x8 (black)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -3993,7 +3993,7 @@
     {
       "id": "rims/mopar/cragar_black_5",
       "name": "cragar_black_5",
-      "display_name": "Cragar Keystone Black 15x5 rim",
+      "display_name": "Keystone Klassic wheel 15x5 (black)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -4133,7 +4133,7 @@
     {
       "id": "rims/mopar/cragar_grey_13",
       "name": "cragar_grey_13",
-      "display_name": "Cragar Keystone Grey 15x13 rim",
+      "display_name": "Keystone Klassic wheel 15x13 (gray)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -4273,7 +4273,7 @@
     {
       "id": "rims/mopar/cragar_grey_11",
       "name": "cragar_grey_11",
-      "display_name": "Cragar Keystone Grey 15x11 rim",
+      "display_name": "Keystone Klassic wheel 15x11 (gray)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -4413,7 +4413,7 @@
     {
       "id": "rims/mopar/cragar_grey_8",
       "name": "cragar_grey_8",
-      "display_name": "Cragar Keystone Grey 15x8 rim",
+      "display_name": "Keystone Klassic wheel 15x8 (gray)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -4553,7 +4553,7 @@
     {
       "id": "rims/mopar/cragar_grey_5",
       "name": "cragar_grey_5",
-      "display_name": "Cragar Keystone Grey 15x5 rim",
+      "display_name": "Keystone Klassic wheel 15x5 (gray)",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -4693,7 +4693,7 @@
     {
       "id": "rims/mopar/Fenton_mag_b_13",
       "name": "Fenton_mag_b_13",
-      "display_name": "Fenton Mag rear 15x13 rim",
+      "display_name": "Fenton mag wheel 15x13",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -4833,7 +4833,7 @@
     {
       "id": "rims/mopar/Fenton_mag_b_11",
       "name": "Fenton_mag_b_11",
-      "display_name": "Fenton Mag rear 15x11 rim",
+      "display_name": "Fenton mag wheel 15x11",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -4973,7 +4973,7 @@
     {
       "id": "rims/mopar/Fenton_mag_a_8",
       "name": "Fenton_mag_a_8",
-      "display_name": "Fenton Mag front 15x8 rim",
+      "display_name": "Fenton mag wheel 15x8",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
@@ -5113,7 +5113,7 @@
     {
       "id": "rims/mopar/Fenton_mag_a_5",
       "name": "Fenton_mag_a_5",
-      "display_name": "Fenton Mag front 15x5 rim",
+      "display_name": "Fenton mag wheel 15x5",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",

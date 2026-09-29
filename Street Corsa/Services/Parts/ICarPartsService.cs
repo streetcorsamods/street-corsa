@@ -53,7 +53,7 @@ namespace StreetCorsa.Services.Parts
         /// <summary>The engine of a car that has been around: the factory build, now and then worked on</summary>
         BuiltEngine? CreateUsedEngine(CarDefinition car, double condition);
 
-        /// <summary>An engine in a few words, e.g. "GM 327-396 small block, 258 hp"</summary>
+        /// <summary>An engine in a few words, e.g. "Chevy 327-396 V8, 258 hp"</summary>
         string? Describe(PartInstance engine, EngineReport? report);
 
         /// <summary>The car's engine on the dyno; null for a car without one or without parts</summary>

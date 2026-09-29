@@ -5,7 +5,7 @@
     {
       "id": "rims/hudson/rim_01",
       "name": "rim_01",
-      "display_name": "hudson rim 15x8",
+      "display_name": "Hudson steel wheel 15x8",
       "base_class": "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",
       "class_chain": [
         "java.game.parts.rgearpart.reciprocatingrgearpart.Wheel",

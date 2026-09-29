@@ -5,7 +5,7 @@
     {
       "id": "engines/generic/Air_cleaner_HOLLEY",
       "name": "Air_cleaner_HOLLEY",
-      "display_name": "HOLLEY 4BRL Air Cleaner",
+      "display_name": "Holley 4-bbl air cleaner",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
@@ -139,7 +139,7 @@
     {
       "id": "engines/generic/Air_cleaner_Edelbrock",
       "name": "Air_cleaner_Edelbrock",
-      "display_name": "Edelbrock 4BRL Air Cleaner",
+      "display_name": "Edelbrock 4-bbl air cleaner",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
@@ -273,7 +273,7 @@
     {
       "id": "engines/generic/Air_cleaner_Edelbrock_Signature_Series",
       "name": "Air_cleaner_Edelbrock_Signature_Series",
-      "display_name": "Edelbrock Signature Series 4BRL Air Cleaner",
+      "display_name": "Edelbrock Signature Series 4-bbl air cleaner",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
@@ -407,7 +407,7 @@
     {
       "id": "engines/generic/Air_cleaner_Edelbrock_racing",
       "name": "Air_cleaner_Edelbrock_racing",
-      "display_name": "Edelbrock Racing 4BRL Air Cleaner",
+      "display_name": "Edelbrock competition 4-bbl air cleaner",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
@@ -541,7 +541,7 @@
     {
       "id": "engines/generic/Air_cleaner_KN_2x4BRL",
       "name": "Air_cleaner_KN_2x4BRL",
-      "display_name": "KN 2x4BRL Air Cleaner",
+      "display_name": "K&N 2x4-bbl air cleaner",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
@@ -670,7 +670,7 @@
     {
       "id": "engines/generic/Air_cleaner_Edelbrock_Oval_2x4BRL",
       "name": "Air_cleaner_Edelbrock_Oval_2x4BRL",
-      "display_name": "Edelbrock Oval 2x4BRL Air Cleaner",
+      "display_name": "Edelbrock oval 2x4-bbl air cleaner",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
@@ -799,7 +799,7 @@
     {
       "id": "engines/generic/Air_cleaner_Six_pack_HOLLEY",
       "name": "Air_cleaner_Six_pack_HOLLEY",
-      "display_name": "Holley 3x2BRL Air Cleaner",
+      "display_name": "Holley 3x2-bbl air cleaner",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
@@ -923,7 +923,7 @@
     {
       "id": "engines/generic/Air_scoop_HOLLEY",
       "name": "Air_scoop_HOLLEY",
-      "display_name": "Holley 4BRL Air Scoop",
+      "display_name": "Holley 4-bbl air scoop",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
@@ -1057,7 +1057,7 @@
     {
       "id": "engines/generic/Air_scoop_Edelbrock",
       "name": "Air_scoop_Edelbrock",
-      "display_name": "Edelbrock 4BRL Air Scoop",
+      "display_name": "Edelbrock 4-bbl air scoop",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
@@ -1191,7 +1191,7 @@
     {
       "id": "engines/generic/Air_scoop_Edelbrock_2x4BRL",
       "name": "Air_scoop_Edelbrock_2x4BRL",
-      "display_name": "Edelbrock 2x4BRL Air Scoop",
+      "display_name": "Edelbrock 2x4-bbl air scoop",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
@@ -1320,7 +1320,7 @@
     {
       "id": "engines/generic/Air_scoop_HOLLEY_2x4BR",
       "name": "Air_scoop_HOLLEY_2x4BR",
-      "display_name": "Holley 2x4BRL Air Scoop",
+      "display_name": "Holley 2x4-bbl air scoop",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
@@ -1449,7 +1449,7 @@
     {
       "id": "engines/generic/Air_scoop_HOLLEY_2x4BR_F",
       "name": "Air_scoop_HOLLEY_2x4BR_F",
-      "display_name": "Holley 2x4BRL Air Scoop (Cleaner)",
+      "display_name": "Holley 2x4-bbl air scoop (with cleaner)",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
@@ -1578,7 +1578,7 @@
     {
       "id": "engines/generic/Carburetors_2BRL_HOLLEY",
       "name": "Carburetors_2BRL_HOLLEY",
-      "display_name": "HOLLEY 2BRL Carburetors",
+      "display_name": "Holley 2-bbl carburetor",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
@@ -1740,7 +1740,7 @@
     {
       "id": "engines/generic/Carburetors_4BRL_street_HOLLEY",
       "name": "Carburetors_4BRL_street_HOLLEY",
-      "display_name": "HOLLEY Street 4BRL Carburetors",
+      "display_name": "Holley Street 4-bbl carburetor",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
@@ -1932,7 +1932,7 @@
     {
       "id": "engines/generic/Carburetors_4BRL_Edelbrock",
       "name": "Carburetors_4BRL_Edelbrock",
-      "display_name": "Edelbrock 4BRL Carburetors",
+      "display_name": "Edelbrock 4-bbl carburetor",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
@@ -2149,7 +2149,7 @@
     {
       "id": "engines/generic/Carburetors_4BRL_Demon",
       "name": "Carburetors_4BRL_Demon",
-      "display_name": "Demon 4BRL Carburetors",
+      "display_name": "Demon 4-bbl carburetor",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
@@ -2346,7 +2346,7 @@
     {
       "id": "engines/generic/Carburetors_2x4BRL_Dominator_HOLLEY",
       "name": "Carburetors_2x4BRL_Dominator_HOLLEY",
-      "display_name": "HOLLEY Dominator 4BRL Carburetor",
+      "display_name": "Holley Dominator 4-bbl carburetor (dual-quad jetting)",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
@@ -2503,7 +2503,7 @@
     {
       "id": "engines/generic/Carburetors_2x4BRL_King_Demon",
       "name": "Carburetors_2x4BRL_King_Demon",
-      "display_name": "King Demon 4BRL Carburetor",
+      "display_name": "King Demon 4-bbl carburetor (dual-quad jetting)",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
@@ -2660,7 +2660,7 @@
     {
       "id": "engines/generic/Carburetors_3x2BRL_Road_Demon_six_pack",
       "name": "Carburetors_3x2BRL_Road_Demon_six_pack",
-      "display_name": "Road Demon 2BRL Carburetor",
+      "display_name": "Road Demon 2-bbl carburetor (Six Pack jetting)",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
@@ -2812,7 +2812,7 @@
     {
       "id": "engines/generic/Supercharger_Weiand",
       "name": "Supercharger_Weiand",
-      "display_name": "Weiand roots type Supercharger RB/B",
+      "display_name": "Weiand roots supercharger",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.charger.SuperCharger",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.charger.SuperCharger",
@@ -3034,7 +3034,7 @@
     {
       "id": "engines/generic/velocity_stack",
       "name": "velocity_stack",
-      "display_name": "Velocity Stack",
+      "display_name": "Velocity stack",
       "base_class": "java.game.parts.Part",
       "class_chain": [
         "java.game.parts.Part"
@@ -3146,7 +3146,7 @@
     {
       "id": "engines/generic/air_scoop",
       "name": "air_scoop",
-      "display_name": "Black Air Scoop",
+      "display_name": "Air scoop (black)",
       "base_class": "java.game.parts.Part",
       "class_chain": [
         "java.game.parts.Part"
@@ -3258,7 +3258,7 @@
     {
       "id": "engines/generic/dualcarb_scoop",
       "name": "dualcarb_scoop",
-      "display_name": "Hood Scoop For Dual Quad Carbs",
+      "display_name": "Dual-quad hood scoop",
       "base_class": "java.game.parts.Part",
       "class_chain": [
         "java.game.parts.Part"
@@ -3365,7 +3365,7 @@
     {
       "id": "engines/generic/Holley_street_carburetor",
       "name": "Holley_street_carburetor",
-      "display_name": "Holley Street Carburetor",
+      "display_name": "Holley Street 4-bbl carburetor (regular gas)",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
@@ -3547,7 +3547,7 @@
     {
       "id": "engines/generic/Edelbrock_4brl_carburetor",
       "name": "Edelbrock_4brl_carburetor",
-      "display_name": "Edelbrock Performer series 500 CFM four-barrel carburetor",
+      "display_name": "Edelbrock Performer 500 CFM 4-bbl carburetor",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
@@ -3704,7 +3704,7 @@
     {
       "id": "engines/generic/Edelbrock_4brl_carburetor_2",
       "name": "Edelbrock_4brl_carburetor_2",
-      "display_name": "Edelbrock Performer Marine series 600 CFM four-barrel carburetor",
+      "display_name": "Edelbrock Performer Marine 600 CFM 4-bbl carburetor",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
@@ -3861,7 +3861,7 @@
     {
       "id": "engines/generic/Edelbrock_supercharger_small_block",
       "name": "Edelbrock_supercharger_small_block",
-      "display_name": "Edelbrock 7.0 psi roots type supercharger",
+      "display_name": "Edelbrock 7 psi roots supercharger",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.charger.SuperCharger",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.charger.SuperCharger",
@@ -4059,7 +4059,7 @@
     {
       "id": "engines/generic/Edelbrock_supercharger_drive_belt_small_block",
       "name": "Edelbrock_supercharger_drive_belt_small_block",
-      "display_name": "Edelbrock roots type supercharger drive belt",
+      "display_name": "Edelbrock roots supercharger drive belt",
       "base_class": "java.game.parts.EnginePart",
       "class_chain": [
         "java.game.parts.EnginePart",
@@ -4144,7 +4144,7 @@
     {
       "id": "engines/generic/Edelbrock_2x4brl_carburetors",
       "name": "Edelbrock_2x4brl_carburetors",
-      "display_name": "Edelbrock Performer 500 CFM four-barrel carburetor (dual-quad jetting)",
+      "display_name": "Edelbrock Performer 500 CFM 4-bbl carburetor (dual-quad jetting)",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
@@ -4281,7 +4281,7 @@
     {
       "id": "engines/generic/Edelbrock_2x4brl_carburetors_2",
       "name": "Edelbrock_2x4brl_carburetors_2",
-      "display_name": "Edelbrock Marine 600 CFM four-barrel carburetor (dual-quad jetting)",
+      "display_name": "Edelbrock Marine 600 CFM 4-bbl carburetor (dual-quad jetting)",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
@@ -4418,7 +4418,7 @@
     {
       "id": "engines/generic/Holley_street_4brl_carburetor",
       "name": "Holley_street_4brl_carburetor",
-      "display_name": "Holley Street four-barrel carburetor",
+      "display_name": "Holley Street 4-bbl carburetor (high-octane)",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
@@ -4600,7 +4600,7 @@
     {
       "id": "engines/generic/Holley_2x4brl_carburetors",
       "name": "Holley_2x4brl_carburetors",
-      "display_name": "Holley street four-barrel carburetor (dual-quad jetting)",
+      "display_name": "Holley Street 4-bbl carburetor (dual-quad jetting)",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
@@ -4743,7 +4743,7 @@
     {
       "id": "engines/generic/Custom_horns",
       "name": "Custom_horns",
-      "display_name": "Custom horns (only for Holley 1050 Dominator)",
+      "display_name": "Velocity stacks (Holley 1050 Dominator only)",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
@@ -4852,7 +4852,7 @@
     {
       "id": "engines/generic/Summit_scoop_5",
       "name": "Summit_scoop_5",
-      "display_name": "Summit Hilborn-Style hood scoop, chrome, smooth top (for dual-quad applications)",
+      "display_name": "Summit Hilborn-style 2x4-bbl hood scoop (chrome, smooth top)",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
@@ -4966,7 +4966,7 @@
     {
       "id": "engines/generic/Summit_scoop_3",
       "name": "Summit_scoop_3",
-      "display_name": "Summit Street Scoop, polished, finned top (for dual-quad applications)",
+      "display_name": "Summit Street 2x4-bbl scoop (polished, finned top)",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
@@ -5080,7 +5080,7 @@
     {
       "id": "engines/generic/Summit_scoop_4",
       "name": "Summit_scoop_4",
-      "display_name": "Summit Street Scoop, black, finned top (for dual-quad applications)",
+      "display_name": "Summit Street 2x4-bbl scoop (black, finned top)",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
@@ -5194,7 +5194,7 @@
     {
       "id": "engines/generic/Summit_scoop_1",
       "name": "Summit_scoop_1",
-      "display_name": "Summit Street Scoop, polished, finned top (for single-4brl applications)",
+      "display_name": "Summit Street 4-bbl scoop (polished, finned top)",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
@@ -5308,7 +5308,7 @@
     {
       "id": "engines/generic/Summit_scoop_2",
       "name": "Summit_scoop_2",
-      "display_name": "Summit Street Scoop, black, finned top (for single-4brl applications)",
+      "display_name": "Summit Street 4-bbl scoop (black, finned top)",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
@@ -5422,7 +5422,7 @@
     {
       "id": "engines/generic/Holley_2x4brl_filter",
       "name": "Holley_2x4brl_filter",
-      "display_name": "Holley round air filter",
+      "display_name": "Holley round air cleaner",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
@@ -5536,7 +5536,7 @@
     {
       "id": "engines/generic/Summit_2x4_3x2_air_filter",
       "name": "Summit_2x4_3x2_air_filter",
-      "display_name": "Summit polished-aluminium air filter (for 2x4brl and 3x2brl applications, paintable element)",
+      "display_name": "Summit polished aluminum air cleaner (2x4-bbl, 3x2-bbl)",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
@@ -5656,7 +5656,7 @@
     {
       "id": "engines/generic/Summit_air_filter",
       "name": "Summit_air_filter",
-      "display_name": "Summit billet air filter (for 2brl and 4brl single-carb app-s, paintable element)",
+      "display_name": "Summit billet air cleaner (single 2-bbl or 4-bbl)",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
@@ -5780,7 +5780,7 @@
     {
       "id": "engines/generic/KN_filter",
       "name": "KN_filter",
-      "display_name": "K&N high-flow air filter (for 2brl and 4brl single-carb app-s)",
+      "display_name": "K&N high-flow air cleaner (single 2-bbl or 4-bbl)",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
@@ -5904,7 +5904,7 @@
     {
       "id": "engines/generic/MOROSO_air_filter",
       "name": "MOROSO_air_filter",
-      "display_name": "MOROSO anodized air filter (for 2brl and 4brl single-carb app-s, colorable)",
+      "display_name": "Moroso anodized air cleaner (single 2-bbl or 4-bbl)",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.AirFilter",
@@ -6028,7 +6028,7 @@
     {
       "id": "engines/generic/Holley_Street_supercharger",
       "name": "Holley_Street_supercharger",
-      "display_name": "Holley Street Supercharger",
+      "display_name": "Holley Street supercharger",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.charger.SuperCharger",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.charger.SuperCharger",
@@ -6224,7 +6224,7 @@
     {
       "id": "engines/generic/Holley_2x4_charger",
       "name": "Holley_2x4_charger",
-      "display_name": "Holley 2x4 Street Supercharger",
+      "display_name": "Holley Street 2x4-bbl supercharger",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.charger.SuperCharger",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.charger.SuperCharger",
@@ -6433,7 +6433,7 @@
     {
       "id": "engines/generic/Weiand_pro_Street_supercharger",
       "name": "Weiand_pro_Street_supercharger",
-      "display_name": "Weiand Pro Street Supercharger",
+      "display_name": "Weiand Pro Street supercharger",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.charger.SuperCharger",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.charger.SuperCharger",
@@ -6595,7 +6595,7 @@
     {
       "id": "engines/generic/Weiand_8_71_supercharger",
       "name": "Weiand_8_71_supercharger",
-      "display_name": "Weiand 8-71 Street Supercharger",
+      "display_name": "Weiand 8-71 Street supercharger",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.charger.SuperCharger",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.charger.SuperCharger",
@@ -6804,7 +6804,7 @@
     {
       "id": "engines/generic/hardcore_1050cfm_carb",
       "name": "hardcore_1050cfm_carb",
-      "display_name": "Hardcoe 1050 CFM modified carburetor (fits all 4brl manifolds)",
+      "display_name": "Modified 1050 CFM 4-bbl race carburetor",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
@@ -6948,7 +6948,7 @@
     {
       "id": "engines/generic/Holley_2x2brl_carbs",
       "name": "Holley_2x2brl_carbs",
-      "display_name": "Holley Classic series 2-barrel carb (350 cfm)",
+      "display_name": "Holley Classic 350 CFM 2-bbl carburetor",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
@@ -7061,7 +7061,7 @@
     {
       "id": "engines/generic/Holley_2x4brl_carburator",
       "name": "Holley_2x4brl_carburator",
-      "display_name": "Holley 750 CFM Dominator carburetor",
+      "display_name": "Holley Dominator 750 CFM 4-bbl carburetor",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
@@ -7209,7 +7209,7 @@
     {
       "id": "engines/generic/Holley_4brl_carburator",
       "name": "Holley_4brl_carburator",
-      "display_name": "Holley 1050 CFM Dominator (fits all 4brl manifolds)",
+      "display_name": "Holley Dominator 1050 CFM 4-bbl carburetor",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
@@ -7372,7 +7372,7 @@
     {
       "id": "engines/generic/Holley_2brl_carb",
       "name": "Holley_2brl_carb",
-      "display_name": "Holley 2300 series 2-barrel carb, 350 cfm (fits all)",
+      "display_name": "Holley 2300 350 CFM 2-bbl carburetor",
       "base_class": "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
       "class_chain": [
         "java.game.parts.enginepart.airfueldeliverysystem.FuelInjectorSystem",
