@@ -63,7 +63,7 @@ namespace StreetCorsa.Dialogs.RepairShop
             Jobs.Clear();
             foreach (var job in Parts.Cars.RepairShop.Jobs(_car, _catalog, _priceMultiplier))
             {
-                Jobs.Add(new RepairJobRow(job, new AsyncRelayCommand(() => Do(job), () => !_busy && _money() >= job.Cost)));
+                Jobs.Add(new RepairJobRow(job, new AsyncRelayCommand(() => Do(job), () => !_busy && _money() >= job.Cost, name: "Repair")));
             }
 
             var problems = CarCondition.WhyCannotRace(_car, _catalog == null ? null : CarCondition.Groups(_catalog));

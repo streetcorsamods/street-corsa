@@ -12,8 +12,12 @@
         Background="{StaticResource BgDarkBrush}"
         x:Name="MainWindowRoot">
     <Grid>
-        <!-- Screen Host -->
-        <ContentControl Content="{Binding NavigationService.CurrentScreen, RelativeSource={RelativeSource AncestorType=Window}}"/>
+        <!-- Screen Host. Disabled while a dialog is up: the overlay only stops the mouse, and the keyboard would
+             otherwise still press the button behind it or rev the engine. Window-level key handlers check
+             Dialogs.ModalState themselves. -->
+        <ContentControl x:Name="ScreenHost"
+                        IsEnabled="{Binding DialogService.IsDialogOpen, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource InverseBooleanConverter}}"
+                        Content="{Binding NavigationService.CurrentScreen, RelativeSource={RelativeSource AncestorType=Window}}"/>
 
         <!-- Dialog Host Overlay -->
         <Grid x:Name="DialogHost"

@@ -39,6 +39,7 @@
     <Compile Include="..\..\Street Corsa\Mods\ContentRegistry.cs" Link="Mods\ContentRegistry.cs" />
     <Compile Include="..\..\Street Corsa\Helpers\PathNames.cs" Link="Helpers\PathNames.cs" />
     <Compile Include="..\..\Street Corsa\Helpers\Multiplier.cs" Link="Helpers\Multiplier.cs" />
+    <Compile Include="..\..\Street Corsa\Helpers\Unit.cs" Link="Helpers\Unit.cs" />
   </ItemGroup>
 
 </Project>

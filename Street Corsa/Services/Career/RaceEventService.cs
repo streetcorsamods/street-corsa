@@ -66,22 +66,7 @@ namespace StreetCorsa.Services.Career
             // gives them to a new instance
             return career.ActiveEvents
                 .Where(e => e.IsAvailable(currentTime))
-                .Select(e =>
-                {
-                    var definition = GetEventDefinition(e.EventDefinitionId);
-                    return new RaceEventInstance
-                    {
-                        InstanceId = e.InstanceId,
-                        EventDefinitionId = e.EventDefinitionId,
-                        AvailableFrom = e.AvailableFrom,
-                        ExpiresAt = e.ExpiresAt,
-                        IsCompleted = e.IsCompleted,
-                        PlayerWon = e.PlayerWon,
-                        CompletedAt = e.CompletedAt,
-                        TrackId = definition?.TrackId,
-                        OpponentName = definition?.SpecificOpponent
-                    };
-                });
+                .Select(e => new RaceEventInstance(e, GetEventDefinition(e.EventDefinitionId)));
         }
 
         /// <summary>How likely an eligible event is to turn up when events are generated</summary>
@@ -139,7 +124,7 @@ namespace StreetCorsa.Services.Career
                 if (_random.NextDouble() > chance && eventDef.Schedule != EventSchedule.Permanent)
                     continue;
 
-                var instance = new RaceEventInstance
+                var state = new RaceEventState
                 {
                     EventDefinitionId = eventDef.Id,
                     AvailableFrom = currentTime,
@@ -148,20 +133,13 @@ namespace StreetCorsa.Services.Career
                         EventSchedule.Daily => currentTime.AddHours(24),
                         EventSchedule.Weekly => currentTime.AddDays(7),
                         _ => null
-                    },
-                    TrackId = eventDef.TrackId,
-                    OpponentName = eventDef.SpecificOpponent
+                    }
                 };
+                var instance = new RaceEventInstance(state, eventDef);
 
-                // Add to career state, under the instance's id: that is what the invitation hands back
-                career.ActiveEvents.Add(new RaceEventState
-                {
-                    InstanceId = instance.InstanceId,
-                    EventDefinitionId = instance.EventDefinitionId,
-                    AvailableFrom = instance.AvailableFrom,
-                    ExpiresAt = instance.ExpiresAt,
-                    IsCompleted = false
-                });
+                // Add to career state, under the instance's id: that is what the invitation hands back. The plain
+                // state, never the instance: the save keeps only that.
+                career.ActiveEvents.Add(state);
 
                 newEvents.Add(instance);
                 open++;

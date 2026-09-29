@@ -1,47 +1,25 @@
-using StreetCorsa.Models.Race;
+using StreetCorsa.Models.GameState;
 
 namespace StreetCorsa.Models.Career.Events
 {
     /// <summary>
-    /// Represents an active instance of a race event.
-    /// Created when an event is generated/scheduled, tracks completion state.
+    /// Represents an active instance of a race event: the state the save keeps of it (<see cref="RaceEventState"/>),
+    /// with the track and the opponent its definition gives it. Only the state is stored; these two are filled in
+    /// from the definition each time.
     /// </summary>
-    public class RaceEventInstance
+    public class RaceEventInstance : RaceEventState
     {
-        /// <summary>
-        /// Unique ID for this event instance
-        /// </summary>
-        public Guid InstanceId { get; set; } = Guid.NewGuid();
+        public RaceEventInstance()
+        {
+        }
 
-        /// <summary>
-        /// ID of the event definition this is an instance of
-        /// </summary>
-        public string EventDefinitionId { get; set; } = string.Empty;
-
-        /// <summary>
-        /// When this event became available
-        /// </summary>
-        public DateTime AvailableFrom { get; set; }
-
-        /// <summary>
-        /// When this event expires (null = no expiration)
-        /// </summary>
-        public DateTime? ExpiresAt { get; set; }
-
-        /// <summary>
-        /// Whether this event has been completed
-        /// </summary>
-        public bool IsCompleted { get; set; }
-
-        /// <summary>
-        /// Whether the player won the event (if completed)
-        /// </summary>
-        public bool? PlayerWon { get; set; }
-
-        /// <summary>
-        /// When the event was completed (if completed)
-        /// </summary>
-        public DateTime? CompletedAt { get; set; }
+        /// <summary>The instance of a stored state, with what its definition gives it</summary>
+        public RaceEventInstance(RaceEventState state, RaceEventDefinition? definition)
+        {
+            CopyFrom(state);
+            TrackId = definition?.TrackId;
+            OpponentName = definition?.SpecificOpponent;
+        }
 
         /// <summary>
         /// Track used for this event instance
@@ -52,21 +30,5 @@ namespace StreetCorsa.Models.Career.Events
         /// Opponent assigned to this event instance
         /// </summary>
         public string? OpponentName { get; set; }
-
-        /// <summary>
-        /// Check if the event has expired
-        /// </summary>
-        public bool IsExpired(DateTime currentTime)
-        {
-            return ExpiresAt.HasValue && currentTime > ExpiresAt.Value;
-        }
-
-        /// <summary>
-        /// Check if the event is currently available
-        /// </summary>
-        public bool IsAvailable(DateTime currentTime)
-        {
-            return !IsCompleted && !IsExpired(currentTime) && currentTime >= AvailableFrom;
-        }
     }
 }

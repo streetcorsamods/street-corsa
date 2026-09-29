@@ -128,7 +128,20 @@ namespace StreetCorsa.Navigation
         /// </summary>
         public void NavigateTo(IScreen screen)
         {
-            CurrentScreen?.Exit();
+            // A screen that fails to leave does not keep the player on it: it is left as far as it went, and the new
+            // one comes. Stopping here would leave the old screen half-exited and the new one built but never shown.
+            if (CurrentScreen is { } leaving)
+            {
+                try
+                {
+                    leaving.Exit();
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "The {Screen} screen could not be left cleanly; going on", leaving.GetType().Name);
+                }
+            }
+
             CurrentScreen = screen;
             CurrentScreen?.Enter();
         }
