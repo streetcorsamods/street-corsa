@@ -17,7 +17,7 @@ namespace StreetCorsa.Audio;
 /// out while a race has the sound device, where the mixer then rests, and, if the player wants it, while another
 /// window has the focus. The system starts on a worker at start-up, or on the first engine that wants it.
 /// </summary>
-public sealed class AudioHub
+public sealed partial class AudioHub
 {
     private static readonly Lazy<AudioHub> SharedInstance = new(() => new AudioHub());
 
@@ -84,7 +84,11 @@ public sealed class AudioHub
             _pump.Start();
         }
 
-        _ = Task.Run(() => TryGetStudio());
+        // The system, then the cues and their short sounds read in, all off the UI thread
+        _ = Task.Run(() =>
+        {
+            if (TryGetStudio() != IntPtr.Zero) LoadCues();
+        });
     }
 
     /// <summary>New volumes, heard at the next tick of the pump</summary>
@@ -117,7 +121,8 @@ public sealed class AudioHub
     /// Plays a sound file on <paramref name="bus"/>, streamed from disk, once or round and round. Null when there is no
     /// system (yet), or FMOD cannot read the file (logged). UI thread.
     /// </summary>
-    public PlayingSound? Play(AudioBus bus, string path, bool loop)
+    /// <param name="paused">Left paused, for the caller to set it up (a fade in) before it is heard</param>
+    public PlayingSound? Play(AudioBus bus, string path, bool loop, bool paused = false)
     {
         var core = _core;
         if (_system == IntPtr.Zero || core == IntPtr.Zero || _shutDown) return null;
@@ -135,7 +140,7 @@ public sealed class AudioHub
 
         var playing = new PlayingSound(sound, channel, path);
         playing.SetLoop(loop);
-        Warn(FMOD_Channel_SetPaused(channel, 0), "unpause");
+        if (!paused) playing.Resume();
         return playing;
     }
 
@@ -189,6 +194,7 @@ public sealed class AudioHub
             }
 
             if (_mixerSuspended) return;
+            TickAmbience();
             Update();
             if (racing && _fade <= 0f) SuspendMixer();
         }
@@ -319,6 +325,9 @@ public sealed class AudioHub
             _system = IntPtr.Zero;
             _core = IntPtr.Zero;
             if (system == IntPtr.Zero) return true;
+
+            // Their memory goes with the system; the handles must not be used after it
+            ForgetSounds();
 
             foreach (var bus in GroupBuses)
             {

@@ -24,6 +24,7 @@ public static class ContentTypes
     public const string Garages = "garages";
     public const string Warehouses = "warehouses";
     public const string Text = "text";
+    public const string Sfx = "sfx";
 }
 
 /// <summary>

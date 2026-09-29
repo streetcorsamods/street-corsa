@@ -28,6 +28,9 @@ namespace StreetCorsa.Screens.CarLot
     /// </summary>
     public class CarLotScreenViewModel : BaseScreenViewModel
     {
+        /// <summary>The sound of the place</summary>
+        public override string? Ambience => "ambience.warehouse";
+
         /// <summary>How many cars a warehouse holds when no scene is installed to say: the lot is then only the list</summary>
         private const int FallbackCapacity = 10;
 

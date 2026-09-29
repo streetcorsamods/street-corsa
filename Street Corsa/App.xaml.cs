@@ -421,6 +421,7 @@ namespace StreetCorsa
 
             // The sound: the pump here, FMOD on a worker. Muted behind other windows if the player wants it
             Audio.AudioHub.Shared.Start(GameSettingsService.Current.Audio);
+            Audio.Sfx.RegisterClicks();
             Activated += (_, _) => Audio.AudioHub.Shared.SetFocused(true);
             Deactivated += (_, _) => Audio.AudioHub.Shared.SetFocused(false);
 

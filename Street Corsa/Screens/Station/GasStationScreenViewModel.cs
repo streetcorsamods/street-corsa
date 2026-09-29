@@ -32,6 +32,9 @@ namespace StreetCorsa.Screens.Station
     /// </summary>
     public class GasStationScreenViewModel : BaseScreenViewModel
     {
+        /// <summary>The sound of the place</summary>
+        public override string? Ambience => "ambience.station";
+
         // A station that is loading is waited on this long at most before the car is simply there
         private static readonly TimeSpan StationLoadWait = TimeSpan.FromSeconds(25);
 
@@ -188,6 +191,9 @@ namespace StreetCorsa.Screens.Station
                 SendHome("You need a car to go to the gas station. Pick one in your garage first.", "No Car");
                 return;
             }
+
+            // The driveway bell, as the car rolls over the hose
+            Audio.Sfx.Play(Audio.Sfx.StationBell, 0.6f);
 
             if (_car.IsImpounded)
             {

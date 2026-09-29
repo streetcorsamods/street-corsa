@@ -25,6 +25,9 @@ namespace StreetCorsa.Screens.Diner
 
     public class DinerScreenViewModel : BaseScreenViewModel
     {
+        /// <summary>The sound of the place</summary>
+        public override string? Ambience => "ambience.diner";
+
         private readonly NavigationService _navigationService;
         private readonly DialogService _dialogService;
         private readonly Models.GameState.GameState _gameState;

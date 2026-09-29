@@ -1237,7 +1237,7 @@ public class CarViewport3D : D3DViewportBase
         return moving
             .GroupBy(i => TopOf(nodes[i].Source!))
             .OrderBy(g => order.KindOf(g.Key.Definition) is { } kind ? order.StandStripTurnOf(kind) : int.MaxValue)
-            .Select((g, turn) => new PartMove(g.ToList(), order.WayOf(g.Key.Definition), turn * stagger))
+            .Select((g, turn) => new PartMove(g.ToList(), order.WayOf(g.Key.Definition), turn * stagger, order.KindOf(g.Key.Definition)))
             .ToList();
 
         InstalledPart TopOf(InstalledPart part)

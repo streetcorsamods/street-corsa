@@ -31,8 +31,9 @@ public readonly record struct PartHit(PartLayer Layer, int Node);
 /// <summary>
 /// Part nodes that move as one, off the car or onto it, the way the part they are on comes off
 /// (<see cref="WorkOrder.WayOf"/>), after <paramref name="Delay"/> seconds. An empty way is away from what stays.
+/// <paramref name="Kind"/> is the part's work-order kind, for the tool it is heard to take (<see cref="Audio.Sfx.ToolFor"/>).
 /// </summary>
-public sealed record PartMove(IReadOnlyList<int> Nodes, IReadOnlyList<PartWay> Way, float Delay = 0f);
+public sealed record PartMove(IReadOnlyList<int> Nodes, IReadOnlyList<PartWay> Way, float Delay = 0f, string? Kind = null);
 
 /// <summary>
 /// Dark renderer with one extra model (the car's parts) in the scene, and an x-ray mode for the car.
@@ -319,6 +320,9 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     /// </summary>
     private bool IsHoldingTurn => _motions.Any(m => m is PartMotion { IsArriving: false });
 
+    // The crank has been heard for the leg the engine is turning on
+    private bool _turnHeard;
+
     private void TickEngineTurn(float dt)
     {
         // Asked for somewhere else: a new leg from where it is, eased at both ends
@@ -329,9 +333,17 @@ public class GarageRenderer : DarkKn5ObjectRenderer
             _turnTo = target;
             _turnElapsed = 0f;
             _turnSeconds = TurnSeconds(_turnFrom, _turnTo);
+            _turnHeard = false;
         }
 
         if (_turnAngle == _turnTo || IsHoldingTurn) return;
+
+        // The stand's crank, as the engine starts to turn (not while it waits for parts to come off)
+        if (!_turnHeard)
+        {
+            _turnHeard = true;
+            Audio.Sfx.Play(Audio.Sfx.EngineTurns);
+        }
 
         _turnElapsed += Math.Min(dt, MaxTickSeconds);
         _turnAngle = _turnElapsed >= _turnSeconds ? _turnTo : _turnFrom + (_turnTo - _turnFrom) * Ease(_turnElapsed / _turnSeconds);
@@ -532,10 +544,17 @@ public class GarageRenderer : DarkKn5ObjectRenderer
                     _ => outward
                 }).ToArray();
 
+            // One sound a part, however many nodes it is: the tool as it comes off; the clank as it goes into its
+            // place, and the tool turning it tight
+            var tool = Audio.Sfx.ToolFor(move.Kind);
+            var first = true;
             foreach (var node in nodes)
             {
                 _motions.RemoveAll(motion => ReferenceEquals(motion.Node, node));
                 var motion = new PartMotion(node, node.List.LocalMatrix, legs, arriving, move.Delay);
+                if (first && !arriving) motion.StartCues = [(tool, 0f)];
+                if (first && arriving) motion.EndCues = [(Audio.Sfx.Clank, 0f), (tool, 0.18f)];
+                first = false;
                 _motions.Add(motion);
                 motion.Apply();
             }
@@ -582,10 +601,18 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         var height = Math.Max(Math.Max(from.M42, to.M42), clearHeight + origin.Y - box.Minimum.Y);
         var hoist = new Hoist(home, from, to, height, (box.Minimum + box.Maximum) / 2f - origin);
 
+        // The chain as the hoist takes the weight, and the load landing where it goes
+        var first = true;
         foreach (var node in carried)
         {
             _motions.RemoveAll(m => ReferenceEquals(m.Node, node));
             var motion = new CarryMotion(this, node, node.List.LocalMatrix, hoist, delay);
+            if (first)
+            {
+                motion.StartCues = [(Audio.Sfx.Hoist, 0f)];
+                motion.EndCues = [(Audio.Sfx.EngineLands, 0f)];
+                first = false;
+            }
             _motions.Add(motion);
             motion.Apply();
         }
@@ -641,7 +668,11 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         if (_motions.Count == 0) return;
 
         var step = Math.Min(dt, MaxTickSeconds);
-        foreach (var motion in _motions) motion.Advance(step);
+        foreach (var motion in _motions)
+        {
+            motion.Advance(step);
+            motion.PlayCues();
+        }
 
         // A load on the hoist casts its shadow all the way; the shadows change otherwise only as a part gets somewhere,
         // or starts or stops fading (UpdateFading)
@@ -708,6 +739,30 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         {
             _elapsed += dt;
             Apply();
+        }
+
+        /// <summary>Sounds when it sets off, and when it gets there, each after its delay in seconds</summary>
+        public (string Cue, float Delay)[] StartCues { get; set; } = [];
+
+        public (string Cue, float Delay)[] EndCues { get; set; } = [];
+
+        private bool _startHeard;
+        private bool _endHeard;
+
+        /// <summary>The sounds that are due, each once: after every advance</summary>
+        public void PlayCues()
+        {
+            if (HasStarted && !_startHeard)
+            {
+                _startHeard = true;
+                foreach (var (cue, delay) in StartCues) Audio.Sfx.Play(cue, delay);
+            }
+
+            if (IsDone && !_endHeard)
+            {
+                _endHeard = true;
+                foreach (var (cue, delay) in EndCues) Audio.Sfx.Play(cue, delay);
+            }
         }
 
         public abstract void Apply();

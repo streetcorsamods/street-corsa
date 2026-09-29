@@ -182,6 +182,7 @@ namespace StreetCorsa.Screens.UsedParts
             }
             else
             {
+                Audio.Sfx.Play(Audio.Sfx.Purchase);
                 Save("a parts deal");
             }
 

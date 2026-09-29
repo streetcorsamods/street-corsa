@@ -20,6 +20,9 @@ namespace StreetCorsa.Screens.PartShop
     /// </summary>
     public class PartShopScreenViewModel : PartsListScreenViewModel
     {
+        /// <summary>The sound of the place</summary>
+        public override string? Ambience => IsJunkyard ? "ambience.junkyard" : "ambience.shop";
+
         private readonly NavigationService _navigationService;
         private readonly DialogService _dialogService;
         private readonly string _shopId;
@@ -215,6 +218,7 @@ namespace StreetCorsa.Screens.PartShop
             }
             else
             {
+                Audio.Sfx.Play(Audio.Sfx.Purchase);
                 Save("a parts deal");
             }
 

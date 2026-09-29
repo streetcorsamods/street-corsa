@@ -16,7 +16,7 @@ Content\
   streetcorsa\          the base game (loaded first)
   mymod\
     mod.json
-    parts\  sounds\  dealers\  partshops\  racers\  events\  milestones\  victories\  streets\  stations\  warehouses\  showcase\  garages\  text\
+    parts\  sounds\  sfx\  dealers\  partshops\  racers\  events\  milestones\  victories\  streets\  stations\  warehouses\  showcase\  garages\  text\
 ```
 
 `mod.json`:
@@ -220,6 +220,15 @@ One folder per engine sound (a `.bank`, `GUIDs.txt`, an optional `sound.json`), 
 README). The sound's id is its folder's name, namespaced. `sounds.json` pins blocks to sounds:
 `{ "pins": { "engines/mine/block": "my_v8" } }` (the block and the sound are references: the mod's own first); its
 `cars` facts are about installed AC cars, by car id.
+
+### sfx
+
+The game's sound effects, by cue name: `*.json` files of `{ "cues": { "<name>": { ... } } }`, each cue a `bus`
+(`interface`, `effects`, `ambience`, `radio`), its `files` (relative to the json; one is picked at random, never the
+same twice in a row), and optionally `volume` (0..2), `pitch` (how far each play's pitch may wander, 0.05 = 5%),
+`loop` (a place's air) and `cooldown` (seconds before it plays again). A mod's cue of a name the base game has replaces
+it; the base game's cues are in `streetcorsa\sfx\sfx.json` (`ui.click`, `part.ratchet`, `ambience.garage`, ...).
+`.ogg`, `.wav`, `.mp3` and `.flac` play. A button can name a cue of its own (`audio:Sfx.Click="ui.lights"`).
 
 ### dealers
 

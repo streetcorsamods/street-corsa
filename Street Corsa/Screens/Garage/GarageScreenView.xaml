@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:audio="clr-namespace:StreetCorsa.Audio"
              xmlns:controls="clr-namespace:StreetCorsa.Controls"
              xmlns:local="clr-namespace:StreetCorsa.Screens.Garage"
              xmlns:helpers="clr-namespace:StreetCorsa.Helpers"
@@ -396,6 +397,7 @@
                             HorizontalAlignment="Right"
                             VerticalAlignment="Bottom">
                     <ToggleButton Content="Lights"
+                                  audio:Sfx.Click="ui.lights"
                                   Style="{StaticResource ViewportToggleStyle}"
                                   IsChecked="{Binding HeadlightsOn, ElementName=Viewport3D, Mode=TwoWay}"/>
                     <ToggleButton Content="Doors"

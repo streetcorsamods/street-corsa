@@ -50,6 +50,34 @@ public sealed class PlayingSound
         if (_sound != IntPtr.Zero && !AudioHub.Shared.IsShutDown) Warn(FMOD_Channel_SetLoopCount(_channel, loop ? -1 : 0), "set loop count");
     }
 
+    /// <summary>Heard from now: a sound played paused (<see cref="AudioHub.Play"/>) once it is set up</summary>
+    public void Resume()
+    {
+        if (_sound != IntPtr.Zero && !AudioHub.Shared.IsShutDown) Warn(FMOD_Channel_SetPaused(_channel, 0), "unpause");
+    }
+
+    public void SetVolume(float volume)
+    {
+        if (_sound != IntPtr.Zero && !AudioHub.Shared.IsShutDown) Warn(FMOD_Channel_SetVolume(_channel, volume), "set volume");
+    }
+
+    /// <summary>
+    /// From <paramref name="from"/> to <paramref name="to"/> of its volume over <paramref name="seconds"/> of the mixer's
+    /// clock (<paramref name="rate"/> samples a second), sample-accurate; stopped at the end when asked, and then let go
+    /// of the next time <see cref="IsPlaying"/> is asked
+    /// </summary>
+    internal void Fade(float from, float to, float seconds, int rate, bool stopAtEnd)
+    {
+        if (_sound == IntPtr.Zero || AudioHub.Shared.IsShutDown) return;
+        if (!Warn(FMOD_Channel_GetDSPClock(_channel, out _, out var now), "read the mixer's clock")) return;
+
+        var end = now + (ulong)Math.Max(1, seconds * rate);
+        FMOD_Channel_RemoveFadePoints(_channel, 0, ulong.MaxValue);
+        Warn(FMOD_Channel_AddFadePoint(_channel, now, from), "fade point");
+        Warn(FMOD_Channel_AddFadePoint(_channel, end, to), "fade point");
+        if (stopAtEnd) Warn(FMOD_Channel_SetDelay(_channel, 0, end, 1), "stop at the end of the fade");
+    }
+
     public void Stop()
     {
         var (sound, channel) = (_sound, _channel);

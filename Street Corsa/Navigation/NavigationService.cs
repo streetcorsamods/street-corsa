@@ -64,7 +64,13 @@ namespace StreetCorsa.Navigation
         public IScreen? CurrentScreen
         {
             get => _currentScreen;
-            private set => SetProperty(ref _currentScreen, value);
+            private set
+            {
+                if (!SetProperty(ref _currentScreen, value)) return;
+
+                // The place's air follows the screen on show, a screen gone back to after a failed navigation too
+                Audio.AudioHub.Shared.SetAmbience(value?.Ambience);
+            }
         }
 
         /// <param name="setCurrentGame">Makes a loaded or new game the one the app saves on exit and races with</param>

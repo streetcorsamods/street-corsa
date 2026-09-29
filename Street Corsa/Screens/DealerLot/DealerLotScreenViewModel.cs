@@ -26,6 +26,9 @@ namespace StreetCorsa.Screens.DealerLot
     /// </summary>
     public class DealerLotScreenViewModel : BaseScreenViewModel
     {
+        /// <summary>The sound of the place</summary>
+        public override string? Ambience => "ambience.lot";
+
         private readonly NavigationService _navigationService;
         private readonly DialogService _dialogService;
         private readonly Models.GameState.GameState _gameState;

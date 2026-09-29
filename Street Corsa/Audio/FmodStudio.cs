@@ -269,6 +269,35 @@ internal static partial class FmodStudio
     [LibraryImport(CoreDll)]
     public static partial int FMOD_Channel_SetLoopCount(IntPtr channel, int loopCount);
 
+    // FMOD_LOOP_OFF; FMOD_CREATESAMPLE: decoded whole into memory as it opens, the file closed again
+    public const uint ModeLoopOff = 0x1;
+    public const uint ModeCreateSample = 0x100;
+
+    [LibraryImport(CoreDll)]
+    public static partial int FMOD_Channel_SetVolume(IntPtr channel, float volume);
+
+    /// <summary>A playback speed: 1 as recorded, 1.05 a semitone's worth higher</summary>
+    [LibraryImport(CoreDll)]
+    public static partial int FMOD_Channel_SetPitch(IntPtr channel, float pitch);
+
+    /// <summary>The mixer's clock, in samples: the channel's own and its group's (what fade points and delays go by)</summary>
+    [LibraryImport(CoreDll)]
+    public static partial int FMOD_Channel_GetDSPClock(IntPtr channel, out ulong dspClock, out ulong parentClock);
+
+    /// <summary>A volume the channel is at when the group's clock reaches <paramref name="dspClock"/>; ramps between points</summary>
+    [LibraryImport(CoreDll)]
+    public static partial int FMOD_Channel_AddFadePoint(IntPtr channel, ulong dspClock, float volume);
+
+    /// <summary>Starts at the group's clock <paramref name="start"/> (0: now) and stops at <paramref name="end"/> (0: never)</summary>
+    [LibraryImport(CoreDll)]
+    public static partial int FMOD_Channel_SetDelay(IntPtr channel, ulong start, ulong end, int stopChannels);
+
+    [LibraryImport(CoreDll)]
+    public static partial int FMOD_Channel_RemoveFadePoints(IntPtr channel, ulong start, ulong end);
+
+    [LibraryImport(CoreDll)]
+    public static partial int FMOD_System_GetSoftwareFormat(IntPtr system, out int sampleRate, out int speakerMode, out int rawSpeakers);
+
     #region Calls 1.08 may not have
 
     // Looked up by name rather than imported: an import that is not there only fails when it is called, and each

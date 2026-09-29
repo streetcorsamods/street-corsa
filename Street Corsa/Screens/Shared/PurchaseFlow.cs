@@ -81,6 +81,7 @@ namespace StreetCorsa.Screens.Shared
 
             try
             {
+                if (result.Succeeded) Audio.Sfx.Play(Audio.Sfx.Purchase);
                 foreach (var (title, message) in ResultDialogs(result))
                 {
                     _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, message, title));
