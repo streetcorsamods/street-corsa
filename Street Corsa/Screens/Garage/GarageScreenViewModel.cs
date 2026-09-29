@@ -178,7 +178,7 @@ namespace StreetCorsa.Screens.Garage
 
         public bool HasCars => Cars.Count > 0;
 
-        public string BankrollDisplay => $"${_gameState.Player.Money:N0}";
+        public string BankrollDisplay => Bankroll(_gameState.Player.Money);
 
         /// <summary>Showroom model used as the environment of the 3D viewport</summary>
         public string GarageShowroomKn5 => AppSettings.Instance.GarageShowroomKn5;
@@ -205,7 +205,7 @@ namespace StreetCorsa.Screens.Garage
         public string CurrentMonthYear => _gameState.Date.ToString("MMMM yyyy");
         public int CurrentDay => _gameState.Date.Day;
         public string CurrentDayOfWeek => _gameState.Date.ToString("dddd");
-        public string CurrentTimeDisplay => _gameState.Date.ToString("h:mm tt");
+        public string CurrentTimeDisplay => HeaderTime(_gameState.Date);
         public BitmapImage CalendarImage1 => GetRandomCalendarImage(0);
         public BitmapImage CalendarImage2 => GetRandomCalendarImage(1);
         public BitmapImage CalendarImage3 => GetRandomCalendarImage(2);
@@ -514,7 +514,7 @@ namespace StreetCorsa.Screens.Garage
                     }
 
                     // On a copy made here: the workbench may change the car's own parts while the worker reads them
-                    var snapshot = CarSnapshot.Of(car);
+                    var snapshot = car.Snapshot();
                     data = await Task.Run(() => _raceCarDataService.Prepare(snapshot, rateCooling: false));
                 }
 

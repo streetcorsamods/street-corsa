@@ -174,7 +174,7 @@ public class AuditFixesETests
             BodyDamageKmh = [10, 0, 0, 5]
         };
 
-        var copy = CarSnapshot.Of(car);
+        var copy = car.Snapshot();
 
         Assert.Equal(car.InstanceId, copy.InstanceId);
         Assert.Equal(12.5, copy.FuelLitres);
@@ -210,13 +210,15 @@ public class AuditFixesETests
     }
 
     [Fact]
-    public void Sent_home_is_told_why()
+    public void The_garage_later_waits_for_the_navigation_under_way()
     {
         var dialogs = new DialogService();
+        var navigation = Navigation(dialogs);
+        var stuck = new StuckScreen();
+        navigation.SafeNavigate("stuck", () => stuck);
 
-        SendHome.ToGarage(dialogs, Navigation(dialogs), new GameState(), "No car.", "No Car");
+        navigation.NavigateToGarageLater(new GameState());
 
-        var shown = Assert.IsType<InformationDialogViewModel>(dialogs.CurrentDialog);
-        Assert.Equal("No car.", shown.Message);
+        Assert.Same(stuck, navigation.CurrentScreen);
     }
 }

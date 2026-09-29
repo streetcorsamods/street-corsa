@@ -44,7 +44,7 @@ namespace StreetCorsa.Screens.UsedParts
         public ObservableCollection<PartOfferViewModel> Offers { get; } = [];
         public ObservableCollection<string> Groups { get; } = [];
 
-        public string BankrollDisplay => $"${_gameState.Player.Money:N0}";
+        public string BankrollDisplay => Bankroll(_gameState.Player.Money);
 
         /// <summary>The player's own shelf, to sell from</summary>
         public abstract bool IsSellTab { get; }

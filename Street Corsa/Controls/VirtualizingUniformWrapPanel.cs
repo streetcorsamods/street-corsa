@@ -6,7 +6,7 @@ using System.Windows.Media;
 using Point = System.Windows.Point;
 using Size = System.Windows.Size;
 
-namespace StreetCorsa.Screens.Shared
+namespace StreetCorsa.Controls
 {
     /// <summary>
     /// A wrap panel for items all of one size (cards) that only makes the cards in view, where a WrapPanel makes every

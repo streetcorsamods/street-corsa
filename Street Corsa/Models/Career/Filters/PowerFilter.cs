@@ -45,9 +45,8 @@ namespace StreetCorsa.Models.Career.Filters
 
         public bool Matches(CarDefinition car, Car? instance = null)
         {
-            // Try to parse BHP from specs
-            // The one spec parser: "350hp @ 6000rpm" is 350, "1,200hp" is 1200, "335.5 bhp" is 335.5
-            var bhp = StreetCorsa.Parts.Cars.AcSpecs.ParsePower(car.Specs?.Bhp);
+            // The car's own dyno figure when it has one (an engine swap counts), else its spec sheet's power
+            var bhp = CarPower.Of(instance, car);
             if (!bhp.HasValue)
                 return false; // Cars without power data don't match power-based filters
 

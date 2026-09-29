@@ -348,7 +348,7 @@ namespace StreetCorsa.Screens.Shared
                 await _parts.EnsurePartsAsync(car);
 
                 // On a copy made here: the car's own parts belong to the UI thread
-                var snapshot = CarSnapshot.Of(car);
+                var snapshot = car.Snapshot();
                 return await Task.Run(() => _raceCarData.Prepare(snapshot, damage));
             }
             catch (Exception ex)

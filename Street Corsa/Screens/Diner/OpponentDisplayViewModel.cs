@@ -77,12 +77,15 @@ namespace StreetCorsa.Screens.Diner
         // Car stats
         public string CarYear => CarDefinition.Year.HasValue ? CarDefinition.Year.Value.ToString() : "";
 
-        /// <summary>The car's stated power; read by <see cref="AcSpecs"/>, the one parser for ui_car.json numbers</summary>
+        /// <summary>
+        /// The car's power: its dyno figure when it has one, else its spec sheet's (<see cref="Models.GameState.CarPower"/>),
+        /// the same figure the matchup beside it shows
+        /// </summary>
         public string CarPower
         {
             get
             {
-                var power = AcSpecs.ParsePower(CarDefinition.Specs?.Bhp) ?? 0;
+                var power = Models.GameState.CarPower.Of(Opponent.Cars.FirstOrDefault(), CarDefinition) ?? 0;
                 return power > 0 ? $"{power:N0} HP" : "";
             }
         }

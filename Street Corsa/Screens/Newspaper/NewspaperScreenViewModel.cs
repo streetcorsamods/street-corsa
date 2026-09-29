@@ -45,7 +45,7 @@ namespace StreetCorsa.Screens.Newspaper
         public RelayCommand UsedPartsCommand { get; }
         public RelayCommand<EventInvitationViewModel> EnterEventCommand { get; }
 
-        public string BankrollDisplay => $"${_gameState.Player.Money:N0}";
+        public string BankrollDisplay => Bankroll(_gameState.Player.Money);
         public bool SkipEnterAnimation { get; }
 
         // Race Invitations

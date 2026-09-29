@@ -540,11 +540,14 @@ namespace StreetCorsa.Services.Simulation
 
         /// <summary>
         /// The car's dyno horsepower, as the rivals' morning review put it on the dyno (<see cref="Car.PowerHp"/>).
-        /// A car never put on one races on a rough figure from what it cost.
+        /// A dyno figure of 0 or less stays 0: the car has no engine that runs, and does not race. A car never put on
+        /// one races on its spec sheet's power when the caller has its definition (<see cref="CarPower"/>), else on a
+        /// rough figure from what it cost.
         /// </summary>
-        public static double GetCarHP(Car car)
+        public static double GetCarHP(Car car, Models.Catalog.CarDefinition? definition = null)
         {
-            return car.PowerHp is { } hp && double.IsFinite(hp) ? Math.Max(0, hp) : 100 + (double)car.PurchasePrice / 50;
+            if (car.PowerHp is { } hp && double.IsFinite(hp) && hp <= 0) return 0;
+            return CarPower.Of(car, definition) ?? 100 + (double)car.PurchasePrice / 50;
         }
 
         /// <summary>A racer's skill; one who is not an opponent drives like the least skilled of them</summary>

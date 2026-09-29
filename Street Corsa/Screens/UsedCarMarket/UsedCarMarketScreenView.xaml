@@ -4,7 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:bottomBar="clr-namespace:StreetCorsa.Components.BottomBar"
-             xmlns:shared="clr-namespace:StreetCorsa.Screens.Shared"
+             xmlns:controls="clr-namespace:StreetCorsa.Controls"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="800">
     <Grid Background="{StaticResource NewspaperBackgroundBrush}">
@@ -78,7 +78,7 @@
 
             <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
-                    <shared:VirtualizingUniformWrapPanel/>
+                    <controls:VirtualizingUniformWrapPanel/>
                 </ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
 

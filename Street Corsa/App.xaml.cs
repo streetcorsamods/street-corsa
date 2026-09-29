@@ -347,6 +347,7 @@ namespace StreetCorsa
             // that data, so it goes back once the game has closed.
             var acRunning = AcProcesses.AnyRunning();
             var acStillRunning = acRunning && HasLeftoversToRestore(logger);
+            var restoreProblems = new List<string>();
             if (acStillRunning)
             {
                 logger.Warning("Assetto Corsa is running: what an earlier race changed in it goes back once it closes");
@@ -358,7 +359,7 @@ namespace StreetCorsa
             }
             else
             {
-                RestoreInstall(logger);
+                RestoreInstall(logger, restoreProblems);
             }
 
             SweepTempFiles(logger);
@@ -431,6 +432,14 @@ namespace StreetCorsa
                     "Assetto Corsa is still running from an earlier session.\n\n" +
                     "The cars' data and race settings it was started with go back once it closes; races can start after that.",
                     "Assetto Corsa Is Running"));
+            }
+
+            // What stayed changed in AC after the start-up restore: the player is told once, the next start tries again
+            if (restoreProblems.Count > 0)
+            {
+                var message = AssettoCorsaLauncher.RestoreProblemsMessage(restoreProblems);
+                DialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(
+                    DialogService, message.Text, message.Title));
             }
         }
 
@@ -523,10 +532,16 @@ namespace StreetCorsa
         /// Car data, race copies and cfg INI files back as they were before a race. Each part on its own (one that
         /// fails does not stop the other), logged, never throws. Only call it when no AC process runs.
         /// </summary>
-        private void RestoreInstall(IAppLogger? logger)
+        /// <param name="problems">
+        /// Gets a line about each car, copy or cfg file that stayed changed, for start-up to tell the player; the exit
+        /// and fatal paths leave it out and only log
+        /// </param>
+        private void RestoreInstall(IAppLogger? logger, ICollection<string>? problems = null)
         {
-            var restored = AssettoCorsaLauncher.RestoreInstall(CarDataOverlay, IniModificationService, logger);
+            var found = problems ?? new List<string>();
+            var restored = AssettoCorsaLauncher.RestoreInstall(CarDataOverlay, IniModificationService, logger, found);
             if (restored > 0) logger?.Warning("{Count} car(s) and file(s) put back from an earlier race", restored);
+            if (found.Count > 0) logger?.Warning("{Count} thing(s) an earlier race changed stayed changed in Assetto Corsa", found.Count);
         }
 
         /// <summary>

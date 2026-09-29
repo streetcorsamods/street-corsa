@@ -282,6 +282,13 @@ namespace StreetCorsa.Navigation
         public Screens.LoadGame.LoadGameScreenViewModel CreateLoadGameCard(Action back) =>
             new(this, _dialogService, _gameStateRepository, _carPartsService, _setCurrentGame, back);
 
+        /// <summary>
+        /// The garage, once what runs on the UI thread now is over: for a screen that sends the player home from its
+        /// <c>Enter</c>, while the navigation that brought them there is still going on
+        /// </summary>
+        public void NavigateToGarageLater(GameState gameState) =>
+            _ = System.Windows.Threading.Dispatcher.CurrentDispatcher.InvokeAsync(() => NavigateToGarage(gameState));
+
         public bool NavigateToGarage(GameState gameState, bool skipAnimation = false) => SafeNavigate("garage", () =>
             new Screens.Garage.GarageScreenViewModel(
                 this,

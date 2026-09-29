@@ -94,8 +94,7 @@ namespace StreetCorsa.Services.Race
         /// </summary>
         public static double EstimateFor(Car car, Models.Catalog.CarDefinition? definition)
         {
-            var power = car.PowerHp is { } hp && hp > 0 && double.IsFinite(hp) ? hp : StreetCorsa.Parts.Cars.AcSpecs.ParsePower(definition?.Specs?.Bhp);
-            return EstimateEt(power, StreetCorsa.Parts.Cars.AcSpecs.ParseWeight(definition?.Specs?.Weight)) ?? UnknownCarDialIn;
+            return EstimateEt(CarPower.Of(car, definition), StreetCorsa.Parts.Cars.AcSpecs.ParseWeight(definition?.Specs?.Weight)) ?? UnknownCarDialIn;
         }
 
         /// <summary>A rival's dial-in: its car's best quarter when it has run one, else the estimate (<see cref="EstimateFor"/>)</summary>

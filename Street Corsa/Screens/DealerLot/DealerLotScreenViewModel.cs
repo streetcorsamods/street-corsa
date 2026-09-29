@@ -71,11 +71,11 @@ namespace StreetCorsa.Screens.DealerLot
         }
 
         public bool HasSaleNotice => SaleNotice.Length > 0;
-        public string BankrollDisplay => $"${_gameState.Player.Money:N0}";
+        public string BankrollDisplay => Bankroll(_gameState.Player.Money);
 
         /// <summary>The clock, so the hours the drive cost are in front of the player when they arrive</summary>
-        public string DateDisplay => _gameState.Date.ToString("dddd, MMMM d, yyyy");
-        public string TimeDisplay => _gameState.Date.ToString("h:mm tt");
+        public string DateDisplay => HeaderDate(_gameState.Date);
+        public string TimeDisplay => HeaderTime(_gameState.Date);
 
         /// <summary>The lot's 3D scene, or null when the showroom is not installed</summary>
         public string? ShowroomKn5 { get; private set; }

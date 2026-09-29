@@ -6,6 +6,7 @@ using StreetCorsa.Audio;
 using StreetCorsa.Configuration;
 using StreetCorsa.Controls.Street;
 using StreetCorsa.Dialogs;
+using StreetCorsa.Dialogs.Information;
 using StreetCorsa.Logging;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Navigation;
@@ -104,7 +105,7 @@ namespace StreetCorsa.Screens.Station
 
         public string ClockDisplay => _gameState.Date.ToString("h:mm tt", CultureInfo.GetCultureInfo("en-US"));
 
-        public string BankrollDisplay => $"${_gameState.Player.Money:N0}";
+        public string BankrollDisplay => Bankroll(_gameState.Player.Money);
 
         private string _statusText = string.Empty;
 
@@ -311,8 +312,10 @@ namespace StreetCorsa.Screens.Station
 
         private void SendHome(string message, string title)
         {
+            // It says why and takes the player back to the garage, once the navigation that brought them here is over
             _leaving = true;
-            Shared.SendHome.ToGarage(_dialogService, _navigationService, _gameState, message, title);
+            _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, message, title));
+            _navigationService.NavigateToGarageLater(_gameState);
         }
 
         #endregion
@@ -357,7 +360,7 @@ namespace StreetCorsa.Screens.Station
             if (_car != null && Station != null)
             {
                 foreach (var job in GasStation.Jobs(_car, _catalog, Station.Prices, _gameState.Rules.PartPriceMultiplier))
-                    Jobs.Add(new StationJobRow(job, new AsyncRelayCommand(() => DoAsync(job), () => IsAtPump && !_busy && !_leaving && _gameState.Player.Money >= job.Cost)));
+                    Jobs.Add(new StationJobRow(job, new AsyncRelayCommand(() => DoAsync(job), () => IsAtPump && !_busy && !_leaving && _gameState.Player.Money >= job.Cost, name: "StationJob")));
             }
 
             OnPropertyChanged(nameof(HasJobs));

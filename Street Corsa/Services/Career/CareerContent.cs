@@ -16,7 +16,11 @@ namespace StreetCorsa.Services.Career
     /// </summary>
     public sealed class CareerContent
     {
-        private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger("Career");
+        // The logger only when the content is read, not in a static field: a save loaded before the log is up (a tool,
+        // a test) makes a new career, which touches this type
+        private static IAppLogger Logger => LazyLogger.Value;
+
+        private static readonly Lazy<IAppLogger> LazyLogger = new(() => AppLoggerFactory.CreateLogger("Career"));
 
         private static readonly Lazy<CareerContent> InstalledContent = new(() => Load(ModSet.Installed));
 

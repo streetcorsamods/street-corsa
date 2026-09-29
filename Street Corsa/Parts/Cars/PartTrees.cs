@@ -34,7 +34,7 @@ public static class PartTrees
     /// cleaner). A save is anyone's file, and a stack overflow cannot be caught: what hangs deeper is left out, as a
     /// part the catalog does not know is.
     /// </summary>
-    public const int MaxDepth = 64;
+    public const int MaxDepth = PartInstance.MaxDepth;
 
     public static LiveTree? ToInstalled(PartsCatalog catalog, PartInstance root)
     {

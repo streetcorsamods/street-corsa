@@ -176,7 +176,7 @@ namespace StreetCorsa.Screens.Cruise
             _ => "Night"
         } + (MatchupCalculator.IsNight(_gameState.Date) ? " · the stakes are up" : string.Empty);
 
-        public string BankrollDisplay => $"${_gameState.Player.Money:N0}";
+        public string BankrollDisplay => Bankroll(_gameState.Player.Money);
 
         private string _statusText = "You pull over to the curb and let the engine idle.";
 
@@ -429,8 +429,10 @@ namespace StreetCorsa.Screens.Cruise
 
         private void SendHome(string message, string title)
         {
+            // It says why and takes the player back to the garage, once the navigation that brought them here is over
             _leaving = true;
-            Shared.SendHome.ToGarage(_dialogService, _navigationService, _gameState, message, title);
+            _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, message, title));
+            _navigationService.NavigateToGarageLater(_gameState);
         }
 
         private async void Leave(bool toGarage)

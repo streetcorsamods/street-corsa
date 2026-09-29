@@ -635,7 +635,9 @@ public class LotViewport3D : D3DViewportBase
                     continue;
                 }
 
-                if (kn5.Textures.Count > 0 && !kn5.Textures.ContainsKey(picture))
+                // Only a picture the room's file holds: the renderer uploads the file's textures, so any other name
+                // (a room without textures included) would leave the material with none
+                if (!kn5.Textures.ContainsKey(picture))
                 {
                     Logger.Warning("The lot's room has no picture {Picture} for {Material}", picture, material);
                     continue;
