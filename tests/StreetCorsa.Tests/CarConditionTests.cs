@@ -50,16 +50,7 @@ public sealed class CarConditionTests : IDisposable
 
         var car = new Car("car_a") { HasPartsAssigned = true, HasRunningGearAssigned = true };
         car.Parts.Add(block);
-        for (var i = 0; i < RunningGear.Corners; i++)
-        {
-            var rim = new PartInstance("rim") { ParentSlot = RunningGear.WheelSlot(i) };
-            rim.Children.Add(new PartInstance("tyre") { ParentSlot = RunningGear.TyreSlotOnRim });
-            car.Parts.Add(rim);
-            car.Parts.Add(new PartInstance("brake") { ParentSlot = RunningGear.BrakeSlot(i) });
-            car.Parts.Add(new PartInstance("spring") { ParentSlot = RunningGear.SpringSlot(i) });
-            car.Parts.Add(new PartInstance("shock") { ParentSlot = RunningGear.ShockSlot(i) });
-        }
-
+        TestCars.AddRunningGear(car, springs: true);
         return car;
     }
 
@@ -502,7 +493,7 @@ public sealed class CarConditionTests : IDisposable
         Assert.Empty(RepairShop.Jobs(NewCar(), catalog: null));
     }
 
-    private static readonly Lazy<PartsCatalog> Catalog = new(() => PartsCatalog.Load(RepoPaths.PartsFolder));
+    private static Lazy<PartsCatalog> Catalog => TestCars.Catalog;
 
     /// <summary>A real Mopar 340 in a car, its tree as the factory puts one in</summary>
     [Fact]
@@ -544,14 +535,7 @@ public sealed class CarConditionTests : IDisposable
         Assert.Equal("rod", CarCondition.FailedPart(car, GroupOf)?.DefinitionId);
     }
 
-    private static Car CarWithRealEngine(PartsCatalog catalog)
-    {
-        var build = catalog.EngineBuilds.Single(b => b.Id.EndsWith("chrysler-v8-pack/chrysler-la-340-275-hp", StringComparison.Ordinal));
-        var tree = PartTreeBuilder.BuildEngine(catalog, build)!;
-        var car = new Car("car_a") { HasPartsAssigned = true };
-        car.Parts.Add(PartTrees.FromInstalled(tree.Root, PartInstance.CarEngineSlot));
-        return car;
-    }
+    private static Car CarWithRealEngine(PartsCatalog catalog) => TestCars.WithRealEngine(catalog);
 
     [Fact]
     public void A_real_engine_blown_in_a_race_needs_a_rebuild_that_puts_it_right()

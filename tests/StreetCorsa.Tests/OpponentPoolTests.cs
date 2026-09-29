@@ -19,33 +19,6 @@ internal sealed class FixedRandom(double roll) : Random
     public override double NextDouble() => roll;
 }
 
-/// <summary>The real parts catalog and nothing else</summary>
-internal sealed class CatalogParts : ICarPartsService
-{
-    private static readonly Lazy<PartsCatalog> Loaded = new(() => PartsCatalog.Load(RepoPaths.PartsFolder));
-    private static readonly Lazy<EngineBuildIndex> Index = new(() => EngineBuildIndex.Create(Loaded.Value));
-
-    public PartsCatalog Catalog => Loaded.Value;
-    public EngineBuildIndex Builds => Index.Value;
-    public bool IsAvailable => true;
-    public Task WarmUpAsync() => Task.CompletedTask;
-    public RatedBuild? GetStockBuild(CarDefinition car) => null;
-    public bool EnsureParts(Car car) => false;
-    public Task<bool> EnsurePartsAsync(Car car) => Task.FromResult(false);
-    public bool BringUpToDate(GameState game) => false;
-    public BuiltEngine? CreateUsedEngine(CarDefinition car, double condition) => null;
-    public string? Describe(PartInstance engine, EngineReport? report) => null;
-    public EngineReport? Evaluate(Car car) => null;
-    public EngineCoolingRating? RateCooling(Car car, EngineReport? engine) => null;
-    public Func<PartInstance, double, double>? EngineCoolingOf(Car car) => null;
-    public SoundLibrary Sounds => throw new NotSupportedException();
-    public CarSound? ChooseSound(Car car, EngineReport? report) => null;
-    public double? FactoryEngineMass(Car car) => null;
-    public AcCarSpecs? Specs(string carDefinitionId) => null;
-    public EngineLayout EngineLayoutOf(string carDefinitionId) => EngineLayout.Front;
-    public (RunningGearFactory.AxleParts Front, RunningGearFactory.AxleParts Rear)? FactoryRunningGear(Car car) => null;
-}
-
 public class OpponentPoolRulesTests
 {
     [Fact]

@@ -162,26 +162,17 @@ public class CarSaleServiceTests
 {
     private const decimal Worth = 2000m;
 
-    private sealed class FakeTime : IGameTimeService
+    /// <summary>Quiet time that keeps what was spent, and moves the clock on by it</summary>
+    private sealed class FakeTime : QuietTime
     {
         public List<GameAction> Spent { get; } = [];
-        public int DayStartHour => GameState.DayStartHour;
-        public int DayEndHour => GameState.DayEndHour;
 
-        public Task<TimeSpendResult> SpendTimeAsync(GameState gameState, GameAction action)
+        public override Task<TimeSpendResult> SpendTimeAsync(GameState gameState, GameAction action)
         {
             Spent.Add(action);
             gameState.Date = gameState.Date.AddMinutes(action.GetTimeInMinutes());
             return Task.FromResult(new TimeSpendResult());
         }
-
-        public Task<TimeSpendResult> SpendTimeAsync(GameState gameState, int minutes) => Task.FromResult(new TimeSpendResult());
-        public int GetRemainingMinutesToday(GameState gameState) => 600;
-        public double GetRemainingHoursToday(GameState gameState) => 10;
-        public string GetFormattedTime(GameState gameState) => string.Empty;
-        public string GetFormattedDate(GameState gameState) => string.Empty;
-        public bool HasTimeFor(GameState gameState, GameAction action) => true;
-        public Task<TimeSpendResult> EndDayAsync(GameState gameState) => Task.FromResult(new TimeSpendResult());
     }
 
     private readonly FakeMarket _market = new(Worth, [new() { Id = "industrial_motors", Name = "Industrial Motors" }]);
