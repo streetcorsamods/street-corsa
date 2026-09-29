@@ -36,6 +36,9 @@ public sealed class EngineRunner : INotifyPropertyChanged
     private bool _listening;
     private bool _soundFailed;
 
+    // A frame that threw has been logged: one that throws again is not logged each frame
+    private bool _tickFailedLogged;
+
     // Driven by the wheels (a car on the move): the engine's speed and the throttle, or null when it runs free
     private double? _drivenRpm;
     private double _drivenThrottle;
@@ -291,7 +294,27 @@ public sealed class EngineRunner : INotifyPropertyChanged
 
         var dt = _lastFrame == TimeSpan.Zero ? 1.0 / 60 : (now - _lastFrame).TotalSeconds;
         _lastFrame = now;
-        Tick(dt, now);
+        try
+        {
+            Tick(dt, now);
+        }
+        catch (Exception ex)
+        {
+            // A throw here would reach the dispatcher's handler every frame: the engine goes off instead, and the
+            // clock with it, until it is started again
+            if (!_tickFailedLogged) _logger.Error(ex, "The engine's frame failed: it is switched off");
+            _tickFailedLogged = true;
+            try
+            {
+                StopNow();
+            }
+            catch (Exception stopEx)
+            {
+                // Whatever threw may throw on the way out too; the clock is stopped all the same
+                _logger.Warning(stopEx, "The engine could not be switched off cleanly");
+                StopTicking();
+            }
+        }
     }
 
     private void Tick(double dt, TimeSpan frame)

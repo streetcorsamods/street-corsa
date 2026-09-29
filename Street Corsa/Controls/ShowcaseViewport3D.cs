@@ -253,6 +253,10 @@ public class ShowcaseViewport3D : D3DViewportBase
         var placements = ShowcaseLineup.Arrange(set.Cars.Count, set.Scene.WallRadius, _random);
         var budget = CarByteBudget;
 
+        // A slot a car failed to load into, still empty: the next car takes it. The renderer cannot drop a slot, so
+        // a new one for every car that failed would leave them piling up in the room.
+        CarSlot? spare = null;
+
         for (var i = 0; i < placements.Count && i < set.Cars.Count; i++)
         {
             var entry = set.Cars[i];
@@ -272,16 +276,18 @@ public class ShowcaseViewport3D : D3DViewportBase
             try
             {
                 // The first car in takes the main slot; StandInLayout gives it the middle
-                var slot = _lineup.Count == 0 ? renderer.MainSlot : renderer.AddCar(null);
+                var slot = _lineup.Count == 0 ? renderer.MainSlot : spare ?? renderer.AddCar(null);
+                spare = ReferenceEquals(slot, renderer.MainSlot) ? null : slot;
 
                 // The slot hands a matrix set while it was empty to the car it is given: set before and after
                 Place(slot, placements[i]);
-                await TrackDeviceWork(slot.SetCarAsync(CarDescription.FromDirectory(directory), skin));
+                await TrackDeviceWork(slot.SetCarAsync(CarDescription.FromDirectory(directory), skin, RendererToken));
                 if (Renderer != renderer || !IsLoaded) return;
 
                 Place(slot, placements[i]);
                 if (slot.CarNode == null) continue;
 
+                spare = null;
                 budget -= bytes;
                 _lineup.Add(new LineupCar(entry, slot, placements[i], FrameOf(slot)));
                 Invalidate();

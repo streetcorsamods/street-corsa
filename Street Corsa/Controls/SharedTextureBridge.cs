@@ -33,6 +33,7 @@ public sealed partial class SharedTextureBridge : IDisposable
             // old binding is stale, so drop it and let the next present build a new one.
             if (_image.IsFrontBufferAvailable)
             {
+                ReplaceDeviceIfLost();
                 _boundTarget = IntPtr.Zero;
                 FrontBufferRestored?.Invoke(this, EventArgs.Empty);
             }
@@ -108,6 +109,34 @@ public sealed partial class SharedTextureBridge : IDisposable
     }
 
     /// <summary>
+    /// A D3D9Ex device is never reported lost the old way (TestCooperativeLevel always succeeds on it), so the front
+    /// buffer coming back is where WPF's D3D9 interop has it asked: a device that was removed or hung is let go,
+    /// with the texture on it, and the next present raises a new one. Waiting for the DX11 side to throw first would
+    /// leave the picture frozen when only the D3D9 side went.
+    /// </summary>
+    private void ReplaceDeviceIfLost()
+    {
+        if (_device == null) return;
+
+        try
+        {
+            // Vortice throws for a failure code (lost, hung, removed); an occluded window or a mode change is no failure
+            _device.CheckDeviceState(IntPtr.Zero);
+            return;
+        }
+        catch (SharpGen.Runtime.SharpGenException)
+        {
+            // Let go of below
+        }
+
+        ReleaseSurface();
+        _device.Dispose();
+        _device = null;
+        _d3d9?.Dispose();
+        _d3d9 = null;
+    }
+
+    /// <summary>
     /// Shows the given render target. Rebinds first when it is not the one already on screen, which is what
     /// happens after a resize: the renderer makes a new target and the old pointer is dead.
     /// </summary>
@@ -136,6 +165,9 @@ public sealed partial class SharedTextureBridge : IDisposable
     private void Bind(IntPtr renderTarget)
     {
         ReleaseSurface();
+
+        // Raised again if the device was let go when the front buffer came back (ReplaceDeviceIfLost)
+        EnsureDevice();
 
         // Owned by the renderer - do not dispose
         var texture = D3D11.Texture2D.FromPointer(renderTarget);

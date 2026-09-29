@@ -1,5 +1,4 @@
 using System.Globalization;
-using AcTools.DataFile;
 using AcTools.Render.Kn5Specific.Objects;
 using Sx = SlimDX;
 
@@ -50,7 +49,7 @@ internal sealed class CarInstruments
 
     /// <summary>The car's needles and steering wheel; null when there is no car or its data cannot be read (logged)</summary>
     /// <param name="data">The car's data, read once by the caller (<see cref="SceneLights.DataOf"/>); null when it has none</param>
-    public static CarInstruments? TryRead(Kn5RenderableCar? car, DataWrapper? data, string carDirectory, Logging.IAppLogger logger)
+    public static CarInstruments? TryRead(Kn5RenderableCar? car, CarData? data, string carDirectory, Logging.IAppLogger logger)
     {
         try
         {
@@ -64,12 +63,12 @@ internal sealed class CarInstruments
     }
 
     /// <summary>The car's needles and steering wheel</summary>
-    public static CarInstruments Read(Kn5RenderableCar car, DataWrapper data)
+    public static CarInstruments Read(Kn5RenderableCar car, CarData data)
     {
-        var controls = data.GetIniFile("car.ini")["CONTROLS"];
-        var ratio = controls.GetFloat("STEER_RATIO", 16f);
-        var steerLock = controls.GetFloat("STEER_LOCK", 450f);
-        var wheelbase = data.GetIniFile("suspensions.ini")["BASIC"].GetFloat("WHEELBASE", 2.8f);
+        var carIni = data.Ini("car.ini");
+        var ratio = CarData.Float(carIni, "CONTROLS", "STEER_RATIO", 16f);
+        var steerLock = CarData.Float(carIni, "CONTROLS", "STEER_LOCK", 450f);
+        var wheelbase = CarData.Float(data.Ini("suspensions.ini"), "BASIC", "WHEELBASE", 2.8f);
         var instruments = new CarInstruments(ratio is > 1 and < 50 ? ratio : 16f, steerLock is > 30 and < 1200 ? steerLock : 450f,
             wheelbase is > 1.5f and < 5f ? wheelbase : 2.8f);
 
@@ -78,18 +77,18 @@ internal sealed class CarInstruments
             if (car.GetDummyByName(name) is { } wheel) instruments._wheels.Add((wheel, wheel.LocalMatrix));
         }
 
-        var ini = data.GetIniFile("analog_instruments.ini");
+        var ini = data.Ini("analog_instruments.ini");
         foreach (var (section, kind) in new[]
                  {
                      ("SPEED_INDICATOR", "speed"), ("RPM_INDICATOR", "rpm"), ("FUEL_INDICATOR", "fuel"), ("WATER_TEMP", "water"),
                      ("OIL_TEMP", "oil")
                  })
         {
-            var entry = ini[section];
-            var nodeName = entry.GetNonEmpty("OBJECT_NAME");
+            var nodeName = CarData.Text(ini, section, "OBJECT_NAME");
             if (nodeName == null || car.GetDummyByName(nodeName) is not { } node) continue;
-            instruments._needles.Add(new Needle(node, node.LocalMatrix, kind, entry.GetFloat("ZERO", 0f), entry.GetFloat("STEP", 0f),
-                entry.GetFloat("MIN_VALUE", float.MinValue), Lut(entry.GetNonEmpty("LUT"))));
+            instruments._needles.Add(new Needle(node, node.LocalMatrix, kind, CarData.Float(ini, section, "ZERO", 0f),
+                CarData.Float(ini, section, "STEP", 0f), CarData.Float(ini, section, "MIN_VALUE", float.MinValue),
+                Lut(CarData.Text(ini, section, "LUT"))));
         }
 
         return instruments;

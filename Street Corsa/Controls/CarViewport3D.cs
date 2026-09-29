@@ -296,7 +296,7 @@ public class CarViewport3D : D3DViewportBase
 
     /// <summary>
     /// The engine on the stand beside the car, with everything on it; null for an empty stand. The stand is always in
-    /// the garage while there is a <see cref="PartsCatalog"/>.
+    /// the garage while there is a <see cref="PartsCatalog"/>. A tree of the view's own, as <see cref="Engine"/> is.
     /// </summary>
     public InstalledPart? StandEngine
     {
@@ -349,7 +349,10 @@ public class CarViewport3D : D3DViewportBase
 
     /// <summary>
     /// The car's engine block with everything that is on it; null for an empty engine bay.
-    /// The tree is drawn as it is when set: after a change, set a new tree.
+    /// The tree is drawn as it is when set: after a change, set a new tree. It is the view's own from then on and is
+    /// walked on worker threads while the models are built, so nothing may change it once set (the workbench makes a
+    /// new tree out of the saved parts for every change: PartTrees.ToInstalled). The same goes for <see cref="Gear"/>,
+    /// <see cref="StandEngine"/> and <see cref="Candidates"/>.
     /// </summary>
     public InstalledPart? Engine
     {
@@ -361,7 +364,7 @@ public class CarViewport3D : D3DViewportBase
         nameof(Gear), typeof(IReadOnlyList<CarPart>), typeof(CarViewport3D),
         new PropertyMetadata(null, (d, _) => ((CarViewport3D)d).QueueApplyParts()));
 
-    /// <summary>What sits on the car's wheel slots, each with what is on it; null or empty for bare hubs</summary>
+    /// <summary>What sits on the car's wheel slots, each with what is on it; null or empty for bare hubs. Trees of the view's own, as <see cref="Engine"/> is.</summary>
     public IReadOnlyList<CarPart>? Gear
     {
         get => (IReadOnlyList<CarPart>?)GetValue(GearProperty);
@@ -383,7 +386,10 @@ public class CarViewport3D : D3DViewportBase
         nameof(Candidates), typeof(IReadOnlyList<MountCandidate>), typeof(CarViewport3D),
         new PropertyMetadata(null, (d, _) => ((CarViewport3D)d).ApplyCandidates()));
 
-    /// <summary>A loose part in every place it could go, shown glowing; a click on one raises <see cref="CandidateClicked"/></summary>
+    /// <summary>
+    /// A loose part in every place it could go, shown glowing; a click on one raises <see cref="CandidateClicked"/>.
+    /// A new list of trees of the view's own for every change, as <see cref="Engine"/> is.
+    /// </summary>
     public IReadOnlyList<MountCandidate>? Candidates
     {
         get => (IReadOnlyList<MountCandidate>?)GetValue(CandidatesProperty);
@@ -483,7 +489,7 @@ public class CarViewport3D : D3DViewportBase
         else
         {
             ReleaseRock();
-            await TrackDeviceWork(renderer.MainSlot.SetCarAsync(car, skinId ?? Kn5RenderableCar.DefaultSkin));
+            await TrackDeviceWork(renderer.MainSlot.SetCarAsync(car, skinId ?? Kn5RenderableCar.DefaultSkin, RendererToken));
 
             // The control may have been unloaded while the car was loading, and the renderer is gone then
             if (renderer != Renderer) return;

@@ -120,6 +120,22 @@ internal sealed class CarBodyRock
         return true;
     }
 
+    // How far the body has to lean or lift from where the shadows were last drawn before they are drawn again: under a
+    // third of a degree and 5 mm, more than an idling engine shakes it from one side to the other (a lumpy four: about
+    // a quarter of a degree and 4 mm), so a car ticking over does not have its shadow maps drawn again every frame. A
+    // blip leans it by more than a degree; a shadow that far behind moves a few millimetres on the floor.
+    public const float ShadowLeanStep = 0.005f;
+    public const float ShadowHeaveStep = 0.005f;
+
+    /// <summary>
+    /// The body has moved far enough from <paramref name="shadowed"/>, the pose its shadows were drawn for, that they
+    /// would show it: time to draw them again. Settling back to rest is drawn by the release, whatever the step.
+    /// </summary>
+    public static bool ShadowsDue(BodyPose shadowed, BodyPose now) =>
+        Math.Abs(now.Roll - shadowed.Roll) >= ShadowLeanStep
+        || Math.Abs(now.Pitch - shadowed.Pitch) >= ShadowLeanStep
+        || Math.Abs(now.Heave - shadowed.Heave) >= ShadowHeaveStep;
+
     /// <summary>Everything back where it was</summary>
     public void Release()
     {

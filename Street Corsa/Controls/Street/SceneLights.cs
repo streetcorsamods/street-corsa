@@ -1,6 +1,8 @@
+using System.Globalization;
 using System.IO;
 using AcTools.DataFile;
 using AcTools.Render.Kn5SpecificForwardDark.Lights;
+using StreetCorsa.Parts.Export;
 using StreetCorsa.Services.Street;
 using Sx = SlimDX;
 
@@ -54,19 +56,18 @@ internal static class SceneLights
     public static AcCarFrame FrameOf(string carDirectory, Action<Exception>? failed = null) => FrameOf(DataOf(carDirectory, failed));
 
     /// <summary><see cref="FrameOf(string, Action{Exception}?)"/> from data already read (<see cref="DataOf"/>)</summary>
-    public static AcCarFrame FrameOf(DataWrapper? data) => data == null ? new AcCarFrame(FallbackEye, 0f) : AcCarFrame.FromData(data);
+    public static AcCarFrame FrameOf(CarData? data) => data == null ? new AcCarFrame(FallbackEye, 0f) : AcCarFrame.FromData(data);
 
     /// <summary>
-    /// A car's data files (data.acd decrypted when it has one), read once for all that wants them; null when it has
-    /// none or they cannot be read (<paramref name="failed"/> hears why)
+    /// A car's data files (data.acd decrypted when it has one), read once for all that wants them, the way the race
+    /// export reads them (<see cref="AcCarDataReader"/>); null when it has none or they cannot be read
+    /// (<paramref name="failed"/> hears why)
     /// </summary>
-    public static DataWrapper? DataOf(string carDirectory, Action<Exception>? failed = null)
+    public static CarData? DataOf(string carDirectory, Action<Exception>? failed = null)
     {
         try
         {
-            if (!Directory.Exists(carDirectory)) return null;
-            var data = DataWrapper.FromCarDirectory(carDirectory);
-            return data.IsEmpty ? null : data;
+            return CarData.Open(carDirectory);
         }
         catch (Exception ex)
         {
@@ -133,34 +134,75 @@ internal sealed record AcCarFrame(float EyeX, float EyeY, float EyeZ, float Lift
     public Sx.Vector3 Eye => new(EyeX, EyeY, EyeZ);
 
     /// <summary>The car's frame; null when it has no data</summary>
-    public static AcCarFrame? Read(string carDirectory)
-    {
-        if (!Directory.Exists(carDirectory)) return null;
-        var data = DataWrapper.FromCarDirectory(carDirectory);
-        return data.IsEmpty ? null : FromData(data);
-    }
+    public static AcCarFrame? Read(string carDirectory) => CarData.Open(carDirectory) is { } data ? FromData(data) : null;
 
     /// <summary>
     /// The car's frame from its data. A car that gives no driver's eyes has them where most cars do: how it sits does
     /// not hang on them
     /// </summary>
-    public static AcCarFrame FromData(DataWrapper data)
+    public static AcCarFrame FromData(CarData data)
     {
-        var car = data.GetIniFile("car.ini");
-        var given = car["GRAPHICS"].GetVector3F("DRIVEREYES");
+        var car = data.Ini("car.ini");
+        var given = CarData.Vector3(car, "GRAPHICS", "DRIVEREYES");
         var eyes = given is { Length: 3 } && given.Any(v => v != 0) && given.All(float.IsFinite)
             ? given
             : [SceneLights.FallbackEye.X, SceneLights.FallbackEye.Y, SceneLights.FallbackEye.Z];
-        var offset = car["BASIC"].GetVector3F("GRAPHICS_OFFSET") is { Length: 3 } o ? o : [0f, 0f, 0f];
+        var offset = CarData.Vector3(car, "BASIC", "GRAPHICS_OFFSET") ?? [0f, 0f, 0f];
 
         // The centre of gravity's height over the road, the axles' mean; the model's origin is the offset from it
-        var suspensions = data.GetIniFile("suspensions.ini");
-        var tyres = data.GetIniFile("tyres.ini");
-        float Height(string axle) => tyres[axle].GetFloat("RADIUS", 0f) - suspensions[axle].GetFloat("BASEY", 0f);
+        var suspensions = data.Ini("suspensions.ini");
+        var tyres = data.Ini("tyres.ini");
+        float Height(string axle) => CarData.Float(tyres, axle, "RADIUS", 0f) - CarData.Float(suspensions, axle, "BASEY", 0f);
         var (front, rear) = (Height("FRONT"), Height("REAR"));
         var cog = front > 0 && rear > 0 ? (front + rear) / 2f : 0f;
         var lift = cog > 0 ? cog + offset[1] : 0f;
 
         return new AcCarFrame(eyes[0], eyes[1], eyes[2], float.IsFinite(lift) && Math.Abs(lift) < 2f ? lift : 0f);
     }
+}
+
+/// <summary>
+/// A car's data files as the race export reads them (<see cref="AcCarDataReader"/>, <see cref="IniText"/>): data.acd
+/// decoded as Latin-1, a missing file an empty ini. The street's and the gas station's viewports read how a car sits and
+/// what its gauges are from these, the same files the car races on.
+/// </summary>
+internal sealed class CarData(Func<string, string?> read)
+{
+    private readonly Dictionary<string, IniText> _files = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The car's data; null when it has neither a data folder nor data.acd. Throws when they cannot be read.</summary>
+    public static CarData? Open(string carDirectory)
+    {
+        if (!Directory.Exists(carDirectory)) return null;
+        if (!Directory.Exists(Path.Combine(carDirectory, AcCarData.DataFolder)) && !File.Exists(Path.Combine(carDirectory, AcdFile.FileName)))
+            return null;
+
+        return new CarData(AcCarDataReader.ForCar(carDirectory));
+    }
+
+    /// <summary>One of the car's ini files, read once; empty when the car has no such file</summary>
+    public IniText Ini(string name)
+    {
+        if (!_files.TryGetValue(name, out var ini)) _files[name] = ini = new IniText(read(name));
+        return ini;
+    }
+
+    /// <summary>A number from an ini file; <paramref name="fallback"/> when it is not there or not a number</summary>
+    public static float Float(IniText ini, string section, string key, float fallback) =>
+        ini.GetNumber(section, key) is { } value ? (float)value : fallback;
+
+    /// <summary>
+    /// Three numbers in a row, "x, y, z"; null when the key is not there or holds another count. A part that is not a
+    /// number reads as 0, as AC's own tools have it.
+    /// </summary>
+    public static float[]? Vector3(IniText ini, string section, string key)
+    {
+        var parts = ini.Get(section, key)?.Split(',');
+        if (parts is not { Length: 3 }) return null;
+
+        return parts.Select(p => float.TryParse(p.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : 0f).ToArray();
+    }
+
+    /// <summary>A text value, null when it is not there or empty</summary>
+    public static string? Text(IniText ini, string section, string key) => ini.Get(section, key) is { Length: > 0 } text ? text : null;
 }

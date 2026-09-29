@@ -422,17 +422,20 @@ public class LotViewport3D : D3DViewportBase
                     ? renderer.AddCar(null)
                     : renderer.MainSlot);
 
+                // The bay keeps its slot before the car is in: the renderer cannot drop a slot, so one that was only
+                // kept once a car loaded would leave another empty one behind for every car that failed to load
+                _slots[i] = slot;
+
                 // Once before the car arrives and once after. The slot keeps a matrix set while it was empty
                 // and gives it to the car on arrival, so without the first call the car would appear for a
                 // frame wherever the slot was last told to be; without the second it would stay there.
                 Place(slot, car);
                 await TrackDeviceWork(slot.SetCarAsync(CarDescription.FromDirectory(car.CarDirectory),
-                    car.SkinId ?? Kn5RenderableCar.DefaultSkin));
+                    car.SkinId ?? Kn5RenderableCar.DefaultSkin, RendererToken));
 
                 if (Renderer != renderer || !IsLoaded) return;
 
                 Place(slot, car);
-                _slots[i] = slot;
                 _standing[i] = car;
                 Invalidate();
             }
@@ -529,15 +532,17 @@ public class LotViewport3D : D3DViewportBase
             {
                 var slot = i == main ? renderer.MainSlot : renderer.AddCar(null);
 
+                // Kept before the car is in, so a car that fails to load leaves its slot to the bay (see UpdateCarsAsync)
+                _slots[i] = slot;
+
                 // Before and after: see the note in UpdateCarsAsync
                 Place(slot, car);
                 await TrackDeviceWork(slot.SetCarAsync(CarDescription.FromDirectory(car.CarDirectory),
-                    car.SkinId ?? Kn5RenderableCar.DefaultSkin));
+                    car.SkinId ?? Kn5RenderableCar.DefaultSkin, RendererToken));
 
                 if (Renderer != renderer || !IsLoaded) return;
 
                 Place(slot, car);
-                _slots[i] = slot;
                 _standing[i] = car;
                 LoadedCount++;
 
