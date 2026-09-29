@@ -176,6 +176,24 @@ namespace StreetCorsa.Services.Catalog
 
             foreach (var car in activeCars)
             {
+                try
+                {
+                    ProfileOne(car);
+                }
+                catch (Exception ex)
+                {
+                    // One mod car with figures nobody could price is not every car's profile: it goes without one
+                    _logger.Error(ex, "Could not work out the profile of {CarId}", car.Id);
+                }
+            }
+
+            if (fresh.Count > 0 || changes.Count > 0) _profileRepo.MergeProfiles(fresh, changes);
+
+            _logger.Information("Profile generation complete. Created: {Created}, Regenerated: {Regenerated}, Existing: {Existing}",
+                created, regenerated, existing);
+
+            void ProfileOne(CarDefinition car)
+            {
                 var hash = DefinitionHashOf(car);
                 if (!profiles.TryGetValue(car.Id, out var profile))
                 {
@@ -204,11 +222,6 @@ namespace StreetCorsa.Services.Catalog
                     existing++;
                 }
             }
-
-            if (fresh.Count > 0 || changes.Count > 0) _profileRepo.MergeProfiles(fresh, changes);
-
-            _logger.Information("Profile generation complete. Created: {Created}, Regenerated: {Regenerated}, Existing: {Existing}",
-                created, regenerated, existing);
         }
 
         // Helper methods
@@ -228,8 +241,13 @@ namespace StreetCorsa.Services.Catalog
                 return NoSpecsPrice;
             }
 
-            return (decimal)(ReferencePrice * Math.Pow(powerToWeight / ReferenceHpPerTonne, PriceExponent));
+            // A mod's ui_car.json can say anything (a million bhp, a car of one kilo): a price past what a decimal holds
+            // would throw in the cast. The base price is clamped to $500,000 in the end anyway.
+            var price = ReferencePrice * Math.Pow(powerToWeight / ReferenceHpPerTonne, PriceExponent);
+            return double.IsFinite(price) ? (decimal)Math.Min(price, MaxPowerWeightPrice) : NoSpecsPrice;
         }
+
+        private const double MaxPowerWeightPrice = 1e9;
 
         private const decimal NoSpecsPrice = 15000m;
         private const double ReferencePrice = 7000;

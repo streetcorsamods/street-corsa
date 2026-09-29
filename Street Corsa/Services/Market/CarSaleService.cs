@@ -1,3 +1,4 @@
+using StreetCorsa.Helpers;
 using StreetCorsa.Logging;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Parts.Cars;
@@ -312,7 +313,7 @@ namespace StreetCorsa.Services.Market
         {
             if (askingPrice <= value) return askingPrice;
 
-            var haggled = RoundToTen((double)askingPrice * (0.85 + 0.15 * Math.Clamp(roll, 0, 1)));
+            var haggled = RoundToTen((double)askingPrice * (0.85 + 0.15 * Unit.Clamp01(roll, ifNotFinite: 0)));
             return Math.Clamp(haggled, Math.Max(0m, value), askingPrice);
         }
 

@@ -35,6 +35,13 @@ namespace StreetCorsa.Services.Opponents
                 .OfType<Offer>()
         ];
 
+        /// <summary>
+        /// Whether an ad found earlier still stands: it is still in the paper, the seller still has the car and does not
+        /// drive it, and it is not in the impound
+        /// </summary>
+        public static bool StillStands(GameState gameState, Offer offer) =>
+            gameState.NewspaperAds.RivalCars?.Contains(offer.Ad) == true && Stands(offer.Ad, offer.Seller) != null;
+
         private static Offer? Stands(RivalCarAd ad, Opponent seller)
         {
             var car = seller.Cars.FirstOrDefault(c => c.InstanceId == ad.CarInstanceId);

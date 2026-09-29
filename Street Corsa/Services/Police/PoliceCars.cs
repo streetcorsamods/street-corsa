@@ -77,13 +77,17 @@ namespace StreetCorsa.Services.Police
             return best;
         }
 
-        /// <summary>The skin folder is a police livery: its ui_skin.json carries <see cref="SkinMarker"/></summary>
+        /// <summary>
+        /// The skin folder is a police livery: its ui_skin.json carries <see cref="SkinMarker"/>. One larger than any
+        /// skin's description (<see cref="Catalog.CarImportService.MaxUiJsonBytes"/>) is not read, and is no police livery.
+        /// </summary>
         public static bool IsPoliceSkin(string skinFolder)
         {
             var path = Path.Combine(skinFolder, "ui_skin.json");
             try
             {
-                return File.Exists(path) && Marker.IsMatch(File.ReadAllText(path));
+                var file = new FileInfo(path);
+                return file.Exists && file.Length <= Catalog.CarImportService.MaxUiJsonBytes && Marker.IsMatch(File.ReadAllText(path));
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {

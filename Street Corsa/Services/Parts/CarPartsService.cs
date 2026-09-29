@@ -92,8 +92,11 @@ namespace StreetCorsa.Services.Parts
             if (!IsAvailable) return null;
 
             var profile = _profileRepo.GetProfile(car.Id);
-            return Builds.Get(profile?.StockEngineBuildId) ?? Suggest(car);
+            return Builds.Get(profile?.StockEngineBuildId) ?? Suggested(car);
         }
+
+        /// <summary>The build the matcher picks for a car without a factory engine on its profile: weighed once a session (the matcher weighs every build)</summary>
+        private RatedBuild? Suggested(CarDefinition car) => _suggestedBuilds.GetOrAdd(car.Id, _ => Suggest(car));
 
         public bool EnsureParts(Car car)
         {
@@ -183,14 +186,11 @@ namespace StreetCorsa.Services.Parts
             return (engine, powerHp) => cooling.Rate(engine.SelfAndDescendants(), powerHp, factory).Cooling;
         }
 
-        // What the car's factory engine was cooled with. The profile's stock build is a lookup; a car without one is
-        // matched to a build once a session (the matcher weighs every build)
+        // What the car's factory engine was cooled with: its factory build (GetStockBuild)
         private FactoryCooling FactoryCoolingOf(Car car)
         {
             if (_catalogRepo.GetCar(car.DefinitionId) is not { } definition) return StreetCorsa.Parts.Cars.FactoryCooling.Unknown;
-            var stock = Builds.Get(_profileRepo.GetProfile(definition.Id)?.StockEngineBuildId)
-                        ?? _suggestedBuilds.GetOrAdd(definition.Id, _ => Suggest(definition));
-            return _cooling.Value.Factory(stock);
+            return _cooling.Value.Factory(GetStockBuild(definition));
         }
 
         // The index weighed every build when it put them on the dyno
@@ -508,7 +508,7 @@ namespace StreetCorsa.Services.Parts
                 if (NeedsNoSuggestion(profile)) continue;
 
                 var car = _catalogRepo.GetCar(profile.CarDefinitionId);
-                var build = car == null ? null : Suggest(car);
+                var build = car == null ? null : Suggested(car);
                 if (build == null) continue;
 
                 // Onto the profile as it is in the database now, not as it was when the loop started: the

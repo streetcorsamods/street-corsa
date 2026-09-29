@@ -13,11 +13,6 @@ namespace StreetCorsa.Services.Catalog
         /// </summary>
         /// <param name="progress">Optional progress callback (current, total, carName)</param>
         Task<ImportResult> ImportCarsAsync(IProgress<ImportProgress>? progress = null);
-
-        /// <summary>
-        /// The same as <see cref="ImportCarsAsync"/>: every import only writes what changed and retires what is gone
-        /// </summary>
-        Task<ImportResult> IncrementalUpdateAsync(IProgress<ImportProgress>? progress = null);
     }
 
     /// <summary>

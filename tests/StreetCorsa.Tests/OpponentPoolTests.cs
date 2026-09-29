@@ -461,7 +461,6 @@ public class NewcomerTests
             DefinitionId = o.DefinitionId, IsKing = o.IsKing, PortraitPath = o.PortraitPath
         }).ToList();
 
-        public Opponent? LoadOpponent(string opponentId) => null;
     }
 
     [Fact]

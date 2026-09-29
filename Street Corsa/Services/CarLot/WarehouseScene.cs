@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using StreetCorsa.Helpers;
 using StreetCorsa.Logging;
 using StreetCorsa.Mods;
 using StreetCorsa.Services.Street;
@@ -69,7 +70,7 @@ namespace StreetCorsa.Services.CarLot
         public WarehouseDressing Dress(int number, int round, StreetLight light)
         {
             var look = Looks.Count == 0 ? null : Looks[round % Looks.Count];
-            var lighting = Lights.TryGetValue(light, out var l) ? l : Lights.Values.FirstOrDefault() ?? StreetScenes.DefaultLighting;
+            var lighting = Lights.TryGetValue(light, out var l) ? l : Lights.Values.FirstOrDefault() ?? SceneLighting.Default;
             if (look != null)
                 lighting = lighting with { Lamps = lighting.Lamps.Select(lamp => lamp with { Color = look.LampColor }).ToList() };
 
@@ -101,18 +102,13 @@ namespace StreetCorsa.Services.CarLot
 
         private sealed record RoomEntry(float HalfLength, float HalfWidth, float Height);
 
-        private sealed record LampEntry(float X, float Y, float Z, float Brightness, float Range);
-
-        private sealed record LightEntry(float Brightness, int[]? Color, float Ambient, int[]? AmbientUp, int[]? AmbientDown,
-            float? CubemapAmbient, float? LampScale);
-
         private sealed record LookEntry(string? Id, Dictionary<string, string?>? Surfaces, int[]? LampColor);
 
         private sealed record DigitsEntry(string? Tens, string? Units, string? Picture);
 
         private sealed record SceneEntry(string? Id, string? Title, string? Model, List<BayEntry?>? Bays, CameraEntry? Camera,
-            RoomEntry? Room, float[]? Sun, Dictionary<string, LightEntry?>? Lights, Dictionary<string, float>? Skylight,
-            List<LampEntry?>? Lamps, List<LookEntry?>? Looks, DigitsEntry? Digits);
+            RoomEntry? Room, float[]? Sun, Dictionary<string, SceneLighting.LightEntry?>? Lights, Dictionary<string, float>? Skylight,
+            List<SceneLighting.LampEntry?>? Lamps, List<LookEntry?>? Looks, DigitsEntry? Digits);
 
         /// <summary>
         /// Every warehouse of every mod (a folder under a mod's <c>warehouses</c>) that loads, by full id. Empty when
@@ -123,8 +119,9 @@ namespace StreetCorsa.Services.CarLot
 
         /// <summary>
         /// The warehouse in <paramref name="folder"/>; null when its file or model is missing or broken, or it has no bays
-        /// (logged). A mod's file is not trusted to be whole: an empty entry in a list is skipped, and a sign picture
-        /// that is no picture name for a digit is dropped.
+        /// (logged). A mod's file is not trusted to be whole: an empty entry in a list is skipped, a sign picture that is
+        /// no picture name for a digit is dropped, and so is a picture name that is not a plain file name. A model outside
+        /// the folder is not read.
         /// </summary>
         public static WarehouseScene? Load(string folder)
         {
@@ -153,7 +150,12 @@ namespace StreetCorsa.Services.CarLot
                 return null;
             }
 
-            var kn5 = Path.Combine(folder, entry.Model ?? "warehouse.kn5");
+            if (!PathNames.TryCombineUnder(folder, entry.Model ?? "warehouse.kn5", out var kn5))
+            {
+                Logger.Warning("The warehouse {Id} names a model outside its folder ({Model})", id, entry.Model);
+                return null;
+            }
+
             if (!File.Exists(kn5))
             {
                 Logger.Warning("The warehouse {Id} has no model {Path}", id, kn5);
@@ -168,33 +170,18 @@ namespace StreetCorsa.Services.CarLot
                 ? new WarehouseRoom(r.HalfLength, r.HalfWidth, r.Height)
                 : (WarehouseRoom?)null;
 
-            var lamps = (entry.Lamps ?? []).OfType<LampEntry>().ToList();
-            var lights = new Dictionary<StreetLight, StreetLighting>();
-            foreach (var (name, light) in entry.Lights ?? [])
-            {
-                if (light == null) continue;
-                if (!Enum.TryParse<StreetLight>(name, ignoreCase: true, out var which))
-                {
-                    Logger.Warning("The warehouse {Id} has a light \"{Light}\", which is no light of the day (day, dusk, night)", id, name);
-                    continue;
-                }
-
-                var scale = light.LampScale ?? 1f;
-                lights[which] = new StreetLighting(light.Brightness, Rgb(light.Color, 200), light.Ambient,
-                    Rgb(light.AmbientUp, 150), Rgb(light.AmbientDown, 150), light.CubemapAmbient ?? 0f,
-                    lamps.Select(l => new StreetLamp(l.X, l.Y, l.Z, Rgb(null, 255), l.Brightness * scale, l.Range)).ToList());
-            }
+            // A warehouse's lamps are white and the same at every hour, only scaled by it (a look colours them)
+            var lamps = (entry.Lamps ?? []).Select(l => l == null ? null : l with { Color = null }).ToList();
+            var lights = SceneLighting.Read(entry.Lights, id, Logger, cubemapAmbient: 0f, sharedLamps: lamps);
 
             var skylight = new Dictionary<StreetLight, float>();
             foreach (var (name, glow) in entry.Skylight ?? [])
             {
-                if (Enum.TryParse<StreetLight>(name, ignoreCase: true, out var which)) skylight[which] = glow;
+                if (SceneLighting.TryParse(name, out var which)) skylight[which] = glow;
             }
 
             var looks = (entry.Looks ?? []).OfType<LookEntry>()
-                .Select((l, i) => new WarehouseLook(l.Id ?? $"look{i + 1}",
-                    (l.Surfaces ?? []).Where(p => p.Value != null).ToDictionary(p => p.Key, p => p.Value!, StringComparer.Ordinal),
-                    Rgb(l.LampColor, 255)))
+                .Select((l, i) => new WarehouseLook(l.Id ?? $"look{i + 1}", Surfaces(id, l.Surfaces), SceneLighting.Rgb(l.LampColor, 255)))
                 .ToList();
 
             var digitPicture = entry.Digits?.Picture;
@@ -209,12 +196,16 @@ namespace StreetCorsa.Services.CarLot
                 entry.Digits?.Tens, entry.Digits?.Units, digitPicture);
         }
 
-        /// <summary>A picture name with the digit in it as <c>{0}</c>, and nothing else string.Format would trip on</summary>
+        /// <summary>
+        /// A picture name with the digit in it as <c>{0}</c>, and nothing else string.Format would trip on; every digit's
+        /// name a plain file name (<see cref="IsPictureName"/>)
+        /// </summary>
         private static bool IsDigitPicture(string picture)
         {
             try
             {
-                return string.Format(picture, 0) != string.Format(picture, 1);
+                return string.Format(picture, 0) != string.Format(picture, 1)
+                       && Enumerable.Range(0, 10).All(digit => IsPictureName(string.Format(picture, digit)));
             }
             catch (FormatException)
             {
@@ -222,8 +213,25 @@ namespace StreetCorsa.Services.CarLot
             }
         }
 
-        // JSON numbers, not the base64 a byte[] is read from
-        private static byte[] Rgb(int[]? color, byte fallback) =>
-            color is { Length: 3 } ? color.Select(c => (byte)Math.Clamp(c, 0, 255)).ToArray() : [fallback, fallback, fallback];
+        /// <summary>
+        /// The surfaces of a look, material to picture. The lot points each material at a texture of the model by this
+        /// name (<c>Controls/LotViewport3D</c>): a name that is not a plain file name (a path out of the folder, a device)
+        /// is dropped here, so no model ever asks the renderer for one.
+        /// </summary>
+        private static Dictionary<string, string> Surfaces(string id, Dictionary<string, string?>? surfaces)
+        {
+            var kept = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var (material, picture) in surfaces ?? [])
+            {
+                if (picture == null) continue;
+                if (IsPictureName(picture)) kept[material] = picture;
+                else Logger.Warning("The warehouse {Id} dresses {Material} in \"{Picture}\", which is no picture name: it keeps its own", id, material, picture);
+            }
+
+            return kept;
+        }
+
+        /// <summary>A texture's name in the model: one plain file name, no folder in it</summary>
+        private static bool IsPictureName(string picture) => PathNames.IsSafeSegment(picture);
     }
 }

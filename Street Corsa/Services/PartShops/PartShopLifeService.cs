@@ -48,25 +48,29 @@ namespace StreetCorsa.Services.PartShops
             var talk = new List<string>();
             var news = new List<NewsArticle>();
 
-            foreach (var shop in shops.Where(s => s.IsTrading)) FadeTrade(shop, date);
-            RunSales(shops, date, talk, news);
-
-            var refresh = gameState.Rules.MarketRefreshEnabled;
-            if (refresh)
+            try
             {
-                foreach (var shop in shops.Where(s => s.Status == DealerStatus.Open)) SellOff(shop, PartShopRules.TownBuysShare);
-            }
+                foreach (var shop in shops.Where(s => s.IsTrading)) FadeTrade(shop, date);
+                RunSales(shops, date, talk, news);
 
-            if (refresh && !shops.Any(s => s.Status == DealerStatus.ClosingDown) && DealerRules.ChangeToday(_random.NextDouble()))
+                var refresh = gameState.Rules.MarketRefreshEnabled;
+                if (refresh)
+                {
+                    foreach (var shop in shops.Where(s => s.Status == DealerStatus.Open)) SellOff(shop, PartShopRules.TownBuysShare);
+                }
+
+                if (refresh && !shops.Any(s => s.Status == DealerStatus.ClosingDown) && DealerRules.ChangeToday(_random.NextDouble()))
+                {
+                    Change(shops, date, talk, news);
+                }
+
+                // A game whose market stands still still gets its shops' first stock, and keeps it
+                await _shops.RestockAsync(gameState, date, _random, firstOnly: !refresh);
+            }
+            finally
             {
-                Change(shops, date, talk, news);
+                DealerChurn.Tell(gameState, date, talk, news);
             }
-
-            // A game whose market stands still still gets its shops' first stock, and keeps it
-            await _shops.RestockAsync(gameState, date, _random, firstOnly: !refresh);
-
-            if (news.Count > 0) NewsWriter.Add(gameState, date, news);
-            if (talk.Count > 0) OpponentLifeService.AddTalk(gameState, date, talk);
         }
 
         /// <summary>
@@ -134,15 +138,7 @@ namespace StreetCorsa.Services.PartShops
         {
             var last = DealerChurn.StartSale(shop, date);
 
-            var values = Values(shop, DealerRules.SaleDiscount, last);
-            news.Add(new NewsArticle
-            {
-                Date = date,
-                Weight = 20,
-                Headline = GameText.Installed.Pick("news.partshop_closing.headline", _random, values),
-                Body = GameText.Installed.Pick("news.partshop_closing.body", _random, values)
-            });
-            talk.Add(GameText.Installed.Pick("street.partshop_closing", _random, values));
+            DealerChurn.Announce("partshop_closing", 20, Values(shop, DealerRules.SaleDiscount, last), date, _random, talk, news);
 
             _logger.Information("{Shop} is going out of business: closing-down sale until {Last:d} (trade {Trade:0.0})", shop.Name, last, shop.Trade);
         }
@@ -157,15 +153,7 @@ namespace StreetCorsa.Services.PartShops
             shop.RestockedOn = null;
             shop.PlayerSpent = 0;
 
-            var values = Values(shop, 0, date);
-            news.Add(new NewsArticle
-            {
-                Date = date,
-                Weight = 8,
-                Headline = GameText.Installed.Pick("news.partshop_closed.headline", _random, values),
-                Body = GameText.Installed.Pick("news.partshop_closed.body", _random, values)
-            });
-            talk.Add(GameText.Installed.Pick("street.partshop_closed", _random, values));
+            DealerChurn.Announce("partshop_closed", 8, Values(shop, 0, date), date, _random, talk, news);
 
             _logger.Information("{Shop} has closed; {Count} parts went with it", shop.Name, left);
         }
@@ -207,16 +195,7 @@ namespace StreetCorsa.Services.PartShops
             shop.RestockedOn = null;
             shop.PlayerSpent = 0;
 
-            var values = Values(shop, 0, date);
-            var story = reopened ? "partshop_reopened" : "partshop_opened";
-            news.Add(new NewsArticle
-            {
-                Date = date,
-                Weight = 15,
-                Headline = GameText.Installed.Pick($"news.{story}.headline", _random, values),
-                Body = GameText.Installed.Pick($"news.{story}.body", _random, values)
-            });
-            talk.Add(GameText.Installed.Pick($"street.{story}", _random, values));
+            DealerChurn.Announce(reopened ? "partshop_reopened" : "partshop_opened", 15, Values(shop, 0, date), date, _random, talk, news);
 
             _logger.Information("{Shop} has {Opened} in {Region}", shop.Name, reopened ? "opened again" : "opened", shop.Region);
         }

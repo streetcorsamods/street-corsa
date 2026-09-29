@@ -58,7 +58,8 @@ namespace StreetCorsa.Services.PartShops
         /// The cheapest a rival can get each new part today (at a shop that has it, sales counted, else the mail order),
         /// with the shop it comes from: a copy, for a tuner working off the UI thread
         /// </summary>
-        RivalPriceList RivalPrices(GameState gameState);
+        /// <param name="date">The day the prices are for (a sale's discount goes by it); the save's date when null</param>
+        RivalPriceList RivalPrices(GameState gameState, DateTime? date = null);
 
         /// <summary>A rival bought the part at the shop: one fewer on its shelf. False when it had none left.</summary>
         bool TakeForRival(GameState gameState, string shopId, string partId);
@@ -350,7 +351,7 @@ namespace StreetCorsa.Services.PartShops
 
         // ----- the rivals -----
 
-        public RivalPriceList RivalPrices(GameState gameState)
+        public RivalPriceList RivalPrices(GameState gameState, DateTime? date = null)
         {
             var multiplier = gameState.Rules.PartPriceMultiplier;
             var prices = new Dictionary<string, (decimal Price, string ShopId)>(StringComparer.OrdinalIgnoreCase);
@@ -360,7 +361,7 @@ namespace StreetCorsa.Services.PartShops
             {
                 if (Catalog.Get(shop.Id) is not { } definition || !PartShopRules.SellsToTuners(definition)) continue;
 
-                var sale = DealerRules.DiscountOn(shop, gameState.Date);
+                var sale = DealerRules.DiscountOn(shop, date ?? gameState.Date);
                 foreach (var shelf in shop.Shelves.Where(s => s.Count > 0))
                 {
                     if (_parts.Catalog.Get(shelf.DefinitionId) is not { } part) continue;

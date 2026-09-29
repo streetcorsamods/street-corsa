@@ -126,10 +126,18 @@ namespace StreetCorsa.Services.Opponents
         /// </summary>
         public static decimal AskingPrice(decimal lotPrice, decimal dealerPays, double roll)
         {
-            roll = Math.Clamp(double.IsFinite(roll) ? roll : 0, 0, 1);
+            roll = Unit.Clamp01(roll, ifNotFinite: 0);
             var share = MinAskShare + roll * (MaxAskShare - MinAskShare);
             return Math.Max(Math.Max(0m, dealerPays), CarValuation.RoundToHundred(Math.Max(0m, lotPrice) * (decimal)share));
         }
+
+        /// <summary>
+        /// Where a skill sits in the opponents' range, 0 at <see cref="Opponent.MinSkill"/> to 1 at
+        /// <see cref="Opponent.MaxSkill"/>. Skill starts at 90 on purpose, so a formula written for 0-100 would put
+        /// every racer near its top: the rules weigh skill through this instead.
+        /// </summary>
+        public static double SkillShare(double skill) =>
+            Unit.Clamp01((skill - Opponent.MinSkill) / (double)(Opponent.MaxSkill - Opponent.MinSkill), ifNotFinite: 0);
 
         public static int WeeksElapsed(DateTime date) =>
             Math.Max(0, (date.Date - GameState.GetStartingDateTime().Date).Days / 7);
@@ -145,7 +153,7 @@ namespace StreetCorsa.Services.Opponents
         /// </summary>
         /// <param name="condition">0 to 1</param>
         public static double CarScore(double hp, double condition, bool canRace, decimal value) =>
-            Unit.NonNegative(hp) * 10 + Math.Clamp(Unit.NonNegative(condition), 0, 1) * 100 * 5 + (canRace ? RacingCarBonus : 0) + (double)value * 0.1;
+            Unit.NonNegative(hp) * 10 + Unit.Clamp01(condition, ifNotFinite: 0) * 100 * 5 + (canRace ? RacingCarBonus : 0) + (double)value * 0.1;
 
         /// <summary>More than any power, shape and worth add up to</summary>
         private const double RacingCarBonus = 1_000_000;
@@ -156,7 +164,7 @@ namespace StreetCorsa.Services.Opponents
         /// </summary>
         public static double PurchaseScore(double hp, double condition, bool runs, decimal price, decimal budget)
         {
-            var score = Unit.NonNegative(hp) * 2 + Math.Clamp(Unit.NonNegative(condition), 0, 1) * 100 * 3 + (runs ? 500 : 0);
+            var score = Unit.NonNegative(hp) * 2 + Unit.Clamp01(condition, ifNotFinite: 0) * 100 * 3 + (runs ? 500 : 0);
             if (price > 0) score += Unit.NonNegative(hp) / (double)price * 1000;
 
             if (budget > 0)
@@ -179,7 +187,7 @@ namespace StreetCorsa.Services.Opponents
         /// <summary>What a broke racer scrapes together: a share of the cheapest car for sale, <paramref name="roll"/> 0 to 1 picking where in the range</summary>
         public static decimal CashInjection(decimal? cheapestCar, double roll)
         {
-            roll = Math.Clamp(double.IsFinite(roll) ? roll : 0, 0, 1);
+            roll = Unit.Clamp01(roll, ifNotFinite: 0);
             if (cheapestCar is not > 0) return Math.Round(MinCashInjection + (decimal)roll * (MaxCashInjection - MinCashInjection));
 
             var share = MinCashShare + roll * (MaxCashShare - MinCashShare);

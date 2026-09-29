@@ -30,8 +30,8 @@ namespace StreetCorsa.Services.Dealers
         {
             get
             {
-                var x = Clamp01(AnchorX);
-                var y = Clamp01(AnchorY);
+                var x = Corner(AnchorX);
+                var y = Corner(AnchorY);
                 var width = Math.Clamp(Finite(AnchorWidth, 1), 0.05, 1 - x);
                 var height = Math.Clamp(Finite(AnchorHeight, 1), 0.05, 1 - y);
                 return new System.Windows.Rect(x, y, Math.Max(0.05, width), Math.Max(0.05, height));
@@ -40,6 +40,7 @@ namespace StreetCorsa.Services.Dealers
 
         private static double Finite(double value, double otherwise) => double.IsFinite(value) ? value : otherwise;
 
-        private static double Clamp01(double value) => Math.Clamp(Finite(value, 0), 0, 0.95);
+        /// <summary>Where the anchor starts, as a share of the picture: short of its far edge, so it keeps some width</summary>
+        private static double Corner(double value) => Math.Clamp(Finite(value, 0), 0, 0.95);
     }
 }
