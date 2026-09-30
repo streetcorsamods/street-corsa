@@ -1,5 +1,10 @@
 # Career UI Implementation Plan
 
+> **Historical plan.** Part 1's career screen was replaced by the career dialog, a big modal over the garage:
+> `Dialogs/Career/` (`CareerDialogViewModel`, `CareerDialogView.xaml`), opened with
+> `NavigationService.ShowCareer` from the garage's trophy button. There is no `Screens/Career`,
+> `CareerScreenViewModel` or `NavigateToCareer` any more; the rest of this page is kept as the plan it was.
+
 This document details the implementation of the Career screen and Events integration for Street Corsa.
 
 ## Overview

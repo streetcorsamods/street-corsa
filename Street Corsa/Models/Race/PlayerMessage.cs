@@ -34,7 +34,7 @@ namespace StreetCorsa.Models.Race
                 new("Reputation", $"{stats.Reputation} ({stats.GetReputationTier()})"),
                 new("Pink slips won", stats.PinkSlipsWon.ToString("N0")),
                 new("Cars in the garage", gameState.Player.Cars.Count.ToString("N0")),
-                new("Net earnings", $"${stats.NetEarnings:N0}")
+                new("Net earnings", Helpers.Money.Dollars(stats.NetEarnings))
             ], footnote);
         }
     }

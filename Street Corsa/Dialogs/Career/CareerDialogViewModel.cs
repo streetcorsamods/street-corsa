@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using System.Runtime.CompilerServices;
+using StreetCorsa.Helpers;
 using StreetCorsa.Logging;
 using StreetCorsa.Services.Career;
 using StreetCorsa.Services.Storage;
@@ -28,23 +30,20 @@ namespace StreetCorsa.Dialogs.Career
         private readonly Action _toMainMenu;
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger("Career");
 
-        /// <summary>The section the player last looked at, for the next time the dialog opens</summary>
-        private static CareerSection _lastSection = CareerSection.Victory;
+        // The section the player last looked at in this game, for the next time the dialog opens
+        private readonly StrongBox<CareerSection> _lastSection;
 
         public RelayCommand CloseCommand { get; }
         public RelayCommand<string> SetActiveVictoryCommand { get; }
+        public RelayCommand<string> ShowSectionCommand { get; }
 
-        public override bool IsWide => true;
-
-        // The section on show: each of the section buttons is on while its section is
-        private CareerSection _section = _lastSection;
         public CareerSection Section
         {
-            get => _section;
-            set
+            get => _lastSection.Value;
+            private set
             {
-                if (_section == value) return;
-                _section = _lastSection = value;
+                if (_lastSection.Value == value) return;
+                _lastSection.Value = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(ShowVictory));
                 OnPropertyChanged(nameof(ShowStats));
@@ -52,24 +51,9 @@ namespace StreetCorsa.Dialogs.Career
             }
         }
 
-        // Set by the section buttons: turning one on shows its section, turning it off is the other one's doing
-        public bool ShowVictory
-        {
-            get => Section == CareerSection.Victory;
-            set { if (value) Section = CareerSection.Victory; }
-        }
-
-        public bool ShowStats
-        {
-            get => Section == CareerSection.Stats;
-            set { if (value) Section = CareerSection.Stats; }
-        }
-
-        public bool ShowMilestones
-        {
-            get => Section == CareerSection.Milestones;
-            set { if (value) Section = CareerSection.Milestones; }
-        }
+        public bool ShowVictory => Section == CareerSection.Victory;
+        public bool ShowStats => Section == CareerSection.Stats;
+        public bool ShowMilestones => Section == CareerSection.Milestones;
 
         // Victory conditions
         public ObservableCollection<VictoryDisplayViewModel> Victories { get; } = [];
@@ -97,9 +81,9 @@ namespace StreetCorsa.Dialogs.Career
 
         public int OpponentsDefeated => _gameState.Career.DefeatedOpponentIds.Count;
 
-        public string TotalEarnings => $"${_gameState.Player.Stats.TotalEarnings:N0}";
-        public string TotalLossesAmount => $"${_gameState.Player.Stats.TotalLosses:N0}";
-        public string NetEarnings => $"${_gameState.Player.Stats.NetEarnings:N0}";
+        public string TotalEarnings => Money.Dollars(_gameState.Player.Stats.TotalEarnings);
+        public string TotalLossesAmount => Money.Dollars(_gameState.Player.Stats.TotalLosses);
+        public string NetEarnings => Money.Dollars(_gameState.Player.Stats.NetEarnings);
         public bool IsNetLoss => _gameState.Player.Stats.NetEarnings < 0;
 
         // Game won state
@@ -108,6 +92,7 @@ namespace StreetCorsa.Dialogs.Career
             ? _victoryService.GetVictoryCondition(_gameState.Career.WinningVictoryType)?.Name
             : null;
 
+        /// <param name="lastSection">The section last looked at in this game: the dialog opens on it, and keeps it up to date</param>
         /// <param name="toMainMenu">Where the victory screen's Main Menu button goes, when picking a path wins the game</param>
         public CareerDialogViewModel(
             DialogService dialogService,
@@ -115,8 +100,10 @@ namespace StreetCorsa.Dialogs.Career
             IMilestoneService milestoneService,
             Models.GameState.GameState gameState,
             IGameStateRepository gameStateRepo,
+            StrongBox<CareerSection> lastSection,
             Action toMainMenu)
         {
+            _lastSection = lastSection;
             _dialogService = dialogService;
             _victoryService = victoryService;
             _milestoneService = milestoneService;
@@ -126,6 +113,10 @@ namespace StreetCorsa.Dialogs.Career
 
             CloseCommand = new RelayCommand(() => _dialogService.CloseDialog());
             SetActiveVictoryCommand = new RelayCommand<string>(OnSetActiveVictory);
+            ShowSectionCommand = new RelayCommand<string>(section =>
+            {
+                if (Enum.TryParse<CareerSection>(section, out var shown)) Section = shown;
+            });
 
             // A save from before the counters followed the player starts them where the player stands
             _gameState.Career.SyncStanding(_gameState.Player);
@@ -195,18 +186,17 @@ namespace StreetCorsa.Dialogs.Career
 
             Save();
 
-            // Refresh display
-            LoadVictories();
-            OnPropertyChanged(nameof(HasWonGame));
-            OnPropertyChanged(nameof(WinningVictoryName));
-
             if (won != null)
             {
-                // The victory screen takes this dialog's place: queued behind it, it would wait for the player to close it
-                _dialogService.CloseDialog();
+                // The victory screen takes this dialog's place, ahead of any dialog waiting behind it
                 var message = CareerProgressService.VictoryMessage(_gameState, won, [], []);
-                PlayerMessageDialogs.Show(_dialogService, message, _toMainMenu);
+                PlayerMessageDialogs.Show(_dialogService, message, _toMainMenu, jumpQueue: true);
+                _dialogService.Withdraw(this);
+                return;
             }
+
+            // Refresh display
+            LoadVictories();
         }
 
         private void Save()

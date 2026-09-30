@@ -10,8 +10,5 @@ namespace StreetCorsa.Dialogs
         /// first is up or waiting. Null for a dialog that is always shown.
         /// </summary>
         string? DuplicateKey { get; }
-
-        /// <summary>A big dialog (the career): its card takes the width the dialog asks for, past the usual limit</summary>
-        bool IsWide => false;
     }
 }

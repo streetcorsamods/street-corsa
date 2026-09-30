@@ -28,9 +28,6 @@ namespace StreetCorsa
         // How long one dialog takes to fade in over another it replaces
         private static readonly TimeSpan DialogSwapFade = TimeSpan.FromMilliseconds(150);
 
-        /// <summary>How wide a dialog's card grows, but for a wide one (IDialog.IsWide)</summary>
-        private const double DialogMaxWidth = 750;
-
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger(LogCategory.Navigation);
 
         // The money card is read off the game this often: the money and the clock change in many places
@@ -76,6 +73,14 @@ namespace StreetCorsa
             DialogHost.IsVisibleChanged += (_, e) =>
             {
                 if (!(bool)e.NewValue && DialogService.CurrentDialog == null) DialogContent.Content = null;
+            };
+
+            // What a dialog has room for: the host less the card's margin and outline
+            DialogHost.SizeChanged += (_, e) =>
+            {
+                var (margin, outline) = (DialogCard.Margin, DialogCard.BorderThickness);
+                DialogRoom.SetWidth(DialogContent, Math.Max(0, e.NewSize.Width - margin.Left - margin.Right - outline.Left - outline.Right));
+                DialogRoom.SetHeight(DialogContent, Math.Max(0, e.NewSize.Height - margin.Top - margin.Bottom - outline.Top - outline.Bottom));
             };
 
             // Assetto Corsa on and off: the screen fades to the loader for it and back (the events may come from any thread)
@@ -349,7 +354,6 @@ namespace StreetCorsa
             {
                 var swapping = DialogHost.IsVisible && DialogContent.Content != null && !ReferenceEquals(DialogContent.Content, dialog);
                 DialogContent.Content = dialog;
-                DialogCard.MaxWidth = dialog.IsWide ? double.PositiveInfinity : DialogMaxWidth;
                 if (swapping) DialogCard.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, DialogSwapFade));
             }
 

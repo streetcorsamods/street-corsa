@@ -283,7 +283,7 @@ public class RaceEventDefinition
   shelf (`PrizeParts.BestCamshaft`). When none fits, $500 (scaled by the part prices) is paid instead.
 - **Reputation is read from the career's `ReputationReached` counter**, which `CareerState.SyncStanding` keeps at
   the player's reputation (with `CarsOwned`): at a new game, every morning before the events are generated,
-  after a purchase, a sale and a race, and when the career screen opens.
+  after a purchase, a sale and a race, and when the career dialog opens.
 
 ### Event Scheduling
 
@@ -393,7 +393,7 @@ AddEvent(events, new RaceEventDefinition
 
 ## Winning the Game
 
-- **Only the path the player picked wins** (`CareerState.ActiveVictoryType`, set with PURSUE on the career screen).
+- **Only the path the player picked wins** (`CareerState.ActiveVictoryType`, set with Pursue in the career dialog's victory paths, opened with the garage's trophy button).
   With none picked, the first path reached wins. A path reached on the way waits: picking it later wins the game
   there and then.
 - **`VictoryConditionService.ClaimVictory`** marks the game won (`HasWonGame`, `WinningVictoryType`), once. It is

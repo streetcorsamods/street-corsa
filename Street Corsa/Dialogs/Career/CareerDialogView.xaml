@@ -3,20 +3,22 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:helpers="clr-namespace:StreetCorsa.Helpers"
              Width="1040"
-             Height="680">
+             Height="680"
+             MaxWidth="{Binding (helpers:DialogRoom.Width), RelativeSource={RelativeSource Self}}"
+             MaxHeight="{Binding (helpers:DialogRoom.Height), RelativeSource={RelativeSource Self}}">
+    <!-- That big, or as big as the window has room for: the lists scroll, the card never has to -->
     <UserControl.Resources>
-        <!-- A section button: the glass toggle, on while its section shows. Each is alone in its group: the dialog
-             says which one is on, so a click on the one already on leaves it on. -->
+        <!-- A section button: the glass toggle, on while its section shows. No padding: the radio button's own
+             would push the label off the middle. -->
         <Style x:Key="SectionButtonStyle" TargetType="RadioButton" BasedOn="{StaticResource GlassToggleButtonStyle}">
+            <Setter Property="Command" Value="{Binding ShowSectionCommand}"/>
+            <Setter Property="Padding" Value="0"/>
             <Setter Property="Height" Value="42"/>
             <Setter Property="Margin" Value="5,0"/>
             <Setter Property="FontSize" Value="{StaticResource FontSizeBodyLarge}"/>
         </Style>
-        <!-- A small amber title over a block, as the radio's -->
-        <Style x:Key="BlockTitleStyle" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource AmberBrush}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeCompact}"/>
-            <Setter Property="FontWeight" Value="Bold"/>
+        <!-- A small amber title over a block of the record, a little further off its figures -->
+        <Style x:Key="BlockTitleStyle" TargetType="TextBlock" BasedOn="{StaticResource SectionTitleStyle}">
             <Setter Property="Margin" Value="0,0,0,10"/>
         </Style>
         <!-- A block of the record: dark glass on the card -->
@@ -60,26 +62,15 @@
         </Grid.RowDefinitions>
 
         <!-- Title -->
-        <Border Grid.Row="0"
-                Background="{StaticResource UiBandBrush}"
-                CornerRadius="7,7,0,0"
-                Padding="20,10,12,10">
+        <Border Grid.Row="0" Style="{StaticResource PanelTitleBandStyle}">
             <DockPanel>
-                <Button DockPanel.Dock="Right"
-                        Style="{StaticResource RoundIconButtonStyle}"
+                <Button Style="{StaticResource PanelCloseButtonStyle}"
                         Tag="{StaticResource CloseIcon}"
                         Command="{Binding CloseCommand}"
                         IsCancel="True"
-                        Width="36"
-                        Height="36"
-                        Padding="11"
                         ToolTip="Close (Esc)"/>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="Career"
-                               Foreground="{StaticResource TextPrimaryBrush}"
-                               FontSize="{StaticResource FontSizeHeading}"
-                               FontWeight="SemiBold"
-                               VerticalAlignment="Center"/>
+                    <TextBlock Text="Career" Style="{StaticResource PanelTitleStyle}"/>
                     <TextBlock Foreground="{StaticResource TextSecondaryBrush}"
                                FontSize="{StaticResource FontSizeBody}"
                                Margin="14,0,0,0"
@@ -93,16 +84,16 @@
         <!-- The sections -->
         <UniformGrid Grid.Row="1" Columns="3" Margin="17,16,17,4">
             <RadioButton Style="{StaticResource SectionButtonStyle}"
-                         GroupName="CareerVictory"
                          Content="Victory paths"
-                         IsChecked="{Binding ShowVictory}"/>
+                         IsChecked="{Binding ShowVictory, Mode=OneWay}"
+                         CommandParameter="Victory"/>
             <RadioButton Style="{StaticResource SectionButtonStyle}"
-                         GroupName="CareerStats"
                          Content="Your record"
-                         IsChecked="{Binding ShowStats}"/>
+                         IsChecked="{Binding ShowStats, Mode=OneWay}"
+                         CommandParameter="Stats"/>
             <RadioButton Style="{StaticResource SectionButtonStyle}"
-                         GroupName="CareerMilestones"
-                         IsChecked="{Binding ShowMilestones}">
+                         IsChecked="{Binding ShowMilestones, Mode=OneWay}"
+                         CommandParameter="Milestones">
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="Milestones"/>
                     <TextBlock Text="{Binding CompletedMilestoneCount}" Foreground="{StaticResource AmberBrush}" Margin="10,0,0,0"/>

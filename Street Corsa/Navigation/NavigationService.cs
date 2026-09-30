@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using StreetCorsa.Dialogs;
 using StreetCorsa.Dialogs.Information;
 using StreetCorsa.Logging;
@@ -56,6 +57,9 @@ namespace StreetCorsa.Navigation
         private readonly IEventOpponentService _eventOpponentService;
         private readonly IVictoryConditionService _victoryConditionService;
         private readonly IMilestoneService _milestoneService;
+
+        // The career section each game's player looked at last, for as long as that game is in memory
+        private readonly ConditionalWeakTable<GameState, StrongBox<Dialogs.Career.CareerSection>> _careerSections = new();
         private readonly Action<GameState?> _setCurrentGame;
         private readonly RaceSetupBuilder _raceSetup;
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger(LogCategory.Navigation);
@@ -322,9 +326,34 @@ namespace StreetCorsa.Navigation
                 _contentService,
                 _raceCarDataService,
                 _saleService,
-                _victoryConditionService,
-                _milestoneService,
                 skipAnimation));
+
+        /// <summary>
+        /// The career, over the current screen, on the section last looked at in this game. One that fails to build is
+        /// logged and the player told, as a screen is. False when it did not open.
+        /// </summary>
+        /// <param name="toMainMenu">Where the victory screen's Main Menu button goes, when picking a path wins the game</param>
+        public bool ShowCareer(GameState gameState, Action toMainMenu)
+        {
+            try
+            {
+                _dialogService.ShowDialog(new Dialogs.Career.CareerDialogViewModel(
+                    _dialogService,
+                    _victoryConditionService,
+                    _milestoneService,
+                    gameState,
+                    _gameStateRepository,
+                    _careerSections.GetOrCreateValue(gameState),
+                    toMainMenu));
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not open the career");
+                ShowNavigationError("career");
+                return false;
+            }
+        }
 
         public bool NavigateToCarLot(GameState gameState) => SafeNavigate("car lot", () =>
             new Screens.CarLot.CarLotScreenViewModel(

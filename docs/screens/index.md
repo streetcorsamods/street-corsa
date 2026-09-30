@@ -34,13 +34,13 @@ Garage (hub) ←→ CarLot
   ├──→ Diner (challenges)      [Hit the streets]
   │      └──→ Cruise ──→ RaceLoading ──→ Cruise   [Cruise the streets]
   ├──→ GasStation               [Gas station]
-  ├──→ Career                   [Career stats]
   ├──→ DealerMap → DealerLot    [Car dealers]
   ├──→ DealerMap → PartShop     [Parts dealers: the same map with the part shops]
   └──→ Newspaper → UsedCarMarket
                  → UsedParts
 
 Garage Quit button → Quit dialog → MainMenu or the desktop
+Garage trophy button → Career dialog (victory paths, the record, milestones) over the garage
 ```
 
 ## Screen Structure

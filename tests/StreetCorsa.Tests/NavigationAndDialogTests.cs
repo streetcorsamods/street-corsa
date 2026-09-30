@@ -252,6 +252,17 @@ public class NavigationServiceTests
     }
 
     [Fact]
+    public void A_career_that_will_not_build_is_reported()
+    {
+        var dialogs = new DialogService();
+        var navigation = NewService(dialogs);
+
+        // No victory service to read the paths from
+        Assert.False(navigation.ShowCareer(Models.GameState.GameState.CreateNew("Tester"), () => { }));
+        Assert.IsType<InformationDialogViewModel>(dialogs.CurrentDialog);
+    }
+
+    [Fact]
     public void A_card_that_will_not_build_or_enter_is_reported_and_left()
     {
         var dialogs = new DialogService();

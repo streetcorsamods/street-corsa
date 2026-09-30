@@ -66,7 +66,7 @@ way.
 Declared in `App.xaml` unless noted.
 
 - `BooleanToVisibilityConverter`, `InverseBooleanToVisibilityConverter`, `InverseBooleanConverter`,
-  `StringToVisibilityConverter`, `GaragePanelToVisibilityConverter`, `PercentageToWidthConverter`.
+  `StringToVisibilityConverter`, `GaragePanelToVisibilityConverter`.
 - `DifficultyToBrushConverter` — an `OpponentDifficulty` as a brush. The brushes are set where it is declared
   (`Easy`, `Matched`, `Hard`, `Other`), so the colours stay in the view. `DinerScreenView.xaml` declares two:
   `DifficultyTextBrushConverter` (AccentSuccess / Gold / Danger / White) and `DifficultyBorderBrushConverter`

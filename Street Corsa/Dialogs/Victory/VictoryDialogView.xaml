@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d"
+             MaxWidth="{StaticResource TextDialogMaxWidth}"
              d:DesignHeight="520" d:DesignWidth="520">
     <Grid MinWidth="480">
         <Grid.RowDefinitions>

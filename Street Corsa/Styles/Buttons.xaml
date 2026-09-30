@@ -337,6 +337,33 @@
         <Setter Property="CornerRadius" Value="6"/>
     </Style>
 
+    <!-- A big panel's title band (the career, the radio): across the card's rounded top, the close button at its right -->
+    <Style x:Key="PanelTitleBandStyle" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource UiBandBrush}"/>
+        <Setter Property="CornerRadius" Value="7,7,0,0"/>
+        <Setter Property="Padding" Value="20,10,12,10"/>
+    </Style>
+    <Style x:Key="PanelTitleStyle" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSizeHeading}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style x:Key="PanelCloseButtonStyle" TargetType="Button" BasedOn="{StaticResource RoundIconButtonStyle}">
+        <Setter Property="DockPanel.Dock" Value="Right"/>
+        <Setter Property="Width" Value="36"/>
+        <Setter Property="Height" Value="36"/>
+        <Setter Property="Padding" Value="11"/>
+    </Style>
+
+    <!-- A small amber title over a block of a big panel -->
+    <Style x:Key="SectionTitleStyle" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource AmberBrush}"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSizeCompact}"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Margin" Value="0,0,0,6"/>
+    </Style>
+
     <!-- Every tooltip in the game: dark glass in the buttons' outline -->
     <Style TargetType="ToolTip">
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
