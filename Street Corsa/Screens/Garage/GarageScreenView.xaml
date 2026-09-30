@@ -36,7 +36,7 @@
                             <VisualStateManager.VisualStateGroups>
                                 <VisualStateGroup x:Name="CommonStates">
                                     <VisualStateGroup.Transitions>
-                                        <VisualTransition GeneratedDuration="0:0:1">
+                                        <VisualTransition GeneratedDuration="0:0:0.5">
                                             <VisualTransition.GeneratedEasingFunction>
                                                 <CubicEase EasingMode="EaseOut"/>
                                             </VisualTransition.GeneratedEasingFunction>
@@ -156,7 +156,7 @@
                                     <VisualStateManager.VisualStateGroups>
                                         <VisualStateGroup x:Name="CommonStates">
                                             <VisualStateGroup.Transitions>
-                                        <VisualTransition GeneratedDuration="0:0:1">
+                                        <VisualTransition GeneratedDuration="0:0:0.5">
                                             <VisualTransition.GeneratedEasingFunction>
                                                 <CubicEase EasingMode="EaseOut"/>
                                             </VisualTransition.GeneratedEasingFunction>

@@ -129,7 +129,7 @@
             <VisualStateManager.VisualStateGroups>
                 <VisualStateGroup x:Name="CommonStates">
                     <VisualStateGroup.Transitions>
-                        <VisualTransition GeneratedDuration="0:0:1">
+                        <VisualTransition GeneratedDuration="0:0:0.5">
                             <VisualTransition.GeneratedEasingFunction>
                                 <CubicEase EasingMode="EaseOut"/>
                             </VisualTransition.GeneratedEasingFunction>
@@ -200,26 +200,26 @@
                 <ControlTemplate TargetType="Button">
                     <Grid x:Name="root" RenderTransformOrigin="0.5,0.5" Background="Transparent">
                         <Grid.RenderTransform>
-                            <ScaleTransform x:Name="scale" ScaleX="1" ScaleY="1"/>
+                            <ScaleTransform ScaleX="1" ScaleY="1"/>
                         </Grid.RenderTransform>
 
                         <!-- The disc, with its glow (off until the pointer comes) -->
-                        <Ellipse StrokeThickness="3">
+                        <Ellipse x:Name="disc" StrokeThickness="3">
                             <Ellipse.Fill>
-                                <SolidColorBrush x:Name="glass" Color="{StaticResource UiGlass}"/>
+                                <SolidColorBrush Color="{StaticResource UiGlass}"/>
                             </Ellipse.Fill>
                             <Ellipse.Stroke>
-                                <SolidColorBrush x:Name="ring" Color="{StaticResource UiOutline}"/>
+                                <SolidColorBrush Color="{StaticResource UiOutline}"/>
                             </Ellipse.Stroke>
                             <Ellipse.Effect>
-                                <DropShadowEffect x:Name="glow" Color="{StaticResource Amber}" ShadowDepth="0" BlurRadius="20" Opacity="0"/>
+                                <DropShadowEffect Color="{StaticResource Amber}" ShadowDepth="0" BlurRadius="20" Opacity="0"/>
                             </Ellipse.Effect>
                         </Ellipse>
 
                         <!-- The icon, in the ring's colour -->
-                        <Rectangle Margin="{TemplateBinding Padding}">
+                        <Rectangle x:Name="icon" Margin="{TemplateBinding Padding}">
                             <Rectangle.Fill>
-                                <SolidColorBrush x:Name="ink" Color="{StaticResource UiOutline}"/>
+                                <SolidColorBrush Color="{StaticResource UiOutline}"/>
                             </Rectangle.Fill>
                             <Rectangle.OpacityMask>
                                 <ImageBrush ImageSource="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}" Stretch="Uniform"/>
@@ -229,7 +229,7 @@
                         <VisualStateManager.VisualStateGroups>
                             <VisualStateGroup x:Name="CommonStates">
                                 <VisualStateGroup.Transitions>
-                                    <VisualTransition GeneratedDuration="0:0:1">
+                                    <VisualTransition GeneratedDuration="0:0:0.5">
                                         <VisualTransition.GeneratedEasingFunction>
                                             <CubicEase EasingMode="EaseOut"/>
                                         </VisualTransition.GeneratedEasingFunction>
@@ -240,24 +240,26 @@
                                     <VisualTransition To="Pressed" GeneratedDuration="0:0:0.06"/>
                                 </VisualStateGroup.Transitions>
                                 <VisualState x:Name="Normal"/>
+                                <!-- Each animation names an element and reaches its brush, effect or transform by path: the
+                                     generated fade skips one aimed at a named brush (it waits the fade out, then jumps) -->
                                 <VisualState x:Name="MouseOver">
                                     <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="scale" Storyboard.TargetProperty="ScaleX" To="1.08" Duration="0"/>
-                                        <DoubleAnimation Storyboard.TargetName="scale" Storyboard.TargetProperty="ScaleY" To="1.08" Duration="0"/>
-                                        <DoubleAnimation Storyboard.TargetName="glow" Storyboard.TargetProperty="Opacity" To="0.8" Duration="0"/>
-                                        <ColorAnimation Storyboard.TargetName="ring" Storyboard.TargetProperty="Color" To="{StaticResource Amber}" Duration="0"/>
-                                        <ColorAnimation Storyboard.TargetName="ink" Storyboard.TargetProperty="Color" To="{StaticResource Amber}" Duration="0"/>
-                                        <ColorAnimation Storyboard.TargetName="glass" Storyboard.TargetProperty="Color" To="{StaticResource UiGlassHover}" Duration="0"/>
+                                        <DoubleAnimation Storyboard.TargetName="root" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1.08" Duration="0"/>
+                                        <DoubleAnimation Storyboard.TargetName="root" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1.08" Duration="0"/>
+                                        <DoubleAnimation Storyboard.TargetName="disc" Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.Opacity)" To="0.8" Duration="0"/>
+                                        <ColorAnimation Storyboard.TargetName="disc" Storyboard.TargetProperty="(Shape.Stroke).(SolidColorBrush.Color)" To="{StaticResource Amber}" Duration="0"/>
+                                        <ColorAnimation Storyboard.TargetName="icon" Storyboard.TargetProperty="(Shape.Fill).(SolidColorBrush.Color)" To="{StaticResource Amber}" Duration="0"/>
+                                        <ColorAnimation Storyboard.TargetName="disc" Storyboard.TargetProperty="(Shape.Fill).(SolidColorBrush.Color)" To="{StaticResource UiGlassHover}" Duration="0"/>
                                     </Storyboard>
                                 </VisualState>
                                 <VisualState x:Name="Pressed">
                                     <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="scale" Storyboard.TargetProperty="ScaleX" To="0.96" Duration="0"/>
-                                        <DoubleAnimation Storyboard.TargetName="scale" Storyboard.TargetProperty="ScaleY" To="0.96" Duration="0"/>
-                                        <DoubleAnimation Storyboard.TargetName="glow" Storyboard.TargetProperty="Opacity" To="0.5" Duration="0"/>
-                                        <ColorAnimation Storyboard.TargetName="ring" Storyboard.TargetProperty="Color" To="{StaticResource Amber}" Duration="0"/>
-                                        <ColorAnimation Storyboard.TargetName="ink" Storyboard.TargetProperty="Color" To="{StaticResource Amber}" Duration="0"/>
-                                        <ColorAnimation Storyboard.TargetName="glass" Storyboard.TargetProperty="Color" To="{StaticResource UiGlassPressed}" Duration="0"/>
+                                        <DoubleAnimation Storyboard.TargetName="root" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="0.96" Duration="0"/>
+                                        <DoubleAnimation Storyboard.TargetName="root" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="0.96" Duration="0"/>
+                                        <DoubleAnimation Storyboard.TargetName="disc" Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.Opacity)" To="0.5" Duration="0"/>
+                                        <ColorAnimation Storyboard.TargetName="disc" Storyboard.TargetProperty="(Shape.Stroke).(SolidColorBrush.Color)" To="{StaticResource Amber}" Duration="0"/>
+                                        <ColorAnimation Storyboard.TargetName="icon" Storyboard.TargetProperty="(Shape.Fill).(SolidColorBrush.Color)" To="{StaticResource Amber}" Duration="0"/>
+                                        <ColorAnimation Storyboard.TargetName="disc" Storyboard.TargetProperty="(Shape.Fill).(SolidColorBrush.Color)" To="{StaticResource UiGlassPressed}" Duration="0"/>
                                     </Storyboard>
                                 </VisualState>
                                 <VisualState x:Name="Disabled">
