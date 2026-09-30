@@ -3,7 +3,6 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:bottomBar="clr-namespace:StreetCorsa.Components.BottomBar"
              xmlns:converters="clr-namespace:StreetCorsa.Converters"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="800">
@@ -24,7 +23,6 @@
           Opacity="0">
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <Grid.Triggers>
@@ -44,8 +42,9 @@
         <!-- Garage Button -->
         <Button x:Name="GarageButton"
                 Grid.Row="0"
-                Style="{StaticResource ExitButtonStyle}"
-                Background="{StaticResource GarageIconButtonBrush}"
+                Style="{StaticResource RoundIconButtonStyle}"
+                Tag="{StaticResource GarageIcon}"
+                ToolTip="Back to the garage"
                 Command="{Binding GarageCommand}"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Top"
@@ -1219,8 +1218,9 @@
             </Border>
         </Grid>
 
-        <!-- Bottom Nav Bar -->
-        <bottomBar:BottomBarView Grid.Row="1"
-                                 BankrollDisplay="{Binding BankrollDisplay}"/>
+        <!-- The money, under the way out to the street -->
+        <Border Style="{StaticResource MoneyReadoutStyle}" Margin="0,92,20,0">
+            <TextBlock Text="{Binding BankrollDisplay}" Style="{StaticResource MoneyReadoutTextStyle}"/>
+        </Border>
     </Grid>
 </UserControl>

@@ -5,6 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:StreetCorsa"
         xmlns:radio="clr-namespace:StreetCorsa.Audio.Radio"
+        xmlns:controls="clr-namespace:StreetCorsa.Controls"
+        xmlns:helpers="clr-namespace:StreetCorsa.Helpers"
         mc:Ignorable="d"
         Title="Street Corsa"
         WindowStyle="None"
@@ -13,16 +15,35 @@
         Background="{StaticResource BgDarkBrush}"
         x:Name="MainWindowRoot">
     <Grid>
-        <!-- Screen Host. Disabled while a dialog is up: the overlay only stops the mouse, and the keyboard would
-             otherwise still press the button behind it or rev the engine. Window-level key handlers check
-             Dialogs.ModalState themselves. -->
-        <ContentControl x:Name="ScreenHost"
-                        Content="{Binding NavigationService.CurrentScreen, RelativeSource={RelativeSource AncestorType=Window}}"/>
+        <!-- The screen and its transition: the still of a change of screen is taken of the two together, so a change
+             in the middle of another carries on from what is on show -->
+        <Grid x:Name="ScreenArea">
+            <!-- Screen Host. Disabled while a dialog is up: the overlay only stops the mouse, and the keyboard would
+                 otherwise still press the button behind it or rev the engine. Window-level key handlers check
+                 Dialogs.ModalState themselves. -->
+            <ContentControl x:Name="ScreenHost"
+                            Content="{Binding NavigationService.CurrentScreen, RelativeSource={RelativeSource AncestorType=Window}}"/>
+
+            <!-- A change of screen: a still of the screen being left, over black. The still fades to black, then the
+                 black fades off the new screen (see ScreenTransition). Takes the clicks while it plays. -->
+            <Grid x:Name="TransitionLayer" Visibility="Collapsed" Background="Transparent">
+                <Rectangle x:Name="TransitionBlack" Fill="Black"/>
+                <Image x:Name="TransitionStill" Stretch="Fill"/>
+            </Grid>
+        </Grid>
+
+        <!-- Assetto Corsa is running (a free run: a race has its own screen for it). The screen fades to this on the
+             launch, and back when AC closes. -->
+        <Grid x:Name="RacingLayer"
+              Background="{StaticResource BgPanelBrush}"
+              helpers:Reveal.IsShown="False">
+            <controls:LoadingIndicator x:Name="RacingIndicator" Message="Out on the track..."/>
+        </Grid>
 
         <!-- The radio's panel, over any screen (F2, the garage's radio). The screen behind is disabled as for a dialog. -->
         <Grid x:Name="RadioHost"
               Background="{StaticResource OverlayBrush}"
-              Visibility="Collapsed">
+              helpers:Reveal.IsShown="False">
             <radio:RadioPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="30"/>
         </Grid>
 
@@ -45,14 +66,16 @@
             </StackPanel>
         </Border>
 
-        <!-- Dialog Host Overlay -->
+        <!-- Dialog Host Overlay: fades in and out (see OnDialogChanged); the dialog that closed stays in it while it
+             fades -->
         <Grid x:Name="DialogHost"
               Background="{StaticResource OverlayBrush}"
-              Visibility="{Binding DialogService.IsDialogOpen, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <Border Background="{StaticResource BgMediumBrush}"
-                    BorderBrush="{StaticResource BorderLightBrush}"
-                    BorderThickness="2"
-                    CornerRadius="8"
+              helpers:Reveal.IsShown="False">
+            <Border x:Name="DialogCard"
+                    Background="{StaticResource UiGlassCardBrush}"
+                    BorderBrush="{StaticResource UiOutlineBrush}"
+                    BorderThickness="3"
+                    CornerRadius="10"
                     MaxWidth="750"
                     Margin="40"
                     Padding="0"
@@ -63,7 +86,7 @@
                      car list is never cut off on a small or high-DPI screen -->
                 <ScrollViewer VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Disabled">
-                    <ContentControl Content="{Binding DialogService.CurrentDialog, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                    <ContentControl x:Name="DialogContent"/>
                 </ScrollViewer>
             </Border>
         </Grid>

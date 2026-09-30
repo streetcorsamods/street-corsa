@@ -1,17 +1,30 @@
-1. Part dealers
-	Just like the car dealers in the map, I want also part dealers. Maybe specialized in brands or part types. Propose something nice, my man!
+1. Garage UI refactor
+	Get rid of the bottom bar with the bankroll and any code related to it.
+	All the buttons should be rounded with an icon inside and smaller. Get rid of the images of the buttons as well. I saved new png icons in the Assets folder we should use them. Give them good size but not too much. Add tooltips to them.
+		Placement:
+			1. Quit: top left
+			2. Hit the streets: center left - steering_wheel icon.
+			3. Newspaper: bottom left
+			4. Part dealer: bottom left above newspaper
+			5. Car dealer: bottom left above Part Dealer
+			6. Gas station: bottom right
+			7. Career stats: top right - Trophy icon
+			8. Calendar: top right below Career Stats
+			9. Radio: top right in the same row as career stats but before it
+			10. Car info: center right
+	The car name bar should be outlined and partially transparent, making good contrast with the text.
 	
-2. Raise the dealer number and check the overlapping
-	Eastside Garage and Industrial Motors overlaps with Downtown and Vermont, respectively.
-	It would be nice to rotate the dealers and make new ones appear. Not too often, they might be in business all along the game, but sometimes a dealer brokes and some other times a new one gets in the business.
-
-3. Init screen
-	Give it a fixed time before moving to the main screen. Preload the car rendering because it shows the buttons in a black screen and after a few seconds the cars and the scene are rendered.
-
-4. Take a look at the shadows in the dealers and in the cinematics of the main screen. Some cars don't have it or it's bad.
-
-5. Engine rotation in the stand
-	It would be nice to be able to flip the engine upside down to install the crankshaft, bearings and oil pan. Just cosmetic, don't prevent the player to do it if it isn't flipped. Give it a nice animation. Keep in mind that the installation animation would flip too.
+2. Car Info buttons
+	It should open a dialog centered in the screen with all the car info and parts installed. Show the condition of all parts, mileage, fuel, etc.
 	
-6. Player's Car Lot
-	Instead of a list, I want a 3D scene. Maybe we can build something like a parking lot or a warehouse. Propose something.
+3. Quit button
+	Another centered dialog with the options. The back and Exit buttons disappear. Get rid of the images and the logic.
+
+4. Screen transitions
+	There should be fade in and out in every screen transition. Ensure the loader shows until the scene is fully loaded.
+	When launching AC, fade to the loading screen and get back to the scene when AC closes. Always with fade transitions.
+	The spinner and loading message should fade as well with the screen.
+	
+5. Add fade transitions for all dialog windows also.
+
+Notes: the buttons outline should be thick and the background semistransparent. Use a color that makes good contrast. Same for the dialogs. This applies game-wide

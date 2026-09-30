@@ -30,6 +30,8 @@
              xmlns:repairShop="clr-namespace:StreetCorsa.Dialogs.RepairShop"
              xmlns:sellCar="clr-namespace:StreetCorsa.Dialogs.SellCar"
              xmlns:victory="clr-namespace:StreetCorsa.Dialogs.Victory"
+             xmlns:quit="clr-namespace:StreetCorsa.Dialogs.Quit"
+             xmlns:carInfo="clr-namespace:StreetCorsa.Dialogs.CarInfo"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
         <ResourceDictionary>
@@ -37,6 +39,7 @@
                 <ResourceDictionary Source="Styles/Colors.xaml"/>
                 <ResourceDictionary Source="Styles/Brushes.xaml"/>
                 <ResourceDictionary Source="Styles/Typography.xaml"/>
+                <ResourceDictionary Source="Styles/Icons.xaml"/>
                 <ResourceDictionary Source="Styles/Buttons.xaml"/>
                 <ResourceDictionary Source="Styles/Radio.xaml"/>
             </ResourceDictionary.MergedDictionaries>
@@ -163,6 +166,14 @@
 
             <DataTemplate DataType="{x:Type victory:VictoryDialogViewModel}">
                 <victory:VictoryDialogView/>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type quit:QuitDialogViewModel}">
+                <quit:QuitDialogView/>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type carInfo:CarInfoDialogViewModel}">
+                <carInfo:CarInfoDialogView/>
             </DataTemplate>
         </ResourceDictionary>
     </Application.Resources>

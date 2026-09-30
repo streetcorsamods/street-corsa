@@ -60,12 +60,20 @@ namespace StreetCorsa.Navigation
         private readonly RaceSetupBuilder _raceSetup;
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger(LogCategory.Navigation);
 
+        /// <summary>
+        /// One screen is about to take another's place (not the first screen of all): the window takes a still of the
+        /// one leaving, to fade it out over the new one
+        /// </summary>
+        public event Action? ScreenChanging;
+
         /// <summary>The screen on show; null until the first navigation</summary>
         public IScreen? CurrentScreen
         {
             get => _currentScreen;
             private set
             {
+                if (ReferenceEquals(_currentScreen, value)) return;
+                if (_currentScreen != null) ScreenChanging?.Invoke();
                 if (!SetProperty(ref _currentScreen, value)) return;
 
                 // The place's air follows the screen on show, a screen gone back to after a failed navigation too

@@ -95,6 +95,17 @@
     <Color x:Key="SpinnerOrange">#FF6B00</Color>
     <Color x:Key="RedZone">#60C02020</Color>
 
+    <!-- The game's buttons and dialogs: a thick cream outline on dark glass, amber under the pointer -->
+    <Color x:Key="UiOutline">#EDE0C4</Color>
+    <Color x:Key="UiGlass">#A6101010</Color>
+    <Color x:Key="UiGlassHover">#C8202020</Color>
+    <Color x:Key="UiGlassPressed">#E0080808</Color>
+    <Color x:Key="UiGlassCard">#E0121212</Color>
+    <Color x:Key="UiBand">#66000000</Color>
+    <Color x:Key="UiPrimaryGlass">#B8A31515</Color>
+    <Color x:Key="UiPrimaryGlassHover">#D8C62828</Color>
+    <Color x:Key="UiPrimaryGlassPressed">#F0801010</Color>
+
     <!-- Dealer map and lot: the old-paper look -->
     <Color x:Key="Cream">#F5E6C8</Color>
     <Color x:Key="Cream50">#50F5E6C8</Color>

@@ -12,10 +12,6 @@ namespace StreetCorsa.Screens.Garage
     {
         private static readonly TimeSpan FadeInDuration = TimeSpan.FromSeconds(0.6);
         private static readonly TimeSpan QuickFadeInDuration = TimeSpan.FromSeconds(0.25);
-        private static readonly TimeSpan FadeOutDuration = TimeSpan.FromSeconds(0.35);
-
-        // The fade-out is waited on this long at most
-        private static readonly TimeSpan FadeOutTimeout = TimeSpan.FromSeconds(2);
 
         // Let the renderer draw a few frames (reflections, shadows) before showing it
         private static readonly TimeSpan SettleDelay = TimeSpan.FromMilliseconds(200);
@@ -55,19 +51,7 @@ namespace StreetCorsa.Screens.Garage
 
         private Window? _window;
 
-        /// <summary>
-        /// Off screen: the view model no longer waits on this view's fade (a garage that is shown again is loaded again,
-        /// and sets them anew)
-        /// </summary>
-        private void OnUnloaded(object sender, RoutedEventArgs e)
-        {
-            _revealTimer?.Stop();
-            if (DataContext is GarageScreenViewModel viewModel)
-            {
-                if (Equals(viewModel.ExitTransition, (Func<Task>)FadeOutAsync)) viewModel.ExitTransition = null;
-                if (Equals(viewModel.ExitCancelled, (Action)CancelFadeOut)) viewModel.ExitCancelled = null;
-            }
-        }
+        private void OnUnloaded(object sender, RoutedEventArgs e) => _revealTimer?.Stop();
 
         /// <summary>The work goes over to the engine stand, when there is a workbench to work at</summary>
         private void ShowStand()
@@ -77,12 +61,6 @@ namespace StreetCorsa.Screens.Garage
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
-            if (DataContext is GarageScreenViewModel viewModel)
-            {
-                viewModel.ExitTransition = FadeOutAsync;
-                viewModel.ExitCancelled = CancelFadeOut;
-            }
-
             _window = Window.GetWindow(this);
             if (_window != null)
             {
@@ -187,42 +165,7 @@ namespace StreetCorsa.Screens.Garage
                 EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
             });
 
-            var hideLoading = new DoubleAnimation(LoadingLayer.Opacity, 0.0, QuickFadeInDuration);
-            hideLoading.Completed += (_, _) => LoadingLayer.Visibility = Visibility.Collapsed;
-            LoadingLayer.BeginAnimation(OpacityProperty, hideLoading);
-        }
-
-        /// <summary>
-        /// Fades the whole screen out. Awaited by the view model before it navigates away.
-        /// </summary>
-        private Task FadeOutAsync()
-        {
-            // A view no longer on screen plays nothing: its animation would never complete, and the garage would wait
-            // on it for good with every tile dead
-            if (!IsLoaded) return Task.CompletedTask;
-
-            var completion = new TaskCompletionSource();
-
-            // Block clicks while leaving
-            RootGrid.IsHitTestVisible = false;
-
-            var fadeOut = new DoubleAnimation(RootGrid.Opacity, 0.0, FadeOutDuration)
-            {
-                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
-            };
-            fadeOut.Completed += (_, _) => completion.TrySetResult();
-            RootGrid.BeginAnimation(OpacityProperty, fadeOut);
-
-            // And one that never reports back is not waited on past its time
-            return Task.WhenAny(completion.Task, Task.Delay(FadeOutTimeout));
-        }
-
-        /// <summary>The garage stays after all (the next screen would not open): back in full view and clickable</summary>
-        private void CancelFadeOut()
-        {
-            RootGrid.BeginAnimation(OpacityProperty, null);
-            RootGrid.Opacity = 1.0;
-            RootGrid.IsHitTestVisible = true;
+            LoadingLayer.IsLoading = false;
         }
     }
 }

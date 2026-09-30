@@ -94,6 +94,18 @@
     <SolidColorBrush x:Key="SpinnerOrangeBrush" Color="{StaticResource SpinnerOrange}"/>
     <SolidColorBrush x:Key="RedZoneBrush" Color="{StaticResource RedZone}"/>
 
+    <!-- The game's buttons and dialogs (see Colors.xaml) -->
+    <SolidColorBrush x:Key="UiOutlineBrush" Color="{StaticResource UiOutline}"/>
+    <SolidColorBrush x:Key="AmberBrush" Color="{StaticResource Amber}"/>
+    <SolidColorBrush x:Key="UiGlassBrush" Color="{StaticResource UiGlass}"/>
+    <SolidColorBrush x:Key="UiGlassHoverBrush" Color="{StaticResource UiGlassHover}"/>
+    <SolidColorBrush x:Key="UiGlassPressedBrush" Color="{StaticResource UiGlassPressed}"/>
+    <SolidColorBrush x:Key="UiGlassCardBrush" Color="{StaticResource UiGlassCard}"/>
+    <SolidColorBrush x:Key="UiBandBrush" Color="{StaticResource UiBand}"/>
+    <SolidColorBrush x:Key="UiPrimaryGlassBrush" Color="{StaticResource UiPrimaryGlass}"/>
+    <SolidColorBrush x:Key="UiPrimaryGlassHoverBrush" Color="{StaticResource UiPrimaryGlassHover}"/>
+    <SolidColorBrush x:Key="UiPrimaryGlassPressedBrush" Color="{StaticResource UiPrimaryGlassPressed}"/>
+
     <!-- Dealer map and lot brushes -->
     <SolidColorBrush x:Key="CreamBrush" Color="{StaticResource Cream}"/>
     <SolidColorBrush x:Key="Cream50Brush" Color="{StaticResource Cream50}"/>
@@ -157,9 +169,8 @@
                 Stretch="UniformToFill"
                 PresentationOptions:Freeze="True"/>
 
-    <!-- Button Images.
-         Most of the art is 820-1024 px square for tiles drawn at 88-300 px, so it is decoded 300 wide; the back,
-         exit and garage icons are already about 290 px and are loaded as they are -->
+    <!-- Button Images: the main menu's badges and the newspaper's two sections.
+         The art is 820-1024 px square for tiles drawn at up to 300 px, so it is decoded 300 wide -->
     <BitmapImage x:Key="NewGameButtonImage"
                  UriSource="pack://application:,,,/Assets/Images/Buttons/new_game.png"
                  DecodePixelWidth="300"
@@ -190,53 +201,6 @@
                 Stretch="Fill"
                 PresentationOptions:Freeze="True"/>
 
-    <BitmapImage x:Key="ExitButtonImage"
-                 UriSource="pack://application:,,,/Assets/Images/Buttons/exit.png"
-                 CacheOption="OnLoad"
-                 PresentationOptions:Freeze="True"/>
-    <ImageBrush x:Key="ExitButtonBrush"
-                ImageSource="{StaticResource ExitButtonImage}"
-                Stretch="Fill"
-                PresentationOptions:Freeze="True"/>
-
-    <BitmapImage x:Key="BackButtonImage"
-                 UriSource="pack://application:,,,/Assets/Images/Buttons/back.png"
-                 CacheOption="OnLoad"
-                 PresentationOptions:Freeze="True"/>
-    <ImageBrush x:Key="BackButtonBrush"
-                ImageSource="{StaticResource BackButtonImage}"
-                Stretch="Fill"
-                PresentationOptions:Freeze="True"/>
-
-    <BitmapImage x:Key="NewspaperButtonImage"
-                 UriSource="pack://application:,,,/Assets/Images/Buttons/newspaper.png"
-                 DecodePixelWidth="300"
-                 CacheOption="OnLoad"
-                 PresentationOptions:Freeze="True"/>
-    <ImageBrush x:Key="NewspaperButtonBrush"
-                ImageSource="{StaticResource NewspaperButtonImage}"
-                Stretch="Fill"
-                PresentationOptions:Freeze="True"/>
-
-    <BitmapImage x:Key="GarageIconButtonImage"
-                 UriSource="pack://application:,,,/Assets/Images/Buttons/garage_icon.png"
-                 CacheOption="OnLoad"
-                 PresentationOptions:Freeze="True"/>
-    <ImageBrush x:Key="GarageIconButtonBrush"
-                ImageSource="{StaticResource GarageIconButtonImage}"
-                Stretch="Fill"
-                PresentationOptions:Freeze="True"/>
-
-    <BitmapImage x:Key="HitTheStreetsButtonImage"
-                 UriSource="pack://application:,,,/Assets/Images/Buttons/hit_the_streets.png"
-                 DecodePixelWidth="300"
-                 CacheOption="OnLoad"
-                 PresentationOptions:Freeze="True"/>
-    <ImageBrush x:Key="HitTheStreetsButtonBrush"
-                ImageSource="{StaticResource HitTheStreetsButtonImage}"
-                Stretch="Fill"
-                PresentationOptions:Freeze="True"/>
-
     <BitmapImage x:Key="UsedCarsButtonImage"
                  UriSource="pack://application:,,,/Assets/Images/Buttons/used_cars.png"
                  DecodePixelWidth="300"
@@ -254,16 +218,6 @@
                  PresentationOptions:Freeze="True"/>
     <ImageBrush x:Key="UsedPartsButtonBrush"
                 ImageSource="{StaticResource UsedPartsButtonImage}"
-                Stretch="Fill"
-                PresentationOptions:Freeze="True"/>
-
-    <BitmapImage x:Key="CareerButtonImage"
-                 UriSource="pack://application:,,,/Assets/Images/Buttons/career_button.png"
-                 DecodePixelWidth="300"
-                 CacheOption="OnLoad"
-                 PresentationOptions:Freeze="True"/>
-    <ImageBrush x:Key="CareerButtonBrush"
-                ImageSource="{StaticResource CareerButtonImage}"
                 Stretch="Fill"
                 PresentationOptions:Freeze="True"/>
 

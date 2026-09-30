@@ -151,8 +151,9 @@
         </StackPanel>
 
         <!-- Back to the garage -->
-        <Button Style="{StaticResource ExitButtonStyle}"
-                Background="{StaticResource GarageIconButtonBrush}"
+        <Button Style="{StaticResource RoundIconButtonStyle}"
+                Tag="{StaticResource GarageIcon}"
+                ToolTip="Back to the garage"
                 Command="{Binding BackCommand}"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Top"

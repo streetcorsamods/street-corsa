@@ -3,7 +3,6 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:bottomBar="clr-namespace:StreetCorsa.Components.BottomBar"
              xmlns:controls="clr-namespace:StreetCorsa.Controls"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="800">
@@ -11,14 +10,14 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- Back Button -->
         <Button x:Name="BackButton"
                 Grid.Row="0"
-                Style="{StaticResource ExitButtonStyle}"
-                Background="{StaticResource BackButtonBrush}"
+                Style="{StaticResource RoundIconButtonStyle}"
+                Tag="{StaticResource BackIcon}"
+                ToolTip="Back"
                 Command="{Binding BackCommand}"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Top"
@@ -249,8 +248,9 @@
             </ItemsControl.ItemTemplate>
         </ItemsControl>
 
-        <!-- Bottom Nav Bar -->
-        <bottomBar:BottomBarView Grid.Row="2"
-                                 BankrollDisplay="{Binding BankrollDisplay}"/>
+        <!-- The money -->
+        <Border Style="{StaticResource MoneyReadoutStyle}">
+            <TextBlock Text="{Binding BankrollDisplay}" Style="{StaticResource MoneyReadoutTextStyle}"/>
+        </Border>
     </Grid>
 </UserControl>

@@ -14,8 +14,8 @@
 
         <!-- Title -->
         <Border Grid.Row="0"
-                Background="{StaticResource BgDarkBrush}"
-                BorderBrush="{StaticResource BorderDarkBrush}"
+                Background="{StaticResource UiBandBrush}"
+                BorderBrush="{StaticResource White20Brush}"
                 BorderThickness="0,0,0,1"
                 Padding="20,15">
             <TextBlock Text="{Binding Title}"
@@ -36,8 +36,8 @@
 
         <!-- Buttons -->
         <Border Grid.Row="2"
-                Background="{StaticResource BgDarkBrush}"
-                BorderBrush="{StaticResource BorderDarkBrush}"
+                Background="{StaticResource UiBandBrush}"
+                BorderBrush="{StaticResource White20Brush}"
                 BorderThickness="0,1,0,0"
                 Padding="20,15">
             <StackPanel Orientation="Horizontal"

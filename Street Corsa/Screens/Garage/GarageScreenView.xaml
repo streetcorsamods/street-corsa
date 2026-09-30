@@ -21,20 +21,19 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="ToggleButton">
                         <Border x:Name="border"
-                                Background="{StaticResource BgPanelAABrush}"
-                                BorderBrush="{StaticResource BorderLightBrush}"
-                                BorderThickness="1"
-                                CornerRadius="4"
+                                Background="{StaticResource UiGlassBrush}"
+                                BorderBrush="{StaticResource UiOutlineBrush}"
+                                BorderThickness="2"
+                                CornerRadius="6"
                                 Padding="12,5">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource Gray80Brush}"/>
-                            </Trigger>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="{StaticResource AccentPrimaryBrush}"/>
-                                <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource AccentPrimaryBrush}"/>
+                                <Setter TargetName="border" Property="Background" Value="{StaticResource UiPrimaryGlassBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource AmberBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -50,14 +49,8 @@
               Opacity="0"
               IsHitTestVisible="False"
               IsEnabled="{Binding IsMovingEngine, ElementName=Viewport3D, Converter={StaticResource InverseBooleanConverter}}">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
-
         <!-- 3D Garage (whole screen background; renders the empty garage when no car is selected) -->
         <controls:CarViewport3D x:Name="Viewport3D"
-                                Grid.Row="0"
                                 CarDirectory="{Binding SelectedCar.CarDirectory}"
                                 SkinId="{Binding SelectedCar.SkinId}"
                                 ShowroomKn5="{Binding GarageShowroomKn5}"
@@ -74,28 +67,8 @@
                                 RunningEngine="{Binding Runner, ElementName=EnginePanel}"
                                 FadeInOnReady="False"/>
 
-        <!-- Back Button -->
-        <Button x:Name="BackButton"
-                Grid.Row="0"
-                Style="{StaticResource ExitButtonStyle}"
-                Background="{StaticResource BackButtonBrush}"
-                Command="{Binding BackCommand}"
-                HorizontalAlignment="Left"
-                VerticalAlignment="Top"
-                Margin="20,20,0,0"/>
-
-        <!-- Exit Button -->
-        <Button x:Name="ExitButton"
-                Grid.Row="0"
-                Style="{StaticResource ExitButtonStyle}"
-                Background="{StaticResource ExitButtonBrush}"
-                Command="{Binding ExitCommand}"
-                HorizontalAlignment="Left"
-                VerticalAlignment="Top"
-                Margin="20,94,0,0"/>
-
         <!-- Main Content: 800 wide at most, narrower on a small or high-DPI screen so it keeps clear of the side buttons -->
-        <Grid Grid.Row="0">
+        <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="4*" MaxWidth="800"/>
@@ -109,12 +82,13 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <!-- Selected Car Display Bar (Clickable) -->
+                <!-- Selected Car Display Bar (Clickable): outlined glass, the name in cream over it -->
                 <Button x:Name="CarDisplayButton"
                     Grid.Row="0"
                     Command="{Binding SelectCarCommand}"
                     HorizontalAlignment="Stretch"
-                    Margin="0,80,0,20"
+                    Margin="0,30,0,20"
+                    ToolTip="Your cars: pick another one from the lot"
                     Cursor="Hand">
                 <Button.Style>
                     <Style TargetType="Button">
@@ -122,34 +96,30 @@
                             <Setter.Value>
                                 <ControlTemplate TargetType="Button">
                                     <Border x:Name="CarDisplayBorder"
-                                           Background="{StaticResource BgMediumBrush}"
-                                           BorderBrush="{StaticResource BorderLightBrush}"
-                                           BorderThickness="2"
-                                           CornerRadius="5"
-                                           Padding="30,15"
+                                           Background="{StaticResource UiGlassBrush}"
+                                           BorderBrush="{StaticResource UiOutlineBrush}"
+                                           BorderThickness="3"
+                                           CornerRadius="8"
+                                           Padding="30,12"
                                            MaxWidth="800">
-                                        <Border.Effect>
-                                            <DropShadowEffect Color="Black"
-                                                            Direction="270"
-                                                            ShadowDepth="3"
-                                                            BlurRadius="10"
-                                                            Opacity="0.5"/>
-                                        </Border.Effect>
                                         <TextBlock Text="{Binding SelectedCarDisplay}"
                                                   FontSize="{StaticResource FontSizeTitleSmall}"
                                                   FontWeight="Bold"
-                                                  Foreground="{StaticResource TextPrimaryBrush}"
+                                                  Foreground="{StaticResource CreamBrush}"
                                                   HorizontalAlignment="Center"
-                                                  VerticalAlignment="Center"/>
+                                                  VerticalAlignment="Center">
+                                            <TextBlock.Effect>
+                                                <DropShadowEffect Color="Black" ShadowDepth="0" BlurRadius="6" Opacity="0.9"/>
+                                            </TextBlock.Effect>
+                                        </TextBlock>
                                     </Border>
                                     <ControlTemplate.Triggers>
                                         <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="CarDisplayBorder" Property="BorderBrush" Value="{StaticResource TextDisabledBrush}"/>
-                                            <Setter TargetName="CarDisplayBorder" Property="Background" Value="{StaticResource Gray33Brush}"/>
+                                            <Setter TargetName="CarDisplayBorder" Property="BorderBrush" Value="{StaticResource AmberBrush}"/>
+                                            <Setter TargetName="CarDisplayBorder" Property="Background" Value="{StaticResource UiGlassHoverBrush}"/>
                                         </Trigger>
                                         <Trigger Property="IsPressed" Value="True">
-                                            <Setter TargetName="CarDisplayBorder" Property="BorderBrush" Value="{StaticResource Gray80Brush}"/>
-                                            <Setter TargetName="CarDisplayBorder" Property="Background" Value="{StaticResource BgLightBrush}"/>
+                                            <Setter TargetName="CarDisplayBorder" Property="Background" Value="{StaticResource UiGlassPressedBrush}"/>
                                         </Trigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>
@@ -378,7 +348,7 @@
                         MaxWidth="800"
                         HorizontalAlignment="Stretch"
                         VerticalAlignment="Bottom"
-                        Margin="0,0,0,42"
+                        Margin="0,0,0,30"
                         Visibility="{Binding ActivePanel, Converter={StaticResource GaragePanelToVisibilityConverter}, ConverterParameter=CarPreview}">
                 <!-- 3D Viewport Controls: the engine on the left, the view toggles on the right -->
                 <Grid Margin="0,0,0,8"
@@ -451,76 +421,17 @@
                     </DockPanel>
                 </Border>
 
-                <!-- Car Details -->
-                <Border Background="{StaticResource BgPanelCCBrush}"
-                       BorderBrush="{StaticResource BorderLightBrush}"
-                       BorderThickness="1"
-                       CornerRadius="5"
-                       Padding="20,8"
+                <!-- What can be done with the car (its details are in Car info, on the right) -->
+                <Border Background="{StaticResource UiGlassBrush}"
+                       BorderBrush="{StaticResource UiOutlineBrush}"
+                       BorderThickness="3"
+                       CornerRadius="8"
+                       Padding="16,8"
+                       HorizontalAlignment="Center"
                        Visibility="{Binding HasCars, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-
-                        <!-- Condition -->
-                        <TextBlock Grid.Column="0"
-                                  Text="Condition:"
-                                  FontSize="{StaticResource FontSizeBody}"
-                                  Foreground="{StaticResource TextSecondaryBrush}"
-                                  Margin="0,0,10,0"
-                                  VerticalAlignment="Center"/>
-                        <TextBlock Grid.Column="1"
-                                  Text="{Binding SelectedCar.ConditionDisplay}"
-                                  FontSize="{StaticResource FontSizeBody}"
-                                  Foreground="{StaticResource TextPrimaryBrush}"
-                                  Margin="0,0,20,0"
-                                  VerticalAlignment="Center"/>
-
-                        <!-- Mileage -->
-                        <TextBlock Grid.Column="2"
-                                  Text="Mileage:"
-                                  FontSize="{StaticResource FontSizeBody}"
-                                  Foreground="{StaticResource TextSecondaryBrush}"
-                                  Margin="0,0,10,0"
-                                  VerticalAlignment="Center"/>
-                        <TextBlock Grid.Column="3"
-                                  Text="{Binding SelectedCar.MileageDisplay}"
-                                  ToolTip="{Binding SelectedCar.HistoryDisplay}"
-                                  FontSize="{StaticResource FontSizeBody}"
-                                  Foreground="{StaticResource TextPrimaryBrush}"
-                                  Margin="0,0,20,0"
-                                  VerticalAlignment="Center"/>
-
-                        <!-- Fuel: what the last race left in the tank -->
-                        <TextBlock Grid.Column="4"
-                                  Text="Fuel:"
-                                  FontSize="{StaticResource FontSizeBody}"
-                                  Foreground="{StaticResource TextSecondaryBrush}"
-                                  Margin="0,0,10,0"
-                                  VerticalAlignment="Center"/>
-                        <TextBlock Grid.Column="5"
-                                  Text="{Binding SelectedCar.FuelDisplay}"
-                                  ToolTip="Filled up at the gas station"
-                                  FontSize="{StaticResource FontSizeBody}"
-                                  Foreground="{StaticResource TextPrimaryBrush}"
-                                  Margin="0,0,20,0"
-                                  VerticalAlignment="Center"/>
-
+                    <StackPanel Orientation="Horizontal">
                         <!-- Repairs: what the races did to the car, and fixing it -->
-                        <Button Grid.Column="6"
-                                Content="Repairs"
+                        <Button Content="Repairs"
                                 Command="{Binding RepairsCommand}"
                                 Style="{StaticResource DialogPrimaryButtonStyle}"
                                 Padding="15,5"
@@ -530,28 +441,16 @@
                                 ToolTip="What the races did to the car and what fixing it costs"/>
 
                         <!-- Sell: to a dealer at once, or through an ad in the paper -->
-                        <Button Grid.Column="7"
-                                Content="{Binding SellButtonText}"
+                        <Button Content="{Binding SellButtonText}"
                                 Command="{Binding SellCommand}"
                                 Style="{StaticResource DialogPrimaryButtonStyle}"
                                 Padding="15,5"
-                                Margin="0,0,10,0"
                                 FontSize="{StaticResource FontSizeBody}"
                                 VerticalAlignment="Center"
                                 ToolTip="Trade the car in at a dealer, or put it in the paper"/>
 
-                        <!-- Showroom Button -->
-                        <Button Grid.Column="8"
-                                Content="Preview in Showroom"
-                                Command="{Binding LaunchShowroomCommand}"
-                                Style="{StaticResource DialogPrimaryButtonStyle}"
-                                Padding="15,5"
-                                FontSize="{StaticResource FontSizeBody}"
-                                VerticalAlignment="Center"/>
-
                         <!-- Free run: the car alone on a track of the player's choosing -->
-                        <ComboBox Grid.Column="9"
-                                  ItemsSource="{Binding FreeRunTracks}"
+                        <ComboBox ItemsSource="{Binding FreeRunTracks}"
                                   SelectedItem="{Binding FreeRunTrack}"
                                   DisplayMemberPath="Name"
                                   Width="230"
@@ -562,8 +461,7 @@
                                   VerticalContentAlignment="Center"
                                   ToolTip="Where to take the car"
                                   Visibility="{Binding HasFreeRunTracks, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                        <Button Grid.Column="10"
-                                Content="Free Run"
+                        <Button Content="Free Run"
                                 Command="{Binding FreeRunCommand}"
                                 Style="{StaticResource DialogPrimaryButtonStyle}"
                                 Padding="15,5"
@@ -572,8 +470,7 @@
                                 ToolTip="Take the car out on your own, on what its parts make of it. An hour goes by."/>
 
                         <!-- Test-and-tune: passes at the strip for timeslips -->
-                        <Button Grid.Column="11"
-                                Content="Test &amp; Tune"
+                        <Button Content="Test &amp; Tune"
                                 Command="{Binding TestAndTuneCommand}"
                                 Style="{StaticResource DialogPrimaryButtonStyle}"
                                 Padding="15,5"
@@ -581,7 +478,7 @@
                                 FontSize="{StaticResource FontSizeBody}"
                                 VerticalAlignment="Center"
                                 ToolTip="An hour at the drag strip on your own: pass after pass, each with its own tree and timeslip. Nothing at stake but the car's wear."/>
-                    </Grid>
+                    </StackPanel>
                 </Border>
             </StackPanel>
             </Grid>
@@ -593,170 +490,138 @@
                                   DataContext="{Binding Workbench}"/>
 
         <!-- ==================== OVERLAY NAVIGATION ==================== -->
+        <!-- Round icon buttons around the car. All but Quit make room while the car is being worked on (the workbench's
+             cards take the sides then). -->
 
-        <!-- Hit the Streets (mid left) -->
+        <!-- Quit (top left): back to the main menu, or out of the game -->
+        <Button x:Name="QuitButton"
+                Style="{StaticResource RoundIconButtonStyle}"
+                Tag="{StaticResource QuitIcon}"
+                Command="{Binding QuitCommand}"
+                ToolTip="Quit"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                Margin="30,30,0,0"/>
+
+        <!-- Hit the Streets (centre left) -->
         <Button x:Name="HitTheStreetsButton"
-                Grid.Row="0"
-                Style="{StaticResource OverlayTileButtonStyle}"
-                Background="{StaticResource HitTheStreetsButtonBrush}"
+                Style="{StaticResource RoundIconButtonLargeStyle}"
+                Tag="{StaticResource DrivingWheelIcon}"
                 Command="{Binding HitTheStreetsCommand}"
-                Tag="Hit the streets"
+                ToolTip="Hit the streets"
                 helpers:Reveal.IsShown="{Binding ShowNavigation}"
                 helpers:Reveal.OffsetX="-60"
-                Width="112"
-                Height="112"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Center"
                 Margin="30,0,0,0"/>
 
-        <!-- Parts dealers (beside the car dealers): the part shops' own map -->
-        <Button x:Name="PartDealersButton"
-                Grid.Row="0"
-                Style="{StaticResource OverlayTileButtonStyle}"
-                Command="{Binding PartDealersCommand}"
-                Tag="Parts dealers"
-                helpers:Reveal.IsShown="{Binding ShowNavigation}"
-                helpers:Reveal.OffsetX="-60"
-                HorizontalAlignment="Left"
-                VerticalAlignment="Bottom"
-                Margin="134,0,0,134">
-            <Button.Background>
-                <ImageBrush ImageSource="/Assets/Images/Buttons/parts_dealers.png" Stretch="Uniform"/>
-            </Button.Background>
-        </Button>
-
-        <!-- Car dealers (left, above the newspaper) -->
-        <Button x:Name="CarDealersButton"
-                Grid.Row="0"
-                Style="{StaticResource OverlayTileButtonStyle}"
-                Command="{Binding CarDealersCommand}"
-                Tag="Car dealers"
-                helpers:Reveal.IsShown="{Binding ShowNavigation}"
-                helpers:Reveal.OffsetX="-60"
-                HorizontalAlignment="Left"
-                VerticalAlignment="Bottom"
-                Margin="30,0,0,134">
-            <Button.Background>
-                <ImageBrush ImageSource="/Assets/Images/Buttons/used_cars.png" Stretch="Uniform"/>
-            </Button.Background>
-        </Button>
-
-        <!-- Newspaper (bottom left) -->
-        <Button x:Name="NewspaperButton"
-                Grid.Row="0"
-                Style="{StaticResource OverlayTileButtonStyle}"
-                Background="{StaticResource NewspaperButtonBrush}"
-                Command="{Binding NewspaperCommand}"
-                Tag="Newspaper"
-                helpers:Reveal.IsShown="{Binding ShowNavigation}"
-                helpers:Reveal.OffsetX="-60"
-                HorizontalAlignment="Left"
-                VerticalAlignment="Bottom"
-                Margin="30,0,0,30"/>
-
-        <!-- Career + Calendar (top right) -->
-        <StackPanel x:Name="RightButtons"
-                    Grid.Row="0"
-                    helpers:Reveal.IsShown="{Binding ShowNavigation}"
-                    helpers:Reveal.OffsetX="60"
-                    HorizontalAlignment="Right"
-                    VerticalAlignment="Top"
-                    Margin="0,30,30,0">
-            <Button Style="{StaticResource OverlayTileButtonStyle}"
-                    Background="{StaticResource CareerButtonBrush}"
-                    Command="{Binding CareerCommand}"
-                    Tag="Career stats"/>
-            <Button x:Name="CalendarButton"
-                    Style="{StaticResource OverlayTileButtonStyle}"
-                    Command="{Binding ShowCalendarCommand}"
-                    Tag="Calendar"
-                    Margin="0,16,0,0">
-                <Button.Background>
-                    <ImageBrush ImageSource="/Assets/Images/Buttons/calendar.png" Stretch="Uniform"/>
-                </Button.Background>
-            </Button>
-            <!-- The gas station: filling up, the oil and the wash are done there -->
-            <Button x:Name="GasStationButton"
-                    Style="{StaticResource OverlayTileButtonStyle}"
-                    Command="{Binding GasStationCommand}"
-                    Tag="Gas station"
-                    Margin="0,16,0,0">
-                <Button.Background>
-                    <ImageBrush ImageSource="/Assets/Images/Buttons/gas_station.png" Stretch="Uniform"/>
-                </Button.Background>
-            </Button>
-            <!-- The radio on the bench: the player's own music, on every screen but a race (F2 anywhere) -->
-            <Button x:Name="RadioButton"
-                    Style="{StaticResource OverlayTileButtonStyle}"
-                    Command="{x:Static radio:RadioPanelViewModel.ToggleCommand}"
-                    Tag="Radio"
-                    Margin="0,16,0,0">
-                <Button.Background>
-                    <ImageBrush ImageSource="{StaticResource RadioArt}" Stretch="Uniform"/>
-                </Button.Background>
-            </Button>
+        <!-- Bottom left, from the top: car dealers, part dealers, the newspaper -->
+        <StackPanel helpers:Reveal.IsShown="{Binding ShowNavigation}"
+                    helpers:Reveal.OffsetX="-60"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Bottom"
+                    Margin="30,0,0,30">
+            <Button x:Name="CarDealersButton"
+                    Style="{StaticResource RoundIconButtonStyle}"
+                    Tag="{StaticResource CarDealerIcon}"
+                    Padding="10"
+                    Command="{Binding CarDealersCommand}"
+                    ToolTip="Car dealers"/>
+            <!-- The part shops' own map -->
+            <Button x:Name="PartDealersButton"
+                    Style="{StaticResource RoundIconButtonStyle}"
+                    Tag="{StaticResource PartsIcon}"
+                    Command="{Binding PartDealersCommand}"
+                    ToolTip="Part dealers"
+                    Margin="0,16,0,0"/>
+            <Button x:Name="NewspaperButton"
+                    Style="{StaticResource RoundIconButtonStyle}"
+                    Tag="{StaticResource NewspaperIcon}"
+                    Command="{Binding NewspaperCommand}"
+                    ToolTip="Newspaper"
+                    Margin="0,16,0,0"/>
         </StackPanel>
 
-        <!-- Bottom Nav Bar -->
-        <Border Grid.Row="1"
-                Background="{StaticResource BorderLightBrush}"
-                BorderBrush="{StaticResource Gray30Brush}"
-                BorderThickness="0,1,0,0"
-                Height="40">
-            <Grid Margin="20,0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
+        <!-- Car info (centre right): everything about the selected car and its parts -->
+        <Button x:Name="CarInfoButton"
+                Style="{StaticResource RoundIconButtonStyle}"
+                Tag="{StaticResource CarInfoIcon}"
+                Command="{Binding CarInfoCommand}"
+                ToolTip="Car info"
+                helpers:Reveal.IsShown="{Binding ShowNavigation}"
+                helpers:Reveal.OffsetX="60"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Center"
+                Margin="0,0,30,0"/>
 
-                <!-- Bankroll Display -->
-                <StackPanel Grid.Column="0"
-                           Orientation="Horizontal"
-                           VerticalAlignment="Center">
-                    <TextBlock Text="Bankroll:"
-                              Foreground="{StaticResource TextPrimaryBrush}"
-                              FontSize="{StaticResource FontSizeSubheading}"
-                              FontWeight="Bold"
-                              Margin="0,0,10,0"/>
-                    <TextBlock Text="{Binding BankrollDisplay}"
-                              Foreground="{StaticResource AccentSuccessBrush}"
-                              FontSize="{StaticResource FontSizeSubheading}"
-                              FontWeight="Bold"/>
-                </StackPanel>
-            </Grid>
-        </Border>
+        <!-- The gas station (bottom right): filling up, the oil and the wash are done there -->
+        <Button x:Name="GasStationButton"
+                Style="{StaticResource RoundIconButtonStyle}"
+                Tag="{StaticResource FuelPumpIcon}"
+                Command="{Binding GasStationCommand}"
+                ToolTip="Gas station"
+                helpers:Reveal.IsShown="{Binding ShowNavigation}"
+                helpers:Reveal.OffsetX="60"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Bottom"
+                Margin="0,0,30,30"/>
+
+        <!-- Top right: the radio and the career in a row, the calendar under the career, the money under them all -->
+        <Grid x:Name="RightButtons"
+              helpers:Reveal.IsShown="{Binding ShowNavigation}"
+              helpers:Reveal.OffsetX="60"
+              HorizontalAlignment="Right"
+              VerticalAlignment="Top"
+              Margin="0,30,30,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <!-- The radio on the bench: the player's own music, on every screen but a race (F2 anywhere) -->
+            <Button x:Name="RadioButton"
+                    Style="{StaticResource RoundIconButtonStyle}"
+                    Tag="{StaticResource RadioIcon}"
+                    Command="{x:Static radio:RadioPanelViewModel.ToggleCommand}"
+                    ToolTip="Radio (F2)"
+                    Margin="0,0,16,0"/>
+            <Button Grid.Column="1"
+                    Style="{StaticResource RoundIconButtonStyle}"
+                    Tag="{StaticResource TrophyIcon}"
+                    Command="{Binding CareerCommand}"
+                    ToolTip="Career stats"/>
+            <Button x:Name="CalendarButton"
+                    Grid.Row="1"
+                    Grid.Column="1"
+                    Style="{StaticResource RoundIconButtonStyle}"
+                    Tag="{StaticResource CalendarIcon}"
+                    Command="{Binding ShowCalendarCommand}"
+                    ToolTip="Calendar"
+                    Margin="0,16,0,0"/>
+            <!-- The money -->
+            <Border Grid.Row="2"
+                    Grid.ColumnSpan="2"
+                    HorizontalAlignment="Right"
+                    Margin="0,16,0,0"
+                    Padding="12,4"
+                    Background="{StaticResource UiGlassBrush}"
+                    BorderBrush="{StaticResource UiOutlineBrush}"
+                    BorderThickness="2"
+                    CornerRadius="6"
+                    ToolTip="Your money">
+                <TextBlock Text="{Binding BankrollDisplay}"
+                           Foreground="{StaticResource AccentSuccessBrush}"
+                           FontSize="{StaticResource FontSizeBody}"
+                           FontWeight="Bold"/>
+            </Border>
+        </Grid>
         </Grid>
 
         <!-- Loading Layer (shown until the 3D garage is ready) -->
-        <StackPanel x:Name="LoadingLayer"
-                    VerticalAlignment="Center"
-                    HorizontalAlignment="Center"
-                    IsHitTestVisible="False">
-            <Border Width="60" Height="60" Margin="0,0,0,30">
-                <Border.RenderTransform>
-                    <RotateTransform x:Name="SpinnerRotation" CenterX="30" CenterY="30"/>
-                </Border.RenderTransform>
-                <Border.Triggers>
-                    <EventTrigger RoutedEvent="Loaded">
-                        <BeginStoryboard>
-                            <Storyboard RepeatBehavior="Forever">
-                                <DoubleAnimation Storyboard.TargetName="SpinnerRotation"
-                                                 Storyboard.TargetProperty="Angle"
-                                                 From="0" To="360"
-                                                 Duration="0:0:1"/>
-                            </Storyboard>
-                        </BeginStoryboard>
-                    </EventTrigger>
-                </Border.Triggers>
-                <Ellipse Stroke="{StaticResource SpinnerOrangeBrush}" StrokeThickness="4"
-                         StrokeDashArray="3 2"
-                         Fill="Transparent"/>
-            </Border>
-            <TextBlock Text="Opening the garage..."
-                       FontSize="{StaticResource FontSizeTitleSmall}"
-                       FontWeight="Bold"
-                       Foreground="{StaticResource TextPrimaryBrush}"
-                       HorizontalAlignment="Center"/>
-        </StackPanel>
+        <controls:LoadingIndicator x:Name="LoadingLayer" Message="Opening the garage..."/>
     </Grid>
 </UserControl>

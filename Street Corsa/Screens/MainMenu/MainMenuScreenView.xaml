@@ -65,8 +65,9 @@
         <!-- Exit -->
         <Button x:Name="ExitButton"
                 Grid.Row="0"
-                Style="{StaticResource ExitButtonStyle}"
-                Background="{StaticResource ExitButtonBrush}"
+                Style="{StaticResource RoundIconButtonStyle}"
+                Tag="{StaticResource QuitIcon}"
+                ToolTip="Quit"
                 Command="{Binding ExitCommand}"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Top"

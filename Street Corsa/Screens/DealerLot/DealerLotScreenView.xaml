@@ -107,8 +107,9 @@
         </StackPanel>
 
         <!-- Back to the map -->
-        <Button Style="{StaticResource ExitButtonStyle}"
-                Background="{StaticResource BackButtonBrush}"
+        <Button Style="{StaticResource RoundIconButtonStyle}"
+                Tag="{StaticResource BackIcon}"
+                ToolTip="Back"
                 Command="{Binding BackCommand}"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Top"
