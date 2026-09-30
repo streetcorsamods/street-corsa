@@ -109,10 +109,6 @@ namespace StreetCorsa.Screens.Station
 
         public string Title => Station?.Title ?? "The gas station";
 
-        public string ClockDisplay => _gameState.Date.ToString("h:mm tt", CultureInfo.GetCultureInfo("en-US"));
-
-        public string BankrollDisplay => Bankroll(_gameState.Player.Money);
-
         private string _statusText = string.Empty;
 
         public string StatusText
@@ -373,8 +369,6 @@ namespace StreetCorsa.Screens.Station
             }
 
             OnPropertyChanged(nameof(HasJobs));
-            OnPropertyChanged(nameof(BankrollDisplay));
-            OnPropertyChanged(nameof(ClockDisplay));
             OnPropertyChanged(nameof(DriveOffText));
         }
 
@@ -468,8 +462,6 @@ namespace StreetCorsa.Screens.Station
             {
                 _logger.Warning("Could not spend the time at the gas station: {Error}", ex.Message);
             }
-
-            OnPropertyChanged(nameof(ClockDisplay));
         }
 
         private void Save()
@@ -509,7 +501,6 @@ namespace StreetCorsa.Screens.Station
                         _towHomePaid = true;
                         _logger.Information("{Car} towed home from {Station} for ${Tow}", _car.DefinitionId, Station?.Id, tow);
                         StatusText = $"The tow truck hauls you home (${tow:N0}).";
-                        OnPropertyChanged(nameof(BankrollDisplay));
                         await _trip;
                         await SpendAsync(GameAction.TowToStation);
                     }

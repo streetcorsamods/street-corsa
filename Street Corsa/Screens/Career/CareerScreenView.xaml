@@ -584,9 +584,5 @@
             </Border>
         </Grid>
 
-        <!-- The money -->
-        <Border Style="{StaticResource MoneyReadoutStyle}">
-            <TextBlock Text="{Binding BankrollDisplay}" Style="{StaticResource MoneyReadoutTextStyle}"/>
-        </Border>
     </Grid>
 </UserControl>

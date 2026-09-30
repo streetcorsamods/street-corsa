@@ -44,8 +44,6 @@ namespace StreetCorsa.Screens.Newspaper
         public RelayCommand UsedCarsCommand { get; }
         public RelayCommand UsedPartsCommand { get; }
         public RelayCommand<EventInvitationViewModel> EnterEventCommand { get; }
-
-        public string BankrollDisplay => Bankroll(_gameState.Player.Money);
         public bool SkipEnterAnimation { get; }
 
         // Race Invitations
@@ -210,7 +208,6 @@ namespace StreetCorsa.Screens.Newspaper
         private void ShowSaleResult(SaleResult result, string title)
         {
             LoadPlayerAds();
-            OnPropertyChanged(nameof(BankrollDisplay));
             var message = result.SaveFailed ? result.Message + "\n\nThe game could not be saved: the details are in the log." : result.Message;
             _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, message, title));
         }
@@ -492,7 +489,6 @@ namespace StreetCorsa.Screens.Newspaper
                     LoadPlayerAds();
                     LoadArticles();
                 }
-                OnPropertyChanged(nameof(BankrollDisplay));
 
                 if (!string.IsNullOrEmpty(_gameState.SaveName)) _gameStateRepo.Save(_gameState, _gameState.SaveName);
             }

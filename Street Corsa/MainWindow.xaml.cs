@@ -30,6 +30,17 @@ namespace StreetCorsa
 
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger(LogCategory.Navigation);
 
+        // The money card is read off the game this often: the money and the clock change in many places
+        private static readonly TimeSpan StatusInterval = TimeSpan.FromMilliseconds(250);
+        private static readonly System.Globalization.CultureInfo Us = System.Globalization.CultureInfo.GetCultureInfo("en-US");
+
+        // The "now playing" note: out of its anchor, held, and back in
+        private static readonly TimeSpan ToastIn = TimeSpan.FromSeconds(0.35);
+        private static readonly TimeSpan ToastHold = TimeSpan.FromSeconds(3.7);
+        private static readonly TimeSpan ToastOut = TimeSpan.FromSeconds(0.5);
+        private const double ToastGap = 12;
+        private const double ToastTravel = 36;
+
         // What had the keyboard on the screen last, to give it back when the dialogs are done. Weak: a screen left
         // behind must not stay in memory for the element of it that had the keyboard last.
         private WeakReference<IInputElement>? _screenFocus;
@@ -69,6 +80,27 @@ namespace StreetCorsa
             // After the screens have had it: the garage's part placement takes R for its own
             KeyDown += OnRadioPowerKey;
             UpdateHosts();
+
+            var status = new DispatcherTimer(StatusInterval, DispatcherPriority.Background, (_, _) => UpdateStatus(), Dispatcher);
+            status.Start();
+        }
+
+        /// <summary>The money card: shown over a game's screens, with the game's money, time and date</summary>
+        private void UpdateStatus()
+        {
+            var game = ((App)System.Windows.Application.Current).CurrentGameState;
+            var shown = game != null && NavigationService.CurrentScreen is { InGame: true };
+            StatusCard.Visibility = shown ? Visibility.Visible : Visibility.Collapsed;
+            if (!shown) return;
+
+            SetText(StatusMoney, $"${game!.Player.Money:N0}");
+            SetText(StatusTime, game.Date.ToString("h:mm tt", Us));
+            SetText(StatusDate, game.Date.ToString("dddd, MMMM d, yyyy", Us));
+
+            static void SetText(System.Windows.Controls.TextBlock block, string text)
+            {
+                if (block.Text != text) block.Text = text;
+            }
         }
 
         /// <summary>The screen takes input only with nothing in front of it; the radio's panel none while a dialog is up</summary>
@@ -227,17 +259,49 @@ namespace StreetCorsa
             e.Handled = true;
         }
 
-        /// <summary>The song's name at the bottom of the screen for a few seconds; not while the panel shows it</summary>
+        /// <summary>
+        /// The song's name for a few seconds, coming out of the radio's icon to its left and going back into it; on a screen
+        /// without the radio, out of the money card, or the top right corner. Not while the panel shows it.
+        /// </summary>
         private void ShowNowPlaying(RadioSong song)
         {
             if (RadioPanelViewModel.Shared.IsOpen) return;
 
             RadioToastText.Text = song.Display;
-            var show = new DoubleAnimationUsingKeyFrames();
-            show.KeyFrames.Add(new LinearDoubleKeyFrame(1, KeyTime.FromTimeSpan(TimeSpan.FromSeconds(0.3))));
-            show.KeyFrames.Add(new LinearDoubleKeyFrame(1, KeyTime.FromTimeSpan(TimeSpan.FromSeconds(4.0))));
-            show.KeyFrames.Add(new LinearDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromSeconds(4.8))));
-            RadioToast.BeginAnimation(OpacityProperty, show);
+            RadioToast.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+            var size = RadioToast.DesiredSize;
+
+            // The anchor's left edge and middle, in the window
+            var anchor = RadioToastAnchor.Current ?? (StatusCard.IsVisible ? StatusCard : null);
+            System.Windows.Point edge;
+            if (anchor != null && anchor.IsDescendantOf(this))
+            {
+                var bounds = anchor.TransformToAncestor(this).TransformBounds(new Rect(anchor.RenderSize));
+                edge = new System.Windows.Point(bounds.Left, bounds.Top + bounds.Height / 2);
+            }
+            else
+            {
+                edge = new System.Windows.Point(ActualWidth - 20 + ToastGap, 20 + size.Height / 2);
+            }
+
+            System.Windows.Controls.Canvas.SetLeft(RadioToast, edge.X - ToastGap - size.Width);
+            System.Windows.Controls.Canvas.SetTop(RadioToast, edge.Y - size.Height / 2);
+
+            var total = ToastIn + ToastHold + ToastOut;
+            RadioToast.BeginAnimation(OpacityProperty, Keys(total, 0, 1, 1, 0));
+            RadioToastShift.BeginAnimation(TranslateTransform.XProperty, Keys(total, ToastTravel, 0, 0, ToastTravel));
+            RadioToastScale.BeginAnimation(ScaleTransform.ScaleXProperty, Keys(total, 0.4, 1, 1, 0.4));
+
+            // From the anchor, held, back to it: eased out of it and into it
+            DoubleAnimationUsingKeyFrames Keys(TimeSpan duration, double from, double shown, double held, double to)
+            {
+                var keys = new DoubleAnimationUsingKeyFrames { Duration = duration };
+                keys.KeyFrames.Add(new DiscreteDoubleKeyFrame(from, KeyTime.FromTimeSpan(TimeSpan.Zero)));
+                keys.KeyFrames.Add(new EasingDoubleKeyFrame(shown, KeyTime.FromTimeSpan(ToastIn), new CubicEase { EasingMode = EasingMode.EaseOut }));
+                keys.KeyFrames.Add(new LinearDoubleKeyFrame(held, KeyTime.FromTimeSpan(ToastIn + ToastHold)));
+                keys.KeyFrames.Add(new EasingDoubleKeyFrame(to, KeyTime.FromTimeSpan(duration), new CubicEase { EasingMode = EasingMode.EaseIn }));
+                return keys;
+            }
         }
 
         /// <summary>

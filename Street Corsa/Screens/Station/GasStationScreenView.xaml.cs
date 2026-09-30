@@ -35,7 +35,13 @@ namespace StreetCorsa.Screens.Station
             _viewModel = viewModel;
             if (_viewModel == null) return;
             _viewModel.AttendantLines.CollectionChanged += OnLine;
-            _viewModel.OpenCurtain = () => Curtain.BeginAnimation(OpacityProperty, new DoubleAnimation(0, CurtainUp));
+            _viewModel.OpenCurtain = () =>
+            {
+                Curtain.BeginAnimation(OpacityProperty, new DoubleAnimation(0, CurtainUp));
+
+                // The car rolls in with the player in it: the radio is the car's from here
+                Audio.Radio.RadioPlayer.Shared.SetInCar(true);
+            };
             _viewModel.CloseCurtain = CloseCurtainAsync;
         }
 

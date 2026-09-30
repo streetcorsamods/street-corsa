@@ -74,11 +74,8 @@ namespace StreetCorsa.Screens.DealerLot
         }
 
         public bool HasSaleNotice => SaleNotice.Length > 0;
-        public string BankrollDisplay => Bankroll(_gameState.Player.Money);
 
         /// <summary>The clock, so the hours the drive cost are in front of the player when they arrive</summary>
-        public string DateDisplay => HeaderDate(_gameState.Date);
-        public string TimeDisplay => HeaderTime(_gameState.Date);
 
         /// <summary>The lot's 3D scene, or null when the showroom is not installed</summary>
         public string? ShowroomKn5 { get; private set; }
@@ -285,7 +282,6 @@ namespace StreetCorsa.Screens.DealerLot
                 // The car is bought and it is in the garage; that is where the player wants to be, not stood on
                 // a lot looking at the gap where it was. Unless they have gone meanwhile (the purchase takes a moment):
                 // then they stay where they went.
-                OnPropertyChanged(nameof(BankrollDisplay));
                 if (!ReferenceEquals(_navigationService.CurrentScreen, this)) return;
                 _navigationService.NavigateToGarage(_gameState, skipAnimation: true);
             });
@@ -299,7 +295,6 @@ namespace StreetCorsa.Screens.DealerLot
         {
             SelectedIndex = -1;
             LoadStock();
-            OnPropertyChanged(nameof(BankrollDisplay));
         }
 
         private void OnBack()

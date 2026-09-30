@@ -276,21 +276,6 @@
         <Setter Property="CornerRadius" Value="6"/>
     </Style>
 
-    <!-- The player's money, top right of a screen (it was the bottom bar's) -->
-    <Style x:Key="MoneyReadoutStyle" TargetType="Border" BasedOn="{StaticResource GlassPanelStyle}">
-        <Setter Property="HorizontalAlignment" Value="Right"/>
-        <Setter Property="VerticalAlignment" Value="Top"/>
-        <Setter Property="Margin" Value="0,20,20,0"/>
-        <Setter Property="Padding" Value="12,4"/>
-        <Setter Property="ToolTip" Value="Your money"/>
-    </Style>
-
-    <Style x:Key="MoneyReadoutTextStyle" TargetType="TextBlock">
-        <Setter Property="Foreground" Value="{StaticResource AccentSuccessBrush}"/>
-        <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
-        <Setter Property="FontWeight" Value="Bold"/>
-    </Style>
-
     <!-- Every tooltip in the game: dark glass in the buttons' outline -->
     <Style TargetType="ToolTip">
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>

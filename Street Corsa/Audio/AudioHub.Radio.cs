@@ -46,7 +46,14 @@ public sealed partial class AudioHub
     // bump in the middle), a little grit, squeezed. Checked with FMOD's wav writer: a left-only noise comes out on both
     // sides alike, 1-2 kHz strongest, 20 dB down under 150 Hz and 25-55 dB down over 5 kHz.
     private IntPtr[] _amChain = [];
-    private bool _amOn;
+
+    // How far in the car radio's sound is, 0 (the music as it is) to 1, and where it is headed: it comes in and goes
+    // out over AmFadeSeconds, the pump stepping it (TickAmRadio)
+    private float _amMix;
+    private float _amTarget;
+
+    /// <summary>How long the car radio's sound takes to come in, or to go</summary>
+    public const float AmFadeSeconds = 1.5f;
 
     /// <summary>
     /// A song file read into memory and opened on it; null when there is no system, the file cannot be read, or FMOD
@@ -180,18 +187,46 @@ public sealed partial class AudioHub
     }
 
     /// <summary>
-    /// The car radio's sound on the radio's bus, or the music as it is. The chain is made the first time it is wanted,
-    /// and after that only switched in and out. UI thread.
+    /// The car radio's sound on the radio's bus, or the music as it is: it comes in (or goes) over
+    /// <see cref="AmFadeSeconds"/>, each effect mixed in by as much. The chain is made the first time it is wanted.
+    /// UI thread.
     /// </summary>
     public void SetAmRadio(bool on)
     {
         var core = _core;
         if (_system == IntPtr.Zero || core == IntPtr.Zero || _shutDown) return;
-        if (on == _amOn && (_amChain.Length > 0 || !on)) return;
 
-        if (on && _amChain.Length == 0) _amChain = BuildAmChain(core, _groups[(int)AudioBus.Radio]);
-        foreach (var dsp in _amChain) Warn(FMOD_DSP_SetBypass(dsp, on ? 0 : 1), "switch the AM sound");
-        _amOn = on;
+        if (on && _amChain.Length == 0)
+        {
+            _amChain = BuildAmChain(core, _groups[(int)AudioBus.Radio]);
+            ApplyAmMix();
+        }
+
+        _amTarget = on ? 1f : 0f;
+    }
+
+    /// <summary>One step of the car radio's fade, from the pump (under the hub's lock)</summary>
+    private void TickAmRadio(TimeSpan elapsed)
+    {
+        if (_amChain.Length == 0 || _amMix == _amTarget) return;
+
+        var step = (float)(elapsed.TotalSeconds / AmFadeSeconds);
+        _amMix = _amMix < _amTarget ? Math.Min(_amTarget, _amMix + step) : Math.Max(_amTarget, _amMix - step);
+        ApplyAmMix();
+    }
+
+    /// <summary>
+    /// Each effect of the chain as far in as the fade is: its own output mixed with what it was given. All the way out,
+    /// they are bypassed, and cost nothing.
+    /// </summary>
+    private void ApplyAmMix()
+    {
+        var mix = _amMix;
+        foreach (var dsp in _amChain)
+        {
+            Warn(FMOD_DSP_SetBypass(dsp, mix <= 0f ? 1 : 0), "switch the AM sound");
+            if (mix > 0f) Warn(FMOD_DSP_SetWetDryMix(dsp, 1f, mix, 1f - mix), "mix the AM sound");
+        }
     }
 
     // FMOD_CHANNELCONTROL_DSP_TAIL: the input end of a group's chain; FMOD_DSP_CHANNELMIX_OUTPUT_ALLMONO

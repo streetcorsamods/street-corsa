@@ -1146,6 +1146,18 @@ The fourth batch of the user's ideas: the garage's look, two new dialogs and fad
 - Checked with an off-screen harness driving the real game on a copy of a save (stills of the garage, dialogs and
   transition frames).
 
+**Tweaks after the user's first look (2026-09-30):**
+- One money card (money, time, date) in the window, top right over every screen of a game in play (`IScreen.InGame`,
+  false for the main menu, sound library and catalog editor), read off `App.CurrentGameState` four times a second. The
+  screens' own money/time readouts and their view-model properties are gone; what sat top right moved under the card.
+- Garage: career, calendar, radio in one column under the card.
+- The "now playing" note comes out of the radio button to its left and goes back into it (`RadioToastAnchor`); on a
+  screen without one, out of the money card.
+- The car radio's AM sound fades in and out over 1.5 s (`FMOD_DSP_SetWetDryMix` on each effect, stepped by the hub's
+  pump); the static fades with it. The radio gets into the car when the street is on screen or the station's curtain
+  lifts, not at the click; it leaves the car with the screen.
+- A free run or a test-and-tune keeps the radio as it was (`App.KeepsRadio`); only a race switches it off.
+
 ## Testing in AC without driving
 
 See `docs/ac-integration/csp-lua-scripts.md`, "Testing the race mode without driving". In short:

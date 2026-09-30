@@ -169,8 +169,6 @@ namespace StreetCorsa.Screens.Garage
 
         public bool HasCars => Cars.Count > 0;
 
-        public string BankrollDisplay => Bankroll(_gameState.Player.Money);
-
         /// <summary>Showroom model used as the environment of the 3D viewport</summary>
         public string GarageShowroomKn5 => AppSettings.Instance.GarageShowroomKn5;
 
@@ -347,7 +345,6 @@ namespace StreetCorsa.Screens.Garage
             Workbench.StateChanged += () =>
             {
                 RefreshCalendarDisplay();
-                OnPropertyChanged(nameof(BankrollDisplay));
             };
             Workbench.SaveFailed += _ => _dialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(
                 _dialogService,
@@ -600,7 +597,6 @@ namespace StreetCorsa.Screens.Garage
                     }
 
                     RefreshCalendarDisplay();
-                    OnPropertyChanged(nameof(BankrollDisplay));
                     OnPropertyChanged(nameof(SelectedCar));
                     // The parts view shows the parts' shape: it gets the repaired ones
                     Workbench.SetCar(car);
@@ -664,7 +660,6 @@ namespace StreetCorsa.Screens.Garage
 
                 Workbench.SetCar(car);
                 RefreshCalendarDisplay();
-                OnPropertyChanged(nameof(BankrollDisplay));
                 RaiseImpoundChanged();
             }
             catch (Exception ex)
@@ -715,7 +710,6 @@ namespace StreetCorsa.Screens.Garage
         private void AfterSale()
         {
             RefreshCalendarDisplay();
-            OnPropertyChanged(nameof(BankrollDisplay));
             OnPropertyChanged(nameof(SellButtonText));
         }
 
@@ -844,7 +838,6 @@ namespace StreetCorsa.Screens.Garage
                 try
                 {
                     RefreshCalendarDisplay();
-                    OnPropertyChanged(nameof(BankrollDisplay));
                     // The night may have brought an offer for a car in the paper, or the impound's release date
                     OnPropertyChanged(nameof(SellButtonText));
                     RaiseImpoundChanged();
@@ -912,9 +905,6 @@ namespace StreetCorsa.Screens.Garage
             {
                 // Refresh calendar properties to reflect current game time
                 RefreshCalendarDisplay();
-
-                // Refresh bankroll display in case money changed
-                OnPropertyChanged(nameof(BankrollDisplay));
 
                 LoadPlayerCars();
                 TellOfDeliveries();

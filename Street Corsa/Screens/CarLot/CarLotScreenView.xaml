@@ -158,34 +158,6 @@
                 HorizontalAlignment="Left"
                 VerticalAlignment="Top"
                 Margin="20,20,0,0"/>
-
-        <!-- Bankroll -->
-        <Border HorizontalAlignment="Right"
-                VerticalAlignment="Top"
-                Margin="0,20,20,0"
-                Background="{StaticResource Glass12C0Brush}"
-                BorderBrush="{StaticResource Cream50Brush}"
-                BorderThickness="1"
-                CornerRadius="3"
-                Padding="14,8,14,10">
-            <StackPanel>
-                <TextBlock Text="{Binding BankrollDisplay}"
-                           FontSize="{StaticResource FontSizeHeading}"
-                           FontWeight="Bold"
-                           HorizontalAlignment="Right"
-                           Foreground="{StaticResource AccentSuccessBrush}"/>
-                <TextBlock Text="{Binding TimeDisplay}"
-                           FontSize="{StaticResource FontSizeBody}"
-                           HorizontalAlignment="Right"
-                           Margin="0,4,0,0"
-                           Foreground="{StaticResource TextPrimaryBrush}"/>
-                <TextBlock Text="{Binding DateDisplay}"
-                           FontSize="{StaticResource FontSizeCaption}"
-                           HorizontalAlignment="Right"
-                           Foreground="{StaticResource TextSecondaryBrush}"/>
-            </StackPanel>
-        </Border>
-
         <!-- Every car the player has, the one in the garage first: a click goes to its warehouse and onto it -->
         <Border HorizontalAlignment="Left"
                 VerticalAlignment="Stretch"

@@ -106,6 +106,7 @@
                                                   FontSize="{StaticResource FontSizeTitleSmall}"
                                                   FontWeight="Bold"
                                                   Foreground="{StaticResource CreamBrush}"
+                                                  TextTrimming="CharacterEllipsis"
                                                   HorizontalAlignment="Center"
                                                   VerticalAlignment="Center">
                                             <TextBlock.Effect>
@@ -566,59 +567,33 @@
                 VerticalAlignment="Bottom"
                 Margin="0,0,30,30"/>
 
-        <!-- Top right: the radio and the career in a row, the calendar under the career, the money under them all -->
-        <Grid x:Name="RightButtons"
-              helpers:Reveal.IsShown="{Binding ShowNavigation}"
-              helpers:Reveal.OffsetX="60"
-              HorizontalAlignment="Right"
-              VerticalAlignment="Top"
-              Margin="0,30,30,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
-            <!-- The radio on the bench: the player's own music, on every screen but a race (F2 anywhere) -->
-            <Button x:Name="RadioButton"
-                    Style="{StaticResource RoundIconButtonStyle}"
-                    Tag="{StaticResource RadioIcon}"
-                    Command="{x:Static radio:RadioPanelViewModel.ToggleCommand}"
-                    ToolTip="Radio (F2)"
-                    Margin="0,0,16,0"/>
-            <Button Grid.Column="1"
-                    Style="{StaticResource RoundIconButtonStyle}"
+        <!-- Right, under the window's money card: the career, the calendar under it, the radio under that -->
+        <StackPanel x:Name="RightButtons"
+                    helpers:Reveal.IsShown="{Binding ShowNavigation}"
+                    helpers:Reveal.OffsetX="60"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    Margin="0,120,30,0">
+            <Button Style="{StaticResource RoundIconButtonStyle}"
                     Tag="{StaticResource TrophyIcon}"
                     Command="{Binding CareerCommand}"
                     ToolTip="Career stats"/>
             <Button x:Name="CalendarButton"
-                    Grid.Row="1"
-                    Grid.Column="1"
                     Style="{StaticResource RoundIconButtonStyle}"
                     Tag="{StaticResource CalendarIcon}"
                     Command="{Binding ShowCalendarCommand}"
                     ToolTip="Calendar"
                     Margin="0,16,0,0"/>
-            <!-- The money -->
-            <Border Grid.Row="2"
-                    Grid.ColumnSpan="2"
-                    HorizontalAlignment="Right"
-                    Margin="0,16,0,0"
-                    Padding="12,4"
-                    Background="{StaticResource UiGlassBrush}"
-                    BorderBrush="{StaticResource UiOutlineBrush}"
-                    BorderThickness="2"
-                    CornerRadius="6"
-                    ToolTip="Your money">
-                <TextBlock Text="{Binding BankrollDisplay}"
-                           Foreground="{StaticResource AccentSuccessBrush}"
-                           FontSize="{StaticResource FontSizeBody}"
-                           FontWeight="Bold"/>
-            </Border>
-        </Grid>
+            <!-- The radio on the bench: the player's own music, on every screen but a race (F2 anywhere). What it puts on
+                 comes out of it. -->
+            <Button x:Name="RadioButton"
+                    Style="{StaticResource RoundIconButtonStyle}"
+                    Tag="{StaticResource RadioIcon}"
+                    Command="{x:Static radio:RadioPanelViewModel.ToggleCommand}"
+                    ToolTip="Radio (F2)"
+                    radio:RadioToastAnchor.IsAnchor="True"
+                    Margin="0,16,0,0"/>
+        </StackPanel>
         </Grid>
 
         <!-- Loading Layer (shown until the 3D garage is ready) -->

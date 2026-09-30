@@ -203,6 +203,7 @@ public sealed partial class AudioHub
                 if (Warn(FMOD_ChannelGroup_SetVolume(_groups[(int)bus], gain), "set bus volume")) _applied[(int)bus] = gain;
             }
 
+            TickAmRadio(elapsed);
             if (_mixerSuspended) return;
             TickAmbience();
             Update();

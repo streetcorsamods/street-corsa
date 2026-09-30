@@ -14,6 +14,9 @@ namespace StreetCorsa.Screens.CarCatalogEditor
 {
     public class CarCatalogEditorScreenViewModel : BaseScreenViewModel
     {
+        /// <summary>Outside any game: no money, date or time over it</summary>
+        public override bool InGame => false;
+
         private readonly NavigationService _navigationService;
         private readonly DialogService _dialogService;
         private readonly IContentCatalogRepository _catalogRepo;

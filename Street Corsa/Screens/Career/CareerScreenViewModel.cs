@@ -67,9 +67,6 @@ namespace StreetCorsa.Screens.Career
         public string TotalLossesAmount => $"${_gameState.Player.Stats.TotalLosses:N0}";
         public string NetEarnings => $"${_gameState.Player.Stats.NetEarnings:N0}";
 
-        // Bottom bar
-        public string BankrollDisplay => Bankroll(_gameState.Player.Money);
-
         // Game won state
         public bool HasWonGame => _gameState.Career.HasWonGame;
         public string? WinningVictoryName => HasWonGame && _gameState.Career.WinningVictoryType != null

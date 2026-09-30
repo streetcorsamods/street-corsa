@@ -292,7 +292,7 @@ namespace StreetCorsa
 
             // A race has the sound device: the game's own sound fades out for it and comes back after; the radio goes off,
             // and the player's keys put it on over AC (on the UI thread, where the radio and its key hook live)
-            Launcher.ExecutionStarted += (_, _) => OnRacing(true);
+            Launcher.ExecutionStarted += (_, intent) => OnRacing(true, KeepsRadio(intent));
             Launcher.ExecutionEnded += (_, _) => OnRacing(false);
 
             // NavigationService (must be created after all its dependencies)
@@ -305,11 +305,18 @@ namespace StreetCorsa
                 game => CurrentGameState = game);
         }
 
-        private void OnRacing(bool racing)
+        private void OnRacing(bool racing, bool keepRadio = false)
         {
             Audio.AudioHub.Shared.SetRacing(racing);
-            Dispatcher.BeginInvoke(() => Audio.Radio.RadioPlayer.Shared.SetRacing(racing));
+            Dispatcher.BeginInvoke(() => Audio.Radio.RadioPlayer.Shared.SetRacing(racing, keepRadio));
         }
+
+        /// <summary>
+        /// The player out on their own (a free run, a test-and-tune at the strip): the radio stays as it was. Only a race
+        /// against somebody switches it off.
+        /// </summary>
+        public static bool KeepsRadio(Services.Configuration.Models.LaunchIntent intent) =>
+            intent is Services.Configuration.Models.FreeRunLaunchIntent or Services.Configuration.Models.DragRaceLaunchIntent { TunePasses: not null };
 
         private static void LogMods()
         {

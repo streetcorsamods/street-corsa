@@ -77,7 +77,7 @@
                 Padding="24,12"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Top"
-                Margin="0,30,20,0"
+                Margin="0,120,20,0"
                 ToolTip="Sit at the curb with the engine running and see who pulls up"/>
 
         <!-- Main Content -->
@@ -1218,9 +1218,5 @@
             </Border>
         </Grid>
 
-        <!-- The money, under the way out to the street -->
-        <Border Style="{StaticResource MoneyReadoutStyle}" Margin="0,92,20,0">
-            <TextBlock Text="{Binding BankrollDisplay}" Style="{StaticResource MoneyReadoutTextStyle}"/>
-        </Border>
     </Grid>
 </UserControl>
