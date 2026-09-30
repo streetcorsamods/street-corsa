@@ -55,6 +55,10 @@ public sealed class RadioPlayer : ObservableObject
     // A pause waits for its fade out before it holds the song; a play in between calls it off
     private int _pauseVersion;
 
+    // On when the last session ended: it comes on again once a game is loaded, not at the main menu
+    private bool _restoreOnGame;
+    private bool _gameLoaded;
+
     // In a race: its keys listened for, and how the radio was before, to put back unless the player changed it
     private RaceKeys? _raceKeys;
     private bool _racing;
@@ -198,7 +202,10 @@ public sealed class RadioPlayer : ObservableObject
         }
     }
 
-    /// <summary>Reads what was saved, lists the songs on a worker and comes back as it was left: on where it was playing, or off and ready there</summary>
+    /// <summary>
+    /// Reads what was saved and lists the songs on a worker; the radio waits off, set at the song and place it was left
+    /// at, and comes on again when a game is loaded if it was on when the last session ended (<see cref="GameLoaded"/>)
+    /// </summary>
     public void Start()
     {
         if (_started) return;
@@ -234,7 +241,8 @@ public sealed class RadioPlayer : ObservableObject
         }
 
         _raceKeys = new RaceKeys(Dispatcher.CurrentDispatcher);
-        Rescan(resume: _state.WasOn);
+        _restoreOnGame = _state.WasOn;
+        Rescan(resume: false);
     }
 
     #region Library
@@ -271,6 +279,7 @@ public sealed class RadioPlayer : ObservableObject
 
             if (resume) Resume();
             else if (!IsOn) Prime();
+            if (_gameLoaded) RestoreForGame();
         }
         catch (OperationCanceledException)
         {
@@ -438,6 +447,8 @@ public sealed class RadioPlayer : ObservableObject
     /// <summary>Plays a list (null: every song), from <paramref name="from"/> or, shuffling, anywhere</summary>
     public void PlayList(string? listName, RadioSong? from = null, uint positionMs = 0, bool fadeIn = false)
     {
+        // The player's own hand on the radio: what they do now stands, the last session's state is not put back over it
+        _restoreOnGame = false;
         var songs = SongsOf(listName);
         if (songs.Count == 0)
         {
@@ -459,6 +470,8 @@ public sealed class RadioPlayer : ObservableObject
     public void TogglePower()
     {
         _changedInRace |= _racing;
+        // The player's own hand on the radio: what they do now stands, the last session's state is not put back over it
+        _restoreOnGame = false;
         if (IsOn) Stop();
         else PowerOn();
     }
@@ -474,6 +487,8 @@ public sealed class RadioPlayer : ObservableObject
     public void TogglePlay()
     {
         _changedInRace |= _racing;
+        // The player's own hand on the radio: what they do now stands, the last session's state is not put back over it
+        _restoreOnGame = false;
         if (!IsOn)
         {
             PowerOn();
@@ -591,6 +606,23 @@ public sealed class RadioPlayer : ObservableObject
         _queue.Load(SongsOf(list).Select(s => s.Path), path, _state.Shuffle);
         Current = song;
         _resumeAtMs = _state.PositionMs;
+    }
+
+    /// <summary>
+    /// A game was loaded (or a new one started): the radio comes on as it was left last session, once. Before the songs
+    /// are listed it waits for them.
+    /// </summary>
+    public void GameLoaded()
+    {
+        _gameLoaded = true;
+        if (!IsScanning) RestoreForGame();
+    }
+
+    private void RestoreForGame()
+    {
+        if (!_restoreOnGame) return;
+        _restoreOnGame = false;
+        if (!IsOn && _songs.Count > 0) PowerOn();
     }
 
     private void Resume()
@@ -817,7 +849,8 @@ public sealed class RadioPlayer : ObservableObject
     public void Save()
     {
         if (!_started) return;
-        _state.WasOn = IsOn;
+        // Left at the main menu before a game was loaded, it is still to come on at the next one
+        _state.WasOn = IsOn || _restoreOnGame;
         _state.List = ListName;
         _state.Song = _current?.Path;
         _state.PositionMs = _playing?.PositionMs ?? _resumeAtMs;

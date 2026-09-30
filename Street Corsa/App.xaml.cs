@@ -75,7 +75,12 @@ namespace StreetCorsa
             {
                 var loaded = value != null && !ReferenceEquals(value, _currentGameState);
                 _currentGameState = value;
-                if (loaded) _ = ProcessOrphanedResultsAsync();
+                if (!loaded) return;
+
+                _ = ProcessOrphanedResultsAsync();
+
+                // The radio comes back as it was left, in the game rather than at the main menu
+                Audio.Radio.RadioPlayer.Shared.GameLoaded();
             }
         }
 
