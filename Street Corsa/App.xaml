@@ -36,7 +36,7 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="Styles/Colors.xaml"/>
+                <!-- Each dictionary once: Brushes.xaml brings Colors.xaml, and the ones after it find both here -->
                 <ResourceDictionary Source="Styles/Brushes.xaml"/>
                 <ResourceDictionary Source="Styles/Typography.xaml"/>
                 <ResourceDictionary Source="Styles/Icons.xaml"/>

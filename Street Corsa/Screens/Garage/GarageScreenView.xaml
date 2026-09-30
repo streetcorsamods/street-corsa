@@ -201,15 +201,22 @@
                     <TranslateTransform/>
                 </Border.RenderTransform>
                 <!-- Shown for the calendar, or as the 2D fallback when the 3D garage could not start. The calendar
-                     rises and fades in as it opens. -->
+                     rises and fades in as it opens, unless the card is already up as the fallback; the fade lets go of
+                     the card when the calendar closes. -->
                 <Border.Style>
                     <Style TargetType="Border">
                         <Setter Property="Visibility" Value="Collapsed"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding ActivePanel}" Value="Calendar">
                                 <Setter Property="Visibility" Value="Visible"/>
-                                <DataTrigger.EnterActions>
-                                    <BeginStoryboard>
+                            </DataTrigger>
+                            <MultiDataTrigger>
+                                <MultiDataTrigger.Conditions>
+                                    <Condition Binding="{Binding ActivePanel}" Value="Calendar"/>
+                                    <Condition Binding="{Binding HasFailed, ElementName=Viewport3D}" Value="False"/>
+                                </MultiDataTrigger.Conditions>
+                                <MultiDataTrigger.EnterActions>
+                                    <BeginStoryboard x:Name="CalendarRise">
                                         <Storyboard>
                                             <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.32">
                                                 <DoubleAnimation.EasingFunction>
@@ -223,8 +230,11 @@
                                             </DoubleAnimation>
                                         </Storyboard>
                                     </BeginStoryboard>
-                                </DataTrigger.EnterActions>
-                            </DataTrigger>
+                                </MultiDataTrigger.EnterActions>
+                                <MultiDataTrigger.ExitActions>
+                                    <RemoveStoryboard BeginStoryboardName="CalendarRise"/>
+                                </MultiDataTrigger.ExitActions>
+                            </MultiDataTrigger>
                             <DataTrigger Binding="{Binding HasFailed, ElementName=Viewport3D}" Value="True">
                                 <Setter Property="Visibility" Value="Visible"/>
                             </DataTrigger>
@@ -275,15 +285,11 @@
                         </Grid.RowDefinitions>
 
                         <!-- The month's pictures, framed in the outline -->
-                        <ItemsControl Grid.Row="0"
-                                      HorizontalAlignment="Center"
-                                      Margin="0,18,0,12">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <StackPanel Orientation="Horizontal"/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.Resources>
+                        <StackPanel Grid.Row="0"
+                                    Orientation="Horizontal"
+                                    HorizontalAlignment="Center"
+                                    Margin="0,18,0,12">
+                            <StackPanel.Resources>
                                 <Style TargetType="Border">
                                     <Setter Property="BorderBrush" Value="{StaticResource UiOutlineBrush}"/>
                                     <Setter Property="BorderThickness" Value="2"/>
@@ -295,7 +301,7 @@
                                         </Setter.Value>
                                     </Setter>
                                 </Style>
-                            </ItemsControl.Resources>
+                            </StackPanel.Resources>
                             <Border>
                                 <Image Source="{Binding CalendarImage1}" Stretch="Uniform" Height="120"/>
                             </Border>
@@ -305,7 +311,7 @@
                             <Border>
                                 <Image Source="{Binding CalendarImage3}" Stretch="Uniform" Height="120"/>
                             </Border>
-                        </ItemsControl>
+                        </StackPanel>
 
                         <!-- Bottom: Date/Time and Calendar Grid -->
                         <Grid Grid.Row="1" Margin="20,0">

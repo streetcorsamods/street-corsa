@@ -1,26 +1,24 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib"
+                    xmlns:helpers="clr-namespace:StreetCorsa.Helpers">
 
     <!-- The game's inputs, in the buttons' look: dark glass, a soft cream outline, amber under the pointer and when
          typing in. Keyless, so every text box, dropdown, scroll bar, slider and tick box in the game wears them.
-         The expander's header comes with them. Hovers fade like the buttons' (0.5 s); as there, each state animation names an element and reaches its brush or
-         transform by path, because the generated fade skips one aimed at a named brush. -->
-    <ResourceDictionary.MergedDictionaries>
-        <ResourceDictionary Source="Brushes.xaml"/>
-        <ResourceDictionary Source="Typography.xaml"/>
-    </ResourceDictionary.MergedDictionaries>
-
-    <Duration x:Key="HoverFade">0:0:0.5</Duration>
+         The expander's header comes with them. Hovers fade like the buttons' (HoverFade); as there, each state animation
+         names an element and reaches its brush or transform by path, because the generated fade skips one aimed at a
+         named brush. Where the keyboard is shows as GlassFocusVisual, or the control's own focused look.
+         Colours, brushes, font sizes, HoverFade and GlassFocusVisual come from App.xaml's earlier dictionaries (not
+         merged here again, which would copy them). The styles set no FontSize: a control takes its container's. -->
 
     <!-- ==================== TEXT BOX ==================== -->
-    <!-- Tag, when set, is the hint shown in an empty box -->
+    <!-- helpers:GlassInput.Hint, when set, is shown in an empty box -->
     <Style TargetType="TextBox">
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
         <Setter Property="Background" Value="{StaticResource UiFieldBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource UiOutlineSoftBrush}"/>
         <Setter Property="BorderThickness" Value="2"/>
         <Setter Property="Padding" Value="8,3"/>
-        <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
         <Setter Property="CaretBrush" Value="{StaticResource AmberBrush}"/>
         <Setter Property="SelectionBrush" Value="{StaticResource AmberBrush}"/>
         <Setter Property="SelectionOpacity" Value="0.35"/>
@@ -31,22 +29,22 @@
             <Setter.Value>
                 <ControlTemplate TargetType="TextBox">
                     <Grid x:Name="root">
+                        <!-- No Padding here: the text box hands its Padding to PART_ContentHost itself. The hint takes
+                             the same room, plus the 2 px the typed text sits in by. -->
                         <Border Background="{TemplateBinding Background}"
-                                BorderBrush="{StaticResource UiOutlineSoftBrush}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="6"
-                                Padding="{TemplateBinding Padding}">
+                                CornerRadius="6">
                             <Grid>
-                                <TextBlock x:Name="hint"
-                                           Text="{TemplateBinding Tag}"
-                                           Foreground="{StaticResource TextSecondaryBrush}"
-                                           FontStyle="Italic"
-                                           Opacity="0.6"
-                                           Margin="2,0"
-                                           VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                                           TextTrimming="CharacterEllipsis"
-                                           IsHitTestVisible="False"
-                                           Visibility="Collapsed"/>
+                                <Border x:Name="hint" Padding="{TemplateBinding Padding}" IsHitTestVisible="False" Visibility="Collapsed">
+                                    <TextBlock Text="{TemplateBinding helpers:GlassInput.Hint}"
+                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                               FontStyle="Italic"
+                                               Opacity="0.6"
+                                               Margin="2,0"
+                                               VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                               TextTrimming="CharacterEllipsis"/>
+                                </Border>
                                 <ScrollViewer x:Name="PART_ContentHost"
                                               Focusable="False"
                                               HorizontalScrollBarVisibility="Hidden"
@@ -108,11 +106,13 @@
     </Style>
 
     <!-- ==================== LIST ROWS (dropdowns and lists) ==================== -->
-    <!-- A row: amber wash under the pointer, red glass when picked, both faded -->
+    <!-- A row: amber wash under the pointer, red glass when picked, both faded. The row the keyboard is on (the arrow
+         keys in an open dropdown, which only move it until Enter picks it) has a thin amber outline. -->
     <ControlTemplate x:Key="GlassRowTemplate" TargetType="ListBoxItem">
         <Grid x:Name="root" Background="Transparent">
             <Border x:Name="picked" Opacity="0" CornerRadius="4" Background="{StaticResource UiPrimaryGlassBrush}"/>
             <Border x:Name="hover" Opacity="0" CornerRadius="4" Background="{StaticResource UiRowHoverBrush}"/>
+            <Border x:Name="focus" Opacity="0" CornerRadius="4" BorderThickness="1.5" BorderBrush="{StaticResource AmberBrush}"/>
             <ContentPresenter Margin="{TemplateBinding Padding}"
                               HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                               VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
@@ -152,6 +152,17 @@
                     <VisualState x:Name="SelectedUnfocused">
                         <Storyboard>
                             <DoubleAnimation Storyboard.TargetName="picked" Storyboard.TargetProperty="Opacity" To="0.8" Duration="0"/>
+                        </Storyboard>
+                    </VisualState>
+                </VisualStateGroup>
+                <VisualStateGroup x:Name="FocusStates">
+                    <VisualStateGroup.Transitions>
+                        <VisualTransition GeneratedDuration="0:0:0.12"/>
+                    </VisualStateGroup.Transitions>
+                    <VisualState x:Name="Unfocused"/>
+                    <VisualState x:Name="Focused">
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetName="focus" Storyboard.TargetProperty="Opacity" To="0.9" Duration="0"/>
                         </Storyboard>
                     </VisualState>
                 </VisualStateGroup>
@@ -204,16 +215,8 @@
     </Style>
 
     <!-- ==================== DROPDOWN ==================== -->
-    <Style TargetType="ComboBoxItem">
-        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-        <Setter Property="Padding" Value="10,5"/>
-        <Setter Property="Margin" Value="2,1"/>
-        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-        <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Cursor" Value="Hand"/>
-        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-        <Setter Property="Template" Value="{StaticResource GlassRowTemplate}"/>
-    </Style>
+    <!-- A dropdown's rows are the lists' rows -->
+    <Style TargetType="ComboBoxItem" BasedOn="{StaticResource GlassListBoxItemStyle}"/>
 
     <!-- The closed dropdown: the field and its chevron, which turns over while the list is open -->
     <Style x:Key="ComboBoxFieldStyle" TargetType="ToggleButton">
@@ -225,7 +228,7 @@
                 <ControlTemplate TargetType="ToggleButton">
                     <Grid>
                         <Border Background="{TemplateBinding Background}"
-                                BorderBrush="{StaticResource UiOutlineSoftBrush}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 CornerRadius="6"/>
                         <Border x:Name="hoverRing" Opacity="0" CornerRadius="6"
@@ -306,12 +309,13 @@
     <Style TargetType="ComboBox">
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
         <Setter Property="Background" Value="{StaticResource UiFieldBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource UiOutlineSoftBrush}"/>
         <Setter Property="BorderThickness" Value="2"/>
         <Setter Property="Padding" Value="10,3,30,3"/>
         <Setter Property="MinHeight" Value="28"/>
-        <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="FocusVisualStyle" Value="{StaticResource GlassFocusVisual}"/>
         <Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
         <Setter Property="MaxDropDownHeight" Value="320"/>
         <Setter Property="Template">
@@ -320,6 +324,7 @@
                     <Grid x:Name="root">
                         <ToggleButton Style="{StaticResource ComboBoxFieldStyle}"
                                       Background="{TemplateBinding Background}"
+                                      BorderBrush="{TemplateBinding BorderBrush}"
                                       BorderThickness="{TemplateBinding BorderThickness}"
                                       IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"/>
                         <ContentPresenter Content="{TemplateBinding SelectionBoxItem}"
@@ -327,7 +332,7 @@
                                           ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
                                           ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}"
                                           Margin="{TemplateBinding Padding}"
-                                          HorizontalAlignment="Left"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                           VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                                           IsHitTestVisible="False"/>
                         <Popup x:Name="PART_Popup"
@@ -443,7 +448,7 @@
                     <RepeatButton Style="{StaticResource ScrollPageStyle}" Command="ScrollBar.PageDownCommand"/>
                 </Track.IncreaseRepeatButton>
                 <Track.Thumb>
-                    <Thumb Style="{StaticResource ScrollThumbStyle}" MinHeight="28"/>
+                    <Thumb Style="{StaticResource ScrollThumbStyle}"/>
                 </Track.Thumb>
             </Track>
         </Grid>
@@ -460,13 +465,19 @@
                     <RepeatButton Style="{StaticResource ScrollPageStyle}" Command="ScrollBar.PageRightCommand"/>
                 </Track.IncreaseRepeatButton>
                 <Track.Thumb>
-                    <Thumb Style="{StaticResource ScrollThumbStyle}" MinWidth="28"/>
+                    <Thumb Style="{StaticResource ScrollThumbStyle}"/>
                 </Track.Thumb>
             </Track>
         </Grid>
     </ControlTemplate>
 
     <Style TargetType="ScrollBar">
+        <!-- The thumb's shortest: the track ignores a thumb's MinHeight and makes it no shorter than half the system's
+             arrow button, which it looks up under these keys; half of 56 keeps a 28 px bar in the longest list -->
+        <Style.Resources>
+            <sys:Double x:Key="{x:Static SystemParameters.VerticalScrollBarButtonHeightKey}">56</sys:Double>
+            <sys:Double x:Key="{x:Static SystemParameters.HorizontalScrollBarButtonWidthKey}">56</sys:Double>
+        </Style.Resources>
         <Setter Property="SnapsToDevicePixels" Value="True"/>
         <Setter Property="Width" Value="10"/>
         <Setter Property="MinWidth" Value="10"/>
@@ -550,6 +561,18 @@
         </Setter>
     </Style>
 
+    <Style x:Key="SliderFilledVerticalStyle" TargetType="RepeatButton" BasedOn="{StaticResource SliderFilledStyle}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RepeatButton">
+                    <Grid Background="Transparent">
+                        <Border Width="4" CornerRadius="2" Background="{StaticResource UiOutlineBrush}" Opacity="0.85"/>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- A glass knob in the cream ring; amber, glowing and a size up under the pointer -->
     <Style x:Key="SliderThumbStyle" TargetType="Thumb">
         <Setter Property="Width" Value="18"/>
@@ -609,47 +632,130 @@
         </Setter>
     </Style>
 
+    <!-- A slider: the rail, filled in cream up to the thumb; ticks (TickPlacement) in the soft outline beside it, and a
+         selection range (IsSelectionRangeEnabled) in amber on it. The Slider places the range in its Canvas, which
+         starts where the track does. -->
+    <ControlTemplate x:Key="HorizontalSliderTemplate" TargetType="Slider">
+        <Grid x:Name="root" Background="Transparent">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto" MinHeight="{TemplateBinding MinHeight}"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <TickBar x:Name="topTicks" Grid.Row="0" Placement="Top" Height="4" Margin="0,0,0,2"
+                     Fill="{StaticResource UiOutlineSoftBrush}" Visibility="Collapsed"/>
+            <Border Grid.Row="1" Height="4" CornerRadius="2" Background="{StaticResource UiRailBrush}" Margin="4,0"/>
+            <Canvas Grid.Row="1" Height="4">
+                <Rectangle x:Name="PART_SelectionRange" Height="4" RadiusX="2" RadiusY="2" Fill="{StaticResource AmberBrush}"
+                           Opacity="0.7" Visibility="Hidden"/>
+            </Canvas>
+            <Track x:Name="PART_Track" Grid.Row="1">
+                <Track.DecreaseRepeatButton>
+                    <RepeatButton Style="{StaticResource SliderFilledStyle}" Command="Slider.DecreaseLarge"/>
+                </Track.DecreaseRepeatButton>
+                <Track.IncreaseRepeatButton>
+                    <RepeatButton Style="{StaticResource ScrollPageStyle}" Command="Slider.IncreaseLarge"/>
+                </Track.IncreaseRepeatButton>
+                <Track.Thumb>
+                    <Thumb Style="{StaticResource SliderThumbStyle}"/>
+                </Track.Thumb>
+            </Track>
+            <TickBar x:Name="bottomTicks" Grid.Row="2" Placement="Bottom" Height="4" Margin="0,2,0,0"
+                     Fill="{StaticResource UiOutlineSoftBrush}" Visibility="Collapsed"/>
+        </Grid>
+        <ControlTemplate.Triggers>
+            <Trigger Property="TickPlacement" Value="TopLeft">
+                <Setter TargetName="topTicks" Property="Visibility" Value="Visible"/>
+            </Trigger>
+            <Trigger Property="TickPlacement" Value="BottomRight">
+                <Setter TargetName="bottomTicks" Property="Visibility" Value="Visible"/>
+            </Trigger>
+            <Trigger Property="TickPlacement" Value="Both">
+                <Setter TargetName="topTicks" Property="Visibility" Value="Visible"/>
+                <Setter TargetName="bottomTicks" Property="Visibility" Value="Visible"/>
+            </Trigger>
+            <Trigger Property="IsSelectionRangeEnabled" Value="True">
+                <Setter TargetName="PART_SelectionRange" Property="Visibility" Value="Visible"/>
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter TargetName="root" Property="Opacity" Value="0.4"/>
+            </Trigger>
+        </ControlTemplate.Triggers>
+    </ControlTemplate>
+
+    <ControlTemplate x:Key="VerticalSliderTemplate" TargetType="Slider">
+        <Grid x:Name="root" Background="Transparent">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto" MinWidth="{TemplateBinding MinWidth}"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TickBar x:Name="leftTicks" Grid.Column="0" Placement="Left" Width="4" Margin="0,0,2,0"
+                     Fill="{StaticResource UiOutlineSoftBrush}" Visibility="Collapsed"/>
+            <Border Grid.Column="1" Width="4" CornerRadius="2" Background="{StaticResource UiRailBrush}" Margin="0,4"/>
+            <Canvas Grid.Column="1" Width="4">
+                <Rectangle x:Name="PART_SelectionRange" Width="4" RadiusX="2" RadiusY="2" Fill="{StaticResource AmberBrush}"
+                           Opacity="0.7" Visibility="Hidden"/>
+            </Canvas>
+            <Track x:Name="PART_Track" Grid.Column="1">
+                <Track.DecreaseRepeatButton>
+                    <RepeatButton Style="{StaticResource SliderFilledVerticalStyle}" Command="Slider.DecreaseLarge"/>
+                </Track.DecreaseRepeatButton>
+                <Track.IncreaseRepeatButton>
+                    <RepeatButton Style="{StaticResource ScrollPageStyle}" Command="Slider.IncreaseLarge"/>
+                </Track.IncreaseRepeatButton>
+                <Track.Thumb>
+                    <Thumb Style="{StaticResource SliderThumbStyle}"/>
+                </Track.Thumb>
+            </Track>
+            <TickBar x:Name="rightTicks" Grid.Column="2" Placement="Right" Width="4" Margin="2,0,0,0"
+                     Fill="{StaticResource UiOutlineSoftBrush}" Visibility="Collapsed"/>
+        </Grid>
+        <ControlTemplate.Triggers>
+            <Trigger Property="TickPlacement" Value="TopLeft">
+                <Setter TargetName="leftTicks" Property="Visibility" Value="Visible"/>
+            </Trigger>
+            <Trigger Property="TickPlacement" Value="BottomRight">
+                <Setter TargetName="rightTicks" Property="Visibility" Value="Visible"/>
+            </Trigger>
+            <Trigger Property="TickPlacement" Value="Both">
+                <Setter TargetName="leftTicks" Property="Visibility" Value="Visible"/>
+                <Setter TargetName="rightTicks" Property="Visibility" Value="Visible"/>
+            </Trigger>
+            <Trigger Property="IsSelectionRangeEnabled" Value="True">
+                <Setter TargetName="PART_SelectionRange" Property="Visibility" Value="Visible"/>
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter TargetName="root" Property="Opacity" Value="0.4"/>
+            </Trigger>
+        </ControlTemplate.Triggers>
+    </ControlTemplate>
+
     <Style TargetType="Slider">
         <Setter Property="MinHeight" Value="24"/>
         <Setter Property="Cursor" Value="Hand"/>
-        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="Slider">
-                    <Grid x:Name="root" Background="Transparent">
-                        <Border Height="4" CornerRadius="2" Background="{StaticResource UiRailBrush}" Margin="4,0"/>
-                        <Track x:Name="PART_Track">
-                            <Track.DecreaseRepeatButton>
-                                <RepeatButton Style="{StaticResource SliderFilledStyle}" Command="Slider.DecreaseLarge"/>
-                            </Track.DecreaseRepeatButton>
-                            <Track.IncreaseRepeatButton>
-                                <RepeatButton Style="{StaticResource ScrollPageStyle}" Command="Slider.IncreaseLarge"/>
-                            </Track.IncreaseRepeatButton>
-                            <Track.Thumb>
-                                <Thumb Style="{StaticResource SliderThumbStyle}"/>
-                            </Track.Thumb>
-                        </Track>
-                    </Grid>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsEnabled" Value="False">
-                            <Setter TargetName="root" Property="Opacity" Value="0.4"/>
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
+        <Setter Property="FocusVisualStyle" Value="{StaticResource GlassFocusVisual}"/>
+        <Setter Property="Template" Value="{StaticResource HorizontalSliderTemplate}"/>
+        <Style.Triggers>
+            <Trigger Property="Orientation" Value="Vertical">
+                <Setter Property="MinHeight" Value="0"/>
+                <Setter Property="MinWidth" Value="24"/>
+                <Setter Property="Template" Value="{StaticResource VerticalSliderTemplate}"/>
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
     <!-- ==================== EXPANDER ==================== -->
-    <!-- The header: a chevron in a ring that turns over as the content folds out; amber under the pointer -->
+    <!-- The header: a chevron in a ring that turns over as the content folds out; amber under the pointer. The
+         expander sets Tag to the way it folds out (Up, Left, Right; down otherwise) and the chevron points that way. -->
     <Style x:Key="ExpanderHeaderStyle" TargetType="ToggleButton">
         <Setter Property="Cursor" Value="Hand"/>
-        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="FocusVisualStyle" Value="{StaticResource GlassFocusVisual}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ToggleButton">
                     <StackPanel Orientation="Horizontal" Background="Transparent">
-                        <Grid Width="18" Height="18" VerticalAlignment="Center">
+                        <Grid x:Name="dial" Width="18" Height="18" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
                             <Ellipse x:Name="ring" StrokeThickness="2" Fill="{StaticResource UiFieldBrush}">
                                 <Ellipse.Stroke>
                                     <SolidColorBrush Color="{StaticResource UiOutlineSoft}"/>
@@ -717,23 +823,50 @@
                             </VisualStateGroup>
                         </VisualStateManager.VisualStateGroups>
                     </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="Tag" Value="Up">
+                            <Setter TargetName="dial" Property="RenderTransform">
+                                <Setter.Value>
+                                    <RotateTransform Angle="180"/>
+                                </Setter.Value>
+                            </Setter>
+                        </Trigger>
+                        <Trigger Property="Tag" Value="Left">
+                            <Setter TargetName="dial" Property="RenderTransform">
+                                <Setter.Value>
+                                    <RotateTransform Angle="90"/>
+                                </Setter.Value>
+                            </Setter>
+                        </Trigger>
+                        <Trigger Property="Tag" Value="Right">
+                            <Setter TargetName="dial" Property="RenderTransform">
+                                <Setter.Value>
+                                    <RotateTransform Angle="-90"/>
+                                </Setter.Value>
+                            </Setter>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
     </Style>
 
-    <!-- Folds down only (the one the game uses) -->
+    <!-- The header on the side the content folds out from (ExpandDirection), the content beyond it -->
     <Style TargetType="Expander">
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Expander">
                     <DockPanel x:Name="root">
-                        <ToggleButton DockPanel.Dock="Top"
+                        <ToggleButton x:Name="header"
+                                      DockPanel.Dock="Top"
                                       HorizontalAlignment="Left"
+                                      VerticalAlignment="Top"
                                       Style="{StaticResource ExpanderHeaderStyle}"
                                       Content="{TemplateBinding Header}"
                                       ContentTemplate="{TemplateBinding HeaderTemplate}"
+                                      ContentTemplateSelector="{TemplateBinding HeaderTemplateSelector}"
+                                      ContentStringFormat="{TemplateBinding HeaderStringFormat}"
                                       Foreground="{TemplateBinding Foreground}"
                                       IsChecked="{Binding IsExpanded, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"/>
                         <ContentPresenter x:Name="body" Visibility="Collapsed" Margin="{TemplateBinding Padding}"/>
@@ -741,6 +874,18 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsExpanded" Value="True">
                             <Setter TargetName="body" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                        <Trigger Property="ExpandDirection" Value="Up">
+                            <Setter TargetName="header" Property="DockPanel.Dock" Value="Bottom"/>
+                            <Setter TargetName="header" Property="Tag" Value="Up"/>
+                        </Trigger>
+                        <Trigger Property="ExpandDirection" Value="Left">
+                            <Setter TargetName="header" Property="DockPanel.Dock" Value="Right"/>
+                            <Setter TargetName="header" Property="Tag" Value="Left"/>
+                        </Trigger>
+                        <Trigger Property="ExpandDirection" Value="Right">
+                            <Setter TargetName="header" Property="DockPanel.Dock" Value="Left"/>
+                            <Setter TargetName="header" Property="Tag" Value="Right"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="root" Property="Opacity" Value="0.5"/>
@@ -753,17 +898,17 @@
 
     <!-- ==================== TICK BOX AND RADIO BUTTON ==================== -->
     <!-- A glass box, or a glass dot, in the soft outline; the tick (the dot) is cream, and all of it amber under the
-         pointer. Shared by both: only the mark (Tag, a geometry drawn in a 16 px box) and the box's corners differ. -->
+         pointer. Shared by both: only the mark (helpers:GlassInput.Mark, a geometry drawn in a 16 px box) and the box's
+         corners differ. -->
     <Style x:Key="GlassCheckStyle" TargetType="ToggleButton">
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-        <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
         <Setter Property="Cursor" Value="Hand"/>
-        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="FocusVisualStyle" Value="{StaticResource GlassFocusVisual}"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="Padding" Value="8,0,0,0"/>
         <Setter Property="Background" Value="{StaticResource UiFieldBrush}"/>
         <!-- The mark: a tick for a tick box -->
-        <Setter Property="Tag">
+        <Setter Property="helpers:GlassInput.Mark">
             <Setter.Value>
                 <PathGeometry Figures="M3,8.5 L6.5,12 L13,4.5"/>
             </Setter.Value>
@@ -788,7 +933,7 @@
                                 </Border.BorderBrush>
                             </Border>
                             <Path x:Name="mark"
-                                  Data="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}"
+                                  Data="{TemplateBinding helpers:GlassInput.Mark}"
                                   Width="16"
                                   Height="16"
                                   Opacity="0"
@@ -878,7 +1023,7 @@
     <Style TargetType="RadioButton" BasedOn="{StaticResource GlassCheckStyle}">
         <Setter Property="Border.CornerRadius" Value="9"/>
         <!-- A dot: a small ring drawn thick enough to close -->
-        <Setter Property="Tag">
+        <Setter Property="helpers:GlassInput.Mark">
             <Setter.Value>
                 <EllipseGeometry Center="8,8" RadiusX="1.8" RadiusY="1.8"/>
             </Setter.Value>
