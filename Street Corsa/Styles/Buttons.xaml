@@ -1,5 +1,6 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:helpers="clr-namespace:StreetCorsa.Helpers">
 
     <!-- Merge Brushes -->
     <ResourceDictionary.MergedDictionaries>
@@ -100,43 +101,73 @@
         <Setter Property="Margin" Value="0,0,0,22"/>
     </Style>
 
-    <!-- The game's buttons, everywhere: a thick outline on semi-transparent glass, amber under the pointer.
-         Primary (Yes, OK, the one thing to do) is red glass, secondary (No, Cancel, the rest) dark glass. -->
+    <!-- The game's buttons, everywhere: a thick outline on semi-transparent glass; under the pointer the style's hover
+         glass (GlassButton.HoverBrush) and an amber outline fade in over it. Primary (Yes, OK, the one thing to do) is
+         red glass, secondary (No, Cancel, the rest) dark glass. -->
+    <ControlTemplate x:Key="GlassButtonTemplate" TargetType="Button">
+        <Grid x:Name="root">
+            <Border Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="6"/>
+            <!-- What the pointer brings: the hover glass and the amber outline, faded in -->
+            <Border x:Name="hover"
+                    Opacity="0"
+                    Background="{Binding (helpers:GlassButton.HoverBrush), RelativeSource={RelativeSource TemplatedParent}}"
+                    BorderBrush="{StaticResource AmberBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="6"/>
+            <Border x:Name="pressed"
+                    Opacity="0"
+                    Background="{StaticResource UiGlassPressedBrush}"
+                    CornerRadius="6"
+                    Margin="{TemplateBinding BorderThickness}"/>
+            <ContentPresenter HorizontalAlignment="Center"
+                              VerticalAlignment="Center"
+                              Margin="{TemplateBinding Padding}"/>
+
+            <VisualStateManager.VisualStateGroups>
+                <VisualStateGroup x:Name="CommonStates">
+                    <VisualStateGroup.Transitions>
+                        <VisualTransition GeneratedDuration="0:0:1">
+                            <VisualTransition.GeneratedEasingFunction>
+                                <CubicEase EasingMode="EaseOut"/>
+                            </VisualTransition.GeneratedEasingFunction>
+                        </VisualTransition>
+                        <VisualTransition To="Pressed" GeneratedDuration="0:0:0.08"/>
+                    </VisualStateGroup.Transitions>
+                    <VisualState x:Name="Normal"/>
+                    <VisualState x:Name="MouseOver">
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetName="hover" Storyboard.TargetProperty="Opacity" To="1" Duration="0"/>
+                        </Storyboard>
+                    </VisualState>
+                    <VisualState x:Name="Pressed">
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetName="hover" Storyboard.TargetProperty="Opacity" To="1" Duration="0"/>
+                            <DoubleAnimation Storyboard.TargetName="pressed" Storyboard.TargetProperty="Opacity" To="0.6" Duration="0"/>
+                        </Storyboard>
+                    </VisualState>
+                    <VisualState x:Name="Disabled">
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetName="root" Storyboard.TargetProperty="Opacity" To="0.5" Duration="0"/>
+                        </Storyboard>
+                    </VisualState>
+                </VisualStateGroup>
+            </VisualStateManager.VisualStateGroups>
+        </Grid>
+    </ControlTemplate>
+
     <Style x:Key="DialogPrimaryButtonStyle" TargetType="Button">
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
         <Setter Property="Background" Value="{StaticResource UiPrimaryGlassBrush}"/>
         <Setter Property="BorderBrush" Value="{StaticResource UiOutlineBrush}"/>
         <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="helpers:GlassButton.HoverBrush" Value="{StaticResource UiPrimaryGlassHoverBrush}"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="Button">
-                    <Border x:Name="border"
-                            Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="6">
-                        <ContentPresenter HorizontalAlignment="Center"
-                                        VerticalAlignment="Center"
-                                        Margin="{TemplateBinding Padding}"/>
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="border" Property="Background" Value="{StaticResource UiPrimaryGlassHoverBrush}"/>
-                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource AmberBrush}"/>
-                        </Trigger>
-                        <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="border" Property="Background" Value="{StaticResource UiPrimaryGlassPressedBrush}"/>
-                        </Trigger>
-                        <Trigger Property="IsEnabled" Value="False">
-                            <Setter TargetName="border" Property="Opacity" Value="0.5"/>
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
+        <Setter Property="Template" Value="{StaticResource GlassButtonTemplate}"/>
     </Style>
 
     <Style x:Key="DialogSecondaryButtonStyle" TargetType="Button">
@@ -144,36 +175,11 @@
         <Setter Property="Background" Value="{StaticResource UiGlassBrush}"/>
         <Setter Property="BorderBrush" Value="{StaticResource UiOutlineBrush}"/>
         <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="helpers:GlassButton.HoverBrush" Value="{StaticResource UiGlassHoverBrush}"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="Button">
-                    <Border x:Name="border"
-                            Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="6">
-                        <ContentPresenter HorizontalAlignment="Center"
-                                        VerticalAlignment="Center"
-                                        Margin="{TemplateBinding Padding}"/>
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="border" Property="Background" Value="{StaticResource UiGlassHoverBrush}"/>
-                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource AmberBrush}"/>
-                        </Trigger>
-                        <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="border" Property="Background" Value="{StaticResource UiGlassPressedBrush}"/>
-                        </Trigger>
-                        <Trigger Property="IsEnabled" Value="False">
-                            <Setter TargetName="border" Property="Opacity" Value="0.5"/>
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
+        <Setter Property="Template" Value="{StaticResource GlassButtonTemplate}"/>
     </Style>
 
     <!-- A round button with an icon in it (the icon, an ImageSource from Icons.xaml, goes in Tag; what it does in
@@ -220,7 +226,7 @@
                         <VisualStateManager.VisualStateGroups>
                             <VisualStateGroup x:Name="CommonStates">
                                 <VisualStateGroup.Transitions>
-                                    <VisualTransition GeneratedDuration="0:0:0.18">
+                                    <VisualTransition GeneratedDuration="0:0:1">
                                         <VisualTransition.GeneratedEasingFunction>
                                             <CubicEase EasingMode="EaseOut"/>
                                         </VisualTransition.GeneratedEasingFunction>

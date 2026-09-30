@@ -20,20 +20,46 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ToggleButton">
-                        <Border x:Name="border"
-                                Background="{StaticResource UiGlassBrush}"
-                                BorderBrush="{StaticResource UiOutlineBrush}"
-                                BorderThickness="2"
-                                CornerRadius="6"
-                                Padding="12,5">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
+                        <Grid>
+                            <Border x:Name="border"
+                                    Background="{StaticResource UiGlassBrush}"
+                                    BorderBrush="{StaticResource UiOutlineBrush}"
+                                    BorderThickness="2"
+                                    CornerRadius="6"/>
+                            <!-- The amber outline, faded in under the pointer -->
+                            <Border x:Name="hover"
+                                    Opacity="0"
+                                    BorderBrush="{StaticResource AmberBrush}"
+                                    BorderThickness="2"
+                                    CornerRadius="6"/>
+                            <ContentPresenter Margin="12,5" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <VisualStateManager.VisualStateGroups>
+                                <VisualStateGroup x:Name="CommonStates">
+                                    <VisualStateGroup.Transitions>
+                                        <VisualTransition GeneratedDuration="0:0:1">
+                                            <VisualTransition.GeneratedEasingFunction>
+                                                <CubicEase EasingMode="EaseOut"/>
+                                            </VisualTransition.GeneratedEasingFunction>
+                                        </VisualTransition>
+                                    </VisualStateGroup.Transitions>
+                                    <VisualState x:Name="Normal"/>
+                                    <VisualState x:Name="MouseOver">
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="hover" Storyboard.TargetProperty="Opacity" To="1" Duration="0"/>
+                                        </Storyboard>
+                                    </VisualState>
+                                    <VisualState x:Name="Pressed">
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="hover" Storyboard.TargetProperty="Opacity" To="1" Duration="0"/>
+                                        </Storyboard>
+                                    </VisualState>
+                                    <VisualState x:Name="Disabled"/>
+                                </VisualStateGroup>
+                            </VisualStateManager.VisualStateGroups>
+                        </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter TargetName="border" Property="Background" Value="{StaticResource UiPrimaryGlassBrush}"/>
-                            </Trigger>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource AmberBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -95,6 +121,7 @@
                         <Setter Property="Template">
                             <Setter.Value>
                                 <ControlTemplate TargetType="Button">
+                                    <Grid>
                                     <Border x:Name="CarDisplayBorder"
                                            Background="{StaticResource UiGlassBrush}"
                                            BorderBrush="{StaticResource UiOutlineBrush}"
@@ -114,15 +141,39 @@
                                             </TextBlock.Effect>
                                         </TextBlock>
                                     </Border>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="CarDisplayBorder" Property="BorderBrush" Value="{StaticResource AmberBrush}"/>
-                                            <Setter TargetName="CarDisplayBorder" Property="Background" Value="{StaticResource UiGlassHoverBrush}"/>
-                                        </Trigger>
-                                        <Trigger Property="IsPressed" Value="True">
-                                            <Setter TargetName="CarDisplayBorder" Property="Background" Value="{StaticResource UiGlassPressedBrush}"/>
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
+                                    <!-- The hover's glass and amber outline, faded in over it -->
+                                    <Border x:Name="CarDisplayHover"
+                                            Opacity="0"
+                                            IsHitTestVisible="False"
+                                            Background="{StaticResource White20Brush}"
+                                            BorderBrush="{StaticResource AmberBrush}"
+                                            BorderThickness="3"
+                                            CornerRadius="8"
+                                            MaxWidth="800"/>
+                                    <VisualStateManager.VisualStateGroups>
+                                        <VisualStateGroup x:Name="CommonStates">
+                                            <VisualStateGroup.Transitions>
+                                        <VisualTransition GeneratedDuration="0:0:1">
+                                            <VisualTransition.GeneratedEasingFunction>
+                                                <CubicEase EasingMode="EaseOut"/>
+                                            </VisualTransition.GeneratedEasingFunction>
+                                        </VisualTransition>
+                                    </VisualStateGroup.Transitions>
+                                            <VisualState x:Name="Normal"/>
+                                            <VisualState x:Name="MouseOver">
+                                                <Storyboard>
+                                                    <DoubleAnimation Storyboard.TargetName="CarDisplayHover" Storyboard.TargetProperty="Opacity" To="0.5" Duration="0"/>
+                                                </Storyboard>
+                                            </VisualState>
+                                            <VisualState x:Name="Pressed">
+                                                <Storyboard>
+                                                    <DoubleAnimation Storyboard.TargetName="CarDisplayHover" Storyboard.TargetProperty="Opacity" To="1" Duration="0"/>
+                                                </Storyboard>
+                                            </VisualState>
+                                            <VisualState x:Name="Disabled"/>
+                                        </VisualStateGroup>
+                                    </VisualStateManager.VisualStateGroups>
+                                    </Grid>
                                 </ControlTemplate>
                             </Setter.Value>
                         </Setter>
@@ -525,7 +576,7 @@
             <Button x:Name="CarDealersButton"
                     Style="{StaticResource RoundIconButtonLargeStyle}"
                     Tag="{StaticResource CarDealerIcon}"
-                    Padding="13"
+                    Padding="9"
                     Command="{Binding CarDealersCommand}"
                     ToolTip="Car dealers"/>
             <!-- The part shops' own map -->
