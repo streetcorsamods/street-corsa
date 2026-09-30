@@ -694,7 +694,7 @@
             <Button Style="{StaticResource RoundIconButtonStyle}"
                     Tag="{StaticResource TrophyIcon}"
                     Command="{Binding CareerCommand}"
-                    ToolTip="Career stats"/>
+                    ToolTip="Career"/>
             <Button x:Name="CalendarButton"
                     Style="{StaticResource RoundIconButtonStyle}"
                     Tag="{StaticResource CalendarIcon}"

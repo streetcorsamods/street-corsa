@@ -28,6 +28,9 @@ namespace StreetCorsa
         // How long one dialog takes to fade in over another it replaces
         private static readonly TimeSpan DialogSwapFade = TimeSpan.FromMilliseconds(150);
 
+        /// <summary>How wide a dialog's card grows, but for a wide one (IDialog.IsWide)</summary>
+        private const double DialogMaxWidth = 750;
+
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger(LogCategory.Navigation);
 
         // The money card is read off the game this often: the money and the clock change in many places
@@ -346,6 +349,7 @@ namespace StreetCorsa
             {
                 var swapping = DialogHost.IsVisible && DialogContent.Content != null && !ReferenceEquals(DialogContent.Content, dialog);
                 DialogContent.Content = dialog;
+                DialogCard.MaxWidth = dialog.IsWide ? double.PositiveInfinity : DialogMaxWidth;
                 if (swapping) DialogCard.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, DialogSwapFade));
             }
 

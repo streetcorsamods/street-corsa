@@ -322,6 +322,8 @@ namespace StreetCorsa.Navigation
                 _contentService,
                 _raceCarDataService,
                 _saleService,
+                _victoryConditionService,
+                _milestoneService,
                 skipAnimation));
 
         public bool NavigateToCarLot(GameState gameState) => SafeNavigate("car lot", () =>
@@ -479,14 +481,5 @@ namespace StreetCorsa.Navigation
                 _gameStateRepository,
                 _purchaseService,
                 _carPartsService));
-
-        public bool NavigateToCareer(GameState gameState) => SafeNavigate("career screen", () =>
-            new Screens.Career.CareerScreenViewModel(
-                this,
-                _dialogService,
-                _victoryConditionService,
-                _milestoneService,
-                gameState,
-                _gameStateRepository));
     }
 }

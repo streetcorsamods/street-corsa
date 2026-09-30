@@ -6,6 +6,7 @@ using StreetCorsa.Models.GameState;
 using StreetCorsa.Navigation;
 using StreetCorsa.Screens.Shared;
 using StreetCorsa.Services;
+using StreetCorsa.Services.Career;
 using StreetCorsa.Services.Catalog;
 using StreetCorsa.Services.Configuration.Models;
 using StreetCorsa.Services.Market;
@@ -37,6 +38,8 @@ namespace StreetCorsa.Screens.Garage
         private readonly IGameTimeService _timeService;
         private readonly GameSettingsService _settingsService;
         private readonly ICarSaleService _saleService;
+        private readonly IVictoryConditionService _victoryService;
+        private readonly IMilestoneService _milestoneService;
         private readonly IAssettoCorsaContentService _contentService;
         private readonly RaceCarDataService _raceCarDataService;
         private readonly IAppLogger _logger;
@@ -290,9 +293,13 @@ namespace StreetCorsa.Screens.Garage
             IAssettoCorsaContentService contentService,
             RaceCarDataService raceCarDataService,
             ICarSaleService saleService,
+            IVictoryConditionService victoryService,
+            IMilestoneService milestoneService,
             bool skipAnimation = false)
         {
             _saleService = saleService;
+            _victoryService = victoryService;
+            _milestoneService = milestoneService;
             _navigationService = navigationService;
             _dialogService = dialogService;
             _gameState = gameState;
@@ -327,7 +334,8 @@ namespace StreetCorsa.Screens.Garage
             PartDealersCommand = new RelayCommand(() => LeaveTo(() => _navigationService.NavigateToPartShopMap(_gameState)), CanLeave);
             HitTheStreetsCommand = new RelayCommand(() => LeaveTo(() => _navigationService.NavigateToDiner(_gameState)), CanLeave);
             GasStationCommand = new AsyncRelayCommand(OnGasStation, () => SelectedCarHere && CanLeave());
-            CareerCommand = new RelayCommand(() => LeaveTo(() => _navigationService.NavigateToCareer(_gameState)), CanLeave);
+            // Not while the night runs: picking a victory path may win the game there and then, and saves
+            CareerCommand = new RelayCommand(OnCareer, CanLeave);
 
             // The garage is the game's home screen: make sure a car is selected if the player owns any
             if (_gameState.Player.SelectedCarInstanceId == null && _gameState.Player.Cars?.Count > 0)
@@ -919,6 +927,27 @@ namespace StreetCorsa.Screens.Garage
             catch (Exception ex)
             {
                 _logger.Error(ex, "Could not show the car's sheet");
+            }
+        }
+
+        /// <summary>The career over the garage: the victory paths, the player's record and the milestones</summary>
+        private void OnCareer()
+        {
+            if (!CanLeave()) return;
+
+            try
+            {
+                _dialogService.ShowDialog(new Dialogs.Career.CareerDialogViewModel(
+                    _dialogService,
+                    _victoryService,
+                    _milestoneService,
+                    _gameState,
+                    _gameStateRepo,
+                    () => LeaveTo(() => _navigationService.NavigateToMainMenu())));
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not show the career");
             }
         }
 

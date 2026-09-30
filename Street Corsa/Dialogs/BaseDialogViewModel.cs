@@ -14,5 +14,8 @@ namespace StreetCorsa.Dialogs
 
         /// <inheritdoc cref="IDialog.DuplicateKey"/>
         public virtual string? DuplicateKey => null;
+
+        /// <inheritdoc cref="IDialog.IsWide"/>
+        public virtual bool IsWide => false;
     }
 }

@@ -1,50 +1,84 @@
 using System.Collections.ObjectModel;
-using StreetCorsa.Dialogs;
 using StreetCorsa.Logging;
-using StreetCorsa.Navigation;
 using StreetCorsa.Services.Career;
 using StreetCorsa.Services.Storage;
 using StreetCorsa.ViewModels;
 
-namespace StreetCorsa.Screens.Career
+namespace StreetCorsa.Dialogs.Career
 {
-    public class CareerScreenViewModel : BaseScreenViewModel
+    /// <summary>The career dialog's three sections, one on show at a time</summary>
+    public enum CareerSection
     {
-        private readonly NavigationService _navigationService;
+        Victory,
+        Stats,
+        Milestones
+    }
+
+    /// <summary>
+    /// The career, over the garage: the victory paths (one of which the player pursues), the player's record, and the
+    /// milestones. One section shows at a time; the dialog opens on the one last looked at.
+    /// </summary>
+    public class CareerDialogViewModel : BaseDialogViewModel
+    {
         private readonly DialogService _dialogService;
         private readonly IVictoryConditionService _victoryService;
         private readonly IMilestoneService _milestoneService;
         private readonly Models.GameState.GameState _gameState;
         private readonly IGameStateRepository _gameStateRepo;
+        private readonly Action _toMainMenu;
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger("Career");
 
-        // Commands
-        public RelayCommand BackCommand { get; }
+        /// <summary>The section the player last looked at, for the next time the dialog opens</summary>
+        private static CareerSection _lastSection = CareerSection.Victory;
+
+        public RelayCommand CloseCommand { get; }
         public RelayCommand<string> SetActiveVictoryCommand { get; }
 
-        // Victory conditions
-        public ObservableCollection<VictoryDisplayViewModel> Victories { get; } = [];
+        public override bool IsWide => true;
 
-        private VictoryDisplayViewModel? _activeVictory;
-        public VictoryDisplayViewModel? ActiveVictory
+        // The section on show: each of the section buttons is on while its section is
+        private CareerSection _section = _lastSection;
+        public CareerSection Section
         {
-            get => _activeVictory;
-            private set
+            get => _section;
+            set
             {
-                _activeVictory = value;
-                OnPropertyChanged(nameof(ActiveVictory));
-                OnPropertyChanged(nameof(HasActiveVictory));
+                if (_section == value) return;
+                _section = _lastSection = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(ShowVictory));
+                OnPropertyChanged(nameof(ShowStats));
+                OnPropertyChanged(nameof(ShowMilestones));
             }
         }
 
-        public bool HasActiveVictory => ActiveVictory != null;
+        // Set by the section buttons: turning one on shows its section, turning it off is the other one's doing
+        public bool ShowVictory
+        {
+            get => Section == CareerSection.Victory;
+            set { if (value) Section = CareerSection.Victory; }
+        }
+
+        public bool ShowStats
+        {
+            get => Section == CareerSection.Stats;
+            set { if (value) Section = CareerSection.Stats; }
+        }
+
+        public bool ShowMilestones
+        {
+            get => Section == CareerSection.Milestones;
+            set { if (value) Section = CareerSection.Milestones; }
+        }
+
+        // Victory conditions
+        public ObservableCollection<VictoryDisplayViewModel> Victories { get; } = [];
 
         // Milestones
         public ObservableCollection<MilestoneDisplayViewModel> Milestones { get; } = [];
 
         public int CompletedMilestoneCount => Milestones.Count(m => m.IsCompleted);
         public int TotalMilestoneCount => Milestones.Count;
-        public string MilestoneProgressText => $"{CompletedMilestoneCount}/{TotalMilestoneCount} completed";
 
         // Stats
         public int TotalWins => _gameState.Player.Stats.Wins;
@@ -66,6 +100,7 @@ namespace StreetCorsa.Screens.Career
         public string TotalEarnings => $"${_gameState.Player.Stats.TotalEarnings:N0}";
         public string TotalLossesAmount => $"${_gameState.Player.Stats.TotalLosses:N0}";
         public string NetEarnings => $"${_gameState.Player.Stats.NetEarnings:N0}";
+        public bool IsNetLoss => _gameState.Player.Stats.NetEarnings < 0;
 
         // Game won state
         public bool HasWonGame => _gameState.Career.HasWonGame;
@@ -73,47 +108,40 @@ namespace StreetCorsa.Screens.Career
             ? _victoryService.GetVictoryCondition(_gameState.Career.WinningVictoryType)?.Name
             : null;
 
-        public CareerScreenViewModel(
-            NavigationService navigationService,
+        /// <param name="toMainMenu">Where the victory screen's Main Menu button goes, when picking a path wins the game</param>
+        public CareerDialogViewModel(
             DialogService dialogService,
             IVictoryConditionService victoryService,
             IMilestoneService milestoneService,
             Models.GameState.GameState gameState,
-            IGameStateRepository gameStateRepo)
+            IGameStateRepository gameStateRepo,
+            Action toMainMenu)
         {
-            _gameStateRepo = gameStateRepo;
-            _navigationService = navigationService;
             _dialogService = dialogService;
             _victoryService = victoryService;
             _milestoneService = milestoneService;
             _gameState = gameState;
+            _gameStateRepo = gameStateRepo;
+            _toMainMenu = toMainMenu;
 
-            BackCommand = new RelayCommand(OnBack);
+            CloseCommand = new RelayCommand(() => _dialogService.CloseDialog());
             SetActiveVictoryCommand = new RelayCommand<string>(OnSetActiveVictory);
 
-            // Victories and milestones are loaded in Enter, once: the screen is always entered right after it is made
+            // A save from before the counters followed the player starts them where the player stands
+            _gameState.Career.SyncStanding(_gameState.Player);
+
+            LoadVictories();
+            LoadMilestones();
         }
 
         private void LoadVictories()
         {
-            Victories.Clear();
-
             // As of now, not as of the last race
             _victoryService.RefreshStanding(_gameState);
 
-            foreach (var condition in _victoryService.GetAllVictoryConditions())
-            {
-                var vm = VictoryDisplayViewModel.FromCondition(condition, _gameState.Career);
-                Victories.Add(vm);
-
-                if (vm.IsActive)
-                {
-                    ActiveVictory = vm;
-                }
-            }
-
-            // Sort: Active first, then achieved, then unlocked, then locked
-            var sorted = Victories
+            // Active first, then achieved, then unlocked, then locked
+            var sorted = _victoryService.GetAllVictoryConditions()
+                .Select(condition => VictoryDisplayViewModel.FromCondition(condition, _gameState.Career))
                 .OrderByDescending(v => v.IsActive)
                 .ThenByDescending(v => v.IsAchieved)
                 .ThenByDescending(v => v.IsUnlocked)
@@ -129,16 +157,9 @@ namespace StreetCorsa.Screens.Career
 
         private void LoadMilestones()
         {
-            Milestones.Clear();
-
-            foreach (var milestone in _milestoneService.GetAllMilestones())
-            {
-                var vm = MilestoneDisplayViewModel.FromMilestone(milestone, _gameState.Career);
-                Milestones.Add(vm);
-            }
-
-            // Sort: Completed first, then by progress percentage descending
-            var sorted = Milestones
+            // Completed first, then by progress percentage descending
+            var sorted = _milestoneService.GetAllMilestones()
+                .Select(milestone => MilestoneDisplayViewModel.FromMilestone(milestone, _gameState.Career))
                 .OrderByDescending(m => m.IsCompleted)
                 .ThenByDescending(m => m.ProgressPercentage)
                 .ThenBy(m => m.Name)
@@ -151,7 +172,7 @@ namespace StreetCorsa.Screens.Career
             }
 
             OnPropertyChanged(nameof(CompletedMilestoneCount));
-            OnPropertyChanged(nameof(MilestoneProgressText));
+            OnPropertyChanged(nameof(TotalMilestoneCount));
         }
 
         private void OnSetActiveVictory(string? victoryType)
@@ -181,8 +202,10 @@ namespace StreetCorsa.Screens.Career
 
             if (won != null)
             {
+                // The victory screen takes this dialog's place: queued behind it, it would wait for the player to close it
+                _dialogService.CloseDialog();
                 var message = CareerProgressService.VictoryMessage(_gameState, won, [], []);
-                PlayerMessageDialogs.Show(_dialogService, message, () => _navigationService.NavigateToMainMenu());
+                PlayerMessageDialogs.Show(_dialogService, message, _toMainMenu);
             }
         }
 
@@ -196,27 +219,6 @@ namespace StreetCorsa.Screens.Career
             {
                 _logger.Error(ex, "Could not save the game after picking a victory path");
             }
-        }
-
-        private void OnBack()
-        {
-            _navigationService.NavigateToGarage(_gameState);
-        }
-
-        public override void Enter()
-        {
-            base.Enter();
-
-            // A save from before the counters followed the player starts them where the player stands
-            _gameState.Career.SyncStanding(_gameState.Player);
-
-            LoadVictories();
-            LoadMilestones();
-        }
-
-        public override void Exit()
-        {
-            base.Exit();
         }
     }
 }
