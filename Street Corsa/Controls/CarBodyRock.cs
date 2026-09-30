@@ -28,12 +28,20 @@ internal sealed class CarBodyRock
     private readonly float _frontSign;
     private BodyPose _pose = BodyPose.Rest;
     private float _wheelSpin;
+    private float _steer;
+
+    // Where each front wheel's middle is in the car's own space, by corner ("LF"): its disc and hub steer about it too
+    private readonly Dictionary<string, Sx.Vector3> _steerAt = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>The lean in world space, for whatever sits in the car without being part of it (the parts view)</summary>
     public Sx.Matrix WorldLean { get; private set; } = Sx.Matrix.Identity;
 
-    /// <summary>A wheel group as it was, and the way from its parent to the car's own space</summary>
-    private sealed record Held(RenderableList Node, Sx.Matrix Local, Sx.Matrix ToCar, Sx.Matrix FromCar, bool Wheel);
+    /// <summary>
+    /// A wheel group as it was, and the way from its parent to the car's own space; its corner ("LF"), and whether it
+    /// is a wheel and whether it turns as the front wheels steer (a front wheel, its hub and its disc; not the
+    /// suspension's arms)
+    /// </summary>
+    private sealed record Held(RenderableList Node, Sx.Matrix Local, Sx.Matrix ToCar, Sx.Matrix FromCar, string Corner, bool Wheel, bool Steers);
 
     public CarBodyRock(Kn5RenderableCar car)
     {
@@ -42,18 +50,24 @@ internal sealed class CarBodyRock
 
         var toWorld = car.Matrix;
         var fromWorld = Sx.Matrix.Invert(toWorld);
-        Collect(car, n =>
+        Collect(car, (n, group) =>
         {
             var toCar = n.ParentMatrix * fromWorld;
+            var kind = group.Groups[1].Value.ToUpperInvariant();
+            var corner = group.Groups[2].Value.ToUpperInvariant();
+
             // The wheel itself turns as the car rolls; its hub, disc and suspension do not
-            var wheel = n is Kn5RenderableList { OriginalNode.Name: var name } && name.StartsWith("WHEEL_", StringComparison.OrdinalIgnoreCase);
-            _held.Add(new Held(n, n.LocalMatrix, toCar, Sx.Matrix.Invert(toCar), wheel));
+            var wheel = kind == "WHEEL";
+            var steers = corner.EndsWith('F') && kind is ("WHEEL" or "HUB" or "DISC");
+            _held.Add(new Held(n, n.LocalMatrix, toCar, Sx.Matrix.Invert(toCar), corner, wheel, steers));
         });
 
         // Where the wheels are says which way is left and which way is the front
-        var hubs = _held.Where(h => h.Node is Kn5RenderableList { OriginalNode.Name: var name } && name.StartsWith("WHEEL_", StringComparison.OrdinalIgnoreCase))
-            .GroupBy(h => ((Kn5RenderableList)h.Node).OriginalNode.Name.ToUpperInvariant()[6..])
+        var hubs = _held.Where(h => h.Wheel)
+            .GroupBy(h => h.Corner)
             .ToDictionary(g => g.Key, g => Position(g.First().Local * g.First().ToCar));
+        foreach (var (corner, at) in hubs)
+            if (corner.EndsWith('F')) _steerAt[corner] = at;
 
         if (hubs.TryGetValue("LF", out var lf) && hubs.TryGetValue("RR", out var rr))
         {
@@ -71,16 +85,22 @@ internal sealed class CarBodyRock
 
     public Kn5RenderableCar Car => _car;
 
+    /// <summary>Where the car stands, the lean left out</summary>
+    public Sx.Matrix Base => _base;
+
+    /// <summary>+1 when the model's nose is at +z, -1 when it is at -z</summary>
+    public float FrontSign => _frontSign;
+
     private static Sx.Vector3 Position(Sx.Matrix m) => new(m.M41, m.M42, m.M43);
 
-    private static void Collect(RenderableList list, Action<RenderableList> found)
+    private static void Collect(RenderableList list, Action<RenderableList, Match> found)
     {
         foreach (var child in list)
         {
             if (child is not RenderableList node) continue;
-            if (node is Kn5RenderableList { OriginalNode.Name: var name } && WheelGroup.IsMatch(name))
+            if (node is Kn5RenderableList { OriginalNode.Name: var name } && WheelGroup.Match(name) is { Success: true } group)
             {
-                found(node);
+                found(node, group);
                 continue;
             }
 
@@ -90,16 +110,18 @@ internal sealed class CarBodyRock
 
     /// <summary>
     /// Puts the body where the pose says, with the wheels turned <paramref name="wheelSpin"/> radians about their
-    /// axles (a car rolling along); false when nothing changed. A car on the move gives where it now stands as
+    /// axles (a car rolling along) and the front ones steered <paramref name="steer"/> radians (positive the way the car
+    /// turns about +y); false when nothing changed. A car on the move gives where it now stands as
     /// <paramref name="placement"/>: the car's own matrix is where the lean goes, so it cannot be set apart from it.
     /// </summary>
-    public bool Apply(BodyPose pose, float wheelSpin = 0f, Sx.Matrix? placement = null)
+    public bool Apply(BodyPose pose, float wheelSpin = 0f, Sx.Matrix? placement = null, float steer = 0f)
     {
         var moved = placement is { } p && p != _base;
-        if (pose == _pose && wheelSpin == _wheelSpin && !moved) return false;
+        if (pose == _pose && wheelSpin == _wheelSpin && steer == _steer && !moved) return false;
         if (placement is { } place) _base = place;
         _pose = pose;
         _wheelSpin = wheelSpin;
+        _steer = steer;
         var spin = Sx.Matrix.RotationX(wheelSpin * _frontSign);
 
         var lean = Sx.Matrix.Translation(-_pivot)
@@ -114,7 +136,18 @@ internal sealed class CarBodyRock
         foreach (var held in _held)
         {
             var local = held.Wheel && wheelSpin != 0f ? spin * held.Local : held.Local;
-            held.Node.LocalMatrix = local * held.ToCar * back * held.FromCar;
+            var inCar = local * held.ToCar;
+
+            // A front wheel steers about the car's vertical through its own middle, and its hub and disc with it: a
+            // wheel model's own axes are not always the car's (its up may lie along the car's length), so they cannot
+            // be steered about
+            if (held.Steers && steer != 0f)
+            {
+                var at = _steerAt.TryGetValue(held.Corner, out var middle) ? middle : Position(held.Local * held.ToCar);
+                inCar *= Sx.Matrix.Translation(-at) * Sx.Matrix.RotationY(steer) * Sx.Matrix.Translation(at);
+            }
+
+            held.Node.LocalMatrix = inCar * back * held.FromCar;
         }
 
         return true;
@@ -143,6 +176,7 @@ internal sealed class CarBodyRock
         foreach (var held in _held) held.Node.LocalMatrix = held.Local;
         _pose = BodyPose.Rest;
         _wheelSpin = 0f;
+        _steer = 0f;
         WorldLean = Sx.Matrix.Identity;
     }
 }

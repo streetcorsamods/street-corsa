@@ -47,6 +47,7 @@
                                 LotRadius="{Binding LotRadius}"
                                 LotView="{Binding LotView}"
                                 Room="{Binding LotRoom}"
+                                Exit="{Binding LotExit}"
                                 Dressing="{Binding Dressing}"
                                 IsHitTestVisible="{Binding IsIdle}"/>
 
@@ -256,6 +257,9 @@
                 <DropShadowEffect BlurRadius="20" ShadowDepth="0" Color="Black" Opacity="0.8"/>
             </Button.Effect>
         </Button>
+
+        <!-- Comes down over the car driving off to the garage -->
+        <Border x:Name="Curtain" Background="Black" Opacity="0" IsHitTestVisible="False"/>
 
     </Grid>
 </UserControl>

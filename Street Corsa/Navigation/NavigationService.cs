@@ -312,7 +312,8 @@ namespace StreetCorsa.Navigation
         public void NavigateToGarageLater(GameState gameState) =>
             _ = System.Windows.Threading.Dispatcher.CurrentDispatcher.InvokeAsync(() => NavigateToGarage(gameState));
 
-        public bool NavigateToGarage(GameState gameState, bool skipAnimation = false) => SafeNavigate("garage", () =>
+        /// <param name="arrival">The car was just taken out of the lot: its engine, and whether it drives in</param>
+        public bool NavigateToGarage(GameState gameState, bool skipAnimation = false, Screens.Garage.CarArrival? arrival = null) => SafeNavigate("garage", () =>
             new Screens.Garage.GarageScreenViewModel(
                 this,
                 _dialogService,
@@ -326,7 +327,8 @@ namespace StreetCorsa.Navigation
                 _contentService,
                 _raceCarDataService,
                 _saleService,
-                skipAnimation));
+                skipAnimation,
+                arrival));
 
         /// <summary>
         /// The career, over the current screen, on the section last looked at in this game. One that fails to build is
@@ -361,7 +363,8 @@ namespace StreetCorsa.Navigation
                 gameState,
                 _catalogRepository,
                 _gameStateRepository,
-                _timeService));
+                _timeService,
+                _carPartsService));
 
         /// <param name="returning">Back from a race: the visit was paid for on the way in, so no time is spent</param>
         public bool NavigateToDiner(GameState gameState, bool returning = false) => SafeNavigate("diner", () =>

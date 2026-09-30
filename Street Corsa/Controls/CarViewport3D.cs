@@ -17,7 +17,7 @@ namespace StreetCorsa.Controls;
 /// The renderer draws off-screen into a shared DX11 texture which is presented through a D3DImage,
 /// so the viewport composes like any other WPF element (overlays, opacity, dialogs on top all work).
 /// </summary>
-public class CarViewport3D : D3DViewportBase
+public class CarViewport3D : D3DViewportBase, ICarDrivingIn
 {
     // Orbit camera limits: stay above the floor and inside the showroom walls
     private const float MinBeta = 0.02f;
@@ -488,6 +488,8 @@ public class CarViewport3D : D3DViewportBase
         }
         else
         {
+            // The car going cannot be left on the move, nor the camera held off it for the next one
+            StopPulling();
             ReleaseRock();
             await TrackDeviceWork(renderer.MainSlot.SetCarAsync(car, skinId ?? Kn5RenderableCar.DefaultSkin, RendererToken));
 
@@ -1652,6 +1654,39 @@ public class CarViewport3D : D3DViewportBase
     protected override void OnPoseChanged() => RockCar(Renderer?.CarNode);
 
     protected override bool EngineTurnedRound => EngineLayout == EngineLayout.Rear;
+
+    #endregion
+
+    #region Driving in
+
+    // Where a car taken out of the lot comes from: this far behind its place, out of the picture
+    private const float RollInDistance = 7f;
+
+    /// <summary>The car, standing on its wheels in the plain view: not with its parts out or an engine on the move</summary>
+    private Kn5RenderableCar? CarToDrive => Renderer?.CarNode is { } node && !PartsVisible && !IsMovingEngine ? node : null;
+
+    public bool Lights(bool on)
+    {
+        if (CarToDrive == null) return false;
+        HeadlightsOn = on;
+        AnimateFor(TimeSpan.FromSeconds(1));
+        return true;
+    }
+
+    public Task? RollIn()
+    {
+        if (CarToDrive is not { } node || Renderer is not { } renderer) return null;
+
+        // The camera holds still while the car comes in, so it is framed on the car's place first: the renderer's own
+        // framing moves only part of the way each frame, and would be stopped short of it
+        if (renderer.AutoAdjustTarget && renderer.CameraOrbit is { } orbit)
+        {
+            orbit.Target = renderer.FramedTarget(orbit.Alpha, orbit.Beta, orbit.Radius, orbit.Target);
+            orbit.UpdateViewMatrix();
+        }
+
+        return RollIn(node, RollInDistance);
+    }
 
     #endregion
 

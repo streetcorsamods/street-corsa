@@ -150,7 +150,13 @@ namespace StreetCorsa.Screens.Garage
             {
                 var version = ++_engineVersion;
                 var car = SelectedCar;
-                var work = car == null ? Task.FromResult<Audio.EngineSpec?>(null) : Services.Parts.EngineSpecs.ForAsync(_partsService, car.CarInstance, car.DisplayName);
+
+                // The car just brought from the lot had its engine worked out there: the same parts, so not again
+                var handed = _arrival is { } arrival && car?.CarInstance.InstanceId == arrival.InstanceId ? arrival.Engine : null;
+                if (car != null) _arrival = null;
+                var work = car == null ? Task.FromResult<Audio.EngineSpec?>(null)
+                    : handed != null ? Task.FromResult<Audio.EngineSpec?>(handed)
+                    : Services.Parts.EngineSpecs.ForAsync(_partsService, car.CarInstance, car.DisplayName);
                 _engineWork = work;
                 var spec = await work;
                 if (version == _engineVersion) SelectedEngine = spec;
@@ -178,6 +184,12 @@ namespace StreetCorsa.Screens.Garage
         public string GarageShowroomKn5 => AppSettings.Instance.GarageShowroomKn5;
 
         public bool SkipEnterAnimation { get; }
+
+        /// <summary>The car was just taken out of the lot and drives in under its own power as the garage comes up</summary>
+        public bool CarArriving { get; }
+
+        // The car just taken out of the lot, until its engine is first worked out
+        private CarArrival? _arrival;
 
         /// <summary>The tiles that lead out of the garage make room while the car is being worked on</summary>
         public bool ShowNavigation => !Workbench.IsOpen;
@@ -290,7 +302,8 @@ namespace StreetCorsa.Screens.Garage
             IAssettoCorsaContentService contentService,
             RaceCarDataService raceCarDataService,
             ICarSaleService saleService,
-            bool skipAnimation = false)
+            bool skipAnimation = false,
+            CarArrival? arrival = null)
         {
             _saleService = saleService;
             _navigationService = navigationService;
@@ -306,6 +319,8 @@ namespace StreetCorsa.Screens.Garage
             _raceCarDataService = raceCarDataService;
             _logger = AppLoggerFactory.CreateLogger("Garage");
             SkipEnterAnimation = skipAnimation;
+            _arrival = arrival;
+            CarArriving = arrival?.DrivesIn == true;
 
             QuitCommand = new RelayCommand(OnQuit, CanLeave);
             CarInfoCommand = new RelayCommand(OnCarInfo, () => SelectedCar != null);
@@ -1074,4 +1089,10 @@ namespace StreetCorsa.Screens.Garage
 
         public override string ToString() => Name;
     }
+
+    /// <summary>
+    /// A car just taken out of the lot comes to the garage: which one, its engine as the lot worked it out (null when it
+    /// could not), and whether it drives in (it drove off out of the lot) or is simply there
+    /// </summary>
+    public sealed record CarArrival(Guid InstanceId, Audio.EngineSpec? Engine, bool DrivesIn);
 }

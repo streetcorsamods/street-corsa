@@ -91,6 +91,12 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     // not by the clock, so a bump lands with the engine however slowly the frames come.
     private readonly List<(float Age, float Sign, bool Front)> _bumps = new();
 
+    // A car pulling away out of the scene, or rolling in to where it stands (DriveOff), and how the camera followed
+    // the car before the move took that over
+    private CarPull? _pull;
+    private Kn5RenderableCar? _pullCar;
+    private bool _pullAutoAdjust;
+
     /// <summary>How the label next to the pointer looks, and where it sits from the pointer</summary>
     protected readonly record struct LabelLook(double FontSize, byte BackgroundAlpha, byte BorderAlpha, Thickness Padding, Vector Offset);
 
@@ -195,7 +201,8 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
 
     public static readonly DependencyProperty RunningEngineProperty = DependencyProperty.Register(
         nameof(RunningEngine), typeof(Audio.EngineRunner), typeof(D3DViewportBase),
-        new PropertyMetadata(null, (d, e) => ((D3DViewportBase)d).OnRunningEngineChanged((Audio.EngineRunner?)e.NewValue)));
+        new PropertyMetadata(null, (d, e) =>
+            ((D3DViewportBase)d).OnRunningEngineChanged((Audio.EngineRunner?)e.OldValue, (Audio.EngineRunner?)e.NewValue)));
 
     /// <summary>The engine of the car on show, started where it stands: the body rocks with it</summary>
     public Audio.EngineRunner? RunningEngine
@@ -509,6 +516,12 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
             // The frame's own steps too: whatever throws in them would otherwise reach the dispatcher every frame
             var moving = StepFrame(renderer, dt);
 
+            if (_pull != null)
+            {
+                StepPull(dt);
+                moving = true;
+            }
+
             // A bump rings out frame by frame, on top of whatever the running engine does
             if (_bumps.Count > 0)
             {
@@ -623,6 +636,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         _firstFrameTimer.Stop();
         _rock = null;
         _bumps.Clear();
+        DropPull();
 
         var renderer = _renderer;
         _renderer = null;
@@ -718,8 +732,11 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     /// <summary>Only the garage leans the parts it shows along with the body</summary>
     protected virtual bool LeansParts => false;
 
-    private void OnRunningEngineChanged(Audio.EngineRunner? runner)
+    private void OnRunningEngineChanged(Audio.EngineRunner? old, Audio.EngineRunner? runner)
     {
+        // An engine a car on the move was driving is out of gear: it would otherwise stay held at the wheels' speed
+        if (_pull != null) old?.Drive(null);
+
         // Only while on screen: a runner that outlives the control must not keep it alive through the event
         if (IsLoaded) SetPoseSource(runner);
         OnPoseChanged();
@@ -792,8 +809,11 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         var running = RunningEngine?.Pose ?? Audio.BodyPose.Rest;
         if (EngineTurnedRound) running = running with { Roll = -running.Roll };
         var bump = BumpPose();
-        var pose = new Audio.BodyPose(running.Roll + bump.Roll, running.Pitch + bump.Pitch, running.Heave + bump.Heave);
-        if (renderer == null || carNode == null || (pose.IsRest && RunningEngine?.IsActive != true && _bumps.Count == 0))
+        var pull = _pull != null && ReferenceEquals(_pullCar, carNode) ? _pull : null;
+        // A car on the move squats or dives, and leans out of a bend
+        var (moveRoll, movePitch) = pull?.Body ?? (0f, 0f);
+        var pose = new Audio.BodyPose(running.Roll + bump.Roll + moveRoll, running.Pitch + bump.Pitch + movePitch, running.Heave + bump.Heave);
+        if (renderer == null || carNode == null || (pull == null && pose.IsRest && RunningEngine?.IsActive != true && _bumps.Count == 0))
         {
             ReleaseRock();
             return;
@@ -806,12 +826,14 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
             _shadowedPose = Audio.BodyPose.Rest;
         }
 
-        if (!_rock.Apply(pose)) return;
+        // A car pulling away rolls along its own length, nose first, its wheels turning as it goes
+        if (!_rock.Apply(pose, pull?.WheelSpin ?? 0f, pull?.Placement(_rock.FrontSign), pull?.Steer ?? 0f)) return;
 
         if (LeansParts) renderer.BodyLean = _rock.WorldLean;
 
-        // The shadow maps are drawn again only for a lean that shows in them, not for every shake at idle
-        if (CarBodyRock.ShadowsDue(_shadowedPose, pose))
+        // The shadow maps are drawn again only for a lean that shows in them, not for every shake at idle; a car on the
+        // move takes its shadow along every frame
+        if (pull != null || CarBodyRock.ShadowsDue(_shadowedPose, pose))
         {
             renderer.RefreshShadows();
             _shadowedPose = pose;
@@ -835,6 +857,113 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
             _renderer.IsDirty = true;
             StartPump();
         }
+    }
+
+    #endregion
+
+    #region Pulling away and rolling in
+
+    /// <summary>
+    /// <paramref name="car"/> pulls away, nose first, and keeps going until the screen goes or <see cref="StopPulling"/>
+    /// puts it back; given an <paramref name="exit"/> (a point on the floor, world x and z) it pulls straight out of its
+    /// place and turns towards it. The camera stays where it is and watches it go; the running engine is driven by the
+    /// wheels. False when it cannot go (no scene, or a car on the move already).
+    /// </summary>
+    protected bool PullAway(Kn5RenderableCar car, (float X, float Z)? exit = null)
+    {
+        if (_renderer is not { } renderer || _pull != null) return false;
+
+        // The rock knows which end is the nose; the car stands where it does less any lean
+        if (_rock == null || !ReferenceEquals(_rock.Car, car))
+        {
+            ReleaseRock();
+            _rock = new CarBodyRock(car);
+            _shadowedPose = Audio.BodyPose.Rest;
+        }
+
+        var parent = SlimDX.Matrix.Invert(car.LocalMatrix) * car.Matrix;
+        StartPull(renderer, car, CarPull.Away(_rock.Base, parent, _rock.FrontSign, exit));
+        return true;
+    }
+
+    /// <summary>
+    /// <paramref name="car"/> rolls in nose first from <paramref name="distance"/> metres behind where it stands and
+    /// comes to a stop there, easing off the brake as it does; done once it has stopped
+    /// </summary>
+    protected Task RollIn(Kn5RenderableCar car, float distance)
+    {
+        if (_renderer is not { } renderer || _pull != null || distance <= 0f) return Task.CompletedTask;
+
+        var from = _rock is { } rock && ReferenceEquals(rock.Car, car) ? rock.Base : car.LocalMatrix;
+        var pull = CarPull.In(from, distance);
+        StartPull(renderer, car, pull);
+        car.BrakeLightsEnabled = true;
+        OnPoseChanged();
+        return pull.Arrived.Task;
+    }
+
+    private void StartPull(GarageRenderer renderer, Kn5RenderableCar car, CarPull pull)
+    {
+        _pull = pull;
+        _pullCar = car;
+        _pullAutoAdjust = renderer.AutoAdjustTarget;
+        renderer.AutoAdjustTarget = false;
+        AnimateFor(SettleWindow);
+    }
+
+    /// <summary>
+    /// The car on the move back where it stood (one rolling in, where it stops), the camera as it was, and the engine
+    /// out of gear. A viewport about to take the car off its scene calls this first, while the car is still there.
+    /// </summary>
+    protected void StopPulling()
+    {
+        if (_pull is not { } pull || _pullCar is not { } car) return;
+
+        _pull = null;
+        _pullCar = null;
+        if (pull.IsRollingIn) car.BrakeLightsEnabled = false;
+        if (_rock is { } rock && ReferenceEquals(rock.Car, car)) rock.Apply(Audio.BodyPose.Rest, 0f, pull.From);
+        else car.LocalMatrix = pull.From;
+        if (_renderer != null) _renderer.AutoAdjustTarget = _pullAutoAdjust;
+        RunningEngine?.Drive(null);
+        ReleaseRock();
+        OnPoseChanged();
+        pull.Arrived.TrySetResult();
+    }
+
+    /// <summary>The move goes with the scene: the engine out of gear and whoever waits let go; there is no car left to put back</summary>
+    private void DropPull()
+    {
+        if (_pull is not { } pull) return;
+
+        _pull = null;
+        _pullCar = null;
+        RunningEngine?.Drive(null);
+        pull.Arrived.TrySetResult();
+    }
+
+    private void StepPull(float dt)
+    {
+        if (_pull is not { } pull || _pullCar is not { } car) return;
+
+        var engine = RunningEngine is { IsRunning: true } running ? running : null;
+        var step = pull.Step(Math.Min(dt, GarageRenderer.MaxTickSeconds), engine?.IdleRpm ?? 0);
+        engine?.Drive(step.Rpm, step.Throttle);
+
+        if (step.Stopped)
+        {
+            car.BrakeLightsEnabled = false;
+            pull.Arrived.TrySetResult();
+        }
+
+        if (step.Done)
+        {
+            StopPulling();
+            return;
+        }
+
+        // A running engine rocks the car on its own frames, and the move goes with it then: once a frame, not twice
+        if (RunningEngine?.IsActive != true) OnPoseChanged();
     }
 
     #endregion

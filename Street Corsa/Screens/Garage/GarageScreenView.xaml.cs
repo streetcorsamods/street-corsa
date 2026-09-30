@@ -22,13 +22,22 @@ namespace StreetCorsa.Screens.Garage
         private DispatcherTimer? _revealTimer;
         private bool _revealed;
 
+        // A car taken out of the lot is driving in: the screen takes no clicks until it is in its place
+        private bool _arriving;
+        private bool _droveIn;
+
         public GarageScreenView()
         {
             InitializeComponent();
             Loaded += OnLoaded;
             Unloaded += OnUnloaded;
 
-            Viewport3D.Ready += (_, _) => RevealAfter(SettleDelay);
+            Viewport3D.Ready += (_, _) =>
+            {
+                // Once the scene has done setting itself up (the camera framing the car included)
+                Dispatcher.BeginInvoke(DispatcherPriority.Background, DriveIn);
+                RevealAfter(SettleDelay);
+            };
             Viewport3D.Failed += (_, _) => RevealAfter(TimeSpan.Zero);
 
             // Parts are picked in the 3D view; what a pick means is the workbench's business
@@ -126,6 +135,36 @@ namespace StreetCorsa.Screens.Garage
         }
 
         /// <summary>
+        /// The car just taken out of the lot drives in as the garage comes up (once: the garage is only arrived at once).
+        /// Asked for only for a car that drove off out of the lot; one that did not was towed in, and is simply there.
+        /// </summary>
+        private async void DriveIn()
+        {
+            if (_droveIn || DataContext is not GarageScreenViewModel { CarArriving: true }) return;
+            _droveIn = true;
+
+            // A garage that took so long it was shown before its first frame has shown the car in its place: it does
+            // not jump back to drive in
+            if (_revealed) return;
+
+            _arriving = true;
+            ContentLayer.IsHitTestVisible = false;
+            try
+            {
+                await StreetCorsa.Controls.DriveOff.DriveInAsync(Viewport3D, EnginePanel.Runner);
+            }
+            catch (Exception ex)
+            {
+                StreetCorsa.Logging.AppLoggerFactory.CreateLogger("Garage").Error(ex, "The car could not drive in");
+            }
+            finally
+            {
+                _arriving = false;
+                ContentLayer.IsHitTestVisible = _revealed;
+            }
+        }
+
+        /// <summary>
         /// Schedules the reveal; a shorter delay replaces a pending longer one (timeout -> ready)
         /// </summary>
         private void RevealAfter(TimeSpan delay)
@@ -157,8 +196,8 @@ namespace StreetCorsa.Screens.Garage
             var skipAnimation = (DataContext as GarageScreenViewModel)?.SkipEnterAnimation == true;
             var duration = skipAnimation ? QuickFadeInDuration : FadeInDuration;
 
-            // Invisible buttons must not be clickable while loading
-            ContentLayer.IsHitTestVisible = true;
+            // Invisible buttons must not be clickable while loading, nor while a car is driving in
+            ContentLayer.IsHitTestVisible = !_arriving;
 
             ContentLayer.BeginAnimation(OpacityProperty, new DoubleAnimation(0.0, 1.0, duration)
             {

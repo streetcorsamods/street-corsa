@@ -514,6 +514,8 @@ internal static class Program
                 "radians; beta up from level; radius metres).",
                 "room: the inside the camera stays in, however it is swung or wheeled out: the walls halfLength either side of the",
                 "middle along x and halfWidth along z, the roof height up at its lowest (the eaves).",
+                "exit: the way out, a point on the floor a car taken out of its bay steers for (the roller door); none, and it",
+                "drives straight out.",
                 "sun: the key light's direction, from overhead through the skylights; its shadows are the cars' on the floor.",
                 "lights: the renderer's light for each light of the day. The lamps are lit at every hour, each colour its look's;",
                 "lampScale is how bright they are against their own brightness then. skylight is how bright the glass is.",
@@ -527,6 +529,7 @@ internal static class Program
             ["bays"] = new JArray(Bays().Select(b => new JObject { ["x"] = Round(b.X), ["z"] = Round(b.Z), ["heading"] = b.Heading })),
             ["camera"] = new JObject { ["alpha"] = 0f, ["beta"] = 0.16f, ["radius"] = 12.5f, ["targetHeight"] = 1.6f },
             ["room"] = new JObject { ["halfLength"] = HalfLength, ["halfWidth"] = HalfWidth, ["height"] = Eaves },
+            ["exit"] = new JObject { ["x"] = HalfLength, ["z"] = 0f },
             ["sun"] = new JArray(0.25f, 1f, 0.35f),
             ["lights"] = new JObject
             {

@@ -229,6 +229,9 @@ public class CarLotTests
         Assert.True(scene.Camera.Radius * MathF.Cos(scene.Camera.Beta) < room.HalfLength);
         Assert.True(scene.Camera.TargetHeight + scene.Camera.Radius * MathF.Sin(scene.Camera.Beta) < room.Height);
 
+        // A car taken out drives for the roller door, at the +x end of the aisle
+        Assert.Equal(new WarehouseExit(room.HalfLength, 0f), scene.Exit);
+
         // No two cars stand in each other: bays a car's width and more apart, all inside the walls
         foreach (var a in scene.Bays)
         {
@@ -317,6 +320,28 @@ public class CarLotTests
         // Dressed for any number without the sign: the picture that would not format is gone
         var dressing = scene.Dress(12, 0, StreetLight.Day);
         Assert.False(dressing.Pictures.ContainsKey("wh_digit_tens"));
+    }
+
+    #endregion
+
+    #region Driving off
+
+    [Theory]
+    [InlineData(0.0, 1.0, 1.0)]
+    [InlineData(1.0, 0.0, -1.0)]
+    // Past half a turn the other way is shorter
+    [InlineData(-3.0, 3.0, 6.0 - 2 * Math.PI)]
+    [InlineData(3.0, -3.0, 2 * Math.PI - 6.0)]
+    // A heading that has gone round several times (a car still circling behind the curtain) is still steered the
+    // short way: C#'s % on a negative number had it the long way round, to full lock the wrong way
+    [InlineData(20.0, 0.5, 0.5 - 20.0 + 6 * Math.PI)]
+    [InlineData(-20.0, 0.5, 0.5 + 20.0 - 6 * Math.PI)]
+    public void A_car_driving_off_turns_for_the_way_out_the_short_way_round(double from, double to, double turn)
+    {
+        var got = Controls.CarPull.Turn((float)from, (float)to);
+
+        Assert.Equal(turn, got, 3);
+        Assert.InRange(got, -MathF.PI, MathF.PI);
     }
 
     #endregion

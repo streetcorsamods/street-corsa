@@ -34,6 +34,9 @@ public sealed record LotView(float Alpha, float Beta, float TargetHeight);
 /// </summary>
 public readonly record struct LotRoom(float HalfLength, float HalfWidth, float Height);
 
+/// <summary>The way out of a lot's room: the point on the floor a car driving off steers for</summary>
+public readonly record struct LotExit(float X, float Z);
+
 /// <summary>
 /// How a lot's room is dressed: the renderer's light, the picture each material wears ("wh_wall" -> a picture in the
 /// model) and how bright the self-lit ones glow
@@ -54,7 +57,7 @@ public sealed record LotDressing(
 /// the work here is placing them, moving the camera between the two views, and working out which car the
 /// pointer is on.
 /// </summary>
-public class LotViewport3D : D3DViewportBase
+public class LotViewport3D : D3DViewportBase, ICarDrivingOff
 {
     // Taking in the whole lot, and standing on one car
     private const float DefaultLotRadius = 19f;
@@ -220,6 +223,16 @@ public class LotViewport3D : D3DViewportBase
         set => SetValue(RoomProperty, value);
     }
 
+    public static readonly DependencyProperty ExitProperty = DependencyProperty.Register(
+        nameof(Exit), typeof(LotExit?), typeof(LotViewport3D), new PropertyMetadata(null));
+
+    /// <summary>Where a car driving off heads for; none, and it drives straight on</summary>
+    public LotExit? Exit
+    {
+        get => (LotExit?)GetValue(ExitProperty);
+        set => SetValue(ExitProperty, value);
+    }
+
     public static readonly DependencyProperty DressingProperty = DependencyProperty.Register(
         nameof(Dressing), typeof(LotDressing), typeof(LotViewport3D),
         new PropertyMetadata(null, (d, _) => ((LotViewport3D)d).ApplyDressing()));
@@ -370,7 +383,8 @@ public class LotViewport3D : D3DViewportBase
         var renderer = Renderer;
         if (renderer == null) return;
 
-        // A bay is about to be told where it stands again: the car in it cannot be leaning when it is
+        // A bay is about to be told where it stands again: the car in it cannot be on the move or leaning when it is
+        StopPulling();
         ReleaseRock();
 
         var previous = _loaded;
@@ -670,6 +684,7 @@ public class LotViewport3D : D3DViewportBase
 
     private void OnSelectionChanged()
     {
+        StopPulling();
         ReleaseRock();
         if (Renderer == null) return;
 
@@ -989,13 +1004,40 @@ public class LotViewport3D : D3DViewportBase
     #region Body rock
 
     /// <summary>The engine of the car being looked at moved its body</summary>
-    protected override void OnPoseChanged()
+    protected override void OnPoseChanged() => RockCar(SelectedCarNode);
+
+    /// <summary>The car being looked at, when it is standing in its bay</summary>
+    private Kn5RenderableCar? SelectedCarNode
     {
-        var index = SelectedIndex;
-        var carNode = Renderer != null && index >= 0 && index < _slots.Count && index < _standing.Count && _standing[index] != null
-            ? _slots[index]?.CarNode
-            : null;
-        RockCar(carNode);
+        get
+        {
+            var index = SelectedIndex;
+            return Renderer != null && index >= 0 && index < _slots.Count && index < _standing.Count && _standing[index] != null
+                ? _slots[index]?.CarNode
+                : null;
+        }
+    }
+
+    #endregion
+
+    #region Driving off
+
+    /// <summary>The car being looked at switches its lights on: the lot loads no light sources, so its lamps glow</summary>
+    public bool LightsOn()
+    {
+        if (SelectedCarNode is not { } node) return false;
+        node.HeadlightsEnabled = true;
+        AnimateFor(TimeSpan.FromSeconds(1));
+        return true;
+    }
+
+    public bool PullAway() => SelectedCarNode is { } node && PullAway(node, Exit is { } exit ? (exit.X, exit.Z) : null);
+
+    public void StayPut()
+    {
+        StopPulling();
+        if (SelectedCarNode is { } node) node.HeadlightsEnabled = false;
+        Invalidate();
     }
 
     #endregion

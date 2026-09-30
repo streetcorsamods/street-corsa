@@ -72,6 +72,9 @@ public sealed class EngineRunner : INotifyPropertyChanged
 
     public double Rpm { get; private set; }
 
+    /// <summary>What the engine idles at, as the simulation has it; 800 without an engine</summary>
+    public double IdleRpm => _sim?.Idle ?? 800;
+
     /// <summary>Where the needle is: 0 at a stop, 1 a little past the limiter</summary>
     public double RpmFraction => _sim == null ? 0 : Math.Clamp(Rpm / TachMax, 0, 1);
 
