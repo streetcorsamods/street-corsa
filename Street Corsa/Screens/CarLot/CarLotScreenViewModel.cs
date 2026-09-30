@@ -72,6 +72,9 @@ namespace StreetCorsa.Screens.CarLot
         public LotDressing? Dressing { get; private set; }
         public LotView? LotView { get; private set; }
         public LotRoom? LotRoom { get; private set; }
+
+        /// <summary>The way out a car taken drives for, when the scene says where it is</summary>
+        public LotExit? LotExit { get; private set; }
         public float LotRadius { get; private set; } = 12f;
 
         public bool HasScene => ShowroomKn5 != null;
@@ -209,6 +212,7 @@ namespace StreetCorsa.Screens.CarLot
                 Dressing = new LotDressing(dressing.Lighting, dressing.Sun, dressing.Pictures, dressing.Glow);
                 LotView = new LotView(scene.Camera.Alpha, scene.Camera.Beta, scene.Camera.TargetHeight);
                 LotRoom = scene.Room is { } room ? new LotRoom(room.HalfLength, room.HalfWidth, room.Height) : null;
+                LotExit = scene.Exit is { } exit ? new LotExit(exit.X, exit.Z) : null;
                 LotRadius = scene.Camera.Radius;
             }
 
@@ -220,6 +224,7 @@ namespace StreetCorsa.Screens.CarLot
             OnPropertyChanged(nameof(Dressing));
             OnPropertyChanged(nameof(LotView));
             OnPropertyChanged(nameof(LotRoom));
+            OnPropertyChanged(nameof(LotExit));
             OnPropertyChanged(nameof(LotRadius));
             OnPropertyChanged(nameof(LotCars));
             OnPropertyChanged(nameof(WarehouseCars));

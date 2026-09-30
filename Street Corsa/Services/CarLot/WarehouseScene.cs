@@ -19,6 +19,9 @@ namespace StreetCorsa.Services.CarLot
     /// </summary>
     public readonly record struct WarehouseRoom(float HalfLength, float HalfWidth, float Height);
 
+    /// <summary>The way out, a point on the floor a car taken out of its bay drives for: metres from the middle of the floor</summary>
+    public readonly record struct WarehouseExit(float X, float Z);
+
     /// <summary>
     /// What a warehouse wears: the picture on each of the scene's surfaces, by material ("wh_wall" -> a picture in the
     /// model), and the colour its lamps give
@@ -54,7 +57,8 @@ namespace StreetCorsa.Services.CarLot
         IReadOnlyList<WarehouseLook> Looks,
         string? TensMaterial,
         string? UnitsMaterial,
-        string? DigitPicture)
+        string? DigitPicture,
+        WarehouseExit? Exit = null)
     {
         /// <summary>The self-lit material whose glow follows the hour</summary>
         public const string SkylightMaterial = "wh_skylight";
@@ -102,13 +106,15 @@ namespace StreetCorsa.Services.CarLot
 
         private sealed record RoomEntry(float HalfLength, float HalfWidth, float Height);
 
+        private sealed record ExitEntry(float X, float Z);
+
         private sealed record LookEntry(string? Id, Dictionary<string, string?>? Surfaces, int[]? LampColor);
 
         private sealed record DigitsEntry(string? Tens, string? Units, string? Picture);
 
         private sealed record SceneEntry(string? Id, string? Title, string? Model, List<BayEntry?>? Bays, CameraEntry? Camera,
             RoomEntry? Room, float[]? Sun, Dictionary<string, SceneLighting.LightEntry?>? Lights, Dictionary<string, float>? Skylight,
-            List<SceneLighting.LampEntry?>? Lamps, List<LookEntry?>? Looks, DigitsEntry? Digits);
+            List<SceneLighting.LampEntry?>? Lamps, List<LookEntry?>? Looks, DigitsEntry? Digits, ExitEntry? Exit = null);
 
         /// <summary>
         /// Every warehouse of every mod (a folder under a mod's <c>warehouses</c>) that loads, by full id. Empty when
@@ -193,7 +199,8 @@ namespace StreetCorsa.Services.CarLot
 
             var sun = entry.Sun is { Length: 3 } s ? s : [0.25f, 1f, 0.35f];
             return new WarehouseScene(id, entry.Title ?? "The warehouse", kn5, bays, camera, room, sun, lights, skylight, looks,
-                entry.Digits?.Tens, entry.Digits?.Units, digitPicture);
+                entry.Digits?.Tens, entry.Digits?.Units, digitPicture,
+                entry.Exit is { } exit && float.IsFinite(exit.X) && float.IsFinite(exit.Z) ? new WarehouseExit(exit.X, exit.Z) : null);
         }
 
         /// <summary>

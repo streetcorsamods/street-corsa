@@ -819,7 +819,8 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         }
 
         // A car pulling away rolls along its own length, nose first, its wheels turning as it goes
-        var placement = pull == null ? (SlimDX.Matrix?)null : SlimDX.Matrix.Translation(0f, 0f, pull.Distance * _rock.FrontSign) * pull.From;
+        var placement = pull == null ? (SlimDX.Matrix?)null
+            : pull.Steered ?? SlimDX.Matrix.Translation(0f, 0f, pull.Distance * _rock.FrontSign) * pull.From;
         if (!_rock.Apply(pose, pull == null ? 0f : Street.RivalDrive.WheelAngle(pull.Distance), placement)) return;
 
         if (LeansParts) renderer.BodyLean = _rock.WorldLean;
@@ -863,6 +864,12 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     private const double PullThrottle = 0.45;
     private const double CruiseThrottle = 0.2;
 
+    // A car steering for a way out: straight out of its place far enough to clear its neighbours, then round on a
+    // tight circle until it points at the way out, how sharply it corrects onto it, and the wheel's lock
+    private const float StraightOut = 2f;
+    private const float TurningRadius = 4.2f;
+    private const float SteerGain = 1.5f;
+
     /// <summary>
     /// A car on the move: where it stands (or stood), how far it is from there and how fast it goes, and how its body
     /// pitches. One pulling away starts at 0 and speeds up; one rolling in starts behind and brakes to a stop at 0.
@@ -879,22 +886,86 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         /// <summary>The brake that stops a car rolling in on its mark; 0 for one pulling away</summary>
         public float Braking { get; init; }
 
+        /// <summary>
+        /// Steering for a way out: where it is (world x, z, from the car's origin), where it is going and its heading
+        /// (radians, 0 along +z, growing towards +x), and the way from world space back to the car's own parent
+        /// </summary>
+        public (float X, float Z)? Exit { get; init; }
+        public float X { get; set; }
+        public float Z { get; set; }
+        public float Heading { get; set; }
+        public float StartX { get; init; }
+        public float StartZ { get; init; }
+        public float StartHeading { get; init; }
+        public SlimDX.Matrix Parent { get; init; } = SlimDX.Matrix.Identity;
+
+        /// <summary>Where a steered car stands now, in its parent's space; null for one going straight</summary>
+        public SlimDX.Matrix? Steered { get; set; }
+
         /// <summary>Done when a car rolling in has stopped (or it was called off)</summary>
         public TaskCompletionSource Arrived { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     }
 
     /// <summary>
     /// <paramref name="car"/> pulls away, nose first, and keeps going until the screen goes or <see cref="StopPulling"/>
-    /// puts it back. The camera stays where it is and watches it go; the running engine is driven by the wheels.
+    /// puts it back; given an <paramref name="exit"/> (a point on the floor, world x and z) it pulls straight out of its
+    /// place and turns towards it. The camera stays where it is and watches it go; the running engine is driven by the
+    /// wheels.
     /// </summary>
-    protected void PullAway(Kn5RenderableCar car)
+    protected void PullAway(Kn5RenderableCar car, (float X, float Z)? exit = null)
     {
         if (_renderer is not { } renderer || _pull != null) return;
 
-        var from = _rock is { } rock && ReferenceEquals(rock.Car, car) ? rock.Base : car.LocalMatrix;
-        _pull = new Pull(car, from, renderer.AutoAdjustTarget);
+        // The rock knows which end is the nose; the car stands where it does less any lean
+        if (_rock == null || !ReferenceEquals(_rock.Car, car))
+        {
+            ReleaseRock();
+            _rock = new CarBodyRock(car);
+            _shadowedPose = Audio.BodyPose.Rest;
+        }
+
+        var from = _rock.Base;
+        var parent = SlimDX.Matrix.Invert(car.LocalMatrix) * car.Matrix;
+        var world = from * parent;
+        var sign = _rock.FrontSign;
+        var heading = MathF.Atan2(world.M31 * sign, world.M33 * sign);
+        _pull = new Pull(car, from, renderer.AutoAdjustTarget)
+        {
+            Exit = exit,
+            X = world.M41,
+            Z = world.M43,
+            Heading = heading,
+            StartX = world.M41,
+            StartZ = world.M43,
+            StartHeading = heading,
+            Parent = parent
+        };
         renderer.AutoAdjustTarget = false;
         AnimateFor(SettleWindow);
+    }
+
+    /// <summary>A car steering for its way out moves on by <paramref name="distance"/> metres, turning as it goes</summary>
+    private static void Steer(Pull pull, float distance)
+    {
+        if (pull.Exit is not { } exit) return;
+
+        if (pull.Distance > StraightOut)
+        {
+            var wanted = MathF.Atan2(exit.X - pull.X, exit.Z - pull.Z);
+            var off = (wanted - pull.Heading + 3f * MathF.PI) % (2f * MathF.PI) - MathF.PI;
+            var curvature = Math.Clamp(off * SteerGain, -1f / TurningRadius, 1f / TurningRadius);
+            pull.Heading += curvature * distance;
+        }
+
+        pull.X += MathF.Sin(pull.Heading) * distance;
+        pull.Z += MathF.Cos(pull.Heading) * distance;
+
+        // Turned about its own origin from where it stood, then moved to where it is now; RotationY adds to the heading
+        var world = pull.From * pull.Parent
+                    * SlimDX.Matrix.Translation(-pull.StartX, 0f, -pull.StartZ)
+                    * SlimDX.Matrix.RotationY(pull.Heading - pull.StartHeading)
+                    * SlimDX.Matrix.Translation(pull.X, 0f, pull.Z);
+        pull.Steered = world * SlimDX.Matrix.Invert(pull.Parent);
     }
 
     /// <summary>
@@ -949,6 +1020,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
 
         var acceleration = pull.Speed < PullTopSpeed ? PullAcceleration : 0f;
         pull.Speed = Math.Min(PullTopSpeed, pull.Speed + acceleration * step);
+        Steer(pull, pull.Speed * step);
         pull.Distance += pull.Speed * step;
         pull.Pitch.Tick(step, acceleration);
 

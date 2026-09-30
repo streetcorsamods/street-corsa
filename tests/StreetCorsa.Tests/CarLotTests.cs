@@ -229,6 +229,9 @@ public class CarLotTests
         Assert.True(scene.Camera.Radius * MathF.Cos(scene.Camera.Beta) < room.HalfLength);
         Assert.True(scene.Camera.TargetHeight + scene.Camera.Radius * MathF.Sin(scene.Camera.Beta) < room.Height);
 
+        // A car taken out drives for the roller door, at the +x end of the aisle
+        Assert.Equal(new WarehouseExit(room.HalfLength, 0f), scene.Exit);
+
         // No two cars stand in each other: bays a car's width and more apart, all inside the walls
         foreach (var a in scene.Bays)
         {

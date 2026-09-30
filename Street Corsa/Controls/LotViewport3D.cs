@@ -34,6 +34,9 @@ public sealed record LotView(float Alpha, float Beta, float TargetHeight);
 /// </summary>
 public readonly record struct LotRoom(float HalfLength, float HalfWidth, float Height);
 
+/// <summary>The way out of a lot's room: the point on the floor a car driving off steers for</summary>
+public readonly record struct LotExit(float X, float Z);
+
 /// <summary>
 /// How a lot's room is dressed: the renderer's light, the picture each material wears ("wh_wall" -> a picture in the
 /// model) and how bright the self-lit ones glow
@@ -218,6 +221,16 @@ public class LotViewport3D : D3DViewportBase, ICarDrivingOff
     {
         get => (LotRoom?)GetValue(RoomProperty);
         set => SetValue(RoomProperty, value);
+    }
+
+    public static readonly DependencyProperty ExitProperty = DependencyProperty.Register(
+        nameof(Exit), typeof(LotExit?), typeof(LotViewport3D), new PropertyMetadata(null));
+
+    /// <summary>Where a car driving off heads for; none, and it drives straight on</summary>
+    public LotExit? Exit
+    {
+        get => (LotExit?)GetValue(ExitProperty);
+        set => SetValue(ExitProperty, value);
     }
 
     public static readonly DependencyProperty DressingProperty = DependencyProperty.Register(
@@ -1019,7 +1032,7 @@ public class LotViewport3D : D3DViewportBase, ICarDrivingOff
     public bool PullAway()
     {
         if (SelectedCarNode is not { } node) return false;
-        PullAway(node);
+        PullAway(node, Exit is { } exit ? (exit.X, exit.Z) : null);
         return true;
     }
 
