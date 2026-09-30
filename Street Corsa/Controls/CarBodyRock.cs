@@ -28,12 +28,13 @@ internal sealed class CarBodyRock
     private readonly float _frontSign;
     private BodyPose _pose = BodyPose.Rest;
     private float _wheelSpin;
+    private float _steer;
 
     /// <summary>The lean in world space, for whatever sits in the car without being part of it (the parts view)</summary>
     public Sx.Matrix WorldLean { get; private set; } = Sx.Matrix.Identity;
 
     /// <summary>A wheel group as it was, and the way from its parent to the car's own space</summary>
-    private sealed record Held(RenderableList Node, Sx.Matrix Local, Sx.Matrix ToCar, Sx.Matrix FromCar, bool Wheel);
+    private sealed record Held(RenderableList Node, Sx.Matrix Local, Sx.Matrix ToCar, Sx.Matrix FromCar, bool Wheel, bool FrontWheel);
 
     public CarBodyRock(Kn5RenderableCar car)
     {
@@ -47,7 +48,8 @@ internal sealed class CarBodyRock
             var toCar = n.ParentMatrix * fromWorld;
             // The wheel itself turns as the car rolls; its hub, disc and suspension do not
             var wheel = n is Kn5RenderableList { OriginalNode.Name: var name } && name.StartsWith("WHEEL_", StringComparison.OrdinalIgnoreCase);
-            _held.Add(new Held(n, n.LocalMatrix, toCar, Sx.Matrix.Invert(toCar), wheel));
+            var front = wheel && ((Kn5RenderableList)n).OriginalNode.Name.EndsWith("F", StringComparison.OrdinalIgnoreCase);
+            _held.Add(new Held(n, n.LocalMatrix, toCar, Sx.Matrix.Invert(toCar), wheel, front));
         });
 
         // Where the wheels are says which way is left and which way is the front
@@ -96,17 +98,20 @@ internal sealed class CarBodyRock
 
     /// <summary>
     /// Puts the body where the pose says, with the wheels turned <paramref name="wheelSpin"/> radians about their
-    /// axles (a car rolling along); false when nothing changed. A car on the move gives where it now stands as
+    /// axles (a car rolling along) and the front ones steered <paramref name="steer"/> radians (positive the way the car
+    /// turns about +y); false when nothing changed. A car on the move gives where it now stands as
     /// <paramref name="placement"/>: the car's own matrix is where the lean goes, so it cannot be set apart from it.
     /// </summary>
-    public bool Apply(BodyPose pose, float wheelSpin = 0f, Sx.Matrix? placement = null)
+    public bool Apply(BodyPose pose, float wheelSpin = 0f, Sx.Matrix? placement = null, float steer = 0f)
     {
         var moved = placement is { } p && p != _base;
-        if (pose == _pose && wheelSpin == _wheelSpin && !moved) return false;
+        if (pose == _pose && wheelSpin == _wheelSpin && steer == _steer && !moved) return false;
         if (placement is { } place) _base = place;
         _pose = pose;
         _wheelSpin = wheelSpin;
+        _steer = steer;
         var spin = Sx.Matrix.RotationX(wheelSpin * _frontSign);
+        var steered = spin * Sx.Matrix.RotationY(steer);
 
         var lean = Sx.Matrix.Translation(-_pivot)
                    * Sx.Matrix.RotationZ(pose.Roll * _leftSign)
@@ -119,7 +124,9 @@ internal sealed class CarBodyRock
         WorldLean = Sx.Matrix.Invert(_base) * lean * _base;
         foreach (var held in _held)
         {
-            var local = held.Wheel && wheelSpin != 0f ? spin * held.Local : held.Local;
+            var local = held.FrontWheel && steer != 0f ? steered * held.Local
+                : held.Wheel && wheelSpin != 0f ? spin * held.Local
+                : held.Local;
             held.Node.LocalMatrix = local * held.ToCar * back * held.FromCar;
         }
 
@@ -149,6 +156,7 @@ internal sealed class CarBodyRock
         foreach (var held in _held) held.Node.LocalMatrix = held.Local;
         _pose = BodyPose.Rest;
         _wheelSpin = 0f;
+        _steer = 0f;
         WorldLean = Sx.Matrix.Identity;
     }
 }

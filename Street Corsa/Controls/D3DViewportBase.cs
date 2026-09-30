@@ -821,7 +821,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         // A car pulling away rolls along its own length, nose first, its wheels turning as it goes
         var placement = pull == null ? (SlimDX.Matrix?)null
             : pull.Steered ?? SlimDX.Matrix.Translation(0f, 0f, pull.Distance * _rock.FrontSign) * pull.From;
-        if (!_rock.Apply(pose, pull == null ? 0f : Street.RivalDrive.WheelAngle(pull.Distance), placement)) return;
+        if (!_rock.Apply(pose, pull == null ? 0f : Street.RivalDrive.WheelAngle(pull.Distance), placement, pull?.Steer ?? 0f)) return;
 
         if (LeansParts) renderer.BodyLean = _rock.WorldLean;
 
@@ -866,9 +866,16 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
 
     // A car steering for a way out: straight out of its place far enough to clear its neighbours, then round on a
     // tight circle until it points at the way out, how sharply it corrects onto it, and the wheel's lock
-    private const float StraightOut = 2f;
+    private const float StraightOut = 1.2f;
     private const float TurningRadius = 4.2f;
     private const float SteerGain = 1.5f;
+
+    // A car turns about its rear axle, this far behind its middle: the nose swings round, the tail follows
+    private const float HalfWheelbase = 1.4f;
+
+    // The wheel is wound on and off over about this long, not snapped to the lock
+    private const float SteerSeconds = 0.3f;
+    private const float SteerLead = 0.5f;
 
     /// <summary>
     /// A car on the move: where it stands (or stood), how far it is from there and how fast it goes, and how its body
@@ -901,6 +908,9 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
 
         /// <summary>Where a steered car stands now, in its parent's space; null for one going straight</summary>
         public SlimDX.Matrix? Steered { get; set; }
+
+        /// <summary>How far the front wheels are turned, radians, the way the car turns</summary>
+        public float Steer { get; set; }
 
         /// <summary>Done when a car rolling in has stopped (or it was called off)</summary>
         public TaskCompletionSource Arrived { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -945,20 +955,30 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     }
 
     /// <summary>A car steering for its way out moves on by <paramref name="distance"/> metres, turning as it goes</summary>
-    private static void Steer(Pull pull, float distance)
+    private static void Steer(Pull pull, float distance, float dt)
     {
         if (pull.Exit is not { } exit) return;
 
-        if (pull.Distance > StraightOut)
+        // The rear axle goes where the car points; the middle is ahead of it
+        var rearX = pull.X - MathF.Sin(pull.Heading) * HalfWheelbase;
+        var rearZ = pull.Z - MathF.Cos(pull.Heading) * HalfWheelbase;
+        var wanted = MathF.Atan2(exit.X - pull.X, exit.Z - pull.Z);
+        var off = (wanted - pull.Heading + 3f * MathF.PI) % (2f * MathF.PI) - MathF.PI;
+        var curvature = Math.Clamp(off * SteerGain, -1f / TurningRadius, 1f / TurningRadius);
+        if (pull.Distance > StraightOut) pull.Heading += curvature * distance;
+
+        // The front wheels point along the bend the car is on (from the rear axle, a wheelbase ahead), wound on over
+        // the last of the way out of the bay so they are round as the bend starts
+        if (pull.Distance > StraightOut - SteerLead)
         {
-            var wanted = MathF.Atan2(exit.X - pull.X, exit.Z - pull.Z);
-            var off = (wanted - pull.Heading + 3f * MathF.PI) % (2f * MathF.PI) - MathF.PI;
-            var curvature = Math.Clamp(off * SteerGain, -1f / TurningRadius, 1f / TurningRadius);
-            pull.Heading += curvature * distance;
+            var lockAngle = MathF.Atan(2f * HalfWheelbase * curvature);
+            pull.Steer += (lockAngle - pull.Steer) * (1f - MathF.Exp(-dt / SteerSeconds));
         }
 
-        pull.X += MathF.Sin(pull.Heading) * distance;
-        pull.Z += MathF.Cos(pull.Heading) * distance;
+        rearX += MathF.Sin(pull.Heading) * distance;
+        rearZ += MathF.Cos(pull.Heading) * distance;
+        pull.X = rearX + MathF.Sin(pull.Heading) * HalfWheelbase;
+        pull.Z = rearZ + MathF.Cos(pull.Heading) * HalfWheelbase;
 
         // Turned about its own origin from where it stood, then moved to where it is now; RotationY adds to the heading
         var world = pull.From * pull.Parent
@@ -1020,7 +1040,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
 
         var acceleration = pull.Speed < PullTopSpeed ? PullAcceleration : 0f;
         pull.Speed = Math.Min(PullTopSpeed, pull.Speed + acceleration * step);
-        Steer(pull, pull.Speed * step);
+        Steer(pull, pull.Speed * step, step);
         pull.Distance += pull.Speed * step;
         pull.Pitch.Tick(step, acceleration);
 

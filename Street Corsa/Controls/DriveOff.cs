@@ -35,7 +35,8 @@ public static class DriveOff
     private static readonly TimeSpan LightsBeforeKey = TimeSpan.FromSeconds(0.5);
     private static readonly TimeSpan MostCranking = TimeSpan.FromSeconds(4);
     private static readonly TimeSpan Idling = TimeSpan.FromSeconds(1.1);
-    private static readonly TimeSpan RollingBeforeFade = TimeSpan.FromSeconds(0.45);
+    // Long enough to see it roll out and start to turn for the way out before the picture goes
+    private static readonly TimeSpan RollingBeforeFade = TimeSpan.FromSeconds(1.8);
 
     /// <summary>How long the screen takes to go black over the car rolling away</summary>
     public static readonly TimeSpan Fade = TimeSpan.FromSeconds(1.0);
