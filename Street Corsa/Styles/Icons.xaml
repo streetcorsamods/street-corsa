@@ -23,4 +23,54 @@
                              Geometry="M 0,50 L 42,10 L 42,34 L 100,34 L 100,66 L 42,66 L 42,90 Z"/>
         </DrawingImage.Drawing>
     </DrawingImage>
+
+    <!-- The radio's transport, drawn in a 24 px box (the clear square keeps every glyph the same size in its button) -->
+    <DrawingImage x:Key="PlayIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="Transparent" Geometry="M0,0 H24 V24 H0 Z"/>
+                <GeometryDrawing Brush="White" Geometry="M7,4 L20,12 L7,20 Z"/>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+    <DrawingImage x:Key="PauseIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="Transparent" Geometry="M0,0 H24 V24 H0 Z"/>
+                <GeometryDrawing Brush="White" Geometry="M5.5,4 H10 V20 H5.5 Z M14,4 H18.5 V20 H14 Z"/>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+    <DrawingImage x:Key="StopIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="Transparent" Geometry="M0,0 H24 V24 H0 Z"/>
+                <GeometryDrawing Brush="White" Geometry="M5.5,5.5 H18.5 V18.5 H5.5 Z"/>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+    <DrawingImage x:Key="NextIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="Transparent" Geometry="M0,0 H24 V24 H0 Z"/>
+                <GeometryDrawing Brush="White" Geometry="M4,5 L14.5,12 L4,19 Z M15.5,5 H19.5 V19 H15.5 Z"/>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+    <DrawingImage x:Key="PreviousIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="Transparent" Geometry="M0,0 H24 V24 H0 Z"/>
+                <GeometryDrawing Brush="White" Geometry="M20,5 L9.5,12 L20,19 Z M4.5,5 H8.5 V19 H4.5 Z"/>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+    <DrawingImage x:Key="CloseIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="Transparent" Geometry="M0,0 H24 V24 H0 Z"/>
+                <GeometryDrawing Brush="White" Geometry="M5.6,3.5 L12,9.9 L18.4,3.5 L20.5,5.6 L14.1,12 L20.5,18.4 L18.4,20.5 L12,14.1 L5.6,20.5 L3.5,18.4 L9.9,12 L3.5,5.6 Z"/>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
 </ResourceDictionary>

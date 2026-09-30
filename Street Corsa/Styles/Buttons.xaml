@@ -2,11 +2,25 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:helpers="clr-namespace:StreetCorsa.Helpers">
 
-    <!-- Merge Brushes -->
-    <ResourceDictionary.MergedDictionaries>
-        <ResourceDictionary Source="Brushes.xaml"/>
-        <ResourceDictionary Source="Typography.xaml"/>
-    </ResourceDictionary.MergedDictionaries>
+    <!-- Colours, brushes and font sizes come from App.xaml, which merges Brushes.xaml and Typography.xaml once before
+         this; merging them here again would make a second copy of every brush. Inputs.xaml, merged after this, uses the
+         hover fade and focus look below the same way. -->
+
+    <!-- How long a hover fades in and out: buttons and inputs alike -->
+    <Duration x:Key="HoverFade">0:0:0.5</Duration>
+
+    <!-- Where the keyboard is (Tab), for the buttons and inputs that have no focused look of their own: an amber
+         outline just outside the control. Only shows for the keyboard, never for a click. -->
+    <Style x:Key="GlassFocusVisual">
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Border Margin="-3" CornerRadius="8" BorderThickness="1.5" BorderBrush="{StaticResource AmberBrush}"
+                            Opacity="0.85" SnapsToDevicePixels="True"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
 
     <!-- Main menu badge: the round badge image, lifting a little under the pointer, with its label beneath -->
     <Style x:Key="MenuButtonStyle" TargetType="Button">
@@ -103,11 +117,18 @@
 
     <!-- The game's buttons, everywhere: a thick outline on semi-transparent glass; under the pointer the style's hover
          glass (GlassButton.HoverBrush) and an amber outline fade in over it. Primary (Yes, OK, the one thing to do) is
-         red glass, secondary (No, Cancel, the rest) dark glass. -->
-    <ControlTemplate x:Key="GlassButtonTemplate" TargetType="Button">
+         red glass, secondary (No, Cancel, the rest) dark glass. A toggle button (GlassToggleButtonStyle) wears it too:
+         while on, an amber outline and wash lie under the hover; a plain button never goes on. -->
+    <ControlTemplate x:Key="GlassButtonTemplate" TargetType="ButtonBase">
         <Grid x:Name="root">
             <Border Background="{TemplateBinding Background}"
                     BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="6"/>
+            <Border x:Name="on"
+                    Opacity="0"
+                    Background="{StaticResource UiRowHoverBrush}"
+                    BorderBrush="{StaticResource AmberBrush}"
                     BorderThickness="{TemplateBinding BorderThickness}"
                     CornerRadius="6"/>
             <!-- What the pointer brings: the hover glass and the amber outline, faded in -->
@@ -129,7 +150,7 @@
             <VisualStateManager.VisualStateGroups>
                 <VisualStateGroup x:Name="CommonStates">
                     <VisualStateGroup.Transitions>
-                        <VisualTransition GeneratedDuration="0:0:0.5">
+                        <VisualTransition GeneratedDuration="{StaticResource HoverFade}">
                             <VisualTransition.GeneratedEasingFunction>
                                 <CubicEase EasingMode="EaseOut"/>
                             </VisualTransition.GeneratedEasingFunction>
@@ -157,6 +178,18 @@
                         </Storyboard>
                     </VisualState>
                 </VisualStateGroup>
+                <VisualStateGroup x:Name="CheckStates">
+                    <VisualStateGroup.Transitions>
+                        <VisualTransition GeneratedDuration="0:0:0.25"/>
+                    </VisualStateGroup.Transitions>
+                    <VisualState x:Name="Unchecked"/>
+                    <VisualState x:Name="Checked">
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetName="on" Storyboard.TargetProperty="Opacity" To="1" Duration="0"/>
+                        </Storyboard>
+                    </VisualState>
+                    <VisualState x:Name="Indeterminate"/>
+                </VisualStateGroup>
             </VisualStateManager.VisualStateGroups>
         </Grid>
     </ControlTemplate>
@@ -180,6 +213,20 @@
         <Setter Property="BorderThickness" Value="2"/>
         <Setter Property="helpers:GlassButton.HoverBrush" Value="{StaticResource UiGlassHoverBrush}"/>
         <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Template" Value="{StaticResource GlassButtonTemplate}"/>
+    </Style>
+
+    <!-- A glass button that stays in (Shuffle): the buttons' glass, with an amber outline and wash while on -->
+    <Style x:Key="GlassToggleButtonStyle" TargetType="ToggleButton">
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="Background" Value="{StaticResource UiGlassBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource UiOutlineBrush}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="helpers:GlassButton.HoverBrush" Value="{StaticResource UiGlassHoverBrush}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FocusVisualStyle" Value="{StaticResource GlassFocusVisual}"/>
         <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Template" Value="{StaticResource GlassButtonTemplate}"/>
@@ -229,7 +276,7 @@
                         <VisualStateManager.VisualStateGroups>
                             <VisualStateGroup x:Name="CommonStates">
                                 <VisualStateGroup.Transitions>
-                                    <VisualTransition GeneratedDuration="0:0:0.5">
+                                    <VisualTransition GeneratedDuration="{StaticResource HoverFade}">
                                         <VisualTransition.GeneratedEasingFunction>
                                             <CubicEase EasingMode="EaseOut"/>
                                         </VisualTransition.GeneratedEasingFunction>
