@@ -52,13 +52,13 @@
                         <Setter Property="VerticalAlignment" Value="Center"/>
                         <Setter Property="TextAlignment" Value="Right"/>
                     </Style>
-                    <Style TargetType="RadioButton">
+                    <Style TargetType="RadioButton" BasedOn="{StaticResource {x:Type RadioButton}}">
                         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
                         <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
                         <Setter Property="Margin" Value="0,0,25,0"/>
                         <Setter Property="VerticalContentAlignment" Value="Center"/>
                     </Style>
-                    <Style TargetType="CheckBox">
+                    <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
                         <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
                         <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}"/>
                         <Setter Property="Margin" Value="0,4"/>

@@ -107,11 +107,7 @@
                                Foreground="{StaticResource TextPrimaryBrush}"
                                VerticalAlignment="Center"
                                Margin="0,0,8,0"/>
-                    <TextBox Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged, Delay=200}"
-                             Background="{StaticResource BgDarkBrush}"
-                             Foreground="{StaticResource TextPrimaryBrush}"
-                             BorderBrush="{StaticResource BorderLightBrush}"
-                             Padding="6,3"/>
+                    <TextBox Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged, Delay=200}"/>
                 </DockPanel>
 
                 <Grid>

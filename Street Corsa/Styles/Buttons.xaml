@@ -185,6 +185,90 @@
         <Setter Property="Template" Value="{StaticResource GlassButtonTemplate}"/>
     </Style>
 
+    <!-- A glass button that stays in (Shuffle): while on, its outline is amber with an amber wash under the label.
+         The hover fades as on the others. -->
+    <Style x:Key="GlassToggleButtonStyle" TargetType="ToggleButton">
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="Background" Value="{StaticResource UiGlassBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource UiOutlineBrush}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="helpers:GlassButton.HoverBrush" Value="{StaticResource UiGlassHoverBrush}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Grid x:Name="root">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6"/>
+                        <Border x:Name="on"
+                                Opacity="0"
+                                Background="{StaticResource UiRowHoverBrush}"
+                                BorderBrush="{StaticResource AmberBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6"/>
+                        <Border x:Name="hover"
+                                Opacity="0"
+                                Background="{Binding (helpers:GlassButton.HoverBrush), RelativeSource={RelativeSource TemplatedParent}}"
+                                BorderBrush="{StaticResource AmberBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6"/>
+                        <ContentPresenter HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          Margin="{TemplateBinding Padding}"/>
+
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualStateGroup.Transitions>
+                                    <VisualTransition GeneratedDuration="0:0:0.5">
+                                        <VisualTransition.GeneratedEasingFunction>
+                                            <CubicEase EasingMode="EaseOut"/>
+                                        </VisualTransition.GeneratedEasingFunction>
+                                    </VisualTransition>
+                                    <VisualTransition To="Disabled" GeneratedDuration="0"/>
+                                    <VisualTransition From="Disabled" GeneratedDuration="0"/>
+                                    <VisualTransition To="Pressed" GeneratedDuration="0:0:0.08"/>
+                                </VisualStateGroup.Transitions>
+                                <VisualState x:Name="Normal"/>
+                                <VisualState x:Name="MouseOver">
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="hover" Storyboard.TargetProperty="Opacity" To="0.85" Duration="0"/>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="hover" Storyboard.TargetProperty="Opacity" To="0.5" Duration="0"/>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Disabled">
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="root" Storyboard.TargetProperty="Opacity" To="0.5" Duration="0"/>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="CheckStates">
+                                <VisualStateGroup.Transitions>
+                                    <VisualTransition GeneratedDuration="0:0:0.25"/>
+                                </VisualStateGroup.Transitions>
+                                <VisualState x:Name="Unchecked"/>
+                                <VisualState x:Name="Checked">
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="on" Storyboard.TargetProperty="Opacity" To="1" Duration="0"/>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Indeterminate"/>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- A round button with an icon in it (the icon, an ImageSource from Icons.xaml, goes in Tag; what it does in
          ToolTip). Only the icon's shape is used: it is painted in the outline's colour, and both turn amber under the
          pointer. Padding is the room around the icon. -->

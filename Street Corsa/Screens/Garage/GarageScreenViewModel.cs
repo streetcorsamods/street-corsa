@@ -268,6 +268,7 @@ namespace StreetCorsa.Screens.Garage
                     {
                         Day = day,
                         IsCurrentDay = day == date.Day,
+                        IsPast = day < date.Day,
                         IsEmpty = false
                     });
                 }
@@ -1040,6 +1041,8 @@ namespace StreetCorsa.Screens.Garage
     {
         public int Day { get; set; }
         public bool IsCurrentDay { get; set; }
+        /// <summary>A day of the month already gone, drawn faint</summary>
+        public bool IsPast { get; set; }
         public bool IsEmpty { get; set; }
     }
 

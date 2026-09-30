@@ -102,6 +102,10 @@
     <SolidColorBrush x:Key="UiBandBrush" Color="{StaticResource UiBand}"/>
     <SolidColorBrush x:Key="UiPrimaryGlassBrush" Color="{StaticResource UiPrimaryGlass}"/>
     <SolidColorBrush x:Key="UiPrimaryGlassHoverBrush" Color="{StaticResource UiPrimaryGlassHover}"/>
+    <SolidColorBrush x:Key="UiOutlineSoftBrush" Color="{StaticResource UiOutlineSoft}"/>
+    <SolidColorBrush x:Key="UiRailBrush" Color="{StaticResource UiRail}"/>
+    <SolidColorBrush x:Key="UiFieldBrush" Color="{StaticResource UiField}"/>
+    <SolidColorBrush x:Key="UiRowHoverBrush" Color="{StaticResource UiRowHover}"/>
 
     <!-- Dealer map and lot brushes -->
     <SolidColorBrush x:Key="CreamBrush" Color="{StaticResource Cream}"/>

@@ -190,20 +190,40 @@
             <!-- Car Preview Container -->
             <Border x:Name="PreviewContainer"
                     Grid.Row="1"
-                    Background="{StaticResource BgPanelBrush}"
-                    BorderBrush="{StaticResource BorderLightBrush}"
-                    BorderThickness="2"
-                    CornerRadius="5"
+                    Background="{StaticResource UiGlassCardBrush}"
+                    BorderBrush="{StaticResource UiOutlineBrush}"
+                    BorderThickness="3"
+                    CornerRadius="10"
                     HorizontalAlignment="Stretch"
                     MaxWidth="800"
                     Margin="0,0,0,40">
-                <!-- Shown for the calendar, or as the 2D fallback when the 3D garage could not start -->
+                <Border.RenderTransform>
+                    <TranslateTransform/>
+                </Border.RenderTransform>
+                <!-- Shown for the calendar, or as the 2D fallback when the 3D garage could not start. The calendar
+                     rises and fades in as it opens. -->
                 <Border.Style>
                     <Style TargetType="Border">
                         <Setter Property="Visibility" Value="Collapsed"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding ActivePanel}" Value="Calendar">
                                 <Setter Property="Visibility" Value="Visible"/>
+                                <DataTrigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.32">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" From="24" To="0" Duration="0:0:0.32">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </DataTrigger.EnterActions>
                             </DataTrigger>
                             <DataTrigger Binding="{Binding HasFailed, ElementName=Viewport3D}" Value="True">
                                 <Setter Property="Visibility" Value="Visible"/>
@@ -254,24 +274,38 @@
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
 
-                        <!-- Calendar Images (Top) -->
-                        <StackPanel Grid.Row="0"
-                                    Orientation="Horizontal"
-                                    HorizontalAlignment="Center"
-                                    Margin="0,5,0,5">
-                            <Image Source="{Binding CalendarImage1}"
-                                   Stretch="Uniform"
-                                   Height="120"
-                                   Margin="5,0"/>
-                            <Image Source="{Binding CalendarImage2}"
-                                   Stretch="Uniform"
-                                   Height="120"
-                                   Margin="5,0"/>
-                            <Image Source="{Binding CalendarImage3}"
-                                   Stretch="Uniform"
-                                   Height="120"
-                                   Margin="5,0"/>
-                        </StackPanel>
+                        <!-- The month's pictures, framed in the outline -->
+                        <ItemsControl Grid.Row="0"
+                                      HorizontalAlignment="Center"
+                                      Margin="0,18,0,12">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="BorderBrush" Value="{StaticResource UiOutlineBrush}"/>
+                                    <Setter Property="BorderThickness" Value="2"/>
+                                    <Setter Property="CornerRadius" Value="4"/>
+                                    <Setter Property="Margin" Value="6,0"/>
+                                    <Setter Property="Effect">
+                                        <Setter.Value>
+                                            <DropShadowEffect Color="Black" ShadowDepth="3" BlurRadius="10" Opacity="0.6"/>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ItemsControl.Resources>
+                            <Border>
+                                <Image Source="{Binding CalendarImage1}" Stretch="Uniform" Height="120"/>
+                            </Border>
+                            <Border>
+                                <Image Source="{Binding CalendarImage2}" Stretch="Uniform" Height="120"/>
+                            </Border>
+                            <Border>
+                                <Image Source="{Binding CalendarImage3}" Stretch="Uniform" Height="120"/>
+                            </Border>
+                        </ItemsControl>
 
                         <!-- Bottom: Date/Time and Calendar Grid -->
                         <Grid Grid.Row="1" Margin="20,0">
@@ -288,28 +322,29 @@
                                        FontWeight="Bold"
                                        Foreground="{StaticResource TextPrimaryBrush}"
                                        HorizontalAlignment="Center"
-                                       Margin="0,0,0,5"/>
+                                       Margin="0,0,0,4"/>
 
                             <!-- Current Time Display -->
                             <StackPanel Grid.Row="1"
                                         Orientation="Horizontal"
                                         HorizontalAlignment="Center"
-                                        Margin="0,0,0,10">
+                                        Margin="0,0,0,14">
                                 <TextBlock Text="{Binding CurrentDayOfWeek}"
                                            FontSize="{StaticResource FontSizeSubheading}"
                                            Foreground="{StaticResource TextSecondaryBrush}"
-                                           Margin="0,0,15,0"/>
+                                           VerticalAlignment="Center"
+                                           Margin="0,0,12,0"/>
                                 <TextBlock Text="{Binding CurrentTimeDisplay}"
                                            FontSize="{StaticResource FontSizeSubheading}"
                                            FontWeight="SemiBold"
-                                           Foreground="{StaticResource AccentPrimaryBrush}"
+                                           Foreground="{StaticResource AmberBrush}"
                                            VerticalAlignment="Center"/>
                                 <Button Content="End Day"
                                         Command="{Binding EndDayCommand}"
                                         Style="{StaticResource DialogSecondaryButtonStyle}"
                                         ToolTip="Call it a day: the game picks up tomorrow morning"
-                                        Height="30"
-                                        Padding="14,0"
+                                        Height="32"
+                                        Padding="16,0"
                                         Margin="20,0,0,0"
                                         VerticalAlignment="Center"/>
                             </StackPanel>
@@ -324,22 +359,33 @@
                             </Grid.RowDefinitions>
 
                             <!-- Day of Week Headers -->
-                            <ItemsControl Grid.Row="0">
+                            <ItemsControl Grid.Row="0" Margin="0,0,0,2">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
                                         <UniformGrid Rows="1" Columns="7"/>
                                     </ItemsPanelTemplate>
                                 </ItemsControl.ItemsPanel>
-                                <TextBlock Text="Sun" Width="70" TextAlignment="Center" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" Margin="3"/>
-                                <TextBlock Text="Mon" Width="70" TextAlignment="Center" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" Margin="3"/>
-                                <TextBlock Text="Tue" Width="70" TextAlignment="Center" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" Margin="3"/>
-                                <TextBlock Text="Wed" Width="70" TextAlignment="Center" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" Margin="3"/>
-                                <TextBlock Text="Thu" Width="70" TextAlignment="Center" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" Margin="3"/>
-                                <TextBlock Text="Fri" Width="70" TextAlignment="Center" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" Margin="3"/>
-                                <TextBlock Text="Sat" Width="70" TextAlignment="Center" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}" Margin="3"/>
+                                <ItemsControl.Resources>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Width" Value="70"/>
+                                        <Setter Property="Margin" Value="3"/>
+                                        <Setter Property="TextAlignment" Value="Center"/>
+                                        <Setter Property="FontSize" Value="{StaticResource FontSizeCompact}"/>
+                                        <Setter Property="FontWeight" Value="Bold"/>
+                                        <Setter Property="Foreground" Value="{StaticResource AmberBrush}"/>
+                                    </Style>
+                                </ItemsControl.Resources>
+                                <TextBlock Text="SUN"/>
+                                <TextBlock Text="MON"/>
+                                <TextBlock Text="TUE"/>
+                                <TextBlock Text="WED"/>
+                                <TextBlock Text="THU"/>
+                                <TextBlock Text="FRI"/>
+                                <TextBlock Text="SAT"/>
                             </ItemsControl>
 
-                            <!-- Days Grid -->
+                            <!-- Days Grid: glass cells in a faint outline, the days gone faded, today red glass in an
+                                 amber ring with a glow -->
                             <ItemsControl Grid.Row="1"
                                           ItemsSource="{Binding CalendarDays}">
                                 <ItemsControl.ItemsPanel>
@@ -352,16 +398,24 @@
                                         <Border Width="70"
                                                 Height="45"
                                                 Margin="3"
-                                                CornerRadius="5"
+                                                CornerRadius="6"
                                                 BorderThickness="2">
                                             <Border.Style>
                                                 <Style TargetType="Border">
-                                                    <Setter Property="Background" Value="{StaticResource BgMediumBrush}"/>
-                                                    <Setter Property="BorderBrush" Value="{StaticResource BorderLightBrush}"/>
+                                                    <Setter Property="Background" Value="{StaticResource UiGlassBrush}"/>
+                                                    <Setter Property="BorderBrush" Value="{StaticResource UiOutlineSoftBrush}"/>
                                                     <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsPast}" Value="True">
+                                                            <Setter Property="Opacity" Value="0.4"/>
+                                                        </DataTrigger>
                                                         <DataTrigger Binding="{Binding IsCurrentDay}" Value="True">
-                                                            <Setter Property="Background" Value="{StaticResource AccentPrimaryBrush}"/>
-                                                            <Setter Property="BorderBrush" Value="{StaticResource AccentPrimaryBrush}"/>
+                                                            <Setter Property="Background" Value="{StaticResource UiPrimaryGlassHoverBrush}"/>
+                                                            <Setter Property="BorderBrush" Value="{StaticResource AmberBrush}"/>
+                                                            <Setter Property="Effect">
+                                                                <Setter.Value>
+                                                                    <DropShadowEffect Color="{StaticResource Amber}" ShadowDepth="0" BlurRadius="18" Opacity="0.7"/>
+                                                                </Setter.Value>
+                                                            </Setter>
                                                         </DataTrigger>
                                                         <DataTrigger Binding="{Binding IsEmpty}" Value="True">
                                                             <Setter Property="Background" Value="Transparent"/>
@@ -380,7 +434,7 @@
                                                         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding IsCurrentDay}" Value="True">
-                                                                <Setter Property="Foreground" Value="White"/>
+                                                                <Setter Property="Foreground" Value="{StaticResource WhiteBrush}"/>
                                                                 <Setter Property="FontWeight" Value="Bold"/>
                                                             </DataTrigger>
                                                             <DataTrigger Binding="{Binding IsEmpty}" Value="True">

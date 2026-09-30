@@ -23,7 +23,6 @@
         <GradientStop Color="#FF5A5A5A" Offset="1"/>
     </RadialGradientBrush>
 
-    <SolidColorBrush x:Key="RadioAmberLightBrush" Color="{StaticResource RadioAmberLight}"/>
     <SolidColorBrush x:Key="RadioInkBrush" Color="#FF3A2008"/>
     <SolidColorBrush x:Key="RadioGrilleBrush" Color="#FF241A12"/>
     <SolidColorBrush x:Key="RadioBrassBrush" Color="#FFC9A45C"/>
@@ -100,7 +99,7 @@
         </DrawingImage.Drawing>
     </DrawingImage>
 
-    <!-- The panel's knobs: round chrome buttons with a glyph -->
+    <!-- The car radio's knobs: round chrome buttons -->
     <Style x:Key="RadioKnobStyle" TargetType="ButtonBase">
         <Setter Property="Width" Value="46"/>
         <Setter Property="Height" Value="46"/>
@@ -128,36 +127,4 @@
             </Setter.Value>
         </Setter>
     </Style>
-
-    <!-- Push buttons on the set: brass when on -->
-    <Style x:Key="RadioPushStyle" TargetType="ButtonBase">
-        <Setter Property="Height" Value="30"/>
-        <Setter Property="Padding" Value="12,0"/>
-        <Setter Property="Margin" Value="0,0,6,0"/>
-        <Setter Property="Cursor" Value="Hand"/>
-        <Setter Property="Foreground" Value="{StaticResource RadioAmberLightBrush}"/>
-        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="ButtonBase">
-                    <Border x:Name="face" Background="#FF2A1609" BorderBrush="{StaticResource RadioBrassBrush}" BorderThickness="1" CornerRadius="4" Padding="{TemplateBinding Padding}">
-                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="face" Property="Background" Value="#FF4A2A12"/>
-                        </Trigger>
-                        <Trigger Property="ToggleButton.IsChecked" Value="True">
-                            <Setter TargetName="face" Property="Background" Value="{StaticResource RadioBrassBrush}"/>
-                            <Setter Property="Foreground" Value="#FF241206"/>
-                        </Trigger>
-                        <Trigger Property="IsEnabled" Value="False">
-                            <Setter TargetName="face" Property="Opacity" Value="0.4"/>
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
-
 </ResourceDictionary>
