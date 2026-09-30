@@ -45,17 +45,7 @@ namespace StreetCorsa.Screens.Station
             _viewModel.CloseCurtain = CloseCurtainAsync;
         }
 
-        private Task CloseCurtainAsync()
-        {
-            var done = new TaskCompletionSource();
-            var animation = new DoubleAnimation(1, CurtainDown);
-            animation.Completed += (_, _) => done.TrySetResult();
-            Curtain.BeginAnimation(OpacityProperty, animation);
-
-            // Not shown (the window gone): no animation will finish
-            if (!IsLoaded) done.TrySetResult();
-            return done.Task;
-        }
+        private Task CloseCurtainAsync() => Controls.CurtainFade.ToAsync(Curtain, 1, CurtainDown);
 
         private void OnLine(object? sender, NotifyCollectionChangedEventArgs e) =>
             Dispatcher.BeginInvoke(() => LinesScroller.ScrollToEnd());

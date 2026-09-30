@@ -488,6 +488,8 @@ public class CarViewport3D : D3DViewportBase, ICarDrivingIn
         }
         else
         {
+            // The car going cannot be left on the move, nor the camera held off it for the next one
+            StopPulling();
             ReleaseRock();
             await TrackDeviceWork(renderer.MainSlot.SetCarAsync(car, skinId ?? Kn5RenderableCar.DefaultSkin, RendererToken));
 
@@ -1671,7 +1673,20 @@ public class CarViewport3D : D3DViewportBase, ICarDrivingIn
         return true;
     }
 
-    public Task? RollIn() => CarToDrive is { } node ? RollIn(node, RollInDistance) : null;
+    public Task? RollIn()
+    {
+        if (CarToDrive is not { } node || Renderer is not { } renderer) return null;
+
+        // The camera holds still while the car comes in, so it is framed on the car's place first: the renderer's own
+        // framing moves only part of the way each frame, and would be stopped short of it
+        if (renderer.AutoAdjustTarget && renderer.CameraOrbit is { } orbit)
+        {
+            orbit.Target = renderer.FramedTarget(orbit.Alpha, orbit.Beta, orbit.Radius, orbit.Target);
+            orbit.UpdateViewMatrix();
+        }
+
+        return RollIn(node, RollInDistance);
+    }
 
     #endregion
 

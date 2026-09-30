@@ -6,6 +6,7 @@ using StreetCorsa.Logging;
 using StreetCorsa.Models.Catalog;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Navigation;
+using StreetCorsa.Screens.Garage;
 using StreetCorsa.Screens.Shared;
 using StreetCorsa.Services.CarLot;
 using StreetCorsa.Services.Catalog;
@@ -288,9 +289,9 @@ namespace StreetCorsa.Screens.CarLot
 
         /// <summary>
         /// The car being looked at starting up with this engine and driving off, the screen black at the end (set by the
-        /// view); nothing is shown for a car without an engine that runs
+        /// view); true when it did drive off. Nothing is shown for a car without an engine that runs.
         /// </summary>
-        public Func<Audio.EngineSpec?, Task>? DriveCarOff { get; set; }
+        public Func<Audio.EngineSpec?, Task<bool>>? DriveCarOff { get; set; }
 
         /// <summary>The car back in its bay and the screen as it was, when the lot stays after all (set by the view)</summary>
         public Action? PutCarBack { get; set; }
@@ -307,17 +308,18 @@ namespace StreetCorsa.Screens.CarLot
             OnPropertyChanged(nameof(IsIdle));
             RelayCommand.RaiseCanExecuteChanged();
 
-            // A car that runs drives out of here and into the garage
-            var runs = false;
+            // A car that drove out of here drives into the garage; its engine goes along, worked out already
+            Audio.EngineSpec? engine = null;
+            var droveOff = false;
+            var tookOut = false;
             try
             {
-                var engine = await EngineSpecs.ForAsync(_partsService, car.Car, car.DisplayName);
-                runs = engine is { Runs: true };
+                engine = await EngineSpecs.ForAsync(_partsService, car.Car, car.DisplayName);
                 if (DriveCarOff is { } driveOff)
                 {
                     try
                     {
-                        await driveOff(engine);
+                        droveOff = await driveOff(engine);
                     }
                     catch (Exception ex)
                     {
@@ -333,6 +335,7 @@ namespace StreetCorsa.Screens.CarLot
                 var player = _gameState.Player;
                 CarStorage.TakeOut(car.Car, player.Cars.FirstOrDefault(c => c.InstanceId == player.SelectedCarInstanceId));
                 player.SelectedCarInstanceId = car.Car.InstanceId;
+                tookOut = true;
 
                 // Waited for before saving: late in the day that is the next morning, and what the new day brings
                 // belongs in the save
@@ -358,8 +361,22 @@ namespace StreetCorsa.Screens.CarLot
                 RelayCommand.RaiseCanExecuteChanged();
             }
 
-            // The navigation service catches and reports a garage that will not open: the lot is shown again then
-            if (!GoToGarage(carArriving: runs)) PutCarBack?.Invoke();
+            try
+            {
+                // The navigation service catches and reports a garage that will not open
+                var arrival = tookOut ? new CarArrival(car.Car.InstanceId, engine, droveOff) : null;
+                if (GoToGarage(arrival)) return;
+
+                // The lot is shown again then, as the save now has it: the car taken is in the garage, and the one
+                // that was there in its bay
+                PutCarBack?.Invoke();
+                Arrange();
+                ShowWarehouse(Warehouse);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not go to the garage with the car taken");
+            }
         }
 
         private void Save(string why)
@@ -380,10 +397,10 @@ namespace StreetCorsa.Screens.CarLot
 
         private void OnBack() => GoToGarage();
 
-        private bool GoToGarage(bool carArriving = false)
+        private bool GoToGarage(CarArrival? arrival = null)
         {
             _logger.Information("Back to the garage");
-            return _navigationService.NavigateToGarage(_gameState, skipAnimation: true, carArriving);
+            return _navigationService.NavigateToGarage(_gameState, skipAnimation: true, arrival);
         }
 
         #endregion

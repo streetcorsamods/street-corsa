@@ -378,7 +378,10 @@ of them at random. A station without its model still works, without the picture.
 
 One folder per warehouse the player's cars are kept in, as the base game's `warehouses\warehouse`: a `warehouse.json`
 and its model (`"model"`, default `warehouse.kn5`). The file gives the `bays` (`x`, `z`, `heading`: as many cars as it
-has bays go in one warehouse), the `camera` the lot opens on (`alpha`, `beta`, `radius`, `targetHeight`), the `sun`,
+has bays go in one warehouse), the `camera` the lot opens on (`alpha`, `beta`, `radius`, `targetHeight`), the `room`
+the camera stays inside (`halfLength` either side of the middle along x, `halfWidth` along z, and the `height` of the
+roof at its lowest), the `exit` a car taken out of its bay drives for (`x`, `z`: a point on the floor, the base game's
+at its roller door; without it the car drives straight out of its bay, through whatever is in front), the `sun`,
 the `lights` of the day as a street's plus `lampScale`, the `lamps` (always lit, coloured by the look), how bright the
 material `wh_skylight` glows at each light (`skylight`), and the `looks`: for each, the picture each material wears
 (`"surfaces": { "wh_wall": "wall_red_brick_03.jpg" }`; every picture must be in the model) and its `lampColor`. Warehouse

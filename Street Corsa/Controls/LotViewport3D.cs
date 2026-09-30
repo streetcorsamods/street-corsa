@@ -383,7 +383,8 @@ public class LotViewport3D : D3DViewportBase, ICarDrivingOff
         var renderer = Renderer;
         if (renderer == null) return;
 
-        // A bay is about to be told where it stands again: the car in it cannot be leaning when it is
+        // A bay is about to be told where it stands again: the car in it cannot be on the move or leaning when it is
+        StopPulling();
         ReleaseRock();
 
         var previous = _loaded;
@@ -683,6 +684,7 @@ public class LotViewport3D : D3DViewportBase, ICarDrivingOff
 
     private void OnSelectionChanged()
     {
+        StopPulling();
         ReleaseRock();
         if (Renderer == null) return;
 
@@ -1029,12 +1031,7 @@ public class LotViewport3D : D3DViewportBase, ICarDrivingOff
         return true;
     }
 
-    public bool PullAway()
-    {
-        if (SelectedCarNode is not { } node) return false;
-        PullAway(node, Exit is { } exit ? (exit.X, exit.Z) : null);
-        return true;
-    }
+    public bool PullAway() => SelectedCarNode is { } node && PullAway(node, Exit is { } exit ? (exit.X, exit.Z) : null);
 
     public void StayPut()
     {

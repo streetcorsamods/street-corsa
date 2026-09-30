@@ -323,4 +323,26 @@ public class CarLotTests
     }
 
     #endregion
+
+    #region Driving off
+
+    [Theory]
+    [InlineData(0.0, 1.0, 1.0)]
+    [InlineData(1.0, 0.0, -1.0)]
+    // Past half a turn the other way is shorter
+    [InlineData(-3.0, 3.0, 6.0 - 2 * Math.PI)]
+    [InlineData(3.0, -3.0, 2 * Math.PI - 6.0)]
+    // A heading that has gone round several times (a car still circling behind the curtain) is still steered the
+    // short way: C#'s % on a negative number had it the long way round, to full lock the wrong way
+    [InlineData(20.0, 0.5, 0.5 - 20.0 + 6 * Math.PI)]
+    [InlineData(-20.0, 0.5, 0.5 + 20.0 - 6 * Math.PI)]
+    public void A_car_driving_off_turns_for_the_way_out_the_short_way_round(double from, double to, double turn)
+    {
+        var got = Controls.CarPull.Turn((float)from, (float)to);
+
+        Assert.Equal(turn, got, 3);
+        Assert.InRange(got, -MathF.PI, MathF.PI);
+    }
+
+    #endregion
 }

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using StreetCorsa.Audio;
 
 namespace StreetCorsa.Controls;
@@ -8,7 +9,7 @@ public interface ICarDrivingOff
     /// <summary>The car's headlights on; false when there is no car there to drive off</summary>
     bool LightsOn();
 
-    /// <summary>The car pulls away and keeps going; false when there is no car there</summary>
+    /// <summary>The car pulls away and keeps going; false when it does not (no car there, or no scene to move it in)</summary>
     bool PullAway();
 
     /// <summary>The car back where it stood (the screen stays after all)</summary>
@@ -54,8 +55,8 @@ public static class DriveOff
         if (!engine.IsRunning || engine.State != EngineState.Running)
         {
             if (!engine.IsRunning) engine.Toggle();
-            var giveUp = DateTime.Now + MostCranking;
-            while (engine.State != EngineState.Running && DateTime.Now < giveUp) await Task.Delay(40);
+            var cranking = Stopwatch.StartNew();
+            while (engine.State != EngineState.Running && cranking.Elapsed < MostCranking) await Task.Delay(40);
             if (engine.State != EngineState.Running) return false;
         }
 
@@ -82,8 +83,8 @@ public static class DriveOff
         if (!car.Lights(true) || car.RollIn() is not { } arrived) return;
 
         // The engine is worked out on a worker while the garage comes up: it starts up running the moment it is there
-        var giveUp = DateTime.Now + WaitForEngine;
-        while (!engine.IsRunning && !arrived.IsCompleted && DateTime.Now < giveUp)
+        var waiting = Stopwatch.StartNew();
+        while (!engine.IsRunning && !arrived.IsCompleted && waiting.Elapsed < WaitForEngine)
         {
             if (engine.Spec is { Runs: true }) engine.StartRunning();
             if (!engine.IsRunning) await Task.Delay(40);
@@ -102,10 +103,11 @@ public static class DriveOff
     /// <summary>The engine fades out with the picture</summary>
     private static async Task QuietenAsync(EngineRunner engine, TimeSpan over)
     {
-        var started = DateTime.Now;
+        // Timed by a stopwatch, not the wall clock: a clock put back an hour would hold the fade for that hour
+        var clock = Stopwatch.StartNew();
         while (true)
         {
-            var done = (DateTime.Now - started).TotalSeconds / over.TotalSeconds;
+            var done = clock.Elapsed.TotalSeconds / over.TotalSeconds;
             engine.Place(null, (float)Math.Max(0, 1 - done));
             if (done >= 1) return;
             await Task.Delay(16);

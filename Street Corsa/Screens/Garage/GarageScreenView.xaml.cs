@@ -136,12 +136,17 @@ namespace StreetCorsa.Screens.Garage
 
         /// <summary>
         /// The car just taken out of the lot drives in as the garage comes up (once: the garage is only arrived at once).
-        /// Asked for only for a car whose engine runs; one that does not was towed in, and is simply there.
+        /// Asked for only for a car that drove off out of the lot; one that did not was towed in, and is simply there.
         /// </summary>
         private async void DriveIn()
         {
             if (_droveIn || DataContext is not GarageScreenViewModel { CarArriving: true }) return;
             _droveIn = true;
+
+            // A garage that took so long it was shown before its first frame has shown the car in its place: it does
+            // not jump back to drive in
+            if (_revealed) return;
+
             _arriving = true;
             ContentLayer.IsHitTestVisible = false;
             try
