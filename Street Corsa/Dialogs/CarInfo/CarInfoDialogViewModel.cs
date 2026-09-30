@@ -69,7 +69,7 @@ namespace StreetCorsa.Dialogs.CarInfo
                 lines.Add(new("Engine", "None"));
             if (car.PowerHp is { } hp) lines.Add(new("Power", hp > 0 ? $"{hp:0} hp on the dyno" : "Doesn't run on the dyno"));
 
-            lines.Add(new("Fuel", FuelOf(car)));
+            lines.Add(new("Fuel", ConditionDisplay.Fuel(car)));
             lines.Add(new("Oil", $"{CarCondition.OilLeft(car) * 100:0}%"));
             lines.Add(new("Body", CarCondition.IsTotaled(car) ? "Totaled" : $"{CarCondition.BodyCondition(car) * 100:0}%"));
             lines.Add(new("Dirt", DirtOf(car.BodyDirt)));
@@ -91,12 +91,6 @@ namespace StreetCorsa.Dialogs.CarInfo
             return name.EndsWith(suffix, StringComparison.OrdinalIgnoreCase) && name.Length > suffix.Length ? name[..^suffix.Length] : name;
         }
 
-        /// <summary>"Full" until a race says otherwise, then "12 of 60 l"</summary>
-        private static string FuelOf(Car car) =>
-            CarCondition.FuelLeft(car) is { } left && CarCondition.TankLitres(car) is { } tank
-                ? left < 10 ? $"{left:0.0} of {tank:0} l" : $"{left:0} of {tank:0} l"
-                : "Full";
-
         private static string DirtOf(double dirt) => dirt switch
         {
             < 0.1 => "Clean",
@@ -106,35 +100,20 @@ namespace StreetCorsa.Dialogs.CarInfo
         };
 
         /// <summary>Every part on the car, each under what it is mounted on, in the order they are mounted</summary>
-        private static List<CarInfoPart> PartsOf(Car car, PartsCatalog catalog)
-        {
-            var parts = new List<CarInfoPart>();
-            var stack = new Stack<(PartInstance Part, int Depth)>();
-            for (var i = (car.Parts?.Count ?? 0) - 1; i >= 0; i--)
-            {
-                if (car.Parts![i] is { } root) stack.Push((root, 0));
-            }
-
-            while (stack.Count > 0)
-            {
-                var (part, depth) = stack.Pop();
-                var definition = catalog.Get(part.DefinitionId);
-                parts.Add(new CarInfoPart(
-                    definition?.DisplayName ?? definition?.Name ?? part.DefinitionId,
-                    definition == null ? string.Empty : PartKinds.GroupOf(definition),
-                    depth,
-                    part.Wear,
-                    part.Tear));
-
-                // A save is anyone's file: no deeper than the parts themselves go
-                if (depth >= PartInstance.MaxDepth || part.Children is not { } children) continue;
-                for (var i = children.Count - 1; i >= 0; i--)
+        private static List<CarInfoPart> PartsOf(Car car, PartsCatalog catalog) =>
+            (car.Parts ?? [])
+                .Where(root => root != null)
+                .SelectMany(root => root.SelfAndDescendantsWithDepth())
+                .Select(p =>
                 {
-                    if (children[i] != null) stack.Push((children[i], depth + 1));
-                }
-            }
-
-            return parts;
-        }
+                    var definition = catalog.Get(p.Part.DefinitionId);
+                    return new CarInfoPart(
+                        definition?.DisplayName ?? definition?.Name ?? p.Part.DefinitionId,
+                        definition == null ? string.Empty : PartKinds.GroupOf(definition),
+                        p.Depth,
+                        p.Part.Wear,
+                        p.Part.Tear);
+                })
+                .ToList();
     }
 }

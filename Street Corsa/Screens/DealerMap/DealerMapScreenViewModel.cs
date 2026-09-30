@@ -73,8 +73,6 @@ namespace StreetCorsa.Screens.DealerMap
         public double MapImageWidth { get; }
         public double MapImageHeight { get; }
 
-        /// <summary>The day, so a drive that costs half of it reads as a cost</summary>
-
         private bool _isLoading;
 
         /// <summary>The market has never been filled and is being put together</summary>

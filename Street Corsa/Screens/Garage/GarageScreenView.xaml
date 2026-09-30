@@ -41,6 +41,9 @@
                                                 <CubicEase EasingMode="EaseOut"/>
                                             </VisualTransition.GeneratedEasingFunction>
                                         </VisualTransition>
+                                        <!-- Only the hover fades: a button goes disabled or comes back at once -->
+                                        <VisualTransition To="Disabled" GeneratedDuration="0"/>
+                                        <VisualTransition From="Disabled" GeneratedDuration="0"/>
                                     </VisualStateGroup.Transitions>
                                     <VisualState x:Name="Normal"/>
                                     <VisualState x:Name="MouseOver">
@@ -158,6 +161,9 @@
                                                 <CubicEase EasingMode="EaseOut"/>
                                             </VisualTransition.GeneratedEasingFunction>
                                         </VisualTransition>
+                                        <!-- Only the hover fades: a button goes disabled or comes back at once -->
+                                        <VisualTransition To="Disabled" GeneratedDuration="0"/>
+                                        <VisualTransition From="Disabled" GeneratedDuration="0"/>
                                     </VisualStateGroup.Transitions>
                                             <VisualState x:Name="Normal"/>
                                             <VisualState x:Name="MouseOver">

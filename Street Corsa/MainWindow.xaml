@@ -92,10 +92,11 @@
                         <TranslateTransform x:Name="RadioToastShift"/>
                     </TransformGroup>
                 </Border.RenderTransform>
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="♪" Foreground="{StaticResource AmberBrush}" FontSize="{StaticResource FontSizeHeading}" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                    <TextBlock x:Name="RadioToastText" Foreground="{StaticResource CreamBrush}" FontFamily="Georgia" FontSize="{StaticResource FontSizeBodyLarge}" VerticalAlignment="Center"/>
-                </StackPanel>
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Left" Text="♪" Foreground="{StaticResource AmberBrush}" FontSize="{StaticResource FontSizeHeading}" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="RadioToastText" Foreground="{StaticResource CreamBrush}" FontFamily="Georgia" FontSize="{StaticResource FontSizeBodyLarge}" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis"/>
+                </DockPanel>
             </Border>
         </Canvas>
 

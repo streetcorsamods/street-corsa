@@ -218,7 +218,7 @@ namespace StreetCorsa.Screens.UsedParts
             } + StatusNote;
         }
 
-        /// <summary>The money and the rows after a deal</summary>
+        /// <summary>The rows after a deal</summary>
         protected virtual void Refresh()
         {
             LoadOffers();

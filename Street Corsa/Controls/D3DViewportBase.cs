@@ -188,6 +188,9 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     /// <summary>Raised if the renderer could not be started or crashed</summary>
     public event EventHandler? Failed;
 
+    /// <summary>Raised when the viewport is shown with nothing to load: neither Ready nor Failed will come</summary>
+    public event EventHandler? NothingToShow;
+
     #region Dependency properties
 
     public static readonly DependencyProperty RunningEngineProperty = DependencyProperty.Register(
@@ -241,7 +244,12 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     protected async void RequestLoad()
     {
         if (!IsLoaded || !IsVisible || _failed) return;
-        if (IsUpToDate) return;
+        if (IsUpToDate)
+        {
+            // Up to date with no renderer: there is nothing to show (a station without its model, a street without a car)
+            if (_renderer == null && !_isLoading) NothingToShow?.Invoke(this, EventArgs.Empty);
+            return;
+        }
 
         if (_isLoading)
         {

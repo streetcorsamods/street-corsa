@@ -26,9 +26,6 @@ namespace StreetCorsa.Services.Time
         /// <summary>Buy and install a part (1 hour)</summary>
         BuyPart,
 
-        /// <summary>View a car in the showroom (15 min)</summary>
-        ViewShowroom,
-
         /// <summary>Perform garage work - minor (30 min)</summary>
         GarageWorkMinor,
 
@@ -82,7 +79,6 @@ namespace StreetCorsa.Services.Time
                 GameAction.RoadRace => 60,
                 GameAction.VisitUsedParts => 30,
                 GameAction.BuyPart => 60,
-                GameAction.ViewShowroom => 15,
                 GameAction.GarageWorkMinor => 30,
                 GameAction.GarageWorkMajor => 120,
                 GameAction.SellCar => 60,

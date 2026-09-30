@@ -214,7 +214,7 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
-                <!-- For what -->
+                <!-- For what: the one picked in its colour, glass and text too, over the outline every button has -->
                 <Grid Margin="0,14,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -229,7 +229,9 @@
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsCashBet}" Value="True">
                                         <Setter Property="BorderBrush" Value="{StaticResource GoldBrush}"/>
-                                        <Setter Property="BorderThickness" Value="2"/>
+                                        <Setter Property="Background" Value="{StaticResource Gold33Brush}"/>
+                                        <Setter Property="Foreground" Value="{StaticResource GoldBrush}"/>
+                                        <Setter Property="BorderThickness" Value="3"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
@@ -245,7 +247,9 @@
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsPinkSlipBet}" Value="True">
                                         <Setter Property="BorderBrush" Value="{StaticResource DangerBrush}"/>
-                                        <Setter Property="BorderThickness" Value="2"/>
+                                        <Setter Property="Background" Value="{StaticResource RedZoneBrush}"/>
+                                        <Setter Property="Foreground" Value="{StaticResource DangerBrush}"/>
+                                        <Setter Property="BorderThickness" Value="3"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>

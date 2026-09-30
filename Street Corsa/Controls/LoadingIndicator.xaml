@@ -11,18 +11,6 @@
             <Border.RenderTransform>
                 <RotateTransform x:Name="SpinnerRotation" CenterX="30" CenterY="30"/>
             </Border.RenderTransform>
-            <Border.Triggers>
-                <EventTrigger RoutedEvent="Loaded">
-                    <BeginStoryboard>
-                        <Storyboard RepeatBehavior="Forever">
-                            <DoubleAnimation Storyboard.TargetName="SpinnerRotation"
-                                             Storyboard.TargetProperty="Angle"
-                                             From="0" To="360"
-                                             Duration="0:0:1"/>
-                        </Storyboard>
-                    </BeginStoryboard>
-                </EventTrigger>
-            </Border.Triggers>
             <Ellipse Stroke="{StaticResource SpinnerOrangeBrush}" StrokeThickness="4"
                      StrokeDashArray="3 2"
                      Fill="Transparent"/>

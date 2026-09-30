@@ -218,6 +218,9 @@ namespace StreetCorsa.Navigation
             {
                 CurrentScreen = previous;
                 previous.Resume();
+
+                // The car's screen is still up and will not say so again: the radio goes back in the car here
+                if (previous.InCar) Audio.Radio.RadioPlayer.Shared.SetInCar(true);
             }
             catch (Exception ex)
             {

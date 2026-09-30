@@ -75,8 +75,6 @@ namespace StreetCorsa.Screens.DealerLot
 
         public bool HasSaleNotice => SaleNotice.Length > 0;
 
-        /// <summary>The clock, so the hours the drive cost are in front of the player when they arrive</summary>
-
         /// <summary>The lot's 3D scene, or null when the showroom is not installed</summary>
         public string? ShowroomKn5 { get; private set; }
 

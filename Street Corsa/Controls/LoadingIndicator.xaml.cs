@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Media;
 using System.Windows.Media.Animation;
 
 namespace StreetCorsa.Controls
@@ -50,11 +51,13 @@ namespace StreetCorsa.Controls
             {
                 old.Ready -= OnViewportSettled;
                 old.Failed -= OnViewportSettled;
+                old.NothingToShow -= OnViewportSettled;
             }
 
             if (viewport == null) return;
             viewport.Ready += OnViewportSettled;
             viewport.Failed += OnViewportSettled;
+            viewport.NothingToShow += OnViewportSettled;
             IsLoading = !viewport.IsReady && !viewport.HasFailed;
         }
 
@@ -63,7 +66,14 @@ namespace StreetCorsa.Controls
         public LoadingIndicator()
         {
             InitializeComponent();
+
+            // The ring turns only while it is seen: a running clock keeps WPF drawing every frame, hidden or not
+            IsVisibleChanged += (_, _) => Spin(IsVisible);
         }
+
+        private void Spin(bool spin) => SpinnerRotation.BeginAnimation(RotateTransform.AngleProperty, spin
+            ? new DoubleAnimation(0, 360, TimeSpan.FromSeconds(1)) { RepeatBehavior = RepeatBehavior.Forever }
+            : null);
 
         private void OnIsLoadingChanged(bool loading)
         {

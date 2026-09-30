@@ -18,6 +18,7 @@ namespace StreetCorsa.Screens.Cruise
             // The radio is the car's once the player is out on the street: when it is on screen
             Street.Ready += (_, _) => GetIn();
             Street.Failed += (_, _) => GetIn();
+            Street.NothingToShow += (_, _) => GetIn();
 
             // The window's keys, as the garage takes them: a button that was clicked keeps the focus otherwise
             Loaded += (_, _) =>

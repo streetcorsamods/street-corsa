@@ -92,11 +92,6 @@ namespace StreetCorsa.Services
         public event EventHandler? RaceCompleted;
         public event EventHandler? AssettoCorsaExited;
 
-        public async Task<LaunchResult> LaunchShowroomAsync(ShowroomLaunchIntent intent)
-        {
-            return await ExecuteLaunchPipeline(intent);
-        }
-
         public async Task<LaunchResult> LaunchRaceAsync(LaunchIntent intent)
         {
             return await ExecuteLaunchPipeline(intent);

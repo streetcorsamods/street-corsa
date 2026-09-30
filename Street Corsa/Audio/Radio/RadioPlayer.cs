@@ -831,7 +831,8 @@ public sealed class RadioPlayer : ObservableObject
             // The static dies away with the song
             if (_static is { } leaving)
             {
-                leaving.Fade(1f, 0f, fadeSeconds, AudioHub.Shared.MixRate, stopAtEnd: true);
+                // From where its fade-in got to: leaving the car while it still comes in does not burst it to full
+                leaving.FadeFromHere(0f, fadeSeconds, AudioHub.Shared.MixRate, stopAtEnd: true);
                 After(fadeSeconds, leaving.Stop);
             }
             _static = null;

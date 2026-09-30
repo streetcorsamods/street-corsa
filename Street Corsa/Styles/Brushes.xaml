@@ -44,7 +44,6 @@
     <SolidColorBrush x:Key="WhiteBrush" Color="{StaticResource White}"/>
 
     <!-- Translucent panel brushes -->
-    <SolidColorBrush x:Key="BgPanelAABrush" Color="{StaticResource BgPanelAA}"/>
     <SolidColorBrush x:Key="BgPanelCCBrush" Color="{StaticResource BgPanelCC}"/>
     <SolidColorBrush x:Key="BgPanelF2Brush" Color="{StaticResource BgPanelF2}"/>
     <SolidColorBrush x:Key="BgDarkDFBrush" Color="{StaticResource BgDarkDF}"/>
@@ -59,7 +58,6 @@
 
     <!-- Veil brushes (Overlay dims the screen behind a dialog) -->
     <SolidColorBrush x:Key="OverlayBrush" Color="{StaticResource Overlay}"/>
-    <SolidColorBrush x:Key="BlackHitTestBrush" Color="{StaticResource BlackHitTest}"/>
     <SolidColorBrush x:Key="BlackB0Brush" Color="{StaticResource BlackB0}"/>
     <SolidColorBrush x:Key="BlackCCBrush" Color="{StaticResource BlackCC}"/>
     <SolidColorBrush x:Key="White20Brush" Color="{StaticResource White20}"/>
@@ -104,7 +102,6 @@
     <SolidColorBrush x:Key="UiBandBrush" Color="{StaticResource UiBand}"/>
     <SolidColorBrush x:Key="UiPrimaryGlassBrush" Color="{StaticResource UiPrimaryGlass}"/>
     <SolidColorBrush x:Key="UiPrimaryGlassHoverBrush" Color="{StaticResource UiPrimaryGlassHover}"/>
-    <SolidColorBrush x:Key="UiPrimaryGlassPressedBrush" Color="{StaticResource UiPrimaryGlassPressed}"/>
 
     <!-- Dealer map and lot brushes -->
     <SolidColorBrush x:Key="CreamBrush" Color="{StaticResource Cream}"/>

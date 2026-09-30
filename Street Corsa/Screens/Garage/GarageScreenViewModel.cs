@@ -128,6 +128,9 @@ namespace StreetCorsa.Screens.Garage
         private Audio.EngineSpec? _selectedEngine;
         private int _engineVersion;
 
+        // The engine being worked out now, or last: what the car's sheet waits for
+        private Task<Audio.EngineSpec?> _engineWork = Task.FromResult<Audio.EngineSpec?>(null);
+
         /// <summary>The selected car's engine, to start and rev where it stands; null without a car or an engine</summary>
         public Audio.EngineSpec? SelectedEngine
         {
@@ -147,7 +150,9 @@ namespace StreetCorsa.Screens.Garage
             {
                 var version = ++_engineVersion;
                 var car = SelectedCar;
-                var spec = car == null ? null : await Services.Parts.EngineSpecs.ForAsync(_partsService, car.CarInstance, car.DisplayName);
+                var work = car == null ? Task.FromResult<Audio.EngineSpec?>(null) : Services.Parts.EngineSpecs.ForAsync(_partsService, car.CarInstance, car.DisplayName);
+                _engineWork = work;
+                var spec = await work;
                 if (version == _engineVersion) SelectedEngine = spec;
             }
             catch (Exception ex)
@@ -884,16 +889,36 @@ namespace StreetCorsa.Screens.Garage
         }
 
         /// <summary>The selected car's sheet: its shape, what is in the tank and the sump, and every part in it</summary>
-        private void OnCarInfo()
+        private async void OnCarInfo()
         {
-            if (SelectedCar is not { } selected) return;
+            // Nothing may escape an async void
+            try
+            {
+                if (SelectedCar is not { } selected) return;
 
-            _dialogService.ShowDialog(new Dialogs.CarInfo.CarInfoDialogViewModel(
-                _dialogService,
-                selected.CarInstance,
-                SelectedCarDisplay,
-                _partsService.IsAvailable ? _partsService.Catalog : null,
-                SelectedEngine));
+                // The engine as it is now: a change a moment ago may still be being worked out
+                Task<Audio.EngineSpec?> work;
+                Audio.EngineSpec? engine;
+                do
+                {
+                    work = _engineWork;
+                    engine = await work;
+                } while (!ReferenceEquals(work, _engineWork));
+
+                // Another car was picked meanwhile: its sheet is not this one
+                if (!ReferenceEquals(SelectedCar, selected)) return;
+
+                _dialogService.ShowDialog(new Dialogs.CarInfo.CarInfoDialogViewModel(
+                    _dialogService,
+                    selected.CarInstance,
+                    SelectedCarDisplay,
+                    _partsService.IsAvailable ? _partsService.Catalog : null,
+                    engine));
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not show the car's sheet");
+            }
         }
 
         public override void Enter()
@@ -1005,17 +1030,6 @@ namespace StreetCorsa.Screens.Garage
 
         public string DisplayName => $"{CarDefinition.Brand} {CarDefinition.Name}";
         public string YearDisplay => CarDefinition.Year?.ToString() ?? "Unknown";
-        /// <summary>What is worst about the car, or its overall shape: the one condition the market prices it by</summary>
-        public string ConditionDisplay => Shared.ConditionDisplay.Of(CarInstance).Percent;
-        public string MileageDisplay => $"{CarInstance.OdometerKM:N0} km";
-
-        /// <summary>What is in the tank: "Full" until a race says otherwise, then "12 of 60 l" ("1.4 of 60 l" when too low to race on)</summary>
-        public string FuelDisplay => Parts.Cars.CarCondition.FuelLeft(CarInstance) is { } left && Parts.Cars.CarCondition.TankLitres(CarInstance) is { } tank
-            ? left < 10 ? $"{left:0.0} of {tank:0} l" : $"{left:0} of {tank:0} l"
-            : "Full";
-
-        /// <summary>Who had the car before, how it came to the player, and how it has raced</summary>
-        public string HistoryDisplay => Shared.CarHistoryDisplay.Summary(CarInstance.History, forSale: false);
         public bool HasPreviewImage => !string.IsNullOrEmpty(PreviewImagePath);
     }
 

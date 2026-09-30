@@ -5,7 +5,7 @@ Launching AC is the final step of a controlled pipeline. All preparation complet
 
 ## Executables
 - `acs.exe` - Race mode
-- `acShowroom.exe` - Showroom mode
+- `acShowroom.exe` - Showroom mode (not launched any more)
 
 No command-line arguments. All config via INI files in `Documents\Assetto Corsa\cfg\`.
 
@@ -92,7 +92,6 @@ launch failure (`Failed`, `Success = false`), not a forfeit.
 
 ### Launch Intent (High-Level)
 What user wants to do:
-- ShowroomLaunchIntent
 - DragRaceLaunchIntent
 - FreeRunLaunchIntent: the selected car alone on a track of the player's choosing (garage "Free Run" button, track
   remembered in `GameSettings.FreeRunTrack`). A practice session without the `sc_race` mode (a race installs the mode first, `ScRaceMode`, and fails with a message when CSP or the mode is missing): nothing auto-starts or
@@ -101,7 +100,7 @@ What user wants to do:
 
 ### Modification Intent (Low-Level)
 Specific INI changes:
-- ShowroomIntent
+- ShowroomIntent (no launch uses it any more: the garage shows cars in its own 3D view)
 - DragRaceIntent
 - FreeRunIntent (one car, `[SESSION_0] TYPE=1`, `SPAWN_SET=PIT`; shares the common race.ini sections with the drag race)
 

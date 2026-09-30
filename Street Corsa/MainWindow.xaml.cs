@@ -41,6 +41,16 @@ namespace StreetCorsa
         private const double ToastGap = 12;
         private const double ToastTravel = 36;
 
+        // The toast keeps this far off the window's left edge: a long song's name is cut short instead
+        private const double ToastMargin = 20;
+
+        // The still of a screen being left is taken no bigger than this across: on a 4K screen a full-size one is a
+        // software render of the whole window on every change of screen, for a picture that is on show half a second
+        private const int StillMaxWidth = 1920;
+
+        // Assetto Corsa runs (a free run): the screen behind the loader takes no keys
+        private bool _racingShown;
+
         // What had the keyboard on the screen last, to give it back when the dialogs are done. Weak: a screen left
         // behind must not stay in memory for the element of it that had the keyboard last.
         private WeakReference<IInputElement>? _screenFocus;
@@ -114,7 +124,15 @@ namespace StreetCorsa
             RadioHost.IsEnabled = radio && !dialog;
             Reveal.SetIsShown(DialogHost, dialog);
             DialogHost.IsEnabled = dialog;
-            ScreenHost.IsEnabled = !dialog && !radio;
+            ScreenHost.IsEnabled = !dialog && !radio && !_racingShown;
+        }
+
+        /// <summary>The keyboard back to what had it on the screen, once nothing is in front of it any more</summary>
+        private void RestoreScreenFocus()
+        {
+            if (_screenFocus?.TryGetTarget(out var focus) == true && focus is UIElement { IsVisible: true, IsEnabled: true } element
+                && ScreenHost.IsAncestorOf(element))
+                Keyboard.Focus(element);
         }
 
         /// <summary>
@@ -173,14 +191,15 @@ namespace StreetCorsa
             TransitionBlack.BeginAnimation(OpacityProperty, fadeIn);
         }
 
-        /// <summary>What the element shows now, at the screen's own resolution</summary>
+        /// <summary>What the element shows now, at the screen's own resolution up to <see cref="StillMaxWidth"/></summary>
         private static BitmapSource TakeStill(FrameworkElement element)
         {
             var dpi = VisualTreeHelper.GetDpi(element);
-            var width = Math.Max(1, (int)Math.Ceiling(element.ActualWidth * dpi.DpiScaleX));
-            var height = Math.Max(1, (int)Math.Ceiling(element.ActualHeight * dpi.DpiScaleY));
+            var scale = Math.Min(1, StillMaxWidth / Math.Max(1, element.ActualWidth * dpi.DpiScaleX));
+            var width = Math.Max(1, (int)Math.Ceiling(element.ActualWidth * dpi.DpiScaleX * scale));
+            var height = Math.Max(1, (int)Math.Ceiling(element.ActualHeight * dpi.DpiScaleY * scale));
 
-            var still = new RenderTargetBitmap(width, height, dpi.PixelsPerInchX, dpi.PixelsPerInchY, PixelFormats.Pbgra32);
+            var still = new RenderTargetBitmap(width, height, dpi.PixelsPerInchX * scale, dpi.PixelsPerInchY * scale, PixelFormats.Pbgra32);
             still.Render(element);
             still.Freeze();
             return still;
@@ -194,6 +213,11 @@ namespace StreetCorsa
         {
             if (racing && NavigationService.CurrentScreen is Screens.RaceLoading.RaceLoadingScreenViewModel) return;
             Reveal.SetIsShown(RacingLayer, racing);
+
+            // The loader only takes the mouse: the keys would still press the screen's buttons behind it
+            _racingShown = racing;
+            UpdateHosts();
+            if (!racing) Dispatcher.BeginInvoke(DispatcherPriority.Loaded, RestoreScreenFocus);
         }
 
         private void OnRadioPanelChanged()
@@ -203,9 +227,7 @@ namespace StreetCorsa
             Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
             {
                 if (open) RadioHost.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
-                else if (_screenFocus?.TryGetTarget(out var focus) == true && focus is UIElement { IsVisible: true, IsEnabled: true } element
-                         && ScreenHost.IsAncestorOf(element))
-                    Keyboard.Focus(element);
+                else RestoreScreenFocus();
             });
         }
 
@@ -268,21 +290,26 @@ namespace StreetCorsa
             if (RadioPanelViewModel.Shared.IsOpen) return;
 
             RadioToastText.Text = song.Display;
-            RadioToast.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
-            var size = RadioToast.DesiredSize;
 
-            // The anchor's left edge and middle, in the window
+            // The anchor's left edge and middle, in the window (the middle of a corner toast once its height is known)
             var anchor = RadioToastAnchor.Current ?? (StatusCard.IsVisible ? StatusCard : null);
+            var anchored = anchor != null && anchor.IsDescendantOf(this);
             System.Windows.Point edge;
-            if (anchor != null && anchor.IsDescendantOf(this))
+            if (anchored)
             {
-                var bounds = anchor.TransformToAncestor(this).TransformBounds(new Rect(anchor.RenderSize));
+                var bounds = anchor!.TransformToAncestor(this).TransformBounds(new Rect(anchor.RenderSize));
                 edge = new System.Windows.Point(bounds.Left, bounds.Top + bounds.Height / 2);
             }
             else
             {
-                edge = new System.Windows.Point(ActualWidth - 20 + ToastGap, 20 + size.Height / 2);
+                edge = new System.Windows.Point(ActualWidth - ToastMargin + ToastGap, ToastMargin);
             }
+
+            // No wider than the room left of the anchor: a long name is cut short rather than off the window
+            RadioToast.MaxWidth = Math.Max(0, edge.X - ToastGap - ToastMargin);
+            RadioToast.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+            var size = RadioToast.DesiredSize;
+            if (!anchored) edge.Y += size.Height / 2;
 
             System.Windows.Controls.Canvas.SetLeft(RadioToast, edge.X - ToastGap - size.Width);
             System.Windows.Controls.Canvas.SetTop(RadioToast, edge.Y - size.Height / 2);
@@ -331,10 +358,9 @@ namespace StreetCorsa
                 {
                     DialogHost.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
                 }
-                else if (_screenFocus?.TryGetTarget(out var focus) == true && focus is UIElement { IsVisible: true, IsEnabled: true } element
-                         && ScreenHost.IsAncestorOf(element))
+                else
                 {
-                    Keyboard.Focus(element);
+                    RestoreScreenFocus();
                 }
             });
         }
