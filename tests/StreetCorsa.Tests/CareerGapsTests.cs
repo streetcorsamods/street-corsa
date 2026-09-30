@@ -1,3 +1,7 @@
+using System.Runtime.CompilerServices;
+using StreetCorsa.Dialogs;
+using StreetCorsa.Dialogs.Career;
+using StreetCorsa.Dialogs.Victory;
 using StreetCorsa.Models.Career.Milestones;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Models.Race;
@@ -90,6 +94,42 @@ public class CareerGapsTests
         var game = TwoPathsReached();
 
         Assert.NotNull(victories.CheckForVictory(game));
+    }
+
+    private static CareerDialogViewModel Career(DialogService dialogs, GameState game, StrongBox<CareerSection> lastSection) =>
+        new(dialogs, new VictoryConditionService(), new MilestoneService(), game, null!, lastSection, () => { });
+
+    [Fact]
+    public void Pursuing_a_path_already_reached_shows_the_victory_ahead_of_the_dialogs_waiting()
+    {
+        var game = TwoPathsReached();
+        var dialogs = new DialogService();
+        var career = Career(dialogs, game, new StrongBox<CareerSection>());
+        var waiting = new FakeDialog();
+        dialogs.ShowDialog(career);
+        dialogs.ShowDialog(waiting);
+
+        career.SetActiveVictoryCommand.Execute("King");
+
+        Assert.True(game.Career.HasWonGame);
+        Assert.IsType<VictoryDialogViewModel>(dialogs.CurrentDialog);
+        dialogs.CloseDialog();
+        Assert.Same(waiting, dialogs.CurrentDialog);
+        dialogs.CloseDialog();
+        Assert.False(dialogs.IsDialogOpen);
+    }
+
+    [Fact]
+    public void The_career_opens_on_the_section_last_looked_at_in_the_same_game()
+    {
+        var game = TwoPathsReached();
+        var dialogs = new DialogService();
+        var lastSection = new StrongBox<CareerSection>();
+
+        Career(dialogs, game, lastSection).ShowSectionCommand.Execute("Milestones");
+
+        Assert.True(Career(dialogs, game, lastSection).ShowMilestones);
+        Assert.True(Career(dialogs, game, new StrongBox<CareerSection>()).ShowVictory);
     }
 
     [Fact]

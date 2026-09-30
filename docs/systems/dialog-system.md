@@ -24,6 +24,8 @@ Central service for showing/hiding dialogs.
 | Method | Purpose |
 |--------|---------|
 | ShowDialog(viewModel) | Display the dialog, or queue it behind the open one |
+| ShowDialog(viewModel, jumpQueue: true) | Display it now, over the open one (which waits at the head of the queue) |
+| Withdraw(viewModel) | Take a dialog away, whether it is up or still waiting |
 | CloseDialog() | Hide the current dialog; the next queued one shows |
 | CurrentDialog / IsDialogOpen | What is showing |
 
@@ -57,6 +59,12 @@ Central service for showing/hiding dialogs.
    var dialog = new MyDialogViewModel(_dialogService, ...);
    _dialogService.ShowDialog(dialog);
    ```
+
+## Size
+The card takes the size its dialog asks for. A dialog of text sets `MaxWidth="{StaticResource TextDialogMaxWidth}"`
+(750) so its lines stay readable; the card scrolls one that grows taller than the window. A big dialog with its own
+lists (the career) sets its Width and Height and binds MaxWidth/MaxHeight to `helpers:DialogRoom.Width`/`Height`,
+the room the main window has for a dialog, so it fits a small or high-DPI screen whole and scrolls its own lists.
 
 ## Rules
 

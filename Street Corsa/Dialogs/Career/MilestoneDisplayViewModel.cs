@@ -2,10 +2,10 @@ using StreetCorsa.ViewModels;
 using StreetCorsa.Models.Career.Milestones;
 using StreetCorsa.Models.GameState;
 
-namespace StreetCorsa.Screens.Career
+namespace StreetCorsa.Dialogs.Career
 {
     /// <summary>
-    /// View model for displaying a milestone in the career screen
+    /// View model for displaying a milestone in the career dialog
     /// </summary>
     public class MilestoneDisplayViewModel : ObservableObject
     {

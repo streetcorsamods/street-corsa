@@ -110,7 +110,6 @@
                     BorderBrush="{StaticResource UiOutlineBrush}"
                     BorderThickness="3"
                     CornerRadius="10"
-                    MaxWidth="750"
                     Margin="40"
                     Padding="0"
                     HorizontalAlignment="Center"

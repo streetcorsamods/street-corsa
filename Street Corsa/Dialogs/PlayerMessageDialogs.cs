@@ -9,14 +9,18 @@ namespace StreetCorsa.Dialogs
     public static class PlayerMessageDialogs
     {
         /// <param name="toMainMenu">Where the victory screen's Main Menu button goes</param>
-        public static void Show(DialogService dialogService, PlayerMessage message, Action toMainMenu)
+        /// <param name="jumpQueue">Shown at once, over the dialog up and ahead of the ones waiting (see <see cref="DialogService.ShowDialog(IDialog, bool)"/>)</param>
+        public static void Show(DialogService dialogService, PlayerMessage message, Action toMainMenu, bool jumpQueue = false)
         {
+            IDialog dialog;
             if (message.Timeslip is { } slip)
-                dialogService.ShowDialog(new Timeslip.TimeslipDialogViewModel(dialogService, slip));
+                dialog = new Timeslip.TimeslipDialogViewModel(dialogService, slip);
             else if (message.Victory is { } victory)
-                dialogService.ShowDialog(new Victory.VictoryDialogViewModel(dialogService, victory, toMainMenu));
+                dialog = new Victory.VictoryDialogViewModel(dialogService, victory, toMainMenu);
             else
-                dialogService.ShowDialog(new Information.InformationDialogViewModel(dialogService, message.Text, message.Title));
+                dialog = new Information.InformationDialogViewModel(dialogService, message.Text, message.Title);
+
+            dialogService.ShowDialog(dialog, jumpQueue);
         }
     }
 }

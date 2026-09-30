@@ -75,6 +75,14 @@ namespace StreetCorsa
                 if (!(bool)e.NewValue && DialogService.CurrentDialog == null) DialogContent.Content = null;
             };
 
+            // What a dialog has room for: the host less the card's margin and outline
+            DialogHost.SizeChanged += (_, e) =>
+            {
+                var (margin, outline) = (DialogCard.Margin, DialogCard.BorderThickness);
+                DialogRoom.SetWidth(DialogContent, Math.Max(0, e.NewSize.Width - margin.Left - margin.Right - outline.Left - outline.Right));
+                DialogRoom.SetHeight(DialogContent, Math.Max(0, e.NewSize.Height - margin.Top - margin.Bottom - outline.Top - outline.Bottom));
+            };
+
             // Assetto Corsa on and off: the screen fades to the loader for it and back (the events may come from any thread)
             app.Launcher.ExecutionStarted += (_, _) => Dispatcher.BeginInvoke(() => ShowRacing(true));
             app.Launcher.ExecutionEnded += (_, _) => Dispatcher.BeginInvoke(() => ShowRacing(false));

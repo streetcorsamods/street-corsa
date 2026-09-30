@@ -1,0 +1,503 @@
+<UserControl x:Class="StreetCorsa.Dialogs.Career.CareerDialogView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:helpers="clr-namespace:StreetCorsa.Helpers"
+             Width="1040"
+             Height="680"
+             MaxWidth="{Binding (helpers:DialogRoom.Width), RelativeSource={RelativeSource Self}}"
+             MaxHeight="{Binding (helpers:DialogRoom.Height), RelativeSource={RelativeSource Self}}">
+    <!-- That big, or as big as the window has room for: the lists scroll, the card never has to -->
+    <UserControl.Resources>
+        <!-- A section button: the glass toggle, on while its section shows. No padding: the radio button's own
+             would push the label off the middle. -->
+        <Style x:Key="SectionButtonStyle" TargetType="RadioButton" BasedOn="{StaticResource GlassToggleButtonStyle}">
+            <Setter Property="Command" Value="{Binding ShowSectionCommand}"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Height" Value="42"/>
+            <Setter Property="Margin" Value="5,0"/>
+            <Setter Property="FontSize" Value="{StaticResource FontSizeBodyLarge}"/>
+        </Style>
+        <!-- A small amber title over a block of the record, a little further off its figures -->
+        <Style x:Key="BlockTitleStyle" TargetType="TextBlock" BasedOn="{StaticResource SectionTitleStyle}">
+            <Setter Property="Margin" Value="0,0,0,10"/>
+        </Style>
+        <!-- A block of the record: dark glass on the card -->
+        <Style x:Key="StatBlockStyle" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource UiGlassBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource UiOutlineSoftBrush}"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="18,14"/>
+            <Setter Property="Margin" Value="6"/>
+        </Style>
+        <Style x:Key="BigFigureStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource CreamBrush}"/>
+            <Setter Property="FontSize" Value="{StaticResource FontSizeDisplaySmall}"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+        <Style x:Key="FigureLabelStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+            <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}"/>
+        </Style>
+        <!-- A line of the record: what on the left, the figure on the right -->
+        <Style x:Key="LineLabelStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="Margin" Value="0,3"/>
+        </Style>
+        <Style x:Key="LineValueStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="Margin" Value="0,3"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Title -->
+        <Border Grid.Row="0" Style="{StaticResource PanelTitleBandStyle}">
+            <DockPanel>
+                <Button Style="{StaticResource PanelCloseButtonStyle}"
+                        Tag="{StaticResource CloseIcon}"
+                        Command="{Binding CloseCommand}"
+                        IsCancel="True"
+                        ToolTip="Close (Esc)"/>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Career" Style="{StaticResource PanelTitleStyle}"/>
+                    <TextBlock Foreground="{StaticResource TextSecondaryBrush}"
+                               FontSize="{StaticResource FontSizeBody}"
+                               Margin="14,0,0,0"
+                               VerticalAlignment="Center">
+                        <Run Text="{Binding ReputationTier, Mode=OneWay}"/><Run Text=" · reputation "/><Run Text="{Binding Reputation, Mode=OneWay}"/>
+                    </TextBlock>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- The sections -->
+        <UniformGrid Grid.Row="1" Columns="3" Margin="17,16,17,4">
+            <RadioButton Style="{StaticResource SectionButtonStyle}"
+                         Content="Victory paths"
+                         IsChecked="{Binding ShowVictory, Mode=OneWay}"
+                         CommandParameter="Victory"/>
+            <RadioButton Style="{StaticResource SectionButtonStyle}"
+                         Content="Your record"
+                         IsChecked="{Binding ShowStats, Mode=OneWay}"
+                         CommandParameter="Stats"/>
+            <RadioButton Style="{StaticResource SectionButtonStyle}"
+                         IsChecked="{Binding ShowMilestones, Mode=OneWay}"
+                         CommandParameter="Milestones">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Milestones"/>
+                    <TextBlock Text="{Binding CompletedMilestoneCount}" Foreground="{StaticResource AmberBrush}" Margin="10,0,0,0"/>
+                    <TextBlock Text="{Binding TotalMilestoneCount, StringFormat='/{0}'}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                </StackPanel>
+            </RadioButton>
+        </UniformGrid>
+
+        <!-- The section on show: the one leaving fades out as the next fades in over it -->
+        <Grid Grid.Row="2" Margin="22,12,22,20">
+
+            <!-- Victory paths -->
+            <DockPanel helpers:Reveal.IsShown="{Binding ShowVictory}"
+                       helpers:Reveal.OffsetY="12">
+                <!-- The game is won: the paths stay for the record -->
+                <Border DockPanel.Dock="Top"
+                        Background="{StaticResource SuccessBgBrush}"
+                        BorderBrush="{StaticResource SuccessStrongBrush}"
+                        BorderThickness="2"
+                        CornerRadius="6"
+                        Padding="14,8"
+                        Margin="0,0,0,10"
+                        Visibility="{Binding HasWonGame, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <TextBlock Foreground="{StaticResource TextPrimaryBrush}"
+                               FontSize="{StaticResource FontSizeBody}"
+                               TextWrapping="Wrap">
+                        <Run Text="You won the game:" Foreground="{StaticResource AccentSuccessBrush}" FontWeight="Bold"/>
+                        <Run Text="{Binding WinningVictoryName, Mode=OneWay}" FontWeight="SemiBold"/><Run Text=". Race on as long as you like."/>
+                    </TextBlock>
+                </Border>
+
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <ItemsControl ItemsSource="{Binding Victories}" Margin="0,0,6,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <!-- A path: later triggers win, so achieved beats active beats unlocked -->
+                                <Border Margin="0,0,0,10"
+                                        CornerRadius="6"
+                                        Padding="16,12"
+                                        BorderThickness="2"
+                                        Opacity="{Binding Opacity}">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="{StaticResource UiGlassBrush}"/>
+                                            <Setter Property="BorderBrush" Value="{StaticResource UiOutlineSoftBrush}"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsUnlocked}" Value="True">
+                                                    <Setter Property="BorderBrush" Value="{StaticResource UiOutlineBrush}"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                    <Setter Property="Background" Value="{StaticResource GoldBgBrush}"/>
+                                                    <Setter Property="BorderBrush" Value="{StaticResource AmberBrush}"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding IsAchieved}" Value="True">
+                                                    <Setter Property="BorderBrush" Value="{StaticResource SuccessStrongBrush}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Status Icon -->
+                                        <TextBlock Grid.Column="0"
+                                                   Text="{Binding StatusIcon}"
+                                                   FontSize="{StaticResource FontSizeTitleSmall}"
+                                                   VerticalAlignment="Top"
+                                                   Width="34"
+                                                   Margin="0,0,10,0">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsUnlocked}" Value="True">
+                                                            <Setter Property="Foreground" Value="{StaticResource CreamBrush}"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                            <Setter Property="Foreground" Value="{StaticResource AmberBrush}"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding IsAchieved}" Value="True">
+                                                            <Setter Property="Foreground" Value="{StaticResource AccentSuccessBrush}"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="{Binding Name}"
+                                                       FontSize="{StaticResource FontSizeSubheading}"
+                                                       FontWeight="Bold"
+                                                       Foreground="{StaticResource CreamBrush}"/>
+                                            <TextBlock Text="{Binding Description}"
+                                                       FontSize="{StaticResource FontSizeCompact}"
+                                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                                       TextWrapping="Wrap"
+                                                       Margin="0,3,0,8"/>
+
+                                            <!-- How far along: the bar, and the figure beside it -->
+                                            <DockPanel>
+                                                <TextBlock DockPanel.Dock="Right"
+                                                           Text="{Binding ProgressText}"
+                                                           FontSize="{StaticResource FontSizeSmall}"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{StaticResource TextPrimaryBrush}"
+                                                           Margin="12,0,0,0"
+                                                           VerticalAlignment="Center"/>
+                                                <ProgressBar Minimum="0" Maximum="100"
+                                                             Value="{Binding ProgressPercentage, Mode=OneWay}"
+                                                             Height="8"
+                                                             Background="{StaticResource UiBandBrush}"
+                                                             BorderThickness="0"
+                                                             VerticalAlignment="Center">
+                                                    <ProgressBar.Style>
+                                                        <Style TargetType="ProgressBar">
+                                                            <Setter Property="Foreground" Value="{StaticResource AmberBrush}"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsAchieved}" Value="True">
+                                                                    <Setter Property="Foreground" Value="{StaticResource AccentSuccessBrush}"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </ProgressBar.Style>
+                                                </ProgressBar>
+                                            </DockPanel>
+
+                                            <!-- The steps done, then the ones to go -->
+                                            <ItemsControl ItemsSource="{Binding CompletedSteps}" Margin="0,8,0,0">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Foreground="{StaticResource AccentSuccessBrush}"
+                                                                   FontSize="{StaticResource FontSizeSmall}"
+                                                                   TextWrapping="Wrap">
+                                                            <Run Text="✓ "/><Run Text="{Binding Mode=OneWay}"/>
+                                                        </TextBlock>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                            <ItemsControl ItemsSource="{Binding RemainingSteps}" Margin="0,2,0,0">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Foreground="{StaticResource TextSecondaryBrush}"
+                                                                   FontSize="{StaticResource FontSizeSmall}"
+                                                                   TextWrapping="Wrap">
+                                                            <Run Text="○ "/><Run Text="{Binding Mode=OneWay}"/>
+                                                        </TextBlock>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+
+                                        <!-- Pick this path -->
+                                        <Button Grid.Column="2"
+                                                Content="Pursue"
+                                                Style="{StaticResource DialogPrimaryButtonStyle}"
+                                                Command="{Binding DataContext.SetActiveVictoryCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                CommandParameter="{Binding VictoryType}"
+                                                Visibility="{Binding CanSetActive, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                VerticalAlignment="Top"
+                                                Margin="16,0,0,0"
+                                                Width="110"
+                                                Height="34"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+
+            <!-- The player's record -->
+            <Grid helpers:Reveal.IsShown="{Binding ShowStats}"
+                  helpers:Reveal.OffsetY="12"
+                  Margin="-6">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Reputation -->
+                <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource StatBlockStyle}">
+                    <StackPanel>
+                        <TextBlock Text="REPUTATION" Style="{StaticResource BlockTitleStyle}"/>
+                        <TextBlock Text="{Binding Reputation}" Style="{StaticResource BigFigureStyle}" FontSize="{StaticResource FontSizeDisplay}" Foreground="{StaticResource GoldBrush}"/>
+                        <TextBlock Text="{Binding ReputationTier}"
+                                   Foreground="{StaticResource CreamBrush}"
+                                   FontSize="{StaticResource FontSizeHeading}"
+                                   FontWeight="SemiBold"
+                                   Margin="0,2,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Race record -->
+                <Border Grid.Row="0" Grid.Column="1" Style="{StaticResource StatBlockStyle}">
+                    <StackPanel>
+                        <TextBlock Text="RACE RECORD" Style="{StaticResource BlockTitleStyle}"/>
+                        <UniformGrid Columns="2">
+                            <StackPanel>
+                                <TextBlock Text="{Binding TotalWins}" Style="{StaticResource BigFigureStyle}" Foreground="{StaticResource AccentSuccessBrush}"/>
+                                <TextBlock Text="Wins" Style="{StaticResource FigureLabelStyle}"/>
+                            </StackPanel>
+                            <StackPanel>
+                                <TextBlock Text="{Binding TotalLosses}" Style="{StaticResource BigFigureStyle}" Foreground="{StaticResource DangerBrush}"/>
+                                <TextBlock Text="Losses" Style="{StaticResource FigureLabelStyle}"/>
+                            </StackPanel>
+                        </UniformGrid>
+                        <Grid Margin="0,14,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Text="Races" Style="{StaticResource LineLabelStyle}"/>
+                            <TextBlock Grid.Column="1" Text="{Binding TotalRaces}" Style="{StaticResource LineValueStyle}"/>
+                            <TextBlock Grid.Row="1" Text="Win rate" Style="{StaticResource LineLabelStyle}"/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding WinRate}" Style="{StaticResource LineValueStyle}"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Pink slips -->
+                <Border Grid.Row="0" Grid.Column="2" Style="{StaticResource StatBlockStyle}">
+                    <StackPanel>
+                        <TextBlock Text="PINK SLIPS" Style="{StaticResource BlockTitleStyle}"/>
+                        <UniformGrid Columns="2">
+                            <StackPanel>
+                                <TextBlock Text="{Binding PinkSlipsWon}" Style="{StaticResource BigFigureStyle}" Foreground="{StaticResource AccentSuccessBrush}"/>
+                                <TextBlock Text="Won" Style="{StaticResource FigureLabelStyle}"/>
+                            </StackPanel>
+                            <StackPanel>
+                                <TextBlock Text="{Binding PinkSlipsLost}" Style="{StaticResource BigFigureStyle}" Foreground="{StaticResource DangerBrush}"/>
+                                <TextBlock Text="Lost" Style="{StaticResource FigureLabelStyle}"/>
+                            </StackPanel>
+                        </UniformGrid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Money -->
+                <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Style="{StaticResource StatBlockStyle}">
+                    <StackPanel>
+                        <TextBlock Text="PRIZE MONEY" Style="{StaticResource BlockTitleStyle}"/>
+                        <UniformGrid Columns="3">
+                            <StackPanel>
+                                <TextBlock Text="{Binding TotalEarnings}" Style="{StaticResource BigFigureStyle}" FontSize="{StaticResource FontSizeTitle}" Foreground="{StaticResource AccentSuccessBrush}"/>
+                                <TextBlock Text="Won" Style="{StaticResource FigureLabelStyle}"/>
+                            </StackPanel>
+                            <StackPanel>
+                                <TextBlock Text="{Binding TotalLossesAmount}" Style="{StaticResource BigFigureStyle}" FontSize="{StaticResource FontSizeTitle}" Foreground="{StaticResource DangerBrush}"/>
+                                <TextBlock Text="Lost" Style="{StaticResource FigureLabelStyle}"/>
+                            </StackPanel>
+                            <StackPanel>
+                                <TextBlock Text="{Binding NetEarnings}" FontSize="{StaticResource FontSizeTitle}">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource BigFigureStyle}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsNetLoss}" Value="True">
+                                                    <Setter Property="Foreground" Value="{StaticResource DangerBrush}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <TextBlock Text="Net" Style="{StaticResource FigureLabelStyle}"/>
+                            </StackPanel>
+                        </UniformGrid>
+                    </StackPanel>
+                </Border>
+
+                <!-- The rest -->
+                <Border Grid.Row="1" Grid.Column="2" Style="{StaticResource StatBlockStyle}">
+                    <StackPanel>
+                        <TextBlock Text="ON THE STREETS" Style="{StaticResource BlockTitleStyle}"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Text="Cars owned" Style="{StaticResource LineLabelStyle}"/>
+                            <TextBlock Grid.Column="1" Text="{Binding CarsOwned}" Style="{StaticResource LineValueStyle}"/>
+                            <TextBlock Grid.Row="1" Text="Opponents beaten" Style="{StaticResource LineLabelStyle}"/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding OpponentsDefeated}" Style="{StaticResource LineValueStyle}"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Milestones (how many are done is on the section's button) -->
+            <DockPanel helpers:Reveal.IsShown="{Binding ShowMilestones}"
+                       helpers:Reveal.OffsetY="12">
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <ItemsControl ItemsSource="{Binding Milestones}" Margin="-5,0,1,0">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Columns="3" VerticalAlignment="Top"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <DataTemplate.Resources>
+                                    <!-- The icon and the progress line: green once the milestone is done -->
+                                    <Style x:Key="MilestoneStatusText" TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{StaticResource AmberBrush}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsCompleted}" Value="True">
+                                                <Setter Property="Foreground" Value="{StaticResource AccentSuccessBrush}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </DataTemplate.Resources>
+                                <Border Margin="5"
+                                        CornerRadius="6"
+                                        Padding="12,10"
+                                        BorderThickness="2"
+                                        Opacity="{Binding Opacity}"
+                                        ToolTip="{Binding TooltipText}">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="{StaticResource UiGlassBrush}"/>
+                                            <Setter Property="BorderBrush" Value="{StaticResource UiOutlineSoftBrush}"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsCompleted}" Value="True">
+                                                    <Setter Property="Background" Value="{StaticResource SuccessBgBrush}"/>
+                                                    <Setter Property="BorderBrush" Value="{StaticResource SuccessStrongBrush}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <TextBlock Text="{Binding StatusIcon}"
+                                                   FontSize="{StaticResource FontSizeHeading}"
+                                                   VerticalAlignment="Top"
+                                                   Margin="0,0,10,0"
+                                                   Style="{StaticResource MilestoneStatusText}"/>
+
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="{Binding Name}"
+                                                       FontSize="{StaticResource FontSizeBody}"
+                                                       FontWeight="Bold"
+                                                       Foreground="{StaticResource CreamBrush}"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding Description}"
+                                                       FontSize="{StaticResource FontSizeSmall}"
+                                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       Margin="0,2,0,6"/>
+                                            <DockPanel>
+                                                <TextBlock DockPanel.Dock="Right"
+                                                           Text="{Binding ProgressText}"
+                                                           FontSize="{StaticResource FontSizeCaption}"
+                                                           FontWeight="SemiBold"
+                                                           Margin="8,0,0,0"
+                                                           VerticalAlignment="Center"
+                                                           Style="{StaticResource MilestoneStatusText}"/>
+                                                <ProgressBar Minimum="0" Maximum="100"
+                                                             Value="{Binding ProgressPercentage, Mode=OneWay}"
+                                                             Height="5"
+                                                             Background="{StaticResource UiBandBrush}"
+                                                             BorderThickness="0"
+                                                             VerticalAlignment="Center">
+                                                    <ProgressBar.Style>
+                                                        <Style TargetType="ProgressBar">
+                                                            <Setter Property="Foreground" Value="{StaticResource AmberBrush}"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsCompleted}" Value="True">
+                                                                    <Setter Property="Foreground" Value="{StaticResource AccentSuccessBrush}"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </ProgressBar.Style>
+                                                </ProgressBar>
+                                            </DockPanel>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+        </Grid>
+    </Grid>
+</UserControl>

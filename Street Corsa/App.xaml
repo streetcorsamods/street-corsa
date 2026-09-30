@@ -21,7 +21,6 @@
              xmlns:carCatalogEditor="clr-namespace:StreetCorsa.Screens.CarCatalogEditor"
              xmlns:soundBrowser="clr-namespace:StreetCorsa.Screens.SoundBrowser"
              xmlns:raceLoading="clr-namespace:StreetCorsa.Screens.RaceLoading"
-             xmlns:career="clr-namespace:StreetCorsa.Screens.Career"
              xmlns:confirmation="clr-namespace:StreetCorsa.Dialogs.Confirmation"
              xmlns:information="clr-namespace:StreetCorsa.Dialogs.Information"
              xmlns:eventEntry="clr-namespace:StreetCorsa.Dialogs.EventEntry"
@@ -32,6 +31,7 @@
              xmlns:victory="clr-namespace:StreetCorsa.Dialogs.Victory"
              xmlns:quit="clr-namespace:StreetCorsa.Dialogs.Quit"
              xmlns:carInfo="clr-namespace:StreetCorsa.Dialogs.CarInfo"
+             xmlns:career="clr-namespace:StreetCorsa.Dialogs.Career"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
         <ResourceDictionary>
@@ -50,7 +50,6 @@
             <converters:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter"/>
             <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
             <converters:GaragePanelToVisibilityConverter x:Key="GaragePanelToVisibilityConverter"/>
-            <converters:PercentageToWidthConverter x:Key="PercentageToWidthConverter"/>
             <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
 
             <!-- Effects -->
@@ -132,10 +131,6 @@
                 <raceLoading:RaceLoadingScreenView/>
             </DataTemplate>
 
-            <DataTemplate DataType="{x:Type career:CareerScreenViewModel}">
-                <career:CareerScreenView/>
-            </DataTemplate>
-
             <!-- Dialog DataTemplates -->
             <DataTemplate DataType="{x:Type confirmation:ConfirmationDialogViewModel}">
                 <confirmation:ConfirmationDialogView/>
@@ -175,6 +170,10 @@
 
             <DataTemplate DataType="{x:Type carInfo:CarInfoDialogViewModel}">
                 <carInfo:CarInfoDialogView/>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type career:CareerDialogViewModel}">
+                <career:CareerDialogView/>
             </DataTemplate>
         </ResourceDictionary>
     </Application.Resources>

@@ -1,6 +1,4 @@
-using System.Globalization;
 using System.IO;
-using StreetCorsa.Converters;
 using StreetCorsa.Dialogs;
 using StreetCorsa.Helpers;
 using StreetCorsa.Logging;
@@ -208,22 +206,6 @@ public class AuditFixesFTests
         {
             AsyncRelayCommand.ReportFailure = before;
         }
-    }
-
-    // ----- PercentageToWidthConverter -----
-
-    [Theory]
-    [InlineData(50f, 104.0, 50.0)]
-    [InlineData(50.0, 104.0, 50.0)]
-    [InlineData(150.0, 104.0, 100.0)]
-    [InlineData(-20f, 104.0, 0.0)]
-    [InlineData(double.NaN, 104.0, 0.0)]
-    [InlineData(50.0, 2.0, 0.0)]
-    [InlineData(50, 104.0, 0.0)] // an int is not a percentage the converter knows
-    public void A_bar_is_as_wide_as_its_share_and_never_wider_than_its_track(object percentage, double width, double expected)
-    {
-        var result = new PercentageToWidthConverter().Convert([percentage, width], typeof(double), null!, CultureInfo.InvariantCulture);
-        Assert.Equal(expected, (double)result, 6);
     }
 
     // ----- The career: victories open from the start, the rules, the events' state -----
