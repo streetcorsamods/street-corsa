@@ -17,7 +17,7 @@ namespace StreetCorsa.Controls;
 /// The renderer draws off-screen into a shared DX11 texture which is presented through a D3DImage,
 /// so the viewport composes like any other WPF element (overlays, opacity, dialogs on top all work).
 /// </summary>
-public class CarViewport3D : D3DViewportBase
+public class CarViewport3D : D3DViewportBase, ICarDrivingOff
 {
     // Orbit camera limits: stay above the floor and inside the showroom walls
     private const float MinBeta = 0.02f;
@@ -1652,6 +1652,30 @@ public class CarViewport3D : D3DViewportBase
     protected override void OnPoseChanged() => RockCar(Renderer?.CarNode);
 
     protected override bool EngineTurnedRound => EngineLayout == EngineLayout.Rear;
+
+    #endregion
+
+    #region Driving off
+
+    /// <summary>The car, standing on its wheels in the plain view: not with its parts out or an engine on the move</summary>
+    private Kn5RenderableCar? CarToDrive => Renderer?.CarNode is { } node && !PartsVisible && !IsMovingEngine ? node : null;
+
+    public bool LightsOn()
+    {
+        if (CarToDrive == null) return false;
+        HeadlightsOn = true;
+        AnimateFor(TimeSpan.FromSeconds(1));
+        return true;
+    }
+
+    public bool PullAway()
+    {
+        if (CarToDrive is not { } node) return false;
+        PullAway(node);
+        return true;
+    }
+
+    public void StayPut() => StopPulling();
 
     #endregion
 

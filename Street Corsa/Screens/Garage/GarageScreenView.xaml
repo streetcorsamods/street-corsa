@@ -715,5 +715,8 @@
 
         <!-- Loading Layer (shown until the 3D garage is ready) -->
         <controls:LoadingIndicator x:Name="LoadingLayer" Message="Opening the garage..."/>
+
+        <!-- Comes down over the car driving off to the lot -->
+        <Border x:Name="Curtain" Background="Black" Opacity="0" IsHitTestVisible="False"/>
     </Grid>
 </UserControl>

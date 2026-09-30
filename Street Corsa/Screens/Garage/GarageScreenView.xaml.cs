@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
@@ -43,6 +44,22 @@ namespace StreetCorsa.Screens.Garage
             Viewport3D.PlacementChanged += text =>
             {
                 if (DataContext is GarageScreenViewModel viewModel) viewModel.Workbench.PlacementDisplay = text ?? string.Empty;
+            };
+
+            // The car drives off to the lot: the view plays it, the view model says when
+            DataContextChanged += (_, e) =>
+            {
+                if (e.OldValue is GarageScreenViewModel old)
+                {
+                    old.DriveCarOff = null;
+                    old.PutCarBack = null;
+                }
+
+                if (e.NewValue is GarageScreenViewModel viewModel)
+                {
+                    viewModel.DriveCarOff = DriveCarOffAsync;
+                    viewModel.PutCarBack = PutCarBack;
+                }
             };
 
             // Placement mode is driven from the keyboard, wherever the focus is on the screen
@@ -123,6 +140,40 @@ namespace StreetCorsa.Screens.Garage
             }
 
             e.Handled = true;
+        }
+
+        /// <summary>
+        /// The car in the garage starts up and drives off, and the screen goes black over it; nothing on the screen can be
+        /// used meanwhile. A car that cannot (no engine that runs, its parts out) stays, and nothing is shown.
+        /// </summary>
+        private async Task DriveCarOffAsync()
+        {
+            // Only from the car's own view, where its engine is on show
+            if (!EnginePanel.IsVisible) return;
+
+            ContentLayer.IsHitTestVisible = false;
+            await StreetCorsa.Controls.DriveOff.PlayAsync(Viewport3D, EnginePanel.Runner, CurtainDownAsync);
+        }
+
+        /// <summary>The garage stays after all: the curtain up, the car back where it stood</summary>
+        private void PutCarBack()
+        {
+            Curtain.BeginAnimation(OpacityProperty, new DoubleAnimation(0, QuickFadeInDuration));
+            Viewport3D.StayPut();
+            StreetCorsa.Controls.DriveOff.Loud(EnginePanel.Runner);
+            ContentLayer.IsHitTestVisible = _revealed;
+        }
+
+        private Task CurtainDownAsync(TimeSpan duration)
+        {
+            var done = new TaskCompletionSource();
+            var animation = new DoubleAnimation(1, duration) { EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn } };
+            animation.Completed += (_, _) => done.TrySetResult();
+            Curtain.BeginAnimation(OpacityProperty, animation);
+
+            // Not shown (the window gone): no animation will finish
+            if (!IsLoaded) done.TrySetResult();
+            return done.Task;
         }
 
         /// <summary>

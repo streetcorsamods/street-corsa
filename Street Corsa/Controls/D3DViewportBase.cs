@@ -91,6 +91,9 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     // not by the clock, so a bump lands with the engine however slowly the frames come.
     private readonly List<(float Age, float Sign, bool Front)> _bumps = new();
 
+    // A car pulling away out of the scene (DriveOff), until the screen goes or it is put back
+    private Pull? _pull;
+
     /// <summary>How the label next to the pointer looks, and where it sits from the pointer</summary>
     protected readonly record struct LabelLook(double FontSize, byte BackgroundAlpha, byte BorderAlpha, Thickness Padding, Vector Offset);
 
@@ -509,6 +512,12 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
             // The frame's own steps too: whatever throws in them would otherwise reach the dispatcher every frame
             var moving = StepFrame(renderer, dt);
 
+            if (_pull != null)
+            {
+                StepPull(dt);
+                moving = true;
+            }
+
             // A bump rings out frame by frame, on top of whatever the running engine does
             if (_bumps.Count > 0)
             {
@@ -623,6 +632,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         _firstFrameTimer.Stop();
         _rock = null;
         _bumps.Clear();
+        _pull = null;
 
         var renderer = _renderer;
         _renderer = null;
@@ -792,8 +802,9 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         var running = RunningEngine?.Pose ?? Audio.BodyPose.Rest;
         if (EngineTurnedRound) running = running with { Roll = -running.Roll };
         var bump = BumpPose();
-        var pose = new Audio.BodyPose(running.Roll + bump.Roll, running.Pitch + bump.Pitch, running.Heave + bump.Heave);
-        if (renderer == null || carNode == null || (pose.IsRest && RunningEngine?.IsActive != true && _bumps.Count == 0))
+        var pull = _pull is { } p && ReferenceEquals(p.Car, carNode) ? p : null;
+        var pose = new Audio.BodyPose(running.Roll + bump.Roll, running.Pitch + bump.Pitch + (pull?.Pitch.Pitch ?? 0f), running.Heave + bump.Heave);
+        if (renderer == null || carNode == null || (pull == null && pose.IsRest && RunningEngine?.IsActive != true && _bumps.Count == 0))
         {
             ReleaseRock();
             return;
@@ -806,12 +817,15 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
             _shadowedPose = Audio.BodyPose.Rest;
         }
 
-        if (!_rock.Apply(pose)) return;
+        // A car pulling away rolls along its own length, nose first, its wheels turning as it goes
+        var placement = pull == null ? (SlimDX.Matrix?)null : SlimDX.Matrix.Translation(0f, 0f, pull.Distance * _rock.FrontSign) * pull.From;
+        if (!_rock.Apply(pose, pull == null ? 0f : Street.RivalDrive.WheelAngle(pull.Distance), placement)) return;
 
         if (LeansParts) renderer.BodyLean = _rock.WorldLean;
 
-        // The shadow maps are drawn again only for a lean that shows in them, not for every shake at idle
-        if (CarBodyRock.ShadowsDue(_shadowedPose, pose))
+        // The shadow maps are drawn again only for a lean that shows in them, not for every shake at idle; a car on the
+        // move takes its shadow along every frame
+        if (pull != null || CarBodyRock.ShadowsDue(_shadowedPose, pose))
         {
             renderer.RefreshShadows();
             _shadowedPose = pose;
@@ -835,6 +849,75 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
             _renderer.IsDirty = true;
             StartPump();
         }
+    }
+
+    #endregion
+
+    #region Pulling away
+
+    // A car pulling away in first gear: gently, to a walking pace and a bit, and the revs with it
+    private const float PullAcceleration = 1.8f;
+    private const float PullTopSpeed = 5f;
+    private const double PullRpmPerMetrePerSecond = 260;
+    private const double PullThrottle = 0.45;
+    private const double CruiseThrottle = 0.2;
+
+    /// <summary>A car on its way out: where it stood, how far it has come and how fast, and how its body squats</summary>
+    private sealed class Pull(Kn5RenderableCar car, SlimDX.Matrix from, bool autoAdjust)
+    {
+        public Kn5RenderableCar Car { get; } = car;
+        public SlimDX.Matrix From { get; } = from;
+        public bool AutoAdjust { get; } = autoAdjust;
+        public Street.ChassisPitch Pitch { get; } = new();
+        public float Distance { get; set; }
+        public float Speed { get; set; }
+    }
+
+    /// <summary>
+    /// <paramref name="car"/> pulls away, nose first, and keeps going until the screen goes or <see cref="StopPulling"/>
+    /// puts it back. The camera stays where it is and watches it go; the running engine is driven by the wheels.
+    /// </summary>
+    protected void PullAway(Kn5RenderableCar car)
+    {
+        if (_renderer is not { } renderer || _pull != null) return;
+
+        var from = _rock is { } rock && ReferenceEquals(rock.Car, car) ? rock.Base : car.LocalMatrix;
+        _pull = new Pull(car, from, renderer.AutoAdjustTarget);
+        renderer.AutoAdjustTarget = false;
+        AnimateFor(SettleWindow);
+    }
+
+    /// <summary>The car that pulled away back where it stood, and the engine out of gear</summary>
+    protected void StopPulling()
+    {
+        if (_pull is not { } pull) return;
+
+        _pull = null;
+        if (_rock is { } rock && ReferenceEquals(rock.Car, pull.Car)) rock.Apply(Audio.BodyPose.Rest, 0f, pull.From);
+        else pull.Car.LocalMatrix = pull.From;
+        if (_renderer != null) _renderer.AutoAdjustTarget = pull.AutoAdjust;
+        RunningEngine?.Drive(null);
+        ReleaseRock();
+        OnPoseChanged();
+    }
+
+    private void StepPull(float dt)
+    {
+        if (_pull is not { } pull) return;
+
+        var step = Math.Min(dt, GarageRenderer.MaxTickSeconds);
+        var acceleration = pull.Speed < PullTopSpeed ? PullAcceleration : 0f;
+        pull.Speed = Math.Min(PullTopSpeed, pull.Speed + acceleration * step);
+        pull.Distance += pull.Speed * step;
+        pull.Pitch.Tick(step, acceleration);
+
+        if (RunningEngine is { IsRunning: true } engine)
+        {
+            var idle = engine.Spec?.IdleRpm is > 200 and var rpm ? rpm : 800;
+            engine.Drive(idle * 1.1 + pull.Speed * PullRpmPerMetrePerSecond, acceleration > 0f ? PullThrottle : CruiseThrottle);
+        }
+
+        OnPoseChanged();
     }
 
     #endregion

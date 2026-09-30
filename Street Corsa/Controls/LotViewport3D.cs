@@ -54,7 +54,7 @@ public sealed record LotDressing(
 /// the work here is placing them, moving the camera between the two views, and working out which car the
 /// pointer is on.
 /// </summary>
-public class LotViewport3D : D3DViewportBase
+public class LotViewport3D : D3DViewportBase, ICarDrivingOff
 {
     // Taking in the whole lot, and standing on one car
     private const float DefaultLotRadius = 19f;
@@ -989,13 +989,45 @@ public class LotViewport3D : D3DViewportBase
     #region Body rock
 
     /// <summary>The engine of the car being looked at moved its body</summary>
-    protected override void OnPoseChanged()
+    protected override void OnPoseChanged() => RockCar(SelectedCarNode);
+
+    /// <summary>The car being looked at, when it is standing in its bay</summary>
+    private Kn5RenderableCar? SelectedCarNode
     {
-        var index = SelectedIndex;
-        var carNode = Renderer != null && index >= 0 && index < _slots.Count && index < _standing.Count && _standing[index] != null
-            ? _slots[index]?.CarNode
-            : null;
-        RockCar(carNode);
+        get
+        {
+            var index = SelectedIndex;
+            return Renderer != null && index >= 0 && index < _slots.Count && index < _standing.Count && _standing[index] != null
+                ? _slots[index]?.CarNode
+                : null;
+        }
+    }
+
+    #endregion
+
+    #region Driving off
+
+    /// <summary>The car being looked at switches its lights on: the lot loads no light sources, so its lamps glow</summary>
+    public bool LightsOn()
+    {
+        if (SelectedCarNode is not { } node) return false;
+        node.HeadlightsEnabled = true;
+        AnimateFor(TimeSpan.FromSeconds(1));
+        return true;
+    }
+
+    public bool PullAway()
+    {
+        if (SelectedCarNode is not { } node) return false;
+        PullAway(node);
+        return true;
+    }
+
+    public void StayPut()
+    {
+        StopPulling();
+        if (SelectedCarNode is { } node) node.HeadlightsEnabled = false;
+        Invalidate();
     }
 
     #endregion

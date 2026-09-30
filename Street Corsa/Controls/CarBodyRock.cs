@@ -71,6 +71,12 @@ internal sealed class CarBodyRock
 
     public Kn5RenderableCar Car => _car;
 
+    /// <summary>Where the car stands, the lean left out</summary>
+    public Sx.Matrix Base => _base;
+
+    /// <summary>+1 when the model's nose is at +z, -1 when it is at -z</summary>
+    public float FrontSign => _frontSign;
+
     private static Sx.Vector3 Position(Sx.Matrix m) => new(m.M41, m.M42, m.M43);
 
     private static void Collect(RenderableList list, Action<RenderableList> found)

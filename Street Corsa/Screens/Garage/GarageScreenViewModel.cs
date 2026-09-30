@@ -720,10 +720,37 @@ namespace StreetCorsa.Screens.Garage
             OnPropertyChanged(nameof(SellButtonText));
         }
 
-        private void OnSelectCar()
+        /// <summary>The car in the garage starting up and driving off, the screen black at the end (set by the view)</summary>
+        public Func<Task>? DriveCarOff { get; set; }
+
+        /// <summary>The car back where it stood and the screen as it was, when the garage stays after all (set by the view)</summary>
+        public Action? PutCarBack { get; set; }
+
+        // The car is on its way out to the lot: nothing else leads out meanwhile
+        private bool _drivingOff;
+
+        /// <summary>To the car lot: the car in the garage drives off there, if it runs</summary>
+        private async void OnSelectCar()
         {
+            if (!CanLeave()) return;
+
             _logger.Information("Navigating to the car lot");
-            _navigationService.NavigateToCarLot(_gameState);
+            _drivingOff = true;
+            RelayCommand.RaiseCanExecuteChanged();
+            try
+            {
+                if (SelectedCarHere && DriveCarOff is { } driveOff) await driveOff();
+                if (_navigationService.NavigateToCarLot(_gameState)) return;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not drive off to the car lot");
+            }
+
+            // Still here (the navigation service has reported why)
+            PutCarBack?.Invoke();
+            _drivingOff = false;
+            RelayCommand.RaiseCanExecuteChanged();
         }
 
         /// <summary>
@@ -798,7 +825,7 @@ namespace StreetCorsa.Screens.Garage
         private bool _endingDay;
 
         /// <summary>Nothing leads out of the garage, nor launches a race, while the day is being ended</summary>
-        private bool CanLeave() => !_endingDay;
+        private bool CanLeave() => !_endingDay && !_drivingOff;
 
         /// <summary>Asks, then ends the day: the night's scheduled work runs, and the new day is saved</summary>
         private void OnEndDay()

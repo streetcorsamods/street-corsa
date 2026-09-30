@@ -257,5 +257,8 @@
             </Button.Effect>
         </Button>
 
+        <!-- Comes down over the car driving off to the garage -->
+        <Border x:Name="Curtain" Background="Black" Opacity="0" IsHitTestVisible="False"/>
+
     </Grid>
 </UserControl>

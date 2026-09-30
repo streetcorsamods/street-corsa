@@ -361,7 +361,8 @@ namespace StreetCorsa.Navigation
                 gameState,
                 _catalogRepository,
                 _gameStateRepository,
-                _timeService));
+                _timeService,
+                _carPartsService));
 
         /// <param name="returning">Back from a race: the visit was paid for on the way in, so no time is spent</param>
         public bool NavigateToDiner(GameState gameState, bool returning = false) => SafeNavigate("diner", () =>
