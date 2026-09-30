@@ -804,7 +804,10 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         if (EngineTurnedRound) running = running with { Roll = -running.Roll };
         var bump = BumpPose();
         var pull = _pull is { } p && ReferenceEquals(p.Car, carNode) ? p : null;
-        var pose = new Audio.BodyPose(running.Roll + bump.Roll, running.Pitch + bump.Pitch + (pull?.Pitch.Pitch ?? 0f), running.Heave + bump.Heave);
+        // A car on the move squats or dives, and leans out of a bend (at walking pace a bend leans it less than the
+        // springs' full say: a driver eases off into it)
+        var pose = new Audio.BodyPose(running.Roll + bump.Roll + LeanShare * (pull?.Lean.Pitch ?? 0f),
+            running.Pitch + bump.Pitch + (pull?.Pitch.Pitch ?? 0f), running.Heave + bump.Heave);
         if (renderer == null || carNode == null || (pull == null && pose.IsRest && RunningEngine?.IsActive != true && _bumps.Count == 0))
         {
             ReleaseRock();
@@ -857,12 +860,17 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
 
     #region Pulling away and rolling in
 
-    // A car pulling away in first gear: gently, to a walking pace and a bit, and the revs with it
+    // A car pulling away in first gear: gently, to a walking pace and a bit, and the revs with it. The clutch takes up
+    // over the first moment, and the pull fades as the car nears the pace it keeps.
     private const float PullAcceleration = 1.8f;
     private const float PullTopSpeed = 5f;
+    private const float ClutchSeconds = 0.6f;
     private const double PullRpmPerMetrePerSecond = 260;
     private const double PullThrottle = 0.45;
     private const double CruiseThrottle = 0.2;
+
+    // How much of the springs' lean a bend shows
+    private const float LeanShare = 0.6f;
 
     // A car steering for a way out: straight out of its place far enough to clear its neighbours, then round on a
     // tight circle until it points at the way out, how sharply it corrects onto it, and the wheel's lock
@@ -873,25 +881,39 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     // A car turns about its rear axle, this far behind its middle: the nose swings round, the tail follows
     private const float HalfWheelbase = 1.4f;
 
-    // The wheel is wound on and off over about this long, not snapped to the lock
-    private const float SteerSeconds = 0.3f;
-    private const float SteerLead = 0.5f;
+    // The wheel is wound on and off over about this long, not snapped to the lock; the car turns only as far as its
+    // wheels are turned. Winding on starts this far before the bend.
+    private const float SteerSeconds = 0.45f;
+    private const float SteerLead = 0.6f;
+
+    // A car rolling in comes off the brake as it stops, as a driver does, and stands until its body has settled
+    private const float RollInSpeed = 5f;
+    private const float MostSettling = 1.5f;
 
     /// <summary>
     /// A car on the move: where it stands (or stood), how far it is from there and how fast it goes, and how its body
-    /// pitches. One pulling away starts at 0 and speeds up; one rolling in starts behind and brakes to a stop at 0.
+    /// pitches and rolls. One pulling away starts at 0 and speeds up; one rolling in starts behind and stops at 0.
     /// </summary>
     private sealed class Pull(Kn5RenderableCar car, SlimDX.Matrix from, bool autoAdjust)
     {
         public Kn5RenderableCar Car { get; } = car;
         public SlimDX.Matrix From { get; } = from;
         public bool AutoAdjust { get; } = autoAdjust;
+
+        /// <summary>Squat and dive: nose up on the pull, down on the brakes</summary>
         public Street.ChassisPitch Pitch { get; } = new();
+
+        /// <summary>The body leaning out of a bend on its springs (the same springs, sideways)</summary>
+        public Street.ChassisPitch Lean { get; } = new();
+
         public float Distance { get; set; }
         public float Speed { get; set; }
+        public float Time { get; set; }
 
-        /// <summary>The brake that stops a car rolling in on its mark; 0 for one pulling away</summary>
-        public float Braking { get; init; }
+        /// <summary>How far a car rolling in comes from, and over how long; 0 for one pulling away</summary>
+        public float RollInFrom { get; init; }
+        public float RollInSeconds { get; init; }
+        public bool IsRollingIn => RollInFrom > 0f;
 
         /// <summary>
         /// Steering for a way out: where it is (world x, z, from the car's origin), where it is going and its heading
@@ -954,27 +976,28 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         AnimateFor(SettleWindow);
     }
 
-    /// <summary>A car steering for its way out moves on by <paramref name="distance"/> metres, turning as it goes</summary>
-    private static void Steer(Pull pull, float distance, float dt)
+    /// <summary>
+    /// A car steering for its way out moves on by <paramref name="distance"/> metres: the wheels wind towards the lock
+    /// the bend wants, and the car turns as far as they are turned (about its rear axle). Returns how sharply it is
+    /// turning, radians per metre, for the lean.
+    /// </summary>
+    private static float Steer(Pull pull, float distance, float dt)
     {
-        if (pull.Exit is not { } exit) return;
+        if (pull.Exit is not { } exit) return 0f;
+
+        var wanted = MathF.Atan2(exit.X - pull.X, exit.Z - pull.Z);
+        var off = (wanted - pull.Heading + 3f * MathF.PI) % (2f * MathF.PI) - MathF.PI;
+        var bend = Math.Clamp(off * SteerGain, -1f / TurningRadius, 1f / TurningRadius);
+        var lockAngle = pull.Distance > StraightOut - SteerLead ? MathF.Atan(2f * HalfWheelbase * bend) : 0f;
+        pull.Steer += (lockAngle - pull.Steer) * (1f - MathF.Exp(-dt / SteerSeconds));
+
+        // Where the front wheels point is the bend the car is on
+        var curvature = MathF.Tan(pull.Steer) / (2f * HalfWheelbase);
 
         // The rear axle goes where the car points; the middle is ahead of it
         var rearX = pull.X - MathF.Sin(pull.Heading) * HalfWheelbase;
         var rearZ = pull.Z - MathF.Cos(pull.Heading) * HalfWheelbase;
-        var wanted = MathF.Atan2(exit.X - pull.X, exit.Z - pull.Z);
-        var off = (wanted - pull.Heading + 3f * MathF.PI) % (2f * MathF.PI) - MathF.PI;
-        var curvature = Math.Clamp(off * SteerGain, -1f / TurningRadius, 1f / TurningRadius);
-        if (pull.Distance > StraightOut) pull.Heading += curvature * distance;
-
-        // The front wheels point along the bend the car is on (from the rear axle, a wheelbase ahead), wound on over
-        // the last of the way out of the bay so they are round as the bend starts
-        if (pull.Distance > StraightOut - SteerLead)
-        {
-            var lockAngle = MathF.Atan(2f * HalfWheelbase * curvature);
-            pull.Steer += (lockAngle - pull.Steer) * (1f - MathF.Exp(-dt / SteerSeconds));
-        }
-
+        pull.Heading += curvature * distance;
         rearX += MathF.Sin(pull.Heading) * distance;
         rearZ += MathF.Cos(pull.Heading) * distance;
         pull.X = rearX + MathF.Sin(pull.Heading) * HalfWheelbase;
@@ -986,23 +1009,26 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
                     * SlimDX.Matrix.RotationY(pull.Heading - pull.StartHeading)
                     * SlimDX.Matrix.Translation(pull.X, 0f, pull.Z);
         pull.Steered = world * SlimDX.Matrix.Invert(pull.Parent);
+        return curvature;
     }
 
     /// <summary>
-    /// <paramref name="car"/> rolls in nose first from <paramref name="distance"/> metres behind where it stands, and
-    /// brakes to a stop there; done once it has stopped
+    /// <paramref name="car"/> rolls in nose first from <paramref name="distance"/> metres behind where it stands and
+    /// comes to a stop there, easing off the brake as it does; done once it has stopped
     /// </summary>
     protected Task RollIn(Kn5RenderableCar car, float distance)
     {
-        if (_renderer is not { } renderer || _pull != null) return Task.CompletedTask;
+        if (_renderer is not { } renderer || _pull != null || distance <= 0f) return Task.CompletedTask;
 
         var from = _rock is { } rock && ReferenceEquals(rock.Car, car) ? rock.Base : car.LocalMatrix;
-        var speed = PullTopSpeed;
+
+        // distance(t) = -D (1 - t/T)^3: in at RollInSpeed = 3D/T, the braking fading to nothing at the stop
         _pull = new Pull(car, from, renderer.AutoAdjustTarget)
         {
             Distance = -distance,
-            Speed = speed,
-            Braking = speed * speed / (2f * distance)
+            Speed = RollInSpeed,
+            RollInFrom = distance,
+            RollInSeconds = 3f * distance / RollInSpeed
         };
         renderer.AutoAdjustTarget = false;
         car.BrakeLightsEnabled = true;
@@ -1017,7 +1043,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         if (_pull is not { } pull) return;
 
         _pull = null;
-        if (pull.Braking > 0f) pull.Car.BrakeLightsEnabled = false;
+        if (pull.IsRollingIn) pull.Car.BrakeLightsEnabled = false;
         if (_rock is { } rock && ReferenceEquals(rock.Car, pull.Car)) rock.Apply(Audio.BodyPose.Rest, 0f, pull.From);
         else pull.Car.LocalMatrix = pull.From;
         if (_renderer != null) _renderer.AutoAdjustTarget = pull.AutoAdjust;
@@ -1032,22 +1058,33 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         if (_pull is not { } pull) return;
 
         var step = Math.Min(dt, GarageRenderer.MaxTickSeconds);
-        if (pull.Braking > 0f)
+        pull.Time += step;
+        if (pull.IsRollingIn)
         {
             StepRollIn(pull, step);
             return;
         }
 
-        var acceleration = pull.Speed < PullTopSpeed ? PullAcceleration : 0f;
+        // The clutch takes up, then the pull fades towards the pace the car keeps
+        var clutch = Math.Min(1f, pull.Time / ClutchSeconds);
+        clutch = clutch * clutch * (3f - 2f * clutch);
+        var pace = pull.Speed / PullTopSpeed;
+        var acceleration = PullAcceleration * clutch * Math.Max(0f, 1f - pace * pace);
         pull.Speed = Math.Min(PullTopSpeed, pull.Speed + acceleration * step);
-        Steer(pull, pull.Speed * step, step);
-        pull.Distance += pull.Speed * step;
+
+        var distance = pull.Speed * step;
+        var curvature = Steer(pull, distance, step);
+        pull.Distance += distance;
         pull.Pitch.Tick(step, acceleration);
+
+        // Across the car: v^2 over the radius, towards the inside of the bend; the body leans the other way
+        pull.Lean.Tick(step, pull.Speed * pull.Speed * curvature);
 
         if (RunningEngine is { IsRunning: true } engine)
         {
             var idle = engine.Spec?.IdleRpm is > 200 and var rpm ? rpm : 800;
-            engine.Drive(idle * 1.1 + pull.Speed * PullRpmPerMetrePerSecond, acceleration > 0f ? PullThrottle : CruiseThrottle);
+            var throttle = CruiseThrottle + (PullThrottle - CruiseThrottle) * acceleration / PullAcceleration;
+            engine.Drive(idle * 1.1 + pull.Speed * PullRpmPerMetrePerSecond, throttle);
         }
 
         OnPoseChanged();
@@ -1055,21 +1092,32 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
 
     private void StepRollIn(Pull pull, float step)
     {
-        pull.Speed = Math.Max(0f, pull.Speed - pull.Braking * step);
-        pull.Distance = Math.Min(0f, pull.Distance + pull.Speed * step);
-        pull.Pitch.Tick(step, -pull.Braking);
+        var left = Math.Max(0f, 1f - pull.Time / pull.RollInSeconds);
+        pull.Distance = -pull.RollInFrom * left * left * left;
+        pull.Speed = 3f * pull.RollInFrom / pull.RollInSeconds * left * left;
+        var acceleration = -6f * pull.RollInFrom / (pull.RollInSeconds * pull.RollInSeconds) * left;
+        pull.Pitch.Tick(step, acceleration);
 
         if (RunningEngine is { IsRunning: true } engine)
         {
             var idle = engine.Spec?.IdleRpm is > 200 and var rpm ? rpm : 800;
-            engine.Drive(idle + pull.Speed * PullRpmPerMetrePerSecond * 0.6, 0);
+            engine.Drive(left > 0f ? idle + pull.Speed * PullRpmPerMetrePerSecond * 0.6 : null, 0);
         }
 
-        if (pull.Distance >= 0f || pull.Speed <= 0f)
+        if (left <= 0f)
         {
-            // On its mark: the body rocks back off the brakes on the engine's springs from here
-            StopPulling();
-            return;
+            // On its mark: off the brake, and done for whoever waits; the body settles before the car is let go
+            if (!pull.Arrived.Task.IsCompleted)
+            {
+                pull.Car.BrakeLightsEnabled = false;
+                pull.Arrived.TrySetResult();
+            }
+
+            if (pull.Pitch.IsSettled || pull.Time >= pull.RollInSeconds + MostSettling)
+            {
+                StopPulling();
+                return;
+            }
         }
 
         OnPoseChanged();
