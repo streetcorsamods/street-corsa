@@ -37,6 +37,14 @@ public class EngineBuild
     [JsonProperty("rated_power")]
     public double? RatedPower { get; set; }
 
+    /// <summary>
+    /// Built from speed-shop parts: an engine as a hot rodder put it together, never one a car left the factory with.
+    /// It turns up whole (in the paper, at a junkyard), but no car gets it as its factory engine, and no swap takes it
+    /// for a bigger engine of the family: its gain is the parts', which the tune-ups buy one by one.
+    /// </summary>
+    [JsonProperty("aftermarket", DefaultValueHandling = DefaultValueHandling.Ignore)]
+    public bool Aftermarket { get; set; }
+
     /// <summary>The engine block first, then everything that goes on it; parts outside the converted packs have no id</summary>
     [JsonProperty("parts")]
     public List<PartStockReference> Parts { get; set; } = new();

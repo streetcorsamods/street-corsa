@@ -249,6 +249,13 @@ The user wants one carburettor per part. So:
   same part, so a saved oval on a set moves over the manifold's row; the set itself becomes one carburettor in a
   save (the other pads wait for the shop).
 
+- **A mod's row by hand.** The flathead mod's Edelbrock 2x2 and polished 4x2 intakes follow the same layout without
+  the converter: pad 7 is the rear of the pair (the rear of the middle pair of four), the others 300-302, all four
+  `enforce`d, and slot 311 takes `air:2x97`/`air:4x97` for a row cleaner a mod may add. Their pads take `carb:97`,
+  which only the Stromberg 97 fits (the flathead Holley's body and linkage run into the next carburettor), and the
+  Stromberg's horn takes `air:97`: the chrome helmet and the velocity stack, never an oil bath or a 14 in cleaner,
+  which would sit on the next carburettor's cleaner.
+
 Checked: every build's power unchanged except the GTO 389 family (348 → 341 hp: GM's tri-power ran 12.5:1, its 2-bbl
 runs 12.0), one GM 427 build whose dual-quad set never found the tunnel ram's stand-in pad now runs (161 → 542 hp);
 `renew` of all engines of the previous content: nothing comes off; `bench` round trips on 10 builds; harness
@@ -264,7 +271,7 @@ Per part, from its compiled script (run with no game around, see `SlrrScriptEval
 | `class_chain` | Script classes above the part, nearest first (`...Block_Vee_OHV`, `...Block_Vee`, `...Block`, ..., `Part`) |
 | `properties` | Fields after construction, script names and units: `bore`/`stroke` mm, `Vmin` cc, `value` USD, `max_wear` m, `ratio[0..7]` ([7] = reverse), `end_ratio`... |
 | `slot_roles` | From `*_slot_ID` fields: which slot takes what (`crankshaft` → 8) |
-| `required_slots` | Slots that must be filled for the part to work, with the script's own message. Found by running `isDynoable`/`isDriveable` with unknown parts |
+| `required_slots` | Slots that must be filled for the part to work, with the script's own message. Found by running `isDynoable`/`isDriveable` with unknown parts. Left to the script, which may ask a rule only on some cars; a rule a pack writes itself with `"enforce": true` is held by `EngineEvaluator` (the extra pads of a mod's manifold that runs on a stock script, which reads only pad 7) |
 | `stock_parts` | What `addStockParts()` mounts |
 | `derived` | What `updatevariables()` computes on a lone new part; reference values |
 
@@ -280,6 +287,12 @@ six (`kit_188`, `kit_221`, `kit_221_SP`) and V8 packs (one kit per displacement)
 `Kit_318_block`... A kit without a block is an upgrade (a blower with its manifold), no engine; one whose parts a car
 or notes build already lists (with a battery on top, say) adds nothing and is left out, so a rated notes build wins
 over the kit it was written from.
+
+**Speed-shop builds** (`"aftermarket": true`): an engine as a hot rodder put it together (the flathead mod's
+Edelbrock and Stromberg builds, its hot rod swap). It turns up whole in the paper and at junkyards, but
+`StockEngineMatcher.Best` never gives it to a car as its factory engine (it stays in `Rank`, to be picked by hand),
+and neither `EngineFactory.CreateTuned` nor `EngineTuner`'s block swap takes it for a bigger engine of the family:
+its gain is its parts', which tune-ups buy one at a time.
 
 A run with a pack filter adds that pack's script classes to `_scripts`; only a full run replaces the folder and
 writes `engine_builds.json`, `script_constants.json` and `part_aliases.json`.
@@ -426,6 +439,8 @@ all 12 engines of the old pack up to date, nothing came off.
   to the other scripts it would just look like a missing part. One verdict of the scripts is put right: with no
   carburettor or injection the compression limit they derive from the fuel is 0 and they complain about compression
   ("not more than 0.0:1"); the report says that nothing feeds the engine instead.
+- After the scripts' verdict, `required_slots` rules marked `enforce` (see the pack.json table): the first empty one
+  is the problem, in its own words ("It's missing the rear carburettor.").
 - Numbers in `properties`/`derived` come back from JSON as `long` or `double`; read them with `PartDefinition.Number`.
 
 **Fault containment.** A bad part costs that part, never the car's evaluation or the catalog:
@@ -849,6 +864,9 @@ the same rating for an engine at a power: `EngineTuner.TuneUp` fits a performanc
 outgrows the cooling (`CoolEnough`, 1.0), and skips an upgrade it cannot keep above `RunsHotBelow` (0.85).
 
 ## Bench (`tools/EngineBench`)
+
+A Content folder as the `<parts folder>` (and as `renew`'s older folder) loads the parts of every mod in it, as the
+game does: `EngineBench "Street Corsa/Content" bench mercury-255-race` benches a mod's build.
 
 ```
 EngineBench <parts folder> list | rated | all | inputs | show <build id>
