@@ -24,6 +24,9 @@ namespace StreetCorsa.Screens.Garage
 {
     public class GarageScreenViewModel : BaseScreenViewModel
     {
+        /// <summary>The sound of the place</summary>
+        public override string? Ambience => "ambience.garage";
+
         private readonly NavigationService _navigationService;
         private readonly DialogService _dialogService;
         private readonly Models.GameState.GameState _gameState;

@@ -504,6 +504,7 @@ public class CarViewport3D : D3DViewportBase
         ApplyCarState();
         ApplyParts();
         ApplyScenery();
+        ApplyRadio();
         Invalidate();
 
         Logger.Information("Loaded {Car} in {Ms} ms", hasCar ? Path.GetFileName(carDirectory) : "(empty garage)",
@@ -1172,6 +1173,44 @@ public class CarViewport3D : D3DViewportBase
         if (Renderer != null && (Renderer != _sceneryRenderer || _sceneryKey != SceneryKey)) ApplyScenery();
     }
 
+    // The renderer the radio was put into: once for each renderer, whatever cars come and go in it
+    private GarageRenderer? _radioRenderer;
+
+    /// <summary>
+    /// The radio on its bench, where the garage's props put it (<see cref="Services.Garage.GarageProps"/>): read off the UI
+    /// thread, set into the renderer once. A garage with no place for it has none; a model that cannot be read is logged.
+    /// </summary>
+    private async void ApplyRadio()
+    {
+        var renderer = Renderer;
+        if (renderer == null || ReferenceEquals(renderer, _radioRenderer)) return;
+        _radioRenderer = renderer;
+
+        var problems = new List<string>();
+        var radio = Services.Garage.GarageProps.Find(Mods.ModSet.Installed, "radio", ShowroomKn5, problems);
+        foreach (var problem in problems) Logger.Warning("Garage props: {Problem}", problem);
+        if (radio == null) return;
+
+        AcTools.Kn5File.IKn5 kn5;
+        try
+        {
+            kn5 = await Task.Run(() => AcTools.Kn5File.Kn5.FromFile(radio.Model));
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning("The garage's radio could not be read from {Model}: {Error}", radio.Model, ex.Message);
+            return;
+        }
+
+        if (renderer != Renderer) return;
+        renderer.SetFixture(kn5, ToSlim(radio.Placement));
+        Invalidate();
+    }
+
+    private bool HitsRadio(System.Windows.Point position) =>
+        Renderer != null && ActualWidth > 0 && ActualHeight > 0
+        && Renderer.HitsFixture((float)(position.X / ActualWidth), (float)(position.Y / ActualHeight));
+
     /// <summary>What the scenery is to show now: the engine is in it unless the stand's parts view has it as the prop</summary>
     private (InstalledPart? Engine, bool WithEngine, PartsCatalog? Catalog) SceneryKey => (StandEngine, !_partsOnStand && !_standKeptEmpty, PartsCatalog);
 
@@ -1237,7 +1276,7 @@ public class CarViewport3D : D3DViewportBase
         return moving
             .GroupBy(i => TopOf(nodes[i].Source!))
             .OrderBy(g => order.KindOf(g.Key.Definition) is { } kind ? order.StandStripTurnOf(kind) : int.MaxValue)
-            .Select((g, turn) => new PartMove(g.ToList(), order.WayOf(g.Key.Definition), turn * stagger))
+            .Select((g, turn) => new PartMove(g.ToList(), order.WayOf(g.Key.Definition), turn * stagger, order.KindOf(g.Key.Definition)))
             .ToList();
 
         InstalledPart TopOf(InstalledPart part)
@@ -1711,6 +1750,7 @@ public class CarViewport3D : D3DViewportBase
             Renderer.HoveredPart = null;
             Renderer.SceneryHovered = false;
             Renderer.CarHovered = false;
+            Renderer.FixtureHovered = false;
         }
 
         Cursor = null;
@@ -1733,6 +1773,20 @@ public class CarViewport3D : D3DViewportBase
         _lastHoverPick = now;
 
         var hit = Renderer.HasProp && PartsVisible ? PickAt(position) : null;
+
+        // The radio on its bench: its panel is a click away
+        var onRadio = hit == null && !IsOnStand && HitsRadio(position);
+        Renderer.FixtureHovered = onRadio;
+        if (onRadio)
+        {
+            Renderer.SceneryHovered = false;
+            Renderer.CarHovered = false;
+            Renderer.HoveredPart = null;
+            Cursor = System.Windows.Input.Cursors.Hand;
+            InvalidateIfDirty();
+            ShowLabel("Radio", position);
+            return;
+        }
 
         // The stand beside the car, while it is not the one being worked on, and the car while the stand is: a way over
         var onStand = hit == null && !IsOnStand && HitsStand(position);
@@ -1773,6 +1827,15 @@ public class CarViewport3D : D3DViewportBase
         if (Renderer == null) return;
 
         var partHit = Renderer.HasProp && PartsVisible ? PickAt(position) : null;
+        if (partHit == null && !IsOnStand && HitsRadio(position))
+        {
+            Renderer.FixtureHovered = false;
+            Cursor = null;
+            ShowPartLabel(null, default);
+            Audio.Radio.RadioPanelViewModel.Shared.IsOpen = true;
+            return;
+        }
+
         if (partHit == null && !IsOnStand && HitsStand(position))
         {
             Renderer.SceneryHovered = false;

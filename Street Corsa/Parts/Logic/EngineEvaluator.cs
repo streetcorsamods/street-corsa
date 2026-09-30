@@ -107,6 +107,10 @@ public static class EngineEvaluator
             ? $"the script of {runtime.MissingScripts[0].Definition.Id} is missing ({runtime.MissingScripts.Count} in all): the parts need converting again."
             : runtime.Call(tree.Root, "isDynoable").AsText;
 
+        // What the scripts do not ask about: the rules a pack holds its part to itself (the extra carburettor pads of
+        // a mod's manifold that runs on a stock script, which never looks at them)
+        problem ??= EmptyRequiredSlot(tree.Root);
+
         // A script that threw or ran out of steps left figures half made: whatever they come to is not the engine
         var faults = runtime.Faults.ToList();
         if (runtime.BudgetExhausted)
@@ -153,6 +157,21 @@ public static class EngineEvaluator
             ScriptFaults = faults,
             Unplaced = tree.Unplaced
         };
+    }
+
+    /// <summary>The first empty slot that a part's pack enforces, in the rule's words; null when there is none</summary>
+    private static string? EmptyRequiredSlot(InstalledPart root)
+    {
+        foreach (var part in root.SelfAndDescendants())
+        {
+            foreach (var rule in part.Definition.RequiredSlots.Where(r => r.Enforce))
+            {
+                if (part.Definition.Slots.Any(s => s.Id == rule.Slot) && !part.Children.ContainsKey(rule.Slot))
+                    return string.IsNullOrWhiteSpace(rule.Message) ? $"{part.Definition.DisplayName ?? part.Definition.Name} is missing a part." : rule.Message;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>

@@ -19,6 +19,7 @@
              xmlns:station="clr-namespace:StreetCorsa.Screens.Station"
              xmlns:settings="clr-namespace:StreetCorsa.Screens.Settings"
              xmlns:carCatalogEditor="clr-namespace:StreetCorsa.Screens.CarCatalogEditor"
+             xmlns:soundBrowser="clr-namespace:StreetCorsa.Screens.SoundBrowser"
              xmlns:raceLoading="clr-namespace:StreetCorsa.Screens.RaceLoading"
              xmlns:career="clr-namespace:StreetCorsa.Screens.Career"
              xmlns:confirmation="clr-namespace:StreetCorsa.Dialogs.Confirmation"
@@ -37,6 +38,7 @@
                 <ResourceDictionary Source="Styles/Brushes.xaml"/>
                 <ResourceDictionary Source="Styles/Typography.xaml"/>
                 <ResourceDictionary Source="Styles/Buttons.xaml"/>
+                <ResourceDictionary Source="Styles/Radio.xaml"/>
             </ResourceDictionary.MergedDictionaries>
 
             <!-- Converters -->
@@ -115,6 +117,9 @@
                 <settings:SettingsScreenView/>
             </DataTemplate>
 
+            <DataTemplate DataType="{x:Type soundBrowser:SoundBrowserScreenViewModel}">
+                <soundBrowser:SoundBrowserScreenView/>
+            </DataTemplate>
             <DataTemplate DataType="{x:Type carCatalogEditor:CarCatalogEditorScreenViewModel}">
                 <carCatalogEditor:CarCatalogEditorScreenView/>
             </DataTemplate>

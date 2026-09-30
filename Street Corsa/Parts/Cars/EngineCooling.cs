@@ -94,8 +94,10 @@ public sealed class EngineCooling
         var cooling = new EngineCooling(catalog);
         foreach (var block in builds.Runnable.Where(b => b.PowerHp > 0 && double.IsFinite(b.PowerHp)).GroupBy(b => b.BlockId, StringComparer.OrdinalIgnoreCase))
         {
-            // The factory's builds, if any, else the kits and the notes: the least powerful is what the block was cooled for
+            // The factory's builds, if any, else the kits and the notes (a speed-shop build last of all): the least
+            // powerful is what the block was cooled for
             var factory = block.Where(b => b.Build.Origin == EngineBuild.OriginCar).ToList();
+            if (factory.Count == 0) factory = block.Where(b => !b.Build.Aftermarket).ToList();
             cooling._blockFactoryHp[block.Key] = (factory.Count > 0 ? factory : block.ToList()).Min(b => b.PowerHp);
         }
 

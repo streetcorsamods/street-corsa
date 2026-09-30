@@ -1,0 +1,8 @@
+{
+  "name": "Radio",
+  "model": "radio.kn5",
+  "credit": "\"1950 Bush DAC10 Vintage Radio\" by Fishboe, CC BY 4.0",
+  "places": {
+    "garage": { "position": [2.62, 1.29, -8.6], "heading": 67 }
+  }
+}

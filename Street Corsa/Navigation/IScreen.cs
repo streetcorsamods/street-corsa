@@ -11,5 +11,11 @@ namespace StreetCorsa.Navigation
         /// only undoes what <see cref="Exit"/> let go of.
         /// </summary>
         void Resume();
+
+        /// <summary>The air of the place, a looping sound cue (<see cref="Audio.AudioHub.SetAmbience"/>); null for a quiet screen</summary>
+        string? Ambience => null;
+
+        /// <summary>The player sits in their car here: the radio is the car's, an AM set (<see cref="Audio.Radio.RadioPlayer.SetInCar"/>)</summary>
+        bool InCar => false;
     }
 }

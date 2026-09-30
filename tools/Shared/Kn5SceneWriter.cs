@@ -61,11 +61,11 @@ internal static class Kn5SceneWriter
     private static Kn5Material.ShaderProperty Property(string name, float value) => new() { Name = name, ValueA = value };
 
     /// <summary>
-    /// A mesh of the scene's own, drawn and shadowless, its bounding sphere round its box; flip turns every
-    /// triangle's winding round
+    /// A mesh of the scene's own, drawn and shadowless unless asked (a prop set into a scene casts one), its bounding
+    /// sphere round its box; flip turns every triangle's winding round
     /// </summary>
     public static void AddMesh(IKn5 kn5, string name, IReadOnlyList<Kn5Node.Vertex> vertices, IEnumerable<int> indices, uint material,
-        bool flip = false)
+        bool flip = false, bool castShadows = false)
     {
         if (vertices.Count > MaxVerticesPerMesh) throw new InvalidOperationException($"{name}: too many vertices");
 
@@ -92,7 +92,7 @@ internal static class Kn5SceneWriter
             Children = [],
             // The scenes are lit the way their pictures were taken (a photo's shadows, a key light through the roof):
             // nothing of them stands in the light's way
-            CastShadows = false,
+            CastShadows = castShadows,
             IsVisible = true,
             IsRenderable = true,
             Vertices = vertices.ToArray(),

@@ -54,7 +54,7 @@ public static class EngineFactory
         if (random.NextDouble() < EngineSwapChance * tuneLevel)
         {
             var bigger = index.Runnable
-                .Where(b => b.Family.Length > 0 && b.Family == stock.Family && b.Build.Id != stock.Build.Id
+                .Where(b => b.Family.Length > 0 && b.Family == stock.Family && b.Build.Id != stock.Build.Id && !b.Build.Aftermarket
                             && b.PowerHp >= stock.PowerHp * SwapMinPower && b.PowerHp <= stock.PowerHp * SwapMaxPower)
                 .ToList();
             if (bigger.Count > 0)

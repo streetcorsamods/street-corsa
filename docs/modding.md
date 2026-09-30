@@ -16,7 +16,7 @@ Content\
   streetcorsa\          the base game (loaded first)
   mymod\
     mod.json
-    parts\  sounds\  dealers\  partshops\  racers\  events\  milestones\  victories\  streets\  stations\  warehouses\  showcase\  garages\  text\
+    parts\  sounds\  sfx\  props\  dealers\  partshops\  racers\  events\  milestones\  victories\  streets\  stations\  warehouses\  showcase\  garages\  text\
 ```
 
 `mod.json`:
@@ -220,6 +220,26 @@ One folder per engine sound (a `.bank`, `GUIDs.txt`, an optional `sound.json`), 
 README). The sound's id is its folder's name, namespaced. `sounds.json` pins blocks to sounds:
 `{ "pins": { "engines/mine/block": "my_v8" } }` (the block and the sound are references: the mod's own first); its
 `cars` facts are about installed AC cars, by car id.
+
+### sfx
+
+The game's sound effects, by cue name: `*.json` files of `{ "cues": { "<name>": { ... } } }`, each cue a `bus`
+(`interface`, `effects`, `ambience`, `radio`), its `files` (relative to the json; one is picked at random, never the
+same twice in a row), and optionally `volume` (0..2), `pitch` (how far each play's pitch may wander, 0.05 = 5%),
+`loop` (a place's air) and `cooldown` (seconds before it plays again). A mod's cue of a name the base game has replaces
+it; the base game's cues are in `streetcorsa\sfx\sfx.json` (`ui.click`, `part.ratchet`, `ambience.garage`, ...).
+`.ogg`, `.wav`, `.mp3` and `.flac` play. A button can name a cue of its own (`audio:Sfx.Click="ui.lights"`).
+
+### props
+
+Things set into a garage, one folder each: a model (KN5) and a `prop.json` naming it and, by garage (the showroom's
+folder name), where it stands and which way it faces: `{ "name": "Radio", "model": "radio.kn5", "places": { "garage":
+{ "position": [2.62, 1.29, -8.6], "heading": 67 } }, "credit": "..." }` (metres, the car at the origin; degrees about the vertical). A
+mod's prop of an id the base game has replaces it, so a mod can swap the radio for another set or put it elsewhere in
+its own garage; one without a place in a garage takes it out of that garage. `credit` names the model's maker where
+the game shows its credits (Settings), as a CC BY licence asks. The published `bushradio` mod has `radio`, the set on the
+welder: clicking it opens the radio. `tools\Props` makes a prop's KN5: `prepare_prop.py` takes any model with PBR
+materials (a Sketchfab .glb, a .blend) through Blender, `PropBuilder` writes the KN5.
 
 ### dealers
 

@@ -33,11 +33,13 @@ public static class AttendantCheck
 
     public const int MostHints = 3;
 
+    private const string AirFiltersGroup = "Air filters";
+
     // Engine parts that show under the hood, by their shelf group
     private static readonly (string Group, string Key)[] UnderTheHood =
     [
         ("Exhaust", "station.hint.exhaust"),
-        ("Air filters", "station.hint.air_filter"),
+        (AirFiltersGroup, "station.hint.air_filter"),
         ("Carburettors and injection", "station.hint.carburettor"),
         ("Flywheels and clutches", "station.hint.clutch")
     ];
@@ -56,8 +58,9 @@ public static class AttendantCheck
             foreach (var (kind, key) in new[] { (EngineCooling.Kind.Radiator, "station.hint.radiator"), (EngineCooling.Kind.WaterPump, "station.hint.water_pump"), (EngineCooling.Kind.Fan, "station.hint.fan") })
                 Worn(hints, key, parts.Where(p => EngineCooling.KindOf(p.Definition!) == kind).Select(p => p.Part));
 
+            // An open velocity stack is among the air filters but has no element to go black (it loses nothing dusted)
             foreach (var (group, key) in UnderTheHood)
-                Worn(hints, key, parts.Where(p => PartKinds.GroupOf(p.Definition!) == group).Select(p => p.Part));
+                Worn(hints, key, parts.Where(p => PartKinds.GroupOf(p.Definition!) == group && !(group == AirFiltersGroup && NeverClogs(p.Definition!))).Select(p => p.Part));
 
             // Heard as it rolled in: a bottom end on its way out knocks, a torn-up gearbox crunches
             var life = CarCondition.EngineLife(car, groupOf) / CarCondition.NewEngineLife;
@@ -85,6 +88,9 @@ public static class AttendantCheck
 
         return hints.OrderBy(h => h.Condition).Take(MostHints).ToList();
     }
+
+    /// <summary>An air part whose script keeps all its flow however dusty it gets (<c>dusted_efficiency</c> 1): nothing to clean or replace</summary>
+    private static bool NeverClogs(PartDefinition part) => part.Number("dusted_efficiency") >= 1;
 
     /// <summary>The most worn of the parts, when it is worn enough to mention</summary>
     private static void Worn(List<AttendantHint> hints, string key, IEnumerable<PartInstance> parts, string? where = null)

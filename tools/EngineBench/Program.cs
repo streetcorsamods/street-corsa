@@ -33,6 +33,7 @@ public static class Program
         if (args.Length < 2)
         {
             Console.WriteLine("Usage: EngineBench <parts folder> list | rated | all | inputs | show <build id>");
+            Console.WriteLine("       A Content folder as the <parts folder> loads the parts of every mod in it, as the game does");
             Console.WriteLine("       EngineBench <parts folder> export <build id> <car data folder> <output folder>");
             Console.WriteLine("       EngineBench <parts folder> cars <AC cars folder>       factory engine suggested for every car");
             Console.WriteLine("       EngineBench <parts folder> tune <build id> [count]     engines a used car of that build may turn up with");
@@ -50,7 +51,7 @@ public static class Program
         // The one command that needs no parts: the catalog is not loaded for it
         if (args[1] == "layout" && args.Length > 2) return Layout(args[2]);
 
-        var catalog = PartsCatalog.Load(args[0]);
+        var catalog = LoadCatalog(args[0]);
         Console.WriteLine($"{catalog.Parts.Count} parts, {catalog.EngineBuilds.Count} engine builds");
 
         switch (args[1])
@@ -294,6 +295,18 @@ public static class Program
         return 0;
     }
 
+    /// <summary>
+    /// The parts of one folder, or of every mod when the folder is a Content folder (no engine builds of its own, a
+    /// base game among its folders): mod builds and parts are benched as the game loads them
+    /// </summary>
+    private static PartsCatalog LoadCatalog(string folder)
+    {
+        if (!File.Exists(Path.Combine(folder, EngineBuild.FileName)) && Directory.Exists(Path.Combine(folder, Mods.ModIds.BaseId)))
+            return PartsCatalog.Load(Mods.ModSet.Load(folder).Folders(Mods.ContentTypes.Parts).ToList());
+
+        return PartsCatalog.Load(folder);
+    }
+
     private static int Tune(PartsCatalog catalog, string id, int count)
     {
         var index = EngineBuildIndex.Create(catalog);
@@ -365,7 +378,7 @@ public static class Program
     /// </summary>
     private static int Renew(PartsCatalog catalog, string oldPartsFolder)
     {
-        var old = PartsCatalog.Load(oldPartsFolder);
+        var old = LoadCatalog(oldPartsFolder);
         var failures = 0;
         var renewed = 0;
 

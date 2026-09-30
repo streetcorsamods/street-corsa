@@ -94,6 +94,8 @@ namespace StreetCorsa.Services.Settings
                     var settings = JsonConvert.DeserializeObject<GameSettings>(json);
                     if (settings != null)
                     {
+                        // "Audio": null by hand is the defaults, not a game that cannot say how loud anything is
+                        settings.Audio ??= new AudioSettings();
                         _logger.Information("Settings loaded from {Path}", _settingsPath);
                         _currentSettings = settings;
                         return settings;

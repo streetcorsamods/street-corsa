@@ -64,7 +64,14 @@ namespace StreetCorsa.Navigation
         public IScreen? CurrentScreen
         {
             get => _currentScreen;
-            private set => SetProperty(ref _currentScreen, value);
+            private set
+            {
+                if (!SetProperty(ref _currentScreen, value)) return;
+
+                // The place's air follows the screen on show, a screen gone back to after a failed navigation too
+                Audio.AudioHub.Shared.SetAmbience(value?.Ambience);
+                Audio.Radio.RadioPlayer.Shared.SetInCar(value?.InCar == true);
+            }
         }
 
         /// <param name="setCurrentGame">Makes a loaded or new game the one the app saves on exit and races with</param>
@@ -389,6 +396,10 @@ namespace StreetCorsa.Navigation
                 _gameStateRepository,
                 _catalogRepository,
                 _timeService));
+
+        /// <summary>Every sound file and engine sound, to be heard one by one; back goes to the settings</summary>
+        public bool NavigateToSoundBrowser() => SafeNavigate("sound library", () =>
+            new Screens.SoundBrowser.SoundBrowserScreenViewModel(this, _carPartsService));
 
         public bool NavigateToCarCatalogEditor() => SafeNavigate("car catalog editor", () =>
             new Screens.CarCatalogEditor.CarCatalogEditorScreenViewModel(

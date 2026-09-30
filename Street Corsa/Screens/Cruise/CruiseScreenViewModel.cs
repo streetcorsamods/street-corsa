@@ -35,6 +35,12 @@ namespace StreetCorsa.Screens.Cruise
     /// </summary>
     public class CruiseScreenViewModel : BaseScreenViewModel
     {
+        /// <summary>The sound of the place</summary>
+        public override string? Ambience => "ambience.street";
+
+        /// <summary>At the wheel: the radio is the car's</summary>
+        public override bool InCar => true;
+
         // Real seconds a tick of the clock takes, and the game minutes it moves on
         private static readonly TimeSpan TickInterval = TimeSpan.FromSeconds(1.5);
         private const int MinutesPerTick = 5;

@@ -27,7 +27,7 @@ namespace StreetCorsa.Dialogs
                 if (_currentDialog != value)
                 {
                     _currentDialog = value;
-                    ModalState.IsOpen = value != null;
+                    ModalState.DialogOpen = value != null;
                     OnPropertyChanged();
                     OnPropertyChanged(nameof(IsDialogOpen));
                 }

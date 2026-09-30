@@ -75,7 +75,12 @@ namespace StreetCorsa
             {
                 var loaded = value != null && !ReferenceEquals(value, _currentGameState);
                 _currentGameState = value;
-                if (loaded) _ = ProcessOrphanedResultsAsync();
+                if (!loaded) return;
+
+                _ = ProcessOrphanedResultsAsync();
+
+                // The radio comes back as it was left, in the game rather than at the main menu
+                Audio.Radio.RadioPlayer.Shared.GameLoaded();
             }
         }
 
@@ -285,6 +290,11 @@ namespace StreetCorsa
             // A game that outlived its launch (or the app) has closed: its race can be settled now
             Launcher.AssettoCorsaExited += OnAssettoCorsaExited;
 
+            // A race has the sound device: the game's own sound fades out for it and comes back after; the radio goes off,
+            // and the player's keys put it on over AC (on the UI thread, where the radio and its key hook live)
+            Launcher.ExecutionStarted += (_, _) => OnRacing(true);
+            Launcher.ExecutionEnded += (_, _) => OnRacing(false);
+
             // NavigationService (must be created after all its dependencies)
             NavigationService = new NavigationService(
                 DialogService, CatalogRepository, ProfileRepository, Launcher, ContentService, OpponentChallengeService,
@@ -293,6 +303,12 @@ namespace StreetCorsa
                 GameTimeService, CarPartsService, NewspaperPartsService, PartShopService, RaceCarDataService, RaceEventService, CarFilterService,
                 EventOpponentService, VictoryConditionService, MilestoneService,
                 game => CurrentGameState = game);
+        }
+
+        private void OnRacing(bool racing)
+        {
+            Audio.AudioHub.Shared.SetRacing(racing);
+            Dispatcher.BeginInvoke(() => Audio.Radio.RadioPlayer.Shared.SetRacing(racing));
         }
 
         private static void LogMods()
@@ -414,6 +430,16 @@ namespace StreetCorsa
                 Shutdown();
                 return;
             }
+
+            // The sound: the pump here, FMOD on a worker. Muted behind other windows if the player wants it
+            Audio.AudioHub.Shared.Start(GameSettingsService.Current.Audio);
+            Audio.Sfx.RegisterClicks();
+
+            // The radio: its lists and folders read, the music listed on a worker, on again if the player asked
+            Audio.Radio.RadioPanelViewModel.Settings = GameSettingsService;
+            Audio.Radio.RadioPlayer.Shared.Start();
+            Activated += (_, _) => Audio.AudioHub.Shared.SetFocused(true);
+            Deactivated += (_, _) => Audio.AudioHub.Shared.SetFocused(false);
 
             // Orphaned race results are processed once a game is loaded (see CurrentGameState): a result can only
             // be applied to the save whose race it is
@@ -883,9 +909,12 @@ namespace StreetCorsa
                 logger?.Error(ex, "Could not put Assetto Corsa back on exit");
             }
 
-            // FMOD's threads call back into this assembly: they stop before the runtime goes
+            // Where the radio was, for the next start, and the settings (a volume turned a moment ago is still waiting
+            // for its save); then FMOD's threads, which call back into this assembly, stop before the runtime goes
             try
             {
+                GameSettingsService?.Save();
+                Audio.Radio.RadioPlayer.Shared.Save();
                 Audio.FmodLifetime.Shutdown();
             }
             catch (Exception ex)

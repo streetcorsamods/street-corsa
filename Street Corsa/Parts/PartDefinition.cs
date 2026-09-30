@@ -363,6 +363,14 @@ public class PartSlotRule
     /// <summary>The script's words when the slot is empty, e.g. "the engine is missing the alternator."</summary>
     [JsonProperty("message")]
     public string Message { get; set; } = string.Empty;
+
+    /// <summary>
+    /// True when the game holds the part to the rule itself (<c>EngineEvaluator</c>): a rule a pack adds of its own,
+    /// such as the extra pads of a manifold whose stock script reads only one. A rule read out of a script is left to
+    /// that script, which may ask it only on some cars.
+    /// </summary>
+    [JsonProperty("enforce", DefaultValueHandling = DefaultValueHandling.Ignore)]
+    public bool Enforce { get; set; }
 }
 
 public class PartSlotReference

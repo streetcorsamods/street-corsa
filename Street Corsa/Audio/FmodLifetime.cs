@@ -1,8 +1,8 @@
 namespace StreetCorsa.Audio;
 
 /// <summary>
-/// The end of FMOD in this process. Two Studio systems may be up: the one the garage plays through, and the silent
-/// one engine banks are measured on. Left running, their mixer and Studio threads (and the DSP callbacks into this
+/// The end of FMOD in this process. Two Studio systems may be up: the one the game plays through (<see cref="AudioHub"/>),
+/// and the silent one engine banks are measured on. Left running, their mixer and Studio threads (and the DSP callbacks into this
 /// assembly) go on while the runtime tears down, and exit can crash or hang. Called on the way out, the normal one
 /// and the fatal one.
 /// </summary>
@@ -36,9 +36,10 @@ public static class FmodLifetime
             // Only a flag
         }
 
+        // The engines let go of their banks first; the system goes only if they did, as a load still inside it keeps it
         try
         {
-            EngineAudio.ShutdownShared(deadline);
+            if (EngineAudio.ShutdownShared(deadline)) AudioHub.ShutdownShared(deadline);
         }
         catch
         {

@@ -29,8 +29,9 @@ public static class StockEngineMatcher
             .ToList();
     }
 
+    /// <summary>The best factory engine: a build of speed-shop parts is never one (it stays in <see cref="Rank"/>, to be picked by hand)</summary>
     public static RatedBuild? Best(EngineBuildIndex index, string brand, string name, double? bhp) =>
-        Rank(index, brand, name, bhp).FirstOrDefault()?.Build;
+        Rank(index, brand, name, bhp).FirstOrDefault(m => !m.Build.Build.Aftermarket)?.Build;
 
     private static double Score(RatedBuild build, string family, IReadOnlySet<string> tokens, double? bhp)
     {

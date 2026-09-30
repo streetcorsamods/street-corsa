@@ -16,5 +16,8 @@ namespace StreetCorsa.Services.Settings
         /// Read once, when the settings load at start-up: a change takes effect at the next start.
         /// </summary>
         public string? AssettoCorsaPath { get; set; }
+
+        /// <summary>The volumes; they take effect as the sliders move</summary>
+        public AudioSettings Audio { get; set; } = new();
     }
 }

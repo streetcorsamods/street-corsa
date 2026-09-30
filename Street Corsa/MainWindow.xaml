@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:StreetCorsa"
+        xmlns:radio="clr-namespace:StreetCorsa.Audio.Radio"
         mc:Ignorable="d"
         Title="Street Corsa"
         WindowStyle="None"
@@ -16,8 +17,33 @@
              otherwise still press the button behind it or rev the engine. Window-level key handlers check
              Dialogs.ModalState themselves. -->
         <ContentControl x:Name="ScreenHost"
-                        IsEnabled="{Binding DialogService.IsDialogOpen, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource InverseBooleanConverter}}"
                         Content="{Binding NavigationService.CurrentScreen, RelativeSource={RelativeSource AncestorType=Window}}"/>
+
+        <!-- The radio's panel, over any screen (F2, the garage's radio). The screen behind is disabled as for a dialog. -->
+        <Grid x:Name="RadioHost"
+              Background="{StaticResource OverlayBrush}"
+              Visibility="Collapsed">
+            <radio:RadioPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="30"/>
+        </Grid>
+
+        <!-- What the radio has just put on, for a few seconds -->
+        <Border x:Name="RadioToast"
+                IsHitTestVisible="False"
+                Opacity="0"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Bottom"
+                Margin="0,0,0,70"
+                Padding="18,8"
+                CornerRadius="8"
+                Background="{StaticResource RadioWoodBrush}"
+                BorderBrush="{StaticResource RadioBrassBrush}"
+                BorderThickness="1"
+                Effect="{StaticResource DropShadowEffect}">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="♪" Foreground="{StaticResource RadioAmberLightBrush}" FontSize="{StaticResource FontSizeHeading}" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                <TextBlock x:Name="RadioToastText" Foreground="{StaticResource RadioAmberLightBrush}" FontFamily="Georgia" FontSize="{StaticResource FontSizeBodyLarge}" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
 
         <!-- Dialog Host Overlay -->
         <Grid x:Name="DialogHost"

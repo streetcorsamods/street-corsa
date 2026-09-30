@@ -31,8 +31,9 @@ public readonly record struct PartHit(PartLayer Layer, int Node);
 /// <summary>
 /// Part nodes that move as one, off the car or onto it, the way the part they are on comes off
 /// (<see cref="WorkOrder.WayOf"/>), after <paramref name="Delay"/> seconds. An empty way is away from what stays.
+/// <paramref name="Kind"/> is the part's work-order kind, for the tool it is heard to take (<see cref="Audio.Sfx.ToolFor"/>).
 /// </summary>
-public sealed record PartMove(IReadOnlyList<int> Nodes, IReadOnlyList<PartWay> Way, float Delay = 0f);
+public sealed record PartMove(IReadOnlyList<int> Nodes, IReadOnlyList<PartWay> Way, float Delay = 0f, string? Kind = null);
 
 /// <summary>
 /// Dark renderer with one extra model (the car's parts) in the scene, and an x-ray mode for the car.
@@ -82,6 +83,11 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     private Kn5RenderableFile? _prop;
     private Kn5RenderableFile? _scenery;
     private List<IKn5RenderableObject> _sceneryMeshes = new();
+
+    // A prop set into the garage for good (the radio on the welder): drawn with the rest, and picked on its own
+    private Kn5RenderableFile? _fixture;
+    private List<IKn5RenderableObject> _fixtureMeshes = new();
+    private bool _fixtureHovered;
     private bool _sceneryHovered;
     private bool _carHovered;
     private bool _standActive;
@@ -319,6 +325,9 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     /// </summary>
     private bool IsHoldingTurn => _motions.Any(m => m is PartMotion { IsArriving: false });
 
+    // The crank has been heard for the leg the engine is turning on
+    private bool _turnHeard;
+
     private void TickEngineTurn(float dt)
     {
         // Asked for somewhere else: a new leg from where it is, eased at both ends
@@ -329,9 +338,17 @@ public class GarageRenderer : DarkKn5ObjectRenderer
             _turnTo = target;
             _turnElapsed = 0f;
             _turnSeconds = TurnSeconds(_turnFrom, _turnTo);
+            _turnHeard = false;
         }
 
         if (_turnAngle == _turnTo || IsHoldingTurn) return;
+
+        // The stand's crank, as the engine starts to turn (not while it waits for parts to come off)
+        if (!_turnHeard)
+        {
+            _turnHeard = true;
+            Audio.Sfx.Play(Audio.Sfx.EngineTurns);
+        }
 
         _turnElapsed += Math.Min(dt, MaxTickSeconds);
         _turnAngle = _turnElapsed >= _turnSeconds ? _turnTo : _turnFrom + (_turnTo - _turnFrom) * Ease(_turnElapsed / _turnSeconds);
@@ -532,10 +549,17 @@ public class GarageRenderer : DarkKn5ObjectRenderer
                     _ => outward
                 }).ToArray();
 
+            // One sound a part, however many nodes it is: the tool as it comes off; the clank as it goes into its
+            // place, and the tool turning it tight
+            var tool = Audio.Sfx.ToolFor(move.Kind);
+            var first = true;
             foreach (var node in nodes)
             {
                 _motions.RemoveAll(motion => ReferenceEquals(motion.Node, node));
                 var motion = new PartMotion(node, node.List.LocalMatrix, legs, arriving, move.Delay);
+                if (first && !arriving) motion.StartCues = [(tool, 0f)];
+                if (first && arriving) motion.EndCues = [(Audio.Sfx.Clank, 0f), (tool, 0.18f)];
+                first = false;
                 _motions.Add(motion);
                 motion.Apply();
             }
@@ -582,10 +606,18 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         var height = Math.Max(Math.Max(from.M42, to.M42), clearHeight + origin.Y - box.Minimum.Y);
         var hoist = new Hoist(home, from, to, height, (box.Minimum + box.Maximum) / 2f - origin);
 
+        // The chain as the hoist takes the weight, and the load landing where it goes
+        var first = true;
         foreach (var node in carried)
         {
             _motions.RemoveAll(m => ReferenceEquals(m.Node, node));
             var motion = new CarryMotion(this, node, node.List.LocalMatrix, hoist, delay);
+            if (first)
+            {
+                motion.StartCues = [(Audio.Sfx.Hoist, 0f)];
+                motion.EndCues = [(Audio.Sfx.EngineLands, 0f)];
+                first = false;
+            }
             _motions.Add(motion);
             motion.Apply();
         }
@@ -641,7 +673,11 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         if (_motions.Count == 0) return;
 
         var step = Math.Min(dt, MaxTickSeconds);
-        foreach (var motion in _motions) motion.Advance(step);
+        foreach (var motion in _motions)
+        {
+            motion.Advance(step);
+            motion.PlayCues();
+        }
 
         // A load on the hoist casts its shadow all the way; the shadows change otherwise only as a part gets somewhere,
         // or starts or stops fading (UpdateFading)
@@ -708,6 +744,30 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         {
             _elapsed += dt;
             Apply();
+        }
+
+        /// <summary>Sounds when it sets off, and when it gets there, each after its delay in seconds</summary>
+        public (string Cue, float Delay)[] StartCues { get; set; } = [];
+
+        public (string Cue, float Delay)[] EndCues { get; set; } = [];
+
+        private bool _startHeard;
+        private bool _endHeard;
+
+        /// <summary>The sounds that are due, each once: after every advance</summary>
+        public void PlayCues()
+        {
+            if (HasStarted && !_startHeard)
+            {
+                _startHeard = true;
+                foreach (var (cue, delay) in StartCues) Audio.Sfx.Play(cue, delay);
+            }
+
+            if (IsDone && !_endHeard)
+            {
+                _endHeard = true;
+                foreach (var (cue, delay) in EndCues) Audio.Sfx.Play(cue, delay);
+            }
         }
 
         public abstract void Apply();
@@ -956,6 +1016,45 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         IsDirty = true;
     }
 
+    /// <summary>
+    /// A prop that stays in the garage whatever the car and the stand do (the radio), put where
+    /// <paramref name="placement"/> says; null takes it away. Must be called on the thread that draws.
+    /// </summary>
+    public void SetFixture(IKn5? kn5, Matrix placement)
+    {
+        _fixture?.Dispose();
+        _fixture = kn5 == null ? null : new Kn5RenderableFile(kn5, placement, asyncTexturesLoading: false);
+        _fixture?.UpdateBoundingBox();
+        _fixtureMeshes = _fixture?.GetAllChildren().OfType<IKn5RenderableObject>().ToList() ?? new();
+        _fixtureHovered = false;
+        SetShadowsDirty();
+        IsDirty = true;
+    }
+
+    /// <summary>True when a point of the picture is on the fixture, and nothing solid of the car or the stand is in front of it</summary>
+    public bool HitsFixture(float x, float y)
+    {
+        if (_fixture == null || Camera == null) return false;
+
+        var ray = Camera.GetPickingRay(new Vector2(x * ActualWidth, y * ActualHeight), new Vector2(ActualWidth, ActualHeight));
+        if (Nearest(ray, _fixtureMeshes) is not { } fixture) return false;
+        if (Nearest(ray, _sceneryMeshes) is { } scenery && scenery < fixture) return false;
+
+        return IsGhosting || CarNode == null || CarDistance(ray) is not { } car || car > fixture;
+    }
+
+    /// <summary>The pointer is on the fixture: it glows, a click on it is the viewport's to answer</summary>
+    public bool FixtureHovered
+    {
+        get => _fixtureHovered;
+        set
+        {
+            if (_fixtureHovered == value) return;
+            _fixtureHovered = value;
+            IsDirty = true;
+        }
+    }
+
     /// <summary>The pointer is on the scenery (the engine stand): it glows, a click on it goes to the stand</summary>
     public bool SceneryHovered
     {
@@ -991,7 +1090,7 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         var ray = Camera.GetPickingRay(new Vector2(x * ActualWidth, y * ActualHeight), new Vector2(ActualWidth, ActualHeight));
         if (CarDistance(ray) is not { } car) return false;
 
-        var cover = new[] { Nearest(ray, _sceneryMeshes), _standActive ? Nearest(_propNodes, ray) : null }.Min();
+        var cover = new[] { Nearest(ray, _sceneryMeshes), Nearest(ray, _fixtureMeshes), _standActive ? Nearest(_propNodes, ray) : null }.Min();
         return cover == null || cover > car;
     }
 
@@ -1135,6 +1234,7 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     protected override void DrawCars(DeviceContextHolder holder, ICamera camera, SpecialRenderMode mode)
     {
         _scenery?.Draw(holder, camera, mode);
+        _fixture?.Draw(holder, camera, mode);
 
         // Parts on their way are left out of every pass, shadows included, and drawn over the scene see-through
         if (!IsGhosting)
@@ -1212,13 +1312,17 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         base.DrawPrepare();
         Array.Clear(_glowDrawn);
         var sceneryGlow = _sceneryHovered && _scenery != null;
-        if (!IsWorking && !sceneryGlow) return;
+        var fixtureGlow = _fixtureHovered && _fixture != null;
+        if (!IsWorking && !sceneryGlow && !fixtureGlow) return;
 
         var holder = DeviceContextHolder;
         _outlineDepth ??= TargetResourceDepthTexture.Create();
         _outlineDepth.Resize(holder, Width, Height, null);
 
         if (sceneryGlow) DrawGlow(3, HoverGlow, 1f, () => _scenery!.Draw(holder, ActualCamera, SpecialRenderMode.Outline));
+
+        // The fixture shares the stand's glow: the pointer is only ever on one of them
+        else if (fixtureGlow) DrawGlow(3, HoverGlow, 1f, () => _fixture!.Draw(holder, ActualCamera, SpecialRenderMode.Outline));
         if (!IsWorking) return;
 
         // The solid car beside the stand, pointed at: the way back to it
@@ -1334,6 +1438,7 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         // as the scene does, and blending changes nothing there
         context.OutputMerger.DepthStencilState = holder.States.LessEqualDepthState;
         _scenery?.Draw(holder, camera, SpecialRenderMode.Simple);
+        _fixture?.Draw(holder, camera, SpecialRenderMode.Simple);
         base.DrawCars(holder, camera, SpecialRenderMode.Simple);
         context.OutputMerger.DepthStencilState = holder.States.ReadOnlyDepthState;
         base.DrawCars(holder, camera, SpecialRenderMode.SimpleTransparent);
@@ -1394,6 +1499,8 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         _prop = null;
         _scenery?.Dispose();
         _scenery = null;
+        _fixture?.Dispose();
+        _fixture = null;
         _candidates?.Dispose();
         _candidates = null;
         _ghostBuffer?.Dispose();

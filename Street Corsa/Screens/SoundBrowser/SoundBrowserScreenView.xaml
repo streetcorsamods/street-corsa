@@ -1,0 +1,259 @@
+<UserControl x:Class="StreetCorsa.Screens.SoundBrowser.SoundBrowserScreenView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:controls="clr-namespace:StreetCorsa.Controls"
+             mc:Ignorable="d"
+             d:DesignHeight="800" d:DesignWidth="1300">
+    <UserControl.Resources>
+        <!-- The lists: dark rows, the picked one in the accent -->
+        <Style x:Key="BrowserListStyle" TargetType="ListBox">
+            <Setter Property="Background" Value="{StaticResource BgPanelCCBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderLightBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+            <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True"/>
+        </Style>
+        <Style x:Key="BrowserItemStyle" TargetType="ListBoxItem">
+            <Setter Property="Padding" Value="8,5"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Row" Background="Transparent" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Row" Property="Background" Value="{StaticResource BgLightBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Row" Property="Background" Value="{StaticResource AccentPressedBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="PanelTitleStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Background="{StaticResource SettingsBackgroundBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Button Grid.Row="0"
+                Style="{StaticResource ExitButtonStyle}"
+                Background="{StaticResource BackButtonBrush}"
+                Command="{Binding BackCommand}"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                Margin="20,20,0,0"/>
+
+        <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="0,30,0,16">
+            <TextBlock Text="SOUND LIBRARY"
+                       FontSize="{StaticResource FontSizeScreenTitle}"
+                       FontWeight="Bold"
+                       Foreground="{StaticResource TextPrimaryBrush}"
+                       HorizontalAlignment="Center"/>
+            <TextBlock Text="{Binding Root}"
+                       Foreground="{StaticResource TextSecondaryBrush}"
+                       FontSize="{StaticResource FontSizeCaption}"
+                       HorizontalAlignment="Center"
+                       Margin="0,4,0,0"/>
+        </StackPanel>
+
+        <Grid Grid.Row="1" Margin="40,0,40,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="300"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="340"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Categories -->
+            <DockPanel Grid.Column="0" Margin="0,0,12,0">
+                <TextBlock DockPanel.Dock="Top" Text="Categories" Style="{StaticResource PanelTitleStyle}"/>
+                <ListBox Style="{StaticResource BrowserListStyle}"
+                         ItemContainerStyle="{StaticResource BrowserItemStyle}"
+                         ItemsSource="{Binding Categories}"
+                         SelectedItem="{Binding SelectedCategory}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Right"
+                                           Text="{Binding Count}"
+                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                           Margin="8,0,0,0"/>
+                                <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis"/>
+                            </DockPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+
+            <!-- The category's sounds -->
+            <DockPanel Grid.Column="1" Margin="0,0,12,0">
+                <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                    <TextBlock Text="Filter:"
+                               Foreground="{StaticResource TextPrimaryBrush}"
+                               VerticalAlignment="Center"
+                               Margin="0,0,8,0"/>
+                    <TextBox Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged, Delay=200}"
+                             Background="{StaticResource BgDarkBrush}"
+                             Foreground="{StaticResource TextPrimaryBrush}"
+                             BorderBrush="{StaticResource BorderLightBrush}"
+                             Padding="6,3"/>
+                </DockPanel>
+
+                <Grid>
+                    <ListBox x:Name="FileList"
+                             Style="{StaticResource BrowserListStyle}"
+                             ItemContainerStyle="{StaticResource BrowserItemStyle}"
+                             ItemsSource="{Binding Files}"
+                             SelectedItem="{Binding SelectedFile}"
+                             MouseDoubleClick="OnFileDoubleClick"
+                             Visibility="{Binding ShowsEngines, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                        <ListBox.InputBindings>
+                            <KeyBinding Key="Return" Command="{Binding PlayCommand}"/>
+                            <KeyBinding Key="K" Command="{Binding KeepCommand}"/>
+                        </ListBox.InputBindings>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Left"
+                                               Width="22"
+                                               Text="★"
+                                               Foreground="{StaticResource GoldBrush}"
+                                               Visibility="{Binding IsKept, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                    <TextBlock DockPanel.Dock="Right"
+                                               Text="{Binding Length}"
+                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                               Margin="8,0,0,0"/>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsPlaying}" Value="True">
+                                                            <Setter Property="FontWeight" Value="Bold"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <TextBlock Text="{Binding Detail}"
+                                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                                   FontSize="{StaticResource FontSizeCaption}"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                </DockPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <ListBox Style="{StaticResource BrowserListStyle}"
+                             ItemContainerStyle="{StaticResource BrowserItemStyle}"
+                             ItemsSource="{Binding Engines}"
+                             SelectedItem="{Binding SelectedEngine}"
+                             Visibility="{Binding ShowsEngines, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding Detail}"
+                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                               FontSize="{StaticResource FontSizeCaption}"
+                                               TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </DockPanel>
+
+            <!-- What plays -->
+            <Border Grid.Column="2"
+                    Background="{StaticResource BgPanelCCBrush}"
+                    BorderBrush="{StaticResource BorderLightBrush}"
+                    BorderThickness="1"
+                    CornerRadius="5"
+                    Padding="15"
+                    VerticalAlignment="Top">
+                <StackPanel>
+                    <!-- A sound file -->
+                    <StackPanel Visibility="{Binding ShowsEngines, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                        <TextBlock Text="{Binding SelectedFile.Title, FallbackValue='Pick a sound'}"
+                                   Style="{StaticResource PanelTitleStyle}"
+                                   TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding SelectedFile.Detail}"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding Position}"
+                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                   FontSize="{StaticResource FontSizeHeading}"
+                                   Margin="0,12,0,0"/>
+                        <WrapPanel Margin="0,12,0,0">
+                            <Button Content="Play / Stop"
+                                    Command="{Binding PlayCommand}"
+                                    Style="{StaticResource DialogPrimaryButtonStyle}"
+                                    Width="130"
+                                    Margin="0,0,8,8"/>
+                            <Button Content="Keep ★"
+                                    Command="{Binding KeepCommand}"
+                                    Style="{StaticResource DialogSecondaryButtonStyle}"
+                                    Width="130"
+                                    Margin="0,0,8,8"/>
+                            <Button Content="Show file"
+                                    Command="{Binding ShowFileCommand}"
+                                    Style="{StaticResource DialogSecondaryButtonStyle}"
+                                    Width="130"
+                                    Margin="0,0,8,8"/>
+                        </WrapPanel>
+                        <CheckBox Content="Play when picked"
+                                  IsChecked="{Binding AutoPlay}"
+                                  Foreground="{StaticResource TextSecondaryBrush}"
+                                  Margin="0,4,0,0"/>
+                        <CheckBox Content="Loop"
+                                  IsChecked="{Binding Loop}"
+                                  Foreground="{StaticResource TextSecondaryBrush}"
+                                  Margin="0,6,0,0"/>
+                        <TextBlock Text="Arrows go through the list, Enter plays or stops, K keeps. Each folder plays on its own volume slider (Settings)."
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   FontSize="{StaticResource FontSizeCaption}"
+                                   TextWrapping="Wrap"
+                                   Margin="0,14,0,0"/>
+                    </StackPanel>
+
+                    <!-- An engine sound: start it and rev it, as in the garage -->
+                    <StackPanel Visibility="{Binding ShowsEngines, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <TextBlock Text="{Binding SelectedEngine.Title, FallbackValue='Pick an engine sound'}"
+                                   Style="{StaticResource PanelTitleStyle}"
+                                   TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding SelectedEngine.Detail}"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   TextWrapping="Wrap"/>
+                        <controls:EnginePanel Margin="0,16,0,0" Engine="{Binding EngineSpec}"/>
+                        <TextBlock Text="A plain stand-in engine: the rev range follows the bank, not a car's dyno."
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   FontSize="{StaticResource FontSizeCaption}"
+                                   TextWrapping="Wrap"
+                                   Margin="0,14,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <TextBlock Grid.Row="2"
+                   Text="{Binding Status}"
+                   Foreground="{StaticResource TextSecondaryBrush}"
+                   Margin="40,0,40,20"/>
+    </Grid>
+</UserControl>
