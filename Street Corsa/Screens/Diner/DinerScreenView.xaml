@@ -3,8 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:bottomBar="clr-namespace:StreetCorsa.Components.BottomBar"
              xmlns:converters="clr-namespace:StreetCorsa.Converters"
+             xmlns:helpers="clr-namespace:StreetCorsa.Helpers"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="800">
     <UserControl.Resources>
@@ -24,7 +24,6 @@
           Opacity="0">
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <Grid.Triggers>
@@ -44,8 +43,9 @@
         <!-- Garage Button -->
         <Button x:Name="GarageButton"
                 Grid.Row="0"
-                Style="{StaticResource ExitButtonStyle}"
-                Background="{StaticResource GarageIconButtonBrush}"
+                Style="{StaticResource RoundIconButtonStyle}"
+                Tag="{StaticResource GarageIcon}"
+                ToolTip="Back to the garage"
                 Command="{Binding GarageCommand}"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Top"
@@ -74,11 +74,12 @@
                 Style="{StaticResource DialogPrimaryButtonStyle}"
                 Foreground="{StaticResource BgPanelBrush}"
                 Background="{StaticResource GoldBrush}"
+                helpers:GlassButton.HoverBrush="{StaticResource PaleYellowBrush}"
                 FontWeight="Bold"
                 Padding="24,12"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Top"
-                Margin="0,30,20,0"
+                Margin="0,120,20,0"
                 ToolTip="Sit at the curb with the engine running and see who pulls up"/>
 
         <!-- Main Content -->
@@ -1219,8 +1220,5 @@
             </Border>
         </Grid>
 
-        <!-- Bottom Nav Bar -->
-        <bottomBar:BottomBarView Grid.Row="1"
-                                 BankrollDisplay="{Binding BankrollDisplay}"/>
     </Grid>
 </UserControl>

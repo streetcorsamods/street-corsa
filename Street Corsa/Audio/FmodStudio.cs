@@ -356,6 +356,9 @@ internal static partial class FmodStudio
     public static partial int FMOD_DSP_SetBypass(IntPtr dsp, int bypass);
 
     [LibraryImport(CoreDll)]
+    public static partial int FMOD_DSP_SetWetDryMix(IntPtr dsp, float preWet, float postWet, float dry);
+
+    [LibraryImport(CoreDll)]
     public static partial int FMOD_System_GetSoftwareFormat(IntPtr system, out int sampleRate, out int speakerMode, out int rawSpeakers);
 
     #region Calls 1.08 may not have

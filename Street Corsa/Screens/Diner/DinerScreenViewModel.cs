@@ -329,8 +329,6 @@ namespace StreetCorsa.Screens.Diner
             }
         }
 
-        public string BankrollDisplay => Bankroll(_gameState.Player.Money);
-
         public DinerScreenViewModel(
             NavigationService navigationService,
             DialogService dialogService,
@@ -415,9 +413,6 @@ namespace StreetCorsa.Screens.Diner
                 UpdateWagerLimits();
             }
             RelayCommand.RaiseCanExecuteChanged();
-
-            // Update bankroll display
-            OnPropertyChanged(nameof(BankrollDisplay));
 
             LoadStreetTalk();
         }
@@ -798,7 +793,6 @@ namespace StreetCorsa.Screens.Diner
                 // the racers at the tables have changed: the room is shown again, and the new day is saved.
                 var spent = await _timeService.SpendTimeAsync(_gameState, GameAction.VisitDiner);
                 if (spent.NewDayStarted) LoadOpponents();
-                OnPropertyChanged(nameof(BankrollDisplay));
 
                 if (!string.IsNullOrEmpty(_gameState.SaveName)) _gameStateRepo.Save(_gameState, _gameState.SaveName);
             }

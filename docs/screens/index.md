@@ -40,7 +40,7 @@ Garage (hub) ←→ CarLot
   └──→ Newspaper → UsedCarMarket
                  → UsedParts
 
-Garage Back button → MainMenu (with confirmation)
+Garage Quit button → Quit dialog → MainMenu or the desktop
 ```
 
 ## Screen Structure

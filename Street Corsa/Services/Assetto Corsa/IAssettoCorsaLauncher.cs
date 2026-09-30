@@ -22,11 +22,6 @@ namespace StreetCorsa.Services
     public interface IAssettoCorsaLauncher
     {
         /// <summary>
-        /// Launch Assetto Corsa showroom with the specified intent
-        /// </summary>
-        Task<LaunchResult> LaunchShowroomAsync(ShowroomLaunchIntent intent);
-
-        /// <summary>
         /// Launch a race session (any type) with the specified intent
         /// </summary>
         Task<LaunchResult> LaunchRaceAsync(LaunchIntent intent);

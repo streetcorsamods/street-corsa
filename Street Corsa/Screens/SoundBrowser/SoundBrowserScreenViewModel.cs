@@ -17,6 +17,9 @@ namespace StreetCorsa.Screens.SoundBrowser
     /// </summary>
     public class SoundBrowserScreenViewModel : BaseScreenViewModel
     {
+        /// <summary>Outside any game: no money, date or time over it</summary>
+        public override bool InGame => false;
+
         private readonly NavigationService _navigationService;
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger("Audio");
         private readonly DispatcherTimer _clock;

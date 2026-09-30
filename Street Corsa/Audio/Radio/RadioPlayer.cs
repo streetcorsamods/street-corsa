@@ -764,12 +764,12 @@ public sealed class RadioPlayer : ObservableObject
     #region The race
 
     /// <summary>
-    /// A race (or AC's showroom) starts or is over. At the start the radio goes off (fading) and its keys are listened
-    /// for over AC, the radio sounding as the car's, AM. At the end the keys are let go of, the screen's sound comes
-    /// back, and the radio is as it was before the race, unless the player switched it in the race: then as they left it.
-    /// UI thread.
+    /// Assetto Corsa starts or is over. At the start of a race the radio goes off (fading); with
+    /// <paramref name="keepRadio"/> (a free run, a test-and-tune) it plays on. Either way its keys are listened for over
+    /// AC, the radio sounding as the car's, AM. At the end the keys are let go of, the screen's sound comes back, and the
+    /// radio is as it was before, unless the player switched it in AC: then as they left it. UI thread.
     /// </summary>
-    public void SetRacing(bool racing)
+    public void SetRacing(bool racing, bool keepRadio = false)
     {
         if (_racing == racing) return;
 
@@ -778,7 +778,7 @@ public sealed class RadioPlayer : ObservableObject
             _onBeforeRace = IsOn && !IsPaused;
             _changedInRace = false;
             _screenInCar = _inCar;
-            if (IsOn) Stop();
+            if (IsOn && !keepRadio) Stop();
             _racing = true;
             ApplyInCar(true);
             _raceKeys?.Start();
@@ -795,7 +795,11 @@ public sealed class RadioPlayer : ObservableObject
 
     #region The car
 
-    /// <summary>In the car (the Cruise screen, the gas station) the radio is the car's: AM, and its static</summary>
+    /// <summary>
+    /// In the car (the Cruise screen, the gas station) the radio is the car's: AM, and its static, fading in over
+    /// <see cref="AudioHub.AmFadeSeconds"/>. The car's screens say so once the player sits in it (their scene is up);
+    /// leaving for any other screen takes it out at once.
+    /// </summary>
     public void SetInCar(bool inCar)
     {
         // In a race the radio is the car's whatever screen is behind it; the screen's own comes back after
@@ -813,11 +817,11 @@ public sealed class RadioPlayer : ObservableObject
         if (_inCar == inCar) return;
         _inCar = inCar;
         AudioHub.Shared.SetAmRadio(inCar);
-        UpdateStatic();
+        UpdateStatic(AudioHub.AmFadeSeconds);
     }
 
-    /// <summary>The static under the music: in the car, while a song plays</summary>
-    private void UpdateStatic()
+    /// <summary>The static under the music: in the car, while a song plays. It comes and goes over <paramref name="fadeSeconds"/>.</summary>
+    private void UpdateStatic(float fadeSeconds = PowerFadeSeconds)
     {
         var wanted = _inCar && IsPlaying;
         if (wanted == (_static != null)) return;
@@ -827,8 +831,9 @@ public sealed class RadioPlayer : ObservableObject
             // The static dies away with the song
             if (_static is { } leaving)
             {
-                leaving.Fade(1f, 0f, PowerFadeSeconds, AudioHub.Shared.MixRate, stopAtEnd: true);
-                After(PowerFadeSeconds, leaving.Stop);
+                // From where its fade-in got to: leaving the car while it still comes in does not burst it to full
+                leaving.FadeFromHere(0f, fadeSeconds, AudioHub.Shared.MixRate, stopAtEnd: true);
+                After(fadeSeconds, leaving.Stop);
             }
             _static = null;
             return;
@@ -838,7 +843,7 @@ public sealed class RadioPlayer : ObservableObject
         var sound = AudioHub.Shared.Play(cue.Bus, cue.Files[0], loop: true, paused: true);
         if (sound == null) return;
         sound.SetVolume(cue.Volume);
-        sound.Fade(0f, 1f, PowerFadeSeconds, AudioHub.Shared.MixRate, stopAtEnd: false);
+        sound.Fade(0f, 1f, fadeSeconds, AudioHub.Shared.MixRate, stopAtEnd: false);
         sound.Resume();
         _static = sound;
     }

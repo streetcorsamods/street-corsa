@@ -44,8 +44,6 @@ namespace StreetCorsa.Screens.UsedParts
         public ObservableCollection<PartOfferViewModel> Offers { get; } = [];
         public ObservableCollection<string> Groups { get; } = [];
 
-        public string BankrollDisplay => Bankroll(_gameState.Player.Money);
-
         /// <summary>The player's own shelf, to sell from</summary>
         public abstract bool IsSellTab { get; }
 
@@ -220,10 +218,9 @@ namespace StreetCorsa.Screens.UsedParts
             } + StatusNote;
         }
 
-        /// <summary>The money and the rows after a deal</summary>
+        /// <summary>The rows after a deal</summary>
         protected virtual void Refresh()
         {
-            OnPropertyChanged(nameof(BankrollDisplay));
             LoadOffers();
         }
 

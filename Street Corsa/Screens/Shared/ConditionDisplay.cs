@@ -32,6 +32,12 @@ namespace StreetCorsa.Screens.Shared
             return new ConditionText($"{(int)(clamped * 100)}%", LabelFor(clamped));
         }
 
+        /// <summary>What is in the tank: "Full" until a race says otherwise, then "12 of 60 l" ("1.4 of 60 l" when too low to race on)</summary>
+        public static string Fuel(Car car) =>
+            CarCondition.FuelLeft(car) is { } left && CarCondition.TankLitres(car) is { } tank
+                ? left < 10 ? $"{left:0.0} of {tank:0} l" : $"{left:0} of {tank:0} l"
+                : "Full";
+
         public static string LabelFor(double condition) => condition switch
         {
             >= 0.9 => "Excellent",

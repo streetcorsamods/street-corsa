@@ -73,12 +73,6 @@ namespace StreetCorsa.Screens.DealerMap
         public double MapImageWidth { get; }
         public double MapImageHeight { get; }
 
-        public string BankrollDisplay => Bankroll(_gameState.Player.Money);
-
-        /// <summary>The day, so a drive that costs half of it reads as a cost</summary>
-        public string DateDisplay => HeaderDate(_gameState.Date);
-        public string TimeDisplay => HeaderTime(_gameState.Date);
-
         private bool _isLoading;
 
         /// <summary>The market has never been filled and is being put together</summary>

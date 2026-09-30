@@ -51,8 +51,9 @@
         </Grid.RowDefinitions>
 
         <Button Grid.Row="0"
-                Style="{StaticResource ExitButtonStyle}"
-                Background="{StaticResource BackButtonBrush}"
+                Style="{StaticResource RoundIconButtonStyle}"
+                Tag="{StaticResource BackIcon}"
+                ToolTip="Back"
                 Command="{Binding BackCommand}"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Top"

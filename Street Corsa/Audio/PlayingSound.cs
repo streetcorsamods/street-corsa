@@ -14,6 +14,9 @@ public sealed class PlayingSound
     // A song out of memory: its memory goes when it does
     private SongSound? _song;
 
+    // The last fade, to know where it has got to
+    private (ulong Start, ulong End, float From, float To)? _fade;
+
     internal PlayingSound(IntPtr sound, IntPtr channel, string path)
     {
         _sound = sound;
@@ -89,6 +92,23 @@ public sealed class PlayingSound
         Warn(FMOD_Channel_AddFadePoint(_channel, now, from), "fade point");
         Warn(FMOD_Channel_AddFadePoint(_channel, end, to), "fade point");
         if (stopAtEnd) Warn(FMOD_Channel_SetDelay(_channel, 0, end, 1), "stop at the end of the fade");
+        _fade = (now, end, from, to);
+    }
+
+    /// <summary>
+    /// <see cref="Fade"/> from wherever the last fade has got to, so a fade turned back halfway does not jump: full
+    /// volume when there was none
+    /// </summary>
+    internal void FadeFromHere(float to, float seconds, int rate, bool stopAtEnd) =>
+        Fade(CurrentFadeLevel(), to, seconds, rate, stopAtEnd);
+
+    private float CurrentFadeLevel()
+    {
+        if (_fade is not { } fade || _sound == IntPtr.Zero || AudioHub.Shared.IsShutDown) return 1f;
+        if (FMOD_Channel_GetDSPClock(_channel, out _, out var now) != ResultOk) return fade.To;
+        if (now >= fade.End) return fade.To;
+        if (now <= fade.Start) return fade.From;
+        return fade.From + (fade.To - fade.From) * (float)(now - fade.Start) / (fade.End - fade.Start);
     }
 
     public void Stop()

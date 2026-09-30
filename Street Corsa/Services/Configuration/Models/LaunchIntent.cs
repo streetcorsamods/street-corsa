@@ -37,31 +37,6 @@ namespace StreetCorsa.Services.Configuration.Models
     }
 
     /// <summary>
-    /// Intent to launch Assetto Corsa showroom with a specific car and skin
-    /// </summary>
-    public class ShowroomLaunchIntent : LaunchIntent
-    {
-        public string CarId { get; set; } = string.Empty;
-        public string SkinId { get; set; } = string.Empty;
-        public string Track { get; set; } = "showroom";
-
-        public override string Executable => "acShowroom.exe";
-
-        public override string Description =>
-            $"Launch showroom to preview car '{CarId}' with skin '{SkinId}'";
-
-        public override IEnumerable<ModificationIntent> GetConfigurationIntents()
-        {
-            yield return new ShowroomIntent
-            {
-                CarId = this.CarId,
-                SkinId = this.SkinId,
-                Track = this.Track
-            };
-        }
-    }
-
-    /// <summary>
     /// Intent to launch a full race session with specified configuration
     /// </summary>
     public class RaceLaunchIntent : LaunchIntent

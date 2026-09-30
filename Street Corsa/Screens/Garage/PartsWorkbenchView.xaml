@@ -164,7 +164,7 @@
                     Width="260"
                     HorizontalAlignment="Right"
                     VerticalAlignment="Top"
-                    Margin="0,30,20,0">
+                    Margin="0,120,20,0">
             <Border Style="{StaticResource PanelStyle}">
                 <StackPanel>
                     <TextBlock Text="{Binding EngineTitle}" Style="{StaticResource PanelTitleStyle}"/>

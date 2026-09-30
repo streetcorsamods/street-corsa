@@ -29,8 +29,8 @@ with it, as a `<Name>Brush`. Name conventions:
 | Accent | `AccentPrimary` #D32F2F, `AccentHover` #F44336, `AccentPressed` #B71C1C, `AccentSuccess` #90EE90 |
 | Borders | `BorderDark` #101010, `BorderLight` #404040 |
 | Greys | `Gray26`, `Gray30`, `Gray33`, `Gray50`, `Gray70`, `Gray80`, `GrayA0`, `White` #FFFFFF |
-| Translucent panels | `BgPanelAA`, `BgPanelCC`, `BgPanelF2`, `BgDarkDF`, `Glass12C0`, `Glass12D0`, `Glass14D0`, `Glass14E0`, `Glass15E8`, `Glass10C0`, `MenuGlassD8` #D8101114 (the main menu's buttons) (`GlassNN` = `#NNNNNN` under the alpha) |
-| Veils | `Overlay` #99000000 (behind dialogs), `BlackTransparent` #00000000, `BlackHitTest` #01000000, `Black77`, `BlackB0`, `BlackCC`, `BlackE6`, `White20`, `White30`, `White38`, `White90`, `WhiteB0`, `Scrim` #80000000 (behind the load and settings panels), `Ink` #000000 (print on the paper dial-in and timeslip cards) |
+| Translucent panels | `BgPanelCC`, `BgPanelF2`, `BgDarkDF`, `Glass12C0`, `Glass12D0`, `Glass14D0`, `Glass14E0`, `Glass15E8`, `Glass10C0`, `MenuGlassD8` #D8101114 (the main menu's buttons) (`GlassNN` = `#NNNNNN` under the alpha) |
+| Veils | `Overlay` #99000000 (behind dialogs), `BlackTransparent` #00000000, `Black77`, `BlackB0`, `BlackCC`, `White20`, `White30`, `White38`, `White90`, `WhiteB0`, `Scrim` #80000000 (behind the load and settings panels), `Ink` #000000 (print on the paper dial-in and timeslip cards) |
 | Status | `Gold` #FFD700 (+`GoldCC`, `Gold33`), `PaleGold60` #60FFE68C, `Amber` #FFC107, `Warning` #FFA500, `WarningStrong` #FF8C00, `WarningBg` #3D2F1F, `Danger` #FF6B6B, `DangerStrong` #CC0000, `DangerBg` #3D1F1F, `SuccessBg` #2A3A2A, `GoldBg` #3A3A2A, `Salmon` #FF8C6B, `SuccessStrong` #00AA00, `SuccessHover` #7CCD7C, `Fit` #59FF73 (+`Fit30`), `PaleYellow` #FFE8A0, `Info` #4A90D9, `InfoBg` #1A2A3A, `RoyalBlue` #4169E1, `SpinnerOrange` #FF6B00, `RedZone` #60C02020 |
 | Dealer map and lot | `Cream` #F5E6C8 (+`Cream50`, `Cream60`, `Cream70`), `MapSepia` #6B4A1E, `MapDotFar` #6E6A60, `MapDotFarBorder` #A09A8C, `MapFarText` #E8A15A |
 | License input | `LicenseBrown` #2C1810 |
@@ -79,11 +79,19 @@ Newspaper.
 
 ## Button Styles
 - `MenuButtonStyle` - Large menu buttons (300x300)
-- `ExitButtonStyle` - Back/exit buttons (64x64)
-- `DialogPrimaryButtonStyle` - Dialog confirm buttons
-- `DialogSecondaryButtonStyle` - Dialog cancel buttons
+- `GlassButtonTemplate` - The game's buttons: a thick `UiOutline` outline on semi-transparent glass. Under the pointer
+  the style's hover glass (`helpers:GlassButton.HoverBrush`) and an amber outline fade in over a second; pressing and
+  going disabled or enabled again are instant.
+- `DialogPrimaryButtonStyle` - Yes, OK, the one thing to do: red glass (`UiPrimaryGlass`) on `GlassButtonTemplate`. A
+  button that sets its own `Background` sets a hover glass to match (the Diner's gold CRUISE button: `PaleYellow`).
+- `DialogSecondaryButtonStyle` - No, Cancel, the rest: dark glass (`UiGlass`) on `GlassButtonTemplate`
+- `RoundIconButtonStyle` - A round button with an icon (an `ImageSource` from `Icons.xaml` in `Tag`, what it does in
+  `ToolTip`): the garage's buttons. The icon is painted in the ring's colour; ring, icon and a glow turn amber under
+  the pointer. `RoundIconButtonLargeStyle` is a notch bigger (Hit the streets, Car dealers, Parts dealers, Newspaper).
+- `GlassPanelStyle` - A panel in the buttons' look (dark glass, outline, rounded)
 - `GameButtonStyle` - Large image buttons with hover labels (Newspaper screen)
-- `OverlayTileButtonStyle` - Image tiles floating over the 3D garage, animated hover (scale, glow, slide-up label) via VisualStateManager
+
+Every tooltip is dark glass in the buttons' outline (an implicit `ToolTip` style in `Buttons.xaml`).
 
 ## Rules
 
@@ -101,6 +109,10 @@ There is one window, `MainWindow.xaml`:
 - `WindowStyle="None"`, `AllowsTransparency="True"`, maximized - no system chrome.
 - Screens are swapped in its content host; dialogs show in its overlay (`OverlayBrush`) inside a
   `ScrollViewer`, so a long dialog scrolls instead of being cut off.
+- A change of screen fades a still of the screen being left to black, then the black off the new one.
+- The money card (money, time, date) is the window's, over every screen of a game (`IScreen.InGame`).
+- While AC runs a free run, the screen fades to a loader and takes neither the mouse nor the keys.
+- The Quit dialog (`Dialogs/Quit`) is the way out of a game: to the main menu, to the desktop, or back.
 
 ## MVVM Compliance
 - Views contain NO logic

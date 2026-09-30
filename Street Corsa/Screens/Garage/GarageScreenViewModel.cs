@@ -41,9 +41,11 @@ namespace StreetCorsa.Screens.Garage
         private readonly RaceCarDataService _raceCarDataService;
         private readonly IAppLogger _logger;
 
-        public RelayCommand BackCommand { get; }
-        public RelayCommand ExitCommand { get; }
-        public AsyncRelayCommand LaunchShowroomCommand { get; }
+        /// <summary>Asks where to go: the main menu, or out of the game</summary>
+        public RelayCommand QuitCommand { get; }
+
+        /// <summary>Everything about the selected car, and every part in it</summary>
+        public RelayCommand CarInfoCommand { get; }
         public AsyncRelayCommand FreeRunCommand { get; }
 
         /// <summary>The selected car at the strip on its own, pass after pass, for timeslips (<see cref="OnTestAndTune"/>)</summary>
@@ -90,20 +92,6 @@ namespace StreetCorsa.Screens.Garage
         /// <summary>The parts view of the selected car: its engine, the part clicked on, the shelf of loose parts</summary>
         public PartsWorkbenchViewModel Workbench { get; }
 
-        /// <summary>
-        /// Set by the view: plays the screen's fade-out and completes when it has finished.
-        /// Awaited before navigating away so the garage doesn't just pop off screen.
-        /// </summary>
-        public Func<Task>? ExitTransition { get; set; }
-
-        /// <summary>
-        /// Set by the view: brings the screen back after the exit transition played but the navigation failed,
-        /// so the player is not left looking at a faded-out garage
-        /// </summary>
-        public Action? ExitCancelled { get; set; }
-
-        private bool _isLeaving;
-
         private ObservableCollection<CarDisplayViewModel> _cars;
         public ObservableCollection<CarDisplayViewModel> Cars
         {
@@ -140,6 +128,9 @@ namespace StreetCorsa.Screens.Garage
         private Audio.EngineSpec? _selectedEngine;
         private int _engineVersion;
 
+        // The engine being worked out now, or last: what the car's sheet waits for
+        private Task<Audio.EngineSpec?> _engineWork = Task.FromResult<Audio.EngineSpec?>(null);
+
         /// <summary>The selected car's engine, to start and rev where it stands; null without a car or an engine</summary>
         public Audio.EngineSpec? SelectedEngine
         {
@@ -159,7 +150,9 @@ namespace StreetCorsa.Screens.Garage
             {
                 var version = ++_engineVersion;
                 var car = SelectedCar;
-                var spec = car == null ? null : await Services.Parts.EngineSpecs.ForAsync(_partsService, car.CarInstance, car.DisplayName);
+                var work = car == null ? Task.FromResult<Audio.EngineSpec?>(null) : Services.Parts.EngineSpecs.ForAsync(_partsService, car.CarInstance, car.DisplayName);
+                _engineWork = work;
+                var spec = await work;
                 if (version == _engineVersion) SelectedEngine = spec;
             }
             catch (Exception ex)
@@ -180,8 +173,6 @@ namespace StreetCorsa.Screens.Garage
         }
 
         public bool HasCars => Cars.Count > 0;
-
-        public string BankrollDisplay => Bankroll(_gameState.Player.Money);
 
         /// <summary>Showroom model used as the environment of the 3D viewport</summary>
         public string GarageShowroomKn5 => AppSettings.Instance.GarageShowroomKn5;
@@ -315,9 +306,8 @@ namespace StreetCorsa.Screens.Garage
             _logger = AppLoggerFactory.CreateLogger("Garage");
             SkipEnterAnimation = skipAnimation;
 
-            BackCommand = new RelayCommand(OnBack, CanLeave);
-            ExitCommand = new RelayCommand(OnExit, CanLeave);
-            LaunchShowroomCommand = new AsyncRelayCommand(OnLaunchShowroom, CanLaunchShowroom);
+            QuitCommand = new RelayCommand(OnQuit, CanLeave);
+            CarInfoCommand = new RelayCommand(OnCarInfo, () => SelectedCar != null);
             FreeRunCommand = new AsyncRelayCommand(OnFreeRun, () => SelectedCarHere && FreeRunTrack != null && !_launcher.IsExecutionLocked && CanLeave());
             TestAndTuneCommand = new AsyncRelayCommand(OnTestAndTune, () => SelectedCarHere && !_launcher.IsExecutionLocked && CanLeave());
             LoadFreeRunTracks();
@@ -360,7 +350,6 @@ namespace StreetCorsa.Screens.Garage
             Workbench.StateChanged += () =>
             {
                 RefreshCalendarDisplay();
-                OnPropertyChanged(nameof(BankrollDisplay));
             };
             Workbench.SaveFailed += _ => _dialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(
                 _dialogService,
@@ -412,57 +401,6 @@ namespace StreetCorsa.Screens.Garage
             }
 
             _logger.Information("Loaded {Count} cars into garage view", Cars.Count);
-        }
-
-        private bool CanLaunchShowroom()
-        {
-            return SelectedCar != null && !_launcher.IsExecutionLocked && CanLeave();
-        }
-
-        private async Task OnLaunchShowroom()
-        {
-            if (SelectedCar == null)
-                return;
-
-            _logger.Information("Launching showroom for car {CarId} with skin {SkinId}",
-                SelectedCar.CarDefinition.Id, SelectedCar.CarInstance.SkinId);
-
-            try
-            {
-                var intent = new ShowroomLaunchIntent
-                {
-                    CarId = SelectedCar.CarDefinition.Id,
-                    SkinId = SelectedCar.CarInstance.SkinId
-                };
-
-                var result = await _launcher.LaunchShowroomAsync(intent);
-
-                if (result.Success)
-                {
-                    _logger.Information("Showroom launched successfully");
-
-                    // Spend time for viewing the showroom (15 min)
-                    await _timeService.SpendTimeAsync(_gameState, GameAction.ViewShowroom);
-                }
-                else
-                {
-                    _logger.Error("Showroom launch failed: {Error}", result.ErrorMessage);
-                    var errorDialog = new Dialogs.Information.InformationDialogViewModel(
-                        _dialogService,
-                        $"Failed to launch showroom:\n\n{result.ErrorMessage}",
-                        "Launch Error");
-                    _dialogService.ShowDialog(errorDialog);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Exception during showroom launch");
-                var errorDialog = new Dialogs.Information.InformationDialogViewModel(
-                    _dialogService,
-                    $"Failed to launch showroom:\n\n{ex.Message}",
-                    "Launch Error");
-                _dialogService.ShowDialog(errorDialog);
-            }
         }
 
         private void LoadFreeRunTracks()
@@ -664,7 +602,6 @@ namespace StreetCorsa.Screens.Garage
                     }
 
                     RefreshCalendarDisplay();
-                    OnPropertyChanged(nameof(BankrollDisplay));
                     OnPropertyChanged(nameof(SelectedCar));
                     // The parts view shows the parts' shape: it gets the repaired ones
                     Workbench.SetCar(car);
@@ -728,7 +665,6 @@ namespace StreetCorsa.Screens.Garage
 
                 Workbench.SetCar(car);
                 RefreshCalendarDisplay();
-                OnPropertyChanged(nameof(BankrollDisplay));
                 RaiseImpoundChanged();
             }
             catch (Exception ex)
@@ -779,13 +715,11 @@ namespace StreetCorsa.Screens.Garage
         private void AfterSale()
         {
             RefreshCalendarDisplay();
-            OnPropertyChanged(nameof(BankrollDisplay));
             OnPropertyChanged(nameof(SellButtonText));
         }
 
         private void OnSelectCar()
         {
-            // No fade here: garage <-> car lot is an instant swap in both directions
             _logger.Information("Navigating to the car lot");
             _navigationService.NavigateToCarLot(_gameState);
         }
@@ -844,39 +778,18 @@ namespace StreetCorsa.Screens.Garage
             LeaveTo(() => _navigationService.NavigateToGasStation(_gameState));
         }
 
-        /// <summary>
-        /// Plays the exit transition (if the view provided one), then navigates
-        /// </summary>
-        private async void LeaveTo(Func<bool> navigate)
+        /// <summary>Leaves the garage (the window fades the screens over), unless the day is being ended</summary>
+        private void LeaveTo(Func<bool> navigate)
         {
-            if (_isLeaving || !CanLeave()) return;
-            _isLeaving = true;
+            if (!CanLeave()) return;
 
             try
             {
-                if (ExitTransition != null)
-                {
-                    await ExitTransition();
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.Warning("Exit transition failed, navigating anyway: {Error}", ex.Message);
-            }
-
-            try
-            {
-                // The navigation service reports a screen that would not open; the garage then comes back
-                if (!navigate()) ExitCancelled?.Invoke();
+                navigate();
             }
             catch (Exception ex)
             {
                 _logger.Error(ex, "Could not leave the garage");
-                ExitCancelled?.Invoke();
-            }
-            finally
-            {
-                _isLeaving = false;
             }
         }
 
@@ -930,7 +843,6 @@ namespace StreetCorsa.Screens.Garage
                 try
                 {
                     RefreshCalendarDisplay();
-                    OnPropertyChanged(nameof(BankrollDisplay));
                     // The night may have brought an offer for a car in the paper, or the impound's release date
                     OnPropertyChanged(nameof(SellButtonText));
                     RaiseImpoundChanged();
@@ -955,42 +867,58 @@ namespace StreetCorsa.Screens.Garage
             _logger.Debug("Active panel changed to {Panel}", ActivePanel);
         }
 
-        private void OnBack()
+        /// <summary>The way out: back to the main menu (the game stays saved), or out of the game altogether</summary>
+        private void OnQuit()
         {
-            // Show confirmation dialog
-            var confirmDialog = new Dialogs.Confirmation.ConfirmationDialogViewModel(
+            _dialogService.ShowDialog(new Dialogs.Quit.QuitDialogViewModel(
                 _dialogService,
-                "Are you sure you want to go back to the Main Menu? Your current game will remain saved.",
-                "Go Back?",
-                confirmed =>
+                choice =>
                 {
-                    if (confirmed)
+                    switch (choice)
                     {
-                        _logger.Information("Navigating back to main menu");
-                        LeaveTo(() => _navigationService.NavigateToMainMenu());
+                        case Dialogs.Quit.QuitChoice.MainMenu:
+                            _logger.Information("Navigating back to main menu");
+                            LeaveTo(() => _navigationService.NavigateToMainMenu());
+                            break;
+                        // Not while the night is being worked out: the exit saves, and a half-ended day would be saved
+                        case Dialogs.Quit.QuitChoice.Desktop when CanLeave():
+                            System.Windows.Application.Current.Shutdown();
+                            break;
                     }
-                });
-
-            _dialogService.ShowDialog(confirmDialog);
+                }));
         }
 
-        private void OnExit()
+        /// <summary>The selected car's sheet: its shape, what is in the tank and the sump, and every part in it</summary>
+        private async void OnCarInfo()
         {
-            // Show confirmation dialog
-            var confirmDialog = new Dialogs.Confirmation.ConfirmationDialogViewModel(
-                _dialogService,
-                "Are you sure you want to exit? Your current game will remain saved.",
-                "Exit Game?",
-                confirmed =>
-                {
-                    // Not while the night is being worked out: the exit saves, and a half-ended day would be saved
-                    if (confirmed && CanLeave())
-                    {
-                        System.Windows.Application.Current.Shutdown();
-                    }
-                });
+            // Nothing may escape an async void
+            try
+            {
+                if (SelectedCar is not { } selected) return;
 
-            _dialogService.ShowDialog(confirmDialog);
+                // The engine as it is now: a change a moment ago may still be being worked out
+                Task<Audio.EngineSpec?> work;
+                Audio.EngineSpec? engine;
+                do
+                {
+                    work = _engineWork;
+                    engine = await work;
+                } while (!ReferenceEquals(work, _engineWork));
+
+                // Another car was picked meanwhile: its sheet is not this one
+                if (!ReferenceEquals(SelectedCar, selected)) return;
+
+                _dialogService.ShowDialog(new Dialogs.CarInfo.CarInfoDialogViewModel(
+                    _dialogService,
+                    selected.CarInstance,
+                    SelectedCarDisplay,
+                    _partsService.IsAvailable ? _partsService.Catalog : null,
+                    engine));
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not show the car's sheet");
+            }
         }
 
         public override void Enter()
@@ -1002,9 +930,6 @@ namespace StreetCorsa.Screens.Garage
             {
                 // Refresh calendar properties to reflect current game time
                 RefreshCalendarDisplay();
-
-                // Refresh bankroll display in case money changed
-                OnPropertyChanged(nameof(BankrollDisplay));
 
                 LoadPlayerCars();
                 TellOfDeliveries();
@@ -1105,17 +1030,6 @@ namespace StreetCorsa.Screens.Garage
 
         public string DisplayName => $"{CarDefinition.Brand} {CarDefinition.Name}";
         public string YearDisplay => CarDefinition.Year?.ToString() ?? "Unknown";
-        /// <summary>What is worst about the car, or its overall shape: the one condition the market prices it by</summary>
-        public string ConditionDisplay => Shared.ConditionDisplay.Of(CarInstance).Percent;
-        public string MileageDisplay => $"{CarInstance.OdometerKM:N0} km";
-
-        /// <summary>What is in the tank: "Full" until a race says otherwise, then "12 of 60 l" ("1.4 of 60 l" when too low to race on)</summary>
-        public string FuelDisplay => Parts.Cars.CarCondition.FuelLeft(CarInstance) is { } left && Parts.Cars.CarCondition.TankLitres(CarInstance) is { } tank
-            ? left < 10 ? $"{left:0.0} of {tank:0} l" : $"{left:0} of {tank:0} l"
-            : "Full";
-
-        /// <summary>Who had the car before, how it came to the player, and how it has raced</summary>
-        public string HistoryDisplay => Shared.CarHistoryDisplay.Summary(CarInstance.History, forSale: false);
         public bool HasPreviewImage => !string.IsNullOrEmpty(PreviewImagePath);
     }
 

@@ -24,7 +24,10 @@
                    VerticalAlignment="Center"
                    Visibility="{Binding HasFailed, ElementName=Street, Converter={StaticResource BooleanToVisibilityConverter}}"/>
 
-        <!-- The clock -->
+        <!-- Until the scene is up -->
+        <controls:LoadingIndicator WaitFor="{Binding ElementName=Street}" Message="Out on the street..."/>
+
+        <!-- The light out there (the clock is the window's money card) -->
         <Border Background="{StaticResource Glass10C0Brush}"
                 BorderBrush="{StaticResource PaleGold60Brush}"
                 BorderThickness="1"
@@ -35,22 +38,9 @@
                 VerticalAlignment="Top"
                 IsHitTestVisible="False">
             <StackPanel>
-                <TextBlock Text="{Binding ClockDisplay}"
-                           FontSize="{StaticResource FontSizeHeadingLarge}"
-                           FontWeight="Bold"
-                           Foreground="{StaticResource GoldBrush}"/>
-                <TextBlock Text="{Binding DateDisplay}"
-                           FontSize="{StaticResource FontSizeSmall}"
-                           Foreground="{StaticResource TextPrimaryBrush}"/>
                 <TextBlock Text="{Binding LightDisplay}"
-                           FontSize="{StaticResource FontSizeCaption}"
-                           Foreground="{StaticResource TextSecondaryBrush}"
-                           Margin="0,2,0,0"/>
-                <TextBlock Text="{Binding BankrollDisplay}"
                            FontSize="{StaticResource FontSizeBody}"
-                           FontWeight="Bold"
-                           Foreground="{StaticResource AccentSuccessBrush}"
-                           Margin="0,8,0,0"/>
+                           Foreground="{StaticResource GoldBrush}"/>
             </StackPanel>
         </Border>
 
@@ -58,7 +48,7 @@
         <StackPanel Orientation="Horizontal"
                     HorizontalAlignment="Right"
                     VerticalAlignment="Top"
-                    Margin="0,20,20,0">
+                    Margin="0,120,20,0">
             <Button Content="DINER"
                     Command="{Binding DinerCommand}"
                     Style="{StaticResource DialogSecondaryButtonStyle}"
@@ -121,7 +111,7 @@
                 BorderThickness="2"
                 CornerRadius="6"
                 Padding="18"
-                Margin="0,80,20,20"
+                Margin="0,180,20,20"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Top"
                 Visibility="{Binding IsEncounterShown, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -224,7 +214,7 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
-                <!-- For what -->
+                <!-- For what: the one picked in its colour, glass and text too, over the outline every button has -->
                 <Grid Margin="0,14,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -239,7 +229,9 @@
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsCashBet}" Value="True">
                                         <Setter Property="BorderBrush" Value="{StaticResource GoldBrush}"/>
-                                        <Setter Property="BorderThickness" Value="2"/>
+                                        <Setter Property="Background" Value="{StaticResource Gold33Brush}"/>
+                                        <Setter Property="Foreground" Value="{StaticResource GoldBrush}"/>
+                                        <Setter Property="BorderThickness" Value="3"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
@@ -255,7 +247,9 @@
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsPinkSlipBet}" Value="True">
                                         <Setter Property="BorderBrush" Value="{StaticResource DangerBrush}"/>
-                                        <Setter Property="BorderThickness" Value="2"/>
+                                        <Setter Property="Background" Value="{StaticResource RedZoneBrush}"/>
+                                        <Setter Property="Foreground" Value="{StaticResource DangerBrush}"/>
+                                        <Setter Property="BorderThickness" Value="3"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>

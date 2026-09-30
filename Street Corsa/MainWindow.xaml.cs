@@ -2,9 +2,13 @@
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
+using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Media.Imaging;
 using StreetCorsa.Audio.Radio;
 using StreetCorsa.Dialogs;
+using StreetCorsa.Helpers;
+using StreetCorsa.Logging;
 using StreetCorsa.Navigation;
 
 namespace StreetCorsa
@@ -13,6 +17,39 @@ namespace StreetCorsa
     {
         public NavigationService NavigationService { get; }
         public DialogService DialogService { get; }
+
+        // A change of screen: the screen left fades to black, then the black fades off the new one
+        private static readonly TimeSpan ScreenFadeOut = TimeSpan.FromMilliseconds(260);
+        private static readonly TimeSpan ScreenFadeIn = TimeSpan.FromMilliseconds(380);
+
+        // Which change of screen is playing: one that is overtaken by another does not end the new one's
+        private int _transition;
+
+        // How long one dialog takes to fade in over another it replaces
+        private static readonly TimeSpan DialogSwapFade = TimeSpan.FromMilliseconds(150);
+
+        private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger(LogCategory.Navigation);
+
+        // The money card is read off the game this often: the money and the clock change in many places
+        private static readonly TimeSpan StatusInterval = TimeSpan.FromMilliseconds(250);
+        private static readonly System.Globalization.CultureInfo Us = System.Globalization.CultureInfo.GetCultureInfo("en-US");
+
+        // The "now playing" note: out of its anchor, held, and back in
+        private static readonly TimeSpan ToastIn = TimeSpan.FromSeconds(0.35);
+        private static readonly TimeSpan ToastHold = TimeSpan.FromSeconds(3.7);
+        private static readonly TimeSpan ToastOut = TimeSpan.FromSeconds(0.5);
+        private const double ToastGap = 12;
+        private const double ToastTravel = 36;
+
+        // The toast keeps this far off the window's left edge: a long song's name is cut short instead
+        private const double ToastMargin = 20;
+
+        // The still of a screen being left is taken no bigger than this across: on a 4K screen a full-size one is a
+        // software render of the whole window on every change of screen, for a picture that is on show half a second
+        private const int StillMaxWidth = 1920;
+
+        // Assetto Corsa runs (a free run): the screen behind the loader takes no keys
+        private bool _racingShown;
 
         // What had the keyboard on the screen last, to give it back when the dialogs are done. Weak: a screen left
         // behind must not stay in memory for the element of it that had the keyboard last.
@@ -30,6 +67,17 @@ namespace StreetCorsa
 
             ScreenHost.PreviewGotKeyboardFocus += (_, e) => _screenFocus = e.NewFocus is { } focus ? new WeakReference<IInputElement>(focus) : null;
             DialogService.PropertyChanged += OnDialogChanged;
+            NavigationService.ScreenChanging += OnScreenChanging;
+
+            // A dialog that closed stays in the host while it fades out, and goes once the host is gone
+            DialogHost.IsVisibleChanged += (_, e) =>
+            {
+                if (!(bool)e.NewValue && DialogService.CurrentDialog == null) DialogContent.Content = null;
+            };
+
+            // Assetto Corsa on and off: the screen fades to the loader for it and back (the events may come from any thread)
+            app.Launcher.ExecutionStarted += (_, _) => Dispatcher.BeginInvoke(() => ShowRacing(true));
+            app.Launcher.ExecutionEnded += (_, _) => Dispatcher.BeginInvoke(() => ShowRacing(false));
 
             // The radio: its panel over the screen, its hotkeys wherever the focus is, a note as a song starts
             RadioPanelViewModel.Shared.PropertyChanged += (_, e) =>
@@ -42,6 +90,27 @@ namespace StreetCorsa
             // After the screens have had it: the garage's part placement takes R for its own
             KeyDown += OnRadioPowerKey;
             UpdateHosts();
+
+            var status = new DispatcherTimer(StatusInterval, DispatcherPriority.Background, (_, _) => UpdateStatus(), Dispatcher);
+            status.Start();
+        }
+
+        /// <summary>The money card: shown over a game's screens, with the game's money, time and date</summary>
+        private void UpdateStatus()
+        {
+            var game = ((App)System.Windows.Application.Current).CurrentGameState;
+            var shown = game != null && NavigationService.CurrentScreen is { InGame: true };
+            StatusCard.Visibility = shown ? Visibility.Visible : Visibility.Collapsed;
+            if (!shown) return;
+
+            SetText(StatusMoney, $"${game!.Player.Money:N0}");
+            SetText(StatusTime, game.Date.ToString("h:mm tt", Us));
+            SetText(StatusDate, game.Date.ToString("dddd, MMMM d, yyyy", Us));
+
+            static void SetText(System.Windows.Controls.TextBlock block, string text)
+            {
+                if (block.Text != text) block.Text = text;
+            }
         }
 
         /// <summary>The screen takes input only with nothing in front of it; the radio's panel none while a dialog is up</summary>
@@ -49,9 +118,106 @@ namespace StreetCorsa
         {
             var radio = RadioPanelViewModel.Shared.IsOpen;
             var dialog = DialogService.IsDialogOpen;
-            RadioHost.Visibility = radio ? Visibility.Visible : Visibility.Collapsed;
-            RadioHost.IsEnabled = !dialog;
-            ScreenHost.IsEnabled = !dialog && !radio;
+
+            // Both fade in and out; while one fades out it takes neither the mouse nor the keys
+            Reveal.SetIsShown(RadioHost, radio);
+            RadioHost.IsEnabled = radio && !dialog;
+            Reveal.SetIsShown(DialogHost, dialog);
+            DialogHost.IsEnabled = dialog;
+            ScreenHost.IsEnabled = !dialog && !radio && !_racingShown;
+        }
+
+        /// <summary>The keyboard back to what had it on the screen, once nothing is in front of it any more</summary>
+        private void RestoreScreenFocus()
+        {
+            if (_screenFocus?.TryGetTarget(out var focus) == true && focus is UIElement { IsVisible: true, IsEnabled: true } element
+                && ScreenHost.IsAncestorOf(element))
+                Keyboard.Focus(element);
+        }
+
+        /// <summary>
+        /// A screen is about to take another's place: a still of what is on show goes over it, on black, and fades to
+        /// black; then the black fades off the new screen. The new screen is built and entered behind it meanwhile.
+        /// </summary>
+        private void OnScreenChanging()
+        {
+            if (!IsLoaded || ScreenArea.ActualWidth < 1 || ScreenArea.ActualHeight < 1) return;
+
+            var transition = ++_transition;
+            BitmapSource? still = null;
+            try
+            {
+                still = TakeStill(ScreenArea);
+            }
+            catch (Exception ex)
+            {
+                // Without it the screen goes to black at once and fades in from there
+                _logger.Warning(ex, "Could not take a still of the screen being left");
+            }
+
+            TransitionStill.Source = still;
+            TransitionStill.BeginAnimation(OpacityProperty, null);
+            TransitionStill.Opacity = 1;
+            TransitionBlack.BeginAnimation(OpacityProperty, null);
+            TransitionBlack.Opacity = 1;
+            TransitionLayer.Visibility = Visibility.Visible;
+
+            // Played once the new screen is built and laid out behind the still: building one can hold the UI thread
+            // for a good half second, and a fade started now would be over before its first frame was drawn
+            Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, () => PlayTransition(transition));
+        }
+
+        /// <summary>The still fades to black, then the black off the new screen; unless another change took over</summary>
+        private void PlayTransition(int transition)
+        {
+            if (transition != _transition) return;
+
+            TransitionStill.BeginAnimation(OpacityProperty, new DoubleAnimation(1, 0, ScreenFadeOut)
+            {
+                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn }
+            });
+
+            var fadeIn = new DoubleAnimation(1, 0, ScreenFadeIn)
+            {
+                BeginTime = ScreenFadeOut,
+                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+            };
+            fadeIn.Completed += (_, _) =>
+            {
+                if (transition != _transition) return;
+                TransitionLayer.Visibility = Visibility.Collapsed;
+                TransitionStill.Source = null;
+            };
+            TransitionBlack.BeginAnimation(OpacityProperty, fadeIn);
+        }
+
+        /// <summary>What the element shows now, at the screen's own resolution up to <see cref="StillMaxWidth"/></summary>
+        private static BitmapSource TakeStill(FrameworkElement element)
+        {
+            var dpi = VisualTreeHelper.GetDpi(element);
+            var scale = Math.Min(1, StillMaxWidth / Math.Max(1, element.ActualWidth * dpi.DpiScaleX));
+            var width = Math.Max(1, (int)Math.Ceiling(element.ActualWidth * dpi.DpiScaleX * scale));
+            var height = Math.Max(1, (int)Math.Ceiling(element.ActualHeight * dpi.DpiScaleY * scale));
+
+            var still = new RenderTargetBitmap(width, height, dpi.PixelsPerInchX * scale, dpi.PixelsPerInchY * scale, PixelFormats.Pbgra32);
+            still.Render(element);
+            still.Freeze();
+            return still;
+        }
+
+        /// <summary>
+        /// Assetto Corsa is running: the screen fades to a loader until it closes, and back. A race has a screen of its
+        /// own for that (the race screen), which is left as it is.
+        /// </summary>
+        private void ShowRacing(bool racing)
+        {
+            if (racing && NavigationService.CurrentScreen is Screens.RaceLoading.RaceLoadingScreenViewModel) return;
+            Reveal.SetIsShown(RacingLayer, racing);
+
+            // The loader only takes the mouse: the keys would still press the screen's buttons behind it
+            _racingShown = racing;
+            UpdateHosts();
+            if (!racing) Dispatcher.BeginInvoke(DispatcherPriority.Loaded, RestoreScreenFocus);
         }
 
         private void OnRadioPanelChanged()
@@ -61,9 +227,7 @@ namespace StreetCorsa
             Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
             {
                 if (open) RadioHost.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
-                else if (_screenFocus?.TryGetTarget(out var focus) == true && focus is UIElement { IsVisible: true, IsEnabled: true } element
-                         && ScreenHost.IsAncestorOf(element))
-                    Keyboard.Focus(element);
+                else RestoreScreenFocus();
             });
         }
 
@@ -117,17 +281,54 @@ namespace StreetCorsa
             e.Handled = true;
         }
 
-        /// <summary>The song's name at the bottom of the screen for a few seconds; not while the panel shows it</summary>
+        /// <summary>
+        /// The song's name for a few seconds, coming out of the radio's icon to its left and going back into it; on a screen
+        /// without the radio, out of the money card, or the top right corner. Not while the panel shows it.
+        /// </summary>
         private void ShowNowPlaying(RadioSong song)
         {
             if (RadioPanelViewModel.Shared.IsOpen) return;
 
             RadioToastText.Text = song.Display;
-            var show = new DoubleAnimationUsingKeyFrames();
-            show.KeyFrames.Add(new LinearDoubleKeyFrame(1, KeyTime.FromTimeSpan(TimeSpan.FromSeconds(0.3))));
-            show.KeyFrames.Add(new LinearDoubleKeyFrame(1, KeyTime.FromTimeSpan(TimeSpan.FromSeconds(4.0))));
-            show.KeyFrames.Add(new LinearDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromSeconds(4.8))));
-            RadioToast.BeginAnimation(OpacityProperty, show);
+
+            // The anchor's left edge and middle, in the window (the middle of a corner toast once its height is known)
+            var anchor = RadioToastAnchor.Current ?? (StatusCard.IsVisible ? StatusCard : null);
+            var anchored = anchor != null && anchor.IsDescendantOf(this);
+            System.Windows.Point edge;
+            if (anchored)
+            {
+                var bounds = anchor!.TransformToAncestor(this).TransformBounds(new Rect(anchor.RenderSize));
+                edge = new System.Windows.Point(bounds.Left, bounds.Top + bounds.Height / 2);
+            }
+            else
+            {
+                edge = new System.Windows.Point(ActualWidth - ToastMargin + ToastGap, ToastMargin);
+            }
+
+            // No wider than the room left of the anchor: a long name is cut short rather than off the window
+            RadioToast.MaxWidth = Math.Max(0, edge.X - ToastGap - ToastMargin);
+            RadioToast.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+            var size = RadioToast.DesiredSize;
+            if (!anchored) edge.Y += size.Height / 2;
+
+            System.Windows.Controls.Canvas.SetLeft(RadioToast, edge.X - ToastGap - size.Width);
+            System.Windows.Controls.Canvas.SetTop(RadioToast, edge.Y - size.Height / 2);
+
+            var total = ToastIn + ToastHold + ToastOut;
+            RadioToast.BeginAnimation(OpacityProperty, Keys(total, 0, 1, 1, 0));
+            RadioToastShift.BeginAnimation(TranslateTransform.XProperty, Keys(total, ToastTravel, 0, 0, ToastTravel));
+            RadioToastScale.BeginAnimation(ScaleTransform.ScaleXProperty, Keys(total, 0.4, 1, 1, 0.4));
+
+            // From the anchor, held, back to it: eased out of it and into it
+            DoubleAnimationUsingKeyFrames Keys(TimeSpan duration, double from, double shown, double held, double to)
+            {
+                var keys = new DoubleAnimationUsingKeyFrames { Duration = duration };
+                keys.KeyFrames.Add(new DiscreteDoubleKeyFrame(from, KeyTime.FromTimeSpan(TimeSpan.Zero)));
+                keys.KeyFrames.Add(new EasingDoubleKeyFrame(shown, KeyTime.FromTimeSpan(ToastIn), new CubicEase { EasingMode = EasingMode.EaseOut }));
+                keys.KeyFrames.Add(new LinearDoubleKeyFrame(held, KeyTime.FromTimeSpan(ToastIn + ToastHold)));
+                keys.KeyFrames.Add(new EasingDoubleKeyFrame(to, KeyTime.FromTimeSpan(duration), new CubicEase { EasingMode = EasingMode.EaseIn }));
+                return keys;
+            }
         }
 
         /// <summary>
@@ -138,9 +339,17 @@ namespace StreetCorsa
         private void OnDialogChanged(object? sender, PropertyChangedEventArgs e)
         {
             if (e.PropertyName != nameof(DialogService.CurrentDialog)) return;
-            UpdateHosts();
 
+            // One dialog straight after another (the next one waiting): the new one fades in on the card that stays up
             var dialog = DialogService.CurrentDialog;
+            if (dialog != null)
+            {
+                var swapping = DialogHost.IsVisible && DialogContent.Content != null && !ReferenceEquals(DialogContent.Content, dialog);
+                DialogContent.Content = dialog;
+                if (swapping) DialogCard.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, DialogSwapFade));
+            }
+
+            UpdateHosts();
             Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
             {
                 if (!ReferenceEquals(dialog, DialogService.CurrentDialog)) return;
@@ -149,10 +358,9 @@ namespace StreetCorsa
                 {
                     DialogHost.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
                 }
-                else if (_screenFocus?.TryGetTarget(out var focus) == true && focus is UIElement { IsVisible: true, IsEnabled: true } element
-                         && ScreenHost.IsAncestorOf(element))
+                else
                 {
-                    Keyboard.Focus(element);
+                    RestoreScreenFocus();
                 }
             });
         }

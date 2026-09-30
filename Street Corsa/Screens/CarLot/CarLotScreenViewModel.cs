@@ -77,10 +77,6 @@ namespace StreetCorsa.Screens.CarLot
         /// <summary>No car is being taken: the warehouse and the list answer the pointer</summary>
         public bool IsIdle => !_taking;
 
-        public string BankrollDisplay => Bankroll(_gameState.Player.Money);
-        public string DateDisplay => HeaderDate(_gameState.Date);
-        public string TimeDisplay => HeaderTime(_gameState.Date);
-
         public CarLotScreenViewModel(
             NavigationService navigationService,
             GameState gameState,

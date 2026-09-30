@@ -1107,6 +1107,57 @@ changing the one scene's pictures, not by building more scenes.
 - Checked with offscreen harnesses (the scene through the renderer; the real screen with fake services), not yet in
   the game.
 
+## Step 24: from `docs/ideas.txt`, batch 4 (planned 2026-09-29)
+
+The fourth batch of the user's ideas: the garage's look, two new dialogs and fades everywhere. **The user decided
+(2026-09-29):** one PR for all of it.
+
+- **Garage buttons** (idea 1): round, smaller buttons with an icon inside (the user's PNGs in `Assets/Icons`, drawn as
+  masks in one light contrast colour, steering wheel and trophy included), a thick outline and a semi-transparent
+  background, tooltips; no button pictures. Placement: Quit top left; Hit the streets centre left (steering wheel);
+  Newspaper bottom left, Part dealer above it, Car dealer above that; Gas station bottom right; Career stats top
+  right (trophy), Radio before it in the same row, Calendar below Career; Car info centre right.
+- **No bankroll bar**: the bottom bar and its code go; the money shows as a small readout top right, under the icons.
+- **Car name bar**: outlined and partly transparent, the text in good contrast.
+- **Car info** (idea 2): a centred dialog with everything about the car and every installed part's condition,
+  mileage, fuel and so on. The floating car bar keeps the 3D toggles and the actions; condition, mileage and fuel move
+  to the dialog; Preview in Showroom goes.
+- **Quit** (idea 3): a centred dialog with the options; the Back and Exit buttons, their pictures and logic go.
+- **Fades** (ideas 4, 5): every screen change fades out and in; the loader shows until the scene is fully loaded, and
+  its spinner and message fade with the screen. Launching AC fades to the loading screen, and the scene fades back
+  when AC closes. Every dialog fades in and out.
+- **Game-wide** (note): buttons and dialogs everywhere get the thick outline and semi-transparent background.
+
+**As built (2026-09-29, `feature/garage-ui`), not yet seen in the game:**
+- `RoundIconButtonStyle` (icon in `Tag`, drawn as an opacity mask in `UiOutline` cream, amber under the pointer) and the
+  icons as `Styles/Icons.xaml`; `quit.png`'s white fill was made transparent so it reads as a mask. The dialog buttons,
+  the garage's toggles, tooltips and the dialog card use the new glass/outline colours (`Ui*` in Colors.xaml).
+- Every screen's picture back/exit button is a round icon button; the unused button pictures, brushes,
+  `ExitButtonStyle`, `OverlayTileButtonStyle` and `Components/BottomBar` are gone. The six screens with the bottom bar
+  show the money top right (`MoneyReadoutStyle`).
+- `Dialogs/Quit` (Main Menu, Quit to Desktop, Stay) and `Dialogs/CarInfo` (figures, history, every part indented under
+  what it is on, with a wear bar). The garage's own exit fade (`ExitTransition`) went: the window does it.
+- `MainWindow`: a change of screen takes a RenderTargetBitmap still of the old screen (D3DImage included), shows it on
+  black and starts the fade at ApplicationIdle, once the new screen is laid out (building one can block the UI for
+  half a second, which ate a fade started at once). Dialog and radio hosts fade with `Reveal`; the closing dialog stays
+  in the host while it fades, disabled. A free run fades to a loader (`RacingLayer`) on the launcher's events and back.
+- `Controls/LoadingIndicator` (fades out, `WaitFor` a viewport): garage, street and gas station use it; the lots keep
+  their own covers.
+- Checked with an off-screen harness driving the real game on a copy of a save (stills of the garage, dialogs and
+  transition frames).
+
+**Tweaks after the user's first look (2026-09-30):**
+- One money card (money, time, date) in the window, top right over every screen of a game in play (`IScreen.InGame`,
+  false for the main menu, sound library and catalog editor), read off `App.CurrentGameState` four times a second. The
+  screens' own money/time readouts and their view-model properties are gone; what sat top right moved under the card.
+- Garage: career, calendar, radio in one column under the card.
+- The "now playing" note comes out of the radio button to its left and goes back into it (`RadioToastAnchor`); on a
+  screen without one, out of the money card.
+- The car radio's AM sound fades in and out over 1.5 s (`FMOD_DSP_SetWetDryMix` on each effect, stepped by the hub's
+  pump); the static fades with it. The radio gets into the car when the street is on screen or the station's curtain
+  lifts, not at the click; it leaves the car with the screen.
+- A free run or a test-and-tune keeps the radio as it was (`App.KeepsRadio`); only a race switches it off.
+
 ## Testing in AC without driving
 
 See `docs/ac-integration/csp-lua-scripts.md`, "Testing the race mode without driving". In short:

@@ -15,6 +15,11 @@ namespace StreetCorsa.Screens.Cruise
         {
             InitializeComponent();
 
+            // The radio is the car's once the player is out on the street: when it is on screen
+            Street.Ready += (_, _) => GetIn();
+            Street.Failed += (_, _) => GetIn();
+            Street.NothingToShow += (_, _) => GetIn();
+
             // The window's keys, as the garage takes them: a button that was clicked keeps the focus otherwise
             Loaded += (_, _) =>
             {
@@ -35,6 +40,11 @@ namespace StreetCorsa.Screens.Cruise
         }
 
         private CruiseScreenViewModel? ViewModel => DataContext as CruiseScreenViewModel;
+
+        private void GetIn()
+        {
+            if (IsLoaded) Audio.Radio.RadioPlayer.Shared.SetInCar(true);
+        }
 
         private void OnWindowKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {

@@ -53,14 +53,17 @@ namespace StreetCorsa.Models.GameState
         /// without recursion, so a save of any depth cannot overflow the stack: what hangs deeper than
         /// <see cref="MaxDepth"/> is left out, as are parts a save left null.
         /// </summary>
-        public IEnumerable<PartInstance> SelfAndDescendants()
+        public IEnumerable<PartInstance> SelfAndDescendants() => SelfAndDescendantsWithDepth().Select(p => p.Part);
+
+        /// <summary><see cref="SelfAndDescendants"/> with how deep each part hangs: 0 for this one, 1 for what is on it</summary>
+        public IEnumerable<(PartInstance Part, int Depth)> SelfAndDescendantsWithDepth()
         {
             var stack = new Stack<(PartInstance Part, int Depth)>();
             stack.Push((this, 0));
             while (stack.Count > 0)
             {
                 var (part, depth) = stack.Pop();
-                yield return part;
+                yield return (part, depth);
                 if (depth >= MaxDepth || part.Children is not { } children) continue;
 
                 for (var i = children.Count - 1; i >= 0; i--)

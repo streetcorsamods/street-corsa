@@ -171,18 +171,12 @@ namespace StreetCorsa.Screens.Cruise
         /// <summary>The rival's engine, driven by the street while the car moves</summary>
         public EngineRunner RivalEngine { get; } = new(EngineChannel.Second);
 
-        public string ClockDisplay => _gameState.Date.ToString("h:mm tt", System.Globalization.CultureInfo.GetCultureInfo("en-US"));
-
-        public string DateDisplay => _gameState.Date.ToString("dddd, MMMM d", System.Globalization.CultureInfo.GetCultureInfo("en-US"));
-
         public string LightDisplay => Light switch
         {
             StreetLight.Day => "Daylight",
             StreetLight.Dusk => "Dusk",
             _ => "Night"
         } + (MatchupCalculator.IsNight(_gameState.Date) ? " · the stakes are up" : string.Empty);
-
-        public string BankrollDisplay => Bankroll(_gameState.Player.Money);
 
         private string _statusText = "You pull over to the curb and let the engine idle.";
 
@@ -538,10 +532,7 @@ namespace StreetCorsa.Screens.Cruise
 
         private void RefreshClock()
         {
-            OnPropertyChanged(nameof(ClockDisplay));
-            OnPropertyChanged(nameof(DateDisplay));
             OnPropertyChanged(nameof(LightDisplay));
-            OnPropertyChanged(nameof(BankrollDisplay));
         }
 
         /// <summary>The day is over: the player drives home, and wakes up in the garage</summary>

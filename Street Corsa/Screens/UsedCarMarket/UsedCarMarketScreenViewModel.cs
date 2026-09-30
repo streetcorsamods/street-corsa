@@ -70,8 +70,6 @@ namespace StreetCorsa.Screens.UsedCarMarket
 
         public ObservableCollection<string> DealerOptions { get; set; }
 
-        public string BankrollDisplay => Bankroll(_gameState.Player.Money);
-
         public UsedCarMarketScreenViewModel(
             NavigationService navigationService,
             DialogService dialogService,
@@ -264,7 +262,6 @@ namespace StreetCorsa.Screens.UsedCarMarket
             {
                 // Bought, or sold to somebody else meanwhile: either way the ads are not what they were
                 if (result.Succeeded || result.Outcome == PurchaseOutcome.NoLongerAvailable) LoadListings();
-                OnPropertyChanged(nameof(BankrollDisplay));
             });
         }
 
