@@ -111,7 +111,6 @@ internal sealed class CarBodyRock
         _wheelSpin = wheelSpin;
         _steer = steer;
         var spin = Sx.Matrix.RotationX(wheelSpin * _frontSign);
-        var steered = spin * Sx.Matrix.RotationY(steer);
 
         var lean = Sx.Matrix.Translation(-_pivot)
                    * Sx.Matrix.RotationZ(pose.Roll * _leftSign)
@@ -124,10 +123,19 @@ internal sealed class CarBodyRock
         WorldLean = Sx.Matrix.Invert(_base) * lean * _base;
         foreach (var held in _held)
         {
-            var local = held.FrontWheel && steer != 0f ? steered * held.Local
-                : held.Wheel && wheelSpin != 0f ? spin * held.Local
-                : held.Local;
-            held.Node.LocalMatrix = local * held.ToCar * back * held.FromCar;
+            var local = held.Wheel && wheelSpin != 0f ? spin * held.Local : held.Local;
+            var inCar = local * held.ToCar;
+
+            // A front wheel steers about the car's vertical through its own middle: a wheel model's own axes are not
+            // always the car's (its up may lie along the car's length), so they cannot be steered about
+            if (held.FrontWheel && steer != 0f)
+            {
+                var middle = held.Local * held.ToCar;
+                var at = new Sx.Vector3(middle.M41, middle.M42, middle.M43);
+                inCar *= Sx.Matrix.Translation(-at) * Sx.Matrix.RotationY(steer) * Sx.Matrix.Translation(at);
+            }
+
+            held.Node.LocalMatrix = inCar * back * held.FromCar;
         }
 
         return true;
