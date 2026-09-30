@@ -23,11 +23,11 @@ Garage (hub) ◀──▶ CarLot ──▶ take a car ──▶ back to the gara
   to the garage, as the list did). Nothing else is done from here (the user, 2026-09-29: no card, no selling or engine
   start; the garage does those for the car in it). The lot opens on warehouse 1. While a car is being taken the arrows,
   the list and the warehouse do nothing.
-- **Driving off**, both ways (`Controls/DriveOff`): the car's lights come on, its engine starts, it idles a moment and
-  pulls away out of the picture, and the screen and the engine fade out together as it rolls. From the garage it is the
-  garage's car going to the lot (the car's own view only: not with its parts out or its engine on the stand); from the
-  lot it is the car taken, out of its bay. A car without an engine that runs is moved without the show. The lot loads
-  no light sources, so there its lamps glow and light nothing.
+- **Driving off and in** (`Controls/DriveOff`): taking a car whose engine runs, its lights come on, its engine starts,
+  it idles a moment and pulls out of its bay, and the screen and the engine fade out together as it rolls; then it
+  drives into the garage, lights on and engine running, brakes to a stop in its place, idles and is switched off. A
+  car whose engine does not run is towed: it is simply there, as before. Going to the lot shows nothing (the player
+  may only be looking). The lot loads no light sources, so there the lamps glow and light nothing.
 
 ## Warehouses
 

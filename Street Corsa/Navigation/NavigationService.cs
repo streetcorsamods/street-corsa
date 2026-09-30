@@ -312,7 +312,8 @@ namespace StreetCorsa.Navigation
         public void NavigateToGarageLater(GameState gameState) =>
             _ = System.Windows.Threading.Dispatcher.CurrentDispatcher.InvokeAsync(() => NavigateToGarage(gameState));
 
-        public bool NavigateToGarage(GameState gameState, bool skipAnimation = false) => SafeNavigate("garage", () =>
+        /// <param name="carArriving">The car was just taken out of the lot: it drives in</param>
+        public bool NavigateToGarage(GameState gameState, bool skipAnimation = false, bool carArriving = false) => SafeNavigate("garage", () =>
             new Screens.Garage.GarageScreenViewModel(
                 this,
                 _dialogService,
@@ -326,7 +327,8 @@ namespace StreetCorsa.Navigation
                 _contentService,
                 _raceCarDataService,
                 _saleService,
-                skipAnimation));
+                skipAnimation,
+                carArriving));
 
         /// <summary>
         /// The career, over the current screen, on the section last looked at in this game. One that fails to build is

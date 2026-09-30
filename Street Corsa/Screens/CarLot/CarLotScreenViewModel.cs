@@ -301,13 +301,18 @@ namespace StreetCorsa.Screens.CarLot
             _taking = true;
             OnPropertyChanged(nameof(IsIdle));
             RelayCommand.RaiseCanExecuteChanged();
+
+            // A car that runs drives out of here and into the garage
+            var runs = false;
             try
             {
+                var engine = await EngineSpecs.ForAsync(_partsService, car.Car, car.DisplayName);
+                runs = engine is { Runs: true };
                 if (DriveCarOff is { } driveOff)
                 {
                     try
                     {
-                        await driveOff(await EngineSpecs.ForAsync(_partsService, car.Car, car.DisplayName));
+                        await driveOff(engine);
                     }
                     catch (Exception ex)
                     {
@@ -349,7 +354,7 @@ namespace StreetCorsa.Screens.CarLot
             }
 
             // The navigation service catches and reports a garage that will not open: the lot is shown again then
-            if (!GoToGarage()) PutCarBack?.Invoke();
+            if (!GoToGarage(carArriving: runs)) PutCarBack?.Invoke();
         }
 
         private void Save(string why)
@@ -370,10 +375,10 @@ namespace StreetCorsa.Screens.CarLot
 
         private void OnBack() => GoToGarage();
 
-        private bool GoToGarage()
+        private bool GoToGarage(bool carArriving = false)
         {
             _logger.Information("Back to the garage");
-            return _navigationService.NavigateToGarage(_gameState, skipAnimation: true);
+            return _navigationService.NavigateToGarage(_gameState, skipAnimation: true, carArriving);
         }
 
         #endregion

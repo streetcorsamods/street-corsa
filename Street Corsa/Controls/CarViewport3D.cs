@@ -17,7 +17,7 @@ namespace StreetCorsa.Controls;
 /// The renderer draws off-screen into a shared DX11 texture which is presented through a D3DImage,
 /// so the viewport composes like any other WPF element (overlays, opacity, dialogs on top all work).
 /// </summary>
-public class CarViewport3D : D3DViewportBase, ICarDrivingOff
+public class CarViewport3D : D3DViewportBase, ICarDrivingIn
 {
     // Orbit camera limits: stay above the floor and inside the showroom walls
     private const float MinBeta = 0.02f;
@@ -1655,27 +1655,23 @@ public class CarViewport3D : D3DViewportBase, ICarDrivingOff
 
     #endregion
 
-    #region Driving off
+    #region Driving in
+
+    // Where a car taken out of the lot comes from: this far behind its place, out of the picture
+    private const float RollInDistance = 7f;
 
     /// <summary>The car, standing on its wheels in the plain view: not with its parts out or an engine on the move</summary>
     private Kn5RenderableCar? CarToDrive => Renderer?.CarNode is { } node && !PartsVisible && !IsMovingEngine ? node : null;
 
-    public bool LightsOn()
+    public bool Lights(bool on)
     {
         if (CarToDrive == null) return false;
-        HeadlightsOn = true;
+        HeadlightsOn = on;
         AnimateFor(TimeSpan.FromSeconds(1));
         return true;
     }
 
-    public bool PullAway()
-    {
-        if (CarToDrive is not { } node) return false;
-        PullAway(node);
-        return true;
-    }
-
-    public void StayPut() => StopPulling();
+    public Task? RollIn() => CarToDrive is { } node ? RollIn(node, RollInDistance) : null;
 
     #endregion
 

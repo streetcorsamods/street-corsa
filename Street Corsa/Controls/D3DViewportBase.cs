@@ -91,7 +91,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     // not by the clock, so a bump lands with the engine however slowly the frames come.
     private readonly List<(float Age, float Sign, bool Front)> _bumps = new();
 
-    // A car pulling away out of the scene (DriveOff), until the screen goes or it is put back
+    // A car pulling away out of the scene, or rolling in to where it stands (DriveOff)
     private Pull? _pull;
 
     /// <summary>How the label next to the pointer looks, and where it sits from the pointer</summary>
@@ -632,6 +632,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         _firstFrameTimer.Stop();
         _rock = null;
         _bumps.Clear();
+        _pull?.Arrived.TrySetResult();
         _pull = null;
 
         var renderer = _renderer;
@@ -853,7 +854,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
 
     #endregion
 
-    #region Pulling away
+    #region Pulling away and rolling in
 
     // A car pulling away in first gear: gently, to a walking pace and a bit, and the revs with it
     private const float PullAcceleration = 1.8f;
@@ -862,7 +863,10 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     private const double PullThrottle = 0.45;
     private const double CruiseThrottle = 0.2;
 
-    /// <summary>A car on its way out: where it stood, how far it has come and how fast, and how its body squats</summary>
+    /// <summary>
+    /// A car on the move: where it stands (or stood), how far it is from there and how fast it goes, and how its body
+    /// pitches. One pulling away starts at 0 and speeds up; one rolling in starts behind and brakes to a stop at 0.
+    /// </summary>
     private sealed class Pull(Kn5RenderableCar car, SlimDX.Matrix from, bool autoAdjust)
     {
         public Kn5RenderableCar Car { get; } = car;
@@ -871,6 +875,12 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         public Street.ChassisPitch Pitch { get; } = new();
         public float Distance { get; set; }
         public float Speed { get; set; }
+
+        /// <summary>The brake that stops a car rolling in on its mark; 0 for one pulling away</summary>
+        public float Braking { get; init; }
+
+        /// <summary>Done when a car rolling in has stopped (or it was called off)</summary>
+        public TaskCompletionSource Arrived { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     }
 
     /// <summary>
@@ -887,18 +897,43 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         AnimateFor(SettleWindow);
     }
 
-    /// <summary>The car that pulled away back where it stood, and the engine out of gear</summary>
+    /// <summary>
+    /// <paramref name="car"/> rolls in nose first from <paramref name="distance"/> metres behind where it stands, and
+    /// brakes to a stop there; done once it has stopped
+    /// </summary>
+    protected Task RollIn(Kn5RenderableCar car, float distance)
+    {
+        if (_renderer is not { } renderer || _pull != null) return Task.CompletedTask;
+
+        var from = _rock is { } rock && ReferenceEquals(rock.Car, car) ? rock.Base : car.LocalMatrix;
+        var speed = PullTopSpeed;
+        _pull = new Pull(car, from, renderer.AutoAdjustTarget)
+        {
+            Distance = -distance,
+            Speed = speed,
+            Braking = speed * speed / (2f * distance)
+        };
+        renderer.AutoAdjustTarget = false;
+        car.BrakeLightsEnabled = true;
+        OnPoseChanged();
+        AnimateFor(SettleWindow);
+        return _pull.Arrived.Task;
+    }
+
+    /// <summary>The car that pulled away back where it stood (one rolling in, where it stops), and the engine out of gear</summary>
     protected void StopPulling()
     {
         if (_pull is not { } pull) return;
 
         _pull = null;
+        if (pull.Braking > 0f) pull.Car.BrakeLightsEnabled = false;
         if (_rock is { } rock && ReferenceEquals(rock.Car, pull.Car)) rock.Apply(Audio.BodyPose.Rest, 0f, pull.From);
         else pull.Car.LocalMatrix = pull.From;
         if (_renderer != null) _renderer.AutoAdjustTarget = pull.AutoAdjust;
         RunningEngine?.Drive(null);
         ReleaseRock();
         OnPoseChanged();
+        pull.Arrived.TrySetResult();
     }
 
     private void StepPull(float dt)
@@ -906,6 +941,12 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         if (_pull is not { } pull) return;
 
         var step = Math.Min(dt, GarageRenderer.MaxTickSeconds);
+        if (pull.Braking > 0f)
+        {
+            StepRollIn(pull, step);
+            return;
+        }
+
         var acceleration = pull.Speed < PullTopSpeed ? PullAcceleration : 0f;
         pull.Speed = Math.Min(PullTopSpeed, pull.Speed + acceleration * step);
         pull.Distance += pull.Speed * step;
@@ -915,6 +956,28 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         {
             var idle = engine.Spec?.IdleRpm is > 200 and var rpm ? rpm : 800;
             engine.Drive(idle * 1.1 + pull.Speed * PullRpmPerMetrePerSecond, acceleration > 0f ? PullThrottle : CruiseThrottle);
+        }
+
+        OnPoseChanged();
+    }
+
+    private void StepRollIn(Pull pull, float step)
+    {
+        pull.Speed = Math.Max(0f, pull.Speed - pull.Braking * step);
+        pull.Distance = Math.Min(0f, pull.Distance + pull.Speed * step);
+        pull.Pitch.Tick(step, -pull.Braking);
+
+        if (RunningEngine is { IsRunning: true } engine)
+        {
+            var idle = engine.Spec?.IdleRpm is > 200 and var rpm ? rpm : 800;
+            engine.Drive(idle + pull.Speed * PullRpmPerMetrePerSecond * 0.6, 0);
+        }
+
+        if (pull.Distance >= 0f || pull.Speed <= 0f)
+        {
+            // On its mark: the body rocks back off the brakes on the engine's springs from here
+            StopPulling();
+            return;
         }
 
         OnPoseChanged();

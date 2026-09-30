@@ -1,5 +1,4 @@
 using System;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
@@ -23,13 +22,22 @@ namespace StreetCorsa.Screens.Garage
         private DispatcherTimer? _revealTimer;
         private bool _revealed;
 
+        // A car taken out of the lot is driving in: the screen takes no clicks until it is in its place
+        private bool _arriving;
+        private bool _droveIn;
+
         public GarageScreenView()
         {
             InitializeComponent();
             Loaded += OnLoaded;
             Unloaded += OnUnloaded;
 
-            Viewport3D.Ready += (_, _) => RevealAfter(SettleDelay);
+            Viewport3D.Ready += (_, _) =>
+            {
+                // Once the scene has done setting itself up (the camera framing the car included)
+                Dispatcher.BeginInvoke(DispatcherPriority.Background, DriveIn);
+                RevealAfter(SettleDelay);
+            };
             Viewport3D.Failed += (_, _) => RevealAfter(TimeSpan.Zero);
 
             // Parts are picked in the 3D view; what a pick means is the workbench's business
@@ -44,22 +52,6 @@ namespace StreetCorsa.Screens.Garage
             Viewport3D.PlacementChanged += text =>
             {
                 if (DataContext is GarageScreenViewModel viewModel) viewModel.Workbench.PlacementDisplay = text ?? string.Empty;
-            };
-
-            // The car drives off to the lot: the view plays it, the view model says when
-            DataContextChanged += (_, e) =>
-            {
-                if (e.OldValue is GarageScreenViewModel old)
-                {
-                    old.DriveCarOff = null;
-                    old.PutCarBack = null;
-                }
-
-                if (e.NewValue is GarageScreenViewModel viewModel)
-                {
-                    viewModel.DriveCarOff = DriveCarOffAsync;
-                    viewModel.PutCarBack = PutCarBack;
-                }
             };
 
             // Placement mode is driven from the keyboard, wherever the focus is on the screen
@@ -143,37 +135,28 @@ namespace StreetCorsa.Screens.Garage
         }
 
         /// <summary>
-        /// The car in the garage starts up and drives off, and the screen goes black over it; nothing on the screen can be
-        /// used meanwhile. A car that cannot (no engine that runs, its parts out) stays, and nothing is shown.
+        /// The car just taken out of the lot drives in as the garage comes up (once: the garage is only arrived at once).
+        /// Asked for only for a car whose engine runs; one that does not was towed in, and is simply there.
         /// </summary>
-        private async Task DriveCarOffAsync()
+        private async void DriveIn()
         {
-            // Only from the car's own view, where its engine is on show
-            if (!EnginePanel.IsVisible) return;
-
+            if (_droveIn || DataContext is not GarageScreenViewModel { CarArriving: true }) return;
+            _droveIn = true;
+            _arriving = true;
             ContentLayer.IsHitTestVisible = false;
-            await StreetCorsa.Controls.DriveOff.PlayAsync(Viewport3D, EnginePanel.Runner, CurtainDownAsync);
-        }
-
-        /// <summary>The garage stays after all: the curtain up, the car back where it stood</summary>
-        private void PutCarBack()
-        {
-            Curtain.BeginAnimation(OpacityProperty, new DoubleAnimation(0, QuickFadeInDuration));
-            Viewport3D.StayPut();
-            StreetCorsa.Controls.DriveOff.Loud(EnginePanel.Runner);
-            ContentLayer.IsHitTestVisible = _revealed;
-        }
-
-        private Task CurtainDownAsync(TimeSpan duration)
-        {
-            var done = new TaskCompletionSource();
-            var animation = new DoubleAnimation(1, duration) { EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn } };
-            animation.Completed += (_, _) => done.TrySetResult();
-            Curtain.BeginAnimation(OpacityProperty, animation);
-
-            // Not shown (the window gone): no animation will finish
-            if (!IsLoaded) done.TrySetResult();
-            return done.Task;
+            try
+            {
+                await StreetCorsa.Controls.DriveOff.DriveInAsync(Viewport3D, EnginePanel.Runner);
+            }
+            catch (Exception ex)
+            {
+                StreetCorsa.Logging.AppLoggerFactory.CreateLogger("Garage").Error(ex, "The car could not drive in");
+            }
+            finally
+            {
+                _arriving = false;
+                ContentLayer.IsHitTestVisible = _revealed;
+            }
         }
 
         /// <summary>
@@ -208,8 +191,8 @@ namespace StreetCorsa.Screens.Garage
             var skipAnimation = (DataContext as GarageScreenViewModel)?.SkipEnterAnimation == true;
             var duration = skipAnimation ? QuickFadeInDuration : FadeInDuration;
 
-            // Invisible buttons must not be clickable while loading
-            ContentLayer.IsHitTestVisible = true;
+            // Invisible buttons must not be clickable while loading, nor while a car is driving in
+            ContentLayer.IsHitTestVisible = !_arriving;
 
             ContentLayer.BeginAnimation(OpacityProperty, new DoubleAnimation(0.0, 1.0, duration)
             {

@@ -15,6 +15,16 @@ public interface ICarDrivingOff
     void StayPut();
 }
 
+/// <summary>A viewport a car can drive into: the garage, as a car taken out of the lot comes home</summary>
+public interface ICarDrivingIn
+{
+    /// <summary>The car's headlights on or off; false when there is no car there to drive in</summary>
+    bool Lights(bool on);
+
+    /// <summary>The car rolls in from behind and stops where it stands; done once it has; null when there is no car there</summary>
+    Task? RollIn();
+}
+
 /// <summary>
 /// A car leaving the screen under its own power, as the player takes it between the garage and the lot: the lights
 /// come on, the engine is started (unless it runs already), it idles a moment, the car pulls away, and as it rolls the
@@ -54,6 +64,35 @@ public static class DriveOff
 
         await Task.WhenAll(curtain(Fade), QuietenAsync(engine, Fade));
         return true;
+    }
+
+    // A car driving in: the engine runs on a moment after it stops, then it is switched off, the lights after it
+    private static readonly TimeSpan IdlingIn = TimeSpan.FromSeconds(1.4);
+    private static readonly TimeSpan LightsAfterKey = TimeSpan.FromSeconds(0.4);
+    private static readonly TimeSpan WaitForEngine = TimeSpan.FromSeconds(3);
+
+    /// <summary>
+    /// A car taken out of the lot comes into the garage: lights on and engine running (it joins in as soon as the
+    /// garage has worked the engine out), it rolls in and brakes to a stop in its place, idles, and is switched off.
+    /// Only for a car whose engine runs: the caller does not ask for it otherwise.
+    /// </summary>
+    public static async Task DriveInAsync(ICarDrivingIn car, EngineRunner engine)
+    {
+        if (!car.Lights(true) || car.RollIn() is not { } arrived) return;
+
+        // The engine is worked out on a worker while the garage comes up: it starts up running the moment it is there
+        var giveUp = DateTime.Now + WaitForEngine;
+        while (!engine.IsRunning && !arrived.IsCompleted && DateTime.Now < giveUp)
+        {
+            if (engine.Spec is { Runs: true }) engine.StartRunning();
+            if (!engine.IsRunning) await Task.Delay(40);
+        }
+
+        await arrived;
+        await Task.Delay(IdlingIn);
+        if (engine.IsRunning) engine.Toggle();
+        await Task.Delay(LightsAfterKey);
+        car.Lights(false);
     }
 
     /// <summary>The engine back to full volume, for a car put back where it stood</summary>
