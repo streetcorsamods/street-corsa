@@ -523,20 +523,20 @@
                     VerticalAlignment="Bottom"
                     Margin="30,0,0,30">
             <Button x:Name="CarDealersButton"
-                    Style="{StaticResource RoundIconButtonStyle}"
+                    Style="{StaticResource RoundIconButtonLargeStyle}"
                     Tag="{StaticResource CarDealerIcon}"
-                    Padding="10"
+                    Padding="13"
                     Command="{Binding CarDealersCommand}"
                     ToolTip="Car dealers"/>
             <!-- The part shops' own map -->
             <Button x:Name="PartDealersButton"
-                    Style="{StaticResource RoundIconButtonStyle}"
+                    Style="{StaticResource RoundIconButtonLargeStyle}"
                     Tag="{StaticResource PartsIcon}"
                     Command="{Binding PartDealersCommand}"
                     ToolTip="Part dealers"
                     Margin="0,16,0,0"/>
             <Button x:Name="NewspaperButton"
-                    Style="{StaticResource RoundIconButtonStyle}"
+                    Style="{StaticResource RoundIconButtonLargeStyle}"
                     Tag="{StaticResource NewspaperIcon}"
                     Command="{Binding NewspaperCommand}"
                     ToolTip="Newspaper"
