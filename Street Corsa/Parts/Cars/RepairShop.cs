@@ -7,10 +7,11 @@ namespace StreetCorsa.Parts.Cars;
 /// <summary>One piece of work the garage can do on a car: what it costs, how long it takes, and doing it</summary>
 public sealed class RepairJob
 {
-    public RepairJob(string name, string detail, decimal cost, GameAction time, Action apply, bool isChore = false)
+    public RepairJob(string name, string detail, decimal cost, GameAction time, Action apply, bool isChore = false, string? id = null)
     {
         IsChore = isChore;
         Name = name;
+        Id = id ?? name;
         Detail = detail;
         Cost = cost;
         Time = time;
@@ -19,7 +20,11 @@ public sealed class RepairJob
 
     private readonly Action _apply;
 
+    /// <summary>The job as the player reads it</summary>
     public string Name { get; }
+
+    /// <summary>The job as the code knows it, whatever the language: <see cref="GasStation.FillUp"/>; the name when it has none</summary>
+    public string Id { get; }
 
     /// <summary>Filling up or a wash: looking after the car, not fixing damage</summary>
     public bool IsChore { get; }

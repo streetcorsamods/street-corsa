@@ -95,16 +95,16 @@ public class GasStationTests
     public void The_station_tops_up_the_oil_by_the_quart_and_charges_at_least_one()
     {
         var car = CarWithEngineAndWheels();
-        Assert.DoesNotContain(GasStation.Jobs(car, null, StationPrices.Default), j => j.Name == GasStation.TopUpOil);
+        Assert.DoesNotContain(GasStation.Jobs(car, null, StationPrices.Default), j => j.Id == GasStation.TopUpOil);
 
         car.OilLevel = 0.9;
-        var oil = Assert.Single(GasStation.Jobs(car, null, StationPrices.Default), j => j.Name == GasStation.TopUpOil);
+        var oil = Assert.Single(GasStation.Jobs(car, null, StationPrices.Default), j => j.Id == GasStation.TopUpOil);
         Assert.Equal("A quart low", oil.Detail);
         Assert.True(oil.IsChore);
         Assert.Equal(PartPricing.Round((double)StationPrices.Default.OilPerLitre * 0.946), oil.Cost);
 
         car.OilLevel = 0.2;
-        oil = Assert.Single(GasStation.Jobs(car, null, StationPrices.Default), j => j.Name == GasStation.TopUpOil);
+        oil = Assert.Single(GasStation.Jobs(car, null, StationPrices.Default), j => j.Id == GasStation.TopUpOil);
         Assert.StartsWith("Way down: four quarts low", oil.Detail);
         oil.Apply();
         Assert.Null(car.OilLevel);
@@ -117,8 +117,8 @@ public class GasStationTests
         var car = new Car("car_a") { FuelLitres = 10, FuelTankLitres = 60, BodyDirt = 0.6 };
         var dear = new StationPrices(0.2m, 1m, 10m, 50m);
         var jobs = GasStation.Jobs(car, null, dear, priceMultiplier: 1.5);
-        Assert.Equal(PartPricing.Round(0.2 * 50 * 1.5), jobs.Single(j => j.Name == GasStation.FillUp).Cost);
-        Assert.Equal(PartPricing.Round(10 * 1.5), jobs.Single(j => j.Name == GasStation.Wash).Cost);
+        Assert.Equal(PartPricing.Round(0.2 * 50 * 1.5), jobs.Single(j => j.Id == GasStation.FillUp).Cost);
+        Assert.Equal(PartPricing.Round(10 * 1.5), jobs.Single(j => j.Id == GasStation.Wash).Cost);
         Assert.All(jobs, j => Assert.Equal(GameAction.GarageChore, j.Time));
     }
 

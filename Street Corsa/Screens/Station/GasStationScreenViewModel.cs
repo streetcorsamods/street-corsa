@@ -388,7 +388,7 @@ namespace StreetCorsa.Screens.Station
                 _gameState.Player.Money -= job.Cost;
                 Stage.FuelLitres = FuelInTank();
                 _logger.Information("{Car} at the gas station: {Job} for ${Cost}", _car.DefinitionId, job.Name, job.Cost);
-                Say(job.Name switch
+                Say(job.Id switch
                 {
                     GasStation.FillUp => "station.filled",
                     GasStation.Wash => "station.washed",
@@ -412,8 +412,8 @@ namespace StreetCorsa.Screens.Station
         {
             var litres = CarCondition.LitresToFill(_car!);
             var from = CarCondition.FuelLeft(_car!) ?? 0;
-            var seconds = GasStation.WatchSeconds(job.Name, litres);
-            WorkTitle = job.Name switch
+            var seconds = GasStation.WatchSeconds(job.Id, litres);
+            WorkTitle = job.Id switch
             {
                 GasStation.FillUp => GameText.Say("station.ui.filling"),
                 GasStation.TopUpOil => GameText.Say("station.ui.oiling"),
@@ -428,8 +428,8 @@ namespace StreetCorsa.Screens.Station
                 {
                     var done = Math.Min(1, clock.Elapsed.TotalSeconds / seconds);
                     WorkProgress = done;
-                    if (job.Name == GasStation.FillUp) Stage.FuelLitres = (float)(from + litres * done);
-                    WorkDetail = job.Name == GasStation.FillUp
+                    if (job.Id == GasStation.FillUp) Stage.FuelLitres = (float)(from + litres * done);
+                    WorkDetail = job.Id == GasStation.FillUp
                         ? GameText.Say("station.ui.fill_detail", ("litres", $"{litres * done:0.0}"), ("cost", $"${job.Cost * (decimal)done:0.00}"),
                             ("fuel", $"{from + litres * done:0}"), ("tank", $"{_car!.FuelTankLitres:0}"))
                         : $"{done * 100:0}%";

@@ -300,13 +300,13 @@ public sealed class DeeperSimulationTests : IDisposable
         Assert.Contains(report, l => l.Contains("the tank is dry", StringComparison.Ordinal));
         Assert.Contains("the tank is empty", CarCondition.WhyCannotRace(car, null));
 
-        var fill = Assert.Single(GasStation.Jobs(car, null, StationPrices.Default), j => j.Name == GasStation.FillUp);
+        var fill = Assert.Single(GasStation.Jobs(car, null, StationPrices.Default), j => j.Id == GasStation.FillUp);
         Assert.Equal(GameAction.GarageChore, fill.Time);
         Assert.Equal(PartPricing.Round((double)StationPrices.Default.FuelPerLitre * 59.99), fill.Cost);
         fill.Apply();
         Assert.Null(car.FuelLitres);
         Assert.Empty(CarCondition.WhyCannotRace(car, null));
-        Assert.DoesNotContain(GasStation.Jobs(car, null, StationPrices.Default), j => j.Name == GasStation.FillUp);
+        Assert.DoesNotContain(GasStation.Jobs(car, null, StationPrices.Default), j => j.Id == GasStation.FillUp);
     }
 
     [Fact]
@@ -353,7 +353,7 @@ public sealed class DeeperSimulationTests : IDisposable
         var car = new Car("car_a") { FuelLitres = 10, FuelTankLitres = 60, BodyDirt = 0.5 };
         Assert.Empty(RepairShop.Jobs(car, null));
         Assert.All(GasStation.Jobs(car, null, StationPrices.Default), j => Assert.True(j.IsChore, j.Name));
-        Assert.Equal([GasStation.FillUp, GasStation.Wash], GasStation.Jobs(car, null, StationPrices.Default).Select(j => j.Name));
+        Assert.Equal([GasStation.FillUp, GasStation.Wash], GasStation.Jobs(car, null, StationPrices.Default).Select(j => j.Id));
 
         car.BodyDamageKmh = [20, 0, 0, 0];
         Assert.Contains(RepairShop.Jobs(car, null), j => !j.IsChore);
@@ -381,11 +381,11 @@ public sealed class DeeperSimulationTests : IDisposable
         CarCondition.ApplyRace(car, Report(dirt: 0.0), 10, null);
         Assert.Equal(0.35 + 10 * CarCondition.DirtPerKm, car.BodyDirt, 6);
 
-        var wash = Assert.Single(GasStation.Jobs(car, null, StationPrices.Default), j => j.Name == GasStation.Wash);
+        var wash = Assert.Single(GasStation.Jobs(car, null, StationPrices.Default), j => j.Id == GasStation.Wash);
         Assert.Equal(GameAction.GarageChore, wash.Time);
         wash.Apply();
         Assert.Equal(0, car.BodyDirt);
-        Assert.DoesNotContain(GasStation.Jobs(car, null, StationPrices.Default), j => j.Name == GasStation.Wash);
+        Assert.DoesNotContain(GasStation.Jobs(car, null, StationPrices.Default), j => j.Id == GasStation.Wash);
     }
 
     [Fact]
