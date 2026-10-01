@@ -211,7 +211,7 @@
 
                                                 <!-- Reward -->
                                                 <TextBlock Margin="0,2,0,0">
-                                                    <Run Text="Reward: " Foreground="{StaticResource TextSecondaryBrush}" FontSize="{StaticResource FontSizeCaption}"/>
+                                                    <Run Text="{t:Text paper.reward}" Foreground="{StaticResource TextSecondaryBrush}" FontSize="{StaticResource FontSizeCaption}"/>
                                                     <Run Text="{Binding RewardDescription, Mode=OneWay}" Foreground="{StaticResource AccentSuccessBrush}" FontSize="{StaticResource FontSizeCaption}" FontWeight="Bold"/>
                                                 </TextBlock>
 

@@ -47,6 +47,38 @@ public partial class WordsTests : IDisposable
         Assert.Empty(missing);
     }
 
+    [GeneratedRegex(@"\b(?:Text|Content|Header|ToolTip|Title|Value)=""([^""{]*[A-Za-z]{2,}[^""]*)""")]
+    private static partial Regex XamlLiteral();
+
+    // The developer's screens stay in English (the owner, 2026-09-30); the window's title is game.json's, set as it
+    // opens; the radio's dial is a picture of a scale
+    private static readonly string[] EnglishOnPurpose =
+    [
+        $"{Path.DirectorySeparatorChar}CarCatalogEditor{Path.DirectorySeparatorChar}",
+        $"{Path.DirectorySeparatorChar}SoundBrowser{Path.DirectorySeparatorChar}",
+        $"{Path.DirectorySeparatorChar}MainWindow.xaml",
+        $"{Path.DirectorySeparatorChar}RadioPanel.xaml"
+    ];
+
+    [Fact]
+    public void No_screen_writes_its_words_in_the_xaml()
+    {
+        var literal = new List<string>();
+        foreach (var file in SourceFiles("*.xaml").Where(f => !EnglishOnPurpose.Any(f.Contains)))
+        foreach (var (line, number) in File.ReadLines(file).Select((l, i) => (l, i + 1)))
+        {
+            // A setter's value may be a colour or a size; only a setter of words counts
+            if (line.Contains("Value=") && !Regex.IsMatch(line, @"Property=""(?:Text|Content|Header|ToolTip|Title)""")) continue;
+            if (line.TrimStart().StartsWith("d:", StringComparison.Ordinal) || line.Contains(" d:")) continue;
+            foreach (Match match in XamlLiteral().Matches(line))
+                // A quote mark written &quot; is no word
+                if (Regex.IsMatch(System.Net.WebUtility.HtmlDecode(match.Groups[1].Value), "[A-Za-z]{2,}"))
+                    literal.Add($"{Path.GetFileName(file)}:{number}: {match.Groups[1].Value}");
+        }
+
+        Assert.Empty(literal);
+    }
+
     [Fact]
     public void Every_line_the_race_mode_says_comes_from_the_base_game()
     {
@@ -57,7 +89,7 @@ public partial class WordsTests : IDisposable
         var said = LuaKey().Matches(lua).Select(m => m.Groups[1].Value).Distinct().ToList();
 
         Assert.NotEmpty(said);
-        Assert.Empty(said.Where(k => !handed.Contains(k)));
+        Assert.DoesNotContain(said, k => !handed.Contains(k));
     }
 
     [Fact]

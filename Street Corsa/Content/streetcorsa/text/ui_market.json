@@ -21,6 +21,8 @@
     "the word before the player's car in a wreck headline."
   ],
   "lines": {
+    "market.kind_filter": "Kind:",
+    "paper.reward": "Reward: ",
     "market.title": "USED CAR MARKET",
     "market.dealer": "Dealer:",
     "market.loading": "The dealers are putting their cars out...",
