@@ -20,7 +20,7 @@ public partial class WordsTests : IDisposable
     [GeneratedRegex(@"\{t:Text\s+(?:Key=)?([\w.\-]+)\s*\}")]
     private static partial Regex XamlKey();
 
-    [GeneratedRegex(@"GameText\.Say\(\s*""([^""]+)""")]
+    [GeneratedRegex(@"\b(?:GameText|PartWords)\.Say\(\s*""([^""]+)""")]
     private static partial Regex CodeKey();
 
     [GeneratedRegex(@"\bsay\('([A-Z0-9_]+)'")]

@@ -30,7 +30,7 @@ public static class EngineWork
             .ToList();
 
         if (!onStand && ruled.Select(r => r.Rule!).FirstOrDefault(r => r.StandOnly) is { } standOnly)
-            return $"The {order.NameOf(standOnly.Kind)} only come{(IsPlural(order, standOnly.Kind) ? "" : "s")} out on the engine stand: pull the engine first.";
+            return PartWords.Say(Plural(order, standOnly.Kind, "work.stand_only_off"), ("kind", order.NameOf(standOnly.Kind)));
 
         // A set: a part can be in the way twice over (on a bare part and of a kind that has to be off first)
         var blocking = new HashSet<PartInstance>(ReferenceEqualityComparer.Instance);
@@ -54,7 +54,7 @@ public static class EngineWork
         }
 
         var blockers = all.Where(blocking.Contains).ToList();
-        return blockers.Count == 0 ? null : $"Take off {List(catalog, blockers)} first.";
+        return blockers.Count == 0 ? null : PartWords.Say("work.take_off_first", ("parts", List(catalog, blockers)));
     }
 
     /// <summary>
@@ -71,25 +71,25 @@ public static class EngineWork
 
         // What comes off for the stand stays off on it: the stand's head is bolted where the gearbox goes
         if (onStand && looseParts.Select(p => KindOf(catalog, p)).FirstOrDefault(k => k != null && order.StandStripTurnOf(k) != int.MaxValue) is { } stripped)
-            return $"The {order.NameOf(stripped)} go{(IsPlural(order, stripped) ? "" : "es")} on with the engine in the car, not on the stand.";
+            return PartWords.Say(Plural(order, stripped, "work.in_car_only"), ("kind", order.NameOf(stripped)));
 
         foreach (var part in looseParts)
         {
             if (RuleOf(catalog, part) is not { } rule) continue;
 
             if (rule.StandOnly && !onStand)
-                return $"The {order.NameOf(rule.Kind)} only go{(IsPlural(order, rule.Kind) ? "" : "es")} in on the engine stand.";
+                return PartWords.Say(Plural(order, rule.Kind, "work.stand_only_on"), ("kind", order.NameOf(rule.Kind)));
 
             if (rule.Bare && part.Children.Count > 0)
-                return $"Take {List(catalog, part.Children.SelfAndDescendantsOf())} off the {order.NameOf(rule.Kind)} first: {(IsPlural(order, rule.Kind) ? "they go" : "it goes")} in by {(IsPlural(order, rule.Kind) ? "themselves" : "itself")}.";
+                return PartWords.Say(Plural(order, rule.Kind, "work.bare"), ("parts", List(catalog, part.Children.SelfAndDescendantsOf())), ("kind", order.NameOf(rule.Kind)));
 
             var elsewhere = OnOthersOfItsKind(catalog, whole, part);
             var blockers = whole.Where(p => !ReferenceEquals(p, part) && IsOneOf(catalog, p, rule.After) && !elsewhere.Contains(p)).ToList();
-            if (blockers.Count > 0) return $"Take off {List(catalog, blockers)} first.";
+            if (blockers.Count > 0) return PartWords.Say("work.take_off_first", ("parts", List(catalog, blockers)));
 
             var missing = rule.Needs.Where(kind => !whole.Any(p => DoesJobOf(catalog, p, kind)) && MayGoOn(order, kind, onStand) && Takes(catalog, engine, kind))
                 .ToList();
-            if (missing.Count > 0) return $"Put on {JoinAnd(missing.Select(k => "the " + order.NameOf(k)).ToList())} first.";
+            if (missing.Count > 0) return PartWords.Say("work.put_on_first", ("parts", JoinAnd(missing.Select(k => The(order.NameOf(k))).ToList())));
         }
 
         return null;
@@ -174,7 +174,7 @@ public static class EngineWork
     public static string StandStripsDisplay(PartsCatalog catalog)
     {
         var order = catalog.WorkOrder;
-        return JoinAnd(order.StandStrips.Select(k => "the " + order.NameOf(k)).Distinct(StringComparer.OrdinalIgnoreCase).ToList()) ?? string.Empty;
+        return JoinAnd(order.StandStrips.Select(k => The(order.NameOf(k))).Distinct(StringComparer.OrdinalIgnoreCase).ToList()) ?? string.Empty;
     }
 
     /// <returns>False when the part is not on the engine</returns>
@@ -239,6 +239,12 @@ public static class EngineWork
 
     private static bool IsPlural(WorkOrder order, string kind) => order.NameOf(kind).EndsWith('s');
 
+    /// <summary>The key's <c>.one</c> or <c>.other</c>, as the kind's name reads one or many ("the radiator", "the cylinder heads")</summary>
+    private static string Plural(WorkOrder order, string kind, string key) => key + (IsPlural(order, kind) ? ".other" : ".one");
+
+    /// <summary>"the radiator"</summary>
+    private static string The(string name) => PartWords.Say("work.the", ("name", name));
+
     private static IEnumerable<PartInstance> SelfAndDescendantsOf(this IEnumerable<PartInstance> parts) => parts.SelectMany(p => p.SelfAndDescendants());
 
     /// <summary>"the oil pan, the timing cover and the cylinder heads", in the order the engine holds them</summary>
@@ -251,10 +257,10 @@ public static class EngineWork
             var definition = group.First()!;
             var kind = order.KindOf(definition);
             var count = group.Count();
-            names.Add("the " + (kind != null ? order.NameOf(kind, count) : definition.DisplayName ?? definition.Name));
+            names.Add(The(kind != null ? order.NameOf(kind, count) : definition.DisplayName ?? definition.Name));
         }
 
-        return JoinAnd(names) ?? "nothing";
+        return JoinAnd(names) ?? PartWords.Say("work.nothing");
     }
 
     /// <summary>"a, b and c"; null when there is nothing</summary>
@@ -262,6 +268,6 @@ public static class EngineWork
     {
         0 => null,
         1 => names[0],
-        _ => string.Join(", ", names.Take(names.Count - 1)) + " and " + names[^1]
+        _ => PartWords.Say("work.list", ("first", string.Join(PartWords.Say("work.list.comma"), names.Take(names.Count - 1))), ("last", names[^1]))
     };
 }

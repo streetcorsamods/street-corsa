@@ -23,7 +23,8 @@ public static class RunningGear
     public const int Corners = 4;
     public const int TyreSlotOnRim = 2;
 
-    public static readonly string[] CornerNames = { "front left", "front right", "rear left", "rear right" };
+    public static string[] CornerNames => [PartWords.Say("condition.corner.front_left"), PartWords.Say("condition.corner.front_right"),
+        PartWords.Say("condition.corner.rear_left"), PartWords.Say("condition.corner.rear_right")];
 
     public static int WheelSlot(int corner) => 101 + corner;
     public static int BrakeSlot(int corner) => 111 + corner;
