@@ -48,6 +48,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The styles for the XAML designer: the game merges them itself at start-up (Styles/Theme.cs) -->
+    <Page Update="Properties\DesignTimeResources.xaml">
+      <ContainsDesignTimeResources>true</ContainsDesignTimeResources>
+    </Page>
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="street_corsa.ico" />
   </ItemGroup>
 

@@ -447,9 +447,15 @@ namespace StreetCorsa.Navigation
                 _catalogRepository,
                 _timeService));
 
-        /// <summary>Every sound file and engine sound, to be heard one by one; back goes to the settings</summary>
+        /// <summary>
+        /// Every sound file and engine sound, to be heard one by one; back goes to the settings. The start music ends
+        /// here, so it does not play under what is listened to.
+        /// </summary>
         public bool NavigateToSoundBrowser() => SafeNavigate("sound library", () =>
-            new Screens.SoundBrowser.SoundBrowserScreenViewModel(this, _carPartsService));
+        {
+            Audio.StartMusic.End();
+            return new Screens.SoundBrowser.SoundBrowserScreenViewModel(this, _carPartsService);
+        });
 
         public bool NavigateToCarCatalogEditor() => SafeNavigate("car catalog editor", () =>
             new Screens.CarCatalogEditor.CarCatalogEditorScreenViewModel(

@@ -204,14 +204,16 @@ licence is granted.
   behind the 3D scenes and the fades (`Stage`), the licence's paper, the tach's redline, the pointer label in the 3D
   views; the fonts typed in 15 places. `ThemeTests` keeps new ones out.
 - The base game's `theme/theme.json` lists every key at its value, written from the dictionaries by a test
-  (`SC_WRITE_BASE_THEME=1`): the published key list. Naming the game's own face needs no "installed" check.
+  (`SC_WRITE_BASE_THEME=1`): the published key list, not read at run time (the dictionaries already are what it says).
+  A mod naming the game's own face is not told of when the PC lacks it; a mod's font file of that name is still used.
 - Pictures by name through one resolver (`ThemeImages`, `{theme:Image backgrounds/main}`): a mod's
-  `theme/images/<name>.png|jpg|jpeg|bmp|ico`, last mod first, header checked (one that does not read is told and passed
-  over), else `Assets/Images/<name>.png` (the icons moved there from `Assets/Icons`). The resource dictionaries' pictures
+  `theme/images/<name>.png|jpg|jpeg|bmp|ico`, last mod first, every mod picture's header checked at start-up (one that
+  does not read is told with the other mod problems and passed over; one that fails to decode later gives way to the
+  one under it), else `Assets/Images/<name>.png` (the icons moved there from `Assets/Icons`). The resource dictionaries' pictures
   stay lazily decoded. New: `intro/logo` (a game's logo over the lettered title) and `window/icon`.
 - `music.intro` (`sfx/music.json`, radio bus, `"optional": true`: a cue whose files may be missing without a problem):
-  `Audio/StartMusic` starts it with the radio, ends it when a game is loaded or the radio comes on. `AudioHub`'s place
-  loop became a `LoopSlot`, used twice (the place's air, the music).
+  `Audio/StartMusic` starts it with the radio, ends it when a game is loaded, the radio comes on or the sound library
+  opens. `AudioHub`'s place loop became a `LoopSlot`, used twice (the place's air, the music).
 - Checked by an off-screen harness that renders 24 views with no data, on dev and on the branch: pixel-identical; and
   with a test theme (fonts, colours, background, logo) that the theme shows.
 

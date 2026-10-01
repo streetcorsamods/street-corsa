@@ -342,7 +342,7 @@ same twice in a row), and optionally `volume` (0..2), `pitch` (how far each play
 it; the base game's cues are in `streetcorsa\sfx\sfx.json` (`ui.click`, `part.ratchet`, `ambience.garage`, ...).
 A cue marked `"optional": true` may name files that are not there: it is then silent, and no problem. `music.intro`
 (`streetcorsa\sfx\music.json`, a loop on the radio's bus) is the music the game starts to: it plays over the intro and
-the main screen until the player is in a game or puts the radio on, once a session.
+the main screen until the player is in a game, puts the radio on or opens the sound library, once a session.
 `.ogg`, `.wav`, `.mp3` and `.flac` play. A button can name a cue of its own (`audio:Sfx.Click="ui.lights"`).
 
 ### props
@@ -575,9 +575,10 @@ changes; a later mod's key goes over an earlier one's:
 ```
 
 The base game's `streetcorsa\theme\theme.json` lists every key there is, at the game's own value: it is the list to
-pick from. A colour is `#RRGGBB`, `#AARRGGBB` (the first byte is how solid it is) or a colour's name; a size is in
-pixels; a typeface is a family name, found first among the font files in the mod's own `theme\fonts` (`.ttf`, `.otf`),
-then among the fonts installed on the PC. A key the game lacks, or a value that does not read, is told at start-up and
+pick from (the game itself does not read it). A colour is `#RRGGBB`, `#AARRGGBB` (the first byte is how solid it is)
+or a colour's name; a size is in pixels; a typeface is a family name, found first among the font files in the mod's own
+`theme\fonts` (`.ttf`, `.otf`), even one with the name of the game's own typeface, then among the fonts installed on the
+PC. A key the game lacks, or a value that does not read, is told at start-up and
 the game's own stands. Keys are matched whatever their case. The look is taken at start-up: a change shows at the next
 start. The typefaces: `BodyFont` (everything not named otherwise), `DisplayFont` (the intro's title), `DialFont` (the
 radio's lettering), `NumbersFont` (figures that line up: the timeslip, the dial-in board, the engine panel),
@@ -587,7 +588,8 @@ A theme sets keys only: the shapes of the buttons and panels stay the game's (a 
 can run code).
 
 **Pictures.** `theme\images\<name>.png` (or `.jpg`, `.jpeg`, `.bmp`, `.ico`) stands in for the game's picture of that
-name, the last mod in load order first; one that does not read is told and the one under it is used. The names:
+name, the last mod in load order first; one that does not read is told at start-up and the one under it is used. The
+names:
 
 | Name | What |
 |---|---|

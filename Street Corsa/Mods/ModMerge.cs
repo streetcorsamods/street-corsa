@@ -51,20 +51,27 @@ public static class ModMerge
 
     private static void MergeFile(JsonObject into, string file, string source, List<string> problems)
     {
+        if (ReadFile(file, source, problems) is { } over) Into(into, over);
+    }
+
+    /// <summary>
+    /// A mod's JSON file read whole into an object that matches names whatever their case; null, and one line in
+    /// <paramref name="problems"/>, when it does not read or is not an object
+    /// </summary>
+    public static JsonObject? ReadFile(string file, string source, List<string> problems)
+    {
         try
         {
             var node = JsonNode.Parse(File.ReadAllText(file), NodeOptions, DocumentOptions);
-            if (node is JsonObject over)
+            if (node is JsonObject read)
             {
                 // A name twice in an object (whatever its case) only shows when the object is first looked into: all
-                // of the file is, before any of it goes in, so a file that does not read adds nothing at all
-                Unpack(over);
-                Into(into, over);
+                // of the file is, before any of it is used, so a file that does not read adds nothing at all
+                Unpack(read);
+                return read;
             }
-            else
-            {
-                problems.Add($"{source}: not an object of settings ({{ ... }}); left out");
-            }
+
+            problems.Add($"{source}: not an object of settings ({{ ... }}); left out");
         }
         catch (ArgumentException ex)
         {
@@ -74,6 +81,8 @@ public static class ModMerge
         {
             problems.Add($"{source}: {ex.Message}; left out");
         }
+
+        return null;
     }
 
     /// <summary>A JSON text read into an object that matches names whatever their case; null when it is not one</summary>

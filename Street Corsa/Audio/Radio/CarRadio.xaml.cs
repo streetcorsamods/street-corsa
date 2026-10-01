@@ -16,6 +16,10 @@ namespace StreetCorsa.Audio.Radio
 
         private RadioPlayer Radio => RadioPlayer.Shared;
 
+        // The lamp's two brushes, found once: the radio changes several times a second while it plays
+        private Brush? _lampOn;
+        private Brush? _lampOff;
+
         public CarRadio()
         {
             InitializeComponent();
@@ -33,7 +37,9 @@ namespace StreetCorsa.Audio.Radio
         private void Refresh()
         {
             SongText.Text = Radio.IsOn || Radio.Current != null ? Radio.NowPlaying : GameText.Say("radio.car.no_music");
-            Lamp.Fill = (Brush)FindResource(Radio.IsPlaying ? "CarRadioLampOnBrush" : "CarRadioLampOffBrush");
+            Lamp.Fill = Radio.IsPlaying
+                ? _lampOn ??= (Brush)FindResource("CarRadioLampOnBrush")
+                : _lampOff ??= (Brush)FindResource("CarRadioLampOffBrush");
             Dial.Opacity = Radio.IsPlaying ? 1.0 : 0.55;
             PlaceNeedle();
         }

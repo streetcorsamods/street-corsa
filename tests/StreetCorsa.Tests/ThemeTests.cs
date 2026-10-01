@@ -96,12 +96,16 @@ public partial class ThemeTests : IDisposable
         foreach (var (name, _, _) in sections)
             Assert.Equal(expected[name]!.ToJsonString(), written[name]?.ToJsonString());
 
-        // And it reads back as it is: no key the game lacks, no value it cannot take
+        // And it reads back as it is (a mod copying it gets no problem): no key the game lacks, no value it cannot take,
+        // on a PC with none of the game's own faces installed too
         var problems = new List<string>();
-        // (on a PC with none of the game's own faces installed too: naming the game's own face needs no check)
-        var theme = ThemeFile.Read(ModSet.BaseOnly(RepoPaths.BaseContent), GameKeys(), problems, _ => false);
+        var theme = new ThemeFile();
+        theme.ReadFile(BaseTheme, "theme.json", null, GameKeys(), problems, _ => false);
         Assert.Empty(problems);
         Assert.Equal(GameKeys().Colors.Count, theme.Colors.Count);
+
+        // The game itself does not read it: the dictionaries already are what it says
+        Assert.Empty(ThemeFile.Read(ModSet.BaseOnly(RepoPaths.BaseContent), GameKeys(), problems).Colors);
     }
 
     [Fact]
@@ -187,7 +191,9 @@ public partial class ThemeTests : IDisposable
     public void A_later_mods_theme_goes_over_an_earlier_ones_key_by_key()
     {
         Mod("streetcorsa");
-        _temp.File("streetcorsa/theme/theme.json", """{ "colors": { "AccentPrimary": "#D32F2F", "BgDark": "#1B1B1B" }, "sizes": { "FontSizeBody": 14 } }""");
+        _temp.File("streetcorsa/theme/theme.json", """{ "colors": { "AccentPrimary": "#FFFFFF", "Gold": "#FFFFFF" } }""");
+        Mod("dark", 5);
+        _temp.File("dark/theme/theme.json", """{ "colors": { "AccentPrimary": "#D32F2F", "BgDark": "#1B1B1B" }, "sizes": { "FontSizeBody": 14 } }""");
         Mod("green", 10);
         _temp.File("green/theme/theme.json", """
             {
@@ -205,6 +211,7 @@ public partial class ThemeTests : IDisposable
         Assert.Equal(Color.FromRgb(0x2E, 0x7D, 0x32), theme.Colors["AccentPrimary"]);
         Assert.Equal(Color.FromRgb(0x1B, 0x1B, 0x1B), theme.Colors["BgDark"]);
         Assert.Equal(15.5, theme.Sizes["FontSizeBody"]);
+        Assert.False(theme.Colors.ContainsKey("Gold"));
     }
 
     [Fact]
@@ -222,6 +229,8 @@ public partial class ThemeTests : IDisposable
             """);
         _temp.File("broken/theme/b.json", "{ not json");
         _temp.File("broken/theme/c.json", """{ "colors": { "Gold": "#FFF", "GOLD": "#000" } }""");
+        // What WPF's colour reader throws other than a FormatException, and a colour profile it would open a file for
+        _temp.File("broken/theme/d.json", """{ "colors": { "Danger": "sc#1", "Gold": "sc#1,,2,3", "Success": "ContextColor x.icc 1,0,0,0" } }""");
 
         var problems = new List<string>();
         var theme = ThemeFile.Read(ModSet.Load(_temp.Path), GameKeys(), problems, _ => false);
@@ -230,7 +239,7 @@ public partial class ThemeTests : IDisposable
         Assert.Equal(Color.FromArgb(0x80, 0xFF, 0xC1, 0x07), theme.Colors["Amber"]);
         Assert.Empty(theme.Sizes);
         Assert.Empty(theme.Fonts);
-        foreach (var said in new[] { "colors.Nope", "colors.Danger", "colors.Gold", "sizes.FontSizeBody", "sizes.FontSizeHero", "sizes.FontSizeTitle", "fonts.BodyFont", "fonts.DialFont", "\"pictures\"", "b.json", "c.json" })
+        foreach (var said in new[] { "colors.Nope", "colors.Danger", "colors.Gold", "sizes.FontSizeBody", "sizes.FontSizeHero", "sizes.FontSizeTitle", "fonts.BodyFont", "fonts.DialFont", "\"pictures\"", "b.json", "c.json", "colors.Success" })
             Assert.Contains(problems, p => p.Contains(said));
     }
 
@@ -252,6 +261,59 @@ public partial class ThemeTests : IDisposable
         Assert.Empty(problems);
         Assert.Contains("comic", theme.Fonts["DisplayFont"].BaseUri?.LocalPath ?? theme.Fonts["DisplayFont"].Source, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("Installed Face", theme.Fonts["BodyFont"].Source);
+    }
+
+    [Fact]
+    public void A_mods_font_named_as_the_games_own_face_is_used_from_the_mod()
+    {
+        var comic = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "comic.ttf");
+        Assert.SkipUnless(File.Exists(comic), "Comic Sans is not on this PC");
+
+        // The game's own face is "Comic Sans MS" here, and the PC has none of it: the mod's file is what is used
+        var keys = new ThemeKeys([], [], ["DisplayFont"], new Dictionary<string, string> { ["DisplayFont"] = "Comic Sans MS" });
+        Mod("streetcorsa");
+        Mod("comic", 10);
+        _temp.Bytes($"comic/theme/{Theme.FontsFolder}/comic.ttf", File.ReadAllBytes(comic));
+        _temp.File("comic/theme/theme.json", """{ "fonts": { "displayfont": "Comic Sans MS" } }""");
+
+        var problems = new List<string>();
+        var theme = ThemeFile.Read(ModSet.Load(_temp.Path), keys, problems, _ => false);
+
+        Assert.Empty(problems);
+        Assert.Contains("comic", theme.Fonts["DisplayFont"].BaseUri?.LocalPath ?? theme.Fonts["DisplayFont"].Source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void A_mods_picture_that_does_not_read_is_told_at_start_up_not_when_first_shown()
+    {
+        Mod("streetcorsa");
+        Mod("broken", 10);
+        _temp.File("broken/theme/images/misc/calendar/calendar03.png", "not a picture");
+
+        ThemeImages.Use(ModSet.Load(_temp.Path));
+
+        Assert.Contains(ModProblems.All, p => p.Contains("broken/theme/images/misc/calendar/calendar03.png"));
+    }
+
+    [Fact]
+    public void A_mods_picture_that_fails_to_decode_gives_way_to_the_one_under_it_not_the_games()
+    {
+        var png = File.ReadAllBytes(Path.Combine(RepoPaths.GameProject, "Assets", "Images", "Icons", "trophy.png"));
+        Mod("streetcorsa");
+        Mod("first", 10);
+        var first = Path.GetFullPath(_temp.Bytes("first/theme/images/icons/quit.png", png));
+        Mod("second", 20);
+        var second = Path.GetFullPath(_temp.Bytes("second/theme/images/icons/quit.png", png));
+
+        ThemeImages.Use(ModSet.Load(_temp.Path));
+        Assert.Equal(second, ThemeImages.ModFile("icons/quit"));
+
+        // Broken on disk after it was found: the first mod's is what is shown, from then on
+        File.WriteAllText(second, "not a picture any more");
+        var image = ThemeImages.Load("icons/quit");
+
+        Assert.Equal(new Uri(first), image?.UriSource);
+        Assert.Equal(first, ThemeImages.ModFile("icons/quit"));
     }
 
     [Fact]

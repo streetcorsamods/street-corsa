@@ -1,7 +1,7 @@
 using System.ComponentModel;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Markup;
-using System.Windows.Media;
 
 namespace StreetCorsa.Styles;
 
@@ -31,9 +31,16 @@ public sealed class ImageExtension : MarkupExtension
 
     public override object? ProvideValue(IServiceProvider serviceProvider)
     {
+        // A Uri for a property that takes one (BitmapImage.UriSource); the picture itself for anything else, a Setter's
+        // Value or an Image's Source alike
         var target = serviceProvider.GetService(typeof(IProvideValueTarget)) as IProvideValueTarget;
-        var wantsPicture = target?.TargetProperty is DependencyProperty property && typeof(ImageSource).IsAssignableFrom(property.PropertyType);
-        if (InDesigner) return wantsPicture ? null : ThemeImages.GameUri(Name);
-        return wantsPicture ? ThemeImages.Load(Name) : ThemeImages.Uri(Name);
+        var wantsUri = target?.TargetProperty switch
+        {
+            DependencyProperty property => typeof(Uri).IsAssignableFrom(property.PropertyType),
+            PropertyInfo property => typeof(Uri).IsAssignableFrom(property.PropertyType),
+            _ => false
+        };
+        if (InDesigner) return wantsUri ? ThemeImages.GameUri(Name) : null;
+        return wantsUri ? ThemeImages.Uri(Name) : ThemeImages.Load(Name);
     }
 }

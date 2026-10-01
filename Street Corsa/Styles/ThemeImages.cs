@@ -10,7 +10,8 @@ namespace StreetCorsa.Styles;
 /// The game's pictures by name (<c>backgrounds/main</c>, <c>icons/garage</c>, <c>misc/calendar/calendar01</c>): a mod's
 /// <c>theme/images/&lt;name&gt;.png</c> (or .jpg, .jpeg, .bmp, .ico) stands in for the game's own, the last mod in
 /// load order first; else the picture compiled into the game, <c>Assets/Images/&lt;name&gt;.png</c>. A mod's picture
-/// that does not read is told once and the next one down is used.
+/// that does not read is told once and the next one down is used. Every mod picture is looked at once at start-up
+/// (<see cref="Use"/>), so what is wrong is told with the rest of the mods' problems.
 /// </summary>
 public static class ThemeImages
 {
@@ -30,13 +31,52 @@ public static class ThemeImages
     // The mod file found for each name (null: none), looked for once
     private static readonly ConcurrentDictionary<string, string?> Found = new(StringComparer.OrdinalIgnoreCase);
 
+    // Mod files that did not read, passed over from then on
+    private static readonly ConcurrentDictionary<string, bool> Broken = new(StringComparer.OrdinalIgnoreCase);
+
     private static ModSet? _mods;
 
-    /// <summary>The mods the pictures are looked for in (<see cref="Theme.Apply"/>); the installed ones when not told</summary>
+    /// <summary>
+    /// The mods the pictures are looked for in (<see cref="Theme.Apply"/>); the installed ones when not told. Each name a
+    /// mod gives a picture for is found here and then, so a picture that does not read is told at start-up.
+    /// </summary>
     public static void Use(ModSet mods)
     {
         _mods = mods;
         Found.Clear();
+        Broken.Clear();
+
+        foreach (var name in NamesInMods(mods)) ModFile(name);
+    }
+
+    /// <summary>The names the mods have pictures for (<c>icons/quit</c>), each once</summary>
+    private static HashSet<string> NamesInMods(ModSet mods)
+    {
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var mod in mods.Mods)
+        {
+            if (mod.Dir(Theme.FolderName) is not { } dir) continue;
+            var images = Path.Combine(dir, FolderName);
+            if (!Directory.Exists(images)) continue;
+
+            try
+            {
+                foreach (var file in Directory.EnumerateFiles(images, "*", SearchOption.AllDirectories))
+                {
+                    var extension = Path.GetExtension(file);
+                    if (!Extensions.Contains(extension, StringComparer.OrdinalIgnoreCase)) continue;
+                    var relative = Path.GetRelativePath(images, file);
+                    names.Add(relative[..^extension.Length].Replace(Path.DirectorySeparatorChar, '/'));
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // A folder that cannot be read: its pictures are looked for by name as they are needed
+                Logger.Warning(ex, "Theme: could not look through {Folder}", images);
+            }
+        }
+
+        return names;
     }
 
     /// <summary>The picture compiled into the game</summary>
@@ -58,8 +98,10 @@ public static class ThemeImages
             foreach (var extension in Extensions)
             {
                 var file = Path.Combine(dir, FolderName, name.Replace('/', Path.DirectorySeparatorChar) + extension);
-                if (!File.Exists(file)) continue;
+                if (!File.Exists(file) || Broken.ContainsKey(file)) continue;
                 if (Reads(file, out var problem)) return file;
+
+                Broken[file] = true;
 
                 var line = $"{mods[i].Id}/{Theme.FolderName}/{FolderName}/{name}{extension}: {problem}; the picture under it is used";
                 Logger.Warning("Theme: {Problem}", line);
@@ -70,7 +112,11 @@ public static class ThemeImages
         return null;
     }
 
-    /// <summary>Whether the file is a picture WPF reads: its header only, the picture is decoded when it is shown</summary>
+    /// <summary>
+    /// Whether the file is a picture WPF reads: its header only, the picture is decoded when it is shown. Decoding all of
+    /// it here would cost about 60 ms a background for little: WIC draws a cut-off or garbled PNG or JPEG as far as it
+    /// goes, and what it does refuse fails here already.
+    /// </summary>
     private static bool Reads(string file, out string problem)
     {
         try
@@ -102,29 +148,41 @@ public static class ThemeImages
         }
         catch (Exception ex) when (ex is IOException or NotSupportedException or FileFormatException or ArgumentException or InvalidOperationException)
         {
-            if (uri.IsFile)
-            {
-                // Read at the header, broken further in: the game's own picture, from now on
-                Found[name] = null;
-                Logger.Warning(ex, "Theme: the picture {File} could not be decoded; the game's is used", uri.LocalPath);
-                ModProblems.Add("Theme", $"{uri.LocalPath}: {ex.Message}; the game's picture is used");
-                try
-                {
-                    return Decode(GameUri(name), decodeWidth, decodeHeight);
-                }
-                catch (Exception inner) when (inner is IOException or NotSupportedException or FileFormatException or ArgumentException or InvalidOperationException)
-                {
-                    return null;
-                }
-            }
+            if (!uri.IsFile) return null;
 
-            return null;
+            // Its header read, the rest did not (or it changed on disk since): passed over, and the picture under it
+            // looked for again. Each time round one more file is out, so this ends at the game's own.
+            Broken[uri.LocalPath] = true;
+            Found.TryRemove(name, out _);
+            Logger.Warning(ex, "Theme: the picture {File} could not be decoded; the one under it is used", uri.LocalPath);
+            ModProblems.Add("Theme", $"{uri.LocalPath}: {ex.Message}; the picture under it is used");
+            return Load(name, decodeWidth, decodeHeight);
         }
     }
 
     /// <summary>A picture only a mod gives (the intro's logo, the window's icon): null when no mod has one</summary>
     public static BitmapImage? LoadModImage(string name, int decodeWidth = 0) =>
         ModFile(name) == null ? null : Load(name, decodeWidth);
+
+    /// <summary>
+    /// The window's icon from a mod with every size in the file kept, so Windows picks the one it draws (title bar,
+    /// taskbar); null when no mod has one or it does not read
+    /// </summary>
+    public static BitmapFrame? LoadModIcon()
+    {
+        if (ModFile(WindowIcon) is not { } file) return null;
+        try
+        {
+            var frame = BitmapFrame.Create(new Uri(file, UriKind.Absolute), BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+            frame.Freeze();
+            return frame;
+        }
+        catch (Exception ex) when (ex is IOException or NotSupportedException or FileFormatException or ArgumentException or InvalidOperationException)
+        {
+            Logger.Warning(ex, "Theme: the window icon {File} could not be read; the game's is kept", file);
+            return null;
+        }
+    }
 
     private static BitmapImage Decode(Uri uri, int decodeWidth, int decodeHeight)
     {

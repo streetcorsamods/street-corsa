@@ -5,8 +5,9 @@ namespace StreetCorsa.Audio;
 
 /// <summary>
 /// The music the game starts to (the cue <c>music.intro</c>, a loop): from the intro on, over the main screen, until
-/// the player is in a game or puts the radio on, whichever comes first. Once a session: back at the main screen from a
-/// game, the radio is what plays (or nothing, if it is off). A game with no such cue starts quiet.
+/// the player is in a game, puts the radio on or opens the sound library (to hear sounds on their own), whichever
+/// comes first. Once a session: back at the main screen from a game, the radio is what plays (or nothing, if it is
+/// off). A game with no such cue starts quiet.
 /// </summary>
 public static class StartMusic
 {

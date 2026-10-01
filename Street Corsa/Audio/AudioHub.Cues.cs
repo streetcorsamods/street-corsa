@@ -190,7 +190,8 @@ public sealed partial class AudioHub
 
             if (_playing is { } leaving)
             {
-                leaving.Fade(1f, 0f, fadeSeconds, hub._mixRate, stopAtEnd: true);
+                // From wherever its fade-in got to: one cut short does not jump to full first
+                leaving.FadeFromHere(0f, fadeSeconds, hub._mixRate, stopAtEnd: true);
                 _fadingOut.Add(leaving);
             }
 
@@ -204,7 +205,9 @@ public sealed partial class AudioHub
                 return;
             }
 
-            var file = cue.Files[hub._random.Next(cue.Files.Count)];
+            // The cues' Random is shared with PlayCue on any thread
+            string file;
+            lock (hub._cueLock) file = cue.Files[hub._random.Next(cue.Files.Count)];
             var playing = hub.Play(cue.Bus, file, loop: true, paused: true);
             if (playing == null) return;
 

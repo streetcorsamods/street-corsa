@@ -18,12 +18,29 @@ public sealed class ThemeKeys(
     IEnumerable<string> fonts,
     IReadOnlyDictionary<string, string>? gameFonts = null)
 {
-    /// <summary>The game's own typeface for each font key: a theme naming that one changes nothing, so needs no check</summary>
+    /// <summary>
+    /// The game's own typeface for each font key: a theme naming that one (a copy of the base game's theme.json) is
+    /// not told of when the PC lacks it, since the game's own stands anyway
+    /// </summary>
     public IReadOnlyDictionary<string, string> GameFonts { get; } = gameFonts ?? new Dictionary<string, string>();
 
-    public IReadOnlySet<string> Colors { get; } = new HashSet<string>(colors, StringComparer.Ordinal);
-    public IReadOnlySet<string> Sizes { get; } = new HashSet<string>(sizes, StringComparer.Ordinal);
-    public IReadOnlySet<string> Fonts { get; } = new HashSet<string>(fonts, StringComparer.Ordinal);
+    // Matched whatever their case; the set gives back the key as the game writes it
+    private readonly HashSet<string> _colors = new(colors, StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _sizes = new(sizes, StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _fonts = new(fonts, StringComparer.OrdinalIgnoreCase);
+
+    public IReadOnlySet<string> Colors => _colors;
+    public IReadOnlySet<string> Sizes => _sizes;
+    public IReadOnlySet<string> Fonts => _fonts;
+
+    /// <summary>The keys of a theme's section ("colors", "sizes", "fonts", any case); null for a section there is not</summary>
+    internal HashSet<string>? Section(string section) => section.ToLowerInvariant() switch
+    {
+        ThemeFile.ColorsSection => _colors,
+        ThemeFile.SizesSection => _sizes,
+        ThemeFile.FontsSection => _fonts,
+        _ => null
+    };
 }
 
 /// <summary>
@@ -40,6 +57,8 @@ public sealed class ThemeKeys(
 /// number of pixels; a typeface is a family name, found first among the fonts in the mod's own <c>theme/fonts</c>, then
 /// among the fonts installed on the PC. A key the game does not have, or a value that does not read, is told and left
 /// out: the game's own look stands for it. Keys are matched whatever their case; names starting with <c>_</c> are notes.
+/// The base game's own theme folder is not read: its theme.json is the list of keys for modders, written from the
+/// dictionaries the game already has.
 /// </summary>
 public sealed class ThemeFile
 {
@@ -50,58 +69,29 @@ public sealed class ThemeFile
     /// <summary>The largest size a theme may set: past it a number is a mistake, not a size</summary>
     public const double MaxSize = 2000;
 
-    private static readonly JsonDocumentOptions DocumentOptions = new()
-    {
-        CommentHandling = JsonCommentHandling.Skip,
-        AllowTrailingCommas = true
-    };
-
     public Dictionary<string, Color> Colors { get; } = new(StringComparer.Ordinal);
     public Dictionary<string, double> Sizes { get; } = new(StringComparer.Ordinal);
     public Dictionary<string, FontFamily> Fonts { get; } = new(StringComparer.Ordinal);
 
-    /// <summary>Every mod's theme files, over one another in load order</summary>
+    /// <summary>Every mod's theme files but the base game's, over one another in load order</summary>
     /// <param name="installedFonts">Whether a family of that name is installed on the PC; all of Windows' when not given</param>
     public static ThemeFile Read(ModSet mods, ThemeKeys keys, List<string> problems, Func<string, bool>? installedFonts = null)
     {
         var theme = new ThemeFile();
-        installedFonts ??= IsInstalled;
         foreach (var (mod, file) in mods.JsonFiles(Theme.FolderName))
         {
-            var source = $"{mod.Id}/{Theme.FolderName}/{Path.GetFileName(file)}";
-            JsonObject? read;
-            try
-            {
-                read = JsonNode.Parse(File.ReadAllText(file), ModMerge.NodeOptions, DocumentOptions) as JsonObject;
-                // A name twice in an object (whatever its case) only throws once the object is looked into: all of
-                // it is, before any of it is used, so a file like that changes nothing
-                LookInto(read);
-            }
-            catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException or ArgumentException)
-            {
-                problems.Add($"{source}: {ex.Message}; left out");
-                continue;
-            }
-
-            if (read == null)
-            {
-                problems.Add($"{source}: not an object ({{ \"colors\": {{ ... }} }}); left out");
-                continue;
-            }
-
+            if (mod.IsBase) continue;
             var fontsFolder = mod.Dir(Theme.FolderName) is { } dir ? Path.Combine(dir, Theme.FontsFolder) : null;
-            theme.ReadOne(read, source, keys, fontsFolder, installedFonts, problems);
+            theme.ReadFile(file, $"{mod.Id}/{Theme.FolderName}/{Path.GetFileName(file)}", fontsFolder, keys, problems, installedFonts);
         }
 
         return theme;
     }
 
-    private static void LookInto(JsonNode? node)
+    /// <summary>One theme file over what is read so far; a file that does not read changes nothing</summary>
+    public void ReadFile(string file, string source, string? fontsFolder, ThemeKeys keys, List<string> problems, Func<string, bool>? installedFonts = null)
     {
-        if (node is JsonObject obj)
-        {
-            foreach (var (_, value) in obj) LookInto(value);
-        }
+        if (ModMerge.ReadFile(file, source, problems) is { } read) ReadOne(read, source, keys, fontsFolder, installedFonts ?? IsInstalled, problems);
     }
 
     private void ReadOne(JsonObject file, string source, ThemeKeys keys, string? fontsFolder, Func<string, bool> installedFonts, List<string> problems)
@@ -110,13 +100,7 @@ public sealed class ThemeFile
         {
             if (section.StartsWith('_')) continue;
 
-            var known = section.ToLowerInvariant() switch
-            {
-                ColorsSection => keys.Colors,
-                SizesSection => keys.Sizes,
-                FontsSection => keys.Fonts,
-                _ => null
-            };
+            var known = keys.Section(section);
             if (known == null)
             {
                 problems.Add($"{source}: \"{section}\" is no part of a theme (colors, sizes, fonts); left out");
@@ -133,8 +117,7 @@ public sealed class ThemeFile
             {
                 if (name.StartsWith('_')) continue;
 
-                var key = known.FirstOrDefault(k => k.Equals(name, StringComparison.OrdinalIgnoreCase));
-                if (key == null)
+                if (!known.TryGetValue(name, out var key))
                 {
                     problems.Add($"{source}: {section}.{name} is not a key the game has; left out");
                     continue;
@@ -155,15 +138,16 @@ public sealed class ThemeFile
                         problems.Add($"{source}: sizes.{key} {value?.ToJsonString()} is not a size (a number above 0, up to {MaxSize}); the game's is kept");
                         break;
                     default:
-                        // The game's own face (the base game's theme.json lists them all): nothing changes, nothing to find
-                        if (value is JsonValue face && face.TryGetValue<string>(out var faceName)
-                            && keys.GameFonts.TryGetValue(key, out var own) && own.Equals(faceName.Trim(), StringComparison.OrdinalIgnoreCase))
+                        if (FindFont(value, fontsFolder, installedFonts) is { } font)
                         {
-                            Fonts.Remove(key);
-                            break;
+                            Fonts[key] = font;
                         }
-
-                        if (FindFont(value, fontsFolder, installedFonts) is { } font) Fonts[key] = font;
+                        else if (value is JsonValue face && face.TryGetValue<string>(out var faceName)
+                                 && keys.GameFonts.TryGetValue(key, out var own) && own.Equals(faceName.Trim(), StringComparison.OrdinalIgnoreCase))
+                        {
+                            // The game's own face, not on this PC: what the game shows anyway, so nothing to tell
+                            Fonts.Remove(key);
+                        }
                         else problems.Add($"{source}: fonts.{key} {value?.ToJsonString()} is in neither the mod's {Theme.FolderName}/{Theme.FontsFolder} nor installed; the game's is kept");
                         break;
                 }
@@ -175,12 +159,18 @@ public sealed class ThemeFile
     public static Color? ParseColor(JsonNode? value)
     {
         if (value is not JsonValue json || !json.TryGetValue<string>(out var text) || string.IsNullOrWhiteSpace(text)) return null;
+        text = text.Trim();
+
+        // A colour with a colour profile names a file to open (even on a network share): no colour a theme needs
+        if (text.StartsWith("ContextColor", StringComparison.OrdinalIgnoreCase)) return null;
         try
         {
-            return System.Windows.Media.ColorConverter.ConvertFromString(text.Trim()) is Color color ? color : null;
+            return System.Windows.Media.ColorConverter.ConvertFromString(text) is Color color ? color : null;
         }
-        catch (Exception ex) when (ex is FormatException or NotSupportedException)
+        catch (Exception ex) when (ex is FormatException or NotSupportedException or InvalidOperationException or ArgumentException
+                                       or OverflowException or IndexOutOfRangeException)
         {
+            // "sc#1" and its like throw InvalidOperationException from WPF's tokenizer
             return null;
         }
     }

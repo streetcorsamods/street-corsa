@@ -36,7 +36,8 @@
     <Application.Resources>
         <ResourceDictionary>
             <!-- The look (Styles/*.xaml) is merged in by Styles.Theme.Apply as the app starts, with the mods' theme over
-                 the game's colours, sizes and typefaces: see App's constructor -->
+                 the game's colours, sizes and typefaces: see App's constructor. The designer finds them in
+                 Properties/DesignTimeResources.xaml -->
 
             <!-- Converters -->
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>

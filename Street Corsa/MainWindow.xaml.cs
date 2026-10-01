@@ -59,7 +59,7 @@ namespace StreetCorsa
             InitializeComponent();
             Title = Rules.GameFile.Installed.Title;
             // The taskbar's picture: a game's own when it has one; the exe's icon itself cannot change
-            if (Styles.ThemeImages.LoadModImage(Styles.ThemeImages.WindowIcon) is { } icon) Icon = icon;
+            if (Styles.ThemeImages.LoadModIcon() is { } icon) Icon = icon;
 
             var app = (App)System.Windows.Application.Current;
             NavigationService = app.NavigationService;

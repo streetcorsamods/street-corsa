@@ -9,9 +9,10 @@ namespace StreetCorsa.Styles;
 
 /// <summary>
 /// The game's look, made at start-up before the first window: the colour, size and typeface keys (Colors.xaml,
-/// Typography.xaml, Fonts.xaml) with the mods' theme over them (<see cref="ThemeFile"/>), then the brushes and styles
-/// made from them. The style dictionaries take their colours as they load, so the mods' go in first; every view finds
-/// them in the application's resources. A key's value is set for the session: a theme changes at the next start.
+/// Typography.xaml, Fonts.xaml) with the mods' theme over them (<see cref="ThemeFile"/>; the base game's own theme.json
+/// only lists those keys for modders, it is not read), then the brushes and styles made from them. The style
+/// dictionaries take their colours as they load, so the mods' go in first; every view finds them in the application's
+/// resources. A key's value is set for the session: a theme changes at the next start.
 /// </summary>
 public static class Theme
 {
