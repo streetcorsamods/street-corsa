@@ -1168,7 +1168,11 @@ steps E1-E12 are in `docs/total-conversion.md`. One PR per step, each playable; 
 E1 (foundations) and E2 (rules as data) are built together on `feature/total-conversion` (2026-09-30): mod.json's type,
 requires, gameVersion and removes; game.json; the mods' problems shown at start-up; Steam's AC folder found; every
 rule figure in `rules/*.json`, kept in the save from the career's start. What was left for later is listed there, "As
-built".
+built". The owner played it ("Works good!"); PR #51 to dev, not merged yet, no code review yet.
+
+Next: a code review of PR #51, then E3 (words: a `{t:Text key}` markup extension, `text/ui.json`, the sweep of the
+XAML and C# strings, the race mode's lines). The order after that is E4-E12 as listed, unless the owner picks
+otherwise.
 
 ## Testing in AC without driving
 

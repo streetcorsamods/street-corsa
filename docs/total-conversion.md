@@ -153,9 +153,24 @@ playing exactly as it does now: today's values become the base game's data.
 - **E5. Look.** Theme keys, fonts, the image resolver, icons, backgrounds, window icon and title, intro, menu music.
 - **E6. Cars and makes.** `makes.json`, `cars.json` (engine, layout, price per AC car), the car allow-list, pricing
   curve, part groups and priorities onto work-order kinds.
-- **E7. Car scripting.** JSON scripts for every car move, as planned: one driver for the lot, garage, station and
-  street; commands; named marks in every scene; triggers per screen (mods can add their own); the existing shows
-  ported onto base-game scripts. The same trigger and condition format serves later steps.
+- **E7. Car scripting.** JSON scripts for every car move (the owner chose JSON over Lua, 2026-09-30). The plan agreed:
+  - One car driver replacing the three movers today (`CarPull` for the lot drive-off and garage drive-in, `PathDrive`
+    for the station, `RivalDrive` for the street): every drive is a path and a speed profile worked out up front (the
+    lot's steer-for-the-exit simulated once with the same bicycle model), reverse added, several cars per viewport.
+  - Commands, free of any era: lights and brake lights, engine start/stop/rev, wait (a time, or until the body has
+    settled), drive to a point / along a path / a distance / in reverse, stop at a mark, top speed, the drive's feel
+    (acceleration, clutch, steer, lean: the constants in `CarPull` today), fade with the engine's volume, camera
+    hold/follow, branches (the engine runs, towed, the hour).
+  - Named marks and paths in every scene's JSON (`exit`, `pump`...); the garage needs a scene JSON of its own (door,
+    the car's spot; its showroom walls were never checked against the drive-in).
+  - Triggers named per screen (`lot.take_out`, `garage.arrive`, `garage.leave`, `station.arrive`, `station.at_pump`,
+    `station.leave`, `street.rival_arrive`, `street.rival_leave`; `diner.*` once it has a scene); mods may name their
+    own. The base game's scripts in `Content/streetcorsa/scripts`, a mod's replace them (`"replaces"`).
+  - The runner: the game's logic never waits on the show; a script that fails, or no 3D, leaves the car where it ends;
+    a script stops when its screen goes, a click skips it, a time limit; problems to `ModProblems`.
+  - The shows of today ported onto base-game scripts, looking the same, then the old movers deleted.
+  - The diner has no 3D scene: a car moving there is its own step, after this one.
+  - The same trigger and condition format serves later steps (flow, events).
 - **E8. Flow.** A screen registry with string ids and kinds, hub tiles and menu cards as data, exits and `returnTo`,
   the home screen, where the day can end; screens and systems a game switches off (police, gas station, paper).
 - **E9. Games.** A `"type": "game"` mod stands in for `streetcorsa` as the base; a game picker; saves stamped with
