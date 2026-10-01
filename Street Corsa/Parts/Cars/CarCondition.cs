@@ -210,19 +210,19 @@ public static class CarCondition
     public static List<string> WhyCannotRace(Car car, Func<string, string?>? groupOf, bool counting = true)
     {
         var problems = new List<string>();
-        if (car.IsImpounded) problems.Add("it's in the police impound");
-        if (IsTotaled(car)) problems.Add("the body is wrecked: the car is totaled");
-        if (counting && FuelLeft(car) is { } fuel && fuel < TooLittleToRaceLitres) problems.Add(fuel < EmptyTankLitres ? "the tank is empty" : "there's hardly any fuel in the tank");
+        if (car.IsImpounded) problems.Add(PartWords.Say("condition.problem.impounded"));
+        if (IsTotaled(car)) problems.Add(PartWords.Say("condition.problem.totaled"));
+        if (counting && FuelLeft(car) is { } fuel && fuel < TooLittleToRaceLitres) problems.Add(PartWords.Say(fuel < EmptyTankLitres ? "condition.problem.tank_empty" : "condition.problem.fuel_low"));
 
         if (groupOf != null && car.HasPartsAssigned)
         {
-            if (car.Engine != null && EngineLife(car, groupOf) <= 0) problems.Add("the engine is blown");
-            if (Transmission(car, groupOf) is { } gearbox && gearbox.Tear < BrokenBelow) problems.Add("the gearbox is wrecked");
+            if (car.Engine != null && EngineLife(car, groupOf) <= 0) problems.Add(PartWords.Say("condition.problem.engine"));
+            if (Transmission(car, groupOf) is { } gearbox && gearbox.Tear < BrokenBelow) problems.Add(PartWords.Say("condition.problem.gearbox"));
         }
         else
         {
-            if (car.EngineHealth <= 0) problems.Add("the engine is blown");
-            if (car.TransmissionHealth < BrokenBelow) problems.Add("the gearbox is wrecked");
+            if (car.EngineHealth <= 0) problems.Add(PartWords.Say("condition.problem.engine"));
+            if (car.TransmissionHealth < BrokenBelow) problems.Add(PartWords.Say("condition.problem.gearbox"));
         }
 
         if (groupOf != null && car.HasRunningGearAssigned)
