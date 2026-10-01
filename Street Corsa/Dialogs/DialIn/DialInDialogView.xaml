@@ -1,6 +1,7 @@
 <UserControl x:Class="StreetCorsa.Dialogs.DialIn.DialInDialogView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:t="clr-namespace:StreetCorsa.Services.Text"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d"
@@ -19,7 +20,7 @@
                 BorderThickness="0,0,0,1"
                 Padding="20,15">
             <StackPanel>
-                <TextBlock Text="Bracket Race: Your Dial-In"
+                <TextBlock Text="{t:Text dialin.title}"
                            Foreground="{StaticResource TextPrimaryBrush}"
                            FontSize="{StaticResource FontSizeHeading}"
                            FontWeight="SemiBold"/>
@@ -32,7 +33,7 @@
 
         <!-- The dial-in -->
         <StackPanel Grid.Row="1" Margin="20">
-            <TextBlock Text="The quarter-mile time you'll run. The slower car gets the green first, by the difference. Run quicker than your dial-in and you've broken out: you lose."
+            <TextBlock Text="{t:Text dialin.about}"
                        Foreground="{StaticResource TextSecondaryBrush}"
                        FontSize="{StaticResource FontSizeSmall}"
                        TextWrapping="Wrap"/>
@@ -84,13 +85,13 @@
                 BorderThickness="0,1,0,0"
                 Padding="20,15">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="Back"
+                <Button Content="{t:Text common.back}"
                         Command="{Binding CancelCommand}"
                         Style="{StaticResource DialogSecondaryButtonStyle}"
                         Width="100"
                         Height="35"
                         Margin="0,0,10,0"/>
-                <Button Content="Race"
+                <Button Content="{t:Text dialin.race}"
                         Command="{Binding ConfirmCommand}"
                         Style="{StaticResource DialogPrimaryButtonStyle}"
                         Width="100"

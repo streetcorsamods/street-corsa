@@ -1,5 +1,6 @@
 using StreetCorsa.Models.Catalog;
 using StreetCorsa.Models.GameState;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Models.Career.Filters
 {
@@ -28,12 +29,12 @@ namespace StreetCorsa.Models.Career.Filters
             get
             {
                 if (MinValue.HasValue && MaxValue.HasValue)
-                    return $"${MinValue:N0}-${MaxValue:N0} value";
+                    return GameText.Say("event.cars.value", ("min", MinValue), ("max", MaxValue));
                 if (MinValue.HasValue)
-                    return $"${MinValue:N0}+ value";
+                    return GameText.Say("event.cars.value.min", ("min", MinValue));
                 if (MaxValue.HasValue)
-                    return $"Under ${MaxValue:N0}";
-                return "Any value";
+                    return GameText.Say("event.cars.value.max", ("max", MaxValue));
+                return GameText.Say("event.cars.any_value");
             }
         }
 

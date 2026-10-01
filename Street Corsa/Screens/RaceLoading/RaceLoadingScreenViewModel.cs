@@ -5,6 +5,7 @@ using StreetCorsa.Logging;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Models.Race;
 using StreetCorsa.Navigation;
+using StreetCorsa.Services.Text;
 using StreetCorsa.Services;
 using StreetCorsa.Services.Configuration.Models;
 using StreetCorsa.Services.Storage;
@@ -33,7 +34,7 @@ namespace StreetCorsa.Screens.RaceLoading
         // the diner with the race's messages queued behind it
         private ConfirmationDialogViewModel? _stopDialog;
 
-        private string _statusMessage = "Launching race...";
+        private string _statusMessage = GameText.Say("raceload.launching");
         public string StatusMessage
         {
             get => _statusMessage;
@@ -85,20 +86,20 @@ namespace StreetCorsa.Screens.RaceLoading
             // A test-and-tune writes its result after every pass: the passes run so far count, whenever AC stops
             var atStake = Context is { } context && (context.IsPinkSlip || context.CashWager > 0);
             var message = !_launcher.IsAssettoCorsaRunning
-                ? "Call the race off?\n\nAssetto Corsa has not started yet, so nothing is lost."
+                ? GameText.Say("raceload.stop.not_started")
                 : _launchIntent.TunePasses != null
-                    ? "Leave the strip now?\n\nThe passes you ran still count: their timeslips, and what they did to the car."
+                    ? GameText.Say("raceload.stop.tune")
                 : atStake
-                    ? "Stop Assetto Corsa now?\n\nStopping before the finish counts as a loss: what was at stake is lost."
-                    : "Stop Assetto Corsa now?\n\nThe race will not count.";
+                    ? GameText.Say("raceload.stop.at_stake")
+                    : GameText.Say("raceload.stop.no_count");
 
-            _stopDialog = new ConfirmationDialogViewModel(_dialogService, message, "Stop Race", confirmed =>
+            _stopDialog = new ConfirmationDialogViewModel(_dialogService, message, GameText.Say("raceload.stop.title"), confirmed =>
             {
                 _stopDialog = null;
                 if (!confirmed || !IsLoading) return;
 
                 _logger.Warning("The player stopped the race");
-                StatusMessage = "Stopping the race...";
+                StatusMessage = GameText.Say("raceload.stopping");
                 _launcher.CancelRace();
             });
             _dialogService.ShowDialog(_stopDialog);
@@ -165,7 +166,7 @@ namespace StreetCorsa.Screens.RaceLoading
             {
                 // The launcher puts the race on record in the save (pending) before AC starts, after settling an
                 // earlier race still waiting for its result, and takes it off again if AC never starts
-                StatusMessage = "Racing...";
+                StatusMessage = GameText.Say("raceload.racing");
                 _logger.Information("Launching race with intent: Player={PlayerCar}, Opponent={OpponentCar}",
                     _launchIntent.PlayerCarId, _launchIntent.OpponentCarId);
 
@@ -179,8 +180,8 @@ namespace StreetCorsa.Screens.RaceLoading
                 if (raced)
                 {
                     StatusMessage = result.Outcome == RaceOutcome.ResultPending
-                        ? "The result is not in yet..."
-                        : "Processing results...";
+                        ? GameText.Say("raceload.result_pending")
+                        : GameText.Say("raceload.processing");
 
                     await SpendRaceTime();
 
@@ -189,20 +190,20 @@ namespace StreetCorsa.Screens.RaceLoading
                 }
                 else if (result.Outcome == RaceOutcome.Cancelled)
                 {
-                    StatusMessage = "Race called off";
+                    StatusMessage = GameText.Say("raceload.called_off");
                     await Task.Delay(1000);
                 }
                 else
                 {
                     _logger.Warning("Race launch failed: {Error}", result.ErrorMessage);
-                    StatusMessage = $"Race failed: {result.ErrorMessage}";
+                    StatusMessage = GameText.Say("raceload.failed", ("problem", result.ErrorMessage));
                     await Task.Delay(2000);
                 }
             }
             catch (Exception ex)
             {
                 _logger.Error(ex, "Exception during race");
-                StatusMessage = $"Error: {ex.Message}";
+                StatusMessage = GameText.Say("raceload.error", ("problem", ex.Message));
                 await Task.Delay(2000);
             }
 
@@ -243,7 +244,7 @@ namespace StreetCorsa.Screens.RaceLoading
                 // The street's night ended while they raced: home, as the street itself sends the player at the day's end
                 _logger.Information("The street race ran past the night's end: home to the garage");
                 _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService,
-                    "By the time the race is done the street's gone quiet. You head home and call it a night.", "Late Night"));
+                    GameText.Say("raceload.late_night"), GameText.Say("cruise.late_night.title")));
                 if (_navigationService.NavigateToGarage(_gameState, skipAnimation: true)) return;
             }
             else if (_launchIntent.ReturnToCruise)

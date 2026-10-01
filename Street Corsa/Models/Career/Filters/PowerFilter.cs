@@ -1,5 +1,6 @@
 using StreetCorsa.Models.Catalog;
 using StreetCorsa.Models.GameState;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Models.Career.Filters
 {
@@ -26,12 +27,12 @@ namespace StreetCorsa.Models.Career.Filters
             get
             {
                 if (MinHP.HasValue && MaxHP.HasValue)
-                    return $"{MinHP}-{MaxHP} HP";
+                    return GameText.Say("event.cars.power", ("min", MinHP), ("max", MaxHP));
                 if (MinHP.HasValue)
-                    return $"{MinHP}+ HP";
+                    return GameText.Say("event.cars.power.min", ("min", MinHP));
                 if (MaxHP.HasValue)
-                    return $"Under {MaxHP} HP";
-                return "Any power";
+                    return GameText.Say("event.cars.power.max", ("max", MaxHP));
+                return GameText.Say("event.cars.any_power");
             }
         }
 

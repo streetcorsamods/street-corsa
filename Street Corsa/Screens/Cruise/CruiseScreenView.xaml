@@ -1,6 +1,7 @@
 <UserControl x:Class="StreetCorsa.Screens.Cruise.CruiseScreenView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:t="clr-namespace:StreetCorsa.Services.Text"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:controls="clr-namespace:StreetCorsa.Controls"
@@ -17,7 +18,7 @@
                                    RunningEngine="{Binding PlayerEngine}"/>
 
         <!-- No 3D: the street goes on without the picture -->
-        <TextBlock Text="The street can't be shown on this machine, but the racers still come by."
+        <TextBlock Text="{t:Text cruise.no_street}"
                    FontSize="{StaticResource FontSizeBody}"
                    Foreground="{StaticResource TextSecondaryBrush}"
                    HorizontalAlignment="Center"
@@ -49,12 +50,12 @@
                     HorizontalAlignment="Right"
                     VerticalAlignment="Top"
                     Margin="0,120,20,0">
-            <Button Content="DINER"
+            <Button Content="{t:Text cruise.diner}"
                     Command="{Binding DinerCommand}"
                     Style="{StaticResource DialogSecondaryButtonStyle}"
                     Padding="22,10"
                     Margin="0,0,10,0"/>
-            <Button Content="GARAGE"
+            <Button Content="{t:Text cruise.garage}"
                     Command="{Binding GarageCommand}"
                     Style="{StaticResource DialogSecondaryButtonStyle}"
                     Padding="22,10"/>
@@ -72,11 +73,11 @@
                 VerticalAlignment="Bottom">
             <StackPanel Orientation="Horizontal">
                 <Button x:Name="RevButton"
-                        Content="REV"
+                        Content="{t:Text cruise.rev}"
                         Style="{StaticResource DialogPrimaryButtonStyle}"
                         Padding="18,8"
                         Margin="0,0,14,0"
-                        ToolTip="Hold to rev your engine (or hold the space bar)"
+                        ToolTip="{t:Text cruise.rev.tooltip}"
                         PreviewMouseLeftButtonDown="RevButton_Down"
                         PreviewMouseLeftButtonUp="RevButton_Up"
                         MouseLeave="RevButton_Leave"/>
@@ -96,7 +97,7 @@
                         Margin="0,0,20,20"/>
 
         <!-- Drag to look round -->
-        <TextBlock Text="Drag to look around · double-click to look back out"
+        <TextBlock Text="{t:Text cruise.look_hint}"
                    FontSize="{StaticResource FontSizeTiny}"
                    Foreground="{StaticResource White90Brush}"
                    HorizontalAlignment="Center"
@@ -220,7 +221,7 @@
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <Button Content="CASH"
+                    <Button Content="{t:Text cruise.cash}"
                             Command="{Binding CashBetCommand}"
                             Padding="10,6"
                             Margin="0,0,4,0">
@@ -238,7 +239,7 @@
                         </Button.Style>
                     </Button>
                     <Button Grid.Column="1"
-                            Content="PINK SLIPS"
+                            Content="{t:Text cruise.pink_slips}"
                             Command="{Binding PinkSlipBetCommand}"
                             Padding="10,6"
                             Margin="4,0,0,0">
@@ -307,7 +308,7 @@
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <Button Content="WAVE OFF"
+                    <Button Content="{t:Text cruise.wave_off}"
                             Command="{Binding WaveOffCommand}"
                             Style="{StaticResource DialogSecondaryButtonStyle}"
                             Padding="10,12"

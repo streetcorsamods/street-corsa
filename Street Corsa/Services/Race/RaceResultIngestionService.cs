@@ -3,6 +3,7 @@ using StreetCorsa.Logging;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Models.Race;
 using StreetCorsa.Services.Race.Validation;
+using StreetCorsa.Services.Text;
 using System.IO;
 
 namespace StreetCorsa.Services.Race
@@ -156,8 +157,7 @@ namespace StreetCorsa.Services.Race
 
                 if (result.FilesProcessed > 0 && pendingBefore != null && gameState?.PendingRace == null)
                 {
-                    result.PlayerMessages.Insert(0, new PlayerMessage("Race Result",
-                        "The result of the race you left running while the game was closed has come in, and it counts."));
+                    result.PlayerMessages.Insert(0, new PlayerMessage(GameText.Say("result.came_in.title"), GameText.Say("result.came_in")));
                 }
 
                 if (gameState != null && pendingBefore != null)
@@ -196,9 +196,7 @@ namespace StreetCorsa.Services.Race
                     if (gameState.PendingRace?.ContextId == earlier.ContextId)
                     {
                         _logger.Warning("Race {Earlier} could not be settled yet: race {ContextId} does not start", earlier.ContextId, context.ContextId);
-                        messages.Add(new PlayerMessage("Last Race Not Settled",
-                            "The result of your last race has not been read yet (Assetto Corsa is still running, or its result file is busy).\n\n"
-                            + "Try again in a moment: it has to count before the next race can start."));
+                        messages.Add(new PlayerMessage(GameText.Say("result.last_not_settled.title"), GameText.Say("result.last_not_settled")));
                         return false;
                     }
                 }
@@ -328,8 +326,7 @@ namespace StreetCorsa.Services.Race
             {
                 _logger.Warning("Race {ContextId}: its result could not be used and was quarantined - the race does not count", pending.ContextId);
                 _processor.ReleasePendingRace(pending, gameState);
-                result.PlayerMessages.Add(new PlayerMessage("Last Race",
-                    "Your last race wrote a result the game could not use, so it does not count and nothing was lost. The file is kept for a look; the details are in the log."));
+                result.PlayerMessages.Add(new PlayerMessage(GameText.Say("result.last_unusable.title"), GameText.Say("result.last_unusable")));
                 return;
             }
 

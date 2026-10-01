@@ -1,3 +1,5 @@
+using StreetCorsa.Services.Text;
+
 namespace StreetCorsa.Models.Career.Milestones
 {
     /// <summary>
@@ -41,7 +43,7 @@ namespace StreetCorsa.Models.Career.Milestones
         /// Get a human-readable progress string
         /// </summary>
         public string ProgressText => IsCompleted
-            ? "Completed!"
-            : $"{CurrentValue}/{TargetValue}";
+            ? GameText.Say("career.milestone.done")
+            : GameText.Say("career.milestone.progress", ("current", CurrentValue), ("target", TargetValue));
     }
 }

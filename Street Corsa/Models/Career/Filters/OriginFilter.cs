@@ -1,5 +1,6 @@
 using StreetCorsa.Models.Catalog;
 using StreetCorsa.Models.GameState;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Models.Career.Filters
 {
@@ -17,7 +18,7 @@ namespace StreetCorsa.Models.Career.Filters
         /// </summary>
         public string Origin { get; set; } = string.Empty;
 
-        public string DisplayDescription => $"{Origin} cars";
+        public string DisplayDescription => GameText.Say("event.cars.origin", ("origin", Origin));
 
         // Regional brand mappings for when country data is missing
         private static readonly Dictionary<string, HashSet<string>> RegionBrands = new(StringComparer.OrdinalIgnoreCase)

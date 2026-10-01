@@ -1,3 +1,5 @@
+using StreetCorsa.Services.Text;
+
 namespace StreetCorsa.Models.Race
 {
     /// <summary>
@@ -28,13 +30,13 @@ namespace StreetCorsa.Models.Race
             var days = gameState.Career.GetCounter(Career.Milestones.MilestoneTrigger.DaysPlayed);
             return new VictoryCard(victoryName, description,
             [
-                new("Won on", gameState.Date.ToString("MMMM d, yyyy")),
-                new("Days on the streets", days.ToString("N0")),
-                new("Races", $"{stats.Races:N0} ({stats.Wins:N0} won, {stats.Losses:N0} lost)"),
-                new("Reputation", $"{stats.Reputation} ({stats.GetReputationTier()})"),
-                new("Pink slips won", stats.PinkSlipsWon.ToString("N0")),
-                new("Cars in the garage", gameState.Player.Cars.Count.ToString("N0")),
-                new("Net earnings", Helpers.Money.Dollars(stats.NetEarnings))
+                new(GameText.Say("victory.won_on"), GameText.Say("victory.won_on.date", ("date", gameState.Date))),
+                new(GameText.Say("victory.days"), days.ToString("N0")),
+                new(GameText.Say("victory.races"), GameText.Say("victory.races.value", ("races", stats.Races), ("wins", stats.Wins), ("losses", stats.Losses))),
+                new(GameText.Say("victory.reputation"), GameText.Say("victory.reputation.value", ("reputation", stats.Reputation), ("tier", stats.GetReputationTier()))),
+                new(GameText.Say("victory.pink_slips"), stats.PinkSlipsWon.ToString("N0")),
+                new(GameText.Say("victory.cars"), gameState.Player.Cars.Count.ToString("N0")),
+                new(GameText.Say("victory.net_earnings"), Helpers.Money.Dollars(stats.NetEarnings))
             ], footnote);
         }
     }
@@ -46,7 +48,7 @@ namespace StreetCorsa.Models.Race
     /// Timeslips as the strip hands them out, a column each: both lanes of a drag race, or a test-and-tune's passes.
     /// <paramref name="Note"/> is a line under the slip (who won a bracket race, a new best); null for none.
     /// </summary>
-    public sealed record TimeslipCard(IReadOnlyList<TimeslipLane> Lanes, string? Note = null, string Title = "Timeslip");
+    public sealed record TimeslipCard(IReadOnlyList<TimeslipLane> Lanes, string? Note = null, string? Title = null);
 
     /// <summary>One column of a <see cref="TimeslipCard"/>: whose it is, the slip (null for a car that never left), its dial-in in a bracket race</summary>
     public sealed record TimeslipLane(string Name, Timeslip? Slip, double? DialIn = null);

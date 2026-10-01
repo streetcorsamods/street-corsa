@@ -14,6 +14,7 @@ using StreetCorsa.Services.Parts;
 using StreetCorsa.Services.Police;
 using StreetCorsa.Services.Race.Validation;
 using StreetCorsa.Services.Storage;
+using StreetCorsa.Services.Text;
 using System.IO;
 
 namespace StreetCorsa.Services.Race
@@ -120,8 +121,8 @@ namespace StreetCorsa.Services.Race
             if (outcome.Player?.Timeslip != null || outcome.Opponent?.Timeslip != null)
             {
                 var note = context.IsBracket ? BracketNote(outcome, context) : null;
-                if (newBest) note = Join(note, $"A new best for your car: {BracketRules.Show(outcome.Player?.Timeslip?.QuarterMileSeconds)}.");
-                messages.Insert(0, new PlayerMessage("Timeslip", string.Empty)
+                if (newBest) note = Join(note, GameText.Say("result.new_best", ("time", BracketRules.Show(outcome.Player?.Timeslip?.QuarterMileSeconds))));
+                messages.Insert(0, new PlayerMessage(GameText.Say("timeslip.title"), string.Empty)
                 {
                     Timeslip = new TimeslipCard(
                         [
@@ -168,17 +169,17 @@ namespace StreetCorsa.Services.Race
             if (passes.Count > 0)
             {
                 var best = passes.Where(p => p.QuarterMileSeconds != null).MinBy(p => p.QuarterMileSeconds);
-                string? note = best == null ? null : $"Best of the day: pass {best.Pass ?? passes.IndexOf(best) + 1}, {BracketRules.Show(best.QuarterMileSeconds)}.";
-                if (newBest) note = Join(note, "A new best for your car.");
-                messages.Insert(0, new PlayerMessage("Timeslip", string.Empty)
+                string? note = best == null ? null : GameText.Say("result.tune.best", ("pass", best.Pass ?? passes.IndexOf(best) + 1), ("time", BracketRules.Show(best.QuarterMileSeconds)));
+                if (newBest) note = Join(note, GameText.Say("result.tune.new_best"));
+                messages.Insert(0, new PlayerMessage(GameText.Say("timeslip.title"), string.Empty)
                 {
                     Timeslip = new TimeslipCard(
-                        passes.Select((p, i) => new TimeslipLane($"Pass {p.Pass ?? i + 1}", p)).ToList(), note, "Test and Tune")
+                        passes.Select((p, i) => new TimeslipLane(GameText.Say("result.tune.pass", ("pass", p.Pass ?? i + 1)), p)).ToList(), note, GameText.Say("result.tune.title"))
                 });
             }
             else
             {
-                messages.Insert(0, new PlayerMessage("Test and Tune", "You never made a full pass: there's no timeslip to take home."));
+                messages.Insert(0, new PlayerMessage(GameText.Say("result.tune.title"), GameText.Say("result.tune.no_pass")));
             }
 
             return messages;
@@ -378,31 +379,30 @@ namespace StreetCorsa.Services.Race
             if (outcome.WinCondition == WinCondition.FalseStart)
                 messages.Add(ApplyFalseStart(gameState, context));
             else if (outcome.WinCondition == WinCondition.PlayerAbandoned)
-                messages.Add(new PlayerMessage("Out of the Race",
-                    $"You left the race before the finish, and that counts as a loss to {context.OpponentName}."));
+                messages.Add(new PlayerMessage(GameText.Say("result.abandoned.title"),
+                    GameText.Say("result.abandoned", ("name", context.OpponentName))));
             else if (outcome.WinCondition == WinCondition.PlayerDisqualified)
-                messages.Add(new PlayerMessage("Disqualified",
-                    $"You hit {context.OpponentName} in his own lane. That's a DQ, and the race is his."));
+                messages.Add(new PlayerMessage(GameText.Say("result.disqualified.title"),
+                    GameText.Say("result.disqualified", ("name", context.OpponentName))));
             else if (outcome.WinCondition == WinCondition.OpponentDisqualified)
-                messages.Add(new PlayerMessage("Rival Disqualified",
-                    $"{context.OpponentName} hit you in your own lane. That's a DQ, and the race is yours."));
+                messages.Add(new PlayerMessage(GameText.Say("result.rival_disqualified.title"),
+                    GameText.Say("result.rival_disqualified", ("name", context.OpponentName))));
             else if (outcome.WinCondition == WinCondition.PlayerBrokeDown)
-                messages.Add(new PlayerMessage("Broke Down",
-                    $"Your {Breakdowns.WhatHappened(outcome.Player?.Breakdown)} before the line. The race is {context.OpponentName}'s."));
+                messages.Add(new PlayerMessage(GameText.Say("result.broke_down.title"),
+                    GameText.Say("result.broke_down", ("what", Breakdowns.WhatHappened(outcome.Player?.Breakdown)), ("name", context.OpponentName))));
             else if (outcome.WinCondition == WinCondition.OpponentBrokeDown)
-                messages.Add(new PlayerMessage("Rival Broke Down",
-                    $"{context.OpponentName}'s {Breakdowns.WhatHappened(outcome.Opponent?.Breakdown)} before the line. The race is yours."));
+                messages.Add(new PlayerMessage(GameText.Say("result.rival_broke_down.title"),
+                    GameText.Say("result.rival_broke_down", ("name", context.OpponentName), ("what", Breakdowns.WhatHappened(outcome.Opponent?.Breakdown)))));
             else if (outcome.WinCondition == WinCondition.BothOut)
-                messages.Add(new PlayerMessage("Nobody Finished",
-                    "Neither car made it to the line. It's a draw, and nothing changes hands."));
+                messages.Add(new PlayerMessage(GameText.Say("result.nobody_finished.title"), GameText.Say("result.nobody_finished")));
             else if (outcome.WinCondition == WinCondition.PlayerBrokeOut)
-                messages.Add(new PlayerMessage("Breakout",
-                    $"You ran quicker than your {BracketRules.Show(context.PlayerDialIn)} dial-in. That's a breakout, and the race is {context.OpponentName}'s."));
+                messages.Add(new PlayerMessage(GameText.Say("result.breakout.title"),
+                    GameText.Say("result.breakout", ("dial_in", BracketRules.Show(context.PlayerDialIn)), ("name", context.OpponentName))));
             else if (outcome.WinCondition == WinCondition.OpponentBrokeOut)
             {
-                var theirs = FindRacer(gameState, context.OpponentName) is { } rival ? OpponentRules.Possessive(rival) : "their";
-                messages.Add(new PlayerMessage("Rival Broke Out",
-                    $"{context.OpponentName} ran quicker than {theirs} {BracketRules.Show(context.OpponentDialIn)} dial-in. The race is yours."));
+                var theirs = FindRacer(gameState, context.OpponentName) is { } rival ? OpponentRules.Possessive(rival) : GameText.Say("rivals.possessive.other");
+                messages.Add(new PlayerMessage(GameText.Say("result.rival_breakout.title"),
+                    GameText.Say("result.rival_breakout", ("name", context.OpponentName), ("possessive", theirs), ("dial_in", BracketRules.Show(context.OpponentDialIn)))));
             }
 
             // Update career milestone counters
@@ -447,13 +447,13 @@ namespace StreetCorsa.Services.Race
                 context.OpponentName, before, stats.Reputation);
 
             var stakes = context.IsPinkSlip || context.CashWager > 0
-                ? " Nothing changes hands."
+                ? GameText.Say("result.false_start.stakes")
                 : string.Empty;
             var reputation = stats.Reputation < before
-                ? $"\n\nReputation: {before} → {stats.Reputation}"
+                ? GameText.Say("result.false_start.reputation", ("before", before), ("after", stats.Reputation))
                 : string.Empty;
-            return new PlayerMessage("False Start",
-                $"You jumped the gun against {context.OpponentName}. No contest.{stakes}{reputation}");
+            return new PlayerMessage(GameText.Say("result.false_start.title"),
+                GameText.Say("result.false_start", ("name", context.OpponentName), ("stakes", stakes), ("reputation", reputation)));
         }
 
         /// <summary>
@@ -475,18 +475,18 @@ namespace StreetCorsa.Services.Race
                     fine, car?.DefinitionId ?? "(not theirs any more)", car?.ImpoundedUntil);
 
                 lines.Add(outcome.WinCondition == WinCondition.BothBusted
-                    ? $"The police caught you and {context.OpponentName}. No contest, and nothing changes hands."
-                    : $"The police caught you. The race goes to {context.OpponentName}.");
-                lines.Add($"Fine: ${fine:N0}");
+                    ? GameText.Say("police.busted.both", ("name", context.OpponentName))
+                    : GameText.Say("police.busted", ("name", context.OpponentName)));
+                lines.Add(GameText.Say("police.fine", ("fine", fine)));
                 if (impounded && car != null)
                 {
-                    lines.Add($"Your car is in the police impound until {car.ImpoundedUntil:dddd d MMMM}. Collecting it costs ${car.ImpoundFee:N0}.");
+                    lines.Add(GameText.Say("police.impounded", ("until", car.ImpoundedUntil), ("fee", car.ImpoundFee)));
                     if (unpaid > 0)
-                        lines.Add($"You couldn't pay ${unpaid:N0} of the fine: it's on the impound's bill.");
+                        lines.Add(GameText.Say("police.unpaid", ("unpaid", unpaid)));
                 }
                 else if (context.IsPinkSlip)
                 {
-                    lines.Add($"The pink slip was signed: {context.OpponentName} collects your car from the police.");
+                    lines.Add(GameText.Say("police.pink_slip", ("name", context.OpponentName)));
                 }
             }
 
@@ -497,8 +497,8 @@ namespace StreetCorsa.Services.Race
                 _logger.Information("The police caught {Rival}: fined ${Fine}, car impounded {Impounded}", rival.Name, fine, impounded);
 
                 if (outcome.WinCondition == WinCondition.OpponentBusted)
-                    lines.Add($"The police caught {rival.Name}. The race is yours.");
-                if (impounded) lines.Add($"{rival.Name}'s car is in the impound for a while.");
+                    lines.Add(GameText.Say("police.rival_busted", ("name", rival.Name)));
+                if (impounded) lines.Add(GameText.Say("police.rival_impounded", ("name", rival.Name)));
             }
 
             if (pursuit.PlayerEscaped)
@@ -509,13 +509,13 @@ namespace StreetCorsa.Services.Race
                 gameState.Career.SetCounter(MilestoneTrigger.ReputationReached, player.Stats.Reputation);
                 _logger.Information("The player got away from the police ({Escapes} times now)", player.Stats.PoliceEscapes);
 
-                lines.Add("You lost the cops. The street will hear about it.");
+                lines.Add(GameText.Say("police.escaped"));
                 if (player.Stats.Reputation > before)
-                    lines.Add($"Reputation: {before} → {player.Stats.Reputation}");
+                    lines.Add(GameText.Say("police.reputation", ("before", before), ("after", player.Stats.Reputation)));
             }
 
             if (lines.Count == 0) return;
-            messages.Add(new PlayerMessage(pursuit.PlayerBusted ? "Busted" : pursuit.PlayerEscaped ? "Got Away" : "The Police", string.Join("\n\n", lines))
+            messages.Add(new PlayerMessage(GameText.Say(pursuit.PlayerBusted ? "police.busted.title" : pursuit.PlayerEscaped ? "police.escaped.title" : "police.title"), string.Join("\n\n", lines))
             {
                 // Home on foot: the garage is where the player finds out what's left
                 TowedToGarage = pursuit.PlayerBusted
@@ -803,10 +803,10 @@ namespace StreetCorsa.Services.Race
         /// <summary>The bracket race in a line under the slip: who won and why</summary>
         private static string? BracketNote(RaceDecision outcome, RaceContext context) => outcome.WinCondition switch
         {
-            WinCondition.BracketFinish => outcome.PlayerWon ? "On your dial-in and first to the quarter: the race is yours."
-                : $"{context.OpponentName} got to the quarter first on the dial-in.",
-            WinCondition.PlayerBrokeOut => "You broke out: quicker than your dial-in.",
-            WinCondition.OpponentBrokeOut => $"{context.OpponentName} broke out: quicker than the dial-in.",
+            WinCondition.BracketFinish => outcome.PlayerWon ? GameText.Say("result.bracket.won")
+                : GameText.Say("result.bracket.lost", ("name", context.OpponentName)),
+            WinCondition.PlayerBrokeOut => GameText.Say("result.bracket.broke_out"),
+            WinCondition.OpponentBrokeOut => GameText.Say("result.bracket.rival_broke_out", ("name", context.OpponentName)),
             _ => null
         };
 
@@ -824,17 +824,17 @@ namespace StreetCorsa.Services.Race
             var after = notes.Count == 0 ? "" : "\n\n" + string.Join("\n", notes);
             if (towed)
             {
-                return new PlayerMessage("Towed Home", (damage.Count == 0
-                    ? "Your car was towed back to the garage."
-                    : "Your car was towed back to the garage. Here's what the crash did:\n\n" + string.Join("\n", damage)) + after)
+                return new PlayerMessage(GameText.Say("result.towed.title"), (damage.Count == 0
+                    ? GameText.Say("result.towed")
+                    : GameText.Say("result.towed.damage", ("damage", string.Join("\n", damage)))) + after)
                 {
                     TowedToGarage = true
                 };
             }
 
-            if (damage.Count > 0) return new PlayerMessage("Damage Report", string.Join("\n", damage) + after);
-            return notes.Count > 0 ? new PlayerMessage(notes.All(n => n.StartsWith(CarCondition.OilNote, StringComparison.Ordinal)) ? "Oil"
-                : notes.Any(n => n.StartsWith(CarCondition.OilNote, StringComparison.Ordinal)) ? "Fuel and Oil" : "Fuel", string.Join("\n", notes)) : null;
+            if (damage.Count > 0) return new PlayerMessage(GameText.Say("result.damage.title"), string.Join("\n", damage) + after);
+            return notes.Count > 0 ? new PlayerMessage(GameText.Say(notes.All(n => n.StartsWith(CarCondition.OilNote, StringComparison.Ordinal)) ? "result.oil.title"
+                : notes.Any(n => n.StartsWith(CarCondition.OilNote, StringComparison.Ordinal)) ? "result.fuel_and_oil.title" : "result.fuel.title"), string.Join("\n", notes)) : null;
         }
 
         /// <summary>
@@ -1150,7 +1150,7 @@ namespace StreetCorsa.Services.Race
                 Date = gameState.Date,
                 PlayerName = gameState.Player.Name,
                 RivalName = context.OpponentName,
-                RivalPossessive = rival == null ? "their" : OpponentRules.Possessive(rival),
+                RivalPossessive = rival == null ? GameText.Say("rivals.possessive.other") : OpponentRules.Possessive(rival),
                 RivalIsKing = rival is Opponent { IsKing: true },
                 PlayerReputation = before.PlayerReputation,
                 RivalReputation = before.RivalReputation,
@@ -1190,7 +1190,7 @@ namespace StreetCorsa.Services.Race
 
         private string CarName(string definitionId)
         {
-            if (string.IsNullOrEmpty(definitionId)) return "car";
+            if (string.IsNullOrEmpty(definitionId)) return GameText.Say("rivals.car");
             return _catalog == null ? definitionId : CarNames.Of(_catalog, definitionId);
         }
 
@@ -1416,7 +1416,7 @@ namespace StreetCorsa.Services.Race
                     for (var i = 0; i < count; i++) gameState.Player.Parts.Add(new PartInstance(cam.Id));
                     var name = cam.DisplayName ?? cam.Name;
                     _logger.Information("Event reward: {Count} x {Cam} on the shelf", count, cam.Id);
-                    return count > 1 ? $"{count} x {name} (on your shelf)" : $"{name} (on your shelf)";
+                    return count > 1 ? GameText.Say("event.prize.parts", ("count", count), ("part", name)) : GameText.Say("event.prize.part", ("part", name));
                 }
             }
             catch (Exception ex)
@@ -1428,7 +1428,7 @@ namespace StreetCorsa.Services.Race
             gameState.Player.Money += cash;
             gameState.Player.Stats.TotalEarnings += cash;
             _logger.Information("Event reward: no better camshaft fits {Car}; ${Cash} instead", car?.DefinitionId ?? "(no car)", cash);
-            return $"${cash:N0} for a camshaft (none better fits your engine)";
+            return GameText.Say("event.prize.camshaft_cash", ("cash", cash));
         }
 
         /// <summary>
@@ -1447,7 +1447,7 @@ namespace StreetCorsa.Services.Race
 
             gameState.Player.Parts.Add(new PartInstance(part.Id));
             _logger.Information("Event reward: {Part} on the shelf", part.Id);
-            return $"{part.DisplayName ?? part.Name} (on your shelf)";
+            return GameText.Say("event.prize.part", ("part", part.DisplayName ?? part.Name));
         }
 
         /// <summary>
@@ -1458,21 +1458,21 @@ namespace StreetCorsa.Services.Race
             var rewardParts = new List<string>();
 
             if (reward.Cash > 0)
-                rewardParts.Add($"${reward.Cash:N0}");
+                rewardParts.Add(GameText.Say("event.reward.cash", ("cash", reward.Cash)));
 
             if (reward.Reputation > 0)
-                rewardParts.Add($"+{reward.Reputation} reputation");
+                rewardParts.Add(GameText.Say("event.reward.reputation", ("reputation", reward.Reputation)));
 
             if (!string.IsNullOrEmpty(reward.SpecialItemDescription))
                 rewardParts.Add(reward.SpecialItemDescription);
             else if (!string.IsNullOrEmpty(reward.SpecialItem))
-                rewardParts.Add($"Special item: {reward.SpecialItem}");
+                rewardParts.Add(GameText.Say("event.reward.special_item", ("item", reward.SpecialItem)));
 
             if (rewardParts.Count == 0)
                 return null; // No rewards to show
 
-            var message = "You won the event!\n\nRewards:\n" + string.Join("\n", rewardParts.Select(r => $"  {r}"));
-            return new PlayerMessage("Event Complete!", message);
+            var message = GameText.Say("event.won", ("rewards", string.Join("\n", rewardParts.Select(r => GameText.Say("event.won.reward", ("reward", r))))));
+            return new PlayerMessage(GameText.Say("event.won.title"), message);
         }
 
         /// <summary>
@@ -1483,18 +1483,16 @@ namespace StreetCorsa.Services.Race
         {
             var stakes = new List<string>();
             if (moved.Cash)
-                stakes.Add($"the ${context.CashWager:N0} wager goes to {context.OpponentName}");
+                stakes.Add(GameText.Say("result.forfeit.cash", ("wager", context.CashWager), ("name", context.OpponentName)));
             if (moved.Car)
-                stakes.Add($"{context.OpponentName} takes your car's pink slip");
+                stakes.Add(GameText.Say("result.forfeit.pink_slip", ("name", context.OpponentName)));
 
             if (stakes.Count == 0)
-                return new PlayerMessage("Race Forfeited",
-                    "The race never came back with a result, and walking away from a race with something on it counts as a loss.");
+                return new PlayerMessage(GameText.Say("result.forfeit.title"), GameText.Say("result.forfeit"));
 
             return new PlayerMessage(
-                "Race Forfeited",
-                "The race never came back with a result, and walking away from a race with something on it counts as a loss:\n\n"
-                + string.Join("\n", stakes.Select(s => $"  {char.ToUpper(s[0])}{s[1..]}.")));
+                GameText.Say("result.forfeit.title"),
+                GameText.Say("result.forfeit.stakes", ("stakes", string.Join("\n", stakes.Select(s => GameText.Say("result.forfeit.stake", ("stake", $"{char.ToUpper(s[0])}{s[1..]}")))))));
         }
 
         /// <summary>

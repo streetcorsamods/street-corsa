@@ -9,6 +9,7 @@ using StreetCorsa.Navigation;
 using StreetCorsa.Services.Catalog;
 using StreetCorsa.Services.Opponents;
 using StreetCorsa.Services.Police;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Screens.Shared
 {
@@ -185,8 +186,8 @@ namespace StreetCorsa.Screens.Shared
             {
                 _dialogService.ShowDialog(new InformationDialogViewModel(
                     _dialogService,
-                    $"Your car is not going anywhere: {setup.PlayerCarProblem}.\n\nSort it out in the garage first.",
-                    "Car Won't Run"));
+                    GameText.Say("challenge.car_wont_run", ("problem", setup.PlayerCarProblem)),
+                    GameText.Say("challenge.car_wont_run.title")));
                 return new ChallengeOutcome(ChallengeStatus.CarWontRun);
             }
 
