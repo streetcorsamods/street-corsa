@@ -8,6 +8,12 @@ namespace StreetCorsa.Models.GameState
 
         public string Text { get; set; } = string.Empty;
 
+        /// <summary>The line told again by the player's AI (<see cref="Services.Ai.AiWriter"/>); null when it was not</summary>
+        public string? AiText { get; set; }
+
+        /// <summary>The language <see cref="AiText"/> was written in: shown only while the game speaks it</summary>
+        public string? AiLanguage { get; set; }
+
         public StreetTalkItem() { }
 
         public StreetTalkItem(DateTime date, string text)

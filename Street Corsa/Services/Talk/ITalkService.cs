@@ -14,5 +14,13 @@ namespace StreetCorsa.Services.Talk
         /// Check if the service is available (for AI services)
         /// </summary>
         bool IsAvailable { get; }
+
+        /// <summary>
+        /// A line for this moment written ahead, in the background, so it is ready when the moment comes (the player's AI,
+        /// <see cref="AiTalkService"/>); nothing for the game's own lines, which are always ready
+        /// </summary>
+        void Prepare(TalkContext context)
+        {
+        }
     }
 }

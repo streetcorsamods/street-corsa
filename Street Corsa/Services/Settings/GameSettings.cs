@@ -31,5 +31,8 @@ namespace StreetCorsa.Services.Settings
 
         /// <summary>The volumes; they take effect as the sliders move</summary>
         public AudioSettings Audio { get; set; } = new();
+
+        /// <summary>The AI the player connects (off by default); taken at once</summary>
+        public AiSettings Ai { get; set; } = new();
     }
 }

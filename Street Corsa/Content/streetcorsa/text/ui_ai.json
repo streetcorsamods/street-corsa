@@ -1,0 +1,36 @@
+{
+  "_comment": [
+    "The words of the AI section in Settings: the player's own AI (a text provider, and ComfyUI for pictures) and its",
+    "Test buttons. What the AI is asked is not here: it is the mods' ai/prompts.json. A label is said one way (the",
+    "first line of its pool). {name} is a value the game fills in.",
+    "{model}, {models}, {answer}: settings.ai.test.ok, settings.ai.test.empty",
+    "{error}: settings.ai.test.failed",
+    "{version}, {device}, {checkpoint}: settings.ai.comfy.ok"
+  ],
+  "lines": {
+    "settings.ai": "AI",
+    "settings.ai.note": "Your own AI can write what the rivals say, the street talk, the paper's stories and the dealers' word on a car. The game never waits for it: its own words are always there, and what the AI writes is kept in the save.",
+    "settings.ai.enabled": "Use my AI for what people say and write",
+    "settings.ai.provider": "Provider",
+    "settings.ai.provider.ollama": "Ollama",
+    "settings.ai.provider.openai": "OpenAI-compatible (LM Studio, OpenRouter, OpenAI)",
+    "settings.ai.provider.anthropic": "Anthropic (Claude)",
+    "settings.ai.endpoint": "Address",
+    "settings.ai.model": "Model",
+    "settings.ai.model.hint": "the provider's first",
+    "settings.ai.model.hint.anthropic": "claude-opus-5-5",
+    "settings.ai.key": "API key",
+    "settings.ai.key.hint": "kept encrypted for this Windows user",
+    "settings.ai.key.saved": "A key is saved, encrypted. Type a new one to change it.",
+    "settings.ai.key.forget": "Forget key",
+    "settings.ai.test": "Test",
+    "settings.ai.testing": "Asking...",
+    "settings.ai.test.ok": "It works: {model} says \"{answer}\"",
+    "settings.ai.test.empty": "{model} answered, but with nothing.",
+    "settings.ai.test.failed": "It did not work: {error}",
+    "settings.ai.test.timeout": "no answer in time",
+    "settings.ai.comfy": "Paint new rivals' portraits with ComfyUI",
+    "settings.ai.comfy.endpoint": "ComfyUI address",
+    "settings.ai.comfy.ok": "ComfyUI {version} answers on {device}. Portraits use {checkpoint}."
+  }
+}

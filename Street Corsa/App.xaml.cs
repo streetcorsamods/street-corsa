@@ -296,8 +296,16 @@ namespace StreetCorsa
             EventOpponentService = new EventOpponentService(CarFilterService, CatalogRepository, OpponentChallengeService.CanRace);
             CareerProgressService = new CareerProgressService(MilestoneService, VictoryConditionService);
 
-            // Talk service for opponent dialogue
-            TalkService = new StaticTalkService();
+            // ----- The player's AI (step 25): off by default, never waited on. Rivals' lines, the diner's talk, the paper's
+            // pieces and new faces' portraits; what it writes goes into the game on the UI thread -----
+            var ai = Services.Ai.AiHub.Start(() => GameSettingsService.Current.Ai, () => CurrentGameState,
+                change => Dispatcher.BeginInvoke(change), id => Services.Catalog.CarNames.Of(CatalogRepository, id));
+            Services.News.NewsWriter.Added = ai.Writer.NewsAdded;
+            OpponentLifeService.TalkAdded = ai.Writer.StreetTalkAdded;
+            OpponentLifeService.NewFaceArrived = ai.Writer.NewFace;
+
+            // Talk service for opponent dialogue: the game's own lines, in the AI's words when it has them ready
+            TalkService = new AiTalkService(new StaticTalkService(), ai.Text);
 
             // Register event generation task (must be after RaceEventService is created)
             Scheduler.RegisterTask(new Services.Scheduler.Tasks.EventGenerationTask(RaceEventService));
@@ -539,6 +547,7 @@ namespace StreetCorsa
                     _ = Services.Street.StreetScenes.Installed;
                     _ = Services.Station.StationScenes.Installed;
                     _ = Services.CarLot.WarehouseScenes.Installed;
+                    _ = Services.Ai.AiPrompts.Installed;
                     Tell("Cars", Parts.Cars.CarBook.Installed.Problems);
                     Tell("Part groups", Parts.PartGroups.Installed.Problems);
                 }));

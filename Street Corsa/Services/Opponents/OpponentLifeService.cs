@@ -721,6 +721,7 @@ namespace StreetCorsa.Services.Opponents
                     talk.Add(racer.Cars.FirstOrDefault() is { } car
                         ? Say("street.new_face_car", racer, car)
                         : Say("street.new_face", racer));
+                    NewFaceArrived?.Invoke(gameState, racer);
                 }
             }
         }
@@ -1002,7 +1003,15 @@ namespace StreetCorsa.Services.Opponents
         public static void AddTalk(GameState gameState, DateTime date, IEnumerable<string> lines)
         {
             gameState.StreetTalk ??= [];
-            DatedLog.Append(gameState.StreetTalk, lines.Select(line => new StreetTalkItem(date, line)), item => item.Date, date, StreetTalkDays, MaxStreetTalk);
+            var added = lines.Select(line => new StreetTalkItem(date, line)).ToList();
+            DatedLog.Append(gameState.StreetTalk, added, item => item.Date, date, StreetTalkDays, MaxStreetTalk);
+            TalkAdded?.Invoke(gameState, added);
         }
+
+        /// <summary>Told of every new line of street talk: the player's AI tells it again (<see cref="Ai.AiWriter.StreetTalkAdded"/>)</summary>
+        public static Action<GameState, IReadOnlyList<StreetTalkItem>>? TalkAdded { get; set; }
+
+        /// <summary>Told of a new face on the street: ComfyUI paints them a portrait (<see cref="Ai.AiWriter.NewFace"/>)</summary>
+        public static Action<GameState, Opponent>? NewFaceArrived { get; set; }
     }
 }
