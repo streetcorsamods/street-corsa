@@ -370,7 +370,7 @@ namespace StreetCorsa.Screens.DealerMap
             if (!pin.FitsToday)
             {
                 var message = GameText.Say("dealermap.far.message",
-                    ("place", pin.Name), ("travel", pin.TravelDisplay.ToLowerInvariant()), ("time", _gameState.Date));
+                    ("place", pin.Name), ("travel", pin.TravelInLine), ("time", _gameState.Date));
 
                 _dialogService.ShowDialog(new ConfirmationDialogViewModel(
                     _dialogService,
@@ -531,5 +531,10 @@ namespace StreetCorsa.Screens.DealerMap
         public string TravelDisplay => TravelHours <= 1f
             ? GameText.Say("dealermap.travel.one")
             : GameText.Say("dealermap.travel.other", ("hours", TravelHours));
+
+        /// <summary>How far it is, said within a line</summary>
+        public string TravelInLine => TravelHours <= 1f
+            ? GameText.Say("dealermap.far.travel.one")
+            : GameText.Say("dealermap.far.travel.other", ("hours", TravelHours));
     }
 }

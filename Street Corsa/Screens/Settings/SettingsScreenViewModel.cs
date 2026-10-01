@@ -92,11 +92,12 @@ namespace StreetCorsa.Screens.Settings
                 var previous = _language;
                 _language = value;
                 OnPropertyChanged();
-                if (previous != null) OnLanguageChanged(value);
+                if (previous != null && !OnLanguageChanged(value)) TakeBack(previous);
             }
         }
 
-        private void OnLanguageChanged(LanguageChoice choice)
+        /// <summary>The choice to disk; false when it did not get there</summary>
+        private bool OnLanguageChanged(LanguageChoice choice)
         {
             var saved = Settings.Language;
             Settings.Language = choice.IsGameLanguage ? null : choice.Id;
@@ -104,11 +105,22 @@ namespace StreetCorsa.Screens.Settings
             {
                 Settings.Language = saved;
                 ShowNotSaved(GameText.Say("settings.not_saved"));
-                return;
+                return false;
             }
 
             _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService,
                 GameText.Say("settings.language.restart", ("language", choice.Name)), GameText.Say("settings.restart.title")));
+            return true;
+        }
+
+        /// <summary>
+        /// The picker back on the language that is saved. Told once the picker is done with the pick, which it would
+        /// otherwise keep showing
+        /// </summary>
+        private void TakeBack(LanguageChoice previous)
+        {
+            _language = previous;
+            Dispatcher.CurrentDispatcher.BeginInvoke(() => OnPropertyChanged(nameof(Language)), DispatcherPriority.Background);
         }
 
         private static IReadOnlyList<LanguageChoice> MakeLanguages(string? picked, out LanguageChoice? selected)
@@ -117,7 +129,7 @@ namespace StreetCorsa.Screens.Settings
             try
             {
                 var own = true;
-                foreach (var (id, name) in GameText.Languages(Mods.ModSet.Installed))
+                foreach (var (id, name) in GameText.AvailableLanguages)
                 {
                     languages.Add(new LanguageChoice(id, name, own));
                     own = false;

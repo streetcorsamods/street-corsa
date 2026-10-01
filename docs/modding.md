@@ -524,6 +524,8 @@ mode's messages in AC are the `race.*` pools of `race.json`: they reach it throu
 is a folder in `text` named for its language, `text\es\*.json`, written like the rest (`lines`, `replace`), over every
 mod in load order; its `language.name` pool is its name in the Settings picker (`"Español"`). With a language picked,
 its pools take the place of the game's, and a key it lacks says the game's own words: a translation can be partial, and
-a mod that adds words can add their translations in its own `text\<language>`. The picker shows once a mod has a
+a mod that adds words can add their translations in its own `text\<language>`. A mod's `removes` and `replace` hold in
+every language: a pool it takes out says nothing, and one it rewrites says the mod's words (or the mod's own
+translation of them) rather than an earlier mod's translation of the old ones. The picker shows once a mod has a
 language besides the game's own; the game speaks it from its next start. Numbers, money and units are still written
 the base game's way (a later step).

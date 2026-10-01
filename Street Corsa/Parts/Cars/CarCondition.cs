@@ -26,8 +26,9 @@ public static class CarCondition
     public const int Zones = 4;
 
     /// <summary>The body's zones as the report says them: "front", "rear", "left side", "right side"</summary>
-    public static string[] ZoneNames => [PartWords.Say("condition.zone.front"), PartWords.Say("condition.zone.rear"),
-        PartWords.Say("condition.zone.left"), PartWords.Say("condition.zone.right")];
+    public static string ZoneName(int zone) => PartWords.Say(ZoneKeys[zone]);
+
+    private static readonly string[] ZoneKeys = ["condition.zone.front", "condition.zone.rear", "condition.zone.left", "condition.zone.right"];
 
     /// <summary>A body that has taken this much, all zones together, is a write-off (a 200 km/h wreck reports 205 on two zones)</summary>
     public static double TotaledKmh => Rules.RuleBook.Current.Condition.TotaledKmh;
@@ -201,10 +202,6 @@ public static class CarCondition
     public static double OilBurned(Car car, double distanceKm, Func<string, string?>? groupOf) =>
         (OilBurnPerRace + Clean(distanceKm) * OilBurnPerKm) * (1 + (WornOilBurn - 1) * EngineWornness(car, groupOf));
 
-    /// <summary>A line of <see cref="ApplyRace"/>'s report that is damage, not a note on the fuel or the oil</summary>
-    public static bool IsDamage(string line) =>
-        !line.StartsWith(FuelNote, StringComparison.Ordinal) && !line.StartsWith(OilNote, StringComparison.Ordinal);
-
     /// <summary>What keeps the car from racing, in words for the player; empty when it can go</summary>
     /// <param name="counting">False leaves the tank out: what keeps the car off the road whatever is in it</param>
     public static List<string> WhyCannotRace(Car car, Func<string, string?>? groupOf, bool counting = true)
@@ -231,8 +228,8 @@ public static class CarCondition
             var bend = SuspensionBend(car);
             for (var i = 0; i < corners.Length; i++)
             {
-                if (1 - bend[i] < BrokenBelow) problems.Add(PartWords.Say("condition.problem.suspension", ("corner", RunningGear.CornerNames[i])));
-                if (corners[i].Tyre is { Tear: <= 0 }) problems.Add(PartWords.Say("condition.problem.tyre", ("corner", RunningGear.CornerNames[i])));
+                if (1 - bend[i] < BrokenBelow) problems.Add(PartWords.Say("condition.problem.suspension", ("corner", RunningGear.CornerName(i))));
+                if (corners[i].Tyre is { Tear: <= 0 }) problems.Add(PartWords.Say("condition.problem.tyre", ("corner", RunningGear.CornerName(i))));
             }
         }
 
@@ -250,10 +247,10 @@ public static class CarCondition
     /// damage is already the difficulty's (<see cref="GameRules.RaceDamagePercent"/>)</param>
     /// <param name="keepsFuelAndDirt">False for a rival's car: the racers fill up, top up the oil and wash before every
     /// race, so the tank, the oil and the dirt a race leaves are not kept</param>
-    public static List<string> ApplyRace(Car car, RaceCarCondition condition, double distanceKm, Func<string, string?>? groupOf,
+    public static ConditionReport ApplyRace(Car car, RaceCarCondition condition, double distanceKm, Func<string, string?>? groupOf,
         double wearMultiplier = 1.0, bool keepsFuelAndDirt = true)
     {
-        var report = new List<string>();
+        var report = new ConditionReport();
         ApplyBody(car, condition, report);
         ApplyHeat(condition, report);
 
@@ -283,19 +280,19 @@ public static class CarCondition
     }
 
     /// <summary>The oil the race burned; the report tells when it runs low, once</summary>
-    private static void ApplyOil(Car car, double distanceKm, Func<string, string?>? groupOf, List<string> report)
+    private static void ApplyOil(Car car, double distanceKm, Func<string, string?>? groupOf, ConditionReport report)
     {
         if (car.Engine == null) return;
 
         var before = OilLeft(car);
         var left = Math.Max(0, before - OilBurned(car, distanceKm, groupOf));
         car.OilLevel = left;
-        if (left < 0.4 && before >= 0.4) report.Add(OilNote + PartWords.Say("condition.oil.light"));
-        else if (left < LowOil && before >= LowOil) report.Add(OilNote + PartWords.Say("condition.oil.burning"));
+        if (left < 0.4 && before >= 0.4) report.Note(ReportKind.Oil, OilNote + PartWords.Say("condition.oil.light"));
+        else if (left < LowOil && before >= LowOil) report.Note(ReportKind.Oil, OilNote + PartWords.Say("condition.oil.burning"));
     }
 
     /// <summary>What the engine's heat and oil did, and what would help; the life they took is in the engine's</summary>
-    private static void ApplyHeat(RaceCarCondition condition, List<string> report)
+    private static void ApplyHeat(RaceCarCondition condition, ConditionReport report)
     {
         if (condition.Heat is not { } heat) return;
 
@@ -314,16 +311,16 @@ public static class CarCondition
     /// The fuel left and the tank's size as AC reported them; dirt from the race and the road. Fuel is kept only
     /// against a known tank: without its size a car could be left too dry to race with nothing to fill it up to.
     /// </summary>
-    private static void ApplyFuelAndDirt(Car car, RaceCarCondition condition, double distanceKm, List<string> report)
+    private static void ApplyFuelAndDirt(Car car, RaceCarCondition condition, double distanceKm, ConditionReport report)
     {
         if (condition.MaxFuelLitres is { } tank && double.IsFinite(tank) && tank > 0) car.FuelTankLitres = tank;
         if (condition.FuelLitres is { } fuel && double.IsFinite(fuel) && TankLitres(car) is { } size)
         {
             var left = Math.Clamp(fuel, 0, size);
             car.FuelLitres = left;
-            if (left < EmptyTankLitres) report.Add(FuelNote + PartWords.Say("condition.fuel.dry"));
-            else if (left < TooLittleToRaceLitres) report.Add(FuelNote + PartWords.Say("condition.fuel.too_little", ("litres", left)));
-            else if (left < size * LowTankShare) report.Add(FuelNote + PartWords.Say("condition.fuel.low", ("litres", left)));
+            if (left < EmptyTankLitres) report.Note(ReportKind.Fuel, FuelNote + PartWords.Say("condition.fuel.dry"));
+            else if (left < TooLittleToRaceLitres) report.Note(ReportKind.Fuel, FuelNote + PartWords.Say("condition.fuel.too_little", ("litres", left)));
+            else if (left < size * LowTankShare) report.Note(ReportKind.Fuel, FuelNote + PartWords.Say("condition.fuel.low", ("litres", left)));
         }
 
         // AC starts the body as dirty as the car went in: what it reports is the whole of it
@@ -332,7 +329,7 @@ public static class CarCondition
         car.BodyDirt = Math.Min(1, dirt + Clean(distanceKm) * DirtPerKm);
     }
 
-    private static void ApplyBody(Car car, RaceCarCondition condition, List<string> report)
+    private static void ApplyBody(Car car, RaceCarCondition condition, ConditionReport report)
     {
         if (condition.BodyDamageKmh is not { } reported) return;
 
@@ -343,7 +340,7 @@ public static class CarCondition
         for (var i = 0; i < Zones && i < reported.Count; i++)
         {
             var now = Math.Min(Clean(reported[i]), MaxZoneKmh);
-            if (now > zones[i] + 0.5) report.Add(PartWords.Say("condition.body.hit", ("zone", ZoneNames[i]), ("kmh", now - zones[i])));
+            if (now > zones[i] + 0.5) report.Add(PartWords.Say("condition.body.hit", ("zone", ZoneName(i)), ("kmh", now - zones[i])));
             zones[i] = Math.Max(zones[i], now);
         }
 
@@ -351,7 +348,7 @@ public static class CarCondition
         if (!wasTotaled && zones.Sum() >= TotaledKmh) report.Add(PartWords.Say("condition.body.totaled"));
     }
 
-    private static void ApplyEngine(Car car, RaceCarCondition condition, Func<string, string?> groupOf, List<string> report)
+    private static void ApplyEngine(Car car, RaceCarCondition condition, Func<string, string?> groupOf, ConditionReport report)
     {
         if (condition.EngineLife is not { } life || !double.IsFinite(life)) return;
 
@@ -438,7 +435,7 @@ public static class CarCondition
         _ => "condition.damaged.bottom_end"
     });
 
-    private static void ApplyGearbox(Car car, RaceCarCondition condition, Func<string, string?> groupOf, List<string> report)
+    private static void ApplyGearbox(Car car, RaceCarCondition condition, Func<string, string?> groupOf, ConditionReport report)
     {
         if (condition.GearboxDamage is not { } damage || Transmission(car, groupOf) is not { } gearbox) return;
 
@@ -459,7 +456,7 @@ public static class CarCondition
         foreach (var part in car.Engine.SelfAndDescendants()) part.Wear = Math.Max(0, Clamp01(part.Wear) - wear);
     }
 
-    private static void ApplyRunningGear(Car car, RaceCarCondition condition, List<string> report)
+    private static void ApplyRunningGear(Car car, RaceCarCondition condition, ConditionReport report)
     {
         if (condition.Wheels is not { } wheels) return;
 
@@ -468,7 +465,7 @@ public static class CarCondition
         {
             var wheel = wheels[i];
             var corner = corners[i];
-            var name = RunningGear.CornerNames[i];
+            var name = RunningGear.CornerName(i);
 
             if (corner.Tyre is { } tyre)
             {
@@ -493,7 +490,7 @@ public static class CarCondition
     }
 
     /// <summary>A car without parts: AC's report goes on its own figures</summary>
-    private static void ApplyToFigures(Car car, RaceCarCondition condition, List<string> report)
+    private static void ApplyToFigures(Car car, RaceCarCondition condition, ConditionReport report)
     {
         if (condition.EngineLife is { } life && double.IsFinite(life))
         {
@@ -539,4 +536,28 @@ public static class CarCondition
 
     /// <summary>A reported figure, not negative and a number</summary>
     private static double Clean(double value) => double.IsFinite(value) ? Math.Max(0, value) : 0;
+}
+
+/// <summary>What a line of the race report is about</summary>
+public enum ReportKind
+{
+    Damage,
+    Fuel,
+    Oil
+}
+
+/// <summary>A line of <see cref="CarCondition.ApplyRace"/>'s report: its words, and whether it is damage or a note on the fuel or the oil</summary>
+public sealed record ReportLine(string Text, ReportKind Kind)
+{
+    public bool IsDamage => Kind == ReportKind.Damage;
+
+    public override string ToString() => Text;
+}
+
+/// <summary>The race report's lines: <see cref="Add(string)"/> a line of damage, <see cref="Note"/> one on the fuel or the oil</summary>
+public sealed class ConditionReport : List<ReportLine>
+{
+    public void Add(string damage) => Add(new ReportLine(damage, ReportKind.Damage));
+
+    public void Note(ReportKind kind, string text) => Add(new ReportLine(text, kind));
 }

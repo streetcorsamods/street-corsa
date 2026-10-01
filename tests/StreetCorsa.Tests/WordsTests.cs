@@ -47,7 +47,51 @@ public partial class WordsTests : IDisposable
         Assert.Empty(missing);
     }
 
-    [GeneratedRegex(@"\b(?:Text|Content|Header|ToolTip|Title|Value)=""([^""{]*[A-Za-z]{2,}[^""]*)""")]
+    // Any literal that reads like a key: "work.bare", or $"loadgame.played.{unit}.one" with its holes
+    [GeneratedRegex(@"\$?""([a-z][a-z0-9_]*(?:\.(?:[a-z0-9_]+|\{[^{}""]+\}))+)""")]
+    private static partial Regex KeyLike();
+
+    private static readonly string[] FileExtensions =
+        ["json", "ini", "db", "kn5", "png", "jpg", "dds", "wav", "ogg", "txt", "lua", "dll", "exe", "cfg", "acd", "log", "xaml", "zip", "bak", "tmp", "csv"];
+
+    // Names in the same spaces that are no words: sound cues, a rule's path
+    private static readonly HashSet<string> NotWords =
+    [
+        "common.bank", "engine.hoist", "engine.land", "engine.turn", "station.bell", "radio.knob", "radio.tune", "radio.static",
+        "rivals.money"
+    ];
+
+    [Fact]
+    public void Every_key_the_code_builds_has_words_in_the_base_game()
+    {
+        // The keys built in code (a ternary, a switch, a key the code adds .one or .other to, a key with a hole in it)
+        // escape the test above. A literal in one of the game's key spaces ("work.", "market.") must be a key, or
+        // start keys (the code adds the rest), or with holes read as at least one key
+        var text = GameText.Load(ModSet.Load(RepoPaths.Content));
+        var keys = text.Keys.ToList();
+        var spaces = keys.Where(k => k.Contains('.')).Select(k => k[..k.IndexOf('.')]).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var missing = new List<string>();
+        foreach (var file in SourceFiles("*.cs").Where(f => !EnglishOnPurpose.Any(f.Contains)))
+        foreach (Match match in KeyLike().Matches(File.ReadAllText(file)))
+        {
+            var key = match.Groups[1].Value;
+            if (!spaces.Contains(key[..key.IndexOf('.')]) || FileExtensions.Contains(key[(key.LastIndexOf('.') + 1)..])) continue;
+            if (!NotWords.Contains(key) && !IsKeyOrStartsKeys(key, text, keys)) missing.Add($"{Path.GetFileName(file)}: {key}");
+        }
+
+        Assert.True(missing.Count == 0, string.Join(Environment.NewLine, missing.Distinct()));
+    }
+
+    private static bool IsKeyOrStartsKeys(string key, GameText text, List<string> keys)
+    {
+        if (!key.Contains('{')) return text.Has(key) || keys.Any(k => k.StartsWith(key + ".", StringComparison.OrdinalIgnoreCase));
+
+        var pattern = "^" + Regex.Replace(Regex.Escape(key), @"\\\{[^}]*}", "[^.]+") + @"(\..+)?$";
+        return keys.Any(k => Regex.IsMatch(k, pattern, RegexOptions.IgnoreCase));
+    }
+
+    // Tag is a GameButton's hover label
+    [GeneratedRegex(@"\b(Text|Content|Header|ToolTip|Title|Tag|Value)=""([^""{]*[A-Za-z]{2,}[^""]*)""")]
     private static partial Regex XamlLiteral();
 
     // The developer's screens stay in English (the owner, 2026-09-30); the window's title is game.json's, set as it
@@ -67,16 +111,19 @@ public partial class WordsTests : IDisposable
         foreach (var file in SourceFiles("*.xaml").Where(f => !EnglishOnPurpose.Any(f.Contains)))
         foreach (var (line, number) in File.ReadLines(file).Select((l, i) => (l, i + 1)))
         {
-            // A setter's value may be a colour or a size; only a setter of words counts
-            if (line.Contains("Value=") && !Regex.IsMatch(line, @"Property=""(?:Text|Content|Header|ToolTip|Title)""")) continue;
             if (line.TrimStart().StartsWith("d:", StringComparison.Ordinal) || line.Contains(" d:")) continue;
+            // A setter's value may be a colour or a size; only a setter of words counts
+            var wordsSetter = line.Contains("<Setter") && Regex.IsMatch(line, @"Property=""(?:Text|Content|Header|ToolTip|Title)""");
             foreach (Match match in XamlLiteral().Matches(line))
+            {
+                if (match.Groups[1].Value == "Value" && !wordsSetter) continue;
                 // A quote mark written &quot; is no word
-                if (Regex.IsMatch(System.Net.WebUtility.HtmlDecode(match.Groups[1].Value), "[A-Za-z]{2,}"))
-                    literal.Add($"{Path.GetFileName(file)}:{number}: {match.Groups[1].Value}");
+                if (Regex.IsMatch(System.Net.WebUtility.HtmlDecode(match.Groups[2].Value), "[A-Za-z]{2,}"))
+                    literal.Add($"{Path.GetFileName(file)}:{number}: {match.Groups[2].Value}");
+            }
         }
 
-        Assert.Empty(literal);
+        Assert.True(literal.Count == 0, string.Join(Environment.NewLine, literal));
     }
 
     [Fact]
@@ -112,6 +159,41 @@ public partial class WordsTests : IDisposable
     }
 
     [Fact]
+    public void What_a_mod_removes_or_rewrites_stays_so_in_a_translation()
+    {
+        Mod(ModIds.BaseId, """{ "id": "streetcorsa" }""");
+        _temp.File($"{ModIds.BaseId}/text/ui.json", """{ "lines": { "hello": "Hello", "bye": "Bye", "title": "Garage" } }""");
+        _temp.File($"{ModIds.BaseId}/text/es/ui.json", """{ "lines": { "hello": "Hola", "bye": "Adiós", "title": "Taller" } }""");
+        Mod("tweak", """{ "id": "tweak", "removes": { "text": ["bye"] } }""");
+        _temp.File("tweak/text/ui.json", """{ "replace": { "hello": "Howdy", "title": "Shop" } }""");
+        _temp.File("tweak/text/es/ui.json", """{ "replace": { "title": "Tienda" } }""");
+
+        var spanish = GameText.Load(ModSet.Load(_temp.Path), "es");
+
+        Assert.Equal("es", spanish.Translation);
+        Assert.Empty(spanish.Lines("bye"));
+        // Rewritten with no words of its own in the language: the mod's
+        Assert.Equal("Howdy", spanish.Get("hello"));
+        Assert.Equal("Tienda", spanish.Get("title"));
+        Assert.Empty(spanish.Problems);
+    }
+
+    [Fact]
+    public void The_games_own_language_is_its_game_json_s()
+    {
+        Mod(ModIds.BaseId, """{ "id": "streetcorsa" }""");
+        _temp.File($"{ModIds.BaseId}/game.json", """{ "language": "es" }""");
+        _temp.File($"{ModIds.BaseId}/text/ui.json", """{ "lines": { "language.name": "Español", "hello": "Hola" } }""");
+        _temp.File($"{ModIds.BaseId}/text/en/ui.json", """{ "lines": { "language.name": "English", "hello": "Hello" } }""");
+
+        var mods = ModSet.Load(_temp.Path);
+
+        Assert.Equal([("es", "Español"), ("en", "English")], GameText.Languages(mods));
+        Assert.Null(GameText.Load(mods, "es").Translation);
+        Assert.Equal("Hello", GameText.Load(mods, "en").Get("hello"));
+    }
+
+    [Fact]
     public void A_language_no_mod_has_is_told_and_the_games_own_words_are_said()
     {
         Mod(ModIds.BaseId, """{ "id": "streetcorsa" }""");
@@ -122,6 +204,7 @@ public partial class WordsTests : IDisposable
         Assert.Equal("Hello", text.Get("hello"));
         Assert.Null(text.Translation);
         Assert.Contains(text.Problems, p => p.Contains("fr"));
+        Assert.True(text.LanguageMissing);
     }
 
     [Fact]

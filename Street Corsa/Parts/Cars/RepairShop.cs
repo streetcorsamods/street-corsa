@@ -7,11 +7,11 @@ namespace StreetCorsa.Parts.Cars;
 /// <summary>One piece of work the garage can do on a car: what it costs, how long it takes, and doing it</summary>
 public sealed class RepairJob
 {
-    public RepairJob(string name, string detail, decimal cost, GameAction time, Action apply, bool isChore = false, string? id = null)
+    public RepairJob(string id, string name, string detail, decimal cost, GameAction time, Action apply, bool isChore = false)
     {
         IsChore = isChore;
         Name = name;
-        Id = id ?? name;
+        Id = id;
         Detail = detail;
         Cost = cost;
         Time = time;
@@ -23,7 +23,7 @@ public sealed class RepairJob
     /// <summary>The job as the player reads it</summary>
     public string Name { get; }
 
-    /// <summary>The job as the code knows it, whatever the language: <see cref="GasStation.FillUp"/>; the name when it has none</summary>
+    /// <summary>The job as the code knows it, whatever the language: <see cref="GasStation.FillUp"/>, <see cref="RepairShop.CanOfGas"/></summary>
     public string Id { get; }
 
     /// <summary>Filling up or a wash: looking after the car, not fixing damage</summary>
@@ -62,7 +62,17 @@ public static class RepairShop
     public static double SmallBodyJobKmh => Rules.RuleBook.Current.Repairs.SmallBodyJobKmh;
 
     /// <summary>The job that puts a can of gas in a dry car</summary>
-    public static string CanOfGas => PartWords.Say("repair.job.can_of_gas");
+    public const string CanOfGas = "can_of_gas";
+
+    public const string Body = "body";
+    public const string Engine = "engine";
+    public const string Gearbox = "gearbox";
+
+    /// <summary>The springs and shocks of a corner (<see cref="RunningGear.CornerName"/>'s index after the dot)</summary>
+    public static string Corner(int corner) => $"corner.{corner}";
+
+    /// <summary>A new tyre at a corner</summary>
+    public static string Tyre(int corner) => $"tyre.{corner}";
 
     /// <summary>What the can holds, litres: about a gallon</summary>
     public static double CanOfGasLitres => Rules.RuleBook.Current.Repairs.CanOfGasLitres;
@@ -87,7 +97,7 @@ public static class RepairShop
         if (GasStation.NeedsTow(car) && CarCondition.FuelLeft(car) is { } fuel)
         {
             var litres = Math.Min(CanOfGasLitres, (CarCondition.TankLitres(car) ?? CanOfGasLitres) - fuel);
-            jobs.Add(new RepairJob(CanOfGas, PartWords.Say("repair.job.can_of_gas.detail"),
+            jobs.Add(new RepairJob(CanOfGas, PartWords.Say("repair.job.can_of_gas"), PartWords.Say("repair.job.can_of_gas.detail"),
                 PartPricing.Round((double)StationPrices.Default.FuelPerLitre * litres * prices), GameAction.GarageChore,
                 () => car.FuelLitres = fuel + litres, isChore: true));
         }
@@ -96,7 +106,7 @@ public static class RepairShop
         if (body > 0.5)
         {
             var detail = CarCondition.IsTotaled(car) ? PartWords.Say("repair.job.body.totaled") : PartWords.Say("repair.job.body.dents", ("kmh", body));
-            jobs.Add(new RepairJob(PartWords.Say("repair.job.body"), detail, LabourAt(prices) + Math.Round(BodyCostPerKmh * (decimal)body * (decimal)prices),
+            jobs.Add(new RepairJob(Body, PartWords.Say("repair.job.body"), detail, LabourAt(prices) + Math.Round(BodyCostPerKmh * (decimal)body * (decimal)prices),
                 body < SmallBodyJobKmh ? GameAction.GarageWorkMinor : GameAction.GarageWorkMajor,
                 () => { car.BodyDamageKmh = new double[CarCondition.Zones]; Refresh(); }));
         }
@@ -116,29 +126,29 @@ public static class RepairShop
                     ? failed == null ? PartWords.Say("repair.job.blown") : PartWords.Say("repair.job.engine.blown_part", ("part", failed))
                     : failed == null ? PartWords.Say("repair.job.engine.damaged", ("life", life * 100))
                     : PartWords.Say("repair.job.engine.damaged_part", ("part", failed), ("life", life * 100));
-                jobs.Add(PartsJob(PartWords.Say("repair.job.engine"), detail, torn, catalog, prices, GameAction.GarageWorkMajor, Refresh));
+                jobs.Add(PartsJob(Engine, PartWords.Say("repair.job.engine"), detail, torn, catalog, prices, GameAction.GarageWorkMajor, Refresh));
             }
         }
 
         if (gearbox is { Tear: < Straight })
         {
             var detail = gearbox.Tear < CarCondition.BrokenBelow ? PartWords.Say("repair.job.gearbox.wrecked") : PartWords.Say("repair.job.gearbox.worn", ("left", gearbox.Tear * 100));
-            jobs.Add(PartsJob(PartWords.Say("repair.job.gearbox"), detail, new[] { gearbox }, catalog, prices,
+            jobs.Add(PartsJob(Gearbox, PartWords.Say("repair.job.gearbox"), detail, new[] { gearbox }, catalog, prices,
                 gearbox.Tear < 0.5 ? GameAction.GarageWorkMajor : GameAction.GarageWorkMinor, Refresh));
         }
 
         var corners = RunningGear.Mounted(car.Parts);
         for (var i = 0; i < corners.Length; i++)
         {
-            var name = RunningGear.CornerNames[i];
+            var name = RunningGear.CornerName(i);
             var bent = new[] { corners[i].Spring, corners[i].Shock }.Where(p => p is { Tear: < Straight }).Select(p => p!).ToList();
             if (bent.Count > 0)
-                jobs.Add(PartsJob(PartWords.Say("repair.job.corner", ("corner", name)), PartWords.Say("repair.job.corner.detail"), bent, catalog, prices, GameAction.GarageWorkMinor, Refresh));
+                jobs.Add(PartsJob(Corner(i), PartWords.Say("repair.job.corner", ("corner", name)), PartWords.Say("repair.job.corner.detail"), bent, catalog, prices, GameAction.GarageWorkMinor, Refresh));
 
             if (corners[i].Tyre is { Tear: < Straight } tyre && catalog.Get(tyre.DefinitionId) is { } tyreDefinition)
             {
                 // A blown tyre is not patched: the same tyre, new, goes on
-                jobs.Add(new RepairJob(PartWords.Say("repair.job.tyre", ("corner", name)), PartWords.Say("repair.job.blown"), LabourAt(prices) + PartPricing.Round(PartPricing.NewPrice(tyreDefinition) * prices),
+                jobs.Add(new RepairJob(Tyre(i), PartWords.Say("repair.job.tyre", ("corner", name)), PartWords.Say("repair.job.blown"), LabourAt(prices) + PartPricing.Round(PartPricing.NewPrice(tyreDefinition) * prices),
                     GameAction.GarageWorkMinor, () => { tyre.Tear = 1; tyre.Wear = 1; Refresh(); }));
             }
         }
@@ -148,12 +158,12 @@ public static class RepairShop
 
     private static decimal LabourAt(double prices) => PartPricing.Round((double)Labour * prices);
 
-    private static RepairJob PartsJob(string name, string detail, IReadOnlyList<PartInstance> parts, PartsCatalog catalog, double prices, GameAction time, Action refresh)
+    private static RepairJob PartsJob(string id, string name, string detail, IReadOnlyList<PartInstance> parts, PartsCatalog catalog, double prices, GameAction time, Action refresh)
     {
         var cost = parts.Sum(p => catalog.Get(p.DefinitionId) is { } definition
             ? PartPricing.NewPrice(definition) * PartShare * (1 - Unit.Clamp01(p.Tear, 1))
             : 0);
-        return new RepairJob(name, detail, LabourAt(prices) + PartPricing.Round(cost * prices), time, () =>
+        return new RepairJob(id, name, detail, LabourAt(prices) + PartPricing.Round(cost * prices), time, () =>
         {
             foreach (var part in parts) part.Tear = 1;
             refresh();

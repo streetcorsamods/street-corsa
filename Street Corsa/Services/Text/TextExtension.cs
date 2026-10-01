@@ -24,7 +24,9 @@ namespace StreetCorsa.Services.Text
         [ConstructorArgument("key")]
         public string Key { get; set; } = string.Empty;
 
-        public override object ProvideValue(IServiceProvider serviceProvider) =>
-            DesignerProperties.GetIsInDesignMode(new DependencyObject()) ? Key : GameText.Say(Key);
+        // The designer or the game: it does not change while the process runs
+        private static readonly bool InDesigner = DesignerProperties.GetIsInDesignMode(new DependencyObject());
+
+        public override object ProvideValue(IServiceProvider serviceProvider) => InDesigner ? Key : GameText.Say(Key);
     }
 }

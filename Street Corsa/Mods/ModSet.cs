@@ -495,10 +495,13 @@ public sealed class ModSet
     {
         foreach (var (mod, dir) in Folders(type))
         {
-            foreach (var file in List(dir, dirs: false, "*.json", _problems).Order(StringComparer.OrdinalIgnoreCase))
-                yield return (mod, file);
+            foreach (var file in JsonFilesIn(dir)) yield return (mod, file);
         }
     }
+
+    /// <summary>The .json files directly in one folder, by name; none for a folder that cannot be listed (told)</summary>
+    public IEnumerable<string> JsonFilesIn(string dir) =>
+        List(dir, dirs: false, "*.json", _problems).Order(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>The folders in each mod's folder for this kind of content (a street, a sound, a garage)</summary>
     public IEnumerable<(ModInfo Mod, string Dir)> SubFolders(string type)

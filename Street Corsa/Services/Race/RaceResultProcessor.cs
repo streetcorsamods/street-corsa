@@ -817,10 +817,10 @@ namespace StreetCorsa.Services.Race
         /// it to see what the crash did), else the damage report, or the fuel and oil alone when nothing was damaged; null
         /// when there is nothing to tell
         /// </summary>
-        private static PlayerMessage? CarReport(IReadOnlyList<string> lines, bool towed)
+        private static PlayerMessage? CarReport(IReadOnlyList<ReportLine> lines, bool towed)
         {
-            var damage = lines.Where(CarCondition.IsDamage).ToList();
-            var notes = lines.Where(l => !CarCondition.IsDamage(l)).ToList();
+            var damage = lines.Where(l => l.IsDamage).Select(l => l.Text).ToList();
+            var notes = lines.Where(l => !l.IsDamage).ToList();
             var after = notes.Count == 0 ? "" : "\n\n" + string.Join("\n", notes);
             if (towed)
             {
@@ -833,15 +833,15 @@ namespace StreetCorsa.Services.Race
             }
 
             if (damage.Count > 0) return new PlayerMessage(GameText.Say("result.damage.title"), string.Join("\n", damage) + after);
-            return notes.Count > 0 ? new PlayerMessage(GameText.Say(notes.All(n => n.StartsWith(CarCondition.OilNote, StringComparison.Ordinal)) ? "result.oil.title"
-                : notes.Any(n => n.StartsWith(CarCondition.OilNote, StringComparison.Ordinal)) ? "result.fuel_and_oil.title" : "result.fuel.title"), string.Join("\n", notes)) : null;
+            return notes.Count > 0 ? new PlayerMessage(GameText.Say(notes.All(n => n.Kind == ReportKind.Oil) ? "result.oil.title"
+                : notes.Any(n => n.Kind == ReportKind.Oil) ? "result.fuel_and_oil.title" : "result.fuel.title"), string.Join("\n", notes)) : null;
         }
 
         /// <summary>
         /// What the race did to both cars, their odometers and their best quarters. Returns the player's car's damage
         /// report lines (none when nothing worth telling happened to it), and whether it ran its best quarter.
         /// </summary>
-        private (List<string> Damage, bool NewBest) ApplyCarUpdates(GameState gameState, RaceDecision outcome, RaceContext context)
+        private (ConditionReport Damage, bool NewBest) ApplyCarUpdates(GameState gameState, RaceDecision outcome, RaceContext context)
         {
             if (outcome.Player == null || outcome.Opponent == null)
             {
@@ -850,7 +850,7 @@ namespace StreetCorsa.Services.Race
             }
 
             var groupOf = PartGroups();
-            var damage = new List<string>();
+            var damage = new ConditionReport();
             var newBest = false;
 
             // Update player car
@@ -906,7 +906,7 @@ namespace StreetCorsa.Services.Race
         /// which has none, takes the flat wear of before. Returns the report's lines for the player.
         /// </summary>
         /// <param name="rival">A rival's car: they fill up before every race, so its tank is not kept (<see cref="CarCondition.ApplyRace"/>)</param>
-        private List<string> ApplyCarDegradation(Car car, RaceParticipant participant, Func<string, string?>? groupOf, double wearMultiplier, bool rival = false)
+        private ConditionReport ApplyCarDegradation(Car car, RaceParticipant participant, Func<string, string?>? groupOf, double wearMultiplier, bool rival = false)
         {
             if (participant.Condition is { } condition)
             {
@@ -943,7 +943,7 @@ namespace StreetCorsa.Services.Race
             car.TransmissionHealth = Worn(car.TransmissionHealth, transDeg);
             car.TireCondition = Worn(car.TireCondition, tireDeg);
             car.BodyCondition = Worn(car.BodyCondition, bodyDeg);
-            return new List<string>();
+            return new ConditionReport();
 
             // A figure that is not a number (a damaged save) counts as new before the race's wear comes off it
             static double Worn(double health, double wear) =>
@@ -1492,7 +1492,7 @@ namespace StreetCorsa.Services.Race
 
             return new PlayerMessage(
                 GameText.Say("result.forfeit.title"),
-                GameText.Say("result.forfeit.stakes", ("stakes", string.Join("\n", stakes.Select(s => GameText.Say("result.forfeit.stake", ("stake", $"{char.ToUpper(s[0])}{s[1..]}")))))));
+                GameText.Say("result.forfeit.stakes", ("stakes", string.Join("\n", stakes.Select(s => GameText.Say("result.forfeit.stake", ("stake", s)))))));
         }
 
         /// <summary>

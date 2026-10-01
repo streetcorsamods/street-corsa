@@ -332,14 +332,14 @@
                     <Button Style="{StaticResource GameButtonStyle}"
                             Background="{StaticResource UsedPartsButtonBrush}"
                             Command="{Binding UsedPartsCommand}"
-                            Tag="Browse used parts"
+                            Tag="{t:Text paper.browse_parts}"
                             Margin="0,0,20,0"/>
 
                     <!-- Used Cars Button -->
                     <Button Style="{StaticResource GameButtonStyle}"
                             Background="{StaticResource UsedCarsButtonBrush}"
                             Command="{Binding UsedCarsCommand}"
-                            Tag="Browse used cars"/>
+                            Tag="{t:Text paper.browse_cars}"/>
                 </StackPanel>
 
                 <!-- The player's own cars in the paper, and the buyers who called -->

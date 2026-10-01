@@ -206,6 +206,12 @@ namespace StreetCorsa
             GameSettingsService = new GameSettingsService();
             // And the player's language, before any word is said
             Services.Text.GameText.Language = GameSettingsService.Current.Language;
+            // A language whose mod is gone is told once and forgotten: the picker cannot show it to be taken back
+            if (Services.Text.GameText.Installed.LanguageMissing)
+            {
+                GameSettingsService.Current.Language = null;
+                GameSettingsService.Save();
+            }
 
             // The game's content is the mods under Content, the base game first: what each kind of content is read from
             LogMods();

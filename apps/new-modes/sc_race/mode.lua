@@ -209,9 +209,12 @@ local function say(key, english, values)
   end
   local line = raceText[key] or english
   if values then
-    line = line:gsub('{(%w+)}', function(name)
+    -- {name} as the game writes it, {dial_in} and {et:0.00} too: the mode's values come formatted, so a format is
+    -- taken as written and the value shows as the mode has it
+    line = line:gsub('{([%w_]+)(:?[^{}]*)}', function(name, format)
       local value = values[name]
-      return value ~= nil and tostring(value) or nil
+      if value == nil or (format ~= '' and format:sub(1, 1) ~= ':') then return nil end
+      return tostring(value)
     end)
   end
   return line

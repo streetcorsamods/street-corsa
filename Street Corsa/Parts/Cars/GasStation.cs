@@ -98,23 +98,23 @@ public static class GasStation
         var litres = CarCondition.LitresToFill(car);
         if (litres >= FillFromLitres)
         {
-            jobs.Add(new RepairJob(PartWords.Say("station.job.fill_up"), PartWords.Say("station.job.fill_up.detail", ("left", CarCondition.FuelLeft(car)), ("tank", car.FuelTankLitres)),
-                PartPricing.Round((double)prices.FuelPerLitre * litres * multiplier), GameAction.GarageChore, () => car.FuelLitres = null, isChore: true, id: FillUp));
+            jobs.Add(new RepairJob(FillUp, PartWords.Say("station.job.fill_up"), PartWords.Say("station.job.fill_up.detail", ("left", CarCondition.FuelLeft(car)), ("tank", car.FuelTankLitres)),
+                PartPricing.Round((double)prices.FuelPerLitre * litres * multiplier), GameAction.GarageChore, () => car.FuelLitres = null, isChore: true));
         }
 
         if (car.Engine != null && 1 - CarCondition.OilLeft(car) >= TopUpFrom)
         {
             var oil = OilToTopUp(car, catalog);
             var detail = PartWords.Say(CarCondition.OilLeft(car) < 0.4 ? "station.job.oil.way_down" : "station.job.oil.low", ("quarts", Quarts(oil)));
-            jobs.Add(new RepairJob(PartWords.Say("station.job.oil"), char.ToUpperInvariant(detail[0]) + detail[1..],
+            jobs.Add(new RepairJob(TopUpOil, PartWords.Say("station.job.oil"), detail,
                 Math.Max(PartPricing.Round((double)prices.OilPerLitre * LitresPerQuart * multiplier), PartPricing.Round((double)prices.OilPerLitre * oil * multiplier)),
-                GameAction.GarageChore, () => car.OilLevel = null, isChore: true, id: TopUpOil));
+                GameAction.GarageChore, () => car.OilLevel = null, isChore: true));
         }
 
         if (car.BodyDirt >= DirtyFrom)
         {
-            jobs.Add(new RepairJob(PartWords.Say("station.job.wash"), PartWords.Say(car.BodyDirt >= 0.5 ? "station.job.wash.filthy" : "station.job.wash.dusty"), PartPricing.Round((double)prices.Wash * multiplier),
-                GameAction.GarageChore, () => car.BodyDirt = 0, isChore: true, id: Wash));
+            jobs.Add(new RepairJob(Wash, PartWords.Say("station.job.wash"), PartWords.Say(car.BodyDirt >= 0.5 ? "station.job.wash.filthy" : "station.job.wash.dusty"), PartPricing.Round((double)prices.Wash * multiplier),
+                GameAction.GarageChore, () => car.BodyDirt = 0, isChore: true));
         }
 
         return jobs;

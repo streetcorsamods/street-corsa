@@ -284,10 +284,10 @@ public sealed class DeeperSimulationTests : IDisposable
         var report = CarCondition.ApplyRace(car, Report(fuel: 40, tank: 60), 1, null);
         Assert.Equal(40, car.FuelLitres);
         Assert.Equal(60, car.FuelTankLitres);
-        Assert.DoesNotContain(report, l => l.StartsWith("Fuel"));
+        Assert.DoesNotContain(report.Texts(), l => l.StartsWith("Fuel"));
 
         report = CarCondition.ApplyRace(car, Report(fuel: 5, tank: 60), 1, null);
-        Assert.Contains(report, l => l.StartsWith("Fuel: 5 litres left"));
+        Assert.Contains(report.Texts(), l => l.StartsWith("Fuel: 5 litres left"));
         Assert.Empty(CarCondition.WhyCannotRace(car, null));
     }
 
@@ -297,7 +297,7 @@ public sealed class DeeperSimulationTests : IDisposable
         var car = new Car("car_a");
         var report = CarCondition.ApplyRace(car, Report(fuel: 0.01, tank: 60), 3, null);
 
-        Assert.Contains(report, l => l.Contains("the tank is dry", StringComparison.Ordinal));
+        Assert.Contains(report.Texts(), l => l.Contains("the tank is dry", StringComparison.Ordinal));
         Assert.Contains("the tank is empty", CarCondition.WhyCannotRace(car, null));
 
         var fill = Assert.Single(GasStation.Jobs(car, null, StationPrices.Default), j => j.Id == GasStation.FillUp);
@@ -316,7 +316,7 @@ public sealed class DeeperSimulationTests : IDisposable
         var report = CarCondition.ApplyRace(car, Report(fuel: 0.1), 1, null);
 
         Assert.Null(car.FuelLitres);
-        Assert.DoesNotContain(report, l => l.StartsWith(CarCondition.FuelNote, StringComparison.Ordinal));
+        Assert.DoesNotContain(report, l => l.Kind == ReportKind.Fuel);
         Assert.Empty(CarCondition.WhyCannotRace(car, null));
 
         // A save from before: fuel without a tank counts as full
@@ -331,9 +331,9 @@ public sealed class DeeperSimulationTests : IDisposable
         var car = new Car("car_a");
         var report = CarCondition.ApplyRace(car, Report(fuel: 1.4, tank: 60), 1, null);
 
-        Assert.Contains(report, l => l.Contains("too little to race on", StringComparison.Ordinal));
+        Assert.Contains(report.Texts(), l => l.Contains("too little to race on", StringComparison.Ordinal));
         Assert.Contains("there's hardly any fuel in the tank", CarCondition.WhyCannotRace(car, null));
-        Assert.All(report, l => Assert.False(CarCondition.IsDamage(l)));
+        Assert.All(report, l => Assert.False(l.IsDamage));
     }
 
     [Fact]
@@ -398,17 +398,17 @@ public sealed class DeeperSimulationTests : IDisposable
     public void The_report_says_what_the_heat_and_the_oil_did_and_what_would_help()
     {
         var cooked = CarCondition.ApplyRace(new Car("a"), Report(heat: new RaceHeatReport { PeakWaterC = 124, HeatLifeLost = 220 }), 5, null);
-        Assert.Contains(cooked, l => l.Contains("overheated (124 °C)", StringComparison.Ordinal) && l.Contains("bigger radiator", StringComparison.Ordinal));
+        Assert.Contains(cooked.Texts(), l => l.Contains("overheated (124 °C)", StringComparison.Ordinal) && l.Contains("bigger radiator", StringComparison.Ordinal));
 
         var hot = CarCondition.ApplyRace(new Car("a"), Report(heat: new RaceHeatReport { PeakWaterC = 114, HeatLifeLost = 0 }), 5, null);
-        Assert.Contains(hot, l => l.Contains("ran hot (114 °C)", StringComparison.Ordinal));
+        Assert.Contains(hot.Texts(), l => l.Contains("ran hot (114 °C)", StringComparison.Ordinal));
 
         var oil = CarCondition.ApplyRace(new Car("a"), Report(heat: new RaceHeatReport { PeakWaterC = 95, OilLifeLost = 40 }), 5, null);
-        Assert.Contains(oil, l => l.Contains("deeper oil pan", StringComparison.Ordinal));
-        Assert.DoesNotContain(oil, l => l.Contains("radiator", StringComparison.Ordinal));
+        Assert.Contains(oil.Texts(), l => l.Contains("deeper oil pan", StringComparison.Ordinal));
+        Assert.DoesNotContain(oil.Texts(), l => l.Contains("radiator", StringComparison.Ordinal));
 
         var cool = CarCondition.ApplyRace(new Car("a"), Report(heat: new RaceHeatReport { PeakWaterC = 97, OilLifeLost = 1 }), 5, null);
-        Assert.DoesNotContain(cool, l => l.StartsWith("Engine", StringComparison.Ordinal));
+        Assert.DoesNotContain(cool.Texts(), l => l.StartsWith("Engine", StringComparison.Ordinal));
     }
 
     [Theory]

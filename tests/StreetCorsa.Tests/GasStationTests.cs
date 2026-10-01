@@ -53,15 +53,15 @@ public class GasStationTests
         var car = CarWithEngineAndWheels();
         car.OilLevel = CarCondition.LowOil + 0.001;
         var report = CarCondition.ApplyRace(car, Finished(), 1, null);
-        var note = Assert.Single(report, l => l.StartsWith(CarCondition.OilNote, StringComparison.Ordinal));
+        var note = Assert.Single(report, l => l.Kind == ReportKind.Oil).Text;
         Assert.Contains("gas station", note);
-        Assert.All(report, l => Assert.False(CarCondition.IsDamage(l)));
+        Assert.All(report, l => Assert.False(l.IsDamage));
 
         // Already low: nothing more until it is nearly dry
-        Assert.DoesNotContain(CarCondition.ApplyRace(car, Finished(), 1, null), l => l.StartsWith(CarCondition.OilNote, StringComparison.Ordinal));
+        Assert.DoesNotContain(CarCondition.ApplyRace(car, Finished(), 1, null), l => l.Kind == ReportKind.Oil);
 
         car.OilLevel = 0.401;
-        Assert.Contains(CarCondition.ApplyRace(car, Finished(), 1, null), l => l.Contains("oil light", StringComparison.Ordinal));
+        Assert.Contains(CarCondition.ApplyRace(car, Finished(), 1, null).Texts(), l => l.Contains("oil light", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -99,7 +99,7 @@ public class GasStationTests
 
         car.OilLevel = 0.9;
         var oil = Assert.Single(GasStation.Jobs(car, null, StationPrices.Default), j => j.Id == GasStation.TopUpOil);
-        Assert.Equal("A quart low", oil.Detail);
+        Assert.Equal("Down a quart", oil.Detail);
         Assert.True(oil.IsChore);
         Assert.Equal(PartPricing.Round((double)StationPrices.Default.OilPerLitre * 0.946), oil.Cost);
 
@@ -493,13 +493,13 @@ public class GasStationTests
     public void A_car_too_dry_to_reach_the_gas_station_gets_a_can_of_gas_at_the_garage()
     {
         var car = new Car("car_a") { FuelLitres = 0.1, FuelTankLitres = 60 };
-        var can = Assert.Single(RepairShop.Jobs(car, null), j => j.Name == RepairShop.CanOfGas);
+        var can = Assert.Single(RepairShop.Jobs(car, null), j => j.Id == RepairShop.CanOfGas);
         Assert.True(can.IsChore);
         Assert.True(can.Cost >= 1);
 
         can.Apply();
         Assert.False(GasStation.NeedsTow(car));
         Assert.Equal(0.1 + RepairShop.CanOfGasLitres, car.FuelLitres!.Value, 6);
-        Assert.DoesNotContain(RepairShop.Jobs(car, null), j => j.Name == RepairShop.CanOfGas);
+        Assert.DoesNotContain(RepairShop.Jobs(car, null), j => j.Id == RepairShop.CanOfGas);
     }
 }

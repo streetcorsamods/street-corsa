@@ -598,7 +598,7 @@ namespace StreetCorsa.Screens.Garage
                     // The work first: a job that fails to go on costs nothing
                     job.Apply();
                     _gameState.Player.Money -= job.Cost;
-                    _logger.Information("Repaired {Car}: {Job} for ${Cost}", car.DefinitionId, job.Name, job.Cost);
+                    _logger.Information("Repaired {Car}: {Job} for ${Cost}", car.DefinitionId, job.Id, job.Cost);
 
                     try
                     {

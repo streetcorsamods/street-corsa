@@ -1,7 +1,7 @@
 {
   "_comment": [
     "What the cars' parts say: a race's damage report (condition.*), the repair shop's jobs (repair.job.*), why a part",
-    "will not come off or go on (work.*). {corner} is a corner as condition.corner.* says it, {zone} a body zone as",
+    "will not come off or go on (work.*). {corner} is a corner as condition.corner.* says it (condition.axle.* an axle, for the station's hints), {zone} a body zone as",
     "condition.zone.*; {peak} the hottest the water got (°C), {litres} fuel left, {kmh} a hit, {before}, {after}, {left}",
     "and {life} percentages, {cause} condition.cause.*, {part} a part as condition.failed.* or condition.damaged.* says it",
     "(repair.job.engine.*: the part's name). work.*.one is said of a kind whose name is one thing (\"the radiator\"),",
@@ -16,6 +16,8 @@
     "condition.zone.rear": "rear",
     "condition.zone.left": "left side",
     "condition.zone.right": "right side",
+    "condition.axle.front": "front",
+    "condition.axle.rear": "rear",
     "condition.corner.front_left": "front left",
     "condition.corner.front_right": "front right",
     "condition.corner.rear_left": "rear left",
@@ -82,7 +84,7 @@
     "station.job.fill_up": "Fill up",
     "station.job.fill_up.detail": "{left:0.#} of {tank:0} litres in the tank",
     "station.job.oil": "Top up the oil",
-    "station.job.oil.low": "{quarts} low",
+    "station.job.oil.low": "Down {quarts}",
     "station.job.oil.way_down": "Way down: {quarts} low",
     "station.job.wash": "Wash",
     "station.job.wash.filthy": "Filthy",

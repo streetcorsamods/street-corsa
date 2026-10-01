@@ -387,7 +387,7 @@ namespace StreetCorsa.Screens.Station
                 job.Apply();
                 _gameState.Player.Money -= job.Cost;
                 Stage.FuelLitres = FuelInTank();
-                _logger.Information("{Car} at the gas station: {Job} for ${Cost}", _car.DefinitionId, job.Name, job.Cost);
+                _logger.Information("{Car} at the gas station: {Job} for ${Cost}", _car.DefinitionId, job.Id, job.Cost);
                 Say(job.Id switch
                 {
                     GasStation.FillUp => "station.filled",

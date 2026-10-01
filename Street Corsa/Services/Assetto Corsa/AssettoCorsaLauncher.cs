@@ -241,7 +241,7 @@ namespace StreetCorsa.Services
             if (!lockAcquired)
             {
                 var error = GameText.Say("launch.in_progress");
-                _logger.Warning(error);
+                _logger.Warning("A launch is already in progress");
                 var busy = Failure(intent, error, startTime);
                 busy.PlayerMessages.Add(new PlayerMessage(GameText.Say("launch.busy.title"), GameText.Say("launch.busy.putting_back")));
                 return busy;
@@ -420,7 +420,9 @@ namespace StreetCorsa.Services
             // Under the install's gate: a restore from another thread (the crash path) never falls between a kept
             // original and the write it is kept for. (Never held across an await: failures leave the block first.)
             // On a worker, so the loading screen does not freeze: the gate is a monitor taken and let go in that one block.
+            // What went wrong for the player, and for the log (its key: the log stays in English)
             string? prepareError = null;
+            var prepareWhy = string.Empty;
             await Task.Run(() =>
             {
                 using (AcInstallGate.Hold())
@@ -428,13 +430,14 @@ namespace StreetCorsa.Services
                     // The app is ending (the crash path has put the install back): nothing more goes in
                     if (AcInstallGate.IsSealed)
                     {
-                        prepareError = GameText.Say("launch.closing");
+                        prepareError = GameText.Say(prepareWhy = "launch.closing");
                         return;
                     }
 
                     // A race runs in the game's own CSP mode: without it nothing starts the race or reports it
                     if (intent is DragRaceLaunchIntent)
                     {
+                        prepareWhy = "the race mode could not be installed";
                         prepareError = _raceMode.Install(AppSettings.Instance.AssettoCorsaPath);
                     }
 
@@ -444,7 +447,7 @@ namespace StreetCorsa.Services
 
                         if (!_iniService.ApplyIntent(configIntent))
                         {
-                            prepareError = GameText.Say("launch.config_failed", ("change", configIntent.Description));
+                            prepareError = GameText.Say(prepareWhy = "launch.config_failed", ("change", configIntent.Description));
                             break;
                         }
                     }
@@ -453,7 +456,7 @@ namespace StreetCorsa.Services
 
             if (prepareError != null)
             {
-                _logger.Error(prepareError);
+                _logger.Error("The launch was not prepared: {Why}", prepareWhy);
                 return (await NotStartedAsync(run, Failure(intent, prepareError, startTime)), false);
             }
 
@@ -477,7 +480,7 @@ namespace StreetCorsa.Services
                 {
                     if (AcInstallGate.IsSealed)
                     {
-                        prepareError = GameText.Say("launch.closing");
+                        prepareError = GameText.Say(prepareWhy = "launch.closing");
                         return;
                     }
 
@@ -491,7 +494,7 @@ namespace StreetCorsa.Services
                     {
                         if (AcInstallGate.IsSealed)
                         {
-                            prepareError = GameText.Say("launch.closing");
+                            prepareError = GameText.Say(prepareWhy = "launch.closing");
                             return;
                         }
 
@@ -503,7 +506,7 @@ namespace StreetCorsa.Services
                     {
                         if (AcInstallGate.IsSealed)
                         {
-                            prepareError = GameText.Say("launch.closing");
+                            prepareError = GameText.Say(prepareWhy = "launch.closing");
                             return;
                         }
 
@@ -518,11 +521,12 @@ namespace StreetCorsa.Services
 
                     if (!File.Exists(exePath))
                     {
-                        prepareError = GameText.Say("launch.no_executable", ("path", exePath));
+                        prepareError = GameText.Say(prepareWhy = "launch.no_executable", ("path", exePath));
+                        _logger.Warning("No executable at {Path}", exePath);
                     }
                     else if (AcInstallGate.IsSealed)
                     {
-                        prepareError = GameText.Say("launch.closing");
+                        prepareError = GameText.Say(prepareWhy = "launch.closing");
                     }
                     else if (!_stopRequested) // the last moment a stop can call the launch off: after this, AC runs
                     {
@@ -547,7 +551,7 @@ namespace StreetCorsa.Services
 
             if (prepareError != null)
             {
-                _logger.Error(prepareError);
+                _logger.Error("The launch was not prepared: {Why}", prepareWhy);
                 return (await NotStartedAsync(run, Failure(intent, prepareError, startTime)), false);
             }
 
@@ -558,7 +562,7 @@ namespace StreetCorsa.Services
             if (started == null)
             {
                 var error = GameText.Say("launch.not_started");
-                _logger.Error(error);
+                _logger.Error("Assetto Corsa did not start");
                 return (await NotStartedAsync(run, Failure(intent, error, startTime)), false);
             }
 

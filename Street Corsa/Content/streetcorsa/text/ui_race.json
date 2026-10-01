@@ -245,7 +245,7 @@
     "result.forfeit": "The race never came back with a result, and walking away from a race with something on it counts as a loss.",
     "result.forfeit.stakes": "The race never came back with a result, and walking away from a race with something on it counts as a loss:\n\n{stakes}",
     "result.forfeit.stake": "  {stake}.",
-    "result.forfeit.cash": "the ${wager:N0} wager goes to {name}",
+    "result.forfeit.cash": "The ${wager:N0} wager goes to {name}",
     "result.forfeit.pink_slip": "{name} takes your car's pink slip",
     "police.title": "The Police",
     "police.busted.title": "Busted",

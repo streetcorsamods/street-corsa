@@ -66,7 +66,7 @@ public static class AcRunningGearData
         for (var i = 0; i < corners.Count; i++)
         {
             var corner = corners[i];
-            var name = RunningGear.CornerNames[firstCorner + i];
+            var name = RunningGear.CornerIds[firstCorner + i];
 
             var rim = Definition(catalog, corner.Rim);
             var tyre = Definition(catalog, corner.Tyre);

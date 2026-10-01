@@ -75,14 +75,14 @@ public static class AttendantCheck
             for (var i = 0; i < corners.Length; i++)
             {
                 // Tread he can see at every corner; a blown tyre is no hint, it is flat
-                if (corners[i].Tyre is { Tear: > 0 } tyre) Worn(hints, "station.hint.tyre", [tyre], RunningGear.CornerNames[i]);
+                if (corners[i].Tyre is { Tear: > 0 } tyre) Worn(hints, "station.hint.tyre", [tyre], RunningGear.CornerName(i));
             }
 
             // The brakes grind on the way in, the shocks bounce when he leans on the fender: an axle's worst
-            foreach (var (axle, first) in new[] { ("front", 0), ("rear", 2) })
+            foreach (var first in new[] { 0, 2 })
             {
-                Worn(hints, "station.hint.brakes", new[] { corners[first].Brake, corners[first + 1].Brake }.OfType<PartInstance>(), axle);
-                Worn(hints, "station.hint.shocks", new[] { corners[first].Shock, corners[first + 1].Shock }.OfType<PartInstance>(), axle);
+                Worn(hints, "station.hint.brakes", new[] { corners[first].Brake, corners[first + 1].Brake }.OfType<PartInstance>(), RunningGear.AxleName(first));
+                Worn(hints, "station.hint.shocks", new[] { corners[first].Shock, corners[first + 1].Shock }.OfType<PartInstance>(), RunningGear.AxleName(first));
             }
         }
 
