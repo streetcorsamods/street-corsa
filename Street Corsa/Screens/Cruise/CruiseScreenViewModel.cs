@@ -346,7 +346,7 @@ namespace StreetCorsa.Screens.Cruise
             }
 
             // Every street the mods have; the one the player is in is picked by the light of the day
-            _streets = StreetScenes.LoadAll(Mods.ModSet.Installed);
+            _streets = StreetScenes.Installed;
             FollowTheLight();
             PlayerCar = new StreetCar(Path.Combine(AppSettings.Instance.CarsPath, playerCar.DefinitionId),
                 string.IsNullOrEmpty(playerCar.SkinId) ? null : playerCar.SkinId);

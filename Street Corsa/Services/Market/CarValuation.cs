@@ -90,7 +90,8 @@ namespace StreetCorsa.Services.Market
                 penalty += Math.Min(MaxMileagePenalty, (decimal)Math.Min(steps, 1000) * MileagePenalty);
             }
 
-            return 1m + Math.Clamp(bonus - penalty, -MaxHistoryShare, MaxHistoryShare);
+            var most = Math.Max(0m, MaxHistoryShare);
+            return 1m + Math.Clamp(bonus - penalty, -most, most);
         }
 
         /// <summary>The factor of this very car's history on its worth</summary>

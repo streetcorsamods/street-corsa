@@ -49,8 +49,9 @@ Content\
 - `gameVersion`: the lowest version of the game it works with. On an older game it is left out, told.
 - `removes`: entries of the mods before it (the base game's included) it takes out of the game, by kind of content, full
   ids: `dealers`, `partshops`, `racers`, `events`, `milestones`, `victories`, `streets`, `stations`, `warehouses`,
-  `text` (pools, by key) and `sfx` (cues, by name). An id no mod has is told. Parts can't be removed (yet): other parts
-  and engine builds hang off them.
+  `text` (pools, by key) and `sfx` (cues, by name). What the mod itself or a later mod adds under the same id stays: a
+  mod can take out a base game's pool or cue and give its own. An id no mod before it has is told. Parts can't be
+  removed (yet): other parts and engine builds hang off them.
 - A folder whose name starts with `_` or `.` is switched off.
 - Only the folders a mod has are read; every one is optional.
 
@@ -97,8 +98,15 @@ it changes:
 
 - An object goes into the one before it (a table given in part, as `time.actions` here, keeps the rest of its
   entries); a list or a value takes the place of what was there.
-- A name the rules do not have (a typo) is told and left out; a part that does not read (a word where a number goes)
-  stays the base game's, told. Keys that start with `_` are notes.
+- A name the rules do not have (a typo) is told and left out, in the entries of a list (`start.cars`) and of a table
+  (`partShops.kinds`) too; a part that does not read (a word where a number goes) stays the base game's, told. Keys
+  that start with `_` are notes.
+- `null` is the base game's figure (or table), and no entry in a list. A least and a most given the wrong way round
+  (`market.maxMileage` set below the base game's `minMileage`) are turned round, told.
+- A kind of part shop the base game does not have (`partShops.kinds.tuner`) takes what it does not give from
+  `partShops.otherKind`.
+- A file with the same name twice in one object (whatever its case: `"title"` and `"Title"`) is left out whole, told.
+  This goes for `game.json` too.
 - **A career keeps the rules it was started with.** They are written into the save when it starts: a mod updated or
   taken out later does not change a game under way. A figure the save does not have (one a later version of the game
   added) comes from the mods as they are. A save from before rules were kept plays by the mods' from its next save on.

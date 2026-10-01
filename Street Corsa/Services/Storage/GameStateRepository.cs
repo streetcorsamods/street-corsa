@@ -12,6 +12,7 @@ namespace StreetCorsa.Services.Storage
         private const int BackupCount = 3;
 
         private readonly IOpponentInitializationService? _opponentInitializationService;
+        private readonly Func<string, bool>? _isGameCar;
 
         // Saves backed up this session. The backups rotate once per session, at a save's first write: rotating on every
         // write (a race alone writes several times) would push a good copy out within a minute, before anybody could
@@ -23,9 +24,15 @@ namespace StreetCorsa.Services.Storage
         /// The saves' database owner to share with the race session repository; null makes one of its own.
         /// Either way this repository disposes it.
         /// </param>
-        public GameStateRepository(IOpponentInitializationService? opponentInitializationService = null, SaveDatabase? database = null)
+        /// <param name="isGameCar">
+        /// A car id the game plays with: in the catalog, installed, with a profile (an encrypted car mod or a race copy is
+        /// not). A career's starting cars must be; null takes any car folder (tests).
+        /// </param>
+        public GameStateRepository(IOpponentInitializationService? opponentInitializationService = null, SaveDatabase? database = null,
+            Func<string, bool>? isGameCar = null)
         {
             _opponentInitializationService = opponentInitializationService;
+            _isGameCar = isGameCar;
             Database = database ?? new SaveDatabase();
         }
 
@@ -206,7 +213,8 @@ namespace StreetCorsa.Services.Storage
         /// <summary>
         /// The cars the rules start a career with (<c>start.cars</c>), in the player's garage, the first the one they
         /// drive. They come without parts: the garage gives a car its factory ones when it first looks at it. One that
-        /// Assetto Corsa does not have is left out, and the mods' problems say so.
+        /// Assetto Corsa does not have, or that the game does not play with (an encrypted car mod, a race copy, a car the
+        /// catalog has no profile for), is left out, and the mods' problems say so.
         /// </summary>
         private void AddStartingCars(GameState state)
         {
@@ -219,6 +227,13 @@ namespace StreetCorsa.Services.Storage
                 {
                     _logger.Warning("The rules start the career with the car {Car}, which Assetto Corsa does not have: left out", id);
                     Mods.ModProblems.Add("Rules", $"start.cars: {id} is no car in Assetto Corsa; left out");
+                    continue;
+                }
+
+                if (_isGameCar != null && !_isGameCar(id))
+                {
+                    _logger.Warning("The rules start the career with the car {Car}, which the game does not play with: left out", id);
+                    Mods.ModProblems.Add("Rules", $"start.cars: {id} is not a car the game plays with (an encrypted mod, a race copy, or one without a profile); left out");
                     continue;
                 }
 

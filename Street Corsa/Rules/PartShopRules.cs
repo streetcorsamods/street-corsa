@@ -1,3 +1,7 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using StreetCorsa.Mods;
+
 namespace StreetCorsa.Rules;
 
 /// <summary>
@@ -78,6 +82,25 @@ public sealed class PartShopRules
     public PartShopKindRules OtherKind { get; set; } = new();
 
     public PartShopKindRules For(string kind) => Kinds.TryGetValue(kind, out var rules) && rules != null ? rules : OtherKind;
+
+    /// <summary>
+    /// A kind the base game's table does not have, given in part in <paramref name="figures"/> (this part of the rules as
+    /// the files have it), takes <see cref="OtherKind"/>'s figures for the rest, not the class's
+    /// </summary>
+    internal void NewKindsFromOtherKind(JsonObject figures)
+    {
+        if (figures["kinds"] is not JsonObject kinds) return;
+
+        var baseKinds = new PartShopRules().Kinds;
+        foreach (var (kind, node) in kinds)
+        {
+            if (baseKinds.ContainsKey(kind) || node is not JsonObject given) continue;
+
+            var start = ModMerge.Parse(JsonSerializer.Serialize(OtherKind, RuleBook.Options))!;
+            ModMerge.Into(start, given);
+            if (start.Deserialize<PartShopKindRules>(RuleBook.Options) is { } rules) Kinds[kind] = rules;
+        }
+    }
 }
 
 /// <summary>A kind of part shop's figures, where a shop's own file says nothing</summary>

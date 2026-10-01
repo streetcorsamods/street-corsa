@@ -14,7 +14,7 @@ namespace StreetCorsa.Services.Time
         private readonly IAppLogger _logger;
 
         /// <summary>The game speaks US English, whatever the machine's culture: "8:00 AM", "June 3, 1971"</summary>
-        private static readonly CultureInfo DisplayCulture = CultureInfo.GetCultureInfo("en-US");
+        public static readonly CultureInfo DisplayCulture = CultureInfo.GetCultureInfo("en-US");
 
         /// <summary>
         /// One spend at a time. The clock moves first and the day's tasks run after it with awaits in between

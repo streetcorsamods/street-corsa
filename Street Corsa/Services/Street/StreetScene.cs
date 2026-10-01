@@ -112,6 +112,18 @@ namespace StreetCorsa.Services.Street
         public static IReadOnlyList<StreetScene> LoadAll(ModSet mods) =>
             ModScenes.LoadAll(mods, ContentTypes.Streets, "Streets", Logger, Load, s => s.Id, (s, id) => s with { Id = id });
 
+        private static readonly Lazy<IReadOnlyList<StreetScene>> InstalledScenes = new(() => LoadAll(ModSet.Installed));
+
+        /// <summary>The streets of the mods next to the game, read once</summary>
+        public static IReadOnlyList<StreetScene> Installed => InstalledScenes.Value;
+
+        /// <summary>A street that is left out: in the log, and in the mods' problems for the player</summary>
+        private static void LeftOut(string problem)
+        {
+            Logger.Warning("{Problem}", problem);
+            ModProblems.Add("Streets", problem);
+        }
+
         /// <summary>
         /// The street for a light of the day: the one the player is in while it still fits, else one of those that fit,
         /// at random; null when none does
@@ -139,6 +151,7 @@ namespace StreetCorsa.Services.Street
             catch (Exception ex)
             {
                 Logger.Error(ex, "Could not read the street {Path}", file);
+                ModProblems.Add("Streets", $"{file} could not be read ({ex.Message}); left out");
                 return null;
             }
         }
@@ -147,7 +160,7 @@ namespace StreetCorsa.Services.Street
         {
             if (entry?.Player == null || entry.LaneOffset <= 0f || entry.ApproachFrom <= 0f || entry.LeaveTo <= 0f)
             {
-                Logger.Warning("The street {Path} has no parking spot or no lane", file);
+                LeftOut($"{file} has no parking spot or no lane; left out");
                 return null;
             }
 
@@ -174,14 +187,14 @@ namespace StreetCorsa.Services.Street
                 var missing = times.Select(scene.Kn5For).FirstOrDefault(p => !File.Exists(p));
                 if (missing != null)
                 {
-                    Logger.Warning("The street {Id} has no model {Path}", scene.Id, missing);
+                    LeftOut($"the street {scene.Id} has no model {missing}; left out");
                     return null;
                 }
             }
 
             if (times.Count == 0)
             {
-                Logger.Warning("The street {Id} is used at no time of day", scene.Id);
+                LeftOut($"the street {scene.Id} is used at no time of day; left out");
                 return null;
             }
 

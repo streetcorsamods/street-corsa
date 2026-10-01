@@ -445,6 +445,21 @@ public sealed class ModSet
     /// <summary>True when a mod takes the entry of this full id out of the game</summary>
     public bool IsRemoved(string type, string id) => Removed(type).ContainsKey(ModIds.Normalize(id));
 
+    /// <summary>The full ids of a kind of content one mod takes out (its <c>removes</c>), as it lists them</summary>
+    public static IReadOnlyList<string> RemovesOf(ModInfo mod, string type) =>
+        mod.Removes.TryGetValue(type, out var ids) && ids != null
+            ? ids.Where(i => !string.IsNullOrWhiteSpace(i)).Select(i => ModIds.Normalize(i.Trim())).ToList()
+            : [];
+
+    /// <summary>
+    /// The mods' removals of a kind of content, applied in load order as it is read (<see cref="ModRemovals"/>): a mod
+    /// takes out entries of the mods before it, never its own or a later mod's
+    /// </summary>
+    /// <param name="remove">Takes an entry out by its full id; false when there was none</param>
+    /// <param name="what">What the entries are, for the report ("racer", "the text")</param>
+    public ModRemovals Removals(string type, Func<string, ModInfo, bool> remove, string what, List<string> problems) =>
+        new(this, type, remove, what, problems);
+
     private static ModInfo? ReadManifest(string folder, out string? problem)
     {
         problem = null;
@@ -453,7 +468,11 @@ public sealed class ModSet
 
         try
         {
-            return JsonSerializer.Deserialize<ModInfo>(File.ReadAllText(file), ModJson.Options) ?? new ModInfo();
+            var info = JsonSerializer.Deserialize<ModInfo>(File.ReadAllText(file), ModJson.Options) ?? new ModInfo();
+            // "removes": null reads as no table at all
+            info.Removes ??= new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+            info.Requires ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            return info;
         }
         catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
         {

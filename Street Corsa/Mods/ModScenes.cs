@@ -21,8 +21,12 @@ public static partial class ModScenes
     {
         var scenes = new List<T>();
         var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        // What a mod takes out (its mod.json's "removes"): the scenes of the mods before it
+        var removals = mods.Removals(type, (id, _) =>
+            scenes.RemoveAll(s => ModIds.Normalize(idOf(s)).Equals(id, StringComparison.OrdinalIgnoreCase)) > 0, type, problems);
         foreach (var (mod, folder) in mods.SubFolders(type))
         {
+            removals.Before(mod);
             if (load(folder) is not { } scene) continue;
 
             var own = idOf(scene);
@@ -36,13 +40,7 @@ public static partial class ModScenes
             scenes.Add(withId(scene, id));
         }
 
-        // What a mod takes out (its mod.json's "removes")
-        foreach (var (id, by) in mods.Removed(type))
-        {
-            if (scenes.RemoveAll(s => ModIds.Normalize(idOf(s)).Equals(id, StringComparison.OrdinalIgnoreCase)) == 0)
-                problems.Add($"{by.Id}/{ModSet.ManifestFileName}: removes {type} {id}, which no mod has");
-        }
-
+        removals.Rest();
         return scenes;
     }
 }

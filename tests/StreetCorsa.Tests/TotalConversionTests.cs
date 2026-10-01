@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using StreetCorsa.Configuration;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Mods;
 using StreetCorsa.Rules;
@@ -185,6 +186,108 @@ public class RuleBookTests : IDisposable
         Assert.Equal(0.42, rules.For("junkyard").BuyFactor);
         Assert.Same(rules.OtherKind, rules.For("Specialist"));
     }
+
+    [Fact]
+    public void A_null_is_the_base_games_figure_and_no_entry_in_a_list()
+    {
+        var problems = new List<string>();
+        var book = Read("""
+            {
+              "time": { "actions": null, "perPart": null },
+              "partShops": { "kinds": null },
+              "rivals": { "king": null, "money": { "byAge": [null, { "under": 30, "low": 100, "high": 200 }] } }
+            }
+            """, problems);
+
+        Assert.Equal(120, book.Time.Of(GameAction.BuyCar));
+        Assert.Equal(new TimeRules().PerPart, book.Time.PerPart);
+        Assert.Equal(1.1, book.PartShops.For("speed").PriceFactor);
+        Assert.Equal(new KingRules().Money, book.Rivals.King.Money);
+        Assert.Single(book.Rivals.Money.ByAge);
+        Assert.Contains(problems, p => p.Contains("time.actions is null"));
+        Assert.Contains(problems, p => p.Contains("rivals.money.byAge[0] is null"));
+    }
+
+    [Fact]
+    public void A_least_and_a_most_the_wrong_way_round_are_turned_round()
+    {
+        var problems = new List<string>();
+        var book = Read("""
+            {
+              "market": { "maxMileage": 3000 },
+              "street": { "longestWait": 3 },
+              "rivals": { "money": { "byAge": [{ "under": 99, "low": 500, "high": 100 }] } },
+              "partShops": { "kinds": { "wheels": { "stockLow": 90 } } }
+            }
+            """, problems);
+
+        Assert.Equal((3000, 5000), (book.Market.MinMileage, book.Market.MaxMileage));
+        Assert.Equal((3, 5), (book.Street.ShortestWait, book.Street.LongestWait));
+        Assert.Equal((100m, 500m), (book.Rivals.Money.ByAge[0].Low, book.Rivals.Money.ByAge[0].High));
+        Assert.Equal((60, 90), (book.PartShops.For("wheels").StockLow, book.PartShops.For("wheels").StockHigh));
+        Assert.Contains(problems, p => p.Contains("market.minMileage (5000) is over market.maxMileage (3000)"));
+        Assert.Contains(problems, p => p.Contains("partShops.kinds.wheels.stockLow"));
+    }
+
+    [Fact]
+    public void Names_in_the_entries_of_lists_and_tables_are_checked_too()
+    {
+        var problems = new List<string>();
+        Read("""
+            {
+              "start": { "cars": [{ "carr": "ks_toyota_ae86" }] },
+              "rivals": { "money": { "byAge": [{ "undr": 30 }] } },
+              "partShops": { "kinds": { "speed": { "priceFactr": 1.2 } } },
+              "time": { "actions": { "AnythingAtAll": 5 } }
+            }
+            """, problems);
+
+        Assert.Contains(problems, p => p.Contains("start.cars[0].carr is no figure"));
+        Assert.Contains(problems, p => p.Contains("rivals.money.byAge[0].undr is no figure"));
+        Assert.Contains(problems, p => p.Contains("partShops.kinds.speed.priceFactr is no figure"));
+        Assert.DoesNotContain(problems, p => p.Contains("AnythingAtAll"));
+    }
+
+    [Fact]
+    public void A_new_kind_of_part_shop_given_in_part_takes_the_rest_from_the_other_kind()
+    {
+        var problems = new List<string>();
+        var book = Read("""{ "partShops": { "otherKind": { "restockDays": 9 }, "kinds": { "tuner": { "priceFactor": 1.3 } } } }""", problems);
+
+        var tuner = book.PartShops.For("tuner");
+        Assert.Equal(1.3, tuner.PriceFactor);
+        Assert.Equal(9, tuner.RestockDays);
+        Assert.Equal(book.PartShops.OtherKind.StockHigh, tuner.StockHigh);
+        Assert.Empty(problems);
+    }
+
+    [Fact]
+    public void The_hours_the_day_works_out_are_not_written_as_figures()
+    {
+        var json = new RuleBook().ToJson();
+
+        Assert.DoesNotContain("firstHour", json);
+        Assert.DoesNotContain("lastHour", json);
+    }
+
+    [Fact]
+    public void A_book_set_aside_for_a_game_being_opened_comes_back_when_it_is_not()
+    {
+        var before = RuleBook.InPlay();
+        var opened = new GameState { RuleBook = new RuleBook { Police = new PoliceRules { DayChance = 0.9 } }.ToJson(), SaveName = "b" };
+
+        RuleBook.PlayBy(opened);
+        try
+        {
+            Assert.Equal(0.9, RuleBook.Current.Police.DayChance);
+            before.Restore();
+            Assert.Equal(RuleBook.Installed.Police.DayChance, RuleBook.Current.Police.DayChance);
+        }
+        finally
+        {
+            RuleBook.PlayBy(null);
+        }
+    }
 }
 
 /// <summary>mod.json's type, requires, gameVersion and removes; game.json; the problems the player is told of</summary>
@@ -279,6 +382,62 @@ public class ModFoundationsTests : IDisposable
     }
 
     [Fact]
+    public void A_mod_removes_what_the_mods_before_it_have_and_not_what_it_or_a_later_mod_adds()
+    {
+        Mod(ModIds.BaseId, """{ "id": "streetcorsa" }""");
+        _temp.File($"{ModIds.BaseId}/text/words.json", """{ "lines": { "greeting": "Howdy" } }""");
+        _temp.File($"{ModIds.BaseId}/sfx/cues.json", """{ "cues": { "click": { "bus": "interface", "files": ["a.ogg"] } } }""");
+        _temp.File($"{ModIds.BaseId}/sfx/a.ogg", "x");
+        Mod("tokyo", """{ "id": "tokyo", "order": 1, "removes": { "text": ["greeting"], "sfx": ["click"] } }""");
+        _temp.File("tokyo/text/words.json", """{ "lines": { "greeting": "Konnichiwa" } }""");
+        _temp.File("tokyo/sfx/cues.json", """{ "cues": { "click": { "bus": "interface", "files": ["b.ogg"] } } }""");
+        _temp.File("tokyo/sfx/b.ogg", "x");
+        Mod("later", """{ "id": "later", "order": 2 }""");
+        _temp.File("later/text/words.json", """{ "lines": { "greeting": "Yo" } }""");
+
+        var mods = Load();
+        var text = GameText.Load(mods);
+        var cues = StreetCorsa.Audio.SoundCues.Load(mods);
+
+        Assert.Equal(["Konnichiwa", "Yo"], text.Lines("greeting"));
+        Assert.EndsWith(Path.Combine("tokyo", "sfx", "b.ogg"), cues.Get("click")!.Files.Single());
+        Assert.DoesNotContain(text.Problems, p => p.Contains("greeting"));
+    }
+
+    [Fact]
+    public void Removes_null_is_no_removal()
+    {
+        Mod(ModIds.BaseId, """{ "id": "streetcorsa" }""");
+        Mod("empty", """{ "id": "empty", "removes": null, "requires": null }""");
+
+        var mods = Load();
+
+        Assert.NotNull(mods.Get("empty"));
+        Assert.Empty(mods.Problems);
+    }
+
+    [Fact]
+    public void A_file_with_a_name_twice_in_an_object_is_left_out_whole()
+    {
+        Mod(ModIds.BaseId, """{ "id": "streetcorsa" }""");
+        _temp.File($"{ModIds.BaseId}/{ModSet.GameFileName}", """{ "title": "Street Corsa" }""");
+        Mod("twice", """{ "id": "twice" }""");
+        _temp.File($"twice/{ModSet.GameFileName}", """{ "garage": "mine", "title": "A", "Title": "B" }""");
+        _temp.File("twice/rules/police.json", """{ "police": { "dayChance": 1, "DAYCHANCE": 2 }, "news": { "daysKept": 3 } }""");
+
+        var mods = Load();
+        var problems = new List<string>();
+        var game = ModMerge.ModFiles(mods, ModSet.GameFileName, problems);
+        var rules = ModMerge.ContentFiles(mods, ContentTypes.Rules, problems);
+
+        Assert.Equal("Street Corsa", (string)game["title"]!);
+        Assert.False(game.ContainsKey("garage"));
+        Assert.Empty(rules);
+        Assert.Equal(2, problems.Count(p => p.Contains("twice in one object")));
+        Assert.Null(ModMerge.Parse("""{ "a": 1, "A": 2 }"""));
+    }
+
+    [Fact]
     public void Game_json_goes_over_the_mods_before_it_key_by_key()
     {
         Mod(ModIds.BaseId, """{ "id": "streetcorsa" }""");
@@ -332,9 +491,9 @@ public class ModFoundationsTests : IDisposable
     public void A_folder_is_an_install_when_it_has_cars_and_tracks()
     {
         Directory.CreateDirectory(_temp.Combine("ac", "content", "cars"));
-        Assert.False(AcInstallFinder.IsInstall(_temp.Combine("ac")));
+        Assert.False(AppSettings.IsInstall(_temp.Combine("ac")));
         Directory.CreateDirectory(_temp.Combine("ac", "content", "tracks"));
-        Assert.True(AcInstallFinder.IsInstall(_temp.Combine("ac")));
-        Assert.False(AcInstallFinder.IsInstall(null));
+        Assert.True(AppSettings.IsInstall(_temp.Combine("ac")));
+        Assert.False(AppSettings.IsInstall(null));
     }
 }

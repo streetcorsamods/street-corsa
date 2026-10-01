@@ -30,10 +30,15 @@ namespace StreetCorsa.Services.Settings
 
         /// <param name="settingsPath">Where the settings are kept</param>
         /// <param name="legacyPath">Where earlier versions kept them (next to the program); moved over once</param>
-        public GameSettingsService(string settingsPath, string? legacyPath)
+        /// <param name="findInstall">
+        /// Where AC is when the settings name no folder: the search of the machine (<see cref="AcInstallFinder.Find"/>)
+        /// when not given; a test gives its own, so it never depends on what the machine has installed
+        /// </param>
+        public GameSettingsService(string settingsPath, string? legacyPath, Func<string?>? findInstall = null)
         {
             _logger = AppLoggerFactory.CreateLogger("GameSettings");
             _settingsPath = settingsPath;
+            _findInstall = findInstall ?? AcInstallFinder.Find;
             MigrateLegacy(legacyPath);
             _currentSettings = Load();
             ApplyInstallPath(_currentSettings);
@@ -90,9 +95,9 @@ namespace StreetCorsa.Services.Settings
         /// </summary>
         private void FindInstall(GameSettings settings)
         {
-            if (AcInstallFinder.IsInstall(AppSettings.DefaultAssettoCorsaPath)) return;
+            if (AppSettings.IsInstall(AppSettings.DefaultAssettoCorsaPath)) return;
 
-            var found = (FindAcInstall ?? AcInstallFinder.Find)();
+            var found = _findInstall();
             if (found == null)
             {
                 _logger.Information("No Assetto Corsa folder in the settings, and Steam's could not be found");
@@ -104,8 +109,7 @@ namespace StreetCorsa.Services.Settings
             Save(settings);
         }
 
-        /// <summary>Stands in for the search of the machine (tests)</summary>
-        internal static Func<string?>? FindAcInstall { get; set; }
+        private readonly Func<string?> _findInstall;
 
         /// <summary>
         /// Load settings from file, or create default if not exists

@@ -35,10 +35,12 @@ namespace StreetCorsa.Services.Opponents
         {
             var problems = new List<string>();
             var registry = new ContentRegistry<Opponent>("racer");
+            var removals = registry.Removals(_mods, ContentTypes.Racers);
             try
             {
                 foreach (var entry in ModJson.Entries(_mods, ContentTypes.Racers, "opponents", problems, idName: "opponentId"))
                 {
+                    removals.Before(entry.Mod);
                     var localId = ModJson.Text(entry.Element, "opponentId") ?? entry.Id;
                     var opponent = ParseOpponent(entry);
                     if (opponent == null) continue;
@@ -55,7 +57,7 @@ namespace StreetCorsa.Services.Opponents
                 _logger.Error(ex, "Failed to load the racers");
             }
 
-            registry.RemoveAll(_mods.Removed(ContentTypes.Racers));
+            removals.Rest();
             problems.AddRange(registry.Problems);
             foreach (var problem in problems) _logger.Warning("Racers: {Problem}", problem);
             ModProblems.Add("Racers", problems);

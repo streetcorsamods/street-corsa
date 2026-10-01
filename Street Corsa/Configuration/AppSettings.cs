@@ -109,14 +109,24 @@ public class AppSettings
     /// <summary>The install's master GUIDs, where Kunos cars name their sound events</summary>
     public string SfxGuidsPath => Path.Combine(AssettoCorsaPath, "content", "sfx", "GUIDs.txt");
 
-    /// <summary>
-    /// Validates that the AC installation path exists and is valid
-    /// </summary>
-    public bool IsValidInstallation()
-    {
-        if (string.IsNullOrEmpty(AssettoCorsaPath) || !Directory.Exists(AssettoCorsaPath))
-            return false;
+    /// <summary>The AC folder the game uses holds Assetto Corsa (<see cref="IsInstall"/>)</summary>
+    public bool IsValidInstallation() => IsInstall(AssettoCorsaPath);
 
-        return Directory.Exists(CarsPath) && Directory.Exists(TracksPath);
+    /// <summary>
+    /// A folder that holds Assetto Corsa: its cars and tracks. The one test of an install, for the folder the game
+    /// starts with and for the one it finds on the machine.
+    /// </summary>
+    public static bool IsInstall(string? folder)
+    {
+        try
+        {
+            return !string.IsNullOrWhiteSpace(folder)
+                   && Directory.Exists(Path.Combine(folder, "content", "cars"))
+                   && Directory.Exists(Path.Combine(folder, "content", "tracks"));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            return false;
+        }
     }
 }

@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.RegularExpressions;
 using Microsoft.Win32;
+using StreetCorsa.Configuration;
 
 namespace StreetCorsa.Services.Settings
 {
@@ -16,23 +17,8 @@ namespace StreetCorsa.Services.Settings
         [GeneratedRegex("\"path\"\\s+\"(?<path>[^\"]+)\"", RegexOptions.IgnoreCase)]
         private static partial Regex LibraryPath();
 
-        /// <summary>The first install found, or null</summary>
-        public static string? Find() => Candidates().FirstOrDefault(IsInstall);
-
-        /// <summary>A folder that holds Assetto Corsa: its cars and tracks</summary>
-        public static bool IsInstall(string? folder)
-        {
-            try
-            {
-                return !string.IsNullOrWhiteSpace(folder)
-                       && Directory.Exists(Path.Combine(folder, "content", "cars"))
-                       && Directory.Exists(Path.Combine(folder, "content", "tracks"));
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
-            {
-                return false;
-            }
-        }
+        /// <summary>The first install found (<see cref="AppSettings.IsInstall"/>), or null</summary>
+        public static string? Find() => Candidates().FirstOrDefault(AppSettings.IsInstall);
 
         /// <summary>Where to look, most likely first</summary>
         public static IEnumerable<string> Candidates()

@@ -6,8 +6,6 @@
   ],
   "day": {
     "startHour": 8,
-    "endHour": 22,
-    "firstHour": 8,
-    "lastHour": 22
+    "endHour": 22
   }
 }

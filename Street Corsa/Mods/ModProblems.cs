@@ -13,9 +13,6 @@ public static class ModProblems
     private static readonly HashSet<string> Seen = new(StringComparer.Ordinal);
     private static readonly object Lock = new();
 
-    /// <summary>A problem was added</summary>
-    public static event Action? Added;
-
     /// <summary>The problems so far, "area: problem", in the order they came</summary>
     public static IReadOnlyList<string> All
     {
@@ -25,43 +22,18 @@ public static class ModProblems
         }
     }
 
-    public static int Count
-    {
-        get
-        {
-            lock (Lock) return Lines.Count;
-        }
-    }
-
     /// <param name="area">What was being read ("Racers", "Rules")</param>
     public static void Add(string area, IEnumerable<string> problems)
     {
-        var added = false;
         lock (Lock)
         {
             foreach (var problem in problems)
             {
                 var line = $"{area}: {problem}";
-                if (Seen.Add(line))
-                {
-                    Lines.Add(line);
-                    added = true;
-                }
+                if (Seen.Add(line)) Lines.Add(line);
             }
         }
-
-        if (added) Added?.Invoke();
     }
 
     public static void Add(string area, string problem) => Add(area, [problem]);
-
-    /// <summary>Forgets them all (tests)</summary>
-    public static void Clear()
-    {
-        lock (Lock)
-        {
-            Lines.Clear();
-            Seen.Clear();
-        }
-    }
 }

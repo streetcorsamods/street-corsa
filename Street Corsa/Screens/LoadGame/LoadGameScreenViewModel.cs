@@ -190,10 +190,13 @@ namespace StreetCorsa.Screens.LoadGame
             if (IsBusy) return;
             IsBusy = true;
 
+            // Everything from here on plays by the save's own rules; a save not opened after all leaves the game in play its own
+            var before = StreetCorsa.Rules.RuleBook.InPlay();
+            var opened = false;
+
             // Nothing may escape an async void
             try
             {
-                // Everything from here on plays by the save's own rules
                 StreetCorsa.Rules.RuleBook.PlayBy(gameState);
 
                 await Task.Run(() =>
@@ -212,7 +215,11 @@ namespace StreetCorsa.Screens.LoadGame
                 }
 
                 // Navigate to game screen with loaded state, then store it in App for saving on exit
-                if (_navigationService.NavigateToGarage(gameState)) _setCurrentGame(gameState);
+                if (_navigationService.NavigateToGarage(gameState))
+                {
+                    opened = true;
+                    _setCurrentGame(gameState);
+                }
             }
             catch (Exception ex)
             {
@@ -221,6 +228,7 @@ namespace StreetCorsa.Screens.LoadGame
             }
             finally
             {
+                if (!opened) before.Restore();
                 IsBusy = false;
             }
         }

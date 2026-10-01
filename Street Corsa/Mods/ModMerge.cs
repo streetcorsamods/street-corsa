@@ -54,8 +54,21 @@ public static class ModMerge
         try
         {
             var node = JsonNode.Parse(File.ReadAllText(file), NodeOptions, DocumentOptions);
-            if (node is JsonObject over) Into(into, over);
-            else problems.Add($"{source}: not an object of settings ({{ ... }}); left out");
+            if (node is JsonObject over)
+            {
+                // A name twice in an object (whatever its case) only shows when the object is first looked into: all
+                // of the file is, before any of it goes in, so a file that does not read adds nothing at all
+                Unpack(over);
+                Into(into, over);
+            }
+            else
+            {
+                problems.Add($"{source}: not an object of settings ({{ ... }}); left out");
+            }
+        }
+        catch (ArgumentException ex)
+        {
+            problems.Add($"{source}: a name is there twice in one object, whatever its case ({ex.Message}); left out");
         }
         catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
         {
@@ -69,11 +82,30 @@ public static class ModMerge
         if (string.IsNullOrWhiteSpace(json)) return null;
         try
         {
-            return JsonNode.Parse(json, NodeOptions, DocumentOptions) as JsonObject;
+            if (JsonNode.Parse(json, NodeOptions, DocumentOptions) is not JsonObject read) return null;
+            Unpack(read);
+            return read;
         }
-        catch (JsonException)
+        catch (Exception ex) when (ex is JsonException or ArgumentException)
         {
             return null;
+        }
+    }
+
+    /// <summary>
+    /// Every object in the tree looked into: a name it has twice (in any case) throws <see cref="ArgumentException"/>
+    /// here and not halfway through a merge
+    /// </summary>
+    private static void Unpack(JsonNode? node)
+    {
+        switch (node)
+        {
+            case JsonObject obj:
+                foreach (var (_, value) in obj) Unpack(value);
+                break;
+            case JsonArray array:
+                foreach (var item in array) Unpack(item);
+                break;
         }
     }
 

@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace StreetCorsa.Rules;
 
 /// <summary>How a new career starts (<c>"start"</c> in the rules)</summary>
@@ -45,8 +47,10 @@ public sealed class DayRules
     public int EndHour { get; set; } = 22;
 
     /// <summary><see cref="StartHour"/> held to a real hour, and before <see cref="EndHour"/></summary>
+    [JsonIgnore]
     public int FirstHour => Math.Clamp(StartHour, 0, 23);
 
     /// <summary><see cref="EndHour"/> held to after the first hour, 24 at the latest (midnight)</summary>
+    [JsonIgnore]
     public int LastHour => Math.Clamp(EndHour, FirstHour + 1, 24);
 }

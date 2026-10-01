@@ -75,6 +75,9 @@ namespace StreetCorsa
             {
                 var loaded = value != null && !ReferenceEquals(value, _currentGameState);
                 _currentGameState = value;
+
+                // No game in play: the mods' rules
+                if (value == null) StreetCorsa.Rules.RuleBook.PlayBy(null);
                 if (!loaded) return;
 
                 // Already so when the game came through the load or new game screen; whatever else sets one plays by its rules too
@@ -241,7 +244,8 @@ namespace StreetCorsa
             // Game state repository (depends on opponent initialization service). The save in use stays open in
             // one place, shared with the race sessions, so a race's result and the state it changes are one write
             var saveDatabase = new Services.Storage.SaveDatabase();
-            GameStateRepository = new GameStateRepository(OpponentInitializationService, saveDatabase);
+            GameStateRepository = new GameStateRepository(OpponentInitializationService, saveDatabase,
+                isGameCar: id => CatalogRepository.GetCar(id) is { Status: Models.Catalog.ContentStatus.Active } && ProfileRepository.ProfileExists(id));
             PurchaseService = new CarPurchaseService(GameStateRepository, CarPartsService, GameTimeService);
             SaleService = new CarSaleService(MarketService, GameTimeService, GameStateRepository);
 
@@ -497,14 +501,14 @@ namespace StreetCorsa
             {
                 await Task.WhenAll(partsWarmUp, Task.Run(() =>
                 {
-                    var mods = Mods.ModSet.Installed;
+                    _ = Mods.ModSet.Installed;
                     _ = Rules.RuleBook.Installed;
                     _ = Services.Text.GameText.Installed;
                     _ = Services.Career.CareerContent.Installed;
                     OpponentRepository.LoadAllOpponents();
-                    Services.Street.StreetScenes.LoadAll(mods);
-                    Services.Station.StationScenes.LoadAll(mods);
-                    Services.CarLot.WarehouseScenes.LoadAll(mods);
+                    _ = Services.Street.StreetScenes.Installed;
+                    _ = Services.Station.StationScenes.Installed;
+                    _ = Services.CarLot.WarehouseScenes.Installed;
                 }));
             }
             catch (Exception ex)
