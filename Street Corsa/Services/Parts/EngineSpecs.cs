@@ -5,6 +5,7 @@ using StreetCorsa.Logging;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Parts.Cars;
 using StreetCorsa.Parts.Export;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Services.Parts
 {
@@ -77,9 +78,9 @@ namespace StreetCorsa.Services.Parts
 
             var report = parts.Evaluate(car);
             var dyno = report?.Dyno;
-            var problem = report == null ? "the engine is not all there"
+            var problem = report == null ? GameText.Say("enginespecs.incomplete")
                 : report.Runs ? null
-                : report.Problem ?? "it makes no power";
+                : report.Problem ?? GameText.Say("enginespecs.no_power");
 
             var sound = parts.ChooseSound(car, report)
                         ?? AcCarSound.FromCar(Path.Combine(AppSettings.Instance.CarsPath, car.DefinitionId), AppSettings.Instance.SfxGuidsPath);

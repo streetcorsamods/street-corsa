@@ -9,6 +9,7 @@ using StreetCorsa.Parts.Cars;
 using StreetCorsa.Services.Catalog;
 using StreetCorsa.Services.Parts;
 using StreetCorsa.Services.Storage;
+using StreetCorsa.Services.Text;
 using StreetCorsa.Services.Time;
 using StreetCorsa.ViewModels;
 
@@ -109,7 +110,7 @@ namespace StreetCorsa.Screens.UsedParts
             catch (Exception ex)
             {
                 _logger.Error(ex, "Could not open the parts pages");
-                StatusText = "The parts pages could not be opened.";
+                StatusText = GameText.Say("usedparts.open_failed");
             }
             finally
             {
@@ -156,7 +157,7 @@ namespace StreetCorsa.Screens.UsedParts
         /// <summary>What is ordered and not here yet: the mail order's page says so, so nothing is ordered twice by mistake</summary>
         protected override string StatusNote =>
             IsNewTab && _gameState.Player.PartOrders.Count is > 0 and var onTheWay
-                ? $"  ·  {onTheWay} part{(onTheWay == 1 ? "" : "s")} on the way"
+                ? GameText.Say(onTheWay == 1 ? "usedparts.on_the_way.one" : "usedparts.on_the_way.other", ("count", onTheWay))
                 : string.Empty;
 
         private void OnOfferAction(PartOfferViewModel? offer)
@@ -174,9 +175,10 @@ namespace StreetCorsa.Screens.UsedParts
             {
                 var (message, title) = offer switch
                 {
-                    { Owned: not null } => ("That part is no longer on your shelf.", "Not Sold"),
-                    { Ad: { } ad } when !_gameState.NewspaperAds.Parts.Contains(ad) => ("Somebody was quicker: that ad is no longer in the paper.", "Already Sold"),
-                    _ => ("You don't have enough money for this part.", "Insufficient Funds")
+                    { Owned: not null } => (GameText.Say("market.part.not_owned"), GameText.Say("market.part.not_owned.title")),
+                    { Ad: { } ad } when !_gameState.NewspaperAds.Parts.Contains(ad) =>
+                        (GameText.Say("usedparts.ad_gone"), GameText.Say("usedparts.ad_gone.title")),
+                    _ => (GameText.Say("market.part.no_money"), GameText.Say("market.part.no_money.title"))
                 };
                 _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, message, title));
             }
@@ -241,42 +243,47 @@ namespace StreetCorsa.Screens.UsedParts
         public string ActionLabel { get; }
 
         /// <summary>Condition, seller, what comes with it</summary>
-        public string Detail { get; private init; } = "New";
+        public string Detail { get; private init; } = GameText.Say("usedparts.detail.new");
 
         public bool Fits { get; set; }
         public bool CanAfford { get; set; }
 
         public static PartOfferViewModel ForNew(PartDefinition definition, decimal price) =>
-            new(definition, price, "Order") { Detail = $"New, by mail: comes in {NewspaperPartsService.MailOrderDays} days" };
+            new(definition, price, GameText.Say("usedparts.action.order"))
+            {
+                Detail = GameText.Say("usedparts.detail.mail", ("days", NewspaperPartsService.MailOrderDays))
+            };
 
         public static PartOfferViewModel ForAd(PartAd ad, PartDefinition definition) =>
-            new(definition, ad.AskingPrice, "Buy")
+            new(definition, ad.AskingPrice, GameText.Say("usedparts.action.buy"))
             {
                 Ad = ad,
-                Detail = $"{PartTrees.Describe(ad.Part)}  ·  {ad.SellerName}"
+                Detail = GameText.Say("usedparts.detail.ad", ("part", PartTrees.Describe(ad.Part)), ("seller", ad.SellerName))
             };
 
         /// <summary>A new part on a shop's shelf, at the shop's price today</summary>
         public static PartOfferViewModel ForShelf(ShopShelf shelf, PartDefinition definition, decimal price, decimal? was) =>
-            new(definition, price, "Buy")
+            new(definition, price, GameText.Say("usedparts.action.buy"))
             {
                 Shelf = shelf,
                 WasPrice = was > price ? was : null,
-                Detail = shelf.Count == 1 ? "New  ·  the last one" : $"New  ·  {shelf.Count} on the shelf"
+                Detail = GameText.Say(shelf.Count == 1 ? "usedparts.detail.shelf.one" : "usedparts.detail.shelf.other", ("count", shelf.Count))
             };
 
         /// <summary>A used part in a junkyard's yard, at the yard's price today</summary>
         public static PartOfferViewModel ForYard(PartAd item, PartDefinition definition, decimal price, decimal? was) =>
-            new(definition, price, "Buy")
+            new(definition, price, GameText.Say("usedparts.action.buy"))
             {
                 Ad = item,
                 WasPrice = was > price ? was : null,
                 CanHaggle = !item.Haggled,
-                Detail = PartTrees.Describe(item.Part) + (item.Haggled ? "  ·  as low as it goes" : string.Empty)
+                Detail = item.Haggled
+                    ? GameText.Say("usedparts.detail.haggled", ("part", PartTrees.Describe(item.Part)))
+                    : PartTrees.Describe(item.Part)
             };
 
         public static PartOfferViewModel ForSale(PartInstance part, PartDefinition definition, decimal price) =>
-            new(definition, price, "Sell")
+            new(definition, price, GameText.Say("usedparts.action.sell"))
             {
                 Owned = part,
                 Detail = PartTrees.Describe(part)

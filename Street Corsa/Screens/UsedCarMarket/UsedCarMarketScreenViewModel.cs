@@ -9,6 +9,7 @@ using StreetCorsa.Services.Dealers;
 using StreetCorsa.Services.Market;
 using StreetCorsa.Services.Opponents;
 using StreetCorsa.Services.Storage;
+using StreetCorsa.Services.Text;
 using StreetCorsa.ViewModels;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -53,10 +54,13 @@ namespace StreetCorsa.Screens.UsedCarMarket
             }
         }
 
-        private string _selectedDealer = "All Dealers";
+        private string _selectedDealer = AllDealers;
+
+        /// <summary>The filter that shows every dealer's cars</summary>
+        public static string AllDealers => GameText.Say("market.all_dealers");
 
         /// <summary>The filter that shows the racers' own cars in the paper</summary>
-        public const string PrivateSellers = "Private sellers";
+        public static string PrivateSellers => GameText.Say("market.private_sellers");
         public string SelectedDealer
         {
             get => _selectedDealer;
@@ -96,7 +100,7 @@ namespace StreetCorsa.Screens.UsedCarMarket
             _listings = new ObservableCollection<UsedCarListingViewModel>();
             _listingsView = CollectionViewSource.GetDefaultView(_listings);
 
-            DealerOptions = ["All Dealers"];
+            DealerOptions = [AllDealers];
 
             // The market is loaded in Enter, after the screen before it has been left
         }
@@ -211,7 +215,7 @@ namespace StreetCorsa.Screens.UsedCarMarket
                     CarProfile = profile,
                     RivalAd = rivalOffer?.Ad,
                     PrivateSeller = rivalOffer?.Seller.Name,
-                    DealerName = rivalOffer != null ? UsedCarListingViewModel.PrivateSellerName(rivalOffer.Seller.Name) : dealerLocation?.Name ?? "Unknown",
+                    DealerName = rivalOffer != null ? UsedCarListingViewModel.PrivateSellerName(rivalOffer.Seller.Name) : dealerLocation?.Name ?? GameText.Say("market.unknown_dealer"),
                     CanAfford = _gameState.Player.Money >= listing.Price
                 };
 
@@ -225,7 +229,7 @@ namespace StreetCorsa.Screens.UsedCarMarket
         {
             if (ListingsView == null) return;
 
-            if (_selectedDealer == "All Dealers")
+            if (_selectedDealer == AllDealers)
             {
                 ListingsView.Filter = null;
             }
@@ -316,13 +320,15 @@ namespace StreetCorsa.Screens.UsedCarMarket
         public string? PrivateSeller { get; set; }
 
         /// <summary>How a racer selling their own car shows where a dealer's name would</summary>
-        public static string PrivateSellerName(string rival) => $"{rival} (private)";
+        public static string PrivateSellerName(string rival) => GameText.Say("market.private_seller", ("rival", rival));
 
         /// <summary>Who sells it, for the purchase question</summary>
-        public string SellerLine => PrivateSeller != null ? $"Seller: {PrivateSeller}" : $"Dealer: {DealerName}";
+        public string SellerLine => PrivateSeller != null
+            ? GameText.Say("market.seller_line.private", ("seller", PrivateSeller))
+            : GameText.Say("market.seller_line.dealer", ("dealer", DealerName));
 
         public string DisplayName => $"{CarDefinition.Brand} {CarDefinition.Name}";
-        public string YearDisplay => CarDefinition.Year?.ToString() ?? "Unknown";
+        public string YearDisplay => CarDefinition.Year?.ToString() ?? GameText.Say("market.unknown_year");
         public string PriceDisplay => $"${Listing.Price:N0}";
 
         /// <summary>Marked down in its dealer's closing-down sale</summary>
@@ -342,6 +348,6 @@ namespace StreetCorsa.Screens.UsedCarMarket
         /// <summary>What is under the hood, with a word on it when somebody has been at it</summary>
         public string EngineDisplay => Listing.EngineSummary == null
             ? string.Empty
-            : Listing.IsModified ? Listing.EngineSummary + " (modified)" : Listing.EngineSummary;
+            : Listing.IsModified ? GameText.Say("market.engine_modified", ("engine", Listing.EngineSummary)) : Listing.EngineSummary;
     }
 }

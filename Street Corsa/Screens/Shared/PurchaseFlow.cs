@@ -5,6 +5,7 @@ using StreetCorsa.Logging;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Screens.UsedCarMarket;
 using StreetCorsa.Services.Market;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Screens.Shared
 {
@@ -30,14 +31,15 @@ namespace StreetCorsa.Screens.Shared
         public static string ConfirmationMessage(UsedCarListingViewModel car, decimal bankroll)
         {
             var def = car.CarDefinition;
-            return $"Purchase this {def.Brand} {def.Name}?\n\n" +
-                   $"Year: {def.Year ?? 0}\n" +
-                   $"Price: ${car.Listing.Price:N0}\n" +
-                   $"Condition: {car.ConditionLabel}\n" +
-                   $"Mileage: {car.Listing.Mileage:N0} km\n" +
-                   $"History: {car.HistoryDisplay}\n" +
-                   $"{car.SellerLine}\n\n" +
-                   $"Your bankroll: ${bankroll:N0}";
+            return GameText.Say("purchase.confirm",
+                ("car", $"{def.Brand} {def.Name}"),
+                ("year", def.Year ?? 0),
+                ("price", $"${car.Listing.Price:N0}"),
+                ("condition", car.ConditionLabel),
+                ("mileage", car.Listing.Mileage),
+                ("history", car.HistoryDisplay),
+                ("seller", car.SellerLine),
+                ("bankroll", $"${bankroll:N0}"));
         }
 
         /// <summary>
@@ -52,7 +54,7 @@ namespace StreetCorsa.Screens.Shared
             _dialogService.ShowDialog(new ConfirmationDialogViewModel(
                 _dialogService,
                 ConfirmationMessage(car, gameState.Player.Money),
-                "Purchase Car?",
+                GameText.Say("purchase.confirm.title"),
                 confirmed =>
                 {
                     if (confirmed) Complete(gameState, car, onFinished);
@@ -74,8 +76,8 @@ namespace StreetCorsa.Screens.Shared
                 _logger.Error(ex, "The purchase of {CarId} failed", car.CarDefinition.Id);
                 _dialogService.ShowDialog(new InformationDialogViewModel(
                     _dialogService,
-                    $"The purchase could not be completed, and nothing was bought:\n\n{ex.Message}",
-                    "Purchase Failed"));
+                    GameText.Say("purchase.failed", ("error", ex.Message)),
+                    GameText.Say("purchase.failed.title")));
                 return;
             }
 
@@ -100,17 +102,17 @@ namespace StreetCorsa.Screens.Shared
         {
             if (!result.Succeeded)
             {
-                var title = result.Outcome == PurchaseOutcome.NotEnoughMoney ? "Insufficient Funds" : "Car Unavailable";
+                var title = GameText.Say(result.Outcome == PurchaseOutcome.NotEnoughMoney ? "purchase.no_money.title" : "purchase.unavailable.title");
                 return new[] { (title, result.Message) };
             }
 
             var dialogs = new List<(string, string)>();
             if (result.SaveFailed)
             {
-                dialogs.Add(("Save Warning", "The purchase was successful but failed to save the game. Please save manually."));
+                dialogs.Add((GameText.Say("purchase.save_failed.title"), GameText.Say("purchase.save_failed")));
             }
 
-            dialogs.Add(("Purchase Successful", result.Message));
+            dialogs.Add((GameText.Say("purchase.done.title"), result.Message));
             return dialogs;
         }
     }

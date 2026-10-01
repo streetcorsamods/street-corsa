@@ -1,6 +1,7 @@
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Parts.Cars;
 using StreetCorsa.Services.Market;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Screens.Shared
 {
@@ -8,7 +9,7 @@ namespace StreetCorsa.Screens.Shared
     public sealed record ConditionText(string Percent, string Label)
     {
         /// <summary>"Good condition (82%)", or just what is wrong with a car that will not run</summary>
-        public string Sentence => Percent == Label ? Label : $"{Label} condition ({Percent})";
+        public string Sentence => Percent == Label ? Label : GameText.Say("market.condition.sentence", ("label", Label), ("percent", Percent));
     }
 
     /// <summary>
@@ -20,8 +21,8 @@ namespace StreetCorsa.Screens.Shared
     {
         public static ConditionText Of(Car car)
         {
-            if (CarCondition.IsTotaled(car)) return new ConditionText("Totaled", "Totaled");
-            if (car.EngineHealth <= 0) return new ConditionText("Blown engine", "Blown engine");
+            if (CarCondition.IsTotaled(car)) return new ConditionText(GameText.Say("market.condition.totaled"), GameText.Say("market.condition.totaled"));
+            if (car.EngineHealth <= 0) return new ConditionText(GameText.Say("market.condition.blown"), GameText.Say("market.condition.blown"));
             return Of(CarValuation.ConditionOf(car));
         }
 
@@ -35,16 +36,16 @@ namespace StreetCorsa.Screens.Shared
         /// <summary>What is in the tank: "Full" until a race says otherwise, then "12 of 60 l" ("1.4 of 60 l" when too low to race on)</summary>
         public static string Fuel(Car car) =>
             CarCondition.FuelLeft(car) is { } left && CarCondition.TankLitres(car) is { } tank
-                ? left < 10 ? $"{left:0.0} of {tank:0} l" : $"{left:0} of {tank:0} l"
-                : "Full";
+                ? GameText.Say(left < 10 ? "market.fuel.low" : "market.fuel", ("left", left), ("tank", tank))
+                : GameText.Say("market.fuel.full");
 
         public static string LabelFor(double condition) => condition switch
         {
-            >= 0.9 => "Excellent",
-            >= 0.75 => "Good",
-            >= 0.6 => "Fair",
-            >= 0.4 => "Poor",
-            _ => "Very Poor"
+            >= 0.9 => GameText.Say("market.condition.excellent"),
+            >= 0.75 => GameText.Say("market.condition.good"),
+            >= 0.6 => GameText.Say("market.condition.fair"),
+            >= 0.4 => GameText.Say("market.condition.poor"),
+            _ => GameText.Say("market.condition.very_poor")
         };
     }
 }

@@ -73,8 +73,8 @@ namespace StreetCorsa.Screens.PartShop
         public string Blurb => Definition.Blurb;
         public string KindLabel => GameText.Installed.Get($"partshop.kind.{Definition.KindOf.ToString().ToLowerInvariant()}");
 
-        public string BuyTabLabel => IsJunkyard ? "In the yard" : "On the shelves";
-        public string SellTabLabel => $"Sell to {Definition.Name}";
+        public string BuyTabLabel => GameText.Say(IsJunkyard ? "partshop.tab.yard" : "partshop.tab.shelves");
+        public string SellTabLabel => GameText.Say("partshop.tab.sell", ("shop", Definition.Name));
 
         /// <summary>The closing-down sale, and what the player gets off as a regular: the line under the shop's name</summary>
         public string Notice
@@ -149,7 +149,7 @@ namespace StreetCorsa.Screens.PartShop
             catch (Exception ex)
             {
                 _logger.Error(ex, "Could not open {Shop}", Definition.Name);
-                StatusText = "The shop could not be looked round.";
+                StatusText = GameText.Say("partshop.open_failed");
             }
             finally
             {
@@ -192,7 +192,7 @@ namespace StreetCorsa.Screens.PartShop
             IsSellTab ? Shop is { IsTrading: true } : base.CanTake(offer);
 
         protected override string NothingText =>
-            Shop is { Status: DealerStatus.ClosingDown } ? "Cleaned out: nothing like that left." : "Nothing like that in today.";
+            GameText.Say(Shop is { Status: DealerStatus.ClosingDown } ? "partshop.nothing.cleaned_out" : "partshop.nothing");
 
         private void OnOfferAction(PartOfferViewModel? offer)
         {
@@ -209,10 +209,10 @@ namespace StreetCorsa.Screens.PartShop
             {
                 var (message, title) = offer switch
                 {
-                    { Owned: not null } => ("That part is no longer on your shelf.", "Not Sold"),
-                    { Ad: { } item } when !shop.Yard.Contains(item) => ("Somebody was quicker: that part has gone.", "Already Sold"),
-                    { Shelf.Count: <= 0 } => ("That was the last one, and it has gone.", "Sold Out"),
-                    _ => ("You don't have enough money for this part.", "Insufficient Funds")
+                    { Owned: not null } => (GameText.Say("market.part.not_owned"), GameText.Say("market.part.not_owned.title")),
+                    { Ad: { } item } when !shop.Yard.Contains(item) => (GameText.Say("partshop.gone"), GameText.Say("partshop.gone.title")),
+                    { Shelf.Count: <= 0 } => (GameText.Say("partshop.sold_out"), GameText.Say("partshop.sold_out.title")),
+                    _ => (GameText.Say("market.part.no_money"), GameText.Say("market.part.no_money.title"))
                 };
                 _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, message, title));
             }

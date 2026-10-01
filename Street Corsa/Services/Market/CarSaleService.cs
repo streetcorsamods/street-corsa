@@ -76,7 +76,7 @@ namespace StreetCorsa.Services.Market
         /// <summary>How far over its worth a car can be put in the paper: past this nobody would even call</summary>
         public static decimal MaxAskingShare => Rules.RuleBook.Current.Market.MaxAskingShare;
 
-        public const string ScrapyardName = "the scrapyard";
+        public static string ScrapyardName => GameText.Say("sell.scrapyard_name");
 
         /// <summary>The chance the buyer who calls is one of the rivals, when one of them wants the car and can pay</summary>
         public static double RivalBuyerChance => Rules.RuleBook.Current.Market.RivalBuyerChance;
@@ -96,7 +96,7 @@ namespace StreetCorsa.Services.Market
 
             var location = _market.TradeInLocation(gameState.DealerLocations);
             var name = (gameState.DealerLocations?.FirstOrDefault(d => d.Id == location)
-                        ?? _market.GetDefaultDealers().FirstOrDefault(d => d.Id == location))?.Name ?? "the dealer";
+                        ?? _market.GetDefaultDealers().FirstOrDefault(d => d.Id == location))?.Name ?? GameText.Say("sell.dealer_name");
             return new DealerQuote(value, RoundToTen((double)value * DealerShare), false, name, location);
         }
 
@@ -119,8 +119,8 @@ namespace StreetCorsa.Services.Market
 
             var saveFailed = await SpendTimeAndSave(gameState, GameAction.SellCar);
             var message = quote.IsScrap
-                ? $"The scrapyard hauled the wreck away and paid ${quote.Amount:N0} for what is left of it."
-                : $"{quote.BuyerName} bought the car for ${quote.Amount:N0}.";
+                ? GameText.Say("sell.scrapped", ("amount", $"${quote.Amount:N0}"))
+                : GameText.Say("sell.traded_in", ("buyer", quote.BuyerName), ("amount", $"${quote.Amount:N0}"));
             return new SaleResult(SaleOutcome.Done, message, saveFailed);
         }
 
@@ -137,17 +137,17 @@ namespace StreetCorsa.Services.Market
             if (WhyNotSellable(gameState, car) is { } refusal) return refusal;
 
             if (CarCondition.IsTotaled(car))
-                return new SaleResult(SaleOutcome.Refused, "Nobody buys a wreck out of the paper. The scrapyard will take it.");
+                return new SaleResult(SaleOutcome.Refused, GameText.Say("sell.refused.wreck"));
 
             var (min, max) = AskingPriceRange(car);
             if (askingPrice < min || askingPrice > max)
-                return new SaleResult(SaleOutcome.Refused, $"Ask between ${min:N0} and ${max:N0}: nobody calls about a car priced like that.");
+                return new SaleResult(SaleOutcome.Refused, GameText.Say("sell.refused.price", ("min", $"${min:N0}"), ("max", $"${max:N0}")));
 
             if (AdFor(gameState, car) != null)
-                return new SaleResult(SaleOutcome.Refused, "The car is in the paper already.");
+                return new SaleResult(SaleOutcome.Refused, GameText.Say("sell.refused.in_paper"));
 
             if (gameState.Player.Money < AdFee)
-                return new SaleResult(SaleOutcome.NotEnoughMoney, $"An ad costs ${AdFee:N0}.");
+                return new SaleResult(SaleOutcome.NotEnoughMoney, GameText.Say("sell.refused.no_money", ("fee", $"${AdFee:N0}")));
 
             gameState.Player.Money -= AdFee;
             gameState.NewspaperAds.PlayerCars.Add(new CarSaleAd
@@ -160,27 +160,27 @@ namespace StreetCorsa.Services.Market
 
             var saveFailed = await SpendTimeAndSave(gameState, GameAction.PlaceAd);
             return new SaleResult(SaleOutcome.Done,
-                $"The ad runs for {AdDays} days at ${askingPrice:N0}. Buyers who call are in the newspaper, under your ads.", saveFailed);
+                GameText.Say("sell.ad.placed", ("days", AdDays), ("price", $"${askingPrice:N0}")), saveFailed);
         }
 
         public SaleResult WithdrawAd(GameState gameState, CarSaleAd ad)
         {
-            if (!gameState.NewspaperAds.PlayerCars.Remove(ad)) return new SaleResult(SaleOutcome.NoOffer, "The ad has run out already.");
+            if (!gameState.NewspaperAds.PlayerCars.Remove(ad)) return new SaleResult(SaleOutcome.NoOffer, GameText.Say("sell.ad.run_out"));
 
             _logger.Information("Took the ad for {Car} out of the paper", ad.CarInstanceId);
-            return new SaleResult(SaleOutcome.Done, "The ad is out of the paper.", !Save(gameState));
+            return new SaleResult(SaleOutcome.Done, GameText.Say("sell.ad.removed"), !Save(gameState));
         }
 
         public async Task<SaleResult> AcceptOfferAsync(GameState gameState, CarSaleAd ad)
         {
             if (!gameState.NewspaperAds.PlayerCars.Contains(ad) || ad.Offer is not { } offer || offer.Expires < gameState.Date)
-                return new SaleResult(SaleOutcome.NoOffer, "That buyer has found another car.");
+                return new SaleResult(SaleOutcome.NoOffer, GameText.Say("sell.offer.gone"));
 
             var car = gameState.Player.Cars.FirstOrDefault(c => c.InstanceId == ad.CarInstanceId);
             if (car == null)
             {
                 gameState.NewspaperAds.PlayerCars.Remove(ad);
-                return new SaleResult(SaleOutcome.NotOwned, "The car is no longer yours to sell.", !Save(gameState));
+                return new SaleResult(SaleOutcome.NotOwned, GameText.Say("sell.refused.not_owned"), !Save(gameState));
             }
 
             if (WhyNotSellable(gameState, car) is { } refusal) return refusal;
@@ -194,7 +194,7 @@ namespace StreetCorsa.Services.Market
                 {
                     ad.Offer = null;
                     _logger.Information("{Rival} can no longer pay ${Amount} for {Car}", offer.RivalName, offer.Amount, car.DefinitionId);
-                    return new SaleResult(SaleOutcome.NoOffer, $"{offer.RivalName} couldn't raise the money after all.", !Save(gameState));
+                    return new SaleResult(SaleOutcome.NoOffer, GameText.Say("sell.offer.no_money", ("rival", offer.RivalName)), !Save(gameState));
                 }
             }
 
@@ -217,16 +217,16 @@ namespace StreetCorsa.Services.Market
             _logger.Information("Sold {Car} to {Buyer} out of the paper for ${Amount}", car.DefinitionId, offer.BuyerName, offer.Amount);
 
             var saveFailed = await SpendTimeAndSave(gameState, GameAction.SellCar);
-            return new SaleResult(SaleOutcome.Done, $"{Capitalized(offer.BuyerName)} paid ${offer.Amount:N0} and drove the car away.", saveFailed);
+            return new SaleResult(SaleOutcome.Done, GameText.Say("sell.offer.sold", ("buyer", Capitalized(offer.BuyerName)), ("amount", $"${offer.Amount:N0}")), saveFailed);
         }
 
         public SaleResult DeclineOffer(GameState gameState, CarSaleAd ad)
         {
-            if (ad.Offer == null) return new SaleResult(SaleOutcome.NoOffer, "Nobody is waiting on an answer.");
+            if (ad.Offer == null) return new SaleResult(SaleOutcome.NoOffer, GameText.Say("sell.offer.none"));
 
             _logger.Information("Turned down {Buyer}'s ${Amount} for {Car}", ad.Offer.BuyerName, ad.Offer.Amount, ad.CarInstanceId);
             ad.Offer = null;
-            return new SaleResult(SaleOutcome.Done, "The buyer hung up.", !Save(gameState));
+            return new SaleResult(SaleOutcome.Done, GameText.Say("sell.offer.declined"), !Save(gameState));
         }
 
         /// <summary>
@@ -335,13 +335,13 @@ namespace StreetCorsa.Services.Market
         private SaleResult? WhyNotSellable(GameState gameState, Car car)
         {
             if (!gameState.Player.Cars.Contains(car))
-                return new SaleResult(SaleOutcome.NotOwned, "The car is no longer yours to sell.");
+                return new SaleResult(SaleOutcome.NotOwned, GameText.Say("sell.refused.not_owned"));
 
             if (gameState.PendingRace is { } race && race.PlayerCarInstanceId == car.InstanceId)
-                return new SaleResult(SaleOutcome.Racing, "The car is out racing: it can be sold once the race is settled.");
+                return new SaleResult(SaleOutcome.Racing, GameText.Say("sell.refused.racing"));
 
             if (car.IsImpounded)
-                return new SaleResult(SaleOutcome.Refused, "The car is in the police impound: nobody buys it until you've collected it.");
+                return new SaleResult(SaleOutcome.Refused, GameText.Say("sell.refused.impounded"));
 
             return null;
         }

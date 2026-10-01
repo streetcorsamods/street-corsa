@@ -1,6 +1,7 @@
 <UserControl x:Class="StreetCorsa.Screens.CarLot.CarLotScreenView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:t="clr-namespace:StreetCorsa.Services.Text"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:controls="clr-namespace:StreetCorsa.Controls"
@@ -93,13 +94,13 @@
                            HorizontalAlignment="Center">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
-                            <Setter Property="Text" Value="Opening the warehouse..."/>
+                            <Setter Property="Text" Value="{t:Text carlot.opening}"/>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding HasFailed, ElementName=Viewport}" Value="True">
-                                    <Setter Property="Text" Value="The warehouse could not be shown in 3D."/>
+                                    <Setter Property="Text" Value="{t:Text carlot.no_3d}"/>
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding HasScene}" Value="False">
-                                    <Setter Property="Text" Value="No warehouse is installed: your cars are in the list."/>
+                                    <Setter Property="Text" Value="{t:Text carlot.no_warehouse}"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
@@ -120,7 +121,7 @@
                         FontSize="{StaticResource FontSizeHeading}"
                         Padding="12,2"
                         Margin="0,0,14,0"
-                        ToolTip="The warehouse before"/>
+                        ToolTip="{t:Text carlot.warehouse_before}"/>
                 <TextBlock Text="{Binding WarehouseTitle}"
                            FontSize="{StaticResource FontSizeTitle}"
                            FontWeight="Bold"
@@ -137,7 +138,7 @@
                         FontSize="{StaticResource FontSizeHeading}"
                         Padding="12,2"
                         Margin="14,0,0,0"
-                        ToolTip="The next warehouse"/>
+                        ToolTip="{t:Text carlot.warehouse_next}"/>
             </StackPanel>
             <TextBlock Text="{Binding WarehouseSummary}"
                        FontSize="{StaticResource FontSizeCompact}"
@@ -154,7 +155,7 @@
         <!-- Back to the garage -->
         <Button Style="{StaticResource RoundIconButtonStyle}"
                 Tag="{StaticResource GarageIcon}"
-                ToolTip="Back to the garage"
+                ToolTip="{t:Text carlot.back}"
                 Command="{Binding BackCommand}"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Top"
@@ -171,7 +172,7 @@
                 Padding="10,12,10,10">
             <DockPanel>
                 <TextBlock DockPanel.Dock="Top"
-                           Text="YOUR CARS"
+                           Text="{t:Text carlot.title}"
                            FontSize="{StaticResource FontSizeCompact}"
                            FontWeight="Bold"
                            Foreground="{StaticResource TextSecondaryBrush}"
@@ -227,7 +228,7 @@
                                                 Margin="6,0,0,0"
                                                 VerticalAlignment="Center"
                                                 Visibility="{Binding IsCurrent, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                            <TextBlock Text="IN USE"
+                                            <TextBlock Text="{t:Text carlot.in_use}"
                                                        FontSize="{StaticResource FontSizeMicro}"
                                                        FontWeight="Bold"
                                                        Foreground="{StaticResource BgPanelBrush}"/>
@@ -242,7 +243,7 @@
         </Border>
 
         <!-- With a car picked, the one thing to do with it: a click on the floor goes back to the whole warehouse -->
-        <Button Content="TAKE THIS CAR"
+        <Button Content="{t:Text carlot.take}"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Bottom"
                 Margin="0,0,0,36"
@@ -250,7 +251,7 @@
                 Height="48"
                 FontSize="{StaticResource FontSizeBodyLarge}"
                 FontWeight="Bold"
-                ToolTip="Make it the car you work on and race, and take it to the garage"
+                ToolTip="{t:Text carlot.take.tip}"
                 Command="{Binding TakeCarCommand}"
                 Visibility="{Binding HasSelection, Converter={StaticResource BooleanToVisibilityConverter}}">
             <Button.Effect>

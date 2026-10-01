@@ -1,4 +1,5 @@
 using StreetCorsa.Models.GameState;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Screens.Newspaper
 {
@@ -11,8 +12,8 @@ namespace StreetCorsa.Screens.Newspaper
 
         public string DateDisplay { get; } = (today.Date - article.Date.Date).Days switch
         {
-            <= 0 => "Today",
-            1 => "Yesterday",
+            <= 0 => GameText.Say("paper.today"),
+            1 => GameText.Say("paper.yesterday"),
             _ => article.Date.ToString("dddd, MMMM d")
         };
     }

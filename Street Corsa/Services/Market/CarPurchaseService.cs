@@ -5,6 +5,7 @@ using StreetCorsa.Parts.Cars;
 using StreetCorsa.Services.Opponents;
 using StreetCorsa.Services.Parts;
 using StreetCorsa.Services.Storage;
+using StreetCorsa.Services.Text;
 using StreetCorsa.Services.Time;
 
 namespace StreetCorsa.Services.Market
@@ -44,7 +45,7 @@ namespace StreetCorsa.Services.Market
             {
                 _logger.Warning("Purchase failed: insufficient funds");
                 return new PurchaseResult(PurchaseOutcome.NotEnoughMoney,
-                    "You don't have enough money to purchase this car.");
+                    GameText.Say("purchase.no_money"));
             }
 
             var currentListing = gameState.UsedCarMarket.FirstOrDefault(l => l.Id == listing.Id);
@@ -52,7 +53,7 @@ namespace StreetCorsa.Services.Market
             {
                 _logger.Warning("Purchase failed: listing no longer available");
                 return new PurchaseResult(PurchaseOutcome.NoLongerAvailable,
-                    "This car is no longer available.");
+                    GameText.Say("purchase.unavailable"));
             }
 
             // Claimed and paid for before anything is awaited: a second confirm that comes in while the engine is
@@ -104,8 +105,7 @@ namespace StreetCorsa.Services.Market
             var saveFailed = !GameSaves.TrySave(_gameStateRepository, gameState, _logger, "a purchase");
 
             return new PurchaseResult(PurchaseOutcome.Bought,
-                $"Congratulations! You've purchased a {carDef.Brand} {carDef.Name} for ${listing.Price:N0}.\n\n" +
-                "You can now find it in your garage.",
+                GameText.Say("purchase.bought", ("car", $"{carDef.Brand} {carDef.Name}"), ("price", $"${listing.Price:N0}")),
                 saveFailed);
         }
 
@@ -119,7 +119,7 @@ namespace StreetCorsa.Services.Market
             if (gameState.NewspaperAds.RivalCars?.Contains(ad) != true)
             {
                 _logger.Warning("Purchase failed: the ad is gone");
-                return new PurchaseResult(PurchaseOutcome.NoLongerAvailable, "This car is no longer available.");
+                return new PurchaseResult(PurchaseOutcome.NoLongerAvailable, GameText.Say("purchase.unavailable"));
             }
 
             var price = ad.AskingPrice;
@@ -127,14 +127,14 @@ namespace StreetCorsa.Services.Market
             if (gameState.Player.Money < price)
             {
                 _logger.Warning("Purchase failed: insufficient funds");
-                return new PurchaseResult(PurchaseOutcome.NotEnoughMoney, "You don't have enough money to purchase this car.");
+                return new PurchaseResult(PurchaseOutcome.NotEnoughMoney, GameText.Say("purchase.no_money"));
             }
 
             var car = RivalCarAds.HandOver(gameState, ad, gameState.Player.Name, gameState.Date);
             if (car == null)
             {
                 _logger.Warning("Purchase failed: the rival no longer has the car");
-                return new PurchaseResult(PurchaseOutcome.NoLongerAvailable, "This car is no longer available.");
+                return new PurchaseResult(PurchaseOutcome.NoLongerAvailable, GameText.Say("purchase.unavailable"));
             }
 
             gameState.Player.Money -= price;
@@ -160,8 +160,7 @@ namespace StreetCorsa.Services.Market
             var saveFailed = !GameSaves.TrySave(_gameStateRepository, gameState, _logger, "a purchase");
 
             return new PurchaseResult(PurchaseOutcome.Bought,
-                $"You bought {seller}'s {carDef.Brand} {carDef.Name} for ${price:N0}.\n\n" +
-                "You can now find it in your garage.",
+                GameText.Say("purchase.bought_private", ("seller", seller), ("car", $"{carDef.Brand} {carDef.Name}"), ("price", $"${price:N0}")),
                 saveFailed);
         }
 
