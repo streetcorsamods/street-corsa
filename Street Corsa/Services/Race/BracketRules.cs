@@ -131,9 +131,9 @@ namespace StreetCorsa.Services.Race
         public static bool RunsTheQuarter(Models.AC.TrackInfo track, Models.AC.TrackConfiguration? layout) =>
             LengthMetres(track, layout) >= MinStripMetres;
 
-        /// <summary>A time as the strip shows it: "12.45", whatever the culture</summary>
+        /// <summary>A time as the strip shows it: "12.45", in the game's culture like the timeslip ("12,45" in a German game)</summary>
         public static string Show(double? seconds) =>
-            seconds is { } s && double.IsFinite(s) ? s.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) : "-";
+            seconds is { } s && double.IsFinite(s) ? s.ToString("0.00", Helpers.Locale.Culture) : "-";
 
         private static double RoundUp(double seconds) => Math.Ceiling(seconds * 20 - 1e-9) / 20;
     }

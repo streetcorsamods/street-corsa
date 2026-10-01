@@ -106,7 +106,7 @@ namespace StreetCorsa.Services.Market
             var saveFailed = !GameSaves.TrySave(_gameStateRepository, gameState, _logger, "a purchase");
 
             return new PurchaseResult(PurchaseOutcome.Bought,
-                GameText.Say("purchase.bought", ("car", $"{carDef.Brand} {carDef.Name}"), ("price", Money.Text(listing.Price))),
+                GameText.Say("purchase.bought", ("car", $"{carDef.Brand} {carDef.Name}"), ("price", new Money(listing.Price))),
                 saveFailed);
         }
 
@@ -161,7 +161,7 @@ namespace StreetCorsa.Services.Market
             var saveFailed = !GameSaves.TrySave(_gameStateRepository, gameState, _logger, "a purchase");
 
             return new PurchaseResult(PurchaseOutcome.Bought,
-                GameText.Say("purchase.bought_private", ("seller", seller), ("car", $"{carDef.Brand} {carDef.Name}"), ("price", Money.Text(price))),
+                GameText.Say("purchase.bought_private", ("seller", seller), ("car", $"{carDef.Brand} {carDef.Name}"), ("price", new Money(price))),
                 saveFailed);
         }
 

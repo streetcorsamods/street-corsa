@@ -148,10 +148,10 @@ namespace StreetCorsa.Screens.Newspaper
                     var hasOffer = ad.Offer is { } offer && offer.Expires >= _gameState.Date;
                     PlayerAds.Add(new PlayerCarAdViewModel(
                         name,
-                        GameText.Say("paper.ad.asking", ("price", Money.Text(ad.AskingPrice))),
+                        GameText.Say("paper.ad.asking", ("price", new Money(ad.AskingPrice))),
                         hasOffer
                             ? GameText.Say("paper.ad.offer", ("buyer", CarSaleService.Capitalized(ad.Offer!.BuyerName)),
-                                ("amount", Money.Text(ad.Offer.Amount)), ("until", ad.Offer.Expires))
+                                ("amount", new Money(ad.Offer.Amount)), ("until", ad.Offer.Expires))
                             : GameText.Say("paper.ad.no_offer"),
                         hasOffer,
                         new RelayCommand(() => OnAcceptOffer(ad, name)),
@@ -171,7 +171,7 @@ namespace StreetCorsa.Screens.Newspaper
             if (ad.Offer is not { } offer) return;
 
             _dialogService.ShowDialog(new ConfirmationDialogViewModel(_dialogService,
-                GameText.Say("paper.sell.confirm", ("car", carName), ("buyer", offer.BuyerName), ("amount", Money.Text(offer.Amount))),
+                GameText.Say("paper.sell.confirm", ("car", carName), ("buyer", offer.BuyerName), ("amount", new Money(offer.Amount))),
                 GameText.Say("sell.title"),
                 yes =>
                 {

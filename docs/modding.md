@@ -86,7 +86,8 @@ The game's own settings: what it is called (the window's title) and the garage i
 
   The words of each unit (`unit.mph` = `"{n} mph"`, `unit.mph.name`) and the patterns of the dates the screens write
   (`format.time` = `"h:mm tt"`, `format.date`...) are text pools in `text\locale.json`: a mod or a translation writes
-  them its own way. A culture the machine does not know, or units that are neither, are told and the base game's used.
+  them its own way, and a mod without them shows the unit's id (`104 mph`). A culture .NET does not list (`"qq-QQ"`,
+  `"en_US"`), or units that are neither, are told and the base game's used.
   The program itself keeps US English for the files it reads and writes (race.ini, the saves): only what the player
   reads is in the game's culture.
 
@@ -551,5 +552,8 @@ game fills in can be named for what it is, and is then written in the game's cur
 `{price:money}` ("$1,500"), `{peak:temp}` ("248 °F" or "120 °C"), `{kmh:speed}`, `{km:distance}`, `{litres:fuel}`,
 `{litres:oil}`, `{kg:mass}`, `{nm:torque}`, `{hp:power}`, `{hp:power_weight}`. A number format may follow
 (`{left:fuel:0.0}`), and `.number` writes the figure alone in that unit (`{left:fuel.number} of {tank:fuel}`: "2.0 of
-16 gal"). The figures the game hands over are metric. Money and figures the game writes out itself come already
-written (`{price}` in the `_comment`s says so). A date takes a .NET pattern: `{until:dddd d MMMM}`.
+16 gal"). The figures the game hands over are metric. Money the game hands over writes itself in the currency
+whichever way it is named: `{price}` and `{price:money}` both write "$1,500", `{price:money.number}` the amount alone
+("1,500"), `{price:N2}` with that format. Figures the game writes out itself come already written (`{speed}` in the
+`_comment`s says so). A fraction with no format reads to two decimals at most. A date takes a .NET pattern:
+`{until:dddd d MMMM}`.

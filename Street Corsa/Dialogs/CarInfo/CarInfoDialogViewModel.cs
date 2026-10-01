@@ -77,8 +77,8 @@ namespace StreetCorsa.Dialogs.CarInfo
             lines.Add(new(GameText.Say("carinfo.dirt"), DirtOf(car.BodyDirt)));
 
             if (car.PurchaseDate != default)
-                lines.Add(new(GameText.Say("carinfo.bought"), car.PurchasePrice > 0 ? GameText.Say("carinfo.bought.price", ("date", car.PurchaseDate), ("price", Money.Text(car.PurchasePrice))) : GameText.Date(car.PurchaseDate, "format.date.day_month_year")));
-            if (car.ImpoundedUntil is { } until) lines.Add(new(GameText.Say("carinfo.impound"), GameText.Say("carinfo.impound.held", ("until", until), ("fee", Money.Text(car.ImpoundFee)))));
+                lines.Add(new(GameText.Say("carinfo.bought"), car.PurchasePrice > 0 ? GameText.Say("carinfo.bought.price", ("date", car.PurchaseDate), ("price", new Money(car.PurchasePrice))) : GameText.Date(car.PurchaseDate, "format.date.day_month_year")));
+            if (car.ImpoundedUntil is { } until) lines.Add(new(GameText.Say("carinfo.impound"), GameText.Say("carinfo.impound.held", ("until", until), ("fee", new Money(car.ImpoundFee)))));
 
             return lines;
         }

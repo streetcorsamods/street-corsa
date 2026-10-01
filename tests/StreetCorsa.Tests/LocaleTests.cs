@@ -165,6 +165,51 @@ public partial class LocaleTests : IDisposable
         Assert.Equal(3, problems.Count);
     }
 
+    [Theory]
+    [InlineData("qq-QQ")]
+    [InlineData("usa")]
+    [InlineData("en_US")]
+    [InlineData("")]
+    public void A_culture_dotnet_does_not_list_is_no_culture(string name) => Assert.Null(Locale.FindCulture(name));
+
+    [Theory]
+    [InlineData("en-US")]
+    [InlineData("de-DE")]
+    [InlineData("ja-JP")]
+    public void A_listed_culture_is_found(string name) => Assert.Equal(name, Locale.FindCulture(name)?.Name);
+
+    [Fact]
+    public void Money_reads_alike_however_the_text_names_it()
+    {
+        var values = new TextValues { ["price"] = new Money(1500m), ["raw"] = -1500m, ["litres"] = 7.570823456123 };
+
+        Assert.Equal("$1,500", GameText.Fill("{price}", values));
+        Assert.Equal("$1,500", GameText.Fill("{price:money}", values));
+        Assert.Equal("1,500", GameText.Fill("{price:money.number}", values));
+        Assert.Equal("-1,500", GameText.Fill("{raw:money.number}", values));
+        Assert.Equal("$1,500.00", GameText.Fill("{price:N2}", values));
+        // A fraction with no format, as older translations name the gas station's litres
+        Assert.Equal("7.57 litros", GameText.Fill("{litres} litros", values));
+    }
+
+    [Fact]
+    public void A_date_outside_the_cultures_calendar_still_writes()
+    {
+        Locale.Culture = CultureInfo.GetCultureInfo("ar-SA");
+        Assert.Equal("0001-01-01", GameText.Date(default, "format.date"));
+    }
+
+    [Fact]
+    public void The_race_mode_gets_the_games_decimal_mark()
+    {
+        var text = GameText.Load(ModSet.Load(RepoPaths.Content));
+
+        Assert.Contains("DECIMAL=.", RaceText.IniLines(text));
+        Locale.Culture = CultureInfo.GetCultureInfo("de-DE");
+        Assert.Contains("DECIMAL=%2C", RaceText.IniLines(text));
+        Assert.Contains("UNIT_SPEED_NAME=MPH", RaceText.IniLines(text));
+    }
+
     [GeneratedRegex(@"\$\{")]
     private static partial Regex DollarPlaceholder();
 
@@ -177,18 +222,49 @@ public partial class LocaleTests : IDisposable
         var wrong = new List<string>();
         foreach (var file in Directory.EnumerateFiles(Path.Combine(RepoPaths.Content, "streetcorsa", "text"), "*.json", SearchOption.AllDirectories))
         {
-            var json = File.ReadAllText(file);
+            // The pools, not the _comment that tells of {name:format}
+            var node = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(file), documentOptions: new() { CommentHandling = System.Text.Json.JsonCommentHandling.Skip, AllowTrailingCommas = true })!.AsObject();
+            node.Remove("_comment");
+            var json = node.ToJsonString();
             if (DollarPlaceholder().IsMatch(json)) wrong.Add($"{Path.GetFileName(file)}: a ${{...}}, which is {{...:money}} now");
             foreach (Match match in KindPlaceholder().Matches(json))
             {
                 var kind = match.Groups[1].Value;
-                if (kind.EndsWith(".number", StringComparison.Ordinal) && !GameText.Kinds.ContainsKey(kind[..^7]))
-                    wrong.Add($"{Path.GetFileName(file)}: {match.Value}");
+                if (!IsKnownKindOrFormat(kind)) wrong.Add($"{Path.GetFileName(file)}: {match.Value}");
             }
         }
 
         Assert.True(wrong.Count == 0, string.Join(Environment.NewLine, wrong));
     }
+
+    /// <summary>
+    /// A kind ("money", "fuel.number"), or a .NET format a kind cannot be mistaken for: a standard one ("N0", "d"), a
+    /// custom number ("0.0") or a date written in the date letters alone ("dddd", "MMMM"). A word of other letters
+    /// ("mony", "tmep") is a kind misspelt, which would write itself as a .NET format.
+    /// </summary>
+    private static bool IsKnownKindOrFormat(string kind)
+    {
+        if (kind.EndsWith(".number", StringComparison.Ordinal)) return GameText.Kinds.ContainsKey(kind[..^7]);
+        if (GameText.Kinds.ContainsKey(kind)) return true;
+        if (StandardFormat().IsMatch(kind)) return true;
+        return !kind.Any(char.IsLetter) || kind.All(c => !char.IsLetter(c) || "dMyhHmstfFgzK".Contains(c));
+    }
+
+    [GeneratedRegex(@"^[A-Za-z]\d{0,2}$")]
+    private static partial Regex StandardFormat();
+
+    [Theory]
+    [InlineData("money", true)]
+    [InlineData("fuel.number", true)]
+    [InlineData("N0", true)]
+    [InlineData("0.0", true)]
+    [InlineData("dddd", true)]
+    [InlineData("MMMM", true)]
+    [InlineData("mony", false)]
+    [InlineData("tmep", false)]
+    [InlineData("fule.number", false)]
+    public void A_misspelt_kind_is_told_from_a_format(string kind, bool known) =>
+        Assert.Equal(known, IsKnownKindOrFormat(kind));
 
     [Fact]
     public void No_screen_writes_a_dollar_sign_or_a_unit_itself()

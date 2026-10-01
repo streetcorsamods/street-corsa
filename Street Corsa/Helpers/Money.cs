@@ -15,6 +15,9 @@ public readonly record struct Money(decimal Amount) : IFormattable
     /// <summary>The amount written with the currency's sign and that many decimals</summary>
     public static string Text(decimal amount, int decimals) => Write(amount, "N" + Math.Clamp(decimals, 0, 6));
 
+    /// <summary>The amount alone, without the currency's sign: "1,234", "-1,234"; a number format in place of the currency's decimals</summary>
+    public string Number(string? format = null) => (Amount < 0 ? "-" : string.Empty) + Digits(Amount, format);
+
     public override string ToString() => Write(Amount, null);
 
     public string ToString(string? format, IFormatProvider? formatProvider) => Write(Amount, format);
@@ -22,10 +25,12 @@ public readonly record struct Money(decimal Amount) : IFormattable
     private static string Write(decimal amount, string? format)
     {
         var style = Locale.Money;
-        var number = Math.Abs(amount).ToString(
-            string.IsNullOrWhiteSpace(format) ? "N" + Math.Clamp(style.Decimals, 0, 6) : format, Locale.Culture);
+        var number = Digits(amount, format);
         var space = style.Space ? " " : string.Empty;
         var written = style.After ? number + space + style.Symbol : style.Symbol + space + number;
         return amount < 0 ? "-" + written : written;
     }
+
+    private static string Digits(decimal amount, string? format) =>
+        Math.Abs(amount).ToString(string.IsNullOrWhiteSpace(format) ? "N" + Math.Clamp(Locale.Money.Decimals, 0, 6) : format, Locale.Culture);
 }

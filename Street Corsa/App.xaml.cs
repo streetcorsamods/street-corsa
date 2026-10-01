@@ -193,9 +193,20 @@ namespace StreetCorsa
             Helpers.Locale.Culture = locale.CultureInfo;
             Helpers.Locale.Money = locale.Money;
             Helpers.Locale.Units = locale.UnitSystem;
-            FrameworkElement.LanguageProperty.OverrideMetadata(
-                typeof(FrameworkElement),
-                new FrameworkPropertyMetadata(XmlLanguage.GetLanguage(Helpers.Locale.Culture.IetfLanguageTag)));
+            XmlLanguage language;
+            try
+            {
+                language = XmlLanguage.GetLanguage(Helpers.Locale.Culture.IetfLanguageTag);
+            }
+            catch (ArgumentException ex)
+            {
+                // GameLocale.Checked lets through only cultures WPF takes; should one slip past, the game still starts
+                startLogger.Warning(ex, "locale.culture {Culture} is no language WPF takes; en-US is used", Helpers.Locale.Culture.Name);
+                Helpers.Locale.Culture = System.Globalization.CultureInfo.GetCultureInfo("en-US");
+                language = XmlLanguage.GetLanguage("en-US");
+            }
+
+            FrameworkElement.LanguageProperty.OverrideMetadata(typeof(FrameworkElement), new FrameworkPropertyMetadata(language));
 
             // A write that had to take a read-only mark off a file (race.ini, video.ini) says so in the log
             Helpers.SafeFile.ReadOnlyCleared = path =>

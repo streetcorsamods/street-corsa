@@ -641,12 +641,12 @@ namespace StreetCorsa.Screens.Garage
             {
                 if (SelectedCar?.CarInstance is not { ImpoundedUntil: { } until } car) return string.Empty;
                 return PoliceRules.CanCollect(car, _gameState.Date)
-                    ? GameText.Say("garage.impound.now", ("fee", Money.Text(car.ImpoundFee)))
-                    : GameText.Say("garage.impound.until", ("until", until), ("fee", Money.Text(car.ImpoundFee)));
+                    ? GameText.Say("garage.impound.now", ("fee", new Money(car.ImpoundFee)))
+                    : GameText.Say("garage.impound.until", ("until", until), ("fee", new Money(car.ImpoundFee)));
             }
         }
 
-        public string CollectButtonText => SelectedCar?.CarInstance is { IsImpounded: true } car ? GameText.Say("garage.collect.fee", ("fee", Money.Text(car.ImpoundFee))) : GameText.Say("garage.collect");
+        public string CollectButtonText => SelectedCar?.CarInstance is { IsImpounded: true } car ? GameText.Say("garage.collect.fee", ("fee", new Money(car.ImpoundFee))) : GameText.Say("garage.collect");
 
         private bool CanCollect() =>
             !_endingDay && SelectedCar?.CarInstance is { } car && PoliceRules.CanCollect(car, _gameState.Date) && _gameState.Player.Money >= car.ImpoundFee;

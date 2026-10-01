@@ -1,4 +1,5 @@
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Windows.Threading;
 using StreetCorsa.Audio;
 using StreetCorsa.Configuration;
@@ -87,14 +88,7 @@ namespace StreetCorsa.Screens.Settings
         public LanguageChoice? Language
         {
             get => _language;
-            set
-            {
-                if (value == null || ReferenceEquals(value, _language)) return;
-                var previous = _language;
-                _language = value;
-                OnPropertyChanged();
-                if (previous != null && !OnLanguageChanged(value)) TakeBack(previous);
-            }
+            set => Pick(ref _language, value, OnLanguageChanged);
         }
 
         /// <summary>The units the player can read: the game's own first, then imperial and metric</summary>
@@ -106,18 +100,7 @@ namespace StreetCorsa.Screens.Settings
         public UnitsChoice? Units
         {
             get => _units;
-            set
-            {
-                if (value == null || ReferenceEquals(value, _units)) return;
-                var previous = _units;
-                _units = value;
-                OnPropertyChanged();
-                if (previous != null && !OnUnitsChanged(value))
-                {
-                    _units = previous;
-                    Dispatcher.CurrentDispatcher.BeginInvoke(() => OnPropertyChanged(nameof(Units)), DispatcherPriority.Background);
-                }
-            }
+            set => Pick(ref _units, value, OnUnitsChanged);
         }
 
         private bool OnUnitsChanged(UnitsChoice choice)
@@ -174,13 +157,19 @@ namespace StreetCorsa.Screens.Settings
         }
 
         /// <summary>
-        /// The picker back on the language that is saved. Told once the picker is done with the pick, which it would
-        /// otherwise keep showing
+        /// A picker's pick, saved by <paramref name="save"/>; one that did not get saved puts the picker back on what
+        /// is, told once the picker is done with the pick, which it would otherwise keep showing
         /// </summary>
-        private void TakeBack(LanguageChoice previous)
+        private void Pick<T>(ref T? field, T? value, Func<T, bool> save, [CallerMemberName] string property = "") where T : class
         {
-            _language = previous;
-            Dispatcher.CurrentDispatcher.BeginInvoke(() => OnPropertyChanged(nameof(Language)), DispatcherPriority.Background);
+            if (value == null || ReferenceEquals(value, field)) return;
+            var previous = field;
+            field = value;
+            OnPropertyChanged(property);
+            if (previous == null || save(value)) return;
+
+            field = previous;
+            Dispatcher.CurrentDispatcher.BeginInvoke(() => OnPropertyChanged(property), DispatcherPriority.Background);
         }
 
         private static IReadOnlyList<LanguageChoice> MakeLanguages(string? picked, out LanguageChoice? selected)

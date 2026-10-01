@@ -491,7 +491,7 @@ namespace StreetCorsa.Screens.DealerMap
             ? KindLabel
             : StockCount == 0
                 ? GameText.Say("dealermap.price.none")
-                : GameText.Say("dealermap.price.range", ("low", Money.Text(CheapestPrice)), ("high", Money.Text(DearestPrice)));
+                : GameText.Say("dealermap.price.range", ("low", new Money(CheapestPrice)), ("high", new Money(DearestPrice)));
 
         /// <summary>The last day of its closing-down sale; null when it is not closing down</summary>
         public DateTime? ClosesOn { get; set; }

@@ -4,7 +4,7 @@
     "as <NAME> in capitals, dots as underscores (race.result.win is RESULT_WIN); the mode says its first line. {name}",
     "is a placeholder the mode fills, its name letters and digits only. \\n breaks the line. The placeholders:",
     "race.result.bracket and race.result.bracket.broke_out: {et} the player's quarter-mile time, {dial} their dial-in.",
-    "race.tune.passes.one and .other: {passes} the passes run. race.tune.best: {et} the best pass's time, {speed} its speed in its unit.",
+    "race.tune.passes.one and .other: {passes} the passes run. race.tune.best: {et} the best pass's time, {speed} its speed in its unit ({mph} the bare mph, for older translations).",
     "race.tune.stage, race.slip.pass and race.slip.pass.red_light: {pass} the pass, {passes} how many the strip allows.",
     "race.slip.eighth.speed and race.slip.quarter.speed: {unit} the speed's unit, in capitals (MPH).",
     "race.slip.back: {seconds} the seconds until the car goes back to the line. race.tree.dial_in: {dial} the dial-in.",

@@ -54,11 +54,12 @@ public partial class WordsTests : IDisposable
     private static readonly string[] FileExtensions =
         ["json", "ini", "db", "kn5", "png", "jpg", "dds", "wav", "ogg", "txt", "lua", "dll", "exe", "cfg", "acd", "log", "xaml", "zip", "bak", "tmp", "csv"];
 
-    // Names in the same spaces that are no words: sound cues, a rule's path
+    // Names in the same spaces that are no words: sound cues, a rule's path; and the keys of older translations the
+    // code still reads when one has them (station.quarts.*, now station.oil_short.qt.*)
     private static readonly HashSet<string> NotWords =
     [
         "common.bank", "engine.hoist", "engine.land", "engine.turn", "station.bell", "radio.knob", "radio.tune", "radio.static",
-        "rivals.money"
+        "rivals.money", "station.quarts.{count}", "station.quarts.many"
     ];
 
     [Fact]

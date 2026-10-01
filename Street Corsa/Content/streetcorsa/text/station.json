@@ -2,7 +2,7 @@
   "_comment": [
     "What the attendant at the gas station says. station.hint.<thing>.soon is a part that will need replacing shortly,",
     ".now one that needs it now (AttendantCheck). {where} is the corner (\"front left\") or the axle (\"front\"), {car} the",
-    "car's short name, {quarts} the oil short as station.oil_short.* says it (\"a quart\"). A pool with several lines says one of them at random."
+    "car's short name, {quarts} the oil short as station.oil_short.* says it (station.quarts.*, of older translations, still counts) (\"a quart\"). A pool with several lines says one of them at random."
   ],
   "lines": {
     "station.greeting": [

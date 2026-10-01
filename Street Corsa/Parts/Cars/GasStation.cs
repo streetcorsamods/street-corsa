@@ -52,8 +52,6 @@ public static class GasStation
     /// <summary>What a sump holds when its pan does not say, litres: a V8 of the day took five quarts</summary>
     public const double DefaultSumpLitres = 4.7;
 
-    private const double LitresPerQuart = 0.946;
-
     /// <summary>The car has too little in the tank to make it to the station: the tow truck brings it</summary>
     public static bool NeedsTow(Car car) => CarCondition.FuelLeft(car) is { } fuel && fuel < TripLitres;
 
@@ -84,7 +82,16 @@ public static class GasStation
         var oil = Measure.Oil(litres);
         var count = Math.Max(1, (int)Math.Round(oil.Value));
         var key = $"station.oil_short.{oil.Unit}.";
+        // A translation made before the units came says quarts in station.quarts.*, {quarts} the count: it still counts
+        if (oil.Unit == "qt" && Said(count <= 4 ? $"station.quarts.{count}" : "station.quarts.many", count) is { } older) return older;
         return count <= 4 ? PartWords.Say(key + count) : PartWords.Say(key + "many", ("n", count));
+    }
+
+    /// <summary>The pool's line with the count in, null when no mod has the pool (the words then say the key)</summary>
+    private static string? Said(string key, int count)
+    {
+        var said = PartWords.Say(key, ("quarts", count), ("n", count));
+        return said == key ? null : said;
     }
 
     /// <param name="catalog">For the oil pan's size; null takes a V8's of the day</param>
@@ -106,7 +113,7 @@ public static class GasStation
             var oil = OilToTopUp(car, catalog);
             var detail = PartWords.Say(CarCondition.OilLeft(car) < 0.4 ? "station.job.oil.way_down" : "station.job.oil.low", ("quarts", OilShort(oil)));
             jobs.Add(new RepairJob(TopUpOil, PartWords.Say("station.job.oil"), detail,
-                Math.Max(PartPricing.Round((double)prices.OilPerLitre * LitresPerQuart * multiplier), PartPricing.Round((double)prices.OilPerLitre * oil * multiplier)),
+                Math.Max(PartPricing.Round((double)prices.OilPerLitre * Conversion.LitresPerQuart * multiplier), PartPricing.Round((double)prices.OilPerLitre * oil * multiplier)),
                 GameAction.GarageChore, () => car.OilLevel = null, isChore: true));
         }
 

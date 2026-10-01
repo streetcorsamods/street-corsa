@@ -38,15 +38,8 @@ public enum Quantity
 /// </summary>
 public readonly record struct Measure(Quantity Quantity, double Metric) : IFormattable
 {
-    private const double KmPerMile = 1.609344;
-    private const double LitresPerGallon = 3.785411784;
-    private const double LitresPerQuart = 0.946352946;
-    private const double KgPerLb = 0.45359237;
-    private const double NmPerLbFt = 1.3558179483;
-    private const double TonnesPerShortTon = 0.90718474;
-
     public static Measure Speed(double kmh) => new(Quantity.Speed, kmh);
-    public static Measure SpeedFromMph(double mph) => new(Quantity.Speed, mph * KmPerMile);
+    public static Measure SpeedFromMph(double mph) => new(Quantity.Speed, mph * Conversion.KmPerMile);
     public static Measure Distance(double km) => new(Quantity.Distance, km);
     public static Measure Fuel(double litres) => new(Quantity.Fuel, litres);
     public static Measure Oil(double litres) => new(Quantity.Oil, litres);
@@ -68,13 +61,13 @@ public readonly record struct Measure(Quantity Quantity, double Metric) : IForma
         if (system == UnitSystem.Metric) return Metric;
         return Quantity switch
         {
-            Quantity.Speed or Quantity.Distance => Metric / KmPerMile,
-            Quantity.Fuel => Metric / LitresPerGallon,
-            Quantity.Oil => Metric / LitresPerQuart,
+            Quantity.Speed or Quantity.Distance => Metric / Conversion.KmPerMile,
+            Quantity.Fuel => Metric / Conversion.LitresPerGallon,
+            Quantity.Oil => Metric / Conversion.LitresPerQuart,
             Quantity.Temperature => Metric * 9 / 5 + 32,
-            Quantity.Mass => Metric / KgPerLb,
-            Quantity.Torque => Metric / NmPerLbFt,
-            Quantity.PowerToWeight => Metric * TonnesPerShortTon,
+            Quantity.Mass => Metric / Conversion.KgPerLb,
+            Quantity.Torque => Metric / Conversion.NmPerLbFt,
+            Quantity.PowerToWeight => Metric * Conversion.TonnesPerShortTon,
             _ => Metric
         };
     }

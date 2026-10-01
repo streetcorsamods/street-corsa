@@ -35,12 +35,12 @@ namespace StreetCorsa.Screens.Shared
             return GameText.Say("purchase.confirm",
                 ("car", $"{def.Brand} {def.Name}"),
                 ("year", def.Year ?? 0),
-                ("price", Money.Text(car.Listing.Price)),
+                ("price", new Money(car.Listing.Price)),
                 ("condition", car.ConditionLabel),
                 ("mileage", car.Listing.Mileage),
                 ("history", car.HistoryDisplay),
                 ("seller", car.SellerLine),
-                ("bankroll", Money.Text(bankroll)));
+                ("bankroll", new Money(bankroll)));
         }
 
         /// <summary>

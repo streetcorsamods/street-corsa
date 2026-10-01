@@ -62,15 +62,22 @@ public static class Locale
     /// <summary>A unit's name on its own ("mph"), for a column's heading; in the game, the pool <c>unit.&lt;id&gt;.name</c></summary>
     public static Func<string, string> UnitName { get; set; } = unit => unit;
 
-    /// <summary>A culture by name ("en-US", "ja-JP"); null for a name the machine does not know</summary>
+    /// <summary>
+    /// A culture by name ("en-US", "ja-JP"); null for a name the machine does not know. Only the cultures .NET lists
+    /// count (ICU would make one up for "qq-QQ" or "usa"), and only a name WPF takes as a language too ("en_US" is
+    /// neither): the screens' bindings write in it.
+    /// </summary>
     public static CultureInfo? FindCulture(string? name)
     {
         if (string.IsNullOrWhiteSpace(name)) return null;
         try
         {
-            return CultureInfo.GetCultureInfo(name.Trim());
+            var culture = CultureInfo.GetCultureInfo(name.Trim(), predefinedOnly: true);
+            if (culture.Equals(CultureInfo.InvariantCulture)) return null;
+            System.Windows.Markup.XmlLanguage.GetLanguage(culture.IetfLanguageTag);
+            return culture;
         }
-        catch (CultureNotFoundException)
+        catch (Exception ex) when (ex is CultureNotFoundException or ArgumentException)
         {
             return null;
         }

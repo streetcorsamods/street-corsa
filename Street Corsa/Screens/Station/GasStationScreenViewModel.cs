@@ -225,7 +225,7 @@ namespace StreetCorsa.Screens.Station
             var tow = TowPrice();
             if (towed && _gameState.Player.Money < tow)
             {
-                SendHome(GameText.Say("station.ui.cant_tow", ("tow", Money.Text(tow))), GameText.Say("station.ui.cant_tow.title"));
+                SendHome(GameText.Say("station.ui.cant_tow", ("tow", new Money(tow))), GameText.Say("station.ui.cant_tow.title"));
                 return;
             }
 
@@ -243,7 +243,7 @@ namespace StreetCorsa.Screens.Station
             {
                 _gameState.Player.Money -= tow;
                 _logger.Information("{Car} towed to {Station} for ${Tow}", _car.DefinitionId, Station.Id, tow);
-                StatusText = GameText.Say("station.ui.towed_in", ("station", Station.Title), ("tow", Money.Text(tow)));
+                StatusText = GameText.Say("station.ui.towed_in", ("station", Station.Title), ("tow", new Money(tow)));
             }
             else
             {
@@ -502,7 +502,7 @@ namespace StreetCorsa.Screens.Station
                         _gameState.Player.Money -= tow;
                         _towHomePaid = true;
                         _logger.Information("{Car} towed home from {Station} for ${Tow}", _car.DefinitionId, Station?.Id, tow);
-                        StatusText = GameText.Say("station.ui.towed_home", ("tow", Money.Text(tow)));
+                        StatusText = GameText.Say("station.ui.towed_home", ("tow", new Money(tow)));
                         await _trip;
                         await SpendAsync(GameAction.TowToStation);
                     }

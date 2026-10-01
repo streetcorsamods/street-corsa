@@ -3,7 +3,7 @@
     "The words of the game's shell: the title, the main menu and its cards (new game, load game, settings), the quit",
     "and yes/no dialogs, start-up messages, the gas station's screen (the attendant's own lines are in station.json),",
     "the radio and the engine's state when it is started in the garage or on a lot. A label is said one way (the first",
-    "line of its pool). {name} is a value the game fills in; money and figures come already written out, or are named for what they are ({tank:fuel}, see locale.json).",
+    "line of its pool). {name} is a value the game fills in; money writes itself, figures come already written out or are named for what they are ({tank:fuel}, see locale.json).",
     ".one / .other: the game picks one by the count.",
     "menu.screen.<name>: a screen's name in menu.open_failed, the screen's own name with spaces as underscores.",
     "{screen}: menu.open_failed",

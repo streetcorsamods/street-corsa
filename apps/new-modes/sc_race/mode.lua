@@ -222,6 +222,7 @@ end
 
 -- Messages, in one table: the main chunk is near Lua's 200 locals. MSG.speed writes a trap speed (kept in mph) in the
 -- player's units: the career hands over SPEED_PER_MPH and the unit's words (UNIT_SPEED "{n} mph", UNIT_SPEED_NAME).
+-- MSG.num writes a figure the player reads with the game's decimal mark (DECIMAL), as the career's screens do.
 local MSG = {
   WIN = say('RESULT_WIN', "You won a few bucks, not bad!"),
   LOSE = say('RESULT_LOSE', "You lost, sucker!"),
@@ -245,7 +246,11 @@ local MSG = {
 -- The speed unit's figures; a launcher older than this mode hands none over, and the speeds stay in mph
 function MSG.perMph() return tonumber(say('SPEED_PER_MPH', '1')) or 1 end
 function MSG.speedName() return say('UNIT_SPEED_NAME', 'MPH') end
-function MSG.speed(mph) return say('UNIT_SPEED', '{n} mph', { n = string.format('%.2f', mph * MSG.perMph()) }) end
+function MSG.num(format, value)
+  local mark = say('DECIMAL', '.')
+  return (string.format(format, value):gsub('%.', function() return mark end))
+end
+function MSG.speed(mph) return say('UNIT_SPEED', '{n} mph', { n = MSG.num('%.2f', mph * MSG.perMph()) }) end
 
 local sim = ac.getSim()
 
@@ -888,7 +893,7 @@ local function bracketLine()
   local _, et = slipQuarterOf(data)
   if not bracket or not et then return '' end
   local dial = bracket.dialIn[0]
-  local values = { et = string.format('%.3f', et), dial = string.format('%.2f', dial) }
+  local values = { et = MSG.num('%.3f', et), dial = MSG.num('%.2f', dial) }
   return '\n' .. (et < dial and say('RESULT_BRACKET_BROKE_OUT', 'Your {et} on a {dial} dial-in: BREAKOUT', values)
     or say('RESULT_BRACKET', 'Your {et} on a {dial} dial-in', values))
 end
@@ -973,7 +978,8 @@ local function endSession(reason, won)
       or say('TUNE_PASSES_OTHER', '{passes} passes on the strip.', { passes = #tune.passes })
     if best then
       resultMessage = resultMessage .. '\n' .. say('TUNE_BEST', 'Best: {et} @ {speed}',
-        { et = string.format('%.3f', best.quarter_mile_s), speed = MSG.speed(best.quarter_mile_mph or 0) })
+        { et = MSG.num('%.3f', best.quarter_mile_s), speed = MSG.speed(best.quarter_mile_mph or 0),
+          mph = MSG.num('%.2f', best.quarter_mile_mph or 0) })
     end
     holdPlayer(30)
   else
@@ -2462,7 +2468,7 @@ local function drawTree(size)
   end
   if bracket then
     ui.pushFont(ui.Font.Main)
-    ui.drawTextClipped(say('TREE_DIAL_IN', 'Dial-in\n{dial}', { dial = string.format('%.2f', bracket.dialIn[0]) }), DRAW.from:set(x - 60, y + (STRIP.TREE_AMBERS + 1) * 44 + 8),
+    ui.drawTextClipped(say('TREE_DIAL_IN', 'Dial-in\n{dial}', { dial = MSG.num('%.2f', bracket.dialIn[0]) }), DRAW.from:set(x - 60, y + (STRIP.TREE_AMBERS + 1) * 44 + 8),
       DRAW.to:set(x + 30, y + (STRIP.TREE_AMBERS + 1) * 44 + 60), COLOR_TEXT, DRAW.ALIGN_TOP_CENTRE)
     ui.popFont()
   end
@@ -2477,7 +2483,7 @@ local function drawPassSlip(size)
     local pass = { pass = slip.pass, passes = tune.maxPasses }
     lines[#lines + 1] = slip.red_light and say('SLIP_PASS_RED_LIGHT', 'Pass {pass} of {passes}   RED LIGHT', pass)
       or say('SLIP_PASS', 'Pass {pass} of {passes}', pass)
-    local function mark(label, value, format) lines[#lines + 1] = string.format('%-8s %s', label, value and string.format(format, value) or '-') end
+    local function mark(label, value, format) lines[#lines + 1] = string.format('%-8s %s', label, value and MSG.num(format, value) or '-') end
     mark(say('SLIP_REACTION', 'R/T'), slip.reaction_s, '%.3f')
     local unit = { unit = MSG.speedName() }
     mark(say('SLIP_SIXTY', "60'"), slip.sixty_ft_s, '%.3f')

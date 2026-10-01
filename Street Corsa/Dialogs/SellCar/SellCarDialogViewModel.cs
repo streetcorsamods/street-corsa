@@ -51,7 +51,7 @@ namespace StreetCorsa.Dialogs.SellCar
 
         public string CarName { get; }
 
-        public string ValueDisplay => GameText.Say("sell.worth", ("value", Money.Text(_quote.Value)));
+        public string ValueDisplay => GameText.Say("sell.worth", ("value", new Money(_quote.Value)));
 
         /// <summary>Who had the car and how it has raced: part of what it is worth</summary>
         public string HistoryDisplay => Screens.Shared.CarHistoryDisplay.Summary(_car.History, forSale: false);
@@ -88,7 +88,7 @@ namespace StreetCorsa.Dialogs.SellCar
 
         public bool CanAdvertise => !_quote.IsScrap;
 
-        public string AdFeeDisplay => GameText.Say("sell.ad.fee", ("fee", Money.Text(CarSaleService.AdFee)), ("days", CarSaleService.AdDays));
+        public string AdFeeDisplay => GameText.Say("sell.ad.fee", ("fee", new Money(CarSaleService.AdFee)), ("days", CarSaleService.AdDays));
 
         private CarSaleAd? Ad => _saleService.AdFor(_gameState, _car);
 
@@ -97,14 +97,14 @@ namespace StreetCorsa.Dialogs.SellCar
         public bool ShowAdForm => CanAdvertise && !HasAd;
 
         public string AdStatus => Ad is { } ad
-            ? GameText.Say("sell.ad.status", ("price", Money.Text(ad.AskingPrice)), ("since", ad.PostedDate),
+            ? GameText.Say("sell.ad.status", ("price", new Money(ad.AskingPrice)), ("since", ad.PostedDate),
                 ("until", ad.PostedDate.AddDays(CarSaleService.AdDays)))
             : string.Empty;
 
         public bool HasOffer => Ad?.Offer is { } offer && offer.Expires >= _gameState.Date;
 
         public string OfferDisplay => Ad?.Offer is { } offer && HasOffer
-            ? GameText.Say("sell.ad.offer", ("buyer", CarSaleService.Capitalized(offer.BuyerName)), ("amount", Money.Text(offer.Amount)),
+            ? GameText.Say("sell.ad.offer", ("buyer", CarSaleService.Capitalized(offer.BuyerName)), ("amount", new Money(offer.Amount)),
                 ("until", offer.Expires))
             : GameText.Say("sell.ad.no_offer");
 
@@ -146,7 +146,7 @@ namespace StreetCorsa.Dialogs.SellCar
             {
                 var (min, max) = _saleService.AskingPriceRange(_car);
                 return AskingPrice is null
-                    ? GameText.Say("sell.ad.range", ("min", Money.Text(min)), ("max", Money.Text(max)))
+                    ? GameText.Say("sell.ad.range", ("min", new Money(min)), ("max", new Money(max)))
                     : GameText.Say("sell.ad.hint");
             }
         }

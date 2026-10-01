@@ -307,7 +307,8 @@ namespace StreetCorsa.Services.Text
 
         /// <summary>
         /// A date or a time as the screens write it: the pattern of the text pool <paramref name="formatKey"/>
-        /// (<c>format.time</c>, <c>format.date</c>...) in the game's culture. A pattern .NET cannot use writes the short date.
+        /// (<c>format.time</c>, <c>format.date</c>...) in the game's culture. A pattern .NET cannot use writes the short date,
+        /// and a date the culture's calendar cannot hold the ISO one.
         /// </summary>
         public static string Date(DateTime date, string formatKey)
         {
@@ -318,7 +319,20 @@ namespace StreetCorsa.Services.Text
             }
             catch (FormatException)
             {
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+            }
+
+            // A pattern .NET cannot use, or a date outside the culture's calendar (UmAlQura's starts in 1900): the short
+            // date, else the date as a file writes it
+            try
+            {
                 return date.ToString("d", Helpers.Locale.Culture);
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                return date.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
             }
         }
 
@@ -348,7 +362,7 @@ namespace StreetCorsa.Services.Text
         /// <summary>
         /// {name} is the value of that name, {name:N0} with a format; a name without a value stays as it is written,
         /// so a typo shows rather than vanishes. Numbers and dates are written in the game's culture
-        /// (<see cref="Helpers.Locale.Culture"/>).
+        /// (<see cref="Helpers.Locale.Culture"/>), a fraction without a format to two decimals at most.
         ///
         /// A number can be named for what it is, and is then written in the game's currency or the player's units:
         /// {price:money}, {peak:temp} ("212 °F"), {kmh:speed}, a format after it ({left:fuel:0.0}), and ".number" for
@@ -368,7 +382,7 @@ namespace StreetCorsa.Services.Text
                 var format = match.Groups[2].Success ? match.Groups[2].Value : null;
                 if (format != null && Kind(format, out var kind, out var numberOnly, out var numberFormat) && Number(value) is { } number)
                 {
-                    if (kind == null) return new Helpers.Money(number).ToString(numberFormat, null);
+                    if (kind == null) return numberOnly ? new Helpers.Money(number).Number(numberFormat) : new Helpers.Money(number).ToString(numberFormat, null);
                     var measure = value is Helpers.Measure made ? made : new Helpers.Measure(kind.Value, (double)number);
                     return numberOnly ? measure.Number(numberFormat) : measure.ToString(numberFormat, null);
                 }
@@ -376,6 +390,8 @@ namespace StreetCorsa.Services.Text
                 return value switch
                 {
                     IFormattable formattable when format != null => formattable.ToString(format, Helpers.Locale.Culture),
+                    // A fraction without a format reads as a person writes it, not to its last digit: "7.57"
+                    double or float => ((IFormattable)value).ToString("0.##", Helpers.Locale.Culture),
                     _ => Convert.ToString(value, Helpers.Locale.Culture) ?? string.Empty
                 };
             });
