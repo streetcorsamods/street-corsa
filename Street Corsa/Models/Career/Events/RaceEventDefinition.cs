@@ -1,5 +1,6 @@
 using StreetCorsa.Models.Career.Filters;
 using StreetCorsa.Models.Race;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Models.Career.Events
 {
@@ -98,14 +99,14 @@ namespace StreetCorsa.Models.Career.Events
                 requirements.Add(EntryRequirements.DisplayDescription);
 
             if (MinReputation > 0)
-                requirements.Add($"{MinReputation}+ reputation");
+                requirements.Add(GameText.Say("event.needs.reputation", ("reputation", MinReputation)));
 
             if (RequiredMilestones.Count > 0)
-                requirements.Add($"Requires: {string.Join(", ", RequiredMilestones)}");
+                requirements.Add(GameText.Say("event.needs.milestones", ("milestones", string.Join(", ", RequiredMilestones))));
 
             return requirements.Count > 0
                 ? string.Join(", ", requirements)
-                : "Open to all";
+                : GameText.Say("event.needs.none");
         }
     }
 

@@ -1,3 +1,5 @@
+using StreetCorsa.Services.Text;
+
 namespace StreetCorsa.Models.Career.Events
 {
     /// <summary>
@@ -70,17 +72,17 @@ namespace StreetCorsa.Models.Career.Events
             var parts = new List<string>();
 
             if (Cash > 0)
-                parts.Add($"${Cash:N0}");
+                parts.Add(GameText.Say("event.reward.cash", ("cash", Cash)));
 
             if (Reputation > 0)
-                parts.Add($"+{Reputation} reputation");
+                parts.Add(GameText.Say("event.reward.reputation", ("reputation", Reputation)));
 
             if (!string.IsNullOrEmpty(SpecialItemDescription))
                 parts.Add(SpecialItemDescription);
             else if (!string.IsNullOrEmpty(SpecialItem))
-                parts.Add($"Special: {SpecialItem}");
+                parts.Add(GameText.Say("event.reward.special", ("item", SpecialItem)));
 
-            return parts.Count > 0 ? string.Join(" + ", parts) : "No reward";
+            return parts.Count > 0 ? string.Join(GameText.Say("event.reward.and"), parts) : GameText.Say("event.reward.none");
         }
     }
 }

@@ -98,7 +98,7 @@ namespace StreetCorsa.Models.Career.Victory
                 else
                 {
                     var todo = GameText.Fill(step.Todo ?? step.Step, values);
-                    progress.RemainingSteps.Add(counts ? todo : "(Locked) " + todo);
+                    progress.RemainingSteps.Add(counts ? todo : GameText.Say("career.step.locked", ("step", todo)));
                 }
             }
 

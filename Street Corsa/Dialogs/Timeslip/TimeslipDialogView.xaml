@@ -1,6 +1,7 @@
 <UserControl x:Class="StreetCorsa.Dialogs.Timeslip.TimeslipDialogView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:t="clr-namespace:StreetCorsa.Services.Text"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d"
@@ -92,7 +93,7 @@
                 BorderBrush="{StaticResource White20Brush}"
                 BorderThickness="0,1,0,0"
                 Padding="20,15">
-            <Button Content="OK"
+            <Button Content="{t:Text common.ok}"
                     Command="{Binding OkCommand}"
                     Style="{StaticResource DialogPrimaryButtonStyle}"
                     Width="100"

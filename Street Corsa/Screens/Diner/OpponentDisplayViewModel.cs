@@ -1,6 +1,7 @@
 using StreetCorsa.Models.Catalog;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Parts.Cars;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Screens.Diner
 {
@@ -22,24 +23,24 @@ namespace StreetCorsa.Screens.Diner
         public bool WantsRematch => Opponent.Grudge != null;
 
         /// <summary>What the badge says under a rival who wants a rematch</summary>
-        public string RematchDisplay => Opponent.Grudge is { } grudge ? $"Wants a rematch · until {grudge.Until:MMM d}" : string.Empty;
+        public string RematchDisplay => Opponent.Grudge is { } grudge ? GameText.Say("diner.rematch", ("until", grudge.Until)) : string.Empty;
         public string Nickname => Opponent.Nickname;
         public string CarDisplay => $"{CarDefinition.Brand} {CarDefinition.Name}";
         public string CarBrand => CarDefinition.Brand;
         public string CarName => CarDefinition.Name;
         public int Reputation => Opponent.Stats.Reputation;
         public string ReputationTier => Opponent.Stats.GetReputationTier();
-        public string RecordDisplay => $"{Opponent.Stats.Wins}W - {Opponent.Stats.Losses}L";
+        public string RecordDisplay => GameText.Say("diner.record.line", ("wins", Opponent.Stats.Wins), ("losses", Opponent.Stats.Losses));
 
         // Drag race record display
         public string DragRecordDisplay => Opponent.Stats.DragRaces > 0
-            ? $"{Opponent.Stats.DragWins}W - {Opponent.Stats.DragLosses}L"
-            : "No races";
+            ? GameText.Say("diner.record.line", ("wins", Opponent.Stats.DragWins), ("losses", Opponent.Stats.DragLosses))
+            : GameText.Say("diner.record.none");
 
         // Road race record display
         public string RoadRecordDisplay => Opponent.Stats.RoadRaces > 0
-            ? $"{Opponent.Stats.RoadWins}W - {Opponent.Stats.RoadLosses}L"
-            : "No races";
+            ? GameText.Say("diner.record.line", ("wins", Opponent.Stats.RoadWins), ("losses", Opponent.Stats.RoadLosses))
+            : GameText.Say("diner.record.none");
 
         public bool HasPortrait => !string.IsNullOrEmpty(PortraitPath);
 
@@ -70,7 +71,7 @@ namespace StreetCorsa.Screens.Diner
             {
                 var won = Opponent.Stats.PinkSlipsWon;
                 var lost = Opponent.Stats.PinkSlipsLost;
-                return $"{won}W - {lost}L";
+                return GameText.Say("diner.record.line", ("wins", won), ("losses", lost));
             }
         }
 

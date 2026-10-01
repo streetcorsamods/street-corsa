@@ -1,6 +1,7 @@
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Screens.Shared;
 using StreetCorsa.Services.Race;
+using StreetCorsa.Services.Text;
 using StreetCorsa.ViewModels;
 
 namespace StreetCorsa.Dialogs.DialIn
@@ -28,8 +29,8 @@ namespace StreetCorsa.Dialogs.DialIn
             var suggested = BracketRules.SuggestDialIn(car);
             _dialIn = suggested ?? BracketRules.Clamp(estimate);
             BestNote = CarHistoryDisplay.BestQuarter(car.History) is { Length: > 0 } best
-                ? $"Your car's {best}."
-                : "Your car has never run the quarter: this is a guess from its power and weight. A test-and-tune tells you better.";
+                ? GameText.Say("dialin.best", ("best", best))
+                : GameText.Say("dialin.guess");
 
             UpCommand = new RelayCommand(() => DialIn += 0.01);
             DownCommand = new RelayCommand(() => DialIn -= 0.01);
@@ -75,7 +76,7 @@ namespace StreetCorsa.Dialogs.DialIn
 
         public string DialInDisplay => BracketRules.Show(DialIn);
 
-        public string OpponentDisplay => $"{OpponentName} dials {BracketRules.Show(OpponentDialIn)}";
+        public string OpponentDisplay => GameText.Say("dialin.rival", ("name", OpponentName), ("dial_in", BracketRules.Show(OpponentDialIn)));
 
         /// <summary>Who leaves first, and by how much</summary>
         public string StartNote
@@ -83,11 +84,11 @@ namespace StreetCorsa.Dialogs.DialIn
             get
             {
                 var gap = Math.Round(DialIn - OpponentDialIn, 2);
-                if (Math.Abs(gap) < 0.005) return "You both get the green together.";
+                if (Math.Abs(gap) < 0.005) return GameText.Say("dialin.green.together");
                 var seconds = BracketRules.Show(Math.Abs(gap));
                 return gap > 0
-                    ? $"You get the green {seconds} s before {OpponentName}."
-                    : $"{OpponentName} gets the green {seconds} s before you.";
+                    ? GameText.Say("dialin.green.you_first", ("seconds", seconds), ("name", OpponentName))
+                    : GameText.Say("dialin.green.rival_first", ("seconds", seconds), ("name", OpponentName));
             }
         }
 

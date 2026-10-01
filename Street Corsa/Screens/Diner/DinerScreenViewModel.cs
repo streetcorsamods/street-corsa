@@ -13,6 +13,7 @@ using StreetCorsa.Services.Opponents;
 using StreetCorsa.Services.Police;
 using StreetCorsa.Services.Storage;
 using StreetCorsa.Services.Talk;
+using StreetCorsa.Services.Text;
 using StreetCorsa.Services.Time;
 using StreetCorsa.ViewModels;
 using System.Collections.ObjectModel;
@@ -88,7 +89,7 @@ namespace StreetCorsa.Screens.Diner
 
         public string SelectedOpponentDisplay => SelectedOpponent != null
             ? $"{SelectedOpponent.Name} \"{SelectedOpponent.Nickname}\""
-            : "Select an opponent";
+            : GameText.Say("diner.select_an_opponent");
 
         private string _opponentMessage = "";
         public string OpponentMessage
@@ -187,7 +188,8 @@ namespace StreetCorsa.Screens.Diner
 
         /// <summary>What the selected rival would dial in, for the bracket option</summary>
         public string BracketNote => SelectedOpponent?.Opponent.Cars.FirstOrDefault() is { } car
-            ? $"{SelectedOpponent.Name} would dial in {Services.Race.BracketRules.Show(Services.Race.BracketRules.RivalDialInFor(car, SelectedOpponent.CarDefinition))}. You pick yours before the race."
+            ? GameText.Say("diner.bracket.rival_dial_in", ("name", SelectedOpponent.Name),
+                ("dial_in", Services.Race.BracketRules.Show(Services.Race.BracketRules.RivalDialInFor(car, SelectedOpponent.CarDefinition))))
             : string.Empty;
 
         // Matchup stats
@@ -257,9 +259,9 @@ namespace StreetCorsa.Screens.Diner
             get
             {
                 var reasons = new List<string>();
-                if (MatchupCalculator.IsNight(_gameState.Date)) reasons.Add("night");
-                if ((SelectedOpponent?.Opponent.Stats.Reputation ?? 0) > MatchupCalculator.StakesReputation) reasons.Add("a big name");
-                return reasons.Count == 0 ? string.Empty : $"Higher stakes: {string.Join(", ", reasons)}";
+                if (MatchupCalculator.IsNight(_gameState.Date)) reasons.Add(GameText.Say("diner.stakes.night"));
+                if ((SelectedOpponent?.Opponent.Stats.Reputation ?? 0) > MatchupCalculator.StakesReputation) reasons.Add(GameText.Say("diner.stakes.big_name"));
+                return reasons.Count == 0 ? string.Empty : GameText.Say("diner.stakes", ("reasons", string.Join(", ", reasons)));
             }
         }
 
@@ -278,7 +280,7 @@ namespace StreetCorsa.Screens.Diner
 
         /// <summary>The word on the police for the race as it is set up: "Police: Moderate"; empty when none could come</summary>
         public string PoliceNote => PoliceChance > 0
-            ? $"Police: {PoliceRules.RiskLabel(PoliceChance)}{(PoliceRules.IsNight(_gameState.Date) ? " (night patrols)" : string.Empty)}"
+            ? GameText.Say(PoliceRules.IsNight(_gameState.Date) ? "diner.police.night" : "diner.police", ("risk", PoliceRules.RiskLabel(PoliceChance)))
             : string.Empty;
 
         public bool HasPoliceNote => PoliceNote.Length > 0;
@@ -297,7 +299,7 @@ namespace StreetCorsa.Screens.Diner
             get
             {
                 var baseMin = MatchupCalculator.MinimumWager(SelectedTrack?.RaceType);
-                return $"You need at least ${baseMin:N0} to place a cash wager.";
+                return GameText.Say("diner.wager.too_poor", ("amount", baseMin));
             }
         }
 
@@ -424,7 +426,7 @@ namespace StreetCorsa.Screens.Diner
             foreach (var item in (_gameState.StreetTalk ?? []).AsEnumerable().Reverse().Take(StreetTalkShown))
             {
                 var days = (today - item.Date.Date).Days;
-                var when = days <= 0 ? "Today" : days == 1 ? "Yesterday" : item.Date.ToString("MMM d");
+                var when = days <= 0 ? GameText.Say("diner.talk.today") : days == 1 ? GameText.Say("diner.talk.yesterday") : GameText.Say("diner.talk.date", ("date", item.Date));
                 StreetTalk.Add(new StreetTalkLine(when, item.Text));
             }
 
@@ -684,8 +686,8 @@ namespace StreetCorsa.Screens.Diner
                 _logger.Error(ex, "The challenge could not be set up");
                 _dialogService.ShowDialog(new InformationDialogViewModel(
                     _dialogService,
-                    $"The race could not be set up:\n\n{ex.Message}",
-                    "Race Not Started"));
+                    GameText.Say("challenge.not_set_up", ("problem", ex.Message)),
+                    GameText.Say("challenge.not_set_up.title")));
             }
         }
 
@@ -711,8 +713,8 @@ namespace StreetCorsa.Screens.Diner
             {
                 var errorDialog = new InformationDialogViewModel(
                     _dialogService,
-                    "You need to select a car in your garage first!",
-                    "No Car Selected");
+                    GameText.Say("diner.no_car"),
+                    GameText.Say("diner.no_car.title"));
                 _dialogService.ShowDialog(errorDialog);
                 return;
             }

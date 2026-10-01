@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Models.Race
 {
@@ -193,22 +194,22 @@ namespace StreetCorsa.Models.Race
         public const string Fuel = "FUEL";
 
         /// <summary>The breakdown in the player's words: "engine", "gearbox"...</summary>
-        public static string Describe(string? breakdown) => breakdown switch
+        public static string Describe(string? breakdown) => GameText.Say(breakdown switch
         {
-            Engine or Overheat or Oil => "engine",
-            Gearbox => "gearbox",
-            Suspension => "suspension",
-            Tyre => "tyre",
-            _ => "car"
-        };
+            Engine or Overheat or Oil => "result.breakdown.engine",
+            Gearbox => "result.breakdown.gearbox",
+            Suspension => "result.breakdown.suspension",
+            Tyre => "result.breakdown.tyre",
+            _ => "result.breakdown.car"
+        });
 
         /// <summary>What happened, for a sentence that starts with whose car it was: "engine gave out", "car ran out of gas"</summary>
         public static string WhatHappened(string? breakdown) => breakdown switch
         {
-            Overheat => "engine boiled over",
-            Oil => "engine lost its oil pressure",
-            Fuel => "car ran out of gas",
-            _ => Describe(breakdown) + " gave out"
+            Overheat => GameText.Say("result.breakdown.overheat"),
+            Oil => GameText.Say("result.breakdown.oil"),
+            Fuel => GameText.Say("result.breakdown.fuel"),
+            _ => GameText.Say("result.breakdown.gave_out", ("part", Describe(breakdown)))
         };
     }
 

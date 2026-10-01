@@ -5,6 +5,7 @@ using StreetCorsa.Logging;
 using StreetCorsa.Models.Race;
 using StreetCorsa.Services.Configuration;
 using StreetCorsa.Services.Configuration.Models;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Services
 {
@@ -239,11 +240,10 @@ namespace StreetCorsa.Services
             var lockAcquired = await _executionLock.WaitAsync(0);
             if (!lockAcquired)
             {
-                var error = "Cannot launch: another execution is in progress";
+                var error = GameText.Say("launch.in_progress");
                 _logger.Warning(error);
                 var busy = Failure(intent, error, startTime);
-                busy.PlayerMessages.Add(new PlayerMessage("Assetto Corsa Is Busy",
-                    "Assetto Corsa is still running, or what an earlier race changed in it is still being put back. Try again once it has closed."));
+                busy.PlayerMessages.Add(new PlayerMessage(GameText.Say("launch.busy.title"), GameText.Say("launch.busy.putting_back")));
                 return busy;
             }
 
@@ -254,9 +254,8 @@ namespace StreetCorsa.Services
             {
                 _executionLock.Release();
                 _logger.Warning("Cannot launch: Assetto Corsa {State}", acBefore == true ? "is already running" : "may be running (the processes could not be listed)");
-                var running = Failure(intent, "Assetto Corsa is already running", startTime);
-                running.PlayerMessages.Add(new PlayerMessage("Assetto Corsa Is Busy",
-                    "Assetto Corsa is already running (opened from Content Manager or Steam, or still closing). Close it, then try again."));
+                var running = Failure(intent, GameText.Say("launch.already_running"), startTime);
+                running.PlayerMessages.Add(new PlayerMessage(GameText.Say("launch.busy.title"), GameText.Say("launch.busy.running")));
                 return running;
             }
 
@@ -402,7 +401,7 @@ namespace StreetCorsa.Services
                 run.Began = await _raceResultService.BeginRaceAsync(context, messages);
                 if (!run.Began)
                 {
-                    var blocked = Failure(intent, "The last race has not been settled yet", startTime);
+                    var blocked = Failure(intent, GameText.Say("launch.not_settled"), startTime);
                     blocked.PlayerMessages.AddRange(messages);
                     return (blocked, false);
                 }
@@ -429,7 +428,7 @@ namespace StreetCorsa.Services
                     // The app is ending (the crash path has put the install back): nothing more goes in
                     if (AcInstallGate.IsSealed)
                     {
-                        prepareError = "Street Corsa is closing";
+                        prepareError = GameText.Say("launch.closing");
                         return;
                     }
 
@@ -445,7 +444,7 @@ namespace StreetCorsa.Services
 
                         if (!_iniService.ApplyIntent(configIntent))
                         {
-                            prepareError = $"Failed to apply configuration intent: {configIntent.Description}";
+                            prepareError = GameText.Say("launch.config_failed", ("change", configIntent.Description));
                             break;
                         }
                     }
@@ -478,7 +477,7 @@ namespace StreetCorsa.Services
                 {
                     if (AcInstallGate.IsSealed)
                     {
-                        prepareError = "Street Corsa is closing";
+                        prepareError = GameText.Say("launch.closing");
                         return;
                     }
 
@@ -492,7 +491,7 @@ namespace StreetCorsa.Services
                     {
                         if (AcInstallGate.IsSealed)
                         {
-                            prepareError = "Street Corsa is closing";
+                            prepareError = GameText.Say("launch.closing");
                             return;
                         }
 
@@ -504,7 +503,7 @@ namespace StreetCorsa.Services
                     {
                         if (AcInstallGate.IsSealed)
                         {
-                            prepareError = "Street Corsa is closing";
+                            prepareError = GameText.Say("launch.closing");
                             return;
                         }
 
@@ -519,11 +518,11 @@ namespace StreetCorsa.Services
 
                     if (!File.Exists(exePath))
                     {
-                        prepareError = $"Executable not found: {exePath}";
+                        prepareError = GameText.Say("launch.no_executable", ("path", exePath));
                     }
                     else if (AcInstallGate.IsSealed)
                     {
-                        prepareError = "Street Corsa is closing";
+                        prepareError = GameText.Say("launch.closing");
                     }
                     else if (!_stopRequested) // the last moment a stop can call the launch off: after this, AC runs
                     {
@@ -558,7 +557,7 @@ namespace StreetCorsa.Services
             var started = _currentProcess;
             if (started == null)
             {
-                var error = "Failed to start process";
+                var error = GameText.Say("launch.not_started");
                 _logger.Error(error);
                 return (await NotStartedAsync(run, Failure(intent, error, startTime)), false);
             }
@@ -595,12 +594,11 @@ namespace StreetCorsa.Services
             {
                 // Stopped, and the game did not go within the timeout: the race is settled once it has
                 _logger.Error("Assetto Corsa did not close within {Seconds}s of being stopped", StopTimeout.TotalSeconds);
-                var stuck = Failure(intent, "Assetto Corsa did not close when it was stopped.", startTime);
+                var stuck = Failure(intent, GameText.Say("launch.stuck"), startTime);
                 if (context != null)
                 {
                     stuck.Outcome = RaceOutcome.ResultPending;
-                    stuck.PlayerMessages.Add(new PlayerMessage("Race Not Settled Yet",
-                        "Assetto Corsa did not close when the race was stopped. The race is settled once it has closed; nothing is lost in the meantime."));
+                    stuck.PlayerMessages.Add(new PlayerMessage(GameText.Say("launch.unsettled.title"), GameText.Say("launch.unsettled.stuck")));
                 }
 
                 if (run.EarlierMessages != null) stuck.PlayerMessages.InsertRange(0, run.EarlierMessages);
@@ -684,16 +682,14 @@ namespace StreetCorsa.Services
             {
                 // A file is there (or may be): the race is not "without a result". It stays pending in the save.
                 result.Outcome = RaceOutcome.ResultPending;
-                result.PlayerMessages.Add(new PlayerMessage("Race Result Waiting",
-                    "The race's result is there but could not be read just now. Nothing is lost: it counts as soon as the game can read it (when this save is loaded again, or before your next race)."));
+                result.PlayerMessages.Add(new PlayerMessage(GameText.Say("launch.result_waiting.title"), GameText.Say("launch.result_waiting")));
                 return false;
             }
 
             if (quarantinedForContext > 0)
             {
                 result.Outcome = RaceOutcome.Quarantined;
-                result.PlayerMessages.Add(new PlayerMessage("Race Results",
-                    "The race wrote a result the game could not use, so nothing was changed. The file is kept for a look; the details are in the log."));
+                result.PlayerMessages.Add(new PlayerMessage(GameText.Say("launch.result_unusable.title"), GameText.Say("launch.result_unusable")));
                 if (context != null) await ReleaseAsync(context);
                 return false;
             }
@@ -702,7 +698,7 @@ namespace StreetCorsa.Services
             {
                 result.Success = false;
                 result.Outcome = RaceOutcome.Failed;
-                result.ErrorMessage = "Assetto Corsa closed right after it started; it most likely failed to load. Nothing was raced.";
+                result.ErrorMessage = GameText.Say("launch.failed_to_load");
                 if (context != null) await ReleaseAsync(context);
                 return false;
             }
@@ -720,8 +716,7 @@ namespace StreetCorsa.Services
             {
                 _logger.Warning("No result yet, but Assetto Corsa is (or may be) still running: the race is settled once it has closed");
                 result.Outcome = RaceOutcome.ResultPending;
-                result.PlayerMessages.Add(new PlayerMessage("Race Not Settled Yet",
-                    "Assetto Corsa is still running. The race is settled once it has closed; nothing is lost in the meantime."));
+                result.PlayerMessages.Add(new PlayerMessage(GameText.Say("launch.unsettled.title"), GameText.Say("launch.unsettled.running")));
                 return false;
             }
 
@@ -731,7 +726,7 @@ namespace StreetCorsa.Services
                 var forfeited = await _raceResultService.ApplyNoResultForfeitAsync(context, result.PlayerMessages);
                 _logger.Information("The race ended without a result; forfeit applied: {Forfeited}", forfeited);
                 if (!forfeited)
-                    result.PlayerMessages.Add(new PlayerMessage("No Result", "The race ended before the finish, so it does not count."));
+                    result.PlayerMessages.Add(new PlayerMessage(GameText.Say("launch.no_result.title"), GameText.Say("launch.no_result")));
 
                 return forfeited;
             }
@@ -741,8 +736,7 @@ namespace StreetCorsa.Services
                 // settles it
                 _logger.Error(ex, "Could not apply the forfeit of a race without a result");
                 result.Outcome = RaceOutcome.ResultPending;
-                result.PlayerMessages.Add(new PlayerMessage("Race Not Settled Yet",
-                    "The race ended without a result, but that could not be recorded just now. It is settled the next time this save is loaded, or before your next race."));
+                result.PlayerMessages.Add(new PlayerMessage(GameText.Say("launch.unsettled.title"), GameText.Say("launch.unsettled.not_recorded")));
                 return false;
             }
         }
@@ -819,10 +813,9 @@ namespace StreetCorsa.Services
 
         /// <summary>What the player is told when part of the install stayed changed after a race</summary>
         internal static PlayerMessage RestoreProblemsMessage(IReadOnlyCollection<string> problems) =>
-            new("Assetto Corsa Not Put Back",
-                "Some of what the race changed in Assetto Corsa could not be put back as it was:\n\n"
-                + string.Join("\n", problems.Select(p => "- " + p))
-                + $"\n\nThe game tries again at its next start. The originals it still has are under {AppSettings.AcRestorePath}.");
+            new(GameText.Say("launch.not_put_back.title"), GameText.Say("launch.not_put_back",
+                ("problems", string.Join("\n", problems.Select(p => GameText.Say("launch.not_put_back.problem", ("problem", p))))),
+                ("folder", AppSettings.AcRestorePath)));
 
         /// <summary>
         /// Car data, copies and cfg files back as they were: the cars first, then the cfg files, each part on its own
@@ -847,7 +840,7 @@ namespace StreetCorsa.Services
             catch (Exception ex)
             {
                 logger?.Error(ex, "Could not put the cars' data back");
-                problems?.Add($"The cars' data could not be put back ({ex.Message}).");
+                problems?.Add(GameText.Say("launch.not_put_back.cars", ("problem", ex.Message)));
             }
 
             try
@@ -859,7 +852,7 @@ namespace StreetCorsa.Services
             catch (Exception ex)
             {
                 logger?.Error(ex, "Could not put the cfg files back");
-                problems?.Add($"The cfg files could not be put back ({ex.Message}).");
+                problems?.Add(GameText.Say("launch.not_put_back.cfg", ("problem", ex.Message)));
             }
 
             return restored;
@@ -874,7 +867,7 @@ namespace StreetCorsa.Services
 
         private static LaunchResult Cancelled(LaunchIntent intent, DateTime startTime)
         {
-            var result = LaunchResult.CreateFailure("The launch was stopped before Assetto Corsa started. Nothing was raced.", startTime, DateTime.Now);
+            var result = LaunchResult.CreateFailure(GameText.Say("launch.stopped"), startTime, DateTime.Now);
             result.Outcome = intent is DragRaceLaunchIntent ? RaceOutcome.Cancelled : RaceOutcome.NotARace;
             return result;
         }

@@ -7,6 +7,7 @@ using StreetCorsa.Helpers;
 using StreetCorsa.Logging;
 using StreetCorsa.Parts.Export;
 using StreetCorsa.Services.Configuration;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Services
 {
@@ -466,7 +467,7 @@ namespace StreetCorsa.Services
             if (!KeptFile.PutBack(Path.Combine(keep, FilesFolder, entry.Name), target, entry.ReadOnly))
             {
                 _logger.Error("{Car}: the kept original of {File} is gone (deleted outside the game?); the race version stays in {Target}", carId, entry.Name, target);
-                problems?.Add($"{carId}: the original of {entry.Name} is no longer kept, so the race version stays in {target}.");
+                problems?.Add(GameText.Say("launch.not_put_back.original_gone", ("car", carId), ("file", entry.Name), ("folder", target)));
             }
         }
 
@@ -522,7 +523,7 @@ namespace StreetCorsa.Services
                 catch (Exception ex)
                 {
                     _logger.Error(ex, "Could not put the data of {Car} back; the originals are kept under {Path}", carId, Path.Combine(_keepPath, carId));
-                    problems?.Add($"{carId}: its data could not all be put back; the originals are kept under {Path.Combine(_keepPath, carId)} and go back at the next start.");
+                    problems?.Add(GameText.Say("launch.not_put_back.car", ("car", carId), ("folder", Path.Combine(_keepPath, carId))));
                 }
             }
 
@@ -670,7 +671,7 @@ namespace StreetCorsa.Services
                     catch (Exception ex)
                     {
                         _logger.Error(ex, "Could not delete the copy {Folder}; the next start tries again", folder);
-                        problems?.Add($"The race copy {folder} could not be deleted; the next start tries again.");
+                        problems?.Add(GameText.Say("launch.not_put_back.copy", ("folder", folder)));
                     }
                 }
             }
@@ -709,7 +710,7 @@ namespace StreetCorsa.Services
                 {
                     left.Add(folder);
                     _logger.Error(ex, "Could not delete the copy {Folder}; the next start tries again", folder);
-                    problems?.Add($"The race copy {folder} could not be deleted; the next start tries again.");
+                    problems?.Add(GameText.Say("launch.not_put_back.copy", ("folder", folder)));
                 }
             }
 

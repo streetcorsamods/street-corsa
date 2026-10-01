@@ -1,6 +1,7 @@
 using StreetCorsa.Helpers;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Services.Market;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Services.Opponents
 {
@@ -196,7 +197,7 @@ namespace StreetCorsa.Services.Opponents
 
         /// <summary>"his", "her", "their"</summary>
         public static string Possessive(Racer racer) => racer is Opponent { Gender: var gender }
-            ? gender switch { Gender.Male => "his", Gender.Female => "her", _ => "their" }
-            : "their";
+            ? GameText.Say(gender switch { Gender.Male => "rivals.possessive.male", Gender.Female => "rivals.possessive.female", _ => "rivals.possessive.other" })
+            : GameText.Say("rivals.possessive.other");
     }
 }

@@ -1,4 +1,5 @@
 using StreetCorsa.Models.GameState;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Services.Police
 {
@@ -64,12 +65,12 @@ namespace StreetCorsa.Services.Police
         public static int CopsPerRace => Rules.RuleBook.Current.Police.CopsPerRace;
 
         /// <summary>The risk in the diner's words</summary>
-        public static string RiskLabel(double chance) => chance switch
+        public static string RiskLabel(double chance) => GameText.Say(chance switch
         {
-            < 0.15 => "Low",
-            < 0.30 => "Moderate",
-            _ => "High"
-        };
+            < 0.15 => "police.risk.low",
+            < 0.30 => "police.risk.moderate",
+            _ => "police.risk.high"
+        });
 
         /// <summary>The fine for a racer caught <paramref name="earlierBusts"/> times before</summary>
         public static decimal Fine(int earlierBusts) =>

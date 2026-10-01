@@ -3,6 +3,7 @@ using StreetCorsa.Models.GameState;
 using StreetCorsa.Models.Race;
 using StreetCorsa.Screens.Newspaper;
 using StreetCorsa.Services.Career;
+using StreetCorsa.Services.Text;
 using StreetCorsa.ViewModels;
 
 namespace StreetCorsa.Dialogs.EventEntry
@@ -59,7 +60,7 @@ namespace StreetCorsa.Dialogs.EventEntry
             }
         }
 
-        public string SelectedCarDisplay => SelectedCar?.DisplayName ?? "Select a car...";
+        public string SelectedCarDisplay => SelectedCar?.DisplayName ?? GameText.Say("event.select_a_car");
         public bool CanConfirm => SelectedCar != null;
 
         // For result
