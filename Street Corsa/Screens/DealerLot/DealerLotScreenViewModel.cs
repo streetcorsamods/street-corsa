@@ -52,7 +52,7 @@ namespace StreetCorsa.Screens.DealerLot
         /// <summary>The cars the 3D lot should stand up, in the same order as the first of <see cref="Stock"/></summary>
         public IReadOnlyList<LotCarPlacement> LotCars { get; private set; } = [];
 
-        public string DealerName => _dealer?.Name ?? "Dealer";
+        public string DealerName => _dealer?.Name ?? GameText.Say("dealer.lot.name_fallback");
         public string DealerRegion => _dealer?.Region ?? string.Empty;
         public string DealerBlurb => _dealer?.Blurb ?? string.Empty;
 
@@ -255,10 +255,10 @@ namespace StreetCorsa.Screens.DealerLot
         {
             get
             {
-                if (Stock.Count == 0) return "Nothing on the lot today";
+                if (Stock.Count == 0) return GameText.Say("dealer.lot.stock.none");
                 return LotCars.Count < Stock.Count
-                    ? $"{LotCars.Count} out front, {Stock.Count - LotCars.Count} more round the back"
-                    : $"{Stock.Count} on the lot";
+                    ? GameText.Say("dealer.lot.stock.split", ("front", LotCars.Count), ("back", Stock.Count - LotCars.Count))
+                    : GameText.Say("dealer.lot.stock.all", ("count", Stock.Count));
             }
         }
 

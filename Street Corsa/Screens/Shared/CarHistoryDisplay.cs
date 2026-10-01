@@ -1,4 +1,5 @@
 using StreetCorsa.Models.GameState;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Screens.Shared
 {
@@ -25,16 +26,21 @@ namespace StreetCorsa.Screens.Shared
         {
             if (history.BestQuarterSeconds is not { } et) return string.Empty;
             var time = et.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
-            return history.BestQuarterMph is { } mph ? $"best {time} @ {mph:0} mph" : $"best {time}";
+            return history.BestQuarterMph is { } mph
+                ? GameText.Say("market.history.best_mph", ("time", time), ("mph", mph))
+                : GameText.Say("market.history.best", ("time", time));
         }
 
         /// <summary>"5 wins in 8 races, 2 cars won on pink slips"; "Never raced" when it hasn't</summary>
         public static string Record(CarHistory history)
         {
-            if (history.Races <= 0) return "Never raced";
+            if (history.Races <= 0) return GameText.Say("market.history.never_raced");
 
-            var record = $"{Count(history.Wins, "win")} in {Count(history.Races, "race")}";
-            return history.PinkSlipsWon > 0 ? $"{record}, {Count(history.PinkSlipsWon, "car")} won on pink slips" : record;
+            var record = GameText.Say("market.history.record",
+                ("wins", Count(history.Wins, "market.history.wins")), ("races", Count(history.Races, "market.history.races")));
+            return history.PinkSlipsWon > 0
+                ? GameText.Say("market.history.pink_slips", ("record", record), ("cars", Count(history.PinkSlipsWon, "market.history.cars")))
+                : record;
         }
 
         private static string Owners(CarHistory history, bool forSale)
@@ -43,9 +49,12 @@ namespace StreetCorsa.Screens.Shared
             var before = forSale ? history.OwnerCount : Math.Max(0, history.OwnerCount - 1);
             var last = forSale ? history.Owners.LastOrDefault()?.Name : null;
 
-            if (before == 0) return forSale ? "No previous owners" : "First owner";
-            if (forSale && last != null) return $"{Count(before, "previous owner")}, the last {last}";
-            return forSale ? Count(before, "previous owner") : $"{Count(before, "owner")} before you";
+            if (before == 0) return GameText.Say(forSale ? "market.history.no_previous_owners" : "market.history.first_owner");
+            if (forSale && last != null)
+                return GameText.Say("market.history.previous_owners_last", ("owners", Count(before, "market.history.previous_owners")), ("last", last));
+            return forSale
+                ? Count(before, "market.history.previous_owners")
+                : GameText.Say("market.history.owners_before_you", ("owners", Count(before, "market.history.owners")));
         }
 
         /// <summary>How the one who has the car now came by it, from whom: "won from Johnny on a pink slip"</summary>
@@ -57,13 +66,18 @@ namespace StreetCorsa.Screens.Shared
             var from = history.Owners.Count >= 2 ? history.Owners[^2].Name : null;
             return now.How switch
             {
-                CarAcquisition.PinkSlip => from != null ? $"won from {from} on a pink slip" : "won on a pink slip",
-                CarAcquisition.PrivateSale => from != null ? $"bought from {from}" : "bought privately",
-                CarAcquisition.Dealer => "bought off a lot",
+                CarAcquisition.PinkSlip => from != null
+                    ? GameText.Say("market.history.won_from", ("from", from))
+                    : GameText.Say("market.history.won"),
+                CarAcquisition.PrivateSale => from != null
+                    ? GameText.Say("market.history.bought_from", ("from", from))
+                    : GameText.Say("market.history.bought_privately"),
+                CarAcquisition.Dealer => GameText.Say("market.history.bought_off_lot"),
                 _ => null
             };
         }
 
-        private static string Count(int n, string noun) => n == 1 ? $"1 {noun}" : $"{n:N0} {noun}s";
+        /// <summary>A count in words: the pool <paramref name="key"/>.one for one, .other for any other number</summary>
+        private static string Count(int n, string key) => GameText.Say(n == 1 ? key + ".one" : key + ".other", ("count", n));
     }
 }

@@ -13,6 +13,7 @@ using StreetCorsa.Services.Catalog;
 using StreetCorsa.Services.Parts;
 using StreetCorsa.Services.Storage;
 using StreetCorsa.Services.Street;
+using StreetCorsa.Services.Text;
 using StreetCorsa.Services.Time;
 using StreetCorsa.ViewModels;
 
@@ -129,7 +130,9 @@ namespace StreetCorsa.Screens.CarLot
 
         public bool HasSeveralWarehouses => WarehouseCount > 1;
 
-        public string WarehouseTitle => WarehouseCount > 1 ? $"Warehouse {Warehouse} of {WarehouseCount}" : "Your warehouse";
+        public string WarehouseTitle => WarehouseCount > 1
+            ? GameText.Say("carlot.warehouse_of", ("number", Warehouse), ("count", WarehouseCount))
+            : GameText.Say("carlot.warehouse_one");
 
         /// <summary>What is in this warehouse, and in all of them</summary>
         public string WarehouseSummary
@@ -142,11 +145,12 @@ namespace StreetCorsa.Screens.CarLot
                 // A bay with a car's place in it is taken, whether the car is standing there or not (at the impound,
                 // or its model no longer installed)
                 var room = CapacityOf(Warehouse) - (_gameState.Player.Cars ?? []).Count(c => c.Warehouse == Warehouse && c.Bay != null);
-                if (inAll == 0) return AllCars.Count == 0 ? "No cars yet: the dealers have plenty" : "Empty: your car is in the garage";
+                if (inAll == 0) return GameText.Say(AllCars.Count == 0 ? "carlot.summary.no_cars" : "carlot.summary.empty");
 
-                var line = here == 0 ? "Nothing parked in here" : here == 1 ? "1 car in here" : $"{here} cars in here";
-                if (WarehouseCount > 1) line += $", {inAll} in all";
-                return room > 0 ? $"{line}; room for {room} more" : $"{line}; full";
+                var line = GameText.Say(here == 0 ? "carlot.summary.here.none" : here == 1 ? "carlot.summary.here.one" : "carlot.summary.here.other",
+                    ("count", here));
+                if (WarehouseCount > 1) line = GameText.Say("carlot.summary.in_all", ("line", line), ("count", inAll));
+                return room > 0 ? GameText.Say("carlot.summary.room", ("line", line), ("room", room)) : GameText.Say("carlot.summary.full", ("line", line));
             }
         }
 
@@ -443,9 +447,10 @@ namespace StreetCorsa.Screens.CarLot
         public string DisplayName => $"{Definition.Brand} {Definition.Name}";
 
         /// <summary>Where it is kept: "W2 · bay 4" when there are several warehouses, "Bay 4" when there is one</summary>
-        public string PlaceDisplay => Car.IsImpounded ? "At the police impound"
-            : Car.Warehouse == null ? "In the garage"
-            : SeveralWarehouses ? $"W{Car.Warehouse} · bay {Car.Bay + 1}" : $"Bay {Car.Bay + 1}";
+        public string PlaceDisplay => Car.IsImpounded ? GameText.Say("carlot.place.impound")
+            : Car.Warehouse == null ? GameText.Say("carlot.place.garage")
+            : SeveralWarehouses ? GameText.Say("carlot.place.warehouse_bay", ("warehouse", Car.Warehouse), ("bay", Car.Bay + 1))
+            : GameText.Say("carlot.place.bay", ("bay", Car.Bay + 1));
 
         /// <summary>The car the garage works on: in the garage, not in a warehouse</summary>
         public bool IsCurrent { get; init; }
