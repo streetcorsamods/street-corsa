@@ -70,10 +70,10 @@ namespace StreetCorsa.Services.Career
         }
 
         /// <summary>How likely an eligible event is to turn up when events are generated</summary>
-        private const double EventChance = 0.5;
+        private static double EventChance => Rules.RuleBook.Current.Events.EventChance;
 
         /// <summary>Most invitations open in the paper at once</summary>
-        public const int MaxOpenEvents = 5;
+        public static int MaxOpenEvents => Rules.RuleBook.Current.Events.MaxOpenEvents;
 
         public List<RaceEventInstance> GenerateEvents(CareerState career, DateTime currentTime, double pinkSlipFactor = 1.0)
         {

@@ -1,0 +1,73 @@
+{
+  "_comment": [
+    "The base game's \"rivals\" rules: every figure the game plays by, as the code has them.",
+    "A mod changes any of them with a .json file of its own in its rules folder, naming only what it changes",
+    "(see docs/modding.md, \"rules\"). A career keeps the rules it was started with."
+  ],
+  "rivals": {
+    "money": {
+      "baseLow": 2000,
+      "baseHigh": 5000,
+      "perSkill": 150,
+      "byAge": [
+        {
+          "under": 26,
+          "low": 0,
+          "high": 500
+        },
+        {
+          "under": 36,
+          "low": 500,
+          "high": 1500
+        },
+        {
+          "under": 46,
+          "low": 1500,
+          "high": 2500
+        },
+        {
+          "under": 200,
+          "low": 2000,
+          "high": 4000
+        }
+      ],
+      "reputationFrom": 50,
+      "perReputation": 40,
+      "spread": 0.15,
+      "roundTo": 100,
+      "least": 1000
+    },
+    "king": {
+      "money": 20000,
+      "carChoices": 5,
+      "races": 52,
+      "wins": 48,
+      "pinkSlipsWon": 12
+    },
+    "baseActiveRacers": 6,
+    "activeRacersPerWeek": 2,
+    "bankruptFloor": 200,
+    "minCashShare": 0.1,
+    "maxCashShare": 0.6,
+    "minCashInjection": 50,
+    "maxCashInjection": 500,
+    "maxCars": 2,
+    "tuningReserveShare": 0.25,
+    "tuningShare": 0.3,
+    "leaveChance": 0.002,
+    "maxTimesBroke": 3,
+    "laidUpDays": 45,
+    "laidUpLeaveChance": 0.05,
+    "comeBackAfterDays": 90,
+    "tradeUpChance": 0.05,
+    "tradeUpGain": 1.2,
+    "bargainChance": 0.35,
+    "maxBargainsPerDay": 2,
+    "bargainTradeUpGain": 1.1,
+    "flipMargin": 1.05,
+    "minAskShare": 0.75,
+    "maxAskShare": 0.9,
+    "askReducedAfterDays": 7,
+    "askReduction": 0.9
+  }
+}

@@ -410,7 +410,7 @@ namespace StreetCorsa.Screens.CarLot
             base.Enter();
             _logger.Information("Entered the car lot");
 
-            _scenes = WarehouseScenes.LoadAll(Mods.ModSet.Installed);
+            _scenes = WarehouseScenes.Installed;
             Arrange();
             ShowWarehouse(1);
         }

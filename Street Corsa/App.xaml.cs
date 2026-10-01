@@ -75,7 +75,13 @@ namespace StreetCorsa
             {
                 var loaded = value != null && !ReferenceEquals(value, _currentGameState);
                 _currentGameState = value;
+
+                // No game in play: the mods' rules
+                if (value == null) StreetCorsa.Rules.RuleBook.PlayBy(null);
                 if (!loaded) return;
+
+                // Already so when the game came through the load or new game screen; whatever else sets one plays by its rules too
+                StreetCorsa.Rules.RuleBook.PlayBy(value);
 
                 _ = ProcessOrphanedResultsAsync();
 
@@ -238,7 +244,8 @@ namespace StreetCorsa
             // Game state repository (depends on opponent initialization service). The save in use stays open in
             // one place, shared with the race sessions, so a race's result and the state it changes are one write
             var saveDatabase = new Services.Storage.SaveDatabase();
-            GameStateRepository = new GameStateRepository(OpponentInitializationService, saveDatabase);
+            GameStateRepository = new GameStateRepository(OpponentInitializationService, saveDatabase,
+                isGameCar: id => CatalogRepository.GetCar(id) is { Status: Models.Catalog.ContentStatus.Active } && ProfileRepository.ProfileExists(id));
             PurchaseService = new CarPurchaseService(GameStateRepository, CarPartsService, GameTimeService);
             SaleService = new CarSaleService(MarketService, GameTimeService, GameStateRepository);
 
@@ -324,6 +331,7 @@ namespace StreetCorsa
             var mods = Mods.ModSet.Installed;
             logger.Information("Content: {Mods} from {Root}", string.Join(", ", mods.Mods), mods.Root);
             foreach (var problem in mods.Problems) logger.Warning("Mods: {Problem}", problem);
+            Mods.ModProblems.Add("Mods", mods.Problems);
         }
 
         protected override async void OnStartup(StartupEventArgs e)
@@ -391,6 +399,7 @@ namespace StreetCorsa
                 AppSettings.Instance.AssettoCorsaPath);
 
             // Import AC content into catalog at startup
+            Task partsWarmUp = Task.CompletedTask;
             try
             {
                 logger.Information("Starting car import");
@@ -416,7 +425,7 @@ namespace StreetCorsa
                     ProfileRepository.GetProfileCount());
 
                 // Parts catalog and factory engines load in the background; nothing needs them before the garage
-                _ = CarPartsService.WarmUpAsync();
+                partsWarmUp = CarPartsService.WarmUpAsync();
 
                 // Load track content
                 logger.Information("Loading track content");
@@ -474,6 +483,48 @@ namespace StreetCorsa
                 DialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(
                     DialogService, message.Text, message.Title));
             }
+
+            _ = ShowModProblemsAsync(partsWarmUp, logger);
+        }
+
+        // At most this many of the mods' problems in the dialog; the rest are in the log
+        private const int ModProblemsShown = 12;
+
+        /// <summary>
+        /// The mods' problems, told to the player once at start-up (they used to reach only the log): the content is read
+        /// on a worker first, the parts with it, so what a mod got wrong anywhere is there to be told. What a mod could not
+        /// use is left out; the rest of the game plays as usual. Never throws.
+        /// </summary>
+        private async Task ShowModProblemsAsync(Task partsWarmUp, IAppLogger logger)
+        {
+            try
+            {
+                await Task.WhenAll(partsWarmUp, Task.Run(() =>
+                {
+                    _ = Mods.ModSet.Installed;
+                    _ = Rules.RuleBook.Installed;
+                    _ = Services.Text.GameText.Installed;
+                    _ = Services.Career.CareerContent.Installed;
+                    OpponentRepository.LoadAllOpponents();
+                    _ = Services.Street.StreetScenes.Installed;
+                    _ = Services.Station.StationScenes.Installed;
+                    _ = Services.CarLot.WarehouseScenes.Installed;
+                }));
+            }
+            catch (Exception ex)
+            {
+                logger.Warning("Reading the mods' content for their problems failed: {Error}", ex.Message);
+            }
+
+            var problems = Mods.ModProblems.All;
+            if (problems.Count == 0) return;
+
+            var shown = string.Join("\n", problems.Take(ModProblemsShown).Select(p => "  " + p));
+            var more = problems.Count > ModProblemsShown ? $"\n  ...and {problems.Count - ModProblemsShown} more" : string.Empty;
+            var text = "Some of the mods have problems. What could not be used is left out; the rest of the game plays as usual.\n\n"
+                       + shown + more + $"\n\nEvery problem is in the log ({AppLoggerFactory.LogDirectory}).";
+            _ = Dispatcher.BeginInvoke(() =>
+                DialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(DialogService, text, "Mod Problems")));
         }
 
         /// <summary>A start-up failure the app closes on, in a message box that waits for the player; never throws</summary>

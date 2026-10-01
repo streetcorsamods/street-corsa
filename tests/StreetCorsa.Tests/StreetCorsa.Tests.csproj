@@ -37,6 +37,8 @@
        (the career, the words, the dealers, the racers) find it in the test output as the game finds it next to itself -->
   <ItemGroup>
     <None Include="..\..\Street Corsa\Content\streetcorsa\mod.json" Link="Content\streetcorsa\mod.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\Street Corsa\Content\streetcorsa\game.json" Link="Content\streetcorsa\game.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\Street Corsa\Content\streetcorsa\rules\*.json" LinkBase="Content\streetcorsa\rules" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\Street Corsa\Content\streetcorsa\text\*.json" LinkBase="Content\streetcorsa\text" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\Street Corsa\Content\streetcorsa\events\*.json" LinkBase="Content\streetcorsa\events" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\Street Corsa\Content\streetcorsa\milestones\*.json" LinkBase="Content\streetcorsa\milestones" CopyToOutputDirectory="PreserveNewest" />

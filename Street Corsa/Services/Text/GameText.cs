@@ -36,8 +36,11 @@ namespace StreetCorsa.Services.Text
         {
             var problems = new List<string>();
             var text = new GameText();
+            // A pool a mod takes out (its mod.json's "removes") says nothing, unless the mod or a later one gives it lines again
+            var removals = mods.Removals(ContentTypes.Text, (key, _) => text._pools.Remove(key), "the text", problems);
             foreach (var (mod, file) in mods.JsonFiles(ContentTypes.Text))
             {
+                removals.Before(mod);
                 var source = $"{mod.Id}/{ContentTypes.Text}/{System.IO.Path.GetFileName(file)}";
                 try
                 {
@@ -52,7 +55,10 @@ namespace StreetCorsa.Services.Text
                 }
             }
 
+            removals.Rest();
+
             foreach (var problem in problems) Logger.Warning("Text: {Problem}", problem);
+            ModProblems.Add("Text", problems);
             text.Problems = problems;
             return text;
         }

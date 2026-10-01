@@ -28,51 +28,51 @@ public static class CarCondition
     public static readonly string[] ZoneNames = { "front", "rear", "left side", "right side" };
 
     /// <summary>A body that has taken this much, all zones together, is a write-off (a 200 km/h wreck reports 205 on two zones)</summary>
-    public const double TotaledKmh = 200;
+    public static double TotaledKmh => Rules.RuleBook.Current.Condition.TotaledKmh;
 
     /// <summary>The most a zone holds: a hand-edited save's 1e29 would make a repair bill no decimal can hold</summary>
     public const double MaxZoneKmh = 1000;
 
     /// <summary>AC's life of a new engine</summary>
-    public const double NewEngineLife = 1000;
+    public static double NewEngineLife => Rules.RuleBook.Current.Condition.NewEngineLife;
 
     /// <summary>A gearbox or a corner in worse shape than this does not go racing</summary>
-    public const double BrokenBelow = 0.1;
+    public static double BrokenBelow => Rules.RuleBook.Current.Condition.BrokenBelow;
 
     /// <summary>
     /// Wear from plain driving, per km, on the engine and the gearbox. Small: what a race does to a car is AC's damage;
     /// a drag race costs a few thousandths of a percent.
     /// </summary>
-    public const double MileageWearPerKm = 1.0 / 40000;
+    public static double MileageWearPerKm => Rules.RuleBook.Current.Condition.MileageWearPerKm;
 
     /// <summary>Dirt a body picks up per km of racing, on top of what AC gives it (on dirt, in the wet)</summary>
-    public const double DirtPerKm = 0.01;
+    public static double DirtPerKm => Rules.RuleBook.Current.Condition.DirtPerKm;
 
     /// <summary>Less fuel than this, in litres, and the tank is dry</summary>
-    public const double EmptyTankLitres = 0.25;
+    public static double EmptyTankLitres => Rules.RuleBook.Current.Condition.EmptyTankLitres;
 
     /// <summary>Less fuel than this, in litres, and the car does not go racing: it would run dry within the first minute</summary>
-    public const double TooLittleToRaceLitres = 2;
+    public static double TooLittleToRaceLitres => Rules.RuleBook.Current.Condition.TooLittleToRaceLitres;
 
     /// <summary>What a fuel line in the report starts with: it tells, it is not damage</summary>
     public const string FuelNote = "Fuel: ";
 
     /// <summary>The report says the tank is low below this share of it</summary>
-    public const double LowTankShare = 0.15;
+    public static double LowTankShare => Rules.RuleBook.Current.Condition.LowTankShare;
 
     /// <summary>
     /// Oil an engine in good shape burns, share of a full sump: at every start (the drive there, the warm-up) and per km
     /// of racing. A worn engine burns up to <see cref="WornOilBurn"/> times as much: rings and valve guides let it by.
     /// </summary>
-    public const double OilBurnPerRace = 0.004;
-    public const double OilBurnPerKm = 0.004;
-    public const double WornOilBurn = 5;
+    public static double OilBurnPerRace => Rules.RuleBook.Current.Condition.OilBurnPerRace;
+    public static double OilBurnPerKm => Rules.RuleBook.Current.Condition.OilBurnPerKm;
+    public static double WornOilBurn => Rules.RuleBook.Current.Condition.WornOilBurn;
 
     /// <summary>The report says the oil is low below this, and the attendant would top it up</summary>
-    public const double LowOil = 0.75;
+    public static double LowOil => Rules.RuleBook.Current.Condition.LowOil;
 
     /// <summary>What a sump holds its oil to at 0 oil, share of what it holds full: a low sump surges sooner</summary>
-    public const double DrySumpShare = 0.4;
+    public static double DrySumpShare => Rules.RuleBook.Current.Condition.DrySumpShare;
 
     /// <summary>What an oil line in the report starts with: it tells, it is not damage</summary>
     public const string OilNote = "Oil: ";
@@ -388,7 +388,7 @@ public static class CarCondition
     }
 
     /// <summary>The share of the failed part's loss the rest of the rotating assembly takes with it</summary>
-    public const double SharedEngineDamage = 0.35;
+    public static double SharedEngineDamage => Rules.RuleBook.Current.Condition.SharedEngineDamage;
 
     // Which rotating part gives first when two are as worn: the rods take the most of an over-rev
     private static readonly string[] FailureOrder = { "Connecting rods", "Pistons", "Crankshafts", "Camshafts" };

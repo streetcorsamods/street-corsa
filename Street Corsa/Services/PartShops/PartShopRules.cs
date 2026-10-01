@@ -11,52 +11,52 @@ namespace StreetCorsa.Services.PartShops
     public static class PartShopRules
     {
         /// <summary>A junkyard's whole engines: one yard item in so many</summary>
-        public const double JunkyardEngineChance = 0.15;
+        public static double JunkyardEngineChance => Rules.RuleBook.Current.PartShops.JunkyardEngineChance;
 
         /// <summary>How worn what lies in a junkyard is: a fair bit more than what the paper's sellers have</summary>
-        public const double JunkyardMinWear = 0.15;
-        public const double JunkyardMaxWear = 0.75;
+        public static double JunkyardMinWear => Rules.RuleBook.Current.PartShops.JunkyardMinWear;
+        public static double JunkyardMaxWear => Rules.RuleBook.Current.PartShops.JunkyardMaxWear;
 
         /// <summary>A part lies in the yard this long before it goes to the crusher</summary>
-        public const int JunkyardKeepsDays = 21;
+        public static int JunkyardKeepsDays => Rules.RuleBook.Current.PartShops.JunkyardKeepsDays;
 
         /// <summary>
         /// A junkyard lets nothing go for less than this share over what it would pay for it: no sale, discount or
         /// haggle takes a part under it, so a part cannot be bought there and sold straight back at a profit
         /// </summary>
-        public const double JunkyardMargin = 0.1;
+        public static double JunkyardMargin => Rules.RuleBook.Current.PartShops.JunkyardMargin;
 
         /// <summary>Haggling at a junkyard: the odds the owner comes down, and by how much (a share of the price, least to most)</summary>
-        public const double HaggleChance = 0.5;
-        public const double HaggleMinCut = 0.1;
-        public const double HaggleMaxCut = 0.25;
+        public static double HaggleChance => Rules.RuleBook.Current.PartShops.HaggleChance;
+        public static double HaggleMinCut => Rules.RuleBook.Current.PartShops.HaggleMinCut;
+        public static double HaggleMaxCut => Rules.RuleBook.Current.PartShops.HaggleMaxCut;
 
         /// <summary>
         /// What the player has spent at a shop to be a regular, and what a regular gets off: a first step, and a second
         /// for a good customer
         /// </summary>
-        public const decimal RegularSpent = 500m;
-        public const decimal GoodCustomerSpent = 2000m;
-        public const decimal RegularDiscount = 0.05m;
-        public const decimal GoodCustomerDiscount = 0.10m;
+        public static decimal RegularSpent => Rules.RuleBook.Current.PartShops.RegularSpent;
+        public static decimal GoodCustomerSpent => Rules.RuleBook.Current.PartShops.GoodCustomerSpent;
+        public static decimal RegularDiscount => Rules.RuleBook.Current.PartShops.RegularDiscount;
+        public static decimal GoodCustomerDiscount => Rules.RuleBook.Current.PartShops.GoodCustomerDiscount;
 
         /// <summary>What a part sold to the player or a rival counts toward a shop's trade (a car off a lot counts one)</summary>
-        public const double TradePerSale = 0.5;
+        public static double TradePerSale => Rules.RuleBook.Current.PartShops.TradePerSale;
 
         /// <summary>
         /// The trade every open shop gets from the town's other customers each day, the same for all: what tells the
         /// shops apart when one has to go is what the player and the rivals buy there
         /// </summary>
-        public const double TownTradePerDay = 0.2;
+        public static double TownTradePerDay => Rules.RuleBook.Current.PartShops.TownTradePerDay;
 
         /// <summary>The town's other customers buy this share of what is on the shelves (and in the yard) each day</summary>
-        public const double TownBuysShare = 0.03;
+        public static double TownBuysShare => Rules.RuleBook.Current.PartShops.TownBuysShare;
 
         /// <summary>A delivery drops this share of the lines on the shelves for others: what a shop carries changes over the weeks</summary>
-        public const double DropLineChance = 0.35;
+        public static double DropLineChance => Rules.RuleBook.Current.PartShops.DropLineChance;
 
         /// <summary>A closing-down sale: the rivals and everybody else clear out this share of what is left each day</summary>
-        public const double SaleClearOutShare = 0.2;
+        public static double SaleClearOutShare => Rules.RuleBook.Current.PartShops.SaleClearOutShare;
 
         /// <summary>The kinds of part a speed shop sells: the ones that make power</summary>
         public static readonly IReadOnlySet<string> PerformanceGroups = new HashSet<string>(StringComparer.Ordinal)
@@ -65,54 +65,37 @@ namespace StreetCorsa.Services.PartShops
             "Air filters", "Nitrous", "Cylinder heads"
         };
 
-        public static double PriceFactor(PartShopDefinition shop) => Positive(shop.PriceFactor) ?? shop.KindOf switch
-        {
-            PartShopKind.Speed => 1.1,
-            PartShopKind.Wheels => 0.9,
-            // Against what the used part is worth: the paper's private sellers ask about 0.6
-            PartShopKind.Junkyard => 0.55,
-            _ => 1.0
-        };
+        /// <summary>The rules' figures for the shop's kind of shop (<c>partShops.kinds</c>), for what the shop's own file leaves out</summary>
+        private static Rules.PartShopKindRules KindRules(PartShopDefinition shop) =>
+            Rules.RuleBook.Current.PartShops.For(shop.KindOf.ToString());
+
+        public static double PriceFactor(PartShopDefinition shop) => Positive(shop.PriceFactor) ?? Positive(KindRules(shop).PriceFactor) ?? 1.0;
 
         /// <summary>
         /// What it pays for a part, against what the part is worth: a shop's trade-in, a little more at a junkyard. Less
         /// than any shop sells a new part for in its closing-down sale to a good customer, in the easy game's prices
         /// (a wheel shop's: 0.9 × 0.85 × 0.65 × 0.9 ≈ 0.45), so nothing bought new sells on to a junkyard at a profit.
         /// </summary>
-        public static double BuyFactor(PartShopDefinition shop) => Positive(shop.BuyFactor) ?? shop.KindOf switch
-        {
-            PartShopKind.Junkyard => 0.42,
-            _ => StreetCorsa.Parts.Cars.PartPricing.TradeInFactor
-        };
+        public static double BuyFactor(PartShopDefinition shop) =>
+            Positive(shop.BuyFactor) ?? Positive(KindRules(shop).BuyFactor) ?? StreetCorsa.Parts.Cars.PartPricing.TradeInFactor;
 
         public static (int Low, int High) Stock(PartShopDefinition shop)
         {
-            var (low, high) = shop.KindOf switch
-            {
-                PartShopKind.Speed => (25, 35),
-                PartShopKind.Wheels => (40, 60),
-                PartShopKind.Junkyard => (20, 35),
-                _ => (40, 60)
-            };
+            var kind = KindRules(shop);
+            var (low, high) = (kind.StockLow, kind.StockHigh);
             low = Math.Max(1, shop.StockLow ?? low);
             return (low, Math.Max(low, shop.StockHigh ?? high));
         }
 
-        public static int RestockDays(PartShopDefinition shop) => Math.Max(1, shop.RestockDays ?? shop.KindOf switch
-        {
-            PartShopKind.Speed => 10,
-            PartShopKind.Wheels => 5,
-            PartShopKind.Junkyard => 3,
-            _ => 7
-        });
+        public static int RestockDays(PartShopDefinition shop) => Math.Max(1, shop.RestockDays ?? KindRules(shop).RestockDays);
 
         /// <summary>How many of one part a delivery puts on the shelf, least to most: a speed shop gets one or two of anything</summary>
-        public static (int Low, int High) PerShelf(PartShopDefinition shop) => shop.KindOf switch
+        public static (int Low, int High) PerShelf(PartShopDefinition shop)
         {
-            PartShopKind.Speed => (1, 2),
-            PartShopKind.Wheels => (2, 6),
-            _ => (2, 5)
-        };
+            var kind = KindRules(shop);
+            var low = Math.Max(1, kind.PerShelfLow);
+            return (low, Math.Max(low, kind.PerShelfHigh));
+        }
 
         /// <summary>
         /// Whether the rivals' tuners buy there: the shops with engine parts on their shelves. Not a junkyard (the

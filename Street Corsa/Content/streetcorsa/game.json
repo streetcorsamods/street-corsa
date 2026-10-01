@@ -1,0 +1,10 @@
+{
+  "_comment": [
+    "The game's own settings. Every mod may have a game.json next to its mod.json: it goes over the mods' before it",
+    "key by key, so a mod names only what it changes. See docs/modding.md, \"game.json\".",
+    "title: the game's name, the window's title.",
+    "garage: the garage the game is played from: a mod's garages/<id>, else Assetto Corsa's showroom of that id."
+  ],
+  "title": "Street Corsa",
+  "garage": "garage"
+}

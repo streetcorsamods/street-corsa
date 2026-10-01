@@ -212,7 +212,7 @@ namespace StreetCorsa.Screens.Station
                 return;
             }
 
-            var stations = StationScenes.LoadAll(Mods.ModSet.Installed);
+            var stations = StationScenes.Installed;
             Station = stations.Count == 0 ? null : stations[_random.Next(stations.Count)];
             if (Station == null)
             {

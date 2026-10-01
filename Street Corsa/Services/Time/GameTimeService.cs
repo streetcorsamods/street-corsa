@@ -14,7 +14,7 @@ namespace StreetCorsa.Services.Time
         private readonly IAppLogger _logger;
 
         /// <summary>The game speaks US English, whatever the machine's culture: "8:00 AM", "June 3, 1971"</summary>
-        private static readonly CultureInfo DisplayCulture = CultureInfo.GetCultureInfo("en-US");
+        public static readonly CultureInfo DisplayCulture = CultureInfo.GetCultureInfo("en-US");
 
         /// <summary>
         /// One spend at a time. The clock moves first and the day's tasks run after it with awaits in between
@@ -24,8 +24,9 @@ namespace StreetCorsa.Services.Time
         /// </summary>
         private readonly SemaphoreSlim _advancing = new(1, 1);
 
-        public int DayStartHour => 8;  // 8:00 AM
-        public int DayEndHour => 22;   // 10:00 PM
+        /// <summary>The day's hours: the rules of the game in play (<c>day</c>)</summary>
+        public int DayStartHour => Rules.RuleBook.Current.Day.FirstHour;
+        public int DayEndHour => Rules.RuleBook.Current.Day.LastHour;
 
         public GameTimeService(IGameTimeScheduler scheduler)
         {

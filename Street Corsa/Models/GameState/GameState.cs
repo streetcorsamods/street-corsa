@@ -4,23 +4,22 @@ namespace StreetCorsa.Models.GameState
 {
     public class GameState
     {
-        // Game time constants
-        public const int StartingYear = 1970;
-        public const int StartingMonth = 6;  // June
-        public const int StartingDay = 1;
-        public const int DayStartHour = 8;   // 8:00 AM
-        public const int DayEndHour = 22;    // 10:00 PM
+        /// <summary>The hour each day starts, by the rules of the game in play (<c>day.startHour</c>)</summary>
+        public static int DayStartHour => StreetCorsa.Rules.RuleBook.Current.Day.FirstHour;
 
-        /// <summary>
-        /// Gets the default starting date/time for a new game
-        /// </summary>
-        public static DateTime GetStartingDateTime() =>
-            new DateTime(StartingYear, StartingMonth, StartingDay, DayStartHour, 0, 0);
+        /// <summary>The hour the day is over, by the rules of the game in play (<c>day.endHour</c>)</summary>
+        public static int DayEndHour => StreetCorsa.Rules.RuleBook.Current.Day.LastHour;
+
+        /// <summary>The career's first morning, by the rules of the game in play (<c>start.date</c>, <c>day.startHour</c>)</summary>
+        public static DateTime GetStartingDateTime() => StartOf(StreetCorsa.Rules.RuleBook.Current);
+
+        /// <summary>The first morning of a career played by <paramref name="book"/></summary>
+        public static DateTime StartOf(StreetCorsa.Rules.RuleBook book) => book.Start.FirstMorning(book.Day);
 
         [BsonId]
         public int Id { get; set; } = 1; // Single record per save file
 
-        // Time System - Game world time (starts in June 1970, see StartingYear)
+        // The game world's time, from the rules' first morning (GetStartingDateTime)
         public DateTime Date { get; set; }
 
         // Player
@@ -53,6 +52,13 @@ namespace StreetCorsa.Models.GameState
 
         /// <summary>The difficulty the career was started on; fixed for the life of the save</summary>
         public GameRules Rules { get; set; }
+
+        /// <summary>
+        /// The rules the career was started on (<see cref="StreetCorsa.Rules.RuleBook"/>), every figure written out: a mod
+        /// updated or taken out later does not change them. Null in a save from before they were kept: it plays on the
+        /// mods' rules, and keeps them from its next save.
+        /// </summary>
+        public string? RuleBook { get; set; }
 
         /// <summary>
         /// The race the player went off to and has not come back from yet: set just before AC starts and saved
@@ -91,7 +97,6 @@ namespace StreetCorsa.Models.GameState
             var gameStart = GetStartingDateTime();
             var now = DateTime.Now;
 
-            // Game world time (1970)
             Date = gameStart;
 
             Player = new Player("Player");
@@ -113,13 +118,18 @@ namespace StreetCorsa.Models.GameState
         }
 
         /// <param name="openFromStart">The victory paths open from the start (<see cref="CareerState.CreateNew"/>)</param>
-        public static GameState CreateNew(string playerName, GameRules? rules = null, IEnumerable<string>? openFromStart = null)
+        /// <param name="book">The rules the career is played by; the mods' (<see cref="StreetCorsa.Rules.RuleBook.Installed"/>) when not given</param>
+        public static GameState CreateNew(string playerName, GameRules? rules = null, IEnumerable<string>? openFromStart = null,
+            StreetCorsa.Rules.RuleBook? book = null)
         {
+            book ??= StreetCorsa.Rules.RuleBook.Installed;
+            var player = new Player(playerName) { Money = book.Start.Money };
             var state = new GameState
             {
-                Player = new Player(playerName),
-                Date = GetStartingDateTime(),
+                Player = player,
+                Date = StartOf(book),
                 Rules = rules ?? new GameRules(),
+                RuleBook = book.ToJson(),
                 Career = CareerState.CreateNew(openFromStart)
             };
 

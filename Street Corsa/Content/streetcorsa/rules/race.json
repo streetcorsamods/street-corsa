@@ -1,0 +1,14 @@
+{
+  "_comment": [
+    "The base game's \"race\" rules: every figure the game plays by, as the code has them.",
+    "A mod changes any of them with a .json file of its own in its rules folder, naming only what it changes",
+    "(see docs/modding.md, \"rules\"). A career keeps the rules it was started with."
+  ],
+  "race": {
+    "damage": 100,
+    "tyreWear": 1,
+    "fuelRate": 1,
+    "policeAILevel": 100,
+    "policeAIAggression": 100
+  }
+}

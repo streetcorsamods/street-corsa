@@ -58,6 +58,7 @@ namespace StreetCorsa.Services.PartShops
             }
 
             foreach (var problem in problems) _logger.Warning("Part shops: {Problem}", problem);
+            ModProblems.Add("Part shops", problems);
         }
 
         public IReadOnlyList<PartShopDefinition> All => _shops;

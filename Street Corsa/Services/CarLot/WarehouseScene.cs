@@ -123,6 +123,18 @@ namespace StreetCorsa.Services.CarLot
         public static IReadOnlyList<WarehouseScene> LoadAll(ModSet mods) =>
             ModScenes.LoadAll(mods, ContentTypes.Warehouses, "Warehouses", Logger, Load, s => s.Id, (s, id) => s with { Id = id });
 
+        private static readonly Lazy<IReadOnlyList<WarehouseScene>> InstalledScenes = new(() => LoadAll(ModSet.Installed));
+
+        /// <summary>The warehouses of the mods next to the game, read once</summary>
+        public static IReadOnlyList<WarehouseScene> Installed => InstalledScenes.Value;
+
+        /// <summary>A warehouse that is left out: in the log, and in the mods' problems for the player</summary>
+        private static void LeftOut(string problem)
+        {
+            Logger.Warning("{Problem}", problem);
+            ModProblems.Add("Warehouses", problem);
+        }
+
         /// <summary>
         /// The warehouse in <paramref name="folder"/>; null when its file or model is missing or broken, or it has no bays
         /// (logged). A mod's file is not trusted to be whole: an empty entry in a list is skipped, a sign picture that is
@@ -140,6 +152,7 @@ namespace StreetCorsa.Services.CarLot
             catch (Exception ex)
             {
                 Logger.Error(ex, "Could not read the warehouse {Path}", file);
+                ModProblems.Add("Warehouses", $"{file} could not be read ({ex.Message}); left out");
                 return null;
             }
         }
@@ -152,19 +165,19 @@ namespace StreetCorsa.Services.CarLot
             var bays = (entry.Bays ?? []).OfType<BayEntry>().Select(b => new WarehouseBay(b.X, b.Z, b.Heading)).ToList();
             if (bays.Count == 0)
             {
-                Logger.Warning("The warehouse {Id} has no bays", id);
+                LeftOut($"the warehouse {id} has no bays; left out");
                 return null;
             }
 
             if (!PathNames.TryCombineUnder(folder, entry.Model ?? "warehouse.kn5", out var kn5))
             {
-                Logger.Warning("The warehouse {Id} names a model outside its folder ({Model})", id, entry.Model);
+                LeftOut($"the warehouse {id} names a model outside its folder ({entry.Model}); left out");
                 return null;
             }
 
             if (!File.Exists(kn5))
             {
-                Logger.Warning("The warehouse {Id} has no model {Path}", id, kn5);
+                LeftOut($"the warehouse {id} has no model {kn5}; left out");
                 return null;
             }
 

@@ -22,11 +22,10 @@ namespace StreetCorsa.Services.Configuration
         public const double MinAngle = DegreesPerHour * (0 - ZeroHour), MaxAngle = DegreesPerHour * (23 + 59 / 60.0 - ZeroHour);
 
         /// <summary>
-        /// The street model's sunset over a whole year, at which the game's clock goes into CM's formula unchanged.
-        /// Worked out from the model itself, so a change there follows here.
+        /// The street model's sunset over a whole year, at which the game's clock goes into CM's formula unchanged: the
+        /// model swings its sunset evenly either side of the mean the rules give (<see cref="StreetLights.SunsetHour"/>)
         /// </summary>
-        public static readonly double MeanSunset =
-            Enumerable.Range(0, 365).Average(day => StreetLights.SunsetHour(new DateTime(2001, 1, 1).AddDays(day)));
+        public static double MeanSunset => Rules.RuleBook.Current.World.MeanSunset;
 
         /// <summary>The hour AC's clock shows for the game's <paramref name="time"/>, in its season</summary>
         public static double AcHour(DateTime time)
@@ -35,9 +34,10 @@ namespace StreetCorsa.Services.Configuration
             if (hour <= ZeroHour) return hour;
 
             var sunset = StreetLights.SunsetHour(time);
+            var mean = MeanSunset;
             return hour <= sunset
-                ? ZeroHour + (hour - ZeroHour) * (MeanSunset - ZeroHour) / (sunset - ZeroHour)
-                : MeanSunset + (hour - sunset) * (24 - MeanSunset) / (24 - sunset);
+                ? ZeroHour + (hour - ZeroHour) * (mean - ZeroHour) / (sunset - ZeroHour)
+                : mean + (hour - sunset) * (24 - mean) / (24 - sunset);
         }
 
         /// <summary>AC's SUN_ANGLE for the game's <paramref name="time"/>, to the hundredth, within what CM writes</summary>

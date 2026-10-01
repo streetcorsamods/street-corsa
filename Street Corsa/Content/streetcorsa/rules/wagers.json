@@ -1,0 +1,18 @@
+{
+  "_comment": [
+    "The base game's \"wagers\" rules: every figure the game plays by, as the code has them.",
+    "A mod changes any of them with a .json file of its own in its rules folder, naming only what it changes",
+    "(see docs/modding.md, \"rules\"). A career keeps the rules it was started with."
+  ],
+  "wagers": {
+    "dragMinimum": 10,
+    "roadMinimum": 25,
+    "dragMaximum": 100,
+    "roadMaximum": 250,
+    "matchedReputationBand": 15,
+    "nightFromHour": 20,
+    "nightStakes": 2,
+    "stakesReputation": 50,
+    "reputationPerStake": 25
+  }
+}

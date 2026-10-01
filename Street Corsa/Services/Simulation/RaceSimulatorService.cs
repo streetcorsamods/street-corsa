@@ -32,8 +32,8 @@ namespace StreetCorsa.Services.Simulation
         }
 
         /// <summary>The loser of a road race crashes this often, a drag racer less</summary>
-        public const double RoadCrashChance = 0.03;
-        public const double DragCrashChance = 0.005;
+        public static double RoadCrashChance => Rules.RuleBook.Current.Simulation.RoadCrashChance;
+        public static double DragCrashChance => Rules.RuleBook.Current.Simulation.DragCrashChance;
 
         /// <summary>
         /// Simulate all AI races for a given day
@@ -358,7 +358,7 @@ namespace StreetCorsa.Services.Simulation
         }
 
         /// <summary>Share of road races between rivals run for pink slips on <see cref="PinkSlipFrequency.Medium"/></summary>
-        private const double RoadPinkSlipChance = 0.1;
+        private static double RoadPinkSlipChance => Rules.RuleBook.Current.Simulation.RoadPinkSlipChance;
 
         /// <summary>
         /// Calculate prize for a race
@@ -528,14 +528,13 @@ namespace StreetCorsa.Services.Simulation
         /// <summary>
         /// Get seasonal modifier for race frequency
         /// </summary>
-        private double GetSeasonalModifier(int month)
+        private static double GetSeasonalModifier(int month)
         {
-            return month switch
-            {
-                6 or 7 or 8 => 1.3,   // Summer - more racing
-                12 or 1 or 2 => 0.7,  // Winter - less racing
-                _ => 1.0
-            };
+            // The rules' world: more racing in summer, less in winter
+            var world = Rules.RuleBook.Current.World;
+            if (world.SummerMonths?.Contains(month) == true) return world.SummerRacing;
+            if (world.WinterMonths?.Contains(month) == true) return world.WinterRacing;
+            return 1.0;
         }
 
         /// <summary>

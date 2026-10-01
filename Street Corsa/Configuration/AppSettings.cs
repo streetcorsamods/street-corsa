@@ -77,10 +77,8 @@ public class AppSettings
     /// <summary>The base game's content: the first mod (see <see cref="Mods.ModSet"/>)</summary>
     public static string BaseContentPath => Mods.ModSet.Installed.Base.Folder;
 
-    /// <summary>
-    /// Showroom used as the 3D garage environment
-    /// </summary>
-    public string GarageShowroomId { get; set; } = "garage";
+    /// <summary>The garage the game is played from (game.json's <c>garage</c>): a mod's garage or an AC showroom of that id</summary>
+    public string GarageShowroomId { get; set; } = Rules.GameFile.Installed.Garage;
 
     /// <summary>
     /// Full path to the garage showroom model: a mod's garage by that id if one has it (the last mod to have it wins,
@@ -111,20 +109,24 @@ public class AppSettings
     /// <summary>The install's master GUIDs, where Kunos cars name their sound events</summary>
     public string SfxGuidsPath => Path.Combine(AssettoCorsaPath, "content", "sfx", "GUIDs.txt");
 
-    /// <summary>
-    /// What a part costs against the value its script gives it. The scripts think in the dollars of the early
-    /// 2000s, the game's cars are priced in those of 1970: about a fifth.
-    /// </summary>
-    public double PartsPriceScale { get; set; } = 0.2;
+    /// <summary>The AC folder the game uses holds Assetto Corsa (<see cref="IsInstall"/>)</summary>
+    public bool IsValidInstallation() => IsInstall(AssettoCorsaPath);
 
     /// <summary>
-    /// Validates that the AC installation path exists and is valid
+    /// A folder that holds Assetto Corsa: its cars and tracks. The one test of an install, for the folder the game
+    /// starts with and for the one it finds on the machine.
     /// </summary>
-    public bool IsValidInstallation()
+    public static bool IsInstall(string? folder)
     {
-        if (string.IsNullOrEmpty(AssettoCorsaPath) || !Directory.Exists(AssettoCorsaPath))
+        try
+        {
+            return !string.IsNullOrWhiteSpace(folder)
+                   && Directory.Exists(Path.Combine(folder, "content", "cars"))
+                   && Directory.Exists(Path.Combine(folder, "content", "tracks"));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
             return false;
-
-        return Directory.Exists(CarsPath) && Directory.Exists(TracksPath);
+        }
     }
 }

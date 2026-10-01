@@ -1,0 +1,38 @@
+{
+  "_comment": [
+    "The base game's \"difficulty\" rules: every figure the game plays by, as the code has them.",
+    "A mod changes any of them with a .json file of its own in its rules folder, naming only what it changes",
+    "(see docs/modding.md, \"rules\"). A career keeps the rules it was started with."
+  ],
+  "difficulty": {
+    "easy": {
+      "carPriceMultiplier": 0.85,
+      "partPriceMultiplier": 0.85,
+      "racePrizeMultiplier": 1.25,
+      "opponentSkillModifier": -3,
+      "opponentAggressionModifier": -15,
+      "carWearMultiplier": 0.6,
+      "pinkSlipFrequency": "low"
+    },
+    "normal": {
+      "carPriceMultiplier": 1,
+      "partPriceMultiplier": 1,
+      "racePrizeMultiplier": 1,
+      "opponentSkillModifier": 0,
+      "opponentAggressionModifier": 0,
+      "carWearMultiplier": 1,
+      "pinkSlipFrequency": "medium"
+    },
+    "hard": {
+      "carPriceMultiplier": 1.15,
+      "partPriceMultiplier": 1.15,
+      "racePrizeMultiplier": 0.85,
+      "opponentSkillModifier": 3,
+      "opponentAggressionModifier": 15,
+      "carWearMultiplier": 1.3,
+      "pinkSlipFrequency": "high"
+    },
+    "lowPinkSlips": 0.5,
+    "highPinkSlips": 1.75
+  }
+}

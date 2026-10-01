@@ -99,8 +99,10 @@ public static class ModJson
         Func<ModEntry, T?> read, IReadOnlyCollection<string>? otherLists = null) where T : class
     {
         var registry = new ContentRegistry<T>(kind);
+        var removals = registry.Removals(mods, type);
         foreach (var entry in Entries(mods, type, listName, problems, otherLists: otherLists))
         {
+            removals.Before(entry.Mod);
             T? value;
             try
             {
@@ -116,6 +118,7 @@ public static class ModJson
             if (value != null) registry.Add(entry.Mod, entry.Id, entry.Replaces, value, entry.Source);
         }
 
+        removals.Rest();
         problems.AddRange(registry.Problems);
         return registry;
     }

@@ -30,10 +30,15 @@ namespace StreetCorsa.Services.Settings
 
         /// <param name="settingsPath">Where the settings are kept</param>
         /// <param name="legacyPath">Where earlier versions kept them (next to the program); moved over once</param>
-        public GameSettingsService(string settingsPath, string? legacyPath)
+        /// <param name="findInstall">
+        /// Where AC is when the settings name no folder: the search of the machine (<see cref="AcInstallFinder.Find"/>)
+        /// when not given; a test gives its own, so it never depends on what the machine has installed
+        /// </param>
+        public GameSettingsService(string settingsPath, string? legacyPath, Func<string?>? findInstall = null)
         {
             _logger = AppLoggerFactory.CreateLogger("GameSettings");
             _settingsPath = settingsPath;
+            _findInstall = findInstall ?? AcInstallFinder.Find;
             MigrateLegacy(legacyPath);
             _currentSettings = Load();
             ApplyInstallPath(_currentSettings);
@@ -74,12 +79,37 @@ namespace StreetCorsa.Services.Settings
         /// </summary>
         private void ApplyInstallPath(GameSettings settings)
         {
+            if (string.IsNullOrWhiteSpace(settings.AssettoCorsaPath)) FindInstall(settings);
+
             var path = string.IsNullOrWhiteSpace(settings.AssettoCorsaPath)
                 ? AppSettings.DefaultAssettoCorsaPath
                 : settings.AssettoCorsaPath.Trim();
             AppSettings.Instance.AssettoCorsaPath = path;
             _logger.Information("Assetto Corsa folder: {ACPath}", path);
         }
+
+        /// <summary>
+        /// Settings that name no AC folder: the default one when it holds AC (the developer's install, which ran on it),
+        /// else the one Steam has (<see cref="AcInstallFinder"/>), written into the settings so the player can see and
+        /// change it. Nothing found leaves the default, and the start-up says where to set the folder.
+        /// </summary>
+        private void FindInstall(GameSettings settings)
+        {
+            if (AppSettings.IsInstall(AppSettings.DefaultAssettoCorsaPath)) return;
+
+            var found = _findInstall();
+            if (found == null)
+            {
+                _logger.Information("No Assetto Corsa folder in the settings, and Steam's could not be found");
+                return;
+            }
+
+            settings.AssettoCorsaPath = found;
+            _logger.Information("Assetto Corsa found at {ACPath}: kept in the settings", found);
+            Save(settings);
+        }
+
+        private readonly Func<string?> _findInstall;
 
         /// <summary>
         /// Load settings from file, or create default if not exists

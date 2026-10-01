@@ -24,10 +24,10 @@ namespace StreetCorsa.Services.Opponents
         private bool _noKingDefined;
 
         /// <summary>What the King has in the bank</summary>
-        public const decimal KingMoney = 20000m;
+        public static decimal KingMoney => Rules.RuleBook.Current.Rivals.King.Money;
 
         /// <summary>The King's car is one of the this many strongest from the factory</summary>
-        private const int KingCarChoices = 5;
+        private static int KingCarChoices => Rules.RuleBook.Current.Rivals.King.CarChoices;
 
         /// <summary>
         /// Where a racer's skill counts from for their money and their car's shape: ten under the floor
@@ -186,14 +186,20 @@ namespace StreetCorsa.Services.Opponents
             king.Status = RacerStatus.Inactive;
             king.Money = KingMoney;
 
-            // A name on the street: years of wins, pink slips taken
-            king.Stats.Races = 52;
-            king.Stats.Wins = 48;
-            king.Stats.Losses = 4;
-            king.Stats.DragRaces = king.Stats.RoadRaces = 26;
-            king.Stats.DragWins = king.Stats.RoadWins = 24;
-            king.Stats.DragLosses = king.Stats.RoadLosses = 2;
-            king.Stats.PinkSlipsWon = 12;
+            // A name on the street: years of wins, pink slips taken (the rules' rivals.king), half of them on the strip
+            var record = Rules.RuleBook.Current.Rivals.King;
+            var races = Math.Max(0, record.Races);
+            var wins = Math.Clamp(record.Wins, 0, races);
+            king.Stats.Races = races;
+            king.Stats.Wins = wins;
+            king.Stats.Losses = races - wins;
+            king.Stats.DragRaces = races / 2;
+            king.Stats.RoadRaces = races - races / 2;
+            king.Stats.DragWins = wins / 2;
+            king.Stats.RoadWins = wins - wins / 2;
+            king.Stats.DragLosses = king.Stats.DragRaces - king.Stats.DragWins;
+            king.Stats.RoadLosses = king.Stats.RoadRaces - king.Stats.RoadWins;
+            king.Stats.PinkSlipsWon = Math.Max(0, record.PinkSlipsWon);
             king.Stats.Reputation = king.Stats.CalculateReputation();
 
             var car = CreateKingCar(carPool ?? BuildCarPool(), gameState.Date, king);
@@ -259,44 +265,34 @@ namespace StreetCorsa.Services.Opponents
         /// </summary>
         private decimal GenerateOpponentMoney(Opponent opponent)
         {
-            // Base money: $2,000 to $5,000
-            var baseMoney = 2000m + (_random.Next(0, 3001));
+            var rules = Rules.RuleBook.Current.Rivals.Money;
 
-            // Skill bonus: Higher skill = more money (up to +$3,000)
-            var skillBonus = (opponent.Skill - SkillBaseline) * 150m; // 1500 to 3000 (skills run 90-100)
+            // Base money, then more for skill (skills run 90-100, counted from SkillBaseline)
+            var baseMoney = Between(rules.BaseLow, rules.BaseHigh);
+            var skillBonus = (opponent.Skill - SkillBaseline) * rules.PerSkill;
 
-            // Age bonus: Older opponents have had more time to earn (up to +$4,000)
-            decimal ageBonus;
-            if (opponent.Age < 26)
-            {
-                ageBonus = _random.Next(0, 501); // Young: $0-500
-            }
-            else if (opponent.Age < 36)
-            {
-                ageBonus = _random.Next(500, 1501); // Middle-aged: $500-1500
-            }
-            else if (opponent.Age < 46)
-            {
-                ageBonus = _random.Next(1500, 2501); // Established: $1500-2500
-            }
-            else
-            {
-                ageBonus = _random.Next(2000, 4001); // Veterans: $2000-4000
-            }
+            // Older opponents have had more time to earn: the first age band the racer is under, else the last
+            var bands = rules.ByAge ?? [];
+            var band = bands.FirstOrDefault(b => opponent.Age < b.Under) ?? bands.LastOrDefault();
+            var ageBonus = band == null ? 0m : Between(band.Low, band.High);
 
-            // Reputation bonus: Higher rep = more money (up to +$2,000)
-            var reputationBonus = Math.Max(0, (opponent.Stats.Reputation - 50) * 40m);
+            // A name brings money: so much a point over the reputation it counts from
+            var reputationBonus = Math.Max(0, (opponent.Stats.Reputation - rules.ReputationFrom) * rules.PerReputation);
 
-            // Calculate total
             var totalMoney = baseMoney + skillBonus + ageBonus + reputationBonus;
 
-            // Add random variation (±15%)
-            var variation = 1.0m + ((decimal)_random.NextDouble() * 0.3m - 0.15m);
-            totalMoney *= variation;
+            // Some random variation either way
+            var spread = (decimal)Math.Clamp(rules.Spread, 0, 1);
+            totalMoney *= 1.0m + ((decimal)_random.NextDouble() * 2 * spread - spread);
 
-            // Round to nearest 100 and ensure minimum
-            totalMoney = Math.Round(totalMoney / 100) * 100;
-            return Math.Max(1000m, totalMoney); // Minimum $1,000
+            // Rounded, and never less than the least
+            var round = rules.RoundTo > 0 ? rules.RoundTo : 1m;
+            totalMoney = Math.Round(totalMoney / round) * round;
+            return Math.Max(rules.Least, totalMoney);
+
+            // Whole amounts, every one as likely, as the draws have always been made
+            decimal Between(decimal low, decimal high) =>
+                high <= low ? low : low + _random.Next(0, (int)Math.Min(int.MaxValue - 1, Math.Floor(high - low)) + 1);
         }
 
         /// <summary>The installed, active catalog cars that have a profile to price them, with that profile</summary>

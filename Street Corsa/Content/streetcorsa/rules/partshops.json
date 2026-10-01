@@ -1,0 +1,64 @@
+{
+  "_comment": [
+    "The base game's \"partShops\" rules: every figure the game plays by, as the code has them.",
+    "A mod changes any of them with a .json file of its own in its rules folder, naming only what it changes",
+    "(see docs/modding.md, \"rules\"). A career keeps the rules it was started with."
+  ],
+  "partShops": {
+    "junkyardEngineChance": 0.15,
+    "junkyardMinWear": 0.15,
+    "junkyardMaxWear": 0.75,
+    "junkyardKeepsDays": 21,
+    "junkyardMargin": 0.1,
+    "haggleChance": 0.5,
+    "haggleMinCut": 0.1,
+    "haggleMaxCut": 0.25,
+    "regularSpent": 500,
+    "goodCustomerSpent": 2000,
+    "regularDiscount": 0.05,
+    "goodCustomerDiscount": 0.10,
+    "tradePerSale": 0.5,
+    "townTradePerDay": 0.2,
+    "townBuysShare": 0.03,
+    "dropLineChance": 0.35,
+    "saleClearOutShare": 0.2,
+    "kinds": {
+      "speed": {
+        "priceFactor": 1.1,
+        "buyFactor": 0,
+        "stockLow": 25,
+        "stockHigh": 35,
+        "restockDays": 10,
+        "perShelfLow": 1,
+        "perShelfHigh": 2
+      },
+      "wheels": {
+        "priceFactor": 0.9,
+        "buyFactor": 0,
+        "stockLow": 40,
+        "stockHigh": 60,
+        "restockDays": 5,
+        "perShelfLow": 2,
+        "perShelfHigh": 6
+      },
+      "junkyard": {
+        "priceFactor": 0.55,
+        "buyFactor": 0.42,
+        "stockLow": 20,
+        "stockHigh": 35,
+        "restockDays": 3,
+        "perShelfLow": 2,
+        "perShelfHigh": 5
+      }
+    },
+    "otherKind": {
+      "priceFactor": 1,
+      "buyFactor": 0,
+      "stockLow": 40,
+      "stockHigh": 60,
+      "restockDays": 7,
+      "perShelfLow": 2,
+      "perShelfHigh": 5
+    }
+  }
+}

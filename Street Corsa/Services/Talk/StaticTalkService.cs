@@ -9,12 +9,12 @@ namespace StreetCorsa.Services.Talk
     public class StaticTalkService : ITalkService
     {
         /// <summary>Reputation apart for a racer to talk up or down to the player; pink slips are talked of at 15</summary>
-        private const int RepGap = 20;
-        private const int PinkSlipRepGap = 15;
+        private static int RepGap => Rules.RuleBook.Current.Street.TalkReputationGap;
+        private static int PinkSlipRepGap => Rules.RuleBook.Current.Street.TalkPinkSlipReputationGap;
 
         /// <summary>Aggression of a hothead; a bold one takes pink slips at 60</summary>
-        private const int Aggressive = 70;
-        private const int Bold = 60;
+        private static int Aggressive => Rules.RuleBook.Current.Street.TalkAggressive;
+        private static int Bold => Rules.RuleBook.Current.Street.TalkBold;
 
         private readonly Random _random = new();
         private readonly GameText _text;

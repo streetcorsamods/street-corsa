@@ -23,7 +23,7 @@ namespace StreetCorsa.Services.Market
         private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger("Market");
 
         /// <summary>Share of the money put into an engine beyond the factory one that shows in the car's worth</summary>
-        public const double ModificationsShare = 0.5;
+        public static double ModificationsShare => Rules.RuleBook.Current.Market.ModificationsShare;
 
         /// <summary>
         /// How much of its base price a car is worth in this condition: 0.5 at condition 0, 1.1 at condition 1
@@ -51,22 +51,22 @@ namespace StreetCorsa.Services.Market
             RoundToHundred(Math.Max(0m, basePrice) * ConditionFactor(condition) * history + modifications);
 
         /// <summary>What wins add to a car's worth: a point each, two for a car won with it, at most <see cref="MaxHistoryShare"/></summary>
-        public const decimal WinShare = 0.01m;
-        public const decimal PinkSlipWinShare = 0.02m;
+        public static decimal WinShare => Rules.RuleBook.Current.Market.WinShare;
+        public static decimal PinkSlipWinShare => Rules.RuleBook.Current.Market.PinkSlipWinShare;
 
         /// <summary>What an owner beyond the first <see cref="OwnersWithoutPenalty"/> takes off, at most <see cref="MaxOwnersPenalty"/></summary>
-        public const decimal OwnerPenalty = 0.02m;
-        public const int OwnersWithoutPenalty = 2;
-        public const decimal MaxOwnersPenalty = 0.08m;
+        public static decimal OwnerPenalty => Rules.RuleBook.Current.Market.OwnerPenalty;
+        public static int OwnersWithoutPenalty => Rules.RuleBook.Current.Market.OwnersWithoutPenalty;
+        public static decimal MaxOwnersPenalty => Rules.RuleBook.Current.Market.MaxOwnersPenalty;
 
         /// <summary>A point off for every <see cref="MileageStepKm"/> past <see cref="MileageWithoutPenaltyKm"/>, at most <see cref="MaxMileagePenalty"/></summary>
-        public const double MileageWithoutPenaltyKm = 80_000;
-        public const double MileageStepKm = 10_000;
-        public const decimal MileagePenalty = 0.01m;
-        public const decimal MaxMileagePenalty = 0.08m;
+        public static double MileageWithoutPenaltyKm => Rules.RuleBook.Current.Market.MileageWithoutPenaltyKm;
+        public static double MileageStepKm => Rules.RuleBook.Current.Market.MileageStepKm;
+        public static decimal MileagePenalty => Rules.RuleBook.Current.Market.MileagePenalty;
+        public static decimal MaxMileagePenalty => Rules.RuleBook.Current.Market.MaxMileagePenalty;
 
         /// <summary>The most a car's history moves its worth, either way</summary>
-        public const decimal MaxHistoryShare = 0.15m;
+        public static decimal MaxHistoryShare => Rules.RuleBook.Current.Market.MaxHistoryShare;
 
         /// <summary>
         /// What a car's past does to its worth, as a factor on it: wins (a car that took pink slips most) put up to 15%
@@ -90,7 +90,8 @@ namespace StreetCorsa.Services.Market
                 penalty += Math.Min(MaxMileagePenalty, (decimal)Math.Min(steps, 1000) * MileagePenalty);
             }
 
-            return 1m + Math.Clamp(bonus - penalty, -MaxHistoryShare, MaxHistoryShare);
+            var most = Math.Max(0m, MaxHistoryShare);
+            return 1m + Math.Clamp(bonus - penalty, -most, most);
         }
 
         /// <summary>The factor of this very car's history on its worth</summary>
@@ -135,13 +136,13 @@ namespace StreetCorsa.Services.Market
         }
 
         /// <summary>Share of the base price a car without its engine loses: the engine is what most of a car's worth is</summary>
-        public const decimal MissingEngineShare = 0.4m;
+        public static decimal MissingEngineShare => Rules.RuleBook.Current.Market.MissingEngineShare;
 
         /// <summary>Share of the base price a corner loses without its rim and tyre (a car on blocks)</summary>
-        public const decimal MissingWheelShare = 0.03m;
+        public static decimal MissingWheelShare => Rules.RuleBook.Current.Market.MissingWheelShare;
 
         /// <summary>Share of the base price a corner loses for each of its brake, spring and shock that is missing</summary>
-        public const decimal MissingCornerPartShare = 0.01m;
+        public static decimal MissingCornerPartShare => Rules.RuleBook.Current.Market.MissingCornerPartShare;
 
         /// <summary>
         /// How much of its base price a car is short for the parts taken off it: its engine (on the stand, on the shelf,

@@ -69,44 +69,32 @@ namespace StreetCorsa.Models.GameState
 
         public GameRules Copy() => (GameRules)MemberwiseClone();
 
-        public static GameRules For(Difficulty difficulty) => difficulty switch
+        /// <summary>
+        /// A preset of the rules a new career starts on (<c>difficulty</c> in the mods' rules, <see cref="StreetCorsa.Rules.RuleBook.Installed"/>);
+        /// Custom is Normal's, to be changed by hand
+        /// </summary>
+        public static GameRules For(Difficulty difficulty)
         {
-            Difficulty.Easy => new GameRules
+            var preset = StreetCorsa.Rules.RuleBook.Installed.Difficulty.For(difficulty);
+            return new GameRules
             {
-                Difficulty = Difficulty.Easy,
-                CarPriceMultiplier = 0.85,
-                PartPriceMultiplier = 0.85,
-                RacePrizeMultiplier = 1.25,
-                OpponentSkillModifier = -3,
-                OpponentAggressionModifier = -15,
-                CarWearMultiplier = 0.6,
-                PinkSlipFrequency = PinkSlipFrequency.Low
-            },
-            Difficulty.Hard => new GameRules
-            {
-                Difficulty = Difficulty.Hard,
-                CarPriceMultiplier = 1.15,
-                PartPriceMultiplier = 1.15,
-                RacePrizeMultiplier = 0.85,
-                OpponentSkillModifier = 3,
-                OpponentAggressionModifier = 15,
-                CarWearMultiplier = 1.3,
-                PinkSlipFrequency = PinkSlipFrequency.High
-            },
-            _ => new GameRules()
-        };
+                Difficulty = difficulty == Difficulty.Custom ? Difficulty.Normal : difficulty,
+                CarPriceMultiplier = preset.CarPriceMultiplier,
+                PartPriceMultiplier = preset.PartPriceMultiplier,
+                RacePrizeMultiplier = preset.RacePrizeMultiplier,
+                OpponentSkillModifier = preset.OpponentSkillModifier,
+                OpponentAggressionModifier = preset.OpponentAggressionModifier,
+                CarWearMultiplier = preset.CarWearMultiplier,
+                PinkSlipFrequency = preset.PinkSlipFrequency
+            };
+        }
 
         /// <summary>
         /// How much more or less often pink slips come up than on <see cref="PinkSlipFrequency.Medium"/>, as a factor
-        /// on the chance
+        /// on the chance (the rules' <c>difficulty.lowPinkSlips</c> and <c>highPinkSlips</c>)
         /// </summary>
         [BsonIgnore]
-        public double PinkSlipFactor => PinkSlipFrequency switch
-        {
-            PinkSlipFrequency.Low => 0.5,
-            PinkSlipFrequency.High => 1.75,
-            _ => 1.0
-        };
+        public double PinkSlipFactor => StreetCorsa.Rules.RuleBook.Current.Difficulty.PinkSlipFactor(PinkSlipFrequency);
 
         /// <summary>A price scaled by a multiplier, never negative; see <see cref="Multiplier.Scale"/></summary>
         public static decimal Scale(decimal price, double multiplier) => Multiplier.Scale(price, multiplier);

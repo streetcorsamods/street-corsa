@@ -116,14 +116,14 @@ public class AudioSettingsTests
         try
         {
             var path = Path.Combine(folder.FullName, "settings.json");
-            var service = new GameSettingsService(path, null);
+            var service = new GameSettingsService(path, null, findInstall: () => null);
             service.Current.AssettoCorsaPath = AppSettings.Instance.AssettoCorsaPath;
             service.Current.Audio.Master = 0.4;
             service.Current.Audio.Set(AudioBus.Ambience, 0.25);
             service.Current.Audio.MuteInBackground = false;
             Assert.True(service.Save());
 
-            var again = new GameSettingsService(path, null).Current.Audio;
+            var again = new GameSettingsService(path, null, findInstall: () => null).Current.Audio;
             Assert.Equal(0.4, again.Master);
             Assert.Equal(0.25, again.Ambience);
             Assert.Equal(1.0, again.Engine);
@@ -157,7 +157,7 @@ public class AudioSettingsTests
             settings["AssettoCorsaPath"] = AppSettings.Instance.AssettoCorsaPath;
             var path = Path.Combine(folder.FullName, "settings.json");
             File.WriteAllText(path, JsonConvert.SerializeObject(settings));
-            return new GameSettingsService(path, null).Current;
+            return new GameSettingsService(path, null, findInstall: () => null).Current;
         }
         finally
         {

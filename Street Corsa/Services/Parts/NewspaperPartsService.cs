@@ -14,19 +14,19 @@ namespace StreetCorsa.Services.Parts
     public class NewspaperPartsService : INewspaperPartsService
     {
         /// <summary>The mail order sells everything there is, for this much over list, and it takes <see cref="MailOrderDays"/> to come</summary>
-        public const double MailOrderPremium = 1.2;
-        public const int MailOrderDays = 3;
+        public static double MailOrderPremium => Rules.RuleBook.Current.Economy.MailOrderPremium;
+        public static int MailOrderDays => Rules.RuleBook.Current.Economy.MailOrderDays;
 
         private const string EnginePacks = "engines/";
 
-        private const int MinAds = 25;
-        private const int MaxAds = 40;
-        private const int AdLifetimeDays = 10;
-        private const double MinWear = 0.35;
-        private const double MaxWear = 0.92;
+        private static int MinAds => Rules.RuleBook.Current.Economy.PartAdsLow;
+        private static int MaxAds => Rules.RuleBook.Current.Economy.PartAdsHigh;
+        private static int AdLifetimeDays => Rules.RuleBook.Current.Economy.PartAdDays;
+        private static double MinWear => Rules.RuleBook.Current.Economy.PartAdMinWear;
+        private static double MaxWear => Rules.RuleBook.Current.Economy.PartAdMaxWear;
 
         // Now and then somebody sells a whole engine instead of its parts
-        private const double CompleteEngineChance = 0.08;
+        private static double CompleteEngineChance => Rules.RuleBook.Current.Economy.PartAdEngineChance;
 
         private readonly ICarPartsService _parts;
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger(LogCategory.Parts);

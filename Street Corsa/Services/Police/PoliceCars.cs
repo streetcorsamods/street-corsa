@@ -21,7 +21,8 @@ namespace StreetCorsa.Services.Police
     /// lot or a rival (<see cref="CarImportService"/> leaves them out, and leaves a car that has nothing else out of the
     /// catalog). A Monaco is preferred over any other.
     ///
-    /// The install is looked at once a run: the player adds cars with the game closed.
+    /// The install is looked at once a run: the player adds cars with the game closed. Which of its police cars comes
+    /// is picked each time, by the rules of the game in play.
     /// </summary>
     public static class PoliceCars
     {
@@ -32,46 +33,62 @@ namespace StreetCorsa.Services.Police
         private static readonly Regex Marker = new("\"" + SkinMarker + @"""\s*:\s*true", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         private static readonly object Lock = new();
-        private static bool _looked;
-        private static PoliceCar? _found;
+        private static List<PoliceCar>? _installed;
+        private static PoliceCar? _lastPicked;
 
-        /// <summary>The install's police car, or null when there is none (no police come then)</summary>
+        /// <summary>
+        /// The install's police car the rules of the game in play like best (<c>police.preferredCars</c>), or null when
+        /// there is none (no police come then)
+        /// </summary>
         public static PoliceCar? Installed()
         {
             lock (Lock)
             {
-                if (_looked) return _found;
-                _looked = true;
-                try
+                if (_installed == null)
                 {
-                    _found = Find(AppSettings.Instance.CarsPath);
-                    if (_found == null) Logger.Information("No police car installed: street races go without police");
-                    else Logger.Information("Police car: {Car} with {Count} livery(ies): {Skins}", _found.CarId, _found.Skins.Count, string.Join(", ", _found.Skins));
+                    try
+                    {
+                        _installed = All(AppSettings.Instance.CarsPath);
+                        if (_installed.Count == 0) Logger.Information("No police car installed: street races go without police");
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Warning("Could not look for a police car: {Error}", ex.Message);
+                        _installed = [];
+                    }
                 }
-                catch (Exception ex)
-                {
-                    Logger.Warning("Could not look for a police car: {Error}", ex.Message);
-                    _found = null;
-                }
-                return _found;
+
+                var picked = Best(_installed);
+                if (picked != null && picked != _lastPicked)
+                    Logger.Information("Police car: {Car} with {Count} livery(ies): {Skins}", picked.CarId, picked.Skins.Count, string.Join(", ", picked.Skins));
+                _lastPicked = picked;
+                return picked;
             }
         }
 
-        /// <summary>The police car in a cars folder, or null</summary>
-        public static PoliceCar? Find(string carsPath)
-        {
-            if (!Directory.Exists(carsPath)) return null;
+        /// <summary>The police car in a cars folder the rules like best, or null</summary>
+        public static PoliceCar? Find(string carsPath) => Best(All(carsPath));
 
+        /// <summary>Every police car in a cars folder, by folder name</summary>
+        private static List<PoliceCar> All(string carsPath)
+        {
+            if (!Directory.Exists(carsPath)) return [];
+
+            return AcCarFolder.InstalledCars(carsPath).OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
+                .Select(Look).OfType<PoliceCar>().ToList();
+        }
+
+        /// <summary>The one the rules like best; the first of them when they like none better</summary>
+        private static PoliceCar? Best(IEnumerable<PoliceCar> cars)
+        {
             PoliceCar? best = null;
             var bestScore = 0;
-            foreach (var folder in AcCarFolder.InstalledCars(carsPath).OrderBy(f => f, StringComparer.OrdinalIgnoreCase))
+            foreach (var car in cars)
             {
-                var candidate = Look(folder, out var score);
-                if (candidate != null && score > bestScore)
-                {
-                    best = candidate;
-                    bestScore = score;
-                }
+                var score = 1 + Preference(car.CarId);
+                if (score <= bestScore) continue;
+                best = car;
+                bestScore = score;
             }
 
             return best;
@@ -102,16 +119,24 @@ namespace StreetCorsa.Services.Police
             return skins.Count > 0 && skins.All(IsPoliceSkin);
         }
 
-        /// <summary>One car folder as a police car, or null; <paramref name="score"/> ranks it against the others</summary>
-        internal static PoliceCar? Look(string folder, out int score)
+        /// <summary>One car folder as a police car, or null</summary>
+        private static PoliceCar? Look(string folder)
         {
-            score = 0;
             var policeSkins = SkinFolders(folder).Where(IsPoliceSkin).Select(Path.GetFileName).OfType<string>().ToList();
-            if (policeSkins.Count == 0) return null;
+            return policeSkins.Count == 0 ? null : new PoliceCar(Path.GetFileName(folder), policeSkins);
+        }
 
-            var id = Path.GetFileName(folder);
-            score = 1 + (id.Contains("monaco", StringComparison.OrdinalIgnoreCase) ? 10 : 0);
-            return new PoliceCar(id, policeSkins);
+        /// <summary>How much the rules' preferred police cars (<c>police.preferredCars</c>) rank this one up: the first word most</summary>
+        private static int Preference(string id)
+        {
+            var preferred = Rules.RuleBook.Current.Police.PreferredCars ?? [];
+            for (var i = 0; i < preferred.Length; i++)
+            {
+                if (!string.IsNullOrWhiteSpace(preferred[i]) && id.Contains(preferred[i], StringComparison.OrdinalIgnoreCase))
+                    return 10 * (preferred.Length - i);
+            }
+
+            return 0;
         }
 
         private static List<string> SkinFolders(string folder)

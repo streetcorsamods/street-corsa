@@ -26,13 +26,13 @@ namespace StreetCorsa.Services.Configuration
         public const string AssistsFile = "assists.ini";
 
         /// <summary>Mechanical and body damage in a race, in percent: AC's full rate, which an easy game turns down</summary>
-        public const int RaceDamage = 100;
+        public static int RaceDamage => Rules.RuleBook.Current.Race.Damage;
 
         /// <summary>Tyre wear in a race: 1 is AC's normal rate</summary>
-        public const int RaceTyreWear = 1;
+        public static int RaceTyreWear => Rules.RuleBook.Current.Race.TyreWear;
 
         /// <summary>Fuel use in a race: 1 is AC's normal rate. The fuel a race burns stays burned (Car.FuelLitres).</summary>
-        public const int RaceFuelRate = 1;
+        public static int RaceFuelRate => Rules.RuleBook.Current.Race.FuelRate;
 
         /// <summary>The most passes one test-and-tune runs</summary>
         public const int MaxTunePasses = 20;
@@ -493,8 +493,8 @@ namespace StreetCorsa.Services.Configuration
         }
 
         /// <summary>How the police drive: flat out, and not shy of contact (the race mode takes them to 150% once they are out)</summary>
-        public const int PoliceAILevel = 100;
-        public const int PoliceAIAggression = 100;
+        public static int PoliceAILevel => Rules.RuleBook.Current.Race.PoliceAILevel;
+        public static int PoliceAIAggression => Rules.RuleBook.Current.Race.PoliceAIAggression;
         public const string PoliceDriverName = "Police";
 
         /// <summary>Noon, which a launch without a time of day races at</summary>
@@ -557,12 +557,14 @@ namespace StreetCorsa.Services.Configuration
             sb.AppendLine("CLOUD_SPEED=0.200");
             sb.AppendLine($"SUN_ANGLE={sunAngle.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}");
             sb.AppendLine("TIME_MULT=1.0");
-            sb.AppendLine("__CM_WEATHER_TYPE=19");
-            sb.AppendLine("__TRACK_GEOTAG_LONG=0.231944444444444");
-            sb.AppendLine("__TRACK_TIMEZONE_BASE_OFFSET=3600");
+            var world = Rules.RuleBook.Current.World;
+            var culture = System.Globalization.CultureInfo.InvariantCulture;
+            sb.AppendLine($"__CM_WEATHER_TYPE={world.WeatherType.ToString(culture)}");
+            sb.AppendLine($"__TRACK_GEOTAG_LONG={world.Longitude.ToString("0.###############", culture)}");
+            sb.AppendLine($"__TRACK_TIMEZONE_BASE_OFFSET={world.TimeZoneOffset.ToString(culture)}");
             sb.AppendLine("__TRACK_TIMEZONE_DTS=0");
-            sb.AppendLine("__TRACK_TIMEZONE_OFFSET=3600");
-            sb.AppendLine("__TRACK_GEOTAG_LAT=47.9602777777778");
+            sb.AppendLine($"__TRACK_TIMEZONE_OFFSET={world.TimeZoneOffset.ToString(culture)}");
+            sb.AppendLine($"__TRACK_GEOTAG_LAT={world.Latitude.ToString("0.###############", culture)}");
             sb.AppendLine("__CM_WEATHER_CONTROLLER=base");
             sb.AppendLine();
 
@@ -599,22 +601,22 @@ namespace StreetCorsa.Services.Configuration
             sb.AppendLine("ACTIVE=0");
             sb.AppendLine();
 
-            // [TEMPERATURE]
+            // [TEMPERATURE], [WEATHER], [WIND]: the rules' world
+            var world = Rules.RuleBook.Current.World;
+            var culture = System.Globalization.CultureInfo.InvariantCulture;
             sb.AppendLine("[TEMPERATURE]");
-            sb.AppendLine("AMBIENT=12");
-            sb.AppendLine("ROAD=13");
+            sb.AppendLine($"AMBIENT={world.AmbientC.ToString(culture)}");
+            sb.AppendLine($"ROAD={world.RoadC.ToString(culture)}");
             sb.AppendLine();
 
-            // [WEATHER]
             sb.AppendLine("[WEATHER]");
-            sb.AppendLine("NAME=4_mid_clear");
+            sb.AppendLine($"NAME={(string.IsNullOrWhiteSpace(world.Weather) ? "4_mid_clear" : world.Weather.Trim())}");
             sb.AppendLine();
 
-            // [WIND]
             sb.AppendLine("[WIND]");
             sb.AppendLine("DIRECTION_DEG=-1");
-            sb.AppendLine("SPEED_KMH_MAX=40");
-            sb.AppendLine("SPEED_KMH_MIN=2");
+            sb.AppendLine($"SPEED_KMH_MAX={Math.Max(world.WindMinKmh, world.WindMaxKmh).ToString(culture)}");
+            sb.AppendLine($"SPEED_KMH_MIN={Math.Max(0, world.WindMinKmh).ToString(culture)}");
             sb.AppendLine();
 
             // [__PREVIEW_GENERATION]

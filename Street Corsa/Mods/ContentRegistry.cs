@@ -88,4 +88,24 @@ public sealed class ContentRegistry<T> where T : class
         _entries[id] = (entry, mod);
         return id;
     }
+
+    /// <summary>
+    /// Takes out an entry a mod removes (its mod.json's <c>removes</c>), told in <see cref="Replaced"/>; false when
+    /// there is none (see <see cref="Removals"/>, which reports that)
+    /// </summary>
+    public bool Remove(string id, ModInfo by)
+    {
+        if (!_entries.TryGetValue(id, out var old)) return false;
+
+        _entries.Remove(id);
+        _order.RemoveAll(o => o.Equals(id, StringComparison.OrdinalIgnoreCase));
+        _replaced.Add($"{by.Id}/{ModSet.ManifestFileName}: {Kind} {id} of {old.Mod.Id} removed");
+        return true;
+    }
+
+    /// <summary>
+    /// The mods' removals of this kind of content, to apply as its entries are added (see <see cref="ModRemovals"/>):
+    /// a removal of an entry no mod before has is a problem (a typo, or a mod not installed)
+    /// </summary>
+    public ModRemovals Removals(ModSet mods, string type) => mods.Removals(type, Remove, Kind, _problems);
 }

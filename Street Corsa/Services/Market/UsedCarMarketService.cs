@@ -22,20 +22,20 @@ namespace StreetCorsa.Services.Market
         private readonly Random _random = new();
 
         // Market configuration
-        private const int DefaultStockLow = 8;
-        private const int DefaultStockHigh = 14;
+        private static int DefaultStockLow => Rules.RuleBook.Current.Market.StockLow;
+        private static int DefaultStockHigh => Rules.RuleBook.Current.Market.StockHigh;
 
         /// <summary>The same model twice on one lot is a coincidence; three times is a car park</summary>
-        private const int MaxSameModelPerDealer = 2;
-        private const float MinCondition = 0.6f;
-        private const float MaxCondition = 0.95f;
-        private const int MinMileage = 5000;
-        private const int MaxMileage = 60000;
-        private const float PriceVariationPercent = 0.2f; // ±20%
+        private static int MaxSameModelPerDealer => Rules.RuleBook.Current.Market.MaxSameModelPerDealer;
+        private static float MinCondition => Rules.RuleBook.Current.Market.MinCondition;
+        private static float MaxCondition => Rules.RuleBook.Current.Market.MaxCondition;
+        private static int MinMileage => Rules.RuleBook.Current.Market.MinMileage;
+        private static int MaxMileage => Rules.RuleBook.Current.Market.MaxMileage;
+        private static float PriceVariationPercent => Rules.RuleBook.Current.Market.PriceSpread;
 
         /// <summary>How hard a dealer pulls condition toward its own standard. At 1 the shift is the full
         /// distance between that standard and the middle of the range</summary>
-        private const float DealerConditionPull = 1.4f;
+        private static float DealerConditionPull => Rules.RuleBook.Current.Market.DealerConditionPull;
 
         public async Task<List<UsedCarListing>> SpawnListingsAsync(List<DealerLocation> dealers, DateTime currentDate, double priceMultiplier)
         {
@@ -306,7 +306,7 @@ namespace StreetCorsa.Services.Market
         /// The least a car goes back on a lot for. A car the catalog cannot price and nobody paid for (no profile, a
         /// purchase price of 0) is valued at nothing, and a listing at $0 is a free car.
         /// </summary>
-        private const decimal MinListPrice = 500m;
+        private static decimal MinListPrice => Rules.RuleBook.Current.Market.MinListPrice;
 
         public UsedCarListing ListCar(Car car, decimal price, string location, DateTime listedDate, bool describeEngine = true)
         {
@@ -394,7 +394,7 @@ namespace StreetCorsa.Services.Market
             return value;
         }
 
-        private const string TradeInFallbackId = "industrial_motors";
+        private static string TradeInFallbackId => Rules.RuleBook.Current.Market.TradeInDealer;
 
         public string TradeInLocation(IReadOnlyList<DealerLocation>? dealers)
         {
@@ -545,7 +545,7 @@ namespace StreetCorsa.Services.Market
         private int GenerateEarlierOwners(int mileage) =>
             1 + (int)Math.Floor(mileage / KmPerEarlierOwner * _random.NextDouble() * 2);
 
-        private const double KmPerEarlierOwner = 40_000;
+        private static double KmPerEarlierOwner => Rules.RuleBook.Current.Market.KmPerEarlierOwner;
 
         private decimal CalculatePrice(decimal basePrice, float condition, decimal history)
         {

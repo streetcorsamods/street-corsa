@@ -93,6 +93,7 @@ namespace StreetCorsa.Services.Career
 
             foreach (var line in milestones.Replaced.Concat(victories.Replaced).Concat(events.Replaced)) Logger.Information("{Line}", line);
             foreach (var problem in problems) Logger.Warning("Career content: {Problem}", problem);
+            ModProblems.Add("Career content", problems);
             Logger.Information("Career: {Events} events, {Milestones} milestones, {Victories} victory paths",
                 eventMap.Count, milestoneMap.Count, victoryList.Count);
 

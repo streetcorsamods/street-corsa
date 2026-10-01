@@ -1,0 +1,12 @@
+{
+  "_comment": [
+    "The base game's \"start\" rules: every figure the game plays by, as the code has them.",
+    "A mod changes any of them with a .json file of its own in its rules folder, naming only what it changes",
+    "(see docs/modding.md, \"rules\"). A career keeps the rules it was started with."
+  ],
+  "start": {
+    "money": 1000000,
+    "date": "1970-06-01",
+    "cars": []
+  }
+}

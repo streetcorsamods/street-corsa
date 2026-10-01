@@ -1,0 +1,35 @@
+{
+  "_comment": [
+    "The base game's \"time\" rules: every figure the game plays by, as the code has them.",
+    "A mod changes any of them with a .json file of its own in its rules folder, naming only what it changes",
+    "(see docs/modding.md, \"rules\"). A career keeps the rules it was started with."
+  ],
+  "time": {
+    "actions": {
+      "VisitNewspaper": 30,
+      "BuyCar": 120,
+      "VisitDiner": 30,
+      "DragRace": 30,
+      "RoadRace": 60,
+      "VisitUsedParts": 30,
+      "BuyPart": 60,
+      "GarageWorkMinor": 30,
+      "GarageWorkMajor": 120,
+      "SellCar": 60,
+      "PlaceAd": 30,
+      "SwitchCar": 15,
+      "FreeRun": 60,
+      "CollectFromImpound": 60,
+      "TestAndTune": 60,
+      "GarageChore": 15,
+      "DriveToStation": 20,
+      "TowToStation": 60
+    },
+    "otherAction": 30,
+    "perPart": 5,
+    "engineInOut": 120,
+    "stand": 20,
+    "cruiseTick": 5,
+    "shortestTrip": 15
+  }
+}

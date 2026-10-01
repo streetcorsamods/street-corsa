@@ -20,19 +20,20 @@ namespace StreetCorsa.Services.Street
     /// </summary>
     public static class StreetLights
     {
-        private const double MeanSunset = 18.3;
-        private const double SunsetSwing = 1.9;
-        private const int Midsummer = 172;
-
-        public static double SunsetHour(DateTime date) =>
-            MeanSunset + SunsetSwing * Math.Cos(2 * Math.PI * (date.DayOfYear - Midsummer) / 365.0);
+        // The rules' world: when the sun sets over the year, and when the street is light in the morning
+        public static double SunsetHour(DateTime date)
+        {
+            var world = Rules.RuleBook.Current.World;
+            return world.MeanSunset + world.SunsetSwing * Math.Cos(2 * Math.PI * (date.DayOfYear - world.Midsummer) / 365.0);
+        }
 
         public static StreetLight At(DateTime time)
         {
+            var world = Rules.RuleBook.Current.World;
             var hour = time.TimeOfDay.TotalHours;
             var sunset = SunsetHour(time);
-            if (hour >= sunset + 0.5 || hour < 5.5) return StreetLight.Night;
-            if (hour >= sunset - 1.5 || hour < 7) return StreetLight.Dusk;
+            if (hour >= sunset + 0.5 || hour < world.DawnHour) return StreetLight.Night;
+            if (hour >= sunset - 1.5 || hour < world.DayFromHour) return StreetLight.Dusk;
             return StreetLight.Day;
         }
 
@@ -111,6 +112,18 @@ namespace StreetCorsa.Services.Street
         public static IReadOnlyList<StreetScene> LoadAll(ModSet mods) =>
             ModScenes.LoadAll(mods, ContentTypes.Streets, "Streets", Logger, Load, s => s.Id, (s, id) => s with { Id = id });
 
+        private static readonly Lazy<IReadOnlyList<StreetScene>> InstalledScenes = new(() => LoadAll(ModSet.Installed));
+
+        /// <summary>The streets of the mods next to the game, read once</summary>
+        public static IReadOnlyList<StreetScene> Installed => InstalledScenes.Value;
+
+        /// <summary>A street that is left out: in the log, and in the mods' problems for the player</summary>
+        private static void LeftOut(string problem)
+        {
+            Logger.Warning("{Problem}", problem);
+            ModProblems.Add("Streets", problem);
+        }
+
         /// <summary>
         /// The street for a light of the day: the one the player is in while it still fits, else one of those that fit,
         /// at random; null when none does
@@ -138,6 +151,7 @@ namespace StreetCorsa.Services.Street
             catch (Exception ex)
             {
                 Logger.Error(ex, "Could not read the street {Path}", file);
+                ModProblems.Add("Streets", $"{file} could not be read ({ex.Message}); left out");
                 return null;
             }
         }
@@ -146,7 +160,7 @@ namespace StreetCorsa.Services.Street
         {
             if (entry?.Player == null || entry.LaneOffset <= 0f || entry.ApproachFrom <= 0f || entry.LeaveTo <= 0f)
             {
-                Logger.Warning("The street {Path} has no parking spot or no lane", file);
+                LeftOut($"{file} has no parking spot or no lane; left out");
                 return null;
             }
 
@@ -173,14 +187,14 @@ namespace StreetCorsa.Services.Street
                 var missing = times.Select(scene.Kn5For).FirstOrDefault(p => !File.Exists(p));
                 if (missing != null)
                 {
-                    Logger.Warning("The street {Id} has no model {Path}", scene.Id, missing);
+                    LeftOut($"the street {scene.Id} has no model {missing}; left out");
                     return null;
                 }
             }
 
             if (times.Count == 0)
             {
-                Logger.Warning("The street {Id} is used at no time of day", scene.Id);
+                LeftOut($"the street {scene.Id} is used at no time of day; left out");
                 return null;
             }
 

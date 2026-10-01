@@ -46,21 +46,21 @@ public sealed class RepairJob
 public static class RepairShop
 {
     /// <summary>Share of a part's new price a repair of a fully wrecked part costs</summary>
-    public const double PartShare = 0.6;
+    public static double PartShare => Rules.RuleBook.Current.Repairs.PartShare;
 
-    public const decimal Labour = 15m;
+    public static decimal Labour => Rules.RuleBook.Current.Repairs.Labour;
 
     /// <summary>Body work, per km/h of collision the body took</summary>
-    public const decimal BodyCostPerKmh = 8m;
+    public static decimal BodyCostPerKmh => Rules.RuleBook.Current.Repairs.BodyCostPerKmh;
 
     /// <summary>Less damage than this on a body is a small job</summary>
-    public const double SmallBodyJobKmh = 40;
+    public static double SmallBodyJobKmh => Rules.RuleBook.Current.Repairs.SmallBodyJobKmh;
 
     /// <summary>The job that puts a can of gas in a dry car</summary>
     public const string CanOfGas = "A can of gas";
 
     /// <summary>What the can holds, litres: about a gallon</summary>
-    public const double CanOfGasLitres = 4;
+    public static double CanOfGasLitres => Rules.RuleBook.Current.Repairs.CanOfGasLitres;
 
     /// <summary>A part at this or better needs nothing done</summary>
     private const double Straight = 0.995;

@@ -747,7 +747,7 @@ namespace StreetCorsa.Screens.Garage
         /// </summary>
         private string WhereToSortOut(Car car)
         {
-            var dry = Parts.Cars.CarCondition.FuelLeft(car) is < Parts.Cars.CarCondition.TooLittleToRaceLitres;
+            var dry = Parts.Cars.CarCondition.FuelLeft(car) is { } fuel && fuel < Parts.Cars.CarCondition.TooLittleToRaceLitres;
             if (!dry) return "The Repairs button sorts it out.";
 
             var groupOf = _partsService.IsAvailable ? Parts.Cars.CarCondition.Groups(_partsService.Catalog) : null;
@@ -819,9 +819,11 @@ namespace StreetCorsa.Screens.Garage
         private void OnEndDay()
         {
             var left = _timeService.GetRemainingMinutesToday(_gameState);
+            // The day's first hour is the rules': written as the game's clock writes the time (8:00 AM, 2:00 PM)
+            var morning = DateTime.Today.AddHours(_timeService.DayStartHour).ToString("h:mm tt", GameTimeService.DisplayCulture);
             var message = left > 0
-                ? $"Call it a day? The rest of today ({left / 60}h {left % 60:D2}m) goes by, and you pick up tomorrow at {_timeService.DayStartHour}:00 AM."
-                : $"Call it a day? You pick up tomorrow at {_timeService.DayStartHour}:00 AM.";
+                ? $"Call it a day? The rest of today ({left / 60}h {left % 60:D2}m) goes by, and you pick up tomorrow at {morning}."
+                : $"Call it a day? You pick up tomorrow at {morning}.";
 
             _dialogService.ShowDialog(new Dialogs.Confirmation.ConfirmationDialogViewModel(
                 _dialogService, message, "End the Day?",
