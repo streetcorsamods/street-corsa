@@ -1,4 +1,5 @@
 using StreetCorsa.Models.GameState;
+using StreetCorsa.Services.Text;
 using StreetCorsa.ViewModels;
 
 namespace StreetCorsa.Screens.NewGame
@@ -22,7 +23,12 @@ namespace StreetCorsa.Screens.NewGame
         /// <summary>Picks a preset: Easy, Normal or Hard</summary>
         public RelayCommand<string> PickCommand { get; }
 
-        public IReadOnlyList<PinkSlipFrequency> PinkSlipFrequencies { get; } = Enum.GetValues<PinkSlipFrequency>();
+        public IReadOnlyList<PinkSlipChoice> PinkSlipFrequencies { get; } =
+        [
+            new(PinkSlipFrequency.Low, GameText.Say("newgame.pink_slips.low")),
+            new(PinkSlipFrequency.Medium, GameText.Say("newgame.pink_slips.medium")),
+            new(PinkSlipFrequency.High, GameText.Say("newgame.pink_slips.high"))
+        ];
 
         /// <summary>The rules as they stand, a copy for the new save</summary>
         public GameRules Build() => _rules.Copy();
@@ -35,10 +41,10 @@ namespace StreetCorsa.Screens.NewGame
 
         public string Summary => Difficulty switch
         {
-            Difficulty.Easy => "Cheaper cars and parts, bigger prizes, cars that last, rivals who take it easy.",
-            Difficulty.Hard => "Dearer cars and parts, smaller prizes, cars that wear fast, rivals who push, and more pink slips.",
-            Difficulty.Custom => "Your own mix.",
-            _ => "The street as it is."
+            Difficulty.Easy => GameText.Say("difficulty.easy.summary"),
+            Difficulty.Hard => GameText.Say("difficulty.hard.summary"),
+            Difficulty.Custom => GameText.Say("difficulty.custom.summary"),
+            _ => GameText.Say("difficulty.normal.summary")
         };
 
         public int CarPricePercent
@@ -135,4 +141,7 @@ namespace StreetCorsa.Screens.NewGame
             return null;
         }
     }
+
+    /// <summary>A pink slip frequency in the picker, by its name in the player's language</summary>
+    public sealed record PinkSlipChoice(PinkSlipFrequency Value, string Name);
 }

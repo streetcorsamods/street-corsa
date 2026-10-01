@@ -1,5 +1,6 @@
 using System.Globalization;
 using StreetCorsa.Models.Race;
+using StreetCorsa.Services.Text;
 using StreetCorsa.ViewModels;
 
 namespace StreetCorsa.Dialogs.Timeslip
@@ -15,7 +16,7 @@ namespace StreetCorsa.Dialogs.Timeslip
         public TimeslipDialogViewModel(DialogService dialogService, TimeslipCard card)
         {
             _dialogService = dialogService;
-            Title = card.Title;
+            Title = card.Title ?? GameText.Say("timeslip.title");
             Names = card.Lanes.Select(l => l.Name).ToList();
             Rows = BuildRows(card.Lanes);
             Note = card.Note ?? string.Empty;
@@ -44,9 +45,9 @@ namespace StreetCorsa.Dialogs.Timeslip
 
             var rows = new List<TimeslipRow>();
             if (lanes.Any(l => l.DialIn != null))
-                rows.Add(new TimeslipRow("DIAL", lanes.Select(l => l.DialIn is { } d ? d.ToString("0.00", CultureInfo.InvariantCulture) : "-").ToList()));
+                rows.Add(new TimeslipRow(GameText.Say("timeslip.dial"), lanes.Select(l => l.DialIn is { } d ? d.ToString("0.00", CultureInfo.InvariantCulture) : "-").ToList()));
 
-            rows.Add(new TimeslipRow("R/T", lanes.Select(l => Reaction(l.Slip)).ToList()));
+            rows.Add(new TimeslipRow(GameText.Say("timeslip.reaction"), lanes.Select(l => Reaction(l.Slip)).ToList()));
             rows.Add(Row("60'", s => s.SixtyFeetSeconds, "0.000"));
             rows.Add(Row("330'", s => s.ThreeThirtyFeetSeconds, "0.000"));
             rows.Add(Row("1/8 ET", s => s.EighthMileSeconds, "0.000"));
@@ -61,7 +62,7 @@ namespace StreetCorsa.Dialogs.Timeslip
         private static string Reaction(Models.Race.Timeslip? slip)
         {
             var shown = Show(slip, s => s.ReactionSeconds, "0.000");
-            return slip?.RedLight == true ? $"{shown} RL" : shown;
+            return slip?.RedLight == true ? GameText.Say("timeslip.red_light", ("reaction", shown)) : shown;
         }
 
         /// <summary>A mark the car never reached is a dash, as on a real slip</summary>

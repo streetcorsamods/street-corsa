@@ -32,7 +32,7 @@ namespace StreetCorsa.Services.Talk
             var values = new TextValues
             {
                 ["car"] = CarOf(context),
-                ["trackName"] = context.SelectedTrackName ?? "that track"
+                ["trackName"] = context.SelectedTrackName ?? GameText.Say("rivals.that_track")
             };
             return Task.FromResult(lines.Count == 0 ? string.Empty : GameText.Fill(lines[_random.Next(lines.Count)], values));
         }
@@ -40,8 +40,8 @@ namespace StreetCorsa.Services.Talk
         /// <summary>The car a line talks about: the grudge's, else the player's</summary>
         private static string CarOf(TalkContext context) =>
             context.Grudge != null
-                ? context.GrudgeCarName ?? "car"
-                : context.PlayerCar is { } playerCar ? Catalog.CarNames.Short(playerCar) : "car";
+                ? context.GrudgeCarName ?? GameText.Say("rivals.car")
+                : context.PlayerCar is { } playerCar ? Catalog.CarNames.Short(playerCar) : GameText.Say("rivals.car");
 
         /// <summary>The pools the lines are drawn from, all of them together</summary>
         private static List<string> PoolsFor(TalkContext context)

@@ -6,6 +6,7 @@ using StreetCorsa.Configuration;
 using StreetCorsa.Dialogs;
 using StreetCorsa.Logging;
 using StreetCorsa.Navigation;
+using StreetCorsa.Services.Text;
 using StreetCorsa.Services;
 using StreetCorsa.Services.Catalog;
 using StreetCorsa.Services.Configuration;
@@ -203,6 +204,14 @@ namespace StreetCorsa
 
             // The settings before anything that reads the install: they name the AC folder
             GameSettingsService = new GameSettingsService();
+            // And the player's language, before any word is said
+            Services.Text.GameText.Language = GameSettingsService.Current.Language;
+            // A language whose mod is gone is told once and forgotten: the picker cannot show it to be taken back
+            if (Services.Text.GameText.Installed.LanguageMissing)
+            {
+                GameSettingsService.Current.Language = null;
+                GameSettingsService.Save();
+            }
 
             // The game's content is the mods under Content, the base game first: what each kind of content is read from
             LogMods();
@@ -365,10 +374,8 @@ namespace StreetCorsa
                 // A message box, not the game's dialog: that one does not wait, and the app is about to close. The
                 // Settings screen cannot be reached from here, so the message says where the folder is set by hand.
                 ShowStartupError(
-                    $"Assetto Corsa was not found at:\n{AppSettings.Instance.AssettoCorsaPath}\n\n" +
-                    $"Set the Assetto Corsa folder as \"AssettoCorsaPath\" in\n{GameSettingsService.SettingsPath}\n" +
-                    "(for example \"AssettoCorsaPath\": \"D:\\\\Games\\\\assettocorsa\") and start Street Corsa again.",
-                    "Assetto Corsa Not Found");
+                    GameText.Say("startup.no_ac", ("path", AppSettings.Instance.AssettoCorsaPath), ("settings", GameSettingsService.SettingsPath)),
+                    GameText.Say("startup.no_ac.title"));
                 Shutdown();
                 return;
             }
@@ -439,10 +446,8 @@ namespace StreetCorsa
                 logger.Critical(ex, "Critical error during content import");
 
                 ShowStartupError(
-                    $"Error importing Assetto Corsa content:\n{ex.Message}\n\n" +
-                    $"The Assetto Corsa folder is set as \"AssettoCorsaPath\" in\n{GameSettingsService.SettingsPath}\n\n" +
-                    "The details are in the log.",
-                    "Import Error");
+                    GameText.Say("startup.import_failed", ("error", ex.Message), ("settings", GameSettingsService.SettingsPath)),
+                    GameText.Say("startup.import_failed.title"));
                 Shutdown();
                 return;
             }
@@ -471,9 +476,8 @@ namespace StreetCorsa
             {
                 DialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(
                     DialogService,
-                    "Assetto Corsa is still running from an earlier session.\n\n" +
-                    "The cars' data and race settings it was started with go back once it closes; races can start after that.",
-                    "Assetto Corsa Is Running"));
+                    GameText.Say("startup.ac_running"),
+                    GameText.Say("startup.ac_running.title")));
             }
 
             // What stayed changed in AC after the start-up restore: the player is told once, the next start tries again
@@ -520,11 +524,13 @@ namespace StreetCorsa
             if (problems.Count == 0) return;
 
             var shown = string.Join("\n", problems.Take(ModProblemsShown).Select(p => "  " + p));
-            var more = problems.Count > ModProblemsShown ? $"\n  ...and {problems.Count - ModProblemsShown} more" : string.Empty;
-            var text = "Some of the mods have problems. What could not be used is left out; the rest of the game plays as usual.\n\n"
-                       + shown + more + $"\n\nEvery problem is in the log ({AppLoggerFactory.LogDirectory}).";
+            var more = problems.Count > ModProblemsShown
+                ? "\n" + GameText.Say("startup.mod_problems.more", ("count", problems.Count - ModProblemsShown))
+                : string.Empty;
+            var text = GameText.Say("startup.mod_problems", ("problems", shown + more), ("log", AppLoggerFactory.LogDirectory));
+            var title = GameText.Say("startup.mod_problems.title");
             _ = Dispatcher.BeginInvoke(() =>
-                DialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(DialogService, text, "Mod Problems")));
+                DialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(DialogService, text, title)));
         }
 
         /// <summary>A start-up failure the app closes on, in a message box that waits for the player; never throws</summary>
@@ -588,8 +594,8 @@ namespace StreetCorsa
         {
             DialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(
                 DialogService,
-                $"Something went wrong:\n{exception.Message}\n\nThe game carries on; the details are in the log.",
-                "Error"), jumpQueue: true);
+                GameText.Say("startup.error", ("error", exception.Message)),
+                GameText.Say("startup.error.title")), jumpQueue: true);
         }
 
         // ===== THE AC INSTALL: PUT BACK =====
@@ -762,8 +768,8 @@ namespace StreetCorsa
             e.Cancel = true;
             DialogService.ShowDialog(new Dialogs.Confirmation.ConfirmationDialogViewModel(
                 DialogService,
-                "Assetto Corsa is still running.\n\nStop it and quit? A race stopped before the finish counts as a loss when something is at stake.",
-                "Quit During a Race",
+                GameText.Say("quit.during_race"),
+                GameText.Say("quit.during_race.title"),
                 stop =>
                 {
                     if (!stop) return;

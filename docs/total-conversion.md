@@ -225,3 +225,40 @@ Left for later steps, on purpose:
 - car prices, rarity, brand countries (`CarProfileService`, `OriginFilter`) and the cooling figures and brand words
   (`EngineCooling`, linked into EngineBench): cars and makes (E6);
 - the reputation tier words, difficulty summaries and other English: words (E3).
+
+### E3: words (2026-09-30, branch `feature/words`)
+
+The owner's decisions: a language picker as well as mods rewriting the words; the whole sweep in one PR; the
+developer's screens (car catalog editor, sound library) stay in English.
+
+- **Lookup**: `GameText.Say(key, ("name", value)...)` in C#, `{t:Text key}` in XAML (`Services/Text/TextExtension`,
+  `xmlns:t="clr-namespace:StreetCorsa.Services.Text"`): a pool's first line, filled in; a key no mod has says itself.
+  App.xaml takes no `{t:Text}`: it loads before the language is set.
+- **Files**: `text/ui.json` (shared, `common.*`, the language's name), `ui_garage`, `ui_race`, `ui_market`, `ui_shell`,
+  `ui_parts`, and `race.json` for the race mode; about 1,300 keys. Choices made in code (plurals, one of two sentences)
+  are `.one`/`.other` or separate keys; the choice stays in code.
+- **Languages**: `game.json` `language` (`"en"`) is the language of the files directly in `text`; a translation is
+  `text/<language>/` in any mod, over the game's pools, the game's words where it has none; `language.name` is its name
+  in the Settings picker (shown when a mod has a language), saved in settings.json `Language`, spoken from the next
+  start (strings are built once in many places: a live switch would leave old words on screen).
+- **Race mode**: `RaceText` writes every `race.*` pool into race.ini `[STREET_CORSA_TEXT]` (`race.result.win` is
+  `RESULT_WIN`), percent-encoded UTF-8 so commas, `;`, `$`, quotes, line breaks and accents survive CSP's INI reader;
+  `mode.lua`'s `say(key, english, values)` reads `INIConfig.sections`, decodes, fills `{name}` (letters and digits
+  only), and says its own English when the key is not there. C# keys must not start with `race.`. The MSG locals
+  became one `MSG` table: the new ones took the main chunk past Lua's 200 locals.
+- **Linked code**: the parts code is compiled into the tools, which read no text: it says its words through
+  `Parts.Cars.PartWords` (the damage report, why a car can't race, the repair shop's and the gas station's jobs, the
+  work order's refusals, a part's few words), pointed at `GameText.Say` by a module initializer in the game; the tools
+  say the keys. A repair job has an `Id` (the gas station switches on it) beside its name.
+- **Tests** (`WordsTests`): every key in `{t:Text}`, `GameText.Say`, `PartWords.Say` and the mode's `say('KEY'` is in
+  the base text; no XAML outside the developer's screens writes words; translations and the INI encoding.
+
+Left for later, on purpose:
+- currency, units, number and date formats (`$`, mph, km/h, kg, HP, litres, °C, quarts as figures, the timeslip's
+  distances, the radio dial's KC): locale (E4). Money is formatted in code and handed to the text as a value;
+- part group names ("Engine blocks", "Pistons"): they are ids too, matched in the code and the data: cars and parts
+  (E6, onto work-order kinds). The work-order kinds' names come from the packs' data;
+- English grammar made in code: possessives (`'s`, his/her/their), "the" before a part, capitals at a sentence's start;
+- messages before the mods are read and on the fatal path (already running, could not start, the crash dialogs), the
+  mods' problem lines (for modders, like the log), the FMOD credit, the developer's F5 placement read-out;
+- saved text stays in the language it was made in (a used car's engine summary, the news, street talk).

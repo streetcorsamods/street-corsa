@@ -191,24 +191,55 @@ local SET_DOWN_MAX_SPEED = 25
 -- How often the cops' AI level and aggression are set again: CSP resets the aggression
 local POLICE_AI_EVERY = 0.5
 
--- Messages
-local MSG_WIN = "You won a few bucks, not bad!"
-local MSG_LOSE = "You lost, sucker!"
-local MSG_CRASH = "Lucky you weren't killed!\nBetter luck next time!"
-local MSG_FALSE_START = "You jumped the gun!\nNo contest, and everybody saw it."
-local MSG_DISQUALIFIED = "You hit him in his own lane!\nThat's a DQ, you lose."
-local MSG_BROKE_DOWN = {
-  ENGINE = "The engine let go!\nYou're out of the race.",
-  GEARBOX = "The gearbox gave out!\nYou're out of the race.",
-  SUSPENSION = "The suspension gave out!\nYou're out of the race.",
-  TYRE = "A tyre blew!\nYou're out of the race.",
-  OVERHEAT = "The engine boiled over and cooked itself!\nYou're out of the race.",
-  OIL = "The oil pressure went, and the bottom end with it!\nYou're out of the race.",
-  FUEL = "You ran out of gas!\nYou're out of the race."
+-- What the mode says, in the player's language: the career hands the words over in race.ini [STREET_CORSA_TEXT]
+-- (the text pools race.* of the mods' text\race.json: race.result.win is RESULT_WIN), each percent-encoded UTF-8.
+-- A key not there (a launcher older than the mode) says the English written here.
+local raceText = nil
+local function say(key, english, values)
+  if raceText == nil then
+    raceText = {}
+    pcall(function()
+      local section = ac.INIConfig.raceConfig().sections['STREET_CORSA_TEXT'] or {}
+      for k, v in pairs(section) do
+        -- A value is a list of its comma-separated parts; an encoded one has no comma, so it is one part
+        if type(v) == 'table' then v = v[1] end
+        if v ~= nil then raceText[k] = (tostring(v):gsub('%%(%x%x)', function(h) return string.char(tonumber(h, 16)) end)) end
+      end
+    end)
+  end
+  local line = raceText[key] or english
+  if values then
+    -- {name} as the game writes it, {dial_in} and {et:0.00} too: the mode's values come formatted, so a format is
+    -- taken as written and the value shows as the mode has it
+    line = line:gsub('{([%w_]+)(:?[^{}]*)}', function(name, format)
+      local value = values[name]
+      if value == nil or (format ~= '' and format:sub(1, 1) ~= ':') then return nil end
+      return tostring(value)
+    end)
+  end
+  return line
+end
+
+-- Messages, in one table: the main chunk is near Lua's 200 locals
+local MSG = {
+  WIN = say('RESULT_WIN', "You won a few bucks, not bad!"),
+  LOSE = say('RESULT_LOSE', "You lost, sucker!"),
+  CRASH = say('RESULT_CRASH', "Lucky you weren't killed!\nBetter luck next time!"),
+  FALSE_START = say('RESULT_FALSE_START', "You jumped the gun!\nNo contest, and everybody saw it."),
+  DISQUALIFIED = say('RESULT_DISQUALIFIED', "You hit him in his own lane!\nThat's a DQ, you lose."),
+  BROKE_DOWN = {
+    ENGINE = say('BROKE_DOWN_ENGINE', "The engine let go!\nYou're out of the race."),
+    GEARBOX = say('BROKE_DOWN_GEARBOX', "The gearbox gave out!\nYou're out of the race."),
+    SUSPENSION = say('BROKE_DOWN_SUSPENSION', "The suspension gave out!\nYou're out of the race."),
+    TYRE = say('BROKE_DOWN_TYRE', "A tyre blew!\nYou're out of the race."),
+    OVERHEAT = say('BROKE_DOWN_OVERHEAT', "The engine boiled over and cooked itself!\nYou're out of the race."),
+    OIL = say('BROKE_DOWN_OIL', "The oil pressure went, and the bottom end with it!\nYou're out of the race."),
+    FUEL = say('BROKE_DOWN_FUEL', "You ran out of gas!\nYou're out of the race.")
+  },
+  BUSTED = say('RESULT_BUSTED', "Busted!\nThe cops have you and your car."),
+  ESCAPED = say('RESULT_ESCAPED', "You lost the cops!"),
+  RED_LIGHT = say('RESULT_RED_LIGHT', "Red light! You left before your green.\nNo contest, and everybody saw it.")
 }
-local MSG_BUSTED = "Busted!\nThe cops have you and your car."
-local MSG_ESCAPED = "You lost the cops!"
-local MSG_RED_LIGHT = "Red light! You left before your green.\nNo contest, and everybody saw it."
 
 local sim = ac.getSim()
 
@@ -257,7 +288,7 @@ local raceClock = nil
 
 -- Overlay state
 local showResultOverlay = false
-local resultTitle = "Race Over"
+local resultTitle = say('TITLE_RACE_OVER', "Race Over")
 local resultMessage = ""
 
 -- Car data storage, keyed by car index 0..carCount-1 (always walked in that order)
@@ -519,15 +550,15 @@ local engineHeat = (function()
       end
     elseif h.water > COOKING then
       h.cookedLife = h.cookedLife + wear(carIndex, car, h, (h.water - COOKING) * LIFE_PER_C * dt, 'OVERHEAT')
-      tell(carIndex, h, 'cooking', 'Overheating!', 'Steam from under the hood. Back off or it lets go.')
+      tell(carIndex, h, 'cooking', say('WARN_COOKING_TITLE', 'Overheating!'), say('WARN_COOKING', 'Steam from under the hood. Back off or it lets go.'))
     elseif h.water > WARM then
-      tell(carIndex, h, 'warm', 'Running hot', 'The temperature gauge is climbing. Ease off!')
+      tell(carIndex, h, 'warm', say('WARN_WARM_TITLE', 'Running hot'), say('WARN_WARM', 'The temperature gauge is climbing. Ease off!'))
     end
 
     if h.supply < 0.5 and revs > 0.4 and car.gas > 0.2 then
       h.starvedFor = h.starvedFor + dt
       h.oilLife = h.oilLife + wear(carIndex, car, h, (1 - h.supply) * revs * OIL_LIFE * dt, 'OIL')
-      tell(carIndex, h, 'oil', 'Oil pressure!', 'The oil light flickers: the sump is surging.')
+      tell(carIndex, h, 'oil', say('WARN_OIL_TITLE', 'Oil pressure!'), say('WARN_OIL', 'The oil light flickers: the sump is surging.'))
     end
   end
 
@@ -851,7 +882,9 @@ local function bracketLine()
   local _, et = slipQuarterOf(data)
   if not bracket or not et then return '' end
   local dial = bracket.dialIn[0]
-  return string.format('\nYour %.3f on a %.2f dial-in%s', et, dial, et < dial and ': BREAKOUT' or '')
+  local values = { et = string.format('%.3f', et), dial = string.format('%.2f', dial) }
+  return '\n' .. (et < dial and say('RESULT_BRACKET_BROKE_OUT', 'Your {et} on a {dial} dial-in: BREAKOUT', values)
+    or say('RESULT_BRACKET', 'Your {et} on a {dial} dial-in', values))
 end
 
 -- The timeslip as the result has it, defined with the output further down
@@ -910,36 +943,40 @@ local function endSession(reason, won)
 
   local busted = chase and chase.player == 'BUSTED'
   if reason == 'BUSTED' then
-    resultTitle, resultMessage = "Busted", MSG_BUSTED
+    resultTitle, resultMessage = say('TITLE_BUSTED', "Busted"), MSG.BUSTED
     holdPlayer(30)
   elseif reason == 'CRASH' then
-    resultTitle, resultMessage = busted and "Busted" or "Race Over", busted and MSG_CRASH .. "\n" .. MSG_BUSTED or MSG_CRASH
+    resultTitle = busted and say('TITLE_BUSTED', "Busted") or say('TITLE_RACE_OVER', "Race Over")
+    resultMessage = busted and MSG.CRASH .. "\n" .. MSG.BUSTED or MSG.CRASH
     holdPlayer(30)
   elseif reason == 'FALSE_START' then
     local red = carData[0] and carData[0].redLight
-    resultTitle, resultMessage = red and "Red Light" or "False Start", red and MSG_RED_LIGHT or MSG_FALSE_START
+    resultTitle = red and say('TITLE_RED_LIGHT', "Red Light") or say('TITLE_FALSE_START', "False Start")
+    resultMessage = red and MSG.RED_LIGHT or MSG.FALSE_START
     holdPlayer(30)
   elseif reason == 'DISQUALIFIED' then
-    resultTitle, resultMessage = "Disqualified", MSG_DISQUALIFIED
+    resultTitle, resultMessage = say('TITLE_DISQUALIFIED', "Disqualified"), MSG.DISQUALIFIED
     holdPlayer(30)
   elseif reason == 'BROKE_DOWN' then
-    resultTitle, resultMessage = "Broke Down", MSG_BROKE_DOWN[carData[0] and carData[0].breakdown or 'ENGINE'] or MSG_BROKE_DOWN.ENGINE
+    resultTitle, resultMessage = say('TITLE_BROKE_DOWN', "Broke Down"), MSG.BROKE_DOWN[carData[0] and carData[0].breakdown or 'ENGINE'] or MSG.BROKE_DOWN.ENGINE
     holdPlayer(30)
   elseif tune then
     local best = bestPass()
-    resultTitle = "Strip Closed"
-    resultMessage = string.format('%d pass%s on the strip.', #tune.passes, #tune.passes == 1 and '' or 'es')
+    resultTitle = say('TITLE_STRIP_CLOSED', "Strip Closed")
+    resultMessage = #tune.passes == 1 and say('TUNE_PASSES_ONE', '{passes} pass on the strip.', { passes = #tune.passes })
+      or say('TUNE_PASSES_OTHER', '{passes} passes on the strip.', { passes = #tune.passes })
     if best then
-      resultMessage = resultMessage .. string.format('\nBest: %.3f @ %.2f mph', best.quarter_mile_s, best.quarter_mile_mph or 0)
+      resultMessage = resultMessage .. '\n' .. say('TUNE_BEST', 'Best: {et} @ {mph} mph',
+        { et = string.format('%.3f', best.quarter_mile_s), mph = string.format('%.2f', best.quarter_mile_mph or 0) })
     end
     holdPlayer(30)
   else
-    resultTitle, resultMessage = "Race Over", (won and MSG_WIN or MSG_LOSE) .. bracketLine()
+    resultTitle, resultMessage = say('TITLE_RACE_OVER', "Race Over"), (won and MSG.WIN or MSG.LOSE) .. bracketLine()
     if busted then
-      resultTitle, resultMessage = "Busted", resultMessage .. "\n" .. MSG_BUSTED
+      resultTitle, resultMessage = say('TITLE_BUSTED', "Busted"), resultMessage .. "\n" .. MSG.BUSTED
       holdPlayer(30)
     elseif chase and chase.player == 'ESCAPED' then
-      resultMessage = resultMessage .. "\n" .. MSG_ESCAPED
+      resultMessage = resultMessage .. "\n" .. MSG.ESCAPED
     end
   end
 
@@ -1059,7 +1096,8 @@ local function updateBreakdowns()
           return
         end
         holdAI(carIndex)
-        pcall(ac.setMessage, 'Broke down', data.driverName .. "'s car gave out. Finish the race and it is yours!")
+        pcall(ac.setMessage, say('RIVAL_BROKE_DOWN_TITLE', 'Broke down'),
+          say('RIVAL_BROKE_DOWN', "{driver}'s car gave out. Finish the race and it is yours!", { driver = data.driverName }))
         if rivalHunted() then decideChase('rival', 'BUSTED') end
       end
     end
@@ -1148,7 +1186,7 @@ local function updateBracket()
   -- hide AC's lights)
   if not bracket.told then
     bracket.told = true
-    pcall(ac.setMessage, 'Bracket race', 'Not yet! Wait for your own tree, on the right.')
+    pcall(ac.setMessage, say('BRACKET_TITLE', 'Bracket race'), say('BRACKET_WAIT', 'Not yet! Wait for your own tree, on the right.'))
   end
 
   if not rival.released then
@@ -1223,7 +1261,8 @@ local function updateTune(tick)
     pcall(physics.forceUserBrakesFor, 0.25, 1.0)
     if state == 'WAIT' then
       tune.state, tune.since = 'STAGE', now
-      pcall(ac.setMessage, 'Test and tune', string.format('Pass %d of %d: stage up', #tune.passes + 1, tune.maxPasses))
+      pcall(ac.setMessage, say('TUNE_TITLE', 'Test and tune'),
+        say('TUNE_STAGE', 'Pass {pass} of {passes}: stage up', { pass = #tune.passes + 1, passes = tune.maxPasses }))
     elseif now - tune.since >= STRIP.TUNE_STAGE then
       -- The brakes come off at the first amber: from here the player holds the car
       -- The pass is measured from where the car stands: put back short of or past its line, it still stages
@@ -1581,7 +1620,8 @@ local function judgeContact(carIndex, otherIndex)
     endSession('DISQUALIFIED')
   else
     holdAI(guiltyIndex)
-    pcall(ac.setMessage, 'Disqualified', guilty.driverName .. ' hit you. Finish the race and it is yours!')
+    pcall(ac.setMessage, say('TITLE_DISQUALIFIED', 'Disqualified'),
+      say('RIVAL_DISQUALIFIED', '{driver} hit you. Finish the race and it is yours!', { driver = guilty.driverName }))
   end
 end
 
@@ -1799,7 +1839,7 @@ local function startChase()
       ac.log(string.format('[Street Corsa] Cop %d could not be put on the road: %s', cop.index, tostring(placed)))
     end
   end
-  pcall(ac.setMessage, 'Cops!', 'The police are on to you. Lose them!')
+  pcall(ac.setMessage, say('COPS_TITLE', 'Cops!'), say('COPS_ON_YOU', 'The police are on to you. Lose them!'))
 end
 
 local _toTarget = vec3()
@@ -2043,8 +2083,9 @@ local function engage(cop, racer)
   end
   markChased(racer)
   ac.log(string.format('[Street Corsa] Cop %d in its speed trap saw car %d go by: after it', i, racer))
-  pcall(ac.setMessage, 'Cops!', racer == 0 and 'A cop saw you go by. Lose him!'
-    or (carData[1] and carData[1].driverName or 'Your rival') .. ' just went past a cop!')
+  pcall(ac.setMessage, say('COPS_TITLE', 'Cops!'), racer == 0 and say('COPS_TRAP', 'A cop saw you go by. Lose him!')
+    or say('COPS_TRAP_RIVAL', '{driver} just went past a cop!',
+      { driver = carData[1] and carData[1].driverName or say('YOUR_RIVAL', 'Your rival') }))
 end
 
 -- A cop is after the racer already
@@ -2059,7 +2100,8 @@ local function bustRival()
   decideChase('rival', 'BUSTED')
   carData[1].busted = true
   holdAI(1)
-  pcall(ac.setMessage, 'Busted', (carData[1] and carData[1].driverName or 'Your rival') .. ' got caught by the police!')
+  pcall(ac.setMessage, say('TITLE_BUSTED', 'Busted'), say('RIVAL_BUSTED', '{driver} got caught by the police!',
+    { driver = carData[1] and carData[1].driverName or say('YOUR_RIVAL', 'Your rival') }))
 end
 
 -- The player is busted: the message, and an autopilot takes the car and brakes it to a stop; the race ends then
@@ -2068,7 +2110,7 @@ local function pullOver()
   chase.pullOverAt = sessionDuration
   pcall(physics.setCarAutopilot, true)
   pcall(physics.setGentleStop, 0, true)
-  pcall(ac.setMessage, 'Busted!', 'The police got you. Pull over.')
+  pcall(ac.setMessage, say('COPS_BUSTED_TITLE', 'Busted!'), say('COPS_BUSTED', 'The police got you. Pull over.'))
 end
 
 local function checkTraps()
@@ -2191,7 +2233,8 @@ local function updateChase(dt)
       for _, cop in ipairs(police) do
         if cop.target == 0 and (cop.state == 'CHASING' or cop.state == 'ROADBLOCK') then putAway(cop) end
       end
-      pcall(ac.setMessage, 'Got away', giveUp and 'The cops gave up on you. Now win the race!' or 'You lost the cops. Now win the race!')
+      pcall(ac.setMessage, say('COPS_LOST_TITLE', 'Got away'), giveUp and say('COPS_GAVE_UP', 'The cops gave up on you. Now win the race!')
+        or say('COPS_LOST', 'You lost the cops. Now win the race!'))
     end
   end
 
@@ -2265,7 +2308,7 @@ startTimer = setInterval(function()
   end
 end, 0.25)
 
-ac.setStartMessage('Street Corsa')
+ac.setStartMessage(say('START', 'Street Corsa'))
 
 local PREPARE_SECONDS = 0.5
 local preparedFor = 0
@@ -2413,7 +2456,7 @@ local function drawTree(size)
   end
   if bracket then
     ui.pushFont(ui.Font.Main)
-    ui.drawTextClipped(string.format('Dial-in\n%.2f', bracket.dialIn[0]), DRAW.from:set(x - 60, y + (STRIP.TREE_AMBERS + 1) * 44 + 8),
+    ui.drawTextClipped(say('TREE_DIAL_IN', 'Dial-in\n{dial}', { dial = string.format('%.2f', bracket.dialIn[0]) }), DRAW.from:set(x - 60, y + (STRIP.TREE_AMBERS + 1) * 44 + 8),
       DRAW.to:set(x + 30, y + (STRIP.TREE_AMBERS + 1) * 44 + 60), COLOR_TEXT, DRAW.ALIGN_TOP_CENTRE)
     ui.popFont()
   end
@@ -2425,9 +2468,11 @@ local function drawPassSlip(size)
   local slip = tune.last
   local lines = {}
   if slip then
-    lines[#lines + 1] = string.format('Pass %d of %d%s', slip.pass, tune.maxPasses, slip.red_light and '   RED LIGHT' or '')
+    local pass = { pass = slip.pass, passes = tune.maxPasses }
+    lines[#lines + 1] = slip.red_light and say('SLIP_PASS_RED_LIGHT', 'Pass {pass} of {passes}   RED LIGHT', pass)
+      or say('SLIP_PASS', 'Pass {pass} of {passes}', pass)
     local function mark(label, value, format) lines[#lines + 1] = string.format('%-8s %s', label, value and string.format(format, value) or '-') end
-    mark('R/T', slip.reaction_s, '%.3f')
+    mark(say('SLIP_REACTION', 'R/T'), slip.reaction_s, '%.3f')
     mark("60'", slip.sixty_ft_s, '%.3f')
     mark("330'", slip.three_thirty_ft_s, '%.3f')
     mark('1/8 ET', slip.eighth_mile_s, '%.3f')
@@ -2435,11 +2480,11 @@ local function drawPassSlip(size)
     mark('1/4 ET', slip.quarter_mile_s, '%.3f')
     mark('1/4 MPH', slip.quarter_mile_mph, '%.2f')
   else
-    lines[#lines + 1] = 'No time: the car never left the line'
+    lines[#lines + 1] = say('SLIP_NO_TIME', 'No time: the car never left the line')
   end
   local left = math.max(0, math.ceil(STRIP.TUNE_SLIP - ((raceClock or 0) - tune.since)))
   lines[#lines + 1] = ''
-  lines[#lines + 1] = string.format('Back to the line in %d s. Go to the pits to leave the strip.', left)
+  lines[#lines + 1] = say('SLIP_BACK', 'Back to the line in {seconds} s. Go to the pits to leave the strip.', { seconds = left })
 
   local box = DRAW.box:set(460, 40 + #lines * 22)
   local topLeft = DRAW.topLeft:set((size.x - box.x) / 2, size.y * 0.15)

@@ -1,6 +1,7 @@
 using StreetCorsa.Models.Career.Events;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Models.Race;
+using StreetCorsa.Services.Text;
 using StreetCorsa.ViewModels;
 
 namespace StreetCorsa.Screens.Newspaper
@@ -39,17 +40,17 @@ namespace StreetCorsa.Screens.Newspaper
 
         public string RaceTypeDisplay => RaceType switch
         {
-            RaceType.DragRace when IsBracket => "Bracket Race",
-            RaceType.DragRace => "Drag Race",
-            RaceType.Circuit => "Circuit Race",
-            RaceType.Sprint => "Sprint Race",
-            _ => "Race"
+            RaceType.DragRace when IsBracket => GameText.Say("paper.race_type.bracket"),
+            RaceType.DragRace => GameText.Say("paper.race_type.drag"),
+            RaceType.Circuit => GameText.Say("paper.race_type.circuit"),
+            RaceType.Sprint => GameText.Say("paper.race_type.sprint"),
+            _ => GameText.Say("paper.race_type.other")
         };
 
         // The expiry and eligibility texts are coloured in the view from IsExpiringSoon and HasEligibleCars
         // (DataTriggers in NewspaperScreenView.xaml), so the colours stay in Styles/.
 
-        public string PinkSlipWarning => IsPinkSlip ? "PINK SLIP - Risk your car!" : string.Empty;
+        public string PinkSlipWarning => IsPinkSlip ? GameText.Say("paper.pink_slip_warning") : string.Empty;
         public bool ShowPinkSlipWarning => IsPinkSlip;
 
         /// <summary>
@@ -83,28 +84,28 @@ namespace StreetCorsa.Screens.Newspaper
                 HasEligibleCars = eligibleCars.Count > 0,
                 EligibleCars = eligibleCars,
                 EligibilityText = eligibleCars.Count > 0
-                    ? $"{eligibleCars.Count} car{(eligibleCars.Count > 1 ? "s" : "")} eligible"
-                    : "No eligible cars"
+                    ? GameText.Say(eligibleCars.Count > 1 ? "paper.eligible.other" : "paper.eligible.one", ("count", eligibleCars.Count))
+                    : GameText.Say("paper.eligible.none")
             };
         }
 
         private static string CalculateExpiresIn(DateTime? expiresAt, DateTime currentTime)
         {
             if (!expiresAt.HasValue)
-                return "No expiration";
+                return GameText.Say("paper.expires.never");
 
             var timeLeft = expiresAt.Value - currentTime;
 
             if (timeLeft.TotalDays >= 1)
-                return $"Expires in {(int)timeLeft.TotalDays} day{((int)timeLeft.TotalDays > 1 ? "s" : "")}";
+                return GameText.Say((int)timeLeft.TotalDays > 1 ? "paper.expires.days.other" : "paper.expires.days.one", ("count", (int)timeLeft.TotalDays));
 
             if (timeLeft.TotalHours >= 1)
-                return $"Expires in {(int)timeLeft.TotalHours} hour{((int)timeLeft.TotalHours > 1 ? "s" : "")}";
+                return GameText.Say((int)timeLeft.TotalHours > 1 ? "paper.expires.hours.other" : "paper.expires.hours.one", ("count", (int)timeLeft.TotalHours));
 
             if (timeLeft.TotalMinutes > 0)
-                return $"Expires soon!";
+                return GameText.Say("paper.expires.soon");
 
-            return "Expired";
+            return GameText.Say("paper.expires.gone");
         }
     }
 

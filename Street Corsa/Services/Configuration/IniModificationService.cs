@@ -418,6 +418,10 @@ namespace StreetCorsa.Services.Configuration
                 foreach (var (key, value) in start.IniKeys(index)) sb.AppendLine($"{key}={value}");
             }
 
+            // What the mode says in AC, in the player's language
+            sb.AppendLine();
+            foreach (var line in StreetCorsa.Services.Text.RaceText.IniLines(StreetCorsa.Services.Text.GameText.Installed)) sb.AppendLine(line);
+
             return sb.ToString();
         }
 

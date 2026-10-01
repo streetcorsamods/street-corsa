@@ -7,6 +7,7 @@ using StreetCorsa.Models.GameState;
 using StreetCorsa.Models.Race;
 using StreetCorsa.Navigation;
 using StreetCorsa.Screens.Shared;
+using StreetCorsa.Services.Text;
 using StreetCorsa.Services;
 using StreetCorsa.Services.Career;
 using StreetCorsa.Services.Catalog;
@@ -146,8 +147,11 @@ namespace StreetCorsa.Screens.Newspaper
                     var hasOffer = ad.Offer is { } offer && offer.Expires >= _gameState.Date;
                     PlayerAds.Add(new PlayerCarAdViewModel(
                         name,
-                        $"Asking ${ad.AskingPrice:N0}",
-                        hasOffer ? $"{CarSaleService.Capitalized(ad.Offer!.BuyerName)} offers ${ad.Offer.Amount:N0}, until {ad.Offer.Expires:ddd h tt}" : "No buyer has called yet",
+                        GameText.Say("paper.ad.asking", ("price", $"${ad.AskingPrice:N0}")),
+                        hasOffer
+                            ? GameText.Say("paper.ad.offer", ("buyer", CarSaleService.Capitalized(ad.Offer!.BuyerName)),
+                                ("amount", $"${ad.Offer.Amount:N0}"), ("until", ad.Offer.Expires))
+                            : GameText.Say("paper.ad.no_offer"),
                         hasOffer,
                         new RelayCommand(() => OnAcceptOffer(ad, name)),
                         new RelayCommand(() => OnDeclineOffer(ad))));
@@ -166,8 +170,8 @@ namespace StreetCorsa.Screens.Newspaper
             if (ad.Offer is not { } offer) return;
 
             _dialogService.ShowDialog(new ConfirmationDialogViewModel(_dialogService,
-                $"Sell the {carName} to {offer.BuyerName} for ${offer.Amount:N0}? The car is gone once it's sold.",
-                "Sell the Car",
+                GameText.Say("paper.sell.confirm", ("car", carName), ("buyer", offer.BuyerName), ("amount", $"${offer.Amount:N0}")),
+                GameText.Say("sell.title"),
                 yes =>
                 {
                     if (yes) SellToBuyer(ad);
@@ -188,10 +192,10 @@ namespace StreetCorsa.Screens.Newspaper
                 catch (Exception ex)
                 {
                     _logger.Error(ex, "Could not sell the car");
-                    result = new SaleResult(SaleOutcome.Refused, $"The car could not be sold:\n\n{ex.Message}");
+                    result = new SaleResult(SaleOutcome.Refused, GameText.Say("sell.failed", ("error", ex.Message)));
                 }
 
-                ShowSaleResult(result, result.Succeeded ? "Car Sold" : "No Sale");
+                ShowSaleResult(result, GameText.Say(result.Succeeded ? "sell.sold.title" : "sell.no_sale.title"));
             }
             catch (Exception ex)
             {
@@ -208,7 +212,7 @@ namespace StreetCorsa.Screens.Newspaper
         private void ShowSaleResult(SaleResult result, string title)
         {
             LoadPlayerAds();
-            var message = result.SaveFailed ? result.Message + "\n\nThe game could not be saved: the details are in the log." : result.Message;
+            var message = result.SaveFailed ? GameText.Say("sell.save_failed", ("message", result.Message)) : result.Message;
             _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, message, title));
         }
 
@@ -293,10 +297,8 @@ namespace StreetCorsa.Screens.Newspaper
                 {
                     var errorDialog = new InformationDialogViewModel(
                         _dialogService,
-                        eventDef.IsPinkSlip
-                            ? "Nobody is putting their pink slip up for this one today. Try again tomorrow."
-                            : "No opponent available for this event.",
-                        "Cannot Enter Event");
+                        GameText.Say(eventDef.IsPinkSlip ? "paper.enter.no_pink_slip" : "paper.enter.no_opponent"),
+                        GameText.Say("paper.enter.cannot.title"));
                     _dialogService.ShowDialog(errorDialog);
                     return;
                 }
@@ -305,7 +307,7 @@ namespace StreetCorsa.Screens.Newspaper
                 var opponentCarDef = _catalogRepository.GetCar(opponent.CarDefinitionId);
                 var opponentCarDisplay = opponentCarDef != null
                     ? $"{opponentCarDef.Year} {opponentCarDef.Brand} {opponentCarDef.Name}"
-                    : "Unknown Car";
+                    : GameText.Say("paper.unknown_car");
 
                 // Show event entry dialog
                 var dialog = new Dialogs.EventEntry.EventEntryDialogViewModel(
@@ -377,10 +379,8 @@ namespace StreetCorsa.Screens.Newspaper
             {
                 _dialogService.ShowDialog(new InformationDialogViewModel(
                     _dialogService,
-                    isBracket
-                        ? "There is no drag strip installed that runs the quarter mile, and a bracket race is run to it."
-                        : "There is no track installed this event can be raced on.",
-                    "Cannot Enter Event"));
+                    GameText.Say(isBracket ? "paper.enter.no_strip" : "paper.enter.no_track"),
+                    GameText.Say("paper.enter.cannot.title")));
                 return;
             }
 
@@ -441,8 +441,8 @@ namespace StreetCorsa.Screens.Newspaper
             {
                 _dialogService.ShowDialog(new InformationDialogViewModel(
                     _dialogService,
-                    $"Your car is not going anywhere: {setup.PlayerCarProblem}.\n\nSort it out in the garage first.",
-                    "Car Won't Run"));
+                    GameText.Say("paper.enter.wont_run", ("problem", setup.PlayerCarProblem)),
+                    GameText.Say("paper.enter.wont_run.title")));
                 return;
             }
 
@@ -454,8 +454,8 @@ namespace StreetCorsa.Screens.Newspaper
         {
             _dialogService.ShowDialog(new InformationDialogViewModel(
                 _dialogService,
-                $"The race could not be set up:\n\n{ex.Message}",
-                "Race Not Started"));
+                GameText.Say("paper.enter.failed", ("error", ex.Message)),
+                GameText.Say("paper.enter.failed.title")));
         }
 
         public override async void Enter()

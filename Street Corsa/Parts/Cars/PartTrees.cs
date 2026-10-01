@@ -131,7 +131,12 @@ public static class PartTrees
     public static string Describe(PartInstance part)
     {
         var attached = part.SelfAndDescendants().Count() - 1;
-        return $"{part.Wear * 100:0}%" + (attached > 0 ? $", with {attached} more part{(attached == 1 ? "" : "s")}" : "");
+        return attached switch
+        {
+            0 => PartWords.Say("parts.describe", ("wear", part.Wear * 100)),
+            1 => PartWords.Say("parts.describe.with.one", ("wear", part.Wear * 100)),
+            _ => PartWords.Say("parts.describe.with.other", ("wear", part.Wear * 100), ("count", attached))
+        };
     }
 
     /// <summary>The part another part is mounted on; null for a root or a part that is not in the tree</summary>

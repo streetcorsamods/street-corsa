@@ -1,5 +1,6 @@
 using StreetCorsa.Models.Catalog;
 using StreetCorsa.Models.GameState;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Models.Career.Filters
 {
@@ -16,7 +17,7 @@ namespace StreetCorsa.Models.Career.Filters
         /// </summary>
         public string Brand { get; set; } = string.Empty;
 
-        public string DisplayDescription => $"{Brand} only";
+        public string DisplayDescription => GameText.Say("event.cars.brand", ("brand", Brand));
 
         public BrandFilter() { }
 

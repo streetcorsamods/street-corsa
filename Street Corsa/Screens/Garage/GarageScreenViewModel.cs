@@ -14,6 +14,7 @@ using StreetCorsa.Services.Police;
 using StreetCorsa.Services.Race;
 using StreetCorsa.Services.Settings;
 using StreetCorsa.Services.Storage;
+using StreetCorsa.Services.Text;
 using StreetCorsa.Services.Time;
 using StreetCorsa.ViewModels;
 using System.Collections.ObjectModel;
@@ -172,7 +173,7 @@ namespace StreetCorsa.Screens.Garage
             get
             {
                 if (SelectedCar == null)
-                    return "No car selected";
+                    return GameText.Say("garage.no_car_selected");
 
                 return $"{SelectedCar.CarDefinition.Brand} {SelectedCar.CarDefinition.Name} ({SelectedCar.CarDefinition.Year ?? 0})";
             }
@@ -370,8 +371,8 @@ namespace StreetCorsa.Screens.Garage
             };
             Workbench.SaveFailed += _ => _dialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(
                 _dialogService,
-                "The work on the car is done, but the game could not be saved. It is saved again the next time something changes.",
-                "Save Warning"));
+                GameText.Say("garage.save_warning"),
+                GameText.Say("garage.save_warning.title")));
             Workbench.PropertyChanged += (_, e) =>
             {
                 if (e.PropertyName == nameof(PartsWorkbenchViewModel.IsOpen)) OnPropertyChanged(nameof(ShowNavigation));
@@ -467,8 +468,8 @@ namespace StreetCorsa.Screens.Garage
                     {
                         _dialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(
                             _dialogService,
-                            $"The car is not going anywhere: {string.Join("; ", damage)}.\n\n{WhereToSortOut(car)}",
-                            "Car Won't Run"));
+                            GameText.Say("garage.wont_run.damage", ("damage", string.Join("; ", damage)), ("fix", WhereToSortOut(car))),
+                            GameText.Say("garage.wont_run.title")));
                         return;
                     }
 
@@ -481,8 +482,8 @@ namespace StreetCorsa.Screens.Garage
                 {
                     _dialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(
                         _dialogService,
-                        $"The car is not going anywhere: {data.Problem}.",
-                        "Car Won't Run"));
+                        GameText.Say("garage.wont_run.problem", ("problem", data.Problem)),
+                        GameText.Say("garage.wont_run.title")));
                     return;
                 }
 
@@ -509,14 +510,14 @@ namespace StreetCorsa.Screens.Garage
                 {
                     _logger.Error("Free run failed: {Error}", result.ErrorMessage);
                     _dialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(
-                        _dialogService, $"Could not start the free run:\n\n{result.ErrorMessage}", "Launch Error"));
+                        _dialogService, GameText.Say("garage.free_run_failed", ("error", result.ErrorMessage)), GameText.Say("garage.launch_error.title")));
                 }
             }
             catch (Exception ex)
             {
                 _logger.Error(ex, "Exception during the free run");
                 _dialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(
-                    _dialogService, $"Could not start the free run:\n\n{ex.Message}", "Launch Error"));
+                    _dialogService, GameText.Say("garage.free_run_failed", ("error", ex.Message)), GameText.Say("garage.launch_error.title")));
             }
             finally
             {
@@ -540,7 +541,7 @@ namespace StreetCorsa.Screens.Garage
                 if (strip is not { } picked)
                 {
                     _dialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(
-                        _dialogService, "There's no drag strip installed in Assetto Corsa to test at.", "No Strip"));
+                        _dialogService, GameText.Say("garage.no_strip"), GameText.Say("garage.no_strip.title")));
                     return;
                 }
 
@@ -566,8 +567,8 @@ namespace StreetCorsa.Screens.Garage
                 {
                     _dialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(
                         _dialogService,
-                        $"The car is not going anywhere: {setup.PlayerCarProblem}.\n\n{WhereToSortOut(car)}",
-                        "Car Won't Run"));
+                        GameText.Say("garage.wont_run.damage", ("damage", setup.PlayerCarProblem), ("fix", WhereToSortOut(car))),
+                        GameText.Say("garage.wont_run.title")));
                     return;
                 }
 
@@ -577,7 +578,7 @@ namespace StreetCorsa.Screens.Garage
             {
                 _logger.Error(ex, "Exception setting up the test-and-tune");
                 _dialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(
-                    _dialogService, $"Could not go to the strip:\n\n{ex.Message}", "Launch Error"));
+                    _dialogService, GameText.Say("garage.strip_failed", ("error", ex.Message)), GameText.Say("garage.launch_error.title")));
             }
         }
 
@@ -597,7 +598,7 @@ namespace StreetCorsa.Screens.Garage
                     // The work first: a job that fails to go on costs nothing
                     job.Apply();
                     _gameState.Player.Money -= job.Cost;
-                    _logger.Information("Repaired {Car}: {Job} for ${Cost}", car.DefinitionId, job.Name, job.Cost);
+                    _logger.Information("Repaired {Car}: {Job} for ${Cost}", car.DefinitionId, job.Id, job.Cost);
 
                     try
                     {
@@ -639,12 +640,12 @@ namespace StreetCorsa.Screens.Garage
             {
                 if (SelectedCar?.CarInstance is not { ImpoundedUntil: { } until } car) return string.Empty;
                 return PoliceRules.CanCollect(car, _gameState.Date)
-                    ? $"The police have this car in the impound. It can be collected now for ${car.ImpoundFee:N0}."
-                    : $"The police have this car in the impound until {until:dddd d MMMM}, {until:h:mm tt}. Collecting it will cost ${car.ImpoundFee:N0}.";
+                    ? GameText.Say("garage.impound.now", ("fee", $"${car.ImpoundFee:N0}"))
+                    : GameText.Say("garage.impound.until", ("until", until), ("fee", $"${car.ImpoundFee:N0}"));
             }
         }
 
-        public string CollectButtonText => SelectedCar?.CarInstance is { IsImpounded: true } car ? $"Collect (${car.ImpoundFee:N0})" : "Collect";
+        public string CollectButtonText => SelectedCar?.CarInstance is { IsImpounded: true } car ? GameText.Say("garage.collect.fee", ("fee", $"${car.ImpoundFee:N0}")) : GameText.Say("garage.collect");
 
         private bool CanCollect() =>
             !_endingDay && SelectedCar?.CarInstance is { } car && PoliceRules.CanCollect(car, _gameState.Date) && _gameState.Player.Money >= car.ImpoundFee;
@@ -706,8 +707,8 @@ namespace StreetCorsa.Screens.Garage
         {
             get
             {
-                if (SelectedCar is not { } selected || _saleService.AdFor(_gameState, selected.CarInstance) is not { } ad) return "Sell";
-                return ad.Offer is { } offer && offer.Expires >= _gameState.Date ? "Sell (offer!)" : "Sell (in the paper)";
+                if (SelectedCar is not { } selected || _saleService.AdFor(_gameState, selected.CarInstance) is not { } ad) return GameText.Say("garage.sell");
+                return ad.Offer is { } offer && offer.Expires >= _gameState.Date ? GameText.Say("garage.sell.offer") : GameText.Say("garage.sell.in_paper");
             }
         }
 
@@ -748,11 +749,11 @@ namespace StreetCorsa.Screens.Garage
         private string WhereToSortOut(Car car)
         {
             var dry = Parts.Cars.CarCondition.FuelLeft(car) is { } fuel && fuel < Parts.Cars.CarCondition.TooLittleToRaceLitres;
-            if (!dry) return "The Repairs button sorts it out.";
+            if (!dry) return GameText.Say("garage.fix.repairs");
 
             var groupOf = _partsService.IsAvailable ? Parts.Cars.CarCondition.Groups(_partsService.Catalog) : null;
             var damaged = Parts.Cars.CarCondition.WhyCannotRace(car, groupOf, counting: false).Count > 0;
-            return damaged ? "The Repairs button sorts out the rest; fill it up at the gas station." : "Fill it up at the gas station.";
+            return damaged ? GameText.Say("garage.fix.repairs_and_gas") : GameText.Say("garage.fix.gas");
         }
 
         /// <summary>
@@ -771,14 +772,14 @@ namespace StreetCorsa.Screens.Garage
                     if (await _partsService.EnsurePartsAsync(car) && !string.IsNullOrEmpty(_gameState.SaveName)) _gameStateRepo.Save(_gameState, _gameState.SaveName);
 
                     var spec = car.Engine == null ? null : await EngineSpecs.ForAsync(_partsService, car, selected.DisplayName);
-                    var problem = car.HasPartsAssigned && car.Engine == null ? "there's no engine in it"
-                        : spec is { Runs: false } ? $"the engine won't run ({spec.Problem})"
+                    var problem = car.HasPartsAssigned && car.Engine == null ? GameText.Say("garage.station.no_engine")
+                        : spec is { Runs: false } ? GameText.Say("garage.station.engine_wont_run", ("problem", spec.Problem))
                         : null;
                     if (!ReferenceEquals(_navigationService.CurrentScreen, this)) return;
                     if (problem != null)
                     {
                         _dialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(
-                            _dialogService, $"Your car won't make it to the gas station: {problem}.", "Car Won't Run"));
+                            _dialogService, GameText.Say("garage.station.wont_make_it", ("problem", problem)), GameText.Say("garage.wont_run.title")));
                         return;
                     }
                 }
@@ -822,11 +823,11 @@ namespace StreetCorsa.Screens.Garage
             // The day's first hour is the rules': written as the game's clock writes the time (8:00 AM, 2:00 PM)
             var morning = DateTime.Today.AddHours(_timeService.DayStartHour).ToString("h:mm tt", GameTimeService.DisplayCulture);
             var message = left > 0
-                ? $"Call it a day? The rest of today ({left / 60}h {left % 60:D2}m) goes by, and you pick up tomorrow at {morning}."
-                : $"Call it a day? You pick up tomorrow at {morning}.";
+                ? GameText.Say("garage.end_day.ask.left", ("hours", left / 60), ("minutes", left % 60), ("morning", morning))
+                : GameText.Say("garage.end_day.ask", ("morning", morning));
 
             _dialogService.ShowDialog(new Dialogs.Confirmation.ConfirmationDialogViewModel(
-                _dialogService, message, "End the Day?",
+                _dialogService, message, GameText.Say("garage.end_day.title"),
                 confirmed =>
                 {
                     if (confirmed) EndDay();
@@ -852,7 +853,7 @@ namespace StreetCorsa.Screens.Garage
             {
                 _logger.Error(ex, "Could not end the day");
                 _dialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(
-                    _dialogService, $"The day could not be ended:\n\n{ex.Message}", "End of Day"));
+                    _dialogService, GameText.Say("garage.end_day.failed", ("error", ex.Message)), GameText.Say("garage.end_day.failed.title")));
             }
             finally
             {
@@ -974,10 +975,10 @@ namespace StreetCorsa.Screens.Garage
             if (delivered is not { Count: > 0 }) return;
 
             var lines = delivered.GroupBy(n => n).Select(g => g.Count() == 1 ? g.Key : $"{g.Key} (x{g.Count()})");
-            var message = "The mailman brought what you ordered. It's on your shelf:" + Environment.NewLine + Environment.NewLine +
+            var message = GameText.Say("garage.delivery") + Environment.NewLine + Environment.NewLine +
                           string.Join(Environment.NewLine, lines.Select(l => "  •  " + l));
             delivered.Clear();
-            _dialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(_dialogService, message, "Delivery"));
+            _dialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(_dialogService, message, GameText.Say("garage.delivery.title")));
 
             try
             {
@@ -1056,7 +1057,7 @@ namespace StreetCorsa.Screens.Garage
         public string SkinId => !string.IsNullOrEmpty(CarInstance.SkinId) ? CarInstance.SkinId : "default";
 
         public string DisplayName => $"{CarDefinition.Brand} {CarDefinition.Name}";
-        public string YearDisplay => CarDefinition.Year?.ToString() ?? "Unknown";
+        public string YearDisplay => CarDefinition.Year?.ToString() ?? GameText.Say("garage.year_unknown");
         public bool HasPreviewImage => !string.IsNullOrEmpty(PreviewImagePath);
     }
 

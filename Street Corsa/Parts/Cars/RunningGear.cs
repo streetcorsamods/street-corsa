@@ -23,7 +23,17 @@ public static class RunningGear
     public const int Corners = 4;
     public const int TyreSlotOnRim = 2;
 
-    public static readonly string[] CornerNames = { "front left", "front right", "rear left", "rear right" };
+    private static readonly string[] CornerKeys =
+        ["condition.corner.front_left", "condition.corner.front_right", "condition.corner.rear_left", "condition.corner.rear_right"];
+
+    /// <summary>A corner as the player reads it ("front left")</summary>
+    public static string CornerName(int corner) => PartWords.Say(CornerKeys[corner]);
+
+    /// <summary>The corners in English, for the log</summary>
+    public static readonly string[] CornerIds = ["front left", "front right", "rear left", "rear right"];
+
+    /// <summary>An axle as the player reads it ("front"): the front's for corners 0-1, the rear's for 2-3</summary>
+    public static string AxleName(int corner) => PartWords.Say(IsFront(corner) ? "condition.axle.front" : "condition.axle.rear");
 
     public static int WheelSlot(int corner) => 101 + corner;
     public static int BrakeSlot(int corner) => 111 + corner;

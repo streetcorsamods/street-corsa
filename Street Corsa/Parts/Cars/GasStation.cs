@@ -19,10 +19,10 @@ public sealed record StationPrices(decimal FuelPerLitre, decimal OilPerLitre, de
 /// </summary>
 public static class GasStation
 {
-    /// <summary>The jobs by name</summary>
-    public const string FillUp = "Fill up";
-    public const string TopUpOil = "Top up the oil";
-    public const string Wash = "Wash";
+    /// <summary>The jobs by id (<see cref="RepairJob.Id"/>)</summary>
+    public const string FillUp = "fill_up";
+    public const string TopUpOil = "top_up_oil";
+    public const string Wash = "wash";
 
     /// <summary>
     /// How long a job takes to watch, real seconds (its game time is <see cref="RepairJob.Time"/>): the pump runs at
@@ -80,11 +80,11 @@ public static class GasStation
         var quarts = Math.Max(1, (int)Math.Round(litres / LitresPerQuart));
         return quarts switch
         {
-            1 => "a quart",
-            2 => "two quarts",
-            3 => "three quarts",
-            4 => "four quarts",
-            _ => $"{quarts} quarts"
+            1 => PartWords.Say("station.quarts.1"),
+            2 => PartWords.Say("station.quarts.2"),
+            3 => PartWords.Say("station.quarts.3"),
+            4 => PartWords.Say("station.quarts.4"),
+            _ => PartWords.Say("station.quarts.many", ("quarts", quarts))
         };
     }
 
@@ -98,22 +98,22 @@ public static class GasStation
         var litres = CarCondition.LitresToFill(car);
         if (litres >= FillFromLitres)
         {
-            jobs.Add(new RepairJob(FillUp, $"{CarCondition.FuelLeft(car):0.#} of {car.FuelTankLitres:0} litres in the tank",
+            jobs.Add(new RepairJob(FillUp, PartWords.Say("station.job.fill_up"), PartWords.Say("station.job.fill_up.detail", ("left", CarCondition.FuelLeft(car)), ("tank", car.FuelTankLitres)),
                 PartPricing.Round((double)prices.FuelPerLitre * litres * multiplier), GameAction.GarageChore, () => car.FuelLitres = null, isChore: true));
         }
 
         if (car.Engine != null && 1 - CarCondition.OilLeft(car) >= TopUpFrom)
         {
             var oil = OilToTopUp(car, catalog);
-            var detail = CarCondition.OilLeft(car) < 0.4 ? $"Way down: {Quarts(oil)} low" : $"{Quarts(oil)} low";
-            jobs.Add(new RepairJob(TopUpOil, char.ToUpperInvariant(detail[0]) + detail[1..],
+            var detail = PartWords.Say(CarCondition.OilLeft(car) < 0.4 ? "station.job.oil.way_down" : "station.job.oil.low", ("quarts", Quarts(oil)));
+            jobs.Add(new RepairJob(TopUpOil, PartWords.Say("station.job.oil"), detail,
                 Math.Max(PartPricing.Round((double)prices.OilPerLitre * LitresPerQuart * multiplier), PartPricing.Round((double)prices.OilPerLitre * oil * multiplier)),
                 GameAction.GarageChore, () => car.OilLevel = null, isChore: true));
         }
 
         if (car.BodyDirt >= DirtyFrom)
         {
-            jobs.Add(new RepairJob(Wash, car.BodyDirt >= 0.5 ? "Filthy" : "Dusty", PartPricing.Round((double)prices.Wash * multiplier),
+            jobs.Add(new RepairJob(Wash, PartWords.Say("station.job.wash"), PartWords.Say(car.BodyDirt >= 0.5 ? "station.job.wash.filthy" : "station.job.wash.dusty"), PartPricing.Round((double)prices.Wash * multiplier),
                 GameAction.GarageChore, () => car.BodyDirt = 0, isChore: true));
         }
 

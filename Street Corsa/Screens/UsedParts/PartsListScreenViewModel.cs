@@ -5,6 +5,7 @@ using StreetCorsa.Navigation;
 using StreetCorsa.Services.Catalog;
 using StreetCorsa.Services.Parts;
 using StreetCorsa.Services.Storage;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Screens.UsedParts
 {
@@ -16,7 +17,7 @@ namespace StreetCorsa.Screens.UsedParts
     /// </summary>
     public abstract class PartsListScreenViewModel : BaseScreenViewModel
     {
-        public const string AllGroups = "All parts";
+        public static string AllGroups => GameText.Say("usedparts.all_groups");
 
         // A full page of rows, not the catalog's two thousand at once
         private const int MaxRows = 250;
@@ -85,7 +86,9 @@ namespace StreetCorsa.Screens.UsedParts
 
         public bool CanFilterByFit => SelectedCar != null && !IsSellTab;
 
-        public string FitFilterLabel => SelectedCar == null ? "Only what fits my car" : $"Only what fits my {CarName}";
+        public string FitFilterLabel => SelectedCar == null
+            ? GameText.Say("usedparts.fit_filter")
+            : GameText.Say("usedparts.fit_filter.car", ("car", CarName));
 
         private string _statusText = string.Empty;
 
@@ -100,7 +103,7 @@ namespace StreetCorsa.Screens.UsedParts
         protected Car? SelectedCar =>
             _gameState.Player.Cars.FirstOrDefault(c => c.InstanceId == _gameState.Player.SelectedCarInstanceId);
 
-        private string CarName => (SelectedCar == null ? null : _catalogRepo.GetCar(SelectedCar.DefinitionId))?.Name ?? "car";
+        private string CarName => (SelectedCar == null ? null : _catalogRepo.GetCar(SelectedCar.DefinitionId))?.Name ?? GameText.Say("usedparts.fit_filter.no_name");
 
         // ----- what the page lists -----
 
@@ -114,7 +117,7 @@ namespace StreetCorsa.Screens.UsedParts
         protected virtual bool CanTake(PartOfferViewModel offer) => IsSellTab || offer.Price <= _gameState.Player.Money;
 
         /// <summary>The status line when nothing matches, on a buying tab</summary>
-        protected virtual string NothingText => "Nothing like that on offer.";
+        protected virtual string NothingText => GameText.Say("usedparts.nothing");
 
         /// <summary>Added to the status line: what else the page has to say</summary>
         protected virtual string StatusNote => string.Empty;
@@ -183,7 +186,7 @@ namespace StreetCorsa.Screens.UsedParts
             {
                 _logger.Error(ex, "Could not list the parts");
                 Offers.Clear();
-                StatusText = "The parts could not be listed.";
+                StatusText = GameText.Say("usedparts.list_failed");
             }
         }
 
@@ -192,7 +195,7 @@ namespace StreetCorsa.Screens.UsedParts
             Offers.Clear();
             if (!CanList)
             {
-                StatusText = "No parts catalog is installed.";
+                StatusText = GameText.Say("usedparts.no_catalog");
                 return;
             }
 
@@ -211,10 +214,11 @@ namespace StreetCorsa.Screens.UsedParts
 
             StatusText = matching.Count switch
             {
-                0 when IsSellTab => "Your shelf is empty.",
+                0 when IsSellTab => GameText.Say("usedparts.shelf_empty"),
                 0 => NothingText,
-                > MaxRows => $"Showing {MaxRows} of {matching.Count}: narrow it down by kind or name.",
-                _ => $"{matching.Count} part{(matching.Count == 1 ? "" : "s")}"
+                > MaxRows => GameText.Say("usedparts.showing", ("shown", MaxRows), ("count", matching.Count)),
+                1 => GameText.Say("usedparts.count.one", ("count", 1)),
+                _ => GameText.Say("usedparts.count.other", ("count", matching.Count))
             } + StatusNote;
         }
 

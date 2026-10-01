@@ -1,6 +1,7 @@
 <UserControl x:Class="StreetCorsa.Screens.Diner.DinerScreenView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:t="clr-namespace:StreetCorsa.Services.Text"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:converters="clr-namespace:StreetCorsa.Converters"
@@ -45,7 +46,7 @@
                 Grid.Row="0"
                 Style="{StaticResource RoundIconButtonStyle}"
                 Tag="{StaticResource GarageIcon}"
-                ToolTip="Back to the garage"
+                ToolTip="{t:Text diner.back.tooltip}"
                 Command="{Binding GarageCommand}"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Top"
@@ -69,7 +70,7 @@
 
         <!-- Out to the street -->
         <Button Grid.Row="0"
-                Content="CRUISE THE STREETS"
+                Content="{t:Text diner.cruise}"
                 Command="{Binding CruiseCommand}"
                 Style="{StaticResource DialogPrimaryButtonStyle}"
                 Foreground="{StaticResource BgPanelBrush}"
@@ -80,7 +81,7 @@
                 HorizontalAlignment="Right"
                 VerticalAlignment="Top"
                 Margin="0,120,20,0"
-                ToolTip="Sit at the curb with the engine running and see who pulls up"/>
+                ToolTip="{t:Text diner.cruise.tooltip}"/>
 
         <!-- Main Content -->
         <Grid Grid.Row="0" Margin="20,100,20,20">
@@ -109,7 +110,7 @@
                            BorderBrush="{StaticResource BorderLightBrush}"
                            BorderThickness="0,0,0,1"
                            Padding="15">
-                        <TextBlock Text="OPPONENTS AT THE DINER"
+                        <TextBlock Text="{t:Text diner.opponents}"
                                   FontSize="{StaticResource FontSizeSubheading}"
                                   FontWeight="Bold"
                                   Foreground="{StaticResource TextPrimaryBrush}"/>
@@ -120,12 +121,12 @@
                            Visibility="{Binding HasOpponents, Converter={StaticResource InverseBooleanToVisibilityConverter}}"
                            Padding="20">
                         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                            <TextBlock Text="No racers here right now"
+                            <TextBlock Text="{t:Text diner.no_racers}"
                                       FontSize="{StaticResource FontSizeBody}"
                                       Foreground="{StaticResource TextSecondaryBrush}"
                                       HorizontalAlignment="Center"
                                       TextWrapping="Wrap"/>
-                            <TextBlock Text="Check back tomorrow"
+                            <TextBlock Text="{t:Text diner.check_back}"
                                       FontSize="{StaticResource FontSizeSmall}"
                                       Foreground="{StaticResource TextDisabledBrush}"
                                       HorizontalAlignment="Center"
@@ -214,7 +215,7 @@
                                                                         <!-- Reputation -->
                                                                         <StackPanel Orientation="Horizontal"
                                                                                    Margin="0,0,0,2">
-                                                                            <TextBlock Text="Reputation: "
+                                                                            <TextBlock Text="{t:Text diner.reputation}"
                                                                                       FontSize="{StaticResource FontSizeCaption}"
                                                                                       Foreground="{StaticResource TextSecondaryBrush}"/>
                                                                             <TextBlock Foreground="{Binding Difficulty, Converter={StaticResource DifficultyTextBrushConverter}}"
@@ -271,7 +272,7 @@
                            Padding="15,10"
                            Visibility="{Binding HasStreetTalk, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <StackPanel>
-                            <TextBlock Text="WORD ON THE STREET"
+                            <TextBlock Text="{t:Text diner.word_on_street}"
                                       FontSize="{StaticResource FontSizeCaption}"
                                       FontWeight="Bold"
                                       Foreground="{StaticResource TextSecondaryBrush}"
@@ -462,7 +463,7 @@
                                    Height="150"
                                    Margin="0,0,10,0">
                                 <StackPanel>
-                                    <TextBlock Text="RECORD"
+                                    <TextBlock Text="{t:Text diner.record}"
                                               FontSize="{StaticResource FontSizeCaption}"
                                               FontWeight="Bold"
                                               Foreground="{StaticResource TextSecondaryBrush}"
@@ -477,7 +478,7 @@
 
                                     <!-- Drag Race Record -->
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                        <TextBlock Text="DRAG"
+                                        <TextBlock Text="{t:Text diner.drag}"
                                                   FontSize="{StaticResource FontSizeMicro}"
                                                   Foreground="{StaticResource WarningBrush}"
                                                   Width="28"/>
@@ -489,7 +490,7 @@
 
                                     <!-- Road Race Record -->
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                        <TextBlock Text="ROAD"
+                                        <TextBlock Text="{t:Text diner.road}"
                                                   FontSize="{StaticResource FontSizeMicro}"
                                                   Foreground="{StaticResource RoyalBlueBrush}"
                                                   Width="28"/>
@@ -501,7 +502,7 @@
 
                                     <!-- Pink Slips -->
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="PINK SLIPS"
+                                        <TextBlock Text="{t:Text diner.pink_slips}"
                                                   FontSize="{StaticResource FontSizeTiny}"
                                                   Foreground="{StaticResource GoldBrush}"
                                                   Margin="0,0,5,0"/>
@@ -523,7 +524,7 @@
                                    Height="150"
                                    Margin="10,0,0,0">
                                 <StackPanel>
-                                    <TextBlock Text="CURRENT CAR"
+                                    <TextBlock Text="{t:Text diner.current_car}"
                                               FontSize="{StaticResource FontSizeCaption}"
                                               FontWeight="Bold"
                                               Foreground="{StaticResource TextSecondaryBrush}"
@@ -541,7 +542,7 @@
 
                                     <!-- Car Year -->
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                        <TextBlock Text="YEAR"
+                                        <TextBlock Text="{t:Text diner.year}"
                                                   FontSize="{StaticResource FontSizeTiny}"
                                                   Foreground="{StaticResource TextSecondaryBrush}"
                                                   Width="50"/>
@@ -552,7 +553,7 @@
 
                                     <!-- Car Power -->
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                        <TextBlock Text="POWER"
+                                        <TextBlock Text="{t:Text diner.power}"
                                                   FontSize="{StaticResource FontSizeTiny}"
                                                   Foreground="{StaticResource TextSecondaryBrush}"
                                                   Width="50"/>
@@ -564,7 +565,7 @@
 
                                     <!-- Car Weight -->
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                        <TextBlock Text="WEIGHT"
+                                        <TextBlock Text="{t:Text diner.weight}"
                                                   FontSize="{StaticResource FontSizeTiny}"
                                                   Foreground="{StaticResource TextSecondaryBrush}"
                                                   Width="50"/>
@@ -590,7 +591,7 @@
                                    CornerRadius="5"
                                    Padding="20"
                                    Visibility="{Binding HasAnyTracks, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
-                                <TextBlock Text="No tracks available. Check your Assetto Corsa installation."
+                                <TextBlock Text="{t:Text diner.no_tracks}"
                                           FontSize="{StaticResource FontSizeCompact}"
                                           Foreground="{StaticResource TextSecondaryBrush}"
                                           HorizontalAlignment="Center"
@@ -614,7 +615,7 @@
                                        Margin="0,0,5,0"
                                        Visibility="{Binding HasDragTracks, Converter={StaticResource BooleanToVisibilityConverter}}">
                                     <StackPanel>
-                                        <TextBlock Text="DRAG RACE"
+                                        <TextBlock Text="{t:Text diner.drag_race}"
                                                   FontSize="{StaticResource FontSizeBody}"
                                                   FontWeight="Bold"
                                                   Foreground="{StaticResource TextPrimaryBrush}"
@@ -660,7 +661,7 @@
                                                                             <!-- Placeholder when no preview -->
                                                                             <Border Background="{StaticResource BgLightBrush}"
                                                                                    Visibility="{Binding HasPreview, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
-                                                                                <TextBlock Text="DRAG"
+                                                                                <TextBlock Text="{t:Text diner.drag}"
                                                                                           FontSize="{StaticResource FontSizeSubheading}"
                                                                                           FontWeight="Bold"
                                                                                           Foreground="{StaticResource Gray50Brush}"
@@ -725,7 +726,7 @@
                                        Margin="5,0,0,0"
                                        Visibility="{Binding HasRoadTracks, Converter={StaticResource BooleanToVisibilityConverter}}">
                                     <StackPanel>
-                                        <TextBlock Text="ROAD RACE"
+                                        <TextBlock Text="{t:Text diner.road_race}"
                                                   FontSize="{StaticResource FontSizeBody}"
                                                   FontWeight="Bold"
                                                   Foreground="{StaticResource TextPrimaryBrush}"
@@ -771,7 +772,7 @@
                                                                             <!-- Placeholder when no preview -->
                                                                             <Border Background="{StaticResource BgLightBrush}"
                                                                                    Visibility="{Binding HasPreview, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
-                                                                                <TextBlock Text="ROAD"
+                                                                                <TextBlock Text="{t:Text diner.road}"
                                                                                           FontSize="{StaticResource FontSizeSubheading}"
                                                                                           FontWeight="Bold"
                                                                                           Foreground="{StaticResource Gray50Brush}"
@@ -836,7 +837,7 @@
                                    Margin="0,15,0,0"
                                    Visibility="{Binding HasMatchupStats, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <StackPanel>
-                                    <TextBlock Text="MATCHUP"
+                                    <TextBlock Text="{t:Text diner.matchup}"
                                               FontSize="{StaticResource FontSizeBody}"
                                               FontWeight="Bold"
                                               Foreground="{StaticResource TextPrimaryBrush}"
@@ -852,13 +853,13 @@
                                         </Grid.ColumnDefinitions>
 
                                         <TextBlock Grid.Column="0"
-                                                  Text="YOU"
+                                                  Text="{t:Text diner.you}"
                                                   FontSize="{StaticResource FontSizeSmall}"
                                                   FontWeight="Bold"
                                                   Foreground="{StaticResource TextSecondaryBrush}"
                                                   HorizontalAlignment="Center"/>
                                         <TextBlock Grid.Column="2"
-                                                  Text="THEM"
+                                                  Text="{t:Text diner.them}"
                                                   FontSize="{StaticResource FontSizeSmall}"
                                                   FontWeight="Bold"
                                                   Foreground="{StaticResource TextSecondaryBrush}"
@@ -936,12 +937,12 @@
                                    Margin="0,15,0,0"
                                    Visibility="{Binding CanBracket, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <StackPanel>
-                                    <CheckBox Content="Run it as a bracket race"
+                                    <CheckBox Content="{t:Text diner.bracket}"
                                               IsChecked="{Binding IsBracket}"
                                               FontSize="{StaticResource FontSizeBody}"
                                               FontWeight="Bold"
                                               Foreground="{StaticResource TextPrimaryBrush}"/>
-                                    <TextBlock Text="Each of you dials in the time you'll run. The slower car leaves first, by the difference; first to the quarter wins, but running under your dial-in is a breakout and loses."
+                                    <TextBlock Text="{t:Text diner.bracket.about}"
                                                FontSize="{StaticResource FontSizeSmall}"
                                                Foreground="{StaticResource TextSecondaryBrush}"
                                                TextWrapping="Wrap"
@@ -963,7 +964,7 @@
                                    Padding="15"
                                    Margin="0,15,0,0">
                                 <StackPanel>
-                                    <TextBlock Text="BET TYPE"
+                                    <TextBlock Text="{t:Text diner.bet_type}"
                                               FontSize="{StaticResource FontSizeBody}"
                                               FontWeight="Bold"
                                               Foreground="{StaticResource TextPrimaryBrush}"
@@ -1009,7 +1010,7 @@
                                                                 Fill="{StaticResource AccentPrimaryBrush}"
                                                                 Visibility="{Binding IsCashBet, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                                                     </Border>
-                                                    <TextBlock Text="CASH WAGER"
+                                                    <TextBlock Text="{t:Text diner.cash_wager}"
                                                               FontSize="{StaticResource FontSizeCompact}"
                                                               FontWeight="Bold"
                                                               Foreground="{StaticResource TextPrimaryBrush}"/>
@@ -1056,7 +1057,7 @@
                                                 </StackPanel>
 
                                                 <!-- Placeholder when not selected -->
-                                                <TextBlock Text="Wager cash on the race"
+                                                <TextBlock Text="{t:Text diner.cash_wager.about}"
                                                           FontSize="{StaticResource FontSizeCaption}"
                                                           Foreground="{StaticResource TextSecondaryBrush}"
                                                           Visibility="{Binding IsCashBet, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
@@ -1097,13 +1098,13 @@
                                                                 Fill="{StaticResource DangerBrush}"
                                                                 Visibility="{Binding IsPinkSlipBet, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                                                     </Border>
-                                                    <TextBlock Text="PINK SLIPS"
+                                                    <TextBlock Text="{t:Text diner.pink_slips}"
                                                               FontSize="{StaticResource FontSizeCompact}"
                                                               FontWeight="Bold"
                                                               Foreground="{StaticResource DangerBrush}"/>
                                                 </StackPanel>
 
-                                                <TextBlock Text="Winner takes the loser's car!"
+                                                <TextBlock Text="{t:Text diner.pink_slips.about}"
                                                           FontSize="{StaticResource FontSizeCaption}"
                                                           Foreground="{StaticResource TextSecondaryBrush}"
                                                           TextWrapping="Wrap"/>
@@ -1114,7 +1115,7 @@
                                                        Padding="8,5"
                                                        Margin="0,8,0,0"
                                                        Visibility="{Binding IsPinkSlipBet, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                    <TextBlock Text="HIGH STAKES!"
+                                                    <TextBlock Text="{t:Text diner.high_stakes}"
                                                               FontSize="{StaticResource FontSizeTiny}"
                                                               FontWeight="Bold"
                                                               Foreground="{StaticResource DangerBrush}"
@@ -1159,7 +1160,7 @@
 
                     <!-- Challenge Button -->
                     <Button Grid.Row="2"
-                           Content="CHALLENGE TO A RACE"
+                           Content="{t:Text diner.challenge}"
                            Command="{Binding ChallengeCommand}"
                            FontSize="{StaticResource FontSizeHeading}"
                            FontWeight="Bold"
@@ -1212,7 +1213,7 @@
                    CornerRadius="5"
                    Margin="10,0,0,0"
                    Visibility="{Binding HasSelectedOpponent, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
-                <TextBlock Text="Select an opponent from the list"
+                <TextBlock Text="{t:Text diner.select_opponent}"
                           FontSize="{StaticResource FontSizeHeading}"
                           Foreground="{StaticResource TextSecondaryBrush}"
                           HorizontalAlignment="Center"

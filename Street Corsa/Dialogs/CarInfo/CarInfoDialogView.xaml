@@ -1,6 +1,7 @@
 <UserControl x:Class="StreetCorsa.Dialogs.CarInfo.CarInfoDialogView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:t="clr-namespace:StreetCorsa.Services.Text"
              Width="680">
     <Grid>
         <Grid.RowDefinitions>
@@ -63,7 +64,7 @@
         <StackPanel Grid.Row="2"
                     Margin="20,12,20,16"
                     Visibility="{Binding HasParts, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <TextBlock Text="Parts installed"
+            <TextBlock Text="{t:Text carinfo.parts}"
                        Foreground="{StaticResource CreamBrush}"
                        FontSize="{StaticResource FontSizeSubheading}"
                        FontWeight="SemiBold"
@@ -135,7 +136,7 @@
         <Border Grid.Row="3"
                 Background="{StaticResource UiBandBrush}"
                 Padding="20,15">
-            <Button Content="Close"
+            <Button Content="{t:Text common.close}"
                     Command="{Binding CloseCommand}"
                     Style="{StaticResource DialogSecondaryButtonStyle}"
                     IsCancel="True"

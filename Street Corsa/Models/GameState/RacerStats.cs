@@ -1,3 +1,5 @@
+using StreetCorsa.Services.Text;
+
 namespace StreetCorsa.Models.GameState
 {
     public class RacerStats
@@ -102,15 +104,15 @@ namespace StreetCorsa.Models.GameState
         /// </summary>
         public string GetReputationTier()
         {
-            return Reputation switch
+            return GameText.Say(Reputation switch
             {
-                >= 90 => "Legendary",
-                >= 75 => "Elite",
-                >= 60 => "Respected",
-                >= 40 => "Average",
-                >= 25 => "Struggling",
-                _ => "Unknown"
-            };
+                >= 90 => "rivals.tier.legendary",
+                >= 75 => "rivals.tier.elite",
+                >= 60 => "rivals.tier.respected",
+                >= 40 => "rivals.tier.average",
+                >= 25 => "rivals.tier.struggling",
+                _ => "rivals.tier.unknown"
+            });
         }
     }
 }

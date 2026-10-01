@@ -1,5 +1,6 @@
 using StreetCorsa.Models.Career.Victory;
 using StreetCorsa.Models.GameState;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Services.Career
 {
@@ -84,7 +85,7 @@ namespace StreetCorsa.Services.Career
                 return condition.GetProgress(career);
             }
 
-            return VictoryProgress.NotStarted("Unknown victory type");
+            return VictoryProgress.NotStarted(GameText.Say("career.victory.unknown"));
         }
 
         public Dictionary<string, VictoryProgress> GetAllProgress(CareerState career)

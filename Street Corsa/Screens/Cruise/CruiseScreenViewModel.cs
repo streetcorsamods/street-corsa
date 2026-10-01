@@ -14,6 +14,7 @@ using StreetCorsa.Models.Race;
 using StreetCorsa.Navigation;
 using StreetCorsa.Screens.Diner;
 using StreetCorsa.Screens.Shared;
+using StreetCorsa.Services.Text;
 using StreetCorsa.Services;
 using StreetCorsa.Services.Catalog;
 using StreetCorsa.Services.Opponents;
@@ -171,14 +172,21 @@ namespace StreetCorsa.Screens.Cruise
         /// <summary>The rival's engine, driven by the street while the car moves</summary>
         public EngineRunner RivalEngine { get; } = new(EngineChannel.Second);
 
-        public string LightDisplay => Light switch
+        public string LightDisplay
         {
-            StreetLight.Day => "Daylight",
-            StreetLight.Dusk => "Dusk",
-            _ => "Night"
-        } + (MatchupCalculator.IsNight(_gameState.Date) ? " · the stakes are up" : string.Empty);
+            get
+            {
+                var light = GameText.Say(Light switch
+                {
+                    StreetLight.Day => "cruise.light.day",
+                    StreetLight.Dusk => "cruise.light.dusk",
+                    _ => "cruise.light.night"
+                });
+                return MatchupCalculator.IsNight(_gameState.Date) ? GameText.Say("cruise.light.stakes_up", ("light", light)) : light;
+            }
+        }
 
-        private string _statusText = "You pull over to the curb and let the engine idle.";
+        private string _statusText = GameText.Say("cruise.pull_over");
 
         public string StatusText
         {
@@ -219,7 +227,7 @@ namespace StreetCorsa.Screens.Cruise
         public string? RivalPortrait { get; private set; }
         public string RivalCarName => _rivalDefinition == null ? string.Empty : CarNames.Of(_rivalDefinition);
         public string RivalStanding => _rival == null ? string.Empty
-            : $"Reputation {_rival.Stats.Reputation} · {_rival.Stats.Wins}W - {_rival.Stats.Losses}L";
+            : GameText.Say("cruise.standing", ("reputation", _rival.Stats.Reputation), ("wins", _rival.Stats.Wins), ("losses", _rival.Stats.Losses));
 
         private string _rivalLine = string.Empty;
 
@@ -232,7 +240,7 @@ namespace StreetCorsa.Screens.Cruise
 
         /// <summary>"Drag race at Santa Pod" or "Road race at Laguna Seca"</summary>
         public string RaceDisplay => _offer == null || _track == null ? string.Empty
-            : $"{(_offer.RaceType == RaceType.DragRace ? "Drag race" : "Road race")} at {_configuration?.Name ?? _track.Name}";
+            : GameText.Say(_offer.RaceType == RaceType.DragRace ? "cruise.race.drag" : "cruise.race.road", ("track", _configuration?.Name ?? _track.Name));
 
         public ObservableCollection<MatchupStatViewModel> MatchupStats { get; } = [];
 
@@ -274,7 +282,7 @@ namespace StreetCorsa.Screens.Cruise
         public decimal MinWager { get; private set; }
         public decimal MaxWager { get; private set; }
 
-        public string BetDisplay => IsPinkSlipBet ? "PINK SLIPS" : $"${Wager:N0}";
+        public string BetDisplay => IsPinkSlipBet ? GameText.Say("cruise.pink_slips") : $"${Wager:N0}";
 
         /// <summary>The player can cover a cash bet (pink slips need no cash)</summary>
         public bool CanAffordBet => IsPinkSlipBet || (MaxWager > 0m && _gameState.Player.Money >= Wager);
@@ -282,7 +290,7 @@ namespace StreetCorsa.Screens.Cruise
         /// <summary>The terms are not the rival's any more: they will say whether they are still on</summary>
         public bool TermsChanged => _offer != null && (_offer.PinkSlips != IsPinkSlipBet || (!IsPinkSlipBet && _offer.Wager != Wager));
 
-        public string AcceptText => TermsChanged ? "HOW ABOUT THIS?" : "YOU'RE ON!";
+        public string AcceptText => TermsChanged ? GameText.Say("cruise.accept.new_terms") : GameText.Say("cruise.accept");
 
         public string PoliceNote
         {
@@ -291,7 +299,7 @@ namespace StreetCorsa.Screens.Cruise
                 if (_offer is not { RaceType: not RaceType.DragRace } || _rival == null || PoliceCars.Installed() == null) return string.Empty;
                 var chance = PoliceRules.Chance(_gameState.Date, ChallengeLauncher.PoliceReputation(_gameState.Player, _rival),
                     IsPinkSlipBet, IsPinkSlipBet ? 0m : Wager);
-                return chance > 0 ? $"Police: {PoliceRules.RiskLabel(chance)}" : string.Empty;
+                return chance > 0 ? GameText.Say("diner.police", ("risk", PoliceRules.RiskLabel(chance))) : string.Empty;
             }
         }
 
@@ -325,13 +333,13 @@ namespace StreetCorsa.Screens.Cruise
             var playerCar = SelectedCar();
             if (playerCar == null || _catalogRepository.GetCar(playerCar.DefinitionId) == null)
             {
-                SendHome("You need a car to cruise in. Pick one in your garage first.", "No Car");
+                SendHome(GameText.Say("cruise.no_car"), GameText.Say("cruise.no_car.title"));
                 return;
             }
 
             if (playerCar.IsImpounded || !_challengeService.CanRace(playerCar))
             {
-                SendHome("Your car is in no shape to be out on the street. Sort it out in the garage first.", "Car Won't Run");
+                SendHome(GameText.Say("cruise.car_wont_run"), GameText.Say("challenge.car_wont_run.title"));
                 return;
             }
 
@@ -380,7 +388,7 @@ namespace StreetCorsa.Screens.Cruise
             var playerCar = SelectedCar();
             if (playerCar == null || PlayerCar == null) return;
 
-            StatusText = "You pull over to the curb and let the engine idle.";
+            StatusText = GameText.Say("cruise.pull_over");
             RefreshClock();
             StartStreet(playerCar);
         }
@@ -543,7 +551,7 @@ namespace StreetCorsa.Screens.Cruise
             _logger.Information("The night is over: home to the garage");
             Save();
             _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService,
-                "The street's gone quiet. You head home and call it a night.", "Late Night"));
+                GameText.Say("cruise.late_night"), GameText.Say("cruise.late_night.title")));
             _leaving = true;
             _navigationService.NavigateToGarage(_gameState);
         }
@@ -585,7 +593,7 @@ namespace StreetCorsa.Screens.Cruise
 
             if (rival == null)
             {
-                StatusText = "The street's quiet. Nobody's out looking for a race.";
+                StatusText = GameText.Say("cruise.quiet");
                 return;
             }
 
@@ -594,7 +602,7 @@ namespace StreetCorsa.Screens.Cruise
             var raceType = StreetEncounters.PickRaceType(time, dragTracks.Count > 0, circuits.Count > 0, _random);
             if (raceType == null)
             {
-                StatusText = "Nowhere to race: no tracks are installed.";
+                StatusText = GameText.Say("cruise.no_tracks");
                 return;
             }
 
@@ -631,7 +639,7 @@ namespace StreetCorsa.Screens.Cruise
             _logger.Information("{Rival} pulls up in a {Car}: {Race} for {Stakes}", rival.Name, definition.Id,
                 raceType, offer.PinkSlips ? "pink slips" : $"${offer.Wager}");
 
-            StatusText = "Headlights in the mirror. Somebody's pulling up...";
+            StatusText = GameText.Say("cruise.headlights");
 
             var spec = await EngineSpecs.ForAsync(_partsService, car, CarNames.Of(_catalogRepository, car.DefinitionId));
             if (version != _encounterVersion || !_ticking) return;
@@ -646,7 +654,7 @@ namespace StreetCorsa.Screens.Cruise
         {
             if (_rival == null || _offer == null) return;
 
-            StatusText = $"{_rival.Name} pulls up alongside and rolls the window down.";
+            StatusText = GameText.Say("cruise.alongside", ("name", _rival.Name));
             RivalPortrait = RacersOut.PortraitOf(_rival, _logger);
 
             MatchupStats.Clear();
@@ -749,7 +757,8 @@ namespace StreetCorsa.Screens.Cruise
         {
             if (_rival == null) return;
             _logger.Information("Waved {Rival} off", _rival.Name);
-            StatusText = $"You wave {_rival.Name} off. The {(_rivalDefinition == null ? "car" : CarNames.Short(_rivalDefinition))} pulls away.";
+            StatusText = GameText.Say("cruise.waved_off", ("name", _rival.Name),
+                ("car", _rivalDefinition == null ? GameText.Say("rivals.car") : CarNames.Short(_rivalDefinition)));
             CloseEncounter();
             Stage.Leave();
         }
@@ -808,7 +817,7 @@ namespace StreetCorsa.Screens.Cruise
                 {
                     case ChallengeStatus.Declined:
                         // Not on those terms; the offer they made still stands
-                        RivalLine = outcome.Message ?? "Nah. Not for that.";
+                        RivalLine = outcome.Message ?? GameText.Say("cruise.declined");
                         break;
                     case ChallengeStatus.Launched:
                         CloseEncounter();
@@ -819,7 +828,7 @@ namespace StreetCorsa.Screens.Cruise
             {
                 _logger.Error(ex, "The street race could not be set up");
                 _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService,
-                    $"The race could not be set up:\n\n{ex.Message}", "Race Not Started"));
+                    GameText.Say("challenge.not_set_up", ("problem", ex.Message)), GameText.Say("challenge.not_set_up.title")));
             }
             finally
             {

@@ -2,6 +2,7 @@ using System.IO;
 using StreetCorsa.Helpers;
 using StreetCorsa.Logging;
 using StreetCorsa.Services.Configuration;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Services
 {
@@ -45,10 +46,10 @@ namespace StreetCorsa.Services
         public string? Install(string acRoot)
         {
             if (!Directory.Exists(Path.Combine(acRoot, "extension")))
-                return "Custom Shaders Patch is not installed in Assetto Corsa: races need it.";
+                return GameText.Say("launch.no_csp");
 
             if (!Directory.Exists(sourceFolder) || !File.Exists(Path.Combine(sourceFolder, "mode.lua")))
-                return $"The race mode is missing from the game's folder ({sourceFolder}).";
+                return GameText.Say("launch.mode_missing", ("folder", sourceFolder));
 
             try
             {
@@ -85,7 +86,7 @@ namespace StreetCorsa.Services
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 _logger.Error(ex, "Could not install the race mode into {AcRoot}", acRoot);
-                return $"The race mode could not be installed into Assetto Corsa: {ex.Message}";
+                return GameText.Say("launch.mode_not_installed", ("problem", ex.Message));
             }
         }
 

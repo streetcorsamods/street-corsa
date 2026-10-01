@@ -2,6 +2,7 @@ using StreetCorsa.Logging;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Mods;
 using StreetCorsa.Services.Career;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Services.Storage
 {
@@ -28,10 +29,7 @@ namespace StreetCorsa.Services.Storage
 
         /// <summary>What the player is told before a save with missing mods loads</summary>
         public static string Warning(IReadOnlyList<ModRef> missing) =>
-            "This game was played with mods that are not installed now:\n\n"
-            + string.Join("\n", missing.Select(m => "  " + m))
-            + "\n\nWhat they added is missing until they are back. Their parts wait on your shelf (an engine of theirs "
-            + "comes out of its car, which gets its factory engine); their events and their dealers' cars are gone. Load it anyway?";
+            GameText.Say("loadgame.mods_missing", ("mods", string.Join("\n", missing.Select(m => "  " + m))));
 
         /// <summary>
         /// Takes out what only makes sense while its content is there, when its mod is not installed; true when anything

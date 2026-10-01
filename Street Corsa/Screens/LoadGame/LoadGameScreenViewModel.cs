@@ -6,6 +6,7 @@ using StreetCorsa.Models.GameState;
 using StreetCorsa.Navigation;
 using StreetCorsa.Services.Parts;
 using StreetCorsa.Services.Storage;
+using StreetCorsa.Services.Text;
 using StreetCorsa.ViewModels;
 using System.Collections.ObjectModel;
 using StreetCorsa.Services.Career;
@@ -110,7 +111,7 @@ namespace StreetCorsa.Screens.LoadGame
             catch (Exception ex)
             {
                 _logger.Error(ex, "Could not list the saved games");
-                ErrorMessage = $"Failed to load saved games: {ex.Message}";
+                ErrorMessage = GameText.Say("loadgame.list_failed", ("error", ex.Message));
                 HasSaves = false;
             }
         }
@@ -120,18 +121,22 @@ namespace StreetCorsa.Screens.LoadGame
             var timeSpan = DateTime.Now - lastPlayed;
 
             if (timeSpan.TotalMinutes < 1)
-                return "Just now";
+                return GameText.Say("loadgame.played.just_now");
             if (timeSpan.TotalMinutes < 60)
-                return $"{(int)timeSpan.TotalMinutes} minute{((int)timeSpan.TotalMinutes != 1 ? "s" : "")} ago";
+                return Ago("minutes", (int)timeSpan.TotalMinutes);
             if (timeSpan.TotalHours < 24)
-                return $"{(int)timeSpan.TotalHours} hour{((int)timeSpan.TotalHours != 1 ? "s" : "")} ago";
+                return Ago("hours", (int)timeSpan.TotalHours);
             if (timeSpan.TotalDays < 7)
-                return $"{(int)timeSpan.TotalDays} day{((int)timeSpan.TotalDays != 1 ? "s" : "")} ago";
+                return Ago("days", (int)timeSpan.TotalDays);
             if (timeSpan.TotalDays < 30)
-                return $"{(int)(timeSpan.TotalDays / 7)} week{((int)(timeSpan.TotalDays / 7) != 1 ? "s" : "")} ago";
+                return Ago("weeks", (int)(timeSpan.TotalDays / 7));
 
             return lastPlayed.ToString("MMM d, yyyy");
         }
+
+        private static string Ago(string unit, int count) => count == 1
+            ? GameText.Say($"loadgame.played.{unit}.one", ("count", count))
+            : GameText.Say($"loadgame.played.{unit}.other", ("count", count));
 
         /// <summary>Reads the save off the UI thread (a whole game can take a moment), then opens it</summary>
         private async void OnLoadSave(SaveGameInfo? saveInfo)
@@ -155,7 +160,7 @@ namespace StreetCorsa.Screens.LoadGame
 
                 if (gameState == null)
                 {
-                    ErrorMessage = "Failed to load save game";
+                    ErrorMessage = GameText.Say("loadgame.read_failed");
                     return;
                 }
 
@@ -164,7 +169,7 @@ namespace StreetCorsa.Screens.LoadGame
                 if (missing.Count > 0)
                 {
                     _logger.Warning("Save {SaveName} was played with mods that are not installed: {Mods}", saveInfo.SaveName, string.Join(", ", missing));
-                    _dialogService.ShowDialog(new ConfirmationDialogViewModel(_dialogService, ModsInSave.Warning(missing), "Mods Missing",
+                    _dialogService.ShowDialog(new ConfirmationDialogViewModel(_dialogService, ModsInSave.Warning(missing), GameText.Say("loadgame.mods_missing.title"),
                         confirmed =>
                         {
                             if (confirmed) Open(saveInfo, gameState);
@@ -177,7 +182,7 @@ namespace StreetCorsa.Screens.LoadGame
             catch (Exception ex)
             {
                 _logger.Error(ex, "Could not load save {SaveName}", saveInfo.SaveName);
-                ErrorMessage = $"Failed to load game: {ex.Message}";
+                ErrorMessage = GameText.Say("loadgame.load_failed", ("error", ex.Message));
             }
         }
 
@@ -224,7 +229,7 @@ namespace StreetCorsa.Screens.LoadGame
             catch (Exception ex)
             {
                 _logger.Error(ex, "Could not load save {SaveName}", saveInfo.SaveName);
-                ErrorMessage = $"Failed to load game: {ex.Message}";
+                ErrorMessage = GameText.Say("loadgame.load_failed", ("error", ex.Message));
             }
             finally
             {
@@ -240,8 +245,8 @@ namespace StreetCorsa.Screens.LoadGame
 
             var confirmDialog = new ConfirmationDialogViewModel(
                 _dialogService,
-                $"Are you sure you want to delete the save '{saveInfo.PlayerName}'? This action cannot be undone.",
-                "Delete Save",
+                GameText.Say("loadgame.delete", ("player", saveInfo.PlayerName)),
+                GameText.Say("loadgame.delete.title"),
                 confirmed =>
                 {
                     if (confirmed)
@@ -255,7 +260,7 @@ namespace StreetCorsa.Screens.LoadGame
                         catch (Exception ex)
                         {
                             _logger.Error(ex, "Could not delete save {SaveName}", saveInfo.SaveName);
-                            ErrorMessage = $"Failed to delete save: {ex.Message}";
+                            ErrorMessage = GameText.Say("loadgame.delete_failed", ("error", ex.Message));
                         }
                     }
                 });

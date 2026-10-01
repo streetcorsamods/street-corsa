@@ -1,3 +1,4 @@
+using StreetCorsa.Services.Text;
 using StreetCorsa.ViewModels;
 using System;
 
@@ -31,12 +32,12 @@ namespace StreetCorsa.Dialogs.Confirmation
         public ConfirmationDialogViewModel(
             DialogService dialogService,
             string message,
-            string title = "Confirm",
+            string? title = null,
             Action<bool>? resultCallback = null)
         {
             _dialogService = dialogService;
             _resultCallback = resultCallback ?? (_ => { });
-            _title = title;
+            _title = title ?? GameText.Say("dialog.title.confirm");
             _message = message;
 
             YesCommand = new RelayCommand(OnYes);

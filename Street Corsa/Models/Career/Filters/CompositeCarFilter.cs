@@ -1,5 +1,6 @@
 using StreetCorsa.Models.Catalog;
 using StreetCorsa.Models.GameState;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Models.Career.Filters
 {
@@ -27,10 +28,10 @@ namespace StreetCorsa.Models.Career.Filters
             get
             {
                 if (Filters.Count == 0)
-                    return "No requirements";
+                    return GameText.Say("event.cars.any");
 
                 var descriptions = Filters.Select(f => f.DisplayDescription);
-                var separator = RequireAll ? " + " : " or ";
+                var separator = GameText.Say(RequireAll ? "event.cars.and" : "event.cars.or");
                 return string.Join(separator, descriptions);
             }
         }

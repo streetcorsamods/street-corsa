@@ -669,7 +669,7 @@ namespace StreetCorsa.Services.Opponents
             racer.Money -= bill;
 
             talk.Add(Say("street.repaired", racer, car, new TextValues { ["price"] = bill }));
-            _logger.Information("{Racer} repaired the {Car}: {Jobs} for ${Bill}", racer.Name, car.DefinitionId, string.Join(", ", jobs.Select(j => j.Name)), bill);
+            _logger.Information("{Racer} repaired the {Car}: {Jobs} for ${Bill}", racer.Name, car.DefinitionId, string.Join(", ", jobs.Select(j => j.Id)), bill);
             return CanRace(car, groupOf);
         }
 

@@ -107,7 +107,7 @@ namespace StreetCorsa.Screens.Station
         /// <summary>The player's own engine, driven by the viewport while the car moves</summary>
         public EngineRunner PlayerEngine { get; } = new(EngineChannel.Main);
 
-        public string Title => Station?.Title ?? "The gas station";
+        public string Title => Station?.Title ?? GameText.Say("station.ui.default_title");
 
         private string _statusText = string.Empty;
 
@@ -172,7 +172,7 @@ namespace StreetCorsa.Screens.Station
         }
 
         /// <summary>A dry tank that was not filled: the tow truck takes the car home</summary>
-        public string DriveOffText => _car != null && GasStation.NeedsTow(_car) ? "TOW IT HOME" : "DRIVE OFF";
+        public string DriveOffText => _car != null && GasStation.NeedsTow(_car) ? GameText.Say("station.ui.tow_home") : GameText.Say("station.ui.drive_off");
 
         #endregion
 
@@ -187,7 +187,7 @@ namespace StreetCorsa.Screens.Station
             _car = _gameState.Player.Cars.FirstOrDefault(c => c.InstanceId == _gameState.Player.SelectedCarInstanceId);
             if (_car == null || _catalogRepository.GetCar(_car.DefinitionId) == null)
             {
-                SendHome("You need a car to go to the gas station. Pick one in your garage first.", "No Car");
+                SendHome(GameText.Say("station.ui.no_car"), GameText.Say("station.ui.no_car.title"));
                 return;
             }
 
@@ -196,7 +196,7 @@ namespace StreetCorsa.Screens.Station
 
             if (_car.IsImpounded)
             {
-                SendHome("Your car is in the police impound.", "Impounded");
+                SendHome(GameText.Say("station.ui.impounded"), GameText.Say("station.ui.impounded.title"));
                 return;
             }
 
@@ -205,10 +205,10 @@ namespace StreetCorsa.Screens.Station
 
             // Only an empty tank brings the tow truck: a car that won't run for anything else is the garage's to fix
             var problems = CarCondition.WhyCannotRace(_car, groupOf, counting: false);
-            if (_catalog != null && _car.HasPartsAssigned && _car.Engine == null) problems.Add("there's no engine in it");
+            if (_catalog != null && _car.HasPartsAssigned && _car.Engine == null) problems.Add(GameText.Say("station.ui.no_engine"));
             if (problems.Count > 0)
             {
-                SendHome($"Your car won't make it to the gas station: {string.Join("; ", problems)}. Sort it out in the garage first.", "Car Won't Run");
+                SendHome(GameText.Say("station.ui.wont_run", ("problems", string.Join("; ", problems))), GameText.Say("station.ui.wont_run.title"));
                 return;
             }
 
@@ -216,7 +216,7 @@ namespace StreetCorsa.Screens.Station
             Station = stations.Count == 0 ? null : stations[_random.Next(stations.Count)];
             if (Station == null)
             {
-                SendHome("There's no gas station in town. (No mod has one.)", "No Gas Station");
+                SendHome(GameText.Say("station.ui.none"), GameText.Say("station.ui.none.title"));
                 return;
             }
 
@@ -224,7 +224,7 @@ namespace StreetCorsa.Screens.Station
             var tow = TowPrice();
             if (towed && _gameState.Player.Money < tow)
             {
-                SendHome($"Your tank is dry, and the tow truck wants ${tow:N0} to haul you to the gas station. You don't have it.", "Out of Gas");
+                SendHome(GameText.Say("station.ui.cant_tow", ("tow", $"${tow:N0}")), GameText.Say("station.ui.cant_tow.title"));
                 return;
             }
 
@@ -242,12 +242,12 @@ namespace StreetCorsa.Screens.Station
             {
                 _gameState.Player.Money -= tow;
                 _logger.Information("{Car} towed to {Station} for ${Tow}", _car.DefinitionId, Station.Id, tow);
-                StatusText = $"Out of gas. The tow truck hauls you to {Station.Title} (${tow:N0}).";
+                StatusText = GameText.Say("station.ui.towed_in", ("station", Station.Title), ("tow", $"${tow:N0}"));
             }
             else
             {
                 GasStation.Drive(_car);
-                StatusText = $"You drive over to {Station.Title}.";
+                StatusText = GameText.Say("station.ui.drive_over", ("station", Station.Title));
             }
 
             // The trip's time goes by while the car rolls in; saving and going home wait for it (the day may roll over)
@@ -332,7 +332,7 @@ namespace StreetCorsa.Screens.Station
             if (!_active || _car == null) return;
 
             IsAtPump = true;
-            StatusText = $"You pull up at the pump at {Title} and switch off.";
+            StatusText = GameText.Say("station.ui.at_pump", ("station", Title));
 
             // Nobody fills a running car: the engine goes off at the pump, and on again to drive off
             if (PlayerEngine.IsRunning) PlayerEngine.Toggle();
@@ -387,8 +387,8 @@ namespace StreetCorsa.Screens.Station
                 job.Apply();
                 _gameState.Player.Money -= job.Cost;
                 Stage.FuelLitres = FuelInTank();
-                _logger.Information("{Car} at the gas station: {Job} for ${Cost}", _car.DefinitionId, job.Name, job.Cost);
-                Say(job.Name switch
+                _logger.Information("{Car} at the gas station: {Job} for ${Cost}", _car.DefinitionId, job.Id, job.Cost);
+                Say(job.Id switch
                 {
                     GasStation.FillUp => "station.filled",
                     GasStation.Wash => "station.washed",
@@ -412,12 +412,12 @@ namespace StreetCorsa.Screens.Station
         {
             var litres = CarCondition.LitresToFill(_car!);
             var from = CarCondition.FuelLeft(_car!) ?? 0;
-            var seconds = GasStation.WatchSeconds(job.Name, litres);
-            WorkTitle = job.Name switch
+            var seconds = GasStation.WatchSeconds(job.Id, litres);
+            WorkTitle = job.Id switch
             {
-                GasStation.FillUp => "Filling up...",
-                GasStation.TopUpOil => "Putting the oil in...",
-                _ => "Washing the car..."
+                GasStation.FillUp => GameText.Say("station.ui.filling"),
+                GasStation.TopUpOil => GameText.Say("station.ui.oiling"),
+                _ => GameText.Say("station.ui.washing")
             };
 
             IsWorking = true;
@@ -428,9 +428,10 @@ namespace StreetCorsa.Screens.Station
                 {
                     var done = Math.Min(1, clock.Elapsed.TotalSeconds / seconds);
                     WorkProgress = done;
-                    if (job.Name == GasStation.FillUp) Stage.FuelLitres = (float)(from + litres * done);
-                    WorkDetail = job.Name == GasStation.FillUp
-                        ? $"{litres * done:0.0} litres · ${job.Cost * (decimal)done:0.00} · {from + litres * done:0} of {_car!.FuelTankLitres:0} in the tank"
+                    if (job.Id == GasStation.FillUp) Stage.FuelLitres = (float)(from + litres * done);
+                    WorkDetail = job.Id == GasStation.FillUp
+                        ? GameText.Say("station.ui.fill_detail", ("litres", $"{litres * done:0.0}"), ("cost", $"${job.Cost * (decimal)done:0.00}"),
+                            ("fuel", $"{from + litres * done:0}"), ("tank", $"{_car!.FuelTankLitres:0}"))
                         : $"{done * 100:0}%";
                     if (done >= 1) break;
                     await Task.Delay(40);
@@ -500,7 +501,7 @@ namespace StreetCorsa.Screens.Station
                         _gameState.Player.Money -= tow;
                         _towHomePaid = true;
                         _logger.Information("{Car} towed home from {Station} for ${Tow}", _car.DefinitionId, Station?.Id, tow);
-                        StatusText = $"The tow truck hauls you home (${tow:N0}).";
+                        StatusText = GameText.Say("station.ui.towed_home", ("tow", $"${tow:N0}"));
                         await _trip;
                         await SpendAsync(GameAction.TowToStation);
                     }
@@ -510,7 +511,7 @@ namespace StreetCorsa.Screens.Station
                 }
 
                 Say("station.goodbye");
-                StatusText = "You start her up...";
+                StatusText = GameText.Say("station.ui.start_up");
                 try
                 {
                     await StartUpAsync();
@@ -521,14 +522,14 @@ namespace StreetCorsa.Screens.Station
                 }
 
                 if (!_active) return;
-                StatusText = "You pull out onto the road and head home.";
+                StatusText = GameText.Say("station.ui.pull_out");
                 Stage.Leave();
             }
             catch (Exception ex)
             {
                 _logger.Error(ex, "Could not drive off from the gas station");
                 if (!_active) return;
-                StatusText = "You're still at the pump.";
+                StatusText = GameText.Say("station.ui.still_at_pump");
                 _leaving = false;
                 RaiseAll();
             }
@@ -577,7 +578,7 @@ namespace StreetCorsa.Screens.Station
             // Back at the pump, engine off, so DRIVE OFF can try again
             if (PlayerEngine.IsRunning) PlayerEngine.Toggle();
             Stage.BackToPump();
-            StatusText = "You're still at the pump.";
+            StatusText = GameText.Say("station.ui.still_at_pump");
             OpenCurtain?.Invoke();
             _leaving = false;
             RaiseAll();

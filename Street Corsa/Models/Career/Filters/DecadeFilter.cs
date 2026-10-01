@@ -1,5 +1,6 @@
 using StreetCorsa.Models.Catalog;
 using StreetCorsa.Models.GameState;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Models.Career.Filters
 {
@@ -28,14 +29,14 @@ namespace StreetCorsa.Models.Career.Filters
                 if (StartYear.HasValue && EndYear.HasValue)
                 {
                     if (EndYear.Value - StartYear.Value == 9 && StartYear.Value % 10 == 0)
-                        return $"{StartYear.Value}s";
-                    return $"{StartYear.Value}-{EndYear.Value}";
+                        return GameText.Say("event.cars.decade", ("year", StartYear.Value));
+                    return GameText.Say("event.cars.years", ("from", StartYear.Value), ("to", EndYear.Value));
                 }
                 if (StartYear.HasValue)
-                    return $"{StartYear.Value} or newer";
+                    return GameText.Say("event.cars.newer", ("year", StartYear.Value));
                 if (EndYear.HasValue)
-                    return $"{EndYear.Value} or older";
-                return "Any year";
+                    return GameText.Say("event.cars.older", ("year", EndYear.Value));
+                return GameText.Say("event.cars.any_year");
             }
         }
 

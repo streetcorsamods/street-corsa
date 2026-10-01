@@ -144,7 +144,7 @@ namespace StreetCorsa.Services.News
                 values["carShort"] = Short(car);
 
                 // The player's own car is "the" car in a headline: the paper does not know the player as him or her
-                values["whose"] = f.PlayerCrashed ? "the" : Capitalized(f.RivalPossessive);
+                values["whose"] = f.PlayerCrashed ? GameText.Say("paper.whose.player") : Capitalized(f.RivalPossessive);
                 return Piece("wreck", 40);
             }
 

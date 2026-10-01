@@ -2,6 +2,7 @@ using System.Globalization;
 using StreetCorsa.Dialogs.Information;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Services.Market;
+using StreetCorsa.Services.Text;
 using StreetCorsa.ViewModels;
 
 namespace StreetCorsa.Dialogs.SellCar
@@ -49,7 +50,7 @@ namespace StreetCorsa.Dialogs.SellCar
 
         public string CarName { get; }
 
-        public string ValueDisplay => $"Worth about ${_quote.Value:N0}";
+        public string ValueDisplay => GameText.Say("sell.worth", ("value", $"${_quote.Value:N0}"));
 
         /// <summary>Who had the car and how it has raced: part of what it is worth</summary>
         public string HistoryDisplay => Screens.Shared.CarHistoryDisplay.Summary(_car.History, forSale: false);
@@ -58,11 +59,11 @@ namespace StreetCorsa.Dialogs.SellCar
 
         // ----- the dealer, or the scrapyard -----
 
-        public string DealerTitle => _quote.IsScrap ? "The scrapyard" : $"Trade it in at {_quote.BuyerName}";
+        public string DealerTitle => _quote.IsScrap ? GameText.Say("sell.scrap.title") : GameText.Say("sell.dealer.title", ("dealer", _quote.BuyerName));
 
         public string DealerDetail => _quote.IsScrap
-            ? "The car is totaled: only the scrapyard wants it, for what is left of it."
-            : $"Cash on the spot, {(int)(CarSaleService.DealerShare * 100)}% of what it's worth. The car goes on their lot.";
+            ? GameText.Say("sell.scrap.detail")
+            : GameText.Say("sell.dealer.detail", ("share", (int)(CarSaleService.DealerShare * 100)));
 
         public string DealerAmountDisplay => $"${_quote.Amount:N0}";
 
@@ -78,7 +79,7 @@ namespace StreetCorsa.Dialogs.SellCar
             }
         }
 
-        public string SellButtonText => ConfirmingSale ? "Sure? Sell it" : _quote.IsScrap ? "Scrap it" : "Sell";
+        public string SellButtonText => GameText.Say(ConfirmingSale ? "sell.button.sure" : _quote.IsScrap ? "sell.button.scrap" : "sell.button.sell");
 
         public AsyncRelayCommand SellToDealerCommand { get; }
 
@@ -86,7 +87,7 @@ namespace StreetCorsa.Dialogs.SellCar
 
         public bool CanAdvertise => !_quote.IsScrap;
 
-        public string AdFeeDisplay => $"The ad costs ${CarSaleService.AdFee:N0} and runs {CarSaleService.AdDays} days.";
+        public string AdFeeDisplay => GameText.Say("sell.ad.fee", ("fee", $"${CarSaleService.AdFee:N0}"), ("days", CarSaleService.AdDays));
 
         private CarSaleAd? Ad => _saleService.AdFor(_gameState, _car);
 
@@ -95,14 +96,16 @@ namespace StreetCorsa.Dialogs.SellCar
         public bool ShowAdForm => CanAdvertise && !HasAd;
 
         public string AdStatus => Ad is { } ad
-            ? $"In the paper at ${ad.AskingPrice:N0} since {ad.PostedDate:MMM d}, until {ad.PostedDate.AddDays(CarSaleService.AdDays):MMM d}."
+            ? GameText.Say("sell.ad.status", ("price", $"${ad.AskingPrice:N0}"), ("since", ad.PostedDate),
+                ("until", ad.PostedDate.AddDays(CarSaleService.AdDays)))
             : string.Empty;
 
         public bool HasOffer => Ad?.Offer is { } offer && offer.Expires >= _gameState.Date;
 
         public string OfferDisplay => Ad?.Offer is { } offer && HasOffer
-            ? $"{CarSaleService.Capitalized(offer.BuyerName)} offers ${offer.Amount:N0}, until {offer.Expires:ddd h tt}."
-            : "No buyer has called yet.";
+            ? GameText.Say("sell.ad.offer", ("buyer", CarSaleService.Capitalized(offer.BuyerName)), ("amount", $"${offer.Amount:N0}"),
+                ("until", offer.Expires))
+            : GameText.Say("sell.ad.no_offer");
 
         private string _askingPriceText;
 
@@ -137,8 +140,8 @@ namespace StreetCorsa.Dialogs.SellCar
             {
                 var (min, max) = _saleService.AskingPriceRange(_car);
                 return AskingPrice is null
-                    ? $"Ask between ${min:N0} and ${max:N0}."
-                    : "Ask more and fewer buyers call, and those who do haggle.";
+                    ? GameText.Say("sell.ad.range", ("min", $"${min:N0}"), ("max", $"${max:N0}"))
+                    : GameText.Say("sell.ad.hint");
             }
         }
 
@@ -206,13 +209,13 @@ namespace StreetCorsa.Dialogs.SellCar
         private void Show(SaleResult result)
         {
             var sold = result.Succeeded && !_gameState.Player.Cars.Contains(_car);
-            var message = result.SaveFailed ? result.Message + "\n\nThe game could not be saved: the details are in the log." : result.Message;
+            var message = result.SaveFailed ? GameText.Say("sell.save_failed", ("message", result.Message)) : result.Message;
 
             if (sold)
             {
                 _dialogService.CloseDialog();
                 _sold();
-                _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, message, "Car Sold"));
+                _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, message, GameText.Say("sell.sold.title")));
                 return;
             }
 

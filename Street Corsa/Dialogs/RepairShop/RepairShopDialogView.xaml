@@ -1,6 +1,7 @@
 <UserControl x:Class="StreetCorsa.Dialogs.RepairShop.RepairShopDialogView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:t="clr-namespace:StreetCorsa.Services.Text"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d"
@@ -19,7 +20,7 @@
                 BorderThickness="0,0,0,1"
                 Padding="20,15">
             <StackPanel>
-                <TextBlock Text="Repairs"
+                <TextBlock Text="{t:Text repair.title}"
                            Foreground="{StaticResource TextPrimaryBrush}"
                            FontSize="{StaticResource FontSizeHeading}"
                            FontWeight="SemiBold"/>
@@ -73,7 +74,7 @@
                                                TextAlignment="Right"
                                                VerticalAlignment="Center"/>
                                     <Button Grid.Column="3"
-                                            Content="Repair"
+                                            Content="{t:Text repair.repair}"
                                             Command="{Binding Command}"
                                             Style="{StaticResource DialogPrimaryButtonStyle}"
                                             Width="90"
@@ -98,9 +99,9 @@
                 <TextBlock VerticalAlignment="Center"
                            Foreground="{StaticResource TextSecondaryBrush}"
                            FontSize="{StaticResource FontSizeBody}">
-                    <Run Text="Bankroll: "/><Run Text="{Binding MoneyDisplay, Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}"/>
+                    <Run Text="{t:Text repair.bankroll}"/><Run Text="{Binding MoneyDisplay, Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}"/>
                 </TextBlock>
-                <Button Content="Close"
+                <Button Content="{t:Text common.close}"
                         Command="{Binding CloseCommand}"
                         Style="{StaticResource DialogSecondaryButtonStyle}"
                         Width="100"

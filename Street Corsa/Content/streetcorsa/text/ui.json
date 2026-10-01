@@ -1,0 +1,22 @@
+{
+  "_comment": [
+    "The words on the game's screens and in its messages that every screen shares; each screen's own are in its",
+    "ui_<screen>.json. A label is said one way (the first line of its pool). {name} is a value the game fills in.",
+    "language.name: this language's name in the Settings picker; a translation (text/<language>/) gives its own."
+  ],
+  "lines": {
+    "language.name": "English",
+    "common.back": "Back",
+    "common.close": "Close",
+    "common.ok": "OK",
+    "common.cancel": "Cancel",
+    "common.yes": "Yes",
+    "common.no": "No",
+    "common.save": "Save",
+    "common.delete": "Delete",
+    "settings.language": "Language",
+    "settings.language.restart": "The game will speak {language} the next time it starts.",
+    "settings.restart.title": "Restart Needed",
+    "settings.not_saved": "The settings could not be saved. The details are in the log."
+  }
+}

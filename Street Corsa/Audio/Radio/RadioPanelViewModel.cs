@@ -3,6 +3,7 @@ using System.IO;
 using System.Windows.Threading;
 using StreetCorsa.Logging;
 using StreetCorsa.Services.Settings;
+using StreetCorsa.Services.Text;
 using StreetCorsa.ViewModels;
 
 namespace StreetCorsa.Audio.Radio;
@@ -142,9 +143,9 @@ public sealed class RadioPanelViewModel : ObservableObject
 
     public string RepeatText => Radio.Repeat switch
     {
-        RadioRepeat.All => "Repeat: list",
-        RadioRepeat.One => "Repeat: song",
-        _ => "Repeat: off"
+        RadioRepeat.All => GameText.Say("radio.repeat.list"),
+        RadioRepeat.One => GameText.Say("radio.repeat.song"),
+        _ => GameText.Say("radio.repeat.off")
     };
 
     public IReadOnlyList<RadioListItem> Lists { get; private set; } = [];
@@ -214,7 +215,7 @@ public sealed class RadioPanelViewModel : ObservableObject
     private void Refresh()
     {
         var picked = _selectedList?.Name;
-        Lists = [new RadioListItem(null, $"All songs ({Radio.Songs.Count})"), .. Radio.Playlists.Select(p => new RadioListItem(p, $"{p.Name} ({p.Songs.Count})"))];
+        Lists = [new RadioListItem(null, GameText.Say("radio.all_songs", ("count", Radio.Songs.Count))), .. Radio.Playlists.Select(p => new RadioListItem(p, $"{p.Name} ({p.Songs.Count})"))];
         OnPropertyChanged(nameof(Lists));
         OnPropertyChanged(nameof(Playlists));
 
@@ -278,7 +279,7 @@ public sealed class RadioPanelViewModel : ObservableObject
     /// <summary>Any folder on the PC; its subfolders come with it</summary>
     private void AddFolder()
     {
-        var dialog = new Microsoft.Win32.OpenFolderDialog { Title = "A folder with music for the radio", Multiselect = true };
+        var dialog = new Microsoft.Win32.OpenFolderDialog { Title = GameText.Say("radio.folder_dialog"), Multiselect = true };
         if (dialog.ShowDialog() != true) return;
         foreach (var folder in dialog.FolderNames) Radio.AddFolder(folder);
     }

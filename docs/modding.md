@@ -71,6 +71,7 @@ The game's own settings: what it is called (the window's title) and the garage i
 - `title`: the window's title.
 - `garage`: the garage the game is played from: a mod's `garages\<id>` (see "showcase and garages"), else the AC
   showroom of that id.
+- `language`: the language the files directly in the mods' `text` folders are written in (`"en"`); see "text".
 
 Unlike the rules below, these are the program's, not a career's: a change shows in every save. The player's own
 choices (the AC folder, the volumes) stay in their `%AppData%\StreetCorsa\settings.json`. With no AC folder there, the
@@ -512,3 +513,19 @@ challenge are the `replies.*` pools in `talk.json`, among them `replies.car_laid
 racer's car can't race today, or the game can't tell), `replies.king.pink_slips` and `replies.king.no_pink_slip` (the
 King takes a pink-slip race, or turns down one for money), `replies.rematch` (a racer out for a rematch) and
 `replies.always_accept` (`{name}`, when the testing switch makes everybody accept). When to say what stays in the game.
+
+Every word on the screens is a pool too: the labels, buttons, messages and titles are in `ui.json` (what every screen
+shares, `common.*`) and `ui_<area>.json` (`ui_garage`, `ui_race`, `ui_market`, `ui_shell`, `ui_parts`), said one way
+(the pool's first line). A key no mod has shows as the key itself, so a word left out shows where it goes. The race
+mode's messages in AC are the `race.*` pools of `race.json`: they reach it through race.ini. The developer's screens
+(the car catalog editor, the sound library) stay in English.
+
+**Languages.** The files directly in `text` are in the game's own language (`game.json`'s `language`). A translation
+is a folder in `text` named for its language, `text\es\*.json`, written like the rest (`lines`, `replace`), over every
+mod in load order; its `language.name` pool is its name in the Settings picker (`"Español"`). With a language picked,
+its pools take the place of the game's, and a key it lacks says the game's own words: a translation can be partial, and
+a mod that adds words can add their translations in its own `text\<language>`. A mod's `removes` and `replace` hold in
+every language: a pool it takes out says nothing, and one it rewrites says the mod's words (or the mod's own
+translation of them) rather than an earlier mod's translation of the old ones. The picker shows once a mod has a
+language besides the game's own; the game speaks it from its next start. Numbers, money and units are still written
+the base game's way (a later step).

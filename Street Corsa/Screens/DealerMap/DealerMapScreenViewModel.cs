@@ -48,15 +48,13 @@ namespace StreetCorsa.Screens.DealerMap
         /// <summary>The part shops' map: their pins and their counters, no car lots</summary>
         public bool IsPartsMap { get; }
 
-        public string Title => IsPartsMap ? "PARTS DEALERS" : "WHERE TO LOOK";
+        public string Title => GameText.Say(IsPartsMap ? "dealermap.title.parts" : "dealermap.title.lots");
 
-        public string Subtitle => IsPartsMap
-            ? "Pick a shop and drive out to see what's on the shelves"
-            : "Pick a lot and drive out to see what they have";
+        public string Subtitle => GameText.Say(IsPartsMap ? "dealermap.subtitle.parts" : "dealermap.subtitle.lots");
 
-        public string EmptyText => IsPartsMap ? "No part shops could be found on the map." : "No dealers could be found on the map.";
+        public string EmptyText => GameText.Say(IsPartsMap ? "dealermap.empty.parts" : "dealermap.empty.lots");
 
-        public string LoadingText => IsPartsMap ? "The shops are stocking their shelves..." : "The dealers are putting their cars out...";
+        public string LoadingText => GameText.Say(IsPartsMap ? "dealermap.loading.parts" : "dealermap.loading.lots");
 
         public ObservableCollection<DealerPinViewModel> Pins { get; } = [];
 
@@ -371,14 +369,13 @@ namespace StreetCorsa.Screens.DealerMap
 
             if (!pin.FitsToday)
             {
-                var message = $"{pin.Name} is {pin.TravelDisplay.ToLowerInvariant()}, and it is " +
-                              $"{_gameState.Date:h:mm tt}." + Environment.NewLine + Environment.NewLine +
-                              "You would not be back before the day is out. Drive over anyway?";
+                var message = GameText.Say("dealermap.far.message",
+                    ("place", pin.Name), ("travel", pin.TravelInLine), ("time", _gameState.Date));
 
                 _dialogService.ShowDialog(new ConfirmationDialogViewModel(
                     _dialogService,
                     message,
-                    "A long way for a look",
+                    GameText.Say("dealermap.far.title"),
                     confirmed =>
                     {
                         if (confirmed) DriveTo(pin);
@@ -483,19 +480,17 @@ namespace StreetCorsa.Screens.DealerMap
         public bool FitsToday => TravelMinutes <= MinutesLeftToday;
 
         /// <summary>What the trip does to the day, for the card</summary>
-        public string DayCostDisplay => FitsToday
-            ? "You would be back before the day is out"
-            : "You would not be back today";
+        public string DayCostDisplay => GameText.Say(FitsToday ? "dealermap.day.fits" : "dealermap.day.late");
 
         public string StockDisplay => IsPartShop
-            ? StockCount == 1 ? "1 part" : $"{StockCount} parts"
-            : StockCount == 1 ? "1 car" : $"{StockCount} cars";
+            ? GameText.Say(StockCount == 1 ? "dealermap.stock.parts.one" : "dealermap.stock.parts.other", ("count", StockCount))
+            : GameText.Say(StockCount == 1 ? "dealermap.stock.cars.one" : "dealermap.stock.cars.other", ("count", StockCount));
 
         public string PriceDisplay => IsPartShop
             ? KindLabel
             : StockCount == 0
-                ? "Nothing on the lot"
-                : $"${CheapestPrice:N0} - ${DearestPrice:N0}";
+                ? GameText.Say("dealermap.price.none")
+                : GameText.Say("dealermap.price.range", ("low", $"${CheapestPrice:N0}"), ("high", $"${DearestPrice:N0}"));
 
         /// <summary>The last day of its closing-down sale; null when it is not closing down</summary>
         public DateTime? ClosesOn { get; set; }
@@ -534,7 +529,12 @@ namespace StreetCorsa.Screens.DealerMap
         });
 
         public string TravelDisplay => TravelHours <= 1f
-            ? "About an hour away"
-            : $"About {TravelHours:0.#} hours away";
+            ? GameText.Say("dealermap.travel.one")
+            : GameText.Say("dealermap.travel.other", ("hours", TravelHours));
+
+        /// <summary>How far it is, said within a line</summary>
+        public string TravelInLine => TravelHours <= 1f
+            ? GameText.Say("dealermap.far.travel.one")
+            : GameText.Say("dealermap.far.travel.other", ("hours", TravelHours));
     }
 }

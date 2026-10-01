@@ -9,6 +9,7 @@ using StreetCorsa.Configuration;
 using StreetCorsa.Logging;
 using StreetCorsa.Parts;
 using StreetCorsa.Parts.Logic;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Controls;
 
@@ -1820,7 +1821,7 @@ public class CarViewport3D : D3DViewportBase, ICarDrivingIn
             Renderer.HoveredPart = null;
             Cursor = System.Windows.Input.Cursors.Hand;
             InvalidateIfDirty();
-            ShowLabel("Radio", position);
+            ShowLabel(GameText.Say("garage.label.radio"), position);
             return;
         }
 
@@ -1834,7 +1835,7 @@ public class CarViewport3D : D3DViewportBase, ICarDrivingIn
         {
             Renderer.HoveredPart = null;
             InvalidateIfDirty();
-            ShowLabel(onStand ? "Engine stand" : "Back to the car", position);
+            ShowLabel(onStand ? GameText.Say("garage.label.stand") : GameText.Say("garage.label.back_to_car"), position);
             return;
         }
 

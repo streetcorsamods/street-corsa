@@ -93,8 +93,8 @@ public sealed class CarConditionTests : IDisposable
         var report = CarCondition.ApplyRace(car, Report(body: new double[] { 12, 0, 25.8, 0 }), 1, GroupOf);
 
         Assert.Equal(new double[] { 30, 0, 25.8, 0 }, car.BodyDamageKmh);
-        Assert.Contains(report, l => l.Contains("left side") && l.Contains("26 km/h"));
-        Assert.DoesNotContain(report, l => l.Contains("front"));
+        Assert.Contains(report.Texts(), l => l.Contains("left side") && l.Contains("26 km/h"));
+        Assert.DoesNotContain(report.Texts(), l => l.Contains("front"));
         Assert.Equal(1 - 55.8 / CarCondition.TotaledKmh, car.BodyCondition, 6);
     }
 
@@ -106,8 +106,8 @@ public sealed class CarConditionTests : IDisposable
         var report = CarCondition.ApplyRace(car, Report(body: new double[] { 0, 0, 205, 205 }, life: -100), 2.5, GroupOf);
 
         Assert.True(CarCondition.IsTotaled(car));
-        Assert.Contains("The body is wrecked: the car is totaled.", report);
-        Assert.Contains("Engine: a connecting rod let go. It needs a rebuild before it runs again.", report);
+        Assert.Contains("The body is wrecked: the car is totaled.", report.Texts());
+        Assert.Contains("Engine: a connecting rod let go. It needs a rebuild before it runs again.", report.Texts());
         var problems = CarCondition.WhyCannotRace(car, GroupOf);
         Assert.Contains(problems, p => p.Contains("totaled"));
         Assert.Contains(problems, p => p.Contains("engine is blown"));
@@ -131,7 +131,7 @@ public sealed class CarConditionTests : IDisposable
         // What does not spin is not hurt by an over-rev
         Assert.Equal(1.0, Part(car, "block").Tear);
         Assert.Equal(1.0, Part(car, "carb").Tear);
-        Assert.Contains("Engine: the connecting rods took a beating (80% → 64%).", report);
+        Assert.Contains("Engine: the connecting rods took a beating (80% → 64%).", report.Texts());
 
         Assert.Equal(640, CarCondition.StartState(car, GroupOf).EngineLife, 6);
     }
@@ -150,7 +150,7 @@ public sealed class CarConditionTests : IDisposable
         var report = CarCondition.ApplyRace(car, Report(life: 0), 0.4, GroupOf);
         Assert.Equal(0, Part(car, "piston").Tear);
         Assert.True(Part(car, "cam").Tear > 0);
-        Assert.Contains("Engine: a piston let go. It needs a rebuild before it runs again.", report);
+        Assert.Contains("Engine: a piston let go. It needs a rebuild before it runs again.", report.Texts());
         Assert.Equal(0, CarCondition.EngineLife(car, GroupOf));
     }
 
@@ -190,7 +190,7 @@ public sealed class CarConditionTests : IDisposable
 
         Assert.Equal(0, Part(car, "block").Tear);
         Assert.Equal(0, CarCondition.EngineLife(car, GroupOf));
-        Assert.Contains("Engine: the bottom end let go. It needs a rebuild before it runs again.", report);
+        Assert.Contains("Engine: the bottom end let go. It needs a rebuild before it runs again.", report.Texts());
         Assert.Contains(CarCondition.WhyCannotRace(car, GroupOf), p => p.Contains("engine is blown"));
     }
 
@@ -203,7 +203,7 @@ public sealed class CarConditionTests : IDisposable
         var report = CarCondition.ApplyRace(car, Report(gearbox: 0.45), 0.4, GroupOf);
 
         Assert.Equal(0.05, Part(car, "gearbox").Tear, 6);
-        Assert.Contains("Gearbox: it is wrecked.", report);
+        Assert.Contains("Gearbox: it is wrecked.", report.Texts());
         Assert.Contains(CarCondition.WhyCannotRace(car, GroupOf), p => p.Contains("gearbox"));
         Assert.Equal(0.95, CarCondition.StartState(car, GroupOf).GearboxWear, 6);
     }
@@ -219,7 +219,7 @@ public sealed class CarConditionTests : IDisposable
         Assert.Equal(0.5, front.Spring!.Tear, 6);
         Assert.Equal(0.5, front.Shock!.Tear, 6);
         Assert.Equal(1.0, RunningGear.Mounted(car.Parts)[1].Spring!.Tear);
-        Assert.Contains("Suspension: the front left corner is bent.", report);
+        Assert.Contains("Suspension: the front left corner is bent.", report.Texts());
         Assert.Equal(new[] { 0.5, 0, 0, 0 }, CarCondition.StartState(car, GroupOf).SuspensionBend);
     }
 
@@ -506,8 +506,8 @@ public sealed class CarConditionTests : IDisposable
             Heat = new RaceHeatReport { PeakWaterC = 136, HeatLifeLost = 1000 }
         }, 5, GroupOf);
 
-        Assert.Contains("Engine: the heat finished it. It needs a rebuild before it runs again.", report);
-        Assert.DoesNotContain(report, l => l.Contains("let go", StringComparison.Ordinal));
+        Assert.Contains("Engine: the heat finished it. It needs a rebuild before it runs again.", report.Texts());
+        Assert.DoesNotContain(report.Texts(), l => l.Contains("let go", StringComparison.Ordinal));
         foreach (var id in new[] { "crank", "rod", "piston", "cam" }) Assert.Equal(0, Part(car, id).Tear);
         Assert.Null(CarCondition.FailedPart(car, GroupOf));
         Assert.Contains("the engine is blown", CarCondition.WhyCannotRace(car, GroupOf));
@@ -523,7 +523,7 @@ public sealed class CarConditionTests : IDisposable
             Heat = new RaceHeatReport { PeakWaterC = 95, OilLifeLost = 100 }
         }, 5, GroupOf);
 
-        Assert.Contains(report, l => l.StartsWith("Engine: running without oil wore the whole bottom end", StringComparison.Ordinal));
+        Assert.Contains(report.Texts(), l => l.StartsWith("Engine: running without oil wore the whole bottom end", StringComparison.Ordinal));
         foreach (var id in new[] { "crank", "rod", "piston", "cam" }) Assert.Equal(0.9, Part(car, id).Tear, 6);
     }
 
@@ -550,8 +550,8 @@ public sealed class CarConditionTests : IDisposable
         Assert.Contains("the engine is blown", CarCondition.WhyCannotRace(car, groupOf));
 
         var jobs = RepairShop.Jobs(car, catalog);
-        var engine = Assert.Single(jobs, j => j.Name == "Engine rebuild");
-        var gearbox = Assert.Single(jobs, j => j.Name == "Gearbox rebuild");
+        var engine = Assert.Single(jobs, j => j.Id == RepairShop.Engine);
+        var gearbox = Assert.Single(jobs, j => j.Id == RepairShop.Gearbox);
         Assert.StartsWith("Blown: the ", engine.Detail);
         Assert.EndsWith(" let go", engine.Detail);
         Assert.True(engine.Cost > gearbox.Cost);

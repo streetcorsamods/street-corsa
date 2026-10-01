@@ -10,6 +10,7 @@ using StreetCorsa.Parts.Logic;
 using System.Collections.Concurrent;
 using System.IO;
 using StreetCorsa.Services.Catalog;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Services.Parts
 {
@@ -142,7 +143,7 @@ namespace StreetCorsa.Services.Parts
             catch (Exception ex)
             {
                 _logger.Error(ex, "{Car}: its engine {Block} could not be evaluated", car.DefinitionId, engine.DefinitionId);
-                return new EngineReport { Problem = "the engine could not be evaluated: " + ex.Message };
+                return new EngineReport { Problem = GameText.Say("garage.engine.not_evaluated", ("error", ex.Message)) };
             }
 
             if (report != null) TellFaults(car.DefinitionId, report.ScriptFaults);
@@ -372,7 +373,9 @@ namespace StreetCorsa.Services.Parts
             if (block == null) return null;
 
             var name = ShortBlockName(block.DisplayName ?? block.Name);
-            return report is { Runs: true } ? $"{name}, {report.Dyno!.MaxPowerHp:0} hp" : $"{name}, not running";
+            return report is { Runs: true }
+                ? GameText.Say("garage.engine.summary", ("engine", name), ("hp", $"{report.Dyno!.MaxPowerHp:0}"))
+                : GameText.Say("garage.engine.summary.not_running", ("engine", name));
         }
 
         /// <summary>

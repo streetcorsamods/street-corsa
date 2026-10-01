@@ -1,6 +1,7 @@
 <UserControl x:Class="StreetCorsa.Screens.MainMenu.IntroView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:t="clr-namespace:StreetCorsa.Services.Text"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d"
@@ -29,7 +30,7 @@
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
                     Opacity="0">
-            <TextBlock Text="STREET CORSA"
+            <TextBlock Text="{t:Text intro.title}"
                        FontFamily="Impact"
                        FontSize="110"
                        FontStyle="Italic"
@@ -46,7 +47,7 @@
                     <DropShadowEffect Color="Black" BlurRadius="12" ShadowDepth="4" Opacity="0.8"/>
                 </TextBlock.Effect>
             </TextBlock>
-            <TextBlock Text="POWERED BY ASSETTO CORSA"
+            <TextBlock Text="{t:Text intro.powered_by}"
                        FontFamily="Impact"
                        FontSize="30"
                        FontStyle="Italic"
