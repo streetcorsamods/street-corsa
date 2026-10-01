@@ -1,30 +1,21 @@
-1. Garage UI refactor
-	Get rid of the bottom bar with the bankroll and any code related to it.
-	All the buttons should be rounded with an icon inside and smaller. Get rid of the images of the buttons as well. I saved new png icons in the Assets folder we should use them. Give them good size but not too much. Add tooltips to them.
-		Placement:
-			1. Quit: top left
-			2. Hit the streets: center left - steering_wheel icon.
-			3. Newspaper: bottom left
-			4. Part dealer: bottom left above newspaper
-			5. Car dealer: bottom left above Part Dealer
-			6. Gas station: bottom right
-			7. Career stats: top right - Trophy icon
-			8. Calendar: top right below Career Stats
-			9. Radio: top right in the same row as career stats but before it
-			10. Car info: center right
-	The car name bar should be outlined and partially transparent, making good contrast with the text.
+1. Hit The Streets button
+	Let's rename to somehitng more generic like "Go race!" or something.
+	Don't hit the streets directly. Open a styled modal and move the race invitations there.
+	Add a button for hit the streets.
+	We'll use that modal as the racing hub.
+	Move the Street News there too.
 	
-2. Car Info buttons
-	It should open a dialog centered in the screen with all the car info and parts installed. Show the condition of all parts, mileage, fuel, etc.
+2. Newspaper
+	Give a proper newspaper ad layout instead of the current card.
+	Style the ads accordingly with the right typography, like Street Rod does.
+	Keep the infinite scroll.
+	Remove the dealers filter and all its logic from there. Let's keep it old school.
+	Only two sections for now: used parts and used cars.
+	The ads should have a tiny description that might vary, don't make them all the same with condition, mileage, etc. Mention briefly some relevant parts, like a V8, supercharger, dual carbs, etc, or simply say that it's original. They can have some particular description like "Grandma car" or something funny like that.
+	The ads should open a renderer in a modal that shows the part and the player can move it.
+	The cars should also open the renderer but with a scene. Maybe it will be better to change the screen instead of a modal. Give me your insights on this one.
 	
-3. Quit button
-	Another centered dialog with the options. The back and Exit buttons disappear. Get rid of the images and the logic.
-
-4. Screen transitions
-	There should be fade in and out in every screen transition. Ensure the loader shows until the scene is fully loaded.
-	When launching AC, fade to the loading screen and get back to the scene when AC closes. Always with fade transitions.
-	The spinner and loading message should fade as well with the screen.
+3. AI Integration
+	Let's build the feature to allow the players to connect to their AI apis or agents. I use Ollama and ComfyUI. Let's support them as well.
+	When AI is enabled and available, it should be used for driver's comments, ad descriptions, dealer insights about cars, and everything you can think of that might improve the game experience.
 	
-5. Add fade transitions for all dialog windows also.
-
-Notes: the buttons outline should be thick and the background semistransparent. Use a color that makes good contrast. Same for the dialogs. This applies game-wide
