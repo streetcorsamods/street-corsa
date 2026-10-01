@@ -1,6 +1,7 @@
 <UserControl x:Class="StreetCorsa.Dialogs.Quit.QuitDialogView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:t="clr-namespace:StreetCorsa.Services.Text"
              Width="420">
     <Grid>
         <Grid.RowDefinitions>
@@ -13,7 +14,7 @@
         <Border Grid.Row="0"
                 Background="{StaticResource UiBandBrush}"
                 Padding="20,15">
-            <TextBlock Text="Quit"
+            <TextBlock Text="{t:Text quit.title}"
                        Foreground="{StaticResource TextPrimaryBrush}"
                        FontSize="{StaticResource FontSizeHeading}"
                        FontWeight="SemiBold"/>
@@ -21,24 +22,24 @@
 
         <TextBlock Grid.Row="1"
                    Margin="20,18,20,8"
-                   Text="Your game is saved as you go. Where to?"
+                   Text="{t:Text quit.message}"
                    Foreground="{StaticResource TextPrimaryBrush}"
                    FontSize="{StaticResource FontSizeBody}"
                    TextWrapping="Wrap"/>
 
         <!-- The choices, one under the other; Esc or Stay goes back to the game -->
         <StackPanel Grid.Row="2" Margin="20,10,20,20">
-            <Button Content="Main Menu"
+            <Button Content="{t:Text quit.main_menu}"
                     Command="{Binding MainMenuCommand}"
                     Style="{StaticResource DialogSecondaryButtonStyle}"
                     Height="40"
                     Margin="0,0,0,10"/>
-            <Button Content="Quit to Desktop"
+            <Button Content="{t:Text quit.desktop}"
                     Command="{Binding DesktopCommand}"
                     Style="{StaticResource DialogPrimaryButtonStyle}"
                     Height="40"
                     Margin="0,0,0,10"/>
-            <Button Content="Stay"
+            <Button Content="{t:Text quit.stay}"
                     Command="{Binding StayCommand}"
                     Style="{StaticResource DialogSecondaryButtonStyle}"
                     IsCancel="True"

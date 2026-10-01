@@ -7,6 +7,7 @@ using StreetCorsa.Models.GameState;
 using StreetCorsa.Navigation;
 using StreetCorsa.Services.Career;
 using StreetCorsa.Services.Storage;
+using StreetCorsa.Services.Text;
 using StreetCorsa.ViewModels;
 
 namespace StreetCorsa.Screens.NewGame
@@ -79,13 +80,13 @@ namespace StreetCorsa.Screens.NewGame
             // Validate player name
             if (string.IsNullOrWhiteSpace(trimmedName))
             {
-                ErrorMessage = "Please enter your name";
+                ErrorMessage = GameText.Say("newgame.no_name");
                 return;
             }
 
             if (trimmedName.Length > 50)
             {
-                ErrorMessage = "Name is too long (max 50 characters)";
+                ErrorMessage = GameText.Say("newgame.name_too_long");
                 return;
             }
 
@@ -117,8 +118,8 @@ namespace StreetCorsa.Screens.NewGame
             // Show confirmation dialog
             var confirmDialog = new ConfirmationDialogViewModel(
                 _dialogService,
-                $"A save file with the name '{saveName}' already exists. Do you want to overwrite it?",
-                "Overwrite Save?",
+                GameText.Say("newgame.overwrite", ("save", saveName)),
+                GameText.Say("newgame.overwrite.title"),
                 confirmed =>
                 {
                     // Create new save, overwriting the existing one
@@ -162,8 +163,8 @@ namespace StreetCorsa.Screens.NewGame
             _logger.Error(ex, "Could not create save {SaveName}", saveName);
             _dialogService.ShowDialog(new InformationDialogViewModel(
                 _dialogService,
-                $"The new game could not be set up:\n\n{ex.Message}",
-                "New Game Failed"));
+                GameText.Say("newgame.failed", ("error", ex.Message)),
+                GameText.Say("newgame.failed.title")));
         }
 
         /// <summary>

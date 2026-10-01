@@ -3,6 +3,7 @@ using System.IO;
 using System.Windows.Threading;
 using StreetCorsa.Configuration;
 using StreetCorsa.Logging;
+using StreetCorsa.Services.Text;
 using StreetCorsa.ViewModels;
 
 namespace StreetCorsa.Audio.Radio;
@@ -111,7 +112,7 @@ public sealed class RadioPlayer : ObservableObject
         }
     }
 
-    public string NowPlaying => _current?.Display ?? (_songs.Count == 0 ? "No music yet" : "Off");
+    public string NowPlaying => _current?.Display ?? (_songs.Count == 0 ? GameText.Say("radio.no_music_yet") : GameText.Say("radio.off"));
 
     /// <summary>On: a song is playing or paused</summary>
     public bool IsOn
@@ -257,7 +258,7 @@ public sealed class RadioPlayer : ObservableObject
         _scanCancel = cancel;
         var folders = Folders.ToList();
         IsScanning = true;
-        Status = "Looking for music...";
+        Status = GameText.Say("radio.looking");
         WatchFolders(folders);
 
         try
@@ -288,7 +289,7 @@ public sealed class RadioPlayer : ObservableObject
         catch (Exception ex)
         {
             _logger.Error(ex, "The radio's music could not be listed");
-            Status = "The music could not be listed: " + ex.Message;
+            Status = GameText.Say("radio.list_failed", ("error", ex.Message));
         }
         finally
         {
@@ -298,9 +299,14 @@ public sealed class RadioPlayer : ObservableObject
 
     private static string Describe(RadioLibrary.ScanResult result)
     {
-        var parts = new List<string> { result.Songs.Count == 1 ? "1 song" : $"{result.Songs.Count} songs" };
-        if (result.NotPlayable > 0) parts.Add($"{result.NotPlayable} file(s) in a format the radio cannot play (m4a, aac, opus, wma: convert them to mp3, ogg or flac)");
-        if (result.MissingFolders.Count > 0) parts.Add("not found: " + string.Join(", ", result.MissingFolders));
+        var parts = new List<string>
+        {
+            result.Songs.Count == 1
+                ? GameText.Say("radio.found.one", ("count", result.Songs.Count))
+                : GameText.Say("radio.found.other", ("count", result.Songs.Count))
+        };
+        if (result.NotPlayable > 0) parts.Add(GameText.Say("radio.not_playable", ("count", result.NotPlayable)));
+        if (result.MissingFolders.Count > 0) parts.Add(GameText.Say("radio.not_found", ("folders", string.Join(", ", result.MissingFolders))));
         return string.Join(" · ", parts);
     }
 
@@ -379,7 +385,7 @@ public sealed class RadioPlayer : ObservableObject
     /// <summary>A new, empty list; its name made unique</summary>
     public RadioPlaylist CreatePlaylist(string name)
     {
-        name = string.IsNullOrWhiteSpace(name) ? "My list" : name.Trim();
+        name = string.IsNullOrWhiteSpace(name) ? GameText.Say("radio.new_list") : name.Trim();
         var unique = name;
         for (var i = 2; Playlists.Any(p => p.Name.Equals(unique, StringComparison.OrdinalIgnoreCase)); i++) unique = $"{name} {i}";
 
@@ -452,7 +458,9 @@ public sealed class RadioPlayer : ObservableObject
         var songs = SongsOf(listName);
         if (songs.Count == 0)
         {
-            Status = listName == null ? $"No music yet: drop mp3, ogg or flac files into {Folders.FirstOrDefault() ?? RadioState.DefaultFolder}" : $"\"{listName}\" has no songs";
+            Status = listName == null
+                ? GameText.Say("radio.empty", ("folder", Folders.FirstOrDefault() ?? RadioState.DefaultFolder))
+                : GameText.Say("radio.list_empty", ("list", listName));
             return;
         }
 
@@ -683,7 +691,7 @@ public sealed class RadioPlayer : ObservableObject
             if (++_failures >= Math.Max(1, _queue.Songs.Count))
             {
                 _logger.Warning("Radio: none of the songs in the list can be played");
-                Status = "None of these songs can be played (the log says why)";
+                Status = GameText.Say("radio.none_playable");
                 Stop();
                 return;
             }

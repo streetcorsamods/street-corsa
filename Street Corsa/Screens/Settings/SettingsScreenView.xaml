@@ -10,7 +10,7 @@
     <!-- The Settings card of the main screen -->
     <Border Style="{StaticResource MenuCardStyle}">
         <StackPanel>
-            <TextBlock Text="SETTINGS" Style="{StaticResource MenuCardTitleStyle}"/>
+            <TextBlock Text="{t:Text settings.title}" Style="{StaticResource MenuCardTitleStyle}"/>
 
             <!-- Assetto Corsa folder: read at start-up, so a change asks for a restart -->
             <Border Background="{StaticResource ScrimBrush}"
@@ -21,7 +21,7 @@
                     Width="560"
                     Margin="0,0,0,24">
                 <StackPanel>
-                    <TextBlock Text="Assetto Corsa folder"
+                    <TextBlock Text="{t:Text settings.ac_folder}"
                                FontWeight="Bold"
                                Foreground="{StaticResource TextPrimaryBrush}"
                                Margin="0,0,0,8"/>
@@ -35,7 +35,7 @@
                                  Padding="8,4"
                                  VerticalContentAlignment="Center"/>
                         <Button Grid.Column="1"
-                                Content="Browse..."
+                                Content="{t:Text settings.browse}"
                                 Command="{Binding BrowseAssettoCorsaFolderCommand}"
                                 Style="{StaticResource DialogSecondaryButtonStyle}"
                                 Width="100"
@@ -46,7 +46,7 @@
                                TextWrapping="Wrap"
                                Margin="0,6,0,0"
                                Visibility="{Binding AssettoCorsaFolderHint, Converter={StaticResource StringToVisibilityConverter}}"/>
-                    <Button Content="Save"
+                    <Button Content="{t:Text common.save}"
                             Command="{Binding SaveCommand}"
                             Style="{StaticResource DialogPrimaryButtonStyle}"
                             Width="120"
@@ -86,7 +86,7 @@
                     Width="560"
                     Margin="0,0,0,24">
                 <StackPanel>
-                    <TextBlock Text="Sound"
+                    <TextBlock Text="{t:Text settings.sound}"
                                FontWeight="Bold"
                                Foreground="{StaticResource TextPrimaryBrush}"
                                Margin="0,0,0,8"/>
@@ -123,17 +123,17 @@
                     </ItemsControl>
                     <DockPanel Margin="0,10,0,0">
                         <Button DockPanel.Dock="Right"
-                                Content="Radio"
+                                Content="{t:Text settings.radio}"
                                 Command="{x:Static radio:RadioPanelViewModel.ToggleCommand}"
                                 Style="{StaticResource DialogSecondaryButtonStyle}"
                                 Width="90"
                                 Margin="8,0,0,0"/>
                         <Button DockPanel.Dock="Right"
-                                Content="Sound Library"
+                                Content="{t:Text settings.sound_library}"
                                 Command="{Binding OpenSoundBrowserCommand}"
                                 Style="{StaticResource DialogSecondaryButtonStyle}"
                                 Width="140"/>
-                        <CheckBox Content="Mute when the game is in the background"
+                        <CheckBox Content="{t:Text settings.mute_in_background}"
                                   IsChecked="{Binding MuteInBackground}"
                                   Foreground="{StaticResource TextSecondaryBrush}"
                                   VerticalAlignment="Center"/>
@@ -142,7 +142,7 @@
             </Border>
 
             <!-- Edit Car Catalog Button -->
-            <Button Content="Edit Car Catalog"
+            <Button Content="{t:Text settings.edit_catalog}"
                     Command="{Binding OpenCatalogEditorCommand}"
                     Style="{StaticResource DialogPrimaryButtonStyle}"
                     Width="200"
@@ -150,7 +150,7 @@
                     FontSize="{StaticResource FontSizeSubheading}"
                     HorizontalAlignment="Center"/>
 
-            <Button Content="Back"
+            <Button Content="{t:Text common.back}"
                     Command="{Binding BackCommand}"
                     Style="{StaticResource DialogSecondaryButtonStyle}"
                     Width="150"

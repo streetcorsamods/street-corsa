@@ -4,6 +4,7 @@ using StreetCorsa.Dialogs.Information;
 using StreetCorsa.Logging;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Screens.Shared;
+using StreetCorsa.Services.Text;
 using StreetCorsa.Services;
 using StreetCorsa.Services.Career;
 using StreetCorsa.Services.Catalog;
@@ -275,10 +276,13 @@ namespace StreetCorsa.Navigation
 
         private void ShowNavigationError(string screenName)
         {
+            // The screen's name in the player's language: menu.screen.<its name, spaces as underscores>
+            var key = "menu.screen." + screenName.Replace(' ', '_').Replace("'", string.Empty);
+            var name = GameText.Installed.Has(key) ? GameText.Say(key) : screenName;
             _dialogService.ShowDialog(new InformationDialogViewModel(
                 _dialogService,
-                $"The {screenName} could not be opened. The details are in the log.",
-                "Something Went Wrong"));
+                GameText.Say("menu.open_failed", ("screen", name)),
+                GameText.Say("menu.open_failed.title")));
         }
 
         // ============================================================

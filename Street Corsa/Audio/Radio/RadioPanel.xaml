@@ -1,6 +1,7 @@
 <UserControl x:Class="StreetCorsa.Audio.Radio.RadioPanel"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:t="clr-namespace:StreetCorsa.Services.Text"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:helpers="clr-namespace:StreetCorsa.Helpers"
@@ -48,8 +49,8 @@
                     <Button Style="{StaticResource PanelCloseButtonStyle}"
                             Tag="{StaticResource CloseIcon}"
                             Command="{Binding CloseCommand}"
-                            ToolTip="Close (F2, Esc)"/>
-                    <TextBlock Text="Radio" Style="{StaticResource PanelTitleStyle}"/>
+                            ToolTip="{t:Text radio.close}"/>
+                    <TextBlock Text="{t:Text radio.title}" Style="{StaticResource PanelTitleStyle}"/>
                 </DockPanel>
             </Border>
 
@@ -100,8 +101,8 @@
 
                 <!-- The transport, shuffle and repeat, the volume -->
                 <DockPanel Grid.Row="1" Margin="0,14,0,14" LastChildFill="False">
-                    <Button DockPanel.Dock="Left" Style="{StaticResource TransportButtonStyle}" Tag="{StaticResource PreviousIcon}" Command="{Binding PreviousCommand}" ToolTip="Back a song" VerticalAlignment="Center"/>
-                    <Button DockPanel.Dock="Left" Command="{Binding PlayPauseCommand}" ToolTip="On / pause" VerticalAlignment="Center">
+                    <Button DockPanel.Dock="Left" Style="{StaticResource TransportButtonStyle}" Tag="{StaticResource PreviousIcon}" Command="{Binding PreviousCommand}" ToolTip="{t:Text radio.back_a_song}" VerticalAlignment="Center"/>
+                    <Button DockPanel.Dock="Left" Command="{Binding PlayPauseCommand}" ToolTip="{t:Text radio.play_pause}" VerticalAlignment="Center">
                         <Button.Style>
                             <Style TargetType="Button" BasedOn="{StaticResource TransportButtonStyle}">
                                 <Setter Property="Width" Value="58"/>
@@ -116,16 +117,16 @@
                             </Style>
                         </Button.Style>
                     </Button>
-                    <Button DockPanel.Dock="Left" Style="{StaticResource TransportButtonStyle}" Tag="{StaticResource NextIcon}" Command="{Binding NextCommand}" ToolTip="Next song" VerticalAlignment="Center"/>
-                    <Button DockPanel.Dock="Left" Style="{StaticResource TransportButtonStyle}" Tag="{StaticResource StopIcon}" Command="{Binding StopCommand}" Margin="0,0,24,0" ToolTip="Off" VerticalAlignment="Center"/>
+                    <Button DockPanel.Dock="Left" Style="{StaticResource TransportButtonStyle}" Tag="{StaticResource NextIcon}" Command="{Binding NextCommand}" ToolTip="{t:Text radio.next_song}" VerticalAlignment="Center"/>
+                    <Button DockPanel.Dock="Left" Style="{StaticResource TransportButtonStyle}" Tag="{StaticResource StopIcon}" Command="{Binding StopCommand}" Margin="0,0,24,0" ToolTip="{t:Text radio.off}" VerticalAlignment="Center"/>
 
-                    <ToggleButton DockPanel.Dock="Left" Content="Shuffle" Style="{StaticResource GlassToggleButtonStyle}" IsChecked="{Binding Radio.Shuffle}"
+                    <ToggleButton DockPanel.Dock="Left" Content="{t:Text radio.shuffle}" Style="{StaticResource GlassToggleButtonStyle}" IsChecked="{Binding Radio.Shuffle}"
                                   Height="32" Padding="14,0" Margin="0,0,6,0" FontSize="{StaticResource FontSizeCompact}" VerticalAlignment="Center"/>
                     <Button DockPanel.Dock="Left" Content="{Binding RepeatText}" Style="{StaticResource PanelButtonStyle}" Command="{Binding CycleRepeatCommand}"
                             MinWidth="120" Margin="0" VerticalAlignment="Center"/>
 
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="Volume" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <TextBlock Text="{t:Text radio.volume}" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,10,0"/>
                         <Slider Width="170" Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1" IsMoveToPointEnabled="True"
                                 Value="{Binding Volume}" VerticalAlignment="Center"/>
                     </StackPanel>
@@ -139,14 +140,14 @@
                     </Grid.ColumnDefinitions>
 
                     <DockPanel Grid.Column="0" Margin="0,0,16,0">
-                        <TextBlock DockPanel.Dock="Top" Text="LISTS" Style="{StaticResource SectionTitleStyle}"/>
+                        <TextBlock DockPanel.Dock="Top" Text="{t:Text radio.lists}" Style="{StaticResource SectionTitleStyle}"/>
                         <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
-                            <TextBox Text="{Binding ListNameText, UpdateSourceTrigger=PropertyChanged}" Height="32" FontSize="{StaticResource FontSizeBody}" helpers:GlassInput.Hint="A list's name"
-                                     ToolTip="A name for a new list, or the picked list's new name"/>
+                            <TextBox Text="{Binding ListNameText, UpdateSourceTrigger=PropertyChanged}" Height="32" FontSize="{StaticResource FontSizeBody}" helpers:GlassInput.Hint="{t:Text radio.list_name.hint}"
+                                     ToolTip="{t:Text radio.list_name.tip}"/>
                             <WrapPanel Margin="0,8,0,0">
-                                <Button Content="New" Style="{StaticResource PanelButtonStyle}" Command="{Binding NewListCommand}"/>
-                                <Button Content="Rename" Style="{StaticResource PanelButtonStyle}" Command="{Binding RenameListCommand}"/>
-                                <Button Content="Delete" Style="{StaticResource PanelButtonStyle}" Command="{Binding DeleteListCommand}"/>
+                                <Button Content="{t:Text radio.new}" Style="{StaticResource PanelButtonStyle}" Command="{Binding NewListCommand}"/>
+                                <Button Content="{t:Text radio.rename}" Style="{StaticResource PanelButtonStyle}" Command="{Binding RenameListCommand}"/>
+                                <Button Content="{t:Text common.delete}" Style="{StaticResource PanelButtonStyle}" Command="{Binding DeleteListCommand}"/>
                             </WrapPanel>
                         </StackPanel>
                         <ListBox Style="{StaticResource GlassListBoxStyle}"
@@ -157,22 +158,22 @@
 
                     <DockPanel Grid.Column="1">
                         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
-                            <TextBlock DockPanel.Dock="Left" Text="SONGS" Style="{StaticResource SectionTitleStyle}" VerticalAlignment="Center" Margin="0,0,14,0"/>
-                            <Button DockPanel.Dock="Right" Content="Play this list" Style="{StaticResource PanelPrimaryButtonStyle}" Command="{Binding PlayListCommand}" Margin="8,0,0,0"/>
-                            <TextBox Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged, Delay=200}" Height="32" FontSize="{StaticResource FontSizeBody}" helpers:GlassInput.Hint="Look for a song, an artist or an album"/>
+                            <TextBlock DockPanel.Dock="Left" Text="{t:Text radio.songs}" Style="{StaticResource SectionTitleStyle}" VerticalAlignment="Center" Margin="0,0,14,0"/>
+                            <Button DockPanel.Dock="Right" Content="{t:Text radio.play_list}" Style="{StaticResource PanelPrimaryButtonStyle}" Command="{Binding PlayListCommand}" Margin="8,0,0,0"/>
+                            <TextBox Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged, Delay=200}" Height="32" FontSize="{StaticResource FontSizeBody}" helpers:GlassInput.Hint="{t:Text radio.filter.hint}"/>
                         </DockPanel>
 
                         <WrapPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
-                            <Button Content="Play" Style="{StaticResource PanelPrimaryButtonStyle}" Command="{Binding PlaySongCommand}"/>
-                            <TextBlock Text="Add to" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="10,0,8,6"/>
+                            <Button Content="{t:Text radio.play}" Style="{StaticResource PanelPrimaryButtonStyle}" Command="{Binding PlaySongCommand}"/>
+                            <TextBlock Text="{t:Text radio.add_to}" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="10,0,8,6"/>
                             <ComboBox ItemsSource="{Binding Playlists}" SelectedItem="{Binding AddTarget}" DisplayMemberPath="Name" Width="170" Height="32"
                                       FontSize="{StaticResource FontSizeCompact}" Margin="0,0,6,6" VerticalAlignment="Center"/>
-                            <Button Content="Add" Style="{StaticResource PanelButtonStyle}" Command="{Binding AddToListCommand}" Margin="0,0,18,6"/>
-                            <Button Content="Take out" Style="{StaticResource PanelButtonStyle}" Command="{Binding RemoveFromListCommand}"
+                            <Button Content="{t:Text radio.add}" Style="{StaticResource PanelButtonStyle}" Command="{Binding AddToListCommand}" Margin="0,0,18,6"/>
+                            <Button Content="{t:Text radio.take_out}" Style="{StaticResource PanelButtonStyle}" Command="{Binding RemoveFromListCommand}"
                                     Visibility="{Binding IsPlaylist, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                            <Button Content="▲" Style="{StaticResource PanelButtonStyle}" Command="{Binding MoveUpCommand}" ToolTip="Up the list"
+                            <Button Content="▲" Style="{StaticResource PanelButtonStyle}" Command="{Binding MoveUpCommand}" ToolTip="{t:Text radio.up}"
                                     Visibility="{Binding IsPlaylist, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                            <Button Content="▼" Style="{StaticResource PanelButtonStyle}" Command="{Binding MoveDownCommand}" ToolTip="Down the list"
+                            <Button Content="▼" Style="{StaticResource PanelButtonStyle}" Command="{Binding MoveDownCommand}" ToolTip="{t:Text radio.down}"
                                     Visibility="{Binding IsPlaylist, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                         </WrapPanel>
 
@@ -212,7 +213,7 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
-                        <TextBlock Text="MUSIC FOLDERS" Style="{StaticResource SectionTitleStyle}"/>
+                        <TextBlock Text="{t:Text radio.folders}" Style="{StaticResource SectionTitleStyle}"/>
                         <ListBox Style="{StaticResource GlassListBoxStyle}"
                                  ItemsSource="{Binding Radio.Folders}"
                                  SelectedItem="{Binding SelectedFolder}"
@@ -229,10 +230,10 @@
                                 <Setter Property="Margin" Value="0,0,0,6"/>
                             </Style>
                         </StackPanel.Resources>
-                        <Button Content="Add a folder..." Command="{Binding AddFolderCommand}" ToolTip="Any folder on the PC; its subfolders come with it"/>
-                        <Button Content="Take the folder out" Command="{Binding RemoveFolderCommand}"/>
-                        <Button Content="Open the folder" Command="{Binding OpenFolderCommand}"/>
-                        <Button Content="Look again" Command="{Binding RescanCommand}"/>
+                        <Button Content="{t:Text radio.add_folder}" Command="{Binding AddFolderCommand}" ToolTip="{t:Text radio.add_folder.tip}"/>
+                        <Button Content="{t:Text radio.remove_folder}" Command="{Binding RemoveFolderCommand}"/>
+                        <Button Content="{t:Text radio.open_folder}" Command="{Binding OpenFolderCommand}"/>
+                        <Button Content="{t:Text radio.rescan}" Command="{Binding RescanCommand}"/>
                     </StackPanel>
                 </Grid>
             </Grid>

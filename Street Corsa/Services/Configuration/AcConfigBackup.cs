@@ -2,6 +2,7 @@ using System.IO;
 using Newtonsoft.Json;
 using StreetCorsa.Helpers;
 using StreetCorsa.Logging;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Services.Configuration
 {
@@ -135,13 +136,13 @@ namespace StreetCorsa.Services.Configuration
                         else
                         {
                             _logger.Error("The kept original of {File} is gone (deleted outside the game?); what the race wrote stays in it", entry.Path);
-                            problems?.Add($"{entry.Path}: its original is no longer kept under {_keep}, so what the race wrote stays in it.");
+                            problems?.Add(GameText.Say("startup.restore.not_kept", ("file", entry.Path), ("keep", _keep)));
                         }
                     }
                     catch (Exception ex)
                     {
                         _logger.Error(ex, "Could not put {File} back; the original stays kept under {Keep}", entry.Path, _keep);
-                        problems?.Add($"{entry.Path} could not be put back ({ex.Message}); the original is kept under {_keep} and goes back at the next start.");
+                        problems?.Add(GameText.Say("startup.restore.failed", ("file", entry.Path), ("error", ex.Message), ("keep", _keep)));
                         left.Add(entry);
                     }
                 }

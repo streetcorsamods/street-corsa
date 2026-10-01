@@ -5,6 +5,7 @@ using StreetCorsa.Logging;
 using StreetCorsa.Mods;
 using StreetCorsa.Parts.Cars;
 using StreetCorsa.Services.Street;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Services.Station
 {
@@ -101,7 +102,7 @@ namespace StreetCorsa.Services.Station
                 Price(entry.Prices.FuelPerLitre, defaults.FuelPerLitre), Price(entry.Prices.OilPerLitre, defaults.OilPerLitre),
                 Price(entry.Prices.Wash, defaults.Wash), Price(entry.Prices.Tow, defaults.Tow));
 
-            var station = new StationScene(entry.Id ?? Path.GetFileName(folder), entry.Title ?? entry.Id ?? "The gas station", folder,
+            var station = new StationScene(entry.Id ?? Path.GetFileName(folder), entry.Title ?? entry.Id ?? GameText.Say("station.ui.default_title"), folder,
                 entry.Model ?? "station.kn5", arrive, leave, entry.LookAtPump ?? 72f, entry.Sun is { Length: 3 } sun ? sun : [0.2f, 1f, 0.8f],
                 SceneLighting.Read(entry.Lights, entry.Id ?? Path.GetFileName(folder), Logger), prices);
             if (station.Kn5.Length == 0)

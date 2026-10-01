@@ -1,3 +1,5 @@
+using StreetCorsa.Services.Text;
+
 namespace StreetCorsa.Services.Time
 {
     /// <summary>
@@ -81,10 +83,12 @@ namespace StreetCorsa.Services.Time
                 var hours = minutes / 60;
                 var remainingMinutes = minutes % 60;
                 if (remainingMinutes == 0)
-                    return hours == 1 ? "1 hour" : $"{hours} hours";
-                return $"{hours}h {remainingMinutes}min";
+                    return hours == 1
+                        ? GameText.Say("time.duration.hours.one", ("hours", hours))
+                        : GameText.Say("time.duration.hours.other", ("hours", hours));
+                return GameText.Say("time.duration.hours_minutes", ("hours", hours), ("minutes", remainingMinutes));
             }
-            return $"{minutes} min";
+            return GameText.Say("time.duration.minutes", ("minutes", minutes));
         }
     }
 }

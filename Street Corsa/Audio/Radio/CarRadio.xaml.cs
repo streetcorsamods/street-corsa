@@ -5,6 +5,7 @@ using System.Windows.Input;
 using Brush = System.Windows.Media.Brush;
 using Color = System.Windows.Media.Color;
 using SolidColorBrush = System.Windows.Media.SolidColorBrush;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Audio.Radio
 {
@@ -35,7 +36,7 @@ namespace StreetCorsa.Audio.Radio
 
         private void Refresh()
         {
-            SongText.Text = Radio.IsOn || Radio.Current != null ? Radio.NowPlaying : "No music: F2 to add some";
+            SongText.Text = Radio.IsOn || Radio.Current != null ? Radio.NowPlaying : GameText.Say("radio.car.no_music");
             Lamp.Fill = Radio.IsPlaying ? LampOn : LampOff;
             Dial.Opacity = Radio.IsPlaying ? 1.0 : 0.55;
             PlaceNeedle();

@@ -41,7 +41,7 @@ namespace StreetCorsa.Screens.Settings
             try
             {
                 var radio = Services.Garage.GarageProps.Find(Mods.ModSet.Installed, "radio", AppSettings.Instance.GarageShowroomKn5);
-                if (radio?.Credit is { Length: > 0 } credit) credits += " · Garage radio: " + credit + ".";
+                if (radio?.Credit is { Length: > 0 } credit) credits += GameText.Say("settings.credits.radio", ("credit", credit));
             }
             catch (Exception)
             {
@@ -152,7 +152,7 @@ namespace StreetCorsa.Screens.Settings
         /// <summary>Whether the folder typed or picked looks like an Assetto Corsa install</summary>
         public string AssettoCorsaFolderHint => LooksLikeAssettoCorsa(AssettoCorsaFolder)
             ? string.Empty
-            : "No Assetto Corsa installation found in this folder (it needs content\\cars and content\\tracks).";
+            : GameText.Say("settings.ac_folder.not_ac");
 
         public SettingsScreenViewModel(
             NavigationService navigationService,
@@ -186,12 +186,12 @@ namespace StreetCorsa.Screens.Settings
             var audio = Settings.Audio;
             return
             [
-                new VolumeSlider("Master", null, audio.Master, OnVolumeChanged),
-                new VolumeSlider("Engines", AudioBus.Engine, audio.Engine, OnVolumeChanged),
-                new VolumeSlider("Radio", AudioBus.Radio, audio.Radio, OnVolumeChanged),
-                new VolumeSlider("Tools and parts", AudioBus.Effects, audio.Effects, OnVolumeChanged),
-                new VolumeSlider("Surroundings", AudioBus.Ambience, audio.Ambience, OnVolumeChanged),
-                new VolumeSlider("Menus and buttons", AudioBus.Interface, audio.Interface, OnVolumeChanged)
+                new VolumeSlider(GameText.Say("settings.volume.master"), null, audio.Master, OnVolumeChanged),
+                new VolumeSlider(GameText.Say("settings.volume.engines"), AudioBus.Engine, audio.Engine, OnVolumeChanged),
+                new VolumeSlider(GameText.Say("settings.volume.radio"), AudioBus.Radio, audio.Radio, OnVolumeChanged),
+                new VolumeSlider(GameText.Say("settings.volume.effects"), AudioBus.Effects, audio.Effects, OnVolumeChanged),
+                new VolumeSlider(GameText.Say("settings.volume.ambience"), AudioBus.Ambience, audio.Ambience, OnVolumeChanged),
+                new VolumeSlider(GameText.Say("settings.volume.interface"), AudioBus.Interface, audio.Interface, OnVolumeChanged)
             ];
         }
 
@@ -240,7 +240,7 @@ namespace StreetCorsa.Screens.Settings
         {
             var dialog = new Microsoft.Win32.OpenFolderDialog
             {
-                Title = "Assetto Corsa folder",
+                Title = GameText.Say("settings.ac_folder"),
                 InitialDirectory = Directory.Exists(AssettoCorsaFolder) ? AssettoCorsaFolder : string.Empty
             };
 
@@ -268,7 +268,7 @@ namespace StreetCorsa.Screens.Settings
                 {
                     // Not on disk, so not in use either: a later save of something else must not carry it along
                     Settings.AssettoCorsaPath = savedPath;
-                    ShowNotSaved("The settings could not be saved. The details are in the log.");
+                    ShowNotSaved(GameText.Say("settings.not_saved"));
                     return;
                 }
 
@@ -278,7 +278,7 @@ namespace StreetCorsa.Screens.Settings
             {
                 _logger.Error(ex, "Could not save the settings");
                 Settings.AssettoCorsaPath = savedPath;
-                ShowNotSaved($"The settings could not be saved:\n\n{ex.Message}");
+                ShowNotSaved(GameText.Say("settings.save_failed", ("error", ex.Message)));
                 return;
             }
 
@@ -297,13 +297,13 @@ namespace StreetCorsa.Screens.Settings
 
             _dialogService.ShowDialog(new InformationDialogViewModel(
                 _dialogService,
-                $"The game will use the Assetto Corsa folder\n{AssettoCorsaFolder}\nthe next time it starts. Restart the game for the change to take effect.",
-                "Restart Needed"));
+                GameText.Say("settings.ac_folder.restart", ("folder", AssettoCorsaFolder)),
+                GameText.Say("settings.restart.title")));
         }
 
         private void ShowNotSaved(string message)
         {
-            _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, message, "Settings Not Saved"));
+            _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, message, GameText.Say("settings.not_saved.title")));
         }
 
         private void OnReset()
@@ -312,14 +312,14 @@ namespace StreetCorsa.Screens.Settings
             {
                 if (!_settingsService.ResetToDefaults())
                 {
-                    ShowNotSaved("The settings could not be reset. The details are in the log.");
+                    ShowNotSaved(GameText.Say("settings.not_reset"));
                     return;
                 }
             }
             catch (Exception ex)
             {
                 _logger.Error(ex, "Could not reset the settings");
-                ShowNotSaved($"The settings could not be reset:\n\n{ex.Message}");
+                ShowNotSaved(GameText.Say("settings.reset_failed", ("error", ex.Message)));
                 return;
             }
 
