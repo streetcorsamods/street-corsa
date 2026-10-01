@@ -27,6 +27,6 @@ namespace StreetCorsa.Navigation
         public virtual bool InGame => true;
 
         /// <summary>The game's time of day as the screens' headers show it ("9:30 PM")</summary>
-        protected static string HeaderTime(DateTime date) => date.ToString("h:mm tt");
+        protected static string HeaderTime(DateTime date) => Services.Text.GameText.Date(date, "format.time");
     }
 }

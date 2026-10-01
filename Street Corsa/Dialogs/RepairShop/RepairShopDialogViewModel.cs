@@ -5,6 +5,7 @@ using StreetCorsa.Parts.Cars;
 using StreetCorsa.Services.Text;
 using StreetCorsa.Services.Time;
 using StreetCorsa.ViewModels;
+using StreetCorsa.Helpers;
 
 namespace StreetCorsa.Dialogs.RepairShop
 {
@@ -46,7 +47,7 @@ namespace StreetCorsa.Dialogs.RepairShop
 
         public bool HasJobs => Jobs.Count > 0;
 
-        public string MoneyDisplay => $"${_money():N0}";
+        public string MoneyDisplay => Money.Text(_money());
 
         private string _status = string.Empty;
 
@@ -109,7 +110,7 @@ namespace StreetCorsa.Dialogs.RepairShop
         {
             Name = job.Name;
             Detail = job.Detail;
-            CostDisplay = $"${job.Cost:N0}";
+            CostDisplay = Money.Text(job.Cost);
             TimeDisplay = job.Time.GetTimeDescription();
             Command = command;
         }

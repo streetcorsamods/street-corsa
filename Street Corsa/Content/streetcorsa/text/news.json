@@ -51,8 +51,8 @@
     "news.upset.headline": [ "Upset: {p} Beats {r}", "Nobody Saw {p} Coming" ],
     "news.upset.body": "{r} was supposed to win this one. {p}'s {playerCar} had other ideas {where}.",
 
-    "news.big_money.headline": [ "${wager:N0} Race Goes to {winner}", "Big Money on the Street" ],
-    "news.big_money.body": "{p} and {r} raced {where} for ${wager:N0}. {winner} collected.",
+    "news.big_money.headline": [ "{wager:money} Race Goes to {winner}", "Big Money on the Street" ],
+    "news.big_money.body": "{p} and {r} raced {where} for {wager:money}. {winner} collected.",
 
     "news.first_win.headline": [ "New Face on the Street", "{p} Gets a First Win" ],
     "news.first_win.body": "A newcomer, {p}, beat {r} {where} in a {playerCar}. Keep an eye on this one.",

@@ -333,7 +333,7 @@ public class MatchupCalculatorTests
     {
         var stats = MatchupCalculator.Compare(CarWith("350hp @ 6000rpm", "1,500kg"), CarWith("300 bhp", "1.250 kg"));
         var hp = stats.Single(s => s.Label == "Horsepower");
-        Assert.Equal(350.ToString("N0") + " HP", hp.PlayerValue);
+        Assert.Equal("350 hp", hp.PlayerValue);
         Assert.Equal(1, hp.Advantage);
         var weight = stats.Single(s => s.Label == "Weight");
         Assert.Equal(-1, weight.Advantage);

@@ -131,7 +131,7 @@ namespace StreetCorsa.Screens.LoadGame
             if (timeSpan.TotalDays < 30)
                 return Ago("weeks", (int)(timeSpan.TotalDays / 7));
 
-            return lastPlayed.ToString("MMM d, yyyy");
+            return GameText.Date(lastPlayed, "format.date.short");
         }
 
         private static string Ago(string unit, int count) => count == 1

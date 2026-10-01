@@ -2,6 +2,7 @@ using System.Globalization;
 using StreetCorsa.Models.Race;
 using StreetCorsa.Services.Text;
 using StreetCorsa.ViewModels;
+using StreetCorsa.Helpers;
 
 namespace StreetCorsa.Dialogs.Timeslip
 {
@@ -45,18 +46,23 @@ namespace StreetCorsa.Dialogs.Timeslip
 
             var rows = new List<TimeslipRow>();
             if (lanes.Any(l => l.DialIn != null))
-                rows.Add(new TimeslipRow(GameText.Say("timeslip.dial"), lanes.Select(l => l.DialIn is { } d ? d.ToString("0.00", CultureInfo.InvariantCulture) : "-").ToList()));
+                rows.Add(new TimeslipRow(GameText.Say("timeslip.dial"), lanes.Select(l => l.DialIn is { } d ? d.ToString("0.00", Locale.Culture) : "-").ToList()));
 
             rows.Add(new TimeslipRow(GameText.Say("timeslip.reaction"), lanes.Select(l => Reaction(l.Slip)).ToList()));
-            rows.Add(Row("60'", s => s.SixtyFeetSeconds, "0.000"));
-            rows.Add(Row("330'", s => s.ThreeThirtyFeetSeconds, "0.000"));
-            rows.Add(Row("1/8 ET", s => s.EighthMileSeconds, "0.000"));
-            rows.Add(Row("1/8 MPH", s => s.EighthMileMph, "0.00"));
-            rows.Add(Row("1000'", s => s.ThousandFeetSeconds, "0.000"));
-            rows.Add(Row("1/4 ET", s => s.QuarterMileSeconds, "0.000"));
-            rows.Add(Row("1/4 MPH", s => s.QuarterMileMph, "0.00"));
+            // The strip's marks are the quarter mile's wherever it is; its trap speeds are in the player's units
+            var unit = Measure.NameOf(Quantity.Speed).ToUpper(Locale.Culture);
+            rows.Add(Row(GameText.Say("timeslip.sixty"), s => s.SixtyFeetSeconds, "0.000"));
+            rows.Add(Row(GameText.Say("timeslip.three_thirty"), s => s.ThreeThirtyFeetSeconds, "0.000"));
+            rows.Add(Row(GameText.Say("timeslip.eighth"), s => s.EighthMileSeconds, "0.000"));
+            rows.Add(Row(GameText.Say("timeslip.eighth.speed", ("unit", unit)), s => Speed(s.EighthMileMph), "0.00"));
+            rows.Add(Row(GameText.Say("timeslip.thousand"), s => s.ThousandFeetSeconds, "0.000"));
+            rows.Add(Row(GameText.Say("timeslip.quarter"), s => s.QuarterMileSeconds, "0.000"));
+            rows.Add(Row(GameText.Say("timeslip.quarter.speed", ("unit", unit)), s => Speed(s.QuarterMileMph), "0.00"));
             return rows;
         }
+
+        /// <summary>A trap speed the slip keeps in mph, in the player's units</summary>
+        private static double? Speed(double? mph) => mph is { } value ? Measure.SpeedFromMph(value).Value : null;
 
         /// <summary>The reaction time, a red light marked as the strips mark it: "-0.052 RL"</summary>
         private static string Reaction(Models.Race.Timeslip? slip)
@@ -67,7 +73,7 @@ namespace StreetCorsa.Dialogs.Timeslip
 
         /// <summary>A mark the car never reached is a dash, as on a real slip</summary>
         private static string Show(Models.Race.Timeslip? slip, Func<Models.Race.Timeslip, double?> value, string format) =>
-            slip != null && value(slip) is { } number && double.IsFinite(number) ? number.ToString(format, CultureInfo.InvariantCulture) : "-";
+            slip != null && value(slip) is { } number && double.IsFinite(number) ? number.ToString(format, Locale.Culture) : "-";
     }
 
     /// <summary>One mark of the slip: its label and each column's figure</summary>

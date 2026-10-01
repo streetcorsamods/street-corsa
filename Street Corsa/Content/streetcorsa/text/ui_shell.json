@@ -3,7 +3,7 @@
     "The words of the game's shell: the title, the main menu and its cards (new game, load game, settings), the quit",
     "and yes/no dialogs, start-up messages, the gas station's screen (the attendant's own lines are in station.json),",
     "the radio and the engine's state when it is started in the garage or on a lot. A label is said one way (the first",
-    "line of its pool). {name} is a value the game fills in; money and figures come already written out.",
+    "line of its pool). {name} is a value the game fills in; money writes itself, figures come already written out or are named for what they are ({tank:fuel}, see locale.json).",
     ".one / .other: the game picks one by the count.",
     "menu.screen.<name>: a screen's name in menu.open_failed, the screen's own name with spaces as underscores.",
     "{screen}: menu.open_failed",
@@ -30,7 +30,7 @@
     "{problems}, {log}: startup.mod_problems",
     "{file}, {keep}: startup.restore.not_kept",
     "{file}, {error}, {keep}: startup.restore.failed",
-    "Placeholders: {cost} the cost so far; {count} a count; {credit} who made the radio; {error} what went wrong; {file} a file; {folder} a folder; {folders} folders; {fuel} litres in the tank; {hours} hours; {keep} where originals are kept; {list} a list's name; {litres} litres so far; {log} the log's folder; {minutes} minutes; {mods} the mods, one a line; {path} a folder; {player} the player's name; {problem} why it won't start; {problems} the problems, one a line; {save} the save's name; {screen} a screen's name; {settings} the settings file; {station} the station's name; {tank} the tank's size; {tow} the tow truck's charge."
+    "Placeholders: {cost} the cost so far; {count} a count; {credit} who made the radio; {error} what went wrong; {file} a file; {folder} a folder; {folders} folders; {fuel} the fuel in the tank; {hours} hours; {keep} where originals are kept; {list} a list's name; {litres} litres so far; {log} the log's folder; {minutes} minutes; {mods} the mods, one a line; {path} a folder; {player} the player's name; {problem} why it won't start; {problems} the problems, one a line; {save} the save's name; {screen} a screen's name; {settings} the settings file; {station} the station's name; {tank} the tank's size; {tow} the tow truck's charge."
   ],
   "lines": {
     "intro.title": "STREET CORSA",
@@ -168,13 +168,14 @@
     "station.ui.filling": "Filling up...",
     "station.ui.oiling": "Putting the oil in...",
     "station.ui.washing": "Washing the car...",
-    "station.ui.fill_detail": "{litres} litres · {cost} · {fuel} of {tank} in the tank",
+    "station.ui.fill_detail": "{litres:fuel:0.0} · {cost} · {fuel:fuel.number:0} of {tank:fuel:0} in the tank",
     "station.ui.towed_home": "The tow truck hauls you home ({tow}).",
     "station.ui.start_up": "You start her up...",
     "station.ui.pull_out": "You pull out onto the road and head home.",
     "station.ui.still_at_pump": "You're still at the pump.",
     "radio.close": "Close (F2, Esc)",
     "radio.title": "Radio",
+    "radio.dial": "55     60     70     80     100     120     140     160     KC",
     "radio.back_a_song": "Back a song",
     "radio.play_pause": "On / pause",
     "radio.next_song": "Next song",

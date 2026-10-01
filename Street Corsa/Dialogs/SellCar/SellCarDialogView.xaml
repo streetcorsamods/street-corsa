@@ -99,7 +99,7 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <TextBlock Grid.Column="0"
-                               Text="{t:Text sell.ad.asking}"
+                               Text="{Binding AskingLabel}"
                                Foreground="{StaticResource TextPrimaryBrush}"
                                FontSize="{StaticResource FontSizeBody}"
                                VerticalAlignment="Center"

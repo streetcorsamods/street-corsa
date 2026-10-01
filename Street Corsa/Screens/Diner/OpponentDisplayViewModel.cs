@@ -2,6 +2,7 @@ using StreetCorsa.Models.Catalog;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Parts.Cars;
 using StreetCorsa.Services.Text;
+using StreetCorsa.Helpers;
 
 namespace StreetCorsa.Screens.Diner
 {
@@ -87,7 +88,7 @@ namespace StreetCorsa.Screens.Diner
             get
             {
                 var power = Models.GameState.CarPower.Of(Opponent.Cars.FirstOrDefault(), CarDefinition) ?? 0;
-                return power > 0 ? $"{power:N0} HP" : "";
+                return power > 0 ? Measure.Power(power).ToString("N0", null) : "";
             }
         }
 
@@ -96,7 +97,7 @@ namespace StreetCorsa.Screens.Diner
             get
             {
                 var weight = AcSpecs.ParseWeight(CarDefinition.Specs?.Weight) ?? 0;
-                return weight > 0 ? $"{weight:N0} kg" : "";
+                return weight > 0 ? Measure.Mass(weight).ToString("N0", null) : "";
             }
         }
 

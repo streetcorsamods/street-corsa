@@ -24,6 +24,17 @@ namespace StreetCorsa.Services.Text
                 var lines = text.Lines(key);
                 if (lines.Count > 0) yield return $"{IniKey(key)}={Encode(lines[0])}";
             }
+
+            // The trap speeds, which the mode keeps in mph, in the player's units: the factor and the unit's words, both
+            // from this text, the unit's id where a mod has no words for it
+            var speed = Helpers.Measure.UnitOf(Helpers.Quantity.Speed, Helpers.Locale.Units);
+            var perMph = Helpers.Measure.SpeedFromMph(1).In(Helpers.Locale.Units);
+            yield return $"SPEED_PER_MPH={Encode(perMph.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture))}";
+            yield return $"UNIT_SPEED={Encode(text.Lines("unit." + speed) is { Count: > 0 } words ? words[0] : "{n} " + speed)}";
+            var name = text.Lines($"unit.{speed}.name") is { Count: > 0 } names ? names[0] : speed;
+            yield return $"UNIT_SPEED_NAME={Encode(name.ToUpper(Helpers.Locale.Culture))}";
+            // And the decimal mark the career writes its figures with, so a slip in AC reads like the one at home
+            yield return $"DECIMAL={Encode(Helpers.Locale.Culture.NumberFormat.NumberDecimalSeparator)}";
         }
 
         /// <summary><c>race.result.win</c> as the mode asks for it: <c>RESULT_WIN</c></summary>

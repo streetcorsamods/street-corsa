@@ -574,7 +574,8 @@ namespace StreetCorsa.Services.Configuration
 
             // [OPTIONS]
             sb.AppendLine("[OPTIONS]");
-            sb.AppendLine("USE_MPH=0");
+            // AC's own read-outs in the player's units
+            sb.AppendLine(Helpers.Locale.Units == Helpers.UnitSystem.Imperial ? "USE_MPH=1" : "USE_MPH=0");
             sb.AppendLine();
 
         }

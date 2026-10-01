@@ -77,8 +77,8 @@ public class AuditFollowUpsTests
 
         var matchup = MatchupCalculator.Compare(definition, definition, null, opponent.Cars[0].PowerHp);
 
-        Assert.Equal("410 HP", card.CarPower);
-        Assert.Contains(matchup, s => s.Label == "Horsepower" && s.OpponentValue == "410 HP");
+        Assert.Equal("410 hp", card.CarPower);
+        Assert.Contains(matchup, s => s.Label == "Horsepower" && s.OpponentValue == "410 hp");
     }
 
     [Fact]

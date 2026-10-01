@@ -1035,16 +1035,14 @@
                                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                                         <TextBlock FontSize="{StaticResource FontSizeTiny}"
                                                                   Foreground="{StaticResource TextSecondaryBrush}">
-                                                            <Run Text="$"/>
-                                                            <Run Text="{Binding MinWager, StringFormat='{}{0:N0}', Mode=OneWay}"/>
+                                                            <Run Text="{Binding MinWager, Converter={StaticResource MoneyConverter}, Mode=OneWay}"/>
                                                         </TextBlock>
                                                         <TextBlock Text=" - "
                                                                   FontSize="{StaticResource FontSizeTiny}"
                                                                   Foreground="{StaticResource TextSecondaryBrush}"/>
                                                         <TextBlock FontSize="{StaticResource FontSizeTiny}"
                                                                   Foreground="{StaticResource TextSecondaryBrush}">
-                                                            <Run Text="$"/>
-                                                            <Run Text="{Binding MaxWager, StringFormat='{}{0:N0}', Mode=OneWay}"/>
+                                                            <Run Text="{Binding MaxWager, Converter={StaticResource MoneyConverter}, Mode=OneWay}"/>
                                                         </TextBlock>
                                                     </StackPanel>
 

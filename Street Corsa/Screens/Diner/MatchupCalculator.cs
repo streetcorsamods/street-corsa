@@ -3,6 +3,7 @@ using StreetCorsa.Models.GameState;
 using StreetCorsa.Models.Race;
 using StreetCorsa.Parts.Cars;
 using StreetCorsa.Services.Text;
+using StreetCorsa.Helpers;
 
 namespace StreetCorsa.Screens.Diner
 {
@@ -93,14 +94,14 @@ namespace StreetCorsa.Screens.Diner
             // Horsepower - higher is better
             if (playerPower > 0 || opponentPower > 0)
             {
-                stats.Add(Stat(GameText.Say("diner.matchup.power"), $"{playerPower:N0} HP", $"{opponentPower:N0} HP",
+                stats.Add(Stat(GameText.Say("diner.matchup.power"), Measure.Power(playerPower).ToString("N0", null), Measure.Power(opponentPower).ToString("N0", null),
                     playerPower, opponentPower, higherIsBetter: true));
             }
 
             // Weight - lower is better
             if (playerWeight > 0 || opponentWeight > 0)
             {
-                stats.Add(Stat(GameText.Say("diner.matchup.weight"), $"{playerWeight:N0} kg", $"{opponentWeight:N0} kg",
+                stats.Add(Stat(GameText.Say("diner.matchup.weight"), Measure.Mass(playerWeight).ToString("N0", null), Measure.Mass(opponentWeight).ToString("N0", null),
                     playerWeight, opponentWeight, higherIsBetter: false));
             }
 
@@ -109,7 +110,8 @@ namespace StreetCorsa.Screens.Diner
             {
                 var playerPwr = playerPower / (playerWeight / 1000.0);
                 var opponentPwr = opponentPower / (opponentWeight / 1000.0);
-                stats.Add(Stat(GameText.Say("diner.matchup.power_to_weight"), $"{playerPwr:N1}", $"{opponentPwr:N1}",
+                stats.Add(Stat(GameText.Say("diner.matchup.power_to_weight", ("unit", Measure.NameOf(Quantity.PowerToWeight))),
+                    Measure.PowerToWeight(playerPwr).Number("N1"), Measure.PowerToWeight(opponentPwr).Number("N1"),
                     playerPwr, opponentPwr, higherIsBetter: true));
             }
 

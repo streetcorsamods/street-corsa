@@ -1,4 +1,7 @@
+using System.Globalization;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using StreetCorsa.Helpers;
 using StreetCorsa.Logging;
 using StreetCorsa.Mods;
 
@@ -31,6 +34,9 @@ public sealed class GameFile
     /// </summary>
     public string Language { get; set; } = "en";
 
+    /// <summary>How the game writes money, units, numbers and dates</summary>
+    public GameLocale Locale { get; set; } = new();
+
     public static GameFile Load(ModSet mods)
     {
         var problems = new List<string>();
@@ -49,9 +55,60 @@ public sealed class GameFile
         if (string.IsNullOrWhiteSpace(file.Title)) file.Title = "Street Corsa";
         if (string.IsNullOrWhiteSpace(file.Garage)) file.Garage = "garage";
         if (string.IsNullOrWhiteSpace(file.Language)) file.Language = "en";
+        file.Locale = GameLocale.Checked(file.Locale, problems);
 
         foreach (var problem in problems) Logger.Warning("Game settings: {Problem}", problem);
         ModProblems.Add("Game settings", problems);
         return file;
+    }
+}
+
+/// <summary>
+/// game.json's <c>locale</c>: the culture numbers and dates are written in, the currency, and the units the game is
+/// played in (the player may pick the others in Settings)
+/// </summary>
+public sealed class GameLocale
+{
+    /// <summary>A .NET culture name: "en-US", "ja-JP", "de-DE"</summary>
+    public string Culture { get; set; } = "en-US";
+
+    public MoneyStyle Money { get; set; } = new();
+
+    /// <summary>"imperial" or "metric"</summary>
+    public string Units { get; set; } = "imperial";
+
+    /// <summary>The culture, or US English for one the machine does not know</summary>
+    [JsonIgnore]
+    public CultureInfo CultureInfo => Helpers.Locale.FindCulture(Culture) ?? CultureInfo.GetCultureInfo("en-US");
+
+    /// <summary>The units, or imperial for a name that is neither</summary>
+    [JsonIgnore]
+    public UnitSystem UnitSystem => Helpers.Locale.ParseUnits(Units) ?? UnitSystem.Imperial;
+
+    /// <summary>The locale with what cannot be used told and put back to the base game's</summary>
+    internal static GameLocale Checked(GameLocale? locale, List<string> problems)
+    {
+        locale ??= new GameLocale();
+        locale.Money ??= new MoneyStyle();
+        if (Helpers.Locale.FindCulture(locale.Culture) == null)
+        {
+            problems.Add($"locale.culture \"{locale.Culture}\" is no culture this machine knows; en-US is used");
+            locale.Culture = "en-US";
+        }
+
+        if (Helpers.Locale.ParseUnits(locale.Units) == null)
+        {
+            problems.Add($"locale.units \"{locale.Units}\" is neither imperial nor metric; imperial is used");
+            locale.Units = "imperial";
+        }
+
+        locale.Money.Symbol ??= string.Empty;
+        if (locale.Money.Decimals is < 0 or > 6)
+        {
+            problems.Add($"locale.money.decimals {locale.Money.Decimals} is not 0 to 6; 0 is used");
+            locale.Money.Decimals = 0;
+        }
+
+        return locale;
     }
 }

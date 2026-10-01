@@ -32,7 +32,6 @@ namespace StreetCorsa
 
         // The money card is read off the game this often: the money and the clock change in many places
         private static readonly TimeSpan StatusInterval = TimeSpan.FromMilliseconds(250);
-        private static readonly System.Globalization.CultureInfo Us = System.Globalization.CultureInfo.GetCultureInfo("en-US");
 
         // The "now playing" note: out of its anchor, held, and back in
         private static readonly TimeSpan ToastIn = TimeSpan.FromSeconds(0.35);
@@ -112,9 +111,9 @@ namespace StreetCorsa
             StatusCard.Visibility = shown ? Visibility.Visible : Visibility.Collapsed;
             if (!shown) return;
 
-            SetText(StatusMoney, $"${game!.Player.Money:N0}");
-            SetText(StatusTime, game.Date.ToString("h:mm tt", Us));
-            SetText(StatusDate, game.Date.ToString("dddd, MMMM d, yyyy", Us));
+            SetText(StatusMoney, Money.Text(game!.Player.Money));
+            SetText(StatusTime, Services.Text.GameText.Date(game.Date, "format.time"));
+            SetText(StatusDate, Services.Text.GameText.Date(game.Date, "format.date.long"));
 
             static void SetText(System.Windows.Controls.TextBlock block, string text)
             {

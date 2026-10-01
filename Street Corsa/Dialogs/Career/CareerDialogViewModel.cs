@@ -82,9 +82,9 @@ namespace StreetCorsa.Dialogs.Career
 
         public int OpponentsDefeated => _gameState.Career.DefeatedOpponentIds.Count;
 
-        public string TotalEarnings => Money.Dollars(_gameState.Player.Stats.TotalEarnings);
-        public string TotalLossesAmount => Money.Dollars(_gameState.Player.Stats.TotalLosses);
-        public string NetEarnings => Money.Dollars(_gameState.Player.Stats.NetEarnings);
+        public string TotalEarnings => Money.Text(_gameState.Player.Stats.TotalEarnings);
+        public string TotalLossesAmount => Money.Text(_gameState.Player.Stats.TotalLosses);
+        public string NetEarnings => Money.Text(_gameState.Player.Stats.NetEarnings);
         public bool IsNetLoss => _gameState.Player.Stats.NetEarnings < 0;
 
         // Game won state

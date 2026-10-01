@@ -21,8 +21,7 @@ namespace StreetCorsa.Parts.Cars;
 public static partial class AcSpecs
 {
     private const double HpPerKw = 1.34102;
-    private const double KgPerLb = 0.45359237;
-    private const double MetresPerMile = 1609.344;
+    private const double MetresPerMile = Helpers.Conversion.KmPerMile * 1000;
     private const double MetresPerFoot = 0.3048;
 
     private enum Figure { Power, Weight, Length }
@@ -77,7 +76,7 @@ public static partial class AcSpecs
     {
         Figure.Weight => unit switch
         {
-            "lb" or "lbs" or "pound" or "pounds" => KgPerLb,
+            "lb" or "lbs" or "pound" or "pounds" => Helpers.Conversion.KgPerLb,
             "t" or "ton" or "tons" or "tonne" or "tonnes" => 1000,
             _ => 1
         },

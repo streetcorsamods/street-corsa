@@ -1,4 +1,5 @@
 using StreetCorsa.Services.Text;
+using StreetCorsa.Helpers;
 
 namespace StreetCorsa.Models.Race
 {
@@ -36,7 +37,7 @@ namespace StreetCorsa.Models.Race
                 new(GameText.Say("victory.reputation"), GameText.Say("victory.reputation.value", ("reputation", stats.Reputation), ("tier", stats.GetReputationTier()))),
                 new(GameText.Say("victory.pink_slips"), stats.PinkSlipsWon.ToString("N0")),
                 new(GameText.Say("victory.cars"), gameState.Player.Cars.Count.ToString("N0")),
-                new(GameText.Say("victory.net_earnings"), Helpers.Money.Dollars(stats.NetEarnings))
+                new(GameText.Say("victory.net_earnings"), Helpers.Money.Text(stats.NetEarnings))
             ], footnote);
         }
     }

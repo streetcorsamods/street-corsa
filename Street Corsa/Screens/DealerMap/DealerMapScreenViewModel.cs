@@ -11,6 +11,7 @@ using StreetCorsa.Services.PartShops;
 using StreetCorsa.Services.Text;
 using StreetCorsa.Services.Time;
 using StreetCorsa.ViewModels;
+using StreetCorsa.Helpers;
 
 namespace StreetCorsa.Screens.DealerMap
 {
@@ -490,7 +491,7 @@ namespace StreetCorsa.Screens.DealerMap
             ? KindLabel
             : StockCount == 0
                 ? GameText.Say("dealermap.price.none")
-                : GameText.Say("dealermap.price.range", ("low", $"${CheapestPrice:N0}"), ("high", $"${DearestPrice:N0}"));
+                : GameText.Say("dealermap.price.range", ("low", new Money(CheapestPrice)), ("high", new Money(DearestPrice)));
 
         /// <summary>The last day of its closing-down sale; null when it is not closing down</summary>
         public DateTime? ClosesOn { get; set; }

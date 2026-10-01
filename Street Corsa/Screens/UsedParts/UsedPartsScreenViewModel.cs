@@ -12,6 +12,7 @@ using StreetCorsa.Services.Storage;
 using StreetCorsa.Services.Text;
 using StreetCorsa.Services.Time;
 using StreetCorsa.ViewModels;
+using StreetCorsa.Helpers;
 
 namespace StreetCorsa.Screens.UsedParts
 {
@@ -230,7 +231,7 @@ namespace StreetCorsa.Screens.UsedParts
         /// <summary>What it cost before today's sale and the regulars' discount; null when nothing is off</summary>
         public decimal? WasPrice { get; private init; }
 
-        public string WasPriceDisplay => WasPrice is { } was ? $"${was:N0}" : string.Empty;
+        public string WasPriceDisplay => WasPrice is { } was ? Money.Text(was) : string.Empty;
         public bool HasWasPrice => WasPrice != null;
 
         /// <summary>A junkyard's part the owner may still come down on</summary>
@@ -239,7 +240,7 @@ namespace StreetCorsa.Screens.UsedParts
         public string Name { get; }
         public string Group { get; }
         public decimal Price { get; }
-        public string PriceDisplay => $"${Price:N0}";
+        public string PriceDisplay => Money.Text(Price);
         public string ActionLabel { get; }
 
         /// <summary>Condition, seller, what comes with it</summary>

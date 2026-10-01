@@ -18,6 +18,7 @@ using StreetCorsa.Services.Race;
 using StreetCorsa.Services.Storage;
 using StreetCorsa.Services.Time;
 using StreetCorsa.ViewModels;
+using StreetCorsa.Helpers;
 
 namespace StreetCorsa.Screens.Newspaper
 {
@@ -56,7 +57,7 @@ namespace StreetCorsa.Screens.Newspaper
         public bool HasArticles => Articles.Count > 0;
 
         /// <summary>The paper's date line</summary>
-        public string EditionDisplay => _gameState.Date.ToString("dddd, MMMM d, yyyy");
+        public string EditionDisplay => GameText.Date(_gameState.Date, "format.date.long");
 
         /// <summary>The player's own cars in the paper, and the buyers who called about them</summary>
         public ObservableCollection<PlayerCarAdViewModel> PlayerAds { get; } = [];
@@ -147,10 +148,10 @@ namespace StreetCorsa.Screens.Newspaper
                     var hasOffer = ad.Offer is { } offer && offer.Expires >= _gameState.Date;
                     PlayerAds.Add(new PlayerCarAdViewModel(
                         name,
-                        GameText.Say("paper.ad.asking", ("price", $"${ad.AskingPrice:N0}")),
+                        GameText.Say("paper.ad.asking", ("price", new Money(ad.AskingPrice))),
                         hasOffer
                             ? GameText.Say("paper.ad.offer", ("buyer", CarSaleService.Capitalized(ad.Offer!.BuyerName)),
-                                ("amount", $"${ad.Offer.Amount:N0}"), ("until", ad.Offer.Expires))
+                                ("amount", new Money(ad.Offer.Amount)), ("until", ad.Offer.Expires))
                             : GameText.Say("paper.ad.no_offer"),
                         hasOffer,
                         new RelayCommand(() => OnAcceptOffer(ad, name)),
@@ -170,7 +171,7 @@ namespace StreetCorsa.Screens.Newspaper
             if (ad.Offer is not { } offer) return;
 
             _dialogService.ShowDialog(new ConfirmationDialogViewModel(_dialogService,
-                GameText.Say("paper.sell.confirm", ("car", carName), ("buyer", offer.BuyerName), ("amount", $"${offer.Amount:N0}")),
+                GameText.Say("paper.sell.confirm", ("car", carName), ("buyer", offer.BuyerName), ("amount", new Money(offer.Amount))),
                 GameText.Say("sell.title"),
                 yes =>
                 {

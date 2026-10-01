@@ -5,9 +5,19 @@
     "title: the game's name, the window's title.",
     "garage: the garage the game is played from: a mod's garages/<id>, else Assetto Corsa's showroom of that id.",
     "language: the language of the files directly in the mods' text folders, played in when the player picks none.",
-    "Another language is a folder of that name in text (text/es), picked in Settings."
+    "Another language is a folder of that name in text (text/es), picked in Settings.",
+    "locale: how the game writes what the player reads. culture: a .NET culture name (en-US, ja-JP, de-DE) for numbers",
+    "and dates. money: the currency's symbol, whether it goes after the amount, a space between, and the decimals shown;",
+    "amounts are in the game's own currency (a yen game writes yen in its rules), nothing is converted. units: imperial",
+    "(mph, miles, gallons, quarts, F, lb) or metric (km/h, km, litres, C, kg): the game's, the player may pick the other",
+    "in Settings. The words of each unit are text pools (unit.mph)."
   ],
   "title": "Street Corsa",
   "garage": "garage",
-  "language": "en"
+  "language": "en",
+  "locale": {
+    "culture": "en-US",
+    "money": { "symbol": "$", "after": false, "space": false, "decimals": 0 },
+    "units": "imperial"
+  }
 }

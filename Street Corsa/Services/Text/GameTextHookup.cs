@@ -14,6 +14,11 @@ namespace StreetCorsa.Services.Text
         internal static void PointTheSeamsAtTheText()
         {
             StreetCorsa.Parts.Cars.PartWords.Source = GameText.Say;
+            // A unit's words: "{n} mph" in unit.mph, its name alone in unit.mph.name; a mod without them still shows the
+            // figure, with the unit's id
+            Helpers.Locale.UnitWords = (unit, number) =>
+                GameText.Installed.Has($"unit.{unit}") ? GameText.Say($"unit.{unit}", ("n", number)) : $"{number} {unit}";
+            Helpers.Locale.UnitName = unit => GameText.Installed.Has($"unit.{unit}.name") ? GameText.Say($"unit.{unit}.name") : unit;
         }
     }
 }

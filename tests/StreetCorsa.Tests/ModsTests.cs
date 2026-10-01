@@ -419,8 +419,8 @@ public class ModCareerAndTextTests : IDisposable
     {
         var values = new TextValues { ["name"] = "Vera", ["price"] = 12500m };
 
-        // The game runs in en-US (App); the test in whatever the machine is set to
-        Assert.Equal($"Vera wants ${12500m:N0} for it, {{nmae}}.", GameText.Fill("{name} wants ${price:N0} for it, {nmae}.", values));
+        // Written in the game's culture (US English for the base game), whatever the machine is set to
+        Assert.Equal("Vera wants $12,500 for it, {nmae}.", GameText.Fill("{name} wants ${price:N0} for it, {nmae}.", values));
     }
 
     [Fact]

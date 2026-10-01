@@ -7,6 +7,7 @@ using StreetCorsa.Parts.Logic;
 using StreetCorsa.Services.Parts;
 using StreetCorsa.Services.Text;
 using StreetCorsa.ViewModels;
+using StreetCorsa.Helpers;
 
 namespace StreetCorsa.Screens.Garage
 {
@@ -281,8 +282,8 @@ namespace StreetCorsa.Screens.Garage
         public string EngineName =>
             _engine == null ? GameText.Say("workbench.no_engine") : (_engine.Definition.DisplayName ?? _engine.Definition.Name);
 
-        public string PowerDisplay => _report?.Dyno is { MaxPowerHp: > 0 } dyno ? $"{dyno.MaxPowerHp:0} hp @ {dyno.MaxPowerRpm:0}" : "-";
-        public string TorqueDisplay => _report?.Dyno is { MaxTorque: > 0 } dyno ? $"{dyno.MaxTorque:0} Nm @ {dyno.MaxTorqueRpm:0}" : "-";
+        public string PowerDisplay => _report?.Dyno is { MaxPowerHp: > 0 } dyno ? $"{Measure.Power(dyno.MaxPowerHp)} @ {dyno.MaxPowerRpm:0}" : "-";
+        public string TorqueDisplay => _report?.Dyno is { MaxTorque: > 0 } dyno ? $"{Measure.Torque(dyno.MaxTorque)} @ {dyno.MaxTorqueRpm:0}" : "-";
 
         public string DisplacementDisplay => _report?.Dyno is { Displacement: > 0 } dyno
             ? $"{dyno.Displacement * 1000:0.0} l ({dyno.Displacement * 61023.7:0} cui), {dyno.Compression:0.0}:1"
@@ -292,7 +293,7 @@ namespace StreetCorsa.Screens.Garage
             ? GameText.Say("workbench.gears", ("gears", report.GearRatios.Count), ("final", $"{report.FinalRatio:0.00}"))
             : GameText.Say("workbench.no_transmission");
 
-        public string MassDisplay => _report == null ? "-" : $"{_report.Mass:0} kg";
+        public string MassDisplay => _report == null ? "-" : Measure.Mass(_report.Mass).ToString();
 
         /// <summary>Why the engine does not run, in the part scripts' own words; empty when it does</summary>
         public string StatusDisplay => _engine == null
@@ -314,7 +315,7 @@ namespace StreetCorsa.Screens.Garage
             : $"{_selectedPart.Wear * 100:0}%" + (_selectedPart.Tear < 0.995 ? GameText.Say("garage.part.damaged", ("left", $"{_selectedPart.Tear * 100:0}")) : string.Empty);
 
         public string SelectedWorthDisplay => _selectedPart != null && SavedOf(_selectedPart) is { } saved
-            ? $"${PartPricing.Round(PartPricing.Worth(_selectedPart.Definition, saved)):N0}"
+            ? Money.Text(PartPricing.Round(PartPricing.Worth(_selectedPart.Definition, saved)))
             : string.Empty;
 
         /// <summary>Why the picked part cannot come off now, in the work order's words; empty when it can</summary>
@@ -869,7 +870,7 @@ namespace StreetCorsa.Screens.Garage
             IsEngine = PartKinds.IsBlock(definition);
 
             Detail = PartTrees.Describe(part);
-            WorthDisplay = $"${PartPricing.Round(PartPricing.WorthOfAssembly(catalog, part)):N0}";
+            WorthDisplay = Money.Text(PartPricing.Round(PartPricing.WorthOfAssembly(catalog, part)));
         }
 
         public PartInstance Part { get; }

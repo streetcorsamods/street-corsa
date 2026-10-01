@@ -20,6 +20,7 @@ using StreetCorsa.ViewModels;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows.Media.Imaging;
+using StreetCorsa.Helpers;
 
 namespace StreetCorsa.Screens.Garage
 {
@@ -209,9 +210,9 @@ namespace StreetCorsa.Screens.Garage
 
         // Calendar Properties
         public DateTime CurrentGameDate => _gameState.Date;
-        public string CurrentMonthYear => _gameState.Date.ToString("MMMM yyyy");
+        public string CurrentMonthYear => GameText.Date(_gameState.Date, "format.month");
         public int CurrentDay => _gameState.Date.Day;
-        public string CurrentDayOfWeek => _gameState.Date.ToString("dddd");
+        public string CurrentDayOfWeek => GameText.Date(_gameState.Date, "format.weekday");
         public string CurrentTimeDisplay => HeaderTime(_gameState.Date);
         public BitmapImage CalendarImage1 => GetRandomCalendarImage(0);
         public BitmapImage CalendarImage2 => GetRandomCalendarImage(1);
@@ -640,12 +641,12 @@ namespace StreetCorsa.Screens.Garage
             {
                 if (SelectedCar?.CarInstance is not { ImpoundedUntil: { } until } car) return string.Empty;
                 return PoliceRules.CanCollect(car, _gameState.Date)
-                    ? GameText.Say("garage.impound.now", ("fee", $"${car.ImpoundFee:N0}"))
-                    : GameText.Say("garage.impound.until", ("until", until), ("fee", $"${car.ImpoundFee:N0}"));
+                    ? GameText.Say("garage.impound.now", ("fee", new Money(car.ImpoundFee)))
+                    : GameText.Say("garage.impound.until", ("until", until), ("fee", new Money(car.ImpoundFee)));
             }
         }
 
-        public string CollectButtonText => SelectedCar?.CarInstance is { IsImpounded: true } car ? GameText.Say("garage.collect.fee", ("fee", $"${car.ImpoundFee:N0}")) : GameText.Say("garage.collect");
+        public string CollectButtonText => SelectedCar?.CarInstance is { IsImpounded: true } car ? GameText.Say("garage.collect.fee", ("fee", new Money(car.ImpoundFee))) : GameText.Say("garage.collect");
 
         private bool CanCollect() =>
             !_endingDay && SelectedCar?.CarInstance is { } car && PoliceRules.CanCollect(car, _gameState.Date) && _gameState.Player.Money >= car.ImpoundFee;
@@ -821,7 +822,7 @@ namespace StreetCorsa.Screens.Garage
         {
             var left = _timeService.GetRemainingMinutesToday(_gameState);
             // The day's first hour is the rules': written as the game's clock writes the time (8:00 AM, 2:00 PM)
-            var morning = DateTime.Today.AddHours(_timeService.DayStartHour).ToString("h:mm tt", GameTimeService.DisplayCulture);
+            var morning = GameText.Date(DateTime.Today.AddHours(_timeService.DayStartHour), "format.time");
             var message = left > 0
                 ? GameText.Say("garage.end_day.ask.left", ("hours", left / 60), ("minutes", left % 60), ("morning", morning))
                 : GameText.Say("garage.end_day.ask", ("morning", morning));

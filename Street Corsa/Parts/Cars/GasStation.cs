@@ -1,5 +1,6 @@
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Services.Time;
+using StreetCorsa.Helpers;
 
 namespace StreetCorsa.Parts.Cars;
 
@@ -51,8 +52,6 @@ public static class GasStation
     /// <summary>What a sump holds when its pan does not say, litres: a V8 of the day took five quarts</summary>
     public const double DefaultSumpLitres = 4.7;
 
-    private const double LitresPerQuart = 0.946;
-
     /// <summary>The car has too little in the tank to make it to the station: the tow truck brings it</summary>
     public static bool NeedsTow(Car car) => CarCondition.FuelLeft(car) is { } fuel && fuel < TripLitres;
 
@@ -74,18 +73,25 @@ public static class GasStation
     public static double OilToTopUp(Car car, PartsCatalog? catalog) =>
         car.Engine == null ? 0 : (1 - CarCondition.OilLeft(car)) * SumpLitres(car, catalog);
 
-    /// <summary>"a quart", "two quarts": the oil short, as the attendant reads it off the dipstick</summary>
-    public static string Quarts(double litres)
+    /// <summary>
+    /// "a quart", "two quarts" ("a litre" in metric): the oil short, as the attendant reads it off the dipstick, in
+    /// whole units of the player's (<c>station.oil_short.&lt;unit&gt;.1</c> to <c>.4</c>, then <c>.many</c>)
+    /// </summary>
+    public static string OilShort(double litres)
     {
-        var quarts = Math.Max(1, (int)Math.Round(litres / LitresPerQuart));
-        return quarts switch
-        {
-            1 => PartWords.Say("station.quarts.1"),
-            2 => PartWords.Say("station.quarts.2"),
-            3 => PartWords.Say("station.quarts.3"),
-            4 => PartWords.Say("station.quarts.4"),
-            _ => PartWords.Say("station.quarts.many", ("quarts", quarts))
-        };
+        var oil = Measure.Oil(litres);
+        var count = Math.Max(1, (int)Math.Round(oil.Value));
+        var key = $"station.oil_short.{oil.Unit}.";
+        // A translation made before the units came says quarts in station.quarts.*, {quarts} the count: it still counts
+        if (oil.Unit == "qt" && Said(count <= 4 ? $"station.quarts.{count}" : "station.quarts.many", count) is { } older) return older;
+        return count <= 4 ? PartWords.Say(key + count) : PartWords.Say(key + "many", ("n", count));
+    }
+
+    /// <summary>The pool's line with the count in, null when no mod has the pool (the words then say the key)</summary>
+    private static string? Said(string key, int count)
+    {
+        var said = PartWords.Say(key, ("quarts", count), ("n", count));
+        return said == key ? null : said;
     }
 
     /// <param name="catalog">For the oil pan's size; null takes a V8's of the day</param>
@@ -105,9 +111,9 @@ public static class GasStation
         if (car.Engine != null && 1 - CarCondition.OilLeft(car) >= TopUpFrom)
         {
             var oil = OilToTopUp(car, catalog);
-            var detail = PartWords.Say(CarCondition.OilLeft(car) < 0.4 ? "station.job.oil.way_down" : "station.job.oil.low", ("quarts", Quarts(oil)));
+            var detail = PartWords.Say(CarCondition.OilLeft(car) < 0.4 ? "station.job.oil.way_down" : "station.job.oil.low", ("quarts", OilShort(oil)));
             jobs.Add(new RepairJob(TopUpOil, PartWords.Say("station.job.oil"), detail,
-                Math.Max(PartPricing.Round((double)prices.OilPerLitre * LitresPerQuart * multiplier), PartPricing.Round((double)prices.OilPerLitre * oil * multiplier)),
+                Math.Max(PartPricing.Round((double)prices.OilPerLitre * Conversion.LitresPerQuart * multiplier), PartPricing.Round((double)prices.OilPerLitre * oil * multiplier)),
                 GameAction.GarageChore, () => car.OilLevel = null, isChore: true));
         }
 
