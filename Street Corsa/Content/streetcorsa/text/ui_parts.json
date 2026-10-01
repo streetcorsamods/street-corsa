@@ -8,7 +8,8 @@
     ".other of one whose name is many (\"the cylinder heads\"); {kind} is the kind's name, {parts} a list made with",
     "work.the, work.list and work.list.comma (\"the oil pan, the timing cover and the cylinder heads\").",
     "station.job.*: the gas station's jobs; {left} and {tank} litres, {quarts} the oil short as station.quarts.* says it",
-    "(\"a quart\"; the game puts a capital on the first letter of the oil job's detail)."
+    "(\"a quart\"; the game puts a capital on the first letter of the oil job's detail). parts.describe*: a part's",
+    "condition ({wear} %) and how many parts come with it ({count})."
   ],
   "lines": {
     "condition.zone.front": "front",
@@ -91,6 +92,10 @@
     "station.quarts.3": "three quarts",
     "station.quarts.4": "four quarts",
     "station.quarts.many": "{quarts} quarts",
+
+    "parts.describe": "{wear:0}%",
+    "parts.describe.with.one": "{wear:0}%, with 1 more part",
+    "parts.describe.with.other": "{wear:0}%, with {count} more parts",
 
     "work.stand_only_off.one": "The {kind} only comes out on the engine stand: pull the engine first.",
     "work.stand_only_off.other": "The {kind} only come out on the engine stand: pull the engine first.",
