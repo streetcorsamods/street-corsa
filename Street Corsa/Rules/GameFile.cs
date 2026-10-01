@@ -25,6 +25,12 @@ public sealed class GameFile
     /// <summary>The garage the game is played from: a mod's <c>garages\&lt;id&gt;</c>, else the AC showroom of that id</summary>
     public string Garage { get; set; } = "garage";
 
+    /// <summary>
+    /// The language the files directly in the mods' <c>text</c> are written in ("en"): the one the game is played in
+    /// when the player picks none. Another language is a folder of that name in <c>text</c>.
+    /// </summary>
+    public string Language { get; set; } = "en";
+
     public static GameFile Load(ModSet mods)
     {
         var problems = new List<string>();
@@ -42,6 +48,7 @@ public sealed class GameFile
 
         if (string.IsNullOrWhiteSpace(file.Title)) file.Title = "Street Corsa";
         if (string.IsNullOrWhiteSpace(file.Garage)) file.Garage = "garage";
+        if (string.IsNullOrWhiteSpace(file.Language)) file.Language = "en";
 
         foreach (var problem in problems) Logger.Warning("Game settings: {Problem}", problem);
         ModProblems.Add("Game settings", problems);

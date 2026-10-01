@@ -17,6 +17,12 @@ namespace StreetCorsa.Services.Settings
         /// </summary>
         public string? AssettoCorsaPath { get; set; }
 
+        /// <summary>
+        /// The language the game speaks: a folder in the mods' <c>text</c> ("es"); null for the game's own
+        /// (game.json's <c>language</c>). Read once at start-up: a change takes effect at the next start.
+        /// </summary>
+        public string? Language { get; set; }
+
         /// <summary>The volumes; they take effect as the sliders move</summary>
         public AudioSettings Audio { get; set; } = new();
     }

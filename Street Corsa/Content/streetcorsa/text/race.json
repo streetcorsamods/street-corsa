@@ -1,0 +1,25 @@
+{
+  "_comment": [
+    "What the race mode says in Assetto Corsa: its messages and the result card. Each key race.<name> reaches the mode",
+    "as <NAME> in capitals, dots as underscores (race.result.win is RESULT_WIN); the mode says its first line. {name}",
+    "is a placeholder the mode fills: {driver} a racer's name, {pass} and {passes} a test-and-tune's pass and their count.",
+    "\\n breaks the line."
+  ],
+  "lines": {
+    "race.result.win": "You won a few bucks, not bad!",
+    "race.result.lose": "You lost, sucker!",
+    "race.result.crash": "Lucky you weren't killed!\nBetter luck next time!",
+    "race.result.false_start": "You jumped the gun!\nNo contest, and everybody saw it.",
+    "race.result.disqualified": "You hit him in his own lane!\nThat's a DQ, you lose.",
+    "race.result.busted": "Busted!\nThe cops have you and your car.",
+    "race.result.escaped": "You lost the cops!",
+    "race.result.red_light": "Red light! You left before your green.\nNo contest, and everybody saw it.",
+    "race.broke_down.engine": "The engine let go!\nYou're out of the race.",
+    "race.broke_down.gearbox": "The gearbox gave out!\nYou're out of the race.",
+    "race.broke_down.suspension": "The suspension gave out!\nYou're out of the race.",
+    "race.broke_down.tyre": "A tyre blew!\nYou're out of the race.",
+    "race.broke_down.overheat": "The engine boiled over and cooked itself!\nYou're out of the race.",
+    "race.broke_down.oil": "The oil pressure went, and the bottom end with it!\nYou're out of the race.",
+    "race.broke_down.fuel": "You ran out of gas!\nYou're out of the race."
+  }
+}

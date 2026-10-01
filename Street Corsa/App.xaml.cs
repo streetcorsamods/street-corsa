@@ -203,6 +203,8 @@ namespace StreetCorsa
 
             // The settings before anything that reads the install: they name the AC folder
             GameSettingsService = new GameSettingsService();
+            // And the player's language, before any word is said
+            Services.Text.GameText.Language = GameSettingsService.Current.Language;
 
             // The game's content is the mods under Content, the base game first: what each kind of content is read from
             LogMods();

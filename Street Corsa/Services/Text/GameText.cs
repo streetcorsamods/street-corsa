@@ -7,32 +7,54 @@ using StreetCorsa.Mods;
 namespace StreetCorsa.Services.Text
 {
     /// <summary>
-    /// The words the game says, from every mod's <c>text</c> folder: the paper's stories, what racers say, street talk,
-    /// names. Each is a pool of lines under a key ("news.king_beaten.headline"); where the game says something, it
-    /// picks one line of the pool at random and fills in its {placeholders}. When to say what stays in the game's code.
+    /// The words the game says, from every mod's <c>text</c> folder: the screens' labels and messages, the paper's
+    /// stories, what racers say, street talk, names. Each is a pool of lines under a key ("news.king_beaten.headline");
+    /// where the game says something, it picks one line of the pool at random and fills in its {placeholders}. When to
+    /// say what stays in the game's code.
     ///
     /// A text file has <c>"lines"</c>, whose pools join those of the mods before it (a mod adds lines to a pool), and
     /// <c>"replace"</c>, whose pools take the place of the ones before (a mod rewrites a pool). A pool is a line or a
     /// list of lines.
+    ///
+    /// The files directly in <c>text</c> are in the game's own language (game.json's <c>language</c>). A translation
+    /// is a folder in <c>text</c> named for its language (<c>text\es</c>), read the same way over every mod; with the
+    /// player's language picked, its pools take the place of the game's, and a key it lacks says the game's own words.
     /// </summary>
     public sealed partial class GameText
     {
         private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger("Text");
 
-        private static readonly Lazy<GameText> InstalledText = new(() => Load(ModSet.Installed));
+        private static readonly Lazy<GameText> InstalledText = new(() => Load(ModSet.Installed, Language));
 
         private readonly Dictionary<string, List<string>> _pools = new(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _missingReported = new(StringComparer.OrdinalIgnoreCase);
         private readonly object _lock = new();
 
-        /// <summary>The words of the mods next to the game, read once</summary>
+        // The player's language over the game's own; null when they play in the game's own
+        private GameText? _translation;
+
+        /// <summary>
+        /// The player's language (a folder in the mods' <c>text</c>), set from their settings at start-up before any
+        /// word is said; null or empty for the game's own. A change takes effect at the next start.
+        /// </summary>
+        public static string? Language { get; set; }
+
+        /// <summary>The words of the mods next to the game, read once, in the player's language</summary>
         public static GameText Installed => InstalledText.Value;
 
         public IReadOnlyList<string> Problems { get; private set; } = [];
 
+        /// <summary>The keys of the game's own words (a translation says some of them its own way)</summary>
         public IEnumerable<string> Keys => _pools.Keys;
 
-        public static GameText Load(ModSet mods)
+        /// <summary>The language over the game's own words; null when there is none</summary>
+        public string? Translation { get; private set; }
+
+        /// <summary>
+        /// The game's words, and over them those of <paramref name="language"/> when it is not the game's own. A
+        /// language no mod has is told: the game's own words are said.
+        /// </summary>
+        public static GameText Load(ModSet mods, string? language = null)
         {
             var problems = new List<string>();
             var text = new GameText();
@@ -41,26 +63,94 @@ namespace StreetCorsa.Services.Text
             foreach (var (mod, file) in mods.JsonFiles(ContentTypes.Text))
             {
                 removals.Before(mod);
-                var source = $"{mod.Id}/{ContentTypes.Text}/{System.IO.Path.GetFileName(file)}";
-                try
-                {
-                    using var document = JsonDocument.Parse(System.IO.File.ReadAllText(file),
-                        new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true });
-                    if (ModJson.TryGet(document.RootElement, "lines", out var lines)) text.Read(lines, replace: false, source, problems);
-                    if (ModJson.TryGet(document.RootElement, "replace", out var replace)) text.Read(replace, replace: true, source, problems);
-                }
-                catch (Exception ex) when (ex is JsonException or System.IO.IOException or UnauthorizedAccessException)
-                {
-                    problems.Add($"{source}: {ex.Message}; left out");
-                }
+                text.ReadFile(file, $"{mod.Id}/{ContentTypes.Text}/{System.IO.Path.GetFileName(file)}", problems);
             }
 
             removals.Rest();
+
+            if (!string.IsNullOrWhiteSpace(language) && !IsGameLanguage(language))
+            {
+                if (ReadLanguage(mods, language, problems) is { } translation)
+                {
+                    text._translation = translation;
+                    text.Translation = language;
+                }
+                else
+                {
+                    problems.Add($"no mod has the language {language}; the game's own words are said");
+                }
+            }
 
             foreach (var problem in problems) Logger.Warning("Text: {Problem}", problem);
             ModProblems.Add("Text", problems);
             text.Problems = problems;
             return text;
+        }
+
+        /// <summary>
+        /// The languages the player can pick: the game's own (game.json's <c>language</c>) first, then every folder
+        /// of the mods' <c>text</c>, each by the name its <c>language.name</c> pool gives it, else its folder's
+        /// </summary>
+        public static IReadOnlyList<(string Id, string Name)> Languages(ModSet mods)
+        {
+            var own = Rules.GameFile.Installed.Language;
+            var languages = new List<(string Id, string Name)> { (own, NameOf(Load(mods), own)) };
+            var ids = mods.SubFolders(ContentTypes.Text).Select(f => System.IO.Path.GetFileName(f.Dir))
+                .Where(id => !string.Equals(id, own, StringComparison.OrdinalIgnoreCase))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Order(StringComparer.OrdinalIgnoreCase);
+            foreach (var id in ids)
+                languages.Add((id, NameOf(ReadLanguage(mods, id, []), id)));
+
+            return languages;
+        }
+
+        private static string NameOf(GameText? text, string id) =>
+            text != null && text._pools.TryGetValue("language.name", out var name) && name.Count > 0 ? name[0] : id;
+
+        private static bool IsGameLanguage(string language) =>
+            string.Equals(language, Rules.GameFile.Installed.Language, StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>The words every mod has in that language's folder, the mods in load order; null when none has it</summary>
+        private static GameText? ReadLanguage(ModSet mods, string language, List<string> problems)
+        {
+            GameText? translation = null;
+            foreach (var (mod, dir) in mods.SubFolders(ContentTypes.Text))
+            {
+                if (!string.Equals(System.IO.Path.GetFileName(dir), language, StringComparison.OrdinalIgnoreCase)) continue;
+
+                translation ??= new GameText();
+                string[] files;
+                try
+                {
+                    files = System.IO.Directory.GetFiles(dir, "*.json");
+                }
+                catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException)
+                {
+                    problems.Add($"{mod.Id}/{ContentTypes.Text}/{language}: {ex.Message}; left out");
+                    continue;
+                }
+
+                foreach (var file in files.Order(StringComparer.OrdinalIgnoreCase))
+                    translation.ReadFile(file, $"{mod.Id}/{ContentTypes.Text}/{language}/{System.IO.Path.GetFileName(file)}", problems);
+            }
+
+            return translation;
+        }
+
+        private void ReadFile(string file, string source, List<string> problems)
+        {
+            try
+            {
+                using var document = JsonDocument.Parse(System.IO.File.ReadAllText(file),
+                    new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true });
+                if (ModJson.TryGet(document.RootElement, "lines", out var lines)) Read(lines, replace: false, source, problems);
+                if (ModJson.TryGet(document.RootElement, "replace", out var replace)) Read(replace, replace: true, source, problems);
+            }
+            catch (Exception ex) when (ex is JsonException or System.IO.IOException or UnauthorizedAccessException)
+            {
+                problems.Add($"{source}: {ex.Message}; left out");
+            }
         }
 
         private void Read(JsonElement section, bool replace, string source, List<string> problems)
@@ -101,6 +191,7 @@ namespace StreetCorsa.Services.Text
         /// <summary>The lines of a pool; none when no mod has it</summary>
         public IReadOnlyList<string> Lines(string key)
         {
+            if (_translation != null && _translation._pools.TryGetValue(key, out var translated)) return translated;
             if (_pools.TryGetValue(key, out var lines)) return lines;
 
             lock (_lock)
@@ -111,7 +202,23 @@ namespace StreetCorsa.Services.Text
             return [];
         }
 
-        public bool Has(string key) => _pools.ContainsKey(key);
+        public bool Has(string key) => _pools.ContainsKey(key) || _translation?._pools.ContainsKey(key) == true;
+
+        /// <summary>
+        /// What the game says at <paramref name="key"/> (a label, a message, a title): the first line of its pool in
+        /// the player's language, its {placeholders} filled from <paramref name="values"/>. A key no mod has says
+        /// itself, so a word left out shows where it goes.
+        /// </summary>
+        public static string Say(string key, params (string Name, object? Value)[] values)
+        {
+            var lines = Installed.Lines(key);
+            if (lines.Count == 0) return key;
+            if (values.Length == 0) return lines[0];
+
+            var filled = new TextValues();
+            foreach (var (name, value) in values) filled[name] = value;
+            return Fill(lines[0], filled);
+        }
 
         /// <summary>A line of the pool at random, filled in; empty when no mod has the pool</summary>
         public string Pick(string key, Random random, IReadOnlyDictionary<string, object?>? values = null)

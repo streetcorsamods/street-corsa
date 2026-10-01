@@ -191,24 +191,50 @@ local SET_DOWN_MAX_SPEED = 25
 -- How often the cops' AI level and aggression are set again: CSP resets the aggression
 local POLICE_AI_EVERY = 0.5
 
+-- What the mode says, in the player's language: the career hands the words over in race.ini [STREET_CORSA_TEXT]
+-- (the text pools race.* of the mods' text\race.json: race.result.win is RESULT_WIN), each percent-encoded UTF-8.
+-- A key not there (a launcher older than the mode) says the English written here.
+local raceText = nil
+local function say(key, english, values)
+  if raceText == nil then
+    raceText = {}
+    pcall(function()
+      local section = ac.INIConfig.raceConfig().sections['STREET_CORSA_TEXT'] or {}
+      for k, v in pairs(section) do
+        -- A value is a list of its comma-separated parts; an encoded one has no comma, so it is one part
+        if type(v) == 'table' then v = v[1] end
+        if v ~= nil then raceText[k] = (tostring(v):gsub('%%(%x%x)', function(h) return string.char(tonumber(h, 16)) end)) end
+      end
+    end)
+  end
+  local line = raceText[key] or english
+  if values then
+    line = line:gsub('{(%w+)}', function(name)
+      local value = values[name]
+      return value ~= nil and tostring(value) or nil
+    end)
+  end
+  return line
+end
+
 -- Messages
-local MSG_WIN = "You won a few bucks, not bad!"
-local MSG_LOSE = "You lost, sucker!"
-local MSG_CRASH = "Lucky you weren't killed!\nBetter luck next time!"
-local MSG_FALSE_START = "You jumped the gun!\nNo contest, and everybody saw it."
-local MSG_DISQUALIFIED = "You hit him in his own lane!\nThat's a DQ, you lose."
+local MSG_WIN = say('RESULT_WIN', "You won a few bucks, not bad!")
+local MSG_LOSE = say('RESULT_LOSE', "You lost, sucker!")
+local MSG_CRASH = say('RESULT_CRASH', "Lucky you weren't killed!\nBetter luck next time!")
+local MSG_FALSE_START = say('RESULT_FALSE_START', "You jumped the gun!\nNo contest, and everybody saw it.")
+local MSG_DISQUALIFIED = say('RESULT_DISQUALIFIED', "You hit him in his own lane!\nThat's a DQ, you lose.")
 local MSG_BROKE_DOWN = {
-  ENGINE = "The engine let go!\nYou're out of the race.",
-  GEARBOX = "The gearbox gave out!\nYou're out of the race.",
-  SUSPENSION = "The suspension gave out!\nYou're out of the race.",
-  TYRE = "A tyre blew!\nYou're out of the race.",
-  OVERHEAT = "The engine boiled over and cooked itself!\nYou're out of the race.",
-  OIL = "The oil pressure went, and the bottom end with it!\nYou're out of the race.",
-  FUEL = "You ran out of gas!\nYou're out of the race."
+  ENGINE = say('BROKE_DOWN_ENGINE', "The engine let go!\nYou're out of the race."),
+  GEARBOX = say('BROKE_DOWN_GEARBOX', "The gearbox gave out!\nYou're out of the race."),
+  SUSPENSION = say('BROKE_DOWN_SUSPENSION', "The suspension gave out!\nYou're out of the race."),
+  TYRE = say('BROKE_DOWN_TYRE', "A tyre blew!\nYou're out of the race."),
+  OVERHEAT = say('BROKE_DOWN_OVERHEAT', "The engine boiled over and cooked itself!\nYou're out of the race."),
+  OIL = say('BROKE_DOWN_OIL', "The oil pressure went, and the bottom end with it!\nYou're out of the race."),
+  FUEL = say('BROKE_DOWN_FUEL', "You ran out of gas!\nYou're out of the race.")
 }
-local MSG_BUSTED = "Busted!\nThe cops have you and your car."
-local MSG_ESCAPED = "You lost the cops!"
-local MSG_RED_LIGHT = "Red light! You left before your green.\nNo contest, and everybody saw it."
+local MSG_BUSTED = say('RESULT_BUSTED', "Busted!\nThe cops have you and your car.")
+local MSG_ESCAPED = say('RESULT_ESCAPED', "You lost the cops!")
+local MSG_RED_LIGHT = say('RESULT_RED_LIGHT', "Red light! You left before your green.\nNo contest, and everybody saw it.")
 
 local sim = ac.getSim()
 
