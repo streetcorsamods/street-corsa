@@ -29,15 +29,30 @@ namespace StreetCorsa.Services.Catalog
         /// The car's own hash, the way specs are read, and what the price was worked out by: the rules' figures and the
         /// car's make with its badge's figures. A mod that changes any of them has the price worked out again.
         /// </summary>
-        private static string DefinitionHashOf(CarDefinition car)
+        private static string DefinitionHashOf(CarDefinition car, string? make)
         {
-            var make = MakeOf(car);
             var badge = CarBook.Current.Make(make);
             var by = FormattableString.Invariant($"{FiguresDigest}|{make}|{badge?.Price}|{badge?.Common}");
             return $"{car.ContentHash}|{SpecsReading}|{Digest(by)}";
         }
 
-        private static string FiguresDigest => System.Text.Json.JsonSerializer.Serialize(Figures, Rules.RuleBook.Options);
+        // One reference, so a thread never reads half of another's write
+        private sealed record DigestOf(Rules.CarRules Figures, string Digest);
+
+        private static DigestOf? _figuresDigest;
+
+        /// <summary>The figures as text, worked out once for each set of them (they do not change while the game runs)</summary>
+        private static string FiguresDigest
+        {
+            get
+            {
+                var figures = Figures;
+                if (_figuresDigest is { } known && ReferenceEquals(known.Figures, figures)) return known.Digest;
+                var digest = System.Text.Json.JsonSerializer.Serialize(figures, Rules.RuleBook.Options);
+                _figuresDigest = new DigestOf(figures, digest);
+                return digest;
+            }
+        }
 
         private static string Digest(string text) =>
             Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(text)))[..16];
@@ -54,8 +69,14 @@ namespace StreetCorsa.Services.Catalog
 
         public CarProfile GenerateDefaultProfile(CarDefinition carDefinition)
         {
-            var basePrice = CalculateBasePrice(carDefinition);
-            var precedence = CalculatePrecedence(carDefinition);
+            var make = MakeOf(carDefinition);
+            return Generate(carDefinition, make, DefinitionHashOf(carDefinition, make));
+        }
+
+        private CarProfile Generate(CarDefinition carDefinition, string? make, string hash)
+        {
+            var basePrice = BasePrice(carDefinition, make);
+            var precedence = Precedence(carDefinition, make);
 
             _logger.Debug("Generated profile for {CarId}: BasePrice=${Price}, Precedence={Precedence}",
                 carDefinition.Id, basePrice, precedence);
@@ -66,32 +87,39 @@ namespace StreetCorsa.Services.Catalog
                 BasePrice = basePrice,
                 DealerPrecedence = precedence,
                 Source = ProfileDataSource.Generated,
-                DefinitionHash = DefinitionHashOf(carDefinition),
+                DefinitionHash = hash,
                 CreatedDate = DateTime.Now,
                 LastUpdatedDate = DateTime.Now,
                 IsStreetLegal = true // Default assumption
             };
         }
 
-        public decimal CalculateBasePrice(CarDefinition carDefinition)
+        public decimal CalculateBasePrice(CarDefinition carDefinition) => BasePrice(carDefinition, MakeOf(carDefinition));
+
+        private decimal BasePrice(CarDefinition carDefinition, string? make)
         {
             // Start with power/weight ratio (primary metric)
             var powerWeightBase = CalculatePowerWeightPrice(carDefinition);
 
             var figures = Figures;
 
-            // The badge, the year and where the car comes from
-            var withBrand = powerWeightBase * (decimal)(CarBook.Current.Make(MakeOf(carDefinition))?.Price ?? 1.0);
-            var withYear = withBrand * (decimal)Rules.CarRules.ForYear(figures.PriceByYear, carDefinition.Year, 1.0);
-            var withSource = withYear * (decimal)figures.PriceBySource.GetValueOrDefault(carDefinition.Source.ToString(), 1.0);
+            // The badge, the year and where the car comes from. Worked in double and clamped before it is money again: a
+            // mod's figure past what a decimal holds (1e30) is the rules' most, not an overflow
+            var raw = (double)powerWeightBase
+                      * (CarBook.Current.Make(make)?.Price ?? 1.0)
+                      * Rules.CarRules.ForYear(figures.PriceByYear, carDefinition.Year, 1.0)
+                      * figures.PriceBySource.GetValueOrDefault(carDefinition.Source.ToString(), 1.0);
 
             var low = Math.Max(0m, figures.MinPrice);
-            var clamped = Math.Clamp(withSource, low, Math.Max(low, figures.MaxPrice));
+            var high = Math.Max(low, figures.MaxPrice);
+            var clamped = double.IsNaN(raw) ? low : (decimal)Math.Clamp(raw, (double)low, (double)high);
             var step = figures.PriceStep > 0 ? figures.PriceStep : 1m;
             return Math.Round(clamped / step) * step;
         }
 
-        public float CalculatePrecedence(CarDefinition carDefinition)
+        public float CalculatePrecedence(CarDefinition carDefinition) => Precedence(carDefinition, MakeOf(carDefinition));
+
+        private float Precedence(CarDefinition carDefinition, string? make)
         {
             var figures = Figures;
             var precedence = figures.Common;
@@ -99,7 +127,7 @@ namespace StreetCorsa.Services.Catalog
             // Newer cars are more common, the official ones too, the badge may be rarer or commoner
             precedence += (float)Rules.CarRules.ForYear(figures.CommonByYear, carDefinition.Year, 0.0);
             precedence += (float)figures.CommonBySource.GetValueOrDefault(carDefinition.Source.ToString(), 0.0);
-            precedence += CarBook.Current.Make(MakeOf(carDefinition))?.Common ?? 0f;
+            precedence += CarBook.Current.Make(make)?.Common ?? 0f;
 
             // Exotics are rarer, economy cars commoner, by power to weight in hp per tonne (0 is a car without specs)
             var powerWeight = CalculatePowerToWeightRatio(carDefinition);
@@ -157,10 +185,11 @@ namespace StreetCorsa.Services.Catalog
 
             void ProfileOne(CarDefinition car)
             {
-                var hash = DefinitionHashOf(car);
+                var make = MakeOf(car);
+                var hash = DefinitionHashOf(car, make);
                 if (!profiles.TryGetValue(car.Id, out var profile))
                 {
-                    fresh.Add(GenerateDefaultProfile(car));
+                    fresh.Add(Generate(car, make, hash));
                     created++;
                 }
                 else
@@ -195,8 +224,9 @@ namespace StreetCorsa.Services.Catalog
 
             if (stored.Source == ProfileDataSource.Generated && stored.DefinitionHash != hash)
             {
-                stored.BasePrice = CalculateBasePrice(car);
-                stored.DealerPrecedence = CalculatePrecedence(car);
+                var make = MakeOf(car);
+                stored.BasePrice = BasePrice(car, make);
+                stored.DealerPrecedence = Precedence(car, make);
                 stored.DefinitionHash = hash;
                 changed = true;
             }

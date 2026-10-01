@@ -441,9 +441,9 @@ public sealed class SoundLibrary
     /// The engine the parts would give a car, for tagging its bank: the stock build's block says how many
     /// cylinders and which family.
     /// </summary>
-    public static CarEngineFacts StockFacts(EngineBuildIndex index, PartsCatalog catalog) => (_, brand, name, bhp) =>
+    public static CarEngineFacts StockFacts(EngineBuildIndex index, PartsCatalog catalog) => (carId, brand, name, bhp) =>
     {
-        var build = StockEngineMatcher.Best(index, brand, name, bhp);
+        var build = StockEngineMatcher.Best(index, carId, brand, name, bhp);
         if (build == null) return null;
         var block = catalog.Get(build.BlockId);
         var cylinders = block == null ? 0 : (int)block.Number("cylinders");

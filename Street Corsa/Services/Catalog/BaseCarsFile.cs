@@ -44,18 +44,48 @@ namespace StreetCorsa.Services.Catalog
             foreach (var path in new[] { InstalledPath, SourcePath(AppContext.BaseDirectory) }.OfType<string>()
                          .Distinct(StringComparer.OrdinalIgnoreCase))
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-                File.WriteAllText(path, With(File.Exists(path) ? File.ReadAllText(path) : null, cars), new UTF8Encoding(false));
+                // In one go (temp file and rename): a crash halfway leaves the old file, never half of one
+                SafeFile.WriteAllText(path, With(File.Exists(path) ? File.ReadAllText(path) : null, cars), SafeFile.Utf8NoBom);
                 written.Add(path);
             }
 
             return written;
         }
 
-        /// <summary>The file's text with the cars' fields set</summary>
+        /// <summary>
+        /// What the base game's own cars.json gives each car (not the mods'), as the editor writes it back; nothing when
+        /// the file is not there or does not read
+        /// </summary>
+        public static IReadOnlyDictionary<string, CarEntry> Given()
+        {
+            try
+            {
+                if (!File.Exists(InstalledPath)) return new Dictionary<string, CarEntry>();
+                var file = ModMerge.Parse(File.ReadAllText(InstalledPath));
+                if (file?["cars"] is not JsonObject) return new Dictionary<string, CarEntry>();
+                var only = ModMerge.NewObject();
+                only["cars"] = file["cars"]!.DeepClone();
+                return CarBook.Read(only, []).Cars;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                return new Dictionary<string, CarEntry>();
+            }
+        }
+
+        /// <summary>
+        /// The file's text with the cars' fields set. A file that is there but does not read throws
+        /// <see cref="InvalidDataException"/>: written over, it would lose every car it holds.
+        /// </summary>
         public static string With(string? text, IReadOnlyDictionary<string, CarFields> cars)
         {
-            var file = ModMerge.Parse(text) ?? ModMerge.NewObject();
+            var file = ModMerge.Parse(text);
+            if (file == null)
+            {
+                if (!string.IsNullOrWhiteSpace(text))
+                    throw new InvalidDataException($"{CarBook.CarsFile} does not read as JSON (a missing comma, a car named twice?): mend it by hand and save again");
+                file = ModMerge.NewObject();
+            }
             if (file["cars"] is not JsonObject entries)
             {
                 entries = ModMerge.NewObject();

@@ -6,18 +6,27 @@ namespace StreetCorsa.Parts.Cars;
 /// tuners work (<see cref="EngineTuner"/>), and how an AC car's engine is matched to a build
 /// (<see cref="StockEngineMatcher"/>).
 ///
-/// Linked into EngineBench, which has no rules: <see cref="Source"/> is pointed at the career's rules by the game, and is
-/// null there, which leaves the base game's figures.
+/// Linked into EngineBench, which has no rules: <see cref="Source"/> is pointed at the career's rules by the game, and
+/// <see cref="ProgramSource"/> at the installed mods' rules; null there, which leaves the base game's figures.
 /// </summary>
 public sealed class EngineRules
 {
     /// <summary>The rules in play; null: the base game's figures</summary>
     public static Func<EngineRules>? Source { get; set; }
 
+    /// <summary>
+    /// The installed mods' rules, not a career's: for what is worked out into the program's own catalog (the factory
+    /// engine an AC car is matched to); null: the base game's figures
+    /// </summary>
+    public static Func<EngineRules>? ProgramSource { get; set; }
+
     private static readonly EngineRules BaseGame = new();
 
     /// <summary>The figures in play</summary>
     public static EngineRules Now => Source?.Invoke() ?? BaseGame;
+
+    /// <summary>The installed mods' figures, whatever career is in play</summary>
+    public static EngineRules Program => ProgramSource?.Invoke() ?? BaseGame;
 
     public EngineCoolingRules Cooling { get; set; } = new();
 

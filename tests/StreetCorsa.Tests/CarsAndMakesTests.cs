@@ -11,8 +11,10 @@ namespace StreetCorsa.Tests;
 
 /// <summary>
 /// Cars and makes as data (E6): the makes and countries of makes.json, what cars.json gives a car, game.json's filter of
-/// the installed cars, the part groups of part_groups.json, the catalog editor's cars.json, the stand-in classes
+/// the installed cars, the part groups of part_groups.json, the catalog editor's cars.json, the stand-in classes. Some
+/// set the book and the groups in use, which every other test reads: run on their own.
 /// </summary>
+[Collection(CarBookCollection.Name)]
 public class CarsAndMakesTests : IDisposable
 {
     private readonly TempDir _temp = new();
@@ -99,6 +101,37 @@ public class CarsAndMakesTests : IDisposable
         Assert.Equal("datsun", book.MakeOf("datsun_240z", "Nissan", "Fairlady"));
         Assert.Equal(4200m, book.Car("datsun_240z")!.Price);
         Assert.Equal(EngineLayout.Front, book.Car("datsun_240z")!.EngineLayout);
+
+        // The make given gives the family too, whatever the brand says
+        Assert.Equal("nissan", book.FamilyOfCar("datsun_240z", "Nissan", "Fairlady"));
+    }
+
+    [Fact]
+    public void A_car_given_a_make_without_a_family_has_none()
+    {
+        var book = CarBook.Load(WithMod(("cars/mine.json", """{ "cars": { "x": { "make": "toyota" } } }""")));
+        Assert.Equal("toyota", book.MakeOf("x", "Chevrolet", "Camaro"));
+        Assert.Equal("", book.FamilyOfCar("x", "Chevrolet", "Camaro"));
+    }
+
+    [Fact]
+    public void A_mods_null_list_or_wild_price_is_none_and_no_crash()
+    {
+        var book = CarBook.Load(WithMod(("cars/mine.json", """
+            {
+              "makes": { "jeep": { "words": null }, "ford": { "price": 1e30 } },
+              "countries": { "USA": { "names": null, "regions": null } },
+              "cars": { "a": { "price": 1e30 } },
+              "words": { "aliases": null, "noise": null }
+            }
+            """)));
+
+        Assert.Empty(book.Make("jeep")!.Words);
+        Assert.Equal(1, book.Make("ford")!.Price);
+        Assert.Contains(book.Problems, p => p.Contains("makes.ford.price"));
+        Assert.Null(book.Car("a")?.Price);
+        Assert.False(book.IsIn("USA", "Europe"));
+        Assert.Contains("camaro", book.Tokens("Chevrolet Camaro"));
     }
 
     [Fact]
@@ -264,4 +297,44 @@ public class CarsAndMakesTests : IDisposable
         bare.UseStandIns(_temp.File("stand_ins.json", """{ "stand_ins": { "java.game.X": { "copy": "" } } }"""));
         Assert.Single(bare.Problems);
     }
+
+    [Fact]
+    public void Stand_ins_that_copy_each_other_are_none_and_no_crash()
+    {
+        var loader = new ScriptClassLoader(Path.Combine(RepoPaths.PartsFolder, PartScripts.Folder));
+        loader.UseStandIns(_temp.File("loop.json", """
+            { "stand_ins": {
+                "java.game.Self": { "copy": "java.game.Self", "extends": "java.game.Base" },
+                "java.game.A": { "copy": "java.game.B", "extends": "java.game.Base" },
+                "java.game.B": { "copy": "java.game.A", "extends": "java.game.Base" } } }
+            """));
+
+        Assert.Empty(loader.Problems);
+        Assert.Null(loader.Find("java.game.Self"));
+        Assert.Null(loader.Find("java.game.A"));
+        Assert.Null(loader.Find("java.game.B"));
+    }
+
+    [Fact]
+    public void The_editor_never_writes_over_a_cars_json_that_does_not_read()
+    {
+        var fields = new Dictionary<string, CarFields> { ["a"] = new("e1", null, null, null) };
+        Assert.Throws<InvalidDataException>(() => BaseCarsFile.With("""{ "cars": { "b": { "price": 1 } "c": { } } }""", fields));
+        Assert.Throws<InvalidDataException>(() => BaseCarsFile.With("""{ "cars": { "b": { }, "B": { } } }""", fields));
+        Assert.Contains("\"a\"", BaseCarsFile.With(null, fields));
+    }
+
+    [Fact]
+    public void A_make_game_json_names_that_is_none_is_told()
+    {
+        GameFile.Load(WithMod(("game.json", """{ "cars": { "makes": [ "ford", "datsunx" ] } }""")));
+        Assert.Contains(ModProblems.All, p => p.Contains("datsunx"));
+    }
+}
+
+/// <summary>The tests that set the car book or the part groups in use: run on their own</summary>
+[CollectionDefinition(Name, DisableParallelization = true)]
+public sealed class CarBookCollection
+{
+    public const string Name = "CarBook";
 }

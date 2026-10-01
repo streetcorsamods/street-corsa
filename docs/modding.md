@@ -227,7 +227,9 @@ anywhere under the folder (a `pack.json` with the parts' `.kn5` models next to i
 - `stand_ins.json` — script classes the mod's parts extend that the source game never shipped, made from the class
   their author copied: `{ "stand_ins": { "<class>": { "copy": "<class copied>", "extends": "<what it extends
   instead>", "drop": [ "<methods left out>" ] } } }`. A later mod's replaces one of the same name. The base game's makes
-  the Ford six's `Block_Inline_OHV` out of `Block_Vee_OHV`.
+  the Ford six's `Block_Inline_OHV` out of `Block_Vee_OHV`. A stand-in that copies itself, or two that copy each
+  other, is no class (the parts that extend it do not load). The parts converter reads the file from its output
+  folder, else from its `--previous` content's.
 
 **The shelves.** Every part is in a group: the shelf it is on in a shop, what the player reads as its kind, and what the
 game does with it. A part is in the first group with a class its script descends from, by the end of the class's name

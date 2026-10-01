@@ -61,6 +61,8 @@ namespace StreetCorsa.Services.Parts
             };
             // And the engines' figures (cooling, factory, tuners, the engine matcher): the same rules
             EngineRules.Source = () => Rules.RuleBook.Current.Engines;
+            // But the engine matcher's go into catalog.db, the program's: the installed mods' rules
+            EngineRules.ProgramSource = () => Rules.RuleBook.Installed.Engines;
             _catalog = new Lazy<PartsCatalog>(LoadCatalog);
             _builds = new Lazy<EngineBuildIndex>(CreateIndex);
             _sounds = new Lazy<SoundLibrary>(LoadSounds);
@@ -506,7 +508,7 @@ namespace StreetCorsa.Services.Parts
         }
 
         private RatedBuild? Suggest(CarDefinition car) =>
-            StockEngineMatcher.Best(Builds, car.Brand, car.Name, StockEngineMatcher.ParsePower(car.Specs?.Bhp));
+            StockEngineMatcher.Best(Builds, car.Id, car.Brand, car.Name, StockEngineMatcher.ParsePower(car.Specs?.Bhp));
 
         /// <summary>
         /// Fills in the factory engine of every profile that has none, or whose build has left the catalog.

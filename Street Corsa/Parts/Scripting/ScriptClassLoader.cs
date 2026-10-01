@@ -145,10 +145,29 @@ public sealed class ScriptClassLoader
             }
         }
 
-        if (result == null && _standIns.TryGetValue(className, out var standIn) && Find(standIn.Copy, nearFolder) is { } original)
+        if (result == null && _standIns.TryGetValue(className, out var standIn) && StandInOriginal(className, standIn, nearFolder) is { } original)
             result = original.DerivedAs(className, standIn.Extends, standIn.Drop.ToArray());
 
         return _byName.GetOrAdd(key, result);
+    }
+
+    // The stand-ins being made on this thread: a mod's stand-in that copies itself, or two that copy each other, would
+    // look for each other for ever
+    [ThreadStatic] private static HashSet<string>? _makingStandIns;
+
+    /// <summary>The class a stand-in copies; null when it copies a stand-in already being made (a loop: none of it is made)</summary>
+    private ScriptClass? StandInOriginal(string className, StandIn standIn, string? nearFolder)
+    {
+        var making = _makingStandIns ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (!making.Add(className)) return null;
+        try
+        {
+            return Find(standIn.Copy, nearFolder);
+        }
+        finally
+        {
+            making.Remove(className);
+        }
     }
 
     /// <summary>The root <paramref name="folder"/> is under, by index; -1 when none. The longest wins: a root may sit inside another.</summary>

@@ -51,6 +51,9 @@ public sealed class SlrrScriptEvaluator
         if (standIns != null) _loader.UseStandIns(standIns);
     }
 
+    /// <summary>What of the stand-ins could not be read</summary>
+    public IReadOnlyList<string> Problems => _loader.Problems;
+
     /// <summary>Static fields of every class evaluated so far, by class name</summary>
     public SortedDictionary<string, Dictionary<string, object>> Constants { get; } = new(StringComparer.Ordinal);
 

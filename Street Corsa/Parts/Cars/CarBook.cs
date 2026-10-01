@@ -24,6 +24,12 @@ public sealed class CarBook
     public const string MakesFile = "makes.json";
     public const string CarsFile = "cars.json";
 
+    /// <summary>The most a badge may multiply a price by: far past any make, and well inside what money can hold</summary>
+    public const double MaxPriceFactor = 1000;
+
+    /// <summary>The most a car may be given as its price</summary>
+    public const decimal MaxCarPrice = 1_000_000_000m;
+
     private static readonly Lazy<CarBook> InstalledBook = new(() => Load(ModSet.Installed));
     private static CarBook? _current;
 
@@ -105,12 +111,15 @@ public sealed class CarBook
     }
 
     /// <summary>Family of whatever the text names, "" when no word of a make with a family gives it away. The first word that tells wins.</summary>
-    public string FamilyOf(string? text) => FirstMake(text, familyOnly: true) is { } make ? _makes[make].FamilyOrId(make) : string.Empty;
+    public string FamilyOf(string? text) => FirstMake(text, familyOnly: true) is { } make ? _makes[make].Family! : string.Empty;
 
-    /// <summary>The family of a car's make: its entry's make, else its brand's and name's words in turn</summary>
+    /// <summary>
+    /// The family of a car's make: its entry's make (one without a family gives none), else its brand's and name's
+    /// words in turn
+    /// </summary>
     public string FamilyOfCar(string? carId, string? brand, string? name)
     {
-        if (Car(carId)?.Make is { Length: > 0 } given && Make(given) is { } make) return make.FamilyOrId(given);
+        if (Car(carId)?.Make is { Length: > 0 } given && Make(given) is { } make) return make.Family ?? string.Empty;
         return FamilyOf($"{brand} {name}");
     }
 
@@ -199,10 +208,11 @@ public sealed class CarBook
 
         foreach (var (id, make) in makes)
         {
-            make.Words = make.Words.Where(w => !string.IsNullOrWhiteSpace(w)).ToList();
-            if (!double.IsFinite(make.Price) || make.Price <= 0)
+            // A mod may write null for a list: as good as none
+            make.Words = (make.Words ?? []).Where(w => !string.IsNullOrWhiteSpace(w)).ToList();
+            if (!double.IsFinite(make.Price) || make.Price is <= 0 or > MaxPriceFactor)
             {
-                problems.Add($"makes.{id}.price {make.Price} is not a positive number; 1 is used");
+                problems.Add($"makes.{id}.price {make.Price} is not a number above 0 and up to {MaxPriceFactor}; 1 is used");
                 make.Price = 1;
             }
 
@@ -218,8 +228,8 @@ public sealed class CarBook
         var countryNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var (id, country) in countries)
         {
-            country.Names = country.Names.Where(n => !string.IsNullOrWhiteSpace(n)).ToList();
-            country.Regions = country.Regions.Where(r => !string.IsNullOrWhiteSpace(r)).ToList();
+            country.Names = (country.Names ?? []).Where(n => !string.IsNullOrWhiteSpace(n)).ToList();
+            country.Regions = (country.Regions ?? []).Where(r => !string.IsNullOrWhiteSpace(r)).ToList();
             foreach (var name in country.Names)
             {
                 if (countryNames.TryGetValue(name.Trim(), out var other) && !other.Equals(id, StringComparison.OrdinalIgnoreCase))
@@ -242,9 +252,9 @@ public sealed class CarBook
                 car.Layout = null;
             }
 
-            if (car.Price is { } price && (price <= 0))
+            if (car.Price is { } price && price is <= 0 or > MaxCarPrice)
             {
-                problems.Add($"cars.{id}.price {price} is not a positive figure; worked out from the car");
+                problems.Add($"cars.{id}.price {price} is not a figure above 0 and up to {MaxCarPrice}; worked out from the car");
                 car.Price = null;
             }
 
@@ -255,8 +265,8 @@ public sealed class CarBook
             }
         }
 
-        var aliases = new Dictionary<string, string>(words.Aliases.Where(a => !string.IsNullOrWhiteSpace(a.Value)), StringComparer.OrdinalIgnoreCase);
-        var noise = new HashSet<string>(words.Noise.Where(n => !string.IsNullOrWhiteSpace(n)), StringComparer.OrdinalIgnoreCase);
+        var aliases = new Dictionary<string, string>((words.Aliases ?? []).Where(a => !string.IsNullOrWhiteSpace(a.Value)), StringComparer.OrdinalIgnoreCase);
+        var noise = new HashSet<string>((words.Noise ?? []).Where(n => !string.IsNullOrWhiteSpace(n)), StringComparer.OrdinalIgnoreCase);
         return new CarBook(makes, countries, countryNames, cars, aliases, noise, problems);
     }
 
@@ -330,8 +340,6 @@ public sealed class MakeEntry
 
     /// <summary>What the badge does to how common a car is, added to it (0 rare to 1 common): -0.3 rarer</summary>
     public float Common { get; set; }
-
-    internal string FamilyOrId(string id) => Family is { Length: > 0 } family ? family : id;
 }
 
 /// <summary>A country in makes.json, by its id ("USA")</summary>

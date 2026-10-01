@@ -282,8 +282,8 @@ public static class Program
                 var name = AcCarUi.GetString(ui, "name") ?? "";
                 var bhp = AcSpecs.ParsePower(AcCarUi.GetString(AcCarUi.GetObject(ui, "specs"), "bhp"));
 
-                Console.WriteLine($"{Path.GetFileName(folder)}: {brand} | {name} | {bhp:0} bhp  (family '{MakeFamilies.FamilyOf(brand + " " + name)}')");
-                foreach (var match in StockEngineMatcher.Rank(index, brand, name, bhp).Take(4))
+                Console.WriteLine($"{Path.GetFileName(folder)}: {brand} | {name} | {bhp:0} bhp  (family '{CarBook.Current.FamilyOfCar(Path.GetFileName(folder), brand, name)}')");
+                foreach (var match in StockEngineMatcher.Rank(index, Path.GetFileName(folder), brand, name, bhp).Take(4))
                     Console.WriteLine($"    {match.Score,6:0.00}  {match.Build.PowerHp,4:0} hp {match.Build.Litres,5:0.00} l  [{match.Build.Family,-6}] {match.Build.Build.Name}  ({match.Build.Build.Id})");
             }
             catch (Exception ex)
@@ -299,29 +299,54 @@ public static class Program
     /// The parts of one folder, or of every mod when the folder is a Content folder (no engine builds of its own, a
     /// base game among its folders): mod builds and parts are benched as the game loads them
     /// </summary>
-    private static PartsCatalog LoadCatalog(string folder)
+    /// <param name="useContent">
+    /// Whether the folder's makes and part groups become the ones in use (process-wide): false for a second catalog
+    /// (renew's old one), which must not change the rules the first is worked by
+    /// </param>
+    private static PartsCatalog LoadCatalog(string folder, bool useContent = true)
     {
+        folder = Path.TrimEndingDirectorySeparator(Path.GetFullPath(folder));
         if (!File.Exists(Path.Combine(folder, EngineBuild.FileName)) && Directory.Exists(Path.Combine(folder, Mods.ModIds.BaseId)))
         {
             var mods = Mods.ModSet.Load(folder);
-            UseContent(mods);
+            if (useContent) UseContent(mods);
             return PartsCatalog.Load(mods.Folders(Mods.ContentTypes.Parts).ToList());
         }
 
         // A parts folder of a Content folder (a mod's, the base game's): the makes and the part groups of that Content
-        // folder's mods, else the folder's own groups
-        var content = Directory.GetParent(folder)?.Parent;
-        if (content != null && Directory.Exists(Path.Combine(content.FullName, Mods.ModIds.BaseId))) UseContent(Mods.ModSet.Load(content.FullName));
-        else PartGroups.Current = PartGroups.Load([folder]);
+        // folder's mods. One outside any (a git archive, a scratch run): the source tree's, with the folder's own
+        // groups over them
+        if (useContent)
+        {
+            var content = Directory.GetParent(folder)?.Parent;
+            if (content != null && Directory.Exists(Path.Combine(content.FullName, Mods.ModIds.BaseId))) UseContent(Mods.ModSet.Load(content.FullName));
+            else UseContent(SourceContent(), folder);
+        }
 
         return PartsCatalog.Load(folder);
     }
 
-    /// <summary>The makes (which family a car or an engine is) and the part groups of the mods, as the game reads them</summary>
-    private static void UseContent(Mods.ModSet mods)
+    /// <summary>The source tree's Content folder, above the program; null when it does not run from a build of the source</summary>
+    private static Mods.ModSet? SourceContent()
     {
-        CarBook.Current = CarBook.Load(mods);
-        PartGroups.Current = PartGroups.Load(mods.Folders(Mods.ContentTypes.Parts).Select(f => f.Dir));
+        for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir != null; dir = dir.Parent)
+        {
+            var content = Path.Combine(dir.FullName, "Street Corsa", Mods.ModSet.FolderName);
+            if (Directory.Exists(Path.Combine(content, Mods.ModIds.BaseId))) return Mods.ModSet.Load(content);
+        }
+
+        return null;
+    }
+
+    /// <summary>The makes (which family a car or an engine is) and the part groups of the mods, as the game reads them</summary>
+    /// <param name="partsFolder">A parts folder whose own groups go over the mods'</param>
+    private static void UseContent(Mods.ModSet? mods, string? partsFolder = null)
+    {
+        if (mods == null) Console.WriteLine("content: no Content folder found for the makes and part groups; the folder's own groups only");
+        CarBook.Current = mods == null ? CarBook.Empty : CarBook.Load(mods);
+        var folders = mods?.Folders(Mods.ContentTypes.Parts).Select(f => f.Dir).ToList() ?? new List<string>();
+        if (partsFolder != null) folders.Add(partsFolder);
+        PartGroups.Current = PartGroups.Load(folders);
         foreach (var problem in CarBook.Current.Problems.Concat(PartGroups.Current.Problems)) Console.WriteLine($"content: {problem}");
     }
 
@@ -396,7 +421,8 @@ public static class Program
     /// </summary>
     private static int Renew(PartsCatalog catalog, string oldPartsFolder)
     {
-        var old = LoadCatalog(oldPartsFolder);
+        // The old catalog is worked by the new one's makes and groups: it is the new game that loads the old save
+        var old = LoadCatalog(oldPartsFolder, useContent: false);
         var failures = 0;
         var renewed = 0;
 

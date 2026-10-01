@@ -66,7 +66,7 @@ public class FlatheadSpeedPartsTests
         Assert.Equal(4, aftermarket.Count(b => b.Build.Id.StartsWith(Pack, StringComparison.Ordinal)));
 
         foreach (var hot in aftermarket)
-            Assert.False(StockEngineMatcher.Best(index, "Ford", hot.Build.Name, hot.PowerHp)?.Build.Aftermarket ?? false, hot.Build.Name);
+            Assert.False(StockEngineMatcher.Best(index, null, "Ford", hot.Build.Name, hot.PowerHp)?.Build.Aftermarket ?? false, hot.Build.Name);
 
         var random = new Random(1);
         foreach (var stock in new[] { "mercury-255-mercomatic", "ford-221-1940-3spd", "ford-221-1932-3spd" }.Select(id => index.Runnable.Single(b => b.Build.Id.EndsWith(id, StringComparison.Ordinal))))

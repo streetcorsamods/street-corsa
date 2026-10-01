@@ -59,7 +59,7 @@ public sealed class GameFile
         if (string.IsNullOrWhiteSpace(file.Garage)) file.Garage = "garage";
         if (string.IsNullOrWhiteSpace(file.Language)) file.Language = "en";
         file.Locale = GameLocale.Checked(file.Locale, problems);
-        file.Cars = GameCars.Checked(file.Cars, problems);
+        file.Cars = GameCars.Checked(file.Cars, problems, mods);
 
         foreach (var problem in problems) Logger.Warning("Game settings: {Problem}", problem);
         ModProblems.Add("Game settings", problems);
@@ -170,7 +170,8 @@ public sealed class GameCars
         return where != null && Countries.Any(c => book.IsIn(where, c));
     }
 
-    internal static GameCars Checked(GameCars? cars, List<string> problems)
+    /// <param name="mods">The mods whose makes a make named must be among</param>
+    internal static GameCars Checked(GameCars? cars, List<string> problems, ModSet mods)
     {
         cars ??= new GameCars();
         cars.Countries = (cars.Countries ?? []).Where(c => !string.IsNullOrWhiteSpace(c)).ToList();
@@ -184,6 +185,14 @@ public sealed class GameCars
         }
 
         if (cars.OnlyIds && cars.Ids.Count == 0) problems.Add("cars.onlyIds is set and cars.ids names no car: the game has no cars");
+
+        // A make no makes.json has (a typo, or one a mod that is not installed adds) lets no car in: told, as a game
+        // left with no cars would otherwise just be empty
+        if (cars.Makes.Count == 0) return cars;
+        var makes = (ReferenceEquals(mods, ModSet.Installed) ? Parts.Cars.CarBook.Installed : Parts.Cars.CarBook.Load(mods)).Makes;
+        foreach (var make in cars.Makes.Where(m => !makes.ContainsKey(m)))
+            problems.Add($"cars.makes \"{make}\" is no make in makes.json: no car is of it");
+        if (cars.Makes.All(m => !makes.ContainsKey(m))) problems.Add("cars.makes names no make there is: the game has no cars");
         return cars;
     }
 }
