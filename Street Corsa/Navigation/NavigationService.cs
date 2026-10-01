@@ -204,7 +204,7 @@ namespace StreetCorsa.Navigation
         /// <summary>
         /// Puts the screen the player came from back after a failed navigation, as far as it will go. It is
         /// resumed, never entered again: an Enter can launch AC (the race screen) or spend time and save (the
-        /// newspaper, the diner, the parts pages), and a failed navigation must do neither a second time.
+        /// newspaper, the diner, the mail order), and a failed navigation must do neither a second time.
         /// </summary>
         private void BackTo(IScreen? previous, IScreen failed)
         {
@@ -361,6 +361,44 @@ namespace StreetCorsa.Navigation
             }
         }
 
+        // ----- Step 25: the racing hub -----
+
+        /// <summary>
+        /// The racing hub, over the current screen (the garage's "Go race!"): the race invitations, Street News, the way
+        /// out onto the streets. One that fails to build is logged and the player told, as a screen is. False when it did
+        /// not open.
+        /// </summary>
+        /// <param name="hitTheStreets">Where its "Hit the streets" button goes, once it is closed</param>
+        public bool ShowRaceHub(GameState gameState, Action hitTheStreets)
+        {
+            try
+            {
+                // A race set up from it goes ahead only while the player is still where the hub was opened
+                var home = CurrentScreen;
+                _dialogService.ShowDialog(new Dialogs.RaceHub.RaceHubDialogViewModel(
+                    _dialogService,
+                    gameState,
+                    _raceEventService,
+                    _carFilterService,
+                    _catalogRepository,
+                    _eventOpponentService,
+                    _contentService,
+                    _raceSetup,
+                    stillHome: () => ReferenceEquals(CurrentScreen, home),
+                    race: intent => NavigateToRaceLoading(gameState, intent),
+                    hitTheStreets));
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not open the racing hub");
+                ShowNavigationError("racing hub");
+                return false;
+            }
+        }
+
+        // ----- end of step 25: the racing hub -----
+
         public bool NavigateToCarLot(GameState gameState) => SafeNavigate("car lot", () =>
             new Screens.CarLot.CarLotScreenViewModel(
                 this,
@@ -414,29 +452,19 @@ namespace StreetCorsa.Navigation
                 this,
                 _dialogService,
                 gameState,
-                _raceEventService,
-                _carFilterService,
                 _catalogRepository,
-                _eventOpponentService,
-                _contentService,
+                _profileRepository,
+                _marketService,
+                _purchaseService,
+                _carPartsService,
+                _partsShopService,
                 _timeService,
                 _gameStateRepository,
-                _raceSetup,
                 _saleService,
                 skipAnimation));
 
-        public bool NavigateToUsedCarMarket(GameState gameState) => SafeNavigate("used car ads", () =>
-            new Screens.UsedCarMarket.UsedCarMarketScreenViewModel(
-                this,
-                _dialogService,
-                gameState,
-                _marketService,
-                _catalogRepository,
-                _profileRepository,
-                _gameStateRepository,
-                _purchaseService));
-
-        public bool NavigateToUsedParts(GameState gameState) => SafeNavigate("parts pages", () =>
+        /// <summary>The part shops' map's way to the mail order and to selling off the shelf; back goes to the map</summary>
+        public bool NavigateToUsedParts(GameState gameState) => SafeNavigate("mail order", () =>
             new Screens.UsedParts.UsedPartsScreenViewModel(
                 this,
                 _dialogService,

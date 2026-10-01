@@ -391,7 +391,8 @@ namespace StreetCorsa.Services.Opponents
 
             // What the seller says about the engine, as a lot would: the ad keeps it, the paper's page reads it from there
             var engine = _market.DescribeEngine(car);
-            RivalCarAds.Post(gameState, racer, car, asking, date, engine?.Summary, engine?.IsModified ?? false);
+            RivalCarAds.Post(gameState, racer, car, asking, date, engine?.Summary, engine?.IsModified ?? false,
+                _parts.IsAvailable ? _parts.Catalog : null, _market.FactoryParts(car.DefinitionId));
             _liveAds = null;
             if (!quiet) talk.Add(Say("street.advertised", racer, car, new TextValues { ["price"] = asking }));
             _logger.Information("{Racer} advertised the {Car} for ${Asking}", racer.Name, car.DefinitionId, asking);

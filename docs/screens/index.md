@@ -14,12 +14,11 @@
 | Diner | `Screens/Diner/` | Meet opponents, accept challenges |
 | Cruise | `Screens/Cruise/` | Sit at the curb in your car; rivals pull up with an offer (see `cruise.md`) |
 | GasStation | `Screens/Station/` | Drive to the gas station: fill up, top up the oil, a wash, the attendant's remarks (see `gas-station.md`) |
-| Newspaper | `Screens/Newspaper/` | Street News (articles on the last 3 days' races, `NewsWriter`), race invitations, used car and parts ads, the player's ads |
+| Newspaper | `Screens/Newspaper/` | The classifieds, set as a period paper's ads: used cars (every dealer's and racer's, the player's own ads with their buyers at the top) and used parts, a page at a time as the player scrolls; an ad is bought from here or clicked to look at it |
 | DealerMap | `Screens/DealerMap/` | The city, with a pin per car dealer (the garage's Car dealers button) or per part shop (Parts dealers: gold squares) |
 | PartShop | `Screens/PartShop/` | One part shop's counter: its shelves or yard at today's prices, haggling at a junkyard, selling to it |
 | DealerLot | `Screens/DealerLot/` | One dealer's cars parked in 3D; click one to look at it |
-| UsedCarMarket | `Screens/UsedCarMarket/` | Browse/buy used cars as a flat list |
-| UsedParts | `Screens/UsedParts/` | Browse/buy used parts |
+| UsedParts | `Screens/UsedParts/` | The mail order (the part shops' map's button): new parts by mail, selling off the shelf |
 
 ## Navigation Flow
 
@@ -31,13 +30,15 @@ MainMenu (opens under the title; NewGame, LoadGame and Settings are cards on it,
 
 Garage (hub) ←→ CarLot
   │
-  ├──→ Diner (challenges)      [Hit the streets]
+  ├──→ Racing hub dialog       [Go race!: invitations, Street News]
+  │      ├──→ EventEntry → RaceLoading
+  │      └──→ Diner (challenges)  [Hit the streets]
   │      └──→ Cruise ──→ RaceLoading ──→ Cruise   [Cruise the streets]
   ├──→ GasStation               [Gas station]
   ├──→ DealerMap → DealerLot    [Car dealers]
   ├──→ DealerMap → PartShop     [Parts dealers: the same map with the part shops]
-  └──→ Newspaper → UsedCarMarket
-                 → UsedParts
+  │              → UsedParts    [Mail order]
+  └──→ Newspaper                [the classifieds]
 
 Garage Quit button → Quit dialog → MainMenu or the desktop
 Garage trophy button → Career dialog (victory paths, the record, milestones) over the garage
@@ -67,8 +68,8 @@ Each screen folder contains:
 | NavigateToNewspaper(gameState) | Newspaper |
 | NavigateToDealerMap(gameState) | DealerMap |
 | NavigateToDealerLot(gameState, dealerId) | DealerLot |
-| NavigateToUsedCarMarket(gameState) | UsedCarMarket |
-| NavigateToUsedParts(gameState) | UsedParts |
+| NavigateToUsedParts(gameState) | UsedParts (the mail order) |
+| ShowRaceHub(gameState, hitTheStreets) | The racing hub dialog over the garage (not a navigation) |
 
 ## Adding a New Screen
 

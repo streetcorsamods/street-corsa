@@ -196,7 +196,7 @@
                 Stretch="UniformToFill"
                 PresentationOptions:Freeze="True"/>
 
-    <!-- Button Images: the main menu's badges and the newspaper's two sections.
+    <!-- Button Images: the main menu's badges.
          The art is 820-1024 px square for tiles drawn at up to 300 px, so it is decoded 300 wide -->
     <BitmapImage x:Key="NewGameButtonImage"
                  UriSource="{theme:Image buttons/new_game}"
@@ -228,24 +228,13 @@
                 Stretch="Fill"
                 PresentationOptions:Freeze="True"/>
 
-    <BitmapImage x:Key="UsedCarsButtonImage"
-                 UriSource="{theme:Image buttons/used_cars}"
-                 DecodePixelWidth="300"
-                 CacheOption="OnLoad"
-                 PresentationOptions:Freeze="True"/>
-    <ImageBrush x:Key="UsedCarsButtonBrush"
-                ImageSource="{StaticResource UsedCarsButtonImage}"
-                Stretch="Fill"
-                PresentationOptions:Freeze="True"/>
-
-    <BitmapImage x:Key="UsedPartsButtonImage"
-                 UriSource="{theme:Image buttons/used_parts}"
-                 DecodePixelWidth="300"
-                 CacheOption="OnLoad"
-                 PresentationOptions:Freeze="True"/>
-    <ImageBrush x:Key="UsedPartsButtonBrush"
-                ImageSource="{StaticResource UsedPartsButtonImage}"
-                Stretch="Fill"
-                PresentationOptions:Freeze="True"/>
+    <!-- The paper's classifieds -->
+    <SolidColorBrush x:Key="NewsprintPaperBrush" Color="{StaticResource NewsprintPaper}"/>
+    <SolidColorBrush x:Key="NewsprintPaperEdgeBrush" Color="{StaticResource NewsprintPaperEdge}"/>
+    <SolidColorBrush x:Key="NewsprintInkBrush" Color="{StaticResource NewsprintInk}"/>
+    <SolidColorBrush x:Key="NewsprintInkFadedBrush" Color="{StaticResource NewsprintInkFaded}"/>
+    <SolidColorBrush x:Key="NewsprintRuleBrush" Color="{StaticResource NewsprintRule}"/>
+    <SolidColorBrush x:Key="NewsprintShadeBrush" Color="{StaticResource NewsprintShade}"/>
+    <SolidColorBrush x:Key="NewsprintPencilBrush" Color="{StaticResource NewsprintPencil}"/>
 
 </ResourceDictionary>

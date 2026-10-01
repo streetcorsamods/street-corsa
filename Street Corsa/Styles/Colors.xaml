@@ -174,4 +174,15 @@
     <Color x:Key="CarRadioLampOff">#FF4A1A10</Color>
     <Color x:Key="CarRadioLampOn">#FFFF7A3A</Color>
 
+    <!-- The paper's classifieds: ink on newsprint (NewspaperScreenView.xaml) -->
+    <Color x:Key="NewsprintPaper">#FFEDE4CF</Color>
+    <Color x:Key="NewsprintPaperEdge">#FFD8CBAE</Color>
+    <Color x:Key="NewsprintInk">#FF1F1B16</Color>
+    <Color x:Key="NewsprintInkFaded">#FF5E564A</Color>
+    <!-- The ruled lines between the columns, and under the pointer an ad's faint shade -->
+    <Color x:Key="NewsprintRule">#FF4A4237</Color>
+    <Color x:Key="NewsprintShade">#1A5A4020</Color>
+    <!-- The ring a pencil puts round an ad the player's own, and round a price marked down -->
+    <Color x:Key="NewsprintPencil">#FFA4281E</Color>
+
 </ResourceDictionary>

@@ -234,6 +234,18 @@
 
         </StackPanel>
 
+        <!-- The part shops' map: the mail order, beside the back button -->
+        <Button Style="{StaticResource DialogSecondaryButtonStyle}"
+                Content="{t:Text dealermap.mail_order}"
+                ToolTip="{t:Text dealermap.mail_order.tip}"
+                Command="{Binding MailOrderCommand}"
+                Visibility="{Binding IsPartsMap, Converter={StaticResource BooleanToVisibilityConverter}}"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                Margin="104,32,0,0"
+                Padding="20,0"
+                Height="40"/>
+
         <!-- Back -->
         <Button Style="{StaticResource RoundIconButtonStyle}"
                 Tag="{StaticResource BackIcon}"

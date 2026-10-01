@@ -201,10 +201,12 @@ namespace StreetCorsa.Services.Parts
             // Private sellers ask around what a shop would, some more, some less, and more in a harder game
             var asking = PartPricing.WorthOfAssembly(catalog, part) * PartPricing.UsedShopFactor * (0.8 + random.NextDouble() * 0.4)
                          * GameRules.Sane(priceMultiplier);
-            return new PartAd(part, PartPricing.Round(asking), GameText.Installed.Pick("names.part_sellers", random))
+            var ad = new PartAd(part, PartPricing.Round(asking), GameText.Installed.Pick("names.part_sellers", random))
             {
                 PostedDate = currentDate.AddDays(-random.Next(0, 4))
             };
+            Market.AdBlurbs.Describe(ad, catalog, random);
+            return ad;
         }
 
         /// <summary>

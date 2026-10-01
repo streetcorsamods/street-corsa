@@ -104,7 +104,7 @@ of the range (the roll still leads, and one car in twelve is not shifted at all)
 cars without making a good find impossible.
 
 ## Purchase Flow
-`CarPurchaseService` owns this, shared by the listings screen and the dealer lot (`Screens/Shared/PurchaseFlow.cs`
+`CarPurchaseService` owns this, shared by the paper's classifieds and the dealer lot (`Screens/Shared/PurchaseFlow.cs`
 holds the confirmation and result dialogs).
 
 1. Validate funds and availability
@@ -119,12 +119,30 @@ holds the confirmation and result dialogs).
 
 A car bought counts in `Player.Stats.CarsOwned`.
 
-**A rival's car out of the paper** (step 12): the Used Cars page lists the rivals' ads after the lots, as listings made
+**A rival's car out of the paper** (step 12): the classifieds list the rivals' ads among the lots' cars, as listings made
 up from the car for the page only (`RivalCarAds.AsListing`: the car's own figures and the engine as the ad described it
 when posted, no dyno run). The row carries the ad (`UsedCarListingViewModel.RivalAd`), and buying it
 (`CarPurchaseService.PurchaseFromRivalAsync`, called with the ad) pays the ad's price as it stands now to the rival and hands over that very
 car from their garage (`RivalCarAds.HandOver`, `CarAcquisition.PrivateSale`); nothing is put together. See
 `opponent-system.md`, "A bigger pool".
+
+## The Classifieds
+The newspaper (step 25) is the classifieds only, two sections set as a period paper's ads (`Screens/Newspaper`): every car
+for sale, every dealer's and every rival's ad, sorted by make, with the player's own ads and their buyers boxed at the top;
+and every used part ad. A section shows a page of ads (`NewspaperScreenViewModel.AdsPerPage`, a screen's worth, not a
+rule) and another each time the player scrolls near its end (`AdPages`); an ad bought or gone leaves the rest in place.
+There is no dealer filter: a dealer's own cars are on its lot (the dealer map). Clicking an ad goes to look at it.
+
+**Ad blurbs** (`AdBlurbs`): every ad has a few words of its own (`Description` on `UsedCarListing`, `RivalCarAd` and
+`PartAd`), written once when the ad is placed (`SpawnListingsAsync`, `RefreshMarketAsync`, `ListCar`,
+`RivalCarAds.Post`, the paper's and the rivals' part ads) and kept in the save; an ad from an older save gets its words
+the first time the paper shows it (`AdBlurbs.Ensure`). What the words are about is picked with some weight from the
+ad's facts (`CarAdFacts`, `PartAdFacts`): a part worth naming off the car's part tree (a blower or turbo, nitrous,
+injection or carbs, heads, a cam, an intake, headers: the last ones only on a car somebody has worked on), the engine,
+"all original", the condition when it is very good or rough, low miles, a line of character; a car's ad now and then
+adds its condition after. The lines are the `ads.car.*` and `ads.part.*` pools of `text\ads.json`. `AdBlurbs.Writer`
+(`IAdWriter`) is the seam for a better writer (an AI): every ad written is offered to it with its facts, and what it
+calls back with, on the UI thread, takes the built-in line's place; the game never waits on it.
 
 ## Selling Cars
 `CarSaleService` (`ICarSaleService`), from the garage's Sell button (`Dialogs/SellCar`):
@@ -184,6 +202,8 @@ seller's engine summary and whether it has been worked on. A pink-slipped car go
 - `Services/Scheduler/Tasks/CarAdsReviewTask.cs`
 - `Dialogs/SellCar/SellCarDialogViewModel.cs`
 - `Services/Market/CarValuation.cs`
+- `Services/Market/AdBlurbs.cs`, `Content/streetcorsa/text/ads.json`
+- `Screens/Newspaper/` (the classifieds)
 - `Services/Dealers/DealerCatalog.cs`
 - `Services/Dealers/DealerRoster.cs`, `DealerRules.cs`, `DealerLifeService.cs`
 - `Services/Scheduler/Tasks/DealerReviewTask.cs`

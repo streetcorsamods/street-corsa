@@ -42,7 +42,35 @@ namespace StreetCorsa.Services.Market
             var (listings, pool) = CreateListings(dealers, currentDate);
             await AddEnginesAsync(listings, pool);
             ApplyPriceMultiplier(listings, priceMultiplier);
+            Describe(listings);
             return listings;
+        }
+
+        /// <summary>The ads' few words (<see cref="AdBlurbs"/>), once the cars have their engines to talk about</summary>
+        private void Describe(List<UsedCarListing> listings)
+        {
+            var catalog = _partsService is { IsAvailable: true } parts ? parts.Catalog : null;
+            var factories = new Dictionary<string, IReadOnlySet<string>?>(StringComparer.OrdinalIgnoreCase);
+            foreach (var listing in listings)
+                AdBlurbs.Describe(listing, catalog, Remembered(factories, listing.CarDefinitionId, FactoryParts));
+        }
+
+        public IReadOnlySet<string>? FactoryParts(string carDefinitionId)
+        {
+            if (_partsService is not { IsAvailable: true } parts || _catalogRepo.GetCar(carDefinitionId) is not { } carDef) return null;
+
+            try
+            {
+                return parts.GetStockBuild(carDef) is { } stock
+                    ? stock.Build.Parts.Where(p => p.Part != null).Select(p => p.Part!).ToHashSet(StringComparer.OrdinalIgnoreCase)
+                    : null;
+            }
+            catch (Exception ex)
+            {
+                // The ad still gets its words; it just cannot tell the factory's parts from the rest
+                _logger.Warning("Could not look up the factory build of a {CarId}: {Error}", carDefinitionId, ex.Message);
+                return null;
+            }
         }
 
         /// <summary>
@@ -258,6 +286,7 @@ namespace StreetCorsa.Services.Market
                 {
                     await AddEnginesAsync(fresh, pool);
                     ApplyPriceMultiplier(fresh, priceMultiplier);
+                    Describe(fresh);
                     kept.AddRange(fresh);
                 }
 
@@ -342,6 +371,8 @@ namespace StreetCorsa.Services.Market
                 listing.IsModified = engine.IsModified;
             }
 
+            // A car relisted gets its ad's words; one shown for a rival's ad has the ad's own
+            if (describeEngine) Describe([listing]);
             return listing;
         }
 

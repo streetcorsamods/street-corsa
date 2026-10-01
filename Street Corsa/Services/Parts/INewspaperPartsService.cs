@@ -4,7 +4,7 @@ using StreetCorsa.Parts;
 namespace StreetCorsa.Services.Parts
 {
     /// <summary>
-    /// The newspaper's parts pages: used parts from the ads, new ones by mail order, and the player's own sold to
+    /// Parts away from the shops: used parts from the paper's ads, new ones by mail order, and the player's own sold to
     /// whoever takes them. Everything bought goes to the player's shelf. The shops on the map are
     /// <see cref="PartShops.IPartShopService"/>.
     /// </summary>

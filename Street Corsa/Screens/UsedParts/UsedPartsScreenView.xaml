@@ -81,11 +81,6 @@
 
             <!-- Pages -->
             <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,12">
-                <RadioButton Content="{t:Text usedparts.tab.ads}"
-                             Style="{StaticResource TabButtonStyle}"
-                             IsChecked="{Binding IsUsedTab, Mode=OneWay}"
-                             Command="{Binding ShowTabCommand}"
-                             CommandParameter="Used"/>
                 <RadioButton Content="{t:Text usedparts.tab.mail}"
                              Style="{StaticResource TabButtonStyle}"
                              IsChecked="{Binding IsNewTab, Mode=OneWay}"

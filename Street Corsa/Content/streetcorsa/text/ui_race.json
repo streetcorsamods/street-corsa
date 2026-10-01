@@ -2,7 +2,7 @@
   "_comment": [
     "The words of the diner, the street, the races and their results: the screens' labels, the loading screen, the",
     "messages after a race (results, the police, events, Assetto Corsa's own troubles), the timeslip and the dial-in,",
-    "event entry and its rules, the victory sheet. A label is said one way (the first line of its pool). {name} is a",
+    "the racing hub (racehub.*), event entry and its rules, the victory sheet. A label is said one way (the first line of its pool). {name} is a",
     "value the game fills in, {name:N0} a number written with its thousands, {name:MMM d} a date written that way. A",
     "line that starts or ends with a space keeps it: it is joined to others. \\n breaks the line. The placeholders:",
     "diner.bracket.rival_dial_in, dialin.rival: {name} {dial_in}",
@@ -67,6 +67,10 @@
     "dialin.green.rival_first: {name} {seconds}"
   ],
   "lines": {
+    "racehub.title": "Go Race",
+    "racehub.close.tip": "Close (Esc)",
+    "racehub.streets": "Hit the streets",
+    "racehub.streets.note": "No invitation? Cruise the strip and the diner: somebody always wants to race.",
     "diner.back.tooltip": "Back to the garage",
     "diner.cruise": "CRUISE THE STREETS",
     "diner.cruise.tooltip": "Sit at the curb with the engine running and see who pulls up",

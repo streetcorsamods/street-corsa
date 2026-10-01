@@ -87,7 +87,7 @@ Newspaper.
 - `DialogSecondaryButtonStyle` - No, Cancel, the rest: dark glass (`UiGlass`) on `GlassButtonTemplate`
 - `RoundIconButtonStyle` - A round button with an icon (an `ImageSource` from `Icons.xaml` in `Tag`, what it does in
   `ToolTip`): the garage's buttons. The icon is painted in the ring's colour; ring, icon and a glow turn amber under
-  the pointer. `RoundIconButtonLargeStyle` is a notch bigger (Hit the streets, Car dealers, Parts dealers, Newspaper).
+  the pointer. `RoundIconButtonLargeStyle` is a notch bigger (Go race!, Car dealers, Parts dealers, Newspaper).
 - `GlassPanelStyle` - A panel in the buttons' look (dark glass, outline, rounded)
 - `GameButtonStyle` - Large image buttons with hover labels (Newspaper screen)
 

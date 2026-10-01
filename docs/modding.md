@@ -593,7 +593,7 @@ random and fills in its `{placeholders}`:
 ```
 
 `lines` add to a pool, `replace` rewrites it. The base game's files (`news.json`, `talk.json`, `street.json`,
-`station.json`, `names.json`) list every key and, in their `_comment`, the placeholders each takes. The answers to a
+`station.json`, `names.json`, `ads.json`: the classifieds' few words on each ad) list every key and, in their `_comment`, the placeholders each takes. The answers to a
 challenge are the `replies.*` pools in `talk.json`, among them `replies.car_laid_up` and `replies.car_unknown` (the
 racer's car can't race today, or the game can't tell), `replies.king.pink_slips` and `replies.king.no_pink_slip` (the
 King takes a pink-slip race, or turns down one for money), `replies.rematch` (a racer out for a rematch) and
@@ -646,7 +646,8 @@ PC. A key the game lacks, or a value that does not read, is told at start-up and
 the game's own stands. Keys are matched whatever their case. The look is taken at start-up: a change shows at the next
 start. The typefaces: `BodyFont` (everything not named otherwise), `DisplayFont` (the intro's title), `DialFont` (the
 radio's lettering), `NumbersFont` (figures that line up: the timeslip, the dial-in board, the engine panel),
-`TypewriterFont` (the licence, the main menu badges' labels).
+`TypewriterFont` (the licence, the main menu badges' labels), `NewsprintFont` (the paper's classifieds: the ads' small print, the
+masthead), `NewsHeadFont` (the ads' run-in headlines and the paper's section heads, set condensed and bold).
 
 A theme sets keys only: the shapes of the buttons and panels stay the game's (a mod's XAML is never read, since XAML
 can run code).
@@ -658,7 +659,7 @@ names:
 | Name | What |
 |---|---|
 | `backgrounds/main`, `init`, `newspaper_background`, `diner_background`, `settings_background` | the screens' backgrounds (the game's are 2560x1440; `init` is behind the intro) |
-| `buttons/new_game`, `load_game`, `settings`, `used_cars`, `used_parts` | the main menu's badges and the newspaper's two sections (square) |
+| `buttons/new_game`, `load_game`, `settings` | the main menu's badges (square) |
 | `icons/calendar`, `car_dealer`, `car_info`, `driving_wheel`, `fuel_pump`, `garage`, `newspaper`, `parts_filled`, `quit`, `radio`, `trophy` | the round buttons' icons: only their shape counts, painted in the button's colour |
 | `misc/license` | the licence the player signs for a new game (the name box sits where the game's has its line) |
 | `misc/calendar/calendar01` .. `calendar12` | the garage calendar's pictures |

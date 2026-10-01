@@ -1,7 +1,7 @@
 using StreetCorsa.Models.Career.Events;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Models.Race;
-using StreetCorsa.Screens.Newspaper;
+using StreetCorsa.Dialogs.RaceHub;
 using StreetCorsa.Services.Career;
 using StreetCorsa.Services.Text;
 using StreetCorsa.ViewModels;

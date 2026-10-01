@@ -16,7 +16,7 @@ there (callers that don't care use it as a statement).
 
 ```
 NavigateToGarage(gameState)
-NavigateToUsedCarMarket(gameState)
+NavigateToNewspaper(gameState)
 NavigateToMainMenu(card)
 NavigateToCarCatalogEditor()
 ```

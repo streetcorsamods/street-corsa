@@ -42,8 +42,15 @@ namespace StreetCorsa.Services.Market
         /// on. The car's part list moves to the listing; the caller no longer owns the car. The listing is
         /// returned, not added to the market.
         /// </summary>
-        /// <param name="describeEngine">False leaves out what the seller says about the engine, and the dyno run it takes</param>
+        /// <param name="describeEngine">False leaves out what the seller says about the engine, and the dyno run it takes, and the
+        /// ad's few words (<see cref="AdBlurbs"/>)</param>
         UsedCarListing ListCar(Car car, decimal price, string location, DateTime listedDate, bool describeEngine = true);
+
+        /// <summary>
+        /// The ids of the parts of the model's factory engine, for an ad to tell what somebody put on from what it came
+        /// with (<see cref="AdBlurbs"/>); null when the model or its factory build is not known
+        /// </summary>
+        IReadOnlySet<string>? FactoryParts(string carDefinitionId);
 
         /// <summary>What a seller says about the car's engine, off the dyno; null without an engine or parts to tell</summary>
         EngineDescription? DescribeEngine(Car car);

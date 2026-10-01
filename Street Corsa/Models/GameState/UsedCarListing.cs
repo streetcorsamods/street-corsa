@@ -103,6 +103,12 @@ namespace StreetCorsa.Models.GameState
         /// null when it is not on sale. <see cref="Price"/> is what it sells for.
         /// </summary>
         public decimal? PriceBeforeSale { get; set; }
+
+        /// <summary>
+        /// The ad's few words about the car ("Blown with a 6-71. Scary fast."), written once when the car is listed
+        /// (<see cref="Services.Market.AdBlurbs"/>); null on listings from before ads had them, written when first shown
+        /// </summary>
+        public string? Description { get; set; }
     }
 
     /// <summary>Where a dealer is in its life: open, holding its closing-down sale, gone, or not open yet</summary>

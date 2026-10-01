@@ -46,6 +46,9 @@ namespace StreetCorsa.Screens.DealerMap
         public RelayCommand BackCommand { get; }
         public RelayCommand<DealerPinViewModel> VisitDealerCommand { get; }
 
+        /// <summary>The part shops' map's way to the mail order: new parts by mail, and selling off the shelf</summary>
+        public RelayCommand MailOrderCommand { get; }
+
         /// <summary>The part shops' map: their pins and their counters, no car lots</summary>
         public bool IsPartsMap { get; }
 
@@ -112,6 +115,7 @@ namespace StreetCorsa.Screens.DealerMap
 
             BackCommand = new RelayCommand(OnBack, () => !_isDriving);
             VisitDealerCommand = new RelayCommand<DealerPinViewModel>(OnVisitDealer, _ => !_isDriving);
+            MailOrderCommand = new RelayCommand(() => _navigationService.NavigateToUsedParts(_gameState), () => !_isDriving);
 
             // The map is filled in Enter, after the screen before it has been left
         }

@@ -28,6 +28,7 @@ namespace StreetCorsa.Services.Parts
             if (asking <= 0) return null;
 
             var ad = new PartAd(part, asking, seller.Name) { SellerRival = seller.Name, PostedDate = date };
+            Market.AdBlurbs.Describe(ad, catalog);
             gameState.NewspaperAds.Parts.Add(ad);
             return ad;
         }
