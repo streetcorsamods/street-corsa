@@ -32,7 +32,7 @@ namespace StreetCorsa.Screens.Settings
             _text = text;
             _images = images;
             _notSaved = notSaved;
-            Providers = AiProviders.All.Select(id => new AiProviderChoice(id, GameText.Say("settings.ai.provider." + id))).ToList();
+            Providers = AiProviders.All.Select(id => new AiProviderChoice(id, GameText.Say(ProviderKey(id)))).ToList();
 
             SaveCommand = new RelayCommand(OnSave);
             ForgetKeyCommand = new RelayCommand(OnForgetKey, () => HasSavedKey);
@@ -42,6 +42,13 @@ namespace StreetCorsa.Screens.Settings
         }
 
         private AiSettings Ai => _settingsService.Current.Ai;
+
+        private static string ProviderKey(string id) => id switch
+        {
+            AiProviders.OpenAi => "settings.ai.provider.openai",
+            AiProviders.Anthropic => "settings.ai.provider.anthropic",
+            _ => "settings.ai.provider.ollama"
+        };
 
         public IReadOnlyList<AiProviderChoice> Providers { get; }
 

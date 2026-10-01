@@ -648,7 +648,8 @@ without repeating the rest.
 
 - `persona`: who the AI is, sent with every request as its system prompt (a text, or lines joined with spaces).
 - `prompts`: one per use: `prompt` filled like the game's text (`{price:money}`, `{mileage:distance}`), `maxLength`
-  (characters kept, cut at a sentence or a word), `maxTokens`, `temperature` (not sent to Anthropic).
+  (characters kept, cut at a sentence or a word), `maxTokens`, `temperature` (not sent to Anthropic), `lines` (the
+  first lines of the answer kept, 1 when not given, 0 for all: a small model likes to add a second try).
 - Every prompt may name `{language}` (the player's language, by the name its `language.name` pool gives it), `{units}`
   and `{title}`. The uses, and what each may name, are listed in the base game's file's `_comment`: `talk` (a rival's
   line; `{line}` is the game's own), `street_talk` (the diner's word on the street), `news` (a piece in the paper,

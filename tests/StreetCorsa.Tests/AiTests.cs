@@ -58,6 +58,8 @@ public sealed class FakeAiText(Func<string, TextValues, Task<string?>> answer, b
 
 public class AiTests
 {
+    private static CancellationToken Ct => TestContext.Current.CancellationToken;
+
     private static AiPrompts BasePrompts() => AiPrompts.Load(ModSet.BaseOnly(RepoPaths.BaseContent));
 
     private static readonly AiTextRequest Request = new("You are a racer.", "Say hi.", 50, 0.7);
@@ -195,7 +197,7 @@ public class AiTests
     {
         var http = new FakeHttp((_, _) => Task.FromResult(FakeHttp.Json("""{ "message": { "content": "\"Out of my way, rookie.\"" } }""")));
 
-        var said = await Service(http).WriteAsync("talk", new TextValues { ["line"] = "Move it.", ["name"] = "Eddie Collins", ["nickname"] = "Flathead", ["temper"] = "hothead" });
+        var said = await Service(http).WriteAsync("talk", new TextValues { ["line"] = "Move it.", ["name"] = "Eddie Collins", ["nickname"] = "Flathead", ["temper"] = "hothead" }, cancellationToken: Ct);
 
         Assert.Equal("Out of my way, rookie.", said);
         var json = http.Sent.Single().Json!;
@@ -213,19 +215,19 @@ public class AiTests
     public async Task A_provider_that_fails_or_is_off_leaves_the_games_own_words()
     {
         var failing = new FakeHttp((_, _) => Task.FromResult(FakeHttp.Json("""{ "error": "model not found" }""", HttpStatusCode.NotFound)));
-        Assert.Null(await Service(failing).WriteAsync("talk", new TextValues { ["line"] = "x" }));
+        Assert.Null(await Service(failing).WriteAsync("talk", new TextValues { ["line"] = "x" }, cancellationToken: Ct));
 
         var unreachable = new FakeHttp((_, _) => throw new HttpRequestException("connection refused"));
         var service = Service(unreachable);
-        Assert.Null(await service.WriteAsync("talk", new TextValues { ["line"] = "x" }));
+        Assert.Null(await service.WriteAsync("talk", new TextValues { ["line"] = "x" }, cancellationToken: Ct));
         // Left alone for a while after that: not asked again at once
         Assert.False(service.IsAvailable);
-        Assert.Null(await service.WriteAsync("talk", new TextValues { ["line"] = "x" }));
+        Assert.Null(await service.WriteAsync("talk", new TextValues { ["line"] = "x" }, cancellationToken: Ct));
         Assert.Single(unreachable.Sent);
 
         var off = new FakeHttp((_, _) => Task.FromResult(FakeHttp.Json("""{ "message": { "content": "hi" } }""")));
-        Assert.Null(await Service(off, new AiSettings { Enabled = false }).WriteAsync("talk", new TextValues()));
-        Assert.Null(await Service(off).WriteAsync("no_such_prompt", new TextValues()));
+        Assert.Null(await Service(off, new AiSettings { Enabled = false }).WriteAsync("talk", new TextValues(), cancellationToken: Ct));
+        Assert.Null(await Service(off).WriteAsync("no_such_prompt", new TextValues(), cancellationToken: Ct));
         Assert.Empty(off.Sent);
 
         // Anthropic without a key is not available at all
@@ -243,7 +245,7 @@ public class AiTests
         var service = Service(slow, rules: new AiRules { RequestTimeoutSeconds = 0.3, MinSecondsBetween = 0 });
 
         var started = DateTime.UtcNow;
-        Assert.Null(await service.WriteAsync("talk", new TextValues { ["line"] = "x" }));
+        Assert.Null(await service.WriteAsync("talk", new TextValues { ["line"] = "x" }, cancellationToken: Ct));
         Assert.True(DateTime.UtcNow - started < TimeSpan.FromSeconds(10));
     }
 
@@ -261,11 +263,11 @@ public class AiTests
         });
         var service = Service(http);
 
-        var first = service.WriteAsync("street_talk", new TextValues { ["line"] = "first" });
-        await Task.Delay(100);
-        var background = service.WriteAsync("street_talk", new TextValues { ["line"] = "background" });
-        var now = service.WriteAsync("street_talk", new TextValues { ["line"] = "now" }, AiPriority.Now);
-        await Task.Delay(100);
+        var first = service.WriteAsync("street_talk", new TextValues { ["line"] = "first" }, cancellationToken: Ct);
+        await Task.Delay(100, Ct);
+        var background = service.WriteAsync("street_talk", new TextValues { ["line"] = "background" }, cancellationToken: Ct);
+        var now = service.WriteAsync("street_talk", new TextValues { ["line"] = "now" }, AiPriority.Now, cancellationToken: Ct);
+        await Task.Delay(100, Ct);
         Assert.Single(order);
 
         release.SetResult();
@@ -288,10 +290,10 @@ public class AiTests
         });
         var service = Service(http, rules: new AiRules { MaxQueued = 1, MinSecondsBetween = 0 });
 
-        var running = service.WriteAsync("street_talk", new TextValues { ["line"] = "a" });
-        await Task.Delay(100);
-        var queued = service.WriteAsync("street_talk", new TextValues { ["line"] = "b" });
-        Assert.Null(await service.WriteAsync("street_talk", new TextValues { ["line"] = "c" }));
+        var running = service.WriteAsync("street_talk", new TextValues { ["line"] = "a" }, cancellationToken: Ct);
+        await Task.Delay(100, Ct);
+        var queued = service.WriteAsync("street_talk", new TextValues { ["line"] = "b" }, cancellationToken: Ct);
+        Assert.Null(await service.WriteAsync("street_talk", new TextValues { ["line"] = "c" }, cancellationToken: Ct));
 
         release.SetResult();
         Assert.Equal("ok", await running);
@@ -309,18 +311,28 @@ public class AiTests
     }
 
     [Fact]
+    public void Only_the_first_lines_of_an_answer_are_kept()
+    {
+        const string answer = "You think that's a real hot rod?\nOr, slightly more edgy:\nChurch clothes, or real heat?";
+        Assert.Equal("You think that's a real hot rod?", AiTextService.Clean(answer, 200, lines: 1));
+        Assert.Equal(3, AiTextService.Clean(answer, 200, lines: 0).Split('\n').Length);
+        Assert.Equal(1, BasePrompts().Prompt("talk")!.Lines);
+        Assert.Equal(0, BasePrompts().Prompt(AiWriter.NewsUse)!.Lines);
+    }
+
+    [Fact]
     public async Task The_test_tells_the_models_and_the_answer_or_why_not()
     {
         var http = new FakeHttp((sent, _) => Task.FromResult(sent.Uri.AbsolutePath == "/api/tags"
             ? FakeHttp.Json("""{ "models": [ { "name": "llama3.2:3b" } ] }""")
             : FakeHttp.Json("""{ "message": { "content": "Welcome to the diner, pal." } }""")));
-        var ok = await Service(http).TestAsync(new AiSettings { TextProvider = AiProviders.Ollama }, null);
+        var ok = await Service(http).TestAsync(new AiSettings { TextProvider = AiProviders.Ollama }, null, cancellationToken: Ct);
         Assert.True(ok.Ok);
         Assert.Contains("llama3.2:3b", ok.Message);
         Assert.Contains("Welcome to the diner, pal.", ok.Message);
 
         var down = new FakeHttp((_, _) => throw new HttpRequestException("No connection could be made"));
-        var failed = await Service(down).TestAsync(new AiSettings(), null);
+        var failed = await Service(down).TestAsync(new AiSettings(), null, cancellationToken: Ct);
         Assert.False(failed.Ok);
         Assert.Contains("No connection could be made", failed.Message);
     }
@@ -387,7 +399,7 @@ public class AiTests
         }));
         var comfy = new ComfyImageService(() => new AiSettings { ComfyEnabled = true, ComfyEndpoint = "http://comfy:8188" }, http.Client(), BasePrompts);
 
-        var picture = await comfy.PaintAsync(AiWriter.PortraitUse, new TextValues { ["look"] = "greased hair, leather jacket", ["sex"] = "man", ["age"] = 31 });
+        var picture = await comfy.PaintAsync(AiWriter.PortraitUse, new TextValues { ["look"] = "greased hair, leather jacket", ["sex"] = "man", ["age"] = 31 }, cancellationToken: Ct);
 
         Assert.Equal(png, picture);
         var graph = http.Sent[0].Json!["prompt"]!;
@@ -406,13 +418,13 @@ public class AiTests
     public async Task ComfyUI_off_or_down_gives_no_picture()
     {
         var down = new FakeHttp((_, _) => throw new HttpRequestException("refused"));
-        Assert.Null(await new ComfyImageService(() => new AiSettings(), down.Client(), BasePrompts).PaintAsync(AiWriter.PortraitUse, new TextValues()));
+        Assert.Null(await new ComfyImageService(() => new AiSettings(), down.Client(), BasePrompts).PaintAsync(AiWriter.PortraitUse, new TextValues(), cancellationToken: Ct));
         Assert.Empty(down.Sent);
 
         var on = new ComfyImageService(() => new AiSettings { ComfyEnabled = true }, down.Client(), BasePrompts);
-        Assert.Null(await on.PaintAsync(AiWriter.PortraitUse, new TextValues()));
+        Assert.Null(await on.PaintAsync(AiWriter.PortraitUse, new TextValues(), cancellationToken: Ct));
         Assert.False(on.IsAvailable);
-        Assert.False((await on.TestAsync(null)).Ok);
+        Assert.False((await on.TestAsync(null, cancellationToken: Ct)).Ok);
     }
 
     // ----- what the game writes with it -----
@@ -590,7 +602,7 @@ public class AiTests
         var slow = new AiTalkService(new OwnLines(), slowAi, () => TalkRules(0.2));
         Assert.Equal("own OpponentSelected Eddie", await slow.GetMessageAsync(Talk(eddie)));
         release.SetResult("late but good");
-        await Task.Delay(100);
+        await Task.Delay(100, Ct);
         Assert.Equal("late but good", await slow.GetMessageAsync(Talk(eddie)));
     }
 
@@ -616,7 +628,7 @@ public class AiTests
         var rosa = new Opponent("Rosa", 24, Gender.Female, 93, 80);
 
         talk.Prepare(Talk(rosa));
-        await Task.Delay(100);
+        await Task.Delay(100, Ct);
 
         Assert.Equal("ready: Rosa", await talk.GetMessageAsync(Talk(rosa)));
         Assert.Equal(AiPriority.Background, ai.Asked[0].Priority);

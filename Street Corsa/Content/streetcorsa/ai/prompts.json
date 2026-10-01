@@ -3,7 +3,8 @@
     "What the player's AI is asked, when they connect one in Settings (see docs/modding.md, \"ai\"). Every mod's",
     "ai/prompts.json goes over the ones before it key by key: a mod changes the persona or one prompt without repeating the rest.",
     "persona: who the AI is, sent as the system prompt with every request (a text, or a list of lines joined with spaces).",
-    "prompts: one per use, each { prompt, maxLength (characters kept, cut at a sentence or a word), maxTokens, temperature }.",
+    "prompts: one per use, each { prompt, maxLength (characters kept, cut at a sentence or a word), maxTokens, temperature,",
+    "  lines (the first lines of the answer kept, 1 by default; 0 keeps all) }.",
     "The game always has its own words first; the AI tells them again or adds to them, and a failure leaves the game's own.",
     "{placeholders} are filled like the game's text (money and units as there: {price:money}, {mileage:distance}).",
     "Every prompt may name {language} (the player's language, by its own name), {units} and {title}; the persona does.",
@@ -41,19 +42,20 @@
       "temperature": 0.9
     },
     "news": {
-      "prompt": "A small-town newspaper of the time reports a street race.\nHeadline: {headline}\nStory: {body}\nWrite it again as that paper would: the headline on the first line (at most eight words, no quotation marks), then the story in two to four sentences on the next line. Keep every name, car and figure.",
-      "maxLength": 700,
-      "maxTokens": 260,
-      "temperature": 0.8
+      "prompt": "A small-town newspaper of the time reports a street race.\nHeadline: {headline}\nStory: {body}\nWrite it again as that paper would: the headline on the first line (at most eight words, no quotation marks), then the story in two to four sentences on the next line. Keep every name, car and figure, and add no names, places, cars or events the story does not have.",
+      "maxLength": 520,
+      "maxTokens": 220,
+      "temperature": 0.7,
+      "lines": 0
     },
     "dealer_take": {
-      "prompt": "A customer asks the seller about a {car} for sale at {price:money}, {mileage:distance} on the clock, condition {condition} out of 100, engine: {engine}, {power} hp, modified: {modified}. On sale {days} days. Seller: {dealer} ({specialty}); private seller: {private}.\nAnswer as the seller would, honest enough but selling, in two or three sentences: what is good about it, what to watch for. Answer with the words only.",
+      "prompt": "A customer asks the seller about a {car} for sale at {price:money}, {mileage:distance} on the clock, condition {condition} out of 100, engine: {engine}, {power} hp, modified: {modified}. On sale {days} days. Seller: {dealer} ({specialty}); private seller: {private}.\nAnswer as the seller would, honest enough but selling, in two or three sentences: what is good about it, what to watch for. Name no engine, power or part you were not given. Answer with the words only.",
       "maxLength": 320,
       "maxTokens": 140,
       "temperature": 0.9
     },
     "ad": {
-      "prompt": "A classified ad in the paper offers a {kind}: \"{blurb}\"\nWrite the ad's few words again, livelier but as short (at most twelve words), in the clipped style of period classifieds, keeping every fact. Answer with the words only.",
+      "prompt": "A classified ad in the paper offers a {kind}: \"{blurb}\"\nWrite the ad's few words again, livelier but as short (at most twelve words), in the clipped style of period classifieds, keeping every fact and adding none: no price, no phone number, nothing the ad does not say. Answer with the words only.",
       "maxLength": 120,
       "maxTokens": 50,
       "temperature": 1.0

@@ -20,6 +20,11 @@ namespace StreetCorsa.Services.Ai
 
         /// <summary>How free the model is (0 to about 1.5); providers that take none are not sent it</summary>
         public double Temperature { get; set; } = 0.9;
+
+        /// <summary>
+        /// Lines of the answer kept, the first ones (a small model likes to offer a second try: "Or, edgier: ..."); 0 keeps all
+        /// </summary>
+        public int Lines { get; set; } = 1;
     }
 
     /// <summary>
@@ -159,6 +164,7 @@ namespace StreetCorsa.Services.Ai
             prompt.MaxLength = Math.Clamp(prompt.MaxLength, 20, 4000);
             prompt.MaxTokens = Math.Clamp(prompt.MaxTokens, 16, 4000);
             prompt.Temperature = Math.Clamp(prompt.Temperature, 0, 2);
+            prompt.Lines = Math.Max(0, prompt.Lines);
             return prompt;
         }
 

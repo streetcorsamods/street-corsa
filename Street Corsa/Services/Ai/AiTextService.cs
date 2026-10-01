@@ -110,7 +110,7 @@ namespace StreetCorsa.Services.Ai
                 var request = new AiTextRequest(SystemPrompt(prompts), GameText.Fill(prompt.Prompt, values), prompt.MaxTokens, prompt.Temperature);
                 var started = DateTime.UtcNow;
                 var answer = await Provider().CompleteAsync(request, timeout.Token).ConfigureAwait(false);
-                var cleaned = Clean(answer, prompt.MaxLength);
+                var cleaned = Clean(answer, prompt.MaxLength, prompt.Lines);
                 _logger.Debug("AI {Use} in {Ms} ms: {Text}", use, (int)(DateTime.UtcNow - started).TotalMilliseconds, cleaned);
                 return cleaned.Length == 0 ? null : cleaned;
             }
@@ -191,7 +191,7 @@ namespace StreetCorsa.Services.Ai
                 var prompt = prompts.Prompt("test");
                 var answer = await provider.CompleteAsync(new AiTextRequest(SystemPrompt(prompts),
                     GameText.Fill(prompt?.Prompt ?? "Say hello in five words.", PlayerValues()), prompt?.MaxTokens ?? 40, prompt?.Temperature ?? 0.7), timeout.Token).ConfigureAwait(false);
-                var said = Clean(answer, prompt?.MaxLength ?? 120);
+                var said = Clean(answer, prompt?.MaxLength ?? 120, prompt?.Lines ?? 1);
                 lock (_lock) _restUntil = DateTime.MinValue;
                 _logger.Information("AI test: {Provider} {Model} answered \"{Answer}\"", settings.TextProvider, model, said);
                 return new AiTestResult(said.Length > 0, GameText.Say(said.Length > 0 ? "settings.ai.test.ok" : "settings.ai.test.empty",
@@ -279,21 +279,22 @@ namespace StreetCorsa.Services.Ai
 
         /// <summary>
         /// The words of an answer as the game shows them: a model's thinking taken out, markdown and the quotes around it
-        /// gone, a label it put first ("Headline:") kept off, and cut to <paramref name="maxLength"/> at a sentence or a word.
-        /// Line breaks stay (the paper's piece is a headline and a body).
+        /// gone, only its first <paramref name="lines"/> lines (0: all; line breaks stay, the paper's piece is a headline and a
+        /// body), and cut to <paramref name="maxLength"/> at a sentence or a word.
         /// </summary>
-        public static string Clean(string? answer, int maxLength)
+        public static string Clean(string? answer, int maxLength, int lines = 0)
         {
             if (string.IsNullOrWhiteSpace(answer)) return string.Empty;
 
             var text = Thinking().Replace(answer, string.Empty);
             text = text.Replace("**", string.Empty).Replace("__", string.Empty).Replace("\r", string.Empty);
-            var lines = text.Split('\n')
+            var kept = text.Split('\n')
                 .Select(line => line.Trim().TrimStart('#', '>', '-', '*', ' ').Trim())
                 .Where(line => line.Length > 0)
                 .Select(line => Unquoted(line))
                 .ToList();
-            text = string.Join("\n", lines).Trim();
+            if (lines > 0 && kept.Count > lines) kept = kept.Take(lines).ToList();
+            text = string.Join("\n", kept).Trim();
             text = Unquoted(text);
             return Cut(text, maxLength);
         }
