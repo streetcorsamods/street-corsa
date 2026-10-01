@@ -1,3 +1,4 @@
+using StreetCorsa.Services.Text;
 using StreetCorsa.ViewModels;
 using System;
 
@@ -33,12 +34,12 @@ namespace StreetCorsa.Dialogs.Information
         public InformationDialogViewModel(
             DialogService dialogService,
             string message,
-            string title = "Information",
+            string? title = null,
             Action? okCallback = null)
         {
             _dialogService = dialogService;
             _okCallback = okCallback;
-            _title = title;
+            _title = title ?? GameText.Say("dialog.title.information");
             _message = message;
 
             OkCommand = new RelayCommand(OnOk);

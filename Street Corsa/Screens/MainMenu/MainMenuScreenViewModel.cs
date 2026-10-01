@@ -7,6 +7,7 @@ using StreetCorsa.Models.Catalog;
 using StreetCorsa.Navigation;
 using StreetCorsa.Services.Catalog;
 using StreetCorsa.Services.Showcase;
+using StreetCorsa.Services.Text;
 using StreetCorsa.ViewModels;
 
 namespace StreetCorsa.Screens.MainMenu
@@ -223,8 +224,8 @@ namespace StreetCorsa.Screens.MainMenu
         {
             var confirmDialog = new ConfirmationDialogViewModel(
                 _dialogService,
-                "Are you sure you want to exit?",
-                "Exit Street Corsa",
+                GameText.Say("menu.exit.message"),
+                GameText.Say("menu.exit.title"),
                 confirmed =>
                 {
                     if (confirmed)

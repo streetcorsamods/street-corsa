@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Media;
 using StreetCorsa.Logging;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Audio;
 
@@ -86,15 +87,15 @@ public sealed class EngineRunner : INotifyPropertyChanged
 
     public string RpmDisplay => $"{Rpm:0}";
 
-    public string StatusText => IsLoading ? "Getting the engine ready..."
-        : _spec == null ? "No engine"
-        : _sim?.FailedToStart == true ? "It won't start: " + _spec.Problem
+    public string StatusText => IsLoading ? GameText.Say("engine.runner.loading")
+        : _spec == null ? GameText.Say("engine.runner.none")
+        : _sim?.FailedToStart == true ? GameText.Say("engine.runner.wont_start", ("problem", _spec.Problem))
         : State switch
         {
-            EngineState.Cranking => "Cranking...",
-            EngineState.Running => _sim!.OnLimiter ? "On the limiter!" : "Running",
-            EngineState.Stopping => "Shutting down",
-            _ => _spec.Sound == null || _soundFailed ? "Off (no sound)" : "Off"
+            EngineState.Cranking => GameText.Say("engine.runner.cranking"),
+            EngineState.Running => _sim!.OnLimiter ? GameText.Say("engine.runner.limiter") : GameText.Say("engine.runner.running"),
+            EngineState.Stopping => GameText.Say("engine.runner.stopping"),
+            _ => _spec.Sound == null || _soundFailed ? GameText.Say("engine.runner.off_no_sound") : GameText.Say("engine.runner.off")
         };
 
     public BodyPose Pose => _sim?.Pose ?? BodyPose.Rest;
