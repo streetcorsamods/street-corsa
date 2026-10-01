@@ -46,6 +46,7 @@ namespace StreetCorsa.Services.Showcase
             }
 
             foreach (var problem in problems) Logger.Warning("Main screen scenes: {Problem}", problem);
+            ModProblems.Add("Main screen scenes", problems);
             return Found(entries, GaragesOf(mods), showroomsPath);
         }
 

@@ -77,6 +77,9 @@ namespace StreetCorsa
                 _currentGameState = value;
                 if (!loaded) return;
 
+                // Already so when the game came through the load or new game screen; whatever else sets one plays by its rules too
+                StreetCorsa.Rules.RuleBook.PlayBy(value);
+
                 _ = ProcessOrphanedResultsAsync();
 
                 // The radio comes back as it was left, in the game rather than at the main menu
@@ -324,6 +327,7 @@ namespace StreetCorsa
             var mods = Mods.ModSet.Installed;
             logger.Information("Content: {Mods} from {Root}", string.Join(", ", mods.Mods), mods.Root);
             foreach (var problem in mods.Problems) logger.Warning("Mods: {Problem}", problem);
+            Mods.ModProblems.Add("Mods", mods.Problems);
         }
 
         protected override async void OnStartup(StartupEventArgs e)
@@ -391,6 +395,7 @@ namespace StreetCorsa
                 AppSettings.Instance.AssettoCorsaPath);
 
             // Import AC content into catalog at startup
+            Task partsWarmUp = Task.CompletedTask;
             try
             {
                 logger.Information("Starting car import");
@@ -416,7 +421,7 @@ namespace StreetCorsa
                     ProfileRepository.GetProfileCount());
 
                 // Parts catalog and factory engines load in the background; nothing needs them before the garage
-                _ = CarPartsService.WarmUpAsync();
+                partsWarmUp = CarPartsService.WarmUpAsync();
 
                 // Load track content
                 logger.Information("Loading track content");
@@ -474,6 +479,48 @@ namespace StreetCorsa
                 DialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(
                     DialogService, message.Text, message.Title));
             }
+
+            _ = ShowModProblemsAsync(partsWarmUp, logger);
+        }
+
+        // At most this many of the mods' problems in the dialog; the rest are in the log
+        private const int ModProblemsShown = 12;
+
+        /// <summary>
+        /// The mods' problems, told to the player once at start-up (they used to reach only the log): the content is read
+        /// on a worker first, the parts with it, so what a mod got wrong anywhere is there to be told. What a mod could not
+        /// use is left out; the rest of the game plays as usual. Never throws.
+        /// </summary>
+        private async Task ShowModProblemsAsync(Task partsWarmUp, IAppLogger logger)
+        {
+            try
+            {
+                await Task.WhenAll(partsWarmUp, Task.Run(() =>
+                {
+                    var mods = Mods.ModSet.Installed;
+                    _ = Rules.RuleBook.Installed;
+                    _ = Services.Text.GameText.Installed;
+                    _ = Services.Career.CareerContent.Installed;
+                    OpponentRepository.LoadAllOpponents();
+                    Services.Street.StreetScenes.LoadAll(mods);
+                    Services.Station.StationScenes.LoadAll(mods);
+                    Services.CarLot.WarehouseScenes.LoadAll(mods);
+                }));
+            }
+            catch (Exception ex)
+            {
+                logger.Warning("Reading the mods' content for their problems failed: {Error}", ex.Message);
+            }
+
+            var problems = Mods.ModProblems.All;
+            if (problems.Count == 0) return;
+
+            var shown = string.Join("\n", problems.Take(ModProblemsShown).Select(p => "  " + p));
+            var more = problems.Count > ModProblemsShown ? $"\n  ...and {problems.Count - ModProblemsShown} more" : string.Empty;
+            var text = "Some of the mods have problems. What could not be used is left out; the rest of the game plays as usual.\n\n"
+                       + shown + more + $"\n\nEvery problem is in the log ({AppLoggerFactory.LogDirectory}).";
+            _ = Dispatcher.BeginInvoke(() =>
+                DialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(DialogService, text, "Mod Problems")));
         }
 
         /// <summary>A start-up failure the app closes on, in a message box that waits for the player; never throws</summary>

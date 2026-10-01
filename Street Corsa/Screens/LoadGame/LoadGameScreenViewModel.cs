@@ -193,6 +193,9 @@ namespace StreetCorsa.Screens.LoadGame
             // Nothing may escape an async void
             try
             {
+                // Everything from here on plays by the save's own rules
+                StreetCorsa.Rules.RuleBook.PlayBy(gameState);
+
                 await Task.Run(() =>
                 {
                     // Parts saved under ids of a pack that has been replaced since, and what no mod holds any more

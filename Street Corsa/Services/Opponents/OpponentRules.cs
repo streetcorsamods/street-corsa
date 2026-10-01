@@ -12,74 +12,74 @@ namespace StreetCorsa.Services.Opponents
     public static class OpponentRules
     {
         /// <summary>Racers on the street when a career starts</summary>
-        public const int BaseActiveRacers = 6;
+        public static int BaseActiveRacers => Rules.RuleBook.Current.Rivals.BaseActiveRacers;
 
         /// <summary>More racers turn up every week</summary>
-        public const int ActiveRacersPerWeek = 2;
+        public static int ActiveRacersPerWeek => Rules.RuleBook.Current.Rivals.ActiveRacersPerWeek;
 
         /// <summary>What counts as broke when there is no car for sale to measure against</summary>
-        public const decimal BankruptFloor = 200m;
+        public static decimal BankruptFloor => Rules.RuleBook.Current.Rivals.BankruptFloor;
 
         /// <summary>
         /// What a broke racer scrapes together (a loan, a pawned watch, a second job), as a share of the cheapest car
         /// for sale: a few of those and they can buy one
         /// </summary>
-        public const double MinCashShare = 0.1;
-        public const double MaxCashShare = 0.6;
+        public static double MinCashShare => Rules.RuleBook.Current.Rivals.MinCashShare;
+        public static double MaxCashShare => Rules.RuleBook.Current.Rivals.MaxCashShare;
 
         /// <summary>The same when nothing is for sale (the GameMaker version's $50–500)</summary>
-        public const int MinCashInjection = 50;
-        public const int MaxCashInjection = 500;
+        public static int MinCashInjection => Rules.RuleBook.Current.Rivals.MinCashInjection;
+        public static int MaxCashInjection => Rules.RuleBook.Current.Rivals.MaxCashInjection;
 
         /// <summary>A racer keeps a car to race and one spare; the rest go to a dealer</summary>
-        public const int MaxCars = 2;
+        public static int MaxCars => Rules.RuleBook.Current.Rivals.MaxCars;
 
         /// <summary>
         /// Money a racer keeps back from tuning, for the bets and the repairs: this share of what their car is worth,
         /// so it follows the prices
         /// </summary>
-        public const decimal TuningReserveShare = 0.25m;
+        public static decimal TuningReserveShare => Rules.RuleBook.Current.Rivals.TuningReserveShare;
 
         /// <summary>Share of the money over the reserve a racer spends on parts in a day</summary>
-        public const decimal TuningShare = 0.3m;
+        public static decimal TuningShare => Rules.RuleBook.Current.Rivals.TuningShare;
 
         /// <summary>The chance a racer on the street sells up and leaves town on a given day: one in five hundred, so most stay well over a year</summary>
-        public const double LeaveChance = 0.002;
+        public static double LeaveChance => Rules.RuleBook.Current.Rivals.LeaveChance;
 
         /// <summary>Going broke this many times, they give up instead of scraping money together once more</summary>
-        public const int MaxTimesBroke = 3;
+        public static int MaxTimesBroke => Rules.RuleBook.Current.Rivals.MaxTimesBroke;
 
         /// <summary>A racer sitting out this long starts thinking of giving up</summary>
-        public const int LaidUpDays = 45;
+        public static int LaidUpDays => Rules.RuleBook.Current.Rivals.LaidUpDays;
 
         /// <summary>The chance, each day after <see cref="LaidUpDays"/>, that a racer sitting out gives up</summary>
-        public const double LaidUpLeaveChance = 0.05;
+        public static double LaidUpLeaveChance => Rules.RuleBook.Current.Rivals.LaidUpLeaveChance;
 
         /// <summary>
         /// When nobody new is left to come out, a racer who left this long ago can come back to town, with fresh money
         /// </summary>
-        public const int ComeBackAfterDays = 90;
+        public static int ComeBackAfterDays => Rules.RuleBook.Current.Rivals.ComeBackAfterDays;
 
         /// <summary>The chance a racer with money to spare goes looking for a better car on a given day</summary>
-        public const double TradeUpChance = 0.05;
+        public static double TradeUpChance => Rules.RuleBook.Current.Rivals.TradeUpChance;
 
         /// <summary>A better car is one with this much more power: less is not worth the trouble of a sale</summary>
-        public const double TradeUpGain = 1.2;
+        public static double TradeUpGain => Rules.RuleBook.Current.Rivals.TradeUpGain;
 
         /// <summary>
         /// The chance a racer with money goes round a dealer's closing-down sale on a given day: far more than they look
         /// for a better car (<see cref="TradeUpChance"/>), because a bargain does not wait
         /// </summary>
-        public const double BargainChance = 0.35;
+        public static double BargainChance => Rules.RuleBook.Current.Rivals.BargainChance;
 
         /// <summary>At most this many cars go off the sale lots to the rivals in a day: the player still gets a look</summary>
-        public const int MaxBargainsPerDay = 2;
+        public static int MaxBargainsPerDay => Rules.RuleBook.Current.Rivals.MaxBargainsPerDay;
 
         /// <summary>At a sale price a smaller step up is worth taking than <see cref="TradeUpGain"/></summary>
-        public const double BargainTradeUpGain = 1.1;
+        public static double BargainTradeUpGain => Rules.RuleBook.Current.Rivals.BargainTradeUpGain;
 
         /// <summary>What a flipped car has to make in the paper over what it cost: less is not worth the bother</summary>
-        public const decimal FlipMargin = 1.05m;
+        public static decimal FlipMargin => Rules.RuleBook.Current.Rivals.FlipMargin;
 
         /// <summary>
         /// Whether a car the sale marks at <paramref name="price"/> is worth buying to put straight back in the paper:
@@ -94,12 +94,12 @@ namespace StreetCorsa.Services.Opponents
         public static bool Affordable(decimal price, decimal money) => price > 0 && money - price >= price * TuningReserveShare;
 
         /// <summary>What a rival asks for a car in the paper, as a share of the lot price: under what a lot asks, over what a dealer pays</summary>
-        public const double MinAskShare = 0.75;
-        public const double MaxAskShare = 0.9;
+        public static double MinAskShare => Rules.RuleBook.Current.Rivals.MinAskShare;
+        public static double MaxAskShare => Rules.RuleBook.Current.Rivals.MaxAskShare;
 
         /// <summary>After this many days an ad nobody answered comes down in price, once, by <see cref="AskReduction"/></summary>
-        public const int AskReducedAfterDays = 7;
-        public const decimal AskReduction = 0.9m;
+        public static int AskReducedAfterDays => Rules.RuleBook.Current.Rivals.AskReducedAfterDays;
+        public static decimal AskReduction => Rules.RuleBook.Current.Rivals.AskReduction;
 
         /// <summary>
         /// Whether a racer gives up the scene today: gone broke once too often, laid up for too long, or, rarely, just

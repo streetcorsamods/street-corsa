@@ -52,7 +52,14 @@ namespace StreetCorsa.Services.Text
                 }
             }
 
+            // A pool a mod takes out (its mod.json's "removes") says nothing
+            foreach (var (key, by) in mods.Removed(ContentTypes.Text))
+            {
+                if (!text._pools.Remove(key)) problems.Add($"{by.Id}/{ModSet.ManifestFileName}: removes the text {key}, which no mod has");
+            }
+
             foreach (var problem in problems) Logger.Warning("Text: {Problem}", problem);
+            ModProblems.Add("Text", problems);
             text.Problems = problems;
             return text;
         }

@@ -1,0 +1,25 @@
+{
+  "_comment": [
+    "The base game's \"reputation\" rules: every figure the game plays by, as the code has them.",
+    "A mod changes any of them with a .json file of its own in its rules folder, naming only what it changes",
+    "(see docs/modding.md, \"rules\"). A career keeps the rules it was started with."
+  ],
+  "reputation": {
+    "base": 50,
+    "winRateBonus": 30,
+    "pinkSlipWin": 5,
+    "maxPinkSlipWins": 15,
+    "pinkSlipLoss": 5,
+    "maxPinkSlipLosses": 15,
+    "loserRaces": 5,
+    "loserWinRate": 0.3,
+    "loserPenalty": 10,
+    "starRaces": 10,
+    "starWinRate": 0.8,
+    "starBonus": 10,
+    "falseStartPenalty": 3,
+    "maxFalseStartPenalty": 15,
+    "policeEscapeBonus": 2,
+    "maxPoliceEscapeBonus": 10
+  }
+}

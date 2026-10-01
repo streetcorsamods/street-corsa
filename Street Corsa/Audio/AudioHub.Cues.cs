@@ -55,6 +55,7 @@ public sealed partial class AudioHub
         }
 
         foreach (var problem in cues.Problems) _logger.Warning("Sound cues: {Problem}", problem);
+        ModProblems.Add("Sound cues", cues.Problems);
 
         var core = _core;
         if (core != IntPtr.Zero && FMOD_System_GetSoftwareFormat(core, out var rate, out _, out _) == ResultOk && rate > 0) _mixRate = rate;

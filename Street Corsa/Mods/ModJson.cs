@@ -116,6 +116,7 @@ public static class ModJson
             if (value != null) registry.Add(entry.Mod, entry.Id, entry.Replaces, value, entry.Source);
         }
 
+        registry.RemoveAll(mods.Removed(type));
         problems.AddRange(registry.Problems);
         return registry;
     }

@@ -477,7 +477,7 @@ namespace StreetCorsa.Screens.DealerMap
         public int MinutesLeftToday { get; set; }
 
         /// <summary>The drive out and back, in minutes of game time</summary>
-        public int TravelMinutes => Math.Max(15, (int)Math.Round(TravelHours * 60f));
+        public int TravelMinutes => Math.Max(Rules.RuleBook.Current.Time.ShortestTrip, (int)Math.Round(TravelHours * 60f));
 
         /// <summary>Whether there is enough of the day left to go and come back</summary>
         public bool FitsToday => TravelMinutes <= MinutesLeftToday;

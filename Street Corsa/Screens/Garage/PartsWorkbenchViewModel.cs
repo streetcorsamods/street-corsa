@@ -17,11 +17,10 @@ namespace StreetCorsa.Screens.Garage
     /// </summary>
     public class PartsWorkbenchViewModel : ObservableObject
     {
-        private const int MinutesPerPart = 5;
-
-        // An engine in or out of a car is a big job; bolting one to the stand, or taking it off, a smaller one
-        private const int EngineInOutMinutes = 120;
-        private const int StandMinutes = 20;
+        // The rules' time for each part, and for an engine in or out of a car (a big job) or onto the stand or off it
+        private static int MinutesPerPart => Rules.RuleBook.Current.Time.PerPart;
+        private static int EngineInOutMinutes => Rules.RuleBook.Current.Time.EngineInOut;
+        private static int StandMinutes => Rules.RuleBook.Current.Time.Stand;
 
         private readonly ICarPartsService _parts;
         private readonly Models.GameState.GameState _gameState;

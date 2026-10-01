@@ -1,0 +1,25 @@
+{
+  "_comment": [
+    "The base game's \"street\" rules: every figure the game plays by, as the code has them.",
+    "A mod changes any of them with a .json file of its own in its rules folder, naming only what it changes",
+    "(see docs/modding.md, \"rules\"). A career keeps the rules it was started with."
+  ],
+  "street": {
+    "dayWait": 50,
+    "duskWait": 35,
+    "nightWait": 18,
+    "shortestWait": 5,
+    "longestWait": 120,
+    "grudgeWeight": 4,
+    "kingWeight": 0.25,
+    "matchedWeight": 1.5,
+    "dragShareByDay": 0.65,
+    "dragShareAtNight": 0.8,
+    "pinkSlipOffer": 0.06,
+    "rematchDays": 14,
+    "talkReputationGap": 20,
+    "talkPinkSlipReputationGap": 15,
+    "talkAggressive": 70,
+    "talkBold": 60
+  }
+}

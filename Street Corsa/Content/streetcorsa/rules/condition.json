@@ -1,0 +1,31 @@
+{
+  "_comment": [
+    "The base game's \"condition\" rules: every figure the game plays by, as the code has them.",
+    "A mod changes any of them with a .json file of its own in its rules folder, naming only what it changes",
+    "(see docs/modding.md, \"rules\"). A career keeps the rules it was started with."
+  ],
+  "condition": {
+    "totaledKmh": 200,
+    "newEngineLife": 1000,
+    "brokenBelow": 0.1,
+    "mileageWearPerKm": 2.5E-05,
+    "dirtPerKm": 0.01,
+    "emptyTankLitres": 0.25,
+    "tooLittleToRaceLitres": 2,
+    "lowTankShare": 0.15,
+    "oilBurnPerRace": 0.004,
+    "oilBurnPerKm": 0.004,
+    "wornOilBurn": 5,
+    "lowOil": 0.75,
+    "drySumpShare": 0.4,
+    "sharedEngineDamage": 0.35,
+    "engineWearPerRace": 0.01,
+    "transmissionWearPerRace": 0.005,
+    "tyreWearPerRace": 0.02,
+    "bodyWearPerRace": 0.001,
+    "crashEngineWear": 0.05,
+    "crashTransmissionWear": 0.03,
+    "crashBodyWear": 0.1,
+    "crashTyreWear": 0.05
+  }
+}

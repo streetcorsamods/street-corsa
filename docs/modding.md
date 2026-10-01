@@ -1,9 +1,9 @@
 # Modding Street Corsa
 
 Everything the game knows beyond Assetto Corsa's cars and tracks is **content in mods**: parts, engine sounds, dealers,
-racers, events, milestones, victory paths, streets, gas stations, warehouses, the main screen's rooms, garages and the
-words the game says. The base game is itself a mod, `Content\streetcorsa`, loaded through the same loader as any other,
-first.
+racers, events, milestones, victory paths, streets, gas stations, warehouses, the main screen's rooms, garages, the
+words the game says, and the rules it plays by (what things cost, how long they take, how the police and the rivals
+behave). The base game is itself a mod, `Content\streetcorsa`, loaded through the same loader as any other, first.
 
 Cars and tracks stay AC's: install them in AC's `content` folder as usual.
 
@@ -16,7 +16,8 @@ Content\
   streetcorsa\          the base game (loaded first)
   mymod\
     mod.json
-    parts\  sounds\  sfx\  props\  dealers\  partshops\  racers\  events\  milestones\  victories\  streets\  stations\  warehouses\  showcase\  garages\  text\
+    game.json
+    rules\  parts\  sounds\  sfx\  props\  dealers\  partshops\  racers\  events\  milestones\  victories\  streets\  stations\  warehouses\  showcase\  garages\  text\
 ```
 
 `mod.json`:
@@ -28,19 +29,103 @@ Content\
   "version": "1.0",
   "author": "you",
   "description": "What it adds",
-  "order": 0
+  "order": 0,
+  "type": "addon",
+  "requires": { "othermod": "1.2" },
+  "gameVersion": "0.1",
+  "removes": { "racers": ["king"], "text": ["news.king_beaten.headline"] }
 }
 ```
 
 - `id`: lower case letters, digits, `_` and `-`, at most 40; not `streetcorsa`, not `car`. Left out, it is the folder's
   name. Two folders with the same id: the first (by folder name) loads, the second is left out.
 - `order`: mods load after the base game, lowest `order` first, then by id. A later mod's entry wins where entries
-  merge (a sound pin, a showroom's measurements, a scene's wall radius).
+  merge (a sound pin, a showroom's measurements, a scene's wall radius). A mod always loads after the mods it requires,
+  whatever its `order`.
+- `type`: `"addon"` (the default: it adds to the game) or `"game"` (a whole game of its own, a total conversion). Only
+  recorded for now; what a `"game"` mod does is the total conversion's later steps (`docs/total-conversion.md`, E9).
+- `requires`: the mods it needs, each with the lowest version it works with (`""` for any). One that is missing, left
+  out, or older is told, and this mod is left out (and so is a mod that requires it in turn).
+- `gameVersion`: the lowest version of the game it works with. On an older game it is left out, told.
+- `removes`: entries of the mods before it (the base game's included) it takes out of the game, by kind of content, full
+  ids: `dealers`, `partshops`, `racers`, `events`, `milestones`, `victories`, `streets`, `stations`, `warehouses`,
+  `text` (pools, by key) and `sfx` (cues, by name). An id no mod has is told. Parts can't be removed (yet): other parts
+  and engine builds hang off them.
 - A folder whose name starts with `_` or `.` is switched off.
 - Only the folders a mod has are read; every one is optional.
 
 What could not be read is written to the log (`%AppData%\StreetCorsa\Logs`), one line each, and the rest of the mod
-loads. Start-up logs the mods it found: `Content: streetcorsa 0.1.0, mymod 1.0`.
+loads. Start-up logs the mods it found (`Content: streetcorsa 0.1.0, mymod 1.0`), reads every mod's content once, and
+shows the player the problems it found, if any: at most a dozen lines, the rest in the log.
+
+## game.json
+
+The game's own settings: what it is called (the window's title) and the garage it is played from. Every mod may have a
+`game.json` next to its `mod.json`; it goes over the mods' before it key by key, so a mod names only what it changes:
+
+```json
+{ "title": "Wangan Nights", "garage": "tokyo_garage" }
+```
+
+- `title`: the window's title.
+- `garage`: the garage the game is played from: a mod's `garages\<id>` (see "showcase and garages"), else the AC
+  showroom of that id.
+
+Unlike the rules below, these are the program's, not a career's: a change shows in every save. The player's own
+choices (the AC folder, the volumes) stay in their `%AppData%\StreetCorsa\settings.json`. With no AC folder there, the
+game uses Steam's when it finds one, and writes it into the settings.
+
+## Rules
+
+Every figure the game plays by is in `rules`: what a car or a part costs, how long a job takes, what a race pays and
+wears, how the police, the dealers, the shops and the rivals behave, when the sun sets. The base game's are
+`Content\streetcorsa\rules\*.json`, one file per part of the rules, every figure written out with its value: read them
+to see what there is.
+
+A mod's `rules` folder holds `.json` files whose top level names the part (`police`, `market`...); a file may hold any
+parts, and a part may be spread over files. They go over the rules before them **key by key**, so a mod gives only what
+it changes:
+
+```json
+{
+  "police": { "dayChance": 0.15, "baseFine": 30000 },
+  "start": { "money": 500000, "date": "1999-04-01", "cars": [ { "car": "ks_toyota_ae86_drift", "condition": 0.6 } ] },
+  "time": { "actions": { "BuyCar": 90 } },
+  "world": { "midsummer": 355, "summerMonths": [12, 1, 2], "winterMonths": [6, 7, 8] }
+}
+```
+
+- An object goes into the one before it (a table given in part, as `time.actions` here, keeps the rest of its
+  entries); a list or a value takes the place of what was there.
+- A name the rules do not have (a typo) is told and left out; a part that does not read (a word where a number goes)
+  stays the base game's, told. Keys that start with `_` are notes.
+- **A career keeps the rules it was started with.** They are written into the save when it starts: a mod updated or
+  taken out later does not change a game under way. A figure the save does not have (one a later version of the game
+  added) comes from the mods as they are. A save from before rules were kept plays by the mods' from its next save on.
+- Money in the rules is in the game's own money: a game in yen writes yen.
+
+| Part | What it holds |
+|---|---|
+| `start` | the player's money, the first day, the cars in the garage on that day (`car`: the AC car's folder, `skin`, `condition` 0-1, `mileage` km; a car AC does not have is left out) |
+| `day` | the hours the player's day starts and ends (an `endHour` past 24 is midnight) |
+| `time` | minutes each action takes (`actions`, by the game's action names), each part at the workbench, an engine in or out, the stand, a tick of cruising, the shortest trip |
+| `difficulty` | the New Game screen's presets (`easy`, `normal`, `hard`) and how often pink slips come up at each frequency |
+| `police` | how likely a street race draws them, fines, the impound, cars per race, the AC cars they like best |
+| `rivals` | how many race, their money (`money`, by age band), going broke, trading up, leaving and coming back, selling cars on, the King's money and record |
+| `dealers` | dealers opening and closing, closing-down sales, trade |
+| `partShops` | the junkyard, haggling, the regulars' discount, trade, and each kind of shop's prices and shelves (`kinds`) where a shop's own file says nothing |
+| `economy` | what parts cost against their scripts (`partsPriceScale`), used and trade-in shares, mail order, the paper's part ads, a prize camshaft's cash |
+| `market` | the dealers' lots, selling a car, and what a car is worth (condition, history, mileage, missing parts) |
+| `repairs` | the garage's repairs: parts, labour, body work |
+| `condition` | damage, wear, dirt, fuel and oil, and what a race takes out of a car |
+| `street` | who comes by while cruising and how soon, drag or road, pink-slip offers, grudge rematches, the diner's talk |
+| `wagers` | the smallest and largest cash wager, night stakes, a fair match |
+| `reputation` | how reputation is worked out: base, wins, pink slips, losing and winning streaks, false starts, escapes |
+| `events` | how often race invitations come, how many at once |
+| `news` | what the paper prints and for how long |
+| `simulation` | the rivals racing among themselves: crashes, pink slips |
+| `race` | AC's damage, tyre wear and fuel rates in a race, how the police drive |
+| `world` | the sunset through the year, the seasons the rivals race in, AC's weather, temperature, wind, latitude and time zone |
 
 ## Ids
 

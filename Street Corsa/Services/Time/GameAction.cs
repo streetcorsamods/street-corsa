@@ -68,31 +68,7 @@ namespace StreetCorsa.Services.Time
         /// <summary>
         /// Gets the time cost in minutes for this action
         /// </summary>
-        public static int GetTimeInMinutes(this GameAction action)
-        {
-            return action switch
-            {
-                GameAction.VisitNewspaper => 30,
-                GameAction.BuyCar => 120,
-                GameAction.VisitDiner => 30,
-                GameAction.DragRace => 30,
-                GameAction.RoadRace => 60,
-                GameAction.VisitUsedParts => 30,
-                GameAction.BuyPart => 60,
-                GameAction.GarageWorkMinor => 30,
-                GameAction.GarageWorkMajor => 120,
-                GameAction.SellCar => 60,
-                GameAction.PlaceAd => 30,
-                GameAction.SwitchCar => 15,
-                GameAction.FreeRun => 60,
-                GameAction.CollectFromImpound => 60,
-                GameAction.TestAndTune => 60,
-                GameAction.GarageChore => 15,
-                GameAction.DriveToStation => 20,
-                GameAction.TowToStation => 60,
-                _ => 30 // Default fallback
-            };
-        }
+        public static int GetTimeInMinutes(this GameAction action) => Rules.RuleBook.Current.Time.Of(action);
 
         /// <summary>
         /// Gets a human-readable description of the time cost

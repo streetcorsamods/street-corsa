@@ -110,8 +110,21 @@ namespace StreetCorsa.Services.Police
             if (policeSkins.Count == 0) return null;
 
             var id = Path.GetFileName(folder);
-            score = 1 + (id.Contains("monaco", StringComparison.OrdinalIgnoreCase) ? 10 : 0);
+            score = 1 + Preference(id);
             return new PoliceCar(id, policeSkins);
+        }
+
+        /// <summary>How much the rules' preferred police cars (<c>police.preferredCars</c>) rank this one up: the first word most</summary>
+        private static int Preference(string id)
+        {
+            var preferred = Rules.RuleBook.Current.Police.PreferredCars ?? [];
+            for (var i = 0; i < preferred.Length; i++)
+            {
+                if (!string.IsNullOrWhiteSpace(preferred[i]) && id.Contains(preferred[i], StringComparison.OrdinalIgnoreCase))
+                    return 10 * (preferred.Length - i);
+            }
+
+            return 0;
         }
 
         private static List<string> SkinFolders(string folder)

@@ -40,8 +40,8 @@ namespace StreetCorsa.Models.GameState
         /// </summary>
         public int FalseStarts { get; set; }
 
-        public const int FalseStartPenalty = 3;
-        public const int MaxFalseStartPenalty = 15;
+        public static int FalseStartPenalty => Rules.RuleBook.Current.Reputation.FalseStartPenalty;
+        public static int MaxFalseStartPenalty => Rules.RuleBook.Current.Reputation.MaxFalseStartPenalty;
 
         /// <summary>Times the police caught this racer after a street race. The fines and the impound grow with it.</summary>
         public int PoliceBusts { get; set; }
@@ -52,8 +52,8 @@ namespace StreetCorsa.Models.GameState
         /// </summary>
         public int PoliceEscapes { get; set; }
 
-        public const int PoliceEscapeBonus = 2;
-        public const int MaxPoliceEscapeBonus = 10;
+        public static int PoliceEscapeBonus => Rules.RuleBook.Current.Reputation.PoliceEscapeBonus;
+        public static int MaxPoliceEscapeBonus => Rules.RuleBook.Current.Reputation.MaxPoliceEscapeBonus;
 
         [LiteDB.BsonIgnore]
         public double WinRate => Races > 0 ? (double)Wins / Races : 0.0;
@@ -62,42 +62,26 @@ namespace StreetCorsa.Models.GameState
         public decimal NetEarnings => TotalEarnings - TotalLosses;
 
         /// <summary>
-        /// Calculate reputation based on current stats
-        /// Formula: Base(50) + WinRate Bonus(0-30) + PinkSlip Bonus(0-15) - Loss Penalty(0-20)
-        /// Result clamped to 0-100
+        /// Calculate reputation based on current stats, by the rules' <c>reputation</c>: in the base game
+        /// Base(50) + WinRate Bonus(0-30) + PinkSlip Bonus(0-15) - Loss Penalty(0-20), clamped to 0-100
         /// </summary>
         public int CalculateReputation()
         {
-            // Start with base reputation
-            int reputation = 50;
+            var rules = Rules.RuleBook.Current.Reputation;
+            var reputation = rules.Base;
 
             if (Races > 0)
             {
-                // Win rate bonus: 0-30 points (0% win = 0, 100% win = +30)
-                var winRateBonus = (int)(WinRate * 30);
-                reputation += winRateBonus;
+                // Win rate bonus: none at no wins, the whole of it at every race won
+                reputation += (int)(WinRate * rules.WinRateBonus);
 
-                // Pink slip wins are prestigious: +5 per win (max +15)
-                var pinkSlipBonus = Math.Min(PinkSlipsWon * 5, 15);
-                reputation += pinkSlipBonus;
+                // Pink slip wins are prestigious, and losses hurt, each up to their most
+                reputation += Math.Min(PinkSlipsWon * rules.PinkSlipWin, rules.MaxPinkSlipWins);
+                reputation -= Math.Min(PinkSlipsLost * rules.PinkSlipLoss, rules.MaxPinkSlipLosses);
 
-                // Pink slip losses hurt reputation: -5 per loss (max -15)
-                var pinkSlipPenalty = Math.Min(PinkSlipsLost * 5, 15);
-                reputation -= pinkSlipPenalty;
-
-                // Consistent losing streak penalty
-                if (Races >= 5 && WinRate < 0.3)
-                {
-                    // Poor performers lose reputation faster
-                    reputation -= 10;
-                }
-
-                // Championship-level performance bonus
-                if (Races >= 10 && WinRate > 0.8)
-                {
-                    // Elite racers get bonus reputation
-                    reputation += 10;
-                }
+                // A racer who keeps losing loses reputation faster; one who keeps winning is a star
+                if (Races >= rules.LoserRaces && WinRate < rules.LoserWinRate) reputation -= rules.LoserPenalty;
+                if (Races >= rules.StarRaces && WinRate > rules.StarWinRate) reputation += rules.StarBonus;
             }
 
             // Add event reputation bonus

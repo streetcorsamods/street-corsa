@@ -36,6 +36,13 @@ public static partial class ModScenes
             scenes.Add(withId(scene, id));
         }
 
+        // What a mod takes out (its mod.json's "removes")
+        foreach (var (id, by) in mods.Removed(type))
+        {
+            if (scenes.RemoveAll(s => ModIds.Normalize(idOf(s)).Equals(id, StringComparison.OrdinalIgnoreCase)) == 0)
+                problems.Add($"{by.Id}/{ModSet.ManifestFileName}: removes {type} {id}, which no mod has");
+        }
+
         return scenes;
     }
 }

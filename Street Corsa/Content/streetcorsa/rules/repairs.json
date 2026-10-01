@@ -1,0 +1,14 @@
+{
+  "_comment": [
+    "The base game's \"repairs\" rules: every figure the game plays by, as the code has them.",
+    "A mod changes any of them with a .json file of its own in its rules folder, naming only what it changes",
+    "(see docs/modding.md, \"rules\"). A career keeps the rules it was started with."
+  ],
+  "repairs": {
+    "partShare": 0.6,
+    "labour": 15,
+    "bodyCostPerKmh": 8,
+    "smallBodyJobKmh": 40,
+    "canOfGasLitres": 4
+  }
+}

@@ -43,16 +43,16 @@ namespace StreetCorsa.Services.Race
         private readonly Random _random = new();
 
         // Car health degradation constants (per race), for result files without the car's condition (before schema 1.2)
-        private const double BASE_ENGINE_DEGRADATION = 0.01;        // -1%
-        private const double BASE_TRANSMISSION_DEGRADATION = 0.005; // -0.5%
-        private const double BASE_TIRE_DEGRADATION = 0.02;          // -2%
-        private const double BASE_BODY_DEGRADATION = 0.001;         // -0.1%
+        private static double BASE_ENGINE_DEGRADATION => Rules.RuleBook.Current.Condition.EngineWearPerRace;
+        private static double BASE_TRANSMISSION_DEGRADATION => Rules.RuleBook.Current.Condition.TransmissionWearPerRace;
+        private static double BASE_TIRE_DEGRADATION => Rules.RuleBook.Current.Condition.TyreWearPerRace;
+        private static double BASE_BODY_DEGRADATION => Rules.RuleBook.Current.Condition.BodyWearPerRace;
 
         // Crash penalties (additional degradation)
-        private const double CRASH_ENGINE_PENALTY = 0.05;           // -5%
-        private const double CRASH_TRANSMISSION_PENALTY = 0.03;     // -3%
-        private const double CRASH_BODY_PENALTY = 0.10;             // -10%
-        private const double CRASH_TIRE_PENALTY = 0.05;             // -5%
+        private static double CRASH_ENGINE_PENALTY => Rules.RuleBook.Current.Condition.CrashEngineWear;
+        private static double CRASH_TRANSMISSION_PENALTY => Rules.RuleBook.Current.Condition.CrashTransmissionWear;
+        private static double CRASH_BODY_PENALTY => Rules.RuleBook.Current.Condition.CrashBodyWear;
+        private static double CRASH_TIRE_PENALTY => Rules.RuleBook.Current.Condition.CrashTyreWear;
 
         /// <summary>
         /// The most one race can add to an odometer. A drag race is 0.4 km and a long circuit race a few tens;
@@ -1390,7 +1390,7 @@ namespace StreetCorsa.Services.Race
         }
 
         /// <summary>What a prize camshaft is worth in cash when no better one fits the car that won it</summary>
-        public const decimal CamshaftPrizeCash = 500m;
+        public static decimal CamshaftPrizeCash => Rules.RuleBook.Current.Economy.CamshaftPrizeCash;
 
         /// <summary>
         /// Gives an event's special item and says what it was. "rare_camshaft" is the dearest camshaft that fits

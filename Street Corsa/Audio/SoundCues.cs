@@ -59,6 +59,13 @@ public sealed class SoundCues
     {
         var cues = new SoundCues();
         foreach (var (mod, file) in mods.JsonFiles(ContentTypes.Sfx)) cues.Read(file, $"{mod.Id}/{ContentTypes.Sfx}/{Path.GetFileName(file)}");
+
+        // A cue a mod takes out (its mod.json's "removes") plays nothing
+        foreach (var (name, by) in mods.Removed(ContentTypes.Sfx))
+        {
+            if (!cues._cues.Remove(name)) cues._problems.Add($"{by.Id}/{ModSet.ManifestFileName}: removes the cue {name}, which no mod has");
+        }
+
         return cues;
     }
 

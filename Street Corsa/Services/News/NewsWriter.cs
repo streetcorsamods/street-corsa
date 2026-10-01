@@ -55,21 +55,21 @@ namespace StreetCorsa.Services.News
     public static class NewsWriter
     {
         /// <summary>How far back the paper goes</summary>
-        public const int DaysPrinted = 3;
+        public static int DaysPrinted => Rules.RuleBook.Current.News.DaysPrinted;
 
         /// <summary>Pieces on the page</summary>
-        public const int OnThePage = 5;
+        public static int OnThePage => Rules.RuleBook.Current.News.OnThePage;
 
         /// <summary>How long a piece is kept at all</summary>
-        public const int DaysKept = 14;
+        public static int DaysKept => Rules.RuleBook.Current.News.DaysKept;
 
-        public const int MaxKept = 40;
+        public static int MaxKept => Rules.RuleBook.Current.News.MaxKept;
 
         /// <summary>A cash race worth writing about, at the least</summary>
-        public const decimal BigWager = 1000m;
+        public static decimal BigWager => Rules.RuleBook.Current.News.BigWager;
 
         /// <summary>How much higher the rival's name has to be for the player's win to be an upset</summary>
-        public const int UpsetReputation = 20;
+        public static int UpsetReputation => Rules.RuleBook.Current.News.UpsetReputation;
 
         /// <summary>The piece about one of the player's races; null when there is no story in it</summary>
         public static NewsArticle? PlayerRace(PlayerRaceFacts f, Random random)

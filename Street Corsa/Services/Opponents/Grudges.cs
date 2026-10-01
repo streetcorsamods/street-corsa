@@ -11,7 +11,7 @@ namespace StreetCorsa.Services.Opponents
     public static class Grudges
     {
         /// <summary>How long a rival waits for the rematch</summary>
-        public const int RematchDays = 14;
+        public static int RematchDays => Rules.RuleBook.Current.Street.RematchDays;
 
         /// <summary>The rival wants a rematch with the player</summary>
         public static bool WantsRematch(Opponent rival) => rival.Grudge != null;

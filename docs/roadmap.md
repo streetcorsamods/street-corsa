@@ -1158,6 +1158,18 @@ The fourth batch of the user's ideas: the garage's look, two new dialogs and fad
   lifts, not at the click; it leaves the car with the screen.
 - A free run or a test-and-tune keeps the radio as it was (`App.KeepsRadio`); only a race switches it off.
 
+## Epic: total conversion (planned 2026-09-30)
+
+The owner wants the whole game moddable, so the community can add game modes and whole new games (a Tokyo Drift game
+on the same program); the 1960s US setting is the base game's taste. The inventory of what is still baked in and the
+steps E1-E12 are in `docs/total-conversion.md`. One PR per step, each playable; the base game keeps its look and play
+(today's values become its data). Car scripting, first asked for on its own, is step E7 and uses JSON (Lua dropped).
+
+E1 (foundations) and E2 (rules as data) are built together on `feature/total-conversion` (2026-09-30): mod.json's type,
+requires, gameVersion and removes; game.json; the mods' problems shown at start-up; Steam's AC folder found; every
+rule figure in `rules/*.json`, kept in the save from the career's start. What was left for later is listed there, "As
+built".
+
 ## Testing in AC without driving
 
 See `docs/ac-integration/csp-lua-scripts.md`, "Testing the race mode without driving". In short:

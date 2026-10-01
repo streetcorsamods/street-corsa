@@ -747,7 +747,7 @@ namespace StreetCorsa.Screens.Garage
         /// </summary>
         private string WhereToSortOut(Car car)
         {
-            var dry = Parts.Cars.CarCondition.FuelLeft(car) is < Parts.Cars.CarCondition.TooLittleToRaceLitres;
+            var dry = Parts.Cars.CarCondition.FuelLeft(car) is { } fuel && fuel < Parts.Cars.CarCondition.TooLittleToRaceLitres;
             if (!dry) return "The Repairs button sorts it out.";
 
             var groupOf = _partsService.IsAvailable ? Parts.Cars.CarCondition.Groups(_partsService.Catalog) : null;

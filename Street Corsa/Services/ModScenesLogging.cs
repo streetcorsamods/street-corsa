@@ -15,6 +15,7 @@ public static partial class ModScenes
         var problems = new List<string>();
         var scenes = LoadAll(mods, type, problems, load, idOf, withId);
         foreach (var problem in problems) logger.Warning("{What}: {Problem}", what, problem);
+        ModProblems.Add(what, problems);
 
         if (scenes.Count == 0) logger.Warning("No {What} in the mods could be loaded", what.ToLowerInvariant());
         return scenes;

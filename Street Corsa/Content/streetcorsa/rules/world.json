@@ -1,0 +1,35 @@
+{
+  "_comment": [
+    "The base game's \"world\" rules: every figure the game plays by, as the code has them.",
+    "A mod changes any of them with a .json file of its own in its rules folder, naming only what it changes",
+    "(see docs/modding.md, \"rules\"). A career keeps the rules it was started with."
+  ],
+  "world": {
+    "meanSunset": 18.3,
+    "sunsetSwing": 1.9,
+    "midsummer": 172,
+    "dawnHour": 5.5,
+    "dayFromHour": 7,
+    "summerMonths": [
+      6,
+      7,
+      8
+    ],
+    "summerRacing": 1.3,
+    "winterMonths": [
+      12,
+      1,
+      2
+    ],
+    "winterRacing": 0.7,
+    "weather": "4_mid_clear",
+    "weatherType": 19,
+    "ambientC": 12,
+    "roadC": 13,
+    "windMinKmh": 2,
+    "windMaxKmh": 40,
+    "latitude": 47.9602777777778,
+    "longitude": 0.231944444444444,
+    "timeZoneOffset": 3600
+  }
+}

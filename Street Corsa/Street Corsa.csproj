@@ -11,6 +11,7 @@
     <PlatformTarget>x64</PlatformTarget>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ApplicationIcon>street_corsa.ico</ApplicationIcon>
+    <Version>0.1.0</Version>
     <Title>Street Corsa</Title>
     <Description>Street Corsa: a Street Rod-style career that runs on top of Assetto Corsa</Description>
   </PropertyGroup>

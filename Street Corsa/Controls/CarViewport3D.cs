@@ -1191,6 +1191,7 @@ public class CarViewport3D : D3DViewportBase, ICarDrivingIn
         var problems = new List<string>();
         var radio = Services.Garage.GarageProps.Find(Mods.ModSet.Installed, "radio", ShowroomKn5, problems);
         foreach (var problem in problems) Logger.Warning("Garage props: {Problem}", problem);
+        Mods.ModProblems.Add("Garage props", problems);
         if (radio == null) return;
 
         AcTools.Kn5File.IKn5 kn5;

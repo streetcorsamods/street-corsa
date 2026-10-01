@@ -20,19 +20,20 @@ namespace StreetCorsa.Services.Street
     /// </summary>
     public static class StreetLights
     {
-        private const double MeanSunset = 18.3;
-        private const double SunsetSwing = 1.9;
-        private const int Midsummer = 172;
-
-        public static double SunsetHour(DateTime date) =>
-            MeanSunset + SunsetSwing * Math.Cos(2 * Math.PI * (date.DayOfYear - Midsummer) / 365.0);
+        // The rules' world: when the sun sets over the year, and when the street is light in the morning
+        public static double SunsetHour(DateTime date)
+        {
+            var world = Rules.RuleBook.Current.World;
+            return world.MeanSunset + world.SunsetSwing * Math.Cos(2 * Math.PI * (date.DayOfYear - world.Midsummer) / 365.0);
+        }
 
         public static StreetLight At(DateTime time)
         {
+            var world = Rules.RuleBook.Current.World;
             var hour = time.TimeOfDay.TotalHours;
             var sunset = SunsetHour(time);
-            if (hour >= sunset + 0.5 || hour < 5.5) return StreetLight.Night;
-            if (hour >= sunset - 1.5 || hour < 7) return StreetLight.Dusk;
+            if (hour >= sunset + 0.5 || hour < world.DawnHour) return StreetLight.Night;
+            if (hour >= sunset - 1.5 || hour < world.DayFromHour) return StreetLight.Dusk;
             return StreetLight.Day;
         }
 

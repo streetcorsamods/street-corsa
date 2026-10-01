@@ -88,4 +88,24 @@ public sealed class ContentRegistry<T> where T : class
         _entries[id] = (entry, mod);
         return id;
     }
+
+    /// <summary>
+    /// Takes out what the mods remove (their mod.json's <c>removes</c> for this kind of content), each told in
+    /// <see cref="Replaced"/>; a removal of an entry no mod has is a problem (a typo, or a mod not installed)
+    /// </summary>
+    public void RemoveAll(IReadOnlyDictionary<string, ModInfo> removed)
+    {
+        foreach (var (id, by) in removed)
+        {
+            if (!_entries.TryGetValue(id, out var old))
+            {
+                _problems.Add($"{by.Id}/{ModSet.ManifestFileName}: removes {Kind} {id}, which no mod has");
+                continue;
+            }
+
+            _entries.Remove(id);
+            _order.RemoveAll(o => o.Equals(id, StringComparison.OrdinalIgnoreCase));
+            _replaced.Add($"{by.Id}/{ModSet.ManifestFileName}: {Kind} {id} of {old.Mod.Id} removed");
+        }
+    }
 }

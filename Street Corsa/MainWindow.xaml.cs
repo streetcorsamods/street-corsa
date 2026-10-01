@@ -58,6 +58,7 @@ namespace StreetCorsa
         public MainWindow()
         {
             InitializeComponent();
+            Title = Rules.GameFile.Installed.Title;
 
             var app = (App)System.Windows.Application.Current;
             NavigationService = app.NavigationService;

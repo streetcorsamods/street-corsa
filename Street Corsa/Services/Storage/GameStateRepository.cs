@@ -192,11 +192,54 @@ namespace StreetCorsa.Services.Storage
             var state = GameState.CreateNew(playerName, rules, Career.CareerContent.Installed.OpenFromStart);
             state.SaveName = saveName;
 
+            // The new career plays by the rules it was just given, its rivals made by them too
+            StreetCorsa.Rules.RuleBook.PlayBy(state);
+            AddStartingCars(state);
+
             // Initialize opponents if service is available
             _opponentInitializationService?.InitializeOpponents(state);
 
             Save(state, saveName);
             return state;
+        }
+
+        /// <summary>
+        /// The cars the rules start a career with (<c>start.cars</c>), in the player's garage, the first the one they
+        /// drive. They come without parts: the garage gives a car its factory ones when it first looks at it. One that
+        /// Assetto Corsa does not have is left out, and the mods' problems say so.
+        /// </summary>
+        private void AddStartingCars(GameState state)
+        {
+            foreach (var start in StreetCorsa.Rules.RuleBook.Current.Start.Cars ?? [])
+            {
+                if (start == null || string.IsNullOrWhiteSpace(start.Car)) continue;
+
+                var id = start.Car.Trim();
+                if (!Directory.Exists(Path.Combine(StreetCorsa.Configuration.AppSettings.Instance.CarsPath, id)))
+                {
+                    _logger.Warning("The rules start the career with the car {Car}, which Assetto Corsa does not have: left out", id);
+                    Mods.ModProblems.Add("Rules", $"start.cars: {id} is no car in Assetto Corsa; left out");
+                    continue;
+                }
+
+                var condition = double.IsFinite(start.Condition) ? Math.Clamp(start.Condition, 0.05, 1.0) : 0.7;
+                var car = new Car(id)
+                {
+                    SkinId = string.IsNullOrWhiteSpace(start.Skin) ? "default" : start.Skin.Trim(),
+                    OdometerKM = double.IsFinite(start.Mileage) ? Math.Max(0, start.Mileage) : 0,
+                    EngineHealth = condition,
+                    TransmissionHealth = condition,
+                    BodyCondition = condition,
+                    TireCondition = condition,
+                    PurchaseDate = state.Date
+                };
+                car.History.ChangeHands(state.Player.Name, state.Date, CarAcquisition.Unknown);
+
+                state.Player.Cars ??= [];
+                state.Player.Cars.Add(car);
+                state.Player.Stats.CarsOwned++;
+                state.Player.SelectedCarInstanceId ??= car.InstanceId;
+            }
         }
 
         /// <summary>Closes the open save; call it after the last save on exit</summary>

@@ -55,8 +55,10 @@ namespace StreetCorsa.Services.Opponents
                 _logger.Error(ex, "Failed to load the racers");
             }
 
+            registry.RemoveAll(_mods.Removed(ContentTypes.Racers));
             problems.AddRange(registry.Problems);
             foreach (var problem in problems) _logger.Warning("Racers: {Problem}", problem);
+            ModProblems.Add("Racers", problems);
             _logger.Information("Loaded {Count} opponent definitions", registry.Count);
             return registry.All.ToList();
         }

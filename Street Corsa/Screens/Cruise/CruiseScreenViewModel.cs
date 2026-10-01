@@ -43,7 +43,7 @@ namespace StreetCorsa.Screens.Cruise
 
         // Real seconds a tick of the clock takes, and the game minutes it moves on
         private static readonly TimeSpan TickInterval = TimeSpan.FromSeconds(1.5);
-        private const int MinutesPerTick = 5;
+        private static int MinutesPerTick => Rules.RuleBook.Current.Time.CruiseTick;
 
         // A rival due while the street is not up on screen waits for it, this long at most: one that turned up before
         // would be there already, with no drive up the lane. A street that never comes up (no 3D) is not waited on again

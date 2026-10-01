@@ -36,6 +36,7 @@
     <Compile Include="..\..\Street Corsa\Helpers\SafeFile.cs" Link="Helpers\SafeFile.cs" />
     <Compile Include="..\..\Street Corsa\Mods\ModIds.cs" Link="Mods\ModIds.cs" />
     <Compile Include="..\..\Street Corsa\Mods\ModSet.cs" Link="Mods\ModSet.cs" />
+    <Compile Include="..\..\Street Corsa\Mods\ModVersion.cs" Link="Mods\ModVersion.cs" />
     <Compile Include="..\..\Street Corsa\Mods\ModJson.cs" Link="Mods\ModJson.cs" />
     <Compile Include="..\..\Street Corsa\Mods\ContentRegistry.cs" Link="Mods\ContentRegistry.cs" />
     <Compile Include="..\..\Street Corsa\Helpers\PathNames.cs" Link="Helpers\PathNames.cs" />

@@ -1,0 +1,15 @@
+{
+  "_comment": [
+    "The base game's \"news\" rules: every figure the game plays by, as the code has them.",
+    "A mod changes any of them with a .json file of its own in its rules folder, naming only what it changes",
+    "(see docs/modding.md, \"rules\"). A career keeps the rules it was started with."
+  ],
+  "news": {
+    "daysPrinted": 3,
+    "onThePage": 5,
+    "daysKept": 14,
+    "maxKept": 40,
+    "bigWager": 1000,
+    "upsetReputation": 20
+  }
+}

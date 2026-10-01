@@ -52,8 +52,12 @@ namespace StreetCorsa.Services.Parts
             // A new overlay per ask: it reads the AC and restore paths from the settings when it is made, and those
             // may have changed since this service was
             _isCarDataApplied = isCarDataApplied ?? (id => new CarDataOverlay().IsApplied(id));
-            // Every part price in the game, process-wide (see PartPricing.Scale): the app makes one parts service
-            PartPricing.Scale = AppSettings.Instance.PartsPriceScale;
+            // Every part price in the game, process-wide (see PartPricing.Source): the rules of the game in play
+            PartPricing.Source = () =>
+            {
+                var economy = Rules.RuleBook.Current.Economy;
+                return new PartPricing.Figures(economy.PartsPriceScale, economy.UsedShopFactor, economy.TradeInFactor);
+            };
             _catalog = new Lazy<PartsCatalog>(LoadCatalog);
             _builds = new Lazy<EngineBuildIndex>(CreateIndex);
             _sounds = new Lazy<SoundLibrary>(LoadSounds);
@@ -445,6 +449,7 @@ namespace StreetCorsa.Services.Parts
                 _logger.Information("Parts catalog: {Parts} parts, {Builds} engine builds in {Ms} ms", catalog.Parts.Count,
                     catalog.EngineBuilds.Count, (int)(DateTime.Now - started).TotalMilliseconds);
                 foreach (var problem in catalog.Problems) _logger.Warning("Parts catalog: {Problem}", problem);
+                Mods.ModProblems.Add("Parts catalog", catalog.Problems);
                 return catalog;
             }
             catch (Exception ex)
@@ -467,6 +472,7 @@ namespace StreetCorsa.Services.Parts
                 _logger.Information("Sound library: {Curated} sound(s) from the mods (base game: {Path}), {Harvested} more off {Cars} installed car(s), in {Ms} ms",
                     library.Curated.Count, settings.SoundsPath, library.Harvested.Count, cars, (int)(DateTime.Now - started).TotalMilliseconds);
                 foreach (var problem in library.Problems) _logger.Warning("Sound library: {Problem}", problem);
+                Mods.ModProblems.Add("Sound library", library.Problems);
                 return library;
             }
             catch (Exception ex)

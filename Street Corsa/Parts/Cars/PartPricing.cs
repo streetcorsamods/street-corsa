@@ -17,28 +17,33 @@ public static class PartPricing
     // More than anything in the game costs, well inside what a decimal holds
     private const double MaxPrice = 1e12;
 
+    /// <summary>The figures every price is worked out with: <see cref="Scale"/>, <see cref="UsedShopFactor"/>, <see cref="TradeInFactor"/></summary>
+    public readonly record struct Figures(double Scale, double UsedShopFactor, double TradeInFactor);
+
+    /// <summary>
+    /// Where the figures come from, asked each time a price is worked out. Process-wide on purpose: every price in the
+    /// game is one of these, asked for from anywhere without a service at hand. The game points it at the rules of the
+    /// game in play (<c>economy</c> in the rules), once, when the parts service is made; the tools that link this file
+    /// (EngineBench) have no rules and leave it null: the scripts' own dollars, at 1, and the base game's shares. A
+    /// figure that is not a positive number is the base game's.
+    /// </summary>
+    public static Func<Figures>? Source { get; set; }
+
+    private static Figures Now => Source?.Invoke() ?? new Figures(1.0, 0.6, 0.4);
+
     /// <summary>What a shop asks for a used part, against the same part new in the same shape</summary>
-    public const double UsedShopFactor = 0.6;
+    public static double UsedShopFactor => Sane(Now.UsedShopFactor, 0.6);
 
     /// <summary>What a shop pays when it buys a part</summary>
-    public const double TradeInFactor = 0.4;
+    public static double TradeInFactor => Sane(Now.TradeInFactor, 0.4);
 
     /// <summary>
     /// From the money of the part scripts to the money of the game. The scripts price parts in the dollars of
-    /// the source game's day; the game's cars cost what cars cost in 1970.
-    ///
-    /// Process-wide on purpose: every price in the game is one of these, asked for from anywhere without a service
-    /// at hand. The game sets it once, from its settings (<c>AppSettings.PartsPriceScale</c>), when the parts
-    /// service is made; the tools that link this file (EngineBench) have no settings and price in the scripts'
-    /// own dollars at 1. A value that is not a positive number (a hand-edited settings file) counts as 1.
+    /// the source game's day; the game's cars cost what cars cost in its own day.
     /// </summary>
-    public static double Scale
-    {
-        get => _scale;
-        set => _scale = double.IsFinite(value) && value > 0 ? value : 1.0;
-    }
+    public static double Scale => Sane(Now.Scale, 1.0);
 
-    private static double _scale = 1.0;
+    private static double Sane(double value, double otherwise) => double.IsFinite(value) && value > 0 ? value : otherwise;
 
     public static double NewPrice(PartDefinition part)
     {

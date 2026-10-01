@@ -54,32 +54,32 @@ namespace StreetCorsa.Services.Market
         IGameStateRepository gameStateRepository) : ICarSaleService
     {
         /// <summary>Share of a car's worth a dealer pays for it</summary>
-        public const double DealerShare = 0.6;
+        public static double DealerShare => Rules.RuleBook.Current.Market.DealerShare;
 
         /// <summary>Share of a wreck's worth the scrapyard pays, before <see cref="ScrapSpread"/></summary>
-        public const double ScrapShare = 0.15;
+        public static double ScrapShare => Rules.RuleBook.Current.Market.ScrapShare;
 
         /// <summary>How far the scrapyard's price strays either way, as a share of its price</summary>
-        public const double ScrapSpread = 0.2;
+        public static double ScrapSpread => Rules.RuleBook.Current.Market.ScrapSpread;
 
         /// <summary>What an ad in the classifieds costs; it runs for <see cref="AdDays"/> days</summary>
-        public const decimal AdFee = 10m;
+        public static decimal AdFee => Rules.RuleBook.Current.Market.AdFee;
 
-        public const int AdDays = 14;
+        public static int AdDays => Rules.RuleBook.Current.Market.AdDays;
 
         /// <summary>How long a buyer waits for an answer</summary>
-        public const int OfferDays = 2;
+        public static int OfferDays => Rules.RuleBook.Current.Market.OfferDays;
 
         /// <summary>The least a car can be put in the paper for</summary>
-        public const decimal MinAskingPrice = 100m;
+        public static decimal MinAskingPrice => Rules.RuleBook.Current.Market.MinAskingPrice;
 
         /// <summary>How far over its worth a car can be put in the paper: past this nobody would even call</summary>
-        public const decimal MaxAskingShare = 3m;
+        public static decimal MaxAskingShare => Rules.RuleBook.Current.Market.MaxAskingShare;
 
         public const string ScrapyardName = "the scrapyard";
 
         /// <summary>The chance the buyer who calls is one of the rivals, when one of them wants the car and can pay</summary>
-        public const double RivalBuyerChance = 0.4;
+        public static double RivalBuyerChance => Rules.RuleBook.Current.Market.RivalBuyerChance;
 
         private readonly IUsedCarMarketService _market = market;
         private readonly IGameTimeService _gameTimeService = gameTimeService;

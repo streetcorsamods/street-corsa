@@ -11,39 +11,39 @@ namespace StreetCorsa.Services.Police
     public static class PoliceRules
     {
         /// <summary>From this hour the streets are dark and the patrols busier (the diner's night stakes start then too)</summary>
-        public const int NightFromHour = 20;
+        public static int NightFromHour => Rules.RuleBook.Current.Police.NightFromHour;
 
         /// <summary>The chance of a patrol by day and by night, before the racers' names and the stakes</summary>
-        public const double DayChance = 0.08;
-        public const double NightChance = 0.30;
+        public static double DayChance => Rules.RuleBook.Current.Police.DayChance;
+        public static double NightChance => Rules.RuleBook.Current.Police.NightChance;
 
         /// <summary>A known name draws attention: up to this much more at 100 reputation</summary>
-        public const double ReputationChance = 0.15;
+        public static double ReputationChance => Rules.RuleBook.Current.Police.ReputationChance;
 
         /// <summary>A pink slip, or a wager of <see cref="BigWager"/> or more, gets talked about beforehand</summary>
-        public const double PinkSlipChance = 0.05;
-        public const double BigWagerChance = 0.05;
-        public const decimal BigWager = 1000m;
+        public static double PinkSlipChance => Rules.RuleBook.Current.Police.PinkSlipChance;
+        public static double BigWagerChance => Rules.RuleBook.Current.Police.BigWagerChance;
+        public static decimal BigWager => Rules.RuleBook.Current.Police.BigWager;
 
-        public const double MaxChance = 0.5;
+        public static double MaxChance => Rules.RuleBook.Current.Police.MaxChance;
 
         /// <summary>The share of patrols that are speed traps parked round the track; the rest drive up from behind</summary>
-        public const double TrapShare = 2.0 / 3.0;
+        public static double TrapShare => Rules.RuleBook.Current.Police.TrapShare;
 
         /// <summary>The fine for a first bust, what each earlier one adds, and the most it gets to</summary>
-        public const decimal BaseFine = 750m;
-        public const decimal FinePerBust = 500m;
-        public const decimal MaxFine = 5000m;
+        public static decimal BaseFine => Rules.RuleBook.Current.Police.BaseFine;
+        public static decimal FinePerBust => Rules.RuleBook.Current.Police.FinePerBust;
+        public static decimal MaxFine => Rules.RuleBook.Current.Police.MaxFine;
 
         /// <summary>Days in the impound for a first bust, one more for each earlier one, up to the most</summary>
-        public const int BaseImpoundDays = 2;
-        public const int MaxImpoundDays = 7;
+        public static int BaseImpoundDays => Rules.RuleBook.Current.Police.BaseImpoundDays;
+        public static int MaxImpoundDays => Rules.RuleBook.Current.Police.MaxImpoundDays;
 
         /// <summary>What the impound charges for each day it keeps the car</summary>
-        public const decimal ImpoundFeePerDay = 100m;
+        public static decimal ImpoundFeePerDay => Rules.RuleBook.Current.Police.ImpoundFeePerDay;
 
         /// <summary>The impound opens at this hour</summary>
-        public const int ImpoundOpensHour = 8;
+        public static int ImpoundOpensHour => Rules.RuleBook.Current.Police.ImpoundOpensHour;
 
         public static bool IsNight(DateTime time) => time.Hour >= NightFromHour;
 
@@ -61,7 +61,7 @@ namespace StreetCorsa.Services.Police
         /// The police send one car for each racer: each sticks to its prey and tries to get past it (the race mode).
         /// A track needs a pit box for each, after the racers' two.
         /// </summary>
-        public const int CopsPerRace = 2;
+        public static int CopsPerRace => Rules.RuleBook.Current.Police.CopsPerRace;
 
         /// <summary>The risk in the diner's words</summary>
         public static string RiskLabel(double chance) => chance switch
@@ -94,7 +94,7 @@ namespace StreetCorsa.Services.Police
         public static bool CanCollect(Car car, DateTime now) => car.ImpoundedUntil is { } until && now >= until;
 
         /// <summary>A rival's car left in the impound this many days past its date is auctioned off</summary>
-        public const int AuctionAfterDays = 14;
+        public static int AuctionAfterDays => Rules.RuleBook.Current.Police.AuctionAfterDays;
 
         /// <summary>The car has waited in the impound long enough past its date to be auctioned off (rivals' cars)</summary>
         public static bool IsForAuction(Car car, DateTime now) =>

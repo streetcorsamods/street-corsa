@@ -1,0 +1,21 @@
+{
+  "_comment": [
+    "The base game's \"dealers\" rules: every figure the game plays by, as the code has them.",
+    "A mod changes any of them with a .json file of its own in its rules folder, naming only what it changes",
+    "(see docs/modding.md, \"rules\"). A career keeps the rules it was started with."
+  ],
+  "dealers": {
+    "openShare": 0.6,
+    "minOpenShare": 0.4,
+    "daysPerChange": 60,
+    "saleDays": 7,
+    "saleDiscount": 0.20,
+    "finalDiscount": 0.35,
+    "finalDays": 3,
+    "newDealerGraceDays": 120,
+    "reopenAfterDays": 180,
+    "tradeHalfLifeDays": 30,
+    "staleDays": 10,
+    "openingTrade": 1
+  }
+}

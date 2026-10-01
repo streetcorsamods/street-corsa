@@ -12,36 +12,36 @@ namespace StreetCorsa.Services.Dealers
     public static class DealerRules
     {
         /// <summary>The share of all the dealers there are that is open at a time: 12 of the base game's 20</summary>
-        public const double OpenShare = 0.6;
+        public static double OpenShare => Rules.RuleBook.Current.Dealers.OpenShare;
 
         /// <summary>Never fewer open than this share, whatever chance says</summary>
-        public const double MinOpenShare = 0.4;
+        public static double MinOpenShare => Rules.RuleBook.Current.Dealers.MinOpenShare;
 
         /// <summary>A lot closes or opens about this often: five or six times a year, so most last the whole game</summary>
-        public const double DaysPerChange = 60;
+        public static double DaysPerChange => Rules.RuleBook.Current.Dealers.DaysPerChange;
 
         /// <summary>The closing-down sale: announced in the paper, and the doors shut the morning after its last day</summary>
-        public const int SaleDays = 7;
+        public static int SaleDays => Rules.RuleBook.Current.Dealers.SaleDays;
 
         /// <summary>What the sale takes off every car, and off it again in the last <see cref="FinalDays"/> days</summary>
-        public const decimal SaleDiscount = 0.20m;
-        public const decimal FinalDiscount = 0.35m;
-        public const int FinalDays = 3;
+        public static decimal SaleDiscount => Rules.RuleBook.Current.Dealers.SaleDiscount;
+        public static decimal FinalDiscount => Rules.RuleBook.Current.Dealers.FinalDiscount;
+        public static int FinalDays => Rules.RuleBook.Current.Dealers.FinalDays;
 
         /// <summary>A lot that opened during the game gets this long to find its feet before it can go under</summary>
-        public const int NewDealerGraceDays = 120;
+        public static int NewDealerGraceDays => Rules.RuleBook.Current.Dealers.NewDealerGraceDays;
 
         /// <summary>Premises stand empty at least this long before somebody opens there again (under the old name)</summary>
-        public const int ReopenAfterDays = 180;
+        public static int ReopenAfterDays => Rules.RuleBook.Current.Dealers.ReopenAfterDays;
 
         /// <summary>How fast a dealer's sales are forgotten: after this many days a sale counts half</summary>
-        public const double TradeHalfLifeDays = 30;
+        public static double TradeHalfLifeDays => Rules.RuleBook.Current.Dealers.TradeHalfLifeDays;
 
         /// <summary>A car on the lot this long without a buyer is one that is not selling</summary>
-        public const int StaleDays = 10;
+        public static int StaleDays => Rules.RuleBook.Current.Dealers.StaleDays;
 
         /// <summary>What a new lot starts with in <see cref="DealerLocation.Trade"/>: the custom of its first weeks</summary>
-        public const double OpeningTrade = 1;
+        public static double OpeningTrade => Rules.RuleBook.Current.Dealers.OpeningTrade;
 
         public static int TargetOpen(int total) => total <= 0 ? 0 : Math.Max(1, (int)Math.Round(total * OpenShare));
 

@@ -1,0 +1,30 @@
+{
+  "_comment": [
+    "The base game's \"police\" rules: every figure the game plays by, as the code has them.",
+    "A mod changes any of them with a .json file of its own in its rules folder, naming only what it changes",
+    "(see docs/modding.md, \"rules\"). A career keeps the rules it was started with."
+  ],
+  "police": {
+    "nightFromHour": 20,
+    "dayChance": 0.08,
+    "nightChance": 0.3,
+    "reputationChance": 0.15,
+    "pinkSlipChance": 0.05,
+    "bigWagerChance": 0.05,
+    "bigWager": 1000,
+    "maxChance": 0.5,
+    "trapShare": 0.6666666666666666,
+    "baseFine": 750,
+    "finePerBust": 500,
+    "maxFine": 5000,
+    "baseImpoundDays": 2,
+    "maxImpoundDays": 7,
+    "impoundFeePerDay": 100,
+    "impoundOpensHour": 8,
+    "copsPerRace": 2,
+    "auctionAfterDays": 14,
+    "preferredCars": [
+      "monaco"
+    ]
+  }
+}

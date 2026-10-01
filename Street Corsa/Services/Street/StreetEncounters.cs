@@ -19,28 +19,28 @@ namespace StreetCorsa.Services.Street
     public static class StreetEncounters
     {
         /// <summary>Game minutes, on average, before somebody pulls up: by day, at dusk, and from 20:00</summary>
-        public const double DayWait = 50;
-        public const double DuskWait = 35;
-        public const double NightWait = 18;
+        public static double DayWait => Rules.RuleBook.Current.Street.DayWait;
+        public static double DuskWait => Rules.RuleBook.Current.Street.DuskWait;
+        public static double NightWait => Rules.RuleBook.Current.Street.NightWait;
 
-        public const int ShortestWait = 5;
-        public const int LongestWait = 120;
+        public static int ShortestWait => Rules.RuleBook.Current.Street.ShortestWait;
+        public static int LongestWait => Rules.RuleBook.Current.Street.LongestWait;
 
         /// <summary>A rival out to get their car back is this many times likelier to be the one who shows</summary>
-        public const double GrudgeWeight = 4;
+        public static double GrudgeWeight => Rules.RuleBook.Current.Street.GrudgeWeight;
 
         /// <summary>The King cruises too, but seldom</summary>
-        public const double KingWeight = 0.25;
+        public static double KingWeight => Rules.RuleBook.Current.Street.KingWeight;
 
         /// <summary>A rival of about the player's standing (<see cref="MatchupCalculator.MatchedReputationBand"/>) is likelier than one far off</summary>
-        public const double MatchedWeight = 1.5;
+        public static double MatchedWeight => Rules.RuleBook.Current.Street.MatchedWeight;
 
         /// <summary>A drag race most of the time: the street is a straight line from light to light, more so at night</summary>
-        public const double DragShareByDay = 0.65;
-        public const double DragShareAtNight = 0.8;
+        public static double DragShareByDay => Rules.RuleBook.Current.Street.DragShareByDay;
+        public static double DragShareAtNight => Rules.RuleBook.Current.Street.DragShareAtNight;
 
         /// <summary>How often a rival of middling aggression, on Normal, offers pink slips unasked</summary>
-        public const double PinkSlipOffer = 0.06;
+        public static double PinkSlipOffer => Rules.RuleBook.Current.Street.PinkSlipOffer;
 
         public static double MeanWait(DateTime time) =>
             MatchupCalculator.IsNight(time) ? NightWait

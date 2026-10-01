@@ -12,24 +12,26 @@ namespace StreetCorsa.Screens.Diner
     public static class MatchupCalculator
     {
         /// <summary>Reputation points either way within which an opponent counts as a fair match</summary>
-        public const int MatchedReputationBand = 15;
+        public static int MatchedReputationBand => Rules.RuleBook.Current.Wagers.MatchedReputationBand;
 
         /// <summary>The smallest cash wager: a drag race is a small bet, a road race a bigger one</summary>
-        public static decimal MinimumWager(RaceType? raceType) => raceType == RaceType.DragRace ? 10m : 25m;
+        public static decimal MinimumWager(RaceType? raceType) =>
+            raceType == RaceType.DragRace ? Rules.RuleBook.Current.Wagers.DragMinimum : Rules.RuleBook.Current.Wagers.RoadMinimum;
 
         /// <summary>The house limit on a cash wager in the day, against a rival of ordinary standing, before either racer's money is counted</summary>
-        public static decimal MaximumWager(RaceType? raceType) => raceType == RaceType.DragRace ? 100m : 250m;
+        public static decimal MaximumWager(RaceType? raceType) =>
+            raceType == RaceType.DragRace ? Rules.RuleBook.Current.Wagers.DragMaximum : Rules.RuleBook.Current.Wagers.RoadMaximum;
 
         /// <summary>From this hour of the game's day the street is racing for real money</summary>
-        public const int NightFromHour = 20;
+        public static int NightFromHour => Rules.RuleBook.Current.Wagers.NightFromHour;
 
         /// <summary>How much more the stakes go at night</summary>
-        public const decimal NightStakes = 2m;
+        public static decimal NightStakes => Rules.RuleBook.Current.Wagers.NightStakes;
 
         /// <summary>Reputation above which a rival plays for more: the stakes grow by one for every <see cref="ReputationPerStake"/> points over it</summary>
-        public const int StakesReputation = 50;
+        public static int StakesReputation => Rules.RuleBook.Current.Wagers.StakesReputation;
 
-        public const int ReputationPerStake = 25;
+        public static int ReputationPerStake => Rules.RuleBook.Current.Wagers.ReputationPerStake;
 
         public static bool IsNight(DateTime gameTime) => gameTime.Hour >= NightFromHour;
 
@@ -49,10 +51,10 @@ namespace StreetCorsa.Screens.Diner
         /// than the minimum, the minimum comes down with it.
         /// </summary>
         public static (decimal Min, decimal Max) WagerLimits(RaceType? raceType, decimal playerMoney, decimal opponentMoney,
-            int opponentReputation = StakesReputation, DateTime? gameTime = null)
+            int? opponentReputation = null, DateTime? gameTime = null)
         {
             var min = MinimumWager(raceType);
-            var house = Math.Round(MaximumWager(raceType) * StakesFactor(opponentReputation, gameTime) / 5) * 5;
+            var house = Math.Round(MaximumWager(raceType) * StakesFactor(opponentReputation ?? StakesReputation, gameTime) / 5) * 5;
             var max = Math.Min(house, Math.Min(playerMoney, opponentMoney));
             if (min > max) min = max;
             return (min, max);

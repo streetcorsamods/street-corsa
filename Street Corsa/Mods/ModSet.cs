@@ -26,6 +26,19 @@ public static class ContentTypes
     public const string Text = "text";
     public const string Sfx = "sfx";
     public const string Props = "props";
+
+    /// <summary>The rules of a career (rules/*.json): figures and tables merged key by key, see <c>Rules.RuleBook</c></summary>
+    public const string Rules = "rules";
+}
+
+/// <summary>What a mod is: <c>"type"</c> in its mod.json</summary>
+public static class ModTypes
+{
+    /// <summary>Adds to the game (the default)</summary>
+    public const string Addon = "addon";
+
+    /// <summary>A whole game of its own: a total conversion</summary>
+    public const string Game = "game";
 }
 
 /// <summary>
@@ -55,16 +68,48 @@ public sealed class ModInfo
     [JsonConverter(typeof(TextOrNumber))]
     public string Description { get; set; } = string.Empty;
 
-    /// <summary>Mods load in this order after the base game, lowest first; ties by id</summary>
+    /// <summary>Mods load in this order after the base game, lowest first; ties by id (a mod always loads after those it requires)</summary>
     [JsonPropertyName("order")]
     [JsonConverter(typeof(WholeNumber))]
     public int Order { get; set; }
+
+    /// <summary>
+    /// <see cref="ModTypes.Addon"/> (the default: it adds to the game) or <see cref="ModTypes.Game"/> (a whole game of
+    /// its own, a total conversion)
+    /// </summary>
+    [JsonPropertyName("type")]
+    [JsonConverter(typeof(TextOrNumber))]
+    public string Type { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The mods this one needs, by id, each with the lowest version it works with ("" for any): without them it is
+    /// left out, and it loads after them
+    /// </summary>
+    [JsonPropertyName("requires")]
+    [JsonConverter(typeof(TextMap))]
+    public Dictionary<string, string> Requires { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The lowest version of the game this mod works with; empty for any</summary>
+    [JsonPropertyName("gameVersion")]
+    [JsonConverter(typeof(TextOrNumber))]
+    public string GameVersion { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Entries of the mods before it, the base game's included, that this one takes out of the game: by kind of content
+    /// (the content folder's name: "racers", "streets", "text"...), full ids (<c>"racers": ["king"]</c>)
+    /// </summary>
+    [JsonPropertyName("removes")]
+    public Dictionary<string, List<string>> Removes { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     [JsonIgnore]
     public string Folder { get; set; } = string.Empty;
 
     [JsonIgnore]
     public bool IsBase => ModIds.IsBase(Id);
+
+    /// <summary>A whole game of its own, not an add-on</summary>
+    [JsonIgnore]
+    public bool IsGame => ModTypes.Game.Equals(Type, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>The mod's folder for a kind of content, null when it has none</summary>
     public string? Dir(string type)
@@ -91,6 +136,37 @@ public sealed class ModInfo
         };
 
         public override void Write(Utf8JsonWriter writer, string value, JsonSerializerOptions options) => writer.WriteStringValue(value);
+    }
+
+    /// <summary>Names to text (a version written as a number is that text); null is none</summary>
+    private sealed class TextMap : JsonConverter<Dictionary<string, string>>
+    {
+        private static readonly TextOrNumber Value = new();
+
+        public override bool HandleNull => true;
+
+        public override Dictionary<string, string> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            if (reader.TokenType == JsonTokenType.Null) return map;
+            if (reader.TokenType != JsonTokenType.StartObject) throw new JsonException($"expected names and versions, found {reader.TokenType}");
+
+            while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+            {
+                var name = reader.GetString() ?? string.Empty;
+                reader.Read();
+                map[name] = Value.Read(ref reader, typeof(string), options);
+            }
+
+            return map;
+        }
+
+        public override void Write(Utf8JsonWriter writer, Dictionary<string, string> value, JsonSerializerOptions options)
+        {
+            writer.WriteStartObject();
+            foreach (var (name, text) in value) writer.WriteString(name, text);
+            writer.WriteEndObject();
+        }
     }
 
     /// <summary>A whole number, written as one, as one with nothing after the point (10.0), or in quotes</summary>
@@ -124,7 +200,13 @@ public sealed class ModSet
     public const string FolderName = "Content";
     public const string ManifestFileName = "mod.json";
 
+    /// <summary>The game's own settings in a mod's folder, merged key by key (see <c>Rules.GameFile</c>)</summary>
+    public const string GameFileName = "game.json";
+
     private static readonly Lazy<ModSet> InstalledSet = new(() => Load(DefaultRoot));
+
+    // What the mods take out of the game: kind of content -> full id -> the mod that took it out
+    private readonly Dictionary<string, Dictionary<string, ModInfo>> _removed = new(StringComparer.OrdinalIgnoreCase);
 
     private readonly List<string> _problems = new();
 
@@ -174,9 +256,25 @@ public sealed class ModSet
         return new ModSet(Path.GetDirectoryName(baseFolder) ?? baseFolder, new List<ModInfo> { info });
     }
 
-    /// <remarks>Never throws for what is in the folder: a mod that does not read is left out, with a line in <see cref="Problems"/></remarks>
-    public static ModSet Load(string root)
+    /// <summary>The version of the game (the program): a mod's <c>gameVersion</c> is held against it</summary>
+    public static ModVersion ProgramVersion { get; } = ReadProgramVersion();
+
+    private static ModVersion ReadProgramVersion()
     {
+        var assembly = typeof(ModSet).Assembly;
+        var informational = assembly.GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+            .OfType<System.Reflection.AssemblyInformationalVersionAttribute>().FirstOrDefault()?.InformationalVersion;
+        if (ModVersion.TryParse(informational, out var version)) return version;
+
+        var name = assembly.GetName().Version;
+        return name == null ? ModVersion.Zero : new ModVersion(name.Major, name.Minor, Math.Max(0, name.Build));
+    }
+
+    /// <remarks>Never throws for what is in the folder: a mod that does not read is left out, with a line in <see cref="Problems"/></remarks>
+    /// <param name="gameVersion">The game's version, for the mods' <c>gameVersion</c>; <see cref="ProgramVersion"/> when not given</param>
+    public static ModSet Load(string root, ModVersion? gameVersion = null)
+    {
+        var game = gameVersion ?? ProgramVersion;
         var problems = new List<string>();
         var mods = new List<ModInfo>();
 
@@ -228,6 +326,22 @@ public sealed class ModSet
                     continue;
                 }
 
+                if (!string.IsNullOrWhiteSpace(info.Type) && !info.IsGame && !ModTypes.Addon.Equals(info.Type, StringComparison.OrdinalIgnoreCase))
+                    problems.Add($"{name}: \"type\": \"{info.Type}\" is neither \"{ModTypes.Addon}\" nor \"{ModTypes.Game}\"; taken as an add-on");
+
+                if (!isBase && !string.IsNullOrWhiteSpace(info.GameVersion))
+                {
+                    if (!ModVersion.TryParse(info.GameVersion, out var wanted))
+                    {
+                        problems.Add($"{name}: \"gameVersion\": \"{info.GameVersion}\" is no version; not checked");
+                    }
+                    else if (game < wanted)
+                    {
+                        problems.Add($"{name}: needs the game at {wanted} or later, this is {game}; left out");
+                        continue;
+                    }
+                }
+
                 info.Folder = folder;
                 if (string.IsNullOrWhiteSpace(info.Name)) info.Name = isBase ? "Street Corsa" : info.Id;
                 mods.Add(info);
@@ -236,13 +350,100 @@ public sealed class ModSet
 
         if (!mods.Any(m => m.IsBase)) problems.Add($"The base game's content ({Path.Combine(root, ModIds.BaseId)}) is missing");
 
-        var ordered = mods.Where(m => m.IsBase)
-            .Concat(mods.Where(m => !m.IsBase).OrderBy(m => m.Order).ThenBy(m => m.Id, StringComparer.OrdinalIgnoreCase))
+        var others = WithWhatTheyNeed(mods.Where(m => !m.IsBase).ToList(), problems)
+            .OrderBy(m => m.Order).ThenBy(m => m.Id, StringComparer.OrdinalIgnoreCase)
             .ToList();
+        var ordered = mods.Where(m => m.IsBase).Concat(AfterWhatTheyNeed(others, problems)).ToList();
         var set = new ModSet(root, ordered);
         set._problems.AddRange(problems);
+        set.ReadRemovals();
         return set;
     }
+
+    /// <summary>
+    /// The mods whose <c>requires</c> are there, in a version new enough: one that is not is left out, and so is what
+    /// needs it in turn
+    /// </summary>
+    private static List<ModInfo> WithWhatTheyNeed(List<ModInfo> mods, List<string> problems)
+    {
+        var kept = mods.ToList();
+        while (true)
+        {
+            var byId = kept.ToDictionary(m => m.Id, StringComparer.OrdinalIgnoreCase);
+            var lacking = kept.Select(m => (Mod: m, Why: Lacks(m, byId))).FirstOrDefault(x => x.Why != null);
+            if (lacking.Mod == null) return kept;
+
+            problems.Add($"{Path.GetFileName(lacking.Mod.Folder)}: {lacking.Why}; left out");
+            kept.Remove(lacking.Mod);
+        }
+
+        static string? Lacks(ModInfo mod, Dictionary<string, ModInfo> byId)
+        {
+            foreach (var (id, version) in mod.Requires)
+            {
+                if (ModIds.IsBase(id) || id.Equals(mod.Id, StringComparison.OrdinalIgnoreCase)) continue;
+                if (!byId.TryGetValue(id, out var needed)) return $"needs the mod \"{id}\", which is not installed (or was left out)";
+                if (string.IsNullOrWhiteSpace(version) || version.Trim() == "*" || !ModVersion.TryParse(version, out var wanted)) continue;
+                if (!ModVersion.TryParse(needed.Version, out var has) || has < wanted)
+                    return $"needs \"{id}\" at {wanted} or later, which is at {(string.IsNullOrWhiteSpace(needed.Version) ? "no version" : needed.Version)}";
+            }
+
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// The mods in their order, each moved after the mods it requires (the order kept otherwise); mods that require
+    /// each other round in a circle keep their order, told once
+    /// </summary>
+    private static List<ModInfo> AfterWhatTheyNeed(List<ModInfo> mods, List<string> problems)
+    {
+        var ids = new HashSet<string>(mods.Select(m => m.Id), StringComparer.OrdinalIgnoreCase);
+        var placed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var waiting = mods.ToList();
+        var result = new List<ModInfo>();
+        while (waiting.Count > 0)
+        {
+            var next = waiting.FirstOrDefault(m => m.Requires.Keys.All(id =>
+                !ids.Contains(id) || placed.Contains(id) || id.Equals(m.Id, StringComparison.OrdinalIgnoreCase)));
+            if (next == null)
+            {
+                problems.Add($"{string.Join(", ", waiting.Select(m => m.Id))} require each other round in a circle; they load in their own order");
+                result.AddRange(waiting);
+                break;
+            }
+
+            waiting.Remove(next);
+            placed.Add(next.Id);
+            result.Add(next);
+        }
+
+        return result;
+    }
+
+    /// <summary>What each mod takes out (its <c>removes</c>): the latest mod to name an entry is the one said to</summary>
+    private void ReadRemovals()
+    {
+        foreach (var mod in Mods)
+        {
+            foreach (var (type, ids) in mod.Removes)
+            {
+                if (ids == null) continue;
+                if (!_removed.TryGetValue(type, out var removed))
+                    _removed[type] = removed = new Dictionary<string, ModInfo>(StringComparer.OrdinalIgnoreCase);
+                foreach (var id in ids.Where(i => !string.IsNullOrWhiteSpace(i))) removed[ModIds.Normalize(id.Trim())] = mod;
+            }
+        }
+    }
+
+    private static readonly Dictionary<string, ModInfo> NothingRemoved = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The full ids of a kind of content that mods take out of the game, and which mod did</summary>
+    public IReadOnlyDictionary<string, ModInfo> Removed(string type) =>
+        _removed.TryGetValue(type, out var removed) ? removed : NothingRemoved;
+
+    /// <summary>True when a mod takes the entry of this full id out of the game</summary>
+    public bool IsRemoved(string type, string id) => Removed(type).ContainsKey(ModIds.Normalize(id));
 
     private static ModInfo? ReadManifest(string folder, out string? problem)
     {

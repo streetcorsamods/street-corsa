@@ -97,6 +97,7 @@ namespace StreetCorsa.Services.Dealers
             }
 
             foreach (var problem in problems) _logger.Warning("Dealers: {Problem}", problem);
+            ModProblems.Add("Dealers", problems);
         }
 
         private const string DealersList = "dealers";
