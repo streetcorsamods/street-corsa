@@ -45,7 +45,13 @@
     <Resource Include="Assets\Images\Text\*.png" />
     <Resource Include="Assets\Images\Misc\*.png" />
     <Resource Include="Assets\Images\Misc\Calendar\*.png" />
-    <Resource Include="Assets\Icons\*.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The styles for the XAML designer: the game merges them itself at start-up (Styles/Theme.cs) -->
+    <Page Update="Properties\DesignTimeResources.xaml">
+      <ContainsDesignTimeResources>true</ContainsDesignTimeResources>
+    </Page>
   </ItemGroup>
 
   <ItemGroup>

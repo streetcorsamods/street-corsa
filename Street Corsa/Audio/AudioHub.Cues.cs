@@ -5,13 +5,15 @@ using static StreetCorsa.Audio.FmodStudio;
 namespace StreetCorsa.Audio;
 
 /// <summary>
-/// The cues (<see cref="SoundCues"/>): one-shots out of memory, each file decoded once and kept for the session, and
-/// the place's air, a loop that crossfades into the next place's as the player goes there.
+/// The cues (<see cref="SoundCues"/>): one-shots out of memory, each file decoded once and kept for the session; the
+/// place's air, a loop that crossfades into the next place's as the player goes there; and the music the game starts
+/// to, a loop of its own.
 /// </summary>
 public sealed partial class AudioHub
 {
-    // How long a place's air takes to come in, and the last one to go
+    // How long a place's air takes to come in, and the last one to go; the music the same, slower
     private const float AmbienceFadeSeconds = 1.5f;
+    private const float MusicFadeSeconds = 2.5f;
 
     private volatile SoundCues _cues = SoundCues.Empty;
     private volatile bool _cuesLoaded;
@@ -27,11 +29,9 @@ public sealed partial class AudioHub
     /// <summary>Samples a second of the mixer's clock, what fades are timed in</summary>
     internal int MixRate => _mixRate;
 
-    // The place's air: the cue asked for, the one playing, and the ones still fading out. Only the pump touches them
-    private volatile string? _wantedAmbience;
-    private string? _ambienceName;
-    private PlayingSound? _ambience;
-    private readonly List<PlayingSound> _fadingOut = [];
+    // The place's air, and the music: the cue each is asked for, the one playing, the ones still fading out
+    private readonly LoopSlot _ambience = new("the place is quiet", AmbienceFadeSeconds);
+    private readonly LoopSlot _music = new("no music plays", MusicFadeSeconds);
 
     /// <summary>The cues the mods give, once read (at start-up, after the system)</summary>
     public SoundCues Cues => _cues;
@@ -141,48 +141,86 @@ public sealed partial class AudioHub
     /// The air of the place the player is in, a looping cue; null for none. Crossfades from the last one at the pump's
     /// next tick, and waits for the system and the cues when they are not there yet. Any thread.
     /// </summary>
-    public void SetAmbience(string? cue) => _wantedAmbience = cue;
+    public void SetAmbience(string? cue) => _ambience.Wanted = cue;
 
-    /// <summary>The pump's part: the place's air brought in line with what is asked for, and faded-out loops let go of</summary>
-    private void TickAmbience()
+    /// <summary>
+    /// The music, a looping cue (<see cref="Audio.StartMusic"/>); null for none. Fades in or out at the pump's next tick,
+    /// once the system and the cues are there. Any thread.
+    /// </summary>
+    public void SetMusic(string? cue) => _music.Wanted = cue;
+
+    /// <summary>The pump's part: the loops brought in line with what is asked for, and faded-out ones let go of</summary>
+    private void TickLoops()
     {
-        _fadingOut.RemoveAll(sound => !sound.IsPlaying);
-        if (!_cuesLoaded) return;
-
-        var wanted = _wantedAmbience;
-        if (string.Equals(wanted, _ambienceName, StringComparison.OrdinalIgnoreCase)) return;
-
-        if (_ambience is { } leaving)
-        {
-            leaving.Fade(1f, 0f, AmbienceFadeSeconds, _mixRate, stopAtEnd: true);
-            _fadingOut.Add(leaving);
-        }
-
-        _ambience = null;
-        _ambienceName = wanted;
-        if (wanted == null) return;
-
-        if (_cues.Get(wanted) is not { Loop: true } cue)
-        {
-            _logger.Debug("No looping sound cue {Cue}: the place is quiet", wanted);
-            return;
-        }
-
-        var file = cue.Files[_random.Next(cue.Files.Count)];
-        var playing = Play(cue.Bus, file, loop: true, paused: true);
-        if (playing == null) return;
-
-        playing.SetVolume(cue.Volume);
-        playing.Fade(0f, 1f, AmbienceFadeSeconds, _mixRate, stopAtEnd: false);
-        playing.Resume();
-        _ambience = playing;
+        _ambience.Tick(this);
+        _music.Tick(this);
     }
 
     /// <summary>At the release of the system, which frees them: their handles are not to be used again</summary>
     private void ForgetSounds()
     {
         lock (_cueLock) _samples.Clear();
-        _ambience = null;
-        _fadingOut.Clear();
+        _ambience.Forget();
+        _music.Forget();
+    }
+
+    /// <summary>
+    /// A looping cue that crossfades into the next one asked for: the place's air, the music. What is asked for may be
+    /// set from any thread; the rest only the pump touches.
+    /// </summary>
+    private sealed class LoopSlot(string whenMissing, float fadeSeconds)
+    {
+        private volatile string? _wanted;
+        private string? _name;
+        private PlayingSound? _playing;
+        private readonly List<PlayingSound> _fadingOut = [];
+
+        public string? Wanted
+        {
+            set => _wanted = value;
+        }
+
+        public void Tick(AudioHub hub)
+        {
+            _fadingOut.RemoveAll(sound => !sound.IsPlaying);
+            if (!hub._cuesLoaded) return;
+
+            var wanted = _wanted;
+            if (string.Equals(wanted, _name, StringComparison.OrdinalIgnoreCase)) return;
+
+            if (_playing is { } leaving)
+            {
+                // From wherever its fade-in got to: one cut short does not jump to full first
+                leaving.FadeFromHere(0f, fadeSeconds, hub._mixRate, stopAtEnd: true);
+                _fadingOut.Add(leaving);
+            }
+
+            _playing = null;
+            _name = wanted;
+            if (wanted == null) return;
+
+            if (hub._cues.Get(wanted) is not { Loop: true } cue)
+            {
+                hub._logger.Debug("No looping sound cue {Cue}: " + whenMissing, wanted);
+                return;
+            }
+
+            // The cues' Random is shared with PlayCue on any thread
+            string file;
+            lock (hub._cueLock) file = cue.Files[hub._random.Next(cue.Files.Count)];
+            var playing = hub.Play(cue.Bus, file, loop: true, paused: true);
+            if (playing == null) return;
+
+            playing.SetVolume(cue.Volume);
+            playing.Fade(0f, 1f, fadeSeconds, hub._mixRate, stopAtEnd: false);
+            playing.Resume();
+            _playing = playing;
+        }
+
+        public void Forget()
+        {
+            _playing = null;
+            _fadingOut.Clear();
+        }
     }
 }

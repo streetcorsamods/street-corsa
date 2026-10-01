@@ -22,6 +22,7 @@ public partial class EnginePanel : System.Windows.Controls.UserControl
 
     // The needle's colour below the redline: looked up once, not on every tach update (every frame while revving)
     private Brush? _accentBrush;
+    private Brush? _redlineBrush;
 
     public EnginePanel()
     {
@@ -112,7 +113,7 @@ public partial class EnginePanel : System.Windows.Controls.UserControl
         Needle.Width = width;
         RedZone.Width = Math.Max(0, width * (1 - Runner.RedlineFraction));
         Needle.Fill = Runner.RpmFraction >= Runner.RedlineFraction - 0.005
-            ? Brushes.Red
+            ? _redlineBrush ??= (Brush)FindResource("TachRedlineBrush")
             : _accentBrush ??= (Brush)FindResource("AccentPrimaryBrush");
     }
 

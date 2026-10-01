@@ -205,7 +205,7 @@ public sealed partial class AudioHub
 
             TickAmRadio(elapsed);
             if (_mixerSuspended) return;
-            TickAmbience();
+            TickLoops();
             Update();
             if (racing && _fade <= 0f && !radioActive) SuspendMixer();
         }

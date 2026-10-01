@@ -214,12 +214,12 @@ namespace StreetCorsa.Screens.Garage
         public int CurrentDay => _gameState.Date.Day;
         public string CurrentDayOfWeek => GameText.Date(_gameState.Date, "format.weekday");
         public string CurrentTimeDisplay => HeaderTime(_gameState.Date);
-        public BitmapImage CalendarImage1 => GetRandomCalendarImage(0);
-        public BitmapImage CalendarImage2 => GetRandomCalendarImage(1);
-        public BitmapImage CalendarImage3 => GetRandomCalendarImage(2);
+        public BitmapImage? CalendarImage1 => GetRandomCalendarImage(0);
+        public BitmapImage? CalendarImage2 => GetRandomCalendarImage(1);
+        public BitmapImage? CalendarImage3 => GetRandomCalendarImage(2);
 
         /// <summary>The calendar pictures once decoded, by number, for the whole session: the same twelve come round every year</summary>
-        private static readonly Dictionary<int, BitmapImage> CalendarImages = new();
+        private static readonly Dictionary<int, BitmapImage?> CalendarImages = new();
 
         /// <summary>
         /// Height the pictures are decoded at. They are 1536x1024 PNGs shown 120 px high; decoded at twice that
@@ -233,7 +233,7 @@ namespace StreetCorsa.Screens.Garage
         /// <summary>The day the calendar grid was last raised for</summary>
         private DateTime _shownCalendarDay = DateTime.MinValue;
 
-        private BitmapImage GetRandomCalendarImage(int index)
+        private BitmapImage? GetRandomCalendarImage(int index)
         {
             // Seed random with year and month so images are consistent for each month but different between months
             var seed = _gameState.Date.Year * 100 + _gameState.Date.Month + index * 17;
@@ -243,18 +243,12 @@ namespace StreetCorsa.Screens.Garage
         }
 
         /// <summary>One calendar picture, decoded small and frozen once, then shared</summary>
-        public static BitmapImage CalendarImage(int imageNumber)
+        public static BitmapImage? CalendarImage(int imageNumber)
         {
             if (CalendarImages.TryGetValue(imageNumber, out var cached)) return cached;
 
-            var image = new BitmapImage();
-            image.BeginInit();
-            image.UriSource = new Uri($"pack://application:,,,/Assets/Images/Misc/Calendar/calendar{imageNumber:D2}.png", UriKind.Absolute);
-            image.DecodePixelHeight = CalendarDecodeHeight;
-            image.CacheOption = BitmapCacheOption.OnLoad;
-            image.EndInit();
-            image.Freeze();
-
+            // A mod's picture (theme/images/misc/calendar/calendar01.png) stands in for the game's
+            var image = Styles.ThemeImages.Load($"misc/calendar/calendar{imageNumber:D2}", decodeHeight: CalendarDecodeHeight);
             CalendarImages[imageNumber] = image;
             return image;
         }

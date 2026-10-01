@@ -92,7 +92,7 @@
                            Width="350"
                            Height="250">
                         <Border.Effect>
-                            <DropShadowEffect Color="Black"
+                            <DropShadowEffect Color="{StaticResource Shadow}"
                                             Direction="270"
                                             ShadowDepth="3"
                                             BlurRadius="10"

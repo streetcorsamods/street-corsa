@@ -8,17 +8,11 @@
              d:DesignWidth="380" d:DesignHeight="84">
     <!-- The car's radio in the dash: the power knob, the dial, the tuning knob -->
     <Border CornerRadius="7"
-            BorderBrush="#FF3A3A3A"
+            BorderBrush="{StaticResource CarRadioBezelBrush}"
             BorderThickness="1.5"
             Padding="10,8"
+            Background="{StaticResource CarRadioFaceBrush}"
             Effect="{StaticResource DropShadowEffect}">
-        <Border.Background>
-            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                <GradientStop Color="#FFE8E8E8" Offset="0"/>
-                <GradientStop Color="#FFB4B4B4" Offset="0.45"/>
-                <GradientStop Color="#FF7C7C7C" Offset="1"/>
-            </LinearGradientBrush>
-        </Border.Background>
         <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
@@ -37,7 +31,7 @@
                 <Ellipse x:Name="Lamp"
                          Width="7"
                          Height="7"
-                         Fill="#FF4A1A10"
+                         Fill="{StaticResource CarRadioLampOffBrush}"
                          HorizontalAlignment="Center"
                          VerticalAlignment="Center"
                          IsHitTestVisible="False"/>
@@ -49,7 +43,7 @@
                     Height="52"
                     MinWidth="220"
                     CornerRadius="4"
-                    BorderBrush="#FF2A2A2A"
+                    BorderBrush="{StaticResource RadioRimBrush}"
                     BorderThickness="2"
                     Background="{StaticResource RadioDialBrush}"
                     Cursor="Hand"
@@ -57,21 +51,21 @@
                     MouseLeftButtonUp="OnDial">
                 <Grid ClipToBounds="True">
                     <TextBlock Text="55   60   70   80   100   120   140   160"
-                               Foreground="#663A2008"
-                               FontFamily="Georgia"
+                               Foreground="{StaticResource RadioInkFaintBrush}"
+                               FontFamily="{StaticResource DialFont}"
                                FontSize="{StaticResource FontSizeMicro}"
                                HorizontalAlignment="Center"
                                Margin="0,2,0,0"/>
                     <TextBlock x:Name="SongText"
                                Foreground="{StaticResource RadioInkBrush}"
-                               FontFamily="Georgia"
+                               FontFamily="{StaticResource DialFont}"
                                FontWeight="Bold"
                                FontSize="{StaticResource FontSizeCompact}"
                                TextTrimming="CharacterEllipsis"
                                VerticalAlignment="Bottom"
                                Margin="8,0,8,6"/>
                     <Canvas x:Name="NeedleTrack" IsHitTestVisible="False">
-                        <Rectangle x:Name="Needle" Width="2" Height="48" Fill="#FFB0201A"/>
+                        <Rectangle x:Name="Needle" Width="2" Height="48" Fill="{StaticResource RadioNeedleBrush}"/>
                     </Canvas>
                 </Grid>
             </Border>

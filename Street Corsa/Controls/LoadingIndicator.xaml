@@ -22,7 +22,7 @@
                    TextAlignment="Center"
                    HorizontalAlignment="Center">
             <TextBlock.Effect>
-                <DropShadowEffect Color="Black" ShadowDepth="0" BlurRadius="8" Opacity="0.9"/>
+                <DropShadowEffect Color="{StaticResource Shadow}" ShadowDepth="0" BlurRadius="8" Opacity="0.9"/>
             </TextBlock.Effect>
         </TextBlock>
     </StackPanel>

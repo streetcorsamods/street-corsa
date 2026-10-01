@@ -82,7 +82,7 @@
                        Foreground="{StaticResource TextPrimaryBrush}"
                        HorizontalAlignment="Center">
                 <TextBlock.Effect>
-                    <DropShadowEffect BlurRadius="14" ShadowDepth="0" Color="Black" Opacity="1"/>
+                    <DropShadowEffect BlurRadius="14" ShadowDepth="0" Color="{StaticResource Shadow}" Opacity="1"/>
                 </TextBlock.Effect>
             </TextBlock>
             <TextBlock Text="{Binding StockSummary}"
@@ -91,7 +91,7 @@
                        HorizontalAlignment="Center"
                        Margin="0,3,0,0">
                 <TextBlock.Effect>
-                    <DropShadowEffect BlurRadius="10" ShadowDepth="0" Color="Black" Opacity="1"/>
+                    <DropShadowEffect BlurRadius="10" ShadowDepth="0" Color="{StaticResource Shadow}" Opacity="1"/>
                 </TextBlock.Effect>
             </TextBlock>
             <TextBlock Text="{Binding SaleNotice}"
@@ -102,7 +102,7 @@
                        HorizontalAlignment="Center"
                        Margin="0,3,0,0">
                 <TextBlock.Effect>
-                    <DropShadowEffect BlurRadius="10" ShadowDepth="0" Color="Black" Opacity="1"/>
+                    <DropShadowEffect BlurRadius="10" ShadowDepth="0" Color="{StaticResource Shadow}" Opacity="1"/>
                 </TextBlock.Effect>
             </TextBlock>
         </StackPanel>
@@ -127,7 +127,7 @@
                 Padding="20"
                 Visibility="{Binding HasSelection, Converter={StaticResource BooleanToVisibilityConverter}}">
             <Border.Effect>
-                <DropShadowEffect BlurRadius="20" ShadowDepth="0" Color="Black" Opacity="0.8"/>
+                <DropShadowEffect BlurRadius="20" ShadowDepth="0" Color="{StaticResource Shadow}" Opacity="0.8"/>
             </Border.Effect>
             <StackPanel DataContext="{Binding SelectedCar}">
                 <TextBlock Text="{Binding DisplayName}"

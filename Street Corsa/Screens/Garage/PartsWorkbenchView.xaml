@@ -251,7 +251,7 @@
                     <!-- Placement mode (F5): a tool for fitting the converted parts -->
                     <Border Background="{StaticResource Gold33Brush}" BorderBrush="{StaticResource GoldBrush}" BorderThickness="1" Padding="6" Margin="0,6,0,0"
                             Visibility="{Binding PlacementDisplay, Converter={StaticResource StringToVisibilityConverter}}">
-                        <TextBlock Text="{Binding PlacementDisplay}" FontSize="{StaticResource FontSizeCaption}" FontFamily="Consolas" Foreground="{StaticResource PaleYellowBrush}" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding PlacementDisplay}" FontSize="{StaticResource FontSizeCaption}" FontFamily="{StaticResource NumbersFont}" Foreground="{StaticResource PaleYellowBrush}" TextWrapping="Wrap"/>
                     </Border>
 
                     <!-- What the work order says is in the way -->

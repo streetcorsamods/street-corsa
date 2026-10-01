@@ -35,15 +35,9 @@
              StartupUri="MainWindow.xaml">
     <Application.Resources>
         <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <!-- Each dictionary once: Brushes.xaml brings Colors.xaml, and the ones after it find both here -->
-                <ResourceDictionary Source="Styles/Brushes.xaml"/>
-                <ResourceDictionary Source="Styles/Typography.xaml"/>
-                <ResourceDictionary Source="Styles/Icons.xaml"/>
-                <ResourceDictionary Source="Styles/Buttons.xaml"/>
-                <ResourceDictionary Source="Styles/Inputs.xaml"/>
-                <ResourceDictionary Source="Styles/Radio.xaml"/>
-            </ResourceDictionary.MergedDictionaries>
+            <!-- The look (Styles/*.xaml) is merged in by Styles.Theme.Apply as the app starts, with the mods' theme over
+                 the game's colours, sizes and typefaces: see App's constructor. The designer finds them in
+                 Properties/DesignTimeResources.xaml -->
 
             <!-- Converters -->
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
@@ -52,14 +46,6 @@
             <converters:GaragePanelToVisibilityConverter x:Key="GaragePanelToVisibilityConverter"/>
             <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
             <converters:MoneyConverter x:Key="MoneyConverter"/>
-
-            <!-- Effects -->
-            <DropShadowEffect x:Key="DropShadowEffect"
-                            Color="Black"
-                            Direction="270"
-                            ShadowDepth="5"
-                            BlurRadius="15"
-                            Opacity="0.5"/>
 
             <!-- Screen DataTemplates -->
             <DataTemplate DataType="{x:Type mainMenu:MainMenuScreenViewModel}">

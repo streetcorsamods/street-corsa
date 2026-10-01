@@ -371,6 +371,8 @@ Street Corsa/Content/streetcorsa/garages/garage/
 # The gas station scene is cut from the player's own AC install (tools/StationScene); only its station.json is ours
 Street Corsa/Content/streetcorsa/stations/*/*.kn5
 Street Corsa/Content/streetcorsa/stations/*/ground.bin
+# The music the game starts to (an SR2 intro cover): local only until its licence is granted; music.json marks it optional
+Street Corsa/Content/streetcorsa/sfx/music/intro.mp3
 
 # The converter builds its output here and swaps it in only when a run completes
 # (a dot in front, then the output's name: .parts.converting, .parts.committing, .parts.old)

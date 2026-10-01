@@ -3,8 +3,6 @@ using System.Windows;
 using Canvas = System.Windows.Controls.Canvas;
 using System.Windows.Input;
 using Brush = System.Windows.Media.Brush;
-using Color = System.Windows.Media.Color;
-using SolidColorBrush = System.Windows.Media.SolidColorBrush;
 using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Audio.Radio
@@ -15,10 +13,12 @@ namespace StreetCorsa.Audio.Radio
     /// </summary>
     public partial class CarRadio : System.Windows.Controls.UserControl
     {
-        private static readonly Brush LampOn = new SolidColorBrush(Color.FromRgb(0xFF, 0x7A, 0x3A));
-        private static readonly Brush LampOff = new SolidColorBrush(Color.FromRgb(0x4A, 0x1A, 0x10));
 
         private RadioPlayer Radio => RadioPlayer.Shared;
+
+        // The lamp's two brushes, found once: the radio changes several times a second while it plays
+        private Brush? _lampOn;
+        private Brush? _lampOff;
 
         public CarRadio()
         {
@@ -37,7 +37,9 @@ namespace StreetCorsa.Audio.Radio
         private void Refresh()
         {
             SongText.Text = Radio.IsOn || Radio.Current != null ? Radio.NowPlaying : GameText.Say("radio.car.no_music");
-            Lamp.Fill = Radio.IsPlaying ? LampOn : LampOff;
+            Lamp.Fill = Radio.IsPlaying
+                ? _lampOn ??= (Brush)FindResource("CarRadioLampOnBrush")
+                : _lampOff ??= (Brush)FindResource("CarRadioLampOffBrush");
             Dial.Opacity = Radio.IsPlaying ? 1.0 : 0.55;
             PlaceNeedle();
         }

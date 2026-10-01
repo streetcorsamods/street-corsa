@@ -32,7 +32,7 @@
                     Padding="18,14"
                     HorizontalAlignment="Center"
                     MinWidth="320">
-                <StackPanel TextElement.FontFamily="Consolas"
+                <StackPanel TextElement.FontFamily="{StaticResource NumbersFont}"
                             TextElement.Foreground="{StaticResource InkBrush}"
                             TextElement.FontSize="{StaticResource FontSizeBody}">
                     <Grid Margin="0,0,0,6">

@@ -25,6 +25,7 @@ public sealed record SoundCue(
 /// <code>
 /// { "cues": { "ui.click": { "bus": "interface", "volume": 0.45, "pitch": 0.04, "files": ["ui/click.ogg"] } } }
 /// </code>
+/// A cue marked <c>"optional": true</c> may name files that are not there: it is no problem, the cue is only silent.
 /// </summary>
 public sealed class SoundCues
 {
@@ -48,6 +49,7 @@ public sealed class SoundCues
         [JsonPropertyName("pitch")] public float? Pitch { get; set; }
         [JsonPropertyName("loop")] public bool? Loop { get; set; }
         [JsonPropertyName("cooldown")] public float? Cooldown { get; set; }
+        [JsonPropertyName("optional")] public bool? Optional { get; set; }
     }
 
     private sealed class FileJson
@@ -100,17 +102,20 @@ public sealed class SoundCues
             return null;
         }
 
+        // An optional cue's files may be missing (music a copy of the game is not allowed to ship): it plays what is
+        // there, and nothing, without a word, when none is
+        var optional = json.Optional ?? false;
         var files = new List<string>();
         foreach (var relative in json.Files ?? [])
         {
             var path = Path.GetFullPath(Path.Combine(dir, relative));
             if (File.Exists(path)) files.Add(path);
-            else _problems.Add($"{shownAs}: {name} names {relative}, which is not there");
+            else if (!optional) _problems.Add($"{shownAs}: {name} names {relative}, which is not there");
         }
 
         if (files.Count == 0)
         {
-            _problems.Add($"{shownAs}: {name} has no sound to play");
+            if (!optional) _problems.Add($"{shownAs}: {name} has no sound to play");
             return null;
         }
 

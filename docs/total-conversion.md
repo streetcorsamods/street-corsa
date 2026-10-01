@@ -38,7 +38,7 @@ Shape: a `{t:Text key}` markup extension and `GameText.One(key, args)` over `tex
 | Hub icons | `Styles/Icons.xaml:7-17` | `pack://` | easy |
 | Calendar pictures, driving licence | `GarageScreenViewModel.cs:250`, `NewGameScreenView.xaml:16` | `pack://` | easy |
 | Window/taskbar icon | `street_corsa.ico` | compiled in; the window can take one at run time (the exe's own icon cannot change) | medium |
-| Menu music | `Assets/Sound/sr2_cover_intro.mp3`, `MainMenuScreenView.xaml.cs:103` | compiled in | easy (make it the cue `music.intro`) |
+| Menu music | `Assets/Sound/sr2_cover_intro.mp3` (untracked; nothing played it) | not in the game | easy (make it the cue `music.intro`) |
 
 Shape: a `theme/` folder per mod: `theme.json` (colour, font and size keys) merged into `Application.Resources` at
 start-up, before the window loads (the style dictionaries resolve their colours as they load, so the mod's go in
@@ -185,6 +185,44 @@ playing exactly as it does now: today's values become the base game's data.
 Later, not in the epic: a weather system (there is none today), nitrous in AC.
 
 ## As built
+
+### E5: look (2026-10-01, branch `feature/look`)
+
+The owner's decisions: a theme sets **keys and pictures only** (no XAML from mods: it can run code); the **menu music**
+plays only as the game starts (intro and main screen, until a game is on or the radio comes on; back at the main screen
+from a game the radio wins, off stays off); the music file (a cover of SR2's intro) is **git-ignored** until its
+licence is granted.
+
+- `Styles/Theme.cs` builds the application's resources in code at start-up (App's constructor, after
+  `InitializeComponent`): Colors.xaml, Typography.xaml and the new Fonts.xaml with every mod's `theme/*.json` over
+  them (`ThemeFile`, load order, keys any case), then Brushes, Icons, Buttons, Inputs, Radio, each loaded once the ones
+  before are in (they take their colours as they load; Brushes.xaml no longer merges Colors.xaml). App.xaml keeps only
+  the converters and templates.
+- Every colour key lives in Colors.xaml, every typeface in Fonts.xaml (`BodyFont`, `DisplayFont`, `DialFont`,
+  `NumbersFont`, `TypewriterFont`), every font size in Typography.xaml. The strays moved onto keys: the radio's colours
+  (out of Radio.xaml and CarRadio), the intro's chrome title, the main screen's band, the shadows (`Shadow`), the black
+  behind the 3D scenes and the fades (`Stage`), the licence's paper, the tach's redline, the pointer label in the 3D
+  views; the fonts typed in 15 places. `ThemeTests` keeps new ones out.
+- The base game's `theme/theme.json` lists every key at its value, written from the dictionaries by a test
+  (`SC_WRITE_BASE_THEME=1`): the published key list, not read at run time (the dictionaries already are what it says).
+  A mod naming the game's own face is not told of when the PC lacks it; a mod's font file of that name is still used.
+- Pictures by name through one resolver (`ThemeImages`, `{theme:Image backgrounds/main}`): a mod's
+  `theme/images/<name>.png|jpg|jpeg|bmp|ico`, last mod first, every mod picture's header checked at start-up (one that
+  does not read is told with the other mod problems and passed over; one that fails to decode later gives way to the
+  one under it), else `Assets/Images/<name>.png` (the icons moved there from `Assets/Icons`). The resource dictionaries' pictures
+  stay lazily decoded. New: `intro/logo` (a game's logo over the lettered title) and `window/icon`.
+- `music.intro` (`sfx/music.json`, radio bus, `"optional": true`: a cue whose files may be missing without a problem):
+  `Audio/StartMusic` starts it with the radio, ends it when a game is loaded, the radio comes on or the sound library
+  opens. `AudioHub`'s place loop became a `LoopSlot`, used twice (the place's air, the music).
+- Checked by an off-screen harness that renders 24 views with no data, on dev and on the branch: pixel-identical; and
+  with a test theme (fonts, colours, background, logo) that the theme shows.
+
+Left for later, on purpose:
+- the control templates (button and panel shapes, corner radii, thicknesses, margins) are the game's; only their colours
+  and sizes are keys;
+- the 3D scenes' lights and the street's colours are their scenes' data, not the theme;
+- `DropShadowEffect` depth, blur and opacity, and animation timings, are not keys;
+- the menu music in game: not heard yet.
 
 ### E4: locale (2026-10-01, branch `feature/locale`)
 

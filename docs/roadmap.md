@@ -1176,8 +1176,14 @@ merged as PR #52.
 
 E4 (locale) is built on `feature/locale` (2026-10-01): `game.json`'s `locale` (culture, currency, units), the base game
 in US 1960s units (mph, miles, gallons, °F), a units picker in Settings, money and figures written through `Money` and
-`Measure`, the text naming a number's kind (`{price:money}`), date patterns as text. Not played yet. The order after
-that is E5-E12 as listed, unless the owner picks otherwise.
+`Measure`, the text naming a number's kind (`{price:money}`), date patterns as text. The owner tested it; merged as
+PR #53.
+
+E5 (look) is built on `feature/look` (2026-10-01): a mod's `theme/*.json` sets the colour, size and typeface keys (the
+base game's `theme/theme.json` lists them all), its `theme/fonts` and `theme/images` stand in for the game's, an intro
+logo and a window icon of a game's own, and the music the game starts to (`music.intro`). The base game looks exactly
+as before (checked pixel for pixel). Not played yet. The order after that is E6-E12 as listed, unless the owner picks
+otherwise.
 
 ## Testing in AC without driving
 

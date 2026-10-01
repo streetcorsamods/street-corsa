@@ -1,20 +1,22 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:theme="clr-namespace:StreetCorsa.Styles">
 
     <!-- The round buttons' icons (RoundIconButtonStyle takes one as its Tag). Only their shape is used: the button
          paints them in its own colour, so a black silhouette and a coloured picture read the same. Decoded small, since
-         they are drawn at a few dozen pixels. -->
-    <BitmapImage x:Key="CalendarIcon" UriSource="pack://application:,,,/Assets/Icons/calendar.png" DecodePixelWidth="128"/>
-    <BitmapImage x:Key="CarDealerIcon" UriSource="pack://application:,,,/Assets/Icons/car_dealer.png" DecodePixelWidth="128"/>
-    <BitmapImage x:Key="CarInfoIcon" UriSource="pack://application:,,,/Assets/Icons/car_info.png" DecodePixelWidth="128"/>
-    <BitmapImage x:Key="DrivingWheelIcon" UriSource="pack://application:,,,/Assets/Icons/driving_wheel.png" DecodePixelWidth="128"/>
-    <BitmapImage x:Key="FuelPumpIcon" UriSource="pack://application:,,,/Assets/Icons/fuel_pump.png" DecodePixelWidth="128"/>
-    <BitmapImage x:Key="GarageIcon" UriSource="pack://application:,,,/Assets/Icons/garage.png" DecodePixelWidth="128"/>
-    <BitmapImage x:Key="NewspaperIcon" UriSource="pack://application:,,,/Assets/Icons/newspaper.png" DecodePixelWidth="128"/>
-    <BitmapImage x:Key="PartsIcon" UriSource="pack://application:,,,/Assets/Icons/parts_filled.png" DecodePixelWidth="128"/>
-    <BitmapImage x:Key="QuitIcon" UriSource="pack://application:,,,/Assets/Icons/quit.png" DecodePixelWidth="128"/>
-    <BitmapImage x:Key="RadioIcon" UriSource="pack://application:,,,/Assets/Icons/radio.png" DecodePixelWidth="128"/>
-    <BitmapImage x:Key="TrophyIcon" UriSource="pack://application:,,,/Assets/Icons/trophy.png" DecodePixelWidth="128"/>
+         they are drawn at a few dozen pixels, and read whole so a mod's file is not held open. A mod's
+         theme/images/icons/<name>.png stands in for one (ThemeImages.cs). -->
+    <BitmapImage x:Key="CalendarIcon" UriSource="{theme:Image icons/calendar}" DecodePixelWidth="128" CacheOption="OnLoad"/>
+    <BitmapImage x:Key="CarDealerIcon" UriSource="{theme:Image icons/car_dealer}" DecodePixelWidth="128" CacheOption="OnLoad"/>
+    <BitmapImage x:Key="CarInfoIcon" UriSource="{theme:Image icons/car_info}" DecodePixelWidth="128" CacheOption="OnLoad"/>
+    <BitmapImage x:Key="DrivingWheelIcon" UriSource="{theme:Image icons/driving_wheel}" DecodePixelWidth="128" CacheOption="OnLoad"/>
+    <BitmapImage x:Key="FuelPumpIcon" UriSource="{theme:Image icons/fuel_pump}" DecodePixelWidth="128" CacheOption="OnLoad"/>
+    <BitmapImage x:Key="GarageIcon" UriSource="{theme:Image icons/garage}" DecodePixelWidth="128" CacheOption="OnLoad"/>
+    <BitmapImage x:Key="NewspaperIcon" UriSource="{theme:Image icons/newspaper}" DecodePixelWidth="128" CacheOption="OnLoad"/>
+    <BitmapImage x:Key="PartsIcon" UriSource="{theme:Image icons/parts_filled}" DecodePixelWidth="128" CacheOption="OnLoad"/>
+    <BitmapImage x:Key="QuitIcon" UriSource="{theme:Image icons/quit}" DecodePixelWidth="128" CacheOption="OnLoad"/>
+    <BitmapImage x:Key="RadioIcon" UriSource="{theme:Image icons/radio}" DecodePixelWidth="128" CacheOption="OnLoad"/>
+    <BitmapImage x:Key="TrophyIcon" UriSource="{theme:Image icons/trophy}" DecodePixelWidth="128" CacheOption="OnLoad"/>
 
     <!-- Back: an arrow pointing left, drawn rather than a picture -->
     <DrawingImage x:Key="BackIcon">
