@@ -1,6 +1,7 @@
 using StreetCorsa.ViewModels;
 using StreetCorsa.Models.Career.Milestones;
 using StreetCorsa.Models.GameState;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Dialogs.Career
 {
@@ -21,11 +22,11 @@ namespace StreetCorsa.Dialogs.Career
         public float ProgressPercentage { get; set; }
 
         // Display text
-        public string ProgressText => IsCompleted ? "Completed!" : $"{CurrentValue}/{TargetValue}";
+        public string ProgressText => IsCompleted ? GameText.Say("career.milestone.completed") : $"{CurrentValue}/{TargetValue}";
 
         public string TooltipText => IsCompleted
-            ? $"{Name}\n{Description}\n\nCompleted!"
-            : $"{Name}\n{Description}\n\nProgress: {CurrentValue}/{TargetValue}";
+            ? GameText.Say("career.milestone.tip.completed", ("name", Name), ("description", Description))
+            : GameText.Say("career.milestone.tip", ("name", Name), ("description", Description), ("current", CurrentValue), ("target", TargetValue));
 
         // Visual properties
         // The colours are the view's: it paints a completed badge from IsCompleted

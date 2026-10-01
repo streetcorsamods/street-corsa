@@ -5,6 +5,7 @@ using StreetCorsa.Parts;
 using StreetCorsa.Parts.Cars;
 using StreetCorsa.Parts.Logic;
 using StreetCorsa.Services.Parts;
+using StreetCorsa.Services.Text;
 using StreetCorsa.ViewModels;
 
 namespace StreetCorsa.Screens.Garage
@@ -271,14 +272,14 @@ namespace StreetCorsa.Screens.Garage
 
         #region Engine sheet
 
-        public string EngineTitle => _isStand ? "ENGINE STAND" : "ENGINE";
+        public string EngineTitle => _isStand ? GameText.Say("workbench.engine_stand") : GameText.Say("workbench.engine");
 
         private EngineReport? _report;
 
         public bool HasEngine => _engine != null;
 
         public string EngineName =>
-            _engine == null ? "No engine" : (_engine.Definition.DisplayName ?? _engine.Definition.Name);
+            _engine == null ? GameText.Say("workbench.no_engine") : (_engine.Definition.DisplayName ?? _engine.Definition.Name);
 
         public string PowerDisplay => _report?.Dyno is { MaxPowerHp: > 0 } dyno ? $"{dyno.MaxPowerHp:0} hp @ {dyno.MaxPowerRpm:0}" : "-";
         public string TorqueDisplay => _report?.Dyno is { MaxTorque: > 0 } dyno ? $"{dyno.MaxTorque:0} Nm @ {dyno.MaxTorqueRpm:0}" : "-";
@@ -288,17 +289,17 @@ namespace StreetCorsa.Screens.Garage
             : "-";
 
         public string GearsDisplay => _report is { GearRatios.Count: > 0 } report
-            ? $"{report.GearRatios.Count} speed, final {report.FinalRatio:0.00}"
-            : "No transmission";
+            ? GameText.Say("workbench.gears", ("gears", report.GearRatios.Count), ("final", $"{report.FinalRatio:0.00}"))
+            : GameText.Say("workbench.no_transmission");
 
         public string MassDisplay => _report == null ? "-" : $"{_report.Mass:0} kg";
 
         /// <summary>Why the engine does not run, in the part scripts' own words; empty when it does</summary>
         public string StatusDisplay => _engine == null
-            ? _isStand ? "The stand is empty. Pull an engine out of a car, or put one from the shelf on it." : "The engine bay is empty."
+            ? _isStand ? GameText.Say("workbench.stand_empty") : GameText.Say("workbench.bay_empty")
             : _report == null
-                ? "Checking the engine..."
-                : _report.Runs ? string.Empty : Capitalize(_report.Problem ?? "the engine does not run.");
+                ? GameText.Say("workbench.checking")
+                : _report.Runs ? string.Empty : Capitalize(_report.Problem ?? GameText.Say("workbench.does_not_run"));
 
         #endregion
 
@@ -310,7 +311,7 @@ namespace StreetCorsa.Screens.Garage
         public double SelectedCondition => _selectedPart?.Wear ?? 0;
         public string SelectedConditionDisplay => _selectedPart == null
             ? string.Empty
-            : $"{_selectedPart.Wear * 100:0}%" + (_selectedPart.Tear < 0.995 ? $", damaged ({_selectedPart.Tear * 100:0}% left)" : string.Empty);
+            : $"{_selectedPart.Wear * 100:0}%" + (_selectedPart.Tear < 0.995 ? GameText.Say("garage.part.damaged", ("left", $"{_selectedPart.Tear * 100:0}")) : string.Empty);
 
         public string SelectedWorthDisplay => _selectedPart != null && SavedOf(_selectedPart) is { } saved
             ? $"${PartPricing.Round(PartPricing.Worth(_selectedPart.Definition, saved)):N0}"
@@ -326,8 +327,8 @@ namespace StreetCorsa.Screens.Garage
         private bool SelectedIsEngine => _selectedPart != null && ReferenceEquals(_selectedPart, _engine);
 
         public string RemoveButtonText => !SelectedIsEngine
-            ? "Take it off"
-            : _isStand ? "Off the stand" : "Pull the engine";
+            ? GameText.Say("workbench.take_off")
+            : _isStand ? GameText.Say("workbench.off_stand") : GameText.Say("workbench.pull_engine");
 
         public string SelectedAttachedDisplay
         {
@@ -336,20 +337,20 @@ namespace StreetCorsa.Screens.Garage
                 if (SelectedIsEngine)
                 {
                     return _isStand
-                        ? "It goes on the shelf as it is."
+                        ? GameText.Say("workbench.off.to_shelf")
                         : _gameState.Player.EngineStand == null
-                            ? "A big job. It goes on the engine stand" + (Catalog is { } catalog && EngineWork.StandStripsDisplay(catalog) is { Length: > 0 } strips
-                                ? $"; {strips} come off onto the shelf."
-                                : ".")
-                            : "A big job. The stand is taken, so it goes on the shelf as it is.";
+                            ? Catalog is { } catalog && EngineWork.StandStripsDisplay(catalog) is { Length: > 0 } strips
+                                ? GameText.Say("workbench.off.to_stand.strips", ("strips", strips))
+                                : GameText.Say("workbench.off.to_stand")
+                            : GameText.Say("workbench.off.stand_taken");
                 }
 
                 var attached = _selectedPart == null ? 0 : _selectedPart.SelfAndDescendants().Count() - 1;
                 return attached switch
                 {
                     0 => string.Empty,
-                    1 => "Comes off with the part that is on it.",
-                    _ => $"Comes off with the {attached} parts that are on it."
+                    1 => GameText.Say("workbench.attached.one"),
+                    _ => GameText.Say("workbench.attached.other", ("count", attached))
                 };
             }
         }
@@ -793,16 +794,16 @@ namespace StreetCorsa.Screens.Garage
             if (_isStand && (item.IsEngine || stand == null))
             {
                 Candidates = null;
-                ShelfHint = !item.IsEngine ? "The stand is empty. Put an engine on it first."
-                    : stand == null ? "Put it on the stand to take it apart."
-                    : "The stand is taken. Take its engine off first.";
+                ShelfHint = !item.IsEngine ? GameText.Say("workbench.hint.stand_empty")
+                    : stand == null ? GameText.Say("workbench.hint.to_stand")
+                    : GameText.Say("workbench.hint.stand_taken");
                 return;
             }
 
             if (!_isStand && _car == null)
             {
                 Candidates = null;
-                ShelfHint = "There is no car here to put it on.";
+                ShelfHint = GameText.Say("workbench.hint.no_car");
                 return;
             }
 
@@ -833,11 +834,11 @@ namespace StreetCorsa.Screens.Garage
             ShelfHint = candidates.Count switch
             {
                 0 when fitting > 0 && blocked != null => blocked,
-                0 when item.IsEngine => "The engine bay is taken. Pull that engine first, or put this one on the stand.",
-                0 when _isStand => "It does not fit anywhere on this engine as it is.",
-                0 => "It does not fit anywhere on this car as it is.",
-                1 => "Click the glowing part in the car to mount it.",
-                _ => $"It fits in {candidates.Count} places: click the one you want."
+                0 when item.IsEngine => GameText.Say("workbench.hint.bay_taken"),
+                0 when _isStand => GameText.Say("workbench.hint.no_fit_engine"),
+                0 => GameText.Say("workbench.hint.no_fit_car"),
+                1 => GameText.Say("workbench.hint.one_place"),
+                _ => GameText.Say("workbench.hint.places", ("count", candidates.Count))
             };
         }
 

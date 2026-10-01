@@ -4,6 +4,7 @@ using StreetCorsa.Helpers;
 using StreetCorsa.Logging;
 using StreetCorsa.Services.Career;
 using StreetCorsa.Services.Storage;
+using StreetCorsa.Services.Text;
 using StreetCorsa.ViewModels;
 
 namespace StreetCorsa.Dialogs.Career
@@ -70,7 +71,7 @@ namespace StreetCorsa.Dialogs.Career
         public int TotalRaces => _gameState.Player.Stats.Races;
         public string WinRate => TotalRaces > 0
             ? $"{(_gameState.Player.Stats.WinRate * 100):F0}%"
-            : "N/A";
+            : GameText.Say("career.win_rate.none");
 
         public int Reputation => _gameState.Player.Stats.Reputation;
         public string ReputationTier => _gameState.Player.Stats.GetReputationTier();
