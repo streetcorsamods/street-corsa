@@ -1,5 +1,6 @@
 using StreetCorsa.Models.Career.Milestones;
 using StreetCorsa.Models.GameState;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Services.Career
 {
@@ -33,7 +34,7 @@ namespace StreetCorsa.Services.Career
             {
                 return new MilestoneProgress
                 {
-                    Definition = new MilestoneDefinition { Id = milestoneId, Name = "Unknown" },
+                    Definition = new MilestoneDefinition { Id = milestoneId, Name = GameText.Say("career.milestone.unknown") },
                     CurrentValue = 0,
                     IsCompleted = false
                 };

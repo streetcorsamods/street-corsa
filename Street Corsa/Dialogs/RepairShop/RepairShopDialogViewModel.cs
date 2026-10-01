@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Parts;
 using StreetCorsa.Parts.Cars;
+using StreetCorsa.Services.Text;
 using StreetCorsa.Services.Time;
 using StreetCorsa.ViewModels;
 
@@ -70,8 +71,8 @@ namespace StreetCorsa.Dialogs.RepairShop
             // The tank is the gas station's to fill, not the garage's
             var dry = CarCondition.FuelLeft(_car) is { } fuel && fuel < CarCondition.TooLittleToRaceLitres;
             Status = problems.Count > 0
-                ? "Not fit to race: " + string.Join("; ", problems) + "." + (dry ? " Fill it up at the gas station." : "")
-                : Jobs.Count > 0 ? "It races as it is, with its damage." : "Nothing to fix: the car is in good shape.";
+                ? GameText.Say(dry ? "repair.not_fit.dry" : "repair.not_fit", ("problems", string.Join("; ", problems)))
+                : Jobs.Count > 0 ? GameText.Say("repair.races_damaged") : GameText.Say("repair.nothing");
 
             OnPropertyChanged(nameof(HasJobs));
             OnPropertyChanged(nameof(MoneyDisplay));

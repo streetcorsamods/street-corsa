@@ -1,6 +1,7 @@
 <UserControl x:Class="StreetCorsa.Screens.Garage.PartsWorkbenchView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:t="clr-namespace:StreetCorsa.Services.Text"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:helpers="clr-namespace:StreetCorsa.Helpers"
@@ -50,10 +51,10 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <TextBlock Grid.Row="0" Text="PARTS SHELF" Style="{StaticResource PanelTitleStyle}"/>
+                <TextBlock Grid.Row="0" Text="{t:Text workbench.shelf}" Style="{StaticResource PanelTitleStyle}"/>
 
                 <TextBlock Grid.Row="1"
-                           Text="Nothing on the shelf. Parts you take off a car or buy end up here."
+                           Text="{t:Text workbench.shelf.empty}"
                            Style="{StaticResource LabelStyle}"
                            TextWrapping="Wrap"
                            Visibility="{Binding HasShelfItems, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
@@ -132,23 +133,23 @@
                                Foreground="{StaticResource FitBrush}"
                                TextWrapping="Wrap"/>
                     <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                        <Button Content="Never mind"
+                        <Button Content="{t:Text workbench.never_mind}"
                                 Command="{Binding CancelMountCommand}"
                                 Style="{StaticResource DialogSecondaryButtonStyle}"
                                 Padding="12,4"
                                 FontSize="{StaticResource FontSizeCompact}"/>
-                        <Button Content="Put on the stand"
+                        <Button Content="{t:Text workbench.put_on_stand}"
                                 Command="{Binding PutOnStandCommand}"
                                 Visibility="{Binding IsShelfEngine, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                ToolTip="Bolt it to the engine stand to take it apart. What is in the way of the stand, and the radiator, come off onto the shelf."
+                                ToolTip="{t:Text workbench.put_on_stand.tip}"
                                 Style="{StaticResource DialogPrimaryButtonStyle}"
                                 Padding="12,4"
                                 FontSize="{StaticResource FontSizeCompact}"
                                 Margin="8,0,0,0"/>
-                        <Button Content="Take apart"
+                        <Button Content="{t:Text workbench.take_apart}"
                                 Command="{Binding TakeApartCommand}"
                                 Visibility="{Binding CanTakeApart, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                ToolTip="Take off what is mounted on it, here on the shelf"
+                                ToolTip="{t:Text workbench.take_apart.tip}"
                                 Style="{StaticResource DialogSecondaryButtonStyle}"
                                 Padding="12,4"
                                 FontSize="{StaticResource FontSizeCompact}"
@@ -186,15 +187,15 @@
                             <RowDefinition/>
                             <RowDefinition/>
                         </Grid.RowDefinitions>
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Power" Style="{StaticResource LabelStyle}"/>
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="{t:Text workbench.power}" Style="{StaticResource LabelStyle}"/>
                         <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding PowerDisplay}" Style="{StaticResource ValueStyle}" FontWeight="SemiBold"/>
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Torque" Style="{StaticResource LabelStyle}"/>
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="{t:Text workbench.torque}" Style="{StaticResource LabelStyle}"/>
                         <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding TorqueDisplay}" Style="{StaticResource ValueStyle}"/>
-                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Size" Style="{StaticResource LabelStyle}"/>
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="{t:Text workbench.size}" Style="{StaticResource LabelStyle}"/>
                         <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding DisplacementDisplay}" Style="{StaticResource ValueStyle}"/>
-                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Gearbox" Style="{StaticResource LabelStyle}"/>
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="{t:Text workbench.gearbox}" Style="{StaticResource LabelStyle}"/>
                         <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding GearsDisplay}" Style="{StaticResource ValueStyle}"/>
-                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Weight" Style="{StaticResource LabelStyle}"/>
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="{t:Text workbench.weight}" Style="{StaticResource LabelStyle}"/>
                         <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding MassDisplay}" Style="{StaticResource ValueStyle}"/>
                     </Grid>
                     <TextBlock Text="{Binding StatusDisplay}"
@@ -225,7 +226,7 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Condition" Style="{StaticResource LabelStyle}"/>
+                        <TextBlock Grid.Column="0" Text="{t:Text workbench.condition}" Style="{StaticResource LabelStyle}"/>
                         <ProgressBar Grid.Column="1"
                                      Minimum="0" Maximum="1"
                                      Value="{Binding SelectedCondition, Mode=OneWay}"
@@ -238,7 +239,7 @@
                     </Grid>
 
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="Worth" Style="{StaticResource LabelStyle}"/>
+                        <TextBlock Text="{t:Text workbench.worth}" Style="{StaticResource LabelStyle}"/>
                         <TextBlock Text="{Binding SelectedWorthDisplay}" Style="{StaticResource ValueStyle}" Foreground="{StaticResource AccentSuccessBrush}"/>
                     </StackPanel>
 
@@ -267,10 +268,10 @@
                                 Style="{StaticResource DialogPrimaryButtonStyle}"
                                 Padding="15,5"
                                 FontSize="{StaticResource FontSizeBody}"/>
-                        <Button Content="Put it in the car"
+                        <Button Content="{t:Text workbench.put_in_car}"
                                 Command="{Binding InstallFromStandCommand}"
                                 Visibility="{Binding CanInstallFromStand, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                ToolTip="A big job: the engine goes in the selected car's empty engine bay"
+                                ToolTip="{t:Text workbench.put_in_car.tip}"
                                 Style="{StaticResource DialogSecondaryButtonStyle}"
                                 Padding="15,5"
                                 FontSize="{StaticResource FontSizeBody}"
@@ -279,7 +280,7 @@
                 </StackPanel>
             </Border>
 
-            <TextBlock Text="Click a part to pick it. Drag to look around, scroll to get closer."
+            <TextBlock Text="{t:Text workbench.help}"
                        FontSize="{StaticResource FontSizeSmall}"
                        Foreground="{StaticResource WhiteB0Brush}"
                        TextWrapping="Wrap"

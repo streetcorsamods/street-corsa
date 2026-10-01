@@ -2,6 +2,7 @@ using StreetCorsa.Models.GameState;
 using StreetCorsa.Parts;
 using StreetCorsa.Parts.Cars;
 using StreetCorsa.Screens.Shared;
+using StreetCorsa.Services.Text;
 using StreetCorsa.ViewModels;
 
 namespace StreetCorsa.Dialogs.CarInfo
@@ -19,7 +20,7 @@ namespace StreetCorsa.Dialogs.CarInfo
         public System.Windows.Thickness Indent => new(Depth * 18, 0, 0, 0);
 
         /// <summary>"82%", or "82%, damaged (40% left)"</summary>
-        public string ConditionDisplay => Tear < 0.995 ? $"{Wear * 100:0}%, damaged ({Tear * 100:0}% left)" : $"{Wear * 100:0}%";
+        public string ConditionDisplay => Tear < 0.995 ? $"{Wear * 100:0}%" + GameText.Say("garage.part.damaged", ("left", $"{Tear * 100:0}")) : $"{Wear * 100:0}%";
 
         /// <summary>What the bar shows: the part's shape, wear and damage together</summary>
         public double Condition => Helpers.Unit.Clamp01(Wear, 0) * Helpers.Unit.Clamp01(Tear, 0);
@@ -59,24 +60,24 @@ namespace StreetCorsa.Dialogs.CarInfo
         {
             var lines = new List<CarInfoLine>
             {
-                new("Condition", ConditionDisplay.Of(car).Sentence),
-                new("Mileage", $"{car.OdometerKM:N0} km")
+                new(GameText.Say("carinfo.condition"), ConditionDisplay.Of(car).Sentence),
+                new(GameText.Say("carinfo.mileage"), $"{car.OdometerKM:N0} km")
             };
 
             if (EngineName(car, catalog) is { } name)
-                lines.Add(new("Engine", engine is { Runs: false } ? $"{name} (won't run: {engine.Problem})" : name));
+                lines.Add(new(GameText.Say("carinfo.engine"), engine is { Runs: false } ? GameText.Say("carinfo.engine.wont_run", ("engine", name), ("problem", engine.Problem)) : name));
             else if (car.HasPartsAssigned && catalog != null)
-                lines.Add(new("Engine", "None"));
-            if (car.PowerHp is { } hp) lines.Add(new("Power", hp > 0 ? $"{hp:0} hp on the dyno" : "Doesn't run on the dyno"));
+                lines.Add(new(GameText.Say("carinfo.engine"), GameText.Say("carinfo.engine.none")));
+            if (car.PowerHp is { } hp) lines.Add(new(GameText.Say("carinfo.power"), hp > 0 ? GameText.Say("carinfo.power.dyno", ("hp", $"{hp:0}")) : GameText.Say("carinfo.power.no_run")));
 
-            lines.Add(new("Fuel", ConditionDisplay.Fuel(car)));
-            lines.Add(new("Oil", $"{CarCondition.OilLeft(car) * 100:0}%"));
-            lines.Add(new("Body", CarCondition.IsTotaled(car) ? "Totaled" : $"{CarCondition.BodyCondition(car) * 100:0}%"));
-            lines.Add(new("Dirt", DirtOf(car.BodyDirt)));
+            lines.Add(new(GameText.Say("carinfo.fuel"), ConditionDisplay.Fuel(car)));
+            lines.Add(new(GameText.Say("carinfo.oil"), $"{CarCondition.OilLeft(car) * 100:0}%"));
+            lines.Add(new(GameText.Say("carinfo.body"), CarCondition.IsTotaled(car) ? GameText.Say("carinfo.body.totaled") : $"{CarCondition.BodyCondition(car) * 100:0}%"));
+            lines.Add(new(GameText.Say("carinfo.dirt"), DirtOf(car.BodyDirt)));
 
             if (car.PurchaseDate != default)
-                lines.Add(new("Bought", car.PurchasePrice > 0 ? $"{car.PurchaseDate:d MMMM yyyy} for ${car.PurchasePrice:N0}" : $"{car.PurchaseDate:d MMMM yyyy}"));
-            if (car.ImpoundedUntil is { } until) lines.Add(new("Impound", $"Held until {until:dddd d MMMM}, ${car.ImpoundFee:N0} to collect"));
+                lines.Add(new(GameText.Say("carinfo.bought"), car.PurchasePrice > 0 ? GameText.Say("carinfo.bought.price", ("date", car.PurchaseDate), ("price", $"${car.PurchasePrice:N0}")) : $"{car.PurchaseDate:d MMMM yyyy}"));
+            if (car.ImpoundedUntil is { } until) lines.Add(new(GameText.Say("carinfo.impound"), GameText.Say("carinfo.impound.held", ("until", until), ("fee", $"${car.ImpoundFee:N0}"))));
 
             return lines;
         }
@@ -93,10 +94,10 @@ namespace StreetCorsa.Dialogs.CarInfo
 
         private static string DirtOf(double dirt) => dirt switch
         {
-            < 0.1 => "Clean",
-            < 0.35 => "Dusty",
-            < 0.7 => "Dirty",
-            _ => "Filthy"
+            < 0.1 => GameText.Say("carinfo.dirt.clean"),
+            < 0.35 => GameText.Say("carinfo.dirt.dusty"),
+            < 0.7 => GameText.Say("carinfo.dirt.dirty"),
+            _ => GameText.Say("carinfo.dirt.filthy")
         };
 
         /// <summary>Every part on the car, each under what it is mounted on, in the order they are mounted</summary>

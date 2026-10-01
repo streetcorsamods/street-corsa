@@ -3,6 +3,7 @@ using StreetCorsa.Models.Career.Milestones;
 using StreetCorsa.Models.Career.Victory;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Models.Race;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Services.Career
 {
@@ -110,17 +111,17 @@ namespace StreetCorsa.Services.Career
         {
             var footnote = new List<string>();
             if (newMilestones.Count > 0)
-                footnote.Add("Milestones also completed: " + string.Join(", ", newMilestones.Select(m => m.Name)));
+                footnote.Add(GameText.Say("career.victory.also_milestones", ("milestones", string.Join(", ", newMilestones.Select(m => m.Name)))));
 
             var otherUnlocks = newVictoryUnlocks.Where(v => v.VictoryType != achievedVictory.VictoryType).ToList();
             if (otherUnlocks.Count > 0)
-                footnote.Add("New victory paths unlocked: " + string.Join(", ", otherUnlocks.Select(v => v.Name)));
+                footnote.Add(GameText.Say("career.victory.also_paths", ("paths", string.Join(", ", otherUnlocks.Select(v => v.Name)))));
 
             var card = VictoryCard.For(achievedVictory.Name, achievedVictory.Description, gameState, string.Join("\n", footnote));
-            var text = $"Congratulations!\n\nYou have achieved the {achievedVictory.Name} victory!\n\n{achievedVictory.Description}";
+            var text = GameText.Say("career.victory.message", ("victory", achievedVictory.Name), ("description", achievedVictory.Description));
             if (footnote.Count > 0) text += "\n\n" + card.Footnote;
 
-            return new PlayerMessage("VICTORY!", text) { Victory = card };
+            return new PlayerMessage(GameText.Say("victory.title"), text) { Victory = card };
         }
 
         /// <summary>
@@ -143,7 +144,7 @@ namespace StreetCorsa.Services.Career
                     var unlockDescriptions = GetUnlockDescriptions(milestone.Unlocks, newVictoryUnlocks);
                     if (unlockDescriptions.Count > 0)
                     {
-                        message += "\n\nUnlocked:";
+                        message += GameText.Say("career.milestone.unlocked");
                         foreach (var unlock in unlockDescriptions)
                         {
                             message += $"\n  {unlock}";
@@ -153,7 +154,7 @@ namespace StreetCorsa.Services.Career
             }
             else
             {
-                message = $"You completed {milestones.Count} milestones!\n";
+                message = GameText.Say("career.milestones.completed", ("count", milestones.Count));
                 foreach (var milestone in milestones)
                 {
                     message += $"\n  {milestone.Name}";
@@ -162,7 +163,7 @@ namespace StreetCorsa.Services.Career
                 // Show any new victory unlocks
                 if (newVictoryUnlocks.Count > 0)
                 {
-                    message += "\n\nNew victory paths unlocked:";
+                    message += GameText.Say("career.milestones.new_paths");
                     foreach (var victory in newVictoryUnlocks)
                     {
                         message += $"\n  {victory.Name}";
@@ -170,7 +171,7 @@ namespace StreetCorsa.Services.Career
                 }
             }
 
-            return new PlayerMessage("Milestone Complete", message);
+            return new PlayerMessage(GameText.Say("career.milestone.title"), message);
         }
 
         /// <summary>
@@ -183,18 +184,18 @@ namespace StreetCorsa.Services.Career
             if (newVictoryUnlocks.Count == 1)
             {
                 var victory = newVictoryUnlocks[0];
-                message = $"New Victory Path Unlocked!\n\n{victory.Name}\n{victory.Description}";
+                message = GameText.Say("career.path_unlocked.one", ("victory", victory.Name), ("description", victory.Description));
             }
             else
             {
-                message = "New Victory Paths Unlocked!\n";
+                message = GameText.Say("career.path_unlocked.other");
                 foreach (var victory in newVictoryUnlocks)
                 {
                     message += $"\n  {victory.Name}";
                 }
             }
 
-            return new PlayerMessage("Path Unlocked", message);
+            return new PlayerMessage(GameText.Say("career.path_unlocked.title"), message);
         }
 
         /// <summary>
@@ -221,7 +222,7 @@ namespace StreetCorsa.Services.Career
                 var victory = newVictoryUnlocks.FirstOrDefault(v => string.Equals(v.VictoryType, unlockId, StringComparison.OrdinalIgnoreCase));
                 if (victory != null)
                 {
-                    descriptions.Add($"{victory.Name} victory path");
+                    descriptions.Add(GameText.Say("career.unlock.victory_path", ("victory", victory.Name)));
                     continue;
                 }
 
@@ -229,7 +230,7 @@ namespace StreetCorsa.Services.Career
                 var knownVictory = _victoryService.GetVictoryCondition(unlockId);
                 if (knownVictory != null)
                 {
-                    descriptions.Add($"{knownVictory.Name} victory path");
+                    descriptions.Add(GameText.Say("career.unlock.victory_path", ("victory", knownVictory.Name)));
                     continue;
                 }
 
