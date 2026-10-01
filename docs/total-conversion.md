@@ -91,11 +91,11 @@ types) need string ids before mods can add kinds.
 
 | What | Where | Now | Effort |
 |---|---|---|---|
-| Make families (gm/ford/mopar...; no Japanese makes). Drive the stock engine guess, swaps, tuning, sounds | `Parts/Cars/MakeFamilies.cs:13-23` | C# keywords | easy, big payoff |
-| Stock engine, layout and price of an AC car | `StockEngineMatcher.cs`, catalog.db (editor only) | guessed by name; never from a mod | easy: `cars.json` |
-| Which AC cars are in the game | `CarImportService.cs`, `UsedCarMarketService.cs` | every installed car, no era filter | medium: allow-list or filter (years, countries, ids) |
-| Part groups, bolt-on groups, tuner priorities, performance groups | `PartKinds.cs:17-37`, `EngineFactory.cs:32-35`, `EngineTuner.cs:66-86`, `PartShopRules.cs:62-66` | C# English strings | easy: fields on work-order kinds |
-| Stand-in script classes | `ScriptClassLoader.cs:26-32` | C# table | easy |
+| Make families (gm/ford/mopar...; no Japanese makes). Drive the stock engine guess, swaps, tuning, sounds | `cars/makes.json` | **done (E6)** | |
+| Stock engine, layout and price of an AC car | `cars/cars.json` | **done (E6)** | |
+| Which AC cars are in the game | game.json `cars` | **done (E6)** | |
+| Part groups, bolt-on groups, tuner priorities, performance groups | `parts/part_groups.json` | **done (E6)** | |
+| Stand-in script classes | `parts/stand_ins.json` | **done (E6)** | |
 | **Engine figures** | `PartScriptRuntime.cs`, `EngineEvaluator.cs` | only from SLRR bytecode; plain-data parts work for running gear only | hard: a `"figures"` object on a part that fills `DynoInputs` directly |
 | Turbo lag, single turbo | `AcEngineData.cs:148-161` | fixed 0.985/0.992 | easy |
 | Gears | `EngineEvaluator.cs:65-66` | SLRR array, at most 6 | medium |
@@ -185,6 +185,56 @@ playing exactly as it does now: today's values become the base game's data.
 Later, not in the epic: a weather system (there is none today), nitrous in AC.
 
 ## As built
+
+### E6: cars and makes (2026-10-01, branch `feature/cars-makes`)
+
+The owner's decisions: the factory engines and prices set by hand in the developer's local catalog.db (about 100 cars)
+go into the base game's **`cars.json`**, which ships, and the **catalog editor saves there** from now on (catalog.db keeps
+only what the game works out); **no car filter** in the base game (every installed car, as before), the filter being
+there for mods; the **part groups in a file of their own** (`parts/part_groups.json`), not on the work-order kinds,
+which cover engine jobs only.
+
+- **Makes** (`Parts/Cars/CarBook`, a new content type `cars`, merged key by key like the rules): `makes.json` holds
+  each make's words, family, country, price factor and how common its badge makes a car, the countries with their names
+  and regions, and the words that match a car's name to an engine's (aliases, noise). It replaces four C# tables:
+  `MakeFamilies`' keywords (still the API, over the book), `CarProfileService`'s brand multipliers and brand rarity, and
+  `OriginFilter`'s brand countries and region aliases. A car's make is the first a word of its brand tells, else of
+  its name; a make without a family names no engine, so the families came out exactly as before (checked on every car
+  name, engine build and part name of the installed game). Linked into EngineBench, which reads its Content folder's.
+- **Cars** (`cars.json`, by AC folder name): `engine`, `layout`, `price`, `common`, `make`. Laid over the stored profile
+  as it is read (`CarProfileRepository.Given`), never written into catalog.db, so a mod taken out leaves the car to the
+  game's guess. A field the mods give takes over from what was set by hand in the catalog at the next start-up (a
+  Manual profile goes back to Generated, a picked engine or layout is let go). The editor writes the fields set by hand
+  (the price with how common the car is, the engine, the layout; a reset takes them out) into the installed base
+  game's `cars.json` and the source tree's when it runs from a build of it (`BaseCarsFile`), then reads the book again.
+- **Pricing** (`rules/cars.json`, `RuleBook.Cars`): the price curve, the year and source factors, the clamp and rounding,
+  the believable weights, and how common a car is by year, source and power. Read from the mods' rules, not the
+  career's (the catalog is the program's); the profile's hash holds the figures and the car's badge, so a change works
+  every generated price out again. The 158 installed cars' prices and rarities came out the same to the cent.
+- **Engines** (`rules/engines.json`, `Parts/Cars/EngineRules`, pointed at the career's rules by `CarPartsService`, the
+  base game's figures in the tools): the cooling and oil figures (`EngineCooling`), the factory's swaps and bolt-ons
+  (`EngineFactory`), the tuners' (`EngineTuner`), the engine matcher's points (`StockEngineMatcher`). The constants kept
+  their names as properties.
+- **Car filter** (game.json `cars`, `Rules.GameCars`): years, countries, makes, ids in, ids never, only the ids;
+  applied in `InstalledCars.Only`, which every picker of a car goes through (the lots, the rivals, the events, the main
+  screen and the showcase).
+- **Part groups** (`Parts/PartGroups`, `parts/part_groups.json`): each group's classes, `never_stacks`, `bolt_on`,
+  `tune` (the tuners' priority), `speed_shop`; a mod's new groups go first, one of an id already there changes it in its
+  place. Group ids are now snake case (`engine_blocks`; no save held them); the player reads `part_group.<id>` in the
+  text (`ui_parts.json`). The ids the code knows (the internals that wear, the running gear's slots, the attendant's
+  air filter and exhaust) are the game's vocabulary: a mod changes their classes, not their meaning. Every part of the
+  base game landed in the group it was in.
+- **Stand-in classes** (`parts/stand_ins.json`, `ScriptClassLoader.UseStandIns`): the Ford six's `Block_Inline_OHV`
+  out of `Block_Vee_OHV`; each mod's parts folder may have one; the converter reads the base game's.
+
+Left for later, on purpose:
+- the starting cars and the police cars are not held to game.json's `cars` (a game names its own in its rules);
+- a make's name is not shown anywhere yet (shops show the pack's make id, `gm`); makes have no `name`;
+- the editor writes into the base game's file even a value a later mod gives the car;
+- engine figures from data, turbo lag, more gears, transverse engines: data engines (E11);
+- the rivals' challenge odds and traits: personality, not setting (as in E2);
+- not played in game: the market, the editor's save and the start-up hand-over were checked by tests and a read-only
+  look at a copy of the developer's catalog.
 
 ### E5: look (2026-10-01, branch `feature/look`)
 

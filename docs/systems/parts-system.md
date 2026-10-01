@@ -473,13 +473,13 @@ the car is looked at (`EnsurePartsAsync` from a screen: the engine is built on a
 caller's).
 
 **Factory engine.** `CarProfile.StockEngineBuildId` names an engine build of `engine_builds.json`. It is suggested by
-`StockEngineMatcher` and can be overruled per car in the Car Catalog Editor (options come best match first;
-`StockEngineIsManual` keeps suggestions away afterwards, also when the picked build leaves the catalog: the car then
-runs on the best match until somebody picks again). Suggestions are written with `ICarProfileRepository.UpdateProfile`,
-a read-change-write in one visit to the database, and the editor saves the same way, so neither overwrites what the
-other stored in the meantime. The matcher scores the builds that run
-(`EngineBuildIndex`: every build on the dyno once, about a second, kept for the session): same corporate family
-(`MakeFamilies`: GM, Ford, Mopar... from the words of the name; a block belongs to the make whose cars it came in),
+`StockEngineMatcher` unless the mods' `cars/cars.json` gives the car one (`engine`), which the Car Catalog Editor
+writes into the base game's (options come best match first; an engine given keeps suggestions away, also when the
+build leaves the catalog: the car then runs on the best match until somebody picks again). Suggestions are written with
+`ICarProfileRepository.UpdateProfile`, a read-change-write in one visit to the database. The matcher scores the builds
+that run (`EngineBuildIndex`: every build on the dyno once, about a second, kept for the session), by the points of the
+rules' `engines.matcher`: same corporate family (`MakeFamilies` over `CarBook`: GM, Ford, Mopar... from the words of
+the name, as `cars/makes.json` says; a block belongs to the make whose cars it came in),
 words the names share (a 427 is a 427), and how close the power comes to the car's own `bhp`. With the parts there are,
 some cars get the nearest relative rather than their engine (no slant six: the Valiant gets a 318).
 Check: `EngineBench <parts> cars <AC cars folder>`.
@@ -487,7 +487,7 @@ Check: `EngineBench <parts> cars <AC cars folder>`.
 **Engine layout.** Where a car carries its engine (`EngineLayout`: front, mid, rear) is guessed from its own data,
 since AC's data never says (`EngineLayouts.Guess`): front-wheel drive, or 44% or more of the weight on the front axle,
 is a front engine; anything else is taken for a rear one, not a mid one, as the weight alone does not tell them apart
-and the rear engine is the one of the game's era. `CarProfile.EngineLayout` overrules the guess, set in the Car
+and the rear engine is the one of the game's era. `layout` in `cars/cars.json` overrules the guess, set in the Car
 Catalog Editor ("Guessed: ..." keeps the guess; a reset to defaults goes back to it). The layout only moves the engine
 in the garage's 3D view (`CarPartsLayout.EnginePlacement`, the mount candidates too): a front engine behind the front
 axle facing forward; a mid one facing forward too, its rear face 0.4 m ahead of the rear axle so the gearbox reaches

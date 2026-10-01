@@ -21,6 +21,9 @@ public static class Program
     private const string BasePackId = "stock";
     private const string SlotRoleSuffix = "_slot_ID";
     private const string ConstantsFile = "script_constants.json";
+
+    /// <summary>The base game's stand-in classes, beside the parts written: the converter's SLRR game never shipped them</summary>
+    private static string StandIns(string output) => Path.Combine(output, ScriptClassLoader.StandInsFile);
     private const string TakesPrefix = "takes:";
 
     /// <summary>Exit code of a run that wrote its output but left parts, packs or rpks out: a script must not take it for a clean run</summary>
@@ -48,7 +51,7 @@ public static class Program
         {
             Options = options;
             Game = new SlrrGame(options.Slrr);
-            Scripts = new SlrrScriptEvaluator(Game);
+            Scripts = new SlrrScriptEvaluator(Game, StandIns(options.Output));
             Staging = ConversionOutput.StagingFolder(options.Output);
         }
 
@@ -204,7 +207,7 @@ public static class Program
     {
         var game = run.Game;
         var options = run.Options;
-        var routing = new SlrrScriptEvaluator(game);
+        var routing = new SlrrScriptEvaluator(game, StandIns(options.Output));
 
         // The base game keeps its stock parts (running gear, accessories, neons) in an rpk next to the parts folder.
         // Sorted by ordinal: the order packs are met in shows in the output, which must not change with the culture
@@ -976,7 +979,7 @@ public static class Program
         var definitions = run.Definitions;
         var engineBuilds = new SlrrEngineBuilds(game, run.PartIds);
         // Cars get an evaluator of their own: their classes are of no use to the game
-        var builds = engineBuilds.FromCars(new SlrrScriptEvaluator(game));
+        var builds = engineBuilds.FromCars(new SlrrScriptEvaluator(game, StandIns(run.Options.Output)));
         // The folder was checked when the options were read
         if (run.Options.Notes != null) builds.AddRange(engineBuilds.FromNotes(run.Options.Notes));
 

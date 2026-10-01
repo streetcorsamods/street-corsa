@@ -59,6 +59,8 @@ namespace StreetCorsa.Services.Parts
                 var economy = Rules.RuleBook.Current.Economy;
                 return new PartPricing.Figures(economy.PartsPriceScale, economy.UsedShopFactor, economy.TradeInFactor);
             };
+            // And the engines' figures (cooling, factory, tuners, the engine matcher): the same rules
+            EngineRules.Source = () => Rules.RuleBook.Current.Engines;
             _catalog = new Lazy<PartsCatalog>(LoadCatalog);
             _builds = new Lazy<EngineBuildIndex>(CreateIndex);
             _sounds = new Lazy<SoundLibrary>(LoadSounds);

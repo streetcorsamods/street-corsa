@@ -9,12 +9,12 @@ public sealed record EngineMatch(RatedBuild Build, double Score);
 /// </summary>
 public static class StockEngineMatcher
 {
-    private const double SameFamily = 3.0;
-    private const double OtherFamily = -3.0;
-    private const double SharedNumber = 2.0;
-    private const double SharedWord = 1.0;
-    private const double PowerWeight = 4.0;
-    private const double FactoryBuildBonus = 0.2;
+    private static double SameFamily => EngineRules.Now.Matcher.SameFamily;
+    private static double OtherFamily => EngineRules.Now.Matcher.OtherFamily;
+    private static double SharedNumber => EngineRules.Now.Matcher.SharedNumber;
+    private static double SharedWord => EngineRules.Now.Matcher.SharedWord;
+    private static double PowerWeight => EngineRules.Now.Matcher.PowerWeight;
+    private static double FactoryBuildBonus => EngineRules.Now.Matcher.FactoryBuildBonus;
 
     /// <param name="bhp">Power the car's own data claims, if any</param>
     public static List<EngineMatch> Rank(EngineBuildIndex index, string brand, string name, double? bhp)

@@ -37,6 +37,9 @@ public sealed class GameFile
     /// <summary>How the game writes money, units, numbers and dates</summary>
     public GameLocale Locale { get; set; } = new();
 
+    /// <summary>Which of the installed AC cars are in the game (every one, in the base game)</summary>
+    public GameCars Cars { get; set; } = new();
+
     public static GameFile Load(ModSet mods)
     {
         var problems = new List<string>();
@@ -56,6 +59,7 @@ public sealed class GameFile
         if (string.IsNullOrWhiteSpace(file.Garage)) file.Garage = "garage";
         if (string.IsNullOrWhiteSpace(file.Language)) file.Language = "en";
         file.Locale = GameLocale.Checked(file.Locale, problems);
+        file.Cars = GameCars.Checked(file.Cars, problems);
 
         foreach (var problem in problems) Logger.Warning("Game settings: {Problem}", problem);
         ModProblems.Add("Game settings", problems);
@@ -110,5 +114,76 @@ public sealed class GameLocale
         }
 
         return locale;
+    }
+}
+
+/// <summary>
+/// game.json's <c>cars</c>: which of the installed AC cars the game uses (the lots, the rivals, the events, the main
+/// screen). A car is in when its model year is within <see cref="From"/> and <see cref="To"/>, its country is (or is in)
+/// one of <see cref="Countries"/>, and its make one of <see cref="Makes"/>, each only where given; a car listed in
+/// <see cref="Ids"/> is in whatever they say, one in <see cref="Never"/> never is. With <see cref="OnlyIds"/> the
+/// game has the cars of <see cref="Ids"/> and no other. Countries and makes are as the mods' makes.json tells them.
+/// </summary>
+public sealed class GameCars
+{
+    /// <summary>The oldest and newest model year; a car whose data gives no year is out when either is given</summary>
+    public int? From { get; set; }
+
+    public int? To { get; set; }
+
+    /// <summary>Countries or regions ("USA", "Europe"), any of their names</summary>
+    public List<string> Countries { get; set; } = [];
+
+    /// <summary>Ids of makes in makes.json</summary>
+    public List<string> Makes { get; set; } = [];
+
+    /// <summary>AC folder names of cars that are in, whatever the rest says</summary>
+    public List<string> Ids { get; set; } = [];
+
+    /// <summary>AC folder names of cars that are never in</summary>
+    public List<string> Never { get; set; } = [];
+
+    /// <summary>The cars of <see cref="Ids"/> and no other</summary>
+    public bool OnlyIds { get; set; }
+
+    /// <summary>Whether every installed car is in: nothing is filtered</summary>
+    [JsonIgnore]
+    public bool Everything => From == null && To == null && Countries.Count == 0 && Makes.Count == 0 && Never.Count == 0 && !OnlyIds;
+
+    /// <summary>Whether the car is in the game</summary>
+    public bool Allows(string id, string? brand, string? name, string? country, int? year, Parts.Cars.CarBook? book = null)
+    {
+        if (Never.Contains(id, StringComparer.OrdinalIgnoreCase)) return false;
+        if (Ids.Contains(id, StringComparer.OrdinalIgnoreCase)) return true;
+        if (OnlyIds) return false;
+
+        if ((From != null || To != null) && year == null) return false;
+        if (year < From || year > To) return false;
+
+        if (Countries.Count == 0 && Makes.Count == 0) return true;
+        book ??= Parts.Cars.CarBook.Current;
+        var make = book.MakeOf(id, brand, name);
+        if (Makes.Count > 0 && (make == null || !Makes.Contains(make, StringComparer.OrdinalIgnoreCase))) return false;
+        if (Countries.Count == 0) return true;
+
+        var where = !string.IsNullOrWhiteSpace(country) ? country : book.CountryOfMake(make);
+        return where != null && Countries.Any(c => book.IsIn(where, c));
+    }
+
+    internal static GameCars Checked(GameCars? cars, List<string> problems)
+    {
+        cars ??= new GameCars();
+        cars.Countries = (cars.Countries ?? []).Where(c => !string.IsNullOrWhiteSpace(c)).ToList();
+        cars.Makes = (cars.Makes ?? []).Where(m => !string.IsNullOrWhiteSpace(m)).ToList();
+        cars.Ids = (cars.Ids ?? []).Where(i => !string.IsNullOrWhiteSpace(i)).ToList();
+        cars.Never = (cars.Never ?? []).Where(i => !string.IsNullOrWhiteSpace(i)).ToList();
+        if (cars.From > cars.To)
+        {
+            problems.Add($"cars.from {cars.From} is after cars.to {cars.To}; taken the other way round");
+            (cars.From, cars.To) = (cars.To, cars.From);
+        }
+
+        if (cars.OnlyIds && cars.Ids.Count == 0) problems.Add("cars.onlyIds is set and cars.ids names no car: the game has no cars");
+        return cars;
     }
 }

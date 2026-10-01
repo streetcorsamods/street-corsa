@@ -1,0 +1,39 @@
+{
+  "_comment": [
+    "The kinds of part on a shop's shelves (see docs/modding.md, \"part_groups.json\"). A part is in the first group with",
+    "a class its script descends from, by the end of the class's name (\"Block\" takes in Block_Vee_OHV), the groups in",
+    "the order listed; a part no group takes in is an accessory. A mod's part_groups.json adds groups (tried before these)",
+    "or changes one of these by its id, naming only what it changes. The player reads part_group.<id> in the text, else",
+    "the group's name. never_stacks: never mounts on its own kind (a head on a head); bolt_on: what the cars on the lots",
+    "were worked on with; tune: how much a rival's tuner goes for it (10 the most, none: not at all); speed_shop: a speed",
+    "shop sells it. The ids engine_blocks to shocks below are the game's own: the engine's internals wear and break, the",
+    "running gear has a slot on each wheel."
+  ],
+  "groups": [
+    {
+      "id": "engine_blocks", "never_stacks": true, "tune": 10,
+      "classes": [ "Block_Vee_OHV", "Block_Vee_OHC", "Block_Inline_OHV", "Block_Inline_OHC", "Block_Vee", "Block_Inline", "Block" ]
+    },
+    { "id": "cylinder_heads", "classes": [ "CylinderHead" ], "never_stacks": true, "speed_shop": true },
+    { "id": "camshafts", "classes": [ "Camshaft" ], "never_stacks": true, "bolt_on": true, "tune": 5, "speed_shop": true },
+    { "id": "crankshafts", "classes": [ "Crankshaft" ], "never_stacks": true },
+    { "id": "connecting_rods", "classes": [ "ConnectingRod" ], "never_stacks": true },
+    { "id": "pistons", "classes": [ "Piston" ], "never_stacks": true },
+    { "id": "flywheels", "classes": [ "Flywheel", "Clutch" ], "bolt_on": true },
+    { "id": "transmissions", "classes": [ "Transmission" ], "never_stacks": true },
+    { "id": "intake_manifolds", "classes": [ "IntakeManifold" ], "bolt_on": true, "tune": 5, "speed_shop": true },
+    { "id": "carburettors", "classes": [ "FuelInjectorSystem", "AirFuelDeliverySystem" ], "bolt_on": true, "tune": 7, "speed_shop": true },
+    { "id": "air_filters", "classes": [ "AirFilter" ], "bolt_on": true, "tune": 3, "speed_shop": true },
+    { "id": "chargers", "classes": [ "SuperCharger", "TurboCharger" ], "tune": 8, "speed_shop": true },
+    { "id": "nitrous", "classes": [ "NOSInjectorSystem", "Canister" ], "speed_shop": true },
+    { "id": "exhaust", "classes": [ "ExhaustHeader", "ExhaustPipe", "ExhaustTip" ], "bolt_on": true, "tune": 6, "speed_shop": true },
+    { "id": "oil_pans", "classes": [ "OilPan" ] },
+    { "id": "tyres", "classes": [ "Tyre" ] },
+    { "id": "rims", "classes": [ "Wheel" ] },
+    { "id": "brakes", "classes": [ "Brake" ] },
+    { "id": "springs", "classes": [ "Spring" ] },
+    { "id": "shocks", "classes": [ "ShockAbsorber" ] },
+    { "id": "sway_bars", "classes": [ "Swaybar" ] },
+    { "id": "suspension_arms", "classes": [ "Suspension" ] }
+  ]
+}

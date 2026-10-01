@@ -27,6 +27,9 @@ public static class ContentTypes
     public const string Sfx = "sfx";
     public const string Props = "props";
 
+    /// <summary>The makes and the cars (makes.json, cars.json): merged key by key, see <c>Parts.Cars.CarBook</c></summary>
+    public const string Cars = "cars";
+
     /// <summary>The look: theme/*.json (colour, size and typeface keys), theme/fonts, theme/images; see <c>Styles.Theme</c></summary>
     public const string Theme = "theme";
 

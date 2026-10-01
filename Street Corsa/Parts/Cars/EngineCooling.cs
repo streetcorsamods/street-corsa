@@ -33,35 +33,35 @@ public sealed class EngineCooling
     public enum Kind { Other, Radiator, Fan, WaterPump }
 
     /// <summary>A performance radiator carries off this much more than a factory one</summary>
-    public const double PerformanceRadiator = 1.35;
+    public static double PerformanceRadiator => EngineRules.Now.Cooling.PerformanceRadiator;
 
     /// <summary>A performance water pump moves this much more coolant</summary>
-    public const double PerformancePump = 1.1;
+    public static double PerformancePump => EngineRules.Now.Cooling.PerformancePump;
 
     /// <summary>What an engine without its radiator is left to cool it with, of what it makes</summary>
-    public const double NoRadiator = 0.15;
+    public static double NoRadiator => EngineRules.Now.Cooling.NoRadiator;
 
     /// <summary>What a radiator still carries off with no water pump to push the coolant through it</summary>
-    public const double NoPump = 0.25;
+    public static double NoPump => EngineRules.Now.Cooling.NoPump;
 
-    public const double NoFan = 0.15;
-    public const double StockFan = 0.35;
-    public const double PerformanceFan = 0.5;
+    public static double NoFan => EngineRules.Now.Cooling.NoFan;
+    public static double StockFan => EngineRules.Now.Cooling.StockFan;
+    public static double PerformanceFan => EngineRules.Now.Cooling.PerformanceFan;
 
     /// <summary>A radiator with an electric fan of its own keeps up best standing still</summary>
-    public const double ElectricFan = 0.55;
+    public static double ElectricFan => EngineRules.Now.Cooling.ElectricFan;
 
-    public const double StockSumpG = 1.05;
-    public const double RaceSumpG = 1.25;
+    public static double StockSumpG => EngineRules.Now.Cooling.StockSumpG;
+    public static double RaceSumpG => EngineRules.Now.Cooling.RaceSumpG;
 
     /// <summary>A race pan this big holds its oil a little longer</summary>
-    public const double BigSumpLitres = 6.5;
-    public const double BigSumpG = 1.3;
+    public static double BigSumpLitres => EngineRules.Now.Cooling.BigSumpLitres;
+    public static double BigSumpG => EngineRules.Now.Cooling.BigSumpG;
 
     /// <summary>No oil pan at all: the pickup is in the air under any g</summary>
-    public const double NoSumpG = 0.5;
+    public static double NoSumpG => EngineRules.Now.Cooling.NoSumpG;
 
-    public const string OilPansGroup = "Oil pans";
+    public const string OilPansGroup = PartGroups.OilPans;
 
     // Whole words, a plural s allowed, as the work order reads names (WorkOrder.HasWord): "race" is not in "brace",
     // "fan" not in "fantastic". A letter on either side ends a match, an underscore, a digit or a space does not, so

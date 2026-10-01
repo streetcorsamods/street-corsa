@@ -308,7 +308,7 @@ namespace StreetCorsa.Screens.Garage
 
         public bool HasSelection => _selectedPart != null;
         public string SelectedName => _selectedPart?.Definition.DisplayName ?? _selectedPart?.Definition.Name ?? string.Empty;
-        public string SelectedKind => _selectedPart == null ? string.Empty : PartKinds.GroupOf(_selectedPart.Definition);
+        public string SelectedKind => _selectedPart == null ? string.Empty : PartKinds.GroupName(PartKinds.GroupOf(_selectedPart.Definition));
         public double SelectedCondition => _selectedPart?.Wear ?? 0;
         public string SelectedConditionDisplay => _selectedPart == null
             ? string.Empty
@@ -866,7 +866,7 @@ namespace StreetCorsa.Screens.Garage
         {
             Part = part;
             Name = definition.DisplayName ?? definition.Name;
-            Kind = PartKinds.GroupOf(definition);
+            Kind = PartKinds.GroupName(PartKinds.GroupOf(definition));
             IsEngine = PartKinds.IsBlock(definition);
 
             Detail = PartTrees.Describe(part);

@@ -18,18 +18,20 @@ public sealed class ScriptClassLoader
     private const string ScriptsFolder = "scripts";
     private const int MaxChain = 32;
 
+    /// <summary>The file in a mod's parts folder that names stand-in classes (<see cref="StandIn"/>), beside its scripts folder</summary>
+    public const string StandInsFile = "stand_ins.json";
+
     /// <summary>
-    /// Classes mods extend that the game never shipped, made from the one their author copied: what to copy,
-    /// what it extends instead, and the methods left out. Block_Inline_OHV (the Ford six's blocks) is
-    /// Block_Vee_OHV with one cylinder head; its author's source sits among the SLRR notes, never compiled.
+    /// Classes mods extend that the game never shipped, made from the one their author copied, from the files given to
+    /// <see cref="UseStandIns"/> (a later one's over an earlier one's): the base game's Block_Inline_OHV (the Ford six's
+    /// blocks) is Block_Vee_OHV with one cylinder head; its author's source sits among the SLRR notes, never compiled.
     /// </summary>
-    private static readonly Dictionary<string, (string CopiedFrom, string BaseClass, string[] DroppedMethods)> StandIns =
-        new(StringComparer.OrdinalIgnoreCase)
-        {
-            ["java.game.parts.enginepart.block.block_inline.Block_Inline_OHV"] =
-                ("java.game.parts.enginepart.block.block_vee.Block_Vee_OHV", "java.game.parts.enginepart.block.Block_Inline",
-                    new[] { "getLeftCylinderHead", "getRightCylinderHead" })
-        };
+    private readonly Dictionary<string, StandIn> _standIns = new(StringComparer.OrdinalIgnoreCase);
+
+    private readonly List<string> _problems = new();
+
+    /// <summary>Stand-in files that could not be read</summary>
+    public IReadOnlyList<string> Problems => _problems;
 
     // Class files by path, and classes by name as they were looked for (see Find): two caches, as a path and a class
     // name are two things. Neither is locked while a file is read and parsed: two threads asking for the same cold
@@ -50,6 +52,43 @@ public sealed class ScriptClassLoader
     {
         Roots = roots.Count > 0 ? roots : new[] { string.Empty };
         _rootPaths = Roots.Select(r => string.IsNullOrEmpty(r) ? null : Path.TrimEndingDirectorySeparator(Path.GetFullPath(r))).ToArray();
+    }
+
+    /// <summary>
+    /// The stand-in classes a file names, over those named before; a file that is not there adds none, one that does not
+    /// read is told in <see cref="Problems"/>.
+    /// </summary>
+    public void UseStandIns(string file)
+    {
+        if (!File.Exists(file)) return;
+        try
+        {
+            using var document = System.Text.Json.JsonDocument.Parse(File.ReadAllText(file),
+                new System.Text.Json.JsonDocumentOptions { CommentHandling = System.Text.Json.JsonCommentHandling.Skip, AllowTrailingCommas = true });
+            if (!document.RootElement.TryGetProperty("stand_ins", out var standIns) || standIns.ValueKind != System.Text.Json.JsonValueKind.Object)
+            {
+                _problems.Add($"{file}: no \"stand_ins\" object; left out");
+                return;
+            }
+
+            foreach (var entry in standIns.EnumerateObject())
+            {
+                var standIn = entry.Value.ValueKind == System.Text.Json.JsonValueKind.Object
+                    ? System.Text.Json.JsonSerializer.Deserialize<StandIn>(entry.Value.GetRawText())
+                    : null;
+                if (standIn is not { Copy.Length: > 0, Extends.Length: > 0 })
+                {
+                    _problems.Add($"{file}: {entry.Name} names no class to copy and extend; left out");
+                    continue;
+                }
+
+                _standIns[entry.Name] = standIn;
+            }
+        }
+        catch (Exception ex) when (ex is System.Text.Json.JsonException or IOException or UnauthorizedAccessException)
+        {
+            _problems.Add($"{file}: {ex.Message}; left out");
+        }
     }
 
     /// <summary>The first root: the base game's scripts</summary>
@@ -106,8 +145,8 @@ public sealed class ScriptClassLoader
             }
         }
 
-        if (result == null && StandIns.TryGetValue(className, out var standIn) && Find(standIn.CopiedFrom, nearFolder) is { } original)
-            result = original.DerivedAs(className, standIn.BaseClass, standIn.DroppedMethods);
+        if (result == null && _standIns.TryGetValue(className, out var standIn) && Find(standIn.Copy, nearFolder) is { } original)
+            result = original.DerivedAs(className, standIn.Extends, standIn.Drop.ToArray());
 
         return _byName.GetOrAdd(key, result);
     }
@@ -147,4 +186,17 @@ public sealed class ScriptClassLoader
 
     public List<ScriptClass>? Chain(string className, string? nearFolder = null) =>
         Find(className, nearFolder) is { } type ? Chain(type) : null;
+}
+
+/// <summary>A class a mod extends that the game never shipped: made from <see cref="Copy"/>, extending <see cref="Extends"/> instead, without the methods of <see cref="Drop"/></summary>
+public sealed class StandIn
+{
+    [System.Text.Json.Serialization.JsonPropertyName("copy")]
+    public string Copy { get; set; } = string.Empty;
+
+    [System.Text.Json.Serialization.JsonPropertyName("extends")]
+    public string Extends { get; set; } = string.Empty;
+
+    [System.Text.Json.Serialization.JsonPropertyName("drop")]
+    public List<string> Drop { get; set; } = new();
 }

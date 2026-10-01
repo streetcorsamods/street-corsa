@@ -195,13 +195,14 @@ public sealed class DeeperSimulationTests : IDisposable
     }
 
     [Theory]
-    [InlineData("engines/chrysler/Oil_pan_big_block_B", EngineCooling.StockSumpG)]
-    [InlineData("engines/gm/GM_small_block_oil_pan", EngineCooling.StockSumpG)]
-    [InlineData("engines/chrysler/Oil_pan_small_block_Milodon_deep", EngineCooling.RaceSumpG)]
-    [InlineData("engines/gm/Canton_427_oil_pan", EngineCooling.BigSumpG)]
-    [InlineData("engines/gm/Milodon_427_oil_pan", EngineCooling.BigSumpG)]
-    public void A_deep_or_race_oil_pan_holds_its_oil_to_more_g(string id, double g)
+    [InlineData("engines/chrysler/Oil_pan_big_block_B", "stock")]
+    [InlineData("engines/gm/GM_small_block_oil_pan", "stock")]
+    [InlineData("engines/chrysler/Oil_pan_small_block_Milodon_deep", "race")]
+    [InlineData("engines/gm/Canton_427_oil_pan", "big")]
+    [InlineData("engines/gm/Milodon_427_oil_pan", "big")]
+    public void A_deep_or_race_oil_pan_holds_its_oil_to_more_g(string id, string pan)
     {
+        var g = pan switch { "stock" => EngineCooling.StockSumpG, "race" => EngineCooling.RaceSumpG, _ => EngineCooling.BigSumpG };
         Assert.Equal(g, EngineCooling.SumpG(Real.Value.Catalog.Get(id)));
     }
 

@@ -17,22 +17,17 @@ public sealed record BuiltEngine(PartInstance Root, EngineReport Report, IReadOn
 /// </summary>
 public static class EngineFactory
 {
-    private const double WearNoise = 0.08;
-    private const double NewerPartBonus = 0.15;
+    private static double WearNoise => EngineRules.Now.Factory.WearNoise;
+    private static double NewerPartBonus => EngineRules.Now.Factory.NewerPartBonus;
 
-    private const double EngineSwapChance = 0.25;
-    private const double SwapMinPower = 1.05;
-    private const double SwapMaxPower = 1.5;
-    private const double MaxPowerOverStock = 1.6;
-    private const double MinPowerGain = 1.005;
-    private const int MaxBoltOns = 4;
-    private const int AttemptsPerBoltOn = 6;
+    private static double EngineSwapChance => EngineRules.Now.Factory.EngineSwapChance;
+    private static double SwapMinPower => EngineRules.Now.Factory.SwapMinPower;
+    private static double SwapMaxPower => EngineRules.Now.Factory.SwapMaxPower;
+    private static double MaxPowerOverStock => EngineRules.Now.Factory.MaxPowerOverStock;
+    private static double MinPowerGain => EngineRules.Now.Factory.MinPowerGain;
+    private static int MaxBoltOns => EngineRules.Now.Factory.MaxBoltOns;
+    private static int AttemptsPerBoltOn => EngineRules.Now.Factory.AttemptsPerBoltOn;
 
-    // What people change on an engine without taking it apart
-    private static readonly HashSet<string> BoltOnGroups = new()
-    {
-        "Air filters", "Carburettors and injection", "Intake manifolds", "Exhaust", "Camshafts", "Flywheels and clutches"
-    };
 
     /// <param name="condition">0..1, how worn the car is; every part ends up around it</param>
     public static BuiltEngine? CreateStock(PartsCatalog catalog, RatedBuild build, double condition, Random random)
@@ -116,7 +111,7 @@ public static class EngineFactory
         double maxPower, double condition, Random random)
     {
         var swappable = root.SelfAndDescendants()
-            .Where(p => !ReferenceEquals(p, root) && catalog.Get(p.DefinitionId) is { } d && BoltOnGroups.Contains(PartKinds.GroupOf(d)))
+            .Where(p => !ReferenceEquals(p, root) && catalog.Get(p.DefinitionId) is { } d && PartGroups.Current.IsBoltOn(PartKinds.GroupOf(d)))
             .ToList();
         if (swappable.Count == 0) return null;
 

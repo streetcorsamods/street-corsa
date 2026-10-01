@@ -302,9 +302,27 @@ public static class Program
     private static PartsCatalog LoadCatalog(string folder)
     {
         if (!File.Exists(Path.Combine(folder, EngineBuild.FileName)) && Directory.Exists(Path.Combine(folder, Mods.ModIds.BaseId)))
-            return PartsCatalog.Load(Mods.ModSet.Load(folder).Folders(Mods.ContentTypes.Parts).ToList());
+        {
+            var mods = Mods.ModSet.Load(folder);
+            UseContent(mods);
+            return PartsCatalog.Load(mods.Folders(Mods.ContentTypes.Parts).ToList());
+        }
+
+        // A parts folder of a Content folder (a mod's, the base game's): the makes and the part groups of that Content
+        // folder's mods, else the folder's own groups
+        var content = Directory.GetParent(folder)?.Parent;
+        if (content != null && Directory.Exists(Path.Combine(content.FullName, Mods.ModIds.BaseId))) UseContent(Mods.ModSet.Load(content.FullName));
+        else PartGroups.Current = PartGroups.Load([folder]);
 
         return PartsCatalog.Load(folder);
+    }
+
+    /// <summary>The makes (which family a car or an engine is) and the part groups of the mods, as the game reads them</summary>
+    private static void UseContent(Mods.ModSet mods)
+    {
+        CarBook.Current = CarBook.Load(mods);
+        PartGroups.Current = PartGroups.Load(mods.Folders(Mods.ContentTypes.Parts).Select(f => f.Dir));
+        foreach (var problem in CarBook.Current.Problems.Concat(PartGroups.Current.Problems)) Console.WriteLine($"content: {problem}");
     }
 
     private static int Tune(PartsCatalog catalog, string id, int count)

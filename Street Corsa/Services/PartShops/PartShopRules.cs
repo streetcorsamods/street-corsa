@@ -58,12 +58,6 @@ namespace StreetCorsa.Services.PartShops
         /// <summary>A closing-down sale: the rivals and everybody else clear out this share of what is left each day</summary>
         public static double SaleClearOutShare => Rules.RuleBook.Current.PartShops.SaleClearOutShare;
 
-        /// <summary>The kinds of part a speed shop sells: the ones that make power</summary>
-        public static readonly IReadOnlySet<string> PerformanceGroups = new HashSet<string>(StringComparer.Ordinal)
-        {
-            "Carburettors and injection", "Intake manifolds", "Superchargers and turbos", "Camshafts", "Exhaust",
-            "Air filters", "Nitrous", "Cylinder heads"
-        };
 
         /// <summary>The rules' figures for the shop's kind of shop (<c>partShops.kinds</c>), for what the shop's own file leaves out</summary>
         private static Rules.PartShopKindRules KindRules(PartShopDefinition shop) =>
@@ -125,7 +119,7 @@ namespace StreetCorsa.Services.PartShops
             return shop.KindOf switch
             {
                 PartShopKind.Specialist => !runningGear && part.Make != null && ofItsMakes,
-                PartShopKind.Speed => !runningGear && ofItsMakes && PerformanceGroups.Contains(group) && !factoryParts.Contains(part.Id),
+                PartShopKind.Speed => !runningGear && ofItsMakes && PartGroups.Current.SoldBySpeedShops(group) && !factoryParts.Contains(part.Id),
                 PartShopKind.Wheels => runningGear,
                 _ => ofItsMakes || runningGear
             };

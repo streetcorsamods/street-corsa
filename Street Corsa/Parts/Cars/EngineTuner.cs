@@ -53,39 +53,29 @@ public sealed record TuneResult(PartInstance Engine, EngineReport Report, IReadO
 public static class EngineTuner
 {
     /// <summary>An upgrade gains at least this share of power, or it is not worth the money</summary>
-    public const double MinGain = 0.03;
+    public static double MinGain => EngineRules.Now.Tuner.MinGain;
 
-    public const int MaxReplacementDepth = 5;
+    public static int MaxReplacementDepth => EngineRules.Now.Tuner.MaxReplacementDepth;
 
     /// <summary>A swapped-in engine makes no more than this times the power of the one it replaces: a bigger engine of the family, not a race engine</summary>
-    public const double MaxSwapPower = 1.6;
+    public static double MaxSwapPower => EngineRules.Now.Tuner.MaxSwapPower;
 
     /// <summary>How worn an engine out of the paper is</summary>
-    public const double UsedEngineCondition = 0.75;
+    public static double UsedEngineCondition => EngineRules.Now.Tuner.UsedEngineCondition;
 
-    public const string BlockGroup = "Engine blocks";
+    public const string BlockGroup = PartGroups.Blocks;
 
-    /// <summary>The group of a radiator or water pump put on to keep a tuned engine cool</summary>
-    public const string CoolingGroup = "Cooling";
+    /// <summary>What a radiator or water pump put on to keep a tuned engine cool counts as: no shelf of its own</summary>
+    public const string CoolingGroup = "cooling";
 
     /// <summary>Cooled this well (<see cref="Models.Race.EngineCoolingRating.Cooling"/>), an engine keeps its temperature at full throttle</summary>
-    public const double CoolEnough = 1.0;
+    public static double CoolEnough => EngineRules.Now.Tuner.CoolEnough;
 
     /// <summary>Cooled less than this, an engine goes flat at full throttle: a tuner does not make that upgrade</summary>
-    public const double RunsHotBelow = 0.85;
+    public static double RunsHotBelow => EngineRules.Now.Tuner.RunsHotBelow;
 
-    /// <summary>How much a racer cares about each kind of part; kinds not listed are not tuned</summary>
-    public static int Priority(string group) => group switch
-    {
-        BlockGroup => 10,
-        "Superchargers and turbos" => 8,
-        "Carburettors and injection" => 7,
-        "Exhaust" => 6,
-        "Intake manifolds" => 5,
-        "Camshafts" => 5,
-        "Air filters" => 3,
-        _ => 0
-    };
+    /// <summary>How much a racer cares about each kind of part (<c>tune</c> in part_groups.json); 0: not tuned</summary>
+    public static int Priority(string group) => PartGroups.Current.TunePriority(group);
 
     /// <summary>What the mail order asks for a new part, in the game's prices</summary>
     public static decimal NewPrice(PartDefinition part, double priceMultiplier) =>

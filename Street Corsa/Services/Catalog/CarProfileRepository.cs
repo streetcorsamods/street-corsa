@@ -5,7 +5,10 @@ namespace StreetCorsa.Services.Catalog
 {
     /// <summary>
     /// LiteDB implementation of car profile repository
-    /// Shares catalog.db with CarDefinitions but uses separate collection
+    /// Shares catalog.db with CarDefinitions but uses separate collection.
+    /// A profile read through <see cref="GetProfile"/> or <see cref="GetAllProfiles"/> carries what the mods give the car
+    /// (<see cref="StreetCorsa.Parts.Cars.CarBook"/>, cars.json) over what was worked out: the stored profile is never changed by
+    /// it, so a mod taken out leaves the car as the game works it out. The writes take the profile as stored.
     /// </summary>
     public class CarProfileRepository : ICarProfileRepository
     {
@@ -32,7 +35,7 @@ namespace StreetCorsa.Services.Catalog
         {
             using var db = CatalogDatabase.Open(_databasePath);
             var collection = db.GetCollection<CarProfile>(ProfilesCollection);
-            return collection.FindById(carDefinitionId);
+            return Given(collection.FindById(carDefinitionId));
         }
 
         public CarProfile GetOrCreateProfile(string carDefinitionId, Func<CarProfile> createDefault)
@@ -43,7 +46,7 @@ namespace StreetCorsa.Services.Catalog
 
             var newProfile = createDefault();
             UpsertProfile(newProfile);
-            return newProfile;
+            return Given(newProfile)!;
         }
 
         public void UpsertProfile(CarProfile profile)
@@ -113,7 +116,27 @@ namespace StreetCorsa.Services.Catalog
         {
             using var db = CatalogDatabase.Open(_databasePath);
             var collection = db.GetCollection<CarProfile>(ProfilesCollection);
-            return [.. collection.FindAll()];
+            return [.. collection.FindAll().Select(Given).OfType<CarProfile>()];
+        }
+
+        /// <summary>
+        /// The profile with what the mods give its car laid over it: the price, how common it is, the factory engine
+        /// (picked, so no suggestion takes its place) and the engine layout
+        /// </summary>
+        public static CarProfile? Given(CarProfile? profile)
+        {
+            if (profile == null || StreetCorsa.Parts.Cars.CarBook.Current.Car(profile.CarDefinitionId) is not { } given) return profile;
+
+            if (given.Price is { } price) profile.BasePrice = price;
+            if (given.Common is { } common) profile.DealerPrecedence = common;
+            if (given.Engine is { Length: > 0 } engine)
+            {
+                profile.StockEngineBuildId = engine;
+                profile.StockEngineIsManual = true;
+            }
+
+            if (given.EngineLayout is { } layout) profile.EngineLayout = layout;
+            return profile;
         }
 
         public bool ProfileExists(string carDefinitionId)

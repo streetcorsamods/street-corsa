@@ -14,37 +14,36 @@ namespace StreetCorsa.Services.Catalog
         private readonly IAppLogger _logger;
 
         /// <summary>
-        /// Weights outside this are misprints ("1.250" read the wrong way, a weight in tonnes or pounds): no
-        /// road car weighs under 300 kg or over 5 t. The car is then priced as one without specs.
-        /// </summary>
-        private const double MinPlausibleWeightKg = 300;
-        private const double MaxPlausibleWeightKg = 5000;
-
-        /// <summary>
         /// Goes into a Generated profile's DefinitionHash with the car's own hash. Moved on when the way specs are
         /// read or priced changes (2: lb and kW converted, instead of read as kg and hp; 3: priced from hp per tonne,
-        /// where hp per kg had put every car on the $5,000 floor), so every generated price is worked out again once.
-        /// The formula is deterministic: a car whose specs read the same keeps its price.
+        /// where hp per kg had put every car on the $5,000 floor; 4: the figures from the rules and the badge from the
+        /// makes), so every generated price is worked out again once. The formula is deterministic: a car whose specs
+        /// read the same keeps its price.
         /// </summary>
-        private const string SpecsReading = "specs3";
+        private const string SpecsReading = "specs4";
 
-        private static string DefinitionHashOf(CarDefinition car) => $"{car.ContentHash}|{SpecsReading}";
+        /// <summary>The pricing figures in play: the mods' rules, not a career's (the catalog is the program's)</summary>
+        private static Rules.CarRules Figures => Rules.RuleBook.Installed.Cars;
 
-        // Brand reputation multipliers for pricing
-        private static readonly Dictionary<string, float> BrandMultipliers = new()
+        /// <summary>
+        /// The car's own hash, the way specs are read, and what the price was worked out by: the rules' figures and the
+        /// car's make with its badge's figures. A mod that changes any of them has the price worked out again.
+        /// </summary>
+        private static string DefinitionHashOf(CarDefinition car)
         {
-            // Luxury/Exotic brands
-            { "ferrari", 2.5f }, { "lamborghini", 2.5f }, { "mclaren", 2.3f },
-            { "porsche", 2.0f }, { "maserati", 1.8f }, { "aston", 1.8f },
+            var make = MakeOf(car);
+            var badge = CarBook.Current.Make(make);
+            var by = FormattableString.Invariant($"{FiguresDigest}|{make}|{badge?.Price}|{badge?.Common}");
+            return $"{car.ContentHash}|{SpecsReading}|{Digest(by)}";
+        }
 
-            // Performance brands
-            { "bmw", 1.5f }, { "mercedes", 1.5f }, { "audi", 1.4f },
-            { "corvette", 1.4f }, { "nissan", 1.2f },
+        private static string FiguresDigest => System.Text.Json.JsonSerializer.Serialize(Figures, Rules.RuleBook.Options);
 
-            // Common brands (default)
-            { "ford", 1.0f }, { "chevrolet", 1.0f }, { "toyota", 0.9f },
-            { "mazda", 0.9f }, { "honda", 0.9f }
-        };
+        private static string Digest(string text) =>
+            Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(text)))[..16];
+
+        /// <summary>The car's make, as the mods' makes tell it (<see cref="CarBook.MakeOf"/>)</summary>
+        private static string? MakeOf(CarDefinition car) => CarBook.Current.MakeOf(car.Id, car.Brand, car.Name);
 
         public CarProfileService(IContentCatalogRepository catalogRepo, ICarProfileRepository profileRepo)
         {
@@ -79,72 +78,36 @@ namespace StreetCorsa.Services.Catalog
             // Start with power/weight ratio (primary metric)
             var powerWeightBase = CalculatePowerWeightPrice(carDefinition);
 
-            // Apply brand multiplier
-            var brandMultiplier = GetBrandMultiplier(carDefinition.Brand);
-            var withBrand = powerWeightBase * (decimal)brandMultiplier;
+            var figures = Figures;
 
-            // Apply year adjustment
-            var withYear = ApplyYearAdjustment(withBrand, carDefinition.Year);
+            // The badge, the year and where the car comes from
+            var withBrand = powerWeightBase * (decimal)(CarBook.Current.Make(MakeOf(carDefinition))?.Price ?? 1.0);
+            var withYear = withBrand * (decimal)Rules.CarRules.ForYear(figures.PriceByYear, carDefinition.Year, 1.0);
+            var withSource = withYear * (decimal)figures.PriceBySource.GetValueOrDefault(carDefinition.Source.ToString(), 1.0);
 
-            // Apply source quality multiplier
-            var withSource = ApplySourceMultiplier(withYear, carDefinition.Source);
-
-            // Clamp to reasonable range
-            var clamped = Math.Clamp(withSource, 5000m, 500000m);
-
-            // Round to nearest 100
-            return Math.Round(clamped / 100) * 100;
+            var low = Math.Max(0m, figures.MinPrice);
+            var clamped = Math.Clamp(withSource, low, Math.Max(low, figures.MaxPrice));
+            var step = figures.PriceStep > 0 ? figures.PriceStep : 1m;
+            return Math.Round(clamped / step) * step;
         }
 
         public float CalculatePrecedence(CarDefinition carDefinition)
         {
-            float precedence = 0.5f; // Start neutral
+            var figures = Figures;
+            var precedence = figures.Common;
 
-            // Recent cars more common
-            if (carDefinition.Year.HasValue)
-            {
-                var year = carDefinition.Year.Value;
-                if (year >= 2010) precedence += 0.3f;
-                else if (year >= 2000) precedence += 0.2f;
-                else if (year >= 1990) precedence += 0.1f;
-                else if (year >= 1970) precedence += 0.0f;
-                else precedence -= 0.1f; // Classic/vintage rarer
-            }
+            // Newer cars are more common, the official ones too, the badge may be rarer or commoner
+            precedence += (float)Rules.CarRules.ForYear(figures.CommonByYear, carDefinition.Year, 0.0);
+            precedence += (float)figures.CommonBySource.GetValueOrDefault(carDefinition.Source.ToString(), 0.0);
+            precedence += CarBook.Current.Make(MakeOf(carDefinition))?.Common ?? 0f;
 
-            // Kunos cars more common (higher quality)
-            if (carDefinition.Source == ContentSource.Kunos || carDefinition.Source == ContentSource.DLC)
-            {
-                precedence += 0.2f;
-            }
-
-            // Exotic brands rarer
-            var brand = carDefinition.Brand.ToLowerInvariant();
-            if (brand.Contains("ferrari") || brand.Contains("lamborghini") || brand.Contains("mclaren"))
-            {
-                precedence -= 0.3f;
-            }
-            else if (brand.Contains("porsche") || brand.Contains("maserati"))
-            {
-                precedence -= 0.2f;
-            }
-            else if (brand.Contains("ford") || brand.Contains("toyota") || brand.Contains("honda"))
-            {
-                precedence += 0.2f; // Common brands
-            }
-
-            // Performance tier based on power/weight, in hp per tonne
+            // Exotics are rarer, economy cars commoner, by power to weight in hp per tonne (0 is a car without specs)
             var powerWeight = CalculatePowerToWeightRatio(carDefinition);
-            if (powerWeight > 300) // Exotic performance
-            {
-                precedence -= 0.2f;
-            }
-            else if (powerWeight > 0 && powerWeight < 100) // Economy cars (0 is a car without specs)
-            {
-                precedence += 0.2f;
-            }
+            if (powerWeight > figures.FastHpPerTonne) precedence += (float)figures.FastCommon;
+            else if (powerWeight > 0 && powerWeight < figures.SlowHpPerTonne) precedence += (float)figures.SlowCommon;
 
-            // Clamp to valid range
-            return Math.Clamp(precedence, 0.0f, 1.0f);
+            // NaN from a figure a mod got wrong is the middle, not a car that never shows
+            return float.IsFinite(precedence) ? Math.Clamp(precedence, 0.0f, 1.0f) : 0.5f;
         }
 
         /// <summary>
@@ -200,28 +163,59 @@ namespace StreetCorsa.Services.Catalog
                     fresh.Add(GenerateDefaultProfile(car));
                     created++;
                 }
-                else if (profile.Source == ProfileDataSource.Generated && profile.DefinitionHash != hash)
-                {
-                    // Worked out now, written onto the profile as it is stored when the write comes: only these
-                    // fields, and only if it is still a generated one that has not been worked out since
-                    var basePrice = CalculateBasePrice(car);
-                    var precedence = CalculatePrecedence(car);
-                    changes.Add(new(profile.CarDefinitionId, stored =>
-                    {
-                        if (stored.Source != ProfileDataSource.Generated || stored.DefinitionHash == hash) return null;
-                        stored.BasePrice = basePrice;
-                        stored.DealerPrecedence = precedence;
-                        stored.DefinitionHash = hash;
-                        stored.LastUpdatedDate = DateTime.Now;
-                        return stored;
-                    }));
-                    regenerated++;
-                }
                 else
                 {
-                    existing++;
+                    // A figure the mods give the car (cars.json) is theirs: what was set by hand for it in the catalog
+                    // goes back to what the game works out, so the catalog keeps only that
+                    var given = CarBook.Current.Car(car.Id);
+                    var priceToMods = given is { } g && (g.Price != null || g.Common != null) && profile.Source == ProfileDataSource.Manual;
+                    var engineToMods = given?.Engine is { Length: > 0 };
+                    var layoutToMods = given?.EngineLayout != null;
+                    var regenerate = priceToMods || profile.Source == ProfileDataSource.Generated && profile.DefinitionHash != hash;
+                    if (regenerate || engineToMods || layoutToMods) changes.Add(new(profile.CarDefinitionId, stored => Rework(car, stored, hash, priceToMods, engineToMods, layoutToMods)));
+                    if (regenerate) regenerated++;
+                    else existing++;
                 }
             }
+        }
+
+        /// <summary>
+        /// The profile as it is stored when the write comes, worked out again where it is a generated one that has not
+        /// been worked out by these figures (only the price and how common the car is), and handed over to what the mods
+        /// give the car; null when there is nothing to do
+        /// </summary>
+        private CarProfile? Rework(CarDefinition car, CarProfile stored, string hash, bool priceToMods, bool engineToMods, bool layoutToMods)
+        {
+            var changed = false;
+            if (priceToMods && stored.Source == ProfileDataSource.Manual)
+            {
+                stored.Source = ProfileDataSource.Generated;
+                stored.DefinitionHash = null;
+            }
+
+            if (stored.Source == ProfileDataSource.Generated && stored.DefinitionHash != hash)
+            {
+                stored.BasePrice = CalculateBasePrice(car);
+                stored.DealerPrecedence = CalculatePrecedence(car);
+                stored.DefinitionHash = hash;
+                changed = true;
+            }
+
+            if (engineToMods && stored.StockEngineIsManual)
+            {
+                stored.StockEngineIsManual = false;
+                changed = true;
+            }
+
+            if (layoutToMods && stored.EngineLayout != null)
+            {
+                stored.EngineLayout = null;
+                changed = true;
+            }
+
+            if (!changed) return null;
+            stored.LastUpdatedDate = DateTime.Now;
+            return stored;
         }
 
         // Helper methods
@@ -238,21 +232,17 @@ namespace StreetCorsa.Services.Catalog
             if (powerToWeight <= 0)
             {
                 // No specs available, use conservative default
-                return NoSpecsPrice;
+                return Figures.NoSpecsPrice;
             }
 
             // A mod's ui_car.json can say anything (a million bhp, a car of one kilo): a price past what a decimal holds
-            // would throw in the cast. The base price is clamped to $500,000 in the end anyway.
-            var price = ReferencePrice * Math.Pow(powerToWeight / ReferenceHpPerTonne, PriceExponent);
-            return double.IsFinite(price) ? (decimal)Math.Min(price, MaxPowerWeightPrice) : NoSpecsPrice;
+            // would throw in the cast. The base price is clamped to the rules' most in the end anyway.
+            var figures = Figures;
+            var price = figures.ReferencePrice * Math.Pow(powerToWeight / figures.ReferenceHpPerTonne, figures.PriceExponent);
+            return double.IsFinite(price) && price >= 0 ? (decimal)Math.Min(price, MaxPowerWeightPrice) : figures.NoSpecsPrice;
         }
 
         private const double MaxPowerWeightPrice = 1e9;
-
-        private const decimal NoSpecsPrice = 15000m;
-        private const double ReferencePrice = 7000;
-        private const double ReferenceHpPerTonne = 70;
-        private const double PriceExponent = 1.3;
 
         /// <summary>Power to weight in hp per tonne, 0 when the specs don't give it</summary>
         private float CalculatePowerToWeightRatio(CarDefinition carDef)
@@ -267,74 +257,13 @@ namespace StreetCorsa.Services.Catalog
             if (!AcSpecs.TryParseWeight(carDef.Specs.Weight, out var weightKg))
                 return 0f;
 
-            if (weightKg < MinPlausibleWeightKg || weightKg > MaxPlausibleWeightKg)
+            if (weightKg < Figures.MinPlausibleWeightKg || weightKg > Figures.MaxPlausibleWeightKg)
             {
                 _logger.Debug("{CarId}: weight {Weight} kg is not believable; priced as a car without specs", carDef.Id, weightKg);
                 return 0f;
             }
 
             return (float)(bhp * 1000 / weightKg);
-        }
-
-        private float GetBrandMultiplier(string brand)
-        {
-            var lowerBrand = brand.ToLowerInvariant();
-
-            foreach (var kvp in BrandMultipliers)
-            {
-                if (lowerBrand.Contains(kvp.Key))
-                {
-                    return kvp.Value;
-                }
-            }
-
-            return 1.0f; // Default multiplier
-        }
-
-        private decimal ApplyYearAdjustment(decimal basePrice, int? year)
-        {
-            if (!year.HasValue)
-                return basePrice;
-
-            var yearValue = year.Value;
-
-            // Modern cars (2010+): slight premium
-            if (yearValue >= 2010)
-                return basePrice * 1.1m;
-
-            // 2000s: no adjustment
-            if (yearValue >= 2000)
-                return basePrice;
-
-            // 1990s: slight discount
-            if (yearValue >= 1990)
-                return basePrice * 0.9m;
-
-            // 1980s: discount
-            if (yearValue >= 1980)
-                return basePrice * 0.7m;
-
-            // 1970s: larger discount
-            if (yearValue >= 1970)
-                return basePrice * 0.6m;
-
-            // 1960s and older: classic premium
-            if (yearValue >= 1960)
-                return basePrice * 1.2m;
-
-            // Very old classics: high premium
-            return basePrice * 1.5m;
-        }
-
-        private decimal ApplySourceMultiplier(decimal basePrice, ContentSource source)
-        {
-            return source switch
-            {
-                ContentSource.Kunos => basePrice * 1.2m,  // Official quality premium
-                ContentSource.DLC => basePrice * 1.2m,     // Official DLC premium
-                ContentSource.Mod => basePrice * 0.9m,     // Community mod discount
-                _ => basePrice                             // Unknown
-            };
         }
     }
 }

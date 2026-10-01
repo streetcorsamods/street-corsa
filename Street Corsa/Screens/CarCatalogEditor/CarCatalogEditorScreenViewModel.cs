@@ -190,7 +190,8 @@ namespace StreetCorsa.Screens.CarCatalogEditor
                     }
 
                     var definition = carDef;
-                    var itemVm = new CatalogItemViewModel(definition, profile, snapshot.HasEngines, () => EngineOptionsFor(definition), () => GuessLayout(definition));
+                    var itemVm = new CatalogItemViewModel(definition, profile, snapshot.HasEngines, () => EngineOptionsFor(definition), () => GuessLayout(definition),
+                        Parts.Cars.CarBook.Current.Car(definition.Id));
                     itemVm.PropertyChanged += OnItemPropertyChanged;
                     _catalogItems.Add(itemVm);
                 }
@@ -297,7 +298,7 @@ namespace StreetCorsa.Screens.CarCatalogEditor
             catch (Exception ex)
             {
                 // catalog.db locked by a second copy of the game or a virus scanner, a read-only folder...
-                _logger.Error(ex, "Could not save the car profiles");
+                _logger.Error(ex, "Could not save the car profiles into cars.json");
                 OnPropertyChanged(nameof(HasDirtyItems));
                 _dialogService.ShowDialog(new InformationDialogViewModel(
                     _dialogService,
@@ -310,36 +311,27 @@ namespace StreetCorsa.Screens.CarCatalogEditor
 
             var successDialog = new InformationDialogViewModel(
                 _dialogService,
-                $"Saved {dirtyItems.Count} car profile(s).",
+                $"Saved {dirtyItems.Count} car profile(s) into the base game's cars.json:\n\n{string.Join("\n", _savedTo)}",
                 "Save Successful");
             _dialogService.ShowDialog(successDialog);
 
             _logger.Information("Save completed");
         }
 
-        /// <summary>Writes the edited profiles, one by one; what was written before a failure stays written</summary>
+        private IReadOnlyList<string> _savedTo = [];
+
+        /// <summary>
+        /// Writes what is set by hand for the edited cars into the base game's cars.json (it ships; catalog.db does not
+        /// and keeps what the game works out), then reads the mods' cars again so the game goes by it at once
+        /// </summary>
         private void SaveProfiles(List<CatalogItemViewModel> dirtyItems)
         {
-            foreach (var item in dirtyItems)
-            {
-                item.ApplyChanges();
+            foreach (var item in dirtyItems) item.ApplyChanges();
 
-                // The factory engines are suggested in the background after the game starts: one that came in
-                // since this profile was read stays, unless an engine was picked here
-                var edited = item.Profile;
-                var updated = _profileRepo.UpdateProfile(edited.CarDefinitionId, stored =>
-                {
-                    if (!edited.StockEngineIsManual)
-                    {
-                        edited.StockEngineBuildId = stored.StockEngineBuildId;
-                        edited.StockEngineIsManual = stored.StockEngineIsManual;
-                    }
-
-                    return edited;
-                });
-                if (!updated) _profileRepo.UpsertProfile(edited);
-                _logger.Debug("Saved profile for {CarId}", item.Definition.Id);
-            }
+            var fields = dirtyItems.ToDictionary(i => i.Definition.Id, i => i.ToFields(), StringComparer.OrdinalIgnoreCase);
+            _savedTo = BaseCarsFile.Save(fields);
+            Parts.Cars.CarBook.Current = Parts.Cars.CarBook.Load(Mods.ModSet.Installed);
+            foreach (var path in _savedTo) _logger.Information("Saved {Count} car(s) into {Path}", fields.Count, path);
         }
 
         private void OnResetAll()

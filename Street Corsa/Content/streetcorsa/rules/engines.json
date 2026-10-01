@@ -1,0 +1,51 @@
+{
+  "_comment": [
+    "The base game's \"engines\" rules: every figure the game plays by, as the code has them.",
+    "A mod changes any of them with a .json file of its own in its rules folder, naming only what it changes",
+    "(see docs/modding.md, \"rules\"). A career keeps the rules it was started with."
+  ],
+  "engines": {
+    "cooling": {
+      "performanceRadiator": 1.35,
+      "performancePump": 1.1,
+      "noRadiator": 0.15,
+      "noPump": 0.25,
+      "noFan": 0.15,
+      "stockFan": 0.35,
+      "performanceFan": 0.5,
+      "electricFan": 0.55,
+      "stockSumpG": 1.05,
+      "raceSumpG": 1.25,
+      "bigSumpLitres": 6.5,
+      "bigSumpG": 1.3,
+      "noSumpG": 0.5
+    },
+    "factory": {
+      "wearNoise": 0.08,
+      "newerPartBonus": 0.15,
+      "engineSwapChance": 0.25,
+      "swapMinPower": 1.05,
+      "swapMaxPower": 1.5,
+      "maxPowerOverStock": 1.6,
+      "minPowerGain": 1.005,
+      "maxBoltOns": 4,
+      "attemptsPerBoltOn": 6
+    },
+    "tuner": {
+      "minGain": 0.03,
+      "maxReplacementDepth": 5,
+      "maxSwapPower": 1.6,
+      "usedEngineCondition": 0.75,
+      "coolEnough": 1,
+      "runsHotBelow": 0.85
+    },
+    "matcher": {
+      "sameFamily": 3,
+      "otherFamily": -3,
+      "sharedNumber": 2,
+      "sharedWord": 1,
+      "powerWeight": 4,
+      "factoryBuildBonus": 0.2
+    }
+  }
+}

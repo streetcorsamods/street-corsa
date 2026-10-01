@@ -47,10 +47,10 @@ public class PartShopRulesTests
         var wheels = new PartShopDefinition { Id = "w", Kind = "wheels" };
         var yard = new PartShopDefinition { Id = "j", Kind = "junkyard" };
 
-        var moparCam = Find(p => p.Make == "mopar" && PartKinds.GroupOf(p) == "Camshafts");
+        var moparCam = Find(p => p.Make == "mopar" && PartKinds.GroupOf(p) == PartGroups.Camshafts);
         var fordBlock = Find(p => p.Make == "ford" && PartKinds.IsBlock(p));
         var tyre = Find(p => p.IsScripted && PartKinds.GroupOf(p) == PartKinds.Tyres);
-        var genericCarb = Find(p => p.Make == null && PartKinds.GroupOf(p) == "Carburettors and injection");
+        var genericCarb = Find(p => p.Make == null && PartKinds.GroupOf(p) == "carburettors");
         var noFactory = new HashSet<string>();
 
         Assert.True(PartShopRules.Deals(mopar, moparCam, noFactory));

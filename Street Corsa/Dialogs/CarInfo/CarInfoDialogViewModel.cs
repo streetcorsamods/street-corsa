@@ -111,7 +111,7 @@ namespace StreetCorsa.Dialogs.CarInfo
                     var definition = catalog.Get(p.Part.DefinitionId);
                     return new CarInfoPart(
                         definition?.DisplayName ?? definition?.Name ?? p.Part.DefinitionId,
-                        definition == null ? string.Empty : PartKinds.GroupOf(definition),
+                        definition == null ? string.Empty : PartKinds.GroupName(PartKinds.GroupOf(definition)),
                         p.Depth,
                         p.Part.Wear,
                         p.Part.Tear);

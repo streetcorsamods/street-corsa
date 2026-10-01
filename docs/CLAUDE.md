@@ -31,7 +31,7 @@ Street Rod-style career mode manager for Assetto Corsa. WPF app manages game log
 | Model | Location | Purpose |
 |-------|----------|---------|
 | CarDefinition | catalog.db | Imported AC car identity (immutable) |
-| CarProfile | catalog.db | Gameplay properties: BasePrice, DealerPrecedence |
+| CarProfile | catalog.db | Gameplay properties: BasePrice, DealerPrecedence; read with what the mods' `cars/cars.json` gives the car laid over it (`CarProfileRepository.Given`), never stored |
 | UsedCarListing | saves/*.db | Car for sale in market |
 | CarInstance | saves/*.db | Player-owned car |
 | PartInstance | saves/*.db | A part somebody owns, with what is mounted on it: `Car.Parts` (engine on car slot 1), `Player.Parts` (shelf), `Player.EngineStand` (the engine on the stand), `Player.PartOrders` (mail order on its way), `UsedCarListing.Parts`, `NewspaperAds.Parts`, a junkyard's `PartShopLocation.Yard` |
@@ -43,7 +43,8 @@ Street Rod-style career mode manager for Assetto Corsa. WPF app manages game log
 
 | System | Service | Purpose |
 |--------|---------|---------|
-| Catalog | ContentCatalogRepository, CarProfileService | Car import, profiles |
+| Catalog | ContentCatalogRepository, CarProfileService | Car import, profiles (priced by the mods' rules `cars` and makes); which installed cars the game uses is game.json's `cars` (`InstalledCars.Only`) |
+| Cars and makes | CarBook, MakeFamilies, PartGroups | The mods' `cars/makes.json` (makes: words, family, country, badge price and rarity; countries) and `cars/cars.json` (a car's engine, layout, price, rarity, make; the developer's Car Catalog Editor saves into the base game's), the shelves of `parts/part_groups.json` (`PartKinds.GroupOf` gives an id, `GroupName` its words) |
 | Market | UsedCarMarketService, CarValuation | Spawn listings, refresh, purchases; one formula for what a car is worth |
 | Dealers | DealerCatalog, DealerRoster, DealerLifeService | The dealers of the mods on their map; about 60% open, now and then one closes (closing-down sale the rivals shop) or opens (the `dealer_review` task; see `docs/systems/market-system.md`) |
 | Part shops | PartShopCatalog, PartShopRoster, PartShopService, PartShopLifeService | Make specialists, speed shops, wheel shops and junkyards on their own map (the garage's Parts dealers button), each with its own stock and prices, a regulars' discount, coming and going as the dealers do (the `partshop_review` task); the rivals tune from their shelves (see `docs/systems/parts-system.md`, "Part shops") |

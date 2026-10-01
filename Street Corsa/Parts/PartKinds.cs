@@ -9,39 +9,16 @@ namespace StreetCorsa.Parts;
 /// </summary>
 public static class PartKinds
 {
-    public const string Accessories = "Accessories";
+    public const string Accessories = PartGroups.Accessories;
 
     private const string FrameworkPackage = "java.game.parts.";
 
-    // Shelf labels by framework class; matched by "ends with", first hit wins
-    private static readonly (string ClassSuffix, string Group)[] Groups =
-    {
-        ("Block_Vee_OHV", "Engine blocks"), ("Block_Vee_OHC", "Engine blocks"), ("Block_Inline_OHV", "Engine blocks"),
-        ("Block_Inline_OHC", "Engine blocks"), ("Block_Vee", "Engine blocks"), ("Block_Inline", "Engine blocks"), ("Block", "Engine blocks"),
-        ("CylinderHead", "Cylinder heads"),
-        ("Camshaft", "Camshafts"),
-        ("Crankshaft", "Crankshafts"),
-        ("ConnectingRod", "Connecting rods"),
-        ("Piston", "Pistons"),
-        ("Flywheel", "Flywheels and clutches"), ("Clutch", "Flywheels and clutches"),
-        ("Transmission", "Transmissions"),
-        ("IntakeManifold", "Intake manifolds"),
-        ("FuelInjectorSystem", "Carburettors and injection"), ("AirFuelDeliverySystem", "Carburettors and injection"),
-        ("AirFilter", "Air filters"),
-        ("SuperCharger", "Superchargers and turbos"), ("TurboCharger", "Superchargers and turbos"),
-        ("NOSInjectorSystem", "Nitrous"), ("Canister", "Nitrous"),
-        ("ExhaustHeader", "Exhaust"), ("ExhaustPipe", "Exhaust"), ("ExhaustTip", "Exhaust"),
-        ("OilPan", "Oil pans"),
-        ("Tyre", Tyres), ("Wheel", Rims), ("Brake", Brakes), ("Spring", Springs), ("ShockAbsorber", Shocks),
-        ("Swaybar", "Sway bars"), ("Suspension", "Suspension arms")
-    };
-
     // The running gear: what goes on the car's own wheel slots, and what goes on it
-    public const string Tyres = "Tyres";
-    public const string Rims = "Rims";
-    public const string Brakes = "Brakes";
-    public const string Springs = "Springs";
-    public const string Shocks = "Shock absorbers";
+    public const string Tyres = PartGroups.Tyres;
+    public const string Rims = PartGroups.Rims;
+    public const string Brakes = PartGroups.Brakes;
+    public const string Springs = PartGroups.Springs;
+    public const string Shocks = PartGroups.Shocks;
 
     /// <summary>
     /// Simple name of the framework class nearest to the part, "" for parts without a script class.
@@ -61,21 +38,27 @@ public static class PartKinds
     }
 
     // A part's class chain does not change once it is loaded, and shops, the workbench and the engine factory ask
-    // for its group per candidate in their loops: worked out once per part
-    private static readonly ConditionalWeakTable<PartDefinition, string> GroupCache = new();
+    // for its group per candidate in their loops: worked out once per part, for the groups in use
+    private static readonly ConditionalWeakTable<PartDefinition, Tuple<PartGroups, string>> GroupCache = new();
 
-    /// <summary>Label of the shelf the part is found on in a shop</summary>
-    public static string GroupOf(PartDefinition part) => GroupCache.GetValue(part, FindGroup);
-
-    private static string FindGroup(PartDefinition part)
+    /// <summary>Id of the shelf the part is found on in a shop (<see cref="PartGroups"/>)</summary>
+    public static string GroupOf(PartDefinition part)
     {
-        var kind = FrameworkClass(part);
-        foreach (var (suffix, group) in Groups)
-        {
-            if (kind.EndsWith(suffix, StringComparison.Ordinal)) return group;
-        }
+        var groups = PartGroups.Current;
+        if (GroupCache.TryGetValue(part, out var known) && ReferenceEquals(known.Item1, groups)) return known.Item2;
 
-        return Accessories;
+        var group = groups.GroupOfClass(FrameworkClass(part));
+        GroupCache.AddOrUpdate(part, Tuple.Create(groups, group));
+        return group;
+    }
+
+    /// <summary>What the player reads for a group: its words in the text (<c>part_group.&lt;id&gt;</c>), else its name, else its id</summary>
+    public static string GroupName(string group)
+    {
+        var key = "part_group." + group;
+        var said = Cars.PartWords.Say(key);
+        if (said != key) return said;
+        return PartGroups.Current.Get(group)?.Name is { Length: > 0 } name ? name : group.Replace('_', ' ');
     }
 
     /// <summary>
@@ -83,8 +66,7 @@ public static class PartKinds
     /// Checked against every engine build. Intake manifolds are not among them: some go on a converter plate
     /// that is a manifold itself; clutches go on flywheels, accessories on accessories.
     /// </summary>
-    public static bool NeverStacks(string group) => group is "Engine blocks" or "Cylinder heads" or "Camshafts" or "Crankshafts"
-        or "Connecting rods" or "Pistons" or "Transmissions";
+    public static bool NeverStacks(string group) => PartGroups.Current.NeverStacks(group);
 
     public static bool IsBlock(PartDefinition part) => Is(part, "Block");
 

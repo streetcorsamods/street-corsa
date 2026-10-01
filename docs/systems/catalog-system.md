@@ -46,9 +46,17 @@ is set aside as `catalog.db.bad` and a new one made (a file in use is not taken 
 ### 4. Profile Generation
 - Create `CarProfile` if missing
 - Calculate `BasePrice` from power/weight (`AcSpecs`, culture-free; a weight outside 300-5000 kg counts as no specs)
-- Calculate `DealerPrecedence` from year/brand/source
-- A `Generated` profile whose `DefinitionHash` no longer matches the car's `ContentHash` is regenerated (base price,
-  precedence, hash, date only; the stock engine and the rest are kept). Manual and Imported profiles are left alone.
+- Calculate `DealerPrecedence` from year/make/source
+- The figures are the mods' rules (`rules/cars.json`, `RuleBook.Installed.Cars`, not a career's), the badge's the
+  mods' makes (`cars/makes.json`, `CarBook`)
+- A `Generated` profile whose `DefinitionHash` no longer matches (the car's `ContentHash`, the way specs are read, the
+  rules' figures and the car's make) is regenerated (base price, precedence, hash, date only; the stock engine and the
+  rest are kept). Manual and Imported profiles are left alone, except a field the mods' `cars.json` gives the car: that
+  one goes back to the game's (Manual to Generated, a picked engine or layout let go).
+- A profile read through the repository carries what `cars.json` gives its car (engine, layout, price, how common it
+  is) over what is stored: the mods' data, never written into catalog.db. The Car Catalog Editor (a developer's screen)
+  saves into the base game's `cars.json` (`BaseCarsFile`), the installed copy and the source tree's.
+- Which installed cars the game uses is game.json's `cars` (`GameCars`, applied in `InstalledCars.Only`)
 
 ## Car States
 
