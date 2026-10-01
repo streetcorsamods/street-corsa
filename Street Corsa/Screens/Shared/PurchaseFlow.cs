@@ -6,6 +6,7 @@ using StreetCorsa.Models.GameState;
 using StreetCorsa.Screens.UsedCarMarket;
 using StreetCorsa.Services.Market;
 using StreetCorsa.Services.Text;
+using StreetCorsa.Helpers;
 
 namespace StreetCorsa.Screens.Shared
 {
@@ -34,12 +35,12 @@ namespace StreetCorsa.Screens.Shared
             return GameText.Say("purchase.confirm",
                 ("car", $"{def.Brand} {def.Name}"),
                 ("year", def.Year ?? 0),
-                ("price", $"${car.Listing.Price:N0}"),
+                ("price", Money.Text(car.Listing.Price)),
                 ("condition", car.ConditionLabel),
                 ("mileage", car.Listing.Mileage),
                 ("history", car.HistoryDisplay),
                 ("seller", car.SellerLine),
-                ("bankroll", $"${bankroll:N0}"));
+                ("bankroll", Money.Text(bankroll)));
         }
 
         /// <summary>

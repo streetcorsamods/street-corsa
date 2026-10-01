@@ -9,6 +9,7 @@ using StreetCorsa.Navigation;
 using StreetCorsa.Services.Settings;
 using StreetCorsa.Services.Text;
 using StreetCorsa.ViewModels;
+using StreetCorsa.Helpers;
 
 namespace StreetCorsa.Screens.Settings
 {
@@ -95,6 +96,65 @@ namespace StreetCorsa.Screens.Settings
                 if (previous != null && !OnLanguageChanged(value)) TakeBack(previous);
             }
         }
+
+        /// <summary>The units the player can read: the game's own first, then imperial and metric</summary>
+        public IReadOnlyList<UnitsChoice> UnitChoices { get; }
+
+        private UnitsChoice? _units;
+
+        /// <summary>The units the player reads. Saved and taken at once: what a screen writes next is in them</summary>
+        public UnitsChoice? Units
+        {
+            get => _units;
+            set
+            {
+                if (value == null || ReferenceEquals(value, _units)) return;
+                var previous = _units;
+                _units = value;
+                OnPropertyChanged();
+                if (previous != null && !OnUnitsChanged(value))
+                {
+                    _units = previous;
+                    Dispatcher.CurrentDispatcher.BeginInvoke(() => OnPropertyChanged(nameof(Units)), DispatcherPriority.Background);
+                }
+            }
+        }
+
+        private bool OnUnitsChanged(UnitsChoice choice)
+        {
+            var saved = Settings.Units;
+            Settings.Units = choice.Id;
+            if (!_settingsService.Save())
+            {
+                Settings.Units = saved;
+                ShowNotSaved(GameText.Say("settings.not_saved"));
+                return false;
+            }
+
+            Locale.Units = UnitsIn(choice.Id);
+            _logger.Information("Units: {Units}", Locale.Units);
+            return true;
+        }
+
+        /// <summary>The units of a pick: its own, or the game's for none</summary>
+        private static UnitSystem UnitsIn(string? picked) =>
+            Locale.ParseUnits(picked) ?? Rules.GameFile.Installed.Locale.UnitSystem;
+
+        private static IReadOnlyList<UnitsChoice> MakeUnits(string? picked, out UnitsChoice? selected)
+        {
+            var game = Rules.GameFile.Installed.Locale.UnitSystem;
+            var choices = new List<UnitsChoice>
+            {
+                new(null, GameText.Say("settings.units.game", ("units", GameText.Say(UnitsKey(game))))),
+                new("imperial", GameText.Say(UnitsKey(UnitSystem.Imperial))),
+                new("metric", GameText.Say(UnitsKey(UnitSystem.Metric)))
+            };
+            var pick = Locale.ParseUnits(picked);
+            selected = pick == null ? choices[0] : choices.First(c => Locale.ParseUnits(c.Id) == pick);
+            return choices;
+        }
+
+        private static string UnitsKey(UnitSystem units) => units == UnitSystem.Imperial ? "settings.units.imperial" : "settings.units.metric";
 
         /// <summary>The choice to disk; false when it did not get there</summary>
         private bool OnLanguageChanged(LanguageChoice choice)
@@ -187,6 +247,7 @@ namespace StreetCorsa.Screens.Settings
 
             _assettoCorsaFolder = SavedAssettoCorsaFolder;
             Languages = MakeLanguages(Settings.Language, out _language);
+            UnitChoices = MakeUnits(Settings.Units, out _units);
 
             _audioSave = new DispatcherTimer { Interval = AudioSaveDelay };
             _audioSave.Tick += (_, _) => SaveAudio();
@@ -346,6 +407,9 @@ namespace StreetCorsa.Screens.Settings
             OnPropertyChanged(nameof(MuteInBackground));
             _language = Languages.FirstOrDefault();
             OnPropertyChanged(nameof(Language));
+            _units = UnitChoices[0];
+            Locale.Units = UnitsIn(null);
+            OnPropertyChanged(nameof(Units));
             _logger.Information("Settings reset to defaults");
 
             // The defaults name the default folder: a player whose install is elsewhere needs to know

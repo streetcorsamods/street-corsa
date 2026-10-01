@@ -1,5 +1,6 @@
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Services.Text;
+using StreetCorsa.Helpers;
 
 namespace StreetCorsa.Screens.Shared
 {
@@ -25,9 +26,9 @@ namespace StreetCorsa.Screens.Shared
         public static string BestQuarter(CarHistory history)
         {
             if (history.BestQuarterSeconds is not { } et) return string.Empty;
-            var time = et.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+            var time = et.ToString("0.00", Locale.Culture);
             return history.BestQuarterMph is { } mph
-                ? GameText.Say("market.history.best_mph", ("time", time), ("mph", mph))
+                ? GameText.Say("market.history.best_mph", ("time", time), ("speed", Measure.SpeedFromMph(mph)))
                 : GameText.Say("market.history.best", ("time", time));
         }
 

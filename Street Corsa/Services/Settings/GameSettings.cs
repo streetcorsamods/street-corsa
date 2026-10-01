@@ -23,6 +23,12 @@ namespace StreetCorsa.Services.Settings
         /// </summary>
         public string? Language { get; set; }
 
+        /// <summary>
+        /// The units the player reads: "imperial" or "metric"; null for the game's own (game.json's
+        /// <c>locale.units</c>). Taken at once.
+        /// </summary>
+        public string? Units { get; set; }
+
         /// <summary>The volumes; they take effect as the sliders move</summary>
         public AudioSettings Audio { get; set; } = new();
     }

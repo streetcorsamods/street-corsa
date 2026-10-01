@@ -4,6 +4,7 @@ using StreetCorsa.Models.GameState;
 using StreetCorsa.Services.Market;
 using StreetCorsa.Services.Text;
 using StreetCorsa.ViewModels;
+using StreetCorsa.Helpers;
 
 namespace StreetCorsa.Dialogs.SellCar
 {
@@ -38,7 +39,7 @@ namespace StreetCorsa.Dialogs.SellCar
             CarName = carName;
 
             _quote = saleService.QuoteDealer(gameState, car);
-            _askingPriceText = saleService.SuggestedAskingPrice(car).ToString("0", CultureInfo.CurrentCulture);
+            _askingPriceText = saleService.SuggestedAskingPrice(car).ToString("0", Locale.Culture);
 
             SellToDealerCommand = new AsyncRelayCommand(OnSellToDealer, () => !_busy);
             PlaceAdCommand = new AsyncRelayCommand(OnPlaceAd, () => !_busy && AskingPrice is not null && !HasAd && !_quote.IsScrap);
@@ -50,12 +51,12 @@ namespace StreetCorsa.Dialogs.SellCar
 
         public string CarName { get; }
 
-        public string ValueDisplay => GameText.Say("sell.worth", ("value", $"${_quote.Value:N0}"));
+        public string ValueDisplay => GameText.Say("sell.worth", ("value", Money.Text(_quote.Value)));
 
         /// <summary>Who had the car and how it has raced: part of what it is worth</summary>
         public string HistoryDisplay => Screens.Shared.CarHistoryDisplay.Summary(_car.History, forSale: false);
 
-        public string MoneyDisplay => $"${_gameState.Player.Money:N0}";
+        public string MoneyDisplay => Money.Text(_gameState.Player.Money);
 
         // ----- the dealer, or the scrapyard -----
 
@@ -65,7 +66,7 @@ namespace StreetCorsa.Dialogs.SellCar
             ? GameText.Say("sell.scrap.detail")
             : GameText.Say("sell.dealer.detail", ("share", (int)(CarSaleService.DealerShare * 100)));
 
-        public string DealerAmountDisplay => $"${_quote.Amount:N0}";
+        public string DealerAmountDisplay => Money.Text(_quote.Amount);
 
         private bool _confirmingSale;
 
@@ -87,7 +88,7 @@ namespace StreetCorsa.Dialogs.SellCar
 
         public bool CanAdvertise => !_quote.IsScrap;
 
-        public string AdFeeDisplay => GameText.Say("sell.ad.fee", ("fee", $"${CarSaleService.AdFee:N0}"), ("days", CarSaleService.AdDays));
+        public string AdFeeDisplay => GameText.Say("sell.ad.fee", ("fee", Money.Text(CarSaleService.AdFee)), ("days", CarSaleService.AdDays));
 
         private CarSaleAd? Ad => _saleService.AdFor(_gameState, _car);
 
@@ -96,14 +97,14 @@ namespace StreetCorsa.Dialogs.SellCar
         public bool ShowAdForm => CanAdvertise && !HasAd;
 
         public string AdStatus => Ad is { } ad
-            ? GameText.Say("sell.ad.status", ("price", $"${ad.AskingPrice:N0}"), ("since", ad.PostedDate),
+            ? GameText.Say("sell.ad.status", ("price", Money.Text(ad.AskingPrice)), ("since", ad.PostedDate),
                 ("until", ad.PostedDate.AddDays(CarSaleService.AdDays)))
             : string.Empty;
 
         public bool HasOffer => Ad?.Offer is { } offer && offer.Expires >= _gameState.Date;
 
         public string OfferDisplay => Ad?.Offer is { } offer && HasOffer
-            ? GameText.Say("sell.ad.offer", ("buyer", CarSaleService.Capitalized(offer.BuyerName)), ("amount", $"${offer.Amount:N0}"),
+            ? GameText.Say("sell.ad.offer", ("buyer", CarSaleService.Capitalized(offer.BuyerName)), ("amount", Money.Text(offer.Amount)),
                 ("until", offer.Expires))
             : GameText.Say("sell.ad.no_offer");
 
@@ -122,13 +123,18 @@ namespace StreetCorsa.Dialogs.SellCar
             }
         }
 
-        /// <summary>The asking price typed, when it is a whole-dollar amount in the range; null otherwise</summary>
+        /// <summary>The label before the asking price: "Asking $", the game's currency's sign</summary>
+        public string AskingLabel => GameText.Say("sell.ad.asking", ("symbol", Locale.Money.Symbol));
+
+        /// <summary>The asking price typed, when it is a whole amount in the range; null otherwise</summary>
         private decimal? AskingPrice
         {
             get
             {
-                var text = AskingPriceText.Trim().TrimStart('$');
-                if (!decimal.TryParse(text, NumberStyles.Number, CultureInfo.CurrentCulture, out var price)) return null;
+                var symbol = Locale.Money.Symbol;
+                var text = AskingPriceText.Trim();
+                if (symbol.Length > 0) text = text.Replace(symbol, string.Empty, StringComparison.Ordinal).Trim();
+                if (!decimal.TryParse(text, NumberStyles.Number, Locale.Culture, out var price)) return null;
                 var (min, max) = _saleService.AskingPriceRange(_car);
                 return price >= min && price <= max ? Math.Round(price) : null;
             }
@@ -140,7 +146,7 @@ namespace StreetCorsa.Dialogs.SellCar
             {
                 var (min, max) = _saleService.AskingPriceRange(_car);
                 return AskingPrice is null
-                    ? GameText.Say("sell.ad.range", ("min", $"${min:N0}"), ("max", $"${max:N0}"))
+                    ? GameText.Say("sell.ad.range", ("min", Money.Text(min)), ("max", Money.Text(max)))
                     : GameText.Say("sell.ad.hint");
             }
         }

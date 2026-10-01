@@ -1,6 +1,7 @@
 using StreetCorsa.Models.Catalog;
 using StreetCorsa.Parts;
 using StreetCorsa.ViewModels;
+using StreetCorsa.Helpers;
 
 namespace StreetCorsa.Screens.CarCatalogEditor
 {
@@ -140,7 +141,7 @@ namespace StreetCorsa.Screens.CarCatalogEditor
             }
         }
 
-        public string BasePriceDisplay => $"${_basePrice:N0}";
+        public string BasePriceDisplay => Money.Text(_basePrice);
 
         public float DealerPrecedence
         {

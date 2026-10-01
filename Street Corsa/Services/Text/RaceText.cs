@@ -24,6 +24,13 @@ namespace StreetCorsa.Services.Text
                 var lines = text.Lines(key);
                 if (lines.Count > 0) yield return $"{IniKey(key)}={Encode(lines[0])}";
             }
+
+            // The trap speeds, which the mode keeps in mph, in the player's units: the factor and the unit's words
+            var speed = Helpers.Measure.UnitOf(Helpers.Quantity.Speed, Helpers.Locale.Units);
+            var perMph = Helpers.Measure.SpeedFromMph(1).In(Helpers.Locale.Units);
+            yield return $"SPEED_PER_MPH={Encode(perMph.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture))}";
+            yield return $"UNIT_SPEED={Encode(text.Lines("unit." + speed) is { Count: > 0 } words ? words[0] : "{n} " + speed)}";
+            yield return $"UNIT_SPEED_NAME={Encode(Helpers.Locale.UnitName(speed).ToUpper(Helpers.Locale.Culture))}";
         }
 
         /// <summary><c>race.result.win</c> as the mode asks for it: <c>RESULT_WIN</c></summary>

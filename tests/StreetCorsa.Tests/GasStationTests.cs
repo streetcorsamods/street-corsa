@@ -141,9 +141,9 @@ public class GasStationTests
     [Fact]
     public void The_oil_short_reads_in_quarts()
     {
-        Assert.Equal("a quart", GasStation.Quarts(0.2));
-        Assert.Equal("two quarts", GasStation.Quarts(1.9));
-        Assert.Equal("7 quarts", GasStation.Quarts(6.6));
+        Assert.Equal("a quart", GasStation.OilShort(0.2));
+        Assert.Equal("two quarts", GasStation.OilShort(1.9));
+        Assert.Equal("7 quarts", GasStation.OilShort(6.6));
     }
 
     [Fact]

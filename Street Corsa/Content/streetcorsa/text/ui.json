@@ -16,6 +16,10 @@
     "common.delete": "Delete",
     "settings.language": "Language",
     "settings.language.restart": "The game will speak {language} the next time it starts.",
+    "settings.units": "Units",
+    "settings.units.game": "The game's ({units})",
+    "settings.units.imperial": "Imperial: mph, miles, gallons, °F",
+    "settings.units.metric": "Metric: km/h, km, litres, °C",
     "settings.restart.title": "Restart Needed",
     "settings.not_saved": "The settings could not be saved. The details are in the log."
   }

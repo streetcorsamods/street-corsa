@@ -18,6 +18,7 @@ using StreetCorsa.Services.Time;
 using StreetCorsa.ViewModels;
 using System.Collections.ObjectModel;
 using System.IO;
+using StreetCorsa.Helpers;
 
 namespace StreetCorsa.Screens.Diner
 {
@@ -251,7 +252,7 @@ namespace StreetCorsa.Screens.Diner
             }
         }
 
-        public string WagerAmountDisplay => $"${WagerAmount:N0}";
+        public string WagerAmountDisplay => Money.Text(WagerAmount);
 
         /// <summary>Why the stakes are higher than usual: the hour, the rival's name; empty when they aren't</summary>
         public string StakesNote

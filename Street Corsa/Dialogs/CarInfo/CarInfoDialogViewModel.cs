@@ -4,6 +4,7 @@ using StreetCorsa.Parts.Cars;
 using StreetCorsa.Screens.Shared;
 using StreetCorsa.Services.Text;
 using StreetCorsa.ViewModels;
+using StreetCorsa.Helpers;
 
 namespace StreetCorsa.Dialogs.CarInfo
 {
@@ -61,7 +62,7 @@ namespace StreetCorsa.Dialogs.CarInfo
             var lines = new List<CarInfoLine>
             {
                 new(GameText.Say("carinfo.condition"), ConditionDisplay.Of(car).Sentence),
-                new(GameText.Say("carinfo.mileage"), $"{car.OdometerKM:N0} km")
+                new(GameText.Say("carinfo.mileage"), Measure.Distance(car.OdometerKM).ToString())
             };
 
             if (EngineName(car, catalog) is { } name)
@@ -76,8 +77,8 @@ namespace StreetCorsa.Dialogs.CarInfo
             lines.Add(new(GameText.Say("carinfo.dirt"), DirtOf(car.BodyDirt)));
 
             if (car.PurchaseDate != default)
-                lines.Add(new(GameText.Say("carinfo.bought"), car.PurchasePrice > 0 ? GameText.Say("carinfo.bought.price", ("date", car.PurchaseDate), ("price", $"${car.PurchasePrice:N0}")) : $"{car.PurchaseDate:d MMMM yyyy}"));
-            if (car.ImpoundedUntil is { } until) lines.Add(new(GameText.Say("carinfo.impound"), GameText.Say("carinfo.impound.held", ("until", until), ("fee", $"${car.ImpoundFee:N0}"))));
+                lines.Add(new(GameText.Say("carinfo.bought"), car.PurchasePrice > 0 ? GameText.Say("carinfo.bought.price", ("date", car.PurchaseDate), ("price", Money.Text(car.PurchasePrice))) : GameText.Date(car.PurchaseDate, "format.date.day_month_year")));
+            if (car.ImpoundedUntil is { } until) lines.Add(new(GameText.Say("carinfo.impound"), GameText.Say("carinfo.impound.held", ("until", until), ("fee", Money.Text(car.ImpoundFee)))));
 
             return lines;
         }

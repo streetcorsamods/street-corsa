@@ -14,6 +14,9 @@ namespace StreetCorsa.Services.Text
         internal static void PointTheSeamsAtTheText()
         {
             StreetCorsa.Parts.Cars.PartWords.Source = GameText.Say;
+            // A unit's words: "{n} mph" in unit.mph, its name alone in unit.mph.name
+            Helpers.Locale.UnitWords = (unit, number) => GameText.Say($"unit.{unit}", ("n", number));
+            Helpers.Locale.UnitName = unit => GameText.Say($"unit.{unit}.name");
         }
     }
 }

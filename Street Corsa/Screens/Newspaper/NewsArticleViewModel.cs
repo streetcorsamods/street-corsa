@@ -14,7 +14,7 @@ namespace StreetCorsa.Screens.Newspaper
         {
             <= 0 => GameText.Say("paper.today"),
             1 => GameText.Say("paper.yesterday"),
-            _ => article.Date.ToString("dddd, MMMM d")
+            _ => GameText.Date(article.Date, "format.weekday_date")
         };
     }
 }

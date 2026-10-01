@@ -71,7 +71,7 @@
                         Padding="16,8">
                     <Grid>
                         <!-- The band's figures, faint behind the song -->
-                        <TextBlock Text="55     60     70     80     100     120     140     160     KC"
+                        <TextBlock Text="{t:Text radio.dial}"
                                    Foreground="#553A2008"
                                    FontFamily="Georgia"
                                    FontSize="{StaticResource FontSizeCaption}"

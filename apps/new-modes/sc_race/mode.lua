@@ -220,7 +220,8 @@ local function say(key, english, values)
   return line
 end
 
--- Messages, in one table: the main chunk is near Lua's 200 locals
+-- Messages, in one table: the main chunk is near Lua's 200 locals. MSG.speed writes a trap speed (kept in mph) in the
+-- player's units: the career hands over SPEED_PER_MPH and the unit's words (UNIT_SPEED "{n} mph", UNIT_SPEED_NAME).
 local MSG = {
   WIN = say('RESULT_WIN', "You won a few bucks, not bad!"),
   LOSE = say('RESULT_LOSE', "You lost, sucker!"),
@@ -240,6 +241,11 @@ local MSG = {
   ESCAPED = say('RESULT_ESCAPED', "You lost the cops!"),
   RED_LIGHT = say('RESULT_RED_LIGHT', "Red light! You left before your green.\nNo contest, and everybody saw it.")
 }
+
+-- The speed unit's figures; a launcher older than this mode hands none over, and the speeds stay in mph
+function MSG.perMph() return tonumber(say('SPEED_PER_MPH', '1')) or 1 end
+function MSG.speedName() return say('UNIT_SPEED_NAME', 'MPH') end
+function MSG.speed(mph) return say('UNIT_SPEED', '{n} mph', { n = string.format('%.2f', mph * MSG.perMph()) }) end
 
 local sim = ac.getSim()
 
@@ -966,8 +972,8 @@ local function endSession(reason, won)
     resultMessage = #tune.passes == 1 and say('TUNE_PASSES_ONE', '{passes} pass on the strip.', { passes = #tune.passes })
       or say('TUNE_PASSES_OTHER', '{passes} passes on the strip.', { passes = #tune.passes })
     if best then
-      resultMessage = resultMessage .. '\n' .. say('TUNE_BEST', 'Best: {et} @ {mph} mph',
-        { et = string.format('%.3f', best.quarter_mile_s), mph = string.format('%.2f', best.quarter_mile_mph or 0) })
+      resultMessage = resultMessage .. '\n' .. say('TUNE_BEST', 'Best: {et} @ {speed}',
+        { et = string.format('%.3f', best.quarter_mile_s), speed = MSG.speed(best.quarter_mile_mph or 0) })
     end
     holdPlayer(30)
   else
@@ -2473,12 +2479,13 @@ local function drawPassSlip(size)
       or say('SLIP_PASS', 'Pass {pass} of {passes}', pass)
     local function mark(label, value, format) lines[#lines + 1] = string.format('%-8s %s', label, value and string.format(format, value) or '-') end
     mark(say('SLIP_REACTION', 'R/T'), slip.reaction_s, '%.3f')
-    mark("60'", slip.sixty_ft_s, '%.3f')
-    mark("330'", slip.three_thirty_ft_s, '%.3f')
-    mark('1/8 ET', slip.eighth_mile_s, '%.3f')
-    mark('1/8 MPH', slip.eighth_mile_mph, '%.2f')
-    mark('1/4 ET', slip.quarter_mile_s, '%.3f')
-    mark('1/4 MPH', slip.quarter_mile_mph, '%.2f')
+    local unit = { unit = MSG.speedName() }
+    mark(say('SLIP_SIXTY', "60'"), slip.sixty_ft_s, '%.3f')
+    mark(say('SLIP_THREE_THIRTY', "330'"), slip.three_thirty_ft_s, '%.3f')
+    mark(say('SLIP_EIGHTH', '1/8 ET'), slip.eighth_mile_s, '%.3f')
+    mark(say('SLIP_EIGHTH_SPEED', '1/8 {unit}', unit), slip.eighth_mile_mph and slip.eighth_mile_mph * MSG.perMph(), '%.2f')
+    mark(say('SLIP_QUARTER', '1/4 ET'), slip.quarter_mile_s, '%.3f')
+    mark(say('SLIP_QUARTER_SPEED', '1/4 {unit}', unit), slip.quarter_mile_mph and slip.quarter_mile_mph * MSG.perMph(), '%.2f')
   else
     lines[#lines + 1] = say('SLIP_NO_TIME', 'No time: the car never left the line')
   end

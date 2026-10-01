@@ -72,6 +72,23 @@ The game's own settings: what it is called (the window's title) and the garage i
 - `garage`: the garage the game is played from: a mod's `garages\<id>` (see "showcase and garages"), else the AC
   showroom of that id.
 - `language`: the language the files directly in the mods' `text` folders are written in (`"en"`); see "text".
+- `locale`: how the game writes what the player reads:
+  - `culture`: a .NET culture name (`"en-US"`, `"ja-JP"`, `"de-DE"`) for numbers, dates, month and day names.
+  - `money`: `symbol` (`"$"`, `"¥"`), `after` (the sign after the amount: `"1.234 €"`), `space` (a space between) and
+    `decimals` (0 for whole dollars). Amounts are in the game's own currency: a yen game writes yen in its rules and
+    prices; nothing is converted.
+  - `units`: `"imperial"` (mph, miles, gallons, quarts, °F, lb, lb-ft) or `"metric"` (km/h, km, litres, °C, kg, N·m).
+    The player may pick the other in Settings. The game keeps every figure metric inside; only what is shown changes.
+
+```json
+{ "locale": { "culture": "ja-JP", "money": { "symbol": "¥", "decimals": 0 }, "units": "metric" } }
+```
+
+  The words of each unit (`unit.mph` = `"{n} mph"`, `unit.mph.name`) and the patterns of the dates the screens write
+  (`format.time` = `"h:mm tt"`, `format.date`...) are text pools in `text\locale.json`: a mod or a translation writes
+  them its own way. A culture the machine does not know, or units that are neither, are told and the base game's used.
+  The program itself keeps US English for the files it reads and writes (race.ini, the saves): only what the player
+  reads is in the game's culture.
 
 Unlike the rules below, these are the program's, not a career's: a change shows in every save. The player's own
 choices (the AC folder, the volumes) stay in their `%AppData%\StreetCorsa\settings.json`. With no AC folder there, the
@@ -527,5 +544,12 @@ its pools take the place of the game's, and a key it lacks says the game's own w
 a mod that adds words can add their translations in its own `text\<language>`. A mod's `removes` and `replace` hold in
 every language: a pool it takes out says nothing, and one it rewrites says the mod's words (or the mod's own
 translation of them) rather than an earlier mod's translation of the old ones. The picker shows once a mod has a
-language besides the game's own; the game speaks it from its next start. Numbers, money and units are still written
-the base game's way (a later step).
+language besides the game's own; the game speaks it from its next start.
+
+**Money, units and dates.** Numbers and dates are written in the game's culture (`game.json`'s `locale`). A number the
+game fills in can be named for what it is, and is then written in the game's currency or the player's units:
+`{price:money}` ("$1,500"), `{peak:temp}` ("248 °F" or "120 °C"), `{kmh:speed}`, `{km:distance}`, `{litres:fuel}`,
+`{litres:oil}`, `{kg:mass}`, `{nm:torque}`, `{hp:power}`, `{hp:power_weight}`. A number format may follow
+(`{left:fuel:0.0}`), and `.number` writes the figure alone in that unit (`{left:fuel.number} of {tank:fuel}`: "2.0 of
+16 gal"). The figures the game hands over are metric. Money and figures the game writes out itself come already
+written (`{price}` in the `_comment`s says so). A date takes a .NET pattern: `{until:dddd d MMMM}`.

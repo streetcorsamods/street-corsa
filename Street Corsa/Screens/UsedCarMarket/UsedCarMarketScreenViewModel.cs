@@ -14,6 +14,7 @@ using StreetCorsa.ViewModels;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Windows.Data;
+using StreetCorsa.Helpers;
 
 namespace StreetCorsa.Screens.UsedCarMarket
 {
@@ -329,15 +330,15 @@ namespace StreetCorsa.Screens.UsedCarMarket
 
         public string DisplayName => $"{CarDefinition.Brand} {CarDefinition.Name}";
         public string YearDisplay => CarDefinition.Year?.ToString() ?? GameText.Say("market.unknown_year");
-        public string PriceDisplay => $"${Listing.Price:N0}";
+        public string PriceDisplay => Money.Text(Listing.Price);
 
         /// <summary>Marked down in its dealer's closing-down sale</summary>
         public bool IsOnSale => Listing.PriceBeforeSale is { } was && was > Listing.Price;
 
         /// <summary>What it was marked at before the sale</summary>
-        public string WasPriceDisplay => IsOnSale ? $"${Listing.PriceBeforeSale:N0}" : string.Empty;
+        public string WasPriceDisplay => IsOnSale ? Money.Text(Listing.PriceBeforeSale!.Value) : string.Empty;
         public string ConditionDisplay => Shared.ConditionDisplay.Of(Listing.Condition).Percent;
-        public string MileageDisplay => $"{Listing.Mileage:N0} km";
+        public string MileageDisplay => Measure.Distance(Listing.Mileage).ToString();
 
         /// <summary>Who had the car and how it has raced</summary>
         public string HistoryDisplay => CarHistoryDisplay.Summary(Listing.History, forSale: true);

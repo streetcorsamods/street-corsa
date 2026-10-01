@@ -1171,8 +1171,13 @@ rule figure in `rules/*.json`, kept in the save from the career's start. What wa
 built". The owner played it ("Works good!"); reviewed, merged to dev as PR #51.
 
 E3 (words) is built on `feature/words` (2026-09-30): every word on the screens, in the messages and in the race mode
-is a text pool of the mods (about 1,300 keys), and a mod can add a language, picked in Settings. Not played yet. The
-order after that is E4-E12 as listed, unless the owner picks otherwise.
+is a text pool of the mods (about 1,300 keys), and a mod can add a language, picked in Settings. The owner played it;
+merged as PR #52.
+
+E4 (locale) is built on `feature/locale` (2026-10-01): `game.json`'s `locale` (culture, currency, units), the base game
+in US 1960s units (mph, miles, gallons, °F), a units picker in Settings, money and figures written through `Money` and
+`Measure`, the text naming a number's kind (`{price:money}`), date patterns as text. Not played yet. The order after
+that is E5-E12 as listed, unless the owner picks otherwise.
 
 ## Testing in AC without driving
 

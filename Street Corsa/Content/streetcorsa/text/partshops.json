@@ -30,7 +30,7 @@
     "street.partshop_opened": [ "There's a new parts place in {region}: {shop}.", "{shop} just opened in {region}." ],
     "street.partshop_reopened": "Somebody opened {shop} in {region} again.",
     "street.partshop_bargain": [
-      "{name} picked up a {part} at {shop}'s closing-down sale for ${price:N0}.",
+      "{name} picked up a {part} at {shop}'s closing-down sale for {price:money}.",
       "{name} got a {part} cheap at {shop}'s closing-down sale and bolted it straight on."
     ],
 
@@ -49,13 +49,13 @@
 
     "partshop.haggle.yes.title": "A Deal",
     "partshop.haggle.yes": [
-      "The owner looks the {part} over, spits, and says ${price:N0}. Down from ${was:N0}.",
-      "\"For you? ${price:N0}, and you carry it out yourself.\" That's ${was:N0} knocked down."
+      "The owner looks the {part} over, spits, and says {price:money}. Down from {was:money}.",
+      "\"For you? {price:money}, and you carry it out yourself.\" That's {was:money} knocked down."
     ],
     "partshop.haggle.no.title": "No Deal",
     "partshop.haggle.no": [
-      "\"${was:N0} for the {part}. Take it or leave it.\"",
-      "The owner laughs. \"${was:N0}, and that's already a steal.\""
+      "\"{was:money} for the {part}. Take it or leave it.\"",
+      "The owner laughs. \"{was:money}, and that's already a steal.\""
     ]
   }
 }

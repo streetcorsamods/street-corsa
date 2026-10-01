@@ -21,6 +21,7 @@ using StreetCorsa.Services.Street;
 using StreetCorsa.Services.Text;
 using StreetCorsa.Services.Time;
 using StreetCorsa.ViewModels;
+using StreetCorsa.Helpers;
 
 namespace StreetCorsa.Screens.Station
 {
@@ -224,7 +225,7 @@ namespace StreetCorsa.Screens.Station
             var tow = TowPrice();
             if (towed && _gameState.Player.Money < tow)
             {
-                SendHome(GameText.Say("station.ui.cant_tow", ("tow", $"${tow:N0}")), GameText.Say("station.ui.cant_tow.title"));
+                SendHome(GameText.Say("station.ui.cant_tow", ("tow", Money.Text(tow))), GameText.Say("station.ui.cant_tow.title"));
                 return;
             }
 
@@ -242,7 +243,7 @@ namespace StreetCorsa.Screens.Station
             {
                 _gameState.Player.Money -= tow;
                 _logger.Information("{Car} towed to {Station} for ${Tow}", _car.DefinitionId, Station.Id, tow);
-                StatusText = GameText.Say("station.ui.towed_in", ("station", Station.Title), ("tow", $"${tow:N0}"));
+                StatusText = GameText.Say("station.ui.towed_in", ("station", Station.Title), ("tow", Money.Text(tow)));
             }
             else
             {
@@ -340,7 +341,7 @@ namespace StreetCorsa.Screens.Station
 
             // He checks the oil and has a look while he's there
             var left = CarCondition.OilLeft(_car);
-            var quarts = GasStation.Quarts(GasStation.OilToTopUp(_car, _catalog));
+            var quarts = GasStation.OilShort(GasStation.OilToTopUp(_car, _catalog));
             if (_car.Engine != null) Say(left < 0.4 ? "station.oil.very_low" : left < 0.95 ? "station.oil.low" : "station.oil.ok", new TextValues { ["quarts"] = quarts });
 
             var hints = AttendantCheck.Look(_car, _catalog);
@@ -430,8 +431,8 @@ namespace StreetCorsa.Screens.Station
                     WorkProgress = done;
                     if (job.Id == GasStation.FillUp) Stage.FuelLitres = (float)(from + litres * done);
                     WorkDetail = job.Id == GasStation.FillUp
-                        ? GameText.Say("station.ui.fill_detail", ("litres", $"{litres * done:0.0}"), ("cost", $"${job.Cost * (decimal)done:0.00}"),
-                            ("fuel", $"{from + litres * done:0}"), ("tank", $"{_car!.FuelTankLitres:0}"))
+                        ? GameText.Say("station.ui.fill_detail", ("litres", litres * done), ("cost", Money.Text(job.Cost * (decimal)done, Locale.Money.Decimals + 2)),
+                            ("fuel", from + litres * done), ("tank", _car!.FuelTankLitres))
                         : $"{done * 100:0}%";
                     if (done >= 1) break;
                     await Task.Delay(40);
@@ -501,7 +502,7 @@ namespace StreetCorsa.Screens.Station
                         _gameState.Player.Money -= tow;
                         _towHomePaid = true;
                         _logger.Information("{Car} towed home from {Station} for ${Tow}", _car.DefinitionId, Station?.Id, tow);
-                        StatusText = GameText.Say("station.ui.towed_home", ("tow", $"${tow:N0}"));
+                        StatusText = GameText.Say("station.ui.towed_home", ("tow", Money.Text(tow)));
                         await _trip;
                         await SpendAsync(GameAction.TowToStation);
                     }
@@ -593,7 +594,7 @@ namespace StreetCorsa.Screens.Station
         {
             Name = job.Name;
             Detail = job.Detail;
-            CostDisplay = $"${job.Cost:N0}";
+            CostDisplay = Money.Text(job.Cost);
             TimeDisplay = job.Time.GetTimeDescription();
             Command = command;
         }

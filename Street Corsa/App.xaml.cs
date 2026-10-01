@@ -155,17 +155,13 @@ namespace StreetCorsa
                 Environment.Exit(0);
             }
 
-            // Force English culture for the entire application
+            // The program runs in US English whatever the machine's culture: every file it reads and writes (race.ini,
+            // the cars' data, the saves) is written the one way. What the player reads is the game's (below).
             var englishCulture = new CultureInfo("en-US");
             CultureInfo.DefaultThreadCurrentCulture = englishCulture;
             CultureInfo.DefaultThreadCurrentUICulture = englishCulture;
             Thread.CurrentThread.CurrentCulture = englishCulture;
             Thread.CurrentThread.CurrentUICulture = englishCulture;
-
-            // Set WPF language for XAML bindings (dates, numbers, etc.)
-            FrameworkElement.LanguageProperty.OverrideMetadata(
-                typeof(FrameworkElement),
-                new FrameworkPropertyMetadata(XmlLanguage.GetLanguage(englishCulture.IetfLanguageTag)));
 
             // The last line of defence before anything that can fail: the rename and the log's folder below touch
             // %AppData%, and one that throws must still end with a message rather than a silent exit
@@ -191,6 +187,16 @@ namespace StreetCorsa
             if (logFailure != null) startLogger.Error(logFailure, "The log could not be opened; the game runs without one");
             foreach (var note in renamed) startLogger.Information("Rename to Street Corsa: {Note}", note);
 
+            // The game's locale (game.json): the culture the player reads numbers and dates in, the currency, the
+            // units. The screens' bindings write in that culture too, from before the first element is made.
+            var locale = Rules.GameFile.Installed.Locale;
+            Helpers.Locale.Culture = locale.CultureInfo;
+            Helpers.Locale.Money = locale.Money;
+            Helpers.Locale.Units = locale.UnitSystem;
+            FrameworkElement.LanguageProperty.OverrideMetadata(
+                typeof(FrameworkElement),
+                new FrameworkPropertyMetadata(XmlLanguage.GetLanguage(Helpers.Locale.Culture.IetfLanguageTag)));
+
             // A write that had to take a read-only mark off a file (race.ini, video.ini) says so in the log
             Helpers.SafeFile.ReadOnlyCleared = path =>
                 AppLoggerFactory.CreateLogger(LogCategory.ACIntegration).Warning("{Path} was read-only; the mark was taken off to write it", path);
@@ -204,8 +210,9 @@ namespace StreetCorsa
 
             // The settings before anything that reads the install: they name the AC folder
             GameSettingsService = new GameSettingsService();
-            // And the player's language, before any word is said
+            // And the player's language, before any word is said, and the units they picked over the game's
             Services.Text.GameText.Language = GameSettingsService.Current.Language;
+            if (Helpers.Locale.ParseUnits(GameSettingsService.Current.Units) is { } units) Helpers.Locale.Units = units;
             // A language whose mod is gone is told once and forgotten: the picker cannot show it to be taken back
             if (Services.Text.GameText.Installed.LanguageMissing)
             {

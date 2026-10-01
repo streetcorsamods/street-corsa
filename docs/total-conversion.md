@@ -186,6 +186,38 @@ Later, not in the epic: a weather system (there is none today), nitrous in AC.
 
 ## As built
 
+### E4: locale (2026-10-01, branch `feature/locale`)
+
+The owner's decisions: the base game shows **all US 1960s units** (miles, mph, gallons, quarts, °F, lb; before it mixed
+km mileage, litres and °C with mph and quarts), and **the game picks the units, the player may pick the others** in
+Settings (taken at once). Money is always the game's.
+
+- `game.json` `locale`: `culture`, `money` (`symbol`, `after`, `space`, `decimals`), `units`; checked at start-up, what
+  cannot be used told (`GameLocale.Checked`). `Helpers.Locale` holds what is in play (the culture, the money style, the
+  units); the player's pick is settings.json `Units`.
+- The program keeps `en-US` as its thread culture, so the files it writes stay one way; what the player reads goes
+  through `Locale.Culture`: `GameText.Fill`, the screens' bindings (`FrameworkElement.Language`, set after the log
+  opens and before the first element), `Money`, `Measure`, the date patterns.
+- `Helpers.Money` (a value that writes itself, `Money.Text`), `Helpers.Measure` (a figure kept metric, written in the
+  player's units through the text pools `unit.<id>`), `MoneyConverter` for XAML. About 45 `$"${x:N0}"` and every unit
+  in C# went through them; a test keeps new ones out.
+- The text names a number's kind: `{price:money}`, `{peak:temp}`, `{left:fuel.number:0.0}` (`GameText.Kinds`); the
+  ~30 `${x:N0}` in the pools became `{x:money}`. Date patterns in code are text pools `format.*` (`GameText.Date`).
+- The oil the attendant reads is in quarts or litres (`station.oil_short.<unit>.*`); the timeslip's marks are text and
+  its trap speeds in the player's units; the race mode gets `SPEED_PER_MPH` and the unit's words through race.ini, and
+  AC's own `USE_MPH` follows the units. The radio dial is text (`radio.dial`).
+
+Left for later, on purpose:
+- the strip is the quarter mile wherever it is (60', 330', 1/8, 1/4 are its marks): race formats (E10);
+- power stays hp in both systems (a mod can call it PS in `unit.hp`, not converted); the workbench's displacement shows
+  litres and cubic inches both;
+- figures written in content as words (a milestone's "Earn $10,000 from races", an event's description): content, a
+  game writes its own;
+- the price rounding steps (a yen game's prices round to 10s of dollars' worth): rules (E2's `rules/*.json`);
+- `$"{x:0.0}"` numbers built in C# for a screen without a unit (percentages, ratios, the rpm) are still written in US
+  English; logs stay US English;
+- in-game look at metric and at another culture: not played yet.
+
 ### E1 and E2 (2026-09-30, one PR, branch `feature/total-conversion`)
 
 The owner's decisions: E1 and E2 together; JSON for the general settings (no INI): `game.json` in the mods plus the

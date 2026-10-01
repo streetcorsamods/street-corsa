@@ -93,7 +93,7 @@ public sealed class CarConditionTests : IDisposable
         var report = CarCondition.ApplyRace(car, Report(body: new double[] { 12, 0, 25.8, 0 }), 1, GroupOf);
 
         Assert.Equal(new double[] { 30, 0, 25.8, 0 }, car.BodyDamageKmh);
-        Assert.Contains(report.Texts(), l => l.Contains("left side") && l.Contains("26 km/h"));
+        Assert.Contains(report.Texts(), l => l.Contains("left side") && l.Contains("16 mph"));
         Assert.DoesNotContain(report.Texts(), l => l.Contains("front"));
         Assert.Equal(1 - 55.8 / CarCondition.TotaledKmh, car.BodyCondition, 6);
     }

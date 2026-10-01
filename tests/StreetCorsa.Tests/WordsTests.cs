@@ -95,13 +95,12 @@ public partial class WordsTests : IDisposable
     private static partial Regex XamlLiteral();
 
     // The developer's screens stay in English (the owner, 2026-09-30); the window's title is game.json's, set as it
-    // opens; the radio's dial is a picture of a scale
+    // opens
     private static readonly string[] EnglishOnPurpose =
     [
         $"{Path.DirectorySeparatorChar}CarCatalogEditor{Path.DirectorySeparatorChar}",
         $"{Path.DirectorySeparatorChar}SoundBrowser{Path.DirectorySeparatorChar}",
-        $"{Path.DirectorySeparatorChar}MainWindow.xaml",
-        $"{Path.DirectorySeparatorChar}RadioPanel.xaml"
+        $"{Path.DirectorySeparatorChar}MainWindow.xaml"
     ];
 
     [Fact]
@@ -130,7 +129,7 @@ public partial class WordsTests : IDisposable
     public void Every_line_the_race_mode_says_comes_from_the_base_game()
     {
         var text = GameText.Load(ModSet.Load(RepoPaths.Content));
-        var handed = text.Keys.Where(k => k.StartsWith("race.", StringComparison.OrdinalIgnoreCase)).Select(RaceText.IniKey).ToHashSet();
+        var handed = RaceText.IniLines(text).Skip(1).Select(l => l[..l.IndexOf('=')]).ToHashSet();
         var lua = File.ReadAllText(Path.Combine(RepoPaths.Root, "apps", "new-modes", "sc_race", "mode.lua"));
 
         var said = LuaKey().Matches(lua).Select(m => m.Groups[1].Value).Distinct().ToList();

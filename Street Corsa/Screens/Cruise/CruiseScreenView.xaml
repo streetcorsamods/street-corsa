@@ -285,12 +285,12 @@
                     <Grid>
                         <TextBlock FontSize="{StaticResource FontSizeTiny}"
                                    Foreground="{StaticResource TextSecondaryBrush}">
-                            <Run Text="$"/><Run Text="{Binding MinWager, StringFormat='{}{0:N0}', Mode=OneWay}"/>
+                            <Run Text="{Binding MinWager, Converter={StaticResource MoneyConverter}, Mode=OneWay}"/>
                         </TextBlock>
                         <TextBlock FontSize="{StaticResource FontSizeTiny}"
                                    Foreground="{StaticResource TextSecondaryBrush}"
                                    HorizontalAlignment="Right">
-                            <Run Text="$"/><Run Text="{Binding MaxWager, StringFormat='{}{0:N0}', Mode=OneWay}"/>
+                            <Run Text="{Binding MaxWager, Converter={StaticResource MoneyConverter}, Mode=OneWay}"/>
                         </TextBlock>
                     </Grid>
                 </StackPanel>

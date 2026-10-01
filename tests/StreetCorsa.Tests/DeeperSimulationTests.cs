@@ -287,7 +287,7 @@ public sealed class DeeperSimulationTests : IDisposable
         Assert.DoesNotContain(report.Texts(), l => l.StartsWith("Fuel"));
 
         report = CarCondition.ApplyRace(car, Report(fuel: 5, tank: 60), 1, null);
-        Assert.Contains(report.Texts(), l => l.StartsWith("Fuel: 5 litres left"));
+        Assert.Contains(report.Texts(), l => l.StartsWith("Fuel: 1.3 gal left"));
         Assert.Empty(CarCondition.WhyCannotRace(car, null));
     }
 
@@ -398,10 +398,10 @@ public sealed class DeeperSimulationTests : IDisposable
     public void The_report_says_what_the_heat_and_the_oil_did_and_what_would_help()
     {
         var cooked = CarCondition.ApplyRace(new Car("a"), Report(heat: new RaceHeatReport { PeakWaterC = 124, HeatLifeLost = 220 }), 5, null);
-        Assert.Contains(cooked.Texts(), l => l.Contains("overheated (124 °C)", StringComparison.Ordinal) && l.Contains("bigger radiator", StringComparison.Ordinal));
+        Assert.Contains(cooked.Texts(), l => l.Contains("overheated (255 °F)", StringComparison.Ordinal) && l.Contains("bigger radiator", StringComparison.Ordinal));
 
         var hot = CarCondition.ApplyRace(new Car("a"), Report(heat: new RaceHeatReport { PeakWaterC = 114, HeatLifeLost = 0 }), 5, null);
-        Assert.Contains(hot.Texts(), l => l.Contains("ran hot (114 °C)", StringComparison.Ordinal));
+        Assert.Contains(hot.Texts(), l => l.Contains("ran hot (237 °F)", StringComparison.Ordinal));
 
         var oil = CarCondition.ApplyRace(new Car("a"), Report(heat: new RaceHeatReport { PeakWaterC = 95, OilLifeLost = 40 }), 5, null);
         Assert.Contains(oil.Texts(), l => l.Contains("deeper oil pan", StringComparison.Ordinal));

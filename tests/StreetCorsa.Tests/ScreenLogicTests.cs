@@ -394,8 +394,8 @@ public class MatchupPowerTests
         var stats = MatchupCalculator.Compare(Car("200bhp"), Car("300bhp"));
 
         var power = stats.Single(s => s.Label == "Horsepower");
-        Assert.Equal("200 HP", power.PlayerValue);
-        Assert.Equal("300 HP", power.OpponentValue);
+        Assert.Equal("200 hp", power.PlayerValue);
+        Assert.Equal("300 hp", power.OpponentValue);
     }
 
     [Fact]
@@ -404,8 +404,8 @@ public class MatchupPowerTests
         var stats = MatchupCalculator.Compare(Car("200bhp"), Car("300bhp"), playerPowerHp: 350, opponentPowerHp: 280);
 
         var power = stats.Single(s => s.Label == "Horsepower");
-        Assert.Equal("350 HP", power.PlayerValue);
-        Assert.Equal("280 HP", power.OpponentValue);
+        Assert.Equal("350 hp", power.PlayerValue);
+        Assert.Equal("280 hp", power.OpponentValue);
     }
 
     [Theory]
@@ -417,7 +417,7 @@ public class MatchupPowerTests
     {
         var stats = MatchupCalculator.Compare(Car("200bhp"), Car("300bhp"), playerPowerHp: dyno);
 
-        Assert.Equal("200 HP", stats.Single(s => s.Label == "Horsepower").PlayerValue);
+        Assert.Equal("200 hp", stats.Single(s => s.Label == "Horsepower").PlayerValue);
     }
 }
 

@@ -306,7 +306,7 @@ public sealed class RaceResultProcessorTests : IDisposable
 
         var towed = Assert.Single(messages, m => m.TowedToGarage);
         Assert.Equal("Towed Home", towed.Title);
-        Assert.Contains("front took a 60 km/h hit", towed.Text);
+        Assert.Contains("front took a 37 mph hit", towed.Text);
         Assert.DoesNotContain(messages, m => m.Title == "Damage Report");
     }
 

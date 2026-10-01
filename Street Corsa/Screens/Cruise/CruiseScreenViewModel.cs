@@ -25,6 +25,7 @@ using StreetCorsa.Services.Street;
 using StreetCorsa.Services.Talk;
 using StreetCorsa.Services.Time;
 using StreetCorsa.ViewModels;
+using StreetCorsa.Helpers;
 
 namespace StreetCorsa.Screens.Cruise
 {
@@ -282,7 +283,7 @@ namespace StreetCorsa.Screens.Cruise
         public decimal MinWager { get; private set; }
         public decimal MaxWager { get; private set; }
 
-        public string BetDisplay => IsPinkSlipBet ? GameText.Say("cruise.pink_slips") : $"${Wager:N0}";
+        public string BetDisplay => IsPinkSlipBet ? GameText.Say("cruise.pink_slips") : Money.Text(Wager);
 
         /// <summary>The player can cover a cash bet (pink slips need no cash)</summary>
         public bool CanAffordBet => IsPinkSlipBet || (MaxWager > 0m && _gameState.Player.Money >= Wager);
@@ -637,7 +638,7 @@ namespace StreetCorsa.Screens.Cruise
             _track = track;
             _configuration = configuration;
             _logger.Information("{Rival} pulls up in a {Car}: {Race} for {Stakes}", rival.Name, definition.Id,
-                raceType, offer.PinkSlips ? "pink slips" : $"${offer.Wager}");
+                raceType, offer.PinkSlips ? "pink slips" : $"{offer.Wager:0} cash");
 
             StatusText = GameText.Say("cruise.headlights");
 

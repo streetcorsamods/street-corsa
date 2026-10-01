@@ -40,12 +40,12 @@
     "dealer.drive.too_late": "Today is the last day of {dealer}'s closing-down sale, and it is {time:h:mm tt}. You would not get there before it shut for good.",
 
     "street.bargain": [
-      "{name} picked up a {car} at {dealer}'s closing-down sale for ${price:N0}.",
-      "{name} got a {car} for ${price:N0} at {dealer}'s closing-down sale."
+      "{name} picked up a {car} at {dealer}'s closing-down sale for {price:money}.",
+      "{name} got a {car} for {price:money} at {dealer}'s closing-down sale."
     ],
     "street.bargain_flip": [
-      "{name} snapped up a {car} at {dealer}'s closing-down sale for ${price:N0}, and it's already in the paper.",
-      "{name} bought a {car} off {dealer}'s sale for ${price:N0} just to sell it on."
+      "{name} snapped up a {car} at {dealer}'s closing-down sale for {price:money}, and it's already in the paper.",
+      "{name} bought a {car} off {dealer}'s sale for {price:money} just to sell it on."
     ]
   }
 }

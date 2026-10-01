@@ -119,8 +119,8 @@ namespace StreetCorsa.Services.Market
 
             var saveFailed = await SpendTimeAndSave(gameState, GameAction.SellCar);
             var message = quote.IsScrap
-                ? GameText.Say("sell.scrapped", ("amount", $"${quote.Amount:N0}"))
-                : GameText.Say("sell.traded_in", ("buyer", quote.BuyerName), ("amount", $"${quote.Amount:N0}"));
+                ? GameText.Say("sell.scrapped", ("amount", Money.Text(quote.Amount)))
+                : GameText.Say("sell.traded_in", ("buyer", quote.BuyerName), ("amount", Money.Text(quote.Amount)));
             return new SaleResult(SaleOutcome.Done, message, saveFailed);
         }
 
@@ -141,13 +141,13 @@ namespace StreetCorsa.Services.Market
 
             var (min, max) = AskingPriceRange(car);
             if (askingPrice < min || askingPrice > max)
-                return new SaleResult(SaleOutcome.Refused, GameText.Say("sell.refused.price", ("min", $"${min:N0}"), ("max", $"${max:N0}")));
+                return new SaleResult(SaleOutcome.Refused, GameText.Say("sell.refused.price", ("min", Money.Text(min)), ("max", Money.Text(max))));
 
             if (AdFor(gameState, car) != null)
                 return new SaleResult(SaleOutcome.Refused, GameText.Say("sell.refused.in_paper"));
 
             if (gameState.Player.Money < AdFee)
-                return new SaleResult(SaleOutcome.NotEnoughMoney, GameText.Say("sell.refused.no_money", ("fee", $"${AdFee:N0}")));
+                return new SaleResult(SaleOutcome.NotEnoughMoney, GameText.Say("sell.refused.no_money", ("fee", Money.Text(AdFee))));
 
             gameState.Player.Money -= AdFee;
             gameState.NewspaperAds.PlayerCars.Add(new CarSaleAd
@@ -160,7 +160,7 @@ namespace StreetCorsa.Services.Market
 
             var saveFailed = await SpendTimeAndSave(gameState, GameAction.PlaceAd);
             return new SaleResult(SaleOutcome.Done,
-                GameText.Say("sell.ad.placed", ("days", AdDays), ("price", $"${askingPrice:N0}")), saveFailed);
+                GameText.Say("sell.ad.placed", ("days", AdDays), ("price", Money.Text(askingPrice))), saveFailed);
         }
 
         public SaleResult WithdrawAd(GameState gameState, CarSaleAd ad)
@@ -217,7 +217,7 @@ namespace StreetCorsa.Services.Market
             _logger.Information("Sold {Car} to {Buyer} out of the paper for ${Amount}", car.DefinitionId, offer.BuyerName, offer.Amount);
 
             var saveFailed = await SpendTimeAndSave(gameState, GameAction.SellCar);
-            return new SaleResult(SaleOutcome.Done, GameText.Say("sell.offer.sold", ("buyer", Capitalized(offer.BuyerName)), ("amount", $"${offer.Amount:N0}")), saveFailed);
+            return new SaleResult(SaleOutcome.Done, GameText.Say("sell.offer.sold", ("buyer", Capitalized(offer.BuyerName)), ("amount", Money.Text(offer.Amount))), saveFailed);
         }
 
         public SaleResult DeclineOffer(GameState gameState, CarSaleAd ad)

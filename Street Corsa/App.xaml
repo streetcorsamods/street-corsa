@@ -51,6 +51,7 @@
             <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
             <converters:GaragePanelToVisibilityConverter x:Key="GaragePanelToVisibilityConverter"/>
             <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+            <converters:MoneyConverter x:Key="MoneyConverter"/>
 
             <!-- Effects -->
             <DropShadowEffect x:Key="DropShadowEffect"

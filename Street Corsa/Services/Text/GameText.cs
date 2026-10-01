@@ -305,6 +305,23 @@ namespace StreetCorsa.Services.Text
             return Fill(lines[0], filled);
         }
 
+        /// <summary>
+        /// A date or a time as the screens write it: the pattern of the text pool <paramref name="formatKey"/>
+        /// (<c>format.time</c>, <c>format.date</c>...) in the game's culture. A pattern .NET cannot use writes the short date.
+        /// </summary>
+        public static string Date(DateTime date, string formatKey)
+        {
+            var lines = Installed.Lines(formatKey);
+            try
+            {
+                return date.ToString(lines.Count > 0 ? lines[0] : "d", Helpers.Locale.Culture);
+            }
+            catch (FormatException)
+            {
+                return date.ToString("d", Helpers.Locale.Culture);
+            }
+        }
+
         /// <summary>A line of the pool at random, filled in; empty when no mod has the pool</summary>
         public string Pick(string key, Random random, IReadOnlyDictionary<string, object?>? values = null)
         {
@@ -330,7 +347,14 @@ namespace StreetCorsa.Services.Text
 
         /// <summary>
         /// {name} is the value of that name, {name:N0} with a format; a name without a value stays as it is written,
-        /// so a typo shows rather than vanishes
+        /// so a typo shows rather than vanishes. Numbers and dates are written in the game's culture
+        /// (<see cref="Helpers.Locale.Culture"/>).
+        ///
+        /// A number can be named for what it is, and is then written in the game's currency or the player's units:
+        /// {price:money}, {peak:temp} ("212 °F"), {kmh:speed}, a format after it ({left:fuel:0.0}), and ".number" for
+        /// the figure alone in that unit ({left:fuel.number}). The kinds are in <see cref="Kinds"/>; the figures they
+        /// take are metric (km/h, km, litres, °C, kg, N·m). Money and figures the game hands over already made
+        /// (<see cref="Helpers.Money"/>, <see cref="Helpers.Measure"/>) write themselves.
         /// </summary>
         public static string Fill(string template, IReadOnlyDictionary<string, object?>? values)
         {
@@ -339,14 +363,69 @@ namespace StreetCorsa.Services.Text
             return Placeholder().Replace(template, match =>
             {
                 if (!values.TryGetValue(match.Groups[1].Value, out var value)) return match.Value;
+                if (value == null) return string.Empty;
+
+                var format = match.Groups[2].Success ? match.Groups[2].Value : null;
+                if (format != null && Kind(format, out var kind, out var numberOnly, out var numberFormat) && Number(value) is { } number)
+                {
+                    if (kind == null) return new Helpers.Money(number).ToString(numberFormat, null);
+                    var measure = value is Helpers.Measure made ? made : new Helpers.Measure(kind.Value, (double)number);
+                    return numberOnly ? measure.Number(numberFormat) : measure.ToString(numberFormat, null);
+                }
 
                 return value switch
                 {
-                    null => string.Empty,
-                    IFormattable formattable when match.Groups[2].Success => formattable.ToString(match.Groups[2].Value, CultureInfo.CurrentCulture),
-                    _ => Convert.ToString(value, CultureInfo.CurrentCulture) ?? string.Empty
+                    IFormattable formattable when format != null => formattable.ToString(format, Helpers.Locale.Culture),
+                    _ => Convert.ToString(value, Helpers.Locale.Culture) ?? string.Empty
                 };
             });
+        }
+
+        /// <summary>The kinds a number can be named in the text, and the quantity each measures (none for money)</summary>
+        public static readonly IReadOnlyDictionary<string, Helpers.Quantity?> Kinds = new Dictionary<string, Helpers.Quantity?>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["money"] = null,
+            ["speed"] = Helpers.Quantity.Speed,
+            ["distance"] = Helpers.Quantity.Distance,
+            ["fuel"] = Helpers.Quantity.Fuel,
+            ["oil"] = Helpers.Quantity.Oil,
+            ["temp"] = Helpers.Quantity.Temperature,
+            ["mass"] = Helpers.Quantity.Mass,
+            ["torque"] = Helpers.Quantity.Torque,
+            ["power"] = Helpers.Quantity.Power,
+            ["power_weight"] = Helpers.Quantity.PowerToWeight
+        };
+
+        /// <summary>"fuel", "fuel.number", "fuel:0.0", "money:N2": the kind, whether the number goes alone, and a number format</summary>
+        private static bool Kind(string format, out Helpers.Quantity? quantity, out bool numberOnly, out string? numberFormat)
+        {
+            var colon = format.IndexOf(':');
+            var name = colon < 0 ? format : format[..colon];
+            numberFormat = colon < 0 || colon == format.Length - 1 ? null : format[(colon + 1)..];
+            numberOnly = name.EndsWith(".number", StringComparison.OrdinalIgnoreCase);
+            if (numberOnly) name = name[..^".number".Length];
+            return Kinds.TryGetValue(name, out quantity);
+        }
+
+        /// <summary>A value as a number; null for one that is not</summary>
+        private static decimal? Number(object value)
+        {
+            try
+            {
+                return value switch
+                {
+                    Helpers.Money money => money.Amount,
+                    Helpers.Measure measure => (decimal)measure.Metric,
+                    double d when double.IsFinite(d) => (decimal)d,
+                    float f when float.IsFinite(f) => (decimal)f,
+                    decimal or int or long or short or byte or uint or ulong => Convert.ToDecimal(value, CultureInfo.InvariantCulture),
+                    _ => null
+                };
+            }
+            catch (OverflowException)
+            {
+                return null;
+            }
         }
     }
 
