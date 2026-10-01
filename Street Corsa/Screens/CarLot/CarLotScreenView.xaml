@@ -128,7 +128,7 @@
                            VerticalAlignment="Center"
                            Foreground="{StaticResource TextPrimaryBrush}">
                     <TextBlock.Effect>
-                        <DropShadowEffect BlurRadius="14" ShadowDepth="0" Color="Black" Opacity="1"/>
+                        <DropShadowEffect BlurRadius="14" ShadowDepth="0" Color="{StaticResource Shadow}" Opacity="1"/>
                     </TextBlock.Effect>
                 </TextBlock>
                 <Button Content="▶"
@@ -147,7 +147,7 @@
                        IsHitTestVisible="False"
                        Margin="0,3,0,0">
                 <TextBlock.Effect>
-                    <DropShadowEffect BlurRadius="10" ShadowDepth="0" Color="Black" Opacity="1"/>
+                    <DropShadowEffect BlurRadius="10" ShadowDepth="0" Color="{StaticResource Shadow}" Opacity="1"/>
                 </TextBlock.Effect>
             </TextBlock>
         </StackPanel>
@@ -255,12 +255,12 @@
                 Command="{Binding TakeCarCommand}"
                 Visibility="{Binding HasSelection, Converter={StaticResource BooleanToVisibilityConverter}}">
             <Button.Effect>
-                <DropShadowEffect BlurRadius="20" ShadowDepth="0" Color="Black" Opacity="0.8"/>
+                <DropShadowEffect BlurRadius="20" ShadowDepth="0" Color="{StaticResource Shadow}" Opacity="0.8"/>
             </Button.Effect>
         </Button>
 
         <!-- Comes down over the car driving off to the garage -->
-        <Border x:Name="Curtain" Background="Black" Opacity="0" IsHitTestVisible="False"/>
+        <Border x:Name="Curtain" Background="{StaticResource StageBrush}" Opacity="0" IsHitTestVisible="False"/>
 
     </Grid>
 </UserControl>

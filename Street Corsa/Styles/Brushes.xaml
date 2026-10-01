@@ -1,13 +1,12 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:theme="clr-namespace:StreetCorsa.Styles"
                     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                     xmlns:PresentationOptions="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options"
                     mc:Ignorable="PresentationOptions">
 
-    <!-- Merge Colors -->
-    <ResourceDictionary.MergedDictionaries>
-        <ResourceDictionary Source="Colors.xaml"/>
-    </ResourceDictionary.MergedDictionaries>
+    <!-- The colours come from Colors.xaml, which Theme.Apply merges into the application's resources before this one
+         (with a mod's theme over them), so every brush here is made in the colours of the game being played -->
 
     <!-- Background Brushes -->
     <SolidColorBrush x:Key="BgDarkBrush" Color="{StaticResource BgDark}"/>
@@ -116,12 +115,39 @@
     <SolidColorBrush x:Key="MapDotFarBorderBrush" Color="{StaticResource MapDotFarBorder}"/>
     <SolidColorBrush x:Key="MapFarTextBrush" Color="{StaticResource MapFarText}"/>
 
+    <!-- Behind the 3D scenes and the fades; the theme's other single colours -->
+    <SolidColorBrush x:Key="StageBrush" Color="{StaticResource Stage}"/>
+    <SolidColorBrush x:Key="LicensePaperBrush" Color="{StaticResource LicensePaper}"/>
+    <SolidColorBrush x:Key="TachRedlineBrush" Color="{StaticResource TachRedline}"/>
+    <SolidColorBrush x:Key="PointerLabelTextBrush" Color="{StaticResource PointerLabelText}"/>
+
+    <!-- The intro's title -->
+    <LinearGradientBrush x:Key="IntroTitleBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="{StaticResource IntroTitleTop}" Offset="0.0"/>
+        <GradientStop Color="{StaticResource IntroTitleUpper}" Offset="0.45"/>
+        <GradientStop Color="{StaticResource IntroTitleLower}" Offset="0.5"/>
+        <GradientStop Color="{StaticResource IntroTitleBottom}" Offset="1.0"/>
+    </LinearGradientBrush>
+    <SolidColorBrush x:Key="IntroSubtitleBrush" Color="{StaticResource IntroSubtitle}"/>
+
+    <!-- The main screen's shade and band -->
+    <SolidColorBrush x:Key="MenuShadeBrush" Color="{StaticResource MenuShade}"/>
+    <SolidColorBrush x:Key="MenuBandBrush" Color="{StaticResource MenuBand}"/>
+
+    <!-- The usual shadow under a card or a title -->
+    <DropShadowEffect x:Key="DropShadowEffect"
+                      Color="{StaticResource Shadow}"
+                      Direction="270"
+                      ShadowDepth="5"
+                      BlurRadius="15"
+                      Opacity="0.5"/>
+
     <!-- Background Images.
          The art is 2560x1440 (about 15 MB each once decoded, kept alive in the application resources after first
          use); decoding at 1920 wide cuts that to about 8 MB with no visible change at the size the screens draw it.
          OnLoad reads the file once and lets the stream go; frozen, so WPF can share them without change tracking -->
     <BitmapImage x:Key="MainBackgroundImage"
-                 UriSource="pack://application:,,,/Assets/Images/Backgrounds/main.png"
+                 UriSource="{theme:Image backgrounds/main}"
                  DecodePixelWidth="1920"
                  CacheOption="OnLoad"
                  PresentationOptions:Freeze="True"/>
@@ -131,7 +157,7 @@
                 PresentationOptions:Freeze="True"/>
 
     <BitmapImage x:Key="InitBackgroundImage"
-                 UriSource="pack://application:,,,/Assets/Images/Backgrounds/init.png"
+                 UriSource="{theme:Image backgrounds/init}"
                  DecodePixelWidth="1920"
                  CacheOption="OnLoad"
                  PresentationOptions:Freeze="True"/>
@@ -141,7 +167,7 @@
                 PresentationOptions:Freeze="True"/>
 
     <BitmapImage x:Key="NewspaperBackgroundImage"
-                 UriSource="pack://application:,,,/Assets/Images/Backgrounds/newspaper_background.png"
+                 UriSource="{theme:Image backgrounds/newspaper_background}"
                  DecodePixelWidth="1920"
                  CacheOption="OnLoad"
                  PresentationOptions:Freeze="True"/>
@@ -151,7 +177,7 @@
                 PresentationOptions:Freeze="True"/>
 
     <BitmapImage x:Key="DinerBackgroundImage"
-                 UriSource="pack://application:,,,/Assets/Images/Backgrounds/diner_background.png"
+                 UriSource="{theme:Image backgrounds/diner_background}"
                  DecodePixelWidth="1920"
                  CacheOption="OnLoad"
                  PresentationOptions:Freeze="True"/>
@@ -161,7 +187,7 @@
                 PresentationOptions:Freeze="True"/>
 
     <BitmapImage x:Key="SettingsBackgroundImage"
-                 UriSource="pack://application:,,,/Assets/Images/Backgrounds/settings_background.png"
+                 UriSource="{theme:Image backgrounds/settings_background}"
                  DecodePixelWidth="1920"
                  CacheOption="OnLoad"
                  PresentationOptions:Freeze="True"/>
@@ -173,7 +199,7 @@
     <!-- Button Images: the main menu's badges and the newspaper's two sections.
          The art is 820-1024 px square for tiles drawn at up to 300 px, so it is decoded 300 wide -->
     <BitmapImage x:Key="NewGameButtonImage"
-                 UriSource="pack://application:,,,/Assets/Images/Buttons/new_game.png"
+                 UriSource="{theme:Image buttons/new_game}"
                  DecodePixelWidth="300"
                  CacheOption="OnLoad"
                  PresentationOptions:Freeze="True"/>
@@ -183,7 +209,7 @@
                 PresentationOptions:Freeze="True"/>
 
     <BitmapImage x:Key="LoadGameButtonImage"
-                 UriSource="pack://application:,,,/Assets/Images/Buttons/load_game.png"
+                 UriSource="{theme:Image buttons/load_game}"
                  DecodePixelWidth="300"
                  CacheOption="OnLoad"
                  PresentationOptions:Freeze="True"/>
@@ -193,7 +219,7 @@
                 PresentationOptions:Freeze="True"/>
 
     <BitmapImage x:Key="SettingsButtonImage"
-                 UriSource="pack://application:,,,/Assets/Images/Buttons/settings.png"
+                 UriSource="{theme:Image buttons/settings}"
                  DecodePixelWidth="300"
                  CacheOption="OnLoad"
                  PresentationOptions:Freeze="True"/>
@@ -203,7 +229,7 @@
                 PresentationOptions:Freeze="True"/>
 
     <BitmapImage x:Key="UsedCarsButtonImage"
-                 UriSource="pack://application:,,,/Assets/Images/Buttons/used_cars.png"
+                 UriSource="{theme:Image buttons/used_cars}"
                  DecodePixelWidth="300"
                  CacheOption="OnLoad"
                  PresentationOptions:Freeze="True"/>
@@ -213,7 +239,7 @@
                 PresentationOptions:Freeze="True"/>
 
     <BitmapImage x:Key="UsedPartsButtonImage"
-                 UriSource="pack://application:,,,/Assets/Images/Buttons/used_parts.png"
+                 UriSource="{theme:Image buttons/used_parts}"
                  DecodePixelWidth="300"
                  CacheOption="OnLoad"
                  PresentationOptions:Freeze="True"/>

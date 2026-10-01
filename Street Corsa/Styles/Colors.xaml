@@ -119,4 +119,59 @@
     <Color x:Key="MapDotFarBorder">#A09A8C</Color>
     <Color x:Key="MapFarText">#E8A15A</Color>
 
+    <!-- Behind the 3D scenes, and the black the screens fade through -->
+    <Color x:Key="Stage">#FF000000</Color>
+    <!-- Drop shadows under text, cards and panels -->
+    <Color x:Key="Shadow">#FF000000</Color>
+    <!-- The paper of the licence the player writes their name on -->
+    <Color x:Key="LicensePaper">#FFFFFFFF</Color>
+    <!-- The tach's needle at the redline (the engine panel) -->
+    <Color x:Key="TachRedline">#FFFF0000</Color>
+    <!-- The label beside the pointer in the 3D views: its glass and edge (how see-through is each view's own), its text -->
+    <Color x:Key="PointerLabelGlass">#FF101010</Color>
+    <Color x:Key="PointerLabelEdge">#FFFFE68C</Color>
+    <Color x:Key="PointerLabelText">#FFFFFFFF</Color>
+
+    <!-- The intro's title: chrome lettering, top to bottom, and the line under it -->
+    <Color x:Key="IntroTitleTop">#FFFFFFFF</Color>
+    <Color x:Key="IntroTitleUpper">#FFC8CCD2</Color>
+    <Color x:Key="IntroTitleLower">#FF6E747C</Color>
+    <Color x:Key="IntroTitleBottom">#FFE6E8EB</Color>
+    <Color x:Key="IntroSubtitle">#FFC8CCD2</Color>
+
+    <!-- The main screen: a shade over the room, and the dark band the cards stand on, fading into the room -->
+    <Color x:Key="MenuShade">#26000000</Color>
+    <Color x:Key="MenuBand">#FF000000</Color>
+    <Color x:Key="MenuBandNear">#E6000000</Color>
+    <Color x:Key="MenuBandMid">#99000000</Color>
+    <Color x:Key="MenuBandEnd">#00000000</Color>
+
+    <!-- The radio's look: a 1960s tabletop set in walnut, a speaker grille, an amber dial, chrome knobs (Radio.xaml) -->
+    <Color x:Key="RadioWoodLight">#FF7A4526</Color>
+    <Color x:Key="RadioWoodDark">#FF3B1D0D</Color>
+    <Color x:Key="RadioWoodEdge">#FF1E0E05</Color>
+    <Color x:Key="RadioAmberLight">#FFF7D08A</Color>
+    <Color x:Key="RadioAmberDark">#FFD68E2A</Color>
+    <Color x:Key="RadioChromeLight">#FFF4F4F4</Color>
+    <Color x:Key="RadioChromeMid">#FF9A9A9A</Color>
+    <Color x:Key="RadioChromeDark">#FF5A5A5A</Color>
+    <Color x:Key="RadioInk">#FF3A2008</Color>
+    <!-- The band's figures, faint behind the song: on the car's dial, on the panel's -->
+    <Color x:Key="RadioInkFaint">#663A2008</Color>
+    <Color x:Key="RadioInkFainter">#553A2008</Color>
+    <Color x:Key="RadioGrille">#FF241A12</Color>
+    <Color x:Key="RadioBrass">#FFC9A45C</Color>
+    <Color x:Key="RadioNeedle">#FFB0201A</Color>
+    <Color x:Key="RadioRim">#FF2A2A2A</Color>
+    <Color x:Key="RadioKnobText">#FF222222</Color>
+    <!-- Round the set in the garage's tile -->
+    <Color x:Key="RadioTileBack">#FF17100A</Color>
+    <!-- The car radio in the dash: its chrome face, top to bottom, its bezel, the power lamp off and on -->
+    <Color x:Key="CarRadioFaceTop">#FFE8E8E8</Color>
+    <Color x:Key="CarRadioFaceMid">#FFB4B4B4</Color>
+    <Color x:Key="CarRadioFaceBottom">#FF7C7C7C</Color>
+    <Color x:Key="CarRadioBezel">#FF3A3A3A</Color>
+    <Color x:Key="CarRadioLampOff">#FF4A1A10</Color>
+    <Color x:Key="CarRadioLampOn">#FFFF7A3A</Color>
+
 </ResourceDictionary>

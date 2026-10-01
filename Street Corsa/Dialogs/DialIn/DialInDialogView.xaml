@@ -43,7 +43,7 @@
                 <Button Content="−" Command="{Binding DownCommand}" Style="{StaticResource DialogSecondaryButtonStyle}" Width="40" Height="36"/>
                 <Border Background="{StaticResource CreamBrush}" Padding="16,4" Margin="12,0" MinWidth="120">
                     <TextBlock Text="{Binding DialInDisplay}"
-                               FontFamily="Consolas"
+                               FontFamily="{StaticResource NumbersFont}"
                                FontSize="{StaticResource FontSizeTitle}"
                                FontWeight="Bold"
                                Foreground="{StaticResource InkBrush}"

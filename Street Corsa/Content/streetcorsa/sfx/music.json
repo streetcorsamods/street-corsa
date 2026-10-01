@@ -1,0 +1,18 @@
+{
+  "_comment": [
+    "The music the game starts to: over the intro and the main screen, until the player is in a game or puts the radio",
+    "on (Audio/StartMusic.cs). It plays on the radio's bus, so the radio's volume is its volume. Optional: the file is",
+    "not in the public repository yet (its licence is being asked for); without it the game starts quiet."
+  ],
+  "cues": {
+    "music.intro": {
+      "bus": "radio",
+      "volume": 0.7,
+      "loop": true,
+      "optional": true,
+      "files": [
+        "music/intro.mp3"
+      ]
+    }
+  }
+}

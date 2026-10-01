@@ -13,6 +13,7 @@
         ResizeMode="NoResize"
         WindowState="Maximized"
         Background="{StaticResource BgDarkBrush}"
+        FontFamily="{StaticResource BodyFont}"
         x:Name="MainWindowRoot">
     <Grid>
         <!-- The screen and its transition: the still of a change of screen is taken of the two together, so a change
@@ -55,7 +56,7 @@
             <!-- A change of screen: a still of the screen being left, over black. The still fades to black, then the
                  black fades off the new screen (see ScreenTransition). Takes the clicks while it plays. -->
             <Grid x:Name="TransitionLayer" Visibility="Collapsed" Background="Transparent">
-                <Rectangle x:Name="TransitionBlack" Fill="Black"/>
+                <Rectangle x:Name="TransitionBlack" Fill="{StaticResource StageBrush}"/>
                 <Image x:Name="TransitionStill" Stretch="Fill"/>
             </Grid>
         </Grid>
@@ -94,7 +95,7 @@
                 </Border.RenderTransform>
                 <DockPanel>
                     <TextBlock DockPanel.Dock="Left" Text="♪" Foreground="{StaticResource AmberBrush}" FontSize="{StaticResource FontSizeHeading}" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                    <TextBlock x:Name="RadioToastText" Foreground="{StaticResource CreamBrush}" FontFamily="Georgia" FontSize="{StaticResource FontSizeBodyLarge}" VerticalAlignment="Center"
+                    <TextBlock x:Name="RadioToastText" Foreground="{StaticResource CreamBrush}" FontFamily="{StaticResource DialFont}" FontSize="{StaticResource FontSizeBodyLarge}" VerticalAlignment="Center"
                                TextTrimming="CharacterEllipsis"/>
                 </DockPanel>
             </Border>

@@ -42,7 +42,7 @@
                                 <ScaleTransform ScaleX="1" ScaleY="1"/>
                             </Border.RenderTransform>
                             <Border.Effect>
-                                <DropShadowEffect Color="Black" ShadowDepth="0" BlurRadius="18" Opacity="0.7"/>
+                                <DropShadowEffect Color="{StaticResource Shadow}" ShadowDepth="0" BlurRadius="18" Opacity="0.7"/>
                             </Border.Effect>
                         </Border>
                         <TextBlock x:Name="label"
@@ -101,7 +101,7 @@
         <Setter Property="Padding" Value="32,26"/>
         <Setter Property="Effect">
             <Setter.Value>
-                <DropShadowEffect Color="Black" ShadowDepth="0" BlurRadius="30" Opacity="0.6"/>
+                <DropShadowEffect Color="{StaticResource Shadow}" ShadowDepth="0" BlurRadius="30" Opacity="0.6"/>
             </Setter.Value>
         </Setter>
     </Style>
@@ -366,6 +366,8 @@
 
     <!-- Every tooltip in the game: dark glass in the buttons' outline -->
     <Style TargetType="ToolTip">
+        <!-- A tooltip is a window of its own, out of the main window's reach: it is told the body font itself -->
+        <Setter Property="FontFamily" Value="{StaticResource BodyFont}"/>
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
         <Setter Property="Background" Value="{StaticResource UiGlassCardBrush}"/>
         <Setter Property="BorderBrush" Value="{StaticResource UiOutlineBrush}"/>
@@ -423,10 +425,10 @@
                         <!-- Hover Label at Bottom Center -->
                         <TextBlock x:Name="hoverLabel"
                                    Text="{TemplateBinding Tag}"
-                                   FontFamily="Courier New"
+                                   FontFamily="{StaticResource TypewriterFont}"
                                    FontSize="{StaticResource FontSizeHeading}"
                                    FontWeight="Bold"
-                                   Foreground="White"
+                                   Foreground="{StaticResource WhiteBrush}"
                                    HorizontalAlignment="Center"
                                    VerticalAlignment="Bottom"
                                    Margin="0,0,0,20"
@@ -451,13 +453,13 @@
 
     <!-- License Name Input Style -->
     <Style x:Key="LicenseNameInputStyle" TargetType="TextBox">
-        <Setter Property="Background" Value="White"/>
+        <Setter Property="Background" Value="{StaticResource LicensePaperBrush}"/>
         <Setter Property="Foreground" Value="{StaticResource LicenseBrownBrush}"/>
         <Setter Property="BorderBrush" Value="{StaticResource LicenseBrownBrush}"/>
         <Setter Property="BorderThickness" Value="2"/>
         <Setter Property="FontSize" Value="{StaticResource FontSizeTitle}"/>
         <Setter Property="FontWeight" Value="Bold"/>
-        <Setter Property="FontFamily" Value="Courier New"/>
+        <Setter Property="FontFamily" Value="{StaticResource TypewriterFont}"/>
         <Setter Property="CharacterCasing" Value="Upper"/>
         <Setter Property="MaxLength" Value="32"/>
         <Setter Property="Padding" Value="1"/>

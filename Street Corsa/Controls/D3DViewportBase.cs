@@ -118,14 +118,14 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
 
         _labelText = new System.Windows.Controls.TextBlock
         {
-            Foreground = System.Windows.Media.Brushes.White,
+            Foreground = new SolidColorBrush(Styles.Theme.Color("PointerLabelText")),
             FontSize = look.FontSize,
             FontWeight = FontWeights.SemiBold
         };
         _label = new System.Windows.Controls.Border
         {
-            Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(look.BackgroundAlpha, 0x10, 0x10, 0x10)),
-            BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(look.BorderAlpha, 0xFF, 0xE6, 0x8C)),
+            Background = new SolidColorBrush(Styles.Theme.Color("PointerLabelGlass", look.BackgroundAlpha)),
+            BorderBrush = new SolidColorBrush(Styles.Theme.Color("PointerLabelEdge", look.BorderAlpha)),
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(3),
             Padding = look.Padding,

@@ -7,7 +7,7 @@
              xmlns:controls="clr-namespace:StreetCorsa.Controls"
              mc:Ignorable="d"
              d:DesignHeight="720" d:DesignWidth="1280">
-    <Grid Background="Black">
+    <Grid Background="{StaticResource StageBrush}">
         <!-- The station, from the driver's seat -->
         <controls:StationViewport3D x:Name="StationView"
                                     Station="{Binding Station}"
@@ -212,7 +212,7 @@
 
         <!-- The curtain: black until the car rolls in, black again when it has gone -->
         <Border x:Name="Curtain"
-                Background="Black"
+                Background="{StaticResource StageBrush}"
                 IsHitTestVisible="False"/>
 
         <!-- Until the scene is up -->

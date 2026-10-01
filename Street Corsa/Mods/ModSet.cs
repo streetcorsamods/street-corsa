@@ -27,6 +27,9 @@ public static class ContentTypes
     public const string Sfx = "sfx";
     public const string Props = "props";
 
+    /// <summary>The look: theme/*.json (colour, size and typeface keys), theme/fonts, theme/images; see <c>Styles.Theme</c></summary>
+    public const string Theme = "theme";
+
     /// <summary>The rules of a career (rules/*.json): figures and tables merged key by key, see <c>Rules.RuleBook</c></summary>
     public const string Rules = "rules";
 }

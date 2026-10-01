@@ -64,7 +64,7 @@
                     <TextBlock Text="{Binding RpmDisplay}"
                                FontSize="{StaticResource FontSizeHeading}"
                                FontWeight="Bold"
-                               FontFamily="Consolas"
+                               FontFamily="{StaticResource NumbersFont}"
                                Foreground="{StaticResource TextPrimaryBrush}"/>
                     <TextBlock Text="{t:Text garage.engine.rpm}"
                                FontSize="{StaticResource FontSizeCaption}"

@@ -17,7 +17,7 @@ Content\
   mymod\
     mod.json
     game.json
-    rules\  parts\  sounds\  sfx\  props\  dealers\  partshops\  racers\  events\  milestones\  victories\  streets\  stations\  warehouses\  showcase\  garages\  text\
+    rules\  parts\  sounds\  sfx\  props\  dealers\  partshops\  racers\  events\  milestones\  victories\  streets\  stations\  warehouses\  showcase\  garages\  text\  theme\
 ```
 
 `mod.json`:
@@ -340,6 +340,9 @@ The game's sound effects, by cue name: `*.json` files of `{ "cues": { "<name>": 
 same twice in a row), and optionally `volume` (0..2), `pitch` (how far each play's pitch may wander, 0.05 = 5%),
 `loop` (a place's air) and `cooldown` (seconds before it plays again). A mod's cue of a name the base game has replaces
 it; the base game's cues are in `streetcorsa\sfx\sfx.json` (`ui.click`, `part.ratchet`, `ambience.garage`, ...).
+A cue marked `"optional": true` may name files that are not there: it is then silent, and no problem. `music.intro`
+(`streetcorsa\sfx\music.json`, a loop on the radio's bus) is the music the game starts to: it plays over the intro and
+the main screen until the player is in a game or puts the radio on, once a session.
 `.ogg`, `.wav`, `.mp3` and `.flac` play. A button can name a cue of its own (`audio:Sfx.Click="ui.lights"`).
 
 ### props
@@ -557,3 +560,44 @@ whichever way it is named: `{price}` and `{price:money}` both write "$1,500", `{
 ("1,500"), `{price:N2}` with that format. Figures the game writes out itself come already written (`{speed}` in the
 `_comment`s says so). A fraction with no format reads to two decimals at most. A date takes a .NET pattern:
 `{until:dddd d MMMM}`.
+
+### theme
+
+The game's look: its colours, font sizes, typefaces and pictures. `theme\*.json` sets keys, naming only what it
+changes; a later mod's key goes over an earlier one's:
+
+```json
+{
+  "colors": { "AccentPrimary": "#2E7D32", "UiOutline": "#80D8FF", "BgDark": "#101418" },
+  "sizes":  { "FontSizeBody": 15 },
+  "fonts":  { "BodyFont": "Bahnschrift", "DisplayFont": "Bebas Neue" }
+}
+```
+
+The base game's `streetcorsa\theme\theme.json` lists every key there is, at the game's own value: it is the list to
+pick from. A colour is `#RRGGBB`, `#AARRGGBB` (the first byte is how solid it is) or a colour's name; a size is in
+pixels; a typeface is a family name, found first among the font files in the mod's own `theme\fonts` (`.ttf`, `.otf`),
+then among the fonts installed on the PC. A key the game lacks, or a value that does not read, is told at start-up and
+the game's own stands. Keys are matched whatever their case. The look is taken at start-up: a change shows at the next
+start. The typefaces: `BodyFont` (everything not named otherwise), `DisplayFont` (the intro's title), `DialFont` (the
+radio's lettering), `NumbersFont` (figures that line up: the timeslip, the dial-in board, the engine panel),
+`TypewriterFont` (the licence, the main menu badges' labels).
+
+A theme sets keys only: the shapes of the buttons and panels stay the game's (a mod's XAML is never read, since XAML
+can run code).
+
+**Pictures.** `theme\images\<name>.png` (or `.jpg`, `.jpeg`, `.bmp`, `.ico`) stands in for the game's picture of that
+name, the last mod in load order first; one that does not read is told and the one under it is used. The names:
+
+| Name | What |
+|---|---|
+| `backgrounds/main`, `init`, `newspaper_background`, `diner_background`, `settings_background` | the screens' backgrounds (the game's are 2560x1440; `init` is behind the intro) |
+| `buttons/new_game`, `load_game`, `settings`, `used_cars`, `used_parts` | the main menu's badges and the newspaper's two sections (square) |
+| `icons/calendar`, `car_dealer`, `car_info`, `driving_wheel`, `fuel_pump`, `garage`, `newspaper`, `parts_filled`, `quit`, `radio`, `trophy` | the round buttons' icons: only their shape counts, painted in the button's colour |
+| `misc/license` | the licence the player signs for a new game (the name box sits where the game's has its line) |
+| `misc/calendar/calendar01` .. `calendar12` | the garage calendar's pictures |
+| `intro/logo` | the game's logo on the intro, in place of the lettered title (the base game has none) |
+| `window/icon` | the window's and the taskbar's picture (the exe's own icon cannot change) |
+
+The window's title is `game.json`'s `title`; the intro's words are the text pools `intro.title` and
+`intro.powered_by`; the dealer map's picture is a `maps` entry of `dealers`.

@@ -23,6 +23,8 @@
     <sys:Double x:Key="FontSizeDisplaySmall">36</sys:Double>
     <sys:Double x:Key="FontSizeDisplay">48</sys:Double>
     <sys:Double x:Key="FontSizeHero">72</sys:Double>
+    <!-- The intro's title -->
+    <sys:Double x:Key="FontSizeIntroTitle">110</sys:Double>
 
     <!-- How wide a dialog of text grows (a message, a question, a timeslip): past this a line is too long to read -->
     <sys:Double x:Key="TextDialogMaxWidth">750</sys:Double>

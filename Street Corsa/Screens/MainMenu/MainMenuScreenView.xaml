@@ -12,7 +12,7 @@
         The cars fill the lower part of the screen, fading into black towards the top. The menu and its cards sit in the
         dark part; the cars go on below them whatever is open.
     -->
-    <Grid Background="Black">
+    <Grid Background="{StaticResource StageBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="20*"/>
             <RowDefinition Height="36*"/>
@@ -32,17 +32,17 @@
                                      Scenes="{Binding ShowcaseScenes}"/>
 
         <!-- The cars a shade darker, so they stay behind the menu -->
-        <Rectangle Grid.Row="1" Grid.RowSpan="2" Fill="#26000000" IsHitTestVisible="False"/>
+        <Rectangle Grid.Row="1" Grid.RowSpan="2" Fill="{StaticResource MenuShadeBrush}" IsHitTestVisible="False"/>
 
         <!-- The fade to black the menu stands in -->
-        <Rectangle Grid.Row="0" Fill="Black" IsHitTestVisible="False"/>
+        <Rectangle Grid.Row="0" Fill="{StaticResource MenuBandBrush}" IsHitTestVisible="False"/>
         <Rectangle Grid.Row="1" IsHitTestVisible="False">
             <Rectangle.Fill>
                 <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                    <GradientStop Color="#FF000000" Offset="0"/>
-                    <GradientStop Color="#E6000000" Offset="0.2"/>
-                    <GradientStop Color="#99000000" Offset="0.55"/>
-                    <GradientStop Color="#00000000" Offset="1"/>
+                    <GradientStop Color="{StaticResource MenuBand}" Offset="0"/>
+                    <GradientStop Color="{StaticResource MenuBandNear}" Offset="0.2"/>
+                    <GradientStop Color="{StaticResource MenuBandMid}" Offset="0.55"/>
+                    <GradientStop Color="{StaticResource MenuBandEnd}" Offset="1"/>
                 </LinearGradientBrush>
             </Rectangle.Fill>
         </Rectangle>
@@ -59,7 +59,7 @@
                    Opacity="0.85"
                    IsHitTestVisible="False">
             <TextBlock.Effect>
-                <DropShadowEffect Color="Black" ShadowDepth="0" BlurRadius="8" Opacity="0.9"/>
+                <DropShadowEffect Color="{StaticResource Shadow}" ShadowDepth="0" BlurRadius="8" Opacity="0.9"/>
             </TextBlock.Effect>
         </TextBlock>
 

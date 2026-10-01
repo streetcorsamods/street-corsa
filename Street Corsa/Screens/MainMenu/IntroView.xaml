@@ -25,43 +25,43 @@
             </EventTrigger>
         </Grid.Triggers>
 
-        <!-- The title, in text until the Street Corsa logo art exists -->
-        <StackPanel x:Name="LogoText"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    Opacity="0">
-            <TextBlock Text="{t:Text intro.title}"
-                       FontFamily="Impact"
-                       FontSize="110"
-                       FontStyle="Italic"
-                       HorizontalAlignment="Center">
-                <TextBlock.Foreground>
-                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                        <GradientStop Color="#FFFFFFFF" Offset="0.0"/>
-                        <GradientStop Color="#FFC8CCD2" Offset="0.45"/>
-                        <GradientStop Color="#FF6E747C" Offset="0.5"/>
-                        <GradientStop Color="#FFE6E8EB" Offset="1.0"/>
-                    </LinearGradientBrush>
-                </TextBlock.Foreground>
-                <TextBlock.Effect>
-                    <DropShadowEffect Color="Black" BlurRadius="12" ShadowDepth="4" Opacity="0.8"/>
-                </TextBlock.Effect>
-            </TextBlock>
-            <TextBlock Text="{t:Text intro.powered_by}"
-                       FontFamily="Impact"
-                       FontSize="30"
-                       FontStyle="Italic"
-                       Foreground="#FFC8CCD2"
-                       HorizontalAlignment="Right">
-                <TextBlock.Effect>
-                    <DropShadowEffect Color="Black" BlurRadius="8" ShadowDepth="3" Opacity="0.8"/>
-                </TextBlock.Effect>
-            </TextBlock>
-            <StackPanel.Triggers>
+        <!-- The title: a mod's logo picture (theme/images/intro/logo) when it has one, else the title in lettering -->
+        <Grid x:Name="Logo"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center"
+              Opacity="0">
+            <Image x:Name="LogoImage"
+                   Stretch="Uniform"
+                   MaxWidth="1100"
+                   MaxHeight="520"
+                   Visibility="Collapsed"/>
+            <StackPanel x:Name="LogoText">
+                <TextBlock Text="{t:Text intro.title}"
+                           FontFamily="{StaticResource DisplayFont}"
+                           FontSize="{StaticResource FontSizeIntroTitle}"
+                           FontStyle="Italic"
+                           Foreground="{StaticResource IntroTitleBrush}"
+                           HorizontalAlignment="Center">
+                    <TextBlock.Effect>
+                        <DropShadowEffect Color="{StaticResource Shadow}" BlurRadius="12" ShadowDepth="4" Opacity="0.8"/>
+                    </TextBlock.Effect>
+                </TextBlock>
+                <TextBlock Text="{t:Text intro.powered_by}"
+                           FontFamily="{StaticResource DisplayFont}"
+                           FontSize="{StaticResource FontSizeTitleLarge}"
+                           FontStyle="Italic"
+                           Foreground="{StaticResource IntroSubtitleBrush}"
+                           HorizontalAlignment="Right">
+                    <TextBlock.Effect>
+                        <DropShadowEffect Color="{StaticResource Shadow}" BlurRadius="8" ShadowDepth="3" Opacity="0.8"/>
+                    </TextBlock.Effect>
+                </TextBlock>
+            </StackPanel>
+            <Grid.Triggers>
                 <EventTrigger RoutedEvent="FrameworkElement.Loaded">
                     <BeginStoryboard>
                         <Storyboard>
-                            <!-- Logo text fade in after background -->
+                            <!-- The title fades in after the background -->
                             <DoubleAnimation Storyboard.TargetProperty="Opacity"
                                            From="0.0"
                                            To="1.0"
@@ -70,7 +70,7 @@
                         </Storyboard>
                     </BeginStoryboard>
                 </EventTrigger>
-            </StackPanel.Triggers>
-        </StackPanel>
+            </Grid.Triggers>
+        </Grid>
     </Grid>
 </UserControl>

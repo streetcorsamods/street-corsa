@@ -86,7 +86,9 @@ namespace StreetCorsa
 
                 _ = ProcessOrphanedResultsAsync();
 
-                // The radio comes back as it was left, in the game rather than at the main menu
+                // The music the game started to fades, and the radio comes back as it was left, in the game rather
+                // than at the main menu
+                Audio.StartMusic.End();
                 Audio.Radio.RadioPlayer.Shared.GameLoaded();
             }
         }
@@ -218,6 +220,10 @@ namespace StreetCorsa
             TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
 
             InitializeComponent();
+
+            // The look: the game's colours, sizes, typefaces and pictures with the mods' theme over them, before any
+            // window is made
+            Styles.Theme.Apply(Resources, Mods.ModSet.Installed);
 
             // The settings before anything that reads the install: they name the AC folder
             GameSettingsService = new GameSettingsService();
@@ -477,6 +483,8 @@ namespace StreetCorsa
             // The radio: its lists and folders read, the music listed on a worker, on again if the player asked
             Audio.Radio.RadioPanelViewModel.Settings = GameSettingsService;
             Audio.Radio.RadioPlayer.Shared.Start();
+            // And the music the game starts to, over the intro and the main screen until a game is on
+            Audio.StartMusic.Begin();
             Activated += (_, _) => Audio.AudioHub.Shared.SetFocused(true);
             Deactivated += (_, _) => Audio.AudioHub.Shared.SetFocused(false);
 

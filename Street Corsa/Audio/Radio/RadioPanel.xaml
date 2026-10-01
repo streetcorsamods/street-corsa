@@ -72,15 +72,15 @@
                     <Grid>
                         <!-- The band's figures, faint behind the song -->
                         <TextBlock Text="{t:Text radio.dial}"
-                                   Foreground="#553A2008"
-                                   FontFamily="Georgia"
+                                   Foreground="{StaticResource RadioInkFainterBrush}"
+                                   FontFamily="{StaticResource DialFont}"
                                    FontSize="{StaticResource FontSizeCaption}"
                                    VerticalAlignment="Top"
                                    HorizontalAlignment="Center"/>
                         <StackPanel Margin="0,14,0,0">
                             <TextBlock Text="{Binding Radio.NowPlaying}"
                                        Foreground="{StaticResource RadioInkBrush}"
-                                       FontFamily="Georgia"
+                                       FontFamily="{StaticResource DialFont}"
                                        FontSize="{StaticResource FontSizeHeadingLarge}"
                                        FontWeight="Bold"
                                        TextTrimming="CharacterEllipsis"/>
@@ -88,10 +88,10 @@
                                 <TextBlock DockPanel.Dock="Right"
                                            Text="{Binding Radio.Position}"
                                            Foreground="{StaticResource RadioInkBrush}"
-                                           FontFamily="Consolas"/>
+                                           FontFamily="{StaticResource NumbersFont}"/>
                                 <TextBlock Text="{Binding Radio.Current.Album}"
                                            Foreground="{StaticResource RadioInkBrush}"
-                                           FontFamily="Georgia"
+                                           FontFamily="{StaticResource DialFont}"
                                            FontStyle="Italic"
                                            TextTrimming="CharacterEllipsis"/>
                             </DockPanel>
@@ -190,7 +190,7 @@
                                 <DataTemplate>
                                     <DockPanel>
                                         <TextBlock DockPanel.Dock="Right" Text="{Binding LengthText}" Foreground="{StaticResource TextSecondaryBrush}"
-                                                   FontFamily="Consolas" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                                   FontFamily="{StaticResource NumbersFont}" VerticalAlignment="Center" Margin="8,0,0,0"/>
                                         <StackPanel>
                                             <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis"/>
                                             <TextBlock Foreground="{StaticResource TextSecondaryBrush}" FontSize="{StaticResource FontSizeCaption}" TextTrimming="CharacterEllipsis">

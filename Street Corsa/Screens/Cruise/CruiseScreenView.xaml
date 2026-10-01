@@ -8,7 +8,7 @@
              xmlns:radio="clr-namespace:StreetCorsa.Audio.Radio"
              mc:Ignorable="d"
              d:DesignHeight="720" d:DesignWidth="1280">
-    <Grid Background="Black">
+    <Grid Background="{StaticResource StageBrush}">
         <!-- The street, from the driver's seat -->
         <controls:StreetViewport3D x:Name="Street"
                                    Scene="{Binding Scene}"

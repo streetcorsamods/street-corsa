@@ -80,7 +80,7 @@
                                                 BorderThickness="2"
                                                 HorizontalAlignment="Center">
                                             <Border.Effect>
-                                                <DropShadowEffect BlurRadius="10" ShadowDepth="0" Color="Black" Opacity="0.85"/>
+                                                <DropShadowEffect BlurRadius="10" ShadowDepth="0" Color="{StaticResource Shadow}" Opacity="0.85"/>
                                             </Border.Effect>
                                         </Border>
                                         <Border x:Name="Plate"
@@ -219,7 +219,7 @@
                        Foreground="{StaticResource TextPrimaryBrush}"
                        HorizontalAlignment="Center">
                 <TextBlock.Effect>
-                    <DropShadowEffect BlurRadius="12" ShadowDepth="0" Color="Black" Opacity="1"/>
+                    <DropShadowEffect BlurRadius="12" ShadowDepth="0" Color="{StaticResource Shadow}" Opacity="1"/>
                 </TextBlock.Effect>
             </TextBlock>
             <TextBlock Text="{Binding Subtitle}"
@@ -228,7 +228,7 @@
                        HorizontalAlignment="Center"
                        Margin="0,4,0,0">
                 <TextBlock.Effect>
-                    <DropShadowEffect BlurRadius="10" ShadowDepth="0" Color="Black" Opacity="1"/>
+                    <DropShadowEffect BlurRadius="10" ShadowDepth="0" Color="{StaticResource Shadow}" Opacity="1"/>
                 </TextBlock.Effect>
             </TextBlock>
 
