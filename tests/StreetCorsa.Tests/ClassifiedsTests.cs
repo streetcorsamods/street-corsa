@@ -41,6 +41,10 @@ public class ClassifiedsTests
         var factoryCam = AdBlurbs.FactsOf([block], Catalog.Value, new HashSet<string> { cam.Id, blower.Id }, "GM 327", modified: true, 0.7, 80_000);
         Assert.Equal(["blower"], factoryCam.Standouts.Select(s => s.Kind));
 
+        // The block's notes in brackets stay out of the ad
+        Assert.Equal("Chevrolet 235 inline six block, 128 hp",
+            AdBlurbs.FactsOf([], null, null, "Chevrolet 235 inline six block (3-9/16 in bore, stand-in casting), 128 hp", false, 0.7, 1).Engine);
+
         // No catalog, no parts to name
         Assert.Empty(AdBlurbs.FactsOf([block], null, null, null, modified: true, 0.7, 80_000).Standouts);
     }

@@ -91,7 +91,9 @@ namespace StreetCorsa.Services.Market
                 }
             }
 
-            return new CarAdFacts(string.IsNullOrWhiteSpace(engine) ? null : engine, modified, condition, mileageKm,
+            // What the seller says about the engine, without the catalog's notes in brackets on the block's name
+            var said = string.IsNullOrWhiteSpace(engine) ? null : Bracketed().Replace(engine, string.Empty).Trim();
+            return new CarAdFacts(string.IsNullOrEmpty(said) ? null : said, modified, condition, mileageKm,
                 standouts.OrderBy(s => Array.IndexOf(Ranked, s.Kind)).ToList());
         }
 
@@ -162,7 +164,8 @@ namespace StreetCorsa.Services.Market
             if (part != null) values["part"] = part.Part;
             var line = GameText.Installed.Pick(key, random, values);
 
-            if (condition != null && key != condition && key != "ads.car.original" && random.NextDouble() < ConditionAside)
+            // Not after "all original" or a line of character: those say enough, and a second "make offer" reads twice
+            if (condition != null && key != condition && key != "ads.car.original" && key != "ads.car.character" && random.NextDouble() < ConditionAside)
                 line = Join(line, GameText.Installed.Pick(condition, random, values));
             return line;
         }
