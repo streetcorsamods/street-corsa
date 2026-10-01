@@ -26,12 +26,12 @@ public sealed class CarConditionTests : IDisposable
 
     private static readonly Dictionary<string, string> GroupsById = new()
     {
-        ["block"] = "Engine blocks",
-        ["crank"] = "Crankshafts",
-        ["rod"] = "Connecting rods",
-        ["piston"] = "Pistons",
-        ["cam"] = "Camshafts",
-        ["carb"] = "Carburettors and injection",
+        ["block"] = "engine_blocks",
+        ["crank"] = "crankshafts",
+        ["rod"] = "connecting_rods",
+        ["piston"] = "pistons",
+        ["cam"] = "camshafts",
+        ["carb"] = "carburettors",
         ["gearbox"] = CarCondition.TransmissionGroup,
         ["rim"] = PartKinds.Rims,
         ["tyre"] = PartKinds.Tyres,

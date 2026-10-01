@@ -1,5 +1,6 @@
 using StreetCorsa.Models.Catalog;
 using StreetCorsa.Models.GameState;
+using StreetCorsa.Parts.Cars;
 using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Models.Career.Filters
@@ -20,76 +21,6 @@ namespace StreetCorsa.Models.Career.Filters
 
         public string DisplayDescription => GameText.Say("event.cars.origin", ("origin", Origin));
 
-        // Regional brand mappings for when country data is missing
-        private static readonly Dictionary<string, HashSet<string>> RegionBrands = new(StringComparer.OrdinalIgnoreCase)
-        {
-            ["USA"] = new(StringComparer.OrdinalIgnoreCase)
-            {
-                "Ford", "Chevrolet", "Dodge", "Plymouth", "Pontiac", "Buick",
-                "Cadillac", "Lincoln", "Mercury", "Oldsmobile", "AMC", "Chrysler",
-                "Jeep", "GMC", "Tesla", "Shelby", "Corvette"
-            },
-            ["Japan"] = new(StringComparer.OrdinalIgnoreCase)
-            {
-                "Toyota", "Honda", "Nissan", "Mazda", "Mitsubishi", "Subaru",
-                "Suzuki", "Daihatsu", "Lexus", "Infiniti", "Acura", "Isuzu"
-            },
-            ["Germany"] = new(StringComparer.OrdinalIgnoreCase)
-            {
-                "BMW", "Mercedes", "Mercedes-Benz", "Audi", "Porsche", "Volkswagen",
-                "Opel", "VW"
-            },
-            ["UK"] = new(StringComparer.OrdinalIgnoreCase)
-            {
-                "Jaguar", "Aston Martin", "Bentley", "Rolls-Royce", "McLaren",
-                "Lotus", "MG", "Mini", "Triumph", "Austin", "Land Rover"
-            },
-            ["Italy"] = new(StringComparer.OrdinalIgnoreCase)
-            {
-                "Ferrari", "Lamborghini", "Maserati", "Alfa Romeo", "Fiat",
-                "Lancia", "Pagani"
-            },
-            ["France"] = new(StringComparer.OrdinalIgnoreCase)
-            {
-                "Renault", "Peugeot", "Citroen", "Bugatti", "Alpine"
-            }
-        };
-
-        // Region aliases (e.g., "American" -> "USA")
-        private static readonly Dictionary<string, string> RegionAliases = new(StringComparer.OrdinalIgnoreCase)
-        {
-            ["American"] = "USA",
-            ["US"] = "USA",
-            ["United States"] = "USA",
-            ["Japanese"] = "Japan",
-            ["German"] = "Germany",
-            ["British"] = "UK",
-            ["English"] = "UK",
-            // What ui_car.json writes as a car's country: the names people use for the UK
-            ["Great Britain"] = "UK",
-            ["Britain"] = "UK",
-            ["United Kingdom"] = "UK",
-            ["England"] = "UK",
-            ["Scotland"] = "UK",
-            ["Wales"] = "UK",
-            ["GB"] = "UK",
-            ["U.K."] = "UK",
-            ["U.S.A."] = "USA",
-            ["United States of America"] = "USA",
-            ["America"] = "USA",
-            ["West Germany"] = "Germany",
-            ["Swedish"] = "Sweden",
-            ["Italian"] = "Italy",
-            ["French"] = "France",
-            ["European"] = "Europe"
-        };
-
-        // European countries for "European" region filter
-        private static readonly HashSet<string> EuropeanCountries = new(StringComparer.OrdinalIgnoreCase)
-        {
-            "Germany", "UK", "Italy", "France", "Sweden", "Netherlands", "Spain", "Belgium"
-        };
-
         public OriginFilter() { }
 
         public OriginFilter(string origin)
@@ -97,53 +28,18 @@ namespace StreetCorsa.Models.Career.Filters
             Origin = origin;
         }
 
+        /// <summary>
+        /// The car's country (its ui_car.json's, else its make's, as the mods' makes say) is the origin, or in it: a
+        /// country by any of its names ("American", "Great Britain"), or a region ("European")
+        /// </summary>
         public bool Matches(CarDefinition car, Car? instance = null)
         {
             if (string.IsNullOrEmpty(Origin))
                 return true;
 
-            var normalizedOrigin = NormalizeOrigin(Origin);
-
-            // First check if car has explicit country data
-            if (!string.IsNullOrEmpty(car.Country))
-            {
-                var carCountry = NormalizeOrigin(car.Country);
-
-                // Handle "European" as a region
-                if (normalizedOrigin == "Europe")
-                    return EuropeanCountries.Contains(carCountry);
-
-                return string.Equals(carCountry, normalizedOrigin, StringComparison.OrdinalIgnoreCase);
-            }
-
-            // Fall back to brand-based detection
-            if (string.IsNullOrEmpty(car.Brand))
-                return false;
-
-            // Handle "European" as a region
-            if (normalizedOrigin == "Europe")
-            {
-                foreach (var europeanCountry in EuropeanCountries)
-                {
-                    if (RegionBrands.TryGetValue(europeanCountry, out var brands) &&
-                        brands.Contains(car.Brand))
-                        return true;
-                }
-                return false;
-            }
-
-            // Check if brand belongs to the specified region
-            if (RegionBrands.TryGetValue(normalizedOrigin, out var regionBrands))
-                return regionBrands.Contains(car.Brand);
-
-            return false;
-        }
-
-        private static string NormalizeOrigin(string origin)
-        {
-            if (RegionAliases.TryGetValue(origin, out var normalized))
-                return normalized;
-            return origin;
+            var book = CarBook.Current;
+            var country = !string.IsNullOrEmpty(car.Country) ? car.Country : book.CountryOfMake(book.MakeOf(car.Id, car.Brand, car.Name));
+            return country != null && book.IsIn(country, Origin);
         }
     }
 }

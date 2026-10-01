@@ -218,7 +218,7 @@ namespace StreetCorsa.Screens.UsedParts
             Price = price;
             ActionLabel = action;
             Name = definition.DisplayName ?? definition.Name;
-            Group = PartKinds.GroupOf(definition);
+            Group = PartKinds.GroupName(PartKinds.GroupOf(definition));
         }
 
         public PartDefinition Definition { get; }

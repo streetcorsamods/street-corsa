@@ -1,0 +1,15 @@
+{
+  "_comment": [
+    "Script classes mods extend that the source game never shipped, made from the class their author copied (see",
+    "docs/modding.md, \"stand_ins.json\"): copy is the class copied, extends what it extends instead, drop the methods left",
+    "out. A mod's stand_ins.json in its parts folder adds its own or replaces one of these by name. Block_Inline_OHV (the",
+    "Ford six's blocks) is Block_Vee_OHV with one cylinder head; its author's source sits among the SLRR notes, never compiled."
+  ],
+  "stand_ins": {
+    "java.game.parts.enginepart.block.block_inline.Block_Inline_OHV": {
+      "copy": "java.game.parts.enginepart.block.block_vee.Block_Vee_OHV",
+      "extends": "java.game.parts.enginepart.block.Block_Inline",
+      "drop": [ "getLeftCylinderHead", "getRightCylinderHead" ]
+    }
+  }
+}

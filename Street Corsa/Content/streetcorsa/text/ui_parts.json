@@ -9,7 +9,7 @@
     "work.the, work.list and work.list.comma (\"the oil pan, the timing cover and the cylinder heads\").",
     "station.job.*: the gas station's jobs; {left} and {tank} the fuel, {quarts} the oil short as station.oil_short.* says it",
     "(\"a quart\"; the game puts a capital on the first letter of the oil job's detail). parts.describe*: a part's",
-    "condition ({wear} %) and how many parts come with it ({count})."
+    "condition ({wear} %) and how many parts come with it ({count}). part_group.*: the shelves of part_groups.json, by id."
   ],
   "lines": {
     "condition.zone.front": "front",
@@ -117,6 +117,29 @@
     "work.the": "the {name}",
     "work.nothing": "nothing",
     "work.list": "{first} and {last}",
-    "work.list.comma": ", "
+    "work.list.comma": ", ",
+    "part_group.engine_blocks": "Engine blocks",
+    "part_group.cylinder_heads": "Cylinder heads",
+    "part_group.camshafts": "Camshafts",
+    "part_group.crankshafts": "Crankshafts",
+    "part_group.connecting_rods": "Connecting rods",
+    "part_group.pistons": "Pistons",
+    "part_group.flywheels": "Flywheels and clutches",
+    "part_group.transmissions": "Transmissions",
+    "part_group.intake_manifolds": "Intake manifolds",
+    "part_group.carburettors": "Carburettors and injection",
+    "part_group.air_filters": "Air filters",
+    "part_group.chargers": "Superchargers and turbos",
+    "part_group.nitrous": "Nitrous",
+    "part_group.exhaust": "Exhaust",
+    "part_group.oil_pans": "Oil pans",
+    "part_group.tyres": "Tyres",
+    "part_group.rims": "Rims",
+    "part_group.brakes": "Brakes",
+    "part_group.springs": "Springs",
+    "part_group.shocks": "Shock absorbers",
+    "part_group.sway_bars": "Sway bars",
+    "part_group.suspension_arms": "Suspension arms",
+    "part_group.accessories": "Accessories"
   }
 }

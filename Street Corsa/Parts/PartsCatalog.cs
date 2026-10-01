@@ -142,6 +142,8 @@ public sealed class PartsCatalog
         }
 
         catalog.EngineBuilds = builds.All.ToList();
+        foreach (var (_, dir) in roots) catalog.Scripts.UseStandIns(Path.Combine(dir, ScriptClassLoader.StandInsFile));
+        catalog._problems.AddRange(catalog.Scripts.Problems);
         catalog.WorkOrder = WorkOrder.Load(roots.Select(r => (r.Mod.Id, r.Mod.IsBase, r.Dir)), catalog._problems);
         WorkOrder.CheckWays(catalog._parts.Values, catalog._problems);
 

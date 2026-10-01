@@ -1182,8 +1182,14 @@ PR #53.
 E5 (look) is built on `feature/look` (2026-10-01): a mod's `theme/*.json` sets the colour, size and typeface keys (the
 base game's `theme/theme.json` lists them all), its `theme/fonts` and `theme/images` stand in for the game's, an intro
 logo and a window icon of a game's own, and the music the game starts to (`music.intro`). The base game looks exactly
-as before (checked pixel for pixel). Not played yet. The order after that is E6-E12 as listed, unless the owner picks
-otherwise.
+as before (checked pixel for pixel). The owner played it; merged as PR #54.
+
+E6 (cars and makes) is built on `feature/cars-makes` (2026-10-01): the makes in `cars/makes.json` (families, countries,
+badge prices and rarity), what a car is given in `cars/cars.json` (the developer's hand-picked factory engines and
+prices moved there out of catalog.db; the catalog editor saves there), the pricing curve and the engines' figures in
+the rules (`cars`, `engines`), game.json's `cars` filter of the installed cars (none in the base game), the shelves in
+`parts/part_groups.json`, the stand-in script classes in `parts/stand_ins.json`. Prices, families and groups came out
+exactly as before. Not played yet. The order after that is E7-E12 as listed, unless the owner picks otherwise.
 
 ## Testing in AC without driving
 

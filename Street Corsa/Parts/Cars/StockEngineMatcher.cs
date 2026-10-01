@@ -9,18 +9,21 @@ public sealed record EngineMatch(RatedBuild Build, double Score);
 /// </summary>
 public static class StockEngineMatcher
 {
-    private const double SameFamily = 3.0;
-    private const double OtherFamily = -3.0;
-    private const double SharedNumber = 2.0;
-    private const double SharedWord = 1.0;
-    private const double PowerWeight = 4.0;
-    private const double FactoryBuildBonus = 0.2;
+    // The installed mods' figures, not the career's: the match is stored in catalog.db, which every career shares
+    private static EngineMatchRules Figures => EngineRules.Program.Matcher;
+    private static double SameFamily => Figures.SameFamily;
+    private static double OtherFamily => Figures.OtherFamily;
+    private static double SharedNumber => Figures.SharedNumber;
+    private static double SharedWord => Figures.SharedWord;
+    private static double PowerWeight => Figures.PowerWeight;
+    private static double FactoryBuildBonus => Figures.FactoryBuildBonus;
 
+    /// <param name="carId">The car's AC folder name: a make the mods give it (cars.json) gives its family</param>
     /// <param name="bhp">Power the car's own data claims, if any</param>
-    public static List<EngineMatch> Rank(EngineBuildIndex index, string brand, string name, double? bhp)
+    public static List<EngineMatch> Rank(EngineBuildIndex index, string? carId, string brand, string name, double? bhp)
     {
         var carName = $"{brand} {name}";
-        var family = MakeFamilies.FamilyOf(carName);
+        var family = CarBook.Current.FamilyOfCar(carId, brand, name);
         var tokens = MakeFamilies.Tokens(carName);
 
         return index.Runnable
@@ -30,8 +33,8 @@ public static class StockEngineMatcher
     }
 
     /// <summary>The best factory engine: a build of speed-shop parts is never one (it stays in <see cref="Rank"/>, to be picked by hand)</summary>
-    public static RatedBuild? Best(EngineBuildIndex index, string brand, string name, double? bhp) =>
-        Rank(index, brand, name, bhp).FirstOrDefault(m => !m.Build.Build.Aftermarket)?.Build;
+    public static RatedBuild? Best(EngineBuildIndex index, string? carId, string brand, string name, double? bhp) =>
+        Rank(index, carId, brand, name, bhp).FirstOrDefault(m => !m.Build.Build.Aftermarket)?.Build;
 
     private static double Score(RatedBuild build, string family, IReadOnlySet<string> tokens, double? bhp)
     {

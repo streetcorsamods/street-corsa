@@ -57,17 +57,21 @@ namespace StreetCorsa.Services.Catalog
         }
 
         /// <summary>
-        /// The cars of <paramref name="cars"/> that are installed, in their order. When the cars folder cannot be listed
-        /// and no listing has worked yet in this run, all of <paramref name="cars"/> (logged by <see cref="TryIds"/>).
+        /// The cars of <paramref name="cars"/> that are installed and in the game (game.json's <c>cars</c>,
+        /// <see cref="Rules.GameCars"/>), in their order. When the cars folder cannot be listed and no listing has worked
+        /// yet in this run, all of <paramref name="cars"/> the game takes (logged by <see cref="TryIds"/>).
         /// </summary>
+        /// <param name="notInstalled">How many were left out for not being installed (a car the game does not take is not counted)</param>
         public static List<CarDefinition> Only(IEnumerable<CarDefinition> cars, out int notInstalled)
         {
             notInstalled = 0;
+            var game = Rules.GameFile.Installed.Cars;
+            var taken = game.Everything ? cars : cars.Where(car => InGame(game, car));
             if (!TryIds(out var installed) && installed == null)
-                return [.. cars];
+                return [.. taken];
 
             var kept = new List<CarDefinition>();
-            foreach (var car in cars)
+            foreach (var car in taken)
             {
                 if (installed!.Contains(car.Id)) kept.Add(car);
                 else notInstalled++;
@@ -75,5 +79,8 @@ namespace StreetCorsa.Services.Catalog
 
             return kept;
         }
+
+        /// <summary>Whether the game takes the car (game.json's <c>cars</c>)</summary>
+        public static bool InGame(Rules.GameCars game, CarDefinition car) => game.Allows(car.Id, car.Brand, car.Name, car.Country, car.Year);
     }
 }

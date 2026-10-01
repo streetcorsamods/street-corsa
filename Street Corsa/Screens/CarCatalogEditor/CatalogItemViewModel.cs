@@ -7,7 +7,9 @@ namespace StreetCorsa.Screens.CarCatalogEditor
 {
     /// <summary>
     /// View model for a single car catalog item in the editor
-    /// Wraps CarDefinition + CarProfile for display and editing
+    /// Wraps CarDefinition + CarProfile for display and editing. What is set by hand (the price and how common the car
+    /// is, the factory engine, the layout) is saved into the base game's cars.json (<see cref="ToFields"/>); what is not
+    /// is left to the game to work out.
     /// </summary>
     public class CatalogItemViewModel : ObservableObject
     {
@@ -23,10 +25,14 @@ namespace StreetCorsa.Screens.CarCatalogEditor
         private readonly bool _hasEngineCatalog;
         private readonly Lazy<IReadOnlyList<EngineLayoutOptionViewModel>> _layoutOptions;
         private EngineLayout? _engineLayout;
+        private bool _priceGiven;
+        private bool _engineGiven;
+        private bool _layoutGiven;
+        private bool _engineReset;
 
         /// <param name="engineOptions">Engine builds the car could leave the factory with, best match first; empty without a parts catalog</param>
         public CatalogItemViewModel(CarDefinition definition, CarProfile profile, IReadOnlyList<EngineOptionViewModel>? engineOptions = null)
-            : this(definition, profile, engineOptions is { Count: > 0 }, () => engineOptions ?? Array.Empty<EngineOptionViewModel>(), () => EngineLayout.Front)
+            : this(definition, profile, engineOptions is { Count: > 0 }, () => engineOptions ?? Array.Empty<EngineOptionViewModel>(), () => EngineLayout.Front, null)
         {
         }
 
@@ -40,14 +46,21 @@ namespace StreetCorsa.Screens.CarCatalogEditor
         /// Where the car's data says the engine is; called off the UI thread the first time the row needs it, as it
         /// reads and decodes the car's data
         /// </param>
+        /// <param name="given">
+        /// What the base game's own cars.json gives the car: those fields are set by hand already. Not the mods' (a field
+        /// only a mod gives is the mod's, and is never copied into the base game's file)
+        /// </param>
         public CatalogItemViewModel(CarDefinition definition, CarProfile profile, bool hasEngineCatalog, Func<IReadOnlyList<EngineOptionViewModel>> engineOptions,
-            Func<EngineLayout> guessLayout)
+            Func<EngineLayout> guessLayout, Parts.Cars.CarEntry? given = null)
         {
             Definition = definition;
             Profile = profile;
             _basePrice = profile.BasePrice;
             _dealerPrecedence = profile.DealerPrecedence;
             _engineLayout = profile.EngineLayout;
+            _priceGiven = given?.Price != null || given?.Common != null;
+            _engineGiven = given?.Engine is { Length: > 0 };
+            _layoutGiven = given?.EngineLayout != null;
             _hasEngineCatalog = hasEngineCatalog;
             _engineOptions = new Lazy<IReadOnlyList<EngineOptionViewModel>>(engineOptions, LazyThreadSafetyMode.None);
             _layoutOptions = new Lazy<IReadOnlyList<EngineLayoutOptionViewModel>>(() => EngineLayoutOptionViewModel.All(guessLayout), LazyThreadSafetyMode.None);
@@ -74,6 +87,7 @@ namespace StreetCorsa.Screens.CarCatalogEditor
                 if (value.Layout == _engineLayout) return;
 
                 _engineLayout = value.Layout;
+                _layoutGiven = true;
                 IsDirty = true;
                 OnPropertyChanged();
             }
@@ -114,6 +128,7 @@ namespace StreetCorsa.Screens.CarCatalogEditor
                 }
 
                 _stockEngine = value;
+                _engineGiven = true;
                 IsDirty = true;
                 OnPropertyChanged();
             }
@@ -134,6 +149,7 @@ namespace StreetCorsa.Screens.CarCatalogEditor
                 if (_basePrice != value)
                 {
                     _basePrice = value;
+                    _priceGiven = true;
                     IsDirty = true;
                     OnPropertyChanged();
                     OnPropertyChanged(nameof(BasePriceDisplay));
@@ -152,6 +168,7 @@ namespace StreetCorsa.Screens.CarCatalogEditor
                 if (_dealerPrecedence != clamped)
                 {
                     _dealerPrecedence = clamped;
+                    _priceGiven = true;
                     IsDirty = true;
                     OnPropertyChanged();
                     OnPropertyChanged(nameof(DealerPrecedencePercent));
@@ -182,7 +199,18 @@ namespace StreetCorsa.Screens.CarCatalogEditor
         }
 
         /// <summary>
-        /// Applies changes to the underlying profile
+        /// The engine a reset gave the car (the best match), for catalog.db once the car's hand-picked one is out of
+        /// cars.json: the one stored there is otherwise kept, as an engine that is still in the catalog. Null when the
+        /// engine was not reset; "" for none.
+        /// </summary>
+        public string? ResetEngine => _engineReset && !_engineGiven ? PendingEngine ?? string.Empty : null;
+
+        /// <summary>The engine shown: the one picked, else the profile's</summary>
+        private string? PendingEngine => _stockEngineResolved && _stockEngine != null ? _stockEngine.BuildId : Profile.StockEngineBuildId;
+
+        /// <summary>
+        /// Applies changes to the profile shown (not to catalog.db: what is set by hand goes into cars.json). Called
+        /// once they are saved: the row is clean after it.
         /// </summary>
         public void ApplyChanges()
         {
@@ -194,13 +222,23 @@ namespace StreetCorsa.Screens.CarCatalogEditor
             if (_stockEngineResolved && _stockEngine != null && !_stockEngine.BuildId.Equals(Profile.StockEngineBuildId, StringComparison.OrdinalIgnoreCase))
             {
                 Profile.StockEngineBuildId = _stockEngine.BuildId;
-                Profile.StockEngineIsManual = true;
             }
 
+            Profile.StockEngineIsManual = _engineGiven;
             Profile.LastUpdatedDate = DateTime.Now;
-            Profile.Source = ProfileDataSource.Manual;
+            _engineReset = false;
             IsDirty = false;
         }
+
+        /// <summary>
+        /// What is set by hand for the car, for cars.json: the price and how common it is together, the engine, the
+        /// layout. Read before <see cref="ApplyChanges"/>: what is shown, saved or not.
+        /// </summary>
+        public Services.Catalog.CarFields ToFields() => new(
+            _engineGiven ? PendingEngine : null,
+            _layoutGiven ? _engineLayout : null,
+            _priceGiven ? _basePrice : null,
+            _priceGiven ? _dealerPrecedence : null);
 
         /// <summary>
         /// Resets to the current profile values
@@ -211,6 +249,7 @@ namespace StreetCorsa.Screens.CarCatalogEditor
             _dealerPrecedence = Profile.DealerPrecedence;
             _engineLayout = Profile.EngineLayout;
             _stockEngineResolved = false;
+            _engineReset = false;
             IsDirty = false;
             OnPropertyChanged(nameof(StockEngine));
             OnPropertyChanged(nameof(EngineLayoutOption));
@@ -227,6 +266,9 @@ namespace StreetCorsa.Screens.CarCatalogEditor
         {
             _basePrice = generatedProfile.BasePrice;
             _dealerPrecedence = generatedProfile.DealerPrecedence;
+            _priceGiven = false;
+            _engineGiven = false;
+            _engineReset = true;
 
             // The options come best match first: the first one is what a fresh profile would get
             _stockEngine = EngineOptions.FirstOrDefault() ?? StockEngine;
@@ -235,6 +277,7 @@ namespace StreetCorsa.Screens.CarCatalogEditor
 
             // Back to the guess from the car's data
             _engineLayout = null;
+            _layoutGiven = false;
             OnPropertyChanged(nameof(EngineLayoutOption));
             IsDirty = true;
             OnPropertyChanged(nameof(BasePrice));

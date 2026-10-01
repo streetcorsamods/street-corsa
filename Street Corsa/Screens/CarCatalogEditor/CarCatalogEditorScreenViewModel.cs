@@ -125,7 +125,7 @@ namespace StreetCorsa.Screens.CarCatalogEditor
             if (_partsService is not { IsAvailable: true }) return Array.Empty<EngineOptionViewModel>();
 
             return Parts.Cars.StockEngineMatcher
-                .Rank(_partsService.Builds, car.Brand, car.Name, Parts.Cars.StockEngineMatcher.ParsePower(car.Specs?.Bhp))
+                .Rank(_partsService.Builds, car.Id, car.Brand, car.Name, Parts.Cars.StockEngineMatcher.ParsePower(car.Specs?.Bhp))
                 .Select(m => new EngineOptionViewModel(m.Build.Build.Id, $"{m.Build.Build.Name}  \u00b7  {m.Build.PowerHp:0} hp, {m.Build.Litres:0.0} l"))
                 .ToList();
         }
@@ -135,7 +135,8 @@ namespace StreetCorsa.Screens.CarCatalogEditor
             _partsService == null ? Parts.EngineLayout.Front : Parts.EngineLayouts.Guess(_partsService.Specs(car.Id));
 
         /// <summary>What the list is made from, read off the UI thread</summary>
-        private sealed record CatalogSnapshot(List<CarDefinition> Cars, Dictionary<string, CarProfile> Profiles, bool HasEngines);
+        private sealed record CatalogSnapshot(List<CarDefinition> Cars, Dictionary<string, CarProfile> Profiles, bool HasEngines,
+            IReadOnlyDictionary<string, Parts.Cars.CarEntry> Given);
 
         /// <summary>
         /// Reads every active car and every profile in one go on a worker thread, and loads the parts catalog
@@ -164,7 +165,8 @@ namespace StreetCorsa.Screens.CarCatalogEditor
                     }
 
                     var hasEngines = _partsService is { IsAvailable: true };
-                    return new CatalogSnapshot(cars, profiles, hasEngines);
+                    // What the base game's file gives each car, not the mods': the editor writes that file only
+                    return new CatalogSnapshot(cars, profiles, hasEngines, BaseCarsFile.Given());
                 });
 
                 _logger.Information("Found {Count} active car definitions", snapshot.Cars.Count);
@@ -190,7 +192,8 @@ namespace StreetCorsa.Screens.CarCatalogEditor
                     }
 
                     var definition = carDef;
-                    var itemVm = new CatalogItemViewModel(definition, profile, snapshot.HasEngines, () => EngineOptionsFor(definition), () => GuessLayout(definition));
+                    var itemVm = new CatalogItemViewModel(definition, profile, snapshot.HasEngines, () => EngineOptionsFor(definition), () => GuessLayout(definition),
+                        snapshot.Given.GetValueOrDefault(definition.Id));
                     itemVm.PropertyChanged += OnItemPropertyChanged;
                     _catalogItems.Add(itemVm);
                 }
@@ -297,7 +300,7 @@ namespace StreetCorsa.Screens.CarCatalogEditor
             catch (Exception ex)
             {
                 // catalog.db locked by a second copy of the game or a virus scanner, a read-only folder...
-                _logger.Error(ex, "Could not save the car profiles");
+                _logger.Error(ex, "Could not save the car profiles into cars.json");
                 OnPropertyChanged(nameof(HasDirtyItems));
                 _dialogService.ShowDialog(new InformationDialogViewModel(
                     _dialogService,
@@ -310,36 +313,44 @@ namespace StreetCorsa.Screens.CarCatalogEditor
 
             var successDialog = new InformationDialogViewModel(
                 _dialogService,
-                $"Saved {dirtyItems.Count} car profile(s).",
+                $"Saved {dirtyItems.Count} car profile(s) into the base game's cars.json:\n\n{string.Join("\n", _savedTo)}",
                 "Save Successful");
             _dialogService.ShowDialog(successDialog);
 
             _logger.Information("Save completed");
         }
 
-        /// <summary>Writes the edited profiles, one by one; what was written before a failure stays written</summary>
+        private IReadOnlyList<string> _savedTo = [];
+
+        /// <summary>
+        /// Writes what is set by hand for the edited cars into the base game's cars.json (it ships; catalog.db does not
+        /// and keeps what the game works out), then reads the mods' cars again so the game goes by it at once
+        /// </summary>
+        /// <remarks>
+        /// The rows are marked clean only once the file is written: a save that fails leaves every edit to save again
+        /// </remarks>
         private void SaveProfiles(List<CatalogItemViewModel> dirtyItems)
         {
+            var fields = dirtyItems.ToDictionary(i => i.Definition.Id, i => i.ToFields(), StringComparer.OrdinalIgnoreCase);
+            _savedTo = BaseCarsFile.Save(fields);
+            foreach (var path in _savedTo) _logger.Information("Saved {Count} car(s) into {Path}", fields.Count, path);
+
+            // An engine reset to the best match: catalog.db keeps the hand pick it held otherwise (a build still in the
+            // catalog is never suggested again)
             foreach (var item in dirtyItems)
             {
-                item.ApplyChanges();
-
-                // The factory engines are suggested in the background after the game starts: one that came in
-                // since this profile was read stays, unless an engine was picked here
-                var edited = item.Profile;
-                var updated = _profileRepo.UpdateProfile(edited.CarDefinitionId, stored =>
+                if (item.ResetEngine is not { } engine) continue;
+                _profileRepo.UpdateProfile(item.Definition.Id, stored =>
                 {
-                    if (!edited.StockEngineIsManual)
-                    {
-                        edited.StockEngineBuildId = stored.StockEngineBuildId;
-                        edited.StockEngineIsManual = stored.StockEngineIsManual;
-                    }
-
-                    return edited;
+                    stored.StockEngineBuildId = engine.Length > 0 ? engine : null;
+                    stored.StockEngineIsManual = false;
+                    stored.LastUpdatedDate = DateTime.Now;
+                    return stored;
                 });
-                if (!updated) _profileRepo.UpsertProfile(edited);
-                _logger.Debug("Saved profile for {CarId}", item.Definition.Id);
             }
+
+            foreach (var item in dirtyItems) item.ApplyChanges();
+            Parts.Cars.CarBook.Current = Parts.Cars.CarBook.Load(Mods.ModSet.Installed);
         }
 
         private void OnResetAll()

@@ -44,10 +44,15 @@ public sealed class SlrrScriptEvaluator
 
     private readonly ScriptClassLoader _loader;
 
-    public SlrrScriptEvaluator(SlrrGame game)
+    /// <param name="standIns">A stand_ins.json naming classes mods extend that the game never shipped (the base game's)</param>
+    public SlrrScriptEvaluator(SlrrGame game, string? standIns = null)
     {
         _loader = new ScriptClassLoader(game.Root);
+        if (standIns != null) _loader.UseStandIns(standIns);
     }
+
+    /// <summary>What of the stand-ins could not be read</summary>
+    public IReadOnlyList<string> Problems => _loader.Problems;
 
     /// <summary>Static fields of every class evaluated so far, by class name</summary>
     public SortedDictionary<string, Dictionary<string, object>> Constants { get; } = new(StringComparer.Ordinal);

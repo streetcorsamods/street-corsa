@@ -539,6 +539,8 @@ namespace StreetCorsa
                     _ = Services.Street.StreetScenes.Installed;
                     _ = Services.Station.StationScenes.Installed;
                     _ = Services.CarLot.WarehouseScenes.Installed;
+                    Tell("Cars", Parts.Cars.CarBook.Installed.Problems);
+                    Tell("Part groups", Parts.PartGroups.Installed.Problems);
                 }));
             }
             catch (Exception ex)
@@ -548,6 +550,13 @@ namespace StreetCorsa
 
             var problems = Mods.ModProblems.All;
             if (problems.Count == 0) return;
+
+            // The parts code the tools link reads its own files and keeps its problems: logged and told here
+            void Tell(string what, IReadOnlyList<string> found)
+            {
+                foreach (var problem in found) logger.Warning("{What}: {Problem}", what, problem);
+                Mods.ModProblems.Add(what, found);
+            }
 
             var shown = string.Join("\n", problems.Take(ModProblemsShown).Select(p => "  " + p));
             var more = problems.Count > ModProblemsShown

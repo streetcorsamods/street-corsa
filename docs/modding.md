@@ -90,6 +90,16 @@ The game's own settings: what it is called (the window's title) and the garage i
   `"en_US"`), or units that are neither, are told and the base game's used.
   The program itself keeps US English for the files it reads and writes (race.ini, the saves): only what the player
   reads is in the game's culture.
+- `cars`: which of the installed AC cars are in the game (the dealers' lots, the rivals' cars, the events, the main
+  screen). Every one when it is not given, as in the base game. `from`, `to`: the oldest and newest model year (a car
+  whose `ui_car.json` gives no year is out when either is given); `countries`: countries or regions, any of their names
+  (`"USA"`, `"American"`, `"Europe"`: see "cars" below), matched against the car's own country, else its make's;
+  `makes`: ids of makes in makes.json; `ids`: AC folder names of cars that are in whatever the rest says; `never`: ones
+  that never are; `onlyIds`: the game has the cars of `ids` and no other.
+
+```json
+{ "cars": { "from": 1985, "to": 2005, "countries": [ "Japan" ], "never": [ "ks_toyota_supra_mkiv_tuned" ] } }
+```
 
 Unlike the rules below, these are the program's, not a career's: a change shows in every save. The player's own
 choices (the AC folder, the volumes) stay in their `%AppData%\StreetCorsa\settings.json`. With no AC folder there, the
@@ -143,6 +153,8 @@ it changes:
 | `partShops` | the junkyard, haggling, the regulars' discount, trade, and each kind of shop's prices and shelves (`kinds`) where a shop's own file says nothing |
 | `economy` | what parts cost against their scripts (`partsPriceScale`), used and trade-in shares, mail order, the paper's part ads, a prize camshaft's cash |
 | `market` | the dealers' lots, selling a car, and what a car is worth (condition, history, mileage, missing parts) |
+| `cars` | what a car is worth new and how common it is where cars.json gives neither: the price for its power to weight (`referencePrice` at `referenceHpPerTonne`, rising as the ratio to `priceExponent`), a car without specs, the least and most, the rounding, the believable weights, the factor of its year (`priceByYear`: the first step it is in, `{ "from": 1960, "value": 1.2 }`, a step without `from` takes any year) and source (`kunos`, `dlc`, `mod`, `unknown`), and how common it is by year, source and power to weight. Unlike the rest these follow the mods next to the game, not the career: the catalog is the program's, and a change works every price out again |
+| `engines` | how an engine is cooled and oiled by its parts (`cooling`), how the cars on the lots were worked on (`factory`: swaps, bolt-ons), how the rivals' tuners work (`tuner`), and the points an AC car's name and power give an engine build when the game picks its factory engine (`matcher`) |
 | `repairs` | the garage's repairs: parts, labour, body work |
 | `condition` | damage, wear, dirt, fuel and oil, and what a race takes out of a car |
 | `street` | who comes by while cruising and how soon, drag or road, pink-slip offers, grudge rematches, the diner's talk |
@@ -209,8 +221,32 @@ anywhere under the folder (a `pack.json` with the parts' `.kn5` models next to i
 - `work_order.json` — what comes off an engine before what (see below). Most mods need none: the base game's covers
   every kind of engine part there is.
 - `"make"` in a `pack.json` (`"make": "gm"`) says which make the pack's parts are for: every part shop specialising in
-  that make stocks them (see `partshops` below). The base game's makes are `mopar`, `ford` and `gm`; a pack of parts
-  for any make (the universal-fit carburettors and air cleaners) has none.
+  that make stocks them (see `partshops` below). The base game's makes are `mopar`, `ford` and `gm` (the families of
+  makes.json); a pack of parts for any make (the universal-fit carburettors and air cleaners) has none.
+- `part_groups.json` — the shelves (see below). Most mods need none.
+- `stand_ins.json` — script classes the mod's parts extend that the source game never shipped, made from the class
+  their author copied: `{ "stand_ins": { "<class>": { "copy": "<class copied>", "extends": "<what it extends
+  instead>", "drop": [ "<methods left out>" ] } } }`. A later mod's replaces one of the same name. The base game's makes
+  the Ford six's `Block_Inline_OHV` out of `Block_Vee_OHV`. A stand-in that copies itself, or two that copy each
+  other, is no class (the parts that extend it do not load). The parts converter reads the file from its output
+  folder, else from its `--previous` content's.
+
+**The shelves.** Every part is in a group: the shelf it is on in a shop, what the player reads as its kind, and what the
+game does with it. A part is in the first group with a class its script descends from, by the end of the class's name
+(`"Block"` takes in `Block_Vee_OHV`), the groups in the order listed; a part no group takes in is an accessory. A mod's
+`part_groups.json` adds groups, tried before the ones before it, or changes a group of an id already there, naming only
+what it changes (a group keeps its place). `never_stacks`: never mounts on its own kind (a head on a head);
+`bolt_on`: what the cars on the lots were worked on with; `tune`: how much a rival's tuner goes for it (10 the most,
+none: not at all); `speed_shop`: a speed shop sells it. The player reads `part_group.<id>` in the text, else the
+group's `name`, else its id. The ids `engine_blocks`, `cylinder_heads`, `camshafts`, `crankshafts`, `connecting_rods`,
+`pistons`, `transmissions`, `air_filters`, `exhaust`, `oil_pans`, `tyres`, `rims`, `brakes`, `springs` and `shocks`
+are the game's own: the engine's internals wear and break, the running gear has a slot on each wheel, the attendant
+looks at the air filter and the exhaust. A mod may change their classes, never their meaning. The base game's groups are
+`Content\streetcorsa\parts\part_groups.json`.
+
+```json
+{ "groups": [ { "id": "intercoolers", "classes": [ "Intercooler" ], "tune": 4, "speed_shop": true } ] }
+```
 
 **The work order.** Every engine part has a *kind*: `"kind": "timing_cover"` on the part in its `pack.json` if the pack
 says so, else the first kind of the work orders listing one of its script classes (`"classes": ["Crankshaft"]`), else
@@ -326,6 +362,34 @@ A part mounts by what its slots name (`attaches_to`, `compatible_with`: a part i
 or by a standard fitting (`fits`/`takes`, e.g. `carb:4bbl`), which works across mods with no ids at all.
 `tools\SlrrPartsConverter` makes packs from SLRR `.rpk` files.
 
+### cars
+
+The makes and the cars: `.json` files in a mod's `cars` folder (the base game's `makes.json` and `cars.json`), merged
+**key by key** over the mods before them like the rules: a mod adds a make or a car, or changes one figure of one,
+naming only that; a list (a make's words) is taken whole. What does not read is told and left out.
+
+- `makes`, by id: `words` that tell the make in a car's brand, else in its name (any case; two words allowed,
+  `"alfa romeo"`; a word is one make's); `family`, the corporate family its cars and engines belong to (`gm`: a Pontiac
+  turns up with a Chevrolet V8, never a Hemi; the engine builds' and sounds' families come from the same words), none
+  for a make whose words name no engine; `country`, a country's id or name; `price`, what the badge does to a car's
+  price (`2.5`: two and a half times); `common`, added to how common its cars are (0 rare to 1 common).
+- `countries`, by id: `names` a `ui_car.json` writes for it (`"Great Britain"` is the `UK`) and `regions` it is in
+  (`"Europe"`); a region is a country entry too, with its names (`"European"`).
+- `words`: `aliases` (a nickname read as the word it stands for, `"vette": "corvette"`) and `noise` (words that say
+  nothing about which car or engine it is), for matching a car's name to an engine build's.
+- `cars`, by the AC car's folder name: what is given here is not worked out from the car's data. `engine`, the
+  engine build it leaves the factory with (`engine_builds.json`, namespaced); `layout`, `front`, `mid` or `rear`;
+  `price`, in perfect condition in the game's money; `common`, how often it turns up for sale, 0 to 1; `make`, a make
+  of `makes`. The base game's holds the factory engines and prices set by hand in the catalog editor (a developer's
+  screen, which saves into the base game's `cars.json`).
+
+```json
+{
+  "makes": { "datsun": { "family": "nissan", "country": "Japan", "words": [ "datsun" ], "price": 0.9 } },
+  "cars": { "ks_nissan_skyline_r34": { "engine": "mymod:engines/rb26/stock", "price": 42000, "common": 0.3 } }
+}
+```
+
 ### sounds
 
 One folder per engine sound (a `.bank`, `GUIDs.txt`, an optional `sound.json`), as the base game's `sounds` (see its
@@ -403,8 +467,8 @@ Parts dealers button). It is drawn on the dealers' map picture, without the car 
 performance parts for any make, or its `makes`: carburettors, blowers, cams, manifolds, heads, headers, nitrous, none that
 a car came with), `wheels` (new tyres, rims, brakes, springs and shocks) or `junkyard` (used parts and whole engines;
 buys the player's parts for a little more than a trade-in, and can be haggled with, though never down to less than
-10% over what it would pay for the part). `groups` narrows a shop to kinds of part as
-the shops list them (`"Camshafts"`). `priceFactor`, `buyFactor`, `stockLow`/`stockHigh` and `restockDays` are optional
+10% over what it would pay for the part). `groups` narrows a shop to kinds of part, by
+the ids of part_groups.json (`"camshafts"`; see "parts"). `priceFactor`, `buyFactor`, `stockLow`/`stockHigh` and `restockDays` are optional
 (the kind's own otherwise; see `PartShopRules`). `"startsOpen": false` keeps a shop out of business when a game starts:
 the shops come and go as the dealers do. Keep a pin about 0.055 across or 0.035 down from every other shop's pin, or the
 name plates overlap; the dealers' pins are on their own map. `kind` is one of the four names; anything else (a number

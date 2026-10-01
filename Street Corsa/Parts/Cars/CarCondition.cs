@@ -86,11 +86,11 @@ public static class CarCondition
     /// <summary>The water got this hot, and the engine went flat at the top</summary>
     private const double TellHotC = 110;
 
-    public const string TransmissionGroup = "Transmissions";
+    public const string TransmissionGroup = PartGroups.Transmissions;
 
     private static readonly HashSet<string> RotatingGroups = new(StringComparer.Ordinal)
     {
-        "Crankshafts", "Connecting rods", "Pistons", "Camshafts"
+        PartGroups.Crankshafts, PartGroups.ConnectingRods, PartGroups.Pistons, PartGroups.Camshafts
     };
 
     /// <summary>A lookup from part id to its shelf group, off the catalog</summary>
@@ -390,7 +390,7 @@ public static class CarCondition
     public static double SharedEngineDamage => Rules.RuleBook.Current.Condition.SharedEngineDamage;
 
     // Which rotating part gives first when two are as worn: the rods take the most of an over-rev
-    private static readonly string[] FailureOrder = { "Connecting rods", "Pistons", "Crankshafts", "Camshafts" };
+    private static readonly string[] FailureOrder = { PartGroups.ConnectingRods, PartGroups.Pistons, PartGroups.Crankshafts, PartGroups.Camshafts };
 
     /// <summary>
     /// The rotating part that gives when the engine takes damage: the most worn one, the rods before the pistons,
@@ -418,20 +418,20 @@ public static class CarCondition
     /// <summary>The part of a group that let go, as the report says it: "a connecting rod"</summary>
     public static string FailedPartName(string? group) => PartWords.Say(group switch
     {
-        "Connecting rods" => "condition.failed.rod",
-        "Pistons" => "condition.failed.piston",
-        "Crankshafts" => "condition.failed.crankshaft",
-        "Camshafts" => "condition.failed.camshaft",
+        PartGroups.ConnectingRods => "condition.failed.rod",
+        PartGroups.Pistons => "condition.failed.piston",
+        PartGroups.Crankshafts => "condition.failed.crankshaft",
+        PartGroups.Camshafts => "condition.failed.camshaft",
         _ => "condition.failed.bottom_end"
     });
 
     /// <summary>The parts of a group that took damage, as the report says it: "the connecting rods"</summary>
     public static string DamagedPartName(string? group) => PartWords.Say(group switch
     {
-        "Connecting rods" => "condition.damaged.rods",
-        "Pistons" => "condition.damaged.pistons",
-        "Crankshafts" => "condition.damaged.crankshaft",
-        "Camshafts" => "condition.damaged.camshaft",
+        PartGroups.ConnectingRods => "condition.damaged.rods",
+        PartGroups.Pistons => "condition.damaged.pistons",
+        PartGroups.Crankshafts => "condition.damaged.crankshaft",
+        PartGroups.Camshafts => "condition.damaged.camshaft",
         _ => "condition.damaged.bottom_end"
     });
 

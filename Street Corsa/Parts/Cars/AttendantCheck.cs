@@ -33,15 +33,15 @@ public static class AttendantCheck
 
     public const int MostHints = 3;
 
-    private const string AirFiltersGroup = "Air filters";
+    private const string AirFiltersGroup = PartGroups.AirFilters;
 
-    // Engine parts that show under the hood, by their shelf group
+    // Engine parts that show under the hood, by their shelf group (part_groups.json): a group a mod drops is never seen
     private static readonly (string Group, string Key)[] UnderTheHood =
     [
-        ("Exhaust", "station.hint.exhaust"),
+        (PartGroups.Exhaust, "station.hint.exhaust"),
         (AirFiltersGroup, "station.hint.air_filter"),
-        ("Carburettors and injection", "station.hint.carburettor"),
-        ("Flywheels and clutches", "station.hint.clutch")
+        ("carburettors", "station.hint.carburettor"),
+        ("flywheels", "station.hint.clutch")
     ];
 
     /// <summary>The worst few things the attendant would mention, worst first; none for a car in good shape</summary>

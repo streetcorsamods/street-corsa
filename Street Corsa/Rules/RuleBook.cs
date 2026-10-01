@@ -81,6 +81,12 @@ public sealed class RuleBook
 
     public MarketRules Market { get; set; } = new();
 
+    /// <summary>What a car is worth new and how common it is, where the mods' cars.json gives neither</summary>
+    public CarRules Cars { get; set; } = new();
+
+    /// <summary>The engines: how they are cooled, how the factory and the rivals' tuners work on them, how a car's engine is matched</summary>
+    public Parts.Cars.EngineRules Engines { get; set; } = new();
+
     public RepairRules Repairs { get; set; } = new();
 
     public ConditionRules Condition { get; set; } = new();
@@ -304,6 +310,9 @@ public sealed class RuleBook
             Range(Rivals.Money.ByAge[i], $"rivals.money.byAge[{i}]", nameof(RivalMoneyByAge.Low), nameof(RivalMoneyByAge.High), problems);
         Range(World, "world", nameof(WorldRules.WindMinKmh), nameof(WorldRules.WindMaxKmh), problems);
         Range(World, "world", nameof(WorldRules.DawnHour), nameof(WorldRules.DayFromHour), problems);
+        Range(Cars, "cars", nameof(CarRules.MinPrice), nameof(CarRules.MaxPrice), problems);
+        Range(Cars, "cars", nameof(CarRules.MinPlausibleWeightKg), nameof(CarRules.MaxPlausibleWeightKg), problems);
+        Range(Engines.Factory, "engines.factory", nameof(Parts.Cars.EngineFactoryRules.SwapMinPower), nameof(Parts.Cars.EngineFactoryRules.SwapMaxPower), problems);
     }
 
     private static void Range(object figures, string path, string least, string most, List<string> problems)
@@ -340,7 +349,7 @@ public sealed class RuleBook
         }
 
         var known = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .Where(p => p.GetCustomAttribute<JsonIgnoreAttribute>() == null)
+            .Where(p => p.GetCustomAttribute<JsonIgnoreAttribute>() is not { Condition: JsonIgnoreCondition.Always })
             .ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase);
         foreach (var (name, node) in json)
         {

@@ -21,6 +21,16 @@ public static class Program
     private const string BasePackId = "stock";
     private const string SlotRoleSuffix = "_slot_ID";
     private const string ConstantsFile = "script_constants.json";
+
+    /// <summary>
+    /// The base game's stand-in classes (the converter's SLRR game never shipped them): beside the parts written, else
+    /// beside the <see cref="ConverterOptions.Previous"/> content's (a scratch output has none of its own); null when
+    /// neither has them
+    /// </summary>
+    private static string? StandIns(ConverterOptions options) =>
+        new[] { options.Output, options.Previous }.OfType<string>()
+            .Select(folder => Path.Combine(folder, ScriptClassLoader.StandInsFile))
+            .FirstOrDefault(File.Exists);
     private const string TakesPrefix = "takes:";
 
     /// <summary>Exit code of a run that wrote its output but left parts, packs or rpks out: a script must not take it for a clean run</summary>
@@ -48,12 +58,19 @@ public static class Program
         {
             Options = options;
             Game = new SlrrGame(options.Slrr);
-            Scripts = new SlrrScriptEvaluator(Game);
+            StandInsFile = StandIns(options);
+            if (StandInsFile == null)
+                Console.WriteLine($"No {ScriptClassLoader.StandInsFile} in the output or the {PreviousOption} content: classes mods extend that SLRR never shipped (Block_Inline_OHV) are not found");
+            Scripts = new SlrrScriptEvaluator(Game, StandInsFile);
+            foreach (var problem in Scripts.Problems) Console.WriteLine($"Stand-ins: {problem}");
             Staging = ConversionOutput.StagingFolder(options.Output);
         }
 
         public ConverterOptions Options { get; }
         public SlrrGame Game { get; }
+
+        /// <summary>The stand_ins.json every evaluator of the run reads (<see cref="StandIns"/>); null when there is none</summary>
+        public string? StandInsFile { get; }
 
         /// <summary>The parts' own evaluator: the classes it touches are the ones the game gets</summary>
         public SlrrScriptEvaluator Scripts { get; }
@@ -204,7 +221,7 @@ public static class Program
     {
         var game = run.Game;
         var options = run.Options;
-        var routing = new SlrrScriptEvaluator(game);
+        var routing = new SlrrScriptEvaluator(game, run.StandInsFile);
 
         // The base game keeps its stock parts (running gear, accessories, neons) in an rpk next to the parts folder.
         // Sorted by ordinal: the order packs are met in shows in the output, which must not change with the culture
@@ -976,7 +993,7 @@ public static class Program
         var definitions = run.Definitions;
         var engineBuilds = new SlrrEngineBuilds(game, run.PartIds);
         // Cars get an evaluator of their own: their classes are of no use to the game
-        var builds = engineBuilds.FromCars(new SlrrScriptEvaluator(game));
+        var builds = engineBuilds.FromCars(new SlrrScriptEvaluator(game, run.StandInsFile));
         // The folder was checked when the options were read
         if (run.Options.Notes != null) builds.AddRange(engineBuilds.FromNotes(run.Options.Notes));
 

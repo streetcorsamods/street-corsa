@@ -5,7 +5,7 @@ namespace StreetCorsa.Parts.Cars;
 /// <summary>Parts an event gives as its prize, picked for the car that won it</summary>
 public static class PrizeParts
 {
-    public const string CamshaftGroup = "Camshafts";
+    public const string CamshaftGroup = PartGroups.Camshafts;
 
     /// <summary>
     /// The best camshaft for <paramref name="engine"/>: the dearest one that goes where its camshaft sits, dearer than
