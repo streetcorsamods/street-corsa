@@ -19,7 +19,7 @@ namespace StreetCorsa.Services.Scripting
         /// <summary>The throttle held this far (0..1); null lets it go</summary>
         void Pedal(double? depth);
 
-        /// <summary>How loud it is against its full volume (a fade takes it down with the picture)</summary>
+        /// <summary>How loud it is against the level the screen has it at, 0..1 (a fade takes it down with the picture)</summary>
         void Volume(float scale);
 
         /// <summary>What it idles at and where its limiter is: a drive's revs are worked out from them</summary>

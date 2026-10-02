@@ -804,6 +804,9 @@ namespace StreetCorsa.Screens.Garage
                 }
             }
 
+            // The script may have taken a while: the player may have gone some other way meanwhile
+            if (!ReferenceEquals(_navigationService.CurrentScreen, this)) return;
+
             LeaveTo(() => _navigationService.NavigateToGasStation(_gameState));
 
             // Still here (the station would not open): the car back in its place

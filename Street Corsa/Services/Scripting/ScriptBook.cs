@@ -306,15 +306,23 @@ namespace StreetCorsa.Services.Scripting
                 float? distance = ModJson.TryGet(s, "distance", out var d) ? Number(d, $"{where}.distance", -500f, 500f) : null;
 
                 var ways = (path != null ? 1 : 0) + (to != null ? 1 : 0) + (toward != null ? 1 : 0) + (distance != null ? 1 : 0);
-                if (ways != 1) throw new FormatException($"{where} needs one of \"path\", \"to\", \"toward\", \"distance\"");
                 if (from != null && to == null) throw new FormatException($"{where}: \"from\" goes with \"to\" only");
 
                 var reverse = ModJson.TryGet(s, "reverse", out var rv) && Bool(rv, where) || distance < 0;
                 var feel = Feel(ModJson.TryGet(s, "feel", out var fl) ? Text(fl, where) : null, toward != null, where);
                 if (toward != null && feel.Kind != DriveKind.Pull) throw new FormatException($"{where}: \"toward\" needs a feel of kind pull, not {feel.Id}");
-                if (feel.Kind == DriveKind.Pull && toward == null)
-                    throw new FormatException($"{where}: a pull ({feel.Id}) goes \"toward\" a mark");
-                if (feel.Kind == DriveKind.Pull && reverse) throw new FormatException($"{where}: a pull ({feel.Id}) does not go in reverse");
+
+                // A pull goes toward a mark, or straight on out of its place; every other drive goes one way of the four
+                if (feel.Kind == DriveKind.Pull)
+                {
+                    if (ways != (toward != null ? 1 : 0))
+                        throw new FormatException($"{where}: a pull ({feel.Id}) goes \"toward\" a mark, or straight on with none of \"path\", \"to\", \"distance\"");
+                    if (reverse) throw new FormatException($"{where}: a pull ({feel.Id}) does not go in reverse");
+                }
+                else if (ways != 1)
+                {
+                    throw new FormatException($"{where} needs one of \"path\", \"to\", \"toward\", \"distance\"");
+                }
 
                 var start = ModJson.TryGet(s, "start", out var st) ? Text(st, where).ToLowerInvariant() : "standing";
                 if (start is not ("standing" or "rolling")) throw new FormatException($"{where}: \"start\" is \"standing\" or \"rolling\"");
@@ -391,28 +399,7 @@ namespace StreetCorsa.Services.Scripting
                 return condition;
             }
 
-            private static MarkSpec Mark(JsonElement m, string where)
-            {
-                switch (m.ValueKind)
-                {
-                    case JsonValueKind.String when !string.IsNullOrWhiteSpace(m.GetString()):
-                        return new MarkSpec(m.GetString()!.Trim());
-                    case JsonValueKind.Array:
-                    {
-                        var xz = m.EnumerateArray().Select(v => Number(v, where, -10000f, 10000f)).ToList();
-                        if (xz.Count != 2) throw new FormatException($"{where} is not a point [x, z]");
-                        return new MarkSpec(X: xz[0], Z: xz[1]);
-                    }
-                    case JsonValueKind.Object:
-                    {
-                        Only(m, where, "ahead", "behind", "left", "right");
-                        float Get(string name) => ModJson.TryGet(m, name, out var v) ? Number(v, $"{where}.{name}", -1000f, 1000f) : 0f;
-                        return new MarkSpec(Ahead: Get("ahead") - Get("behind"), Left: Get("left") - Get("right"));
-                    }
-                    default:
-                        throw new FormatException($"{where} is no mark: a name, a point [x, z], or {{ \"behind\": metres }} and the like");
-                }
-            }
+            private static MarkSpec Mark(JsonElement m, string where) => SceneMarks.ParseMark(m, where, names: true);
 
             private static void Only(JsonElement e, string where, params string[] keys)
             {

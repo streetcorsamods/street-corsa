@@ -32,7 +32,11 @@ internal sealed class ScriptEngine(Func<EngineRunner?> runner) : IScriptEngine
 
     public void Pedal(double? depth) => Runner?.SetPedal(depth);
 
-    public void Volume(float scale) => Runner?.Place(null, scale);
+    /// <summary>On top of the level the screen has it at (and where it has it heard from), never in place of it</summary>
+    public void Volume(float scale)
+    {
+        if (Runner is { } r) r.Fade = scale;
+    }
 }
 
 /// <summary>
@@ -64,7 +68,7 @@ internal sealed class ScriptedCar : IScriptCar
         _lights = lights;
     }
 
-    public GroundPose Home { get; set; }
+    public GroundPose Home { get; }
 
     public GroundPose Pose { get; private set; }
 
@@ -74,8 +78,6 @@ internal sealed class ScriptedCar : IScriptCar
 
     /// <summary>The drive under way, and how far into it</summary>
     public DrivePlan? Plan => _plan;
-
-    public float Time => _time;
 
     /// <summary>Metres a second, now</summary>
     public float Speed { get; private set; }

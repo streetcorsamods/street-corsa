@@ -47,10 +47,8 @@ public class StreetViewport3D : OnboardViewport3D
     private bool _rivalReady;
     private CarBodyRock? _rivalRock;
 
-    // The rival as its scripts move it (its home the spot alongside), the script playing and the moment that set it off
+    // The rival as its scripts move it (its home the spot alongside)
     private ScriptedCar? _rival;
-    private ScriptRun? _run;
-    private string? _playing;
 
     public StreetViewport3D()
         : base("Street")
@@ -300,14 +298,22 @@ public class StreetViewport3D : OnboardViewport3D
             return;
         }
 
+        // Sent away while its car loaded (the stage heard it gone at once): it never comes
+        if (stage.Phase is not (RivalPhase.Arriving or RivalPhase.Alongside))
+        {
+            HideRival();
+            return;
+        }
+
         _rivalReady = true;
 
         // Its engine is its own for as long as it is here: the stage lets go of it as the rival goes
         var engine = stage.RivalEngine;
+        // It stands where the scripts bring it: a mod's own way up the lane moves both
         var marks = scene.ScriptMarks;
         var alongside = scene.Lane(scene.RivalStop);
-        var heading = scene.Player.Heading * MathF.PI / 180f;
-        _rival = new ScriptedCar(new GroundPose(alongside.X, alongside.Z, heading), new ScriptEngine(() => engine), RivalLights);
+        var home = marks.Stand("alongside", Arrive) ?? new GroundPose(alongside.X, alongside.Z, scene.Player.Heading * MathF.PI / 180f);
+        _rival = new ScriptedCar(home, new ScriptEngine(() => engine), RivalLights);
         _rival.Started += () => AnimateFor(TimeSpan.FromSeconds(1));
 
         if (stage.Phase == RivalPhase.Alongside)
@@ -320,11 +326,7 @@ public class StreetViewport3D : OnboardViewport3D
         else
         {
             // Placed and heard from where it comes from before it makes a sound
-            if (marks.Paths.TryGetValue("arrive", out var way) && way.Count > 0)
-            {
-                var (x, z, h, _) = DrivePath.Through(way).At(0f);
-                _rival.Place(new GroundPose(x, z, h));
-            }
+            if (marks.PathStart(Arrive) is { } start) _rival.Place(start);
 
             var run = Play(ScriptTriggers.StreetRivalArrive, stage);
 
@@ -337,7 +339,7 @@ public class StreetViewport3D : OnboardViewport3D
 
             PlaceRival();
             HearRival();
-            if (run != null) _ = AfterReleaseAsync(run, () => _stageListened?.ReportAlongside());
+            if (run != null) AfterRelease(run, () => _stageListened?.ReportAlongside());
             else stage.ReportAlongside();
         }
 
@@ -353,38 +355,14 @@ public class StreetViewport3D : OnboardViewport3D
         Invalidate();
     }
 
+    // The way up the lane, as the scripts have it (a street's file may name its own)
+    private const string Arrive = "arrive";
+
     /// <summary>The script for <paramref name="trigger"/> plays with the rival; null with no rival to play it with</summary>
-    private ScriptRun? Play(string trigger, StreetStage stage)
-    {
-        if (_rival is not { } rival || _scene is not { } scene) return null;
-
-        StopRun();
-        var run = ScriptRun.Play(ScriptBook.Installed, trigger, new StreetScriptStage(rival, scene.ScriptMarks),
-            new ScriptFacts(stage.Time, Light));
-        _run = run;
-        _playing = trigger;
-        AnimateFor(TimeSpan.FromSeconds(1));
-        return run;
-    }
-
-    /// <summary>The script playing stops where it is (another one takes over, the rival goes, or the scene does)</summary>
-    private void StopRun()
-    {
-        _run?.Cancel();
-        _run = null;
-        _playing = null;
-    }
-
-    protected override ScriptRun? SkippableRun => _run;
-
-    /// <summary>Once <paramref name="run"/> lets the screen go on, <paramref name="then"/>; not when it was stopped first</summary>
-    private async Task AfterReleaseAsync(ScriptRun run, Action then)
-    {
-        await run.Released;
-
-        // A run stopped is always replaced (or the rival or the scene went): only the one still playing goes on
-        if (ReferenceEquals(run, _run)) then();
-    }
+    private ScriptRun? Play(string trigger, StreetStage stage) =>
+        _rival is { } rival && _scene is { } scene
+            ? PlayScript(trigger, rival, SceneStage.Rival, scene.ScriptMarks, new ScriptFacts(stage.Time, Light))
+            : null;
 
     private void StartLeaving(StreetStage stage)
     {
@@ -402,28 +380,36 @@ public class StreetViewport3D : OnboardViewport3D
             return;
         }
 
-        _ = GoneAsync(run);
+        GoneAfter(run);
     }
 
     /// <summary>
     /// The rival is gone out of sight when its leaving script is over, and the screen hears it then; a script that lets
-    /// the screen go on before has the rival hidden once it is over (unless another has taken its place meanwhile)
+    /// the screen go on before has the rival hidden once it is over (unless another has taken its place meanwhile).
+    /// Nobody waits on this: what goes wrong in it is logged here.
     /// </summary>
-    private async Task GoneAsync(ScriptRun run)
+    private async void GoneAfter(ScriptRun run)
     {
-        await run.Released;
-        if (!ReferenceEquals(run, _run)) return;
-
-        if (run.IsOver)
+        try
         {
-            HideRival();
-            _stageListened?.ReportGone();
-            return;
-        }
+            await run.Released;
+            if (!IsPlaying(run)) return;
 
-        _stageListened?.ReportGone();
-        await run.Ended;
-        if (ReferenceEquals(run, _run)) HideRival();
+            if (run.IsOver)
+            {
+                HideRival();
+                _stageListened?.ReportGone();
+                return;
+            }
+
+            _stageListened?.ReportGone();
+            await run.Ended;
+            if (IsPlaying(run)) HideRival();
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            Logger.Error(ex, "{Viewport}: the rival could not be seen off", ViewportName);
+        }
     }
 
     private void HideRival()
@@ -486,22 +472,6 @@ public class StreetViewport3D : OnboardViewport3D
 
         var volume = Math.Clamp(RivalFullVolumeWithin / Math.Max(distance, 0.1f), RivalQuietest, 1f);
         engine.Place(direction, volume);
-    }
-
-    /// <summary>The stage the street's scripts play on: the rival (the player sits in a parked car, the camera's), the lane's marks and paths</summary>
-    private sealed class StreetScriptStage(ScriptedCar rival, SceneMarks marks) : IScriptStage
-    {
-        public IScriptCar? Car(string? role) => role == null || role.Equals("rival", StringComparison.OrdinalIgnoreCase) ? rival : null;
-
-        public MarkSpec? Mark(string name) => marks.Marks.TryGetValue(name, out var mark) ? mark : null;
-
-        public IReadOnlyList<Services.Station.GroundPoint>? Path(string name) => marks.Paths.TryGetValue(name, out var path) ? path : null;
-
-        public Task Fade(float opacity, TimeSpan over, FadeEase ease) => Task.CompletedTask;
-
-        public void Camera(IScriptCar of, CameraMode mode)
-        {
-        }
     }
 
     #endregion

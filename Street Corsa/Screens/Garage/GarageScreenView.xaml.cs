@@ -187,6 +187,7 @@ namespace StreetCorsa.Screens.Garage
         private async Task<bool> DriveCarOutAsync()
         {
             if (DataContext is not GarageScreenViewModel viewModel) return false;
+            _runningBeforeLeave = EnginePanel.Runner.IsRunning;
             if (Viewport3D.Leave(() => EnginePanel.Runner, viewModel.ScriptFacts, CurtainAsync) is not { Script: not null } run) return false;
 
             ContentLayer.IsHitTestVisible = false;
@@ -194,11 +195,19 @@ namespace StreetCorsa.Screens.Garage
             return true;
         }
 
-        /// <summary>The garage stays after all: the curtain up, the car back in its place and the screen to be used</summary>
+        // The engine was running before the car set off to leave: put back, it is left running
+        private bool _runningBeforeLeave;
+
+        /// <summary>
+        /// The garage stays after all: the curtain up, the car back in its place and the screen to be used, its engine
+        /// as loud as before and off again if the script started it
+        /// </summary>
         private void PutCarBack()
         {
             _ = StreetCorsa.Controls.CurtainFade.ToAsync(Curtain, 0, TimeSpan.FromSeconds(0.25));
             Viewport3D.PutBack();
+            EnginePanel.Runner.Fade = 1f;
+            if (!_runningBeforeLeave) EnginePanel.Runner.StopNow();
             ContentLayer.IsHitTestVisible = _revealed && !_arriving;
         }
 

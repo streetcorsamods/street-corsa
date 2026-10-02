@@ -225,6 +225,66 @@ public class CarScriptingTests : IDisposable
         Assert.Equal(new MarkSpec(Ahead: -7f), GarageScene.Load(mods, "no_such_garage").Marks["door"]);
     }
 
+    [Fact]
+    public void A_cars_place_is_where_the_scripts_bring_it_so_a_mods_own_way_in_moves_both()
+    {
+        var mods = ModSet.Load(RepoPaths.Content);
+        var station = StationScenes.LoadAll(mods).Single(s => s.Id == "tomwixon");
+        var own = station with
+        {
+            Marks = SceneMarks.None.With(paths: new Dictionary<string, IReadOnlyList<GroundPoint>> { ["arrive"] = [new(0, 0), new(0, 10)] })
+        };
+
+        var marks = own.ScriptMarks;
+        Assert.Equal(new MarkSpec(X: 0, Z: 10), marks.Marks["pump"]);
+        var home = marks.Stand("pump", "arrive")!.Value;
+        Assert.Equal(10f, home.Z, 3);
+        Assert.Equal(0f, home.Heading, 3);
+        Assert.Equal(0f, marks.PathStart("arrive")!.Value.Z, 3);
+
+        // A pump of its own is where the car stands, facing the way the way in ends
+        var pump = own with
+        {
+            Marks = own.Marks.With(new Dictionary<string, MarkSpec> { ["pump"] = new(X: 1, Z: 9) })
+        };
+        Assert.Equal(new GroundPose(1, 9, 0), pump.ScriptMarks.Stand("pump", "arrive"));
+        Assert.Null(SceneMarks.None.Stand("pump", "arrive"));
+
+        // The base station's car stands at the end of its own way in, as it did
+        var built = DrivePath.Through(station.Arrive);
+        var at = station.ScriptMarks.Stand("pump", "arrive")!.Value;
+        Assert.Equal(built.End.X, at.X, 3);
+        Assert.Equal(built.End.Z, at.Z, 3);
+    }
+
+    [Fact]
+    public void A_mark_reads_the_same_in_a_scene_file_and_in_a_script()
+    {
+        var file = _temp.File("street/street.json", """
+            { "marks": { "near": [ 9000, 0 ], "far": [ 20000, 0 ], "beside": { "left": 1500 } } }
+            """);
+        var problems = new List<string>();
+        var marks = SceneMarks.ReadFile(file, problems);
+        Assert.True(marks.Marks.ContainsKey("near"));
+        Assert.Equal(2, problems.Count);
+        Assert.Contains(problems, p => p.Contains("\"far\"") && p.Contains("is not between"));
+        Assert.Contains(problems, p => p.Contains("\"beside\"") && p.Contains("is not between"));
+
+        var scriptProblems = new List<string>();
+        ScriptBook.Load(ModWith("""
+            { "id": "far", "trigger": "station.arrive", "steps": [ { "do": "drive", "to": [ 20000, 0 ] } ] }
+            """), scriptProblems);
+        Assert.Contains("is not between", Assert.Single(scriptProblems));
+    }
+
+    [Fact]
+    public void A_warehouse_without_a_way_out_sends_the_car_straight_on()
+    {
+        var warehouse = Services.CarLot.WarehouseScenes.LoadAll(ModSet.Load(RepoPaths.Content)).First();
+        var without = warehouse with { Exit = null };
+        Assert.Equal(new MarkSpec(Ahead: 100f), without.ScriptMarks.Marks["exit"]);
+    }
+
     #endregion
 
     #region Drives
@@ -256,6 +316,46 @@ public class CarScriptingTests : IDisposable
         var late = plan.At(plan.Duration - 2f).Heading;
         Assert.Equal(late, plan.End.Heading, 2);
         Assert.InRange(plan.End.Speed, 4.9f, 5.01f);
+    }
+
+    [Theory]
+    [InlineData(0f, -8f)]
+    [InlineData(6f, 0f)]
+    [InlineData(-6f, -1f)]
+    public void A_car_pulling_away_turns_round_for_a_mark_beside_or_behind_it(float x, float z)
+    {
+        var plan = DrivePlan.Pull(new GroundPose(0, 0, 0), new GroundPoint(x, z), BaseBook.Feels["pull_away"], 800);
+
+        // Straight out of its place first, then round towards the mark (to the left for one on its left, +x)
+        Assert.Equal(0f, plan.At(0.5f).Steer, 3);
+        var turned = GroundPose.Turn(0f, plan.At(4f).Heading);
+        Assert.True(MathF.Abs(turned) > 1f, $"it turned {turned} radians");
+        if (x != 0f) Assert.Equal(MathF.Sign(x), MathF.Sign(turned));
+    }
+
+    [Fact]
+    public void A_pull_without_a_mark_drives_straight_on_and_reads_as_such()
+    {
+        var plan = DrivePlan.Pull(new GroundPose(0, 0, 0), null, BaseBook.Feels["pull_away"], 800);
+        Assert.Equal(0f, plan.End.Heading, 4);
+        Assert.Equal(0f, plan.End.X, 4);
+
+        var problems = new List<string>();
+        var book = ScriptBook.Load(ModWith("""
+            { "id": "out", "trigger": "lot.take_out", "steps": [ { "do": "drive", "feel": "pull_away" } ] }
+            """), problems);
+        Assert.Empty(problems);
+        Assert.Null(Assert.IsType<DriveStep>(book.Scripts.Single(s => s.Id == "mymod:out").Steps[0]).Toward);
+    }
+
+    [Fact]
+    public void A_roll_in_from_far_away_takes_no_longer_than_a_minute()
+    {
+        var path = DrivePath.Through([new GroundPoint(-5000, 0), new GroundPoint(0, 0)]);
+        var plan = DrivePlan.RollIn(path, BaseBook.Feels["roll_in"] with { CruiseSpeed = 0.1f }, 800);
+
+        Assert.Equal(60f, plan.Duration, 3);
+        Assert.Equal(0f, plan.End.X, 2);
     }
 
     [Fact]
@@ -391,6 +491,42 @@ public class CarScriptingTests : IDisposable
     }
 
     [Fact]
+    public void A_fade_cancelled_halfway_leaves_the_engines_volume_to_the_screen()
+    {
+        var clock = new FakeClock();
+        var stage = new FakeStage(clock);
+        var engine = new FakeEngine { Runs = true };
+        stage.Car.Engine = engine;
+        var run = Play(Script(30f, new FadeStep(null, 1f, 2f, FadeEase.None, true)), stage, clock);
+
+        clock.Advance(1);
+        run.Cancel();
+        clock.Advance(5);
+
+        Assert.Equal(ScriptEnd.Cancelled, EndOf(run));
+        Assert.NotEmpty(engine.Volumes);
+        Assert.InRange(engine.Volumes[^1], 0.3f, 1f);
+    }
+
+    [Fact]
+    public void A_scenes_stage_has_its_one_car_by_its_role_and_the_scenes_marks()
+    {
+        var car = new FakeCar(new FakeClock());
+        var marks = SceneMarks.None.With(new Dictionary<string, MarkSpec> { ["exit"] = new(X: 1, Z: 2) });
+        CameraMode? mode = null;
+        var stage = new SceneStage(car, SceneStage.Rival, marks, camera: m => mode = m);
+
+        Assert.Same(car, stage.Car(null));
+        Assert.Same(car, stage.Car("RIVAL"));
+        Assert.Null(stage.Car(SceneStage.Player));
+        Assert.Equal(new MarkSpec(X: 1, Z: 2), stage.Mark("exit"));
+        Assert.Null(stage.Path("arrive"));
+        Assert.True(stage.Fade(1f, TimeSpan.FromSeconds(1), FadeEase.None).IsCompleted);
+        stage.Camera(car, CameraMode.Follow);
+        Assert.Equal(CameraMode.Follow, mode);
+    }
+
+    [Fact]
     public void A_step_that_cannot_be_done_is_said_and_the_rest_done_at_once()
     {
         var clock = new FakeClock();
@@ -520,9 +656,9 @@ public class CarScriptingTests : IDisposable
         {
         }
 
-        public void Volume(float scale)
-        {
-        }
+        public List<float> Volumes { get; } = [];
+
+        public void Volume(float scale) => Volumes.Add(scale);
     }
 
     private sealed class FakeCar(FakeClock clock) : IScriptCar

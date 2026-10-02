@@ -377,7 +377,7 @@ namespace StreetCorsa.Services.Scripting
             var (idle, limiter) = car.Engine?.Revs ?? (800, 6000);
             var feel = step.Feel;
 
-            if (step.Toward is { } toward) return DrivePlan.Pull(car.Pose, Point(toward, car), feel, idle);
+            if (feel.Kind == DriveKind.Pull) return DrivePlan.Pull(car.Pose, step.Toward is { } toward ? Point(toward, car) : null, feel, idle);
 
             DrivePath path;
             if (step.Path is { } name)
@@ -437,6 +437,8 @@ namespace StreetCorsa.Services.Scripting
                     await Pause(Poll);
                 }
 
+                // Cancelled: the screen has the engine back, at the level it sets
+                if (_cancelled) return;
                 engine.Volume(_volume = to);
             }
 

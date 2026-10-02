@@ -36,10 +36,8 @@ public class StationViewport3D : OnboardViewport3D
     private StationStage? _stageListened;
     private EngineRunner? _engineListened;
 
-    // The player's car as its scripts move it (its home the pump), the script playing and the moment that set it off
+    // The player's car as its scripts move it (its home the pump)
     private ScriptedCar? _car;
-    private ScriptRun? _run;
-    private string? _playing;
     private Sx.Matrix _placement = Sx.Matrix.Identity;
     private CarBodyRock? _rock;
 
@@ -173,7 +171,7 @@ public class StationViewport3D : OnboardViewport3D
         _rock = null;
 
         // Whatever the car was doing, it is done at once: nobody sees it
-        var playing = _playing;
+        var playing = Playing;
         StopRun();
         _car?.Drop();
         _car = null;
@@ -269,9 +267,7 @@ public class StationViewport3D : OnboardViewport3D
                 break;
             default:
                 // Waiting to drive in: at the start of the way in, out on the road
-                var way = DrivePath.Through(_station!.Arrive);
-                var (x, z, heading, _) = way.At(0f);
-                Car.Place(new GroundPose(x, z, heading));
+                Car.Place(_station!.ScriptMarks.PathStart(Arrive) ?? Car.Home);
                 PlaceCar(Car.Pose);
                 LookYaw = 0f;
                 AimCamera();
@@ -282,11 +278,15 @@ public class StationViewport3D : OnboardViewport3D
     /// <summary>The player's car as the scripts move it: it stands at the pump when nothing moves it</summary>
     private ScriptedCar Car => _car ??= NewCar();
 
+    // The way in, and the pump at its end, as the scripts have them (a station's file may name its own)
+    private const string Arrive = "arrive";
+    private const string Pump = "pump";
+
     private ScriptedCar NewCar()
     {
-        var way = DrivePath.Through(_station!.Arrive);
-        var (x, z, heading, _) = way.At(way.Length);
-        var car = new ScriptedCar(new GroundPose(x, z, heading), new ScriptEngine(() => _stageListened?.Engine), (head, brake) =>
+        // Where the scripts bring it: a mod's own way in moves both
+        var home = _station!.ScriptMarks.Stand(Pump, Arrive) ?? default;
+        var car = new ScriptedCar(home, new ScriptEngine(() => _stageListened?.Engine), (head, brake) =>
         {
             if (Renderer?.CarNode is not { } node) return;
             if (head is { } on) node.HeadlightsEnabled = on;
@@ -302,26 +302,9 @@ public class StationViewport3D : OnboardViewport3D
     {
         if (Renderer == null || _station is not { } station || _stageListened is not { } stage) return null;
 
-        StopRun();
         _lookHeld = false;
-        var run = ScriptRun.Play(ScriptBook.Installed, trigger, new StationScriptStage(Car, station.ScriptMarks),
-            new ScriptFacts(stage.Time, Light, stage.Towed));
-        _run = run;
-        _playing = trigger;
-        AnimateFor(TimeSpan.FromSeconds(1));
-        Invalidate();
-        return run;
+        return PlayScript(trigger, Car, SceneStage.Player, station.ScriptMarks, new ScriptFacts(stage.Time, Light, stage.Towed));
     }
-
-    /// <summary>The script playing stops where it is (another one takes over, or the scene goes)</summary>
-    private void StopRun()
-    {
-        _run?.Cancel();
-        _run = null;
-        _playing = null;
-    }
-
-    protected override ScriptRun? SkippableRun => _run;
 
     /// <summary>The car drives in off the road; at the pump once its script lets the screen go on</summary>
     private void DriveIn()
@@ -335,7 +318,7 @@ public class StationViewport3D : OnboardViewport3D
             PlaceCar(Car.Pose);
         }
 
-        _ = AfterReleaseAsync(run, () =>
+        AfterRelease(run, () =>
         {
             _stageListened?.ReportAtPump();
             Play(ScriptTriggers.StationAtPump);
@@ -346,16 +329,7 @@ public class StationViewport3D : OnboardViewport3D
     private void DriveOut()
     {
         if (Play(ScriptTriggers.StationLeave) is not { } run) return;
-        _ = AfterReleaseAsync(run, () => _stageListened?.ReportGone());
-    }
-
-    /// <summary>Once <paramref name="run"/> lets the screen go on, <paramref name="then"/>; not when it was stopped first</summary>
-    private async Task AfterReleaseAsync(ScriptRun run, Action then)
-    {
-        await run.Released;
-
-        // A run stopped is always replaced (or the scene went): only the one still playing goes on
-        if (ReferenceEquals(run, _run)) then();
+        AfterRelease(run, () => _stageListened?.ReportGone());
     }
 
     /// <summary>The car at the pump at once (towed there, or back from a way out that went nowhere), the driver looking at the pump</summary>
@@ -455,22 +429,6 @@ public class StationViewport3D : OnboardViewport3D
 
         PlaceCar(car.Pose);
         return moving;
-    }
-
-    /// <summary>The stage the station's scripts play on: the player's car, the station's marks and paths; no curtain, and the camera is the driver's eyes</summary>
-    private sealed class StationScriptStage(ScriptedCar car, SceneMarks marks) : IScriptStage
-    {
-        public IScriptCar? Car(string? role) => role == null || role.Equals("player", StringComparison.OrdinalIgnoreCase) ? car : null;
-
-        public MarkSpec? Mark(string name) => marks.Marks.TryGetValue(name, out var mark) ? mark : null;
-
-        public IReadOnlyList<GroundPoint>? Path(string name) => marks.Paths.TryGetValue(name, out var path) ? path : null;
-
-        public Task Fade(float opacity, TimeSpan over, FadeEase ease) => Task.CompletedTask;
-
-        public void Camera(IScriptCar of, CameraMode mode)
-        {
-        }
     }
 
     #endregion

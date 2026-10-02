@@ -34,10 +34,14 @@ namespace StreetCorsa.Services.Scripting
         // The longest a launch is followed: one that never gets to the end of its way stops being worked out here
         private const float MostLaunchSeconds = 30f;
 
+        // The longest a roll in takes: a longer way is rolled faster (a mod's far mark does not make a plan of millions of moments)
+        private const float MostRollInSeconds = 60f;
+
         // A road car brakes with its lights on harder than this
         private const float BrakeLightsDecel = 0.6f;
 
-        // A pull steering for a point stops steering for it once it is this close ahead (or behind): it drives on straight
+        // A pull steering for a point stops steering for it once it is this close ahead (or behind), having had it ahead
+        // first: it drives on straight. A point beside or behind it to start with is turned for until it is ahead.
         private const float PassedWithin = 0.5f;
 
         private readonly float[] _time;
@@ -189,13 +193,13 @@ namespace StreetCorsa.Services.Scripting
         /// <summary>
         /// Rolling in along <paramref name="path"/> at the feel's speed and braking to a stop at its end, the braking
         /// fading to nothing as it stops (the distance left goes as the cube of the time left), the brake lights on until
-        /// it has
+        /// it has; at most <see cref="MostRollInSeconds"/>, a longer way taken faster
         /// </summary>
         public static DrivePlan RollIn(DrivePath path, DriveFeel feel, double idleRpm, bool reverse = false)
         {
             var idle = Idle(idleRpm);
             var length = path.Length;
-            var seconds = length > 0f ? 3f * length / Math.Max(0.1f, feel.CruiseSpeed) : 0f;
+            var seconds = length > 0f ? Math.Min(MostRollInSeconds, 3f * length / Math.Max(0.1f, feel.CruiseSpeed)) : 0f;
             var samples = new List<(float, DriveMoment)>();
             for (var t = 0f; ; t = Math.Min(seconds, t + TimeStep))
             {
@@ -214,7 +218,7 @@ namespace StreetCorsa.Services.Scripting
         /// Pulling away in first gear from <paramref name="from"/>, gently, to the feel's pace and keeping on: the clutch
         /// takes up, and the pull fades as the car nears the pace it keeps. Given <paramref name="toward"/> it drives
         /// straight out of its place, then winds the wheel on and turns (about its rear axle, only as far as its wheels
-        /// are turned) for that point, and on past it straight.
+        /// are turned) for that point, and on past it straight: one beside or behind it is turned round for.
         /// </summary>
         public static DrivePlan Pull(GroundPose from, GroundPoint? toward, DriveFeel feel, double idleRpm)
         {
@@ -225,6 +229,7 @@ namespace StreetCorsa.Services.Scripting
             var distance = 0f;
             var steer = 0f;
             var passed = toward == null;
+            var hadAhead = false;
 
             var samples = new List<(float, DriveMoment)> { (0f, new DriveMoment(x, z, heading, 0f, 0f, 0f, 0f, 0f, idle * 1.1, feel.CruiseThrottle, false, false)) };
             for (var t = TimeStep; t <= feel.Seconds + 1e-4f; t += TimeStep)
@@ -242,7 +247,8 @@ namespace StreetCorsa.Services.Scripting
                 if (!passed && toward is { } point)
                 {
                     var ahead = MathF.Sin(heading) * (point.X - x) + MathF.Cos(heading) * (point.Z - z);
-                    passed = ahead < PassedWithin;
+                    hadAhead |= ahead >= PassedWithin;
+                    passed = hadAhead && ahead < PassedWithin;
                     if (!passed)
                     {
                         var wanted = MathF.Atan2(point.X - x, point.Z - z);

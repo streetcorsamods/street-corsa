@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO;
 using System.Text.Json;
 using StreetCorsa.Mods;
@@ -25,6 +26,36 @@ namespace StreetCorsa.Services.Scripting
             return new SceneMarks(allMarks, allPaths);
         }
 
+        /// <summary>
+        /// Where a car stands that the scripts bring to <paramref name="mark"/> along <paramref name="path"/>: at the mark
+        /// when it is a point (else the path's end), facing the way the path ends; null when the scene has no such path.
+        /// The scripts and the screen resolve them the same way, so a mod's own path or mark moves both.
+        /// </summary>
+        public GroundPose? Stand(string mark, string path)
+        {
+            if (!Paths.TryGetValue(path, out var points) || points.Count == 0) return null;
+            var (x, z, heading, _) = DrivePath.Through(points).At(float.MaxValue);
+            return Marks.TryGetValue(mark, out var m) && m.IsPoint ? new GroundPose(m.X!.Value, m.Z!.Value, heading) : new GroundPose(x, z, heading);
+        }
+
+        /// <summary>Where the path <paramref name="path"/> starts, facing along it; null when the scene has no such path</summary>
+        public GroundPose? PathStart(string path)
+        {
+            if (!Paths.TryGetValue(path, out var points) || points.Count == 0) return null;
+            var (x, z, heading, _) = DrivePath.Through(points).At(0f);
+            return new GroundPose(x, z, heading);
+        }
+
+        // How far a point may be from a scene's middle, and a mark from the car's home, in metres
+        public const float MostPoint = 10000f;
+        public const float MostOffset = 1000f;
+
+        private static readonly JsonDocumentOptions FileOptions = new()
+        {
+            CommentHandling = JsonCommentHandling.Skip,
+            AllowTrailingCommas = true
+        };
+
         /// <summary>The marks and paths of a scene's file; <paramref name="where"/> names it in the problems</summary>
         public static SceneMarks Read(JsonElement scene, string where, List<string> problems)
         {
@@ -35,8 +66,14 @@ namespace StreetCorsa.Services.Scripting
             {
                 foreach (var property in m.EnumerateObject())
                 {
-                    if (ReadMark(property.Value) is { } mark) marks[property.Name] = mark;
-                    else problems.Add($"{where}: the mark \"{property.Name}\" is no point [x, z] nor {{ \"behind\": metres }} and the like; left out");
+                    try
+                    {
+                        marks[property.Name] = ParseMark(property.Value, $"the mark \"{property.Name}\"", names: false);
+                    }
+                    catch (FormatException ex)
+                    {
+                        problems.Add($"{where}: {ex.Message}; left out");
+                    }
                 }
             }
 
@@ -44,16 +81,26 @@ namespace StreetCorsa.Services.Scripting
             {
                 foreach (var property in p.EnumerateObject())
                 {
-                    var points = property.Value.ValueKind == JsonValueKind.Array
-                        ? property.Value.EnumerateArray().Select(Point).ToList()
-                        : null;
-                    if (points is { Count: > 0 } && points.All(x => x != null)) paths[property.Name] = points.Select(x => x!.Value).ToList();
-                    else problems.Add($"{where}: the path \"{property.Name}\" is not a list of points [x, z]; left out");
+                    try
+                    {
+                        var points = property.Value.ValueKind == JsonValueKind.Array
+                            ? property.Value.EnumerateArray().Select((v, i) => ParsePoint(v, $"the path \"{property.Name}\"[{i}]")).ToList()
+                            : [];
+                        if (points.Count == 0) throw new FormatException($"the path \"{property.Name}\" is not a list of points [x, z]");
+                        paths[property.Name] = points;
+                    }
+                    catch (FormatException ex)
+                    {
+                        problems.Add($"{where}: {ex.Message}; left out");
+                    }
                 }
             }
 
             return new SceneMarks(marks, paths);
         }
+
+        /// <summary>A scene's file, as its loader and its marks read it (comments and trailing commas let by); throws as the parser does</summary>
+        public static JsonDocument Parse(string file) => JsonDocument.Parse(File.ReadAllText(file), FileOptions);
 
         /// <summary>The marks and paths of the scene file <paramref name="file"/>; none when it is missing or does not read</summary>
         public static SceneMarks ReadFile(string file, List<string> problems)
@@ -61,11 +108,7 @@ namespace StreetCorsa.Services.Scripting
             if (!File.Exists(file)) return None;
             try
             {
-                using var document = JsonDocument.Parse(File.ReadAllText(file), new JsonDocumentOptions
-                {
-                    CommentHandling = JsonCommentHandling.Skip,
-                    AllowTrailingCommas = true
-                });
+                using var document = Parse(file);
                 return Read(document.RootElement, file, problems);
             }
             catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
@@ -75,36 +118,61 @@ namespace StreetCorsa.Services.Scripting
             }
         }
 
-        private static MarkSpec? ReadMark(JsonElement value)
+        /// <summary>
+        /// A mark as a scene's file and a script both write it: a point <c>[x, z]</c>, one measured from the car's home
+        /// (<c>{ "behind": 7 }</c>, with <c>ahead</c>, <c>left</c>, <c>right</c>), or, where <paramref name="names"/>
+        /// lets it, a name. Whatever is wrong with it throws, saying what and where.
+        /// </summary>
+        public static MarkSpec ParseMark(JsonElement m, string where, bool names)
         {
-            if (Point(value) is { } point) return new MarkSpec(X: point.X, Z: point.Z);
-            if (value.ValueKind != JsonValueKind.Object) return null;
-
-            float ahead = 0, left = 0;
-            foreach (var property in value.EnumerateObject())
+            switch (m.ValueKind)
             {
-                if (property.Value.ValueKind != JsonValueKind.Number || !float.IsFinite(property.Value.GetSingle())) return null;
-                var v = property.Value.GetSingle();
-                switch (property.Name.ToLowerInvariant())
+                case JsonValueKind.String when names && !string.IsNullOrWhiteSpace(m.GetString()):
+                    return new MarkSpec(m.GetString()!.Trim());
+                case JsonValueKind.Array:
                 {
-                    case "ahead": ahead += v; break;
-                    case "behind": ahead -= v; break;
-                    case "left": left += v; break;
-                    case "right": left -= v; break;
-                    default: return null;
+                    var point = ParsePoint(m, where);
+                    return new MarkSpec(X: point.X, Z: point.Z);
                 }
-            }
+                case JsonValueKind.Object:
+                {
+                    float ahead = 0, left = 0;
+                    foreach (var property in m.EnumerateObject())
+                    {
+                        var v = Number(property.Value, $"{where}.{property.Name}", -MostOffset, MostOffset);
+                        switch (property.Name.ToLowerInvariant())
+                        {
+                            case "ahead": ahead += v; break;
+                            case "behind": ahead -= v; break;
+                            case "left": left += v; break;
+                            case "right": left -= v; break;
+                            default: throw new FormatException($"{where}: \"{property.Name}\" is not one of ahead, behind, left, right");
+                        }
+                    }
 
-            return new MarkSpec(Ahead: ahead, Left: left);
+                    return new MarkSpec(Ahead: ahead, Left: left);
+                }
+                default:
+                    throw new FormatException(names
+                        ? $"{where} is no mark: a name, a point [x, z], or {{ \"behind\": metres }} and the like"
+                        : $"{where} is no point [x, z] nor {{ \"behind\": metres }} and the like");
+            }
         }
 
-        private static GroundPoint? Point(JsonElement value)
+        /// <summary>A point <c>[x, z]</c> on a scene's ground, within <see cref="MostPoint"/> of its middle</summary>
+        public static GroundPoint ParsePoint(JsonElement m, string where)
         {
-            if (value.ValueKind != JsonValueKind.Array || value.GetArrayLength() != 2) return null;
-            var xz = value.EnumerateArray().ToList();
-            return xz.All(v => v.ValueKind == JsonValueKind.Number && float.IsFinite(v.GetSingle()))
-                ? new GroundPoint(xz[0].GetSingle(), xz[1].GetSingle())
-                : null;
+            var xz = m.ValueKind == JsonValueKind.Array ? m.EnumerateArray().Select(v => Number(v, where, -MostPoint, MostPoint)).ToList() : [];
+            return xz.Count == 2 ? new GroundPoint(xz[0], xz[1]) : throw new FormatException($"{where} is not a point [x, z]");
+        }
+
+        private static float Number(JsonElement v, string where, float min, float max)
+        {
+            if (v.ValueKind != JsonValueKind.Number || !float.IsFinite(v.GetSingle())) throw new FormatException($"{where}: {v} is not a number");
+            var value = v.GetSingle();
+            return value >= min && value <= max
+                ? value
+                : throw new FormatException(string.Format(CultureInfo.InvariantCulture, "{0}: {1} is not between {2} and {3}", where, value, min, max));
         }
     }
 }

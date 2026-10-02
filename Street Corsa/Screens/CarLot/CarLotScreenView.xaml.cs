@@ -62,7 +62,7 @@ namespace StreetCorsa.Screens.CarLot
             _ = CurtainFade.ToAsync(Curtain, 0, CurtainUp);
             Viewport.StayPut();
             _engine.StopNow();
-            _engine.Place(null, 1f);
+            _engine.Fade = 1f;
         }
 
         private Task CurtainAsync(float opacity, TimeSpan over, FadeEase ease) => CurtainFade.ToAsync(Curtain, opacity, over, CurtainFade.Easing(ease));

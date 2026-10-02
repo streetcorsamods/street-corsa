@@ -232,6 +232,17 @@ Not done, for later steps:
   (flow, E8);
 - the player's car on the street is the camera's seat: a street script moves only the rival.
 
+Review fixes (2026-10-02): a click that skips a script lets go of the mouse; a fade's `engine` multiplies the
+screen's own level (`EngineRunner.Fade`) and does nothing once cancelled, and the garage puts it back (and stops an
+engine the script started) when the station will not open; the garage goes to the station only while it is still
+the screen; a rival sent away while its car loaded never comes; a pull turns round for a mark beside or behind it,
+and drives straight on without one (the warehouse's `exit` default is a mark far ahead in `WarehouseScene`); a roll
+in takes 60 s at most; the station's and the street's stage reports log what goes wrong; an orbit viewport lets go
+of a car once its script is over and it stands still, back in its place; a car's home comes from the same resolved
+marks its scripts drive by (`SceneMarks.Stand`); the garage's camera is not reframed when no script plays; one
+`SceneStage` for every screen, one mark parser (`SceneMarks.ParseMark`) for scene files and scripts; a scene's file
+is read once; the scripts and the garage's marks are read at start-up.
+
 ### E6: cars and makes (2026-10-01, branch `feature/cars-makes`)
 
 The owner's decisions: the factory engines and prices set by hand in the developer's local catalog.db (about 100 cars)

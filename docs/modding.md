@@ -631,7 +631,10 @@ in the game sets them off yet.
 the picture skips the rest of a script: every step from there is done at once, a drive under way is put at its end,
 a fade is finished. So is a script that takes longer than its `most` seconds (30 when it says none). A step that
 cannot be done (a mark the scene does not have, say) is a line in the mods' problems, and the rest is skipped the
-same way. A screen that goes stops its script where it is.
+same way. A screen that goes stops its script where it is. In the lot and the garage, a car a script leaves away
+from its place goes back to it once the script is over and the car stands still: the screen is the player's again.
+A fade's `engine` turns the engine down against the level the screen has it at (the street's rival heard from where
+it is, the station's car from inside), never louder; a screen that takes the car back puts it back up.
 
 **The steps.** Each is `{ "do": ... }`; `"car"` names the car a step is about where a screen has more than one (the
 street's is `rival`; left out, the script's own car). A key a step does not know leaves the script out, with a line
@@ -642,7 +645,7 @@ in the mods' problems that says which, so a mistyped key is never silently ignor
 | `lights` | `head`, `brake`: true or false; one left out stays as it is |
 | `engine` | `on`: true starts it (`crank`: false for one running at once, as a car that drives up; `wait`: false to go on with the next steps while it starts; `most`: seconds to wait for it, 4), false stops it; or `rev`: the throttle 0..1 for `seconds` |
 | `wait` | `seconds`; or `until`: `settled` (the body stops rocking), `running` (the engine runs), `drive_end` (the drive under way is over, or `early` seconds before), with `seconds` as the most to wait |
-| `drive` | one of `path` (a path of the scene, start to end), `to` (a mark, in a straight line, `from` a mark or where the car is), `toward` (a mark a pull steers for), `distance` (metres along the car's own length, backwards when negative); `feel`; `reverse`; `start`: `standing` or `rolling`; `end`: `stop` or `keep_going`; `wait`: false to go on with the next steps while it drives |
+| `drive` | one of `path` (a path of the scene, start to end), `to` (a mark, in a straight line, `from` a mark or where the car is), `toward` (a mark a pull steers for; a pull without one goes straight on), `distance` (metres along the car's own length, backwards when negative); `feel`; `reverse`; `start`: `standing` or `rolling`; `end`: `stop` or `keep_going`; `wait`: false to go on with the next steps while it drives |
 | `place` | `at`: a mark (`heading` in degrees, else as it faces); or `path` and `end`: `start` or `end`, facing along it |
 | `fade` | `to`: the screen's curtain 0..1 (1 black), over `seconds`, `ease`: `none`, `in`, `out`; `engine`: true takes the engine's volume down with the picture. A screen with no curtain (the station, the street) waits the time |
 | `camera` | `mode`: `hold` (the camera stays and watches the car go: the default while a script plays) or `follow`; the seat views (station, street) have their own |
@@ -656,12 +659,15 @@ game's clock, round midnight when from is the later (`[20, 6]`); `not`: a condit
 
 **Marks and paths.** A drive goes to marks and along paths the scene names. A mark is a point `[x, z]` in metres, or a
 point measured from where the car stands, `{ "behind": 7 }` (`ahead`, `left`, `right`); `home` (where the car stands
-when nothing moves it) and `here` (where it is now) are on every scene. Every scene file may name its own:
+when nothing moves it) and `here` (where it is now) are on every scene. A point is within 10000 metres of the
+scene's middle, a measured one within 1000 of the car, in a scene's file as in a script. Every scene file may name its own:
 `"marks": { "kerb": [3, -4.5] }` and `"paths": { "round_back": [[0, 0], [5, 5], [0, 10]] }`, next to what it has.
 Besides these, the lot's warehouses have `exit` (their `exit`; without one, straight ahead), the garage has `door`
 (from `garages\<id>\scene.json`; without it, 7 metres behind the car), the gas stations have the paths `arrive` and
-`leave` and the mark `pump`, and the streets have the paths `arrive` (up the lane to the stop) and `leave`, and the
-marks `alongside` and `gone` (out of sight up the lane).
+`leave` and the mark `pump` (the end of `arrive`), and the streets have the paths `arrive` (up the lane to the stop)
+and `leave`, and the marks `alongside` (the end of `arrive`) and `gone` (out of sight up the lane). The car stands at
+the pump, the rival alongside, when nothing moves them: a scene that names its own `arrive` moves where they stand
+with it.
 
 **Feels.** In a `feels` list, by id; a drive names one (`"feel": "lane"`, or another mod's as `"mymod:creep"`), or has
 `road` (`pull_away` for `toward`). A feel is a `kind` and its numbers; a number left out is its kind's, as the base
@@ -671,7 +677,7 @@ game's feels have them. Speeds are metres a second, accelerations metres a secon
 |---|---|---|
 | `road` | along a path, cruising between bends and slow enough in them, braking in time for a stop | `cruiseSpeed`, `acceleration`, `brake`, `cornerAccel` (the most sideways pull in a bend), `clutchSpeed`, `cruiseThrottle`, `gear` (1 on: stays in it; 0 changes up) |
 | `launch` | hard off the line through the gears to the end of its way (it never stops) | `acceleration`, `topSpeed`, `shiftSeconds` |
-| `pull` | gently away in first gear, straight out of its place, then turning for the mark it goes `toward`, and on | `acceleration`, `topSpeed`, `clutchSeconds`, `throttle`, `cruiseThrottle`, `rpmPerMetrePerSecond`, `straightOut`, `turningRadius`, `steerGain`, `steerSeconds`, `steerLead`, `seconds` (how long it goes on) |
+| `pull` | gently away in first gear, straight out of its place, then turning for the mark it goes `toward` (round for one beside or behind it), and on | `acceleration`, `topSpeed`, `clutchSeconds`, `throttle`, `cruiseThrottle`, `rpmPerMetrePerSecond`, `straightOut`, `turningRadius`, `steerGain`, `steerSeconds`, `steerLead`, `seconds` (how long it goes on) |
 | `roll_in` | rolling in and braking to a stop at the end of its way, the braking fading as it stops | `cruiseSpeed` (the speed it comes in at), `rpmPerMetrePerSecond` |
 
 Every kind also has `lean` (how much of the body's lean in a bend shows, 0..1), `halfWheelbase`, `ratios` (the

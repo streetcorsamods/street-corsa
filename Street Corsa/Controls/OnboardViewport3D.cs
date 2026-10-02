@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Input;
 using AcTools.Render.Kn5Specific.Objects;
 using StreetCorsa.Controls.Street;
+using StreetCorsa.Services.Scripting;
 using StreetCorsa.Services.Street;
 using Sx = SlimDX;
 
@@ -233,6 +234,8 @@ public abstract class OnboardViewport3D : D3DViewportBase
         e.Handled = true;
     }
 
+    protected override void ForgetPress() => _dragFrom = null;
+
     protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
     {
         base.OnMouseLeftButtonUp(e);
@@ -252,6 +255,58 @@ public abstract class OnboardViewport3D : D3DViewportBase
 
         OnLookDragged();
         Invalidate();
+    }
+
+    #endregion
+
+    #region Scripts
+
+    // The script playing
+    private ScriptRun? _run;
+
+    /// <summary>The trigger of the script playing; null when none is</summary>
+    protected string? Playing { get; private set; }
+
+    protected override ScriptRun? SkippableRun => _run;
+
+    /// <summary>The script for <paramref name="trigger"/> plays with <paramref name="car"/> (in its <paramref name="role"/>) on the scene's <paramref name="marks"/>; the one playing stops first</summary>
+    protected ScriptRun PlayScript(string trigger, IScriptCar car, string role, SceneMarks marks, ScriptFacts facts)
+    {
+        StopRun();
+        var run = ScriptRun.Play(ScriptBook.Installed, trigger, new SceneStage(car, role, marks), facts);
+        _run = run;
+        Playing = trigger;
+        AnimateFor(TimeSpan.FromSeconds(1));
+        Invalidate();
+        return run;
+    }
+
+    /// <summary>The script playing stops where it is (another one takes over, its car goes, or the scene does)</summary>
+    protected void StopRun()
+    {
+        _run?.Cancel();
+        _run = null;
+        Playing = null;
+    }
+
+    /// <summary>The run still playing is <paramref name="run"/>: one stopped is always replaced, or its scene went</summary>
+    protected bool IsPlaying(ScriptRun run) => ReferenceEquals(run, _run);
+
+    /// <summary>
+    /// Once <paramref name="run"/> lets the screen go on, <paramref name="then"/>; not when it was stopped first. Nobody
+    /// waits on this: what goes wrong in it is logged here.
+    /// </summary>
+    protected async void AfterRelease(ScriptRun run, Action then)
+    {
+        try
+        {
+            await run.Released;
+            if (IsPlaying(run)) then();
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            Logger.Error(ex, "{Viewport}: the screen could not go on after the script {Trigger}", ViewportName, run.Script?.Trigger);
+        }
     }
 
     #endregion

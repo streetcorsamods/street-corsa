@@ -102,6 +102,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     private Kn5RenderableCar? _scriptedNode;
     private SlimDX.Matrix _scriptFrom = SlimDX.Matrix.Identity;
     private SlimDX.Matrix _scriptParent = SlimDX.Matrix.Identity;
+    private SlimDX.Matrix _scriptParentInverse = SlimDX.Matrix.Identity;
     private bool _scriptAutoAdjust;
     private bool _follow;
 
@@ -900,6 +901,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
 
         _scriptFrom = _rock.Base;
         _scriptParent = SlimDX.Matrix.Invert(car.LocalMatrix) * car.Matrix;
+        _scriptParentInverse = SlimDX.Matrix.Invert(_scriptParent);
         var world = _scriptFrom * _scriptParent;
         var front = _rock.FrontSign;
         var home = new GroundPose(world.M41, world.M43, MathF.Atan2(world.M31 * front, world.M33 * front));
@@ -917,11 +919,16 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         _follow = false;
         renderer.AutoAdjustTarget = false;
 
-        var run = ScriptRun.Play(script, new OrbitStage(this, scripted, scene ?? SceneMarks.None, fade), facts);
+        var run = ScriptRun.Play(script, new SceneStage(scripted, SceneStage.Player, scene ?? SceneMarks.None, fade,
+            mode => _follow = mode == CameraMode.Follow), facts);
         _run = run;
         AnimateFor(SettleWindow);
         return run;
     }
+
+    /// <summary>A script plays for <paramref name="trigger"/> at this moment: a screen that readies itself for one (its camera) asks first</summary>
+    protected static bool HasScript(string trigger, Func<Audio.EngineRunner?> engine, ScriptFacts facts) =>
+        ScriptBook.Installed.For(trigger, facts, new ScriptEngine(engine)) != null;
 
     /// <summary>
     /// The script playing stops, and its car is back where it stood, at rest, the camera as it was and the engine out
@@ -974,11 +981,20 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         if (_pressedAt is { } pressed && SkippableRun is { IsOver: false } run && (e.GetPosition(this) - pressed).Length < 4)
         {
             run.Skip();
+
+            // The press is used up: the click handlers below never hear of it, so what they took hold of is let go here
             e.Handled = true;
+            ForgetPress();
+            ReleaseMouseCapture();
         }
 
         _pressedAt = null;
         base.OnPreviewMouseLeftButtonUp(e);
+    }
+
+    /// <summary>A press used up skipping a script: whatever the viewport's own handlers began with it (a drag) is over</summary>
+    protected virtual void ForgetPress()
+    {
     }
 
     private void StepScripted(float dt)
@@ -991,13 +1007,14 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         // The camera keeps the car where it has it in the picture
         if (_follow && _renderer?.CameraOrbit is { } orbit && scripted.Pose != before)
         {
-            var (now, then) = (Placement(scripted.Pose) * _scriptParent, Placement(before) * _scriptParent);
+            var (now, then) = (World(scripted.Pose), World(before));
             orbit.Target += new SlimDX.Vector3(now.M41 - then.M41, now.M42 - then.M42, now.M43 - then.M43);
             orbit.UpdateViewMatrix();
         }
 
-        // Played out with the car standing where it stood: let go of it
-        if (_run?.IsOver != false && scripted.IsHome)
+        // Played out and standing: let go of it, back in its place if the script left it elsewhere (the screen is the
+        // player's again, and a car out of its place would stand in the way)
+        if (_run?.IsOver != false && scripted.IsSettled)
         {
             StopScript();
             return;
@@ -1008,33 +1025,21 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     }
 
     /// <summary>Where the scripted car stands at <paramref name="pose"/>, in its parent's space: turned and moved from its home on the floor</summary>
-    private SlimDX.Matrix Placement(GroundPose pose)
+    private SlimDX.Matrix Placement(GroundPose pose) =>
+        _scripted is { } scripted && pose != scripted.Home ? World(pose) * _scriptParentInverse : _scriptFrom;
+
+    /// <summary>Where the scripted car stands at <paramref name="pose"/>, in the world</summary>
+    private SlimDX.Matrix World(GroundPose pose)
     {
-        if (_scripted is not { } scripted) return _scriptFrom;
-        var home = scripted.Home;
-        if (pose == home) return _scriptFrom;
+        var world = _scriptFrom * _scriptParent;
+        if (_scripted is not { } scripted) return world;
 
         // Turned about its own origin from where it stood, then moved to where it is now; RotationY adds to the heading
-        var world = _scriptFrom * _scriptParent
-                    * SlimDX.Matrix.Translation(-home.X, 0f, -home.Z)
-                    * SlimDX.Matrix.RotationY(pose.Heading - home.Heading)
-                    * SlimDX.Matrix.Translation(pose.X, 0f, pose.Z);
-        return world * SlimDX.Matrix.Invert(_scriptParent);
-    }
-
-    /// <summary>The stage an orbit viewport's script plays on: its one car, the scene's marks, the screen's curtain, the orbit camera</summary>
-    private sealed class OrbitStage(D3DViewportBase viewport, ScriptedCar car, SceneMarks scene,
-        Func<float, TimeSpan, FadeEase, Task>? fade) : IScriptStage
-    {
-        public IScriptCar? Car(string? role) => role == null || role.Equals("player", StringComparison.OrdinalIgnoreCase) ? car : null;
-
-        public MarkSpec? Mark(string name) => scene.Marks.TryGetValue(name, out var mark) ? mark : null;
-
-        public IReadOnlyList<GroundPoint>? Path(string name) => scene.Paths.TryGetValue(name, out var path) ? path : null;
-
-        public Task Fade(float opacity, TimeSpan over, FadeEase ease) => fade?.Invoke(opacity, over, ease) ?? Task.CompletedTask;
-
-        public void Camera(IScriptCar of, CameraMode mode) => viewport._follow = mode == CameraMode.Follow;
+        var home = scripted.Home;
+        return world
+               * SlimDX.Matrix.Translation(-home.X, 0f, -home.Z)
+               * SlimDX.Matrix.RotationY(pose.Heading - home.Heading)
+               * SlimDX.Matrix.Translation(pose.X, 0f, pose.Z);
     }
 
     #endregion

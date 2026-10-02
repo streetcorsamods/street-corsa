@@ -1688,6 +1688,9 @@ public class CarViewport3D : D3DViewportBase
     {
         if (CarToDrive is not { } node || Renderer is not { } renderer) return null;
 
+        // No script at this moment: the camera and the car are left as they are
+        if (!HasScript(trigger, engine, facts)) return ScriptRun.Nothing();
+
         // The camera holds still while the car moves, so it is framed on the car's place first: the renderer's own
         // framing moves only part of the way each frame, and would be stopped short of it
         if (renderer.AutoAdjustTarget && renderer.CameraOrbit is { } orbit)
@@ -1756,6 +1759,8 @@ public class CarViewport3D : D3DViewportBase
         _lastMouse = _pressedAt = e.GetPosition(this);
         CaptureMouse();
     }
+
+    protected override void ForgetPress() => _isDragging = false;
 
     protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
     {

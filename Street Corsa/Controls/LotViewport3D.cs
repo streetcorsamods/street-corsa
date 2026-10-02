@@ -914,6 +914,8 @@ public class LotViewport3D : D3DViewportBase
         CaptureMouse();
     }
 
+    protected override void ForgetPress() => _isDragging = false;
+
     protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
     {
         base.OnMouseLeftButtonUp(e);
@@ -1033,11 +1035,8 @@ public class LotViewport3D : D3DViewportBase
         {
             node.HeadlightsEnabled = on;
             AnimateFor(TimeSpan.FromSeconds(1));
-        }, (Marks ?? SceneMarks.None).With(new Dictionary<string, MarkSpec> { ["exit"] = WayOut }), fade);
+        }, Marks ?? SceneMarks.None, fade);
     }
-
-    // A warehouse that does not say where its way out is: the car drives straight on out of its bay
-    private static readonly MarkSpec WayOut = new(Ahead: 100f);
 
     /// <summary>The car back where it stood, lights off (the screen stays after all)</summary>
     public void StayPut()

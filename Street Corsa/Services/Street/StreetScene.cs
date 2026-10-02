@@ -108,20 +108,27 @@ namespace StreetCorsa.Services.Street
 
         /// <summary>
         /// What the scripts drive along and to: the file's own, and up the lane to a stop beside the player
-        /// (<c>arrive</c>), on from there out of sight (<c>leave</c>), the stop (<c>alongside</c>) and where a car is out
-        /// of sight up the lane (<c>gone</c>) unless it names its own
+        /// (<c>arrive</c>), on from there out of sight (<c>leave</c>), the stop at the end of the way up (<c>alongside</c>,
+        /// the file's way up if it has its own) and where a car is out of sight up the lane (<c>gone</c>) unless it names
+        /// its own. The rival stands alongside when nothing moves it.
         /// </summary>
-        public Scripting.SceneMarks ScriptMarks => Marks.With(
-            new Dictionary<string, Scripting.MarkSpec>
+        public Scripting.SceneMarks ScriptMarks
+        {
+            get
             {
-                ["alongside"] = new(X: Lane(RivalStop).X, Z: Lane(RivalStop).Z),
-                ["gone"] = new(X: Lane(LeaveTo).X, Z: Lane(LeaveTo).Z)
-            },
-            new Dictionary<string, IReadOnlyList<Station.GroundPoint>>
-            {
-                ["arrive"] = [Lane(-ApproachFrom), Lane(RivalStop)],
-                ["leave"] = [Lane(RivalStop), Lane(LeaveTo)]
-            });
+                var marks = Marks.With(paths: new Dictionary<string, IReadOnlyList<Station.GroundPoint>>
+                {
+                    ["arrive"] = [Lane(-ApproachFrom), Lane(RivalStop)],
+                    ["leave"] = [Lane(RivalStop), Lane(LeaveTo)]
+                });
+                var end = marks.Paths["arrive"][^1];
+                return marks.With(new Dictionary<string, Scripting.MarkSpec>
+                {
+                    ["alongside"] = new(X: end.X, Z: end.Z),
+                    ["gone"] = new(X: Lane(LeaveTo).X, Z: Lane(LeaveTo).Z)
+                });
+            }
+        }
     }
 
     public static class StreetScenes
@@ -176,9 +183,10 @@ namespace StreetCorsa.Services.Street
             try
             {
                 if (!File.Exists(file)) return null;
-                if (Build(folder, file, JsonSerializer.Deserialize<SceneEntry>(File.ReadAllText(file), Options)) is not { } street) return null;
+                using var document = Scripting.SceneMarks.Parse(file);
+                if (Build(folder, file, document.RootElement.Deserialize<SceneEntry>(Options)) is not { } street) return null;
                 var problems = new List<string>();
-                street = street with { Marks = Scripting.SceneMarks.ReadFile(file, problems) };
+                street = street with { Marks = Scripting.SceneMarks.Read(document.RootElement, file, problems) };
                 ModProblems.Add("Streets", problems);
                 return street;
             }
