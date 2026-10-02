@@ -49,9 +49,13 @@ namespace StreetCorsa.Screens.Shared
             return racers;
         }
 
-        /// <summary>The racer's portrait as a file on disk, or null when they have none or it is missing</summary>
+        /// <summary>
+        /// The racer's portrait as a file on disk, or null when they have none or it is missing. One ComfyUI painted for them
+        /// in this game comes first (<see cref="Services.Ai.AiWriter.PortraitOf"/>).
+        /// </summary>
         public static string? PortraitOf(Opponent opponent, IAppLogger? logger = null)
         {
+            if (Services.Ai.AiHub.Shared.Writer.PortraitOf(opponent) is { } painted) return painted;
             if (string.IsNullOrEmpty(opponent.PortraitPath)) return null;
 
             var path = Services.Opponents.Portraits.Resolve(Mods.ModSet.Installed, opponent.PortraitPath);

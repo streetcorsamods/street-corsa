@@ -391,7 +391,8 @@ namespace StreetCorsa.Services.Opponents
 
             // What the seller says about the engine, as a lot would: the ad keeps it, the paper's page reads it from there
             var engine = _market.DescribeEngine(car);
-            RivalCarAds.Post(gameState, racer, car, asking, date, engine?.Summary, engine?.IsModified ?? false);
+            RivalCarAds.Post(gameState, racer, car, asking, date, engine?.Summary, engine?.IsModified ?? false,
+                _parts.IsAvailable ? _parts.Catalog : null, _market.FactoryParts(car.DefinitionId));
             _liveAds = null;
             if (!quiet) talk.Add(Say("street.advertised", racer, car, new TextValues { ["price"] = asking }));
             _logger.Information("{Racer} advertised the {Car} for ${Asking}", racer.Name, car.DefinitionId, asking);
@@ -721,6 +722,7 @@ namespace StreetCorsa.Services.Opponents
                     talk.Add(racer.Cars.FirstOrDefault() is { } car
                         ? Say("street.new_face_car", racer, car)
                         : Say("street.new_face", racer));
+                    NewFaceArrived?.Invoke(gameState, racer);
                 }
             }
         }
@@ -1002,7 +1004,15 @@ namespace StreetCorsa.Services.Opponents
         public static void AddTalk(GameState gameState, DateTime date, IEnumerable<string> lines)
         {
             gameState.StreetTalk ??= [];
-            DatedLog.Append(gameState.StreetTalk, lines.Select(line => new StreetTalkItem(date, line)), item => item.Date, date, StreetTalkDays, MaxStreetTalk);
+            var added = lines.Select(line => new StreetTalkItem(date, line)).ToList();
+            DatedLog.Append(gameState.StreetTalk, added, item => item.Date, date, StreetTalkDays, MaxStreetTalk);
+            TalkAdded?.Invoke(gameState, added);
         }
+
+        /// <summary>Told of every new line of street talk: the player's AI tells it again (<see cref="Ai.AiWriter.StreetTalkAdded"/>)</summary>
+        public static Action<GameState, IReadOnlyList<StreetTalkItem>>? TalkAdded { get; set; }
+
+        /// <summary>Told of a new face on the street: ComfyUI paints them a portrait (<see cref="Ai.AiWriter.NewFace"/>)</summary>
+        public static Action<GameState, Opponent>? NewFaceArrived { get; set; }
     }
 }

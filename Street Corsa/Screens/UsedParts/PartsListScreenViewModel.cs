@@ -10,7 +10,7 @@ using StreetCorsa.Services.Text;
 namespace StreetCorsa.Screens.UsedParts
 {
     /// <summary>
-    /// A page of parts to buy or sell: the newspaper's parts pages (<see cref="UsedPartsScreenViewModel"/>) and a part
+    /// A page of parts to buy or sell: the mail order (<see cref="UsedPartsScreenViewModel"/>) and a part
     /// shop's counter (<c>PartShopScreenViewModel</c>). The tabs, what is on each and what the rows cost are the page's
     /// own; the filters by kind, name and fit, the cap on rows and the status line are here. Every tab starts
     /// unfiltered, with the kinds of what is on it.

@@ -7,7 +7,6 @@ using StreetCorsa.Logging;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Navigation;
 using StreetCorsa.Screens.Shared;
-using StreetCorsa.Screens.UsedCarMarket;
 using StreetCorsa.Services.Catalog;
 using StreetCorsa.Services.Dealers;
 using StreetCorsa.Services.Market;

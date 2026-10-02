@@ -176,6 +176,19 @@ public static class PartAssembler
     }
 
     /// <summary>
+    /// The same merged model moved by <paramref name="offset"/> (a translation): each part's node and its box, without
+    /// reading or merging the models again
+    /// </summary>
+    public static AssemblyModel Moved(AssemblyModel model, Vector3 offset)
+    {
+        var move = Matrix4x4.CreateTranslation(offset);
+        var nodes = model.Nodes.Select(p => p with { World = p.World * move }).ToList();
+        var partNodes = model.Kn5.RootNode.Children;
+        for (var i = 0; i < partNodes.Count && i < nodes.Count; i++) partNodes[i].Transform = ToMat4x4(nodes[i].World);
+        return model with { Min = model.Min + offset, Max = model.Max + offset, Nodes = nodes };
+    }
+
+    /// <summary>
     /// The name a texture goes into a merged model under: its own, unless a texture of other content has it already
     /// (another mod's), then its own with a number, the extension kept
     /// </summary>

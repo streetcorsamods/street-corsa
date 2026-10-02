@@ -16,12 +16,9 @@ using StreetCorsa.Helpers;
 
 namespace StreetCorsa.Screens.UsedParts
 {
-    /// <summary>What the parts pages show</summary>
+    /// <summary>What the mail order's pages show</summary>
     public enum PartsShopTab
     {
-        /// <summary>Used parts from the ads</summary>
-        Used,
-
         /// <summary>New parts by mail order</summary>
         New,
 
@@ -30,8 +27,8 @@ namespace StreetCorsa.Screens.UsedParts
     }
 
     /// <summary>
-    /// The parts pages of the newspaper: used parts from the ads, new ones by mail order, and selling what is
-    /// on the shelf. Whatever is bought goes to the shelf in the garage.
+    /// The mail order, reached from the part shops' map: new parts by mail, and selling what is on the shelf. Whatever
+    /// is bought goes to the shelf in the garage when it comes. The paper's used part ads are the newspaper's.
     /// </summary>
     public class UsedPartsScreenViewModel : PartsListScreenViewModel
     {
@@ -61,11 +58,11 @@ namespace StreetCorsa.Screens.UsedParts
             _timeService = timeService;
 
             BackCommand = new RelayCommand(OnBack);
-            ShowTabCommand = new RelayCommand<string>(tab => Tab = Enum.Parse<PartsShopTab>(tab ?? nameof(PartsShopTab.Used)));
+            ShowTabCommand = new RelayCommand<string>(tab => Tab = Enum.Parse<PartsShopTab>(tab ?? nameof(PartsShopTab.New)));
             BuyCommand = new RelayCommand<PartOfferViewModel>(OnOfferAction);
         }
 
-        private PartsShopTab _tab = PartsShopTab.Used;
+        private PartsShopTab _tab = PartsShopTab.New;
 
         public PartsShopTab Tab
         {
@@ -74,14 +71,12 @@ namespace StreetCorsa.Screens.UsedParts
             {
                 if (!SetProperty(ref _tab, value)) return;
 
-                OnPropertyChanged(nameof(IsUsedTab));
                 OnPropertyChanged(nameof(IsNewTab));
                 OnPropertyChanged(nameof(IsSellTab));
                 TabChanged();
             }
         }
 
-        public bool IsUsedTab => _tab == PartsShopTab.Used;
         public bool IsNewTab => _tab == PartsShopTab.New;
         public override bool IsSellTab => _tab == PartsShopTab.Sell;
 
@@ -90,18 +85,17 @@ namespace StreetCorsa.Screens.UsedParts
         public override async void Enter()
         {
             base.Enter();
-            _logger.Information("Entered used parts screen");
+            _logger.Information("Entered the mail order");
 
             Entering = true;
             try
             {
-                // Catalog, first ads and the fit check take a moment the first time: not on the UI thread.
-                // The game state itself is only changed on it.
+                // Catalog and the fit check take a moment the first time: not on the UI thread. The game state itself is
+                // only changed on it.
                 var car = SelectedCar;
                 if (await Task.Run(() => _shopService.IsAvailable))
                 {
                     if (car != null) await _partsService.EnsurePartsAsync(car);
-                    if (_gameState.NewspaperAds.Parts.Count == 0) await _shopService.RefreshAdsAsync(_gameState, _gameState.Date);
                     _fitting = await Task.Run(() => _shopService.FindFittingParts(car));
                 }
 
@@ -110,7 +104,7 @@ namespace StreetCorsa.Screens.UsedParts
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Could not open the parts pages");
+                _logger.Error(ex, "Could not open the mail order");
                 StatusText = GameText.Say("usedparts.open_failed");
             }
             finally
@@ -123,18 +117,18 @@ namespace StreetCorsa.Screens.UsedParts
 
             try
             {
-                // Spend time for visiting the used parts shop (30 min)
+                // The time on the phone to the mail order
                 var spent = await _timeService.SpendTimeAsync(_gameState, GameAction.VisitUsedParts);
 
-                // Late in the evening that is the next morning, with another paper
+                // Late in the evening that is the next morning: what was on the way may have come
                 if (spent.NewDayStarted) LoadOffers();
 
                 // The time spent, and the new day it may end in, belong in the save
-                Save("the time for the parts pages");
+                Save("the time for the mail order");
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Could not spend and save the time for the parts pages");
+                _logger.Error(ex, "Could not spend and save the time for the mail order");
             }
         }
 
@@ -145,9 +139,6 @@ namespace StreetCorsa.Screens.UsedParts
             var catalog = _partsService.Catalog;
             return _tab switch
             {
-                PartsShopTab.Used => _gameState.NewspaperAds.Parts
-                    .Where(ad => catalog.Get(ad.Part.DefinitionId) != null)
-                    .Select(ad => PartOfferViewModel.ForAd(ad, catalog.Get(ad.Part.DefinitionId)!)),
                 PartsShopTab.New => _shopService.Assortment.Select(p => PartOfferViewModel.ForNew(p, _shopService.NewPrice(p, _gameState.Rules.PartPriceMultiplier))),
                 _ => _gameState.Player.Parts
                     .Where(p => catalog.Get(p.DefinitionId) != null)
@@ -167,7 +158,6 @@ namespace StreetCorsa.Screens.UsedParts
 
             var done = offer switch
             {
-                { Ad: { } ad } => _shopService.BuyUsed(_gameState, ad),
                 { Owned: { } owned } => _shopService.Sell(_gameState, owned),
                 _ => _shopService.BuyNew(_gameState, offer.Definition) != null
             };
@@ -177,8 +167,6 @@ namespace StreetCorsa.Screens.UsedParts
                 var (message, title) = offer switch
                 {
                     { Owned: not null } => (GameText.Say("market.part.not_owned"), GameText.Say("market.part.not_owned.title")),
-                    { Ad: { } ad } when !_gameState.NewspaperAds.Parts.Contains(ad) =>
-                        (GameText.Say("usedparts.ad_gone"), GameText.Say("usedparts.ad_gone.title")),
                     _ => (GameText.Say("market.part.no_money"), GameText.Say("market.part.no_money.title"))
                 };
                 _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, message, title));
@@ -195,20 +183,13 @@ namespace StreetCorsa.Screens.UsedParts
 
         private void OnBack()
         {
-            _logger.Information("Navigating back to newspaper");
-            _navigationService.NavigateToNewspaper(_gameState, skipAnimation: true);
-        }
-
-        public override void Exit()
-        {
-            base.Exit();
-            _logger.Information("Exited used parts screen");
+            _navigationService.NavigateToPartShopMap(_gameState);
         }
     }
 
     /// <summary>
-    /// One row of the parts pages and the part shops: a used part from an ad or a junkyard, a new part by mail or off a
-    /// shop's shelf, or one of the player's own
+    /// One row of the mail order and the part shops: a used part in a junkyard, a new part by mail or off a shop's shelf,
+    /// or one of the player's own
     /// </summary>
     public class PartOfferViewModel
     {
@@ -253,13 +234,6 @@ namespace StreetCorsa.Screens.UsedParts
             new(definition, price, GameText.Say("usedparts.action.order"))
             {
                 Detail = GameText.Say("usedparts.detail.mail", ("days", NewspaperPartsService.MailOrderDays))
-            };
-
-        public static PartOfferViewModel ForAd(PartAd ad, PartDefinition definition) =>
-            new(definition, ad.AskingPrice, GameText.Say("usedparts.action.buy"))
-            {
-                Ad = ad,
-                Detail = GameText.Say("usedparts.detail.ad", ("part", PartTrees.Describe(ad.Part)), ("seller", ad.SellerName))
             };
 
         /// <summary>A new part on a shop's shelf, at the shop's price today</summary>

@@ -1,0 +1,21 @@
+{
+  "_comment": [
+    "The base game's \"ai\" rules: every figure the game plays by, as the code has them.",
+    "A mod changes any of them with a .json file of its own in its rules folder, naming only what it changes",
+    "(see docs/modding.md, \"rules\"). A career keeps the rules it was started with."
+  ],
+  "ai": {
+    "talkWaitSeconds": 1.5,
+    "requestTimeoutSeconds": 60,
+    "imageTimeoutSeconds": 240,
+    "maxConcurrent": 1,
+    "minSecondsBetween": 0.5,
+    "maxQueued": 24,
+    "retryAfterFailureSeconds": 60,
+    "talkLinesAhead": 1,
+    "streetTalkChance": 1,
+    "newsChance": 1,
+    "paintNewFaces": true,
+    "maxKept": 400
+  }
+}

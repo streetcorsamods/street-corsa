@@ -1,0 +1,30 @@
+{
+  "_comment": [
+    "The words of the previews: a part ad's look at the part (preview.part.*) and going to see a car from the ads",
+    "(preview.car.*). Each is said one way (the first line of its pool). preview.car.at_dealer {dealer} the dealer's",
+    "name; preview.car.at_curb {street} the street's name, {seller} who sells it as the ads say it; preview.car.short",
+    "{price} the asking price, written out (\"$1,200\")."
+  ],
+  "lines": {
+    "preview.part.loading": "Unwrapping it...",
+    "preview.part.no_picture": "No picture of this one: you'll have to take the seller's word for it.",
+    "preview.part.hint": "Drag to turn it, wheel to look closer",
+    "preview.part.buy": "Buy",
+    "preview.car.loading": "Driving over to see it...",
+    "preview.car.no_3d": "You can't see much from here: the details are on the card.",
+    "preview.car.at_dealer": "On the lot at {dealer}",
+    "preview.car.at_curb": "At the curb on {street}: {seller}",
+    "preview.car.hint": "Drag to walk round it, wheel to step closer",
+    "preview.car.condition": "Condition",
+    "preview.car.mileage": "Mileage",
+    "preview.car.seller": "Seller",
+    "preview.car.short": "You're short of the {price} asked.",
+    "preview.car.buy": "BUY IT",
+    "preview.car.back": "Back to the paper",
+    "preview.car.garage": "Back to the garage",
+    "preview.car.ask_seller": "What do you make of it?",
+    "preview.car.seller_shrugs": "\"Drive it and see.\"",
+    "menu.screen.car_viewing": "car viewing",
+    "menu.screen.part_preview": "part preview"
+  }
+}

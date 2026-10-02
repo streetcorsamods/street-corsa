@@ -47,6 +47,12 @@ namespace StreetCorsa.Models.GameState
         /// <summary>What the paper has written about the races, newest last (<see cref="Services.News.NewsWriter"/>)</summary>
         public List<NewsArticle> News { get; set; }
 
+        /// <summary>
+        /// What the player's AI wrote that has no other place in the save (a dealer's word on a car, an ad's blurb), by key;
+        /// the oldest go past <see cref="StreetCorsa.Rules.AiRules.MaxKept"/>
+        /// </summary>
+        public List<AiWords> AiWords { get; set; } = [];
+
         // Career Progression
         public CareerState Career { get; set; }
 

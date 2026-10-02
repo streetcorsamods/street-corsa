@@ -204,7 +204,7 @@ namespace StreetCorsa.Navigation
         /// <summary>
         /// Puts the screen the player came from back after a failed navigation, as far as it will go. It is
         /// resumed, never entered again: an Enter can launch AC (the race screen) or spend time and save (the
-        /// newspaper, the diner, the parts pages), and a failed navigation must do neither a second time.
+        /// newspaper, the diner, the mail order), and a failed navigation must do neither a second time.
         /// </summary>
         private void BackTo(IScreen? previous, IScreen failed)
         {
@@ -304,7 +304,20 @@ namespace StreetCorsa.Navigation
             new(this, _dialogService, _gameSettingsService, back);
 
         public Screens.NewGame.NewGameScreenViewModel CreateNewGameCard(Action back) =>
-            new(this, _dialogService, _gameStateRepository, _raceEventService, _setCurrentGame, back);
+            new(this, _dialogService, _gameStateRepository, _raceEventService, _setCurrentGame, back, StockFirstMarket);
+
+        /// <summary>A new game's first classifieds, made in the background; one that fails is made when the paper is opened</summary>
+        private async void StockFirstMarket(GameState gameState)
+        {
+            try
+            {
+                await Services.Market.FirstMarket.EnsureAsync(gameState, _marketService, _partsShopService);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not make the new game's first market");
+            }
+        }
 
         public Screens.LoadGame.LoadGameScreenViewModel CreateLoadGameCard(Action back) =>
             new(this, _dialogService, _gameStateRepository, _carPartsService, _setCurrentGame, back);
@@ -361,6 +374,44 @@ namespace StreetCorsa.Navigation
             }
         }
 
+        // ----- Step 25: the racing hub -----
+
+        /// <summary>
+        /// The racing hub, over the current screen (the garage's "Go race!"): the race invitations, Street News, the way
+        /// out onto the streets. One that fails to build is logged and the player told, as a screen is. False when it did
+        /// not open.
+        /// </summary>
+        /// <param name="hitTheStreets">Where its "Hit the streets" button goes, once it is closed</param>
+        public bool ShowRaceHub(GameState gameState, Action hitTheStreets)
+        {
+            try
+            {
+                // A race set up from it goes ahead only while the player is still where the hub was opened
+                var home = CurrentScreen;
+                _dialogService.ShowDialog(new Dialogs.RaceHub.RaceHubDialogViewModel(
+                    _dialogService,
+                    gameState,
+                    _raceEventService,
+                    _carFilterService,
+                    _catalogRepository,
+                    _eventOpponentService,
+                    _contentService,
+                    _raceSetup,
+                    stillHome: () => ReferenceEquals(CurrentScreen, home),
+                    race: intent => NavigateToRaceLoading(gameState, intent),
+                    hitTheStreets));
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not open the racing hub");
+                ShowNavigationError("racing hub");
+                return false;
+            }
+        }
+
+        // ----- end of step 25: the racing hub -----
+
         public bool NavigateToCarLot(GameState gameState) => SafeNavigate("car lot", () =>
             new Screens.CarLot.CarLotScreenViewModel(
                 this,
@@ -414,29 +465,18 @@ namespace StreetCorsa.Navigation
                 this,
                 _dialogService,
                 gameState,
-                _raceEventService,
-                _carFilterService,
                 _catalogRepository,
-                _eventOpponentService,
-                _contentService,
+                _profileRepository,
+                _marketService,
+                _carPartsService,
+                _partsShopService,
                 _timeService,
                 _gameStateRepository,
-                _raceSetup,
                 _saleService,
                 skipAnimation));
 
-        public bool NavigateToUsedCarMarket(GameState gameState) => SafeNavigate("used car ads", () =>
-            new Screens.UsedCarMarket.UsedCarMarketScreenViewModel(
-                this,
-                _dialogService,
-                gameState,
-                _marketService,
-                _catalogRepository,
-                _profileRepository,
-                _gameStateRepository,
-                _purchaseService));
-
-        public bool NavigateToUsedParts(GameState gameState) => SafeNavigate("parts pages", () =>
+        /// <summary>The part shops' map's way to the mail order and to selling off the shelf; back goes to the map</summary>
+        public bool NavigateToUsedParts(GameState gameState) => SafeNavigate("mail order", () =>
             new Screens.UsedParts.UsedPartsScreenViewModel(
                 this,
                 _dialogService,
@@ -523,5 +563,45 @@ namespace StreetCorsa.Navigation
                 _gameStateRepository,
                 _purchaseService,
                 _carPartsService));
+
+        // ============================================================
+        // STEP 25 (B): 3D PREVIEWS
+        // A car ad goes to see the car; a part ad opens a look at the part
+        // ============================================================
+
+        /// <summary>
+        /// "You drive over to see it": a car from the paper's ads where its seller has it (a dealer's on the lot, a
+        /// private seller's at the curb), to walk round and buy. Back, and a car gone meanwhile, return to the paper.
+        /// </summary>
+        public bool NavigateToCarViewing(GameState gameState, Screens.Shared.UsedCarListingViewModel car) => SafeNavigate("car viewing", () =>
+            new Screens.CarViewing.CarViewingScreenViewModel(
+                this,
+                _dialogService,
+                gameState,
+                car,
+                _dealerCatalog,
+                _purchaseService,
+                _carPartsService));
+
+        /// <summary>
+        /// A part to look at in 3D over the current screen (with whatever is bolted on it), its name, condition and
+        /// <paramref name="priceLine"/>; Buy only with a <paramref name="buy"/>, which runs once the preview has
+        /// closed. One that fails to build is logged and the player told. False when it did not open.
+        /// </summary>
+        public bool ShowPartPreview(PartInstance part, string title, string priceLine, Action? buy)
+        {
+            try
+            {
+                _dialogService.ShowDialog(new Dialogs.PartPreview.PartPreviewDialogViewModel(
+                    _dialogService, _carPartsService.Catalog, part, title, priceLine, buy));
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not open the preview of {Part}", part.DefinitionId);
+                ShowNavigationError("part preview");
+                return false;
+            }
+        }
     }
 }

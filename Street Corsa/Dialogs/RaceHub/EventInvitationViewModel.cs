@@ -4,10 +4,10 @@ using StreetCorsa.Models.Race;
 using StreetCorsa.Services.Text;
 using StreetCorsa.ViewModels;
 
-namespace StreetCorsa.Screens.Newspaper
+namespace StreetCorsa.Dialogs.RaceHub
 {
     /// <summary>
-    /// View model for displaying a race event invitation in the newspaper
+    /// A race event invitation, as the racing hub shows it
     /// </summary>
     public class EventInvitationViewModel : ObservableObject
     {
@@ -48,7 +48,7 @@ namespace StreetCorsa.Screens.Newspaper
         };
 
         // The expiry and eligibility texts are coloured in the view from IsExpiringSoon and HasEligibleCars
-        // (DataTriggers in NewspaperScreenView.xaml), so the colours stay in Styles/.
+        // (DataTriggers in RaceHubDialogView.xaml), so the colours stay in Styles/.
 
         public string PinkSlipWarning => IsPinkSlip ? GameText.Say("paper.pink_slip_warning") : string.Empty;
         public bool ShowPinkSlipWarning => IsPinkSlip;
@@ -139,7 +139,7 @@ namespace StreetCorsa.Screens.Newspaper
             {
                 InstanceId = car.InstanceId,
                 DisplayName = displayName,
-                ConditionText = Shared.ConditionDisplay.Of(car).Sentence
+                ConditionText = Screens.Shared.ConditionDisplay.Of(car).Sentence
             };
         }
     }

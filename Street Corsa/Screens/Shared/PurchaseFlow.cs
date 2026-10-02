@@ -3,7 +3,6 @@ using StreetCorsa.Dialogs.Confirmation;
 using StreetCorsa.Dialogs.Information;
 using StreetCorsa.Logging;
 using StreetCorsa.Models.GameState;
-using StreetCorsa.Screens.UsedCarMarket;
 using StreetCorsa.Services.Market;
 using StreetCorsa.Services.Text;
 using StreetCorsa.Helpers;

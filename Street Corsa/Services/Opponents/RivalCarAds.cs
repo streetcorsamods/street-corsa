@@ -62,8 +62,11 @@ namespace StreetCorsa.Services.Opponents
 
         /// <param name="engineSummary">What the seller says about the engine, worked out once here: a spare in the
         /// paper is not driven or worked on, so it holds for as long as the ad runs</param>
+        /// <param name="catalog">The parts catalog, for the ad's few words to name a part (<see cref="AdBlurbs"/>)</param>
+        /// <param name="factory">The car's factory engine parts (<see cref="IUsedCarMarketService.FactoryParts"/>), which the ad does not brag about</param>
         public static RivalCarAd Post(GameState gameState, Opponent seller, Car car, decimal askingPrice, DateTime date,
-            string? engineSummary = null, bool isModified = false)
+            string? engineSummary = null, bool isModified = false, StreetCorsa.Parts.PartsCatalog? catalog = null,
+            IReadOnlySet<string>? factory = null)
         {
             gameState.NewspaperAds.RivalCars ??= [];
             var ad = new RivalCarAd
@@ -75,6 +78,7 @@ namespace StreetCorsa.Services.Opponents
                 EngineSummary = engineSummary,
                 IsModified = isModified
             };
+            AdBlurbs.Describe(ad, car, catalog, factory);
             gameState.NewspaperAds.RivalCars.Add(ad);
             return ad;
         }
@@ -121,6 +125,7 @@ namespace StreetCorsa.Services.Opponents
             listing.PowerHp = offer.Car.PowerHp;
             listing.EngineSummary = offer.Ad.EngineSummary;
             listing.IsModified = offer.Ad.IsModified;
+            listing.Description = offer.Ad.Description;
             return listing;
         }
     }

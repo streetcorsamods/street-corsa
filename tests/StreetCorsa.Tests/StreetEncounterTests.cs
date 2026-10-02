@@ -347,6 +347,18 @@ public class StreetEncounterTests
         Assert.Equal(expected, StreetCorsa.Services.Catalog.CarNames.Short(new StreetCorsa.Models.Catalog.CarDefinition { Brand = brand, Name = name }));
     }
 
+    [Theory]
+    [InlineData("AC", "Ace", "AC Ace")]
+    [InlineData("AC", "Aceca", "AC Aceca")]
+    [InlineData("Chevrolet", "Chevrolet Camaro 1969 Z/28", "Chevrolet Camaro 1969 Z/28")]
+    [InlineData("Batmobile", "The Batmobile", "The Batmobile")]
+    [InlineData("American Motor Company", "AMC Javelin", "AMC Javelin")]
+    [InlineData("Ford", "Fairlane", "Ford Fairlane")]
+    public void A_car_names_its_make_once_as_a_word(string brand, string name, string expected)
+    {
+        Assert.Equal(expected, StreetCorsa.Services.Catalog.CarNames.MakeAndModel(new StreetCorsa.Models.Catalog.CarDefinition { Brand = brand, Name = name }));
+    }
+
     #region The stage
 
     [Fact]

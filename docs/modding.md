@@ -17,7 +17,7 @@ Content\
   mymod\
     mod.json
     game.json
-    rules\  parts\  sounds\  sfx\  props\  dealers\  partshops\  racers\  events\  milestones\  victories\  streets\  stations\  warehouses\  showcase\  garages\  text\  theme\
+    rules\  parts\  sounds\  sfx\  props\  dealers\  partshops\  racers\  events\  milestones\  victories\  streets\  stations\  warehouses\  showcase\  garages\  text\  theme\  ai\
 ```
 
 `mod.json`:
@@ -165,6 +165,7 @@ it changes:
 | `simulation` | the rivals racing among themselves: crashes, pink slips |
 | `race` | AC's damage, tyre wear and fuel rates in a race, how the police drive |
 | `world` | the sunset through the year, the seasons the rivals race in, AC's weather, temperature, wind, latitude and time zone |
+| `ai` | the player's AI (Settings, "AI"): how long a rival's line waits for it (`talkWaitSeconds`), a request's and a picture's timeouts, requests at once and the gap between them, the queue, the rest after a failure, lines written ahead, the chance a line of street talk or a piece in the paper is written again, whether new faces are painted, and how many of its words a save keeps |
 
 ## Ids
 
@@ -593,7 +594,7 @@ random and fills in its `{placeholders}`:
 ```
 
 `lines` add to a pool, `replace` rewrites it. The base game's files (`news.json`, `talk.json`, `street.json`,
-`station.json`, `names.json`) list every key and, in their `_comment`, the placeholders each takes. The answers to a
+`station.json`, `names.json`, `ads.json`: the classifieds' few words on each ad) list every key and, in their `_comment`, the placeholders each takes. The answers to a
 challenge are the `replies.*` pools in `talk.json`, among them `replies.car_laid_up` and `replies.car_unknown` (the
 racer's car can't race today, or the game can't tell), `replies.king.pink_slips` and `replies.king.no_pink_slip` (the
 King takes a pink-slip race, or turns down one for money), `replies.rematch` (a racer out for a rematch) and
@@ -625,6 +626,67 @@ whichever way it is named: `{price}` and `{price:money}` both write "$1,500", `{
 `_comment`s says so). A fraction with no format reads to two decimals at most. A date takes a .NET pattern:
 `{until:dddd d MMMM}`.
 
+### ai
+
+What the player's own AI is asked, when they connect one in Settings ("AI": Ollama, an OpenAI-compatible API such as
+LM Studio or OpenRouter, or Anthropic; ComfyUI for pictures). It is off by default and the game never waits on it: the
+game's own words are always made first, the AI tells them again or adds to them in the background, what it writes is
+kept in the save (next to the game's own, which stay for another language and for when the AI is off), and anything
+that fails leaves the game's own. So a game mod has its own voice.
+
+`ai\prompts.json`: every mod's goes over the ones before it **key by key**, so a mod changes the persona or one prompt
+without repeating the rest.
+
+```json
+{
+  "persona": [ "You write for {title}, a game about street racing in Tokyo in 2003.", "Write in {language}. Speeds in {units}." ],
+  "prompts": {
+    "talk": { "prompt": "{name} says: \"{line}\". Say it again in their voice.", "maxLength": 180, "maxTokens": 80, "temperature": 0.9 }
+  }
+}
+```
+
+- `persona`: who the AI is, sent with every request as its system prompt (a text, or lines joined with spaces).
+- `prompts`: one per use: `prompt` filled like the game's text (`{price:money}`, `{mileage:distance}`), `maxLength`
+  (characters kept, cut at a sentence or a word), `maxTokens`, `temperature` (not sent to Anthropic), `lines` (the
+  first lines of the answer kept, 1 when not given, 0 for all: a small model likes to add a second try).
+- Every prompt may name `{language}` (the player's language, by the name its `language.name` pool gives it), `{units}`
+  and `{title}`. The uses, and what each may name, are listed in the base game's file's `_comment`: `talk` (a rival's
+  line; `{line}` is the game's own), `street_talk` (the diner's word on the street), `news` (a piece in the paper,
+  answered as the headline on the first line and the body after), `dealer_take` (the seller's word on a car), `ad` (an
+  ad's blurb), `portrait_look` (a new rival's looks for the picture, in English) and `test` (Settings' Test button).
+  A use with no prompt is not asked for.
+
+`ai\comfy_<use>.json`: a ComfyUI workflow, the last mod's whole (a graph is not merged). The base game has
+`comfy_portrait.json`, the portrait painted for a new face on the street, shown in place of their own portrait from then
+on (kept under `%AppData%\StreetCorsa\AiPortraits\<save>`):
+
+```json
+{
+  "checkpoint": "juggernautXL_ragnarokBy.safetensors",
+  "width": 512, "height": 512,
+  "prompt": "1960s American street racer portrait, {sex} aged {age}, {look}, film grain",
+  "negative": "modern clothing, cartoon, watermark",
+  "fill": {
+    "positive": { "node": "10", "input": "text" },   "negative": { "node": "12", "input": "text" },
+    "seed": { "node": "11", "input": "seed" },       "width": { "node": "22", "input": "width" },
+    "height": { "node": "22", "input": "height" },   "checkpoint": { "node": "8", "input": "ckpt_name" },
+    "prefix": { "node": "21", "input": "filename_prefix" }
+  },
+  "workflow": { "8": { "class_type": "CheckpointLoaderSimple", "inputs": { "ckpt_name": "" } } }
+}
+```
+
+- `workflow`: the graph in ComfyUI's API format (in ComfyUI, "Save (API Format)"); any graph that ends in a saved
+  image works.
+- `fill`: which node input gets which value: `positive` and `negative` (the prompts, filled with `{look}`, `{name}`,
+  `{nickname}`, `{age}`, `{sex}`, `{biography}`, `{aggression}`), `seed` (a new one each time), `width`, `height`,
+  `checkpoint` (left as the graph has it when empty) and `prefix` (the name ComfyUI saves under). A node the graph does
+  not have is told at start-up.
+- `checkpoint`: a model file ComfyUI has in `models\checkpoints`; set it to one you have.
+
+How long the game waits, how often it asks and what it keeps are the rules' `ai` part.
+
 ### theme
 
 The game's look: its colours, font sizes, typefaces and pictures. `theme\*.json` sets keys, naming only what it
@@ -646,7 +708,8 @@ PC. A key the game lacks, or a value that does not read, is told at start-up and
 the game's own stands. Keys are matched whatever their case. The look is taken at start-up: a change shows at the next
 start. The typefaces: `BodyFont` (everything not named otherwise), `DisplayFont` (the intro's title), `DialFont` (the
 radio's lettering), `NumbersFont` (figures that line up: the timeslip, the dial-in board, the engine panel),
-`TypewriterFont` (the licence, the main menu badges' labels).
+`TypewriterFont` (the licence, the main menu badges' labels), `NewsprintFont` (the paper's classifieds: the ads' small print, the
+masthead), `NewsHeadFont` (the ads' run-in headlines and the paper's section heads, set condensed and bold).
 
 A theme sets keys only: the shapes of the buttons and panels stay the game's (a mod's XAML is never read, since XAML
 can run code).
@@ -658,7 +721,7 @@ names:
 | Name | What |
 |---|---|
 | `backgrounds/main`, `init`, `newspaper_background`, `diner_background`, `settings_background` | the screens' backgrounds (the game's are 2560x1440; `init` is behind the intro) |
-| `buttons/new_game`, `load_game`, `settings`, `used_cars`, `used_parts` | the main menu's badges and the newspaper's two sections (square) |
+| `buttons/new_game`, `load_game`, `settings` | the main menu's badges (square) |
 | `icons/calendar`, `car_dealer`, `car_info`, `driving_wheel`, `fuel_pump`, `garage`, `newspaper`, `parts_filled`, `quit`, `radio`, `trophy` | the round buttons' icons: only their shape counts, painted in the button's colour |
 | `misc/license` | the licence the player signs for a new game (the name box sits where the game's has its line) |
 | `misc/calendar/calendar01` .. `calendar12` | the garage calendar's pictures |

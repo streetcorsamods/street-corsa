@@ -126,6 +126,7 @@ namespace StreetCorsa.Services.Settings
                     {
                         // "Audio": null by hand is the defaults, not a game that cannot say how loud anything is
                         settings.Audio ??= new AudioSettings();
+                        settings.Ai ??= new AiSettings();
                         _logger.Information("Settings loaded from {Path}", _settingsPath);
                         _currentSettings = settings;
                         return settings;

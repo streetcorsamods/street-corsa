@@ -2,136 +2,372 @@ using System.Collections.ObjectModel;
 using StreetCorsa.Dialogs;
 using StreetCorsa.Dialogs.Confirmation;
 using StreetCorsa.Dialogs.Information;
+using StreetCorsa.Helpers;
 using StreetCorsa.Logging;
 using StreetCorsa.Models.GameState;
-using StreetCorsa.Models.Race;
 using StreetCorsa.Navigation;
+using StreetCorsa.Parts;
 using StreetCorsa.Screens.Shared;
-using StreetCorsa.Services.Text;
-using StreetCorsa.Services;
-using StreetCorsa.Services.Career;
 using StreetCorsa.Services.Catalog;
+using StreetCorsa.Services.Dealers;
 using StreetCorsa.Services.Market;
-using StreetCorsa.Services.News;
 using StreetCorsa.Services.Opponents;
-using StreetCorsa.Services.Race;
+using StreetCorsa.Services.Parts;
 using StreetCorsa.Services.Storage;
+using StreetCorsa.Services.Text;
 using StreetCorsa.Services.Time;
 using StreetCorsa.ViewModels;
-using StreetCorsa.Helpers;
 
 namespace StreetCorsa.Screens.Newspaper
 {
+    /// <summary>The paper's two sections of classifieds</summary>
+    public enum ClassifiedSection
+    {
+        Cars,
+        Parts
+    }
+
+    /// <summary>
+    /// The paper: the classifieds, nothing else (the race invitations and Street News are the racing hub's). Two sections,
+    /// used cars and used parts, set as a period paper's ads and read a page at a time as the player scrolls. Every car
+    /// for sale is there, the dealers' and the racers' own, with the player's own ads and their buyers at the top; every
+    /// used part ad, the racers' too. An ad is bought from here, and clicked to go and look at it.
+    /// </summary>
     public class NewspaperScreenViewModel : BaseScreenViewModel
     {
+        /// <summary>Ads added each time the player reaches the end of a section: a screen's worth and more, not a rule</summary>
+        public const int AdsPerPage = 30;
+
         private readonly NavigationService _navigationService;
         private readonly DialogService _dialogService;
         private readonly Models.GameState.GameState _gameState;
-        private readonly IRaceEventService _eventService;
-        private readonly ICarFilterService _filterService;
         private readonly IContentCatalogRepository _catalogRepository;
-        private readonly IEventOpponentService _eventOpponentService;
-        private readonly IAssettoCorsaContentService _contentService;
+        private readonly ICarProfileRepository _profileRepository;
+        private readonly IUsedCarMarketService _marketService;
+        private readonly ICarPartsService _partsService;
+        private readonly INewspaperPartsService _partAdsService;
         private readonly IGameTimeService _timeService;
         private readonly IGameStateRepository _gameStateRepo;
-        private readonly RaceSetupBuilder _raceSetup;
         private readonly ICarSaleService _saleService;
         private readonly IAppLogger _logger;
 
-        // True from the moment the player confirms an entry until the race is set up (or not): the paper stays
-        // clickable meanwhile, and a second entry would start a second race
-        private bool _isEntering;
+        /// <summary>Ids of the parts that go somewhere on the car selected in the garage</summary>
+        private HashSet<string> _fitting = new(StringComparer.OrdinalIgnoreCase);
+
+        // An ad from before ads had words got them as it was shown: the save is worth writing
+        private bool _wroteBlurbs;
 
         public RelayCommand BackCommand { get; }
-        public RelayCommand UsedCarsCommand { get; }
-        public RelayCommand UsedPartsCommand { get; }
-        public RelayCommand<EventInvitationViewModel> EnterEventCommand { get; }
+        public RelayCommand<string> ShowSectionCommand { get; }
         public bool SkipEnterAnimation { get; }
-
-        // Race Invitations
-        public ObservableCollection<EventInvitationViewModel> RaceInvitations { get; } = [];
-        public bool HasRaceInvitations => RaceInvitations.Count > 0;
-
-        /// <summary>The race pages: what the paper wrote about the last few days' races, the lead story first</summary>
-        public ObservableCollection<NewsArticleViewModel> Articles { get; } = [];
-        public bool HasArticles => Articles.Count > 0;
-
-        /// <summary>The paper's date line</summary>
-        public string EditionDisplay => GameText.Date(_gameState.Date, "format.date.long");
-
-        /// <summary>The player's own cars in the paper, and the buyers who called about them</summary>
-        public ObservableCollection<PlayerCarAdViewModel> PlayerAds { get; } = [];
-        public bool HasPlayerAds => PlayerAds.Count > 0;
 
         public NewspaperScreenViewModel(
             NavigationService navigationService,
             DialogService dialogService,
             Models.GameState.GameState gameState,
-            IRaceEventService eventService,
-            ICarFilterService filterService,
             IContentCatalogRepository catalogRepository,
-            IEventOpponentService eventOpponentService,
-            IAssettoCorsaContentService contentService,
+            ICarProfileRepository profileRepository,
+            IUsedCarMarketService marketService,
+            ICarPartsService partsService,
+            INewspaperPartsService partAdsService,
             IGameTimeService timeService,
             IGameStateRepository gameStateRepo,
-            RaceSetupBuilder raceSetup,
             ICarSaleService saleService,
             bool skipAnimation = false)
         {
-            _saleService = saleService;
             _navigationService = navigationService;
             _dialogService = dialogService;
             _gameState = gameState;
-            _eventService = eventService;
-            _filterService = filterService;
             _catalogRepository = catalogRepository;
-            _eventOpponentService = eventOpponentService;
-            _contentService = contentService;
+            _profileRepository = profileRepository;
+            _marketService = marketService;
+            _partsService = partsService;
+            _partAdsService = partAdsService;
             _timeService = timeService;
             _gameStateRepo = gameStateRepo;
-            _raceSetup = raceSetup;
+            _saleService = saleService;
             _logger = AppLoggerFactory.CreateLogger("Newspaper");
             SkipEnterAnimation = skipAnimation;
 
             BackCommand = new RelayCommand(OnBack);
-            UsedCarsCommand = new RelayCommand(OnUsedCars);
-            UsedPartsCommand = new RelayCommand(OnUsedParts);
-            EnterEventCommand = new RelayCommand<EventInvitationViewModel>(OnEnterEvent, _ => !_isEntering);
+            ShowSectionCommand = new RelayCommand<string>(section =>
+            {
+                if (Enum.TryParse<ClassifiedSection>(section, out var shown)) Section = shown;
+            });
 
-            // The invitations are loaded in Enter, once: the screen is always entered right after it is made
+            // The ads are put together in Enter: the screen is always entered right after it is made
         }
 
-        private void OnUsedCars()
+        // ----- what the page shows -----
+
+        private ClassifiedSection _section = ClassifiedSection.Cars;
+
+        public ClassifiedSection Section
         {
-            _navigationService.NavigateToUsedCarMarket(_gameState);
+            get => _section;
+            set
+            {
+                if (!SetProperty(ref _section, value)) return;
+                OnPropertyChanged(nameof(ShowCars));
+                OnPropertyChanged(nameof(ShowParts));
+            }
         }
 
-        private void OnUsedParts()
+        public bool ShowCars => _section == ClassifiedSection.Cars;
+        public bool ShowParts => _section == ClassifiedSection.Parts;
+
+        /// <summary>The paper's date line</summary>
+        public string EditionDisplay => GameText.Date(_gameState.Date, "format.date.long");
+
+        /// <summary>Every car for sale, a page at a time</summary>
+        public AdPages<CarAdViewModel> CarAds { get; } = new(AdsPerPage);
+
+        /// <summary>Every used part ad, a page at a time</summary>
+        public AdPages<PartAdViewModel> PartAds { get; } = new(AdsPerPage);
+
+        public bool HasCarAds => CarAds.Count > 0;
+        public bool HasPartAds => PartAds.Count > 0;
+
+        /// <summary>The paper is out and the section has no ads: it says so</summary>
+        public bool ShowNoCars => !IsLoading && !HasCarAds;
+        public bool ShowNoParts => !IsLoading && !HasPartAds;
+
+        /// <summary>The player's own cars in the paper, and the buyers who called about them</summary>
+        public ObservableCollection<PlayerCarAdViewModel> PlayerAds { get; } = [];
+        public bool HasPlayerAds => PlayerAds.Count > 0;
+
+        private bool _isLoading;
+
+        /// <summary>The paper is being put together: the first market of a game gives every car an engine, which takes a few seconds</summary>
+        public bool IsLoading
         {
-            _navigationService.NavigateToUsedParts(_gameState);
+            get => _isLoading;
+            private set
+            {
+                if (!SetProperty(ref _isLoading, value)) return;
+                OnPropertyChanged(nameof(ShowNoCars));
+                OnPropertyChanged(nameof(ShowNoParts));
+            }
         }
 
-        private void OnBack()
+        /// <summary>The player scrolled to the end of the section on show: the next page of its ads</summary>
+        public void ShowMore()
         {
-            _navigationService.NavigateToGarage(_gameState);
+            if (ShowCars) CarAds.ShowMore();
+            else PartAds.ShowMore();
         }
 
-        private void LoadArticles()
+        // ----- putting it together -----
+
+        public override async void Enter()
         {
-            Articles.Clear();
+            base.Enter();
+
+            IsLoading = true;
             try
             {
-                var page = NewsWriter.FrontPage(_gameState.News, _gameState.Date);
-                for (var i = 0; i < page.Count; i++) Articles.Add(new NewsArticleViewModel(page[i], _gameState.Date, isLead: i == 0));
+                await PrepareAsync();
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Could not lay out the race pages");
+                _logger.Error(ex, "Could not put the paper's ads together");
+            }
+            finally
+            {
+                IsLoading = false;
             }
 
-            OnPropertyChanged(nameof(HasArticles));
+            LoadAll();
+
+            // Back from looking at a car, or the player put the paper down while it was put together: no time spent
+            if (SkipEnterAnimation || !ReferenceEquals(_navigationService.CurrentScreen, this))
+            {
+                if (_wroteBlurbs) Save("the ads' words");
+                return;
+            }
+
+            try
+            {
+                // Late in the evening that is the next morning, with another paper: the ads are read again, and the new
+                // day is saved
+                var spent = await _timeService.SpendTimeAsync(_gameState, GameAction.VisitNewspaper);
+                if (spent.NewDayStarted) LoadAll();
+
+                Save("the time for the newspaper");
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not spend and save the time for the newspaper");
+            }
+        }
+
+        /// <summary>
+        /// The first market of a game and its first part ads (made with the game; here for a game from before, or one
+        /// still being made), the part catalog and what fits the player's car: what takes a moment, off the UI thread
+        /// where it can be. The game state itself is only changed on it.
+        /// </summary>
+        private async Task PrepareAsync()
+        {
+            await FirstMarket.EnsureAsync(_gameState, _marketService, _partAdsService);
+
+            var car = SelectedCar;
+            if (!await Task.Run(() => _partAdsService.IsAvailable)) return;
+
+            if (car != null) await _partsService.EnsurePartsAsync(car);
+            _fitting = await Task.Run(() => _partAdsService.FindFittingParts(car));
+        }
+
+        private Car? SelectedCar =>
+            _gameState.Player.Cars.FirstOrDefault(c => c.InstanceId == _gameState.Player.SelectedCarInstanceId);
+
+        private void LoadAll()
+        {
+            LoadPlayerAds();
+            LoadCarAds();
+            LoadPartAds();
             OnPropertyChanged(nameof(EditionDisplay));
         }
+
+        private PartsCatalog? Catalog => _partsService.IsAvailable ? _partsService.Catalog : null;
+
+        /// <summary>Every car for sale, the lots' and the racers' own, by make</summary>
+        private void LoadCarAds()
+        {
+            try
+            {
+                var catalog = Catalog;
+                var ads = new List<CarAdViewModel>();
+                foreach (var listing in _marketService.GetAvailableListings(_gameState.UsedCarMarket ?? []))
+                {
+                    _wroteBlurbs |= AdBlurbs.Ensure(listing, catalog, () => _marketService.FactoryParts(listing.CarDefinitionId));
+                    // Words still the game's own go to the player's AI; they show the next time the paper is opened
+                    AdBlurbs.Polish(listing, catalog, () => _marketService.FactoryParts(listing.CarDefinitionId));
+                    var dealer = _gameState.DealerLocations?.FirstOrDefault(d => d.Id == listing.DealerLocation);
+                    if (CarAd(listing, null, dealer?.Name ?? GameText.Say("market.unknown_dealer")) is { } ad) ads.Add(ad);
+                }
+
+                foreach (var offer in RivalCarAds.Live(_gameState))
+                {
+                    try
+                    {
+                        _wroteBlurbs |= AdBlurbs.Ensure(offer.Ad, offer.Car, catalog, () => _marketService.FactoryParts(offer.Car.DefinitionId));
+                        AdBlurbs.Polish(offer.Ad, offer.Car, catalog, () => _marketService.FactoryParts(offer.Car.DefinitionId));
+                        if (CarAd(RivalCarAds.AsListing(offer, _marketService), offer, UsedCarListingViewModel.PrivateSellerName(offer.Seller.Name)) is { } ad)
+                            ads.Add(ad);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Warning("Could not show {Rival}'s ad: {Error}", offer.Seller.Name, ex.Message);
+                    }
+                }
+
+                CarAds.Fill(ads.OrderBy(a => a.SortKey, StringComparer.CurrentCultureIgnoreCase));
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not lay out the car ads");
+                CarAds.Fill([]);
+            }
+
+            OnPropertyChanged(nameof(HasCarAds));
+            OnPropertyChanged(nameof(ShowNoCars));
+        }
+
+        private CarAdViewModel? CarAd(UsedCarListing listing, RivalCarAds.Offer? rivalOffer, string seller)
+        {
+            var definition = _catalogRepository.GetCar(listing.CarDefinitionId);
+            var profile = _profileRepository.GetProfile(listing.CarDefinitionId);
+            if (definition == null || profile == null)
+            {
+                _logger.Warning("The catalog lacks car {CarId} of ad {ListingId}", listing.CarDefinitionId, listing.Id);
+                return null;
+            }
+
+            var car = new UsedCarListingViewModel
+            {
+                Listing = listing,
+                CarDefinition = definition,
+                CarProfile = profile,
+                RivalAd = rivalOffer?.Ad,
+                PrivateSeller = rivalOffer?.Seller.Name,
+                DealerName = seller,
+                CanAfford = _gameState.Player.Money >= listing.Price
+            };
+
+            CarAdViewModel? ad = null;
+            ad = new CarAdViewModel(car, new RelayCommand(() => OnLookAtCar(ad!)));
+            return ad;
+        }
+
+        /// <summary>Every used part ad the catalog knows the part of, by name</summary>
+        private void LoadPartAds()
+        {
+            try
+            {
+                var ads = new List<PartAdViewModel>();
+                if (Catalog is { } catalog)
+                {
+                    foreach (var ad in _gameState.NewspaperAds.Parts)
+                    {
+                        if (catalog.Get(ad.Part.DefinitionId) is not { } definition) continue;
+
+                        _wroteBlurbs |= AdBlurbs.Ensure(ad, catalog);
+                        // Words still the game's own go to the player's AI; they show the next time the paper is opened
+                        AdBlurbs.Polish(ad, catalog);
+                        PartAdViewModel? row = null;
+                        row = new PartAdViewModel(ad, definition, _fitting.Contains(definition.Id), new RelayCommand(() => OnLookAtPart(row!)));
+                        ads.Add(row);
+                    }
+                }
+
+                PartAds.Fill(ads.OrderBy(a => a.Headline, StringComparer.CurrentCultureIgnoreCase));
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not lay out the part ads");
+                PartAds.Fill([]);
+            }
+
+            OnPropertyChanged(nameof(HasPartAds));
+            OnPropertyChanged(nameof(ShowNoParts));
+        }
+
+        // ----- buying and looking -----
+
+        private void OnBuyPart(PartAdViewModel ad)
+        {
+            if (!_partAdsService.BuyUsed(_gameState, ad.Ad))
+            {
+                var gone = !_gameState.NewspaperAds.Parts.Contains(ad.Ad);
+                _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService,
+                    GameText.Say(gone ? "usedparts.ad_gone" : "market.part.no_money"),
+                    GameText.Say(gone ? "usedparts.ad_gone.title" : "market.part.no_money.title")));
+                if (gone) PartAds.Remove(ad);
+            }
+            else
+            {
+                Audio.Sfx.Play(Audio.Sfx.Purchase);
+                PartAds.Remove(ad);
+                Save("a part bought from the paper");
+            }
+
+            OnPropertyChanged(nameof(HasPartAds));
+            OnPropertyChanged(nameof(ShowNoParts));
+        }
+
+        /// <summary>Go and see the car (clicking its ad): a screen of its own, the car at the seller's curb or on the lot</summary>
+        private void OnLookAtCar(CarAdViewModel ad)
+        {
+            _navigationService.NavigateToCarViewing(_gameState, ad.Car);
+        }
+
+        /// <summary>Have a look at the part (clicking its ad): the part alone in 3D, turned with the mouse, with Buy</summary>
+        private void OnLookAtPart(PartAdViewModel ad)
+        {
+            _navigationService.ShowPartPreview(ad.Ad.Part, ad.Name, ad.PriceDisplay, () => OnBuyPart(ad));
+        }
+
+        // ----- the player's own ads -----
 
         private void LoadPlayerAds()
         {
@@ -144,7 +380,7 @@ namespace StreetCorsa.Screens.Newspaper
                     if (car == null) continue;
 
                     var definition = _catalogRepository.GetCar(car.DefinitionId);
-                    var name = definition != null ? $"{definition.Brand} {definition.Name}" : car.DefinitionId;
+                    var name = definition != null ? CarNames.MakeAndModel(definition) : car.DefinitionId;
                     var hasOffer = ad.Offer is { } offer && offer.Expires >= _gameState.Date;
                     PlayerAds.Add(new PlayerCarAdViewModel(
                         name,
@@ -217,285 +453,21 @@ namespace StreetCorsa.Screens.Newspaper
             _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, message, title));
         }
 
-        private void LoadRaceInvitations()
+        private void OnBack()
         {
-            RaceInvitations.Clear();
-
-            var currentTime = _gameState.Date;
-            var activeEvents = _eventService.GetActiveEvents(_gameState.Career, currentTime);
-
-            foreach (var eventInstance in activeEvents)
-            {
-                var definition = _eventService.GetEventDefinition(eventInstance.EventDefinitionId);
-                if (definition == null) continue;
-
-                // Find eligible cars from player's garage
-                var eligibleCars = FindEligibleCars(definition);
-
-                var vm = EventInvitationViewModel.FromEvent(
-                    eventInstance,
-                    definition,
-                    eligibleCars,
-                    currentTime,
-                    _gameState.Rules.RacePrizeMultiplier);
-
-                RaceInvitations.Add(vm);
-            }
-
-            // Sort: events with eligible cars first, then by expiry
-            var sorted = RaceInvitations
-                .OrderByDescending(e => e.HasEligibleCars)
-                .ThenBy(e => e.ExpiresAt ?? DateTime.MaxValue)
-                .ToList();
-
-            RaceInvitations.Clear();
-            foreach (var e in sorted)
-            {
-                RaceInvitations.Add(e);
-            }
-
-            OnPropertyChanged(nameof(HasRaceInvitations));
+            _navigationService.NavigateToGarage(_gameState);
         }
 
-        private List<EligibleCarViewModel> FindEligibleCars(Models.Career.Events.RaceEventDefinition definition)
+        private void Save(string what)
         {
-            var eligible = new List<EligibleCarViewModel>();
-
-            foreach (var car in _gameState.Player.Cars)
-            {
-                var carDef = _catalogRepository.GetCar(car.DefinitionId);
-                if (carDef == null) continue;
-
-                // Check filter (if any)
-                if (definition.EntryRequirements != null)
-                {
-                    if (!_filterService.Matches(definition.EntryRequirements, carDef, car))
-                        continue;
-                }
-
-                var displayName = $"{carDef.Year} {carDef.Brand} {carDef.Name}";
-                eligible.Add(EligibleCarViewModel.FromCar(car, displayName));
-            }
-
-            return eligible;
-        }
-
-        private void OnEnterEvent(EventInvitationViewModel? eventVm)
-        {
-            if (eventVm == null || !eventVm.CanEnter || _isEntering)
-                return;
-
             try
             {
-                // Get event definition
-                var eventDef = _eventService.GetEventDefinition(eventVm.EventId);
-                if (eventDef == null)
-                    return;
-
-                // Get opponent for the event
-                var opponent = _eventOpponentService.GetOpponentForEvent(eventDef, _gameState);
-                if (opponent == null)
-                {
-                    var errorDialog = new InformationDialogViewModel(
-                        _dialogService,
-                        GameText.Say(eventDef.IsPinkSlip ? "paper.enter.no_pink_slip" : "paper.enter.no_opponent"),
-                        GameText.Say("paper.enter.cannot.title"));
-                    _dialogService.ShowDialog(errorDialog);
-                    return;
-                }
-
-                // Get opponent car display name
-                var opponentCarDef = _catalogRepository.GetCar(opponent.CarDefinitionId);
-                var opponentCarDisplay = opponentCarDef != null
-                    ? $"{opponentCarDef.Year} {opponentCarDef.Brand} {opponentCarDef.Name}"
-                    : GameText.Say("paper.unknown_car");
-
-                // Show event entry dialog
-                var dialog = new Dialogs.EventEntry.EventEntryDialogViewModel(
-                    _dialogService,
-                    eventVm,
-                    eventDef,
-                    opponent,
-                    opponentCarDisplay,
-                    OnEventEntryComplete);
-                _dialogService.ShowDialog(dialog);
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Could not open the entry for {Event}", eventVm.EventId);
-                ShowRaceError(ex);
-            }
-        }
-
-        /// <summary>
-        /// The player entered: the event is raced on its own track, with each car on what its parts make of it,
-        /// through the same set-up as a challenge at the diner.
-        /// </summary>
-        private async void OnEventEntryComplete(Dialogs.EventEntry.EventEntryResult? result)
-        {
-            if (result == null || _isEntering)
-                return;
-
-            _isEntering = true;
-            RelayCommand.RaiseCanExecuteChanged();
-            try
-            {
-                await EnterEventAsync(result);
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Could not set up the race for {Event}", result.EventId);
-                ShowRaceError(ex);
-            }
-            finally
-            {
-                _isEntering = false;
-                RelayCommand.RaiseCanExecuteChanged();
-            }
-        }
-
-        private async Task EnterEventAsync(Dialogs.EventEntry.EventEntryResult result)
-        {
-            // Get player's selected car
-            var playerCar = _gameState.Player.Cars.FirstOrDefault(c => c.InstanceId == result.PlayerCarInstanceId);
-            if (playerCar == null)
-                return;
-
-            var playerCarDef = _catalogRepository.GetCar(playerCar.DefinitionId);
-            var opponentCarDef = _catalogRepository.GetCar(result.Opponent.CarDefinitionId);
-            if (playerCarDef == null || opponentCarDef == null)
-            {
-                _logger.Warning("Event {Event}: a car is missing from the catalog (player {Player}, opponent {Opponent})",
-                    result.EventId, playerCar.DefinitionId, result.Opponent.CarDefinitionId);
-                return;
-            }
-
-            // A bracket race is run to the quarter, on a strip that runs it: the mode only ends one there
-            var definition = result.EventDefinition;
-            var isBracket = definition.IsBracketRace;
-            var track = isBracket
-                ? RaceSetupBuilder.PickStrip(_contentService.GetTracks(), quarterOnly: true, definition.TrackId)
-                : RaceSetupBuilder.PickTrack(_contentService.GetTracks(), definition.RaceType, definition.TrackId, result.EventInstanceId.GetHashCode());
-            if (track == null)
-            {
-                _dialogService.ShowDialog(new InformationDialogViewModel(
-                    _dialogService,
-                    GameText.Say(isBracket ? "paper.enter.no_strip" : "paper.enter.no_track"),
-                    GameText.Say("paper.enter.cannot.title")));
-                return;
-            }
-
-            // The pool racer drives as they are; a one-off entrant is given the event's skill and aggression.
-            // Either way the AC values come from the adapter, the one place they are made.
-            var opponent = result.Opponent;
-            var driver = opponent.PoolOpponent
-                ?? new Opponent(opponent.OpponentName, 25, Gender.Other, opponent.Skill, opponent.Aggression);
-            var ai = OpponentAIAdapter.ToAssettoCorsaAI(driver, _gameState.Rules);
-
-            // A bracket race: the rival dials in from its car (a one-off entrant's has no history), the player picks theirs
-            BracketSetup? bracket = null;
-            if (isBracket)
-            {
-                var rivalDialIn = BracketRules.RivalDialInFor(opponent.PoolOpponentCar ?? new Car(opponent.CarDefinitionId), opponentCarDef);
-                var playerDialIn = await Dialogs.DialIn.DialInDialogViewModel.AskAsync(_dialogService, playerCar, playerCarDef,
-                    CarNames.Of(playerCarDef), opponent.OpponentName, rivalDialIn);
-                if (playerDialIn == null)
-                {
-                    _logger.Information("The player backed out of {Event} at the dial-in", result.EventId);
-                    return;
-                }
-
-                bracket = BracketRules.Setup(playerDialIn.Value, rivalDialIn, ai.AILevel);
-            }
-
-            var setup = await _raceSetup.BuildAsync(new RaceEntry
-            {
-                PlayerName = _gameState.Player.Name,
-                PlayerCar = playerCar,
-                OpponentName = opponent.OpponentName,
-                OpponentCarId = opponent.CarDefinitionId,
-                OpponentSkin = opponent.CarSkin,
-                OpponentCar = opponent.PoolOpponentCar,
-                OpponentAI = ai,
-                TrackId = track.Value.TrackId,
-                TrackConfig = track.Value.TrackConfig,
-                RaceType = definition.RaceType,
-                CashWager = 0, // Event rewards handled separately
-                IsPinkSlip = result.IsPinkSlip,
-                DamagePercent = _gameState.Rules.RaceDamagePercent,
-                EventId = result.EventId,
-                EventInstanceId = result.EventInstanceId,
-                IsEventOnlyOpponent = !opponent.IsPoolOpponent,
-                // An organised event: the police stay away, but it runs at the game's hour, after dark too
-                RaceTime = _gameState.Date,
-                Bracket = bracket
-            });
-
-            // Setting the cars up takes a moment: a player who put the paper down meanwhile has called it off
-            if (!ReferenceEquals(_navigationService.CurrentScreen, this))
-            {
-                _logger.Information("The player left the newspaper while {Event} was set up; no race", result.EventId);
-                return;
-            }
-
-            if (setup.Intent == null)
-            {
-                _dialogService.ShowDialog(new InformationDialogViewModel(
-                    _dialogService,
-                    GameText.Say("paper.enter.wont_run", ("problem", setup.PlayerCarProblem)),
-                    GameText.Say("paper.enter.wont_run.title")));
-                return;
-            }
-
-            _logger.Information("Entering {Event} on {Track} {Config}", result.EventId, track.Value.TrackId, track.Value.TrackConfig ?? "");
-            _navigationService.NavigateToRaceLoading(_gameState, setup.Intent);
-        }
-
-        private void ShowRaceError(Exception ex)
-        {
-            _dialogService.ShowDialog(new InformationDialogViewModel(
-                _dialogService,
-                GameText.Say("paper.enter.failed", ("error", ex.Message)),
-                GameText.Say("paper.enter.failed.title")));
-        }
-
-        public override async void Enter()
-        {
-            base.Enter();
-
-            try
-            {
-                LoadRaceInvitations();
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Could not list the race invitations");
-            }
-
-            LoadPlayerAds();
-            LoadArticles();
-
-            // Only spend time when actually visiting (not returning from sub-screens)
-            if (SkipEnterAnimation)
-                return;
-
-            try
-            {
-                // Late in the evening that is the next morning, with another paper: the invitations are read
-                // again, and the new day is saved
-                var spent = await _timeService.SpendTimeAsync(_gameState, GameAction.VisitNewspaper);
-                if (spent.NewDayStarted)
-                {
-                    LoadRaceInvitations();
-                    LoadPlayerAds();
-                    LoadArticles();
-                }
-
                 if (!string.IsNullOrEmpty(_gameState.SaveName)) _gameStateRepo.Save(_gameState, _gameState.SaveName);
+                _wroteBlurbs = false;
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Could not spend and save the time for the newspaper");
+                _logger.Error(ex, "Could not save the game after {What}", what);
             }
         }
     }

@@ -133,7 +133,14 @@
     "CarRadioFaceBottom": "#FF7C7C7C",
     "CarRadioBezel": "#FF3A3A3A",
     "CarRadioLampOff": "#FF4A1A10",
-    "CarRadioLampOn": "#FFFF7A3A"
+    "CarRadioLampOn": "#FFFF7A3A",
+    "NewsprintPaper": "#FFEDE4CF",
+    "NewsprintPaperEdge": "#FFD8CBAE",
+    "NewsprintInk": "#FF1F1B16",
+    "NewsprintInkFaded": "#FF5E564A",
+    "NewsprintRule": "#FF4A4237",
+    "NewsprintShade": "#1A5A4020",
+    "NewsprintPencil": "#FFA4281E"
   },
   "sizes": {
     "FontSizeMicro": 9,
@@ -163,6 +170,8 @@
     "DisplayFont": "Impact",
     "DialFont": "Georgia",
     "NumbersFont": "Consolas",
-    "TypewriterFont": "Courier New"
+    "TypewriterFont": "Courier New",
+    "NewsprintFont": "Times New Roman",
+    "NewsHeadFont": "Bahnschrift"
   }
 }

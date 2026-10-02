@@ -14,5 +14,9 @@
     <FontFamily x:Key="NumbersFont">Consolas</FontFamily>
     <!-- Typed on paper: the licence's name, the main menu badges' labels -->
     <FontFamily x:Key="TypewriterFont">Courier New</FontFamily>
+    <!-- The paper's classifieds: the small print of the ads, the masthead -->
+    <FontFamily x:Key="NewsprintFont">Times New Roman</FontFamily>
+    <!-- The ads' run-in headlines and the section heads, set condensed and bold -->
+    <FontFamily x:Key="NewsHeadFont">Bahnschrift</FontFamily>
 
 </ResourceDictionary>

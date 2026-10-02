@@ -7,7 +7,6 @@
              xmlns:newGame="clr-namespace:StreetCorsa.Screens.NewGame"
              xmlns:loadGame="clr-namespace:StreetCorsa.Screens.LoadGame"
              xmlns:newspaper="clr-namespace:StreetCorsa.Screens.Newspaper"
-             xmlns:usedCarMarket="clr-namespace:StreetCorsa.Screens.UsedCarMarket"
              xmlns:dealerMap="clr-namespace:StreetCorsa.Screens.DealerMap"
              xmlns:dealerLot="clr-namespace:StreetCorsa.Screens.DealerLot"
              xmlns:usedParts="clr-namespace:StreetCorsa.Screens.UsedParts"
@@ -32,6 +31,7 @@
              xmlns:quit="clr-namespace:StreetCorsa.Dialogs.Quit"
              xmlns:carInfo="clr-namespace:StreetCorsa.Dialogs.CarInfo"
              xmlns:career="clr-namespace:StreetCorsa.Dialogs.Career"
+             xmlns:raceHub="clr-namespace:StreetCorsa.Dialogs.RaceHub"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
         <ResourceDictionary>
@@ -70,10 +70,6 @@
 
             <DataTemplate DataType="{x:Type dealerLot:DealerLotScreenViewModel}">
                 <dealerLot:DealerLotScreenView/>
-            </DataTemplate>
-
-            <DataTemplate DataType="{x:Type usedCarMarket:UsedCarMarketScreenViewModel}">
-                <usedCarMarket:UsedCarMarketScreenView/>
             </DataTemplate>
 
             <DataTemplate DataType="{x:Type usedParts:UsedPartsScreenViewModel}">
@@ -161,6 +157,21 @@
 
             <DataTemplate DataType="{x:Type career:CareerDialogViewModel}">
                 <career:CareerDialogView/>
+            </DataTemplate>
+
+            <!-- Step 25: the racing hub -->
+            <DataTemplate DataType="{x:Type raceHub:RaceHubDialogViewModel}">
+                <raceHub:RaceHubDialogView/>
+            </DataTemplate>
+            <!-- end of step 25: the racing hub -->
+            <!-- Step 25 (B): the 3D previews, a car gone to see and a part looked at; namespaces declared here -->
+            <DataTemplate xmlns:carViewing="clr-namespace:StreetCorsa.Screens.CarViewing"
+                          DataType="{x:Type carViewing:CarViewingScreenViewModel}">
+                <carViewing:CarViewingScreenView/>
+            </DataTemplate>
+            <DataTemplate xmlns:partPreview="clr-namespace:StreetCorsa.Dialogs.PartPreview"
+                          DataType="{x:Type partPreview:PartPreviewDialogViewModel}">
+                <partPreview:PartPreviewDialogView/>
             </DataTemplate>
         </ResourceDictionary>
     </Application.Resources>

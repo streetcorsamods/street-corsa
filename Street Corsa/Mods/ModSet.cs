@@ -27,6 +27,9 @@ public static class ContentTypes
     public const string Sfx = "sfx";
     public const string Props = "props";
 
+    /// <summary>What the AI is asked (ai/prompts.json, merged key by key) and the ComfyUI workflows (ai/comfy_*.json); see <c>Services.Ai.AiPrompts</c></summary>
+    public const string Ai = "ai";
+
     /// <summary>The makes and the cars (makes.json, cars.json): merged key by key, see <c>Parts.Cars.CarBook</c></summary>
     public const string Cars = "cars";
 

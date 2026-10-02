@@ -2,20 +2,293 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:t="clr-namespace:StreetCorsa.Services.Text"
+             xmlns:local="clr-namespace:StreetCorsa.Screens.Newspaper"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d"
-             d:DesignHeight="450" d:DesignWidth="800">
-    <Grid x:Name="RootGrid"
-          Background="{StaticResource NewspaperBackgroundBrush}"
-          Opacity="0">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
+             d:DesignHeight="900" d:DesignWidth="1600">
+    <UserControl.Resources>
+        <!-- An ad: the whole of it is clicked to go and look; a faint shade under the pointer, a hairline under each -->
+        <Style x:Key="ClassifiedAdStyle" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="ToolTipService.InitialShowDelay" Value="600"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ad"
+                                Background="Transparent"
+                                BorderBrush="{StaticResource NewsprintRuleBrush}"
+                                BorderThickness="0,0,0,0.5"
+                                Padding="2,7,2,7">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ad" Property="Background" Value="{StaticResource NewsprintShadeBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
 
-        <!-- Back Button -->
+        <!-- The ad's small print -->
+        <Style x:Key="AdTextStyle" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource NewsprintFont}"/>
+            <Setter Property="FontSize" Value="{StaticResource FontSizeHeading}"/>
+            <Setter Property="Foreground" Value="{StaticResource NewsprintInkBrush}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="TextAlignment" Value="Justify"/>
+        </Style>
+
+        <!-- A button printed in ink: Take it, Turn down. Ink fills it under the pointer. -->
+        <Style x:Key="InkButtonStyle" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Foreground" Value="{StaticResource NewsprintInkBrush}"/>
+            <Setter Property="FontFamily" Value="{StaticResource NewsHeadFont}"/>
+            <Setter Property="FontStretch" Value="Condensed"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}"/>
+            <Setter Property="Padding" Value="5,0,5,0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="box"
+                                Background="Transparent"
+                                BorderBrush="{StaticResource NewsprintInkBrush}"
+                                BorderThickness="1.25"
+                                CornerRadius="2"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter x:Name="label" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="box" Property="Background" Value="{StaticResource NewsprintInkBrush}"/>
+                                <Setter Property="Foreground" Value="{StaticResource NewsprintPaperBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="box" Property="Opacity" Value="0.35"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- A section's head across the page, in heavy condensed capitals: the one on show in ink and underscored -->
+        <Style x:Key="SectionHeadStyle" TargetType="RadioButton">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Command" Value="{Binding ShowSectionCommand}"/>
+            <Setter Property="Foreground" Value="{StaticResource NewsprintInkFadedBrush}"/>
+            <Setter Property="FontFamily" Value="{StaticResource NewsHeadFont}"/>
+            <Setter Property="FontStretch" Value="Condensed"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="{StaticResource FontSizeTitle}"/>
+            <Setter Property="Margin" Value="18,0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="head" Background="Transparent" BorderBrush="Transparent" BorderThickness="0,0,0,4" Padding="4,0,4,2">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter Property="Foreground" Value="{StaticResource NewsprintInkBrush}"/>
+                                <Setter TargetName="head" Property="BorderBrush" Value="{StaticResource NewsprintInkBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="{StaticResource NewsprintInkBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- A line across the page: the masthead's rules -->
+        <Style x:Key="PageRuleStyle" TargetType="Border">
+            <Setter Property="BorderBrush" Value="{StaticResource NewsprintInkBrush}"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+        </Style>
+
+        <Style x:Key="PaperNoteStyle" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource NewsprintFont}"/>
+            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="FontStyle" Value="Italic"/>
+            <Setter Property="Foreground" Value="{StaticResource NewsprintInkFadedBrush}"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,24"/>
+        </Style>
+
+        <ItemsPanelTemplate x:Key="ColumnsPanel">
+            <local:ClassifiedColumnsPanel MinColumnWidth="360" Gutter="32" Rule="{StaticResource NewsprintRuleBrush}"/>
+        </ItemsPanelTemplate>
+    </UserControl.Resources>
+
+    <Grid x:Name="RootGrid"
+          Background="{StaticResource NewsprintPaperBrush}"
+          Opacity="0">
+        <!-- The sheet: newsprint over the whole screen -->
+        <Border x:Name="Sheet"
+                Padding="40,18,36,0"
+                Opacity="0">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- The masthead: the paper's name between its rules, the date and the page's name under it, across the
+                     whole page; it starts under the back button on the left and the money card on the right -->
+                <StackPanel Grid.Row="0" Margin="0,84,0,0">
+                    <Border Style="{StaticResource PageRuleStyle}" BorderThickness="0,0,0,3"/>
+                    <TextBlock Text="{t:Text paper.masthead}"
+                               FontFamily="{StaticResource NewsprintFont}"
+                               FontWeight="Bold"
+                               FontSize="{StaticResource FontSizeDisplay}"
+                               Foreground="{StaticResource NewsprintInkBrush}"
+                               HorizontalAlignment="Center"
+                               Margin="0,2,0,0"/>
+                    <Border Style="{StaticResource PageRuleStyle}"/>
+                    <Grid Margin="0,3,0,3">
+                        <TextBlock Text="{Binding EditionDisplay}"
+                                   FontFamily="{StaticResource NewsprintFont}"
+                                   FontSize="{StaticResource FontSizeCompact}"
+                                   FontStyle="Italic"
+                                   Foreground="{StaticResource NewsprintInkBrush}"
+                                   HorizontalAlignment="Left"/>
+                        <TextBlock Text="{t:Text paper.classifieds}"
+                                   FontFamily="{StaticResource NewsHeadFont}"
+                                   FontStretch="Condensed"
+                                   FontWeight="Bold"
+                                   FontSize="{StaticResource FontSizeCompact}"
+                                   Foreground="{StaticResource NewsprintInkBrush}"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock Text="{t:Text paper.masthead.price}"
+                                   FontFamily="{StaticResource NewsprintFont}"
+                                   FontSize="{StaticResource FontSizeCompact}"
+                                   FontStyle="Italic"
+                                   Foreground="{StaticResource NewsprintInkBrush}"
+                                   HorizontalAlignment="Right"/>
+                    </Grid>
+                    <Border Style="{StaticResource PageRuleStyle}"/>
+                    <Border Style="{StaticResource PageRuleStyle}" Margin="0,2,0,0"/>
+                </StackPanel>
+
+                <!-- The two sections -->
+                <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,8">
+                    <RadioButton Style="{StaticResource SectionHeadStyle}"
+                                 Content="{t:Text paper.section.cars}"
+                                 IsChecked="{Binding ShowCars, Mode=OneWay}"
+                                 CommandParameter="Cars"/>
+                    <RadioButton Style="{StaticResource SectionHeadStyle}"
+                                 Content="{t:Text paper.section.parts}"
+                                 IsChecked="{Binding ShowParts, Mode=OneWay}"
+                                 CommandParameter="Parts"/>
+                </StackPanel>
+
+                <!-- The paper is being put together: the first market of a game takes a few seconds -->
+                <TextBlock Grid.Row="2"
+                           Text="{t:Text paper.loading}"
+                           Style="{StaticResource PaperNoteStyle}"
+                           VerticalAlignment="Top"
+                           Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+                <!-- Used cars: the player's own ads boxed at the top, then every car for sale -->
+                <ScrollViewer x:Name="CarsScroller"
+                              Grid.Row="2"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled"
+                              ScrollChanged="OnScrollChanged"
+                              Visibility="{Binding ShowCars, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <StackPanel Margin="0,0,10,24">
+                        <!-- The player's own cars in the paper, and the buyers who called -->
+                        <Border BorderBrush="{StaticResource NewsprintInkBrush}"
+                                BorderThickness="2"
+                                Padding="14,8,14,10"
+                                Margin="0,0,0,12"
+                                HorizontalAlignment="Left"
+                                MinWidth="420"
+                                Visibility="{Binding HasPlayerAds, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <StackPanel>
+                                <TextBlock Text="{t:Text paper.your_ads}"
+                                           FontFamily="{StaticResource NewsHeadFont}"
+                                           FontStretch="Condensed"
+                                           FontWeight="Bold"
+                                           FontSize="{StaticResource FontSizeSubheading}"
+                                           Foreground="{StaticResource NewsprintInkBrush}"
+                                           Margin="0,0,0,4"/>
+                                <ItemsControl ItemsSource="{Binding PlayerAds}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <DockPanel Margin="0,3">
+                                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center"
+                                                            Visibility="{Binding HasOffer, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                    <Button Content="{t:Text paper.offer.take}" Command="{Binding AcceptCommand}" Style="{StaticResource InkButtonStyle}" Margin="12,0,0,0"/>
+                                                    <Button Content="{t:Text paper.offer.turn_down}" Command="{Binding DeclineCommand}" Style="{StaticResource InkButtonStyle}" Margin="6,0,0,0"/>
+                                                </StackPanel>
+                                                <TextBlock Style="{StaticResource AdTextStyle}" TextAlignment="Left">
+                                                    <Run Text="{Binding CarName, Mode=OneWay}" FontFamily="{StaticResource NewsHeadFont}" FontStretch="Condensed" FontWeight="Bold"/><Run Text="  "/><Run Text="{Binding AskingDisplay, Mode=OneWay}"/><LineBreak/><Run Text="{Binding OfferDisplay, Mode=OneWay}" FontStyle="Italic" Foreground="{StaticResource NewsprintInkFadedBrush}"/>
+                                                </TextBlock>
+                                            </DockPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Text="{t:Text paper.cars.none}"
+                                   Style="{StaticResource PaperNoteStyle}"
+                                   Visibility="{Binding ShowNoCars, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+                        <ItemsControl ItemsSource="{Binding CarAds.Shown}" ItemsPanel="{StaticResource ColumnsPanel}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type local:CarAdViewModel}">
+                                    <Button Style="{StaticResource ClassifiedAdStyle}" Command="{Binding LookCommand}" ToolTip="{Binding Details}">
+                                        <TextBlock Style="{StaticResource AdTextStyle}">
+                                            <Run Text="{Binding Headline, Mode=OneWay}" FontFamily="{StaticResource NewsHeadFont}" FontStretch="Condensed" FontWeight="Bold"/><Run Text="  "/><Run Text="{Binding Blurb, Mode=OneWay}"/><Run Text="{Binding WasPriceDisplay, Mode=OneWay}" TextDecorations="Strikethrough" Foreground="{StaticResource NewsprintPencilBrush}"/><Run Text="{Binding PriceDisplay, Mode=OneWay}" FontWeight="Bold"/><Run Text=". "/><Run Text="{Binding SellerDisplay, Mode=OneWay}" FontStyle="Italic"/>
+                                        </TextBlock>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- Used parts: every part ad -->
+                <ScrollViewer x:Name="PartsScroller"
+                              Grid.Row="2"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled"
+                              ScrollChanged="OnScrollChanged"
+                              Visibility="{Binding ShowParts, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <StackPanel Margin="0,0,10,24">
+                        <TextBlock Text="{t:Text paper.parts.none}"
+                                   Style="{StaticResource PaperNoteStyle}"
+                                   Visibility="{Binding ShowNoParts, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+                        <ItemsControl ItemsSource="{Binding PartAds.Shown}" ItemsPanel="{StaticResource ColumnsPanel}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type local:PartAdViewModel}">
+                                    <Button Style="{StaticResource ClassifiedAdStyle}" Command="{Binding LookCommand}" ToolTip="{Binding Details}">
+                                        <TextBlock Style="{StaticResource AdTextStyle}">
+                                            <Run Text="{Binding Headline, Mode=OneWay}" FontFamily="{StaticResource NewsHeadFont}" FontStretch="Condensed" FontWeight="Bold"/><Run Text="  "/><Run Text="{Binding Blurb, Mode=OneWay}"/><Run Text="{Binding PriceDisplay, Mode=OneWay}" FontWeight="Bold"/><Run Text=". "/><Run Text="{Binding SellerDisplay, Mode=OneWay}" FontStyle="Italic"/><Run Text="{Binding FitsDisplay, Mode=OneWay}" FontStyle="Italic" Foreground="{StaticResource NewsprintPencilBrush}"/>
+                                        </TextBlock>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <!-- Back to the garage -->
         <Button x:Name="BackButton"
-                Grid.Row="0"
                 Style="{StaticResource RoundIconButtonStyle}"
                 Tag="{StaticResource BackIcon}"
                 ToolTip="{t:Text common.back}"
@@ -24,392 +297,5 @@
                 VerticalAlignment="Top"
                 Margin="20,20,0,0"
                 Opacity="0"/>
-
-
-        <!-- Content Area: the paper's race pages, the invitations, the classifieds -->
-        <Grid Grid.Row="0" Margin="20,80,20,20">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="420"/>
-            </Grid.ColumnDefinitions>
-
-            <!-- The race pages (Left Side): what the street did the last few days -->
-            <Border x:Name="NewsPanel"
-                    Grid.Column="0"
-                    Background="{StaticResource BgDarkDFBrush}"
-                    BorderBrush="{StaticResource BorderLightBrush}"
-                    BorderThickness="2"
-                    CornerRadius="5"
-                    Margin="0,0,20,0"
-                    Opacity="0">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-
-                    <Border Grid.Row="0"
-                            Background="{StaticResource BgPanelBrush}"
-                            BorderBrush="{StaticResource BorderLightBrush}"
-                            BorderThickness="0,0,0,1"
-                            Padding="15">
-                        <StackPanel>
-                            <TextBlock Text="{t:Text paper.news}"
-                                       FontSize="{StaticResource FontSizeHeading}"
-                                       FontWeight="Bold"
-                                       Foreground="{StaticResource TextPrimaryBrush}"/>
-                            <TextBlock Text="{Binding EditionDisplay}"
-                                       FontSize="{StaticResource FontSizeCaption}"
-                                       FontStyle="Italic"
-                                       Foreground="{StaticResource TextSecondaryBrush}"/>
-                        </StackPanel>
-                    </Border>
-
-                    <TextBlock Grid.Row="1"
-                               Text="{t:Text paper.news.none}"
-                               FontSize="{StaticResource FontSizeSmall}"
-                               FontStyle="Italic"
-                               Foreground="{StaticResource TextSecondaryBrush}"
-                               TextWrapping="Wrap"
-                               Margin="15"
-                               Visibility="{Binding HasArticles, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
-
-                    <ScrollViewer Grid.Row="1"
-                                  VerticalScrollBarVisibility="Auto"
-                                  HorizontalScrollBarVisibility="Disabled">
-                        <ItemsControl ItemsSource="{Binding Articles}" Margin="15,10">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border BorderBrush="{StaticResource BorderLightBrush}"
-                                            BorderThickness="0,0,0,1"
-                                            Padding="0,0,0,12"
-                                            Margin="0,0,0,12">
-                                        <StackPanel>
-                                            <TextBlock Text="{Binding Headline}"
-                                                       FontWeight="Bold"
-                                                       TextWrapping="Wrap"
-                                                       Foreground="{StaticResource TextPrimaryBrush}">
-                                                <!-- The lead story in bigger type -->
-                                                <TextBlock.Style>
-                                                    <Style TargetType="TextBlock">
-                                                        <Setter Property="FontSize" Value="{StaticResource FontSizeSubheading}"/>
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsLead}" Value="True">
-                                                                <Setter Property="FontSize" Value="{StaticResource FontSizeTitleSmall}"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </TextBlock.Style>
-                                            </TextBlock>
-                                            <TextBlock Text="{Binding DateDisplay}"
-                                                       FontSize="{StaticResource FontSizeCaption}"
-                                                       FontStyle="Italic"
-                                                       Foreground="{StaticResource GoldBrush}"
-                                                       Margin="0,2,0,4"/>
-                                            <TextBlock Text="{Binding Body}"
-                                                       FontSize="{StaticResource FontSizeSmall}"
-                                                       TextWrapping="Wrap"
-                                                       Foreground="{StaticResource TextSecondaryBrush}"/>
-                                        </StackPanel>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
-                </Grid>
-            </Border>
-
-            <!-- Race Invitations Panel (Middle) -->
-            <Border x:Name="RaceInvitationsPanel"
-                    Grid.Column="1"
-                    Background="{StaticResource BgDarkDFBrush}"
-                    BorderBrush="{StaticResource BorderLightBrush}"
-                    BorderThickness="2"
-                    CornerRadius="5"
-                    Margin="0,0,20,0"
-                    Opacity="0">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-
-                    <!-- Header -->
-                    <Border Grid.Row="0"
-                            Background="{StaticResource BgPanelBrush}"
-                            BorderBrush="{StaticResource BorderLightBrush}"
-                            BorderThickness="0,0,0,1"
-                            Padding="15">
-                        <TextBlock Text="{t:Text paper.invitations}"
-                                   FontSize="{StaticResource FontSizeHeading}"
-                                   FontWeight="Bold"
-                                   Foreground="{StaticResource TextPrimaryBrush}"/>
-                    </Border>
-
-                    <TextBlock Grid.Row="1"
-                               Text="{t:Text paper.invitations.none}"
-                               FontSize="{StaticResource FontSizeSmall}"
-                               FontStyle="Italic"
-                               Foreground="{StaticResource TextSecondaryBrush}"
-                               TextWrapping="Wrap"
-                               Margin="15"
-                               Visibility="{Binding HasRaceInvitations, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
-
-                    <!-- Events List -->
-                    <ScrollViewer Grid.Row="1"
-                                  VerticalScrollBarVisibility="Auto"
-                                  HorizontalScrollBarVisibility="Disabled">
-                        <ItemsControl ItemsSource="{Binding RaceInvitations}"
-                                      Margin="10">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <!-- Event Card -->
-                                    <Border Background="{StaticResource BgMediumBrush}"
-                                            BorderBrush="{StaticResource BorderLightBrush}"
-                                            BorderThickness="1"
-                                            CornerRadius="6"
-                                            Padding="12"
-                                            Margin="0,0,0,10"
-                                            Opacity="{Binding Opacity}">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-
-                                            <StackPanel Grid.Column="0">
-                                                <!-- Event name and type -->
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="{Binding Name}"
-                                                               FontWeight="Bold"
-                                                               FontSize="{StaticResource FontSizeSubheading}"
-                                                               Foreground="{StaticResource TextPrimaryBrush}"/>
-                                                    <Border Background="{StaticResource BorderLightBrush}"
-                                                            CornerRadius="3"
-                                                            Padding="6,2"
-                                                            Margin="10,0,0,0"
-                                                            VerticalAlignment="Center">
-                                                        <TextBlock Text="{Binding RaceTypeDisplay}"
-                                                                   FontSize="{StaticResource FontSizeTiny}"
-                                                                   Foreground="{StaticResource TextSecondaryBrush}"/>
-                                                    </Border>
-                                                </StackPanel>
-
-                                                <!-- Description -->
-                                                <TextBlock Text="{Binding Description}"
-                                                           FontSize="{StaticResource FontSizeSmall}"
-                                                           Foreground="{StaticResource TextSecondaryBrush}"
-                                                           TextWrapping="Wrap"
-                                                           Margin="0,4,0,0"/>
-
-                                                <!-- Requirements -->
-                                                <TextBlock Margin="0,6,0,0">
-                                                    <Run Text="{t:Text paper.requirements}" Foreground="{StaticResource TextSecondaryBrush}" FontSize="{StaticResource FontSizeCaption}"/>
-                                                    <Run Text="{Binding RequirementsDescription, Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" FontSize="{StaticResource FontSizeCaption}"/>
-                                                </TextBlock>
-
-                                                <!-- Reward -->
-                                                <TextBlock Margin="0,2,0,0">
-                                                    <Run Text="{t:Text paper.reward}" Foreground="{StaticResource TextSecondaryBrush}" FontSize="{StaticResource FontSizeCaption}"/>
-                                                    <Run Text="{Binding RewardDescription, Mode=OneWay}" Foreground="{StaticResource AccentSuccessBrush}" FontSize="{StaticResource FontSizeCaption}" FontWeight="Bold"/>
-                                                </TextBlock>
-
-                                                <!-- Pink Slip Warning -->
-                                                <TextBlock Text="{Binding PinkSlipWarning}"
-                                                           FontSize="{StaticResource FontSizeCaption}"
-                                                           FontWeight="Bold"
-                                                           Foreground="{StaticResource DangerBrush}"
-                                                           Margin="0,4,0,0"
-                                                           Visibility="{Binding ShowPinkSlipWarning, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-
-                                                <!-- Footer: Expiry and Eligibility -->
-                                                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                                                    <TextBlock Text="{Binding ExpiresInText}"
-                                                               FontSize="{StaticResource FontSizeCaption}"
-                                                               FontStyle="Italic">
-                                                        <!-- Orange, red when it expires within a day -->
-                                                        <TextBlock.Style>
-                                                            <Style TargetType="TextBlock">
-                                                                <Setter Property="Foreground" Value="{StaticResource WarningBrush}"/>
-                                                                <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding IsExpiringSoon}" Value="True">
-                                                                        <Setter Property="Foreground" Value="{StaticResource DangerBrush}"/>
-                                                                    </DataTrigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </TextBlock.Style>
-                                                    </TextBlock>
-                                                    <TextBlock Text=" | "
-                                                               FontSize="{StaticResource FontSizeCaption}"
-                                                               Foreground="{StaticResource TextSecondaryBrush}"/>
-                                                    <TextBlock Text="{Binding EligibilityText}"
-                                                               FontSize="{StaticResource FontSizeCaption}"
-                                                               FontStyle="Italic">
-                                                        <!-- Green when a car can enter, red when none can -->
-                                                        <TextBlock.Style>
-                                                            <Style TargetType="TextBlock">
-                                                                <Setter Property="Foreground" Value="{StaticResource DangerBrush}"/>
-                                                                <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding HasEligibleCars}" Value="True">
-                                                                        <Setter Property="Foreground" Value="{StaticResource AccentSuccessBrush}"/>
-                                                                    </DataTrigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </TextBlock.Style>
-                                                    </TextBlock>
-                                                </StackPanel>
-                                            </StackPanel>
-
-                                            <!-- Enter button -->
-                                            <Button Grid.Column="1"
-                                                    Content="{t:Text paper.enter}"
-                                                    Command="{Binding DataContext.EnterEventCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                    CommandParameter="{Binding}"
-                                                    IsEnabled="{Binding CanEnter}"
-                                                    VerticalAlignment="Center"
-                                                    Margin="15,0,0,0"
-                                                    Padding="15,10"
-                                                    FontSize="{StaticResource FontSizeSmall}"
-                                                    FontWeight="Bold"
-                                                    Foreground="{StaticResource BgPanelBrush}"
-                                                    Cursor="Hand">
-                                                <Button.Style>
-                                                    <Style TargetType="Button">
-                                                        <Setter Property="Background" Value="{StaticResource AccentSuccessBrush}"/>
-                                                        <Setter Property="Template">
-                                                            <Setter.Value>
-                                                                <ControlTemplate TargetType="Button">
-                                                                    <Border x:Name="Bd"
-                                                                            Background="{TemplateBinding Background}"
-                                                                            CornerRadius="4"
-                                                                            Padding="{TemplateBinding Padding}">
-                                                                        <ContentPresenter HorizontalAlignment="Center"
-                                                                                          VerticalAlignment="Center"/>
-                                                                    </Border>
-                                                                    <ControlTemplate.Triggers>
-                                                                        <Trigger Property="IsMouseOver" Value="True">
-                                                                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource SuccessHoverBrush}"/>
-                                                                        </Trigger>
-                                                                        <Trigger Property="IsEnabled" Value="False">
-                                                                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource Gray50Brush}"/>
-                                                                            <Setter Property="Foreground" Value="{StaticResource Gray80Brush}"/>
-                                                                        </Trigger>
-                                                                    </ControlTemplate.Triggers>
-                                                                </ControlTemplate>
-                                                            </Setter.Value>
-                                                        </Setter>
-                                                    </Style>
-                                                </Button.Style>
-                                            </Button>
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
-                </Grid>
-            </Border>
-
-            <!-- The classifieds (Right Side): the market buttons, then the player's own ads, scrolled when they run long -->
-            <Grid x:Name="ContentPanel"
-                  Grid.Column="2"
-                  Opacity="0">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-
-                <!-- The two market buttons side by side, at two thirds of their size -->
-                <StackPanel Grid.Row="0"
-                            Orientation="Horizontal"
-                            HorizontalAlignment="Center">
-                    <StackPanel.LayoutTransform>
-                        <ScaleTransform ScaleX="0.66" ScaleY="0.66"/>
-                    </StackPanel.LayoutTransform>
-
-                    <!-- Used Parts Button -->
-                    <Button Style="{StaticResource GameButtonStyle}"
-                            Background="{StaticResource UsedPartsButtonBrush}"
-                            Command="{Binding UsedPartsCommand}"
-                            Tag="{t:Text paper.browse_parts}"
-                            Margin="0,0,20,0"/>
-
-                    <!-- Used Cars Button -->
-                    <Button Style="{StaticResource GameButtonStyle}"
-                            Background="{StaticResource UsedCarsButtonBrush}"
-                            Command="{Binding UsedCarsCommand}"
-                            Tag="{t:Text paper.browse_cars}"/>
-                </StackPanel>
-
-                <!-- The player's own cars in the paper, and the buyers who called -->
-                <Border Grid.Row="1"
-                        Background="{StaticResource BgPanelCCBrush}"
-                        BorderBrush="{StaticResource BorderLightBrush}"
-                        BorderThickness="1"
-                        CornerRadius="5"
-                        Padding="15,10"
-                        Margin="0,20,0,0"
-                        VerticalAlignment="Top"
-                        Visibility="{Binding HasPlayerAds, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-                        <TextBlock Grid.Row="0"
-                                   Text="{t:Text paper.your_ads}"
-                                   Foreground="{StaticResource TextPrimaryBrush}"
-                                   FontSize="{StaticResource FontSizeBody}"
-                                   FontWeight="SemiBold"
-                                   Margin="0,0,0,6"/>
-                        <ScrollViewer Grid.Row="1"
-                                      VerticalScrollBarVisibility="Auto"
-                                      HorizontalScrollBarVisibility="Disabled">
-                                <ItemsControl ItemsSource="{Binding PlayerAds}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Grid Margin="0,4">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-                                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                                    <TextBlock Foreground="{StaticResource TextPrimaryBrush}"
-                                                               FontSize="{StaticResource FontSizeSmall}">
-                                                        <Run Text="{Binding CarName, Mode=OneWay}"/><Run Text=" · "/><Run Text="{Binding AskingDisplay, Mode=OneWay}"/>
-                                                    </TextBlock>
-                                                    <TextBlock Text="{Binding OfferDisplay}"
-                                                               Foreground="{StaticResource TextSecondaryBrush}"
-                                                               FontSize="{StaticResource FontSizeSmall}"
-                                                               TextWrapping="Wrap"/>
-                                                </StackPanel>
-                                                <Button Grid.Column="1"
-                                                        Content="{t:Text paper.offer.take}"
-                                                        Command="{Binding AcceptCommand}"
-                                                        Style="{StaticResource DialogPrimaryButtonStyle}"
-                                                        Width="80"
-                                                        Height="28"
-                                                        Margin="8,0,0,0"
-                                                        Visibility="{Binding HasOffer, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                                                <Button Grid.Column="2"
-                                                        Content="{t:Text paper.offer.turn_down}"
-                                                        Command="{Binding DeclineCommand}"
-                                                        Style="{StaticResource DialogSecondaryButtonStyle}"
-                                                        Width="80"
-                                                        Height="28"
-                                                        Margin="6,0,0,0"
-                                                        Visibility="{Binding HasOffer, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                        </ScrollViewer>
-                    </Grid>
-                </Border>
-            </Grid>
-        </Grid>
-
     </Grid>
 </UserControl>

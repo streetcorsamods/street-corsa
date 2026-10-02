@@ -1158,6 +1158,63 @@ The fourth batch of the user's ideas: the garage's look, two new dialogs and fad
   lifts, not at the click; it leaves the car with the screen.
 - A free run or a test-and-tune keeps the radio as it was (`App.KeepsRadio`); only a race switches it off.
 
+## Step 25: from `docs/ideas.txt`, batch 5 (planned 2026-10-01)
+
+The fifth batch of the user's ideas: a racing hub, the newspaper as real classifieds, 3D previews, and AI. **The user
+decided (2026-10-01):** one PR for all of it, built before E7; every car ad goes in the paper (dealers, private sellers,
+rivals); a car ad opens a screen of its own, a part ad a modal; AI supports Ollama, ComfyUI, OpenAI-compatible
+endpoints and the Anthropic API.
+
+What the code has today (mapped 2026-10-01): the garage's "Hit the streets" opens the Diner (Cruise is a button
+there); race invitations (events from `events.json`) and Street News (`NewsWriter`) are columns of the Newspaper,
+next to links to the Used Car Market and Used Parts screens; the car list is virtualized
+(`VirtualizingUniformWrapPanel`), not paged, and the parts list stops at 250 rows; no ad has a description; there is
+no single-part 3D view and no dialog hosts a viewport; there is no AI or HTTP code, but `ITalkService`
+(`StaticTalkService`) is the seam the rivals' lines already go through.
+
+- **Racing hub** (idea 1): the garage's steering-wheel button becomes "Go race!" (text key, not hard-coded) and opens a
+  styled modal: the race invitations (entered as today: `EventEntry`, dial-in, race setup), Street News, and a "Hit the
+  streets" button that goes to the Diner as before. The Newspaper loses both columns.
+- **Newspaper** (idea 2): the classifieds only, two sections, used cars and used parts, laid out like a period paper's
+  ads (dense small type, bold run-in headline, ruled columns, newsprint), endless scroll that adds ads page by page.
+  Every car ad is there, dealers' included; the dealer filter and its code go, and the Used Car Market screen is folded
+  into the paper. The player's own car ads and their offers stay in the cars section, at the top. Mail order and
+  selling parts stay with the part dealers.
+- **Ad blurbs**: a short, varied description on every ad (`Description` on the listing and part ads, written once and
+  saved): a standout part ("327 V8, dual quads", "blower"), "all original", or a character line ("grandma's car,
+  church on Sundays"), from text pools; not all condition and mileage.
+- **Part preview**: a part ad opens a modal with a small 3D viewport of the part alone (a new control on
+  `D3DViewportBase`, its KN5 from the parts catalog), turned and zoomed with the mouse.
+- **Car preview**: a car ad opens a screen of its own, "you go see it": the car at the seller's curb (the street
+  scene) or on the dealer's lot, orbit camera, Buy and Back. A car needs the whole window, the lot viewport and street
+  scene can be reused, and a 3D scene inside a fading modal is untried.
+- **AI** (idea 3): an AI section in Settings, off by default: text provider (Ollama, OpenAI-compatible, Anthropic),
+  endpoint, model, key (encrypted with DPAPI, never plain in `settings.json`), a Test button; ComfyUI address and a
+  workflow for images. The game never waits on it: the built-in text is always there, AI text is made in the
+  background, kept in the save, and a failure falls back quietly. Uses: rival talk (`ITalkService`), ad blurbs, a
+  dealer's word on a car, news stories, the Diner's street talk; ComfyUI portraits for new rivals (as in step 12) and
+  maybe newspaper photos. Prompts and ComfyUI workflows are mod data (`ai/` in Content), so a game mod has its own voice.
+
+**As built (2026-10-01, `feature/ideas-batch-5`), the owner tested it:** three parallel branches merged. After the
+first look: the paper fills the screen in bigger type, no Buy on the ads (a car is bought only after going to see it,
+a part from its look), the car stands on its tyres, the camera walks round it, a garage button under the back one.
+- Racing hub: `Dialogs/RaceHub` (`NavigationService.ShowRaceHub`), the garage's wheel button says "Go race!"; the hub
+  withdraws itself before the event entry; invitations load through `RaceInvitations.Load`.
+- Newspaper: "The Street Trader", AUTOMOBILES FOR SALE and PARTS & ACCESSORIES, newsprint theme keys (`NewsprintFont`,
+  `NewsHeadFont`, `Newsprint*` colours), `ClassifiedColumnsPanel` (an ad goes in the shortest column, so ads never
+  move as pages arrive), 30 ads a page. The Used Car Market screen and the dealer filter are gone;
+  `UsedCarListingViewModel` is in `Screens/Shared`. `Screens/UsedParts` is now the mail order (New and Sell tabs),
+  reached from a "Mail order" button on the part shops' map. Headlines and listing names say the make once
+  (`CarNames.MakeAndModel`: "AMC Javelin", not "American Motor Company AMC Javelin").
+- Blurbs: `Description` on `UsedCarListing`, `RivalCarAd`, `PartAd`, from `text/ads.json` (`AdBlurbs`); old saves'
+  ads get theirs when first shown. Only parts that did not come from the factory are bragged about, a blower always.
+- Previews: `Controls/PartViewport3D` in `Dialogs/PartPreview` (the part with what is bolted on it, a dark studio,
+  turns until touched); `Screens/CarViewing` with `Controls/CarViewingViewport3D`: a dealer's car alone in its
+  showroom, anyone else's at the curb of a street lit for the hour (the same street per ad), a rival's ad bought from
+  the rival; the engine panel, Buy, Back to the paper, the ad's blurb, and "What do you make of it?" when the AI is on.
+- AI: see `docs/ai-integration.md`. Tested live with Ollama `llama3.2:3b`; ComfyUI, Anthropic and OpenAI-compatible
+  only against fake servers.
+
 ## Epic: total conversion (planned 2026-09-30)
 
 The owner wants the whole game moddable, so the community can add game modes and whole new games (a Tokyo Drift game

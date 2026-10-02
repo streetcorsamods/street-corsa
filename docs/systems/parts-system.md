@@ -603,9 +603,9 @@ about 0.2 ms; a place for a loose part wins over a mounted part in front of it, 
 and some sit inside another part) and draws the glows: depth of the thing alone, `EffectPpOutline`, then scaled to a tint with a
 blend-factor pass, one buffer per glow (car, candidates, selected, hovered).
 
-**Shop** (`NewspaperPartsService`, the Used Parts screen of the newspaper). Three pages: used parts from the ads
-(`NewspaperAds.Parts`, 25-40 ads turned over daily by `PartsAdsRefreshTask`, now and then a complete engine), new parts
-by mail order (the engine packs plus whatever else the builds use: everything there is, at the list price and 20% more,
+**Shop** (`NewspaperPartsService`). Used parts from the ads (`NewspaperAds.Parts`, 25-40 ads turned over daily by
+`PartsAdsRefreshTask`, now and then a complete engine) are the newspaper's used parts section, bought from the ad. The
+mail order (`Screens/UsedParts`, the part shops' map's Mail order button) has two pages: new parts by mail order (the engine packs plus whatever else the builds use: everything there is, at the list price and 20% more,
 `NewspaperPartsService.MailOrderPremium`, paid when ordered and on the shelf three days later: `Player.PartOrders`, brought by
 `PartsAdsRefreshTask` each morning, told of in the garage from `Player.Delivered`), and selling from the shelf. Filters: kind
 (`PartKinds.GroupOf`, from the script classes), name, and "only what fits my car" (`FindFittingParts`: everything that

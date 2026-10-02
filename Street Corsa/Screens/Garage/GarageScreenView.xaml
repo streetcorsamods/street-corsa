@@ -622,12 +622,12 @@
                 VerticalAlignment="Top"
                 Margin="30,30,0,0"/>
 
-        <!-- Hit the Streets (centre left) -->
-        <Button x:Name="HitTheStreetsButton"
+        <!-- Go race: the racing hub (centre left) -->
+        <Button x:Name="GoRaceButton"
                 Style="{StaticResource RoundIconButtonLargeStyle}"
                 Tag="{StaticResource DrivingWheelIcon}"
-                Command="{Binding HitTheStreetsCommand}"
-                ToolTip="{t:Text garage.tile.streets}"
+                Command="{Binding GoRaceCommand}"
+                ToolTip="{t:Text garage.tile.go_race}"
                 helpers:Reveal.IsShown="{Binding ShowNavigation}"
                 helpers:Reveal.OffsetX="-60"
                 HorizontalAlignment="Left"

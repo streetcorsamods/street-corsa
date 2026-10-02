@@ -87,7 +87,8 @@ namespace StreetCorsa.Screens.Garage
         public RelayCommand NewspaperCommand { get; }
         public RelayCommand CarDealersCommand { get; }
         public RelayCommand PartDealersCommand { get; }
-        public RelayCommand HitTheStreetsCommand { get; }
+        /// <summary>The racing hub: the race invitations, Street News, and the way out onto the streets</summary>
+        public RelayCommand GoRaceCommand { get; }
         public AsyncRelayCommand GasStationCommand { get; }
         public RelayCommand CareerCommand { get; }
 
@@ -336,7 +337,7 @@ namespace StreetCorsa.Screens.Garage
             NewspaperCommand = new RelayCommand(() => LeaveTo(() => _navigationService.NavigateToNewspaper(_gameState)), CanLeave);
             CarDealersCommand = new RelayCommand(() => LeaveTo(() => _navigationService.NavigateToDealerMap(_gameState)), CanLeave);
             PartDealersCommand = new RelayCommand(() => LeaveTo(() => _navigationService.NavigateToPartShopMap(_gameState)), CanLeave);
-            HitTheStreetsCommand = new RelayCommand(() => LeaveTo(() => _navigationService.NavigateToDiner(_gameState)), CanLeave);
+            GoRaceCommand = new RelayCommand(OnGoRace, CanLeave);
             GasStationCommand = new AsyncRelayCommand(OnGasStation, () => SelectedCarHere && CanLeave());
             // Not while the night runs: picking a victory path may win the game there and then, and saves
             CareerCommand = new RelayCommand(OnCareer, CanLeave);
@@ -934,6 +935,14 @@ namespace StreetCorsa.Screens.Garage
             {
                 _logger.Error(ex, "Could not show the car's sheet");
             }
+        }
+
+        /// <summary>The racing hub over the garage; its "Hit the streets" goes to the diner</summary>
+        private void OnGoRace()
+        {
+            if (!CanLeave()) return;
+
+            _navigationService.ShowRaceHub(_gameState, () => LeaveTo(() => _navigationService.NavigateToDiner(_gameState)));
         }
 
         /// <summary>The career over the garage: the victory paths, the player's record and the milestones</summary>

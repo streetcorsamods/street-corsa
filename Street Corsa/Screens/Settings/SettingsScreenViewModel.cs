@@ -73,6 +73,9 @@ namespace StreetCorsa.Screens.Settings
             }
         }
 
+        /// <summary>The player's own AI: the text provider and ComfyUI</summary>
+        public AiSettingsSection Ai { get; }
+
         /// <summary>The languages of the mods next to the game, the game's own first</summary>
         public IReadOnlyList<LanguageChoice> Languages { get; }
 
@@ -238,6 +241,8 @@ namespace StreetCorsa.Screens.Settings
             Languages = MakeLanguages(Settings.Language, out _language);
             UnitChoices = MakeUnits(Settings.Units, out _units);
 
+            Ai = new AiSettingsSection(settingsService, Services.Ai.AiHub.Shared.Text, Services.Ai.AiHub.Shared.Images, ShowNotSaved);
+
             _audioSave = new DispatcherTimer { Interval = AudioSaveDelay };
             _audioSave.Tick += (_, _) => SaveAudio();
             Volumes = MakeVolumes();
@@ -399,6 +404,7 @@ namespace StreetCorsa.Screens.Settings
             _units = UnitChoices[0];
             Locale.Units = UnitsIn(null);
             OnPropertyChanged(nameof(Units));
+            Ai.Reload();
             _logger.Information("Settings reset to defaults");
 
             // The defaults name the default folder: a player whose install is elsewhere needs to know

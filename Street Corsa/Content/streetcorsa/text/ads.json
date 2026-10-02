@@ -1,0 +1,129 @@
+{
+  "_comment": [
+    "The few words of an ad in the paper's classifieds, written once when the ad is placed and kept with it. Which pool",
+    "an ad draws from is the game's to decide (Services/Market/AdBlurbs.cs): a part worth naming first, then the engine,",
+    "all original, the condition, low miles, or a line of character; now and then a car's ad adds its condition after.",
+    "Each pool gives one line at random. A car's ad: {part} the part's name (ads.car.blower, turbo, nitrous, carbs (a",
+    "carburettor or injection: the game cannot tell them apart), heads, cam, intake, headers), {engine} what the seller says about the engine (\"GM 327, 275 hp\";",
+    "ads.car.engine and ads.car.built only), {km} the mileage (ads.car.low_miles, as {km:distance}). A part's ad: {part}",
+    "the part's name, {kind} its kind as a shop's shelf says it (\"Camshafts\"). ads.car.mint and ads.car.rough take",
+    "nothing, nor do the character lines."
+  ],
+  "lines": {
+    "ads.car.blower": [
+      "Blown with a {part}. Not for the timid.",
+      "{part} on top. Eats Corvettes.",
+      "Supercharged ({part}). Scares the neighbors.",
+      "Wears a {part}. You'll hear it coming."
+    ],
+    "ads.car.turbo": [
+      "Turbocharged: {part}. Whistles, then goes.",
+      "{part} fitted. Strong on top."
+    ],
+    "ads.car.nitrous": [
+      "Has the bottle: {part}. Push the button, hang on.",
+      "{part} on board. Street legal, mostly."
+    ],
+    "ads.car.carbs": [
+      "{part} on top. Breathes deep.",
+      "Runs a {part}. Strong pull.",
+      "Fed by a {part}. Ready to run."
+    ],
+    "ads.car.heads": [
+      "Ported heads: {part}. Lots of go.",
+      "{part} on it. Built right."
+    ],
+    "ads.car.cam": [
+      "Hot cam ({part}). Lopes at idle.",
+      "{part} in it. Idles rough, runs hard.",
+      "Lumpy {part}. Sounds mean."
+    ],
+    "ads.car.intake": [
+      "{part} on the motor. Pulls hard.",
+      "Speed intake, {part}. Quick."
+    ],
+    "ads.car.headers": [
+      "{part}, loud pipes. Gets looks.",
+      "Headers ({part}). Barks at the light."
+    ],
+    "ads.car.built": [
+      "{engine}, built not bought. Fast.",
+      "Worked-over {engine}. Too much car for me.",
+      "{engine}, lots of speed parts. Must sell."
+    ],
+    "ads.car.engine": [
+      "{engine}. Runs strong.",
+      "Numbers-matching {engine}. Never apart.",
+      "{engine}, good compression, no smoke."
+    ],
+    "ads.car.original": [
+      "All original. Never raced.",
+      "Bone stock, as it left the factory.",
+      "Stock, unmolested. A real survivor.",
+      "Original paint and interior. Kept up."
+    ],
+    "ads.car.mint": [
+      "Clean, straight, shiny.",
+      "Showroom shape.",
+      "Garage kept. Like new."
+    ],
+    "ads.car.rough": [
+      "Needs work. Make offer.",
+      "Project car. Runs, mostly.",
+      "Rough but solid. Priced to go.",
+      "Fixer-upper. Bring a trailer."
+    ],
+    "ads.car.low_miles": [
+      "Only {km:distance}. Hardly driven.",
+      "Low miles: {km:distance}."
+    ],
+    "ads.car.character": [
+      "Grandma's car. Church on Sundays only.",
+      "Drafted. Must sell.",
+      "Wife says it goes.",
+      "Getting married. Need cash fast.",
+      "Moving out of state. Best offer.",
+      "Doctor's car, always garaged.",
+      "Too fast for my insurance.",
+      "Ex-schoolteacher's car. Never above 40.",
+      "Lost a bet. Your gain.",
+      "Bought a boat. Car has to go.",
+      "Baby on the way. Trading for a wagon.",
+      "Won it in a card game. Make me an offer.",
+      "Hate to let it go. Call evenings.",
+      "First $ takes it. No tire kickers."
+    ],
+    "ads.part.engine": [
+      "Complete {part}, pulled running.",
+      "{part}, all there. Ran when parked.",
+      "Whole {part}. Drop it in and go."
+    ],
+    "ads.part.speed": [
+      "Hot setup. Too much for my street car.",
+      "Speed shop quality, half the price.",
+      "Came off a winner."
+    ],
+    "ads.part.fresh": [
+      "Like new. Used one season.",
+      "Hardly used. Still has the shine.",
+      "Low miles. Excellent shape."
+    ],
+    "ads.part.worn": [
+      "Needs a rebuild. Priced to go.",
+      "Tired but usable. Cheap.",
+      "Good core. Make offer."
+    ],
+    "ads.part.racer": [
+      "Off my race car. Upgraded.",
+      "Pulled it for something bigger.",
+      "Swapped for more power. Yours now."
+    ],
+    "ads.part.character": [
+      "Cleaning out the garage.",
+      "Wife says it goes.",
+      "Must sell this week.",
+      "No room for it. Cash only.",
+      "Moving. Everything must go."
+    ]
+  }
+}
