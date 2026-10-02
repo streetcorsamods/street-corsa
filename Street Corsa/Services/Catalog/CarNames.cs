@@ -50,11 +50,25 @@ namespace StreetCorsa.Services.Catalog
             return kept.Length > 0 ? kept : definition.Name;
         }
 
+        /// <summary>
+        /// Make and model, the make said once: not again when the name holds it ("The Batmobile" of Batmobile, "Chevrolet
+        /// Camaro" of Chevrolet) or starts with its initials ("AMC Javelin" of American Motor Company)
+        /// </summary>
+        public static string MakeAndModel(CarDefinition definition)
+        {
+            var brand = definition.Brand.Trim();
+            if (brand.Length == 0 || definition.Name.Contains(brand, StringComparison.OrdinalIgnoreCase)) return definition.Name;
+
+            var words = brand.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var first = definition.Name.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
+            return words.Length > 1 && string.Equals(first, string.Concat(words.Select(w => char.ToUpperInvariant(w[0]))), StringComparison.OrdinalIgnoreCase)
+                ? definition.Name
+                : $"{brand} {definition.Name}";
+        }
+
         public static string Of(CarDefinition definition)
         {
-            var name = definition.Brand.Length == 0 || definition.Name.StartsWith(definition.Brand, StringComparison.OrdinalIgnoreCase)
-                ? definition.Name
-                : $"{definition.Brand} {definition.Name}";
+            var name = MakeAndModel(definition);
             return definition.Year is { } year && !name.Contains(year.ToString()) ? $"{year} {name}" : name;
         }
     }

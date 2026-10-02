@@ -34,7 +34,7 @@ namespace StreetCorsa.Screens.Shared
             ? GameText.Say("market.seller_line.private", ("seller", PrivateSeller))
             : GameText.Say("market.seller_line.dealer", ("dealer", DealerName));
 
-        public string DisplayName => $"{CarDefinition.Brand} {CarDefinition.Name}";
+        public string DisplayName => Services.Catalog.CarNames.MakeAndModel(CarDefinition);
         public string YearDisplay => CarDefinition.Year?.ToString() ?? GameText.Say("market.unknown_year");
         public string PriceDisplay => Money.Text(Listing.Price);
 

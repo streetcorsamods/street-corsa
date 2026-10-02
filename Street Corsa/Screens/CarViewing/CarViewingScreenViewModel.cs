@@ -6,7 +6,7 @@ using StreetCorsa.Logging;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Navigation;
 using StreetCorsa.Screens.Shared;
-using StreetCorsa.Screens.UsedCarMarket;
+using StreetCorsa.Screens.Shared;
 using StreetCorsa.Services.Catalog;
 using StreetCorsa.Services.Dealers;
 using StreetCorsa.Services.Market;
@@ -76,6 +76,7 @@ namespace StreetCorsa.Screens.CarViewing
 
             BuyCommand = new RelayCommand(OnBuy, () => Car != null);
             BackCommand = new RelayCommand(OnBack);
+            AskSellerCommand = new AsyncRelayCommand(OnAskSellerAsync, () => CanAskSeller);
         }
 
         /// <summary>The air of where the car stands</summary>
@@ -84,6 +85,9 @@ namespace StreetCorsa.Screens.CarViewing
         public RelayCommand BuyCommand { get; }
 
         public RelayCommand BackCommand { get; }
+
+        /// <summary>Ask the seller what they make of it: the player's AI speaking for them, when it is on</summary>
+        public AsyncRelayCommand AskSellerCommand { get; }
 
         /// <summary>The car as the ads show it; null until the screen is entered</summary>
         public UsedCarListingViewModel? Car { get; private set; }
@@ -102,7 +106,43 @@ namespace StreetCorsa.Screens.CarViewing
         /// <summary>A word when the player is short of the asking price</summary>
         public string AffordLine => Car != null && !CanAfford ? GameText.Say("preview.car.short", ("price", new Helpers.Money(Car.Listing.Price))) : string.Empty;
 
-        // TODO(b5 merge): listing.Description - the ad's blurb goes on the card once UsedCarListing has it
+        /// <summary>The ad's few words, as the paper printed them</summary>
+        public string Description => _listing.Description ?? string.Empty;
+
+        private DealerLocation? _dealer;
+        private string _sellerWord = string.Empty;
+        private bool _asking;
+
+        /// <summary>What the seller said when asked; empty until then</summary>
+        public string SellerWord
+        {
+            get => _sellerWord;
+            private set
+            {
+                if (SetProperty(ref _sellerWord, value)) OnPropertyChanged(nameof(CanAskSeller));
+            }
+        }
+
+        /// <summary>The seller can be asked once, while the player's AI is on</summary>
+        public bool CanAskSeller => Car != null && !_asking && SellerWord.Length == 0 && Services.Ai.AiHub.Shared.Writer.IsAvailable;
+
+        private async Task OnAskSellerAsync()
+        {
+            _asking = true;
+            OnPropertyChanged(nameof(CanAskSeller));
+            AskSellerCommand.RaiseCanExecuteChanged();
+            try
+            {
+                var said = await Services.Ai.AiHub.Shared.Writer.DealerTakeAsync(_listing, _dealer);
+                SellerWord = said is { Length: > 0 } ? said : GameText.Say("preview.car.seller_shrugs");
+            }
+            finally
+            {
+                _asking = false;
+                OnPropertyChanged(nameof(CanAskSeller));
+                AskSellerCommand.RaiseCanExecuteChanged();
+            }
+        }
 
         private Audio.EngineSpec? _engine;
 
@@ -122,7 +162,7 @@ namespace StreetCorsa.Screens.CarViewing
                 ?? throw new InvalidOperationException($"The car {_listing.CarDefinitionId} of listing {_listing.Id} is not in the catalog");
             var profile = _profileRepo.GetProfile(_listing.CarDefinitionId) ?? new Models.Catalog.CarProfile();
 
-            var dealer = _seller.DealerId != null ? DealerRoster.Find(_gameState, _seller.DealerId) : null;
+            var dealer = _dealer = _seller.DealerId != null ? DealerRoster.Find(_gameState, _seller.DealerId) : null;
             Car = new UsedCarListingViewModel
             {
                 Listing = _listing,
@@ -145,7 +185,9 @@ namespace StreetCorsa.Screens.CarViewing
             OnPropertyChanged(nameof(SellerLine));
             OnPropertyChanged(nameof(CanAfford));
             OnPropertyChanged(nameof(AffordLine));
+            OnPropertyChanged(nameof(CanAskSeller));
             RelayCommand.RaiseCanExecuteChanged();
+            AskSellerCommand.RaiseCanExecuteChanged();
 
             _ = LoadEngineAsync(Car);
         }

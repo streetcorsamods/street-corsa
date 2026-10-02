@@ -34,9 +34,7 @@ namespace StreetCorsa.Screens.Newspaper
         /// </summary>
         public static string ModelOf(Models.Catalog.CarDefinition definition)
         {
-            var name = definition.Brand.Length == 0 || definition.Name.StartsWith(definition.Brand, StringComparison.OrdinalIgnoreCase)
-                ? definition.Name
-                : $"{definition.Brand} {definition.Name}";
+            var name = Services.Catalog.CarNames.MakeAndModel(definition);
             if (definition.Year is not { } year) return name;
 
             var words = name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(w => w != year.ToString(System.Globalization.CultureInfo.InvariantCulture)).ToList();

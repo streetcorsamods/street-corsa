@@ -1195,6 +1195,24 @@ no single-part 3D view and no dialog hosts a viewport; there is no AI or HTTP co
   dealer's word on a car, news stories, the Diner's street talk; ComfyUI portraits for new rivals (as in step 12) and
   maybe newspaper photos. Prompts and ComfyUI workflows are mod data (`ai/` in Content), so a game mod has its own voice.
 
+**As built (2026-10-01, `feature/ideas-batch-5`), not yet seen in the game:** three parallel branches merged.
+- Racing hub: `Dialogs/RaceHub` (`NavigationService.ShowRaceHub`), the garage's wheel button says "Go race!"; the hub
+  withdraws itself before the event entry; invitations load through `RaceInvitations.Load`.
+- Newspaper: "The Street Trader", AUTOMOBILES FOR SALE and PARTS & ACCESSORIES, newsprint theme keys (`NewsprintFont`,
+  `NewsHeadFont`, `Newsprint*` colours), `ClassifiedColumnsPanel` (an ad goes in the shortest column, so ads never
+  move as pages arrive), 30 ads a page. The Used Car Market screen and the dealer filter are gone;
+  `UsedCarListingViewModel` is in `Screens/Shared`. `Screens/UsedParts` is now the mail order (New and Sell tabs),
+  reached from a "Mail order" button on the part shops' map. Headlines and listing names say the make once
+  (`CarNames.MakeAndModel`: "AMC Javelin", not "American Motor Company AMC Javelin").
+- Blurbs: `Description` on `UsedCarListing`, `RivalCarAd`, `PartAd`, from `text/ads.json` (`AdBlurbs`); old saves'
+  ads get theirs when first shown. Only parts that did not come from the factory are bragged about, a blower always.
+- Previews: `Controls/PartViewport3D` in `Dialogs/PartPreview` (the part with what is bolted on it, a dark studio,
+  turns until touched); `Screens/CarViewing` with `Controls/CarViewingViewport3D`: a dealer's car alone in its
+  showroom, anyone else's at the curb of a street lit for the hour (the same street per ad), a rival's ad bought from
+  the rival; the engine panel, Buy, Back to the paper, the ad's blurb, and "What do you make of it?" when the AI is on.
+- AI: see `docs/ai-integration.md`. Tested live with Ollama `llama3.2:3b`; ComfyUI, Anthropic and OpenAI-compatible
+  only against fake servers.
+
 ## Epic: total conversion (planned 2026-09-30)
 
 The owner wants the whole game moddable, so the community can add game modes and whole new games (a Tokyo Drift game

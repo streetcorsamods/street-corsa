@@ -390,14 +390,13 @@ namespace StreetCorsa.Screens.Newspaper
         /// <summary>Go and see the car (clicking its ad): a screen of its own, the car at the seller's curb or on the lot</summary>
         private void OnLookAtCar(CarAdViewModel ad)
         {
-            // TODO(b5 merge): ShowPartPreview / NavigateToCarViewing: _navigationService.NavigateToCarViewing(_gameState, ad.Car.Listing)
+            _navigationService.NavigateToCarViewing(_gameState, ad.Car.Listing);
         }
 
         /// <summary>Have a look at the part (clicking its ad): the part alone in 3D, turned with the mouse, with Buy</summary>
         private void OnLookAtPart(PartAdViewModel ad)
         {
-            // TODO(b5 merge): ShowPartPreview / NavigateToCarViewing: _navigationService.ShowPartPreview(ad.Ad.Part, ad.Name,
-            // ad.PriceDisplay, () => OnBuyPart(ad))
+            _navigationService.ShowPartPreview(ad.Ad.Part, ad.Name, ad.PriceDisplay, () => OnBuyPart(ad));
         }
 
         // ----- the player's own ads -----

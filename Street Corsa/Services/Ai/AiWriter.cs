@@ -3,6 +3,7 @@ using StreetCorsa.Configuration;
 using StreetCorsa.Helpers;
 using StreetCorsa.Logging;
 using StreetCorsa.Models.GameState;
+using StreetCorsa.Services.Market;
 using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Services.Ai
@@ -18,7 +19,7 @@ namespace StreetCorsa.Services.Ai
     /// <see cref="DealerTakeUse"/>, <see cref="AdUse"/>, <see cref="PortraitLookUse"/>, and the ComfyUI workflow
     /// <see cref="PortraitUse"/>.
     /// </summary>
-    public sealed class AiWriter
+    public sealed class AiWriter : IAdWriter
     {
         public const string StreetTalkUse = "street_talk";
         public const string NewsUse = "news";
@@ -189,6 +190,30 @@ namespace StreetCorsa.Services.Ai
             values["kind"] = kind;
             values["blurb"] = baseBlurb;
             return key == null ? WriteOnceAsync(null, AdUse, values, AiPriority.Background) : KeptAsync("ad_" + key, AdUse, values, AiPriority.Background);
+        }
+
+        /// <summary>
+        /// The paper's writer (<see cref="AdBlurbs.Writer"/>): every ad's blurb, offered as it is written, comes back
+        /// livelier when the AI answers, on the game's thread; the ad keeps it, so it is never kept twice
+        /// </summary>
+        public void Improve(AdFacts facts, string written, Action<string> rewrite)
+        {
+            if (!_text.IsAvailable) return;
+
+            var (kind, values) = facts switch
+            {
+                CarAdFacts car => ("car", new Dictionary<string, object?>
+                {
+                    ["engine"] = car.Engine ?? string.Empty,
+                    ["parts"] = string.Join(", ", car.Standouts.Select(s => s.Part))
+                }),
+                PartAdFacts part => ("part", new Dictionary<string, object?> { ["part"] = part.Part }),
+                _ => ("car", new Dictionary<string, object?>())
+            };
+            Background(async () =>
+            {
+                if (await ImproveAdAsync(kind, written, values).ConfigureAwait(false) is { Length: > 0 } better) _onGameThread(() => rewrite(better));
+            });
         }
 
         /// <summary>What was kept for <paramref name="key"/> in the game in play (in the language spoken), else written and kept</summary>

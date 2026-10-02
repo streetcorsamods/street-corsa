@@ -61,6 +61,7 @@ Street Rod-style career mode manager for Assetto Corsa. WPF app manages game log
 | Mods | ModSet, ModIds, ContentRegistry, ModJson | All game content (parts, sounds, dealers, part shops, racers, events, milestones, victory paths, streets, gas stations, warehouses, rooms, words) comes from `Content\<mod>`, the base game (`Content\streetcorsa`) first; ids namespaced by mod, the base game's without (see `docs/modding.md`) |
 | Rules | RuleBook, GameFile, ModMerge, ModProblems | Every figure from the mods' `rules` (merged key by key, kept in the save from the career's start), the game's own settings from `game.json`, every mod problem shown at start-up (see `docs/total-conversion.md`) |
 | Career and words as data | CareerContent, DataVictory, GameText | Events, milestones and victory paths from the mods' `events`/`milestones`/`victories`; everything the game says (screens, messages, the race mode's lines, paper, talk, names) from their `text` pools, in the player's language (`text/<language>/`), the when-to-say-what in code |
+| Player's AI | AiHub, AiTextService, ComfyImageService, AiWriter, AiTalkService | Optional, off by default, never waited on: Ollama / OpenAI-compatible / Anthropic text and ComfyUI images; rivals' lines, street talk and paper pieces told again, ad blurbs, a seller's word, new faces' portraits; kept in the save, the game's own words always the fallback (see `docs/ai-integration.md`) |
 
 ## File Structure
 ```
@@ -131,6 +132,7 @@ NavigationService.NavigateTo[ScreenName](dependencies) : bool
 
 ## Documentation Index
 - [Modding](modding.md): the Content folder, mod.json, ids and `replaces`, every content type's format
+- [The player's AI](ai-integration.md)
 - [Roadmap](roadmap.md): next steps (damage, timeslips, economy, living opponents, police), decisions and research
 - [Architecture Overview](architecture/overview.md)
 - [Data Storage](architecture/data-storage.md)

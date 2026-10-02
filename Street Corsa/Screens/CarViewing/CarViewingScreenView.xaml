@@ -109,6 +109,15 @@
                                Foreground="{StaticResource AccentSuccessBrush}"
                                Margin="0,0,0,14"/>
 
+                    <!-- The ad's few words, as printed -->
+                    <TextBlock Text="{Binding Description}"
+                               Visibility="{Binding Description, Converter={StaticResource StringToVisibilityConverter}}"
+                               FontStyle="Italic"
+                               FontSize="{StaticResource FontSizeCompact}"
+                               TextWrapping="Wrap"
+                               Foreground="{StaticResource TextPrimaryBrush}"
+                               Margin="0,-6,0,14"/>
+
                     <Grid Margin="0,0,0,6">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
@@ -158,6 +167,21 @@
                 <controls:EnginePanel x:Name="EnginePanel"
                                       Margin="0,16,0,0"
                                       Engine="{Binding Engine}"/>
+
+                <!-- The seller's word on it, when the player's AI speaks for them -->
+                <Button Content="{t:Text preview.car.ask_seller}"
+                        Margin="0,14,0,0"
+                        Height="32"
+                        FontSize="{StaticResource FontSizeCompact}"
+                        Command="{Binding AskSellerCommand}"
+                        Visibility="{Binding CanAskSeller, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                <TextBlock Text="{Binding SellerWord}"
+                           Visibility="{Binding SellerWord, Converter={StaticResource StringToVisibilityConverter}}"
+                           FontStyle="Italic"
+                           FontSize="{StaticResource FontSizeCompact}"
+                           TextWrapping="Wrap"
+                           Foreground="{StaticResource TextPrimaryBrush}"
+                           Margin="0,14,0,0"/>
 
                 <TextBlock Text="{Binding AffordLine}"
                            Visibility="{Binding AffordLine, Converter={StaticResource StringToVisibilityConverter}}"

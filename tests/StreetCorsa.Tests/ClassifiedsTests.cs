@@ -145,6 +145,8 @@ public class ClassifiedsTests
         Assert.Equal("Chevrolet Camaro Z/28", CarAdViewModel.ModelOf(new CarDefinition { Brand = "Chevrolet", Name = "Chevrolet Camaro 1969 Z/28", Year = 1969 }));
         Assert.Equal("Plymouth Fury", CarAdViewModel.ModelOf(new CarDefinition { Brand = "Plymouth", Name = "Fury", Year = 1959 }));
         Assert.Equal("1969", CarAdViewModel.ModelOf(new CarDefinition { Brand = "", Name = "1969", Year = 1969 }));
+        Assert.Equal("AMC Javelin SST 360", CarAdViewModel.ModelOf(new CarDefinition { Brand = "American Motor Company", Name = "AMC Javelin SST 360", Year = 1970 }));
+        Assert.Equal("The Batmobile", CarAdViewModel.ModelOf(new CarDefinition { Brand = "Batmobile", Name = "The Batmobile", Year = 1966 }));
     }
 
     // ----- the paper a page at a time -----

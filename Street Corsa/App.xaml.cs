@@ -303,6 +303,7 @@ namespace StreetCorsa
             Services.News.NewsWriter.Added = ai.Writer.NewsAdded;
             OpponentLifeService.TalkAdded = ai.Writer.StreetTalkAdded;
             OpponentLifeService.NewFaceArrived = ai.Writer.NewFace;
+            Services.Market.AdBlurbs.Writer = ai.Writer;
 
             // Talk service for opponent dialogue: the game's own lines, in the AI's words when it has them ready
             TalkService = new AiTalkService(new StaticTalkService(), ai.Text);
