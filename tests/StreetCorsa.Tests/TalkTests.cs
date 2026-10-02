@@ -30,6 +30,7 @@ public class TalkTests
     [InlineData("1.2k, cash", 1200)]
     [InlineData("how about 900 bucks", 900)]
     [InlineData("$1300", 1300)]
+    [InlineData("I'll give you 3,000 for it", 3000)]
     public void An_offer_is_read_from_what_the_player_types(string text, int expected)
     {
         Assert.Equal(expected, Haggle.OfferIn(text, 1500m, OfferWords, Rules));

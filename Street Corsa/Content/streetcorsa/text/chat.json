@@ -80,7 +80,7 @@
     "chat.fact.price_down": "You first asked {asked:money}; you have come down to {price:money}. Never name a lower price yourself: only the deal lines below change it.",
 
     "chat.deal.accept": "The player has just offered {offer:money}. You take it: the price is now {price:money}. Say yes, it's a deal.",
-    "chat.deal.accept_asked": "The player has just offered {offer:money}, more than you ask. You take the price, {price:money}: say it's a deal at that.",
+    "chat.deal.accept_asked": "The player has just offered {offer:money}, which is MORE than your price of {price:money}: they are not haggling you down. Glad of it, and honest, you take only your price, {price:money}: say it's a deal at {price:money}.",
     "chat.deal.counter": "The player has just offered {offer:money}. Too low, but you come down to {price:money} and no lower right now. Say so.",
     "chat.deal.firm": "The player has just offered {offer:money}. You will not come down any more from {price:money}. Say so.",
     "chat.deal.shake": "The player takes your price, {price:money}: it's a deal. Shake on it at {price:money}, not a cent lower.",
@@ -103,6 +103,7 @@
 
     "chat.ui.buy": "Buy it for {price:money}",
     "chat.ui.talk": "Talk",
+    "chat.ui.toggle": "Show or hide the talk",
     "chat.ui.call_seller": "Call the seller",
     "chat.ui.talk_seller": "Talk to the seller",
     "chat.ui.talk_salesman": "Talk to the salesman",

@@ -117,22 +117,117 @@
                 VerticalAlignment="Top"
                 Margin="20,20,0,0"/>
         <!-- The left card, under the back button. With the player's AI on, the salesman's talk: he comes over as the
-             player arrives, follows them round the lot, tells them about the car, and closes the deal ("Buy it for $X") -->
-        <Border HorizontalAlignment="Left"
-                VerticalAlignment="Stretch"
-                Width="360"
-                Margin="20,100,0,20"
-                Background="{StaticResource Glass15E8Brush}"
-                BorderBrush="{StaticResource Cream70Brush}"
-                BorderThickness="1"
-                CornerRadius="4"
-                Padding="16,14"
-                Visibility="{Binding HasTalk, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <Border.Effect>
-                <DropShadowEffect BlurRadius="20" ShadowDepth="0" Color="{StaticResource Shadow}" Opacity="0.8"/>
-            </Border.Effect>
-            <controls:TalkPanel DataContext="{Binding Talk}"/>
-        </Border>
+             player arrives, follows them round the lot, tells them about the car, and closes the deal ("Buy it for $X").
+             Two thirds of the room down there; the tab with his name opens and closes it, the card sliding off to the
+             left as it fades, and back -->
+        <Grid HorizontalAlignment="Left"
+              Width="360"
+              Margin="20,100,0,20"
+              Visibility="{Binding HasTalk, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="2*"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <ToggleButton Grid.Row="0"
+                          Style="{StaticResource GlassToggleButtonStyle}"
+                          IsChecked="{Binding Talk.IsOpen, Mode=TwoWay}"
+                          ToolTip="{t:Text chat.ui.toggle}"
+                          HorizontalAlignment="Left"
+                          Height="36"
+                          Padding="14,0"
+                          FontSize="{StaticResource FontSizeCompact}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="{Binding Talk.Title}" VerticalAlignment="Center"/>
+                    <!-- The chevron turns down with the talk open, right with it shut -->
+                    <TextBlock Text="▾" Margin="10,0,0,0" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                        <TextBlock.RenderTransform>
+                            <RotateTransform/>
+                        </TextBlock.RenderTransform>
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Talk.IsOpen}" Value="False">
+                                        <DataTrigger.EnterActions>
+                                            <BeginStoryboard>
+                                                <Storyboard>
+                                                    <DoubleAnimation Storyboard.TargetProperty="RenderTransform.Angle" To="-90" Duration="0:0:0.35">
+                                                        <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                    </DoubleAnimation>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </DataTrigger.EnterActions>
+                                        <DataTrigger.ExitActions>
+                                            <BeginStoryboard>
+                                                <Storyboard>
+                                                    <DoubleAnimation Storyboard.TargetProperty="RenderTransform.Angle" To="0" Duration="0:0:0.35">
+                                                        <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                    </DoubleAnimation>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </DataTrigger.ExitActions>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </StackPanel>
+            </ToggleButton>
+            <Border Grid.Row="1"
+                    Margin="0,8,0,0"
+                    Background="{StaticResource Glass15E8Brush}"
+                    BorderBrush="{StaticResource Cream70Brush}"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Padding="16,14">
+                <Border.RenderTransform>
+                    <TranslateTransform/>
+                </Border.RenderTransform>
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="20" ShadowDepth="0" Color="{StaticResource Shadow}" Opacity="0.8"/>
+                </Border.Effect>
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Talk.IsOpen}" Value="False">
+                                <Setter Property="IsHitTestVisible" Value="False"/>
+                                <DataTrigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.35">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseIn"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetProperty="RenderTransform.X" To="-60" Duration="0:0:0.35">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseIn"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
+                                                <DiscreteObjectKeyFrame KeyTime="0:0:0.35" Value="{x:Static Visibility.Hidden}"/>
+                                            </ObjectAnimationUsingKeyFrames>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </DataTrigger.EnterActions>
+                                <DataTrigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
+                                                <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Visible}"/>
+                                            </ObjectAnimationUsingKeyFrames>
+                                            <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.45">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetProperty="RenderTransform.X" To="0" Duration="0:0:0.45">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </DataTrigger.ExitActions>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <controls:TalkPanel DataContext="{Binding Talk}"/>
+            </Border>
+        </Grid>
 
         <!-- With the AI off, nobody to tell the player about the car: the same card has its facts and Buy -->
         <Border HorizontalAlignment="Left"
@@ -204,7 +299,8 @@
             </StackPanel>
         </Border>
 
-        <!-- The car picked: its name in the garage's card and place (top centre, 800 wide at most), its price under it -->
+        <!-- The car picked: the garage's name card (centre, 800 wide at most), up level with the window's money card,
+             the name and its price on one line -->
         <Grid VerticalAlignment="Top"
               IsHitTestVisible="False"
               Visibility="{Binding HasSelection, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -214,38 +310,29 @@
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
             <Border Grid.Column="1"
-                    Margin="0,30,0,0"
+                    Margin="0,20,0,0"
                     Background="{StaticResource UiGlassBrush}"
                     BorderBrush="{StaticResource UiOutlineBrush}"
                     BorderThickness="3"
                     CornerRadius="8"
                     Padding="30,12">
-                <StackPanel>
-                    <TextBlock Text="{Binding SelectedCar.DisplayName}"
-                               FontSize="{StaticResource FontSizeTitleSmall}"
-                               FontWeight="Bold"
-                               Foreground="{StaticResource CreamBrush}"
-                               TextTrimming="CharacterEllipsis"
-                               HorizontalAlignment="Center">
-                        <TextBlock.Effect>
-                            <DropShadowEffect Color="{StaticResource Shadow}" ShadowDepth="0" BlurRadius="6" Opacity="0.9"/>
-                        </TextBlock.Effect>
-                    </TextBlock>
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2,0,0">
-                        <TextBlock Text="{Binding SelectedCar.WasPriceDisplay}"
-                                   Visibility="{Binding SelectedCar.IsOnSale, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                   FontSize="{StaticResource FontSizeCompact}"
-                                   TextDecorations="Strikethrough"
-                                   Foreground="{StaticResource TextSecondaryBrush}"
-                                   VerticalAlignment="Center"
-                                   Margin="0,0,10,0"/>
-                        <TextBlock Text="{Binding SelectedCar.PriceDisplay}"
-                                   FontSize="{StaticResource FontSizeHeading}"
-                                   FontWeight="Bold"
-                                   Foreground="{StaticResource AccentSuccessBrush}"
-                                   VerticalAlignment="Center"/>
-                    </StackPanel>
-                </StackPanel>
+                <TextBlock FontSize="{StaticResource FontSizeTitleSmall}"
+                           FontWeight="Bold"
+                           Foreground="{StaticResource CreamBrush}"
+                           TextTrimming="CharacterEllipsis"
+                           HorizontalAlignment="Center">
+                    <TextBlock.Effect>
+                        <DropShadowEffect Color="{StaticResource Shadow}" ShadowDepth="0" BlurRadius="6" Opacity="0.9"/>
+                    </TextBlock.Effect>
+                    <Run Text="{Binding SelectedCar.DisplayName, Mode=OneWay}"/>
+                    <Run Text="   "/>
+                    <Run Text="{Binding SelectedCar.WasPriceDisplay, Mode=OneWay}"
+                         FontWeight="Normal"
+                         TextDecorations="Strikethrough"
+                         Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <Run Text=" "/>
+                    <Run Text="{Binding SelectedCar.PriceDisplay, Mode=OneWay}" Foreground="{StaticResource AccentSuccessBrush}"/>
+                </TextBlock>
             </Border>
         </Grid>
 

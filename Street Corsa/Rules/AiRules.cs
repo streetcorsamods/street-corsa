@@ -119,7 +119,7 @@ public sealed class TalkRules
     public double OfferLowest { get; set; } = 0.2;
 
     /// <summary>...up to this share of it: a year or a mileage is no offer</summary>
-    public double OfferHighest { get; set; } = 1.5;
+    public double OfferHighest { get; set; } = 3;
 
     /// <summary>
     /// The hard floor: the most anybody ever comes down from the price a thing was first offered at (0.25: never under 75

@@ -69,6 +69,15 @@ namespace StreetCorsa.Screens.Shared
             _ => "chat.ui.on_street"
         });
 
+        private bool _isOpen = true;
+
+        /// <summary>The talk shown, or shut away by the player (on the lot, its tab); shut, it still goes on</summary>
+        public bool IsOpen
+        {
+            get => _isOpen;
+            set => SetProperty(ref _isOpen, value);
+        }
+
         /// <summary>A rival's portrait, when there is one</summary>
         public string? Portrait { get; }
 
