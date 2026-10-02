@@ -42,24 +42,42 @@ namespace StreetCorsa.Services.Talk
                 Temperament = Draw(prompts ?? AiPrompts.Installed, PersonKind.Rival, rival.Aggression, Seeded(RivalKey(rival)))
             });
 
-        /// <summary>A dealer's salesman, one per dealer, named by the dealer's mod data or drawn from the salesmen's names</summary>
-        public static Person Salesman(GameState game, string dealerId, string? name = null, AiPrompts? prompts = null, TalkRules? rules = null)
+        /// <summary>
+        /// A dealer's salesman, one per dealer: who the dealer's mod data says (<paramref name="given"/>; it is the truth, a
+        /// salesman met before it gave one becomes him), else drawn from the salesmen's names
+        /// </summary>
+        public static Person Salesman(GameState game, string dealerId, DealerSalesman? given = null, AiPrompts? prompts = null, TalkRules? rules = null)
         {
             var key = DealerKey(dealerId);
-            if (Find(game, key) is { } found) return found;
+            if (Find(game, key) is { } found)
+            {
+                if (given != null) As(found, given);
+                return found;
+            }
 
             rules ??= RuleBook.Current.Ai.Talk;
             var random = Seeded(key);
             var gender = random.NextDouble() < rules.WomenSalesmen ? Gender.Female : Gender.Male;
-            return Add(game, new Person
+            var person = Add(game, new Person
             {
                 Key = key,
                 Kind = PersonKind.Salesman,
-                Name = string.IsNullOrWhiteSpace(name) ? NameFor("names.salesmen", gender, random) : name,
+                Name = NameFor("names.salesmen", gender, random),
                 Age = AgeBetween(rules.SalesmanMinAge, rules.SalesmanMaxAge, random),
                 Gender = gender,
                 Temperament = Draw(prompts ?? AiPrompts.Installed, PersonKind.Salesman, 50, random)
             });
+            if (given != null) As(person, given);
+            return person;
+        }
+
+        /// <summary>The salesman as the dealer's data gives him: what it says goes, what it leaves out stays</summary>
+        private static void As(Person person, DealerSalesman given)
+        {
+            if (!string.IsNullOrWhiteSpace(given.Name)) person.Name = given.Name;
+            if (given.Age > 0) person.Age = given.Age;
+            person.Gender = given.Gender;
+            if (!string.IsNullOrWhiteSpace(given.Temperament)) person.Temperament = given.Temperament;
         }
 
         /// <summary>

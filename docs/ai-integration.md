@@ -101,6 +101,16 @@ The AI only speaks: the game decides every fact and every price.
   asked about after `pitchDelaySeconds`, only the last one picked), in `Dialogs/Talk` or docked on the lot and car
   viewing screens. The panel shows the price now and what it came down from.
 
+### Salesmen's portraits
+
+Painted off the game, once, and shipped as content: `tools/SalesmanPortraits/paint_salesmen.py` gives every dealer in
+the base game's `dealers.json` a salesman (a name from `names.salesmen.*` used once, an age, a sex, a salesman's
+temperament from `ai/people.json`, all the same every run for the same dealer), asks Ollama how he looks (if it
+answers), paints him with ComfyUI (`comfy_salesman.json` next to the script, the rivals' portrait graph with a car lot's
+look; ComfyUI Desktop's address, 8000, by default) into `dealers/salesmen/<id>.png`, and writes him into the dealer's
+entry. The game reads him with the dealers (`DealerSalesman`), makes the talk's person him (`TalkPeople.Salesman`), and
+shows the portrait at the top of the talk. It never calls ComfyUI for them.
+
 ### The game's model in Ollama
 
 No training: what a Modelfile does. Settings' AI section has "Make the game's model" while the provider is Ollama: it

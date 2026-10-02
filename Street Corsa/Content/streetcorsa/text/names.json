@@ -25,10 +25,12 @@
     ],
     "names.salesmen.men": [
       "Honest Abe Fenton", "Dickie Marconi", "Lucky Lou Pratt", "Sonny Baxter", "Big Walt Kroger", "Smilin' Jack Tully",
-      "Benny Delgado", "Cal Whitaker", "Duke Hollister", "Ernie Sacco"
+      "Benny Delgado", "Cal Whitaker", "Duke Hollister", "Ernie Sacco", "Fast Eddie Kowalczyk", "Marty Silverman",
+      "Buddy Lee Crenshaw", "Tex Mahoney", "Frankie Russo", "Happy Hal Jorgensen", "Mel Pettibone", "Chuck Ramirez",
+      "Vic Castellano", "Gus Papadakis", "Red Dunleavy", "Sid Feldman", "Johnny Boy Callahan", "Lyle Swenson"
     ],
-    "names.salesmen.women": [ "Rita Mae Dawson", "Gloria Benedetti" ],
-    "names.event_racers":[ "Speed Demon", "Road Runner", "Night Rider", "Street King", "Drag Master" ],
+    "names.salesmen.women": [ "Rita Mae Dawson", "Gloria Benedetti", "Dottie Vance", "Peggy Sue Hartwell" ],
+    "names.event_racers": [ "Speed Demon", "Road Runner", "Night Rider", "Street King", "Drag Master" ],
     "names.event_nicknames": [ "The Flash", "Quick Draw", "Burnout", "Smokey", "Rev Head" ]
   }
 }

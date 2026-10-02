@@ -25,15 +25,25 @@ namespace StreetCorsa.Services.Talk
         private readonly Func<AiPrompts> _prompts;
         private readonly Func<TalkRules> _rules;
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger("Talk");
+        private readonly Func<string, DealerSalesman?> _salesmen;
+
+        /// <summary>A person's portrait from the game's data (a dealer's salesman's); null when there is none</summary>
+        public string? PortraitOf(Person person) =>
+            person.Kind == PersonKind.Salesman && person.Key.StartsWith("dealer:", StringComparison.Ordinal)
+                ? _salesmen(person.Key["dealer:".Length..])?.PortraitFile
+                : null;
 
         /// <param name="text">The player's AI</param>
         /// <param name="races">The player's races of a save, by its name</param>
         /// <param name="carName">A car's name by its id</param>
         /// <param name="parts">The parts catalog</param>
         /// <param name="onGameThread">Runs what changes the game on its thread (a memory written in the background)</param>
+        /// <param name="salesmen">A dealer's salesman as its mod data gives him, by the dealer's id; none, and they are made up</param>
         public TalkDesk(IAiText text, Func<string, Task<List<ProcessedRaceSession>>>? races = null, Func<string, string>? carName = null,
-            Func<PartsCatalog?>? parts = null, Action<Action>? onGameThread = null, Func<AiPrompts>? prompts = null, Func<TalkRules>? rules = null)
+            Func<PartsCatalog?>? parts = null, Action<Action>? onGameThread = null, Func<AiPrompts>? prompts = null, Func<TalkRules>? rules = null,
+            Func<string, DealerSalesman?>? salesmen = null)
         {
+            _salesmen = salesmen ?? (_ => null);
             Text = text;
             _races = races;
             _carName = carName ?? (id => id);
@@ -77,7 +87,7 @@ namespace StreetCorsa.Services.Talk
             if (car.RivalAd is { } ad && game.Racers.Find(ad.RivalName) is Opponent rival)
                 return new Conversation(this, game, TalkPeople.Rival(game, rival, Prompts), rival, place, subject);
             if (!string.IsNullOrWhiteSpace(dealerId))
-                return new Conversation(this, game, TalkPeople.Salesman(game, dealerId, prompts: Prompts, rules: Rules), null, TalkPlace.Lot, subject);
+                return new Conversation(this, game, TalkPeople.Salesman(game, dealerId, _salesmen(dealerId), Prompts, Rules), null, TalkPlace.Lot, subject);
             return new Conversation(this, game, TalkPeople.Seller(game, TalkPeople.CarKey(car.Listing), prompts: Prompts, rules: Rules), null, place, subject);
         }
 
@@ -85,7 +95,7 @@ namespace StreetCorsa.Services.Talk
         public Conversation ForLot(GameState game, string dealerId, IReadOnlyList<UsedCarListingViewModel> lot)
         {
             Forget(game);
-            return new Conversation(this, game, TalkPeople.Salesman(game, dealerId, prompts: Prompts, rules: Rules), null, TalkPlace.Lot, null, lot);
+            return new Conversation(this, game, TalkPeople.Salesman(game, dealerId, _salesmen(dealerId), Prompts, Rules), null, TalkPlace.Lot, null, lot);
         }
 
         /// <summary>The seller of a part in the paper, on the phone: a rival who pulled it off a car, or whoever placed the ad</summary>

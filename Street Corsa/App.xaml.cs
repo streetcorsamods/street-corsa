@@ -325,7 +325,7 @@ namespace StreetCorsa
             // Talking to people (step 26): the person's side is the player's AI, the race record what they know of the player
             Services.Talk.TalkDesk.Start(new Services.Talk.TalkDesk(ai.Text, save => sessionRepository.GetAllAsync(save),
                 id => Services.Catalog.CarNames.Of(CatalogRepository, id), () => CarPartsService.Catalog,
-                change => Dispatcher.BeginInvoke(change)));
+                change => Dispatcher.BeginInvoke(change), salesmen: id => DealerCatalog.Get(id)?.Salesman));
 
             RaceResultIngestionService = new Services.Race.RaceResultIngestionService(
                 raceResultValidator,

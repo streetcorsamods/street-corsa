@@ -42,7 +42,7 @@ namespace StreetCorsa.Screens.Shared
         public TalkViewModel(Conversation talk, string? portrait = null)
         {
             Talk = talk;
-            Portrait = portrait;
+            Portrait = portrait ?? TalkDesk.Shared.PortraitOf(talk.Person);
             SendCommand = new AsyncRelayCommand(SendAsync, () => CanSend, name: "Talk.Send");
             BuyCommand = new RelayCommand(() => Buy?.Invoke(), () => CanBuy);
             talk.Dealt += _ =>
@@ -90,7 +90,7 @@ namespace StreetCorsa.Screens.Shared
             private set => SetProperty(ref _hasUnread, value);
         }
 
-        /// <summary>A rival's portrait, when there is one</summary>
+        /// <summary>Their portrait, when there is one: a rival's, a dealer's salesman's</summary>
         public string? Portrait { get; }
 
         public bool HasPortrait => !string.IsNullOrEmpty(Portrait);

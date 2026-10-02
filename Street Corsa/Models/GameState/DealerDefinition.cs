@@ -38,6 +38,32 @@ namespace StreetCorsa.Models.GameState
     /// so adding a field here does not have to reach into everybody's saved game: the definitions are the
     /// truth and are merged over the save on load (<c>DealerCatalog</c>).
     /// </summary>
+    /// <summary>
+    /// A dealer's salesman as the mod gives him (<c>"salesman"</c> on a dealer): who he is, how he talks and deals (a
+    /// temperament of <c>ai/people.json</c>), and his portrait, a picture next to the dealer files
+    /// </summary>
+    public class DealerSalesman
+    {
+        public string Name { get; set; } = string.Empty;
+
+        public int Age { get; set; }
+
+        /// <summary>"man" or "woman"</summary>
+        public string Sex { get; set; } = "man";
+
+        /// <summary>A temperament's key in <c>ai/people.json</c>; empty, one is drawn</summary>
+        public string Temperament { get; set; } = string.Empty;
+
+        /// <summary>His portrait, a path under the mod's dealers folder ("salesmen/downtown_motors.png")</summary>
+        public string? Portrait { get; set; }
+
+        /// <summary>The portrait's file, found when the dealers are read; null when there is none</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public string? PortraitFile { get; set; }
+
+        public Gender Gender => string.Equals(Sex, "woman", StringComparison.OrdinalIgnoreCase) ? Gender.Female : Gender.Male;
+    }
+
     public class DealerDefinition : ILocationDefinition<DealerLocation>
     {
         public string Id { get; set; } = string.Empty;
@@ -81,6 +107,12 @@ namespace StreetCorsa.Models.GameState
         /// (<c>DealerLifeService</c>). A save made before the dealer existed gets it the same way.
         /// </summary>
         public bool StartsOpen { get; set; } = true;
+
+        /// <summary>
+        /// Who sells the cars here, when the mod says (the base game's are painted ahead by tools/SalesmanPortraits); none,
+        /// and the game makes one up the first time the player talks to him
+        /// </summary>
+        public DealerSalesman? Salesman { get; set; }
 
         /// <summary>The save only ever needs the name and the region, and how the business is going</summary>
         public DealerLocation ToLocation() => new()

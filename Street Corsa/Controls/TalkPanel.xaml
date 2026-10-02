@@ -23,14 +23,14 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             <Border Grid.Column="0"
-                    Width="44" Height="44"
-                    CornerRadius="22"
-                    Margin="0,0,10,0"
+                    Width="84" Height="84"
+                    CornerRadius="6"
+                    Margin="0,0,12,0"
                     BorderBrush="{StaticResource Cream70Brush}"
-                    BorderThickness="1"
+                    BorderThickness="2"
                     Visibility="{Binding HasPortrait, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <Border.Background>
-                    <ImageBrush ImageSource="{Binding Portrait}" Stretch="UniformToFill"/>
+                    <ImageBrush ImageSource="{Binding Portrait}" Stretch="UniformToFill" Viewbox="0.15,0.02,0.7,0.7"/>
                 </Border.Background>
             </Border>
             <StackPanel Grid.Column="1" VerticalAlignment="Center">
