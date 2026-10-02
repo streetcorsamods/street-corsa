@@ -415,8 +415,9 @@ namespace StreetCorsa.Services.Opponents
                 }
                 else if (days >= OpponentRules.AskReducedAfterDays && !ad.Reduced)
                 {
+                    // Never up: a price the player talked down under the dealer's share stays where it was agreed
                     var floor = Math.Round(ValueOf(car) * (decimal)CarSaleService.DealerShare);
-                    ad.AskingPrice = Math.Max(floor, CarValuation.RoundToHundred(ad.AskingPrice * OpponentRules.AskReduction));
+                    ad.AskingPrice = Math.Min(ad.AskingPrice, Math.Max(floor, CarValuation.RoundToHundred(ad.AskingPrice * OpponentRules.AskReduction)));
                     ad.Reduced = true;
                 }
             }

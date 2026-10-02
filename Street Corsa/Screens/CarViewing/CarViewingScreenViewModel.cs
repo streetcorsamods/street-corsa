@@ -134,7 +134,22 @@ namespace StreetCorsa.Screens.CarViewing
             var view = new TalkViewModel(talk, portrait) { Buy = OnBuy };
             view.PriceChanged += OnPriceChanged;
             Talk = view;
-            _ = view.OpenAsync();
+            _ = OpenTalkAsync(view);
+        }
+
+        /// <summary>
+        /// The seller comes out; when they never say a word (the AI is on in Settings but not answering) the talk goes
+        /// and the car card, with its Buy, is back
+        /// </summary>
+        private async Task OpenTalkAsync(TalkViewModel view)
+        {
+            await view.OpenAsync();
+            if (Talk != view || view.HasAnswered) return;
+
+            _logger.Information("The seller's AI did not answer: the viewing goes on without the talk");
+            view.PriceChanged -= OnPriceChanged;
+            view.End();
+            Talk = null;
         }
 
         /// <summary>The seller came down: the card, the money line and Buy go by the new price</summary>

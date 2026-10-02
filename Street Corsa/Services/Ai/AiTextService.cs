@@ -183,11 +183,14 @@ namespace StreetCorsa.Services.Ai
         {
             var settings = _settings();
             var key = AiKeys.Unprotect(settings.ApiKeyProtected);
-            var signature = string.Join("|", AiProviders.Normalize(settings.TextProvider), settings.Endpoint, settings.Model, settings.ApiKeyProtected);
+            // The rules' Ollama tuning too: a career whose mod sets other values gets a provider that sends them
+            var ollama = Rules.Ollama;
+            var signature = string.Join("|", AiProviders.Normalize(settings.TextProvider), settings.Endpoint, settings.Model, settings.ApiKeyProtected,
+                ollama.ContextTokens, ollama.KeepAlive, ollama.RepeatPenalty);
             lock (_lock)
             {
                 if (_provider is { } made && made.Signature == signature) return made.Provider;
-                var provider = AiProviders.Create(_http, settings.TextProvider, settings.Endpoint, settings.Model, key, Rules.Ollama);
+                var provider = AiProviders.Create(_http, settings.TextProvider, settings.Endpoint, settings.Model, key, ollama);
                 _provider = (signature, provider);
                 _restUntil = DateTime.MinValue;
                 return provider;
@@ -196,7 +199,8 @@ namespace StreetCorsa.Services.Ai
 
         public async Task<AiTestResult> TestAsync(AiSettings settings, string? apiKey, CancellationToken cancellationToken = default)
         {
-            var provider = AiProviders.Create(_http, settings.TextProvider, settings.Endpoint, settings.Model, apiKey);
+            // Sent as every other request is: a different context size would make Ollama load the model again
+            var provider = AiProviders.Create(_http, settings.TextProvider, settings.Endpoint, settings.Model, apiKey, Rules.Ollama);
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeout.CancelAfter(TimeSpan.FromSeconds(Math.Max(1, Rules.RequestTimeoutSeconds)));
             try

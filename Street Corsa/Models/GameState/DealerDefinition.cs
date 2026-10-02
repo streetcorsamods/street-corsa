@@ -31,14 +31,6 @@ namespace StreetCorsa.Models.GameState
     }
 
     /// <summary>
-    /// Everything about a dealer that never changes: where it is on the map, what it looks like inside,
-    /// and the kind of cars it keeps.
-    ///
-    /// Kept apart from <see cref="DealerLocation"/> on purpose. The save holds the dealer's Id and no more,
-    /// so adding a field here does not have to reach into everybody's saved game: the definitions are the
-    /// truth and are merged over the save on load (<c>DealerCatalog</c>).
-    /// </summary>
-    /// <summary>
     /// A dealer's salesman as the mod gives him (<c>"salesman"</c> on a dealer): who he is, how he talks and deals (a
     /// temperament of <c>ai/people.json</c>), and his portrait, a picture next to the dealer files
     /// </summary>
@@ -48,8 +40,8 @@ namespace StreetCorsa.Models.GameState
 
         public int Age { get; set; }
 
-        /// <summary>"man" or "woman"</summary>
-        public string Sex { get; set; } = "man";
+        /// <summary>"man" or "woman"; left out, a man when the name is given, else drawn with the name</summary>
+        public string? Sex { get; set; }
 
         /// <summary>A temperament's key in <c>ai/people.json</c>; empty, one is drawn</summary>
         public string Temperament { get; set; } = string.Empty;
@@ -61,9 +53,19 @@ namespace StreetCorsa.Models.GameState
         [System.Text.Json.Serialization.JsonIgnore]
         public string? PortraitFile { get; set; }
 
-        public Gender Gender => string.Equals(Sex, "woman", StringComparison.OrdinalIgnoreCase) ? Gender.Female : Gender.Male;
+        public Gender? Gender => string.IsNullOrWhiteSpace(Sex)
+            ? null
+            : string.Equals(Sex, "woman", StringComparison.OrdinalIgnoreCase) ? global::StreetCorsa.Models.GameState.Gender.Female : global::StreetCorsa.Models.GameState.Gender.Male;
     }
 
+    /// <summary>
+    /// Everything about a dealer that never changes: where it is on the map, what it looks like inside,
+    /// and the kind of cars it keeps.
+    ///
+    /// Kept apart from <see cref="DealerLocation"/> on purpose. The save holds the dealer's Id and no more,
+    /// so adding a field here does not have to reach into everybody's saved game: the definitions are the
+    /// truth and are merged over the save on load (<c>DealerCatalog</c>).
+    /// </summary>
     public class DealerDefinition : ILocationDefinition<DealerLocation>
     {
         public string Id { get; set; } = string.Empty;

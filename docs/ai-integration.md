@@ -117,8 +117,9 @@ No training: what a Modelfile does. Settings' AI section has "Make the game's mo
 makes `streetcorsa` in Ollama (`POST /api/create`) from `ai/ollama.json`: a base model (`from`, llama3.1:8b; or the
 model typed in the box), its own system prompt, parameters (temperature, top_p, repeat_penalty, num_ctx) and a few
 example exchanges in the game's voice, then puts its name in the model box to Save. Every Ollama request is also sent
-the rules' `ai.ollama`: `num_ctx` (8192, room for a talk and its fact sheet), `keep_alive` (30m, so the next line does
-not wait for the model to load) and `repeat_penalty`.
+the rules' `ai.ollama`: `num_ctx` (8192, room for a talk and its fact sheet), `keep_alive` (10m: the next line does
+not wait for the model to load, and it is out of the GPU soon after the player goes racing; Ollama's own is 5m) and
+`repeat_penalty`. The Settings test sends them too, so testing does not make Ollama load the model again.
 
 Tried live on 2026-10-01 (RTX 3060 12 GB): `streetcorsa` from llama3.1:8b answers in 0-3 s, stays in character, says it
 does not remember a race that never was, haggles as the rules say, and writes good memories; it still adds a small

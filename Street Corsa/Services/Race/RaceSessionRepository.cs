@@ -96,6 +96,23 @@ namespace StreetCorsa.Services.Race
             }
         }
 
+        public async Task<List<ProcessedRaceSession>> GetWithOpponentAsync(string saveName, string opponentName)
+        {
+            try
+            {
+                // Only the one opponent's sessions are made into objects (the save's collation ignores case)
+                return await Task.Run(() => Read(saveName, db => db.CollectionExists(Collection)
+                    ? db.GetCollection<ProcessedRaceSession>(Collection)
+                        .Find(Query.EQ(nameof(ProcessedRaceSession.OpponentName), opponentName)).ToList()
+                    : null) ?? new List<ProcessedRaceSession>());
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error retrieving the sessions with {Opponent}", opponentName);
+                return new List<ProcessedRaceSession>();
+            }
+        }
+
         public async Task<int> GetCountAsync(string saveName)
         {
             try

@@ -52,7 +52,7 @@
     },
     "ollama": {
       "contextTokens": 8192,
-      "keepAlive": "30m",
+      "keepAlive": "10m",
       "repeatPenalty": 1.1
     }
   }

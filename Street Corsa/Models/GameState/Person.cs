@@ -74,7 +74,7 @@ namespace StreetCorsa.Models.GameState
         /// <summary>Offers turned down or countered: past the rules' most, the seller stands firm</summary>
         public int Counters { get; set; }
 
-        /// <summary>Game time of the last offer</summary>
+        /// <summary>Game time it was last talked over: forgotten as the person's memories are (<c>TalkPeople.Forget</c>)</summary>
         public DateTime? Date { get; set; }
 
         /// <summary>What the seller said about it last (a salesman's pitches), newest last, a few kept</summary>

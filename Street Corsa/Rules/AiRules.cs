@@ -155,8 +155,11 @@ public sealed class OllamaRules
     /// <summary>The context window asked for (tokens): a talk with its fact sheet needs more than Ollama's usual</summary>
     public int ContextTokens { get; set; } = 8192;
 
-    /// <summary>How long Ollama keeps the model loaded after a request ("30m"), so the next line does not wait for it to load</summary>
-    public string KeepAlive { get; set; } = "30m";
+    /// <summary>
+    /// How long Ollama keeps the model loaded after a request ("10m"), so the next line does not wait for it to load; not
+    /// so long that it holds the GPU through the race that follows
+    /// </summary>
+    public string KeepAlive { get; set; } = "10m";
 
     /// <summary>How much the model is kept from saying the same words again (1: not at all)</summary>
     public double RepeatPenalty { get; set; } = 1.1;

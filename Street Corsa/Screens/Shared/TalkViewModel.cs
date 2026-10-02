@@ -36,6 +36,8 @@ namespace StreetCorsa.Screens.Shared
         private bool _opened;
         private bool _ended;
         private int _pick;
+        private bool _pickPending;
+        private TalkSubject? _picked;
         private string _draft = string.Empty;
         private bool _isWaiting;
 
@@ -44,7 +46,7 @@ namespace StreetCorsa.Screens.Shared
             Talk = talk;
             Portrait = portrait ?? TalkDesk.Shared.PortraitOf(talk.Person);
             SendCommand = new AsyncRelayCommand(SendAsync, () => CanSend, name: "Talk.Send");
-            BuyCommand = new RelayCommand(() => Buy?.Invoke(), () => CanBuy);
+            BuyCommand = new RelayCommand(OnBuy, () => CanBuy);
             talk.Dealt += _ =>
             {
                 RefreshPrice();
@@ -155,6 +157,9 @@ namespace StreetCorsa.Screens.Shared
 
         public RelayCommand BuyCommand { get; }
 
+        /// <summary>They have said something in this talk: the AI is answering (none yet, and it may not be there at all)</summary>
+        public bool HasAnswered { get; private set; }
+
         /// <summary>The other one begins (once)</summary>
         public Task OpenAsync()
         {
@@ -170,6 +175,8 @@ namespace StreetCorsa.Screens.Shared
         public async Task PickAsync(TalkSubject? subject, TimeSpan settle)
         {
             var mine = ++_pick;
+            _picked = subject;
+            _pickPending = true;
             if (settle > TimeSpan.Zero)
             {
                 try
@@ -185,6 +192,7 @@ namespace StreetCorsa.Screens.Shared
             await WhenIdleAsync();
             if (mine != _pick || _ended) return;
 
+            _pickPending = false;
             if (subject == null)
             {
                 Talk.TurnAway();
@@ -203,8 +211,30 @@ namespace StreetCorsa.Screens.Shared
             if (text.Length == 0 || IsWaiting || _ended) return;
 
             Draft = string.Empty;
+            SettlePick();
             Lines.Add(new TalkLineViewModel(GameText.Say("chat.ui.you"), text, true));
             await Run(() => Talk.SayAsync(text, _cancel.Token), "chat.ui.dead_line");
+        }
+
+        /// <summary>The thing the screen shows is the one bought, even when the talk has not turned to it yet</summary>
+        private void OnBuy()
+        {
+            SettlePick();
+            if (CanBuy) Buy?.Invoke();
+        }
+
+        /// <summary>
+        /// A car picked and not yet talked about (the pick settling, or an answer still out when it was picked): the talk
+        /// is about it now, unsaid, so what the player says or buys is for the car on screen; its pitch is not asked for
+        /// </summary>
+        private void SettlePick()
+        {
+            if (!_pickPending) return;
+            _pickPending = false;
+            _pick++;
+            if (_picked == null) Talk.TurnAway();
+            else Talk.Look(_picked);
+            RefreshPrice();
         }
 
         /// <summary>The talk is over: nothing more is asked, and the person keeps what they make of it</summary>
@@ -258,6 +288,7 @@ namespace StreetCorsa.Screens.Shared
             if (_ended) return;
             if (said != null)
             {
+                HasAnswered = true;
                 Lines.Add(new TalkLineViewModel(Talk.Person.Name, said, false));
                 if (!IsOpen) HasUnread = true;
             }

@@ -63,6 +63,9 @@ namespace StreetCorsa.Services.Talk
         /// <summary>Game time now: when the talk is had</summary>
         public DateTime Date => _game.Date;
 
+        /// <summary>Who the person talks to</summary>
+        public string PlayerName => _game.Player.Name;
+
         /// <summary>What is talked about now; null at the diner, or a salesman before a car is picked</summary>
         public TalkSubject? Subject { get; private set; }
 
@@ -130,6 +133,15 @@ namespace StreetCorsa.Services.Talk
         /// <summary>Back from a thing to the rest (the lot): nothing is said, the next words are about the lot</summary>
         public void TurnAway() => Subject = null;
 
+        /// <summary>
+        /// The talk is about <paramref name="subject"/> now, with nothing said of it: the player speaks of it before the
+        /// person has gone on about it (an offer typed as soon as the car is picked is for that car)
+        /// </summary>
+        public void Look(TalkSubject subject)
+        {
+            if (Subject?.Thing != subject.Thing) Focus(subject);
+        }
+
         /// <summary>What the player says: an offer in it is answered by the rules first, then the person speaks</summary>
         public Task<string?> SayAsync(string text, CancellationToken cancellationToken = default)
         {
@@ -156,13 +168,14 @@ namespace StreetCorsa.Services.Talk
             // is asked (a seller who has forgotten the player is made again, and starts from the ad's first price too)
             subject.FirstAsked ??= subject.Price;
             subject.MostOff ??= Haggle.DrawMostOff(_desk.Rules, _desk.Random);
-            TalkPeople.Deal(Person, subject.Thing, subject.FirstAsked.Value);
+            TalkPeople.Deal(Person, subject.Thing, subject.FirstAsked.Value, _game.Date);
         }
 
         /// <summary>The player takes the price as it stands ("you got a deal"): shaken on; null when the line says no such thing</summary>
         private HaggleOutcome? Agree(string text, TalkSubject subject)
         {
-            if (!Haggle.AgreesIn(text, GameText.Installed.Lines("chat.agree_words"), GameText.Installed.Lines("chat.agree_alone"))) return null;
+            var words = GameText.Installed;
+            if (!Haggle.AgreesIn(text, words.Lines("chat.agree_words"), words.Lines("chat.agree_alone"), words.Lines("chat.agree_not"))) return null;
 
             var outcome = new HaggleOutcome(HaggleAnswer.Shake, subject.Price, subject.Price);
             _agreedThing = subject.Thing;
@@ -176,9 +189,11 @@ namespace StreetCorsa.Services.Talk
         private HaggleOutcome? Offer(string text, TalkSubject subject)
         {
             var rules = _desk.Rules;
-            if (Haggle.OfferIn(text, subject.Price, GameText.Installed.Lines("chat.offer_words"), rules) is not { } offer) return null;
+            if (Haggle.OfferIn(text, subject.Price, GameText.Installed.Lines("chat.offer_words"), rules, UnitWords) is not { } offer) return null;
 
-            var deal = TalkPeople.Deal(Person, subject.Thing, subject.FirstAsked ?? subject.Price);
+            _offers.Add(offer);
+
+            var deal = TalkPeople.Deal(Person, subject.Thing, subject.FirstAsked ?? subject.Price, _game.Date);
             var temperament = _desk.Prompts.TemperamentOf(Person.Temperament);
             var days = Math.Max(0, (int)(_game.Date.Date - subject.OnSaleSince.Date).TotalDays);
             var floor = Math.Max(Haggle.Floor(deal.Asked, Person.Kind, temperament, days, Rival?.IsBroke == true, rules),
@@ -211,18 +226,24 @@ namespace StreetCorsa.Services.Talk
             else
                 _turns.Add(new AiTurn(false, playerTurn));
 
-            var said = await _desk.Text.ChatAsync(Use, Values(outcome), Window(), cancellationToken).ConfigureAwait(true);
+            // The fact sheet once a turn: the prompt and the sums the person may name both come of it
+            var values = Values(outcome);
+            var facts = values["facts"] as string ?? string.Empty;
+            var said = await _desk.Text.ChatAsync(Use, values, Window(), cancellationToken).ConfigureAwait(true);
 
             // The AI must not come down by itself: a price under the one that stands, that nothing it was told gives, and
             // it is asked again with a word on it; the same again and the game says the price itself
-            if (said != null && Subject is { } subject && Haggle.NamesLowerPrice(said, subject.Price, KnownSums()))
+            if (said != null && Subject is { } subject)
             {
-                _logger.Information("{Person} named a price under {Price} by themselves: asked again", Person.Name, subject.Price);
-                var values = Values(outcome);
-                values["facts"] += "\n" + GameText.Say("chat.fact.price_warning", ("price", new Helpers.Money(subject.Price)));
-                said = await _desk.Text.ChatAsync(Use, values, Window(), cancellationToken).ConfigureAwait(true);
-                if (said != null && Haggle.NamesLowerPrice(said, subject.Price, KnownSums()))
-                    said = GameText.Say("chat.deal.held", ("price", new Helpers.Money(subject.Price)));
+                var known = KnownSums(facts);
+                if (Haggle.NamesLowerPrice(said, subject.Price, known, UnitWords))
+                {
+                    _logger.Information("{Person} named a price under {Price} by themselves: asked again", Person.Name, subject.Price);
+                    values["facts"] = facts + "\n" + GameText.Say("chat.fact.price_warning", ("price", new Helpers.Money(subject.Price)));
+                    said = await _desk.Text.ChatAsync(Use, values, Window(), cancellationToken).ConfigureAwait(true);
+                    if (said != null && Haggle.NamesLowerPrice(said, subject.Price, known, UnitWords))
+                        said = GameText.Say("chat.deal.held", ("price", new Helpers.Money(subject.Price)));
+                }
             }
 
             if (said == null) return null;
@@ -232,12 +253,22 @@ namespace StreetCorsa.Services.Talk
             return said;
         }
 
-        // What the player typed this talk: the sums in it are theirs to be named back
+        // What the player typed this talk, and the offers read in it: the sums in them are theirs to be named back
         private readonly List<string> _playerSaid = [];
+        private readonly List<decimal> _offers = [];
 
-        /// <summary>The sums the person may name: those of the facts they were given (the lot, what was first asked) and the player's</summary>
-        private IEnumerable<decimal> KnownSums() =>
-            Haggle.SumsIn(Facts()).Concat(_playerSaid.SelectMany(Haggle.SumsIn)).Concat(Deal is { } deal ? new[] { deal.Asked } : Array.Empty<decimal>());
+        private static IReadOnlyList<string> UnitWords => GameText.Installed.Lines("chat.unit_words");
+
+        /// <summary>
+        /// The sums the person may name: those of the facts they were given (the lot, what was first asked), the player's,
+        /// and the player's offers ("would you take 1200" is one with no dollar sign on it)
+        /// </summary>
+        private List<decimal> KnownSums(string facts) =>
+            Haggle.SumsIn(facts, UnitWords)
+                .Concat(_playerSaid.SelectMany(line => Haggle.SumsIn(line, UnitWords)))
+                .Concat(_offers)
+                .Concat(Deal is { } deal ? [deal.Asked] : Array.Empty<decimal>())
+                .ToList();
 
         /// <summary>The newest turns the rules keep, from a player's turn on</summary>
         private List<AiTurn> Window()
@@ -253,7 +284,7 @@ namespace StreetCorsa.Services.Talk
             _sessionsLoaded = true;
             try
             {
-                _sessions = await _desk.RacesOf(_game.SaveName).ConfigureAwait(true);
+                _sessions = await _desk.RacesOf(_game.SaveName, Person.Name).ConfigureAwait(true);
             }
             catch (Exception ex)
             {
@@ -297,7 +328,8 @@ namespace StreetCorsa.Services.Talk
                     break;
             }
 
-            if (Person.Kind == PersonKind.Salesman) lines.AddRange(TalkFacts.Lot(Lot, rules.LotCarsTold));
+            // A salesman met over one car (Car Viewing) is not given his lot, and so is not told it is empty either
+            if (Person.Kind == PersonKind.Salesman && (Lot.Count > 0 || Subject == null)) lines.AddRange(TalkFacts.Lot(Lot, rules.LotCarsTold));
             lines.AddRange(TalkFacts.RacesWithPlayer(Person.Name, _sessions, today, rules.RacesTold));
             if (Rival != null) lines.AddRange(TalkFacts.RivalRaces(Person.Name, _game.RivalRaces ?? [], today, _desk.CarName, rules.RivalRacesTold));
             lines.AddRange(TalkFacts.Memories(TalkPeople.Remembered(Person, today, rules), today));

@@ -168,7 +168,22 @@ namespace StreetCorsa.Screens.DealerLot
             };
             talk.PriceChanged += OnPriceChanged;
             Talk = talk;
-            _ = talk.OpenAsync();
+            _ = OpenTalkAsync(talk);
+        }
+
+        /// <summary>
+        /// He comes over; when he never says a word (the AI is on in Settings but not answering) the talk goes and the
+        /// car card, with its Buy, is back: the lot never stands without a way to buy
+        /// </summary>
+        private async Task OpenTalkAsync(TalkViewModel talk)
+        {
+            await talk.OpenAsync();
+            if (Talk != talk || talk.HasAnswered) return;
+
+            _logger.Information("The salesman's AI did not answer: the lot goes on without the talk");
+            talk.PriceChanged -= OnPriceChanged;
+            talk.End();
+            Talk = null;
         }
 
         // The card is bound to the car picked: shown again, it shows the price the salesman came down to

@@ -39,25 +39,46 @@ namespace StreetCorsa.Services.Talk
         /// The price the player names in <paramref name="text"/>, when it reads as an offer: a sum with a currency sign
         /// or "k"/"grand" on it, or any number in a line with one of <paramref name="offerWords"/> ("take", "give",
         /// "offer"), and within reason of <paramref name="asking"/> (<see cref="TalkRules.OfferLowest"/> to
-        /// <see cref="TalkRules.OfferHighest"/> of it); the last such. A year ("a '57?") or a mileage is no offer.
+        /// <see cref="TalkRules.OfferHighest"/> of it); the last such. A number with one of <paramref name="unitWords"/>
+        /// after it ("5k miles") is no offer, nor is a year ("the 1957") unless an offer word comes right before it
+        /// ("give you 1950").
         /// </summary>
-        public static decimal? OfferIn(string text, decimal asking, IReadOnlyList<string> offerWords, TalkRules? rules = null)
+        public static decimal? OfferIn(string text, decimal asking, IReadOnlyList<string> offerWords, TalkRules? rules = null,
+            IReadOnlyList<string>? unitWords = null)
         {
             rules ??= RuleBook.Current.Ai.Talk;
             if (string.IsNullOrWhiteSpace(text) || asking <= 0) return null;
 
-            var worded = offerWords.Any(word => word.Length > 0 && Regex.IsMatch(text, $@"\b{Regex.Escape(word)}\b", RegexOptions.IgnoreCase));
+            var words = offerWords.Where(word => word.Length > 0).ToList();
+            var worded = words.Any(word => Regex.IsMatch(text, $@"\b{Regex.Escape(word)}\b", RegexOptions.IgnoreCase));
             decimal? offer = null;
             foreach (Match match in Amount().Matches(text))
             {
                 if (Value(match) is not { } value) continue;
+                if (IsMeasure(text, match, unitWords)) continue;
                 var marked = match.Groups["cur"].Success || match.Groups["k"].Success;
                 if (!marked && !worded) continue;
+                if (!marked && YearShaped().IsMatch(match.Groups["num"].Value) && !OfferWordBefore(text, match, words)) continue;
                 if (value < asking * (decimal)rules.OfferLowest || value > asking * (decimal)rules.OfferHighest) continue;
                 offer = value;
             }
 
             return offer;
+        }
+
+        /// <summary>A number with a unit after it ("5k miles", "283 cubes"): a measure, no sum of money</summary>
+        private static bool IsMeasure(string text, Match match, IReadOnlyList<string>? unitWords)
+        {
+            if (unitWords is not { Count: > 0 }) return false;
+            var after = text[(match.Index + match.Length)..];
+            return unitWords.Any(word => word.Length > 0 && Regex.IsMatch(after, $@"^\s*{Regex.Escape(word)}\b", RegexOptions.IgnoreCase));
+        }
+
+        /// <summary>An offer word right before the number ("give you 1950", "how about 1950")</summary>
+        private static bool OfferWordBefore(string text, Match match, IReadOnlyList<string> words)
+        {
+            var before = text[..match.Index];
+            return words.Any(word => Regex.IsMatch(before, $@"\b{Regex.Escape(word)}(\s+(you|me))?\s*$", RegexOptions.IgnoreCase));
         }
 
         private static decimal? Value(Match match)
@@ -77,29 +98,37 @@ namespace StreetCorsa.Services.Talk
         }
 
         /// <summary>
-        /// The player agrees to the price as it stands: a line that is one of <paramref name="alone"/> ("deal", "ok") by
-        /// itself, or that holds one of <paramref name="phrases"/> ("got a deal", "I'll take it", "sold"), in any case
+        /// The player agrees to the price as it stands: a line that is one of <paramref name="alone"/> ("deal", "sold") by
+        /// itself, or that holds one of <paramref name="phrases"/> ("got a deal", "I'll take it"), in any case. A question
+        /// ("Deal?") agrees to nothing, nor does a line with one of <paramref name="negations"/> in it ("I never agreed").
         /// </summary>
-        public static bool AgreesIn(string text, IReadOnlyList<string> phrases, IReadOnlyList<string> alone)
+        public static bool AgreesIn(string text, IReadOnlyList<string> phrases, IReadOnlyList<string> alone, IReadOnlyList<string>? negations = null)
         {
-            var line = Regex.Replace(text.Trim().ToLowerInvariant(), @"[.!?,]+$", string.Empty).Trim();
+            var trimmed = text.Trim().ToLowerInvariant();
+            if (trimmed.EndsWith('?')) return false;
+            var line = Regex.Replace(trimmed, @"[.!,]+$", string.Empty).Trim();
             if (line.Length == 0) return false;
+            if (negations != null && negations.Any(word => word.Length > 0
+                                                           && Regex.IsMatch(line, $@"(^|\W){Regex.Escape(word.ToLowerInvariant())}(\W|$)")))
+                return false;
             if (alone.Any(word => line == word.ToLowerInvariant())) return true;
             return phrases.Any(phrase => phrase.Length > 0
                                          && Regex.IsMatch(line, $@"(^|\W){Regex.Escape(phrase.ToLowerInvariant())}(\W|$)"));
         }
 
         /// <summary>
-        /// The sums of money <paramref name="text"/> names: with a currency sign ("$1,250"), or "bucks"/"dollars" after
-        /// them ("900 bucks"); a mileage or a year is no sum
+        /// The sums of money <paramref name="text"/> names: with a currency sign ("$1,250"), "k"/"grand"/"thousand" on
+        /// them ("1.2 grand"), or "bucks"/"dollars" after them ("900 bucks"); a number with one of
+        /// <paramref name="unitWords"/> after it ("5k miles"), or a bare year, is no sum
         /// </summary>
-        public static IReadOnlyList<decimal> SumsIn(string text)
+        public static IReadOnlyList<decimal> SumsIn(string text, IReadOnlyList<string>? unitWords = null)
         {
             var sums = new List<decimal>();
             foreach (Match match in Amount().Matches(text))
             {
-                var marked = match.Groups["cur"].Success
-                             || Regex.IsMatch(text[(match.Index + match.Length)..], @"^\s*(bucks|dollars|grand)\b", RegexOptions.IgnoreCase);
+                if (IsMeasure(text, match, unitWords)) continue;
+                var marked = match.Groups["cur"].Success || match.Groups["k"].Success
+                             || Regex.IsMatch(text[(match.Index + match.Length)..], @"^\s*(bucks|dollars)\b", RegexOptions.IgnoreCase);
                 if (marked && Value(match) is { } value) sums.Add(value);
             }
 
@@ -110,10 +139,10 @@ namespace StreetCorsa.Services.Talk
         /// The answer names a price under <paramref name="price"/> that nothing the person was told gives (the player's
         /// own offer, a cheaper car on the lot, what was first asked): the AI came down by itself
         /// </summary>
-        public static bool NamesLowerPrice(string answer, decimal price, IEnumerable<decimal> known)
+        public static bool NamesLowerPrice(string answer, decimal price, IEnumerable<decimal> known, IReadOnlyList<string>? unitWords = null)
         {
             var allowed = known.ToHashSet();
-            return SumsIn(answer).Any(sum => sum < price && !allowed.Contains(sum));
+            return SumsIn(answer, unitWords).Any(sum => sum < price && !allowed.Contains(sum));
         }
 
         /// <summary>
@@ -160,8 +189,11 @@ namespace StreetCorsa.Services.Talk
             if (offer < floor * (1m - (decimal)Math.Clamp(rules.InsultMargin, 0, 1))) return new HaggleOutcome(HaggleAnswer.Insulted, offer, current);
             if (counters >= rules.MaxCounters) return new HaggleOutcome(HaggleAnswer.Firm, offer, current);
 
-            var counter = Math.Max(round((offer + current) / 2m), floor);
-            if (counter < floor) counter = floor;
+            // Halfway on the seller's round figures, never under the floor; when that rounds up to the price itself (a
+            // step from the floor) there is still room: plain halfway, in whole dollars
+            var halfway = (offer + current) / 2m;
+            var counter = Math.Max(round(halfway), round(floor));
+            if (counter >= current) counter = Math.Ceiling(Math.Max(halfway, floor));
             return counter >= current
                 ? new HaggleOutcome(HaggleAnswer.Firm, offer, current)
                 : new HaggleOutcome(HaggleAnswer.Counter, offer, counter);
@@ -176,5 +208,8 @@ namespace StreetCorsa.Services.Talk
 
         [GeneratedRegex(@"^\d{1,3}(?:[,.]\d{3})+$")]
         private static partial Regex ThousandsGrouped();
+
+        [GeneratedRegex(@"^(19|20)\d{2}$")]
+        private static partial Regex YearShaped();
     }
 }

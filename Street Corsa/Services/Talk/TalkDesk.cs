@@ -18,7 +18,7 @@ namespace StreetCorsa.Services.Talk
     {
         private static TalkDesk _shared = new(new NoAiText());
 
-        private readonly Func<string, Task<List<ProcessedRaceSession>>>? _races;
+        private readonly Func<string, string, Task<List<ProcessedRaceSession>>>? _races;
         private readonly Func<string, string> _carName;
         private readonly Func<PartsCatalog?> _parts;
         private readonly Action<Action> _onGameThread;
@@ -34,12 +34,12 @@ namespace StreetCorsa.Services.Talk
                 : null;
 
         /// <param name="text">The player's AI</param>
-        /// <param name="races">The player's races of a save, by its name</param>
+        /// <param name="races">The player's races of a save against one person: by the save's name and the person's</param>
         /// <param name="carName">A car's name by its id</param>
         /// <param name="parts">The parts catalog</param>
         /// <param name="onGameThread">Runs what changes the game on its thread (a memory written in the background)</param>
         /// <param name="salesmen">A dealer's salesman as its mod data gives him, by the dealer's id; none, and they are made up</param>
-        public TalkDesk(IAiText text, Func<string, Task<List<ProcessedRaceSession>>>? races = null, Func<string, string>? carName = null,
+        public TalkDesk(IAiText text, Func<string, string, Task<List<ProcessedRaceSession>>>? races = null, Func<string, string>? carName = null,
             Func<PartsCatalog?>? parts = null, Action<Action>? onGameThread = null, Func<AiPrompts>? prompts = null, Func<TalkRules>? rules = null,
             Func<string, DealerSalesman?>? salesmen = null)
         {
@@ -73,8 +73,8 @@ namespace StreetCorsa.Services.Talk
 
         internal string CarName(string id) => _carName(id);
 
-        internal async Task<IReadOnlyList<ProcessedRaceSession>> RacesOf(string saveName) =>
-            _races == null || string.IsNullOrEmpty(saveName) ? [] : await _races(saveName).ConfigureAwait(true);
+        internal async Task<IReadOnlyList<ProcessedRaceSession>> RacesOf(string saveName, string personName) =>
+            _races == null || string.IsNullOrEmpty(saveName) ? [] : await _races(saveName, personName).ConfigureAwait(true);
 
         /// <summary>
         /// The seller of a car: a rival's own ad is the rival; a dealer's car (<paramref name="dealerId"/>) the dealer's
@@ -130,7 +130,7 @@ namespace StreetCorsa.Services.Talk
             var values = new TextValues
             {
                 ["name"] = person.Name,
-                ["player"] = talk.Values()["player"],
+                ["player"] = talk.PlayerName,
                 ["talk"] = transcript
             };
             var language = AiWriter.Language;

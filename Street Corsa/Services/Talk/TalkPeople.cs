@@ -71,18 +71,22 @@ namespace StreetCorsa.Services.Talk
             return person;
         }
 
-        /// <summary>The salesman as the dealer's data gives him: what it says goes, what it leaves out stays</summary>
+        /// <summary>
+        /// The salesman as the dealer's data gives him: what it says goes, what it leaves out stays; a name given with no
+        /// sex is a man's, so the name and the sex never disagree
+        /// </summary>
         private static void As(Person person, DealerSalesman given)
         {
             if (!string.IsNullOrWhiteSpace(given.Name)) person.Name = given.Name;
             if (given.Age > 0) person.Age = given.Age;
-            person.Gender = given.Gender;
+            if (given.Gender is { } gender) person.Gender = gender;
+            else if (!string.IsNullOrWhiteSpace(given.Name)) person.Gender = Gender.Male;
             if (!string.IsNullOrWhiteSpace(given.Temperament)) person.Temperament = given.Temperament;
         }
 
         /// <summary>
         /// A private seller (a car or a part in the paper) by the ad's key: <paramref name="name"/> when the ad gives one
-        /// (a part's seller), else drawn
+        /// (a part's seller), a woman only when the name is one of the women's, else drawn
         /// </summary>
         public static Person Seller(GameState game, string key, string? name = null, AiPrompts? prompts = null, TalkRules? rules = null)
         {
@@ -90,7 +94,8 @@ namespace StreetCorsa.Services.Talk
 
             rules ??= RuleBook.Current.Ai.Talk;
             var random = Seeded(key);
-            var gender = random.NextDouble() < rules.WomenSellers ? Gender.Female : Gender.Male;
+            var drawn = random.NextDouble() < rules.WomenSellers ? Gender.Female : Gender.Male;
+            var gender = string.IsNullOrWhiteSpace(name) ? drawn : GenderOf(name);
             return Add(game, new Person
             {
                 Key = key,
@@ -101,6 +106,15 @@ namespace StreetCorsa.Services.Talk
                 Temperament = Draw(prompts ?? AiPrompts.Installed, PersonKind.PrivateSeller, 50, random)
             });
         }
+
+        /// <summary>A given name's sex: a woman's when it is in a pool of women's names, else a man's ("Frank", "Al's Speed Shop")</summary>
+        private static Gender GenderOf(string name)
+        {
+            var text = GameText.Installed;
+            return WomenPools.Any(pool => text.Lines(pool).Contains(name, StringComparer.OrdinalIgnoreCase)) ? Gender.Female : Gender.Male;
+        }
+
+        private static readonly string[] WomenPools = ["names.people.women", "names.salesmen.women"];
 
         private static int AgeBetween(int least, int most, Random random) => least + random.Next(Math.Max(1, most - least + 1));
 
@@ -141,12 +155,7 @@ namespace StreetCorsa.Services.Talk
         }
 
         /// <summary>The same draws for the same key every run (string.GetHashCode is not)</summary>
-        public static Random Seeded(string key)
-        {
-            var hash = 17u;
-            foreach (var c in key) hash = hash * 31u + c;
-            return new Random((int)(hash & 0x7FFFFFFF));
-        }
+        public static Random Seeded(string key) => new((int)(Helpers.StableHash.Of(key) & 0x7FFFFFFF));
 
         // ----- memories -----
 
@@ -176,11 +185,15 @@ namespace StreetCorsa.Services.Talk
             Forget(person, date, rules);
         }
 
-        /// <summary>The memories older than the kind remembers go, and at most twice what is told is kept</summary>
+        /// <summary>
+        /// The memories older than the kind remembers go, and at most twice what is told is kept; so do the deals not talked
+        /// over for as long (the ad keeps its own hard floor, so a forgotten deal is never a cheaper one)
+        /// </summary>
         public static void Forget(Person person, DateTime date, TalkRules rules)
         {
             var days = ForgetDays(person.Kind, rules);
             person.Memories.RemoveAll(m => (date.Date - m.Date.Date).TotalDays > days);
+            person.Deals.RemoveAll(d => d.Date is not { } talked || (date.Date - talked.Date).TotalDays > days);
             var most = Math.Max(1, rules.MemoriesGiven * 2);
             if (person.Memories.Count > most) person.Memories.RemoveRange(0, person.Memories.Count - most);
         }
@@ -196,12 +209,19 @@ namespace StreetCorsa.Services.Talk
                                        && (game.Date.Date - p.Met.Date).TotalDays > rules.ForgetDaysSeller);
         }
 
-        /// <summary>The deal over <paramref name="thing"/>, begun at <paramref name="asked"/> the first time it is talked about</summary>
-        public static PersonDeal Deal(Person person, string thing, decimal asked)
+        /// <summary>
+        /// The deal over <paramref name="thing"/>, begun at <paramref name="asked"/> the first time it is talked about;
+        /// talked about on <paramref name="date"/>, so not forgotten yet
+        /// </summary>
+        public static PersonDeal Deal(Person person, string thing, decimal asked, DateTime date)
         {
-            if (person.DealFor(thing) is { } deal) return deal;
-            deal = new PersonDeal { Thing = thing, Asked = asked };
-            person.Deals.Add(deal);
+            if (person.DealFor(thing) is not { } deal)
+            {
+                deal = new PersonDeal { Thing = thing, Asked = asked };
+                person.Deals.Add(deal);
+            }
+
+            deal.Date = date;
             return deal;
         }
 

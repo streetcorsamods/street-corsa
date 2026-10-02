@@ -127,7 +127,7 @@ public class TalkTests
     private static (TalkDesk Desk, FakeAiText Ai) Desk(List<ProcessedRaceSession>? races = null, string? answer = "Sure thing.")
     {
         var ai = new FakeAiText((_, _) => Task.FromResult(answer));
-        var desk = new TalkDesk(ai, _ => Task.FromResult(races ?? []), id => id == "bel_air" ? "Chevrolet Bel Air" : id,
+        var desk = new TalkDesk(ai, (_, _) => Task.FromResult(races ?? []), id => id == "bel_air" ? "Chevrolet Bel Air" : id,
             prompts: BasePrompts, rules: () => Rules);
         return (desk, ai);
     }
@@ -449,7 +449,7 @@ public class TalkTests
         Assert.Equal(new[] { "system", "user", "assistant", "user" }, messages.Select(m => m!["role"]!.GetValue<string>()));
         Assert.Equal("Does it run?", messages[3]!["content"]!.GetValue<string>());
         Assert.Equal(8192, json["options"]!["num_ctx"]!.GetValue<int>());
-        Assert.Equal("30m", json["keep_alive"]!.GetValue<string>());
+        Assert.Equal("10m", json["keep_alive"]!.GetValue<string>());
     }
 
     [Fact]
@@ -481,6 +481,127 @@ public class TalkTests
         Assert.Equal(model.From, sent.Json!["from"]!.GetValue<string>());
         Assert.Equal(examples.Count, sent.Json!["messages"]!.AsArray().Count);
         Assert.False(string.IsNullOrWhiteSpace(sent.Json!["system"]!.GetValue<string>()));
+    }
+
+    // ----- the review's cases: what is no offer, no deal, and what the AI may say back -----
+
+    private static IReadOnlyList<string> Lines(string key) => GameText.Installed.Lines(key);
+
+    [Theory]
+    [InlineData("Is this the 1957 for sale?")]
+    [InlineData("What about the 1958?")]
+    [InlineData("Only 5k miles?")]
+    [InlineData("How about the 283 cubes?")]
+    public void A_year_or_a_measure_is_no_offer_with_the_base_games_words(string text)
+    {
+        Assert.Null(Haggle.OfferIn(text, 1800m, Lines("chat.offer_words"), Rules, Lines("chat.unit_words")));
+    }
+
+    [Theory]
+    [InlineData("I'll give you 1950", 1950)]
+    [InlineData("How about 1500?", 1500)]
+    [InlineData("would you take 1200?", 1200)]
+    public void An_offer_that_looks_like_a_year_is_one_with_an_offer_word_before_it(string text, int expected)
+    {
+        Assert.Equal(expected, Haggle.OfferIn(text, 2000m, Lines("chat.offer_words"), Rules, Lines("chat.unit_words")));
+    }
+
+    [Theory]
+    [InlineData("Sure", false)]
+    [InlineData("yes", false)]
+    [InlineData("Deal?", false)]
+    [InlineData("I never agreed to that", false)]
+    [InlineData("It's not a deal", false)]
+    [InlineData("Deal!", true)]
+    [InlineData("You got a deal, mister", true)]
+    public void Only_a_plain_yes_to_the_price_is_a_deal_with_the_base_games_words(string text, bool agrees)
+    {
+        Assert.Equal(agrees, Haggle.AgreesIn(text, Lines("chat.agree_words"), Lines("chat.agree_alone"), Lines("chat.agree_not")));
+    }
+
+    [Theory]
+    [InlineData("I'd let her go for 1.2 grand", 1200)]
+    [InlineData("call it 1.2k", 1200)]
+    [InlineData("1,250 bucks", 1250)]
+    public void A_sum_with_k_or_grand_on_it_is_a_sum(string text, int expected)
+    {
+        Assert.Equal([(decimal)expected], Haggle.SumsIn(text, Lines("chat.unit_words")));
+    }
+
+    [Fact]
+    public void A_mileage_is_no_sum()
+    {
+        Assert.Empty(Haggle.SumsIn("only 5k miles on her", Lines("chat.unit_words")));
+    }
+
+    [Fact]
+    public void A_price_a_step_over_the_floor_still_comes_down()
+    {
+        Func<decimal, decimal> round = p => Haggle.RoundUp(p, 25);
+
+        // Halfway rounds to $1,350, the floor to $1,400, over the price: the counter is the floor itself
+        Assert.Equal(new HaggleOutcome(HaggleAnswer.Counter, 1300m, 1380m), Haggle.Decide(1300m, 1395m, 1380m, 0, Rules, round));
+    }
+
+    [Fact]
+    public async Task The_players_own_offer_said_back_is_no_price_come_down_by_itself()
+    {
+        var game = Game();
+        var car = Car();
+        car.Listing.FirstAsked = 1500m;
+        car.Listing.MostOff = 0;
+        var (desk, ai) = Desk(answer: "$1,200? Can't do it, friend.");
+        var talk = desk.ForCar(game, car, null, TalkPlace.Phone);
+
+        var said = await talk.SayAsync("would you take 1200?", Ct);
+
+        Assert.Single(ai.Chats);
+        Assert.Equal("$1,200? Can't do it, friend.", said);
+    }
+
+    [Fact]
+    public void A_salesman_met_over_one_car_is_not_told_his_lot_is_empty()
+    {
+        var (desk, _) = Desk();
+        var talk = desk.ForCar(Game(), Car(dealer: "dealer_1"), "dealer_1", TalkPlace.Curb);
+
+        Assert.Equal(PersonKind.Salesman, talk.Person.Kind);
+        Assert.DoesNotContain(GameText.Say("chat.fact.lot_empty"), talk.Facts());
+    }
+
+    [Fact]
+    public void A_deal_not_talked_over_is_forgotten_with_the_memories()
+    {
+        var game = Game();
+        var person = TalkPeople.Salesman(game, "dealer_1", rules: Rules);
+        TalkPeople.Deal(person, "car:old", 1500m, game.Date);
+        TalkPeople.Deal(person, "car:new", 1500m, game.Date.AddDays(Rules.ForgetDaysSalesman));
+
+        TalkPeople.Forget(person, game.Date.AddDays(Rules.ForgetDaysSalesman + 1), Rules);
+
+        Assert.Equal(["car:new"], person.Deals.Select(d => d.Thing));
+    }
+
+    [Fact]
+    public void A_seller_named_by_the_ad_is_of_the_names_sex()
+    {
+        var game = Game();
+        for (var i = 0; i < 20; i++)
+            Assert.Equal(Gender.Male, TalkPeople.Seller(game, $"part:{i}", "Frank", rules: Rules).Gender);
+        Assert.Equal(Gender.Female, TalkPeople.Seller(game, "part:doris", "Doris Kemper", rules: Rules).Gender);
+    }
+
+    [Fact]
+    public void A_mod_salesman_with_a_name_and_no_sex_is_a_man_and_with_neither_keeps_who_he_was()
+    {
+        var game = Game();
+        var named = TalkPeople.Salesman(game, "dealer_named", new DealerSalesman { Name = "Cal Whitaker" }, rules: Rules);
+        Assert.Equal(Gender.Male, named.Gender);
+
+        var drawn = TalkPeople.Salesman(game, "dealer_drawn", rules: Rules);
+        var again = TalkPeople.Salesman(game, "dealer_drawn", new DealerSalesman { Temperament = "old_timer" }, rules: Rules);
+        Assert.Same(drawn, again);
+        Assert.Equal(TalkPeople.Salesman(Game(), "dealer_drawn", rules: Rules).Gender, again.Gender);
     }
 
     // ----- the base game's content -----
