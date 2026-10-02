@@ -1,0 +1,11 @@
+{
+  "_comment": [
+    "The garage's marks for the car scripts (see docs/modding.md, scripts). A mark is a point [x, z] on the floor, in",
+    "metres from the middle of the garage, or one measured from where the car stands: { \"behind\": 7 }, with ahead,",
+    "left and right. door: where a car taken out of the lot comes in from (scripts/scripts.json, garage.arrive).",
+    "paths: named lists of points, for a mod's scripts to drive along."
+  ],
+  "marks": {
+    "door": { "behind": 7 }
+  }
+}

@@ -75,8 +75,8 @@ namespace StreetCorsa.Screens.CarLot
         public LotView? LotView { get; private set; }
         public LotRoom? LotRoom { get; private set; }
 
-        /// <summary>The way out a car taken drives for, when the scene says where it is</summary>
-        public LotExit? LotExit { get; private set; }
+        /// <summary>The scene's marks a car taken drives by: its way out, when the scene says where it is</summary>
+        public Services.Scripting.SceneMarks? LotMarks { get; private set; }
         public float LotRadius { get; private set; } = 12f;
 
         public bool HasScene => ShowroomKn5 != null;
@@ -217,7 +217,7 @@ namespace StreetCorsa.Screens.CarLot
                 Dressing = new LotDressing(dressing.Lighting, dressing.Sun, dressing.Pictures, dressing.Glow);
                 LotView = new LotView(scene.Camera.Alpha, scene.Camera.Beta, scene.Camera.TargetHeight);
                 LotRoom = scene.Room is { } room ? new LotRoom(room.HalfLength, room.HalfWidth, room.Height) : null;
-                LotExit = scene.Exit is { } exit ? new LotExit(exit.X, exit.Z) : null;
+                LotMarks = scene.ScriptMarks;
                 LotRadius = scene.Camera.Radius;
             }
 
@@ -229,7 +229,7 @@ namespace StreetCorsa.Screens.CarLot
             OnPropertyChanged(nameof(Dressing));
             OnPropertyChanged(nameof(LotView));
             OnPropertyChanged(nameof(LotRoom));
-            OnPropertyChanged(nameof(LotExit));
+            OnPropertyChanged(nameof(LotMarks));
             OnPropertyChanged(nameof(LotRadius));
             OnPropertyChanged(nameof(LotCars));
             OnPropertyChanged(nameof(WarehouseCars));
@@ -296,6 +296,9 @@ namespace StreetCorsa.Screens.CarLot
         /// view); true when it did drive off. Nothing is shown for a car without an engine that runs.
         /// </summary>
         public Func<Audio.EngineSpec?, Task<bool>>? DriveCarOff { get; set; }
+
+        /// <summary>The moment a car is taken out in, for its script: the game's clock and the light of the day</summary>
+        public Services.Scripting.ScriptFacts ScriptFacts => new(_gameState.Date, StreetLights.At(_gameState.Date));
 
         /// <summary>The car back in its bay and the screen as it was, when the lot stays after all (set by the view)</summary>
         public Action? PutCarBack { get; set; }

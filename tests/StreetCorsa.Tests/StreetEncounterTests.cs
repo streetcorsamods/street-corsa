@@ -2,6 +2,8 @@ using StreetCorsa.Controls.Street;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Models.Race;
 using StreetCorsa.Mods;
+using StreetCorsa.Services.Scripting;
+using StreetCorsa.Services.Station;
 using StreetCorsa.Services.Street;
 
 namespace StreetCorsa.Tests;
@@ -123,14 +125,14 @@ public class StreetEncounterTests
     [Fact]
     public void Arriving_the_rival_brakes_to_a_stop_where_the_street_says()
     {
-        var drive = RivalDrive.Arrive(-45f, 0.35f, 800, 6000);
+        var drive = RivalArrives(-45f, 0.35f, 800);
         var last = drive.At(0f);
         var braked = false;
 
         for (var t = 0.05f; t <= drive.Duration + 0.5f; t += 0.05f)
         {
             var state = drive.At(t);
-            Assert.True(state.Position >= last.Position - 1e-4f, "never rolls back");
+            Assert.True(state.Z >= last.Z - 1e-4f, "never rolls back");
             Assert.True(state.Speed <= last.Speed + 1e-4f, "never speeds up");
             braked |= state.Braking && state.Acceleration < 0;
             last = state;
@@ -138,7 +140,7 @@ public class StreetEncounterTests
 
         Assert.True(braked);
         Assert.True(last.Done);
-        Assert.Equal(0.35f, last.Position, 3);
+        Assert.Equal(0.35f, last.Z, 3);
         Assert.Equal(0f, last.Speed);
         Assert.Null(last.Rpm);
     }
@@ -146,7 +148,7 @@ public class StreetEncounterTests
     [Fact]
     public void The_clutch_goes_in_before_the_car_stops_and_the_engine_never_drops_under_idle()
     {
-        var drive = RivalDrive.Arrive(-45f, 0f, 850, 6000);
+        var drive = RivalArrives(-45f, 0f, 850);
 
         Assert.True(drive.At(0.5f).Rpm >= 850);
         var nearlyStopped = drive.At(drive.Duration - 0.3f);
@@ -157,16 +159,15 @@ public class StreetEncounterTests
     [Fact]
     public void Leaving_the_rival_launches_up_through_the_gears_and_out_of_sight()
     {
-        var drive = RivalDrive.Leave(0f, 70f, 800, 6000);
+        var drive = DrivePlan.Launch(DrivePath.Through([new GroundPoint(0, 0f), new GroundPoint(0, 70f)]), BaseFeel("launch"), 800, 6000);
         var early = drive.At(0.5f);
         var later = drive.At(3f);
 
-        Assert.True(drive.IsLeaving);
         Assert.True(early.Acceleration > 3f);
         Assert.True(later.Speed > early.Speed);
         Assert.InRange(drive.Duration, 3f, 12f);
         Assert.True(drive.At(drive.Duration).Done);
-        Assert.True(drive.At(drive.Duration).Position >= 70f);
+        Assert.True(drive.At(drive.Duration).Z >= 70f - 1e-3f);
 
         for (var t = 0f; t < drive.Duration; t += 0.1f) Assert.True(drive.At(t).Rpm <= 6000 * 1.05, $"over the limiter at {t}");
     }
@@ -188,8 +189,15 @@ public class StreetEncounterTests
     [Fact]
     public void A_wheel_turns_once_for_its_own_circumference()
     {
-        Assert.Equal(2 * MathF.PI, RivalDrive.WheelAngle(2 * MathF.PI * 0.33f), 3);
+        Assert.Equal(2 * MathF.PI, DriveFeel.Road.WheelAngle(2 * MathF.PI * 0.33f), 3);
     }
+
+    /// <summary>A feel of the base game's scripts</summary>
+    private static DriveFeel BaseFeel(string id) => ScriptBook.Load(ModSet.Load(RepoPaths.Content), []).Feels[id];
+
+    /// <summary>The rival up a straight lane along +z from <paramref name="from"/> to a stop at <paramref name="stopAt"/>, as its script drives it</summary>
+    private static DrivePlan RivalArrives(float from, float stopAt, double idle) =>
+        DrivePlan.Road(DrivePath.Through([new GroundPoint(0, from), new GroundPoint(0, stopAt)]), BaseFeel("lane"), idle, rolling: true, stop: true);
 
     #endregion
 

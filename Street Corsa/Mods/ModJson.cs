@@ -96,11 +96,11 @@ public static class ModJson
     /// <paramref name="read"/> gives null for an entry it cannot use, and says why in the problems
     /// </summary>
     public static ContentRegistry<T> Load<T>(ModSet mods, string type, string listName, string kind, List<string> problems,
-        Func<ModEntry, T?> read, IReadOnlyCollection<string>? otherLists = null) where T : class
+        Func<ModEntry, T?> read, IReadOnlyCollection<string>? otherLists = null, bool listOnly = false) where T : class
     {
         var registry = new ContentRegistry<T>(kind);
         var removals = registry.Removals(mods, type);
-        foreach (var entry in Entries(mods, type, listName, problems, otherLists: otherLists))
+        foreach (var entry in Entries(mods, type, listName, problems, listOnly: listOnly, otherLists: otherLists))
         {
             removals.Before(entry.Mod);
             T? value;

@@ -231,6 +231,7 @@ namespace StreetCorsa.Screens.Station
 
             // The scene first: a station that fails to set up sends the player home before the trip is paid for
             Light = StreetLights.At(_gameState.Date);
+            Stage.Time = _gameState.Date;
             PlayerCar = new StreetCar(Path.Combine(AppSettings.Instance.CarsPath, _car.DefinitionId), string.IsNullOrEmpty(_car.SkinId) ? null : _car.SkinId);
             OnPropertyChanged(nameof(Station));
             OnPropertyChanged(nameof(Title));
@@ -524,6 +525,7 @@ namespace StreetCorsa.Screens.Station
 
                 if (!_active) return;
                 StatusText = GameText.Say("station.ui.pull_out");
+                Stage.Time = _gameState.Date;
                 Stage.Leave();
             }
             catch (Exception ex)

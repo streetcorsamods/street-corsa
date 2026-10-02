@@ -10,6 +10,7 @@ using AcTools.Render.Kn5SpecificForwardDark.Lights;
 using StreetCorsa.Controls.Street;
 using StreetCorsa.Logging;
 using StreetCorsa.Services.Catalog;
+using StreetCorsa.Services.Scripting;
 using StreetCorsa.Services.Street;
 using CarSlot = AcTools.Render.Kn5SpecificForward.ForwardKn5ObjectRenderer.CarSlot;
 using Sx = SlimDX;
@@ -34,9 +35,6 @@ public sealed record LotView(float Alpha, float Beta, float TargetHeight);
 /// </summary>
 public readonly record struct LotRoom(float HalfLength, float HalfWidth, float Height);
 
-/// <summary>The way out of a lot's room: the point on the floor a car driving off steers for</summary>
-public readonly record struct LotExit(float X, float Z);
-
 /// <summary>
 /// How a lot's room is dressed: the renderer's light, the picture each material wears ("wh_wall" -> a picture in the
 /// model) and how bright the self-lit ones glow
@@ -57,7 +55,7 @@ public sealed record LotDressing(
 /// the work here is placing them, moving the camera between the two views, and working out which car the
 /// pointer is on.
 /// </summary>
-public class LotViewport3D : D3DViewportBase, ICarDrivingOff
+public class LotViewport3D : D3DViewportBase
 {
     // Taking in the whole lot, and standing on one car
     private const float DefaultLotRadius = 19f;
@@ -223,14 +221,14 @@ public class LotViewport3D : D3DViewportBase, ICarDrivingOff
         set => SetValue(RoomProperty, value);
     }
 
-    public static readonly DependencyProperty ExitProperty = DependencyProperty.Register(
-        nameof(Exit), typeof(LotExit?), typeof(LotViewport3D), new PropertyMetadata(null));
+    public static readonly DependencyProperty MarksProperty = DependencyProperty.Register(
+        nameof(Marks), typeof(SceneMarks), typeof(LotViewport3D), new PropertyMetadata(null));
 
-    /// <summary>Where a car driving off heads for; none, and it drives straight on</summary>
-    public LotExit? Exit
+    /// <summary>The scene's marks and paths a car taken out drives by: the way out (<c>exit</c>) and whatever else it names</summary>
+    public SceneMarks? Marks
     {
-        get => (LotExit?)GetValue(ExitProperty);
-        set => SetValue(ExitProperty, value);
+        get => (SceneMarks?)GetValue(MarksProperty);
+        set => SetValue(MarksProperty, value);
     }
 
     public static readonly DependencyProperty DressingProperty = DependencyProperty.Register(
@@ -384,7 +382,7 @@ public class LotViewport3D : D3DViewportBase, ICarDrivingOff
         if (renderer == null) return;
 
         // A bay is about to be told where it stands again: the car in it cannot be on the move or leaning when it is
-        StopPulling();
+        StopScript();
         ReleaseRock();
 
         var previous = _loaded;
@@ -684,7 +682,7 @@ public class LotViewport3D : D3DViewportBase, ICarDrivingOff
 
     private void OnSelectionChanged()
     {
-        StopPulling();
+        StopScript();
         ReleaseRock();
         if (Renderer == null) return;
 
@@ -1022,20 +1020,29 @@ public class LotViewport3D : D3DViewportBase, ICarDrivingOff
 
     #region Driving off
 
-    /// <summary>The car being looked at switches its lights on: the lot loads no light sources, so its lamps glow</summary>
-    public bool LightsOn()
+    /// <summary>
+    /// The car being looked at is taken out: the script for <see cref="ScriptTriggers.LotTakeOut"/> plays with it, its
+    /// engine <paramref name="engine"/>, on the warehouse's marks (its way out is "exit"). The lot loads no light
+    /// sources, so its lamps glow. Null when there is no car or no scene.
+    /// </summary>
+    public ScriptRun? TakeOut(Audio.EngineRunner engine, ScriptFacts facts, Func<float, TimeSpan, FadeEase, Task> fade)
     {
-        if (SelectedCarNode is not { } node) return false;
-        node.HeadlightsEnabled = true;
-        AnimateFor(TimeSpan.FromSeconds(1));
-        return true;
+        if (SelectedCarNode is not { } node) return null;
+
+        return PlayScript(ScriptTriggers.LotTakeOut, node, () => engine, facts, on =>
+        {
+            node.HeadlightsEnabled = on;
+            AnimateFor(TimeSpan.FromSeconds(1));
+        }, (Marks ?? SceneMarks.None).With(new Dictionary<string, MarkSpec> { ["exit"] = WayOut }), fade);
     }
 
-    public bool PullAway() => SelectedCarNode is { } node && PullAway(node, Exit is { } exit ? (exit.X, exit.Z) : null);
+    // A warehouse that does not say where its way out is: the car drives straight on out of its bay
+    private static readonly MarkSpec WayOut = new(Ahead: 100f);
 
+    /// <summary>The car back where it stood, lights off (the screen stays after all)</summary>
     public void StayPut()
     {
-        StopPulling();
+        StopScript();
         if (SelectedCarNode is { } node) node.HeadlightsEnabled = false;
         Invalidate();
     }

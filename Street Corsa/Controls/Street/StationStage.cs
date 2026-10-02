@@ -34,6 +34,9 @@ public sealed class StationStage
     /// <summary>The car came in on the tow truck: it is at the pump, not driven there</summary>
     public bool Towed { get; private set; }
 
+    /// <summary>The game's clock, for the scripts that move the car (the screen keeps it)</summary>
+    public DateTime? Time { get; set; }
+
     /// <summary>The player's engine, which the viewport drives while the car moves</summary>
     public EngineRunner? Engine { get; private set; }
 

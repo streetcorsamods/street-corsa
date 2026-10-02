@@ -33,6 +33,9 @@ public sealed class StreetStage
 
     public StreetCar? RivalCar { get; private set; }
 
+    /// <summary>The game's clock, for the scripts that move the cars (the screen keeps it)</summary>
+    public DateTime? Time { get; set; }
+
     /// <summary>The rival's engine, which the viewport drives while the car moves</summary>
     public EngineRunner? RivalEngine { get; private set; }
 

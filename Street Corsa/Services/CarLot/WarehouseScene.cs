@@ -60,6 +60,14 @@ namespace StreetCorsa.Services.CarLot
         string? DigitPicture,
         WarehouseExit? Exit = null)
     {
+        /// <summary>The scene's own marks and paths for the scripts (<see cref="Scripting.SceneMarks"/>)</summary>
+        public Scripting.SceneMarks Marks { get; init; } = Scripting.SceneMarks.None;
+
+        /// <summary>What the scripts drive along and to: the file's own, and the way out (<c>exit</c>) unless it names its own</summary>
+        public Scripting.SceneMarks ScriptMarks => Exit is { } exit
+            ? Marks.With(new Dictionary<string, Scripting.MarkSpec> { ["exit"] = new(X: exit.X, Z: exit.Z) })
+            : Marks;
+
         /// <summary>The self-lit material whose glow follows the hour</summary>
         public const string SkylightMaterial = "wh_skylight";
 
@@ -147,7 +155,11 @@ namespace StreetCorsa.Services.CarLot
             try
             {
                 if (!File.Exists(file)) return null;
-                return Build(folder, JsonSerializer.Deserialize<SceneEntry>(File.ReadAllText(file), Options));
+                if (Build(folder, JsonSerializer.Deserialize<SceneEntry>(File.ReadAllText(file), Options)) is not { } warehouse) return null;
+                var problems = new List<string>();
+                warehouse = warehouse with { Marks = Scripting.SceneMarks.ReadFile(file, problems) };
+                ModProblems.Add("Warehouses", problems);
+                return warehouse;
             }
             catch (Exception ex)
             {

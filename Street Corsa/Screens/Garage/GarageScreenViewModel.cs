@@ -787,10 +787,40 @@ namespace StreetCorsa.Screens.Garage
             }
 
             // Out here too: a check that threw never got to it, and the player may have left meanwhile
-            if (!ReferenceEquals(_navigationService.CurrentScreen, this)) return;
+            if (!ReferenceEquals(_navigationService.CurrentScreen, this) || !CanLeave()) return;
+
+            // The car drives out as a mod's script has it; the garage goes when the script lets it
+            var droveOut = false;
+            if (DriveCarOut is { } driveOut)
+            {
+                try
+                {
+                    droveOut = await driveOut();
+                }
+                catch (Exception ex)
+                {
+                    // The show is not the business: the car goes all the same
+                    _logger.Error(ex, "The car could not drive out");
+                }
+            }
 
             LeaveTo(() => _navigationService.NavigateToGasStation(_gameState));
+
+            // Still here (the station would not open): the car back in its place
+            if (droveOut && ReferenceEquals(_navigationService.CurrentScreen, this)) PutCarBack?.Invoke();
         }
+
+        /// <summary>
+        /// The car drives out as its script has it before the garage is left for the road (set by the view); true when
+        /// a script played. Done when the garage may go.
+        /// </summary>
+        public Func<Task<bool>>? DriveCarOut { get; set; }
+
+        /// <summary>The car back in its place, when the garage stays after all (set by the view)</summary>
+        public Action? PutCarBack { get; set; }
+
+        /// <summary>The moment the car moves in, for its script: the game's clock and the light of the day</summary>
+        public Services.Scripting.ScriptFacts ScriptFacts => new(_gameState.Date, Services.Street.StreetLights.At(_gameState.Date));
 
         /// <summary>Leaves the garage (the window fades the screens over), unless the day is being ended</summary>
         private void LeaveTo(Func<bool> navigate)

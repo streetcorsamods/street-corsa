@@ -60,7 +60,8 @@ A `D3DViewportBase` like the garage's, the lot's and the main screen's:
   window, through the car's own interior. Dragging looks round (−35° to 160°, ±20° up and down); a double click looks
   back out. The player's engine runs at idle (`RunningEngine`, as in the garage) and rocks the car; the view rocks with
   it (`CarLean`).
-- **The rival's car** takes a second slot and drives the lane (`Controls/Street/RivalDrive.cs`, a function of time):
+- **The rival's car** takes a second slot and drives the lane as its scripts say (`street_rival_arrive` with the
+  `lane` feel, `street_rival_leave` with `launch`; `Services/Scripting/DrivePlan`, a function of time):
   cruising in second gear at about 27 mph, braking at 4.2 m/s² to a stop, the clutch in under 3.5 m/s; leaving, a
   launch through a four-speed, a quarter of a second off the throttle at each shift. The engine is turned by the
   wheels while the car rolls (`EngineRunner.Drive`, `EngineSim.TickCoupled`) and idles on its own when stopped. The

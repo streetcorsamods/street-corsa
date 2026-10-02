@@ -116,7 +116,7 @@ work order, cooling roles, sound pins, `overrides` on copied scripts.
 | Exits of each screen | each view model | C# calls | medium |
 | Main menu cards | `MainMenuScreenViewModel.cs` | enum | easy |
 | End Day only in the garage; nightly tasks in a fixed order | `GarageScreenViewModel.cs:819-875`, `App.xaml.cs:231-269` | code | easy / medium |
-| Shows (drive-off, drive-in, station, street rival) | `Controls/CarPull.cs`, `DriveOff.cs`, `PathDrive.cs`, `RivalDrive.cs` | C# choreography | see step E7 |
+| Shows (drive-off, drive-in, station, street rival) | `scripts/scripts.json`, `scripts/feels.json` | **done (E7)** | |
 
 A truly new kind of screen will always need C#. Data can rename, rewire, hide and reuse the existing screen kinds.
 
@@ -185,6 +185,52 @@ playing exactly as it does now: today's values become the base game's data.
 Later, not in the epic: a weather system (there is none today), nitrous in AC.
 
 ## As built
+
+### E7: car scripting (2026-10-02, branch `feature/car-scripting`)
+
+Built as agreed, on the owner's go after step 26 ("We can proceed"). What a modder writes is in
+[modding.md](modding.md), "scripts".
+
+- **One car driver.** `Services/Scripting/DrivePlan` works a drive out whole before the car moves, as a table in time:
+  four kinds of feel, each the maths of a mover it replaced with that mover's tuned numbers as the base game's feels
+  (`road`: the gas station's spline path, which with a fixed gear is also the rival's lane; `launch`: the rival leaving;
+  `pull`: the lot's steer-for-the-exit, the bicycle model now stepped once up front; `roll_in`: the garage's). A
+  scratch test held the new drives against the old movers before they were deleted: the station's, the lot's and the
+  garage's positions to a tenth of a millimetre, the rival's to 10 cm (3 ms of driving); only a few revs differ at a
+  change of gear. Reverse is new (the car faces back, its front wheels steer the other way); so are the front wheels
+  steering on every drive (they turn with the path's bend), not only in the lot. `Controls/Scripting/ScriptedCar`
+  drives it a frame at a time in any viewport (the wheels, the squat, dive and lean, the engine driven by the wheels,
+  the brake lights), and each viewport puts the car where it says its own way (the garage's floor, the station's
+  ground). `CarPull`, `DriveOff`, `PathDrive` and `RivalDrive` are gone; `ChassisPitch` has a file of its own.
+- **Scripts and feels.** `ScriptBook` reads them from every mod's `scripts` folder, strictly: an unknown key, a step
+  that is no step, a feel no mod has, and the script is left out with a line in the mods' problems (one replacing the
+  base game's leaves that standing). Several scripts may share a trigger: the latest mod's whose `when` holds plays.
+  Feels are read only from a `feels` list (a file that is one script is never taken for a feel).
+- **The runner.** `ScriptRun`: the game goes on at a `release` step or the end; a click (not a drag) on the viewport
+  skips to the end, as does going past `most` (30 s); a failing step is a problem line and the rest is skipped the same
+  way, so the car always lands where the script ends; the screen going cancels it. Time is an `IScriptClock`, so the
+  tests move it by hand. No script on a trigger: nothing moves and the car is where the move ends (the station's at the
+  pump, the rival alongside).
+- **Marks and paths.** `SceneMarks`: every scene's JSON may name `marks` (points, or measured from the car's home:
+  `{ "behind": 7 }`) and `paths`. Each scene adds its own: the warehouse's `exit` (straight ahead without one), the
+  garage's `door` from its new `garages/garage/scene.json` (the folder is git-ignored for the showroom; that one file is
+  let through), the station's `arrive`, `leave` and `pump`, the street's `arrive`, `leave`, `alongside` and `gone`.
+  The street's leave drives `to: "gone"` from where the rival is, as before: a rival told to go while still coming up
+  the lane launches from there.
+- **Triggers wired.** The lot (`TakeOut`, the curtain its fade), the garage (`Arrive`; `Leave` before the gas station,
+  with a curtain of its own, the car put back if the station will not open; the base game has no `garage.leave`
+  script), the station (`station.arrive` lets the pump's buttons in when it lets go, then `station.at_pump`, also after
+  a tow; `station.leave`), the street (`street.rival_arrive`, `street.rival_leave`). The scripts' facts: the game's
+  clock (the stages carry it now) and the light, and towed at the station.
+- The trigger names sit in the text key spaces (`garage.`, `station.`, `street.`): `WordsTests` lists them as no words.
+
+Not done, for later steps:
+- the garage's showroom walls were not checked against the drive-in from the door (the same 7 m as before);
+- a click does not skip the garage's drive-in: the garage takes no clicks while a car comes in (as before);
+- the diner has no 3D scene: `diner.*` triggers come with one (its own step);
+- `station.at_pump` and `garage.leave` have no base script; nothing in the game sets off a mod's own trigger yet
+  (flow, E8);
+- the player's car on the street is the camera's seat: a street script moves only the rival.
 
 ### E6: cars and makes (2026-10-01, branch `feature/cars-makes`)
 

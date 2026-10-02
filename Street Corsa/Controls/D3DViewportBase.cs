@@ -3,7 +3,10 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using AcTools.Render.Kn5Specific.Objects;
+using StreetCorsa.Controls.Scripting;
 using StreetCorsa.Logging;
+using StreetCorsa.Services.Scripting;
+using StreetCorsa.Services.Station;
 
 namespace StreetCorsa.Controls;
 
@@ -91,11 +94,16 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     // not by the clock, so a bump lands with the engine however slowly the frames come.
     private readonly List<(float Age, float Sign, bool Front)> _bumps = new();
 
-    // A car pulling away out of the scene, or rolling in to where it stands (DriveOff), and how the camera followed
-    // the car before the move took that over
-    private CarPull? _pull;
-    private Kn5RenderableCar? _pullCar;
-    private bool _pullAutoAdjust;
+    // A car moving by a script (the lot's drive-off, the garage's drive-in): the script, the car and where it stood (in
+    // its parent's space, and the way from there to the world), and how the camera followed the car before the script
+    // took that over
+    private ScriptRun? _run;
+    private ScriptedCar? _scripted;
+    private Kn5RenderableCar? _scriptedNode;
+    private SlimDX.Matrix _scriptFrom = SlimDX.Matrix.Identity;
+    private SlimDX.Matrix _scriptParent = SlimDX.Matrix.Identity;
+    private bool _scriptAutoAdjust;
+    private bool _follow;
 
     /// <summary>How the label next to the pointer looks, and where it sits from the pointer</summary>
     protected readonly record struct LabelLook(double FontSize, byte BackgroundAlpha, byte BorderAlpha, Thickness Padding, Vector Offset);
@@ -516,9 +524,9 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
             // The frame's own steps too: whatever throws in them would otherwise reach the dispatcher every frame
             var moving = StepFrame(renderer, dt);
 
-            if (_pull != null)
+            if (_scripted != null)
             {
-                StepPull(dt);
+                StepScripted(dt);
                 moving = true;
             }
 
@@ -636,7 +644,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         _firstFrameTimer.Stop();
         _rock = null;
         _bumps.Clear();
-        DropPull();
+        DropScript();
 
         var renderer = _renderer;
         _renderer = null;
@@ -735,7 +743,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     private void OnRunningEngineChanged(Audio.EngineRunner? old, Audio.EngineRunner? runner)
     {
         // An engine a car on the move was driving is out of gear: it would otherwise stay held at the wheels' speed
-        if (_pull != null) old?.Drive(null);
+        if (_scripted != null) old?.Drive(null);
 
         // Only while on screen: a runner that outlives the control must not keep it alive through the event
         if (IsLoaded) SetPoseSource(runner);
@@ -809,11 +817,11 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         var running = RunningEngine?.Pose ?? Audio.BodyPose.Rest;
         if (EngineTurnedRound) running = running with { Roll = -running.Roll };
         var bump = BumpPose();
-        var pull = _pull != null && ReferenceEquals(_pullCar, carNode) ? _pull : null;
+        var moved = _scripted != null && ReferenceEquals(_scriptedNode, carNode) ? _scripted : null;
         // A car on the move squats or dives, and leans out of a bend
-        var (moveRoll, movePitch) = pull?.Body ?? (0f, 0f);
+        var (moveRoll, movePitch) = moved?.Body ?? (0f, 0f);
         var pose = new Audio.BodyPose(running.Roll + bump.Roll + moveRoll, running.Pitch + bump.Pitch + movePitch, running.Heave + bump.Heave);
-        if (renderer == null || carNode == null || (pull == null && pose.IsRest && RunningEngine?.IsActive != true && _bumps.Count == 0))
+        if (renderer == null || carNode == null || (moved == null && pose.IsRest && RunningEngine?.IsActive != true && _bumps.Count == 0))
         {
             ReleaseRock();
             return;
@@ -826,14 +834,14 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
             _shadowedPose = Audio.BodyPose.Rest;
         }
 
-        // A car pulling away rolls along its own length, nose first, its wheels turning as it goes
-        if (!_rock.Apply(pose, pull?.WheelSpin ?? 0f, pull?.Placement(_rock.FrontSign), pull?.Steer ?? 0f)) return;
+        // A car on the move goes where its script has it, its wheels turning and its front wheels steered as it goes
+        if (!_rock.Apply(pose, moved?.WheelSpin ?? 0f, moved == null ? null : Placement(moved.Pose), moved?.Steer ?? 0f)) return;
 
         if (LeansParts) renderer.BodyLean = _rock.WorldLean;
 
         // The shadow maps are drawn again only for a lean that shows in them, not for every shake at idle; a car on the
         // move takes its shadow along every frame
-        if (pull != null || CarBodyRock.ShadowsDue(_shadowedPose, pose))
+        if (moved != null || CarBodyRock.ShadowsDue(_shadowedPose, pose))
         {
             renderer.RefreshShadows();
             _shadowedPose = pose;
@@ -861,17 +869,26 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
 
     #endregion
 
-    #region Pulling away and rolling in
+    #region Scripted moves
 
     /// <summary>
-    /// <paramref name="car"/> pulls away, nose first, and keeps going until the screen goes or <see cref="StopPulling"/>
-    /// puts it back; given an <paramref name="exit"/> (a point on the floor, world x and z) it pulls straight out of its
-    /// place and turns towards it. The camera stays where it is and watches it go; the running engine is driven by the
-    /// wheels. False when it cannot go (no scene, or a car on the move already).
+    /// Plays the script for <paramref name="trigger"/> with <paramref name="car"/> as its car: it stands where it stands
+    /// now (its home, on the floor under it), and moves as the script says, its engine
+    /// (<paramref name="engine"/>) driven by the wheels. The camera stays where it is while it plays (or follows the car,
+    /// as the script says). Null when there is no scene to play it in.
     /// </summary>
-    protected bool PullAway(Kn5RenderableCar car, (float X, float Z)? exit = null)
+    /// <param name="headlights">Switches the car's headlights (the garage's are a property of its own)</param>
+    /// <param name="scene">The scene's marks and paths, by name</param>
+    /// <param name="fade">The screen's curtain to an opacity over a time; null for a screen without one</param>
+    protected ScriptRun? PlayScript(string trigger, Kn5RenderableCar car, Func<Audio.EngineRunner?> engine, ScriptFacts facts,
+        Action<bool> headlights, SceneMarks? scene = null, Func<float, TimeSpan, FadeEase, Task>? fade = null)
     {
-        if (_renderer is not { } renderer || _pull != null) return false;
+        if (_renderer is not { } renderer) return null;
+        StopScript();
+
+        // No script at this moment: nothing moves, and nothing is taken over
+        var scriptEngine = new ScriptEngine(engine);
+        if (ScriptBook.Installed.For(trigger, facts, scriptEngine) is not { } script) return ScriptRun.Nothing();
 
         // The rock knows which end is the nose; the car stands where it does less any lean
         if (_rock == null || !ReferenceEquals(_rock.Car, car))
@@ -881,89 +898,143 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
             _shadowedPose = Audio.BodyPose.Rest;
         }
 
-        var parent = SlimDX.Matrix.Invert(car.LocalMatrix) * car.Matrix;
-        StartPull(renderer, car, CarPull.Away(_rock.Base, parent, _rock.FrontSign, exit));
-        return true;
-    }
+        _scriptFrom = _rock.Base;
+        _scriptParent = SlimDX.Matrix.Invert(car.LocalMatrix) * car.Matrix;
+        var world = _scriptFrom * _scriptParent;
+        var front = _rock.FrontSign;
+        var home = new GroundPose(world.M41, world.M43, MathF.Atan2(world.M31 * front, world.M33 * front));
 
-    /// <summary>
-    /// <paramref name="car"/> rolls in nose first from <paramref name="distance"/> metres behind where it stands and
-    /// comes to a stop there, easing off the brake as it does; done once it has stopped
-    /// </summary>
-    protected Task RollIn(Kn5RenderableCar car, float distance)
-    {
-        if (_renderer is not { } renderer || _pull != null || distance <= 0f) return Task.CompletedTask;
-
-        var from = _rock is { } rock && ReferenceEquals(rock.Car, car) ? rock.Base : car.LocalMatrix;
-        var pull = CarPull.In(from, distance);
-        StartPull(renderer, car, pull);
-        car.BrakeLightsEnabled = true;
-        OnPoseChanged();
-        return pull.Arrived.Task;
-    }
-
-    private void StartPull(GarageRenderer renderer, Kn5RenderableCar car, CarPull pull)
-    {
-        _pull = pull;
-        _pullCar = car;
-        _pullAutoAdjust = renderer.AutoAdjustTarget;
+        var scripted = new ScriptedCar(home, scriptEngine, (head, brake) =>
+        {
+            if (head is { } on) headlights(on);
+            if (brake is { } braking) car.BrakeLightsEnabled = braking;
+            Invalidate();
+        });
+        scripted.Started += () => AnimateFor(SettleWindow);
+        _scripted = scripted;
+        _scriptedNode = car;
+        _scriptAutoAdjust = renderer.AutoAdjustTarget;
+        _follow = false;
         renderer.AutoAdjustTarget = false;
+
+        var run = ScriptRun.Play(script, new OrbitStage(this, scripted, scene ?? SceneMarks.None, fade), facts);
+        _run = run;
         AnimateFor(SettleWindow);
+        return run;
     }
 
     /// <summary>
-    /// The car on the move back where it stood (one rolling in, where it stops), the camera as it was, and the engine
-    /// out of gear. A viewport about to take the car off its scene calls this first, while the car is still there.
+    /// The script playing stops, and its car is back where it stood, at rest, the camera as it was and the engine out
+    /// of gear. A viewport about to take the car off its scene calls this first, while the car is still there.
     /// </summary>
-    protected void StopPulling()
+    protected void StopScript()
     {
-        if (_pull is not { } pull || _pullCar is not { } car) return;
+        _run?.Cancel();
+        _run = null;
+        if (_scripted is not { } scripted || _scriptedNode is not { } car) return;
 
-        _pull = null;
-        _pullCar = null;
-        if (pull.IsRollingIn) car.BrakeLightsEnabled = false;
-        if (_rock is { } rock && ReferenceEquals(rock.Car, car)) rock.Apply(Audio.BodyPose.Rest, 0f, pull.From);
-        else car.LocalMatrix = pull.From;
-        if (_renderer != null) _renderer.AutoAdjustTarget = _pullAutoAdjust;
+        _scripted = null;
+        _scriptedNode = null;
+        scripted.GoHome();
+        scripted.Drop();
+        car.BrakeLightsEnabled = false;
+        if (_rock is { } rock && ReferenceEquals(rock.Car, car)) rock.Apply(Audio.BodyPose.Rest, 0f, _scriptFrom);
+        else car.LocalMatrix = _scriptFrom;
+        if (_renderer != null) _renderer.AutoAdjustTarget = _scriptAutoAdjust;
         RunningEngine?.Drive(null);
         ReleaseRock();
         OnPoseChanged();
-        pull.Arrived.TrySetResult();
     }
 
-    /// <summary>The move goes with the scene: the engine out of gear and whoever waits let go; there is no car left to put back</summary>
-    private void DropPull()
+    /// <summary>The script goes with the scene: whoever waits is let go; there is no car left to put back</summary>
+    private void DropScript()
     {
-        if (_pull is not { } pull) return;
-
-        _pull = null;
-        _pullCar = null;
+        _run?.Cancel();
+        _run = null;
+        _scripted?.Drop();
+        _scripted = null;
+        _scriptedNode = null;
         RunningEngine?.Drive(null);
-        pull.Arrived.TrySetResult();
     }
 
-    private void StepPull(float dt)
+    /// <summary>A script under way here, if one is: a click skips it</summary>
+    protected virtual ScriptRun? SkippableRun => _run;
+
+    private System.Windows.Point? _pressedAt;
+
+    protected override void OnPreviewMouseLeftButtonDown(System.Windows.Input.MouseButtonEventArgs e)
     {
-        if (_pull is not { } pull || _pullCar is not { } car) return;
+        _pressedAt = SkippableRun is { IsOver: false } ? e.GetPosition(this) : null;
+        base.OnPreviewMouseLeftButtonDown(e);
+    }
 
-        var engine = RunningEngine is { IsRunning: true } running ? running : null;
-        var step = pull.Step(Math.Min(dt, GarageRenderer.MaxTickSeconds), engine?.IdleRpm ?? 0);
-        engine?.Drive(step.Rpm, step.Throttle);
-
-        if (step.Stopped)
+    /// <summary>A click (not a drag) on a car moving by its script skips the show to its end</summary>
+    protected override void OnPreviewMouseLeftButtonUp(System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (_pressedAt is { } pressed && SkippableRun is { IsOver: false } run && (e.GetPosition(this) - pressed).Length < 4)
         {
-            car.BrakeLightsEnabled = false;
-            pull.Arrived.TrySetResult();
+            run.Skip();
+            e.Handled = true;
         }
 
-        if (step.Done)
+        _pressedAt = null;
+        base.OnPreviewMouseLeftButtonUp(e);
+    }
+
+    private void StepScripted(float dt)
+    {
+        if (_scripted is not { } scripted || _scriptedNode is null) return;
+
+        var before = scripted.Pose;
+        scripted.Step(Math.Min(dt, GarageRenderer.MaxTickSeconds));
+
+        // The camera keeps the car where it has it in the picture
+        if (_follow && _renderer?.CameraOrbit is { } orbit && scripted.Pose != before)
         {
-            StopPulling();
+            var (now, then) = (Placement(scripted.Pose) * _scriptParent, Placement(before) * _scriptParent);
+            orbit.Target += new SlimDX.Vector3(now.M41 - then.M41, now.M42 - then.M42, now.M43 - then.M43);
+            orbit.UpdateViewMatrix();
+        }
+
+        // Played out with the car standing where it stood: let go of it
+        if (_run?.IsOver != false && scripted.IsHome)
+        {
+            StopScript();
             return;
         }
 
         // A running engine rocks the car on its own frames, and the move goes with it then: once a frame, not twice
         if (RunningEngine?.IsActive != true) OnPoseChanged();
+    }
+
+    /// <summary>Where the scripted car stands at <paramref name="pose"/>, in its parent's space: turned and moved from its home on the floor</summary>
+    private SlimDX.Matrix Placement(GroundPose pose)
+    {
+        if (_scripted is not { } scripted) return _scriptFrom;
+        var home = scripted.Home;
+        if (pose == home) return _scriptFrom;
+
+        // Turned about its own origin from where it stood, then moved to where it is now; RotationY adds to the heading
+        var world = _scriptFrom * _scriptParent
+                    * SlimDX.Matrix.Translation(-home.X, 0f, -home.Z)
+                    * SlimDX.Matrix.RotationY(pose.Heading - home.Heading)
+                    * SlimDX.Matrix.Translation(pose.X, 0f, pose.Z);
+        return world * SlimDX.Matrix.Invert(_scriptParent);
+    }
+
+    /// <summary>The stage an orbit viewport's script plays on: its one car, the scene's marks, the screen's curtain, the orbit camera</summary>
+    private sealed class OrbitStage(D3DViewportBase viewport, ScriptedCar car, SceneMarks scene,
+        Func<float, TimeSpan, FadeEase, Task>? fade) : IScriptStage
+    {
+        public IScriptCar? Car(string? role) => role == null || role.Equals("player", StringComparison.OrdinalIgnoreCase) ? car : null;
+
+        public MarkSpec? Mark(string name) => scene.Marks.TryGetValue(name, out var mark) ? mark : null;
+
+        public IReadOnlyList<GroundPoint>? Path(string name) => scene.Paths.TryGetValue(name, out var path) ? path : null;
+
+        public Task Fade(float opacity, TimeSpan over, FadeEase ease) => fade?.Invoke(opacity, over, ease) ?? Task.CompletedTask;
+
+        public void Camera(IScriptCar of, CameraMode mode) => viewport._follow = mode == CameraMode.Follow;
     }
 
     #endregion

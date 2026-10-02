@@ -44,6 +44,17 @@ namespace StreetCorsa.Services.Station
         public static string SkyNode(StreetLight light) => "STATION_SKY_" + StreetLights.Describe(light).ToUpperInvariant();
 
         public StreetLighting LightingFor(StreetLight light) => SceneLighting.For(Lights, light);
+
+        /// <summary>The scene's own marks and paths for the scripts (<see cref="Scripting.SceneMarks"/>)</summary>
+        public Scripting.SceneMarks Marks { get; init; } = Scripting.SceneMarks.None;
+
+        /// <summary>
+        /// What the scripts drive along and to: the file's own, and the ways in and out (<c>arrive</c>, <c>leave</c>)
+        /// and the pump at the end of the way in (<c>pump</c>) unless the file names its own
+        /// </summary>
+        public Scripting.SceneMarks ScriptMarks => Marks.With(
+            new Dictionary<string, Scripting.MarkSpec> { ["pump"] = new(X: Arrive[^1].X, Z: Arrive[^1].Z) },
+            new Dictionary<string, IReadOnlyList<GroundPoint>> { ["arrive"] = Arrive, ["leave"] = Leave });
     }
 
     public static class StationScenes
@@ -76,7 +87,11 @@ namespace StreetCorsa.Services.Station
             try
             {
                 if (!File.Exists(file)) return null;
-                return Build(folder, file, JsonSerializer.Deserialize<SceneEntry>(File.ReadAllText(file), Options));
+                if (Build(folder, file, JsonSerializer.Deserialize<SceneEntry>(File.ReadAllText(file), Options)) is not { } station) return null;
+                var problems = new List<string>();
+                station = station with { Marks = Scripting.SceneMarks.ReadFile(file, problems) };
+                ModProblems.Add("Stations", problems);
+                return station;
             }
             catch (Exception ex)
             {

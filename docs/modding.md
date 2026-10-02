@@ -586,7 +586,97 @@ logged and ignored, and a light written as `null` is skipped, as if it were not 
 
 `showcase` lists the main screen's rooms: `{ "scenes": [ { "id": "mygarage", "wallRadius": 12 } ] }`. A room is a
 folder of `garages` (a mod's own, `garages\mygarage\mygarage.kn5`; a later mod's room of the same name wins) or an AC
-showroom. The garage the player works in is the room `garage`.
+showroom. The garage the player works in is the room `garage`; its `scene.json` names the marks its car scripts drive by
+(see scripts).
+
+### scripts
+
+How the cars move on the screens: the car taken out of the lot driving off, the one coming into the garage, the
+player's car at the gas station, the rival on the street. A **script** is a list of steps played at a moment of the
+game (its `trigger`); a **feel** is how a drive is driven. The base game's are in `scripts\scripts.json` and
+`scripts\feels.json`; their comments say what each does.
+
+```json
+{
+  "scripts": [
+    {
+      "id": "night_arrive",
+      "trigger": "station.arrive",
+      "when": { "light": "night" },
+      "most": 30,
+      "steps": [
+        { "do": "lights", "head": true },
+        { "do": "drive", "path": "arrive", "feel": "road", "start": "rolling" },
+        { "do": "wait", "seconds": 1 },
+        { "do": "lights", "head": false }
+      ]
+    }
+  ]
+}
+```
+
+**Which script plays.** Of the scripts on a trigger, the latest mod's whose `when` holds. A script that `replaces`
+the base game's (`"replaces": "station_arrive"`) takes its place; one with its own id and a `when` plays only then, the
+base game's the rest of the time. No script on a trigger: nothing moves, and the car is where the move would end.
+
+**The triggers.** `lot.take_out` (the car picked in the lot is taken; the screen goes once the script lets it),
+`garage.arrive` (a car taken out of the lot under its own power comes in), `garage.leave` (the car leaves for the gas
+station; the base game has none), `station.arrive` (in off the road to the pump; the pump's buttons wait for the
+script to let go), `station.at_pump` (stopped at the pump, or towed there; the base game has none), `station.leave`
+(out onto the road; the screen goes when the script lets it), `street.rival_arrive` (a rival up the lane, stopping
+alongside), `street.rival_leave` (the rival away; it is gone when the script ends). A mod may name its own; nothing
+in the game sets them off yet.
+
+**The game never waits on the show.** It goes on when the script lets it: a `release` step, or the end. A click on
+the picture skips the rest of a script: every step from there is done at once, a drive under way is put at its end,
+a fade is finished. So is a script that takes longer than its `most` seconds (30 when it says none). A step that
+cannot be done (a mark the scene does not have, say) is a line in the mods' problems, and the rest is skipped the
+same way. A screen that goes stops its script where it is.
+
+**The steps.** Each is `{ "do": ... }`; `"car"` names the car a step is about where a screen has more than one (the
+street's is `rival`; left out, the script's own car). A key a step does not know leaves the script out, with a line
+in the mods' problems that says which, so a mistyped key is never silently ignored.
+
+| Step | Keys |
+|---|---|
+| `lights` | `head`, `brake`: true or false; one left out stays as it is |
+| `engine` | `on`: true starts it (`crank`: false for one running at once, as a car that drives up; `wait`: false to go on with the next steps while it starts; `most`: seconds to wait for it, 4), false stops it; or `rev`: the throttle 0..1 for `seconds` |
+| `wait` | `seconds`; or `until`: `settled` (the body stops rocking), `running` (the engine runs), `drive_end` (the drive under way is over, or `early` seconds before), with `seconds` as the most to wait |
+| `drive` | one of `path` (a path of the scene, start to end), `to` (a mark, in a straight line, `from` a mark or where the car is), `toward` (a mark a pull steers for), `distance` (metres along the car's own length, backwards when negative); `feel`; `reverse`; `start`: `standing` or `rolling`; `end`: `stop` or `keep_going`; `wait`: false to go on with the next steps while it drives |
+| `place` | `at`: a mark (`heading` in degrees, else as it faces); or `path` and `end`: `start` or `end`, facing along it |
+| `fade` | `to`: the screen's curtain 0..1 (1 black), over `seconds`, `ease`: `none`, `in`, `out`; `engine`: true takes the engine's volume down with the picture. A screen with no curtain (the station, the street) waits the time |
+| `camera` | `mode`: `hold` (the camera stays and watches the car go: the default while a script plays) or `follow`; the seat views (station, street) have their own |
+| `release` | the game goes on, the script plays out |
+| `end` | the script is over |
+| `{ "if": {...}, "then": [...], "else": [...] }` | the steps of `then` when the condition holds, else of `else` |
+
+**Conditions** (`when` and `if`): every key must hold. `engine`: `runs` (the car has an engine that starts), `dead`,
+`running` (now), `off`; `towed`: true or false; `light`: `day`, `dusk`, `night`, or a list; `hours`: `[from, to]` on the
+game's clock, round midnight when from is the later (`[20, 6]`); `not`: a condition; `any`: a list of conditions.
+
+**Marks and paths.** A drive goes to marks and along paths the scene names. A mark is a point `[x, z]` in metres, or a
+point measured from where the car stands, `{ "behind": 7 }` (`ahead`, `left`, `right`); `home` (where the car stands
+when nothing moves it) and `here` (where it is now) are on every scene. Every scene file may name its own:
+`"marks": { "kerb": [3, -4.5] }` and `"paths": { "round_back": [[0, 0], [5, 5], [0, 10]] }`, next to what it has.
+Besides these, the lot's warehouses have `exit` (their `exit`; without one, straight ahead), the garage has `door`
+(from `garages\<id>\scene.json`; without it, 7 metres behind the car), the gas stations have the paths `arrive` and
+`leave` and the mark `pump`, and the streets have the paths `arrive` (up the lane to the stop) and `leave`, and the
+marks `alongside` and `gone` (out of sight up the lane).
+
+**Feels.** In a `feels` list, by id; a drive names one (`"feel": "lane"`, or another mod's as `"mymod:creep"`), or has
+`road` (`pull_away` for `toward`). A feel is a `kind` and its numbers; a number left out is its kind's, as the base
+game's feels have them. Speeds are metres a second, accelerations metres a second squared.
+
+| Kind | What it is | Its numbers |
+|---|---|---|
+| `road` | along a path, cruising between bends and slow enough in them, braking in time for a stop | `cruiseSpeed`, `acceleration`, `brake`, `cornerAccel` (the most sideways pull in a bend), `clutchSpeed`, `cruiseThrottle`, `gear` (1 on: stays in it; 0 changes up) |
+| `launch` | hard off the line through the gears to the end of its way (it never stops) | `acceleration`, `topSpeed`, `shiftSeconds` |
+| `pull` | gently away in first gear, straight out of its place, then turning for the mark it goes `toward`, and on | `acceleration`, `topSpeed`, `clutchSeconds`, `throttle`, `cruiseThrottle`, `rpmPerMetrePerSecond`, `straightOut`, `turningRadius`, `steerGain`, `steerSeconds`, `steerLead`, `seconds` (how long it goes on) |
+| `roll_in` | rolling in and braking to a stop at the end of its way, the braking fading as it stops | `cruiseSpeed` (the speed it comes in at), `rpmPerMetrePerSecond` |
+
+Every kind also has `lean` (how much of the body's lean in a bend shows, 0..1), `halfWheelbase`, `ratios` (the
+gearbox, first gear first), `finalDrive` and `tyreRadius`. A drive is worked out whole before the car moves, so a
+skipped one lands exactly where it would have ended.
 
 ### text
 

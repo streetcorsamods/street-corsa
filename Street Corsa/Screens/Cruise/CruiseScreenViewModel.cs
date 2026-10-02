@@ -544,6 +544,7 @@ namespace StreetCorsa.Screens.Cruise
         private void FollowTheLight()
         {
             var light = StreetLights.At(_gameState.Date);
+            Stage.Time = _gameState.Date;
             var street = StreetScenes.Pick(_streets, light, Random.Shared, Scene) ?? Scene ?? _streets.FirstOrDefault();
             Light = street == null ? light : street.NearestTime(light);
             if (ReferenceEquals(street, Scene)) return;
