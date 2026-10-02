@@ -54,6 +54,9 @@ namespace StreetCorsa.Services.Talk
 
         internal TalkRules Rules => _rules();
 
+        /// <summary>The draws of a talk (how far a seller will come down)</summary>
+        internal Random Random { get; init; } = Random.Shared;
+
         internal AiPrompts Prompts => _prompts();
 
         internal PartsCatalog? Parts => _parts();

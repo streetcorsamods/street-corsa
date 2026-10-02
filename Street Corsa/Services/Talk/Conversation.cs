@@ -155,6 +155,7 @@ namespace StreetCorsa.Services.Talk
             // The price before any talk, kept on the ad the first time: every later floor is worked out from it, whoever
             // is asked (a seller who has forgotten the player is made again, and starts from the ad's first price too)
             subject.FirstAsked ??= subject.Price;
+            subject.MostOff ??= Haggle.DrawMostOff(_desk.Rules, _desk.Random);
             TalkPeople.Deal(Person, subject.Thing, subject.FirstAsked.Value);
         }
 
@@ -181,7 +182,7 @@ namespace StreetCorsa.Services.Talk
             var temperament = _desk.Prompts.TemperamentOf(Person.Temperament);
             var days = Math.Max(0, (int)(_game.Date.Date - subject.OnSaleSince.Date).TotalDays);
             var floor = Math.Max(Haggle.Floor(deal.Asked, Person.Kind, temperament, days, Rival?.IsBroke == true, rules),
-                Haggle.HardFloor(subject.FirstAsked ?? deal.Asked, rules));
+                Haggle.HardFloor(subject.FirstAsked ?? deal.Asked, subject.MostOff ?? rules.MostDiscount, rules));
             var outcome = Haggle.Decide(offer, subject.Price, floor, deal.Counters, rules, subject.Round);
 
             deal.Date = _game.Date;

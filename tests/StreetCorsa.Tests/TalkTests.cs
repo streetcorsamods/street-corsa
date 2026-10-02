@@ -136,6 +136,7 @@ public class TalkTests
     {
         var game = Game();
         var car = Car();
+        car.Listing.MostOff = Rules.MostDiscount; // the seller's temperament is the limit here, not the ad's draw
         var (desk, ai) = Desk();
         var talk = desk.ForCar(game, car, null, TalkPlace.Phone);
 
@@ -198,8 +199,40 @@ public class TalkTests
         }
 
         Assert.Equal(1500m, car.Listing.FirstAsked);
-        Assert.True(car.Listing.Price >= Haggle.HardFloor(1500m, Rules), $"{car.Listing.Price}");
-        Assert.Equal(1125m, Haggle.HardFloor(1500m, Rules));
+        var mostOff = car.Listing.MostOff!.Value;
+        Assert.InRange(mostOff, 0, Rules.MostDiscount);
+        Assert.True(car.Listing.Price >= Haggle.HardFloor(1500m, mostOff, Rules), $"{car.Listing.Price}");
+        Assert.Equal(1125m, Haggle.HardFloor(1500m, 0.9, Rules));
+    }
+
+    [Fact]
+    public void Each_seller_draws_their_own_limit_under_the_hard_floor_and_some_will_not_budge()
+    {
+        var random = new Random(7);
+        var draws = Enumerable.Range(0, 2000).Select(_ => Haggle.DrawMostOff(Rules, random)).ToList();
+
+        Assert.All(draws, d => Assert.InRange(d, 0, Rules.MostDiscount));
+        Assert.InRange(draws.Count(d => d == 0) / 2000.0, Rules.FirmShare - 0.04, Rules.FirmShare + 0.04);
+        Assert.True(draws.Distinct().Count() > 1000);
+    }
+
+    [Fact]
+    public async Task A_seller_who_will_not_budge_stands_firm_however_the_player_asks()
+    {
+        var game = Game();
+        var car = Car();
+        car.Listing.FirstAsked = 1500m;
+        car.Listing.MostOff = 0;
+        var (desk, _) = Desk();
+
+        for (var i = 0; i < 5; i++)
+        {
+            var talk = desk.ForCar(game, car, null, TalkPlace.Phone);
+            await talk.SayAsync("Would you take 1400?", Ct);
+            Assert.NotEqual(HaggleAnswer.Accept, talk.LastOutcome!.Answer);
+        }
+
+        Assert.Equal(1500m, car.Listing.Price);
     }
 
     [Fact]

@@ -83,7 +83,8 @@ The AI only speaks: the game decides every fact and every price.
   kind's most discount and the temperament's `give`, more for a broke rival or a thing long on sale. A hard floor holds
   over all of it: the ad keeps the price it was first offered at (`FirstAsked` on the listing, the rival's ad, the part
   ad) and nobody goes more than `mostDiscount` (25%) under it, however often and whoever is asked (a forgotten seller
-  made again starts from it too). The new price is the
+  made again starts from it too). Under that, each thing's seller draws their own limit once (`MostOff` on the ad):
+  none at all for `firmShare` (20%) of them, else anything up to 25%, so the bottom is never the same twice. The new price is the
   ad's own (the listing's, the rival's ad's, the part ad's), so every way of buying pays it. The AI is told the answer.
   Words of agreement (`chat.agree_words` anywhere in the line, `chat.agree_alone` as the whole line: "you got a deal",
   "I'll take it", "deal") shake on the price as it stands. Once agreed (an offer taken or a shake), the talk shows

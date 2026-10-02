@@ -41,6 +41,7 @@
       "offerLowest": 0.2,
       "offerHighest": 1.5,
       "mostDiscount": 0.25,
+      "firmShare": 0.2,
       "lotCarsTold": 10,
       "womenSalesmen": 0.15,
       "womenSellers": 0.3,

@@ -135,11 +135,18 @@ namespace StreetCorsa.Services.Talk
         }
 
         /// <summary>
-        /// The least anybody ever takes for a thing first offered at <paramref name="firstAsked"/>: that less
-        /// <see cref="TalkRules.MostDiscount"/>, however often and whoever is asked
+        /// The least anybody ever takes for a thing first offered at <paramref name="firstAsked"/>, whose seller comes
+        /// down at most <paramref name="mostOff"/> (<see cref="DrawMostOff"/>), however often and whoever is asked
         /// </summary>
-        public static decimal HardFloor(decimal firstAsked, TalkRules rules) =>
-            firstAsked * (1m - (decimal)Math.Clamp(rules.MostDiscount, 0, 1));
+        public static decimal HardFloor(decimal firstAsked, double mostOff, TalkRules rules) =>
+            firstAsked * (1m - (decimal)Math.Clamp(mostOff, 0, Math.Clamp(rules.MostDiscount, 0, 1)));
+
+        /// <summary>
+        /// How far a seller will come down on a thing, drawn once: nothing at all for <see cref="TalkRules.FirmShare"/> of
+        /// them, else anything up to <see cref="TalkRules.MostDiscount"/>, so the bottom is never the same twice
+        /// </summary>
+        public static double DrawMostOff(TalkRules rules, Random random) =>
+            random.NextDouble() < rules.FirmShare ? 0 : random.NextDouble() * Math.Clamp(rules.MostDiscount, 0, 1);
 
         /// <summary>
         /// The seller's answer to <paramref name="offer"/> with the price at <paramref name="current"/> and the least they

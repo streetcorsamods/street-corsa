@@ -123,9 +123,13 @@ public sealed class TalkRules
 
     /// <summary>
     /// The hard floor: the most anybody ever comes down from the price a thing was first offered at (0.25: never under 75
-    /// percent of it), whatever their temperament, the time on sale, and however often the player asks
+    /// percent of it), whatever their temperament, the time on sale, and however often the player asks. Each thing's
+    /// seller draws their own limit under it once (none at all for <see cref="FirmShare"/> of them), kept with the ad.
     /// </summary>
     public double MostDiscount { get; set; } = 0.25;
+
+    /// <summary>The share of sellers who will not come down at all on a thing</summary>
+    public double FirmShare { get; set; } = 0.2;
 
     /// <summary>A salesman's cars told him, the dearest first</summary>
     public int LotCarsTold { get; set; } = 10;

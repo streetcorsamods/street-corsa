@@ -52,6 +52,12 @@ namespace StreetCorsa.Models.GameState
         /// (<c>ai.talk.mostDiscount</c>), so asking again and again, of whoever, never brings it lower. Null until then.
         /// </summary>
         public decimal? FirstAsked { get; set; }
+
+        /// <summary>
+        /// The most this seller will come down from <see cref="FirstAsked"/> (0.1: ten percent), drawn once with it: 0 for
+        /// one who will not budge, never more than <c>ai.talk.mostDiscount</c>. Kept, so asking again never draws again.
+        /// </summary>
+        public double? MostOff { get; set; }
     }
 
     /// <summary>
@@ -118,6 +124,12 @@ namespace StreetCorsa.Models.GameState
         /// (<c>ai.talk.mostDiscount</c>), so asking again and again, of whoever, never brings it lower. Null until then.
         /// </summary>
         public decimal? FirstAsked { get; set; }
+
+        /// <summary>
+        /// The most this seller will come down from <see cref="FirstAsked"/> (0.1: ten percent), drawn once with it: 0 for
+        /// one who will not budge, never more than <c>ai.talk.mostDiscount</c>. Kept, so asking again never draws again.
+        /// </summary>
+        public double? MostOff { get; set; }
 
         public PartAd()
         {
