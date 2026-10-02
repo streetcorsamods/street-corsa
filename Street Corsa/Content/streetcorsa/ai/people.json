@@ -1,0 +1,64 @@
+{
+  "_comment": [
+    "How the people the player talks to are (see docs/modding.md, \"ai\"). Every mod's ai/people.json goes over the ones",
+    "before it key by key. A person is drawn one temperament the first time they are talked to, and keeps it.",
+    "words: who they are, as the AI is told ({temperament} in the chat prompts).",
+    "give: how far they come down on a price, times the rules' most for their kind (ai.talk.discount*): 0 never, 1 all of it.",
+    "for: the kinds it is drawn for (seller, salesman, rival); none is every kind. weight: how often, against the others.",
+    "minAggression, maxAggression: for rivals, drawn only for a racer's aggression (0-100) in this range."
+  ],
+  "temperaments": {
+    "chatty": {
+      "words": "Friendly and talkative, wanders off into stories about the old days, but honest.",
+      "give": 1.0, "for": ["seller"], "weight": 3
+    },
+    "gruff": {
+      "words": "Gruff and short with words, no time for small talk, hates being lowballed.",
+      "give": 0.5, "for": ["seller"], "weight": 2
+    },
+    "needs_cash": {
+      "words": "Needs the money and it shows: eager, a little nervous, wants the thing gone.",
+      "give": 1.4, "for": ["seller"], "weight": 1.5
+    },
+    "proud_owner": {
+      "words": "Proud of what they are selling, fussy about it, sad to let it go; won't sell it to just anybody.",
+      "give": 0.6, "for": ["seller"], "weight": 1.5
+    },
+    "widow": {
+      "words": "Selling it for a husband or son who is gone; knows little about engines, kind but no pushover.",
+      "give": 1.1, "for": ["seller"], "weight": 0.6
+    },
+    "shifty": {
+      "words": "A bit shifty: talks around the bad points without lying about them, always says it's a steal.",
+      "give": 0.9, "for": ["seller"], "weight": 1
+    },
+    "jive_talker": {
+      "words": "A fast-talking car salesman full of jive: calls everybody pal or sport, a joke a minute, never stops selling, every car is the deal of the century. Never lies about the facts, but puts the best shine on them.",
+      "give": 0.8, "for": ["salesman"], "weight": 4
+    },
+    "smooth_operator": {
+      "words": "A smooth, slick salesman: easy smile, low voice, flatters the customer, makes every car sound like it was waiting for them.",
+      "give": 0.7, "for": ["salesman"], "weight": 2
+    },
+    "old_timer": {
+      "words": "An old-timer salesman who has sold cars since before the war: folksy, knows every car's quirks, likes a straight talker.",
+      "give": 1.0, "for": ["salesman"], "weight": 1.5
+    },
+    "hothead": {
+      "words": "A hothead: cocky, quick to take offence, trash-talks and dares people to race.",
+      "give": 0.4, "for": ["rival"], "weight": 2, "minAggression": 65
+    },
+    "cool_customer": {
+      "words": "Cool and quiet, says little, a dry sense of humour, sizes people up.",
+      "give": 0.8, "for": ["rival"], "weight": 2, "maxAggression": 50
+    },
+    "showboat": {
+      "words": "A show-off who loves to brag about their car and their wins, but friendly enough.",
+      "give": 0.7, "for": ["rival"], "weight": 2, "minAggression": 35, "maxAggression": 85
+    },
+    "good_sport": {
+      "words": "A good sport: friendly, honest about wins and losses, likes talking engines.",
+      "give": 1.0, "for": ["rival"], "weight": 1.5, "maxAggression": 60
+    }
+  }
+}

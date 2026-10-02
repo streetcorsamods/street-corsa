@@ -39,7 +39,6 @@
     "dealer.lot.condition": "Condition",
     "dealer.lot.mileage": "Mileage",
     "dealer.lot.buy": "BUY IT",
-    "dealer.lot.back_to_lot": "Back to the lot",
     "dealer.lot.loading": "Loading dealer...",
     "dealer.lot.no_3d": "The lot could not be shown in 3D.",
     "partshop.name_filter": "Name:",

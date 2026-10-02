@@ -36,6 +36,9 @@ namespace StreetCorsa.Screens.Newspaper
         public string Blurb => string.IsNullOrEmpty(Ad.Description) ? string.Empty : Ad.Description + " ";
 
         public string PriceDisplay => Money.Text(Ad.AskingPrice);
+
+        /// <summary>The seller came down on the phone: the ad shows the new price</summary>
+        public void RefreshPrice() => OnPropertyChanged(nameof(PriceDisplay));
         public string SellerDisplay => GameText.Say("paper.ad.seller.part", ("seller", Ad.SellerName));
 
         /// <summary>It goes somewhere on the car selected in the garage</summary>

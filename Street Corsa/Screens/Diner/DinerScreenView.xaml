@@ -428,6 +428,16 @@
                                 <Run Text="&quot;"/>
                             </TextBlock>
 
+                            <!-- A word with them, while the player's AI speaks for them -->
+                            <Button Content="{t:Text chat.ui.talk}"
+                                    Command="{Binding TalkCommand}"
+                                    Visibility="{Binding CanTalk, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                    FontSize="{StaticResource FontSizeCompact}"
+                                    HorizontalAlignment="Left"
+                                    MinWidth="110"
+                                    Height="30"
+                                    Margin="0,0,0,10"/>
+
                             <!-- Reputation Badge -->
                             <Border Background="{StaticResource BgPanelBrush}"
                                    BorderBrush="{Binding SelectedOpponent.Difficulty, Converter={StaticResource DifficultyBorderBrushConverter}}"

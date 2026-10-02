@@ -1,0 +1,176 @@
+<UserControl x:Class="StreetCorsa.Controls.TalkCard"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:t="clr-namespace:StreetCorsa.Services.Text"
+             xmlns:controls="clr-namespace:StreetCorsa.Controls"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="480" d:DesignWidth="360">
+    <!-- A talk on a screen (Screens/Shared/TalkViewModel as the DataContext): a glass tab with who it is with, which opens
+         and shuts the card under it. Shut, the card slides off to the left as it fades (and back as it opens), eased as
+         the garage's buttons are; the talk goes on, and what they say meanwhile makes the tab breathe and an amber dot
+         pulse on it until the player opens it again. -->
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <ToggleButton Grid.Row="0"
+                      IsChecked="{Binding IsOpen, Mode=TwoWay}"
+                      ToolTip="{t:Text chat.ui.toggle}"
+                      HorizontalAlignment="Left"
+                      Height="36"
+                      Padding="14,0"
+                      FontSize="{StaticResource FontSizeCompact}"
+                      RenderTransformOrigin="0,0.5">
+            <ToggleButton.RenderTransform>
+                <ScaleTransform/>
+            </ToggleButton.RenderTransform>
+            <StackPanel Orientation="Horizontal">
+                <!-- New words while shut: an amber dot, pulsing -->
+                <Ellipse Width="9"
+                         Height="9"
+                         Margin="0,0,9,0"
+                         Fill="{StaticResource AmberBrush}"
+                         VerticalAlignment="Center"
+                         Visibility="{Binding HasUnread, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Ellipse.Style>
+                        <Style TargetType="Ellipse">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasUnread}" Value="True">
+                                    <DataTrigger.EnterActions>
+                                        <BeginStoryboard x:Name="DotPulse">
+                                            <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" From="1" To="0.25" Duration="0:0:0.6">
+                                                    <DoubleAnimation.EasingFunction><SineEase EasingMode="EaseInOut"/></DoubleAnimation.EasingFunction>
+                                                </DoubleAnimation>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </DataTrigger.EnterActions>
+                                    <DataTrigger.ExitActions>
+                                        <StopStoryboard BeginStoryboardName="DotPulse"/>
+                                    </DataTrigger.ExitActions>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Ellipse.Style>
+                </Ellipse>
+                <TextBlock Text="{Binding Title}" VerticalAlignment="Center"/>
+                <!-- The chevron turns down with the talk open, right with it shut -->
+                <TextBlock Text="▾" Margin="10,0,0,0" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                    <TextBlock.RenderTransform>
+                        <RotateTransform/>
+                    </TextBlock.RenderTransform>
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsOpen}" Value="False">
+                                    <DataTrigger.EnterActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.Angle" To="-90" Duration="0:0:0.35">
+                                                    <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                </DoubleAnimation>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </DataTrigger.EnterActions>
+                                    <DataTrigger.ExitActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.Angle" To="0" Duration="0:0:0.35">
+                                                    <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                                </DoubleAnimation>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </DataTrigger.ExitActions>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </StackPanel>
+            <ToggleButton.Style>
+                <Style TargetType="ToggleButton" BasedOn="{StaticResource GlassToggleButtonStyle}">
+                    <Style.Triggers>
+                        <!-- New words while shut: the tab breathes, a little bigger and back, until it is opened -->
+                        <DataTrigger Binding="{Binding HasUnread}" Value="True">
+                            <Setter Property="BorderBrush" Value="{StaticResource AmberBrush}"/>
+                            <DataTrigger.EnterActions>
+                                <BeginStoryboard x:Name="TabBreath">
+                                    <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                        <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleX" To="1.06" Duration="0:0:0.6">
+                                            <DoubleAnimation.EasingFunction><SineEase EasingMode="EaseInOut"/></DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleY" To="1.06" Duration="0:0:0.6">
+                                            <DoubleAnimation.EasingFunction><SineEase EasingMode="EaseInOut"/></DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.EnterActions>
+                            <DataTrigger.ExitActions>
+                                <StopStoryboard BeginStoryboardName="TabBreath"/>
+                            </DataTrigger.ExitActions>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </ToggleButton.Style>
+        </ToggleButton>
+
+        <Border Grid.Row="1"
+                Margin="0,8,0,0"
+                Background="{StaticResource Glass15E8Brush}"
+                BorderBrush="{StaticResource Cream70Brush}"
+                BorderThickness="1"
+                CornerRadius="4"
+                Padding="16,14">
+            <Border.RenderTransform>
+                <TranslateTransform/>
+            </Border.RenderTransform>
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="20" ShadowDepth="0" Color="{StaticResource Shadow}" Opacity="0.8"/>
+            </Border.Effect>
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsOpen}" Value="False">
+                            <Setter Property="IsHitTestVisible" Value="False"/>
+                            <DataTrigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.35">
+                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseIn"/></DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetProperty="RenderTransform.X" To="-60" Duration="0:0:0.35">
+                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseIn"/></DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
+                                            <DiscreteObjectKeyFrame KeyTime="0:0:0.35" Value="{x:Static Visibility.Hidden}"/>
+                                        </ObjectAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.EnterActions>
+                            <DataTrigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
+                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Visible}"/>
+                                        </ObjectAnimationUsingKeyFrames>
+                                        <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.45">
+                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetProperty="RenderTransform.X" To="0" Duration="0:0:0.45">
+                                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.ExitActions>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <controls:TalkPanel/>
+        </Border>
+    </Grid>
+</UserControl>

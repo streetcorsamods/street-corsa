@@ -335,6 +335,31 @@
                         </TextBlock>
                     </DockPanel>
 
+                    <!-- Ollama: the game's own model, made from one the player has (ai/ollama.json) -->
+                    <DockPanel Margin="0,10,0,0"
+                               IsEnabled="{Binding Enabled}"
+                               Visibility="{Binding IsOllama, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Button DockPanel.Dock="Right"
+                                Content="{t:Text settings.ai.ollama.make}"
+                                Command="{Binding MakeModelCommand}"
+                                Style="{StaticResource DialogSecondaryButtonStyle}"
+                                MinWidth="150"/>
+                        <TextBlock Text="{Binding MakeModelResult}"
+                                   TextWrapping="Wrap"
+                                   VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource AiResultStyle}">
+                                    <Setter Property="Margin" Value="0,0,10,0"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding MakeModelOk}" Value="True">
+                                            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </DockPanel>
+
                     <Border Height="1" Background="{StaticResource BorderLightBrush}" Margin="0,14,0,12"/>
 
                     <CheckBox Content="{t:Text settings.ai.comfy}"

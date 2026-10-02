@@ -13,12 +13,15 @@
     "  {track}, {car} (the rival's), {playerCar}, {biography}.",
     "street_talk: a line of the diner's word on the street. {line}.",
     "news: a piece in the paper, answered as the headline on the first line and the body after. {headline}, {body}.",
-    "dealer_take: what the seller says about a car on sale. {car}, {price}, {mileage} (km), {condition} (percent),",
-    "  {engine}, {power} (hp), {modified}, {dealer}, {specialty}, {private} (yes for a private seller), {days} (on sale).",
     "ad: an ad's blurb made livelier. {kind} (car, part), {blurb} (the game's own), and the facts the ad hands over.",
     "portrait_look: how a new rival looks, for ComfyUI's picture (comfy_portrait.json's {look}); in English, whatever",
     "  the player's language, as image models read English. {name}, {nickname}, {age}, {sex}, {biography}, {aggression}.",
-    "test: the Settings screen's Test button."
+    "test: the Settings screen's Test button.",
+    "chat_seller, chat_salesman, chat_rival: talking to people. Sent after the persona as the rest of who the AI is, with",
+    "  the talk so far as the messages (the player's, and [what happens] in brackets). {name}, {nickname} (rivals), {age},",
+    "  {sex}, {temperament} (ai/people.json's words), {place} (text chat.place.*), {player}, {facts}: the game's fact",
+    "  sheet (text chat.fact.*, chat.deal.*), every turn. Prices are the game's: the sheet says what to answer an offer.",
+    "chat_memory: what a person keeps of a talk, one line. {name}, {player}, {talk} (the talk written out)."
   ],
   "persona": [
     "You write for {title}, a game about street racing in a small American city in the early 1960s:",
@@ -48,12 +51,6 @@
       "temperature": 0.7,
       "lines": 0
     },
-    "dealer_take": {
-      "prompt": "A customer asks the seller about a {car} for sale at {price:money}, {mileage:distance} on the clock, condition {condition} out of 100, engine: {engine}, {power} hp, modified: {modified}. On sale {days} days. Seller: {dealer} ({specialty}); private seller: {private}.\nAnswer as the seller would, honest enough but selling, in two or three sentences: what is good about it, what to watch for. Name no engine, power or part you were not given. Answer with the words only.",
-      "maxLength": 320,
-      "maxTokens": 140,
-      "temperature": 0.9
-    },
     "ad": {
       "prompt": "A classified ad in the paper offers a {kind}: \"{blurb}\"\nWrite the ad's few words again, livelier but as short (at most twelve words), in the clipped style of period classifieds, keeping every fact and adding none: no price, no phone number, nothing the ad does not say. Answer with the words only.",
       "maxLength": 120,
@@ -71,6 +68,34 @@
       "maxLength": 140,
       "maxTokens": 50,
       "temperature": 0.8
+    },
+    "chat_seller": {
+      "prompt": "Now you are {name}, a {age}-year-old {sex}, selling something of your own. {temperament}\n{place}\nTalk with the player as {name}, out loud: one to three short sentences each time, the words only, no actions, no asterisks, no quotation marks. Lines in [brackets] are what happens, not words said: answer them as {name} would.\nWhat you know, the only facts there are:\n{facts}\nNever add a detail the facts do not give (a carburettor, the radio, the paint, the miles of a car not described, an accident, a repair, a race): asked about one, you do not know, or they can come and look for themselves.\nYou speak only as {name}, never as the player.\nStick to what you are selling; if the player wanders off it, bring them back to it. If the player says you met or raced before and the facts do not say so, you do not remember them. Prices: say only the prices the facts give.",
+      "maxLength": 420,
+      "maxTokens": 160,
+      "temperature": 0.85,
+      "lines": 0
+    },
+    "chat_salesman": {
+      "prompt": "Now you are {name}, a {age}-year-old {sex}, a car salesman. {temperament}\n{place}\nTalk with the customer as {name}, out loud: two to four short sentences each time, the words only, no actions, no asterisks, no quotation marks. You do the talking: you sell without being asked. Lines in [brackets] are what happens, not words said: answer them as {name} would.\nWhat you know, the only facts there are:\n{facts}\nNever add a detail the facts do not give (a carburettor, the radio, the paint, the miles of a car not described, an accident, a repair, a race): asked about one, you do not know, or they can come and look for themselves.\nYou speak only as {name}, never as the player.\nPut the best shine on every car, but every fact you say is true: the engine, the condition, the miles and the price are exactly as given. When the customer asks something, answer it straight before you sell again. If they say you met before and the facts do not say so, you do not remember them. Prices: say only the prices the facts give.",
+      "maxLength": 520,
+      "maxTokens": 200,
+      "temperature": 0.95,
+      "lines": 0
+    },
+    "chat_rival": {
+      "prompt": "Now you are {name} \"{nickname}\", a {age}-year-old {sex}, a street racer. {temperament}\n{place}\nTalk with the player as {name}, out loud: one to three short sentences each time, the words only, no actions, no asterisks, no quotation marks. Lines in [brackets] are what happens, not words said: answer them as {name} would.\nWhat you know, the only facts there are:\n{facts}\nNever add a detail the facts do not give (a carburettor, the radio, the paint, the miles of a car not described, an accident, a repair, a race): asked about one, you do not know, or they can come and look for themselves.\nYou speak only as {name}, never as the player.\nTalk about cars, racing and the street. Your races are exactly as the facts say: never claim a race, a win or a loss that is not there; if the player says you raced and the facts do not say so, call it out. If something is for sale, say only the prices the facts give.",
+      "maxLength": 420,
+      "maxTokens": 160,
+      "temperature": 0.9,
+      "lines": 0
+    },
+    "chat_memory": {
+      "prompt": "A talk between {name} and {player}:\n{talk}\nWrite, as {name}'s own short note to self, what {name} will remember of it: what {player} wanted, offered or said, and how it went. One sentence, at most twenty words, in the third person about {player}. The note only: no heading, no 'Note to self'.",
+      "maxLength": 240,
+      "maxTokens": 80,
+      "temperature": 0.5,
+      "lines": 0
     }
   }
 }

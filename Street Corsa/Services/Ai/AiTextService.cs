@@ -31,6 +31,13 @@ namespace StreetCorsa.Services.Ai
         /// </summary>
         Task<string?> WriteAsync(string use, TextValues values, AiPriority priority = AiPriority.Background, CancellationToken cancellationToken = default);
 
+        /// <summary>
+        /// The next words of a talk: the mods' prompt <paramref name="use"/> filled with <paramref name="values"/> goes after
+        /// the persona as who the AI is and what it knows, and <paramref name="turns"/> are the talk so far (the first and the
+        /// last the player's). Always the player's own request. Null as for <see cref="WriteAsync"/>.
+        /// </summary>
+        Task<string?> ChatAsync(string use, TextValues values, IReadOnlyList<AiTurn> turns, CancellationToken cancellationToken = default);
+
         /// <summary>Tries <paramref name="settings"/> (not yet saved, maybe): the models the provider offers, and a short answer</summary>
         Task<AiTestResult> TestAsync(AiSettings settings, string? apiKey, CancellationToken cancellationToken = default);
     }
@@ -83,7 +90,16 @@ namespace StreetCorsa.Services.Ai
             }
         }
 
-        public async Task<string?> WriteAsync(string use, TextValues values, AiPriority priority = AiPriority.Background, CancellationToken cancellationToken = default)
+        public Task<string?> WriteAsync(string use, TextValues values, AiPriority priority = AiPriority.Background, CancellationToken cancellationToken = default) =>
+            AskAsync(use, priority, (prompts, prompt) =>
+                new AiTextRequest(SystemPrompt(prompts), GameText.Fill(prompt.Prompt, values), prompt.MaxTokens, prompt.Temperature), cancellationToken);
+
+        public Task<string?> ChatAsync(string use, TextValues values, IReadOnlyList<AiTurn> turns, CancellationToken cancellationToken = default) =>
+            turns.Count == 0 ? Task.FromResult<string?>(null) : AskAsync(use, AiPriority.Now, (prompts, prompt) =>
+                new AiTextRequest(SystemPrompt(prompts) + "\n\n" + GameText.Fill(prompt.Prompt, values), string.Empty, prompt.MaxTokens,
+                    prompt.Temperature, turns), cancellationToken);
+
+        private async Task<string?> AskAsync(string use, AiPriority priority, Func<AiPrompts, AiPrompt, AiTextRequest> ask, CancellationToken cancellationToken)
         {
             if (!IsAvailable) return null;
             var prompts = _prompts();
@@ -107,7 +123,7 @@ namespace StreetCorsa.Services.Ai
                 using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 timeout.CancelAfter(TimeSpan.FromSeconds(Math.Max(1, Rules.RequestTimeoutSeconds)));
 
-                var request = new AiTextRequest(SystemPrompt(prompts), GameText.Fill(prompt.Prompt, values), prompt.MaxTokens, prompt.Temperature);
+                var request = ask(prompts, prompt);
                 var started = DateTime.UtcNow;
                 var answer = await Provider().CompleteAsync(request, timeout.Token).ConfigureAwait(false);
                 var cleaned = Clean(answer, prompt.MaxLength, prompt.Lines);
@@ -167,11 +183,14 @@ namespace StreetCorsa.Services.Ai
         {
             var settings = _settings();
             var key = AiKeys.Unprotect(settings.ApiKeyProtected);
-            var signature = string.Join("|", AiProviders.Normalize(settings.TextProvider), settings.Endpoint, settings.Model, settings.ApiKeyProtected);
+            // The rules' Ollama tuning too: a career whose mod sets other values gets a provider that sends them
+            var ollama = Rules.Ollama;
+            var signature = string.Join("|", AiProviders.Normalize(settings.TextProvider), settings.Endpoint, settings.Model, settings.ApiKeyProtected,
+                ollama.ContextTokens, ollama.KeepAlive, ollama.RepeatPenalty);
             lock (_lock)
             {
                 if (_provider is { } made && made.Signature == signature) return made.Provider;
-                var provider = AiProviders.Create(_http, settings.TextProvider, settings.Endpoint, settings.Model, key);
+                var provider = AiProviders.Create(_http, settings.TextProvider, settings.Endpoint, settings.Model, key, ollama);
                 _provider = (signature, provider);
                 _restUntil = DateTime.MinValue;
                 return provider;
@@ -180,7 +199,8 @@ namespace StreetCorsa.Services.Ai
 
         public async Task<AiTestResult> TestAsync(AiSettings settings, string? apiKey, CancellationToken cancellationToken = default)
         {
-            var provider = AiProviders.Create(_http, settings.TextProvider, settings.Endpoint, settings.Model, apiKey);
+            // Sent as every other request is: a different context size would make Ollama load the model again
+            var provider = AiProviders.Create(_http, settings.TextProvider, settings.Endpoint, settings.Model, apiKey, Rules.Ollama);
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeout.CancelAfter(TimeSpan.FromSeconds(Math.Max(1, Rules.RequestTimeoutSeconds)));
             try

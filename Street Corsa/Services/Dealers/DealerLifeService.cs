@@ -123,7 +123,9 @@ namespace StreetCorsa.Services.Dealers
             var cut = false;
             foreach (var listing in (gameState.UsedCarMarket ?? []).Where(l => !l.IsSold && l.DealerLocation == dealer.Id))
             {
-                var was = listing.PriceBeforeSale ??= listing.Price;
+                // The sale is off the price first asked, not off one a salesman was talked down to: a haggled price
+                // stays when the sale's is no lower
+                var was = listing.PriceBeforeSale ??= listing.FirstAsked ?? listing.Price;
                 var price = DealerRules.SalePrice(was, discount);
                 if (price >= listing.Price) continue;
 

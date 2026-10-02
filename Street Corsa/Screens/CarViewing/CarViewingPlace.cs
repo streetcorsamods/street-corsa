@@ -67,11 +67,6 @@ namespace StreetCorsa.Screens.CarViewing
         }
 
         /// <summary>The same number for the same text every run (string.GetHashCode is not)</summary>
-        private static int StableIndex(string text, int count)
-        {
-            var hash = 17u;
-            foreach (var c in text) hash = hash * 31u + c;
-            return (int)(hash % (uint)Math.Max(1, count));
-        }
+        private static int StableIndex(string text, int count) => (int)(Helpers.StableHash.Of(text) % (uint)Math.Max(1, count));
     }
 }

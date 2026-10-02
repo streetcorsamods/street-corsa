@@ -80,9 +80,10 @@ namespace StreetCorsa.Services.Dealers
 
                 var dealers = ModJson.Load(mods, ContentTypes.Dealers, DealersList, "dealer", problems, entry =>
                     entry.Id == null && entry.Replaces == null ? null : entry.As<DealerDefinition>(), otherLists: [ShowroomsList, MapsList]);
-                foreach (var (id, dealer, _) in dealers.Entries)
+                foreach (var (id, dealer, mod) in dealers.Entries)
                 {
                     dealer.Id = id;
+                    FindPortrait(dealer, mod, problems);
                     _byId[id] = dealer;
                     _dealers.Add(dealer);
                 }
@@ -98,6 +99,18 @@ namespace StreetCorsa.Services.Dealers
 
             foreach (var problem in problems) _logger.Warning("Dealers: {Problem}", problem);
             ModProblems.Add("Dealers", problems);
+        }
+
+        /// <summary>A salesman's portrait, next to the dealer files of the mod that gives him; told when it is not there</summary>
+        private static void FindPortrait(DealerDefinition dealer, ModInfo mod, List<string> problems)
+        {
+            if (dealer.Salesman is not { Portrait.Length: > 0 } salesman) return;
+
+            var folder = Path.Combine(mod.Folder, ContentTypes.Dealers);
+            if (PathNames.TryCombineUnder(folder, salesman.Portrait, out var file) && File.Exists(file))
+                salesman.PortraitFile = file;
+            else
+                problems.Add($"{mod.Id}/{ContentTypes.Dealers}: dealer {dealer.Id}: no salesman portrait \"{salesman.Portrait}\"; he is shown without one");
         }
 
         private const string DealersList = "dealers";

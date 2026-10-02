@@ -53,6 +53,15 @@ public sealed class FakeAiText(Func<string, TextValues, Task<string?>> answer, b
         return answer(use, values);
     }
 
+    /// <summary>The talks asked, with the turns as they were then</summary>
+    public List<(string Use, TextValues Values, List<AiTurn> Turns)> Chats { get; } = [];
+
+    public Task<string?> ChatAsync(string use, TextValues values, IReadOnlyList<AiTurn> turns, CancellationToken cancellationToken = default)
+    {
+        lock (Chats) Chats.Add((use, values, turns.ToList()));
+        return answer(use, values);
+    }
+
     public Task<AiTestResult> TestAsync(AiSettings settings, string? apiKey, CancellationToken cancellationToken = default) =>
         Task.FromResult(new AiTestResult(true, "ok"));
 }
@@ -407,7 +416,7 @@ public class AiTests
 
         Assert.Empty(prompts.Problems);
         Assert.Contains("{language}", prompts.Persona);
-        foreach (var use in new[] { AiTalkService.TalkUse, AiWriter.StreetTalkUse, AiWriter.NewsUse, AiWriter.DealerTakeUse, AiWriter.AdUse, AiWriter.PortraitLookUse, "test" })
+        foreach (var use in new[] { AiTalkService.TalkUse, AiWriter.StreetTalkUse, AiWriter.NewsUse, AiWriter.AdUse, AiWriter.PortraitLookUse, "test" })
             Assert.NotNull(prompts.Prompt(use));
 
         var workflow = prompts.Workflow(AiWriter.PortraitUse);
@@ -529,7 +538,6 @@ public class AiTests
         var game = new GameState();
         var talk = new StreetTalkItem(game.Date, "line");
         Writer(off, game).StreetTalkAdded(game, [talk]);
-        Assert.Null(await Writer(off, game).DealerTakeAsync(new UsedCarListing(), null));
         Assert.Empty(off.Asked);
         Assert.Null(talk.AiText);
 
@@ -541,29 +549,6 @@ public class AiTests
         await writer.WhenIdle();
         Assert.Null(piece.AiBody);
         Assert.Equal("b", AiWriter.Body(piece));
-    }
-
-    [Fact]
-    public async Task A_dealers_word_is_written_once_per_listing_and_kept_in_the_save()
-    {
-        var ai = new FakeAiText((_, values) => Task.FromResult<string?>($"Runs like a top, only {values["mileage"]} km."));
-        var game = new GameState();
-        var writer = Writer(ai, game);
-        var listing = new UsedCarListing { CarDefinitionId = "bel_air", Price = 1500, Mileage = 42000, Condition = 0.8f };
-
-        var first = await writer.DealerTakeAsync(listing, new DealerLocation { Name = "Joe's Used Cars", Specialization = "Classics" });
-        var again = await writer.DealerTakeAsync(listing, null);
-
-        Assert.Equal("Runs like a top, only 42000 km.", first);
-        Assert.Equal(first, again);
-        var asked = Assert.Single(ai.Asked);
-        Assert.Equal(AiWriter.DealerTakeUse, asked.Use);
-        Assert.Equal(AiPriority.Now, asked.Priority);
-        Assert.Equal("1957 bel_air", asked.Values["car"]);
-        Assert.Equal(80, asked.Values["condition"]);
-        Assert.Equal("Joe's Used Cars", asked.Values["dealer"]);
-        var kept = Assert.Single(game.AiWords);
-        Assert.Equal("dealer_" + listing.Id, kept.Key);
     }
 
     [Fact]

@@ -39,7 +39,14 @@
       "conditionCenter": 0.85,
       "travelHours": 1,
       "stockLow": 7,
-      "stockHigh": 10
+      "stockHigh": 10,
+      "salesman": {
+        "name": "Cal Whitaker",
+        "age": 45,
+        "sex": "man",
+        "temperament": "jive_talker",
+        "portrait": "salesmen/downtown_motors.png"
+      }
     },
     {
       "id": "sunset_motors",
@@ -54,7 +61,14 @@
       "conditionCenter": 0.8,
       "travelHours": 1,
       "stockLow": 7,
-      "stockHigh": 10
+      "stockHigh": 10,
+      "salesman": {
+        "name": "Honest Abe Fenton",
+        "age": 49,
+        "sex": "man",
+        "temperament": "old_timer",
+        "portrait": "salesmen/sunset_motors.png"
+      }
     },
     {
       "id": "colorado_motors",
@@ -69,7 +83,14 @@
       "conditionCenter": 0.82,
       "travelHours": 1.5,
       "stockLow": 14,
-      "stockHigh": 20
+      "stockHigh": 20,
+      "salesman": {
+        "name": "Sonny Baxter",
+        "age": 51,
+        "sex": "man",
+        "temperament": "smooth_operator",
+        "portrait": "salesmen/colorado_motors.png"
+      }
     },
     {
       "id": "suburban_autos",
@@ -84,7 +105,14 @@
       "conditionCenter": 0.7,
       "travelHours": 2,
       "stockLow": 14,
-      "stockHigh": 20
+      "stockHigh": 20,
+      "salesman": {
+        "name": "Dickie Marconi",
+        "age": 53,
+        "sex": "man",
+        "temperament": "old_timer",
+        "portrait": "salesmen/suburban_autos.png"
+      }
     },
     {
       "id": "ocean_park_autos",
@@ -99,7 +127,14 @@
       "conditionCenter": 0.62,
       "travelHours": 1.5,
       "stockLow": 14,
-      "stockHigh": 20
+      "stockHigh": 20,
+      "salesman": {
+        "name": "Benny Delgado",
+        "age": 48,
+        "sex": "man",
+        "temperament": "jive_talker",
+        "portrait": "salesmen/ocean_park_autos.png"
+      }
     },
     {
       "id": "riverside_cars",
@@ -114,7 +149,14 @@
       "conditionCenter": 0.55,
       "travelHours": 3.5,
       "stockLow": 14,
-      "stockHigh": 20
+      "stockHigh": 20,
+      "salesman": {
+        "name": "Big Walt Kroger",
+        "age": 53,
+        "sex": "man",
+        "temperament": "jive_talker",
+        "portrait": "salesmen/riverside_cars.png"
+      }
     },
     {
       "id": "vermont_auto_sales",
@@ -129,7 +171,14 @@
       "conditionCenter": 0.5,
       "travelHours": 1,
       "stockLow": 14,
-      "stockHigh": 20
+      "stockHigh": 20,
+      "salesman": {
+        "name": "Ernie Sacco",
+        "age": 35,
+        "sex": "man",
+        "temperament": "jive_talker",
+        "portrait": "salesmen/vermont_auto_sales.png"
+      }
     },
     {
       "id": "industrial_motors",
@@ -144,7 +193,14 @@
       "conditionCenter": 0.48,
       "travelHours": 1.5,
       "stockLow": 7,
-      "stockHigh": 10
+      "stockHigh": 10,
+      "salesman": {
+        "name": "Rita Mae Dawson",
+        "age": 42,
+        "sex": "woman",
+        "temperament": "jive_talker",
+        "portrait": "salesmen/industrial_motors.png"
+      }
     },
     {
       "id": "harbor_auto",
@@ -159,7 +215,14 @@
       "conditionCenter": 0.45,
       "travelHours": 2,
       "stockLow": 14,
-      "stockHigh": 20
+      "stockHigh": 20,
+      "salesman": {
+        "name": "Duke Hollister",
+        "age": 39,
+        "sex": "man",
+        "temperament": "smooth_operator",
+        "portrait": "salesmen/harbor_auto.png"
+      }
     },
     {
       "id": "eastside_garage",
@@ -174,7 +237,14 @@
       "conditionCenter": 0.4,
       "travelHours": 1,
       "stockLow": 7,
-      "stockHigh": 10
+      "stockHigh": 10,
+      "salesman": {
+        "name": "Smilin' Jack Tully",
+        "age": 54,
+        "sex": "man",
+        "temperament": "old_timer",
+        "portrait": "salesmen/eastside_garage.png"
+      }
     },
     {
       "id": "mission_motors",
@@ -190,7 +260,14 @@
       "travelHours": 2,
       "stockLow": 14,
       "stockHigh": 20,
-      "startsOpen": false
+      "startsOpen": false,
+      "salesman": {
+        "name": "Lucky Lou Pratt",
+        "age": 50,
+        "sex": "man",
+        "temperament": "jive_talker",
+        "portrait": "salesmen/mission_motors.png"
+      }
     },
     {
       "id": "bay_cities_auto",
@@ -206,7 +283,14 @@
       "travelHours": 1.5,
       "stockLow": 14,
       "stockHigh": 20,
-      "startsOpen": false
+      "startsOpen": false,
+      "salesman": {
+        "name": "Fast Eddie Kowalczyk",
+        "age": 43,
+        "sex": "man",
+        "temperament": "old_timer",
+        "portrait": "salesmen/bay_cities_auto.png"
+      }
     },
     {
       "id": "orange_grove_motors",
@@ -222,7 +306,14 @@
       "travelHours": 2,
       "stockLow": 14,
       "stockHigh": 20,
-      "startsOpen": false
+      "startsOpen": false,
+      "salesman": {
+        "name": "Marty Silverman",
+        "age": 28,
+        "sex": "man",
+        "temperament": "jive_talker",
+        "portrait": "salesmen/orange_grove_motors.png"
+      }
     },
     {
       "id": "main_street_speed",
@@ -238,7 +329,14 @@
       "travelHours": 2.5,
       "stockLow": 7,
       "stockHigh": 10,
-      "startsOpen": false
+      "startsOpen": false,
+      "salesman": {
+        "name": "Buddy Lee Crenshaw",
+        "age": 39,
+        "sex": "man",
+        "temperament": "jive_talker",
+        "portrait": "salesmen/main_street_speed.png"
+      }
     },
     {
       "id": "fairplex_auto_mart",
@@ -254,7 +352,14 @@
       "travelHours": 2.5,
       "stockLow": 14,
       "stockHigh": 20,
-      "startsOpen": true
+      "startsOpen": true,
+      "salesman": {
+        "name": "Tex Mahoney",
+        "age": 55,
+        "sex": "man",
+        "temperament": "smooth_operator",
+        "portrait": "salesmen/fairplex_auto_mart.png"
+      }
     },
     {
       "id": "route_66_motors",
@@ -270,7 +375,14 @@
       "travelHours": 4,
       "stockLow": 14,
       "stockHigh": 20,
-      "startsOpen": false
+      "startsOpen": false,
+      "salesman": {
+        "name": "Frankie Russo",
+        "age": 39,
+        "sex": "man",
+        "temperament": "jive_talker",
+        "portrait": "salesmen/route_66_motors.png"
+      }
     },
     {
       "id": "car_corral",
@@ -286,7 +398,14 @@
       "travelHours": 2,
       "stockLow": 14,
       "stockHigh": 20,
-      "startsOpen": false
+      "startsOpen": false,
+      "salesman": {
+        "name": "Gloria Benedetti",
+        "age": 30,
+        "sex": "woman",
+        "temperament": "jive_talker",
+        "portrait": "salesmen/car_corral.png"
+      }
     },
     {
       "id": "culver_classics",
@@ -302,7 +421,14 @@
       "travelHours": 1,
       "stockLow": 7,
       "stockHigh": 10,
-      "startsOpen": false
+      "startsOpen": false,
+      "salesman": {
+        "name": "Happy Hal Jorgensen",
+        "age": 43,
+        "sex": "man",
+        "temperament": "old_timer",
+        "portrait": "salesmen/culver_classics.png"
+      }
     },
     {
       "id": "circle_city_used_cars",
@@ -318,7 +444,14 @@
       "travelHours": 3,
       "stockLow": 7,
       "stockHigh": 10,
-      "startsOpen": false
+      "startsOpen": false,
+      "salesman": {
+        "name": "Mel Pettibone",
+        "age": 46,
+        "sex": "man",
+        "temperament": "jive_talker",
+        "portrait": "salesmen/circle_city_used_cars.png"
+      }
     },
     {
       "id": "firestone_motors",
@@ -334,7 +467,14 @@
       "travelHours": 1.5,
       "stockLow": 7,
       "stockHigh": 10,
-      "startsOpen": true
+      "startsOpen": true,
+      "salesman": {
+        "name": "Chuck Ramirez",
+        "age": 49,
+        "sex": "man",
+        "temperament": "old_timer",
+        "portrait": "salesmen/firestone_motors.png"
+      }
     }
   ]
 }

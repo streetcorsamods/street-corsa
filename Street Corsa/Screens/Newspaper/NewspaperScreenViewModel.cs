@@ -364,7 +364,8 @@ namespace StreetCorsa.Screens.Newspaper
         /// <summary>Have a look at the part (clicking its ad): the part alone in 3D, turned with the mouse, with Buy</summary>
         private void OnLookAtPart(PartAdViewModel ad)
         {
-            _navigationService.ShowPartPreview(ad.Ad.Part, ad.Name, ad.PriceDisplay, () => OnBuyPart(ad));
+            _navigationService.ShowPartPreview(ad.Ad.Part, ad.Name, ad.PriceDisplay, () => OnBuyPart(ad),
+                () => Services.Talk.TalkDesk.Shared.ForPart(_gameState, ad.Ad, ad.Name), ad.RefreshPrice);
         }
 
         // ----- the player's own ads -----

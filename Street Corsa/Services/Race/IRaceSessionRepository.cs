@@ -45,6 +45,11 @@ namespace StreetCorsa.Services.Race
         Task<List<ProcessedRaceSession>> GetAllAsync(string saveName);
 
         /// <summary>
+        /// The processed sessions of the save against one opponent, by name in any case
+        /// </summary>
+        Task<List<ProcessedRaceSession>> GetWithOpponentAsync(string saveName, string opponentName);
+
+        /// <summary>
         /// Get the count of processed sessions
         /// </summary>
         Task<int> GetCountAsync(string saveName);

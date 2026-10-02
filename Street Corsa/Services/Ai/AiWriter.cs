@@ -16,14 +16,13 @@ namespace StreetCorsa.Services.Ai
     /// progress never sees a list change under it.
     ///
     /// The prompts are the mods' (<see cref="AiPrompts"/>): <see cref="StreetTalkUse"/>, <see cref="NewsUse"/>,
-    /// <see cref="DealerTakeUse"/>, <see cref="AdUse"/>, <see cref="PortraitLookUse"/>, and the ComfyUI workflow
+    /// <see cref="AdUse"/>, <see cref="PortraitLookUse"/>, and the ComfyUI workflow
     /// <see cref="PortraitUse"/>.
     /// </summary>
     public sealed class AiWriter : IAdWriter
     {
         public const string StreetTalkUse = "street_talk";
         public const string NewsUse = "news";
-        public const string DealerTakeUse = "dealer_take";
         public const string AdUse = "ad";
         public const string PortraitLookUse = "portrait_look";
         public const string PortraitUse = "portrait";
@@ -152,30 +151,7 @@ namespace StreetCorsa.Services.Ai
             return text.Trim().Trim('"').Trim();
         }
 
-        // ----- a dealer's word, an ad's blurb -----
-
-        /// <summary>
-        /// The dealer's word on a car on the lot (or a private seller's, with no dealer): written once per listing and kept
-        /// in the save, in the language the game speaks. Null when the AI is off or fails: the button says nothing.
-        /// </summary>
-        public Task<string?> DealerTakeAsync(UsedCarListing listing, DealerLocation? dealer)
-        {
-            var values = new TextValues
-            {
-                ["car"] = _carName(listing.CarDefinitionId),
-                ["price"] = new Money(listing.Price),
-                ["mileage"] = listing.Mileage,
-                ["condition"] = (int)Math.Round(listing.Condition * 100),
-                ["engine"] = listing.EngineSummary ?? string.Empty,
-                ["power"] = listing.PowerHp is { } hp ? (int)Math.Round(hp) : null,
-                ["modified"] = listing.IsModified ? "yes" : "no",
-                ["dealer"] = dealer?.Name ?? string.Empty,
-                ["specialty"] = dealer?.Specialization ?? string.Empty,
-                ["private"] = dealer == null ? "yes" : "no",
-                ["days"] = _currentGame() is { } game ? (int)(game.Date.Date - listing.ListedDate.Date).TotalDays : 0
-            };
-            return KeptAsync("dealer_" + listing.Id, DealerTakeUse, values, AiPriority.Now);
-        }
+        // ----- an ad's blurb -----
 
         /// <summary>
         /// An ad's blurb told livelier by the AI, keeping its facts: <paramref name="kind"/> is what is for sale ("car",

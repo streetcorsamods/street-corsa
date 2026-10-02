@@ -16,6 +16,44 @@
     "streetTalkChance": 1,
     "newsChance": 1,
     "paintNewFaces": true,
-    "maxKept": 400
+    "maxKept": 400,
+    "talk": {
+      "turnsKept": 16,
+      "memoriesGiven": 4,
+      "forgetDaysSeller": 14,
+      "forgetDaysSalesman": 30,
+      "forgetDaysRival": 90,
+      "racesTold": 6,
+      "rivalRacesTold": 5,
+      "rivalRacesKept": 300,
+      "saidKept": 3,
+      "pitchDelaySeconds": 0.8,
+      "discountPrivate": 0.15,
+      "discountSalesman": 0.12,
+      "discountRival": 0.08,
+      "brokeRivalFactor": 1.5,
+      "longOnSaleDays": 14,
+      "longOnSaleExtra": 0.05,
+      "insultMargin": 0.25,
+      "maxCounters": 3,
+      "carPriceStep": 25,
+      "partPriceStep": 5,
+      "offerLowest": 0.2,
+      "offerHighest": 3,
+      "mostDiscount": 0.25,
+      "firmShare": 0.2,
+      "lotCarsTold": 10,
+      "womenSalesmen": 0.15,
+      "womenSellers": 0.3,
+      "salesmanMinAge": 28,
+      "salesmanMaxAge": 57,
+      "sellerMinAge": 20,
+      "sellerMaxAge": 74
+    },
+    "ollama": {
+      "contextTokens": 8192,
+      "keepAlive": "10m",
+      "repeatPenalty": 1.1
+    }
   }
 }

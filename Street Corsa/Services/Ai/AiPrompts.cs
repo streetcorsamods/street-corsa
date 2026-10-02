@@ -71,6 +71,67 @@ namespace StreetCorsa.Services.Ai
         public string Source { get; set; } = string.Empty;
     }
 
+    /// <summary>
+    /// How a person talks and deals (<c>ai/people.json</c>'s <c>temperaments</c>): the words the AI is given for it, how far
+    /// they come down on a price (times the rules' most), who it is for, and how often it is drawn
+    /// </summary>
+    public sealed class Temperament
+    {
+        /// <summary>Its key in the file</summary>
+        public string Id { get; set; } = string.Empty;
+
+        /// <summary>Who they are, for the AI: "a fast-talking salesman who calls everybody pal"</summary>
+        public string Words { get; set; } = string.Empty;
+
+        /// <summary>How far they come down, times the rules' most for their kind (0: never, 1: all the way)</summary>
+        public double Give { get; set; } = 1;
+
+        /// <summary>The kinds of person it is drawn for: "seller", "salesman", "rival"; none is every kind</summary>
+        public List<string> For { get; set; } = [];
+
+        /// <summary>How often it is drawn against the others</summary>
+        public double Weight { get; set; } = 1;
+
+        /// <summary>For rivals: drawn only for an aggression in this range (0-100)</summary>
+        public int MinAggression { get; set; }
+
+        public int MaxAggression { get; set; } = 100;
+
+        public bool Fits(string kind, int aggression) =>
+            (For.Count == 0 || For.Contains(kind, StringComparer.OrdinalIgnoreCase)) && aggression >= MinAggression && aggression <= MaxAggression;
+    }
+
+    /// <summary>
+    /// The game's own model in Ollama (<c>ai/ollama.json</c>): made from a base model the player has, with a system prompt,
+    /// parameters and a few example exchanges in the game's voice. No training: what a Modelfile does.
+    /// </summary>
+    public sealed class OllamaModel
+    {
+        /// <summary>What it is called in Ollama</summary>
+        public string Name { get; set; } = "streetcorsa";
+
+        /// <summary>The model it is made from, when the player names none</summary>
+        public string From { get; set; } = "llama3.1:8b";
+
+        /// <summary>Its own system prompt (a list of lines is joined), under the persona sent with every request</summary>
+        public JsonNode? System { get; set; }
+
+        /// <summary>Its parameters, as a Modelfile's (temperature, repeat_penalty, num_ctx, stop...)</summary>
+        public JsonObject Parameters { get; set; } = new();
+
+        /// <summary>Example exchanges: what the player says, what is answered</summary>
+        public List<OllamaExample> Examples { get; set; } = [];
+
+        public string SystemText => AiPrompts.Joined(System);
+    }
+
+    public sealed class OllamaExample
+    {
+        public string Player { get; set; } = string.Empty;
+
+        public string Answer { get; set; } = string.Empty;
+    }
+
     /// <summary>A node's input: <c>{ "node": "10", "input": "text" }</c></summary>
     public sealed class ComfyInput
     {
@@ -88,6 +149,8 @@ namespace StreetCorsa.Services.Ai
     public sealed class AiPrompts
     {
         public const string PromptsFile = "prompts.json";
+        public const string PeopleFile = "people.json";
+        public const string OllamaFile = "ollama.json";
         public const string ComfyPrefix = "comfy_";
 
         private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger("Ai");
@@ -110,6 +173,23 @@ namespace StreetCorsa.Services.Ai
 
         public IReadOnlyList<string> Problems { get; private init; } = [];
 
+        /// <summary>The temperaments people are drawn with (<c>ai/people.json</c>)</summary>
+        public IReadOnlyList<Temperament> Temperaments { get; private init; } = [];
+
+        /// <summary>The game's model in Ollama (<c>ai/ollama.json</c>); null when no mod has one</summary>
+        public OllamaModel? Ollama { get; private init; }
+
+        public Temperament? TemperamentOf(string? id) =>
+            Temperaments.FirstOrDefault(t => string.Equals(t.Id, id, StringComparison.OrdinalIgnoreCase));
+
+        /// <summary>A text, or a list of lines joined with spaces</summary>
+        public static string Joined(JsonNode? node) => node switch
+        {
+            JsonValue value when value.TryGetValue<string>(out var text) => text,
+            JsonArray lines => string.Join(" ", lines.Select(l => l?.ToString()).Where(l => !string.IsNullOrEmpty(l))),
+            _ => string.Empty
+        };
+
         public AiPrompt? Prompt(string use) => Prompts.TryGetValue(use, out var prompt) ? prompt : null;
 
         public ComfyWorkflow? Workflow(string use) => Workflows.TryGetValue(use, out var workflow) ? workflow : null;
@@ -118,6 +198,8 @@ namespace StreetCorsa.Services.Ai
         {
             var problems = new List<string>();
             var merged = ModMerge.NewObject();
+            var people = ModMerge.NewObject();
+            var ollama = ModMerge.NewObject();
             var workflows = new Dictionary<string, ComfyWorkflow>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var (mod, file) in mods.JsonFiles(ContentTypes.Ai))
@@ -128,6 +210,14 @@ namespace StreetCorsa.Services.Ai
                 {
                     if (ModMerge.ReadFile(file, source, problems) is { } read) ModMerge.Into(merged, read);
                 }
+                else if (name.Equals(PeopleFile, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (ModMerge.ReadFile(file, source, problems) is { } read) ModMerge.Into(people, read);
+                }
+                else if (name.Equals(OllamaFile, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (ModMerge.ReadFile(file, source, problems) is { } read) ModMerge.Into(ollama, read);
+                }
                 else if (name.StartsWith(ComfyPrefix, StringComparison.OrdinalIgnoreCase))
                 {
                     var use = Path.GetFileNameWithoutExtension(name)[ComfyPrefix.Length..];
@@ -135,7 +225,7 @@ namespace StreetCorsa.Services.Ai
                 }
                 else
                 {
-                    problems.Add($"{source}: neither {PromptsFile} nor a {ComfyPrefix}<use>.json workflow; left out");
+                    problems.Add($"{source}: not {PromptsFile}, {PeopleFile}, {OllamaFile} nor a {ComfyPrefix}<use>.json workflow; left out");
                 }
             }
 
@@ -160,16 +250,64 @@ namespace StreetCorsa.Services.Ai
                 }
             }
 
-            var persona = merged["persona"] switch
-            {
-                JsonValue value when value.TryGetValue<string>(out var text) => text,
-                JsonArray lines => string.Join(" ", lines.Select(l => l?.ToString()).Where(l => !string.IsNullOrEmpty(l))),
-                _ => string.Empty
-            };
+            var persona = Joined(merged["persona"]);
+            var temperaments = ReadTemperaments(people, problems);
+            var model = ReadOllama(ollama, problems);
 
             foreach (var problem in problems) Logger.Warning("AI content: {Problem}", problem);
             ModProblems.Add("AI", problems);
-            return new AiPrompts { Persona = persona, Prompts = prompts, Workflows = workflows, Problems = problems };
+            return new AiPrompts
+            {
+                Persona = persona, Prompts = prompts, Workflows = workflows, Problems = problems, Temperaments = temperaments, Ollama = model
+            };
+        }
+
+        private static List<Temperament> ReadTemperaments(JsonObject people, List<string> problems)
+        {
+            var temperaments = new List<Temperament>();
+            if (people["temperaments"] is not JsonObject drawn) return temperaments;
+
+            foreach (var (id, node) in drawn)
+            {
+                if (id.StartsWith('_') || node == null) continue;
+                try
+                {
+                    var temperament = node.Deserialize<Temperament>(Options);
+                    if (temperament == null || string.IsNullOrWhiteSpace(temperament.Words))
+                    {
+                        problems.Add($"temperament {id}: no words; left out");
+                        continue;
+                    }
+
+                    temperament.Id = id;
+                    temperament.Give = Math.Clamp(temperament.Give, 0, 2);
+                    temperament.Weight = Math.Max(0, temperament.Weight);
+                    temperaments.Add(temperament);
+                }
+                catch (JsonException ex)
+                {
+                    problems.Add($"temperament {id}: {ex.Message}; left out");
+                }
+            }
+
+            return temperaments;
+        }
+
+        private static OllamaModel? ReadOllama(JsonObject ollama, List<string> problems)
+        {
+            if (ollama.Count == 0) return null;
+            try
+            {
+                var model = ollama.Deserialize<OllamaModel>(Options);
+                if (model != null && !string.IsNullOrWhiteSpace(model.Name) && !string.IsNullOrWhiteSpace(model.From)) return model;
+                problems.Add($"{OllamaFile}: no name or no from; left out");
+            }
+            catch (JsonException ex)
+            {
+                problems.Add($"{OllamaFile}: {ex.Message}; left out");
+            }
+
+            return null;
         }
 
         /// <summary>Figures a prompt cannot do with, put inside what a request can take</summary>
