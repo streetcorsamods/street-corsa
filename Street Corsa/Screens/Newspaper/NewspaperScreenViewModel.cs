@@ -95,32 +95,7 @@ namespace StreetCorsa.Screens.Newspaper
                 if (Enum.TryParse<ClassifiedSection>(section, out var shown)) Section = shown;
             });
 
-            // The ads are put together in Enter: the screen is always entered right after it is made. The ones of the
-            // section on show are offered to the player's AI as they come out, not before: most ads are never read.
-            CarAds.Shown.CollectionChanged += (_, e) =>
-            {
-                if (ShowCars) PolishAll(e.NewItems?.OfType<CarAdViewModel>().Select(a => a.Polish));
-            };
-            PartAds.Shown.CollectionChanged += (_, e) =>
-            {
-                if (ShowParts) PolishAll(e.NewItems?.OfType<PartAdViewModel>().Select(a => a.Polish));
-            };
-        }
-
-        /// <summary>The ads' words to the player's AI; one that fails leaves the game's own</summary>
-        private void PolishAll(IEnumerable<Action?>? polish)
-        {
-            foreach (var each in polish ?? [])
-            {
-                try
-                {
-                    each?.Invoke();
-                }
-                catch (Exception ex)
-                {
-                    _logger.Warning("Could not offer an ad to the AI: {Error}", ex.Message);
-                }
-            }
+            // The ads are put together in Enter: the screen is always entered right after it is made
         }
 
         // ----- what the page shows -----
@@ -135,9 +110,6 @@ namespace StreetCorsa.Screens.Newspaper
                 if (!SetProperty(ref _section, value)) return;
                 OnPropertyChanged(nameof(ShowCars));
                 OnPropertyChanged(nameof(ShowParts));
-
-                // The section's ads out so far are read now
-                PolishAll(ShowCars ? CarAds.Shown.Select(a => a.Polish) : PartAds.Shown.Select(a => a.Polish));
             }
         }
 
@@ -230,26 +202,18 @@ namespace StreetCorsa.Screens.Newspaper
         }
 
         /// <summary>
-        /// The first market of a game, the first part ads, the part catalog and what fits the player's car: what takes a
-        /// moment, off the UI thread where it can be. The game state itself is only changed on it.
+        /// The first market of a game and its first part ads (made with the game; here for a game from before, or one
+        /// still being made), the part catalog and what fits the player's car: what takes a moment, off the UI thread
+        /// where it can be. The game state itself is only changed on it.
         /// </summary>
         private async Task PrepareAsync()
         {
-            if (_gameState.UsedCarMarket == null || _gameState.UsedCarMarket.Count == 0)
-            {
-                if (_gameState.DealerLocations == null || _gameState.DealerLocations.Count == 0)
-                    _gameState.DealerLocations = _marketService.GetDefaultDealers();
-
-                _gameState.UsedCarMarket = await _marketService.SpawnListingsAsync(DealerRoster.Restocking(_gameState), _gameState.Date,
-                    _gameState.Rules.CarPriceMultiplier);
-                _logger.Information("Spawned {ListingCount} initial listings", _gameState.UsedCarMarket.Count);
-            }
+            await FirstMarket.EnsureAsync(_gameState, _marketService, _partAdsService);
 
             var car = SelectedCar;
             if (!await Task.Run(() => _partAdsService.IsAvailable)) return;
 
             if (car != null) await _partsService.EnsurePartsAsync(car);
-            if (_gameState.NewspaperAds.Parts.Count == 0) await _partAdsService.RefreshAdsAsync(_gameState, _gameState.Date);
             _fitting = await Task.Run(() => _partAdsService.FindFittingParts(car));
         }
 
@@ -276,6 +240,8 @@ namespace StreetCorsa.Screens.Newspaper
                 foreach (var listing in _marketService.GetAvailableListings(_gameState.UsedCarMarket ?? []))
                 {
                     _wroteBlurbs |= AdBlurbs.Ensure(listing, catalog, () => _marketService.FactoryParts(listing.CarDefinitionId));
+                    // Words still the game's own go to the player's AI; they show the next time the paper is opened
+                    AdBlurbs.Polish(listing, catalog, () => _marketService.FactoryParts(listing.CarDefinitionId));
                     var dealer = _gameState.DealerLocations?.FirstOrDefault(d => d.Id == listing.DealerLocation);
                     if (CarAd(listing, null, dealer?.Name ?? GameText.Say("market.unknown_dealer")) is { } ad) ads.Add(ad);
                 }
@@ -285,6 +251,7 @@ namespace StreetCorsa.Screens.Newspaper
                     try
                     {
                         _wroteBlurbs |= AdBlurbs.Ensure(offer.Ad, offer.Car, catalog, () => _marketService.FactoryParts(offer.Car.DefinitionId));
+                        AdBlurbs.Polish(offer.Ad, offer.Car, catalog, () => _marketService.FactoryParts(offer.Car.DefinitionId));
                         if (CarAd(RivalCarAds.AsListing(offer, _marketService), offer, UsedCarListingViewModel.PrivateSellerName(offer.Seller.Name)) is { } ad)
                             ads.Add(ad);
                     }
@@ -327,19 +294,8 @@ namespace StreetCorsa.Screens.Newspaper
                 CanAfford = _gameState.Player.Money >= listing.Price
             };
 
-            var catalog = Catalog;
             CarAdViewModel? ad = null;
-            ad = new CarAdViewModel(car, new RelayCommand(() => OnLookAtCar(ad!)))
-            {
-                // A rival's ad is shown as a listing made up from it: the words go to both
-                Polish = rivalOffer is { } offer
-                    ? () => AdBlurbs.Polish(offer.Ad, offer.Car, catalog, () => _marketService.FactoryParts(offer.Car.DefinitionId), better =>
-                    {
-                        listing.Description = better;
-                        ad!.BlurbRewritten();
-                    })
-                    : () => AdBlurbs.Polish(listing, catalog, () => _marketService.FactoryParts(listing.CarDefinitionId), _ => ad!.BlurbRewritten())
-            };
+            ad = new CarAdViewModel(car, new RelayCommand(() => OnLookAtCar(ad!)));
             return ad;
         }
 
@@ -356,11 +312,10 @@ namespace StreetCorsa.Screens.Newspaper
                         if (catalog.Get(ad.Part.DefinitionId) is not { } definition) continue;
 
                         _wroteBlurbs |= AdBlurbs.Ensure(ad, catalog);
+                        // Words still the game's own go to the player's AI; they show the next time the paper is opened
+                        AdBlurbs.Polish(ad, catalog);
                         PartAdViewModel? row = null;
-                        row = new PartAdViewModel(ad, definition, _fitting.Contains(definition.Id), new RelayCommand(() => OnLookAtPart(row!)))
-                        {
-                            Polish = () => AdBlurbs.Polish(ad, catalog, _ => row!.BlurbRewritten())
-                        };
+                        row = new PartAdViewModel(ad, definition, _fitting.Contains(definition.Id), new RelayCommand(() => OnLookAtPart(row!)));
                         ads.Add(row);
                     }
                 }

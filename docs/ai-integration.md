@@ -38,9 +38,12 @@ and key by Save, so the game never asks one provider at another's address.
   - the Diner's street talk and the paper's pieces told again (`StreetTalkAdded`, `NewsAdded`), kept next to the
     originals (`AiText`, `AiHeadline`, `AiBody`, with the language they were written in); screens show them through
     `AiWriter.Said`, `Headline`, `Body`, which give the original in any other language;
-  - ads: `AiWriter` is `AdBlurbs.Writer` (`IAdWriter`): an ad's blurb is offered when the paper first shows it
-    (`AdBlurbs.Polish`, the section on show only), not when the ad is made, since most ads are never read; it comes
-    back livelier, replaces the ad's `Description` and marks it `AiPolished`, so it is not offered again;
+  - ads: `AiWriter` is `AdBlurbs.Writer` (`IAdWriter`): an ad's blurb is offered as the ad is made (`AdBlurbs.Describe`;
+    a new game's first market and part ads are made with the game, `FirstMarket`, then the daily tasks turn them
+    over). The ads wait at a desk of their own in `AiWriter` and go to the AI one at a time as background work, so
+    a hundred new ads never fill the shared queue. The answer replaces the ad's `Description` and marks it
+    `AiPolished`, never offered again; an open paper keeps the words it was opened with. Ads still in the game's
+    words (made while the AI was off) are offered when the paper opens (`AdBlurbs.Polish`);
   - a seller's word on a car (`DealerTakeAsync`): the car viewing screen's "What do you make of it?" button, shown
     only while the AI is on, kept per listing in `GameState.AiWords`;
   - portraits for new faces (`NewFace`): painted with ComfyUI, saved under
@@ -61,4 +64,4 @@ See `docs/modding.md`, "ai".
 
 - Small local models make things up (a price, an engine). The prompts forbid it; a bigger model does better.
 - Portraits of a deleted save stay in `AiPortraits`.
-- Ads past the queue's cap keep the game's own words, and are not offered again that session.
+- An ad whose request failed keeps the game's own words until the paper is opened in a later session.

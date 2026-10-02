@@ -233,7 +233,6 @@ public class AdWriterTests
         try
         {
             CarAdFacts? seen = null;
-            string? heard = null;
             var writer = new Writer((facts, written) =>
             {
                 seen = facts as CarAdFacts;
@@ -241,22 +240,28 @@ public class AdWriterTests
             });
             AdBlurbs.Writer = writer;
 
-            // Written, the ad is not offered: only once the paper shows it, and then only the once
+            // Offered as it is written, and only the once: the paper's sweep does not ask again
             AdBlurbs.Describe(listing, null, null);
-            Assert.Equal(0, writer.Asked);
-            AdBlurbs.Polish(listing, null, () => null, better => heard = better);
+            Assert.Equal(1, writer.Asked);
             Assert.Equal("Mean and green.", listing.Description);
-            Assert.Equal("Mean and green.", heard);
             Assert.True(listing.AiPolished);
             Assert.Equal("Ford 390", seen?.Engine);
             AdBlurbs.Polish(listing, null, () => null);
             Assert.Equal(1, writer.Asked);
 
+            // One written while there was no writer is offered by the sweep
+            AdBlurbs.Writer = null;
+            var before = new UsedCarListing { CarDefinitionId = "test_car", Condition = 0.5f, Mileage = 100_000 };
+            AdBlurbs.Describe(before, null, null);
+            AdBlurbs.Writer = writer;
+            AdBlurbs.Polish(before, null, () => null);
+            Assert.Equal(2, writer.Asked);
+            Assert.Equal("Mean and green.", before.Description);
+
             var other = new UsedCarListing { CarDefinitionId = "test_car", Condition = 0.5f, Mileage = 100_000 };
+            AdBlurbs.Writer = new Writer((_, _) => throw new InvalidOperationException("offline"));
             AdBlurbs.Describe(other, null, null);
             var own = other.Description;
-            AdBlurbs.Writer = new Writer((_, _) => throw new InvalidOperationException("offline"));
-            AdBlurbs.Polish(other, null, () => null);
             Assert.False(string.IsNullOrWhiteSpace(other.Description));
             Assert.Equal(own, other.Description);
             Assert.False(other.AiPolished);

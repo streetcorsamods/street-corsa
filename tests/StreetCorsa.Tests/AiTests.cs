@@ -7,6 +7,7 @@ using StreetCorsa.Models.GameState;
 using StreetCorsa.Mods;
 using StreetCorsa.Rules;
 using StreetCorsa.Services.Ai;
+using StreetCorsa.Services.Market;
 using StreetCorsa.Services.Settings;
 using StreetCorsa.Services.Talk;
 using StreetCorsa.Services.Text;
@@ -580,6 +581,33 @@ public class AiTests
         Assert.Single(ai.Asked);
         Assert.Equal(AiPriority.Background, ai.Asked[0].Priority);
         Assert.Equal("car", ai.Asked[0].Values["kind"]);
+    }
+
+    [Fact]
+    public async Task Ads_go_to_the_ai_one_at_a_time_and_each_gets_its_own_words()
+    {
+        var atOnce = 0;
+        var most = 0;
+        var ai = new FakeAiText(async (_, values) =>
+        {
+            most = Math.Max(most, Interlocked.Increment(ref atOnce));
+            await Task.Delay(5);
+            Interlocked.Decrement(ref atOnce);
+            return "AI: " + values["blurb"];
+        });
+        var writer = Writer(ai, new GameState());
+        var said = new string?[20];
+
+        for (var i = 0; i < said.Length; i++)
+        {
+            var n = i;
+            writer.Improve(new PartAdFacts("Cam", "Camshafts", false, true, 0.9, false), "ad " + n, better => said[n] = better);
+        }
+
+        await writer.WhenIdle();
+
+        Assert.Equal(1, most);
+        for (var i = 0; i < said.Length; i++) Assert.Equal("AI: ad " + i, said[i]);
     }
 
     [Fact]

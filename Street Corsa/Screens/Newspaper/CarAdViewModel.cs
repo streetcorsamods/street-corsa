@@ -50,12 +50,6 @@ namespace StreetCorsa.Screens.Newspaper
         /// <summary>The ad's few words (<see cref="Services.Market.AdBlurbs"/>), with the space after them when there are any</summary>
         public string Blurb => string.IsNullOrEmpty(Car.Listing.Description) ? string.Empty : Car.Listing.Description + " ";
 
-        /// <summary>Offers the ad's words to the player's AI, as the paper first shows it (<see cref="Services.Market.AdBlurbs"/>)</summary>
-        public Action? Polish { get; init; }
-
-        /// <summary>The AI's words came: the ad prints them</summary>
-        public void BlurbRewritten() => OnPropertyChanged(nameof(Blurb));
-
         public string PriceDisplay => Car.PriceDisplay;
 
         /// <summary>What it was marked at before its dealer's closing-down sale, struck through before the price; empty when not on sale</summary>

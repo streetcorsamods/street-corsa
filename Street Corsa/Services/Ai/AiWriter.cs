@@ -192,9 +192,15 @@ namespace StreetCorsa.Services.Ai
             return key == null ? WriteOnceAsync(null, AdUse, values, AiPriority.Background) : KeptAsync("ad_" + key, AdUse, values, AiPriority.Background);
         }
 
+        // The ads waiting for the AI, asked one at a time: a new game makes a hundred at once, and the line the player's
+        // own requests share would otherwise be full of them
+        private readonly Queue<(string Kind, string Written, Dictionary<string, object?> Values, Action<string> Rewrite)> _adDesk = new();
+        private bool _deskRunning;
+
         /// <summary>
-        /// The paper's writer (<see cref="AdBlurbs.Writer"/>): an ad's blurb, offered as the paper first shows it, comes back
-        /// livelier when the AI answers, on the game's thread; the ad keeps it, so it is never kept twice
+        /// The paper's writer (<see cref="AdBlurbs.Writer"/>): an ad's blurb, offered as the ad is made, comes back livelier
+        /// when the AI answers, on the game's thread; the ad keeps it, so it is never kept twice. The ads wait their turn
+        /// at a desk of their own and go to the AI one by one, as background work.
         /// </summary>
         public bool CanImprove => _text.IsAvailable;
 
@@ -212,10 +218,44 @@ namespace StreetCorsa.Services.Ai
                 PartAdFacts part => ("part", new Dictionary<string, object?> { ["part"] = part.Part }),
                 _ => ("car", new Dictionary<string, object?>())
             };
-            Background(async () =>
+            lock (_lock)
             {
-                if (await ImproveAdAsync(kind, written, values).ConfigureAwait(false) is { Length: > 0 } better) _onGameThread(() => rewrite(better));
-            });
+                _adDesk.Enqueue((kind, written, values, rewrite));
+                if (_deskRunning) return;
+                _deskRunning = true;
+            }
+
+            Background(WorkTheDeskAsync);
+        }
+
+        /// <summary>The ads at the desk, one after the other, until none waits (or the AI is turned off: they keep the game's words)</summary>
+        private async Task WorkTheDeskAsync()
+        {
+            while (true)
+            {
+                (string Kind, string Written, Dictionary<string, object?> Values, Action<string> Rewrite) ad;
+                lock (_lock)
+                {
+                    if (_adDesk.Count == 0 || !_text.IsAvailable)
+                    {
+                        _adDesk.Clear();
+                        _deskRunning = false;
+                        return;
+                    }
+
+                    ad = _adDesk.Dequeue();
+                }
+
+                try
+                {
+                    if (await ImproveAdAsync(ad.Kind, ad.Written, ad.Values).ConfigureAwait(false) is { Length: > 0 } better)
+                        _onGameThread(() => ad.Rewrite(better));
+                }
+                catch (Exception ex)
+                {
+                    _logger.Warning("An ad was not rewritten: {Error}", ex.Message);
+                }
+            }
         }
 
         /// <summary>What was kept for <paramref name="key"/> in the game in play (in the language spoken), else written and kept</summary>

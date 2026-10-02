@@ -20,6 +20,7 @@ namespace StreetCorsa.Screens.NewGame
         private readonly IGameStateRepository _repository;
         private readonly IRaceEventService _raceEventService;
         private readonly Action<GameState?> _setCurrentGame;
+        private readonly Action<GameState>? _firstMarket;
         private readonly IAppLogger _logger;
         private string _playerName = string.Empty;
         private string _errorMessage = string.Empty;
@@ -53,13 +54,15 @@ namespace StreetCorsa.Screens.NewGame
 
         /// <param name="setCurrentGame">Makes the new game the one the app saves on exit and races with</param>
         /// <param name="back">Closes the card, back to the main screen's menu</param>
+        /// <param name="firstMarket">Starts making the new game's first classifieds in the background (<see cref="Services.Market.FirstMarket"/>)</param>
         public NewGameScreenViewModel(
             NavigationService navigationService,
             DialogService dialogService,
             IGameStateRepository repository,
             IRaceEventService raceEventService,
             Action<GameState?> setCurrentGame,
-            Action back)
+            Action back,
+            Action<GameState>? firstMarket = null)
         {
             _navigationService = navigationService;
             _back = back;
@@ -67,6 +70,7 @@ namespace StreetCorsa.Screens.NewGame
             _repository = repository;
             _raceEventService = raceEventService;
             _setCurrentGame = setCurrentGame;
+            _firstMarket = firstMarket;
             _logger = AppLoggerFactory.CreateLogger(LogCategory.Save);
 
             StartGameCommand = new RelayCommand(OnStartGame);
@@ -155,7 +159,11 @@ namespace StreetCorsa.Screens.NewGame
 
             // Navigate to game screen, then store the game in App for saving on exit: only a garage that opened makes it
             // the game the app saves and races with
-            if (_navigationService.NavigateToGarage(gameState)) _setCurrentGame(gameState);
+            if (!_navigationService.NavigateToGarage(gameState)) return;
+            _setCurrentGame(gameState);
+
+            // The lots and the paper's ads, made now so they are there from the first day
+            _firstMarket?.Invoke(gameState);
         }
 
         private void ReportFailure(Exception ex, string saveName)

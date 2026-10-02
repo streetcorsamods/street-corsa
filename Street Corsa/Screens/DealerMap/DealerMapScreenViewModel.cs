@@ -190,6 +190,9 @@ namespace StreetCorsa.Screens.DealerMap
             // The dealers the save carries are whatever the files say today, each keeping how its business is going:
             // a save made before a dealer existed still gets it, and one dropped from the files goes away
             DealerRoster.Sync(_gameState, _dealerCatalog);
+
+            // A new game's first market may still be being made: the lots are stocked by it, not a second time here
+            await FirstMarket.WaitAsync(_gameState);
             if (_gameState.DealerLocations == null || _gameState.DealerLocations.Count == 0)
             {
                 _gameState.DealerLocations = _marketService.GetDefaultDealers();

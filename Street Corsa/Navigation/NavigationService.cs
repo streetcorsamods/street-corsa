@@ -304,7 +304,20 @@ namespace StreetCorsa.Navigation
             new(this, _dialogService, _gameSettingsService, back);
 
         public Screens.NewGame.NewGameScreenViewModel CreateNewGameCard(Action back) =>
-            new(this, _dialogService, _gameStateRepository, _raceEventService, _setCurrentGame, back);
+            new(this, _dialogService, _gameStateRepository, _raceEventService, _setCurrentGame, back, StockFirstMarket);
+
+        /// <summary>A new game's first classifieds, made in the background; one that fails is made when the paper is opened</summary>
+        private async void StockFirstMarket(GameState gameState)
+        {
+            try
+            {
+                await Services.Market.FirstMarket.EnsureAsync(gameState, _marketService, _partsShopService);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not make the new game's first market");
+            }
+        }
 
         public Screens.LoadGame.LoadGameScreenViewModel CreateLoadGameCard(Action back) =>
             new(this, _dialogService, _gameStateRepository, _carPartsService, _setCurrentGame, back);

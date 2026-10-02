@@ -142,9 +142,9 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <!-- The masthead: the paper's name between its rules, the date and the page's name under it; clear of the
-                     back button on the left and the money card on the right -->
-                <StackPanel Grid.Row="0" Margin="200,0,200,0">
+                <!-- The masthead: the paper's name between its rules, the date and the page's name under it, across the
+                     whole page; it starts under the back button on the left and the money card on the right -->
+                <StackPanel Grid.Row="0" Margin="0,84,0,0">
                     <Border Style="{StaticResource PageRuleStyle}" BorderThickness="0,0,0,3"/>
                     <TextBlock Text="{t:Text paper.masthead}"
                                FontFamily="{StaticResource NewsprintFont}"
