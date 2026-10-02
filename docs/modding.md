@@ -653,9 +653,33 @@ without repeating the rest.
 - Every prompt may name `{language}` (the player's language, by the name its `language.name` pool gives it), `{units}`
   and `{title}`. The uses, and what each may name, are listed in the base game's file's `_comment`: `talk` (a rival's
   line; `{line}` is the game's own), `street_talk` (the diner's word on the street), `news` (a piece in the paper,
-  answered as the headline on the first line and the body after), `dealer_take` (the seller's word on a car), `ad` (an
+  answered as the headline on the first line and the body after), `ad` (an
   ad's blurb), `portrait_look` (a new rival's looks for the picture, in English) and `test` (Settings' Test button).
   A use with no prompt is not asked for.
+- Talking to people: `chat_seller`, `chat_salesman`, `chat_rival` are sent after the persona as the rest of who the AI
+  is, with the talk as the messages; they name `{name}`, `{nickname}`, `{age}`, `{sex}`, `{temperament}`, `{place}`,
+  `{player}` and `{facts}` (the game's fact sheet, the text pools `chat.fact.*` and `chat.deal.*`). `chat_memory`
+  writes what a person keeps of a talk (`{name}`, `{player}`, `{talk}`). The stage lines, the window's words and the
+  words that make a number an offer are the text pools `chat.*` (the base game's `text/chat.json`).
+
+`ai\people.json`: the temperaments people are drawn with, merged key by key:
+
+```json
+{
+  "temperaments": {
+    "jive_talker": { "words": "A fast-talking car salesman full of jive...", "give": 0.8, "for": ["salesman"], "weight": 4 },
+    "hothead": { "words": "Cocky, quick to take offence...", "give": 0.4, "for": ["rival"], "minAggression": 65 }
+  }
+}
+```
+
+- `words`: who they are, as the AI is told. `give`: how far they come down on a price, times the rules' most for their
+  kind (0 never). `for`: `seller`, `salesman`, `rival` (none: every kind). `weight`: how often. `minAggression`,
+  `maxAggression`: a rival's aggression range. Every kind should have one for every aggression, or the person has none.
+
+`ai\ollama.json`: the game's own model in Ollama, made from Settings ("Make the game's model"), merged key by key:
+`name`, `from` (the base model), `system` (a text or lines), `parameters` (as a Modelfile's), `examples`
+(`{ "player", "answer" }` pairs, its first messages).
 
 `ai\comfy_<use>.json`: a ComfyUI workflow, the last mod's whole (a graph is not merged). The base game has
 `comfy_portrait.json`, the portrait painted for a new face on the street, shown in place of their own portrait from then

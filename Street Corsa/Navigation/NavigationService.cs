@@ -586,14 +586,17 @@ namespace StreetCorsa.Navigation
         /// <summary>
         /// A part to look at in 3D over the current screen (with whatever is bolted on it), its name, condition and
         /// <paramref name="priceLine"/>; Buy only with a <paramref name="buy"/>, which runs once the preview has
-        /// closed. One that fails to build is logged and the player told. False when it did not open.
+        /// closed. One that fails to build is logged and the player told. False when it did not open. With
+        /// <paramref name="talk"/> the seller can be called (while the player's AI is on); <paramref name="talked"/> runs
+        /// after the call, for the screen behind to show a price the call changed.
         /// </summary>
-        public bool ShowPartPreview(PartInstance part, string title, string priceLine, Action? buy)
+        public bool ShowPartPreview(PartInstance part, string title, string priceLine, Action? buy,
+            Func<Services.Talk.Conversation>? talk = null, Action? talked = null)
         {
             try
             {
                 _dialogService.ShowDialog(new Dialogs.PartPreview.PartPreviewDialogViewModel(
-                    _dialogService, _carPartsService.Catalog, part, title, priceLine, buy));
+                    _dialogService, _carPartsService.Catalog, part, title, priceLine, buy, talk, talked));
                 return true;
             }
             catch (Exception ex)

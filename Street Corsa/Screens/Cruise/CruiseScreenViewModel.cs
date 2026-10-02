@@ -118,6 +118,11 @@ namespace StreetCorsa.Screens.Cruise
             DinerCommand = new RelayCommand(() => Leave(toGarage: false));
             AcceptCommand = new AsyncRelayCommand(OnAccept, () => IsEncounterShown && !IsBusy && CanAffordBet);
             WaveOffCommand = new RelayCommand(WaveOff, () => IsEncounterShown && !IsBusy);
+            TalkCommand = new RelayCommand(() =>
+            {
+                if (_rival != null && CanTalk)
+                    Dialogs.Talk.TalkDialogViewModel.Show(_dialogService, Services.Talk.TalkDesk.Shared.ForRival(_gameState, _rival, Services.Talk.TalkPlace.Cruise));
+            }, () => CanTalk);
             CashBetCommand = new RelayCommand(() => IsPinkSlipBet = false, () => CanChangeBet);
             PinkSlipBetCommand = new RelayCommand(() => IsPinkSlipBet = true, () => CanChangeBet);
 
@@ -207,9 +212,17 @@ namespace StreetCorsa.Screens.Cruise
             get => _isEncounterShown;
             private set
             {
-                if (SetProperty(ref _isEncounterShown, value)) RelayCommand.RaiseCanExecuteChanged();
+                if (!SetProperty(ref _isEncounterShown, value)) return;
+                OnPropertyChanged(nameof(CanTalk));
+                RelayCommand.RaiseCanExecuteChanged();
             }
         }
+
+        /// <summary>The rival alongside can be talked to before the player decides, while the player's AI is on</summary>
+        public bool CanTalk => IsEncounterShown && !IsBusy && _rival != null && Services.Talk.TalkDesk.Shared.IsAvailable;
+
+        /// <summary>A word with the rival alongside</summary>
+        public RelayCommand TalkCommand { get; }
 
         private bool _isBusy;
 

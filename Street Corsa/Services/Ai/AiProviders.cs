@@ -5,8 +5,24 @@ using System.Text.Json.Nodes;
 
 namespace StreetCorsa.Services.Ai
 {
-    /// <summary>What one request asks: who the AI is, what it is to write, and how long the answer may be</summary>
-    public sealed record AiTextRequest(string System, string Prompt, int MaxTokens, double Temperature);
+    /// <summary>
+    /// What one request asks: who the AI is, what it is to write, and how long the answer may be. With
+    /// <paramref name="Turns"/> it is a talk: those are sent as the messages so far (the first the player's), and
+    /// <paramref name="Prompt"/> is not sent.
+    /// </summary>
+    public sealed record AiTextRequest(string System, string Prompt, int MaxTokens, double Temperature, IReadOnlyList<AiTurn>? Turns = null)
+    {
+        /// <summary>The messages after the system prompt: the talk's turns, or the prompt as the one user message</summary>
+        public IEnumerable<AiTurn> Messages => Turns is { Count: > 0 } turns ? turns : [new AiTurn(false, Prompt)];
+    }
+
+    /// <summary>One turn of a talk: the player's (<paramref name="Mine"/> false: the user's message) or the AI's own</summary>
+    public sealed record AiTurn(bool Mine, string Text)
+    {
+        public string Role => Mine ? "assistant" : "user";
+
+        public JsonObject ToJson() => new() { ["role"] = Role, ["content"] = Text };
+    }
 
     /// <summary>A provider answered, but not with words the game can use; its message is for the log and the Test button</summary>
     public sealed class AiProviderException(string message) : Exception(message);
@@ -75,7 +91,9 @@ namespace StreetCorsa.Services.Ai
             All.FirstOrDefault(p => p.Equals(provider?.Trim(), StringComparison.OrdinalIgnoreCase)) ?? Ollama;
 
         /// <summary>The provider asked through <paramref name="http"/></summary>
-        public static IAiTextProvider Create(HttpClient http, string? provider, string? endpoint, string? model, string? apiKey)
+        /// <param name="ollama">What else Ollama is sent (context, keep-alive); its own defaults when not given</param>
+        public static IAiTextProvider Create(HttpClient http, string? provider, string? endpoint, string? model, string? apiKey,
+            StreetCorsa.Rules.OllamaRules? ollama = null)
         {
             var kind = Normalize(provider);
             var address = string.IsNullOrWhiteSpace(endpoint) ? DefaultEndpoint(kind) : endpoint.Trim();
@@ -84,7 +102,7 @@ namespace StreetCorsa.Services.Ai
             {
                 OpenAi => new OpenAiTextProvider(http, address, named, apiKey),
                 Anthropic => new AnthropicTextProvider(http, address, named, apiKey),
-                _ => new OllamaTextProvider(http, address, named, apiKey)
+                _ => new OllamaTextProvider(http, address, named, apiKey, ollama)
             };
         }
     }
@@ -150,6 +168,10 @@ namespace StreetCorsa.Services.Ai
             }
         }
 
+        /// <summary>The system prompt as the first message, then the request's</summary>
+        protected static JsonArray WithSystem(AiTextRequest request) =>
+            new([new JsonObject { ["role"] = "system", ["content"] = request.System }, .. request.Messages.Select(turn => (JsonNode)turn.ToJson())]);
+
         protected static string Snippet(string text) => text.Length <= 200 ? text.Trim() : text[..200].Trim() + "...";
 
         protected static string Text(JsonNode? node) =>
@@ -157,22 +179,56 @@ namespace StreetCorsa.Services.Ai
     }
 
     /// <summary>Ollama's own API: POST /api/chat (not streamed), GET /api/tags; an address typed with /api or /v1 on it goes without</summary>
-    public sealed class OllamaTextProvider(HttpClient http, string endpoint, string? model, string? apiKey)
+    public sealed class OllamaTextProvider(HttpClient http, string endpoint, string? model, string? apiKey, StreetCorsa.Rules.OllamaRules? tuning = null)
         : AiTextProviderBase(http, AiProviders.Without(endpoint, "/api", "/v1"), model, apiKey)
     {
+        private readonly StreetCorsa.Rules.OllamaRules? _tuning = tuning;
+
         public override async Task<string> CompleteAsync(AiTextRequest request, CancellationToken cancellationToken)
         {
             var body = new JsonObject
             {
                 ["model"] = await ModelAsync(cancellationToken).ConfigureAwait(false),
                 ["stream"] = false,
-                ["messages"] = new JsonArray(
-                    new JsonObject { ["role"] = "system", ["content"] = request.System },
-                    new JsonObject { ["role"] = "user", ["content"] = request.Prompt }),
-                ["options"] = new JsonObject { ["num_predict"] = request.MaxTokens, ["temperature"] = request.Temperature }
+                ["messages"] = WithSystem(request),
+                ["options"] = Options(request)
             };
+            if (_tuning is { KeepAlive.Length: > 0 }) body["keep_alive"] = _tuning.KeepAlive;
             var answer = await SendAsync(HttpMethod.Post, Endpoint + "/api/chat", body, cancellationToken).ConfigureAwait(false);
             return Text(answer["message"]?["content"]);
+        }
+
+        /// <summary>What the model is asked to answer within: its length and freedom, and the game's tuning when given</summary>
+        private JsonObject Options(AiTextRequest request)
+        {
+            var options = new JsonObject { ["num_predict"] = request.MaxTokens, ["temperature"] = request.Temperature };
+            if (_tuning == null) return options;
+            if (_tuning.ContextTokens > 0) options["num_ctx"] = _tuning.ContextTokens;
+            if (_tuning.RepeatPenalty > 0) options["repeat_penalty"] = _tuning.RepeatPenalty;
+            return options;
+        }
+
+        /// <summary>
+        /// Makes (or makes again) the model <paramref name="name"/> in Ollama from <paramref name="from"/>, with a system
+        /// prompt, parameters and example messages of its own (POST /api/create, not streamed)
+        /// </summary>
+        public async Task CreateModelAsync(string name, string from, string system, JsonObject parameters, IReadOnlyList<AiTurn> examples,
+            CancellationToken cancellationToken)
+        {
+            var body = new JsonObject
+            {
+                ["model"] = name,
+                ["from"] = from,
+                ["system"] = system,
+                ["parameters"] = parameters.DeepClone(),
+                ["stream"] = false
+            };
+            if (examples.Count > 0) body["messages"] = new JsonArray(examples.Select(turn => (JsonNode)turn.ToJson()).ToArray());
+
+            var answer = await SendAsync(HttpMethod.Post, Endpoint + "/api/create", body, cancellationToken).ConfigureAwait(false);
+            var status = Text(answer["status"]);
+            if (status.Length > 0 && !status.Equals("success", StringComparison.OrdinalIgnoreCase))
+                throw new AiProviderException($"Ollama said: {Snippet(status)}");
         }
 
         public override async Task<IReadOnlyList<string>> ModelsAsync(CancellationToken cancellationToken)
@@ -196,9 +252,7 @@ namespace StreetCorsa.Services.Ai
             var body = new JsonObject
             {
                 ["model"] = await ModelAsync(cancellationToken).ConfigureAwait(false),
-                ["messages"] = new JsonArray(
-                    new JsonObject { ["role"] = "system", ["content"] = request.System },
-                    new JsonObject { ["role"] = "user", ["content"] = request.Prompt }),
+                ["messages"] = WithSystem(request),
                 ["max_tokens"] = request.MaxTokens,
                 ["temperature"] = request.Temperature,
                 ["stream"] = false
@@ -242,7 +296,7 @@ namespace StreetCorsa.Services.Ai
                 ["model"] = await ModelAsync(cancellationToken).ConfigureAwait(false),
                 ["max_tokens"] = Math.Max(request.MaxTokens, MinMaxTokens),
                 ["system"] = request.System,
-                ["messages"] = new JsonArray(new JsonObject { ["role"] = "user", ["content"] = request.Prompt })
+                ["messages"] = new JsonArray(request.Messages.Select(turn => (JsonNode)turn.ToJson()).ToArray())
             };
             var answer = await SendAsync(HttpMethod.Post, Endpoint + "/v1/messages", body, cancellationToken).ConfigureAwait(false);
             if (Text(answer["stop_reason"]) == "refusal") throw new AiProviderException("The model declined to answer");

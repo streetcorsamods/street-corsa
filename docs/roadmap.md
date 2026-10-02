@@ -1266,9 +1266,31 @@ one answer (`AiTextRequest(System, Prompt, ...)`); nothing remembers a talk; the
   seller's first words are their take) and in the part preview; "Talk to the salesman" for a dealer's car; "Talk" at
   the Diner for the picked rival and at the Cruise curb before the player accepts or waves off. All shown only while the
   AI is on.
+- **The salesman talks first** (the user's tweak, 2026-10-01): on the dealer's lot he is not waited for. As the player
+  arrives he welcomes them and talks up what he has on the lot; when the player picks a car he goes on about it without
+  being asked, and the player can put in a question at any time. The talk is a panel on the lot screen (and on the car
+  viewing screen for a dealer's car), not a modal: the same talk control the window uses. He remembers what he said
+  about each car (kept per car with the person, this visit and the last ones), so coming back to a car after looking at
+  others he says something new, not the same pitch. Picking cars quickly asks only for the last one.
+- **Ollama tuned for the game** (the user's ask, 2026-10-01; no training, a Modelfile): a `streetcorsa` model made from a
+  base the player has (llama3.1:8b advised on a 12 GB card) with the game's persona as its system prompt, its
+  parameters (temperature, repeat penalty, a context big enough for a talk and its fact sheet) and a few example
+  exchanges in the period's voice. The Modelfile is mod data (`ai/ollama.json`: base, parameters, examples), made in
+  Ollama from Settings with one button (`POST /api/create`), then picked as the model. What the game sends Ollama is
+  tuned too: `num_ctx` for talks, `keep_alive` so the model stays loaded between lines, stop words.
 - **Mod data:** prompts `chat_seller`, `chat_salesman`, `chat_clerk`, `chat_rival` (each a persona of its own on top of
   the game's) and `chat_memory` in `ai/prompts.json`; temperaments in `people/temperaments.json`; window words in
   `text/ui_talk.json`; figures in `rules/ai.json`'s `talk` (turns kept, memories given, forgetDays per kind, haggle).
+
+**As built (2026-10-01, `feature/talking`), not played yet:** see `docs/ai-integration.md`, "Talking to people".
+Changed from the plan: no shop clerk (the paper's part ads are private sellers or rivals; the shops are not called);
+no seller ids on the ads: a person is found by the ad's key (`car:<listing>`, `rivalcar:<ad>`, `part:<ad>`,
+`dealer:<id>`, `rival:<opponent>`) and made from a seed of it; temperaments are `ai/people.json` and the words
+`text/chat.json` (`chat.*`, as `talk.*` is the rivals' lines already); the Modelfile is `ai/ollama.json`. A deal is the
+ad's price itself (no `GameState.Deals`): a counter-offer lowers it too, and the seller's first price is kept with the
+person so asking again never goes under the first floor. The car viewing screen's "What do you make of it?" became the
+talk (`AiWriter.DealerTakeAsync` is no longer called). Tried live against Ollama: `streetcorsa` (llama3.1:8b) talks
+well; llama3.2:3b mixes up prices.
 
 ## Epic: total conversion (planned 2026-09-30)
 

@@ -62,6 +62,18 @@ namespace StreetCorsa.Services.Scheduler.Tasks
                     news.Add(article);
             }
 
+            // Kept as they were, so a rival talked to can tell them true
+            Talk.TalkPeople.RecordRivalRaces(gameState, result.Races.Select(race => new RivalRaceRecord
+            {
+                Date = currentDate,
+                Winner = race.WinnerName,
+                Loser = race.LoserName,
+                LoserCar = race.LoserCar?.DefinitionId,
+                RaceType = race.RaceType,
+                PinkSlip = race.IsPinkSlip,
+                Crashed = race.LoserCrashed
+            }));
+
             OpponentLifeService.AddTalk(gameState, currentDate, talk);
             NewsWriter.Add(gameState, currentDate, news);
             return Task.CompletedTask;

@@ -78,6 +78,7 @@ namespace StreetCorsa.Screens.Diner
                 _selectedOpponent = value;
                 OnPropertyChanged(nameof(SelectedOpponent));
                 OnPropertyChanged(nameof(HasSelectedOpponent));
+                OnPropertyChanged(nameof(CanTalk));
                 OnPropertyChanged(nameof(SelectedOpponentDisplay));
                 OnPropertyChanged(nameof(BracketNote));
 
@@ -87,6 +88,12 @@ namespace StreetCorsa.Screens.Diner
         }
 
         public bool HasSelectedOpponent => SelectedOpponent != null;
+
+        /// <summary>The racer picked can be talked to while the player's AI is on</summary>
+        public bool CanTalk => SelectedOpponent != null && Services.Talk.TalkDesk.Shared.IsAvailable;
+
+        /// <summary>A word with the racer picked, at their table</summary>
+        public RelayCommand TalkCommand { get; }
 
         public string SelectedOpponentDisplay => SelectedOpponent != null
             ? $"{SelectedOpponent.Name} \"{SelectedOpponent.Nickname}\""
@@ -362,6 +369,11 @@ namespace StreetCorsa.Screens.Diner
 
             GarageCommand = new RelayCommand(OnGarage);
             CruiseCommand = new RelayCommand(() => _navigationService.NavigateToCruise(_gameState));
+            TalkCommand = new RelayCommand(() =>
+            {
+                if (SelectedOpponent?.Opponent is { } rival && Services.Talk.TalkDesk.Shared.IsAvailable)
+                    Dialogs.Talk.TalkDialogViewModel.Show(_dialogService, Services.Talk.TalkDesk.Shared.ForRival(_gameState, rival, Services.Talk.TalkPlace.Diner));
+            }, () => CanTalk);
             SelectOpponentCommand = new RelayCommand<OpponentDisplayViewModel>(OnSelectOpponent);
             SelectTrackCommand = new RelayCommand<TrackCardViewModel>(OnSelectTrack);
             // Async: preparing the cars' data takes a moment, and a second click meanwhile must not start a second race

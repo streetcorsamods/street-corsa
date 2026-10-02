@@ -173,6 +173,10 @@
                           DataType="{x:Type partPreview:PartPreviewDialogViewModel}">
                 <partPreview:PartPreviewDialogView/>
             </DataTemplate>
+            <DataTemplate xmlns:talk="clr-namespace:StreetCorsa.Dialogs.Talk"
+                          DataType="{x:Type talk:TalkDialogViewModel}">
+                <talk:TalkDialogView/>
+            </DataTemplate>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

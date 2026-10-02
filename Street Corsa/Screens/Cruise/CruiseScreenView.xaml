@@ -302,6 +302,16 @@
                            Margin="0,6,0,0"
                            Visibility="{Binding HasPoliceNote, Converter={StaticResource BooleanToVisibilityConverter}}"/>
 
+                <!-- A word before deciding, while the player's AI speaks for them -->
+                <Button Content="{t:Text chat.ui.talk}"
+                        Command="{Binding TalkCommand}"
+                        Visibility="{Binding CanTalk, Converter={StaticResource BooleanToVisibilityConverter}}"
+                        Style="{StaticResource DialogSecondaryButtonStyle}"
+                        HorizontalAlignment="Center"
+                        MinWidth="120"
+                        Padding="10,8"
+                        Margin="0,14,0,0"/>
+
                 <!-- Yes or no -->
                 <Grid Margin="0,16,0,0">
                     <Grid.ColumnDefinitions>

@@ -38,6 +38,7 @@ namespace StreetCorsa.Screens.Settings
             ForgetKeyCommand = new RelayCommand(OnForgetKey, () => HasSavedKey);
             TestCommand = new AsyncRelayCommand(OnTestAsync, () => !IsTesting, name: "Test AI");
             TestComfyCommand = new AsyncRelayCommand(OnTestComfyAsync, () => !IsTestingComfy, name: "Test ComfyUI");
+            MakeModelCommand = new AsyncRelayCommand(OnMakeModelAsync, () => !IsMaking, name: "Make the Ollama model");
             Reload();
         }
 
@@ -56,6 +57,82 @@ namespace StreetCorsa.Screens.Settings
         public RelayCommand ForgetKeyCommand { get; }
         public AsyncRelayCommand TestCommand { get; }
         public AsyncRelayCommand TestComfyCommand { get; }
+        public AsyncRelayCommand MakeModelCommand { get; }
+
+        /// <summary>The provider is Ollama: the game's own model can be made in it</summary>
+        public bool IsOllama => _provider.Id == AiProviders.Ollama;
+
+        private string _makeModelResult = GameText.Say("settings.ai.ollama.note");
+
+        public string MakeModelResult
+        {
+            get => _makeModelResult;
+            private set => SetProperty(ref _makeModelResult, value);
+        }
+
+        private bool _makeModelOk;
+
+        public bool MakeModelOk
+        {
+            get => _makeModelOk;
+            private set => SetProperty(ref _makeModelOk, value);
+        }
+
+        private bool _isMaking;
+
+        public bool IsMaking
+        {
+            get => _isMaking;
+            private set
+            {
+                if (SetProperty(ref _isMaking, value)) MakeModelCommand.RaiseCanExecuteChanged();
+            }
+        }
+
+        /// <summary>
+        /// The game's model made in Ollama at the address typed (<c>ai/ollama.json</c>): from the model typed in the box when
+        /// there is one (and it is not the game's own), else the file's base. Once made, its name goes in the model box, to Save.
+        /// </summary>
+        private async Task OnMakeModelAsync()
+        {
+            if (AiPrompts.Installed.Ollama is not { } model)
+            {
+                MakeModelOk = false;
+                MakeModelResult = GameText.Say("settings.ai.ollama.none");
+                return;
+            }
+
+            var from = Model.Trim().Length > 0 && !Model.Trim().Equals(model.Name, StringComparison.OrdinalIgnoreCase) ? Model.Trim() : model.From;
+            IsMaking = true;
+            MakeModelResult = GameText.Say("settings.ai.ollama.making", ("model", model.Name), ("from", from));
+            try
+            {
+                var endpoint = Endpoint.Trim().Length > 0 ? Endpoint.Trim() : AiProviders.DefaultEndpoint(AiProviders.Ollama);
+                var ollama = new OllamaTextProvider(AiHttp.Shared, endpoint, null, null);
+                var examples = model.Examples
+                    .Where(e => e.Player.Length > 0 && e.Answer.Length > 0)
+                    .SelectMany(e => new[] { new AiTurn(false, e.Player), new AiTurn(true, e.Answer) })
+                    .ToList();
+                using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+                await ollama.CreateModelAsync(model.Name, from, model.SystemText, model.Parameters, examples, timeout.Token);
+
+                _logger.Information("Made the Ollama model {Model} from {From} at {Endpoint}", model.Name, from, endpoint);
+                Model = model.Name;
+                MakeModelOk = true;
+                MakeModelResult = GameText.Say("settings.ai.ollama.made", ("model", model.Name), ("from", from));
+            }
+            catch (Exception ex)
+            {
+                var reason = ex is OperationCanceledException ? GameText.Say("settings.ai.test.timeout") : ex.Message;
+                _logger.Information("Could not make the Ollama model {Model} from {From}: {Error}", model.Name, from, reason);
+                MakeModelOk = false;
+                MakeModelResult = GameText.Say("settings.ai.ollama.failed", ("from", from), ("error", reason));
+            }
+            finally
+            {
+                IsMaking = false;
+            }
+        }
 
         /// <summary>What the settings in use hold, shown again (after a reset)</summary>
         public void Reload()
@@ -100,6 +177,7 @@ namespace StreetCorsa.Screens.Settings
                 _provider = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(NeedsKey));
+                OnPropertyChanged(nameof(IsOllama));
                 OnPropertyChanged(nameof(ModelHint));
                 if (string.IsNullOrWhiteSpace(Endpoint) || Endpoint.Trim() == oldDefault) Endpoint = AiProviders.DefaultEndpoint(value.Id);
             }

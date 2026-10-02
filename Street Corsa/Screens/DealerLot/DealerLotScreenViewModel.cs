@@ -127,7 +127,50 @@ namespace StreetCorsa.Screens.DealerLot
                 OnPropertyChanged(nameof(SelectedCar));
                 OnPropertyChanged(nameof(HasSelection));
                 RefreshEngine();
+
+                // The salesman goes over with the player: about the car once it stays picked a moment, the last one picked
+                _ = Talk?.PickAsync(SelectedCar is { } car ? new Services.Talk.CarSubject(car) : null,
+                    TimeSpan.FromSeconds(Math.Max(0, Services.Talk.TalkFacts.Rules.PitchDelaySeconds)));
             }
+        }
+
+        private TalkViewModel? _talk;
+
+        /// <summary>The salesman's talk, begun as the player arrives; none while the player's AI is off</summary>
+        public TalkViewModel? Talk
+        {
+            get => _talk;
+            private set
+            {
+                if (!SetProperty(ref _talk, value)) return;
+                OnPropertyChanged(nameof(HasTalk));
+            }
+        }
+
+        public bool HasTalk => Talk != null;
+
+        /// <summary>He does not wait to be asked: he comes over, welcomes the player and talks up the lot</summary>
+        private void StartTalk()
+        {
+            if (Talk != null || _dealer == null || !Services.Talk.TalkDesk.Shared.IsAvailable) return;
+
+            var talk = new TalkViewModel(Services.Talk.TalkDesk.Shared.ForLot(_gameState, _dealer.Id, Stock));
+            talk.PriceChanged += OnPriceChanged;
+            Talk = talk;
+            _ = talk.OpenAsync();
+        }
+
+        // The card is bound to the car picked: shown again, it shows the price the salesman came down to
+        private bool _refreshingCard;
+
+        private void OnPriceChanged()
+        {
+            _refreshingCard = true;
+            OnPropertyChanged(nameof(SelectedCar));
+            _refreshingCard = false;
+            if (SelectedCar is { } car) car.CanAfford = _gameState.Player.Money >= car.Listing.Price;
+            OnPropertyChanged(nameof(SelectedCar));
+            RelayCommand.RaiseCanExecuteChanged();
         }
 
         private Audio.EngineSpec? _selectedEngine;
@@ -167,7 +210,7 @@ namespace StreetCorsa.Screens.DealerLot
 
         /// <summary>The car being looked at, or null on the lot view</summary>
         public UsedCarListingViewModel? SelectedCar =>
-            _selectedIndex >= 0 && _selectedIndex < Stock.Count ? Stock[_selectedIndex] : null;
+            !_refreshingCard && _selectedIndex >= 0 && _selectedIndex < Stock.Count ? Stock[_selectedIndex] : null;
 
         public bool HasSelection => SelectedCar != null;
 
@@ -306,11 +349,13 @@ namespace StreetCorsa.Screens.DealerLot
 
             ResolveShowroom();
             LoadStock();
+            StartTalk();
         }
 
         public override void Exit()
         {
             base.Exit();
+            Talk?.End();
             _logger.Information("Left {Dealer}", DealerName);
         }
     }

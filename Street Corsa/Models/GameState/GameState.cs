@@ -53,6 +53,12 @@ namespace StreetCorsa.Models.GameState
         /// </summary>
         public List<AiWords> AiWords { get; set; } = [];
 
+        /// <summary>The people the player has talked to: who they are, what they remember, the prices talked over</summary>
+        public List<Person> People { get; set; } = [];
+
+        /// <summary>The races between rivals, newest last, the oldest dropped past the rules' most (<c>ai.talk.rivalRacesKept</c>)</summary>
+        public List<RivalRaceRecord> RivalRaces { get; set; } = [];
+
         // Career Progression
         public CareerState Career { get; set; }
 
