@@ -195,8 +195,13 @@ namespace StreetCorsa.Services.News
         public static void Add(GameState gameState, DateTime date, IEnumerable<NewsArticle> articles)
         {
             gameState.News ??= [];
-            DatedLog.Append(gameState.News, articles, a => a.Date, date, DaysKept, MaxKept);
+            var added = articles.ToList();
+            DatedLog.Append(gameState.News, added, a => a.Date, date, DaysKept, MaxKept);
+            Added?.Invoke(gameState, added);
         }
+
+        /// <summary>Told of every new piece once it is in the paper: the player's AI writes it again (<see cref="Ai.AiWriter.NewsAdded"/>)</summary>
+        public static Action<GameState, IReadOnlyList<NewsArticle>>? Added { get; set; }
 
         /// <summary>What the paper prints on <paramref name="today"/>: the last few days, newest day first, the weightiest first within a day</summary>
         public static List<NewsArticle> FrontPage(IEnumerable<NewsArticle>? news, DateTime today) =>

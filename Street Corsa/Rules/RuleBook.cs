@@ -107,6 +107,9 @@ public sealed class RuleBook
 
     public WorldRules World { get; set; } = new();
 
+    /// <summary>The AI the player may connect: how long the game waits for it and what it asks of it</summary>
+    public AiRules Ai { get; set; } = new();
+
     // The save Current was read for, so a game made current again is not read again
     private static WeakReference<Models.GameState.GameState>? _currentFor;
 

@@ -417,6 +417,10 @@ namespace StreetCorsa.Screens.Diner
             }
             RelayCommand.RaiseCanExecuteChanged();
 
+            // The player's AI, if on, writes the other racers' greetings ahead, so a click shows one at once
+            foreach (var opponentVm in Opponents.Where(o => !ReferenceEquals(o, SelectedOpponent)))
+                _talkService.Prepare(TalkContextFor(opponentVm, TalkTrigger.OpponentSelected));
+
             LoadStreetTalk();
         }
 
@@ -428,7 +432,7 @@ namespace StreetCorsa.Screens.Diner
             {
                 var days = (today - item.Date.Date).Days;
                 var when = days <= 0 ? GameText.Say("diner.talk.today") : days == 1 ? GameText.Say("diner.talk.yesterday") : GameText.Say("diner.talk.date", ("date", item.Date));
-                StreetTalk.Add(new StreetTalkLine(when, item.Text));
+                StreetTalk.Add(new StreetTalkLine(when, Services.Ai.AiWriter.Said(item)));
             }
 
             OnPropertyChanged(nameof(HasStreetTalk));
@@ -471,40 +475,44 @@ namespace StreetCorsa.Screens.Diner
         {
             try
             {
-                // Get player's car for context
-                CarDefinition? playerCarDef = null;
-                if (_gameState.Player.SelectedCarInstanceId != null)
-                {
-                    var playerCar = _gameState.Player.Cars.FirstOrDefault(c =>
-                        c.InstanceId == _gameState.Player.SelectedCarInstanceId);
-                    if (playerCar != null)
-                    {
-                        playerCarDef = _catalogRepository.GetCar(playerCar.DefinitionId);
-                    }
-                }
-
-                var grudge = opponentVm.Opponent.Grudge;
-                var context = new TalkContext
-                {
-                    Opponent = opponentVm.Opponent,
-                    Player = _gameState.Player,
-                    OpponentCar = opponentVm.CarDefinition,
-                    PlayerCar = playerCarDef,
-                    Trigger = trigger,
-                    IsPinkSlipBet = IsPinkSlipBet,
-                    SelectedTrackName = SelectedTrack?.DisplayName,
-                    Grudge = grudge,
-                    GrudgeCarName = grudge == null ? null : CarNames.Of(_catalogRepository, grudge.CarDefinitionId),
-                    PlayerHasGrudgeCar = grudge != null && _gameState.Player.Cars.Any(c => c.InstanceId == grudge.CarInstanceId)
-                };
-
-                OpponentMessage = await _talkService.GetMessageAsync(context);
+                OpponentMessage = await _talkService.GetMessageAsync(TalkContextFor(opponentVm, trigger));
             }
             catch (Exception ex)
             {
                 _logger.Warning("Failed to load opponent message: {Error}", ex.Message);
                 OpponentMessage = "";
             }
+        }
+
+        /// <summary>The moment a racer at the tables speaks in: who, to whom, about which cars, track and bet</summary>
+        private TalkContext TalkContextFor(OpponentDisplayViewModel opponentVm, TalkTrigger trigger)
+        {
+            // Get player's car for context
+            CarDefinition? playerCarDef = null;
+            if (_gameState.Player.SelectedCarInstanceId != null)
+            {
+                var playerCar = _gameState.Player.Cars.FirstOrDefault(c =>
+                    c.InstanceId == _gameState.Player.SelectedCarInstanceId);
+                if (playerCar != null)
+                {
+                    playerCarDef = _catalogRepository.GetCar(playerCar.DefinitionId);
+                }
+            }
+
+            var grudge = opponentVm.Opponent.Grudge;
+            return new TalkContext
+            {
+                Opponent = opponentVm.Opponent,
+                Player = _gameState.Player,
+                OpponentCar = opponentVm.CarDefinition,
+                PlayerCar = playerCarDef,
+                Trigger = trigger,
+                IsPinkSlipBet = IsPinkSlipBet,
+                SelectedTrackName = SelectedTrack?.DisplayName,
+                Grudge = grudge,
+                GrudgeCarName = grudge == null ? null : CarNames.Of(_catalogRepository, grudge.CarDefinitionId),
+                PlayerHasGrudgeCar = grudge != null && _gameState.Player.Cars.Any(c => c.InstanceId == grudge.CarInstanceId)
+            };
         }
 
         private void LoadTracks()

@@ -5,8 +5,68 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:radio="clr-namespace:StreetCorsa.Audio.Radio"
              xmlns:t="clr-namespace:StreetCorsa.Services.Text"
+             xmlns:helpers="clr-namespace:StreetCorsa.Helpers"
              mc:Ignorable="d"
              d:DesignWidth="800">
+    <UserControl.Resources>
+        <!-- The API key's box, in the text box's look (Styles/Inputs.xaml): dark glass, a cream outline, amber when typing in -->
+        <Style x:Key="AiKeyBoxStyle" TargetType="PasswordBox">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+            <Setter Property="Background" Value="{StaticResource UiFieldBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource UiOutlineSoftBrush}"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="Padding" Value="8,3"/>
+            <Setter Property="CaretBrush" Value="{StaticResource AmberBrush}"/>
+            <Setter Property="SelectionBrush" Value="{StaticResource AmberBrush}"/>
+            <Setter Property="SelectionOpacity" Value="0.35"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="PasswordBox">
+                        <Grid>
+                            <Border Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="6">
+                                <ScrollViewer x:Name="PART_ContentHost"
+                                              Focusable="False"
+                                              HorizontalScrollBarVisibility="Hidden"
+                                              VerticalScrollBarVisibility="Hidden"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                            </Border>
+                            <Border x:Name="ring" Opacity="0" IsHitTestVisible="False" CornerRadius="6"
+                                    BorderBrush="{StaticResource AmberBrush}" BorderThickness="{TemplateBinding BorderThickness}"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ring" Property="Opacity" Value="0.6"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                <Setter TargetName="ring" Property="Opacity" Value="1"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- A Test's answer: cream when it worked, the accent when it did not -->
+        <Style x:Key="AiResultStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource AccentPrimaryBrush}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="0,6,0,0"/>
+            <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}"/>
+        </Style>
+
+        <Style x:Key="AiLabelStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+    </UserControl.Resources>
     <!-- The Settings card of the main screen -->
     <Border Style="{StaticResource MenuCardStyle}">
         <StackPanel>
@@ -159,6 +219,163 @@
                                   Foreground="{StaticResource TextSecondaryBrush}"
                                   VerticalAlignment="Center"/>
                     </DockPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- AI (step 25): the player's own text provider and ComfyUI; the ticks and the provider are saved at once, the
+                 address, model and key with the section's Save; the key is kept encrypted and never shown back -->
+            <Border Background="{StaticResource ScrimBrush}"
+                    BorderBrush="{StaticResource BorderLightBrush}"
+                    BorderThickness="1"
+                    CornerRadius="5"
+                    Padding="15"
+                    Width="560"
+                    Margin="0,0,0,24"
+                    DataContext="{Binding Ai}">
+                <StackPanel>
+                    <TextBlock Text="{t:Text settings.ai}"
+                               FontWeight="Bold"
+                               Foreground="{StaticResource TextPrimaryBrush}"
+                               Margin="0,0,0,6"/>
+                    <TextBlock Text="{t:Text settings.ai.note}"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               FontSize="{StaticResource FontSizeSmall}"
+                               TextWrapping="Wrap"
+                               Margin="0,0,0,10"/>
+                    <CheckBox Content="{t:Text settings.ai.enabled}"
+                              IsChecked="{Binding Enabled}"
+                              Foreground="{StaticResource TextSecondaryBrush}"
+                              Margin="0,0,0,10"/>
+                    <Grid IsEnabled="{Binding Enabled}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="110"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Text="{t:Text settings.ai.provider}" Style="{StaticResource AiLabelStyle}"/>
+                        <ComboBox Grid.Row="0" Grid.Column="1"
+                                  ItemsSource="{Binding Providers}"
+                                  SelectedItem="{Binding Provider}"
+                                  DisplayMemberPath="Name"
+                                  Margin="0,3"/>
+
+                        <TextBlock Grid.Row="1" Text="{t:Text settings.ai.endpoint}" Style="{StaticResource AiLabelStyle}"/>
+                        <TextBox Grid.Row="1" Grid.Column="1"
+                                 Text="{Binding Endpoint, UpdateSourceTrigger=PropertyChanged}"
+                                 Margin="0,3"/>
+
+                        <TextBlock Grid.Row="2" Text="{t:Text settings.ai.model}" Style="{StaticResource AiLabelStyle}"/>
+                        <TextBox Grid.Row="2" Grid.Column="1"
+                                 Text="{Binding Model, UpdateSourceTrigger=PropertyChanged}"
+                                 helpers:GlassInput.Hint="{Binding ModelHint}"
+                                 Margin="0,3"/>
+
+                        <TextBlock Grid.Row="3" Text="{t:Text settings.ai.key}" Style="{StaticResource AiLabelStyle}"
+                                   Visibility="{Binding NeedsKey, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                        <DockPanel Grid.Row="3" Grid.Column="1" Margin="0,3"
+                                   Visibility="{Binding NeedsKey, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <Button DockPanel.Dock="Right"
+                                    Content="{t:Text settings.ai.key.forget}"
+                                    Command="{Binding ForgetKeyCommand}"
+                                    Style="{StaticResource DialogSecondaryButtonStyle}"
+                                    Width="110"
+                                    Margin="8,0,0,0"/>
+                            <PasswordBox x:Name="AiKeyBox"
+                                         Style="{StaticResource AiKeyBoxStyle}"
+                                         PasswordChanged="OnAiKeyChanged"
+                                         AutomationProperties.Name="{t:Text settings.ai.key}"/>
+                        </DockPanel>
+                        <TextBlock Grid.Row="4" Grid.Column="1"
+                                   Text="{t:Text settings.ai.key.saved}"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   FontSize="{StaticResource FontSizeSmall}"
+                                   TextWrapping="Wrap"
+                                   Margin="0,2,0,0">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding NeedsKey}" Value="True"/>
+                                                <Condition Binding="{Binding HasSavedKey}" Value="True"/>
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </MultiDataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+                    <DockPanel Margin="0,10,0,0" IsEnabled="{Binding Enabled}">
+                        <Button DockPanel.Dock="Right"
+                                Content="{t:Text settings.ai.test}"
+                                Command="{Binding TestCommand}"
+                                Style="{StaticResource DialogSecondaryButtonStyle}"
+                                Width="90"/>
+                        <TextBlock Text="{Binding TestResult}"
+                                   VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource AiResultStyle}">
+                                    <Setter Property="Margin" Value="0,0,10,0"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding TestOk}" Value="True">
+                                            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </DockPanel>
+
+                    <Border Height="1" Background="{StaticResource BorderLightBrush}" Margin="0,14,0,12"/>
+
+                    <CheckBox Content="{t:Text settings.ai.comfy}"
+                              IsChecked="{Binding ComfyEnabled}"
+                              Foreground="{StaticResource TextSecondaryBrush}"
+                              Margin="0,0,0,8"/>
+                    <Grid IsEnabled="{Binding ComfyEnabled}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="110"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{t:Text settings.ai.comfy.endpoint}" Style="{StaticResource AiLabelStyle}" TextWrapping="Wrap"/>
+                        <TextBox Grid.Column="1"
+                                 Text="{Binding ComfyEndpoint, UpdateSourceTrigger=PropertyChanged}"
+                                 Margin="0,3"/>
+                        <Button Grid.Column="2"
+                                Content="{t:Text settings.ai.test}"
+                                Command="{Binding TestComfyCommand}"
+                                Style="{StaticResource DialogSecondaryButtonStyle}"
+                                Width="90"
+                                Margin="8,0,0,0"/>
+                    </Grid>
+                    <TextBlock Text="{Binding ComfyResult}"
+                               Visibility="{Binding ComfyResult, Converter={StaticResource StringToVisibilityConverter}}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource AiResultStyle}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ComfyOk}" Value="True">
+                                        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <Button Content="{t:Text common.save}"
+                            Command="{Binding SaveCommand}"
+                            Style="{StaticResource DialogPrimaryButtonStyle}"
+                            Width="120"
+                            HorizontalAlignment="Right"
+                            Margin="0,12,0,0"/>
                 </StackPanel>
             </Border>
 

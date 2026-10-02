@@ -1,0 +1,76 @@
+{
+  "_comment": [
+    "What the player's AI is asked, when they connect one in Settings (see docs/modding.md, \"ai\"). Every mod's",
+    "ai/prompts.json goes over the ones before it key by key: a mod changes the persona or one prompt without repeating the rest.",
+    "persona: who the AI is, sent as the system prompt with every request (a text, or a list of lines joined with spaces).",
+    "prompts: one per use, each { prompt, maxLength (characters kept, cut at a sentence or a word), maxTokens, temperature,",
+    "  lines (the first lines of the answer kept, 1 by default; 0 keeps all) }.",
+    "The game always has its own words first; the AI tells them again or adds to them, and a failure leaves the game's own.",
+    "{placeholders} are filled like the game's text (money and units as there: {price:money}, {mileage:distance}).",
+    "Every prompt may name {language} (the player's language, by its own name), {units} and {title}; the persona does.",
+    "talk: a rival's line. {line} the game's own line; {name}, {nickname}, {age}, {aggression} (0-100), {temper},",
+    "  {standing}, {king}, {moment} (OpponentSelected, TrackSelected, BetTypeChanged, PulledUp), {pinkSlip}, {grudge},",
+    "  {track}, {car} (the rival's), {playerCar}, {biography}.",
+    "street_talk: a line of the diner's word on the street. {line}.",
+    "news: a piece in the paper, answered as the headline on the first line and the body after. {headline}, {body}.",
+    "dealer_take: what the seller says about a car on sale. {car}, {price}, {mileage} (km), {condition} (percent),",
+    "  {engine}, {power} (hp), {modified}, {dealer}, {specialty}, {private} (yes for a private seller), {days} (on sale).",
+    "ad: an ad's blurb made livelier. {kind} (car, part), {blurb} (the game's own), and the facts the ad hands over.",
+    "portrait_look: how a new rival looks, for ComfyUI's picture (comfy_portrait.json's {look}); in English, whatever",
+    "  the player's language, as image models read English. {name}, {nickname}, {age}, {sex}, {biography}, {aggression}.",
+    "test: the Settings screen's Test button."
+  ],
+  "persona": [
+    "You write for {title}, a game about street racing in a small American city in the early 1960s:",
+    "hot rods, drive-ins, the diner, drag strips, pink slips and the police.",
+    "Write as people of that time and place talk: plain, short, a little cocky, period slang used sparingly, never modern words.",
+    "Never mention that this is a game, never explain, never add notes or quotation marks.",
+    "Keep every name, car, number and fact you are given exactly as given, and invent no new facts.",
+    "Write in {language}. Speeds, distances and fuel in {units}."
+  ],
+  "prompts": {
+    "talk": {
+      "prompt": "{name} \"{nickname}\", {age}, a {temper} street racer ({standing}), says this to the player at the diner or from a car window: \"{line}\"\nSay the same thing in {name}'s own voice, one or two short sentences. Answer with the words only.",
+      "maxLength": 180,
+      "maxTokens": 80,
+      "temperature": 0.9
+    },
+    "street_talk": {
+      "prompt": "A line of gossip overheard at the diner: \"{line}\"\nTell it again the way a regular at the counter would, one or two sentences, keeping every name and fact. Answer with the words only.",
+      "maxLength": 200,
+      "maxTokens": 90,
+      "temperature": 0.9
+    },
+    "news": {
+      "prompt": "A small-town newspaper of the time reports a street race.\nHeadline: {headline}\nStory: {body}\nWrite it again as that paper would: the headline on the first line (at most eight words, no quotation marks), then the story in two to four sentences on the next line. Keep every name, car and figure, and add no names, places, cars or events the story does not have.",
+      "maxLength": 520,
+      "maxTokens": 220,
+      "temperature": 0.7,
+      "lines": 0
+    },
+    "dealer_take": {
+      "prompt": "A customer asks the seller about a {car} for sale at {price:money}, {mileage:distance} on the clock, condition {condition} out of 100, engine: {engine}, {power} hp, modified: {modified}. On sale {days} days. Seller: {dealer} ({specialty}); private seller: {private}.\nAnswer as the seller would, honest enough but selling, in two or three sentences: what is good about it, what to watch for. Name no engine, power or part you were not given. Answer with the words only.",
+      "maxLength": 320,
+      "maxTokens": 140,
+      "temperature": 0.9
+    },
+    "ad": {
+      "prompt": "A classified ad in the paper offers a {kind}: \"{blurb}\"\nWrite the ad's few words again, livelier but as short (at most twelve words), in the clipped style of period classifieds, keeping every fact and adding none: no price, no phone number, nothing the ad does not say. Answer with the words only.",
+      "maxLength": 120,
+      "maxTokens": 50,
+      "temperature": 1.0
+    },
+    "portrait_look": {
+      "prompt": "Describe for a photographer, in English, how {name} \"{nickname}\" looks: a {age}-year-old {sex}, a street racer in the early 1960s. {biography}\nOne line of comma-separated visual details: face, hair, expression, clothes, pose. No names, no sentences.",
+      "maxLength": 300,
+      "maxTokens": 90,
+      "temperature": 1.0
+    },
+    "test": {
+      "prompt": "Greet a newcomer at the diner in one short sentence.",
+      "maxLength": 140,
+      "maxTokens": 50,
+      "temperature": 0.8
+    }
+  }
+}
