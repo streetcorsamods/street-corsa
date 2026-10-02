@@ -126,6 +126,7 @@ namespace StreetCorsa.Screens.DealerLot
                 OnPropertyChanged(nameof(SelectedIndex));
                 OnPropertyChanged(nameof(SelectedCar));
                 OnPropertyChanged(nameof(HasSelection));
+                OnPropertyChanged(nameof(HasColumn));
                 RefreshEngine();
 
                 // The salesman goes over with the player: about the car once it stays picked a moment, the last one picked
@@ -144,10 +145,14 @@ namespace StreetCorsa.Screens.DealerLot
             {
                 if (!SetProperty(ref _talk, value)) return;
                 OnPropertyChanged(nameof(HasTalk));
+                OnPropertyChanged(nameof(HasColumn));
             }
         }
 
         public bool HasTalk => Talk != null;
+
+        /// <summary>The left column shows: a car picked, or the salesman talking</summary>
+        public bool HasColumn => HasSelection || HasTalk;
 
         /// <summary>He does not wait to be asked: he comes over, welcomes the player and talks up the lot</summary>
         private void StartTalk()

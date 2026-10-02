@@ -69,7 +69,7 @@
                         <Grid Margin="0,0,0,8">
                             <!-- Theirs: on the left, their name over it -->
                             <StackPanel HorizontalAlignment="Left"
-                                        MaxWidth="340"
+                                        MaxWidth="290"
                                         Visibility="{Binding FromThem, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <TextBlock Text="{Binding Who}"
                                            FontSize="{StaticResource FontSizeCaption}"
@@ -88,7 +88,7 @@
                             </StackPanel>
                             <!-- The player's: on the right -->
                             <Border HorizontalAlignment="Right"
-                                    MaxWidth="320"
+                                    MaxWidth="270"
                                     Background="{StaticResource UiPrimaryGlassBrush}"
                                     CornerRadius="4"
                                     Padding="10,6"

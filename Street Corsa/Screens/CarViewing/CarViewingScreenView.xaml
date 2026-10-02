@@ -73,159 +73,171 @@
         <TextBlock Text="{t:Text preview.car.hint}"
                    FontSize="{StaticResource FontSizeCaption}"
                    Foreground="{StaticResource TextSecondaryBrush}"
-                   HorizontalAlignment="Left"
+                   HorizontalAlignment="Right"
                    VerticalAlignment="Bottom"
-                   Margin="24,0,0,20"
+                   Margin="0,0,24,20"
                    IsHitTestVisible="False">
             <TextBlock.Effect>
                 <DropShadowEffect BlurRadius="8" ShadowDepth="0" Color="{StaticResource Shadow}" Opacity="1"/>
             </TextBlock.Effect>
         </TextBlock>
 
-        <!-- The talk with the seller, once begun (a salesman begins it himself) -->
+        <!-- The car and the talk, one narrow column on the left: the card on top, the talk under it (a salesman
+             begins it himself), so the car stands clear in the rest of the screen -->
         <Border HorizontalAlignment="Left"
-                VerticalAlignment="Bottom"
-                Width="440"
-                Height="380"
-                Margin="24,0,0,48"
+                Width="360"
+                Margin="100,20,0,20"
                 Background="{StaticResource Glass15E8Brush}"
                 BorderBrush="{StaticResource Cream70Brush}"
                 BorderThickness="1"
                 CornerRadius="4"
-                Padding="16,14"
-                Visibility="{Binding HasTalk, Converter={StaticResource BooleanToVisibilityConverter}}">
+                Padding="16,14">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="VerticalAlignment" Value="Top"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding HasTalk}" Value="True">
+                            <Setter Property="VerticalAlignment" Value="Stretch"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
             <Border.Effect>
                 <DropShadowEffect BlurRadius="20" ShadowDepth="0" Color="{StaticResource Shadow}" Opacity="0.8"/>
             </Border.Effect>
-            <controls:TalkPanel DataContext="{Binding Talk}"/>
-        </Border>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <ScrollViewer Grid.Row="0"
+                              MaxHeight="430"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel>
+                        <StackPanel DataContext="{Binding Car}">
+                            <TextBlock Text="{Binding DisplayName}"
+                                       FontSize="{StaticResource FontSizeCardTitle}"
+                                       FontWeight="Bold"
+                                       TextWrapping="Wrap"
+                                       Foreground="{StaticResource TextPrimaryBrush}"/>
+                            <TextBlock Text="{Binding YearDisplay}"
+                                       FontSize="{StaticResource FontSizeCompact}"
+                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                       Margin="0,0,0,14"/>
 
-        <!-- The ad's facts, the engine to start, Buy and Back -->
-        <Border HorizontalAlignment="Right"
-                VerticalAlignment="Center"
-                Width="340"
-                Margin="0,0,24,0"
-                Background="{StaticResource Glass15E8Brush}"
-                BorderBrush="{StaticResource Cream70Brush}"
-                BorderThickness="1"
-                CornerRadius="4"
-                Padding="20">
-            <Border.Effect>
-                <DropShadowEffect BlurRadius="20" ShadowDepth="0" Color="{StaticResource Shadow}" Opacity="0.8"/>
-            </Border.Effect>
-            <StackPanel>
-                <StackPanel DataContext="{Binding Car}">
-                    <TextBlock Text="{Binding DisplayName}"
-                               FontSize="{StaticResource FontSizeCardTitle}"
-                               FontWeight="Bold"
-                               TextWrapping="Wrap"
-                               Foreground="{StaticResource TextPrimaryBrush}"/>
-                    <TextBlock Text="{Binding YearDisplay}"
-                               FontSize="{StaticResource FontSizeCompact}"
-                               Foreground="{StaticResource TextSecondaryBrush}"
-                               Margin="0,0,0,14"/>
+                            <TextBlock Text="{Binding WasPriceDisplay}"
+                                       Visibility="{Binding IsOnSale, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                       FontSize="{StaticResource FontSizeCompact}"
+                                       TextDecorations="Strikethrough"
+                                       Foreground="{StaticResource TextSecondaryBrush}"/>
+                            <TextBlock Text="{Binding PriceDisplay}"
+                                       FontSize="{StaticResource FontSizeTitle}"
+                                       FontWeight="Bold"
+                                       Foreground="{StaticResource AccentSuccessBrush}"
+                                       Margin="0,0,0,14"/>
 
-                    <TextBlock Text="{Binding WasPriceDisplay}"
-                               Visibility="{Binding IsOnSale, Converter={StaticResource BooleanToVisibilityConverter}}"
-                               FontSize="{StaticResource FontSizeCompact}"
-                               TextDecorations="Strikethrough"
-                               Foreground="{StaticResource TextSecondaryBrush}"/>
-                    <TextBlock Text="{Binding PriceDisplay}"
-                               FontSize="{StaticResource FontSizeTitle}"
-                               FontWeight="Bold"
-                               Foreground="{StaticResource AccentSuccessBrush}"
-                               Margin="0,0,0,14"/>
+                            <!-- The ad's few words, as printed -->
+                            <TextBlock Text="{Binding Description}"
+                                       Visibility="{Binding Description, Converter={StaticResource StringToVisibilityConverter}}"
+                                       FontStyle="Italic"
+                                       FontSize="{StaticResource FontSizeCompact}"
+                                       TextWrapping="Wrap"
+                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                       Margin="0,-6,0,14"/>
 
-                    <!-- The ad's few words, as printed -->
-                    <TextBlock Text="{Binding Description}"
-                               Visibility="{Binding Description, Converter={StaticResource StringToVisibilityConverter}}"
-                               FontStyle="Italic"
-                               FontSize="{StaticResource FontSizeCompact}"
-                               TextWrapping="Wrap"
-                               Foreground="{StaticResource TextPrimaryBrush}"
-                               Margin="0,-6,0,14"/>
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{t:Text preview.car.condition}" Grid.Column="0" FontSize="{StaticResource FontSizeCompact}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                <TextBlock Text="{Binding ConditionDisplay}" Grid.Column="1" FontSize="{StaticResource FontSizeCompact}" HorizontalAlignment="Right"
+                                           Foreground="{StaticResource TextPrimaryBrush}"/>
+                            </Grid>
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{t:Text preview.car.mileage}" Grid.Column="0" FontSize="{StaticResource FontSizeCompact}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                <TextBlock Text="{Binding MileageDisplay}" Grid.Column="1" FontSize="{StaticResource FontSizeCompact}" HorizontalAlignment="Right"
+                                           Foreground="{StaticResource TextPrimaryBrush}"/>
+                            </Grid>
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{t:Text preview.car.seller}" Grid.Column="0" FontSize="{StaticResource FontSizeCompact}" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                <TextBlock Text="{Binding DealerName}" Grid.Column="1" FontSize="{StaticResource FontSizeCompact}" HorizontalAlignment="Right"
+                                           TextTrimming="CharacterEllipsis" Margin="12,0,0,0"
+                                           Foreground="{StaticResource TextPrimaryBrush}"/>
+                            </Grid>
 
-                    <Grid Margin="0,0,0,6">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="{t:Text preview.car.condition}" Grid.Column="0" FontSize="{StaticResource FontSizeCompact}" Foreground="{StaticResource TextSecondaryBrush}"/>
-                        <TextBlock Text="{Binding ConditionDisplay}" Grid.Column="1" FontSize="{StaticResource FontSizeCompact}" HorizontalAlignment="Right"
-                                   Foreground="{StaticResource TextPrimaryBrush}"/>
-                    </Grid>
-                    <Grid Margin="0,0,0,6">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="{t:Text preview.car.mileage}" Grid.Column="0" FontSize="{StaticResource FontSizeCompact}" Foreground="{StaticResource TextSecondaryBrush}"/>
-                        <TextBlock Text="{Binding MileageDisplay}" Grid.Column="1" FontSize="{StaticResource FontSizeCompact}" HorizontalAlignment="Right"
-                                   Foreground="{StaticResource TextPrimaryBrush}"/>
-                    </Grid>
-                    <Grid Margin="0,0,0,6">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="{t:Text preview.car.seller}" Grid.Column="0" FontSize="{StaticResource FontSizeCompact}" Foreground="{StaticResource TextSecondaryBrush}"/>
-                        <TextBlock Text="{Binding DealerName}" Grid.Column="1" FontSize="{StaticResource FontSizeCompact}" HorizontalAlignment="Right"
-                                   TextTrimming="CharacterEllipsis" Margin="12,0,0,0"
-                                   Foreground="{StaticResource TextPrimaryBrush}"/>
-                    </Grid>
+                            <TextBlock Text="{Binding EngineDisplay}"
+                                       FontSize="{StaticResource FontSizeCompact}"
+                                       TextWrapping="Wrap"
+                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                       Margin="0,8,0,0"
+                                       Visibility="{Binding EngineDisplay, Converter={StaticResource StringToVisibilityConverter}}"/>
 
-                    <TextBlock Text="{Binding EngineDisplay}"
-                               FontSize="{StaticResource FontSizeCompact}"
-                               TextWrapping="Wrap"
-                               Foreground="{StaticResource TextSecondaryBrush}"
-                               Margin="0,8,0,0"
-                               Visibility="{Binding EngineDisplay, Converter={StaticResource StringToVisibilityConverter}}"/>
+                            <!-- Who had it, how it has raced -->
+                            <TextBlock Text="{Binding HistoryDisplay}"
+                                       FontSize="{StaticResource FontSizeCompact}"
+                                       TextWrapping="Wrap"
+                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                       Margin="0,6,0,0"
+                                       Visibility="{Binding HistoryDisplay, Converter={StaticResource StringToVisibilityConverter}}"/>
+                        </StackPanel>
 
-                    <!-- Who had it, how it has raced -->
-                    <TextBlock Text="{Binding HistoryDisplay}"
-                               FontSize="{StaticResource FontSizeCompact}"
-                               TextWrapping="Wrap"
-                               Foreground="{StaticResource TextSecondaryBrush}"
-                               Margin="0,6,0,0"
-                               Visibility="{Binding HistoryDisplay, Converter={StaticResource StringToVisibilityConverter}}"/>
-                </StackPanel>
+                        <!-- Start it up before you buy it -->
+                        <controls:EnginePanel x:Name="EnginePanel"
+                                              Margin="0,16,0,0"
+                                              Engine="{Binding Engine}"/>
 
-                <!-- Start it up before you buy it -->
-                <controls:EnginePanel x:Name="EnginePanel"
-                                      Margin="0,16,0,0"
-                                      Engine="{Binding Engine}"/>
+                        <!-- A word with the seller, when the player's AI speaks for them -->
+                        <Button Content="{Binding TalkLabel}"
+                                Margin="0,14,0,0"
+                                Height="32"
+                                FontSize="{StaticResource FontSizeCompact}"
+                                Command="{Binding TalkCommand}"
+                                Visibility="{Binding CanTalk, Converter={StaticResource BooleanToVisibilityConverter}}"/>
 
-                <!-- A word with the seller, when the player's AI speaks for them -->
-                <Button Content="{Binding TalkLabel}"
-                        Margin="0,14,0,0"
-                        Height="32"
-                        FontSize="{StaticResource FontSizeCompact}"
-                        Command="{Binding TalkCommand}"
-                        Visibility="{Binding CanTalk, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                        <TextBlock Text="{Binding AffordLine}"
+                                   Visibility="{Binding AffordLine, Converter={StaticResource StringToVisibilityConverter}}"
+                                   FontSize="{StaticResource FontSizeCompact}"
+                                   TextWrapping="Wrap"
+                                   Foreground="{StaticResource GoldBrush}"
+                                   Margin="0,14,0,0"/>
 
-                <TextBlock Text="{Binding AffordLine}"
-                           Visibility="{Binding AffordLine, Converter={StaticResource StringToVisibilityConverter}}"
-                           FontSize="{StaticResource FontSizeCompact}"
-                           TextWrapping="Wrap"
-                           Foreground="{StaticResource GoldBrush}"
-                           Margin="0,14,0,0"/>
+                        <Button Content="{t:Text preview.car.buy}"
+                                Margin="0,16,0,0"
+                                Height="42"
+                                FontSize="{StaticResource FontSizeBodyLarge}"
+                                FontWeight="Bold"
+                                Command="{Binding BuyCommand}"/>
 
-                <Button Content="{t:Text preview.car.buy}"
-                        Margin="0,16,0,0"
-                        Height="42"
-                        FontSize="{StaticResource FontSizeBodyLarge}"
-                        FontWeight="Bold"
-                        Command="{Binding BuyCommand}"/>
-
-                <Button Content="{t:Text preview.car.back}"
-                        Margin="0,10,0,0"
-                        Height="32"
-                        FontSize="{StaticResource FontSizeCompact}"
-                        Background="Transparent"
-                        BorderBrush="{StaticResource BorderLightBrush}"
-                        Foreground="{StaticResource TextSecondaryBrush}"
-                        Command="{Binding BackCommand}"/>
-            </StackPanel>
+                        <Button Content="{t:Text preview.car.back}"
+                                Margin="0,10,0,0"
+                                Height="32"
+                                FontSize="{StaticResource FontSizeCompact}"
+                                Background="Transparent"
+                                BorderBrush="{StaticResource BorderLightBrush}"
+                                Foreground="{StaticResource TextSecondaryBrush}"
+                                Command="{Binding BackCommand}"/>
+                    </StackPanel>
+                </ScrollViewer>
+                <Border Grid.Row="1"
+                        MinHeight="220"
+                        Margin="0,12,0,0"
+                        Padding="0,12,0,0"
+                        BorderBrush="{StaticResource Cream70Brush}"
+                        BorderThickness="0,1,0,0"
+                        Visibility="{Binding HasTalk, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <controls:TalkPanel DataContext="{Binding Talk}"/>
+                </Border>
+            </Grid>
         </Border>
 
     </Grid>
