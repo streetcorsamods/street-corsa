@@ -112,6 +112,12 @@ namespace StreetCorsa.Models.GameState
 
         /// <summary>The player's AI rewrote <see cref="Description"/>: it is not offered the ad again</summary>
         public bool AiPolished { get; set; }
+
+        /// <summary>
+        /// The price first asked, kept the first time anybody haggles over it: the hard floor is worked out from it
+        /// (<c>ai.talk.mostDiscount</c>), so asking again and again, of whoever, never brings it lower. Null until then.
+        /// </summary>
+        public decimal? FirstAsked { get; set; }
     }
 
     /// <summary>Where a dealer is in its life: open, holding its closing-down sale, gone, or not open yet</summary>

@@ -80,8 +80,16 @@ The AI only speaks: the game decides every fact and every price.
 - **Haggling** (`Haggle`): a number the player types reads as an offer when it has a currency sign or "k", or an offer
   word (`chat.offer_words`) is in the line, and it is within reason of the price. The rules (`ai.talk`) decide: take it,
   meet halfway, stand firm, or take offence; the floor comes from the price first asked (`PersonDeal.Asked`), times the
-  kind's most discount and the temperament's `give`, more for a broke rival or a thing long on sale. The new price is the
+  kind's most discount and the temperament's `give`, more for a broke rival or a thing long on sale. A hard floor holds
+  over all of it: the ad keeps the price it was first offered at (`FirstAsked` on the listing, the rival's ad, the part
+  ad) and nobody goes more than `mostDiscount` (25%) under it, however often and whoever is asked (a forgotten seller
+  made again starts from it too). The new price is the
   ad's own (the listing's, the rival's ad's, the part ad's), so every way of buying pays it. The AI is told the answer.
+  Words of agreement (`chat.agree_words` anywhere in the line, `chat.agree_alone` as the whole line: "you got a deal",
+  "I'll take it", "deal") shake on the price as it stands. Once agreed (an offer taken or a shake), the talk shows
+  "Buy it for $X", which runs the screen's own purchase (the car viewing screen's, the lot's, the part preview's).
+  An answer that names a lower price than the one standing, that no fact or player line gives, is asked again with a
+  word on it (`chat.fact.price_warning`); a second time, the game says the price itself (`chat.deal.held`).
 - **Memories**: when a talk with something said by the player ends, `chat_memory` writes one line in the background, kept
   with the game date (`PersonMemory`); the newest few are told next time, forgotten after `forgetDays*` (seller 14,
   salesman 30, rival 90).

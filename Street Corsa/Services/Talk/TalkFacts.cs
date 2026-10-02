@@ -162,6 +162,7 @@ namespace StreetCorsa.Services.Talk
                 HaggleAnswer.Accept => "chat.deal.accept",
                 HaggleAnswer.Counter => "chat.deal.counter",
                 HaggleAnswer.Firm => "chat.deal.firm",
+                HaggleAnswer.Shake => "chat.deal.shake",
                 _ => "chat.deal.insulted"
             };
             yield return GameText.Say(key, ("offer", new Helpers.Money(outcome.Offer)), ("price", new Helpers.Money(outcome.Price)));

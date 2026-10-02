@@ -44,10 +44,10 @@ namespace StreetCorsa.Screens.Shared
             Talk = talk;
             Portrait = portrait;
             SendCommand = new AsyncRelayCommand(SendAsync, () => CanSend, name: "Talk.Send");
+            BuyCommand = new RelayCommand(() => Buy?.Invoke(), () => CanBuy);
             talk.Dealt += _ =>
             {
-                OnPropertyChanged(nameof(PriceLine));
-                OnPropertyChanged(nameof(DealLine));
+                RefreshPrice();
                 PriceChanged?.Invoke();
             };
         }
@@ -112,6 +112,27 @@ namespace StreetCorsa.Screens.Shared
         public bool CanSend => !IsWaiting && !_ended && Draft.Trim().Length > 0;
 
         public AsyncRelayCommand SendCommand { get; }
+
+        private Action? _buy;
+
+        /// <summary>What buying the thing talked about is where the talk is (the screen's own purchase); none: no Buy</summary>
+        public Action? Buy
+        {
+            get => _buy;
+            set
+            {
+                _buy = value;
+                OnPropertyChanged(nameof(CanBuy));
+            }
+        }
+
+        /// <summary>A price is agreed: the deal can be closed</summary>
+        public bool CanBuy => Buy != null && Talk.IsAgreed && !_ended;
+
+        /// <summary>"Buy it for $1,325"</summary>
+        public string BuyLabel => Talk.Subject is { } subject ? GameText.Say("chat.ui.buy", ("price", new Helpers.Money(subject.Price))) : string.Empty;
+
+        public RelayCommand BuyCommand { get; }
 
         /// <summary>The other one begins (once)</summary>
         public Task OpenAsync()
@@ -224,6 +245,9 @@ namespace StreetCorsa.Screens.Shared
         {
             OnPropertyChanged(nameof(PriceLine));
             OnPropertyChanged(nameof(DealLine));
+            OnPropertyChanged(nameof(CanBuy));
+            OnPropertyChanged(nameof(BuyLabel));
+            RelayCommand.RaiseCanExecuteChanged();
         }
     }
 }

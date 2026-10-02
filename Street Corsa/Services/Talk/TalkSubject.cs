@@ -19,6 +19,9 @@ namespace StreetCorsa.Services.Talk
 
         public abstract DateTime OnSaleSince { get; }
 
+        /// <summary>The price first asked, kept on the ad itself the first time it is talked over (the hard floor's base)</summary>
+        public abstract decimal? FirstAsked { get; set; }
+
         /// <summary>A price up to the seller's round figures</summary>
         public abstract decimal Round(decimal price);
     }
@@ -45,6 +48,16 @@ namespace StreetCorsa.Services.Talk
 
         public override DateTime OnSaleSince => Car.RivalAd?.PostedDate ?? Car.Listing.ListedDate;
 
+        public override decimal? FirstAsked
+        {
+            get => Car.RivalAd?.FirstAsked ?? Car.Listing.FirstAsked;
+            set
+            {
+                if (Car.RivalAd is { } ad) ad.FirstAsked = value;
+                Car.Listing.FirstAsked = value;
+            }
+        }
+
         public override decimal Round(decimal price) => Haggle.RoundUp(price, StreetCorsa.Rules.RuleBook.Current.Ai.Talk.CarPriceStep);
     }
 
@@ -64,6 +77,12 @@ namespace StreetCorsa.Services.Talk
         }
 
         public override DateTime OnSaleSince => Ad.PostedDate;
+
+        public override decimal? FirstAsked
+        {
+            get => Ad.FirstAsked;
+            set => Ad.FirstAsked = value;
+        }
 
         public override decimal Round(decimal price) => Haggle.RoundUp(price, price >= 100 ? StreetCorsa.Rules.RuleBook.Current.Ai.Talk.PartPriceStep : 1);
     }

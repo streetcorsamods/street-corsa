@@ -76,6 +76,34 @@ public class TalkTests
         Assert.Equal(1275m, counter.Price);
     }
 
+    private static readonly IReadOnlyList<string> AgreeWords = ["got a deal", "it's a deal", "i'll take it"];
+    private static readonly IReadOnlyList<string> AgreeAlone = ["deal", "sold", "ok"];
+
+    [Theory]
+    [InlineData("yo got a deal", true)]
+    [InlineData("You got a deal!", true)]
+    [InlineData("Deal.", true)]
+    [InlineData("ok", true)]
+    [InlineData("Alright, I'll take it", true)]
+    [InlineData("What's the deal with the engine?", false)]
+    [InlineData("Is it sold?", false)]
+    [InlineData("I won't take it for that", false)]
+    public void Taking_the_price_as_it_stands_is_read_from_what_the_player_types(string text, bool agrees)
+    {
+        Assert.Equal(agrees, Haggle.AgreesIn(text, AgreeWords, AgreeAlone));
+    }
+
+    [Theory]
+    [InlineData("Tell you what, $1,300 and she's yours.", true)]
+    [InlineData("I could do 1,250 bucks.", true)]
+    [InlineData("Only 57,166 miles on her, a '57 with a 283.", false)]
+    [InlineData("The Fairlane over there is $900, but this one's $1,325.", false)]
+    [InlineData("You offered $1,000? No dice.", false)]
+    public void An_answer_that_comes_down_by_itself_is_caught(string answer, bool lower)
+    {
+        Assert.Equal(lower, Haggle.NamesLowerPrice(answer, 1325m, [900m, 1000m, 1450m]));
+    }
+
     // ----- a talk -----
 
     private static GameState Game()
@@ -140,8 +168,55 @@ public class TalkTests
             talk.End();
         }
 
+        // Taking the price as it stands shakes on it and changes nothing
+        var price = car.Listing.Price;
+        var shake = desk.ForCar(game, car, null, TalkPlace.Phone);
+        Assert.False(shake.IsAgreed);
+        await shake.SayAsync("yo got a deal", Ct);
+        Assert.Equal(HaggleAnswer.Shake, shake.LastOutcome!.Answer);
+        Assert.True(shake.IsAgreed);
+        Assert.Equal(price, car.Listing.Price);
+
         Assert.True(car.Listing.Price >= Haggle.Floor(1500m, PersonKind.PrivateSeller, BasePrompts().TemperamentOf(TalkPeople.Find(game, TalkPeople.CarKey(car.Listing))!.Temperament), 0, false, Rules));
         Assert.Single(game.People);
+    }
+
+    [Fact]
+    public async Task However_often_and_whoever_is_asked_a_price_never_goes_under_the_hard_floor()
+    {
+        var game = Game();
+        var car = Car();
+        var (desk, _) = Desk();
+
+        // Asked again and again, the seller forgetting the player (made again) in between: the ad keeps its first price
+        for (var i = 0; i < 30; i++)
+        {
+            var talk = desk.ForCar(game, car, null, TalkPlace.Phone);
+            await talk.SayAsync($"I'll give you ${Math.Round(car.Listing.Price * 0.8m)}", Ct);
+            talk.End();
+            game.People.Clear();
+        }
+
+        Assert.Equal(1500m, car.Listing.FirstAsked);
+        Assert.True(car.Listing.Price >= Haggle.HardFloor(1500m, Rules), $"{car.Listing.Price}");
+        Assert.Equal(1125m, Haggle.HardFloor(1500m, Rules));
+    }
+
+    [Fact]
+    public async Task A_price_the_ai_comes_down_to_by_itself_is_asked_again_and_then_held_by_the_game()
+    {
+        var game = Game();
+        var car = Car();
+        var (desk, ai) = Desk(answer: "Tell you what, pal, $1,100 and she's yours.");
+        var talk = desk.ForCar(game, car, "dealer_1", TalkPlace.Lot);
+
+        var said = await talk.SayAsync("yo got a deal", Ct);
+
+        Assert.Equal(2, ai.Chats.Count);
+        Assert.Contains(GameText.Say("chat.fact.price_warning", ("price", new Helpers.Money(1500m))), (string)ai.Chats[1].Values["facts"]!);
+        Assert.Equal(GameText.Say("chat.deal.held", ("price", new Helpers.Money(1500m))), said);
+        Assert.Equal(1500m, car.Listing.Price);
+        Assert.True(talk.IsAgreed);
     }
 
     [Fact]

@@ -57,7 +57,7 @@ namespace StreetCorsa.Dialogs.PartPreview
             {
                 if (conversation.Subject is { } subject) PriceLine = Helpers.Money.Text(subject.Price);
                 _talked?.Invoke();
-            }, jumpQueue: true);
+            }, jumpQueue: true, buy: _buy == null ? null : OnBuy);
         }
 
         public PartsCatalog Catalog { get; }

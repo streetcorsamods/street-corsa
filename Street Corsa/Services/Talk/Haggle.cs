@@ -19,7 +19,10 @@ namespace StreetCorsa.Services.Talk
         Firm,
 
         /// <summary>So low it is not worth an answer</summary>
-        Insulted
+        Insulted,
+
+        /// <summary>The player takes the price as it stands ("you got a deal"): shaken on, nothing changes</summary>
+        Shake
     }
 
     /// <summary>An offer and what came of it: <paramref name="Price"/> is the price now (the ad's)</summary>
@@ -74,6 +77,46 @@ namespace StreetCorsa.Services.Talk
         }
 
         /// <summary>
+        /// The player agrees to the price as it stands: a line that is one of <paramref name="alone"/> ("deal", "ok") by
+        /// itself, or that holds one of <paramref name="phrases"/> ("got a deal", "I'll take it", "sold"), in any case
+        /// </summary>
+        public static bool AgreesIn(string text, IReadOnlyList<string> phrases, IReadOnlyList<string> alone)
+        {
+            var line = Regex.Replace(text.Trim().ToLowerInvariant(), @"[.!?,]+$", string.Empty).Trim();
+            if (line.Length == 0) return false;
+            if (alone.Any(word => line == word.ToLowerInvariant())) return true;
+            return phrases.Any(phrase => phrase.Length > 0
+                                         && Regex.IsMatch(line, $@"(^|\W){Regex.Escape(phrase.ToLowerInvariant())}(\W|$)"));
+        }
+
+        /// <summary>
+        /// The sums of money <paramref name="text"/> names: with a currency sign ("$1,250"), or "bucks"/"dollars" after
+        /// them ("900 bucks"); a mileage or a year is no sum
+        /// </summary>
+        public static IReadOnlyList<decimal> SumsIn(string text)
+        {
+            var sums = new List<decimal>();
+            foreach (Match match in Amount().Matches(text))
+            {
+                var marked = match.Groups["cur"].Success
+                             || Regex.IsMatch(text[(match.Index + match.Length)..], @"^\s*(bucks|dollars|grand)\b", RegexOptions.IgnoreCase);
+                if (marked && Value(match) is { } value) sums.Add(value);
+            }
+
+            return sums;
+        }
+
+        /// <summary>
+        /// The answer names a price under <paramref name="price"/> that nothing the person was told gives (the player's
+        /// own offer, a cheaper car on the lot, what was first asked): the AI came down by itself
+        /// </summary>
+        public static bool NamesLowerPrice(string answer, decimal price, IEnumerable<decimal> known)
+        {
+            var allowed = known.ToHashSet();
+            return SumsIn(answer).Any(sum => sum < price && !allowed.Contains(sum));
+        }
+
+        /// <summary>
         /// The least the seller takes: what was first asked, less the most their kind comes down (<see cref="TalkRules"/>)
         /// times their temperament's give, more for a broke rival, more again for something long on sale
         /// </summary>
@@ -90,6 +133,13 @@ namespace StreetCorsa.Services.Talk
             if (daysOnSale >= rules.LongOnSaleDays) discount += rules.LongOnSaleExtra;
             return asked * (1m - (decimal)Math.Clamp(discount, 0, Math.Clamp(rules.MostDiscount, 0, 1)));
         }
+
+        /// <summary>
+        /// The least anybody ever takes for a thing first offered at <paramref name="firstAsked"/>: that less
+        /// <see cref="TalkRules.MostDiscount"/>, however often and whoever is asked
+        /// </summary>
+        public static decimal HardFloor(decimal firstAsked, TalkRules rules) =>
+            firstAsked * (1m - (decimal)Math.Clamp(rules.MostDiscount, 0, 1));
 
         /// <summary>
         /// The seller's answer to <paramref name="offer"/> with the price at <paramref name="current"/> and the least they

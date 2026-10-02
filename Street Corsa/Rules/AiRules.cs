@@ -121,8 +121,11 @@ public sealed class TalkRules
     /// <summary>...up to this share of it: a year or a mileage is no offer</summary>
     public double OfferHighest { get; set; } = 1.5;
 
-    /// <summary>The most a seller ever comes down, whatever their temperament and the time on sale</summary>
-    public double MostDiscount { get; set; } = 0.6;
+    /// <summary>
+    /// The hard floor: the most anybody ever comes down from the price a thing was first offered at (0.25: never under 75
+    /// percent of it), whatever their temperament, the time on sale, and however often the player asks
+    /// </summary>
+    public double MostDiscount { get; set; } = 0.25;
 
     /// <summary>A salesman's cars told him, the dearest first</summary>
     public int LotCarsTold { get; set; } = 10;

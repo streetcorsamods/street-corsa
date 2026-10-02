@@ -6,6 +6,8 @@
     "chat.stage.*: what happens, sent as the player's turn in [brackets] (the AI answers it): {thing} is what is talked about.",
     "chat.ui.*: the words of the talk window and panel.",
     "chat.offer_words: words that make a number in what the player types an offer (with a currency sign or k it is one anyway).",
+    "chat.agree_words: phrases that, anywhere in the player's line, take the price as it stands; chat.agree_alone: words that do",
+    "  it as the whole line. chat.deal.shake, chat.deal.held, chat.fact.price_warning, chat.ui.buy: {price}.",
     "chat.place.*: where the talk is, for the prompt's {place}. chat.sex.*: {sex}.",
     "chat.fact.car: {car}, {year}, {price}. car_engine: {engine}. car_power: {power} (hp). car_condition: {condition}, {label},",
     "  {mileage}. car_history: {history}. ad: {ad}. on_sale: {days}. part: {part}, {group}, {condition}, {price}.",
@@ -81,6 +83,9 @@
     "chat.deal.accept_asked": "The player has just offered {offer:money}, more than you ask. You take the price, {price:money}: say it's a deal at that.",
     "chat.deal.counter": "The player has just offered {offer:money}. Too low, but you come down to {price:money} and no lower right now. Say so.",
     "chat.deal.firm": "The player has just offered {offer:money}. You will not come down any more from {price:money}. Say so.",
+    "chat.deal.shake": "The player takes your price, {price:money}: it's a deal. Shake on it at {price:money}, not a cent lower.",
+    "chat.deal.held": "The price is {price:money}, friend. That's as low as it goes.",
+    "chat.fact.price_warning": "You just named a price lower than {price:money} by yourself: never do that. The price is {price:money}; only the deal lines change it.",
     "chat.deal.insulted": "The player has just offered {offer:money}: far too low, near an insult. Turn it down; the price stays {price:money}.",
 
     "chat.transcript.player": "Player: {text}",
@@ -90,6 +95,13 @@
       "take", "give", "offer", "pay", "would you", "how about", "what about", "bucks", "dollars", "cash", "deal", "for"
     ],
 
+    "chat.agree_words": [
+      "got a deal", "it's a deal", "its a deal", "that's a deal", "thats a deal", "i'll take it", "ill take it", "i will take it",
+      "agreed", "shake on it", "you're on", "youre on", "we have a deal", "we got a deal"
+    ],
+    "chat.agree_alone": [ "deal", "sold", "ok", "okay", "sure", "yes", "fine", "done" ],
+
+    "chat.ui.buy": "Buy it for {price:money}",
     "chat.ui.talk": "Talk",
     "chat.ui.call_seller": "Call the seller",
     "chat.ui.talk_seller": "Talk to the seller",
