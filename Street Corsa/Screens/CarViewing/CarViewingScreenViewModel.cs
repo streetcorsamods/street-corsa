@@ -72,7 +72,6 @@ namespace StreetCorsa.Screens.CarViewing
             BuyCommand = new RelayCommand(OnBuy, () => Car != null);
             BackCommand = new RelayCommand(OnBack);
             GarageCommand = new RelayCommand(OnGarage);
-            TalkCommand = new RelayCommand(StartTalk, () => CanTalk);
         }
 
         /// <summary>The air of where the car stands</summary>
@@ -83,9 +82,6 @@ namespace StreetCorsa.Screens.CarViewing
         public RelayCommand BackCommand { get; }
 
         public RelayCommand GarageCommand { get; }
-
-        /// <summary>Talk to the seller: the player's AI speaking for them, when it is on</summary>
-        public RelayCommand TalkCommand { get; }
 
         /// <summary>The car as the ads show it; null until the screen is entered</summary>
         public UsedCarListingViewModel? Car { get; private set; }
@@ -109,7 +105,10 @@ namespace StreetCorsa.Screens.CarViewing
 
         private TalkViewModel? _talk;
 
-        /// <summary>The talk with the seller, once begun: a dealer's salesman begins it himself as the player arrives</summary>
+        /// <summary>
+        /// The talk with the seller, while the player's AI is on: begun by the seller as the player arrives (a salesman
+        /// comes over, a private seller comes out to the curb)
+        /// </summary>
         public TalkViewModel? Talk
         {
             get => _talk;
@@ -117,17 +116,14 @@ namespace StreetCorsa.Screens.CarViewing
             {
                 if (!SetProperty(ref _talk, value)) return;
                 OnPropertyChanged(nameof(HasTalk));
-                OnPropertyChanged(nameof(CanTalk));
+                OnPropertyChanged(nameof(ShowsCarInfo));
             }
         }
 
         public bool HasTalk => Talk != null;
 
-        /// <summary>The seller can be talked to while the player's AI is on</summary>
-        public bool CanTalk => Car != null && Talk == null && Services.Talk.TalkDesk.Shared.IsAvailable;
-
-        /// <summary>"Talk to the salesman" on a lot, "Talk to the seller" at the curb</summary>
-        public string TalkLabel => GameText.Say(_seller.Spot == CarViewingSpot.DealerLot ? "chat.ui.talk_salesman" : "chat.ui.talk_seller");
+        /// <summary>The car's facts and Buy in the left card: with nobody to talk to (the player's AI is off)</summary>
+        public bool ShowsCarInfo => Car != null && !HasTalk;
 
         private void StartTalk()
         {
@@ -138,7 +134,6 @@ namespace StreetCorsa.Screens.CarViewing
             var view = new TalkViewModel(talk, portrait) { Buy = OnBuy };
             view.PriceChanged += OnPriceChanged;
             Talk = view;
-            RelayCommand.RaiseCanExecuteChanged();
             _ = view.OpenAsync();
         }
 
@@ -152,6 +147,7 @@ namespace StreetCorsa.Screens.CarViewing
             OnPropertyChanged(nameof(Car));
             OnPropertyChanged(nameof(CanAfford));
             OnPropertyChanged(nameof(AffordLine));
+            OnPropertyChanged(nameof(ShowsCarInfo));
         }
 
         private Audio.EngineSpec? _engine;
@@ -180,12 +176,12 @@ namespace StreetCorsa.Screens.CarViewing
             OnPropertyChanged(nameof(SellerLine));
             OnPropertyChanged(nameof(CanAfford));
             OnPropertyChanged(nameof(AffordLine));
-            OnPropertyChanged(nameof(CanTalk));
-            OnPropertyChanged(nameof(TalkLabel));
             RelayCommand.RaiseCanExecuteChanged();
 
-            // A salesman does not wait to be asked: he comes over as the player walks onto the lot
-            if (_seller.Spot == CarViewingSpot.DealerLot) StartTalk();
+            // Nobody waits to be asked: the salesman comes over as the player walks onto the lot, a private seller comes
+            // out to the curb
+            StartTalk();
+            OnPropertyChanged(nameof(ShowsCarInfo));
 
             _ = LoadEngineAsync(Car);
         }

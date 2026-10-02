@@ -105,8 +105,6 @@
     "chat.ui.talk": "Talk",
     "chat.ui.toggle": "Show or hide the talk",
     "chat.ui.call_seller": "Call the seller",
-    "chat.ui.talk_seller": "Talk to the seller",
-    "chat.ui.talk_salesman": "Talk to the salesman",
     "chat.ui.send": "Say it",
     "chat.ui.hang_up": "Hang up",
     "chat.ui.goodbye": "So long",

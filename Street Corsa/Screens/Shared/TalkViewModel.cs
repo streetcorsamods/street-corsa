@@ -75,7 +75,19 @@ namespace StreetCorsa.Screens.Shared
         public bool IsOpen
         {
             get => _isOpen;
-            set => SetProperty(ref _isOpen, value);
+            set
+            {
+                if (SetProperty(ref _isOpen, value) && value) HasUnread = false;
+            }
+        }
+
+        private bool _hasUnread;
+
+        /// <summary>They said something while the talk was shut: the tab calls for the player until it is opened</summary>
+        public bool HasUnread
+        {
+            get => _hasUnread;
+            private set => SetProperty(ref _hasUnread, value);
         }
 
         /// <summary>A rival's portrait, when there is one</summary>
@@ -245,7 +257,10 @@ namespace StreetCorsa.Screens.Shared
 
             if (_ended) return;
             if (said != null)
+            {
                 Lines.Add(new TalkLineViewModel(Talk.Person.Name, said, false));
+                if (!IsOpen) HasUnread = true;
+            }
             else if (failKey != null)
                 Lines.Add(new TalkLineViewModel(string.Empty, GameText.Say(failKey), false, isNote: true));
         }
