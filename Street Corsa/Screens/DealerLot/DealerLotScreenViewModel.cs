@@ -42,7 +42,6 @@ namespace StreetCorsa.Screens.DealerLot
         private readonly DealerDefinition? _dealer;
 
         public RelayCommand BackCommand { get; }
-        public RelayCommand BackToLotCommand { get; }
         public RelayCommand<UsedCarListingViewModel> PurchaseCarCommand { get; }
 
         /// <summary>Everything this dealer has, whether or not it fitted on the lot</summary>
@@ -107,7 +106,6 @@ namespace StreetCorsa.Screens.DealerLot
             _dealer = dealerCatalog.Get(dealerId);
 
             BackCommand = new RelayCommand(OnBack);
-            BackToLotCommand = new RelayCommand(() => SelectedIndex = -1);
             PurchaseCarCommand = new RelayCommand<UsedCarListingViewModel>(OnPurchaseCar, CanPurchaseCar);
 
             // The showroom and the stock are loaded in Enter, once the screen before has been left
@@ -126,7 +124,7 @@ namespace StreetCorsa.Screens.DealerLot
                 OnPropertyChanged(nameof(SelectedIndex));
                 OnPropertyChanged(nameof(SelectedCar));
                 OnPropertyChanged(nameof(HasSelection));
-                OnPropertyChanged(nameof(HasColumn));
+                OnPropertyChanged(nameof(ShowsCarInfo));
                 RefreshEngine();
 
                 // The salesman goes over with the player: about the car once it stays picked a moment, the last one picked
@@ -145,14 +143,17 @@ namespace StreetCorsa.Screens.DealerLot
             {
                 if (!SetProperty(ref _talk, value)) return;
                 OnPropertyChanged(nameof(HasTalk));
-                OnPropertyChanged(nameof(HasColumn));
+                OnPropertyChanged(nameof(ShowsCarInfo));
             }
         }
 
         public bool HasTalk => Talk != null;
 
-        /// <summary>The left column shows: a car picked, or the salesman talking</summary>
-        public bool HasColumn => HasSelection || HasTalk;
+        /// <summary>
+        /// The car's facts and Buy in the left card: a car picked and no salesman to tell of it and sell it (the player's
+        /// AI is off); with him, the card is the talk
+        /// </summary>
+        public bool ShowsCarInfo => HasSelection && !HasTalk;
 
         /// <summary>He does not wait to be asked: he comes over, welcomes the player and talks up the lot</summary>
         private void StartTalk()
