@@ -32,8 +32,8 @@ public sealed record CarViewingStage(
 /// <summary>
 /// One car in a scene, to walk round: the car viewing screen's view of a car for sale. The scene and the car load
 /// together and the picture is held back until the car stands there (<see cref="IsSettled"/>); then the camera glides
-/// in to the car's front three-quarter and walks slowly round it. Dragging walks round it (and stops the walk), the
-/// wheel steps closer or back. The car stands on the
+/// in to the car's front three-quarter and walks round it. Dragging walks round it by hand (the walk picks up again a
+/// few seconds after the player lets go), the wheel steps closer or back. The car stands on the
 /// ground by its tyres, and its running engine rocks it.
 /// </summary>
 public class CarViewingViewport3D : D3DViewportBase
@@ -52,8 +52,11 @@ public class CarViewingViewport3D : D3DViewportBase
     private const float MinRadius = 3.2f;
     private const float FloorClearance = 0.25f;
 
-    // Once in, the camera walks slowly round the car (radians a second) until the player takes it
-    private const float TurnRate = 0.12f;
+    // Once in, the camera walks round the car (radians a second, a lap in about 25 s); the player's drag stops it, and
+    // it eases back into the walk a while after the player lets go
+    private const float TurnRate = 0.25f;
+    private const double ResumeAfterSeconds = 4;
+    private const float TurnEase = 1.5f;
 
     // The light over a car seen after dark: on the camera's side of it, up on a pole, warm, reaching the whole car
     private const float DarkBelow = 0.5f;
@@ -72,6 +75,8 @@ public class CarViewingViewport3D : D3DViewportBase
     private float? _alphaGoal;
     private System.Windows.Point? _dragFrom;
     private bool _touched;
+    private DateTime _letGoAt;
+    private float _turnSpeed;
     private int _fadeInAfter = -1;
 
     public CarViewingViewport3D()
@@ -254,6 +259,7 @@ public class CarViewingViewport3D : D3DViewportBase
         var alpha = PreviewFraming.CarCameraAlpha(stage.Heading, stage.CameraFromSide);
         _alphaGoal = alpha;
         _touched = false;
+        _turnSpeed = 0f;
 
         orbit.MinY = FloorClearance;
         orbit.Target = _target;
@@ -302,12 +308,23 @@ public class CarViewingViewport3D : D3DViewportBase
             }
             else
             {
+                // In: the walk round takes over from the next frame, so the pump must not stop here
                 _alphaGoal = null;
+                moving = true;
             }
         }
-        else if (!_touched && _loaded != null)
+        else if (_loaded != null)
         {
-            orbit.Alpha += TurnRate * Math.Min(dt, GarageRenderer.MaxTickSeconds * 2f);
+            if (_touched && _dragFrom == null && (DateTime.Now - _letGoAt).TotalSeconds >= ResumeAfterSeconds) _touched = false;
+            if (!_touched)
+            {
+                // Eased in, from the glide's end and after the player's hand
+                var step = Math.Min(dt, GarageRenderer.MaxTickSeconds * 2f);
+                _turnSpeed += (TurnRate - _turnSpeed) * (1f - MathF.Exp(-TurnEase * step));
+                orbit.Alpha += _turnSpeed * step;
+            }
+
+            // Still drawn while the player's hand rests, to see when the walk picks up again
             moving = true;
         }
 
@@ -363,7 +380,18 @@ public class CarViewingViewport3D : D3DViewportBase
     {
         base.OnMouseLeftButtonUp(e);
         _dragFrom = null;
+        _letGoAt = DateTime.Now;
         ReleaseMouseCapture();
+    }
+
+    protected override void OnLostMouseCapture(System.Windows.Input.MouseEventArgs e)
+    {
+        base.OnLostMouseCapture(e);
+        if (_dragFrom == null) return;
+
+        // Let go somewhere else (another window took the mouse): the walk picks up as after any let-go
+        _dragFrom = null;
+        _letGoAt = DateTime.Now;
     }
 
     protected override void OnMouseMove(System.Windows.Input.MouseEventArgs e)
@@ -379,6 +407,7 @@ public class CarViewingViewport3D : D3DViewportBase
         // The player has the camera now: it is no longer brought round to the car, nor walked round it
         _alphaGoal = null;
         _touched = true;
+        _turnSpeed = 0f;
         orbit.Alpha += (float)dx * DragPerPixel;
         _betaGoal = Math.Clamp(orbit.Beta + (float)dy * DragPerPixel, MinBeta, MaxBeta);
         orbit.Beta = _betaGoal;
