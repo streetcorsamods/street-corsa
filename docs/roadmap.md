@@ -1195,7 +1195,9 @@ no single-part 3D view and no dialog hosts a viewport; there is no AI or HTTP co
   dealer's word on a car, news stories, the Diner's street talk; ComfyUI portraits for new rivals (as in step 12) and
   maybe newspaper photos. Prompts and ComfyUI workflows are mod data (`ai/` in Content), so a game mod has its own voice.
 
-**As built (2026-10-01, `feature/ideas-batch-5`), not yet seen in the game:** three parallel branches merged.
+**As built (2026-10-01, `feature/ideas-batch-5`), the owner tested it:** three parallel branches merged. After the
+first look: the paper fills the screen in bigger type, no Buy on the ads (a car is bought only after going to see it,
+a part from its look), the car stands on its tyres, the camera walks round it, a garage button under the back one.
 - Racing hub: `Dialogs/RaceHub` (`NavigationService.ShowRaceHub`), the garage's wheel button says "Go race!"; the hub
   withdraws itself before the event entry; invitations load through `RaceInvitations.Load`.
 - Newspaper: "The Street Trader", AUTOMOBILES FOR SALE and PARTS & ACCESSORIES, newsprint theme keys (`NewsprintFont`,
