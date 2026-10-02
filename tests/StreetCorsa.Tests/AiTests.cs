@@ -101,6 +101,33 @@ public class AiTests
         Assert.Equal("llama3.2:3b", http.Sent[1].Json!["model"]!.GetValue<string>());
     }
 
+    [Fact]
+    public async Task Without_a_model_one_that_cannot_chat_is_passed_over()
+    {
+        var http = new FakeHttp((sent, _) => Task.FromResult(sent.Uri.AbsolutePath == "/v1/models"
+            ? FakeHttp.Json("""{ "data": [ { "id": "text-embedding-nomic-embed-text-v1.5" }, { "id": "whisper-1" }, { "id": "qwen2.5-7b-instruct" } ] }""")
+            : FakeHttp.Json("""{ "choices": [ { "message": { "content": "Yo." } } ] }""")));
+        var provider = AiProviders.Create(http.Client(), AiProviders.OpenAi, null, null, null);
+
+        Assert.Equal("qwen2.5-7b-instruct", await provider.ModelAsync(CancellationToken.None));
+    }
+
+    [Theory]
+    [InlineData(AiProviders.Anthropic, "https://api.anthropic.com/v1", "https://api.anthropic.com/v1/messages")]
+    [InlineData(AiProviders.Anthropic, "https://api.anthropic.com/v1/", "https://api.anthropic.com/v1/messages")]
+    [InlineData(AiProviders.Ollama, "http://box:11434/api", "http://box:11434/api/chat")]
+    [InlineData(AiProviders.Ollama, "http://box:11434/v1/", "http://box:11434/api/chat")]
+    public async Task An_address_typed_with_the_apis_own_path_is_not_doubled(string kind, string endpoint, string url)
+    {
+        var http = new FakeHttp((_, _) => Task.FromResult(FakeHttp.Json("""
+            { "message": { "content": "Hi." }, "content": [ { "type": "text", "text": "Hi." } ] }
+            """)));
+        var provider = AiProviders.Create(http.Client(), kind, endpoint, "some-model", "key");
+
+        Assert.Equal("Hi.", await provider.CompleteAsync(Request, CancellationToken.None));
+        Assert.Equal(url, Assert.Single(http.Sent).Uri.ToString());
+    }
+
     [Theory]
     [InlineData("http://127.0.0.1:1234/v1", "http://127.0.0.1:1234/v1/chat/completions")]
     [InlineData("https://openrouter.ai/api/", "https://openrouter.ai/api/v1/chat/completions")]
@@ -298,6 +325,39 @@ public class AiTests
         release.SetResult();
         Assert.Equal("ok", await running);
         Assert.Equal("ok", await queued);
+    }
+
+    [Fact]
+    public async Task A_line_full_of_background_work_still_takes_the_players_request()
+    {
+        var release = new TaskCompletionSource();
+        var http = new FakeHttp(async (_, _) =>
+        {
+            await release.Task;
+            return FakeHttp.Json("""{ "message": { "content": "ok" } }""");
+        });
+        var service = Service(http, rules: new AiRules { MaxQueued = 1, MinSecondsBetween = 0 });
+
+        var running = service.WriteAsync("street_talk", new TextValues { ["line"] = "a" }, cancellationToken: Ct);
+        await Task.Delay(100, Ct);
+        var queued = service.WriteAsync("street_talk", new TextValues { ["line"] = "b" }, cancellationToken: Ct);
+        var now = service.WriteAsync("street_talk", new TextValues { ["line"] = "now" }, AiPriority.Now, cancellationToken: Ct);
+        Assert.Null(await service.WriteAsync("street_talk", new TextValues { ["line"] = "c" }, AiPriority.Now, cancellationToken: Ct));
+
+        release.SetResult();
+        Assert.Equal("ok", await running);
+        Assert.Equal("ok", await queued);
+        Assert.Equal("ok", await now);
+    }
+
+    [Fact]
+    public void A_workflows_fill_is_read_in_any_case()
+    {
+        var workflow = System.Text.Json.JsonSerializer.Deserialize<ComfyWorkflow>(
+            """{ "fill": { "Positive": { "node": "6", "input": "text" } } }""", ModJson.Options)!;
+
+        Assert.True(workflow.Fill.TryGetValue("positive", out var input));
+        Assert.Equal("6", input.Node);
     }
 
     [Theory]

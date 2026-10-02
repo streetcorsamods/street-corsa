@@ -43,6 +43,9 @@ namespace StreetCorsa.Models.GameState
 
         /// <summary>The ad's few words about the car (<see cref="Services.Market.AdBlurbs"/>); null on ads from before they had them</summary>
         public string? Description { get; set; }
+
+        /// <summary>The player's AI rewrote <see cref="Description"/>: it is not offered the ad again</summary>
+        public bool AiPolished { get; set; }
     }
 
     /// <summary>
@@ -100,6 +103,9 @@ namespace StreetCorsa.Models.GameState
         /// junkyard's part and on ads from before they had them
         /// </summary>
         public string? Description { get; set; }
+
+        /// <summary>The player's AI rewrote <see cref="Description"/>: it is not offered the ad again</summary>
+        public bool AiPolished { get; set; }
 
         public PartAd()
         {

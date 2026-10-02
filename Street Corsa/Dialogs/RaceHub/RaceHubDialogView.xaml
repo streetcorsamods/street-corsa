@@ -241,7 +241,16 @@
                        Foreground="{StaticResource TextSecondaryBrush}"
                        FontSize="{StaticResource FontSizeSmall}"
                        FontStyle="Italic"
-                       VerticalAlignment="Center"/>
+                       VerticalAlignment="Center"
+                       Visibility="{Binding IsSettingUp, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+            <!-- While the race entered is set up the hub waits in front, nothing to press -->
+            <TextBlock DockPanel.Dock="Left"
+                       Text="{t:Text racehub.setting_up}"
+                       Foreground="{StaticResource AmberBrush}"
+                       FontSize="{StaticResource FontSizeBody}"
+                       FontStyle="Italic"
+                       VerticalAlignment="Center"
+                       Visibility="{Binding IsSettingUp, Converter={StaticResource BooleanToVisibilityConverter}}"/>
             <Button DockPanel.Dock="Right"
                     Content="{t:Text racehub.streets}"
                     Style="{StaticResource DialogPrimaryButtonStyle}"

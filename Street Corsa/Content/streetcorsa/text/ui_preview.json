@@ -14,7 +14,6 @@
     "preview.car.no_3d": "You can't see much from here: the details are on the card.",
     "preview.car.at_dealer": "On the lot at {dealer}",
     "preview.car.at_curb": "At the curb on {street}: {seller}",
-    "preview.car.private_seller": "A private seller",
     "preview.car.hint": "Drag to walk round it, wheel to step closer",
     "preview.car.condition": "Condition",
     "preview.car.mileage": "Mileage",

@@ -75,7 +75,7 @@ public class CarViewingViewport3D : D3DViewportBase
     private float? _alphaGoal;
     private System.Windows.Point? _dragFrom;
     private bool _touched;
-    private DateTime _letGoAt;
+    private System.Windows.Threading.DispatcherTimer? _resume;
     private float _turnSpeed;
     private int _fadeInAfter = -1;
 
@@ -234,6 +234,7 @@ public class CarViewingViewport3D : D3DViewportBase
     {
         _loaded = null;
         _fadeInAfter = -1;
+        _resume?.Stop();
     }
 
     #endregion
@@ -315,17 +316,16 @@ public class CarViewingViewport3D : D3DViewportBase
         }
         else if (_loaded != null)
         {
-            if (_touched && _dragFrom == null && (DateTime.Now - _letGoAt).TotalSeconds >= ResumeAfterSeconds) _touched = false;
             if (!_touched)
             {
                 // Eased in, from the glide's end and after the player's hand
                 var step = Math.Min(dt, GarageRenderer.MaxTickSeconds * 2f);
                 _turnSpeed += (TurnRate - _turnSpeed) * (1f - MathF.Exp(-TurnEase * step));
                 orbit.Alpha += _turnSpeed * step;
+                moving = true;
             }
 
-            // Still drawn while the player's hand rests, to see when the walk picks up again
-            moving = true;
+            // While the player's hand rests nothing is drawn: the walk is woken again by ResumeLater
         }
 
         if (Math.Abs(_betaGoal - orbit.Beta) > Settled)
@@ -380,8 +380,30 @@ public class CarViewingViewport3D : D3DViewportBase
     {
         base.OnMouseLeftButtonUp(e);
         _dragFrom = null;
-        _letGoAt = DateTime.Now;
+        ResumeLater();
         ReleaseMouseCapture();
+    }
+
+    /// <summary>The walk round picks up again a while after the player lets go, unless they take hold again first</summary>
+    private void ResumeLater()
+    {
+        if (!_touched) return;
+
+        if (_resume == null)
+        {
+            _resume = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(ResumeAfterSeconds) };
+            _resume.Tick += (_, _) =>
+            {
+                _resume.Stop();
+                if (_dragFrom != null) return;
+
+                _touched = false;
+                Invalidate();
+            };
+        }
+
+        _resume.Stop();
+        _resume.Start();
     }
 
     protected override void OnLostMouseCapture(System.Windows.Input.MouseEventArgs e)
@@ -391,7 +413,7 @@ public class CarViewingViewport3D : D3DViewportBase
 
         // Let go somewhere else (another window took the mouse): the walk picks up as after any let-go
         _dragFrom = null;
-        _letGoAt = DateTime.Now;
+        ResumeLater();
     }
 
     protected override void OnMouseMove(System.Windows.Input.MouseEventArgs e)

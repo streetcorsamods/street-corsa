@@ -14,8 +14,8 @@ namespace StreetCorsa.Screens.Settings
 
     /// <summary>
     /// The AI section of the Settings card: the player's text provider (Ollama, an OpenAI-compatible API, Anthropic), its
-    /// address, model and key, and ComfyUI for pictures, each with a Test. The ticks and the provider are saved at once; the
-    /// address, model and key with the section's Save. The key is only ever kept encrypted (<see cref="AiKeys"/>), and the
+    /// address, model and key, and ComfyUI for pictures, each with a Test. The ticks are saved at once; the provider, address,
+    /// model and key together with the section's Save, so the game never asks one provider with another's address or model. The key is only ever kept encrypted (<see cref="AiKeys"/>), and the
     /// box never shows it back. Tests try what is typed, saved or not.
     /// </summary>
     public sealed class AiSettingsSection : ObservableObject
@@ -89,7 +89,7 @@ namespace StreetCorsa.Screens.Settings
 
         private AiProviderChoice _provider = null!;
 
-        /// <summary>The provider; saved at once. An address left at the old one's usual becomes the new one's usual.</summary>
+        /// <summary>The provider, saved with the rest by Save. An address left at the old one's usual becomes the new one's usual.</summary>
         public AiProviderChoice Provider
         {
             get => _provider;
@@ -102,7 +102,6 @@ namespace StreetCorsa.Screens.Settings
                 OnPropertyChanged(nameof(NeedsKey));
                 OnPropertyChanged(nameof(ModelHint));
                 if (string.IsNullOrWhiteSpace(Endpoint) || Endpoint.Trim() == oldDefault) Endpoint = AiProviders.DefaultEndpoint(value.Id);
-                SaveAtOnce(Ai.TextProvider, value.Id, v => Ai.TextProvider = v);
             }
         }
 
@@ -200,7 +199,7 @@ namespace StreetCorsa.Screens.Settings
             }
         }
 
-        /// <summary>A tick or the provider to disk at once; put back as it was when it could not be written</summary>
+        /// <summary>A tick to disk at once; put back as it was when it could not be written</summary>
         private void SaveAtOnce<T>(T was, T value, Action<T> set, [System.Runtime.CompilerServices.CallerMemberName] string property = "")
         {
             if (EqualityComparer<T>.Default.Equals(was, value)) return;

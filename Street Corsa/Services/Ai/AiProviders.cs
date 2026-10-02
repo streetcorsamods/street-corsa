@@ -50,6 +50,26 @@ namespace StreetCorsa.Services.Ai
             _ => "http://localhost:11434"
         };
 
+        // The kinds of model a provider lists that cannot chat: speech, pictures, embeddings, moderation
+        private static readonly string[] NotChat =
+            ["embed", "whisper", "tts", "dall-e", "image", "moderation", "transcribe", "audio", "speech", "rerank", "sora"];
+
+        /// <summary>Whether a listed model looks like one that chats: the one picked when the player names none</summary>
+        public static bool CanChat(string model) =>
+            !NotChat.Any(word => model.Contains(word, StringComparison.OrdinalIgnoreCase));
+
+        /// <summary><paramref name="endpoint"/> without the given path at its end ("…/v1" typed for an API that adds its own)</summary>
+        public static string Without(string endpoint, params string[] paths)
+        {
+            var trimmed = endpoint.TrimEnd('/');
+            foreach (var path in paths)
+            {
+                if (trimmed.EndsWith(path, StringComparison.OrdinalIgnoreCase)) return trimmed[..^path.Length];
+            }
+
+            return trimmed;
+        }
+
         /// <summary>A provider id the game knows; anything else is Ollama</summary>
         public static string Normalize(string? provider) =>
             All.FirstOrDefault(p => p.Equals(provider?.Trim(), StringComparison.OrdinalIgnoreCase)) ?? Ollama;
@@ -85,8 +105,9 @@ namespace StreetCorsa.Services.Ai
         public virtual async Task<string> ModelAsync(CancellationToken cancellationToken)
         {
             if (_model != null) return _model;
+            // The first that chats: a provider lists its embedding, speech and picture models alongside
             var models = await ModelsAsync(cancellationToken).ConfigureAwait(false);
-            return _model = models.FirstOrDefault() ?? throw new AiProviderException("The provider has no model to offer");
+            return _model = models.FirstOrDefault(AiProviders.CanChat) ?? throw new AiProviderException("The provider has no chat model to offer");
         }
 
         protected virtual void Authorize(HttpRequestMessage request)
@@ -135,9 +156,9 @@ namespace StreetCorsa.Services.Ai
             node?.GetValueKind() == System.Text.Json.JsonValueKind.String ? node.GetValue<string>() : string.Empty;
     }
 
-    /// <summary>Ollama's own API: POST /api/chat (not streamed), GET /api/tags</summary>
+    /// <summary>Ollama's own API: POST /api/chat (not streamed), GET /api/tags; an address typed with /api or /v1 on it goes without</summary>
     public sealed class OllamaTextProvider(HttpClient http, string endpoint, string? model, string? apiKey)
-        : AiTextProviderBase(http, endpoint, model, apiKey)
+        : AiTextProviderBase(http, AiProviders.Without(endpoint, "/api", "/v1"), model, apiKey)
     {
         public override async Task<string> CompleteAsync(AiTextRequest request, CancellationToken cancellationToken)
         {
@@ -196,10 +217,11 @@ namespace StreetCorsa.Services.Ai
     /// <summary>
     /// Anthropic's Messages API: POST /v1/messages with the key in x-api-key and the API version header, GET /v1/models.
     /// No temperature is sent (current models take none), and room is left for the model's own thinking, which counts
-    /// against max_tokens; only the text blocks of the answer are words. A refusal is no answer.
+    /// against max_tokens; only the text blocks of the answer are words. A refusal is no answer. An address typed with
+    /// /v1 on it goes without, as the paths add their own.
     /// </summary>
     public sealed class AnthropicTextProvider(HttpClient http, string endpoint, string? model, string? apiKey)
-        : AiTextProviderBase(http, endpoint, model ?? AiProviders.AnthropicDefaultModel, apiKey)
+        : AiTextProviderBase(http, AiProviders.Without(endpoint, "/v1"), model ?? AiProviders.AnthropicDefaultModel, apiKey)
     {
         public const string ApiVersion = "2023-06-01";
 

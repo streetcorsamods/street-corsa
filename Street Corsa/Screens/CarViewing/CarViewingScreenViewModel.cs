@@ -6,7 +6,6 @@ using StreetCorsa.Logging;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Navigation;
 using StreetCorsa.Screens.Shared;
-using StreetCorsa.Screens.Shared;
 using StreetCorsa.Services.Catalog;
 using StreetCorsa.Services.Dealers;
 using StreetCorsa.Services.Market;
@@ -43,9 +42,8 @@ namespace StreetCorsa.Screens.CarViewing
         private readonly NavigationService _navigationService;
         private readonly GameState _gameState;
         private readonly UsedCarListing _listing;
+        private readonly UsedCarListingViewModel _car;
         private readonly IDealerCatalog _dealerCatalog;
-        private readonly IContentCatalogRepository _catalogRepo;
-        private readonly ICarProfileRepository _profileRepo;
         private readonly ICarPartsService _partsService;
         private readonly PurchaseFlow _purchaseFlow;
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger("CarViewing");
@@ -55,24 +53,21 @@ namespace StreetCorsa.Screens.CarViewing
             NavigationService navigationService,
             DialogService dialogService,
             GameState gameState,
-            UsedCarListing listing,
+            UsedCarListingViewModel car,
             IDealerCatalog dealerCatalog,
-            IContentCatalogRepository catalogRepo,
-            ICarProfileRepository profileRepo,
             ICarPurchaseService purchaseService,
             ICarPartsService partsService)
         {
             _navigationService = navigationService;
             _gameState = gameState;
-            _listing = listing;
+            _car = car;
+            _listing = car.Listing;
             _dealerCatalog = dealerCatalog;
-            _catalogRepo = catalogRepo;
-            _profileRepo = profileRepo;
             _partsService = partsService;
             _purchaseFlow = new PurchaseFlow(dialogService, purchaseService, _logger);
 
             // Known before the screen is shown: the place's air is asked for as it comes up
-            _seller = CarViewingPlace.Of(gameState, listing, id => dealerCatalog.Get(id) != null);
+            _seller = CarViewingPlace.Of(car, id => dealerCatalog.Get(id) != null);
 
             BuyCommand = new RelayCommand(OnBuy, () => Car != null);
             BackCommand = new RelayCommand(OnBack);
@@ -160,26 +155,12 @@ namespace StreetCorsa.Screens.CarViewing
         {
             base.Enter();
 
-            // A car the catalog no longer has cannot be shown or bought: the navigation fails, the player stays put
-            var definition = _catalogRepo.GetCar(_listing.CarDefinitionId)
-                ?? throw new InvalidOperationException($"The car {_listing.CarDefinitionId} of listing {_listing.Id} is not in the catalog");
-            var profile = _profileRepo.GetProfile(_listing.CarDefinitionId) ?? new Models.Catalog.CarProfile();
+            // The car as the paper's ad has it, seller and all
+            _dealer = _seller.DealerId != null ? DealerRoster.Find(_gameState, _seller.DealerId) : null;
+            _car.CanAfford = _gameState.Player.Money >= _listing.Price;
+            Car = _car;
 
-            var dealer = _dealer = _seller.DealerId != null ? DealerRoster.Find(_gameState, _seller.DealerId) : null;
-            Car = new UsedCarListingViewModel
-            {
-                Listing = _listing,
-                CarDefinition = definition,
-                CarProfile = profile,
-                RivalAd = _seller.Rival?.Ad,
-                PrivateSeller = _seller.Rival?.Seller.Name,
-                DealerName = _seller.Rival != null
-                    ? UsedCarListingViewModel.PrivateSellerName(_seller.Rival.Seller.Name)
-                    : dealer?.Name ?? _dealerCatalog.Get(_seller.DealerId ?? string.Empty)?.Name ?? GameText.Say("preview.car.private_seller"),
-                CanAfford = _gameState.Player.Money >= _listing.Price
-            };
-
-            Stage = BuildStage(definition.Id);
+            Stage = BuildStage(_car.CarDefinition.Id);
             _logger.Information("Gone to see {Car} ({Spot}), {Scene}", Car.DisplayName, _seller.Spot, Stage?.SceneKn5 ?? "no scene");
 
             OnPropertyChanged(nameof(Car));

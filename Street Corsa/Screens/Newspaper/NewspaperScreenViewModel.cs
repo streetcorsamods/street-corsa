@@ -95,7 +95,32 @@ namespace StreetCorsa.Screens.Newspaper
                 if (Enum.TryParse<ClassifiedSection>(section, out var shown)) Section = shown;
             });
 
-            // The ads are put together in Enter: the screen is always entered right after it is made
+            // The ads are put together in Enter: the screen is always entered right after it is made. The ones of the
+            // section on show are offered to the player's AI as they come out, not before: most ads are never read.
+            CarAds.Shown.CollectionChanged += (_, e) =>
+            {
+                if (ShowCars) PolishAll(e.NewItems?.OfType<CarAdViewModel>().Select(a => a.Polish));
+            };
+            PartAds.Shown.CollectionChanged += (_, e) =>
+            {
+                if (ShowParts) PolishAll(e.NewItems?.OfType<PartAdViewModel>().Select(a => a.Polish));
+            };
+        }
+
+        /// <summary>The ads' words to the player's AI; one that fails leaves the game's own</summary>
+        private void PolishAll(IEnumerable<Action?>? polish)
+        {
+            foreach (var each in polish ?? [])
+            {
+                try
+                {
+                    each?.Invoke();
+                }
+                catch (Exception ex)
+                {
+                    _logger.Warning("Could not offer an ad to the AI: {Error}", ex.Message);
+                }
+            }
         }
 
         // ----- what the page shows -----
@@ -110,6 +135,9 @@ namespace StreetCorsa.Screens.Newspaper
                 if (!SetProperty(ref _section, value)) return;
                 OnPropertyChanged(nameof(ShowCars));
                 OnPropertyChanged(nameof(ShowParts));
+
+                // The section's ads out so far are read now
+                PolishAll(ShowCars ? CarAds.Shown.Select(a => a.Polish) : PartAds.Shown.Select(a => a.Polish));
             }
         }
 
@@ -299,8 +327,19 @@ namespace StreetCorsa.Screens.Newspaper
                 CanAfford = _gameState.Player.Money >= listing.Price
             };
 
+            var catalog = Catalog;
             CarAdViewModel? ad = null;
-            ad = new CarAdViewModel(car, new RelayCommand(() => OnLookAtCar(ad!)));
+            ad = new CarAdViewModel(car, new RelayCommand(() => OnLookAtCar(ad!)))
+            {
+                // A rival's ad is shown as a listing made up from it: the words go to both
+                Polish = rivalOffer is { } offer
+                    ? () => AdBlurbs.Polish(offer.Ad, offer.Car, catalog, () => _marketService.FactoryParts(offer.Car.DefinitionId), better =>
+                    {
+                        listing.Description = better;
+                        ad!.BlurbRewritten();
+                    })
+                    : () => AdBlurbs.Polish(listing, catalog, () => _marketService.FactoryParts(listing.CarDefinitionId), _ => ad!.BlurbRewritten())
+            };
             return ad;
         }
 
@@ -318,7 +357,10 @@ namespace StreetCorsa.Screens.Newspaper
 
                         _wroteBlurbs |= AdBlurbs.Ensure(ad, catalog);
                         PartAdViewModel? row = null;
-                        row = new PartAdViewModel(ad, definition, _fitting.Contains(definition.Id), new RelayCommand(() => OnLookAtPart(row!)));
+                        row = new PartAdViewModel(ad, definition, _fitting.Contains(definition.Id), new RelayCommand(() => OnLookAtPart(row!)))
+                        {
+                            Polish = () => AdBlurbs.Polish(ad, catalog, _ => row!.BlurbRewritten())
+                        };
                         ads.Add(row);
                     }
                 }
@@ -361,7 +403,7 @@ namespace StreetCorsa.Screens.Newspaper
         /// <summary>Go and see the car (clicking its ad): a screen of its own, the car at the seller's curb or on the lot</summary>
         private void OnLookAtCar(CarAdViewModel ad)
         {
-            _navigationService.NavigateToCarViewing(_gameState, ad.Car.Listing);
+            _navigationService.NavigateToCarViewing(_gameState, ad.Car);
         }
 
         /// <summary>Have a look at the part (clicking its ad): the part alone in 3D, turned with the mouse, with Buy</summary>
@@ -383,7 +425,7 @@ namespace StreetCorsa.Screens.Newspaper
                     if (car == null) continue;
 
                     var definition = _catalogRepository.GetCar(car.DefinitionId);
-                    var name = definition != null ? $"{definition.Brand} {definition.Name}" : car.DefinitionId;
+                    var name = definition != null ? CarNames.MakeAndModel(definition) : car.DefinitionId;
                     var hasOffer = ad.Offer is { } offer && offer.Expires >= _gameState.Date;
                     PlayerAds.Add(new PlayerCarAdViewModel(
                         name,

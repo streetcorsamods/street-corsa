@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using StreetCorsa.Logging;
 using StreetCorsa.Models.GameState;
@@ -28,10 +29,13 @@ namespace StreetCorsa.Services.Market
     /// Writes something better for an ad than the built-in line, in its own time: an AI, say. The game never waits on
     /// it. It is handed the ad's facts and what the game wrote, and calls <c>rewrite</c> with its own line if it comes
     /// up with one, on the thread that owns the game state (the UI thread), never at all if it does not. Improve itself
-    /// may be called on a worker (the paper's part ads are made on one) and must return at once.
+    /// must return at once.
     /// </summary>
     public interface IAdWriter
     {
+        /// <summary>The writer is there to ask now (the player's AI is on)</summary>
+        bool CanImprove { get; }
+
         void Improve(AdFacts facts, string written, Action<string> rewrite);
     }
 
@@ -41,8 +45,9 @@ namespace StreetCorsa.Services.Market
     /// only"), now and then the condition; not every ad the same. The lines are the text pools <c>ads.car.*</c> and
     /// <c>ads.part.*</c> (the base game's <c>text\ads.json</c>), when to say which is here.
     ///
-    /// The seam for a better writer: <see cref="Writer"/>. Every ad written here is offered to it after the built-in
-    /// line is set, and what it writes back takes that line's place.
+    /// The seam for a better writer: <see cref="Writer"/>. An ad is offered to it when the paper first shows it
+    /// (<c>Polish</c>), not when it is written: most ads are never read, and the writer may be a paid API. What it writes
+    /// back takes the built-in line's place, and the ad is not offered again.
     /// </summary>
     public static partial class AdBlurbs
     {
@@ -50,6 +55,10 @@ namespace StreetCorsa.Services.Market
 
         /// <summary>The writer that may improve an ad after it is written (<see cref="IAdWriter"/>); none by default</summary>
         public static IAdWriter? Writer { get; set; }
+
+        // The ads offered to the writer this session, so one shown again (a page back, the paper opened again) is not
+        // asked for twice while the first answer is still to come
+        private static readonly ConditionalWeakTable<object, object> Offered = new();
 
         // The sorts of part a car's ad names, the most telling first: each is a pool ads.car.<kind>, with {part}. A
         // blower or a turbo is worth a word even as the factory fitted it; the rest only when somebody put it on.
@@ -201,28 +210,60 @@ namespace StreetCorsa.Services.Market
 
         // ----- onto the ads -----
 
-        /// <summary>The listing's words, written now and offered to the <see cref="Writer"/></summary>
-        public static void Describe(UsedCarListing listing, PartsCatalog? catalog, IReadOnlySet<string>? factory, Random? random = null)
-        {
-            var facts = FactsOf(listing, catalog, factory);
-            listing.Description = Write(facts, random ?? Random.Shared);
-            Offer(facts, listing.Description, better => listing.Description = better);
-        }
+        /// <summary>The listing's words, the game's own, written now</summary>
+        public static void Describe(UsedCarListing listing, PartsCatalog? catalog, IReadOnlySet<string>? factory, Random? random = null) =>
+            listing.Description = Write(FactsOf(listing, catalog, factory), random ?? Random.Shared);
 
-        public static void Describe(RivalCarAd ad, Car car, PartsCatalog? catalog, IReadOnlySet<string>? factory, Random? random = null)
-        {
-            var facts = FactsOf(ad, car, catalog, factory);
-            ad.Description = Write(facts, random ?? Random.Shared);
-            Offer(facts, ad.Description, better => ad.Description = better);
-        }
+        public static void Describe(RivalCarAd ad, Car car, PartsCatalog? catalog, IReadOnlySet<string>? factory, Random? random = null) =>
+            ad.Description = Write(FactsOf(ad, car, catalog, factory), random ?? Random.Shared);
 
         /// <summary>The part ad's words; none for a part the catalog does not know</summary>
         public static void Describe(PartAd ad, PartsCatalog catalog, Random? random = null)
         {
             if (FactsOf(ad, catalog) is not { } facts) return;
             ad.Description = Write(facts, random ?? Random.Shared);
-            Offer(facts, ad.Description, better => ad.Description = better);
         }
+
+        /// <summary>
+        /// The paper shows the listing: its words are offered to the <see cref="Writer"/>, once. <paramref name="rewritten"/>
+        /// hears the better words when they come, on the game's thread.
+        /// </summary>
+        public static void Polish(UsedCarListing listing, PartsCatalog? catalog, Func<IReadOnlySet<string>?> factory, Action<string>? rewritten = null)
+        {
+            if (!ShouldOffer(listing, listing.AiPolished, listing.Description)) return;
+            Offer(FactsOf(listing, catalog, factory()), listing.Description!, better =>
+            {
+                listing.Description = better;
+                listing.AiPolished = true;
+                rewritten?.Invoke(better);
+            });
+        }
+
+        public static void Polish(RivalCarAd ad, Car car, PartsCatalog? catalog, Func<IReadOnlySet<string>?> factory, Action<string>? rewritten = null)
+        {
+            if (!ShouldOffer(ad, ad.AiPolished, ad.Description)) return;
+            Offer(FactsOf(ad, car, catalog, factory()), ad.Description!, better =>
+            {
+                ad.Description = better;
+                ad.AiPolished = true;
+                rewritten?.Invoke(better);
+            });
+        }
+
+        public static void Polish(PartAd ad, PartsCatalog catalog, Action<string>? rewritten = null)
+        {
+            if (FactsOf(ad, catalog) is not { } facts || !ShouldOffer(ad, ad.AiPolished, ad.Description)) return;
+            Offer(facts, ad.Description!, better =>
+            {
+                ad.Description = better;
+                ad.AiPolished = true;
+                rewritten?.Invoke(better);
+            });
+        }
+
+        /// <summary>An ad with words of the game's own, not offered yet this session, while there is a writer to ask</summary>
+        private static bool ShouldOffer(object ad, bool polished, string? description) =>
+            !polished && !string.IsNullOrWhiteSpace(description) && Writer is { CanImprove: true } && Offered.TryAdd(ad, ad);
 
         /// <summary>
         /// An ad from before ads had words gets them as it is shown, and keeps them; true when it was written now (the

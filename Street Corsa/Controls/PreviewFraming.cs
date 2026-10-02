@@ -129,10 +129,9 @@ public static class PartPreviewModel
             var placed = Placed(catalog, part, Matrix4x4.Identity);
             if (placed.Count == 0) return null;
 
-            // Once to measure it, once where it stands: the models are read once, the assembler keeps them
+            // Merged once, then moved to where it stands
             var measured = PartAssembler.BuildModel(catalog, "preview", placed);
-            var offset = Matrix4x4.CreateTranslation(PreviewFraming.PartOffset(measured.Min, measured.Max));
-            return PartAssembler.BuildModel(catalog, "preview", placed.Select(p => p with { World = p.World * offset }));
+            return PartAssembler.Moved(measured, PreviewFraming.PartOffset(measured.Min, measured.Max));
         }
         catch (InvalidOperationException)
         {

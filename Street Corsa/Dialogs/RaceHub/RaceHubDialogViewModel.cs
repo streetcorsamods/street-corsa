@@ -20,7 +20,8 @@ namespace StreetCorsa.Dialogs.RaceHub
     /// The racing hub, over the garage (its "Go race!" button): the race invitations, what the street did the last few
     /// days, and the way out onto the streets. An invitation taken up is entered as it always was: the entry, a bracket
     /// race's dial-in, the race set up, the race. The hub closes before the entry shows (dialogs never nest), so the
-    /// entry's answer comes back here with the hub gone.
+    /// entry's answer comes back here with the hub gone; it comes back in front, with nothing to press, while the race
+    /// is set up.
     /// </summary>
     public class RaceHubDialogViewModel : BaseDialogViewModel
     {
@@ -39,6 +40,21 @@ namespace StreetCorsa.Dialogs.RaceHub
         // True from the moment the player confirms an entry until the race is set up (or not): the hub can be opened
         // again meanwhile, and a second entry would start a second race
         private static bool _isEntering;
+
+        private bool _isSettingUp;
+
+        /// <summary>
+        /// True while the race entered is being set up: the hub stands in front meanwhile, with nothing to press, so the
+        /// garage behind it (the end of the day, the workbench, the way out) cannot change what is being set up
+        /// </summary>
+        public bool IsSettingUp
+        {
+            get => _isSettingUp;
+            private set
+            {
+                if (SetProperty(ref _isSettingUp, value)) RelayCommand.RaiseCanExecuteChanged();
+            }
+        }
 
         public RelayCommand CloseCommand { get; }
         public RelayCommand HitTheStreetsCommand { get; }
@@ -82,8 +98,8 @@ namespace StreetCorsa.Dialogs.RaceHub
             _race = race;
             _hitTheStreets = hitTheStreets;
 
-            CloseCommand = new RelayCommand(() => _dialogService.CloseDialog());
-            HitTheStreetsCommand = new RelayCommand(OnHitTheStreets);
+            CloseCommand = new RelayCommand(() => _dialogService.CloseDialog(), () => !IsSettingUp);
+            HitTheStreetsCommand = new RelayCommand(OnHitTheStreets, () => !IsSettingUp);
             EnterEventCommand = new RelayCommand<EventInvitationViewModel>(OnEnterEvent, _ => !_isEntering);
 
             try
@@ -143,7 +159,7 @@ namespace StreetCorsa.Dialogs.RaceHub
 
                 var opponentCarDef = _catalogRepository.GetCar(opponent.CarDefinitionId);
                 var opponentCarDisplay = opponentCarDef != null
-                    ? $"{opponentCarDef.Year} {opponentCarDef.Brand} {opponentCarDef.Name}"
+                    ? CarNames.Of(opponentCarDef)
                     : GameText.Say("paper.unknown_car");
 
                 _dialogService.ShowDialog(new EventEntry.EventEntryDialogViewModel(
@@ -243,7 +259,41 @@ namespace StreetCorsa.Dialogs.RaceHub
                 bracket = BracketRules.Setup(playerDialIn.Value, rivalDialIn, ai.AILevel);
             }
 
-            var setup = await _raceSetup.BuildAsync(new RaceEntry
+            // Setting the cars up takes a moment: the hub comes back in front meanwhile, so nothing in the garage behind it
+            // changes the cars or the day the race is being set up from
+            IsSettingUp = true;
+            _dialogService.ShowDialog(this, jumpQueue: true);
+            RaceSetupResult setup;
+            try
+            {
+                setup = await BuildSetupAsync();
+            }
+            finally
+            {
+                _dialogService.Withdraw(this);
+                IsSettingUp = false;
+            }
+
+            // The player could not have left the garage meanwhile, but the screen may have been changed under it
+            if (!_stillHome())
+            {
+                _logger.Information("The garage was left while {Event} was set up; no race", result.EventId);
+                return;
+            }
+
+            if (setup.Intent == null)
+            {
+                _dialogService.ShowDialog(new InformationDialogViewModel(
+                    _dialogService,
+                    GameText.Say("paper.enter.wont_run", ("problem", setup.PlayerCarProblem)),
+                    GameText.Say("paper.enter.wont_run.title")));
+                return;
+            }
+
+            _logger.Information("Entering {Event} on {Track} {Config}", result.EventId, track.Value.TrackId, track.Value.TrackConfig ?? "");
+            _race(setup.Intent);
+
+            Task<RaceSetupResult> BuildSetupAsync() => _raceSetup.BuildAsync(new RaceEntry
             {
                 PlayerName = _gameState.Player.Name,
                 PlayerCar = playerCar,
@@ -265,25 +315,6 @@ namespace StreetCorsa.Dialogs.RaceHub
                 RaceTime = _gameState.Date,
                 Bracket = bracket
             });
-
-            // Setting the cars up takes a moment: a player who left the garage meanwhile has called it off
-            if (!_stillHome())
-            {
-                _logger.Information("The player left the garage while {Event} was set up; no race", result.EventId);
-                return;
-            }
-
-            if (setup.Intent == null)
-            {
-                _dialogService.ShowDialog(new InformationDialogViewModel(
-                    _dialogService,
-                    GameText.Say("paper.enter.wont_run", ("problem", setup.PlayerCarProblem)),
-                    GameText.Say("paper.enter.wont_run.title")));
-                return;
-            }
-
-            _logger.Information("Entering {Event} on {Track} {Config}", result.EventId, track.Value.TrackId, track.Value.TrackConfig ?? "");
-            _race(setup.Intent);
         }
 
         private void ShowRaceError(Exception ex)

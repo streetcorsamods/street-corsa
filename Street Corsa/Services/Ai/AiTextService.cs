@@ -207,7 +207,7 @@ namespace StreetCorsa.Services.Ai
 
         // ----- the queue -----
 
-        /// <summary>A place to run: at once while fewer than the most run, else in line (the player's first); false when the line is full</summary>
+        /// <summary>A place to run: at once while fewer than the most run, else in line (the player's first); false when the line is full (for the player's, full of the player's)</summary>
         private Task<bool> EnterAsync(AiPriority priority, CancellationToken cancellationToken)
         {
             lock (_lock)
@@ -218,7 +218,9 @@ namespace StreetCorsa.Services.Ai
                     return Task.FromResult(true);
                 }
 
-                if (_waitingNow.Count + _waitingLater.Count >= Math.Max(1, Rules.MaxQueued)) return Task.FromResult(false);
+                // A full line drops background work only: the player's own request waits ahead of it anyway
+                var waitingAhead = priority == AiPriority.Now ? _waitingNow.Count : _waitingNow.Count + _waitingLater.Count;
+                if (waitingAhead >= Math.Max(1, Rules.MaxQueued)) return Task.FromResult(false);
 
                 var waiting = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
                 var node = (priority == AiPriority.Now ? _waitingNow : _waitingLater).AddLast(waiting);

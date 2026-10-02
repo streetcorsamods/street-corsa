@@ -51,13 +51,14 @@ namespace StreetCorsa.Services.Catalog
         }
 
         /// <summary>
-        /// Make and model, the make said once: not again when the name holds it ("The Batmobile" of Batmobile, "Chevrolet
-        /// Camaro" of Chevrolet) or starts with its initials ("AMC Javelin" of American Motor Company)
+        /// Make and model, the make said once: not again when the name holds it as a word ("The Batmobile" of Batmobile,
+        /// "Chevrolet Camaro" of Chevrolet, but "AC Ace" of AC) or starts with its initials ("AMC Javelin" of American Motor
+        /// Company)
         /// </summary>
         public static string MakeAndModel(CarDefinition definition)
         {
             var brand = definition.Brand.Trim();
-            if (brand.Length == 0 || definition.Name.Contains(brand, StringComparison.OrdinalIgnoreCase)) return definition.Name;
+            if (brand.Length == 0 || HasWord(definition.Name, brand)) return definition.Name;
 
             var words = brand.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             var first = definition.Name.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
@@ -69,7 +70,19 @@ namespace StreetCorsa.Services.Catalog
         public static string Of(CarDefinition definition)
         {
             var name = MakeAndModel(definition);
-            return definition.Year is { } year && !name.Contains(year.ToString()) ? $"{year} {name}" : name;
+            return definition.Year is { } year && !HasWord(name, year.ToString()) ? $"{year} {name}" : name;
+        }
+
+        /// <summary>Whether <paramref name="text"/> holds <paramref name="word"/> with no letter or digit either side of it</summary>
+        private static bool HasWord(string text, string word)
+        {
+            for (var at = text.IndexOf(word, StringComparison.OrdinalIgnoreCase); at >= 0; at = text.IndexOf(word, at + 1, StringComparison.OrdinalIgnoreCase))
+            {
+                var end = at + word.Length;
+                if ((at == 0 || !char.IsLetterOrDigit(text[at - 1])) && (end == text.Length || !char.IsLetterOrDigit(text[end]))) return true;
+            }
+
+            return false;
         }
     }
 }

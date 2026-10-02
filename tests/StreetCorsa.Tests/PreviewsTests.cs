@@ -2,7 +2,9 @@ using System.Numerics;
 using StreetCorsa.Controls;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Parts;
+using StreetCorsa.Parts.Logic;
 using StreetCorsa.Screens.CarViewing;
+using StreetCorsa.Screens.Shared;
 using StreetCorsa.Services.Market;
 using StreetCorsa.Services.Opponents;
 using StreetCorsa.Services.Street;
@@ -151,10 +153,9 @@ public class PreviewsTests
     [Fact]
     public void A_dealers_car_is_seen_on_the_dealers_lot()
     {
-        var state = GameState.CreateNew("P");
-        var listing = new UsedCarListing { CarDefinitionId = "car", DealerLocation = "downtown_motors" };
+        var car = new UsedCarListingViewModel { Listing = new UsedCarListing { CarDefinitionId = "car", DealerLocation = "downtown_motors" } };
 
-        var seller = CarViewingPlace.Of(state, listing, id => id == "downtown_motors");
+        var seller = CarViewingPlace.Of(car, id => id == "downtown_motors");
 
         Assert.Equal(CarViewingSpot.DealerLot, seller.Spot);
         Assert.Equal("downtown_motors", seller.DealerId);
@@ -166,10 +167,9 @@ public class PreviewsTests
     [InlineData("a_dealer_no_mod_has")]
     public void Anyone_elses_car_is_seen_at_the_curb(string dealer)
     {
-        var state = GameState.CreateNew("P");
-        var listing = new UsedCarListing { CarDefinitionId = "car", DealerLocation = dealer };
+        var car = new UsedCarListingViewModel { Listing = new UsedCarListing { CarDefinitionId = "car", DealerLocation = dealer } };
 
-        var seller = CarViewingPlace.Of(state, listing, id => id == "downtown_motors");
+        var seller = CarViewingPlace.Of(car, id => id == "downtown_motors");
 
         Assert.Equal(CarViewingSpot.Curb, seller.Spot);
         Assert.Null(seller.DealerId);
@@ -187,13 +187,18 @@ public class PreviewsTests
         state.Racers.AddRacer(pat);
         var ad = RivalCarAds.Post(state, pat, spare, 900m, state.Date);
 
-        // The paper shows it as a listing made up from the car, with the ad's id
-        var listing = new UsedCarListing { Id = ad.AdId.ToString(), CarDefinitionId = "car_b", DealerLocation = string.Empty };
-        var seller = CarViewingPlace.Of(state, listing, _ => true);
+        // The paper's ad carries the rival's own ad, which is what is bought
+        var car = new UsedCarListingViewModel
+        {
+            Listing = new UsedCarListing { Id = ad.AdId.ToString(), CarDefinitionId = "car_b", DealerLocation = string.Empty },
+            RivalAd = ad,
+            PrivateSeller = pat.Name
+        };
+        var seller = CarViewingPlace.Of(car, _ => true);
 
         Assert.Equal(CarViewingSpot.Curb, seller.Spot);
-        Assert.Same(ad, seller.Rival?.Ad);
-        Assert.Same(pat, seller.Rival?.Seller);
+        Assert.Null(seller.DealerId);
+        Assert.Same(ad, seller.Rival);
     }
 
     [Theory]
@@ -252,6 +257,23 @@ public class PreviewsTests
 
         Assert.False(PartPreviewModel.HasModel(catalog, new PartInstance("nobody/has_this")));
         Assert.Null(PartPreviewModel.Build(catalog, new PartInstance("nobody/has_this")));
+    }
+
+    [Fact]
+    public void A_merged_model_is_moved_without_being_built_again()
+    {
+        using var temp = new TempDir();
+        var catalog = PartsCatalog.Empty(temp.Path);
+        var part = new PartDefinition { Id = "x/box", Name = "box" };
+        var model = PartAssembler.BuildModel(catalog, "test",
+            [new PlacedPart(part, Matrix4x4.CreateTranslation(1f, 2f, 3f), new InstalledPart(part))]);
+
+        var moved = PartAssembler.Moved(model, new Vector3(-1f, -2f, 0f));
+
+        Assert.Same(model.Kn5, moved.Kn5);
+        Assert.Equal(model.Min + new Vector3(-1f, -2f, 0f), moved.Min);
+        Assert.Equal(model.Max + new Vector3(-1f, -2f, 0f), moved.Max);
+        Assert.Equal(new Vector3(0f, 0f, 3f), moved.Nodes[0].World.Translation);
     }
 
     #endregion

@@ -109,6 +109,9 @@ namespace StreetCorsa.Models.GameState
         /// (<see cref="Services.Market.AdBlurbs"/>); null on listings from before ads had them, written when first shown
         /// </summary>
         public string? Description { get; set; }
+
+        /// <summary>The player's AI rewrote <see cref="Description"/>: it is not offered the ad again</summary>
+        public bool AiPolished { get; set; }
     }
 
     /// <summary>Where a dealer is in its life: open, holding its closing-down sale, gone, or not open yet</summary>

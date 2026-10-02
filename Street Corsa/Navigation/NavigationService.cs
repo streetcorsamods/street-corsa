@@ -560,15 +560,13 @@ namespace StreetCorsa.Navigation
         /// "You drive over to see it": a car from the paper's ads where its seller has it (a dealer's on the lot, a
         /// private seller's at the curb), to walk round and buy. Back, and a car gone meanwhile, return to the paper.
         /// </summary>
-        public bool NavigateToCarViewing(GameState gameState, UsedCarListing listing) => SafeNavigate("car viewing", () =>
+        public bool NavigateToCarViewing(GameState gameState, Screens.Shared.UsedCarListingViewModel car) => SafeNavigate("car viewing", () =>
             new Screens.CarViewing.CarViewingScreenViewModel(
                 this,
                 _dialogService,
                 gameState,
-                listing,
+                car,
                 _dealerCatalog,
-                _catalogRepository,
-                _profileRepository,
                 _purchaseService,
                 _carPartsService));
 

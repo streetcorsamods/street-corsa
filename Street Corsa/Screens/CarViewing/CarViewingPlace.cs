@@ -1,6 +1,6 @@
 using StreetCorsa.Models.GameState;
+using StreetCorsa.Screens.Shared;
 using StreetCorsa.Services.Market;
-using StreetCorsa.Services.Opponents;
 using StreetCorsa.Services.Street;
 
 namespace StreetCorsa.Screens.CarViewing
@@ -16,7 +16,7 @@ namespace StreetCorsa.Screens.CarViewing
     /// Who sells the car and where it stands: a dealer's car on that dealer's lot (<paramref name="DealerId"/>), a
     /// rival's own at the curb (<paramref name="Rival"/>, the ad that is bought), anyone else's at the curb too
     /// </summary>
-    public sealed record CarViewingSeller(CarViewingSpot Spot, string? DealerId, RivalCarAds.Offer? Rival);
+    public sealed record CarViewingSeller(CarViewingSpot Spot, string? DealerId, RivalCarAd? Rival);
 
     /// <summary>Where the screen goes once the player has tried to buy the car</summary>
     public enum AfterPurchase
@@ -35,15 +35,14 @@ namespace StreetCorsa.Screens.CarViewing
     public static class CarViewingPlace
     {
         /// <summary>
-        /// Who sells the car: a rival's ad in the paper stands for its listing by the ad's id
-        /// (<see cref="RivalCarAds.AsListing"/>); a listing of a dealer the game knows is that dealer's; anything
-        /// else is a private seller's
+        /// Who sells the car, as the paper's ad says: a rival's ad is the rival's; a listing of a dealer the game knows is
+        /// that dealer's; anything else is a private seller's
         /// </summary>
-        public static CarViewingSeller Of(GameState state, UsedCarListing listing, Func<string, bool> isDealer)
+        public static CarViewingSeller Of(UsedCarListingViewModel car, Func<string, bool> isDealer)
         {
-            var rival = RivalCarAds.Live(state).FirstOrDefault(o => string.Equals(o.Ad.AdId.ToString(), listing.Id, StringComparison.OrdinalIgnoreCase));
-            if (rival != null) return new CarViewingSeller(CarViewingSpot.Curb, null, rival);
+            if (car.RivalAd != null) return new CarViewingSeller(CarViewingSpot.Curb, null, car.RivalAd);
 
+            var listing = car.Listing;
             return !string.IsNullOrWhiteSpace(listing.DealerLocation) && isDealer(listing.DealerLocation)
                 ? new CarViewingSeller(CarViewingSpot.DealerLot, listing.DealerLocation, null)
                 : new CarViewingSeller(CarViewingSpot.Curb, null, null);

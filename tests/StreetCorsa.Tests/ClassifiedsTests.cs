@@ -215,8 +215,13 @@ public class AdWriterTests
 {
     private sealed class Writer(Func<AdFacts, string, string?> write) : IAdWriter
     {
+        public int Asked { get; private set; }
+
+        public bool CanImprove => true;
+
         public void Improve(AdFacts facts, string written, Action<string> rewrite)
         {
+            Asked++;
             if (write(facts, written) is { } better) rewrite(better);
         }
     }
@@ -228,19 +233,33 @@ public class AdWriterTests
         try
         {
             CarAdFacts? seen = null;
-            AdBlurbs.Writer = new Writer((facts, written) =>
+            string? heard = null;
+            var writer = new Writer((facts, written) =>
             {
                 seen = facts as CarAdFacts;
                 return "  Mean and green.  ";
             });
-            AdBlurbs.Describe(listing, null, null);
-            Assert.Equal("Mean and green.", listing.Description);
-            Assert.Equal("Ford 390", seen?.Engine);
+            AdBlurbs.Writer = writer;
 
-            AdBlurbs.Writer = new Writer((_, _) => throw new InvalidOperationException("offline"));
+            // Written, the ad is not offered: only once the paper shows it, and then only the once
             AdBlurbs.Describe(listing, null, null);
-            Assert.False(string.IsNullOrWhiteSpace(listing.Description));
-            Assert.NotEqual("Mean and green.", listing.Description);
+            Assert.Equal(0, writer.Asked);
+            AdBlurbs.Polish(listing, null, () => null, better => heard = better);
+            Assert.Equal("Mean and green.", listing.Description);
+            Assert.Equal("Mean and green.", heard);
+            Assert.True(listing.AiPolished);
+            Assert.Equal("Ford 390", seen?.Engine);
+            AdBlurbs.Polish(listing, null, () => null);
+            Assert.Equal(1, writer.Asked);
+
+            var other = new UsedCarListing { CarDefinitionId = "test_car", Condition = 0.5f, Mileage = 100_000 };
+            AdBlurbs.Describe(other, null, null);
+            var own = other.Description;
+            AdBlurbs.Writer = new Writer((_, _) => throw new InvalidOperationException("offline"));
+            AdBlurbs.Polish(other, null, () => null);
+            Assert.False(string.IsNullOrWhiteSpace(other.Description));
+            Assert.Equal(own, other.Description);
+            Assert.False(other.AiPolished);
         }
         finally
         {

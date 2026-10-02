@@ -193,9 +193,11 @@ namespace StreetCorsa.Services.Ai
         }
 
         /// <summary>
-        /// The paper's writer (<see cref="AdBlurbs.Writer"/>): every ad's blurb, offered as it is written, comes back
+        /// The paper's writer (<see cref="AdBlurbs.Writer"/>): an ad's blurb, offered as the paper first shows it, comes back
         /// livelier when the AI answers, on the game's thread; the ad keeps it, so it is never kept twice
         /// </summary>
+        public bool CanImprove => _text.IsAvailable;
+
         public void Improve(AdFacts facts, string written, Action<string> rewrite)
         {
             if (!_text.IsAvailable) return;

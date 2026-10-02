@@ -47,8 +47,22 @@ namespace StreetCorsa.Services.Ai
         /// <summary>What the picture must not be</summary>
         public string Negative { get; set; } = string.Empty;
 
-        /// <summary>Where each value goes: "positive", "negative", "seed", "width", "height", "checkpoint", "prefix"</summary>
-        public Dictionary<string, ComfyInput> Fill { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+        private Dictionary<string, ComfyInput> _fill = new(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Where each value goes: "positive", "negative", "seed", "width", "height", "checkpoint", "prefix", in any case
+        /// (the JSON reader sets a dictionary of its own: it is copied into one that ignores case)
+        /// </summary>
+        public Dictionary<string, ComfyInput> Fill
+        {
+            get => _fill;
+            set
+            {
+                // The same name twice in other cases: the last one written
+                _fill = new Dictionary<string, ComfyInput>(StringComparer.OrdinalIgnoreCase);
+                foreach (var (name, input) in value ?? []) _fill[name] = input;
+            }
+        }
 
         /// <summary>The graph, node id to node, in ComfyUI's API format</summary>
         public JsonObject Workflow { get; set; } = new();

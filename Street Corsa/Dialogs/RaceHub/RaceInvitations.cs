@@ -40,7 +40,7 @@ namespace StreetCorsa.Dialogs.RaceHub
                 if (catalog.GetCar(car.DefinitionId) is not { } carDef) continue;
                 if (definition.EntryRequirements != null && !filter.Matches(definition.EntryRequirements, carDef, car)) continue;
 
-                eligible.Add(EligibleCarViewModel.FromCar(car, $"{carDef.Year} {carDef.Brand} {carDef.Name}"));
+                eligible.Add(EligibleCarViewModel.FromCar(car, CarNames.Of(carDef)));
             }
 
             return eligible;

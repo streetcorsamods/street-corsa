@@ -29,13 +29,12 @@
                        TextTrimming="CharacterEllipsis"/>
         </Border>
 
-        <!-- The part, turned and wheeled with the mouse. The viewport is only there while there is a picture to show:
-             it is unloaded with the dialog, and its renderer with it. -->
+        <!-- The part, turned and wheeled with the mouse. The viewport finds out off the UI thread whether there is a
+             picture to show; it is unloaded with the dialog, and its renderer with it. -->
         <Grid Grid.Row="1" Height="440" Background="{StaticResource BgPanelBrush}" ClipToBounds="True">
             <controls:PartViewport3D x:Name="Viewport"
                                      Part="{Binding Part}"
-                                     Catalog="{Binding Catalog}"
-                                     Visibility="{Binding HasPicture, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                     Catalog="{Binding Catalog}"/>
 
             <!-- A studio's falloff: the light pools on the part, the corners go dark -->
             <Rectangle IsHitTestVisible="False" Opacity="0.6">
@@ -61,14 +60,14 @@
                        VerticalAlignment="Center"
                        Visibility="Collapsed"/>
 
-            <TextBlock Text="{t:Text preview.part.hint}"
+            <TextBlock x:Name="Hint"
+                       Text="{t:Text preview.part.hint}"
                        Foreground="{StaticResource TextSecondaryBrush}"
                        FontSize="{StaticResource FontSizeCaption}"
                        HorizontalAlignment="Right"
                        VerticalAlignment="Bottom"
                        Margin="0,0,12,8"
-                       IsHitTestVisible="False"
-                       Visibility="{Binding HasPicture, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                       IsHitTestVisible="False"/>
         </Grid>
 
         <!-- What it is, what shape it is in, what it costs -->

@@ -29,9 +29,6 @@ namespace StreetCorsa.Dialogs.PartPreview
             Group = definition == null ? string.Empty : PartKinds.GroupName(PartKinds.GroupOf(definition));
             Condition = PartTrees.Describe(part);
 
-            // Worked out once: the catalog knows from its files whether there is a model to show
-            HasPicture = Controls.PartPreviewModel.HasModel(catalog, part);
-
             BuyCommand = new RelayCommand(OnBuy, () => _buy != null);
             CloseCommand = new RelayCommand(() => _dialogService.CloseDialog());
         }
@@ -59,9 +56,6 @@ namespace StreetCorsa.Dialogs.PartPreview
 
         /// <summary>The name is said under the title only when the title is something else</summary>
         public bool ShowsPartName => !string.Equals(PartName, Title, StringComparison.Ordinal);
-
-        /// <summary>Something of the part has a model: false shows words instead of the 3D view</summary>
-        public bool HasPicture { get; }
 
         public bool CanBuy => _buy != null;
 
