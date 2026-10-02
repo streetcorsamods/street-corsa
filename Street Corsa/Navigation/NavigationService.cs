@@ -551,5 +551,47 @@ namespace StreetCorsa.Navigation
                 _gameStateRepository,
                 _purchaseService,
                 _carPartsService));
+
+        // ============================================================
+        // STEP 25 (B): 3D PREVIEWS
+        // A car ad goes to see the car; a part ad opens a look at the part
+        // ============================================================
+
+        /// <summary>
+        /// "You drive over to see it": a car from the paper's ads where its seller has it (a dealer's on the lot, a
+        /// private seller's at the curb), to walk round and buy. Back, and a car gone meanwhile, return to the paper.
+        /// </summary>
+        public bool NavigateToCarViewing(GameState gameState, UsedCarListing listing) => SafeNavigate("car viewing", () =>
+            new Screens.CarViewing.CarViewingScreenViewModel(
+                this,
+                _dialogService,
+                gameState,
+                listing,
+                _dealerCatalog,
+                _catalogRepository,
+                _profileRepository,
+                _purchaseService,
+                _carPartsService));
+
+        /// <summary>
+        /// A part to look at in 3D over the current screen (with whatever is bolted on it), its name, condition and
+        /// <paramref name="priceLine"/>; Buy only with a <paramref name="buy"/>, which runs once the preview has
+        /// closed. One that fails to build is logged and the player told. False when it did not open.
+        /// </summary>
+        public bool ShowPartPreview(PartInstance part, string title, string priceLine, Action? buy)
+        {
+            try
+            {
+                _dialogService.ShowDialog(new Dialogs.PartPreview.PartPreviewDialogViewModel(
+                    _dialogService, _carPartsService.Catalog, part, title, priceLine, buy));
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not open the preview of {Part}", part.DefinitionId);
+                ShowNavigationError("part preview");
+                return false;
+            }
+        }
     }
 }
