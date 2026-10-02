@@ -76,6 +76,7 @@ namespace StreetCorsa.Screens.CarViewing
 
             BuyCommand = new RelayCommand(OnBuy, () => Car != null);
             BackCommand = new RelayCommand(OnBack);
+            GarageCommand = new RelayCommand(OnGarage);
             AskSellerCommand = new AsyncRelayCommand(OnAskSellerAsync, () => CanAskSeller);
         }
 
@@ -85,6 +86,8 @@ namespace StreetCorsa.Screens.CarViewing
         public RelayCommand BuyCommand { get; }
 
         public RelayCommand BackCommand { get; }
+
+        public RelayCommand GarageCommand { get; }
 
         /// <summary>Ask the seller what they make of it: the player's AI speaking for them, when it is on</summary>
         public AsyncRelayCommand AskSellerCommand { get; }
@@ -270,6 +273,12 @@ namespace StreetCorsa.Screens.CarViewing
         {
             _logger.Information("Back to the paper from {Car}", Car?.DisplayName);
             _navigationService.NavigateToNewspaper(_gameState, skipAnimation: true);
+        }
+
+        private void OnGarage()
+        {
+            _logger.Information("Home to the garage from {Car}", Car?.DisplayName);
+            _navigationService.NavigateToGarage(_gameState);
         }
 
         public override void Exit()

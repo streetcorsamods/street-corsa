@@ -61,6 +61,15 @@
                 VerticalAlignment="Top"
                 Margin="20,20,0,0"/>
 
+        <!-- Straight home to the garage -->
+        <Button Style="{StaticResource RoundIconButtonStyle}"
+                Tag="{StaticResource GarageIcon}"
+                ToolTip="{t:Text preview.car.garage}"
+                Command="{Binding GarageCommand}"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                Margin="20,100,0,0"/>
+
         <TextBlock Text="{t:Text preview.car.hint}"
                    FontSize="{StaticResource FontSizeCaption}"
                    Foreground="{StaticResource TextSecondaryBrush}"

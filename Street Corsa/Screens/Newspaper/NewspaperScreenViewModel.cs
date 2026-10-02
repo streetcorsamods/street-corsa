@@ -49,7 +49,6 @@ namespace StreetCorsa.Screens.Newspaper
         private readonly IGameTimeService _timeService;
         private readonly IGameStateRepository _gameStateRepo;
         private readonly ICarSaleService _saleService;
-        private readonly PurchaseFlow _purchaseFlow;
         private readonly IAppLogger _logger;
 
         /// <summary>Ids of the parts that go somewhere on the car selected in the garage</summary>
@@ -69,7 +68,6 @@ namespace StreetCorsa.Screens.Newspaper
             IContentCatalogRepository catalogRepository,
             ICarProfileRepository profileRepository,
             IUsedCarMarketService marketService,
-            ICarPurchaseService purchaseService,
             ICarPartsService partsService,
             INewspaperPartsService partAdsService,
             IGameTimeService timeService,
@@ -89,7 +87,6 @@ namespace StreetCorsa.Screens.Newspaper
             _gameStateRepo = gameStateRepo;
             _saleService = saleService;
             _logger = AppLoggerFactory.CreateLogger("Newspaper");
-            _purchaseFlow = new PurchaseFlow(dialogService, purchaseService, _logger);
             SkipEnterAnimation = skipAnimation;
 
             BackCommand = new RelayCommand(OnBack);
@@ -303,7 +300,7 @@ namespace StreetCorsa.Screens.Newspaper
             };
 
             CarAdViewModel? ad = null;
-            ad = new CarAdViewModel(car, car.CanAfford, new RelayCommand(() => OnBuyCar(ad!)), new RelayCommand(() => OnLookAtCar(ad!)));
+            ad = new CarAdViewModel(car, new RelayCommand(() => OnLookAtCar(ad!)));
             return ad;
         }
 
@@ -321,8 +318,7 @@ namespace StreetCorsa.Screens.Newspaper
 
                         _wroteBlurbs |= AdBlurbs.Ensure(ad, catalog);
                         PartAdViewModel? row = null;
-                        row = new PartAdViewModel(ad, definition, _fitting.Contains(definition.Id), _gameState.Player.Money >= ad.AskingPrice,
-                            new RelayCommand(() => OnBuyPart(row!)), new RelayCommand(() => OnLookAtPart(row!)));
+                        row = new PartAdViewModel(ad, definition, _fitting.Contains(definition.Id), new RelayCommand(() => OnLookAtPart(row!)));
                         ads.Add(row);
                     }
                 }
@@ -339,31 +335,7 @@ namespace StreetCorsa.Screens.Newspaper
             OnPropertyChanged(nameof(ShowNoParts));
         }
 
-        /// <summary>After a deal: who can afford what is not what it was</summary>
-        private void RefreshAffordable()
-        {
-            var money = _gameState.Player.Money;
-            foreach (var ad in CarAds.Shown) ad.CanAfford = money >= ad.Car.Listing.Price;
-            foreach (var ad in PartAds.Shown) ad.CanAfford = money >= ad.Ad.AskingPrice;
-        }
-
         // ----- buying and looking -----
-
-        private void OnBuyCar(CarAdViewModel ad)
-        {
-            _purchaseFlow.Offer(_gameState, ad.Car, result =>
-            {
-                // Bought, or sold to somebody else meanwhile: either way the ad is out of the paper
-                if (result.Succeeded || result.Outcome == PurchaseOutcome.NoLongerAvailable)
-                {
-                    CarAds.Remove(ad);
-                    OnPropertyChanged(nameof(HasCarAds));
-            OnPropertyChanged(nameof(ShowNoCars));
-                }
-
-                RefreshAffordable();
-            });
-        }
 
         private void OnBuyPart(PartAdViewModel ad)
         {
@@ -384,7 +356,6 @@ namespace StreetCorsa.Screens.Newspaper
 
             OnPropertyChanged(nameof(HasPartAds));
             OnPropertyChanged(nameof(ShowNoParts));
-            RefreshAffordable();
         }
 
         /// <summary>Go and see the car (clicking its ad): a screen of its own, the car at the seller's curb or on the lot</summary>
@@ -481,7 +452,6 @@ namespace StreetCorsa.Screens.Newspaper
         private void ShowSaleResult(SaleResult result, string title)
         {
             LoadPlayerAds();
-            RefreshAffordable();
             var message = result.SaveFailed ? GameText.Say("sell.save_failed", ("message", result.Message)) : result.Message;
             _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, message, title));
         }

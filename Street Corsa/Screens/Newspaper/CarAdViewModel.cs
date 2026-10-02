@@ -12,11 +12,9 @@ namespace StreetCorsa.Screens.Newspaper
     /// </summary>
     public sealed class CarAdViewModel : ObservableObject
     {
-        public CarAdViewModel(UsedCarListingViewModel car, bool canAfford, RelayCommand buy, RelayCommand look)
+        public CarAdViewModel(UsedCarListingViewModel car, RelayCommand look)
         {
             Car = car;
-            _canAfford = canAfford;
-            BuyCommand = buy;
             LookCommand = look;
 
             var definition = car.CarDefinition;
@@ -74,17 +72,6 @@ namespace StreetCorsa.Screens.Newspaper
                 return Car.EngineDisplay.Length == 0 ? details : GameText.Say("paper.ad.car.details.engine", ("details", details), ("engine", Car.EngineDisplay));
             }
         }
-
-        private bool _canAfford;
-
-        /// <summary>The player has the money for it, as of the last deal</summary>
-        public bool CanAfford
-        {
-            get => _canAfford;
-            set => SetProperty(ref _canAfford, value);
-        }
-
-        public RelayCommand BuyCommand { get; }
 
         /// <summary>Go and see the car (clicking the ad)</summary>
         public RelayCommand LookCommand { get; }

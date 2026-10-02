@@ -32,8 +32,9 @@ public sealed record CarViewingStage(
 /// <summary>
 /// One car in a scene, to walk round: the car viewing screen's view of a car for sale. The scene and the car load
 /// together and the picture is held back until the car stands there (<see cref="IsSettled"/>); then the camera glides
-/// in to the car's front three-quarter. Dragging walks round it, the wheel steps closer or back. The car stands on the
-/// ground as its own data says (<see cref="AcCarFrame"/>), and its running engine rocks it.
+/// in to the car's front three-quarter and walks slowly round it. Dragging walks round it (and stops the walk), the
+/// wheel steps closer or back. The car stands on the
+/// ground by its tyres, and its running engine rocks it.
 /// </summary>
 public class CarViewingViewport3D : D3DViewportBase
 {
@@ -51,6 +52,9 @@ public class CarViewingViewport3D : D3DViewportBase
     private const float MinRadius = 3.2f;
     private const float FloorClearance = 0.25f;
 
+    // Once in, the camera walks slowly round the car (radians a second) until the player takes it
+    private const float TurnRate = 0.12f;
+
     // The light over a car seen after dark: on the camera's side of it, up on a pole, warm, reaching the whole car
     private const float DarkBelow = 0.5f;
     private const float YardLightHeight = 4.5f;
@@ -67,6 +71,7 @@ public class CarViewingViewport3D : D3DViewportBase
     private float _betaGoal = StartBeta;
     private float? _alphaGoal;
     private System.Windows.Point? _dragFrom;
+    private bool _touched;
     private int _fadeInAfter = -1;
 
     public CarViewingViewport3D()
@@ -161,12 +166,7 @@ public class CarViewingViewport3D : D3DViewportBase
             if (lighting.Brightness < DarkBelow) renderer.AddLight(YardLight(stage));
         }
 
-        // How the car sits on the road, from its data, read off this thread
-        var frame = await Task.Run(() => SceneLights.FrameOf(stage.CarDirectory,
-            ex => Logger.Warning(ex, "The data of {Car} could not be read: it sits as most cars do", stage.CarDirectory)));
-        if (Renderer != renderer || !IsLoaded) return;
-
-        var placement = Sx.Matrix.RotationY(stage.Heading * MathF.PI / 180f) * Sx.Matrix.Translation(stage.X, frame.Lift, stage.Z);
+        var placement = Sx.Matrix.RotationY(stage.Heading * MathF.PI / 180f) * Sx.Matrix.Translation(stage.X, 0f, stage.Z);
 
         // The slot hands a matrix set while it was empty to the car it is given: set before and after
         renderer.MainSlot.LocalMatrix = placement;
@@ -175,8 +175,16 @@ public class CarViewingViewport3D : D3DViewportBase
         if (Renderer != renderer || !IsLoaded) return;
 
         renderer.MainSlot.LocalMatrix = placement;
-        renderer.MainSlot.ResetCarBoundingBox();
         renderer.RefreshBounds();
+
+        // On the floor by its tyres as they are drawn: the model's own origin (and the data's word on it) differs from
+        // mod to mod, and the floor of the showroom and the street is the ground plane
+        if (LowestTyre(renderer) is { } low && Math.Abs(low) > 0.002f)
+        {
+            placement *= Sx.Matrix.Translation(0f, -low, 0f);
+            renderer.MainSlot.LocalMatrix = placement;
+            renderer.RefreshBounds();
+        }
 
         AimAtCar(renderer, stage);
         _loaded = stage;
@@ -185,6 +193,21 @@ public class CarViewingViewport3D : D3DViewportBase
         Invalidate();
 
         Logger.Information("Car viewing: {Car} up in {Ms} ms", Path.GetFileName(stage.CarDirectory), (int)(DateTime.Now - started).TotalMilliseconds);
+    }
+
+    /// <summary>How far the lowest of the car's tyres is over the ground, as it stands now; null without its wheels</summary>
+    private static float? LowestTyre(GarageRenderer renderer)
+    {
+        if (renderer.CarNode is not { } car) return renderer.MainSlot.GetCarBoundingBox()?.Minimum.Y;
+
+        float? low = null;
+        foreach (var name in new[] { "WHEEL_LF", "WHEEL_RF", "WHEEL_LR", "WHEEL_RR" })
+        {
+            if (car.RootObject.GetDummyByName(name)?.BoundingBox is not { } box || !float.IsFinite(box.Minimum.Y)) return renderer.MainSlot.GetCarBoundingBox()?.Minimum.Y;
+            low = Math.Min(low ?? float.MaxValue, box.Minimum.Y);
+        }
+
+        return low;
     }
 
     /// <summary>A lamp over the car, out on the side the camera comes round from</summary>
@@ -230,6 +253,7 @@ public class CarViewingViewport3D : D3DViewportBase
         _betaGoal = StartBeta;
         var alpha = PreviewFraming.CarCameraAlpha(stage.Heading, stage.CameraFromSide);
         _alphaGoal = alpha;
+        _touched = false;
 
         orbit.MinY = FloorClearance;
         orbit.Target = _target;
@@ -280,6 +304,11 @@ public class CarViewingViewport3D : D3DViewportBase
             {
                 _alphaGoal = null;
             }
+        }
+        else if (!_touched && _loaded != null)
+        {
+            orbit.Alpha += TurnRate * Math.Min(dt, GarageRenderer.MaxTickSeconds * 2f);
+            moving = true;
         }
 
         if (Math.Abs(_betaGoal - orbit.Beta) > Settled)
@@ -347,8 +376,9 @@ public class CarViewingViewport3D : D3DViewportBase
         _dragFrom = now;
         if (Math.Abs(dx) < 0.01 && Math.Abs(dy) < 0.01) return;
 
-        // The player has the camera now: it is no longer brought round to the car
+        // The player has the camera now: it is no longer brought round to the car, nor walked round it
         _alphaGoal = null;
+        _touched = true;
         orbit.Alpha += (float)dx * DragPerPixel;
         _betaGoal = Math.Clamp(orbit.Beta + (float)dy * DragPerPixel, MinBeta, MaxBeta);
         orbit.Beta = _betaGoal;

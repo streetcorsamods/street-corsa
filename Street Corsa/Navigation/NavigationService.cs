@@ -455,7 +455,6 @@ namespace StreetCorsa.Navigation
                 _catalogRepository,
                 _profileRepository,
                 _marketService,
-                _purchaseService,
                 _carPartsService,
                 _partsShopService,
                 _timeService,

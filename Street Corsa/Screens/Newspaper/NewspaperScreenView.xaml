@@ -36,13 +36,13 @@
         <!-- The ad's small print -->
         <Style x:Key="AdTextStyle" TargetType="TextBlock">
             <Setter Property="FontFamily" Value="{StaticResource NewsprintFont}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+            <Setter Property="FontSize" Value="{StaticResource FontSizeHeading}"/>
             <Setter Property="Foreground" Value="{StaticResource NewsprintInkBrush}"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
             <Setter Property="TextAlignment" Value="Justify"/>
         </Style>
 
-        <!-- A button printed in ink: Buy, Take it, Turn down. Ink fills it under the pointer. -->
+        <!-- A button printed in ink: Take it, Turn down. Ink fills it under the pointer. -->
         <Style x:Key="InkButtonStyle" TargetType="Button">
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
@@ -124,28 +124,17 @@
         </Style>
 
         <ItemsPanelTemplate x:Key="ColumnsPanel">
-            <local:ClassifiedColumnsPanel MinColumnWidth="270" Gutter="26" Rule="{StaticResource NewsprintRuleBrush}"/>
+            <local:ClassifiedColumnsPanel MinColumnWidth="360" Gutter="32" Rule="{StaticResource NewsprintRuleBrush}"/>
         </ItemsPanelTemplate>
     </UserControl.Resources>
 
     <Grid x:Name="RootGrid"
-          Background="{StaticResource NewspaperBackgroundBrush}"
+          Background="{StaticResource NewsprintPaperBrush}"
           Opacity="0">
-        <!-- The old front pages behind, pushed back so the sheet in front reads -->
-        <Rectangle Fill="{StaticResource BlackB0Brush}"/>
-
-        <!-- The sheet: newsprint, run off the bottom of the screen -->
+        <!-- The sheet: newsprint over the whole screen -->
         <Border x:Name="Sheet"
-                Background="{StaticResource NewsprintPaperBrush}"
-                BorderBrush="{StaticResource NewsprintPaperEdgeBrush}"
-                BorderThickness="1,1,1,0"
-                Margin="110,22,110,0"
-                MaxWidth="1560"
-                Padding="34,18,30,0"
+                Padding="40,18,36,0"
                 Opacity="0">
-            <Border.Effect>
-                <DropShadowEffect Color="{StaticResource Shadow}" BlurRadius="24" ShadowDepth="4" Direction="270" Opacity="0.7"/>
-            </Border.Effect>
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -153,8 +142,9 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <!-- The masthead: the paper's name between its rules, the date and the page's name under it -->
-                <StackPanel Grid.Row="0">
+                <!-- The masthead: the paper's name between its rules, the date and the page's name under it; clear of the
+                     back button on the left and the money card on the right -->
+                <StackPanel Grid.Row="0" Margin="200,0,200,0">
                     <Border Style="{StaticResource PageRuleStyle}" BorderThickness="0,0,0,3"/>
                     <TextBlock Text="{t:Text paper.masthead}"
                                FontFamily="{StaticResource NewsprintFont}"
@@ -260,7 +250,7 @@
                                 <DataTemplate DataType="{x:Type local:CarAdViewModel}">
                                     <Button Style="{StaticResource ClassifiedAdStyle}" Command="{Binding LookCommand}" ToolTip="{Binding Details}">
                                         <TextBlock Style="{StaticResource AdTextStyle}">
-                                            <Run Text="{Binding Headline, Mode=OneWay}" FontFamily="{StaticResource NewsHeadFont}" FontStretch="Condensed" FontWeight="Bold"/><Run Text="  "/><Run Text="{Binding Blurb, Mode=OneWay}"/><Run Text="{Binding WasPriceDisplay, Mode=OneWay}" TextDecorations="Strikethrough" Foreground="{StaticResource NewsprintPencilBrush}"/><Run Text="{Binding PriceDisplay, Mode=OneWay}" FontWeight="Bold"/><Run Text=". "/><Run Text="{Binding SellerDisplay, Mode=OneWay}" FontStyle="Italic"/><Run Text="  "/><InlineUIContainer BaselineAlignment="Center"><Button Content="{t:Text paper.ad.buy}" Command="{Binding BuyCommand}" IsEnabled="{Binding CanAfford}" Style="{StaticResource InkButtonStyle}"/></InlineUIContainer>
+                                            <Run Text="{Binding Headline, Mode=OneWay}" FontFamily="{StaticResource NewsHeadFont}" FontStretch="Condensed" FontWeight="Bold"/><Run Text="  "/><Run Text="{Binding Blurb, Mode=OneWay}"/><Run Text="{Binding WasPriceDisplay, Mode=OneWay}" TextDecorations="Strikethrough" Foreground="{StaticResource NewsprintPencilBrush}"/><Run Text="{Binding PriceDisplay, Mode=OneWay}" FontWeight="Bold"/><Run Text=". "/><Run Text="{Binding SellerDisplay, Mode=OneWay}" FontStyle="Italic"/>
                                         </TextBlock>
                                     </Button>
                                 </DataTemplate>
@@ -286,7 +276,7 @@
                                 <DataTemplate DataType="{x:Type local:PartAdViewModel}">
                                     <Button Style="{StaticResource ClassifiedAdStyle}" Command="{Binding LookCommand}" ToolTip="{Binding Details}">
                                         <TextBlock Style="{StaticResource AdTextStyle}">
-                                            <Run Text="{Binding Headline, Mode=OneWay}" FontFamily="{StaticResource NewsHeadFont}" FontStretch="Condensed" FontWeight="Bold"/><Run Text="  "/><Run Text="{Binding Blurb, Mode=OneWay}"/><Run Text="{Binding PriceDisplay, Mode=OneWay}" FontWeight="Bold"/><Run Text=". "/><Run Text="{Binding SellerDisplay, Mode=OneWay}" FontStyle="Italic"/><Run Text="{Binding FitsDisplay, Mode=OneWay}" FontStyle="Italic" Foreground="{StaticResource NewsprintPencilBrush}"/><Run Text="  "/><InlineUIContainer BaselineAlignment="Center"><Button Content="{t:Text paper.ad.buy}" Command="{Binding BuyCommand}" IsEnabled="{Binding CanAfford}" Style="{StaticResource InkButtonStyle}"/></InlineUIContainer>
+                                            <Run Text="{Binding Headline, Mode=OneWay}" FontFamily="{StaticResource NewsHeadFont}" FontStretch="Condensed" FontWeight="Bold"/><Run Text="  "/><Run Text="{Binding Blurb, Mode=OneWay}"/><Run Text="{Binding PriceDisplay, Mode=OneWay}" FontWeight="Bold"/><Run Text=". "/><Run Text="{Binding SellerDisplay, Mode=OneWay}" FontStyle="Italic"/><Run Text="{Binding FitsDisplay, Mode=OneWay}" FontStyle="Italic" Foreground="{StaticResource NewsprintPencilBrush}"/>
                                         </TextBlock>
                                     </Button>
                                 </DataTemplate>

@@ -13,13 +13,11 @@ namespace StreetCorsa.Screens.Newspaper
     /// </summary>
     public sealed class PartAdViewModel : ObservableObject
     {
-        public PartAdViewModel(PartAd ad, PartDefinition definition, bool fits, bool canAfford, RelayCommand buy, RelayCommand look)
+        public PartAdViewModel(PartAd ad, PartDefinition definition, bool fits, RelayCommand look)
         {
             Ad = ad;
             Definition = definition;
             Fits = fits;
-            _canAfford = canAfford;
-            BuyCommand = buy;
             LookCommand = look;
             Name = definition.DisplayName ?? definition.Name;
             Headline = Name.ToUpper(Locale.Culture);
@@ -49,17 +47,6 @@ namespace StreetCorsa.Screens.Newspaper
         /// <summary>Its kind, condition, and what comes with it</summary>
         public string Details => GameText.Say("paper.ad.part.details",
             ("kind", PartKinds.GroupName(PartKinds.GroupOf(Definition))), ("part", PartTrees.Describe(Ad.Part)));
-
-        private bool _canAfford;
-
-        /// <summary>The player has the money for it, as of the last deal</summary>
-        public bool CanAfford
-        {
-            get => _canAfford;
-            set => SetProperty(ref _canAfford, value);
-        }
-
-        public RelayCommand BuyCommand { get; }
 
         /// <summary>Have a look at the part (clicking the ad)</summary>
         public RelayCommand LookCommand { get; }
