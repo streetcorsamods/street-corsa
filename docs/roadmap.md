@@ -1215,6 +1215,61 @@ a part from its look), the car stands on its tyres, the camera walks round it, a
 - AI: see `docs/ai-integration.md`. Tested live with Ollama `llama3.2:3b`; ComfyUI, Anthropic and OpenAI-compatible
   only against fake servers.
 
+## Step 26: from `docs/ideas.txt`, batch 6: talking to people (planned 2026-10-01)
+
+The sixth batch, all for when the player's AI is on: call whoever placed an ad (a car or a part) and talk to them;
+talk to a car dealer's salesman, who sells with all the jive he has but answers true; talk to the rivals on the
+street, who remember longer. Each person has a personality, remembers past talks for a while and then forgets, and
+answers about what is for sale and about past races with the truth ("I raced you last week!" "Sorry, dude. I don't
+remember you. Do you want this valve cover or not?"). **The user decided (2026-10-01):** this is next, before E7; one
+PR; talk can change a deal, but the game decides the price and the AI only says it; rivals can be talked to at the
+Diner and at the Cruise curb; races between rivals start being recorded so they can talk true about them too.
+
+What the code has today (mapped 2026-10-01): only rivals are people (`Opponent`: id, name, age, gender, aggression,
+biography, grudge). A private car seller has no identity (`UsedCarListing` with no `DealerLocation`); a part ad's
+seller is a name made up at random (`PartAd.SellerName`, or `SellerRival`); a dealer is a business with no
+salesman (`DealerDefinition`, `DealerLocation`). The player's races are saved (`ProcessedRaceSession`: date, opponent
+by name, won, pink slip); races between rivals are only text in the street talk and the paper. The AI is one question,
+one answer (`AiTextRequest(System, Prompt, ...)`); nothing remembers a talk; the game has no chat window.
+
+- **People:** a `Person` in the save (id, name, age, sex, a temperament and a way of talking from the mods'
+  `people/temperaments.json`, the person's kind: private seller, salesman, shop clerk, rival). Made once, when first
+  needed, from the ad's seed so an ad keeps its seller: `UsedCarListing.SellerId`, `PartAd.SellerId`, a salesman per
+  dealer (`DealerLocation.SalesmanId`; a dealer's mod data may name one) and a clerk per part shop. A rival is its own
+  `Opponent`; the person record only holds what rivals lack. Salesmen lean to the jive talkers.
+- **Chat with the AI:** `AiTextRequest` carries a list of turns; the three providers send them as messages. `IAiText`
+  gets `ChatAsync(use, values, turns)`, always the player's priority, with the same queue, timeout and fallback.
+- **What a person knows (the fact sheet):** sent with every turn and filled by the game, never by the AI: who they are
+  and their temperament; what is for sale (the car's make and model, engine and parts as the engine panel shows them,
+  condition, mileage, owners, wins, days on sale, the asked price; a part's name, condition, what it fits, price); the
+  races they had with the player (`ProcessedRaceSession` by name: when, where, who won, pink slip) and, for rivals,
+  their recorded races with other rivals; what they remember of past talks; the deal on the table. The prompt says to
+  answer only from it, to say "don't know" otherwise, and to steer back to the sale when the talk wanders.
+- **Haggling:** when the player names a price (a number in what they typed: "1200", "$1,200", "1.2k"), the game
+  decides before the AI answers: take it, counter, or refuse (rules `talk.haggle`: the most a seller comes down, more
+  for a private seller who wants it gone, a car long on sale, a gruff or broke rival less, a salesman who opens high
+  and comes down in steps, never below what the game says it is worth less a margin). The decision goes in the fact
+  sheet ("The player offers $1,200. You counter at $1,400.") and the AI only says it. An agreed price is a deal
+  (`GameState.Deals`: listing or ad, price, until a date) that Buy uses; it is shown in the talk window.
+- **Memory that fades:** when a talk ends (with at least one thing said by the player), a background request writes
+  one line from the person's side ("The kid asked about the 327's compression, offered $900, I said no."), kept with
+  the game date in `GameState.Memories`. Only the last few are given back, and they are forgotten after
+  `talk.forgetDays`: about 14 days for a private seller or a clerk, 30 for a salesman, 90 for a rival. Deals and races
+  are facts from the game, not memories, so they are always told true.
+- **Rival races recorded:** `RaceSimulatorTask` saves each rival-vs-rival race (`RivalRaceRecord`: date, both names,
+  cars, winner, pink slip) in the save, the oldest dropped past a cap.
+- **The talk window:** `Dialogs/Talk`, a modal in the game's look: the person's name, portrait (a rival's, else none)
+  and what they are (on the phone, at the lot, at the curb); the talk so far; a text box and Send; the deal, if any;
+  Hang up / Goodbye. While the AI writes, "..." on their side; if it fails, a line from the text pool ("The line went
+  dead.") and the talk can go on. The AI writes in the player's language (the persona says so).
+- **Where:** "Call the seller" on the car viewing screen (the "What do you make of it?" button becomes the talk: the
+  seller's first words are their take) and in the part preview; "Talk to the salesman" for a dealer's car; "Talk" at
+  the Diner for the picked rival and at the Cruise curb before the player accepts or waves off. All shown only while the
+  AI is on.
+- **Mod data:** prompts `chat_seller`, `chat_salesman`, `chat_clerk`, `chat_rival` (each a persona of its own on top of
+  the game's) and `chat_memory` in `ai/prompts.json`; temperaments in `people/temperaments.json`; window words in
+  `text/ui_talk.json`; figures in `rules/ai.json`'s `talk` (turns kept, memories given, forgetDays per kind, haggle).
+
 ## Epic: total conversion (planned 2026-09-30)
 
 The owner wants the whole game moddable, so the community can add game modes and whole new games (a Tokyo Drift game
