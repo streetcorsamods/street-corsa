@@ -5,6 +5,7 @@ using StreetCorsa.Mods;
 using StreetCorsa.Parts;
 using StreetCorsa.Parts.Cars;
 using StreetCorsa.Parts.Logic;
+using StreetCorsa.Services.Scripting;
 using StreetCorsa.Services.Station;
 using StreetCorsa.Services.Street;
 using StreetCorsa.Services.Text;
@@ -291,13 +292,20 @@ public class GasStationTests
 
     private static readonly GroundPoint[] Arrival = [new(-60, 28), new(-20, 28), new(-8, 22), new(2, 12), new(2, 5)];
 
+    // The station's drives as its scripts have them: in rolling and stopping at the pump, out from a standstill and on
+    private static DrivePlan Arrive(IReadOnlyList<GroundPoint> points) => DrivePlan.Road(DrivePath.Through(points), DriveFeel.Road, 800, rolling: true, stop: true);
+
+    private static DrivePlan Leave(IReadOnlyList<GroundPoint> points) => DrivePlan.Road(DrivePath.Through(points), DriveFeel.Road, 800, rolling: false, stop: false);
+
+    private static float Degrees(float radians) => radians * 180f / MathF.PI;
+
     [Fact]
     public void Arriving_the_car_rolls_in_and_stops_at_the_pump_facing_along_the_last_stretch()
     {
-        var drive = PathDrive.Arrive(Arrival, 800);
+        var drive = Arrive(Arrival);
         var start = drive.At(0);
         Assert.True(start.Speed > 5, "it comes in rolling");
-        Assert.InRange(start.Heading, 89f, 91f);
+        Assert.InRange(Degrees(start.Heading), 89f, 91f);
 
         var end = drive.At(drive.Duration + 1);
         Assert.True(end.Done);
@@ -305,14 +313,14 @@ public class GasStationTests
         Assert.Null(end.Rpm);
         Assert.Equal(2, end.X, 2);
         Assert.Equal(5, end.Z, 2);
-        Assert.InRange(Math.Abs(end.Heading), 178f, 182f);
+        Assert.InRange(Math.Abs(Degrees(end.Heading)), 178f, 182f);
         Assert.InRange(drive.Duration, 5, 30);
     }
 
     [Fact]
     public void Leaving_the_car_pulls_away_from_a_standstill_and_is_still_going_at_the_end()
     {
-        var drive = PathDrive.Leave([new(0, 0), new(0, 20), new(0, 60)], 800);
+        var drive = Leave([new(0, 0), new(0, 20), new(0, 60)]);
         Assert.Equal(0, drive.At(0).Speed);
         Assert.True(drive.At(0.5f).Speed > 0);
         var end = drive.At(drive.Duration);
@@ -324,7 +332,7 @@ public class GasStationTests
     [Fact]
     public void A_bend_is_taken_slower_than_the_straight_and_the_clock_only_goes_forward()
     {
-        var drive = PathDrive.Arrive(Arrival, 800);
+        var drive = Arrive(Arrival);
         var fastest = 0f;
         var slowestInBend = float.MaxValue;
         var last = drive.At(0);
@@ -332,7 +340,7 @@ public class GasStationTests
         {
             var state = drive.At(t);
             Assert.True(state.Distance >= last.Distance - 1e-4f);
-            Assert.True(state.Speed <= PathDrive.CruiseSpeed + 1e-3f);
+            Assert.True(state.Speed <= DriveFeel.Road.CruiseSpeed + 1e-3f);
             if (state.X < -30) fastest = Math.Max(fastest, state.Speed);
             if (state.X is > -10 and < 0) slowestInBend = Math.Min(slowestInBend, state.Speed);
             last = state;
@@ -345,21 +353,21 @@ public class GasStationTests
     public void The_base_games_drives_never_swing_the_car_round_faster_than_a_driver_would()
     {
         var station = StationScenes.LoadAll(ModSet.Installed).Single(s => s.Id == "tomwixon");
-        foreach (var drive in new[] { PathDrive.Arrive(station.Arrive, 800), PathDrive.Leave(station.Leave, 800) })
+        foreach (var (drive, leaving) in new[] { (Arrive(station.Arrive), false), (Leave(station.Leave), true) })
         {
             const float step = 0.05f;
             var worst = 0f;
             var where = drive.At(0);
             for (var t = step; t < drive.Duration; t += step)
             {
-                var turn = (drive.At(t).Heading - drive.At(t - step).Heading + 540f) % 360f - 180f;
+                var turn = Degrees(GroundPose.Turn(drive.At(t - step).Heading, drive.At(t).Heading));
                 if (Math.Abs(turn) / step <= worst) continue;
                 worst = Math.Abs(turn) / step;
                 where = drive.At(t);
             }
 
             // A car taking a street corner turns some 30 degrees a second; the spin was hundreds
-            Assert.True(worst < 45f, $"{(drive.IsLeaving ? "leaving" : "arriving")}: {worst:0} degrees a second at ({where.X:0.0}, {where.Z:0.0}), {where.Speed:0.0} m/s");
+            Assert.True(worst < 45f, $"{(leaving ? "leaving" : "arriving")}: {worst:0} degrees a second at ({where.X:0.0}, {where.Z:0.0}), {where.Speed:0.0} m/s");
         }
     }
 
@@ -367,7 +375,7 @@ public class GasStationTests
     public void A_short_stretch_into_a_long_one_does_not_loop()
     {
         // The uniform curve overshot here into a loop: the car spun on the spot
-        var drive = PathDrive.Leave([new(40, 11), new(45, 19.5f), new(51, 27), new(60, 28.4f), new(125, 28.4f)], 800);
+        var drive = Leave([new(40, 11), new(45, 19.5f), new(51, 27), new(60, 28.4f), new(125, 28.4f)]);
         var last = drive.At(0);
         for (var t = 0.05f; t <= drive.Duration; t += 0.05f)
         {
@@ -485,7 +493,7 @@ public class GasStationTests
         File.WriteAllText(Path.Combine(folder, "station.json"), """{ "id": "nowhere", "arrive": [[0,0],[0,0]], "leave": [[0,0],[5,0]] }""");
         Assert.Null(StationScenes.Load(folder));
 
-        var drive = PathDrive.Arrive([new(3, 3), new(3, 3)], 800);
+        var drive = Arrive([new(3, 3), new(3, 3)]);
         Assert.True(drive.At(drive.Duration).Done);
     }
 

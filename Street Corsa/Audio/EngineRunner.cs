@@ -47,6 +47,7 @@ public sealed class EngineRunner : INotifyPropertyChanged
     // Where the engine is heard from, and how loud against its full volume
     private (float X, float Y, float Z)? _direction;
     private float _volumeScale = 1f;
+    private float _fade = 1f;
 
     /// <param name="channel">Where it plays: the car on show, or a second one beside it (<see cref="EngineAudio"/>)</param>
     public EngineRunner(EngineChannel channel = EngineChannel.Main)
@@ -232,6 +233,16 @@ public sealed class EngineRunner : INotifyPropertyChanged
         _volumeScale = Math.Clamp(volumeScale, 0f, 1f);
     }
 
+    /// <summary>
+    /// How far a script's fade has it, on top of what <see cref="Place"/> says (the screen's own level): 1 as loud as
+    /// the screen has it, 0 silent. The screen puts it back to 1 when it takes the car back from a script.
+    /// </summary>
+    public float Fade
+    {
+        get => _fade;
+        set => _fade = Math.Clamp(value, 0f, 1f);
+    }
+
     /// <summary>The throttle key is down or up</summary>
     public void SetKey(bool down)
     {
@@ -272,6 +283,7 @@ public sealed class EngineRunner : INotifyPropertyChanged
         _voice = null;
         _direction = null;
         _volumeScale = 1f;
+        _fade = 1f;
         IsLoading = false;
         NotifyAll();
     }
@@ -359,7 +371,7 @@ public sealed class EngineRunner : INotifyPropertyChanged
             else
             {
                 _voice.Set((float)Rpm, (float)sim.Load);
-                _voice.SetVolume(Volume * _volumeScale * EngineAudio.Shared.Volume * (float)Math.Clamp(Rpm / FadeOutRpm, 0, 1), Rpm, sim.Load);
+                _voice.SetVolume(Volume * _volumeScale * _fade * EngineAudio.Shared.Volume * (float)Math.Clamp(Rpm / FadeOutRpm, 0, 1), Rpm, sim.Load);
                 _voice.SetLimiter(sim.OnLimiter);
                 if (_direction is { } d) _voice.SetDirection(d.X, d.Y, d.Z);
             }

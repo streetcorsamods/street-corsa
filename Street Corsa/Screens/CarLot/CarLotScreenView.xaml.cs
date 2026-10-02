@@ -1,6 +1,6 @@
-using System.Windows.Media.Animation;
 using StreetCorsa.Audio;
 using StreetCorsa.Controls;
+using StreetCorsa.Services.Scripting;
 
 namespace StreetCorsa.Screens.CarLot
 {
@@ -37,15 +37,19 @@ namespace StreetCorsa.Screens.CarLot
         }
 
         /// <summary>
-        /// The car picked starts up with <paramref name="spec"/> and drives out of its bay; the screen goes black over
-        /// it. True when it drove off.
+        /// The car picked starts up with <paramref name="spec"/> and is taken out as its script has it (it drives out of
+        /// its bay, and the screen goes black over it). True when it drove off.
         /// </summary>
         private async Task<bool> DriveCarOffAsync(EngineSpec? spec)
         {
             if (spec is not { Runs: true }) return false;
 
             await _engine.SetEngineAsync(spec);
-            if (!await DriveOff.PlayAsync(Viewport, _engine, CurtainDownAsync)) return false;
+            var facts = (DataContext as CarLotScreenViewModel)?.ScriptFacts ?? ScriptFacts.None;
+            if (Viewport.TakeOut(_engine, facts, CurtainAsync) is not { } run) return false;
+
+            await run.Released;
+            if (!run.Drove) return false;
 
             // Gone: its engine goes with it, before the garage takes up the same sound
             _engine.Detach();
@@ -58,10 +62,9 @@ namespace StreetCorsa.Screens.CarLot
             _ = CurtainFade.ToAsync(Curtain, 0, CurtainUp);
             Viewport.StayPut();
             _engine.StopNow();
-            DriveOff.Loud(_engine);
+            _engine.Fade = 1f;
         }
 
-        private Task CurtainDownAsync(TimeSpan duration) =>
-            CurtainFade.ToAsync(Curtain, 1, duration, new QuadraticEase { EasingMode = EasingMode.EaseIn });
+        private Task CurtainAsync(float opacity, TimeSpan over, FadeEase ease) => CurtainFade.ToAsync(Curtain, opacity, over, CurtainFade.Easing(ease));
     }
 }

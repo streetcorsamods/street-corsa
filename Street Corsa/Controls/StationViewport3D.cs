@@ -1,7 +1,9 @@
 using System.IO;
 using System.Windows;
 using StreetCorsa.Audio;
+using StreetCorsa.Controls.Scripting;
 using StreetCorsa.Controls.Street;
+using StreetCorsa.Services.Scripting;
 using StreetCorsa.Services.Station;
 using StreetCorsa.Services.Street;
 using Sx = SlimDX;
@@ -25,9 +27,6 @@ public class StationViewport3D : OnboardViewport3D
     private const float HalfWheelbase = 1.4f;
     private const float HalfTrack = 0.75f;
 
-    // A car driving off is gone for the screen this long before its drive ends: the curtain comes down on it moving
-    private const float GoneBeforeTheEnd = 1.2f;
-
     // What stands in the scene
     private string? _kn5;
     private StreetLight? _light;
@@ -37,16 +36,9 @@ public class StationViewport3D : OnboardViewport3D
     private StationStage? _stageListened;
     private EngineRunner? _engineListened;
 
-    // The car on its way
-    private PathDrive? _drive;
-
-    // Where the arrival stops, worked out once a scene
-    private PathState? _pumpPose;
-    private float _driveTime;
-    private float _wheelAngle;
-    private float _lastDistance;
+    // The player's car as its scripts move it (its home the pump)
+    private ScriptedCar? _car;
     private Sx.Matrix _placement = Sx.Matrix.Identity;
-    private readonly ChassisPitch _pitch = new();
     private CarBodyRock? _rock;
 
     // What the dashboard's needles and the steering wheel show
@@ -177,16 +169,17 @@ public class StationViewport3D : OnboardViewport3D
         _player = null;
         _station = null;
         _rock = null;
-        _pumpPose = null;
 
         // Whatever the car was doing, it is done at once: nobody sees it
-        var drive = _drive;
-        _drive = null;
+        var playing = Playing;
+        StopRun();
+        _car?.Drop();
+        _car = null;
         _engineListened?.Drive(null);
-        if (drive != null && _stageListened is { } stage)
+        if (_stageListened is { } stage)
         {
-            if (drive.IsLeaving) stage.ReportGone();
-            else stage.ReportAtPump();
+            if (playing == ScriptTriggers.StationLeave) stage.ReportGone();
+            else if (playing == ScriptTriggers.StationArrive) stage.ReportAtPump();
         }
     }
 
@@ -244,10 +237,10 @@ public class StationViewport3D : OnboardViewport3D
         switch (stage.Phase)
         {
             case StationPhase.Arriving:
-                StartDrive(PathDrive.Arrive(_station.Arrive, IdleRpm()));
+                DriveIn();
                 break;
             case StationPhase.Leaving:
-                StartDrive(PathDrive.Leave(_station.Leave, IdleRpm()));
+                DriveOut();
                 break;
             case StationPhase.AtPump:
                 StandAtPump();
@@ -259,68 +252,102 @@ public class StationViewport3D : OnboardViewport3D
     private void StartFromStage()
     {
         ListenToEngine(_stageListened?.Engine);
-        _drive = null;
+        StopRun();
         switch (_stageListened?.Phase)
         {
             case StationPhase.Arriving:
-                StartDrive(PathDrive.Arrive(_station!.Arrive, IdleRpm()));
+                DriveIn();
                 break;
             case StationPhase.Leaving:
             case StationPhase.Gone:
-                StartDrive(PathDrive.Leave(_station!.Leave, IdleRpm()));
+                DriveOut();
                 break;
             case StationPhase.AtPump:
                 StandAtPump();
                 break;
             default:
                 // Waiting to drive in: at the start of the way in, out on the road
-                Place(PathDrive.Arrive(_station!.Arrive, IdleRpm()).At(0f));
+                Car.Place(_station!.ScriptMarks.PathStart(Arrive) ?? Car.Home);
+                PlaceCar(Car.Pose);
                 LookYaw = 0f;
                 AimCamera();
                 break;
         }
     }
 
-    /// <summary>The headlights: on while the car drives at night, off while it stands at the pump</summary>
-    private void Headlights(bool on)
-    {
-        if (Renderer?.CarNode is { } node) node.HeadlightsEnabled = on && _light == StreetLight.Night;
-    }
+    /// <summary>The player's car as the scripts move it: it stands at the pump when nothing moves it</summary>
+    private ScriptedCar Car => _car ??= NewCar();
 
-    private void StartDrive(PathDrive drive)
-    {
-        Headlights(true);
-        _drive = drive;
-        _driveTime = 0f;
-        _lastDistance = 0f;
-        _pitch.Reset();
-        _lookHeld = false;
-        Place(drive.At(0f));
-        AnimateFor(TimeSpan.FromSeconds(1));
-        Invalidate();
-    }
+    // The way in, and the pump at its end, as the scripts have them (a station's file may name its own)
+    private const string Arrive = "arrive";
+    private const string Pump = "pump";
 
-    private void StandAtPump()
+    private ScriptedCar NewCar()
     {
-        if (_station is not { } station) return;
-
-        _drive = null;
-        _engineListened?.Drive(null);
-        Headlights(false);
-        if (_pumpPose is not { } pose)
+        // Where the scripts bring it: a mod's own way in moves both
+        var home = _station!.ScriptMarks.Stand(Pump, Arrive) ?? default;
+        var car = new ScriptedCar(home, new ScriptEngine(() => _stageListened?.Engine), (head, brake) =>
         {
-            var arrival = PathDrive.Arrive(station.Arrive, IdleRpm());
-            _pumpPose = pose = arrival.At(arrival.Duration);
+            if (Renderer?.CarNode is not { } node) return;
+            if (head is { } on) node.HeadlightsEnabled = on;
+            if (brake is { } braking) node.BrakeLightsEnabled = braking;
+            Invalidate();
+        });
+        car.Started += () => AnimateFor(TimeSpan.FromSeconds(1));
+        return car;
+    }
+
+    /// <summary>The script for <paramref name="trigger"/> plays with the player's car; null with no scene to play it in</summary>
+    private ScriptRun? Play(string trigger)
+    {
+        if (Renderer == null || _station is not { } station || _stageListened is not { } stage) return null;
+
+        _lookHeld = false;
+        return PlayScript(trigger, Car, SceneStage.Player, station.ScriptMarks, new ScriptFacts(stage.Time, Light, stage.Towed));
+    }
+
+    /// <summary>The car drives in off the road; at the pump once its script lets the screen go on</summary>
+    private void DriveIn()
+    {
+        if (Play(ScriptTriggers.StationArrive) is not { } run) return;
+
+        // No script for it: the car is where the drive would end, at the pump
+        if (run.Script == null)
+        {
+            Car.GoHome();
+            PlaceCar(Car.Pose);
         }
 
-        Place(pose);
-        LookYaw = station.LookAtPump;
-        _lookHeld = false;
-        AimCamera();
-        Invalidate();
+        AfterRelease(run, () =>
+        {
+            _stageListened?.ReportAtPump();
+            Play(ScriptTriggers.StationAtPump);
+        });
     }
 
-    private double IdleRpm() => _stageListened?.Engine?.Spec?.IdleRpm is > 200 and var idle ? idle : 800;
+    /// <summary>The car pulls out onto the road; gone once its script lets the screen go (it drives on behind the curtain)</summary>
+    private void DriveOut()
+    {
+        if (Play(ScriptTriggers.StationLeave) is not { } run) return;
+        AfterRelease(run, () => _stageListened?.ReportGone());
+    }
+
+    /// <summary>The car at the pump at once (towed there, or back from a way out that went nowhere), the driver looking at the pump</summary>
+    private void StandAtPump()
+    {
+        if (_station == null) return;
+
+        StopRun();
+        Car.GoHome();
+        Car.Lights(false, false);
+        _engineListened?.Drive(null);
+        PlaceCar(Car.Pose);
+        LookYaw = _station.LookAtPump;
+        _lookHeld = false;
+        AimCamera();
+        Play(ScriptTriggers.StationAtPump);
+        Invalidate();
+    }
 
     /// <summary>The player's engine rocks the car at the pump: every change of its pose is a frame</summary>
     private void ListenToEngine(EngineRunner? engine)
@@ -333,20 +360,20 @@ public class StationViewport3D : OnboardViewport3D
 
     private void OnEnginePose()
     {
-        if (_drive == null && Renderer != null) Invalidate();
+        if (_car?.Plan == null && Renderer != null) Invalidate();
     }
 
-    /// <summary>The car where the drive has it, on the ground under its wheels</summary>
-    private void Place(PathState state)
+    /// <summary>The car at <paramref name="pose"/>, on the ground under its wheels</summary>
+    private void PlaceCar(GroundPose pose)
     {
-        var heading = state.Heading * MathF.PI / 180f;
+        var heading = pose.Heading;
         var forward = new Sx.Vector3(MathF.Sin(heading), 0f, MathF.Cos(heading));
 
         // A car's own +x is its left
         var left = new Sx.Vector3(MathF.Cos(heading), 0f, -MathF.Sin(heading));
         float Ground(Sx.Vector3 at) => _ground.HeightAt(at.X, at.Z);
 
-        var middle = new Sx.Vector3(state.X, 0f, state.Z);
+        var middle = new Sx.Vector3(pose.X, 0f, pose.Z);
         var front = Ground(middle + forward * HalfWheelbase);
         var rear = Ground(middle - forward * HalfWheelbase);
         var leftSide = Ground(middle + left * HalfTrack);
@@ -363,11 +390,9 @@ public class StationViewport3D : OnboardViewport3D
             M11 = xAxis.X, M12 = xAxis.Y, M13 = xAxis.Z,
             M21 = y.X, M22 = y.Y, M23 = y.Z,
             M31 = z.X, M32 = z.Y, M33 = z.Z,
-            M41 = state.X, M42 = height + Frame.Lift, M43 = state.Z, M44 = 1f
+            M41 = pose.X, M42 = height + Frame.Lift, M43 = pose.Z, M44 = 1f
         };
 
-        _wheelAngle += RivalDrive.WheelAngle(state.Distance - _lastDistance);
-        _lastDistance = state.Distance;
         PoseCar();
     }
 
@@ -377,48 +402,33 @@ public class StationViewport3D : OnboardViewport3D
         if (Renderer?.CarNode is not { } node) return;
 
         var engine = _engineListened?.Pose ?? BodyPose.Rest;
-        var pose = new BodyPose(engine.Roll, engine.Pitch + _pitch.Pitch, engine.Heave);
+        var (roll, pitch) = _car?.Body ?? (0f, 0f);
+        var pose = new BodyPose(engine.Roll + roll, engine.Pitch + pitch, engine.Heave);
         var fresh = _rock == null || !ReferenceEquals(_rock.Car, node);
         if (fresh) _rock = new CarBodyRock(node);
-        if (_rock!.Apply(pose, _wheelAngle, _placement) || fresh) Renderer.RefreshShadows();
+        if (_rock!.Apply(pose, _car?.WheelSpin ?? 0f, _placement, _car?.Steer ?? 0f) || fresh) Renderer.RefreshShadows();
     }
 
-    /// <summary>Moves the car along its drive by a frame; true while it moves</summary>
-    private bool StepDrive(float dt)
+    /// <summary>Moves the car along its drive by a frame; true while it moves or its body settles</summary>
+    private bool StepCar(float dt)
     {
-        if (_drive is not { } drive || _stageListened is not { } stage) return false;
+        if (_car is not { } car) return false;
 
-        _driveTime += dt;
-        var state = drive.At(_driveTime);
-        _speed = state.Speed;
-        _steer += (drive.At(_driveTime + SteerAhead).Curvature - _steer) * (1f - MathF.Exp(-dt / SteerSeconds));
-        _pitch.Tick(dt, state.Acceleration);
-        _engineListened?.Drive(state.Rpm, state.Throttle);
-        if (Renderer?.CarNode is { } node) node.BrakeLightsEnabled = state.Braking;
-
-        // The head turns a little into a bend: the heading's turn over the next second. Both are to the left positive
-        // (a heading growing is a turn to the left, as PathDrive has it)
-        var ahead = drive.At(_driveTime + 1f).Heading;
-        var turn = (ahead - state.Heading + 540f) % 360f - 180f;
-        _bend += (turn * LookIntoBend - _bend) * (1f - MathF.Exp(-dt / 0.5f));
-        Place(state);
-
-        if (drive.IsLeaving && _driveTime >= drive.Duration - GoneBeforeTheEnd) stage.ReportGone();
-        if (!state.Done) return true;
-
-        _drive = null;
-        _engineListened?.Drive(null);
-        if (drive.IsLeaving)
+        var moving = car.Step(dt);
+        _speed = car.Speed;
+        if (car.Plan != null)
         {
-            stage.ReportGone();
-        }
-        else
-        {
-            Headlights(false);
-            stage.ReportAtPump();
+            // The wheel turns into a bend a moment before the car gets there
+            _steer += ((car.Ahead(SteerAhead)?.Curvature ?? 0f) - _steer) * (1f - MathF.Exp(-dt / SteerSeconds));
+
+            // The head turns a little into a bend: the heading's turn over the next second, to the left positive
+            var ahead = car.Ahead(1f)?.Heading ?? car.Pose.Heading;
+            var turn = GroundPose.Turn(car.Pose.Heading, ahead) * 180f / MathF.PI;
+            _bend += (turn * LookIntoBend - _bend) * (1f - MathF.Exp(-dt / 0.5f));
         }
 
-        return false;
+        PlaceCar(car.Pose);
+        return moving;
     }
 
     #endregion
@@ -427,7 +437,7 @@ public class StationViewport3D : OnboardViewport3D
 
     /// <summary>Where the driver looks now: ahead while driving, at the pump while standing; a drag holds it</summary>
     private float TargetYaw() => _lookHeld ? LookYaw
-        : _stageListened?.Phase == StationPhase.AtPump && _drive == null ? _station?.LookAtPump ?? 0f
+        : _stageListened?.Phase == StationPhase.AtPump && _car?.Plan == null ? _station?.LookAtPump ?? 0f
         : _bend;
 
     /// <summary>From the driver's eyes, the car where the drive has it and its body as it leans</summary>
@@ -456,13 +466,8 @@ public class StationViewport3D : OnboardViewport3D
 
     protected override bool StepFrame(GarageRenderer renderer, float dt)
     {
-        var moving = StepDrive(dt);
-        if (!moving)
-        {
-            _speed = 0f;
-            _pitch.Tick(dt, 0);
-            PoseCar();
-        }
+        var moving = StepCar(dt);
+        if (_car == null) PoseCar();
 
         ShowInstruments();
 
@@ -472,7 +477,7 @@ public class StationViewport3D : OnboardViewport3D
         if (turning) LookYaw += (target - LookYaw) * (1f - MathF.Exp(-dt / (LookSeconds / 3f)));
         AimCamera();
 
-        return moving || turning || !_pitch.IsSettled || _engineListened is { IsActive: true };
+        return moving || turning || _engineListened is { IsActive: true };
     }
 
     // The station's own engine listener rocks the car; the base's is not used

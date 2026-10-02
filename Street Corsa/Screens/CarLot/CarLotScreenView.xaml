@@ -48,7 +48,7 @@
                                 LotRadius="{Binding LotRadius}"
                                 LotView="{Binding LotView}"
                                 Room="{Binding LotRoom}"
-                                Exit="{Binding LotExit}"
+                                Marks="{Binding LotMarks}"
                                 Dressing="{Binding Dressing}"
                                 IsHitTestVisible="{Binding IsIdle}"/>
 

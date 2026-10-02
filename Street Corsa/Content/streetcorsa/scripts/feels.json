@@ -1,0 +1,66 @@
+{
+  "_comment": [
+    "How the cars drive in the scripts (see docs/modding.md, scripts). A feel is a kind and its numbers; a number left out",
+    "is its kind's, as below. Speeds in metres a second, accelerations in metres a second squared, times in seconds.",
+    "road: along a path, cruising between bends, slow enough in them (cornerAccel), braking in time for a stop.",
+    "launch: hard off the line through the gears along a path to its end. pull: gently away in first gear, steering",
+    "for a point (the lot). roll_in: rolling in and braking to a stop, the braking fading as it stops (the garage)."
+  ],
+  "feels": [
+    {
+      "id": "road",
+      "kind": "road",
+      "_comment": "The gas station: about 30 mph on the road, the gears changed up as it goes",
+      "cruiseSpeed": 13.5,
+      "acceleration": 2.2,
+      "brake": 3.2,
+      "cornerAccel": 1.5,
+      "clutchSpeed": 3,
+      "cruiseThrottle": 0.18
+    },
+    {
+      "id": "lane",
+      "kind": "road",
+      "_comment": "A rival coming up the street: about 27 mph in second, braking to a stop alongside",
+      "cruiseSpeed": 12,
+      "brake": 4.2,
+      "clutchSpeed": 3.5,
+      "cruiseThrottle": 0.28,
+      "gear": 2
+    },
+    {
+      "id": "launch",
+      "kind": "launch",
+      "_comment": "A rival leaving: hard off the line, a little less in each gear, never past what a street car does",
+      "acceleration": 5.2,
+      "topSpeed": 38,
+      "shiftSeconds": 0.25
+    },
+    {
+      "id": "pull_away",
+      "kind": "pull",
+      "_comment": "Out of a bay in the lot: to a walking pace and a bit in first gear, turning for the way out",
+      "acceleration": 1.8,
+      "topSpeed": 5,
+      "clutchSeconds": 0.6,
+      "rpmPerMetrePerSecond": 260,
+      "throttle": 0.45,
+      "cruiseThrottle": 0.2,
+      "lean": 0.6,
+      "straightOut": 1.2,
+      "turningRadius": 4.2,
+      "steerGain": 1.5,
+      "steerSeconds": 0.45,
+      "steerLead": 0.6,
+      "halfWheelbase": 1.4,
+      "seconds": 12
+    },
+    {
+      "id": "roll_in",
+      "kind": "roll_in",
+      "_comment": "Into the garage: in at 5 m/s, the braking fading to nothing at the stop",
+      "cruiseSpeed": 5,
+      "rpmPerMetrePerSecond": 156
+    }
+  ]
+}

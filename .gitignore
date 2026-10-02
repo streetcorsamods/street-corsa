@@ -367,7 +367,9 @@ tmpclaude-*
 .aider*
 
 # Third-party garage showroom (Rob Taylor, no redistribution licence) - local only until we build our own
-Street Corsa/Content/streetcorsa/garages/garage/
+Street Corsa/Content/streetcorsa/garages/garage/*
+# ...but its marks for the car scripts are ours
+!Street Corsa/Content/streetcorsa/garages/garage/scene.json
 # The gas station scene is cut from the player's own AC install (tools/StationScene); only its station.json is ours
 Street Corsa/Content/streetcorsa/stations/*/*.kn5
 Street Corsa/Content/streetcorsa/stations/*/ground.bin

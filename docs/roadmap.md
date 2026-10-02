@@ -1325,6 +1325,12 @@ the rules (`cars`, `engines`), game.json's `cars` filter of the installed cars (
 `parts/part_groups.json`, the stand-in script classes in `parts/stand_ins.json`. Prices, families and groups came out
 exactly as before. Not played yet. The order after that is E7-E12 as listed, unless the owner picks otherwise.
 
+E7 (car scripting) is built on `feature/car-scripting` (2026-10-02), after step 26: every car move is a JSON script of
+the mods (`scripts/scripts.json`, the drives' feels in `scripts/feels.json`) played at a trigger (`lot.take_out`,
+`garage.arrive`, `garage.leave`, `station.arrive`, `station.at_pump`, `station.leave`, `street.rival_arrive`,
+`street.rival_leave`), on the marks and paths each scene's JSON names. One car driver replaces the three movers; the
+base game's shows are its scripts, checked against the old movers number for number. Not seen in game yet.
+
 ## Testing in AC without driving
 
 See `docs/ac-integration/csp-lua-scripts.md`, "Testing the race mode without driving". In short:

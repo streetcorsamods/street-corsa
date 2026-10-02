@@ -68,7 +68,7 @@
             </Button.Triggers>
         </Button>
 
-        <!-- Out to the street -->
+        <!-- Out to the street: beside the garage button, above the panels (the money card has the top right) -->
         <Button Grid.Row="0"
                 Content="{t:Text diner.cruise}"
                 Command="{Binding CruiseCommand}"
@@ -78,9 +78,9 @@
                 helpers:GlassButton.HoverBrush="{StaticResource PaleYellowBrush}"
                 FontWeight="Bold"
                 Padding="24,12"
-                HorizontalAlignment="Right"
+                HorizontalAlignment="Left"
                 VerticalAlignment="Top"
-                Margin="0,120,20,0"
+                Margin="100,30,0,0"
                 ToolTip="{t:Text diner.cruise.tooltip}"/>
 
         <!-- Main Content -->

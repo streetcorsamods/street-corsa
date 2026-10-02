@@ -64,7 +64,8 @@ the workshops and out onto the road at the far opening. A top-down render with t
 ## The viewport (`Controls/StationViewport3D.cs`)
 
 A `D3DViewportBase` like the street's. The scene is the showroom slot; the player's car the main slot, driven along the
-station's paths by **`Controls/Street/PathDrive.cs`**: a centripetal Catmull-Rom curve through the points (the uniform
+station's paths by its scripts (`station_arrive`, `station_leave`) with the **`road`** feel (`Services/Scripting/DrivePlan`
+and `DrivePath`): a centripetal Catmull-Rom curve through the points (the uniform
 one overshot into a loop where a short stretch met a long one, and the car spun on the spot before the road), resampled
 every 0.25 m,
 the speed the most each point's bend allows (1.5 m/s² sideways, 13.5 m/s on the straight), speeding up at 2.2 m/s² and

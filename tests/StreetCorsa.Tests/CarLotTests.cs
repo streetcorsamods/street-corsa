@@ -338,7 +338,7 @@ public class CarLotTests
     [InlineData(-20.0, 0.5, 0.5 + 20.0 - 6 * Math.PI)]
     public void A_car_driving_off_turns_for_the_way_out_the_short_way_round(double from, double to, double turn)
     {
-        var got = Controls.CarPull.Turn((float)from, (float)to);
+        var got = Services.Scripting.GroundPose.Turn((float)from, (float)to);
 
         Assert.Equal(turn, got, 3);
         Assert.InRange(got, -MathF.PI, MathF.PI);

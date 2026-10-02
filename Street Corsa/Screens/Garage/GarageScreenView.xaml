@@ -716,5 +716,8 @@
 
         <!-- Loading Layer (shown until the 3D garage is ready) -->
         <controls:LoadingIndicator x:Name="LoadingLayer" Message="Opening the garage..."/>
+
+        <!-- Comes down over the car when a mod's script drives it out (garage.leave) -->
+        <Border x:Name="Curtain" Background="{StaticResource StageBrush}" Opacity="0" IsHitTestVisible="False"/>
     </Grid>
 </UserControl>

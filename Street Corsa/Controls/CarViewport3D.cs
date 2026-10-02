@@ -9,6 +9,7 @@ using StreetCorsa.Configuration;
 using StreetCorsa.Logging;
 using StreetCorsa.Parts;
 using StreetCorsa.Parts.Logic;
+using StreetCorsa.Services.Scripting;
 using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Controls;
@@ -18,7 +19,7 @@ namespace StreetCorsa.Controls;
 /// The renderer draws off-screen into a shared DX11 texture which is presented through a D3DImage,
 /// so the viewport composes like any other WPF element (overlays, opacity, dialogs on top all work).
 /// </summary>
-public class CarViewport3D : D3DViewportBase, ICarDrivingIn
+public class CarViewport3D : D3DViewportBase
 {
     // Orbit camera limits: stay above the floor and inside the showroom walls
     private const float MinBeta = 0.02f;
@@ -490,7 +491,7 @@ public class CarViewport3D : D3DViewportBase, ICarDrivingIn
         else
         {
             // The car going cannot be left on the move, nor the camera held off it for the next one
-            StopPulling();
+            StopScript();
             ReleaseRock();
             await TrackDeviceWork(renderer.MainSlot.SetCarAsync(car, skinId ?? Kn5RenderableCar.DefaultSkin, RendererToken));
 
@@ -1659,27 +1660,38 @@ public class CarViewport3D : D3DViewportBase, ICarDrivingIn
 
     #endregion
 
-    #region Driving in
-
-    // Where a car taken out of the lot comes from: this far behind its place, out of the picture
-    private const float RollInDistance = 7f;
+    #region Driving in and out
 
     /// <summary>The car, standing on its wheels in the plain view: not with its parts out or an engine on the move</summary>
     private Kn5RenderableCar? CarToDrive => Renderer?.CarNode is { } node && !PartsVisible && !IsMovingEngine ? node : null;
 
-    public bool Lights(bool on)
+    /// <summary>
+    /// A car taken out of the lot comes in: the script for <see cref="ScriptTriggers.GarageArrive"/> plays with it, its
+    /// engine <paramref name="engine"/> (worked out while the garage comes up), on the garage's marks. Null when there
+    /// is no car in the plain view, or no scene.
+    /// </summary>
+    public ScriptRun? Arrive(Func<Audio.EngineRunner?> engine, ScriptFacts facts) => Play(ScriptTriggers.GarageArrive, engine, facts, null);
+
+    /// <summary>The car leaves for somewhere: the script for <see cref="ScriptTriggers.GarageLeave"/>, the screen's curtain its to bring down</summary>
+    public ScriptRun? Leave(Func<Audio.EngineRunner?> engine, ScriptFacts facts, Func<float, TimeSpan, FadeEase, Task> fade) =>
+        Play(ScriptTriggers.GarageLeave, engine, facts, fade);
+
+    /// <summary>The car back in its place, its lights off: the garage stays after all</summary>
+    public void PutBack()
     {
-        if (CarToDrive == null) return false;
-        HeadlightsOn = on;
-        AnimateFor(TimeSpan.FromSeconds(1));
-        return true;
+        StopScript();
+        HeadlightsOn = false;
+        Invalidate();
     }
 
-    public Task? RollIn()
+    private ScriptRun? Play(string trigger, Func<Audio.EngineRunner?> engine, ScriptFacts facts, Func<float, TimeSpan, FadeEase, Task>? fade)
     {
         if (CarToDrive is not { } node || Renderer is not { } renderer) return null;
 
-        // The camera holds still while the car comes in, so it is framed on the car's place first: the renderer's own
+        // No script at this moment: the camera and the car are left as they are
+        if (!HasScript(trigger, engine, facts)) return ScriptRun.Nothing();
+
+        // The camera holds still while the car moves, so it is framed on the car's place first: the renderer's own
         // framing moves only part of the way each frame, and would be stopped short of it
         if (renderer.AutoAdjustTarget && renderer.CameraOrbit is { } orbit)
         {
@@ -1687,7 +1699,11 @@ public class CarViewport3D : D3DViewportBase, ICarDrivingIn
             orbit.UpdateViewMatrix();
         }
 
-        return RollIn(node, RollInDistance);
+        return PlayScript(trigger, node, engine, facts, on =>
+        {
+            HeadlightsOn = on;
+            AnimateFor(TimeSpan.FromSeconds(1));
+        }, GarageScene.For(AppSettings.Instance.GarageShowroomId), fade);
     }
 
     #endregion
@@ -1743,6 +1759,8 @@ public class CarViewport3D : D3DViewportBase, ICarDrivingIn
         _lastMouse = _pressedAt = e.GetPosition(this);
         CaptureMouse();
     }
+
+    protected override void ForgetPress() => _isDragging = false;
 
     protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
     {

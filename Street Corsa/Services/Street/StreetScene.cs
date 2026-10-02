@@ -92,6 +92,43 @@ namespace StreetCorsa.Services.Street
 
         /// <summary>The light of the day as the renderer gets it; the day's when the file leaves one out</summary>
         public StreetLighting LightingFor(StreetLight light) => SceneLighting.For(Lights, light);
+
+        /// <summary>The scene's own marks and paths for the scripts (<see cref="Scripting.SceneMarks"/>)</summary>
+        public Scripting.SceneMarks Marks { get; init; } = Scripting.SceneMarks.None;
+
+        /// <summary>A point of the rivals' lane, <paramref name="along"/> metres ahead of the player's car</summary>
+        public Station.GroundPoint Lane(float along)
+        {
+            var heading = Player.Heading * MathF.PI / 180f;
+
+            // A car's own +x is its left (its driver's side, in the cars of the day)
+            return new Station.GroundPoint(Player.X + MathF.Sin(heading) * along + MathF.Cos(heading) * LaneOffset,
+                Player.Z + MathF.Cos(heading) * along - MathF.Sin(heading) * LaneOffset);
+        }
+
+        /// <summary>
+        /// What the scripts drive along and to: the file's own, and up the lane to a stop beside the player
+        /// (<c>arrive</c>), on from there out of sight (<c>leave</c>), the stop at the end of the way up (<c>alongside</c>,
+        /// the file's way up if it has its own) and where a car is out of sight up the lane (<c>gone</c>) unless it names
+        /// its own. The rival stands alongside when nothing moves it.
+        /// </summary>
+        public Scripting.SceneMarks ScriptMarks
+        {
+            get
+            {
+                var marks = Marks.With(paths: new Dictionary<string, IReadOnlyList<Station.GroundPoint>>
+                {
+                    ["arrive"] = [Lane(-ApproachFrom), Lane(RivalStop)],
+                    ["leave"] = [Lane(RivalStop), Lane(LeaveTo)]
+                });
+                var end = marks.Paths["arrive"][^1];
+                return marks.With(new Dictionary<string, Scripting.MarkSpec>
+                {
+                    ["alongside"] = new(X: end.X, Z: end.Z),
+                    ["gone"] = new(X: Lane(LeaveTo).X, Z: Lane(LeaveTo).Z)
+                });
+            }
+        }
     }
 
     public static class StreetScenes
@@ -146,7 +183,12 @@ namespace StreetCorsa.Services.Street
             try
             {
                 if (!File.Exists(file)) return null;
-                return Build(folder, file, JsonSerializer.Deserialize<SceneEntry>(File.ReadAllText(file), Options));
+                using var document = Scripting.SceneMarks.Parse(file);
+                if (Build(folder, file, document.RootElement.Deserialize<SceneEntry>(Options)) is not { } street) return null;
+                var problems = new List<string>();
+                street = street with { Marks = Scripting.SceneMarks.Read(document.RootElement, file, problems) };
+                ModProblems.Add("Streets", problems);
+                return street;
             }
             catch (Exception ex)
             {

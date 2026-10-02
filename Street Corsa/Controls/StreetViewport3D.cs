@@ -2,8 +2,10 @@ using System.IO;
 using System.Windows;
 using AcTools.Render.Kn5Specific.Objects;
 using StreetCorsa.Audio;
+using StreetCorsa.Controls.Scripting;
 using StreetCorsa.Controls.Street;
 using StreetCorsa.Services.Catalog;
+using StreetCorsa.Services.Scripting;
 using StreetCorsa.Services.Street;
 using CarSlot = AcTools.Render.Kn5SpecificForward.ForwardKn5ObjectRenderer.CarSlot;
 using Sx = SlimDX;
@@ -43,12 +45,10 @@ public class StreetViewport3D : OnboardViewport3D
     // Rival loads run one after another: two into the one slot at once would draw on the device from two workers
     private Task _rivalLoads = Task.CompletedTask;
     private bool _rivalReady;
-    private RivalDrive? _drive;
-    private float _driveTime;
-    private float _rivalPosition;
-    private float _wheelAngle;
-    private readonly ChassisPitch _pitch = new();
     private CarBodyRock? _rivalRock;
+
+    // The rival as its scripts move it (its home the spot alongside)
+    private ScriptedCar? _rival;
 
     public StreetViewport3D()
         : base("Street")
@@ -166,9 +166,11 @@ public class StreetViewport3D : OnboardViewport3D
         _rivalLoad++;
 
         // Whatever the rival was doing, it has no car to do it in: the stage hears of it as if at once
+        StopRun();
+        _rival?.Drop();
+        _rival = null;
         if (_stageListened is { Phase: RivalPhase.Arriving }) _stageListened.ReportAlongside();
         if (_stageListened is { Phase: RivalPhase.Leaving }) _stageListened.ReportGone();
-        _drive = null;
     }
 
     #endregion
@@ -258,7 +260,8 @@ public class StreetViewport3D : OnboardViewport3D
         var scene = _scene;
         if (car == null || scene == null) return;
 
-        _drive = null;
+        StopRun();
+        _rival = null;
         _rivalReady = false;
 
         try
@@ -295,36 +298,71 @@ public class StreetViewport3D : OnboardViewport3D
             return;
         }
 
-        _rivalReady = true;
-        _pitch.Reset();
+        // Sent away while its car loaded (the stage heard it gone at once): it never comes
+        if (stage.Phase is not (RivalPhase.Arriving or RivalPhase.Alongside))
+        {
+            HideRival();
+            return;
+        }
 
+        _rivalReady = true;
+
+        // Its engine is its own for as long as it is here: the stage lets go of it as the rival goes
         var engine = stage.RivalEngine;
-        var (idle, limiter) = RpmRange(engine);
+        // It stands where the scripts bring it: a mod's own way up the lane moves both
+        var marks = scene.ScriptMarks;
+        var alongside = scene.Lane(scene.RivalStop);
+        var home = marks.Stand("alongside", Arrive) ?? new GroundPose(alongside.X, alongside.Z, scene.Player.Heading * MathF.PI / 180f);
+        _rival = new ScriptedCar(home, new ScriptEngine(() => engine), RivalLights);
+        _rival.Started += () => AnimateFor(TimeSpan.FromSeconds(1));
 
         if (stage.Phase == RivalPhase.Alongside)
         {
-            // Came back into a new scene: already stopped where it was
-            _rivalPosition = scene.RivalStop;
-            _drive = null;
+            // Came back into a new scene: already stopped where it was, running
+            PlaceRival();
+            HearRival();
+            engine?.StartRunning();
         }
         else
         {
-            _drive = RivalDrive.Arrive(-scene.ApproachFrom, scene.RivalStop, idle, limiter);
-            _driveTime = 0f;
-            _rivalPosition = -scene.ApproachFrom;
+            // Placed and heard from where it comes from before it makes a sound
+            if (marks.PathStart(Arrive) is { } start) _rival.Place(start);
+
+            var run = Play(ScriptTriggers.StreetRivalArrive, stage);
+
+            // No script for it: the rival is where the drive would end, alongside, running
+            if (run?.Script == null)
+            {
+                _rival.GoHome();
+                engine?.StartRunning();
+            }
+
+            PlaceRival();
+            HearRival();
+            if (run != null) AfterRelease(run, () => _stageListened?.ReportAlongside());
+            else stage.ReportAlongside();
         }
 
-        // Placed and heard from where it is before it makes a sound
-        PlaceRival();
-        HearRival();
-        engine?.StartRunning();
         AnimateFor(TimeSpan.FromSeconds(1));
     }
 
-    /// <summary>The engine's idle and limiter, or a V8's of the day when it does not say</summary>
-    private static (double Idle, double Limiter) RpmRange(EngineRunner? engine) =>
-        (engine?.Spec?.IdleRpm is > 200 and var idle ? idle : 800,
-         engine?.Spec?.LimiterRpm is > 1000 and var limiter ? limiter : 6000);
+    /// <summary>The rival's lights: the headlights and the brake lights</summary>
+    private void RivalLights(bool? head, bool? brake)
+    {
+        if (_rivalSlot?.CarNode is not { } node) return;
+        if (head is { } on) node.HeadlightsEnabled = on;
+        if (brake is { } braking) node.BrakeLightsEnabled = braking;
+        Invalidate();
+    }
+
+    // The way up the lane, as the scripts have it (a street's file may name its own)
+    private const string Arrive = "arrive";
+
+    /// <summary>The script for <paramref name="trigger"/> plays with the rival; null with no rival to play it with</summary>
+    private ScriptRun? Play(string trigger, StreetStage stage) =>
+        _rival is { } rival && _scene is { } scene
+            ? PlayScript(trigger, rival, SceneStage.Rival, scene.ScriptMarks, new ScriptFacts(stage.Time, Light))
+            : null;
 
     private void StartLeaving(StreetStage stage)
     {
@@ -334,20 +372,53 @@ public class StreetViewport3D : OnboardViewport3D
             return;
         }
 
-        var engine = stage.RivalEngine;
-        var (idle, limiter) = RpmRange(engine);
-        engine?.SetPedal(null);
-        _drive = RivalDrive.Leave(_rivalPosition, _scene.LeaveTo, idle, limiter);
-        _driveTime = 0f;
-        AnimateFor(TimeSpan.FromSeconds(1));
+        stage.RivalEngine?.SetPedal(null);
+        if (Play(ScriptTriggers.StreetRivalLeave, stage) is not { } run)
+        {
+            HideRival();
+            stage.ReportGone();
+            return;
+        }
+
+        GoneAfter(run);
+    }
+
+    /// <summary>
+    /// The rival is gone out of sight when its leaving script is over, and the screen hears it then; a script that lets
+    /// the screen go on before has the rival hidden once it is over (unless another has taken its place meanwhile).
+    /// Nobody waits on this: what goes wrong in it is logged here.
+    /// </summary>
+    private async void GoneAfter(ScriptRun run)
+    {
+        try
+        {
+            await run.Released;
+            if (!IsPlaying(run)) return;
+
+            if (run.IsOver)
+            {
+                HideRival();
+                _stageListened?.ReportGone();
+                return;
+            }
+
+            _stageListened?.ReportGone();
+            await run.Ended;
+            if (IsPlaying(run)) HideRival();
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            Logger.Error(ex, "{Viewport}: the rival could not be seen off", ViewportName);
+        }
     }
 
     private void HideRival()
     {
-        _drive = null;
+        StopRun();
+        _rival?.Drop();
+        _rival = null;
         _rivalReady = false;
         _rivalLoad++;
-        _pitch.Reset();
         _rivalRock?.Release();
         _rivalRock = null;
         if (_rivalSlot != null) _rivalSlot.LocalMatrix = Sx.Matrix.Translation(0f, -50f, 0f);
@@ -356,15 +427,17 @@ public class StreetViewport3D : OnboardViewport3D
 
     private void PlaceRival()
     {
-        if (_rivalSlot?.CarNode is not { } node || _scene is not { } scene) return;
+        if (_rivalSlot?.CarNode is not { } node || _rival is not { } rival) return;
 
-        var placement = Placement(scene, scene.Player, _rivalPosition, scene.LaneOffset, _rivalLift);
-        var engine = _stageListened?.RivalEngine;
+        var at = rival.Pose;
+        var placement = Sx.Matrix.RotationY(at.Heading) * Sx.Matrix.Translation(at.X, _rivalLift, at.Z);
+        var engine = (rival.Engine as ScriptEngine)?.Runner;
         var pose = engine?.Pose ?? BodyPose.Rest;
-        var body = new BodyPose(pose.Roll, pose.Pitch + _pitch.Pitch, pose.Heave);
+        var (roll, pitch) = rival.Body;
+        var body = new BodyPose(pose.Roll + roll, pose.Pitch + pitch, pose.Heave);
 
         _rivalRock ??= new CarBodyRock(node);
-        _rivalRock.Apply(body, _wheelAngle, placement);
+        _rivalRock.Apply(body, rival.WheelSpin, placement, rival.Steer);
     }
 
     /// <summary>Moves the rival along its drive by a frame; true while it moves, its engine runs or its body settles</summary>
@@ -373,48 +446,20 @@ public class StreetViewport3D : OnboardViewport3D
         var stage = _stageListened;
         if (!_rivalReady || stage == null) return false;
 
-        var engine = stage.RivalEngine;
-        if (_drive is { } drive)
-        {
-            _driveTime += dt;
-            var state = drive.At(_driveTime);
-            _wheelAngle += RivalDrive.WheelAngle(state.Position - _rivalPosition);
-            _rivalPosition = state.Position;
-            _pitch.Tick(dt, state.Acceleration);
-            engine?.Drive(state.Rpm, state.Throttle);
-            if (_rivalSlot?.CarNode is { } node) node.BrakeLightsEnabled = state.Braking;
+        if (_rival is not { } rival) return false;
 
-            if (state.Done)
-            {
-                _drive = null;
-                engine?.Drive(null);
-                if (drive.IsLeaving)
-                {
-                    HideRival();
-                    stage.ReportGone();
-                    return false;
-                }
-
-                stage.ReportAlongside();
-            }
-        }
-        else
-        {
-            _pitch.Tick(dt, 0);
-        }
-
+        var moving = rival.Step(dt);
         PlaceRival();
         HearRival();
-        return _drive != null || engine is { IsActive: true } || !_pitch.IsSettled;
+        return moving || rival.Engine?.Runner is { IsActive: true };
     }
 
     /// <summary>The rival's engine heard from where the car is, from where the player looks</summary>
     private void HearRival()
     {
-        if (_stageListened?.RivalEngine is not { } engine || _scene is not { } scene || Renderer?.Camera is not { } camera) return;
+        if (_rival is not { Engine.Runner: { } engine } rival || Renderer?.Camera is not { } camera) return;
 
-        var at = Placement(scene, scene.Player, _rivalPosition, scene.LaneOffset);
-        var car = new Sx.Vector3(at.M41, 0.5f, at.M43);
+        var car = new Sx.Vector3(rival.Pose.X, 0.5f, rival.Pose.Z);
         var offset = car - camera.Position;
         var distance = offset.Length();
 

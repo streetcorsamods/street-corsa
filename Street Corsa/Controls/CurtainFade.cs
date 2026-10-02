@@ -24,4 +24,12 @@ public static class CurtainFade
         if (curtain is FrameworkElement { IsLoaded: false }) done.TrySetResult();
         return Task.WhenAny(done.Task, Task.Delay(duration + Grace));
     }
+
+    /// <summary>A script's ease as an animation's: <c>in</c> starts slow, <c>out</c> ends slow</summary>
+    public static IEasingFunction? Easing(Services.Scripting.FadeEase ease) => ease switch
+    {
+        Services.Scripting.FadeEase.In => new QuadraticEase { EasingMode = EasingMode.EaseIn },
+        Services.Scripting.FadeEase.Out => new QuadraticEase { EasingMode = EasingMode.EaseOut },
+        _ => null
+    };
 }

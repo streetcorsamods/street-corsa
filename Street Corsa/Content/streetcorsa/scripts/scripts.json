@@ -1,0 +1,81 @@
+{
+  "_comment": [
+    "How the cars move on the screens (see docs/modding.md, scripts). A script plays at a trigger, its steps one after",
+    "the other; the game goes on when it lets it (a release step, or its end), and a click skips it to its end. A mod",
+    "takes the place of one of these with \"replaces\" (\"replaces\": \"lot_take_out\"), or adds its own for a trigger",
+    "with a \"when\": the latest mod's whose \"when\" holds is played. The marks and paths are the scene's: the lot's",
+    "\"exit\", the garage's \"door\", the gas station's \"arrive\", \"leave\" and \"pump\", the street's \"arrive\",",
+    "\"leave\", \"alongside\" and \"gone\"; \"home\" is where the car stands, \"here\" where it is now."
+  ],
+  "scripts": [
+    {
+      "id": "lot_take_out",
+      "trigger": "lot.take_out",
+      "_comment": "The car picked in the lot: lights, the key, a moment's idle, out of its bay turning for the way out, and the screen and the engine fade out together as it rolls. A car that will not start stays where it is.",
+      "steps": [
+        { "do": "lights", "head": true },
+        { "do": "wait", "seconds": 0.5 },
+        { "do": "engine", "on": true, "most": 4 },
+        { "if": { "engine": "off" }, "then": [ { "do": "lights", "head": false }, { "do": "end" } ] },
+        { "do": "wait", "seconds": 1.1 },
+        { "do": "drive", "toward": "exit", "feel": "pull_away", "wait": false },
+        { "do": "wait", "seconds": 2.3 },
+        { "do": "fade", "to": 1, "seconds": 1, "ease": "in", "engine": true },
+        { "do": "release" }
+      ]
+    },
+    {
+      "id": "garage_arrive",
+      "trigger": "garage.arrive",
+      "_comment": "A car taken out of the lot comes home: lights on, its engine running as soon as the garage has worked it out, it rolls in from the door and stops in its place, idles a moment and is switched off, the lights after it.",
+      "steps": [
+        { "do": "lights", "head": true },
+        { "do": "engine", "on": true, "crank": false, "wait": false, "most": 3 },
+        { "do": "drive", "from": "door", "to": "home", "feel": "roll_in" },
+        { "do": "wait", "seconds": 1.4 },
+        { "do": "engine", "on": false },
+        { "do": "wait", "seconds": 0.4 },
+        { "do": "lights", "head": false }
+      ]
+    },
+    {
+      "id": "station_arrive",
+      "trigger": "station.arrive",
+      "_comment": "In off the road to the pump, the headlights on after dark; off once it stands there.",
+      "steps": [
+        { "if": { "light": "night" }, "then": [ { "do": "lights", "head": true } ] },
+        { "do": "drive", "path": "arrive", "feel": "road", "start": "rolling" },
+        { "do": "lights", "head": false }
+      ]
+    },
+    {
+      "id": "station_leave",
+      "trigger": "station.leave",
+      "_comment": "Out onto the road; the screen goes a moment before the way out ends, the car still rolling.",
+      "steps": [
+        { "if": { "light": "night" }, "then": [ { "do": "lights", "head": true } ] },
+        { "do": "drive", "path": "leave", "feel": "road", "end": "keep_going", "wait": false },
+        { "do": "wait", "until": "drive_end", "early": 1.2 },
+        { "do": "release" },
+        { "do": "wait", "until": "drive_end" }
+      ]
+    },
+    {
+      "id": "street_rival_arrive",
+      "trigger": "street.rival_arrive",
+      "_comment": "A rival comes up the lane in second, running, and brakes to a stop alongside.",
+      "steps": [
+        { "do": "engine", "on": true, "crank": false, "wait": false },
+        { "do": "drive", "path": "arrive", "feel": "lane", "start": "rolling" }
+      ]
+    },
+    {
+      "id": "street_rival_leave",
+      "trigger": "street.rival_leave",
+      "_comment": "The rival launches from where it is up the lane and out of sight.",
+      "steps": [
+        { "do": "drive", "to": "gone", "feel": "launch" }
+      ]
+    }
+  ]
+}

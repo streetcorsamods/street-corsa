@@ -40,6 +40,21 @@ namespace StreetCorsa.Screens.Garage
             };
             Viewport3D.Failed += (_, _) => RevealAfter(TimeSpan.Zero);
 
+            DataContextChanged += (_, e) =>
+            {
+                if (e.OldValue is GarageScreenViewModel old)
+                {
+                    old.DriveCarOut = null;
+                    old.PutCarBack = null;
+                }
+
+                if (e.NewValue is GarageScreenViewModel viewModel)
+                {
+                    viewModel.DriveCarOut = DriveCarOutAsync;
+                    viewModel.PutCarBack = PutCarBack;
+                }
+            };
+
             // Parts are picked in the 3D view; what a pick means is the workbench's business
             Viewport3D.PartClicked += part => (DataContext as GarageScreenViewModel)?.Workbench.OnPartClicked(part);
             Viewport3D.StandClicked += ShowStand;
@@ -140,7 +155,7 @@ namespace StreetCorsa.Screens.Garage
         /// </summary>
         private async void DriveIn()
         {
-            if (_droveIn || DataContext is not GarageScreenViewModel { CarArriving: true }) return;
+            if (_droveIn || DataContext is not GarageScreenViewModel { CarArriving: true } viewModel) return;
             _droveIn = true;
 
             // A garage that took so long it was shown before its first frame has shown the car in its place: it does
@@ -151,7 +166,8 @@ namespace StreetCorsa.Screens.Garage
             ContentLayer.IsHitTestVisible = false;
             try
             {
-                await StreetCorsa.Controls.DriveOff.DriveInAsync(Viewport3D, EnginePanel.Runner);
+                // The engine is worked out on a worker while the garage comes up: the script starts it the moment it is there
+                if (Viewport3D.Arrive(() => EnginePanel.Runner, viewModel.ScriptFacts) is { } run) await run.Ended;
             }
             catch (Exception ex)
             {
@@ -163,6 +179,40 @@ namespace StreetCorsa.Screens.Garage
                 ContentLayer.IsHitTestVisible = _revealed;
             }
         }
+
+        /// <summary>
+        /// The car leaves as its script has it (the base game has none: it is simply gone with the screen); done when
+        /// the garage may go. True when a script played, and the car may need putting back.
+        /// </summary>
+        private async Task<bool> DriveCarOutAsync()
+        {
+            if (DataContext is not GarageScreenViewModel viewModel) return false;
+            _runningBeforeLeave = EnginePanel.Runner.IsRunning;
+            if (Viewport3D.Leave(() => EnginePanel.Runner, viewModel.ScriptFacts, CurtainAsync) is not { Script: not null } run) return false;
+
+            ContentLayer.IsHitTestVisible = false;
+            await run.Released;
+            return true;
+        }
+
+        // The engine was running before the car set off to leave: put back, it is left running
+        private bool _runningBeforeLeave;
+
+        /// <summary>
+        /// The garage stays after all: the curtain up, the car back in its place and the screen to be used, its engine
+        /// as loud as before and off again if the script started it
+        /// </summary>
+        private void PutCarBack()
+        {
+            _ = StreetCorsa.Controls.CurtainFade.ToAsync(Curtain, 0, TimeSpan.FromSeconds(0.25));
+            Viewport3D.PutBack();
+            EnginePanel.Runner.Fade = 1f;
+            if (!_runningBeforeLeave) EnginePanel.Runner.StopNow();
+            ContentLayer.IsHitTestVisible = _revealed && !_arriving;
+        }
+
+        private Task CurtainAsync(float opacity, TimeSpan over, StreetCorsa.Services.Scripting.FadeEase ease) =>
+            StreetCorsa.Controls.CurtainFade.ToAsync(Curtain, opacity, over, StreetCorsa.Controls.CurtainFade.Easing(ease));
 
         /// <summary>
         /// Schedules the reveal; a shorter delay replaces a pending longer one (timeout -> ready)

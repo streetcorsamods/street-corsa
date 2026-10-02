@@ -543,6 +543,8 @@ namespace StreetCorsa
         {
             try
             {
+                // Read here too, off the screens' thread: the first car to move would otherwise wait on every mod's scripts
+                var garage = AppSettings.Instance.GarageShowroomId;
                 await Task.WhenAll(partsWarmUp, Task.Run(() =>
                 {
                     _ = Mods.ModSet.Installed;
@@ -554,6 +556,8 @@ namespace StreetCorsa
                     _ = Services.Station.StationScenes.Installed;
                     _ = Services.CarLot.WarehouseScenes.Installed;
                     _ = Services.Ai.AiPrompts.Installed;
+                    _ = Services.Scripting.ScriptBook.Installed;
+                    _ = Services.Scripting.GarageScene.For(garage);
                     Tell("Cars", Parts.Cars.CarBook.Installed.Problems);
                     Tell("Part groups", Parts.PartGroups.Installed.Problems);
                 }));
