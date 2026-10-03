@@ -1038,6 +1038,22 @@ public class LotViewport3D : D3DViewportBase
         }, Marks ?? SceneMarks.None, fade);
     }
 
+    /// <summary>
+    /// A script of the flow's (screen.&lt;id&gt;.enter or .leave) with the car being looked at; null with no car or no
+    /// scene. With no script for the moment nothing is touched: a car still driving off goes on.
+    /// </summary>
+    public ScriptRun? PlayTrigger(string trigger, Audio.EngineRunner engine, ScriptFacts facts, Func<float, TimeSpan, FadeEase, Task> fade)
+    {
+        if (SelectedCarNode is not { } node) return null;
+        if (!HasScript(trigger, () => engine, facts)) return ScriptRun.Nothing();
+
+        return PlayScript(trigger, node, () => engine, facts, on =>
+        {
+            node.HeadlightsEnabled = on;
+            AnimateFor(TimeSpan.FromSeconds(1));
+        }, Marks ?? SceneMarks.None, fade);
+    }
+
     /// <summary>The car back where it stood, lights off (the screen stays after all)</summary>
     public void StayPut()
     {

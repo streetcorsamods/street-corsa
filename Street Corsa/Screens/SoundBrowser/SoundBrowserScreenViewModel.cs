@@ -184,7 +184,7 @@ namespace StreetCorsa.Screens.SoundBrowser
         {
             StopPlaying();
             SelectedEngine = null;
-            _navigationService.NavigateToMainMenu(MainMenu.MainMenuCard.Settings);
+            _navigationService.Leave(this, "back", null, new FlowArgs { Card = MainMenu.MainMenuCard.Settings });
         }
 
         private void TogglePlay()

@@ -142,7 +142,7 @@ namespace StreetCorsa.Screens.RaceLoading
                 }
             }
 
-            ReturnFromRace(toGarage: _launchIntent.ReturnToGarage || messages.Any(m => m.TowedToGarage));
+            ReturnFromRace(towed: messages.Any(m => m.TowedToGarage));
 
             // One at a time, over the screen the player came back to: the dialog service queues them. Each on its
             // own, so one that cannot be shown does not lose the rest
@@ -150,7 +150,7 @@ namespace StreetCorsa.Screens.RaceLoading
             {
                 try
                 {
-                    Dialogs.PlayerMessageDialogs.Show(_dialogService, message, () => _navigationService.NavigateToMainMenu());
+                    Dialogs.PlayerMessageDialogs.Show(_dialogService, message, () => _navigationService.GoToMenu());
                 }
                 catch (Exception ex)
                 {
@@ -227,45 +227,39 @@ namespace StreetCorsa.Screens.RaceLoading
         }
 
         /// <summary>
-        /// Back to the diner (or the street, for a race met there), or to the garage when that cannot be opened, or
-        /// to the main menu when neither can: the player is never left on this screen. A player whose car was towed
-        /// home after a crash goes to the garage, where the car is, and so does one whose session started there (a
-        /// test-and-tune).
+        /// Back where the race was set up (the diner, the street, the garage for a test-and-tune or the racing hub), or
+        /// where that screen's <c>after_race</c> way out leads; home when that cannot be opened, and the main menu when
+        /// home cannot either: the player is never left on this screen. A player whose car was towed home goes home,
+        /// where the car is; so does one whose night on the street ended while they raced.
         /// </summary>
-        private void ReturnFromRace(bool toGarage)
+        private void ReturnFromRace(bool towed)
         {
-            if (toGarage)
+            var flow = _navigationService.Flow;
+            var back = flow.Exit(_launchIntent.ReturnTo, "after_race") ?? _launchIntent.ReturnTo;
+            var args = new FlowArgs { SkipAnimation = true, Returning = true };
+
+            if (towed)
             {
-                _logger.Information("Back from the strip, or towed home after a crash: navigating to the garage");
-                if (_navigationService.NavigateToGarage(_gameState, skipAnimation: true)) return;
+                _logger.Information("Towed home after a crash: navigating home");
             }
-            else if (_launchIntent.ReturnToCruise && _raceRanIntoNextDay)
+            else if (_raceRanIntoNextDay && flow.KindOf(back) == ScreenKinds.Street)
             {
                 // The street's night ended while they raced: home, as the street itself sends the player at the day's end
-                _logger.Information("The street race ran past the night's end: home to the garage");
+                _logger.Information("The street race ran past the night's end: home");
                 _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService,
                     GameText.Say("raceload.late_night"), GameText.Say("cruise.late_night.title")));
-                if (_navigationService.NavigateToGarage(_gameState, skipAnimation: true)) return;
             }
-            else if (_launchIntent.ReturnToCruise)
+            else if (back != null && flow.IsOpen(back))
             {
-                _logger.Information("Back to the street, where the rival was met");
-                if (_navigationService.NavigateToCruise(_gameState)) return;
-
-                _logger.Warning("The street could not be opened after the race: going to the garage");
-                if (_navigationService.NavigateToGarage(_gameState, skipAnimation: true)) return;
-            }
-            else
-            {
-                _logger.Information("Navigating back to diner");
-                if (_navigationService.NavigateToDiner(_gameState, returning: true)) return;
-
-                _logger.Warning("The diner could not be opened after the race: going to the garage");
-                if (_navigationService.NavigateToGarage(_gameState, skipAnimation: true)) return;
+                _logger.Information("Back to {Screen} after the race", back);
+                if (_navigationService.Go(back, _gameState, args)) return;
+                _logger.Warning("{Screen} could not be opened after the race: going home", back);
             }
 
-            _logger.Warning("The garage could not be opened after the race either: going to the main menu");
-            _navigationService.NavigateToMainMenu();
+            if (_navigationService.GoHome(_gameState, args)) return;
+
+            _logger.Warning("Home could not be opened after the race either: going to the main menu");
+            _navigationService.GoToMenu();
         }
     }
 }

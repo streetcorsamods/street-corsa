@@ -414,13 +414,13 @@ namespace StreetCorsa.Screens.Settings
         private void OnOpenSoundBrowser()
         {
             if (_audioSave.IsEnabled) SaveAudio();
-            _navigationService.NavigateToSoundBrowser();
+            _navigationService.Go(_navigationService.Flow.FirstOfKind(ScreenKinds.SoundBrowser), null);
         }
 
         private void OnOpenCatalogEditor()
         {
             _logger.Information("Navigating to car catalog editor");
-            _navigationService.NavigateToCarCatalogEditor();
+            _navigationService.Go(_navigationService.Flow.FirstOfKind(ScreenKinds.CarCatalogEditor), null);
         }
 
         /// <summary>The same test the game makes of the install at start-up: a cars and a tracks folder</summary>

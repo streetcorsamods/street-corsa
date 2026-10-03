@@ -208,6 +208,7 @@ public class StationViewport3D : OnboardViewport3D
             _stageListened.FuelChanged -= OnFuelChanged;
             _stageListened.IsShown = false;
             _stageListened.CannotShow = false;
+            _stageListened.PlayTrigger = null;
             ListenToEngine(null);
         }
 
@@ -216,6 +217,7 @@ public class StationViewport3D : OnboardViewport3D
         {
             _stageListened.Changed += OnStageAction;
             _stageListened.FuelChanged += OnFuelChanged;
+            _stageListened.PlayTrigger = PlayFlowScript;
             _stageListened.IsShown = Renderer != null && _kn5 != null;
             _stageListened.CannotShow = HasFailed;
         }
@@ -297,13 +299,30 @@ public class StationViewport3D : OnboardViewport3D
         return car;
     }
 
-    /// <summary>The script for <paramref name="trigger"/> plays with the player's car; null with no scene to play it in</summary>
-    private ScriptRun? Play(string trigger)
+    /// <summary>
+    /// The script for <paramref name="trigger"/> plays with the player's car; null with no scene to play it in. A script
+    /// of the flow's is told the screens (<paramref name="told"/>).
+    /// </summary>
+    private ScriptRun? Play(string trigger, ScriptFacts? told = null)
     {
         if (Renderer == null || _station is not { } station || _stageListened is not { } stage) return null;
 
         _lookHeld = false;
-        return PlayScript(trigger, Car, SceneStage.Player, station.ScriptMarks, new ScriptFacts(stage.Time, Light, stage.Towed));
+        var facts = new ScriptFacts(stage.Time, Light, stage.Towed) { Screen = told?.Screen, From = told?.From, To = told?.To };
+        return PlayScript(trigger, Car, SceneStage.Player, station.ScriptMarks, facts);
+    }
+
+    /// <summary>
+    /// A script of the flow's (screen.&lt;id&gt;.enter or .leave) with the player's car; done once it lets the screen go
+    /// on. With no script for the moment nothing is touched (the station's own show goes on): null.
+    /// </summary>
+    private Task? PlayFlowScript(string trigger, ScriptFacts told)
+    {
+        if (_stageListened is not { } stage) return null;
+
+        var facts = new ScriptFacts(stage.Time, Light, stage.Towed) { Screen = told.Screen, From = told.From, To = told.To };
+        if (!HasScript(trigger, () => stage.Engine, facts)) return null;
+        return Play(trigger, told) is { Script: not null } run ? run.Released : null;
     }
 
     /// <summary>The car drives in off the road; at the pump once its script lets the screen go on</summary>

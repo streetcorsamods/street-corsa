@@ -110,6 +110,9 @@ public sealed class RuleBook
     /// <summary>The AI the player may connect: how long the game waits for it and what it asks of it</summary>
     public AiRules Ai { get; set; } = new();
 
+    /// <summary>The systems the game has: each can be switched off by a game (police, the gas station, the paper...)</summary>
+    public SystemRules Systems { get; set; } = new();
+
     // The save Current was read for, so a game made current again is not read again
     private static WeakReference<Models.GameState.GameState>? _currentFor;
 

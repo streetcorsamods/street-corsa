@@ -46,12 +46,14 @@ namespace StreetCorsa.Screens.Garage
                 {
                     old.DriveCarOut = null;
                     old.PutCarBack = null;
+                    old.PlayScreenScript = null;
                 }
 
                 if (e.NewValue is GarageScreenViewModel viewModel)
                 {
                     viewModel.DriveCarOut = DriveCarOutAsync;
                     viewModel.PutCarBack = PutCarBack;
+                    viewModel.PlayScreenScript = PlayScreenScript;
                 }
             };
 
@@ -177,6 +179,37 @@ namespace StreetCorsa.Screens.Garage
             {
                 _arriving = false;
                 ContentLayer.IsHitTestVisible = _revealed;
+                TellSceneReady();
+            }
+        }
+
+        /// <summary>The garage is up and no car is driving in: the flow's enter script may play</summary>
+        private void TellSceneReady()
+        {
+            if (_revealed && !_arriving && DataContext is GarageScreenViewModel viewModel) viewModel.SceneReady();
+        }
+
+        /// <summary>
+        /// A script of the flow's (the garage's screen.&lt;id&gt;.enter or .leave) with the car on show; done once it lets
+        /// the screen go on. The screen takes no clicks meanwhile. Null when none plays.
+        /// </summary>
+        private Task? PlayScreenScript(string trigger, StreetCorsa.Services.Scripting.ScriptFacts facts)
+        {
+            if (Viewport3D.PlayTrigger(trigger, () => EnginePanel.Runner, facts, CurtainAsync) is not { Script: not null } run) return null;
+
+            ContentLayer.IsHitTestVisible = false;
+            return AfterScreenScript(run);
+        }
+
+        private async Task AfterScreenScript(StreetCorsa.Services.Scripting.ScriptRun run)
+        {
+            try
+            {
+                await run.Released;
+            }
+            finally
+            {
+                ContentLayer.IsHitTestVisible = _revealed && !_arriving;
             }
         }
 
@@ -255,6 +288,7 @@ namespace StreetCorsa.Screens.Garage
             });
 
             LoadingLayer.IsLoading = false;
+            TellSceneReady();
         }
     }
 }

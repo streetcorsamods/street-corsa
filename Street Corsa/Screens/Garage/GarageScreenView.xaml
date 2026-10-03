@@ -70,6 +70,19 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- A round button round the car, as the flow's tile has it -->
+        <DataTemplate x:Key="GarageTileTemplate" DataType="{x:Type local:GarageTile}">
+            <Button Style="{StaticResource RoundIconButtonStyle}"
+                    Tag="{Binding Icon}"
+                    Command="{Binding Command}"
+                    ToolTip="{Binding Text}"
+                    Width="{Binding Size}"
+                    Height="{Binding Size}"
+                    Padding="{Binding Padding}"
+                    Margin="{Binding Margin}"
+                    radio:RadioToastAnchor.IsAnchor="{Binding IsRadio}"/>
+        </DataTemplate>
     </UserControl.Resources>
     <Grid x:Name="RootGrid">
         <!-- Everything lives in ContentLayer, which stays invisible until the 3D garage has rendered its
@@ -348,6 +361,7 @@
                                            VerticalAlignment="Center"/>
                                 <Button Content="{t:Text garage.end_day}"
                                         Command="{Binding EndDayCommand}"
+                                        Visibility="{Binding CanEndDayHere, Converter={StaticResource BooleanToVisibilityConverter}}"
                                         Style="{StaticResource DialogSecondaryButtonStyle}"
                                         ToolTip="{t:Text garage.end_day.tip}"
                                         Height="32"
@@ -501,7 +515,7 @@
                     <ToggleButton Content="{t:Text garage.view.stand}"
                                   Style="{StaticResource ViewportToggleStyle}"
                                   ToolTip="{t:Text garage.view.stand.tip}"
-                                  Visibility="{Binding Workbench.IsAvailable, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                  Visibility="{Binding Workbench.CanShowStand, Converter={StaticResource BooleanToVisibilityConverter}}"
                                   IsChecked="{Binding Workbench.IsStandView, Mode=TwoWay}"/>
                     <ToggleButton Content="{t:Text garage.view.turn_over}"
                                   Style="{StaticResource ViewportToggleStyle}"
@@ -612,106 +626,62 @@
         <!-- Round icon buttons around the car. All but Quit make room while the car is being worked on (the workbench's
              cards take the sides then). -->
 
-        <!-- Quit (top left): back to the main menu, or out of the game -->
-        <Button x:Name="QuitButton"
-                Style="{StaticResource RoundIconButtonStyle}"
-                Tag="{StaticResource QuitIcon}"
-                Command="{Binding QuitCommand}"
-                ToolTip="{t:Text garage.tile.quit}"
-                HorizontalAlignment="Left"
-                VerticalAlignment="Top"
-                Margin="30,30,0,0"/>
+        <!-- The tiles, as the flow has them (flow/*.json, "tiles"), each spot a column of them from the top. Top left
+             (the way out) stays while the car is being worked on; the rest make room for the workbench's cards. In the
+             base game: Quit top left; Go race! at the left; car dealers, part dealers and the newspaper bottom left; car
+             info at the right; the gas station bottom right; the career, the calendar and the radio top right, under the
+             window's money card. -->
+        <ItemsControl ItemsSource="{Binding TopLeftTiles}"
+                      ItemTemplate="{StaticResource GarageTileTemplate}"
+                      Focusable="False"
+                      HorizontalAlignment="Left"
+                      VerticalAlignment="Top"
+                      Margin="30,30,0,0"/>
 
-        <!-- Go race: the racing hub (centre left) -->
-        <Button x:Name="GoRaceButton"
-                Style="{StaticResource RoundIconButtonLargeStyle}"
-                Tag="{StaticResource DrivingWheelIcon}"
-                Command="{Binding GoRaceCommand}"
-                ToolTip="{t:Text garage.tile.go_race}"
-                helpers:Reveal.IsShown="{Binding ShowNavigation}"
-                helpers:Reveal.OffsetX="-60"
-                HorizontalAlignment="Left"
-                VerticalAlignment="Center"
-                Margin="30,0,0,0"/>
+        <ItemsControl ItemsSource="{Binding LeftTiles}"
+                      ItemTemplate="{StaticResource GarageTileTemplate}"
+                      Focusable="False"
+                      helpers:Reveal.IsShown="{Binding ShowNavigation}"
+                      helpers:Reveal.OffsetX="-60"
+                      HorizontalAlignment="Left"
+                      VerticalAlignment="Center"
+                      Margin="30,0,0,0"/>
 
-        <!-- Bottom left, from the top: car dealers, part dealers, the newspaper -->
-        <StackPanel helpers:Reveal.IsShown="{Binding ShowNavigation}"
-                    helpers:Reveal.OffsetX="-60"
-                    HorizontalAlignment="Left"
-                    VerticalAlignment="Bottom"
-                    Margin="30,0,0,30">
-            <Button x:Name="CarDealersButton"
-                    Style="{StaticResource RoundIconButtonLargeStyle}"
-                    Tag="{StaticResource CarDealerIcon}"
-                    Padding="9"
-                    Command="{Binding CarDealersCommand}"
-                    ToolTip="{t:Text garage.tile.car_dealers}"/>
-            <!-- The part shops' own map -->
-            <Button x:Name="PartDealersButton"
-                    Style="{StaticResource RoundIconButtonLargeStyle}"
-                    Tag="{StaticResource PartsIcon}"
-                    Command="{Binding PartDealersCommand}"
-                    ToolTip="{t:Text garage.tile.part_dealers}"
-                    Margin="0,16,0,0"/>
-            <Button x:Name="NewspaperButton"
-                    Style="{StaticResource RoundIconButtonLargeStyle}"
-                    Tag="{StaticResource NewspaperIcon}"
-                    Command="{Binding NewspaperCommand}"
-                    ToolTip="{t:Text garage.tile.newspaper}"
-                    Margin="0,16,0,0"/>
-        </StackPanel>
+        <ItemsControl ItemsSource="{Binding BottomLeftTiles}"
+                      ItemTemplate="{StaticResource GarageTileTemplate}"
+                      Focusable="False"
+                      helpers:Reveal.IsShown="{Binding ShowNavigation}"
+                      helpers:Reveal.OffsetX="-60"
+                      HorizontalAlignment="Left"
+                      VerticalAlignment="Bottom"
+                      Margin="30,0,0,30"/>
 
-        <!-- Car info (centre right): everything about the selected car and its parts -->
-        <Button x:Name="CarInfoButton"
-                Style="{StaticResource RoundIconButtonStyle}"
-                Tag="{StaticResource CarInfoIcon}"
-                Command="{Binding CarInfoCommand}"
-                ToolTip="{t:Text garage.tile.car_info}"
-                helpers:Reveal.IsShown="{Binding ShowNavigation}"
-                helpers:Reveal.OffsetX="60"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Center"
-                Margin="0,0,30,0"/>
+        <ItemsControl ItemsSource="{Binding RightTiles}"
+                      ItemTemplate="{StaticResource GarageTileTemplate}"
+                      Focusable="False"
+                      helpers:Reveal.IsShown="{Binding ShowNavigation}"
+                      helpers:Reveal.OffsetX="60"
+                      HorizontalAlignment="Right"
+                      VerticalAlignment="Center"
+                      Margin="0,0,30,0"/>
 
-        <!-- The gas station (bottom right): filling up, the oil and the wash are done there -->
-        <Button x:Name="GasStationButton"
-                Style="{StaticResource RoundIconButtonStyle}"
-                Tag="{StaticResource FuelPumpIcon}"
-                Command="{Binding GasStationCommand}"
-                ToolTip="{t:Text garage.tile.gas_station}"
-                helpers:Reveal.IsShown="{Binding ShowNavigation}"
-                helpers:Reveal.OffsetX="60"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Bottom"
-                Margin="0,0,30,30"/>
+        <ItemsControl ItemsSource="{Binding BottomRightTiles}"
+                      ItemTemplate="{StaticResource GarageTileTemplate}"
+                      Focusable="False"
+                      helpers:Reveal.IsShown="{Binding ShowNavigation}"
+                      helpers:Reveal.OffsetX="60"
+                      HorizontalAlignment="Right"
+                      VerticalAlignment="Bottom"
+                      Margin="0,0,30,30"/>
 
-        <!-- Right, under the window's money card: the career, the calendar under it, the radio under that -->
-        <StackPanel x:Name="RightButtons"
-                    helpers:Reveal.IsShown="{Binding ShowNavigation}"
-                    helpers:Reveal.OffsetX="60"
-                    HorizontalAlignment="Right"
-                    VerticalAlignment="Top"
-                    Margin="0,120,30,0">
-            <Button Style="{StaticResource RoundIconButtonStyle}"
-                    Tag="{StaticResource TrophyIcon}"
-                    Command="{Binding CareerCommand}"
-                    ToolTip="{t:Text garage.tile.career}"/>
-            <Button x:Name="CalendarButton"
-                    Style="{StaticResource RoundIconButtonStyle}"
-                    Tag="{StaticResource CalendarIcon}"
-                    Command="{Binding ShowCalendarCommand}"
-                    ToolTip="{t:Text garage.tile.calendar}"
-                    Margin="0,16,0,0"/>
-            <!-- The radio on the bench: the player's own music, on every screen but a race (F2 anywhere). What it puts on
-                 comes out of it. -->
-            <Button x:Name="RadioButton"
-                    Style="{StaticResource RoundIconButtonStyle}"
-                    Tag="{StaticResource RadioIcon}"
-                    Command="{x:Static radio:RadioPanelViewModel.ToggleCommand}"
-                    ToolTip="{t:Text garage.tile.radio}"
-                    radio:RadioToastAnchor.IsAnchor="True"
-                    Margin="0,16,0,0"/>
-        </StackPanel>
+        <ItemsControl ItemsSource="{Binding TopRightTiles}"
+                      ItemTemplate="{StaticResource GarageTileTemplate}"
+                      Focusable="False"
+                      helpers:Reveal.IsShown="{Binding ShowNavigation}"
+                      helpers:Reveal.OffsetX="60"
+                      HorizontalAlignment="Right"
+                      VerticalAlignment="Top"
+                      Margin="0,120,30,0"/>
         </Grid>
 
         <!-- Loading Layer (shown until the 3D garage is ready) -->

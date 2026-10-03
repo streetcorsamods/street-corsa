@@ -239,7 +239,7 @@
                 Content="{t:Text dealermap.mail_order}"
                 ToolTip="{t:Text dealermap.mail_order.tip}"
                 Command="{Binding MailOrderCommand}"
-                Visibility="{Binding IsPartsMap, Converter={StaticResource BooleanToVisibilityConverter}}"
+                Visibility="{Binding CanMailOrder, Converter={StaticResource BooleanToVisibilityConverter}}"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Top"
                 Margin="104,32,0,0"

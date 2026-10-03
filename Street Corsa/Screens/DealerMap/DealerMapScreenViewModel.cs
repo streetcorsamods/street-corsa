@@ -49,6 +49,9 @@ namespace StreetCorsa.Screens.DealerMap
         /// <summary>The part shops' map's way to the mail order: new parts by mail, and selling off the shelf</summary>
         public RelayCommand MailOrderCommand { get; }
 
+        /// <summary>The map has a way out to the mail order that leads somewhere (the part shops' map, in the base game)</summary>
+        public bool CanMailOrder => _navigationService.CanLeave(this, "mail_order");
+
         /// <summary>The part shops' map: their pins and their counters, no car lots</summary>
         public bool IsPartsMap { get; }
 
@@ -115,7 +118,7 @@ namespace StreetCorsa.Screens.DealerMap
 
             BackCommand = new RelayCommand(OnBack, () => !_isDriving);
             VisitDealerCommand = new RelayCommand<DealerPinViewModel>(OnVisitDealer, _ => !_isDriving);
-            MailOrderCommand = new RelayCommand(() => _navigationService.NavigateToUsedParts(_gameState), () => !_isDriving);
+            MailOrderCommand = new RelayCommand(() => _navigationService.Leave(this, "mail_order", _gameState), () => !_isDriving);
 
             // The map is filled in Enter, after the screen before it has been left
         }
@@ -417,8 +420,8 @@ namespace StreetCorsa.Screens.DealerMap
                 }
 
                 // Guarded by the navigation service: a lot that will not open is reported and the map stays
-                if (pin.IsPartShop) _navigationService.NavigateToPartShop(_gameState, pin.Id);
-                else _navigationService.NavigateToDealerLot(_gameState, pin.Id);
+                if (pin.IsPartShop) _navigationService.Leave(this, "shop", _gameState, new FlowArgs { ShopId = pin.Id });
+                else _navigationService.Leave(this, "lot", _gameState, new FlowArgs { DealerId = pin.Id });
             }
             catch (Exception ex)
             {
@@ -433,7 +436,7 @@ namespace StreetCorsa.Screens.DealerMap
 
         private void OnBack()
         {
-            _navigationService.NavigateToGarage(_gameState, skipAnimation: true);
+            _navigationService.Leave(this, "back", _gameState, new FlowArgs { SkipAnimation = true });
         }
 
         public override async void Enter()

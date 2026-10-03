@@ -1329,7 +1329,14 @@ E7 (car scripting) is built on `feature/car-scripting` (2026-10-02), after step 
 the mods (`scripts/scripts.json`, the drives' feels in `scripts/feels.json`) played at a trigger (`lot.take_out`,
 `garage.arrive`, `garage.leave`, `station.arrive`, `station.at_pump`, `station.leave`, `street.rival_arrive`,
 `street.rival_leave`), on the marks and paths each scene's JSON names. One car driver replaces the three movers; the
-base game's shows are its scripts, checked against the old movers number for number. Not seen in game yet.
+base game's shows are its scripts, checked against the old movers number for number. The owner played it;
+merged as PR #58.
+
+E8 (flow) is built on `feature/flow` (2026-10-02): the screens by id in the mods' `flow/*.json` (kinds the program has,
+named exits, `home`, the garage's tiles, the main menu's cards, where the day can end), navigation by id, every system a
+game can switch off in `rules/systems.json` with its fallback (no station: filled up overnight; no career screen: the
+rules' path), races back where they were set up (the racing hub's to the garage), and `screen.<id>.enter/.leave`
+scripts on the garage, the car lot and the gas station. The base game plays as before. Not seen in game yet.
 
 ## Testing in AC without driving
 

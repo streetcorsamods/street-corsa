@@ -7,6 +7,7 @@
         xmlns:radio="clr-namespace:StreetCorsa.Audio.Radio"
         xmlns:controls="clr-namespace:StreetCorsa.Controls"
         xmlns:helpers="clr-namespace:StreetCorsa.Helpers"
+        xmlns:t="clr-namespace:StreetCorsa.Services.Text"
         mc:Ignorable="d"
         Title="Street Corsa"
         WindowStyle="None"
@@ -26,12 +27,13 @@
                             Content="{Binding NavigationService.CurrentScreen, RelativeSource={RelativeSource AncestorType=Window}}"/>
 
             <!-- The player's money, the date and the time, top right over every screen of a game in play
-                 (IScreen.InGame); read off the game a few times a second (see UpdateStatus) -->
+                 (IScreen.InGame); read off the game a few times a second (see UpdateStatus). Under it, on a screen the
+                 flow lets the day be ended from that has no End Day button of its own, the window's. -->
+            <StackPanel HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Margin="0,20,20,0">
             <Border x:Name="StatusCard"
                     Style="{StaticResource GlassPanelStyle}"
-                    HorizontalAlignment="Right"
-                    VerticalAlignment="Top"
-                    Margin="0,20,20,0"
                     Padding="14,6,14,8"
                     MinWidth="150"
                     IsHitTestVisible="False"
@@ -52,6 +54,17 @@
                                HorizontalAlignment="Right"/>
                 </StackPanel>
             </Border>
+            <Button x:Name="EndDayButton"
+                    Content="{t:Text garage.end_day}"
+                    ToolTip="{t:Text shell.end_day.tip}"
+                    Style="{StaticResource DialogSecondaryButtonStyle}"
+                    Click="OnEndDayClick"
+                    HorizontalAlignment="Right"
+                    Height="32"
+                    Padding="16,0"
+                    Margin="0,8,0,0"
+                    Visibility="Collapsed"/>
+            </StackPanel>
 
             <!-- A change of screen: a still of the screen being left, over black. The still fades to black, then the
                  black fades off the new screen (see ScreenTransition). Takes the clicks while it plays. -->

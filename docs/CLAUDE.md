@@ -14,7 +14,7 @@ Street Rod-style career mode manager for Assetto Corsa. WPF app manages game log
 3. **Data Layer** - Dual-database: catalog.db (static) + saves/*.db (dynamic), both under `%AppData%\StreetCorsa` (`Catalog\catalog.db`, `Saves\{name}.db`, next to `settings.json`; see `docs/architecture/data-storage.md`)
 
 ## Key Architectural Rules
-- **Navigation**: Single `NavigationService` with typed factory methods. Screens never instantiate other screens. Screens get their services through NavigationService (constructor parameters), never from `(App)Application.Current`.
+- **Navigation**: Single `NavigationService`; screens are gone to by their id in the flow (`flow\*.json`, `FlowBook`) and leave by named exits (`Leave(this, "back", game)`). Screens never instantiate or name other screens. Screens get their services through NavigationService (constructor parameters), never from `(App)Application.Current`.
 - **Dialogs**: Modal overlays, never nested. One dialog at a time: one requested while another is open is queued and shows after it, never replacing it. A dialog closes before it runs its callback.
 - **INI Files**: Declare intent, apply minimally, always restore after AC exits. Every cfg INI write goes through `IniModificationService` (`IniText`, line- and encoding-preserving, written atomically by `SafeFile`); the original is kept first under `%AppData%\StreetCorsa\AcRestore\~cfg` (`AcConfigBackup`) and put back in the launcher's `finally`, at start-up, on exit and on the fatal path, never while an AC process runs.
 - **Saves**: One open save database at a time (`SaveDatabase`), shared by the game state and race session repositories; the Load screen lists saves by header without switching it.
@@ -78,12 +78,21 @@ Street Corsa/
 
 ## Screen Navigation Pattern
 ```
-NavigationService.NavigateTo[ScreenName](dependencies) : bool
-  → SafeNavigate: creates ScreenViewModel with the services from NavigationService's fields
-  → Calls NavigateTo(screen) internally
+NavigationService.Leave(this, "back", gameState, args?) : bool
+  → the flow says where the screen's exit leads (none open: home, or the main menu with no game)
+  → Go(id, gameState, FlowArgs) : bool, builds the screen by its kind (ScreenKinds) with the services from its fields
+  → SafeNavigate(name, create, id): records the flow id, calls NavigateTo(screen) internally
   → Screen.Enter() lifecycle hook (loading happens here, not in the constructor)
   → A constructor or Enter() that throws: logged, dialog shown, previous screen kept, returns false
 ```
+- Also `GoFrom(this, id, ...)` (a hub's tile), `GoHome`, `GoHomeLater` (from an `Enter`), `GoToMenu(card)`,
+  `NavigateToStart()` (startup only), `CanLeave(this, exit)` (show a button only while its exit leads somewhere).
+- `FlowArgs` carries what a screen is told: the shop, the dealer, the car, the race, skip the animation, the car
+  arriving, back from a race, end the day, the menu's card.
+- Races: `GoRace(gameState, intent)` sets `intent.ReturnTo` to the screen on show; the race screen goes back there
+  (or where its `after_race` exit leads), home when towed.
+- Screens with the car on a 3D scene (`IScriptedScreen`) call `ScreenReady(this)` once up; their `screen.<id>.enter`
+  and `.leave` scripts play then and on `Leave`/`GoFrom`. See `docs/architecture/navigation.md`.
 
 ## Opponent System (AC-Agnostic)
 - `Opponent` model stores Skill (90-100; the floor of 90 is deliberate, commit 61ca613: below it AC's AI drives too badly to make a race. Never lower it) and Aggression (0-100)
@@ -115,11 +124,13 @@ NavigationService.NavigateTo[ScreenName](dependencies) : bool
 
 ## Quick Reference - Adding Features
 
-**New Screen:**
+**New Screen** (another screen of a kind there is needs only an entry in `flow\*.json`):
 1. Create `Screens/[Name]/[Name]ScreenViewModel.cs` (inherit BaseScreenViewModel)
 2. Create `Screens/[Name]/[Name]ScreenView.xaml` + `.xaml.cs`
-3. Add `bool NavigateTo[Name]()` in NavigationService through `SafeNavigate`, passing services from its fields (add a constructor parameter for a new one)
-4. Add DataTemplate in App.xaml
+3. Add DataTemplate in App.xaml
+4. Add a `ScreenKinds` constant in `Navigation/FlowBook.cs`, in `ScreenKinds.All` (and `SystemOf`, `NeedsWhat`, `IsOverlay`, `CanEndDay` if they concern it)
+5. Add a case for the kind in `NavigationService.Go` through `SafeNavigate(name, ..., id)`, passing services from its fields (add a constructor parameter for a new one) and what it is told from `FlowArgs`
+6. Add it to `Content\streetcorsa\flow\flow.json` with its exits, and the exits or tiles that lead to it
 
 **New Scheduled Task:**
 1. Implement `IScheduledTask` (TaskId, IntervalDays, ExecuteAsync)

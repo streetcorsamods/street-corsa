@@ -255,6 +255,7 @@
                     Content="{t:Text racehub.streets}"
                     Style="{StaticResource DialogPrimaryButtonStyle}"
                     Command="{Binding HitTheStreetsCommand}"
+                    Visibility="{Binding CanHitTheStreets, Converter={StaticResource BooleanToVisibilityConverter}}"
                     FontSize="{StaticResource FontSizeBodyLarge}"
                     Width="220"
                     Height="44"/>

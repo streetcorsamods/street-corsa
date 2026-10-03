@@ -42,7 +42,7 @@ namespace StreetCorsa.Dialogs.SellCar
             _askingPriceText = saleService.SuggestedAskingPrice(car).ToString("0", Locale.Culture);
 
             SellToDealerCommand = new AsyncRelayCommand(OnSellToDealer, () => !_busy);
-            PlaceAdCommand = new AsyncRelayCommand(OnPlaceAd, () => !_busy && AskingPrice is not null && !HasAd && !_quote.IsScrap);
+            PlaceAdCommand = new AsyncRelayCommand(OnPlaceAd, () => !_busy && HasPaper && AskingPrice is not null && !HasAd && !_quote.IsScrap);
             AcceptOfferCommand = new AsyncRelayCommand(OnAcceptOffer, () => !_busy && HasOffer);
             DeclineOfferCommand = new RelayCommand(OnDeclineOffer, () => !_busy && HasOffer);
             WithdrawAdCommand = new RelayCommand(OnWithdrawAd, () => !_busy && HasAd);
@@ -88,13 +88,19 @@ namespace StreetCorsa.Dialogs.SellCar
 
         public bool CanAdvertise => !_quote.IsScrap;
 
+        /// <summary>The game has a paper to advertise in (<see cref="Rules.SystemRules.Paper"/>)</summary>
+        public bool HasPaper => Rules.RuleBook.Current.Systems.Paper;
+
+        /// <summary>The paper takes no ad for a wreck: said where the ad would be</summary>
+        public bool ShowWreckNote => HasPaper && !CanAdvertise;
+
         public string AdFeeDisplay => GameText.Say("sell.ad.fee", ("fee", new Money(CarSaleService.AdFee)), ("days", CarSaleService.AdDays));
 
         private CarSaleAd? Ad => _saleService.AdFor(_gameState, _car);
 
         public bool HasAd => Ad != null;
 
-        public bool ShowAdForm => CanAdvertise && !HasAd;
+        public bool ShowAdForm => HasPaper && CanAdvertise && !HasAd;
 
         public string AdStatus => Ad is { } ad
             ? GameText.Say("sell.ad.status", ("price", new Money(ad.AskingPrice)), ("since", ad.PostedDate),

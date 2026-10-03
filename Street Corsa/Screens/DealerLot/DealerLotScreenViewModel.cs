@@ -349,7 +349,7 @@ namespace StreetCorsa.Screens.DealerLot
                 // a lot looking at the gap where it was. Unless they have gone meanwhile (the purchase takes a moment):
                 // then they stay where they went.
                 if (!ReferenceEquals(_navigationService.CurrentScreen, this)) return;
-                _navigationService.NavigateToGarage(_gameState, skipAnimation: true);
+                _navigationService.Leave(this, "bought", _gameState, new FlowArgs { SkipAnimation = true });
             });
         }
 
@@ -365,7 +365,7 @@ namespace StreetCorsa.Screens.DealerLot
 
         private void OnBack()
         {
-            _navigationService.NavigateToDealerMap(_gameState);
+            _navigationService.Leave(this, "back", _gameState);
         }
 
         public override void Enter()

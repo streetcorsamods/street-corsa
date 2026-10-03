@@ -351,7 +351,7 @@ namespace StreetCorsa.Services.Scripting
             private ScriptCondition Condition(JsonElement c, string where)
             {
                 if (c.ValueKind != JsonValueKind.Object) throw new FormatException($"{where} is not a condition");
-                Only(c, where, "engine", "towed", "light", "hours", "not", "any", "_comment");
+                Only(c, where, "engine", "towed", "light", "hours", "from", "to", "not", "any", "_comment");
                 var condition = ScriptCondition.Always;
                 if (ModJson.TryGet(c, "engine", out var e))
                 {
@@ -389,6 +389,8 @@ namespace StreetCorsa.Services.Scripting
                     condition = condition with { Hours = (hours[0], hours[1]) };
                 }
 
+                if (ModJson.TryGet(c, "from", out var fr)) condition = condition with { From = Screens(fr, $"{where}.from") };
+                if (ModJson.TryGet(c, "to", out var to)) condition = condition with { To = Screens(to, $"{where}.to") };
                 if (ModJson.TryGet(c, "not", out var n)) condition = condition with { Not = Condition(n, $"{where}.not") };
                 if (ModJson.TryGet(c, "any", out var a))
                 {
@@ -397,6 +399,14 @@ namespace StreetCorsa.Services.Scripting
                 }
 
                 return condition;
+            }
+
+            /// <summary>One screen id or a list of them, matched whatever their case</summary>
+            private static IReadOnlySet<string> Screens(JsonElement s, string where)
+            {
+                var ids = s.ValueKind == JsonValueKind.Array ? s.EnumerateArray().Select(x => Text(x, where)).ToList() : [Text(s, where)];
+                if (ids.Count == 0 || ids.Any(string.IsNullOrWhiteSpace)) throw new FormatException($"{where} is not a screen id or a list of them");
+                return new HashSet<string>(ids, StringComparer.OrdinalIgnoreCase);
             }
 
             private static MarkSpec Mark(JsonElement m, string where) => SceneMarks.ParseMark(m, where, names: true);

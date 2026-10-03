@@ -266,14 +266,14 @@ namespace StreetCorsa.Screens.CarCatalogEditor
                     {
                         if (confirmed)
                         {
-                            _navigationService.NavigateToMainMenu(MainMenu.MainMenuCard.Settings);
+                            _navigationService.Leave(this, "back", null, new FlowArgs { Card = MainMenu.MainMenuCard.Settings });
                         }
                     });
                 _dialogService.ShowDialog(confirmDialog);
             }
             else
             {
-                _navigationService.NavigateToMainMenu(MainMenu.MainMenuCard.Settings);
+                _navigationService.Leave(this, "back", null, new FlowArgs { Card = MainMenu.MainMenuCard.Settings });
             }
         }
 

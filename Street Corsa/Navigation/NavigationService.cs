@@ -63,6 +63,15 @@ namespace StreetCorsa.Navigation
         private readonly ConditionalWeakTable<GameState, StrongBox<Dialogs.Career.CareerSection>> _careerSections = new();
         private readonly Action<GameState?> _setCurrentGame;
         private readonly RaceSetupBuilder _raceSetup;
+        private readonly FlowBook _flow;
+
+        // The flow id each screen was built for, and the one on show when it was
+        private readonly ConditionalWeakTable<IScreen, string> _ids = new();
+        private readonly ConditionalWeakTable<IScreen, string> _cameFrom = new();
+
+        // The screens whose enter script has played, and those a leave script is taking out of
+        private readonly ConditionalWeakTable<IScreen, object> _entered = new();
+        private readonly ConditionalWeakTable<IScreen, object> _departing = new();
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger(LogCategory.Navigation);
 
         /// <summary>
@@ -89,6 +98,7 @@ namespace StreetCorsa.Navigation
         }
 
         /// <param name="setCurrentGame">Makes a loaded or new game the one the app saves on exit and races with</param>
+        /// <param name="flow">How the screens hang together; the installed mods' when none is given</param>
         public NavigationService(
             DialogService dialogService,
             IContentCatalogRepository catalogRepository,
@@ -114,7 +124,8 @@ namespace StreetCorsa.Navigation
             IEventOpponentService eventOpponentService,
             IVictoryConditionService victoryConditionService,
             IMilestoneService milestoneService,
-            Action<GameState?> setCurrentGame)
+            Action<GameState?> setCurrentGame,
+            FlowBook? flow = null)
         {
             _dialogService = dialogService;
             _catalogRepository = catalogRepository;
@@ -142,6 +153,7 @@ namespace StreetCorsa.Navigation
             _milestoneService = milestoneService;
             _setCurrentGame = setCurrentGame;
             _raceSetup = new RaceSetupBuilder(carPartsService, raceCarDataService);
+            _flow = flow ?? FlowBook.Installed;
         }
 
         /// <summary>
@@ -172,12 +184,15 @@ namespace StreetCorsa.Navigation
         /// throws is left again for the screen the player came from. Either way the error is logged and the
         /// player told, instead of the exception ending the game. False when the player did not get there.
         /// </summary>
-        internal bool SafeNavigate(string screenName, Func<IScreen> create)
+        /// <param name="id">The screen's id in the flow</param>
+        internal bool SafeNavigate(string screenName, Func<IScreen> create, string? id = null)
         {
             IScreen screen;
             try
             {
                 screen = create();
+                if (id != null) _ids.AddOrUpdate(screen, id);
+                if (CurrentId is { } from) _cameFrom.AddOrUpdate(screen, from);
             }
             catch (Exception ex)
             {
@@ -276,9 +291,12 @@ namespace StreetCorsa.Navigation
 
         private void ShowNavigationError(string screenName)
         {
-            // The screen's name in the player's language: menu.screen.<its name, spaces as underscores>
+            // The screen's name in the player's language: menu.screen.<its id, spaces as underscores>, else its kind's
             var key = "menu.screen." + screenName.Replace(' ', '_').Replace("'", string.Empty);
-            var name = GameText.Installed.Has(key) ? GameText.Say(key) : screenName;
+            var kindKey = "menu.screen." + _flow.KindOf(screenName);
+            var name = GameText.Installed.Has(key) ? GameText.Say(key)
+                : GameText.Installed.Has(kindKey) ? GameText.Say(kindKey)
+                : screenName;
             _dialogService.ShowDialog(new InformationDialogViewModel(
                 _dialogService,
                 GameText.Say("menu.open_failed", ("screen", name)),
@@ -286,17 +304,304 @@ namespace StreetCorsa.Navigation
         }
 
         // ============================================================
-        // TYPED FACTORY METHODS
-        // Each method encapsulates the creation of a specific screen
+        // THE FLOW
+        // Screens are gone to by their id in the flow (flow/*.json, FlowBook), each built here by its kind. A screen
+        // leaves by one of its ways out, named, which the flow leads to a screen id; one that leads nowhere open goes
+        // home. The screens never name each other.
         // ============================================================
 
-        /// <summary>Where the game opens: the main screen, under its title while the cars load behind it</summary>
-        public bool NavigateToStart() => SafeNavigate("main menu", () =>
-            new Screens.MainMenu.MainMenuScreenViewModel(this, _dialogService, _catalogRepository, showIntro: true));
+        /// <summary>How the screens hang together: the mods' flow</summary>
+        public FlowBook Flow => _flow;
 
-        /// <param name="card">A card to open on arrival: the car catalog editor goes back to the settings it came from</param>
-        public bool NavigateToMainMenu(Screens.MainMenu.MainMenuCard card = Screens.MainMenu.MainMenuCard.None) =>
-            SafeNavigate("main menu", () => new Screens.MainMenu.MainMenuScreenViewModel(this, _dialogService, _catalogRepository, card));
+        /// <summary>The flow id of a screen built here; null for one built some other way</summary>
+        public string? IdOf(IScreen? screen) => screen != null && _ids.TryGetValue(screen, out var id) ? id : null;
+
+        /// <summary>The flow id of the screen on show</summary>
+        public string? CurrentId => IdOf(CurrentScreen);
+
+        /// <summary>
+        /// Goes to the screen of this id in the flow, built as its kind is; what the screen needs to be told (the shop,
+        /// the car, the race) comes in <paramref name="args"/>. A screen that is not there, or whose system is off, is not
+        /// gone to (logged). An overlay kind (the racing hub, the career) opens over the screen on show, and its own ways
+        /// out go through <paramref name="leaveVia"/> when given (the garage's: not while the night is being worked out).
+        /// False when the player did not get there.
+        /// </summary>
+        public bool Go(string? id, GameState? gameState, FlowArgs? args = null, Action<Func<bool>>? leaveVia = null)
+        {
+            args ??= FlowArgs.None;
+            if (_flow.Screen(id) is not { } screen || !_flow.IsOpen(id))
+            {
+                _logger.Warning("There is no screen {Screen} open in the flow: not gone to", id);
+                return false;
+            }
+
+            var name = id!;
+            if (screen.Kind is not (ScreenKinds.MainMenu or ScreenKinds.SoundBrowser or ScreenKinds.CarCatalogEditor) && gameState == null)
+            {
+                _logger.Warning("The {Screen} screen needs a game in play: not gone to", name);
+                return false;
+            }
+
+            var game = gameState!;
+            switch (screen.Kind)
+            {
+                case ScreenKinds.MainMenu:
+                    return SafeNavigate(name, () => new Screens.MainMenu.MainMenuScreenViewModel(
+                        this, _dialogService, _catalogRepository, args.Card, args.Intro), id);
+                case ScreenKinds.Garage:
+                    return SafeNavigate(name, () => new Screens.Garage.GarageScreenViewModel(
+                        this, _dialogService, game, _catalogRepository, _launcher, _carPartsService, _gameStateRepository,
+                        _timeService, _gameSettingsService, _contentService, _raceCarDataService, _saleService,
+                        args.SkipAnimation, args.Arrival, args.EndDay), id);
+                case ScreenKinds.CarLot:
+                    return SafeNavigate(name, () => new Screens.CarLot.CarLotScreenViewModel(
+                        this, game, _catalogRepository, _gameStateRepository, _timeService, _carPartsService), id);
+                case ScreenKinds.RacingHub:
+                    return ShowRaceHub(name, game, leaveVia);
+                case ScreenKinds.Career:
+                    return ShowCareer(name, game, leaveVia);
+                case ScreenKinds.Diner:
+                    return SafeNavigate(name, () => new Screens.Diner.DinerScreenViewModel(
+                        this, _dialogService, game, _catalogRepository, _opponentChallengeService, _contentService,
+                        _talkService, _timeService, _gameStateRepository, _raceSetup, args.Returning), id);
+                case ScreenKinds.Street:
+                    return SafeNavigate(name, () => new Screens.Cruise.CruiseScreenViewModel(
+                        this, _dialogService, game, _catalogRepository, _opponentChallengeService, _contentService,
+                        _talkService, _timeService, _gameStateRepository, _raceSetup, _carPartsService), id);
+                case ScreenKinds.GasStation:
+                    return SafeNavigate(name, () => new Screens.Station.GasStationScreenViewModel(
+                        this, _dialogService, game, _catalogRepository, _timeService, _gameStateRepository, _carPartsService), id);
+                case ScreenKinds.Newspaper:
+                    return SafeNavigate(name, () => new Screens.Newspaper.NewspaperScreenViewModel(
+                        this, _dialogService, game, _catalogRepository, _profileRepository, _marketService, _carPartsService,
+                        _partsShopService, _timeService, _gameStateRepository, _saleService, args.SkipAnimation), id);
+                case ScreenKinds.CarViewing when args.Car is { } car:
+                    // "You drive over to see it": a car from the paper's ads where its seller has it (a dealer's on the
+                    // lot, a private seller's at the curb), to walk round and buy
+                    return SafeNavigate(name, () => new Screens.CarViewing.CarViewingScreenViewModel(
+                        this, _dialogService, game, car, _dealerCatalog, _purchaseService, _carPartsService), id);
+                case ScreenKinds.DealerMap:
+                    return SafeNavigate(name, () => new Screens.DealerMap.DealerMapScreenViewModel(
+                        this, _dialogService, game, _dealerCatalog, _marketService, _timeService, _partShopService), id);
+                case ScreenKinds.PartShopsMap:
+                    // The same map with the part shops on it instead of the car lots
+                    return SafeNavigate(name, () => new Screens.DealerMap.DealerMapScreenViewModel(
+                        this, _dialogService, game, _dealerCatalog, _marketService, _timeService, _partShopService,
+                        partShopsMap: true), id);
+                case ScreenKinds.DealerLot when args.DealerId is { } dealerId:
+                    return SafeNavigate(name, () => new Screens.DealerLot.DealerLotScreenViewModel(
+                        this, _dialogService, game, dealerId, _dealerCatalog, _marketService, _catalogRepository,
+                        _profileRepository, _gameStateRepository, _purchaseService, _carPartsService), id);
+                case ScreenKinds.PartShop when args.ShopId is { } shopId:
+                    return SafeNavigate(name, () => new Screens.PartShop.PartShopScreenViewModel(
+                        this, _dialogService, game, shopId, _partShopService, _carPartsService, _partsShopService,
+                        _gameStateRepository, _catalogRepository), id);
+                case ScreenKinds.MailOrder:
+                    return SafeNavigate(name, () => new Screens.UsedParts.UsedPartsScreenViewModel(
+                        this, _dialogService, game, _carPartsService, _partsShopService, _gameStateRepository,
+                        _catalogRepository, _timeService), id);
+                case ScreenKinds.Race when args.Race is { } intent:
+                    return SafeNavigate(name, () => new Screens.RaceLoading.RaceLoadingScreenViewModel(
+                        this, _dialogService, game, _launcher, intent, _timeService, _gameStateRepository), id);
+                case ScreenKinds.SoundBrowser:
+                    // Every sound file and engine sound, to be heard one by one. The start music ends here, so it does
+                    // not play under what is listened to.
+                    return SafeNavigate(name, () =>
+                    {
+                        Audio.StartMusic.End();
+                        return new Screens.SoundBrowser.SoundBrowserScreenViewModel(this, _carPartsService);
+                    }, id);
+                case ScreenKinds.CarCatalogEditor:
+                    return SafeNavigate(name, () => new Screens.CarCatalogEditor.CarCatalogEditorScreenViewModel(
+                        this, _dialogService, _catalogRepository, _profileRepository, _profileService, _carPartsService), id);
+                default:
+                    _logger.Warning("The {Screen} screen ({Kind}) was not told what to show: not gone to", name, screen.Kind);
+                    return false;
+            }
+        }
+
+        /// <summary>
+        /// Leaves a screen by one of its ways out (<c>"back"</c>, <c>"bought"</c>): to the screen the flow leads it to.
+        /// A way out that leads to no screen open goes home instead (from anywhere but home), or with no game in play to
+        /// the main menu. False when the player did not get anywhere: a screen that failed to open leaves them where they
+        /// were, as any navigation does.
+        /// </summary>
+        public bool Leave(IScreen from, string exit, GameState? gameState, FlowArgs? args = null)
+        {
+            var id = IdOf(from);
+            // Where it leads, for the leave script's "to"
+            var to = _flow.Exit(id, exit) ?? (gameState != null && !IsHome(id) ? _flow.Home : gameState == null ? _flow.Menu : null);
+            return Depart(from, to, () => LeaveFrom(id, exit, gameState, args));
+        }
+
+        /// <summary>
+        /// Leaves a screen for a screen of the flow it names itself (a hub's tile), as <see cref="Leave"/> does: its leave
+        /// script first. An overlay opens over it, and the screen is not left.
+        /// </summary>
+        public bool GoFrom(IScreen from, string to, GameState? gameState, FlowArgs? args = null, Action<Func<bool>>? leaveVia = null) =>
+            Depart(from, to, () => Go(to, gameState, args, leaveVia));
+
+        /// <summary>
+        /// A screen with its car on a 3D scene plays its <c>screen.&lt;id&gt;.leave</c> script first, when a mod has one
+        /// for the moment, and is left once the script lets it go; a way out that then goes nowhere puts the car back.
+        /// True while that is under way.
+        /// </summary>
+        private bool Depart(IScreen from, string? to, Func<bool> go)
+        {
+            if (from is IScriptedScreen { PlayScreenScript: { } play } scripted && IdOf(from) is { } id
+                && ReferenceEquals(CurrentScreen, from) && !ScreenKinds.IsOverlay(_flow.KindOf(to)))
+            {
+                if (_departing.TryGetValue(from, out _)) return true;
+
+                Task? playing = null;
+                try
+                {
+                    playing = play(Services.Scripting.ScriptTriggers.ScreenLeave(id), FactsFor(scripted, id, to));
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "The {Screen} screen's leave script could not be played", id);
+                }
+
+                if (playing != null)
+                {
+                    _departing.AddOrUpdate(from, new object());
+                    _ = DepartAfterAsync(playing, scripted, go);
+                    return true;
+                }
+            }
+
+            return go();
+        }
+
+        private async Task DepartAfterAsync(Task playing, IScriptedScreen from, Func<bool> go)
+        {
+            try
+            {
+                await playing;
+            }
+            catch (Exception ex)
+            {
+                // The show is not the business: the player goes all the same
+                _logger.Error(ex, "A leave script failed");
+            }
+
+            try
+            {
+                // The player may have gone some other way meanwhile
+                if (!ReferenceEquals(CurrentScreen, from)) return;
+
+                var went = false;
+                try
+                {
+                    went = go();
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "Could not leave after the leave script");
+                }
+
+                if (!went && ReferenceEquals(CurrentScreen, from)) from.PutBackAfterLeave();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not put the car back after a leave that went nowhere");
+            }
+            finally
+            {
+                _departing.Remove(from);
+            }
+        }
+
+        /// <summary>
+        /// A screen with its car on a 3D scene is up, its own show over: its <c>screen.&lt;id&gt;.enter</c> script plays,
+        /// when a mod has one for the moment (once for the screen)
+        /// </summary>
+        public void ScreenReady(IScriptedScreen screen)
+        {
+            if (screen.PlayScreenScript is not { } play || IdOf(screen) is not { } id || !ReferenceEquals(CurrentScreen, screen)) return;
+            if (_entered.TryGetValue(screen, out _)) return;
+            _entered.AddOrUpdate(screen, new object());
+
+            try
+            {
+                _ = play(Services.Scripting.ScriptTriggers.ScreenEnter(id), FactsFor(screen, id, null));
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "The {Screen} screen's enter script could not be played", id);
+            }
+        }
+
+        /// <summary>The moment as the screen tells it, with the flow's: the screen, where the player came from, where to</summary>
+        private Services.Scripting.ScriptFacts FactsFor(IScriptedScreen screen, string id, string? to) =>
+            screen.ScriptFacts with { Screen = id, From = _cameFrom.TryGetValue(screen, out var from) ? from : null, To = to };
+
+        /// <summary><see cref="Leave"/> from a screen known by its id (an overlay, which is not a screen on show)</summary>
+        public bool LeaveFrom(string? from, string exit, GameState? gameState, FlowArgs? args = null, Action<Func<bool>>? leaveVia = null)
+        {
+            if (_flow.Exit(from, exit) is { } to)
+            {
+                _logger.Information("From {From} by {Exit} to {To}", from, exit, to);
+                return Go(to, gameState, args, leaveVia);
+            }
+
+            if (gameState == null)
+            {
+                _logger.Information("From {From} by {Exit}: no screen open there, to the main menu", from, exit);
+                return !string.Equals(from, _flow.Menu, StringComparison.OrdinalIgnoreCase) && GoToMenu(args?.Card ?? default);
+            }
+
+            if (IsHome(from))
+            {
+                _logger.Warning("From {From} by {Exit}: no screen open there", from, exit);
+                return false;
+            }
+
+            _logger.Information("From {From} by {Exit}: no screen open there, going home", from, exit);
+            return GoHome(gameState, args);
+        }
+
+        /// <summary>Whether a screen's way out leads to a screen that is open: its button is shown only then</summary>
+        public bool CanLeave(IScreen from, string exit) => _flow.Exit(IdOf(from), exit) != null;
+
+        /// <summary>
+        /// The day can be ended from the screen on show with the window's own End Day button: the flow says so of it, and
+        /// it has no button of its own (the garage's is in its calendar)
+        /// </summary>
+        public bool CanEndDayHere =>
+            CurrentScreen is { InGame: true } and not Screens.Garage.GarageScreenViewModel
+            && _flow.Screen(CurrentId) is { EndDay: true };
+
+        /// <summary>Whether this screen id is home</summary>
+        public bool IsHome(string? id) => string.Equals(id, _flow.Home, StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>Home: where a game starts, and where a way out that leads nowhere goes</summary>
+        public bool GoHome(GameState gameState, FlowArgs? args = null) => Go(_flow.Home, gameState, args);
+
+        /// <summary>
+        /// Home, once what runs on the UI thread now is over: for a screen that sends the player home from its
+        /// <c>Enter</c>, while the navigation that brought them there is still going on
+        /// </summary>
+        public void GoHomeLater(GameState gameState) =>
+            _ = System.Windows.Threading.Dispatcher.CurrentDispatcher.InvokeAsync(() => GoHome(gameState));
+
+        /// <summary>Where the game opens: the main screen, under its title while the cars load behind it</summary>
+        public bool NavigateToStart() => Go(_flow.Menu, null, new FlowArgs { Intro = true });
+
+        /// <summary>The main menu, a game over or left; <paramref name="card"/> opens on arrival</summary>
+        public bool GoToMenu(Screens.MainMenu.MainMenuCard card = Screens.MainMenu.MainMenuCard.None) =>
+            Go(_flow.Menu, null, new FlowArgs { Card = card });
+
+        /// <summary>
+        /// A race, set up by the screen on show: after it the player comes back there (or where its <c>after_race</c>
+        /// way out leads), unless the intent already says where
+        /// </summary>
+        public bool GoRace(GameState gameState, DragRaceLaunchIntent intent)
+        {
+            intent.ReturnTo ??= CurrentId;
+            return Go(_flow.FirstOfKind(ScreenKinds.Race), gameState, new FlowArgs { Race = intent });
+        }
 
         // The main menu's cards. They open over the main screen rather than in place of it; back closes them.
 
@@ -323,36 +628,11 @@ namespace StreetCorsa.Navigation
             new(this, _dialogService, _gameStateRepository, _carPartsService, _setCurrentGame, back);
 
         /// <summary>
-        /// The garage, once what runs on the UI thread now is over: for a screen that sends the player home from its
-        /// <c>Enter</c>, while the navigation that brought them there is still going on
-        /// </summary>
-        public void NavigateToGarageLater(GameState gameState) =>
-            _ = System.Windows.Threading.Dispatcher.CurrentDispatcher.InvokeAsync(() => NavigateToGarage(gameState));
-
-        /// <param name="arrival">The car was just taken out of the lot: its engine, and whether it drives in</param>
-        public bool NavigateToGarage(GameState gameState, bool skipAnimation = false, Screens.Garage.CarArrival? arrival = null) => SafeNavigate("garage", () =>
-            new Screens.Garage.GarageScreenViewModel(
-                this,
-                _dialogService,
-                gameState,
-                _catalogRepository,
-                _launcher,
-                _carPartsService,
-                _gameStateRepository,
-                _timeService,
-                _gameSettingsService,
-                _contentService,
-                _raceCarDataService,
-                _saleService,
-                skipAnimation,
-                arrival));
-
-        /// <summary>
         /// The career, over the current screen, on the section last looked at in this game. One that fails to build is
         /// logged and the player told, as a screen is. False when it did not open.
         /// </summary>
-        /// <param name="toMainMenu">Where the victory screen's Main Menu button goes, when picking a path wins the game</param>
-        public bool ShowCareer(GameState gameState, Action toMainMenu)
+        /// <param name="leaveVia">How its way out ("won", when picking a path wins the game) is taken</param>
+        internal bool ShowCareer(string id, GameState gameState, Action<Func<bool>>? leaveVia)
         {
             try
             {
@@ -363,31 +643,36 @@ namespace StreetCorsa.Navigation
                     gameState,
                     _gameStateRepository,
                     _careerSections.GetOrCreateValue(gameState),
-                    toMainMenu));
+                    () => Via(leaveVia, () => LeaveFrom(id, "won", gameState) || GoToMenu())));
                 return true;
             }
             catch (Exception ex)
             {
                 _logger.Error(ex, "Could not open the career");
-                ShowNavigationError("career");
+                ShowNavigationError(id);
                 return false;
             }
         }
 
-        // ----- Step 25: the racing hub -----
+        private static void Via(Action<Func<bool>>? leaveVia, Func<bool> leave)
+        {
+            if (leaveVia != null) leaveVia(leave);
+            else leave();
+        }
 
         /// <summary>
         /// The racing hub, over the current screen (the garage's "Go race!"): the race invitations, Street News, the way
-        /// out onto the streets. One that fails to build is logged and the player told, as a screen is. False when it did
-        /// not open.
+        /// out onto the streets (its "streets" way out, shown while it leads somewhere). A race set up from it comes back
+        /// to the screen it was opened over. One that fails to build is logged and the player told, as a screen is.
+        /// False when it did not open.
         /// </summary>
-        /// <param name="hitTheStreets">Where its "Hit the streets" button goes, once it is closed</param>
-        public bool ShowRaceHub(GameState gameState, Action hitTheStreets)
+        private bool ShowRaceHub(string id, GameState gameState, Action<Func<bool>>? leaveVia)
         {
             try
             {
                 // A race set up from it goes ahead only while the player is still where the hub was opened
                 var home = CurrentScreen;
+                var streets = _flow.Exit(id, "streets") != null;
                 _dialogService.ShowDialog(new Dialogs.RaceHub.RaceHubDialogViewModel(
                     _dialogService,
                     gameState,
@@ -398,190 +683,17 @@ namespace StreetCorsa.Navigation
                     _contentService,
                     _raceSetup,
                     stillHome: () => ReferenceEquals(CurrentScreen, home),
-                    race: intent => NavigateToRaceLoading(gameState, intent),
-                    hitTheStreets));
+                    race: intent => GoRace(gameState, intent),
+                    streets ? () => Via(leaveVia, () => LeaveFrom(id, "streets", gameState)) : null));
                 return true;
             }
             catch (Exception ex)
             {
                 _logger.Error(ex, "Could not open the racing hub");
-                ShowNavigationError("racing hub");
+                ShowNavigationError(id);
                 return false;
             }
         }
-
-        // ----- end of step 25: the racing hub -----
-
-        public bool NavigateToCarLot(GameState gameState) => SafeNavigate("car lot", () =>
-            new Screens.CarLot.CarLotScreenViewModel(
-                this,
-                gameState,
-                _catalogRepository,
-                _gameStateRepository,
-                _timeService,
-                _carPartsService));
-
-        /// <param name="returning">Back from a race: the visit was paid for on the way in, so no time is spent</param>
-        public bool NavigateToDiner(GameState gameState, bool returning = false) => SafeNavigate("diner", () =>
-            new Screens.Diner.DinerScreenViewModel(
-                this,
-                _dialogService,
-                gameState,
-                _catalogRepository,
-                _opponentChallengeService,
-                _contentService,
-                _talkService,
-                _timeService,
-                _gameStateRepository,
-                _raceSetup,
-                returning));
-
-        public bool NavigateToCruise(GameState gameState) => SafeNavigate("street", () =>
-            new Screens.Cruise.CruiseScreenViewModel(
-                this,
-                _dialogService,
-                gameState,
-                _catalogRepository,
-                _opponentChallengeService,
-                _contentService,
-                _talkService,
-                _timeService,
-                _gameStateRepository,
-                _raceSetup,
-                _carPartsService));
-
-        public bool NavigateToGasStation(GameState gameState) => SafeNavigate("gas station", () =>
-            new Screens.Station.GasStationScreenViewModel(
-                this,
-                _dialogService,
-                gameState,
-                _catalogRepository,
-                _timeService,
-                _gameStateRepository,
-                _carPartsService));
-
-        public bool NavigateToNewspaper(GameState gameState, bool skipAnimation = false) => SafeNavigate("newspaper", () =>
-            new Screens.Newspaper.NewspaperScreenViewModel(
-                this,
-                _dialogService,
-                gameState,
-                _catalogRepository,
-                _profileRepository,
-                _marketService,
-                _carPartsService,
-                _partsShopService,
-                _timeService,
-                _gameStateRepository,
-                _saleService,
-                skipAnimation));
-
-        /// <summary>The part shops' map's way to the mail order and to selling off the shelf; back goes to the map</summary>
-        public bool NavigateToUsedParts(GameState gameState) => SafeNavigate("mail order", () =>
-            new Screens.UsedParts.UsedPartsScreenViewModel(
-                this,
-                _dialogService,
-                gameState,
-                _carPartsService,
-                _partsShopService,
-                _gameStateRepository,
-                _catalogRepository,
-                _timeService));
-
-        /// <summary>
-        /// Every sound file and engine sound, to be heard one by one; back goes to the settings. The start music ends
-        /// here, so it does not play under what is listened to.
-        /// </summary>
-        public bool NavigateToSoundBrowser() => SafeNavigate("sound library", () =>
-        {
-            Audio.StartMusic.End();
-            return new Screens.SoundBrowser.SoundBrowserScreenViewModel(this, _carPartsService);
-        });
-
-        public bool NavigateToCarCatalogEditor() => SafeNavigate("car catalog editor", () =>
-            new Screens.CarCatalogEditor.CarCatalogEditorScreenViewModel(
-                this,
-                _dialogService,
-                _catalogRepository,
-                _profileRepository,
-                _profileService,
-                _carPartsService));
-
-        public bool NavigateToRaceLoading(GameState gameState, DragRaceLaunchIntent launchIntent) => SafeNavigate("race", () =>
-            new Screens.RaceLoading.RaceLoadingScreenViewModel(
-                this,
-                _dialogService,
-                gameState,
-                _launcher,
-                launchIntent,
-                _timeService,
-                _gameStateRepository));
-
-        public bool NavigateToDealerMap(GameState gameState) => SafeNavigate("dealer map", () =>
-            new Screens.DealerMap.DealerMapScreenViewModel(
-                this,
-                _dialogService,
-                gameState,
-                _dealerCatalog,
-                _marketService,
-                _timeService,
-                _partShopService));
-
-        /// <summary>The same map with the part shops on it instead of the car lots</summary>
-        public bool NavigateToPartShopMap(GameState gameState) => SafeNavigate("part shops map", () =>
-            new Screens.DealerMap.DealerMapScreenViewModel(
-                this,
-                _dialogService,
-                gameState,
-                _dealerCatalog,
-                _marketService,
-                _timeService,
-                _partShopService,
-                partShopsMap: true));
-
-        public bool NavigateToPartShop(GameState gameState, string shopId) => SafeNavigate("part shop", () =>
-            new Screens.PartShop.PartShopScreenViewModel(
-                this,
-                _dialogService,
-                gameState,
-                shopId,
-                _partShopService,
-                _carPartsService,
-                _partsShopService,
-                _gameStateRepository,
-                _catalogRepository));
-
-        public bool NavigateToDealerLot(GameState gameState, string dealerId) => SafeNavigate("dealer's lot", () =>
-            new Screens.DealerLot.DealerLotScreenViewModel(
-                this,
-                _dialogService,
-                gameState,
-                dealerId,
-                _dealerCatalog,
-                _marketService,
-                _catalogRepository,
-                _profileRepository,
-                _gameStateRepository,
-                _purchaseService,
-                _carPartsService));
-
-        // ============================================================
-        // STEP 25 (B): 3D PREVIEWS
-        // A car ad goes to see the car; a part ad opens a look at the part
-        // ============================================================
-
-        /// <summary>
-        /// "You drive over to see it": a car from the paper's ads where its seller has it (a dealer's on the lot, a
-        /// private seller's at the curb), to walk round and buy. Back, and a car gone meanwhile, return to the paper.
-        /// </summary>
-        public bool NavigateToCarViewing(GameState gameState, Screens.Shared.UsedCarListingViewModel car) => SafeNavigate("car viewing", () =>
-            new Screens.CarViewing.CarViewingScreenViewModel(
-                this,
-                _dialogService,
-                gameState,
-                car,
-                _dealerCatalog,
-                _purchaseService,
-                _carPartsService));
 
         /// <summary>
         /// A part to look at in 3D over the current screen (with whatever is bolted on it), its name, condition and
@@ -602,9 +714,47 @@ namespace StreetCorsa.Navigation
             catch (Exception ex)
             {
                 _logger.Error(ex, "Could not open the preview of {Part}", part.DefinitionId);
-                ShowNavigationError("part preview");
+                ShowNavigationError("part_preview");
                 return false;
             }
         }
+    }
+
+    /// <summary>
+    /// What a screen gone to is told besides its id: what it shows (a shop, a dealer, a car, a race) and how it comes in
+    /// </summary>
+    public sealed record FlowArgs
+    {
+        public static readonly FlowArgs None = new();
+
+        /// <summary>The screen comes up at once, without its opening show</summary>
+        public bool SkipAnimation { get; init; }
+
+        /// <summary>The garage: the car just taken out of the lot, its engine, and whether it drives in</summary>
+        public Screens.Garage.CarArrival? Arrival { get; init; }
+
+        /// <summary>The garage: the player ended the day elsewhere (and said yes to it) and came home for the night</summary>
+        public bool EndDay { get; init; }
+
+        /// <summary>Back from a race: a visit paid for on the way in costs no time again (the diner)</summary>
+        public bool Returning { get; init; }
+
+        /// <summary>The part shop to show</summary>
+        public string? ShopId { get; init; }
+
+        /// <summary>The dealer whose lot to show</summary>
+        public string? DealerId { get; init; }
+
+        /// <summary>The car from the paper to go and see</summary>
+        public Screens.Shared.UsedCarListingViewModel? Car { get; init; }
+
+        /// <summary>The race to run</summary>
+        public DragRaceLaunchIntent? Race { get; init; }
+
+        /// <summary>The main menu: a card to open on arrival</summary>
+        public Screens.MainMenu.MainMenuCard Card { get; init; }
+
+        /// <summary>The main menu: under its title, while the cars load behind it (the game opening)</summary>
+        public bool Intro { get; init; }
     }
 }

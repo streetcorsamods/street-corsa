@@ -41,6 +41,9 @@ public static class ContentTypes
 
     /// <summary>The rules of a career (rules/*.json): figures and tables merged key by key, see <c>Rules.RuleBook</c></summary>
     public const string Rules = "rules";
+
+    /// <summary>How the screens hang together (flow/*.json: screens, exits, tiles, the main menu's cards), merged key by key; see <c>Navigation.FlowBook</c></summary>
+    public const string Flow = "flow";
 }
 
 /// <summary>What a mod is: <c>"type"</c> in its mod.json</summary>

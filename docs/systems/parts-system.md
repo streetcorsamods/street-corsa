@@ -618,7 +618,7 @@ Mopar and Ford blocks 0.75 × 0.63 m, the stock disc 0.265 m, a four-barrel 0.26
 (0.28 m tall, 0.095 m across) is small.
 
 **Part shops** (step 21: `Services/PartShops`, content in each mod's `partshops` folder). Shops on the dealer map's
-picture, reached by their own button in the garage (Parts dealers, beside Car dealers: `NavigateToPartShopMap`, the
+picture, reached by their own button in the garage (Parts dealers, beside Car dealers: the flow's `part_shops_map` screen, the
 dealer map with `partShopsMap`, gold square pins and no car lots), driven out to like a lot, each with its own stock:
 - **Kinds** (`PartShopRules.Deals`): a *specialist* sells the new parts of every pack whose `"make"` (in `pack.json`,
   `PartDefinition.Make`) is one of its `makes`, running gear aside; a *speed shop* the new parts of the kinds that make

@@ -52,31 +52,49 @@ Each screen folder contains:
 
 ## NavigationService Methods
 
+Screens are gone to by their id in the flow (`Content\streetcorsa\flow\flow.json`), never by a method per screen.
+
 | Method | Target Screen |
 |--------|---------------|
 | NavigateToStart() | MainMenu under the title, at startup |
-| NavigateToMainMenu(card) | MainMenu, optionally with a card open |
+| GoToMenu(card) | MainMenu, optionally with a card open |
+| Go(id, gameState, args) | The screen of that flow id, built by its kind; `FlowArgs` says what it shows (`DealerId`, `ShopId`, `Car`, `Race`...) |
+| Leave(this, exit, gameState, args) | Where the screen's exit leads in the flow (`back`, `bought`, `car_ad`...); nowhere open: home |
+| GoFrom(this, id, gameState) | A hub's tile: the screen it names (the racing hub and the career open as dialogs over it) |
+| GoHome(gameState) / GoHomeLater(gameState) | Home (the garage); later: once the navigation under way is over |
+| GoRace(gameState, intent) | RaceLoading; it comes back to the screen it was set up on (`intent.ReturnTo`) |
 | CreateNewGameCard(back) | NewGame card (not a navigation) |
 | CreateLoadGameCard(back) | LoadGame card (not a navigation) |
 | CreateSettingsCard(back) | Settings card (not a navigation) |
-| NavigateToCarCatalogEditor() | CarCatalogEditor |
-| NavigateToGarage(gameState) | Garage |
-| NavigateToCarLot(gameState) | CarLot |
-| NavigateToDiner(gameState) | Diner |
-| NavigateToCruise(gameState) | Cruise |
-| NavigateToGasStation(gameState) | GasStation |
-| NavigateToNewspaper(gameState) | Newspaper |
-| NavigateToDealerMap(gameState) | DealerMap |
-| NavigateToDealerLot(gameState, dealerId) | DealerLot |
-| NavigateToUsedParts(gameState) | UsedParts (the mail order) |
-| ShowRaceHub(gameState, hitTheStreets) | The racing hub dialog over the garage (not a navigation) |
+
+| Flow id (base game) | Screen | Kind |
+|---------------------|--------|------|
+| main_menu | MainMenu | main_menu |
+| garage | Garage (home) | garage |
+| car_lot | CarLot | car_lot |
+| racing_hub | The racing hub dialog | racing_hub |
+| career | The career dialog | career |
+| diner | Diner | diner |
+| street | Cruise | street |
+| gas_station | GasStation | gas_station |
+| newspaper | Newspaper | newspaper |
+| car_viewing | CarViewing | car_viewing |
+| dealer_map | DealerMap | dealer_map |
+| dealer_lot | DealerLot | dealer_lot |
+| part_shops_map | DealerMap with the part shops | part_shops_map |
+| part_shop | PartShop | part_shop |
+| mail_order | UsedParts (the mail order) | mail_order |
+| race | RaceLoading | race |
+| sound_browser | SoundBrowser | sound_browser |
+| car_catalog_editor | CarCatalogEditor | car_catalog_editor |
 
 ## Adding a New Screen
 
 1. Create folder: `Screens/[Name]/`
 2. Create ViewModel inheriting `BaseScreenViewModel`
 3. Create View (UserControl XAML)
-4. Add navigation method to `NavigationService`
-5. Add DataTemplate to `App.xaml`
+4. Add DataTemplate to `App.xaml`
+5. Add a `ScreenKinds` constant (and to `ScreenKinds.All`) and a case for it in `NavigationService.Go`
+6. Add it to `flow/flow.json` with its exits
 
 See [Navigation System](../architecture/navigation.md) for details.

@@ -220,7 +220,7 @@ namespace StreetCorsa.Screens.LoadGame
                 }
 
                 // Navigate to game screen with loaded state, then store it in App for saving on exit
-                if (_navigationService.NavigateToGarage(gameState))
+                if (_navigationService.GoHome(gameState))
                 {
                     opened = true;
                     _setCurrentGame(gameState);

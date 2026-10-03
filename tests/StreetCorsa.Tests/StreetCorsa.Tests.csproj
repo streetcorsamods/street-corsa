@@ -39,6 +39,7 @@
     <None Include="..\..\Street Corsa\Content\streetcorsa\mod.json" Link="Content\streetcorsa\mod.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\Street Corsa\Content\streetcorsa\game.json" Link="Content\streetcorsa\game.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\Street Corsa\Content\streetcorsa\rules\*.json" LinkBase="Content\streetcorsa\rules" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\Street Corsa\Content\streetcorsa\flow\*.json" LinkBase="Content\streetcorsa\flow" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\Street Corsa\Content\streetcorsa\cars\*.json" LinkBase="Content\streetcorsa\cars" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\Street Corsa\Content\streetcorsa\parts\part_groups.json" Link="Content\streetcorsa\parts\part_groups.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\Street Corsa\Content\streetcorsa\text\*.json" LinkBase="Content\streetcorsa\text" CopyToOutputDirectory="PreserveNewest" />

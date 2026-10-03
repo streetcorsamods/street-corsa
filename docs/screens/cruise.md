@@ -127,7 +127,8 @@ its default), which pans it without FMOD's own distance falloff, and the volume 
   are put to the rival like a diner challenge ("HOW ABOUT THIS?"), and a no is said through the window with the offer
   still standing. The race goes through **`Screens/Shared/ChallengeLauncher.cs`**, which the diner now uses too: the
   answer, the dial-in for a bracket race, the police roll, both cars on their parts, and the loading screen. After the
-  race the player comes back to the street (`ReturnToCruise` on the launch intent), unless towed home.
+  race the player comes back to the street (`GoRace` sets the intent's `ReturnTo` to the screen's flow id), unless
+  towed home.
 - **The rival talks** (`TalkTrigger.PulledUp`: lines about the player's car by its short name, `CarNames.Short`; the
   King's and a grudge's own) and blips the throttle every few seconds. The player revs back with the REV button or the
   space bar.
@@ -143,7 +144,7 @@ A player whose car cannot race (or is impounded), or who has none, is sent back 
 Two throwaway harnesses (in a session's scratchpad, not the repo) did the checking on 2026-09-26:
 - **viewport:** a WPF window off screen hosting `StreetViewport3D` with a `StreetStage`, sending a rival up and away and
   capturing frames with `RenderTargetBitmap` (it draws the D3DImage too). Wait for `Stage.IsShown` before `Arrive`.
-- **screen:** the real `CruiseScreenViewModel` through `NavigationService.NavigateToCruise`, the services put together
+- **screen:** the real `CruiseScreenViewModel` through `NavigationService.NavigateToCruise` (now `Go("street", ...)`), the services put together
   as `App` does (the ones it never touches passed as null), on a **copy** of a save (`new SaveDatabase(copyFolder)`,
   `SaveName` cleared so nothing is written), with the styles merged from `pack://application:,,,/Street Corsa;component/Styles/*.xaml`
   and `ContentService.LoadTracksAsync()` called first (the app does that at start-up). It sat through two rivals,

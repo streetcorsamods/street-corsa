@@ -31,7 +31,7 @@ namespace StreetCorsa.Screens.Station
     /// an hour each, and while he is at it says what he noticed about the car (<see cref="AttendantCheck"/>). A car with
     /// too little gas to make it there is brought in by the tow truck, at a price. Then the player drives off, home.
     /// </summary>
-    public class GasStationScreenViewModel : BaseScreenViewModel
+    public class GasStationScreenViewModel : BaseScreenViewModel, IScriptedScreen
     {
         /// <summary>The sound of the place</summary>
         public override string? Ambience => "ambience.station";
@@ -322,16 +322,33 @@ namespace StreetCorsa.Screens.Station
             // It says why and takes the player back to the garage, once the navigation that brought them here is over
             _leaving = true;
             _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, message, title));
-            _navigationService.NavigateToGarageLater(_gameState);
+            _navigationService.GoHomeLater(_gameState);
         }
 
         #endregion
 
         #region At the pump
 
+        // The flow's scripts play on the station's viewport, through the stage
+        Func<string, Services.Scripting.ScriptFacts, Task?>? IScriptedScreen.PlayScreenScript
+        {
+            get => Stage.PlayTrigger;
+            set { }
+        }
+
+        /// <inheritdoc cref="IScriptedScreen.ScriptFacts"/>
+        public Services.Scripting.ScriptFacts ScriptFacts => new(_gameState.Date, StreetLights.At(_gameState.Date), Stage.Towed);
+
+        /// <summary>A leave script played and the way home went nowhere: the car is at the pump again</summary>
+        void IScriptedScreen.PutBackAfterLeave() => Stage.BackToPump();
+
         private void OnAtPump()
         {
             if (!_active || _car == null) return;
+
+            // At the pump: the station's own show is over. Once the viewport has started its station.at_pump script: the
+            // flow's enter script, when a mod has one, plays in its place
+            _ = Dispatcher.CurrentDispatcher.BeginInvoke(() => _navigationService.ScreenReady(this));
 
             IsAtPump = true;
             StatusText = GameText.Say("station.ui.at_pump", ("station", Title));
@@ -571,7 +588,7 @@ namespace StreetCorsa.Screens.Station
                 await _trip;
                 Save();
                 if (CloseCurtain is { } close) await close();
-                if (_navigationService.NavigateToGarage(_gameState)) return;
+                if (_navigationService.Leave(this, "back", _gameState)) return;
             }
             catch (Exception ex)
             {

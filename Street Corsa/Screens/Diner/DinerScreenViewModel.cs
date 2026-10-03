@@ -50,6 +50,9 @@ namespace StreetCorsa.Screens.Diner
 
         /// <summary>Out to the street, to sit at the curb and wait for a rival to pull up</summary>
         public RelayCommand CruiseCommand { get; }
+
+        /// <summary>The way out to the street leads somewhere: a game may have no street</summary>
+        public bool CanCruise => _navigationService.CanLeave(this, "cruise");
         public RelayCommand<OpponentDisplayViewModel> SelectOpponentCommand { get; }
         public RelayCommand<TrackCardViewModel> SelectTrackCommand { get; }
         public AsyncRelayCommand ChallengeCommand { get; }
@@ -368,7 +371,7 @@ namespace StreetCorsa.Screens.Diner
                 raceSetup, _logger);
 
             GarageCommand = new RelayCommand(OnGarage);
-            CruiseCommand = new RelayCommand(() => _navigationService.NavigateToCruise(_gameState));
+            CruiseCommand = new RelayCommand(() => _navigationService.Leave(this, "cruise", _gameState));
             TalkCommand = new RelayCommand(() =>
             {
                 if (SelectedOpponent?.Opponent is { } rival && Services.Talk.TalkDesk.Shared.IsAvailable)
@@ -777,7 +780,7 @@ namespace StreetCorsa.Screens.Diner
         private void OnGarage()
         {
             _logger.Information("Navigating to garage");
-            _navigationService.NavigateToGarage(_gameState);
+            _navigationService.Leave(this, "back", _gameState);
         }
 
         public override async void Enter()

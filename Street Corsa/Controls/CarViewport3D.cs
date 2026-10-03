@@ -1219,10 +1219,13 @@ public class CarViewport3D : D3DViewportBase
     /// <summary>What the scenery is to show now: the engine is in it unless the stand's parts view has it as the prop</summary>
     private (InstalledPart? Engine, bool WithEngine, PartsCatalog? Catalog) SceneryKey => (StandEngine, !_partsOnStand && !_standKeptEmpty, PartsCatalog);
 
+    /// <summary>The game has an engine stand (<see cref="Rules.SystemRules.EngineStand"/>): none is drawn without</summary>
+    private static bool HasStand => Rules.RuleBook.Current.Systems.EngineStand;
+
     private void PutScenery(GarageRenderer renderer, AcTools.Kn5File.IKn5? kn5, (InstalledPart? Engine, bool WithEngine, PartsCatalog? Catalog) key)
     {
         _sceneryVersion++;
-        renderer.SetScenery(kn5);
+        renderer.SetScenery(HasStand ? kn5 : null);
         _sceneryRenderer = renderer;
         _sceneryKey = key;
     }
@@ -1676,6 +1679,10 @@ public class CarViewport3D : D3DViewportBase
     public ScriptRun? Leave(Func<Audio.EngineRunner?> engine, ScriptFacts facts, Func<float, TimeSpan, FadeEase, Task> fade) =>
         Play(ScriptTriggers.GarageLeave, engine, facts, fade);
 
+    /// <summary>A script of the flow's (screen.&lt;id&gt;.enter or .leave) with the car on show; null with no car or no scene</summary>
+    public ScriptRun? PlayTrigger(string trigger, Func<Audio.EngineRunner?> engine, ScriptFacts facts, Func<float, TimeSpan, FadeEase, Task>? fade) =>
+        Play(trigger, engine, facts, fade);
+
     /// <summary>The car back in its place, its lights off: the garage stays after all</summary>
     public void PutBack()
     {
@@ -1891,7 +1898,7 @@ public class CarViewport3D : D3DViewportBase
             return;
         }
 
-        if (partHit == null && !IsOnStand && HitsStand(position))
+        if (partHit == null && !IsOnStand && HasStand && HitsStand(position))
         {
             Renderer.SceneryHovered = false;
             Cursor = null;

@@ -210,14 +210,14 @@ public class AuditFixesETests
     }
 
     [Fact]
-    public void The_garage_later_waits_for_the_navigation_under_way()
+    public void Home_later_waits_for_the_navigation_under_way()
     {
         var dialogs = new DialogService();
         var navigation = Navigation(dialogs);
         var stuck = new StuckScreen();
         navigation.SafeNavigate("stuck", () => stuck);
 
-        navigation.NavigateToGarageLater(new GameState());
+        navigation.GoHomeLater(new GameState());
 
         Assert.Same(stuck, navigation.CurrentScreen);
     }

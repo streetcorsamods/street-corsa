@@ -159,7 +159,7 @@ namespace StreetCorsa.Screens.NewGame
 
             // Navigate to game screen, then store the game in App for saving on exit: only a garage that opened makes it
             // the game the app saves and races with
-            if (!_navigationService.NavigateToGarage(gameState)) return;
+            if (!_navigationService.GoHome(gameState)) return;
             _setCurrentGame(gameState);
 
             // The lots and the paper's ads, made now so they are there from the first day
