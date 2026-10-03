@@ -1316,6 +1316,86 @@ swaps them back; Test and Tune picks its strip from the same cards as Free Run.
 
 Not seen in game: all of it. Unchecked: the headlights' look, 300+ tracks in the picker, the buyer talk's tone.
 
+## Step 28: from `docs/ideas.txt`, batch 8 (planned 2026-10-03)
+
+The owner's seven ideas after E11/E12, talked over on 2026-10-03. Branch `feature/ideas-batch-8` off `dev` `9e45ed1`.
+Ideas 1 and 2 are built (PR #65 to `dev`, not merged, review pending); 3 to 7 are planned below, each with the owner's
+decisions and what the research found.
+
+### Built: ideas 1 and 2 (PR #65, commit `7c08bf9`, played by the owner)
+
+- **Switch to a car just bought.** With no car in the garage the new one goes straight in. With another car there (an
+  impounded one counts: it is collected from the garage) the new one is parked in the car lot and the player is asked
+  "Switch Cars?"; yes swaps them (`CarStorage.TakeOut`) and saves (`ICarPurchaseService.SwitchTo`). The question comes
+  after the result dialogs and before the screen moves on, so the garage opens on the car chosen
+  (`PurchaseFlow.AskToSwitch`, `CarPurchaseService.TakeIfGarageEmpty`). `purchase.bought` names where the car is
+  (`{where}`: `purchase.where.garage` / `purchase.where.lot`). Switching takes no game time.
+- **Buy always in the talk.** "Buy it for $X" shows whenever a car or a part is talked about, at its price as it stands
+  (a shake the AI did not take in still leaves it); selling the player's own car to a buyer still needs an agreed price,
+  the ad window has its own buttons (`TalkViewModel.CanBuy`). The talk card is full height again on the dealer lot and
+  the car viewing screen.
+- **Found in play: a bought car drives in.** Purchases never handed the garage an arrival; now the "bought" leave
+  carries one when the car bought is the garage's car (`PurchaseFlow.ArrivalOf`).
+- **Found in play: nested wheels turn.** 9 of the game's cars keep a wheel inside its hub or suspension
+  (`HUB_LF/SUSP_LF/WHEEL_LF` on `pb_charger_se_69`; also the El Camino '70 mby, Bel Air nostalgia V8, '65 GTO, both
+  C10s, Camaro SS v2, two C1 Corvettes). `CarBodyRock` stopped at the outer group, so those wheels never turned or
+  steered in any scripted move. It now collects groups nested in groups (not inside a wheel: what is in it turns with it)
+  and sets each against its parent's place.
+
+Tests: switch rules and the always-there Buy (2140 pass). `check.ps1` fails only on the old EngineBench Corvette build.
+
+### Idea 3 and 4: cars look used (planned)
+
+- **Already there:** `Car.BodyDirt` is carried into AC (`ac.setBodyDirt`, step 14) and washed at the station.
+- **Owner's decisions:** dealer cars come in a bit better condition, newspaper cars noticeably crappier (rust, dirt,
+  wear drawn when the car is made, by where it is sold). Ride height: suspension damage only (a broken spring sags its
+  corner), but everything prepared for aftermarket springs with an adjustable height later.
+- **Plan, garage renderer:** dirt, rust, scratches and cracked glass blended into the car's materials at runtime (the
+  car lot's texture-swap technique); dents faked with normal maps on the damaged zones (real deformation is too hard).
+  Ride height: the body moved against the wheels per corner.
+- **Plan, AC:** CSP already draws scratches and deformation from the damage sent; rust as a temporary skin with the rust
+  baked into the body texture, written and restored by `CarDataOverlay`; ride height follows the suspension geometry.
+- **Rules:** rust grows with game time; dirt after a race rises with time off the track and dirt surfaces (the mode
+  samples the surface under the wheels).
+
+### Idea 5: parts visible in AC (research done, spike next)
+
+- **Owner's decision:** a blower or supercharger clipping through the hood is fine; something cleaner if possible.
+- **Research (2026-10-03, not tried in game):** the installed CSP SDK (`extension/internal/lua-sdk/ac_new_modes`) has
+  `ac.findNodes('carRoot:N')`, `SceneReference:loadKN5` / `loadKN5LOD` / `findMeshes` / `setVisible` / `setPosition` /
+  `setOrientation`; CSP's own `driver-interview` mode hides car meshes from a mode script, so a mode may touch car nodes.
+- **Plan:** race.ini carries each car's visible parts; `sc_race` loads our rim KN5 under `WHEEL_LF/RF/LR/RR` (the car's
+  `RIM_*` and blur meshes hidden), the blower under `BODYTR` at the engine layout's offset, the hood mesh hidden (the
+  cleaner way); per-car mesh name patterns as data, stock rims kept when unknown. Nothing written to car folders.
+  Distant AI LODs will not show the parts.
+- **Reserve:** CSP `[MODEL_REPLACEMENT_...]` and `extension/config/cars/common/custom_rims.ini` through a car's
+  `ext_config.ini` (whether it merges with the `loaded` config is untested). A merged KN5 is rejected (size, LODs, mesh
+  names, checksums).
+- **First spike:** one of our rims on `WHEEL_LF` of one car in a real race: facing, scale, blur meshes, materials.
+
+### Ideas 6 and 7: the diner street and the parts shop (planned)
+
+- **Diner refactor (owner):** a full 1960s/70s American street model instead of the street dome; a cinematic arriving
+  and leaving like the gas station's; the street scene is the screen, with no data by default: a toggle opens one modal
+  with the rivals list and the word on the streets, and clicking a rival switches the same modal to their options and
+  talk.
+- **Assets (research 2026-10-03, licences from Sketchfab's API):** no free realistic 1960s Main Street exists, so the
+  block is built: Quaternius *Downtown City MegaKit* (CC0) as the base, realistic CC-BY buildings mixed in (gamico
+  *Modular Urban Dry Cleaners Building*, Orzechu *Low-poly Old American brick building with shop*, soysascha *Corner
+  brick storefront building*), WaajaaH *Diner Exterior Asset Reworked* (CC-BY) in a gap, Poly Haven CC0 textures, own
+  period signs; the *Bozeman Montana Downtown Strip* (CC-BY) as the proportion reference. Rejected: Fab/CGTrader free
+  assets (no redistribution), CC-NC diners. CC-BY needs a credit line each. The owner downloaded the kit, the diner and
+  the auto parts store to `D:\JUEGOS\3D Models\scenes`.
+- **Parts shop (owner):** a 3D scene from inside the shop instead of the black screen with a list; the soysascha store
+  is outdoors only, so it is our own interior: counter, shelves, an engine on a stand, tyres, our own part meshes as stock
+  (better_peter *Store Shelves*, CC-BY, for dressing).
+- **The clerk (owner approved the design):** one modal with the stock list and the clerk's talk. The game does the
+  search, the AI only voices it: the player's words go to Ollama with structured JSON output and come back as a filter
+  (kind, fits my car, price); the game applies it to the shop's real stock with the fit check against the player's car
+  and engine, the list filters; a second call gets the top ~5 as facts and recommends among them, naming part ids that
+  highlight rows. Vague asks ("something fast") fall back to the biggest dyno gain for the player's engine. Cost: two
+  calls a message (about 3 to 6 s).
+
 ## Epic: total conversion (planned 2026-09-30)
 
 The owner wants the whole game moddable, so the community can add game modes and whole new games (a Tokyo Drift game
