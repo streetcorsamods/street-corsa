@@ -262,7 +262,9 @@ namespace StreetCorsa.Screens.CarViewing
                 switch (CarViewingPlace.Next(result))
                 {
                     case AfterPurchase.Garage:
-                        _navigationService.Leave(this, "bought", _gameState, new FlowArgs { SkipAnimation = true });
+                        var catalog = _partsService.IsAvailable ? _partsService.Catalog : null;
+                        _navigationService.Leave(this, "bought", _gameState,
+                            new FlowArgs { SkipAnimation = true, Arrival = PurchaseFlow.ArrivalOf(_gameState, result, catalog) });
                         break;
                     case AfterPurchase.Newspaper:
                         _navigationService.Leave(this, "gone", _gameState, new FlowArgs { SkipAnimation = true });

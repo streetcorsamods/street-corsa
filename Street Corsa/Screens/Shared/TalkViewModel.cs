@@ -157,8 +157,12 @@ namespace StreetCorsa.Screens.Shared
             }
         }
 
-        /// <summary>A price is agreed: the deal can be closed</summary>
-        public bool CanBuy => Buy != null && Talk.IsAgreed && !_ended;
+        /// <summary>
+        /// The deal can be closed: a thing for sale can always be bought at its price as it stands (a shake the AI did not
+        /// take in still leaves the button there); the player's own car is sold to a buyer only at a price agreed, the ad's
+        /// own buttons being there for the rest
+        /// </summary>
+        public bool CanBuy => Buy != null && !_ended && Talk.Subject is { } subject && (subject is not BuyerSubject || Talk.IsAgreed);
 
         /// <summary>"Buy it for $1,325"; "Sell it for $1,325" to a buyer</summary>
         public string BuyLabel => Talk.Subject is { } subject

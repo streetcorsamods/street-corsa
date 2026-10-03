@@ -89,6 +89,14 @@ namespace StreetCorsa.Screens.Shared
                     _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, message, title));
                 }
 
+                // Another car stands in the garage: the new one went to the car lot, unless the player wants it in now.
+                // Answered before the screen moves on, so the garage opens on the car they chose.
+                if (result is { Succeeded: true, AskToSwitch: true, Car: { } bought })
+                {
+                    AskToSwitch(gameState, bought, result, onFinished);
+                    return;
+                }
+
                 onFinished(result);
             }
             catch (Exception ex)
@@ -96,6 +104,40 @@ namespace StreetCorsa.Screens.Shared
                 _logger.Error(ex, "Could not finish the purchase of {CarId} on screen", car.CarDefinition.Id);
             }
         }
+
+        private void AskToSwitch(GameState gameState, Car bought, PurchaseResult result, Action<PurchaseResult> onFinished)
+        {
+            _dialogService.ShowDialog(new ConfirmationDialogViewModel(
+                _dialogService,
+                GameText.Say("purchase.switch", ("car", result.CarName ?? "")),
+                GameText.Say("purchase.switch.title"),
+                yes =>
+                {
+                    try
+                    {
+                        if (yes && !_purchaseService.SwitchTo(gameState, bought))
+                        {
+                            _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService,
+                                GameText.Say("purchase.switch.save_failed"), GameText.Say("purchase.save_failed.title")));
+                        }
+
+                        onFinished(result);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Error(ex, "Could not switch to the car just bought");
+                    }
+                }));
+        }
+
+        /// <summary>
+        /// The garage's arrival after a purchase: the car bought drives in (or, when it would not run, is simply there) when it
+        /// is the one in the garage now; null when it went to the car lot
+        /// </summary>
+        public static Garage.CarArrival? ArrivalOf(GameState gameState, PurchaseResult result, Parts.PartsCatalog? catalog) =>
+            result is { Succeeded: true, Car: { } car } && car.InstanceId == gameState.Player.SelectedCarInstanceId
+                ? DrivingHome.Arrival(gameState, null, catalog)
+                : null;
 
         /// <summary>What the player is told after a purchase, in the order they read it</summary>
         public static IReadOnlyList<(string Title, string Message)> ResultDialogs(PurchaseResult result)

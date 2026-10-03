@@ -2,6 +2,7 @@ using StreetCorsa.Logging;
 using StreetCorsa.Models.Catalog;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Parts.Cars;
+using StreetCorsa.Services.CarLot;
 using StreetCorsa.Services.Opponents;
 using StreetCorsa.Services.Parts;
 using StreetCorsa.Services.Storage;
@@ -19,8 +20,13 @@ namespace StreetCorsa.Services.Market
         NoLongerAvailable
     }
 
-    /// <summary>The result of a purchase, for the screen to put in front of the player</summary>
-    public readonly record struct PurchaseResult(PurchaseOutcome Outcome, string Message, bool SaveFailed = false)
+    /// <summary>
+    /// The result of a purchase, for the screen to put in front of the player. <see cref="Car"/> is the car bought, and
+    /// <see cref="CarName"/> its name; <see cref="AskToSwitch"/> is true when another car stands in the garage, so the
+    /// new one went to the car lot and the player is asked whether to bring it in instead.
+    /// </summary>
+    public readonly record struct PurchaseResult(PurchaseOutcome Outcome, string Message, bool SaveFailed = false,
+        Car? Car = null, string? CarName = null, bool AskToSwitch = false)
     {
         public bool Succeeded => Outcome == PurchaseOutcome.Bought;
     }
@@ -82,9 +88,9 @@ namespace StreetCorsa.Services.Market
             gameState.Player.Stats.CarsOwned++;
             gameState.Career.SyncStanding(gameState.Player);
 
-            // Somebody with no car of their own has just bought one: it is the one they mean. Without this
+            // Somebody with no car in the garage has just bought one: it is the one they mean. Without this
             // the garage falls back to whatever happens to be first in the list.
-            gameState.Player.SelectedCarInstanceId ??= carInstance.InstanceId;
+            var askToSwitch = !TakeIfGarageEmpty(gameState.Player, carInstance);
 
             // The parts went with the car; the sold listing stays around for a week and need not keep a copy
             currentListing.Parts = [];
@@ -110,8 +116,9 @@ namespace StreetCorsa.Services.Market
             var saveFailed = !GameSaves.TrySave(_gameStateRepository, gameState, _logger, "a purchase");
 
             return new PurchaseResult(PurchaseOutcome.Bought,
-                GameText.Say("purchase.bought", ("car", $"{carDef.Brand} {carDef.Name}"), ("price", new Money(listing.Price))),
-                saveFailed);
+                GameText.Say("purchase.bought", ("car", $"{carDef.Brand} {carDef.Name}"), ("price", new Money(listing.Price)),
+                    ("where", WhereItIs(askToSwitch))),
+                saveFailed, carInstance, $"{carDef.Brand} {carDef.Name}", askToSwitch);
         }
 
         /// <summary>
@@ -148,7 +155,7 @@ namespace StreetCorsa.Services.Market
             gameState.Player.Cars.Add(car);
             gameState.Player.Stats.CarsOwned++;
             gameState.Career.SyncStanding(gameState.Player);
-            gameState.Player.SelectedCarInstanceId ??= car.InstanceId;
+            var askToSwitch = !TakeIfGarageEmpty(gameState.Player, car);
             if (gameState.Racers.Find(seller) is Opponent rival)
                 Talk.TalkPeople.Happened(gameState, rival, new PersonEvent { Date = gameState.Date, Kind = "bought", CarId = car.DefinitionId, Amount = price });
 
@@ -167,9 +174,37 @@ namespace StreetCorsa.Services.Market
             var saveFailed = !GameSaves.TrySave(_gameStateRepository, gameState, _logger, "a purchase");
 
             return new PurchaseResult(PurchaseOutcome.Bought,
-                GameText.Say("purchase.bought_private", ("seller", seller), ("car", $"{carDef.Brand} {carDef.Name}"), ("price", new Money(price))),
-                saveFailed);
+                GameText.Say("purchase.bought_private", ("seller", seller), ("car", $"{carDef.Brand} {carDef.Name}"), ("price", new Money(price)),
+                    ("where", WhereItIs(askToSwitch))),
+                saveFailed, car, $"{carDef.Brand} {carDef.Name}", askToSwitch);
         }
+
+        public bool SwitchTo(Models.GameState.GameState gameState, Car car)
+        {
+            var player = gameState.Player;
+            if (!player.Cars.Contains(car)) return false;
+
+            // The car from the garage is parked where the new one would have gone
+            CarStorage.TakeOut(car, player.Cars.FirstOrDefault(c => c.InstanceId == player.SelectedCarInstanceId));
+            player.SelectedCarInstanceId = car.InstanceId;
+            _logger.Information("Switched to the car just bought: {CarId} (Instance: {InstanceId})", car.DefinitionId, car.InstanceId);
+            return GameSaves.TrySave(_gameStateRepository, gameState, _logger, "switching to the car just bought");
+        }
+
+        /// <summary>
+        /// Puts the car just bought in the garage when no car stands there: none picked, or the picked one gone. A car
+        /// in the police impound still counts as there: it is collected from the garage. True when the new car went in;
+        /// false when another car is there and the new one goes to the car lot.
+        /// </summary>
+        public static bool TakeIfGarageEmpty(Player player, Car car)
+        {
+            if (player.Cars.Any(c => c.InstanceId == player.SelectedCarInstanceId && c != car)) return false;
+
+            player.SelectedCarInstanceId = car.InstanceId;
+            return true;
+        }
+
+        private static string WhereItIs(bool inTheLot) => GameText.Say(inTheLot ? "purchase.where.lot" : "purchase.where.garage");
 
         /// <summary>
         /// The car that was for sale, as whoever buys it gets it: the parts it came with (the listing's list moves to the

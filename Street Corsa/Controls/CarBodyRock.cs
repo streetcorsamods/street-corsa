@@ -39,9 +39,15 @@ internal sealed class CarBodyRock
     /// <summary>
     /// A wheel group as it was, and the way from its parent to the car's own space; its corner ("LF"), and whether it
     /// is a wheel and whether it turns as the front wheels steer (a front wheel, its hub and its disc; not the
-    /// suspension's arms)
+    /// suspension's arms). <c>Parent</c> is the group it sits in, when a model nests them (a wheel in its hub or its
+    /// suspension): it is then set against where that group is put, not against the car.
     /// </summary>
-    private sealed record Held(RenderableList Node, Sx.Matrix Local, Sx.Matrix ToCar, Sx.Matrix FromCar, string Corner, bool Wheel, bool Steers);
+    private sealed record Held(RenderableList Node, Sx.Matrix Local, Sx.Matrix ToCar, Sx.Matrix FromCar, string Corner, bool Wheel, bool Steers,
+        Held? Parent);
+
+    // Where each group is put this frame, in the car's own space, by its place in _held: a nested group is set against
+    // its parent's
+    private Sx.Matrix[] _placed = [];
 
     public CarBodyRock(Kn5RenderableCar car)
     {
@@ -50,7 +56,7 @@ internal sealed class CarBodyRock
 
         var toWorld = car.Matrix;
         var fromWorld = Sx.Matrix.Invert(toWorld);
-        Collect(car, (n, group) =>
+        Collect(car, null, (n, group, parent) =>
         {
             var toCar = n.ParentMatrix * fromWorld;
             var kind = group.Groups[1].Value.ToUpperInvariant();
@@ -59,8 +65,11 @@ internal sealed class CarBodyRock
             // The wheel itself turns as the car rolls; its hub, disc and suspension do not
             var wheel = kind == "WHEEL";
             var steers = corner.EndsWith('F') && kind is ("WHEEL" or "HUB" or "DISC");
-            _held.Add(new Held(n, n.LocalMatrix, toCar, Sx.Matrix.Invert(toCar), corner, wheel, steers));
+            var held = new Held(n, n.LocalMatrix, toCar, Sx.Matrix.Invert(toCar), corner, wheel, steers, parent);
+            _held.Add(held);
+            return held;
         });
+        _placed = new Sx.Matrix[_held.Count];
 
         // Where the wheels are says which way is left and which way is the front
         var hubs = _held.Where(h => h.Wheel)
@@ -93,18 +102,24 @@ internal sealed class CarBodyRock
 
     private static Sx.Vector3 Position(Sx.Matrix m) => new(m.M41, m.M42, m.M43);
 
-    private static void Collect(RenderableList list, Action<RenderableList, Match> found)
+    /// <summary>
+    /// The wheel groups under <paramref name="list"/>, parents before the groups nested in them. Some models keep the wheel
+    /// inside its hub or its suspension (HUB_LF/WHEEL_LF, SUSP_LF/WHEEL_LF, HUB_LF/SUSP_LF/WHEEL_LF): those are looked
+    /// into, or the wheel would never turn. What is inside a wheel turns with it, and is left to.
+    /// </summary>
+    private static void Collect(RenderableList list, Held? parent, Func<RenderableList, Match, Held?, Held> found)
     {
         foreach (var child in list)
         {
             if (child is not RenderableList node) continue;
             if (node is Kn5RenderableList { OriginalNode.Name: var name } && WheelGroup.Match(name) is { Success: true } group)
             {
-                found(node, group);
+                var held = found(node, group, parent);
+                if (!held.Wheel) Collect(node, held, found);
                 continue;
             }
 
-            Collect(node, found);
+            Collect(node, parent, found);
         }
     }
 
@@ -133,8 +148,9 @@ internal sealed class CarBodyRock
 
         _car.LocalMatrix = lean * _base;
         WorldLean = Sx.Matrix.Invert(_base) * lean * _base;
-        foreach (var held in _held)
+        for (var i = 0; i < _held.Count; i++)
         {
+            var held = _held[i];
             var local = held.Wheel && wheelSpin != 0f ? spin * held.Local : held.Local;
             var inCar = local * held.ToCar;
 
@@ -147,7 +163,10 @@ internal sealed class CarBodyRock
                 inCar *= Sx.Matrix.Translation(-at) * Sx.Matrix.RotationY(steer) * Sx.Matrix.Translation(at);
             }
 
-            held.Node.LocalMatrix = inCar * back * held.FromCar;
+            // Where it goes in the car's space, the body's lean undone; set against its parent group's place when it is
+            // nested in one (put there already: parents come first), else against the car
+            _placed[i] = inCar * back;
+            held.Node.LocalMatrix = _placed[i] * (held.Parent is { } parent ? Sx.Matrix.Invert(_placed[_held.IndexOf(parent)]) : held.FromCar);
         }
 
         return true;

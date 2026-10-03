@@ -134,6 +134,24 @@ public class TalkTests
     }
 
     [Fact]
+    public async Task A_car_for_sale_can_be_bought_from_the_talk_without_a_shake_at_its_price_as_it_stands()
+    {
+        var game = Game();
+        var car = Car();
+        var (desk, _) = Desk();
+        var talk = new TalkViewModel(desk.ForCar(game, car, null, TalkPlace.Phone), portrait: "") { Buy = () => { } };
+
+        await talk.OpenAsync();
+
+        Assert.False(talk.Talk.IsAgreed);
+        Assert.True(talk.CanBuy);
+        Assert.Contains("1,500", talk.BuyLabel);
+
+        talk.End();
+        Assert.False(talk.CanBuy);
+    }
+
+    [Fact]
     public async Task An_offer_changes_the_price_by_the_rules_and_the_ai_is_told_what_to_say()
     {
         var game = Game();

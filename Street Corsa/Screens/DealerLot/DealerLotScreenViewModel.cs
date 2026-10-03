@@ -349,7 +349,9 @@ namespace StreetCorsa.Screens.DealerLot
                 // a lot looking at the gap where it was. Unless they have gone meanwhile (the purchase takes a moment):
                 // then they stay where they went.
                 if (!ReferenceEquals(_navigationService.CurrentScreen, this)) return;
-                _navigationService.Leave(this, "bought", _gameState, new FlowArgs { SkipAnimation = true });
+                var catalog = _partsService.IsAvailable ? _partsService.Catalog : null;
+                _navigationService.Leave(this, "bought", _gameState,
+                    new FlowArgs { SkipAnimation = true, Arrival = PurchaseFlow.ArrivalOf(_gameState, result, catalog) });
             });
         }
 

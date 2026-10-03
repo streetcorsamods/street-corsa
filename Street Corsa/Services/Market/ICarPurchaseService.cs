@@ -15,5 +15,11 @@ namespace StreetCorsa.Services.Market
 
         /// <summary>The same for a rival's car out of the paper (<see cref="RivalCarAd"/>), at the ad's price as it stands now</summary>
         Task<PurchaseResult> PurchaseFromRivalAsync(Models.GameState.GameState gameState, RivalCarAd ad, CarDefinition carDef);
+
+        /// <summary>
+        /// Brings the car just bought into the garage, the car that stood there going to the car lot in its stead, and saves.
+        /// False when the save failed.
+        /// </summary>
+        bool SwitchTo(Models.GameState.GameState gameState, Car car);
     }
 }
