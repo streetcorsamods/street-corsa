@@ -852,7 +852,10 @@ without repeating the rest.
   `{player}` and `{facts}` (the game's fact sheet, the text pools `chat.fact.*` and `chat.deal.*`, in sections headed by
   `chat.section` and `chat.section.*`; best at the prompt's end, as the base game's are, so a local model reads again
   only what changed; its size is the rules' `ai.talk.factTokens`). `chat_memory`
-  writes what a person keeps of a talk (`{name}`, `{player}`, `{talk}`). The stage lines, the window's words and the
+  writes what a person keeps of a talk (`{name}`, `{player}`, `{talk}`); `chat_summary` sums up the start of a long talk
+  (`{name}`, `{player}`, `{earlier}` the summary so far, `{talk}` the turns to add). The fact sheet also tells how the person
+  feels about the player (`chat.fact.feeling.*`) and what happened between them (`chat.fact.events`, `chat.fact.event.*`),
+  moved by the rules' `ai.talk.feeling*` weights. The stage lines, the window's words and the
   words that make a number an offer are the text pools `chat.*` (the base game's `text/chat.json`).
 
 `ai\people.json`: the temperaments people are drawn with, merged key by key:

@@ -157,13 +157,11 @@ namespace StreetCorsa.Services.Talk
         internal void Remember(Conversation talk)
         {
             var person = talk.Person;
-            var transcript = string.Join("\n", talk.Turns.Select(turn =>
-                GameText.Say(turn.Mine ? "chat.transcript.them" : "chat.transcript.player", ("name", person.Name), ("text", turn.Text))));
             var values = new TextValues
             {
                 ["name"] = person.Name,
                 ["player"] = talk.PlayerName,
-                ["talk"] = transcript
+                ["talk"] = Transcript(person, talk.Turns)
             };
             var language = AiWriter.Language;
             var rules = Rules;
@@ -182,9 +180,17 @@ namespace StreetCorsa.Services.Talk
             });
         }
 
-        /// <summary>The note in what the AI wrote: its first line that is not a heading ("Note to self:")</summary>
-        public static string? NoteOf(string? written) =>
-            written?.Split('\n').Select(line => line.Trim()).FirstOrDefault(line => line.Length > 0 && !line.EndsWith(':'));
+        /// <summary>Turns of a talk written out, a line each: "Player: ...", "Walt: ..."</summary>
+        internal static string Transcript(Person person, IEnumerable<AiTurn> turns) =>
+            string.Join("\n", turns.Select(turn =>
+                GameText.Say(turn.Mine ? "chat.transcript.them" : "chat.transcript.player", ("name", person.Name), ("text", turn.Text))));
+
+        /// <summary>The note in what the AI wrote: its lines that are not headings ("Note to self:"), as one; null when none</summary>
+        public static string? NoteOf(string? written)
+        {
+            var lines = written?.Split('\n').Select(line => line.Trim()).Where(line => line.Length > 0 && !line.EndsWith(':')).ToList();
+            return lines is { Count: > 0 } ? string.Join(" ", lines) : null;
+        }
 
         /// <summary>A text AI that is never there: talking is off until the app starts the desk</summary>
         private sealed class NoAiText : IAiText

@@ -89,6 +89,10 @@ namespace StreetCorsa.Services.Market
             // The parts went with the car; the sold listing stays around for a week and need not keep a copy
             currentListing.Parts = [];
 
+            // The seller remembers it: the lot's salesman, or whoever the player called about the car
+            Talk.TalkPeople.Happened(gameState, new PersonEvent { Date = gameState.Date, Kind = "bought", CarId = listing.CarDefinitionId, Amount = listing.Price },
+                Talk.TalkPeople.DealerKey(listing.DealerLocation), Talk.TalkPeople.CarKey(listing));
+
             _logger.Information("Purchase completed: {CarName} for ${Price}, new bankroll: ${Bankroll}",
                 carDef.Name, listing.Price, gameState.Player.Money);
 
@@ -145,6 +149,8 @@ namespace StreetCorsa.Services.Market
             gameState.Player.Stats.CarsOwned++;
             gameState.Career.SyncStanding(gameState.Player);
             gameState.Player.SelectedCarInstanceId ??= car.InstanceId;
+            if (gameState.Racers.Find(seller) is Opponent rival)
+                Talk.TalkPeople.Happened(gameState, rival, new PersonEvent { Date = gameState.Date, Kind = "bought", CarId = car.DefinitionId, Amount = price });
 
             _logger.Information("Purchase completed: {CarName} from {Seller} for ${Price}, new bankroll: ${Bankroll}",
                 carDef.Name, seller, price, gameState.Player.Money);

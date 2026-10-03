@@ -56,7 +56,13 @@ public sealed class AiRules
 public sealed class TalkRules
 {
     /// <summary>Turns of a talk sent with each request, the newest; the older ones are left out</summary>
-    public int TurnsKept { get; set; } = 16;
+    public int TurnsKept { get; set; } = 40;
+
+    /// <summary>
+    /// Turns that have fallen out of the ones sent, at least, before they are summed up (an AI request, in the background)
+    /// in a few sentences that are sent with the facts instead: a long talk is not forgotten from its start
+    /// </summary>
+    public int SummaryTurns { get; set; } = 6;
 
     /// <summary>
     /// The most the fact sheet may take (tokens, as the game guesses them), and never more than half the context window
@@ -66,7 +72,34 @@ public sealed class TalkRules
     public int FactTokens { get; set; } = 5000;
 
     /// <summary>What a person remembers of past talks, the newest few, told them when they are talked to again</summary>
-    public int MemoriesGiven { get; set; } = 4;
+    public int MemoriesGiven { get; set; } = 10;
+
+    /// <summary>What happened between a person and the player (a deal, a race) kept with them at most, the oldest dropped</summary>
+    public int EventsKept { get; set; } = 12;
+
+    // How a person's feeling toward the player (-2..+2, the sum of what they still remember) moves with each thing that
+    // happened: it changes how they talk, never a price
+
+    /// <summary>An offer far too low, or a buyer pushed until they walked</summary>
+    public int FeelingInsulted { get; set; } = -1;
+
+    /// <summary>The player bought from them</summary>
+    public int FeelingBought { get; set; } = 1;
+
+    /// <summary>The player sold to them</summary>
+    public int FeelingSold { get; set; } = 1;
+
+    /// <summary>The player beat them in a race</summary>
+    public int FeelingBeaten { get; set; } = -1;
+
+    /// <summary>They beat the player</summary>
+    public int FeelingBeatPlayer { get; set; } = 0;
+
+    /// <summary>The player won their car for pink slips (on top of the race lost)</summary>
+    public int FeelingPinkLost { get; set; } = -2;
+
+    /// <summary>They won the player's car (on top of the race won)</summary>
+    public int FeelingPinkWon { get; set; } = 1;
 
     /// <summary>Days a private seller remembers a talk</summary>
     public int ForgetDaysSeller { get; set; } = 14;

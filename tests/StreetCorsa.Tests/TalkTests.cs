@@ -827,6 +827,152 @@ public class TalkTests
         Assert.Equal(TalkPeople.Salesman(Game(), "dealer_drawn", rules: Rules).Gender, again.Gender);
     }
 
+    // ----- memory and feelings -----
+
+    [Fact]
+    public async Task A_long_talk_sums_up_the_turns_that_fall_out_and_sends_the_summary_with_the_facts()
+    {
+        var game = Game();
+        var rules = new TalkRules { TurnsKept = 4, SummaryTurns = 2 };
+        var ai = new FakeAiText((use, _) => Task.FromResult<string?>(use == "chat_summary" ? "The kid asked about the paint.\nThen the tires." : "Sure thing."));
+        var desk = new TalkDesk(ai, prompts: BasePrompts, rules: () => rules);
+        var talk = desk.ForCar(game, Car(), null, TalkPlace.Phone);
+
+        await talk.SayAsync("What color is it?", Ct);
+        await talk.SayAsync("How are the tires?", Ct);
+        Assert.DoesNotContain(ai.Asked, a => a.Use == "chat_summary");
+        await talk.SayAsync("Does the radio work?", Ct);
+
+        // Two turns fell out of the four kept: summed up, the lines kept as one
+        var asked = Assert.Single(ai.Asked, a => a.Use == "chat_summary");
+        Assert.Contains("What color is it?", (string)asked.Values["talk"]!);
+        Assert.DoesNotContain("Does the radio work?", (string)asked.Values["talk"]!);
+        Assert.Equal("The kid asked about the paint. Then the tires.", talk.Summary);
+
+        await talk.SayAsync("Any rust?", Ct);
+        var last = ai.Chats[^1];
+        Assert.Contains("The kid asked about the paint.", (string)last.Values["facts"]!);
+        Assert.DoesNotContain(last.Turns, t => t.Text.Contains("What color"));
+        Assert.Equal("Any rust?", last.Turns[^1].Text);
+    }
+
+    [Fact]
+    public async Task A_price_the_summary_got_wrong_is_no_price_the_seller_may_come_down_to()
+    {
+        var game = Game();
+        var rules = new TalkRules { TurnsKept = 2, SummaryTurns = 1 };
+        var ai = new FakeAiText((use, values) => Task.FromResult<string?>(use == "chat_summary" ? "Frank came down to $600."
+            : ((string)values["facts"]!).Contains("$600") ? "Like I said, $600." : "Sure thing."));
+        var desk = new TalkDesk(ai, prompts: BasePrompts, rules: () => rules);
+        var talk = desk.ForCar(game, Car(), null, TalkPlace.Phone);
+
+        await talk.SayAsync("What color is it?", Ct);
+        await talk.SayAsync("How are the tires?", Ct);
+        Assert.NotNull(talk.Summary);
+
+        var said = await talk.SayAsync("Any rust?", Ct);
+        Assert.Equal(GameText.Say("chat.deal.held", ("price", new Helpers.Money(1500m))), said);
+    }
+
+    [Fact]
+    public async Task Turns_not_summed_up_yet_are_still_sent_up_to_twice_the_turns_kept()
+    {
+        var game = Game();
+        var rules = new TalkRules { TurnsKept = 2, SummaryTurns = 1 };
+        var ai = new FakeAiText((use, _) => Task.FromResult<string?>(use == "chat_summary" ? null : "Sure thing."));
+        var desk = new TalkDesk(ai, prompts: BasePrompts, rules: () => rules);
+        var talk = desk.ForCar(game, Car(), null, TalkPlace.Phone);
+
+        foreach (var line in new[] { "One?", "Two?", "Three?", "Four?" }) await talk.SayAsync(line, Ct);
+
+        Assert.Null(talk.Summary);
+        Assert.Equal(["Three?", "Sure thing.", "Four?"], ai.Chats[^1].Turns.Select(t => t.Text));
+    }
+
+    [Fact]
+    public async Task An_insulting_offer_and_the_last_offer_are_kept_and_the_seller_is_cooler_next_time()
+    {
+        var game = Game();
+        var (desk, ai) = Desk();
+        var car = Car();
+        var talk = desk.ForCar(game, car, null, TalkPlace.Phone);
+
+        await talk.SayAsync("I'll give you 300", Ct);
+        Assert.Equal(HaggleAnswer.Insulted, talk.LastOutcome!.Answer);
+        talk.End();
+
+        Assert.Equal(["insulted", "offered"], talk.Person.Events.Select(e => e.Kind));
+        Assert.Equal(300m, talk.Person.Events[1].Amount);
+        Assert.Equal(-1, TalkPeople.Feeling(talk.Person, game.Date, Rules));
+
+        var again = desk.ForCar(game, car, null, TalkPlace.Phone);
+        Assert.Same(talk.Person, again.Person);
+        await again.OpenAsync(Ct);
+        var facts = (string)ai.Chats[^1].Values["facts"]!;
+        Assert.Contains(GameText.Say("chat.fact.feeling.cool"), facts);
+        Assert.Contains(Heading("events"), facts);
+        Assert.Contains("$300", facts);
+        // How they feel is only how they talk: the price stands as it was
+        Assert.Equal(1500m, again.Subject!.Price);
+    }
+
+    [Fact]
+    public void How_a_person_feels_is_what_they_still_remember_added_up_from_minus_two_to_two()
+    {
+        var game = Game();
+        var person = TalkPeople.Seller(game, "car:1", rules: Rules);
+        Assert.Equal(0, TalkPeople.Feeling(person, game.Date, Rules));
+        Assert.Empty(TalkFacts.Feeling(0));
+
+        for (var i = 0; i < 4; i++) TalkPeople.Happened(person, new PersonEvent { Date = game.Date, Kind = "bought", Amount = 100m }, Rules);
+        Assert.Equal(2, TalkPeople.Feeling(person, game.Date, Rules));
+        TalkPeople.Happened(person, new PersonEvent { Date = game.Date, Kind = "offered", Amount = 50m }, Rules);
+        Assert.Equal(2, TalkPeople.Feeling(person, game.Date, Rules));
+
+        // Forgotten in time, as the memories are
+        Assert.Equal(0, TalkPeople.Feeling(person, game.Date.AddDays(Rules.ForgetDaysSeller + 1), Rules));
+        TalkPeople.Forget(person, game.Date.AddDays(Rules.ForgetDaysSeller + 1), Rules);
+        Assert.Empty(person.Events);
+
+        // Never more than the rules keep, the oldest dropped
+        var few = new TalkRules { EventsKept = 2 };
+        foreach (var kind in new[] { "bought", "beaten", "sold" }) TalkPeople.Happened(person, new PersonEvent { Date = game.Date, Kind = kind }, few);
+        Assert.Equal(["beaten", "sold"], person.Events.Select(e => e.Kind));
+    }
+
+    [Fact]
+    public void A_rival_remembers_a_pink_slip_lost_and_a_stranger_never_talked_to_is_nobody()
+    {
+        var game = Game();
+        var rival = new Opponent("Johnny Reyes", 24, Gender.Male, 95, 80);
+        game.Racers.AddRacer(rival);
+
+        TalkPeople.Happened(game, rival, new PersonEvent { Date = game.Date, Kind = "beaten" });
+        TalkPeople.Happened(game, rival, new PersonEvent { Date = game.Date, Kind = "pink_lost" });
+        var person = TalkPeople.Rival(game, rival);
+        Assert.Equal(-2, TalkPeople.Feeling(person, game.Date, Rules));
+        Assert.Equal([GameText.Say("chat.fact.feeling.sore")], TalkFacts.Feeling(-2));
+
+        TalkPeople.Happened(game, new PersonEvent { Date = game.Date, Kind = "sold", CarId = "bel_air", Amount = 900m }, "buyer:nobody", "car:nobody");
+        Assert.Single(game.People);
+
+        // A seller talked to is found by any of the keys given
+        var seller = TalkPeople.Seller(game, "car:x", rules: Rules);
+        TalkPeople.Happened(game, new PersonEvent { Date = game.Date, Kind = "bought", CarId = "bel_air", Amount = 900m }, "dealer:", "car:x");
+        var lines = TalkFacts.Events(seller.Events, game.Date, id => id == "bel_air" ? "Chevrolet Bel Air" : id).ToList();
+        Assert.Equal(GameText.Say("chat.fact.events"), lines[0]);
+        Assert.Contains("Chevrolet Bel Air", lines[1]);
+        Assert.Contains("$900", lines[1]);
+    }
+
+    [Fact]
+    public void A_note_of_several_lines_is_kept_whole_without_its_heading()
+    {
+        Assert.Equal("Kid offered 900. Seemed keen.", TalkDesk.NoteOf("Note to self:\nKid offered 900.\n\nSeemed keen.\n"));
+        Assert.Null(TalkDesk.NoteOf("Note to self:\n"));
+        Assert.Null(TalkDesk.NoteOf(null));
+    }
+
     // ----- the base game's content -----
 
     [Fact]
@@ -835,7 +981,7 @@ public class TalkTests
         var prompts = BasePrompts();
 
         Assert.Empty(prompts.Problems);
-        foreach (var use in new[] { "chat_seller", "chat_salesman", "chat_rival", "chat_memory" })
+        foreach (var use in new[] { "chat_seller", "chat_salesman", "chat_rival", "chat_memory", "chat_summary" })
             Assert.NotNull(prompts.Prompt(use));
         foreach (var kind in new[] { "seller", "salesman", "rival" })
             Assert.Contains(prompts.Temperaments, t => t.Fits(kind, 50));

@@ -169,8 +169,19 @@ namespace StreetCorsa.Services.Talk
         public void End()
         {
             if (!PlayerSpoke) return;
+
+            // What the game keeps of it, whatever the AI makes of it: an insult, and the last offer that came to nothing
+            if (_insulted) TalkPeople.Happened(Person, new PersonEvent { Date = _game.Date, Kind = "insulted", What = _insultedOver }, _desk.Rules);
+            if (_lastOffer is { } last && _agreedThing != last.Thing)
+                TalkPeople.Happened(Person, new PersonEvent { Date = _game.Date, Kind = last.Asked ? "asked" : "offered", What = last.What, Amount = last.Amount },
+                    _desk.Rules);
             _desk.Remember(this);
         }
+
+        // An offer this talk was an insult (a buyer asked too much and walked), over what; the last offer made, and on what
+        private bool _insulted;
+        private string _insultedOver = string.Empty;
+        private (string Thing, string What, decimal Amount, bool Asked)? _lastOffer;
 
         private void Focus(TalkSubject subject)
         {
@@ -208,6 +219,7 @@ namespace StreetCorsa.Services.Talk
                 return null;
 
             _offers.Add(ask);
+            _lastOffer = (subject.Thing, subject.Name, ask, true);
 
             var deal = TalkPeople.Deal(Person, subject.Thing, subject.FirstAsked ?? subject.Price, _game.Date);
             var temperament = _desk.Prompts.TemperamentOf(Person.Temperament);
@@ -217,7 +229,11 @@ namespace StreetCorsa.Services.Talk
 
             deal.Date = _game.Date;
             if (outcome.Answer != HaggleAnswer.Accept) deal.Counters++;
-            if (outcome.Answer == HaggleAnswer.Walk) subject.Walk();
+            if (outcome.Answer == HaggleAnswer.Walk)
+            {
+                subject.Walk();
+                Insulted(subject);
+            }
             else if (outcome.Price != subject.Price)
             {
                 subject.Price = outcome.Price;
@@ -240,6 +256,7 @@ namespace StreetCorsa.Services.Talk
             if (Haggle.OfferIn(text, subject.Price, GameText.Installed.Lines("chat.offer_words"), rules, UnitWords) is not { } offer) return null;
 
             _offers.Add(offer);
+            _lastOffer = (subject.Thing, subject.Name, offer, false);
 
             var deal = TalkPeople.Deal(Person, subject.Thing, subject.FirstAsked ?? subject.Price, _game.Date);
             var temperament = _desk.Prompts.TemperamentOf(Person.Temperament);
@@ -247,6 +264,7 @@ namespace StreetCorsa.Services.Talk
             var floor = Math.Max(Haggle.Floor(deal.Asked, Person.Kind, temperament, days, Rival?.IsBroke == true, rules),
                 Haggle.HardFloor(subject.FirstAsked ?? deal.Asked, subject.MostOff ?? rules.MostDiscount, rules));
             var outcome = Haggle.Decide(offer, subject.Price, floor, deal.Counters, rules, subject.Round);
+            if (outcome.Answer == HaggleAnswer.Insulted) Insulted(subject);
 
             deal.Date = _game.Date;
             if (outcome.Answer != HaggleAnswer.Accept) deal.Counters++;
@@ -264,6 +282,12 @@ namespace StreetCorsa.Services.Talk
             LastOutcome = outcome;
             Dealt?.Invoke(outcome);
             return outcome;
+        }
+
+        private void Insulted(TalkSubject subject)
+        {
+            _insulted = true;
+            _insultedOver = subject.Name;
         }
 
         private async Task<string?> AskAsync(string playerTurn, HaggleOutcome? outcome, CancellationToken cancellationToken)
@@ -309,6 +333,7 @@ namespace StreetCorsa.Services.Talk
 
             _turns.Add(new AiTurn(true, said));
             if (Person.Kind == PersonKind.Salesman && Deal is { } deal) TalkPeople.Said(deal, said, _desk.Rules);
+            SumUpOlder();
             return said;
         }
 
@@ -321,21 +346,78 @@ namespace StreetCorsa.Services.Talk
         /// <summary>
         /// The sums the person may name: those of the facts they were given (the lot, what was first asked), the player's,
         /// and the player's offers ("would you take 1200" is one with no dollar sign on it). Not the other cars for sale in
-        /// town: the person may name them, but never as the price of their own
+        /// town: the person may name them, but never as the price of their own; nor the AI's summary of the talk, which may
+        /// get a figure wrong (the player's own are known anyway)
         /// </summary>
         private List<decimal> KnownSums(HaggleOutcome? outcome) =>
-            Haggle.SumsIn(TalkFacts.Sheet(Sections(outcome).Where(s => s.Key != "market"), int.MaxValue), UnitWords)
+            Haggle.SumsIn(TalkFacts.Sheet(Sections(outcome).Where(s => s.Key is not ("market" or "earlier")), int.MaxValue), UnitWords)
                 .Concat(_playerSaid.SelectMany(line => Haggle.SumsIn(line, UnitWords)))
                 .Concat(_offers)
                 .Concat(Deal is { } deal ? [deal.Asked] : Array.Empty<decimal>())
                 .ToList();
 
-        /// <summary>The newest turns the rules keep, from a player's turn on</summary>
+        /// <summary>
+        /// The newest turns the rules keep, from a player's turn on, and the older ones not summed up yet (the summary is
+        /// asked in the background, and may be late or never come: never more than twice the turns kept, though)
+        /// </summary>
         private List<AiTurn> Window()
         {
-            var kept = _turns.TakeLast(Math.Max(1, _desk.Rules.TurnsKept)).ToList();
+            var keep = Math.Max(1, _desk.Rules.TurnsKept);
+            var start = Math.Max(Math.Min(_turns.Count - keep, _summed), _turns.Count - keep * 2);
+            var kept = _turns.Skip(Math.Max(0, start)).ToList();
             while (kept.Count > 1 && kept[0].Mine) kept.RemoveAt(0);
             return kept;
+        }
+
+        // What was said before the turns sent, summed up by the AI; how many turns from the first it covers
+        private string? _summary;
+        private int _summed;
+        private bool _summing;
+
+        /// <summary>What was said earlier in the talk, summed up, once its turns are no longer sent; null before</summary>
+        public string? Summary => _summary;
+
+        /// <summary>
+        /// Enough turns have fallen out of the ones the rules keep: they are summed up with the summary before them, in the
+        /// background, and sent with the facts from then on
+        /// </summary>
+        private void SumUpOlder()
+        {
+            var rules = _desk.Rules;
+            var outside = _turns.Count - Math.Max(1, rules.TurnsKept);
+            if (_summing || outside - _summed < Math.Max(1, rules.SummaryTurns)) return;
+
+            _summing = true;
+            _ = SumUpAsync(_turns.Skip(_summed).Take(outside - _summed).ToList(), outside);
+        }
+
+        private async Task SumUpAsync(List<AiTurn> turns, int upTo)
+        {
+            try
+            {
+                var values = new TextValues
+                {
+                    ["name"] = Person.Name,
+                    ["player"] = _game.Player.Name,
+                    ["earlier"] = _summary ?? string.Empty,
+                    ["talk"] = TalkDesk.Transcript(Person, turns)
+                };
+                var written = await _desk.Text.WriteAsync("chat_summary", values).ConfigureAwait(true);
+                if (TalkDesk.NoteOf(written) is { } summary)
+                {
+                    _summary = summary;
+                    _summed = upTo;
+                }
+            }
+            catch (Exception ex)
+            {
+                // The turns are still sent, up to twice the rules' many: nothing is lost yet
+                _logger.Warning("Could not sum up the start of the talk with {Person}: {Error}", Person.Name, ex.Message);
+            }
+            finally
+            {
+                _summing = false;
+            }
         }
 
         // The factory's engine parts of each car talked about, looked up once a talk
@@ -400,6 +482,7 @@ namespace StreetCorsa.Services.Talk
             var today = _game.Date;
             var sections = new List<FactSection> { new("now", [.. TalkFacts.Today(_game, _desk.CarName)], FactSection.Always) };
             if (Rival != null) sections.Add(new("you", [.. TalkFacts.Rival(Rival, _desk.CarName)], FactSection.Always));
+            sections.Add(new("feeling", [.. TalkFacts.Feeling(TalkPeople.Feeling(Person, today, rules))], FactSection.Always));
             // A racer sizes up what the player drives
             if (Rival != null && TalkFacts.CarDriven(_game) is { } playersCar)
                 sections.Add(new("player_car", [.. TalkFacts.Build(playersCar.Parts, _desk.Parts, Factory(playersCar.DefinitionId), rules.BuildPartsPerKind)],
@@ -432,9 +515,12 @@ namespace StreetCorsa.Services.Talk
             if (Rival != null)
                 sections.Add(new("rival_races", [.. TalkFacts.RivalRaces(Person.Name, _game.RivalRaces ?? [], today, _desk.CarName, rules.RivalRacesTold)], FactSection.RivalRaces));
             sections.Add(new("memories", [.. TalkFacts.Memories(TalkPeople.Remembered(Person, today, rules), today)], FactSection.Memories, HeadLines: 1));
+            sections.Add(new("events", [.. TalkFacts.Events(TalkPeople.Events(Person, today, rules), today, _desk.CarName)], FactSection.Events, HeadLines: 1));
             // The town's talk and the paper: everybody hears it
             sections.Add(new("town", [.. TalkFacts.Town(_game, rules.StreetTalkTold)], FactSection.Town, HeadLines: 1));
             sections.Add(new("news", [.. TalkFacts.News(_game, rules.NewsTold)], FactSection.News, HeadLines: 1));
+            // What changes as the talk goes on, last: the start of a long talk, what was said of the thing, the deal
+            sections.Add(new("earlier", [.. TalkFacts.Earlier(_summary)], FactSection.Earlier));
             sections.Add(new("said", [.. TalkFacts.Said(Deal)], FactSection.Said, HeadLines: 1));
 
             IEnumerable<string> dealLines = Subject switch

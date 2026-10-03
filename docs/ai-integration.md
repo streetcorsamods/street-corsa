@@ -130,9 +130,23 @@ The AI only speaks: the game decides every fact and every price.
   window's own Take. An answer offering more than stands by itself is asked again (`chat.fact.offer_warning`), then held
   (`chat.deal.buyer.held`). The player's own ads get their words as the others do (`AdBlurbs` on `CarSaleAd`, offered to
   the AI the first time the paper shows them; the rewrite shows the next time it opens).
-- **Memories**: when a talk with something said by the player ends, `chat_memory` writes one line in the background, kept
-  with the game date (`PersonMemory`); the newest few are told next time, forgotten after `forgetDays*` (seller 14,
-  salesman 30, rival 90).
+- **Memories**: when a talk with something said by the player ends, `chat_memory` writes a note of two or three
+  sentences in the background (what the player wanted, the prices named, how it went, what the person thinks of them),
+  kept with the game date (`PersonMemory`); the newest `memoriesGiven` (10) are told next time, forgotten after
+  `forgetDays*` (seller 14, salesman 30, rival 90).
+- **A long talk**: the newest `turnsKept` (40) turns are sent (and fitted to the window). Once `summaryTurns` (6) more
+  have fallen out, `chat_summary` sums them up with the summary before them, in the background, and the summary goes
+  with the facts (section `earlier`, near the end as it changes); turns not summed up yet (the summary late, or never
+  written) are still sent, up to twice `turnsKept`.
+- **What happened, and feelings** (`Person.Events`, `TalkPeople.Happened`): the game keeps, whatever the AI says, what
+  happened between a person and the player: a car or part bought from them (`CarPurchaseService`,
+  `NewspaperPartsService.BuyUsed`), a car sold to them (`CarSaleService.AcceptOfferAsync`), a talk's insulting offer or a
+  buyer pushed until they walked, its last offer that came to nothing, and a rival's races with the player and pink
+  slips (`RaceResultProcessor`). Private sellers and buyers keep it only when the player has talked to them; rivals
+  always. It is told as a section (`events`, `chat.fact.event.*`, the newest first, `eventsKept` 12) and is forgotten as
+  the memories are. How the person feels about the player (-2 sore .. +2 friendly) is what they still remember, added up
+  by the rules' `feeling*` weights (insulted -1, bought +1, sold +1, beaten -1, beat the player 0, pink slip lost -2,
+  won +1), told in words (`chat.fact.feeling.*`); it changes only how they talk, never a price.
 - **Chat**: `AiTextRequest.Turns` carries the talk; Ollama and OpenAI-compatible get the system prompt as their first
   message, Anthropic as `system`. `IAiText.ChatAsync` is always the player's priority. Stage lines ("[A customer walks
   onto your lot.]", text `chat.stage.*`) go as the player's turns; two of the player's in a row go as one.

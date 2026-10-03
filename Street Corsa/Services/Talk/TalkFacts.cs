@@ -39,6 +39,8 @@ namespace StreetCorsa.Services.Talk
         public const int Lot = 60;
         public const int Said = 70;
         public const int Build = 80;
+        public const int Events = 85;
+        public const int Earlier = 90;
     }
 
     public static class TalkFacts
@@ -292,6 +294,37 @@ namespace StreetCorsa.Services.Talk
             yield return GameText.Say("chat.fact.memories");
             foreach (var memory in memories.Reverse())
                 yield return GameText.Say("chat.fact.memory", ("when", When(memory.Date, today)), ("text", memory.Text));
+        }
+
+        /// <summary>What happened between the person and the player, the newest first; nothing when nothing did</summary>
+        public static IEnumerable<string> Events(IReadOnlyList<PersonEvent> events, DateTime today, Func<string, string> carName)
+        {
+            if (events.Count == 0) yield break;
+
+            yield return GameText.Say("chat.fact.events");
+            foreach (var happened in events.Reverse())
+                yield return GameText.Say($"chat.fact.event.{happened.Kind}", ("when", When(happened.Date, today)), ("what", happened.CarId is { } car ? carName(car) : happened.What),
+                    ("amount", new Helpers.Money(happened.Amount ?? 0)));
+        }
+
+        /// <summary>How the person feels about the player (-2..+2), in words; nothing when they feel nothing either way</summary>
+        public static IEnumerable<string> Feeling(int feeling)
+        {
+            if (feeling == 0) yield break;
+            yield return GameText.Say(feeling switch
+            {
+                <= -2 => "chat.fact.feeling.sore",
+                -1 => "chat.fact.feeling.cool",
+                1 => "chat.fact.feeling.warm",
+                _ => "chat.fact.feeling.friendly"
+            });
+        }
+
+        /// <summary>What was said earlier in this talk, summed up, when the oldest turns are no longer sent</summary>
+        public static IEnumerable<string> Earlier(string? summary)
+        {
+            if (string.IsNullOrWhiteSpace(summary)) yield break;
+            yield return summary.Trim();
         }
 
         /// <summary>What the person said about the thing before: not to be said again</summary>

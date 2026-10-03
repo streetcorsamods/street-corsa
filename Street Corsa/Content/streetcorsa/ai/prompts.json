@@ -22,7 +22,9 @@
     "  the talk so far as the messages (the player's, and [what happens] in brackets). {name}, {nickname} (rivals), {age},",
     "  {sex}, {temperament} (ai/people.json's words), {place} (text chat.place.*), {player}, {facts}: the game's fact",
     "  sheet (text chat.fact.*, chat.deal.*), every turn. Prices are the game's: the sheet says what to answer an offer.",
-    "chat_memory: what a person keeps of a talk, one line. {name}, {player}, {talk} (the talk written out)."
+    "chat_memory: what a person keeps of a talk, a short note. {name}, {player}, {talk} (the talk written out).",
+    "chat_summary: the start of a long talk summed up, once its turns are no longer sent (rules ai.talk.summaryTurns).",
+    "  {name}, {player}, {earlier} (the summary so far, or nothing), {talk} (the turns to add, written out)."
   ],
   "persona": [
     "You write for {title}, a game about street racing in a small American city in the early 1960s:",
@@ -99,10 +101,17 @@
       "lines": 0
     },
     "chat_memory": {
-      "prompt": "A talk between {name} and {player}:\n{talk}\nWrite, as {name}'s own short note to self, what {name} will remember of it: what {player} wanted, offered or said, and how it went. One sentence, at most twenty words, in the third person about {player}. The note only: no heading, no 'Note to self'.",
-      "maxLength": 240,
-      "maxTokens": 80,
+      "prompt": "A talk between {name} and {player}:\n{talk}\nWrite, as {name}'s own short note to self, what {name} will remember of it: what {player} wanted, offered or said, any price or promise named, how it went, and what {name} thinks of {player} now. Two or three short sentences, in the third person about {player}, keeping every name, car and figure as said. The note only: no heading, no 'Note to self'.",
+      "maxLength": 420,
+      "maxTokens": 140,
       "temperature": 0.5,
+      "lines": 0
+    },
+    "chat_summary": {
+      "prompt": "{name} and {player} are talking.\nWhat was said before, in short: {earlier}\nThen:\n{talk}\nSum up everything said so far, the short version above and the lines after it, as notes for {name} to carry on the talk: what {player} wants, every price, offer and promise named and who named it ({name} asking, {player} offering), what was agreed or turned down, and the mood. At most four short sentences, in the third person, keeping every name, car and figure exactly as said and adding none. The notes only: no heading.",
+      "maxLength": 600,
+      "maxTokens": 200,
+      "temperature": 0.1,
       "lines": 0
     }
   }

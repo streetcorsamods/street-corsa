@@ -222,9 +222,73 @@ namespace StreetCorsa.Services.Talk
         {
             var days = ForgetDays(person.Kind, rules);
             person.Memories.RemoveAll(m => (date.Date - m.Date.Date).TotalDays > days);
+            person.Events ??= [];
+            person.Events.RemoveAll(e => (date.Date - e.Date.Date).TotalDays > days);
             person.Deals.RemoveAll(d => d.Date is not { } talked || (date.Date - talked.Date).TotalDays > days);
             var most = Math.Max(1, rules.MemoriesGiven * 2);
             if (person.Memories.Count > most) person.Memories.RemoveRange(0, person.Memories.Count - most);
+            var events = Math.Max(0, rules.EventsKept);
+            if (person.Events.Count > events) person.Events.RemoveRange(0, person.Events.Count - events);
+        }
+
+        // ----- what happened, and how they feel about the player -----
+
+        /// <summary>Something happened between the person and the player: kept with them, the oldest dropped past the rules' most</summary>
+        public static void Happened(Person person, PersonEvent happened, TalkRules? rules = null)
+        {
+            rules ??= RuleBook.Current.Ai.Talk;
+            person.Events ??= [];
+            person.Events.Add(happened);
+            Forget(person, happened.Date, rules);
+        }
+
+        /// <summary>
+        /// Something happened with whoever is behind one of <paramref name="keys"/> (the first found), when the player has
+        /// talked to them: a private seller or a buyer never talked to is nobody yet, and stays so
+        /// </summary>
+        public static void Happened(GameState game, PersonEvent happened, params string[] keys)
+        {
+            if (game.People is not { } people) return;
+            if (keys.Select(key => people.FirstOrDefault(p => p.Key == key)).FirstOrDefault(p => p != null) is { } person)
+                Happened(person, happened);
+        }
+
+        /// <summary>Something happened with a rival: they remember it whether or not the player ever talked to them</summary>
+        public static void Happened(GameState game, Opponent rival, PersonEvent happened)
+        {
+            game.People ??= [];
+            Happened(Rival(game, rival), happened);
+        }
+
+        /// <summary>How much one thing that happened moves the feeling, by the rules; 0 for what moves nothing (an offer)</summary>
+        public static int Weight(string kind, TalkRules rules) => kind switch
+        {
+            "insulted" => rules.FeelingInsulted,
+            "bought" => rules.FeelingBought,
+            "sold" => rules.FeelingSold,
+            "beaten" => rules.FeelingBeaten,
+            "beat_player" => rules.FeelingBeatPlayer,
+            "pink_lost" => rules.FeelingPinkLost,
+            "pink_won" => rules.FeelingPinkWon,
+            _ => 0
+        };
+
+        /// <summary>
+        /// How they feel about the player on <paramref name="date"/>, -2 (sore at them) to +2 (warm): what they still
+        /// remember, added up. It changes only how they talk
+        /// </summary>
+        public static int Feeling(Person person, DateTime date, TalkRules rules)
+        {
+            var days = ForgetDays(person.Kind, rules);
+            var sum = (person.Events ?? []).Where(e => (date.Date - e.Date.Date).TotalDays <= days).Sum(e => Weight(e.Kind, rules));
+            return Math.Clamp(sum, -2, 2);
+        }
+
+        /// <summary>What they still remember happening, oldest first</summary>
+        public static IReadOnlyList<PersonEvent> Events(Person person, DateTime date, TalkRules rules)
+        {
+            var days = ForgetDays(person.Kind, rules);
+            return (person.Events ?? []).Where(e => (date.Date - e.Date.Date).TotalDays <= days).ToList();
         }
 
         /// <summary>
@@ -234,7 +298,7 @@ namespace StreetCorsa.Services.Talk
         public static void ForgetAll(GameState game, TalkRules rules)
         {
             foreach (var person in game.People) Forget(person, game.Date, rules);
-            game.People.RemoveAll(p => p.Kind is PersonKind.PrivateSeller or PersonKind.Buyer && p.Memories.Count == 0
+            game.People.RemoveAll(p => p.Kind is PersonKind.PrivateSeller or PersonKind.Buyer && p.Memories.Count == 0 && p.Events.Count == 0
                                        && (game.Date.Date - p.Met.Date).TotalDays > rules.ForgetDaysSeller);
         }
 
