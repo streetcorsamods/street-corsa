@@ -121,6 +121,12 @@ namespace StreetCorsa.Screens.Garage
             }
         }
 
+        /// <summary>
+        /// The buttons that put kinds of part out of sight while the car's parts are on show (the engine, the gearbox,
+        /// the brakes, the springs and shocks), as the mods' part_groups.json has them; every kind in sight at first
+        /// </summary>
+        public IReadOnlyList<Controls.PartShowToggle> PartShows { get; } = Controls.PartShowToggle.ForInstalled();
+
         /// <summary>The "Parts" toggle: the car's parts are on show</summary>
         public bool IsCarView
         {

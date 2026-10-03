@@ -9,12 +9,12 @@
 | LoadGame | `Screens/LoadGame/` | Load existing save (a card on the main screen) |
 | Settings | `Screens/Settings/` | App settings (a card on the main screen) |
 | CarCatalogEditor | `Screens/CarCatalogEditor/` | Edit car prices/precedence |
-| Garage | `Screens/Garage/` | In-game hub: 3D garage with the selected car, overlay buttons to every other in-game screen |
+| Garage | `Screens/Garage/` | In-game hub: 3D garage with the selected car, overlay buttons to every other in-game screen. Under the car a row of round icon buttons: the key, then parts view (with stand and turn over while it is open), repairs, lights, doors, rotate. Turning the key starts the engine and the engine bar (rpm, tach, pedal) rises in the buttons' place; turning it back, or the engine dying, brings them back. Sell is the round button right of the car's name (a dot while in the paper, amber with an offer). Free run and test-and-tune are in the racing hub |
 | CarLot | `Screens/CarLot/` | The player's cars parked in their warehouses in 3D: look them over and take one to the garage (see `car-lot.md`) |
 | Diner | `Screens/Diner/` | Meet opponents, accept challenges |
 | Cruise | `Screens/Cruise/` | Sit at the curb in your car; rivals pull up with an offer (see `cruise.md`) |
 | GasStation | `Screens/Station/` | Drive to the gas station: fill up, top up the oil, a wash, the attendant's remarks (see `gas-station.md`) |
-| Newspaper | `Screens/Newspaper/` | The classifieds, set as a period paper's ads: used cars (every dealer's and racer's, the player's own ads with their buyers at the top) and used parts, a page at a time as the player scrolls; an ad is bought from here or clicked to look at it |
+| Newspaper | `Screens/Newspaper/` | The classifieds, set as a period paper's ads under the masthead (the paper's name in the top band between the back button and the money card, the date line under the thick rule): used cars (every dealer's and racer's, and the player's own among them at a place drawn from the ad's id, written like the others and circled in pencil with the buyer's offer pencilled under it; clicked, `Dialogs/PlayerAd`: the car, the offer to take or turn down, "Call the buyer" with the AI on) and used parts, a page at a time as the player scrolls; an ad is bought from here or clicked to look at it |
 | DealerMap | `Screens/DealerMap/` | The city, with a pin per car dealer (the garage's Car dealers button) or per part shop (Parts dealers: gold squares) |
 | PartShop | `Screens/PartShop/` | One part shop's counter: its shelves or yard at today's prices, haggling at a junkyard, selling to it |
 | DealerLot | `Screens/DealerLot/` | One dealer's cars parked in 3D; click one to look at it |
@@ -31,6 +31,8 @@ MainMenu (opens under the title; NewGame, LoadGame and Settings are cards on it,
 Garage (hub) ←→ CarLot
   │
   ├──→ Racing hub dialog       [Go race!: invitations, Street News]
+  │      ├──→ TrackPicker → AC free run (back in the garage)   [Free Run: any track, as cards with a search]
+  │      ├──→ TrackPicker → RaceLoading (test-and-tune)        [Test & Tune: the drag strips]
   │      ├──→ EventEntry → RaceLoading
   │      └──→ Diner (challenges)  [Hit the streets]
   │      └──→ Cruise ──→ RaceLoading ──→ Cruise   [Cruise the streets]

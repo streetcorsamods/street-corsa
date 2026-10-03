@@ -427,6 +427,13 @@ namespace StreetCorsa.Screens.Cruise
             _ = EngineAudio.Shared.ReleaseAsync(EngineChannel.Second);
         }
 
+        // The player's engine once worked out: it goes home with the car, which drives into the garage
+        private Audio.EngineSpec? _engine;
+
+        /// <summary>Home in the car: it drives into the garage, unless it is out of gas or the police kept it</summary>
+        private FlowArgs DriveHome() =>
+            new() { Arrival = DrivingHome.Arrival(_gameState, _engine, _partsService.IsAvailable ? _partsService.Catalog : null) };
+
         private Car? SelectedCar() =>
             _gameState.Player.Cars.FirstOrDefault(c => c.InstanceId == _gameState.Player.SelectedCarInstanceId);
 
@@ -436,6 +443,7 @@ namespace StreetCorsa.Screens.Cruise
             {
                 var spec = await EngineSpecs.ForAsync(_partsService, car, CarNames.Of(_catalogRepository, car.DefinitionId));
                 if (!_ticking) return;
+                _engine = spec;
                 await PlayerEngine.SetEngineAsync(spec);
                 if (_ticking) PlayerEngine.StartRunning();
             }
@@ -478,7 +486,7 @@ namespace StreetCorsa.Screens.Cruise
             }
 
             Save();
-            var went = _navigationService.Leave(this, toGarage ? "back" : "diner", _gameState);
+            var went = toGarage ? _navigationService.Leave(this, "back", _gameState, DriveHome()) : _navigationService.Leave(this, "diner", _gameState);
             if (went || !ReferenceEquals(_navigationService.CurrentScreen, this)) return;
 
             // Still here (the other screen could not be opened): the street goes on
@@ -571,7 +579,7 @@ namespace StreetCorsa.Screens.Cruise
             _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService,
                 GameText.Say("cruise.late_night"), GameText.Say("cruise.late_night.title")));
             _leaving = true;
-            _navigationService.GoHome(_gameState);
+            _navigationService.GoHome(_gameState, DriveHome());
         }
 
         /// <summary>The street is on screen to drive a rival up, or has been waited on long enough</summary>

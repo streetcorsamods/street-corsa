@@ -16,7 +16,7 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Ignition -->
+            <!-- Ignition (a screen with a key of its own hides it) -->
             <Button x:Name="StartButton"
                     Grid.Column="0"
                     Width="92"
@@ -25,6 +25,7 @@
                     Cursor="Hand"
                     Focusable="False"
                     IsEnabled="{Binding CanToggle}"
+                    Visibility="{Binding ShowStartButton, ElementName=Root, Converter={StaticResource BooleanToVisibilityConverter}}"
                     Click="OnStartClick">
                 <Button.Template>
                     <ControlTemplate TargetType="Button">

@@ -128,8 +128,16 @@ public sealed class TalkRules
     /// </summary>
     public double MostDiscount { get; set; } = 0.25;
 
-    /// <summary>The share of sellers who will not come down at all on a thing</summary>
+    /// <summary>The share of sellers who will not come down at all on a thing (and of buyers who will not go up)</summary>
     public double FirmShare { get; set; } = 0.2;
+
+    /// <summary>
+    /// The hard ceiling: the most a buyer who answered the player's ad ever comes up from what they first offered (0.12:
+    /// never over 112 percent of it, nor over what the ad asks), however often the player asks. Each buyer draws their own
+    /// limit under it once (none at all for <see cref="FirmShare"/> of them), kept with the offer. Asked for more than
+    /// <see cref="InsultMargin"/> over their limit, or pushed past <see cref="MaxCounters"/>, they walk away.
+    /// </summary>
+    public double MostRaise { get; set; } = 0.12;
 
     /// <summary>A salesman's cars told him, the dearest first</summary>
     public int LotCarsTold { get; set; } = 10;

@@ -12,7 +12,6 @@ using StreetCorsa.Services.Market;
 using StreetCorsa.Services.Parts;
 using StreetCorsa.Services.Police;
 using StreetCorsa.Services.Race;
-using StreetCorsa.Services.Settings;
 using StreetCorsa.Services.Storage;
 using StreetCorsa.Services.Text;
 using StreetCorsa.Services.Time;
@@ -37,43 +36,15 @@ namespace StreetCorsa.Screens.Garage
         private readonly IGameStateRepository _gameStateRepo;
         private readonly ICarPartsService _partsService;
         private readonly IGameTimeService _timeService;
-        private readonly GameSettingsService _settingsService;
         private readonly ICarSaleService _saleService;
-        private readonly IAssettoCorsaContentService _contentService;
-        private readonly RaceCarDataService _raceCarDataService;
         private readonly IAppLogger _logger;
 
-        public AsyncRelayCommand FreeRunCommand { get; }
-
-        /// <summary>The selected car at the strip on its own, pass after pass, for timeslips (<see cref="OnTestAndTune"/>)</summary>
-        public AsyncRelayCommand TestAndTuneCommand { get; }
-
-        /// <summary>How many passes a test-and-tune runs</summary>
-        public const int TestAndTunePasses = 6;
         public RelayCommand RepairsCommand { get; }
         public RelayCommand SellCommand { get; }
 
         /// <summary>Pays the impound and brings the selected car home, once its days there are up</summary>
         public RelayCommand CollectCommand { get; }
 
-        /// <summary>Where a free run can go: every track of the install, one entry per layout</summary>
-        public ObservableCollection<FreeRunTrackViewModel> FreeRunTracks { get; } = new();
-
-        private FreeRunTrackViewModel? _freeRunTrack;
-
-        public FreeRunTrackViewModel? FreeRunTrack
-        {
-            get => _freeRunTrack;
-            set
-            {
-                if (!SetProperty(ref _freeRunTrack, value) || value == null) return;
-
-                // Remembered for next time on a free run or when the garage is left, not on every step through the list
-                FreeRunCommand.RaiseCanExecuteChanged();
-            }
-        }
-
-        public bool HasFreeRunTracks => FreeRunTracks.Count > 0;
         public RelayCommand SelectCarCommand { get; }
 
         /// <summary>Calls it a day: the rest of today goes by, and the game picks up tomorrow morning</summary>
@@ -115,7 +86,7 @@ namespace StreetCorsa.Screens.Garage
                 OnPropertyChanged(nameof(SelectedCar));
                 OnPropertyChanged(nameof(SelectedCarDisplay));
                 OnPropertyChanged(nameof(HasCars));
-                OnPropertyChanged(nameof(SellButtonText));
+                RaiseSaleChanged();
                 RaiseImpoundChanged();
                 if (carChanged)
                 {
@@ -293,9 +264,6 @@ namespace StreetCorsa.Screens.Garage
             ICarPartsService partsService,
             IGameStateRepository gameStateRepo,
             IGameTimeService timeService,
-            GameSettingsService settingsService,
-            IAssettoCorsaContentService contentService,
-            RaceCarDataService raceCarDataService,
             ICarSaleService saleService,
             bool skipAnimation = false,
             CarArrival? arrival = null,
@@ -310,18 +278,12 @@ namespace StreetCorsa.Screens.Garage
             _gameStateRepo = gameStateRepo;
             _partsService = partsService;
             _timeService = timeService;
-            _settingsService = settingsService;
-            _contentService = contentService;
-            _raceCarDataService = raceCarDataService;
             _logger = AppLoggerFactory.CreateLogger("Garage");
             SkipEnterAnimation = skipAnimation;
             _arrival = arrival;
             CarArriving = arrival?.DrivesIn == true;
             _endDayOnArrival = endDay;
 
-            FreeRunCommand = new AsyncRelayCommand(OnFreeRun, () => SelectedCarHere && FreeRunTrack != null && !_launcher.IsExecutionLocked && CanLeave());
-            TestAndTuneCommand = new AsyncRelayCommand(OnTestAndTune, () => SelectedCarHere && !_launcher.IsExecutionLocked && CanLeave());
-            LoadFreeRunTracks();
             // Not while the night runs: its tasks read and change the cars and the money these spend
             RepairsCommand = new RelayCommand(OnRepairs, () => SelectedCarHere && !_endingDay);
             SellCommand = new RelayCommand(OnSell, () => SelectedCarHere && !_endingDay && !_launcher.IsExecutionLocked);
@@ -404,166 +366,6 @@ namespace StreetCorsa.Screens.Garage
             _logger.Information("Loaded {Count} cars into garage view", Cars.Count);
         }
 
-        private void LoadFreeRunTracks()
-        {
-            try
-            {
-                foreach (var track in _contentService.GetTracks().OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase))
-                {
-                    if (track.Configurations.Count == 0) FreeRunTracks.Add(new FreeRunTrackViewModel(track.TrackId, null, track.Name));
-                    foreach (var configuration in track.Configurations)
-                        FreeRunTracks.Add(new FreeRunTrackViewModel(track.TrackId, configuration.FolderName, $"{track.Name} - {configuration.Name}"));
-                }
-
-                var remembered = _settingsService.Current.FreeRunTrack;
-                _freeRunTrack = FreeRunTracks.FirstOrDefault(t => t.Key == remembered) ?? FreeRunTracks.FirstOrDefault(t => !t.Key.Contains("drag", StringComparison.OrdinalIgnoreCase)) ?? FreeRunTracks.FirstOrDefault();
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Could not list the tracks for a free run");
-            }
-        }
-
-        /// <summary>
-        /// The selected car out on its own on the chosen track, on what its parts make of it: a practice
-        /// session the player ends when they have had enough. No opponent, no stake, no results; an hour goes by.
-        /// </summary>
-        private async Task OnFreeRun()
-        {
-            // Read once: the selection can change while the parts are checked and AC runs
-            if (SelectedCar is not { } selected || FreeRunTrack is not { } track) return;
-
-            var car = selected.CarInstance;
-            _logger.Information("Free run: {Car} on {Track}", car.DefinitionId, track.Key);
-            RememberFreeRunTrack();
-
-            try
-            {
-                // The car races on its parts; one that will not go stays in
-                Services.Race.RaceCarData? data = null;
-                if (_partsService.IsAvailable)
-                {
-                    if (await _partsService.EnsurePartsAsync(car) && !string.IsNullOrEmpty(_gameState.SaveName)) _gameStateRepo.Save(_gameState, _gameState.SaveName);
-
-                    // Blown, wrecked or totaled: it goes nowhere until it is repaired
-                    var damage = Parts.Cars.CarCondition.WhyCannotRace(car, Parts.Cars.CarCondition.Groups(_partsService.Catalog));
-                    if (damage.Count > 0)
-                    {
-                        _dialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(
-                            _dialogService,
-                            GameText.Say("garage.wont_run.damage", ("damage", string.Join("; ", damage)), ("fix", WhereToSortOut(car))),
-                            GameText.Say("garage.wont_run.title")));
-                        return;
-                    }
-
-                    // On a copy made here: the workbench may change the car's own parts while the worker reads them
-                    var snapshot = car.Snapshot();
-                    data = await Task.Run(() => _raceCarDataService.Prepare(snapshot, rateCooling: false));
-                }
-
-                if (data is { CanDrive: false })
-                {
-                    _dialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(
-                        _dialogService,
-                        GameText.Say("garage.wont_run.problem", ("problem", data.Problem)),
-                        GameText.Say("garage.wont_run.title")));
-                    return;
-                }
-
-                var intent = new FreeRunLaunchIntent
-                {
-                    CarId = selected.CarDefinition.Id,
-                    SkinId = car.SkinId,
-                    PlayerName = _gameState.Player.Name,
-                    TrackId = track.TrackId,
-                    TrackConfig = track.Configuration
-                };
-                if (data != null) intent.CarData.Add(data);
-
-                // Checking the car takes a moment: a player who left meanwhile has called it off
-                if (!ReferenceEquals(_navigationService.CurrentScreen, this)) return;
-
-                FreeRunCommand.RaiseCanExecuteChanged();
-                var result = await _launcher.LaunchRaceAsync(intent);
-                if (result.Success)
-                {
-                    await _timeService.SpendTimeAsync(_gameState, GameAction.FreeRun);
-                }
-                else
-                {
-                    _logger.Error("Free run failed: {Error}", result.ErrorMessage);
-                    _dialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(
-                        _dialogService, GameText.Say("garage.free_run_failed", ("error", result.ErrorMessage)), GameText.Say("garage.launch_error.title")));
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Exception during the free run");
-                _dialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(
-                    _dialogService, GameText.Say("garage.free_run_failed", ("error", ex.Message)), GameText.Say("garage.launch_error.title")));
-            }
-            finally
-            {
-                FreeRunCommand.RaiseCanExecuteChanged();
-            }
-        }
-
-        /// <summary>
-        /// The selected car at the strip on its own: a test-and-tune, pass after pass, each with its own tree and timeslip,
-        /// nothing at stake but the car's wear. Run through the race pipeline (the race mode, a result, the timeslips
-        /// after), an hour goes by, and the player comes back to the garage.
-        /// </summary>
-        private async Task OnTestAndTune()
-        {
-            if (SelectedCar is not { } selected) return;
-            var car = selected.CarInstance;
-
-            try
-            {
-                var strip = Shared.RaceSetupBuilder.PickStrip(_contentService.GetTracks());
-                if (strip is not { } picked)
-                {
-                    _dialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(
-                        _dialogService, GameText.Say("garage.no_strip"), GameText.Say("garage.no_strip.title")));
-                    return;
-                }
-
-                var (trackId, trackConfig) = picked;
-                _logger.Information("Test-and-tune: {Car} on {Track}/{Layout}", car.DefinitionId, trackId, trackConfig ?? "(none)");
-                var setup = await new Shared.RaceSetupBuilder(_partsService, _raceCarDataService).BuildAsync(new Shared.RaceEntry
-                {
-                    PlayerName = _gameState.Player.Name,
-                    PlayerCar = car,
-                    TrackId = trackId,
-                    TrackConfig = trackConfig,
-                    RaceType = Models.Race.RaceType.DragRace,
-                    DamagePercent = _gameState.Rules.RaceDamagePercent,
-                    RaceTime = _gameState.Date,
-                    TunePasses = TestAndTunePasses
-                });
-
-                // Setting the car up takes a moment: a player who left meanwhile has called it off
-                if (!ReferenceEquals(_navigationService.CurrentScreen, this)) return;
-
-                if (setup.Intent == null)
-                {
-                    _dialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(
-                        _dialogService,
-                        GameText.Say("garage.wont_run.damage", ("damage", setup.PlayerCarProblem), ("fix", WhereToSortOut(car))),
-                        GameText.Say("garage.wont_run.title")));
-                    return;
-                }
-
-                _navigationService.GoRace(_gameState, setup.Intent);
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Exception setting up the test-and-tune");
-                _dialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(
-                    _dialogService, GameText.Say("garage.strip_failed", ("error", ex.Message)), GameText.Say("garage.launch_error.title")));
-            }
-        }
-
         /// <summary>The repair bay for the selected car: each job paid for, timed and saved as it is done</summary>
         private void OnRepairs()
         {
@@ -612,6 +414,9 @@ namespace StreetCorsa.Screens.Garage
 
         /// <summary>A car is selected and it is in the garage, not the police impound</summary>
         private bool SelectedCarHere => SelectedCar is { CarInstance.IsImpounded: false };
+
+        /// <summary>There is a car in the garage to work on: the key and the car's buttons are shown</summary>
+        public bool IsCarHere => SelectedCarHere;
 
         public bool IsSelectedCarImpounded => SelectedCar?.CarInstance.IsImpounded == true;
 
@@ -677,21 +482,30 @@ namespace StreetCorsa.Screens.Garage
         private void RaiseImpoundChanged()
         {
             OnPropertyChanged(nameof(IsSelectedCarImpounded));
+            OnPropertyChanged(nameof(IsCarHere));
             OnPropertyChanged(nameof(ImpoundNote));
             OnPropertyChanged(nameof(CollectButtonText));
             RelayCommand.RaiseCanExecuteChanged();
-            FreeRunCommand?.RaiseCanExecuteChanged();
-            TestAndTuneCommand?.RaiseCanExecuteChanged();
         }
 
         /// <summary>"Sell", or where the selected car's sale stands when it is in the paper</summary>
-        public string SellButtonText
+        public string SellButtonText => !IsSelectedCarInPaper ? GameText.Say("garage.sell")
+            : HasSaleOffer ? GameText.Say("garage.sell.offer")
+            : GameText.Say("garage.sell.in_paper");
+
+        /// <summary>The selected car has an ad in the paper</summary>
+        public bool IsSelectedCarInPaper => SelectedAd != null;
+
+        /// <summary>Someone answered the selected car's ad, and the offer still stands</summary>
+        public bool HasSaleOffer => SelectedAd?.OfferOn(_gameState.Date) != null;
+
+        private CarSaleAd? SelectedAd => SelectedCar is { } selected ? _saleService.AdFor(_gameState, selected.CarInstance) : null;
+
+        private void RaiseSaleChanged()
         {
-            get
-            {
-                if (SelectedCar is not { } selected || _saleService.AdFor(_gameState, selected.CarInstance) is not { } ad) return GameText.Say("garage.sell");
-                return ad.Offer is { } offer && offer.Expires >= _gameState.Date ? GameText.Say("garage.sell.offer") : GameText.Say("garage.sell.in_paper");
-            }
+            OnPropertyChanged(nameof(SellButtonText));
+            OnPropertyChanged(nameof(IsSelectedCarInPaper));
+            OnPropertyChanged(nameof(HasSaleOffer));
         }
 
         /// <summary>Selling the selected car: to the dealer, or through the paper</summary>
@@ -715,29 +529,13 @@ namespace StreetCorsa.Screens.Garage
         private void AfterSale()
         {
             RefreshCalendarDisplay();
-            OnPropertyChanged(nameof(SellButtonText));
+            RaiseSaleChanged();
         }
 
         private void OnSelectCar()
         {
             _logger.Information("Navigating to the car lot");
             _navigationService.Leave(this, "car_lot", _gameState);
-        }
-
-        /// <summary>
-        /// Where a car that will not go is sorted out: an empty tank at the gas station (the garage only has a can of
-        /// gas, to get it there), the damage with the Repairs button
-        /// </summary>
-        private string WhereToSortOut(Car car)
-        {
-            var dry = Parts.Cars.CarCondition.FuelLeft(car) is { } fuel && fuel < Parts.Cars.CarCondition.TooLittleToRaceLitres;
-            if (!dry) return GameText.Say("garage.fix.repairs");
-
-            var groupOf = _partsService.IsAvailable ? Parts.Cars.CarCondition.Groups(_partsService.Catalog) : null;
-            var damaged = Parts.Cars.CarCondition.WhyCannotRace(car, groupOf, counting: false).Count > 0;
-            // A game with no gas station fills the tank overnight
-            var overnight = Rules.RuleBook.Current.Systems.Station ? string.Empty : ".overnight";
-            return damaged ? GameText.Say("garage.fix.repairs_and_gas" + overnight) : GameText.Say("garage.fix.gas" + overnight);
         }
 
         /// <summary>
@@ -875,7 +673,7 @@ namespace StreetCorsa.Screens.Garage
                 {
                     RefreshCalendarDisplay();
                     // The night may have brought an offer for a car in the paper, or the impound's release date
-                    OnPropertyChanged(nameof(SellButtonText));
+                    RaiseSaleChanged();
                     RaiseImpoundChanged();
 
                     // And the mail order, the morning after
@@ -1112,26 +910,9 @@ namespace StreetCorsa.Screens.Garage
         public override void Exit()
         {
             base.Exit();
-            RememberFreeRunTrack();
             // The part models are the garage's: the lots, the menus and a race have no use for them in memory
             StreetCorsa.Parts.PartAssembler.ClearModelCache();
             _logger.Information("Exited garage screen");
-        }
-
-        /// <summary>The free run's track, kept in the settings for next time, across saves; written only when it changed</summary>
-        private void RememberFreeRunTrack()
-        {
-            if (_freeRunTrack is not { } track || track.Key == _settingsService.Current.FreeRunTrack) return;
-
-            try
-            {
-                _settingsService.Current.FreeRunTrack = track.Key;
-                _settingsService.Save();
-            }
-            catch (Exception ex)
-            {
-                _logger.Warning("Could not remember the free run's track: {Error}", ex.Message);
-            }
         }
     }
 
@@ -1163,26 +944,6 @@ namespace StreetCorsa.Screens.Garage
         /// <summary>A day of the month already gone, drawn faint</summary>
         public bool IsPast { get; set; }
         public bool IsEmpty { get; set; }
-    }
-
-    /// <summary>A track, or one layout of it, a free run can go to</summary>
-    public sealed class FreeRunTrackViewModel
-    {
-        public FreeRunTrackViewModel(string trackId, string? configuration, string name)
-        {
-            TrackId = trackId;
-            Configuration = string.IsNullOrEmpty(configuration) ? null : configuration;
-            Name = name;
-        }
-
-        public string TrackId { get; }
-        public string? Configuration { get; }
-        public string Name { get; }
-
-        /// <summary>"track" or "track/configuration", as the settings remember it</summary>
-        public string Key => Configuration == null ? TrackId : $"{TrackId}/{Configuration}";
-
-        public override string ToString() => Name;
     }
 
     /// <summary>

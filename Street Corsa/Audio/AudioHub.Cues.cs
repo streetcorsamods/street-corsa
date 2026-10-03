@@ -33,6 +33,9 @@ public sealed partial class AudioHub
     private readonly LoopSlot _ambience = new("the place is quiet", AmbienceFadeSeconds);
     private readonly LoopSlot _music = new("no music plays", MusicFadeSeconds);
 
+    // The loops of a moment told to stop, fading out until they have
+    private readonly List<PlayingSound> _stoppingLoops = [];
+
     /// <summary>The cues the mods give, once read (at start-up, after the system)</summary>
     public SoundCues Cues => _cues;
 
@@ -138,6 +141,65 @@ public sealed partial class AudioHub
     }
 
     /// <summary>
+    /// A looping cue of a moment, round and round until the caller lets it go with <see cref="StopLoop"/>: the pump while
+    /// the tank fills. Fades in over <paramref name="fadeSeconds"/>. Null when there is no such cue, or the game is
+    /// silent. UI thread; never throws.
+    /// </summary>
+    public PlayingSound? PlayLoop(string name, float fadeSeconds = 0.3f)
+    {
+        try
+        {
+            if (_system == IntPtr.Zero || _shutDown || _racing || !_cuesLoaded) return null;
+            if (_cues.Get(name) is not { Loop: true } cue)
+            {
+                lock (_cueLock)
+                {
+                    if (_unknownTold.Add(name)) _logger.Debug("No looping sound cue {Cue}: the moment goes unheard", name);
+                }
+                return null;
+            }
+
+            string file;
+            lock (_cueLock) file = cue.Files[_random.Next(cue.Files.Count)];
+            var playing = Play(cue.Bus, file, loop: true, paused: true);
+            if (playing == null) return null;
+
+            playing.SetVolume(cue.Volume);
+            if (fadeSeconds > 0f) playing.Fade(0f, 1f, fadeSeconds, _mixRate, stopAtEnd: false);
+            playing.Resume();
+            return playing;
+        }
+        catch (Exception ex)
+        {
+            _logger.Warning("The {Cue} sound could not be played: {Error}", name, ex.Message);
+            return null;
+        }
+    }
+
+    /// <summary>A loop of <see cref="PlayLoop"/> faded out from where it is and let go of; nothing for none</summary>
+    public void StopLoop(PlayingSound? playing, float fadeSeconds = 0.3f)
+    {
+        if (playing == null) return;
+        try
+        {
+            if (fadeSeconds > 0f && playing.IsPlaying)
+            {
+                // Let go of by the pump once the fade has stopped it
+                playing.FadeFromHere(0f, fadeSeconds, _mixRate, stopAtEnd: true);
+                lock (_cueLock) _stoppingLoops.Add(playing);
+            }
+            else
+            {
+                playing.Stop();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Warning("A loop could not be stopped: {Error}", ex.Message);
+        }
+    }
+
+    /// <summary>
     /// The air of the place the player is in, a looping cue; null for none. Crossfades from the last one at the pump's
     /// next tick, and waits for the system and the cues when they are not there yet. Any thread.
     /// </summary>
@@ -154,12 +216,17 @@ public sealed partial class AudioHub
     {
         _ambience.Tick(this);
         _music.Tick(this);
+        lock (_cueLock) _stoppingLoops.RemoveAll(sound => !sound.IsPlaying);
     }
 
     /// <summary>At the release of the system, which frees them: their handles are not to be used again</summary>
     private void ForgetSounds()
     {
-        lock (_cueLock) _samples.Clear();
+        lock (_cueLock)
+        {
+            _samples.Clear();
+            _stoppingLoops.Clear();
+        }
         _ambience.Forget();
         _music.Forget();
     }

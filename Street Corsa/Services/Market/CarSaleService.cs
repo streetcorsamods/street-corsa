@@ -173,7 +173,7 @@ namespace StreetCorsa.Services.Market
 
         public async Task<SaleResult> AcceptOfferAsync(GameState gameState, CarSaleAd ad)
         {
-            if (!gameState.NewspaperAds.PlayerCars.Contains(ad) || ad.Offer is not { } offer || offer.Expires < gameState.Date)
+            if (!gameState.NewspaperAds.PlayerCars.Contains(ad) || ad.OfferOn(gameState.Date) is not { } offer)
                 return new SaleResult(SaleOutcome.NoOffer, GameText.Say("sell.offer.gone"));
 
             var car = gameState.Player.Cars.FirstOrDefault(c => c.InstanceId == ad.CarInstanceId);
@@ -242,7 +242,7 @@ namespace StreetCorsa.Services.Market
             var valueOf = _market.Valuer();
             foreach (var ad in ads)
             {
-                if (ad.Offer is { } old && old.Expires < currentDate) ad.Offer = null;
+                if (ad.Offer != null && ad.OfferOn(currentDate) == null) ad.Offer = null;
                 if (ad.Offer != null) continue;
 
                 var car = gameState.Player.Cars.First(c => c.InstanceId == ad.CarInstanceId);
@@ -263,6 +263,7 @@ namespace StreetCorsa.Services.Market
                 var rival = RivalBuyer(gameState, car, amount, random);
                 ad.Offer = new CarOffer
                 {
+                    Id = Guid.NewGuid(),
                     BuyerName = rival?.Name ?? GameText.Installed.Pick("names.car_buyers", random),
                     RivalName = rival?.Name,
                     Amount = amount,

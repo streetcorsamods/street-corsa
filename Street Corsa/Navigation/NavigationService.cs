@@ -353,7 +353,7 @@ namespace StreetCorsa.Navigation
                 case ScreenKinds.Garage:
                     return SafeNavigate(name, () => new Screens.Garage.GarageScreenViewModel(
                         this, _dialogService, game, _catalogRepository, _launcher, _carPartsService, _gameStateRepository,
-                        _timeService, _gameSettingsService, _contentService, _raceCarDataService, _saleService,
+                        _timeService, _saleService,
                         args.SkipAnimation, args.Arrival, args.EndDay), id);
                 case ScreenKinds.CarLot:
                     return SafeNavigate(name, () => new Screens.CarLot.CarLotScreenViewModel(
@@ -365,7 +365,7 @@ namespace StreetCorsa.Navigation
                 case ScreenKinds.Diner:
                     return SafeNavigate(name, () => new Screens.Diner.DinerScreenViewModel(
                         this, _dialogService, game, _catalogRepository, _opponentChallengeService, _contentService,
-                        _talkService, _timeService, _gameStateRepository, _raceSetup, args.Returning), id);
+                        _talkService, _timeService, _gameStateRepository, _raceSetup, _carPartsService, args.Returning), id);
                 case ScreenKinds.Street:
                     return SafeNavigate(name, () => new Screens.Cruise.CruiseScreenViewModel(
                         this, _dialogService, game, _catalogRepository, _opponentChallengeService, _contentService,
@@ -653,7 +653,8 @@ namespace StreetCorsa.Navigation
         /// <summary>
         /// A race, set up by the screen on show: after it the player comes back there (or where its <c>after_race</c>
         /// way out leads), unless the intent already says where. The screen's leave script plays first, as for any way
-        /// out; not for a race set up in an overlay over it (the racing hub), which the show would play behind.
+        /// out; not for a race set up in an overlay over it (the racing hub's invitations), which the show would play
+        /// behind. The hub's test-and-tune plays it, as the garage's own button did.
         /// </summary>
         public bool GoRace(GameState gameState, DragRaceLaunchIntent intent, bool fromOverlay = false)
         {
@@ -742,8 +743,9 @@ namespace StreetCorsa.Navigation
             under != null && ReferenceEquals(CurrentScreen, under) ? Depart(under, _flow.Exit(id, exit), go) : go();
 
         /// <summary>
-        /// The racing hub, over the current screen (the garage's "Go race!"): the race invitations, Street News, the way
-        /// out onto the streets (its "streets" way out, shown while it leads somewhere). A race set up from it comes back
+        /// The racing hub, over the current screen (the garage's "Go race!"): the race invitations, Street News, a free run
+        /// and a test-and-tune of the selected car, the way out onto the streets (its "streets" way out, shown while it
+        /// leads somewhere). A race set up from it comes back
         /// to the screen it was opened over. One that fails to build is logged and the player told, as a screen is.
         /// False when it did not open.
         /// </summary>
@@ -763,8 +765,10 @@ namespace StreetCorsa.Navigation
                     _eventOpponentService,
                     _contentService,
                     _raceSetup,
+                    new Screens.Shared.PracticeRuns(_dialogService, _launcher, _carPartsService, _gameStateRepository, _timeService,
+                        _gameSettingsService, _contentService, _raceCarDataService, _raceSetup),
                     stillHome: () => ReferenceEquals(CurrentScreen, home),
-                    race: intent => GoRace(gameState, intent, fromOverlay: true),
+                    race: (intent, leave) => GoRace(gameState, intent, fromOverlay: !leave),
                     streets ? () => Via(leaveVia, () => LeaveOverlay(home, id, "streets", gameState, () => LeaveFrom(id, "streets", gameState))) : null));
                 return true;
             }

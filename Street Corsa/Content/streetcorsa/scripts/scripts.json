@@ -41,10 +41,13 @@
     {
       "id": "station_arrive",
       "trigger": "station.arrive",
-      "_comment": "In off the road to the pump, the headlights on after dark; off once it stands there.",
+      "_comment": "In off the road to the pump, the headlights on after dark; the driveway bell as the wheels roll over its hose, a moment before the car stops; the lights off once it stands there.",
       "steps": [
         { "if": { "light": "night" }, "then": [ { "do": "lights", "head": true } ] },
-        { "do": "drive", "path": "arrive", "feel": "road", "start": "rolling" },
+        { "do": "drive", "path": "arrive", "feel": "road", "start": "rolling", "wait": false },
+        { "do": "wait", "until": "drive_end", "early": 1.0 },
+        { "do": "sound", "cue": "station.bell" },
+        { "do": "wait", "until": "drive_end" },
         { "do": "lights", "head": false }
       ]
     },

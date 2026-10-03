@@ -285,6 +285,12 @@ namespace StreetCorsa.Services.Scripting
                             _ => throw new FormatException($"{where}: \"mode\" is \"hold\" or \"follow\"")
                         });
                     }
+                    case "sound":
+                    {
+                        Only(s, where, "do", "cue", "_comment");
+                        if (!ModJson.TryGet(s, "cue", out var cue)) throw new FormatException($"{where} has no \"cue\"");
+                        return new SoundStep(Text(cue, $"{where}.cue"));
+                    }
                     case "release":
                         Only(s, where, "do", "_comment");
                         return new ReleaseStep();
@@ -292,7 +298,7 @@ namespace StreetCorsa.Services.Scripting
                         Only(s, where, "do", "_comment");
                         return new EndStep();
                     default:
-                        throw new FormatException($"{where}: \"{kind}\" is no step (lights, engine, wait, drive, place, fade, camera, release, end, or an \"if\")");
+                        throw new FormatException($"{where}: \"{kind}\" is no step (lights, engine, wait, drive, place, fade, camera, sound, release, end, or an \"if\")");
                 }
             }
 

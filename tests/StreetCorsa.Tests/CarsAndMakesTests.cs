@@ -234,6 +234,32 @@ public class CarsAndMakesTests : IDisposable
     }
 
     [Fact]
+    public void The_parts_views_shows_take_their_kinds_the_rest_of_the_engine_and_a_mod_adds_or_changes_one()
+    {
+        var base_ = PartGroups.Load([Path.Combine(RepoPaths.BaseContent, ContentTypes.Parts)]);
+        Assert.Equal(["engine", "drivetrain", "brakes", "suspension"], base_.Shows.Select(s => s.Id));
+        Assert.Equal("drivetrain", base_.ShowOf(PartGroups.Transmissions, inEngine: true)!.Id);
+        Assert.Equal("engine", base_.ShowOf("flywheels", inEngine: true)!.Id);
+        Assert.Equal("engine", base_.ShowOf(PartGroups.CylinderHeads, inEngine: true)!.Id);
+        Assert.Equal("engine", base_.ShowOf(PartGroups.Accessories, inEngine: true)!.Id);
+        Assert.Equal("brakes", base_.ShowOf(PartGroups.Brakes, inEngine: false)!.Id);
+        Assert.Equal("suspension", base_.ShowOf(PartGroups.Shocks, inEngine: false)!.Id);
+        Assert.Null(base_.ShowOf(PartGroups.Accessories, inEngine: false));
+
+        var mods = WithMod(("parts/part_groups.json", """
+            {
+              "groups": [ { "id": "differentials", "classes": [ "Differential" ] } ],
+              "shows": [ { "id": "brakes", "icon": "icons/brake_drum" }, { "id": "body", "icon": "icons/car", "groups": [ "panels" ] } ]
+            }
+            """));
+        var groups = PartGroups.Load(mods.Folders(ContentTypes.Parts).Select(f => f.Dir));
+        Assert.Empty(groups.Problems);
+        Assert.Equal(["engine", "drivetrain", "brakes", "suspension", "body"], groups.Shows.Select(s => s.Id));
+        Assert.Equal("icons/brake_drum", groups.ShowOf(PartGroups.Brakes, inEngine: false)!.Icon);
+        Assert.Equal("drivetrain", groups.ShowOf("differentials", inEngine: false)!.Id);
+    }
+
+    [Fact]
     public void A_group_reads_as_its_words_else_its_name_else_its_id()
     {
         var before = PartGroups.Current;

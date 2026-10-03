@@ -11,6 +11,9 @@ namespace StreetCorsa.Services.Settings
         // Where the last free run went: "track" or "track/configuration"
         public string FreeRunTrack { get; set; } = string.Empty;
 
+        // The strip the last test-and-tune went to, the same way; empty for the one a race would pick
+        public string TestAndTuneStrip { get; set; } = string.Empty;
+
         /// <summary>
         /// The Assetto Corsa folder; null for the default (<see cref="StreetCorsa.Configuration.AppSettings.DefaultAssettoCorsaPath"/>).
         /// Read once, when the settings load at start-up: a change takes effect at the next start.

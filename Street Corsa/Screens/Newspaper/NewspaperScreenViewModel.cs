@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+using StreetCorsa.Configuration;
 using StreetCorsa.Dialogs;
 using StreetCorsa.Dialogs.Confirmation;
 using StreetCorsa.Dialogs.Information;
@@ -7,6 +7,7 @@ using StreetCorsa.Logging;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Navigation;
 using StreetCorsa.Parts;
+using StreetCorsa.Parts.Export;
 using StreetCorsa.Screens.Shared;
 using StreetCorsa.Services.Catalog;
 using StreetCorsa.Services.Dealers;
@@ -30,8 +31,9 @@ namespace StreetCorsa.Screens.Newspaper
     /// <summary>
     /// The paper: the classifieds, nothing else (the race invitations and Street News are the racing hub's). Two sections,
     /// used cars and used parts, set as a period paper's ads and read a page at a time as the player scrolls. Every car
-    /// for sale is there, the dealers' and the racers' own, with the player's own ads and their buyers at the top; every
-    /// used part ad, the racers' too. An ad is bought from here, and clicked to go and look at it.
+    /// for sale is there, the dealers', the racers' own and the player's own (somewhere among the rest, circled in pencil;
+    /// clicked, the buyer who called); every used part ad, the racers' too. An ad is bought from here, and clicked to go
+    /// and look at it.
     /// </summary>
     public class NewspaperScreenViewModel : BaseScreenViewModel
     {
@@ -132,10 +134,6 @@ namespace StreetCorsa.Screens.Newspaper
         public bool ShowNoCars => !IsLoading && !HasCarAds;
         public bool ShowNoParts => !IsLoading && !HasPartAds;
 
-        /// <summary>The player's own cars in the paper, and the buyers who called about them</summary>
-        public ObservableCollection<PlayerCarAdViewModel> PlayerAds { get; } = [];
-        public bool HasPlayerAds => PlayerAds.Count > 0;
-
         private bool _isLoading;
 
         /// <summary>The paper is being put together: the first market of a game gives every car an engine, which takes a few seconds</summary>
@@ -222,7 +220,6 @@ namespace StreetCorsa.Screens.Newspaper
 
         private void LoadAll()
         {
-            LoadPlayerAds();
             LoadCarAds();
             LoadPartAds();
             OnPropertyChanged(nameof(EditionDisplay));
@@ -230,7 +227,7 @@ namespace StreetCorsa.Screens.Newspaper
 
         private PartsCatalog? Catalog => _partsService.IsAvailable ? _partsService.Catalog : null;
 
-        /// <summary>Every car for sale, the lots' and the racers' own, by make</summary>
+        /// <summary>Every car for sale, the lots' and the racers' own by make, the player's own in among them</summary>
         private void LoadCarAds()
         {
             try
@@ -261,7 +258,20 @@ namespace StreetCorsa.Screens.Newspaper
                     }
                 }
 
-                CarAds.Fill(ads.OrderBy(a => a.SortKey, StringComparer.CurrentCultureIgnoreCase));
+                var mine = new List<(Guid, CarAdViewModel)>();
+                foreach (var sale in _gameState.NewspaperAds.PlayerCars)
+                {
+                    try
+                    {
+                        if (PlayerCarAd(sale, catalog) is { } ad) mine.Add((sale.AdId, ad));
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Warning("Could not show the player's ad {AdId}: {Error}", sale.AdId, ex.Message);
+                    }
+                }
+
+                CarAds.Fill(ClassifiedOrder.Mix(ads.OrderBy(a => a.SortKey, StringComparer.CurrentCultureIgnoreCase), mine));
             }
             catch (Exception ex)
             {
@@ -273,7 +283,30 @@ namespace StreetCorsa.Screens.Newspaper
             OnPropertyChanged(nameof(ShowNoCars));
         }
 
-        private CarAdViewModel? CarAd(UsedCarListing listing, RivalCarAds.Offer? rivalOffer, string seller)
+        /// <summary>
+        /// The player's own ad, set like the others: its words written the first time it is shown (and offered to the
+        /// player's AI; what it writes shows the next time the paper opens), the car as it stands in the garage
+        /// </summary>
+        private CarAdViewModel? PlayerCarAd(CarSaleAd sale, PartsCatalog? catalog)
+        {
+            if (_gameState.Player.Cars.FirstOrDefault(c => c.InstanceId == sale.CarInstanceId) is not { } car) return null;
+
+            IReadOnlySet<string>? Factory() => _marketService.FactoryParts(car.DefinitionId);
+            _wroteBlurbs |= AdBlurbs.Ensure(sale, car, catalog, Factory, () => _marketService.DescribeEngine(car));
+            AdBlurbs.Polish(sale, car, catalog, Factory);
+
+            // A listing to show it by, never put in the market; the ad's own price and words
+            var listing = _marketService.ListCar(car, sale.AskingPrice, string.Empty, sale.PostedDate, describeEngine: false);
+            listing.Id = sale.AdId.ToString();
+            listing.Price = sale.AskingPrice;
+            listing.PowerHp = car.PowerHp;
+            listing.EngineSummary = sale.EngineSummary;
+            listing.IsModified = sale.IsModified;
+            listing.Description = sale.Description;
+            return CarAd(listing, null, _gameState.Player.Name, sale);
+        }
+
+        private CarAdViewModel? CarAd(UsedCarListing listing, RivalCarAds.Offer? rivalOffer, string seller, CarSaleAd? playerAd = null)
         {
             var definition = _catalogRepository.GetCar(listing.CarDefinitionId);
             var profile = _profileRepository.GetProfile(listing.CarDefinitionId);
@@ -289,13 +322,17 @@ namespace StreetCorsa.Screens.Newspaper
                 CarDefinition = definition,
                 CarProfile = profile,
                 RivalAd = rivalOffer?.Ad,
-                PrivateSeller = rivalOffer?.Seller.Name,
+                PrivateSeller = rivalOffer?.Seller.Name ?? (playerAd != null ? seller : null),
                 DealerName = seller,
                 CanAfford = _gameState.Player.Money >= listing.Price
             };
 
             CarAdViewModel? ad = null;
-            ad = new CarAdViewModel(car, new RelayCommand(() => OnLookAtCar(ad!)));
+            ad = new CarAdViewModel(car, new RelayCommand(() =>
+            {
+                if (ad!.IsPlayerAd) OnOpenPlayerAd(ad);
+                else OnLookAtCar(ad);
+            }), playerAd, _gameState.Date);
             return ad;
         }
 
@@ -370,54 +407,49 @@ namespace StreetCorsa.Screens.Newspaper
 
         // ----- the player's own ads -----
 
-        private void LoadPlayerAds()
+        /// <summary>
+        /// The player's own ad clicked: the ad, the car, and the buyer who called, to take, turn down or (the player's AI
+        /// on) call back
+        /// </summary>
+        private void OnOpenPlayerAd(CarAdViewModel row)
         {
-            PlayerAds.Clear();
-            try
+            var sale = row.PlayerAd!;
+            if (_gameState.Player.Cars.FirstOrDefault(c => c.InstanceId == sale.CarInstanceId) is not { } car)
             {
-                foreach (var ad in _gameState.NewspaperAds.PlayerCars)
+                CarAds.Remove(row);
+                OnPropertyChanged(nameof(HasCarAds));
+                OnPropertyChanged(nameof(ShowNoCars));
+                return;
+            }
+
+            var preview = AcCarFolder.PreviewImage(AppSettings.Instance.CarsPath, car.DefinitionId, car.SkinId);
+            _dialogService.ShowDialog(new Dialogs.PlayerAd.PlayerAdDialogViewModel(_dialogService, _gameState, row, car, preview,
+                () => Services.Talk.TalkDesk.Shared.ForBuyer(_gameState, sale, row.Car),
+                ad => OnAcceptOffer(ad, row),
+                ad => OnDeclineOffer(ad, row),
+                () =>
                 {
-                    var car = _gameState.Player.Cars.FirstOrDefault(c => c.InstanceId == ad.CarInstanceId);
-                    if (car == null) continue;
-
-                    var definition = _catalogRepository.GetCar(car.DefinitionId);
-                    var name = definition != null ? CarNames.MakeAndModel(definition) : car.DefinitionId;
-                    var hasOffer = ad.Offer is { } offer && offer.Expires >= _gameState.Date;
-                    PlayerAds.Add(new PlayerCarAdViewModel(
-                        name,
-                        GameText.Say("paper.ad.asking", ("price", new Money(ad.AskingPrice))),
-                        hasOffer
-                            ? GameText.Say("paper.ad.offer", ("buyer", CarSaleService.Capitalized(ad.Offer!.BuyerName)),
-                                ("amount", new Money(ad.Offer.Amount)), ("until", ad.Offer.Expires))
-                            : GameText.Say("paper.ad.no_offer"),
-                        hasOffer,
-                        new RelayCommand(() => OnAcceptOffer(ad, name)),
-                        new RelayCommand(() => OnDeclineOffer(ad))));
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Could not list the player's ads");
-            }
-
-            OnPropertyChanged(nameof(HasPlayerAds));
+                    // A call may have raised the offer, or sent the buyer away
+                    row.RefreshOffer();
+                    Save("a call to a buyer");
+                }));
         }
 
-        private void OnAcceptOffer(CarSaleAd ad, string carName)
+        private void OnAcceptOffer(CarSaleAd ad, CarAdViewModel row)
         {
             if (ad.Offer is not { } offer) return;
 
             _dialogService.ShowDialog(new ConfirmationDialogViewModel(_dialogService,
-                GameText.Say("paper.sell.confirm", ("car", carName), ("buyer", offer.BuyerName), ("amount", new Money(offer.Amount))),
+                GameText.Say("paper.sell.confirm", ("car", row.Car.DisplayName), ("buyer", offer.BuyerName), ("amount", new Money(offer.Amount))),
                 GameText.Say("sell.title"),
                 yes =>
                 {
-                    if (yes) SellToBuyer(ad);
+                    if (yes) SellToBuyer(ad, row);
                 }));
         }
 
-        /// <summary>The offer taken up: the car goes to the buyer, and the player is told how it went</summary>
-        private async void SellToBuyer(CarSaleAd ad)
+        /// <summary>The offer taken up: the car goes to the buyer, its ad out of the paper, and the player is told how it went</summary>
+        private async void SellToBuyer(CarSaleAd ad, CarAdViewModel row)
         {
             // Nothing may escape an async void, the telling included
             try
@@ -433,7 +465,17 @@ namespace StreetCorsa.Screens.Newspaper
                     result = new SaleResult(SaleOutcome.Refused, GameText.Say("sell.failed", ("error", ex.Message)));
                 }
 
-                ShowSaleResult(result, GameText.Say(result.Succeeded ? "sell.sold.title" : "sell.no_sale.title"));
+                if (!_gameState.NewspaperAds.PlayerCars.Contains(ad))
+                {
+                    CarAds.Remove(row);
+                    OnPropertyChanged(nameof(HasCarAds));
+                    OnPropertyChanged(nameof(ShowNoCars));
+                }
+                else row.RefreshOffer();
+
+                var message = result.SaveFailed ? GameText.Say("sell.save_failed", ("message", result.Message)) : result.Message;
+                _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, message,
+                    GameText.Say(result.Succeeded ? "sell.sold.title" : "sell.no_sale.title")));
             }
             catch (Exception ex)
             {
@@ -441,17 +483,10 @@ namespace StreetCorsa.Screens.Newspaper
             }
         }
 
-        private void OnDeclineOffer(CarSaleAd ad)
+        private void OnDeclineOffer(CarSaleAd ad, CarAdViewModel row)
         {
             _saleService.DeclineOffer(_gameState, ad);
-            LoadPlayerAds();
-        }
-
-        private void ShowSaleResult(SaleResult result, string title)
-        {
-            LoadPlayerAds();
-            var message = result.SaveFailed ? GameText.Say("sell.save_failed", ("message", result.Message)) : result.Message;
-            _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, message, title));
+            row.RefreshOffer();
         }
 
         private void OnBack()

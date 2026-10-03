@@ -98,6 +98,7 @@ public class CarScriptingTests : IDisposable
     [InlineData("""{ "do": "wait" }""", "says neither \"seconds\" nor \"until\"")]
     [InlineData("""{ "do": "fade", "to": 2 }""", "is not between 0 and 1")]
     [InlineData("""{ "if": { "light": "noon" } }""", "light \"noon\" is none of")]
+    [InlineData("""{ "do": "sound" }""", "has no \"cue\"")]
     public void A_broken_replacement_is_left_out_said_and_the_base_games_script_stands(string step, string said)
     {
         var problems = new List<string>();
@@ -108,7 +109,7 @@ public class CarScriptingTests : IDisposable
         var problem = Assert.Single(problems);
         Assert.Contains(said, problem);
         Assert.Contains("mymod/scripts/mine.json", problem);
-        Assert.Equal(3, book.For(ScriptTriggers.StationArrive, ScriptFacts.None, null)!.Steps.Count);
+        Assert.Equal(6, book.For(ScriptTriggers.StationArrive, ScriptFacts.None, null)!.Steps.Count);
     }
 
     [Fact]
@@ -429,6 +430,39 @@ public class CarScriptingTests : IDisposable
     }
 
     [Fact]
+    public void The_driveway_bell_rings_a_moment_before_the_car_stops_at_the_pump_and_not_when_skipped_past()
+    {
+        var clock = new FakeClock();
+        var stage = new FakeStage(clock);
+        stage.Marks["pump"] = new MarkSpec(X: 0, Z: 40);
+        var run = Play(Script(30f,
+            DriveTo("pump", wait: false),
+            new WaitStep(null, WaitFor.DriveEnd, 30f, 1f),
+            new SoundStep("station.bell"),
+            new WaitStep(null, WaitFor.DriveEnd, 30f, 0f)), stage, clock);
+
+        var plan = stage.Car.LastPlan!;
+        clock.Advance(plan.Duration - 1.5);
+        Assert.Empty(stage.Sounds);
+        clock.Advance(0.6);
+        Assert.Equal(["station.bell"], stage.Sounds);
+        clock.Advance(1.1);
+        Assert.Equal(ScriptEnd.Finished, EndOf(run));
+
+        // A click that skips the drive in skips the bell with it
+        var skipped = new FakeStage(clock);
+        skipped.Marks["pump"] = new MarkSpec(X: 0, Z: 40);
+        var again = Play(Script(30f,
+            DriveTo("pump", wait: false),
+            new WaitStep(null, WaitFor.DriveEnd, 30f, 1f),
+            new SoundStep("station.bell")), skipped, clock);
+        clock.Advance(0.5);
+        again.Skip();
+        Assert.Equal(ScriptEnd.Skipped, EndOf(again));
+        Assert.Empty(skipped.Sounds);
+    }
+
+    [Fact]
     public void A_skipped_script_does_the_rest_at_once_the_car_where_it_would_end()
     {
         var clock = new FakeClock();
@@ -739,6 +773,10 @@ public class CarScriptingTests : IDisposable
         public void Camera(IScriptCar of, CameraMode mode)
         {
         }
+
+        public List<string> Sounds { get; } = [];
+
+        public void Sound(string cue) => Sounds.Add(cue);
     }
 
     #endregion

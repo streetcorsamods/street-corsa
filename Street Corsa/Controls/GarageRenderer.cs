@@ -93,13 +93,20 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     private bool _standActive;
     private Kn5RenderableFile? _candidates;
     private List<PartNode> _propNodes = new();
+
+    // Mounted parts the player has put out of sight by their kind (the parts view's show buttons): not drawn, not picked.
+    // Kept apart from the nodes' own on/off, which the motions own: a part hidden on its way somewhere goes on its way,
+    // out of sight. Those fading out or back in, at how far they are in sight (0 gone, 1 in sight).
+    private HashSet<PartNode> _hiddenNodes = new();
+    private readonly Dictionary<PartNode, float> _hideFades = new();
     private List<PartNode> _candidateNodes = new();
     private PartHit? _hovered;
     private int? _selected;
     private readonly List<Motion> _motions = new();
 
-    // The part nodes drawn see-through over the scene right now, and the filter that leaves them out of every other pass
-    private HashSet<RenderableList>? _fading;
+    // The part nodes drawn see-through over the scene right now, at their step of the fade (0: not drawn at all, a
+    // hidden part), and the filter that leaves them out of every other pass
+    private Dictionary<RenderableList, float>? _fading;
     private Func<IRenderableObject, bool>? _settled;
 
     // Whether the prop and the candidates lean with the car's body: not the ones made for the stand
@@ -670,9 +677,10 @@ public class GarageRenderer : DarkKn5ObjectRenderer
 
     private void TickPartMotions(float dt)
     {
+        var step = Math.Min(dt, MaxTickSeconds);
+        TickHideFades(step);
         if (_motions.Count == 0) return;
 
-        var step = Math.Min(dt, MaxTickSeconds);
         foreach (var motion in _motions)
         {
             motion.Advance(step);
@@ -695,18 +703,53 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     /// </summary>
     private void UpdateFading()
     {
-        var fading = _motions.Count == 0 ? null : _motions.Where(IsSeeThrough).Select(m => m.Node.List).ToHashSet();
-        if (fading is { Count: 0 }) fading = null;
-        if (fading == null ? _fading == null : _fading != null && _fading.SetEquals(fading)) return;
+        Dictionary<RenderableList, float>? fading = null;
+        foreach (var node in _motions.Select(m => m.Node).Concat(_hiddenNodes).Concat(_hideFades.Keys).Distinct())
+        {
+            if (!node.List.IsEnabled) continue;
+            var step = (float)Math.Round(OpacityOf(node) * FadeSteps);
+            if (step < FadeSteps) (fading ??= new())[node.List] = step;
+        }
 
+        var same = fading == null ? _fading == null : _fading != null && _fading.Count == fading.Count && fading.Keys.All(_fading.ContainsKey);
         _fading = fading;
-        _settled = fading == null ? null : o => o is not RenderableList list || !fading.Contains(list);
+        if (same) return;
+
+        _settled = fading == null ? null : o => o is not RenderableList list || !fading.ContainsKey(list);
         SetShadowsDirty();
     }
 
-    /// <summary>Whether a motion is drawn see-through over the scene, not with the rest (<see cref="DrawFading"/>)</summary>
-    private static bool IsSeeThrough(Motion motion) =>
-        motion is PartMotion part && part.Node.List.IsEnabled && Math.Round(part.Opacity * FadeSteps) < FadeSteps;
+    /// <summary>
+    /// How much of a part node is in sight, drawn see-through over the scene below 1 (<see cref="DrawFading"/>): the way
+    /// it is going (a part fades as it travels) and whether the player hid it
+    /// </summary>
+    private float OpacityOf(PartNode node)
+    {
+        var travel = _motions.OfType<PartMotion>().FirstOrDefault(m => ReferenceEquals(m.Node, node))?.Opacity ?? 1f;
+        var shown = _hideFades.TryGetValue(node, out var fade) ? fade : _hiddenNodes.Contains(node) ? 0f : 1f;
+        return travel * shown;
+    }
+
+    /// <summary>The parts going out of sight or coming back, a step further; each is done with once it gets there</summary>
+    private void TickHideFades(float step)
+    {
+        if (_hideFades.Count == 0) return;
+
+        foreach (var node in _hideFades.Keys.ToList())
+        {
+            var to = _hiddenNodes.Contains(node) ? 0f : 1f;
+            var at = _hideFades[node];
+            at = to > at ? Math.Min(to, at + step / PartMotionSeconds) : Math.Max(to, at - step / PartMotionSeconds);
+            if (at == to) _hideFades.Remove(node);
+            else _hideFades[node] = at;
+        }
+
+        if (_motions.Count == 0)
+        {
+            UpdateFading();
+            IsDirty = true;
+        }
+    }
 
     /// <summary>A part node on its way somewhere, once it has waited its turn</summary>
     private abstract class Motion
@@ -975,6 +1018,33 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         IsDirty = true;
     }
 
+    /// <summary>
+    /// The mounted parts out of sight, given by node: those newly hidden fade out wherever they are, those shown again
+    /// fade back in, at once without <paramref name="fade"/>. A part on its way somewhere goes on its way, in sight or
+    /// not. No sound: nothing comes off, they are only not looked at. A new prop shows everything until it is told again.
+    /// </summary>
+    public void SetHiddenParts(IReadOnlyCollection<int> nodes, bool fade)
+    {
+        var hidden = nodes.Where(n => n >= 0 && n < _propNodes.Count).Select(n => _propNodes[n]).ToHashSet();
+        var going = hidden.Where(n => !_hiddenNodes.Contains(n)).ToList();
+        var coming = _hiddenNodes.Where(n => !hidden.Contains(n) && _propNodes.Contains(n)).ToList();
+        _hiddenNodes = hidden;
+        if (going.Count == 0 && coming.Count == 0) return;
+
+        foreach (var node in going.Concat(coming))
+        {
+            node.IsHidden = hidden.Contains(node);
+            if (!fade) _hideFades.Remove(node);
+            else if (!_hideFades.ContainsKey(node)) _hideFades[node] = node.IsHidden ? 1f : 0f;
+        }
+
+        if (_selected is { } selected && selected < _propNodes.Count && hidden.Contains(_propNodes[selected])) _selected = null;
+        _hovered = null;
+        SetShadowsDirty();
+        UpdateFading();
+        IsDirty = true;
+    }
+
     /// <summary>Replaces the prop; pass null to remove it. Must be called on the thread that draws.</summary>
     public void SetProp(IKn5? kn5, Matrix placement)
     {
@@ -988,6 +1058,8 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         _propPlacement = placement;
         _prop = kn5 == null ? null : new Kn5RenderableFile(kn5, placement * (_propLeans ? _bodyLean : Matrix.Identity), asyncTexturesLoading: hiddenAtFirst);
         _propNodes = PartNode.Of(_prop);
+        _hiddenNodes = new();
+        _hideFades.Clear();
 
         // An engine for the stand: how far it can turn over is worked out upright, then it is turned as far as the one
         // before it was, and goes on from there to where it can
@@ -1227,8 +1299,11 @@ public class GarageRenderer : DarkKn5ObjectRenderer
             return nodes;
         }
 
+        /// <summary>Put out of sight by the player (its kind's show button): not drawn, not picked</summary>
+        public bool IsHidden { get; set; }
+
         /// <summary>Distance along the ray to the part's surface; null when the ray misses it</summary>
-        public float? Intersect(Ray ray) => Nearest(ray, _meshes);
+        public float? Intersect(Ray ray) => List.IsEnabled && !IsHidden ? Nearest(ray, _meshes) : null;
     }
 
     protected override void DrawCars(DeviceContextHolder holder, ICamera camera, SpecialRenderMode mode)
@@ -1276,13 +1351,13 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         _fadeBuffer.Resize(holder, Width, Height, null);
         _ghostBlend ??= CreateGhostBlend(holder.Device);
 
-        foreach (var group in _motions.Where(IsSeeThrough).Cast<PartMotion>().GroupBy(m => (float)Math.Round(m.Opacity * FadeSteps)))
+        var siblings = _propNodes.Count > 0 ? _propNodes[0].Siblings : new HashSet<RenderableList>();
+        foreach (var group in _fading.GroupBy(f => f.Value))
         {
             var opacity = group.Key / FadeSteps;
             if (opacity <= 0f) continue;
 
-            var lists = group.Select(m => m.Node.List).ToHashSet();
-            var siblings = group.First().Node.Siblings;
+            var lists = group.Select(f => f.Key).ToHashSet();
             bool Only(IRenderableObject o) => o is not RenderableList list || !siblings.Contains(list) || lists.Contains(list);
 
             // In the scene's depth, so what is in front of them still is

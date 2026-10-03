@@ -107,7 +107,7 @@ namespace StreetCorsa.Dialogs.SellCar
                 ("until", ad.PostedDate.AddDays(CarSaleService.AdDays)))
             : string.Empty;
 
-        public bool HasOffer => Ad?.Offer is { } offer && offer.Expires >= _gameState.Date;
+        public bool HasOffer => Ad?.OfferOn(_gameState.Date) != null;
 
         public string OfferDisplay => Ad?.Offer is { } offer && HasOffer
             ? GameText.Say("sell.ad.offer", ("buyer", CarSaleService.Capitalized(offer.BuyerName)), ("amount", new Money(offer.Amount)),

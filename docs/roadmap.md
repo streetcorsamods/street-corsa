@@ -1292,6 +1292,30 @@ person so asking again never goes under the first floor. The car viewing screen'
 talk (`AiWriter.DealerTakeAsync` is no longer called). Tried live against Ollama: `streetcorsa` (llama3.1:8b) talks
 well; llama3.2:3b mixes up prices.
 
+## Step 27: from `docs/ideas.txt`, batch 7: polish (built 2026-10-03)
+
+The owner's play-test list, one PR (branch `feature/ideas-batch-6`), before E9. The owner's decisions: the Door icon is
+the owner's `car_door.png`; the player's own ad opens a window with the buyer's offer and, with the AI on, a call to the
+buyer who haggles (a new talk role); the car key starts the engine and swaps the buttons for the engine bar, stopping it
+swaps them back; Test and Tune picks its strip from the same cards as Free Run.
+
+- **Cars drive home**: back from the street, the diner or the gas station the car drives into the garage as one from
+  the lot does (`Screens/Shared/DrivingHome`), unless it was towed, held or is dry.
+- **Gas station**: the driveway bell is a `sound` step of `station_arrive`, a second before the car stops; the pump is
+  heard filling (`station.pump.*`, `AudioHub.PlayLoop`, CC0 freesound 382268); night headlights reach 40 m at twice the
+  brightness (`SceneLights.BrightenHeadlights`); the attendant's window goes on DRIVE OFF.
+- **Garage bar**: round icon buttons under the car (key, parts, stand, turn over, repairs, lights, door, rotate;
+  `RoundIconToggleStyle`), the engine bar behind the key; Sell (handshake) beside the car's name, a dot for an ad, amber
+  for an offer.
+- **Racing hub**: Free Run and Test and Tune beside Hit the streets (`Screens/Shared/PracticeRuns`), each through the
+  track picker (`Dialogs/TrackPicker`: search, lazily loaded cards, the last pick first; `GameSettings.TestAndTuneStrip`).
+- **Paper**: the masthead in the top band over the thick rule; the player's ads among the others at stable places
+  (`ClassifiedOrder.Mix`), ringed in grease pencil, their words written and offered to the AI like the rest; clicking one
+  opens `Dialogs/PlayerAd` (the car, the offer, Take / Turn down, Call the buyer). The buyer haggles up to a hidden
+  ceiling per offer (`ai.talk.mostRaise`) or walks away (`Haggle.DecideAsk`).
+
+Not seen in game: all of it. Unchecked: the headlights' look, 300+ tracks in the picker, the buyer talk's tone.
+
 ## Epic: total conversion (planned 2026-09-30)
 
 The owner wants the whole game moddable, so the community can add game modes and whole new games (a Tokyo Drift game

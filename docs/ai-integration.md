@@ -91,6 +91,19 @@ The AI only speaks: the game decides every fact and every price.
   "Buy it for $X", which runs the screen's own purchase (the car viewing screen's, the lot's, the part preview's).
   An answer that names a lower price than the one standing, that no fact or player line gives, is asked again with a
   word on it (`chat.fact.price_warning`); a second time, the game says the price itself (`chat.deal.held`).
+- **The buyer who answered the player's ad** (ideas batch 6): "Call the buyer" on the player's own ad in the paper
+  (`Dialogs/PlayerAd`, `TalkDesk.ForBuyer`, `BuyerSubject`). The player sells: the person is the caller (`PersonKind.Buyer`,
+  named as they gave it, `chat_buyer`; a rival who called is the rival, `chat_rival`, the fact sheet saying they buy),
+  told the car as a seller would be (`TalkFacts.PlayersCar`). A number the player types (with `chat.offer_words` or
+  `chat.ask_words`) is a price asked of them, decided by `Haggle.DecideAsk`: no more than they offered and they keep their
+  offer; up to their ceiling and they pay it; else halfway up on round figures, or firm; far over the ceiling
+  (`insultMargin`) or pushed past `maxCounters` and they walk away (the offer leaves the ad). The ceiling is hard and
+  drawn once per offer, the seller's floor turned round: `FirstAmount` and `MostOver` on the `CarOffer` (none for
+  `firmShare` of buyers, else up to `mostRaise`, 12%, times the temperament's `give`), never over what the ad asks nor a
+  rival's money. A raised offer is the `CarOffer.Amount`, saved; once agreed the talk shows "Sell it for $X", the
+  window's own Take. An answer offering more than stands by itself is asked again (`chat.fact.offer_warning`), then held
+  (`chat.deal.buyer.held`). The player's own ads get their words as the others do (`AdBlurbs` on `CarSaleAd`, offered to
+  the AI the first time the paper shows them; the rewrite shows the next time it opens).
 - **Memories**: when a talk with something said by the player ends, `chat_memory` writes one line in the background, kept
   with the game date (`PersonMemory`); the newest few are told next time, forgotten after `forgetDays*` (seller 14,
   salesman 30, rival 90).

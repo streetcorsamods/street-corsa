@@ -108,6 +108,20 @@ namespace StreetCorsa.Services.Talk
             return new Conversation(this, game, TalkPeople.Seller(game, TalkPeople.PartKey(ad), ad.SellerName, Prompts, Rules), null, TalkPlace.Phone, subject);
         }
 
+        /// <summary>
+        /// The buyer who answered the player's ad, called back on the phone: a rival who called is the rival (with what they
+        /// remember of the player), anybody else the name they gave. The car is what the ad shows (<paramref name="car"/>).
+        /// </summary>
+        public Conversation ForBuyer(GameState game, CarSaleAd ad, UsedCarListingViewModel car)
+        {
+            Forget(game);
+            var subject = new BuyerSubject(ad, car);
+            if (ad.Offer?.RivalName is { } name && game.Racers.Find(name) is Opponent rival)
+                return new Conversation(this, game, TalkPeople.Rival(game, rival, Prompts), rival, TalkPlace.Phone, subject);
+            return new Conversation(this, game, TalkPeople.Buyer(game, TalkPeople.BuyerKey(ad), Market.CarSaleService.Capitalized(ad.Offer?.BuyerName ?? string.Empty),
+                Prompts, Rules), null, TalkPlace.Phone, subject);
+        }
+
         /// <summary>A racer, at the diner or pulled up alongside</summary>
         public Conversation ForRival(GameState game, Opponent rival, TalkPlace place)
         {

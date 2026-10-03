@@ -6,16 +6,22 @@ using StreetCorsa.ViewModels;
 namespace StreetCorsa.Screens.Newspaper
 {
     /// <summary>
-    /// A car ad in the classifieds: a dealer's car, or a racer's own (<see cref="UsedCarListingViewModel.RivalAd"/>). Set
-    /// as a period paper sets one: the car in bold, the ad's few words, the price, who to call. The rest (condition,
-    /// mileage, history, engine) is in its tooltip, the purchase question and a look at the car.
+    /// A car ad in the classifieds: a dealer's car, a racer's own (<see cref="UsedCarListingViewModel.RivalAd"/>), or the
+    /// player's own (<see cref="PlayerAd"/>), circled in pencil. Set as a period paper sets one: the car in bold, the ad's
+    /// few words, the price, who to call. The rest (condition, mileage, history, engine) is in its tooltip, the purchase
+    /// question and a look at the car; the player's own opens on the ad and the buyer who called.
     /// </summary>
     public sealed class CarAdViewModel : ObservableObject
     {
-        public CarAdViewModel(UsedCarListingViewModel car, RelayCommand look)
+        /// <param name="look">Clicking the ad: go and see the car, or, the player's own, open it</param>
+        /// <param name="playerAd">The player's own ad, when it is one</param>
+        /// <param name="today">Game time now, for whether a buyer's offer still stands</param>
+        public CarAdViewModel(UsedCarListingViewModel car, RelayCommand look, Models.GameState.CarSaleAd? playerAd = null, DateTime today = default)
         {
             Car = car;
             LookCommand = look;
+            PlayerAd = playerAd;
+            _today = today;
 
             var definition = car.CarDefinition;
             var name = ModelOf(definition);
@@ -41,6 +47,27 @@ namespace StreetCorsa.Screens.Newspaper
 
         public UsedCarListingViewModel Car { get; }
 
+        private readonly DateTime _today;
+
+        /// <summary>The player's own ad, when this is one: it is marked as theirs and opens on the buyer who called</summary>
+        public Models.GameState.CarSaleAd? PlayerAd { get; }
+
+        public bool IsPlayerAd => PlayerAd != null;
+
+        /// <summary>The buyer's offer pencilled by the player's own ad ("Gary, $1,200!"); empty with nobody on the phone</summary>
+        public string PencilNote => PlayerAd?.OfferOn(_today) is { } offer
+            ? GameText.Say("paper.ad.pencil.offer", ("buyer", Services.Market.CarSaleService.Capitalized(offer.BuyerName)), ("amount", new Helpers.Money(offer.Amount)))
+            : string.Empty;
+
+        public bool HasPencilNote => PencilNote.Length > 0;
+
+        /// <summary>The offer on the player's ad changed (raised, turned down, gone): the pencil note again</summary>
+        public void RefreshOffer()
+        {
+            OnPropertyChanged(nameof(PencilNote));
+            OnPropertyChanged(nameof(HasPencilNote));
+        }
+
         /// <summary>The car in the ad's bold run-in: "'63 CHEVROLET IMPALA"</summary>
         public string Headline { get; }
 
@@ -55,8 +82,10 @@ namespace StreetCorsa.Screens.Newspaper
         /// <summary>What it was marked at before its dealer's closing-down sale, struck through before the price; empty when not on sale</summary>
         public string WasPriceDisplay => Car.IsOnSale ? Car.WasPriceDisplay + " " : string.Empty;
 
-        /// <summary>Who to call: the dealer, or the racer selling their own</summary>
-        public string SellerDisplay => Car.PrivateSeller is { } rival
+        /// <summary>Who to call: the dealer, the racer selling their own, or the player</summary>
+        public string SellerDisplay => IsPlayerAd
+            ? GameText.Say("paper.ad.seller.player", ("player", Car.PrivateSeller ?? string.Empty))
+            : Car.PrivateSeller is { } rival
             ? GameText.Say("paper.ad.seller.private", ("rival", rival))
             : GameText.Say("paper.ad.seller.dealer", ("dealer", Car.DealerName));
 

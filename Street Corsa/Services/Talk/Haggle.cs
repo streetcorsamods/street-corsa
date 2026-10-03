@@ -22,7 +22,10 @@ namespace StreetCorsa.Services.Talk
         Insulted,
 
         /// <summary>The player takes the price as it stands ("you got a deal"): shaken on, nothing changes</summary>
-        Shake
+        Shake,
+
+        /// <summary>A buyer pushed too far: they want no more of it, and their offer is gone</summary>
+        Walk
     }
 
     /// <summary>An offer and what came of it: <paramref name="Price"/> is the price now (the ad's)</summary>
@@ -198,6 +201,67 @@ namespace StreetCorsa.Services.Talk
                 ? new HaggleOutcome(HaggleAnswer.Firm, offer, current)
                 : new HaggleOutcome(HaggleAnswer.Counter, offer, counter);
         }
+
+        // ----- the other way round: a buyer of the player's car -----
+
+        /// <summary>
+        /// How far a buyer will come up on the player's car, drawn once: nothing at all for <see cref="TalkRules.FirmShare"/>
+        /// of them, else anything up to <see cref="TalkRules.MostRaise"/>
+        /// </summary>
+        public static double DrawMostRaise(TalkRules rules, Random random) =>
+            random.NextDouble() < rules.FirmShare ? 0 : random.NextDouble() * Math.Clamp(rules.MostRaise, 0, 1);
+
+        /// <summary>
+        /// The most a buyer who first offered <paramref name="firstOffered"/> ever pays: up by their own limit
+        /// <paramref name="mostOver"/> (<see cref="DrawMostRaise"/>) times their temperament's give, never by more than
+        /// <see cref="TalkRules.MostRaise"/>, never over what the ad asks, nor over what they have (<paramref name="money"/>,
+        /// a rival's; null for anybody else). Never under what they offered.
+        /// </summary>
+        public static decimal Ceiling(decimal firstOffered, double mostOver, Temperament? temperament, decimal asking, decimal? money, TalkRules rules)
+        {
+            var raise = Math.Clamp(mostOver * (temperament?.Give ?? 1), 0, Math.Clamp(rules.MostRaise, 0, 1));
+            var ceiling = Math.Min(firstOffered * (1m + (decimal)raise), Math.Max(asking, firstOffered));
+            if (money is { } has) ceiling = Math.Min(ceiling, has);
+            return Math.Max(ceiling, firstOffered);
+        }
+
+        /// <summary>
+        /// The buyer's answer to the player asking <paramref name="ask"/> for their car with the offer at
+        /// <paramref name="current"/> and the most they pay <paramref name="ceiling"/>, after <paramref name="counters"/>
+        /// answers already: no more than they offered asked and they keep to their offer; up to the ceiling and they pay
+        /// it; far over it, or pushed past <see cref="TalkRules.MaxCounters"/>, they walk away; else they come up halfway,
+        /// on round figures down (<paramref name="round"/>), never over the ceiling, or stand where they are.
+        /// </summary>
+        public static HaggleOutcome DecideAsk(decimal ask, decimal current, decimal ceiling, int counters, TalkRules rules, Func<decimal, decimal> round)
+        {
+            if (ask <= current) return new HaggleOutcome(HaggleAnswer.Accept, ask, current);
+            if (ask <= ceiling) return new HaggleOutcome(HaggleAnswer.Accept, ask, ask);
+            if (ask > ceiling * (1m + (decimal)Math.Clamp(rules.InsultMargin, 0, 1)) || counters >= rules.MaxCounters)
+                return new HaggleOutcome(HaggleAnswer.Walk, ask, current);
+
+            // Halfway on the buyer's round figures, never over the ceiling; when that rounds down to the offer itself (a
+            // step from it) there is still room: plain halfway, in whole dollars
+            var halfway = (ask + current) / 2m;
+            var counter = Math.Min(round(halfway), ceiling);
+            if (counter <= current) counter = Math.Floor(Math.Min(halfway, ceiling));
+            return counter <= current
+                ? new HaggleOutcome(HaggleAnswer.Firm, ask, current)
+                : new HaggleOutcome(HaggleAnswer.Counter, ask, counter);
+        }
+
+        /// <summary>
+        /// The answer names an offer over <paramref name="price"/> that nothing the buyer was told gives (what the ad asks,
+        /// the player's own figure): the AI went up by itself
+        /// </summary>
+        public static bool NamesHigherPrice(string answer, decimal price, IEnumerable<decimal> known, IReadOnlyList<string>? unitWords = null)
+        {
+            var allowed = known.ToHashSet();
+            return SumsIn(answer, unitWords).Any(sum => sum > price && !allowed.Contains(sum));
+        }
+
+        /// <summary>A price down to the last <paramref name="step"/> (25: $1,437 is $1,425)</summary>
+        public static decimal RoundDown(decimal price, int step) =>
+            step <= 1 ? Math.Floor(price) : Math.Floor(price / step) * step;
 
         /// <summary>A price up to the next <paramref name="step"/> (25: $1,437 is $1,450)</summary>
         public static decimal RoundUp(decimal price, int step) =>

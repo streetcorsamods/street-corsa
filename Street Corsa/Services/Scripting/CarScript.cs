@@ -144,6 +144,9 @@ namespace StreetCorsa.Services.Scripting
     /// <summary><c>if</c>: the steps of <paramref name="Then"/> when the condition holds, else those of <paramref name="Else"/></summary>
     public sealed record IfStep(string? Car, ScriptCondition When, IReadOnlyList<ScriptStep> Then, IReadOnlyList<ScriptStep> Else) : ScriptStep(Car);
 
+    /// <summary><c>sound</c>: a sound cue of the mods' sfx, played once where the screen is (the driveway bell)</summary>
+    public sealed record SoundStep(string Cue) : ScriptStep((string?)null);
+
     /// <summary><c>release</c>: the game goes on (the screen moves on) while the script plays out</summary>
     public sealed record ReleaseStep() : ScriptStep((string?)null);
 

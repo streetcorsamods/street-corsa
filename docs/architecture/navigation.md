@@ -37,7 +37,7 @@ NavigateToStart()                        the main menu under the title, at start
 ```
 
 - `FlowArgs` (a record) carries what a screen is told besides its id: `ShopId`, `DealerId`, `Car`, `Race`,
-  `SkipAnimation`, `Arrival` (the car out of the lot), `EndDay`, `Returning` (back from a race), `Card`, `Intro`. A
+  `SkipAnimation`, `Arrival` (the car out of the lot, or driven home from the street, the diner or the gas station: `DrivingHome.Arrival`; it drives in when it would run), `EndDay`, `Returning` (back from a race), `Card`, `Intro`. A
   kind that must be told what to show (`ScreenKinds.NeedsWhat`: car viewing, dealer lot, part shop, race) is not gone
   to without it, and no tile can open it.
 - A way out that leads to no open screen goes home (from anywhere but home), or with no game in play to the main

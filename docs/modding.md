@@ -246,6 +246,13 @@ are the game's own: the engine's internals wear and break, the running gear has 
 looks at the air filter and the exhaust. A mod may change their classes, never their meaning. The base game's groups are
 `Content\streetcorsa\parts\part_groups.json`.
 
+**The shows.** The same file's `shows` are the garage parts view's buttons that put kinds of part out of sight, as the
+source game had them: each has an `id`, an `icon` (a theme image name, `"icons/engine"`) and the `groups` it takes; the
+first show naming a part's group takes it, `rest_of_engine: true` takes every other part of the engine, and a part no
+show takes stays in sight. The tooltip is `part_show.<id>` in the text. A mod adds shows (after the ones before) or
+changes one by its id. The base game has `engine` (the rest of the engine), `drivetrain` (the gearbox, the clutch and flywheel being the engine's,
+and `differentials` and `transfer_cases` should a mod add those groups), `brakes` and `suspension` (the part dealers' icon).
+
 ```json
 { "groups": [ { "id": "intercoolers", "classes": [ "Intercooler" ], "tune": 4, "speed_shop": true } ] }
 ```
@@ -728,6 +735,7 @@ in the mods' problems that says which, so a mistyped key is never silently ignor
 | `place` | `at`: a mark (`heading` in degrees, else as it faces); or `path` and `end`: `start` or `end`, facing along it |
 | `fade` | `to`: the screen's curtain 0..1 (1 black), over `seconds`, `ease`: `none`, `in`, `out`; `engine`: true takes the engine's volume down with the picture. A screen with no curtain (the station, the street) waits the time |
 | `camera` | `mode`: `hold` (the camera stays and watches the car go: the default while a script plays) or `follow`; the seat views (station, street) have their own |
+| `sound` | `cue`: a sound cue of the mods' `sfx` (the station's arrival rings `station.bell` a second before the car stops); a script skipped past it plays none |
 | `release` | the game goes on, the script plays out |
 | `end` | the script is over |
 | `{ "if": {...}, "then": [...], "else": [...] }` | the steps of `then` when the condition holds, else of `else` |
@@ -839,7 +847,7 @@ without repeating the rest.
   answered as the headline on the first line and the body after), `ad` (an
   ad's blurb), `portrait_look` (a new rival's looks for the picture, in English) and `test` (Settings' Test button).
   A use with no prompt is not asked for.
-- Talking to people: `chat_seller`, `chat_salesman`, `chat_rival` are sent after the persona as the rest of who the AI
+- Talking to people: `chat_seller`, `chat_salesman`, `chat_rival`, `chat_buyer` (who answered the player's own ad) are sent after the persona as the rest of who the AI
   is, with the talk as the messages; they name `{name}`, `{nickname}`, `{age}`, `{sex}`, `{temperament}`, `{place}`,
   `{player}` and `{facts}` (the game's fact sheet, the text pools `chat.fact.*` and `chat.deal.*`). `chat_memory`
   writes what a person keeps of a talk (`{name}`, `{player}`, `{talk}`). The stage lines, the window's words and the
@@ -857,7 +865,7 @@ without repeating the rest.
 ```
 
 - `words`: who they are, as the AI is told. `give`: how far they come down on a price, times the rules' most for their
-  kind (0 never). `for`: `seller`, `salesman`, `rival` (none: every kind). `weight`: how often. `minAggression`,
+  kind (0 never; a buyer's: how far they come up). `for`: `seller`, `salesman`, `rival`, `buyer` (none: every kind). `weight`: how often. `minAggression`,
   `maxAggression`: a rival's aggression range. Every kind should have one for every aggression, or the person has none.
 
 `ai\ollama.json`: the game's own model in Ollama, made from Settings ("Make the game's model"), merged key by key:
@@ -930,6 +938,7 @@ names:
 | `backgrounds/main`, `init`, `newspaper_background`, `diner_background`, `settings_background` | the screens' backgrounds (the game's are 2560x1440; `init` is behind the intro) |
 | `buttons/new_game`, `load_game`, `settings` | the main menu's badges (square) |
 | `icons/calendar`, `car_dealer`, `car_info`, `driving_wheel`, `fuel_pump`, `garage`, `newspaper`, `parts_filled`, `quit`, `radio`, `trophy` | the round buttons' icons: only their shape counts, painted in the button's colour |
+| `icons/car_key`, `car_parts`, `engine_stand`, `gears`, `wrench`, `high_beam`, `car_door`, `rotate`, `handshake` | the garage's buttons under the car (the key, parts view, engine stand, turn over, repairs, lights, doors, rotate) and its Sell button; one that is missing shows its word instead |
 | `misc/license` | the licence the player signs for a new game (the name box sits where the game's has its line) |
 | `misc/calendar/calendar01` .. `calendar12` | the garage calendar's pictures |
 | `intro/logo` | the game's logo on the intro, in place of the lettered title (the base game has none) |

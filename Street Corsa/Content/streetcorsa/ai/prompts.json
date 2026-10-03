@@ -17,7 +17,8 @@
     "portrait_look: how a new rival looks, for ComfyUI's picture (comfy_portrait.json's {look}); in English, whatever",
     "  the player's language, as image models read English. {name}, {nickname}, {age}, {sex}, {biography}, {aggression}.",
     "test: the Settings screen's Test button.",
-    "chat_seller, chat_salesman, chat_rival: talking to people. Sent after the persona as the rest of who the AI is, with",
+    "chat_seller, chat_salesman, chat_rival, chat_buyer: talking to people (chat_buyer: whoever answered the player's own car ad;",
+    "  a rival who did talks with chat_rival, the fact sheet saying they are buying). Sent after the persona as the rest of who the AI is, with",
     "  the talk so far as the messages (the player's, and [what happens] in brackets). {name}, {nickname} (rivals), {age},",
     "  {sex}, {temperament} (ai/people.json's words), {place} (text chat.place.*), {player}, {facts}: the game's fact",
     "  sheet (text chat.fact.*, chat.deal.*), every turn. Prices are the game's: the sheet says what to answer an offer.",
@@ -88,6 +89,13 @@
       "maxLength": 420,
       "maxTokens": 160,
       "temperature": 0.9,
+      "lines": 0
+    },
+    "chat_buyer": {
+      "prompt": "Now you are {name}, a {age}-year-old {sex}, who wants to buy a car the player has in the paper. {temperament}\n{place}\nTalk with the player as {name}, out loud: one to three short sentences each time, the words only, no actions, no asterisks, no quotation marks. Lines in [brackets] are what happens, not words said: answer them as {name} would.\nWhat you know, the only facts there are:\n{facts}\nNever add a detail the facts do not give (a carburettor, the radio, the paint, the miles of a car not described, an accident, a repair, a race): asked about one, you do not know, or you will see it when you come to pick it up.\nYou speak only as {name}, never as the player. You are buying, the player is selling: you want a fair price, never more than you have to pay.\nStick to the car; if the player wanders off it, bring them back to it. If the player says you met or raced before and the facts do not say so, you do not remember them. Prices: say only the prices the facts give.",
+      "maxLength": 420,
+      "maxTokens": 160,
+      "temperature": 0.85,
       "lines": 0
     },
     "chat_memory": {

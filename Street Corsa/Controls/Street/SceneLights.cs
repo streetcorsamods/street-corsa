@@ -47,6 +47,25 @@ internal static class SceneLights
         return lamps;
     }
 
+    // A car's headlights as the renderer guesses them reach 13.5 m and barely light the road: at night, seen from the
+    // driver's seat, they carry this far down it and this many times as bright
+    public const float HeadlightReach = 40f;
+    public const float HeadlightBoost = 2f;
+
+    /// <summary>
+    /// The cars' headlights in a night scene, reaching down the road as headlights do, not just the ground before the
+    /// bumper; done once (a light reaching that far already is left as it is)
+    /// </summary>
+    public static void BrightenHeadlights(GarageRenderer renderer)
+    {
+        foreach (var light in renderer.Lights)
+        {
+            if (!light.Tag.IsCarTag || !light.ActAsHeadlight || light is not DarkSpotLight spot || spot.Range >= HeadlightReach) continue;
+            spot.Range = HeadlightReach;
+            spot.Brightness *= HeadlightBoost;
+        }
+    }
+
     private static System.Drawing.Color Color(byte[] rgb) => System.Drawing.Color.FromArgb(rgb[0], rgb[1], rgb[2]);
 
     /// <summary>

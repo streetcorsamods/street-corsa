@@ -77,6 +77,9 @@ namespace StreetCorsa.Services.Scripting
 
         /// <summary>How the camera goes with <paramref name="car"/> while it moves; a screen whose camera is a seat ignores it</summary>
         void Camera(IScriptCar car, CameraMode mode);
+
+        /// <summary>A sound cue heard on the screen; every screen plays it through the game's sound effects</summary>
+        void Sound(string cue) => Audio.Sfx.Play(cue);
     }
 
     /// <summary>How a script played</summary>

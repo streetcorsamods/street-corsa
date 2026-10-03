@@ -5,6 +5,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:controls="clr-namespace:StreetCorsa.Controls"
+             xmlns:helpers="clr-namespace:StreetCorsa.Helpers"
              mc:Ignorable="d"
              d:DesignHeight="720" d:DesignWidth="1280">
     <Grid Background="{StaticResource StageBrush}">
@@ -67,7 +68,7 @@
                    Margin="0,0,0,8"
                    IsHitTestVisible="False"/>
 
-        <!-- The attendant at the window, and what he can do -->
+        <!-- The attendant at the window, and what he can do; it goes as the car drives off -->
         <Border Width="420"
                 Background="{StaticResource Glass10C0Brush}"
                 BorderBrush="{StaticResource GoldBrush}"
@@ -77,22 +78,8 @@
                 Margin="0,120,20,20"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Top"
-                Visibility="{Binding IsAtPump, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <Border.Style>
-                <Style TargetType="Border">
-                    <Style.Triggers>
-                        <Trigger Property="Visibility" Value="Visible">
-                            <Trigger.EnterActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.4"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </Trigger.EnterActions>
-                        </Trigger>
-                    </Style.Triggers>
-                </Style>
-            </Border.Style>
+                helpers:Reveal.IsShown="{Binding ShowAttendant}"
+                helpers:Reveal.OffsetX="40">
             <StackPanel>
                 <TextBlock Text="{t:Text station.ui.attendant}"
                            FontSize="{StaticResource FontSizeCaption}"

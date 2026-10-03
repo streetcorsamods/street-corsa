@@ -3,8 +3,9 @@
     "How the people the player talks to are (see docs/modding.md, \"ai\"). Every mod's ai/people.json goes over the ones",
     "before it key by key. A person is drawn one temperament the first time they are talked to, and keeps it.",
     "words: who they are, as the AI is told ({temperament} in the chat prompts).",
-    "give: how far they come down on a price, times the rules' most for their kind (ai.talk.discount*): 0 never, 1 all of it.",
-    "for: the kinds it is drawn for (seller, salesman, rival); none is every kind. weight: how often, against the others.",
+    "give: how far they come down on a price, times the rules' most for their kind (ai.talk.discount*): 0 never, 1 all of it;",
+    "  for a buyer, how far they come up on their offer (times the limit each draws under ai.talk.mostRaise).",
+    "for: the kinds it is drawn for (seller, salesman, rival, buyer); none is every kind. weight: how often, against the others.",
     "minAggression, maxAggression: for rivals, drawn only for a racer's aggression (0-100) in this range."
   ],
   "temperaments": {
@@ -59,6 +60,22 @@
     "good_sport": {
       "words": "A good sport: friendly, honest about wins and losses, likes talking engines.",
       "give": 1.0, "for": ["rival"], "weight": 1.5, "maxAggression": 60
+    },
+    "eager_buyer": {
+      "words": "Wants this car badly and can hardly hide it: eager, asks a lot of questions, already sees themselves driving it.",
+      "give": 1.3, "for": ["buyer"], "weight": 2
+    },
+    "tire_kicker": {
+      "words": "A tire kicker: finds something wrong with everything, talks the car down, in no hurry at all.",
+      "give": 0.5, "for": ["buyer"], "weight": 2
+    },
+    "family_buyer": {
+      "words": "Buying for the family, on a budget they keep coming back to; polite, careful, a little worried about the money.",
+      "give": 0.8, "for": ["buyer"], "weight": 1.5
+    },
+    "cash_in_hand": {
+      "words": "Has the cash on them and likes a quick deal: blunt, no small talk, wants to know if it runs and when they can pick it up.",
+      "give": 1.0, "for": ["buyer"], "weight": 1.5
     }
   }
 }

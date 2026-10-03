@@ -40,6 +40,7 @@ namespace StreetCorsa.Screens.Diner
         private readonly IGameTimeService _timeService;
         private readonly IGameStateRepository _gameStateRepo;
         private readonly RaceSetupBuilder _raceSetup;
+        private readonly Services.Parts.ICarPartsService _partsService;
         private readonly ChallengeLauncher _launcher;
         private readonly IAppLogger _logger;
 
@@ -353,6 +354,7 @@ namespace StreetCorsa.Screens.Diner
             IGameTimeService timeService,
             IGameStateRepository gameStateRepo,
             RaceSetupBuilder raceSetup,
+            Services.Parts.ICarPartsService partsService,
             bool returning = false)
         {
             _returning = returning;
@@ -366,6 +368,7 @@ namespace StreetCorsa.Screens.Diner
             _timeService = timeService;
             _gameStateRepo = gameStateRepo;
             _raceSetup = raceSetup;
+            _partsService = partsService;
             _logger = AppLoggerFactory.CreateLogger("Diner");
             _launcher = new ChallengeLauncher(navigationService, dialogService, gameState, catalogRepository, challengeService,
                 raceSetup, _logger);
@@ -780,7 +783,11 @@ namespace StreetCorsa.Screens.Diner
         private void OnGarage()
         {
             _logger.Information("Navigating to garage");
-            _navigationService.Leave(this, "back", _gameState);
+
+            // Home in the car from a night out: it drives into the garage (its engine worked out there), when it has one
+            // that runs, as from the street
+            var catalog = _partsService.IsAvailable ? _partsService.Catalog : null;
+            _navigationService.Leave(this, "back", _gameState, new FlowArgs { Arrival = DrivingHome.Arrival(_gameState, null, catalog) });
         }
 
         public override async void Enter()
