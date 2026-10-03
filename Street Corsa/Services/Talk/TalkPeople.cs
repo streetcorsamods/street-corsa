@@ -22,11 +22,15 @@ namespace StreetCorsa.Services.Talk
 
         public static string PartKey(PartAd ad) => $"part:{ad.AdId}";
 
+        /// <summary>The buyer who answered the player's ad, one per ad and caller: another caller is somebody else</summary>
+        public static string BuyerKey(CarSaleAd ad) => $"buyer:{ad.AdId}:{ad.Offer?.BuyerName}";
+
         /// <summary>The kind's word in the temperaments' <c>for</c></summary>
         public static string KindWord(PersonKind kind) => kind switch
         {
             PersonKind.Salesman => "salesman",
             PersonKind.Rival => "rival",
+            PersonKind.Buyer => "buyer",
             _ => "seller"
         };
 
@@ -107,6 +111,27 @@ namespace StreetCorsa.Services.Talk
             });
         }
 
+        /// <summary>
+        /// The buyer who answered the player's ad (by <see cref="BuyerKey"/>): the name they gave the player ("Gary", "a man
+        /// from out of town"), a woman only when the name is one of the women's, the rest drawn
+        /// </summary>
+        public static Person Buyer(GameState game, string key, string name, AiPrompts? prompts = null, TalkRules? rules = null)
+        {
+            if (Find(game, key) is { } found) return found;
+
+            rules ??= RuleBook.Current.Ai.Talk;
+            var random = Seeded(key);
+            return Add(game, new Person
+            {
+                Key = key,
+                Kind = PersonKind.Buyer,
+                Name = string.IsNullOrWhiteSpace(name) ? GameText.Say("chat.somebody") : name,
+                Age = AgeBetween(rules.SellerMinAge, rules.SellerMaxAge, random),
+                Gender = string.IsNullOrWhiteSpace(name) ? Gender.Male : GenderOf(name),
+                Temperament = Draw(prompts ?? AiPrompts.Installed, PersonKind.Buyer, 50, random)
+            });
+        }
+
         /// <summary>A given name's sex: a woman's when it is in a pool of women's names, else a man's ("Frank", "Al's Speed Shop")</summary>
         private static Gender GenderOf(string name)
         {
@@ -114,7 +139,7 @@ namespace StreetCorsa.Services.Talk
             return WomenPools.Any(pool => text.Lines(pool).Contains(name, StringComparer.OrdinalIgnoreCase)) ? Gender.Female : Gender.Male;
         }
 
-        private static readonly string[] WomenPools = ["names.people.women", "names.salesmen.women"];
+        private static readonly string[] WomenPools = ["names.people.women", "names.salesmen.women", "names.car_buyers.women"];
 
         private static int AgeBetween(int least, int most, Random random) => least + random.Next(Math.Max(1, most - least + 1));
 
@@ -199,13 +224,13 @@ namespace StreetCorsa.Services.Talk
         }
 
         /// <summary>
-        /// The people nobody needs any more go: a private seller with nothing remembered, met longer ago than they
-        /// remember. Rivals and salesmen stay (their temperament is who they are).
+        /// The people nobody needs any more go: a private seller or a buyer with nothing remembered, met longer ago than
+        /// they remember. Rivals and salesmen stay (their temperament is who they are).
         /// </summary>
         public static void ForgetAll(GameState game, TalkRules rules)
         {
             foreach (var person in game.People) Forget(person, game.Date, rules);
-            game.People.RemoveAll(p => p.Kind == PersonKind.PrivateSeller && p.Memories.Count == 0
+            game.People.RemoveAll(p => p.Kind is PersonKind.PrivateSeller or PersonKind.Buyer && p.Memories.Count == 0
                                        && (game.Date.Date - p.Met.Date).TotalDays > rules.ForgetDaysSeller);
         }
 

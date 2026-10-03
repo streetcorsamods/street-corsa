@@ -3,13 +3,15 @@
     "Names the game gives people who are not racers: whoever calls about a car the player advertised, who sells parts",
     "in the paper, and the stand-in racers of an event nobody on the street can enter.",
     "names.people.men/women: a private seller of a car, met when the player talks to them (their sex is the pool's).",
-    "names.salesmen.men/women: a dealer's salesman, one per dealer."
+    "names.salesmen.men/women: a dealer's salesman, one per dealer.",
+    "names.car_buyers.women: the names of names.car_buyers that are women's, for how they talk when the player calls them back."
   ],
   "lines": {
     "names.car_buyers": [
       "Gary", "Denise", "Tommy", "Earl", "Linda", "Vince", "Carl", "Donna", "Rick", "Sal", "Marge", "Butch",
       "Norm", "Wanda", "Lenny", "a kid from the high school", "a man from out of town"
     ],
+    "names.car_buyers.women": [ "Denise", "Linda", "Donna", "Marge", "Wanda" ],
     "names.part_sellers": [
       "Al's Speed Shop", "Frank", "Eddie's Salvage", "Bobby", "Route 9 Wreckers", "Hank", "Mel's Machine Shop",
       "Ray", "Lou", "Valley Auto Parts", "Skip", "Dutch", "Big Jim", "Walt", "Southside Garage"
