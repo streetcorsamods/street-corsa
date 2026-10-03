@@ -250,7 +250,7 @@ looks at the air filter and the exhaust. A mod may change their classes, never t
 source game had them: each has an `id`, an `icon` (a theme image name, `"icons/engine"`) and the `groups` it takes; the
 first show naming a part's group takes it, `rest_of_engine: true` takes every other part of the engine, and a part no
 show takes stays in sight. The tooltip is `part_show.<id>` in the text. A mod adds shows (after the ones before) or
-changes one by its id. The base game has `engine` (the rest of the engine), `drivetrain` (gearbox, clutch and flywheel,
+changes one by its id. The base game has `engine` (the rest of the engine), `drivetrain` (the gearbox, the clutch and flywheel being the engine's,
 and `differentials` and `transfer_cases` should a mod add those groups), `brakes` and `suspension` (the part dealers' icon).
 
 ```json

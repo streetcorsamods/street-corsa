@@ -239,7 +239,7 @@ public class CarsAndMakesTests : IDisposable
         var base_ = PartGroups.Load([Path.Combine(RepoPaths.BaseContent, ContentTypes.Parts)]);
         Assert.Equal(["engine", "drivetrain", "brakes", "suspension"], base_.Shows.Select(s => s.Id));
         Assert.Equal("drivetrain", base_.ShowOf(PartGroups.Transmissions, inEngine: true)!.Id);
-        Assert.Equal("drivetrain", base_.ShowOf("flywheels", inEngine: true)!.Id);
+        Assert.Equal("engine", base_.ShowOf("flywheels", inEngine: true)!.Id);
         Assert.Equal("engine", base_.ShowOf(PartGroups.CylinderHeads, inEngine: true)!.Id);
         Assert.Equal("engine", base_.ShowOf(PartGroups.Accessories, inEngine: true)!.Id);
         Assert.Equal("brakes", base_.ShowOf(PartGroups.Brakes, inEngine: false)!.Id);

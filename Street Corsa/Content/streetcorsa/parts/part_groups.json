@@ -11,12 +11,12 @@
     "shows: the parts view's buttons that put kinds of part out of sight, as the source game had them. Each names its",
     "groups (the first that names a part's group takes it); rest_of_engine takes every other part of the engine; a part",
     "no show takes stays in sight. The player reads part_show.<id> as the button's tooltip. A mod adds shows, or changes",
-    "one by its id. The drivetrain is the gearbox and what is between it and the crank; a differential or a transfer case",
+    "one by its id. The drivetrain is the gearbox (the flywheel and clutch are the engine's); a differential or a transfer case",
     "group a mod adds goes in it too."
   ],
   "shows": [
     { "id": "engine", "icon": "icons/engine", "rest_of_engine": true },
-    { "id": "drivetrain", "icon": "icons/gears", "groups": [ "transmissions", "flywheels", "differentials", "transfer_cases" ] },
+    { "id": "drivetrain", "icon": "icons/gears", "groups": [ "transmissions", "differentials", "transfer_cases" ] },
     { "id": "brakes", "icon": "icons/disc_brake", "groups": [ "brakes" ] },
     { "id": "suspension", "icon": "icons/parts_filled", "groups": [ "springs", "shocks", "sway_bars", "suspension_arms" ] }
   ],
