@@ -154,12 +154,18 @@ namespace StreetCorsa.Screens.Shared
             if (playerData != null) carData.Add(playerData);
             if (sharedData != null) carData.Add(sharedData);
 
-            // The race mode runs each engine's heat from how its car is cooled
+            // The race mode runs each engine's heat from how its car is cooled, and puts on the rims it does not have
             var intent = BuildIntent(entry, opponentRacesAs, carData);
-            intent.PlayerStart = playerStart with { Cooling = playerData?.Cooling };
-            intent.OpponentStart = opponentStart == null ? null : opponentStart with { Cooling = opponentData?.Cooling };
+            intent.PlayerStart = playerStart with { Cooling = playerData?.Cooling, Rims = ShownRims(entry.PlayerCar) };
+            intent.OpponentStart = opponentStart == null ? null : opponentStart with { Cooling = opponentData?.Cooling, Rims = ShownRims(entry.OpponentCar!) };
             return new RaceSetupResult { Intent = intent };
         }
+
+        /// <summary>The rims the car shows in the race that its model does not have: none when the catalog is not there</summary>
+        private ShownModel?[] ShownRims(Car car) =>
+            _parts.IsAvailable
+                ? ShownParts.Rims(car.Parts, _parts.Catalog, _parts.FactoryRunningGear(car))
+                : new ShownModel?[RunningGear.Corners];
 
         /// <summary>
         /// The folder the opponent's car races in, and its data: an opponent in the player's model races in a

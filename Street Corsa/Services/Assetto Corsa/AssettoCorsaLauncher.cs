@@ -439,7 +439,8 @@ namespace StreetCorsa.Services
                     {
                         prepareWhy = "the race mode could not be installed";
                         var format = race.TunePasses != null ? null : Race.RaceFormats.Current.Of(race.Format);
-                        prepareError = _raceMode.Install(AppSettings.Instance.AssettoCorsaPath, format);
+                        var models = (race.PlayerStart?.Models ?? []).Concat(race.OpponentStart?.Models ?? []);
+                        prepareError = _raceMode.Install(AppSettings.Instance.AssettoCorsaPath, format, models);
                     }
 
                     foreach (var configIntent in prepareError == null ? configIntents : [])

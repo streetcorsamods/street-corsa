@@ -20,6 +20,9 @@ namespace StreetCorsa.Services
     /// The mods' race formats go in with it (<see cref="Race.RaceFormats"/>): every mod's format module next to the mode's
     /// own (<c>format_&lt;mod&gt;_&lt;module&gt;.lua</c>), and a format's own mode, when the race is one, in a folder of its
     /// own (<c>new-modes\&lt;mod&gt;_&lt;mode&gt;</c>).
+    ///
+    /// So do the part models the race's cars show (<see cref="StreetCorsa.Parts.Cars.ShownParts"/>, in <c>parts\</c>): the mode loads
+    /// them from its own folder, and a race's models leave with the next race.
     /// </summary>
     public sealed class ScRaceMode(string sourceFolder, Func<Race.RaceFormats>? formats = null)
     {
@@ -44,11 +47,11 @@ namespace StreetCorsa.Services
             Path.Combine(acRoot, "extension", "lua", "new-modes", IniModificationService.RaceModeId);
 
         /// <summary>
-        /// Puts the mode into <paramref name="acRoot"/> as this build has it, with the mods' format modules, and the mode
-        /// of <paramref name="format"/> when it has its own. Null when it is there; otherwise why the race cannot run, for
-        /// the player.
+        /// Puts the mode into <paramref name="acRoot"/> as this build has it, with the mods' format modules, the mode
+        /// of <paramref name="format"/> when it has its own, and the part <paramref name="models"/> the cars show. Null when
+        /// it is there; otherwise why the race cannot run, for the player.
         /// </summary>
-        public string? Install(string acRoot, Models.Race.RaceFormat? format = null)
+        public string? Install(string acRoot, Models.Race.RaceFormat? format = null, IEnumerable<StreetCorsa.Parts.Cars.ShownModel>? models = null)
         {
             if (!Directory.Exists(Path.Combine(acRoot, "extension")))
                 return GameText.Say("launch.no_csp");
@@ -60,7 +63,8 @@ namespace StreetCorsa.Services
             {
                 var target = InstalledFolder(acRoot);
                 var files = Directory.GetFiles(sourceFolder).Select(f => (Name: Path.GetFileName(f), Source: f))
-                    .Concat(formats?.Invoke().ModuleFiles ?? []).ToList();
+                    .Concat(formats?.Invoke().ModuleFiles ?? [])
+                    .Concat((models ?? []).Select(m => (m.Name, m.Source))).ToList();
                 var written = Mirror(files, target);
                 if (written > 0)
                     _logger.Information("Race mode installed in {Target} ({Count} file(s) changed)", target, written);

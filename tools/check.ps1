@@ -51,7 +51,7 @@ if (-not $lupa) {
     Write-Warning "check: the sc_race harness is skipped: no python with lupa's LuaJIT (pip install -r tools\sc_race_harness\requirements.txt)"
 }
 else {
-    foreach ($test in "test_chase.py", "test_heat.py", "test_strip.py", "test_time_attack.py") {
+    foreach ($test in "test_chase.py", "test_heat.py", "test_strip.py", "test_time_attack.py", "test_parts.py") {
         & $python.Source (Join-Path $PSScriptRoot "sc_race_harness\$test")
         if ($LASTEXITCODE -ne 0) {
             [Console]::Error.WriteLine("check: the sc_race harness failed ($test)")

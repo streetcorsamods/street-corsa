@@ -49,6 +49,15 @@ namespace StreetCorsa.Models.Race
         /// <summary>How the engine is cooled and oiled; null leaves the race mode to take a factory car's</summary>
         public EngineCoolingRating? Cooling { get; init; }
 
+        /// <summary>
+        /// The rim each corner shows (front left, front right, rear left, rear right), null where the car keeps its own;
+        /// the race mode puts it on the car (see <see cref="Parts.Cars.ShownParts"/>)
+        /// </summary>
+        public Parts.Cars.ShownModel?[] Rims { get; init; } = new Parts.Cars.ShownModel?[4];
+
+        /// <summary>The models the race mode loads for the car, once each</summary>
+        public IEnumerable<Parts.Cars.ShownModel> Models => Rims.OfType<Parts.Cars.ShownModel>().DistinctBy(m => m.Name, StringComparer.OrdinalIgnoreCase);
+
         /// <summary>Nothing wrong with the car</summary>
         public bool IsPristine =>
             BodyKmh.All(z => z <= 0) && EngineLife >= 1000 && GearboxWear <= 0 && SuspensionBend.All(b => b <= 0);
@@ -68,6 +77,12 @@ namespace StreetCorsa.Models.Race
             yield return (prefix + "DIRT", Unit.Clamp01(Dirt, ifNotFinite: 0).ToString("0.000", CultureInfo.InvariantCulture));
             if (Cooling is { } cooling)
                 yield return (prefix + "COOLING", List([cooling.Cooling, cooling.Fan, cooling.OilG], "0.000"));
+            // AC's own names for the wheels, in the same order
+            string[] wheels = ["LF", "RF", "LR", "RR"];
+            for (var corner = 0; corner < Math.Min(Rims.Length, wheels.Length); corner++)
+            {
+                if (Rims[corner] is { } rim) yield return (prefix + "RIM_" + wheels[corner], rim.Name);
+            }
         }
 
         private static string List(double[] values, string format) =>
