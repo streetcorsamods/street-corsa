@@ -1319,7 +1319,10 @@ Not seen in game: all of it. Unchecked: the headlights' look, 300+ tracks in the
 ## Epic: total conversion (planned 2026-09-30)
 
 The owner wants the whole game moddable, so the community can add game modes and whole new games (a Tokyo Drift game
-on the same program); the 1960s US setting is the base game's taste. The inventory of what is still baked in and the
+on the same program); the 1960s US setting is the base game's taste. **Changed 2026-10-03:** Street Corsa stays one
+game; being open source, a whole new game is a fork. E9 is cut down to saves and mods (mod set stamped in the save,
+string ids for the saved enums, the King as data; no game picker or game-type base), and E12 becomes an example add-on
+mod instead of a separate game. The inventory of what is still baked in and the
 steps E1-E12 are in `docs/total-conversion.md`. One PR per step, each playable; the base game keeps its look and play
 (today's values become its data). Car scripting, first asked for on its own, is step E7 and uses JSON (Lua dropped).
 
@@ -1347,7 +1350,8 @@ badge prices and rarity), what a car is given in `cars/cars.json` (the developer
 prices moved there out of catalog.db; the catalog editor saves there), the pricing curve and the engines' figures in
 the rules (`cars`, `engines`), game.json's `cars` filter of the installed cars (none in the base game), the shelves in
 `parts/part_groups.json`, the stand-in script classes in `parts/stand_ins.json`. Prices, families and groups came out
-exactly as before. Not played yet. The order after that is E7-E12 as listed, unless the owner picks otherwise.
+exactly as before. Not played yet. The order after that is E7-E12 as listed (E9 and E12 cut down on 2026-10-03, see
+above), unless the owner picks otherwise.
 
 E7 (car scripting) is built on `feature/car-scripting` (2026-10-02), after step 26: every car move is a JSON script of
 the mods (`scripts/scripts.json`, the drives' feels in `scripts/feels.json`) played at a trigger (`lot.take_out`,

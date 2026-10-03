@@ -5,6 +5,11 @@ games from `Content\<mod>\` without touching C#. The 1960s American street-racin
 not the program's: someone should be able to make a Tokyo Drift game (modern JDM cars, yen, km/h, turbos, drift and
 touge races, a different look) on the same program.
 
+**Changed 2026-10-03:** the owner decided Street Corsa stays one game. It will be open source, so a whole new game is
+a fork, not a mod: no game picker, no `"type": "game"` base swap, no data folder per game. The epic's aim is now
+everything a Street Corsa **add-on** mod could want to change, and E1-E8 make a fork easy anyway. E9-E12 below were
+cut down to match.
+
 This file is the inventory of what is still baked into C#, XAML, the exe or the race mode's Lua (taken 2026-09-30,
 after PR #50), and the plan for the epic. Step 16 (`docs/modding.md`) already made the content data: parts, sounds,
 sfx, props, dealers, part shops, racers, events, milestones, victories, streets, stations, warehouses, showcase,
@@ -127,9 +132,9 @@ A truly new kind of screen will always need C#. Data can rename, rewire, hide an
 |---|---|---|---|
 | Player settings | `%AppData%\StreetCorsa\settings.json` (track, AC path, audio) | JSON, no game-wide defaults | easy |
 | AC folder default | `AppSettings.cs:37` `C:\GAMES\Street Rod AC` | the developer's own install | easy: detect Steam |
-| "Street Corsa" folders (AppData, Documents radio, logs, saves, AC out inbox) | about 10 places | literals | medium: one name, a folder per game |
+| "Street Corsa" folders (AppData, Documents radio, logs, saves, AC out inbox) | about 10 places | literals | kept: one game (2026-10-03); a fork renames them |
 | mod.json | `Mods/ModSet.cs:36-67` | id, name, version, author, description, order | easy: `requires`, `gameVersion`, `type` |
-| The base game | `ModSet.cs:153,237`, `ModIds.cs:17` | `streetcorsa` always loaded first, can't be switched off; mods only `replaces`, never remove | hard |
+| The base game | `ModSet.cs:153,237`, `ModIds.cs:17` | `streetcorsa` always loaded first, can't be switched off; mods `replaces` and `remove` (E1) | kept: one game (2026-10-03) |
 | Turning mods on and off | folder rename (`_` prefix) | no in-game switch | easy |
 | Mod problems | log only | player sees nothing | easy: a dialog |
 | Race formats | `RaceContext.cs:115` (Drag/Circuit/Sprint), `RaceResultJson.cs:144`, about 17-35 switch sites; `mode.lua` (2478 lines) | closed on both sides | hard |
@@ -174,14 +179,20 @@ playing exactly as it does now: today's values become the base game's data.
   - The same trigger and condition format serves later steps (flow, events).
 - **E8. Flow.** A screen registry with string ids and kinds, hub tiles and menu cards as data, exits and `returnTo`,
   the home screen, where the day can end; screens and systems a game switches off (police, gas station, paper).
-- **E9. Games.** A `"type": "game"` mod stands in for `streetcorsa` as the base; a game picker; saves stamped with
-  their game and mod set; a data folder per game; bosses instead of the King; string ids for the saved enums.
+- **E9. Saves and mods** (cut down 2026-10-03 from "Games": no game picker, no game-type base, no data folder per
+  game). What add-on mods need from the save:
+  - saves stamped with their mod set (id and version), and a warning on load when a mod the career used is gone or
+    older, instead of a broken career;
+  - string ids for the closed enums saved by name (milestone triggers, victory step kinds, event schedules...), so a
+    mod can add its own values;
+  - the King as data: bosses in the racers' data, so a mod can change the final rival or add more.
 - **E10. Race formats.** Format ids in data, race.ini session templates, mods shipping their own CSP mode, a result
-  contract with a score. Drift, time attack and touge become possible.
+  contract with a score. Drift, time attack and touge become possible: worth it for Street Corsa itself.
 - **E11. Data engines.** The `"figures"` path that skips the SLRR VM, turbo lag and twin turbos per part, more gears,
-  transverse engines.
-- **E12. The proof.** A small, deliberately different game mod (a few modern Japanese cars, yen and km/h, its own
-  look, a changed flow) that shows what still breaks and becomes the example modders copy.
+  transverse engines. For modders' cars that have no SLRR parts.
+- **E12. The example mod** (was "the proof", changed 2026-10-03). An example add-on, not a separate game: a few cars,
+  a parts pack, an event and a race of its own, made only from data, that shows what still breaks and becomes the mod
+  modders copy.
 
 Later, not in the epic: a weather system (there is none today), nitrous in AC.
 
