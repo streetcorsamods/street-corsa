@@ -415,6 +415,9 @@ namespace StreetCorsa.Screens.Garage
         /// <summary>A car is selected and it is in the garage, not the police impound</summary>
         private bool SelectedCarHere => SelectedCar is { CarInstance.IsImpounded: false };
 
+        /// <summary>There is a car in the garage to work on: the key and the car's buttons are shown</summary>
+        public bool IsCarHere => SelectedCarHere;
+
         public bool IsSelectedCarImpounded => SelectedCar?.CarInstance.IsImpounded == true;
 
         /// <summary>Where the selected car is and what getting it back takes</summary>
@@ -479,6 +482,7 @@ namespace StreetCorsa.Screens.Garage
         private void RaiseImpoundChanged()
         {
             OnPropertyChanged(nameof(IsSelectedCarImpounded));
+            OnPropertyChanged(nameof(IsCarHere));
             OnPropertyChanged(nameof(ImpoundNote));
             OnPropertyChanged(nameof(CollectButtonText));
             RelayCommand.RaiseCanExecuteChanged();

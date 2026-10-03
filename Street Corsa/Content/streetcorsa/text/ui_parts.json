@@ -9,7 +9,8 @@
     "work.the, work.list and work.list.comma (\"the oil pan, the timing cover and the cylinder heads\").",
     "station.job.*: the gas station's jobs; {left} and {tank} the fuel, {quarts} the oil short as station.oil_short.* says it",
     "(\"a quart\"; the game puts a capital on the first letter of the oil job's detail). parts.describe*: a part's",
-    "condition ({wear} %) and how many parts come with it ({count}). part_group.*: the shelves of part_groups.json, by id."
+    "condition ({wear} %) and how many parts come with it ({count}). part_group.*: the shelves of part_groups.json, by id.",
+    "part_show.*: the parts view's buttons of part_groups.json's shows, by id."
   ],
   "lines": {
     "condition.zone.front": "front",
@@ -140,6 +141,10 @@
     "part_group.shocks": "Shock absorbers",
     "part_group.sway_bars": "Sway bars",
     "part_group.suspension_arms": "Suspension arms",
-    "part_group.accessories": "Accessories"
+    "part_group.accessories": "Accessories",
+    "part_show.engine": "The engine",
+    "part_show.drivetrain": "The gearbox and clutch",
+    "part_show.brakes": "The brakes",
+    "part_show.suspension": "The springs and shocks"
   }
 }

@@ -93,6 +93,9 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     private bool _standActive;
     private Kn5RenderableFile? _candidates;
     private List<PartNode> _propNodes = new();
+
+    // Mounted parts the player has put out of sight by their kind (the parts view's show buttons): not drawn, not picked
+    private HashSet<PartNode> _hiddenNodes = new();
     private List<PartNode> _candidateNodes = new();
     private PartHit? _hovered;
     private int? _selected;
@@ -683,6 +686,7 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         // or starts or stops fading (UpdateFading)
         var carrying = _motions.Any(m => m is CarryMotion && m.HasStarted);
         if (_motions.RemoveAll(m => m.IsDone) > 0 || carrying) SetShadowsDirty();
+        KeepHiddenOut();
         UpdateFading();
 
         _prop?.UpdateBoundingBox();
@@ -975,6 +979,51 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         IsDirty = true;
     }
 
+    /// <summary>
+    /// The mounted parts out of sight, given by node: those newly hidden fade out where they are, those shown again fade
+    /// back in, at once without <paramref name="fade"/>. No sound: nothing comes off, they are only not looked at. A new
+    /// prop shows everything until it is told again.
+    /// </summary>
+    public void SetHiddenParts(IReadOnlyCollection<int> nodes, bool fade)
+    {
+        var hidden = nodes.Where(n => n >= 0 && n < _propNodes.Count).Select(n => _propNodes[n]).ToHashSet();
+        var going = hidden.Where(n => !_hiddenNodes.Contains(n)).ToList();
+        var coming = _hiddenNodes.Where(n => !hidden.Contains(n) && _propNodes.Contains(n)).ToList();
+        _hiddenNodes = hidden;
+        if (going.Count == 0 && coming.Count == 0) return;
+
+        foreach (var (node, arriving) in going.Select(n => (n, false)).Concat(coming.Select(n => (n, true))))
+        {
+            _motions.RemoveAll(m => ReferenceEquals(m.Node, node));
+            if (fade)
+            {
+                var motion = new PartMotion(node, node.List.LocalMatrix, [], arriving, 0f);
+                _motions.Add(motion);
+                motion.Apply();
+            }
+            else
+            {
+                node.List.IsEnabled = arriving;
+            }
+        }
+
+        if (_selected is { } selected && selected < _propNodes.Count && hidden.Contains(_propNodes[selected])) _selected = null;
+        _hovered = null;
+        SetShadowsDirty();
+        UpdateFading();
+        IsDirty = true;
+    }
+
+    /// <summary>A hidden part another motion brought back (it settled into its place) goes out of sight again</summary>
+    private void KeepHiddenOut()
+    {
+        if (_hiddenNodes.Count == 0) return;
+        foreach (var node in _hiddenNodes)
+        {
+            if (node.List.IsEnabled && !_motions.Any(m => ReferenceEquals(m.Node, node))) node.List.IsEnabled = false;
+        }
+    }
+
     /// <summary>Replaces the prop; pass null to remove it. Must be called on the thread that draws.</summary>
     public void SetProp(IKn5? kn5, Matrix placement)
     {
@@ -988,6 +1037,7 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         _propPlacement = placement;
         _prop = kn5 == null ? null : new Kn5RenderableFile(kn5, placement * (_propLeans ? _bodyLean : Matrix.Identity), asyncTexturesLoading: hiddenAtFirst);
         _propNodes = PartNode.Of(_prop);
+        _hiddenNodes = new();
 
         // An engine for the stand: how far it can turn over is worked out upright, then it is turned as far as the one
         // before it was, and goes on from there to where it can
@@ -1228,7 +1278,7 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         }
 
         /// <summary>Distance along the ray to the part's surface; null when the ray misses it</summary>
-        public float? Intersect(Ray ray) => Nearest(ray, _meshes);
+        public float? Intersect(Ray ray) => List.IsEnabled ? Nearest(ray, _meshes) : null;
     }
 
     protected override void DrawCars(DeviceContextHolder holder, ICamera camera, SpecialRenderMode mode)

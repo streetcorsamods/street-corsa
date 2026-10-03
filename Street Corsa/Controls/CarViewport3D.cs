@@ -266,6 +266,83 @@ public class CarViewport3D : D3DViewportBase
         set => SetValue(PartsVisibleProperty, value);
     }
 
+    public static readonly DependencyProperty PartShowsProperty = DependencyProperty.Register(
+        nameof(PartShows), typeof(IReadOnlyList<PartShowToggle>), typeof(CarViewport3D),
+        new PropertyMetadata(null, (d, e) => ((CarViewport3D)d).OnPartShowsChanged(e.OldValue as IReadOnlyList<PartShowToggle>, e.NewValue as IReadOnlyList<PartShowToggle>)));
+
+    /// <summary>
+    /// The parts view's buttons that put kinds of part out of sight: the parts of a kind whose button is off fade out
+    /// of the car, and back in when it is on again. On the stand everything stays in sight.
+    /// </summary>
+    public IReadOnlyList<PartShowToggle>? PartShows
+    {
+        get => (IReadOnlyList<PartShowToggle>?)GetValue(PartShowsProperty);
+        set => SetValue(PartShowsProperty, value);
+    }
+
+    private void OnPartShowsChanged(IReadOnlyList<PartShowToggle>? before, IReadOnlyList<PartShowToggle>? after)
+    {
+        foreach (var toggle in before ?? []) toggle.PropertyChanged -= OnPartShowToggled;
+        foreach (var toggle in after ?? []) toggle.PropertyChanged += OnPartShowToggled;
+        ApplyHiddenParts(fade: true);
+    }
+
+    private void OnPartShowToggled(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(PartShowToggle.IsShown) || _revealingShows) return;
+        ApplyHiddenParts(fade: true);
+        AnimateFor(AnimationWindow);
+    }
+
+    // Set while the viewport itself turns a button back on (a part of a hidden kind just went on): no second pass
+    private bool _revealingShows;
+
+    /// <summary>The kinds whose button is off, out of sight in the car's parts view; none on the stand</summary>
+    private void ApplyHiddenParts(bool fade)
+    {
+        if (Renderer is not { HasProp: true } renderer) return;
+
+        var hidden = (PartShows ?? []).Where(t => !t.IsShown).Select(t => t.Show).ToHashSet();
+        var nodes = new List<int>();
+        if (hidden.Count > 0 && PartsVisible && !IsOnStand)
+        {
+            var engine = EngineParts();
+            for (var i = 0; i < _partNodes.Count; i++)
+            {
+                if (ShowOf(_partNodes[i], engine) is { } show && hidden.Contains(show)) nodes.Add(i);
+            }
+        }
+
+        renderer.SetHiddenParts(nodes, fade);
+    }
+
+    /// <summary>The parts of the engine laid out in the car</summary>
+    private HashSet<InstalledPart> EngineParts() => _partsEngine?.SelfAndDescendants().ToHashSet() ?? [];
+
+    /// <summary>The show a laid-out part goes with: by its kind, or as part of the engine</summary>
+    private static PartShow? ShowOf(PlacedPart placed, HashSet<InstalledPart> engine) =>
+        PartGroups.Current.ShowOf(PartKinds.GroupOf(placed.Part), placed.Source is { } source && engine.Contains(source));
+
+    /// <summary>A part just put on whose kind is out of sight: its button comes back on, so the player sees what they did</summary>
+    private void RevealShowsOf(IEnumerable<int> arrived)
+    {
+        if (PartShows is not { Count: > 0 } toggles) return;
+
+        _revealingShows = true;
+        try
+        {
+            var engine = EngineParts();
+            foreach (var show in arrived.Where(n => n >= 0 && n < _partNodes.Count).Select(n => ShowOf(_partNodes[n], engine)).OfType<PartShow>().Distinct())
+            {
+                if (toggles.FirstOrDefault(t => ReferenceEquals(t.Show, show)) is { IsShown: false } toggle) toggle.IsShown = true;
+            }
+        }
+        finally
+        {
+            _revealingShows = false;
+        }
+    }
+
     public static readonly DependencyProperty StandModeProperty = DependencyProperty.Register(
         nameof(StandMode), typeof(bool), typeof(CarViewport3D),
         new PropertyMetadata(false, (d, _) => ((CarViewport3D)d).OnStandModeChanged()));
@@ -828,6 +905,8 @@ public class CarViewport3D : D3DViewportBase
                 _anchors = anchors;
                 _partNodes = model.Nodes;
                 _partWorlds = placed.Where(p => p.Source != null).ToDictionary(p => p.Source!, p => p.World);
+                if (before != null) RevealShowsOf(NodesWhere(model.Nodes, id => !before.Contains(id)));
+                ApplyHiddenParts(fade: false);
                 AnimateFor(AnimationWindow);
 
                 // The part being placed is gone, or the tree was made anew: the mode is over

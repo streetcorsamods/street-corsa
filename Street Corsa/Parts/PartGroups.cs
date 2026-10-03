@@ -20,6 +20,9 @@ namespace StreetCorsa.Parts;
 /// internals wear and break, the running gear has a slot on each wheel. A mod may change what their classes are, and add
 /// groups of its own.
 ///
+/// The file's <c>shows</c> are the parts view's buttons that put kinds of part out of sight (<see cref="PartShow"/>),
+/// merged by id the same way, a later mod's new ones after the ones before.
+///
 /// Plain BCL and linked into EngineBench: the problems are kept (<see cref="Problems"/>) for the game to tell.
 /// </summary>
 public sealed class PartGroups
@@ -61,14 +64,26 @@ public sealed class PartGroups
     private readonly List<PartGroup> _groups;
     private readonly Dictionary<string, PartGroup> _byId;
 
-    private PartGroups(List<PartGroup> groups, List<string> problems)
+    private PartGroups(List<PartGroup> groups, List<PartShow> shows, List<string> problems)
     {
         _groups = groups;
         _byId = groups.ToDictionary(g => g.Id, StringComparer.OrdinalIgnoreCase);
+        Shows = shows;
         Problems = problems;
     }
 
     public IReadOnlyList<PartGroup> All => _groups;
+
+    /// <summary>The parts view's buttons that put kinds of part out of sight, in order</summary>
+    public IReadOnlyList<PartShow> Shows { get; }
+
+    /// <summary>
+    /// The show a part of <paramref name="group"/> goes with: the first that names its group, else, for a part of the
+    /// engine (<paramref name="inEngine"/>), the one that takes the rest of the engine; null: always in sight
+    /// </summary>
+    public PartShow? ShowOf(string group, bool inEngine) =>
+        Shows.FirstOrDefault(s => s.Groups.Contains(group, StringComparer.OrdinalIgnoreCase))
+        ?? (inEngine ? Shows.FirstOrDefault(s => s.RestOfEngine == true) : null);
 
     public IReadOnlyList<string> Problems { get; }
 
@@ -102,16 +117,19 @@ public sealed class PartGroups
     {
         var problems = new List<string>();
         var groups = new List<PartGroup>();
+        var shows = new List<PartShow>();
         foreach (var dir in partsFolders)
         {
             var file = Path.Combine(dir, FileName);
             if (!File.Exists(file)) continue;
 
             List<PartGroup?>? read;
+            List<PartShow?>? readShows;
             try
             {
-                read = JsonDocument.Parse(File.ReadAllText(file), new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true })
-                    .RootElement.GetProperty("groups").Deserialize<List<PartGroup?>>(ModJson.Options);
+                var root = JsonDocument.Parse(File.ReadAllText(file), new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true }).RootElement;
+                read = root.GetProperty("groups").Deserialize<List<PartGroup?>>(ModJson.Options);
+                readShows = root.TryGetProperty("shows", out var showsElement) ? showsElement.Deserialize<List<PartShow?>>(ModJson.Options) : null;
             }
             catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException or KeyNotFoundException or InvalidOperationException)
             {
@@ -145,9 +163,52 @@ public sealed class PartGroups
             }
 
             groups.InsertRange(0, added);
+
+            foreach (var show in readShows ?? [])
+            {
+                if (show == null || string.IsNullOrWhiteSpace(show.Id))
+                {
+                    problems.Add($"{file}: a show without an id; left out");
+                    continue;
+                }
+
+                show.Groups = (show.Groups ?? []).Where(g => !string.IsNullOrWhiteSpace(g)).ToList();
+                if (shows.FirstOrDefault(s => s.Id.Equals(show.Id, StringComparison.OrdinalIgnoreCase)) is { } earlier) earlier.Over(show);
+                else shows.Add(show);
+            }
         }
 
-        return new PartGroups(groups, problems);
+        return new PartGroups(groups, shows, problems);
+    }
+}
+
+/// <summary>
+/// One of the parts view's buttons in part_groups.json's <c>shows</c>: the kinds of part it puts out of sight and back
+/// (by group id), the rest of the engine's parts when <see cref="RestOfEngine"/>, its icon. The player reads
+/// <c>part_show.&lt;id&gt;</c> as its tooltip.
+/// </summary>
+public sealed class PartShow
+{
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = string.Empty;
+
+    /// <summary>The picture on the button: an image name as the theme has them ("icons/engine")</summary>
+    [JsonPropertyName("icon")]
+    public string? Icon { get; set; }
+
+    [JsonPropertyName("groups")]
+    public List<string> Groups { get; set; } = new();
+
+    /// <summary>Every part of the engine no other show takes</summary>
+    [JsonPropertyName("rest_of_engine")]
+    public bool? RestOfEngine { get; set; }
+
+    /// <summary>Another mod's show of the same id, over this one where it says something</summary>
+    internal void Over(PartShow other)
+    {
+        if (other.Icon != null) Icon = other.Icon;
+        if (other.Groups.Count > 0) Groups = other.Groups;
+        if (other.RestOfEngine != null) RestOfEngine = other.RestOfEngine;
     }
 }
 

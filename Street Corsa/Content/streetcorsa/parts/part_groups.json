@@ -7,7 +7,18 @@
     "the group's name. never_stacks: never mounts on its own kind (a head on a head); bolt_on: what the cars on the lots",
     "were worked on with; tune: how much a rival's tuner goes for it (10 the most, none: not at all); speed_shop: a speed",
     "shop sells it. The ids engine_blocks to shocks below are the game's own: the engine's internals wear and break, the",
-    "running gear has a slot on each wheel."
+    "running gear has a slot on each wheel.",
+    "shows: the parts view's buttons that put kinds of part out of sight, as the source game had them. Each names its",
+    "groups (the first that names a part's group takes it); rest_of_engine takes every other part of the engine; a part",
+    "no show takes stays in sight. The player reads part_show.<id> as the button's tooltip. A mod adds shows, or changes",
+    "one by its id. The drivetrain is the gearbox and what is between it and the crank; a differential or a transfer case",
+    "group a mod adds goes in it too."
+  ],
+  "shows": [
+    { "id": "engine", "icon": "icons/engine", "rest_of_engine": true },
+    { "id": "drivetrain", "icon": "icons/gears", "groups": [ "transmissions", "flywheels", "differentials", "transfer_cases" ] },
+    { "id": "brakes", "icon": "icons/disc_brake", "groups": [ "brakes" ] },
+    { "id": "suspension", "icon": "icons/suspension", "groups": [ "springs", "shocks", "sway_bars", "suspension_arms" ] }
   ],
   "groups": [
     {

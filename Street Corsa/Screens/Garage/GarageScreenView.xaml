@@ -41,6 +41,7 @@
                                 ShowroomKn5="{Binding GarageShowroomKn5}"
                                 PartsCatalog="{Binding Workbench.Catalog}"
                                 PartsVisible="{Binding Workbench.IsOpen}"
+                                PartShows="{Binding Workbench.PartShows}"
                                 StandMode="{Binding Workbench.IsStand}"
                                 StandEngine="{Binding Workbench.StandEngine}"
                                 EngineTurnedOver="{Binding Workbench.IsEngineTurnedOver}"
@@ -509,8 +510,30 @@
                 <!-- The key at the left, then the car's buttons. Turning the key starts the engine: the buttons sink away
                      and the engine (tach and pedal) rises in their place; turned back, the engine goes off and the buttons
                      come back (GarageScreenView.xaml.cs). The car's details are in Car info, on the right. -->
-                <Grid HorizontalAlignment="Center"
-                      Visibility="{Binding HasCars, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <!-- Only with a car in the garage: the selected car home (not at the impound) and standing there in 3D, or
+                     the garage in 2D when the 3D one could not start -->
+                <Grid HorizontalAlignment="Center">
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding IsCarHere}" Value="True"/>
+                                        <Condition Binding="{Binding HasCar, ElementName=Viewport3D}" Value="True"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </MultiDataTrigger>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding IsCarHere}" Value="True"/>
+                                        <Condition Binding="{Binding HasFailed, ElementName=Viewport3D}" Value="True"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </MultiDataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
@@ -562,6 +585,27 @@
                                               ToolTip="{t:Text garage.view.parts.tip}"
                                               Visibility="{Binding Workbench.IsAvailable, Converter={StaticResource BooleanToVisibilityConverter}}"
                                               IsChecked="{Binding Workbench.IsCarView, Mode=TwoWay}"/>
+                                <!-- With the car's parts on show: a button for each kind that can be put out of sight, lit
+                                     while it is in sight (part_groups.json's shows) -->
+                                <ItemsControl ItemsSource="{Binding Workbench.PartShows}"
+                                              Focusable="False"
+                                              Visibility="{Binding Workbench.IsCarView, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <ToggleButton Style="{StaticResource RoundIconToggleStyle}"
+                                                          Margin="0,0,10,0"
+                                                          Tag="{Binding Icon}"
+                                                          Content="{Binding Name}"
+                                                          ToolTip="{Binding Tip}"
+                                                          IsChecked="{Binding IsShown, Mode=TwoWay}"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
                                 <ToggleButton Tag="{theme:Image icons/engine, Size=128}"
                                               Content="{t:Text garage.view.stand}"
                                               ToolTip="{t:Text garage.view.stand.tip}"

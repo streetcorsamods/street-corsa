@@ -246,6 +246,13 @@ are the game's own: the engine's internals wear and break, the running gear has 
 looks at the air filter and the exhaust. A mod may change their classes, never their meaning. The base game's groups are
 `Content\streetcorsa\parts\part_groups.json`.
 
+**The shows.** The same file's `shows` are the garage parts view's buttons that put kinds of part out of sight, as the
+source game had them: each has an `id`, an `icon` (a theme image name, `"icons/engine"`) and the `groups` it takes; the
+first show naming a part's group takes it, `rest_of_engine: true` takes every other part of the engine, and a part no
+show takes stays in sight. The tooltip is `part_show.<id>` in the text. A mod adds shows (after the ones before) or
+changes one by its id. The base game has `engine` (the rest of the engine), `drivetrain` (gearbox, clutch and flywheel,
+and `differentials` and `transfer_cases` should a mod add those groups), `brakes` and `suspension`.
+
 ```json
 { "groups": [ { "id": "intercoolers", "classes": [ "Intercooler" ], "tune": 4, "speed_shop": true } ] }
 ```
