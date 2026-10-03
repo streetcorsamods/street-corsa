@@ -16,7 +16,12 @@
     "rival_car, rival_grudge: {car}. races: {count}, {won} (by the person), {lost}. race_won, race_lost: {when}, {kind}, {pink}.",
     "rival_race_won, rival_race_lost: {when}, {other}, {kind}, {car} (the loser's), {pink}, {wreck}. memory: {when}, {text}.",
     "said_line: {text}. price, price_down: {price}, {asked}. chat.deal.*: {offer}, {price}. today: {date}. player: {player},",
-    "{wins}, {losses}, {reputation}. chat.when.days: {days}. chat.transcript.*: {name}, {text}."
+    "{wins}, {losses}, {reputation}. chat.when.days: {days}. chat.transcript.*: {name}, {text}.",
+    "The buyer who answered the player's own ad (the player sells): chat.place.buyer_phone; chat.stage.buyer_phone {thing},",
+    "{player}; chat.fact.buyer_car as chat.fact.car ({price} what the ad asks); chat.fact.offer, offer_up {price} the offer",
+    "now, {asked} the first; chat.deal.buyer.* {offer} what the player asked, {price} the offer after; chat.fact.offer_warning,",
+    "chat.deal.buyer.held, chat.ui.sell, chat.ui.offer_now {price}; chat.ui.offer_up {asked}. chat.ask_words: words that,",
+    "with chat.offer_words, make a number the player types a price asked of a buyer (\"I want 1500\")."
   ],
   "lines": {
     "chat.somebody": "Somebody",
@@ -24,12 +29,14 @@
     "chat.sex.woman": "woman",
 
     "chat.place.phone": "You are on the telephone at home: the player has called about your ad in the paper.",
+    "chat.place.buyer_phone": "You are on the telephone at home. You answered the player's ad in the paper and offered to buy their car; now the player has called you back.",
     "chat.place.lot": "You are on your car lot, where you sell cars; the player is a customer walking round it.",
     "chat.place.curb": "You are at the curb in front of your house, where the car stands; the player has come to see it.",
     "chat.place.diner": "You are at the diner, where the street racers meet; the player has come over to your table.",
     "chat.place.cruise": "You are in your car on the street at night, pulled up beside the player's car, engines running.",
 
     "chat.stage.phone": "[Your telephone rings at home. You pick up; the caller is asking about the {thing} you advertised. Answer the phone as yourself.]",
+    "chat.stage.buyer_phone": "[Your telephone rings at home. It is {player}, calling back about the {thing} you offered to buy out of the paper. Answer the phone as yourself.]",
     "chat.stage.lot": "[A customer walks onto your lot. Go over, welcome them, and talk up what you have on the lot.]",
     "chat.stage.lot_car": "[A customer walks onto your lot and stops at the {thing}. Go over and start selling it.]",
     "chat.stage.curb": "[The player has come round to your place to look at the {thing}. You come out to meet them.]",
@@ -45,6 +52,7 @@
     "chat.fact.today": "Today is {date:dddd, d MMMM yyyy}.",
     "chat.fact.player": "The one you are talking to is {player}, a street racer in town ({wins} wins, {losses} losses, reputation {reputation} of 100).",
     "chat.fact.car": "For sale: a {year} {car}, the price {price:money}.",
+    "chat.fact.buyer_car": "The player's car you want to buy: a {year} {car}; their ad asks {price:money}. You are the buyer, not the seller.",
     "chat.fact.car_engine": "Engine: {engine}.",
     "chat.fact.car_power": "It makes about {power} horsepower.",
     "chat.fact.car_modified": "It has been worked on: not as it left the factory.",
@@ -89,6 +97,18 @@
     "chat.fact.price_warning": "You just named a price lower than {price:money} by yourself: never do that. The price is {price:money}; only the deal lines change it.",
     "chat.deal.insulted": "The player has just offered {offer:money}: far too low, near an insult. Turn it down; the price stays {price:money}.",
 
+    "chat.fact.offer": "You have offered {price:money} for it. Never offer more yourself: only the deal lines below change it.",
+    "chat.fact.offer_up": "You first offered {asked:money}; you have come up to {price:money}. Never offer more yourself: only the deal lines below change it.",
+    "chat.fact.offer_gone": "You have walked away from this deal: you no longer want the car. Say so if it comes up, politely or not.",
+    "chat.fact.offer_warning": "You just offered more than {price:money} by yourself: never do that. Your offer is {price:money}; only the deal lines change it.",
+    "chat.deal.buyer.accept": "The player has just asked {offer:money}. You agree: your offer is now {price:money}. Say yes, it's a deal.",
+    "chat.deal.buyer.accept_offered": "The player has just asked {offer:money}, LESS than the {price:money} you offered. Glad of it, and honest, you keep to your offer of {price:money}: say it's a deal at {price:money}.",
+    "chat.deal.buyer.counter": "The player has just asked {offer:money}. Too much, but you come up to {price:money} and no higher right now. Say so.",
+    "chat.deal.buyer.firm": "The player has just asked {offer:money}. You will not go any higher than {price:money}. Say so.",
+    "chat.deal.buyer.shake": "The player takes your offer, {price:money}: it's a deal. Shake on it at {price:money}, not a cent more.",
+    "chat.deal.buyer.walk": "The player has just asked {offer:money}: too much, and you have had enough. You no longer want the car: say so and say goodbye.",
+    "chat.deal.buyer.held": "I said {price:money}, and that's all I've got.",
+
     "chat.transcript.player": "Player: {text}",
     "chat.transcript.them": "{name}: {text}",
 
@@ -101,6 +121,7 @@
       "agreed", "shake on it", "you're on", "youre on", "we have a deal", "we got a deal"
     ],
     "chat.agree_alone": [ "deal", "sold", "done" ],
+    "chat.ask_words": [ "want", "need", "asking", "get", "make it", "at least", "no less" ],
     "chat.agree_not": [ "not", "no", "never", "don't", "dont", "won't", "wont", "can't", "cant", "nope", "didn't", "didnt" ],
 
     "chat.unit_words": [
@@ -109,6 +130,10 @@
     ],
 
     "chat.ui.buy": "Buy it for {price:money}",
+    "chat.ui.sell": "Sell it for {price:money}",
+    "chat.ui.call_buyer": "Call the buyer",
+    "chat.ui.offer_now": "Offer now {price:money}",
+    "chat.ui.offer_up": "Up from {asked:money}",
     "chat.ui.talk": "Talk",
     "chat.ui.toggle": "Show or hide the talk",
     "chat.ui.call_seller": "Call the seller",

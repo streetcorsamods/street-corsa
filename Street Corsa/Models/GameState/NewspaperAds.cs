@@ -75,6 +75,18 @@ namespace StreetCorsa.Models.GameState
 
         /// <summary>The buyer on the phone, if there is one; a later caller takes the place of one who gave up</summary>
         public CarOffer? Offer { get; set; }
+
+        /// <summary>What the player says about the engine in the ad, worked out when its words were; null when nothing</summary>
+        public string? EngineSummary { get; set; }
+
+        /// <summary>Somebody has been at the engine, as the ad was written</summary>
+        public bool IsModified { get; set; }
+
+        /// <summary>The ad's few words about the car (<see cref="Services.Market.AdBlurbs"/>); null on ads from before they had them</summary>
+        public string? Description { get; set; }
+
+        /// <summary>The player's AI rewrote <see cref="Description"/>: it is not offered the ad again</summary>
+        public bool AiPolished { get; set; }
     }
 
     /// <summary>What a buyer who answered an ad would pay, and until when</summary>
@@ -88,6 +100,18 @@ namespace StreetCorsa.Models.GameState
 
         /// <summary>Game time; after it the buyer has found another car</summary>
         public DateTime Expires { get; set; }
+
+        /// <summary>
+        /// What the buyer first offered, kept the first time the player haggles with them: the hard ceiling is worked out
+        /// from it (<c>ai.talk.mostRaise</c>), so asking again and again never brings it higher. Null until then.
+        /// </summary>
+        public decimal? FirstAmount { get; set; }
+
+        /// <summary>
+        /// The most this buyer will come up from <see cref="FirstAmount"/> (0.1: ten percent), drawn once with it: 0 for one
+        /// who will not budge, never more than <c>ai.talk.mostRaise</c>. Kept, so asking again never draws again.
+        /// </summary>
+        public double? MostOver { get; set; }
     }
 
     public class PartAd

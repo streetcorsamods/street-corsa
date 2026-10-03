@@ -839,7 +839,7 @@ without repeating the rest.
   answered as the headline on the first line and the body after), `ad` (an
   ad's blurb), `portrait_look` (a new rival's looks for the picture, in English) and `test` (Settings' Test button).
   A use with no prompt is not asked for.
-- Talking to people: `chat_seller`, `chat_salesman`, `chat_rival` are sent after the persona as the rest of who the AI
+- Talking to people: `chat_seller`, `chat_salesman`, `chat_rival`, `chat_buyer` (who answered the player's own ad) are sent after the persona as the rest of who the AI
   is, with the talk as the messages; they name `{name}`, `{nickname}`, `{age}`, `{sex}`, `{temperament}`, `{place}`,
   `{player}` and `{facts}` (the game's fact sheet, the text pools `chat.fact.*` and `chat.deal.*`). `chat_memory`
   writes what a person keeps of a talk (`{name}`, `{player}`, `{talk}`). The stage lines, the window's words and the
@@ -857,7 +857,7 @@ without repeating the rest.
 ```
 
 - `words`: who they are, as the AI is told. `give`: how far they come down on a price, times the rules' most for their
-  kind (0 never). `for`: `seller`, `salesman`, `rival` (none: every kind). `weight`: how often. `minAggression`,
+  kind (0 never; a buyer's: how far they come up). `for`: `seller`, `salesman`, `rival`, `buyer` (none: every kind). `weight`: how often. `minAggression`,
   `maxAggression`: a rival's aggression range. Every kind should have one for every aggression, or the person has none.
 
 `ai\ollama.json`: the game's own model in Ollama, made from Settings ("Make the game's model"), merged key by key:

@@ -14,7 +14,7 @@
 | Diner | `Screens/Diner/` | Meet opponents, accept challenges |
 | Cruise | `Screens/Cruise/` | Sit at the curb in your car; rivals pull up with an offer (see `cruise.md`) |
 | GasStation | `Screens/Station/` | Drive to the gas station: fill up, top up the oil, a wash, the attendant's remarks (see `gas-station.md`) |
-| Newspaper | `Screens/Newspaper/` | The classifieds, set as a period paper's ads: used cars (every dealer's and racer's, the player's own ads with their buyers at the top) and used parts, a page at a time as the player scrolls; an ad is bought from here or clicked to look at it |
+| Newspaper | `Screens/Newspaper/` | The classifieds, set as a period paper's ads under the masthead (the paper's name in the top band between the back button and the money card, the date line under the thick rule): used cars (every dealer's and racer's, and the player's own among them at a place drawn from the ad's id, written like the others and circled in pencil with the buyer's offer pencilled under it; clicked, `Dialogs/PlayerAd`: the car, the offer to take or turn down, "Call the buyer" with the AI on) and used parts, a page at a time as the player scrolls; an ad is bought from here or clicked to look at it |
 | DealerMap | `Screens/DealerMap/` | The city, with a pin per car dealer (the garage's Car dealers button) or per part shop (Parts dealers: gold squares) |
 | PartShop | `Screens/PartShop/` | One part shop's counter: its shelves or yard at today's prices, haggling at a junkyard, selling to it |
 | DealerLot | `Screens/DealerLot/` | One dealer's cars parked in 3D; click one to look at it |

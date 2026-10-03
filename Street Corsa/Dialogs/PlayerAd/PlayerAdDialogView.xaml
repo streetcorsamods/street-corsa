@@ -1,0 +1,151 @@
+<UserControl x:Class="StreetCorsa.Dialogs.PlayerAd.PlayerAdDialogView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:t="clr-namespace:StreetCorsa.Services.Text"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             Width="720"
+             d:DesignHeight="560" d:DesignWidth="720">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Title: the player's ad -->
+        <Border Grid.Row="0"
+                Background="{StaticResource UiBandBrush}"
+                BorderBrush="{StaticResource White20Brush}"
+                BorderThickness="0,0,0,1"
+                Padding="20,15">
+            <TextBlock Text="{Binding Title}"
+                       Foreground="{StaticResource CreamBrush}"
+                       FontSize="{StaticResource FontSizeHeading}"
+                       FontWeight="SemiBold"
+                       TextTrimming="CharacterEllipsis"/>
+        </Border>
+
+        <!-- The car's picture and the ad cut out of the paper beside the car's figures -->
+        <Grid Grid.Row="1" Margin="20,16,20,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="300"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0">
+                <Border Background="{StaticResource BgPanelBrush}"
+                        Height="170"
+                        Margin="0,0,0,10"
+                        Visibility="{Binding HasPreview, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Image Source="{Binding Preview}" Stretch="UniformToFill"/>
+                </Border>
+
+                <!-- The clipping: the ad as the paper sets it, on newsprint, a little askew -->
+                <Border Background="{StaticResource NewsprintPaperBrush}"
+                        BorderBrush="{StaticResource NewsprintPaperEdgeBrush}"
+                        BorderThickness="1"
+                        Padding="12,10">
+                    <Border.LayoutTransform>
+                        <RotateTransform Angle="-1"/>
+                    </Border.LayoutTransform>
+                    <TextBlock FontFamily="{StaticResource NewsprintFont}"
+                               FontSize="{StaticResource FontSizeBody}"
+                               Foreground="{StaticResource NewsprintInkBrush}"
+                               TextWrapping="Wrap"
+                               TextAlignment="Justify">
+                        <Run Text="{Binding Ad.Headline, Mode=OneWay}" FontFamily="{StaticResource NewsHeadFont}" FontStretch="Condensed" FontWeight="Bold"/><Run Text="  "/><Run Text="{Binding Ad.Blurb, Mode=OneWay}"/><Run Text="{Binding Ad.PriceDisplay, Mode=OneWay}" FontWeight="Bold"/><Run Text=". "/><Run Text="{Binding Ad.SellerDisplay, Mode=OneWay}" FontStyle="Italic"/>
+                    </TextBlock>
+                </Border>
+            </StackPanel>
+
+            <!-- What it asks, how long it has run, the car -->
+            <ItemsControl Grid.Column="1" ItemsSource="{Binding Lines}" Margin="20,0,0,0">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Margin="0,3">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="100"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding Label}"
+                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                       FontSize="{StaticResource FontSizeBody}"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding Value}"
+                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                       FontSize="{StaticResource FontSizeBody}"
+                                       FontWeight="SemiBold"
+                                       TextWrapping="Wrap"/>
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </Grid>
+
+        <!-- The buyer on the phone, or that nobody has called -->
+        <Border Grid.Row="2"
+                Margin="20,4,20,16"
+                Padding="14,10"
+                BorderBrush="{StaticResource UiOutlineBrush}"
+                BorderThickness="1"
+                CornerRadius="4">
+            <TextBlock Text="{Binding OfferLine}"
+                       FontSize="{StaticResource FontSizeBodyLarge}"
+                       TextWrapping="Wrap">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                        <Setter Property="FontStyle" Value="Italic"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding HasOffer}" Value="True">
+                                <Setter Property="Foreground" Value="{StaticResource AccentSuccessBrush}"/>
+                                <Setter Property="FontStyle" Value="Normal"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+        </Border>
+
+        <!-- Buttons -->
+        <Border Grid.Row="3"
+                Background="{StaticResource UiBandBrush}"
+                BorderBrush="{StaticResource White20Brush}"
+                BorderThickness="0,1,0,0"
+                Padding="20,15">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="{t:Text common.close}"
+                        Command="{Binding CloseCommand}"
+                        Style="{StaticResource DialogSecondaryButtonStyle}"
+                        Width="100"
+                        Height="35"/>
+                <!-- A call back to the buyer, while the player's AI speaks for them -->
+                <Button Content="{t:Text chat.ui.call_buyer}"
+                        Command="{Binding CallCommand}"
+                        Visibility="{Binding CanCall, Converter={StaticResource BooleanToVisibilityConverter}}"
+                        Style="{StaticResource DialogSecondaryButtonStyle}"
+                        MinWidth="130"
+                        Height="35"
+                        Margin="10,0,0,0"/>
+                <Button Content="{t:Text paper.offer.turn_down}"
+                        Command="{Binding TurnDownCommand}"
+                        Visibility="{Binding HasOffer, Converter={StaticResource BooleanToVisibilityConverter}}"
+                        Style="{StaticResource DialogSecondaryButtonStyle}"
+                        MinWidth="110"
+                        Height="35"
+                        Margin="10,0,0,0"/>
+                <Button Content="{t:Text paper.offer.take}"
+                        Command="{Binding TakeCommand}"
+                        Visibility="{Binding HasOffer, Converter={StaticResource BooleanToVisibilityConverter}}"
+                        Style="{StaticResource DialogPrimaryButtonStyle}"
+                        MinWidth="110"
+                        Height="35"
+                        Margin="10,0,0,0"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

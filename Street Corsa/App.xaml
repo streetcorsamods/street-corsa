@@ -177,6 +177,11 @@
                           DataType="{x:Type talk:TalkDialogViewModel}">
                 <talk:TalkDialogView/>
             </DataTemplate>
+            <!-- Ideas batch 6 (C): the player's own ad in the paper, and the buyer who called -->
+            <DataTemplate xmlns:playerAd="clr-namespace:StreetCorsa.Dialogs.PlayerAd"
+                          DataType="{x:Type playerAd:PlayerAdDialogViewModel}">
+                <playerAd:PlayerAdDialogView/>
+            </DataTemplate>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

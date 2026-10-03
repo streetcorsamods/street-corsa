@@ -97,12 +97,20 @@ namespace StreetCorsa.Screens.Shared
 
         public bool HasPortrait => !string.IsNullOrEmpty(Portrait);
 
-        /// <summary>The price of what is talked about now; empty with nothing for sale in the talk</summary>
-        public string PriceLine => Talk.Subject is { } subject ? GameText.Say("chat.ui.price_now", ("price", new Helpers.Money(subject.Price))) : string.Empty;
+        /// <summary>The price of what is talked about now (the buyer's offer, the player selling); empty with nothing for sale in the talk</summary>
+        public string PriceLine => Talk.Subject switch
+        {
+            BuyerSubject { IsGone: true } => string.Empty,
+            BuyerSubject buyer => GameText.Say("chat.ui.offer_now", ("price", new Helpers.Money(buyer.Price))),
+            { } subject => GameText.Say("chat.ui.price_now", ("price", new Helpers.Money(subject.Price))),
+            _ => string.Empty
+        };
 
-        /// <summary>"Down from $1,600" once the seller has come down</summary>
-        public string DealLine => Talk.Subject is { } subject && Talk.Deal is { } deal && subject.Price < deal.Asked
-            ? GameText.Say("chat.ui.deal_down", ("asked", new Helpers.Money(deal.Asked)))
+        /// <summary>"Down from $1,600" once the seller has come down; "Up from $1,200" once a buyer has come up</summary>
+        public string DealLine => Talk.Subject is { } subject && Talk.Deal is { } deal
+            ? subject is BuyerSubject buyer
+                ? !buyer.IsGone && buyer.Price > deal.Asked ? GameText.Say("chat.ui.offer_up", ("asked", new Helpers.Money(deal.Asked))) : string.Empty
+                : subject.Price < deal.Asked ? GameText.Say("chat.ui.deal_down", ("asked", new Helpers.Money(deal.Asked))) : string.Empty
             : string.Empty;
 
         /// <summary>The price changed in the talk: the screen shows the new one</summary>
@@ -152,8 +160,10 @@ namespace StreetCorsa.Screens.Shared
         /// <summary>A price is agreed: the deal can be closed</summary>
         public bool CanBuy => Buy != null && Talk.IsAgreed && !_ended;
 
-        /// <summary>"Buy it for $1,325"</summary>
-        public string BuyLabel => Talk.Subject is { } subject ? GameText.Say("chat.ui.buy", ("price", new Helpers.Money(subject.Price))) : string.Empty;
+        /// <summary>"Buy it for $1,325"; "Sell it for $1,325" to a buyer</summary>
+        public string BuyLabel => Talk.Subject is { } subject
+            ? GameText.Say(subject is BuyerSubject ? "chat.ui.sell" : "chat.ui.buy", ("price", new Helpers.Money(subject.Price)))
+            : string.Empty;
 
         public RelayCommand BuyCommand { get; }
 

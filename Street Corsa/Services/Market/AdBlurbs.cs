@@ -113,6 +113,10 @@ namespace StreetCorsa.Services.Market
             FactsOf(car.Parts, catalog, factory, ad.EngineSummary, ad.IsModified, CarValuation.ConditionOf(car),
                 double.IsFinite(car.OdometerKM) ? (int)Math.Clamp(car.OdometerKM, 0, int.MaxValue) : 0);
 
+        public static CarAdFacts FactsOf(CarSaleAd ad, Car car, PartsCatalog? catalog, IReadOnlySet<string>? factory) =>
+            FactsOf(car.Parts, catalog, factory, ad.EngineSummary, ad.IsModified, CarValuation.ConditionOf(car),
+                double.IsFinite(car.OdometerKM) ? (int)Math.Clamp(car.OdometerKM, 0, int.MaxValue) : 0);
+
         /// <summary>A part's facts; null when the catalog does not know it</summary>
         public static PartAdFacts? FactsOf(PartAd ad, PartsCatalog catalog)
         {
@@ -225,6 +229,14 @@ namespace StreetCorsa.Services.Market
             if (ShouldOffer(ad, ad.AiPolished, ad.Description)) Offer(facts, ad.Description, Rewrites(ad));
         }
 
+        /// <summary>The player's own ad's words, as a private seller would put them</summary>
+        public static void Describe(CarSaleAd ad, Car car, PartsCatalog? catalog, IReadOnlySet<string>? factory, Random? random = null)
+        {
+            var facts = FactsOf(ad, car, catalog, factory);
+            ad.Description = Write(facts, random ?? Random.Shared);
+            if (ShouldOffer(ad, ad.AiPolished, ad.Description)) Offer(facts, ad.Description, Rewrites(ad));
+        }
+
         /// <summary>The part ad's words; none for a part the catalog does not know</summary>
         public static void Describe(PartAd ad, PartsCatalog catalog, Random? random = null)
         {
@@ -247,6 +259,11 @@ namespace StreetCorsa.Services.Market
             if (ShouldOffer(ad, ad.AiPolished, ad.Description)) Offer(FactsOf(ad, car, catalog, factory()), ad.Description!, Rewrites(ad));
         }
 
+        public static void Polish(CarSaleAd ad, Car car, PartsCatalog? catalog, Func<IReadOnlySet<string>?> factory)
+        {
+            if (ShouldOffer(ad, ad.AiPolished, ad.Description)) Offer(FactsOf(ad, car, catalog, factory()), ad.Description!, Rewrites(ad));
+        }
+
         public static void Polish(PartAd ad, PartsCatalog catalog)
         {
             if (FactsOf(ad, catalog) is { } facts && ShouldOffer(ad, ad.AiPolished, ad.Description)) Offer(facts, ad.Description!, Rewrites(ad));
@@ -260,6 +277,12 @@ namespace StreetCorsa.Services.Market
         };
 
         private static Action<string> Rewrites(RivalCarAd ad) => better =>
+        {
+            ad.Description = better;
+            ad.AiPolished = true;
+        };
+
+        private static Action<string> Rewrites(CarSaleAd ad) => better =>
         {
             ad.Description = better;
             ad.AiPolished = true;
@@ -289,6 +312,21 @@ namespace StreetCorsa.Services.Market
         public static bool Ensure(RivalCarAd ad, Car car, PartsCatalog? catalog, Func<IReadOnlySet<string>?> factory)
         {
             if (ad.Description != null) return false;
+            Describe(ad, car, catalog, factory());
+            return true;
+        }
+
+        /// <param name="engine">What the seller says about the engine (<see cref="IUsedCarMarketService.DescribeEngine"/>):
+        /// asked only when the words are written, and kept with the ad</param>
+        public static bool Ensure(CarSaleAd ad, Car car, PartsCatalog? catalog, Func<IReadOnlySet<string>?> factory, Func<EngineDescription?> engine)
+        {
+            if (ad.Description != null) return false;
+            if (engine() is { } said)
+            {
+                ad.EngineSummary = said.Summary;
+                ad.IsModified = said.IsModified;
+            }
+
             Describe(ad, car, catalog, factory());
             return true;
         }

@@ -10,7 +10,10 @@ namespace StreetCorsa.Models.GameState
         Salesman,
 
         /// <summary>A racer on the street (<see cref="Opponent"/>): the racer's own record says who they are</summary>
-        Rival
+        Rival,
+
+        /// <summary>Somebody who answered the player's own ad in the paper, from home: they want to buy</summary>
+        Buyer
     }
 
     /// <summary>

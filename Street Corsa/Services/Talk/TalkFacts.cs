@@ -36,8 +36,23 @@ namespace StreetCorsa.Services.Talk
         /// <summary>A car for sale: what it is, the engine, its shape and mileage, its past, the ad's words, how long on sale</summary>
         public static IEnumerable<string> Car(UsedCarListingViewModel car, decimal price, DateTime today, DateTime onSaleSince)
         {
-            var listing = car.Listing;
             yield return GameText.Say("chat.fact.car", ("car", car.DisplayName), ("year", car.YearDisplay), ("price", new Helpers.Money(price)));
+            foreach (var line in CarDetails(car, today, onSaleSince)) yield return line;
+        }
+
+        /// <summary>
+        /// The player's own car in the paper, as the buyer who answered the ad knows it: what the ad asks, and the car as
+        /// it is (the same truths a seller tells)
+        /// </summary>
+        public static IEnumerable<string> PlayersCar(UsedCarListingViewModel car, decimal asking, DateTime today, DateTime onSaleSince)
+        {
+            yield return GameText.Say("chat.fact.buyer_car", ("car", car.DisplayName), ("year", car.YearDisplay), ("price", new Helpers.Money(asking)));
+            foreach (var line in CarDetails(car, today, onSaleSince)) yield return line;
+        }
+
+        private static IEnumerable<string> CarDetails(UsedCarListingViewModel car, DateTime today, DateTime onSaleSince)
+        {
+            var listing = car.Listing;
             if (car.EngineDisplay.Length > 0) yield return GameText.Say("chat.fact.car_engine", ("engine", car.EngineDisplay));
             if (listing.PowerHp is { } hp and > 0) yield return GameText.Say("chat.fact.car_power", ("power", (int)Math.Round(hp)));
             yield return GameText.Say(listing.IsModified ? "chat.fact.car_modified" : "chat.fact.car_original");
@@ -164,6 +179,35 @@ namespace StreetCorsa.Services.Talk
                 HaggleAnswer.Firm => "chat.deal.firm",
                 HaggleAnswer.Shake => "chat.deal.shake",
                 _ => "chat.deal.insulted"
+            };
+            yield return GameText.Say(key, ("offer", new Helpers.Money(outcome.Offer)), ("price", new Helpers.Money(outcome.Price)));
+        }
+
+        /// <summary>
+        /// The buyer's offer as it stands (raised from what they first offered, or gone), and their answer to what the
+        /// player just asked, if they asked
+        /// </summary>
+        public static IEnumerable<string> Offer(decimal offer, decimal first, bool gone, HaggleOutcome? outcome)
+        {
+            if (gone && outcome?.Answer != HaggleAnswer.Walk)
+            {
+                yield return GameText.Say("chat.fact.offer_gone");
+                yield break;
+            }
+
+            yield return GameText.Say(offer > first ? "chat.fact.offer_up" : "chat.fact.offer",
+                ("price", new Helpers.Money(offer)), ("asked", new Helpers.Money(first)));
+            if (outcome == null) yield break;
+
+            var key = outcome.Answer switch
+            {
+                // Less than they offered: they keep to their offer all the same
+                HaggleAnswer.Accept when outcome.Offer < outcome.Price => "chat.deal.buyer.accept_offered",
+                HaggleAnswer.Accept => "chat.deal.buyer.accept",
+                HaggleAnswer.Counter => "chat.deal.buyer.counter",
+                HaggleAnswer.Firm => "chat.deal.buyer.firm",
+                HaggleAnswer.Shake => "chat.deal.buyer.shake",
+                _ => "chat.deal.buyer.walk"
             };
             yield return GameText.Say(key, ("offer", new Helpers.Money(outcome.Offer)), ("price", new Helpers.Money(outcome.Price)));
         }

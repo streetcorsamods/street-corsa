@@ -74,6 +74,76 @@ namespace StreetCorsa.Services.Talk
         public override decimal Round(decimal price) => Haggle.RoundUp(price, StreetCorsa.Rules.RuleBook.Current.Ai.Talk.CarPriceStep);
     }
 
+    /// <summary>
+    /// The player's own car in the paper, talked over with the buyer who answered the ad: the price is the buyer's offer,
+    /// which goes up (never down) as they are talked round, and is gone when they walk away (<see cref="Walk"/>)
+    /// </summary>
+    public sealed class BuyerSubject(CarSaleAd ad, UsedCarListingViewModel car) : TalkSubject
+    {
+        private decimal _last = ad.Offer?.Amount ?? 0m;
+
+        public CarSaleAd Ad { get; } = ad;
+
+        /// <summary>The car as the ad shows it: what the buyer is told about it</summary>
+        public UsedCarListingViewModel Car { get; } = car;
+
+        /// <summary>The offer talked over, while it stands</summary>
+        public CarOffer? Offer { get; } = ad.Offer;
+
+        /// <summary>The buyer walked away: the offer is out of the ad</summary>
+        public bool IsGone => Offer == null || !ReferenceEquals(Ad.Offer, Offer);
+
+        // By the offer talked over, kept: the buyer gone, the deal is still theirs
+        public override string Thing { get; } = TalkPeople.BuyerKey(ad);
+
+        public override string Name => $"{Car.YearDisplay} {Car.DisplayName}";
+
+        /// <summary>What the buyer offers now</summary>
+        public override decimal Price
+        {
+            get => Offer?.Amount ?? _last;
+            set
+            {
+                _last = value;
+                if (Offer != null) Offer.Amount = value;
+            }
+        }
+
+        /// <summary>What the ad asks</summary>
+        public decimal Asking => Ad.AskingPrice;
+
+        public override DateTime OnSaleSince => Ad.PostedDate;
+
+        /// <summary>What the buyer first offered (the hard ceiling's base)</summary>
+        public override decimal? FirstAsked
+        {
+            get => Offer?.FirstAmount;
+            set
+            {
+                if (Offer != null) Offer.FirstAmount = value;
+            }
+        }
+
+        /// <summary>The most this buyer comes up from the first offer, drawn once and kept on it</summary>
+        public override double? MostOff
+        {
+            get => Offer?.MostOver;
+            set
+            {
+                if (Offer != null) Offer.MostOver = value;
+            }
+        }
+
+        /// <summary>A buyer's figures go down to round ones</summary>
+        public override decimal Round(decimal price) => Haggle.RoundDown(price, StreetCorsa.Rules.RuleBook.Current.Ai.Talk.CarPriceStep);
+
+        /// <summary>The buyer wants no more of it: their offer leaves the ad (the next caller may come another day)</summary>
+        public void Walk()
+        {
+            if (Offer != null && ReferenceEquals(Ad.Offer, Offer)) Ad.Offer = null;
+        }
+    }
+
     /// <summary>A part in the paper</summary>
     public sealed class PartSubject(PartAd ad, string name) : TalkSubject
     {
