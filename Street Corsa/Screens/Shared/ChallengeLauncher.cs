@@ -22,7 +22,8 @@ namespace StreetCorsa.Screens.Shared
         public Car PlayerCar { get; init; } = null!;
         public TrackInfo Track { get; init; } = null!;
         public TrackConfiguration? Configuration { get; init; }
-        public RaceType RaceType { get; init; }
+        /// <summary>The race's format id (<see cref="Services.Race.RaceFormats"/>)</summary>
+        public string Format { get; init; } = string.Empty;
         public bool IsPinkSlip { get; init; }
         public decimal CashWager { get; init; }
 
@@ -142,7 +143,7 @@ namespace StreetCorsa.Screens.Shared
             }
 
             // Whether the police turn up, rolled once the race is on
-            var police = PoliceCars.Patrol(PoliceCars.Installed(), request.RaceType != RaceType.DragRace, _gameState.Date,
+            var police = PoliceCars.Patrol(PoliceCars.Installed(), Services.Race.RaceFormats.Current.Of(request.Format).Police, _gameState.Date,
                 PoliceReputation(_gameState.Player, opponent), request.IsPinkSlip, request.CashWager,
                 request.Configuration?.Pitboxes ?? request.Track.Pitboxes,
                 [playerCar.DefinitionId, request.OpponentDefinition.Id], Random.Shared);
@@ -162,7 +163,7 @@ namespace StreetCorsa.Screens.Shared
                 OpponentAI = ai,
                 TrackId = request.Track.TrackId,
                 TrackConfig = request.Configuration?.FolderName,
-                RaceType = request.RaceType,
+                Format = request.Format,
                 CashWager = request.CashWager,
                 IsPinkSlip = request.IsPinkSlip,
                 DamagePercent = _gameState.Rules.RaceDamagePercent,

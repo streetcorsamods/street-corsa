@@ -43,8 +43,11 @@ namespace StreetCorsa.Services.Career
         /// <summary>The career of the mods next to the game</summary>
         public static CareerContent Installed => InstalledContent.Value;
 
-        public static CareerContent Load(ModSet mods)
+        /// <param name="raceFormats">The race formats its events name; none: those of the same mods</param>
+        public static CareerContent Load(ModSet mods, Race.RaceFormats? raceFormats = null)
         {
+            var formats = raceFormats ?? (ReferenceEquals(mods, ModSet.Installed) ? Race.RaceFormats.Installed
+                : Race.RaceFormats.Load(mods, ScRaceMode.DefaultSourceFolder));
             var problems = new List<string>();
 
             var victories = ModJson.Load(mods, ContentTypes.Victories, "victories", "victory path", problems, entry =>
@@ -76,8 +79,33 @@ namespace StreetCorsa.Services.Career
                 milestoneMap[id] = milestone;
             }
 
-            var events = ModJson.Load(mods, ContentTypes.Events, "events", "event", problems,
-                entry => Tidy(entry.Element.Deserialize<RaceEventDefinition>(Options)));
+            var events = ModJson.Load(mods, ContentTypes.Events, "events", "event", problems, entry =>
+            {
+                var evt = Tidy(entry.Element.Deserialize<RaceEventDefinition>(Options));
+                if (evt == null) return null;
+
+                // The format the mod's own, else the base game's; an event that names none is a drag race, as every
+                // event without a race type was. One no mod has leaves the event out.
+                var written = (string.IsNullOrWhiteSpace(evt.Format) ? evt.RaceType : evt.Format)?.Trim();
+                var format = string.IsNullOrEmpty(written)
+                    ? formats.First(Models.Race.RaceFormatFamilies.Drag)
+                    : formats.Get(ModIds.Resolve(entry.Mod.Id, written, id => formats.Get(id) != null));
+                if (format == null)
+                {
+                    problems.Add($"{entry.Source}: event {entry.Id} is a \"{written}\" race, a format no mod has; left out");
+                    return null;
+                }
+
+                evt.Format = format.Id;
+                evt.RaceType = null;
+                if (evt.Laps is { } laps) evt.Laps = Math.Clamp(laps, 1, Race.RaceFormats.MaxLaps);
+                if (format.IsDrag && evt.Laps is > 1)
+                {
+                    problems.Add($"{entry.Source}: event {entry.Id} is a drag race over {evt.Laps} laps; a drag race is one run");
+                    evt.Laps = null;
+                }
+                return evt;
+            });
             var eventMap = new Dictionary<string, RaceEventDefinition>(StringComparer.OrdinalIgnoreCase);
             foreach (var (id, evt, mod) in events.Entries)
             {

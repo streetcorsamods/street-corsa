@@ -257,7 +257,7 @@ namespace StreetCorsa.Screens.Cruise
 
         /// <summary>"Drag race at Santa Pod" or "Road race at Laguna Seca"</summary>
         public string RaceDisplay => _offer == null || _track == null ? string.Empty
-            : GameText.Say(_offer.RaceType == RaceType.DragRace ? "cruise.race.drag" : "cruise.race.road", ("track", _configuration?.Name ?? _track.Name));
+            : GameText.Say(Services.Race.RaceFormats.Current.IsDrag(_offer.Format) ? "cruise.race.drag" : "cruise.race.road", ("track", _configuration?.Name ?? _track.Name));
 
         public ObservableCollection<MatchupStatViewModel> MatchupStats { get; } = [];
 
@@ -313,7 +313,7 @@ namespace StreetCorsa.Screens.Cruise
         {
             get
             {
-                if (_offer is not { RaceType: not RaceType.DragRace } || _rival == null || PoliceCars.Installed() == null) return string.Empty;
+                if (_offer == null || !Services.Race.RaceFormats.Current.Of(_offer.Format).Police || _rival == null || PoliceCars.Installed() == null) return string.Empty;
                 var chance = PoliceRules.Chance(_gameState.Date, ChallengeLauncher.PoliceReputation(_gameState.Player, _rival),
                     IsPinkSlipBet, IsPinkSlipBet ? 0m : Wager);
                 return chance > 0 ? GameText.Say("diner.police", ("risk", PoliceRules.RiskLabel(chance))) : string.Empty;
@@ -625,8 +625,8 @@ namespace StreetCorsa.Screens.Cruise
 
             var dragTracks = _tracks.Where(t => t.Type == TrackType.Dragstrip).ToList();
             var circuits = _tracks.Where(t => t.Type != TrackType.Dragstrip).ToList();
-            var raceType = StreetEncounters.PickRaceType(time, dragTracks.Count > 0, circuits.Count > 0, _random);
-            if (raceType == null)
+            var format = StreetEncounters.PickFormat(time, dragTracks.Count > 0, circuits.Count > 0, _random);
+            if (format == null)
             {
                 StatusText = GameText.Say("cruise.no_tracks");
                 return;
@@ -635,7 +635,7 @@ namespace StreetCorsa.Screens.Cruise
             // Pink slips only against a car the rival would stake theirs on: the diner's own check of what they are worth
             var car = rival.Cars.First();
             var wouldStake = SelectedCar() is { } playerCar && _challengeService.WouldStakePinkSlips(rival, playerCar, car);
-            var offer = StreetEncounters.OfferFrom(rival, _gameState.Player.Money, raceType.Value, time,
+            var offer = StreetEncounters.OfferFrom(rival, _gameState.Player.Money, format, time,
                 _gameState.Rules.PinkSlipFactor, wouldStake, _random);
             if (offer == null)
             {
@@ -644,9 +644,10 @@ namespace StreetCorsa.Screens.Cruise
                 return;
             }
 
-            var track = (raceType == RaceType.DragRace ? dragTracks : circuits)[_random.Next(raceType == RaceType.DragRace ? dragTracks.Count : circuits.Count)];
+            var isDrag = Services.Race.RaceFormats.Current.IsDrag(format);
+            var track = (isDrag ? dragTracks : circuits)[_random.Next(isDrag ? dragTracks.Count : circuits.Count)];
             var configuration = track.Configurations.Count > 0 ? track.Configurations[_random.Next(track.Configurations.Count)] : null;
-            if (raceType == RaceType.DragRace && track.Configurations.Count > 0)
+            if (isDrag && track.Configurations.Count > 0)
             {
                 // A drag strip's layouts: the quarter mile if it has one, as the street runs it
                 configuration = track.Configurations.FirstOrDefault(c => Services.Race.BracketRules.RunsTheQuarter(track, c)) ?? configuration;
@@ -663,7 +664,7 @@ namespace StreetCorsa.Screens.Cruise
             _track = track;
             _configuration = configuration;
             _logger.Information("{Rival} pulls up in a {Car}: {Race} for {Stakes}", rival.Name, definition.Id,
-                raceType, offer.PinkSlips ? "pink slips" : $"{offer.Wager:0} cash");
+                format, offer.PinkSlips ? "pink slips" : $"{offer.Wager:0} cash");
 
             StatusText = GameText.Say("cruise.headlights");
 
@@ -701,7 +702,7 @@ namespace StreetCorsa.Screens.Cruise
             }
 
             // The cash limits even with pink slips on the table: the player may put cash up instead
-            var (min, max) = MatchupCalculator.WagerLimits(_offer.RaceType, _gameState.Player.Money, _rival.Money,
+            var (min, max) = MatchupCalculator.WagerLimits(_offer.Format, _gameState.Player.Money, _rival.Money,
                 _rival.Stats.Reputation, _gameState.Date);
             SetTerms(_offer.PinkSlips, min, max, _offer.PinkSlips ? min : _offer.Wager);
             _ = SayAsync(TalkTrigger.PulledUp);
@@ -832,7 +833,7 @@ namespace StreetCorsa.Screens.Cruise
                     PlayerCar = playerCar,
                     Track = _track,
                     Configuration = _configuration,
-                    RaceType = _offer.RaceType,
+                    Format = _offer.Format,
                     IsPinkSlip = IsPinkSlipBet,
                     CashWager = IsPinkSlipBet ? 0m : Wager,
                     AlreadyAgreed = !TermsChanged

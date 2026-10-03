@@ -151,10 +151,10 @@ public class StakesTests
     [Fact]
     public void The_house_limit_grows_but_the_poorer_racer_still_caps_it()
     {
-        Assert.Equal((10m, 100m), MatchupCalculator.WagerLimits(RaceType.DragRace, 10000, 10000, 50, Afternoon));
-        Assert.Equal((10m, 200m), MatchupCalculator.WagerLimits(RaceType.DragRace, 10000, 10000, 50, Night));
-        Assert.Equal((25m, 1500m), MatchupCalculator.WagerLimits(RaceType.Circuit, 10000, 10000, 100, Night));
-        Assert.Equal((10m, 300m), MatchupCalculator.WagerLimits(RaceType.DragRace, 10000, 300, 100, Night));
+        Assert.Equal((10m, 100m), MatchupCalculator.WagerLimits("drag", 10000, 10000, 50, Afternoon));
+        Assert.Equal((10m, 200m), MatchupCalculator.WagerLimits("drag", 10000, 10000, 50, Night));
+        Assert.Equal((25m, 1500m), MatchupCalculator.WagerLimits("circuit", 10000, 10000, 100, Night));
+        Assert.Equal((10m, 300m), MatchupCalculator.WagerLimits("drag", 10000, 300, 100, Night));
     }
 }
 

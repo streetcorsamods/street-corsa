@@ -291,7 +291,7 @@ public sealed class AcConfigBackupTests : IDisposable
         const string assists = "[ASSISTS]\r\nABS=2\r\nVISUALDAMAGE=100\r\nDAMAGE=0\r\nFUEL_RATE=0\r\nTYRE_WEAR=0\r\n";
         var assistsFile = _temp.File(Path.Combine("cfg", "assists.ini"), assists);
 
-        Assert.True(Service().ApplyIntent(new DragRaceIntent { PlayerCarId = "a", OpponentCarId = "b", PlayerName = "P", OpponentName = "O" }));
+        Assert.True(Service().ApplyIntent(new DragRaceIntent { PlayerCarId = "a", OpponentCarId = "b", PlayerName = "P", OpponentName = "O", Format = "drag" }));
 
         var race = File.ReadAllLines(CfgFile("race.ini"));
         Assert.Contains($"__CM_CUSTOM_MODE={IniModificationService.RaceModeId}", race);

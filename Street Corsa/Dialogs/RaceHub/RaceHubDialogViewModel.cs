@@ -427,7 +427,7 @@ namespace StreetCorsa.Dialogs.RaceHub
             var isBracket = definition.IsBracketRace;
             var track = isBracket
                 ? RaceSetupBuilder.PickStrip(_contentService.GetTracks(), quarterOnly: true, definition.TrackId)
-                : RaceSetupBuilder.PickTrack(_contentService.GetTracks(), definition.RaceType, definition.TrackId, result.EventInstanceId.GetHashCode());
+                : RaceSetupBuilder.PickTrack(_contentService.GetTracks(), definition.Format, definition.TrackId, result.EventInstanceId.GetHashCode(), definition.Laps);
             if (track == null)
             {
                 _dialogService.ShowDialog(new InformationDialogViewModel(
@@ -505,7 +505,8 @@ namespace StreetCorsa.Dialogs.RaceHub
                 OpponentAI = ai,
                 TrackId = track.Value.TrackId,
                 TrackConfig = track.Value.TrackConfig,
-                RaceType = definition.RaceType,
+                Format = definition.Format,
+                Laps = definition.Laps,
                 CashWager = 0, // Event rewards handled separately
                 IsPinkSlip = result.IsPinkSlip,
                 DamagePercent = _gameState.Rules.RaceDamagePercent,

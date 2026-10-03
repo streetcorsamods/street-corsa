@@ -63,7 +63,7 @@ public class RaceSetupBuilderTests
             OpponentAI = new AssettoCorsaAIParameters { AILevel = 95, AIAggression = 40 },
             TrackId = "ks_drag",
             TrackConfig = "drag1000",
-            RaceType = RaceType.DragRace,
+            Format = "drag",
             CashWager = 500,
             EventId = "evt",
             IsEventOnlyOpponent = true
@@ -114,11 +114,11 @@ public class RaceSetupBuilderTests
     ];
 
     [Theory]
-    [InlineData(RaceType.DragRace, "monza", "monza", "gp")] // the named track, on its first layout, whatever the race
-    [InlineData(RaceType.Sprint, "BRANDS", "brands", null)]
-    [InlineData(RaceType.DragRace, null, "ks_drag", "drag1000")] // AC's own strip is the drag default
-    [InlineData(RaceType.DragRace, "not_installed", "ks_drag", "drag1000")]
-    public void PickTrack(RaceType type, string? wanted, string expectedTrack, string? expectedLayout)
+    [InlineData("drag", "monza", "monza", "gp")] // the named track, on its first layout, whatever the race
+    [InlineData("sprint", "BRANDS", "brands", null)]
+    [InlineData("drag", null, "ks_drag", "drag1000")] // AC's own strip is the drag default
+    [InlineData("drag", "not_installed", "ks_drag", "drag1000")]
+    public void PickTrack(string type, string? wanted, string expectedTrack, string? expectedLayout)
     {
         var pick = RaceSetupBuilder.PickTrack(Installed, type, wanted, seed: 7);
 
@@ -128,22 +128,22 @@ public class RaceSetupBuilderTests
     [Fact]
     public void PickTrack_a_road_race_gets_a_road_layout_and_the_same_one_for_the_same_seed()
     {
-        var first = RaceSetupBuilder.PickTrack(Installed, RaceType.Circuit, null, seed: 12345);
-        var again = RaceSetupBuilder.PickTrack(Installed, RaceType.Circuit, null, seed: 12345);
+        var first = RaceSetupBuilder.PickTrack(Installed, "circuit", null, seed: 12345);
+        var again = RaceSetupBuilder.PickTrack(Installed, "circuit", null, seed: 12345);
 
         Assert.NotNull(first);
         Assert.Contains(first!.Value.TrackId, new[] { "monza", "brands" });
         Assert.Equal(first, again);
 
         // Negative seeds too
-        Assert.NotNull(RaceSetupBuilder.PickTrack(Installed, RaceType.Circuit, null, seed: int.MinValue));
+        Assert.NotNull(RaceSetupBuilder.PickTrack(Installed, "circuit", null, seed: int.MinValue));
     }
 
     [Fact]
     public void PickTrack_nothing_suitable_installed_is_null()
     {
-        Assert.Null(RaceSetupBuilder.PickTrack([Track("monza", "clockwise")], RaceType.DragRace, null, 1));
-        Assert.Null(RaceSetupBuilder.PickTrack([], RaceType.Sprint, "monza", 1));
+        Assert.Null(RaceSetupBuilder.PickTrack([Track("monza", "clockwise")], "drag", null, 1));
+        Assert.Null(RaceSetupBuilder.PickTrack([], "sprint", "monza", 1));
     }
 }
 

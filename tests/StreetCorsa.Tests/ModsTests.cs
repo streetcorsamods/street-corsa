@@ -386,7 +386,7 @@ public class ModCareerAndTextTests : IDisposable
 
         var career = CareerContent.Load(mods);
         Assert.Empty(career.Problems);
-        Assert.Equal(12, career.Events.Count);
+        Assert.Equal(13, career.Events.Count);
         Assert.Equal(14, career.Milestones.Count);
         Assert.Equal(["Reputation", "King", "PinkSlipCollector", "SeasonChampion", "Domination"], career.Victories.Select(v => v.Id));
 
@@ -419,7 +419,7 @@ public class ModCareerAndTextTests : IDisposable
               { "id": "odd", "entryRequirements": { "type": "colour" } } ]
             """);
 
-        var career = CareerContent.Load(ModSet.Load(_temp.Path));
+        var career = CareerContent.Load(ModSet.Load(_temp.Path), Services.Race.RaceFormats.Installed);
 
         Assert.Equal(["victory:mymod:Path", "victory:King"], career.Milestones["mymod:own"].Unlocks);
         var meet = career.Events["mymod:meet"];
@@ -554,7 +554,7 @@ public class ModCareerAndTextTests : IDisposable
               { "id": "f", "raceType": "Circuit", "requiredMilestones": [ null, "m" ] } ]
             """);
 
-        var career = CareerContent.Load(ModSet.Load(_temp.Path));
+        var career = CareerContent.Load(ModSet.Load(_temp.Path), Services.Race.RaceFormats.Installed);
 
         var open = Assert.Single(career.Victories);
         Assert.Empty(open.Unlock);

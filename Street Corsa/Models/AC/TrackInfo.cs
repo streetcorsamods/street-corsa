@@ -56,6 +56,29 @@ public class TrackInfo
     };
 
     /// <summary>
+    /// A layout raced from A to B, whose finish no car crosses twice: its ui_track.json says so (the layout's own, else
+    /// the track's) in "run" or a tag: point to point, A to B, p2p, hillclimb, touge. A race of more than one lap cannot
+    /// be run there. AC keeps no surer mark, so a layout that says nothing counts as a loop.
+    /// </summary>
+    public bool IsPointToPoint(string? configFolder)
+    {
+        var layout = configFolder == null ? null
+            : Configurations.FirstOrDefault(c => string.Equals(c.FolderName, configFolder, StringComparison.OrdinalIgnoreCase));
+        var run = layout is { Run.Length: > 0 } ? layout.Run : Run;
+        var tags = layout is { Tags.Count: > 0 } ? layout.Tags : Tags;
+        return SaysPointToPoint(run) || tags.Any(SaysPointToPoint);
+    }
+
+    private static readonly string[] PointToPointWords = ["pointtopoint", "atob", "p2p", "a2b", "hillclimb", "touge"];
+
+    private static bool SaysPointToPoint(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return false;
+        var plain = new string(text.Where(char.IsLetterOrDigit).Select(char.ToLowerInvariant).ToArray());
+        return PointToPointWords.Contains(plain);
+    }
+
+    /// <summary>
     /// The track's folder ID (e.g., "ks_brands_hatch")
     /// </summary>
     public string TrackId { get; set; } = string.Empty;
@@ -90,4 +113,10 @@ public class TrackConfiguration
 
     [JsonPropertyName("pitboxes")]
     public string Pitboxes { get; set; } = string.Empty;
+
+    [JsonPropertyName("run")]
+    public string Run { get; set; } = string.Empty;
+
+    [JsonPropertyName("tags")]
+    public List<string> Tags { get; set; } = new();
 }

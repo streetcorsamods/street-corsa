@@ -44,6 +44,9 @@ public static class ContentTypes
 
     /// <summary>How the screens hang together (flow/*.json: screens, exits, tiles, the main menu's cards), merged key by key; see <c>Navigation.FlowBook</c></summary>
     public const string Flow = "flow";
+
+    /// <summary>The kinds of race (formats/*.json) and their Lua modules or modes (formats/*.lua, formats/&lt;mode&gt;/); see <c>Services.Race.RaceFormats</c></summary>
+    public const string Formats = "formats";
 }
 
 /// <summary>What a mod is: <c>"type"</c> in its mod.json</summary>

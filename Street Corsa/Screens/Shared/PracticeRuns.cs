@@ -208,7 +208,7 @@ namespace StreetCorsa.Screens.Shared
                     PlayerCar = car,
                     TrackId = strip.TrackId,
                     TrackConfig = strip.Configuration,
-                    RaceType = Models.Race.RaceType.DragRace,
+                    Format = Services.Race.RaceFormats.Current.First(Models.Race.RaceFormatFamilies.Drag)?.Id ?? string.Empty,
                     DamagePercent = gameState.Rules.RaceDamagePercent,
                     RaceTime = gameState.Date,
                     TunePasses = TestAndTunePasses

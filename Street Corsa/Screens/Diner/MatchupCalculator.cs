@@ -17,12 +17,15 @@ namespace StreetCorsa.Screens.Diner
         public static int MatchedReputationBand => Rules.RuleBook.Current.Wagers.MatchedReputationBand;
 
         /// <summary>The smallest cash wager: a drag race is a small bet, a road race a bigger one</summary>
-        public static decimal MinimumWager(RaceType? raceType) =>
-            raceType == RaceType.DragRace ? Rules.RuleBook.Current.Wagers.DragMinimum : Rules.RuleBook.Current.Wagers.RoadMinimum;
+        public static decimal MinimumWager(string? format) =>
+            IsDrag(format) ? Rules.RuleBook.Current.Wagers.DragMinimum : Rules.RuleBook.Current.Wagers.RoadMinimum;
 
         /// <summary>The house limit on a cash wager in the day, against a rival of ordinary standing, before either racer's money is counted</summary>
-        public static decimal MaximumWager(RaceType? raceType) =>
-            raceType == RaceType.DragRace ? Rules.RuleBook.Current.Wagers.DragMaximum : Rules.RuleBook.Current.Wagers.RoadMaximum;
+        public static decimal MaximumWager(string? format) =>
+            IsDrag(format) ? Rules.RuleBook.Current.Wagers.DragMaximum : Rules.RuleBook.Current.Wagers.RoadMaximum;
+
+        // A format goes by its family's wagers: every drag format is a drag race's bet
+        private static bool IsDrag(string? format) => Services.Race.RaceFormats.Current.IsDrag(format);
 
         /// <summary>From this hour of the game's day the street is racing for real money</summary>
         public static int NightFromHour => Rules.RuleBook.Current.Wagers.NightFromHour;
@@ -52,11 +55,11 @@ namespace StreetCorsa.Screens.Diner
         /// (<see cref="StakesFactor"/>), the top capped by what the poorer of the two racers has. When that is less
         /// than the minimum, the minimum comes down with it.
         /// </summary>
-        public static (decimal Min, decimal Max) WagerLimits(RaceType? raceType, decimal playerMoney, decimal opponentMoney,
+        public static (decimal Min, decimal Max) WagerLimits(string? format, decimal playerMoney, decimal opponentMoney,
             int? opponentReputation = null, DateTime? gameTime = null)
         {
-            var min = MinimumWager(raceType);
-            var house = Math.Round(MaximumWager(raceType) * StakesFactor(opponentReputation ?? StakesReputation, gameTime) / 5) * 5;
+            var min = MinimumWager(format);
+            var house = Math.Round(MaximumWager(format) * StakesFactor(opponentReputation ?? StakesReputation, gameTime) / 5) * 5;
             var max = Math.Min(house, Math.Min(playerMoney, opponentMoney));
             if (min > max) min = max;
             return (min, max);

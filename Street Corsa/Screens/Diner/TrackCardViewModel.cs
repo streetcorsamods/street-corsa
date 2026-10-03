@@ -27,6 +27,9 @@ namespace StreetCorsa.Screens.Diner
         /// </summary>
         public string? ConfigurationId => Configuration?.FolderName;
 
+        /// <summary>Raced from A to B: no race of more than one lap here (<see cref="TrackInfo.IsPointToPoint"/>)</summary>
+        public bool IsPointToPoint => Track.IsPointToPoint(Configuration?.FolderName);
+
         /// <summary>
         /// Path to the track preview image
         /// </summary>
@@ -47,9 +50,12 @@ namespace StreetCorsa.Screens.Diner
         public System.Windows.Media.ImageSource? PreviewImage => Shared.Thumbnails.Load(PreviewPath, PreviewDecodeWidth);
 
         /// <summary>
-        /// Race type this track supports
+        /// The races this track takes: <see cref="RaceFormatFamilies.Drag"/> on a strip, <see cref="RaceFormatFamilies.Road"/>
+        /// anywhere else
         /// </summary>
-        public RaceType RaceType { get; set; }
+        public string Family { get; set; } = RaceFormatFamilies.Road;
+
+        public bool IsDrag => Family == RaceFormatFamilies.Drag;
 
         private bool _isSelected;
         /// <summary>

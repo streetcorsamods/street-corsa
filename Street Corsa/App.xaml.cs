@@ -555,6 +555,7 @@ namespace StreetCorsa
                     _ = Mods.ModSet.Installed;
                     _ = Rules.RuleBook.Installed;
                     _ = Services.Text.GameText.Installed;
+                    _ = Services.Race.RaceFormats.Installed;
                     _ = Services.Career.CareerContent.Installed;
                     OpponentRepository.LoadAllOpponents();
                     _ = Services.Street.StreetScenes.Installed;

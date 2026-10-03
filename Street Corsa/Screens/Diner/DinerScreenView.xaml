@@ -939,6 +939,32 @@
                                 </StackPanel>
                             </Border>
 
+                            <!-- The race: when the track takes more than one the diner offers (a circuit race or a time attack) -->
+                            <Border Background="{StaticResource BgPanelBrush}"
+                                   BorderBrush="{StaticResource BorderLightBrush}"
+                                   BorderThickness="1"
+                                   CornerRadius="5"
+                                   Padding="15"
+                                   Margin="0,15,0,0"
+                                   Visibility="{Binding HasFormatChoice, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <StackPanel>
+                                    <TextBlock Text="{t:Text diner.format}"
+                                               FontSize="{StaticResource FontSizeBody}"
+                                               FontWeight="Bold"
+                                               Foreground="{StaticResource TextPrimaryBrush}"/>
+                                    <ComboBox ItemsSource="{Binding FormatChoices}"
+                                              SelectedItem="{Binding SelectedFormat}"
+                                              DisplayMemberPath="Name"
+                                              Margin="0,6,0,0"/>
+                                    <TextBlock Text="{Binding FormatNote}"
+                                               FontSize="{StaticResource FontSizeSmall}"
+                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                               TextWrapping="Wrap"
+                                               Margin="0,6,0,0"
+                                               Visibility="{Binding HasFormatNote, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                </StackPanel>
+                            </Border>
+
                             <!-- Bracket race: on a strip that runs the quarter -->
                             <Border Background="{StaticResource BgPanelBrush}"
                                    BorderBrush="{StaticResource BorderLightBrush}"

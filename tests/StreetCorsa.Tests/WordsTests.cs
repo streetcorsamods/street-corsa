@@ -132,7 +132,8 @@ public partial class WordsTests : IDisposable
     {
         var text = GameText.Load(ModSet.Load(RepoPaths.Content));
         var handed = RaceText.IniLines(text).Skip(1).Select(l => l[..l.IndexOf('=')]).ToHashSet();
-        var lua = File.ReadAllText(Path.Combine(RepoPaths.Root, "apps", "new-modes", "sc_race", "mode.lua"));
+        // The mode and its format modules (format_*.lua)
+        var lua = string.Join("\n", Directory.GetFiles(Path.Combine(RepoPaths.Root, "apps", "new-modes", "sc_race"), "*.lua").Select(File.ReadAllText));
 
         var said = LuaKey().Matches(lua).Select(m => m.Groups[1].Value).Distinct().ToList();
 

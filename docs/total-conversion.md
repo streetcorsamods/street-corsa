@@ -138,10 +138,10 @@ A truly new kind of screen will always need C#. Data can rename, rewire, hide an
 | The base game | `ModSet.cs:153,237`, `ModIds.cs:17` | `streetcorsa` always loaded first, can't be switched off; mods `replaces` and `remove` (E1) | kept: one game (2026-10-03) |
 | Turning mods on and off | folder rename (`_` prefix) | no in-game switch | easy |
 | Mod problems | log only | player sees nothing | easy: a dialog |
-| Race formats | `RaceContext.cs:115` (Drag/Circuit/Sprint), `RaceResultJson.cs:144`, about 17-35 switch sites; `mode.lua` (2478 lines) | closed on both sides | hard |
-| race.ini | `IniModificationService.cs` | built in code (one lap, `DRIFT_MODE=0`, fixed tail) | medium: session templates |
-| Race mode | `apps/new-modes/sc_race`, copied from next to the exe | one mode, not from Content | hard: mods ship their own `acmodes/<id>/` |
-| Results | schema 1.7, win/lose/crash/busted | no score | medium: `score`, `format` |
+| Race formats | `formats/formats.json`, `Services/Race/RaceFormats.cs`; the mode's `format_*.lua` modules | **done (E10)** | |
+| race.ini | `IniModificationService.cs`: the format's module, laps, session name, police, mode | **done (E10)**; `DRIFT_MODE=0` and the tail stay | |
+| Race mode | sc_race's core plus format modules; a mod ships `formats/<module>.lua` or a whole `formats/<mode>/` | **done (E10)** | |
+| Results | schema 1.8: `session.format`, `participants[].score` | **done (E10)** | |
 | Logging | `AppLoggerFactory.cs` | fixed level | easy |
 
 ## The plan: steps of the epic
@@ -198,6 +198,40 @@ playing exactly as it does now: today's values become the base game's data.
 Later, not in the epic: a weather system (there is none today), nitrous in AC.
 
 ## As built
+
+### E10: race formats (2026-10-03, branch `feature/race-formats`)
+
+The owner's decisions: the plumbing (today's races as format data, the score in the result, mods' modules and modes)
+plus time attack as the one new base format (drift and touge later); sc_race keeps a shared core and each format is a
+Lua module it loads; laps per format and per event; each format names a family, `drag` or `road`, which is all the
+career counts (the record, wagers, the street's share and milestones stay drag/road, saves untouched).
+
+- **Formats as data** (`Models/Race/RaceFormat.cs`, `Services/Race/RaceFormats.cs`, content type `formats`): `family`,
+  `module` or `mode`, `laps`, `sessionLaps`, `session`, `police`, `bracket`, `win` (`position`/`score`), `better`,
+  `scoreShows`, `name`, `diner`, `street`, `aliases`. The base game's `drag`, `circuit`, `sprint` (aliases the old
+  `DragRace`, `Circuit`, `Sprint`) and `time_attack`. `RaceType` the enum is gone: a race, an event, a street offer
+  and a launch carry a format id (`RaceContext.Format`, kept in the save under `RaceType`, whose old values are the
+  aliases). An id no mod has is run and counted as a road race.
+- **The code goes by family or format**: police (`format.Police`), bracket (`format.Bracket`), wagers, the street's
+  pick (`StreetEncounters.PickFormat`: the family's first `street` format), tracks (`PickTrack`), wins counters, the
+  newspaper, the AI's facts. The diner offers its formats per track family (`FormatChoices`, a drop-down when there is
+  more than one; `diner.format.about.<id>`). Events name `format` (or `raceType` as before) and may set `laps`; the
+  paper has `against_the_clock`, a weekly time attack.
+- **race.ini**: `[STREET_CORSA] FORMAT`, `MODULE`, `LAPS`, `SCORE`; `RACE_LAPS`/`LAPS` from the format (`sessionLaps`
+  for AC), the session's name, `__CM_CUSTOM_MODE` the format's mode.
+- **The mode**: `mode.lua` (4.0.0) is the core; `format_drag.lua` (the strip, bracket races, test-and-tune: moved out
+  whole), `format_road.lua` (the finish at the line; its header lists every hook and the core `SC`: the template),
+  `format_time_attack.lua` (ghosts via `physics.disableCarCollisions`, a warm-up lap then `LAPS` timed laps, the best
+  lap the score, a wait of 90 s for the rival, a stopwatch on screen). A module that does not load runs a road race.
+  `ScRaceMode.Install` mirrors the mods' modules in as `format_<mod>_<module>.lua` and a format's own mode as
+  `new-modes/<mod>_<mode>`; the validator takes a result from any format's mode.
+- **The result**: schema 1.8, `session.format`, `participants[].score` and `lap_times_ms`. `DetermineOutcome` decides a
+  `score` format on the scores (`WinCondition.ScoreFinish`) after crashes and breakdowns; a score card comes first.
+- **Tests**: `RaceFormatTests`, the contract fixture `sc_race_time_attack_result.json`, `tools/sc_race_harness/test_time_attack.py`
+  (in `check.ps1`); the harness loads the modules with `require` and fails a run whose module does not load.
+
+Left for later: drift and touge, `DRIFT_MODE`, a format's own track filter (a family's tracks only), the street racing
+a format other than each family's first, a rival's pace in a time attack beyond AC's AI. Not seen in game.
 
 ### E9: saves and mods (2026-10-03, branch `feature/bosses`)
 

@@ -6,7 +6,7 @@ namespace StreetCorsa.Services.Street
 {
     /// <summary>What a rival who pulls up puts to the player: the kind of race and what it is for</summary>
     /// <param name="Wager">The cash on it; 0 with pink slips</param>
-    public sealed record StreetOffer(RaceType RaceType, bool PinkSlips, decimal Wager);
+    public sealed record StreetOffer(string Format, bool PinkSlips, decimal Wager);
 
     /// <summary>
     /// The rules of the street: how long the player sits at the curb before somebody pulls up, who it is, and what
@@ -90,15 +90,19 @@ namespace StreetCorsa.Services.Street
             return left[^1];
         }
 
-        /// <summary>The kind of race a rival asks for, given what the player's AC has installed; null with no track at all</summary>
-        public static RaceType? PickRaceType(DateTime time, bool hasDragStrip, bool hasCircuit, Random random)
+        /// <summary>
+        /// The format a rival asks for, given what the player's AC has installed: a drag or a road race (the street's
+        /// share), run as the family's street format; null with no track (or no format) for either
+        /// </summary>
+        public static string? PickFormat(DateTime time, bool hasDragStrip, bool hasCircuit, Random random)
         {
-            if (!hasDragStrip && !hasCircuit) return null;
-            if (!hasCircuit) return RaceType.DragRace;
-            if (!hasDragStrip) return RaceType.Circuit;
+            var formats = Services.Race.RaceFormats.Current;
+            var drag = hasDragStrip ? formats.Street(RaceFormatFamilies.Drag)?.Id : null;
+            var road = hasCircuit ? formats.Street(RaceFormatFamilies.Road)?.Id : null;
+            if (drag == null || road == null) return drag ?? road;
 
-            var drag = MatchupCalculator.IsNight(time) ? DragShareAtNight : DragShareByDay;
-            return random.NextDouble() < drag ? RaceType.DragRace : RaceType.Circuit;
+            var dragShare = MatchupCalculator.IsNight(time) ? DragShareAtNight : DragShareByDay;
+            return random.NextDouble() < dragShare ? drag : road;
         }
 
         /// <summary>
@@ -109,21 +113,21 @@ namespace StreetCorsa.Services.Street
         /// the two are worth). Null when the two of them cannot scrape a cash bet together and pink slips are not on,
         /// and for a boss or a rival with a grudge who would not stake their car.
         /// </summary>
-        public static StreetOffer? OfferFrom(Opponent rival, decimal playerMoney, RaceType raceType, DateTime time,
+        public static StreetOffer? OfferFrom(Opponent rival, decimal playerMoney, string format, DateTime time,
             double pinkSlipFactor, bool wouldStakePinkSlips, Random random)
         {
-            if (rival.IsBoss || rival.Grudge != null) return wouldStakePinkSlips ? new StreetOffer(raceType, true, 0m) : null;
+            if (rival.IsBoss || rival.Grudge != null) return wouldStakePinkSlips ? new StreetOffer(format, true, 0m) : null;
 
             var aggression = Math.Clamp(rival.Aggression, 0, 100) / 100.0;
             if (random.NextDouble() < PinkSlipOffer * pinkSlipFactor * (0.5 + aggression) && wouldStakePinkSlips)
-                return new StreetOffer(raceType, true, 0m);
+                return new StreetOffer(format, true, 0m);
 
-            var (min, max) = MatchupCalculator.WagerLimits(raceType, playerMoney, rival.Money, rival.Stats.Reputation, time);
+            var (min, max) = MatchupCalculator.WagerLimits(format, playerMoney, rival.Money, rival.Stats.Reputation, time);
             if (max <= 0m || min <= 0m) return null;
 
             var share = (decimal)Math.Clamp(0.25 + 0.6 * aggression * random.NextDouble(), 0, 1);
             var wager = Math.Round((min + (max - min) * share) / 5m) * 5m;
-            return new StreetOffer(raceType, false, MatchupCalculator.ClampWager(wager, min, max));
+            return new StreetOffer(format, false, MatchupCalculator.ClampWager(wager, min, max));
         }
     }
 }

@@ -425,9 +425,16 @@ namespace StreetCorsa.Services.Talk
             yield return GameText.Say(key, ("offer", new Helpers.Money(outcome.Offer)), ("price", new Helpers.Money(outcome.Price)));
         }
 
-        /// <summary>"drag race" or "road race", in the player's words</summary>
-        public static string KindOf(string? raceType) =>
-            GameText.Say(raceType?.Contains("drag", StringComparison.OrdinalIgnoreCase) == true ? "chat.fact.kind_drag" : "chat.fact.kind_road");
+        /// <summary>
+        /// "drag race" or "road race", in the player's words: by the format's family, or for a format no mod has any
+        /// more, by its name
+        /// </summary>
+        public static string KindOf(string? raceType)
+        {
+            var isDrag = Race.RaceFormats.Current.Get(raceType) is { } format ? format.IsDrag
+                : raceType?.Contains("drag", StringComparison.OrdinalIgnoreCase) == true;
+            return GameText.Say(isDrag ? "chat.fact.kind_drag" : "chat.fact.kind_road");
+        }
 
         /// <summary>
         /// The sections as the sheet the AI is given, each under its heading (<c>chat.section</c>), in the order given:

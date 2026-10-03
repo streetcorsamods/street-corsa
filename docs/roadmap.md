@@ -1358,6 +1358,12 @@ and the King is one boss of several: any racer can be one (`"boss"` in the racer
 record), a path's `beatBoss` step is won by beating its bosses, a boss can have lines of his own, old saves' King
 becomes the King path's boss. Race types as ids moved to E10; milestone triggers stay an enum. Not seen in game.
 
+E10 (race formats) is built on `feature/race-formats` (2026-10-03): the kinds of race are data (`formats/formats.json`:
+family, Lua module or a mod's own mode, laps, how it is won), the race mode is a core plus format modules
+(`format_drag.lua`, `format_road.lua`, `format_time_attack.lua`), results carry the format and a score, events and the
+diner pick a format, and the base game gains a time attack (ghost cars, a warm-up lap and three flying laps, the best
+lap wins; at the diner on road tracks and as the paper's "Against the Clock"). Not seen in game.
+
 E7 (car scripting) is built on `feature/car-scripting` (2026-10-02), after step 26: every car move is a JSON script of
 the mods (`scripts/scripts.json`, the drives' feels in `scripts/feels.json`) played at a trigger (`lot.take_out`,
 `garage.arrive`, `garage.leave`, `station.arrive`, `station.at_pump`, `station.leave`, `street.rival_arrive`,

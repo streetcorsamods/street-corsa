@@ -38,7 +38,7 @@ internal static class RaceFakes
     /// The player (a million, one healthy car, selected) against a rival (5000, one healthy car), the race between
     /// them pending: a drag race on ks_drag, or a road race on ks_highlands
     /// </summary>
-    public static RaceWorld World(decimal wager = 100m, bool pinkSlip = false, RaceType raceType = RaceType.DragRace, string saveName = "test")
+    public static RaceWorld World(decimal wager = 100m, bool pinkSlip = false, string format = "drag", string saveName = "test")
     {
         var state = GameState.CreateNew(PlayerName);
         state.SaveName = saveName;
@@ -55,7 +55,7 @@ internal static class RaceFakes
         {
             PlayerName = PlayerName, OpponentName = OpponentName, PlayerCarInstanceId = playerCar.InstanceId,
             OpponentCarInstanceId = rivalCar.InstanceId, CashWager = wager, IsPinkSlip = pinkSlip,
-            TrackId = raceType == RaceType.DragRace ? "ks_drag" : "ks_highlands", RaceType = raceType
+            TrackId = format == "drag" ? "ks_drag" : "ks_highlands", Format = format
         };
         state.PendingRace = context;
         return new RaceWorld(state, context, playerCar, rival, rivalCar);

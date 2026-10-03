@@ -364,10 +364,16 @@ def run(name, cars, ini, player, rival, cop, max_seconds=400, length=2000.0, sid
         world['engine'] = lambda i, t, car: engine(i, t)
     if strip is not None:
         world['accel'] = lambda i, t, car: strip(world, i, t, car)
+    # The format modules sit next to the mode and are loaded with require, as CSP finds them in the mode's folder; a
+    # module that does not load fails the run (the mode would quietly run a road race)
+    lua.globals().package.path = os.path.dirname(os.path.abspath(MODE)).replace('\\', '/') + '/?.lua'
     runner = lua.execute(STUB, world)
     with open(MODE, encoding='utf-8') as f:
         source = f.read()
     result, log, seconds, placements = runner(source)
+    if 'did not load' in log:
+        print(log)
+        raise AssertionError(f'{name}: the race format module did not load')
     if result is None:
         print(log)
         raise AssertionError(f'{name}: no result written after {seconds:.0f} s')
@@ -497,7 +503,8 @@ def paths(value, prefix=''):
 def golden_file(write=False):
     # The C# side reads this file as the mode's contract (RaceResultContractTests): a road race with the police,
     # won at the line after getting away. The file must have the shape the mode writes now; --golden writes it again.
-    ini = dict(POLICE_INI, **{'STREET_CORSA.CONTEXT_ID': GOLDEN_CONTEXT_ID})
+    ini = dict(POLICE_INI, **{'STREET_CORSA.CONTEXT_ID': GOLDEN_CONTEXT_ID, 'STREET_CORSA.FORMAT': 'circuit',
+                              'STREET_CORSA.MODULE': 'format_road', 'STREET_CORSA.LAPS': '1'})
     result, log, _, _ = run('golden', 4, ini, lambda t: 30, lambda t: 20, lambda t, i: 12)
     if write:
         with open(GOLDEN, 'w', encoding='utf-8', newline='\n') as f:

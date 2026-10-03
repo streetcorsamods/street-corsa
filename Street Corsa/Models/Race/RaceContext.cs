@@ -59,9 +59,24 @@ namespace StreetCorsa.Models.Race
         public string? TrackConfig { get; set; }
 
         /// <summary>
-        /// Race type (drag, circuit, etc.)
+        /// The race's format id (<see cref="Services.Race.RaceFormats"/>). Kept under the name the race type had, whose
+        /// values ("DragRace") are the base formats' aliases.
         /// </summary>
-        public RaceType RaceType { get; set; }
+        [LiteDB.BsonField("RaceType")]
+        public string Format { get; set; } = string.Empty;
+
+        /// <summary>The laps the race is over (an event's own); null: the format's</summary>
+        public int? Laps { get; set; }
+
+        /// <summary>
+        /// The format's family when the race was set up (<see cref="RaceFormatFamilies"/>): what the career counts the
+        /// race as, even when the format's mod is gone by the time the result comes in. Null on contexts from before.
+        /// </summary>
+        public string? Family { get; set; }
+
+        /// <summary>A drag race, by <see cref="Family"/>; a context from before goes by its format</summary>
+        [LiteDB.BsonIgnore]
+        public bool IsDrag => Family != null ? Family == RaceFormatFamilies.Drag : Services.Race.RaceFormats.Current.IsDrag(Format);
 
         /// <summary>
         /// When this context was created
@@ -107,26 +122,5 @@ namespace StreetCorsa.Models.Race
         /// <summary>A bracket race: both racers dialled in (<see cref="Services.Race.BracketRules"/>)</summary>
         [LiteDB.BsonIgnore]
         public bool IsBracket => PlayerDialIn != null && OpponentDialIn != null;
-    }
-
-    /// <summary>
-    /// Type of race being run
-    /// </summary>
-    public enum RaceType
-    {
-        /// <summary>
-        /// Quarter-mile drag race (1v1)
-        /// </summary>
-        DragRace,
-
-        /// <summary>
-        /// Circuit race (multiple laps)
-        /// </summary>
-        Circuit,
-
-        /// <summary>
-        /// Point-to-point sprint
-        /// </summary>
-        Sprint
     }
 }

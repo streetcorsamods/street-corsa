@@ -195,8 +195,9 @@ FIXTURES = os.path.join(HERE, '..', '..', 'tests', 'StreetCorsa.Tests', 'Fixture
 
 
 def golden_files(write=False):
-    bracket = dict(bracket_ini(10.20, 12.20, reaction=0.3), **{'STREET_CORSA.CONTEXT_ID': GOLDEN_CONTEXT_ID})
-    tune = dict(tune_ini(2), **{'STREET_CORSA.CONTEXT_ID': GOLDEN_CONTEXT_ID})
+    named = {'STREET_CORSA.CONTEXT_ID': GOLDEN_CONTEXT_ID, 'STREET_CORSA.FORMAT': 'drag', 'STREET_CORSA.MODULE': 'format_drag'}
+    bracket = dict(bracket_ini(10.20, 12.20, reaction=0.3), **named)
+    tune = dict(tune_ini(2), **named)
     for name, ini, cars, drivers in (('sc_race_bracket_result.json', bracket, 2, strip(driver(8, 0.02), driver(6, 0))),
                                      ('sc_race_tune_result.json', tune, 1, strip(driver(8, 0.3)))):
         result, log, _, _ = run(name, cars, ini, None, None, None, length=STRIP_LENGTH, strip=drivers, max_seconds=200)
