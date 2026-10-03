@@ -1,0 +1,206 @@
+<UserControl x:Class="StreetCorsa.Dialogs.TrackPicker.TrackPickerDialogView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:t="clr-namespace:StreetCorsa.Services.Text"
+             xmlns:helpers="clr-namespace:StreetCorsa.Helpers"
+             xmlns:controls="clr-namespace:StreetCorsa.Controls"
+             Width="1120"
+             Height="700"
+             MaxWidth="{Binding (helpers:DialogRoom.Width), RelativeSource={RelativeSource Self}}"
+             MaxHeight="{Binding (helpers:DialogRoom.Height), RelativeSource={RelativeSource Self}}"
+             FocusManager.FocusedElement="{Binding ElementName=Search}">
+    <!-- As big as the racing hub it comes from, or as the window has room for: the cards scroll -->
+    <UserControl.Resources>
+        <!-- A track's card: the buttons' dark glass, amber under the pointer; red glass and an amber outline once picked -->
+        <Style x:Key="TrackCardStyle" TargetType="Button" BasedOn="{StaticResource DialogSecondaryButtonStyle}">
+            <Setter Property="Width" Value="248"/>
+            <Setter Property="Height" Value="244"/>
+            <Setter Property="Margin" Value="5"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="FontWeight" Value="Normal"/>
+            <Setter Property="ToolTip" Value="{Binding Track.DisplayName}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                    <Setter Property="Background" Value="{StaticResource UiPrimaryGlassBrush}"/>
+                    <Setter Property="BorderBrush" Value="{StaticResource AmberBrush}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="CardLineStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}"/>
+            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+            <Setter Property="Margin" Value="0,2,0,0"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Title -->
+        <Border Grid.Row="0" Style="{StaticResource PanelTitleBandStyle}">
+            <DockPanel>
+                <Button Style="{StaticResource PanelCloseButtonStyle}"
+                        Tag="{StaticResource CloseIcon}"
+                        Command="{Binding BackCommand}"
+                        ToolTip="{t:Text trackpicker.back.tip}"/>
+                <TextBlock Text="{Binding Title}" Style="{StaticResource PanelTitleStyle}" VerticalAlignment="Center"/>
+            </DockPanel>
+        </Border>
+
+        <!-- The search, and how many tracks it finds -->
+        <DockPanel Grid.Row="1" Margin="22,16,22,8">
+            <TextBlock DockPanel.Dock="Right"
+                       Text="{Binding CountDisplay}"
+                       Foreground="{StaticResource TextSecondaryBrush}"
+                       FontSize="{StaticResource FontSizeSmall}"
+                       FontStyle="Italic"
+                       VerticalAlignment="Center"
+                       Margin="16,0,0,0"/>
+            <TextBox x:Name="Search"
+                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged, Delay=150}"
+                     Height="36"
+                     FontSize="{StaticResource FontSizeBody}"
+                     helpers:GlassInput.Hint="{t:Text trackpicker.search.hint}"/>
+        </DockPanel>
+
+        <!-- The cards: only those in sight are made, and each reads its picture as it first comes into view -->
+        <Border Grid.Row="2"
+                Margin="22,4,22,10"
+                Background="{StaticResource UiGlassBrush}"
+                BorderBrush="{StaticResource UiOutlineSoftBrush}"
+                BorderThickness="2"
+                CornerRadius="6"
+                Padding="8,8,4,8">
+            <Grid>
+                <ItemsControl ItemsSource="{Binding Cards}"
+                              VirtualizingPanel.IsVirtualizing="True"
+                              Focusable="False">
+                    <ItemsControl.Template>
+                        <ControlTemplate TargetType="ItemsControl">
+                            <ScrollViewer CanContentScroll="True"
+                                          VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Disabled"
+                                          Focusable="False">
+                                <ItemsPresenter/>
+                            </ScrollViewer>
+                        </ControlTemplate>
+                    </ItemsControl.Template>
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <controls:VirtualizingUniformWrapPanel/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Style="{StaticResource TrackCardStyle}"
+                                    Command="{Binding DataContext.PickCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                    CommandParameter="{Binding}">
+                                <Grid Width="232" Height="228">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="130"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+
+                                    <!-- The preview; a blank band while it is read, a word when there is none -->
+                                    <Border Grid.Row="0" Background="{StaticResource UiFieldBrush}" CornerRadius="4" ClipToBounds="True">
+                                        <Grid>
+                                            <TextBlock Text="{t:Text trackpicker.no_preview}"
+                                                       FontSize="{StaticResource FontSizeSmall}"
+                                                       FontStyle="Italic"
+                                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"
+                                                       Visibility="{Binding HasNoPreview, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                            <Image Source="{Binding Preview}" Stretch="UniformToFill" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            <!-- The one picked last time -->
+                                            <Border Background="{StaticResource UiBandBrush}"
+                                                    BorderBrush="{StaticResource AmberBrush}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="3"
+                                                    Padding="6,2"
+                                                    Margin="6"
+                                                    HorizontalAlignment="Left"
+                                                    VerticalAlignment="Top"
+                                                    Visibility="{Binding IsLast, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                <TextBlock Text="{t:Text trackpicker.last}"
+                                                           FontSize="{StaticResource FontSizeTiny}"
+                                                           Foreground="{StaticResource AmberBrush}"/>
+                                            </Border>
+                                        </Grid>
+                                    </Border>
+
+                                    <StackPanel Grid.Row="1" Margin="4,8,4,0">
+                                        <TextBlock Text="{Binding Name}"
+                                                   FontSize="{StaticResource FontSizeBody}"
+                                                   FontWeight="Bold"
+                                                   Foreground="{StaticResource CreamBrush}"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding LayoutName}"
+                                                   FontSize="{StaticResource FontSizeSmall}"
+                                                   Foreground="{StaticResource AmberBrush}"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Visibility="{Binding HasLayout, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                        <TextBlock Text="{Binding Place}"
+                                                   Style="{StaticResource CardLineStyle}"
+                                                   Visibility="{Binding HasPlace, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                        <TextBlock Text="{Binding Facts}"
+                                                   Style="{StaticResource CardLineStyle}"
+                                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                                   Visibility="{Binding HasFacts, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                        <TextBlock Text="{Binding Tags}"
+                                                   Style="{StaticResource CardLineStyle}"
+                                                   FontStyle="Italic"
+                                                   Visibility="{Binding HasTags, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <TextBlock Text="{t:Text trackpicker.none}"
+                           FontSize="{StaticResource FontSizeBody}"
+                           FontStyle="Italic"
+                           Foreground="{StaticResource TextSecondaryBrush}"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           Visibility="{Binding HasCards, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+            </Grid>
+        </Border>
+
+        <!-- What it is for, back, and go -->
+        <DockPanel Grid.Row="3" Margin="22,0,22,20" LastChildFill="True">
+            <Button DockPanel.Dock="Right"
+                    Content="{t:Text trackpicker.go}"
+                    Style="{StaticResource DialogPrimaryButtonStyle}"
+                    Command="{Binding GoCommand}"
+                    IsDefault="True"
+                    FontSize="{StaticResource FontSizeBodyLarge}"
+                    Width="160"
+                    Height="44"
+                    Margin="12,0,0,0"/>
+            <Button DockPanel.Dock="Right"
+                    Content="{t:Text trackpicker.back}"
+                    Style="{StaticResource DialogSecondaryButtonStyle}"
+                    Command="{Binding BackCommand}"
+                    IsCancel="True"
+                    ToolTip="{t:Text trackpicker.back.tip}"
+                    FontSize="{StaticResource FontSizeBodyLarge}"
+                    Width="140"
+                    Height="44"/>
+            <TextBlock Text="{Binding Note}"
+                       Foreground="{StaticResource TextSecondaryBrush}"
+                       FontSize="{StaticResource FontSizeSmall}"
+                       FontStyle="Italic"
+                       TextWrapping="Wrap"
+                       VerticalAlignment="Center"
+                       Margin="0,0,16,0"/>
+        </DockPanel>
+    </Grid>
+</UserControl>

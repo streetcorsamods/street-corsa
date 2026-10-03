@@ -31,6 +31,8 @@ MainMenu (opens under the title; NewGame, LoadGame and Settings are cards on it,
 Garage (hub) ←→ CarLot
   │
   ├──→ Racing hub dialog       [Go race!: invitations, Street News]
+  │      ├──→ TrackPicker → AC free run (back in the garage)   [Free Run: any track, as cards with a search]
+  │      ├──→ TrackPicker → RaceLoading (test-and-tune)        [Test & Tune: the drag strips]
   │      ├──→ EventEntry → RaceLoading
   │      └──→ Diner (challenges)  [Hit the streets]
   │      └──→ Cruise ──→ RaceLoading ──→ Cruise   [Cruise the streets]

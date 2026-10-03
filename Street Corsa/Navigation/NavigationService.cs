@@ -742,8 +742,9 @@ namespace StreetCorsa.Navigation
             under != null && ReferenceEquals(CurrentScreen, under) ? Depart(under, _flow.Exit(id, exit), go) : go();
 
         /// <summary>
-        /// The racing hub, over the current screen (the garage's "Go race!"): the race invitations, Street News, the way
-        /// out onto the streets (its "streets" way out, shown while it leads somewhere). A race set up from it comes back
+        /// The racing hub, over the current screen (the garage's "Go race!"): the race invitations, Street News, a free run
+        /// and a test-and-tune of the selected car, the way out onto the streets (its "streets" way out, shown while it
+        /// leads somewhere). A race set up from it comes back
         /// to the screen it was opened over. One that fails to build is logged and the player told, as a screen is.
         /// False when it did not open.
         /// </summary>
@@ -763,6 +764,8 @@ namespace StreetCorsa.Navigation
                     _eventOpponentService,
                     _contentService,
                     _raceSetup,
+                    new Screens.Shared.PracticeRuns(_dialogService, _launcher, _carPartsService, _gameStateRepository, _timeService,
+                        _gameSettingsService, _contentService, _raceCarDataService, _raceSetup),
                     stillHome: () => ReferenceEquals(CurrentScreen, home),
                     race: intent => GoRace(gameState, intent, fromOverlay: true),
                     streets ? () => Via(leaveVia, () => LeaveOverlay(home, id, "streets", gameState, () => LeaveFrom(id, "streets", gameState))) : null));
