@@ -151,7 +151,8 @@ namespace StreetCorsa.Screens.Shared
                     SkinId = car.SkinId,
                     PlayerName = gameState.Player.Name,
                     TrackId = track.TrackId,
-                    TrackConfig = track.Configuration
+                    TrackConfig = track.Configuration,
+                    Wheels = _partsService.ShownWheels(car)
                 };
                 if (data != null) intent.CarData.Add(data);
                 return intent;

@@ -76,6 +76,12 @@ namespace StreetCorsa.Services.Configuration.Models
         public string TrackId { get; set; } = string.Empty;
         public string? TrackConfig { get; set; }
 
+        /// <summary>The wheels the car shows that its model does not have (AC's corner order); none runs without a mode</summary>
+        public StreetCorsa.Parts.Cars.ShownWheel?[] Wheels { get; set; } = new StreetCorsa.Parts.Cars.ShownWheel?[4];
+
+        /// <summary>Whether the free run needs its mode, sc_free: the car shows parts its model does not have</summary>
+        public bool HasShownParts => Wheels.Any(w => w != null);
+
         public override string Executable => "acs.exe";
 
         public override string Description => $"Free run: {CarId} on {TrackId}";
@@ -88,7 +94,8 @@ namespace StreetCorsa.Services.Configuration.Models
                 Skin = SkinId,
                 PlayerName = PlayerName,
                 TrackId = TrackId,
-                TrackConfig = TrackConfig
+                TrackConfig = TrackConfig,
+                Wheels = Wheels
             };
         }
     }

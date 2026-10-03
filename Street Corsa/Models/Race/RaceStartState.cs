@@ -56,9 +56,7 @@ namespace StreetCorsa.Models.Race
         public Parts.Cars.ShownWheel?[] Wheels { get; init; } = new Parts.Cars.ShownWheel?[4];
 
         /// <summary>The models the race mode loads for the car, once each</summary>
-        public IEnumerable<Parts.Cars.ShownModel> Models => Wheels.OfType<Parts.Cars.ShownWheel>()
-            .SelectMany(w => w.Tyre is { } tyre ? new[] { w.Rim, tyre } : [w.Rim])
-            .DistinctBy(m => m.Name, StringComparer.OrdinalIgnoreCase);
+        public IEnumerable<Parts.Cars.ShownModel> Models => ModelsOf(Wheels);
 
         /// <summary>Nothing wrong with the car</summary>
         public bool IsPristine =>
@@ -79,19 +77,35 @@ namespace StreetCorsa.Models.Race
             yield return (prefix + "DIRT", Unit.Clamp01(Dirt, ifNotFinite: 0).ToString("0.000", CultureInfo.InvariantCulture));
             if (Cooling is { } cooling)
                 yield return (prefix + "COOLING", List([cooling.Cooling, cooling.Fan, cooling.OilG], "0.000"));
-            // AC's own names for the wheels, in the same order
-            string[] wheels = ["LF", "RF", "LR", "RR"];
-            for (var corner = 0; corner < Math.Min(Wheels.Length, wheels.Length); corner++)
+            foreach (var key in WheelKeys(carIndex, Wheels)) yield return key;
+        }
+
+        /// <summary>
+        /// The race.ini keys of the wheels the car at <paramref name="carIndex"/> shows (the race mode's and the free
+        /// run's car_parts.lua): the rim's model, and the tyre's with where it sits on the rim
+        /// </summary>
+        public static IEnumerable<(string Key, string Value)> WheelKeys(int carIndex, IReadOnlyList<Parts.Cars.ShownWheel?> wheels)
+        {
+            var prefix = $"CAR_{carIndex}_";
+            for (var corner = 0; corner < Math.Min(wheels.Count, Parts.Cars.WheelFit.WheelNodes.Length); corner++)
             {
-                if (Wheels[corner] is not { } wheel) continue;
-                yield return (prefix + "RIM_" + wheels[corner], wheel.Rim.Name);
+                if (wheels[corner] is not { } wheel) continue;
+                // AC's own names for the wheels, in the same order
+                var name = Parts.Cars.WheelFit.WheelNodes[corner]["WHEEL_".Length..];
+                yield return (prefix + "RIM_" + name, wheel.Rim.Name);
                 if (wheel.Tyre is not { } tyre) continue;
-                yield return (prefix + "TYRE_" + wheels[corner], tyre.Name);
+                yield return (prefix + "TYRE_" + name, tyre.Name);
                 var m = wheel.TyreOnRim;
-                yield return (prefix + "TYRE_" + wheels[corner] + "_AT",
+                yield return (prefix + "TYRE_" + name + "_AT",
                     List([m.M11, m.M12, m.M13, m.M21, m.M22, m.M23, m.M31, m.M32, m.M33, m.M41, m.M42, m.M43], "0.######"));
             }
         }
+
+        /// <summary>The models the race mode loads for <paramref name="wheels"/>, once each</summary>
+        public static IEnumerable<Parts.Cars.ShownModel> ModelsOf(IEnumerable<Parts.Cars.ShownWheel?> wheels) =>
+            wheels.OfType<Parts.Cars.ShownWheel>()
+                .SelectMany(w => w.Tyre is { } tyre ? new[] { w.Rim, tyre } : [w.Rim])
+                .DistinctBy(m => m.Name, StringComparer.OrdinalIgnoreCase);
 
         private static string List(double[] values, string format) =>
             string.Join(",", values.Select(v => (double.IsFinite(v) ? v : 0).ToString(format, CultureInfo.InvariantCulture)));

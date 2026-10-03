@@ -94,6 +94,42 @@ namespace StreetCorsa.Services
         }
 
         /// <summary>
+        /// Puts the free run's mode (<c>sc_free</c>, built next to this one) into <paramref name="acRoot"/> with this
+        /// mode's car_parts.lua and the part <paramref name="models"/> the car shows. Null when it is there; otherwise why
+        /// the free run cannot go, for the player.
+        /// </summary>
+        public string? InstallFreeRun(string acRoot, IEnumerable<StreetCorsa.Parts.Cars.ShownModel> models)
+        {
+            if (!Directory.Exists(Path.Combine(acRoot, "extension")))
+                return GameText.Say("launch.no_csp");
+
+            var freeSource = Path.Combine(Path.GetDirectoryName(sourceFolder) ?? sourceFolder, IniModificationService.FreeRunModeId);
+            var parts = Path.Combine(sourceFolder, PartsScript);
+            if (!File.Exists(Path.Combine(freeSource, "mode.lua")) || !File.Exists(parts))
+                return GameText.Say("launch.mode_missing", ("folder", freeSource));
+
+            try
+            {
+                var target = Path.Combine(acRoot, "extension", "lua", "new-modes", IniModificationService.FreeRunModeId);
+                var files = Directory.GetFiles(freeSource).Select(f => (Name: Path.GetFileName(f), Source: f))
+                    .Append((PartsScript, parts))
+                    .Concat(models.Select(m => (m.Name, m.Source))).ToList();
+                var written = Mirror(files, target);
+                if (written > 0)
+                    _logger.Information("Free run mode installed in {Target} ({Count} file(s) changed)", target, written);
+                return null;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                _logger.Error(ex, "Could not install the free run mode into {AcRoot}", acRoot);
+                return GameText.Say("launch.mode_not_installed", ("problem", ex.Message));
+            }
+        }
+
+        /// <summary>The race mode's script that puts the parts on, which the free run's mode runs too</summary>
+        private const string PartsScript = "car_parts.lua";
+
+        /// <summary>
         /// Makes <paramref name="target"/> hold exactly <paramref name="files"/> (by their names there, which may have
         /// folders in them), each written only when it differs: files no longer wanted go, since the mode would still
         /// load (or read) them. Returns how many changed.

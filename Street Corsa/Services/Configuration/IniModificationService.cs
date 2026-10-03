@@ -22,6 +22,9 @@ namespace StreetCorsa.Services.Configuration
         /// <summary>The CSP mode a race runs in: race.ini selects it by its folder name under extension\lua\new-modes</summary>
         public const string RaceModeId = "sc_race";
 
+        /// <summary>The CSP mode a free run of a car with parts its model does not have runs in (ScRaceMode.InstallFreeRun)</summary>
+        public const string FreeRunModeId = "sc_free";
+
         /// <summary>AC's assists file, where the damage, fuel and tyre wear rates are</summary>
         public const string AssistsFile = "assists.ini";
 
@@ -490,9 +493,19 @@ namespace StreetCorsa.Services.Configuration
             sb.AppendLine("RACE_LAPS=0");
             sb.AppendLine($"SKIN={IniId(intent.Skin, "skin")}");
             sb.AppendLine($"TRACK={IniId(intent.TrackId, "track")}");
+            // A car with parts its model does not have runs in sc_free, which puts them on and leaves the session to AC
+            var shown = intent.Wheels.Any(w => w != null);
+            if (shown) sb.AppendLine($"__CM_CUSTOM_MODE={FreeRunModeId}");
             sb.AppendLine();
 
             AppendTailSections(sb);
+
+            if (shown)
+            {
+                sb.AppendLine("[STREET_CORSA]");
+                foreach (var (key, value) in StreetCorsa.Models.Race.RaceStartState.WheelKeys(0, intent.Wheels)) sb.AppendLine($"{key}={value}");
+                sb.AppendLine();
+            }
 
             sb.AppendLine("[SESSION_0]");
             sb.AppendLine("NAME=Free Run");

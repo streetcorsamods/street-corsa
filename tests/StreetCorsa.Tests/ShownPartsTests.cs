@@ -104,4 +104,47 @@ public sealed class ShownPartsTests : IDisposable
         Assert.Null(new ScRaceMode(source).Install(ac));
         Assert.False(File.Exists(installed));
     }
+
+    [Fact]
+    public void A_free_run_of_a_car_with_part_wheels_runs_in_its_mode_and_names_them()
+    {
+        var cfg = _temp.Combine("cfg");
+        Directory.CreateDirectory(cfg);
+        var ini = new StreetCorsa.Services.Configuration.IniModificationService(cfg, _temp.Combine("restore"));
+        var rim = new ShownModel(ShownParts.FileName(Cragar), "x.kn5");
+
+        Assert.True(ini.ApplyIntent(new StreetCorsa.Services.Configuration.Models.FreeRunIntent
+        {
+            CarId = "car", PlayerName = "P", TrackId = "track", Wheels = [new ShownWheel(rim), null, null, null]
+        }));
+        var race = File.ReadAllLines(Path.Combine(cfg, "race.ini"));
+        Assert.Contains("__CM_CUSTOM_MODE=" + StreetCorsa.Services.Configuration.IniModificationService.FreeRunModeId, race);
+        Assert.Contains("[STREET_CORSA]", race);
+        Assert.Contains(@"CAR_0_RIM_LF=parts\rims_mopar_cragar_8.kn5", race);
+
+        // On its own wheels: no mode, as a free run always was
+        Assert.True(ini.ApplyIntent(new StreetCorsa.Services.Configuration.Models.FreeRunIntent { CarId = "car", PlayerName = "P", TrackId = "track" }));
+        race = File.ReadAllLines(Path.Combine(cfg, "race.ini"));
+        Assert.DoesNotContain(race, l => l.StartsWith("__CM_CUSTOM_MODE"));
+        Assert.DoesNotContain("[STREET_CORSA]", race);
+    }
+
+    [Fact]
+    public void The_free_run_mode_goes_in_with_the_race_modes_parts_script_and_the_models()
+    {
+        var source = _temp.Combine("build", "AcModes", "sc_race");
+        _temp.File(Path.Combine("build", "AcModes", "sc_race", "mode.lua"), "-- race");
+        _temp.File(Path.Combine("build", "AcModes", "sc_race", "car_parts.lua"), "-- parts");
+        _temp.File(Path.Combine("build", "AcModes", "sc_free", "mode.lua"), "-- free");
+        _temp.File("cragar.kn5", "kn5");
+        var ac = _temp.Combine("ac");
+        Directory.CreateDirectory(Path.Combine(ac, "extension"));
+
+        Assert.Null(new ScRaceMode(source).InstallFreeRun(ac, [new ShownModel(ShownParts.FileName(Cragar), _temp.Combine("cragar.kn5"))]));
+
+        var free = Path.Combine(ac, "extension", "lua", "new-modes", "sc_free");
+        Assert.Equal("-- free", File.ReadAllText(Path.Combine(free, "mode.lua")));
+        Assert.Equal("-- parts", File.ReadAllText(Path.Combine(free, "car_parts.lua")));
+        Assert.Equal("kn5", File.ReadAllText(Path.Combine(free, "parts", "rims_mopar_cragar_8.kn5")));
+    }
 }
