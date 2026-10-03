@@ -683,6 +683,75 @@ public class TalkTests
         Assert.Contains("- " + PartKinds.GroupName(PartGroups.Blocks) + ":", rivalFacts);
     }
 
+    // ----- the town, the market, the player as seen -----
+
+    private static UsedCarListing ForSale(string id, decimal price, string dealer = "") => new()
+    {
+        CarDefinitionId = id, Price = price, Mileage = 70_000, Condition = 0.6f, DealerLocation = dealer, ListedDate = GameState.GetStartingDateTime()
+    };
+
+    [Fact]
+    public void Everybody_hears_the_town_and_reads_the_paper_and_a_seller_knows_what_else_is_for_sale()
+    {
+        var game = Game();
+        game.StreetTalk = [new StreetTalkItem(game.Date.AddDays(-3), "Hank wrecked his Ford on Route 9."), new StreetTalkItem(game.Date.AddDays(-1), "The King has a new cam.")];
+        game.News = [new NewsArticle { Date = game.Date.AddDays(-2), Headline = "Drag racing on Main", Body = "Police were called." }];
+        var car = Car();
+        game.UsedCarMarket = [ForSale("fairlane", 1450m), ForSale("bel_air", 1300m, "dealer_2"), ForSale("impala", 2600m), car.Listing];
+        var (desk, _) = Desk();
+
+        var facts = desk.ForCar(game, car, null, TalkPlace.Phone).Facts();
+
+        // The newest first
+        Assert.True(facts.IndexOf("The King has a new cam.", StringComparison.Ordinal) < facts.IndexOf("Hank wrecked", StringComparison.Ordinal));
+        Assert.Contains("Drag racing on Main", facts);
+        // The same model first, then the nearest in price; never the car itself
+        var market = facts[facts.IndexOf(Heading("market"), StringComparison.Ordinal)..];
+        Assert.True(market.IndexOf("$1,300", StringComparison.Ordinal) < market.IndexOf("$1,450", StringComparison.Ordinal));
+        Assert.True(market.IndexOf("$1,450", StringComparison.Ordinal) < market.IndexOf("$2,600", StringComparison.Ordinal));
+        Assert.DoesNotContain("$1,500", market[..market.IndexOf("\n\n", StringComparison.Ordinal)]);
+        Assert.Contains(GameText.Say("chat.fact.market_dealer"), market);
+    }
+
+    [Fact]
+    public async Task A_seller_who_names_another_cars_price_as_their_own_is_caught()
+    {
+        var game = Game();
+        var car = Car();
+        car.Listing.FirstAsked = 1500m;
+        car.Listing.MostOff = 0;
+        game.UsedCarMarket = [ForSale("bel_air", 1300m)];
+        var (desk, ai) = Desk(answer: "Tell you what, $1,300 and she's yours.");
+
+        var said = await desk.ForCar(game, car, null, TalkPlace.Phone).SayAsync("Does it run?", Ct);
+
+        Assert.Equal(2, ai.Chats.Count);
+        Assert.Equal(GameText.Say("chat.deal.held", ("price", new Helpers.Money(1500m))), said);
+    }
+
+    [Fact]
+    public void People_know_the_players_name_on_the_street_and_what_they_drive_and_a_racer_knows_its_parts()
+    {
+        var catalog = TestCars.Catalog.Value;
+        var game = Game();
+        game.Player.Stats.Reputation = 80;
+        var mine = TestCars.WithRealEngine(catalog);
+        game.Player.Cars.Add(mine);
+        game.Player.SelectedCarInstanceId = mine.InstanceId;
+        var rival = new Opponent("Johnny Reyes", 24, Gender.Male, 95, 80) { Nickname = "Flash" };
+        game.Racers.AddRacer(rival);
+        var ai = new FakeAiText((_, _) => Task.FromResult<string?>("Sure."));
+        var desk = new TalkDesk(ai, carName: id => id == "car_a" ? "1968 Dodge Dart" : id, parts: () => catalog, prompts: BasePrompts, rules: () => Rules);
+
+        var sellerFacts = desk.ForCar(game, Car(), null, TalkPlace.Phone).Facts();
+        Assert.Contains(game.Player.Stats.GetReputationTier(), sellerFacts);
+        Assert.Contains(GameText.Say("chat.fact.player_car", ("player", "Kid"), ("car", "1968 Dodge Dart")), sellerFacts);
+        Assert.DoesNotContain(Heading("player_car"), sellerFacts);
+
+        var rivalFacts = desk.ForRival(game, rival, TalkPlace.Cruise).Facts();
+        Assert.Contains(Heading("player_car"), rivalFacts);
+    }
+
     [Fact]
     public async Task A_salesman_who_makes_up_a_price_on_his_lot_is_asked_again()
     {

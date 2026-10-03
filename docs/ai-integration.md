@@ -97,6 +97,12 @@ The AI only speaks: the game decides every fact and every price.
   line, but for those not from the factory. A salesman's lot tells each car's engine, miles and condition too, up to
   `lotCarsTold` (30). A salesman going over his lot who names a sum that is no car's on it is asked again once
   (`chat.fact.lot_price_warning`), and the prompts ask for prices in figures, as the facts give them.
+- **The town and the market**: everybody hears the diner's street talk (`ai.talk.streetTalkTold`, 6) and reads the
+  paper (`newsTold`, 3), the newest first, in the AI's words when it rewrote them in the player's language. The player
+  is told in words (`RacerStats.GetReputationTier`, a rival's own standing too), with the car they drive (the one picked
+  in the garage); a rival also sizes it up part by part. A seller or buyer knows the other cars for sale in town
+  (`marketCarsTold`, 4: the same model first, then the nearest in price), told they are theirs and never this one's
+  price; the price guard does not count those sums as known, so a seller who names one as their own price is caught.
 - **Haggling** (`Haggle`): a number the player types reads as an offer when it has a currency sign or "k", or an offer
   word (`chat.offer_words`) is in the line, and it is within reason of the price. The rules (`ai.talk`) decide: take it,
   meet halfway, stand firm, or take offence; the floor comes from the price first asked (`PersonDeal.Asked`), times the

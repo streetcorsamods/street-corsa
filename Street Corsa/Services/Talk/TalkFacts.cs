@@ -5,6 +5,7 @@ using StreetCorsa.Parts.Cars;
 using StreetCorsa.Rules;
 using StreetCorsa.Screens.Shared;
 using StreetCorsa.Services.Ai;
+using StreetCorsa.Services.Market;
 using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Services.Talk
@@ -27,8 +28,12 @@ namespace StreetCorsa.Services.Talk
 
         // Kept before the others, the lowest first out
         public const int RivalRaces = 10;
+        public const int News = 12;
+        public const int Town = 14;
         public const int OtherCars = 20;
+        public const int Market = 30;
         public const int Races = 40;
+        public const int PlayersCar = 42;
         public const int OwnCar = 45;
         public const int Memories = 50;
         public const int Lot = 60;
@@ -50,10 +55,62 @@ namespace StreetCorsa.Services.Talk
             };
         }
 
-        public static IEnumerable<string> Today(GameState game) =>
-            [GameText.Say("chat.fact.today", ("date", game.Date)),
-             GameText.Say("chat.fact.player", ("player", game.Player.Name), ("wins", game.Player.Stats.Wins),
-                 ("losses", game.Player.Stats.Losses), ("reputation", game.Player.Stats.Reputation))];
+        /// <summary>Today, and the player as the town sees them: their record, their name on the street, what they drive</summary>
+        public static IEnumerable<string> Today(GameState game, Func<string, string> carName)
+        {
+            yield return GameText.Say("chat.fact.today", ("date", game.Date));
+            yield return GameText.Say("chat.fact.player", ("player", game.Player.Name), ("wins", game.Player.Stats.Wins),
+                ("losses", game.Player.Stats.Losses), ("reputation", game.Player.Stats.Reputation), ("standing", game.Player.Stats.GetReputationTier()));
+            if (CarDriven(game) is { } car) yield return GameText.Say("chat.fact.player_car", ("player", game.Player.Name), ("car", carName(car.DefinitionId)));
+        }
+
+        /// <summary>The car the player drives: the one picked in the garage, else their first</summary>
+        public static Car? CarDriven(GameState game) =>
+            game.Player.Cars.FirstOrDefault(c => c.InstanceId == game.Player.SelectedCarInstanceId) ?? game.Player.Cars.FirstOrDefault();
+
+        /// <summary>What is said around town (the diner's street talk), the newest <paramref name="most"/> first, in the AI's words when it wrote them</summary>
+        public static IEnumerable<string> Town(GameState game, int most)
+        {
+            var said = (game.StreetTalk ?? []).OrderByDescending(t => t.Date).Take(Math.Max(0, most)).ToList();
+            if (said.Count == 0) yield break;
+            yield return GameText.Say("chat.fact.town");
+            foreach (var item in said)
+                yield return GameText.Say("chat.fact.town_line", ("when", When(item.Date, game.Date)), ("text", AiWriter.Said(item)));
+        }
+
+        /// <summary>What was in the paper lately, the newest <paramref name="most"/> first, in the AI's words when it wrote them</summary>
+        public static IEnumerable<string> News(GameState game, int most)
+        {
+            var news = (game.News ?? []).OrderByDescending(n => n.Date).Take(Math.Max(0, most)).ToList();
+            if (news.Count == 0) yield break;
+            yield return GameText.Say("chat.fact.news");
+            foreach (var article in news)
+            {
+                var ai = article.AiBody is { Length: > 0 } && article.AiLanguage == AiWriter.Language;
+                yield return GameText.Say("chat.fact.news_line", ("when", When(article.Date, game.Date)),
+                    ("headline", ai ? article.AiHeadline ?? article.Headline : article.Headline), ("text", ai ? article.AiBody : article.Body));
+            }
+        }
+
+        /// <summary>
+        /// Other cars for sale in town now (the paper's and the dealers'), the most like <paramref name="car"/> first (the
+        /// same model, then the nearest in price), at most <paramref name="most"/>: what a seller or buyer knows of the market
+        /// </summary>
+        public static IEnumerable<string> Market(UsedCarListing car, IReadOnlyList<UsedCarListing> market, Func<string, string> carName, int most)
+        {
+            var others = market
+                .Where(l => !l.IsSold && l.Id != car.Id && (car.CarInstanceId == null || l.CarInstanceId != car.CarInstanceId))
+                .OrderBy(l => string.Equals(l.CarDefinitionId, car.CarDefinitionId, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+                .ThenBy(l => Math.Abs(l.Price - car.Price))
+                .Take(Math.Max(0, most))
+                .ToList();
+            if (others.Count == 0) yield break;
+            yield return GameText.Say("chat.fact.market");
+            foreach (var other in others)
+                yield return GameText.Say("chat.fact.market_car", ("car", carName(other.CarDefinitionId)), ("price", new Helpers.Money(other.Price)),
+                    ("condition", ConditionDisplay.Of(other.Condition).Label), ("mileage", Helpers.Measure.Distance(other.Mileage).ToString()),
+                    ("where", GameText.Say(string.IsNullOrEmpty(other.DealerLocation) ? "chat.fact.market_paper" : "chat.fact.market_dealer")));
+        }
 
         /// <summary>A car for sale: what it is, the engine, its shape and mileage, its past, the ad's words, how long on sale</summary>
         public static IEnumerable<string> Car(UsedCarListingViewModel car, decimal price, DateTime today, DateTime onSaleSince)
@@ -130,7 +187,7 @@ namespace StreetCorsa.Services.Talk
                     }
 
                     var origin = stock switch { true => GameText.Say("chat.fact.build_stock"), false => GameText.Say("chat.fact.build_aftermarket"), _ => string.Empty };
-                    yield return GameText.Say("chat.fact.build_part", ("group", name), ("part", Market.AdBlurbs.NameOf(definition!)),
+                    yield return GameText.Say("chat.fact.build_part", ("group", name), ("part", AdBlurbs.NameOf(definition!)),
                         ("count", same.Count > 1 ? GameText.Say("chat.fact.build_count", ("count", same.Count)) : string.Empty),
                         ("condition", ConditionDisplay.Of(same.Min(p => p.Wear)).Sentence), ("origin", origin));
                 }
@@ -174,7 +231,8 @@ namespace StreetCorsa.Services.Talk
         public static IEnumerable<string> Rival(Opponent rival, Func<string, string> carName)
         {
             yield return GameText.Say("chat.fact.rival", ("name", rival.Name), ("nickname", rival.Nickname), ("age", rival.Age),
-                ("wins", rival.Stats.Wins), ("losses", rival.Stats.Losses), ("reputation", rival.Stats.Reputation));
+                ("wins", rival.Stats.Wins), ("losses", rival.Stats.Losses), ("reputation", rival.Stats.Reputation),
+                ("standing", rival.Stats.GetReputationTier()));
             if (rival.Cars.FirstOrDefault() is { } car) yield return GameText.Say("chat.fact.rival_car", ("car", carName(car.DefinitionId)));
             if (rival.IsKing) yield return GameText.Say("chat.fact.rival_king");
             if (rival.Grudge is { } grudge) yield return GameText.Say("chat.fact.rival_grudge", ("car", carName(grudge.CarDefinitionId)));

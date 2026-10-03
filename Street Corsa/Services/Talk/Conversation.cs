@@ -283,7 +283,7 @@ namespace StreetCorsa.Services.Talk
             // told gives, and it is asked again with a word on it; the same again and the game says the price itself
             if (said != null && Subject is { } subject)
             {
-                var known = KnownSums(facts);
+                var known = KnownSums(outcome);
                 var buyer = subject is BuyerSubject;
                 bool Strays(string line) => buyer
                     ? Haggle.NamesHigherPrice(line, subject.Price, known, UnitWords)
@@ -298,7 +298,7 @@ namespace StreetCorsa.Services.Talk
                 }
             }
             // A salesman going over his lot names only its prices: one made up is asked again, once
-            else if (said != null && Person.Kind == PersonKind.Salesman && Haggle.NamesUnknownSum(said, KnownSums(facts), UnitWords))
+            else if (said != null && Person.Kind == PersonKind.Salesman && Haggle.NamesUnknownSum(said, KnownSums(outcome), UnitWords))
             {
                 _logger.Information("{Person} named a price that is no car's on the lot: asked again", Person.Name);
                 values["facts"] = facts + "\n" + GameText.Say("chat.fact.lot_price_warning");
@@ -320,10 +320,11 @@ namespace StreetCorsa.Services.Talk
 
         /// <summary>
         /// The sums the person may name: those of the facts they were given (the lot, what was first asked), the player's,
-        /// and the player's offers ("would you take 1200" is one with no dollar sign on it)
+        /// and the player's offers ("would you take 1200" is one with no dollar sign on it). Not the other cars for sale in
+        /// town: the person may name them, but never as the price of their own
         /// </summary>
-        private List<decimal> KnownSums(string facts) =>
-            Haggle.SumsIn(facts, UnitWords)
+        private List<decimal> KnownSums(HaggleOutcome? outcome) =>
+            Haggle.SumsIn(TalkFacts.Sheet(Sections(outcome).Where(s => s.Key != "market"), int.MaxValue), UnitWords)
                 .Concat(_playerSaid.SelectMany(line => Haggle.SumsIn(line, UnitWords)))
                 .Concat(_offers)
                 .Concat(Deal is { } deal ? [deal.Asked] : Array.Empty<decimal>())
@@ -397,8 +398,12 @@ namespace StreetCorsa.Services.Talk
         {
             var rules = _desk.Rules;
             var today = _game.Date;
-            var sections = new List<FactSection> { new("now", [.. TalkFacts.Today(_game)], FactSection.Always) };
+            var sections = new List<FactSection> { new("now", [.. TalkFacts.Today(_game, _desk.CarName)], FactSection.Always) };
             if (Rival != null) sections.Add(new("you", [.. TalkFacts.Rival(Rival, _desk.CarName)], FactSection.Always));
+            // A racer sizes up what the player drives
+            if (Rival != null && TalkFacts.CarDriven(_game) is { } playersCar)
+                sections.Add(new("player_car", [.. TalkFacts.Build(playersCar.Parts, _desk.Parts, Factory(playersCar.DefinitionId), rules.BuildPartsPerKind)],
+                    FactSection.PlayersCar, HeadLines: 1));
 
             var thing = Subject switch
             {
@@ -414,6 +419,10 @@ namespace StreetCorsa.Services.Talk
             if (Rival?.Cars.FirstOrDefault() is { } rivalCar)
                 sections.Add(new("your_car", [.. TalkFacts.Build(rivalCar.Parts, _desk.Parts, Factory(rivalCar.DefinitionId), rules.BuildPartsPerKind)],
                     FactSection.OwnCar, HeadLines: 1));
+            // What else is for sale in town: a seller's or buyer's sense of the price
+            if (Subject switch { CarSubject car => car.Car, BuyerSubject buyer => buyer.Car, _ => null } is { } forSale)
+                sections.Add(new("market", [.. TalkFacts.Market(forSale.Listing, _game.UsedCarMarket ?? [], _desk.CarName, rules.MarketCarsTold)],
+                    FactSection.Market, HeadLines: 1));
 
             // A salesman met over one car (Car Viewing) is not given his lot, and so is not told it is empty either; the
             // lot is what he talks about until a car is picked, and the rest of it after
@@ -423,6 +432,9 @@ namespace StreetCorsa.Services.Talk
             if (Rival != null)
                 sections.Add(new("rival_races", [.. TalkFacts.RivalRaces(Person.Name, _game.RivalRaces ?? [], today, _desk.CarName, rules.RivalRacesTold)], FactSection.RivalRaces));
             sections.Add(new("memories", [.. TalkFacts.Memories(TalkPeople.Remembered(Person, today, rules), today)], FactSection.Memories, HeadLines: 1));
+            // The town's talk and the paper: everybody hears it
+            sections.Add(new("town", [.. TalkFacts.Town(_game, rules.StreetTalkTold)], FactSection.Town, HeadLines: 1));
+            sections.Add(new("news", [.. TalkFacts.News(_game, rules.NewsTold)], FactSection.News, HeadLines: 1));
             sections.Add(new("said", [.. TalkFacts.Said(Deal)], FactSection.Said, HeadLines: 1));
 
             IEnumerable<string> dealLines = Subject switch

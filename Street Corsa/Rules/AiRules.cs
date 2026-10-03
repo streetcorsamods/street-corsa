@@ -155,6 +155,15 @@ public sealed class TalkRules
     /// </summary>
     public int BuildPartsPerKind { get; set; } = 3;
 
+    /// <summary>Other cars for sale in town told a seller or buyer, the most like the one talked about first</summary>
+    public int MarketCarsTold { get; set; } = 4;
+
+    /// <summary>What is said around town (the diner's street talk) told everybody, the newest</summary>
+    public int StreetTalkTold { get; set; } = 6;
+
+    /// <summary>Pieces in the paper told everybody, the newest</summary>
+    public int NewsTold { get; set; } = 3;
+
     /// <summary>The share of salesmen who are women</summary>
     public double WomenSalesmen { get; set; } = 0.15;
 
