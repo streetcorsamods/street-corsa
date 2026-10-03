@@ -251,7 +251,7 @@ source game had them: each has an `id`, an `icon` (a theme image name, `"icons/e
 first show naming a part's group takes it, `rest_of_engine: true` takes every other part of the engine, and a part no
 show takes stays in sight. The tooltip is `part_show.<id>` in the text. A mod adds shows (after the ones before) or
 changes one by its id. The base game has `engine` (the rest of the engine), `drivetrain` (gearbox, clutch and flywheel,
-and `differentials` and `transfer_cases` should a mod add those groups), `brakes` and `suspension`.
+and `differentials` and `transfer_cases` should a mod add those groups), `brakes` and `suspension` (the part dealers' icon).
 
 ```json
 { "groups": [ { "id": "intercoolers", "classes": [ "Intercooler" ], "tune": 4, "speed_shop": true } ] }

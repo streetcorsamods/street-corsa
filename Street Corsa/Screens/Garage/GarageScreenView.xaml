@@ -585,37 +585,6 @@
                                               ToolTip="{t:Text garage.view.parts.tip}"
                                               Visibility="{Binding Workbench.IsAvailable, Converter={StaticResource BooleanToVisibilityConverter}}"
                                               IsChecked="{Binding Workbench.IsCarView, Mode=TwoWay}"/>
-                                <!-- With the car's parts on show: a button for each kind that can be put out of sight, lit
-                                     while it is in sight (part_groups.json's shows) -->
-                                <ItemsControl ItemsSource="{Binding Workbench.PartShows}"
-                                              Focusable="False"
-                                              Visibility="{Binding Workbench.IsCarView, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <StackPanel Orientation="Horizontal"/>
-                                        </ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <ToggleButton Style="{StaticResource RoundIconToggleStyle}"
-                                                          Margin="0,0,10,0"
-                                                          Tag="{Binding Icon}"
-                                                          Content="{Binding Name}"
-                                                          ToolTip="{Binding Tip}"
-                                                          IsChecked="{Binding IsShown, Mode=TwoWay}"/>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                                <ToggleButton Tag="{theme:Image icons/engine, Size=128}"
-                                              Content="{t:Text garage.view.stand}"
-                                              ToolTip="{t:Text garage.view.stand.tip}"
-                                              Visibility="{Binding Workbench.CanShowStand, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                              IsChecked="{Binding Workbench.IsStandView, Mode=TwoWay}"/>
-                                <ToggleButton Tag="{theme:Image icons/gears, Size=128}"
-                                              Content="{t:Text garage.view.turn_over}"
-                                              ToolTip="{t:Text garage.view.turn_over.tip}"
-                                              Visibility="{Binding Workbench.CanTurnEngineOver, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                              IsChecked="{Binding Workbench.IsEngineTurnedOver, Mode=TwoWay}"/>
                             </StackPanel>
 
                             <!-- Repairs: what the races did to the car, and fixing it -->
@@ -660,6 +629,63 @@
                             </controls:EnginePanel.RenderTransform>
                         </controls:EnginePanel>
                     </Grid>
+
+                    <!-- The parts view's own row: the Parts button lit, the stand, turning the engine over and the buttons
+                         that put kinds of part out of sight. When the parts view opens the row above sinks away first,
+                         then this one rises; closing it, the other way round (GarageScreenView.xaml.cs). -->
+                    <StackPanel x:Name="PartsRow"
+                                Grid.Column="0"
+                                Grid.ColumnSpan="2"
+                                Orientation="Horizontal"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Opacity="0"
+                                IsHitTestVisible="False"
+                                IsEnabled="False">
+                        <StackPanel.RenderTransform>
+                            <TranslateTransform Y="24"/>
+                        </StackPanel.RenderTransform>
+                        <StackPanel.Resources>
+                            <Style TargetType="ToggleButton" BasedOn="{StaticResource RoundIconToggleStyle}">
+                                <Setter Property="Margin" Value="0,0,10,0"/>
+                            </Style>
+                        </StackPanel.Resources>
+                        <ToggleButton Tag="{theme:Image icons/car_parts, Size=128}"
+                                      Content="{t:Text garage.view.parts}"
+                                      ToolTip="{t:Text garage.view.parts.tip}"
+                                      IsChecked="{Binding Workbench.IsCarView, Mode=TwoWay}"/>
+                        <ToggleButton Tag="{theme:Image icons/engine, Size=128}"
+                                      Content="{t:Text garage.view.stand}"
+                                      ToolTip="{t:Text garage.view.stand.tip}"
+                                      Visibility="{Binding Workbench.CanShowStand, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                      IsChecked="{Binding Workbench.IsStandView, Mode=TwoWay}"/>
+                        <ToggleButton Tag="{theme:Image icons/gears, Size=128}"
+                                      Content="{t:Text garage.view.turn_over}"
+                                      ToolTip="{t:Text garage.view.turn_over.tip}"
+                                      Visibility="{Binding Workbench.CanTurnEngineOver, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                      IsChecked="{Binding Workbench.IsEngineTurnedOver, Mode=TwoWay}"/>
+                        <!-- With the car's parts on show (not the stand): a button for each kind that can be put
+                             out of sight, lit while it is in sight (part_groups.json's shows) -->
+                        <ItemsControl ItemsSource="{Binding Workbench.PartShows}"
+                                      Focusable="False"
+                                      Visibility="{Binding Workbench.IsCarView, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <ToggleButton Style="{StaticResource RoundIconToggleStyle}"
+                                                  Margin="0,0,10,0"
+                                                  Tag="{Binding Icon}"
+                                                  Content="{Binding Name}"
+                                                  ToolTip="{Binding Tip}"
+                                                  IsChecked="{Binding IsShown, Mode=TwoWay}"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
                 </Grid>
             </StackPanel>
             </Grid>

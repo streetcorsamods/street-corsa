@@ -18,7 +18,7 @@
     { "id": "engine", "icon": "icons/engine", "rest_of_engine": true },
     { "id": "drivetrain", "icon": "icons/gears", "groups": [ "transmissions", "flywheels", "differentials", "transfer_cases" ] },
     { "id": "brakes", "icon": "icons/disc_brake", "groups": [ "brakes" ] },
-    { "id": "suspension", "icon": "icons/suspension", "groups": [ "springs", "shocks", "sway_bars", "suspension_arms" ] }
+    { "id": "suspension", "icon": "icons/parts_filled", "groups": [ "springs", "shocks", "sway_bars", "suspension_arms" ] }
   ],
   "groups": [
     {
