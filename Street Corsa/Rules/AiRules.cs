@@ -58,6 +58,13 @@ public sealed class TalkRules
     /// <summary>Turns of a talk sent with each request, the newest; the older ones are left out</summary>
     public int TurnsKept { get; set; } = 16;
 
+    /// <summary>
+    /// The most the fact sheet may take (tokens, as the game guesses them), and never more than half the context window
+    /// when the game sets one: past it, the least needed facts are left out first (other racers' races, the rest of the
+    /// lot, old races, old memories), never who the person is, the thing talked about or the deal
+    /// </summary>
+    public int FactTokens { get; set; } = 5000;
+
     /// <summary>What a person remembers of past talks, the newest few, told them when they are talked to again</summary>
     public int MemoriesGiven { get; set; } = 4;
 
@@ -160,8 +167,11 @@ public sealed class TalkRules
 /// <summary>What the game sends Ollama besides the prompt (<c>"ai": { "ollama": ... }</c>)</summary>
 public sealed class OllamaRules
 {
-    /// <summary>The context window asked for (tokens): a talk with its fact sheet needs more than Ollama's usual</summary>
-    public int ContextTokens { get; set; } = 8192;
+    /// <summary>
+    /// The context window asked for (tokens): a talk with its fact sheet needs more than Ollama's usual. 16k costs an 8B
+    /// model about 1 GB of the card over 8k, and fits beside the game on 12 GB; past it the model spills off the GPU
+    /// </summary>
+    public int ContextTokens { get; set; } = 16384;
 
     /// <summary>
     /// How long Ollama keeps the model loaded after a request ("10m"), so the next line does not wait for it to load; not

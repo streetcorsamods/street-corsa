@@ -47,6 +47,8 @@ public sealed class FakeAiText(Func<string, TextValues, Task<string?>> answer, b
 
     public bool IsAvailable { get; set; } = available;
 
+    public int? ContextTokens { get; set; }
+
     public Task<string?> WriteAsync(string use, TextValues values, AiPriority priority = AiPriority.Background, CancellationToken cancellationToken = default)
     {
         lock (Asked) Asked.Add((use, values, priority));

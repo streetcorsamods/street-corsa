@@ -77,6 +77,18 @@ The AI only speaks: the game decides every fact and every price.
   rival's races with other rivals (`GameState.RivalRaces`, now recorded by `RaceSimulatorTask`), what the person
   remembers, what a salesman already said about the car, and the answer to an offer. The prompts say to use only these
   facts, to say "don't know" otherwise, and to speak only as the person.
+- **The sheet's sections and budget** (`FactSection`, `TalkFacts.Sheet`): the sheet goes in sections under headings
+  (`chat.section`, `chat.section.*`: now, who you are, what the talk is about, the lot, races with the player, races
+  with other racers, memories, what was said, the deal), what stays the same through a talk first and the deal last;
+  the prompts put `{facts}` at their end. A local model then reads again only what changed from the end of the last
+  request on (Ollama keeps the start it already read). The sheet keeps to `ai.talk.factTokens` (5000), and to half the
+  context window when the game sets one: past it, the least needed lines go first (other racers' races, the rest of the
+  lot once a car is picked, old races, old memories, what was said), a list's head line only with the whole section;
+  who the person is, the thing and the deal never go. Tokens are the game's guess (`AiTokens`, 3 characters a token:
+  measured about 25% over Ollama's own count, never under); every Ollama answer logs its real count against the guess,
+  and a warning when a prompt filled the window. The talk's turns are fitted too (`AiTextService.Fit`): when the
+  system prompt, the turns and the answer would not fit the window, the oldest turns are left out, from a player's turn
+  on.
 - **Haggling** (`Haggle`): a number the player types reads as an offer when it has a currency sign or "k", or an offer
   word (`chat.offer_words`) is in the line, and it is within reason of the price. The rules (`ai.talk`) decide: take it,
   meet halfway, stand firm, or take offence; the floor comes from the price first asked (`PersonDeal.Asked`), times the
@@ -130,7 +142,7 @@ No training: what a Modelfile does. Settings' AI section has "Make the game's mo
 makes `streetcorsa` in Ollama (`POST /api/create`) from `ai/ollama.json`: a base model (`from`, llama3.1:8b; or the
 model typed in the box), its own system prompt, parameters (temperature, top_p, repeat_penalty, num_ctx) and a few
 example exchanges in the game's voice, then puts its name in the model box to Save. Every Ollama request is also sent
-the rules' `ai.ollama`: `num_ctx` (8192, room for a talk and its fact sheet), `keep_alive` (10m: the next line does
+the rules' `ai.ollama`: `num_ctx` (16384, room for a talk and a full fact sheet), `keep_alive` (10m: the next line does
 not wait for the model to load, and it is out of the GPU soon after the player goes racing; Ollama's own is 5m) and
 `repeat_penalty`. The Settings test sends them too, so testing does not make Ollama load the model again.
 

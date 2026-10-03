@@ -26,6 +26,12 @@ namespace StreetCorsa.Services.Ai
         bool IsAvailable { get; }
 
         /// <summary>
+        /// The context window the provider is asked to work in (tokens), when the game sets it (Ollama's num_ctx); null
+        /// when the provider keeps its own
+        /// </summary>
+        int? ContextTokens { get; }
+
+        /// <summary>
         /// The answer to the mods' prompt <paramref name="use"/> filled with <paramref name="values"/>, cleaned and cut to
         /// its length; null when the AI is off, the prompt is missing, the queue is full, or the request failed or timed out
         /// </summary>
@@ -94,10 +100,45 @@ namespace StreetCorsa.Services.Ai
             AskAsync(use, priority, (prompts, prompt) =>
                 new AiTextRequest(SystemPrompt(prompts), GameText.Fill(prompt.Prompt, values), prompt.MaxTokens, prompt.Temperature), cancellationToken);
 
+        public int? ContextTokens
+        {
+            get
+            {
+                var context = Rules.Ollama.ContextTokens;
+                return AiProviders.Normalize(_settings().TextProvider) == AiProviders.Ollama && context > 0 ? context : null;
+            }
+        }
+
         public Task<string?> ChatAsync(string use, TextValues values, IReadOnlyList<AiTurn> turns, CancellationToken cancellationToken = default) =>
             turns.Count == 0 ? Task.FromResult<string?>(null) : AskAsync(use, AiPriority.Now, (prompts, prompt) =>
-                new AiTextRequest(SystemPrompt(prompts) + "\n\n" + GameText.Fill(prompt.Prompt, values), string.Empty, prompt.MaxTokens,
-                    prompt.Temperature, turns), cancellationToken);
+            {
+                var system = SystemPrompt(prompts) + "\n\n" + GameText.Fill(prompt.Prompt, values);
+                var fitted = Fit(turns, system, prompt.MaxTokens, ContextTokens);
+                if (fitted.Count < turns.Count)
+                    _logger.Debug("AI {Use}: the {Dropped} oldest turns left out to fit the context window", use, turns.Count - fitted.Count);
+                var request = new AiTextRequest(system, string.Empty, prompt.MaxTokens, prompt.Temperature, fitted);
+                if (ContextTokens is { } context && AiTokens.Estimate(request) + prompt.MaxTokens > context)
+                    _logger.Warning("AI {Use}: about {Tokens} tokens asked in a context of {Context}: the provider will cut it", use,
+                        AiTokens.Estimate(request) + prompt.MaxTokens, context);
+                return request;
+            }, cancellationToken);
+
+        /// <summary>
+        /// The newest of <paramref name="turns"/> that fit a context window of <paramref name="context"/> tokens beside the
+        /// system prompt and room for the answer, from a player's turn on (the APIs want the talk to start with one); the
+        /// last turn always goes. All of them when the window is not known.
+        /// </summary>
+        public static IReadOnlyList<AiTurn> Fit(IReadOnlyList<AiTurn> turns, string system, int answerTokens, int? context)
+        {
+            if (context is not { } window || turns.Count == 0) return turns;
+
+            var room = window - AiTokens.Estimate(system) - AiTokens.PerMessage - answerTokens - AiTokens.Margin;
+            var used = turns.Sum(AiTokens.Estimate);
+            var first = 0;
+            while (first < turns.Count - 1 && (used > room || turns[first].Mine))
+                used -= AiTokens.Estimate(turns[first++]);
+            return first == 0 ? turns : turns.Skip(first).ToList();
+        }
 
         private async Task<string?> AskAsync(string use, AiPriority priority, Func<AiPrompts, AiPrompt, AiTextRequest> ask, CancellationToken cancellationToken)
         {

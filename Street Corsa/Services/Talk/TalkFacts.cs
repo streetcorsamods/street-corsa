@@ -4,6 +4,7 @@ using StreetCorsa.Parts;
 using StreetCorsa.Parts.Cars;
 using StreetCorsa.Rules;
 using StreetCorsa.Screens.Shared;
+using StreetCorsa.Services.Ai;
 using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Services.Talk
@@ -14,6 +15,25 @@ namespace StreetCorsa.Services.Talk
     /// player and with each other, what they remember of past talks, what they said about the thing before, and the
     /// answer to an offer just made. One fact a line.
     /// </summary>
+    /// <summary>
+    /// One part of the fact sheet: its heading (<c>chat.section.{Key}</c>), its lines, the most needed first, and how much
+    /// it is needed when the sheet is too long (<see cref="TalkFacts.Sheet"/>): the lowest goes first, line by line from
+    /// the end; its first <paramref name="HeadLines"/> lines (a line that heads a list) only go with the whole section
+    /// </summary>
+    public sealed record FactSection(string Key, IReadOnlyList<string> Lines, int Priority, int HeadLines = 0)
+    {
+        /// <summary>Never left out: who the person is, the thing talked about, the deal</summary>
+        public const int Always = int.MaxValue;
+
+        // Kept before the others, the lowest first out
+        public const int RivalRaces = 10;
+        public const int OtherCars = 20;
+        public const int Races = 40;
+        public const int Memories = 50;
+        public const int Lot = 60;
+        public const int Said = 70;
+    }
+
     public static class TalkFacts
     {
         /// <summary>"today", "yesterday", "5 days ago": how people say when</summary>
@@ -102,7 +122,7 @@ namespace StreetCorsa.Services.Talk
         }
 
         /// <summary>
-        /// The races the person had with the player, the newest <paramref name="most"/>, by name (as the race record keeps
+        /// The races the person had with the player, the newest <paramref name="most"/> (the newest first), by name (as the race record keeps
         /// it), with how many there were in all; that there were none, when none
         /// </summary>
         public static IEnumerable<string> RacesWithPlayer(string name, IReadOnlyList<ProcessedRaceSession> sessions, DateTime today, int most)
@@ -118,7 +138,7 @@ namespace StreetCorsa.Services.Talk
             }
 
             yield return GameText.Say("chat.fact.races", ("count", races.Count), ("won", races.Count(r => !r.PlayerWon)), ("lost", races.Count(r => r.PlayerWon)));
-            foreach (var race in races.TakeLast(Math.Max(0, most)))
+            foreach (var race in races.TakeLast(Math.Max(0, most)).Reverse())
             {
                 yield return GameText.Say(race.PlayerWon ? "chat.fact.race_lost" : "chat.fact.race_won",
                     ("when", When(race.GameDate!.Value, today)), ("kind", KindOf(race.RaceType)),
@@ -126,11 +146,11 @@ namespace StreetCorsa.Services.Talk
             }
         }
 
-        /// <summary>A rival's races with other rivals, the newest <paramref name="most"/></summary>
+        /// <summary>A rival's races with other rivals, the newest <paramref name="most"/>, the newest first</summary>
         public static IEnumerable<string> RivalRaces(string name, IReadOnlyList<RivalRaceRecord> records, DateTime today, Func<string, string> carName, int most)
         {
             foreach (var race in records.Where(r => string.Equals(r.Winner, name, StringComparison.OrdinalIgnoreCase)
-                                                    || string.Equals(r.Loser, name, StringComparison.OrdinalIgnoreCase)).TakeLast(Math.Max(0, most)))
+                                                    || string.Equals(r.Loser, name, StringComparison.OrdinalIgnoreCase)).TakeLast(Math.Max(0, most)).Reverse())
             {
                 var won = string.Equals(race.Winner, name, StringComparison.OrdinalIgnoreCase);
                 yield return GameText.Say(won ? "chat.fact.rival_race_won" : "chat.fact.rival_race_lost",
@@ -141,7 +161,7 @@ namespace StreetCorsa.Services.Talk
             }
         }
 
-        /// <summary>What the person remembers of past talks; that they remember none, when none</summary>
+        /// <summary>What the person remembers of past talks, the newest first; that they remember none, when none</summary>
         public static IEnumerable<string> Memories(IReadOnlyList<PersonMemory> memories, DateTime today)
         {
             if (memories.Count == 0)
@@ -151,7 +171,7 @@ namespace StreetCorsa.Services.Talk
             }
 
             yield return GameText.Say("chat.fact.memories");
-            foreach (var memory in memories)
+            foreach (var memory in memories.Reverse())
                 yield return GameText.Say("chat.fact.memory", ("when", When(memory.Date, today)), ("text", memory.Text));
         }
 
@@ -216,9 +236,36 @@ namespace StreetCorsa.Services.Talk
         public static string KindOf(string? raceType) =>
             GameText.Say(raceType?.Contains("drag", StringComparison.OrdinalIgnoreCase) == true ? "chat.fact.kind_drag" : "chat.fact.kind_road");
 
-        /// <summary>The lines as one block, one a line</summary>
-        public static string Block(IEnumerable<string> lines) =>
-            string.Join("\n", lines.Where(l => !string.IsNullOrWhiteSpace(l)).Select(l => l.Trim()));
+        /// <summary>
+        /// The sections as the sheet the AI is given, each under its heading (<c>chat.section</c>), in the order given:
+        /// cut to <paramref name="maxTokens"/> by leaving out the lines of the least needed section first, from its end,
+        /// and the whole section once only its head is left
+        /// </summary>
+        public static string Sheet(IEnumerable<FactSection> sections, int maxTokens)
+        {
+            var kept = sections
+                .Select(s => (s.Priority, s.HeadLines,
+                    Heading: GameText.Say("chat.section", ("heading", GameText.Say($"chat.section.{s.Key}"))),
+                    Lines: s.Lines.Where(l => !string.IsNullOrWhiteSpace(l)).Select(l => l.Trim()).ToList()))
+                .Where(s => s.Lines.Count > 0)
+                .ToList();
+
+            string Write() => string.Join("\n\n", kept.Select(s => s.Heading + "\n" + string.Join("\n", s.Lines)));
+
+            var sheet = Write();
+            while (AiTokens.Estimate(sheet) > maxTokens)
+            {
+                var lowest = kept.Select(s => s.Priority).DefaultIfEmpty(FactSection.Always).Min();
+                if (lowest == FactSection.Always) break;
+                var least = kept.FindIndex(s => s.Priority == lowest);
+                // From its end, the most needed line first in it; the head only with the whole section
+                if (kept[least].Lines.Count > Math.Max(1, kept[least].HeadLines)) kept[least].Lines.RemoveAt(kept[least].Lines.Count - 1);
+                else kept.RemoveAt(least);
+                sheet = Write();
+            }
+
+            return sheet;
+        }
 
         public static TalkRules Rules => RuleBook.Current.Ai.Talk;
     }

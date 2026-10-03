@@ -195,7 +195,22 @@ namespace StreetCorsa.Services.Ai
             };
             if (_tuning is { KeepAlive.Length: > 0 }) body["keep_alive"] = _tuning.KeepAlive;
             var answer = await SendAsync(HttpMethod.Post, Endpoint + "/api/chat", body, cancellationToken).ConfigureAwait(false);
+            LogTokens(request, answer);
             return Text(answer["message"]?["content"]);
+        }
+
+        private static readonly StreetCorsa.Logging.IAppLogger Logger = StreetCorsa.Logging.AppLoggerFactory.CreateLogger("Ai");
+
+        /// <summary>Ollama's own count of the prompt against the game's guess (<see cref="AiTokens"/>); a prompt that filled the window was cut</summary>
+        private void LogTokens(AiTextRequest request, JsonNode answer)
+        {
+            if (answer["prompt_eval_count"]?.GetValueKind() != System.Text.Json.JsonValueKind.Number) return;
+            var read = answer["prompt_eval_count"]!.GetValue<int>();
+            var estimated = AiTokens.Estimate(request);
+            Logger.Debug("Ollama read {Read} prompt tokens (the game guessed {Estimated}) and wrote {Wrote}", read, estimated,
+                answer["eval_count"]?.ToString() ?? "?");
+            if (_tuning is { ContextTokens: > 0 } tuning && read >= tuning.ContextTokens - request.MaxTokens)
+                Logger.Warning("Ollama read {Read} prompt tokens in a window of {Context}: the start of the prompt was likely cut", read, tuning.ContextTokens);
         }
 
         /// <summary>What the model is asked to answer within: its length and freedom, and the game's tuning when given</summary>

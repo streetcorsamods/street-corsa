@@ -173,6 +173,8 @@ namespace StreetCorsa.Services.Talk
         {
             public bool IsAvailable => false;
 
+            public int? ContextTokens => null;
+
             public Task<string?> WriteAsync(string use, TextValues values, AiPriority priority = AiPriority.Background, CancellationToken cancellationToken = default) =>
                 Task.FromResult<string?>(null);
 

@@ -849,7 +849,9 @@ without repeating the rest.
   A use with no prompt is not asked for.
 - Talking to people: `chat_seller`, `chat_salesman`, `chat_rival`, `chat_buyer` (who answered the player's own ad) are sent after the persona as the rest of who the AI
   is, with the talk as the messages; they name `{name}`, `{nickname}`, `{age}`, `{sex}`, `{temperament}`, `{place}`,
-  `{player}` and `{facts}` (the game's fact sheet, the text pools `chat.fact.*` and `chat.deal.*`). `chat_memory`
+  `{player}` and `{facts}` (the game's fact sheet, the text pools `chat.fact.*` and `chat.deal.*`, in sections headed by
+  `chat.section` and `chat.section.*`; best at the prompt's end, as the base game's are, so a local model reads again
+  only what changed; its size is the rules' `ai.talk.factTokens`). `chat_memory`
   writes what a person keeps of a talk (`{name}`, `{player}`, `{talk}`). The stage lines, the window's words and the
   words that make a number an offer are the text pools `chat.*` (the base game's `text/chat.json`).
 

@@ -362,36 +362,55 @@ namespace StreetCorsa.Services.Talk
             };
         }
 
-        /// <summary>The fact sheet for the next answer</summary>
+        /// <summary>
+        /// The fact sheet for the next answer, cut to the rules' <see cref="Rules.TalkRules.FactTokens"/> and to half the
+        /// context window, when the provider has one the game sets
+        /// </summary>
         public string Facts(HaggleOutcome? outcome = null)
+        {
+            var budget = _desk.Rules.FactTokens;
+            if (_desk.Text.ContextTokens is { } context) budget = Math.Min(budget, context / 2);
+            return TalkFacts.Sheet(Sections(outcome), budget);
+        }
+
+        /// <summary>
+        /// The fact sheet's sections, what stays the same through the talk first and the deal, which changes with every
+        /// offer, last: a local model reads again only what changed from the end of the last request on
+        /// </summary>
+        public IReadOnlyList<FactSection> Sections(HaggleOutcome? outcome = null)
         {
             var rules = _desk.Rules;
             var today = _game.Date;
-            var lines = new List<string>(TalkFacts.Today(_game));
-            if (Rival != null) lines.AddRange(TalkFacts.Rival(Rival, _desk.CarName));
+            var sections = new List<FactSection> { new("now", [.. TalkFacts.Today(_game)], FactSection.Always) };
+            if (Rival != null) sections.Add(new("you", [.. TalkFacts.Rival(Rival, _desk.CarName)], FactSection.Always));
 
-            switch (Subject)
+            var thing = Subject switch
             {
-                case CarSubject car:
-                    lines.AddRange(TalkFacts.Car(car.Car, car.Price, today, car.OnSaleSince));
-                    break;
-                case PartSubject part:
-                    lines.AddRange(TalkFacts.Part(part.Ad, part.Name, _desk.Parts, today));
-                    break;
-                case BuyerSubject buyer:
-                    lines.AddRange(TalkFacts.PlayersCar(buyer.Car, buyer.Asking, today, buyer.OnSaleSince));
-                    break;
-            }
+                CarSubject car => TalkFacts.Car(car.Car, car.Price, today, car.OnSaleSince),
+                PartSubject part => TalkFacts.Part(part.Ad, part.Name, _desk.Parts, today),
+                BuyerSubject buyer => TalkFacts.PlayersCar(buyer.Car, buyer.Asking, today, buyer.OnSaleSince),
+                _ => []
+            };
+            sections.Add(new("thing", [.. thing], FactSection.Always));
 
-            // A salesman met over one car (Car Viewing) is not given his lot, and so is not told it is empty either
-            if (Person.Kind == PersonKind.Salesman && (Lot.Count > 0 || Subject == null)) lines.AddRange(TalkFacts.Lot(Lot, rules.LotCarsTold));
-            lines.AddRange(TalkFacts.RacesWithPlayer(Person.Name, _sessions, today, rules.RacesTold));
-            if (Rival != null) lines.AddRange(TalkFacts.RivalRaces(Person.Name, _game.RivalRaces ?? [], today, _desk.CarName, rules.RivalRacesTold));
-            lines.AddRange(TalkFacts.Memories(TalkPeople.Remembered(Person, today, rules), today));
-            lines.AddRange(TalkFacts.Said(Deal));
-            if (Subject is BuyerSubject sold && Deal is { } offered) lines.AddRange(TalkFacts.Offer(sold.Price, offered.Asked, sold.IsGone, outcome));
-            else if (Subject != null && Deal is { } deal) lines.AddRange(TalkFacts.Deal(Subject.Price, deal.Asked, outcome));
-            return TalkFacts.Block(lines);
+            // A salesman met over one car (Car Viewing) is not given his lot, and so is not told it is empty either; the
+            // lot is what he talks about until a car is picked, and the rest of it after
+            if (Person.Kind == PersonKind.Salesman && (Lot.Count > 0 || Subject == null))
+                sections.Add(new("lot", [.. TalkFacts.Lot(Lot, rules.LotCarsTold)], Subject == null ? FactSection.Lot : FactSection.OtherCars, HeadLines: 1));
+            sections.Add(new("races", [.. TalkFacts.RacesWithPlayer(Person.Name, _sessions, today, rules.RacesTold)], FactSection.Races, HeadLines: 1));
+            if (Rival != null)
+                sections.Add(new("rival_races", [.. TalkFacts.RivalRaces(Person.Name, _game.RivalRaces ?? [], today, _desk.CarName, rules.RivalRacesTold)], FactSection.RivalRaces));
+            sections.Add(new("memories", [.. TalkFacts.Memories(TalkPeople.Remembered(Person, today, rules), today)], FactSection.Memories, HeadLines: 1));
+            sections.Add(new("said", [.. TalkFacts.Said(Deal)], FactSection.Said, HeadLines: 1));
+
+            IEnumerable<string> dealLines = Subject switch
+            {
+                BuyerSubject sold when Deal is { } offered => TalkFacts.Offer(sold.Price, offered.Asked, sold.IsGone, outcome),
+                not null when Deal is { } deal => TalkFacts.Deal(Subject.Price, deal.Asked, outcome),
+                _ => []
+            };
+            sections.Add(new("deal", [.. dealLines], FactSection.Always));
+            return sections;
         }
     }
 }

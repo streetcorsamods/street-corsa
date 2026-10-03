@@ -124,11 +124,11 @@ public class TalkTests
         CarDefinition = new CarDefinition { Id = "bel_air", Brand = "Chevrolet", Name = "Bel Air", Year = 1957 }
     };
 
-    private static (TalkDesk Desk, FakeAiText Ai) Desk(List<ProcessedRaceSession>? races = null, string? answer = "Sure thing.")
+    private static (TalkDesk Desk, FakeAiText Ai) Desk(List<ProcessedRaceSession>? races = null, string? answer = "Sure thing.", TalkRules? rules = null)
     {
         var ai = new FakeAiText((_, _) => Task.FromResult(answer));
         var desk = new TalkDesk(ai, (_, _) => Task.FromResult(races ?? []), id => id == "bel_air" ? "Chevrolet Bel Air" : id,
-            prompts: BasePrompts, rules: () => Rules);
+            prompts: BasePrompts, rules: () => rules ?? Rules);
         return (desk, ai);
     }
 
@@ -448,7 +448,7 @@ public class TalkTests
         var messages = json["messages"]!.AsArray();
         Assert.Equal(new[] { "system", "user", "assistant", "user" }, messages.Select(m => m!["role"]!.GetValue<string>()));
         Assert.Equal("Does it run?", messages[3]!["content"]!.GetValue<string>());
-        Assert.Equal(8192, json["options"]!["num_ctx"]!.GetValue<int>());
+        Assert.Equal(16384, json["options"]!["num_ctx"]!.GetValue<int>());
         Assert.Equal("10m", json["keep_alive"]!.GetValue<string>());
     }
 
@@ -567,6 +567,88 @@ public class TalkTests
 
         Assert.Equal(PersonKind.Salesman, talk.Person.Kind);
         Assert.DoesNotContain(GameText.Say("chat.fact.lot_empty"), talk.Facts());
+    }
+
+    // ----- the fact sheet's sections and budget -----
+
+    private static string Heading(string key) => GameText.Say("chat.section", ("heading", GameText.Say($"chat.section.{key}")));
+
+    [Fact]
+    public void The_fact_sheet_goes_under_headings_what_stays_the_same_first_and_the_deal_last()
+    {
+        var (desk, _) = Desk();
+        var talk = desk.ForCar(Game(), Car(), null, TalkPlace.Phone);
+
+        var facts = talk.Facts();
+
+        var order = new[] { "now", "thing", "races", "memories", "deal" }.Select(key => facts.IndexOf(Heading(key), StringComparison.Ordinal)).ToList();
+        Assert.All(order, at => Assert.True(at >= 0));
+        Assert.Equal(order.OrderBy(at => at), order);
+        Assert.EndsWith(GameText.Say("chat.fact.price", ("price", new Helpers.Money(1500m)), ("asked", new Helpers.Money(1500m))), facts);
+    }
+
+    [Fact]
+    public void A_sheet_too_long_loses_the_least_needed_lines_first_and_never_the_thing_or_the_deal()
+    {
+        var thing = new FactSection("thing", ["For sale: a 1957 Chevrolet Bel Air, the price $1,500."], FactSection.Always);
+        var others = new FactSection("rival_races", ["Yesterday you beat Hank in a drag race.", "3 days ago Lou beat you in a road race.", "6 days ago you beat Sal in a drag race."], FactSection.RivalRaces);
+        var races = new FactSection("races", ["You have raced the player 3 times. The latest:", "- yesterday, a drag race: you won.", "- 5 days ago, a road race: the player won."], FactSection.Races, HeadLines: 1);
+        var deal = new FactSection("deal", ["The price is $1,500."], FactSection.Always);
+
+        // Room for all but the other racers' races: they go, line by line and then the heading, before any race with the player
+        var withoutOthers = TalkFacts.Sheet([thing, races, deal], int.MaxValue);
+        Assert.Equal(withoutOthers, TalkFacts.Sheet([thing, others, races, deal], AiTokens.Estimate(withoutOthers)));
+
+        // Less room: the races with the player go from the oldest, their head line last of all
+        var headOnly = TalkFacts.Sheet([thing, races with { Lines = races.Lines.Take(1).ToList() }, deal], int.MaxValue);
+        Assert.Equal(headOnly, TalkFacts.Sheet([thing, others, races, deal], AiTokens.Estimate(headOnly)));
+
+        // No room at all: what is always kept is still there, over the budget
+        var kept = TalkFacts.Sheet([thing, others, races, deal], 1);
+        Assert.Equal(TalkFacts.Sheet([thing, deal], int.MaxValue), kept);
+        Assert.StartsWith(Heading("thing"), kept);
+    }
+
+    [Fact]
+    public void The_fact_sheet_keeps_to_the_rules_budget_and_to_half_the_context_window()
+    {
+        var game = Game();
+        var car = Car();
+        var (roomy, _) = Desk();
+        Assert.Contains(GameText.Say("chat.fact.no_memories"), roomy.ForCar(game, car, null, TalkPlace.Phone).Facts());
+
+        // Half a small window holds the car and the deal, not what the seller remembers
+        var (small, ai) = Desk();
+        ai.ContextTokens = 2 * AiTokens.Estimate(TalkFacts.Sheet(small.ForCar(game, car, null, TalkPlace.Phone).Sections().Where(s => s.Priority == FactSection.Always), int.MaxValue));
+        var facts = small.ForCar(game, car, null, TalkPlace.Phone).Facts();
+        Assert.DoesNotContain(GameText.Say("chat.fact.no_memories"), facts);
+        Assert.Contains(Heading("deal"), facts);
+
+        // And the rules' own budget, with no window known
+        var (tight, _) = Desk(rules: new TalkRules { FactTokens = 1 });
+        Assert.DoesNotContain(Heading("memories"), tight.ForCar(game, car, null, TalkPlace.Phone).Facts());
+    }
+
+    [Fact]
+    public void A_talk_too_long_for_the_window_loses_its_oldest_turns_and_starts_with_the_players()
+    {
+        var line = new string('x', 300);
+        var turns = Enumerable.Range(0, 9).Select(i => new AiTurn(i % 2 == 1, line + i)).ToList();
+        var each = AiTokens.Estimate(turns[0]);
+
+        // Room for the system prompt, the answer and about three turns and a half
+        var context = AiTokens.Estimate("You are Walt.") + AiTokens.PerMessage + 80 + AiTokens.Margin + each * 7 / 2;
+        var fitted = AiTextService.Fit(turns, "You are Walt.", 80, context);
+
+        Assert.Equal(turns[^1], fitted[^1]);
+        Assert.False(fitted[0].Mine);
+        Assert.Equal(turns.Skip(turns.Count - fitted.Count), fitted);
+        Assert.InRange(fitted.Count, 1, 3);
+
+        // No window known: every turn goes, as the provider keeps its own
+        Assert.Same(turns, AiTextService.Fit(turns, "You are Walt.", 80, null));
+        // Even a window too small for one: the player's last line still goes
+        Assert.Equal(new[] { turns[^1] }, AiTextService.Fit(turns, "You are Walt.", 80, 10));
     }
 
     [Fact]

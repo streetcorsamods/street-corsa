@@ -19,6 +19,7 @@
     "maxKept": 400,
     "talk": {
       "turnsKept": 16,
+      "factTokens": 5000,
       "memoriesGiven": 4,
       "forgetDaysSeller": 14,
       "forgetDaysSalesman": 30,
@@ -52,7 +53,7 @@
       "sellerMaxAge": 74
     },
     "ollama": {
-      "contextTokens": 8192,
+      "contextTokens": 16384,
       "keepAlive": "10m",
       "repeatPenalty": 1.1
     }
