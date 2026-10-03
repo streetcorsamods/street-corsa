@@ -8,7 +8,8 @@ namespace StreetCorsa.Services.Storage
 {
     /// <summary>
     /// A save and the mods: which mods it was last played with (<see cref="GameState.Mods"/>, stamped on every save),
-    /// which of them are not installed now, and what a save holds of content no mod has any more.
+    /// which of them are not installed now or are older than it was played with, and what a save holds of content no
+    /// mod has any more.
     ///
     /// Each kind of content copes with a missing id its own way. A mod's parts are kept and skipped (they may come back;
     /// an engine of a missing mod waits on the shelf, whole) and renamed ones follow the aliases
@@ -27,9 +28,36 @@ namespace StreetCorsa.Services.Storage
                 .Where(m => !ModIds.IsBase(m.Id) && installed.Get(m.Id) == null)
                 .ToList();
 
-        /// <summary>What the player is told before a save with missing mods loads</summary>
-        public static string Warning(IReadOnlyList<ModRef> missing) =>
-            GameText.Say("loadgame.mods_missing", ("mods", string.Join("\n", missing.Select(m => "  " + m))));
+        /// <summary>
+        /// The mods a save names that are installed at an older version than it was played with, with the version there
+        /// now (the base game too: a game played on a newer release). A newer one, or a version that does not read, is
+        /// no news.
+        /// </summary>
+        public static List<(ModRef Saved, string Installed)> Older(GameState gameState, ModSet installed) =>
+            (gameState.Mods ?? [])
+                .Select(m => (Saved: m, Now: installed.Get(m.Id)))
+                .Where(m => m.Now != null
+                            && ModVersion.TryParse(m.Saved.Version, out var saved)
+                            && ModVersion.TryParse(m.Now.Version, out var now)
+                            && now < saved)
+                .Select(m => (m.Saved, m.Now!.Version))
+                .ToList();
+
+        /// <summary>What the player is told before a save with missing or older mods loads</summary>
+        public static string Warning(IReadOnlyList<ModRef> missing, IReadOnlyList<(ModRef Saved, string Installed)> older)
+        {
+            var parts = new List<string>();
+            if (missing.Count > 0)
+                parts.Add(GameText.Say("loadgame.mods_missing", ("mods", string.Join("\n", missing.Select(m => "  " + m)))));
+            if (older.Count > 0)
+            {
+                var lines = older.Select(m => "  " + GameText.Say("loadgame.mods_older.line",
+                    ("mod", m.Saved.Name.Length > 0 ? m.Saved.Name : m.Saved.Id), ("saved", m.Saved.Version), ("installed", m.Installed)));
+                parts.Add(GameText.Say("loadgame.mods_older", ("mods", string.Join("\n", lines))));
+            }
+            parts.Add(GameText.Say("loadgame.mods_load_anyway"));
+            return string.Join("\n\n", parts);
+        }
 
         /// <summary>
         /// Takes out what only makes sense while its content is there, when its mod is not installed; true when anything

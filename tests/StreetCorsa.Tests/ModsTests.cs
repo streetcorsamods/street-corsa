@@ -458,6 +458,36 @@ public class ModCareerAndTextTests : IDisposable
     }
 
     [Fact]
+    public void A_save_played_with_a_newer_mod_says_which_and_what_is_installed()
+    {
+        var state = new GameState
+        {
+            Mods =
+            [
+                new ModRef { Id = "older", Name = "Older Mod", Version = "1.1" },
+                new ModRef { Id = "same", Name = "Same Mod", Version = "1.0" },
+                new ModRef { Id = "newer", Name = "Newer Mod", Version = "1.0" },
+                new ModRef { Id = "unread", Name = "Unread Mod", Version = "beta" },
+                new ModRef { Id = "gone", Name = "Gone Mod", Version = "2" }
+            ]
+        };
+        _temp.File("streetcorsa/readme.txt", "");
+        _temp.File("older/mod.json", """{ "id": "older", "version": "1.0.9" }""");
+        _temp.File("same/mod.json", """{ "id": "same", "version": "1" }""");
+        _temp.File("newer/mod.json", """{ "id": "newer", "version": 1.2 }""");
+        _temp.File("unread/mod.json", """{ "id": "unread", "version": "0.1" }""");
+        var mods = ModSet.Load(_temp.Path);
+
+        var older = ModsInSave.Older(state, mods);
+
+        Assert.Equal([("older", "1.0.9")], older.Select(m => (m.Saved.Id, m.Installed)));
+        var warning = ModsInSave.Warning(ModsInSave.Missing(state, mods), older);
+        Assert.Contains("Gone Mod 2", warning);
+        Assert.Contains("Older Mod: played with 1.1, installed 1.0.9", warning);
+        Assert.EndsWith("Load it anyway?", warning);
+    }
+
+    [Fact]
     public void Nulls_in_a_mods_career_leave_out_nothing_but_what_they_break()
     {
         _temp.File("streetcorsa/readme.txt", "");
