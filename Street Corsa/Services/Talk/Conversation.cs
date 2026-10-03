@@ -362,7 +362,7 @@ namespace StreetCorsa.Services.Talk
         /// </summary>
         private List<AiTurn> Window()
         {
-            var keep = Math.Max(1, _desk.Rules.TurnsKept);
+            var keep = Math.Max(1, _desk.Told.TurnsKept);
             var start = Math.Max(Math.Min(_turns.Count - keep, _summed), _turns.Count - keep * 2);
             var kept = _turns.Skip(Math.Max(0, start)).ToList();
             while (kept.Count > 1 && kept[0].Mine) kept.RemoveAt(0);
@@ -383,7 +383,7 @@ namespace StreetCorsa.Services.Talk
         /// </summary>
         private void SumUpOlder()
         {
-            var rules = _desk.Rules;
+            var rules = _desk.Told;
             var outside = _turns.Count - Math.Max(1, rules.TurnsKept);
             if (_summing || outside - _summed < Math.Max(1, rules.SummaryTurns)) return;
 
@@ -468,7 +468,7 @@ namespace StreetCorsa.Services.Talk
         /// </summary>
         public string Facts(HaggleOutcome? outcome = null)
         {
-            var budget = _desk.Rules.FactTokens;
+            var budget = _desk.Told.FactTokens;
             if (_desk.Text.ContextTokens is { } context) budget = Math.Min(budget, context / 2);
             return TalkFacts.Sheet(Sections(outcome), budget);
         }
@@ -479,7 +479,7 @@ namespace StreetCorsa.Services.Talk
         /// </summary>
         public IReadOnlyList<FactSection> Sections(HaggleOutcome? outcome = null)
         {
-            var rules = _desk.Rules;
+            var rules = _desk.Told;
             var today = _game.Date;
             var sections = new List<FactSection> { new("now", [.. TalkFacts.Today(_game, _desk.CarName)], FactSection.Always) };
             // What everybody knows these days, the same all day: what they may make small talk of

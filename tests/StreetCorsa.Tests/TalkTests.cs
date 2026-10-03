@@ -1043,6 +1043,53 @@ public class TalkTests
         Assert.DoesNotContain(prompts.Lore.SelectMany(t => t.Lines), l => l.Contains('$'));
     }
 
+    // ----- how much is sent -----
+
+    [Fact]
+    public void The_talk_detail_caps_what_is_told_and_full_is_the_rules_as_they_are()
+    {
+        var rules = new TalkRules();
+        Assert.Same(rules, TalkDetail.Apply(rules, TalkDetail.Full));
+        Assert.Same(rules, TalkDetail.Apply(rules, "nonsense"));
+
+        var light = TalkDetail.Apply(rules, TalkDetail.Light);
+        Assert.Equal((1500, 12, 4), (light.FactTokens, light.TurnsKept, light.MemoriesGiven));
+        Assert.Equal(rules.DiscountPrivate, light.DiscountPrivate);
+        Assert.Equal(40, rules.TurnsKept);
+
+        // A mod's rules already under the cap stay as they are
+        var small = TalkDetail.Apply(new TalkRules { FactTokens = 800 }, TalkDetail.Normal);
+        Assert.Equal(800, small.FactTokens);
+
+        var prompts = BasePrompts();
+        var tokens = TalkDetail.All.Select(d => TalkDetail.MostTokensALine(TalkDetail.Apply(rules, d), prompts)).ToList();
+        Assert.True(tokens[0] < tokens[1] && tokens[1] < tokens[2], string.Join(", ", tokens));
+        // Ollama's window halves the sheet
+        Assert.True(TalkDetail.MostTokensALine(rules, prompts, 4096) < tokens[2]);
+    }
+
+    [Fact]
+    public async Task A_light_talk_tells_fewer_memories_and_turns_but_forgets_nothing_it_keeps()
+    {
+        var game = Game();
+        var ai = new FakeAiText((use, _) => Task.FromResult<string?>(use == "chat_memory" ? "A new note." : "Sure thing."));
+        var desk = new TalkDesk(ai, prompts: BasePrompts, rules: () => Rules, detail: () => TalkDetail.Light);
+        var talk = desk.ForCar(game, Car(), null, TalkPlace.Phone);
+        for (var i = 0; i < 9; i++) TalkPeople.Remember(talk.Person, game.Date, $"Note {i}.", "en", Rules);
+
+        for (var i = 0; i < 10; i++) await talk.SayAsync($"Question {i}?", Ct);
+
+        var last = ai.Chats[^1];
+        Assert.True(last.Turns.Count <= 12 * 2, $"{last.Turns.Count} turns");
+        var facts = (string)last.Values["facts"]!;
+        Assert.Contains("Note 8.", facts);
+        Assert.DoesNotContain("Note 4.", facts);
+
+        talk.End();
+        for (var i = 0; i < 50 && talk.Person.Memories.Count < 10; i++) await Task.Delay(20, Ct);
+        Assert.Equal(10, talk.Person.Memories.Count);
+    }
+
     // ----- the base game's content -----
 
     [Fact]

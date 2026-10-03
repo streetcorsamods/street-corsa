@@ -216,6 +216,16 @@ public sealed class TalkRules
     public int SellerMinAge { get; set; } = 20;
 
     public int SellerMaxAge { get; set; } = 74;
+
+    /// <summary>These rules with less sent each line (the player's talk detail): the rest as they are</summary>
+    public TalkRules With(int factTokens, int turnsKept, int memoriesGiven)
+    {
+        var copy = (TalkRules)MemberwiseClone();
+        copy.FactTokens = factTokens;
+        copy.TurnsKept = turnsKept;
+        copy.MemoriesGiven = memoriesGiven;
+        return copy;
+    }
 }
 
 /// <summary>What the game sends Ollama besides the prompt (<c>"ai": { "ollama": ... }</c>)</summary>

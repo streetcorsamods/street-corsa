@@ -193,6 +193,14 @@ request then would load it again; the game's own words stand), and when the race
 loaded again in the background (an empty chat with the same `num_ctx` and `keep_alive`, so the first line does not
 load it once more). Measured on 2026-10-03: unloaded at once, loaded again in 2.2 s. Other providers are not touched.
 
+Talk detail (Settings' AI section, `AiSettings.TalkDetail`, `TalkDetail`): how much a talk sends with each line, for a paid
+provider billed by the token or a slow one. Light (a fact sheet of at most 1,500 tokens, 12 turns, 4 memories told),
+normal (3,000, 24, 6) or full (the rules as they are, the default). It caps only what is told (`TalkDesk.Told`):
+what is kept (memories, deals, events) always goes by the rules, so a lighter detail forgets nothing. The section shows
+the most a line sends at the detail picked, by the game's guess (`TalkDetail.MostTokensALine`: the persona, the longest
+talk prompt with its examples, a full sheet and the turns; most lines send far less). The answer's length stays the
+prompts' own.
+
 Tried live on 2026-10-01 (RTX 3060 12 GB): `streetcorsa` from llama3.1:8b answers in 0-3 s, stays in character, says it
 does not remember a race that never was, haggles as the rules say, and writes good memories; it still adds a small
 detail now and then (a paint colour). llama3.2:3b mixes the prices up (turns down an offer above the price). Advise 8B

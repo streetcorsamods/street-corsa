@@ -28,6 +28,12 @@ namespace StreetCorsa.Services.Settings
         /// <summary>ComfyUI's address; empty for its usual one</summary>
         public string? ComfyEndpoint { get; set; }
 
+        /// <summary>
+        /// How much a talk sends with each line (<see cref="Talk.TalkDetail"/>: light, normal, full): less costs a paid
+        /// provider less and reads faster; full is all the rules give
+        /// </summary>
+        public string TalkDetail { get; set; } = Talk.TalkDetail.Full;
+
         public AiSettings Clone() => (AiSettings)MemberwiseClone();
     }
 }

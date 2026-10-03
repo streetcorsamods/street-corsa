@@ -27,6 +27,7 @@ namespace StreetCorsa.Services.Talk
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger("Talk");
         private readonly Func<string, DealerSalesman?> _salesmen;
         private readonly Func<string, IReadOnlySet<string>?> _factory;
+        private readonly Func<string?> _detail;
 
         /// <summary>A person's portrait from the game's data (a dealer's salesman's); null when there is none</summary>
         public string? PortraitOf(Person person) =>
@@ -41,10 +42,12 @@ namespace StreetCorsa.Services.Talk
         /// <param name="onGameThread">Runs what changes the game on its thread (a memory written in the background)</param>
         /// <param name="salesmen">A dealer's salesman as its mod data gives him, by the dealer's id; none, and they are made up</param>
         /// <param name="factory">The ids of the parts of a car's factory engine, by the car's id; null when not known</param>
+        /// <param name="detail">How much a talk sends with each line, as the player sets it (<see cref="TalkDetail"/>); full when not given</param>
         public TalkDesk(IAiText text, Func<string, string, Task<List<ProcessedRaceSession>>>? races = null, Func<string, string>? carName = null,
             Func<PartsCatalog?>? parts = null, Action<Action>? onGameThread = null, Func<AiPrompts>? prompts = null, Func<TalkRules>? rules = null,
-            Func<string, DealerSalesman?>? salesmen = null, Func<string, IReadOnlySet<string>?>? factory = null)
+            Func<string, DealerSalesman?>? salesmen = null, Func<string, IReadOnlySet<string>?>? factory = null, Func<string?>? detail = null)
         {
+            _detail = detail ?? (() => TalkDetail.Full);
             _factory = factory ?? (_ => null);
             _salesmen = salesmen ?? (_ => null);
             Text = text;
@@ -66,6 +69,12 @@ namespace StreetCorsa.Services.Talk
         public bool IsAvailable => RuleBook.Current.Systems.Talk && Text.IsAvailable;
 
         internal TalkRules Rules => _rules();
+
+        /// <summary>
+        /// The rules as far as what a person is told each line goes, capped by the player's talk detail: the fact sheet, the
+        /// turns, the memories told. What is kept (memories, deals) always goes by <see cref="Rules"/>
+        /// </summary>
+        internal TalkRules Told => TalkDetail.Apply(_rules(), _detail());
 
         /// <summary>The draws of a talk (how far a seller will come down)</summary>
         internal Random Random { get; init; } = Random.Shared;

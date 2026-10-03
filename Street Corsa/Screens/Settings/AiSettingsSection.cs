@@ -12,6 +12,12 @@ namespace StreetCorsa.Screens.Settings
         public override string ToString() => Name;
     }
 
+    /// <summary>A talk detail the player can pick</summary>
+    public sealed record TalkDetailChoice(string Id, string Name)
+    {
+        public override string ToString() => Name;
+    }
+
     /// <summary>
     /// The AI section of the Settings card: the player's text provider (Ollama, an OpenAI-compatible API, Anthropic), its
     /// address, model and key, and ComfyUI for pictures, each with a Test. The ticks are saved at once; the provider, address,
@@ -33,6 +39,7 @@ namespace StreetCorsa.Screens.Settings
             _images = images;
             _notSaved = notSaved;
             Providers = AiProviders.All.Select(id => new AiProviderChoice(id, GameText.Say(ProviderKey(id)))).ToList();
+            Details = Services.Talk.TalkDetail.All.Select(id => new TalkDetailChoice(id, Services.Talk.TalkDetail.Name(id))).ToList();
 
             SaveCommand = new RelayCommand(OnSave);
             ForgetKeyCommand = new RelayCommand(OnForgetKey, () => HasSavedKey);
@@ -155,6 +162,31 @@ namespace StreetCorsa.Screens.Settings
         {
             get => Ai.Enabled;
             set => SaveAtOnce(Ai.Enabled, value, v => Ai.Enabled = v);
+        }
+
+        public IReadOnlyList<TalkDetailChoice> Details { get; }
+
+        /// <summary>How much a talk sends with each line; saved at once, as it costs nothing to change</summary>
+        public TalkDetailChoice Detail
+        {
+            get => Details.First(d => d.Id == Services.Talk.TalkDetail.Normalize(Ai.TalkDetail));
+            set
+            {
+                if (value == null) return;
+                SaveAtOnce(Services.Talk.TalkDetail.Normalize(Ai.TalkDetail), value.Id, v => Ai.TalkDetail = v);
+                OnPropertyChanged(nameof(DetailTokens));
+            }
+        }
+
+        /// <summary>"Up to about 9,000 tokens with each line": the most a line sends at the detail picked, by the game's guess</summary>
+        public string DetailTokens
+        {
+            get
+            {
+                var rules = Services.Talk.TalkDetail.Apply(StreetCorsa.Rules.RuleBook.Current.Ai.Talk, Ai.TalkDetail);
+                var tokens = Services.Talk.TalkDetail.MostTokensALine(rules, AiPrompts.Installed, _text.ContextTokens);
+                return GameText.Say("settings.ai.detail.tokens", ("tokens", (int)(Math.Round(tokens / 100.0) * 100)));
+            }
         }
 
         /// <summary>ComfyUI paints the new rivals; saved at once</summary>
