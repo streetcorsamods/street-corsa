@@ -26,6 +26,12 @@ namespace StreetCorsa.Services.Ai
         bool IsAvailable { get; }
 
         /// <summary>
+        /// The context window the provider is asked to work in (tokens), when the game sets it (Ollama's num_ctx); null
+        /// when the provider keeps its own
+        /// </summary>
+        int? ContextTokens { get; }
+
+        /// <summary>
         /// The answer to the mods' prompt <paramref name="use"/> filled with <paramref name="values"/>, cleaned and cut to
         /// its length; null when the AI is off, the prompt is missing, the queue is full, or the request failed or timed out
         /// </summary>
@@ -94,31 +100,95 @@ namespace StreetCorsa.Services.Ai
             AskAsync(use, priority, (prompts, prompt) =>
                 new AiTextRequest(SystemPrompt(prompts), GameText.Fill(prompt.Prompt, values), prompt.MaxTokens, prompt.Temperature), cancellationToken);
 
+        public int? ContextTokens
+        {
+            get
+            {
+                var context = Rules.Ollama.ContextTokens;
+                return AiProviders.Normalize(_settings().TextProvider) == AiProviders.Ollama && context > 0 ? context : null;
+            }
+        }
+
         public Task<string?> ChatAsync(string use, TextValues values, IReadOnlyList<AiTurn> turns, CancellationToken cancellationToken = default) =>
             turns.Count == 0 ? Task.FromResult<string?>(null) : AskAsync(use, AiPriority.Now, (prompts, prompt) =>
-                new AiTextRequest(SystemPrompt(prompts) + "\n\n" + GameText.Fill(prompt.Prompt, values), string.Empty, prompt.MaxTokens,
-                    prompt.Temperature, turns), cancellationToken);
+            {
+                var system = SystemPrompt(prompts) + "\n\n" + GameText.Fill(prompt.Prompt, values);
+                var fitted = Fit(turns, system, prompt.MaxTokens, ContextTokens);
+                if (fitted.Count < turns.Count)
+                    _logger.Debug("AI {Use}: the {Dropped} oldest turns left out to fit the context window", use, turns.Count - fitted.Count);
+                var request = new AiTextRequest(system, string.Empty, prompt.MaxTokens, prompt.Temperature, fitted);
+                if (ContextTokens is { } context && AiTokens.Estimate(request) + prompt.MaxTokens > context)
+                    _logger.Warning("AI {Use}: about {Tokens} tokens asked in a context of {Context}: the provider will cut it", use,
+                        AiTokens.Estimate(request) + prompt.MaxTokens, context);
+                return request;
+            }, cancellationToken);
+
+        /// <summary>
+        /// The newest of <paramref name="turns"/> that fit a context window of <paramref name="context"/> tokens beside the
+        /// system prompt and room for the answer, from a player's turn on (the APIs want the talk to start with one); the
+        /// last turn always goes. All of them when the window is not known.
+        /// </summary>
+        public static IReadOnlyList<AiTurn> Fit(IReadOnlyList<AiTurn> turns, string system, int answerTokens, int? context)
+        {
+            if (context is not { } window || turns.Count == 0) return turns;
+
+            var room = window - AiTokens.Estimate(system) - AiTokens.PerMessage - answerTokens - AiTokens.Margin;
+            var used = turns.Sum(AiTokens.Estimate);
+            var first = 0;
+            while (first < turns.Count - 1 && (used > room || turns[first].Mine))
+                used -= AiTokens.Estimate(turns[first++]);
+            return first == 0 ? turns : turns.Skip(first).ToList();
+        }
 
         private async Task<string?> AskAsync(string use, AiPriority priority, Func<AiPrompts, AiPrompt, AiTextRequest> ask, CancellationToken cancellationToken)
         {
-            if (!IsAvailable) return null;
-            var prompts = _prompts();
-            if (prompts.Prompt(use) is not { } prompt)
+            while (true)
             {
-                _logger.Debug("No AI prompt {Use} in the mods", use);
-                return null;
-            }
+                if (!IsAvailable) return null;
+                if (HeldForRace)
+                {
+                    // Nobody waits on the player's own in a race; the background's (the race's own news and talk) is asked after it
+                    if (priority == AiPriority.Now)
+                    {
+                        _logger.Debug("AI {Use} not asked during a race: the model is off the GPU", use);
+                        return null;
+                    }
 
-            if (!await EnterAsync(priority, cancellationToken).ConfigureAwait(false))
-            {
-                _logger.Debug("AI queue full: {Use} left to the game's own words", use);
-                return null;
-            }
+                    _logger.Debug("AI {Use} waits for the race to end: the model is off the GPU", use);
+                    if (!await RaceOverAsync(cancellationToken).ConfigureAwait(false)) return null;
+                    continue;
+                }
 
+                var prompts = _prompts();
+                if (prompts.Prompt(use) is not { } prompt)
+                {
+                    _logger.Debug("No AI prompt {Use} in the mods", use);
+                    return null;
+                }
+
+                if (!await EnterAsync(priority, cancellationToken).ConfigureAwait(false))
+                {
+                    _logger.Debug("AI queue full: {Use} left to the game's own words", use);
+                    return null;
+                }
+
+                var (held, answer) = await RunAsync(use, prompts, prompt, ask, cancellationToken).ConfigureAwait(false);
+                if (!held) return answer;
+            }
+        }
+
+        /// <summary>
+        /// A request that has its place, sent once its turn comes: held (and the place given up) when a race began while it
+        /// waited in line, as sending it would load the model again
+        /// </summary>
+        private async Task<(bool Held, string? Answer)> RunAsync(string use, AiPrompts prompts, AiPrompt prompt,
+            Func<AiPrompts, AiPrompt, AiTextRequest> ask, CancellationToken cancellationToken)
+        {
             try
             {
                 await WaitTurnAsync(cancellationToken).ConfigureAwait(false);
-                if (!IsAvailable) return null;
+                if (!IsAvailable) return (false, null);
+                if (HeldForRace) return (true, null);
 
                 using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 timeout.CancelAfter(TimeSpan.FromSeconds(Math.Max(1, Rules.RequestTimeoutSeconds)));
@@ -128,31 +198,155 @@ namespace StreetCorsa.Services.Ai
                 var answer = await Provider().CompleteAsync(request, timeout.Token).ConfigureAwait(false);
                 var cleaned = Clean(answer, prompt.MaxLength, prompt.Lines);
                 _logger.Debug("AI {Use} in {Ms} ms: {Text}", use, (int)(DateTime.UtcNow - started).TotalMilliseconds, cleaned);
-                return cleaned.Length == 0 ? null : cleaned;
+                return (false, cleaned.Length == 0 ? null : cleaned);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                return null;
+                return (false, null);
             }
             catch (OperationCanceledException)
             {
                 _logger.Warning("AI {Use} timed out after {Seconds} s: the game's own words stand", use, Rules.RequestTimeoutSeconds);
-                return null;
+                return (false, null);
             }
             catch (HttpRequestException ex)
             {
                 Rest(ex.Message);
-                return null;
+                return (false, null);
             }
             catch (Exception ex)
             {
                 // A provider that answered badly (a wrong model, a refused key): the game's own words, and a line in the log
                 _logger.Warning("AI {Use} failed: {Error}", use, ex.Message);
-                return null;
+                return (false, null);
             }
             finally
             {
                 Leave();
+            }
+        }
+
+        // ----- races -----
+
+        private volatile bool _racing;
+
+        // Done when no race runs: the background's requests held for one wait on it
+        private TaskCompletionSource _raceOver = Over();
+
+        // Whether the model was on the GPU when the race began (and was let go): only then is it loaded again after
+        private Task<bool> _letGo = Task.FromResult(false);
+
+        private static TaskCompletionSource Over()
+        {
+            var over = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            over.SetResult();
+            return over;
+        }
+
+        /// <summary>A race runs and the local model was let go for it: nothing is asked, which would load it again</summary>
+        private bool HeldForRace => _racing && Rules.Ollama.UnloadForRaces && AiProviders.Normalize(_settings().TextProvider) == AiProviders.Ollama;
+
+        /// <summary>The race is over (true), or the wait was called off (false)</summary>
+        private async Task<bool> RaceOverAsync(CancellationToken cancellationToken)
+        {
+            Task over;
+            lock (_lock) over = _raceOver.Task;
+            try
+            {
+                await over.WaitAsync(cancellationToken).ConfigureAwait(false);
+                return true;
+            }
+            catch (OperationCanceledException)
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// A race starts (<paramref name="racing"/>) or is over: a local model on the GPU lets go of it for the race, and is
+        /// loaded again in the background after (<see cref="StreetCorsa.Rules.OllamaRules.UnloadForRaces"/>); one that was not
+        /// loaded is left off. The background's requests asked meanwhile wait for the end of the race. Other providers are not
+        /// touched. Never throws, never waits.
+        /// </summary>
+        public void SetRacing(bool racing)
+        {
+            TaskCompletionSource? over = null;
+            lock (_lock)
+            {
+                if (_racing == racing) return;
+                _racing = racing;
+                if (racing) _raceOver = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                else over = _raceOver;
+            }
+
+            try
+            {
+                if (Rules.Ollama.UnloadForRaces && _settings().Enabled && Provider() is OllamaTextProvider ollama)
+                {
+                    if (racing) _letGo = LetGoAsync(ollama);
+                    else _ = LoadAgainAsync(ollama, _letGo);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Warning("Could not {What} the AI model for the race: {Error}", racing ? "let go of" : "load", ex.Message);
+            }
+            finally
+            {
+                // After the load is sent: the requests that waited go to a model already being loaded
+                over?.TrySetResult();
+            }
+        }
+
+        /// <summary>Lets go of the model if it is on the GPU: whether it was</summary>
+        private async Task<bool> LetGoAsync(OllamaTextProvider ollama)
+        {
+            try
+            {
+                using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(Math.Max(1, Rules.RequestTimeoutSeconds)));
+                bool loaded;
+                try
+                {
+                    loaded = await ollama.IsLoadedAsync(timeout.Token).ConfigureAwait(false);
+                }
+                catch (AiProviderException)
+                {
+                    // An Ollama that cannot say: let go of it all the same
+                    loaded = true;
+                }
+
+                if (!loaded)
+                {
+                    _logger.Debug("The AI model was not on the GPU at the start of the race");
+                    return false;
+                }
+
+                await ollama.UnloadAsync(timeout.Token).ConfigureAwait(false);
+                _logger.Information("The AI model let go of the GPU for the race");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                // Ollama not running is nothing to let go of
+                _logger.Debug("Could not let go of the AI model for the race: {Error}", ex.Message);
+                return false;
+            }
+        }
+
+        private async Task LoadAgainAsync(OllamaTextProvider ollama, Task<bool> letGo)
+        {
+            try
+            {
+                if (!await letGo.ConfigureAwait(false)) return;
+                using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(Math.Max(1, Rules.RequestTimeoutSeconds)));
+                var started = DateTime.UtcNow;
+                await ollama.LoadAsync(timeout.Token).ConfigureAwait(false);
+                _logger.Information("The AI model is loaded again after the race in {Ms} ms", (int)(DateTime.UtcNow - started).TotalMilliseconds);
+            }
+            catch (Exception ex)
+            {
+                // The first line after waits for it instead
+                _logger.Debug("Could not load the AI model again after the race: {Error}", ex.Message);
             }
         }
 

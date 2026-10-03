@@ -6,7 +6,8 @@
     "{model}, {models}, {answer}: settings.ai.test.ok, settings.ai.test.empty",
     "{error}: settings.ai.test.failed",
     "{model}, {from}: settings.ai.ollama.making, settings.ai.ollama.made; {from}, {error}: settings.ai.ollama.failed",
-    "{version}, {device}, {checkpoint}: settings.ai.comfy.ok"
+    "{version}, {device}, {checkpoint}: settings.ai.comfy.ok",
+    "{tokens}: settings.ai.detail.tokens (the most a line of a talk sends, the game's guess)"
   ],
   "lines": {
     "settings.ai": "AI",
@@ -25,6 +26,11 @@
     "settings.ai.key.saved": "A key is saved, encrypted. Type a new one to change it.",
     "settings.ai.key.forget": "Forget key",
     "settings.ai.test": "Test",
+    "settings.ai.detail": "Talk detail",
+    "settings.ai.detail.light": "Light: the main facts and the last few lines",
+    "settings.ai.detail.normal": "Normal: most facts, a fair stretch of the talk",
+    "settings.ai.detail.full": "Full: everything the game knows",
+    "settings.ai.detail.tokens": "Up to about {tokens:N0} tokens sent with each line of a talk, usually far fewer. Less costs a paid provider less, and a slow one answers sooner.",
     "settings.ai.ollama.make": "Make the game's model",
     "settings.ai.ollama.note": "Makes a model of the game's own in Ollama, from one you have pulled: tuned to talk like the town.",
     "settings.ai.ollama.making": "Making {model} from {from}...",

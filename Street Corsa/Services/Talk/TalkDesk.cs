@@ -26,6 +26,8 @@ namespace StreetCorsa.Services.Talk
         private readonly Func<TalkRules> _rules;
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger("Talk");
         private readonly Func<string, DealerSalesman?> _salesmen;
+        private readonly Func<string, IReadOnlySet<string>?> _factory;
+        private readonly Func<string?> _detail;
 
         /// <summary>A person's portrait from the game's data (a dealer's salesman's); null when there is none</summary>
         public string? PortraitOf(Person person) =>
@@ -39,10 +41,14 @@ namespace StreetCorsa.Services.Talk
         /// <param name="parts">The parts catalog</param>
         /// <param name="onGameThread">Runs what changes the game on its thread (a memory written in the background)</param>
         /// <param name="salesmen">A dealer's salesman as its mod data gives him, by the dealer's id; none, and they are made up</param>
+        /// <param name="factory">The ids of the parts of a car's factory engine, by the car's id; null when not known</param>
+        /// <param name="detail">How much a talk sends with each line, as the player sets it (<see cref="TalkDetail"/>); full when not given</param>
         public TalkDesk(IAiText text, Func<string, string, Task<List<ProcessedRaceSession>>>? races = null, Func<string, string>? carName = null,
             Func<PartsCatalog?>? parts = null, Action<Action>? onGameThread = null, Func<AiPrompts>? prompts = null, Func<TalkRules>? rules = null,
-            Func<string, DealerSalesman?>? salesmen = null)
+            Func<string, DealerSalesman?>? salesmen = null, Func<string, IReadOnlySet<string>?>? factory = null, Func<string?>? detail = null)
         {
+            _detail = detail ?? (() => TalkDetail.Full);
+            _factory = factory ?? (_ => null);
             _salesmen = salesmen ?? (_ => null);
             Text = text;
             _races = races;
@@ -64,6 +70,12 @@ namespace StreetCorsa.Services.Talk
 
         internal TalkRules Rules => _rules();
 
+        /// <summary>
+        /// The rules as far as what a person is told each line goes, capped by the player's talk detail: the fact sheet, the
+        /// turns, the memories told. What is kept (memories, deals) always goes by <see cref="Rules"/>
+        /// </summary>
+        internal TalkRules Told => TalkDetail.Apply(_rules(), _detail());
+
         /// <summary>The draws of a talk (how far a seller will come down)</summary>
         internal Random Random { get; init; } = Random.Shared;
 
@@ -72,6 +84,21 @@ namespace StreetCorsa.Services.Talk
         internal PartsCatalog? Parts => _parts();
 
         internal string CarName(string id) => _carName(id);
+
+        /// <summary>The parts of a car's factory engine, by the car's id; null when not known</summary>
+        internal IReadOnlySet<string>? FactoryParts(string carId)
+        {
+            try
+            {
+                return _factory(carId);
+            }
+            catch (Exception ex)
+            {
+                // The build is still told, without what came from the factory
+                _logger.Warning("Could not look up the factory parts of a {CarId} for a talk: {Error}", carId, ex.Message);
+                return null;
+            }
+        }
 
         internal async Task<IReadOnlyList<ProcessedRaceSession>> RacesOf(string saveName, string personName) =>
             _races == null || string.IsNullOrEmpty(saveName) ? [] : await _races(saveName, personName).ConfigureAwait(true);
@@ -139,13 +166,11 @@ namespace StreetCorsa.Services.Talk
         internal void Remember(Conversation talk)
         {
             var person = talk.Person;
-            var transcript = string.Join("\n", talk.Turns.Select(turn =>
-                GameText.Say(turn.Mine ? "chat.transcript.them" : "chat.transcript.player", ("name", person.Name), ("text", turn.Text))));
             var values = new TextValues
             {
                 ["name"] = person.Name,
                 ["player"] = talk.PlayerName,
-                ["talk"] = transcript
+                ["talk"] = Transcript(person, talk.Turns)
             };
             var language = AiWriter.Language;
             var rules = Rules;
@@ -164,14 +189,24 @@ namespace StreetCorsa.Services.Talk
             });
         }
 
-        /// <summary>The note in what the AI wrote: its first line that is not a heading ("Note to self:")</summary>
-        public static string? NoteOf(string? written) =>
-            written?.Split('\n').Select(line => line.Trim()).FirstOrDefault(line => line.Length > 0 && !line.EndsWith(':'));
+        /// <summary>Turns of a talk written out, a line each: "Player: ...", "Walt: ..."</summary>
+        internal static string Transcript(Person person, IEnumerable<AiTurn> turns) =>
+            string.Join("\n", turns.Select(turn =>
+                GameText.Say(turn.Mine ? "chat.transcript.them" : "chat.transcript.player", ("name", person.Name), ("text", turn.Text))));
+
+        /// <summary>The note in what the AI wrote: its lines that are not headings ("Note to self:"), as one; null when none</summary>
+        public static string? NoteOf(string? written)
+        {
+            var lines = written?.Split('\n').Select(line => line.Trim()).Where(line => line.Length > 0 && !line.EndsWith(':')).ToList();
+            return lines is { Count: > 0 } ? string.Join(" ", lines) : null;
+        }
 
         /// <summary>A text AI that is never there: talking is off until the app starts the desk</summary>
         private sealed class NoAiText : IAiText
         {
             public bool IsAvailable => false;
+
+            public int? ContextTokens => null;
 
             public Task<string?> WriteAsync(string use, TextValues values, AiPriority priority = AiPriority.Background, CancellationToken cancellationToken = default) =>
                 Task.FromResult<string?>(null);

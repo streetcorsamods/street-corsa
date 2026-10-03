@@ -213,6 +213,11 @@ namespace StreetCorsa.Services.Market
                     [GameText.Installed.Pick("street.bought_players_car", Random.Shared, new TextValues { ["name"] = rival.Name, ["player"] = gameState.Player.Name })]);
             }
 
+            // The buyer remembers it, a rival whether or not the player talked to them
+            var sold = new PersonEvent { Date = gameState.Date, Kind = "sold", CarId = car.DefinitionId, Amount = offer.Amount };
+            if (rival != null) Talk.TalkPeople.Happened(gameState, rival, sold);
+            else Talk.TalkPeople.Happened(gameState, sold, Talk.TalkPeople.BuyerKey(ad));
+
             // Anybody else drives it away: it leaves the game
             _logger.Information("Sold {Car} to {Buyer} out of the paper for ${Amount}", car.DefinitionId, offer.BuyerName, offer.Amount);
 

@@ -47,6 +47,35 @@ namespace StreetCorsa.Models.GameState
         public List<PersonDeal> Deals { get; set; } = [];
 
         public PersonDeal? DealFor(string thing) => Deals.FirstOrDefault(d => d.Thing == thing);
+
+        /// <summary>
+        /// What happened between them and the player, as the game knows it (a car bought from them, a race lost to the
+        /// player, an offer they took for an insult), newest last; forgotten as the memories are. How they feel about the
+        /// player is worked out of it (<c>TalkPeople.Feeling</c>): it changes how they talk, never a price.
+        /// </summary>
+        public List<PersonEvent> Events { get; set; } = [];
+    }
+
+    /// <summary>One thing that happened between a person and the player (<see cref="Person.Events"/>)</summary>
+    public class PersonEvent
+    {
+        public DateTime Date { get; set; }
+
+        /// <summary>
+        /// What: "bought" (the player bought from them), "sold" (the player sold to them), "offered" (the player's last offer
+        /// in a talk with no deal; "asked" when the player was selling), "insulted" (an offer far too low, or a buyer pushed away), "beaten" (the player beat them),
+        /// "beat_player", "pink_lost" (the player won their car), "pink_won" (they won the player's)
+        /// </summary>
+        public string Kind { get; set; } = string.Empty;
+
+        /// <summary>The thing it was about, in words ("1957 Bel Air", "a Holley 4-barrel"); empty when none, or a car's</summary>
+        public string What { get; set; } = string.Empty;
+
+        /// <summary>The car it was about (its definition id), told by its name when the person is talked to</summary>
+        public string? CarId { get; set; }
+
+        /// <summary>The money in it, when there was</summary>
+        public decimal? Amount { get; set; }
     }
 
     /// <summary>One line a person keeps of a talk with the player, in the words of the language it was written in</summary>

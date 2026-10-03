@@ -18,8 +18,18 @@
     "paintNewFaces": true,
     "maxKept": 400,
     "talk": {
-      "turnsKept": 16,
-      "memoriesGiven": 4,
+      "turnsKept": 40,
+      "summaryTurns": 6,
+      "factTokens": 5000,
+      "memoriesGiven": 10,
+      "eventsKept": 12,
+      "feelingInsulted": -1,
+      "feelingBought": 1,
+      "feelingSold": 1,
+      "feelingBeaten": -1,
+      "feelingBeatPlayer": 0,
+      "feelingPinkLost": -2,
+      "feelingPinkWon": 1,
       "forgetDaysSeller": 14,
       "forgetDaysSalesman": 30,
       "forgetDaysRival": 90,
@@ -43,18 +53,35 @@
       "mostDiscount": 0.25,
       "firmShare": 0.2,
       "mostRaise": 0.12,
-      "lotCarsTold": 10,
+      "lotCarsTold": 30,
+      "buildPartsPerKind": 3,
+      "marketCarsTold": 4,
+      "streetTalkTold": 6,
+      "newsTold": 3,
+      "loreTold": 8,
       "womenSalesmen": 0.15,
       "womenSellers": 0.3,
       "salesmanMinAge": 28,
       "salesmanMaxAge": 57,
       "sellerMinAge": 20,
-      "sellerMaxAge": 74
+      "sellerMaxAge": 74,
+      "detailLight": {
+        "factTokens": 1500,
+        "turnsKept": 12,
+        "memoriesGiven": 4
+      },
+      "detailNormal": {
+        "factTokens": 3000,
+        "turnsKept": 24,
+        "memoriesGiven": 6
+      },
+      "turnTokens": 45
     },
     "ollama": {
-      "contextTokens": 8192,
+      "contextTokens": 16384,
       "keepAlive": "10m",
-      "repeatPenalty": 1.1
+      "repeatPenalty": 1.1,
+      "unloadForRaces": true
     }
   }
 }

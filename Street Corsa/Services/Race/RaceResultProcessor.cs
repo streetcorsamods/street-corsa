@@ -787,6 +787,11 @@ namespace StreetCorsa.Services.Race
                         if (outcome.WinCondition == WinCondition.OpponentCrashed) _evolution.ApplyCrashEvolution(rival);
                         else if (outcome.PlayerWon) _evolution.ApplyLossEvolution(rival);
                         else _evolution.ApplyWinEvolution(rival);
+
+                        // And remembers it: how they feel about the player comes of it (a pink slip lost the most)
+                        Talk.TalkPeople.Happened(gameState, rival, new PersonEvent { Date = gameState.Date, Kind = outcome.PlayerWon ? "beaten" : "beat_player" });
+                        if (context.IsPinkSlip)
+                            Talk.TalkPeople.Happened(gameState, rival, new PersonEvent { Date = gameState.Date, Kind = outcome.PlayerWon ? "pink_lost" : "pink_won" });
                     }
                 }
                 else

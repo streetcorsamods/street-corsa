@@ -56,10 +56,50 @@ public sealed class AiRules
 public sealed class TalkRules
 {
     /// <summary>Turns of a talk sent with each request, the newest; the older ones are left out</summary>
-    public int TurnsKept { get; set; } = 16;
+    public int TurnsKept { get; set; } = 40;
+
+    /// <summary>
+    /// Turns that have fallen out of the ones sent, at least, before they are summed up (an AI request, in the background)
+    /// in a few sentences that are sent with the facts instead: a long talk is not forgotten from its start
+    /// </summary>
+    public int SummaryTurns { get; set; } = 6;
+
+    /// <summary>
+    /// The most the fact sheet may take (tokens, as the game guesses them), and never more than half the context window
+    /// when the game sets one: past it, the least needed facts are left out first (other racers' races, the rest of the
+    /// lot, old races, old memories), never who the person is, the thing talked about or the deal
+    /// </summary>
+    public int FactTokens { get; set; } = 5000;
 
     /// <summary>What a person remembers of past talks, the newest few, told them when they are talked to again</summary>
-    public int MemoriesGiven { get; set; } = 4;
+    public int MemoriesGiven { get; set; } = 10;
+
+    /// <summary>What happened between a person and the player (a deal, a race) kept with them at most, the oldest dropped</summary>
+    public int EventsKept { get; set; } = 12;
+
+    // How a person's feeling toward the player (-2..+2, the sum of what they still remember) moves with each thing that
+    // happened: it changes how they talk, never a price
+
+    /// <summary>An offer far too low, or a buyer pushed until they walked</summary>
+    public int FeelingInsulted { get; set; } = -1;
+
+    /// <summary>The player bought from them</summary>
+    public int FeelingBought { get; set; } = 1;
+
+    /// <summary>The player sold to them</summary>
+    public int FeelingSold { get; set; } = 1;
+
+    /// <summary>The player beat them in a race</summary>
+    public int FeelingBeaten { get; set; } = -1;
+
+    /// <summary>They beat the player</summary>
+    public int FeelingBeatPlayer { get; set; } = 0;
+
+    /// <summary>The player won their car for pink slips (on top of the race lost)</summary>
+    public int FeelingPinkLost { get; set; } = -2;
+
+    /// <summary>They won the player's car (on top of the race won)</summary>
+    public int FeelingPinkWon { get; set; } = 1;
 
     /// <summary>Days a private seller remembers a talk</summary>
     public int ForgetDaysSeller { get; set; } = 14;
@@ -139,8 +179,29 @@ public sealed class TalkRules
     /// </summary>
     public double MostRaise { get; set; } = 0.12;
 
-    /// <summary>A salesman's cars told him, the dearest first</summary>
-    public int LotCarsTold { get; set; } = 10;
+    /// <summary>A salesman's cars told him, the dearest first, each with its engine, miles and condition</summary>
+    public int LotCarsTold { get; set; } = 30;
+
+    /// <summary>
+    /// Different parts of one kind told one by one in a car's build; a kind of more (an engine's small accessories) is
+    /// told as one line, but for the parts not from the factory
+    /// </summary>
+    public int BuildPartsPerKind { get; set; } = 3;
+
+    /// <summary>Other cars for sale in town told a seller or buyer, the most like the one talked about first</summary>
+    public int MarketCarsTold { get; set; } = 4;
+
+    /// <summary>What is said around town (the diner's street talk) told everybody, the newest</summary>
+    public int StreetTalkTold { get; set; } = 6;
+
+    /// <summary>Pieces in the paper told everybody, the newest</summary>
+    public int NewsTold { get; set; } = 3;
+
+    /// <summary>
+    /// Lines of what everybody knows in the game's time and place (<c>ai/lore.json</c>) told a person, drawn across the
+    /// topics they know, the same all day; the first facts left out when the sheet is too long
+    /// </summary>
+    public int LoreTold { get; set; } = 8;
 
     /// <summary>The share of salesmen who are women</summary>
     public double WomenSalesmen { get; set; } = 0.15;
@@ -155,13 +216,48 @@ public sealed class TalkRules
     public int SellerMinAge { get; set; } = 20;
 
     public int SellerMaxAge { get; set; } = 74;
+
+    /// <summary>The most the player's "light" talk detail (Settings) sends each line; the figures above when they are lower</summary>
+    public TalkDetailCaps DetailLight { get; set; } = new() { FactTokens = 1500, TurnsKept = 12, MemoriesGiven = 4 };
+
+    /// <summary>The most the "normal" talk detail sends each line; "full" sends the figures above as they are</summary>
+    public TalkDetailCaps DetailNormal { get; set; } = new() { FactTokens = 3000, TurnsKept = 24, MemoriesGiven = 6 };
+
+    /// <summary>A turn of a talk, about (tokens): a line or two of the player's and the person's, for the most a line sends shown in Settings</summary>
+    public int TurnTokens { get; set; } = 45;
+
+    /// <summary>These rules with less sent each line (the player's talk detail): the rest as they are</summary>
+    public TalkRules With(int factTokens, int turnsKept, int memoriesGiven)
+    {
+        var copy = (TalkRules)MemberwiseClone();
+        copy.FactTokens = factTokens;
+        copy.TurnsKept = turnsKept;
+        copy.MemoriesGiven = memoriesGiven;
+        return copy;
+    }
+}
+
+/// <summary>The most a talk detail sends each line (<see cref="TalkRules.DetailLight"/>, <see cref="TalkRules.DetailNormal"/>)</summary>
+public sealed class TalkDetailCaps
+{
+    /// <summary>The fact sheet, tokens at most</summary>
+    public int FactTokens { get; set; }
+
+    /// <summary>Turns of the talk sent</summary>
+    public int TurnsKept { get; set; }
+
+    /// <summary>Memories of past talks told</summary>
+    public int MemoriesGiven { get; set; }
 }
 
 /// <summary>What the game sends Ollama besides the prompt (<c>"ai": { "ollama": ... }</c>)</summary>
 public sealed class OllamaRules
 {
-    /// <summary>The context window asked for (tokens): a talk with its fact sheet needs more than Ollama's usual</summary>
-    public int ContextTokens { get; set; } = 8192;
+    /// <summary>
+    /// The context window asked for (tokens): a talk with its fact sheet needs more than Ollama's usual. 16k costs an 8B
+    /// model about 1 GB of the card over 8k, and fits beside the game on 12 GB; past it the model spills off the GPU
+    /// </summary>
+    public int ContextTokens { get; set; } = 16384;
 
     /// <summary>
     /// How long Ollama keeps the model loaded after a request ("10m"), so the next line does not wait for it to load; not
@@ -171,4 +267,11 @@ public sealed class OllamaRules
 
     /// <summary>How much the model is kept from saying the same words again (1: not at all)</summary>
     public double RepeatPenalty { get; set; } = 1.1;
+
+    /// <summary>
+    /// The model lets go of the GPU when a race starts (Assetto Corsa wants the card), nothing is asked of it while the race
+    /// runs, and it is loaded again in the background when the race is over, so the first line after waits a few seconds
+    /// less (measured on a 12 GB card: about 3-4 s warm, 11 s from a cold disk)
+    /// </summary>
+    public bool UnloadForRaces { get; set; } = true;
 }

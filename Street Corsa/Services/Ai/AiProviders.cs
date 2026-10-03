@@ -195,7 +195,22 @@ namespace StreetCorsa.Services.Ai
             };
             if (_tuning is { KeepAlive.Length: > 0 }) body["keep_alive"] = _tuning.KeepAlive;
             var answer = await SendAsync(HttpMethod.Post, Endpoint + "/api/chat", body, cancellationToken).ConfigureAwait(false);
+            LogTokens(request, answer);
             return Text(answer["message"]?["content"]);
+        }
+
+        private static readonly StreetCorsa.Logging.IAppLogger Logger = StreetCorsa.Logging.AppLoggerFactory.CreateLogger("Ai");
+
+        /// <summary>Ollama's own count of the prompt against the game's guess (<see cref="AiTokens"/>); a prompt that filled the window was cut</summary>
+        private void LogTokens(AiTextRequest request, JsonNode answer)
+        {
+            if (answer["prompt_eval_count"]?.GetValueKind() != System.Text.Json.JsonValueKind.Number) return;
+            var read = answer["prompt_eval_count"]!.GetValue<int>();
+            var estimated = AiTokens.Estimate(request);
+            Logger.Debug("Ollama read {Read} prompt tokens (the game guessed {Estimated}) and wrote {Wrote}", read, estimated,
+                answer["eval_count"]?.ToString() ?? "?");
+            if (_tuning is { ContextTokens: > 0 } tuning && read >= tuning.ContextTokens - request.MaxTokens)
+                Logger.Warning("Ollama read {Read} prompt tokens in a window of {Context}: the start of the prompt was likely cut", read, tuning.ContextTokens);
         }
 
         /// <summary>What the model is asked to answer within: its length and freedom, and the game's tuning when given</summary>
@@ -206,6 +221,49 @@ namespace StreetCorsa.Services.Ai
             if (_tuning.ContextTokens > 0) options["num_ctx"] = _tuning.ContextTokens;
             if (_tuning.RepeatPenalty > 0) options["repeat_penalty"] = _tuning.RepeatPenalty;
             return options;
+        }
+
+        /// <summary>
+        /// Loads the model onto the GPU with nothing asked of it (a chat of no messages), with the context every request is
+        /// sent, so the next line does not wait for it; kept as long as the game's keep-alive
+        /// </summary>
+        public async Task LoadAsync(CancellationToken cancellationToken)
+        {
+            var body = new JsonObject
+            {
+                ["model"] = await ModelAsync(cancellationToken).ConfigureAwait(false),
+                ["stream"] = false,
+                ["messages"] = new JsonArray()
+            };
+            if (_tuning is { ContextTokens: > 0 } tuning) body["options"] = new JsonObject { ["num_ctx"] = tuning.ContextTokens };
+            if (_tuning is { KeepAlive.Length: > 0 }) body["keep_alive"] = _tuning.KeepAlive;
+            await SendAsync(HttpMethod.Post, Endpoint + "/api/chat", body, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>The model is on the GPU now (GET /api/ps): asked before it is let go, so only a model that was is loaded again</summary>
+        public async Task<bool> IsLoadedAsync(CancellationToken cancellationToken)
+        {
+            var model = Tagged(await ModelAsync(cancellationToken).ConfigureAwait(false));
+            var answer = await SendAsync(HttpMethod.Get, Endpoint + "/api/ps", null, cancellationToken).ConfigureAwait(false);
+            return (answer["models"] as JsonArray ?? []).Any(m =>
+                string.Equals(Tagged(Text(m?["name"])), model, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(Tagged(Text(m?["model"])), model, StringComparison.OrdinalIgnoreCase));
+        }
+
+        /// <summary>A model's name as Ollama lists it: "latest" when no tag is given</summary>
+        private static string Tagged(string name) => name.Length == 0 || name.Contains(':') ? name : name + ":latest";
+
+        /// <summary>Lets go of the model, so its memory on the card is free (a chat of no messages kept alive for 0)</summary>
+        public async Task UnloadAsync(CancellationToken cancellationToken)
+        {
+            var body = new JsonObject
+            {
+                ["model"] = await ModelAsync(cancellationToken).ConfigureAwait(false),
+                ["stream"] = false,
+                ["messages"] = new JsonArray(),
+                ["keep_alive"] = 0
+            };
+            await SendAsync(HttpMethod.Post, Endpoint + "/api/chat", body, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>

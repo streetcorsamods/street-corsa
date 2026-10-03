@@ -849,8 +849,13 @@ without repeating the rest.
   A use with no prompt is not asked for.
 - Talking to people: `chat_seller`, `chat_salesman`, `chat_rival`, `chat_buyer` (who answered the player's own ad) are sent after the persona as the rest of who the AI
   is, with the talk as the messages; they name `{name}`, `{nickname}`, `{age}`, `{sex}`, `{temperament}`, `{place}`,
-  `{player}` and `{facts}` (the game's fact sheet, the text pools `chat.fact.*` and `chat.deal.*`). `chat_memory`
-  writes what a person keeps of a talk (`{name}`, `{player}`, `{talk}`). The stage lines, the window's words and the
+  `{player}` and `{facts}` (the game's fact sheet, the text pools `chat.fact.*` and `chat.deal.*`, in sections headed by
+  `chat.section` and `chat.section.*`; best at the prompt's end, as the base game's are, so a local model reads again
+  only what changed; its size is the rules' `ai.talk.factTokens`). `chat_memory`
+  writes what a person keeps of a talk (`{name}`, `{player}`, `{talk}`); `chat_summary` sums up the start of a long talk
+  (`{name}`, `{player}`, `{earlier}` the summary so far, `{talk}` the turns to add). The fact sheet also tells how the person
+  feels about the player (`chat.fact.feeling.*`) and what happened between them (`chat.fact.events`, `chat.fact.event.*`),
+  moved by the rules' `ai.talk.feeling*` weights. The stage lines, the window's words and the
   words that make a number an offer are the text pools `chat.*` (the base game's `text/chat.json`).
 
 `ai\people.json`: the temperaments people are drawn with, merged key by key:
@@ -871,6 +876,29 @@ without repeating the rest.
 `ai\ollama.json`: the game's own model in Ollama, made from Settings ("Make the game's model"), merged key by key:
 `name`, `from` (the base model), `system` (a text or lines), `parameters` (as a Modelfile's), `examples`
 (`{ "player", "answer" }` pairs, its first messages).
+
+A chat prompt (`chat_seller`, `chat_salesman`, `chat_rival`, `chat_buyer`) may have `examples` too, the same pairs, filled
+into its `{examples}` under the text `chat.examples`: how the person might talk, for every provider. Keep figures out of
+them: a model copies them.
+
+`ai\lore.json`: what everybody knows in the game's time and place, told to the people the player talks to as small talk
+they may use (the rules' `ai.talk.loreTold` lines, drawn across the topics they know). Merged key by key: a mod adds a
+topic, changes one's lines, or takes one out with `"lines": []`.
+
+```json
+{
+  "lore": {
+    "radio_1970": {
+      "from": 1970, "to": 1970,
+      "lines": ["On the radio: Creedence's 'Up Around the Bend'..."]
+    },
+    "racing": { "for": ["rival"], "lines": ["Big Daddy Don Garlits is the name everybody knows in Top Fuel."] }
+  }
+}
+```
+
+`lines`: one thing known a line, written to the AI. `for`: the kinds who know it (`seller`, `salesman`, `rival`, `buyer`;
+none is everybody). `from`, `to`: the years of the game's calendar it is true in (none, always). Never a car's price.
 
 `ai\comfy_<use>.json`: a ComfyUI workflow, the last mod's whole (a graph is not merged). The base game has
 `comfy_portrait.json`, the portrait painted for a new face on the street, shown in place of their own portrait from then
