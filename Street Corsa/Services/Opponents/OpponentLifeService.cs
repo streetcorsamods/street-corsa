@@ -82,7 +82,7 @@ namespace StreetCorsa.Services.Opponents
 
         public async Task ReviewDayAsync(GameState gameState, DateTime currentDate)
         {
-            _initialization?.EnsureKing(gameState);
+            _initialization?.EnsureBosses(gameState);
             try
             {
                 _initialization?.EnsureNewcomers(gameState);
@@ -120,10 +120,10 @@ namespace StreetCorsa.Services.Opponents
             await GiveCarsTheirPartsAsync(gameState);
             await PutOnDynoAsync(gameState);
 
-            // Those who sat out first: they may be back today. The King is reviewed wherever he is kept.
+            // Those who sat out first: they may be back today. A boss is reviewed wherever he is kept.
             var racers = gameState.Racers.Retired.Values
                 .Concat(gameState.Racers.ReadyToRace.Values)
-                .Concat(gameState.Racers.Inactive.Values.Where(r => r is Opponent { IsKing: true }))
+                .Concat(gameState.Racers.Inactive.Values.Where(r => r is Opponent { IsBoss: true }))
                 .OfType<Opponent>()
                 .ToList();
             RivalCarAds.Tidy(gameState);
@@ -209,20 +209,11 @@ namespace StreetCorsa.Services.Opponents
             }
         }
 
-        /// <summary>The path that ends at the King ("King" in the victory paths the mods define)</summary>
-        private static readonly Lazy<DataVictory?> KingPath = new(() =>
-            CareerContent.Installed.Victories.FirstOrDefault(v => v.Id == KingPathId) is { } path ? new DataVictory(path) : null);
-
-        public const string KingPathId = "King";
-
-        /// <summary>The King comes out once his victory path is open; with no such path, from the start</summary>
-        private static bool KingPathOpen(CareerState career) => KingPath.Value?.IsUnlocked(career) ?? true;
-
         private void MoveToWhereTheyBelong(GameState gameState, Opponent racer, DateTime date, Func<string, string?>? groupOf, List<string> talk)
         {
             var ready = IsReady(racer, groupOf);
-            var target = racer.IsKing
-                ? ready && KingPathOpen(gameState.Career) ? RacerStatus.ReadyToRace : RacerStatus.Inactive
+            var target = racer.IsBoss
+                ? ready && Bosses.PathOpen(racer, gameState.Career) ? RacerStatus.ReadyToRace : RacerStatus.Inactive
                 : ready ? RacerStatus.ReadyToRace : RacerStatus.Retired;
 
             // How long they have been sitting out, for whether they give up (OpponentRules.Leaves)
@@ -232,9 +223,9 @@ namespace StreetCorsa.Services.Opponents
             var from = racer.Status;
             gameState.Racers.MoveRacer(racer.Name, target);
 
-            if (racer.IsKing)
+            if (racer.IsBoss)
             {
-                if (target == RacerStatus.ReadyToRace) talk.Add(Say("street.king_out", racer));
+                if (target == RacerStatus.ReadyToRace) talk.Add(Say(Bosses.Key("street.king_out", racer), racer));
             }
             else if (target == RacerStatus.ReadyToRace && from == RacerStatus.Retired)
             {
@@ -272,7 +263,7 @@ namespace StreetCorsa.Services.Opponents
         /// </summary>
         private static bool CanLeave(GameState gameState, Opponent racer)
         {
-            if (racer.IsKing || racer.Grudge != null) return false;
+            if (racer.IsBoss || racer.Grudge != null) return false;
             if (HasPendingRace(gameState, racer)) return false;
             return !gameState.NewspaperAds.PlayerCars.Any(a => string.Equals(a.Offer?.RivalName, racer.Name, StringComparison.Ordinal));
         }
@@ -486,7 +477,7 @@ namespace StreetCorsa.Services.Opponents
         /// </summary>
         private void TryTradeUp(GameState gameState, Opponent racer, DateTime date, Func<string, string?>? groupOf, List<string> talk)
         {
-            if (racer.IsKing || racer.Cars.FirstOrDefault() is not { } current) return;
+            if (racer.IsBoss || racer.Cars.FirstOrDefault() is not { } current) return;
 
             var currentHp = current.PowerHp ?? 0;
             var pick = CarsForSale(gameState, racer, racer.Money)
@@ -517,7 +508,7 @@ namespace StreetCorsa.Services.Opponents
             if (!AnyOnSale(gameState)) return;
 
             var shoppers = gameState.Racers.ReadyToRace.Values.OfType<Opponent>()
-                .Where(r => !r.IsKing && !r.IsBroke && r.Money > 0 && !HasPendingRace(gameState, r))
+                .Where(r => !r.IsBoss && !r.IsBroke && r.Money > 0 && !HasPendingRace(gameState, r))
                 .OrderBy(_ => _random.Next())
                 .ToList();
 
@@ -697,12 +688,12 @@ namespace StreetCorsa.Services.Opponents
             var racers = gameState.Racers;
             // Those who left count: once the new faces run out, they are who comes back
             var street = racers.All.Concat(racers.Departed.Values)
-                .Count(r => r is not Opponent { IsKing: true });
-            var ready = racers.ReadyToRace.Values.Count(r => r is not Opponent { IsKing: true });
+                .Count(r => r is not Opponent { IsBoss: true });
+            var ready = racers.ReadyToRace.Values.Count(r => r is not Opponent { IsBoss: true });
             var wanted = OpponentRules.MinActive(date, street) - ready;
             if (wanted <= 0) return;
 
-            var newcomers = racers.Inactive.Values.OfType<Opponent>().Where(o => !o.IsKing).OrderBy(_ => _random.Next()).Take(wanted).ToList();
+            var newcomers = racers.Inactive.Values.OfType<Opponent>().Where(o => !o.IsBoss).OrderBy(_ => _random.Next()).Take(wanted).ToList();
             var comebacks = ComeBacks(gameState, date, wanted - newcomers.Count);
             foreach (var back in comebacks)
             {
@@ -737,7 +728,7 @@ namespace StreetCorsa.Services.Opponents
             if (count <= 0) return [];
 
             var back = gameState.Racers.Departed.Values.OfType<Opponent>()
-                .Where(o => !o.IsKing && o.LeftDate is { } left && (date.Date - left.Date).Days >= OpponentRules.ComeBackAfterDays)
+                .Where(o => !o.IsBoss && o.LeftDate is { } left && (date.Date - left.Date).Days >= OpponentRules.ComeBackAfterDays)
                 .OrderBy(o => o.LeftDate)
                 .Take(count)
                 .ToList();
@@ -763,7 +754,7 @@ namespace StreetCorsa.Services.Opponents
                                                              && _partShops?.Catalog.Get(s.Id) is { } shop && PartShopRules.SellsToTuners(shop));
             var chance = bargains ? SaleTuneChance : TuneChance;
             var jobs = gameState.Racers.ReadyToRace.Values
-                .Concat(gameState.Racers.Inactive.Values.Where(r => r is Opponent { IsKing: true }))
+                .Concat(gameState.Racers.Inactive.Values.Where(r => r is Opponent { IsBoss: true }))
                 .OfType<Opponent>()
                 .Where(r => !HasPendingRace(gameState, r))
                 .Where(r => r.Cars.FirstOrDefault() is { Engine: not null } car && CanRace(car, groupOf) && _random.NextDouble() < chance)

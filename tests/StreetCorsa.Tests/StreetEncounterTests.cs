@@ -241,7 +241,8 @@ public class StreetEncounterTests
         var sore = Rival("Sore", reputation: 90);
         sore.Grudge = new Grudge();
         var king = Rival("King", reputation: 100);
-        king.IsKing = true;
+        king.IsBoss = true;
+        king.BossPath = "King";
         var time = new DateTime(1969, 6, 21, 14, 0, 0);
 
         var random = new Random(3);
@@ -284,7 +285,8 @@ public class StreetEncounterTests
     public void The_King_and_a_sore_loser_want_pink_slips()
     {
         var king = Rival("King");
-        king.IsKing = true;
+        king.IsBoss = true;
+        king.BossPath = "King";
         var sore = Rival("Sore");
         sore.Grudge = new Grudge();
         var time = new DateTime(1969, 6, 21, 12, 0, 0);
@@ -297,7 +299,8 @@ public class StreetEncounterTests
     public void Pink_slips_are_only_offered_against_a_car_the_rival_would_stake_theirs_on()
     {
         var king = Rival("King");
-        king.IsKing = true;
+        king.IsBoss = true;
+        king.BossPath = "King";
         var sore = Rival("Sore");
         sore.Grudge = new Grudge();
         var bold = Rival("Bold", aggression: 100, money: 500m);

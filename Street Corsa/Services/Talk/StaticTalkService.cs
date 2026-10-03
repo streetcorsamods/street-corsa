@@ -74,7 +74,7 @@ namespace StreetCorsa.Services.Talk
         /// <summary>A rival who has pulled up beside the player's car in the street, window down</summary>
         private static List<string> PulledUp(TalkContext context, bool aggressive)
         {
-            if (context.Opponent.IsKing) return ["talk.pulled_up.king"];
+            if (context.Opponent.IsBoss) return [Opponents.Bosses.Key("talk.pulled_up.king", context.Opponent)];
             if (context.IsPinkSlipBet) return ["talk.pulled_up.pink_slip"];
 
             return aggressive ? ["talk.pulled_up", "talk.pulled_up.aggressive"] : ["talk.pulled_up"];

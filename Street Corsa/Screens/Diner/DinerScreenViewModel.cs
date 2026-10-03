@@ -468,7 +468,7 @@ namespace StreetCorsa.Screens.Diner
 
                 // The King races for pink slips and nothing else, and a rival who wants a rematch wants the pink slips.
                 // Pink slips only they asked for go back off the table when the player turns to somebody else.
-                if (opponentVm.Opponent.IsKing || opponentVm.WantsRematch)
+                if (opponentVm.Opponent.IsBoss || opponentVm.WantsRematch)
                 {
                     if (!IsPinkSlipBet)
                     {

@@ -86,7 +86,7 @@ namespace StreetCorsa.Services.Career
             foreach (var racer in gameState.Racers.ReadyToRace.Values)
             {
                 // The King races for pink slips at his own table, not in anybody's event
-                if (racer is not Opponent opponent || opponent.IsKing)
+                if (racer is not Opponent opponent || opponent.IsBoss)
                     continue;
 
                 var car = opponent.Cars.FirstOrDefault();

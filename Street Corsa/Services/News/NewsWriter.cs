@@ -13,7 +13,10 @@ namespace StreetCorsa.Services.News
 
         /// <summary>"his", "her", "their" for the rival (<see cref="Opponents.OpponentRules.Possessive"/>)</summary>
         public string RivalPossessive { get; init; } = "their";
-        public bool RivalIsKing { get; init; }
+        public bool RivalIsBoss { get; init; }
+
+        /// <summary>The boss's racer id, for his own stories (<c>news.king_beaten.&lt;id&gt;.headline</c>) when a mod has them</summary>
+        public string RivalBossId { get; init; } = string.Empty;
         public int PlayerReputation { get; init; }
         public int RivalReputation { get; init; }
         public string PlayerCar { get; init; } = string.Empty;
@@ -48,7 +51,7 @@ namespace StreetCorsa.Services.News
 
     /// <summary>
     /// The newspaper's race pages (<see cref="GameState.News"/>): a piece is written when a race is settled, and only
-    /// when there is a story in it. The player's pink slips, the King, the police and wrecks make the paper; a
+    /// when there is a story in it. The player's pink slips, a boss, the police and wrecks make the paper; a
     /// run-of-the-mill cash race does not. From the rivals' own races only pink slips and wrecks do. The paper prints
     /// the last <see cref="DaysPrinted"/> days, newest and weightiest first.
     /// </summary>
@@ -116,8 +119,12 @@ namespace StreetCorsa.Services.News
 
             if (!f.Decided) return (null, null, 0);
 
-            if (f.RivalIsKing)
-                return f.PlayerWon ? Piece("king_beaten", 100) : Piece("king_won", 80);
+            if (f.RivalIsBoss)
+            {
+                var story = f.PlayerWon ? "king_beaten" : "king_won";
+                if (f.RivalBossId.Length > 0 && text.Has($"news.{story}.{f.RivalBossId}.headline")) story += "." + f.RivalBossId;
+                return Piece(story, f.PlayerWon ? 100 : 80);
+            }
 
             var revenge = f.RivalSwearsRevenge ? Line("news.suffix.revenge") : "";
             var crash = f.PlayerCrashed ? Line("news.suffix.player_crashed")

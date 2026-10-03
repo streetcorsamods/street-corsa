@@ -244,7 +244,7 @@ public class AuditFixesFTests
         var game = GameState.CreateNew("P");
         game.Racers = new RacerCollection();
         game.Player.Stats.Wins = 5;
-        game.Racers.AddRacer(new Opponent("King", 50, Gender.Male, 99, 50) { Status = RacerStatus.ReadyToRace, IsKing = true });
+        game.Racers.AddRacer(new Opponent("King", 50, Gender.Male, 99, 50) { Status = RacerStatus.ReadyToRace, IsBoss = true, BossPath = "King" });
         game.Racers.ReadyToRace["King"].Stats.Wins = 100;
         game.Racers.AddRacer(new Opponent("Gone", 30, Gender.Male, 50, 50) { Status = RacerStatus.Departed });
 

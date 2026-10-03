@@ -20,14 +20,11 @@ namespace StreetCorsa.Services.Opponents
         private readonly IAppLogger _logger;
         private readonly Random _random;
 
-        /// <summary>The opponent definitions were read and hold no King: not read again every day of the session</summary>
-        private bool _noKingDefined;
+        /// <summary>The game state whose bosses were last looked for: the definitions are read once per game, not once a day</summary>
+        private WeakReference<GameState>? _bossesChecked;
 
-        /// <summary>What the King has in the bank</summary>
+        /// <summary>What a boss has in the bank, unless his own figures say</summary>
         public static decimal KingMoney => Rules.RuleBook.Current.Rivals.King.Money;
-
-        /// <summary>The King's car is one of the this many strongest from the factory</summary>
-        private static int KingCarChoices => Rules.RuleBook.Current.Rivals.King.CarChoices;
 
         /// <summary>
         /// Where a racer's skill counts from for their money and their car's shape: ten under the floor
@@ -61,7 +58,7 @@ namespace StreetCorsa.Services.Opponents
             _logger.Information("Initializing opponents for new game");
 
             // Load all available opponents; the King is set up on his own
-            var allOpponents = _opponentRepository.LoadAllOpponents().Where(o => !o.IsKing).ToList();
+            var allOpponents = _opponentRepository.LoadAllOpponents().Where(o => !o.IsBoss).ToList();
 
             if (allOpponents.Count == 0)
             {
@@ -116,10 +113,10 @@ namespace StreetCorsa.Services.Opponents
 
             _logger.Information("Successfully initialized {Count} opponents, {Street} of them on the street", selectedOpponents.Count, onTheStreet);
 
-            EnsureKing(gameState, carPool);
+            EnsureBosses(gameState, carPool);
         }
 
-        public void EnsureKing(GameState gameState) => EnsureKing(gameState, null);
+        public void EnsureBosses(GameState gameState) => EnsureBosses(gameState, null);
 
         /// <summary>The game state last brought up to date: the definitions are read once per game, not once a day</summary>
         private WeakReference<GameState>? _newcomersChecked;
@@ -142,7 +139,7 @@ namespace StreetCorsa.Services.Opponents
 
             // Known by definition, and by name for racers from before definitions were remembered
             var newcomers = definitions
-                .Where(d => !d.IsKing
+                .Where(d => !d.IsBoss
                             && !known.Any(r => (!string.IsNullOrEmpty(d.DefinitionId) && r.DefinitionId == d.DefinitionId)
                                                || string.Equals(r.Name, d.Name, StringComparison.OrdinalIgnoreCase)))
                 .ToList();
@@ -168,26 +165,40 @@ namespace StreetCorsa.Services.Opponents
 
         public decimal StartingMoney(Opponent opponent) => GenerateOpponentMoney(opponent);
 
-        private void EnsureKing(GameState gameState, List<(CarDefinition Car, CarProfile Profile)>? carPool)
+        /// <summary>
+        /// Every boss the mods define that the game does not have yet (a new game, a save from before him, a mod
+        /// added since) joins it out of sight, with his money, his record and his car. Known by definition, and by
+        /// name for one from before definitions were remembered. Once per game state.
+        /// </summary>
+        private void EnsureBosses(GameState gameState, List<(CarDefinition Car, CarProfile Profile)>? carPool)
         {
-            var racers = gameState.Racers;
-            if (racers.All.Any(r => r is Opponent { IsKing: true })) return;
-            if (_noKingDefined) return;
+            if (_bossesChecked != null && _bossesChecked.TryGetTarget(out var checkedState) && ReferenceEquals(checkedState, gameState)) return;
+            _bossesChecked = new WeakReference<GameState>(gameState);
 
-            var king = _opponentRepository.LoadAllOpponents().FirstOrDefault(o => o.IsKing);
-            if (king == null)
+            var racers = gameState.Racers;
+            var known = racers.All.Concat(racers.Departed.Values).OfType<Opponent>().ToList();
+            var bosses = _opponentRepository.LoadAllOpponents().Where(o => o.IsBoss).ToList();
+            if (bosses.Count == 0) _logger.Warning("No boss among the racer definitions: a path that ends at one can't be won");
+
+            foreach (var boss in bosses.Where(b => !known.Any(r => (b.DefinitionId.Length > 0 && r.DefinitionId == b.DefinitionId)
+                                                                   || string.Equals(r.Name, b.Name, StringComparison.OrdinalIgnoreCase))))
             {
-                _noKingDefined = true;
-                _logger.Warning("No King among the opponent definitions: the King victory can't be won");
-                return;
+                AddBoss(gameState, boss, carPool ??= BuildCarPool());
             }
+
+            Bosses.Refresh(gameState);
+        }
+
+        private void AddBoss(GameState gameState, Opponent king, List<(CarDefinition Car, CarProfile Profile)> carPool)
+        {
+            // His own figures, the rules' (rivals.king) for what they leave out
+            var record = (king.BossRecord ?? new BossRecord()).Over(Rules.RuleBook.Current.Rivals.King);
 
             // Out of sight until the player has earned a shot at him (OpponentLifeService brings him to the diner)
             king.Status = RacerStatus.Inactive;
-            king.Money = KingMoney;
+            king.Money = record.Money;
 
-            // A name on the street: years of wins, pink slips taken (the rules' rivals.king), half of them on the strip
-            var record = Rules.RuleBook.Current.Rivals.King;
+            // A name on the street: years of wins, pink slips taken, half of them on the strip
             var races = Math.Max(0, record.Races);
             var wins = Math.Clamp(record.Wins, 0, races);
             king.Stats.Races = races;
@@ -202,24 +213,24 @@ namespace StreetCorsa.Services.Opponents
             king.Stats.PinkSlipsWon = Math.Max(0, record.PinkSlipsWon);
             king.Stats.Reputation = king.Stats.CalculateReputation();
 
-            var car = CreateKingCar(carPool ?? BuildCarPool(), gameState.Date, king);
+            var car = CreateBossCar(carPool, gameState.Date, king, record.CarChoices);
             if (car != null) king.Cars.Add(car);
 
-            racers.AddRacer(king);
-            _logger.Information("{King} is in town, in a {Car} ({Power:0} hp)", king.Name, car?.DefinitionId ?? "(no car)", car?.PowerHp ?? 0);
+            gameState.Racers.AddRacer(king);
+            _logger.Information("{Boss} is in town, in a {Car} ({Power:0} hp)", king.Name, car?.DefinitionId ?? "(no car)", car?.PowerHp ?? 0);
         }
 
         /// <summary>
         /// One of the strongest cars there is from the factory (the dearest, without parts to tell), in top shape, its
         /// engine worked on as much as it gets
         /// </summary>
-        private Car? CreateKingCar(List<(CarDefinition Car, CarProfile Profile)> pool, DateTime today, Opponent king)
+        private Car? CreateBossCar(List<(CarDefinition Car, CarProfile Profile)> pool, DateTime today, Opponent king, int carChoices)
         {
             var choices = (_parts is { IsAvailable: true } catalogParts
                     ? pool.Select(p => (p.Car, p.Profile, Power: catalogParts.GetStockBuild(p.Car)?.PowerHp ?? 0)).Where(p => p.Power > 0)
                     : pool.Select(p => (p.Car, p.Profile, Power: (double)p.Profile.BasePrice)))
                 .OrderByDescending(p => p.Power)
-                .Take(KingCarChoices)
+                .Take(Math.Max(1, carChoices))
                 .Select(p => (p.Car, p.Profile))
                 .ToList();
             if (choices.Count == 0) return null;
@@ -244,7 +255,7 @@ namespace StreetCorsa.Services.Opponents
                 }
                 catch (Exception ex)
                 {
-                    _logger.Warning("Could not build the King's engine: {Error}", ex.Message);
+                    _logger.Warning("Could not build {Boss}'s engine: {Error}", king.Name, ex.Message);
                 }
             }
 

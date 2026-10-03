@@ -53,13 +53,16 @@ namespace StreetCorsa.Services.Career
                 var bad = victory?.Unlock.Concat(victory.Goal).FirstOrDefault(s => !IsKnownStep(s));
                 if (bad == null) return victory;
 
-                problems.Add($"{entry.Source}: victory path {entry.Id} has a step of type \"{bad.Type}\" (counter, beatKing, beatAll, mostWins), or a counter step without a counter; left out");
+                problems.Add($"{entry.Source}: victory path {entry.Id} has a step of type \"{bad.Type}\" (counter, beatBoss, beatAll, mostWins), or a counter step without a counter; left out");
                 return null;
             });
             var victoryList = new List<VictoryDefinition>();
-            foreach (var (id, victory, _) in victories.Entries)
+            foreach (var (id, victory, mod) in victories.Entries)
             {
                 victory.Id = id;
+                // A boss named as its mod wrote him: the mod's own racer, else the base game's (Bosses.Means)
+                foreach (var step in victory.Unlock.Concat(victory.Goal).Where(s => s.Boss is { Length: > 0 }))
+                    step.Boss = Opponents.Bosses.Qualify(mod.Id, step.Boss);
                 victoryList.Add(victory);
             }
 
@@ -149,7 +152,7 @@ namespace StreetCorsa.Services.Career
 
         private static bool IsKnownStep(VictoryStep step) => step.Type switch
         {
-            VictoryStep.BeatKingType or VictoryStep.BeatAllType or VictoryStep.MostWinsType => true,
+            VictoryStep.BeatBossType or VictoryStep.BeatKingType or VictoryStep.BeatAllType or VictoryStep.MostWinsType => true,
             VictoryStep.CounterType => step.Counter != null,
             _ => false
         };

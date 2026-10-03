@@ -1353,6 +1353,11 @@ the rules (`cars`, `engines`), game.json's `cars` filter of the installed cars (
 exactly as before. Not played yet. The order after that is E7-E12 as listed (E9 and E12 cut down on 2026-10-03, see
 above), unless the owner picks otherwise.
 
+E9 (saves and mods) is built on `feature/bosses` (2026-10-03): a save played with older mods says so before it loads,
+and the King is one boss of several: any racer can be one (`"boss"` in the racers' data, with his path, money and
+record), a path's `beatBoss` step is won by beating its bosses, a boss can have lines of his own, old saves' King
+becomes the King path's boss. Race types as ids moved to E10; milestone triggers stay an enum. Not seen in game.
+
 E7 (car scripting) is built on `feature/car-scripting` (2026-10-02), after step 26: every car move is a JSON script of
 the mods (`scripts/scripts.json`, the drives' feels in `scripts/feels.json`) played at a trigger (`lot.take_out`,
 `garage.arrive`, `garage.leave`, `station.arrive`, `station.at_pump`, `station.leave`, `street.rival_arrive`,

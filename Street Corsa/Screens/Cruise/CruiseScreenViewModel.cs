@@ -262,7 +262,7 @@ namespace StreetCorsa.Screens.Cruise
         public ObservableCollection<MatchupStatViewModel> MatchupStats { get; } = [];
 
         /// <summary>The King and a rival after a rematch race for pink slips and nothing else</summary>
-        public bool CanChangeBet => IsEncounterShown && _rival is { IsKing: false, Grudge: null };
+        public bool CanChangeBet => IsEncounterShown && _rival is { IsBoss: false, Grudge: null };
 
         private bool _isPinkSlipBet;
 

@@ -89,8 +89,9 @@ Shape: `rules/*.json` per mod, merged key by key in mod order, **copied into the
 `GameRules` already is), so updating a mod cannot change a career under way.
 
 Logic, not numbers: **the King** is a special case in code (`IsKing`, path `"King"`, fixed stats and money); a game
-wants a list of bosses. **Closed enums saved by name** (milestone triggers, victory step kinds, event schedules, race
-types) need string ids before mods can add kinds.
+wants a list of bosses (**done, E9**: bosses). **Closed enums saved by name** (milestone triggers, victory step kinds,
+event schedules, race types) need string ids before mods can add kinds (E9 looked: victory steps are strings already,
+the schedule is not saved, a milestone trigger needs code to count it, race types go with E10).
 
 ## 5. Cars, makes, parts, engines
 
@@ -197,6 +198,31 @@ playing exactly as it does now: today's values become the base game's data.
 Later, not in the epic: a weather system (there is none today), nitrous in AC.
 
 ## As built
+
+### E9: saves and mods (2026-10-03, branch `feature/bosses`)
+
+The owner's decisions: several bosses (any racer can be one); race types as ids go with E10, milestone triggers stay an
+enum (a new one needs code to count it, so a string id gains nothing); a save played with older mods warns only when
+one is older, not newer.
+
+- **What was there already:** saves stamp their mod set on every save (`GameState.Mods`), a missing mod is warned of on
+  load (`ModsInSave`) and what needs it is tidied away (events, dealers' cars, parts to the shelf, `Legacy` cars).
+- **Older mods:** `ModsInSave.Older` compares each saved mod's version with the installed one (`ModVersion`); an older
+  one, the base game too, goes in the same dialog with both versions (`loadgame.mods_older*`, `loadgame.mods_load_anyway`).
+- **Bosses:** a racer with `"boss": { "path", "money", "carChoices", "races", "wins", "pinkSlipsWon" }` (every figure
+  optional, the rules' `rivals.king` for what is left out; `"isKing": true` is `"boss": { "path": "King" }`).
+  `Opponent.IsBoss`/`BossPath` replace `IsKing`, which an old save's King is read from once (`Bosses.BringUpToDate`).
+  `EnsureBosses` puts every boss a game lacks in it (a mod added later too), once per game state. A boss comes out
+  when his path opens (`Bosses.PathOpen`; none, or a path no mod has: from the start). The career keeps its bosses
+  (`CareerState.Bosses`, refreshed with the standing) for the new `beatBoss` step (every boss of the path, or
+  `"boss": <racer id>` that one; `beatKing` is the same; a share of the bosses beaten counts as progress).
+  `KingName` stays for saves that have not looked their bosses up.
+- **A boss's own lines:** `Bosses.Key` takes `<key>.<racer id>` when a mod has it, else the King's
+  (`talk.pulled_up.king`, `replies.king.*`, `street.king_out`, `chat.fact.rival_king`, `news.king_beaten/won.<id>.*`).
+- A mod's path or racer id without a namespace means its own, else the base game's (`Bosses.Qualify`/`Means`).
+
+Left for later: the street's `kingWeight` and the boss's car pick are the same for every boss; the AI talk's `{king}`
+placeholder keeps its name (yes for any boss). Not seen in game.
 
 ### E8: flow (2026-10-02, branch `feature/flow`)
 

@@ -91,15 +91,15 @@ namespace StreetCorsa.Services.Opponents
                 };
             }
 
-            // The King races for one thing, and he takes on anybody who has made it to his table
-            if (opponent.IsKing)
+            // A boss races for one thing, and he takes on anybody who has made it to his table
+            if (opponent.IsBoss)
             {
                 return isPinkSlip
-                    ? new ChallengeResponse { Accepted = true, Message = Reply("replies.king.pink_slips") }
+                    ? new ChallengeResponse { Accepted = true, Message = Reply(Bosses.Key("replies.king.pink_slips", opponent)) }
                     : new ChallengeResponse
                     {
                         Accepted = false,
-                        Message = Reply("replies.king.no_pink_slip"),
+                        Message = Reply(Bosses.Key("replies.king.no_pink_slip", opponent)),
                         DeclineReason = ChallengeDeclineReason.NotInterested
                     };
             }
@@ -132,8 +132,8 @@ namespace StreetCorsa.Services.Opponents
 
         public bool WouldStakePinkSlips(Opponent opponent, Car playerCar, Car opponentCar)
         {
-            // The King takes on anybody who has made it to his table
-            if (opponent.IsKing) return true;
+            // A boss takes on anybody who has made it to his table
+            if (opponent.IsBoss) return true;
 
             var playerCarDef = _catalogRepository.GetCar(playerCar.DefinitionId);
             var opponentCarDef = _catalogRepository.GetCar(opponentCar.DefinitionId);

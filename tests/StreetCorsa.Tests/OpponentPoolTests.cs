@@ -431,9 +431,36 @@ public class NewcomerTests
     {
         public List<Opponent> LoadAllOpponents() => opponents.Select(o => new Opponent(o.Name, o.Age, o.Gender, o.Skill, o.Aggression)
         {
-            DefinitionId = o.DefinitionId, IsKing = o.IsKing, PortraitPath = o.PortraitPath
+            DefinitionId = o.DefinitionId, IsBoss = o.IsBoss, BossPath = o.BossPath, BossRecord = o.BossRecord, PortraitPath = o.PortraitPath
         }).ToList();
 
+    }
+
+    [Fact]
+    public void A_boss_a_mod_adds_joins_a_game_under_way_out_of_sight_and_the_King_is_not_made_twice()
+    {
+        TestLogging.SilenceLogging();
+        var state = GameState.CreateNew("P");
+        var king = new Opponent("The King", 41, Gender.Male, 100, 65) { DefinitionId = "king", IsBoss = true, BossPath = "King", Status = RacerStatus.Inactive };
+        state.Racers.AddRacer(king);
+
+        var repo = new Definitions(
+            new Opponent("The King", 41, Gender.Male, 100, 65) { DefinitionId = "king", IsBoss = true, BossPath = "King" },
+            new Opponent("Big Jim", 50, Gender.Male, 99, 70)
+            {
+                DefinitionId = "mymod:big_jim", IsBoss = true, BossPath = "mymod:Mopar",
+                BossRecord = new BossRecord { Money = 15000m, Races = 10, Wins = 9 }
+            });
+        var init = new OpponentInitializationService(repo, new MemoryCatalog(), new MemoryProfiles());
+
+        init.EnsureBosses(state);
+        init.EnsureBosses(state); // once per game
+
+        Assert.Equal(2, state.Racers.All.Count());
+        var jim = Assert.IsType<Opponent>(state.Racers.Inactive["Big Jim"]);
+        Assert.Equal(15000m, jim.Money);
+        Assert.Equal((10, 9), (jim.Stats.Races, jim.Stats.Wins));
+        Assert.Equal(["King", "mymod:Mopar"], state.Career.Bosses.Select(b => b.Path).Order());
     }
 
     [Fact]
@@ -442,14 +469,14 @@ public class NewcomerTests
         TestLogging.SilenceLogging();
         var state = GameState.CreateNew("P");
         var old = new Opponent("Eddie", 30, Gender.Male, 92, 50) { DefinitionId = "drv_001", Status = RacerStatus.ReadyToRace };
-        var king = new Opponent("The King", 41, Gender.Male, 100, 65) { DefinitionId = "king", IsKing = true, Status = RacerStatus.Inactive };
+        var king = new Opponent("The King", 41, Gender.Male, 100, 65) { DefinitionId = "king", IsBoss = true, BossPath = "King", Status = RacerStatus.Inactive };
         state.Racers.AddRacer(old);
         state.Racers.AddRacer(king);
 
         var repo = new Definitions(
             new Opponent("Eddie", 30, Gender.Male, 92, 50) { DefinitionId = "drv_001" },
             new Opponent("Marcus", 43, Gender.Male, 91, 50) { DefinitionId = "drv_031", PortraitPath = "/Assets/Opponents/drv_031.png" },
-            new Opponent("The King", 41, Gender.Male, 100, 65) { DefinitionId = "king", IsKing = true, PortraitPath = "/Assets/Opponents/king.png" });
+            new Opponent("The King", 41, Gender.Male, 100, 65) { DefinitionId = "king", IsBoss = true, BossPath = "King", PortraitPath = "/Assets/Opponents/king.png" });
         var init = new OpponentInitializationService(repo, new MemoryCatalog(), new MemoryProfiles());
 
         init.EnsureNewcomers(state);

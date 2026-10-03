@@ -128,8 +128,8 @@ namespace StreetCorsa.Services.Career
         }
 
         /// <summary>
-        /// The figures the victories need from the whole game (how many racers, who has the most wins, the King's
-        /// name), put on the career where every victory reads them
+        /// The figures the victories need from the whole game (how many racers, who has the most wins, the bosses),
+        /// put on the career where every victory reads them
         /// </summary>
         public void RefreshStanding(GameState gameState)
         {
@@ -137,9 +137,7 @@ namespace StreetCorsa.Services.Career
             if (_getTotalOpponents != null) career.TotalOpponents = _getTotalOpponents(gameState);
             if (_playerHasMostWins != null) career.PlayerHasMostWins = _playerHasMostWins(gameState);
 
-            var racers = gameState.Racers;
-            career.KingName = racers.All
-                .OfType<Opponent>().FirstOrDefault(o => o.IsKing)?.Name ?? career.KingName;
+            Opponents.Bosses.Refresh(gameState);
         }
 
         /// <summary>
@@ -157,13 +155,13 @@ namespace StreetCorsa.Services.Career
         {
             var playerWins = gameState.Player.Stats.Wins;
 
-            // Every racer of the street, the King aside (his record is from before the season); those who left
+            // Every racer of the street, the bosses aside (his record is from before the season); those who left
             // town too, or the champion would be whoever is left the day the best of them is away
             return gameState.Racers.ReadyToRace.Values
                 .Concat(gameState.Racers.Inactive.Values)
                 .Concat(gameState.Racers.Retired.Values)
                 .Concat(gameState.Racers.Departed.Values)
-                .Where(racer => racer is not Opponent { IsKing: true })
+                .Where(racer => racer is not Opponent { IsBoss: true })
                 .All(racer => racer.Stats.Wins <= playerWins);
         }
     }

@@ -407,7 +407,7 @@ public class NewsWriterTests
         Assert.Null(NewsWriter.PlayerRace(Facts with { PlayerWon = true, CashWager = 100m }, random));
 
         Assert.Equal(60, NewsWriter.PlayerRace(Facts with { PlayerWon = true, PinkSlip = true }, random)!.Weight);
-        Assert.Equal(100, NewsWriter.PlayerRace(Facts with { PlayerWon = true, PinkSlip = true, RivalIsKing = true }, random)!.Weight);
+        Assert.Equal(100, NewsWriter.PlayerRace(Facts with { PlayerWon = true, PinkSlip = true, RivalIsBoss = true }, random)!.Weight);
         Assert.Equal(50, NewsWriter.PlayerRace(Facts with { Decided = false, PlayerEscaped = true }, random)!.Weight);
         Assert.Equal(35, NewsWriter.PlayerRace(Facts with { PlayerWon = true, RivalReputation = 60 }, random)!.Weight);
         Assert.Equal(30, NewsWriter.PlayerRace(Facts with { PlayerWon = false, CashWager = 2500m }, random)!.Weight);

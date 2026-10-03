@@ -740,7 +740,7 @@ public class AiTests
 
         // Painted once; the King never
         writer.NewFace(game, racer);
-        writer.NewFace(game, new Opponent("The King", 40, Gender.Male, 100, 50) { IsKing = true });
+        writer.NewFace(game, new Opponent("The King", 40, Gender.Male, 100, 50) { IsBoss = true, BossPath = "King" });
         await writer.WhenIdle();
         Assert.Equal(1, images.Painted);
     }

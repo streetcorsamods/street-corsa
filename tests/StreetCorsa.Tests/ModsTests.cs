@@ -226,6 +226,38 @@ public class ModContentTests : IDisposable
     }
 
     [Fact]
+    public void A_racer_with_a_boss_block_is_a_boss_of_his_mods_path_with_his_own_figures()
+    {
+        WriteBaseAndMod();
+        _temp.File("streetcorsa/racers/racers.json", """
+            { "opponents": [ { "opponentId": "king", "name": "The King", "age": 41, "gender": "Male", "skill": 100, "aggression": 65, "isKing": true } ] }
+            """);
+        _temp.File("mymod/racers/jim.json", """
+            { "opponentId": "big_jim", "name": "Big Jim", "age": 50, "gender": "Male", "skill": 99, "aggression": 70,
+              "boss": { "path": "Mopar", "money": 15000, "wins": "35" } }
+            """);
+        _temp.File("mymod/racers/free.json", """
+            { "opponentId": "free", "name": "Free", "age": 50, "gender": "Male", "skill": 99, "aggression": 70, "boss": {} }
+            """);
+
+        var racers = new OpponentRepository(Mods()).LoadAllOpponents();
+
+        var king = racers.Single(r => r.Name == "The King");
+        Assert.True(king.IsBoss);
+        Assert.Equal("King", king.BossPath);
+
+        var jim = racers.Single(r => r.Name == "Big Jim");
+        Assert.True(jim.IsBoss);
+        Assert.Equal("mymod:Mopar", jim.BossPath);
+        var figures = jim.BossRecord!.Over(new StreetCorsa.Rules.KingRules());
+        Assert.Equal(15000m, figures.Money);
+        Assert.Equal(35, figures.Wins);
+        Assert.Equal(52, figures.Races); // the rules' where he names none
+
+        Assert.Equal("", racers.Single(r => r.Name == "Free").BossPath); // out from the start
+    }
+
+    [Fact]
     public void A_mods_racers_get_its_namespace_and_the_base_games_keep_who_they_were()
     {
         WriteBaseAndMod();

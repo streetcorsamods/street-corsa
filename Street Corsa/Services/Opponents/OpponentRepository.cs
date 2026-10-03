@@ -18,6 +18,8 @@ namespace StreetCorsa.Services.Opponents
         private readonly ModSet _mods;
         private readonly IAppLogger _logger;
 
+        private static readonly JsonSerializerOptions BossOptions = new() { PropertyNameCaseInsensitive = true, NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString };
+
         public OpponentRepository() : this(ModSet.Installed)
         {
         }
@@ -120,9 +122,18 @@ namespace StreetCorsa.Services.Opponents
                     opponent.Location = locationElement.GetString();
                 }
 
-                if (json.TryGetProperty("isKing", out var kingElement) && kingElement.ValueKind == JsonValueKind.True)
+                // A boss: "boss": { "path": ..., his own figures }; "isKing": true, as before bosses, is the King path's
+                if (json.TryGetProperty("boss", out var bossElement) && bossElement.ValueKind == JsonValueKind.Object)
                 {
-                    opponent.IsKing = true;
+                    var record = bossElement.Deserialize<BossRecord>(BossOptions) ?? new BossRecord();
+                    opponent.IsBoss = true;
+                    opponent.BossRecord = record;
+                    opponent.BossPath = Bosses.Qualify(entry.Mod.Id, record.Path);
+                }
+                else if (json.TryGetProperty("isKing", out var kingElement) && kingElement.ValueKind == JsonValueKind.True)
+                {
+                    opponent.IsBoss = true;
+                    opponent.BossPath = Bosses.KingPathId;
                 }
 
                 if (json.TryGetProperty("biography", out var biographyElement))

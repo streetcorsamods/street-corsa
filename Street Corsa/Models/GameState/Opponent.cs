@@ -19,8 +19,21 @@ namespace StreetCorsa.Models.GameState
         public string DefinitionId { get; set; } = string.Empty;
 
         /// <summary>
-        /// The boss at the top of the ladder (the "King" victory path): he only races for pink
-        /// slips, only once the player has earned the right, and never in the races nobody watches
+        /// A boss, at the top of a victory path (the base game's is the King): only races for pink slips, only once
+        /// the player has opened his path, and never in the races nobody watches
+        /// </summary>
+        public bool IsBoss { get; set; }
+
+        /// <summary>The id of the victory path that ends at this boss; empty: he is out from the start</summary>
+        public string BossPath { get; set; } = string.Empty;
+
+        /// <summary>A boss's own figures from the racers' data, for when he joins a game; not saved</summary>
+        [LiteDB.BsonIgnore]
+        public BossRecord? BossRecord { get; set; }
+
+        /// <summary>
+        /// Saves from before bosses: the King. Read once into <see cref="IsBoss"/> and <see cref="BossPath"/>
+        /// (<c>Bosses.BringUpToDate</c>) and false from then on.
         /// </summary>
         public bool IsKing { get; set; }
 
@@ -145,5 +158,35 @@ namespace StreetCorsa.Models.GameState
         Male,
         Female,
         Other
+    }
+
+    /// <summary>
+    /// A boss's own figures as the racers' data has them (<c>"boss": { ... }</c>); what one leaves out is the rules'
+    /// (<c>rivals.king</c>)
+    /// </summary>
+    public sealed class BossRecord
+    {
+        /// <summary>The victory path that ends at him</summary>
+        public string? Path { get; set; }
+
+        public decimal? Money { get; set; }
+
+        public int? CarChoices { get; set; }
+
+        public int? Races { get; set; }
+
+        public int? Wins { get; set; }
+
+        public int? PinkSlipsWon { get; set; }
+
+        /// <summary>These figures over <paramref name="rules"/></summary>
+        public StreetCorsa.Rules.KingRules Over(StreetCorsa.Rules.KingRules rules) => new()
+        {
+            Money = Money ?? rules.Money,
+            CarChoices = CarChoices ?? rules.CarChoices,
+            Races = Races ?? rules.Races,
+            Wins = Wins ?? rules.Wins,
+            PinkSlipsWon = PinkSlipsWon ?? rules.PinkSlipsWon
+        };
     }
 }
