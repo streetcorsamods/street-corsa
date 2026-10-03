@@ -185,6 +185,22 @@ public class DealerRosterTests
 
         Assert.Equal("fine", market.TradeInLocation(dealers));
     }
+
+    [Fact]
+    public void A_lot_of_one_kind_of_car_takes_only_its_kind_in_trade()
+    {
+        var cars = new MemoryCatalog();
+        cars.UpsertCar(new CarDefinition { Id = "chevy", Name = "Chevy", Brand = "Chevrolet" });
+        cars.UpsertCar(new CarDefinition { Id = "fiat", Name = "Fiat", Brand = "Fiat" });
+        var catalog = new FakeDealers(
+            new DealerDefinition { Id = "imports", ConditionCenter = 0.2f, Cars = new StreetCorsa.Models.Career.Filters.BrandFilter("Fiat") },
+            new DealerDefinition { Id = "rough", ConditionCenter = 0.4f });
+        var market = new UsedCarMarketService(cars, new MemoryProfiles(), null, catalog);
+        List<DealerLocation> dealers = [new() { Id = "imports" }, new() { Id = "rough" }];
+
+        Assert.Equal("rough", market.TradeInLocation(dealers, new Car("chevy")));
+        Assert.Equal("imports", market.TradeInLocation(dealers, new Car("fiat")));
+    }
 }
 
 public class DealerLifeTests
@@ -563,5 +579,26 @@ public class DealerMapTests : IDisposable
         Assert.Equal(_temp.Combine("mymod", "dealers", "valley.png"), dealers.Map.ImagePath);
         Assert.Equal(0.5, dealers.Map.Anchor.Width, 6);
         Assert.Equal(["downtown"], dealers.All.Select(d => d.Id)); // a map is no dealer
+    }
+
+    [Fact]
+    public void A_lots_kind_of_car_that_does_not_read_is_told_and_the_lot_deals_in_any()
+    {
+        _temp.File("streetcorsa/mod.json", "{}");
+        _temp.File("streetcorsa/dealers/dealers.json", """
+            { "dealers": [
+              { "id": "imports", "name": "Imports", "cars": { "type": "origin", "origin": "European" } },
+              { "id": "worded", "name": "Worded", "cars": "European" },
+              { "id": "unknown", "name": "Unknown", "cars": { "type": "country" } } ] }
+            """);
+
+        var dealers = new DealerCatalog(ModSet.Load(_temp.Path));
+
+        Assert.Equal(["imports", "worded", "unknown"], dealers.All.Select(d => d.Id));
+        Assert.Equal("European", Assert.IsType<StreetCorsa.Models.Career.Filters.OriginFilter>(dealers.Get("imports")!.Cars).Origin);
+        Assert.Null(dealers.Get("worded")!.Cars);
+        Assert.Null(dealers.Get("unknown")!.Cars);
+        Assert.Contains(ModProblems.All, p => p.Contains("dealer worded: \"cars\" is no car filter"));
+        Assert.Contains(ModProblems.All, p => p.Contains("dealer unknown: \"cars\" is no car filter"));
     }
 }

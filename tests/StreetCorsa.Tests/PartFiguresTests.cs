@@ -25,8 +25,15 @@ public sealed class PartFiguresTests : IDisposable
                        { "id": 16, "takes": [ "t:turbo" ] }, { "id": 17, "takes": [ "t:blower" ] } ],
             "figures": { "cylinders": 4, "bore": 86, "stroke": 86, "compression": 9.5, "rev_limit": 6500, "max_rpm": 7000,
                          "idle_rpm": 850, "inertia": 0.12 } },
-          { "id": "engines/data/head", "name": "head", "class_chain": [ "CylinderHead" ], "slots": [ { "id": 1, "fits": [ "t:head" ] } ],
+          { "id": "engines/data/plain_block", "name": "block of no figures", "class_chain": [ "Block" ], "mass": 110,
+            "slots": [ { "id": 10, "takes": [ "t:head" ] }, { "id": 11, "takes": [ "t:cam" ] }, { "id": 12, "takes": [ "t:carb" ] },
+                       { "id": 18, "takes": [ "t:crank" ] } ] },
+          { "id": "engines/data/crank", "name": "crank and pistons", "slots": [ { "id": 1, "fits": [ "t:crank" ] } ],
+            "figures": { "cylinders": 4, "bore": 80, "stroke": 80, "compression": 9, "rev_limit": 6000 } },
+          { "id": "engines/data/head", "name": "head", "class_chain": [ "CylinderHead" ], "slots": [ { "id": 1, "fits": [ "t:head" ] }, { "id": 2, "takes": [ "t:headfeed" ] } ],
             "figures": { "intake_flow": 0.8, "exhaust_flow": 0.35 } },
+          { "id": "engines/data/head_feed", "name": "injection on the head", "slots": [ { "id": 1, "fits": [ "t:headfeed" ] } ],
+            "figures": { "fuel_flow": 45 } },
           { "id": "engines/data/cam", "name": "cam", "class_chain": [ "Camshaft" ], "slots": [ { "id": 1, "fits": [ "t:cam" ] } ],
             "figures": { "intake_duration": 240, "exhaust_duration": 240, "spark_advance": 32, "spark_advance_high": 22 } },
           { "id": "engines/data/carb", "name": "carb", "slots": [ { "id": 1, "fits": [ "t:carb" ] } ],
@@ -225,6 +232,70 @@ public sealed class PartFiguresTests : IDisposable
             crank.Figures = block.Figures = null;
             crank.ReadFigures = block.ReadFigures = null;
         }
+    }
+
+    [Fact]
+    public void The_part_furthest_out_from_the_block_wins_whatever_slot_its_branch_is_on()
+    {
+        // The injection is on the head (block slot 10), the carburettor straight on the block (slot 12): the injection wins
+        var report = Evaluate(Catalog(), [.. Bare, "engines/data/head_feed"]);
+
+        Assert.Equal(0.045, report.Inputs!.MaxFuelFlow, 9);
+    }
+
+    [Fact]
+    public void A_block_with_no_script_and_no_figures_of_its_own_is_made_of_its_parts_figures()
+    {
+        var report = Evaluate(Catalog(), "engines/data/plain_block", "engines/data/head", "engines/data/cam", "engines/data/carb", "engines/data/crank");
+
+        Assert.True(report.Runs, report.Problem);
+        Assert.True(report.FromFigures);
+        Assert.Equal(6000, report.LimiterRpm);
+    }
+
+    [Fact]
+    public void A_rev_range_past_any_engine_is_said_not_left_without_a_reason()
+    {
+        var catalog = Catalog();
+        var block = catalog.Get("engines/data/block")!;
+        var problems = new List<string>();
+        block.Figures = JsonConvert.DeserializeObject<PartDefinition>("""
+            { "figures": { "cylinders": 4, "bore": 86, "stroke": 86, "compression": 9.5, "rev_limit": 26000 } }
+            """)!.Figures;
+        block.ReadFigures = PartFigures.Read(block, problems);
+        Assert.Empty(problems);
+
+        var report = Evaluate(catalog, Bare);
+
+        Assert.False(report.Runs);
+        Assert.Contains("32500 rpm", report.Problem);
+    }
+
+    [Theory]
+    [InlineData("rev_limit", 0)]
+    [InlineData("max_rpm", 40000)]
+    public void An_engine_speed_of_none_or_past_any_engine_is_told_and_left_out(string figure, double rpm)
+    {
+        var part = JsonConvert.DeserializeObject<PartDefinition>($$"""{ "id": "engines/data/bad", "figures": { "{{figure}}": {{rpm}} } }""")!;
+        var problems = new List<string>();
+
+        Assert.Null(PartFigures.Read(part, problems));
+        Assert.Contains("is no engine speed", Assert.Single(problems));
+    }
+
+    [Fact]
+    public void A_gearbox_of_figures_that_says_nothing_of_the_differential_leaves_the_cars_own()
+    {
+        var report = Evaluate(Catalog(), Bare);
+        Assert.Null(report.DiffLock);
+
+        _temp.File("car/engine.ini", "[HEADER]\nVERSION=1\nPOWER_CURVE=power.lut\n[ENGINE_DATA]\nINERTIA=0.120\nLIMITER=6500\nMINIMUM=900\n");
+        _temp.File("car/drivetrain.ini", "[TRACTION]\nTYPE=RWD\n[GEARS]\nCOUNT=4\nGEAR_R=-3.000\nGEAR_1=3.000\nGEAR_2=2.000\nGEAR_3=1.400\nGEAR_4=1.000\nFINAL=4.100\n[DIFFERENTIAL]\nPOWER=0.45\nCOAST=0.30\n[CLUTCH]\nMAX_TORQUE=250\n");
+        var drivetrain = new IniText(AcEngineData.Generate(report, AcCarDataReader.ForFolder(_temp.Combine("car")))["drivetrain.ini"]);
+
+        Assert.Equal("5", drivetrain.Get("GEARS", "COUNT"));
+        Assert.Equal("0.45", drivetrain.Get("DIFFERENTIAL", "POWER"));
+        Assert.Equal("0.30", drivetrain.Get("DIFFERENTIAL", "COAST"));
     }
 
     [Fact]

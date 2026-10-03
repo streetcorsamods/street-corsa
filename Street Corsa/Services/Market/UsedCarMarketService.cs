@@ -203,11 +203,17 @@ namespace StreetCorsa.Services.Market
 
             // A lot that deals in one kind of car (imports) takes its price band of the cars of that kind, the share of
             // them it is dearer than; none of that kind installed, it deals in any
-            if (definition?.Cars is { } kind)
+            // A model is weighed at its price new and its spec sheet; each car drawn, at what the lot asks for it
+            var kind = definition?.Cars;
+            if (kind != null)
             {
-                var ofKind = pool.Where(e => kind.Matches(e.Car)).ToList();
+                var ofKind = pool.Where(e => kind.MatchesOffer(e.Car, null, e.Profile.BasePrice, null)).ToList();
                 if (ofKind.Count > 0) pool = Ranked(ofKind);
-                else _logger.Warning("{Dealer} deals in {Kind} and no installed car is one; it takes any", dealer.Name, kind.DisplayDescription);
+                else
+                {
+                    _logger.Warning("{Dealer} deals in {Kind} and no installed car is one; it takes any", dealer.Name, kind.DisplayDescription);
+                    kind = null;
+                }
             }
 
             var candidates = definition == null
@@ -246,9 +252,12 @@ namespace StreetCorsa.Services.Market
                 var entry = candidates[index];
                 used.TryGetValue(entry.Car.Id, out var already);
                 if (already >= MaxSameModelPerDealer) continue;
-                used[entry.Car.Id] = already + 1;
 
-                listings.Add(CreateListing(entry.Car, entry.Profile, dealer, currentDate));
+                var listing = CreateListing(entry.Car, entry.Profile, dealer, currentDate);
+                if (kind != null && !kind.MatchesOffer(entry.Car, null, listing.Price, listing.PowerHp)) continue;
+
+                used[entry.Car.Id] = already + 1;
+                listings.Add(listing);
             }
 
             return listings;
@@ -443,17 +452,22 @@ namespace StreetCorsa.Services.Market
 
         private static string TradeInFallbackId => Rules.RuleBook.Current.Market.TradeInDealer;
 
-        public string TradeInLocation(IReadOnlyList<DealerLocation>? dealers)
+        public string TradeInLocation(IReadOnlyList<DealerLocation>? dealers, Car? car = null)
         {
             // Only a lot that is open takes a car in: not one selling off its stock, closed, or not open yet
             var all = dealers is { Count: > 0 } ? dealers : GetDefaultDealers();
             var open = DealerRoster.Restocking(all);
             var known = open.Count > 0 ? open : all;
 
+            // A lot that deals in one kind of car takes only its kind in
+            var model = car == null ? null : _catalogRepo.GetCar(car.DefinitionId);
+            bool Takes(DealerDefinition definition) =>
+                definition.Cars is not { } kind || (model != null && kind.MatchesOffer(model, car, ValueOf(car!), car!.PowerHp));
+
             // The lot that keeps the roughest stock takes the cars nobody asked about: the trade-ins
             var roughest = known
                 .Select(d => (Location: d, Definition: _dealerCatalog?.Get(d.Id)))
-                .Where(d => d.Definition != null)
+                .Where(d => d.Definition != null && Takes(d.Definition))
                 .OrderBy(d => d.Definition!.ConditionCenter)
                 .Select(d => d.Location)
                 .FirstOrDefault();

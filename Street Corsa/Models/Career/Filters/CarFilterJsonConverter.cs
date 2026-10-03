@@ -20,11 +20,13 @@ namespace StreetCorsa.Models.Career.Filters
             return Read(document.RootElement);
         }
 
-        /// <summary>A filter from its JSON; null for what is no object</summary>
-        /// <exception cref="JsonException">The type is none of the filters</exception>
+        /// <summary>A filter from its JSON; null for none (<c>null</c>)</summary>
+        /// <exception cref="JsonException">It is no object, or its type is none of the filters</exception>
         public static ICarFilter? Read(JsonElement element)
         {
-            if (element.ValueKind != JsonValueKind.Object) return null;
+            if (element.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined) return null;
+            if (element.ValueKind != JsonValueKind.Object)
+                throw new JsonException($"{element.GetRawText()} is no filter: write one as {{ \"type\": \"origin\", \"origin\": \"European\" }}");
 
             var type = ModJson.Text(element, "type")?.ToLowerInvariant();
             return type switch

@@ -148,6 +148,8 @@ public class EngineLayoutTests
     [InlineData("sideways", null)]
     [InlineData("1", null)]
     [InlineData("", null)]
+    [InlineData("mid, rear", null)]
+    [InlineData("front, mid", null)]
     public void A_layout_is_read_by_its_name(string name, EngineLayout? expected)
     {
         Assert.Equal(expected, EngineLayouts.Parse(name));

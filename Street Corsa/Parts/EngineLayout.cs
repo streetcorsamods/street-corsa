@@ -65,8 +65,17 @@ public static class EngineLayouts
     };
 
     /// <summary>A layout by its name in content (<see cref="Name"/>), case and underscores aside; null for none</summary>
-    public static EngineLayout? Parse(string? name) =>
-        name is { Length: > 0 } && !name.Any(char.IsDigit) && Enum.TryParse<EngineLayout>(name.Replace("_", ""), ignoreCase: true, out var layout) && Enum.IsDefined(layout)
-            ? layout
-            : null;
+    /// <remarks>Matched by name, not by <see cref="Enum.TryParse(Type, string?, bool, out object?)"/>, which takes numbers and "mid, rear" (two OR'd into a third)</remarks>
+    public static EngineLayout? Parse(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return null;
+
+        var plain = name.Trim().Replace("_", "");
+        foreach (var layout in Enum.GetValues<EngineLayout>())
+        {
+            if (string.Equals(layout.ToString(), plain, StringComparison.OrdinalIgnoreCase)) return layout;
+        }
+
+        return null;
+    }
 }

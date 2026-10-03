@@ -98,8 +98,15 @@ namespace StreetCorsa.Models.GameState
         /// The kind of car the lot deals in, a car filter as an event's entry requirements are written (an import lot:
         /// <c>{ "type": "origin", "origin": "European" }</c>); null, any. Its price band is of the cars of that kind.
         /// </summary>
-        [System.Text.Json.Serialization.JsonConverter(typeof(Career.Filters.CarFilterJsonConverter))]
+        [System.Text.Json.Serialization.JsonIgnore]
         public Career.Filters.ICarFilter? Cars { get; set; }
+
+        /// <summary>
+        /// <see cref="Cars"/> as the mod wrote it, read by the dealer catalog: one that does not read is told, and the
+        /// lot deals in any car
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("cars")]
+        public System.Text.Json.JsonElement? CarsJson { get; set; }
 
         /// <summary>Hours of game time it takes to get here from the garage and back</summary>
         public float TravelHours { get; set; } = 1f;

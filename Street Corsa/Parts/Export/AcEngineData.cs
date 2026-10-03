@@ -57,7 +57,7 @@ public static class AcEngineData
 
     private const double LutStep = 250;
     private const int MaxTurbos = 8;
-    private const int MaxGears = 10;
+    private const int MaxGears = PartFigures.MaxGears;
 
     // A downshift point this far below where the widest upshift lands keeps the gearbox from hunting
     private const double DownshiftMargin = 0.9;
@@ -188,8 +188,11 @@ public static class AcEngineData
 
             if (report.FinalRatio > 0) ini.Set("GEARS", "FINAL", report.FinalRatio, "0.000");
 
-            ini.Set("DIFFERENTIAL", "POWER", Math.Clamp(report.DiffLock, 0, 1), "0.00");
-            ini.Set("DIFFERENTIAL", "COAST", Math.Clamp(report.DiffLock, 0, 1) * 0.75, "0.00");
+            if (report.DiffLock is { } diffLock)
+            {
+                ini.Set("DIFFERENTIAL", "POWER", Math.Clamp(diffLock, 0, 1), "0.00");
+                ini.Set("DIFFERENTIAL", "COAST", Math.Clamp(diffLock, 0, 1) * 0.75, "0.00");
+            }
         }
 
         // The clutch of the build holds what its clamp is good for: a stock clutch behind a built engine slips.

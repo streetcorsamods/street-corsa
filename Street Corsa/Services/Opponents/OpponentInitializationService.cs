@@ -369,7 +369,7 @@ namespace StreetCorsa.Services.Opponents
             }
 
             // A random car, of the kind the racer drives when the install has one
-            var liked = opponent.Drives is { } kind ? pool.Where(c => kind.Matches(c.Car)).ToList() : [];
+            var liked = opponent.Drives is { } kind ? pool.Where(c => kind.MatchesOffer(c.Car, null, c.Profile.BasePrice, null)).ToList() : [];
             if (liked.Count > 0) pool = liked;
             var (carDefinition, profile) = pool[_random.Next(pool.Count)];
 

@@ -2,7 +2,10 @@ using StreetCorsa.Parts.Export;
 
 namespace StreetCorsa.Audio;
 
-/// <summary>What a car's engine is, for starting it up and revving it where it stands</summary>
+/// <summary>
+/// What a car's engine is, for starting it up and revving it where it stands; <c>Layout</c> is where the car carries
+/// it, which way the body rocks as it revs
+/// </summary>
 public sealed record EngineSpec(
     string Name,
     double IdleRpm,
@@ -12,7 +15,8 @@ public sealed record EngineSpec(
     Func<double, double> TorqueAt,
     double PeakTorque,
     CarSound? Sound,
-    string? Problem)
+    string? Problem,
+    StreetCorsa.Parts.EngineLayout Layout = StreetCorsa.Parts.EngineLayout.Front)
 {
     /// <summary>The engine turns over but will not fire</summary>
     public bool Runs => Problem == null;

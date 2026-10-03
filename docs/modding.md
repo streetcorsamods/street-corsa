@@ -332,15 +332,17 @@ the gearing from the transmission (`gears`, `ratio`: element 0 unused, the last 
 ```
 
 **An engine of figures.** A part needs no SLRR script to work in an engine: `"figures"` gives its engine figures in
-plain metric units. An engine whose block has no script (no `source_script`) is made of its parts' figures alone; on
+plain metric units. An engine whose block has no script (no `source_script`) is made of its parts' figures alone, whichever of its
+parts give them (the block may give none); on
 an engine of SLRR scripts, the figures go over what the scripts worked out before the dyno runs, so a part of figures
 (a turbo, a five-speed) also goes on a source-game engine. Either way the game's own dyno makes the curve from them,
 so tuning works the same: a bigger cam, a header or a second carburettor changes the figures, and the dyno the power.
 
 A number puts the part's own figure; `{ "add": n }` adds to the engine's and `{ "times": n }` multiplies it. Of the
-same figure, the parts' numbers go first (the part furthest out from the block wins, parts side by side by the slot
-they are on), then what is added, then what multiplies: a head gives `"exhaust_flow": 0.35` and a header
-`"exhaust_flow": { "times": 1.15 }`.
+same figure, the parts' numbers go first (the part furthest out from the block wins, whatever slot its branch is on;
+parts as far out as each other by the slot they are on), then what is added, then what multiplies: a head gives
+`"exhaust_flow": 0.35` and a header `"exhaust_flow": { "times": 1.15 }`. An engine the dyno cannot run (a rev range
+of none, or past 30000 rpm) says why.
 
 | Figure | Unit | What it is |
 |---|---|---|
@@ -356,14 +358,14 @@ they are on), then what is added, then what multiplies: a head gives `"exhaust_f
 | `mixture_ratio` | air to fuel by mass | 12.5 |
 | `mixture_heat` | MJ per kg of mixture | 1.70 at 12.5:1 |
 | `fuel_flow`, `air_flow` | g/s | the most the fuel system delivers, the most the air cleaner and intake pass; an engine of figures needs a `fuel_flow` |
-| `rev_limit`, `max_rpm` | rpm | where the ignition cuts, and what the weakest rotating part survives (the curve goes that far) |
+| `rev_limit`, `max_rpm` | rpm | where the ignition cuts, and what the weakest rotating part survives (the curve goes that far; a quarter past `rev_limit` when no part gives it); above 0, up to 30000 |
 | `idle_rpm` | rpm | |
 | `inertia` | kg m2 | the engine spinning, flywheel and all, as Assetto Corsa takes it |
 | `friction` | times a stock bottom end's | engine braking |
 | `clutch_torque` | Nm | what the clutch holds |
 | `gears` | a list of ratios | the forward gears, first gear first, 1 to 10 of them (numbers only) |
 | `reverse`, `final_drive` | ratio | |
-| `diff_lock` | 0 to 1 | the limited slip's lock |
+| `diff_lock` | 0 to 1 | the limited slip's lock; with a gearbox of figures and no part giving it, the car keeps its own differential |
 | `turbo` | `{ "boost": bar, "spool_rpm": rpm, "full_boost_rpm": rpm, "lag_up": 0.992, "lag_down": 0.985 }` | a turbo, or a list of them; boost builds from `spool_rpm` (0 when left out) to all of it at `full_boost_rpm`, then holds; the lags are Assetto Corsa's (closer to 1, slower) |
 | `blower` | `{ "boost": bar, "spool_rpm": rpm, "full_boost_rpm": rpm }` | a crank-driven charger: no lag, its boost stays in the power curve |
 | `lag_up`, `lag_down` | 0 to 1 | the lag of an SLRR turbo's script, on any part of its engine |
@@ -521,7 +523,9 @@ room for another lot (about 60% of all the dealers are open at a time, and now a
 
 `"cars"` is the kind of car the lot deals in, a car filter written as an event's entry requirements (an import lot:
 `{ "type": "origin", "origin": "European" }`); its price band is then of the cars of that kind, and with none of
-that kind installed it deals in any. Left out: any car.
+that kind installed it deals in any. Left out: any car. A `value` filter weighs each car at what the lot asks for it,
+a `power` filter at the power it is quoted at. Trade-ins go only to a lot that deals in their kind. A filter that
+does not read is told, and the lot deals in any car.
 
 A dealer's `salesman` is who the player talks to on the lot, when their AI is on: `{ "name": "Cal Whitaker", "age": 45,
 "sex": "man", "temperament": "jive_talker", "portrait": "salesmen/downtown_motors.png" }`. The temperament is a key of
@@ -577,7 +581,8 @@ A list under `opponents`, or one racer per file (its id as `opponentId` or `id`)
 `portraitPath` is next to the file. `skill` is 90 to 100. New racers join games already under way. `"cars"` is the
 kind of car the racer drives, a car filter as an event's entry requirements (`{ "type": "origin", "origin":
 "European" }`): he starts with one, and buys one, when there is one to be had (with none for sale, one without a car
-takes what he can get). A filter that does not read is told, and he drives any car.
+of his kind that runs takes what he can get). A car for sale is weighed at what it is offered for and the power it
+is quoted at. A filter that does not read is told, and he drives any car.
 
 **A racer's own lines.** Any racer says lines of his own where a mod adds a pool's key with his racer id after it
 (`talk.pulled_up.gino`, `talk.pulled_up.aggressive.gino`, `replies.accept.gino`, `replies.decline.gino`,

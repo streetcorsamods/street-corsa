@@ -22,7 +22,7 @@ internal sealed class FakeMarket(decimal value, List<DealerLocation>? dealers = 
     public List<(Car Car, decimal Price, string Location)> Listed { get; } = [];
 
     public decimal ValueOf(Car car) => Value;
-    public string TradeInLocation(IReadOnlyList<DealerLocation>? known) => "industrial_motors";
+    public string TradeInLocation(IReadOnlyList<DealerLocation>? known, Car? car = null) => "industrial_motors";
     public List<DealerLocation> GetDefaultDealers() => dealers ?? [];
 
     public UsedCarListing ListCar(Car car, decimal price, string location, DateTime listedDate, bool describeEngine = true)

@@ -804,15 +804,15 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
 
     /// <summary>
     /// The car's engine faces backwards (a rear engine): its crankshaft turns the other way under the body, so the
-    /// body leans the other way as it revs
+    /// body leans the other way as it revs. Where the running engine's car carries it, unless the viewport knows better.
     /// </summary>
-    protected virtual bool EngineTurnedRound => false;
+    protected virtual bool EngineTurnedRound => RunningEngine?.Spec?.Layout == StreetCorsa.Parts.EngineLayout.Rear;
 
     /// <summary>
     /// The car's engine lies across it: its crankshaft turns under the body from side to side, so as it revs the body
     /// pitches where a lengthwise engine rolls it
     /// </summary>
-    protected virtual bool EngineAcross => false;
+    protected virtual bool EngineAcross => RunningEngine?.Spec?.Layout is { } layout && StreetCorsa.Parts.EngineLayouts.IsTransverse(layout);
 
     /// <summary>
     /// Rocks <paramref name="carNode"/> the way the running engine has it, and any bump with it; null, or an engine at

@@ -40,7 +40,6 @@ public static class PartFigures
 
     private const double CycleDegrees = 720;
     private const double MaxBoost = 5;
-    private const double MaxRpm = 30_000;
     private const int MaxCylinders = 32;
 
     /// <summary>
@@ -78,8 +77,8 @@ public static class PartFigures
         new("chamber", i => i.ClearanceVolume * 1e6, (i, v) => i with { ClearanceVolume = v / 1e6 }),
         new("intake_flow", i => i.IntakeMax, (i, v) => i with { IntakeMax = v }),
         new("exhaust_flow", i => i.ExhaustMax, (i, v) => i with { ExhaustMax = v }),
-        new("intake_duration", i => Span(i.IntakeOpen, i.IntakeClose) * CycleDegrees, (i, v) => i with { IntakeClose = Wrap(i.IntakeOpen + v / CycleDegrees) }),
-        new("exhaust_duration", i => Span(i.ExhaustOpen, i.ExhaustClose) * CycleDegrees, (i, v) => i with { ExhaustClose = Wrap(i.ExhaustOpen + v / CycleDegrees) }),
+        new("intake_duration", i => EngineDyno.Span(i.IntakeOpen, i.IntakeClose) * CycleDegrees, (i, v) => i with { IntakeClose = Wrap(i.IntakeOpen + v / CycleDegrees) }),
+        new("exhaust_duration", i => EngineDyno.Span(i.ExhaustOpen, i.ExhaustClose) * CycleDegrees, (i, v) => i with { ExhaustClose = Wrap(i.ExhaustOpen + v / CycleDegrees) }),
         new("spark_advance", i => (0.5 - i.SparkMin) * CycleDegrees, (i, v) =>
         {
             var high = i.SparkMin + i.SparkInc;
@@ -97,7 +96,7 @@ public static class PartFigures
         new("air_flow", i => i.MaxAirFlow * 1000, (i, v) => i with { MaxAirFlow = v / 1000 }),
         new("rev_limit", i => i.RpmLimit, (i, v) => i with { RpmLimit = v }),
         new("max_rpm", i => i.MaxRpm, (i, v) => i with { MaxRpm = v }),
-        new("compression", Compression, (i, v) => i with { ClearanceVolume = v > 1 ? CylinderVolume(i) / (v - 1) : 0 })
+        new("compression", EngineDyno.Compression, (i, v) => i with { ClearanceVolume = v > 1 ? EngineDyno.CylinderVolume(i) / (v - 1) : 0 })
     };
 
     /// <summary>Figures of the engine as a whole, which the evaluator puts on its report (<see cref="ApplyEngine"/>)</summary>
@@ -154,18 +153,22 @@ public static class PartFigures
         return numbers.Count == 0 && gears == null && chargers.Count == 0 ? null : new PartFigureSet { Numbers = numbers, Gears = gears, Chargers = chargers };
     }
 
-    /// <summary>The figure sets of an assembly in the order their numbers go on: a part before what is on it, sibling parts by their slot</summary>
+    /// <summary>
+    /// The figure sets of an assembly in the order their numbers go on: level by level out from the block, so a part
+    /// further out always comes after (and wins over) one nearer the block; on one level, by the order of the parts
+    /// they are on, then by their slot
+    /// </summary>
     public static IReadOnlyList<PartFigureSet> Of(InstalledPart root)
     {
         var sets = new List<PartFigureSet>();
-        Walk(root);
-        return sets;
-
-        void Walk(InstalledPart part)
+        var level = new List<InstalledPart> { root };
+        while (level.Count > 0)
         {
-            if (part.Definition.ReadFigures is { } set) sets.Add(set);
-            foreach (var (_, child) in part.Children.OrderBy(c => c.Key)) Walk(child);
+            sets.AddRange(level.Select(p => p.Definition.ReadFigures).OfType<PartFigureSet>());
+            level = level.SelectMany(p => p.Children.OrderBy(c => c.Key).Select(c => c.Value)).ToList();
         }
+
+        return sets;
     }
 
     /// <summary>The dyno's inputs with the parts' figures on them; the very same inputs when no part has any</summary>
@@ -188,7 +191,7 @@ public static class PartFigures
     /// </summary>
     public static double? ApplyEngine(IReadOnlyList<PartFigureSet> sets, string name, double current) => Combine(sets, name, current);
 
-    /// <summary>The gears the parts give, the last part out from the block's; null when none gives any</summary>
+    /// <summary>The gears the parts give, the part's furthest out from the block (the last of <see cref="Of"/>); null when none gives any</summary>
     public static IReadOnlyList<double>? GearsOf(IReadOnlyList<PartFigureSet> sets) => sets.LastOrDefault(s => s.Gears != null)?.Gears;
 
     /// <summary>What an engine of figures lacks to run, in words; null when it has what it needs</summary>
@@ -201,11 +204,6 @@ public static class PartFigures
         if (inputs.MaxFuelFlow <= 0) return "nothing feeds the engine: there is no carburettor or injection on the intake.";
         return null;
     }
-
-    public static double CylinderVolume(DynoInputs inputs) => Math.PI / 4 * inputs.Bore * inputs.Bore * inputs.Stroke;
-
-    private static double Compression(DynoInputs inputs) =>
-        inputs.ClearanceVolume > 0 ? (CylinderVolume(inputs) + inputs.ClearanceVolume) / inputs.ClearanceVolume : 0;
 
     private static double? Combine(IReadOnlyList<PartFigureSet> sets, string name, double current)
     {
@@ -269,7 +267,13 @@ public static class PartFigures
                 return null;
             }
 
-            if (name == "compression" && value <= 1.5)
+            if (name is "rev_limit" or "max_rpm" && value is <= 0 or > EngineDyno.MaxRpm)
+            {
+                problems.Add($"{label}: {Text(value)} rpm is no engine speed (above 0, up to {Text(EngineDyno.MaxRpm)}); left out");
+                return null;
+            }
+
+            if (name == "compression" && value <= EngineDyno.MinCompression)
             {
                 problems.Add($"{label}: a compression of {Text(value)}:1 is none; left out");
                 return null;
@@ -319,7 +323,7 @@ public static class PartFigures
 
         var boost = Read("boost");
         var full = Read("full_boost_rpm");
-        if (boost is not (> 0 and <= MaxBoost) || full is not (> 0 and <= MaxRpm))
+        if (boost is not (> 0 and <= MaxBoost) || full is not (> 0 and <= EngineDyno.MaxRpm))
         {
             problems.Add($"{label}: a charger needs its \"boost\" (bar, up to {Text(MaxBoost)}) and its \"full_boost_rpm\"; left out");
             return null;
@@ -356,12 +360,6 @@ public static class PartFigures
 
         problems.Add($"{label}: {token} is not a finite number; left out");
         return null;
-    }
-
-    private static double Span(double open, double close)
-    {
-        var span = close - open;
-        return span < 0 ? span + 1 : span;
     }
 
     private static double Wrap(double fraction) => fraction - Math.Floor(fraction);

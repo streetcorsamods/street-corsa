@@ -227,6 +227,19 @@ the Abarth 595 SS (rear), the Alfa Romeo GTA, the Ford Escort RS1600 (front) and
   `ExampleModTests` loads the mod over the base game through every loader (parts, cars, sounds, formats, events, racers,
   dealers, shops, text) and runs its engines.
 
+Review fixes (E11 and E12): `RacerWords.OwnSuffixes` (moved from `Bosses`, `Bosses.Key` gone) guards a racer with no
+id (an old save); the grudge, bought-your-car and rivals' race lines are a racer's own too (the loser's for the
+rivals'). Figures go on level by level out from the block (`PartFigures.Of`), so the part furthest out wins as the
+guide says; a block with no script is an engine of figures whatever gives them; an engine the dyno will not run says
+why (`EngineDyno.Unrunnable`, which with `CylinderVolume`, `Compression`, `Span`, `MaxRpm` and `MinCompression` the
+figures now share); `rev_limit`/`max_rpm` of 0 or past 30000 are told; `EngineReport.DiffLock` is null when a gearbox
+of figures says nothing, and the car keeps its own differential. `EngineLayouts.Parse` matches names only ("mid, rear"
+is none). Car filters have `MatchesOffer` (price and power of the car on offer; composites pass on every overload):
+lots, racers and trade-ins (`TradeInLocation(dealers, car)`, only to a lot of the car's kind) use it, and a racer with
+a car of his kind that cannot race buys one that runs. A dealer's `"cars"` is read by the catalog (`CarsJson`), so one
+that does not read (a word, an unknown type) is told and the lot kept, dealing in any car. The rocking body takes the
+running engine's layout in every viewport (`EngineSpec.Layout`).
+
 Left for later: unknown keys in a dealer's or a racer's entry are passed over without a word (System.Text.Json ignores
 them), part models (the mod's parts are drawn as the placeholder boxes), a portrait for Gino, the cars' own sound banks
 pinned only when the car is installed. Not seen in game.
@@ -320,7 +333,7 @@ one is older, not newer.
   (`CareerState.Bosses`, refreshed with the standing) for the new `beatBoss` step (every boss of the path, or
   `"boss": <racer id>` that one; `beatKing` is the same; a share of the bosses beaten counts as progress).
   `KingName` stays for saves that have not looked their bosses up.
-- **A boss's own lines:** `Bosses.Key` takes `<key>.<racer id>` when a mod has it, else the King's
+- **A boss's own lines:** `Bosses.Key` (since E12 `RacerWords.Key`, for every racer) takes `<key>.<racer id>` when a mod has it, else the King's
   (`talk.pulled_up.king`, `replies.king.*`, `street.king_out`, `chat.fact.rival_king`, `news.king_beaten/won.<id>.*`).
 - A mod's path or racer id without a namespace means its own, else the base game's (`Bosses.Qualify`/`Means`).
 

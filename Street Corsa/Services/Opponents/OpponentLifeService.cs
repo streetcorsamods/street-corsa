@@ -172,7 +172,7 @@ namespace StreetCorsa.Services.Opponents
                     ReviewAds(gameState, racer, date, talk);
                     SellSpares(gameState, racer, date, groupOf, talk);
 
-                    if (racer.Cars.Count == 0) TryBuy(gameState, racer, date, talk);
+                    if (racer.Cars.Count == 0) TryBuy(gameState, racer, date, groupOf, talk);
 
                     // A car in the impound can be neither fixed nor sold: they wait for it
                     if (racer.Cars.FirstOrDefault() is { IsImpounded: false } car && !CanRace(car, groupOf)
@@ -236,7 +236,7 @@ namespace StreetCorsa.Services.Opponents
 
             if (racer.IsBoss)
             {
-                if (target == RacerStatus.ReadyToRace) talk.Add(Say(Bosses.Key("street.king_out", racer), racer));
+                if (target == RacerStatus.ReadyToRace) talk.Add(Say(RacerWords.Key("street.king_out", racer), racer));
             }
             else if (target == RacerStatus.ReadyToRace && from == RacerStatus.Retired)
             {
@@ -440,7 +440,7 @@ namespace StreetCorsa.Services.Opponents
             if (!totaled)
             {
                 gameState.UsedCarMarket.Add(_market.ListCar(car, GameRules.Scale(value, gameState.Rules.CarPriceMultiplier),
-                    _market.TradeInLocation(gameState.DealerLocations), date));
+                    _market.TradeInLocation(gameState.DealerLocations, car), date));
             }
 
             talk.Add(Say(totaled ? "street.sold_scrap" : "street.sold_dealer", racer, car, new TextValues { ["price"] = paid }));
@@ -452,7 +452,7 @@ namespace StreetCorsa.Services.Opponents
         private sealed record ForSale(decimal Price, double Hp, double Condition, UsedCarListing? Listing, RivalCarAds.Offer? Ad);
 
         /// <summary>Everything for sale a racer could buy with <paramref name="budget"/>: the lots and the other rivals' ads</summary>
-        private List<ForSale> CarsForSale(GameState gameState, Opponent racer, decimal budget)
+        private List<ForSale> CarsForSale(GameState gameState, Opponent racer, decimal budget, Func<string, string?>? groupOf)
         {
             List<ForSale> all =
             [
@@ -466,14 +466,20 @@ namespace StreetCorsa.Services.Opponents
             ];
             if (racer.Drives is not { } kind) return all;
 
-            // A racer who drives one kind of car buys one of that kind; with none for sale, one who has no car takes
-            // what he can get, and one who has his kind of car keeps it
-            var liked = all.Where(c => Likes(kind, c.Listing?.CarDefinitionId ?? c.Ad?.Car.DefinitionId)).ToList();
-            return liked.Count > 0 || racer.Cars.Any(c => Likes(kind, c.DefinitionId)) ? liked : all;
+            // A racer who drives one kind of car buys one of that kind; with none for sale, one with no car of his kind
+            // that runs takes what he can get, and one who has one keeps it
+            var liked = all.Where(c => c.Listing is { } listing ? Likes(kind, listing)
+                : Definition(c.Ad!.Car.DefinitionId) is { } car && kind.MatchesOffer(car, c.Ad.Car, c.Price, c.Ad.Car.PowerHp)).ToList();
+            return liked.Count > 0 || racer.Cars.Any(c => Likes(kind, c) && CanRace(c, groupOf)) ? liked : all;
         }
 
-        private bool Likes(Models.Career.Filters.ICarFilter kind, string? definitionId) =>
-            definitionId != null && Definition(definitionId) is { } car && kind.Matches(car);
+        /// <summary>A car for sale is of the racer's kind at what it is offered for and the power it is quoted at</summary>
+        private bool Likes(Models.Career.Filters.ICarFilter kind, UsedCarListing listing) =>
+            Definition(listing.CarDefinitionId) is { } car && kind.MatchesOffer(car, null, listing.Price, listing.PowerHp);
+
+        /// <summary>A car of his own, or out of an ad, at what it is worth</summary>
+        private bool Likes(Models.Career.Filters.ICarFilter kind, Car owned) =>
+            Definition(owned.DefinitionId) is { } car && kind.MatchesOffer(car, owned, ValueOf(owned), owned.PowerHp);
 
         /// <summary>A car's definition, found once in a review</summary>
         private Models.Catalog.CarDefinition? Definition(string id)
@@ -491,12 +497,12 @@ namespace StreetCorsa.Services.Opponents
         private List<RivalCarAds.Offer> LiveAds(GameState gameState) => _liveAds ??= RivalCarAds.Live(gameState);
 
         /// <summary>The best car on the lots and in the paper for the racer's money, as <see cref="OpponentRules.PurchaseScore"/> weighs them</summary>
-        private bool TryBuy(GameState gameState, Opponent racer, DateTime date, List<string> talk)
+        private bool TryBuy(GameState gameState, Opponent racer, DateTime date, Func<string, string?>? groupOf, List<string> talk)
         {
             var budget = racer.Money;
             if (budget <= 0) return false;
 
-            var pick = CarsForSale(gameState, racer, budget)
+            var pick = CarsForSale(gameState, racer, budget, groupOf)
                 .OrderByDescending(c => OpponentRules.PurchaseScore(c.Hp, c.Condition, c.Hp > 0, c.Price, budget))
                 .FirstOrDefault();
             return pick != null && Buy(gameState, racer, pick, date, talk);
@@ -511,7 +517,7 @@ namespace StreetCorsa.Services.Opponents
             if (racer.IsBoss || racer.Cars.FirstOrDefault() is not { } current) return;
 
             var currentHp = current.PowerHp ?? 0;
-            var pick = CarsForSale(gameState, racer, racer.Money)
+            var pick = CarsForSale(gameState, racer, racer.Money, groupOf)
                 .Where(c => c.Hp > 0 && OpponentRules.WorthTradingUp(currentHp, c.Hp, c.Price, racer.Money))
                 // A rival's car is there to look at: one that can't race is no step up
                 .Where(c => c.Ad == null || CanRace(c.Ad.Car, groupOf))
@@ -583,7 +589,7 @@ namespace StreetCorsa.Services.Opponents
             // A stronger car than theirs, cheap, of the kind they drive (one bought to sell on can be any)
             var step = affordable
                 .Where(l => (l.PowerHp ?? 0) >= Math.Max(1, currentHp) * OpponentRules.BargainTradeUpGain)
-                .Where(l => racer.Drives is not { } kind || Likes(kind, l.CarDefinitionId))
+                .Where(l => racer.Drives is not { } kind || Likes(kind, l))
                 .OrderByDescending(l => OpponentRules.PurchaseScore(l.PowerHp ?? 0, l.Condition, (l.PowerHp ?? 0) > 0, l.Price, racer.Money))
                 .FirstOrDefault();
             if (step != null)
@@ -709,7 +715,7 @@ namespace StreetCorsa.Services.Opponents
             if (racer.Money + fetches < cheapestRunner) return;
 
             Sell(gameState, racer, car, date, talk);
-            if (racer.Cars.Count == 0 || !CanRace(racer.Cars[0], groupOf)) TryBuy(gameState, racer, date, talk);
+            if (racer.Cars.Count == 0 || !CanRace(racer.Cars[0], groupOf)) TryBuy(gameState, racer, date, groupOf, talk);
         }
 
         // ----- the street -----

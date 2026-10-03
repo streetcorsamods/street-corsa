@@ -144,6 +144,23 @@ public class OpponentLifeServiceTests
     }
 
     [Fact]
+    public async Task A_racer_who_drives_cheap_cars_weighs_each_car_at_what_it_is_offered_for()
+    {
+        var catalog = new MemoryCatalog();
+        catalog.UpsertCar(new CarDefinition { Id = "chevy", Name = "Chevy", Brand = "Chevrolet" });
+        catalog.UpsertCar(new CarDefinition { Id = "fiat", Name = "Fiat", Brand = "Fiat" });
+        var life = new OpponentLifeService(new NoParts(), _market, catalog, random: new FixedRandom(0.99));
+        var racer = Racer("Gino", 2000m, RacerStatus.Retired);
+        racer.Drives = new StreetCorsa.Models.Career.Filters.ValueFilter(null, 1000m);
+        Listing("chevy", 1500m, 250);
+        Listing("fiat", 900m, 40);
+
+        await life.ReviewDayAsync(_state, _state.Date);
+
+        Assert.Equal("fiat", Assert.Single(racer.Cars).DefinitionId);
+    }
+
+    [Fact]
     public async Task Too_many_cars_with_every_spare_in_the_impound_waits_and_the_day_goes_on()
     {
         var driven = GoodCar();
