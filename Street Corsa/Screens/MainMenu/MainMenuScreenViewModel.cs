@@ -21,6 +21,10 @@ namespace StreetCorsa.Screens.MainMenu
         Settings
     }
 
+    /// <summary>A button of the main menu, as the flow's card has it: what it says, which card it opens</summary>
+    /// <param name="Card">The card's kind (<see cref="MenuCards"/>), which the view gives its picture</param>
+    public sealed record MainMenuButton(string Card, string Text, RelayCommand Command);
+
     /// <summary>
     /// The main screen. Installed cars stand in the showrooms behind it, one at a time; the menu is laid over them, and
     /// New Game, Load Game and Settings open as cards in its place rather than as screens of their own. Only starting
@@ -49,9 +53,9 @@ namespace StreetCorsa.Screens.MainMenu
         /// <summary>A card asked for before the screen was entered</summary>
         private MainMenuCard _pendingCard;
 
-        public RelayCommand NewGameCommand { get; }
-        public RelayCommand LoadGameCommand { get; }
-        public RelayCommand SettingsCommand { get; }
+        /// <summary>The menu's buttons from the left, as the flow's cards have them (flow/*.json, "cards")</summary>
+        public IReadOnlyList<MainMenuButton> Buttons { get; }
+
         public RelayCommand ExitCommand { get; }
 
         /// <summary>Esc: back to the menu from whichever card is open</summary>
@@ -74,15 +78,26 @@ namespace StreetCorsa.Screens.MainMenu
             _catalog = catalog;
             ShowIntro = showIntro;
 
-            NewGameCommand = new RelayCommand(() => Open(MainMenuCard.NewGame));
-            LoadGameCommand = new RelayCommand(() => Open(MainMenuCard.LoadGame));
-            SettingsCommand = new RelayCommand(() => Open(MainMenuCard.Settings));
+            Buttons = navigationService.Flow.CardsInOrder()
+                .Select(c => new MainMenuButton(
+                    c.Card.Card,
+                    GameText.Say(c.Card.Text ?? "menu." + c.Card.Card),
+                    new RelayCommand(() => Open(CardOf(c.Card.Card)))))
+                .ToList();
             ExitCommand = new RelayCommand(OnExit);
             // Not while a dialog is up: Esc belongs to the dialog then
             CloseCardCommand = new RelayCommand(CloseCard, () => _currentCard != null && !_dialogService.IsDialogOpen);
 
             _pendingCard = openCard;
         }
+
+        private static MainMenuCard CardOf(string card) => card switch
+        {
+            MenuCards.NewGame => MainMenuCard.NewGame,
+            MenuCards.LoadGame => MainMenuCard.LoadGame,
+            MenuCards.Settings => MainMenuCard.Settings,
+            _ => MainMenuCard.None
+        };
 
         /// <summary>The card open over the cars, or null while the menu shows</summary>
         public BaseScreenViewModel? CurrentCard

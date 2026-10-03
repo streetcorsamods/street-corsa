@@ -34,6 +34,9 @@ public static class ThemeImages
     // Mod files that did not read, passed over from then on
     private static readonly ConcurrentDictionary<string, bool> Broken = new(StringComparer.OrdinalIgnoreCase);
 
+    // Small pictures shown again and again (the tiles' icons), decoded once at their size: by name and size
+    private static readonly ConcurrentDictionary<(string Name, int Size), BitmapImage?> Icons = new();
+
     private static ModSet? _mods;
 
     /// <summary>
@@ -45,6 +48,7 @@ public static class ThemeImages
         _mods = mods;
         Found.Clear();
         Broken.Clear();
+        Icons.Clear();
 
         foreach (var name in NamesInMods(mods)) ModFile(name);
     }
@@ -159,6 +163,12 @@ public static class ThemeImages
             return Load(name, decodeWidth, decodeHeight);
         }
     }
+
+    /// <summary>
+    /// A small picture shown again and again (a tile's icon), <paramref name="size"/> pixels wide: decoded the first time
+    /// and kept, frozen, for every screen after. Not for the large pictures, which are let go of with their screen.
+    /// </summary>
+    public static BitmapImage? Icon(string name, int size) => Icons.GetOrAdd((name, size), key => Load(key.Name, key.Size));
 
     /// <summary>A picture only a mod gives (the intro's logo, the window's icon): null when no mod has one</summary>
     public static BitmapImage? LoadModImage(string name, int decodeWidth = 0) =>

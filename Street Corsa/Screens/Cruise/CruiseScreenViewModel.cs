@@ -139,6 +139,9 @@ namespace StreetCorsa.Screens.Cruise
 
         public RelayCommand GarageCommand { get; }
         public RelayCommand DinerCommand { get; }
+
+        /// <summary>The way out to the diner leads somewhere: a game may have no diner</summary>
+        public bool CanGoToDiner => _navigationService.CanLeave(this, "diner");
         public AsyncRelayCommand AcceptCommand { get; }
         public RelayCommand WaveOffCommand { get; }
         public RelayCommand CashBetCommand { get; }
@@ -454,7 +457,7 @@ namespace StreetCorsa.Screens.Cruise
             // It says why and takes the player back to the garage, once the navigation that brought them here is over
             _leaving = true;
             _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, message, title));
-            _navigationService.NavigateToGarageLater(_gameState);
+            _navigationService.GoHomeLater(_gameState);
         }
 
         private async void Leave(bool toGarage)
@@ -475,7 +478,7 @@ namespace StreetCorsa.Screens.Cruise
             }
 
             Save();
-            var went = toGarage ? _navigationService.NavigateToGarage(_gameState) : _navigationService.NavigateToDiner(_gameState);
+            var went = _navigationService.Leave(this, toGarage ? "back" : "diner", _gameState);
             if (went || !ReferenceEquals(_navigationService.CurrentScreen, this)) return;
 
             // Still here (the other screen could not be opened): the street goes on
@@ -568,7 +571,7 @@ namespace StreetCorsa.Screens.Cruise
             _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService,
                 GameText.Say("cruise.late_night"), GameText.Say("cruise.late_night.title")));
             _leaving = true;
-            _navigationService.NavigateToGarage(_gameState);
+            _navigationService.GoHome(_gameState);
         }
 
         /// <summary>The street is on screen to drive a rival up, or has been waited on long enough</summary>
@@ -824,8 +827,7 @@ namespace StreetCorsa.Screens.Cruise
                     RaceType = _offer.RaceType,
                     IsPinkSlip = IsPinkSlipBet,
                     CashWager = IsPinkSlipBet ? 0m : Wager,
-                    AlreadyAgreed = !TermsChanged,
-                    ReturnToCruise = true
+                    AlreadyAgreed = !TermsChanged
                 }, this);
 
                 switch (outcome.Status)

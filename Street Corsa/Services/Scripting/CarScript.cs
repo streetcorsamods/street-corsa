@@ -42,6 +42,19 @@ namespace StreetCorsa.Services.Scripting
 
         public static readonly IReadOnlyList<string> All =
             [LotTakeOut, GarageArrive, GarageLeave, StationArrive, StationAtPump, StationLeave, StreetRivalArrive, StreetRivalLeave];
+
+        /// <summary>
+        /// A screen of the flow is up, its own show over (<c>screen.&lt;id&gt;.enter</c>): played on the screens with a
+        /// car on a 3D scene (the garage, the car lot, the gas station)
+        /// </summary>
+        public static string ScreenEnter(string screenId) => $"screen.{screenId}.enter";
+
+        /// <summary>The player leaves a screen by a way out (<c>screen.&lt;id&gt;.leave</c>): the screen goes once the script lets it</summary>
+        public static string ScreenLeave(string screenId) => $"screen.{screenId}.leave";
+
+        /// <summary>Whether a trigger is a screen's leave (<see cref="ScreenLeave"/>)</summary>
+        public static bool IsScreenLeave(string trigger) =>
+            trigger.StartsWith("screen.", StringComparison.Ordinal) && trigger.EndsWith(".leave", StringComparison.Ordinal);
     }
 
     /// <summary>

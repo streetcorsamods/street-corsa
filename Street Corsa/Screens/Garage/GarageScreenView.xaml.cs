@@ -37,7 +37,14 @@ namespace StreetCorsa.Screens.Garage
                 // Once the scene has done setting itself up (the camera framing the car included)
                 Dispatcher.BeginInvoke(DispatcherPriority.Background, DriveIn);
                 RevealAfter(SettleDelay);
+                // A garage revealed before its first frame (the timeout) is ready only now
+                Dispatcher.BeginInvoke(DispatcherPriority.Background, TellSceneReady);
             };
+
+            // The car comes after the first frame: the flow's enter script plays with it, not before it is there
+            System.ComponentModel.DependencyPropertyDescriptor
+                .FromProperty(StreetCorsa.Controls.CarViewport3D.HasCarProperty, typeof(StreetCorsa.Controls.CarViewport3D))
+                .AddValueChanged(Viewport3D, (_, _) => Dispatcher.BeginInvoke(DispatcherPriority.Background, TellSceneReady));
             Viewport3D.Failed += (_, _) => RevealAfter(TimeSpan.Zero);
 
             DataContextChanged += (_, e) =>
@@ -46,12 +53,14 @@ namespace StreetCorsa.Screens.Garage
                 {
                     old.DriveCarOut = null;
                     old.PutCarBack = null;
+                    old.PlayScreenScript = null;
                 }
 
                 if (e.NewValue is GarageScreenViewModel viewModel)
                 {
                     viewModel.DriveCarOut = DriveCarOutAsync;
                     viewModel.PutCarBack = PutCarBack;
+                    viewModel.PlayScreenScript = PlayScreenScript;
                 }
             };
 
@@ -177,6 +186,44 @@ namespace StreetCorsa.Screens.Garage
             {
                 _arriving = false;
                 ContentLayer.IsHitTestVisible = _revealed;
+                TellSceneReady();
+            }
+        }
+
+        /// <summary>
+        /// The garage is up, its scene rendered with the car in it, and no car is driving in: the flow's enter script may
+        /// play (once: the navigation keeps count). A garage with no car never says so: there is nothing to play it with.
+        /// </summary>
+        private void TellSceneReady()
+        {
+            if (_revealed && !_arriving && Viewport3D.IsReady && Viewport3D.HasCar && DataContext is GarageScreenViewModel viewModel)
+                viewModel.SceneReady();
+        }
+
+        /// <summary>
+        /// A script of the flow's (the garage's screen.&lt;id&gt;.enter or .leave) with the car on show; done once it lets
+        /// the screen go on. The screen takes no clicks meanwhile. Null when none plays.
+        /// </summary>
+        private Task? PlayScreenScript(string trigger, StreetCorsa.Services.Scripting.ScriptFacts facts)
+        {
+            var running = EnginePanel.Runner.IsRunning;
+            if (Viewport3D.PlayTrigger(trigger, () => EnginePanel.Runner, facts, CurtainAsync) is not { Script: not null } run) return null;
+
+            // A leave that goes nowhere puts the engine back as it was before this script, not before an older one
+            if (StreetCorsa.Services.Scripting.ScriptTriggers.IsScreenLeave(trigger)) _runningBeforeLeave = running;
+            ContentLayer.IsHitTestVisible = false;
+            return AfterScreenScript(run);
+        }
+
+        private async Task AfterScreenScript(StreetCorsa.Services.Scripting.ScriptRun run)
+        {
+            try
+            {
+                await run.Released;
+            }
+            finally
+            {
+                ContentLayer.IsHitTestVisible = _revealed && !_arriving;
             }
         }
 
@@ -255,6 +302,7 @@ namespace StreetCorsa.Screens.Garage
             });
 
             LoadingLayer.IsLoading = false;
+            TellSceneReady();
         }
     }
 }

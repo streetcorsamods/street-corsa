@@ -183,7 +183,7 @@ namespace StreetCorsa.Screens.UsedParts
 
         private void OnBack()
         {
-            _navigationService.NavigateToPartShopMap(_gameState);
+            _navigationService.Leave(this, "back", _gameState);
         }
     }
 

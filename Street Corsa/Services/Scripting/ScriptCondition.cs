@@ -9,6 +9,15 @@ namespace StreetCorsa.Services.Scripting
     public sealed record ScriptFacts(DateTime? Time = null, StreetLight? Light = null, bool Towed = false)
     {
         public static readonly ScriptFacts None = new();
+
+        /// <summary>The flow id of the screen the script plays on; null when it is not told</summary>
+        public string? Screen { get; init; }
+
+        /// <summary>The flow id of the screen the player came from; null when it is not told</summary>
+        public string? From { get; init; }
+
+        /// <summary>The flow id of the screen the player is leaving for (a leave script); null when it is not told</summary>
+        public string? To { get; init; }
     }
 
     /// <summary>What a car's engine is, for a condition</summary>
@@ -30,9 +39,10 @@ namespace StreetCorsa.Services.Scripting
     /// <summary>
     /// A condition (<c>"when"</c> on a script, <c>"if"</c> on a step): every key it has must hold. <c>engine</c>
     /// (runs, dead, running, off), <c>towed</c> (true, false), <c>light</c> (day, dusk, night, or a list of them),
-    /// <c>hours</c> ([from, to), on the game's clock, round midnight when from is the later), <c>not</c> (a condition
-    /// that must not hold), <c>any</c> (a list of conditions, one of which must). A fact the screen does not know holds
-    /// for no condition on it.
+    /// <c>hours</c> ([from, to), on the game's clock, round midnight when from is the later), <c>from</c> and <c>to</c>
+    /// (the flow's screen ids the player came from or is leaving for, one or a list), <c>not</c> (a condition that must
+    /// not hold), <c>any</c> (a list of conditions, one of which must). A fact the screen does not know holds for no
+    /// condition on it.
     /// </summary>
     public sealed record ScriptCondition
     {
@@ -43,6 +53,12 @@ namespace StreetCorsa.Services.Scripting
         public IReadOnlySet<StreetLight>? Light { get; init; }
 
         public (int From, int To)? Hours { get; init; }
+
+        /// <summary>The screens the player may have come from</summary>
+        public IReadOnlySet<string>? From { get; init; }
+
+        /// <summary>The screens the player may be leaving for</summary>
+        public IReadOnlySet<string>? To { get; init; }
 
         public ScriptCondition? Not { get; init; }
 
@@ -58,6 +74,8 @@ namespace StreetCorsa.Services.Scripting
             if (Towed is { } towed && facts.Towed != towed) return false;
             if (Light is { } lights && (facts.Light is not { } light || !lights.Contains(light))) return false;
             if (Hours is { } hours && (facts.Time is not { } time || !Within(time.Hour, hours.From, hours.To))) return false;
+            if (From is { } from && (facts.From is not { } came || !from.Contains(came))) return false;
+            if (To is { } to && (facts.To is not { } going || !to.Contains(going))) return false;
             if (Not != null && Not.Holds(facts, engine)) return false;
             if (Any != null && !Any.Any(c => c.Holds(facts, engine))) return false;
             return true;

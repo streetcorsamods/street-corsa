@@ -72,10 +72,12 @@
                         VerticalAlignment="Center"/>
             </Grid>
 
-            <Border BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="0,1,0,0" Margin="0,0,0,12"/>
+            <Border BorderBrush="{StaticResource BorderDarkBrush}" BorderThickness="0,1,0,0" Margin="0,0,0,12"
+                    Visibility="{Binding HasPaper, Converter={StaticResource BooleanToVisibilityConverter}}"/>
 
-            <!-- The paper -->
+            <!-- The paper, in a game that has one -->
             <TextBlock Text="{t:Text sell.ad.title}"
+                       Visibility="{Binding HasPaper, Converter={StaticResource BooleanToVisibilityConverter}}"
                        Foreground="{StaticResource TextPrimaryBrush}"
                        FontSize="{StaticResource FontSizeBody}"
                        FontWeight="SemiBold"/>
@@ -83,7 +85,7 @@
             <TextBlock Text="{t:Text sell.ad.wreck}"
                        Foreground="{StaticResource TextSecondaryBrush}"
                        FontSize="{StaticResource FontSizeSmall}"
-                       Visibility="{Binding CanAdvertise, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                       Visibility="{Binding ShowWreckNote, Converter={StaticResource BooleanToVisibilityConverter}}"/>
 
             <!-- No ad yet: the asking price -->
             <StackPanel Visibility="{Binding ShowAdForm, Converter={StaticResource BooleanToVisibilityConverter}}">

@@ -67,12 +67,6 @@ namespace StreetCorsa.Screens.Shared
         /// opponent's fields stay empty.
         /// </summary>
         public int? TunePasses { get; init; }
-
-        /// <summary>Back to the garage after the session, where it was started from; else the player goes to the diner</summary>
-        public bool ReturnToGarage { get; init; }
-
-        /// <summary>Back to the street after the race, where the rival was met, rather than to the diner</summary>
-        public bool ReturnToCruise { get; init; }
     }
 
     /// <summary>What came of putting a race together</summary>
@@ -204,8 +198,6 @@ namespace StreetCorsa.Screens.Shared
                 RaceTime = entry.RaceTime,
                 Bracket = entry.Bracket,
                 TunePasses = entry.TunePasses,
-                ReturnToGarage = entry.ReturnToGarage,
-                ReturnToCruise = entry.ReturnToCruise,
                 CarData = carData
             };
 

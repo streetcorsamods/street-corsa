@@ -111,6 +111,7 @@ namespace StreetCorsa
             var game = ((App)System.Windows.Application.Current).CurrentGameState;
             var shown = game != null && NavigationService.CurrentScreen is { InGame: true };
             StatusCard.Visibility = shown ? Visibility.Visible : Visibility.Collapsed;
+            EndDayButton.Visibility = shown && NavigationService.CanEndDayHere ? Visibility.Visible : Visibility.Collapsed;
             if (!shown) return;
 
             SetText(StatusMoney, Money.Text(game!.Player.Money));
@@ -121,6 +122,24 @@ namespace StreetCorsa
             {
                 if (block.Text != text) block.Text = text;
             }
+        }
+
+        /// <summary>
+        /// The window's End Day, on a screen the flow lets the day be ended from: asked as the garage asks, then home for
+        /// the night, where the day ends (the screen on show was built from the day that is ending)
+        /// </summary>
+        private void OnEndDayClick(object sender, RoutedEventArgs e)
+        {
+            var app = (App)System.Windows.Application.Current;
+            if (app.CurrentGameState is not { } game || !NavigationService.CanEndDayHere || app.Launcher.IsExecutionLocked) return;
+
+            var screen = NavigationService.CurrentScreen;
+            Dialogs.Confirmation.EndDayQuestion.Ask(DialogService, app.GameTimeService, game, () =>
+            {
+                // Still on the screen it was asked on, and still the same game
+                if (!ReferenceEquals(NavigationService.CurrentScreen, screen) || !ReferenceEquals(app.CurrentGameState, game)) return;
+                NavigationService.GoHome(game, new Navigation.FlowArgs { EndDay = true });
+            });
         }
 
         /// <summary>The screen takes input only with nothing in front of it; the radio's panel none while a dialog is up</summary>

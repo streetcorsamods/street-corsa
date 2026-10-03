@@ -34,7 +34,7 @@ namespace StreetCorsa.Dialogs.RaceHub
         private readonly RaceSetupBuilder _raceSetup;
         private readonly Func<bool> _stillHome;
         private readonly Action<DragRaceLaunchIntent> _race;
-        private readonly Action _hitTheStreets;
+        private readonly Action? _hitTheStreets;
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger("RaceHub");
 
         // True from the moment the player confirms an entry until the race is set up (or not): the hub can be opened
@@ -73,7 +73,7 @@ namespace StreetCorsa.Dialogs.RaceHub
         /// <param name="stillHome">Whether the player is still on the screen the hub was opened over: setting a race up
         /// takes a moment, and one who left meanwhile has called it off</param>
         /// <param name="race">Goes to the race</param>
-        /// <param name="hitTheStreets">Where the "Hit the streets" button goes, once the hub is closed</param>
+        /// <param name="hitTheStreets">Where the "Hit the streets" button goes, once the hub is closed; none: no such button</param>
         public RaceHubDialogViewModel(
             DialogService dialogService,
             GameState gameState,
@@ -85,7 +85,7 @@ namespace StreetCorsa.Dialogs.RaceHub
             RaceSetupBuilder raceSetup,
             Func<bool> stillHome,
             Action<DragRaceLaunchIntent> race,
-            Action hitTheStreets)
+            Action? hitTheStreets)
         {
             _dialogService = dialogService;
             _gameState = gameState;
@@ -99,7 +99,7 @@ namespace StreetCorsa.Dialogs.RaceHub
             _hitTheStreets = hitTheStreets;
 
             CloseCommand = new RelayCommand(() => _dialogService.CloseDialog(), () => !IsSettingUp);
-            HitTheStreetsCommand = new RelayCommand(OnHitTheStreets, () => !IsSettingUp);
+            HitTheStreetsCommand = new RelayCommand(OnHitTheStreets, () => !IsSettingUp && _hitTheStreets != null);
             EnterEventCommand = new RelayCommand<EventInvitationViewModel>(OnEnterEvent, _ => !_isEntering);
 
             try
@@ -128,8 +128,12 @@ namespace StreetCorsa.Dialogs.RaceHub
             }
         }
 
+        /// <summary>The way out onto the streets is there (a game may have none)</summary>
+        public bool CanHitTheStreets => _hitTheStreets != null;
+
         private void OnHitTheStreets()
         {
+            if (_hitTheStreets == null) return;
             _dialogService.CloseDialog();
             _hitTheStreets();
         }

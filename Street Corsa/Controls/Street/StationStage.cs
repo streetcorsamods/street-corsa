@@ -60,6 +60,12 @@ public sealed class StationStage
     /// <summary>The viewport has given up (no 3D here, or the car would not load): nobody will show the station</summary>
     public bool CannotShow { get; internal set; }
 
+    /// <summary>
+    /// Set by the viewport while it shows the station: plays a script of the flow's (screen.&lt;id&gt;.enter or .leave)
+    /// with the player's car; done once it lets the screen go on, null when none plays
+    /// </summary>
+    public Func<string, Services.Scripting.ScriptFacts, Task?>? PlayTrigger { get; internal set; }
+
     /// <summary>Something for the viewport to act on</summary>
     public event Action? Changed;
 

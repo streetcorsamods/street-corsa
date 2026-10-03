@@ -173,11 +173,11 @@ namespace StreetCorsa.Services.Configuration.Models
         /// <summary>Test-and-tune: the player alone on the strip for this many passes; null for a race</summary>
         public int? TunePasses { get; set; }
 
-        /// <summary>Back to the garage after the session, where it was started from; else the player goes to the diner</summary>
-        public bool ReturnToGarage { get; set; }
-
-        /// <summary>Back to the street after the race, where the rival was met, rather than to the diner</summary>
-        public bool ReturnToCruise { get; set; }
+        /// <summary>
+        /// The flow id of the screen the race was set up from, where the player comes back to after it (or where its
+        /// <c>after_race</c> way out leads); none: home
+        /// </summary>
+        public string? ReturnTo { get; set; }
 
         /// <summary>The time the session takes in the game</summary>
         public Time.GameAction SessionAction => TunePasses != null ? Time.GameAction.TestAndTune

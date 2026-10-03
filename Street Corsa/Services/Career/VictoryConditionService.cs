@@ -51,14 +51,24 @@ namespace StreetCorsa.Services.Career
         {
             RefreshStanding(gameState);
 
-            // The path the player set out on is the one that wins; with none picked (or one the game no longer
-            // knows), whichever is reached first
-            if (gameState.Career.ActiveVictoryType is { } active && _victoryConditions.TryGetValue(active, out var chosen))
+            // The path the player set out on is the one that wins (in a game with no career screen, the one the
+            // rules give); with none picked (or one the game no longer knows), whichever is reached first
+            if (ActivePath(gameState) is { } active && _victoryConditions.TryGetValue(active, out var chosen))
             {
                 return chosen.IsAchieved(gameState.Career) ? chosen : null;
             }
 
             return _victoryConditions.Values.FirstOrDefault(c => c.IsAchieved(gameState.Career));
+        }
+
+        /// <summary>
+        /// The victory path the game is played for: the player's pick, or in a game with no career screen to pick it in
+        /// (<see cref="Rules.SystemRules.Career"/> off), the rules' <see cref="Rules.SystemRules.CareerPath"/>
+        /// </summary>
+        public static string? ActivePath(GameState gameState)
+        {
+            var systems = Rules.RuleBook.Current.Systems;
+            return gameState.Career.ActiveVictoryType ?? (systems.Career || string.IsNullOrWhiteSpace(systems.CareerPath) ? null : systems.CareerPath);
         }
 
         public IVictoryCondition? ClaimVictory(GameState gameState)

@@ -23,6 +23,12 @@ namespace StreetCorsa.Services.Scheduler
         int IntervalDays { get; }
 
         /// <summary>
+        /// The system the task is the work of (<see cref="Rules.SystemRules"/>): in a game with it switched off the task
+        /// never runs. None: it always does.
+        /// </summary>
+        string? System => null;
+
+        /// <summary>
         /// Execute the scheduled task
         /// </summary>
         /// <param name="gameState">Current game state to modify</param>

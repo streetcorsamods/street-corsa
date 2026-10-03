@@ -110,12 +110,13 @@ work order, cooling roles, sound pins, `overrides` on copied scripts.
 
 | What | Where | Now | Effort |
 |---|---|---|---|
-| Screen list | `Navigation/NavigationService.cs:290-515`, `App.xaml:64-175` | 18 typed `NavigateToX(...)` methods, compiled DataTemplates, no ids | hard |
-| Hub tiles | `GarageScreenView.xaml:612-705`, `GarageScreenViewModel.cs:340-346` | fixed | medium: `tiles[]` with label, icon, target, `requires` |
-| Garage as home, diner as race lobby | about 20 call sites, `RaceLoadingScreenViewModel.cs:234-268` | assumed | medium |
-| Exits of each screen | each view model | C# calls | medium |
-| Main menu cards | `MainMenuScreenViewModel.cs` | enum | easy |
-| End Day only in the garage; nightly tasks in a fixed order | `GarageScreenViewModel.cs:819-875`, `App.xaml.cs:231-269` | code | easy / medium |
+| Screen list | `flow/flow.json` `screens`, `Navigation/FlowBook.cs` | **done (E8)** | |
+| Hub tiles | `flow/flow.json` `tiles` | **done (E8)** | |
+| Garage as home, diner as race lobby | `home`; a race returns where it was set up (`after_race`) | **done (E8)** | |
+| Exits of each screen | `screens.<id>.exits` | **done (E8)** | |
+| Main menu cards | `flow/flow.json` `cards` | **done (E8)** | |
+| End Day only in the garage; nightly tasks in a fixed order | `screens.<id>.endDay`; tasks skip a system that is off | **done (E8)**; the order stays the code's | |
+| Screens and systems a game switches off | `rules/systems.json` | **done (E8)** | |
 | Shows (drive-off, drive-in, station, street rival) | `scripts/scripts.json`, `scripts/feels.json` | **done (E7)** | |
 
 A truly new kind of screen will always need C#. Data can rename, rewire, hide and reuse the existing screen kinds.
@@ -186,6 +187,54 @@ Later, not in the epic: a weather system (there is none today), nitrous in AC.
 
 ## As built
 
+### E8: flow (2026-10-02, branch `feature/flow`)
+
+The owner's decisions: every system can be switched off, each with a fallback; races from the racing hub come back to
+the garage (they went to the diner); the flow's own script triggers play on the screens with a car on a 3D scene; the
+system switches are rules (kept in the save), the screens, exits, tiles and cards are read at start-up.
+
+- **The flow** (`Navigation/FlowBook.cs`, content type `flow`, merged key by key): screens by id, each of a kind the
+  program has (`ScreenKinds`), with named exits; `home` (a garage screen) and `menu`; the hubs' tiles (`TileActions`, `TileSpots`,
+  `TileRequirements`); the main menu's cards (`MenuCards`); `endDay` per screen. Checked on load: what does not read is
+  a mods' problem and left out; exits and tiles to a screen a mod took `off` go quietly.
+- **Navigation** goes by id: `NavigationService.Go(id, game, FlowArgs)` builds a screen by its kind (the 18 typed
+  `NavigateToX` are gone), `Leave(screen, exit)` takes a way out (one that leads nowhere goes home), `GoFrom(screen, id)`
+  for a hub's tile, `GoHome`, `GoHomeLater`, `GoToMenu`, `GoRace` (the intent's `ReturnTo` is the screen on show; the
+  two return flags are gone). `FlowArgs` carries what a screen is told (the shop, the dealer, the car, the race, skip
+  the animation, the car arriving, back from a race, end the day). Each screen knows its flow id (`IdOf`) and the one
+  before it.
+- **Buttons from data**: the garage's tiles (`GarageTile`, six `ItemsControl` spots), the main menu's buttons
+  (`MainMenuButton`; each card's kind has its picture), the racing hub's Hit the streets, the diner's Cruise, the
+  street's Diner, a map's Mail order, the Sell dialog's ad, the Stand toggle: each shown only while it leads somewhere.
+- **Systems** (`Rules/SystemRules.cs`, `rules/systems.json`): `police` (`PoliceCars.Installed` is none), `station`
+  (`StationStandInTask` fills, tops up and washes overnight; the garage's hint says so), `paper` (the car ads' nights,
+  the Sell dialog's ad; part ads go on for the mail order, deliveries always), `carDealers` and `partShops` (their
+  nights; a Mail order tile `without` part shops), `mailOrder`, `street`, `diner`, `engineStand` (no stand drawn or
+  clicked, the engine to the shelf), `talk` (`TalkDesk.IsAvailable`), `career` (`VictoryConditionService.ActivePath`:
+  `careerPath`, else the first reached). A task names its system (`IScheduledTask.System`); the scheduler skips it.
+- **End Day**: the garage's button follows its screen's `endDay`; elsewhere the window has one under the money card
+  (`NavigationService.CanEndDayHere`), which asks, then goes home with `FlowArgs.EndDay` and the garage ends the day.
+- **Triggers**: `screen.<id>.enter` and `screen.<id>.leave` (`ScriptTriggers.ScreenEnter/ScreenLeave`) through
+  `IScriptedScreen` (the garage, the car lot, the gas station): the view hands the screen a way to play a script, the
+  screen tells `NavigationService.ScreenReady` when its own show is over (the lot once its cars stand, the garage once
+  its car is there), and `Leave`/`GoFrom`/`GoRace`/the hub's streets play the leave script first (`Depart`); a screen
+  with more to put back than its car awaits `LeaveAsync` (the station's curtain, the lot's warehouse) and stays
+  `IsLeaving` meanwhile. Facts gain `Screen`, `From`, `To`; conditions gain `from` and `to`.
+- Text: `garage.tile.mail_order`, `garage.fix.gas.overnight`, `garage.fix.repairs_and_gas.overnight`,
+  `shell.end_day.tip`; the screens' names for a failed navigation are by id (`menu.screen.dealer_lot`,
+  `menu.screen.sound_browser`), else by kind.
+- Tests: `FlowTests` (the base flow as the game was, switches, a mod's flow, problems, from/to, the race's way back,
+  End Day) and `SystemSwitchTests` (nights, the station's stand-in, police, the career's path), in their own
+  non-parallel collection.
+
+Not done, for later steps:
+- the street has no `screen.street.*` triggers: the player's car there is the camera; the diner and the paper have no
+  scene;
+- the nightly tasks' order stays the code's (two of them must be last); a game switches them off only by system;
+- the Sell dialog's dealer stays with no car dealers (a game needs a way to sell);
+- the garage's tiles were not compared pixel for pixel with the old buttons (the same styles, sizes and margins);
+- not seen in game.
+
 ### E7: car scripting (2026-10-02, branch `feature/car-scripting`)
 
 Built as agreed, on the owner's go after step 26 ("We can proceed"). What a modder writes is in
@@ -228,8 +277,8 @@ Not done, for later steps:
 - the garage's showroom walls were not checked against the drive-in from the door (the same 7 m as before);
 - a click does not skip the garage's drive-in: the garage takes no clicks while a car comes in (as before);
 - the diner has no 3D scene: `diner.*` triggers come with one (its own step);
-- `station.at_pump` and `garage.leave` have no base script; nothing in the game sets off a mod's own trigger yet
-  (flow, E8);
+- `station.at_pump` and `garage.leave` have no base script; the flow's `screen.<id>.enter/.leave` came with E8, a
+  trigger of a mod's own naming still has nothing to set it off;
 - the player's car on the street is the camera's seat: a street script moves only the rival.
 
 Review fixes (2026-10-02): a click that skips a script lets go of the mouse; a fade's `engine` multiplies the

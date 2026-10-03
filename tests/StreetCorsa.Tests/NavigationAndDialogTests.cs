@@ -258,7 +258,7 @@ public class NavigationServiceTests
         var navigation = NewService(dialogs);
 
         // No victory service to read the paths from
-        Assert.False(navigation.ShowCareer(Models.GameState.GameState.CreateNew("Tester"), () => { }));
+        Assert.False(navigation.ShowCareer("career", Models.GameState.GameState.CreateNew("Tester"), leaveVia: null));
         Assert.IsType<InformationDialogViewModel>(dialogs.CurrentDialog);
     }
 

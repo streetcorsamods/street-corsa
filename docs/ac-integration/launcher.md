@@ -49,7 +49,9 @@ The race is timed until the **last** AC process exits, so a Steam relaunch is on
 - The race loading screen has a **Stop Race** button (`StopRaceCommand`), behind a confirmation that says what is at
   stake. On a test-and-tune it says the passes already run still count: the mode writes the result after every pass.
 - Where the player goes afterwards and the time the session takes come from the launch intent
-  (`DragRaceLaunchIntent.ReturnToGarage`, `SessionAction`), set by the screen that started it.
+  (`DragRaceLaunchIntent.ReturnTo`, a flow screen id, and `SessionAction`). `NavigationService.GoRace` sets `ReturnTo`
+  to the screen that started the race; the race loading screen goes back there, or where that screen's `after_race`
+  exit leads, and home when the car was towed.
 - Closing the main window during a race asks first; yes stops the race and the app closes once the launcher is done.
 
 ## Race Outcome

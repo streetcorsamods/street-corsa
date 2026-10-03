@@ -31,9 +31,6 @@ namespace StreetCorsa.Screens.Shared
 
         /// <summary>The rival put these terms up themselves: they are not asked again</summary>
         public bool AlreadyAgreed { get; init; }
-
-        /// <summary>After the race, back to the street rather than the diner</summary>
-        public bool ReturnToCruise { get; init; }
     }
 
     public enum ChallengeStatus
@@ -171,8 +168,7 @@ namespace StreetCorsa.Screens.Shared
                 DamagePercent = _gameState.Rules.RaceDamagePercent,
                 Police = police,
                 RaceTime = _gameState.Date,
-                Bracket = bracket,
-                ReturnToCruise = request.ReturnToCruise
+                Bracket = bracket
             });
 
             // Setting the cars up takes a moment: a player who walked out meanwhile has called it off
@@ -191,9 +187,9 @@ namespace StreetCorsa.Screens.Shared
                 return new ChallengeOutcome(ChallengeStatus.CarWontRun);
             }
 
-            // The loading screen launches the race, spends its time and comes back when AC is closed
+            // The loading screen launches the race, spends its time and comes back here when AC is closed
             _logger.Information("Navigating to race loading screen");
-            _navigationService.NavigateToRaceLoading(_gameState, setup.Intent);
+            _navigationService.GoRace(_gameState, setup.Intent);
             return new ChallengeOutcome(ChallengeStatus.Launched);
         }
     }

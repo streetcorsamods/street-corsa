@@ -24,7 +24,7 @@ using StreetCorsa.Helpers;
 
 namespace StreetCorsa.Screens.Garage
 {
-    public class GarageScreenViewModel : BaseScreenViewModel
+    public class GarageScreenViewModel : BaseScreenViewModel, IScriptedScreen
     {
         /// <summary>The sound of the place</summary>
         public override string? Ambience => "ambience.garage";
@@ -43,11 +43,6 @@ namespace StreetCorsa.Screens.Garage
         private readonly RaceCarDataService _raceCarDataService;
         private readonly IAppLogger _logger;
 
-        /// <summary>Asks where to go: the main menu, or out of the game</summary>
-        public RelayCommand QuitCommand { get; }
-
-        /// <summary>Everything about the selected car, and every part in it</summary>
-        public RelayCommand CarInfoCommand { get; }
         public AsyncRelayCommand FreeRunCommand { get; }
 
         /// <summary>The selected car at the strip on its own, pass after pass, for timeslips (<see cref="OnTestAndTune"/>)</summary>
@@ -80,17 +75,20 @@ namespace StreetCorsa.Screens.Garage
 
         public bool HasFreeRunTracks => FreeRunTracks.Count > 0;
         public RelayCommand SelectCarCommand { get; }
-        public RelayCommand ShowCalendarCommand { get; }
 
         /// <summary>Calls it a day: the rest of today goes by, and the game picks up tomorrow morning</summary>
         public RelayCommand EndDayCommand { get; }
-        public RelayCommand NewspaperCommand { get; }
-        public RelayCommand CarDealersCommand { get; }
-        public RelayCommand PartDealersCommand { get; }
-        /// <summary>The racing hub: the race invitations, Street News, and the way out onto the streets</summary>
-        public RelayCommand GoRaceCommand { get; }
-        public AsyncRelayCommand GasStationCommand { get; }
-        public RelayCommand CareerCommand { get; }
+
+        // The round buttons round the car, by where they stand: this screen's tiles in the flow, built the first time
+        // they are asked for (the screen knows its id in the flow only once it is built)
+        private Dictionary<string, List<GarageTile>>? _tiles;
+
+        public IReadOnlyList<GarageTile> TopLeftTiles => TilesAt(TileSpots.TopLeft);
+        public IReadOnlyList<GarageTile> LeftTiles => TilesAt(TileSpots.Left);
+        public IReadOnlyList<GarageTile> BottomLeftTiles => TilesAt(TileSpots.BottomLeft);
+        public IReadOnlyList<GarageTile> TopRightTiles => TilesAt(TileSpots.TopRight);
+        public IReadOnlyList<GarageTile> RightTiles => TilesAt(TileSpots.Right);
+        public IReadOnlyList<GarageTile> BottomRightTiles => TilesAt(TileSpots.BottomRight);
 
         /// <summary>The parts view of the selected car: its engine, the part clicked on, the shelf of loose parts</summary>
         public PartsWorkbenchViewModel Workbench { get; }
@@ -300,7 +298,8 @@ namespace StreetCorsa.Screens.Garage
             RaceCarDataService raceCarDataService,
             ICarSaleService saleService,
             bool skipAnimation = false,
-            CarArrival? arrival = null)
+            CarArrival? arrival = null,
+            bool endDay = false)
         {
             _saleService = saleService;
             _navigationService = navigationService;
@@ -318,9 +317,8 @@ namespace StreetCorsa.Screens.Garage
             SkipEnterAnimation = skipAnimation;
             _arrival = arrival;
             CarArriving = arrival?.DrivesIn == true;
+            _endDayOnArrival = endDay;
 
-            QuitCommand = new RelayCommand(OnQuit, CanLeave);
-            CarInfoCommand = new RelayCommand(OnCarInfo, () => SelectedCar != null);
             FreeRunCommand = new AsyncRelayCommand(OnFreeRun, () => SelectedCarHere && FreeRunTrack != null && !_launcher.IsExecutionLocked && CanLeave());
             TestAndTuneCommand = new AsyncRelayCommand(OnTestAndTune, () => SelectedCarHere && !_launcher.IsExecutionLocked && CanLeave());
             LoadFreeRunTracks();
@@ -329,18 +327,7 @@ namespace StreetCorsa.Screens.Garage
             SellCommand = new RelayCommand(OnSell, () => SelectedCarHere && !_endingDay && !_launcher.IsExecutionLocked);
             CollectCommand = new RelayCommand(OnCollect, CanCollect);
             SelectCarCommand = new RelayCommand(OnSelectCar, CanLeave);
-            ShowCalendarCommand = new RelayCommand(OnShowCalendar);
             EndDayCommand = new RelayCommand(OnEndDay, () => !_endingDay && !_launcher.IsExecutionLocked);
-
-            // While the night's work runs nothing leads out of the garage: the screens out there are built from the day
-            // that is ending, and a race launched now would be stamped with it
-            NewspaperCommand = new RelayCommand(() => LeaveTo(() => _navigationService.NavigateToNewspaper(_gameState)), CanLeave);
-            CarDealersCommand = new RelayCommand(() => LeaveTo(() => _navigationService.NavigateToDealerMap(_gameState)), CanLeave);
-            PartDealersCommand = new RelayCommand(() => LeaveTo(() => _navigationService.NavigateToPartShopMap(_gameState)), CanLeave);
-            GoRaceCommand = new RelayCommand(OnGoRace, CanLeave);
-            GasStationCommand = new AsyncRelayCommand(OnGasStation, () => SelectedCarHere && CanLeave());
-            // Not while the night runs: picking a victory path may win the game there and then, and saves
-            CareerCommand = new RelayCommand(OnCareer, CanLeave);
 
             // The garage is the game's home screen: make sure a car is selected if the player owns any
             if (_gameState.Player.SelectedCarInstanceId == null && _gameState.Player.Cars?.Count > 0)
@@ -552,8 +539,7 @@ namespace StreetCorsa.Screens.Garage
                     RaceType = Models.Race.RaceType.DragRace,
                     DamagePercent = _gameState.Rules.RaceDamagePercent,
                     RaceTime = _gameState.Date,
-                    TunePasses = TestAndTunePasses,
-                    ReturnToGarage = true
+                    TunePasses = TestAndTunePasses
                 });
 
                 // Setting the car up takes a moment: a player who left meanwhile has called it off
@@ -568,7 +554,7 @@ namespace StreetCorsa.Screens.Garage
                     return;
                 }
 
-                _navigationService.NavigateToRaceLoading(_gameState, setup.Intent);
+                _navigationService.GoRace(_gameState, setup.Intent);
             }
             catch (Exception ex)
             {
@@ -735,7 +721,7 @@ namespace StreetCorsa.Screens.Garage
         private void OnSelectCar()
         {
             _logger.Information("Navigating to the car lot");
-            _navigationService.NavigateToCarLot(_gameState);
+            _navigationService.Leave(this, "car_lot", _gameState);
         }
 
         /// <summary>
@@ -749,14 +735,16 @@ namespace StreetCorsa.Screens.Garage
 
             var groupOf = _partsService.IsAvailable ? Parts.Cars.CarCondition.Groups(_partsService.Catalog) : null;
             var damaged = Parts.Cars.CarCondition.WhyCannotRace(car, groupOf, counting: false).Count > 0;
-            return damaged ? GameText.Say("garage.fix.repairs_and_gas") : GameText.Say("garage.fix.gas");
+            // A game with no gas station fills the tank overnight
+            var overnight = Rules.RuleBook.Current.Systems.Station ? string.Empty : ".overnight";
+            return damaged ? GameText.Say("garage.fix.repairs_and_gas" + overnight) : GameText.Say("garage.fix.gas" + overnight);
         }
 
         /// <summary>
         /// To the gas station, in a car that gets there: one without an engine, or with one that will not run, stays in
         /// (an empty tank is the tow truck's, the station's own business)
         /// </summary>
-        private async Task OnGasStation()
+        private async Task OnGasStation(string station)
         {
             if (SelectedCar is not { } selected) return;
             var car = selected.CarInstance;
@@ -807,7 +795,7 @@ namespace StreetCorsa.Screens.Garage
             // The script may have taken a while: the player may have gone some other way meanwhile
             if (!ReferenceEquals(_navigationService.CurrentScreen, this)) return;
 
-            LeaveTo(() => _navigationService.NavigateToGasStation(_gameState));
+            LeaveTo(() => _navigationService.Go(station, _gameState));
 
             // Still here (the station would not open): the car back in its place
             if (droveOut && ReferenceEquals(_navigationService.CurrentScreen, this)) PutCarBack?.Invoke();
@@ -821,6 +809,15 @@ namespace StreetCorsa.Screens.Garage
 
         /// <summary>The car back in its place, when the garage stays after all (set by the view)</summary>
         public Action? PutCarBack { get; set; }
+
+        /// <inheritdoc cref="IScriptedScreen.PlayScreenScript"/>
+        public Func<string, Services.Scripting.ScriptFacts, Task?>? PlayScreenScript { get; set; }
+
+        /// <inheritdoc cref="IScriptedScreen.PutBackAfterLeave"/>
+        public void PutBackAfterLeave() => PutCarBack?.Invoke();
+
+        /// <summary>The view's word: the scene is up and the screen's own show is over (the flow's enter script may play)</summary>
+        public void SceneReady() => _navigationService.ScreenReady(this);
 
         /// <summary>The moment the car moves in, for its script: the game's clock and the light of the day</summary>
         public Services.Scripting.ScriptFacts ScriptFacts => new(_gameState.Date, Services.Street.StreetLights.At(_gameState.Date));
@@ -846,22 +843,7 @@ namespace StreetCorsa.Screens.Garage
         private bool CanLeave() => !_endingDay;
 
         /// <summary>Asks, then ends the day: the night's scheduled work runs, and the new day is saved</summary>
-        private void OnEndDay()
-        {
-            var left = _timeService.GetRemainingMinutesToday(_gameState);
-            // The day's first hour is the rules': written as the game's clock writes the time (8:00 AM, 2:00 PM)
-            var morning = GameText.Date(DateTime.Today.AddHours(_timeService.DayStartHour), "format.time");
-            var message = left > 0
-                ? GameText.Say("garage.end_day.ask.left", ("hours", left / 60), ("minutes", left % 60), ("morning", morning))
-                : GameText.Say("garage.end_day.ask", ("morning", morning));
-
-            _dialogService.ShowDialog(new Dialogs.Confirmation.ConfirmationDialogViewModel(
-                _dialogService, message, GameText.Say("garage.end_day.title"),
-                confirmed =>
-                {
-                    if (confirmed) EndDay();
-                }));
-        }
+        private void OnEndDay() => Dialogs.Confirmation.EndDayQuestion.Ask(_dialogService, _timeService, _gameState, EndDay);
 
         private async void EndDay()
         {
@@ -927,7 +909,7 @@ namespace StreetCorsa.Screens.Garage
                     {
                         case Dialogs.Quit.QuitChoice.MainMenu:
                             _logger.Information("Navigating back to main menu");
-                            LeaveTo(() => _navigationService.NavigateToMainMenu());
+                            LeaveTo(() => _navigationService.Leave(this, "quit", null));
                             break;
                         // Not while the night is being worked out: the exit saves, and a half-ended day would be saved
                         case Dialogs.Quit.QuitChoice.Desktop when CanLeave():
@@ -970,20 +952,81 @@ namespace StreetCorsa.Screens.Garage
             }
         }
 
-        /// <summary>The racing hub over the garage; its "Hit the streets" goes to the diner</summary>
-        private void OnGoRace()
+        private IReadOnlyList<GarageTile> TilesAt(string spot)
         {
-            if (!CanLeave()) return;
-
-            _navigationService.ShowRaceHub(_gameState, () => LeaveTo(() => _navigationService.NavigateToDiner(_gameState)));
+            _tiles ??= BuildTiles();
+            return _tiles.TryGetValue(spot, out var tiles) ? tiles : [];
         }
 
-        /// <summary>The career over the garage: the victory paths, the player's record and the milestones</summary>
-        private void OnCareer()
+        private Dictionary<string, List<GarageTile>> BuildTiles()
+        {
+            var flow = _navigationService.Flow;
+            var hub = _navigationService.IdOf(this) ?? flow.FirstOfKind(ScreenKinds.Garage);
+            var bySpot = new Dictionary<string, List<GarageTile>>();
+            foreach (var (id, tile) in flow.TilesOf(hub))
+            {
+                if (!bySpot.TryGetValue(tile.Spot, out var spot)) bySpot[tile.Spot] = spot = [];
+                var text = tile.Text is { } key ? GameText.Say(key) : null;
+                var icon = tile.Icon is { } image ? Styles.ThemeImages.Icon(image, 128) : null;
+                spot.Add(new GarageTile(id, tile, text, icon, TileCommand(tile), first: spot.Count == 0));
+            }
+
+            return bySpot;
+        }
+
+        /// <summary>
+        /// What a tile does: one of the garage's own things, or a way out to its screen. While the night's work runs
+        /// nothing leads out of the garage: the screens out there are built from the day that is ending, a race launched
+        /// now would be stamped with it, and picking a victory path in the career may win the game there and then.
+        /// </summary>
+        private System.Windows.Input.ICommand TileCommand(FlowTile tile)
+        {
+            bool Has() => tile.Requires.All(need => need switch
+            {
+                TileRequirements.Car => SelectedCar != null,
+                TileRequirements.CarHere => SelectedCarHere,
+                _ => true
+            });
+
+            switch (tile.To.ToLowerInvariant())
+            {
+                case TileActions.Quit:
+                    return new RelayCommand(OnQuit, () => CanLeave() && Has());
+                case TileActions.CarInfo:
+                    return new RelayCommand(OnCarInfo, () => SelectedCar != null && Has());
+                case TileActions.Calendar:
+                    return new RelayCommand(OnShowCalendar, Has);
+                case TileActions.Radio:
+                    return Audio.Radio.RadioPanelViewModel.ToggleCommand;
+            }
+
+            var to = tile.To;
+            return new AsyncRelayCommand(() => OnTileAsync(to), () => CanLeave() && Has(), name: "tile " + to);
+        }
+
+        /// <summary>
+        /// Out of the garage to the tile's screen: the racing hub and the career open over it, the car drives out to the
+        /// gas station as its script has it
+        /// </summary>
+        private async Task OnTileAsync(string to)
         {
             if (!CanLeave()) return;
 
-            _navigationService.ShowCareer(_gameState, () => LeaveTo(() => _navigationService.NavigateToMainMenu()));
+            var kind = _navigationService.Flow.KindOf(to);
+            if (ScreenKinds.IsOverlay(kind))
+            {
+                _navigationService.Go(to, _gameState, leaveVia: LeaveTo);
+                return;
+            }
+
+            if (kind == ScreenKinds.GasStation)
+            {
+                await OnGasStation(to);
+                return;
+            }
+
+            _logger.Information("From the garage to {Screen}", to);
+            LeaveTo(() => _navigationService.GoFrom(this, to, _gameState));
         }
 
         public override void Enter()
@@ -1003,7 +1046,19 @@ namespace StreetCorsa.Screens.Garage
             {
                 _logger.Error(ex, "Could not set up the garage");
             }
+
+            // Home for the night from another screen, the player having said so there: the day ends once the garage is up
+            if (_endDayOnArrival)
+            {
+                _endDayOnArrival = false;
+                _ = System.Windows.Threading.Dispatcher.CurrentDispatcher.InvokeAsync(EndDay);
+            }
         }
+
+        private bool _endDayOnArrival;
+
+        /// <summary>The flow lets the day be ended here: the End Day button is shown</summary>
+        public bool CanEndDayHere => _navigationService.Flow.Screen(_navigationService.IdOf(this)) is not { EndDay: false };
 
         /// <summary>What the mail order brought while the player was out: on the shelf already, told of once</summary>
         private void TellOfDeliveries()

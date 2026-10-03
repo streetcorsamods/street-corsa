@@ -22,14 +22,21 @@ namespace StreetCorsa.Screens.CarLot
                 {
                     old.DriveCarOff = null;
                     old.PutCarBack = null;
+                    old.PlayScreenScript = null;
                 }
 
                 if (e.NewValue is CarLotScreenViewModel viewModel)
                 {
                     viewModel.DriveCarOff = DriveCarOffAsync;
                     viewModel.PutCarBack = PutCarBack;
+                    viewModel.PlayScreenScript = PlayScreenScript;
                 }
             };
+
+            // The warehouse is up, its cars in their bays (not the first frame: the room is empty then): the flow's enter
+            // script may play, once the scene has done setting itself up
+            Viewport.LotReady += (_, _) => Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background,
+                () => (DataContext as CarLotScreenViewModel)?.SceneReady());
 
             // The screen is going: silence. The bank stays loaded: the garage plays the same car next, and a race lets
             // go of it itself before it moves it.
@@ -55,6 +62,13 @@ namespace StreetCorsa.Screens.CarLot
             _engine.Detach();
             return true;
         }
+
+        /// <summary>
+        /// A script of the flow's (the lot's screen.&lt;id&gt;.enter or .leave) with the car being looked at, its engine
+        /// as it is (none, until a car is taken out); done once it lets the screen go on. Null when none plays.
+        /// </summary>
+        private Task? PlayScreenScript(string trigger, ScriptFacts facts) =>
+            Viewport.PlayTrigger(trigger, _engine, facts, CurtainAsync) is { Script: not null } run ? run.Released : null;
 
         /// <summary>The lot stays after all: the curtain up, the car back in its bay and quiet</summary>
         private void PutCarBack()

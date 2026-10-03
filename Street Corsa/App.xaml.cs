@@ -311,6 +311,8 @@ namespace StreetCorsa
             // Register event generation task (must be after RaceEventService is created)
             Scheduler.RegisterTask(new Services.Scheduler.Tasks.EventGenerationTask(RaceEventService));
             Scheduler.RegisterTask(new CarAdsReviewTask(SaleService));
+            // A game with no gas station fills the cars up overnight
+            Scheduler.RegisterTask(new Services.Scheduler.Tasks.StationStandInTask());
 
             // Last: these two put engines together on a worker thread and hand the day back before they are
             // done. What comes before them is finished by the time whoever spent the time carries on.
@@ -796,11 +798,11 @@ namespace StreetCorsa
 
                 var changed = orphanedResult.FilesProcessed > 0 || orphanedResult.ForfeitApplied;
                 if (changed && NavigationService.CurrentScreen is Screens.Garage.GarageScreenViewModel)
-                    NavigationService.NavigateToGarage(state, skipAnimation: true);
+                    NavigationService.Go(NavigationService.CurrentId, state, new Navigation.FlowArgs { SkipAnimation = true });
 
                 foreach (var message in orphanedResult.PlayerMessages)
                 {
-                    Dialogs.PlayerMessageDialogs.Show(DialogService, message, () => NavigationService.NavigateToMainMenu());
+                    Dialogs.PlayerMessageDialogs.Show(DialogService, message, () => NavigationService.GoToMenu());
                 }
             }
             catch (Exception ex)

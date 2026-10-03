@@ -59,8 +59,8 @@ namespace StreetCorsa.Services.Talk
 
         public IAiText Text { get; }
 
-        /// <summary>Talking can begin: the player's AI is on and answering</summary>
-        public bool IsAvailable => Text.IsAvailable;
+        /// <summary>Talking can begin: the game has talking (<see cref="SystemRules.Talk"/>), and the player's AI is on and answering</summary>
+        public bool IsAvailable => RuleBook.Current.Systems.Talk && Text.IsAvailable;
 
         internal TalkRules Rules => _rules();
 

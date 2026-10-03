@@ -1,0 +1,52 @@
+{
+  "_comment": [
+    "How the base game's screens hang together (see docs/modding.md, \"flow\"). Every screen has an id and a kind the",
+    "program has; its \"exits\" are its ways out by name, each to a screen id. A way out to a screen that is not there",
+    "(a system switched off in the rules' \"systems\", or a screen a mod took \"off\") goes \"home\" instead, or its",
+    "button is not shown. A mod's flow/*.json goes over this one key by key: it may rewire an exit, add a screen of a",
+    "kind there is, move, add or take \"off\" a tile or a card. \"system\" names the system a screen or tile belongs to",
+    "(a screen's kind has one already); a tile with \"without\" is shown only while those systems are off."
+  ],
+  "home": "garage",
+  "menu": "main_menu",
+  "screens": {
+    "main_menu": { "kind": "main_menu" },
+    "garage": { "kind": "garage", "endDay": true, "exits": { "quit": "main_menu", "car_lot": "car_lot" } },
+    "car_lot": { "kind": "car_lot", "exits": { "back": "garage" } },
+    "racing_hub": { "kind": "racing_hub", "exits": { "streets": "diner" } },
+    "career": { "kind": "career", "exits": { "won": "main_menu" } },
+    "diner": { "kind": "diner", "exits": { "back": "garage", "cruise": "street" } },
+    "street": { "kind": "street", "exits": { "back": "garage", "diner": "diner" } },
+    "gas_station": { "kind": "gas_station", "exits": { "back": "garage" } },
+    "newspaper": { "kind": "newspaper", "exits": { "back": "garage", "car_ad": "car_viewing" } },
+    "car_viewing": { "kind": "car_viewing", "exits": { "back": "newspaper", "gone": "newspaper", "bought": "garage", "garage": "garage" } },
+    "dealer_map": { "kind": "dealer_map", "exits": { "back": "garage", "lot": "dealer_lot" } },
+    "dealer_lot": { "kind": "dealer_lot", "exits": { "back": "dealer_map", "bought": "garage" } },
+    "part_shops_map": { "kind": "part_shops_map", "exits": { "back": "garage", "shop": "part_shop", "mail_order": "mail_order" } },
+    "part_shop": { "kind": "part_shop", "exits": { "back": "part_shops_map" } },
+    "mail_order": { "kind": "mail_order", "exits": { "back": "part_shops_map" } },
+    "race": { "kind": "race" },
+    "sound_browser": { "kind": "sound_browser", "exits": { "back": "main_menu" } },
+    "car_catalog_editor": { "kind": "car_catalog_editor", "exits": { "back": "main_menu" } }
+  },
+  "tiles": {
+    "garage": {
+      "quit": { "to": "quit", "text": "garage.tile.quit", "icon": "icons/quit", "spot": "top_left" },
+      "go_race": { "to": "racing_hub", "text": "garage.tile.go_race", "icon": "icons/driving_wheel", "spot": "left", "size": "large" },
+      "car_dealers": { "to": "dealer_map", "text": "garage.tile.car_dealers", "icon": "icons/car_dealer", "spot": "bottom_left", "order": 1, "size": "large", "padding": 9 },
+      "part_dealers": { "to": "part_shops_map", "text": "garage.tile.part_dealers", "icon": "icons/parts_filled", "spot": "bottom_left", "order": 2, "size": "large" },
+      "newspaper": { "to": "newspaper", "text": "garage.tile.newspaper", "icon": "icons/newspaper", "spot": "bottom_left", "order": 3, "size": "large" },
+      "mail_order": { "to": "mail_order", "text": "garage.tile.mail_order", "icon": "icons/parts_filled", "spot": "bottom_left", "order": 4, "size": "large", "without": [ "partShops" ] },
+      "car_info": { "to": "car_info", "text": "garage.tile.car_info", "icon": "icons/car_info", "spot": "right", "requires": [ "car" ] },
+      "gas_station": { "to": "gas_station", "text": "garage.tile.gas_station", "icon": "icons/fuel_pump", "spot": "bottom_right", "requires": [ "car_here" ] },
+      "career": { "to": "career", "text": "garage.tile.career", "icon": "icons/trophy", "spot": "top_right", "order": 1 },
+      "calendar": { "to": "calendar", "text": "garage.tile.calendar", "icon": "icons/calendar", "spot": "top_right", "order": 2 },
+      "radio": { "to": "radio", "text": "garage.tile.radio", "icon": "icons/radio", "spot": "top_right", "order": 3 }
+    }
+  },
+  "cards": {
+    "load_game": { "card": "load_game", "order": 1 },
+    "new_game": { "card": "new_game", "order": 2 },
+    "settings": { "card": "settings", "order": 3 }
+  }
+}

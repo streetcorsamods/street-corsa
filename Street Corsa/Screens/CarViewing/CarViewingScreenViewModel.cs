@@ -262,10 +262,10 @@ namespace StreetCorsa.Screens.CarViewing
                 switch (CarViewingPlace.Next(result))
                 {
                     case AfterPurchase.Garage:
-                        _navigationService.NavigateToGarage(_gameState, skipAnimation: true);
+                        _navigationService.Leave(this, "bought", _gameState, new FlowArgs { SkipAnimation = true });
                         break;
                     case AfterPurchase.Newspaper:
-                        _navigationService.NavigateToNewspaper(_gameState, skipAnimation: true);
+                        _navigationService.Leave(this, "gone", _gameState, new FlowArgs { SkipAnimation = true });
                         break;
                     default:
                         OnPropertyChanged(nameof(CanAfford));
@@ -278,13 +278,13 @@ namespace StreetCorsa.Screens.CarViewing
         private void OnBack()
         {
             _logger.Information("Back to the paper from {Car}", Car?.DisplayName);
-            _navigationService.NavigateToNewspaper(_gameState, skipAnimation: true);
+            _navigationService.Leave(this, "back", _gameState, new FlowArgs { SkipAnimation = true });
         }
 
         private void OnGarage()
         {
             _logger.Information("Home to the garage from {Car}", Car?.DisplayName);
-            _navigationService.NavigateToGarage(_gameState);
+            _navigationService.Leave(this, "garage", _gameState);
         }
 
         public override void Exit()

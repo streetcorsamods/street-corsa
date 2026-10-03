@@ -14,6 +14,7 @@ namespace StreetCorsa.Services.Scheduler.Tasks
 
         public string TaskId => "partshop_review";
         public int IntervalDays => 1;
+        public string System => "partShops";
 
         public Task ExecuteAsync(GameState gameState, DateTime currentDate) => _lifeService.ReviewDayAsync(gameState, currentDate);
     }

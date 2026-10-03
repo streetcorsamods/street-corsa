@@ -165,6 +165,7 @@ it changes:
 | `simulation` | the rivals racing among themselves: crashes, pink slips |
 | `race` | AC's damage, tyre wear and fuel rates in a race, how the police drive |
 | `world` | the sunset through the year, the seasons the rivals race in, AC's weather, temperature, wind, latitude and time zone |
+| `systems` | the systems the game has, each `true` in the base game: `police`, `station` (the gas station), `paper`, `carDealers`, `partShops`, `mailOrder`, `street`, `diner`, `engineStand`, `talk`, `career`; and `careerPath`, the victory a game with no career screen is won on (none: whichever comes first). See "flow" for what goes with one switched off |
 | `ai` | the player's AI (Settings, "AI"): how long a rival's line waits for it (`talkWaitSeconds`), a request's and a picture's timeouts, requests at once and the gap between them, the queue, the rest after a failure, lines written ahead, the chance a line of street talk or a piece in the paper is written again, whether new faces are painted, and how many of its words a save keeps |
 
 ## Ids
@@ -589,6 +590,76 @@ folder of `garages` (a mod's own, `garages\mygarage\mygarage.kn5`; a later mod's
 showroom. The garage the player works in is the room `garage`; its `scene.json` names the marks its car scripts drive by
 (see scripts).
 
+### flow
+
+How the screens hang together: `flow\*.json`, merged **key by key** like the rules (an object goes into the one
+before it; a value or a list takes its place), but not kept in a save: a mod that changes its flow changes every
+career. The base game's is `flow\flow.json`; its comment says what each part is.
+
+```json
+{
+  "screens": {
+    "touge": { "kind": "street", "exits": { "back": "garage" } },
+    "diner": { "exits": { "back": "touge" } },
+    "newspaper": { "off": true }
+  },
+  "tiles": {
+    "garage": {
+      "career": { "off": true },
+      "touge": { "to": "touge", "text": "mymod.tile.touge", "icon": "icons/touge", "spot": "right", "order": 2 }
+    }
+  },
+  "cards": { "settings": { "order": 0 } }
+}
+```
+
+- **`screens`**, by id: each is a `kind` the program has (`main_menu`, `garage`, `car_lot`, `racing_hub`, `career`,
+  `diner`, `street`, `gas_station`, `newspaper`, `car_viewing`, `dealer_map`, `dealer_lot`, `part_shops_map`,
+  `part_shop`, `mail_order`, `race`, `sound_browser`, `car_catalog_editor`), and its `exits`, its ways out by name,
+  each to a screen id. A mod may rewire an exit, add a screen of a kind there is under an id of its own, or take one
+  `off`. A new kind of screen needs the program. `racing_hub` and `career` open over the screen they are opened from.
+- **The exits the screens take**: `back` (most of them), `bought` (the car viewing and a dealer's lot, after a sale),
+  `gone` (the car viewing, a car sold meanwhile), `garage` (the car viewing's own button), `car_ad` (the paper, to the
+  car viewing), `lot` and `shop` (the maps, to a dealer's lot or a part shop), `mail_order` (a map: its button is shown
+  only on a map whose exit leads somewhere), `cruise` (the diner, to the street), `diner` (the street), `streets` (the
+  racing hub's Hit the streets), `car_lot` and `quit` (the garage), `won` (the career, when picking a path wins),
+  `after_race` (where a race set up on that screen comes back to; none: the screen itself). A race comes back to the
+  screen it was set up from, the racing hub's to the screen it was opened over.
+- **`home`**: a `garage` screen (any other kind is told and the first garage is home): where a game starts, where
+  the night is ended and where an exit that leads nowhere goes (a button for such an exit is not shown
+  where the screen has one to hide: the diner's Cruise, the street's Diner, a map's Mail order, the hub's Hit the
+  streets). A car towed home, and a street race that ran past the night, go home. **`menu`**: the main screen.
+- **`system`**: the rules' system a screen belongs to (`rules`, `systems`). Its kind has one already (the diner's is
+  `diner`, the gas station's `station`, the paper's `paper`... the garage's none). A screen of a
+  system switched off is not there, nor are the tiles and exits to it. What goes with each switch:
+  - `police`: no police come to a race; the risk is not shown;
+  - `station`: no gas station; the player's cars are filled up, topped up and washed every night for free;
+  - `paper`: no paper, nor the player's own ads (the Sell dialog keeps the dealer); the part ads still come while the
+    mail order is on, and so do the deliveries;
+  - `carDealers`, `partShops`: their maps, lots and shops, and their nights' work, are gone (the Sell dialog's dealer
+    stays: it is how a car is sold without a paper). With no part shops, the base game's garage shows a Mail order
+    tile (`"without": ["partShops"]`), and the mail order's back goes home;
+  - `mailOrder`, `street`, `diner`: the screens and the ways to them;
+  - `engineStand`: no stand in the garage; an engine pulled goes on the shelf;
+  - `talk`: nobody can be called or talked to, whatever the player's AI;
+  - `career`: no career screen; the game is won on `systems.careerPath`, or on whichever victory comes first.
+- **`endDay`**: the day can be ended from that screen. The garage has its own End Day button (shown only while its
+  screen says so); anywhere else the window shows one under the money, which asks and then goes home for the night.
+  Not on the main menu, a race, an overlay or the tools.
+- **`tiles`**, by hub screen then by tile id: the round buttons round the garage's car. `to` (a screen id, or one of
+  the hub's own things: `quit`, `car_info`, `calendar`, `radio`), `text` (the tooltip's text key), `icon` (a theme
+  image name, `icons/...`), `spot` (`top_left`, `left`, `bottom_left`, `top_right`, `right`, `bottom_right`: a column
+  from the top; top left stays while the car is being worked on), `order` (in its spot), `size` (`large`), `padding`,
+  `requires` (`car`: a car picked; `car_here`: one that is not impounded), `system` (shown only while it is on),
+  `without` (shown only while all of these are off), `off`. A tile cannot open a screen that needs to be told what to
+  show (`car_viewing`, `dealer_lot`, `part_shop`, `race`). A tile to the gas station drives the car out first
+  (`garage.leave`).
+- **`cards`**: the main menu's buttons, from the left: `card` (`load_game`, `new_game`, `settings`: each has its
+  picture), `text` (a text key; none: `menu.<card>`), `order`, `off`.
+
+What does not read (a kind there is not, an exit to no screen, a tile to nowhere, a spot or a requirement there is not)
+is told in the mods' problems and left out. An exit or a tile to a screen a mod took `off` goes quietly.
+
 ### scripts
 
 How the cars move on the screens: the car taken out of the lot driving off, the one coming into the garage, the
@@ -624,8 +695,16 @@ base game's the rest of the time. No script on a trigger: nothing moves, and the
 station; the base game has none), `station.arrive` (in off the road to the pump; the pump's buttons wait for the
 script to let go), `station.at_pump` (stopped at the pump, or towed there; the base game has none), `station.leave`
 (out onto the road; the screen goes when the script lets it), `street.rival_arrive` (a rival up the lane, stopping
-alongside), `street.rival_leave` (the rival away; it is gone when the script ends). A mod may name its own; nothing
-in the game sets them off yet.
+alongside), `street.rival_leave` (the rival away; it is gone when the script ends). And the flow's own, on the
+screens with the player's car on a 3D scene (the garage, the car lot, the gas station; not the street, where the
+player's car is the camera): `screen.<id>.enter` (the screen of that id in the flow is up and its own show is over: the
+garage once it is revealed and any car has driven in, the lot once its warehouse is up, the station once the car is at
+the pump, in place of a `station.at_pump` script still playing) and `screen.<id>.leave` (the player leaves it by a way
+out, a tile, a race set up on it or the racing hub's Hit the streets; the screen goes once the script lets it, and a car
+driven off a way out that then goes nowhere is put back; a way out that leads to no screen plays none). The garage's car
+leaving for the gas station plays `garage.leave`, not `screen.garage.leave`; a race entered from the racing hub plays
+none (the hub is over the screen). The gas station's plays once its car has pulled out (`station.leave`), before the
+curtain; a car taken out of the lot plays `lot.take_out` first, then the lot's leave script.
 
 **The game never waits on the show.** It goes on when the script lets it: a `release` step, or the end. A click on
 the picture skips the rest of a script: every step from there is done at once, a drive under way is put at its end,
@@ -655,7 +734,8 @@ in the mods' problems that says which, so a mistyped key is never silently ignor
 
 **Conditions** (`when` and `if`): every key must hold. `engine`: `runs` (the car has an engine that starts), `dead`,
 `running` (now), `off`; `towed`: true or false; `light`: `day`, `dusk`, `night`, or a list; `hours`: `[from, to]` on the
-game's clock, round midnight when from is the later (`[20, 6]`); `not`: a condition; `any`: a list of conditions.
+game's clock, round midnight when from is the later (`[20, 6]`); `from` and `to`: the flow's screen id the player came
+from or is leaving for (a `screen.<id>.leave` script), one or a list; `not`: a condition; `any`: a list of conditions.
 
 **Marks and paths.** A drive goes to marks and along paths the scene names. A mark is a point `[x, z]` in metres, or a
 point measured from where the car stands, `{ "behind": 7 }` (`ahead`, `left`, `right`); `home` (where the car stands

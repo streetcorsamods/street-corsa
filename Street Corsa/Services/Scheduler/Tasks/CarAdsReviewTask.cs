@@ -12,6 +12,7 @@ namespace StreetCorsa.Services.Scheduler.Tasks
 
         public string TaskId => "car_ads_review";
         public int IntervalDays => 1;
+        public string System => "paper";
 
         public Task ExecuteAsync(GameState gameState, DateTime currentDate)
         {

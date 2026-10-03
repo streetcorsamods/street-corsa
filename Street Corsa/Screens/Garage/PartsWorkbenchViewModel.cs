@@ -142,6 +142,7 @@ namespace StreetCorsa.Screens.Garage
             get => _isOpen && _isStand;
             set
             {
+                if (value && !HasStand) return;
                 if (value)
                 {
                     IsStand = true;
@@ -189,6 +190,12 @@ namespace StreetCorsa.Screens.Garage
 
         /// <summary>There are parts to work with</summary>
         public bool IsAvailable => _catalog != null;
+
+        /// <summary>The game has an engine stand (<see cref="Rules.SystemRules.EngineStand"/>); without, an engine pulled goes on the shelf</summary>
+        public bool HasStand => Rules.RuleBook.Current.Systems.EngineStand;
+
+        /// <summary>The Stand toggle is shown: the parts can be worked on and there is a stand</summary>
+        public bool CanShowStand => IsAvailable && HasStand;
 
         private InstalledPart? _engine;
 
@@ -337,7 +344,7 @@ namespace StreetCorsa.Screens.Garage
             {
                 if (SelectedIsEngine)
                 {
-                    return _isStand
+                    return _isStand || !HasStand
                         ? GameText.Say("workbench.off.to_shelf")
                         : _gameState.Player.EngineStand == null
                             ? Catalog is { } catalog && EngineWork.StandStripsDisplay(catalog) is { Length: > 0 } strips
@@ -388,9 +395,9 @@ namespace StreetCorsa.Screens.Garage
         public bool CanTakeApart => _selectedShelfItem is { Part.Children.Count: > 0, IsEngine: false };
 
         /// <summary>The picked shelf part is an engine, and the stand is free for it</summary>
-        public bool CanPutOnStand => _selectedShelfItem is { IsEngine: true } && _gameState.Player.EngineStand == null;
+        public bool CanPutOnStand => HasStand && _selectedShelfItem is { IsEngine: true } && _gameState.Player.EngineStand == null;
 
-        public bool IsShelfEngine => _selectedShelfItem is { IsEngine: true };
+        public bool IsShelfEngine => HasStand && _selectedShelfItem is { IsEngine: true };
 
         /// <summary>The engine on the stand, picked, can go in the car: there is one, with its engine bay empty</summary>
         public bool CanInstallFromStand => _isStand && SelectedIsEngine && _car != null && _car.Engine == null;
@@ -542,7 +549,7 @@ namespace StreetCorsa.Screens.Garage
             if (!Workbench.Remove(roots, engine)) return;
 
             var stripped = 0;
-            if (_gameState.Player.EngineStand == null && Catalog is { } catalog)
+            if (HasStand && _gameState.Player.EngineStand == null && Catalog is { } catalog)
             {
                 var off = EngineWork.StripForStand(catalog, engine);
                 _gameState.Player.Parts.AddRange(off);

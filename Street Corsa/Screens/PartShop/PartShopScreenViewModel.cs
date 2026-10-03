@@ -251,6 +251,6 @@ namespace StreetCorsa.Screens.PartShop
             base.Refresh();
         }
 
-        private void OnBack() => _navigationService.NavigateToPartShopMap(_gameState);
+        private void OnBack() => _navigationService.Leave(this, "back", _gameState);
     }
 }

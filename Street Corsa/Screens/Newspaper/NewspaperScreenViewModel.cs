@@ -358,7 +358,7 @@ namespace StreetCorsa.Screens.Newspaper
         /// <summary>Go and see the car (clicking its ad): a screen of its own, the car at the seller's curb or on the lot</summary>
         private void OnLookAtCar(CarAdViewModel ad)
         {
-            _navigationService.NavigateToCarViewing(_gameState, ad.Car);
+            _navigationService.Leave(this, "car_ad", _gameState, new FlowArgs { Car = ad.Car });
         }
 
         /// <summary>Have a look at the part (clicking its ad): the part alone in 3D, turned with the mouse, with Buy</summary>
@@ -456,7 +456,7 @@ namespace StreetCorsa.Screens.Newspaper
 
         private void OnBack()
         {
-            _navigationService.NavigateToGarage(_gameState);
+            _navigationService.Leave(this, "back", _gameState);
         }
 
         private void Save(string what)

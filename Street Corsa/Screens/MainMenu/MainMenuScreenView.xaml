@@ -86,20 +86,37 @@
             <StackPanel.RenderTransform>
                 <TranslateTransform/>
             </StackPanel.RenderTransform>
-            <Button Style="{StaticResource MenuButtonStyle}"
-                    Background="{StaticResource LoadGameButtonBrush}"
-                    Command="{Binding LoadGameCommand}"
-                    Content="{t:Text menu.load_game}"
-                    Margin="0,0,36,0"/>
-            <Button Style="{StaticResource MenuButtonStyle}"
-                    Background="{StaticResource NewGameButtonBrush}"
-                    Command="{Binding NewGameCommand}"
-                    Content="{t:Text menu.new_game}"
-                    Margin="0,0,36,0"/>
-            <Button Style="{StaticResource MenuButtonStyle}"
-                    Background="{StaticResource SettingsButtonBrush}"
-                    Command="{Binding SettingsCommand}"
-                    Content="{t:Text menu.settings}"/>
+            <!-- The flow's cards (flow/*.json, "cards"), from the left, 36 apart; each card's kind has its picture -->
+            <ItemsControl ItemsSource="{Binding Buttons}" Focusable="False">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Button Command="{Binding Command}"
+                                Content="{Binding Text}"
+                                Margin="18,0">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource MenuButtonStyle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Card}" Value="load_game">
+                                            <Setter Property="Background" Value="{StaticResource LoadGameButtonBrush}"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Card}" Value="new_game">
+                                            <Setter Property="Background" Value="{StaticResource NewGameButtonBrush}"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Card}" Value="settings">
+                                            <Setter Property="Background" Value="{StaticResource SettingsButtonBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
         </StackPanel>
 
         <!-- The open card, in the menu's place. It may reach down over the cars: a new game's form is tall. -->

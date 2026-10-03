@@ -29,7 +29,7 @@ namespace StreetCorsa.Screens.CarLot
     /// The car the player drives is in the garage, not here: it heads the list, and is parked in the bay of the car taken
     /// out in its place. A car in the police impound keeps its bay for when it is back, but is not standing in it.
     /// </summary>
-    public class CarLotScreenViewModel : BaseScreenViewModel
+    public class CarLotScreenViewModel : BaseScreenViewModel, IScriptedScreen
     {
         /// <summary>The sound of the place</summary>
         public override string? Ambience => "ambience.warehouse";
@@ -303,6 +303,15 @@ namespace StreetCorsa.Screens.CarLot
         /// <summary>The car back in its bay and the screen as it was, when the lot stays after all (set by the view)</summary>
         public Action? PutCarBack { get; set; }
 
+        /// <inheritdoc cref="IScriptedScreen.PlayScreenScript"/>
+        public Func<string, Services.Scripting.ScriptFacts, Task?>? PlayScreenScript { get; set; }
+
+        /// <inheritdoc cref="IScriptedScreen.PutBackAfterLeave"/>
+        public void PutBackAfterLeave() => PutCarBack?.Invoke();
+
+        /// <summary>The view's word: the scene is up and the screen's own show is over (the flow's enter script may play)</summary>
+        public void SceneReady() => _navigationService.ScreenReady(this);
+
         /// <summary>
         /// Takes the car being looked at: it drives off out of its bay, it becomes the car the garage works on, and the
         /// player goes there with it. A quarter of an hour goes by moving the cars round.
@@ -361,18 +370,14 @@ namespace StreetCorsa.Screens.CarLot
             {
                 _logger.Error(ex, "Could not switch cars");
             }
-            finally
-            {
-                _taking = false;
-                OnPropertyChanged(nameof(IsIdle));
-                RelayCommand.RaiseCanExecuteChanged();
-            }
 
+            // Still taking till the garage is up or has failed: a mod's leave script may play first, and nothing else
+            // is done on the lot meanwhile
             try
             {
                 // The navigation service catches and reports a garage that will not open
                 var arrival = tookOut ? new CarArrival(car.Car.InstanceId, engine, droveOff) : null;
-                if (GoToGarage(arrival)) return;
+                if (await GoToGarageAsync(arrival)) return;
 
                 // The lot is shown again then, as the save now has it: the car taken is in the garage, and the one
                 // that was there in its bay
@@ -384,6 +389,17 @@ namespace StreetCorsa.Screens.CarLot
             {
                 _logger.Error(ex, "Could not go to the garage with the car taken");
             }
+            finally
+            {
+                Idle();
+            }
+        }
+
+        private void Idle()
+        {
+            _taking = false;
+            OnPropertyChanged(nameof(IsIdle));
+            RelayCommand.RaiseCanExecuteChanged();
         }
 
         private void Save(string why)
@@ -402,12 +418,35 @@ namespace StreetCorsa.Screens.CarLot
             }
         }
 
-        private void OnBack() => GoToGarage();
+        /// <summary>Back to the garage; a mod's leave script plays first, and the lot takes nothing else meanwhile</summary>
+        private async void OnBack()
+        {
+            if (_taking) return;
+            _taking = true;
+            OnPropertyChanged(nameof(IsIdle));
+            RelayCommand.RaiseCanExecuteChanged();
 
-        private bool GoToGarage(CarArrival? arrival = null)
+            try
+            {
+                if (await GoToGarageAsync()) return;
+
+                // The garage would not open: the car the script moved back in its bay
+                PutCarBack?.Invoke();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not go back to the garage");
+            }
+            finally
+            {
+                Idle();
+            }
+        }
+
+        private Task<bool> GoToGarageAsync(CarArrival? arrival = null)
         {
             _logger.Information("Back to the garage");
-            return _navigationService.NavigateToGarage(_gameState, skipAnimation: true, arrival);
+            return _navigationService.LeaveAsync(this, "back", _gameState, new FlowArgs { SkipAnimation = true, Arrival = arrival });
         }
 
         #endregion

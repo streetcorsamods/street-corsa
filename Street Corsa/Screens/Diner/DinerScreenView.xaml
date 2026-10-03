@@ -72,6 +72,7 @@
         <Button Grid.Row="0"
                 Content="{t:Text diner.cruise}"
                 Command="{Binding CruiseCommand}"
+                Visibility="{Binding CanCruise, Converter={StaticResource BooleanToVisibilityConverter}}"
                 Style="{StaticResource DialogPrimaryButtonStyle}"
                 Foreground="{StaticResource BgPanelBrush}"
                 Background="{StaticResource GoldBrush}"

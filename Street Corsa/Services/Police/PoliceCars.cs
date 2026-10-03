@@ -38,10 +38,12 @@ namespace StreetCorsa.Services.Police
 
         /// <summary>
         /// The install's police car the rules of the game in play like best (<c>police.preferredCars</c>), or null when
-        /// there is none (no police come then)
+        /// there is none or the game has no police (<see cref="Rules.SystemRules.Police"/>): no police come then
         /// </summary>
         public static PoliceCar? Installed()
         {
+            if (!Rules.RuleBook.Current.Systems.Police) return null;
+
             lock (Lock)
             {
                 if (_installed == null)
