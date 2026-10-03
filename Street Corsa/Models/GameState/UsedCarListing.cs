@@ -4,7 +4,7 @@ namespace StreetCorsa.Models.GameState
     /// Represents a car available for purchase in the used car market.
     /// This is market state, stored in GameState, not Catalog.
     /// </summary>
-    public class UsedCarListing
+    public class UsedCarListing : IAdWords
     {
         /// <summary>
         /// Unique identifier for this listing

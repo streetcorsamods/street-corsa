@@ -23,14 +23,21 @@ namespace StreetCorsa.Screens.Shared
         }
 
         /// <summary>
-        /// The car would run: home, with gas for the way, nothing broken that keeps it off the road, an engine in it when
-        /// its parts are known (the gas station's rule for driving there)
+        /// The car would run: home, with gas for the way, and nothing that keeps it off the road (<see cref="WhyWontRun"/>)
         /// </summary>
-        public static bool Drives(Car car, PartsCatalog? catalog)
+        public static bool Drives(Car car, PartsCatalog? catalog) =>
+            !car.IsImpounded && !GasStation.NeedsTow(car) && WhyWontRun(car, catalog).Count == 0;
+
+        /// <summary>
+        /// What keeps the car off the road, gas aside: anything broken, and no engine in it when its parts are known
+        /// (<paramref name="catalog"/>; without it the car is judged by its overall health). The one rule for driving to
+        /// the gas station and back home.
+        /// </summary>
+        public static List<string> WhyWontRun(Car car, PartsCatalog? catalog)
         {
-            if (car.IsImpounded || GasStation.NeedsTow(car)) return false;
-            if (catalog != null && car.HasPartsAssigned && car.Engine == null) return false;
-            return CarCondition.WhyCannotRace(car, catalog == null ? null : CarCondition.Groups(catalog), counting: false).Count == 0;
+            var problems = CarCondition.WhyCannotRace(car, catalog == null ? null : CarCondition.Groups(catalog), counting: false);
+            if (catalog != null && car.HasPartsAssigned && car.Engine == null) problems.Add(Services.Text.GameText.Say("station.ui.no_engine"));
+            return problems;
         }
     }
 }

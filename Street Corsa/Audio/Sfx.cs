@@ -20,6 +20,10 @@ public static class Sfx
     public const string EngineLands = "engine.land";
     public const string EngineTurns = "engine.turn";
 
+    // The driveway bell as a car rolls over its hose: a step of the station's arrive script, and rung by the game when
+    // no script shows the car driving in
+    public const string StationBell = "station.bell";
+
     // The pump as the tank fills: the nozzle going in, the flow (a loop), the click as it shuts off
     public const string PumpStart = "station.pump.start";
     public const string Pump = "station.pump";

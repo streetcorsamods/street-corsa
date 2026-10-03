@@ -63,6 +63,9 @@ namespace StreetCorsa.Screens.Garage
                     viewModel.PutCarBack = PutCarBack;
                     viewModel.PlayScreenScript = PlayScreenScript;
                     viewModel.Workbench.PropertyChanged += OnWorkbenchChanged;
+
+                    // A new garage screen's parts view may not be where the last one's was: the row follows it
+                    _ = ShowPartsRowAsync(viewModel.Workbench.IsOpen);
                 }
             };
 

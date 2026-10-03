@@ -86,9 +86,9 @@ public sealed class StationStage
         Phase = towed ? StationPhase.AtPump : StationPhase.Arriving;
         Changed?.Invoke();
 
-        // A drive nobody shows is over at once; a tow is at the pump from the start
+        // A drive nobody shows is over at once, the driveway bell heard all the same; a tow is at the pump from the start
         if (towed) AtPump?.Invoke();
-        else if (!IsShown) ReportAtPump();
+        else if (!IsShown) DrivenInUnseen();
     }
 
     public void Leave()
@@ -119,6 +119,14 @@ public sealed class StationStage
     }
 
     /// <summary>The viewport's word: the car has stopped at the pump</summary>
+    /// <summary>The car drove in with nothing to show it (no 3D, no arrive script): the bell, and it is at the pump</summary>
+    internal void DrivenInUnseen()
+    {
+        if (Phase != StationPhase.Arriving) return;
+        Sfx.Play(Sfx.StationBell);
+        ReportAtPump();
+    }
+
     internal void ReportAtPump()
     {
         if (Phase != StationPhase.Arriving) return;

@@ -875,8 +875,10 @@ public class CarViewport3D : D3DViewportBase
                 pulledDown = pulling;
 
                 // And what is new comes flying in, or over from the stand on the hoist
+                IEnumerable<int> arrived = [];
                 if (before != null)
                 {
+                    arrived = NodesWhere(model.Nodes, id => !before.Contains(id));
                     renderer.MoveParts(MovesOf(catalog, model.Nodes, NodesWhere(model.Nodes, id => !before.Contains(id))), arriving: true, NodeOf(model.Nodes, engine));
 
                     // An engine put in settles the car on its springs as it gets there
@@ -885,6 +887,7 @@ public class CarViewport3D : D3DViewportBase
                 else if (_carryFromStand is { } fromStand && engine?.InstanceId == fromStand.Id && placed.FirstOrDefault(p => ReferenceEquals(p.Source, engine)) is { } block)
                 {
                     var ids = engine.SelfAndDescendants().Select(p => p.InstanceId).ToHashSet();
+                    arrived = NodesWhere(model.Nodes, ids.Contains);
                     var bay = ToSlim(block.World);
                     var landsIn = renderer.CarryParts(NodesWhere(model.Nodes, ids.Contains), bay, fromStand.From, bay, ClearHeight(renderer), 0f);
                     if (landsIn > 0f)
@@ -905,7 +908,7 @@ public class CarViewport3D : D3DViewportBase
                 _anchors = anchors;
                 _partNodes = model.Nodes;
                 _partWorlds = placed.Where(p => p.Source != null).ToDictionary(p => p.Source!, p => p.World);
-                if (before != null) RevealShowsOf(NodesWhere(model.Nodes, id => !before.Contains(id)));
+                RevealShowsOf(arrived);
                 ApplyHiddenParts(fade: false);
                 AnimateFor(AnimationWindow);
 

@@ -365,7 +365,7 @@ namespace StreetCorsa.Navigation
                 case ScreenKinds.Diner:
                     return SafeNavigate(name, () => new Screens.Diner.DinerScreenViewModel(
                         this, _dialogService, game, _catalogRepository, _opponentChallengeService, _contentService,
-                        _talkService, _timeService, _gameStateRepository, _raceSetup, args.Returning), id);
+                        _talkService, _timeService, _gameStateRepository, _raceSetup, _carPartsService, args.Returning), id);
                 case ScreenKinds.Street:
                     return SafeNavigate(name, () => new Screens.Cruise.CruiseScreenViewModel(
                         this, _dialogService, game, _catalogRepository, _opponentChallengeService, _contentService,
@@ -653,7 +653,8 @@ namespace StreetCorsa.Navigation
         /// <summary>
         /// A race, set up by the screen on show: after it the player comes back there (or where its <c>after_race</c>
         /// way out leads), unless the intent already says where. The screen's leave script plays first, as for any way
-        /// out; not for a race set up in an overlay over it (the racing hub), which the show would play behind.
+        /// out; not for a race set up in an overlay over it (the racing hub's invitations), which the show would play
+        /// behind. The hub's test-and-tune plays it, as the garage's own button did.
         /// </summary>
         public bool GoRace(GameState gameState, DragRaceLaunchIntent intent, bool fromOverlay = false)
         {
@@ -767,7 +768,7 @@ namespace StreetCorsa.Navigation
                     new Screens.Shared.PracticeRuns(_dialogService, _launcher, _carPartsService, _gameStateRepository, _timeService,
                         _gameSettingsService, _contentService, _raceCarDataService, _raceSetup),
                     stillHome: () => ReferenceEquals(CurrentScreen, home),
-                    race: intent => GoRace(gameState, intent, fromOverlay: true),
+                    race: (intent, leave) => GoRace(gameState, intent, fromOverlay: !leave),
                     streets ? () => Via(leaveVia, () => LeaveOverlay(home, id, "streets", gameState, () => LeaveFrom(id, "streets", gameState))) : null));
                 return true;
             }

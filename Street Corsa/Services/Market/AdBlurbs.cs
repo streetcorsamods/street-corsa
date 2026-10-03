@@ -109,11 +109,8 @@ namespace StreetCorsa.Services.Market
         public static CarAdFacts FactsOf(UsedCarListing listing, PartsCatalog? catalog, IReadOnlySet<string>? factory) =>
             FactsOf(listing.Parts, catalog, factory, listing.EngineSummary, listing.IsModified, listing.Condition, listing.Mileage);
 
-        public static CarAdFacts FactsOf(RivalCarAd ad, Car car, PartsCatalog? catalog, IReadOnlySet<string>? factory) =>
-            FactsOf(car.Parts, catalog, factory, ad.EngineSummary, ad.IsModified, CarValuation.ConditionOf(car),
-                double.IsFinite(car.OdometerKM) ? (int)Math.Clamp(car.OdometerKM, 0, int.MaxValue) : 0);
-
-        public static CarAdFacts FactsOf(CarSaleAd ad, Car car, PartsCatalog? catalog, IReadOnlySet<string>? factory) =>
+        /// <summary>A rival's ad or the player's own: the car as it is, what the seller says about its engine</summary>
+        public static CarAdFacts FactsOf(ICarAdWords ad, Car car, PartsCatalog? catalog, IReadOnlySet<string>? factory) =>
             FactsOf(car.Parts, catalog, factory, ad.EngineSummary, ad.IsModified, CarValuation.ConditionOf(car),
                 double.IsFinite(car.OdometerKM) ? (int)Math.Clamp(car.OdometerKM, 0, int.MaxValue) : 0);
 
@@ -222,15 +219,8 @@ namespace StreetCorsa.Services.Market
             if (ShouldOffer(listing, listing.AiPolished, listing.Description)) Offer(facts, listing.Description, Rewrites(listing));
         }
 
-        public static void Describe(RivalCarAd ad, Car car, PartsCatalog? catalog, IReadOnlySet<string>? factory, Random? random = null)
-        {
-            var facts = FactsOf(ad, car, catalog, factory);
-            ad.Description = Write(facts, random ?? Random.Shared);
-            if (ShouldOffer(ad, ad.AiPolished, ad.Description)) Offer(facts, ad.Description, Rewrites(ad));
-        }
-
-        /// <summary>The player's own ad's words, as a private seller would put them</summary>
-        public static void Describe(CarSaleAd ad, Car car, PartsCatalog? catalog, IReadOnlySet<string>? factory, Random? random = null)
+        /// <summary>A rival's ad's words, or the player's own, as a private seller would put them</summary>
+        public static void Describe(ICarAdWords ad, Car car, PartsCatalog? catalog, IReadOnlySet<string>? factory, Random? random = null)
         {
             var facts = FactsOf(ad, car, catalog, factory);
             ad.Description = Write(facts, random ?? Random.Shared);
@@ -254,12 +244,7 @@ namespace StreetCorsa.Services.Market
             if (ShouldOffer(listing, listing.AiPolished, listing.Description)) Offer(FactsOf(listing, catalog, factory()), listing.Description!, Rewrites(listing));
         }
 
-        public static void Polish(RivalCarAd ad, Car car, PartsCatalog? catalog, Func<IReadOnlySet<string>?> factory)
-        {
-            if (ShouldOffer(ad, ad.AiPolished, ad.Description)) Offer(FactsOf(ad, car, catalog, factory()), ad.Description!, Rewrites(ad));
-        }
-
-        public static void Polish(CarSaleAd ad, Car car, PartsCatalog? catalog, Func<IReadOnlySet<string>?> factory)
+        public static void Polish(ICarAdWords ad, Car car, PartsCatalog? catalog, Func<IReadOnlySet<string>?> factory)
         {
             if (ShouldOffer(ad, ad.AiPolished, ad.Description)) Offer(FactsOf(ad, car, catalog, factory()), ad.Description!, Rewrites(ad));
         }
@@ -270,25 +255,7 @@ namespace StreetCorsa.Services.Market
         }
 
         // The better words take the game's place for good: the ad is not offered again
-        private static Action<string> Rewrites(UsedCarListing listing) => better =>
-        {
-            listing.Description = better;
-            listing.AiPolished = true;
-        };
-
-        private static Action<string> Rewrites(RivalCarAd ad) => better =>
-        {
-            ad.Description = better;
-            ad.AiPolished = true;
-        };
-
-        private static Action<string> Rewrites(CarSaleAd ad) => better =>
-        {
-            ad.Description = better;
-            ad.AiPolished = true;
-        };
-
-        private static Action<string> Rewrites(PartAd ad) => better =>
+        private static Action<string> Rewrites(IAdWords ad) => better =>
         {
             ad.Description = better;
             ad.AiPolished = true;
@@ -316,17 +283,27 @@ namespace StreetCorsa.Services.Market
             return true;
         }
 
+        /// <summary>
+        /// The player's own ad: its words written the first time, and again whenever the engine in the car is no longer
+        /// the one they speak of (the player swapped it, or built it up), so the ad and the buyer who calls about it go
+        /// by the car as it is. The AI's words go with the old engine.
+        /// </summary>
         /// <param name="engine">What the seller says about the engine (<see cref="IUsedCarMarketService.DescribeEngine"/>):
-        /// asked only when the words are written, and kept with the ad</param>
+        /// null when it cannot be told now (the parts not loaded), and the ad is left as it was</param>
         public static bool Ensure(CarSaleAd ad, Car car, PartsCatalog? catalog, Func<IReadOnlySet<string>?> factory, Func<EngineDescription?> engine)
         {
-            if (ad.Description != null) return false;
-            if (engine() is { } said)
+            var said = engine();
+            if (ad.Description != null && (said == null || (said.Summary == ad.EngineSummary && said.IsModified == ad.IsModified))) return false;
+
+            if (said != null)
             {
                 ad.EngineSummary = said.Summary;
                 ad.IsModified = said.IsModified;
             }
 
+            // Written anew: offered to the AI again
+            ad.AiPolished = false;
+            Offered.Remove(ad);
             Describe(ad, car, catalog, factory());
             return true;
         }

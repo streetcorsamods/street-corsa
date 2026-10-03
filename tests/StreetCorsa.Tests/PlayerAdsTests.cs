@@ -286,6 +286,7 @@ public class PlayerAdsTests
         ad.AiPolished = true;
         ad.Offer!.FirstAmount = 1000m;
         ad.Offer.MostOver = 0.07;
+        ad.Offer.Id = Guid.NewGuid();
         game.People.Add(new Person { Key = "buyer:x", Kind = PersonKind.Buyer, Name = "Gary", Temperament = "tire_kicker" });
 
         repository.Save(game, "Ads");
@@ -298,6 +299,7 @@ public class PlayerAdsTests
         Assert.True(back.AiPolished);
         Assert.Equal(1000m, back.Offer!.FirstAmount);
         Assert.Equal(0.07, back.Offer.MostOver);
+        Assert.Equal(ad.Offer.Id, back.Offer.Id);
         Assert.Equal(PersonKind.Buyer, Assert.Single(loaded.People).Kind);
     }
 
@@ -334,12 +336,8 @@ public class PlayerAdWordsTests
     {
         var car = new Car("bel_air") { OdometerKM = 30_000 };
         var ad = new CarSaleAd { CarInstanceId = car.InstanceId, AskingPrice = 1200m };
-        var asked = 0;
-        EngineDescription? Engine()
-        {
-            asked++;
-            return new EngineDescription("327 V8", 250, true);
-        }
+        var engine = new EngineDescription("327 V8", 250, true);
+        EngineDescription? Engine() => engine;
 
         try
         {
@@ -350,10 +348,9 @@ public class PlayerAdWordsTests
             Assert.Equal("327 V8", ad.EngineSummary);
             Assert.True(ad.IsModified);
 
-            // Written once: shown again, it keeps its words and the dyno is not asked again
+            // Written once: shown again with the same engine in the car, it keeps its words
             Assert.False(AdBlurbs.Ensure(ad, car, null, () => null, Engine));
             Assert.Equal(own, ad.Description);
-            Assert.Equal(1, asked);
 
             // The paper offers it to the writer as it opens; what comes back takes the words' place, once
             var writer = new Writer();
@@ -363,10 +360,69 @@ public class PlayerAdWordsTests
             Assert.Equal(1, writer.Asked);
             Assert.Equal("Clean as a whistle, 327 V8.", ad.Description);
             Assert.True(ad.AiPolished);
+
+            // Parts unknown for now: the ad stays as it is
+            Assert.False(AdBlurbs.Ensure(ad, car, null, () => null, () => null));
+            Assert.Equal("327 V8", ad.EngineSummary);
         }
         finally
         {
             AdBlurbs.Writer = null;
         }
+    }
+
+    [Fact]
+    public void The_players_ad_is_written_anew_when_the_engine_in_the_car_changed()
+    {
+        var car = new Car("bel_air") { OdometerKM = 30_000 };
+        var ad = new CarSaleAd { CarInstanceId = car.InstanceId, AskingPrice = 1200m, EngineSummary = "283 V8", Description = "Clean as a whistle, 283 V8.", AiPolished = true };
+
+        try
+        {
+            AdBlurbs.Writer = null;
+            Assert.True(AdBlurbs.Ensure(ad, car, null, () => null, () => new EngineDescription("409 V8", 340, true)));
+            Assert.Equal("409 V8", ad.EngineSummary);
+            Assert.True(ad.IsModified);
+            Assert.False(ad.AiPolished);
+            Assert.DoesNotContain("283", ad.Description);
+
+            // And offered to the AI again, in the same session
+            var writer = new Writer();
+            AdBlurbs.Writer = writer;
+            AdBlurbs.Polish(ad, car, null, () => null);
+            Assert.Equal(1, writer.Asked);
+            Assert.Equal("Clean as a whistle, 409 V8.", ad.Description);
+        }
+        finally
+        {
+            AdBlurbs.Writer = null;
+        }
+    }
+
+    // ----- one offer, one deal -----
+
+    [Fact]
+    public void A_new_offer_from_a_caller_of_the_same_name_is_a_new_deal()
+    {
+        var ad = new CarSaleAd { Offer = new CarOffer { Id = Guid.NewGuid(), BuyerName = "Gary" } };
+        var first = TalkPeople.BuyerKey(ad);
+        Assert.Equal(first, TalkPeople.BuyerKey(ad));
+
+        ad.Offer = new CarOffer { Id = Guid.NewGuid(), BuyerName = "Gary" };
+        Assert.NotEqual(first, TalkPeople.BuyerKey(ad));
+
+        // An offer from before offers were told apart keeps its old key, so its deal is not lost
+        ad.Offer = new CarOffer { BuyerName = "Gary" };
+        Assert.Equal($"buyer:{ad.AdId}:Gary", TalkPeople.BuyerKey(ad));
+    }
+
+    [Fact]
+    public void An_offer_stands_until_the_end_of_its_last_day_and_not_after()
+    {
+        var day = new DateTime(1962, 5, 4, 10, 0, 0);
+        var ad = new CarSaleAd { Offer = new CarOffer { Expires = day } };
+        Assert.Same(ad.Offer, ad.OfferOn(day));
+        Assert.Null(ad.OfferOn(day.AddMinutes(1)));
+        Assert.Null(new CarSaleAd().OfferOn(day));
     }
 }

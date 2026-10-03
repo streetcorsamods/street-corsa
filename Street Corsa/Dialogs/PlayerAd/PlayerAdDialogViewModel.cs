@@ -66,7 +66,7 @@ namespace StreetCorsa.Dialogs.PlayerAd
         public IReadOnlyList<CarInfoLine> Lines { get; }
 
         /// <summary>A buyer is on the phone, their offer still good</summary>
-        public bool HasOffer => SaleAd.Offer is { } offer && offer.Expires >= _game.Date && _game.NewspaperAds.PlayerCars.Contains(SaleAd);
+        public bool HasOffer => SaleAd.OfferOn(_game.Date) != null && _game.NewspaperAds.PlayerCars.Contains(SaleAd);
 
         /// <summary>Who called and what they offer, until when; that nobody has called yet</summary>
         public string OfferLine => HasOffer

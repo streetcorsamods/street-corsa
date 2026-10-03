@@ -497,7 +497,7 @@ namespace StreetCorsa.Screens.Garage
         public bool IsSelectedCarInPaper => SelectedAd != null;
 
         /// <summary>Someone answered the selected car's ad, and the offer still stands</summary>
-        public bool HasSaleOffer => SelectedAd?.Offer is { } offer && offer.Expires >= _gameState.Date;
+        public bool HasSaleOffer => SelectedAd?.OfferOn(_gameState.Date) != null;
 
         private CarSaleAd? SelectedAd => SelectedCar is { } selected ? _saleService.AdFor(_gameState, selected.CarInstance) : null;
 

@@ -520,6 +520,24 @@ public class GasStationTests
     }
 
     [Fact]
+    public void A_car_whose_engine_is_out_does_not_drive_home_when_its_parts_are_known()
+    {
+        var catalog = Catalog.Value;
+        var car = CarWithRealEngine(catalog);
+        car.FuelLitres = 10;
+        car.FuelTankLitres = 60;
+        var game = new GameState();
+        game.Player.Cars.Add(car);
+        game.Player.SelectedCarInstanceId = car.InstanceId;
+        Assert.True(DrivingHome.Arrival(game, null, catalog)!.DrivesIn);
+
+        // The engine on the stand: the station's rule and the way home agree
+        car.Parts.Remove(car.Engine!);
+        Assert.Contains(GameText.Say("station.ui.no_engine"), DrivingHome.WhyWontRun(car, catalog));
+        Assert.False(DrivingHome.Arrival(game, null, catalog)!.DrivesIn);
+    }
+
+    [Fact]
     public void A_car_too_dry_to_reach_the_gas_station_gets_a_can_of_gas_at_the_garage()
     {
         var car = new Car("car_a") { FuelLitres = 0.1, FuelTankLitres = 60 };

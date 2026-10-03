@@ -22,8 +22,12 @@ namespace StreetCorsa.Services.Talk
 
         public static string PartKey(PartAd ad) => $"part:{ad.AdId}";
 
-        /// <summary>The buyer who answered the player's ad, one per ad and caller: another caller is somebody else</summary>
-        public static string BuyerKey(CarSaleAd ad) => $"buyer:{ad.AdId}:{ad.Offer?.BuyerName}";
+        /// <summary>
+        /// The buyer who answered the player's ad, one per offer: another offer is somebody else, whatever name they give
+        /// (an offer from before offers were told apart goes by its caller's name)
+        /// </summary>
+        public static string BuyerKey(CarSaleAd ad) =>
+            ad.Offer?.Id is { } offer ? $"buyer:{ad.AdId}:{offer:N}" : $"buyer:{ad.AdId}:{ad.Offer?.BuyerName}";
 
         /// <summary>The kind's word in the temperaments' <c>for</c></summary>
         public static string KindWord(PersonKind kind) => kind switch

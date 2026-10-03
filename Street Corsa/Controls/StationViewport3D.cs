@@ -330,11 +330,12 @@ public class StationViewport3D : OnboardViewport3D
     {
         if (Play(ScriptTriggers.StationArrive) is not { } run) return;
 
-        // No script for it: the car is where the drive would end, at the pump
+        // No script for it: the car is where the drive would end, at the pump, and the bell rings as the script's would
         if (run.Script == null)
         {
             Car.GoHome();
             PlaceCar(Car.Pose);
+            Audio.Sfx.Play(Audio.Sfx.StationBell);
         }
 
         AfterRelease(run, () =>

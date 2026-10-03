@@ -55,7 +55,7 @@ namespace StreetCorsa.Screens.Newspaper
         public bool IsPlayerAd => PlayerAd != null;
 
         /// <summary>The buyer's offer pencilled by the player's own ad ("Gary, $1,200!"); empty with nobody on the phone</summary>
-        public string PencilNote => PlayerAd?.Offer is { } offer && offer.Expires >= _today
+        public string PencilNote => PlayerAd?.OfferOn(_today) is { } offer
             ? GameText.Say("paper.ad.pencil.offer", ("buyer", Services.Market.CarSaleService.Capitalized(offer.BuyerName)), ("amount", new Helpers.Money(offer.Amount)))
             : string.Empty;
 

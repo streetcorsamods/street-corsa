@@ -218,11 +218,9 @@ namespace StreetCorsa.Screens.Station
             }
 
             _catalog = _partsService.IsAvailable ? _partsService.Catalog : null;
-            var groupOf = _catalog == null ? null : CarCondition.Groups(_catalog);
 
             // Only an empty tank brings the tow truck: a car that won't run for anything else is the garage's to fix
-            var problems = CarCondition.WhyCannotRace(_car, groupOf, counting: false);
-            if (_catalog != null && _car.HasPartsAssigned && _car.Engine == null) problems.Add(GameText.Say("station.ui.no_engine"));
+            var problems = DrivingHome.WhyWontRun(_car, _catalog);
             if (problems.Count > 0)
             {
                 SendHome(GameText.Say("station.ui.wont_run", ("problems", string.Join("; ", problems))), GameText.Say("station.ui.wont_run.title"));
