@@ -125,7 +125,12 @@ public class SfxContentTests
             .Where(f => f.IsLiteral && f.FieldType == typeof(string))
             .Select(f => (string)f.GetRawConstantValue()!);
 
-        foreach (var name in named) Assert.True(cues.Get(name) is { Loop: false }, $"{name} is not a one-shot cue in sfx.json");
+        // The pump's flow plays round and round while the tank fills (AudioHub.PlayLoop); the rest once
+        foreach (var name in named)
+        {
+            var loop = name == Sfx.Pump;
+            Assert.True(cues.Get(name) is { } cue && cue.Loop == loop, $"{name} is not a {(loop ? "looping" : "one-shot")} cue in sfx.json");
+        }
     }
 
     [Fact]

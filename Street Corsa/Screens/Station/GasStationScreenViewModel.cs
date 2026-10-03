@@ -12,6 +12,7 @@ using StreetCorsa.Models.GameState;
 using StreetCorsa.Navigation;
 using StreetCorsa.Parts;
 using StreetCorsa.Parts.Cars;
+using StreetCorsa.Screens.Shared;
 using StreetCorsa.Services;
 using StreetCorsa.Services.Catalog;
 using StreetCorsa.Services.Parts;
@@ -126,9 +127,27 @@ namespace StreetCorsa.Screens.Station
             get => _isAtPump;
             private set
             {
-                if (SetProperty(ref _isAtPump, value)) RelayCommand.RaiseCanExecuteChanged();
+                if (!SetProperty(ref _isAtPump, value)) return;
+                RelayCommand.RaiseCanExecuteChanged();
+                OnPropertyChanged(nameof(ShowAttendant));
             }
         }
+
+        private bool _isDrivingOff;
+
+        /// <summary>DRIVE OFF pressed: the car is on its way (or the tow truck is), the attendant's window goes</summary>
+        private bool IsDrivingOff
+        {
+            set
+            {
+                if (_isDrivingOff == value) return;
+                _isDrivingOff = value;
+                OnPropertyChanged(nameof(ShowAttendant));
+            }
+        }
+
+        /// <summary>The attendant, his jobs and DRIVE OFF are up: at the pump, until the player drives off</summary>
+        public bool ShowAttendant => IsAtPump && !_isDrivingOff;
 
         /// <summary>What the attendant has said, first to last, in quotes</summary>
         public ObservableCollection<string> AttendantLines { get; } = [];
@@ -191,9 +210,6 @@ namespace StreetCorsa.Screens.Station
                 SendHome(GameText.Say("station.ui.no_car"), GameText.Say("station.ui.no_car.title"));
                 return;
             }
-
-            // The driveway bell, as the car rolls over the hose
-            Audio.Sfx.Play(Audio.Sfx.StationBell, 0.6f);
 
             if (_car.IsImpounded)
             {
@@ -268,6 +284,9 @@ namespace StreetCorsa.Screens.Station
         // How the car comes, until it does (then the stage has it: Stage.Towed)
         private bool _comesOnTheTow;
 
+        // The car's engine once worked out: it goes home with the car, which drives into the garage
+        private Audio.EngineSpec? _engine;
+
         private Task _trip = Task.CompletedTask;
 
         // The tow home is paid once, however often the garage would not open
@@ -305,6 +324,7 @@ namespace StreetCorsa.Screens.Station
             {
                 var spec = await EngineSpecs.ForAsync(_partsService, car, CarNames.Of(_catalogRepository, car.DefinitionId));
                 if (!_active) return;
+                _engine = spec;
                 await PlayerEngine.SetEngineAsync(spec);
 
                 // Only on the way in: an engine worked out after the car stopped at the pump stays off (nobody fills a
@@ -441,6 +461,15 @@ namespace StreetCorsa.Screens.Station
 
             IsWorking = true;
             var clock = System.Diagnostics.Stopwatch.StartNew();
+            var filling = job.Id == GasStation.FillUp;
+            PlayingSound? pump = null;
+            if (filling)
+            {
+                Sfx.Play(Sfx.PumpStart);
+                pump = AudioHub.Shared.PlayLoop(Sfx.Pump, fadeSeconds: 0.8f);
+            }
+
+            var full = false;
             try
             {
                 while (_active)
@@ -452,12 +481,20 @@ namespace StreetCorsa.Screens.Station
                         ? GameText.Say("station.ui.fill_detail", ("litres", litres * done), ("cost", Money.Text(job.Cost * (decimal)done, Locale.Money.Decimals + 2)),
                             ("fuel", from + litres * done), ("tank", _car!.FuelTankLitres))
                         : $"{done * 100:0}%";
-                    if (done >= 1) break;
+                    if (done >= 1)
+                    {
+                        full = true;
+                        break;
+                    }
+
                     await Task.Delay(40);
                 }
             }
             finally
             {
+                // The nozzle clicks off at a full tank; a player gone meanwhile hears the pump stop, nothing more
+                AudioHub.Shared.StopLoop(pump, 0.25f);
+                if (filling && full) Sfx.Play(Sfx.PumpStop);
                 IsWorking = false;
             }
         }
@@ -504,6 +541,7 @@ namespace StreetCorsa.Screens.Station
         {
             if (!IsAtPump || _leaving || _car == null) return;
             _leaving = true;
+            IsDrivingOff = true;
             RaiseAll();
 
             // Nothing may escape an async void; a throw (a line missing from a mod's words) leaves the player at the
@@ -551,6 +589,7 @@ namespace StreetCorsa.Screens.Station
                 if (!_active) return;
                 StatusText = GameText.Say("station.ui.still_at_pump");
                 _leaving = false;
+                IsDrivingOff = false;
                 RaiseAll();
             }
         }
@@ -590,7 +629,9 @@ namespace StreetCorsa.Screens.Station
                 // The trip's time first: a day that rolled over is saved and shown as it now is
                 await _trip;
                 Save();
-                if (await _navigationService.LeaveAsync(this, "back", _gameState, first: CloseCurtain)) return;
+                // Driven off, the car drives into the garage; towed home, it is simply there
+                var home = new FlowArgs { Arrival = _car != null && Stage.Phase == StationPhase.Gone ? DrivingHome.Arrival(_gameState, _engine, _catalog) : null };
+                if (await _navigationService.LeaveAsync(this, "back", _gameState, home, first: CloseCurtain)) return;
             }
             catch (Exception ex)
             {
@@ -603,6 +644,7 @@ namespace StreetCorsa.Screens.Station
             StatusText = GameText.Say("station.ui.still_at_pump");
             OpenCurtain?.Invoke();
             _leaving = false;
+            IsDrivingOff = false;
             RaiseAll();
         }
 

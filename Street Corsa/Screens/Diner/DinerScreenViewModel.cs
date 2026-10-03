@@ -780,7 +780,9 @@ namespace StreetCorsa.Screens.Diner
         private void OnGarage()
         {
             _logger.Information("Navigating to garage");
-            _navigationService.Leave(this, "back", _gameState);
+
+            // Home in the car from a night out: it drives into the garage (its engine worked out there)
+            _navigationService.Leave(this, "back", _gameState, new FlowArgs { Arrival = DrivingHome.Arrival(_gameState, null, null) });
         }
 
         public override async void Enter()

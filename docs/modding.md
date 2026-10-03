@@ -728,6 +728,7 @@ in the mods' problems that says which, so a mistyped key is never silently ignor
 | `place` | `at`: a mark (`heading` in degrees, else as it faces); or `path` and `end`: `start` or `end`, facing along it |
 | `fade` | `to`: the screen's curtain 0..1 (1 black), over `seconds`, `ease`: `none`, `in`, `out`; `engine`: true takes the engine's volume down with the picture. A screen with no curtain (the station, the street) waits the time |
 | `camera` | `mode`: `hold` (the camera stays and watches the car go: the default while a script plays) or `follow`; the seat views (station, street) have their own |
+| `sound` | `cue`: a sound cue of the mods' `sfx` (the station's arrival rings `station.bell` a second before the car stops); a script skipped past it plays none |
 | `release` | the game goes on, the script plays out |
 | `end` | the script is over |
 | `{ "if": {...}, "then": [...], "else": [...] }` | the steps of `then` when the condition holds, else of `else` |

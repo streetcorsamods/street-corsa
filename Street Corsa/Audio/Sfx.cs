@@ -20,7 +20,10 @@ public static class Sfx
     public const string EngineLands = "engine.land";
     public const string EngineTurns = "engine.turn";
 
-    public const string StationBell = "station.bell";
+    // The pump as the tank fills: the nozzle going in, the flow (a loop), the click as it shuts off
+    public const string PumpStart = "station.pump.start";
+    public const string Pump = "station.pump";
+    public const string PumpStop = "station.pump.stop";
 
     // The drivetrain's big bolts come off with the air gun; everything else with a socket wrench
     private static readonly HashSet<string> ImpactKinds = new(StringComparer.OrdinalIgnoreCase)

@@ -75,7 +75,9 @@ clutch in below 3 m/s on the way to a stop (it idles on its own then).
 
 The car sits on the ground under its wheels (the heights at ±1.4 m along it and ±0.75 m across tilt it), its wheels turn,
 its body dives and squats (`ChassisPitch`) and rocks with the engine (`CarBodyRock`, placement and lean together), its
-brake lights come on, headlights at night. The camera is at the driver's eyes: ahead while driving, turning a little into
+brake lights come on, headlights at night (reaching 40 m down the road at twice the brightness the renderer guesses for
+them, `SceneLights.BrightenHeadlights`, the street's cars too). The driveway bell rings a second before the car stops at
+the pump, a `sound` step of the `station_arrive` script (none for a car towed in, or a drive skipped). The camera is at the driver's eyes: ahead while driving, turning a little into
 a bend; at the pump the head turns to it (`lookAtPump`) over about a second. Dragging looks round; a double click looks
 back where the driver would. The station's own listener on the engine rocks the car (the base's `RunningEngine` is not
 used: the car moves).
@@ -131,12 +133,14 @@ gone. With no viewport up the car is simply there, and gone, at once; a car towe
   he noticed (`AttendantCheck`), or that everything else looks good. The jobs (`GasStation.Jobs`) are up with their price
   and time, a quarter of an hour each: **fill up** (by the litre), **top up the oil** (by the litre, a quart at least),
   **wash**. Each is watched (`GasStation.WatchSeconds`: the pump at about nine litres a second, 3 to 8 s, its dials counting
-  the litres and the dollars on a bar; the oil 2.5 s, the wash 4 s), then paid, done, timed and saved; the attendant says
+  the litres and the dollars on a bar, heard: the nozzle going in, the pump running, `station.pump` as a loop, the click
+  at a full tank; the oil 2.5 s, the wash 4 s), then paid, done, timed and saved; the attendant says
   it's done. Nothing else can be done meanwhile, driving off included.
-- **Driving off**: the starter, a moment at idle (up to 4 s for an engine that won't catch), the headlights back on at
+- **Driving off**: the attendant's window goes (`ShowAttendant`; back if the garage won't open), the starter, a moment at idle (up to 4 s for an engine that won't catch), the headlights back on at
   night, then out onto the road and home. A car left dry is towed home instead, with nothing to watch: the tow costs what
   it did on the way in (or all the player has left) and an hour. A garage that won't open leaves the car back at the pump
-  (`StationStage.BackToPump`), engine off, to try again.
+  (`StationStage.BackToPump`), engine off, to try again. Driven off, the car drives into the garage as one from the lot
+  does (`DrivingHome.Arrival`, its engine handed over); towed home, it is simply there.
 
 ## The oil (`CarCondition`)
 

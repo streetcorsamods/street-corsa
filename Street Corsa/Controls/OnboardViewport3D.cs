@@ -157,7 +157,11 @@ public abstract class OnboardViewport3D : D3DViewportBase
 
         if (placement is { } after) renderer.MainSlot.LocalMatrix = after;
         renderer.MainSlot.ResetCarBoundingBox();
-        if (renderer.CarNode is { } car && light == StreetLight.Night) car.HeadlightsEnabled = true;
+        if (renderer.CarNode is { } car && light == StreetLight.Night)
+        {
+            car.HeadlightsEnabled = true;
+            SceneLights.BrightenHeadlights(renderer);
+        }
         Instruments = CarInstruments.TryRead(renderer.CarNode, data, player.Directory, Logger);
         Frame = frame;
 

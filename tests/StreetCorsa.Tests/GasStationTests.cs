@@ -5,6 +5,7 @@ using StreetCorsa.Mods;
 using StreetCorsa.Parts;
 using StreetCorsa.Parts.Cars;
 using StreetCorsa.Parts.Logic;
+using StreetCorsa.Screens.Shared;
 using StreetCorsa.Services.Scripting;
 using StreetCorsa.Services.Station;
 using StreetCorsa.Services.Street;
@@ -495,6 +496,27 @@ public class GasStationTests
 
         var drive = Arrive([new(3, 3), new(3, 3)]);
         Assert.True(drive.At(drive.Duration).Done);
+    }
+
+    [Fact]
+    public void A_car_driven_home_drives_into_the_garage_unless_it_is_dry_or_held_by_the_police()
+    {
+        var car = new Car("car_a") { FuelLitres = 10, FuelTankLitres = 60 };
+        var game = new GameState();
+        game.Player.Cars.Add(car);
+        Assert.Null(DrivingHome.Arrival(game, null, null));
+
+        game.Player.SelectedCarInstanceId = car.InstanceId;
+        var arrival = DrivingHome.Arrival(game, null, null)!;
+        Assert.Equal(car.InstanceId, arrival.InstanceId);
+        Assert.True(arrival.DrivesIn);
+
+        car.FuelLitres = GasStation.TripLitres / 2;
+        Assert.False(DrivingHome.Arrival(game, null, null)!.DrivesIn);
+
+        car.FuelLitres = 10;
+        car.ImpoundedUntil = new DateTime(1965, 6, 1);
+        Assert.False(DrivingHome.Arrival(game, null, null)!.DrivesIn);
     }
 
     [Fact]

@@ -237,6 +237,10 @@ namespace StreetCorsa.Services.Scripting
                 case IfStep branch:
                     await StepsAsync(branch.When.Holds(_facts, _stage.Car(branch.Car)?.Engine) ? branch.Then : branch.Else);
                     break;
+                case SoundStep sound:
+                    // A moment skipped past goes unheard
+                    if (!_fast) _stage.Sound(sound.Cue);
+                    break;
                 case ReleaseStep:
                     _released.TrySetResult();
                     break;

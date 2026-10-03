@@ -160,6 +160,28 @@
         "station/bell/bell_465381_2.ogg"
       ]
     },
+    "station.pump.start": {
+      "bus": "effects",
+      "volume": 0.5,
+      "files": [
+        "station/pump/pump_start_382268.ogg"
+      ]
+    },
+    "station.pump": {
+      "bus": "effects",
+      "volume": 0.5,
+      "files": [
+        "station/pump/pump_flow_382268.ogg"
+      ],
+      "loop": true
+    },
+    "station.pump.stop": {
+      "bus": "effects",
+      "volume": 0.5,
+      "files": [
+        "station/pump/pump_stop_382268.ogg"
+      ]
+    },
     "radio.static": {
       "bus": "radio",
       "volume": 0.1,
