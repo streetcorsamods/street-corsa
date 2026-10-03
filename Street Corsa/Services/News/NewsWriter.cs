@@ -122,7 +122,10 @@ namespace StreetCorsa.Services.News
             if (f.RivalIsBoss)
             {
                 var story = f.PlayerWon ? "king_beaten" : "king_won";
-                if (f.RivalBossId.Length > 0 && text.Has($"news.{story}.{f.RivalBossId}.headline")) story += "." + f.RivalBossId;
+                // His own story only with both its lines: a headline alone would print with no body
+                if (Opponents.Bosses.OwnSuffixes(f.RivalBossId)
+                        .FirstOrDefault(s => text.Has($"news.{story}.{s}.headline") && text.Has($"news.{story}.{s}.body")) is { } own)
+                    story += "." + own;
                 return Piece(story, f.PlayerWon ? 100 : 80);
             }
 

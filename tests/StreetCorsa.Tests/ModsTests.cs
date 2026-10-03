@@ -237,8 +237,20 @@ public class ModContentTests : IDisposable
               "boss": { "path": "Mopar", "money": 15000, "wins": "35" } }
             """);
         _temp.File("mymod/racers/free.json", """
-            { "opponentId": "free", "name": "Free", "age": 50, "gender": "Male", "skill": 99, "aggression": 70, "boss": {} }
+            { "opponentId": "free", "name": "Free", "age": 50, "gender": "Male", "skill": 99, "aggression": 70, "boss": true }
             """);
+        _temp.File("mymod/racers/king_path.json", """
+            { "opponentId": "jerry", "name": "Jerry", "age": 50, "gender": "Male", "skill": 99, "aggression": 70, "boss": { "path": "King" } }
+            """);
+        _temp.File("mymod/racers/bad.json", """
+            { "opponentId": "bad", "name": "Bad Boss", "age": 50, "gender": "Male", "skill": 99, "aggression": 70, "boss": { "money": "lots" } }
+            """);
+        _temp.File("mymod/racers/odd.json", """
+            { "opponentId": "odd", "name": "Odd Boss", "age": 50, "gender": "Male", "skill": 99, "aggression": 70, "boss": 5 }
+            """);
+        _temp.File("streetcorsa/victories/v.json", """{ "victories": [ { "id": "King", "name": "King" } ] }""");
+        _temp.File("mymod/victories/v.json", """{ "victories": [ { "id": "Mopar", "name": "Mopar" } ] }""");
+
 
         var racers = new OpponentRepository(Mods()).LoadAllOpponents();
 
@@ -254,7 +266,16 @@ public class ModContentTests : IDisposable
         Assert.Equal(35, figures.Wins);
         Assert.Equal(52, figures.Races); // the rules' where he names none
 
-        Assert.Equal("", racers.Single(r => r.Name == "Free").BossPath); // out from the start
+        var free = racers.Single(r => r.Name == "Free");
+        Assert.True(free.IsBoss);
+        Assert.Equal("", free.BossPath); // out from the start
+
+        Assert.Equal("King", racers.Single(r => r.Name == "Jerry").BossPath); // his mod has no King path: the base game's
+
+        // A boss block that does not read leaves him out, and the player is told
+        Assert.DoesNotContain(racers, r => r.Name is "Bad Boss" or "Odd Boss");
+        Assert.Contains(ModProblems.All, p => p.Contains("Bad Boss"));
+        Assert.Contains(ModProblems.All, p => p.Contains("Odd Boss"));
     }
 
     [Fact]

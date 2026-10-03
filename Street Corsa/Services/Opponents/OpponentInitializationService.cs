@@ -23,8 +23,11 @@ namespace StreetCorsa.Services.Opponents
         /// <summary>The game state whose bosses were last looked for: the definitions are read once per game, not once a day</summary>
         private WeakReference<GameState>? _bossesChecked;
 
-        /// <summary>What a boss has in the bank, unless his own figures say</summary>
-        public static decimal KingMoney => Rules.RuleBook.Current.Rivals.King.Money;
+        /// <summary>
+        /// The racer definitions read for a game state, shared by <see cref="EnsureBosses(GameState)"/> and
+        /// <see cref="EnsureNewcomers"/> (each takes racers of its own from them: bosses, the rest)
+        /// </summary>
+        private (WeakReference<GameState> Game, List<Opponent> Definitions)? _definitions;
 
         /// <summary>
         /// Where a racer's skill counts from for their money and their car's shape: ten under the floor
@@ -58,7 +61,7 @@ namespace StreetCorsa.Services.Opponents
             _logger.Information("Initializing opponents for new game");
 
             // Load all available opponents; the King is set up on his own
-            var allOpponents = _opponentRepository.LoadAllOpponents().Where(o => !o.IsBoss).ToList();
+            var allOpponents = Definitions(gameState).Where(o => !o.IsBoss).ToList();
 
             if (allOpponents.Count == 0)
             {
@@ -125,7 +128,7 @@ namespace StreetCorsa.Services.Opponents
         {
             if (_newcomersChecked != null && _newcomersChecked.TryGetTarget(out var done) && ReferenceEquals(done, gameState)) return;
 
-            var definitions = _opponentRepository.LoadAllOpponents();
+            var definitions = Definitions(gameState);
             var racers = gameState.Racers;
             var known = racers.All.Concat(racers.Departed.Values).OfType<Opponent>().ToList();
 
@@ -163,30 +166,62 @@ namespace StreetCorsa.Services.Opponents
             _logger.Information("{Count} racer(s) defined since this game began join it, not on the street yet", newcomers.Count);
         }
 
+        /// <summary>The racer definitions, read once for <paramref name="gameState"/></summary>
+        private List<Opponent> Definitions(GameState gameState)
+        {
+            if (_definitions is { } read && read.Game.TryGetTarget(out var game) && ReferenceEquals(game, gameState)) return read.Definitions;
+
+            var definitions = _opponentRepository.LoadAllOpponents();
+            _definitions = (new WeakReference<GameState>(gameState), definitions);
+            return definitions;
+        }
+
         public decimal StartingMoney(Opponent opponent) => GenerateOpponentMoney(opponent);
 
         /// <summary>
         /// Every boss the mods define that the game does not have yet (a new game, a save from before him, a mod
-        /// added since) joins it out of sight, with his money, his record and his car. Known by definition, and by
-        /// name for one from before definitions were remembered. Once per game state.
+        /// added since) joins it out of sight, with his money, his record and his car. One the game has, known by
+        /// definition, is a boss of the path his definition names now (a racer a mod update made a boss becomes one).
+        /// A boss from before definitions were remembered stands for the one of his path. Once per game state, once it
+        /// all went through: a failure is tried again with the next review.
         /// </summary>
         private void EnsureBosses(GameState gameState, List<(CarDefinition Car, CarProfile Profile)>? carPool)
         {
             if (_bossesChecked != null && _bossesChecked.TryGetTarget(out var checkedState) && ReferenceEquals(checkedState, gameState)) return;
-            _bossesChecked = new WeakReference<GameState>(gameState);
 
             var racers = gameState.Racers;
             var known = racers.All.Concat(racers.Departed.Values).OfType<Opponent>().ToList();
-            var bosses = _opponentRepository.LoadAllOpponents().Where(o => o.IsBoss).ToList();
+            var bosses = Definitions(gameState).Where(o => o.IsBoss).ToList();
             if (bosses.Count == 0) _logger.Warning("No boss among the racer definitions: a path that ends at one can't be won");
 
-            foreach (var boss in bosses.Where(b => !known.Any(r => (b.DefinitionId.Length > 0 && r.DefinitionId == b.DefinitionId)
-                                                                   || string.Equals(r.Name, b.Name, StringComparison.OrdinalIgnoreCase))))
+            foreach (var boss in bosses)
             {
-                AddBoss(gameState, boss, carPool ??= BuildCarPool());
+                if (boss.DefinitionId.Length > 0 && known.FirstOrDefault(r => r.DefinitionId == boss.DefinitionId) is { } racer)
+                {
+                    if (!racer.IsBoss || racer.BossPath != boss.BossPath)
+                    {
+                        _logger.Information("{Racer} is now a boss, of the {Path} path", racer.Name, boss.BossPath.Length > 0 ? boss.BossPath : "(none)");
+                        racer.IsBoss = true;
+                        racer.BossPath = boss.BossPath;
+                    }
+                }
+                else if (known.FirstOrDefault(r => r.IsBoss && r.DefinitionId.Length == 0 && r.BossPath == boss.BossPath) is { } old)
+                {
+                    _logger.Debug("{Old} stands for {Boss}, the boss of his path from before definitions were remembered", old.Name, boss.Name);
+                }
+                else if (known.FirstOrDefault(r => string.Equals(r.Name, boss.Name, StringComparison.OrdinalIgnoreCase)) is { } namesake)
+                {
+                    _logger.Warning("{Boss} is not brought in: the game has a racer by that name already ({Id})", boss.Name, namesake.DefinitionId);
+                }
+                else
+                {
+                    AddBoss(gameState, boss, carPool ??= BuildCarPool());
+                    known.Add(boss);
+                }
             }
 
             Bosses.Refresh(gameState);
+            _bossesChecked = new WeakReference<GameState>(gameState);
         }
 
         private void AddBoss(GameState gameState, Opponent king, List<(CarDefinition Car, CarProfile Profile)> carPool)
@@ -262,9 +297,9 @@ namespace StreetCorsa.Services.Opponents
             // The car everybody on the street has lost to: his since he had it, and it shows in its worth (before
             // FinishCar prices it)
             car.History.ChangeHands(king.Name, car.PurchaseDate, CarAcquisition.Unknown);
-            car.History.Races = king.Stats.Races - _random.Next(0, 10);
-            car.History.Wins = car.History.Races - _random.Next(1, 4);
-            car.History.PinkSlipsWon = king.Stats.PinkSlipsWon;
+            car.History.Races = Math.Max(0, king.Stats.Races - _random.Next(0, 10));
+            car.History.Wins = Math.Clamp(car.History.Races - _random.Next(1, 4), 0, Math.Min(car.History.Races, king.Stats.Wins));
+            car.History.PinkSlipsWon = Math.Min(king.Stats.PinkSlipsWon, car.History.Wins);
 
             FinishCar(car, definition, profile);
             return car;

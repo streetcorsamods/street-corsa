@@ -503,8 +503,10 @@ A list under `opponents`, or one racer per file (its id as `opponentId` or `id`)
 `portraitPath` is next to the file. `skill` is 90 to 100. New racers join games already under way.
 
 A **boss** is a racer with a `"boss"` block: he only races for pink slips, stays out of sight until his victory path
-opens (`path`; none, or one no mod has: out from the start), never races where nobody watches and never leaves town. His
-money and record are his own where he names them, the rules' `rivals.king` where he does not:
+opens (`path`, his mod's own path first, then the base game's; none: out from the start; one no installed mod has, or
+a boss whose mod is gone: never out), never races where nobody watches and never leaves town. His money and record are
+his own where he names them, the rules' `rivals.king` where he does not (`"boss": true` is a boss with neither). A
+boss block that does not read leaves the racer out, and the game says so at startup:
 
 ```json
 { "opponentId": "big_jim", "name": "Big Jim", "…": "…",
@@ -513,6 +515,7 @@ money and record are his own where he names them, the rules' `rivals.king` where
 
 The base game's King is `"boss": { "path": "King" }` (`"isKing": true`, from before bosses, still means that); to
 replace him, give yours `"replaces": "king"`. A path's `beatBoss` step is won by beating every boss whose path it is.
+A racer a mod update makes a boss becomes one in games under way.
 A boss has lines of his own where a mod adds the key with his racer id after it (`talk.pulled_up.king.big_jim`, or
 `talk.pulled_up.king.my_mod:big_jim` from another mod); otherwise he says the King's: `talk.pulled_up.king`,
 `replies.king.pink_slips`, `replies.king.no_pink_slip`, `street.king_out`, `chat.fact.rival_king`, and the paper's
@@ -562,7 +565,8 @@ Ways to win the game. A path opens once every `unlock` step is done (none: open 
 ```
 
 Step types: `counter` (a trigger, as in milestones, at `atLeast`), `beatBoss` (every boss whose path this is beaten,
-or with `"boss"`, a racer id, that one; `beatKing` is the same), `beatAll` (every racer beaten once), `mostWins` (more
+or with `"boss"`, a racer id, that one: the mod's own racer first, then the base game's; `beatKing` is the same),
+`beatAll` (every racer beaten once; a boss still out of sight is not asked for), `mostWins` (more
 wins than any racer but the bosses). `{target}`, `{current}`, `{remaining}` fill a step's text;
 counters by name (`{TotalWins}`), `{defeated}` and `{total}` fill both steps and progress lines, with a format if
 wanted (`{MoneyEarned:N0}`). A goal step is never done while the path is locked. The progress shown is the share of all

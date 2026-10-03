@@ -91,6 +91,12 @@ namespace StreetCorsa.Models.GameState
         /// <summary>The game's bosses, for the victories' beatBoss steps (<c>Bosses.Refresh</c>)</summary>
         public List<BossStanding> Bosses { get; set; } = [];
 
+        /// <summary>
+        /// Whether <see cref="Bosses"/> has been looked up: until then (a save from before bosses) the King path's step
+        /// goes by <see cref="KingName"/>; from then on a game with no boss has none to beat
+        /// </summary>
+        public bool BossesKnown { get; set; }
+
         #endregion
 
         /// <summary>

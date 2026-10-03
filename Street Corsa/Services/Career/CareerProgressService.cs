@@ -45,7 +45,8 @@ namespace StreetCorsa.Services.Career
                     newMilestones.Count, string.Join(", ", newMilestones.Select(m => m.Name)));
             }
 
-            // Check for newly unlocked victory conditions
+            // Check for newly unlocked victory conditions, on the game's standing as it is now (who the bosses are)
+            _victoryService.RefreshStanding(gameState);
             var newVictoryUnlocks = _victoryService.CheckForNewUnlocks(gameState.Career);
             result.UnlockedVictories = newVictoryUnlocks.Select(v => v.VictoryType).ToList();
 

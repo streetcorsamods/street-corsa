@@ -16,64 +16,75 @@ namespace StreetCorsa.Services.Opponents
         /// <summary>The path the King was at before bosses, and the base game's King's still</summary>
         public const string KingPathId = "King";
 
+        /// <summary>The base game's King's racer id</summary>
+        public const string KingId = "king";
+
         /// <summary>
-        /// A path or racer id a mod names, as the game keeps it: one written in full is that one, otherwise the mod's own
-        /// (<see cref="Means"/> falls back to the base game's when the mod has none)
+        /// The path a boss's mod names, as the game keeps it (<see cref="ModIds.Resolve"/>): one written in full is
+        /// that one, otherwise the mod's own path when it has one, else the base game's
         /// </summary>
-        public static string Qualify(string modId, string? path) =>
+        public static string ResolvePath(string modId, string? path, IEnumerable<VictoryDefinition> victories) =>
             string.IsNullOrWhiteSpace(path) ? string.Empty
-            : ModIds.IsQualified(path) ? ModIds.Normalize(path.Trim())
-            : ModIds.Qualify(modId, path.Trim());
+            : ModIds.Resolve(modId, path.Trim(), id => victories.Any(v => v.Id.Equals(id, StringComparison.OrdinalIgnoreCase)));
 
-        /// <summary>Whether <paramref name="id"/> names what <paramref name="wanted"/> means: itself, or the base game's of the same name</summary>
-        public static bool Means(string wanted, string id) =>
-            id.Equals(wanted, StringComparison.OrdinalIgnoreCase)
-            || (!ModIds.IsQualified(id) && ModIds.IsQualified(wanted) && id.Equals(ModIds.Local(wanted), StringComparison.OrdinalIgnoreCase));
+        /// <summary>The path <paramref name="pathId"/> is among <paramref name="victories"/></summary>
+        public static VictoryDefinition? FindPath(string pathId, IEnumerable<VictoryDefinition> victories) =>
+            pathId.Length == 0 ? null : victories.FirstOrDefault(v => v.Id.Equals(pathId, StringComparison.OrdinalIgnoreCase));
 
-        /// <summary>The path <paramref name="pathId"/> means among <paramref name="victories"/>: its own id first, then the base game's</summary>
-        public static VictoryDefinition? FindPath(string pathId, IEnumerable<VictoryDefinition> victories)
-        {
-            if (pathId.Length == 0) return null;
-
-            var list = victories as IReadOnlyCollection<VictoryDefinition> ?? victories.ToList();
-            return list.FirstOrDefault(v => v.Id.Equals(pathId, StringComparison.OrdinalIgnoreCase))
-                   ?? list.FirstOrDefault(v => Means(pathId, v.Id));
-        }
-
-        /// <summary>The boss comes out once his path is open; with no path, or one no mod has, from the start</summary>
-        public static bool PathOpen(Opponent boss, CareerState career) =>
-            FindPath(boss.BossPath, CareerContent.Installed.Victories) is not { } path || new DataVictory(path).IsUnlocked(career);
+        /// <summary>Whether the mod a boss comes from is installed (the base game's always is)</summary>
+        public static bool ModInstalled(Opponent boss) =>
+            boss.DefinitionId.Length == 0 || ModIds.IsBase(ModIds.ModOf(boss.DefinitionId)) || ModSet.Installed.Get(ModIds.ModOf(boss.DefinitionId)) != null;
 
         /// <summary>
-        /// The text key for a boss: his own (<c>key.&lt;racer id&gt;</c>, "talk.pulled_up.king.my_mod:big_jim") when
-        /// a mod has it, else every boss's
+        /// The boss comes out once his path is open; with no path, from the start. One whose path no installed mod has,
+        /// or whose own mod is gone, stays out of sight: beating him would win nothing.
         /// </summary>
-        public static string Key(string key, Opponent boss)
+        public static bool PathOpen(Opponent boss, CareerState career)
         {
-            if (boss.DefinitionId.Length == 0) return key;
+            if (!ModInstalled(boss)) return false;
+            if (boss.BossPath.Length == 0) return true;
 
-            var own = key + "." + boss.DefinitionId;
-            return GameText.Installed.Has(own) ? own : key;
+            return FindPath(boss.BossPath, CareerContent.Installed.Victories) is { } path && new DataVictory(path).IsUnlocked(career);
         }
+
+        /// <summary>
+        /// What a boss's own text keys end in: his racer id in full ("my_mod:big_jim"), then as his mod wrote it
+        /// ("big_jim")
+        /// </summary>
+        public static IEnumerable<string> OwnSuffixes(string bossId)
+        {
+            if (bossId.Length == 0) yield break;
+
+            yield return bossId;
+            if (ModIds.IsQualified(bossId)) yield return ModIds.Local(bossId);
+        }
+
+        /// <summary>
+        /// The text key for a boss: his own (<c>key.&lt;racer id&gt;</c>, by <see cref="OwnSuffixes"/>) when a mod
+        /// has it, else every boss's
+        /// </summary>
+        public static string Key(string key, Opponent boss) =>
+            OwnSuffixes(boss.DefinitionId).Select(s => key + "." + s).FirstOrDefault(GameText.Installed.Has) ?? key;
 
         /// <summary>
         /// Puts what the career needs to know of its bosses on it (<see cref="CareerState.Bosses"/>): who they are,
-        /// by the name they are beaten under, and their paths
+        /// by the name they are beaten under, and their paths. A boss whose mod is gone is no boss of any path.
         /// </summary>
         public static void Refresh(GameState gameState)
         {
-            var bosses = gameState.Racers.All.Concat(gameState.Racers.Departed.Values)
+            gameState.Career.Bosses = gameState.Racers.All.Concat(gameState.Racers.Departed.Values)
                 .OfType<Opponent>()
-                .Where(o => o.IsBoss)
+                .Where(o => o.IsBoss && ModInstalled(o))
                 .Select(o => new BossStanding { Id = o.DefinitionId, Name = o.Name, Path = o.BossPath })
                 .ToList();
-            if (bosses.Count > 0 || gameState.Career.Bosses.Count > 0) gameState.Career.Bosses = bosses;
+            gameState.Career.BossesKnown = true;
         }
 
         /// <summary>A save from before bosses: its King is the King path's boss</summary>
         public static void BringUpToDate(GameState gameState)
         {
-            foreach (var king in gameState.Racers.All.Concat(gameState.Racers.Departed?.Values ?? Enumerable.Empty<Racer>())
+            gameState.Racers.Departed ??= [];
+            foreach (var king in gameState.Racers.All.Concat(gameState.Racers.Departed.Values)
                          .OfType<Opponent>().Where(o => o.IsKing))
             {
                 king.IsBoss = true;
@@ -81,7 +92,7 @@ namespace StreetCorsa.Services.Opponents
                 king.IsKing = false;
             }
 
-            gameState.Career.Bosses ??= [];
+            Refresh(gameState);
         }
     }
 }

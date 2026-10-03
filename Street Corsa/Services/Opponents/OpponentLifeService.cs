@@ -82,7 +82,16 @@ namespace StreetCorsa.Services.Opponents
 
         public async Task ReviewDayAsync(GameState gameState, DateTime currentDate)
         {
-            _initialization?.EnsureBosses(gameState);
+            try
+            {
+                _initialization?.EnsureBosses(gameState);
+            }
+            catch (Exception ex)
+            {
+                // The racers on the street still have their day; the bosses are looked for again tomorrow
+                _logger.Error(ex, "Could not bring in the bosses");
+            }
+
             try
             {
                 _initialization?.EnsureNewcomers(gameState);

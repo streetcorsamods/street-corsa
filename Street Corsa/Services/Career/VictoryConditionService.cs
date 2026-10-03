@@ -143,10 +143,13 @@ namespace StreetCorsa.Services.Career
         /// <summary>
         /// How many racers Total Domination asks the player to have beaten: everybody on the scene, and those who left
         /// after the player beat them (they stay among the beaten, so they stay in the count). One who left unbeaten
-        /// is not asked for until they come back.
+        /// is not asked for until they come back. A boss is not asked for while he keeps out of sight (his path is
+        /// not open), unless the player has beaten him already.
         /// </summary>
         public static int OpponentsToDominate(GameState gameState) =>
-            gameState.Racers.TotalCount + gameState.Racers.Departed.Keys.Count(gameState.Career.DefeatedOpponentIds.Contains);
+            gameState.Racers.TotalCount + gameState.Racers.Departed.Keys.Count(gameState.Career.DefeatedOpponentIds.Contains)
+            - gameState.Racers.All.OfType<Opponent>().Count(o => o.IsBoss && !gameState.Career.DefeatedOpponentIds.Contains(o.Name)
+                                                                 && !Opponents.Bosses.PathOpen(o, gameState.Career));
 
         /// <summary>
         /// Check if the player has the most wins for Season Champion victory

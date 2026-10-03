@@ -60,9 +60,9 @@ namespace StreetCorsa.Services.Career
             foreach (var (id, victory, mod) in victories.Entries)
             {
                 victory.Id = id;
-                // A boss named as its mod wrote him: the mod's own racer, else the base game's (Bosses.Means)
-                foreach (var step in victory.Unlock.Concat(victory.Goal).Where(s => s.Boss is { Length: > 0 }))
-                    step.Boss = Opponents.Bosses.Qualify(mod.Id, step.Boss);
+                // The boss a step names is the mod's own racer, else the base game's: the racers are not read yet, so
+                // that is told once the game has its bosses (DataVictory)
+                victory.ModId = mod.Id;
                 victoryList.Add(victory);
             }
 
@@ -118,6 +118,8 @@ namespace StreetCorsa.Services.Career
             foreach (var step in victory.Unlock.Concat(victory.Goal))
             {
                 step.Type ??= VictoryStep.CounterType;
+                if (step.Type == VictoryStep.BeatKingType) step.Type = VictoryStep.BeatBossType; // as written before bosses
+                step.Boss = string.IsNullOrWhiteSpace(step.Boss) ? null : step.Boss.Trim();
                 step.Step ??= string.Empty;
             }
 
@@ -152,7 +154,7 @@ namespace StreetCorsa.Services.Career
 
         private static bool IsKnownStep(VictoryStep step) => step.Type switch
         {
-            VictoryStep.BeatBossType or VictoryStep.BeatKingType or VictoryStep.BeatAllType or VictoryStep.MostWinsType => true,
+            VictoryStep.BeatBossType or VictoryStep.BeatAllType or VictoryStep.MostWinsType => true,
             VictoryStep.CounterType => step.Counter != null,
             _ => false
         };

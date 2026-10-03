@@ -448,7 +448,7 @@ public class NewcomerTests
             new Opponent("The King", 41, Gender.Male, 100, 65) { DefinitionId = "king", IsBoss = true, BossPath = "King" },
             new Opponent("Big Jim", 50, Gender.Male, 99, 70)
             {
-                DefinitionId = "mymod:big_jim", IsBoss = true, BossPath = "mymod:Mopar",
+                DefinitionId = "big_jim", IsBoss = true, BossPath = "Mopar",
                 BossRecord = new BossRecord { Money = 15000m, Races = 10, Wins = 9 }
             });
         var init = new OpponentInitializationService(repo, new MemoryCatalog(), new MemoryProfiles());
@@ -460,7 +460,53 @@ public class NewcomerTests
         var jim = Assert.IsType<Opponent>(state.Racers.Inactive["Big Jim"]);
         Assert.Equal(15000m, jim.Money);
         Assert.Equal((10, 9), (jim.Stats.Races, jim.Stats.Wins));
-        Assert.Equal(["King", "mymod:Mopar"], state.Career.Bosses.Select(b => b.Path).Order());
+        Assert.Equal(["King", "Mopar"], state.Career.Bosses.Select(b => b.Path).Order());
+    }
+
+    private sealed class FailsOnce(IOpponentRepository inner) : IOpponentRepository
+    {
+        public int Reads { get; private set; }
+
+        public List<Opponent> LoadAllOpponents() => ++Reads == 1 ? throw new InvalidOperationException("busy") : inner.LoadAllOpponents();
+    }
+
+    [Fact]
+    public void Bosses_that_could_not_be_brought_in_are_tried_again_and_the_definitions_are_read_once_for_both()
+    {
+        TestLogging.SilenceLogging();
+        var state = GameState.CreateNew("P");
+        var repo = new FailsOnce(new Definitions(
+            new Opponent("The King", 41, Gender.Male, 100, 65) { DefinitionId = "king", IsBoss = true, BossPath = "King" },
+            new Opponent("Marcus", 43, Gender.Male, 91, 50) { DefinitionId = "drv_031" }));
+        var init = new OpponentInitializationService(repo, new MemoryCatalog(), new MemoryProfiles());
+
+        Assert.Throws<InvalidOperationException>(() => init.EnsureBosses(state));
+        init.EnsureBosses(state);
+        init.EnsureNewcomers(state);
+
+        Assert.Equal(["Marcus", "The King"], state.Racers.All.Select(r => r.Name).Order());
+        Assert.Equal(2, repo.Reads);
+    }
+
+    [Fact]
+    public void A_racer_a_mod_update_makes_a_boss_becomes_one_and_an_old_King_is_not_doubled()
+    {
+        TestLogging.SilenceLogging();
+        var state = GameState.CreateNew("P");
+        var marcus = new Opponent("Marcus", 43, Gender.Male, 91, 50) { DefinitionId = "drv_031", Status = RacerStatus.ReadyToRace };
+        var oldKing = new Opponent("Elvis", 41, Gender.Male, 100, 65) { IsBoss = true, BossPath = "King", Status = RacerStatus.Inactive };
+        state.Racers.AddRacer(marcus);
+        state.Racers.AddRacer(oldKing);
+
+        var repo = new Definitions(
+            new Opponent("Marcus", 43, Gender.Male, 91, 50) { DefinitionId = "drv_031", IsBoss = true, BossPath = "Mopar" },
+            new Opponent("The New King", 41, Gender.Male, 100, 65) { DefinitionId = "king", IsBoss = true, BossPath = "King" });
+        new OpponentInitializationService(repo, new MemoryCatalog(), new MemoryProfiles()).EnsureBosses(state);
+
+        Assert.True(marcus.IsBoss);
+        Assert.Equal("Mopar", marcus.BossPath);
+        Assert.Equal(2, state.Racers.All.Count());
+        Assert.Equal(["Elvis", "Marcus"], state.Career.Bosses.Select(b => b.Name).Order());
     }
 
     [Fact]
