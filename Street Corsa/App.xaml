@@ -164,6 +164,11 @@
                 <raceHub:RaceHubDialogView/>
             </DataTemplate>
             <!-- end of step 25: the racing hub -->
+            <!-- The track picker, for a free run and a test-and-tune from the racing hub -->
+            <DataTemplate xmlns:trackPicker="clr-namespace:StreetCorsa.Dialogs.TrackPicker"
+                          DataType="{x:Type trackPicker:TrackPickerDialogViewModel}">
+                <trackPicker:TrackPickerDialogView/>
+            </DataTemplate>
             <!-- Step 25 (B): the 3D previews, a car gone to see and a part looked at; namespaces declared here -->
             <DataTemplate xmlns:carViewing="clr-namespace:StreetCorsa.Screens.CarViewing"
                           DataType="{x:Type carViewing:CarViewingScreenViewModel}">

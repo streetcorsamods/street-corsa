@@ -95,8 +95,9 @@ launch failure (`Failed`, `Success = false`), not a forfeit.
 ### Launch Intent (High-Level)
 What user wants to do:
 - DragRaceLaunchIntent
-- FreeRunLaunchIntent: the selected car alone on a track of the player's choosing (garage "Free Run" button, track
-  remembered in `GameSettings.FreeRunTrack`). A practice session without the `sc_race` mode (a race installs the mode first, `ScRaceMode`, and fails with a message when CSP or the mode is missing): nothing auto-starts or
+- FreeRunLaunchIntent: the selected car alone on a track of the player's choosing (the racing hub's "Free Run" button, the track
+  picked from cards in `Dialogs/TrackPicker` and remembered in `GameSettings.FreeRunTrack`; `Screens/Shared/PracticeRuns` sets it
+  up, and the hub's Test & Tune the same way, its strip remembered in `GameSettings.TestAndTuneStrip`). A practice session without the `sc_race` mode (a race installs the mode first, `ScRaceMode`, and fails with a message when CSP or the mode is missing): nothing auto-starts or
   auto-quits and no results are read; the player leaves when done and an hour of game time goes by. The car's parts
   data is applied and restored like a race's.
 

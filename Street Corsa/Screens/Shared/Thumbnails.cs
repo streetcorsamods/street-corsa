@@ -8,7 +8,7 @@ namespace StreetCorsa.Screens.Shared
     /// A picture off the disk shown small (a racer's portrait, a track's preview), decoded at a small width and frozen
     /// once, then shared for the session, as <see cref="Garage.GarageScreenViewModel.CalendarImage"/> does. The files
     /// are often 1024 px or more for a card a hundred pixels wide: decoded at full size, every visit to the screen
-    /// would decode them again at many times the memory.
+    /// would decode them again at many times the memory. Safe to call off the UI thread: the picture comes frozen.
     /// </summary>
     public static class Thumbnails
     {
@@ -33,7 +33,10 @@ namespace StreetCorsa.Screens.Shared
             try
             {
                 var key = (path, decodeWidth, File.GetLastWriteTimeUtc(path));
-                if (Cache.TryGetValue(key, out var cached)) return cached;
+                lock (Cache)
+                {
+                    if (Cache.TryGetValue(key, out var cached)) return cached;
+                }
 
                 var image = new BitmapImage();
                 image.BeginInit();
@@ -42,13 +45,15 @@ namespace StreetCorsa.Screens.Shared
                 image.CacheOption = BitmapCacheOption.OnLoad;
                 image.EndInit();
                 image.Freeze();
-                Cache[key] = image;
+                lock (Cache) Cache[key] = image;
                 return image;
             }
             catch (Exception ex)
             {
                 // The logger only now: a test that touches this class first must not need the logging set up
-                if (Warned.Add(path))
+                bool first;
+                lock (Warned) first = Warned.Add(path);
+                if (first)
                     AppLoggerFactory.CreateLogger(LogCategory.UI).Warning("The picture {Path} could not be read: {Error}", path, ex.Message);
                 return null;
             }

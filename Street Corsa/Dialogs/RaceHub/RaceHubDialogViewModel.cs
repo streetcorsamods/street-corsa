@@ -18,10 +18,12 @@ namespace StreetCorsa.Dialogs.RaceHub
 {
     /// <summary>
     /// The racing hub, over the garage (its "Go race!" button): the race invitations, what the street did the last few
-    /// days, and the way out onto the streets. An invitation taken up is entered as it always was: the entry, a bracket
+    /// days, the car out on its own (a free run, a test-and-tune, each picking its track from cards), and the way out
+    /// onto the streets. An invitation taken up is entered as it always was: the entry, a bracket
     /// race's dial-in, the race set up, the race. The hub closes before the entry shows (dialogs never nest), so the
     /// entry's answer comes back here with the hub gone; it comes back in front, with nothing to press, while the race
-    /// is set up.
+    /// is set up. A free run or a test-and-tune goes the same way: the hub closes for the track picker, and comes back
+    /// in front while the car is made ready.
     /// </summary>
     public class RaceHubDialogViewModel : BaseDialogViewModel
     {
@@ -32,6 +34,7 @@ namespace StreetCorsa.Dialogs.RaceHub
         private readonly IEventOpponentService _eventOpponentService;
         private readonly IAssettoCorsaContentService _contentService;
         private readonly RaceSetupBuilder _raceSetup;
+        private readonly PracticeRuns _practice;
         private readonly Func<bool> _stillHome;
         private readonly Action<DragRaceLaunchIntent> _race;
         private readonly Action? _hitTheStreets;
@@ -42,6 +45,7 @@ namespace StreetCorsa.Dialogs.RaceHub
         private static bool _isEntering;
 
         private bool _isSettingUp;
+        private bool _isPractice;
 
         /// <summary>
         /// True while the race entered is being set up: the hub stands in front meanwhile, with nothing to press, so the
@@ -56,9 +60,22 @@ namespace StreetCorsa.Dialogs.RaceHub
             }
         }
 
+        /// <summary>What the hub says while it waits in front: the cars got ready for a race, or the car for a run on its own</summary>
+        public string SettingUpText => GameText.Say(_isPractice ? "racehub.setting_up.practice" : "racehub.setting_up");
+
         public RelayCommand CloseCommand { get; }
         public RelayCommand HitTheStreetsCommand { get; }
         public RelayCommand<EventInvitationViewModel> EnterEventCommand { get; }
+
+        /// <summary>The selected car out on its own on a track the player picks: no opponent, no stake, an hour goes by</summary>
+        public RelayCommand FreeRunCommand { get; }
+
+        /// <summary>The selected car at a drag strip the player picks, pass after pass, for timeslips</summary>
+        public RelayCommand TestAndTuneCommand { get; }
+
+        // The tracks of the install as each run offers them, listed once as the hub opens
+        private readonly List<PracticeTrack> _freeRunTracks;
+        private readonly List<PracticeTrack> _strips;
 
         public ObservableCollection<EventInvitationViewModel> RaceInvitations { get; } = [];
         public bool HasRaceInvitations => RaceInvitations.Count > 0;
@@ -83,6 +100,7 @@ namespace StreetCorsa.Dialogs.RaceHub
             IEventOpponentService eventOpponentService,
             IAssettoCorsaContentService contentService,
             RaceSetupBuilder raceSetup,
+            PracticeRuns practice,
             Func<bool> stillHome,
             Action<DragRaceLaunchIntent> race,
             Action? hitTheStreets)
@@ -94,6 +112,7 @@ namespace StreetCorsa.Dialogs.RaceHub
             _eventOpponentService = eventOpponentService;
             _contentService = contentService;
             _raceSetup = raceSetup;
+            _practice = practice;
             _stillHome = stillHome;
             _race = race;
             _hitTheStreets = hitTheStreets;
@@ -101,6 +120,10 @@ namespace StreetCorsa.Dialogs.RaceHub
             CloseCommand = new RelayCommand(() => _dialogService.CloseDialog(), () => !IsSettingUp);
             HitTheStreetsCommand = new RelayCommand(OnHitTheStreets, () => !IsSettingUp && _hitTheStreets != null);
             EnterEventCommand = new RelayCommand<EventInvitationViewModel>(OnEnterEvent, _ => !_isEntering);
+            _freeRunTracks = practice.FreeRunTracks();
+            _strips = practice.Strips();
+            FreeRunCommand = new RelayCommand(OnFreeRun, () => CanPractice && _freeRunTracks.Count > 0);
+            TestAndTuneCommand = new RelayCommand(OnTestAndTune, () => CanPractice && _strips.Count > 0);
 
             try
             {
@@ -136,6 +159,140 @@ namespace StreetCorsa.Dialogs.RaceHub
             if (_hitTheStreets == null) return;
             _dialogService.CloseDialog();
             _hitTheStreets();
+        }
+
+        /// <summary>Why the selected car cannot go out on its own now; null when it can</summary>
+        private string? WhyNoPractice()
+        {
+            if (PracticeRuns.CarOf(_gameState) is not { } car || _catalogRepository.GetCar(car.DefinitionId) == null) return GameText.Say("racehub.practice.no_car");
+            if (car.IsImpounded) return GameText.Say("racehub.practice.impounded");
+            if (_practice.IsBusy) return GameText.Say("racehub.practice.busy");
+            return null;
+        }
+
+        private bool CanPractice => !IsSettingUp && !_isEntering && WhyNoPractice() == null;
+
+        /// <summary>What the Free Run button does, or why it cannot</summary>
+        public string FreeRunTip => WhyNoPractice()
+            ?? (_freeRunTracks.Count == 0 ? GameText.Say("racehub.free_run.no_tracks") : GameText.Say("garage.free_run.tip"));
+
+        /// <summary>What the Test and Tune button does, or why it cannot</summary>
+        public string TestAndTuneTip => WhyNoPractice()
+            ?? (_strips.Count == 0 ? GameText.Say("garage.no_strip") : GameText.Say("garage.test_and_tune.tip"));
+
+        private void OnFreeRun() => PickTrack(strip: false);
+
+        private void OnTestAndTune() => PickTrack(strip: true);
+
+        /// <summary>
+        /// The track picker in the hub's place (dialogs never nest): the run goes ahead from its pick, and Back brings the
+        /// hub back
+        /// </summary>
+        private void PickTrack(bool strip)
+        {
+            if (!CanPractice) return;
+
+            try
+            {
+                var tracks = strip ? _strips : _freeRunTracks;
+                var last = strip
+                    ? PracticeTracks.StripDefault(tracks, _practice.RememberedStrip)
+                    : PracticeTracks.FreeRunDefault(tracks, _practice.RememberedFreeRun);
+                _dialogService.ShowDialog(new TrackPicker.TrackPickerDialogViewModel(
+                    _dialogService,
+                    GameText.Say(strip ? "trackpicker.test_and_tune.title" : "trackpicker.free_run.title"),
+                    GameText.Say(strip ? "trackpicker.test_and_tune.note" : "trackpicker.free_run.note"),
+                    tracks,
+                    last,
+                    picked: track => OnPracticePicked(track, strip),
+                    back: () => _dialogService.ShowDialog(this, jumpQueue: true)), jumpQueue: true);
+                _dialogService.Withdraw(this);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not open the track picker");
+                _dialogService.Withdraw(this);
+                ShowPracticeError(ex, strip);
+            }
+        }
+
+        /// <summary>
+        /// The track picked: the car made ready with the hub in front, then the run. A free run runs Assetto Corsa from
+        /// here and the player is in the garage again after it; a test-and-tune goes through the race, which comes back
+        /// to the garage.
+        /// </summary>
+        private async void OnPracticePicked(PracticeTrack track, bool strip)
+        {
+            // Read once: the car checked is the one sent
+            if (_isEntering || PracticeRuns.CarOf(_gameState) is not { IsImpounded: false } car || _practice.IsBusy) return;
+
+            _isEntering = true;
+            RelayCommand.RaiseCanExecuteChanged();
+            try
+            {
+                Services.Configuration.Models.FreeRunLaunchIntent? freeRun = null;
+                DragRaceLaunchIntent? testAndTune = null;
+
+                // Checking the car takes a moment: the hub comes back in front meanwhile, as for a race
+                SetPractice(true);
+                IsSettingUp = true;
+                _dialogService.ShowDialog(this, jumpQueue: true);
+                try
+                {
+                    if (strip) testAndTune = await _practice.PrepareTestAndTuneAsync(_gameState, car, track);
+                    else freeRun = await _practice.PrepareFreeRunAsync(_gameState, car, track);
+                }
+                finally
+                {
+                    _dialogService.Withdraw(this);
+                    IsSettingUp = false;
+                    SetPractice(false);
+                }
+
+                // A player who left meanwhile has called it off
+                if (!_stillHome())
+                {
+                    _logger.Information("The garage was left while the car was made ready; no {Run}", strip ? "test-and-tune" : "free run");
+                    return;
+                }
+
+                if (testAndTune != null)
+                {
+                    _race(testAndTune);
+                }
+                else if (freeRun != null)
+                {
+                    // Assetto Corsa holds its own lock from here: the hub's entry is done with
+                    _isEntering = false;
+                    RelayCommand.RaiseCanExecuteChanged();
+                    await _practice.FreeRunAsync(_gameState, freeRun);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Nothing may escape an async void
+                _logger.Error(ex, "Could not take the car out on {Track}", track.Key);
+                ShowPracticeError(ex, strip);
+            }
+            finally
+            {
+                _isEntering = false;
+                RelayCommand.RaiseCanExecuteChanged();
+            }
+        }
+
+        private void ShowPracticeError(Exception ex, bool strip)
+        {
+            _dialogService.ShowDialog(new InformationDialogViewModel(
+                _dialogService,
+                GameText.Say(strip ? "garage.strip_failed" : "garage.free_run_failed", ("error", ex.Message)),
+                GameText.Say("garage.launch_error.title")));
+        }
+
+        private void SetPractice(bool practice)
+        {
+            _isPractice = practice;
+            OnPropertyChanged(nameof(SettingUpText));
         }
 
         private void OnEnterEvent(EventInvitationViewModel? eventVm)
