@@ -3,6 +3,16 @@ using StreetCorsa.Models.GameState;
 
 namespace StreetCorsa.Services.Market
 {
+    /// <summary>What came of bringing the car just bought into the garage</summary>
+    public enum SwitchOutcome
+    {
+        Switched,
+        /// <summary>In the garage, but the game could not be saved</summary>
+        SaveFailed,
+        /// <summary>The car is no longer the player's: nothing changed</summary>
+        NotOwned
+    }
+
     /// <summary>Buying a car, wherever it was found</summary>
     public interface ICarPurchaseService
     {
@@ -18,8 +28,7 @@ namespace StreetCorsa.Services.Market
 
         /// <summary>
         /// Brings the car just bought into the garage, the car that stood there going to the car lot in its stead, and saves.
-        /// False when the save failed.
         /// </summary>
-        bool SwitchTo(Models.GameState.GameState gameState, Car car);
+        SwitchOutcome SwitchTo(Models.GameState.GameState gameState, Car car);
     }
 }

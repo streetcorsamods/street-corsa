@@ -215,6 +215,10 @@ namespace StreetCorsa.Screens.Shared
             }
 
             if (Talk.Subject?.Thing == subject.Thing) return;
+
+            // The talk is about it at once, before the salesman has gone on about it: Buy is for this car at its price
+            Talk.Look(subject);
+            RefreshPrice();
             await Run(() => Talk.TurnToAsync(subject, _cancel.Token), null);
             RefreshPrice();
         }
@@ -234,7 +238,10 @@ namespace StreetCorsa.Screens.Shared
         private void OnBuy()
         {
             SettlePick();
-            if (CanBuy) Buy?.Invoke();
+            if (!CanBuy) return;
+
+            Talk.Take();
+            Buy?.Invoke();
         }
 
         /// <summary>

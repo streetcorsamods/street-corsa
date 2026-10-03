@@ -38,8 +38,11 @@ namespace StreetCorsa.Services.Market
     public class CarPurchaseService(
         IGameStateRepository gameStateRepository,
         ICarPartsService partsService,
-        IGameTimeService gameTimeService) : ICarPurchaseService
+        IGameTimeService gameTimeService,
+        Func<IReadOnlyList<WarehouseScene>>? warehouses = null) : ICarPurchaseService
     {
+        // The warehouses the car lot has, for the bays a car from the garage is parked in
+        private readonly Func<IReadOnlyList<WarehouseScene>> _warehouses = warehouses ?? (() => WarehouseScenes.Installed);
         private readonly IGameStateRepository _gameStateRepository = gameStateRepository;
         private readonly ICarPartsService _partsService = partsService;
         private readonly IGameTimeService _gameTimeService = gameTimeService;
@@ -179,16 +182,21 @@ namespace StreetCorsa.Services.Market
                 saveFailed, car, $"{carDef.Brand} {carDef.Name}", askToSwitch);
         }
 
-        public bool SwitchTo(Models.GameState.GameState gameState, Car car)
+        public SwitchOutcome SwitchTo(Models.GameState.GameState gameState, Car car)
         {
             var player = gameState.Player;
-            if (!player.Cars.Contains(car)) return false;
+            if (player.Cars?.Contains(car) != true)
+            {
+                _logger.Warning("Not switched to {CarId} (Instance: {InstanceId}): the player no longer has it", car.DefinitionId, car.InstanceId);
+                return SwitchOutcome.NotOwned;
+            }
 
-            // The car from the garage is parked where the new one would have gone
-            CarStorage.TakeOut(car, player.Cars.FirstOrDefault(c => c.InstanceId == player.SelectedCarInstanceId));
-            player.SelectedCarInstanceId = car.InstanceId;
+            // The car from the garage takes the first free bay: the new one had none to give it
+            CarStorage.ToGarage(player, car, n => CarStorage.CapacityOf(_warehouses(), n));
             _logger.Information("Switched to the car just bought: {CarId} (Instance: {InstanceId})", car.DefinitionId, car.InstanceId);
-            return GameSaves.TrySave(_gameStateRepository, gameState, _logger, "switching to the car just bought");
+            return GameSaves.TrySave(_gameStateRepository, gameState, _logger, "switching to the car just bought")
+                ? SwitchOutcome.Switched
+                : SwitchOutcome.SaveFailed;
         }
 
         /// <summary>

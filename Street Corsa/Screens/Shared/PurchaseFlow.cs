@@ -2,8 +2,10 @@ using StreetCorsa.Dialogs;
 using StreetCorsa.Dialogs.Confirmation;
 using StreetCorsa.Dialogs.Information;
 using StreetCorsa.Logging;
+using StreetCorsa.Navigation;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Services.Market;
+using StreetCorsa.Services.Parts;
 using StreetCorsa.Services.Text;
 using StreetCorsa.Helpers;
 
@@ -18,12 +20,14 @@ namespace StreetCorsa.Screens.Shared
     {
         private readonly DialogService _dialogService;
         private readonly ICarPurchaseService _purchaseService;
+        private readonly ICarPartsService _partsService;
         private readonly IAppLogger _logger;
 
-        public PurchaseFlow(DialogService dialogService, ICarPurchaseService purchaseService, IAppLogger logger)
+        public PurchaseFlow(DialogService dialogService, ICarPurchaseService purchaseService, ICarPartsService partsService, IAppLogger logger)
         {
             _dialogService = dialogService;
             _purchaseService = purchaseService;
+            _partsService = partsService;
             _logger = logger;
         }
 
@@ -45,9 +49,11 @@ namespace StreetCorsa.Screens.Shared
         /// <summary>
         /// Asks, and buys when the player says yes. <paramref name="onFinished"/> runs after the result has
         /// been shown, for the screen to move on or reload; it is not called when the player said no, nor when
-        /// the purchase failed with an error (nothing was bought then).
+        /// the purchase failed with an error (nothing was bought then). <paramref name="onScreen"/> says whether the
+        /// player is still on the screen that sold the car: one who has gone meanwhile (the purchase takes a moment) is
+        /// not asked to switch cars under a garage already open on the old one.
         /// </summary>
-        public void Offer(GameState gameState, UsedCarListingViewModel car, Action<PurchaseResult> onFinished)
+        public void Offer(GameState gameState, UsedCarListingViewModel car, Func<bool> onScreen, Action<PurchaseResult> onFinished)
         {
             _logger.Information("Player attempting to purchase car {CarId} for ${Price}", car.CarDefinition.Id, car.Listing.Price);
 
@@ -57,11 +63,11 @@ namespace StreetCorsa.Screens.Shared
                 GameText.Say("purchase.confirm.title"),
                 confirmed =>
                 {
-                    if (confirmed) Complete(gameState, car, onFinished);
+                    if (confirmed) Complete(gameState, car, onScreen, onFinished);
                 }));
         }
 
-        private async void Complete(GameState gameState, UsedCarListingViewModel car, Action<PurchaseResult> onFinished)
+        private async void Complete(GameState gameState, UsedCarListingViewModel car, Func<bool> onScreen, Action<PurchaseResult> onFinished)
         {
             PurchaseResult result;
             try
@@ -91,9 +97,9 @@ namespace StreetCorsa.Screens.Shared
 
                 // Another car stands in the garage: the new one went to the car lot, unless the player wants it in now.
                 // Answered before the screen moves on, so the garage opens on the car they chose.
-                if (result is { Succeeded: true, AskToSwitch: true, Car: { } bought })
+                if (result is { Succeeded: true, AskToSwitch: true, Car: { } bought } && onScreen())
                 {
-                    AskToSwitch(gameState, bought, result, onFinished);
+                    AskToSwitch(gameState, bought, result, onScreen, onFinished);
                     return;
                 }
 
@@ -105,7 +111,7 @@ namespace StreetCorsa.Screens.Shared
             }
         }
 
-        private void AskToSwitch(GameState gameState, Car bought, PurchaseResult result, Action<PurchaseResult> onFinished)
+        private void AskToSwitch(GameState gameState, Car bought, PurchaseResult result, Func<bool> onScreen, Action<PurchaseResult> onFinished)
         {
             _dialogService.ShowDialog(new ConfirmationDialogViewModel(
                 _dialogService,
@@ -115,7 +121,8 @@ namespace StreetCorsa.Screens.Shared
                 {
                     try
                     {
-                        if (yes && !_purchaseService.SwitchTo(gameState, bought))
+                        // Gone off the screen while the question waited: the garage is open on the old car, which stays
+                        if (yes && onScreen() && _purchaseService.SwitchTo(gameState, bought) == SwitchOutcome.SaveFailed)
                         {
                             _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService,
                                 GameText.Say("purchase.switch.save_failed"), GameText.Say("purchase.save_failed.title")));
@@ -127,14 +134,22 @@ namespace StreetCorsa.Screens.Shared
                     {
                         _logger.Error(ex, "Could not switch to the car just bought");
                     }
-                }));
+                })
+            {
+                // Two cars of one model bought at once are two questions
+                About = bought.InstanceId.ToString()
+            });
         }
+
+        /// <summary>Where the screen goes with a car bought: to the garage, the car driving in when it is the one there now</summary>
+        public FlowArgs Bought(GameState gameState, PurchaseResult result) =>
+            new() { SkipAnimation = true, Arrival = ArrivalOf(gameState, result, _partsService.IsAvailable ? _partsService.Catalog : null) };
 
         /// <summary>
         /// The garage's arrival after a purchase: the car bought drives in (or, when it would not run, is simply there) when it
         /// is the one in the garage now; null when it went to the car lot
         /// </summary>
-        public static Garage.CarArrival? ArrivalOf(GameState gameState, PurchaseResult result, Parts.PartsCatalog? catalog) =>
+        private static Garage.CarArrival? ArrivalOf(GameState gameState, PurchaseResult result, Parts.PartsCatalog? catalog) =>
             result is { Succeeded: true, Car: { } car } && car.InstanceId == gameState.Player.SelectedCarInstanceId
                 ? DrivingHome.Arrival(gameState, null, catalog)
                 : null;

@@ -39,15 +39,19 @@ internal sealed class CarBodyRock
     /// <summary>
     /// A wheel group as it was, and the way from its parent to the car's own space; its corner ("LF"), and whether it
     /// is a wheel and whether it turns as the front wheels steer (a front wheel, its hub and its disc; not the
-    /// suspension's arms). <c>Parent</c> is the group it sits in, when a model nests them (a wheel in its hub or its
-    /// suspension): it is then set against where that group is put, not against the car.
+    /// suspension's arms, unless they sit in a hub that steers). <c>Parent</c> is the place in <see cref="_held"/> of the
+    /// group it sits in, when a model nests them (a wheel in its hub or its suspension), -1 when none: it is then set
+    /// against where that group is put, not against the car, and <c>FromParent</c> is the way from that group to the
+    /// node it hangs from (the nodes between them as they stand).
     /// </summary>
     private sealed record Held(RenderableList Node, Sx.Matrix Local, Sx.Matrix ToCar, Sx.Matrix FromCar, string Corner, bool Wheel, bool Steers,
-        Held? Parent);
+        int Parent, Sx.Matrix FromParent);
 
     // Where each group is put this frame, in the car's own space, by its place in _held: a nested group is set against
-    // its parent's
+    // its parent's, turned back once a frame for the groups in it
     private Sx.Matrix[] _placed = [];
+    private Sx.Matrix[] _unplaced = [];
+    private bool[] _isParent = [];
 
     public CarBodyRock(Kn5RenderableCar car)
     {
@@ -56,20 +60,27 @@ internal sealed class CarBodyRock
 
         var toWorld = car.Matrix;
         var fromWorld = Sx.Matrix.Invert(toWorld);
-        Collect(car, null, (n, group, parent) =>
+        Collect(car, -1, (n, group, parent) =>
         {
             var toCar = n.ParentMatrix * fromWorld;
+            var fromCar = Sx.Matrix.Invert(toCar);
             var kind = group.Groups[1].Value.ToUpperInvariant();
             var corner = group.Groups[2].Value.ToUpperInvariant();
+            var outer = parent >= 0 ? _held[parent] : null;
 
-            // The wheel itself turns as the car rolls; its hub, disc and suspension do not
+            // The wheel itself turns as the car rolls; its hub, disc and suspension do not. What sits in a hub that
+            // steers turns with it, its suspension too.
             var wheel = kind == "WHEEL";
-            var steers = corner.EndsWith('F') && kind is ("WHEEL" or "HUB" or "DISC");
-            var held = new Held(n, n.LocalMatrix, toCar, Sx.Matrix.Invert(toCar), corner, wheel, steers, parent);
-            _held.Add(held);
-            return held;
+            var steers = corner.EndsWith('F') && (kind is ("WHEEL" or "HUB" or "DISC") || outer?.Steers == true);
+            var fromParent = outer == null ? Sx.Matrix.Identity : outer.Local * outer.ToCar * fromCar;
+            _held.Add(new Held(n, n.LocalMatrix, toCar, fromCar, corner, wheel, steers, parent, fromParent));
+            return _held.Count - 1;
         });
         _placed = new Sx.Matrix[_held.Count];
+        _unplaced = new Sx.Matrix[_held.Count];
+        _isParent = new bool[_held.Count];
+        foreach (var held in _held)
+            if (held.Parent >= 0) _isParent[held.Parent] = true;
 
         // Where the wheels are says which way is left and which way is the front
         var hubs = _held.Where(h => h.Wheel)
@@ -107,7 +118,7 @@ internal sealed class CarBodyRock
     /// inside its hub or its suspension (HUB_LF/WHEEL_LF, SUSP_LF/WHEEL_LF, HUB_LF/SUSP_LF/WHEEL_LF): those are looked
     /// into, or the wheel would never turn. What is inside a wheel turns with it, and is left to.
     /// </summary>
-    private static void Collect(RenderableList list, Held? parent, Func<RenderableList, Match, Held?, Held> found)
+    private void Collect(RenderableList list, int parent, Func<RenderableList, Match, int, int> found)
     {
         foreach (var child in list)
         {
@@ -115,7 +126,7 @@ internal sealed class CarBodyRock
             if (node is Kn5RenderableList { OriginalNode.Name: var name } && WheelGroup.Match(name) is { Success: true } group)
             {
                 var held = found(node, group, parent);
-                if (!held.Wheel) Collect(node, held, found);
+                if (!_held[held].Wheel) Collect(node, held, found);
                 continue;
             }
 
@@ -164,9 +175,10 @@ internal sealed class CarBodyRock
             }
 
             // Where it goes in the car's space, the body's lean undone; set against its parent group's place when it is
-            // nested in one (put there already: parents come first), else against the car
+            // nested in one (put there already: parents come first), and the nodes between them, else against the car
             _placed[i] = inCar * back;
-            held.Node.LocalMatrix = _placed[i] * (held.Parent is { } parent ? Sx.Matrix.Invert(_placed[_held.IndexOf(parent)]) : held.FromCar);
+            if (_isParent[i]) _unplaced[i] = Sx.Matrix.Invert(_placed[i]);
+            held.Node.LocalMatrix = held.Parent >= 0 ? _placed[i] * _unplaced[held.Parent] * held.FromParent : _placed[i] * held.FromCar;
         }
 
         return true;

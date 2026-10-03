@@ -23,8 +23,14 @@ namespace StreetCorsa.Dialogs.Confirmation
             set => SetProperty(ref _message, value);
         }
 
-        /// <summary>The same question, word for word, is only asked once at a time</summary>
-        public override string? DuplicateKey => $"{Title}\n{Message}";
+        /// <summary>
+        /// What the question is about, when the same words can be asked of two things at once (two cars of one model): two
+        /// questions about different things are both asked
+        /// </summary>
+        public string? About { get; init; }
+
+        /// <summary>The same question, word for word and about the same thing, is only asked once at a time</summary>
+        public override string? DuplicateKey => $"{Title}\n{Message}\n{About}";
 
         public RelayCommand YesCommand { get; }
         public RelayCommand NoCommand { get; }

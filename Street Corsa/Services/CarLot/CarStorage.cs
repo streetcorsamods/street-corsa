@@ -85,6 +85,25 @@ namespace StreetCorsa.Services.CarLot
         }
 
         /// <summary>
+        /// <paramref name="car"/> goes into the garage and the car that stood there to the car lot: into the bay the new one
+        /// leaves, or, when it had none (just bought), the first free one. Wherever a car is taken in, the same way.
+        /// </summary>
+        public static void ToGarage(Player player, Car car, Func<int, int> capacityOf)
+        {
+            var fromGarage = player.Cars.FirstOrDefault(c => c.InstanceId == player.SelectedCarInstanceId && c != car);
+            TakeOut(car, fromGarage);
+            player.SelectedCarInstanceId = car.InstanceId;
+            if (fromGarage is { Warehouse: null } or { Bay: null }) Arrange(player.Cars, capacityOf, car.InstanceId);
+        }
+
+        /// <summary>How many bays warehouse <paramref name="number"/> (from 1) has: its scene's, the installed ones in turn</summary>
+        public static int CapacityOf(IReadOnlyList<WarehouseScene> scenes, int number) =>
+            scenes.Count == 0 ? FallbackCapacity : scenes[(number - 1) % scenes.Count].Capacity;
+
+        /// <summary>The bays of a warehouse when no scene is installed: the car lot is a list then</summary>
+        public const int FallbackCapacity = 10;
+
+        /// <summary>
         /// How many warehouses the player has: up to the last one with a car in it, and always the first (an empty one when
         /// they have no car). A warehouse emptied between two full ones stays, and is filled first.
         /// </summary>

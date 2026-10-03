@@ -23,7 +23,8 @@
     "seller's line. enginespecs.* is why an engine will not run, said after \"It won't start: \"; paper.whose.player is",
     "the word before the player's car in a wreck headline. The player's own ad: paper.ad.seller.player {player};",
     "paper.ad.pencil.offer {buyer}, {amount} (pencilled under it); paper.yours.title {car} the ad's headline;",
-    "paper.yours.running.* {count} days in the paper, {until} the day it runs out."
+    "paper.yours.running.* {count} days in the paper, {until} the day it runs out. purchase.bought and purchase.bought_private",
+    "{where} where the car went, as purchase.where.garage or purchase.where.lot says it; purchase.switch {car} the car just bought."
   ],
   "lines": {
     "market.kind_filter": "Kind:",

@@ -64,7 +64,7 @@ namespace StreetCorsa.Screens.CarViewing
             _listing = car.Listing;
             _dealerCatalog = dealerCatalog;
             _partsService = partsService;
-            _purchaseFlow = new PurchaseFlow(dialogService, purchaseService, _logger);
+            _purchaseFlow = new PurchaseFlow(dialogService, purchaseService, partsService, _logger);
 
             // Known before the screen is shown: the place's air is asked for as it comes up
             _seller = CarViewingPlace.Of(car, id => dealerCatalog.Get(id) != null);
@@ -254,17 +254,15 @@ namespace StreetCorsa.Screens.CarViewing
         {
             if (Car is not { } car) return;
 
-            _purchaseFlow.Offer(_gameState, car, result =>
+            _purchaseFlow.Offer(_gameState, car, IsCurrent, result =>
             {
                 // The purchase takes a moment: a player who has gone meanwhile stays where they went
-                if (!ReferenceEquals(_navigationService.CurrentScreen, this)) return;
+                if (!IsCurrent()) return;
 
                 switch (CarViewingPlace.Next(result))
                 {
                     case AfterPurchase.Garage:
-                        var catalog = _partsService.IsAvailable ? _partsService.Catalog : null;
-                        _navigationService.Leave(this, "bought", _gameState,
-                            new FlowArgs { SkipAnimation = true, Arrival = PurchaseFlow.ArrivalOf(_gameState, result, catalog) });
+                        _navigationService.Leave(this, "bought", _gameState, _purchaseFlow.Bought(_gameState, result));
                         break;
                     case AfterPurchase.Newspaper:
                         _navigationService.Leave(this, "gone", _gameState, new FlowArgs { SkipAnimation = true });
@@ -276,6 +274,8 @@ namespace StreetCorsa.Screens.CarViewing
                 }
             });
         }
+
+        private bool IsCurrent() => ReferenceEquals(_navigationService.CurrentScreen, this);
 
         private void OnBack()
         {

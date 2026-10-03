@@ -147,6 +147,15 @@ namespace StreetCorsa.Services.Talk
             if (Subject?.Thing != subject.Thing) Focus(subject);
         }
 
+        /// <summary>
+        /// The player buys what is talked about at its price as it stands (the talk's Buy): that is taking the price, so the
+        /// last offer is not kept as one that came to nothing. A buyer's offer is only taken once agreed in words.
+        /// </summary>
+        public void Take()
+        {
+            if (Subject is { } subject and not BuyerSubject) _agreedThing = subject.Thing;
+        }
+
         /// <summary>What the player says: an offer in it is answered by the rules first, then the person speaks</summary>
         public Task<string?> SayAsync(string text, CancellationToken cancellationToken = default)
         {

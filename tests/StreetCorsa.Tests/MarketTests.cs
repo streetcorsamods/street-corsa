@@ -192,7 +192,7 @@ public class CarPurchaseServiceTests
     {
         var parts = new GatedParts();
         parts.Release.SetResult();
-        return new CarPurchaseService(new RaceResultProcessorTests.FakeRepository(), parts, new QuietTime());
+        return new CarPurchaseService(new RaceResultProcessorTests.FakeRepository(), parts, new QuietTime(), () => []);
     }
 
     [Fact]
@@ -219,9 +219,28 @@ public class CarPurchaseServiceTests
         Assert.Equal("Ford A", result.CarName);
         Assert.Equal(old.InstanceId, _state.Player.SelectedCarInstanceId);
 
-        Assert.True(service.SwitchTo(_state, result.Car!));
+        Assert.Equal(SwitchOutcome.Switched, service.SwitchTo(_state, result.Car!));
         Assert.Equal(result.Car!.InstanceId, _state.Player.SelectedCarInstanceId);
         Assert.Null(result.Car.Warehouse);
+
+        // The car from the garage is parked: the new one had no bay to give it, so it takes the first free one
+        Assert.Equal(1, old.Warehouse);
+        Assert.Equal(0, old.Bay);
+    }
+
+    [Fact]
+    public async Task A_car_no_longer_the_players_is_not_switched_to()
+    {
+        var old = new Car("car_old");
+        _state.Player.Cars.Add(old);
+        _state.Player.SelectedCarInstanceId = old.InstanceId;
+        var service = Released();
+
+        var result = await service.PurchaseAsync(_state, _listing, Definition);
+        _state.Player.Cars.Remove(result.Car!);
+
+        Assert.Equal(SwitchOutcome.NotOwned, service.SwitchTo(_state, result.Car!));
+        Assert.Equal(old.InstanceId, _state.Player.SelectedCarInstanceId);
     }
 
     [Fact]

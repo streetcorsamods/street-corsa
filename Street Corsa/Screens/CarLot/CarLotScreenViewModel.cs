@@ -34,9 +34,6 @@ namespace StreetCorsa.Screens.CarLot
         /// <summary>The sound of the place</summary>
         public override string? Ambience => "ambience.warehouse";
 
-        /// <summary>How many cars a warehouse holds when no scene is installed to say: the lot is then only the list</summary>
-        private const int FallbackCapacity = 10;
-
         private readonly NavigationService _navigationService;
         private readonly GameState _gameState;
         private readonly IContentCatalogRepository _catalogRepo;
@@ -157,7 +154,7 @@ namespace StreetCorsa.Screens.CarLot
         /// <summary>The scene warehouse <paramref name="number"/> is in: the installed ones in turn</summary>
         private WarehouseScene? SceneOf(int number) => _scenes.Count == 0 ? null : _scenes[(number - 1) % _scenes.Count];
 
-        private int CapacityOf(int number) => SceneOf(number)?.Capacity ?? FallbackCapacity;
+        private int CapacityOf(int number) => CarStorage.CapacityOf(_scenes, number);
 
         /// <summary>
         /// Gives every car a place, and fills the list. Places given for the first time are saved at once, so a car is
@@ -348,9 +345,7 @@ namespace StreetCorsa.Screens.CarLot
                     car.Definition.Id, car.Car.InstanceId, Warehouse);
 
                 // Out of its bay, and the car from the garage parked in it
-                var player = _gameState.Player;
-                CarStorage.TakeOut(car.Car, player.Cars.FirstOrDefault(c => c.InstanceId == player.SelectedCarInstanceId));
-                player.SelectedCarInstanceId = car.Car.InstanceId;
+                CarStorage.ToGarage(_gameState.Player, car.Car, CapacityOf);
                 tookOut = true;
 
                 // Waited for before saving: late in the day that is the next morning, and what the new day brings
