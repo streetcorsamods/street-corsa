@@ -353,7 +353,7 @@ namespace StreetCorsa.Navigation
                 case ScreenKinds.Garage:
                     return SafeNavigate(name, () => new Screens.Garage.GarageScreenViewModel(
                         this, _dialogService, game, _catalogRepository, _launcher, _carPartsService, _gameStateRepository,
-                        _timeService, _gameSettingsService, _contentService, _raceCarDataService, _saleService,
+                        _timeService, _saleService,
                         args.SkipAnimation, args.Arrival, args.EndDay), id);
                 case ScreenKinds.CarLot:
                     return SafeNavigate(name, () => new Screens.CarLot.CarLotScreenViewModel(

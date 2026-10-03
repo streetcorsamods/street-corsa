@@ -80,6 +80,120 @@ namespace StreetCorsa.Screens.Garage
 
             // Placement mode is driven from the keyboard, wherever the focus is on the screen
             Unloaded += (_, _) => { if (_window != null) _window.PreviewKeyDown -= OnWindowKeyDown; };
+
+            EnginePanel.Runner.PropertyChanged += OnRunnerChanged;
+            Unloaded += (_, _) => _keyBackTimer?.Stop();
+        }
+
+        // ----- the key -----
+
+        // The buttons under the car and the engine bar trade places this fast, sinking and rising this far
+        private static readonly TimeSpan BarSwapDuration = TimeSpan.FromMilliseconds(380);
+        private const double BarSwapDrop = 24;
+
+        // An engine that would not catch says so on the bar for this long before the buttons come back
+        private static readonly TimeSpan WontStartPause = TimeSpan.FromSeconds(2);
+
+        // The player turned the key: the engine is theirs to run, and the bar shows it. A script that starts the
+        // engine (the drive-in, a mod's) never turns the key, so the buttons stay where they are.
+        private bool _keyOn;
+        private DispatcherTimer? _keyBackTimer;
+
+        /// <summary>
+        /// The key: turned on it starts the engine and the engine bar rises in place of the buttons; turned off it
+        /// stops the engine and the buttons come back
+        /// </summary>
+        private void OnKeyClick(object sender, RoutedEventArgs e)
+        {
+            var runner = EnginePanel.Runner;
+            if (_keyOn)
+            {
+                if (runner.IsRunning) runner.Toggle();
+                TurnKey(false);
+                return;
+            }
+
+            if (!runner.CanToggle)
+            {
+                KeyButton.IsChecked = false;
+                return;
+            }
+
+            // Already running (a script left it so): the player simply takes it over
+            if (!runner.IsRunning) runner.Toggle();
+            TurnKey(true);
+        }
+
+        /// <summary>
+        /// The engine went off by itself with the key on (it would not catch, the car or its engine changed, the panel
+        /// went out of sight): the key goes back and so do the buttons
+        /// </summary>
+        private void OnRunnerChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (!_keyOn || e.PropertyName is not (nameof(Audio.EngineRunner.State) or nameof(Audio.EngineRunner.CanToggle))) return;
+
+            var runner = EnginePanel.Runner;
+            if (runner.State != Audio.EngineState.Off)
+            {
+                _keyBackTimer?.Stop();
+                return;
+            }
+
+            if (!runner.FailedToStart || !runner.CanToggle || !EnginePanel.IsVisible)
+            {
+                TurnKey(false);
+                return;
+            }
+
+            // Left a moment to read why it would not start
+            if (_keyBackTimer is { IsEnabled: true }) return;
+            _keyBackTimer ??= new DispatcherTimer();
+            _keyBackTimer.Interval = WontStartPause;
+            _keyBackTimer.Tick -= OnKeyBack;
+            _keyBackTimer.Tick += OnKeyBack;
+            _keyBackTimer.Start();
+        }
+
+        private void OnKeyBack(object? sender, EventArgs e)
+        {
+            _keyBackTimer?.Stop();
+            if (_keyOn && EnginePanel.Runner.State == Audio.EngineState.Off) TurnKey(false);
+        }
+
+        /// <summary>The key on or off: the engine bar and the buttons trade places</summary>
+        private void TurnKey(bool on)
+        {
+            _keyOn = on;
+            _keyBackTimer?.Stop();
+            KeyButton.IsChecked = on;
+            Swap(EnginePanel, on);
+            Swap(CarButtons, !on);
+        }
+
+        /// <summary>
+        /// Rises and fades in, or fades out sinking. Out of sight it takes no clicks; it is never collapsed, since the
+        /// engine panel switches its engine off when it is not on screen.
+        /// </summary>
+        private static void Swap(FrameworkElement element, bool show)
+        {
+            var slide = element.RenderTransform as System.Windows.Media.TranslateTransform;
+            if (slide == null || slide.IsFrozen) element.RenderTransform = slide = new System.Windows.Media.TranslateTransform(0, slide?.Y ?? 0);
+
+            element.IsHitTestVisible = show;
+            // The buttons go out of the keyboard's reach too, once they are gone
+            if (show) element.ClearValue(IsEnabledProperty);
+
+            var ease = new CubicEase { EasingMode = show ? EasingMode.EaseOut : EasingMode.EaseIn };
+            var fade = new DoubleAnimation(show ? 1 : 0, BarSwapDuration) { EasingFunction = ease };
+            if (!show && element is not StreetCorsa.Controls.EnginePanel)
+                fade.Completed += (_, _) =>
+                {
+                    if (!element.IsHitTestVisible) element.IsEnabled = false;
+                };
+
+            element.BeginAnimation(OpacityProperty, fade);
+            slide.BeginAnimation(System.Windows.Media.TranslateTransform.YProperty,
+                new DoubleAnimation(show ? 0 : BarSwapDrop, BarSwapDuration) { EasingFunction = ease });
         }
 
         private Window? _window;

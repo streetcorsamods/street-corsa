@@ -9,7 +9,7 @@
 | LoadGame | `Screens/LoadGame/` | Load existing save (a card on the main screen) |
 | Settings | `Screens/Settings/` | App settings (a card on the main screen) |
 | CarCatalogEditor | `Screens/CarCatalogEditor/` | Edit car prices/precedence |
-| Garage | `Screens/Garage/` | In-game hub: 3D garage with the selected car, overlay buttons to every other in-game screen |
+| Garage | `Screens/Garage/` | In-game hub: 3D garage with the selected car, overlay buttons to every other in-game screen. Under the car a row of round icon buttons: the key, then parts view (with stand and turn over while it is open), repairs, lights, doors, rotate. Turning the key starts the engine and the engine bar (rpm, tach, pedal) rises in the buttons' place; turning it back, or the engine dying, brings them back. Sell is the round button right of the car's name (a dot while in the paper, amber with an offer). Free run and test-and-tune are in the racing hub |
 | CarLot | `Screens/CarLot/` | The player's cars parked in their warehouses in 3D: look them over and take one to the garage (see `car-lot.md`) |
 | Diner | `Screens/Diner/` | Meet opponents, accept challenges |
 | Cruise | `Screens/Cruise/` | Sit at the curb in your car; rivals pull up with an offer (see `cruise.md`) |
