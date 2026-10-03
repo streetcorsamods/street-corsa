@@ -116,17 +116,13 @@
                 HorizontalAlignment="Left"
                 VerticalAlignment="Top"
                 Margin="20,20,0,0"/>
-        <!-- The left card, under the back button. With the player's AI on, the salesman's talk (two thirds of the room
-             down there, behind a tab that opens and shuts it): he comes over as the player arrives, follows them round the
+        <!-- The left card, under the back button. With the player's AI on, the salesman's talk (all the room down
+             there, behind a tab that opens and shuts it): he comes over as the player arrives, follows them round the
              lot, tells them about the car, and closes the deal ("Buy it for $X") -->
         <Grid HorizontalAlignment="Left"
               Width="360"
               Margin="20,100,0,20"
               Visibility="{Binding HasTalk, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="2*"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
             <controls:TalkCard DataContext="{Binding Talk}"/>
         </Grid>
 

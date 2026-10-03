@@ -102,7 +102,7 @@ namespace StreetCorsa.Screens.DealerLot
             _gameStateRepo = gameStateRepo;
             _partsService = partsService;
             _logger = AppLoggerFactory.CreateLogger("DealerLot");
-            _purchaseFlow = new PurchaseFlow(dialogService, purchaseService, _logger);
+            _purchaseFlow = new PurchaseFlow(dialogService, purchaseService, partsService, _logger);
             _dealer = dealerCatalog.Get(dealerId);
 
             BackCommand = new RelayCommand(OnBack);
@@ -337,7 +337,7 @@ namespace StreetCorsa.Screens.DealerLot
         {
             if (car == null) return;
 
-            _purchaseFlow.Offer(_gameState, car, result =>
+            _purchaseFlow.Offer(_gameState, car, IsCurrent, result =>
             {
                 if (!result.Succeeded)
                 {
@@ -348,10 +348,12 @@ namespace StreetCorsa.Screens.DealerLot
                 // The car is bought and it is in the garage; that is where the player wants to be, not stood on
                 // a lot looking at the gap where it was. Unless they have gone meanwhile (the purchase takes a moment):
                 // then they stay where they went.
-                if (!ReferenceEquals(_navigationService.CurrentScreen, this)) return;
-                _navigationService.Leave(this, "bought", _gameState, new FlowArgs { SkipAnimation = true });
+                if (!IsCurrent()) return;
+                _navigationService.Leave(this, "bought", _gameState, _purchaseFlow.Bought(_gameState, result));
             });
         }
+
+        private bool IsCurrent() => ReferenceEquals(_navigationService.CurrentScreen, this);
 
         /// <summary>
         /// Puts the lot back the way the market says it is. Used when a car turned out to be gone: back to

@@ -1,8 +1,25 @@
-When AI is enabled and available:
+1. Car into scene:
+	- When buying a car and no car is in the garage. Ask the player if they want to switch to it.
+	
+2. Handshake with the dealers:
+	With AI enabled Sometimes I say something that confirms the buy but the model doesn't understand it and doesn't display the buy button. Let's show it always.
+	Get back the chat window to the full height, but keep it in its current place.
+	
+3. Visual damage to the cars.
+	- Check what we can do in our renderer. Some dents, scratches, broken windows would be really awesome.
+	- Rust and dirt: some base textures that applies randomly to the used cars when they are created. Rust can appear after some time in the cars. Dirt after a race, enhanced if the track has dirt surfaces or if the car when off the track often.
+	
+4. Car height variations due to suspension damage or tuned parts.
 
-	1. Allow to call the owner when seeing an ad, part or car, and have a conversation with him/her. The model should vary its personality according to the person it represents. Make it have a memory of the conversations, but not forever. People forgets after certain time. If it were possible, the model should limit to answer questions and talk about what's on sale. Maybe a little chat remembering things like "Hey, I raced against you last week!" and the model answers accordingly with the truth, if the person didn't raced against the player, will give that answer or say "Sorry, dude. I don't remember you. Do you want this valve cover or not?". That would be really nice but if it's too complicated, discard it.
+5. Addons and replacements in the car mod and visible in AC
+	- Tyres and rims: they're a part of the mod. Is it possible to switch them?
+	- Superchargers and blowers: the tracks in AC support a list of loadable models. I don't know if it's possible with cars. Make a web search and some tests to confirm it.
 	
-	2. Talk to the car dealer: the dealer should try to sell the car with all kind of jive talking. The model should adopt that personality. The player should be able to enter a question about the car and the dealer should respond with the truth.
+6. Diner refactor
+	- The street dome looks bad. I want a full model. Search for a model that fits the game: some american city of the 60s or 70s. It doesn't matter if they're not for AC, we'll port it. If you can't find anything, build one basic model.
+	- Build a cinematic for arriving and leaving the diner, just like the gas station does.
+	- The streets scene is the main screen. Don't show any data by default. Add a toggle button for opening a modal window with the rivals list and the word on the streets. Switch to the rival options and chat when clicking them inside the same modal window.
 	
-	3. Same for people on the streets. They should tend to remember more in there.
-	
+7. Part dealers
+	- Currently, we have a black screen with a part list. I want a 3d scene of a parts shop and integration with AI for talking to the dealer.
+	- The chat and the part list should be in a unique modal window. The player should be able to search and buy as it does today but the AI dealer should have the ability to answer questions about the parts and suggest parts. The player talks the dealer about the car, engine or part that he's looking for and the dealer make suggestions and maybe filters the list. Propose something nice and check if it'll work or it'll be tricky.

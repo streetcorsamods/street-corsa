@@ -92,17 +92,13 @@
             </TextBlock.Effect>
         </TextBlock>
 
-        <!-- The left card, under the round buttons. With the player's AI on, the talk with the seller (two thirds of the
-             room down there, behind a tab that opens and shuts it): they begin it as the player arrives, tell them about
+        <!-- The left card, under the round buttons. With the player's AI on, the talk with the seller (all the room down
+             there, behind a tab that opens and shuts it): they begin it as the player arrives, tell them about
              the car, and close the deal ("Buy it for $X") -->
         <Grid HorizontalAlignment="Left"
               Width="360"
               Margin="20,180,0,20"
               Visibility="{Binding HasTalk, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="2*"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
             <controls:TalkCard DataContext="{Binding Talk}"/>
         </Grid>
 
