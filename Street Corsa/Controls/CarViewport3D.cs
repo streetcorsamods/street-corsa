@@ -1343,7 +1343,7 @@ public class CarViewport3D : D3DViewportBase
     }
 
     /// <summary>An engine the nose carries, rather than the tail</summary>
-    private static bool InFront(EngineLayout layout) => layout == EngineLayout.Front;
+    private static bool InFront(EngineLayout layout) => layout.IsFront();
 
     private static HashSet<Guid> IdsOf(IReadOnlyList<PlacedPart> nodes) =>
         nodes.Select(n => n.Source?.InstanceId ?? Guid.Empty).Where(id => id != Guid.Empty).ToHashSet();
@@ -1742,6 +1742,8 @@ public class CarViewport3D : D3DViewportBase
     protected override void OnPoseChanged() => RockCar(Renderer?.CarNode);
 
     protected override bool EngineTurnedRound => EngineLayout == EngineLayout.Rear;
+
+    protected override bool EngineAcross => EngineLayout.IsTransverse();
 
     #endregion
 

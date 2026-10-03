@@ -21,13 +21,16 @@ public static class PartKinds
     public const string Shocks = PartGroups.Shocks;
 
     /// <summary>
-    /// Simple name of the framework class nearest to the part, "" for parts without a script class.
+    /// Simple name of the framework class nearest to the part (a simple name as the part gives it, for a part of
+    /// figures), "" for parts without a script class.
     /// Classes of the engine packs and cars sit under java.game.parts.engines / java.game.cars.
     /// </summary>
     public static string FrameworkClass(PartDefinition part)
     {
         foreach (var name in part.ClassChain)
         {
+            // A part of figures alone names its classes simply
+            if (!name.Contains('.')) return name;
             if (!name.StartsWith(FrameworkPackage, StringComparison.Ordinal)) continue;
             if (name.StartsWith(FrameworkPackage + "engines.", StringComparison.Ordinal)) continue;
 
@@ -70,7 +73,10 @@ public static class PartKinds
 
     public static bool IsBlock(PartDefinition part) => Is(part, "Block");
 
-    /// <summary>True when the part's script descends from the class, given by simple name</summary>
+    /// <summary>
+    /// True when the part's script descends from the class, given by simple name. A part of figures alone may name its
+    /// classes simply ("class_chain": ["Camshaft"]).
+    /// </summary>
     public static bool Is(PartDefinition part, string className) =>
-        part.ClassChain.Any(c => c.EndsWith("." + className, StringComparison.Ordinal));
+        part.ClassChain.Any(c => c.EndsWith("." + className, StringComparison.Ordinal) || c == className);
 }

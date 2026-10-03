@@ -439,6 +439,10 @@ all 12 engines of the old pack up to date, nothing came off.
   to the other scripts it would just look like a missing part. One verdict of the scripts is put right: with no
   carburettor or injection the compression limit they derive from the fuel is 0 and they complain about compression
   ("not more than 0.0:1"); the report says that nothing feeds the engine instead.
+- `PartFigures`: a part's own engine figures (pack.json `"figures"`, plain metric; see the modding guide's "An engine
+  of figures"). `PartScriptRuntime` puts them over the block's `DynoData` before every dyno run; a block without a
+  script makes an engine of figures alone on `PartFigures.DataEngineBase` (`EngineReport.FromFigures`). Turbos and
+  blowers of figures are `DynoInputs.Chargers`, their boost added to the scripts' charger's.
 - After the scripts' verdict, `required_slots` rules marked `enforce` (see the pack.json table): the first empty one
   is the problem, in its own words ("It's missing the rear carburettor.").
 - Numbers in `properties`/`derived` come back from JSON as `long` or `double`; read them with `PartDefinition.Number`.
@@ -700,7 +704,7 @@ game does it, checked against every packed car of both installs on this machine)
 |---|---|
 | `power.lut` | Flywheel torque, exactly (no drivetrain loss taken off: `DrivetrainEfficiency` = 1) |
 | `engine.ini` | `INERTIA`, `LIMITER`, `MINIMUM`; `COAST_REF` = 12 Nm per litre at the limiter × the build's friction over a stock oil pan's (`engine_friction_fwd`, 0.0002 is the median of the builds, clamped ½..2: a racing pan lets the engine spin freer); `DAMAGE/RPM_THRESHOLD` = what the weakest rotating part survives; the car's own `TURBO_n` removed |
-| `engine.ini [TURBO_0]` | Only with a turbocharger part: the game's own turbo (lag, gauge, boost damage) fitted to how much more the boosted curve makes than the same engine without its charger: `MAX_BOOST` = `WASTEGATE` = the peak gain, `REFERENCE_RPM` where 95% of it is reached, `GAMMA` by least squares on the way up. The lut is divided by the boost the game adds back, so the torque with the throttle open stays the dyno's. A supercharger is crank-driven and has no lag: it stays baked into the curve |
+| `engine.ini [TURBO_n]` | One per turbo, the scripts' first, each with its lag (0.992 up, 0.985 down unless its figures say); with several, the gain at each speed is shared by the boost each makes there. Only with a turbocharger part: the game's own turbo (lag, gauge, boost damage) fitted to how much more the boosted curve makes than the same engine without its charger: `MAX_BOOST` = `WASTEGATE` = the peak gain, `REFERENCE_RPM` where 95% of it is reached, `GAMMA` by least squares on the way up. The lut is divided by the boost the game adds back, so the torque with the throttle open stays the dyno's. A supercharger is crank-driven and has no lag: it stays baked into the curve |
 | `drivetrain.ini` | `GEARS` count/ratios/reverse/final, `DIFFERENTIAL` lock; `CLUTCH/MAX_TORQUE` = the clutch part's clamp figure (`maxF`) × 2.6 Nm, set so every factory engine's clutch holds it (the big-block packs put a 300 behind 770 Nm): a built engine outgrows a stock clutch and it slips; `AUTO_SHIFTER` `UP`/`DOWN` when the car has them. `TRACTION` is left alone: the body decides |
 | `ai.ini` | Shift points: `UP` near peak power below the limiter; `DOWN` at most 90% of where the widest gear step lands after an upshift, so wide-ratio boxes do not hunt |
 | `setup.ini` | Gear ratio selectors removed; they would override the transmission |

@@ -16,7 +16,7 @@ public sealed class AcEngineDataOptions
     public double DrivetrainEfficiency { get; set; } = 1.0;
 
     /// <summary>The part scripts' inertia figures (mass * 0.09, summed) to kg m2 of a spinning engine</summary>
-    public double InertiaScale { get; set; } = 0.02;
+    public double InertiaScale { get; set; } = PartFigures.KgM2PerInertiaUnit;
 
     /// <summary>Whether the build's transmission replaces the car's gears, final drive and differential lock</summary>
     public bool ReplaceGearbox { get; set; } = true;
@@ -31,13 +31,13 @@ public sealed class AcEngineDataOptions
     /// Nm the clutch holds per unit of the scripts' clamp figure. Set so that every factory engine's clutch
     /// holds it (the big-block packs put a 300 behind 770 Nm); a built engine outgrows its stock clutch.
     /// </summary>
-    public double ClutchTorquePerUnit { get; set; } = 2.6;
+    public double ClutchTorquePerUnit { get; set; } = PartFigures.ClutchNmPerUnit;
 
     /// <summary>Engine braking of a stock oil pan, Nm per litre at the limiter</summary>
     public double CoastTorquePerLitre { get; set; } = 12;
 
     /// <summary>The scripts' friction figure of a stock oil pan on a stock bottom end (the median of the builds); more drag means more braking</summary>
-    public double ReferenceFriction { get; set; } = 0.0002;
+    public double ReferenceFriction { get; set; } = PartFigures.ReferenceFriction;
 }
 
 /// <summary>
@@ -84,9 +84,9 @@ public static class AcEngineData
         var curveFile = engine.Get("HEADER", "POWER_CURVE") is { Length: > 0 } existing && PathNames.IsSafeSegment(existing)
             && existing.EndsWith(".lut", StringComparison.OrdinalIgnoreCase) ? existing : DefaultPowerCurve;
 
-        var turbo = Turbo(report, dyno);
-        files[curveFile] = PowerCurve(dyno, options.DrivetrainEfficiency, turbo);
-        files[EngineFile] = Engine(engine, report, dyno, limiter, curveFile, turbo, options);
+        var turbos = Turbos(report, dyno);
+        files[curveFile] = PowerCurve(dyno, options.DrivetrainEfficiency, turbos);
+        files[EngineFile] = Engine(engine, report, dyno, limiter, curveFile, turbos, options);
 
         GearsAndClutch(drivetrain, report, dyno, options);
         var (up, down) = ShiftPoints(drivetrain, report, dyno, limiter);
@@ -109,9 +109,9 @@ public static class AcEngineData
 
     /// <summary>
     /// The torque the game will see at each speed with the throttle open: the dyno's, exactly. With a turbo
-    /// the game multiplies the curve by its own boost, so the curve is the dyno's divided by that.
+    /// the game multiplies the curve by its own boost (the turbos' added up), so the curve is the dyno's divided by that.
     /// </summary>
-    private static string PowerCurve(DynoResult dyno, double efficiency, AcTurbo? turbo)
+    private static string PowerCurve(DynoResult dyno, double efficiency, IReadOnlyList<AcTurbo> turbos)
     {
         var text = new StringBuilder();
         var last = dyno.Curve[^1].Rpm;
@@ -119,14 +119,14 @@ public static class AcEngineData
         {
             // An engine does not make its running torque at standstill; the curve leads in from half of the first point
             var torque = rpm == 0 ? dyno.Curve[0].Torque * 0.5 : dyno.TorqueAt(rpm);
-            if (turbo != null) torque /= 1 + turbo.BoostAt(rpm);
+            if (turbos.Count > 0) torque /= 1 + turbos.Sum(t => t.BoostAt(rpm));
             text.Append(Number(rpm, "0")).Append('|').Append(Number(torque * efficiency, "0.0")).Append("\r\n");
         }
 
         return text.ToString();
     }
 
-    private static string Engine(IniText ini, EngineReport report, DynoResult dyno, double limiter, string curveFile, AcTurbo? turbo, AcEngineDataOptions options)
+    private static string Engine(IniText ini, EngineReport report, DynoResult dyno, double limiter, string curveFile, IReadOnlyList<AcTurbo> turbos, AcEngineDataOptions options)
     {
         ini.Set("HEADER", "POWER_CURVE", curveFile);
         if (ini.Get("HEADER", "COAST_CURVE") == null) ini.Set("HEADER", "COAST_CURVE", "FROM_COAST_REF");
@@ -144,19 +144,25 @@ public static class AcEngineData
         ini.Set("COAST_REF", "TORQUE", dyno.Displacement * 1000 * options.CoastTorquePerLitre * friction, "0");
         if (ini.Get("COAST_REF", "NON_LINEARITY") == null) ini.Set("COAST_REF", "NON_LINEARITY", "0");
 
-        // The car's own turbos would come on top of the curve; a turbo of the build gets the game's turbo model
+        // The car's own turbos would come on top of the curve; each turbo of the build gets the game's turbo model
         for (var i = 0; i < MaxTurbos; i++) ini.RemoveSection($"TURBO_{i}");
-        if (turbo != null)
+        for (var i = 0; i < turbos.Count; i++)
         {
-            ini.Set("TURBO_0", "LAG_DN", "0.985");
-            ini.Set("TURBO_0", "LAG_UP", "0.992");
-            ini.Set("TURBO_0", "MAX_BOOST", turbo.MaxBoost, "0.000");
-            ini.Set("TURBO_0", "WASTEGATE", turbo.MaxBoost, "0.000");
-            ini.Set("TURBO_0", "DISPLAY_MAX_BOOST", turbo.MaxBoost, "0.00");
-            ini.Set("TURBO_0", "REFERENCE_RPM", turbo.ReferenceRpm, "0");
-            ini.Set("TURBO_0", "GAMMA", turbo.Gamma, "0.00");
-            ini.Set("TURBO_0", "COCKPIT_ADJUSTABLE", "0");
-            ini.Set("DAMAGE", "TURBO_BOOST_THRESHOLD", turbo.MaxBoost + 0.5, "0.00");
+            var turbo = turbos[i];
+            var section = $"TURBO_{i}";
+            ini.Set(section, "LAG_DN", turbo.LagDown, "0.000");
+            ini.Set(section, "LAG_UP", turbo.LagUp, "0.000");
+            ini.Set(section, "MAX_BOOST", turbo.MaxBoost, "0.000");
+            ini.Set(section, "WASTEGATE", turbo.MaxBoost, "0.000");
+            ini.Set(section, "DISPLAY_MAX_BOOST", turbo.MaxBoost, "0.00");
+            ini.Set(section, "REFERENCE_RPM", turbo.ReferenceRpm, "0");
+            ini.Set(section, "GAMMA", turbo.Gamma, "0.00");
+            ini.Set(section, "COCKPIT_ADJUSTABLE", "0");
+        }
+
+        if (turbos.Count > 0)
+        {
+            ini.Set("DAMAGE", "TURBO_BOOST_THRESHOLD", turbos.Sum(t => t.MaxBoost) + 0.5, "0.00");
             if (ini.Get("DAMAGE", "TURBO_DAMAGE_K") == null) ini.Set("DAMAGE", "TURBO_DAMAGE_K", "5");
         }
 
@@ -246,19 +252,50 @@ public static class AcEngineData
     }
 
     /// <summary>
-    /// The game's turbo: boost climbs with engine speed as (rpm / reference)^gamma up to the wastegate, with a
-    /// lag behind the throttle. Fitted to how much more the dyno's boosted curve makes than the same engine
-    /// without its charger, so the gauge and the lag are the turbo's while the torque with the throttle open
-    /// stays the dyno's (the curve is divided by the boost the game adds back).
+    /// The game's turbos: boost climbs with engine speed as (rpm / reference)^gamma up to the wastegate, with a lag
+    /// behind the throttle, and the boosts of several add up. Fitted to how much more the dyno's boosted curve makes
+    /// than the same engine without its turbos (its blowers kept: their boost stays in the curve), so the gauge and
+    /// the lag are the turbos' while the torque with the throttle open stays the dyno's (the curve is divided by the
+    /// boost the game adds back). With several turbos the gain at each speed is shared by the boost each makes there.
     /// </summary>
-    private static AcTurbo? Turbo(EngineReport report, DynoResult dyno)
+    private static IReadOnlyList<AcTurbo> Turbos(EngineReport report, DynoResult dyno)
     {
-        if (!report.Turbocharged || report.Inputs is not { BoostMax: > 0 } inputs) return null;
+        if (report.Inputs is not { } inputs) return Array.Empty<AcTurbo>();
 
-        var natural = EngineDyno.Run(inputs with { BoostMax = 0 });
+        // Each turbo with the boost it makes at a speed, bar: the scripts' own, then the parts' figures'
+        var turbos = new List<(Func<double, double> Boost, double LagUp, double LagDown)>();
+        var scriptTurbo = report.Turbocharged && inputs.BoostMax > 0;
+        if (scriptTurbo) turbos.Add((rpm => EngineDyno.ScriptBoostBar(inputs, rpm), report.TurboLagUp, report.TurboLagDown));
+        foreach (var charger in inputs.Chargers.Where(c => c.Turbo)) turbos.Add((charger.BoostAt, charger.LagUp, charger.LagDown));
+        if (turbos.Count == 0) return Array.Empty<AcTurbo>();
+
+        var natural = EngineDyno.Run(inputs with
+        {
+            BoostMax = scriptTurbo ? 0 : inputs.BoostMax,
+            Chargers = inputs.Chargers.Where(c => !c.Turbo).ToList()
+        });
         var gain = dyno.Curve
             .Select(p => (p.Rpm, Gain: natural.TorqueAt(p.Rpm) > 0 ? Math.Max(0, p.Torque / natural.TorqueAt(p.Rpm) - 1) : 0))
             .ToList();
+
+        var fitted = new List<AcTurbo>();
+        foreach (var turbo in turbos)
+        {
+            var share = turbos.Count == 1
+                ? gain
+                : gain.Select(g =>
+                {
+                    var all = turbos.Sum(t => t.Boost(g.Rpm));
+                    return (g.Rpm, Gain: all > 0 ? g.Gain * turbo.Boost(g.Rpm) / all : 0);
+                }).ToList();
+            if (Fit(share, turbo.LagUp, turbo.LagDown) is { } made) fitted.Add(made);
+        }
+
+        return fitted;
+    }
+
+    private static AcTurbo? Fit(IReadOnlyList<(double Rpm, double Gain)> gain, double lagUp, double lagDown)
+    {
         var max = gain.Max(g => g.Gain);
         if (max < 0.02) return null;
 
@@ -275,10 +312,10 @@ public static class AcEngineData
         }
 
         var gamma = sumXx > 0 ? Math.Clamp(sumXy / sumXx, 0.5, 4) : 2;
-        return new AcTurbo(max, reference, gamma);
+        return new AcTurbo(max, reference, gamma, lagUp, lagDown);
     }
 
-    private sealed record AcTurbo(double MaxBoost, double ReferenceRpm, double Gamma)
+    private sealed record AcTurbo(double MaxBoost, double ReferenceRpm, double Gamma, double LagUp, double LagDown)
     {
         /// <summary>Boost the game settles at with the throttle open at this speed</summary>
         public double BoostAt(double rpm) => rpm <= 0 ? 0 : Math.Min(MaxBoost, MaxBoost * Math.Pow(rpm / ReferenceRpm, Gamma));

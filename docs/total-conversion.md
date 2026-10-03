@@ -102,10 +102,10 @@ the schedule is not saved, a milestone trigger needs code to count it, race type
 | Which AC cars are in the game | game.json `cars` | **done (E6)** | |
 | Part groups, bolt-on groups, tuner priorities, performance groups | `parts/part_groups.json` | **done (E6)** | |
 | Stand-in script classes | `parts/stand_ins.json` | **done (E6)** | |
-| **Engine figures** | `PartScriptRuntime.cs`, `EngineEvaluator.cs` | only from SLRR bytecode; plain-data parts work for running gear only | hard: a `"figures"` object on a part that fills `DynoInputs` directly |
-| Turbo lag, single turbo | `AcEngineData.cs:148-161` | fixed 0.985/0.992 | easy |
-| Gears | `EngineEvaluator.cs:65-66` | SLRR array, at most 6 | medium |
-| Engine drawing | `EngineLayout.cs` | always longitudinal (transverse FWD shows wrong) | medium |
+| Engine figures | a part's `"figures"` (`Parts/Logic/PartFigures.cs`) | **done (E11)** | |
+| Turbo lag, twin turbos | a turbo's `lag_up`/`lag_down`; one AC turbo per turbo | **done (E11)** | |
+| Gears | `"gears"` in figures, up to 10 (an SLRR gearbox stays at 6) | **done (E11)** | |
+| Engine drawing | `front_transverse`, `mid_transverse` layouts (`EngineLayout.cs`, `CarPartsLayout.cs`) | **done (E11)** | |
 | Nitrous | `PartKinds.cs:32` | a shelf, no effect in AC | hard |
 | Rotary engines | `EngineDyno.cs` | 4-stroke piston model only | hard (fake piston figures meanwhile) |
 
@@ -189,8 +189,8 @@ playing exactly as it does now: today's values become the base game's data.
   - the King as data: bosses in the racers' data, so a mod can change the final rival or add more.
 - **E10. Race formats.** Format ids in data, race.ini session templates, mods shipping their own CSP mode, a result
   contract with a score. Drift, time attack and touge become possible: worth it for Street Corsa itself.
-- **E11. Data engines.** The `"figures"` path that skips the SLRR VM, turbo lag and twin turbos per part, more gears,
-  transverse engines. For modders' cars that have no SLRR parts.
+- **E11. Data engines** (done 2026-10-03). The `"figures"` path that skips the SLRR VM, turbo lag and twin turbos per
+  part, more gears, transverse engines. For modders' cars that have no SLRR parts.
 - **E12. The example mod** (was "the proof", changed 2026-10-03). An example add-on, not a separate game: a few cars,
   a parts pack, an event and a race of its own, made only from data, that shows what still breaks and becomes the mod
   modders copy.
@@ -198,6 +198,43 @@ playing exactly as it does now: today's values become the base game's data.
 Later, not in the epic: a weather system (there is none today), nitrous in AC.
 
 ## As built
+
+### E11: data engines (2026-10-03, branch `feature/data-engines`)
+
+The owner's decisions: a part's figures go onto the dyno's inputs (the game's dyno still makes the curve, so tuning
+works and a data part goes on an SLRR engine too), in plain metric units, transverse engines as a layout the garage
+draws, and tests only (the playable data engine ships with E12's example mod).
+
+- **Figures** (`Parts/Logic/PartFigures.cs`, `PartFigureSet.cs`; pack.json `"figures"`, read as the catalog loads into
+  `PartDefinition.ReadFigures`, what does not read told): a number sets, `{ "add" }` adds, `{ "times" }` multiplies;
+  parts' own numbers first (the part furthest out from the block, siblings by slot), then adds, then multiplies. Dyno
+  figures (`cylinders`, `bore`, `stroke`, `compression` or `chamber`, breathing, cam durations, spark, burn, mixture,
+  `fuel_flow`/`air_flow` in g/s, `rev_limit`, `max_rpm`) and engine figures (`idle_rpm`, `inertia` kg m2, `friction`,
+  `clutch_torque` Nm, `gears`, `reverse`, `final_drive`, `diff_lock`, an SLRR turbo's `lag_up`/`lag_down`).
+  `PartScriptRuntime` puts them over `DynoData` at every `calcDyno`; a block with no script is an engine of figures
+  (`EngineReport.FromFigures`) on `PartFigures.DataEngineBase` (a small-block's breathing, cam, spark and mixture), whose
+  problem is what it lacks (`PartFigures.MissingOf`). The cam's durations are all the dyno reads of the valve events.
+- **Chargers**: `turbo`/`blower` (one or a list) become `DynoInputs.Chargers` (`DynoCharger`: boost in bar, building
+  from `spool_rpm` to `full_boost_rpm` by a smoothstep, then held); their boost adds to the scripts' charger's.
+  `AcEngineData` fits one `[TURBO_n]` per turbo (the SLRR one first) with its own lag: the dyno's gain over the engine
+  without its turbos (blowers kept) is shared at each speed by the boost each turbo makes there. One SLRR turbo comes
+  out exactly as before.
+- **Gears**: a gearbox of figures has up to 10 (AC's limit); an SLRR one stays at 6.
+- **Simple classes**: a part of figures may name its classes simply (`"class_chain": ["Camshaft"]`): `PartKinds.Is`
+  and `FrameworkClass` take them; `IsScripted` counts a part with figures. Only a turbo with a script is the scripts'
+  charger (`Turbocharged`).
+- **Transverse**: `EngineLayout.FrontTransverse` and `MidTransverse` (`front_transverse`, `mid_transverse` in cars.json,
+  the editor's "Front, across"), guessed for a front-wheel-drive car (none of the installed cars is one). The garage
+  turns the block across the car, its crank 8 cm ahead of the front axle (25 cm ahead of the rear one behind the
+  driver), its middle 15 cm off the centre line; a running engine across pitches the body where one along it rolls it.
+  The stand and the part moves are the engine's own directions, unchanged.
+- **Tests**: `PartFiguresTests` (a four of figures alone with a five-speed, a header, twin turbos to two AC turbos, a
+  blower in the curve, bad figures, figures on the Chrysler 340), `EngineLayoutTests`. EngineBench takes a pack of
+  figures as it is (a 2.0 l four: 135 hp, 256 hp with the two turbos).
+
+Left for later: wear on a part of figures (its figures stay as new), the player's tuning of a part of figures (it has
+no script fields to tune), a boost controller (a `times` on every charger's boost), which side the gearbox of an engine
+across the car is on (not seen against a front-wheel-drive car in the garage), rotary engines, nitrous. Not seen in game.
 
 ### E10: race formats (2026-10-03, branch `feature/race-formats`)
 

@@ -809,6 +809,12 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     protected virtual bool EngineTurnedRound => false;
 
     /// <summary>
+    /// The car's engine lies across it: its crankshaft turns under the body from side to side, so as it revs the body
+    /// pitches where a lengthwise engine rolls it
+    /// </summary>
+    protected virtual bool EngineAcross => false;
+
+    /// <summary>
     /// Rocks <paramref name="carNode"/> the way the running engine has it, and any bump with it; null, or an engine at
     /// rest and no bump, lets it settle
     /// </summary>
@@ -817,6 +823,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         var renderer = _renderer;
         var running = RunningEngine?.Pose ?? Audio.BodyPose.Rest;
         if (EngineTurnedRound) running = running with { Roll = -running.Roll };
+        if (EngineAcross) running = running with { Roll = 0f, Pitch = running.Pitch + running.Roll };
         var bump = BumpPose();
         var moved = _scripted != null && ReferenceEquals(_scriptedNode, carNode) ? _scripted : null;
         // A car on the move squats or dives, and leans out of a bend

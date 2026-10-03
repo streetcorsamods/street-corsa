@@ -29,6 +29,7 @@ public sealed class PartScriptRuntime
     public PartScriptRuntime(PartsCatalog catalog, InstalledPart root)
     {
         Root = root;
+        Figures = PartFigures.Of(root);
 
         var loader = catalog.Scripts;
         _vm = new ScriptVm(loader, new Host(this));
@@ -74,6 +75,9 @@ public sealed class PartScriptRuntime
     }
 
     public InstalledPart Root { get; }
+
+    /// <summary>The parts' own engine figures, in the order they go on; they go over the scripts' before every dyno run</summary>
+    public IReadOnlyList<PartFigureSet> Figures { get; }
 
     /// <summary>Stand-in for the car; the scripts leave their results for the drivetrain on it</summary>
     public ScriptObject? Chassis { get; }
@@ -269,7 +273,7 @@ public sealed class PartScriptRuntime
                 case "calcDyno":
                 {
                     vm.Charge(DynoSteps);
-                    var result = EngineDyno.Run(DynoInputs.From(data));
+                    var result = EngineDyno.Run(PartFigures.Apply(DynoInputs.From(data), _runtime.Figures));
                     _runtime._dynoResults[data] = result;
 
                     // The scripts read these back for their checks and the tuning menus

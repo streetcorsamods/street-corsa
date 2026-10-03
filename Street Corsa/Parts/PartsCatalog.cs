@@ -157,6 +157,7 @@ public sealed class PartsCatalog
             }
         }
         PartOverrides.Apply(catalog.Scripts, catalog._parts.Values, catalog._problems);
+        Logic.PartFigures.Read(catalog._parts.Values, catalog._problems);
 
         foreach (var (mod, gone, current) in aliases)
         {

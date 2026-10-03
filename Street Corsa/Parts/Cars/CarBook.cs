@@ -246,9 +246,9 @@ public sealed class CarBook
                 car.Make = null;
             }
 
-            if (car.Layout is { Length: > 0 } layout && !Enum.TryParse<EngineLayout>(layout, ignoreCase: true, out _))
+            if (car.Layout is { Length: > 0 } layout && EngineLayouts.Parse(layout) == null)
             {
-                problems.Add($"cars.{id}.layout \"{layout}\" is none of front, mid, rear; guessed from the car");
+                problems.Add($"cars.{id}.layout \"{layout}\" is none of front, mid, rear, front_transverse, mid_transverse; guessed from the car");
                 car.Layout = null;
             }
 
@@ -361,7 +361,7 @@ public sealed class CarEntry
     /// <summary>The engine build it leaves the factory with (engine_builds.json)</summary>
     public string? Engine { get; set; }
 
-    /// <summary>"front", "mid" or "rear"</summary>
+    /// <summary>"front", "mid", "rear", "front_transverse" or "mid_transverse"</summary>
     public string? Layout { get; set; }
 
     /// <summary>What it costs in perfect condition, in the game's money</summary>
@@ -370,5 +370,5 @@ public sealed class CarEntry
     /// <summary>How often it turns up for sale, 0 rare to 1 common</summary>
     public float? Common { get; set; }
 
-    public EngineLayout? EngineLayout => Layout is { Length: > 0 } layout && Enum.TryParse<EngineLayout>(layout, ignoreCase: true, out var parsed) ? parsed : null;
+    public EngineLayout? EngineLayout => EngineLayouts.Parse(Layout);
 }

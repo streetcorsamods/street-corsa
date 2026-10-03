@@ -135,7 +135,7 @@ public static class EngineDyno
 
         var volumetric = filling * (1 - ResidualPenalty * residual) * reversion;
 
-        var pressure = Atmosphere + BoostScale * Boost(inputs, rpm);
+        var pressure = Atmosphere + BoostScale * Boost(inputs, rpm) + ChargersBoost(inputs, rpm);
         var airPerSecond = AirDensity * pressure / Atmosphere * displacement * volumetric / cycleTime;
         if (inputs.MaxAirFlow > 0) airPerSecond = Math.Min(airPerSecond, inputs.MaxAirFlow);
 
@@ -179,6 +179,17 @@ public static class EngineDyno
         var error = (leadDegrees - bestLead) / PhasingWidth;
         return Math.Clamp(1 - error * error, 0.5, 1);
     }
+
+    /// <summary>Boost of the chargers the parts' figures bring at this speed, bar: theirs adds up, as in Assetto Corsa</summary>
+    public static double ChargersBoost(DynoInputs inputs, double rpm)
+    {
+        var boost = 0.0;
+        foreach (var charger in inputs.Chargers) boost += charger.BoostAt(rpm);
+        return boost;
+    }
+
+    /// <summary>Boost of the scripts' charger at this speed, bar of manifold pressure</summary>
+    public static double ScriptBoostBar(DynoInputs inputs, double rpm) => BoostScale * Boost(inputs, rpm);
 
     /// <summary>
     /// Chargers spin with the engine; boost peaks where they work best and the wastegate caps it. A blower's

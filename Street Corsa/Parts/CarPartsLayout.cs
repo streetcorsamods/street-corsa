@@ -31,7 +31,8 @@ public sealed record CarAnchors(Vector3 WheelLF, Vector3 WheelRF, Vector3 WheelL
 /// <summary>
 /// Estimates where a car's parts sit from its wheel hubs and its <see cref="EngineLayout"/> alone, since AC cars know
 /// nothing about engine bays or suspension mounts: a longitudinal engine with the gearbox bolted to its back (in the
-/// front or ahead of the rear axle facing forward, behind the rear axle turned around), the wheel and the brake on the
+/// front or ahead of the rear axle facing forward, behind the rear axle turned around) or one lying across the car,
+/// the wheel and the brake on the
 /// hub, a coil spring and a shock next to every wheel.
 /// Part models have their front towards -Z while AC cars face +Z, hence the frames below.
 /// </summary>
@@ -46,6 +47,13 @@ public static class CarPartsLayout
     // reaches back to the rear axle; a rear engine's rear face is at the axle, its gearbox reaching forward past it.
     private const float MidRearFaceAheadOfRearAxle = 0.4f;
     private const float RearRearFaceBehindRearAxle = 0.05f;
+
+    // An engine across the car: its crankshaft a little ahead of the front axle (the drive shafts come out of the
+    // gearbox beside it on the axle line), or ahead of the rear axle behind the driver; the block's middle off the
+    // centre line towards its timing end, so the block and the gearbox on its other end sit about the middle
+    private const float TransverseCrankAheadOfFrontAxle = 0.08f;
+    private const float TransverseCrankAheadOfRearAxle = 0.25f;
+    private const float TransverseBlockOffCentre = 0.15f;
 
     /// <summary>Half a block's length, for a block whose model can't be measured</summary>
     private const float DefaultBlockHalfLength = 0.3f;
@@ -111,13 +119,20 @@ public static class CarPartsLayout
     /// <summary>
     /// Where an engine block sits in the car, crankshaft a little above the hubs: a front engine behind the front axle
     /// line; a mid one facing forward with its rear face ahead of the rear axle; a rear one turned around, its rear
-    /// face at the rear axle
+    /// face at the rear axle. One across the car has its timing end towards the side <see cref="CarFrame"/> calls
+    /// right and its gearbox towards the other (not yet checked against a front-wheel-drive car in the garage).
     /// </summary>
     /// <param name="bounds">The block model's box, to find its rear face by; null for a block of the usual length</param>
     public static Matrix4x4 EnginePlacement(CarAnchors anchors, PartDefinition block, EngineLayout layout = EngineLayout.Front, (Vector3 Min, Vector3 Max)? bounds = null)
     {
         var forward = anchors.Forward;
-        var frame = CarFrame(layout == EngineLayout.Rear ? -forward : forward);
+        var right = Vector3.Cross(Vector3.UnitY, forward);
+        var frame = CarFrame(layout switch
+        {
+            EngineLayout.Rear => -forward,
+            EngineLayout.FrontTransverse or EngineLayout.MidTransverse => right,
+            _ => forward
+        });
 
         var crank = block.Slots.FirstOrDefault(s => s.Name.Contains("crank", StringComparison.OrdinalIgnoreCase));
         var crankLocal = crank == null ? DefaultCrankPosition : new Vector3(crank.Position[0], crank.Position[1], 0f);
@@ -128,6 +143,8 @@ public static class CarPartsLayout
         {
             EngineLayout.Mid => (crankLocal with { Z = RearFaceZ(bounds) }, anchors.RearAxle + forward * MidRearFaceAheadOfRearAxle + lift),
             EngineLayout.Rear => (crankLocal with { Z = RearFaceZ(bounds) }, anchors.RearAxle - forward * RearRearFaceBehindRearAxle + lift),
+            EngineLayout.FrontTransverse => (crankLocal with { Z = MiddleZ(bounds) }, anchors.FrontAxle + forward * TransverseCrankAheadOfFrontAxle + right * TransverseBlockOffCentre + lift),
+            EngineLayout.MidTransverse => (crankLocal with { Z = MiddleZ(bounds) }, anchors.RearAxle + forward * TransverseCrankAheadOfRearAxle + right * TransverseBlockOffCentre + lift),
             _ => (crankLocal, anchors.FrontAxle - forward * EngineBehindFrontAxle + lift)
         };
 
@@ -137,6 +154,9 @@ public static class CarPartsLayout
 
     /// <summary>Z of a block's rear face in its own space: part models have their front towards -Z</summary>
     private static float RearFaceZ((Vector3 Min, Vector3 Max)? bounds) => bounds?.Max.Z ?? DefaultBlockHalfLength;
+
+    /// <summary>Z of the middle of a block's length in its own space</summary>
+    private static float MiddleZ((Vector3 Min, Vector3 Max)? bounds) => bounds is { } box ? (box.Min.Z + box.Max.Z) / 2 : 0f;
 
     /// <summary>Places a part so that its first slot (where it meets the car) lands on a point</summary>
     private static Matrix4x4 BySlot(PartDefinition part, Matrix4x4 frame, Vector3 target)
