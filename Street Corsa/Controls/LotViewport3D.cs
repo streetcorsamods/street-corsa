@@ -258,7 +258,13 @@ public class LotViewport3D : D3DViewportBase
     }
 
     private static readonly DependencyPropertyKey IsLotReadyPropertyKey = DependencyProperty.RegisterReadOnly(
-        nameof(IsLotReady), typeof(bool), typeof(LotViewport3D), new PropertyMetadata(false));
+        nameof(IsLotReady), typeof(bool), typeof(LotViewport3D), new PropertyMetadata(false, (d, e) =>
+        {
+            if (e.NewValue is true) ((LotViewport3D)d).LotReady?.Invoke(d, EventArgs.Empty);
+        }));
+
+    /// <summary>The lot has become worth looking at (<see cref="IsLotReady"/>): its cars stand in their bays</summary>
+    public event EventHandler? LotReady;
 
     public static readonly DependencyProperty IsLotReadyProperty = IsLotReadyPropertyKey.DependencyProperty;
 

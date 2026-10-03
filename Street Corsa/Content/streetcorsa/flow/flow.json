@@ -11,7 +11,7 @@
   "menu": "main_menu",
   "screens": {
     "main_menu": { "kind": "main_menu" },
-    "garage": { "kind": "garage", "endDay": true, "exits": { "quit": "main_menu", "won": "main_menu", "car_lot": "car_lot" } },
+    "garage": { "kind": "garage", "endDay": true, "exits": { "quit": "main_menu", "car_lot": "car_lot" } },
     "car_lot": { "kind": "car_lot", "exits": { "back": "garage" } },
     "racing_hub": { "kind": "racing_hub", "exits": { "streets": "diner" } },
     "career": { "kind": "career", "exits": { "won": "main_menu" } },

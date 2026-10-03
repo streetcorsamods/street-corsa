@@ -133,20 +133,13 @@ namespace StreetCorsa
             var app = (App)System.Windows.Application.Current;
             if (app.CurrentGameState is not { } game || !NavigationService.CanEndDayHere || app.Launcher.IsExecutionLocked) return;
 
-            var left = app.GameTimeService.GetRemainingMinutesToday(game);
-            var morning = Services.Text.GameText.Date(DateTime.Today.AddHours(app.GameTimeService.DayStartHour), "format.time");
-            var message = left > 0
-                ? Services.Text.GameText.Say("garage.end_day.ask.left", ("hours", left / 60), ("minutes", left % 60), ("morning", morning))
-                : Services.Text.GameText.Say("garage.end_day.ask", ("morning", morning));
             var screen = NavigationService.CurrentScreen;
-            DialogService.ShowDialog(new Dialogs.Confirmation.ConfirmationDialogViewModel(
-                DialogService, message, Services.Text.GameText.Say("garage.end_day.title"),
-                confirmed =>
-                {
-                    // Still on the screen it was asked on, and still the same game
-                    if (!confirmed || !ReferenceEquals(NavigationService.CurrentScreen, screen) || !ReferenceEquals(app.CurrentGameState, game)) return;
-                    NavigationService.GoHome(game, new Navigation.FlowArgs { EndDay = true });
-                }));
+            Dialogs.Confirmation.EndDayQuestion.Ask(DialogService, app.GameTimeService, game, () =>
+            {
+                // Still on the screen it was asked on, and still the same game
+                if (!ReferenceEquals(NavigationService.CurrentScreen, screen) || !ReferenceEquals(app.CurrentGameState, game)) return;
+                NavigationService.GoHome(game, new Navigation.FlowArgs { EndDay = true });
+            });
         }
 
         /// <summary>The screen takes input only with nothing in front of it; the radio's panel none while a dialog is up</summary>

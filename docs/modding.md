@@ -598,7 +598,6 @@ career. The base game's is `flow\flow.json`; its comment says what each part is.
 
 ```json
 {
-  "home": "touge",
   "screens": {
     "touge": { "kind": "street", "exits": { "back": "garage" } },
     "diner": { "exits": { "back": "touge" } },
@@ -626,7 +625,8 @@ career. The base game's is `flow\flow.json`; its comment says what each part is.
   racing hub's Hit the streets), `car_lot` and `quit` (the garage), `won` (the career, when picking a path wins),
   `after_race` (where a race set up on that screen comes back to; none: the screen itself). A race comes back to the
   screen it was set up from, the racing hub's to the screen it was opened over.
-- **`home`**: where a game starts and where an exit that leads nowhere goes (a button for such an exit is not shown
+- **`home`**: a `garage` screen (any other kind is told and the first garage is home): where a game starts, where
+  the night is ended and where an exit that leads nowhere goes (a button for such an exit is not shown
   where the screen has one to hide: the diner's Cruise, the street's Diner, a map's Mail order, the hub's Hit the
   streets). A car towed home, and a street race that ran past the night, go home. **`menu`**: the main screen.
 - **`system`**: the rules' system a screen belongs to (`rules`, `systems`). Its kind has one already (the diner's is
@@ -700,8 +700,11 @@ screens with the player's car on a 3D scene (the garage, the car lot, the gas st
 player's car is the camera): `screen.<id>.enter` (the screen of that id in the flow is up and its own show is over: the
 garage once it is revealed and any car has driven in, the lot once its warehouse is up, the station once the car is at
 the pump, in place of a `station.at_pump` script still playing) and `screen.<id>.leave` (the player leaves it by a way
-out or a tile; the screen goes once the script lets it, and a car driven off a way out that then goes nowhere is put
-back). The garage's car leaving for the gas station plays `garage.leave`, not `screen.garage.leave`.
+out, a tile, a race set up on it or the racing hub's Hit the streets; the screen goes once the script lets it, and a car
+driven off a way out that then goes nowhere is put back; a way out that leads to no screen plays none). The garage's car
+leaving for the gas station plays `garage.leave`, not `screen.garage.leave`; a race entered from the racing hub plays
+none (the hub is over the screen). The gas station's plays once its car has pulled out (`station.leave`), before the
+curtain; a car taken out of the lot plays `lot.take_out` first, then the lot's leave script.
 
 **The game never waits on the show.** It goes on when the script lets it: a `release` step, or the end. A click on
 the picture skips the rest of a script: every step from there is done at once, a drive under way is put at its end,

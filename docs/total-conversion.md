@@ -194,7 +194,7 @@ the garage (they went to the diner); the flow's own script triggers play on the 
 system switches are rules (kept in the save), the screens, exits, tiles and cards are read at start-up.
 
 - **The flow** (`Navigation/FlowBook.cs`, content type `flow`, merged key by key): screens by id, each of a kind the
-  program has (`ScreenKinds`), with named exits; `home` and `menu`; the hubs' tiles (`TileActions`, `TileSpots`,
+  program has (`ScreenKinds`), with named exits; `home` (a garage screen) and `menu`; the hubs' tiles (`TileActions`, `TileSpots`,
   `TileRequirements`); the main menu's cards (`MenuCards`); `endDay` per screen. Checked on load: what does not read is
   a mods' problem and left out; exits and tiles to a screen a mod took `off` go quietly.
 - **Navigation** goes by id: `NavigationService.Go(id, game, FlowArgs)` builds a screen by its kind (the 18 typed
@@ -216,8 +216,10 @@ system switches are rules (kept in the save), the screens, exits, tiles and card
   (`NavigationService.CanEndDayHere`), which asks, then goes home with `FlowArgs.EndDay` and the garage ends the day.
 - **Triggers**: `screen.<id>.enter` and `screen.<id>.leave` (`ScriptTriggers.ScreenEnter/ScreenLeave`) through
   `IScriptedScreen` (the garage, the car lot, the gas station): the view hands the screen a way to play a script, the
-  screen tells `NavigationService.ScreenReady` when its own show is over, and `Leave`/`GoFrom` play the leave script
-  first (`Depart`). Facts gain `Screen`, `From`, `To`; conditions gain `from` and `to`.
+  screen tells `NavigationService.ScreenReady` when its own show is over (the lot once its cars stand, the garage once
+  its car is there), and `Leave`/`GoFrom`/`GoRace`/the hub's streets play the leave script first (`Depart`); a screen
+  with more to put back than its car awaits `LeaveAsync` (the station's curtain, the lot's warehouse) and stays
+  `IsLeaving` meanwhile. Facts gain `Screen`, `From`, `To`; conditions gain `from` and `to`.
 - Text: `garage.tile.mail_order`, `garage.fix.gas.overnight`, `garage.fix.repairs_and_gas.overnight`,
   `shell.end_day.tip`; the screens' names for a failed navigation are by id (`menu.screen.dealer_lot`,
   `menu.screen.sound_browser`), else by kind.

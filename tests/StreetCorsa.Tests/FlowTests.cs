@@ -192,9 +192,10 @@ public sealed class FlowTests : IDisposable
         _temp.File("drift/mod.json", """{ "id": "drift" }""");
         _temp.File("drift/flow/flow.json", """
             {
-              "home": "touge",
+              "home": "shed",
               "screens": {
-                "touge": { "kind": "street", "exits": { "back": "garage" } },
+                "shed": { "kind": "garage", "endDay": true, "exits": { "quit": "main_menu" } },
+                "touge": { "kind": "street", "exits": { "back": "shed" } },
                 "diner": { "exits": { "back": "touge" } },
                 "newspaper": { "off": true }
               },
@@ -207,7 +208,7 @@ public sealed class FlowTests : IDisposable
         var book = FlowBook.Load(ModSet.Load(_temp.Path), problems: problems);
 
         Assert.Empty(problems);
-        Assert.Equal("touge", book.Home);
+        Assert.Equal("shed", book.Home);
         Assert.Equal("street", book.KindOf("touge"));
         Assert.Equal("touge", book.Exit("diner", "back", new SystemRules()));
         Assert.Equal("street", book.Exit("diner", "cruise", new SystemRules()));
@@ -218,6 +219,25 @@ public sealed class FlowTests : IDisposable
         Assert.DoesNotContain("newspaper", tiles);
         Assert.Equal(["car_info", "touge"], book.TilesOf("garage", new SystemRules()).Where(t => t.Tile.Spot == TileSpots.Right).Select(t => t.Id));
         Assert.Equal("settings", book.CardsInOrder()[0].Id);
+    }
+
+    [Fact]
+    public void Home_is_a_garage()
+    {
+        var problems = new List<string>();
+        var book = Read("""
+            {
+              "home": "touge",
+              "screens": {
+                "garage": { "kind": "garage" },
+                "touge": { "kind": "street" },
+                "main_menu": { "kind": "main_menu" }
+              }
+            }
+            """, problems);
+
+        Assert.Equal("garage", book.Home);
+        Assert.Contains(problems, p => p.Contains("home \"touge\" is a street screen"));
     }
 
     [Fact]
@@ -334,6 +354,85 @@ public sealed class FlowTests : IDisposable
         Assert.Null(navigation.IdOf(new Screen()));
     }
 
+    // ---- leave scripts ----
+
+    private sealed class StagedScreen : IScreen, IScriptedScreen
+    {
+        public readonly List<string> Played = [];
+        public TaskCompletionSource Show = new();
+        public int PutBack;
+
+        public StagedScreen() => PlayScreenScript = (trigger, _) =>
+        {
+            Played.Add(trigger);
+            return Show.Task;
+        };
+
+        public void Enter() { }
+        public void Exit() { }
+        public void Resume() { }
+        public Func<string, ScriptFacts, Task?>? PlayScreenScript { get; set; }
+        public ScriptFacts ScriptFacts => ScriptFacts.None;
+        public void PutBackAfterLeave() => PutBack++;
+    }
+
+    [Fact]
+    public void A_way_out_that_leads_nowhere_plays_no_leave_script()
+    {
+        var problems = new List<string>();
+        var noLot = Read("""{ "screens": { "garage": { "kind": "garage", "exits": { "car_lot": "car_lot" } }, "main_menu": { "kind": "main_menu" }, "car_lot": { "kind": "car_lot", "off": true } } }""", problems);
+        var navigation = new NavigationService(new DialogService(), null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!,
+            null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, _ => { }, noLot);
+        var garage = new StagedScreen();
+        navigation.SafeNavigate("garage", () => garage, "garage");
+
+        Assert.False(navigation.Leave(garage, "car_lot", new GameState()));
+        Assert.Empty(garage.Played);
+        Assert.Equal(0, garage.PutBack);
+    }
+
+    [Fact]
+    public async Task An_awaited_leave_plays_the_script_then_the_curtain_then_goes()
+    {
+        var navigation = Navigation(new DialogService());
+        var lot = new StagedScreen();
+        navigation.SafeNavigate("car_lot", () => lot, "car_lot");
+        var curtain = false;
+
+        var leaving = navigation.LeaveAsync(lot, "back", new GameState(), first: () =>
+        {
+            curtain = true;
+            return Task.CompletedTask;
+        });
+
+        Assert.Equal(["screen.car_lot.leave"], lot.Played);
+        Assert.True(navigation.IsLeaving(lot));
+        Assert.False(curtain);
+        // A second way out meanwhile is not taken
+        Assert.True(navigation.Leave(lot, "back", new GameState()));
+        Assert.Single(lot.Played);
+
+        lot.Show.SetResult();
+        Assert.True(await leaving);
+        Assert.True(curtain);
+        Assert.Equal("garage", navigation.CurrentId);
+        Assert.False(navigation.IsLeaving(lot));
+        Assert.Equal(0, lot.PutBack);
+    }
+
+    [Fact]
+    public void A_screen_the_flow_does_not_have_is_told_to_the_player()
+    {
+        var problems = new List<string>();
+        var bare = Read("""{ "screens": { "garage": { "kind": "garage" }, "main_menu": { "kind": "main_menu" } } }""", problems);
+        var dialogs = new DialogService();
+        var navigation = new NavigationService(dialogs, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!,
+            null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, _ => { }, bare);
+
+        Assert.False(navigation.GoKind(ScreenKinds.SoundBrowser, null));
+        Assert.True(dialogs.IsDialogOpen);
+    }
+
     // ---- the window's End Day ----
 
     [Fact]
@@ -374,6 +473,7 @@ public sealed class SystemSwitchTests
 
     private static void PlayWith(SystemRules systems, Action test)
     {
+        var before = RuleBook.InPlay();
         RuleBook.Current = new RuleBook { Systems = systems };
         try
         {
@@ -381,7 +481,7 @@ public sealed class SystemSwitchTests
         }
         finally
         {
-            RuleBook.Current = null!;
+            before.Restore();
         }
     }
 

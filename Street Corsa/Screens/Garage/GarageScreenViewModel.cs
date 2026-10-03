@@ -43,11 +43,6 @@ namespace StreetCorsa.Screens.Garage
         private readonly RaceCarDataService _raceCarDataService;
         private readonly IAppLogger _logger;
 
-        /// <summary>Asks where to go: the main menu, or out of the game</summary>
-        public RelayCommand QuitCommand { get; }
-
-        /// <summary>Everything about the selected car, and every part in it</summary>
-        public RelayCommand CarInfoCommand { get; }
         public AsyncRelayCommand FreeRunCommand { get; }
 
         /// <summary>The selected car at the strip on its own, pass after pass, for timeslips (<see cref="OnTestAndTune"/>)</summary>
@@ -80,7 +75,6 @@ namespace StreetCorsa.Screens.Garage
 
         public bool HasFreeRunTracks => FreeRunTracks.Count > 0;
         public RelayCommand SelectCarCommand { get; }
-        public RelayCommand ShowCalendarCommand { get; }
 
         /// <summary>Calls it a day: the rest of today goes by, and the game picks up tomorrow morning</summary>
         public RelayCommand EndDayCommand { get; }
@@ -325,8 +319,6 @@ namespace StreetCorsa.Screens.Garage
             CarArriving = arrival?.DrivesIn == true;
             _endDayOnArrival = endDay;
 
-            QuitCommand = new RelayCommand(OnQuit, CanLeave);
-            CarInfoCommand = new RelayCommand(OnCarInfo, () => SelectedCar != null);
             FreeRunCommand = new AsyncRelayCommand(OnFreeRun, () => SelectedCarHere && FreeRunTrack != null && !_launcher.IsExecutionLocked && CanLeave());
             TestAndTuneCommand = new AsyncRelayCommand(OnTestAndTune, () => SelectedCarHere && !_launcher.IsExecutionLocked && CanLeave());
             LoadFreeRunTracks();
@@ -335,7 +327,6 @@ namespace StreetCorsa.Screens.Garage
             SellCommand = new RelayCommand(OnSell, () => SelectedCarHere && !_endingDay && !_launcher.IsExecutionLocked);
             CollectCommand = new RelayCommand(OnCollect, CanCollect);
             SelectCarCommand = new RelayCommand(OnSelectCar, CanLeave);
-            ShowCalendarCommand = new RelayCommand(OnShowCalendar);
             EndDayCommand = new RelayCommand(OnEndDay, () => !_endingDay && !_launcher.IsExecutionLocked);
 
             // The garage is the game's home screen: make sure a car is selected if the player owns any
@@ -852,22 +843,7 @@ namespace StreetCorsa.Screens.Garage
         private bool CanLeave() => !_endingDay;
 
         /// <summary>Asks, then ends the day: the night's scheduled work runs, and the new day is saved</summary>
-        private void OnEndDay()
-        {
-            var left = _timeService.GetRemainingMinutesToday(_gameState);
-            // The day's first hour is the rules': written as the game's clock writes the time (8:00 AM, 2:00 PM)
-            var morning = GameText.Date(DateTime.Today.AddHours(_timeService.DayStartHour), "format.time");
-            var message = left > 0
-                ? GameText.Say("garage.end_day.ask.left", ("hours", left / 60), ("minutes", left % 60), ("morning", morning))
-                : GameText.Say("garage.end_day.ask", ("morning", morning));
-
-            _dialogService.ShowDialog(new Dialogs.Confirmation.ConfirmationDialogViewModel(
-                _dialogService, message, GameText.Say("garage.end_day.title"),
-                confirmed =>
-                {
-                    if (confirmed) EndDay();
-                }));
-        }
+        private void OnEndDay() => Dialogs.Confirmation.EndDayQuestion.Ask(_dialogService, _timeService, _gameState, EndDay);
 
         private async void EndDay()
         {
@@ -991,7 +967,7 @@ namespace StreetCorsa.Screens.Garage
             {
                 if (!bySpot.TryGetValue(tile.Spot, out var spot)) bySpot[tile.Spot] = spot = [];
                 var text = tile.Text is { } key ? GameText.Say(key) : null;
-                var icon = tile.Icon is { } image ? Styles.ThemeImages.Load(image, 128) : null;
+                var icon = tile.Icon is { } image ? Styles.ThemeImages.Icon(image, 128) : null;
                 spot.Add(new GarageTile(id, tile, text, icon, TileCommand(tile), first: spot.Count == 0));
             }
 

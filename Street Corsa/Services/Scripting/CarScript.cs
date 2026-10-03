@@ -51,6 +51,10 @@ namespace StreetCorsa.Services.Scripting
 
         /// <summary>The player leaves a screen by a way out (<c>screen.&lt;id&gt;.leave</c>): the screen goes once the script lets it</summary>
         public static string ScreenLeave(string screenId) => $"screen.{screenId}.leave";
+
+        /// <summary>Whether a trigger is a screen's leave (<see cref="ScreenLeave"/>)</summary>
+        public static bool IsScreenLeave(string trigger) =>
+            trigger.StartsWith("screen.", StringComparison.Ordinal) && trigger.EndsWith(".leave", StringComparison.Ordinal);
     }
 
     /// <summary>

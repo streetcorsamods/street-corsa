@@ -579,7 +579,10 @@ namespace StreetCorsa.Screens.Station
             if (_active) GoHome();
         }
 
-        /// <summary>The curtain comes down and the player is home; a garage that would not open leaves them at the pump</summary>
+        /// <summary>
+        /// A mod's leave script plays while the station is still seen, then the curtain comes down and the player is home;
+        /// a garage that would not open leaves them at the pump
+        /// </summary>
         private async void GoHome()
         {
             try
@@ -587,8 +590,7 @@ namespace StreetCorsa.Screens.Station
                 // The trip's time first: a day that rolled over is saved and shown as it now is
                 await _trip;
                 Save();
-                if (CloseCurtain is { } close) await close();
-                if (_navigationService.Leave(this, "back", _gameState)) return;
+                if (await _navigationService.LeaveAsync(this, "back", _gameState, first: CloseCurtain)) return;
             }
             catch (Exception ex)
             {

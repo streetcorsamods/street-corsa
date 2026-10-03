@@ -33,8 +33,9 @@ namespace StreetCorsa.Screens.CarLot
                 }
             };
 
-            // The warehouse is up: the flow's enter script may play, once the scene has done setting itself up
-            Viewport.Ready += (_, _) => Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background,
+            // The warehouse is up, its cars in their bays (not the first frame: the room is empty then): the flow's enter
+            // script may play, once the scene has done setting itself up
+            Viewport.LotReady += (_, _) => Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background,
                 () => (DataContext as CarLotScreenViewModel)?.SceneReady());
 
             // The screen is going: silence. The bank stays loaded: the garage plays the same car next, and a race lets

@@ -22,7 +22,10 @@ public sealed class FlowBook
     /// <summary>The flow of the mods next to the game, read once</summary>
     public static FlowBook Installed => InstalledBook.Value;
 
-    /// <summary>The screen the game goes to when a game is started or loaded, and wherever a way out leads nowhere</summary>
+    /// <summary>
+    /// The screen the game goes to when a game is started or loaded, and wherever a way out leads nowhere: a garage
+    /// screen (another kind is told and the first garage taken)
+    /// </summary>
     public string Home { get; set; } = "garage";
 
     /// <summary>The main screen: where the game opens and where it goes when a game is over</summary>
@@ -165,10 +168,14 @@ public sealed class FlowBook
             screen.Exits.Remove(exit);
         }
 
-        if (string.IsNullOrWhiteSpace(Home) || !Screens.ContainsKey(Home))
+        // Home is a garage: it is where the night is ended, a car towed to and a game started, and where the screens
+        // that cannot keep the player send them; any other kind would send the player home from home, or end no day
+        if (string.IsNullOrWhiteSpace(Home) || KindOf(Home) != ScreenKinds.Garage)
         {
             var garage = FirstOfKind(ScreenKinds.Garage);
-            problems.Add($"home \"{Home}\" is no screen; {(garage ?? "none")} is home");
+            problems.Add(Screens.ContainsKey(Home ?? string.Empty)
+                ? $"home \"{Home}\" is a {KindOf(Home)} screen, and home must be a garage; {(garage ?? "none")} is home"
+                : $"home \"{Home}\" is no screen; {(garage ?? "none")} is home");
             Home = garage ?? "garage";
         }
 

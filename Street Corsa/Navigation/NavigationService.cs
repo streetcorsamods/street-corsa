@@ -322,9 +322,9 @@ namespace StreetCorsa.Navigation
         /// <summary>
         /// Goes to the screen of this id in the flow, built as its kind is; what the screen needs to be told (the shop,
         /// the car, the race) comes in <paramref name="args"/>. A screen that is not there, or whose system is off, is not
-        /// gone to (logged). An overlay kind (the racing hub, the career) opens over the screen on show, and its own ways
-        /// out go through <paramref name="leaveVia"/> when given (the garage's: not while the night is being worked out).
-        /// False when the player did not get there.
+        /// gone to (logged, and the player told). An overlay kind (the racing hub, the career) opens over the screen on
+        /// show, and its own ways out go through <paramref name="leaveVia"/> when given (the garage's: not while the night
+        /// is being worked out). False when the player did not get there.
         /// </summary>
         public bool Go(string? id, GameState? gameState, FlowArgs? args = null, Action<Func<bool>>? leaveVia = null)
         {
@@ -332,6 +332,7 @@ namespace StreetCorsa.Navigation
             if (_flow.Screen(id) is not { } screen || !_flow.IsOpen(id))
             {
                 _logger.Warning("There is no screen {Screen} open in the flow: not gone to", id);
+                ShowNavigationError(id ?? "?");
                 return false;
             }
 
@@ -339,6 +340,7 @@ namespace StreetCorsa.Navigation
             if (screen.Kind is not (ScreenKinds.MainMenu or ScreenKinds.SoundBrowser or ScreenKinds.CarCatalogEditor) && gameState == null)
             {
                 _logger.Warning("The {Screen} screen needs a game in play: not gone to", name);
+                ShowNavigationError(name);
                 return false;
             }
 
@@ -416,6 +418,7 @@ namespace StreetCorsa.Navigation
                         this, _dialogService, _catalogRepository, _profileRepository, _profileService, _carPartsService), id);
                 default:
                     _logger.Warning("The {Screen} screen ({Kind}) was not told what to show: not gone to", name, screen.Kind);
+                    ShowNavigationError(name);
                     return false;
             }
         }
@@ -424,15 +427,58 @@ namespace StreetCorsa.Navigation
         /// Leaves a screen by one of its ways out (<c>"back"</c>, <c>"bought"</c>): to the screen the flow leads it to.
         /// A way out that leads to no screen open goes home instead (from anywhere but home), or with no game in play to
         /// the main menu. False when the player did not get anywhere: a screen that failed to open leaves them where they
-        /// were, as any navigation does.
+        /// were, as any navigation does. True while a leave script plays: a way out that goes nowhere after it puts the
+        /// car back itself (<see cref="IScriptedScreen.PutBackAfterLeave"/>); a screen with more to put back awaits
+        /// <see cref="LeaveAsync"/> instead.
         /// </summary>
         public bool Leave(IScreen from, string exit, GameState? gameState, FlowArgs? args = null)
         {
             var id = IdOf(from);
-            // Where it leads, for the leave script's "to"
-            var to = _flow.Exit(id, exit) ?? (gameState != null && !IsHome(id) ? _flow.Home : gameState == null ? _flow.Menu : null);
-            return Depart(from, to, () => LeaveFrom(id, exit, gameState, args));
+            return Depart(from, LeadsTo(id, exit, gameState), () => LeaveFrom(id, exit, gameState, args));
         }
+
+        /// <summary>
+        /// <see cref="Leave"/>, done once the player has gone or not: the leave script first, when a mod has one, then
+        /// <paramref name="first"/> (the screen's own curtain), then the way out. False when the player did not get
+        /// anywhere, the screen to put back as it was (the car included): nothing is put back here.
+        /// </summary>
+        public async Task<bool> LeaveAsync(IScreen from, string exit, GameState? gameState, FlowArgs? args = null, Func<Task>? first = null)
+        {
+            var id = IdOf(from);
+            if (IsLeaving(from)) return true;
+
+            var playing = StartLeaveScript(from, LeadsTo(id, exit, gameState));
+            if (playing != null) _departing.AddOrUpdate(from, new object());
+            try
+            {
+                if (playing != null)
+                {
+                    try
+                    {
+                        await playing;
+                    }
+                    catch (Exception ex)
+                    {
+                        // The show is not the business: the player goes all the same
+                        _logger.Error(ex, "A leave script failed");
+                    }
+
+                    // The player may have gone some other way meanwhile
+                    if (!ReferenceEquals(CurrentScreen, from)) return true;
+                }
+
+                if (first != null) await first();
+                return LeaveFrom(id, exit, gameState, args);
+            }
+            finally
+            {
+                if (playing != null) _departing.Remove(from);
+            }
+        }
+
+        /// <summary>Where a screen's way out takes the player, as <see cref="LeaveFrom"/> goes: for the leave script's "to"</summary>
+        private string? LeadsTo(string? id, string exit, GameState? gameState) =>
+            _flow.Exit(id, exit) ?? (gameState != null && !IsHome(id) ? _flow.Home : gameState == null ? _flow.Menu : null);
 
         /// <summary>
         /// Leaves a screen for a screen of the flow it names itself (a hub's tile), as <see cref="Leave"/> does: its leave
@@ -441,6 +487,9 @@ namespace StreetCorsa.Navigation
         public bool GoFrom(IScreen from, string to, GameState? gameState, FlowArgs? args = null, Action<Func<bool>>? leaveVia = null) =>
             Depart(from, to, () => Go(to, gameState, args, leaveVia));
 
+        /// <summary>A leave script is taking the player off this screen: what they do meanwhile is not done</summary>
+        public bool IsLeaving(IScreen screen) => _departing.TryGetValue(screen, out _);
+
         /// <summary>
         /// A screen with its car on a 3D scene plays its <c>screen.&lt;id&gt;.leave</c> script first, when a mod has one
         /// for the moment, and is left once the script lets it go; a way out that then goes nowhere puts the car back.
@@ -448,30 +497,34 @@ namespace StreetCorsa.Navigation
         /// </summary>
         private bool Depart(IScreen from, string? to, Func<bool> go)
         {
-            if (from is IScriptedScreen { PlayScreenScript: { } play } scripted && IdOf(from) is { } id
-                && ReferenceEquals(CurrentScreen, from) && !ScreenKinds.IsOverlay(_flow.KindOf(to)))
+            if (IsLeaving(from)) return true;
+            if (StartLeaveScript(from, to) is not { } playing) return go();
+
+            _departing.AddOrUpdate(from, new object());
+            _ = DepartAfterAsync(playing, (IScriptedScreen)from, go);
+            return true;
+        }
+
+        /// <summary>
+        /// The screen's leave script for a way out to <paramref name="to"/>, started: done once it lets the screen go.
+        /// None for a screen with no 3D scene or not on show, for an overlay (the screen stays), for a way out that leads
+        /// to no screen open (nothing to drive off for), and when no script plays for the moment.
+        /// </summary>
+        private Task? StartLeaveScript(IScreen from, string? to)
+        {
+            if (from is not IScriptedScreen { PlayScreenScript: { } play } scripted || IdOf(from) is not { } id
+                || !ReferenceEquals(CurrentScreen, from) || !_flow.IsOpen(to) || ScreenKinds.IsOverlay(_flow.KindOf(to)))
+                return null;
+
+            try
             {
-                if (_departing.TryGetValue(from, out _)) return true;
-
-                Task? playing = null;
-                try
-                {
-                    playing = play(Services.Scripting.ScriptTriggers.ScreenLeave(id), FactsFor(scripted, id, to));
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error(ex, "The {Screen} screen's leave script could not be played", id);
-                }
-
-                if (playing != null)
-                {
-                    _departing.AddOrUpdate(from, new object());
-                    _ = DepartAfterAsync(playing, scripted, go);
-                    return true;
-                }
+                return play(Services.Scripting.ScriptTriggers.ScreenLeave(id), FactsFor(scripted, id, to));
             }
-
-            return go();
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "The {Screen} screen's leave script could not be played", id);
+                return null;
+            }
         }
 
         private async Task DepartAfterAsync(Task playing, IScriptedScreen from, Func<bool> go)
@@ -583,8 +636,12 @@ namespace StreetCorsa.Navigation
         /// Home, once what runs on the UI thread now is over: for a screen that sends the player home from its
         /// <c>Enter</c>, while the navigation that brought them there is still going on
         /// </summary>
-        public void GoHomeLater(GameState gameState) =>
+        public void GoHomeLater(GameState gameState)
+        {
+            // Home sending the player home would build it again, and again
+            if (IsHome(CurrentId)) return;
             _ = System.Windows.Threading.Dispatcher.CurrentDispatcher.InvokeAsync(() => GoHome(gameState));
+        }
 
         /// <summary>Where the game opens: the main screen, under its title while the cars load behind it</summary>
         public bool NavigateToStart() => Go(_flow.Menu, null, new FlowArgs { Intro = true });
@@ -595,12 +652,28 @@ namespace StreetCorsa.Navigation
 
         /// <summary>
         /// A race, set up by the screen on show: after it the player comes back there (or where its <c>after_race</c>
-        /// way out leads), unless the intent already says where
+        /// way out leads), unless the intent already says where. The screen's leave script plays first, as for any way
+        /// out; not for a race set up in an overlay over it (the racing hub), which the show would play behind.
         /// </summary>
-        public bool GoRace(GameState gameState, DragRaceLaunchIntent intent)
+        public bool GoRace(GameState gameState, DragRaceLaunchIntent intent, bool fromOverlay = false)
         {
             intent.ReturnTo ??= CurrentId;
-            return Go(_flow.FirstOfKind(ScreenKinds.Race), gameState, new FlowArgs { Race = intent });
+            var race = _flow.FirstOfKind(ScreenKinds.Race);
+            bool Go() => GoKind(ScreenKinds.Race, gameState, new FlowArgs { Race = intent });
+            return fromOverlay || CurrentScreen is not { } from ? Go() : Depart(from, race, Go);
+        }
+
+        /// <summary>
+        /// The first screen of a kind, for code that knows only what it wants (the race, the sound library); a flow with
+        /// none tells the player so
+        /// </summary>
+        public bool GoKind(string kind, GameState? gameState, FlowArgs? args = null)
+        {
+            if (_flow.FirstOfKind(kind) is { } id) return Go(id, gameState, args);
+
+            _logger.Warning("The flow has no {Kind} screen: not gone to", kind);
+            ShowNavigationError(kind);
+            return false;
         }
 
         // The main menu's cards. They open over the main screen rather than in place of it; back closes them.
@@ -636,6 +709,7 @@ namespace StreetCorsa.Navigation
         {
             try
             {
+                var under = CurrentScreen;
                 _dialogService.ShowDialog(new Dialogs.Career.CareerDialogViewModel(
                     _dialogService,
                     _victoryConditionService,
@@ -643,7 +717,7 @@ namespace StreetCorsa.Navigation
                     gameState,
                     _gameStateRepository,
                     _careerSections.GetOrCreateValue(gameState),
-                    () => Via(leaveVia, () => LeaveFrom(id, "won", gameState) || GoToMenu())));
+                    () => Via(leaveVia, () => LeaveOverlay(under, id, "won", gameState, () => LeaveFrom(id, "won", gameState) || GoToMenu()))));
                 return true;
             }
             catch (Exception ex)
@@ -659,6 +733,13 @@ namespace StreetCorsa.Navigation
             if (leaveVia != null) leaveVia(leave);
             else leave();
         }
+
+        /// <summary>
+        /// An overlay's way out, closed already: the screen it was opened over is left, its leave script first, as it is
+        /// by a way out of its own
+        /// </summary>
+        private bool LeaveOverlay(IScreen? under, string id, string exit, GameState gameState, Func<bool> go) =>
+            under != null && ReferenceEquals(CurrentScreen, under) ? Depart(under, _flow.Exit(id, exit), go) : go();
 
         /// <summary>
         /// The racing hub, over the current screen (the garage's "Go race!"): the race invitations, Street News, the way
@@ -683,8 +764,8 @@ namespace StreetCorsa.Navigation
                     _contentService,
                     _raceSetup,
                     stillHome: () => ReferenceEquals(CurrentScreen, home),
-                    race: intent => GoRace(gameState, intent),
-                    streets ? () => Via(leaveVia, () => LeaveFrom(id, "streets", gameState)) : null));
+                    race: intent => GoRace(gameState, intent, fromOverlay: true),
+                    streets ? () => Via(leaveVia, () => LeaveOverlay(home, id, "streets", gameState, () => LeaveFrom(id, "streets", gameState))) : null));
                 return true;
             }
             catch (Exception ex)

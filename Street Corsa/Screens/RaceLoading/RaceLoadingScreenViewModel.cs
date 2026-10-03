@@ -249,6 +249,11 @@ namespace StreetCorsa.Screens.RaceLoading
                 _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService,
                     GameText.Say("raceload.late_night"), GameText.Say("cruise.late_night.title")));
             }
+            else if (ScreenKinds.IsOverlay(flow.KindOf(back)))
+            {
+                // The racing hub or the career would open over this screen and leave the player on it
+                _logger.Warning("{Screen} opens over a screen, not in its place: home after the race", back);
+            }
             else if (back != null && flow.IsOpen(back))
             {
                 _logger.Information("Back to {Screen} after the race", back);
