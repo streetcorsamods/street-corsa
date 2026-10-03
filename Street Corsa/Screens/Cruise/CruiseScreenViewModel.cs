@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows.Threading;
+using StreetCorsa.Parts.Cars;
 using StreetCorsa.Audio;
 using StreetCorsa.Configuration;
 using StreetCorsa.Controls.Street;
@@ -374,7 +375,7 @@ namespace StreetCorsa.Screens.Cruise
             _streets = StreetScenes.Installed;
             FollowTheLight();
             PlayerCar = new StreetCar(Path.Combine(AppSettings.Instance.CarsPath, playerCar.DefinitionId),
-                string.IsNullOrEmpty(playerCar.SkinId) ? null : playerCar.SkinId);
+                string.IsNullOrEmpty(playerCar.SkinId) ? null : playerCar.SkinId, WheelSet.Of(_partsService.ShownWheels(playerCar)));
             OnPropertyChanged(nameof(PlayerCar));
             RefreshClock();
             StartStreet(playerCar);
@@ -674,7 +675,7 @@ namespace StreetCorsa.Screens.Cruise
             if (version != _encounterVersion || !_ticking) return;
 
             Stage.Arrive(new StreetCar(Path.Combine(AppSettings.Instance.CarsPath, car.DefinitionId),
-                string.IsNullOrEmpty(car.SkinId) ? null : car.SkinId), RivalEngine);
+                string.IsNullOrEmpty(car.SkinId) ? null : car.SkinId, WheelSet.Of(_partsService.ShownWheels(car))), RivalEngine);
         }
 
         private void OnRivalAlongside()

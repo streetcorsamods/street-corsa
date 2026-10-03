@@ -50,13 +50,15 @@ namespace StreetCorsa.Models.Race
         public EngineCoolingRating? Cooling { get; init; }
 
         /// <summary>
-        /// The rim each corner shows (front left, front right, rear left, rear right), null where the car keeps its own;
+        /// The wheel each corner shows (front left, front right, rear left, rear right), null where the car keeps its own;
         /// the race mode puts it on the car (see <see cref="Parts.Cars.ShownParts"/>)
         /// </summary>
-        public Parts.Cars.ShownModel?[] Rims { get; init; } = new Parts.Cars.ShownModel?[4];
+        public Parts.Cars.ShownWheel?[] Wheels { get; init; } = new Parts.Cars.ShownWheel?[4];
 
         /// <summary>The models the race mode loads for the car, once each</summary>
-        public IEnumerable<Parts.Cars.ShownModel> Models => Rims.OfType<Parts.Cars.ShownModel>().DistinctBy(m => m.Name, StringComparer.OrdinalIgnoreCase);
+        public IEnumerable<Parts.Cars.ShownModel> Models => Wheels.OfType<Parts.Cars.ShownWheel>()
+            .SelectMany(w => w.Tyre is { } tyre ? new[] { w.Rim, tyre } : [w.Rim])
+            .DistinctBy(m => m.Name, StringComparer.OrdinalIgnoreCase);
 
         /// <summary>Nothing wrong with the car</summary>
         public bool IsPristine =>
@@ -79,9 +81,15 @@ namespace StreetCorsa.Models.Race
                 yield return (prefix + "COOLING", List([cooling.Cooling, cooling.Fan, cooling.OilG], "0.000"));
             // AC's own names for the wheels, in the same order
             string[] wheels = ["LF", "RF", "LR", "RR"];
-            for (var corner = 0; corner < Math.Min(Rims.Length, wheels.Length); corner++)
+            for (var corner = 0; corner < Math.Min(Wheels.Length, wheels.Length); corner++)
             {
-                if (Rims[corner] is { } rim) yield return (prefix + "RIM_" + wheels[corner], rim.Name);
+                if (Wheels[corner] is not { } wheel) continue;
+                yield return (prefix + "RIM_" + wheels[corner], wheel.Rim.Name);
+                if (wheel.Tyre is not { } tyre) continue;
+                yield return (prefix + "TYRE_" + wheels[corner], tyre.Name);
+                var m = wheel.TyreOnRim;
+                yield return (prefix + "TYRE_" + wheels[corner] + "_AT",
+                    List([m.M11, m.M12, m.M13, m.M21, m.M22, m.M23, m.M31, m.M32, m.M33, m.M41, m.M42, m.M43], "0.######"));
             }
         }
 

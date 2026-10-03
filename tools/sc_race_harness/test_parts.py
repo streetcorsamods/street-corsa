@@ -92,6 +92,8 @@ local function walk(n, out, test)
   return out
 end
 function R:size() return #self.items end
+function R:findAny(name) return ref(walk(self.items[1], {}, function(c) return c.name == name end)) end
+function R:createNode(name) return ref({ node(name, self.items[1]) }) end
 function R:at(i) return ref({ self.items[i] }) end
 function R:name(i) return self.items[i or 1].name end
 function R:materialName(i) return self.items[i or 1].material or self.items[i or 1].name end
@@ -105,12 +107,17 @@ function R:setVisible(v) for _, n in ipairs(self.items) do n.visible = v end; re
 function R:dispose() end
 function R:loadKN5(file)
   local root = node(file, self.items[1])
+  world.loaded[#world.loaded + 1] = { file = file, node = root }
+  if file:find('tyre') then
+    -- tyres/mopar/Tyre_15_8 as the converter wrote it
+    mesh('Tyre_15_8_0', root, { -0.101, -0.312, -0.313 }, { 0.097, 0.312, 0.312 })
+    return ref({ root })
+  end
   -- rims/mopar/rim_8_5 as the converter wrote it
   mesh('rim_8_5_0', root, { -0.029, -0.028, -0.028 }, { -0.029, 0.029, 0.028 })
   mesh('rim_8_5_1', root, { -0.031, -0.052, -0.059 }, { 0.01, 0.062, 0.059 })
   mesh('rim_8_5_2', root, { -0.022, -0.147, -0.147 }, { 0.058, 0.147, 0.147 })
   mesh('rim_8_5_3', root, { -0.047, -0.187, -0.187 }, { 0.103, 0.187, 0.187 })
-  world.loaded[#world.loaded + 1] = { file = file, node = root }
   return ref({ root })
 end
 
@@ -150,28 +157,53 @@ sub(1, 'chevelle_rim_inner', -0.072, 0.162, 0.231)
 sub(0, 'chevelle_rim', 0.067, 0.164, 0.217)
 world.wheels.LR = chevelle
 
+-- A blurred rim outside the wheel, as some cars keep it
+mesh('RIM_BLUR_LF', node('RIM_BLUR_LF', car), { -0.1, -0.2, -0.2 }, { 0.1, 0.2, 0.2 })
+world.blur = car.children[#car.children].children[1]
+
 ac = {
   log = function(s) world.log[#world.log + 1] = s end,
   getSim = function() return { carsCount = 1 } end,
+  getCar = function() return { wheels = { [0] = { tyreRadius = 0.30 }, [1] = { tyreRadius = 0.30 }, [2] = { tyreRadius = 0.30 }, [3] = { tyreRadius = 0.30 } } } end,
   findNodes = function(f) return f == 'carRoot:0' and ref({ car }) or ref({}) end,
   getFolder = function() return 'docs' end,
   FolderID = { ACDocuments = 1 },
-  INIConfig = { raceConfig = function() return { get = function(_, section, key, default)
-    return world.ini[key] or default
-  end } end }
+  INIConfig = {
+    raceConfig = function() return { get = function(_, section, key, default)
+      return world.ini[key] or default
+    end } end,
+    -- blurred_objects.ini: world.blurred = { 'WHEEL_LF', 'RIM_BLUR_LF' }, all of wheel 0
+    carData = function() return {
+      iterate = function()
+        local i = 0
+        return function()
+          i = i + 1
+          if world.blurred and world.blurred[i] then return i, 'OBJECT_' .. (i - 1) end
+        end
+      end,
+      get = function(_, section, key, default)
+        local i = tonumber(section:match('%d+')) + 1
+        if key == 'WHEEL_INDEX' then return 0 end
+        if key == 'NAME' then return world.blurred[i] end
+        return default
+      end
+    } end
+  }
 }
 io = { save = function() return true end }
 '''
 
 
-def run(ini):
+def run(ini, blurred=None):
     lua = lupa.LuaRuntime()
-    world = lua.table_from({'ini': lua.table_from(ini), 'log': lua.table(), 'loaded': lua.table()})
+    world = lua.table_from({'ini': lua.table_from(ini), 'log': lua.table(), 'loaded': lua.table(),
+                            'blurred': lua.table_from(blurred or [])})
     lua.execute(STUB, world)
     with open(PARTS, encoding='utf-8') as f:
         parts = lua.execute(f.read())
     parts.update()
     parts.update()
+    world.parts = parts
     return lua, world
 
 
@@ -186,11 +218,15 @@ def visible(world, wheel):
     return out
 
 
+def matrix(t):
+    return [[t[i][j] for j in range(1, 5)] for i in range(1, 5)]
+
+
 def rim(world, wheel):
+    """The transform of the node the parts of a wheel are in"""
     for item in world.loaded.values():
-        if item.node.parent.name == 'WHEEL_' + wheel:
-            t = item.node.transform
-            return [[t[i][j] for j in range(1, 5)] for i in range(1, 5)]
+        if item.node.parent.name == 'sc_wheel_' + wheel:
+            return matrix(item.node.parent.transform)
     return None
 
 
@@ -246,7 +282,42 @@ def a_mesh_named_after_its_node_goes_by_its_material():
           list(world.log.values()))
 
 
+def a_tyre_makes_the_whole_wheel_ours_as_big_as_acs_tyre():
+    at = '1,0,0, 0,1,0, 0,0,1, 0.027,0,0'
+    _, world = run({'CAR_0_RIM_RF': 'rim.kn5', 'CAR_0_TYRE_RF': 'tyre.kn5', 'CAR_0_TYRE_RF_AT': at})
+    log = list(world.log.values())
+    shown = visible(world, 'RF')
+    group = rim(world, 'RF')
+    scale = 0.30 / 0.313
+    # The car's tyre spans -0.045..0.125 (centre 0.04), the part's 0.027-0.101..0.027+0.097 in the rim's space
+    check('a tyre hides the car tyre too, the brake stays',
+          not shown['tire_tread_RF'] and not shown['whitewall_RF'] and shown['brake_drum_RF'], log)
+    check('the wheel is scaled so the tyre is as big as AC says', group and near(group[1][1], scale), log)
+    check('the tyre is centred on the car tyre', group and near(group[3][0] + (0.027 - 0.002) * scale, 0.04), log)
+    tyre = [i for i in world.loaded.values() if i.file == 'tyre.kn5']
+    check('the tyre sits on the rim where its slot puts it', tyre and near(matrix(tyre[0].node.transform)[3][0], 0.027), log)
+
+
+def a_tyre_without_its_place_on_the_rim_leaves_the_car_its_tyre():
+    _, world = run({'CAR_0_RIM_RF': 'rim.kn5', 'CAR_0_TYRE_RF': 'tyre.kn5'})
+    check('a tyre without its place on the rim leaves the car its tyre', visible(world, 'RF')['tire_tread_RF'],
+          list(world.log.values()))
+
+
+def blurred_objects_go_and_a_blurred_wheel_node_is_kept_shown():
+    lua, world = run({'CAR_0_RIM_LF': 'rim.kn5'}, ['WHEEL_LF', 'RIM_BLUR_LF'])
+    log = list(world.log.values())
+    check('a blurred rim outside the wheel is hidden', not world.blur.visible, log)
+    world.wheels.LF.visible = False   # AC swaps the whole wheel at speed
+    world.blur.visible = True
+    world.parts.update()
+    check('a blurred wheel node is kept shown, its blurred one hidden again', world.wheels.LF.visible and not world.blur.visible, log)
+
+
 a_corner_not_named_keeps_its_own_rim()
+a_tyre_makes_the_whole_wheel_ours_as_big_as_acs_tyre()
+a_tyre_without_its_place_on_the_rim_leaves_the_car_its_tyre()
+blurred_objects_go_and_a_blurred_wheel_node_is_kept_shown()
 a_mesh_named_after_its_node_goes_by_its_material()
 the_rim_goes_and_the_tyre_and_brake_stay()
 the_part_fills_the_lip_flush_with_the_sidewall_facing_out()

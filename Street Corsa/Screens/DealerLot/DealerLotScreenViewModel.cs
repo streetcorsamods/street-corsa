@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.IO;
+using StreetCorsa.Parts.Cars;
 using StreetCorsa.Configuration;
 using StreetCorsa.Controls;
 using StreetCorsa.Dialogs;
@@ -305,7 +306,8 @@ namespace StreetCorsa.Screens.DealerLot
                     bays[i].X,
                     bays[i].Z,
                     bays[i].Heading,
-                    car.DisplayName));
+                    car.DisplayName,
+                    WheelSet.Of(_partsService.ShownWheels(car.CarDefinition.Id, car.Listing.Parts))));
             }
 
             LotCars = placements;

@@ -246,7 +246,8 @@ namespace StreetCorsa.Screens.Station
             // The scene first: a station that fails to set up sends the player home before the trip is paid for
             Light = StreetLights.At(_gameState.Date);
             Stage.Time = _gameState.Date;
-            PlayerCar = new StreetCar(Path.Combine(AppSettings.Instance.CarsPath, _car.DefinitionId), string.IsNullOrEmpty(_car.SkinId) ? null : _car.SkinId);
+            PlayerCar = new StreetCar(Path.Combine(AppSettings.Instance.CarsPath, _car.DefinitionId), string.IsNullOrEmpty(_car.SkinId) ? null : _car.SkinId,
+                WheelSet.Of(_partsService.ShownWheels(_car)));
             OnPropertyChanged(nameof(Station));
             OnPropertyChanged(nameof(Title));
             OnPropertyChanged(nameof(Light));

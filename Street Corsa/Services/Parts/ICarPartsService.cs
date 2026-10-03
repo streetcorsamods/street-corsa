@@ -91,5 +91,17 @@ namespace StreetCorsa.Services.Parts
 
         /// <summary>The running gear the car left the factory with, matched to its data; null without a catalog or data</summary>
         (RunningGearFactory.AxleParts Front, RunningGearFactory.AxleParts Rear)? FactoryRunningGear(Car car);
+
+        /// <summary>
+        /// The wheels the car shows, in a race and in the game's scenes, that its own model does not have (AC's corner
+        /// order, null where it keeps its own): none without a catalog
+        /// </summary>
+        ShownWheel?[] ShownWheels(Car car) => ShownWheels(car.DefinitionId, car.Parts);
+
+        /// <summary>The wheels a car of <paramref name="carDefinitionId"/> with <paramref name="parts"/> shows (a car for sale)</summary>
+        ShownWheel?[] ShownWheels(string carDefinitionId, List<PartInstance> parts) =>
+            IsAvailable && Specs(carDefinitionId) is { } specs
+                ? ShownParts.Wheels(parts, Catalog, RunningGearFactory.Choose(Catalog, specs))
+                : new ShownWheel?[RunningGear.Corners];
     }
 }

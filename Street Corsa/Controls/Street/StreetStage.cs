@@ -2,8 +2,8 @@ using StreetCorsa.Audio;
 
 namespace StreetCorsa.Controls.Street;
 
-/// <summary>A car to stand in the street: its AC folder and skin</summary>
-public sealed record StreetCar(string Directory, string? Skin);
+/// <summary>A car to stand in the street: its AC folder and skin, and the wheels it shows that its model does not have</summary>
+public sealed record StreetCar(string Directory, string? Skin, StreetCorsa.Parts.Cars.WheelSet? Wheels = null);
 
 /// <summary>Where the rival is in the scene</summary>
 public enum RivalPhase

@@ -8,6 +8,7 @@ using AcTools.Render.Kn5SpecificForwardDark;
 using StreetCorsa.Configuration;
 using StreetCorsa.Logging;
 using StreetCorsa.Parts;
+using StreetCorsa.Parts.Cars;
 using StreetCorsa.Parts.Logic;
 using StreetCorsa.Services.Scripting;
 using StreetCorsa.Services.Text;
@@ -450,6 +451,17 @@ public class CarViewport3D : D3DViewportBase
         set => SetValue(GearProperty, value);
     }
 
+    public static readonly DependencyProperty WheelsProperty = DependencyProperty.Register(
+        nameof(Wheels), typeof(IReadOnlyList<ShownWheel?>), typeof(CarViewport3D),
+        new PropertyMetadata(null, (d, _) => ((CarViewport3D)d).ApplyWheels()));
+
+    /// <summary>The wheels the car shows that its own model does not have (<see cref="WheelParts"/>); null keeps its own</summary>
+    public IReadOnlyList<ShownWheel?>? Wheels
+    {
+        get => (IReadOnlyList<ShownWheel?>?)GetValue(WheelsProperty);
+        set => SetValue(WheelsProperty, value);
+    }
+
     public static readonly DependencyProperty EngineLayoutProperty = DependencyProperty.Register(
         nameof(EngineLayout), typeof(EngineLayout), typeof(CarViewport3D),
         new PropertyMetadata(EngineLayout.Front, (d, _) => ((CarViewport3D)d).QueueApplyParts()));
@@ -584,6 +596,7 @@ public class CarViewport3D : D3DViewportBase
         ApplySkin();
         ApplyCarState();
         ApplyParts();
+        ApplyWheels();
         ApplyScenery();
         ApplyRadio();
         Invalidate();
@@ -1210,6 +1223,24 @@ public class CarViewport3D : D3DViewportBase
             _applySceneryQueued = false;
             ApplyScenery();
         });
+    }
+
+    /// <summary>Puts <see cref="Wheels"/> on the car; from property callbacks too, so nothing escapes: the car keeps its own</summary>
+    private async void ApplyWheels()
+    {
+        try
+        {
+            if (Renderer is not { } renderer) return;
+            if (await WheelParts.SetAsync(renderer.CarNode, Wheels) && renderer == Renderer)
+            {
+                renderer.RefreshShadows();
+                Invalidate();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error(ex, "The car's wheels could not be put on");
+        }
     }
 
     /// <summary>Runs from property callbacks, so nothing may escape it: the garage goes on without the stand</summary>

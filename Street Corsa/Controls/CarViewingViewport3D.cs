@@ -27,7 +27,8 @@ public sealed record CarViewingStage(
     float Z,
     float Heading,
     float CameraFromSide,
-    float MaxRadius);
+    float MaxRadius,
+    StreetCorsa.Parts.Cars.WheelSet? Wheels = null);
 
 /// <summary>
 /// One car in a scene, to walk round: the car viewing screen's view of a car for sale. The scene and the car load
@@ -177,6 +178,8 @@ public class CarViewingViewport3D : D3DViewportBase
         renderer.MainSlot.LocalMatrix = placement;
         await TrackDeviceWork(renderer.MainSlot.SetCarAsync(CarDescription.FromDirectory(stage.CarDirectory),
             SkinOrDefault(stage.CarDirectory, stage.Skin), RendererToken));
+        if (Renderer != renderer || !IsLoaded) return;
+        await WheelParts.SetAsync(renderer.CarNode, stage.Wheels?.Corners);
         if (Renderer != renderer || !IsLoaded) return;
 
         renderer.MainSlot.LocalMatrix = placement;

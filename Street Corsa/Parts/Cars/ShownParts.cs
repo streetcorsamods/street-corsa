@@ -1,4 +1,5 @@
 using System.IO;
+using System.Numerics;
 using StreetCorsa.Models.GameState;
 
 namespace StreetCorsa.Parts.Cars;
@@ -9,8 +10,19 @@ namespace StreetCorsa.Parts.Cars;
 public sealed record ShownModel(string Name, string Source);
 
 /// <summary>
-/// The parts a car shows in a race that its own model does not have (the race mode's <c>car_parts.lua</c>): the rims.
-/// A corner on its factory rim keeps the car's own: the car's model is what that rim looks like.
+/// The wheel a corner shows in place of the car's own: the rim, and the tyre when the car's own will not do
+/// </summary>
+/// <param name="Rim">The rim's model</param>
+/// <param name="Tyre">The tyre's model; null keeps the car's own tyre round the rim</param>
+/// <param name="TyreOnRim">Where the tyre sits in the rim's model, as it mounts on the rim's slot</param>
+/// <param name="TyreScale">The tyre's size over the factory tyre's, as the car's data scales AC's tyre for the race: the
+/// game's scenes size the tyre by it (AC by its own tyre)</param>
+public sealed record ShownWheel(ShownModel Rim, ShownModel? Tyre = null, Matrix4x4 TyreOnRim = default, float TyreScale = 1);
+
+/// <summary>
+/// The parts a car shows that its own model does not have (the race mode's <c>car_parts.lua</c>): the wheels. A corner
+/// on its factory rim and tyre keeps the car's own wheel: the car's model is what those look like. Another rim goes in
+/// round the car's tyre; another tyre brings the whole wheel, the rim's model with it (the factory rim's too).
 /// </summary>
 public static class ShownParts
 {
@@ -18,27 +30,39 @@ public static class ShownParts
     public const string Folder = "parts";
 
     /// <summary>
-    /// The rim each corner shows, null where the car keeps its own: a corner with the factory rim, without a rim, or on
-    /// a car whose factory rims are not known (nothing to tell its own from)
+    /// The wheel each corner shows, null where the car keeps its own: a corner on its factory rim and tyre, without a
+    /// rim, or on a car whose factory running gear is not known (nothing to tell its own from)
     /// </summary>
-    public static ShownModel?[] Rims(List<PartInstance> carParts, PartsCatalog catalog,
+    public static ShownWheel?[] Wheels(List<PartInstance> carParts, PartsCatalog catalog,
         (RunningGearFactory.AxleParts Front, RunningGearFactory.AxleParts Rear)? factory)
     {
-        var rims = new ShownModel?[RunningGear.Corners];
-        if (factory is not { } axles) return rims;
+        var wheels = new ShownWheel?[RunningGear.Corners];
+        if (factory is not { } axles) return wheels;
 
         foreach (var rim in RunningGear.Rims(carParts))
         {
             var corner = RunningGear.CornerOf(rim.ParentSlot);
-            if (corner < 0 || catalog.Get(rim.DefinitionId) is not { } definition) continue;
+            if (corner < 0 || catalog.Get(rim.DefinitionId) is not { } rimDefinition || Model(catalog, rimDefinition) is not { } rimModel) continue;
 
-            var own = RunningGear.IsFront(corner) ? axles.Front.Rim : axles.Rear.Rim;
-            if (string.Equals(own.Id, definition.Id, StringComparison.OrdinalIgnoreCase)) continue;
+            var own = RunningGear.IsFront(corner) ? axles.Front : axles.Rear;
+            var tyre = rim.Children.FirstOrDefault(c => c.ParentSlot == RunningGear.TyreSlotOnRim);
+            var tyreDefinition = tyre == null ? null : catalog.Get(tyre.DefinitionId);
+            var otherTyre = tyreDefinition != null && !Same(tyreDefinition, own.Tyre);
 
-            if (catalog.GetModelPath(definition) is { } path && File.Exists(path))
-                rims[corner] = new ShownModel(FileName(definition.Id), path);
+            // Another tyre: the whole wheel, the tyre where the rim's slot puts it (one without that place is no tyre to show)
+            if (otherTyre && Model(catalog, tyreDefinition!) is { } tyreModel
+                && PartSlots.ChildWorld(rimDefinition, RunningGear.TyreSlotOnRim, tyreDefinition!, MountedBy(tyre!, tyreDefinition!), Matrix4x4.Identity) is { } onRim)
+            {
+                var factoryRadius = RunningGear.TyreRadius(own.Tyre);
+                var scale = factoryRadius > 0 ? (float)(RunningGear.TyreRadius(tyreDefinition!) / factoryRadius) : 1;
+                wheels[corner] = new ShownWheel(rimModel, tyreModel, onRim, scale > 0 ? scale : 1);
+            }
+            else if (!Same(rimDefinition, own.Rim))
+            {
+                wheels[corner] = new ShownWheel(rimModel);
+            }
         }
-        return rims;
+        return wheels;
     }
 
     /// <summary>A part's model file in the race mode's folder: its id made a file name</summary>
@@ -47,5 +71,40 @@ public static class ShownParts
         var invalid = Path.GetInvalidFileNameChars();
         var name = new string(partId.Select(c => c == '/' || c == '\\' || invalid.Contains(c) ? '_' : c).ToArray());
         return Path.Combine(Folder, name + ".kn5");
+    }
+
+    private static bool Same(PartDefinition a, PartDefinition b) => string.Equals(a.Id, b.Id, StringComparison.OrdinalIgnoreCase);
+
+    private static ShownModel? Model(PartsCatalog catalog, PartDefinition part) =>
+        catalog.GetModelPath(part) is { } path && File.Exists(path) ? new ShownModel(FileName(part.Id), path) : null;
+
+    /// <summary>The tyre's own slot it is mounted by: as the save has it, else its first</summary>
+    private static int MountedBy(PartInstance tyre, PartDefinition definition) =>
+        tyre.OwnSlot != 0 ? tyre.OwnSlot : definition.Slots.FirstOrDefault()?.Id ?? 0;
+}
+
+/// <summary>
+/// The wheels of a car's corners (AC's order) as a scene is given them: equal when every corner is, so a scene that
+/// compares what it is shown sees the same car as the same
+/// </summary>
+public sealed class WheelSet : IEquatable<WheelSet>
+{
+    private WheelSet(IReadOnlyList<ShownWheel?> corners) => Corners = corners;
+
+    public IReadOnlyList<ShownWheel?> Corners { get; }
+
+    /// <summary>The set of <paramref name="corners"/>; null when every corner keeps the car's own</summary>
+    public static WheelSet? Of(IReadOnlyList<ShownWheel?>? corners) =>
+        corners == null || corners.All(c => c == null) ? null : new WheelSet(corners.ToArray());
+
+    public bool Equals(WheelSet? other) => other != null && Corners.SequenceEqual(other.Corners);
+
+    public override bool Equals(object? obj) => Equals(obj as WheelSet);
+
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        foreach (var corner in Corners) hash.Add(corner);
+        return hash.ToHashCode();
     }
 }

@@ -278,6 +278,8 @@ public class StreetViewport3D : OnboardViewport3D
                 var skin = SkinOrDefault(car.Directory, car.Skin);
                 await TrackDeviceWork(_rivalSlot.SetCarAsync(CarDescription.FromDirectory(car.Directory), skin, RendererToken));
                 if (Renderer != renderer || load != _rivalLoad) return;
+                await WheelParts.SetAsync(_rivalSlot.CarNode, car.Wheels?.Corners);
+                if (Renderer != renderer || load != _rivalLoad) return;
 
                 _rivalShown = car;
                 _rivalLift = SceneLights.FrameOf(car.Directory).Lift;

@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.IO;
+using StreetCorsa.Parts.Cars;
 using StreetCorsa.Configuration;
 using StreetCorsa.Controls;
 using StreetCorsa.Logging;
@@ -205,7 +206,8 @@ namespace StreetCorsa.Screens.CarLot
                 foreach (var car in cars)
                 {
                     var bay = scene.Bays[Math.Clamp(car.Car.Bay ?? 0, 0, scene.Bays.Count - 1)];
-                    placements.Add(new LotCarPlacement(car.CarDirectory, car.SkinId, bay.X, bay.Z, bay.Heading, car.DisplayName));
+                    placements.Add(new LotCarPlacement(car.CarDirectory, car.SkinId, bay.X, bay.Z, bay.Heading, car.DisplayName,
+                        WheelSet.Of(_partsService.ShownWheels(car.Car))));
                 }
 
                 // The same scene is dressed again, not loaded again: warehouse 2 is warehouse 1 in its next look

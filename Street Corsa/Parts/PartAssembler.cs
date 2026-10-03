@@ -55,25 +55,14 @@ public static class PartAssembler
         }
     }
 
-    /// <summary>
-    /// Where a part ends up when one of its slots is brought onto a slot of a placed part; null when either slot is not
-    /// there.
-    /// </summary>
-    public static Matrix4x4? ChildWorld(PartDefinition parent, int parentSlotId, PartDefinition child, int childSlotId, Matrix4x4 parentWorld)
-    {
-        var parentSlot = parent.Slots.FirstOrDefault(s => s.Id == parentSlotId);
-        var childSlot = child.Slots.FirstOrDefault(s => s.Id == childSlotId);
-        if (parentSlot == null || childSlot == null || !Matrix4x4.Invert(SlotMatrix(childSlot), out var childSlotInverse)) return null;
-
-        return childSlotInverse * SlotMatrix(parentSlot) * parentWorld;
-    }
+    /// <inheritdoc cref="PartSlots.ChildWorld"/>
+    public static Matrix4x4? ChildWorld(PartDefinition parent, int parentSlotId, PartDefinition child, int childSlotId, Matrix4x4 parentWorld) =>
+        PartSlots.ChildWorld(parent, parentSlotId, child, childSlotId, parentWorld);
 
     /// <summary>Name of the node a part gets in a merged model</summary>
     public static string NodeName(int index) => $"part{index}";
 
-    public static Matrix4x4 SlotMatrix(PartSlot slot) =>
-        Matrix4x4.CreateFromYawPitchRoll(slot.Rotation[0], slot.Rotation[1], slot.Rotation[2]) *
-        Matrix4x4.CreateTranslation(slot.Position[0], slot.Position[1], slot.Position[2]);
+    public static Matrix4x4 SlotMatrix(PartSlot slot) => PartSlots.SlotMatrix(slot);
 
     public static AssemblyModel BuildModel(PartsCatalog catalog, string name, IEnumerable<PlacedPart> parts)
     {
