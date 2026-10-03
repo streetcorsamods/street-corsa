@@ -10,6 +10,9 @@ a fork, not a mod: no game picker, no `"type": "game"` base swap, no data folder
 everything a Street Corsa **add-on** mod could want to change, and E1-E8 make a fork easy anyway. E9-E12 below were
 cut down to match.
 
+**Done 2026-10-03:** E1 to E12 are built, the last with the example mod (`examples/mods/small_imports`). What each step
+left is under its "Left for later" in As built.
+
 This file is the inventory of what is still baked into C#, XAML, the exe or the race mode's Lua (taken 2026-09-30,
 after PR #50), and the plan for the epic. Step 16 (`docs/modding.md`) already made the content data: parts, sounds,
 sfx, props, dealers, part shops, racers, events, milestones, victories, streets, stations, warehouses, showcase,
@@ -102,10 +105,10 @@ the schedule is not saved, a milestone trigger needs code to count it, race type
 | Which AC cars are in the game | game.json `cars` | **done (E6)** | |
 | Part groups, bolt-on groups, tuner priorities, performance groups | `parts/part_groups.json` | **done (E6)** | |
 | Stand-in script classes | `parts/stand_ins.json` | **done (E6)** | |
-| **Engine figures** | `PartScriptRuntime.cs`, `EngineEvaluator.cs` | only from SLRR bytecode; plain-data parts work for running gear only | hard: a `"figures"` object on a part that fills `DynoInputs` directly |
-| Turbo lag, single turbo | `AcEngineData.cs:148-161` | fixed 0.985/0.992 | easy |
-| Gears | `EngineEvaluator.cs:65-66` | SLRR array, at most 6 | medium |
-| Engine drawing | `EngineLayout.cs` | always longitudinal (transverse FWD shows wrong) | medium |
+| Engine figures | a part's `"figures"` (`Parts/Logic/PartFigures.cs`) | **done (E11)** | |
+| Turbo lag, twin turbos | a turbo's `lag_up`/`lag_down`; one AC turbo per turbo | **done (E11)** | |
+| Gears | `"gears"` in figures, up to 10 (an SLRR gearbox stays at 6) | **done (E11)** | |
+| Engine drawing | `front_transverse`, `mid_transverse` layouts (`EngineLayout.cs`, `CarPartsLayout.cs`) | **done (E11)** | |
 | Nitrous | `PartKinds.cs:32` | a shelf, no effect in AC | hard |
 | Rotary engines | `EngineDyno.cs` | 4-stroke piston model only | hard (fake piston figures meanwhile) |
 
@@ -189,15 +192,94 @@ playing exactly as it does now: today's values become the base game's data.
   - the King as data: bosses in the racers' data, so a mod can change the final rival or add more.
 - **E10. Race formats.** Format ids in data, race.ini session templates, mods shipping their own CSP mode, a result
   contract with a score. Drift, time attack and touge become possible: worth it for Street Corsa itself.
-- **E11. Data engines.** The `"figures"` path that skips the SLRR VM, turbo lag and twin turbos per part, more gears,
-  transverse engines. For modders' cars that have no SLRR parts.
-- **E12. The example mod** (was "the proof", changed 2026-10-03). An example add-on, not a separate game: a few cars,
+- **E11. Data engines** (done 2026-10-03). The `"figures"` path that skips the SLRR VM, turbo lag and twin turbos per
+  part, more gears, transverse engines. For modders' cars that have no SLRR parts.
+- **E12. The example mod** (done 2026-10-03; was "the proof", changed 2026-10-03). An example add-on, not a separate game: a few cars,
   a parts pack, an event and a race of its own, made only from data, that shows what still breaks and becomes the mod
   modders copy.
 
 Later, not in the epic: a weather system (there is none today), nitrous in AC.
 
 ## As built
+
+### E12: the example mod (2026-10-03, branch `feature/example-mod`)
+
+The owner's decisions: small imports (cars with engines of figures, twin carbs, a turbo kit, a five-speed, a transverse
+engine), in the repo's `examples\mods\small_imports` (copied into `Content` to try, never loaded by default), with
+makes and a speed shop, an event and a format of its own, a rival and a dealer. The cars are Kunos cars every AC has:
+the Abarth 595 SS (rear), the Alfa Romeo GTA, the Ford Escort RS1600 (front) and the Abarth 500 esseesse
+(`front_transverse`, turbo).
+
+- **The mod**: `mod.json`; `cars/cars.json` (makes `abarth` in a `fiat` family, `fiat` and `alfa_romeo` given families,
+  `ford_uk` apart from the American Ford; the four cars' engines, layouts, prices, makes); four packs of figures
+  (`fiat_twin`, `alfa_twincam`, `ford_bda`, `fiat_tjet`: 66 parts with simple class chains, `required_slots`, fittings
+  per engine, cooling parts by name, an IHI and a Garrett turbo), eight builds (four factory, rated 32/115/120/160 hp,
+  the model within 7%; four aftermarket kits, 39 to 202 hp); `sounds/sounds.json` pinning each block to its car's own
+  bank (`car:<id>`); a specialist shop, an import lot, a rival, the `autocross` format (time attack over two laps),
+  the weekly Import Night event (a Cosworth cam the prize), the words; a README.
+- **What it found, now fixed**: a lot could not deal in one kind of car (`DealerDefinition.Cars`, a car filter; the
+  price band is of that kind: `UsedCarMarketService.FillDealer`); a racer could not drive one kind (`Opponent.Drives`,
+  read from the racers' `"cars"`, put on him from his definition every review like his portrait, used when he gets
+  his first car and when he buys or bargains for one to drive); only bosses had lines of their own (`RacerWords.Key`
+  for every racer's `talk.pulled_up*`, `replies.*` and `street.*`). The events' car filter reader moved out of the career
+  content into `CarFilterJsonConverter` for all three.
+- **For tools and tests**: `ModSet.Load(root, alsoFrom: [folder])` reads a mod from outside the Content folder.
+  `ExampleModTests` loads the mod over the base game through every loader (parts, cars, sounds, formats, events, racers,
+  dealers, shops, text) and runs its engines.
+
+Review fixes (E11 and E12): `RacerWords.OwnSuffixes` (moved from `Bosses`, `Bosses.Key` gone) guards a racer with no
+id (an old save); the grudge, bought-your-car and rivals' race lines are a racer's own too (the loser's for the
+rivals'). Figures go on level by level out from the block (`PartFigures.Of`), so the part furthest out wins as the
+guide says; a block with no script is an engine of figures whatever gives them; an engine the dyno will not run says
+why (`EngineDyno.Unrunnable`, which with `CylinderVolume`, `Compression`, `Span`, `MaxRpm` and `MinCompression` the
+figures now share); `rev_limit`/`max_rpm` of 0 or past 30000 are told; `EngineReport.DiffLock` is null when a gearbox
+of figures says nothing, and the car keeps its own differential. `EngineLayouts.Parse` matches names only ("mid, rear"
+is none). Car filters have `MatchesOffer` (price and power of the car on offer; composites pass on every overload):
+lots, racers and trade-ins (`TradeInLocation(dealers, car)`, only to a lot of the car's kind) use it, and a racer with
+a car of his kind that cannot race buys one that runs. A dealer's `"cars"` is read by the catalog (`CarsJson`), so one
+that does not read (a word, an unknown type) is told and the lot kept, dealing in any car. The rocking body takes the
+running engine's layout in every viewport (`EngineSpec.Layout`).
+
+Left for later: unknown keys in a dealer's or a racer's entry are passed over without a word (System.Text.Json ignores
+them), part models (the mod's parts are drawn as the placeholder boxes), a portrait for Gino, the cars' own sound banks
+pinned only when the car is installed. Not seen in game.
+
+### E11: data engines (2026-10-03, branch `feature/data-engines`)
+
+The owner's decisions: a part's figures go onto the dyno's inputs (the game's dyno still makes the curve, so tuning
+works and a data part goes on an SLRR engine too), in plain metric units, transverse engines as a layout the garage
+draws, and tests only (the playable data engine ships with E12's example mod).
+
+- **Figures** (`Parts/Logic/PartFigures.cs`, `PartFigureSet.cs`; pack.json `"figures"`, read as the catalog loads into
+  `PartDefinition.ReadFigures`, what does not read told): a number sets, `{ "add" }` adds, `{ "times" }` multiplies;
+  parts' own numbers first (the part furthest out from the block, siblings by slot), then adds, then multiplies. Dyno
+  figures (`cylinders`, `bore`, `stroke`, `compression` or `chamber`, breathing, cam durations, spark, burn, mixture,
+  `fuel_flow`/`air_flow` in g/s, `rev_limit`, `max_rpm`) and engine figures (`idle_rpm`, `inertia` kg m2, `friction`,
+  `clutch_torque` Nm, `gears`, `reverse`, `final_drive`, `diff_lock`, an SLRR turbo's `lag_up`/`lag_down`).
+  `PartScriptRuntime` puts them over `DynoData` at every `calcDyno`; a block with no script is an engine of figures
+  (`EngineReport.FromFigures`) on `PartFigures.DataEngineBase` (a small-block's breathing, cam, spark and mixture), whose
+  problem is what it lacks (`PartFigures.MissingOf`). The cam's durations are all the dyno reads of the valve events.
+- **Chargers**: `turbo`/`blower` (one or a list) become `DynoInputs.Chargers` (`DynoCharger`: boost in bar, building
+  from `spool_rpm` to `full_boost_rpm` by a smoothstep, then held); their boost adds to the scripts' charger's.
+  `AcEngineData` fits one `[TURBO_n]` per turbo (the SLRR one first) with its own lag: the dyno's gain over the engine
+  without its turbos (blowers kept) is shared at each speed by the boost each turbo makes there. One SLRR turbo comes
+  out exactly as before.
+- **Gears**: a gearbox of figures has up to 10 (AC's limit); an SLRR one stays at 6.
+- **Simple classes**: a part of figures may name its classes simply (`"class_chain": ["Camshaft"]`): `PartKinds.Is`
+  and `FrameworkClass` take them; `IsScripted` counts a part with figures. Only a turbo with a script is the scripts'
+  charger (`Turbocharged`).
+- **Transverse**: `EngineLayout.FrontTransverse` and `MidTransverse` (`front_transverse`, `mid_transverse` in cars.json,
+  the editor's "Front, across"), guessed for a front-wheel-drive car (none of the installed cars is one). The garage
+  turns the block across the car, its crank 8 cm ahead of the front axle (25 cm ahead of the rear one behind the
+  driver), its middle 15 cm off the centre line; a running engine across pitches the body where one along it rolls it.
+  The stand and the part moves are the engine's own directions, unchanged.
+- **Tests**: `PartFiguresTests` (a four of figures alone with a five-speed, a header, twin turbos to two AC turbos, a
+  blower in the curve, bad figures, figures on the Chrysler 340), `EngineLayoutTests`. EngineBench takes a pack of
+  figures as it is (a 2.0 l four: 135 hp, 256 hp with the two turbos).
+
+Left for later: wear on a part of figures (its figures stay as new), the player's tuning of a part of figures (it has
+no script fields to tune), a boost controller (a `times` on every charger's boost), which side the gearbox of an engine
+across the car is on (not seen against a front-wheel-drive car in the garage), rotary engines, nitrous. Not seen in game.
 
 ### E10: race formats (2026-10-03, branch `feature/race-formats`)
 
@@ -251,7 +333,7 @@ one is older, not newer.
   (`CareerState.Bosses`, refreshed with the standing) for the new `beatBoss` step (every boss of the path, or
   `"boss": <racer id>` that one; `beatKing` is the same; a share of the bosses beaten counts as progress).
   `KingName` stays for saves that have not looked their bosses up.
-- **A boss's own lines:** `Bosses.Key` takes `<key>.<racer id>` when a mod has it, else the King's
+- **A boss's own lines:** `Bosses.Key` (since E12 `RacerWords.Key`, for every racer) takes `<key>.<racer id>` when a mod has it, else the King's
   (`talk.pulled_up.king`, `replies.king.*`, `street.king_out`, `chat.fact.rival_king`, `news.king_beaten/won.<id>.*`).
 - A mod's path or racer id without a namespace means its own, else the base game's (`Bosses.Qualify`/`Means`).
 

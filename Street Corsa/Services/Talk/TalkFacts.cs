@@ -234,7 +234,7 @@ namespace StreetCorsa.Services.Talk
                 ("wins", rival.Stats.Wins), ("losses", rival.Stats.Losses), ("reputation", rival.Stats.Reputation),
                 ("standing", rival.Stats.GetReputationTier()));
             if (rival.Cars.FirstOrDefault() is { } car) yield return GameText.Say("chat.fact.rival_car", ("car", carName(car.DefinitionId)));
-            if (rival.IsBoss) yield return GameText.Say(Opponents.Bosses.Key("chat.fact.rival_king", rival));
+            if (rival.IsBoss) yield return GameText.Say(Opponents.RacerWords.Key("chat.fact.rival_king", rival));
             if (rival.Grudge is { } grudge) yield return GameText.Say("chat.fact.rival_grudge", ("car", carName(grudge.CarDefinitionId)));
             if (rival.IsBroke) yield return GameText.Say("chat.fact.rival_broke");
             if (!string.IsNullOrWhiteSpace(rival.Biography)) yield return rival.Biography!;

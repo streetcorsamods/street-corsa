@@ -60,21 +60,20 @@ namespace StreetCorsa.Models.Career.Filters
             return new CompositeCarFilter(false, filters);
         }
 
-        public bool Matches(CarDefinition car, Car? instance = null)
+        public bool Matches(CarDefinition car, Car? instance = null) => Combine(f => f.Matches(car, instance));
+
+        public bool Matches(CarDefinition car, Car? instance, Func<Car, decimal>? valueOf) => Combine(f => f.Matches(car, instance, valueOf));
+
+        public bool MatchesOffer(CarDefinition car, Car? instance, decimal price, double? powerHp) =>
+            Combine(f => f.MatchesOffer(car, instance, price, powerHp));
+
+        private bool Combine(Func<ICarFilter, bool> matches)
         {
             if (Filters.Count == 0)
                 return true;
 
-            if (RequireAll)
-            {
-                // AND logic: all filters must match
-                return Filters.All(f => f.Matches(car, instance));
-            }
-            else
-            {
-                // OR logic: any filter can match
-                return Filters.Any(f => f.Matches(car, instance));
-            }
+            // AND logic: all filters must match; OR logic: any filter can match
+            return RequireAll ? Filters.All(matches) : Filters.Any(matches);
         }
     }
 }

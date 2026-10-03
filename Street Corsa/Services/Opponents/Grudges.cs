@@ -77,7 +77,7 @@ namespace StreetCorsa.Services.Opponents
         }
 
         private static string Say(string key, Opponent rival, string? car, string? playerName) =>
-            GameText.Installed.Pick(key, Random.Shared, new TextValues
+            GameText.Installed.Pick(RacerWords.Key(key, rival), Random.Shared, new TextValues
             {
                 ["name"] = rival.Name,
                 ["possessive"] = OpponentRules.Possessive(rival),

@@ -32,6 +32,43 @@ public class OriginFilterTests
     }
 }
 
+public class CarKindTests
+{
+    private static readonly CarDefinition Fiat = new() { Id = "fiat", Brand = "Fiat", Country = "Italy" };
+
+    [Fact]
+    public void A_car_on_offer_is_worth_what_it_is_offered_for_and_has_the_power_quoted_for_it()
+    {
+        Assert.True(new ValueFilter(null, 1000m).MatchesOffer(Fiat, null, 900m, null));
+        Assert.False(new ValueFilter(null, 1000m).MatchesOffer(Fiat, null, 1100m, null));
+        Assert.True(new PowerFilter(null, 100).MatchesOffer(Fiat, null, 900m, 60));
+        Assert.False(new PowerFilter(null, 100).MatchesOffer(Fiat, null, 900m, 160));
+
+        // Through an all or any filter too
+        var cheapItalian = CompositeCarFilter.And(new OriginFilter("Italy"), new ValueFilter(null, 1000m));
+        Assert.True(cheapItalian.MatchesOffer(Fiat, null, 900m, null));
+        Assert.False(cheapItalian.MatchesOffer(Fiat, null, 1100m, null));
+        Assert.True(cheapItalian.Matches(Fiat, new Car("fiat"), _ => 900m));
+    }
+
+    [Theory]
+    [InlineData("\"European\"")]
+    [InlineData("[ { \"type\": \"origin\", \"origin\": \"European\" } ]")]
+    [InlineData("{ \"type\": \"country\" }")]
+    public void A_filter_that_does_not_read_is_an_error_not_no_filter(string json)
+    {
+        using var document = System.Text.Json.JsonDocument.Parse(json);
+        Assert.Throws<System.Text.Json.JsonException>(() => CarFilterJsonConverter.Read(document.RootElement));
+    }
+
+    [Fact]
+    public void No_filter_is_none()
+    {
+        using var document = System.Text.Json.JsonDocument.Parse("null");
+        Assert.Null(CarFilterJsonConverter.Read(document.RootElement));
+    }
+}
+
 public class VictoryTests
 {
     private static GameState Career(int wins, int reputation)
@@ -123,9 +160,13 @@ public class VictoryTests
     [Fact]
     public void A_bosss_own_lines_go_by_his_full_racer_id_then_as_his_mod_wrote_it()
     {
-        Assert.Equal(["my_mod:big_jim", "big_jim"], Bosses.OwnSuffixes("my_mod:big_jim"));
-        Assert.Equal(["king"], Bosses.OwnSuffixes("king"));
-        Assert.Empty(Bosses.OwnSuffixes(""));
+        Assert.Equal(["my_mod:big_jim", "big_jim"], RacerWords.OwnSuffixes("my_mod:big_jim"));
+        Assert.Equal(["king"], RacerWords.OwnSuffixes("king"));
+        Assert.Empty(RacerWords.OwnSuffixes(""));
+        Assert.Empty(RacerWords.OwnSuffixes(null));
+
+        // A racer of an old save, with no racer id, says what every racer says
+        Assert.Equal("replies.decline", RacerWords.Key("replies.decline", new Opponent { DefinitionId = null! }));
     }
 
     [Fact]

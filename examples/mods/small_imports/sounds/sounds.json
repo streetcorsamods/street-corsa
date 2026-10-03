@@ -1,0 +1,13 @@
+{
+  "_comment": [
+    "Each engine sounds as the Kunos car it came in: car:<car id> names the bank that car ships. Without a pin the game",
+    "picks the nearest sound of its library by cylinders and family, which for a twin or a four out of Italy is no",
+    "sound it has; with the car not installed the pin finds nothing and the game picks as without it."
+  ],
+  "pins": {
+    "engines/fiat_twin/block": "car:ks_abarth_595ss",
+    "engines/alfa_twincam/block": "car:ks_alfa_romeo_gta",
+    "engines/ford_bda/block": "car:ks_ford_escort_mk1",
+    "engines/fiat_tjet/block": "car:abarth500"
+  }
+}

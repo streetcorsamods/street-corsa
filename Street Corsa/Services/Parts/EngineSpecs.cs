@@ -98,7 +98,8 @@ namespace StreetCorsa.Services.Parts
                 torque,
                 dyno?.MaxTorque ?? 0,
                 sound,
-                problem);
+                problem,
+                parts.EngineLayoutOf(car.DefinitionId));
         }
     }
 }

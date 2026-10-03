@@ -1364,6 +1364,18 @@ family, Lua module or a mod's own mode, laps, how it is won), the race mode is a
 diner pick a format, and the base game gains a time attack (ghost cars, a warm-up lap and three flying laps, the best
 lap wins; at the diner on road tracks and as the paper's "Against the Clock"). Not seen in game.
 
+E11 (data engines) is built on `feature/data-engines` (2026-10-03): a part gives its engine figures in plain metric
+units (`"figures"` in its pack: bore, stroke, compression, breathing, cam, fuel, gears, turbos...), an engine whose block
+has no SLRR script is made of them alone and runs on the game's dyno, figures go over the scripts' on an SLRR engine,
+each turbo has its own lag and is a turbo of its own in AC (twin turbos), a gearbox of figures has up to 10 gears, and
+an engine can lie across the car (`front_transverse`, `mid_transverse`, guessed for front-wheel drive). Not seen in game.
+
+E12 (the example mod) is built on `feature/example-mod` (2026-10-03), closing the total-conversion epic:
+`examples/mods/small_imports`, four small European cars (Kunos cars every AC has) with engines of figures alone, their
+speed parts, a specialist shop, an import lot, a rival who drives imports, an autocross format and an Import Night
+event. What it found is fixed: a lot and a racer can keep to one kind of car (`"cars"`), and any racer can have lines
+of his own. Not seen in game.
+
 E7 (car scripting) is built on `feature/car-scripting` (2026-10-02), after step 26: every car move is a JSON script of
 the mods (`scripts/scripts.json`, the drives' feels in `scripts/feels.json`) played at a trigger (`lot.take_out`,
 `garage.arrive`, `garage.leave`, `station.arrive`, `station.at_pump`, `station.leave`, `street.rival_arrive`,

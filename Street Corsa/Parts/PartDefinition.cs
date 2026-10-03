@@ -140,7 +140,7 @@ public class PartDefinition
     /// it has no chain, but it was constructed.
     /// </summary>
     [JsonIgnore]
-    public bool IsScripted => ClassChain.Count > 0 || Properties.Count > 0;
+    public bool IsScripted => ClassChain.Count > 0 || Properties.Count > 0 || ReadFigures != null;
 
     /// <summary>
     /// The part's script fields once constructed (bore, stroke, ratio, value, max_wear...), in the script's
@@ -166,6 +166,19 @@ public class PartDefinition
     /// </summary>
     [JsonIgnore]
     public IReadOnlyList<PartOverride> FieldOverrides { get; internal set; } = Array.Empty<PartOverride>();
+
+    /// <summary>
+    /// Engine figures of the part's own, in plain metric units, for a part without a script of the source game or over
+    /// what its script works out (<see cref="Logic.PartFigures"/>): "bore": 86, "intake_flow": { "times": 1.1 },
+    /// "gears": [3.5, 2.1, 1.4, 1.0], "turbo": { "boost": 0.6, "full_boost_rpm": 4000 }. As written in the pack;
+    /// what is used is <see cref="ReadFigures"/>.
+    /// </summary>
+    [JsonProperty("figures", NullValueHandling = NullValueHandling.Ignore)]
+    public Dictionary<string, JToken>? Figures { get; set; }
+
+    /// <summary><see cref="Figures"/> as the catalog read them, checked; null when the part has none that read</summary>
+    [JsonIgnore]
+    public Logic.PartFigureSet? ReadFigures { get; internal set; }
 
     /// <summary>
     /// Fields the script recomputes in updatevariables(), as they come out for a brand new part on its own.

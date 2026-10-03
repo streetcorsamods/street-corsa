@@ -1,0 +1,16 @@
+{
+  "opponents": [
+    {
+      "opponentId": "gino",
+      "name": "Gino Ferraro",
+      "nickname": "Little Giant",
+      "age": 27,
+      "gender": "Male",
+      "skill": 93,
+      "aggression": 70,
+      "location": "Santa Monica pier",
+      "biography": "Came over with his uncle's Abarth in a crate and never learned to drive anything bigger. Brakes late, laughs at V8s.",
+      "cars": { "type": "origin", "origin": "European" }
+    }
+  ]
+}

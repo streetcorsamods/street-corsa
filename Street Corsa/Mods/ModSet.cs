@@ -290,7 +290,11 @@ public sealed class ModSet
 
     /// <remarks>Never throws for what is in the folder: a mod that does not read is left out, with a line in <see cref="Problems"/></remarks>
     /// <param name="gameVersion">The game's version, for the mods' <c>gameVersion</c>; <see cref="ProgramVersion"/> when not given</param>
-    public static ModSet Load(string root, ModVersion? gameVersion = null)
+    /// <param name="alsoFrom">
+    /// Mod folders from elsewhere, read after the root's as if they were in it (a mod being made, the example mod in the
+    /// repo's examples folder): tests and tools
+    /// </param>
+    public static ModSet Load(string root, ModVersion? gameVersion = null, IEnumerable<string>? alsoFrom = null)
     {
         var game = gameVersion ?? ProgramVersion;
         var problems = new List<string>();
@@ -299,7 +303,7 @@ public sealed class ModSet
         if (Directory.Exists(root))
         {
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var folder in List(root, dirs: true, "*", problems).Order(StringComparer.OrdinalIgnoreCase))
+            foreach (var folder in List(root, dirs: true, "*", problems).Order(StringComparer.OrdinalIgnoreCase).Concat(alsoFrom ?? []))
             {
                 var name = Path.GetFileName(folder);
                 if (name.StartsWith('_') || name.StartsWith('.')) continue;

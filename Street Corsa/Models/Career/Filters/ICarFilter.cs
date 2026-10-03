@@ -33,5 +33,12 @@ namespace StreetCorsa.Models.Career.Filters
         /// (<c>CarValuation</c> through the market). Filters that don't look at worth ignore it.
         /// </summary>
         bool Matches(CarDefinition car, Car? instance, Func<Car, decimal>? valueOf) => Matches(car, instance);
+
+        /// <summary>
+        /// Check a car on offer as the market shows it, with or without the car itself (a lot's car, a rival's ad, a
+        /// model a lot means to stock): <paramref name="price"/> is what it is worth and <paramref name="powerHp"/>,
+        /// when known, its power. Filters that look at neither ignore them.
+        /// </summary>
+        bool MatchesOffer(CarDefinition car, Car? instance, decimal price, double? powerHp) => Matches(car, instance);
     }
 }

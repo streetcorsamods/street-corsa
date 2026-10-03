@@ -65,8 +65,11 @@ namespace StreetCorsa.Services.Market
         /// </summary>
         Func<Car, decimal> Valuer() => ValueOf;
 
-        /// <summary>The id of the dealer that takes in the cars nobody asked about: the roughest lot of <paramref name="dealers"/></summary>
-        string TradeInLocation(IReadOnlyList<DealerLocation>? dealers);
+        /// <summary>
+        /// The id of the dealer that takes in the cars nobody asked about: the roughest lot of <paramref name="dealers"/>
+        /// that deals in <paramref name="car"/>'s kind (a lot of one kind of car takes no other)
+        /// </summary>
+        string TradeInLocation(IReadOnlyList<DealerLocation>? dealers, Car? car = null);
     }
 
     /// <summary>An engine as a seller describes it: what it is, its dyno power, and whether somebody has been at it</summary>

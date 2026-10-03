@@ -7,6 +7,10 @@ behave). The base game is itself a mod, `Content\streetcorsa`, loaded through th
 
 Cars and tracks stay AC's: install them in AC's `content` folder as usual.
 
+**The example mod**, `examples\mods\small_imports` in the repo, is an add-on made of data alone to copy: four small
+European cars with engines of figures, their speed parts, a shop, a lot, a rival, a format and an event. Its README
+says how to try it and what each file shows.
+
 ## A mod
 
 Drop a folder into `Content`, next to the game's exe:
@@ -299,11 +303,11 @@ other on, or a rule needing a kind it waits for) are reported. A kind of the sam
 rules are in `Content\streetcorsa\parts\work_order.json`.
 
 **A part's figures.** A part's stats come from its SLRR script (`source_script`): the game builds the script and runs it
-to work the engine out. The rest is read from the pack: `"class_chain"` says what the part is (a crankshaft, a clutch:
+to work the engine out; a part without one gives its own (`"figures"`, see an engine of figures below). The rest is read from the pack: `"class_chain"` says what the part is (a crankshaft, a clutch:
 without it the work order and the engine can't tell), and `"properties"` holds the script's
 fields as it built them, which is where the price (`value`), the running gear's figures (tyres, springs, shocks,
 brakes), an oil pan's `capacity` and a block's `cylinders` for its sound are read; a part with neither is a bare
-fitting with no script of its own, left out of the shops and the running gear. `tools\SlrrPartsConverter` writes
+fitting with no script of its own (and no figures), left out of the shops and the running gear. `tools\SlrrPartsConverter` writes
 both; a part made by hand copies them from the part whose script it shares.
 
 A part that shares a stock script but has figures of its own says so in `"overrides"`: script fields set over what the
@@ -324,6 +328,74 @@ the gearing from the transmission (`gears`, `ratio`: element 0 unused, the last 
   "id": "engines/l79/CV8_crank_283", "source_script": "...V8_small_block_crank.class",
   "class_chain": [ "...", "java.game.parts.Part" ], "properties": { "value": 180.0, "stroke": 82.55, "...": "..." },
   "overrides": { "stroke": 76.2, "value": 150 }
+}
+```
+
+**An engine of figures.** A part needs no SLRR script to work in an engine: `"figures"` gives its engine figures in
+plain metric units. An engine whose block has no script (no `source_script`) is made of its parts' figures alone, whichever of its
+parts give them (the block may give none); on
+an engine of SLRR scripts, the figures go over what the scripts worked out before the dyno runs, so a part of figures
+(a turbo, a five-speed) also goes on a source-game engine. Either way the game's own dyno makes the curve from them,
+so tuning works the same: a bigger cam, a header or a second carburettor changes the figures, and the dyno the power.
+
+A number puts the part's own figure; `{ "add": n }` adds to the engine's and `{ "times": n }` multiplies it. Of the
+same figure, the parts' numbers go first (the part furthest out from the block wins, whatever slot its branch is on;
+parts as far out as each other by the slot they are on), then what is added, then what multiplies: a head gives
+`"exhaust_flow": 0.35` and a header `"exhaust_flow": { "times": 1.15 }`. An engine the dyno cannot run (a rev range
+of none, or past 30000 rpm) says why.
+
+| Figure | Unit | What it is |
+|---|---|---|
+| `cylinders` | count | whole, 1 to 32 |
+| `bore`, `stroke` | mm | |
+| `compression` | ratio | 9.5 for 9.5:1; worked out last, from the bore and stroke the engine ends with |
+| `chamber` | cc | the space left above a piston at top dead centre, instead of `compression` |
+| `intake_flow`, `exhaust_flow` | 0 to 1 | how well the cylinders breathe in and out through their valves at full lift (the base game's V8s: 0.5 to 1 in, 0.2 to 0.45 out) |
+| `intake_duration`, `exhaust_duration` | degrees | how long the cam holds each valve open |
+| `spark_advance`, `spark_advance_high` | degrees before top dead centre | at `spark_rpm_low` and from `spark_rpm_high` on, rpm |
+| `burn_time` | ms | how long the mixture takes to burn |
+| `heat_loss` | % per second | heat lost to the cylinder walls |
+| `mixture_ratio` | air to fuel by mass | 12.5 |
+| `mixture_heat` | MJ per kg of mixture | 1.70 at 12.5:1 |
+| `fuel_flow`, `air_flow` | g/s | the most the fuel system delivers, the most the air cleaner and intake pass; an engine of figures needs a `fuel_flow` |
+| `rev_limit`, `max_rpm` | rpm | where the ignition cuts, and what the weakest rotating part survives (the curve goes that far; a quarter past `rev_limit` when no part gives it); above 0, up to 30000 |
+| `idle_rpm` | rpm | |
+| `inertia` | kg m2 | the engine spinning, flywheel and all, as Assetto Corsa takes it |
+| `friction` | times a stock bottom end's | engine braking |
+| `clutch_torque` | Nm | what the clutch holds |
+| `gears` | a list of ratios | the forward gears, first gear first, 1 to 10 of them (numbers only) |
+| `reverse`, `final_drive` | ratio | |
+| `diff_lock` | 0 to 1 | the limited slip's lock; with a gearbox of figures and no part giving it, the car keeps its own differential |
+| `turbo` | `{ "boost": bar, "spool_rpm": rpm, "full_boost_rpm": rpm, "lag_up": 0.992, "lag_down": 0.985 }` | a turbo, or a list of them; boost builds from `spool_rpm` (0 when left out) to all of it at `full_boost_rpm`, then holds; the lags are Assetto Corsa's (closer to 1, slower) |
+| `blower` | `{ "boost": bar, "spool_rpm": rpm, "full_boost_rpm": rpm }` | a crank-driven charger: no lag, its boost stays in the power curve |
+| `lag_up`, `lag_down` | 0 to 1 | the lag of an SLRR turbo's script, on any part of its engine |
+
+Chargers add up, as in Assetto Corsa: twin turbos side by side are two turbos of half the boost each, a sequential pair
+a small one that spools early and a big one that comes in later. Each turbo of the engine is an Assetto Corsa turbo of
+its own, with its own lag and gauge. An engine of figures starts from a small-block V8's breathing, cam, spark and
+mixture, and from nothing for its cylinders, bore, stroke, compression and fuel: what it lacks to run is its problem,
+in words ("nothing feeds the engine"), and the pack's `required_slots` hold its parts to their slots as on any part.
+A figure that does not read (a name not in the table, a word for a number, `times` 0, a turbo without its `boost`) is
+told in the log and left out.
+
+A part of figures says what it is by `"class_chain"`, which for such a part may name the classes simply (`["Block"]`,
+`["Camshaft"]`, `["TurboCharger"]`): that puts it on its shelf and in the work order like any other. Its price is
+`"properties": { "value": 300 }` as for any part. On an SLRR engine, a part of figures the scripts look for (a
+carburettor the block needs on its pad) is not there to them: give such a part the script of a similar one
+(`source_script`) and its own figures over it. `tools\EngineBench <parts> show <build>` puts a build on the dyno.
+
+```json
+{
+  "id": "engines/four/block", "name": "2.0 four block", "class_chain": [ "Block" ], "mass": 120,
+  "properties": { "value": 400 },
+  "slots": [ { "id": 10, "takes": [ "four:head" ] } ],
+  "figures": { "cylinders": 4, "bore": 86, "stroke": 86, "compression": 9.5, "rev_limit": 6500, "max_rpm": 7000,
+               "idle_rpm": 850, "inertia": 0.12 }
+},
+{
+  "id": "engines/four/big_turbo", "name": "big turbo", "class_chain": [ "TurboCharger" ],
+  "slots": [ { "id": 1, "fits": [ "four:turbo" ] } ],
+  "figures": { "turbo": { "boost": 0.5, "spool_rpm": 3500, "full_boost_rpm": 5500, "lag_up": 0.995 } }
 }
 ```
 
@@ -387,7 +459,7 @@ naming only that; a list (a make's words) is taken whole. What does not read is 
 - `words`: `aliases` (a nickname read as the word it stands for, `"vette": "corvette"`) and `noise` (words that say
   nothing about which car or engine it is), for matching a car's name to an engine build's.
 - `cars`, by the AC car's folder name: what is given here is not worked out from the car's data. `engine`, the
-  engine build it leaves the factory with (`engine_builds.json`, namespaced); `layout`, `front`, `mid` or `rear`;
+  engine build it leaves the factory with (`engine_builds.json`, namespaced); `layout`, `front`, `mid`, `rear`, or `front_transverse` and `mid_transverse` for an engine lying across the car (guessed for a front-wheel-drive car; the garage draws it so);
   `price`, in perfect condition in the game's money; `common`, how often it turns up for sale, 0 to 1; `make`, a make
   of `makes`. The base game's holds the factory engines and prices set by hand in the catalog editor (a developer's
   screen, which saves into the base game's `cars.json`).
@@ -449,6 +521,12 @@ dealers. `"startsOpen": false` keeps a dealer out of business when a game starts
 room for another lot (about 60% of all the dealers are open at a time, and now and then one goes out of business).
 `mapX`/`mapY` are fractions of the dealer map picture (see the base game's `dealers.json` for how they are measured).
 
+`"cars"` is the kind of car the lot deals in, a car filter written as an event's entry requirements (an import lot:
+`{ "type": "origin", "origin": "European" }`); its price band is then of the cars of that kind, and with none of
+that kind installed it deals in any. Left out: any car. A `value` filter weighs each car at what the lot asks for it,
+a `power` filter at the power it is quoted at. Trade-ins go only to a lot that deals in their kind. A filter that
+does not read is told, and the lot deals in any car.
+
 A dealer's `salesman` is who the player talks to on the lot, when their AI is on: `{ "name": "Cal Whitaker", "age": 45,
 "sex": "man", "temperament": "jive_talker", "portrait": "salesmen/downtown_motors.png" }`. The temperament is a key of
 `ai/people.json` (how he talks and how far he comes down), the portrait a picture under the mod's `dealers` folder,
@@ -500,7 +578,16 @@ A list under `opponents`, or one racer per file (its id as `opponentId` or `id`)
   "skill": 95, "aggression": 80, "portraitPath": "vera.png", "location": "The docks", "biography": "…" }
 ```
 
-`portraitPath` is next to the file. `skill` is 90 to 100. New racers join games already under way.
+`portraitPath` is next to the file. `skill` is 90 to 100. New racers join games already under way. `"cars"` is the
+kind of car the racer drives, a car filter as an event's entry requirements (`{ "type": "origin", "origin":
+"European" }`): he starts with one, and buys one, when there is one to be had (with none for sale, one without a car
+of his kind that runs takes what he can get). A car for sale is weighed at what it is offered for and the power it
+is quoted at. A filter that does not read is told, and he drives any car.
+
+**A racer's own lines.** Any racer says lines of his own where a mod adds a pool's key with his racer id after it
+(`talk.pulled_up.gino`, `talk.pulled_up.aggressive.gino`, `replies.accept.gino`, `replies.decline.gino`,
+`street.back_on_street.gino`; `.my_mod:gino` from another mod); otherwise he says what every racer says. The keys are
+the `talk.pulled_up*`, `replies.*` and `street.*` pools of the base game's `talk.json` and `street.json`.
 
 A **boss** is a racer with a `"boss"` block: he only races for pink slips, stays out of sight until his victory path
 opens (`path`, his mod's own path first, then the base game's; none: out from the start; one no installed mod has, or

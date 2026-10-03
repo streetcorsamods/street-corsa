@@ -33,7 +33,7 @@ namespace StreetCorsa.Services.Opponents
 
         /// <summary>Whether the mod a boss comes from is installed (the base game's always is)</summary>
         public static bool ModInstalled(Opponent boss) =>
-            boss.DefinitionId.Length == 0 || ModIds.IsBase(ModIds.ModOf(boss.DefinitionId)) || ModSet.Installed.Get(ModIds.ModOf(boss.DefinitionId)) != null;
+            string.IsNullOrEmpty(boss.DefinitionId) || ModIds.IsBase(ModIds.ModOf(boss.DefinitionId)) || ModSet.Installed.Get(ModIds.ModOf(boss.DefinitionId)) != null;
 
         /// <summary>
         /// The boss comes out once his path is open; with no path, from the start. One whose path no installed mod has,
@@ -46,25 +46,6 @@ namespace StreetCorsa.Services.Opponents
 
             return FindPath(boss.BossPath, CareerContent.Installed.Victories) is { } path && new DataVictory(path).IsUnlocked(career);
         }
-
-        /// <summary>
-        /// What a boss's own text keys end in: his racer id in full ("my_mod:big_jim"), then as his mod wrote it
-        /// ("big_jim")
-        /// </summary>
-        public static IEnumerable<string> OwnSuffixes(string bossId)
-        {
-            if (bossId.Length == 0) yield break;
-
-            yield return bossId;
-            if (ModIds.IsQualified(bossId)) yield return ModIds.Local(bossId);
-        }
-
-        /// <summary>
-        /// The text key for a boss: his own (<c>key.&lt;racer id&gt;</c>, by <see cref="OwnSuffixes"/>) when a mod
-        /// has it, else every boss's
-        /// </summary>
-        public static string Key(string key, Opponent boss) =>
-            OwnSuffixes(boss.DefinitionId).Select(s => key + "." + s).FirstOrDefault(GameText.Installed.Has) ?? key;
 
         /// <summary>
         /// Puts what the career needs to know of its bosses on it (<see cref="CareerState.Bosses"/>): who they are,

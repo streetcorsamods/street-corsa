@@ -23,6 +23,7 @@
   <ItemGroup>
     <Compile Include="..\..\Street Corsa\Parts\PartDefinition.cs" Link="Parts\PartDefinition.cs" />
     <Compile Include="..\..\Street Corsa\Parts\PartOverrides.cs" Link="Parts\PartOverrides.cs" />
+    <Compile Include="..\..\Street Corsa\Parts\Logic\PartFigureSet.cs" Link="Parts\Logic\PartFigureSet.cs" />
     <Compile Include="..\..\Street Corsa\Parts\EngineBuild.cs" Link="Parts\EngineBuild.cs" />
     <Compile Include="..\..\Street Corsa\Parts\SlotShifts.cs" Link="Parts\SlotShifts.cs" />
     <Compile Include="..\..\Street Corsa\Parts\Kn5Bitmap.cs" Link="Parts\Kn5Bitmap.cs" />

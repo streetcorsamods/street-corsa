@@ -333,7 +333,7 @@ namespace StreetCorsa.Screens.CarCatalogEditor
             guessed.Guessing = guessed.GuessAsync(guess);
 
             return new[] { guessed }
-                .Concat(Enum.GetValues<EngineLayout>().Select(l => new EngineLayoutOptionViewModel(l, l.ToString())))
+                .Concat(Enum.GetValues<EngineLayout>().Select(l => new EngineLayoutOptionViewModel(l, l.Label())))
                 .ToList();
         }
 
@@ -350,7 +350,7 @@ namespace StreetCorsa.Screens.CarCatalogEditor
                 layout = EngineLayout.Front;
             }
 
-            Label = $"Guessed: {layout}";
+            Label = $"Guessed: {layout.Label()}";
         }
     }
 }

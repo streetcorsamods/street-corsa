@@ -94,7 +94,7 @@ namespace StreetCorsa.Services.Market
             if (CarCondition.IsTotaled(car))
                 return new DealerQuote(value, RoundToTen((double)value * ScrapFactor(car.InstanceId)), true, ScrapyardName, null);
 
-            var location = _market.TradeInLocation(gameState.DealerLocations);
+            var location = _market.TradeInLocation(gameState.DealerLocations, car);
             var name = (gameState.DealerLocations?.FirstOrDefault(d => d.Id == location)
                         ?? _market.GetDefaultDealers().FirstOrDefault(d => d.Id == location))?.Name ?? GameText.Say("sell.dealer_name");
             return new DealerQuote(value, RoundToTen((double)value * DealerShare), false, name, location);
@@ -210,7 +210,7 @@ namespace StreetCorsa.Services.Market
                 car.History.ChangeHands(rival.Name, gameState.Date, CarAcquisition.PrivateSale);
                 Grudges.CarBack(rival, car);
                 OpponentLifeService.AddTalk(gameState, gameState.Date,
-                    [GameText.Installed.Pick("street.bought_players_car", Random.Shared, new TextValues { ["name"] = rival.Name, ["player"] = gameState.Player.Name })]);
+                    [GameText.Installed.Pick(Opponents.RacerWords.Key("street.bought_players_car", rival), Random.Shared, new TextValues { ["name"] = rival.Name, ["player"] = gameState.Player.Name })]);
             }
 
             // The buyer remembers it, a rival whether or not the player talked to them

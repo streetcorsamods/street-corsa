@@ -54,8 +54,14 @@ namespace StreetCorsa.Models.Career.Filters
             if (instance == null)
                 return false;
 
-            var value = valueOf?.Invoke(instance) ?? instance.PurchasePrice;
+            return InRange(valueOf?.Invoke(instance) ?? instance.PurchasePrice);
+        }
 
+        /// <summary>A car on offer is worth what it is offered for</summary>
+        public bool MatchesOffer(CarDefinition car, Car? instance, decimal price, double? powerHp) => InRange(price);
+
+        private bool InRange(decimal value)
+        {
             if (MinValue.HasValue && value < MinValue.Value)
                 return false;
 

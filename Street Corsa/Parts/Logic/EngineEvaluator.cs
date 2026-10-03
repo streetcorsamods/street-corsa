@@ -29,8 +29,11 @@ public sealed class EngineReport
     /// <summary>1 = front, 2 = rear, 3 = all wheels; 0 when there is no transmission</summary>
     public int DriveType { get; init; }
 
-    /// <summary>Limited slip lock, 0..1</summary>
-    public double DiffLock { get; init; }
+    /// <summary>
+    /// Limited slip lock, 0..1; null when nothing of the build says (a gearbox of figures with no <c>"diff_lock"</c>):
+    /// the car keeps its own differential
+    /// </summary>
+    public double? DiffLock { get; init; }
 
     /// <summary>
     /// The engine's own drag when it is pushed, the oil pan's figure over the losses of the moving parts,
@@ -41,8 +44,18 @@ public sealed class EngineReport
     /// <summary>The clutch's clamp figure (the script's maxF); 0 without a clutch</summary>
     public double ClutchCapacity { get; init; }
 
-    /// <summary>Whether an exhaust-driven charger is on the engine: boost comes with a lag, and a gauge</summary>
+    /// <summary>
+    /// Whether an exhaust-driven charger of the scripts is on the engine: boost comes with a lag, and a gauge. The
+    /// turbos of the parts' figures are among the <see cref="Inputs"/>' chargers.
+    /// </summary>
     public bool Turbocharged { get; init; }
+
+    /// <summary>Assetto Corsa's lag of the scripts' turbo, as the parts' figures leave it (<c>"lag_up"</c>, <c>"lag_down"</c>)</summary>
+    public double TurboLagUp { get; init; } = PartFigures.DefaultLagUp;
+    public double TurboLagDown { get; init; } = PartFigures.DefaultLagDown;
+
+    /// <summary>Whether the block has no script: the engine is made of its parts' figures alone</summary>
+    public bool FromFigures { get; init; }
 
     /// <summary>Kilograms, all parts of the build</summary>
     public double Mass { get; init; }
@@ -67,7 +80,7 @@ public static class EngineEvaluator
 
     // Figures past any engine the game could hold: a script (anyone's) or a pack.json can make them, finite and absurd,
     // and AC would be handed them. Each is well above anything real, so a real build never meets one.
-    private const double MaxRpm = 30_000;
+    private const double MaxRpm = EngineDyno.MaxRpm;
     private const double MaxPowerHp = 20_000;
     private const double MaxTorqueNm = 50_000;
     private const double MaxRatio = 100;
@@ -98,14 +111,21 @@ public static class EngineEvaluator
 
         var block = runtime.ObjectOf(tree.Root);
         var chassis = runtime.Chassis;
+        var figures = runtime.Figures;
         var data = block?.Fields.GetValueOrDefault("dynodata")?.AsObject;
-        var dyno = data == null ? null : runtime.DynoResultOf(data);
+
+        // A block without a script is an engine of figures alone, whichever of its parts give them: no script fills a
+        // DynoData, the parts' figures go on the base of such an engine and the dyno runs on them here
+        var fromFigures = block == null && tree.Root.Definition.SourceScript == null;
+        var inputs = fromFigures ? PartFigures.Apply(PartFigures.DataEngineBase, figures)
+            : data == null ? null : PartFigures.Apply(DynoInputs.From(data), figures);
+        var dyno = fromFigures ? EngineDyno.Run(inputs!) : data == null ? null : runtime.DynoResultOf(data);
 
         // The scripts' own verdict, asked after the dyno so the compression check has its figure. A part whose
         // script is not there looks like a missing part to the others; what they say about it would mislead.
         var problem = runtime.MissingScripts.Count > 0
             ? $"the script of {runtime.MissingScripts[0].Definition.Id} is missing ({runtime.MissingScripts.Count} in all): the parts need converting again."
-            : runtime.Call(tree.Root, "isDynoable").AsText;
+            : fromFigures ? PartFigures.MissingOf(inputs!) : runtime.Call(tree.Root, "isDynoable").AsText;
 
         // What the scripts do not ask about: the rules a pack holds its part to itself (the extra carburettor pads of
         // a mod's manifold that runs on a stock script, which never looks at them)
@@ -119,12 +139,14 @@ public static class EngineEvaluator
             problem = $"a part script failed: {faults[0]}{(faults.Count > 1 ? $" ({faults.Count} faults in all)" : "")}.";
 
         if (problem == null && dyno == null) problem = "the engine could not be evaluated.";
+        // A curve the dyno would not run (figures past any engine, a rev range of none) is said in its words
+        if (problem == null && dyno is { Curve.Count: 0 })
+            problem = (inputs != null ? EngineDyno.Unrunnable(inputs) : null) ?? "the engine makes no power on the dyno.";
         if (problem == null && dyno is { } made && !(made.MaxPowerHp <= MaxPowerHp && made.MaxTorque <= MaxTorqueNm))
             problem = $"the dyno makes {made.MaxPowerHp:0} hp and {made.MaxTorque:0} Nm, past any engine: a part's figures are not what they should be.";
 
         // The scripts hold the compression against what the fuel system allows. With no carburettor or injection
         // that limit is 0, and what they say ("too high, not more than 0.0:1") points away from what is wrong.
-        var inputs = data == null ? null : DynoInputs.From(data);
         if (problem != null && inputs is { MaxFuelFlow: <= 0, MaxAirFlow: <= 0 } && problem.Contains("compression", StringComparison.OrdinalIgnoreCase))
             problem = "nothing feeds the engine: there is no carburettor or injection on the intake.";
 
@@ -133,30 +155,59 @@ public static class EngineEvaluator
         var gears = (int)Finite(chassis?.Number("gears"), MaxFigure);
         var ratios = chassis?.Fields.GetValueOrDefault("ratio") as ScriptArray;
         double Ratio(int index) => ratios != null && ratios.Items.GetValueOrDefault(index) is ScriptNumber ratio ? Finite(ratio.Amount, MaxRatio) : 0;
+        var gearRatios = Enumerable.Range(1, Math.Clamp(gears, 0, MaxForwardGears)).Select(Ratio).Where(r => r > 0).ToList();
+        var gearsGiven = PartFigures.GearsOf(figures);
+        if (gearsGiven != null) gearRatios = gearsGiven.Select(r => Finite(r, MaxRatio)).Where(r => r > 0).ToList();
+
+        // The scripts' differential goes with the scripts' gearbox; a gearbox of figures (or an engine of them, on the
+        // stand-in chassis) has only what a part says, and with nothing said the car keeps its own
+        var diffLock = Engine("diff_lock", Finite(chassis?.Number("diff_lock"), MaxFigure), MaxFigure);
+        double? keptDiffLock = fromFigures || gearsGiven != null
+            ? PartFigures.ApplyEngine(figures, "diff_lock", 0) != null ? diffLock : null
+            : diffLock;
+
+        // The engine's own figures, in the units the parts give them in (the report's figure times unit), then back to
+        // the report's; a figure no part gives stays exactly what it was
+        double Engine(string name, double current, double max, double unit = 1) =>
+            PartFigures.ApplyEngine(figures, name, current * unit) is { } given ? Finite(given, max * unit) / unit : current;
 
         var parts = tree.Root.SelfAndDescendants().ToList();
         var clutch = parts.FirstOrDefault(p => p.Is("Clutch"));
+        var clutchCapacity = clutch == null ? 0 : Finite(runtime.ObjectOf(clutch)?.Number("maxF") ?? clutch.Definition.Number("maxF"), MaxFigure * 100);
+        var friction = Finite(chassis?.Number("engine_friction_fwd"), MaxFigure);
+        var inertia = fromFigures
+            ? (dyno?.Displacement ?? 0) * 1000 * PartFigures.InertiaPerLitre / PartFigures.KgM2PerInertiaUnit
+            : Finite(block?.Number("inertia"), MaxFigure);
+        var limiter = fromFigures || PartFigures.ApplyEngine(figures, "rev_limit", 0) != null ? inputs?.RpmLimit : block?.Number("RPM_limit");
         return new EngineReport
         {
             Problem = problem,
             Inputs = inputs,
             Dyno = dyno,
-            IdleRpm = Finite(block?.Number("rpm_idle"), MaxRpm),
-            LimiterRpm = Finite(block?.Number("RPM_limit"), MaxRpm),
-            Inertia = Finite(block?.Number("inertia"), MaxFigure),
-            GearRatios = Enumerable.Range(1, Math.Clamp(gears, 0, MaxForwardGears)).Select(Ratio).Where(r => r > 0).ToList(),
-            ReverseRatio = Math.Abs(Ratio(ReverseGearIndex)),
-            FinalRatio = Finite(chassis?.Number("rearend_ratio"), MaxRatio),
+            FromFigures = fromFigures,
+            IdleRpm = Engine("idle_rpm", fromFigures ? PartFigures.DefaultIdleRpm : Finite(block?.Number("rpm_idle"), MaxRpm), MaxRpm),
+            LimiterRpm = Finite(limiter, MaxRpm),
+            Inertia = Engine("inertia", inertia, MaxFigure, PartFigures.KgM2PerInertiaUnit),
+            GearRatios = gearRatios,
+            ReverseRatio = Engine("reverse", Math.Abs(Ratio(ReverseGearIndex)), MaxRatio),
+            FinalRatio = Engine("final_drive", Finite(chassis?.Number("rearend_ratio"), MaxRatio), MaxRatio),
             DriveType = gears > 0 ? (int)Finite(chassis?.Number("drive_type"), MaxFigure) : 0,
-            DiffLock = Finite(chassis?.Number("diff_lock"), MaxFigure),
-            Friction = Finite(chassis?.Number("engine_friction_fwd"), MaxFigure),
-            ClutchCapacity = clutch == null ? 0 : Finite(runtime.ObjectOf(clutch)?.Number("maxF") ?? clutch.Definition.Number("maxF"), MaxFigure * 100),
-            Turbocharged = parts.Any(p => p.Is("TurboCharger")),
+            DiffLock = keptDiffLock,
+            Friction = PartFigures.ApplyEngine(figures, "friction", friction > 0 ? friction / PartFigures.ReferenceFriction : 1) is { } drag
+                ? Finite(drag * PartFigures.ReferenceFriction, MaxFigure)
+                : friction,
+            ClutchCapacity = Engine("clutch_torque", clutchCapacity, MaxFigure * 100, PartFigures.ClutchNmPerUnit),
+            // A part of figures may take a turbo's shelf by its class; only a turbo with a script is the scripts' charger
+            Turbocharged = parts.Any(p => p.Is("TurboCharger") && runtime.ObjectOf(p) != null),
+            TurboLagUp = LagOf("lag_up", PartFigures.DefaultLagUp),
+            TurboLagDown = LagOf("lag_down", PartFigures.DefaultLagDown),
             Mass = Finite(parts.Sum(p => (double)p.Definition.Mass), MaxFigure),
             Value = Finite(parts.Sum(p => PartPricing.NewPrice(p.Definition)), MaxFigure * 1000),
             ScriptFaults = faults,
             Unplaced = tree.Unplaced
         };
+
+        double LagOf(string name, double fallback) => PartFigures.ApplyEngine(figures, name, fallback) is { } lag && lag is > 0 and < 1 ? lag : fallback;
     }
 
     /// <summary>The first empty slot that a part's pack enforces, in the rule's words; null when there is none</summary>

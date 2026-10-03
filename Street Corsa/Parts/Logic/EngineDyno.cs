@@ -71,6 +71,12 @@ public sealed class DynoResult
 /// </summary>
 public static class EngineDyno
 {
+    /// <summary>Fastest an engine the dyno runs may turn: past any engine the game could hold</summary>
+    public const double MaxRpm = 30_000;
+
+    /// <summary>A compression ratio at or below this is none: the dyno runs no engine with it</summary>
+    public const double MinCompression = 1.5;
+
     private const double RpmStep = 250;
     private const double AirDensity = 1.184;        // kg/m3 at 25 C
     private const double Atmosphere = 1.0;          // bar
@@ -98,15 +104,12 @@ public static class EngineDyno
 
     public static DynoResult Run(DynoInputs inputs)
     {
-        var cylinderVolume = Math.PI / 4 * inputs.Bore * inputs.Bore * inputs.Stroke;
-        var displacement = cylinderVolume * inputs.Cylinders;
-        var compression = inputs.ClearanceVolume > 0 ? (cylinderVolume + inputs.ClearanceVolume) / inputs.ClearanceVolume : 1;
+        var displacement = CylinderVolume(inputs) * inputs.Cylinders;
+        var compression = Compression(inputs);
 
         var curve = new List<(double, double)>();
-        var maxRpm = inputs.MaxRpm > 0 ? inputs.MaxRpm : inputs.RpmLimit * 1.25;
-        // The inputs are script figures: NaN fails every comparison, so it is ruled out by name
-        if (!double.IsFinite(displacement) || !double.IsFinite(compression) || !double.IsFinite(maxRpm)
-            || displacement <= 0 || inputs.Cylinders <= 0 || compression <= 1.5 || maxRpm <= 0 || maxRpm > 30_000)
+        var maxRpm = TopRpm(inputs);
+        if (Unrunnable(inputs) != null)
             return new DynoResult(double.IsFinite(displacement) ? Math.Max(0, displacement) : 0, double.IsFinite(compression) ? compression : 1, curve);
 
         for (var rpm = RpmStep; rpm <= maxRpm + 1; rpm += RpmStep)
@@ -135,7 +138,7 @@ public static class EngineDyno
 
         var volumetric = filling * (1 - ResidualPenalty * residual) * reversion;
 
-        var pressure = Atmosphere + BoostScale * Boost(inputs, rpm);
+        var pressure = Atmosphere + BoostScale * Boost(inputs, rpm) + ChargersBoost(inputs, rpm);
         var airPerSecond = AirDensity * pressure / Atmosphere * displacement * volumetric / cycleTime;
         if (inputs.MaxAirFlow > 0) airPerSecond = Math.Min(airPerSecond, inputs.MaxAirFlow);
 
@@ -152,8 +155,37 @@ public static class EngineDyno
         return power / (rpm * Math.PI / 30.0);
     }
 
+    /// <summary>Swept volume of one cylinder, m3</summary>
+    public static double CylinderVolume(DynoInputs inputs) => Math.PI / 4 * inputs.Bore * inputs.Bore * inputs.Stroke;
+
+    /// <summary>Static compression ratio, x:1; 1 (none) without a clearance volume</summary>
+    public static double Compression(DynoInputs inputs) =>
+        inputs.ClearanceVolume > 0 ? (CylinderVolume(inputs) + inputs.ClearanceVolume) / inputs.ClearanceVolume : 1;
+
+    /// <summary>The speed the dyno runs up to: the engine's own top, else a quarter past its rev limit</summary>
+    public static double TopRpm(DynoInputs inputs) => inputs.MaxRpm > 0 ? inputs.MaxRpm : inputs.RpmLimit * 1.25;
+
+    /// <summary>Why the dyno runs no curve for these inputs, in words; null when it runs one</summary>
+    public static string? Unrunnable(DynoInputs inputs)
+    {
+        var displacement = CylinderVolume(inputs) * inputs.Cylinders;
+        var compression = Compression(inputs);
+        var maxRpm = TopRpm(inputs);
+
+        // The inputs are script figures: NaN fails every comparison, so it is ruled out by name
+        if (!double.IsFinite(displacement) || displacement <= 0 || inputs.Cylinders <= 0)
+            return "the engine has no displacement: its cylinders, bore and stroke come to none.";
+        if (!double.IsFinite(compression) || compression <= MinCompression)
+            return $"the engine has no compression to speak of ({(double.IsFinite(compression) ? compression : 0):0.0}:1).";
+        if (!double.IsFinite(maxRpm) || maxRpm <= 0)
+            return "the engine has no rev range: neither \"rev_limit\" nor \"max_rpm\" is above 0.";
+        if (maxRpm > MaxRpm)
+            return $"the engine would rev to {maxRpm:0} rpm, past the {MaxRpm:0} any engine may (\"max_rpm\", or a quarter past \"rev_limit\").";
+        return null;
+    }
+
     /// <summary>Length of a valve event as a fraction of the cycle; events may wrap around the end of the cycle</summary>
-    private static double Span(double open, double close)
+    public static double Span(double open, double close)
     {
         var span = close - open;
         return span < 0 ? span + 1 : span;
@@ -179,6 +211,17 @@ public static class EngineDyno
         var error = (leadDegrees - bestLead) / PhasingWidth;
         return Math.Clamp(1 - error * error, 0.5, 1);
     }
+
+    /// <summary>Boost of the chargers the parts' figures bring at this speed, bar: theirs adds up, as in Assetto Corsa</summary>
+    public static double ChargersBoost(DynoInputs inputs, double rpm)
+    {
+        var boost = 0.0;
+        foreach (var charger in inputs.Chargers) boost += charger.BoostAt(rpm);
+        return boost;
+    }
+
+    /// <summary>Boost of the scripts' charger at this speed, bar of manifold pressure</summary>
+    public static double ScriptBoostBar(DynoInputs inputs, double rpm) => BoostScale * Boost(inputs, rpm);
 
     /// <summary>
     /// Chargers spin with the engine; boost peaks where they work best and the wastegate caps it. A blower's

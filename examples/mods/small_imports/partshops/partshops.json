@@ -1,0 +1,15 @@
+{
+  "shops": [
+    {
+      "id": "euro_speed",
+      "name": "Euro Speed & Sport",
+      "region": "Santa Monica",
+      "blurb": "Webers, Abarth exhausts and Cosworth cams for the little cars, and a man who can tell them apart by ear.",
+      "kind": "specialist",
+      "makes": [ "fiat", "alfa_romeo", "ford_uk" ],
+      "mapX": 0.16,
+      "mapY": 0.56,
+      "travelHours": 1.5
+    }
+  ]
+}

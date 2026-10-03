@@ -96,7 +96,7 @@ namespace StreetCorsa.Services.Catalog
             {
                 var entry = entries[id] as JsonObject ?? ModMerge.NewObject();
                 Set(entry, "engine", fields.Engine is { Length: > 0 } engine ? JsonValue.Create(engine) : null);
-                Set(entry, "layout", fields.Layout is { } layout ? JsonValue.Create(layout.ToString().ToLowerInvariant()) : null);
+                Set(entry, "layout", fields.Layout is { } layout ? JsonValue.Create(StreetCorsa.Parts.EngineLayouts.Name(layout)) : null);
                 Set(entry, "price", fields.Price is { } price ? JsonValue.Create(price) : null);
                 Set(entry, "common", fields.Common is { } common ? JsonValue.Create(Math.Round((double)common, 2)) : null);
                 if (entry.Count == 0) entries.Remove(id);

@@ -46,17 +46,19 @@ namespace StreetCorsa.Services.Scheduler.Tasks
             foreach (var race in result.Races)
             {
                 var car = race.LoserCar == null ? "car" : carName(race.LoserCar.DefinitionId);
+                // The street's line is about the loser and his car: his own where a mod has it
+                var loser = gameState.Racers.Find(race.LoserName);
                 if (race.IsPinkSlip)
                 {
                     _logger.Information("Pink slip race! {Winner} won {Loser}'s car", race.WinnerName, race.LoserName);
-                    talk.Add(GameText.Installed.Pick(race.LoserCrashed ? "street.rivals.pink_wreck" : "street.rivals.pink", Random.Shared, Values(race, car)));
+                    talk.Add(GameText.Installed.Pick(RacerWords.Key(race.LoserCrashed ? "street.rivals.pink_wreck" : "street.rivals.pink", loser), Random.Shared, Values(race, car)));
                 }
                 else if (race.LoserCrashed)
                 {
-                    talk.Add(GameText.Installed.Pick("street.rivals.wreck", Random.Shared, Values(race, car)));
+                    talk.Add(GameText.Installed.Pick(RacerWords.Key("street.rivals.wreck", loser), Random.Shared, Values(race, car)));
                 }
 
-                var loserPossessive = gameState.Racers.Find(race.LoserName) is { } loser ? OpponentRules.Possessive(loser) : "their";
+                var loserPossessive = loser != null ? OpponentRules.Possessive(loser) : "their";
                 if (NewsWriter.RivalRace(currentDate, race.WinnerName, race.LoserName, loserPossessive, car, race.RaceType == "Drag",
                         race.IsPinkSlip, race.LoserCrashed, race.LoserCar?.History.Wins ?? 0, _random) is { } article)
                     news.Add(article);

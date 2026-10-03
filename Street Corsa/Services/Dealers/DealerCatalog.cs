@@ -84,6 +84,7 @@ namespace StreetCorsa.Services.Dealers
                 {
                     dealer.Id = id;
                     FindPortrait(dealer, mod, problems);
+                    ReadCars(dealer, problems);
                     _byId[id] = dealer;
                     _dealers.Add(dealer);
                 }
@@ -99,6 +100,21 @@ namespace StreetCorsa.Services.Dealers
 
             foreach (var problem in problems) _logger.Warning("Dealers: {Problem}", problem);
             ModProblems.Add("Dealers", problems);
+        }
+
+        /// <summary>The kind of car the lot deals in; one that does not read is told, and the lot deals in any</summary>
+        private static void ReadCars(DealerDefinition dealer, List<string> problems)
+        {
+            if (dealer.CarsJson is not { } cars) return;
+
+            try
+            {
+                dealer.Cars = Models.Career.Filters.CarFilterJsonConverter.Read(cars);
+            }
+            catch (Exception ex) when (ex is System.Text.Json.JsonException or InvalidOperationException)
+            {
+                problems.Add($"dealer {dealer.Id}: \"cars\" is no car filter ({ex.Message}); it deals in any car");
+            }
         }
 
         /// <summary>A salesman's portrait, next to the dealer files of the mod that gives him; told when it is not there</summary>

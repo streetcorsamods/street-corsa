@@ -114,12 +114,54 @@ public class EngineLayoutTests
     [InlineData(0.38, "RWD", EngineLayout.Rear)]   // Corvair
     [InlineData(0.46, "RWD", EngineLayout.Front)]  // the lightest nose of the installed front-engined cars
     [InlineData(0.55, "RWD", EngineLayout.Front)]
-    [InlineData(0.38, "FWD", EngineLayout.Front)]
+    [InlineData(0.38, "FWD", EngineLayout.FrontTransverse)]  // nearly every front-wheel-drive car has its engine across
     [InlineData(0.40, "AWD", EngineLayout.Rear)]
     [InlineData(0.40, null, EngineLayout.Rear)]
     public void The_layout_is_guessed_from_the_weight_and_the_driven_wheels(double frontShare, string? traction, EngineLayout expected)
     {
         Assert.Equal(expected, EngineLayouts.Guess(new AcCarSpecs { FrontWeightShare = frontShare, Traction = traction }));
+    }
+
+    [Fact]
+    public void An_engine_across_the_car_has_its_crankshaft_side_to_side_and_the_block_and_gearbox_about_the_middle()
+    {
+        var front = CarPartsLayout.EnginePlacement(Car, Block(), EngineLayout.FrontTransverse, BlockBounds);
+        var across = FrontOf(front);
+        Assert.True(Math.Abs(across.Z) < 1e-5f && Math.Abs(Math.Abs(across.X) - 1) < 1e-5f, $"the block's front points {across}");
+
+        // The crankshaft a little ahead of the front axle, the block's middle off the centre line towards its front
+        var crank = Vector3.Transform(new Vector3(0f, -0.1f, 0f), front);
+        Assert.Equal(1.4f + 0.08f, crank.Z, 4);
+        Assert.Equal(0.3f + 0.06f, crank.Y, 4);
+        Assert.Equal(0.15f, Vector3.Dot(crank, across), 4);
+
+        var mid = CarPartsLayout.EnginePlacement(Car, Block(), EngineLayout.MidTransverse, BlockBounds);
+        Assert.Equal(-1.3f + 0.25f, Vector3.Transform(new Vector3(0f, -0.1f, 0f), mid).Z, 4);
+        Assert.True(Vector3.Distance(FrontOf(mid), across) < 1e-5f);
+    }
+
+    [Theory]
+    [InlineData("front", EngineLayout.Front)]
+    [InlineData("Rear", EngineLayout.Rear)]
+    [InlineData("front_transverse", EngineLayout.FrontTransverse)]
+    [InlineData("MidTransverse", EngineLayout.MidTransverse)]
+    [InlineData("sideways", null)]
+    [InlineData("1", null)]
+    [InlineData("", null)]
+    [InlineData("mid, rear", null)]
+    [InlineData("front, mid", null)]
+    public void A_layout_is_read_by_its_name(string name, EngineLayout? expected)
+    {
+        Assert.Equal(expected, EngineLayouts.Parse(name));
+        if (expected is { } layout) Assert.Equal(layout, EngineLayouts.Parse(layout.Name()));
+    }
+
+    [Fact]
+    public void Only_the_front_layouts_are_carried_by_the_nose_and_only_the_transverse_ones_lie_across()
+    {
+        Assert.Equal(new[] { EngineLayout.Front, EngineLayout.FrontTransverse }, Enum.GetValues<EngineLayout>().Where(l => l.IsFront()));
+        Assert.Equal(new[] { EngineLayout.FrontTransverse, EngineLayout.MidTransverse }, Enum.GetValues<EngineLayout>().Where(l => l.IsTransverse()));
+        Assert.Equal("front_transverse", EngineLayout.FrontTransverse.Name());
     }
 
     [Fact]
