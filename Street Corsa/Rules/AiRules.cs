@@ -146,8 +146,14 @@ public sealed class TalkRules
     /// </summary>
     public double MostRaise { get; set; } = 0.12;
 
-    /// <summary>A salesman's cars told him, the dearest first</summary>
-    public int LotCarsTold { get; set; } = 10;
+    /// <summary>A salesman's cars told him, the dearest first, each with its engine, miles and condition</summary>
+    public int LotCarsTold { get; set; } = 30;
+
+    /// <summary>
+    /// Different parts of one kind told one by one in a car's build; a kind of more (an engine's small accessories) is
+    /// told as one line, but for the parts not from the factory
+    /// </summary>
+    public int BuildPartsPerKind { get; set; } = 3;
 
     /// <summary>The share of salesmen who are women</summary>
     public double WomenSalesmen { get; set; } = 0.15;

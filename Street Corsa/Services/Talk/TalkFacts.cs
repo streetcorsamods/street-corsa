@@ -29,9 +29,11 @@ namespace StreetCorsa.Services.Talk
         public const int RivalRaces = 10;
         public const int OtherCars = 20;
         public const int Races = 40;
+        public const int OwnCar = 45;
         public const int Memories = 50;
         public const int Lot = 60;
         public const int Said = 70;
+        public const int Build = 80;
     }
 
     public static class TalkFacts
@@ -83,6 +85,63 @@ namespace StreetCorsa.Services.Talk
             yield return GameText.Say("chat.fact.on_sale", ("days", Math.Max(0, (int)(today.Date - onSaleSince.Date).TotalDays)));
         }
 
+        /// <summary>
+        /// What is on a car, part by part, as the game knows it: a line a kind of part (the order of the mods'
+        /// <c>part_groups.json</c>, the engine's first), the same part on every corner said once with how many, with its
+        /// condition, and, for the engine's parts when the factory's are known, whether it came from the factory or not.
+        /// Nothing without the catalog.
+        /// </summary>
+        /// <param name="factory">The ids of the parts of the car's factory engine; null when not known</param>
+        /// <param name="mostPerKind">Different parts of a kind told one by one; more, and they are one line (but for those put on since)</param>
+        public static IEnumerable<string> Build(IReadOnlyList<PartInstance> roots, PartsCatalog? catalog, IReadOnlySet<string>? factory, int mostPerKind = 3)
+        {
+            if (catalog == null || roots.Count == 0) yield break;
+
+            var engine = roots.Where(p => p.ParentSlot == PartInstance.CarEngineSlot).SelectMany(p => p.SelfAndDescendants()).ToHashSet();
+            var groups = PartGroups.Current.All.Select(g => g.Id).ToList();
+            var parts = roots
+                .SelectMany(p => p.SelfAndDescendants())
+                .Select(p => (Part: p, Definition: catalog.Get(p.DefinitionId)))
+                .Where(p => p.Definition != null)
+                .GroupBy(p => p.Definition!.Id, StringComparer.OrdinalIgnoreCase)
+                .Select(same => (Group: PartKinds.GroupOf(same.First().Definition!), same.First().Definition, Parts: same.Select(p => p.Part).ToList()))
+                .OrderBy(p => groups.IndexOf(p.Group) is var at and >= 0 ? at : int.MaxValue)
+                .ToList();
+            if (parts.Count == 0) yield break;
+
+            // From the factory (true), put on since (false), or not known (null: the factory unknown, or not the engine's)
+            bool? Stock(PartDefinition definition, List<PartInstance> same) =>
+                factory == null || !same.Any(engine.Contains) ? null : factory.Contains(definition.Id);
+
+            yield return GameText.Say("chat.fact.build");
+            foreach (var kind in parts.GroupBy(p => p.Group))
+            {
+                var name = PartKinds.GroupName(kind.Key);
+                // A kind of many parts (the engine's small accessories) is one line, but for any put on since
+                var many = kind.Count() > Math.Max(1, mostPerKind);
+                var rest = new List<(PartDefinition Definition, List<PartInstance> Parts, bool? Stock)>();
+                foreach (var (_, definition, same) in kind)
+                {
+                    var stock = Stock(definition!, same);
+                    if (many && stock != false)
+                    {
+                        rest.Add((definition!, same, stock));
+                        continue;
+                    }
+
+                    var origin = stock switch { true => GameText.Say("chat.fact.build_stock"), false => GameText.Say("chat.fact.build_aftermarket"), _ => string.Empty };
+                    yield return GameText.Say("chat.fact.build_part", ("group", name), ("part", Market.AdBlurbs.NameOf(definition!)),
+                        ("count", same.Count > 1 ? GameText.Say("chat.fact.build_count", ("count", same.Count)) : string.Empty),
+                        ("condition", ConditionDisplay.Of(same.Min(p => p.Wear)).Sentence), ("origin", origin));
+                }
+
+                if (rest.Count > 0)
+                    yield return GameText.Say("chat.fact.build_many", ("group", name), ("count", rest.Sum(r => r.Parts.Count)),
+                        ("condition", ConditionDisplay.Of(rest.SelectMany(r => r.Parts).Min(p => p.Wear)).Sentence),
+                        ("origin", rest.All(r => r.Stock == true) ? GameText.Say("chat.fact.build_stock_all") : string.Empty));
+            }
+        }
+
         /// <summary>A part for sale: its name and shelf, its shape, the ad's words, how long on sale</summary>
         public static IEnumerable<string> Part(PartAd ad, string name, PartsCatalog? catalog, DateTime today)
         {
@@ -106,7 +165,9 @@ namespace StreetCorsa.Services.Talk
             yield return GameText.Say("chat.fact.lot", ("count", lot.Count));
             foreach (var car in lot.OrderByDescending(c => c.Listing.Price).Take(most))
                 yield return GameText.Say("chat.fact.lot_car", ("year", car.YearDisplay), ("car", car.DisplayName),
-                    ("price", new Helpers.Money(car.Listing.Price)), ("condition", car.ConditionLabel));
+                    ("price", new Helpers.Money(car.Listing.Price)), ("condition", car.ConditionLabel),
+                    ("engine", car.EngineDisplay.Length > 0 ? car.EngineDisplay : GameText.Say("chat.fact.lot_engine_unknown")),
+                    ("mileage", car.MileageDisplay));
         }
 
         /// <summary>Who a rival is: name, record, car, the King, a grudge, broke, their story</summary>

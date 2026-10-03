@@ -297,6 +297,13 @@ namespace StreetCorsa.Services.Talk
                         said = GameText.Say(buyer ? "chat.deal.buyer.held" : "chat.deal.held", ("price", new Helpers.Money(subject.Price)));
                 }
             }
+            // A salesman going over his lot names only its prices: one made up is asked again, once
+            else if (said != null && Person.Kind == PersonKind.Salesman && Haggle.NamesUnknownSum(said, KnownSums(facts), UnitWords))
+            {
+                _logger.Information("{Person} named a price that is no car's on the lot: asked again", Person.Name);
+                values["facts"] = facts + "\n" + GameText.Say("chat.fact.lot_price_warning");
+                said = await _desk.Text.ChatAsync(Use, values, Window(), cancellationToken).ConfigureAwait(true) ?? said;
+            }
 
             if (said == null) return null;
 
@@ -328,6 +335,15 @@ namespace StreetCorsa.Services.Talk
             var kept = _turns.TakeLast(Math.Max(1, _desk.Rules.TurnsKept)).ToList();
             while (kept.Count > 1 && kept[0].Mine) kept.RemoveAt(0);
             return kept;
+        }
+
+        // The factory's engine parts of each car talked about, looked up once a talk
+        private readonly Dictionary<string, IReadOnlySet<string>?> _factories = new(StringComparer.OrdinalIgnoreCase);
+
+        private IReadOnlySet<string>? Factory(string carId)
+        {
+            if (!_factories.TryGetValue(carId, out var parts)) _factories[carId] = parts = _desk.FactoryParts(carId);
+            return parts;
         }
 
         private async Task LoadRacesAsync()
@@ -392,6 +408,12 @@ namespace StreetCorsa.Services.Talk
                 _ => []
             };
             sections.Add(new("thing", [.. thing], FactSection.Always));
+            if (Subject switch { CarSubject car => car.Car, BuyerSubject buyer => buyer.Car, _ => null } is { } subjectCar)
+                sections.Add(new("build", [.. TalkFacts.Build(subjectCar.Listing.Parts, _desk.Parts, Factory(subjectCar.Listing.CarDefinitionId), rules.BuildPartsPerKind)],
+                    FactSection.Build, HeadLines: 1));
+            if (Rival?.Cars.FirstOrDefault() is { } rivalCar)
+                sections.Add(new("your_car", [.. TalkFacts.Build(rivalCar.Parts, _desk.Parts, Factory(rivalCar.DefinitionId), rules.BuildPartsPerKind)],
+                    FactSection.OwnCar, HeadLines: 1));
 
             // A salesman met over one car (Car Viewing) is not given his lot, and so is not told it is empty either; the
             // lot is what he talks about until a car is picked, and the rest of it after

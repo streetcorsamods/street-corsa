@@ -148,6 +148,13 @@ namespace StreetCorsa.Services.Talk
             return SumsIn(answer, unitWords).Any(sum => sum < price && !allowed.Contains(sum));
         }
 
+        /// <summary>The answer names a sum, higher or lower, that nothing the person was told gives (a car's price made up)</summary>
+        public static bool NamesUnknownSum(string answer, IEnumerable<decimal> known, IReadOnlyList<string>? unitWords = null)
+        {
+            var allowed = known.ToHashSet();
+            return SumsIn(answer, unitWords).Any(sum => !allowed.Contains(sum));
+        }
+
         /// <summary>
         /// The least the seller takes: what was first asked, less the most their kind comes down (<see cref="TalkRules"/>)
         /// times their temperament's give, more for a broke rival, more again for something long on sale

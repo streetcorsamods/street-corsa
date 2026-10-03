@@ -89,6 +89,14 @@ The AI only speaks: the game decides every fact and every price.
   and a warning when a prompt filled the window. The talk's turns are fitted too (`AiTextService.Fit`): when the
   system prompt, the turns and the answer would not fit the window, the oldest turns are left out, from a player's turn
   on.
+- **What is on a car** (`TalkFacts.Build`): the car talked about (an ad's, a dealer's, the player's own when a buyer
+  calls) and a rival's own car are told part by part from their part trees: a line a kind (the order of
+  `part_groups.json`), the same part on every corner once with how many and the worst condition, and for the engine's
+  parts whether they came from the factory (`IUsedCarMarketService.FactoryParts`, looked up once a talk) or were put on
+  since. A kind of more than `ai.talk.buildPartsPerKind` (3) different parts (an engine's small accessories) is one
+  line, but for those not from the factory. A salesman's lot tells each car's engine, miles and condition too, up to
+  `lotCarsTold` (30). A salesman going over his lot who names a sum that is no car's on it is asked again once
+  (`chat.fact.lot_price_warning`), and the prompts ask for prices in figures, as the facts give them.
 - **Haggling** (`Haggle`): a number the player types reads as an offer when it has a currency sign or "k", or an offer
   word (`chat.offer_words`) is in the line, and it is within reason of the price. The rules (`ai.talk`) decide: take it,
   meet halfway, stand firm, or take offence; the floor comes from the price first asked (`PersonDeal.Asked`), times the

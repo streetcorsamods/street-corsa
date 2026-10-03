@@ -2,6 +2,7 @@ using StreetCorsa.Models.Catalog;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Models.Race;
 using StreetCorsa.Mods;
+using StreetCorsa.Parts;
 using StreetCorsa.Rules;
 using StreetCorsa.Screens.Shared;
 using StreetCorsa.Services.Ai;
@@ -627,6 +628,77 @@ public class TalkTests
         // And the rules' own budget, with no window known
         var (tight, _) = Desk(rules: new TalkRules { FactTokens = 1 });
         Assert.DoesNotContain(Heading("memories"), tight.ForCar(game, car, null, TalkPlace.Phone).Facts());
+    }
+
+    // ----- what is on a car -----
+
+    [Fact]
+    public void A_cars_build_is_told_part_by_part_the_engine_first_the_same_part_once_and_what_the_factory_put_on()
+    {
+        var catalog = TestCars.Catalog.Value;
+        var car = TestCars.WithRealEngine(catalog);
+        var engineParts = car.Parts.SelectMany(p => p.SelfAndDescendants()).Select(p => p.DefinitionId).ToList();
+        var swapped = engineParts.First(id => PartKinds.GroupOf(catalog.Get(id)!) == PartGroups.Camshafts);
+        var factory = engineParts.Where(id => id != swapped).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var tyre = catalog.Parts.Values.First(p => PartKinds.GroupOf(p) == PartGroups.Tyres);
+        for (var i = 0; i < 4; i++) car.Parts.Add(new PartInstance(tyre.Id) { Wear = 0.9 - i * 0.1 });
+
+        var lines = TalkFacts.Build(car.Parts, catalog, factory).ToList();
+
+        Assert.Equal(GameText.Say("chat.fact.build"), lines[0]);
+        Assert.StartsWith("- " + PartKinds.GroupName(PartGroups.Blocks) + ":", lines[1]);
+        // The same part on every corner is one line, with how many and the worst of them, after the engine's
+        var tyreLine = Assert.Single(lines, l => l.Contains(Services.Market.AdBlurbs.NameOf(tyre) + GameText.Say("chat.fact.build_count", ("count", 4)) + ","));
+        Assert.Contains(ConditionDisplay.Of(0.6).Sentence, tyreLine);
+        Assert.True(lines.FindIndex(l => l.StartsWith("- " + PartKinds.GroupName(PartGroups.Camshafts), StringComparison.Ordinal)) < lines.IndexOf(tyreLine));
+        // The cam not the factory's says so; the rest say they came from it
+        var camLine = Assert.Single(lines, l => l.Contains(Services.Market.AdBlurbs.NameOf(catalog.Get(swapped)!)));
+        Assert.EndsWith(GameText.Say("chat.fact.build_aftermarket"), camLine);
+        Assert.EndsWith(GameText.Say("chat.fact.build_stock"), lines[1]);
+        // The engine's many small accessories are one line, all from the factory
+        var accessories = Assert.Single(lines, l => l.StartsWith("- " + PartKinds.GroupName(PartGroups.Accessories) + ":", StringComparison.Ordinal));
+        Assert.Contains(GameText.Say("chat.fact.build_stock_all"), accessories);
+
+        // The factory not known: no word on where a part came from; no catalog: nothing at all
+        Assert.DoesNotContain(TalkFacts.Build(car.Parts, catalog, null), l => l.EndsWith(GameText.Say("chat.fact.build_stock"), StringComparison.Ordinal));
+        Assert.Empty(TalkFacts.Build(car.Parts, null, factory));
+    }
+
+    [Fact]
+    public void A_car_for_sale_and_a_rivals_own_car_are_told_part_by_part()
+    {
+        var catalog = TestCars.Catalog.Value;
+        var game = Game();
+        var car = Car();
+        car.Listing.Parts = TestCars.WithRealEngine(catalog).Parts;
+        var rival = new Opponent("Johnny Reyes", 24, Gender.Male, 95, 80) { Nickname = "Flash" };
+        rival.Cars.Add(TestCars.WithRealEngine(catalog));
+        game.Racers.AddRacer(rival);
+        var ai = new FakeAiText((_, _) => Task.FromResult<string?>("Sure."));
+        var desk = new TalkDesk(ai, carName: id => id, parts: () => catalog, prompts: BasePrompts, rules: () => Rules);
+
+        Assert.Contains(Heading("build"), desk.ForCar(game, car, null, TalkPlace.Phone).Facts());
+        var rivalFacts = desk.ForRival(game, rival, TalkPlace.Diner).Facts();
+        Assert.Contains(Heading("your_car"), rivalFacts);
+        Assert.Contains("- " + PartKinds.GroupName(PartGroups.Blocks) + ":", rivalFacts);
+    }
+
+    [Fact]
+    public async Task A_salesman_who_makes_up_a_price_on_his_lot_is_asked_again()
+    {
+        var game = Game();
+        var answers = new Queue<string>(["The Bel Air's yours for $950, pal!", "The Bel Air's a steal at $1,500, pal!"]);
+        var ai = new FakeAiText((_, _) => Task.FromResult<string?>(answers.Dequeue()));
+        var desk = new TalkDesk(ai, carName: id => id, prompts: BasePrompts, rules: () => Rules);
+        var talk = desk.ForLot(game, "dealer_1", [Car(1500m, "dealer_1")]);
+
+        var said = await talk.OpenAsync(Ct);
+
+        Assert.Equal("The Bel Air's a steal at $1,500, pal!", said);
+        Assert.Equal(2, ai.Chats.Count);
+        Assert.Contains(GameText.Say("chat.fact.lot_price_warning"), (string)ai.Chats[1].Values["facts"]!);
+        // Each car on the lot with its engine and miles
+        Assert.Contains("283 V8", (string)ai.Chats[0].Values["facts"]!);
     }
 
     [Fact]
