@@ -373,6 +373,9 @@ namespace StreetCorsa.Services.Ai
             ["title"] = StreetCorsa.Rules.GameFile.Installed.Title
         };
 
+        /// <summary>The game's own Ollama model, taken when the player names none and Ollama has it</summary>
+        private static string? GameModel => AiPrompts.Installed.Ollama?.Name;
+
         private IAiTextProvider Provider()
         {
             var settings = _settings();
@@ -384,7 +387,7 @@ namespace StreetCorsa.Services.Ai
             lock (_lock)
             {
                 if (_provider is { } made && made.Signature == signature) return made.Provider;
-                var provider = AiProviders.Create(_http, settings.TextProvider, settings.Endpoint, settings.Model, key, ollama);
+                var provider = AiProviders.Create(_http, settings.TextProvider, settings.Endpoint, settings.Model, key, ollama, GameModel);
                 _provider = (signature, provider);
                 _restUntil = DateTime.MinValue;
                 return provider;
@@ -394,7 +397,7 @@ namespace StreetCorsa.Services.Ai
         public async Task<AiTestResult> TestAsync(AiSettings settings, string? apiKey, CancellationToken cancellationToken = default)
         {
             // Sent as every other request is: a different context size would make Ollama load the model again
-            var provider = AiProviders.Create(_http, settings.TextProvider, settings.Endpoint, settings.Model, apiKey, Rules.Ollama);
+            var provider = AiProviders.Create(_http, settings.TextProvider, settings.Endpoint, settings.Model, apiKey, Rules.Ollama, GameModel);
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeout.CancelAfter(TimeSpan.FromSeconds(Math.Max(1, Rules.RequestTimeoutSeconds)));
             try

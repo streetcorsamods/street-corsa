@@ -74,6 +74,12 @@ namespace StreetCorsa.Services.Ai
         public static bool CanChat(string model) =>
             !NotChat.Any(word => model.Contains(word, StringComparison.OrdinalIgnoreCase));
 
+        /// <summary>Whether two model names are one: Ollama lists "streetcorsa:latest" for "streetcorsa"</summary>
+        public static bool SameModel(string listed, string named) =>
+            Tagged(listed).Equals(Tagged(named), StringComparison.OrdinalIgnoreCase);
+
+        private static string Tagged(string model) => model.Trim().Contains(':') ? model.Trim() : model.Trim() + ":latest";
+
         /// <summary><paramref name="endpoint"/> without the given path at its end ("…/v1" typed for an API that adds its own)</summary>
         public static string Without(string endpoint, params string[] paths)
         {
@@ -92,8 +98,12 @@ namespace StreetCorsa.Services.Ai
 
         /// <summary>The provider asked through <paramref name="http"/></summary>
         /// <param name="ollama">What else Ollama is sent (context, keep-alive); its own defaults when not given</param>
+        /// <param name="gameModel">
+        /// The game's own model (<c>ai/ollama.json</c>): with no <paramref name="model"/> named, Ollama takes it when it
+        /// has it, before the first it lists
+        /// </param>
         public static IAiTextProvider Create(HttpClient http, string? provider, string? endpoint, string? model, string? apiKey,
-            StreetCorsa.Rules.OllamaRules? ollama = null)
+            StreetCorsa.Rules.OllamaRules? ollama = null, string? gameModel = null)
         {
             var kind = Normalize(provider);
             var address = string.IsNullOrWhiteSpace(endpoint) ? DefaultEndpoint(kind) : endpoint.Trim();
@@ -102,7 +112,7 @@ namespace StreetCorsa.Services.Ai
             {
                 OpenAi => new OpenAiTextProvider(http, address, named, apiKey),
                 Anthropic => new AnthropicTextProvider(http, address, named, apiKey),
-                _ => new OllamaTextProvider(http, address, named, apiKey, ollama)
+                _ => new OllamaTextProvider(http, address, named, apiKey, ollama, gameModel)
             };
         }
     }
@@ -120,12 +130,18 @@ namespace StreetCorsa.Services.Ai
 
         public abstract Task<IReadOnlyList<string>> ModelsAsync(CancellationToken cancellationToken);
 
+        /// <summary>The model taken before any other when the player names none and the provider has it</summary>
+        protected virtual string? Preferred => null;
+
         public virtual async Task<string> ModelAsync(CancellationToken cancellationToken)
         {
             if (_model != null) return _model;
-            // The first that chats: a provider lists its embedding, speech and picture models alongside
+            // The preferred one, else the first that chats: a provider lists its embedding, speech and picture models
+            // alongside, and Ollama lists the newest first, so a model pulled for anything else would win
             var models = await ModelsAsync(cancellationToken).ConfigureAwait(false);
-            return _model = models.FirstOrDefault(AiProviders.CanChat) ?? throw new AiProviderException("The provider has no chat model to offer");
+            var preferred = Preferred is { Length: > 0 } name ? models.FirstOrDefault(m => AiProviders.SameModel(m, name)) : null;
+            return _model = preferred ?? models.FirstOrDefault(AiProviders.CanChat)
+                ?? throw new AiProviderException("The provider has no chat model to offer");
         }
 
         protected virtual void Authorize(HttpRequestMessage request)
@@ -179,10 +195,13 @@ namespace StreetCorsa.Services.Ai
     }
 
     /// <summary>Ollama's own API: POST /api/chat (not streamed), GET /api/tags; an address typed with /api or /v1 on it goes without</summary>
-    public sealed class OllamaTextProvider(HttpClient http, string endpoint, string? model, string? apiKey, StreetCorsa.Rules.OllamaRules? tuning = null)
+    public sealed class OllamaTextProvider(HttpClient http, string endpoint, string? model, string? apiKey, StreetCorsa.Rules.OllamaRules? tuning = null,
+        string? gameModel = null)
         : AiTextProviderBase(http, AiProviders.Without(endpoint, "/api", "/v1"), model, apiKey)
     {
         private readonly StreetCorsa.Rules.OllamaRules? _tuning = tuning;
+
+        protected override string? Preferred => gameModel;
 
         public override async Task<string> CompleteAsync(AiTextRequest request, CancellationToken cancellationToken)
         {

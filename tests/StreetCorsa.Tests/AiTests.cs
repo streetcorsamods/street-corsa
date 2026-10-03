@@ -114,6 +114,36 @@ public class AiTests
     }
 
     [Fact]
+    public async Task Ollama_without_a_model_asks_the_games_own_when_it_has_it()
+    {
+        var http = new FakeHttp((sent, _) => Task.FromResult(sent.Uri.AbsolutePath == "/api/tags"
+            ? FakeHttp.Json("""{ "models": [ { "name": "qwen3:14b" }, { "name": "StreetCorsa:latest" }, { "name": "llama3.1:8b" } ] }""")
+            : FakeHttp.Json("""{ "message": { "content": "Yo." } }""")));
+        var provider = AiProviders.Create(http.Client(), AiProviders.Ollama, null, null, null, gameModel: "streetcorsa");
+
+        Assert.Equal("StreetCorsa:latest", await provider.ModelAsync(CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Ollama_without_the_games_model_asks_the_first_it_has()
+    {
+        var http = new FakeHttp((_, _) => Task.FromResult(FakeHttp.Json("""{ "models": [ { "name": "qwen3:14b" }, { "name": "streetcorsa:v2" } ] }""")));
+        var provider = AiProviders.Create(http.Client(), AiProviders.Ollama, null, null, null, gameModel: "streetcorsa");
+
+        Assert.Equal("qwen3:14b", await provider.ModelAsync(CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task A_model_the_player_names_beats_the_games_own()
+    {
+        var http = new FakeHttp((_, _) => Task.FromResult(FakeHttp.Json("""{ "models": [ { "name": "streetcorsa:latest" } ] }""")));
+        var provider = AiProviders.Create(http.Client(), AiProviders.Ollama, null, "gemma3:12b", null, gameModel: "streetcorsa");
+
+        Assert.Equal("gemma3:12b", await provider.ModelAsync(CancellationToken.None));
+        Assert.Empty(http.Sent);
+    }
+
+    [Fact]
     public async Task Without_a_model_one_that_cannot_chat_is_passed_over()
     {
         var http = new FakeHttp((sent, _) => Task.FromResult(sent.Uri.AbsolutePath == "/v1/models"
