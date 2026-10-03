@@ -40,15 +40,7 @@ namespace StreetCorsa.Dialogs.RaceHub
         public bool CanEnter => HasEligibleCars;
 
         /// <summary>The format's name (a bracket race is one of its own); a format without one is a race</summary>
-        public string RaceTypeDisplay => FormatName(Format, IsBracket);
-
-        /// <summary>A format's name as the paper and the diner write it</summary>
-        public static string FormatName(string? format, bool bracket = false)
-        {
-            if (bracket) return GameText.Say("paper.race_type.bracket");
-            var key = Services.Race.RaceFormats.Current.Get(format)?.NameKey;
-            return key != null && GameText.Installed.Has(key) ? GameText.Say(key) : GameText.Say("paper.race_type.other");
-        }
+        public string RaceTypeDisplay => Services.Race.RaceFormats.Current.NameOf(Format, IsBracket);
 
         // The expiry and eligibility texts are coloured in the view from IsExpiringSoon and HasEligibleCars
         // (DataTriggers in RaceHubDialogView.xaml), so the colours stay in Styles/.

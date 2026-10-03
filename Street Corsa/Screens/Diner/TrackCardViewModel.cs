@@ -27,6 +27,9 @@ namespace StreetCorsa.Screens.Diner
         /// </summary>
         public string? ConfigurationId => Configuration?.FolderName;
 
+        /// <summary>Raced from A to B: no race of more than one lap here (<see cref="TrackInfo.IsPointToPoint"/>)</summary>
+        public bool IsPointToPoint => Track.IsPointToPoint(Configuration?.FolderName);
+
         /// <summary>
         /// Path to the track preview image
         /// </summary>

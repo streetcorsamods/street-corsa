@@ -58,6 +58,15 @@ def a_rival_without_a_time_is_beaten():
     check(f'after waiting for the rival ({seconds:.0f} s)', seconds > lap_ms(30) * 3 / 1000 + 80, log)
 
 
+def back_in_the_pits_with_the_laps_run_ends_the_race_on_them():
+    # The player has their laps (warm-up and two at 30 m/s: about 200 s) and goes to the pits while the rival crawls:
+    # the race is over there, on the laps run so far, not abandoned
+    result, log, _, _ = run('pits', 2, attack_ini(), lambda t: 30, lambda t: 4, None, max_seconds=600, menu_at=240)
+    player, rival = participant(result, 0), participant(result, 1)
+    check(f"the race ran its course ({result['session']['end_reason']})", result['session']['end_reason'] == 'FINISHED', log)
+    check('the player won on their laps', player['performance']['final_position'] == 1 and rival.get('score') is None, log)
+
+
 def one_lap_is_a_race_too():
     result, log, _, _ = run('one lap', 2, attack_ini(laps=1), lambda t: 30, lambda t: 29, None, max_seconds=400)
     check('one timed lap each', len(participant(result, 0)['lap_times_ms']) == 1 and len(participant(result, 1)['lap_times_ms']) == 1, log)
@@ -89,7 +98,7 @@ if __name__ == '__main__':
     if '--golden' in sys.argv:
         golden_file(write=True)
     for test in (golden_file, the_quicker_lap_wins, the_slower_lap_loses_whoever_finished_first, a_rival_without_a_time_is_beaten,
-                 one_lap_is_a_race_too):
+                 one_lap_is_a_race_too, back_in_the_pits_with_the_laps_run_ends_the_race_on_them):
         test()
         print(f'ok  {test.__name__}')
     sys.exit(0)

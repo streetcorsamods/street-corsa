@@ -30,7 +30,7 @@ namespace StreetCorsa.Models.Race
 
         /// <summary>
         /// A whole CSP mode of the mod's own instead of a module: its folder in the mod's <c>formats</c> folder, put into
-        /// AC as <c>&lt;mod&gt;_&lt;mode&gt;</c>. It reads race.ini as sc_race does and writes the same result.
+        /// AC as <c>&lt;mod&gt;-&lt;mode&gt;</c>. It reads race.ini as sc_race does and writes the same result.
         /// </summary>
         public string? Mode { get; set; }
 
@@ -61,7 +61,7 @@ namespace StreetCorsa.Models.Race
         /// <summary>How a score shows: <c>time</c> (milliseconds, shown as a lap time) or <c>points</c></summary>
         public string ScoreShows { get; set; } = "points";
 
-        /// <summary>Its name's text key; none: <c>paper.race_type.&lt;id&gt;</c></summary>
+        /// <summary>Its name's text key; none: <c>paper.race_type.&lt;id&gt;</c> (<see cref="Services.Race.RaceFormats.NameOf(RaceFormat?, bool)"/>)</summary>
         public string? Name { get; set; }
 
         /// <summary>The ids it was known by before (the base game's race types: <c>DragRace</c>, <c>Circuit</c>, <c>Sprint</c>)</summary>
@@ -84,8 +84,11 @@ namespace StreetCorsa.Models.Race
         /// <summary>The laps AC's session is given</summary>
         public int AcLaps(int laps) => Math.Max(laps, SessionLaps ?? laps);
 
-        /// <summary>Its name's text key</summary>
-        public string NameKey => string.IsNullOrWhiteSpace(Name) ? "paper.race_type." + Mods.ModIds.Local(Id) : Name;
+        /// <summary>
+        /// Run over more than one lap of AC's (a time attack's warm-up lap and its laps): only on a layout that comes back
+        /// round, never on one raced from A to B (<see cref="AC.TrackInfo.IsPointToPoint"/>). A drag race never laps.
+        /// </summary>
+        public bool NeedsLoop(int? laps = null) => !IsDrag && AcLaps(laps ?? Laps) > 1;
     }
 
     /// <summary>What a format counts as</summary>

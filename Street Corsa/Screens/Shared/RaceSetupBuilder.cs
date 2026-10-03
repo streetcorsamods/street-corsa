@@ -218,6 +218,7 @@ namespace StreetCorsa.Screens.Shared
                 TrackId = entry.TrackId,
                 TrackConfig = entry.TrackConfig,
                 Format = Services.Race.RaceFormats.Current.IdOf(entry.Format),
+                Family = Services.Race.RaceFormats.Current.Of(entry.Format).Family,
                 Laps = entry.Laps,
                 EventId = entry.EventId,
                 EventInstanceId = entry.EventInstanceId,
@@ -234,23 +235,26 @@ namespace StreetCorsa.Screens.Shared
         /// Where an event is raced: the track it names when that is installed, else one of the installed tracks
         /// that suits its format's family (a dragstrip for a drag race, anything else for a road race). A track with
         /// layouts is raced on one of them. The drag strip AC ships (ks_drag, drag1000) is the drag default when
-        /// it is there. <paramref name="seed"/> makes the pick the same every time for one invitation.
-        /// Null when nothing installed suits the event.
+        /// it is there. A race of more than one lap (the format's, or the event's own <paramref name="laps"/>) is only
+        /// raced on a layout that comes back round, the named track's too. <paramref name="seed"/> makes the pick the
+        /// same every time for one invitation. Null when nothing installed suits the event.
         /// </summary>
         public static (string TrackId, string? TrackConfig)? PickTrack(
-            IEnumerable<Models.AC.TrackInfo> tracks, string format, string? wantedTrackId, int seed)
+            IEnumerable<Models.AC.TrackInfo> tracks, string format, string? wantedTrackId, int seed, int? laps = null)
         {
             var installed = tracks.ToList();
+            var needsLoop = Services.Race.RaceFormats.Current.Of(format).NeedsLoop(laps);
 
             IEnumerable<(string TrackId, string? TrackConfig)> Layouts(Models.AC.TrackInfo track) =>
-                track.Configurations.Count == 0
+                (track.Configurations.Count == 0
                     ? new[] { (track.TrackId, (string?)null) }
-                    : track.Configurations.Select(c => (track.TrackId, (string?)c.FolderName));
+                    : track.Configurations.Select(c => (track.TrackId, (string?)c.FolderName)))
+                .Where(l => !needsLoop || !track.IsPointToPoint(l.Item2));
 
             if (!string.IsNullOrWhiteSpace(wantedTrackId))
             {
                 var wanted = installed.FirstOrDefault(t => string.Equals(t.TrackId, wantedTrackId, StringComparison.OrdinalIgnoreCase));
-                if (wanted != null) return Layouts(wanted).First();
+                if (wanted != null && Layouts(wanted).Any()) return Layouts(wanted).First();
             }
 
             var isDrag = Services.Race.RaceFormats.Current.IsDrag(format);

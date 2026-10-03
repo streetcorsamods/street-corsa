@@ -536,7 +536,8 @@ The paper's invitations:
 
 - `format`: a race format's id ([formats](#formats): `drag`, `circuit`, `sprint`, `time_attack`, or the mod's own
   first). `raceType` (`DragRace`, `Circuit`, `Sprint`) is read as before formats; neither: a drag race. A format no
-  mod has leaves the event out. `laps`: the race's own laps (1 to 50), left out for the format's.
+  mod has leaves the event out. `laps`: the race's own laps (1 to 50), left out for the format's; a drag race is
+  always one run. An event of more than one lap is only raced on a layout that comes back round (see `laps` below).
 - `schedule`: `OneTime`, `Daily`, `Weekly`, `Permanent`.
 - Car filters (`type`): `brand`, `origin` (a country, or American, European, Japanese...), `years` (`startYear`,
   `endYear`), `power` (`minHP`, `maxHP`), `value` (`minValue`, `maxValue`: what the car is worth), `all` and `any`
@@ -564,20 +565,25 @@ The kinds of race (`formats/formats.json`, `{ "formats": [ ... ] }`), merged by 
 - `family`: `drag` (raced on the strips; counts as a drag race for the record, the wagers, `DragWins` and the street's
   drag share) or `road` (every other track). The family is what the career knows of a format; the rest is the race's.
 - `module`: the Lua module the race mode runs it with. One of the mode's own (`drag`, `road`, `time_attack`), or the
-  mod's `formats/<module>.lua`, which the game puts into the mode's folder in AC as `format_<mod>_<module>.lua`.
+  mod's `formats/<module>.lua`, which the game puts into the mode's folder in AC as `format_<mod>-<module>.lua` (the
+  `-` is in no module or mode name, so no two mods' modules, nor the mode's own, ever share a file).
 - `mode`: a whole CSP mode instead, the mod's `formats/<mode>/` folder with its `mode.lua` (and `manifest.ini`), put
-  into AC as `extension/lua/new-modes/<mod>_<mode>` and selected for the race. It reads race.ini and writes its result
+  into AC as `extension/lua/new-modes/<mod>-<mode>` and selected for the race. It reads race.ini and writes its result
   as sc_race does (below), with `metadata.source` its folder name in AC.
-- `laps`: what the race is over (1 to 50); an event may set its own. `sessionLaps`: the laps AC's session is given,
-  when the format runs past its laps (a time attack's warm-up lap and its wait for the rival: 99), so AC never ends
-  the race before the mode does.
+- `laps`: what the race is over (1 to 50; a drag race 1); an event may set its own. `sessionLaps`: the laps AC's
+  session is given, when the format runs past its laps (a time attack's warm-up lap and its wait for the rival: 99),
+  so AC never ends the race before the mode does. A race of more than one lap of AC's is never offered or picked on a
+  layout raced from A to B: one whose `ui_track.json` (the layout's, else the track's) says `point to point`, `A to
+  B`, `p2p`, `hillclimb` or `touge` in `run` or `tags`.
 - `session`: the session's name in AC. `police`: the police may come. `bracket`: it can be a bracket race (drag only).
 - `win`: `position` (the order at the line) or `score` (each racer's `score` in the result; `better`: `lower` or
   `higher` wins; `scoreShows`: `time` for milliseconds shown as a lap time, else `points`). A racer without a score
-  loses; the same score both ways goes by the order at the line. The career hands out a card with both scores, and
-  says `result.score.won.<id>`/`result.score.lost.<id>` when the mod has them (else `result.score.won`/`.lost`).
+  loses, and a rival that crashes or breaks down keeps the score it set before; the same score both ways goes by the
+  places the mode gives. The career hands out a card with both scores, and says `result.score.won.<id>`/
+  `result.score.lost.<id>` when the mod has them (else `result.score.won`/`.lost`).
 - `name`: its name's text key; left out, `paper.race_type.<id>`. `diner.format.about.<id>`, when there, is what the
-  diner says of it.
+  diner says of it. A format's own keys go by its full id (`paper.race_type.jdm:drift`), else by the id as the mod
+  wrote it (`paper.race_type.drift`) when no other format has that name, so two mods' `drift` never share words.
 - `diner`: offered at the diner on its family's tracks (the first of a family is the one picked). `street`: raced on
   the street; the first street format of each family is the one the cruise's rivals ask for.
 - `aliases`: ids it was known by (the base game's are its old race types, `DragRace`, `Circuit`, `Sprint`, which saves
@@ -588,6 +594,7 @@ A race saved with a format no mod has any more is run and counted as a road race
 **A format module.** The race mode (`apps/new-modes/sc_race/mode.lua`) runs what every race has: the start, false
 starts, crashes, breakdowns, the engine's heat and oil, the police, the result file and the result card. A module is a
 Lua file that returns a table of hooks, every one optional; `format_road.lua` lists them all and is the one to copy.
+A hook that fails is told in the log once and the race goes on as if the module had none.
 The hooks get the core (`SC`): the cars' data, the race clock, the laps, the race's words (`SC.say(key, english,
 values)`: `race.<key>` in the mods' `text/race.json`, as `<KEY>` in capitals), `endSession`, and more. The mode's
 harness (`tools/sc_race_harness`) runs the mode and its modules on LuaJIT without AC; `test_time_attack.py` is the

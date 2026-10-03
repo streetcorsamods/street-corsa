@@ -314,8 +314,9 @@ namespace StreetCorsa.Services.Configuration
 
             // A test-and-tune is the player alone, pass after pass, in a race session that never ends at its line: the
             // race mode runs the passes and ends it. A format that runs past its laps (time attack's out lap and its
-            // wait for the rival) gives AC's session more, so AC never ends it before the mode does.
-            var laps = tune != null ? 1 : Math.Clamp(intent.Laps ?? format.Laps, 1, Services.Race.RaceFormats.MaxLaps);
+            // wait for the rival) gives AC's session more, so AC never ends it before the mode does. A drag race is one
+            // run down the strip, whatever an event says: the finish is never crossed twice.
+            var laps = tune != null || format.IsDrag ? 1 : Math.Clamp(intent.Laps ?? format.Laps, 1, Services.Race.RaceFormats.MaxLaps);
             var acLaps = tune != null ? TuneLaps : format.AcLaps(laps);
 
             // [RACE] - Player car info and track
@@ -332,7 +333,8 @@ namespace StreetCorsa.Services.Configuration
             sb.AppendLine($"RACE_LAPS={acLaps}");
             sb.AppendLine($"SKIN={IniId(intent.PlayerSkin, "skin")}");
             sb.AppendLine($"TRACK={IniId(intent.TrackId, "track")}");
-            sb.AppendLine($"__CM_CUSTOM_MODE={Services.Race.RaceFormats.ModeIdOf(format)}");  // the CSP mode that runs the race (see ScRaceMode)
+            // The CSP mode that runs the race (see ScRaceMode); a test-and-tune always runs in sc_race, which the launcher installs
+            sb.AppendLine($"__CM_CUSTOM_MODE={(tune != null ? RaceModeId : Services.Race.RaceFormats.ModeIdOf(format))}");
             sb.AppendLine();
 
             AppendTailSections(sb);
@@ -401,7 +403,7 @@ namespace StreetCorsa.Services.Configuration
             // The format: its id (written back into the result), the module sc_race runs it with, the laps it is
             // over, and how it is won
             sb.AppendLine($"FORMAT={IniId(format.Id, "race format")}");
-            sb.AppendLine($"MODULE={Services.Race.RaceFormats.ModuleOf(format)}");
+            sb.AppendLine($"MODULE={(tune != null ? Services.Race.RaceFormats.TuneModule : Services.Race.RaceFormats.ModuleOf(format))}");
             sb.AppendLine($"LAPS={laps}");
             if (format.ByScore) sb.AppendLine(format.HigherWins ? "SCORE=HIGHER" : "SCORE=LOWER");
 

@@ -69,6 +69,16 @@ namespace StreetCorsa.Models.Race
         public int? Laps { get; set; }
 
         /// <summary>
+        /// The format's family when the race was set up (<see cref="RaceFormatFamilies"/>): what the career counts the
+        /// race as, even when the format's mod is gone by the time the result comes in. Null on contexts from before.
+        /// </summary>
+        public string? Family { get; set; }
+
+        /// <summary>A drag race, by <see cref="Family"/>; a context from before goes by its format</summary>
+        [LiteDB.BsonIgnore]
+        public bool IsDrag => Family != null ? Family == RaceFormatFamilies.Drag : Services.Race.RaceFormats.Current.IsDrag(Format);
+
+        /// <summary>
         /// When this context was created
         /// </summary>
         public DateTime CreatedAt { get; set; } = DateTime.Now;

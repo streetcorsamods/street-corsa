@@ -10,6 +10,7 @@ using StreetCorsa.Services.Configuration.Models;
 using StreetCorsa.Services.Race;
 using StreetCorsa.Services.Race.Validation;
 using StreetCorsa.Services.Storage;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Tests;
 
@@ -39,7 +40,7 @@ public sealed class RaceFormatTests : IDisposable
         Assert.True(Base.Get("circuit")!.Police);
         Assert.False(Base.Get("time_attack")!.Police);
         Assert.Equal("format_road", RaceFormats.ModuleOf(Base.Get("sprint")!));
-        Assert.Equal(RaceFormats.ModuleOf(Base.Get("time_attack")!), "format_time_attack");
+        Assert.Equal("format_time_attack", RaceFormats.ModuleOf(Base.Get("time_attack")!));
     }
 
     [Theory]
@@ -112,11 +113,11 @@ public sealed class RaceFormatTests : IDisposable
         var drift = formats.Get("jdm:drift")!;
         Assert.True(drift.ByScore);
         Assert.True(drift.HigherWins);
-        Assert.Equal("format_jdm_drift", RaceFormats.ModuleOf(drift));
+        Assert.Equal("format_jdm-drift", RaceFormats.ModuleOf(drift));
         // A mod's format may run on one of the mode's own modules
         Assert.Equal("format_road", RaceFormats.ModuleOf(formats.Get("jdm:touge")!));
         var module = Assert.Single(formats.ModuleFiles);
-        Assert.Equal("format_jdm_drift.lua", module.Name);
+        Assert.Equal("format_jdm-drift.lua", module.Name);
         Assert.Equal("jdm:drift", formats.IdOf("JDM:Drift"));
     }
 
@@ -153,15 +154,15 @@ public sealed class RaceFormatTests : IDisposable
         var formats = RaceFormats.Load(mods, ModeFolder());
         var gymkhana = formats.Get("jdm:gymkhana")!;
 
-        Assert.Equal("jdm_gymkhana", RaceFormats.ModeIdOf(gymkhana));
-        Assert.Contains("jdm_gymkhana", formats.ModeIds);
+        Assert.Equal("jdm-gymkhana", RaceFormats.ModeIdOf(gymkhana));
+        Assert.Contains("jdm-gymkhana", formats.ModeIds);
         Assert.Contains(IniModificationService.RaceModeId, formats.ModeIds);
 
         // Installed whole beside sc_race, sub-folders too
         var ac = _temp.Combine("ac");
         Directory.CreateDirectory(Path.Combine(ac, "extension"));
         Assert.Null(new ScRaceMode(ModeFolder(), () => formats).Install(ac, gymkhana));
-        var installed = Path.Combine(ac, "extension", "lua", "new-modes", "jdm_gymkhana");
+        var installed = Path.Combine(ac, "extension", "lua", "new-modes", "jdm-gymkhana");
         Assert.True(File.Exists(Path.Combine(installed, "mode.lua")));
         Assert.True(File.Exists(Path.Combine(installed, "lib", "util.lua")));
     }
@@ -186,7 +187,7 @@ public sealed class RaceFormatTests : IDisposable
 
         Assert.Null(new ScRaceMode(ModeFolder(), () => formats).Install(ac));
 
-        Assert.Equal("return { drift = true }", File.ReadAllText(Path.Combine(ScRaceMode.InstalledFolder(ac), "format_jdm_drift.lua")));
+        Assert.Equal("return { drift = true }", File.ReadAllText(Path.Combine(ScRaceMode.InstalledFolder(ac), "format_jdm-drift.lua")));
         Assert.True(File.Exists(Path.Combine(ScRaceMode.InstalledFolder(ac), "format_time_attack.lua")));
         Assert.False(File.Exists(stale));
     }
@@ -206,7 +207,7 @@ public sealed class RaceFormatTests : IDisposable
             ] }
             """);
 
-        var content = CareerContent.Load(ModSet.Load(_temp.Path));
+        var content = CareerContent.Load(ModSet.Load(_temp.Path), RaceFormats.Installed);
 
         Assert.Equal("drag", content.Events["old"].Format);
         Assert.Equal("time_attack", content.Events["attack"].Format);
@@ -268,9 +269,113 @@ public sealed class RaceFormatTests : IDisposable
         Assert.Contains("__CM_CUSTOM_MODE=sc_race", ini);
     }
 
+    [Fact]
+    public void A_drag_race_is_one_run_whatever_the_event_says()
+    {
+        var ini = RaceIni(Intent("drag", laps: 2));
+
+        Assert.Contains("LAPS=1", ini);
+        Assert.Contains("RACE_LAPS=1", ini);
+    }
+
+    [Fact]
+    public void A_test_and_tune_runs_in_sc_race_s_own_drag_module_whatever_a_mod_made_of_drag()
+    {
+        var before = RaceFormats.Current;
+        try
+        {
+            RaceFormats.Current = RaceFormats.From([new RaceFormat { Id = "drag", ModId = "jdm", Family = RaceFormatFamilies.Drag, Mode = "strip" }]);
+            var intent = Intent("drag");
+            intent.TunePasses = 3;
+
+            var ini = RaceIni(intent);
+
+            Assert.Contains("__CM_CUSTOM_MODE=sc_race", ini);
+            Assert.Contains("MODULE=format_drag", ini);
+        }
+        finally
+        {
+            RaceFormats.Current = before;
+        }
+    }
+
+    // ---- where a race is run ----
+
+    private static Models.AC.TrackInfo Layouts(string id, string run, params (string Folder, string Run, string[] Tags)[] layouts) => new()
+    {
+        TrackId = id,
+        Run = run,
+        Configurations = layouts.Select(l => new Models.AC.TrackConfiguration { FolderName = l.Folder, Run = l.Run, Tags = [.. l.Tags] }).ToList()
+    };
+
+    [Fact]
+    public void A_layout_raced_from_A_to_B_says_so_in_its_run_or_its_tags_else_its_tracks()
+    {
+        var track = Layouts("mountain", "clockwise", ("up", "Point-to-point", []), ("loop", "", []), ("down", "", ["Touge"]));
+
+        Assert.True(track.IsPointToPoint("up"));
+        Assert.False(track.IsPointToPoint("loop"));
+        Assert.True(track.IsPointToPoint("down"));
+        Assert.True(Layouts("hill", "A to B").IsPointToPoint(null));
+        Assert.False(Layouts("ring", "anticlockwise").IsPointToPoint(null));
+    }
+
+    [Fact]
+    public void A_race_of_more_than_one_lap_is_never_picked_on_a_layout_raced_from_A_to_B()
+    {
+        Assert.True(Base.Get("time_attack")!.NeedsLoop());
+        Assert.False(Base.Get("circuit")!.NeedsLoop());
+        Assert.True(Base.Get("circuit")!.NeedsLoop(3));
+        Assert.False(Base.Get("drag")!.NeedsLoop(3));
+
+        Models.AC.TrackInfo[] tracks = [Layouts("mountain", "clockwise", ("up", "point to point", []), ("loop", "clockwise", []))];
+
+        // The named track's layout that comes back round, for a time attack; any of them for a sprint
+        Assert.Equal<(string, string?)?>(("mountain", "loop"), Screens.Shared.RaceSetupBuilder.PickTrack(tracks, "time_attack", "mountain", 1));
+        Assert.Equal<(string, string?)?>(("mountain", "up"), Screens.Shared.RaceSetupBuilder.PickTrack(tracks, "sprint", "mountain", 1));
+        // An event's own laps count too; nothing that loops is nothing to race on
+        Assert.Null(Screens.Shared.RaceSetupBuilder.PickTrack([Layouts("hill", "A to B")], "circuit", null, 1, laps: 2));
+        Assert.NotNull(Screens.Shared.RaceSetupBuilder.PickTrack([Layouts("hill", "A to B")], "circuit", null, 1));
+    }
+
+    // ---- words ----
+
+    [Fact]
+    public void A_mods_format_never_takes_the_base_games_words_nor_shares_another_mods()
+    {
+        var mine = new RaceFormat { Id = "x:time_attack", ModId = "x" };
+        var a = new RaceFormat { Id = "a:drift", ModId = "a" };
+        var b = new RaceFormat { Id = "b:drift", ModId = "b" };
+        var formats = RaceFormats.From([Base.Get("time_attack")!, mine, a, b]);
+
+        Assert.Equal("Time Attack", formats.NameOf("time_attack"));
+        Assert.Null(formats.OwnKey("paper.race_type", mine));
+        Assert.Equal("Race", formats.NameOf(mine));
+        Assert.Equal(GameText.Say("result.score.won"), formats.SayFor(mine, "result.score.won"));
+        Assert.Null(formats.OwnKey("paper.race_type", a));
+        Assert.Equal("Bracket Race", formats.NameOf("drag", bracket: true));
+    }
+
+    [Fact]
+    public void A_road_format_with_drag_in_its_id_is_told_to_the_AI_as_a_road_race()
+    {
+        var before = RaceFormats.Current;
+        try
+        {
+            RaceFormats.Current = RaceFormats.From([new RaceFormat { Id = "jdm:drag_circuit", ModId = "jdm", Family = RaceFormatFamilies.Road }]);
+
+            Assert.Equal(GameText.Say("chat.fact.kind_road"), Services.Talk.TalkFacts.KindOf("jdm:drag_circuit"));
+            Assert.Equal(GameText.Say("chat.fact.kind_drag"), Services.Talk.TalkFacts.KindOf("gone:drag"));
+        }
+        finally
+        {
+            RaceFormats.Current = before;
+        }
+    }
+
     // ---- the result ----
 
-    private static RaceResultJson Attack(double? playerScore, double? rivalScore, int playerPosition)
+    private static RaceResultJson Attack(double? playerScore, double? rivalScore, int playerPosition, string? rivalOut = null)
     {
         var json = RaceResultValidatorTests.Fixture("1.1", RaceFakes.PlayerName, RaceFakes.OpponentName);
         json["session"]!["format"] = "time_attack";
@@ -279,6 +384,8 @@ public sealed class RaceFormatTests : IDisposable
         json["participants"]![0]!["lap_times_ms"] = new JArray(70000.0, playerScore ?? 71000.0);
         json["participants"]![0]!["performance"]!["final_position"] = playerPosition;
         json["participants"]![1]!["performance"]!["final_position"] = 3 - playerPosition;
+        if (rivalOut == "crashed") json["participants"]![1]!["crash"]!["crashed"] = true;
+        if (rivalOut == "broke_down") json["participants"]![1]!["broke_down"] = true;
         return JsonConvert.DeserializeObject<RaceResultJson>(json.ToString())!;
     }
 
@@ -303,6 +410,21 @@ public sealed class RaceFormatTests : IDisposable
         Assert.Equal("Time Attack", messages[0].Title);
         Assert.Contains(playerWon ? "The best lap is yours" : "set the best lap", messages[0].Text);
         if (player == 66650.0) Assert.Contains("1:06.650", messages[0].Text);
+    }
+
+    [Theory]
+    [InlineData("crashed", 66650.0, 60000.0, 2, false)]   // the rival set the better lap before it went out: it wins
+    [InlineData("broke_down", 66650.0, 60000.0, 2, false)]
+    [InlineData("crashed", 60000.0, 66650.0, 1, true)]
+    [InlineData(null, 60000.0, 60000.0, 2, false)]          // the same lap both ways: the places the mode gave
+    public void A_time_attack_rival_out_of_the_race_keeps_its_best_lap(string? rivalOut, double player, double rival, int position, bool playerWon)
+    {
+        var world = RaceFakes.World(format: "time_attack");
+        var repository = new RaceResultProcessorTests.FakeRepository();
+
+        Processor(repository).ProcessRaceResult(Attack(player, rival, position, rivalOut), world.Context, world.State);
+
+        Assert.Equal(playerWon, repository.Recorded.Single().PlayerWon);
     }
 
     [Fact]
@@ -343,6 +465,14 @@ public sealed class RaceFormatTests : IDisposable
         var path = _temp.File("x.json", json.ToString());
 
         Assert.False((await new RaceResultValidator().ValidateFileAsync(path)).IsValid);
+    }
+
+    [Fact]
+    public void A_race_counts_by_the_family_it_was_set_up_with_even_when_its_format_is_gone()
+    {
+        Assert.True(new RaceContext { Format = "gone:strip", Family = RaceFormatFamilies.Drag }.IsDrag);
+        Assert.False(new RaceContext { Format = "gone:strip" }.IsDrag);
+        Assert.True(new RaceContext { Format = "DragRace" }.IsDrag);
     }
 
     // ---- saves from before formats ----

@@ -28,6 +28,9 @@
                                  format won on score; see docs/modding.md, formats)
     drawUI(size)                 draw on the screen while the race runs (ui.*)
 
+  And one field: scored = true for a format won on score, not by finishing (no "finish the race and it is yours" when
+  the rival breaks down). A hook that fails is told in the log once and the race goes on as if the format had none.
+
   SC, the core: carData (by car index; driverName, carName, lapsCompleted, bestLapTimeMs, crashed, brokeDown,
   disqualified, falseStart...), count() the cars, isPolice(index), clock() seconds since the green (nil before),
   duration() seconds of the session, laps the race's laps, raceType() DRAG, ROAD or TUNE, format the format's id,

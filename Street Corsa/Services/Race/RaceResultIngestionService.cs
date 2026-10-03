@@ -699,7 +699,7 @@ namespace StreetCorsa.Services.Race
                 return;
 
             var formats = RaceFormats.Current;
-            var expected = context.IsTestAndTune ? RaceTypes.TestAndTune : formats.IsDrag(context.Format) ? RaceTypes.Drag : RaceTypes.Road;
+            var expected = context.IsTestAndTune ? RaceTypes.TestAndTune : context.IsDrag ? RaceTypes.Drag : RaceTypes.Road;
             if (!string.Equals(fileType, expected, StringComparison.OrdinalIgnoreCase))
             {
                 _logger.Warning("File {FileName} says the race was {FileRaceType}, but race {ContextId} is a {Format} ({Expected}) - applied as the race was set up",

@@ -382,6 +382,23 @@ local raceFormat = (function()
 end)()
 fmt = raceFormat.module
 
+-- A format hook, guarded: true and what it returned, or false when the format has none or it failed (told in the log
+-- once per hook). A mod's module never stops the race with an error.
+function raceFormat.call(name, ...)
+  if not fmt[name] then return false end
+  return raceFormat.checked(name, pcall(fmt[name], ...))
+end
+
+function raceFormat.checked(name, ok, ...)
+  if ok then return true, ... end
+  raceFormat.faults = raceFormat.faults or {}
+  if not raceFormat.faults[name] then
+    raceFormat.faults[name] = true
+    ac.log("[Street Corsa] The race format's " .. name .. ' failed: ' .. tostring((...)))
+  end
+  return false
+end
+
 -- Heat, oil, fuel and dirt (docs/roadmap.md, step 14). AC's water temperature is an estimate that changes nothing, and
 -- stock cars have no oil to speak of, so the mode runs its own engine heat and oil supply and makes them count: the
 -- water gauge shows it, a hot engine goes flat at the top (AC's restrictor, which takes power off at high rpm: on the
@@ -687,7 +704,7 @@ local function initializeSession()
   carCount = sim.carsCount
   for i = 0, carCount - 1 do
     carData[i] = createCarData(i)
-    if fmt.newCar then fmt.newCar(carData[i]) end
+    raceFormat.call('newCar', carData[i])
     local ok, err = pcall(applyStartState, i, carData[i])
     if not ok then ac.log('[Street Corsa] Could not put car ' .. i .. ' into its shape: ' .. tostring(err)) end
   end
@@ -778,7 +795,10 @@ end
 -- Past the line, where nothing counts any more for the car (crashes, breakdowns, the heat, the police): as the format
 -- says, else once the car has done the race's laps
 local function pastTheLine(data)
-  if fmt.pastTheLine then return fmt.pastTheLine(data) end
+  if fmt.pastTheLine then
+    local ok, past = raceFormat.call('pastTheLine', data)
+    if ok then return past end
+  end
   return data.lapsCompleted >= raceFormat.laps
 end
 
@@ -975,8 +995,11 @@ local function updateBreakdowns()
           return
         end
         holdAI(carIndex)
-        pcall(ac.setMessage, say('RIVAL_BROKE_DOWN_TITLE', 'Broke down'),
-          say('RIVAL_BROKE_DOWN', "{driver}'s car gave out. Finish the race and it is yours!", { driver = data.driverName }))
+        -- A race won on score is not won by finishing: the rival's score so far still counts
+        if not fmt.scored then
+          pcall(ac.setMessage, say('RIVAL_BROKE_DOWN_TITLE', 'Broke down'),
+            say('RIVAL_BROKE_DOWN', "{driver}'s car gave out. Finish the race and it is yours!", { driver = data.driverName }))
+        end
         if rivalHunted() then decideChase('rival', 'BUSTED') end
       end
     end
@@ -1736,7 +1759,7 @@ local function checkTraps()
     if cop.state == 'PARKED' and cop.spotT then
       for racer = 0, math.min(1, carCount - 1) do
         local free = ((racer == 0 and chase.player == nil) or (racer == 1 and rivalRunning())) and not hasCop(racer)
-          and carData[racer] and carData[racer].lapsCompleted < 1
+          and carData[racer] and not pastTheLine(carData[racer])
         local car = free and ac.getCar(racer)
         if car then
           local t = ac.worldCoordinateToTrackProgress(car.position)
@@ -1944,7 +1967,7 @@ function script.update(dt)
   -- Back on the pits menu (the player pressed Escape): nothing to track there. The format may end its race there (a
   -- test-and-tune is leaving the strip, with the passes run so far).
   if sim.isInMainMenu then
-    if fmt.onMenu and sessionActive and sim.isSessionStarted then fmt.onMenu() end
+    if sessionActive and sim.isSessionStarted then raceFormat.call('onMenu') end
     return
   end
 
@@ -1953,7 +1976,12 @@ function script.update(dt)
     return
   end
 
-  if not fmt.checksFalseStart or fmt.checksFalseStart() then checkFalseStart() end
+  local checksStart = true
+  if fmt.checksFalseStart then
+    local ok, checks = raceFormat.call('checksFalseStart')
+    checksStart = not ok or checks
+  end
+  if checksStart then checkFalseStart() end
   if sessionEnded then return end
 
   updateCrashes(dt)
@@ -2021,9 +2049,18 @@ ac.onCarJumped(-1, function(carIndex)
   end
 
   -- The format's own jumps (a test-and-tune puts the car back on the line after each pass)
-  if fmt.onJumped and fmt.onJumped(carIndex, data) then return end
+  if fmt.onJumped then
+    local ok, tookCare = raceFormat.call('onJumped', carIndex, data)
+    if ok and tookCare then return end
+  end
 
   if not sessionActive or not data then return end
+
+  -- The player's race is run (a time attack waiting on the rival): back in the pits is not giving up
+  if pastTheLine(data) then
+    ac.log('[Street Corsa] Put back past the line: the race is run, not abandoned')
+    return
+  end
 
   -- Before it got anywhere, the car jumped the start; after, it is out of the race
   if data.distanceKm * 1000 < FALSE_START_TELEPORT_METRES then

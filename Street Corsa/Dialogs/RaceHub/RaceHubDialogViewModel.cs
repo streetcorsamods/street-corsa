@@ -427,7 +427,7 @@ namespace StreetCorsa.Dialogs.RaceHub
             var isBracket = definition.IsBracketRace;
             var track = isBracket
                 ? RaceSetupBuilder.PickStrip(_contentService.GetTracks(), quarterOnly: true, definition.TrackId)
-                : RaceSetupBuilder.PickTrack(_contentService.GetTracks(), definition.Format, definition.TrackId, result.EventInstanceId.GetHashCode());
+                : RaceSetupBuilder.PickTrack(_contentService.GetTracks(), definition.Format, definition.TrackId, result.EventInstanceId.GetHashCode(), definition.Laps);
             if (track == null)
             {
                 _dialogService.ShowDialog(new InformationDialogViewModel(

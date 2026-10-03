@@ -208,9 +208,9 @@ namespace StreetCorsa.Screens.Diner
         {
             get
             {
-                if (SelectedFormat is not { } choice) return string.Empty;
-                var key = $"diner.format.about.{choice.LocalId}";
-                return GameText.Installed.Has(key) ? GameText.Say(key) : string.Empty;
+                var formats = Services.Race.RaceFormats.Current;
+                return SelectedFormat is { } choice && formats.Get(choice.Id) is { } format
+                    && formats.OwnKey("diner.format.about", format) is { } key ? GameText.Say(key) : string.Empty;
             }
         }
 
@@ -223,8 +223,9 @@ namespace StreetCorsa.Screens.Diner
             FormatChoices.Clear();
             if (SelectedTrack is { } track)
             {
-                foreach (var format in Services.Race.RaceFormats.Current.ForDiner(track.Family))
-                    FormatChoices.Add(new FormatChoice(format.Id, Dialogs.RaceHub.EventInvitationViewModel.FormatName(format.Id)));
+                // A race of more than one lap is not offered where the finish is never crossed twice
+                foreach (var format in Services.Race.RaceFormats.Current.ForDiner(track.Family).Where(f => !track.IsPointToPoint || !f.NeedsLoop()))
+                    FormatChoices.Add(new FormatChoice(format.Id, Services.Race.RaceFormats.Current.NameOf(format)));
             }
 
             _selectedFormat = null;

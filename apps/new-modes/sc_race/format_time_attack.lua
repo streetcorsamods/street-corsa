@@ -14,6 +14,10 @@
 local F = {}
 local SC = nil
 
+-- Won on the best laps, not by finishing: a rival out of the race keeps the laps it ran (the core says nothing of
+-- finishing to win)
+F.scored = true
+
 -- How long the race waits for the rival to finish its laps once the player has, in seconds
 local RIVAL_WAIT_SECONDS = 90
 
@@ -108,6 +112,31 @@ local function playerBeats(player, rival)
   return player.best < rival.best
 end
 
+-- The race over on the best laps so far
+local function finish(player, rival)
+  local won = playerBeats(player.attack, rival and rival.attack)
+  ac.log(string.format('[Street Corsa] Time attack over: player %s, rival %s: %s', tostring(player.attack.best),
+    tostring(rival and rival.attack and rival.attack.best), won and 'WON' or 'LOST'))
+  SC.endSession('FINISHED', won)
+end
+
+-- The player back in the pits with their laps run: the race is over now, on the laps the rival has so far (the mode
+-- does not run while the player is on the pits menu)
+local function finishInThePits()
+  local player = SC.carData[0]
+  if not player or not done(player) then return false end
+  if SC.isActive() then finish(player, SC.carData[1]) end
+  return true
+end
+
+function F.onJumped(carIndex)
+  return carIndex == 0 and finishInThePits()
+end
+
+function F.onMenu()
+  finishInThePits()
+end
+
 -- The player has their laps: the race is over once the rival has theirs, is out, or has had long enough
 function F.checkFinish()
   local player, rival = SC.carData[0], SC.carData[1]
@@ -124,11 +153,7 @@ function F.checkFinish()
 
   local rivalOver = not rival or done(rival) or rival.crashed or rival.brokeDown or rival.disqualified
   if not rivalOver and now - playerDoneAt < RIVAL_WAIT_SECONDS then return end
-
-  local won = playerBeats(player.attack, rival and rival.attack)
-  ac.log(string.format('[Street Corsa] Time attack over: player %s, rival %s: %s', tostring(player.attack.best),
-    tostring(rival and rival.attack and rival.attack.best), won and 'WON' or 'LOST'))
-  SC.endSession('FINISHED', won)
+  finish(player, rival)
 end
 
 -- Under the race over card: both best laps

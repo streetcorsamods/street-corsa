@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using StreetCorsa.Logging;
 using StreetCorsa.Models.Race;
 using StreetCorsa.Mods;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Services.Race
 {
@@ -14,8 +15,10 @@ namespace StreetCorsa.Services.Race
     ///
     /// A format runs in the sc_race mode, which loads its Lua module (<c>format_&lt;module&gt;.lua</c>): the mode's own,
     /// or one a mod ships as <c>formats/&lt;module&gt;.lua</c>, put into the mode's folder in AC as
-    /// <c>format_&lt;mod&gt;_&lt;module&gt;.lua</c>. A mod may instead ship a whole CSP mode (<c>formats/&lt;mode&gt;/</c>),
-    /// put into AC as <c>&lt;mod&gt;_&lt;mode&gt;</c>; it writes its result where sc_race does, as sc_race does.
+    /// <c>format_&lt;mod&gt;-&lt;module&gt;.lua</c>. A mod may instead ship a whole CSP mode (<c>formats/&lt;mode&gt;/</c>),
+    /// put into AC as <c>&lt;mod&gt;-&lt;mode&gt;</c>; it writes its result where sc_race does, as sc_race does. The '-'
+    /// is in no module or mode name, and in none of the game's own files or modes: the last one splits a name in two
+    /// one way only, so no two formats share a file or a folder, and none is the game's.
     /// </summary>
     public sealed partial class RaceFormats
     {
@@ -25,6 +28,15 @@ namespace StreetCorsa.Services.Race
 
         /// <summary>The prefix of a format module's file in the mode's folder</summary>
         public const string ModulePrefix = "format_";
+
+        /// <summary>
+        /// The module a test-and-tune runs in: sc_race's own drag module, whatever a mod made of the drag format (the
+        /// launcher installs no other mode for one)
+        /// </summary>
+        public const string TuneModule = ModulePrefix + "drag";
+
+        /// <summary>Between a mod's id and its module or mode's name in AC: in no module or mode name</summary>
+        public const char ModSeparator = '-';
 
         private static readonly Lazy<RaceFormats> InstalledFormats = new(() => Load(ModSet.Installed, ScRaceMode.DefaultSourceFolder));
         private static RaceFormats? _current;
@@ -81,16 +93,53 @@ namespace StreetCorsa.Services.Race
         /// <summary>The formats the diner offers on a family's tracks, the first the one it starts on</summary>
         public IReadOnlyList<RaceFormat> ForDiner(string family) => _formats.Where(f => f.Family == family && f.Diner).ToList();
 
+        /// <summary>
+        /// The text key a format's own words go by (<c>key.&lt;id&gt;</c>) when a mod has it: its id in full
+        /// ("my_mod:drift"), then as its mod wrote it ("drift") when no other format goes by that; null when neither is
+        /// there. Two mods' formats of one name never share their words, nor take the base game's.
+        /// </summary>
+        public string? OwnKey(string key, RaceFormat format)
+        {
+            var text = GameText.Installed;
+            var full = key + "." + format.Id;
+            if (text.Has(full)) return full;
+
+            var local = ModIds.Local(format.Id);
+            if (local == format.Id || _formats.Any(f => !ReferenceEquals(f, format) && ModIds.Local(f.Id) == local)) return null;
+            var written = key + "." + local;
+            return text.Has(written) ? written : null;
+        }
+
+        /// <summary>The format's own words for a key when a mod has them (<see cref="OwnKey"/>), else the key's own</summary>
+        public string SayFor(RaceFormat format, string key, params (string Name, object? Value)[] values) =>
+            GameText.Say(OwnKey(key, format) ?? key, values);
+
+        /// <summary>
+        /// A format's name as the paper, the diner and the score card write it: its <c>name</c> key, else its own
+        /// <c>paper.race_type.&lt;id&gt;</c>; a bracket race is one of its own, and a format without a name is a race
+        /// </summary>
+        public string NameOf(RaceFormat? format, bool bracket = false)
+        {
+            if (bracket) return GameText.Say("paper.race_type.bracket");
+            var key = format == null ? null
+                : !string.IsNullOrWhiteSpace(format.Name) ? (GameText.Installed.Has(format.Name) ? format.Name : null)
+                : OwnKey("paper.race_type", format);
+            return GameText.Say(key ?? "paper.race_type.other");
+        }
+
+        /// <summary>A format's name by its id (<see cref="NameOf(RaceFormat?, bool)"/>)</summary>
+        public string NameOf(string? id, bool bracket = false) => NameOf(Get(id), bracket);
+
         /// <summary>The ids of the modes a result may come from: sc_race and every format's own</summary>
         public IEnumerable<string> ModeIds => _formats.Where(f => f.Mode != null).Select(ModeIdOf).Prepend(Configuration.IniModificationService.RaceModeId).Distinct();
 
         /// <summary>The CSP mode a format runs in: sc_race, or the mod's own (its folder name in AC)</summary>
         public static string ModeIdOf(RaceFormat format) =>
-            format.Mode is { } mode ? format.ModId + "_" + mode : Configuration.IniModificationService.RaceModeId;
+            format.Mode is { } mode ? format.ModId + ModSeparator + mode : Configuration.IniModificationService.RaceModeId;
 
         /// <summary>The module sc_race loads for a format (its file's name without .lua)</summary>
         public static string ModuleOf(RaceFormat format) =>
-            OwnModule(format) != null ? ModulePrefix + format.ModId + "_" + format.Module : ModulePrefix + format.Module;
+            OwnModule(format) != null ? ModulePrefix + format.ModId + ModSeparator + format.Module : ModulePrefix + format.Module;
 
         /// <summary>A format's module in its mod's folder; null when it is one of the mode's own</summary>
         public static string? OwnModule(RaceFormat format)
@@ -147,7 +196,7 @@ namespace StreetCorsa.Services.Race
         }
 
         /// <summary>A book of the given formats, for tests and tools</summary>
-        public static RaceFormats Of(IEnumerable<RaceFormat> formats)
+        public static RaceFormats From(IEnumerable<RaceFormat> formats)
         {
             var list = formats.ToList();
             var byId = new Dictionary<string, RaceFormat>(StringComparer.OrdinalIgnoreCase);
@@ -219,6 +268,11 @@ namespace StreetCorsa.Services.Race
             {
                 problems.Add($"{where}: {format.Laps} laps; it has {Math.Clamp(format.Laps, 1, MaxLaps)}");
                 format.Laps = Math.Clamp(format.Laps, 1, MaxLaps);
+            }
+            if (format.Family == RaceFormatFamilies.Drag && format.Laps != 1)
+            {
+                problems.Add($"{where}: a drag race is one run down the strip, not {format.Laps} laps; it has 1");
+                format.Laps = 1;
             }
             if (format.SessionLaps is { } sessionLaps) format.SessionLaps = Math.Clamp(sessionLaps, 1, MaxSessionLaps);
 
