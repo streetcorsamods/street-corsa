@@ -938,7 +938,7 @@ names:
 | `backgrounds/main`, `init`, `newspaper_background`, `diner_background`, `settings_background` | the screens' backgrounds (the game's are 2560x1440; `init` is behind the intro) |
 | `buttons/new_game`, `load_game`, `settings` | the main menu's badges (square) |
 | `icons/calendar`, `car_dealer`, `car_info`, `driving_wheel`, `fuel_pump`, `garage`, `newspaper`, `parts_filled`, `quit`, `radio`, `trophy` | the round buttons' icons: only their shape counts, painted in the button's colour |
-| `icons/car_key`, `car_parts`, `engine`, `gears`, `wrench`, `high_beam`, `car_door`, `rotate`, `handshake` | the garage's buttons under the car (the key, parts view, engine stand, turn over, repairs, lights, doors, rotate) and its Sell button; one that is missing shows its word instead |
+| `icons/car_key`, `car_parts`, `engine_stand`, `gears`, `wrench`, `high_beam`, `car_door`, `rotate`, `handshake` | the garage's buttons under the car (the key, parts view, engine stand, turn over, repairs, lights, doors, rotate) and its Sell button; one that is missing shows its word instead |
 | `misc/license` | the licence the player signs for a new game (the name box sits where the game's has its line) |
 | `misc/calendar/calendar01` .. `calendar12` | the garage calendar's pictures |
 | `intro/logo` | the game's logo on the intro, in place of the lettered title (the base game has none) |
