@@ -111,7 +111,7 @@ namespace StreetCorsa.Services.Simulation
         private List<Racer> GetEligibleRacers(GameState gameState)
         {
             return gameState.Racers.ReadyToRace.Values
-                .Where(r => r.Type == RacerType.AI && r is not Opponent { IsKing: true } && ShouldRaceAgain(r))
+                .Where(r => r.Type == RacerType.AI && r is not Opponent { IsBoss: true } && ShouldRaceAgain(r))
                 // The rival of the player's race that has not been settled yet keeps the car it is settled on
                 .Where(r => !OpponentLifeService.HasPendingRace(gameState, r))
                 .ToList();

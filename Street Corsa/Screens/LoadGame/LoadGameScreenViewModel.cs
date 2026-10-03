@@ -164,12 +164,18 @@ namespace StreetCorsa.Screens.LoadGame
                     return;
                 }
 
-                // Played with mods that are not here now: the player says whether to go on without them
+                // Played with mods that are not here now, or newer ones: the player says whether to go on without them
                 var missing = ModsInSave.Missing(gameState, Mods.ModSet.Installed);
-                if (missing.Count > 0)
+                var older = ModsInSave.Older(gameState, Mods.ModSet.Installed);
+                if (missing.Count > 0 || older.Count > 0)
                 {
-                    _logger.Warning("Save {SaveName} was played with mods that are not installed: {Mods}", saveInfo.SaveName, string.Join(", ", missing));
-                    _dialogService.ShowDialog(new ConfirmationDialogViewModel(_dialogService, ModsInSave.Warning(missing), GameText.Say("loadgame.mods_missing.title"),
+                    if (missing.Count > 0)
+                        _logger.Warning("Save {SaveName} was played with mods that are not installed: {Mods}", saveInfo.SaveName, string.Join(", ", missing));
+                    if (older.Count > 0)
+                        _logger.Warning("Save {SaveName} was played with newer mods than are installed: {Mods}", saveInfo.SaveName,
+                            string.Join(", ", older.Select(m => $"{m.Saved} (now {m.Installed})")));
+                    var title = GameText.Say(missing.Count > 0 ? "loadgame.mods_missing.title" : "loadgame.mods_older.title");
+                    _dialogService.ShowDialog(new ConfirmationDialogViewModel(_dialogService, ModsInSave.Warning(missing, older), title,
                         confirmed =>
                         {
                             if (confirmed) Open(saveInfo, gameState);

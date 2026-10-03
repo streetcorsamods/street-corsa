@@ -53,13 +53,16 @@ namespace StreetCorsa.Services.Career
                 var bad = victory?.Unlock.Concat(victory.Goal).FirstOrDefault(s => !IsKnownStep(s));
                 if (bad == null) return victory;
 
-                problems.Add($"{entry.Source}: victory path {entry.Id} has a step of type \"{bad.Type}\" (counter, beatKing, beatAll, mostWins), or a counter step without a counter; left out");
+                problems.Add($"{entry.Source}: victory path {entry.Id} has a step of type \"{bad.Type}\" (counter, beatBoss, beatAll, mostWins), or a counter step without a counter; left out");
                 return null;
             });
             var victoryList = new List<VictoryDefinition>();
-            foreach (var (id, victory, _) in victories.Entries)
+            foreach (var (id, victory, mod) in victories.Entries)
             {
                 victory.Id = id;
+                // The boss a step names is the mod's own racer, else the base game's: the racers are not read yet, so
+                // that is told once the game has its bosses (DataVictory)
+                victory.ModId = mod.Id;
                 victoryList.Add(victory);
             }
 
@@ -115,6 +118,8 @@ namespace StreetCorsa.Services.Career
             foreach (var step in victory.Unlock.Concat(victory.Goal))
             {
                 step.Type ??= VictoryStep.CounterType;
+                if (step.Type == VictoryStep.BeatKingType) step.Type = VictoryStep.BeatBossType; // as written before bosses
+                step.Boss = string.IsNullOrWhiteSpace(step.Boss) ? null : step.Boss.Trim();
                 step.Step ??= string.Empty;
             }
 
@@ -149,7 +154,7 @@ namespace StreetCorsa.Services.Career
 
         private static bool IsKnownStep(VictoryStep step) => step.Type switch
         {
-            VictoryStep.BeatKingType or VictoryStep.BeatAllType or VictoryStep.MostWinsType => true,
+            VictoryStep.BeatBossType or VictoryStep.BeatAllType or VictoryStep.MostWinsType => true,
             VictoryStep.CounterType => step.Counter != null,
             _ => false
         };

@@ -35,7 +35,8 @@ public sealed class SaveFormatTests : IDisposable
         Name = name,
         Nickname = string.Empty,
         DefinitionId = string.Empty,
-        IsKing = false,
+        IsBoss = true,
+        BossPath = "my_mod:Mopar",
         Money = 321m,
         Status = RacerStatus.ReadyToRace
     };

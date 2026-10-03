@@ -128,8 +128,8 @@ namespace StreetCorsa.Services.Career
         }
 
         /// <summary>
-        /// The figures the victories need from the whole game (how many racers, who has the most wins, the King's
-        /// name), put on the career where every victory reads them
+        /// The figures the victories need from the whole game (how many racers, who has the most wins, the bosses),
+        /// put on the career where every victory reads them
         /// </summary>
         public void RefreshStanding(GameState gameState)
         {
@@ -137,18 +137,19 @@ namespace StreetCorsa.Services.Career
             if (_getTotalOpponents != null) career.TotalOpponents = _getTotalOpponents(gameState);
             if (_playerHasMostWins != null) career.PlayerHasMostWins = _playerHasMostWins(gameState);
 
-            var racers = gameState.Racers;
-            career.KingName = racers.All
-                .OfType<Opponent>().FirstOrDefault(o => o.IsKing)?.Name ?? career.KingName;
+            Opponents.Bosses.Refresh(gameState);
         }
 
         /// <summary>
         /// How many racers Total Domination asks the player to have beaten: everybody on the scene, and those who left
         /// after the player beat them (they stay among the beaten, so they stay in the count). One who left unbeaten
-        /// is not asked for until they come back.
+        /// is not asked for until they come back. A boss is not asked for while he keeps out of sight (his path is
+        /// not open), unless the player has beaten him already.
         /// </summary>
         public static int OpponentsToDominate(GameState gameState) =>
-            gameState.Racers.TotalCount + gameState.Racers.Departed.Keys.Count(gameState.Career.DefeatedOpponentIds.Contains);
+            gameState.Racers.TotalCount + gameState.Racers.Departed.Keys.Count(gameState.Career.DefeatedOpponentIds.Contains)
+            - gameState.Racers.All.OfType<Opponent>().Count(o => o.IsBoss && !gameState.Career.DefeatedOpponentIds.Contains(o.Name)
+                                                                 && !Opponents.Bosses.PathOpen(o, gameState.Career));
 
         /// <summary>
         /// Check if the player has the most wins for Season Champion victory
@@ -157,13 +158,13 @@ namespace StreetCorsa.Services.Career
         {
             var playerWins = gameState.Player.Stats.Wins;
 
-            // Every racer of the street, the King aside (his record is from before the season); those who left
+            // Every racer of the street, the bosses aside (his record is from before the season); those who left
             // town too, or the champion would be whoever is left the day the best of them is away
             return gameState.Racers.ReadyToRace.Values
                 .Concat(gameState.Racers.Inactive.Values)
                 .Concat(gameState.Racers.Retired.Values)
                 .Concat(gameState.Racers.Departed.Values)
-                .Where(racer => racer is not Opponent { IsKing: true })
+                .Where(racer => racer is not Opponent { IsBoss: true })
                 .All(racer => racer.Stats.Wins <= playerWins);
         }
     }

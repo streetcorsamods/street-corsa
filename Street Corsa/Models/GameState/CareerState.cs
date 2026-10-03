@@ -83,10 +83,19 @@ namespace StreetCorsa.Models.GameState
         public bool PlayerHasMostWins { get; set; }
 
         /// <summary>
-        /// The King's name, as <see cref="DefeatedOpponentIds"/> holds the racers beaten; null when the game has no
-        /// King (or has not looked yet), and the King's usual name counts
+        /// The King's name, from before bosses (<see cref="Bosses"/>): a beatBoss step of a career that has not
+        /// looked its bosses up yet goes by it, or by the King's usual name
         /// </summary>
         public string? KingName { get; set; }
+
+        /// <summary>The game's bosses, for the victories' beatBoss steps (<c>Bosses.Refresh</c>)</summary>
+        public List<BossStanding> Bosses { get; set; } = [];
+
+        /// <summary>
+        /// Whether <see cref="Bosses"/> has been looked up: until then (a save from before bosses) the King path's step
+        /// goes by <see cref="KingName"/>; from then on a game with no boss has none to beat
+        /// </summary>
+        public bool BossesKnown { get; set; }
 
         #endregion
 
@@ -164,6 +173,14 @@ namespace StreetCorsa.Models.GameState
         }
 
         #endregion
+    }
+
+    /// <summary>A boss as the career knows him: his racer id, the name he is beaten under, his path</summary>
+    public class BossStanding
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string Path { get; set; } = string.Empty;
     }
 
     /// <summary>

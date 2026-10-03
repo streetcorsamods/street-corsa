@@ -1,6 +1,8 @@
 using StreetCorsa.Logging;
+using StreetCorsa.Models.Career.Victory;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Mods;
+using StreetCorsa.Services.Career;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
@@ -18,6 +20,8 @@ namespace StreetCorsa.Services.Opponents
         private readonly ModSet _mods;
         private readonly IAppLogger _logger;
 
+        private static readonly JsonSerializerOptions BossOptions = new() { PropertyNameCaseInsensitive = true, NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString };
+
         public OpponentRepository() : this(ModSet.Installed)
         {
         }
@@ -26,6 +30,15 @@ namespace StreetCorsa.Services.Opponents
         {
             _mods = mods;
             _logger = AppLoggerFactory.CreateLogger("OpponentRepository");
+            _victories = new(() => ReferenceEquals(mods, ModSet.Installed) ? CareerContent.Installed.Victories : CareerContent.Load(mods).Victories);
+        }
+
+        /// <summary>The victory paths of the same mods, for the path a boss names; read only when one may be his mod's own</summary>
+        private readonly Lazy<IReadOnlyList<VictoryDefinition>> _victories;
+
+        private IEnumerable<VictoryDefinition> Victories()
+        {
+            foreach (var victory in _victories.Value) yield return victory;
         }
 
         /// <summary>
@@ -42,7 +55,7 @@ namespace StreetCorsa.Services.Opponents
                 {
                     removals.Before(entry.Mod);
                     var localId = ModJson.Text(entry.Element, "opponentId") ?? entry.Id;
-                    var opponent = ParseOpponent(entry);
+                    var opponent = ParseOpponent(entry, problems);
                     if (opponent == null) continue;
 
                     if (registry.Add(entry.Mod, localId, entry.Replaces, opponent, entry.Source) is { } id)
@@ -82,7 +95,7 @@ namespace StreetCorsa.Services.Opponents
         /// <summary>
         /// Parse a single opponent from JSON element
         /// </summary>
-        private Opponent? ParseOpponent(ModEntry entry)
+        private Opponent? ParseOpponent(ModEntry entry, List<string> problems)
         {
             var json = entry.Element;
             try
@@ -120,9 +133,31 @@ namespace StreetCorsa.Services.Opponents
                     opponent.Location = locationElement.GetString();
                 }
 
-                if (json.TryGetProperty("isKing", out var kingElement) && kingElement.ValueKind == JsonValueKind.True)
+                // A boss: "boss": { "path": ..., his own figures } (true: one with neither); "isKing": true, as before
+                // bosses, is the King path's
+                if (json.TryGetProperty("boss", out var bossElement) && bossElement.ValueKind is not (JsonValueKind.False or JsonValueKind.Null))
                 {
-                    opponent.IsKing = true;
+                    BossRecord record;
+                    try
+                    {
+                        record = bossElement.ValueKind == JsonValueKind.True ? new BossRecord()
+                            : bossElement.ValueKind == JsonValueKind.Object ? bossElement.Deserialize<BossRecord>(BossOptions) ?? new BossRecord()
+                            : throw new JsonException("\"boss\" is an object (or true)");
+                    }
+                    catch (JsonException ex)
+                    {
+                        problems.Add($"{entry.Source}: racer {name}'s boss block does not read ({ex.Message}); left out");
+                        return null;
+                    }
+
+                    opponent.IsBoss = true;
+                    opponent.BossRecord = record;
+                    opponent.BossPath = Bosses.ResolvePath(entry.Mod.Id, record.Path, Victories());
+                }
+                else if (json.TryGetProperty("isKing", out var kingElement) && kingElement.ValueKind == JsonValueKind.True)
+                {
+                    opponent.IsBoss = true;
+                    opponent.BossPath = Bosses.KingPathId;
                 }
 
                 if (json.TryGetProperty("biography", out var biographyElement))
@@ -134,7 +169,7 @@ namespace StreetCorsa.Services.Opponents
             }
             catch (Exception ex)
             {
-                _logger.Warning(ex, "{Source}: a racer that does not read is left out", entry.Source);
+                problems.Add($"{entry.Source}: a racer that does not read ({ex.Message}); left out");
                 return null;
             }
         }

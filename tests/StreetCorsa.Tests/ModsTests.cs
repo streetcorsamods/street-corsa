@@ -226,6 +226,59 @@ public class ModContentTests : IDisposable
     }
 
     [Fact]
+    public void A_racer_with_a_boss_block_is_a_boss_of_his_mods_path_with_his_own_figures()
+    {
+        WriteBaseAndMod();
+        _temp.File("streetcorsa/racers/racers.json", """
+            { "opponents": [ { "opponentId": "king", "name": "The King", "age": 41, "gender": "Male", "skill": 100, "aggression": 65, "isKing": true } ] }
+            """);
+        _temp.File("mymod/racers/jim.json", """
+            { "opponentId": "big_jim", "name": "Big Jim", "age": 50, "gender": "Male", "skill": 99, "aggression": 70,
+              "boss": { "path": "Mopar", "money": 15000, "wins": "35" } }
+            """);
+        _temp.File("mymod/racers/free.json", """
+            { "opponentId": "free", "name": "Free", "age": 50, "gender": "Male", "skill": 99, "aggression": 70, "boss": true }
+            """);
+        _temp.File("mymod/racers/king_path.json", """
+            { "opponentId": "jerry", "name": "Jerry", "age": 50, "gender": "Male", "skill": 99, "aggression": 70, "boss": { "path": "King" } }
+            """);
+        _temp.File("mymod/racers/bad.json", """
+            { "opponentId": "bad", "name": "Bad Boss", "age": 50, "gender": "Male", "skill": 99, "aggression": 70, "boss": { "money": "lots" } }
+            """);
+        _temp.File("mymod/racers/odd.json", """
+            { "opponentId": "odd", "name": "Odd Boss", "age": 50, "gender": "Male", "skill": 99, "aggression": 70, "boss": 5 }
+            """);
+        _temp.File("streetcorsa/victories/v.json", """{ "victories": [ { "id": "King", "name": "King" } ] }""");
+        _temp.File("mymod/victories/v.json", """{ "victories": [ { "id": "Mopar", "name": "Mopar" } ] }""");
+
+
+        var racers = new OpponentRepository(Mods()).LoadAllOpponents();
+
+        var king = racers.Single(r => r.Name == "The King");
+        Assert.True(king.IsBoss);
+        Assert.Equal("King", king.BossPath);
+
+        var jim = racers.Single(r => r.Name == "Big Jim");
+        Assert.True(jim.IsBoss);
+        Assert.Equal("mymod:Mopar", jim.BossPath);
+        var figures = jim.BossRecord!.Over(new StreetCorsa.Rules.KingRules());
+        Assert.Equal(15000m, figures.Money);
+        Assert.Equal(35, figures.Wins);
+        Assert.Equal(52, figures.Races); // the rules' where he names none
+
+        var free = racers.Single(r => r.Name == "Free");
+        Assert.True(free.IsBoss);
+        Assert.Equal("", free.BossPath); // out from the start
+
+        Assert.Equal("King", racers.Single(r => r.Name == "Jerry").BossPath); // his mod has no King path: the base game's
+
+        // A boss block that does not read leaves him out, and the player is told
+        Assert.DoesNotContain(racers, r => r.Name is "Bad Boss" or "Odd Boss");
+        Assert.Contains(ModProblems.All, p => p.Contains("Bad Boss"));
+        Assert.Contains(ModProblems.All, p => p.Contains("Odd Boss"));
+    }
+
+    [Fact]
     public void A_mods_racers_get_its_namespace_and_the_base_games_keep_who_they_were()
     {
         WriteBaseAndMod();
@@ -455,6 +508,36 @@ public class ModCareerAndTextTests : IDisposable
         Assert.Equal(["downtown"], state.DealerLocations.Select(d => d.Id));
         Assert.Equal(["ford_fanatics", "here:left_out", "retired_event"], state.Career.ActiveEvents.Select(e => e.EventDefinitionId));
         Assert.False(ModsInSave.Tidy(state, CareerContent.Load(BaseGame()), mods));
+    }
+
+    [Fact]
+    public void A_save_played_with_a_newer_mod_says_which_and_what_is_installed()
+    {
+        var state = new GameState
+        {
+            Mods =
+            [
+                new ModRef { Id = "older", Name = "Older Mod", Version = "1.1" },
+                new ModRef { Id = "same", Name = "Same Mod", Version = "1.0" },
+                new ModRef { Id = "newer", Name = "Newer Mod", Version = "1.0" },
+                new ModRef { Id = "unread", Name = "Unread Mod", Version = "beta" },
+                new ModRef { Id = "gone", Name = "Gone Mod", Version = "2" }
+            ]
+        };
+        _temp.File("streetcorsa/readme.txt", "");
+        _temp.File("older/mod.json", """{ "id": "older", "version": "1.0.9" }""");
+        _temp.File("same/mod.json", """{ "id": "same", "version": "1" }""");
+        _temp.File("newer/mod.json", """{ "id": "newer", "version": 1.2 }""");
+        _temp.File("unread/mod.json", """{ "id": "unread", "version": "0.1" }""");
+        var mods = ModSet.Load(_temp.Path);
+
+        var older = ModsInSave.Older(state, mods);
+
+        Assert.Equal([("older", "1.0.9")], older.Select(m => (m.Saved.Id, m.Installed)));
+        var warning = ModsInSave.Warning(ModsInSave.Missing(state, mods), older);
+        Assert.Contains("Gone Mod 2", warning);
+        Assert.Contains("Older Mod: played with 1.1, installed 1.0.9", warning);
+        Assert.EndsWith("Load it anyway?", warning);
     }
 
     [Fact]

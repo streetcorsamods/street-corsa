@@ -68,6 +68,7 @@ public class CareerGapsTests
         var game = GameState.CreateNew("Tester");
         game.Career.SetCounter(MilestoneTrigger.ReputationReached, 100);
         game.Career.SetCounter(MilestoneTrigger.TotalWins, 50);
+        game.Racers.AddRacer(new Opponent("The King", 41, Gender.Male, 100, 65) { DefinitionId = "king", IsBoss = true, BossPath = "King" });
         game.Career.RecordDefeatedOpponent("The King");
         return game;
     }

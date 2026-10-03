@@ -3,9 +3,9 @@
     "The ways to win the game. A path opens once every unlock step is done (none: open from the start) and is won once",
     "every goal step is done too. A step is:",
     "  { \"type\": \"counter\", \"counter\": \"TotalWins\", \"atLeast\": 10 }   a career counter (as in milestones)",
-    "  { \"type\": \"beatKing\" }     the King beaten",
+    "  { \"type\": \"beatBoss\" }     every boss whose path this is beaten (\"boss\": a racer id, that one only)",
     "  { \"type\": \"beatAll\" }      every racer beaten at least once",
-    "  { \"type\": \"mostWins\" }     more wins than any other racer (the King left out)",
+    "  { \"type\": \"mostWins\" }     more wins than any other racer (the bosses left out)",
     "step is its text once done, todo while still to do ({target}, {current}, {remaining} are filled in); a goal step",
     "of a path not yet open shows as (Locked). progress is the line under the name: achieved, unlocked (open, not won)",
     "and locked, with {TotalWins} and the other counters by name, {defeated} and {total} filled in.",
@@ -30,7 +30,7 @@
         { "type": "counter", "counter": "ReputationReached", "atLeast": 50, "step": "Reach {target} reputation", "todo": "Reach {target} reputation ({current}/{target})" }
       ],
       "goal": [
-        { "type": "beatKing", "step": "Defeat The King in a pink slip race", "todo": "Challenge and defeat The King in a pink slip race" }
+        { "type": "beatBoss", "step": "Defeat The King in a pink slip race", "todo": "Challenge and defeat The King in a pink slip race" }
       ],
       "progress": {
         "achieved": "The King has been dethroned!",

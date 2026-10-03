@@ -148,7 +148,7 @@ it changes:
 | `time` | minutes each action takes (`actions`, by the game's action names), each part at the workbench, an engine in or out, the stand, a tick of cruising, the shortest trip |
 | `difficulty` | the New Game screen's presets (`easy`, `normal`, `hard`) and how often pink slips come up at each frequency |
 | `police` | how likely a street race draws them, fines, the impound, cars per race, the AC cars they like best |
-| `rivals` | how many race, their money (`money`, by age band), going broke, trading up, leaving and coming back, selling cars on, the King's money and record |
+| `rivals` | how many race, their money (`money`, by age band), going broke, trading up, leaving and coming back, selling cars on, a boss's money and record (`king`) |
 | `dealers` | dealers opening and closing, closing-down sales, trade |
 | `partShops` | the junkyard, haggling, the regulars' discount, trade, and each kind of shop's prices and shelves (`kinds`) where a shop's own file says nothing |
 | `economy` | what parts cost against their scripts (`partsPriceScale`), used and trade-in shares, mail order, the paper's part ads, a prize camshaft's cash |
@@ -500,8 +500,27 @@ A list under `opponents`, or one racer per file (its id as `opponentId` or `id`)
   "skill": 95, "aggression": 80, "portraitPath": "vera.png", "location": "The docks", "biography": "…" }
 ```
 
-`portraitPath` is next to the file. `skill` is 90 to 100. New racers join games already under way. `"isKing": true`
-makes the King; to replace the base game's King, give yours `"replaces": "king"`.
+`portraitPath` is next to the file. `skill` is 90 to 100. New racers join games already under way.
+
+A **boss** is a racer with a `"boss"` block: he only races for pink slips, stays out of sight until his victory path
+opens (`path`, his mod's own path first, then the base game's; none: out from the start; one no installed mod has, or
+a boss whose mod is gone: never out), never races where nobody watches and never leaves town. His money and record are
+his own where he names them, the rules' `rivals.king` where he does not (`"boss": true` is a boss with neither). A
+boss block that does not read leaves the racer out, and the game says so at startup:
+
+```json
+{ "opponentId": "big_jim", "name": "Big Jim", "…": "…",
+  "boss": { "path": "Mopar", "money": 15000, "carChoices": 3, "races": 40, "wins": 35, "pinkSlipsWon": 8 } }
+```
+
+The base game's King is `"boss": { "path": "King" }` (`"isKing": true`, from before bosses, still means that); to
+replace him, give yours `"replaces": "king"`. A path's `beatBoss` step is won by beating every boss whose path it is.
+A racer a mod update makes a boss becomes one in games under way.
+A boss has lines of his own where a mod adds the key with his racer id after it (`talk.pulled_up.king.big_jim`, or
+`talk.pulled_up.king.my_mod:big_jim` from another mod); otherwise he says the King's: `talk.pulled_up.king`,
+`replies.king.pink_slips`, `replies.king.no_pink_slip`, `street.king_out`, `chat.fact.rival_king`, and the paper's
+`news.king_beaten.<id>.headline`/`.body` and `news.king_won.<id>.*`. The base game's lines name the King, so a mod's
+boss should bring his own.
 
 ### events
 
@@ -541,12 +560,14 @@ Ways to win the game. A path opens once every `unlock` step is done (none: open 
 { "id": "MyPath", "name": "Mopar King", "description": "…",
   "unlock": [ { "type": "counter", "counter": "DragWins", "atLeast": 5, "step": "Win {target} drag races",
                 "todo": "Win {target} drag races ({current}/{target})" } ],
-  "goal": [ { "type": "beatKing", "step": "Beat the King" } ],
+  "goal": [ { "type": "beatBoss", "step": "Beat the King" } ],
   "progress": { "achieved": "Done!", "unlocked": "The King is waiting", "locked": "{DragWins}/5 drag wins" } }
 ```
 
-Step types: `counter` (a trigger, as in milestones, at `atLeast`), `beatKing`, `beatAll` (every racer beaten once),
-`mostWins` (more wins than any racer but the King). `{target}`, `{current}`, `{remaining}` fill a step's text;
+Step types: `counter` (a trigger, as in milestones, at `atLeast`), `beatBoss` (every boss whose path this is beaten,
+or with `"boss"`, a racer id, that one: the mod's own racer first, then the base game's; `beatKing` is the same),
+`beatAll` (every racer beaten once; a boss still out of sight is not asked for), `mostWins` (more
+wins than any racer but the bosses). `{target}`, `{current}`, `{remaining}` fill a step's text;
 counters by name (`{TotalWins}`), `{defeated}` and `{total}` fill both steps and progress lines, with a format if
 wanted (`{MoneyEarned:N0}`). A goal step is never done while the path is locked. The progress shown is the share of all
 steps done, a counter counting by how far along it is. Path ids are kept in saves.
@@ -787,8 +808,8 @@ random and fills in its `{placeholders}`:
 `lines` add to a pool, `replace` rewrites it. The base game's files (`news.json`, `talk.json`, `street.json`,
 `station.json`, `names.json`, `ads.json`: the classifieds' few words on each ad) list every key and, in their `_comment`, the placeholders each takes. The answers to a
 challenge are the `replies.*` pools in `talk.json`, among them `replies.car_laid_up` and `replies.car_unknown` (the
-racer's car can't race today, or the game can't tell), `replies.king.pink_slips` and `replies.king.no_pink_slip` (the
-King takes a pink-slip race, or turns down one for money), `replies.rematch` (a racer out for a rematch) and
+racer's car can't race today, or the game can't tell), `replies.king.pink_slips` and `replies.king.no_pink_slip` (a
+boss takes a pink-slip race, or turns down one for money; see racers for a boss's own), `replies.rematch` (a racer out for a rematch) and
 `replies.always_accept` (`{name}`, when the testing switch makes everybody accept). When to say what stays in the game.
 
 Every word on the screens is a pool too: the labels, buttons, messages and titles are in `ui.json` (what every screen

@@ -220,7 +220,8 @@ public class OpponentLifeServiceTests
     public async Task The_King_stays_out_of_sight_until_the_player_has_earned_a_shot()
     {
         var king = Racer("The King", 20000m, RacerStatus.Inactive, GoodCar("car_king", 500));
-        king.IsKing = true;
+        king.IsBoss = true;
+        king.BossPath = "King";
         for (var i = 0; i < 3; i++) Racer($"R{i}", 1000m, RacerStatus.Inactive, GoodCar());
 
         await _life.ReviewDayAsync(_state, _state.Date);

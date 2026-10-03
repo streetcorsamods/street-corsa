@@ -227,14 +227,14 @@ namespace StreetCorsa.Services.Talk
                     ("mileage", car.MileageDisplay));
         }
 
-        /// <summary>Who a rival is: name, record, car, the King, a grudge, broke, their story</summary>
+        /// <summary>Who a rival is: name, record, car, a boss, a grudge, broke, their story</summary>
         public static IEnumerable<string> Rival(Opponent rival, Func<string, string> carName)
         {
             yield return GameText.Say("chat.fact.rival", ("name", rival.Name), ("nickname", rival.Nickname), ("age", rival.Age),
                 ("wins", rival.Stats.Wins), ("losses", rival.Stats.Losses), ("reputation", rival.Stats.Reputation),
                 ("standing", rival.Stats.GetReputationTier()));
             if (rival.Cars.FirstOrDefault() is { } car) yield return GameText.Say("chat.fact.rival_car", ("car", carName(car.DefinitionId)));
-            if (rival.IsKing) yield return GameText.Say("chat.fact.rival_king");
+            if (rival.IsBoss) yield return GameText.Say(Opponents.Bosses.Key("chat.fact.rival_king", rival));
             if (rival.Grudge is { } grudge) yield return GameText.Say("chat.fact.rival_grudge", ("car", carName(grudge.CarDefinitionId)));
             if (rival.IsBroke) yield return GameText.Say("chat.fact.rival_broke");
             if (!string.IsNullOrWhiteSpace(rival.Biography)) yield return rival.Biography!;

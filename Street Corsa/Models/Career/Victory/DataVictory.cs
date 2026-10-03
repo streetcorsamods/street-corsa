@@ -1,5 +1,7 @@
 using StreetCorsa.Models.Career.Milestones;
 using StreetCorsa.Models.GameState;
+using StreetCorsa.Mods;
+using StreetCorsa.Services.Opponents;
 using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Models.Career.Victory
@@ -8,12 +10,18 @@ namespace StreetCorsa.Models.Career.Victory
     public class VictoryStep
     {
         public const string CounterType = "counter";
+        public const string BeatBossType = "beatBoss";
+
+        /// <summary>beatBoss as it was written before bosses; read as beatBoss (<c>CareerContent</c>)</summary>
         public const string BeatKingType = "beatKing";
         public const string BeatAllType = "beatAll";
         public const string MostWinsType = "mostWins";
 
-        /// <summary>counter (a career counter at a target), beatKing, beatAll (every racer beaten once) or mostWins</summary>
+        /// <summary>counter (a career counter at a target), beatBoss, beatAll (every racer beaten once) or mostWins</summary>
         public string Type { get; set; } = CounterType;
+
+        /// <summary>For beatBoss: the racer id of the boss to beat, as the path's mod wrote it; none: every boss whose path this is</summary>
+        public string? Boss { get; set; }
 
         /// <summary>For a counter: which</summary>
         public MilestoneTrigger? Counter { get; set; }
@@ -42,6 +50,10 @@ namespace StreetCorsa.Models.Career.Victory
         public string Id { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
+
+        /// <summary>The mod the path comes from, for the boss its steps name (<see cref="VictoryStep.Boss"/>); the base game's when none</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public string ModId { get; set; } = Mods.ModIds.BaseId;
 
         /// <summary>What opens the path; none for a path open from the start</summary>
         public List<VictoryStep> Unlock { get; set; } = [];
@@ -77,6 +89,28 @@ namespace StreetCorsa.Models.Career.Victory
 
         public bool IsAchieved(CareerState career) => IsUnlocked(career) && _definition.Goal.Count > 0 && _definition.Goal.All(s => IsDone(s, career));
 
+        /// <summary>
+        /// The names of the bosses a beatBoss step asks to beat: the one it names (the path's mod's own racer, else the
+        /// base game's), or every boss whose path this is. A career that has not looked its bosses up yet (a save from
+        /// before them) has only the King, on the King path.
+        /// </summary>
+        private List<string> BossNames(VictoryStep step, CareerState career)
+        {
+            if (!career.BossesKnown)
+                return _definition.Id == Bosses.KingPathId && ModIds.IsBase(_definition.ModId) && step.Boss is null or "" or Bosses.KingId
+                    ? [string.IsNullOrEmpty(career.KingName) ? DefaultKingName : career.KingName]
+                    : [];
+
+            var bosses = career.Bosses ?? [];
+            if (step.Boss is { Length: > 0 } named)
+            {
+                var id = ModIds.Resolve(_definition.ModId, named, x => bosses.Any(b => b.Id.Equals(x, StringComparison.OrdinalIgnoreCase)));
+                return bosses.Where(b => b.Id.Equals(id, StringComparison.OrdinalIgnoreCase)).Select(b => b.Name).ToList();
+            }
+
+            return bosses.Where(b => b.Path.Equals(_definition.Id, StringComparison.OrdinalIgnoreCase)).Select(b => b.Name).ToList();
+        }
+
         public VictoryProgress GetProgress(CareerState career)
         {
             var progress = new VictoryProgress();
@@ -109,20 +143,23 @@ namespace StreetCorsa.Models.Career.Victory
             return progress;
         }
 
-        private static bool IsDone(VictoryStep step, CareerState career) => step.Type switch
+        private bool IsDone(VictoryStep step, CareerState career) => step.Type switch
         {
-            VictoryStep.BeatKingType => career.DefeatedOpponentIds.Contains(string.IsNullOrEmpty(career.KingName) ? DefaultKingName : career.KingName),
+            // No boss to beat (none in the game, or the one named is not in it): never won
+            VictoryStep.BeatBossType => BossNames(step, career) is { Count: > 0 } bosses && bosses.All(career.DefeatedOpponentIds.Contains),
             VictoryStep.BeatAllType => career.TotalOpponents > 0 && career.DefeatedOpponentIds.Count >= career.TotalOpponents,
             VictoryStep.MostWinsType => career.PlayerHasMostWins,
             _ => step.Counter is { } counter && career.GetCounter(counter) >= step.AtLeast
         };
 
-        private static float Share(VictoryStep step, CareerState career)
+        private float Share(VictoryStep step, CareerState career)
         {
             if (IsDone(step, career)) return 1f;
 
             return step.Type switch
             {
+                VictoryStep.BeatBossType when BossNames(step, career) is { Count: > 1 } bosses =>
+                    bosses.Count(career.DefeatedOpponentIds.Contains) / (float)bosses.Count,
                 VictoryStep.BeatAllType => career.TotalOpponents > 0 ? Math.Min(1f, career.DefeatedOpponentIds.Count / (float)career.TotalOpponents) : 0f,
                 VictoryStep.CounterType when step.Counter is { } counter && step.AtLeast > 0 =>
                     Math.Clamp(career.GetCounter(counter) / (float)step.AtLeast, 0f, 1f),
@@ -146,10 +183,12 @@ namespace StreetCorsa.Models.Career.Victory
         }
 
         /// <summary>A step's {target}, {current} and {remaining}, over the last step's</summary>
-        private static void SetStepValues(TextValues values, VictoryStep step, CareerState career)
+        private void SetStepValues(TextValues values, VictoryStep step, CareerState career)
         {
             var (current, target) = step.Type switch
             {
+                VictoryStep.BeatBossType when BossNames(step, career) is var bosses =>
+                    (bosses.Count(career.DefeatedOpponentIds.Contains), bosses.Count),
                 VictoryStep.BeatAllType => (career.DefeatedOpponentIds.Count, career.TotalOpponents),
                 VictoryStep.CounterType when step.Counter is { } counter => (career.GetCounter(counter), step.AtLeast),
                 _ => (0, 0)

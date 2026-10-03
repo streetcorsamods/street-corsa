@@ -15,10 +15,10 @@ namespace StreetCorsa.Services.Opponents
         void InitializeOpponents(GameState gameState);
 
         /// <summary>
-        /// Puts the King in the game when he isn't in it yet (a save from before him): out of sight, with his money
-        /// and his car. Nothing when there is no King among the definitions.
+        /// Puts every boss the mods define in the game when he isn't in it yet (a save from before him, a mod added
+        /// since): out of sight, with his money, record and car. Once per game state.
         /// </summary>
-        void EnsureKing(GameState gameState);
+        void EnsureBosses(GameState gameState);
 
         /// <summary>
         /// Racers defined since the save began (a bigger pool in a newer version) join it, not on the street yet, each

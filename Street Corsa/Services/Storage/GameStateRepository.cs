@@ -67,6 +67,7 @@ namespace StreetCorsa.Services.Storage
                     state.Player.PartOrders ??= [];
                     state.Player.Delivered ??= [];
                     HistoryUpgrade.BringUpToDate(state);
+                    Opponents.Bosses.BringUpToDate(state);
                 }
 
                 return state;

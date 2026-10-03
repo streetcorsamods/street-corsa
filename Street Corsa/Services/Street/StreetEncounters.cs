@@ -29,7 +29,7 @@ namespace StreetCorsa.Services.Street
         /// <summary>A rival out to get their car back is this many times likelier to be the one who shows</summary>
         public static double GrudgeWeight => Rules.RuleBook.Current.Street.GrudgeWeight;
 
-        /// <summary>The King cruises too, but seldom</summary>
+        /// <summary>A boss cruises too, but seldom</summary>
         public static double KingWeight => Rules.RuleBook.Current.Street.KingWeight;
 
         /// <summary>A rival of about the player's standing (<see cref="MatchupCalculator.MatchedReputationBand"/>) is likelier than one far off</summary>
@@ -57,7 +57,7 @@ namespace StreetCorsa.Services.Street
         /// <summary>How likely <paramref name="rival"/> is to be the one who pulls up, against the others out</summary>
         public static double Weight(Opponent rival, int playerReputation, DateTime time)
         {
-            if (rival.IsKing) return KingWeight;
+            if (rival.IsBoss) return KingWeight;
 
             var weight = 1.0;
             if (rival.Grudge != null) weight *= GrudgeWeight;
@@ -102,17 +102,17 @@ namespace StreetCorsa.Services.Street
         }
 
         /// <summary>
-        /// What the rival offers. The King and a rival with a grudge want pink slips; anybody else now and then
+        /// What the rival offers. A boss and a rival with a grudge want pink slips; anybody else now and then
         /// (the bolder, the likelier, and the difficulty's pink-slip figure on top); otherwise cash, a share of what
         /// the street's limits allow tonight that grows with the rival's aggression. Pink slips only when
         /// <paramref name="wouldStakePinkSlips"/> (the rival would stake their car against the player's, going by what
         /// the two are worth). Null when the two of them cannot scrape a cash bet together and pink slips are not on,
-        /// and for the King or a rival with a grudge who would not stake their car.
+        /// and for a boss or a rival with a grudge who would not stake their car.
         /// </summary>
         public static StreetOffer? OfferFrom(Opponent rival, decimal playerMoney, RaceType raceType, DateTime time,
             double pinkSlipFactor, bool wouldStakePinkSlips, Random random)
         {
-            if (rival.IsKing || rival.Grudge != null) return wouldStakePinkSlips ? new StreetOffer(raceType, true, 0m) : null;
+            if (rival.IsBoss || rival.Grudge != null) return wouldStakePinkSlips ? new StreetOffer(raceType, true, 0m) : null;
 
             var aggression = Math.Clamp(rival.Aggression, 0, 100) / 100.0;
             if (random.NextDouble() < PinkSlipOffer * pinkSlipFactor * (0.5 + aggression) && wouldStakePinkSlips)

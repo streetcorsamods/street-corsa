@@ -305,7 +305,7 @@ namespace StreetCorsa.Services.Ai
         /// </summary>
         public void NewFace(GameState game, Opponent opponent)
         {
-            if (!_images.IsAvailable || !Rules.PaintNewFaces || opponent.IsKing || game.SaveName.Length == 0) return;
+            if (!_images.IsAvailable || !Rules.PaintNewFaces || opponent.IsBoss || game.SaveName.Length == 0) return;
             var file = PortraitFile(game.SaveName, opponent.OpponentId);
             if (File.Exists(file)) return;
 
