@@ -27,6 +27,7 @@ namespace StreetCorsa.Services.Talk
         public const int Always = int.MaxValue;
 
         // Kept before the others, the lowest first out
+        public const int Lore = 5;
         public const int RivalRaces = 10;
         public const int News = 12;
         public const int Town = 14;
@@ -318,6 +319,49 @@ namespace StreetCorsa.Services.Talk
                 1 => "chat.fact.feeling.warm",
                 _ => "chat.fact.feeling.friendly"
             });
+        }
+
+        /// <summary>
+        /// What everybody of the person's kind knows in <paramref name="year"/>, at most <paramref name="most"/> lines:
+        /// the topics in a drawn order, a line of each in turn, so a few lines touch many things
+        /// </summary>
+        public static IEnumerable<string> Lore(IReadOnlyList<LoreTopic> topics, string kind, int year, int most, Random random)
+        {
+            var drawn = topics.Where(t => t.Fits(kind, year))
+                .Select(t => new Queue<string>(t.Lines.OrderBy(_ => random.Next())))
+                .OrderBy(_ => random.Next())
+                .ToList();
+            var told = 0;
+            while (told < most && drawn.Count > 0)
+            {
+                foreach (var topic in drawn.ToList())
+                {
+                    if (told >= most) break;
+                    if (topic.Count == 0)
+                    {
+                        drawn.Remove(topic);
+                        continue;
+                    }
+
+                    told++;
+                    yield return topic.Dequeue();
+                }
+            }
+        }
+
+        /// <summary>
+        /// A prompt's example exchanges written out, under their heading (<c>chat.examples</c>), the person by name; empty
+        /// with none
+        /// </summary>
+        public static string Examples(IReadOnlyList<OllamaExample> examples, string name)
+        {
+            if (examples.Count == 0) return string.Empty;
+            var lines = examples.SelectMany(e => new[]
+            {
+                GameText.Say("chat.transcript.player", ("text", e.Player)),
+                GameText.Say("chat.transcript.them", ("name", name), ("text", e.Answer))
+            });
+            return GameText.Say("chat.examples") + "\n" + string.Join("\n", lines);
         }
 
         /// <summary>What was said earlier in this talk, summed up, when the oldest turns are no longer sent</summary>

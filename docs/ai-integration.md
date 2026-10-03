@@ -103,6 +103,20 @@ The AI only speaks: the game decides every fact and every price.
   in the garage); a rival also sizes it up part by part. A seller or buyer knows the other cars for sale in town
   (`marketCarsTold`, 4: the same model first, then the nearest in price), told they are theirs and never this one's
   price; the price guard does not count those sums as known, so a seller who names one as their own price is caught.
+- **What everybody knows** (`ai/lore.json`, `AiPrompts.Lore`, `TalkFacts.Lore`): topics of the game's time and place
+  (the town, street words, speed parts, racing, selling, new cars, what things cost, the radio, the news), each for some
+  kinds of person and some years of the game's calendar. A person is told `ai.talk.loreTold` (8) lines of the topics
+  they know, a line of each in turn, drawn the same all day (seeded by who they are and the date); the section is the
+  first left out when the sheet is too long, and its figures are not sums the price guard trusts. The prompts let people
+  color in small talk of the time and place (the weather, the radio, their work and family, what things cost) but never
+  a car's facts, a price, a race or a person the facts do not give. Measured with the 8B: it uses the lore well (the
+  hits on the radio, the price of gas, the strip's new class), and still embellishes a car now and then (a radio, the
+  paint), as it did before the prompts were softened.
+- **Example exchanges** (`examples` on a chat prompt in `prompts.json`): a few lines in each kind's voice, written into
+  the prompt as `{examples}` under `chat.examples` (voice only, nothing in them happened), so every provider gets them;
+  they carry no figures (a model copies them) and show the person not knowing what the facts do not say. The game's
+  Ollama model's own examples (`ai/ollama.json`) are now in no one kind's voice; "Make the game's model" again in
+  Settings takes them in.
 - **Haggling** (`Haggle`): a number the player types reads as an offer when it has a currency sign or "k", or an offer
   word (`chat.offer_words`) is in the line, and it is within reason of the price. The rules (`ai.talk`) decide: take it,
   meet halfway, stand firm, or take offence; the floor comes from the price first asked (`PersonDeal.Asked`), times the

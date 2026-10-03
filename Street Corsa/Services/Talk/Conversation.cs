@@ -347,10 +347,10 @@ namespace StreetCorsa.Services.Talk
         /// The sums the person may name: those of the facts they were given (the lot, what was first asked), the player's,
         /// and the player's offers ("would you take 1200" is one with no dollar sign on it). Not the other cars for sale in
         /// town: the person may name them, but never as the price of their own; nor the AI's summary of the talk, which may
-        /// get a figure wrong (the player's own are known anyway)
+        /// get a figure wrong (the player's own are known anyway), nor what things cost these days (the lore)
         /// </summary>
         private List<decimal> KnownSums(HaggleOutcome? outcome) =>
-            Haggle.SumsIn(TalkFacts.Sheet(Sections(outcome).Where(s => s.Key is not ("market" or "earlier")), int.MaxValue), UnitWords)
+            Haggle.SumsIn(TalkFacts.Sheet(Sections(outcome).Where(s => s.Key is not ("market" or "earlier" or "lore")), int.MaxValue), UnitWords)
                 .Concat(_playerSaid.SelectMany(line => Haggle.SumsIn(line, UnitWords)))
                 .Concat(_offers)
                 .Concat(Deal is { } deal ? [deal.Asked] : Array.Empty<decimal>())
@@ -457,6 +457,7 @@ namespace StreetCorsa.Services.Talk
                 ["temperament"] = temperament?.Words ?? string.Empty,
                 ["place"] = GameText.Say(PlayerSells ? "chat.place.buyer_phone" : $"chat.place.{Place.ToString().ToLowerInvariant()}"),
                 ["player"] = _game.Player.Name,
+                ["examples"] = TalkFacts.Examples(_desk.Prompts.Prompt(Use)?.Examples ?? [], Person.Name),
                 ["facts"] = Facts(outcome)
             };
         }
@@ -481,6 +482,9 @@ namespace StreetCorsa.Services.Talk
             var rules = _desk.Rules;
             var today = _game.Date;
             var sections = new List<FactSection> { new("now", [.. TalkFacts.Today(_game, _desk.CarName)], FactSection.Always) };
+            // What everybody knows these days, the same all day: what they may make small talk of
+            sections.Add(new("lore", [.. TalkFacts.Lore(_desk.Prompts.Lore, TalkPeople.KindWord(Person.Kind), today.Year, rules.LoreTold,
+                TalkPeople.Seeded($"{Person.Key}:{today:yyyy-MM-dd}"))], FactSection.Lore));
             if (Rival != null) sections.Add(new("you", [.. TalkFacts.Rival(Rival, _desk.CarName)], FactSection.Always));
             sections.Add(new("feeling", [.. TalkFacts.Feeling(TalkPeople.Feeling(Person, today, rules))], FactSection.Always));
             // A racer sizes up what the player drives

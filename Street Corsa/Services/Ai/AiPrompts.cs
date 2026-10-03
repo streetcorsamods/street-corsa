@@ -25,6 +25,37 @@ namespace StreetCorsa.Services.Ai
         /// Lines of the answer kept, the first ones (a small model likes to offer a second try: "Or, edgier: ..."); 0 keeps all
         /// </summary>
         public int Lines { get; set; } = 1;
+
+        /// <summary>
+        /// A few exchanges in the voice wanted (a talk's prompts), filled into the prompt's <c>{examples}</c> as how the
+        /// person might talk: every provider gets them, not only the game's model in Ollama
+        /// </summary>
+        public List<OllamaExample> Examples { get; set; } = [];
+    }
+
+    /// <summary>
+    /// What everybody knows in the game's time and place (<c>ai/lore.json</c>'s <c>lore</c>): one topic's lines, a few of
+    /// them told to the people talked to as small talk they may use (<c>Services.Talk.TalkFacts.Lore</c>)
+    /// </summary>
+    public sealed class LoreTopic
+    {
+        /// <summary>Its key in the file</summary>
+        public string Id { get; set; } = string.Empty;
+
+        /// <summary>One thing known a line: "Gas is about 36 cents a gallon."</summary>
+        public List<string> Lines { get; set; } = [];
+
+        /// <summary>The kinds of person who know it: "seller", "salesman", "rival", "buyer"; none is everybody</summary>
+        public List<string> For { get; set; } = [];
+
+        /// <summary>The first year of the game's calendar it is true in; none, always</summary>
+        public int? From { get; set; }
+
+        /// <summary>The last year it is true in; none, always</summary>
+        public int? To { get; set; }
+
+        public bool Fits(string kind, int year) =>
+            (For.Count == 0 || For.Contains(kind, StringComparer.OrdinalIgnoreCase)) && (From == null || year >= From) && (To == null || year <= To);
     }
 
     /// <summary>
@@ -151,6 +182,7 @@ namespace StreetCorsa.Services.Ai
         public const string PromptsFile = "prompts.json";
         public const string PeopleFile = "people.json";
         public const string OllamaFile = "ollama.json";
+        public const string LoreFile = "lore.json";
         public const string ComfyPrefix = "comfy_";
 
         private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger("Ai");
@@ -179,6 +211,9 @@ namespace StreetCorsa.Services.Ai
         /// <summary>The game's model in Ollama (<c>ai/ollama.json</c>); null when no mod has one</summary>
         public OllamaModel? Ollama { get; private init; }
 
+        /// <summary>What everybody knows in the game's time and place (<c>ai/lore.json</c>)</summary>
+        public IReadOnlyList<LoreTopic> Lore { get; private init; } = [];
+
         public Temperament? TemperamentOf(string? id) =>
             Temperaments.FirstOrDefault(t => string.Equals(t.Id, id, StringComparison.OrdinalIgnoreCase));
 
@@ -200,6 +235,7 @@ namespace StreetCorsa.Services.Ai
             var merged = ModMerge.NewObject();
             var people = ModMerge.NewObject();
             var ollama = ModMerge.NewObject();
+            var lore = ModMerge.NewObject();
             var workflows = new Dictionary<string, ComfyWorkflow>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var (mod, file) in mods.JsonFiles(ContentTypes.Ai))
@@ -218,6 +254,10 @@ namespace StreetCorsa.Services.Ai
                 {
                     if (ModMerge.ReadFile(file, source, problems) is { } read) ModMerge.Into(ollama, read);
                 }
+                else if (name.Equals(LoreFile, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (ModMerge.ReadFile(file, source, problems) is { } read) ModMerge.Into(lore, read);
+                }
                 else if (name.StartsWith(ComfyPrefix, StringComparison.OrdinalIgnoreCase))
                 {
                     var use = Path.GetFileNameWithoutExtension(name)[ComfyPrefix.Length..];
@@ -225,7 +265,7 @@ namespace StreetCorsa.Services.Ai
                 }
                 else
                 {
-                    problems.Add($"{source}: not {PromptsFile}, {PeopleFile}, {OllamaFile} nor a {ComfyPrefix}<use>.json workflow; left out");
+                    problems.Add($"{source}: not {PromptsFile}, {PeopleFile}, {OllamaFile}, {LoreFile} nor a {ComfyPrefix}<use>.json workflow; left out");
                 }
             }
 
@@ -253,12 +293,14 @@ namespace StreetCorsa.Services.Ai
             var persona = Joined(merged["persona"]);
             var temperaments = ReadTemperaments(people, problems);
             var model = ReadOllama(ollama, problems);
+            var topics = ReadLore(lore, problems);
 
             foreach (var problem in problems) Logger.Warning("AI content: {Problem}", problem);
             ModProblems.Add("AI", problems);
             return new AiPrompts
             {
-                Persona = persona, Prompts = prompts, Workflows = workflows, Problems = problems, Temperaments = temperaments, Ollama = model
+                Persona = persona, Prompts = prompts, Workflows = workflows, Problems = problems, Temperaments = temperaments, Ollama = model,
+                Lore = topics
             };
         }
 
@@ -291,6 +333,33 @@ namespace StreetCorsa.Services.Ai
             }
 
             return temperaments;
+        }
+
+        private static List<LoreTopic> ReadLore(JsonObject lore, List<string> problems)
+        {
+            var topics = new List<LoreTopic>();
+            if (lore["lore"] is not JsonObject known) return topics;
+
+            foreach (var (id, node) in known)
+            {
+                if (id.StartsWith('_') || node == null) continue;
+                try
+                {
+                    var topic = node.Deserialize<LoreTopic>(Options);
+                    // A topic with no lines is one a mod took out
+                    topic?.Lines.RemoveAll(string.IsNullOrWhiteSpace);
+                    if (topic == null || topic.Lines.Count == 0) continue;
+
+                    topic.Id = id;
+                    topics.Add(topic);
+                }
+                catch (JsonException ex)
+                {
+                    problems.Add($"lore {id}: {ex.Message}; left out");
+                }
+            }
+
+            return topics;
         }
 
         private static OllamaModel? ReadOllama(JsonObject ollama, List<string> problems)

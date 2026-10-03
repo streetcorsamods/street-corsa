@@ -973,6 +973,76 @@ public class TalkTests
         Assert.Null(TalkDesk.NoteOf(null));
     }
 
+    // ----- what everybody knows, and how people talk -----
+
+    private static readonly LoreTopic[] Topics =
+    [
+        new() { Id = "town", Lines = ["Town 1.", "Town 2.", "Town 3."] },
+        new() { Id = "racing", For = ["rival"], Lines = ["Racing 1.", "Racing 2."] },
+        new() { Id = "sixties", To = 1965, Lines = ["Sixties 1."] },
+        new() { Id = "seventy", From = 1970, To = 1970, Lines = ["Seventy 1.", "Seventy 2."] }
+    ];
+
+    [Fact]
+    public void Lore_is_what_the_kind_knows_in_the_years_it_is_true_a_line_of_each_topic_in_turn_and_no_more_than_told()
+    {
+        var seller = TalkFacts.Lore(Topics, "seller", 1970, 3, new Random(1)).ToList();
+        Assert.Equal(3, seller.Count);
+        Assert.DoesNotContain(seller, l => l.StartsWith("Racing") || l.StartsWith("Sixties"));
+        // A line of each topic before a second of any
+        Assert.Contains(seller.Take(2), l => l.StartsWith("Seventy"));
+        Assert.Contains(seller.Take(2), l => l.StartsWith("Town"));
+
+        var rival = TalkFacts.Lore(Topics, "rival", 1963, 10, new Random(1)).ToList();
+        Assert.Equal(6, rival.Count);
+        Assert.Contains("Sixties 1.", rival);
+        Assert.DoesNotContain(rival, l => l.StartsWith("Seventy"));
+
+        // The same draw, the same lines: a talk's sheet stays the same all day
+        Assert.Equal(TalkFacts.Lore(Topics, "rival", 1963, 4, new Random(7)), TalkFacts.Lore(Topics, "rival", 1963, 4, new Random(7)));
+    }
+
+    [Fact]
+    public async Task People_are_told_what_everybody_knows_and_the_prompts_examples_in_their_kinds_voice()
+    {
+        var game = Game();
+        var (desk, ai) = Desk();
+        var talk = desk.ForLot(game, "dealer_1", [Car(1500m, "dealer_1")]);
+
+        await talk.OpenAsync(Ct);
+
+        var values = ai.Chats[^1].Values;
+        Assert.Contains(Heading("lore"), (string)values["facts"]!);
+        var examples = (string)values["examples"]!;
+        Assert.StartsWith(GameText.Say("chat.examples"), examples);
+        Assert.Contains($"{talk.Person.Name}: ", examples);
+        Assert.Equal(BasePrompts().Prompt("chat_salesman")!.Examples[0].Answer,
+            BasePrompts().Prompt("chat_salesman")!.Examples.Select(e => e.Answer).First(examples.Contains));
+
+        // Told the same lines all day, other lines another day
+        var sections = talk.Sections();
+        Assert.Equal(sections.Single(s => s.Key == "lore").Lines, talk.Sections().Single(s => s.Key == "lore").Lines);
+    }
+
+    [Fact]
+    public void The_base_game_knows_its_times_for_every_kind_and_has_examples_for_every_talk()
+    {
+        var prompts = BasePrompts();
+        Assert.Empty(prompts.Problems);
+        foreach (var kind in new[] { "seller", "salesman", "rival", "buyer" })
+            Assert.True(TalkFacts.Lore(prompts.Lore, kind, GameState.GetStartingDateTime().Year, 8, new Random(1)).Count() >= 6, kind);
+        foreach (var use in new[] { "chat_seller", "chat_salesman", "chat_rival", "chat_buyer" })
+        {
+            Assert.NotEmpty(prompts.Prompt(use)!.Examples);
+            Assert.Contains("{examples}", prompts.Prompt(use)!.Prompt);
+            // No figure in an example: a model copies them
+            Assert.DoesNotContain(prompts.Prompt(use)!.Examples, e => e.Answer.Any(char.IsDigit));
+        }
+
+        // Never a price in the lore: what is for sale is the game's to say
+        Assert.DoesNotContain(prompts.Lore.SelectMany(t => t.Lines), l => l.Contains('$'));
+    }
+
     // ----- the base game's content -----
 
     [Fact]

@@ -877,6 +877,29 @@ without repeating the rest.
 `name`, `from` (the base model), `system` (a text or lines), `parameters` (as a Modelfile's), `examples`
 (`{ "player", "answer" }` pairs, its first messages).
 
+A chat prompt (`chat_seller`, `chat_salesman`, `chat_rival`, `chat_buyer`) may have `examples` too, the same pairs, filled
+into its `{examples}` under the text `chat.examples`: how the person might talk, for every provider. Keep figures out of
+them: a model copies them.
+
+`ai\lore.json`: what everybody knows in the game's time and place, told to the people the player talks to as small talk
+they may use (the rules' `ai.talk.loreTold` lines, drawn across the topics they know). Merged key by key: a mod adds a
+topic, changes one's lines, or takes one out with `"lines": []`.
+
+```json
+{
+  "lore": {
+    "radio_1970": {
+      "from": 1970, "to": 1970,
+      "lines": ["On the radio: Creedence's 'Up Around the Bend'..."]
+    },
+    "racing": { "for": ["rival"], "lines": ["Big Daddy Don Garlits is the name everybody knows in Top Fuel."] }
+  }
+}
+```
+
+`lines`: one thing known a line, written to the AI. `for`: the kinds who know it (`seller`, `salesman`, `rival`, `buyer`;
+none is everybody). `from`, `to`: the years of the game's calendar it is true in (none, always). Never a car's price.
+
 `ai\comfy_<use>.json`: a ComfyUI workflow, the last mod's whole (a graph is not merged). The base game has
 `comfy_portrait.json`, the portrait painted for a new face on the street, shown in place of their own portrait from then
 on (kept under `%AppData%\StreetCorsa\AiPortraits\<save>`):

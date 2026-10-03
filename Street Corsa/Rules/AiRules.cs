@@ -197,6 +197,12 @@ public sealed class TalkRules
     /// <summary>Pieces in the paper told everybody, the newest</summary>
     public int NewsTold { get; set; } = 3;
 
+    /// <summary>
+    /// Lines of what everybody knows in the game's time and place (<c>ai/lore.json</c>) told a person, drawn across the
+    /// topics they know, the same all day; the first facts left out when the sheet is too long
+    /// </summary>
+    public int LoreTold { get; set; } = 8;
+
     /// <summary>The share of salesmen who are women</summary>
     public double WomenSalesmen { get; set; } = 0.15;
 

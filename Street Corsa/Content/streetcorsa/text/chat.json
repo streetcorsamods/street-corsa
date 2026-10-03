@@ -13,7 +13,8 @@
     "chat.section: how a section of the fact sheet is headed, {heading} one of chat.section.* (now, you: a rival's own facts,",
     "  thing: what is talked about, build: what is on that car, your_car: what is on a rival's own car, lot, races: with the",
     "  player, rival_races: with other racers, memories, said, deal; feeling: how they feel about the player, events: what",
-    "  happened between them, earlier: the start of a long talk summed up).",
+    "  happened between them, earlier: the start of a long talk summed up, lore: what everybody knows these days, ai/lore.json).",
+    "chat.examples: heads a prompt's example exchanges ({examples} in the chat prompts), written as chat.transcript.*.",
     "chat.fact.feeling.sore, cool, warm, friendly: how the person feels about the player (-2, -1, +1, +2; nothing at 0).",
     "chat.fact.events heads chat.fact.event.<kind>: {when}, {what} (the car or part), {amount} (bought, sold: the price;",
     "  offered, asked: the player's last offer that came to nothing); kinds bought, sold, offered, asked, insulted, beaten,",
@@ -64,6 +65,7 @@
     "chat.section.memories": "What you remember of the player",
     "chat.section.feeling": "How you feel about the player",
     "chat.section.events": "What happened between you and the player",
+    "chat.section.lore": "What everybody knows these days (small talk you may use; never about a car, a price or a race)",
     "chat.section.earlier": "Earlier in this talk, in short (your notes: where a price differs, the deal below is right)",
     "chat.section.said": "What you already said",
     "chat.section.deal": "The deal now",
@@ -177,6 +179,7 @@
     "chat.deal.buyer.held": "I said {price:money}, and that's all I've got.",
 
     "chat.transcript.player": "Player: {text}",
+    "chat.examples": "How you might talk (examples of the voice only: nothing in them happened, none of it is a fact, and you never say them word for word):",
     "chat.transcript.them": "{name}: {text}",
 
     "chat.offer_words": [

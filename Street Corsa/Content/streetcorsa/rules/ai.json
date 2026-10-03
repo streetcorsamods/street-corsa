@@ -58,6 +58,7 @@
       "marketCarsTold": 4,
       "streetTalkTold": 6,
       "newsTold": 3,
+      "loreTold": 8,
       "womenSalesmen": 0.15,
       "womenSellers": 0.3,
       "salesmanMinAge": 28,
