@@ -240,6 +240,19 @@ namespace StreetCorsa.Services.Ai
             await SendAsync(HttpMethod.Post, Endpoint + "/api/chat", body, cancellationToken).ConfigureAwait(false);
         }
 
+        /// <summary>The model is on the GPU now (GET /api/ps): asked before it is let go, so only a model that was is loaded again</summary>
+        public async Task<bool> IsLoadedAsync(CancellationToken cancellationToken)
+        {
+            var model = Tagged(await ModelAsync(cancellationToken).ConfigureAwait(false));
+            var answer = await SendAsync(HttpMethod.Get, Endpoint + "/api/ps", null, cancellationToken).ConfigureAwait(false);
+            return (answer["models"] as JsonArray ?? []).Any(m =>
+                string.Equals(Tagged(Text(m?["name"])), model, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(Tagged(Text(m?["model"])), model, StringComparison.OrdinalIgnoreCase));
+        }
+
+        /// <summary>A model's name as Ollama lists it: "latest" when no tag is given</summary>
+        private static string Tagged(string name) => name.Length == 0 || name.Contains(':') ? name : name + ":latest";
+
         /// <summary>Lets go of the model, so its memory on the card is free (a chat of no messages kept alive for 0)</summary>
         public async Task UnloadAsync(CancellationToken cancellationToken)
         {

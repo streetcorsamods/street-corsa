@@ -96,7 +96,8 @@ The AI only speaks: the game decides every fact and every price.
   since. A kind of more than `ai.talk.buildPartsPerKind` (3) different parts (an engine's small accessories) is one
   line, but for those not from the factory. A salesman's lot tells each car's engine, miles and condition too, up to
   `lotCarsTold` (30). A salesman going over his lot who names a sum that is no car's on it is asked again once
-  (`chat.fact.lot_price_warning`), and the prompts ask for prices in figures, as the facts give them.
+  (`chat.fact.lot_price_warning`), and the prompts ask for prices in figures, as the facts give them. A warning goes
+  last in the sheet under a heading of its own (`chat.section.warning`).
 - **The town and the market**: everybody hears the diner's street talk (`ai.talk.streetTalkTold`, 6) and reads the
   paper (`newsTold`, 3), the newest first, in the AI's words when it rewrote them in the player's language. The player
   is told in words (`RacerStats.GetReputationTier`, a rival's own standing too), with the car they drive (the one picked
@@ -130,7 +131,10 @@ The AI only speaks: the game decides every fact and every price.
   "I'll take it", "deal") shake on the price as it stands. Once agreed (an offer taken or a shake), the talk shows
   "Buy it for $X", which runs the screen's own purchase (the car viewing screen's, the lot's, the part preview's).
   An answer that names a lower price than the one standing, that no fact or player line gives, is asked again with a
-  word on it (`chat.fact.price_warning`); a second time, the game says the price itself (`chat.deal.held`).
+  word on it (`chat.fact.price_warning`); a second time, the game says the price itself (`chat.deal.held`). The sums
+  of the market, the town's talk, the paper, past events, the lore and the talk's summary are no price the person may
+  come down to. Small talk is no price: a sum under `offerLowest` (20%) of the price (on the lot, of the cheapest car),
+  or with a `chat.unit_words` word after it ("$300 down", "a gallon", "a month").
 - **The buyer who answered the player's ad** (ideas batch 6): "Call the buyer" on the player's own ad in the paper
   (`Dialogs/PlayerAd`, `TalkDesk.ForBuyer`, `BuyerSubject`). The player sells: the person is the caller (`PersonKind.Buyer`,
   named as they gave it, `chat_buyer`; a rival who called is the rival, `chat_rival`, the fact sheet saying they buy),
@@ -148,10 +152,11 @@ The AI only speaks: the game decides every fact and every price.
   sentences in the background (what the player wanted, the prices named, how it went, what the person thinks of them),
   kept with the game date (`PersonMemory`); the newest `memoriesGiven` (10) are told next time, forgotten after
   `forgetDays*` (seller 14, salesman 30, rival 90).
-- **A long talk**: the newest `turnsKept` (40) turns are sent (and fitted to the window). Once `summaryTurns` (6) more
-  have fallen out, `chat_summary` sums them up with the summary before them, in the background, and the summary goes
-  with the facts (section `earlier`, near the end as it changes); turns not summed up yet (the summary late, or never
-  written) are still sent, up to twice `turnsKept`.
+- **A long talk**: the newest `turnsKept` (40) turns are sent (and fitted to the window); the older ones not summed up
+  yet are still sent, up to twice `turnsKept`. When they are near that (`turnsKept` less `summaryTurns` of them, at
+  least `summaryTurns`), `chat_summary` sums them up with the summary before them, in the background, ending after one
+  of the person's turns, and the summary goes with the facts (section `earlier`, near the end as it changes). Late and
+  in one go: the summary takes the AI's one place, and its prompt makes a local model read the talk's whole prompt again.
 - **What happened, and feelings** (`Person.Events`, `TalkPeople.Happened`): the game keeps, whatever the AI says, what
   happened between a person and the player: a car or part bought from them (`CarPurchaseService`,
   `NewspaperPartsService.BuyUsed`), a car sold to them (`CarSaleService.AcceptOfferAsync`), a talk's insulting offer or a
@@ -188,17 +193,20 @@ the rules' `ai.ollama`: `num_ctx` (16384, room for a talk and a full fact sheet)
 not wait for the model to load, and it is out of the GPU soon after the player goes racing; Ollama's own is 5m) and
 `repeat_penalty`. The Settings test sends them too, so testing does not make Ollama load the model again.
 Races (`ai.ollama.unloadForRaces`, on): when a race starts (`AssettoCorsaLauncher.ExecutionStarted`, `AiHub.SetRacing`)
-the model lets go of the GPU (an empty `/api/chat` with `keep_alive` 0), nothing is asked of it while the race runs (a
-request then would load it again; the game's own words stand), and when the race is over (`ExecutionEnded`) it is
-loaded again in the background (an empty chat with the same `num_ctx` and `keep_alive`, so the first line does not
-load it once more). Measured on 2026-10-03: unloaded at once, loaded again in 2.2 s. Other providers are not touched.
+the model lets go of the GPU (an empty `/api/chat` with `keep_alive` 0) if it is on it (`/api/ps`). Nothing is asked of
+it while the race runs (a request then would load it again): the player's own requests get the game's words, the
+background's (the race's own news and street talk, written before `ExecutionEnded`) wait for the end of the race, and
+one already in line when the race starts is held at its turn. When the race is over it is loaded again in the
+background (an empty chat with the same `num_ctx` and `keep_alive`, so the first line does not load it once more), only
+if it was on the GPU when the race began. Measured on 2026-10-03: unloaded at once, loaded again in 2.2 s. Other providers are not touched.
 
 Talk detail (Settings' AI section, `AiSettings.TalkDetail`, `TalkDetail`): how much a talk sends with each line, for a paid
 provider billed by the token or a slow one. Light (a fact sheet of at most 1,500 tokens, 12 turns, 4 memories told),
-normal (3,000, 24, 6) or full (the rules as they are, the default). It caps only what is told (`TalkDesk.Told`):
+normal (3,000, 24, 6) or full (the rules as they are, the default); the caps are the rules' `detailLight` and
+`detailNormal`. It caps only what is told (`TalkDesk.Told`):
 what is kept (memories, deals, events) always goes by the rules, so a lighter detail forgets nothing. The section shows
 the most a line sends at the detail picked, by the game's guess (`TalkDetail.MostTokensALine`: the persona, the longest
-talk prompt with its examples, a full sheet and the turns; most lines send far less). The answer's length stays the
+talk prompt with its examples, a full sheet and twice the turns kept at `turnTokens` (45) each; most lines send far less). The answer's length stays the
 prompts' own.
 
 Tried live on 2026-10-01 (RTX 3060 12 GB): `streetcorsa` from llama3.1:8b answers in 0-3 s, stays in character, says it

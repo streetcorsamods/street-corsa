@@ -18,7 +18,10 @@ namespace StreetCorsa.Services.Ai
         /// <summary>Room kept free in the window besides the answer, for a guess that ran low</summary>
         public const int Margin = 256;
 
-        public static int Estimate(string? text) => string.IsNullOrEmpty(text) ? 0 : (int)Math.Ceiling(text.Length / CharsPerToken);
+        public static int Estimate(string? text) => string.IsNullOrEmpty(text) ? 0 : EstimateLength(text.Length);
+
+        /// <summary>A text of <paramref name="characters"/> characters</summary>
+        public static int EstimateLength(int characters) => characters <= 0 ? 0 : (int)Math.Ceiling(characters / CharsPerToken);
 
         /// <summary>A message of the talk, with what it costs to send it</summary>
         public static int Estimate(AiTurn turn) => Estimate(turn.Text) + PerMessage;

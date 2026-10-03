@@ -64,7 +64,18 @@
       "salesmanMinAge": 28,
       "salesmanMaxAge": 57,
       "sellerMinAge": 20,
-      "sellerMaxAge": 74
+      "sellerMaxAge": 74,
+      "detailLight": {
+        "factTokens": 1500,
+        "turnsKept": 12,
+        "memoriesGiven": 4
+      },
+      "detailNormal": {
+        "factTokens": 3000,
+        "turnsKept": 24,
+        "memoriesGiven": 6
+      },
+      "turnTokens": 45
     },
     "ollama": {
       "contextTokens": 16384,

@@ -13,7 +13,8 @@
     "chat.section: how a section of the fact sheet is headed, {heading} one of chat.section.* (now, you: a rival's own facts,",
     "  thing: what is talked about, build: what is on that car, your_car: what is on a rival's own car, lot, races: with the",
     "  player, rival_races: with other racers, memories, said, deal; feeling: how they feel about the player, events: what",
-    "  happened between them, earlier: the start of a long talk summed up, lore: what everybody knows these days, ai/lore.json).",
+    "  happened between them, earlier: the start of a long talk summed up, lore: what everybody knows these days, ai/lore.json;",
+    "  warning: a word on an answer that named a price it must not, last, when the person is asked again).",
     "chat.examples: heads a prompt's example exchanges ({examples} in the chat prompts), written as chat.transcript.*.",
     "chat.fact.feeling.sore, cool, warm, friendly: how the person feels about the player (-2, -1, +1, +2; nothing at 0).",
     "chat.fact.events heads chat.fact.event.<kind>: {when}, {what} (the car or part), {amount} (bought, sold: the price;",
@@ -69,6 +70,7 @@
     "chat.section.earlier": "Earlier in this talk, in short (your notes: where a price differs, the deal below is right)",
     "chat.section.said": "What you already said",
     "chat.section.deal": "The deal now",
+    "chat.section.warning": "Mind this",
 
     "chat.place.cruise": "You are in your car on the street at night, pulled up beside the player's car, engines running.",
 
@@ -196,7 +198,8 @@
 
     "chat.unit_words": [
       "miles", "mile", "mi", "km", "kilometers", "mph", "hp", "horsepower", "horses", "cubes", "cubic", "ci", "cc", "inch",
-      "inches", "rpm", "years", "year", "yrs", "owners", "owner", "cylinders", "speed", "barrel", "barrels", "days", "weeks", "times"
+      "inches", "rpm", "years", "year", "yrs", "owners", "owner", "cylinders", "speed", "barrel", "barrels", "days", "weeks", "times",
+      "down", "a month", "a week", "a day", "a year", "a gallon", "a quart", "an hour", "per", "monthly", "weekly"
     ],
 
     "chat.ui.buy": "Buy it for {price:money}",

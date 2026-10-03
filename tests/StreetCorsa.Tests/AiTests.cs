@@ -234,24 +234,75 @@ public class AiTests
     [Fact]
     public async Task A_local_model_lets_go_of_the_gpu_for_a_race_is_asked_nothing_during_it_and_is_loaded_again_after()
     {
-        var http = new FakeHttp((_, _) => Task.FromResult(FakeHttp.Json("""{ "message": { "content": "Hey." }, "done": true }""")));
+        var http = new FakeHttp((sent, _) => Task.FromResult(FakeHttp.Json(sent.Uri.AbsolutePath == "/api/ps"
+            ? """{ "models": [ { "name": "m:latest", "model": "m:latest" } ] }"""
+            : """{ "message": { "content": "Hey." }, "done": true }""")));
+        var service = Service(http);
+        List<SentRequest> Chats() { lock (http.Sent) return http.Sent.Where(s => s.Uri.AbsolutePath == "/api/chat").ToList(); }
+
+        service.SetRacing(true);
+        for (var i = 0; i < 50 && Chats().Count == 0; i++) await Task.Delay(10, Ct);
+        var unload = Assert.Single(Chats()).Json!;
+        Assert.Equal(0, unload["keep_alive"]!.GetValue<int>());
+        Assert.Empty(unload["messages"]!.AsArray());
+
+        // The player's own is not asked; the background's waits for the end of the race
+        Assert.Null(await service.ChatAsync("talk", new TextValues { ["line"] = "Move it." }, [new AiTurn(false, "Hi.")], Ct));
+        var waiting = service.WriteAsync("talk", new TextValues { ["line"] = "Move it." }, cancellationToken: Ct);
+        await Task.Delay(50, Ct);
+        Assert.False(waiting.IsCompleted);
+        Assert.Single(Chats());
+
+        service.SetRacing(false);
+        Assert.Equal("Hey.", await waiting);
+        for (var i = 0; i < 50 && Chats().Count < 3; i++) await Task.Delay(10, Ct);
+        var load = Assert.Single(Chats(), s => s.Json!["messages"]!.AsArray().Count == 0 && s.Json!["keep_alive"]!.GetValueKind() == System.Text.Json.JsonValueKind.String).Json!;
+        Assert.Equal(new OllamaRules().KeepAlive, load["keep_alive"]!.GetValue<string>());
+        Assert.Equal(new OllamaRules().ContextTokens, load["options"]!["num_ctx"]!.GetValue<int>());
+    }
+
+    [Fact]
+    public async Task A_model_that_was_not_loaded_before_a_race_is_not_loaded_after_it()
+    {
+        var http = new FakeHttp((sent, _) => Task.FromResult(FakeHttp.Json(sent.Uri.AbsolutePath == "/api/ps"
+            ? """{ "models": [ { "name": "other:latest" } ] }"""
+            : """{ "message": { "content": "Hey." }, "done": true }""")));
         var service = Service(http);
 
         service.SetRacing(true);
         for (var i = 0; i < 50 && http.Sent.Count == 0; i++) await Task.Delay(10, Ct);
-        var unload = Assert.Single(http.Sent).Json!;
-        Assert.Equal(0, unload["keep_alive"]!.GetValue<int>());
-        Assert.Empty(unload["messages"]!.AsArray());
+        await Task.Delay(30, Ct);
+        service.SetRacing(false);
+        await Task.Delay(100, Ct);
 
-        Assert.Null(await service.WriteAsync("talk", new TextValues { ["line"] = "Move it." }, cancellationToken: Ct));
-        Assert.Single(http.Sent);
+        Assert.Equal("/api/ps", Assert.Single(http.Sent).Uri.AbsolutePath);
+    }
+
+    [Fact]
+    public async Task A_request_waiting_in_line_when_a_race_starts_is_not_sent_until_it_is_over()
+    {
+        var release = new TaskCompletionSource();
+        var http = new FakeHttp(async (sent, _) =>
+        {
+            if (sent.Uri.AbsolutePath == "/api/ps") return FakeHttp.Json("""{ "models": [] }""");
+            if (sent.Json!["messages"]!.AsArray().Count > 0 && sent.Body.Contains("first")) await release.Task;
+            return FakeHttp.Json("""{ "message": { "content": "Hey." }, "done": true }""");
+        });
+        var service = Service(http);
+        List<SentRequest> Chats() { lock (http.Sent) return http.Sent.Where(s => s.Uri.AbsolutePath == "/api/chat").ToList(); }
+
+        var first = service.WriteAsync("talk", new TextValues { ["line"] = "first" }, cancellationToken: Ct);
+        for (var i = 0; i < 50 && Chats().Count == 0; i++) await Task.Delay(10, Ct);
+        var second = service.WriteAsync("talk", new TextValues { ["line"] = "second" }, cancellationToken: Ct);
+        service.SetRacing(true);
+        release.SetResult();
+        Assert.Equal("Hey.", await first);
+        await Task.Delay(50, Ct);
+        Assert.DoesNotContain(Chats(), s => s.Body.Contains("second"));
 
         service.SetRacing(false);
-        for (var i = 0; i < 50 && http.Sent.Count == 1; i++) await Task.Delay(10, Ct);
-        var load = http.Sent[1].Json!;
-        Assert.Equal(new OllamaRules().KeepAlive, load["keep_alive"]!.GetValue<string>());
-        Assert.Equal(new OllamaRules().ContextTokens, load["options"]!["num_ctx"]!.GetValue<int>());
-        Assert.Equal("Hey.", await service.WriteAsync("talk", new TextValues { ["line"] = "Move it." }, cancellationToken: Ct));
+        Assert.Equal("Hey.", await second);
+        Assert.Contains(Chats(), s => s.Body.Contains("second"));
     }
 
     [Fact]

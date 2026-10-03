@@ -217,6 +217,15 @@ public sealed class TalkRules
 
     public int SellerMaxAge { get; set; } = 74;
 
+    /// <summary>The most the player's "light" talk detail (Settings) sends each line; the figures above when they are lower</summary>
+    public TalkDetailCaps DetailLight { get; set; } = new() { FactTokens = 1500, TurnsKept = 12, MemoriesGiven = 4 };
+
+    /// <summary>The most the "normal" talk detail sends each line; "full" sends the figures above as they are</summary>
+    public TalkDetailCaps DetailNormal { get; set; } = new() { FactTokens = 3000, TurnsKept = 24, MemoriesGiven = 6 };
+
+    /// <summary>A turn of a talk, about (tokens): a line or two of the player's and the person's, for the most a line sends shown in Settings</summary>
+    public int TurnTokens { get; set; } = 45;
+
     /// <summary>These rules with less sent each line (the player's talk detail): the rest as they are</summary>
     public TalkRules With(int factTokens, int turnsKept, int memoriesGiven)
     {
@@ -226,6 +235,19 @@ public sealed class TalkRules
         copy.MemoriesGiven = memoriesGiven;
         return copy;
     }
+}
+
+/// <summary>The most a talk detail sends each line (<see cref="TalkRules.DetailLight"/>, <see cref="TalkRules.DetailNormal"/>)</summary>
+public sealed class TalkDetailCaps
+{
+    /// <summary>The fact sheet, tokens at most</summary>
+    public int FactTokens { get; set; }
+
+    /// <summary>Turns of the talk sent</summary>
+    public int TurnsKept { get; set; }
+
+    /// <summary>Memories of past talks told</summary>
+    public int MemoriesGiven { get; set; }
 }
 
 /// <summary>What the game sends Ollama besides the prompt (<c>"ai": { "ollama": ... }</c>)</summary>

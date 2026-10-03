@@ -765,9 +765,78 @@ public class TalkTests
 
         Assert.Equal("The Bel Air's a steal at $1,500, pal!", said);
         Assert.Equal(2, ai.Chats.Count);
-        Assert.Contains(GameText.Say("chat.fact.lot_price_warning"), (string)ai.Chats[1].Values["facts"]!);
+        // Last, under a heading of its own: not read as one of the section's before it
+        Assert.EndsWith(Heading("warning") + "\n" + GameText.Say("chat.fact.lot_price_warning"), (string)ai.Chats[1].Values["facts"]!);
         // Each car on the lot with its engine and miles
         Assert.Contains("283 V8", (string)ai.Chats[0].Values["facts"]!);
+    }
+
+    [Fact]
+    public async Task Small_talk_of_money_down_or_what_gas_costs_is_no_price()
+    {
+        var game = Game();
+        var (desk, ai) = Desk(answer: "Just $300 down and she's yours. Gas is $0.30 a gallon, she sips it.");
+        var said = await desk.ForCar(game, Car(), null, TalkPlace.Phone).SayAsync("What would it take?", Ct);
+        Assert.Equal("Just $300 down and she's yours. Gas is $0.30 a gallon, she sips it.", said);
+        Assert.Single(ai.Chats);
+
+        var answers = new FakeAiText((_, _) => Task.FromResult<string?>("Only $40 a month on any car here, pal. Gas is $0.30!"));
+        var lot = new TalkDesk(answers, carName: id => id, prompts: BasePrompts, rules: () => Rules).ForLot(game, "dealer_1", [Car(1500m, "dealer_1")]);
+        await lot.OpenAsync(Ct);
+        Assert.Single(answers.Chats);
+    }
+
+    [Fact]
+    public async Task A_sum_from_the_towns_talk_or_the_paper_is_no_price_the_seller_may_come_down_to()
+    {
+        var game = Game();
+        game.StreetTalk = [new StreetTalkItem(game.Date.AddDays(-1), "Word is Hank let his Ford go for $900.")];
+        game.News = [new NewsArticle { Date = game.Date.AddDays(-1), Headline = "Coupe sold", Body = "A coupe went for $1,100 at auction." }];
+        var car = Car();
+        car.Listing.FirstAsked = 1500m;
+        car.Listing.MostOff = 0;
+
+        foreach (var answer in new[] { "Tell you what, $900 and it's yours.", "Make it $1,100 and we're done." })
+        {
+            var (desk, ai) = Desk(answer: answer);
+            var said = await desk.ForCar(game, car, null, TalkPlace.Phone).SayAsync("Does it run?", Ct);
+            Assert.Equal(2, ai.Chats.Count);
+            Assert.Equal(GameText.Say("chat.deal.held", ("price", new Helpers.Money(1500m))), said);
+        }
+    }
+
+    [Fact]
+    public void A_rivals_car_for_sale_is_told_once_not_again_as_their_own()
+    {
+        var catalog = TestCars.Catalog.Value;
+        var game = Game();
+        var own = TestCars.WithRealEngine(catalog);
+        var rival = new Opponent("Johnny Reyes", 24, Gender.Male, 95, 80) { Nickname = "Flash" };
+        rival.Cars.Add(own);
+        game.Racers.AddRacer(rival);
+        var car = Car();
+        car.Listing.Parts = own.Parts;
+        car.RivalAd = new RivalCarAd { RivalName = rival.Name, CarInstanceId = own.InstanceId, AskingPrice = 1500m, PostedDate = game.Date };
+        var desk = new TalkDesk(new FakeAiText((_, _) => Task.FromResult<string?>("Sure.")), carName: id => id, parts: () => catalog,
+            prompts: BasePrompts, rules: () => Rules);
+
+        var keys = desk.ForCar(game, car, null, TalkPlace.Phone).Sections().Select(s => s.Key).ToList();
+        Assert.Contains("build", keys);
+        Assert.DoesNotContain("your_car", keys);
+    }
+
+    [Fact]
+    public void A_piece_in_the_paper_is_told_as_the_paper_shows_it()
+    {
+        var game = Game();
+        game.News = [new NewsArticle { Date = game.Date, Headline = "Drag racing on Main", Body = "Police were called.", AiBody = "The cops came.", AiLanguage = AiWriter.Language }];
+        var (desk, _) = Desk();
+
+        var facts = desk.ForCar(game, Car(), null, TalkPlace.Phone).Facts();
+
+        // No AI headline: the paper shows the piece as the game wrote it, and so the person read it
+        Assert.Contains("Police were called.", facts);
+        Assert.DoesNotContain("The cops came.", facts);
     }
 
     [Fact]
@@ -872,6 +941,45 @@ public class TalkTests
 
         var said = await talk.SayAsync("Any rust?", Ct);
         Assert.Equal(GameText.Say("chat.deal.held", ("price", new Helpers.Money(1500m))), said);
+    }
+
+    [Fact]
+    public async Task The_summary_is_asked_late_and_in_one_go_not_every_few_turns()
+    {
+        var game = Game();
+        var rules = new TalkRules { TurnsKept = 10, SummaryTurns = 2 };
+        var ai = new FakeAiText((use, _) => Task.FromResult<string?>(use == "chat_summary" ? "They talked." : "Sure thing."));
+        var desk = new TalkDesk(ai, prompts: BasePrompts, rules: () => rules);
+        var talk = desk.ForCar(game, Car(), null, TalkPlace.Phone);
+
+        for (var i = 0; i < 8; i++) await talk.SayAsync($"Question {i}?", Ct);
+        Assert.DoesNotContain(ai.Asked, a => a.Use == "chat_summary");
+
+        await talk.SayAsync("Question 8?", Ct);
+        var asked = Assert.Single(ai.Asked, a => a.Use == "chat_summary");
+        Assert.Contains("Question 3?", (string)asked.Values["talk"]!);
+        Assert.DoesNotContain("Question 4?", (string)asked.Values["talk"]!);
+    }
+
+    [Fact]
+    public async Task With_an_odd_number_of_turns_kept_the_summary_still_takes_the_persons_answer()
+    {
+        var game = Game();
+        var rules = new TalkRules { TurnsKept = 3, SummaryTurns = 1 };
+        var answered = 0;
+        var ai = new FakeAiText((use, _) => Task.FromResult<string?>(use == "chat_summary" ? "They talked." : $"Answer {++answered}."));
+        var desk = new TalkDesk(ai, prompts: BasePrompts, rules: () => rules);
+        var talk = desk.ForCar(game, Car(), null, TalkPlace.Phone);
+
+        await talk.SayAsync("One?", Ct);
+        await talk.SayAsync("Two?", Ct);
+        var asked = Assert.Single(ai.Asked, a => a.Use == "chat_summary");
+        Assert.Contains("Answer 1.", (string)asked.Values["talk"]!);
+
+        await talk.SayAsync("Three?", Ct);
+        var sent = ai.Chats[^1].Turns;
+        Assert.False(sent[0].Mine);
+        Assert.Equal("Two?", sent[0].Text);
     }
 
     [Fact]
@@ -1066,6 +1174,13 @@ public class TalkTests
         Assert.True(tokens[0] < tokens[1] && tokens[1] < tokens[2], string.Join(", ", tokens));
         // Ollama's window halves the sheet
         Assert.True(TalkDetail.MostTokensALine(rules, prompts, 4096) < tokens[2]);
+        // Twice the turns kept go until the older ones are summed up
+        Assert.Equal(2 * 10 * rules.TurnTokens,
+            TalkDetail.MostTokensALine(new TalkRules { TurnsKept = 20 }, prompts) - TalkDetail.MostTokensALine(new TalkRules { TurnsKept = 10 }, prompts));
+
+        // A mod sets the caps in the rules
+        var modded = TalkDetail.Apply(new TalkRules { DetailLight = new TalkDetailCaps { FactTokens = 700, TurnsKept = 5, MemoriesGiven = 2 } }, TalkDetail.Light);
+        Assert.Equal((700, 5, 2), (modded.FactTokens, modded.TurnsKept, modded.MemoriesGiven));
     }
 
     [Fact]

@@ -140,19 +140,23 @@ namespace StreetCorsa.Services.Talk
 
         /// <summary>
         /// The answer names a price under <paramref name="price"/> that nothing the person was told gives (the player's
-        /// own offer, a cheaper car on the lot, what was first asked): the AI came down by itself
+        /// own offer, a cheaper car on the lot, what was first asked): the AI came down by itself. A sum under
+        /// <paramref name="least"/> is small talk (what gas costs), no price of the thing
         /// </summary>
-        public static bool NamesLowerPrice(string answer, decimal price, IEnumerable<decimal> known, IReadOnlyList<string>? unitWords = null)
+        public static bool NamesLowerPrice(string answer, decimal price, IEnumerable<decimal> known, IReadOnlyList<string>? unitWords = null, decimal least = 0)
         {
             var allowed = known.ToHashSet();
-            return SumsIn(answer, unitWords).Any(sum => sum < price && !allowed.Contains(sum));
+            return SumsIn(answer, unitWords).Any(sum => sum < price && sum >= least && !allowed.Contains(sum));
         }
 
-        /// <summary>The answer names a sum, higher or lower, that nothing the person was told gives (a car's price made up)</summary>
-        public static bool NamesUnknownSum(string answer, IEnumerable<decimal> known, IReadOnlyList<string>? unitWords = null)
+        /// <summary>
+        /// The answer names a sum, higher or lower, that nothing the person was told gives (a car's price made up); a sum
+        /// under <paramref name="least"/> is small talk, no car's price
+        /// </summary>
+        public static bool NamesUnknownSum(string answer, IEnumerable<decimal> known, IReadOnlyList<string>? unitWords = null, decimal least = 0)
         {
             var allowed = known.ToHashSet();
-            return SumsIn(answer, unitWords).Any(sum => !allowed.Contains(sum));
+            return SumsIn(answer, unitWords).Any(sum => sum >= least && !allowed.Contains(sum));
         }
 
         /// <summary>

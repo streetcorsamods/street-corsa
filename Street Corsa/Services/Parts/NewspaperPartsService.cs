@@ -166,7 +166,7 @@ namespace StreetCorsa.Services.Parts
             RivalPartAds.Pay(gameState, ad, ad.AskingPrice);
 
             // The seller remembers it, a rival whether or not the player talked to them
-            var what = _parts.Catalog.Get(ad.Part.DefinitionId) is { } definition ? definition.DisplayName ?? definition.Name : ad.Part.DefinitionId;
+            var what = _parts.Catalog.Get(ad.Part.DefinitionId) is { } definition ? Market.AdBlurbs.NameOf(definition) : ad.Part.DefinitionId;
             var bought = new PersonEvent { Date = gameState.Date, Kind = "bought", What = what, Amount = ad.AskingPrice };
             if (ad.SellerRival is { } name && gameState.Racers.Find(name) is Opponent rival) Talk.TalkPeople.Happened(gameState, rival, bought);
             else Talk.TalkPeople.Happened(gameState, bought, Talk.TalkPeople.PartKey(ad));

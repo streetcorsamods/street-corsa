@@ -11,12 +11,6 @@ using StreetCorsa.Services.Text;
 namespace StreetCorsa.Services.Talk
 {
     /// <summary>
-    /// What a person knows, written out for the AI with every turn (the text pools <c>talk.fact.*</c>): the game's facts,
-    /// never the AI's. The thing for sale and its price now, the lot's cars, who a rival is, the races they had with the
-    /// player and with each other, what they remember of past talks, what they said about the thing before, and the
-    /// answer to an offer just made. One fact a line.
-    /// </summary>
-    /// <summary>
     /// One part of the fact sheet: its heading (<c>chat.section.{Key}</c>), its lines, the most needed first, and how much
     /// it is needed when the sheet is too long (<see cref="TalkFacts.Sheet"/>): the lowest goes first, line by line from
     /// the end; its first <paramref name="HeadLines"/> lines (a line that heads a list) only go with the whole section
@@ -44,6 +38,12 @@ namespace StreetCorsa.Services.Talk
         public const int Earlier = 90;
     }
 
+    /// <summary>
+    /// What a person knows, written out for the AI with every turn (the text pools <c>talk.fact.*</c>): the game's facts,
+    /// never the AI's. The thing for sale and its price now, the lot's cars, who a rival is, the races they had with the
+    /// player and with each other, what they remember of past talks, what they said about the thing before, and the
+    /// answer to an offer just made. One fact a line.
+    /// </summary>
     public static class TalkFacts
     {
         /// <summary>"today", "yesterday", "5 days ago": how people say when</summary>
@@ -88,11 +88,8 @@ namespace StreetCorsa.Services.Talk
             if (news.Count == 0) yield break;
             yield return GameText.Say("chat.fact.news");
             foreach (var article in news)
-            {
-                var ai = article.AiBody is { Length: > 0 } && article.AiLanguage == AiWriter.Language;
                 yield return GameText.Say("chat.fact.news_line", ("when", When(article.Date, game.Date)),
-                    ("headline", ai ? article.AiHeadline ?? article.Headline : article.Headline), ("text", ai ? article.AiBody : article.Body));
-            }
+                    ("headline", AiWriter.Headline(article)), ("text", AiWriter.Body(article)));
         }
 
         /// <summary>
@@ -446,21 +443,33 @@ namespace StreetCorsa.Services.Talk
                 .Where(s => s.Lines.Count > 0)
                 .ToList();
 
-            string Write() => string.Join("\n\n", kept.Select(s => s.Heading + "\n" + string.Join("\n", s.Lines)));
-
-            var sheet = Write();
-            while (AiTokens.Estimate(sheet) > maxTokens)
+            // The sheet's length, kept as lines go rather than written again each time: a section is its heading and a line
+            // each, two line breaks between sections
+            var lengths = kept.Select(s => s.Heading.Length + s.Lines.Sum(l => l.Length + 1)).ToList();
+            var length = lengths.Sum() + Math.Max(0, kept.Count - 1) * 2;
+            while (AiTokens.EstimateLength(length) > maxTokens)
             {
                 var lowest = kept.Select(s => s.Priority).DefaultIfEmpty(FactSection.Always).Min();
                 if (lowest == FactSection.Always) break;
                 var least = kept.FindIndex(s => s.Priority == lowest);
                 // From its end, the most needed line first in it; the head only with the whole section
-                if (kept[least].Lines.Count > Math.Max(1, kept[least].HeadLines)) kept[least].Lines.RemoveAt(kept[least].Lines.Count - 1);
-                else kept.RemoveAt(least);
-                sheet = Write();
+                var lines = kept[least].Lines;
+                if (lines.Count > Math.Max(1, kept[least].HeadLines))
+                {
+                    var gone = lines[^1].Length + 1;
+                    lines.RemoveAt(lines.Count - 1);
+                    lengths[least] -= gone;
+                    length -= gone;
+                }
+                else
+                {
+                    length -= lengths[least] + (kept.Count > 1 ? 2 : 0);
+                    kept.RemoveAt(least);
+                    lengths.RemoveAt(least);
+                }
             }
 
-            return sheet;
+            return string.Join("\n\n", kept.Select(s => s.Heading + "\n" + string.Join("\n", s.Lines)));
         }
 
         public static TalkRules Rules => RuleBook.Current.Ai.Talk;
