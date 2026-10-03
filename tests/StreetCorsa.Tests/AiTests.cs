@@ -232,6 +232,45 @@ public class AiTests
             () => rules ?? new AiRules { MinSecondsBetween = 0 });
 
     [Fact]
+    public async Task A_local_model_lets_go_of_the_gpu_for_a_race_is_asked_nothing_during_it_and_is_loaded_again_after()
+    {
+        var http = new FakeHttp((_, _) => Task.FromResult(FakeHttp.Json("""{ "message": { "content": "Hey." }, "done": true }""")));
+        var service = Service(http);
+
+        service.SetRacing(true);
+        for (var i = 0; i < 50 && http.Sent.Count == 0; i++) await Task.Delay(10, Ct);
+        var unload = Assert.Single(http.Sent).Json!;
+        Assert.Equal(0, unload["keep_alive"]!.GetValue<int>());
+        Assert.Empty(unload["messages"]!.AsArray());
+
+        Assert.Null(await service.WriteAsync("talk", new TextValues { ["line"] = "Move it." }, cancellationToken: Ct));
+        Assert.Single(http.Sent);
+
+        service.SetRacing(false);
+        for (var i = 0; i < 50 && http.Sent.Count == 1; i++) await Task.Delay(10, Ct);
+        var load = http.Sent[1].Json!;
+        Assert.Equal(new OllamaRules().KeepAlive, load["keep_alive"]!.GetValue<string>());
+        Assert.Equal(new OllamaRules().ContextTokens, load["options"]!["num_ctx"]!.GetValue<int>());
+        Assert.Equal("Hey.", await service.WriteAsync("talk", new TextValues { ["line"] = "Move it." }, cancellationToken: Ct));
+    }
+
+    [Fact]
+    public async Task A_paid_provider_is_not_touched_by_a_race_and_nothing_is_unloaded_when_the_rules_say_not_to()
+    {
+        var http = new FakeHttp((_, _) => Task.FromResult(FakeHttp.Json("""{ "choices": [ { "message": { "content": "Hey." } } ] }""")));
+        var service = Service(http, new AiSettings { Enabled = true, TextProvider = AiProviders.OpenAi, Model = "m" });
+        service.SetRacing(true);
+        Assert.Equal("Hey.", await service.WriteAsync("talk", new TextValues { ["line"] = "Move it." }, cancellationToken: Ct));
+        Assert.Single(http.Sent);
+
+        var local = new FakeHttp((_, _) => Task.FromResult(FakeHttp.Json("""{ "message": { "content": "Hey." } }""")));
+        var kept = Service(local, rules: new AiRules { MinSecondsBetween = 0, Ollama = new OllamaRules { UnloadForRaces = false } });
+        kept.SetRacing(true);
+        Assert.Equal("Hey.", await kept.WriteAsync("talk", new TextValues { ["line"] = "Move it." }, cancellationToken: Ct));
+        Assert.Single(local.Sent);
+    }
+
+    [Fact]
     public async Task A_prompt_is_filled_with_the_games_values_and_the_persona_with_the_players_language()
     {
         var http = new FakeHttp((_, _) => Task.FromResult(FakeHttp.Json("""{ "message": { "content": "\"Out of my way, rookie.\"" } }""")));

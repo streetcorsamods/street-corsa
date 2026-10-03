@@ -235,4 +235,11 @@ public sealed class OllamaRules
 
     /// <summary>How much the model is kept from saying the same words again (1: not at all)</summary>
     public double RepeatPenalty { get; set; } = 1.1;
+
+    /// <summary>
+    /// The model lets go of the GPU when a race starts (Assetto Corsa wants the card), nothing is asked of it while the race
+    /// runs, and it is loaded again in the background when the race is over, so the first line after waits a few seconds
+    /// less (measured on a 12 GB card: about 3-4 s warm, 11 s from a cold disk)
+    /// </summary>
+    public bool UnloadForRaces { get; set; } = true;
 }

@@ -69,7 +69,8 @@
     "ollama": {
       "contextTokens": 16384,
       "keepAlive": "10m",
-      "repeatPenalty": 1.1
+      "repeatPenalty": 1.1,
+      "unloadForRaces": true
     }
   }
 }

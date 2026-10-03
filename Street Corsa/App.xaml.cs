@@ -364,6 +364,8 @@ namespace StreetCorsa
         private void OnRacing(bool racing, bool keepRadio = false)
         {
             Audio.AudioHub.Shared.SetRacing(racing);
+            // A local AI model gives the GPU to the race, and is loaded again after it
+            Services.Ai.AiHub.Shared.SetRacing(racing);
             Dispatcher.BeginInvoke(() => Audio.Radio.RadioPlayer.Shared.SetRacing(racing, keepRadio));
         }
 

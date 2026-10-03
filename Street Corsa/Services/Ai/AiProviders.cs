@@ -224,6 +224,36 @@ namespace StreetCorsa.Services.Ai
         }
 
         /// <summary>
+        /// Loads the model onto the GPU with nothing asked of it (a chat of no messages), with the context every request is
+        /// sent, so the next line does not wait for it; kept as long as the game's keep-alive
+        /// </summary>
+        public async Task LoadAsync(CancellationToken cancellationToken)
+        {
+            var body = new JsonObject
+            {
+                ["model"] = await ModelAsync(cancellationToken).ConfigureAwait(false),
+                ["stream"] = false,
+                ["messages"] = new JsonArray()
+            };
+            if (_tuning is { ContextTokens: > 0 } tuning) body["options"] = new JsonObject { ["num_ctx"] = tuning.ContextTokens };
+            if (_tuning is { KeepAlive.Length: > 0 }) body["keep_alive"] = _tuning.KeepAlive;
+            await SendAsync(HttpMethod.Post, Endpoint + "/api/chat", body, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>Lets go of the model, so its memory on the card is free (a chat of no messages kept alive for 0)</summary>
+        public async Task UnloadAsync(CancellationToken cancellationToken)
+        {
+            var body = new JsonObject
+            {
+                ["model"] = await ModelAsync(cancellationToken).ConfigureAwait(false),
+                ["stream"] = false,
+                ["messages"] = new JsonArray(),
+                ["keep_alive"] = 0
+            };
+            await SendAsync(HttpMethod.Post, Endpoint + "/api/chat", body, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
         /// Makes (or makes again) the model <paramref name="name"/> in Ollama from <paramref name="from"/>, with a system
         /// prompt, parameters and example messages of its own (POST /api/create, not streamed)
         /// </summary>

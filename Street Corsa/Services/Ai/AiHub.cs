@@ -20,12 +20,17 @@ namespace StreetCorsa.Services.Ai
 
         public AiWriter Writer { get; }
 
+        private readonly AiTextService _text;
+
         public AiHub(Func<AiSettings> settings, Func<GameState?> currentGame, Action<Action>? onGameThread = null, Func<string, string>? carName = null)
         {
-            Text = new AiTextService(settings, AiHttp.Shared);
+            Text = _text = new AiTextService(settings, AiHttp.Shared);
             Images = new ComfyImageService(settings, AiHttp.Shared);
             Writer = new AiWriter(Text, Images, currentGame, onGameThread, carName);
         }
+
+        /// <summary>A race starts or is over: a local model lets go of the GPU for it (<see cref="AiTextService.SetRacing"/>)</summary>
+        public void SetRacing(bool racing) => _text.SetRacing(racing);
 
         /// <summary>The app's hub, from start-up on</summary>
         public static AiHub Start(Func<AiSettings> settings, Func<GameState?> currentGame, Action<Action> onGameThread, Func<string, string>? carName = null) =>

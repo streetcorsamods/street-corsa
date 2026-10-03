@@ -143,6 +143,11 @@ namespace StreetCorsa.Services.Ai
         private async Task<string?> AskAsync(string use, AiPriority priority, Func<AiPrompts, AiPrompt, AiTextRequest> ask, CancellationToken cancellationToken)
         {
             if (!IsAvailable) return null;
+            if (HeldForRace)
+            {
+                _logger.Debug("AI {Use} not asked during a race: the model is off the GPU", use);
+                return null;
+            }
             var prompts = _prompts();
             if (prompts.Prompt(use) is not { } prompt)
             {
@@ -194,6 +199,65 @@ namespace StreetCorsa.Services.Ai
             finally
             {
                 Leave();
+            }
+        }
+
+        // ----- races -----
+
+        private volatile bool _racing;
+
+        /// <summary>A race runs and the local model was let go for it: nothing is asked, which would load it again</summary>
+        private bool HeldForRace => _racing && Rules.Ollama.UnloadForRaces && AiProviders.Normalize(_settings().TextProvider) == AiProviders.Ollama;
+
+        /// <summary>
+        /// A race starts (<paramref name="racing"/>) or is over: a local model lets go of the GPU for it, and is loaded again
+        /// in the background after (<see cref="StreetCorsa.Rules.OllamaRules.UnloadForRaces"/>). Other providers are not
+        /// touched. Never throws, never waits.
+        /// </summary>
+        public void SetRacing(bool racing)
+        {
+            if (_racing == racing) return;
+            _racing = racing;
+            if (!Rules.Ollama.UnloadForRaces || !_settings().Enabled) return;
+            try
+            {
+                if (Provider() is not OllamaTextProvider ollama) return;
+                _ = racing ? LetGoAsync(ollama) : LoadAgainAsync(ollama);
+            }
+            catch (Exception ex)
+            {
+                _logger.Warning("Could not {What} the AI model for the race: {Error}", racing ? "let go of" : "load", ex.Message);
+            }
+        }
+
+        private async Task LetGoAsync(OllamaTextProvider ollama)
+        {
+            try
+            {
+                using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(Math.Max(1, Rules.RequestTimeoutSeconds)));
+                await ollama.UnloadAsync(timeout.Token).ConfigureAwait(false);
+                _logger.Information("The AI model let go of the GPU for the race");
+            }
+            catch (Exception ex)
+            {
+                // Ollama not running is nothing to let go of
+                _logger.Debug("Could not let go of the AI model for the race: {Error}", ex.Message);
+            }
+        }
+
+        private async Task LoadAgainAsync(OllamaTextProvider ollama)
+        {
+            try
+            {
+                using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(Math.Max(1, Rules.RequestTimeoutSeconds)));
+                var started = DateTime.UtcNow;
+                await ollama.LoadAsync(timeout.Token).ConfigureAwait(false);
+                _logger.Information("The AI model is loaded again after the race in {Ms} ms", (int)(DateTime.UtcNow - started).TotalMilliseconds);
+            }
+            catch (Exception ex)
+            {
+                // The first line after waits for it instead
+                _logger.Debug("Could not load the AI model again after the race: {Error}", ex.Message);
             }
         }
 

@@ -187,6 +187,11 @@ example exchanges in the game's voice, then puts its name in the model box to Sa
 the rules' `ai.ollama`: `num_ctx` (16384, room for a talk and a full fact sheet), `keep_alive` (10m: the next line does
 not wait for the model to load, and it is out of the GPU soon after the player goes racing; Ollama's own is 5m) and
 `repeat_penalty`. The Settings test sends them too, so testing does not make Ollama load the model again.
+Races (`ai.ollama.unloadForRaces`, on): when a race starts (`AssettoCorsaLauncher.ExecutionStarted`, `AiHub.SetRacing`)
+the model lets go of the GPU (an empty `/api/chat` with `keep_alive` 0), nothing is asked of it while the race runs (a
+request then would load it again; the game's own words stand), and when the race is over (`ExecutionEnded`) it is
+loaded again in the background (an empty chat with the same `num_ctx` and `keep_alive`, so the first line does not
+load it once more). Measured on 2026-10-03: unloaded at once, loaded again in 2.2 s. Other providers are not touched.
 
 Tried live on 2026-10-01 (RTX 3060 12 GB): `streetcorsa` from llama3.1:8b answers in 0-3 s, stays in character, says it
 does not remember a race that never was, haggles as the rules say, and writes good memories; it still adds a small
