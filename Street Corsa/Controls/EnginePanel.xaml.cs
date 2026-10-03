@@ -55,6 +55,16 @@ public partial class EnginePanel : System.Windows.Controls.UserControl
         set => SetValue(EngineProperty, value);
     }
 
+    public static readonly DependencyProperty ShowStartButtonProperty = DependencyProperty.Register(
+        nameof(ShowStartButton), typeof(bool), typeof(EnginePanel), new PropertyMetadata(true));
+
+    /// <summary>The panel's own START button; off where the screen turns the engine over with a key of its own</summary>
+    public bool ShowStartButton
+    {
+        get => (bool)GetValue(ShowStartButtonProperty);
+        set => SetValue(ShowStartButtonProperty, value);
+    }
+
     private void OnEngineChanged()
     {
         if (IsLoaded) Forget(Runner.SetEngineAsync(Engine), "putting the engine under the pedal");

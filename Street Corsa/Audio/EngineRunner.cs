@@ -72,6 +72,9 @@ public sealed class EngineRunner : INotifyPropertyChanged
 
     public bool CanToggle => _spec != null;
 
+    /// <summary>The starter turned it over and it would not catch (the status line says why)</summary>
+    public bool FailedToStart => _sim?.FailedToStart == true;
+
     public double Rpm { get; private set; }
 
     /// <summary>What the engine idles at, as the simulation has it; 800 without an engine</summary>
@@ -394,7 +397,7 @@ public sealed class EngineRunner : INotifyPropertyChanged
     {
         foreach (var name in new[]
                  {
-                     nameof(Spec), nameof(HasEngine), nameof(IsLoading), nameof(State), nameof(IsRunning), nameof(CanToggle),
+                     nameof(Spec), nameof(HasEngine), nameof(IsLoading), nameof(State), nameof(IsRunning), nameof(CanToggle), nameof(FailedToStart),
                      nameof(Rpm), nameof(RpmDisplay), nameof(RpmFraction), nameof(RedlineFraction), nameof(Pedal), nameof(StatusText),
                      nameof(IsActive)
                  })

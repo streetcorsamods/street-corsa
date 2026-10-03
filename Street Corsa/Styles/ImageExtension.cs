@@ -26,6 +26,12 @@ public sealed class ImageExtension : MarkupExtension
     [ConstructorArgument("name")]
     public string Name { get; set; } = string.Empty;
 
+    /// <summary>
+    /// An icon this many pixels wide, decoded once and shared (<see cref="ThemeImages.Icon"/>); 0 for the picture as
+    /// it is. Either way a picture that is not there comes out null.
+    /// </summary>
+    public int Size { get; set; }
+
     // The designer or the game: it does not change while the process runs
     private static readonly bool InDesigner = DesignerProperties.GetIsInDesignMode(new DependencyObject());
 
@@ -41,6 +47,6 @@ public sealed class ImageExtension : MarkupExtension
             _ => false
         };
         if (InDesigner) return wantsUri ? ThemeImages.GameUri(Name) : null;
-        return wantsUri ? ThemeImages.Uri(Name) : ThemeImages.Load(Name);
+        return wantsUri ? ThemeImages.Uri(Name) : Size > 0 ? ThemeImages.Icon(Name, Size) : ThemeImages.Load(Name);
     }
 }

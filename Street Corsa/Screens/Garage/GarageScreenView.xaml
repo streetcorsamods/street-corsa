@@ -9,68 +9,10 @@
              xmlns:controls="clr-namespace:StreetCorsa.Controls"
              xmlns:local="clr-namespace:StreetCorsa.Screens.Garage"
              xmlns:helpers="clr-namespace:StreetCorsa.Helpers"
+             xmlns:theme="clr-namespace:StreetCorsa.Styles"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="800">
     <UserControl.Resources>
-        <Style x:Key="ViewportToggleStyle" TargetType="ToggleButton">
-            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-            <Setter Property="FontSize" Value="{StaticResource FontSizeCompact}"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Margin" Value="6,0,0,0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ToggleButton">
-                        <Grid>
-                            <Border x:Name="border"
-                                    Background="{StaticResource UiGlassBrush}"
-                                    BorderBrush="{StaticResource UiOutlineBrush}"
-                                    BorderThickness="2"
-                                    CornerRadius="6"/>
-                            <!-- The amber outline, faded in under the pointer -->
-                            <Border x:Name="hover"
-                                    Opacity="0"
-                                    BorderBrush="{StaticResource AmberBrush}"
-                                    BorderThickness="2"
-                                    CornerRadius="6"/>
-                            <ContentPresenter Margin="12,5" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            <VisualStateManager.VisualStateGroups>
-                                <VisualStateGroup x:Name="CommonStates">
-                                    <VisualStateGroup.Transitions>
-                                        <VisualTransition GeneratedDuration="0:0:0.5">
-                                            <VisualTransition.GeneratedEasingFunction>
-                                                <CubicEase EasingMode="EaseOut"/>
-                                            </VisualTransition.GeneratedEasingFunction>
-                                        </VisualTransition>
-                                        <!-- Only the hover fades: a button goes disabled or comes back at once -->
-                                        <VisualTransition To="Disabled" GeneratedDuration="0"/>
-                                        <VisualTransition From="Disabled" GeneratedDuration="0"/>
-                                    </VisualStateGroup.Transitions>
-                                    <VisualState x:Name="Normal"/>
-                                    <VisualState x:Name="MouseOver">
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="hover" Storyboard.TargetProperty="Opacity" To="1" Duration="0"/>
-                                        </Storyboard>
-                                    </VisualState>
-                                    <VisualState x:Name="Pressed">
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="hover" Storyboard.TargetProperty="Opacity" To="1" Duration="0"/>
-                                        </Storyboard>
-                                    </VisualState>
-                                    <VisualState x:Name="Disabled"/>
-                                </VisualStateGroup>
-                            </VisualStateManager.VisualStateGroups>
-                        </Grid>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="{StaticResource UiPrimaryGlassBrush}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
         <!-- A round button round the car, as the flow's tile has it -->
         <DataTemplate x:Key="GarageTileTemplate" DataType="{x:Type local:GarageTile}">
             <Button Style="{StaticResource RoundIconButtonStyle}"
@@ -125,12 +67,18 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
+                <!-- The car's name, and selling it at its right -->
+                <Grid Grid.Row="0" Margin="0,30,0,20">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
                 <!-- Selected Car Display Bar (Clickable): outlined glass, the name in cream over it -->
                 <Button x:Name="CarDisplayButton"
-                    Grid.Row="0"
+                    Grid.Column="0"
                     Command="{Binding SelectCarCommand}"
                     HorizontalAlignment="Stretch"
-                    Margin="0,30,0,20"
                     ToolTip="{t:Text garage.cars.tip}"
                     Cursor="Hand">
                 <Button.Style>
@@ -200,6 +148,54 @@
                     </Style>
                 </Button.Style>
             </Button>
+
+                <!-- Sell: to a dealer at once, or through an ad in the paper. A dot on it while the car is in the paper,
+                     amber and glowing when someone has made an offer. -->
+                <Grid Grid.Column="1"
+                      Margin="12,0,0,0"
+                      VerticalAlignment="Center"
+                      Visibility="{Binding HasCars, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Button Style="{StaticResource RoundIconButtonStyle}"
+                            Tag="{theme:Image icons/handshake, Size=128}"
+                            Content="{Binding SellButtonText}"
+                            Command="{Binding SellCommand}"
+                            Width="56"
+                            Height="56"
+                            Padding="13">
+                        <Button.ToolTip>
+                            <StackPanel MaxWidth="320">
+                                <TextBlock Text="{Binding SellButtonText}" FontWeight="SemiBold"/>
+                                <TextBlock Text="{t:Text garage.sell.tip}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Button.ToolTip>
+                    </Button>
+                    <Ellipse Width="12"
+                             Height="12"
+                             Margin="0,1,1,0"
+                             HorizontalAlignment="Right"
+                             VerticalAlignment="Top"
+                             IsHitTestVisible="False"
+                             StrokeThickness="1.5"
+                             Stroke="{StaticResource UiGlassBrush}"
+                             Visibility="{Binding IsSelectedCarInPaper, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Ellipse.Style>
+                            <Style TargetType="Ellipse">
+                                <Setter Property="Fill" Value="{StaticResource UiOutlineBrush}"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasSaleOffer}" Value="True">
+                                        <Setter Property="Fill" Value="{StaticResource AmberBrush}"/>
+                                        <Setter Property="Effect">
+                                            <Setter.Value>
+                                                <DropShadowEffect Color="{StaticResource Amber}" ShadowDepth="0" BlurRadius="10" Opacity="0.9"/>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Ellipse.Style>
+                    </Ellipse>
+                </Grid>
+                </Grid>
 
             <!-- Car Preview Container -->
             <Border x:Name="PreviewContainer"
@@ -475,7 +471,7 @@
                 </Grid>
             </Border>
 
-            <!-- Floating Car Bar (3D controls + car details) -->
+            <!-- Under the car: the impound's note, then the key and what can be done with the car -->
             <StackPanel x:Name="CarInfoBar"
                         Grid.Row="1"
                         MaxWidth="800"
@@ -483,51 +479,6 @@
                         VerticalAlignment="Bottom"
                         Margin="0,0,0,30"
                         Visibility="{Binding ActivePanel, Converter={StaticResource GaragePanelToVisibilityConverter}, ConverterParameter=CarPreview}">
-                <!-- 3D Viewport Controls: the engine on the left, the view toggles on the right -->
-                <Grid Margin="0,0,0,8"
-                      Visibility="{Binding HasCar, ElementName=Viewport3D, Converter={StaticResource BooleanToVisibilityConverter}}">
-                <!-- The engine takes 340 when there is room and gives way to the toggles when there is not -->
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="10*" MaxWidth="340"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <controls:EnginePanel x:Name="EnginePanel"
-                                      Grid.Column="0"
-                                      VerticalAlignment="Bottom"
-                                      Engine="{Binding SelectedEngine}"/>
-                <StackPanel Grid.Column="2"
-                            Orientation="Horizontal"
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Bottom">
-                    <ToggleButton Content="{t:Text garage.view.lights}"
-                                  audio:Sfx.Click="ui.lights"
-                                  Style="{StaticResource ViewportToggleStyle}"
-                                  IsChecked="{Binding HeadlightsOn, ElementName=Viewport3D, Mode=TwoWay}"/>
-                    <ToggleButton Content="{t:Text garage.view.doors}"
-                                  Style="{StaticResource ViewportToggleStyle}"
-                                  Visibility="{Binding HasDoors, ElementName=Viewport3D, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                  IsChecked="{Binding DoorsOpen, ElementName=Viewport3D, Mode=TwoWay}"/>
-                    <ToggleButton Content="{t:Text garage.view.parts}"
-                                  Style="{StaticResource ViewportToggleStyle}"
-                                  Visibility="{Binding Workbench.IsAvailable, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                  IsChecked="{Binding Workbench.IsCarView, Mode=TwoWay}"/>
-                    <ToggleButton Content="{t:Text garage.view.stand}"
-                                  Style="{StaticResource ViewportToggleStyle}"
-                                  ToolTip="{t:Text garage.view.stand.tip}"
-                                  Visibility="{Binding Workbench.CanShowStand, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                  IsChecked="{Binding Workbench.IsStandView, Mode=TwoWay}"/>
-                    <ToggleButton Content="{t:Text garage.view.turn_over}"
-                                  Style="{StaticResource ViewportToggleStyle}"
-                                  ToolTip="{t:Text garage.view.turn_over.tip}"
-                                  Visibility="{Binding Workbench.CanTurnEngineOver, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                  IsChecked="{Binding Workbench.IsEngineTurnedOver, Mode=TwoWay}"/>
-                    <ToggleButton Content="{t:Text garage.view.rotate}"
-                                  Style="{StaticResource ViewportToggleStyle}"
-                                  IsChecked="{Binding AutoRotate, ElementName=Viewport3D, Mode=TwoWay}"/>
-                </StackPanel>
-                </Grid>
-
                 <!-- The police impound: the selected car is held there until it is collected -->
                 <Border Background="{StaticResource WarningBgBrush}"
                         BorderBrush="{StaticResource WarningBrush}"
@@ -555,64 +506,117 @@
                 </Border>
 
                 <!-- What can be done with the car (its details are in Car info, on the right) -->
-                <Border Background="{StaticResource UiGlassBrush}"
-                       BorderBrush="{StaticResource UiOutlineBrush}"
-                       BorderThickness="3"
-                       CornerRadius="8"
-                       Padding="16,8"
-                       HorizontalAlignment="Center"
-                       Visibility="{Binding HasCars, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <StackPanel Orientation="Horizontal">
-                        <!-- Repairs: what the races did to the car, and fixing it -->
-                        <Button Content="{t:Text garage.repairs}"
-                                Command="{Binding RepairsCommand}"
-                                Style="{StaticResource DialogPrimaryButtonStyle}"
-                                Padding="15,5"
-                                Margin="0,0,10,0"
-                                FontSize="{StaticResource FontSizeBody}"
-                                VerticalAlignment="Center"
-                                ToolTip="{t:Text garage.repairs.tip}"/>
+                <!-- The key at the left, then the car's buttons. Turning the key starts the engine: the buttons sink away
+                     and the engine (tach and pedal) rises in their place; turned back, the engine goes off and the buttons
+                     come back (GarageScreenView.xaml.cs). The car's details are in Car info, on the right. -->
+                <Grid HorizontalAlignment="Center"
+                      Visibility="{Binding HasCars, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
 
-                        <!-- Sell: to a dealer at once, or through an ad in the paper -->
-                        <Button Content="{Binding SellButtonText}"
-                                Command="{Binding SellCommand}"
-                                Style="{StaticResource DialogPrimaryButtonStyle}"
-                                Padding="15,5"
-                                FontSize="{StaticResource FontSizeBody}"
-                                VerticalAlignment="Center"
-                                ToolTip="{t:Text garage.sell.tip}"/>
-
-                        <!-- Free run: the car alone on a track of the player's choosing -->
-                        <ComboBox ItemsSource="{Binding FreeRunTracks}"
-                                  SelectedItem="{Binding FreeRunTrack}"
-                                  DisplayMemberPath="Name"
-                                  Width="230"
-                                  Height="30"
-                                  FontSize="{StaticResource FontSizeCompact}"
-                                  Margin="20,0,8,0"
+                    <!-- The ignition: in while the engine is the player's to run -->
+                    <ToggleButton x:Name="KeyButton"
+                                  Grid.Column="0"
+                                  Style="{StaticResource RoundIconToggleStyle}"
+                                  Tag="{theme:Image icons/car_key, Size=128}"
+                                  Content="{t:Text garage.key}"
+                                  Margin="0,0,16,0"
                                   VerticalAlignment="Center"
-                                  VerticalContentAlignment="Center"
-                                  ToolTip="{t:Text garage.free_run.track.tip}"
-                                  Visibility="{Binding HasFreeRunTracks, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                        <Button Content="{t:Text garage.free_run}"
-                                Command="{Binding FreeRunCommand}"
-                                Style="{StaticResource DialogPrimaryButtonStyle}"
-                                Padding="15,5"
-                                FontSize="{StaticResource FontSizeBody}"
-                                VerticalAlignment="Center"
-                                ToolTip="{t:Text garage.free_run.tip}"/>
+                                  Focusable="False"
+                                  IsEnabled="{Binding Runner.CanToggle, ElementName=EnginePanel}"
+                                  Visibility="{Binding HasCar, ElementName=Viewport3D, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                  Click="OnKeyClick">
+                        <ToggleButton.ToolTip>
+                            <TextBlock>
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Text" Value="{t:Text garage.key.start.tip}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding PlacementTarget.IsChecked, RelativeSource={RelativeSource AncestorType=ToolTip}}" Value="True">
+                                                <Setter Property="Text" Value="{t:Text garage.key.stop.tip}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </ToggleButton.ToolTip>
+                    </ToggleButton>
 
-                        <!-- Test-and-tune: passes at the strip for timeslips -->
-                        <Button Content="{t:Text garage.test_and_tune}"
-                                Command="{Binding TestAndTuneCommand}"
-                                Style="{StaticResource DialogPrimaryButtonStyle}"
-                                Padding="15,5"
-                                Margin="10,0,0,0"
-                                FontSize="{StaticResource FontSizeBody}"
-                                VerticalAlignment="Center"
-                                ToolTip="{t:Text garage.test_and_tune.tip}"/>
-                    </StackPanel>
-                </Border>
+                    <Grid Grid.Column="1" VerticalAlignment="Center">
+                        <!-- What can be done with the car; the 3D view's own only when the car is shown in 3D -->
+                        <StackPanel x:Name="CarButtons" Orientation="Horizontal" VerticalAlignment="Center">
+                            <StackPanel.RenderTransform>
+                                <TranslateTransform/>
+                            </StackPanel.RenderTransform>
+                            <StackPanel.Resources>
+                                <Style TargetType="ToggleButton" BasedOn="{StaticResource RoundIconToggleStyle}">
+                                    <Setter Property="Margin" Value="0,0,10,0"/>
+                                </Style>
+                            </StackPanel.Resources>
+                            <StackPanel Orientation="Horizontal"
+                                        Visibility="{Binding HasCar, ElementName=Viewport3D, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <ToggleButton Tag="{theme:Image icons/car_parts, Size=128}"
+                                              Content="{t:Text garage.view.parts}"
+                                              ToolTip="{t:Text garage.view.parts.tip}"
+                                              Visibility="{Binding Workbench.IsAvailable, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                              IsChecked="{Binding Workbench.IsCarView, Mode=TwoWay}"/>
+                                <ToggleButton Tag="{theme:Image icons/engine, Size=128}"
+                                              Content="{t:Text garage.view.stand}"
+                                              ToolTip="{t:Text garage.view.stand.tip}"
+                                              Visibility="{Binding Workbench.CanShowStand, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                              IsChecked="{Binding Workbench.IsStandView, Mode=TwoWay}"/>
+                                <ToggleButton Tag="{theme:Image icons/gears, Size=128}"
+                                              Content="{t:Text garage.view.turn_over}"
+                                              ToolTip="{t:Text garage.view.turn_over.tip}"
+                                              Visibility="{Binding Workbench.CanTurnEngineOver, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                              IsChecked="{Binding Workbench.IsEngineTurnedOver, Mode=TwoWay}"/>
+                            </StackPanel>
+
+                            <!-- Repairs: what the races did to the car, and fixing it -->
+                            <Button Style="{StaticResource RoundIconButtonStyle}"
+                                    Tag="{theme:Image icons/wrench, Size=128}"
+                                    Content="{t:Text garage.repairs}"
+                                    Command="{Binding RepairsCommand}"
+                                    Margin="0,0,10,0"
+                                    ToolTip="{t:Text garage.repairs.tip}"/>
+
+                            <StackPanel Orientation="Horizontal"
+                                        Visibility="{Binding HasCar, ElementName=Viewport3D, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <ToggleButton Tag="{theme:Image icons/high_beam, Size=128}"
+                                              Content="{t:Text garage.view.lights}"
+                                              ToolTip="{t:Text garage.view.lights.tip}"
+                                              audio:Sfx.Click="ui.lights"
+                                              IsChecked="{Binding HeadlightsOn, ElementName=Viewport3D, Mode=TwoWay}"/>
+                                <ToggleButton Tag="{theme:Image icons/car_door, Size=128}"
+                                              Content="{t:Text garage.view.doors}"
+                                              ToolTip="{t:Text garage.view.doors.tip}"
+                                              Visibility="{Binding HasDoors, ElementName=Viewport3D, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                              IsChecked="{Binding DoorsOpen, ElementName=Viewport3D, Mode=TwoWay}"/>
+                                <ToggleButton Tag="{theme:Image icons/rotate, Size=128}"
+                                              Content="{t:Text garage.view.rotate}"
+                                              ToolTip="{t:Text garage.view.rotate.tip}"
+                                              Margin="0"
+                                              IsChecked="{Binding AutoRotate, ElementName=Viewport3D, Mode=TwoWay}"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- The engine, once the key is turned: rpm, tach and pedal. Faded out it stays where it is,
+                             only out of reach: a panel out of sight switches its engine off. -->
+                        <controls:EnginePanel x:Name="EnginePanel"
+                                              Engine="{Binding SelectedEngine}"
+                                              ShowStartButton="False"
+                                              MinWidth="340"
+                                              VerticalAlignment="Center"
+                                              Opacity="0"
+                                              IsHitTestVisible="False">
+                            <controls:EnginePanel.RenderTransform>
+                                <TranslateTransform Y="24"/>
+                            </controls:EnginePanel.RenderTransform>
+                        </controls:EnginePanel>
+                    </Grid>
+                </Grid>
             </StackPanel>
             </Grid>
         </Grid>
