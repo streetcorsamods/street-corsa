@@ -302,14 +302,21 @@ namespace StreetCorsa.Services.Configuration
             var sb = new System.Text.StringBuilder();
             AppendCommonSections(sb, SunAngle(intent.RaceTime));
 
+            // The format: the mode and module that run the race, its laps, its session, whether the police may come.
+            // A test-and-tune is a drag race's practice, whatever the intent says.
+            var tune = intent.TunePasses is { } passes ? Math.Clamp(passes, 1, MaxTunePasses) : (int?)null;
+            var formats = Services.Race.RaceFormats.Current;
+            var format = tune != null ? formats.First(RaceFormatFamilies.Drag) ?? formats.Of(intent.Format) : formats.Of(intent.Format);
+
             // The police go on the grid after the two racers, as many as the track has room for; the race mode
             // keeps them out of sight until the patrol shows up
-            var police = intent.Police is { Count: > 0 } sent && intent.RaceType != RaceType.DragRace ? sent : null;
+            var police = intent.Police is { Count: > 0 } sent && format.Police && tune == null ? sent : null;
 
             // A test-and-tune is the player alone, pass after pass, in a race session that never ends at its line: the
-            // race mode runs the passes and ends it
-            var tune = intent.TunePasses is { } passes ? Math.Clamp(passes, 1, MaxTunePasses) : (int?)null;
-            var laps = tune != null ? TuneLaps : 1;
+            // race mode runs the passes and ends it. A format that runs past its laps (time attack's out lap and its
+            // wait for the rival) gives AC's session more, so AC never ends it before the mode does.
+            var laps = tune != null ? 1 : Math.Clamp(intent.Laps ?? format.Laps, 1, Services.Race.RaceFormats.MaxLaps);
+            var acLaps = tune != null ? TuneLaps : format.AcLaps(laps);
 
             // [RACE] - Player car info and track
             sb.AppendLine("[RACE]");
@@ -322,10 +329,10 @@ namespace StreetCorsa.Services.Configuration
             sb.AppendLine($"MODEL={IniId(intent.PlayerCarId, "car")}");
             sb.AppendLine("MODEL_CONFIG=");
             sb.AppendLine("PENALTIES=0");
-            sb.AppendLine($"RACE_LAPS={laps}");
+            sb.AppendLine($"RACE_LAPS={acLaps}");
             sb.AppendLine($"SKIN={IniId(intent.PlayerSkin, "skin")}");
             sb.AppendLine($"TRACK={IniId(intent.TrackId, "track")}");
-            sb.AppendLine($"__CM_CUSTOM_MODE={RaceModeId}");  // the CSP mode that runs the race (see ScRaceMode)
+            sb.AppendLine($"__CM_CUSTOM_MODE={Services.Race.RaceFormats.ModeIdOf(format)}");  // the CSP mode that runs the race (see ScRaceMode)
             sb.AppendLine();
 
             AppendTailSections(sb);
@@ -334,12 +341,12 @@ namespace StreetCorsa.Services.Configuration
             // (TYPE=7) disqualifies for lanes, resets jump starts and runs matches, all by teleporting the cars,
             // and the race mode owns those calls. On ks_drag both cars start side by side, one per lane, and the
             // lap ends at the strip's finish line (checked in the game 2026-09-24).
-            var isDrag = intent.RaceType == RaceType.DragRace;
+            var isDrag = format.IsDrag;
             sb.AppendLine("[SESSION_0]");
             sb.AppendLine("STARTING_POSITION=1");
-            sb.AppendLine(tune != null ? "NAME=Test and Tune" : isDrag ? "NAME=Drag Race" : "NAME=Quick Race");
+            sb.AppendLine(tune != null ? "NAME=Test and Tune" : $"NAME={IniName(format.Session)}");
             sb.AppendLine("TYPE=3");
-            sb.AppendLine($"LAPS={laps}");
+            sb.AppendLine($"LAPS={acLaps}");
             sb.AppendLine("DURATION_MINUTES=0");
             sb.AppendLine("SPAWN_SET=START");
             sb.AppendLine();
@@ -391,8 +398,15 @@ namespace StreetCorsa.Services.Configuration
             sb.AppendLine(tune != null ? $"RACE_TYPE={RaceTypes.TestAndTune}" : isDrag ? $"RACE_TYPE={RaceTypes.Drag}" : $"RACE_TYPE={RaceTypes.Road}");
             if (tune != null) sb.AppendLine($"TUNE_PASSES={tune}");
 
+            // The format: its id (written back into the result), the module sc_race runs it with, the laps it is
+            // over, and how it is won
+            sb.AppendLine($"FORMAT={IniId(format.Id, "race format")}");
+            sb.AppendLine($"MODULE={Services.Race.RaceFormats.ModuleOf(format)}");
+            sb.AppendLine($"LAPS={laps}");
+            if (format.ByScore) sb.AppendLine(format.HigherWins ? "SCORE=HIGHER" : "SCORE=LOWER");
+
             // A bracket race: both dial-ins, and how the rival leaves and takes the stripe
-            if (intent.Bracket is { } bracket && isDrag && tune == null)
+            if (intent.Bracket is { } bracket && format.Bracket && tune == null)
             {
                 var ac = System.Globalization.CultureInfo.InvariantCulture;
                 sb.AppendLine($"DIAL_IN={bracket.PlayerDialIn.ToString("0.00", ac)},{bracket.OpponentDialIn.ToString("0.00", ac)}");

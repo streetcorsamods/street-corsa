@@ -382,7 +382,7 @@ public sealed class CarConditionTests : IDisposable
             CultureInfo.CurrentCulture = new CultureInfo("de-DE");
             Assert.True(service.ApplyIntent(new DragRaceIntent
             {
-                PlayerCarId = "a", OpponentCarId = "b", PlayerName = "P", OpponentName = "O",
+                PlayerCarId = "a", OpponentCarId = "b", PlayerName = "P", OpponentName = "O", Format = "drag",
                 Bracket = new BracketSetup(12.4, 13.05, 0.2, 0.06)
             }));
         }

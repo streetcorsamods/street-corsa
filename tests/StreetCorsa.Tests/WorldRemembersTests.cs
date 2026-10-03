@@ -344,7 +344,7 @@ public sealed class WorldRemembersRaceTests : IDisposable
         var session = _repository.Recorded.Single();
         Assert.Equal(world.State.Date, session.GameDate);
         Assert.Equal(world.RivalCar.InstanceId, session.OpponentCarInstanceId);
-        Assert.Equal(nameof(RaceType.DragRace), session.RaceType);
+        Assert.Equal("drag", session.RaceType);
     }
 
     [Fact]

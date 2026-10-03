@@ -93,10 +93,11 @@ namespace StreetCorsa.Services.Configuration.Models
         /// </summary>
         public int OpponentAIAggression { get; set; } = 50;
 
-        /// <summary>
-        /// Type of race (drag or circuit)
-        /// </summary>
-        public RaceType RaceType { get; set; } = RaceType.DragRace;
+        /// <summary>The race's format id (<see cref="Services.Race.RaceFormats"/>): its module, laps and session</summary>
+        public string Format { get; set; } = string.Empty;
+
+        /// <summary>The laps the race is over; null: the format's</summary>
+        public int? Laps { get; set; }
 
         /// <summary>AC's damage for the race, in percent (the difficulty's; 100 is AC's full rate)</summary>
         public int DamagePercent { get; set; } = IniModificationService.RaceDamage;

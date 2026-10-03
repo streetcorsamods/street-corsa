@@ -17,7 +17,8 @@ namespace StreetCorsa.Dialogs.RaceHub
         public string Description { get; set; } = string.Empty;
         public string RequirementsDescription { get; set; } = string.Empty;
         public string RewardDescription { get; set; } = string.Empty;
-        public RaceType RaceType { get; set; }
+        /// <summary>The event's race format id</summary>
+        public string Format { get; set; } = string.Empty;
         public bool IsPinkSlip { get; set; }
 
         /// <summary>A bracket race: the player dials in before it</summary>
@@ -38,14 +39,16 @@ namespace StreetCorsa.Dialogs.RaceHub
         public double Opacity => HasEligibleCars ? 1.0 : 0.5;
         public bool CanEnter => HasEligibleCars;
 
-        public string RaceTypeDisplay => RaceType switch
+        /// <summary>The format's name (a bracket race is one of its own); a format without one is a race</summary>
+        public string RaceTypeDisplay => FormatName(Format, IsBracket);
+
+        /// <summary>A format's name as the paper and the diner write it</summary>
+        public static string FormatName(string? format, bool bracket = false)
         {
-            RaceType.DragRace when IsBracket => GameText.Say("paper.race_type.bracket"),
-            RaceType.DragRace => GameText.Say("paper.race_type.drag"),
-            RaceType.Circuit => GameText.Say("paper.race_type.circuit"),
-            RaceType.Sprint => GameText.Say("paper.race_type.sprint"),
-            _ => GameText.Say("paper.race_type.other")
-        };
+            if (bracket) return GameText.Say("paper.race_type.bracket");
+            var key = Services.Race.RaceFormats.Current.Get(format)?.NameKey;
+            return key != null && GameText.Installed.Has(key) ? GameText.Say(key) : GameText.Say("paper.race_type.other");
+        }
 
         // The expiry and eligibility texts are coloured in the view from IsExpiringSoon and HasEligibleCars
         // (DataTriggers in RaceHubDialogView.xaml), so the colours stay in Styles/.
@@ -75,7 +78,7 @@ namespace StreetCorsa.Dialogs.RaceHub
                 Description = definition.Description,
                 RequirementsDescription = definition.GetEntryRequirementsDescription(),
                 RewardDescription = definition.Reward.ScaledBy(prizeMultiplier).GetDescription(),
-                RaceType = definition.RaceType,
+                Format = definition.Format,
                 IsPinkSlip = definition.IsPinkSlip,
                 IsBracket = definition.IsBracketRace,
                 ExpiresAt = instance.ExpiresAt,

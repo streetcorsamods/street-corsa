@@ -139,6 +139,13 @@ namespace StreetCorsa.Models.Race
         /// </summary>
         [JsonProperty("race_type")]
         public string? RaceType { get; set; }
+
+        /// <summary>
+        /// The race format's id, as race.ini told it ([STREET_CORSA] FORMAT, schema 1.8). The race's context decides;
+        /// this is only checked against it. Null in older files.
+        /// </summary>
+        [JsonProperty("format")]
+        public string? Format { get; set; }
     }
 
     /// <summary>The <see cref="RaceSession.RaceType"/> values the race mode writes</summary>
@@ -274,6 +281,17 @@ namespace StreetCorsa.Models.Race
         /// <summary>The car ran quicker than its dial-in in a bracket race (schema 1.6); null in any other race</summary>
         [JsonProperty("breakout")]
         public bool? Breakout { get; set; }
+
+        /// <summary>
+        /// The racer's score in a format won on score (schema 1.8): a time attack's best timed lap in milliseconds, a mod's
+        /// points. Null when the racer has none (never set a timed lap) and in any other race.
+        /// </summary>
+        [JsonProperty("score")]
+        public double? Score { get; set; }
+
+        /// <summary>A time attack's timed laps, in order, in milliseconds (schema 1.8); null in any other race</summary>
+        [JsonProperty("lap_times_ms")]
+        public List<double>? LapTimesMs { get; set; }
 
         [JsonProperty("performance")]
         public ParticipantPerformance Performance { get; set; } = new();

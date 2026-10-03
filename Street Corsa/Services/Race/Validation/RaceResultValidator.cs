@@ -154,7 +154,8 @@ namespace StreetCorsa.Services.Race.Validation
             }
 
             // Check metadata.source (exactly the mode's id, or the one it had before the rename)
-            if (raceResult.Metadata.Source is not (RaceMetadata.ModeSource or RaceMetadata.LegacySource))
+            if (raceResult.Metadata.Source is not (RaceMetadata.ModeSource or RaceMetadata.LegacySource)
+                && !RaceFormats.Current.ModeIds.Contains(raceResult.Metadata.Source, StringComparer.Ordinal))
             {
                 _logger.Debug("File has wrong source identifier: {Source} - ignoring", raceResult.Metadata.Source);
                 return ValidationResult.Failure(

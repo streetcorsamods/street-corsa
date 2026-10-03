@@ -348,18 +348,18 @@ public class MatchupCalculatorTests
     }
 
     [Theory]
-    [InlineData(RaceType.DragRace, 1000, 40, 10, 40)]
-    [InlineData(RaceType.DragRace, 1000, 1000, 10, 100)]
-    [InlineData(RaceType.Circuit, 5, 1000, 5, 5)]
-    [InlineData(RaceType.Circuit, 1000, 1000, 25, 250)]
-    [InlineData(RaceType.DragRace, 0, 1000, 0, 0)]
-    public void WagerLimits(RaceType type, int player, int opponent, int min, int max) =>
+    [InlineData("drag", 1000, 40, 10, 40)]
+    [InlineData("drag", 1000, 1000, 10, 100)]
+    [InlineData("circuit", 5, 1000, 5, 5)]
+    [InlineData("circuit", 1000, 1000, 25, 250)]
+    [InlineData("drag", 0, 1000, 0, 0)]
+    public void WagerLimits(string type, int player, int opponent, int min, int max) =>
         Assert.Equal(((decimal)min, (decimal)max), MatchupCalculator.WagerLimits(type, player, opponent));
 
     [Fact]
     public void A_negative_balance_gives_a_range_that_is_not_upside_down()
     {
-        var (min, max) = MatchupCalculator.WagerLimits(RaceType.DragRace, -50m, 1000m);
+        var (min, max) = MatchupCalculator.WagerLimits("drag", -50m, 1000m);
         Assert.True(min <= max);
     }
 

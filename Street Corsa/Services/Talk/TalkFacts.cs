@@ -427,7 +427,8 @@ namespace StreetCorsa.Services.Talk
 
         /// <summary>"drag race" or "road race", in the player's words</summary>
         public static string KindOf(string? raceType) =>
-            GameText.Say(raceType?.Contains("drag", StringComparison.OrdinalIgnoreCase) == true ? "chat.fact.kind_drag" : "chat.fact.kind_road");
+            GameText.Say(Race.RaceFormats.Current.IsDrag(raceType) || raceType?.Contains("drag", StringComparison.OrdinalIgnoreCase) == true
+                ? "chat.fact.kind_drag" : "chat.fact.kind_road");
 
         /// <summary>
         /// The sections as the sheet the AI is given, each under its heading (<c>chat.section</c>), in the order given:

@@ -386,7 +386,7 @@ public class ModCareerAndTextTests : IDisposable
 
         var career = CareerContent.Load(mods);
         Assert.Empty(career.Problems);
-        Assert.Equal(12, career.Events.Count);
+        Assert.Equal(13, career.Events.Count);
         Assert.Equal(14, career.Milestones.Count);
         Assert.Equal(["Reputation", "King", "PinkSlipCollector", "SeasonChampion", "Domination"], career.Victories.Select(v => v.Id));
 

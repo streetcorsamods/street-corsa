@@ -36,7 +36,11 @@ namespace StreetCorsa.Screens.Shared
 
         public string TrackId { get; init; } = string.Empty;
         public string? TrackConfig { get; init; }
-        public RaceType RaceType { get; init; }
+        /// <summary>The race's format id (<see cref="Services.Race.RaceFormats"/>)</summary>
+        public string Format { get; init; } = string.Empty;
+
+        /// <summary>The laps the race is over (an event's own); null: the format's</summary>
+        public int? Laps { get; init; }
 
         public decimal CashWager { get; init; }
         public bool IsPinkSlip { get; init; }
@@ -190,7 +194,8 @@ namespace StreetCorsa.Screens.Shared
                 OpponentAIAggression = entry.OpponentAI.AIAggression,
                 TrackId = entry.TrackId,
                 TrackConfig = entry.TrackConfig,
-                RaceType = entry.RaceType,
+                Format = entry.Format,
+                Laps = entry.Laps,
                 CashWager = entry.CashWager,
                 IsPinkSlip = entry.IsPinkSlip,
                 DamagePercent = entry.DamagePercent,
@@ -212,7 +217,8 @@ namespace StreetCorsa.Screens.Shared
                 IsPinkSlip = entry.IsPinkSlip,
                 TrackId = entry.TrackId,
                 TrackConfig = entry.TrackConfig,
-                RaceType = entry.RaceType,
+                Format = Services.Race.RaceFormats.Current.IdOf(entry.Format),
+                Laps = entry.Laps,
                 EventId = entry.EventId,
                 EventInstanceId = entry.EventInstanceId,
                 IsEventOnlyOpponent = entry.IsEventOnlyOpponent,
@@ -226,13 +232,13 @@ namespace StreetCorsa.Screens.Shared
 
         /// <summary>
         /// Where an event is raced: the track it names when that is installed, else one of the installed tracks
-        /// that suits its race type (a dragstrip for a drag race, anything else for a road race). A track with
+        /// that suits its format's family (a dragstrip for a drag race, anything else for a road race). A track with
         /// layouts is raced on one of them. The drag strip AC ships (ks_drag, drag1000) is the drag default when
         /// it is there. <paramref name="seed"/> makes the pick the same every time for one invitation.
         /// Null when nothing installed suits the event.
         /// </summary>
         public static (string TrackId, string? TrackConfig)? PickTrack(
-            IEnumerable<Models.AC.TrackInfo> tracks, RaceType raceType, string? wantedTrackId, int seed)
+            IEnumerable<Models.AC.TrackInfo> tracks, string format, string? wantedTrackId, int seed)
         {
             var installed = tracks.ToList();
 
@@ -247,7 +253,7 @@ namespace StreetCorsa.Screens.Shared
                 if (wanted != null) return Layouts(wanted).First();
             }
 
-            var isDrag = raceType == RaceType.DragRace;
+            var isDrag = Services.Race.RaceFormats.Current.IsDrag(format);
             var candidates = installed
                 .Where(t => (t.Type == Models.AC.TrackType.Dragstrip) == isDrag)
                 .OrderBy(t => t.TrackId, StringComparer.OrdinalIgnoreCase)

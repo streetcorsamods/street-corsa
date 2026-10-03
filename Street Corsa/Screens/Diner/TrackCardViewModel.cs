@@ -47,9 +47,12 @@ namespace StreetCorsa.Screens.Diner
         public System.Windows.Media.ImageSource? PreviewImage => Shared.Thumbnails.Load(PreviewPath, PreviewDecodeWidth);
 
         /// <summary>
-        /// Race type this track supports
+        /// The races this track takes: <see cref="RaceFormatFamilies.Drag"/> on a strip, <see cref="RaceFormatFamilies.Road"/>
+        /// anywhere else
         /// </summary>
-        public RaceType RaceType { get; set; }
+        public string Family { get; set; } = RaceFormatFamilies.Road;
+
+        public bool IsDrag => Family == RaceFormatFamilies.Drag;
 
         private bool _isSelected;
         /// <summary>

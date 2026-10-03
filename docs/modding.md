@@ -527,19 +527,82 @@ boss should bring his own.
 The paper's invitations:
 
 ```json
-{ "id": "mopar_night", "name": "Mopar Night", "description": "…", "raceType": "DragRace",
+{ "id": "mopar_night", "name": "Mopar Night", "description": "…", "format": "drag",
   "entryRequirements": { "type": "any", "filters": [ { "type": "brand", "brand": "Dodge" }, { "type": "brand", "brand": "Plymouth" } ] },
   "minReputation": 20, "requiredMilestones": [ "street_cred" ], "isPinkSlip": false, "isBracket": false,
   "reward": { "cash": 800, "reputation": 8, "specialItem": "part:engines/mine/cam", "specialItemDescription": "A hot cam" },
   "schedule": "Weekly" }
 ```
 
-- `raceType`: `DragRace`, `Circuit`, `Sprint`. `schedule`: `OneTime`, `Daily`, `Weekly`, `Permanent`.
+- `format`: a race format's id ([formats](#formats): `drag`, `circuit`, `sprint`, `time_attack`, or the mod's own
+  first). `raceType` (`DragRace`, `Circuit`, `Sprint`) is read as before formats; neither: a drag race. A format no
+  mod has leaves the event out. `laps`: the race's own laps (1 to 50), left out for the format's.
+- `schedule`: `OneTime`, `Daily`, `Weekly`, `Permanent`.
 - Car filters (`type`): `brand`, `origin` (a country, or American, European, Japanese...), `years` (`startYear`,
   `endYear`), `power` (`minHP`, `maxHP`), `value` (`minValue`, `maxValue`: what the car is worth), `all` and `any`
   (of `filters`). Left out: any car.
 - `specialItem`: `rare_camshaft` (the best camshaft that fits the winner's engine) or `part:<part id>` (the mod's own
   part first).
+
+### formats
+
+The kinds of race (`formats/formats.json`, `{ "formats": [ ... ] }`), merged by id. The base game's:
+
+| id | family | module | laps | won on |
+|---|---|---|---|---|
+| `drag` | drag | `drag` (the strip: timeslips, lanes, bracket races, test-and-tune) | 1 | the order at the line, or the bracket's rules |
+| `circuit` | road | `road` | 1 | the order at the line |
+| `sprint` | road | `road` | 1 | the order at the line (not offered at the diner) |
+| `time_attack` | road | `time_attack` (ghosts: a warm-up lap, then flying laps) | 3 | the best lap, lower wins |
+
+```json
+{ "id": "drift", "family": "road", "module": "drift", "laps": 2, "session": "Drift",
+  "win": "score", "better": "higher", "scoreShows": "points", "name": "paper.race_type.drift",
+  "diner": true, "street": false, "police": false }
+```
+
+- `family`: `drag` (raced on the strips; counts as a drag race for the record, the wagers, `DragWins` and the street's
+  drag share) or `road` (every other track). The family is what the career knows of a format; the rest is the race's.
+- `module`: the Lua module the race mode runs it with. One of the mode's own (`drag`, `road`, `time_attack`), or the
+  mod's `formats/<module>.lua`, which the game puts into the mode's folder in AC as `format_<mod>_<module>.lua`.
+- `mode`: a whole CSP mode instead, the mod's `formats/<mode>/` folder with its `mode.lua` (and `manifest.ini`), put
+  into AC as `extension/lua/new-modes/<mod>_<mode>` and selected for the race. It reads race.ini and writes its result
+  as sc_race does (below), with `metadata.source` its folder name in AC.
+- `laps`: what the race is over (1 to 50); an event may set its own. `sessionLaps`: the laps AC's session is given,
+  when the format runs past its laps (a time attack's warm-up lap and its wait for the rival: 99), so AC never ends
+  the race before the mode does.
+- `session`: the session's name in AC. `police`: the police may come. `bracket`: it can be a bracket race (drag only).
+- `win`: `position` (the order at the line) or `score` (each racer's `score` in the result; `better`: `lower` or
+  `higher` wins; `scoreShows`: `time` for milliseconds shown as a lap time, else `points`). A racer without a score
+  loses; the same score both ways goes by the order at the line. The career hands out a card with both scores, and
+  says `result.score.won.<id>`/`result.score.lost.<id>` when the mod has them (else `result.score.won`/`.lost`).
+- `name`: its name's text key; left out, `paper.race_type.<id>`. `diner.format.about.<id>`, when there, is what the
+  diner says of it.
+- `diner`: offered at the diner on its family's tracks (the first of a family is the one picked). `street`: raced on
+  the street; the first street format of each family is the one the cruise's rivals ask for.
+- `aliases`: ids it was known by (the base game's are its old race types, `DragRace`, `Circuit`, `Sprint`, which saves
+  and events from before formats name).
+
+A race saved with a format no mod has any more is run and counted as a road race.
+
+**A format module.** The race mode (`apps/new-modes/sc_race/mode.lua`) runs what every race has: the start, false
+starts, crashes, breakdowns, the engine's heat and oil, the police, the result file and the result card. A module is a
+Lua file that returns a table of hooks, every one optional; `format_road.lua` lists them all and is the one to copy.
+The hooks get the core (`SC`): the cars' data, the race clock, the laps, the race's words (`SC.say(key, english,
+values)`: `race.<key>` in the mods' `text/race.json`, as `<KEY>` in capitals), `endSession`, and more. The mode's
+harness (`tools/sc_race_harness`) runs the mode and its modules on LuaJIT without AC; `test_time_attack.py` is the
+example to copy for a format's own tests.
+
+**What race.ini tells the mode** (`[STREET_CORSA]`): `FORMAT` (the id), `MODULE` (`format_<module>`), `LAPS`,
+`SCORE` (`LOWER`/`HIGHER`, a format won on score), `RACE_TYPE` (`DRAG`, `ROAD`, `TUNE`: the family, and test-and-tune),
+`CONTEXT_ID`, each car's start (`CAR_<n>_*`), the police (`POLICE*`), a bracket race's `DIAL_IN`, and
+`[STREET_CORSA_TEXT]` the words.
+
+**The result** (schema 1.8), written to `Documents\Assetto Corsa\out\sc_race\<session>.json` (as `.tmp`, then
+renamed): `metadata` (`schema_version`, `source`), `session` (`context_id` from race.ini, `end_reason`, `race_type`,
+`format`), `participants` (the player, `car_index` 0 and `is_player`, and the rival: `performance.final_position`,
+`crash`, `breakdown`, `condition`, and a format won on score its `score`). See
+`tests/StreetCorsa.Tests/Fixtures/sc_race_time_attack_result.json`.
 
 ### milestones
 

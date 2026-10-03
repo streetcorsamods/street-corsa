@@ -147,10 +147,11 @@ namespace StreetCorsa.Services.Configuration.Models
         /// </summary>
         public int OpponentAIAggression { get; set; } = 50;
 
-        /// <summary>
-        /// Type of race (drag or circuit)
-        /// </summary>
-        public RaceType RaceType { get; set; } = RaceType.DragRace;
+        /// <summary>The race's format id (<see cref="Services.Race.RaceFormats"/>)</summary>
+        public string Format { get; set; } = string.Empty;
+
+        /// <summary>The laps the race is over; null: the format's</summary>
+        public int? Laps { get; set; }
 
         /// <summary>AC's damage for the race, in percent (the difficulty's; 100 is AC's full rate)</summary>
         public int DamagePercent { get; set; } = 100;
@@ -181,7 +182,7 @@ namespace StreetCorsa.Services.Configuration.Models
 
         /// <summary>The time the session takes in the game</summary>
         public Time.GameAction SessionAction => TunePasses != null ? Time.GameAction.TestAndTune
-            : RaceType == RaceType.DragRace ? Time.GameAction.DragRace
+            : Services.Race.RaceFormats.Current.IsDrag(Format) ? Time.GameAction.DragRace
             : Time.GameAction.RoadRace;
 
         public override string Executable => "acs.exe";
@@ -204,7 +205,8 @@ namespace StreetCorsa.Services.Configuration.Models
                 TrackConfig = this.TrackConfig,
                 OpponentAILevel = this.OpponentAILevel,
                 OpponentAIAggression = this.OpponentAIAggression,
-                RaceType = this.RaceType,
+                Format = this.Format,
+                Laps = this.Laps,
                 DamagePercent = this.DamagePercent,
                 PlayerStart = this.PlayerStart,
                 OpponentStart = this.OpponentStart,

@@ -154,8 +154,7 @@ namespace StreetCorsa.Screens.Diner
 
                     OnPropertyChanged(nameof(SelectedTrack));
                     OnPropertyChanged(nameof(HasSelectedTrack));
-                    OnPropertyChanged(nameof(SelectedRaceType));
-                    OnPropertyChanged(nameof(CanBracket));
+                    OfferFormats();
 
                     // Update matchup stats when track changes
                     UpdateMatchupStats();
@@ -174,10 +173,68 @@ namespace StreetCorsa.Screens.Diner
 
         public bool HasSelectedTrack => SelectedTrack != null;
 
-        public RaceType SelectedRaceType => SelectedTrack?.RaceType ?? RaceType.DragRace;
+        /// <summary>The races the diner offers on the selected track (<see cref="RaceFormat.Diner"/> of its family)</summary>
+        public ObservableCollection<FormatChoice> FormatChoices { get; } = [];
 
-        /// <summary>A bracket race can be run on the selected track: a drag strip that runs the quarter</summary>
-        public bool CanBracket => SelectedTrack is { RaceType: RaceType.DragRace } track
+        /// <summary>A choice to make: the track's family has more than one race the diner offers</summary>
+        public bool HasFormatChoice => FormatChoices.Count > 1;
+
+        private FormatChoice? _selectedFormat;
+
+        /// <summary>The race picked for the selected track</summary>
+        public FormatChoice? SelectedFormat
+        {
+            get => _selectedFormat;
+            set
+            {
+                if (ReferenceEquals(_selectedFormat, value)) return;
+                _selectedFormat = value;
+                OnPropertyChanged(nameof(SelectedFormat));
+                OnPropertyChanged(nameof(CanBracket));
+                OnPropertyChanged(nameof(PoliceNote));
+                OnPropertyChanged(nameof(HasPoliceNote));
+                OnPropertyChanged(nameof(FormatNote));
+                OnPropertyChanged(nameof(HasFormatNote));
+                UpdateWagerLimits();
+            }
+        }
+
+        /// <summary>The format the race is run as: the one picked, else the family's street race</summary>
+        private string? SelectedFormatId => SelectedFormat?.Id
+            ?? (SelectedTrack is { } track ? Services.Race.RaceFormats.Current.Street(track.Family)?.Id : null);
+
+        /// <summary>What a race picked at the diner is about, when it is not a plain race to the line (a time attack)</summary>
+        public string FormatNote
+        {
+            get
+            {
+                if (SelectedFormat is not { } choice) return string.Empty;
+                var key = $"diner.format.about.{choice.LocalId}";
+                return GameText.Installed.Has(key) ? GameText.Say(key) : string.Empty;
+            }
+        }
+
+        public bool HasFormatNote => FormatNote.Length > 0;
+
+        /// <summary>The selected track's family's races, the one picked kept when it is still among them</summary>
+        private void OfferFormats()
+        {
+            var keep = SelectedFormat?.Id;
+            FormatChoices.Clear();
+            if (SelectedTrack is { } track)
+            {
+                foreach (var format in Services.Race.RaceFormats.Current.ForDiner(track.Family))
+                    FormatChoices.Add(new FormatChoice(format.Id, Dialogs.RaceHub.EventInvitationViewModel.FormatName(format.Id)));
+            }
+
+            _selectedFormat = null;
+            SelectedFormat = FormatChoices.FirstOrDefault(c => c.Id == keep) ?? FormatChoices.FirstOrDefault();
+            OnPropertyChanged(nameof(HasFormatChoice));
+            OnPropertyChanged(nameof(CanBracket));
+        }
+
+        /// <summary>A bracket race can be run on the selected track: a drag strip that runs the quarter, in a race that can be one</summary>
+        public bool CanBracket => SelectedTrack is { } track && Services.Race.RaceFormats.Current.Get(SelectedFormatId)?.Bracket == true
             && Services.Race.BracketRules.RunsTheQuarter(track.Track, track.Configuration);
 
         private bool _isBracket;
@@ -286,7 +343,7 @@ namespace StreetCorsa.Screens.Diner
 
         /// <summary>The chance of the police on a road race with the selected rival, now; 0 for a drag race or with no police car installed</summary>
         private double PoliceChance =>
-            SelectedTrack is { RaceType: not RaceType.DragRace } && PoliceCars.Installed() != null
+            SelectedTrack != null && Services.Race.RaceFormats.Current.Get(SelectedFormatId)?.Police == true && PoliceCars.Installed() != null
                 ? PoliceRules.Chance(_gameState.Date, PoliceReputation, IsPinkSlipBet, IsCashBet ? WagerAmount : 0m)
                 : 0;
 
@@ -302,7 +359,7 @@ namespace StreetCorsa.Screens.Diner
             get
             {
                 if (!IsCashBet) return true; // Pink slip doesn't require cash
-                return _gameState.Player.Money >= MatchupCalculator.MinimumWager(SelectedTrack?.RaceType);
+                return _gameState.Player.Money >= MatchupCalculator.MinimumWager(SelectedFormatId);
             }
         }
 
@@ -310,7 +367,7 @@ namespace StreetCorsa.Screens.Diner
         {
             get
             {
-                var baseMin = MatchupCalculator.MinimumWager(SelectedTrack?.RaceType);
+                var baseMin = MatchupCalculator.MinimumWager(SelectedFormatId);
                 return GameText.Say("diner.wager.too_poor", ("amount", baseMin));
             }
         }
@@ -543,10 +600,8 @@ namespace StreetCorsa.Screens.Diner
 
             foreach (var track in tracks)
             {
-                // Determine race type based on track type
-                var raceType = track.Type == TrackType.Dragstrip
-                    ? RaceType.DragRace
-                    : RaceType.Circuit;
+                // A strip takes the drag races, any other track the road races
+                var family = track.Type == TrackType.Dragstrip ? RaceFormatFamilies.Drag : RaceFormatFamilies.Road;
 
                 // Get preview path
                 var previewPath = _contentService.GetTrackPreviewPath(track.TrackId);
@@ -561,10 +616,10 @@ namespace StreetCorsa.Screens.Diner
                             Track = track,
                             Configuration = config,
                             PreviewPath = previewPath,
-                            RaceType = raceType
+                            Family = family
                         };
 
-                        if (raceType == RaceType.DragRace)
+                        if (trackVm.IsDrag)
                             DragTracks.Add(trackVm);
                         else
                             RoadTracks.Add(trackVm);
@@ -578,10 +633,10 @@ namespace StreetCorsa.Screens.Diner
                         Track = track,
                         Configuration = null,
                         PreviewPath = previewPath,
-                        RaceType = raceType
+                        Family = family
                     };
 
-                    if (raceType == RaceType.DragRace)
+                    if (trackVm.IsDrag)
                         DragTracks.Add(trackVm);
                     else
                         RoadTracks.Add(trackVm);
@@ -662,7 +717,7 @@ namespace StreetCorsa.Screens.Diner
                 // Wager limits vary by race type (drag $10-$100, road $25-$250), go up at night and against a
                 // rival with a name, and are capped by both racers' money
                 var (min, max) = MatchupCalculator.WagerLimits(
-                    SelectedTrack?.RaceType,
+                    SelectedFormatId,
                     _gameState.Player.Money,
                     SelectedOpponent?.Opponent.Money ?? 0m,
                     SelectedOpponent?.Opponent.Stats.Reputation ?? MatchupCalculator.StakesReputation,
@@ -771,7 +826,7 @@ namespace StreetCorsa.Screens.Diner
                 PlayerCar = playerCar,
                 Track = SelectedTrack.Track,
                 Configuration = SelectedTrack.Configuration,
-                RaceType = SelectedTrack.RaceType,
+                Format = SelectedFormatId ?? string.Empty,
                 IsPinkSlip = IsPinkSlipBet,
                 CashWager = IsCashBet ? WagerAmount : 0m,
                 Bracket = IsBracket && CanBracket

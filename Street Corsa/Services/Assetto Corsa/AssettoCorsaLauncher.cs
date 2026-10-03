@@ -435,10 +435,11 @@ namespace StreetCorsa.Services
                     }
 
                     // A race runs in the game's own CSP mode: without it nothing starts the race or reports it
-                    if (intent is DragRaceLaunchIntent)
+                    if (intent is DragRaceLaunchIntent race)
                     {
                         prepareWhy = "the race mode could not be installed";
-                        prepareError = _raceMode.Install(AppSettings.Instance.AssettoCorsaPath);
+                        var format = race.TunePasses != null ? null : Race.RaceFormats.Current.Of(race.Format);
+                        prepareError = _raceMode.Install(AppSettings.Instance.AssettoCorsaPath, format);
                     }
 
                     foreach (var configIntent in prepareError == null ? configIntents : [])

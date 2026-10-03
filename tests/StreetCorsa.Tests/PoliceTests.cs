@@ -180,7 +180,7 @@ public sealed class PoliceTests : IDisposable
     {
         var lines = RaceIni(new DragRaceIntent
         {
-            PlayerCarId = "car_a", OpponentCarId = "car_b", PlayerName = "P", OpponentName = "O", RaceType = RaceType.Circuit,
+            PlayerCarId = "car_a", OpponentCarId = "car_b", PlayerName = "P", OpponentName = "O", Format = "circuit",
             TrackId = "ks_highlands", TrackConfig = "layout_int", RaceTime = Night,
             Police = new RacePolice { CarId = "dodge_monaco_74", Skins = ["police_a", "police_b"], SpotShare = 0.4 }
         });
@@ -204,7 +204,7 @@ public sealed class PoliceTests : IDisposable
     {
         var lines = RaceIni(new DragRaceIntent
         {
-            PlayerCarId = "car_a", OpponentCarId = "car_b", PlayerName = "P", OpponentName = "O", RaceType = RaceType.DragRace,
+            PlayerCarId = "car_a", OpponentCarId = "car_b", PlayerName = "P", OpponentName = "O", Format = "drag",
             Police = new RacePolice { CarId = "dodge_monaco_74", Skins = ["police_a"], SpotShare = 0.4 }
         });
 
@@ -224,7 +224,7 @@ public sealed class PoliceTests : IDisposable
 
     private static (GameState State, RaceContext Context, Car PlayerCar, Opponent Rival, Car RivalCar) World(decimal wager = 500m, bool pinkSlip = false)
     {
-        var world = RaceFakes.World(wager, pinkSlip, RaceType.Circuit);
+        var world = RaceFakes.World(wager, pinkSlip, "circuit");
         world.State.Date = Night;
         return (world.State, world.Context, world.PlayerCar, world.Rival, world.RivalCar);
     }

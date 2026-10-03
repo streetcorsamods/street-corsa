@@ -14,6 +14,6 @@ namespace StreetCorsa.Models.Race
         public decimal CashWager { get; set; }
         public string TrackId { get; set; } = "ks_drag";
         public string? TrackConfig { get; set; } = "drag1000";
-        public RaceType RaceType { get; set; } = RaceType.DragRace;
+        public string Format { get; set; } = string.Empty;
     }
 }

@@ -132,6 +132,11 @@ namespace StreetCorsa.Services.Race
                 });
             }
 
+            // A format won on score hands out each racer's score (a time attack's laps), first too
+            if (RaceFormats.Current.Of(context.Format) is { ByScore: true } scoredFormat
+                && (outcome.Player?.Score != null || outcome.Opponent?.Score != null))
+                messages.Insert(0, ScoreCard(scoredFormat, outcome, context));
+
             _logger.Information("Race result processed successfully");
             return messages;
         }
@@ -672,6 +677,19 @@ namespace StreetCorsa.Services.Race
                 return outcome;
             }
 
+            // A format won on score (a time attack's best lap): the better score wins, a racer without one loses; the same
+            // score both ways goes to the order at the line
+            if (RaceFormats.Current.Of(context.Format) is { ByScore: true } scored
+                && (playerParticipant.Score != null || opponentParticipant.Score != null)
+                && playerParticipant.Score != opponentParticipant.Score)
+            {
+                var mine = playerParticipant.Score;
+                var theirs = opponentParticipant.Score;
+                outcome.WinCondition = WinCondition.ScoreFinish;
+                outcome.PlayerWon = theirs == null || (mine != null && (scored.HigherWins ? mine > theirs : mine < theirs));
+                return outcome;
+            }
+
             // No crashes - determine by final position
             var playerPosition = playerParticipant.Performance.FinalPosition;
             var opponentPosition = opponentParticipant.Performance.FinalPosition;
@@ -816,6 +834,44 @@ namespace StreetCorsa.Services.Race
         };
 
         private static string? Join(string? first, string second) => first == null ? second : first + "\n" + second;
+
+        /// <summary>
+        /// The racers' scores after a format won on score: each one's score (a time shows as one), and who won on it.
+        /// The format's name is the title.
+        /// </summary>
+        private static PlayerMessage ScoreCard(RaceFormat format, RaceDecision outcome, RaceContext context)
+        {
+            string Show(double? score) => score is not { } value ? GameText.Say("result.score.none")
+                : format.ScoreIsTime ? LapTime(value)
+                : value.ToString("N0", Locale.Culture);
+
+            var lines = new List<string>
+            {
+                GameText.Say("result.score.line", ("name", context.PlayerName), ("score", Show(outcome.Player?.Score))),
+                GameText.Say("result.score.line", ("name", context.OpponentName), ("score", Show(outcome.Opponent?.Score)))
+            };
+            if (outcome.Player?.LapTimesMs is { Count: > 0 } laps)
+                lines.Add(GameText.Say("result.score.laps", ("laps", string.Join("  ", laps.Select(LapTime)))));
+            if (outcome.WinCondition == WinCondition.ScoreFinish)
+                lines.Add(outcome.PlayerWon ? SayFor("result.score.won") : SayFor("result.score.lost", ("name", context.OpponentName)));
+
+            return new PlayerMessage(GameText.Say(format.NameKey), string.Join("\n", lines));
+
+            // The format's own words when its mod has them (result.score.won.time_attack), else the plain ones
+            string SayFor(string key, params (string Name, object? Value)[] values)
+            {
+                var own = key + "." + Mods.ModIds.Local(format.Id);
+                return GameText.Say(GameText.Installed.Has(own) ? own : key, values);
+            }
+        }
+
+        /// <summary>A lap time in milliseconds as the stopwatch shows it: 1:23.456</summary>
+        public static string LapTime(double milliseconds)
+        {
+            var total = TimeSpan.FromMilliseconds(Math.Max(0, Math.Round(milliseconds)));
+            var decimals = Locale.Culture.NumberFormat.NumberDecimalSeparator;
+            return $"{(int)total.TotalMinutes}:{total.Seconds:00}{decimals}{total.Milliseconds:000}";
+        }
 
         /// <summary>
         /// What the player hears about their car after the session: towed home when it crashed (the player goes with
@@ -1094,7 +1150,7 @@ namespace StreetCorsa.Services.Race
             session.OpponentName = context.OpponentName;
             session.PlayerCarInstanceId = context.PlayerCarInstanceId;
             session.OpponentCarInstanceId = context.OpponentCarInstanceId;
-            session.RaceType = context.RaceType.ToString();
+            session.RaceType = RaceFormats.Current.IdOf(context.Format);
             session.EventId = context.EventId;
             return session;
         }
@@ -1163,7 +1219,7 @@ namespace StreetCorsa.Services.Race
                 PlayerCar = CarName(CarDefinitionOf(gameState, context.PlayerCarInstanceId)),
                 RivalCar = CarName(CarDefinitionOf(gameState, context.OpponentCarInstanceId) is { Length: > 0 } rivalCar
                     ? rivalCar : context.OpponentCarDefinitionId),
-                IsDrag = context.RaceType == RaceType.DragRace,
+                IsDrag = RaceFormats.Current.IsDrag(context.Format),
                 Decided = outcome.IsDecided,
                 PlayerWon = outcome.PlayerWon,
                 PinkSlip = context.IsPinkSlip && moved.Car,
@@ -1284,17 +1340,8 @@ namespace StreetCorsa.Services.Race
                 // Update total wins
                 career.IncrementCounter(MilestoneTrigger.TotalWins);
 
-                // Update race-type specific wins
-                switch (context.RaceType)
-                {
-                    case RaceType.DragRace:
-                        career.IncrementCounter(MilestoneTrigger.DragWins);
-                        break;
-                    case RaceType.Circuit:
-                    case RaceType.Sprint:
-                        career.IncrementCounter(MilestoneTrigger.RoadWins);
-                        break;
-                }
+                // The format's family's wins: every format counts as a drag or a road race
+                career.IncrementCounter(RaceFormats.Current.IsDrag(context.Format) ? MilestoneTrigger.DragWins : MilestoneTrigger.RoadWins);
 
                 // Update pink slip wins
                 if (context.IsPinkSlip)
@@ -1655,6 +1702,11 @@ namespace StreetCorsa.Services.Race
         OpponentBrokeOut,
 
         /// <summary>A test-and-tune: no race, nobody wins</summary>
-        TestAndTune
+        TestAndTune,
+
+        /// <summary>
+        /// A format won on score (<see cref="RaceFormat.ByScore"/>): the better score won, a racer without one lost
+        /// </summary>
+        ScoreFinish
     }
 }

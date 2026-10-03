@@ -26,9 +26,19 @@ namespace StreetCorsa.Models.Career.Events
         public string Description { get; set; } = string.Empty;
 
         /// <summary>
-        /// Type of race (drag, circuit, sprint)
+        /// The event's race format id (<see cref="Services.Race.RaceFormats"/>): the mod's own format, else the base
+        /// game's. Resolved when the events are read.
         /// </summary>
-        public RaceType RaceType { get; set; }
+        public string Format { get; set; } = string.Empty;
+
+        /// <summary>
+        /// The race type as events were written before formats ("raceType": "DragRace"): read into <see cref="Format"/>
+        /// when that is not given
+        /// </summary>
+        public string? RaceType { get; set; }
+
+        /// <summary>The laps the race is over; null: the format's</summary>
+        public int? Laps { get; set; }
 
         /// <summary>
         /// Car filter for entry requirements (null = any car allowed)
@@ -75,8 +85,8 @@ namespace StreetCorsa.Models.Career.Events
         /// </summary>
         public bool IsBracket { get; set; }
 
-        /// <summary>Run as a bracket race: <see cref="IsBracket"/> on a drag race, the only kind that can be one</summary>
-        public bool IsBracketRace => IsBracket && RaceType == RaceType.DragRace;
+        /// <summary>Run as a bracket race: <see cref="IsBracket"/> on a format that can be one (a drag race)</summary>
+        public bool IsBracketRace => IsBracket && Services.Race.RaceFormats.Current.Get(Format)?.Bracket == true;
 
         /// <summary>
         /// Special opponents for this event (if set, uses these instead of pool)

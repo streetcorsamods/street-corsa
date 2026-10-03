@@ -8,6 +8,8 @@
     "race.tune.stage, race.slip.pass and race.slip.pass.red_light: {pass} the pass, {passes} how many the strip allows.",
     "race.slip.eighth.speed and race.slip.quarter.speed: {unit} the speed's unit, in capitals (MPH).",
     "race.slip.back: {seconds} the seconds until the car goes back to the line. race.tree.dial_in: {dial} the dial-in.",
+    "race.ta.* (a time attack): {laps} the timed laps, {lap} the lap, {time} and {best} lap times as 1:23.456, {driver}",
+    "the rival's name, {rival} the rival's best lap. A format of a mod's own says its own race.<key> words the same way.",
     "race.rival.broke_down, race.rival.disqualified, race.rival.busted and race.cops.trap.rival: {driver} the rival's",
     "name (race.your_rival when the mode has none)."
   ],
@@ -75,6 +77,20 @@
     "race.cops.busted": "The police got you. Pull over.",
     "race.cops.lost.title": "Got away",
     "race.cops.gave_up": "The cops gave up on you. Now win the race!",
-    "race.cops.lost": "You lost the cops. Now win the race!"
+    "race.cops.lost": "You lost the cops. Now win the race!",
+    "race.ta.title": "Time attack",
+    "race.ta.go": "The clock is running: {laps} flying laps, best one counts.",
+    "race.ta.lap.title": "Lap {lap} of {laps}",
+    "race.ta.lap": "{time}   best {best}",
+    "race.ta.wait": "{driver} is still on the clock.",
+    "race.ta.result": "Your best lap {time}, {driver} {rival}",
+    "race.ta.no_time": "no time",
+    "race.ta.hud.warm_up": "WARM-UP LAP",
+    "race.ta.hud.lap": "LAP {lap}/{laps}",
+    "race.ta.hud.done": "LAPS DONE",
+    "race.ta.hud.time": "TIME",
+    "race.ta.hud.last": "LAST",
+    "race.ta.hud.best": "BEST",
+    "race.ta.hud.rival": "RIVAL"
   }
 }

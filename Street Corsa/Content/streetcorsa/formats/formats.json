@@ -1,0 +1,55 @@
+{
+  "_comment": [
+    "The kinds of race (see Services/Race/RaceFormats.cs and docs/modding.md, formats). family: drag (the strips; the",
+    "drag record, wagers and milestones) or road (every other track). module: the race mode's Lua module that runs it",
+    "(format_<module>.lua in apps/new-modes/sc_race, or formats/<module>.lua in a mod). laps: what the race is over, an",
+    "event may set its own; sessionLaps: what AC's session is given when the format runs past its laps. win: position",
+    "(first over the line) or score (participants[].score in the result, better: lower or higher; scoreShows: time for",
+    "milliseconds shown as a lap time, else points). name: its name's text",
+    "key (paper.race_type.<id> when left out). diner: offered at the diner; street: raced on the street (the first of each",
+    "family). aliases: the race types events and saves named before formats."
+  ],
+  "formats": [
+    {
+      "id": "drag",
+      "family": "drag",
+      "module": "drag",
+      "laps": 1,
+      "session": "Drag Race",
+      "bracket": true,
+      "street": true,
+      "aliases": [ "DragRace" ]
+    },
+    {
+      "id": "circuit",
+      "family": "road",
+      "module": "road",
+      "laps": 1,
+      "session": "Quick Race",
+      "police": true,
+      "street": true,
+      "aliases": [ "Circuit" ]
+    },
+    {
+      "id": "sprint",
+      "family": "road",
+      "module": "road",
+      "laps": 1,
+      "session": "Quick Race",
+      "police": true,
+      "diner": false,
+      "aliases": [ "Sprint" ]
+    },
+    {
+      "id": "time_attack",
+      "family": "road",
+      "module": "time_attack",
+      "laps": 3,
+      "sessionLaps": 99,
+      "session": "Time Attack",
+      "win": "score",
+      "better": "lower",
+      "scoreShows": "time"
+    }
+  ]
+}

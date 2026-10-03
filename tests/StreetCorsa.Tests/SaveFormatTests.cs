@@ -76,7 +76,7 @@ public sealed class SaveFormatTests : IDisposable
         state.Career.DefeatedOpponentIds.Add("Ace");
         state.Career.CompletedEventIds.Add("event_1");
         state.Rules.Difficulty = Difficulty.Hard;
-        state.PendingRace = new RaceContext { OpponentName = "Ace", CashWager = 50m, RaceType = RaceType.Sprint };
+        state.PendingRace = new RaceContext { OpponentName = "Ace", CashWager = 50m, Format = "sprint" };
         return state;
     }
 
@@ -119,7 +119,7 @@ public sealed class SaveFormatTests : IDisposable
         Assert.Contains("Ace", loaded.Career.DefeatedOpponentIds);
         Assert.Contains("event_1", loaded.Career.CompletedEventIds);
         Assert.Equal(Difficulty.Hard, loaded.Rules.Difficulty);
-        Assert.Equal(RaceType.Sprint, loaded.PendingRace!.RaceType);
+        Assert.Equal("sprint", loaded.PendingRace!.Format);
         Assert.Equal(string.Empty, loaded.PendingRace.TrackId);
         Assert.Equal(GameState.GetStartingDateTime(), loaded.Date);
     }
@@ -196,8 +196,7 @@ public sealed class SaveFormatTests : IDisposable
         Assert.Equal(["Player", "AI"], Enum.GetNames<RacerType>());
         Assert.Equal(["Inactive", "Retired", "ReadyToRace", "Departed"], Enum.GetNames<RacerStatus>());
         Assert.Equal(["Male", "Female", "Other"], Enum.GetNames<Gender>());
-        Assert.Equal(["DragRace", "Circuit", "Sprint"], Enum.GetNames<RaceType>());
-        Assert.Equal(
+                Assert.Equal(
             ["TotalWins", "DragWins", "RoadWins", "PinkSlipWins", "ReputationReached", "MoneyEarned", "CarsOwned", "DaysPlayed", "OpponentsDefeated"],
             Enum.GetNames<MilestoneTrigger>());
     }

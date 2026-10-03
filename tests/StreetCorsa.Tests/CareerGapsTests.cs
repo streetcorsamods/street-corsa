@@ -57,9 +57,9 @@ public class CareerGapsTests
         var events = Events().GetAllEventDefinitions().ToDictionary(e => e.Id);
 
         foreach (var id in new[] { "classic_showdown", "fifties_fever", "sixties_showdown", "european_invasion", "chevy_challenge" })
-            Assert.Equal(RaceType.Circuit, events[id].RaceType);
+            Assert.Equal("circuit", events[id].Format);
         foreach (var id in new[] { "ford_fanatics", "budget_brawl", "muscle_madness", "high_stakes", "underdog_challenge" })
-            Assert.Equal(RaceType.DragRace, events[id].RaceType);
+            Assert.Equal("drag", events[id].Format);
     }
 
     /// <summary>Reputation victory reached (the counter at its target) and the King beaten, both at once</summary>

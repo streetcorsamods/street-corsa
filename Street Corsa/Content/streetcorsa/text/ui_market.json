@@ -180,6 +180,7 @@
     "paper.race_type.drag": "Drag Race",
     "paper.race_type.circuit": "Circuit Race",
     "paper.race_type.sprint": "Sprint Race",
+    "paper.race_type.time_attack": "Time Attack",
     "paper.race_type.other": "Race",
     "paper.pink_slip_warning": "PINK SLIP - Risk your car!",
     "paper.eligible.one": "{count} car eligible",

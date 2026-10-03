@@ -698,11 +698,20 @@ namespace StreetCorsa.Services.Race
             if (string.IsNullOrWhiteSpace(fileType))
                 return;
 
-            var expected = context.IsTestAndTune ? RaceTypes.TestAndTune : context.RaceType == RaceType.DragRace ? RaceTypes.Drag : RaceTypes.Road;
+            var formats = RaceFormats.Current;
+            var expected = context.IsTestAndTune ? RaceTypes.TestAndTune : formats.IsDrag(context.Format) ? RaceTypes.Drag : RaceTypes.Road;
             if (!string.Equals(fileType, expected, StringComparison.OrdinalIgnoreCase))
             {
-                _logger.Warning("File {FileName} says the race was {FileRaceType}, but race {ContextId} is a {RaceType} ({Expected}) - applied as the race was set up",
-                    file.Name, fileType, context.ContextId, context.RaceType, expected);
+                _logger.Warning("File {FileName} says the race was {FileRaceType}, but race {ContextId} is a {Format} ({Expected}) - applied as the race was set up",
+                    file.Name, fileType, context.ContextId, context.Format, expected);
+            }
+
+            // The format too, from a mode that writes it (schema 1.8)
+            if (!context.IsTestAndTune && raceResult.Session.Format is { Length: > 0 } fileFormat
+                && !string.Equals(formats.IdOf(fileFormat), formats.IdOf(context.Format), StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.Warning("File {FileName} says the race was a {FileFormat} race, but race {ContextId} is a {Format} race - applied as the race was set up",
+                    file.Name, fileFormat, context.ContextId, context.Format);
             }
         }
 
