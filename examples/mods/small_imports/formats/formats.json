@@ -1,0 +1,23 @@
+{
+  "_comment": [
+    "A format of the mod's own made of data alone: an autocross is the race mode's time attack module over two",
+    "flying laps (docs/modding.md, \"formats\"). Its words are paper.race_type.autocross and diner.format.about.autocross",
+    "in the mod's text."
+  ],
+  "formats": [
+    {
+      "id": "autocross",
+      "family": "road",
+      "module": "time_attack",
+      "laps": 2,
+      "sessionLaps": 99,
+      "session": "Autocross",
+      "win": "score",
+      "better": "lower",
+      "scoreShows": "time",
+      "diner": true,
+      "street": false,
+      "police": false
+    }
+  ]
+}

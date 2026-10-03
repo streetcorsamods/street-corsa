@@ -1,0 +1,19 @@
+{
+  "_comment": [
+    "The mod's words (docs/modding.md, \"text\"): the autocross's names, and Gino's own lines. A racer's own line is the",
+    "pool's key with his racer id after it (talk.pulled_up.gino); where he has none he says what every racer says."
+  ],
+  "lines": {
+    "paper.race_type.autocross": [ "Autocross" ],
+    "diner.format.about.autocross": [ "Two flying laps between the cones, one car at a time. The quicker lap wins: no bumping, no excuses." ],
+    "result.score.won.autocross": [ "Your lap beat his between the cones. The night is yours." ],
+    "result.score.lost.autocross": [ "{name} found the time between the cones that you didn't." ],
+
+    "talk.pulled_up.gino": [ "Nice boat. Does it turn, or only go straight?", "My uncle's sewing machine says hello." ],
+    "talk.pulled_up.aggressive.gino": [ "Five hundred pounds of Italian says you're too slow. Want to find out?" ],
+    "replies.accept.gino": [ "Va bene. Try to keep up in the corners." ],
+    "replies.accept.aggressive.gino": [ "Andiamo! Don't cry when I pass you on the inside." ],
+    "replies.decline.gino": [ "Not tonight, amico. The little one needs new plugs." ],
+    "street.back_on_street.gino": [ "Gino Ferraro's Abarth is buzzing around the pier again." ]
+  }
+}

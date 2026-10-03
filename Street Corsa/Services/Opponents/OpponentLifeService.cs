@@ -79,6 +79,7 @@ namespace StreetCorsa.Services.Opponents
         private Func<Car, decimal>? _valueOf;
         private Func<string, string>? _carNames;
         private List<RivalCarAds.Offer>? _liveAds;
+        private Dictionary<string, Models.Catalog.CarDefinition?>? _definitions;
 
         public async Task ReviewDayAsync(GameState gameState, DateTime currentDate)
         {
@@ -107,6 +108,7 @@ namespace StreetCorsa.Services.Opponents
             var talk = new List<string>();
             var groupOf = PartGroups();
             _liveAds = null;
+            _definitions = null;
 
             try
             {
@@ -450,16 +452,36 @@ namespace StreetCorsa.Services.Opponents
         private sealed record ForSale(decimal Price, double Hp, double Condition, UsedCarListing? Listing, RivalCarAds.Offer? Ad);
 
         /// <summary>Everything for sale a racer could buy with <paramref name="budget"/>: the lots and the other rivals' ads</summary>
-        private List<ForSale> CarsForSale(GameState gameState, Opponent racer, decimal budget) =>
-        [
-            .. gameState.UsedCarMarket
-                .Where(l => !l.IsSold && l.Price > 0 && l.Price <= budget)
-                .Select(l => new ForSale(l.Price, l.PowerHp ?? 0, l.Condition, l, null)),
-            .. LiveAds(gameState)
-                .Where(o => !ReferenceEquals(o.Seller, racer) && o.Ad.AskingPrice > 0 && o.Ad.AskingPrice <= budget)
-                .Where(o => !HasPendingRace(gameState, o.Seller) && RivalCarAds.StillStands(gameState, o))
-                .Select(o => new ForSale(o.Ad.AskingPrice, o.Car.PowerHp ?? 0, CarValuation.ConditionOf(o.Car), null, o))
-        ];
+        private List<ForSale> CarsForSale(GameState gameState, Opponent racer, decimal budget)
+        {
+            List<ForSale> all =
+            [
+                .. gameState.UsedCarMarket
+                    .Where(l => !l.IsSold && l.Price > 0 && l.Price <= budget)
+                    .Select(l => new ForSale(l.Price, l.PowerHp ?? 0, l.Condition, l, null)),
+                .. LiveAds(gameState)
+                    .Where(o => !ReferenceEquals(o.Seller, racer) && o.Ad.AskingPrice > 0 && o.Ad.AskingPrice <= budget)
+                    .Where(o => !HasPendingRace(gameState, o.Seller) && RivalCarAds.StillStands(gameState, o))
+                    .Select(o => new ForSale(o.Ad.AskingPrice, o.Car.PowerHp ?? 0, CarValuation.ConditionOf(o.Car), null, o))
+            ];
+            if (racer.Drives is not { } kind) return all;
+
+            // A racer who drives one kind of car buys one of that kind; with none for sale, one who has no car takes
+            // what he can get, and one who has his kind of car keeps it
+            var liked = all.Where(c => Likes(kind, c.Listing?.CarDefinitionId ?? c.Ad?.Car.DefinitionId)).ToList();
+            return liked.Count > 0 || racer.Cars.Any(c => Likes(kind, c.DefinitionId)) ? liked : all;
+        }
+
+        private bool Likes(Models.Career.Filters.ICarFilter kind, string? definitionId) =>
+            definitionId != null && Definition(definitionId) is { } car && kind.Matches(car);
+
+        /// <summary>A car's definition, found once in a review</summary>
+        private Models.Catalog.CarDefinition? Definition(string id)
+        {
+            var known = _definitions ??= new Dictionary<string, Models.Catalog.CarDefinition?>(StringComparer.OrdinalIgnoreCase);
+            if (!known.TryGetValue(id, out var car)) known[id] = car = _catalogRepo.GetCar(id);
+            return car;
+        }
 
         /// <summary>
         /// The rivals' ads that stood when first asked for in this review: found once, not per racer who shops. An ad
@@ -558,9 +580,10 @@ namespace StreetCorsa.Services.Opponents
             var affordable = OnSale(gameState).Where(l => OpponentRules.Affordable(l.Price, racer.Money)).ToList();
             if (affordable.Count == 0) return false;
 
-            // A stronger car than theirs, cheap
+            // A stronger car than theirs, cheap, of the kind they drive (one bought to sell on can be any)
             var step = affordable
                 .Where(l => (l.PowerHp ?? 0) >= Math.Max(1, currentHp) * OpponentRules.BargainTradeUpGain)
+                .Where(l => racer.Drives is not { } kind || Likes(kind, l.CarDefinitionId))
                 .OrderByDescending(l => OpponentRules.PurchaseScore(l.PowerHp ?? 0, l.Condition, (l.PowerHp ?? 0) > 0, l.Price, racer.Money))
                 .FirstOrDefault();
             if (step != null)
@@ -984,12 +1007,13 @@ namespace StreetCorsa.Services.Opponents
         private static string Nickname(Opponent racer) => string.IsNullOrWhiteSpace(racer.Nickname) ? "" : $" \"{racer.Nickname}\"";
 
         /// <summary>A line of the street's talk about a racer (the mods' "street.*" text), and their car when it is about one</summary>
+        // A racer may have lines of his own (RacerWords)
         private string Say(string key, Opponent racer, Car? car = null, TextValues? values = null) =>
-            GameText.Installed.Pick(key, _random, With(racer, car, values));
+            GameText.Installed.Pick(RacerWords.Key(key, racer), _random, With(racer, car, values));
 
         /// <summary>Every way a line can come out for this racer: to take back what was said</summary>
         private HashSet<string> Said(string key, Opponent racer, Car? car = null) =>
-            GameText.Installed.Lines(key).Select(line => GameText.Fill(line, With(racer, car, null))).ToHashSet();
+            GameText.Installed.Lines(RacerWords.Key(key, racer)).Select(line => GameText.Fill(line, With(racer, car, null))).ToHashSet();
 
         private TextValues With(Opponent racer, Car? car, TextValues? values)
         {

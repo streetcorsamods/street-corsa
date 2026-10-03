@@ -1,0 +1,21 @@
+{
+  "dealers": [
+    {
+      "id": "continental_imports",
+      "name": "Continental Imports",
+      "region": "Santa Monica",
+      "blurb": "Little cars from across the water: Fiats, Alfas and the odd Ford of Britain, every one with a story.",
+      "mapX": 0.15,
+      "mapY": 0.53,
+      "showroomId": "industrial",
+      "priceBandLow": 0,
+      "priceBandHigh": 1,
+      "conditionCenter": 0.6,
+      "travelHours": 1.5,
+      "stockLow": 4,
+      "stockHigh": 6,
+      "cars": { "type": "origin", "origin": "European" },
+      "salesman": { "name": "Enzo Bellini", "age": 52, "sex": "man", "temperament": "smooth_operator" }
+    }
+  ]
+}

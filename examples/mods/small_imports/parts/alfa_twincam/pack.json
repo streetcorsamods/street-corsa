@@ -1,0 +1,576 @@
+{
+  "id": "engines/alfa_twincam",
+  "source": "small_imports example mod",
+  "make": "alfa_romeo",
+  "parts": [
+    {
+      "id": "engines/alfa_twincam/block",
+      "name": "GTA 1570 block",
+      "display_name": "Alfa Romeo GTA 1570 block (Alfa Romeo 1570 twin cam)",
+      "class_chain": [
+        "Block"
+      ],
+      "mass": 95,
+      "properties": {
+        "value": 520
+      },
+      "slots": [
+        {
+          "id": 10,
+          "name": "crankshaft",
+          "position": [
+            0,
+            -0.1,
+            0
+          ],
+          "takes": [
+            "alfa_twincam:crank"
+          ]
+        },
+        {
+          "id": 12,
+          "name": "cylinder head",
+          "position": [
+            0,
+            0.2,
+            0
+          ],
+          "takes": [
+            "alfa_twincam:head"
+          ]
+        },
+        {
+          "id": 13,
+          "name": "camshaft",
+          "position": [
+            0,
+            0.3,
+            0
+          ],
+          "takes": [
+            "alfa_twincam:cam"
+          ]
+        },
+        {
+          "id": 14,
+          "name": "induction",
+          "position": [
+            0.18,
+            0.28,
+            0
+          ],
+          "takes": [
+            "alfa_twincam:intake"
+          ]
+        },
+        {
+          "id": 15,
+          "name": "air cleaner",
+          "position": [
+            0.22,
+            0.4,
+            0
+          ],
+          "takes": [
+            "alfa_twincam:air"
+          ]
+        },
+        {
+          "id": 16,
+          "name": "exhaust",
+          "position": [
+            -0.2,
+            0.12,
+            0
+          ],
+          "takes": [
+            "alfa_twincam:exhaust"
+          ]
+        },
+        {
+          "id": 17,
+          "name": "transmission",
+          "position": [
+            0,
+            -0.1,
+            0.34
+          ],
+          "takes": [
+            "alfa_twincam:gearbox"
+          ]
+        },
+        {
+          "id": 18,
+          "name": "clutch",
+          "position": [
+            0,
+            -0.1,
+            0.26
+          ],
+          "takes": [
+            "alfa_twincam:clutch"
+          ]
+        },
+        {
+          "id": 19,
+          "name": "oil pan",
+          "position": [
+            0,
+            -0.24,
+            0
+          ],
+          "takes": [
+            "alfa_twincam:sump"
+          ]
+        },
+        {
+          "id": 20,
+          "name": "radiator",
+          "position": [
+            0,
+            0.05,
+            -0.55
+          ],
+          "takes": [
+            "alfa_twincam:radiator"
+          ]
+        },
+        {
+          "id": 21,
+          "name": "water pump",
+          "position": [
+            0,
+            0.02,
+            -0.28
+          ],
+          "takes": [
+            "alfa_twincam:pump"
+          ]
+        },
+        {
+          "id": 22,
+          "name": "fan",
+          "position": [
+            0,
+            0.05,
+            -0.42
+          ],
+          "takes": [
+            "alfa_twincam:fan"
+          ]
+        }
+      ],
+      "required_slots": [
+        {
+          "slot": 10,
+          "message": "The engine needs its crankshaft.",
+          "enforce": true
+        },
+        {
+          "slot": 12,
+          "message": "The engine needs its cylinder head.",
+          "enforce": true
+        },
+        {
+          "slot": 13,
+          "message": "The engine needs its camshaft.",
+          "enforce": true
+        },
+        {
+          "slot": 14,
+          "message": "Nothing feeds the engine: it needs its carburettors or its injection.",
+          "enforce": true
+        }
+      ],
+      "figures": {
+        "cylinders": 4,
+        "bore": 78,
+        "compression": 9.7,
+        "rev_limit": 6800,
+        "max_rpm": 7400,
+        "idle_rpm": 900,
+        "inertia": 0.09
+      }
+    },
+    {
+      "id": "engines/alfa_twincam/crank",
+      "name": "crankshaft",
+      "display_name": "Alfa Romeo crankshaft 82 mm (Alfa Romeo 1570 twin cam)",
+      "class_chain": [
+        "Crankshaft"
+      ],
+      "mass": 14,
+      "properties": {
+        "value": 160
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "alfa_twincam:crank"
+          ]
+        }
+      ],
+      "figures": {
+        "stroke": 82
+      }
+    },
+    {
+      "id": "engines/alfa_twincam/head",
+      "name": "cylinder head",
+      "display_name": "Alfa Romeo GTA twin-cam head (Alfa Romeo 1570 twin cam)",
+      "class_chain": [
+        "CylinderHead"
+      ],
+      "mass": 14,
+      "properties": {
+        "value": 260
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "alfa_twincam:head"
+          ]
+        }
+      ],
+      "figures": {
+        "intake_flow": 0.88,
+        "exhaust_flow": 0.36
+      }
+    },
+    {
+      "id": "engines/alfa_twincam/head_twin_plug",
+      "name": "twin plug cylinder head",
+      "display_name": "Autodelta twin-plug head (Alfa Romeo 1570 twin cam)",
+      "class_chain": [
+        "CylinderHead"
+      ],
+      "mass": 14,
+      "properties": {
+        "value": 520
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "alfa_twincam:head"
+          ]
+        }
+      ],
+      "figures": {
+        "intake_flow": 0.98,
+        "exhaust_flow": 0.42,
+        "burn_time": {
+          "times": 0.8
+        }
+      }
+    },
+    {
+      "id": "engines/alfa_twincam/cams",
+      "name": "camshafts",
+      "display_name": "Alfa Romeo GTA camshafts (Alfa Romeo 1570 twin cam)",
+      "class_chain": [
+        "Camshaft"
+      ],
+      "mass": 4,
+      "properties": {
+        "value": 110
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "alfa_twincam:cam"
+          ]
+        }
+      ],
+      "figures": {
+        "intake_duration": 245,
+        "exhaust_duration": 245
+      }
+    },
+    {
+      "id": "engines/alfa_twincam/cams_corsa",
+      "name": "race camshafts",
+      "display_name": "Autodelta GTA Corsa camshafts (Alfa Romeo 1570 twin cam)",
+      "class_chain": [
+        "Camshaft"
+      ],
+      "mass": 4,
+      "properties": {
+        "value": 240
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "alfa_twincam:cam"
+          ]
+        }
+      ],
+      "figures": {
+        "intake_duration": 285,
+        "exhaust_duration": 285,
+        "rev_limit": 7800,
+        "max_rpm": 8200
+      }
+    },
+    {
+      "id": "engines/alfa_twincam/webers_45",
+      "name": "twin carburettors",
+      "display_name": "Weber 45 DCOE twin carburettors (Alfa Romeo 1570 twin cam)",
+      "class_chain": [
+        "AirFuelDeliverySystem"
+      ],
+      "mass": 6,
+      "properties": {
+        "value": 210
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "alfa_twincam:intake"
+          ]
+        }
+      ],
+      "figures": {
+        "fuel_flow": 11,
+        "air_flow": 150
+      }
+    },
+    {
+      "id": "engines/alfa_twincam/air_cleaner",
+      "name": "air cleaner",
+      "display_name": "Alfa Romeo air cleaner (Alfa Romeo 1570 twin cam)",
+      "class_chain": [
+        "AirFilter"
+      ],
+      "mass": 1.5,
+      "properties": {
+        "value": 20
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "alfa_twincam:air"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "engines/alfa_twincam/trumpets",
+      "name": "velocity stacks",
+      "display_name": "Autodelta velocity stacks (Alfa Romeo 1570 twin cam)",
+      "class_chain": [
+        "AirFilter"
+      ],
+      "mass": 0.5,
+      "properties": {
+        "value": 45
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "alfa_twincam:air"
+          ]
+        }
+      ],
+      "figures": {
+        "air_flow": {
+          "times": 1.15
+        }
+      }
+    },
+    {
+      "id": "engines/alfa_twincam/exhaust",
+      "name": "exhaust manifold",
+      "display_name": "Alfa Romeo exhaust manifold (Alfa Romeo 1570 twin cam)",
+      "class_chain": [
+        "ExhaustHeader"
+      ],
+      "mass": 9,
+      "properties": {
+        "value": 60
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "alfa_twincam:exhaust"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "engines/alfa_twincam/header_autodelta",
+      "name": "exhaust header",
+      "display_name": "Autodelta 4-into-1 header (Alfa Romeo 1570 twin cam)",
+      "class_chain": [
+        "ExhaustHeader"
+      ],
+      "mass": 6,
+      "properties": {
+        "value": 180
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "alfa_twincam:exhaust"
+          ]
+        }
+      ],
+      "figures": {
+        "exhaust_flow": {
+          "times": 1.2
+        }
+      }
+    },
+    {
+      "id": "engines/alfa_twincam/gearbox",
+      "name": "gearbox",
+      "display_name": "Alfa Romeo 5-speed transmission (Alfa Romeo 1570 twin cam)",
+      "class_chain": [
+        "Transmission"
+      ],
+      "mass": 32,
+      "properties": {
+        "value": 300
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "alfa_twincam:gearbox"
+          ]
+        }
+      ],
+      "figures": {
+        "gears": [
+          3.304,
+          1.988,
+          1.355,
+          1.0,
+          0.791
+        ],
+        "reverse": 3.01,
+        "final_drive": 4.556
+      }
+    },
+    {
+      "id": "engines/alfa_twincam/clutch",
+      "name": "clutch",
+      "display_name": "Alfa Romeo clutch (Alfa Romeo 1570 twin cam)",
+      "class_chain": [
+        "Clutch"
+      ],
+      "mass": 5,
+      "properties": {
+        "value": 55
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "alfa_twincam:clutch"
+          ]
+        }
+      ],
+      "figures": {
+        "clutch_torque": 220
+      }
+    },
+    {
+      "id": "engines/alfa_twincam/sump",
+      "name": "oil pan",
+      "display_name": "Alfa Romeo oil pan (Alfa Romeo 1570 twin cam)",
+      "class_chain": [
+        "OilPan"
+      ],
+      "mass": 4,
+      "properties": {
+        "value": 40,
+        "capacity": 6.6
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "alfa_twincam:sump"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "engines/alfa_twincam/radiator",
+      "name": "radiator",
+      "display_name": "Alfa Romeo radiator (Alfa Romeo 1570 twin cam)",
+      "mass": 6,
+      "properties": {
+        "value": 70
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "alfa_twincam:radiator"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "engines/alfa_twincam/water_pump",
+      "name": "water pump",
+      "display_name": "Alfa Romeo water pump (Alfa Romeo 1570 twin cam)",
+      "mass": 2,
+      "properties": {
+        "value": 35
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "alfa_twincam:pump"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "engines/alfa_twincam/fan",
+      "name": "fan",
+      "display_name": "Alfa Romeo 4-blade fan (Alfa Romeo 1570 twin cam)",
+      "mass": 1,
+      "properties": {
+        "value": 15
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "alfa_twincam:fan"
+          ]
+        }
+      ]
+    }
+  ]
+}

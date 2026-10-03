@@ -26,7 +26,7 @@ namespace StreetCorsa.Services.Career
 
         private static readonly JsonSerializerOptions Options = new(ModJson.Options)
         {
-            Converters = { new JsonStringEnumConverter(), new CarFilterConverter() }
+            Converters = { new JsonStringEnumConverter(), new CarFilterJsonConverter() }
         };
 
         public IReadOnlyDictionary<string, RaceEventDefinition> Events { get; private init; } = new Dictionary<string, RaceEventDefinition>();
@@ -194,42 +194,6 @@ namespace StreetCorsa.Services.Career
             return unlock.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
                 ? prefix + victories.Resolve(mod, unlock[prefix.Length..])
                 : unlock;
-        }
-
-        /// <summary>
-        /// A car filter from a mod's file: an object with its "type" (brand, origin, years or decade, power, value,
-        /// all, any) and the fields of that filter
-        /// </summary>
-        private sealed class CarFilterConverter : JsonConverter<ICarFilter>
-        {
-            public override ICarFilter? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-            {
-                using var document = JsonDocument.ParseValue(ref reader);
-                return ReadFilter(document.RootElement, options);
-            }
-
-            private static ICarFilter? ReadFilter(JsonElement element, JsonSerializerOptions options)
-            {
-                if (element.ValueKind != JsonValueKind.Object) return null;
-
-                var type = ModJson.Text(element, "type")?.ToLowerInvariant();
-                return type switch
-                {
-                    "brand" => element.Deserialize<BrandFilter>(options),
-                    "origin" => element.Deserialize<OriginFilter>(options),
-                    "years" or "decade" => element.Deserialize<DecadeFilter>(options),
-                    "power" => element.Deserialize<PowerFilter>(options),
-                    "value" => element.Deserialize<ValueFilter>(options),
-                    "all" or "any" => new CompositeCarFilter(type == "all",
-                        (ModJson.TryGet(element, "filters", out var list) && list.ValueKind == JsonValueKind.Array
-                            ? list.EnumerateArray().Select(f => ReadFilter(f, options)).OfType<ICarFilter>()
-                            : []).ToArray()),
-                    _ => throw new JsonException($"\"{type}\" is no car filter (brand, origin, years, power, value, all, any)")
-                };
-            }
-
-            public override void Write(Utf8JsonWriter writer, ICarFilter value, JsonSerializerOptions options) =>
-                throw new NotSupportedException("Car filters are read from the mods, never written");
         }
     }
 }

@@ -124,6 +124,25 @@ public class OpponentLifeServiceTests
         Assert.Contains(_state.StreetTalk, t => t.Text.Contains("Ann bought"));
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task A_racer_who_drives_one_kind_of_car_buys_one_of_that_kind_or_takes_what_there_is(bool fiatForSale)
+    {
+        var catalog = new MemoryCatalog();
+        catalog.UpsertCar(new CarDefinition { Id = "chevy", Name = "Chevy", Brand = "Chevrolet" });
+        catalog.UpsertCar(new CarDefinition { Id = "fiat", Name = "Fiat", Brand = "Fiat" });
+        var life = new OpponentLifeService(new NoParts(), _market, catalog, random: new FixedRandom(0.99));
+        var racer = Racer("Gino", 2000m, RacerStatus.Retired);
+        racer.Drives = new StreetCorsa.Models.Career.Filters.BrandFilter("Fiat");
+        Listing("chevy", 900m, 250);
+        if (fiatForSale) Listing("fiat", 900m, 40);
+
+        await life.ReviewDayAsync(_state, _state.Date);
+
+        Assert.Equal(fiatForSale ? "fiat" : "chevy", Assert.Single(racer.Cars).DefinitionId);
+    }
+
     [Fact]
     public async Task Too_many_cars_with_every_spare_in_the_impound_waits_and_the_day_goes_on()
     {

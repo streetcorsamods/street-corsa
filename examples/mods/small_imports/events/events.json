@@ -1,0 +1,22 @@
+{
+  "events": [
+    {
+      "id": "import_night",
+      "name": "Import Night",
+      "description": "Little European cars only, against the clock between the cones. Big engines need not apply.",
+      "format": "autocross",
+      "entryRequirements": {
+        "type": "all",
+        "filters": [ { "type": "origin", "origin": "European" }, { "type": "value", "maxValue": 6000 } ]
+      },
+      "minReputation": 10,
+      "reward": {
+        "cash": 900,
+        "reputation": 6,
+        "specialItem": "part:engines/ford_bda/cams_bd3",
+        "specialItemDescription": "A set of Cosworth BD3 race camshafts"
+      },
+      "schedule": "Weekly"
+    }
+  ]
+}

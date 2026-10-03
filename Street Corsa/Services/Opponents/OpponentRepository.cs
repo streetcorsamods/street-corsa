@@ -133,6 +133,19 @@ namespace StreetCorsa.Services.Opponents
                     opponent.Location = locationElement.GetString();
                 }
 
+                // The kind of car he drives: a car filter, as an event's entry requirements; one that does not read is told
+                if (json.TryGetProperty("cars", out var carsElement))
+                {
+                    try
+                    {
+                        opponent.Drives = Models.Career.Filters.CarFilterJsonConverter.Read(carsElement);
+                    }
+                    catch (Exception ex) when (ex is JsonException or InvalidOperationException)
+                    {
+                        problems.Add($"{entry.Source}: racer {entry.Id}: \"cars\" is no car filter ({ex.Message}); he drives any car");
+                    }
+                }
+
                 // A boss: "boss": { "path": ..., his own figures } (true: one with neither); "isKing": true, as before
                 // bosses, is the King path's
                 if (json.TryGetProperty("boss", out var bossElement) && bossElement.ValueKind is not (JsonValueKind.False or JsonValueKind.Null))

@@ -1,0 +1,617 @@
+{
+  "id": "engines/ford_bda",
+  "source": "small_imports example mod",
+  "make": "ford_uk",
+  "parts": [
+    {
+      "id": "engines/ford_bda/block",
+      "name": "BDA 1600 block",
+      "display_name": "Ford BDA 1600 block (Ford BDA)",
+      "class_chain": [
+        "Block"
+      ],
+      "mass": 90,
+      "properties": {
+        "value": 480
+      },
+      "slots": [
+        {
+          "id": 10,
+          "name": "crankshaft",
+          "position": [
+            0,
+            -0.1,
+            0
+          ],
+          "takes": [
+            "ford_bda:crank"
+          ]
+        },
+        {
+          "id": 11,
+          "name": "pistons",
+          "position": [
+            0,
+            0.02,
+            0
+          ],
+          "takes": [
+            "ford_bda:pistons"
+          ]
+        },
+        {
+          "id": 12,
+          "name": "cylinder head",
+          "position": [
+            0,
+            0.2,
+            0
+          ],
+          "takes": [
+            "ford_bda:head"
+          ]
+        },
+        {
+          "id": 13,
+          "name": "camshaft",
+          "position": [
+            0,
+            0.3,
+            0
+          ],
+          "takes": [
+            "ford_bda:cam"
+          ]
+        },
+        {
+          "id": 14,
+          "name": "induction",
+          "position": [
+            0.18,
+            0.28,
+            0
+          ],
+          "takes": [
+            "ford_bda:intake"
+          ]
+        },
+        {
+          "id": 15,
+          "name": "air cleaner",
+          "position": [
+            0.22,
+            0.4,
+            0
+          ],
+          "takes": [
+            "ford_bda:air"
+          ]
+        },
+        {
+          "id": 16,
+          "name": "exhaust",
+          "position": [
+            -0.2,
+            0.12,
+            0
+          ],
+          "takes": [
+            "ford_bda:exhaust"
+          ]
+        },
+        {
+          "id": 17,
+          "name": "transmission",
+          "position": [
+            0,
+            -0.1,
+            0.34
+          ],
+          "takes": [
+            "ford_bda:gearbox"
+          ]
+        },
+        {
+          "id": 18,
+          "name": "clutch",
+          "position": [
+            0,
+            -0.1,
+            0.26
+          ],
+          "takes": [
+            "ford_bda:clutch"
+          ]
+        },
+        {
+          "id": 19,
+          "name": "oil pan",
+          "position": [
+            0,
+            -0.24,
+            0
+          ],
+          "takes": [
+            "ford_bda:sump"
+          ]
+        },
+        {
+          "id": 20,
+          "name": "radiator",
+          "position": [
+            0,
+            0.05,
+            -0.55
+          ],
+          "takes": [
+            "ford_bda:radiator"
+          ]
+        },
+        {
+          "id": 21,
+          "name": "water pump",
+          "position": [
+            0,
+            0.02,
+            -0.28
+          ],
+          "takes": [
+            "ford_bda:pump"
+          ]
+        },
+        {
+          "id": 22,
+          "name": "fan",
+          "position": [
+            0,
+            0.05,
+            -0.42
+          ],
+          "takes": [
+            "ford_bda:fan"
+          ]
+        }
+      ],
+      "required_slots": [
+        {
+          "slot": 10,
+          "message": "The engine needs its crankshaft.",
+          "enforce": true
+        },
+        {
+          "slot": 12,
+          "message": "The engine needs its cylinder head.",
+          "enforce": true
+        },
+        {
+          "slot": 13,
+          "message": "The engine needs its camshaft.",
+          "enforce": true
+        },
+        {
+          "slot": 14,
+          "message": "Nothing feeds the engine: it needs its carburettors or its injection.",
+          "enforce": true
+        }
+      ],
+      "figures": {
+        "cylinders": 4,
+        "bore": 80.97,
+        "compression": 10.0,
+        "rev_limit": 7000,
+        "max_rpm": 7600,
+        "idle_rpm": 950,
+        "inertia": 0.09
+      }
+    },
+    {
+      "id": "engines/ford_bda/crank",
+      "name": "crankshaft",
+      "display_name": "Ford crankshaft 77.6 mm (Ford BDA)",
+      "class_chain": [
+        "Crankshaft"
+      ],
+      "mass": 13,
+      "properties": {
+        "value": 140
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "ford_bda:crank"
+          ]
+        }
+      ],
+      "figures": {
+        "stroke": 77.62
+      }
+    },
+    {
+      "id": "engines/ford_bda/pistons_1800",
+      "name": "big bore pistons",
+      "display_name": "Cosworth 1800 big-bore pistons 86.75 mm (Ford BDA)",
+      "class_chain": [
+        "Piston"
+      ],
+      "mass": 2.5,
+      "properties": {
+        "value": 260
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "ford_bda:pistons"
+          ]
+        }
+      ],
+      "figures": {
+        "bore": 86.75,
+        "compression": {
+          "add": 1.0
+        }
+      }
+    },
+    {
+      "id": "engines/ford_bda/head",
+      "name": "cylinder head",
+      "display_name": "Cosworth BDA 16-valve head (Ford BDA)",
+      "class_chain": [
+        "CylinderHead"
+      ],
+      "mass": 13,
+      "properties": {
+        "value": 420
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "ford_bda:head"
+          ]
+        }
+      ],
+      "figures": {
+        "intake_flow": 0.85,
+        "exhaust_flow": 0.4
+      }
+    },
+    {
+      "id": "engines/ford_bda/cams",
+      "name": "camshafts",
+      "display_name": "Cosworth BDA camshafts (Ford BDA)",
+      "class_chain": [
+        "Camshaft"
+      ],
+      "mass": 4,
+      "properties": {
+        "value": 120
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "ford_bda:cam"
+          ]
+        }
+      ],
+      "figures": {
+        "intake_duration": 250,
+        "exhaust_duration": 250
+      }
+    },
+    {
+      "id": "engines/ford_bda/cams_bd3",
+      "name": "race camshafts",
+      "display_name": "Cosworth BD3 race camshafts (Ford BDA)",
+      "class_chain": [
+        "Camshaft"
+      ],
+      "mass": 4,
+      "properties": {
+        "value": 260
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "ford_bda:cam"
+          ]
+        }
+      ],
+      "figures": {
+        "intake_duration": 280,
+        "exhaust_duration": 280,
+        "rev_limit": 8500,
+        "max_rpm": 9000
+      }
+    },
+    {
+      "id": "engines/ford_bda/webers_40",
+      "name": "twin carburettors",
+      "display_name": "Weber 40 DCOE twin carburettors (Ford BDA)",
+      "class_chain": [
+        "AirFuelDeliverySystem"
+      ],
+      "mass": 6,
+      "properties": {
+        "value": 180
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "ford_bda:intake"
+          ]
+        }
+      ],
+      "figures": {
+        "fuel_flow": 10,
+        "air_flow": 140
+      }
+    },
+    {
+      "id": "engines/ford_bda/webers_45",
+      "name": "twin carburettors",
+      "display_name": "Weber 45 DCOE twin carburettors (Ford BDA)",
+      "class_chain": [
+        "AirFuelDeliverySystem"
+      ],
+      "mass": 6,
+      "properties": {
+        "value": 230
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "ford_bda:intake"
+          ]
+        }
+      ],
+      "figures": {
+        "fuel_flow": 15,
+        "air_flow": 200
+      }
+    },
+    {
+      "id": "engines/ford_bda/air_cleaner",
+      "name": "air cleaner",
+      "display_name": "Ford air cleaner (Ford BDA)",
+      "class_chain": [
+        "AirFilter"
+      ],
+      "mass": 1.5,
+      "properties": {
+        "value": 18
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "ford_bda:air"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "engines/ford_bda/exhaust",
+      "name": "exhaust manifold",
+      "display_name": "Ford exhaust manifold (Ford BDA)",
+      "class_chain": [
+        "ExhaustHeader"
+      ],
+      "mass": 8,
+      "properties": {
+        "value": 50
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "ford_bda:exhaust"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "engines/ford_bda/header",
+      "name": "exhaust header",
+      "display_name": "Janspeed 4-into-1 header (Ford BDA)",
+      "class_chain": [
+        "ExhaustHeader"
+      ],
+      "mass": 6,
+      "properties": {
+        "value": 160
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "ford_bda:exhaust"
+          ]
+        }
+      ],
+      "figures": {
+        "exhaust_flow": {
+          "times": 1.2
+        }
+      }
+    },
+    {
+      "id": "engines/ford_bda/gearbox",
+      "name": "gearbox",
+      "display_name": "Ford 2000E 4-speed transmission (Ford BDA)",
+      "class_chain": [
+        "Transmission"
+      ],
+      "mass": 28,
+      "properties": {
+        "value": 220
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "ford_bda:gearbox"
+          ]
+        }
+      ],
+      "figures": {
+        "gears": [
+          2.972,
+          2.01,
+          1.397,
+          1.0
+        ],
+        "reverse": 3.324,
+        "final_drive": 3.77
+      }
+    },
+    {
+      "id": "engines/ford_bda/gearbox_zf",
+      "name": "gearbox",
+      "display_name": "ZF 5-speed close-ratio transmission (Ford BDA)",
+      "class_chain": [
+        "Transmission"
+      ],
+      "mass": 30,
+      "properties": {
+        "value": 650
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "ford_bda:gearbox"
+          ]
+        }
+      ],
+      "figures": {
+        "gears": [
+          2.51,
+          1.73,
+          1.33,
+          1.08,
+          0.88
+        ],
+        "reverse": 2.8,
+        "final_drive": 4.44
+      }
+    },
+    {
+      "id": "engines/ford_bda/clutch",
+      "name": "clutch",
+      "display_name": "Ford clutch (Ford BDA)",
+      "class_chain": [
+        "Clutch"
+      ],
+      "mass": 5,
+      "properties": {
+        "value": 50
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "ford_bda:clutch"
+          ]
+        }
+      ],
+      "figures": {
+        "clutch_torque": 230
+      }
+    },
+    {
+      "id": "engines/ford_bda/sump",
+      "name": "oil pan",
+      "display_name": "Ford oil pan (Ford BDA)",
+      "class_chain": [
+        "OilPan"
+      ],
+      "mass": 4,
+      "properties": {
+        "value": 35,
+        "capacity": 4.0
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "ford_bda:sump"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "engines/ford_bda/radiator",
+      "name": "radiator",
+      "display_name": "Ford radiator (Ford BDA)",
+      "mass": 6,
+      "properties": {
+        "value": 70
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "ford_bda:radiator"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "engines/ford_bda/water_pump",
+      "name": "water pump",
+      "display_name": "Ford water pump (Ford BDA)",
+      "mass": 2,
+      "properties": {
+        "value": 35
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "ford_bda:pump"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "engines/ford_bda/fan",
+      "name": "fan",
+      "display_name": "Ford 4-blade fan (Ford BDA)",
+      "mass": 1,
+      "properties": {
+        "value": 15
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "ford_bda:fan"
+          ]
+        }
+      ]
+    }
+  ]
+}

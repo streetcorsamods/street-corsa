@@ -7,6 +7,10 @@ behave). The base game is itself a mod, `Content\streetcorsa`, loaded through th
 
 Cars and tracks stay AC's: install them in AC's `content` folder as usual.
 
+**The example mod**, `examples\mods\small_imports` in the repo, is an add-on made of data alone to copy: four small
+European cars with engines of figures, their speed parts, a shop, a lot, a rival, a format and an event. Its README
+says how to try it and what each file shows.
+
 ## A mod
 
 Drop a folder into `Content`, next to the game's exe:
@@ -515,6 +519,10 @@ dealers. `"startsOpen": false` keeps a dealer out of business when a game starts
 room for another lot (about 60% of all the dealers are open at a time, and now and then one goes out of business).
 `mapX`/`mapY` are fractions of the dealer map picture (see the base game's `dealers.json` for how they are measured).
 
+`"cars"` is the kind of car the lot deals in, a car filter written as an event's entry requirements (an import lot:
+`{ "type": "origin", "origin": "European" }`); its price band is then of the cars of that kind, and with none of
+that kind installed it deals in any. Left out: any car.
+
 A dealer's `salesman` is who the player talks to on the lot, when their AI is on: `{ "name": "Cal Whitaker", "age": 45,
 "sex": "man", "temperament": "jive_talker", "portrait": "salesmen/downtown_motors.png" }`. The temperament is a key of
 `ai/people.json` (how he talks and how far he comes down), the portrait a picture under the mod's `dealers` folder,
@@ -566,7 +574,15 @@ A list under `opponents`, or one racer per file (its id as `opponentId` or `id`)
   "skill": 95, "aggression": 80, "portraitPath": "vera.png", "location": "The docks", "biography": "…" }
 ```
 
-`portraitPath` is next to the file. `skill` is 90 to 100. New racers join games already under way.
+`portraitPath` is next to the file. `skill` is 90 to 100. New racers join games already under way. `"cars"` is the
+kind of car the racer drives, a car filter as an event's entry requirements (`{ "type": "origin", "origin":
+"European" }`): he starts with one, and buys one, when there is one to be had (with none for sale, one without a car
+takes what he can get). A filter that does not read is told, and he drives any car.
+
+**A racer's own lines.** Any racer says lines of his own where a mod adds a pool's key with his racer id after it
+(`talk.pulled_up.gino`, `talk.pulled_up.aggressive.gino`, `replies.accept.gino`, `replies.decline.gino`,
+`street.back_on_street.gino`; `.my_mod:gino` from another mod); otherwise he says what every racer says. The keys are
+the `talk.pulled_up*`, `replies.*` and `street.*` pools of the base game's `talk.json` and `street.json`.
 
 A **boss** is a racer with a `"boss"` block: he only races for pink slips, stays out of sight until his victory path
 opens (`path`, his mod's own path first, then the base game's; none: out from the start; one no installed mod has, or

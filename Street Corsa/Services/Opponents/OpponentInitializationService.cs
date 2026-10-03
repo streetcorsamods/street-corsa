@@ -132,12 +132,14 @@ namespace StreetCorsa.Services.Opponents
             var racers = gameState.Racers;
             var known = racers.All.Concat(racers.Departed.Values).OfType<Opponent>().ToList();
 
-            // The portrait is the definition's: drawn after the save began (the King's), or moved by its mod. A save
-            // from before empty strings were kept may hold a racer without a definition id at all.
+            // The portrait is the definition's: drawn after the save began (the King's), or moved by its mod; so is the
+            // kind of car he drives, which the save does not keep. A save from before empty strings were kept may hold
+            // a racer without a definition id at all.
             foreach (var racer in known.Where(r => !string.IsNullOrEmpty(r.DefinitionId)))
             {
-                var portrait = definitions.FirstOrDefault(d => d.DefinitionId == racer.DefinitionId)?.PortraitPath;
-                if (!string.IsNullOrEmpty(portrait)) racer.PortraitPath = portrait;
+                var definition = definitions.FirstOrDefault(d => d.DefinitionId == racer.DefinitionId);
+                if (!string.IsNullOrEmpty(definition?.PortraitPath)) racer.PortraitPath = definition.PortraitPath;
+                racer.Drives = definition?.Drives;
             }
 
             // Known by definition, and by name for racers from before definitions were remembered
@@ -366,7 +368,9 @@ namespace StreetCorsa.Services.Opponents
                 return null;
             }
 
-            // Select a random car definition
+            // A random car, of the kind the racer drives when the install has one
+            var liked = opponent.Drives is { } kind ? pool.Where(c => kind.Matches(c.Car)).ToList() : [];
+            if (liked.Count > 0) pool = liked;
             var (carDefinition, profile) = pool[_random.Next(pool.Count)];
 
             // Select random skin

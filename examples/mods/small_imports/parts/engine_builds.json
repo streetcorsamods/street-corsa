@@ -1,0 +1,380 @@
+[
+  {
+    "id": "cars/abarth_595ss/stock",
+    "name": "Abarth 595 SS twin",
+    "origin": "car",
+    "source": "small_imports example mod",
+    "rated_power": 32,
+    "parts": [
+      {
+        "part": "engines/fiat_twin/block"
+      },
+      {
+        "part": "engines/fiat_twin/crank"
+      },
+      {
+        "part": "engines/fiat_twin/head"
+      },
+      {
+        "part": "engines/fiat_twin/cam"
+      },
+      {
+        "part": "engines/fiat_twin/carb_solex_28"
+      },
+      {
+        "part": "engines/fiat_twin/air_cleaner"
+      },
+      {
+        "part": "engines/fiat_twin/exhaust"
+      },
+      {
+        "part": "engines/fiat_twin/gearbox"
+      },
+      {
+        "part": "engines/fiat_twin/clutch"
+      },
+      {
+        "part": "engines/fiat_twin/sump"
+      }
+    ]
+  },
+  {
+    "id": "kits/abarth_695",
+    "name": "Abarth 695 big-bore twin",
+    "origin": "kit",
+    "source": "small_imports example mod",
+    "aftermarket": true,
+    "parts": [
+      {
+        "part": "engines/fiat_twin/block"
+      },
+      {
+        "part": "engines/fiat_twin/crank"
+      },
+      {
+        "part": "engines/fiat_twin/pistons_695"
+      },
+      {
+        "part": "engines/fiat_twin/head"
+      },
+      {
+        "part": "engines/fiat_twin/cam_abarth"
+      },
+      {
+        "part": "engines/fiat_twin/carb_dellorto_30"
+      },
+      {
+        "part": "engines/fiat_twin/air_cleaner"
+      },
+      {
+        "part": "engines/fiat_twin/exhaust_record_monza"
+      },
+      {
+        "part": "engines/fiat_twin/gearbox"
+      },
+      {
+        "part": "engines/fiat_twin/clutch"
+      },
+      {
+        "part": "engines/fiat_twin/sump"
+      }
+    ]
+  },
+  {
+    "id": "cars/alfa_gta/stock",
+    "name": "Alfa Romeo GTA 1570 twin cam",
+    "origin": "car",
+    "source": "small_imports example mod",
+    "rated_power": 115,
+    "parts": [
+      {
+        "part": "engines/alfa_twincam/block"
+      },
+      {
+        "part": "engines/alfa_twincam/crank"
+      },
+      {
+        "part": "engines/alfa_twincam/head"
+      },
+      {
+        "part": "engines/alfa_twincam/cams"
+      },
+      {
+        "part": "engines/alfa_twincam/webers_45"
+      },
+      {
+        "part": "engines/alfa_twincam/air_cleaner"
+      },
+      {
+        "part": "engines/alfa_twincam/exhaust"
+      },
+      {
+        "part": "engines/alfa_twincam/gearbox"
+      },
+      {
+        "part": "engines/alfa_twincam/clutch"
+      },
+      {
+        "part": "engines/alfa_twincam/sump"
+      },
+      {
+        "part": "engines/alfa_twincam/radiator"
+      },
+      {
+        "part": "engines/alfa_twincam/water_pump"
+      },
+      {
+        "part": "engines/alfa_twincam/fan"
+      }
+    ]
+  },
+  {
+    "id": "kits/alfa_gta_corsa",
+    "name": "Alfa Romeo GTA Corsa",
+    "origin": "kit",
+    "source": "small_imports example mod",
+    "aftermarket": true,
+    "parts": [
+      {
+        "part": "engines/alfa_twincam/block"
+      },
+      {
+        "part": "engines/alfa_twincam/crank"
+      },
+      {
+        "part": "engines/alfa_twincam/head_twin_plug"
+      },
+      {
+        "part": "engines/alfa_twincam/cams_corsa"
+      },
+      {
+        "part": "engines/alfa_twincam/webers_45"
+      },
+      {
+        "part": "engines/alfa_twincam/trumpets"
+      },
+      {
+        "part": "engines/alfa_twincam/header_autodelta"
+      },
+      {
+        "part": "engines/alfa_twincam/gearbox"
+      },
+      {
+        "part": "engines/alfa_twincam/clutch"
+      },
+      {
+        "part": "engines/alfa_twincam/sump"
+      },
+      {
+        "part": "engines/alfa_twincam/radiator"
+      },
+      {
+        "part": "engines/alfa_twincam/water_pump"
+      },
+      {
+        "part": "engines/alfa_twincam/fan"
+      }
+    ]
+  },
+  {
+    "id": "cars/escort_rs1600/stock",
+    "name": "Ford Escort RS1600 BDA",
+    "origin": "car",
+    "source": "small_imports example mod",
+    "rated_power": 120,
+    "parts": [
+      {
+        "part": "engines/ford_bda/block"
+      },
+      {
+        "part": "engines/ford_bda/crank"
+      },
+      {
+        "part": "engines/ford_bda/head"
+      },
+      {
+        "part": "engines/ford_bda/cams"
+      },
+      {
+        "part": "engines/ford_bda/webers_40"
+      },
+      {
+        "part": "engines/ford_bda/air_cleaner"
+      },
+      {
+        "part": "engines/ford_bda/exhaust"
+      },
+      {
+        "part": "engines/ford_bda/gearbox"
+      },
+      {
+        "part": "engines/ford_bda/clutch"
+      },
+      {
+        "part": "engines/ford_bda/sump"
+      },
+      {
+        "part": "engines/ford_bda/radiator"
+      },
+      {
+        "part": "engines/ford_bda/water_pump"
+      },
+      {
+        "part": "engines/ford_bda/fan"
+      }
+    ]
+  },
+  {
+    "id": "kits/bda_1800",
+    "name": "Ford BDA 1800 race",
+    "origin": "kit",
+    "source": "small_imports example mod",
+    "aftermarket": true,
+    "parts": [
+      {
+        "part": "engines/ford_bda/block"
+      },
+      {
+        "part": "engines/ford_bda/crank"
+      },
+      {
+        "part": "engines/ford_bda/pistons_1800"
+      },
+      {
+        "part": "engines/ford_bda/head"
+      },
+      {
+        "part": "engines/ford_bda/cams_bd3"
+      },
+      {
+        "part": "engines/ford_bda/webers_45"
+      },
+      {
+        "part": "engines/ford_bda/air_cleaner"
+      },
+      {
+        "part": "engines/ford_bda/header"
+      },
+      {
+        "part": "engines/ford_bda/gearbox_zf"
+      },
+      {
+        "part": "engines/ford_bda/clutch"
+      },
+      {
+        "part": "engines/ford_bda/sump"
+      },
+      {
+        "part": "engines/ford_bda/radiator"
+      },
+      {
+        "part": "engines/ford_bda/water_pump"
+      },
+      {
+        "part": "engines/ford_bda/fan"
+      }
+    ]
+  },
+  {
+    "id": "cars/abarth_500/stock",
+    "name": "Abarth 500 esseesse 1.4 T-Jet",
+    "origin": "car",
+    "source": "small_imports example mod",
+    "rated_power": 160,
+    "parts": [
+      {
+        "part": "engines/fiat_tjet/block"
+      },
+      {
+        "part": "engines/fiat_tjet/crank"
+      },
+      {
+        "part": "engines/fiat_tjet/head"
+      },
+      {
+        "part": "engines/fiat_tjet/cams"
+      },
+      {
+        "part": "engines/fiat_tjet/injection"
+      },
+      {
+        "part": "engines/fiat_tjet/air_cleaner"
+      },
+      {
+        "part": "engines/fiat_tjet/exhaust"
+      },
+      {
+        "part": "engines/fiat_tjet/turbo_ihi"
+      },
+      {
+        "part": "engines/fiat_tjet/gearbox"
+      },
+      {
+        "part": "engines/fiat_tjet/clutch"
+      },
+      {
+        "part": "engines/fiat_tjet/sump"
+      },
+      {
+        "part": "engines/fiat_tjet/radiator"
+      },
+      {
+        "part": "engines/fiat_tjet/water_pump"
+      },
+      {
+        "part": "engines/fiat_tjet/fan"
+      }
+    ]
+  },
+  {
+    "id": "kits/tjet_garrett",
+    "name": "Abarth 500 Garrett kit",
+    "origin": "kit",
+    "source": "small_imports example mod",
+    "aftermarket": true,
+    "parts": [
+      {
+        "part": "engines/fiat_tjet/block"
+      },
+      {
+        "part": "engines/fiat_tjet/crank"
+      },
+      {
+        "part": "engines/fiat_tjet/head"
+      },
+      {
+        "part": "engines/fiat_tjet/cams"
+      },
+      {
+        "part": "engines/fiat_tjet/injection_sport"
+      },
+      {
+        "part": "engines/fiat_tjet/air_cleaner"
+      },
+      {
+        "part": "engines/fiat_tjet/exhaust_monza"
+      },
+      {
+        "part": "engines/fiat_tjet/turbo_garrett"
+      },
+      {
+        "part": "engines/fiat_tjet/gearbox"
+      },
+      {
+        "part": "engines/fiat_tjet/clutch"
+      },
+      {
+        "part": "engines/fiat_tjet/sump"
+      },
+      {
+        "part": "engines/fiat_tjet/radiator"
+      },
+      {
+        "part": "engines/fiat_tjet/water_pump"
+      },
+      {
+        "part": "engines/fiat_tjet/fan"
+      }
+    ]
+  }
+]

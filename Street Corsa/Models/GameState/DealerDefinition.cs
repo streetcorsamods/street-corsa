@@ -94,6 +94,13 @@ namespace StreetCorsa.Models.GameState
         /// <summary>How rough the cars are here: the middle of the condition range, 0..1</summary>
         public float ConditionCenter { get; set; } = 0.6f;
 
+        /// <summary>
+        /// The kind of car the lot deals in, a car filter as an event's entry requirements are written (an import lot:
+        /// <c>{ "type": "origin", "origin": "European" }</c>); null, any. Its price band is of the cars of that kind.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonConverter(typeof(Career.Filters.CarFilterJsonConverter))]
+        public Career.Filters.ICarFilter? Cars { get; set; }
+
         /// <summary>Hours of game time it takes to get here from the garage and back</summary>
         public float TravelHours { get; set; } = 1f;
 

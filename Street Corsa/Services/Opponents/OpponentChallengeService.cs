@@ -76,7 +76,7 @@ namespace StreetCorsa.Services.Opponents
                 return new ChallengeResponse
                 {
                     Accepted = true,
-                    Message = Reply("replies.always_accept", new TextValues { ["name"] = opponent.Name }),
+                    Message = Reply(RacerWords.Key("replies.always_accept", opponent), new TextValues { ["name"] = opponent.Name }),
                     DeclineReason = null
                 };
             }
@@ -86,7 +86,7 @@ namespace StreetCorsa.Services.Opponents
                 return new ChallengeResponse
                 {
                     Accepted = false,
-                    Message = Reply("replies.car_laid_up"),
+                    Message = Reply(RacerWords.Key("replies.car_laid_up", opponent)),
                     DeclineReason = ChallengeDeclineReason.CarNotAvailable
                 };
             }
@@ -114,7 +114,7 @@ namespace StreetCorsa.Services.Opponents
                 return new ChallengeResponse
                 {
                     Accepted = false,
-                    Message = Reply("replies.car_unknown"),
+                    Message = Reply(RacerWords.Key("replies.car_unknown", opponent)),
                     DeclineReason = ChallengeDeclineReason.CarNotAvailable
                 };
             }
@@ -200,7 +200,7 @@ namespace StreetCorsa.Services.Opponents
             if (Grudges.WantsRematch(opponent))
             {
                 _logger.Information("{Name} wants the rematch: pink slips accepted", opponent.Name);
-                return new ChallengeResponse { Accepted = true, Message = Reply("replies.rematch") };
+                return new ChallengeResponse { Accepted = true, Message = Reply(RacerWords.Key("replies.rematch", opponent)) };
             }
 
             // Calculate acceptance chance based on multiple factors
@@ -414,25 +414,25 @@ namespace StreetCorsa.Services.Opponents
         // The words are the mods' ("replies.*" in their text); which answer is the game's
         private string Reply(string pool, TextValues? values = null) => GameText.Installed.Pick(pool, _random, values);
 
-        private string GetAcceptanceMessage(Opponent opponent) => Reply(opponent.Aggression switch
+        private string GetAcceptanceMessage(Opponent opponent) => Reply(RacerWords.Key(opponent.Aggression switch
         {
             >= 70 => "replies.accept.aggressive",
             <= 40 => "replies.accept.calm",
             _ => "replies.accept"
-        });
+        }, opponent));
 
-        private string GetPinkSlipDeclineMessage(Opponent opponent) => Reply("replies.no_pink_slips");
+        private string GetPinkSlipDeclineMessage(Opponent opponent) => Reply(RacerWords.Key("replies.no_pink_slips", opponent));
 
         private string GetCarValueMismatchMessage(Opponent opponent, bool isPlayerCarCheaper) =>
-            Reply(isPlayerCarCheaper ? "replies.your_car_is_worth_less" : "replies.your_car_is_worth_more");
+            Reply(RacerWords.Key(isPlayerCarCheaper ? "replies.your_car_is_worth_less" : "replies.your_car_is_worth_more", opponent));
 
-        private string GetInsufficientFundsMessage(Opponent opponent) => Reply("replies.no_money");
+        private string GetInsufficientFundsMessage(Opponent opponent) => Reply(RacerWords.Key("replies.no_money", opponent));
 
-        private string GetBetTooHighMessage(Opponent opponent) => Reply("replies.bet_too_high");
+        private string GetBetTooHighMessage(Opponent opponent) => Reply(RacerWords.Key("replies.bet_too_high", opponent));
 
-        private string GetReputationTooLowMessage(Opponent opponent) => Reply("replies.reputation_too_low");
+        private string GetReputationTooLowMessage(Opponent opponent) => Reply(RacerWords.Key("replies.reputation_too_low", opponent));
 
-        private string GetGenericDeclineMessage(Opponent opponent) => Reply("replies.decline");
+        private string GetGenericDeclineMessage(Opponent opponent) => Reply(RacerWords.Key("replies.decline", opponent));
 
         #endregion
     }

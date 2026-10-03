@@ -1,0 +1,496 @@
+{
+  "id": "engines/fiat_twin",
+  "source": "small_imports example mod",
+  "make": "fiat",
+  "parts": [
+    {
+      "id": "engines/fiat_twin/block",
+      "name": "595 twin block",
+      "display_name": "Abarth 595 block (Fiat 500 twin)",
+      "class_chain": [
+        "Block"
+      ],
+      "mass": 38,
+      "properties": {
+        "value": 260
+      },
+      "slots": [
+        {
+          "id": 10,
+          "name": "crankshaft",
+          "position": [
+            0,
+            -0.1,
+            0
+          ],
+          "takes": [
+            "fiat_twin:crank"
+          ]
+        },
+        {
+          "id": 11,
+          "name": "pistons",
+          "position": [
+            0,
+            0.02,
+            0
+          ],
+          "takes": [
+            "fiat_twin:pistons"
+          ]
+        },
+        {
+          "id": 12,
+          "name": "cylinder head",
+          "position": [
+            0,
+            0.2,
+            0
+          ],
+          "takes": [
+            "fiat_twin:head"
+          ]
+        },
+        {
+          "id": 13,
+          "name": "camshaft",
+          "position": [
+            0,
+            0.3,
+            0
+          ],
+          "takes": [
+            "fiat_twin:cam"
+          ]
+        },
+        {
+          "id": 14,
+          "name": "induction",
+          "position": [
+            0.18,
+            0.28,
+            0
+          ],
+          "takes": [
+            "fiat_twin:intake"
+          ]
+        },
+        {
+          "id": 15,
+          "name": "air cleaner",
+          "position": [
+            0.22,
+            0.4,
+            0
+          ],
+          "takes": [
+            "fiat_twin:air"
+          ]
+        },
+        {
+          "id": 16,
+          "name": "exhaust",
+          "position": [
+            -0.2,
+            0.12,
+            0
+          ],
+          "takes": [
+            "fiat_twin:exhaust"
+          ]
+        },
+        {
+          "id": 17,
+          "name": "transmission",
+          "position": [
+            0,
+            -0.1,
+            0.34
+          ],
+          "takes": [
+            "fiat_twin:gearbox"
+          ]
+        },
+        {
+          "id": 18,
+          "name": "clutch",
+          "position": [
+            0,
+            -0.1,
+            0.26
+          ],
+          "takes": [
+            "fiat_twin:clutch"
+          ]
+        },
+        {
+          "id": 19,
+          "name": "oil pan",
+          "position": [
+            0,
+            -0.24,
+            0
+          ],
+          "takes": [
+            "fiat_twin:sump"
+          ]
+        }
+      ],
+      "required_slots": [
+        {
+          "slot": 10,
+          "message": "The engine needs its crankshaft.",
+          "enforce": true
+        },
+        {
+          "slot": 12,
+          "message": "The engine needs its cylinder head.",
+          "enforce": true
+        },
+        {
+          "slot": 13,
+          "message": "The engine needs its camshaft.",
+          "enforce": true
+        },
+        {
+          "slot": 14,
+          "message": "Nothing feeds the engine: it needs its carburettors or its injection.",
+          "enforce": true
+        }
+      ],
+      "figures": {
+        "cylinders": 2,
+        "bore": 73.5,
+        "compression": 8.6,
+        "rev_limit": 5600,
+        "max_rpm": 6200,
+        "idle_rpm": 900,
+        "inertia": 0.05,
+        "friction": 0.8
+      }
+    },
+    {
+      "id": "engines/fiat_twin/crank",
+      "name": "crankshaft",
+      "display_name": "Fiat crankshaft 70 mm (Fiat 500 twin)",
+      "class_chain": [
+        "Crankshaft"
+      ],
+      "mass": 9,
+      "properties": {
+        "value": 90
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "fiat_twin:crank"
+          ]
+        }
+      ],
+      "figures": {
+        "stroke": 70
+      }
+    },
+    {
+      "id": "engines/fiat_twin/pistons_695",
+      "name": "big bore pistons",
+      "display_name": "Abarth 695 big-bore pistons and barrels 76 mm (Fiat 500 twin)",
+      "class_chain": [
+        "Piston"
+      ],
+      "mass": 3,
+      "properties": {
+        "value": 140
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "fiat_twin:pistons"
+          ]
+        }
+      ],
+      "figures": {
+        "bore": 76,
+        "compression": {
+          "add": 0.6
+        }
+      }
+    },
+    {
+      "id": "engines/fiat_twin/head",
+      "name": "cylinder head",
+      "display_name": "Abarth 595 cylinder head (Fiat 500 twin)",
+      "class_chain": [
+        "CylinderHead"
+      ],
+      "mass": 7,
+      "properties": {
+        "value": 120
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "fiat_twin:head"
+          ]
+        }
+      ],
+      "figures": {
+        "intake_flow": 0.68,
+        "exhaust_flow": 0.32
+      }
+    },
+    {
+      "id": "engines/fiat_twin/cam",
+      "name": "camshaft",
+      "display_name": "Fiat camshaft (Fiat 500 twin)",
+      "class_chain": [
+        "Camshaft"
+      ],
+      "mass": 1.5,
+      "properties": {
+        "value": 45
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "fiat_twin:cam"
+          ]
+        }
+      ],
+      "figures": {
+        "intake_duration": 225,
+        "exhaust_duration": 225
+      }
+    },
+    {
+      "id": "engines/fiat_twin/cam_abarth",
+      "name": "hot camshaft",
+      "display_name": "Abarth sport camshaft (Fiat 500 twin)",
+      "class_chain": [
+        "Camshaft"
+      ],
+      "mass": 1.5,
+      "properties": {
+        "value": 95
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "fiat_twin:cam"
+          ]
+        }
+      ],
+      "figures": {
+        "intake_duration": 250,
+        "exhaust_duration": 250,
+        "rev_limit": 6200,
+        "max_rpm": 6800
+      }
+    },
+    {
+      "id": "engines/fiat_twin/carb_solex_28",
+      "name": "carburettor",
+      "display_name": "Solex 28 single-barrel carburettor (Fiat 500 twin)",
+      "class_chain": [
+        "AirFuelDeliverySystem"
+      ],
+      "mass": 1.2,
+      "properties": {
+        "value": 40
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "fiat_twin:intake"
+          ]
+        }
+      ],
+      "figures": {
+        "fuel_flow": 2.6,
+        "air_flow": 40
+      }
+    },
+    {
+      "id": "engines/fiat_twin/carb_dellorto_30",
+      "name": "carburettor",
+      "display_name": "Dell'Orto 30 sport carburettor (Fiat 500 twin)",
+      "class_chain": [
+        "AirFuelDeliverySystem"
+      ],
+      "mass": 1.3,
+      "properties": {
+        "value": 85
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "fiat_twin:intake"
+          ]
+        }
+      ],
+      "figures": {
+        "fuel_flow": 3.6,
+        "air_flow": 55
+      }
+    },
+    {
+      "id": "engines/fiat_twin/air_cleaner",
+      "name": "air cleaner",
+      "display_name": "Fiat air cleaner (Fiat 500 twin)",
+      "class_chain": [
+        "AirFilter"
+      ],
+      "mass": 0.8,
+      "properties": {
+        "value": 12
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "fiat_twin:air"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "engines/fiat_twin/exhaust",
+      "name": "exhaust",
+      "display_name": "Fiat exhaust (Fiat 500 twin)",
+      "class_chain": [
+        "ExhaustHeader"
+      ],
+      "mass": 5,
+      "properties": {
+        "value": 30
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "fiat_twin:exhaust"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "engines/fiat_twin/exhaust_record_monza",
+      "name": "sport exhaust",
+      "display_name": "Abarth Record Monza exhaust (Fiat 500 twin)",
+      "class_chain": [
+        "ExhaustHeader"
+      ],
+      "mass": 4,
+      "properties": {
+        "value": 75
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "fiat_twin:exhaust"
+          ]
+        }
+      ],
+      "figures": {
+        "exhaust_flow": {
+          "times": 1.2
+        }
+      }
+    },
+    {
+      "id": "engines/fiat_twin/gearbox",
+      "name": "gearbox",
+      "display_name": "Fiat 4-speed transmission (Fiat 500 twin)",
+      "class_chain": [
+        "Transmission"
+      ],
+      "mass": 22,
+      "properties": {
+        "value": 150
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "fiat_twin:gearbox"
+          ]
+        }
+      ],
+      "figures": {
+        "gears": [
+          3.7,
+          2.07,
+          1.3,
+          0.875
+        ],
+        "reverse": 5.14,
+        "final_drive": 5.125
+      }
+    },
+    {
+      "id": "engines/fiat_twin/clutch",
+      "name": "clutch",
+      "display_name": "Fiat clutch (Fiat 500 twin)",
+      "class_chain": [
+        "Clutch"
+      ],
+      "mass": 3,
+      "properties": {
+        "value": 35
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "fiat_twin:clutch"
+          ]
+        }
+      ],
+      "figures": {
+        "clutch_torque": 90
+      }
+    },
+    {
+      "id": "engines/fiat_twin/sump",
+      "name": "oil pan",
+      "display_name": "Fiat oil pan (Fiat 500 twin)",
+      "class_chain": [
+        "OilPan"
+      ],
+      "mass": 2,
+      "properties": {
+        "value": 25,
+        "capacity": 2.5
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": [
+            "fiat_twin:sump"
+          ]
+        }
+      ]
+    }
+  ]
+}

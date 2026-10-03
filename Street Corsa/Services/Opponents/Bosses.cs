@@ -61,10 +61,9 @@ namespace StreetCorsa.Services.Opponents
 
         /// <summary>
         /// The text key for a boss: his own (<c>key.&lt;racer id&gt;</c>, by <see cref="OwnSuffixes"/>) when a mod
-        /// has it, else every boss's
+        /// has it, else every boss's (<see cref="RacerWords.Key"/>, as for any racer)
         /// </summary>
-        public static string Key(string key, Opponent boss) =>
-            OwnSuffixes(boss.DefinitionId).Select(s => key + "." + s).FirstOrDefault(GameText.Installed.Has) ?? key;
+        public static string Key(string key, Opponent boss) => RacerWords.Key(key, boss);
 
         /// <summary>
         /// Puts what the career needs to know of its bosses on it (<see cref="CareerState.Bosses"/>): who they are,

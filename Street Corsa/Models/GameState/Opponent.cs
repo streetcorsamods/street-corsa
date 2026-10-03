@@ -32,6 +32,14 @@ namespace StreetCorsa.Models.GameState
         public BossRecord? BossRecord { get; set; }
 
         /// <summary>
+        /// The kind of car the racer drives, from the racers' data (<c>"cars"</c>, a car filter as an event's entry
+        /// requirements are written); null, any. He gets and buys one of that kind when there is one to be had. Not
+        /// saved: put on him from his definition as the game is reviewed (<c>OpponentInitializationService.EnsureNewcomers</c>).
+        /// </summary>
+        [LiteDB.BsonIgnore]
+        public Career.Filters.ICarFilter? Drives { get; set; }
+
+        /// <summary>
         /// Saves from before bosses: the King. Read once into <see cref="IsBoss"/> and <see cref="BossPath"/>
         /// (<c>Bosses.BringUpToDate</c>) and false from then on.
         /// </summary>

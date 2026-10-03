@@ -10,6 +10,9 @@ a fork, not a mod: no game picker, no `"type": "game"` base swap, no data folder
 everything a Street Corsa **add-on** mod could want to change, and E1-E8 make a fork easy anyway. E9-E12 below were
 cut down to match.
 
+**Done 2026-10-03:** E1 to E12 are built, the last with the example mod (`examples/mods/small_imports`). What each step
+left is under its "Left for later" in As built.
+
 This file is the inventory of what is still baked into C#, XAML, the exe or the race mode's Lua (taken 2026-09-30,
 after PR #50), and the plan for the epic. Step 16 (`docs/modding.md`) already made the content data: parts, sounds,
 sfx, props, dealers, part shops, racers, events, milestones, victories, streets, stations, warehouses, showcase,
@@ -191,13 +194,42 @@ playing exactly as it does now: today's values become the base game's data.
   contract with a score. Drift, time attack and touge become possible: worth it for Street Corsa itself.
 - **E11. Data engines** (done 2026-10-03). The `"figures"` path that skips the SLRR VM, turbo lag and twin turbos per
   part, more gears, transverse engines. For modders' cars that have no SLRR parts.
-- **E12. The example mod** (was "the proof", changed 2026-10-03). An example add-on, not a separate game: a few cars,
+- **E12. The example mod** (done 2026-10-03; was "the proof", changed 2026-10-03). An example add-on, not a separate game: a few cars,
   a parts pack, an event and a race of its own, made only from data, that shows what still breaks and becomes the mod
   modders copy.
 
 Later, not in the epic: a weather system (there is none today), nitrous in AC.
 
 ## As built
+
+### E12: the example mod (2026-10-03, branch `feature/example-mod`)
+
+The owner's decisions: small imports (cars with engines of figures, twin carbs, a turbo kit, a five-speed, a transverse
+engine), in the repo's `examples\mods\small_imports` (copied into `Content` to try, never loaded by default), with
+makes and a speed shop, an event and a format of its own, a rival and a dealer. The cars are Kunos cars every AC has:
+the Abarth 595 SS (rear), the Alfa Romeo GTA, the Ford Escort RS1600 (front) and the Abarth 500 esseesse
+(`front_transverse`, turbo).
+
+- **The mod**: `mod.json`; `cars/cars.json` (makes `abarth` in a `fiat` family, `fiat` and `alfa_romeo` given families,
+  `ford_uk` apart from the American Ford; the four cars' engines, layouts, prices, makes); four packs of figures
+  (`fiat_twin`, `alfa_twincam`, `ford_bda`, `fiat_tjet`: 66 parts with simple class chains, `required_slots`, fittings
+  per engine, cooling parts by name, an IHI and a Garrett turbo), eight builds (four factory, rated 32/115/120/160 hp,
+  the model within 7%; four aftermarket kits, 39 to 202 hp); `sounds/sounds.json` pinning each block to its car's own
+  bank (`car:<id>`); a specialist shop, an import lot, a rival, the `autocross` format (time attack over two laps),
+  the weekly Import Night event (a Cosworth cam the prize), the words; a README.
+- **What it found, now fixed**: a lot could not deal in one kind of car (`DealerDefinition.Cars`, a car filter; the
+  price band is of that kind: `UsedCarMarketService.FillDealer`); a racer could not drive one kind (`Opponent.Drives`,
+  read from the racers' `"cars"`, put on him from his definition every review like his portrait, used when he gets
+  his first car and when he buys or bargains for one to drive); only bosses had lines of their own (`RacerWords.Key`
+  for every racer's `talk.pulled_up*`, `replies.*` and `street.*`). The events' car filter reader moved out of the career
+  content into `CarFilterJsonConverter` for all three.
+- **For tools and tests**: `ModSet.Load(root, alsoFrom: [folder])` reads a mod from outside the Content folder.
+  `ExampleModTests` loads the mod over the base game through every loader (parts, cars, sounds, formats, events, racers,
+  dealers, shops, text) and runs its engines.
+
+Left for later: unknown keys in a dealer's or a racer's entry are passed over without a word (System.Text.Json ignores
+them), part models (the mod's parts are drawn as the placeholder boxes), a portrait for Gino, the cars' own sound banks
+pinned only when the car is installed. Not seen in game.
 
 ### E11: data engines (2026-10-03, branch `feature/data-engines`)
 

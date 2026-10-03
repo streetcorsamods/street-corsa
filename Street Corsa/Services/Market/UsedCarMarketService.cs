@@ -147,16 +147,22 @@ namespace StreetCorsa.Services.Market
                 if (profiles.TryGetValue(car.Id, out var profile) && profile.BasePrice > 0) priced.Add((car, profile));
             }
 
-            if (priced.Count == 0) return [];
+            return Ranked(priced.Select(p => new PoolEntry(p.Car, p.Profile, 0f)).ToList());
+        }
 
-            var ladder = priced.Select(p => p.Profile.BasePrice).OrderBy(p => p).ToList();
-            var pool = new List<PoolEntry>(priced.Count);
+        /// <summary>The cars with their places among each other: the share of them each is dearer than</summary>
+        private static List<PoolEntry> Ranked(List<PoolEntry> cars)
+        {
+            if (cars.Count == 0) return [];
 
-            foreach (var (car, profile) in priced)
+            var ladder = cars.Select(e => e.Profile.BasePrice).OrderBy(p => p).ToList();
+            var pool = new List<PoolEntry>(cars.Count);
+
+            foreach (var entry in cars)
             {
-                var below = CountBelow(ladder, profile.BasePrice);
+                var below = CountBelow(ladder, entry.Profile.BasePrice);
                 var rank = ladder.Count == 1 ? 0.5f : (float)below / (ladder.Count - 1);
-                pool.Add(new PoolEntry(car, profile, Math.Clamp(rank, 0f, 1f)));
+                pool.Add(entry with { Rank = Math.Clamp(rank, 0f, 1f) });
             }
 
             return pool;
@@ -194,6 +200,16 @@ namespace StreetCorsa.Services.Market
         private List<UsedCarListing> FillDealer(DealerLocation dealer, int wanted, List<PoolEntry> pool, DateTime currentDate)
         {
             var definition = _dealerCatalog?.Get(dealer.Id);
+
+            // A lot that deals in one kind of car (imports) takes its price band of the cars of that kind, the share of
+            // them it is dearer than; none of that kind installed, it deals in any
+            if (definition?.Cars is { } kind)
+            {
+                var ofKind = pool.Where(e => kind.Matches(e.Car)).ToList();
+                if (ofKind.Count > 0) pool = Ranked(ofKind);
+                else _logger.Warning("{Dealer} deals in {Kind} and no installed car is one; it takes any", dealer.Name, kind.DisplayDescription);
+            }
+
             var candidates = definition == null
                 ? pool
                 : pool.Where(e => e.Rank >= definition.PriceBandLow && e.Rank <= definition.PriceBandHigh).ToList();

@@ -1,0 +1,9 @@
+{
+  "id": "small_imports",
+  "name": "Small Imports",
+  "version": "1.0",
+  "author": "Street Corsa",
+  "description": "The example add-on: four small European cars with engines made of data alone, their speed parts, an import speed shop, a used-import lot, a rival who drives them, and an autocross night of their own.",
+  "type": "addon",
+  "gameVersion": "0.1"
+}
