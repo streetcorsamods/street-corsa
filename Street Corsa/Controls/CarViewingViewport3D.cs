@@ -4,6 +4,7 @@ using System.Windows.Input;
 using AcTools.Render.Kn5Specific.Objects;
 using StreetCorsa.Controls.Showcase;
 using StreetCorsa.Controls.Street;
+using StreetCorsa.Looks;
 using StreetCorsa.Services.Catalog;
 using StreetCorsa.Services.Street;
 using Sx = SlimDX;
@@ -152,6 +153,10 @@ public class CarViewingViewport3D : D3DViewportBase
         }
 
         var started = DateTime.Now;
+
+        // The car's wear is made while the scene and its model load, so it comes with the car
+        if (stage.Shown?.Look is { } look && Directory.Exists(stage.CarDirectory)) _ = WearLayer.WarmAsync(stage.CarDirectory, look);
+
         var renderer = NewRenderer(null, scene);
         renderer.AutoAdjustTarget = false;
 

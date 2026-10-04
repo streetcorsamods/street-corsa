@@ -7,6 +7,7 @@ using StreetCorsa.Parts;
 using StreetCorsa.Parts.Cars;
 using StreetCorsa.Parts.Export;
 using StreetCorsa.Services.Market;
+using StreetCorsa.Services.Scheduler.Tasks;
 
 namespace StreetCorsa.Tests;
 
@@ -49,6 +50,45 @@ public sealed class CarLooksTests
 
         Assert.Equal((0.3, 0.2, 0.5, 0.1, 1234), (car.Rust, car.PaintWear, car.GlassCracks, car.BodyDirt, car.LookSeed));
         Assert.Equal(CarLooks.Of(listing), CarLooks.Of(car));
+    }
+
+    [Fact]
+    public void A_days_rust_is_the_same_look_so_a_scene_keeps_the_wear_it_has_on()
+    {
+        var car = new Car("car_a") { Rust = 0.3, PaintWear = 0.2, BodyDirt = 0.1 };
+        var before = ShownSet.Of(null, look: CarLooks.Of(car));
+        CarLooks.Age(car);
+        Assert.NotEqual(0.3, car.Rust);
+
+        Assert.Equal(before, ShownSet.Of(null, look: CarLooks.Of(car)));
+        Assert.Equal(CarLooks.Of(car), CarLooks.Of(car).Rounded());
+    }
+
+    [Fact]
+    public async Task Rust_grows_a_day_for_every_day_gone_by_since_it_last_grew()
+    {
+        var task = new RustTask();
+        var daily = new Car("car_a") { Rust = 0.3 };
+        var jumped = new Car("car_a") { Rust = 0.3 };
+        var start = new DateTime(1969, 5, 1);
+
+        var day = new GameState { Player = new Player { Cars = [daily] } };
+        day.ScheduledTasks.Add(new ScheduledTaskState { TaskId = task.TaskId, LastExecuted = start });
+        await task.ExecuteAsync(day, start.AddDays(1));
+
+        var week = new GameState { Player = new Player { Cars = [jumped] } };
+        week.ScheduledTasks.Add(new ScheduledTaskState { TaskId = task.TaskId, LastExecuted = start });
+        await task.ExecuteAsync(week, start.AddDays(7));
+
+        var expected = new Car("car_a") { Rust = 0.3 };
+        CarLooks.Age(expected, 7);
+        Assert.True(jumped.Rust > daily.Rust);
+        Assert.Equal(expected.Rust, jumped.Rust, 9);
+
+        // Never run before: one day's, not the age since the dawn of time
+        var first = new Car("car_a") { Rust = 0.3 };
+        await task.ExecuteAsync(new GameState { Player = new Player { Cars = [first] } }, start);
+        Assert.Equal(daily.Rust, first.Rust, 9);
     }
 
     [Fact]
@@ -224,6 +264,10 @@ public sealed class CarLooksTests
         var layer = Kn5.FromFile(temp.Combine("looks", name));
         Assert.All(layer.TexturesData.Values, png => Assert.Equal(new byte[] { 0x89, (byte)'P', (byte)'N', (byte)'G' }, png[..4]));
         Assert.Equal(name, WearLayer.WriteFor(carFolder, look, temp.Combine("looks")));
+
+        // The car's model changed (a mod updated): its layer is another file, not the old body's
+        File.SetLastWriteTimeUtc(Path.Combine(carFolder, "box_car.kn5"), DateTime.UtcNow.AddDays(1));
+        Assert.NotEqual(name, WearLayer.WriteFor(carFolder, look, temp.Combine("looks")));
     }
 
     [Fact]
@@ -248,6 +292,19 @@ public sealed class CarLooksTests
         Assert.Null(none);
         ShellFile.Write(path, shell);
         File.WriteAllBytes(path, File.ReadAllBytes(path)[..100]);
+        Assert.False(ShellFile.TryRead(path, out _));
+
+        // A file with a count that is no count (a bad int, a file of another kind with the same magic) is no file either,
+        // not an array the size of the moon
+        ShellFile.Write(path, shell);
+        var bytes = File.ReadAllBytes(path);
+        // After the magic (a length byte and 8 chars), the flag, two vectors and two signs: the hubs' count
+        var hubsAt = 1 + 8 + 1 + 6 * 4 + 2 * 4;
+        BitConverter.GetBytes(int.MaxValue).CopyTo(bytes, hubsAt);
+        File.WriteAllBytes(path, bytes);
+        Assert.False(ShellFile.TryRead(path, out _));
+        BitConverter.GetBytes(-5).CopyTo(bytes, hubsAt);
+        File.WriteAllBytes(path, bytes);
         Assert.False(ShellFile.TryRead(path, out _));
     }
 

@@ -26,8 +26,9 @@ public sealed class ConditionRules
 
     /// <summary>
     /// A used car's rust and worn paint as it comes into the game, at the worst condition (they shrink with a better one,
-    /// rolled between 0.3 and 1.2 of it for rust, 0.4 and 1.2 for paint): a dealer's lot cleans its cars up, a private car
-    /// comes as its owner left it (<see cref="Parts.Cars.CarLooks.Roll"/>)
+    /// rolled between <see cref="RustRollLow"/> and <see cref="RustRollHigh"/> of it for rust, <see cref="PaintRollLow"/>
+    /// and <see cref="PaintRollHigh"/> for paint): a dealer's lot cleans its cars up, a private car comes as its owner
+    /// left it (<see cref="Parts.Cars.CarLooks.Roll"/>)
     /// </summary>
     public double DealerRust { get; set; } = 0.35;
 
@@ -37,10 +38,24 @@ public sealed class ConditionRules
 
     public double PrivatePaintWear { get; set; } = 1.1;
 
+    /// <summary>How far either way from its figure a used car's rust is rolled, and its worn paint</summary>
+    public double RustRollLow { get; set; } = 0.3;
+
+    public double RustRollHigh { get; set; } = 1.2;
+
+    public double PaintRollLow { get; set; } = 0.4;
+
+    public double PaintRollHigh { get; set; } = 1.2;
+
     /// <summary>The chance a used car comes with a cracked windscreen, at the worst condition</summary>
     public double DealerCrackChance { get; set; } = 0.05;
 
     public double PrivateCrackChance { get; set; } = 0.35;
+
+    /// <summary>How cracked a used car's windscreen comes (0..1), rolled between these</summary>
+    public double CrackRollLow { get; set; } = 0.2;
+
+    public double CrackRollHigh { get; set; } = 0.8;
 
     /// <summary>The dirt a used car comes with: up to this on a dealer's washed car; between these on a private one</summary>
     public double DealerDirt { get; set; } = 0.08;

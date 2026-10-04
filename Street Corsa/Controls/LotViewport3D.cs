@@ -405,7 +405,8 @@ public class LotViewport3D : D3DViewportBase
 
         var budget = CarByteBudget;
 
-        // Every car's wear is made at once, on the side, while the cars load one by one: each finds its own ready
+        // Every car's wear is started now, on the side (one made at a time, so the drawing keeps its cores), while the
+        // cars load one by one: each finds its own ready or being made
         WarmWear(cars);
 
         for (var i = 0; i < cars.Count; i++)
@@ -519,7 +520,7 @@ public class LotViewport3D : D3DViewportBase
     /// taking the renderer's lock, so two at once race each other and the drawing. Reading the .kn5 off disk
     /// is the slow part and that is already off this thread.
     /// </summary>
-    /// <summary>Starts making the wear of <paramref name="cars"/> off the UI thread, all at once</summary>
+    /// <summary>Starts making the wear of <paramref name="cars"/> off the UI thread (WearLayer makes them one at a time)</summary>
     private static void WarmWear(IReadOnlyList<LotCarPlacement> cars)
     {
         foreach (var car in cars)
@@ -533,7 +534,8 @@ public class LotViewport3D : D3DViewportBase
         var main = MostCentralIndex(cars);
         var budget = CarByteBudget;
 
-        // Every car's wear is made at once, on the side, while the cars load one by one: each finds its own ready
+        // Every car's wear is started now, on the side (one made at a time, so the drawing keeps its cores), while the
+        // cars load one by one: each finds its own ready or being made
         WarmWear(cars);
 
         for (var i = 0; i < cars.Count; i++)

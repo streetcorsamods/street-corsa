@@ -170,10 +170,19 @@ internal sealed class BodyShell
         var body = Build(tris.Where(t => t.Seen && !t.Wheel && paint.Contains(t.Material)), meshes, positions,
             (t, n) => Place(panels, pictureSize, SideOf(n, frontSign, leftSign), t));
 
-        // The windscreen: glass that faces forwards, above the hood (headlamp lenses face forwards too, lower down)
+        // The windscreen: glass seen from outside that faces forwards, above the hood (headlamp lenses face forwards too,
+        // lower down). The way it faces is its corners' normals, as the body's views are: a face's winding is not to be
+        // trusted in a mod, and the rear window wound the wrong way would pass for the windscreen
         var screenFloor = min.Y + (max.Y - min.Y) * 0.55f;
-        var screenTris = tris.Where(t => !t.Wheel && MaterialOf(t.Material) is { } mat && IsGlass(mat)
-                                         && FaceNormal(t).Z * frontSign > 0.25f && (t.A.Y + t.B.Y + t.C.Y) / 3 > screenFloor).ToList();
+        Vector3 Facing(Tri t)
+        {
+            var (node, toModel, _) = meshes[t.Mesh];
+            var face = FaceNormal(t);
+            var mean = NormalOf(node.Vertices[t.I0], toModel, face) + NormalOf(node.Vertices[t.I1], toModel, face) + NormalOf(node.Vertices[t.I2], toModel, face);
+            return mean.LengthSquared() > 1e-8f ? Vector3.Normalize(mean) : face;
+        }
+        var screenTris = tris.Where(t => t.Seen && !t.Wheel && MaterialOf(t.Material) is { } mat && IsGlass(mat)
+                                         && Facing(t).Z * frontSign > 0.25f && (t.A.Y + t.B.Y + t.C.Y) / 3 > screenFloor).ToList();
         var screenMin = new Vector2(float.MaxValue);
         var screenMax = new Vector2(float.MinValue);
         foreach (var t in screenTris)

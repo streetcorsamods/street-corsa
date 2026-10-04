@@ -37,8 +37,15 @@ internal static class WearPainter
     }
 
     /// <summary>
+    /// How far round the layer's triangles the picture is painted, pixels: what the filtering between pixels and the first
+    /// mips read past a triangle's edge
+    /// </summary>
+    private const int Margin = 3;
+
+    /// <summary>
     /// The body's picture, RGBA rows from the top, <paramref name="size"/> pixels a side (the shell's views scaled to it:
-    /// the layer's corners point into the picture by share, whatever its size); the shell's own size when 0
+    /// the layer's corners point into the picture by share, whatever its size); the shell's own size when 0. Lent (it may
+    /// be longer than the picture): give it back with <see cref="Return"/> once encoded.
     /// </summary>
     public static byte[] Body(BodyShell shell, CarLook look, int size = 0)
     {
@@ -48,37 +55,111 @@ internal static class WearPainter
         {
             X = (int)(p.X * scale), Y = (int)(p.Y * scale), Width = Math.Max(1, (int)(p.Width * scale)), Height = Math.Max(1, (int)(p.Height * scale))
         }).ToList();
-        var pixels = new byte[size * size * 4];
+        // A picture's worth of arrays made and dropped for every car would keep the garbage collector busy while a scene
+        // moves (and they go on the large object heap, collected seldom and whole): the picture is lent, as the lines'
+        // cover and the layer's cover are, a byte a pixel
+        var pixels = Rent(size * size * 4);
         var noise = new Noise(look.Seed);
         var detail = new Noise(look.Seed ^ 0x5bd1e995);
-        // The lines' cover, a byte a pixel, lent: a picture's worth of arrays made and dropped for every car would keep the
-        // garbage collector busy while a scene moves
         var lines = ArrayPool<byte>.Shared.Rent(size * size);
+        var cover = ArrayPool<byte>.Shared.Rent(size * size);
         try
         {
             Lines(lines, shell, panels, look, size);
-            foreach (var panel in panels) PaintPanel(shell, panel, look, noise, detail, lines, pixels, size);
+            Cover(cover, shell, size);
+            foreach (var panel in panels) PaintPanel(shell, panel, look, noise, detail, lines, cover, pixels, size);
+        }
+        catch
+        {
+            Return(pixels);
+            throw;
         }
         finally
         {
             ArrayPool<byte>.Shared.Return(lines);
+            ArrayPool<byte>.Shared.Return(cover);
         }
 
         Bleed(pixels, size, size);
         return pixels;
     }
 
-    private static void PaintPanel(BodyShell shell, BodyShell.Panel panel, CarLook look, Noise noise, Noise detail, byte[] lines, byte[] pixels, int size)
+    /// <summary>A picture lent, zeroed (a lent array holds what it last held)</summary>
+    private static byte[] Rent(int length)
+    {
+        var array = ArrayPool<byte>.Shared.Rent(length);
+        Array.Clear(array, 0, length);
+        return array;
+    }
+
+    /// <summary>Gives back a picture <see cref="Body"/> or <see cref="Screen"/> lent</summary>
+    public static void Return(byte[] picture) => ArrayPool<byte>.Shared.Return(picture);
+
+    /// <summary>
+    /// Marks the pixels the layer's meshes map onto (their triangles in the picture, with <see cref="Margin"/> round each):
+    /// only those are painted. Much of a view is empty (the car's outline, the views nothing faces, the bottom no look
+    /// reaches), and a pixel nothing samples is work and resolution for nothing.
+    /// </summary>
+    private static void Cover(byte[] cover, BodyShell shell, int size)
+    {
+        Array.Clear(cover, 0, size * size);
+        foreach (var mesh in shell.BodyMeshes)
+        {
+            var v = mesh.Vertices;
+            var indices = mesh.Indices;
+            for (var t = 0; t + 2 < indices.Length; t += 3)
+            {
+                var a = new Vector2(v[indices[t]].Tex.X * size, v[indices[t]].Tex.Y * size);
+                var b = new Vector2(v[indices[t + 1]].Tex.X * size, v[indices[t + 1]].Tex.Y * size);
+                var c = new Vector2(v[indices[t + 2]].Tex.X * size, v[indices[t + 2]].Tex.Y * size);
+                var minX = Math.Max(0, (int)MathF.Floor(MathF.Min(a.X, MathF.Min(b.X, c.X))) - Margin);
+                var maxX = Math.Min(size - 1, (int)MathF.Ceiling(MathF.Max(a.X, MathF.Max(b.X, c.X))) + Margin);
+                var minY = Math.Max(0, (int)MathF.Floor(MathF.Min(a.Y, MathF.Min(b.Y, c.Y))) - Margin);
+                var maxY = Math.Min(size - 1, (int)MathF.Ceiling(MathF.Max(a.Y, MathF.Max(b.Y, c.Y))) + Margin);
+                var area = (b.X - a.X) * (c.Y - a.Y) - (b.Y - a.Y) * (c.X - a.X);
+                if (MathF.Abs(area) < 1e-9f)
+                {
+                    // A sliver: its box, a few pixels, is near enough
+                    for (var y = minY; y <= maxY; y++)
+                        for (var x = minX; x <= maxX; x++) cover[y * size + x] = 1;
+                    continue;
+                }
+                var inverse = 1 / area;
+                // A pixel within the margin of an edge: the edge functions scaled to pixels
+                var ab = MathF.Max(1e-6f, Vector2.Distance(a, b));
+                var bc = MathF.Max(1e-6f, Vector2.Distance(b, c));
+                var ca = MathF.Max(1e-6f, Vector2.Distance(c, a));
+                var slack = Margin * MathF.Abs(inverse);
+                for (var y = minY; y <= maxY; y++)
+                {
+                    var py = y + 0.5f;
+                    for (var x = minX; x <= maxX; x++)
+                    {
+                        var px = x + 0.5f;
+                        var w0 = ((b.X - px) * (c.Y - py) - (b.Y - py) * (c.X - px)) * inverse;
+                        var w1 = ((c.X - px) * (a.Y - py) - (c.Y - py) * (a.X - px)) * inverse;
+                        var w2 = 1 - w0 - w1;
+                        if (w0 < -slack * bc || w1 < -slack * ca || w2 < -slack * ab) continue;
+                        cover[y * size + x] = 1;
+                    }
+                }
+            }
+        }
+    }
+
+    private static void PaintPanel(BodyShell shell, BodyShell.Panel panel, CarLook look, Noise noise, Noise detail, byte[] lines, byte[] cover, byte[] pixels, int size)
     {
             Parallel.For(0, panel.Height, WearLayer.Work, row =>
             {
+                var y = panel.Y + row;
+                if (y >= size) return;
                 for (var column = 0; column < panel.Width; column++)
                 {
+                    var x = panel.X + column;
+                    if (x >= size || cover[y * size + x] == 0) continue;
                     var u = (column + 0.5f) / panel.Width;
                     var v = (row + 0.5f) / panel.Height;
                     var p = PointOf(shell, panel, u, v);
-                    var x = panel.X + column;
-                    var y = panel.Y + row;
                     var colour = Pixel(shell, panel.Side, p, look, noise, detail, lines[y * size + x] / 255f);
                     if (colour.A <= 0.003f) continue;
                     var at = (y * size + x) * 4;
@@ -352,12 +433,28 @@ internal static class WearPainter
         }
     }
 
-    /// <summary>The windscreen's picture: cracks running out from where it was struck, rings round it, a frosted spot</summary>
+    /// <summary>
+    /// The windscreen's picture: cracks running out from where it was struck, rings round it, a frosted spot. Lent, as
+    /// <see cref="Body"/> is: give it back with <see cref="Return"/>.
+    /// </summary>
     public static byte[] Screen(CarLook look)
     {
         var w = ScreenWidth;
         var hgt = ScreenHeight;
-        var cover = new float[w * hgt];
+        var cover = ArrayPool<float>.Shared.Rent(w * hgt);
+        Array.Clear(cover, 0, w * hgt);
+        try
+        {
+            return Screen(look, cover, w, hgt);
+        }
+        finally
+        {
+            ArrayPool<float>.Shared.Return(cover);
+        }
+    }
+
+    private static byte[] Screen(CarLook look, float[] cover, int w, int hgt)
+    {
         var random = new Random(look.Seed * 17 + 3);
         var cracks = (float)Math.Clamp(look.Cracks, 0, 1);
         var strikes = cracks > 0.55f ? 2 : 1;
@@ -391,8 +488,8 @@ internal static class WearPainter
                 }
         }
 
-        var pixels = new byte[w * hgt * 4];
-        for (var i = 0; i < cover.Length; i++)
+        var pixels = Rent(w * hgt * 4);
+        for (var i = 0; i < w * hgt; i++)
         {
             if (cover[i] <= 0) continue;
             pixels[i * 4] = 232;

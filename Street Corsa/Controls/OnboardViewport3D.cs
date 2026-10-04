@@ -1,7 +1,9 @@
+using System.IO;
 using System.Windows;
 using System.Windows.Input;
 using AcTools.Render.Kn5Specific.Objects;
 using StreetCorsa.Controls.Street;
+using StreetCorsa.Looks;
 using StreetCorsa.Services.Scripting;
 using StreetCorsa.Services.Street;
 using Sx = SlimDX;
@@ -146,6 +148,10 @@ public abstract class OnboardViewport3D : D3DViewportBase
     private protected async Task<bool> LoadPlayerCarAsync(GarageRenderer renderer, StreetCar player, StreetLight light, Func<AcCarFrame, Sx.Matrix>? placementOf)
     {
         var skin = SkinOrDefault(player.Directory, player.Skin);
+
+        // The car's wear is made while its model loads, so it comes with the car
+        if (player.Shown?.Look is { } look && Directory.Exists(player.Directory)) _ = WearLayer.WarmAsync(player.Directory, look);
+
         var data = SceneLights.DataOf(player.Directory, ex => Logger.Warning(ex, "The data of {Car} could not be read: it sits and looks as most cars do", player.Directory));
         var frame = SceneLights.FrameOf(data);
         var placement = placementOf?.Invoke(frame);

@@ -325,19 +325,20 @@ namespace StreetCorsa.Services.Parts
         {
             var directory = Path.Combine(AppSettings.Instance.CarsPath, carDefinitionId);
             if (look is { IsClean: true }) look = null;
-            if (!IsAvailable) return look == null ? null : ShownSet.Of(null, null, CarHubs.FrameOf(directory), look, heights);
+            // Without the parts the car still shows its wear and how it sits (a sagging corner on a clean car too)
+            if (!IsAvailable) return ShownSet.Of(null, null, look == null ? null : CarHubs.FrameOf(directory), look, heights);
 
             // The engine's upper parts, any of which may stand out of the hood: whether they do is for whoever has the car's meshes
             var extras = new List<ShownModelAt>();
-            var frame = look == null ? null : CarHubs.FrameOf(directory);
             if (parts.FirstOrDefault(p => p.ParentSlot == PartInstance.CarEngineSlot) is { } engine && PartTrees.ToInstalled(Catalog, engine) is { } tree)
             {
                 var hubs = CarHubs.Of(directory);
                 extras = ShownEngineParts.Of(Catalog, tree.Root, hubs == null ? null : hubs with { EngineOffset = EngineOffsetOf(carDefinitionId) },
                     EngineLayoutOf(carDefinitionId), FactoryEngineParts(carDefinitionId, tree.Root.Definition.Id));
-                frame = CarHubs.FrameOf(directory);
             }
 
+            // The model's space, for the parts that stand out and the wear layer: worked out once, when either needs it
+            var frame = look != null || extras.Count > 0 ? CarHubs.FrameOf(directory) : null;
             var wheels = Specs(carDefinitionId) is { } specs
                 ? ShownParts.Wheels(parts, Catalog, RunningGearFactory.Choose(Catalog, specs))
                 : new ShownWheel?[RunningGear.Corners];

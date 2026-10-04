@@ -46,6 +46,12 @@ public static class WearLayer
     private const long KeptBytes = 200L * 1024 * 1024;
 
     /// <summary>
+    /// The painter's version, in a race layer's file name: a layer written by an older painter is not the one the scenes
+    /// draw, so it is written again
+    /// </summary>
+    private const int PainterVersion = 2;
+
+    /// <summary>
     /// The shell of each car model read so far, by its file: the same for the model a scene loaded, a race's, and one read
     /// ahead while a scene loads the car (<see cref="WarmAsync"/>); by the model itself for one with no file
     /// </summary>
@@ -53,9 +59,29 @@ public static class WearLayer
 
     private static readonly ConditionalWeakTable<IKn5, Lazy<BodyShell?>> Shells = new();
 
-    private static readonly ConcurrentDictionary<(BodyShell Shell, CarLook Look, int Picture, bool Race), (IKn5 Layer, long Asked, long Bytes)> Layers = new();
+    /// <summary>
+    /// The scenes' layers, each made once however many ask for it at once (a scene's ask finds the one being made ahead and
+    /// waits for it, not for a second paint of its own)
+    /// </summary>
+    private static readonly ConcurrentDictionary<(BodyShell Shell, CarLook Look, int Picture), Kept> Layers = new();
+
+    private sealed class Kept(Func<IKn5> make)
+    {
+        public readonly Lazy<IKn5> Layer = new(make, LazyThreadSafetyMode.ExecutionAndPublication);
+        public long Asked;
+
+        /// <summary>Its pictures' bytes once it is made; nothing while it is being made</summary>
+        public long Bytes => Layer.IsValueCreated ? Layer.Value.TexturesData.Values.Sum(t => (long)t.Length) : 0;
+    }
 
     private static long _asks;
+
+    /// <summary>
+    /// One layer made ahead at a time: each paint spreads over half the cores (<see cref="Work"/>), so a lot asking for
+    /// twenty at once would take every core from the scene drawing meanwhile. A scene's own ask never waits here: it makes
+    /// (or joins) its layer at once.
+    /// </summary>
+    private static readonly SemaphoreSlim Warms = new(1, 1);
 
     /// <summary>
     /// The layer over the car <paramref name="carModel"/> (its main model, as loaded) for <paramref name="look"/>; null
@@ -68,19 +94,35 @@ public static class WearLayer
         var shell = carModel.OriginalFilename is { Length: > 0 } file
             ? ShellOf(file, carModel)
             : Shells.GetValue(carModel, m => new Lazy<BodyShell?>(() => Read(m, null))).Value;
-        return shell == null ? null : Layer(shell, look.Rounded(), picture, race: false);
+        return shell == null ? null : Layer(shell, look.Rounded(), picture);
     }
+
+    /// <summary>
+    /// The main model of the car in <paramref name="carDirectory"/>, the file the scenes load (the high-resolution one
+    /// when the car has it, as AcTools' CarDescription picks it): the shell made ahead or for a race is the shell of the
+    /// model the scenes draw. Null when there is none.
+    /// </summary>
+    private static string? ModelOf(string carDirectory) =>
+        AcPaths.GetMainCarFilename(carDirectory, true) is { } file && File.Exists(file) ? file : null;
 
     /// <summary>
     /// Makes the layer of the car in <paramref name="carDirectory"/> for <paramref name="look"/> ahead, off the UI thread,
     /// while a scene loads the car: <see cref="For"/> finds it made (or being made) when the car is up. Never throws.
     /// </summary>
-    public static Task WarmAsync(string carDirectory, CarLook look, int picture = FullPicture) => Task.Run(() =>
+    public static Task WarmAsync(string carDirectory, CarLook look, int picture = FullPicture) => Task.Run(async () =>
     {
         try
         {
-            if (look.IsClean || AcPaths.GetMainCarFilename(carDirectory, false) is not { } file || !File.Exists(file)) return;
-            if (ShellOf(file, null) is { } shell) Layer(shell, look.Rounded(), picture, race: false);
+            if (look.IsClean || ModelOf(carDirectory) is not { } file) return;
+            await Warms.WaitAsync();
+            try
+            {
+                if (ShellOf(file, null) is { } shell) Layer(shell, look.Rounded(), picture);
+            }
+            finally
+            {
+                Warms.Release();
+            }
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
@@ -104,8 +146,10 @@ public static class WearLayer
                 kept = ShellFile.PathFor(ShellCache, f);
                 if (ShellFile.TryRead(kept, out var shell)) return shell;
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            catch (Exception ex) when (ex is not OutOfMemoryException)
             {
+                // The folder cannot be worked out or read: the shell is read from the model and not kept
+                Logger.Warning("The kept wear of {Model} could not be looked for: {Error}", Path.GetFileName(f), ex.Message);
                 kept = null;
             }
 
@@ -138,21 +182,21 @@ public static class WearLayer
     /// </summary>
     public static string? WriteFor(string carDirectory, CarLook look, string folder)
     {
-        if (look.IsClean) return null;
-        var file = AcPaths.GetMainCarFilename(carDirectory, false);
-        if (file == null || !File.Exists(file)) return null;
+        if (look.IsClean || ModelOf(carDirectory) is not { } file) return null;
 
         var shell = ShellOf(file, null);
         if (shell == null) return null;
 
+        // Named for the look and the model as it is (a car mod updated gets a new layer) and the painter that made it
         var rounded = look.Rounded();
-        var name = $"{Path.GetFileName(carDirectory)}_{Hash(rounded):x8}.kn5";
+        var name = $"{Path.GetFileName(carDirectory)}_{Hash(rounded, ShellFile.KeyOf(file) + "|" + PainterVersion):x8}.kn5";
         var path = Path.Combine(folder, name);
         if (!File.Exists(path))
         {
             Directory.CreateDirectory(folder);
             var temp = path + ".tmp";
-            Layer(shell, rounded, FullPicture, race: true).Save(temp);
+            // Not kept with the scenes' layers: a race's is written once and read from its file
+            Make(shell, rounded, FullPicture, race: true).Save(temp);
             File.Move(temp, path, overwrite: true);
         }
         return name;
@@ -228,28 +272,39 @@ public static class WearLayer
         }
     }
 
-    /// <summary>A look's figures as a file name's part: the same look, the same name</summary>
-    private static uint Hash(CarLook look)
+    /// <summary>A look's figures (and <paramref name="more"/>) as a file name's part: the same look, the same name</summary>
+    private static uint Hash(CarLook look, string more)
     {
-        var text = string.Join(",", look.Rust, look.Paint, look.Cracks, look.Dirt, look.Front, look.Rear, look.Left, look.Right, look.Seed);
+        var text = string.Join(",", look.Rust, look.Paint, look.Cracks, look.Dirt, look.Front, look.Rear, look.Left, look.Right, look.Seed, more);
         var hash = 2166136261u;
         foreach (var c in text) hash = (hash ^ c) * 16777619u;
         return hash;
     }
 
-    /// <summary>The layer for a look, made once while it is kept; the least lately asked for go past <see cref="KeptBytes"/></summary>
-    private static IKn5 Layer(BodyShell shell, CarLook look, int picture, bool race)
+    /// <summary>
+    /// A scene's layer for a look, made once while it is kept, whoever asks first making it for the rest; the least lately
+    /// asked for go past <see cref="KeptBytes"/>. One that could not be made is not kept: the next ask tries again.
+    /// </summary>
+    private static IKn5 Layer(BodyShell shell, CarLook look, int picture)
     {
         var asked = Interlocked.Increment(ref _asks);
-        var key = (shell, look, picture, race);
-        var layer = Layers.AddOrUpdate(key, k =>
+        var key = (shell, look, picture);
+        var kept = Layers.GetOrAdd(key, k => new Kept(() => Make(k.Shell, k.Look, k.Picture, race: false)));
+        Interlocked.Exchange(ref kept.Asked, asked);
+        IKn5 layer;
+        try
         {
-            var made = Make(k.Shell, k.Look, k.Picture, k.Race);
-            return (made, asked, made.TexturesData.Values.Sum(t => (long)t.Length));
-        }, (_, kept) => (kept.Layer, asked, kept.Bytes)).Layer;
+            layer = kept.Layer.Value;
+        }
+        catch
+        {
+            Layers.TryRemove(new KeyValuePair<(BodyShell, CarLook, int), Kept>(key, kept));
+            throw;
+        }
+
         while (Layers.Count > 1 && Layers.Values.Sum(l => l.Bytes) > KeptBytes)
         {
-            var oldest = Layers.MinBy(l => l.Value.Asked).Key;
+            var oldest = Layers.Where(l => l.Value.Layer.IsValueCreated).MinBy(l => l.Value.Asked).Key;
             if (oldest == key || !Layers.TryRemove(oldest, out _)) break;
         }
         return layer;
@@ -263,7 +318,20 @@ public static class WearLayer
     {
         var kn5 = Kn5.CreateEmpty();
         kn5.RootNode.Name = "sc_look";
-        byte[] Encode(byte[] rgba, int w, int h) => race ? Png.Encode(rgba, w, h) : Dds.Encode(rgba, w, h);
+
+        // The painter's pictures are lent (a picture's worth of garbage a car would land a collection mid-scene): encoded
+        // and given back
+        byte[] Encode(byte[] rgba, int w, int h)
+        {
+            try
+            {
+                return race ? Png.Encode(rgba, w, h) : Dds.Encode(rgba, w, h);
+            }
+            finally
+            {
+                WearPainter.Return(rgba);
+            }
+        }
 
         var bodyId = Material(kn5, BodyMaterial, Encode(WearPainter.Body(shell, look, picture), picture, picture), shell, race);
         var k = 0;

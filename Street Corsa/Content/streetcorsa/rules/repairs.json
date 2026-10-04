@@ -11,6 +11,9 @@
     "rustCost": 900,
     "paintCost": 300,
     "windscreenCost": 60,
+    "someRust": 0.02,
+    "somePaintWear": 0.05,
+    "bigRustJob": 0.25,
     "smallBodyJobKmh": 40,
     "canOfGasLitres": 4
   }

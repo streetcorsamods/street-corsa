@@ -284,7 +284,7 @@ namespace StreetCorsa.Services.Opponents
                 PurchaseDate = today.AddDays(-_random.Next(60, 365))
             };
             // Kept like a show car
-            CarLooks.Give(car, CarLooks.Roll(0.95, LookSource.Dealer, _random) with { Dirt = 0 });
+            CarLooks.Give(car, CarLooks.Roll(Rules.RuleBook.Current.Rivals.King.CarCondition, LookSource.Dealer, _random) with { Dirt = 0 });
 
             if (_parts is { IsAvailable: true } parts && parts.GetStockBuild(definition) is { } build)
             {

@@ -148,6 +148,9 @@ public sealed class KingRules
     /// <summary>His car is one of this many strongest from the factory</summary>
     public int CarChoices { get; set; } = 5;
 
+    /// <summary>The condition his car is kept in (0..1): a show car, its looks rolled as a dealer's at that, and washed</summary>
+    public double CarCondition { get; set; } = 0.95;
+
     /// <summary>His record when the career starts: years of wins, pink slips taken</summary>
     public int Races { get; set; } = 52;
 

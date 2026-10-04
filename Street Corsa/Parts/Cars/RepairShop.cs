@@ -73,9 +73,12 @@ public static class RepairShop
     public static decimal WindscreenCost => Rules.RuleBook.Current.Repairs.WindscreenCost;
 
     /// <summary>Less rust than this is not worth a body shop's while; less worn paint than this is not worth a respray</summary>
-    private const double SomeRust = 0.02;
+    public static double SomeRust => Rules.RuleBook.Current.Repairs.SomeRust;
 
-    private const double SomePaintWear = 0.05;
+    public static double SomePaintWear => Rules.RuleBook.Current.Repairs.SomePaintWear;
+
+    /// <summary>Rust from this on is a big job</summary>
+    public static double BigRustJob => Rules.RuleBook.Current.Repairs.BigRustJob;
 
     public const string Body = "body";
     public const string Rust = "rust";
@@ -134,7 +137,7 @@ public static class RepairShop
         {
             jobs.Add(new RepairJob(Rust, PartWords.Say("repair.job.rust"), PartWords.Say("repair.job.rust.detail", ("rust", rust * 100), ("paint", paint * 100)),
                 LabourAt(prices) + Math.Round((RustCost * (decimal)rust + PaintCost * (decimal)paint) * (decimal)prices),
-                rust < 0.25 ? GameAction.GarageWorkMinor : GameAction.GarageWorkMajor,
+                rust < BigRustJob ? GameAction.GarageWorkMinor : GameAction.GarageWorkMajor,
                 () => { car.Rust = 0; car.PaintWear = 0; }));
         }
         else if (paint >= SomePaintWear)

@@ -23,6 +23,14 @@ public sealed class RepairRules
     /// <summary>A new windscreen, fitted</summary>
     public decimal WindscreenCost { get; set; } = 60m;
 
+    /// <summary>Less rust than this (0..1) is not worth a body shop's while; less worn paint than this is not worth a respray</summary>
+    public double SomeRust { get; set; } = 0.02;
+
+    public double SomePaintWear { get; set; } = 0.05;
+
+    /// <summary>Rust from this on is a big job (a day's work, not a morning's)</summary>
+    public double BigRustJob { get; set; } = 0.25;
+
     /// <summary>Less damage than this on a body is a small job</summary>
     public double SmallBodyJobKmh { get; set; } = 40;
 

@@ -36,10 +36,11 @@ public static class CarLooks
         var rules = Rules;
         var wear = 1 - Unit.Clamp01(condition, 1);
         var dealer = source == LookSource.Dealer;
-        var rust = wear * (dealer ? rules.DealerRust : rules.PrivateRust) * (0.3 + 0.9 * random.NextDouble());
-        var paint = wear * (dealer ? rules.DealerPaintWear : rules.PrivatePaintWear) * (0.4 + 0.8 * random.NextDouble());
+        double Between(double low, double high) => low + (high - low) * random.NextDouble();
+        var rust = wear * (dealer ? rules.DealerRust : rules.PrivateRust) * Between(rules.RustRollLow, rules.RustRollHigh);
+        var paint = wear * (dealer ? rules.DealerPaintWear : rules.PrivatePaintWear) * Between(rules.PaintRollLow, rules.PaintRollHigh);
         var cracks = random.NextDouble() < wear * (dealer ? rules.DealerCrackChance : rules.PrivateCrackChance)
-            ? 0.2 + 0.6 * random.NextDouble()
+            ? Between(rules.CrackRollLow, rules.CrackRollHigh)
             : 0;
         var dirt = dealer ? rules.DealerDirt * random.NextDouble() : rules.PrivateDirtMin + (rules.PrivateDirtMax - rules.PrivateDirtMin) * random.NextDouble();
         return new Rolled(Math.Min(1, rust), Math.Min(1, paint), cracks, Unit.Clamp01(dirt, 0), random.Next(1, int.MaxValue));
@@ -95,20 +96,23 @@ public static class CarLooks
         return hash == 0 ? 1 : hash;
     }
 
-    /// <summary>How the car looks for its wear layer</summary>
+    /// <summary>
+    /// How the car looks for its wear layer, rounded to what can be seen (<see cref="CarLook.Rounded"/>): a day's rust
+    /// or a hair of dirt is the same look, so a scene showing the car does not take its wear off and put it on again
+    /// </summary>
     public static CarLook Of(Car car)
     {
         var body = CarCondition.Body(car);
         return new CarLook(Clean(car.Rust), Clean(car.PaintWear), Clean(car.GlassCracks), Clean(car.BodyDirt),
-            body[0], body[1], body[2], body[3], SeedOf(car));
+            body[0], body[1], body[2], body[3], SeedOf(car)).Rounded();
     }
 
-    /// <summary>How the car on sale looks for its wear layer</summary>
+    /// <summary>How the car on sale looks for its wear layer, rounded as <see cref="Of(Car)"/> is</summary>
     public static CarLook Of(UsedCarListing listing)
     {
         var body = listing.BodyDamageKmh is { Length: >= 4 } b ? b : new double[4];
         return new CarLook(Clean(listing.Rust), Clean(listing.PaintWear), Clean(listing.GlassCracks), Clean(listing.BodyDirt),
-            Kmh(body[0]), Kmh(body[1]), Kmh(body[2]), Kmh(body[3]), listing.LookSeed != 0 ? listing.LookSeed : SeedOf(listing.Id));
+            Kmh(body[0]), Kmh(body[1]), Kmh(body[2]), Kmh(body[3]), listing.LookSeed != 0 ? listing.LookSeed : SeedOf(listing.Id)).Rounded();
     }
 
     /// <summary>

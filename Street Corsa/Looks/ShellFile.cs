@@ -13,15 +13,32 @@ internal static class ShellFile
 {
     private const string Magic = "SCSHELL2";
 
+    /// <summary>The model as it is, what its kept shell and its race layers are named for: its path, size and time</summary>
+    public static string KeyOf(string model)
+    {
+        var info = new FileInfo(model);
+        return $"{Path.GetFullPath(model).ToLowerInvariant()}|{info.Length}|{info.LastWriteTimeUtc.Ticks}";
+    }
+
     /// <summary>The kept file for the model in <paramref name="model"/>, in <paramref name="folder"/></summary>
     public static string PathFor(string folder, string model)
     {
-        var info = new FileInfo(model);
-        var key = $"{Path.GetFullPath(model).ToLowerInvariant()}|{info.Length}|{info.LastWriteTimeUtc.Ticks}";
         var hash = 2166136261u;
-        foreach (var c in key) hash = (hash ^ c) * 16777619u;
+        foreach (var c in KeyOf(model)) hash = (hash ^ c) * 16777619u;
         return Path.Combine(folder, $"{Path.GetFileNameWithoutExtension(model)}_{hash:x8}.shell");
     }
+
+    /// <summary>
+    /// The most of anything a file may say it holds: a count past it (a bad int, a file of some other kind with the same
+    /// magic) is a bad file, not an array of that size
+    /// </summary>
+    private const int MostMeshes = 100_000;
+
+    private const int MostVertices = 65_536;
+
+    private const int MostIndices = 3 * 65_536;
+
+    private const int MostOthers = 10_000;
 
     /// <summary>The kept shell: found (null for a model with no paint), or not found when there is no good file</summary>
     public static bool TryRead(string path, out BodyShell? shell)
@@ -38,9 +55,10 @@ internal static class ShellFile
             var max = ReadVector(reader);
             var frontSign = reader.ReadSingle();
             var leftSign = reader.ReadSingle();
-            var hubs = Enumerable.Range(0, reader.ReadInt32()).Select(_ => ReadVector(reader)).ToList();
+            var hubs = Enumerable.Range(0, Count(reader, MostOthers)).Select(_ => ReadVector(reader)).ToList();
             var pictureSize = reader.ReadInt32();
-            var panels = Enumerable.Range(0, reader.ReadInt32()).Select(_ => new BodyShell.Panel((BodyShell.Side)reader.ReadInt32(),
+            if (pictureSize <= 0 || pictureSize > 16384) return false;
+            var panels = Enumerable.Range(0, Count(reader, MostOthers)).Select(_ => new BodyShell.Panel((BodyShell.Side)reader.ReadInt32(),
                 reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(),
                 reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle())).ToList();
             var body = ReadMeshes(reader);
@@ -49,7 +67,7 @@ internal static class ShellFile
             var screenMax = new System.Numerics.Vector2(reader.ReadSingle(), reader.ReadSingle());
             var ambient = reader.ReadSingle();
             var diffuse = reader.ReadSingle();
-            var paint = Enumerable.Range(0, reader.ReadInt32()).Select(_ => reader.ReadString()).ToList();
+            var paint = Enumerable.Range(0, Count(reader, MostOthers)).Select(_ => reader.ReadString()).ToList();
             shell = new BodyShell
             {
                 Min = min, Max = max, FrontSign = frontSign, LeftSign = leftSign, Hubs = hubs, PictureSize = pictureSize, Panels = panels,
@@ -58,11 +76,20 @@ internal static class ShellFile
             };
             return true;
         }
-        catch (Exception ex) when (ex is IOException or EndOfStreamException or UnauthorizedAccessException or ArgumentException
-                                       or InvalidDataException or FormatException)
+        catch (Exception ex) when (ex is not OutOfMemoryException)
         {
+            // Whatever is wrong with the file (cut short, a bad count, unreadable), it is no file
+            shell = null;
             return false;
         }
+    }
+
+    /// <summary>A count read, within <paramref name="most"/>; a bad file otherwise</summary>
+    private static int Count(BinaryReader reader, int most)
+    {
+        var count = reader.ReadInt32();
+        if (count < 0 || count > most) throw new InvalidDataException($"a count of {count} in a shell file");
+        return count;
     }
 
     /// <summary>Keeps <paramref name="shell"/> (null: the model has no paint), whole or not at all</summary>
@@ -123,14 +150,14 @@ internal static class ShellFile
     private static List<BodyShell.Mesh> ReadMeshes(BinaryReader r)
     {
         var meshes = new List<BodyShell.Mesh>();
-        for (var m = r.ReadInt32(); m > 0; m--)
+        for (var m = Count(r, MostMeshes); m > 0; m--)
         {
-            var vertices = new Kn5Node.Vertex[r.ReadInt32()];
+            var vertices = new Kn5Node.Vertex[Count(r, MostVertices)];
             for (var i = 0; i < vertices.Length; i++)
                 vertices[i] = new Kn5Node.Vertex(new Vec3(r.ReadSingle(), r.ReadSingle(), r.ReadSingle()),
                     new Vec3(r.ReadSingle(), r.ReadSingle(), r.ReadSingle()), new Vec2(r.ReadSingle(), r.ReadSingle()),
                     new Vec3(r.ReadSingle(), r.ReadSingle(), r.ReadSingle()));
-            var indices = new ushort[r.ReadInt32()];
+            var indices = new ushort[Count(r, MostIndices)];
             for (var i = 0; i < indices.Length; i++) indices[i] = r.ReadUInt16();
             meshes.Add(new BodyShell.Mesh(vertices, indices));
         }
