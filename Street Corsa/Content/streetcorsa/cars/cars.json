@@ -11,6 +11,7 @@
     "1969_chevy_nova_s1": { "engine": "sbc350:engines/sbc350/sbc-350-th350" },
     "1969_chevy_nova_s2": { "engine": "l79:engines/l79/350-l48-4spd" },
     "69_pontiac_gto_bpe505": { "engine": "sbc350:engines/sbc350/sbc-350-th350" },
+    "70_dodge_superbee_rm_redd_tuned": { "engine_offset": [0,-0.075,0.015] },
     "ac_legends_camaro_1970": { "engine": "l79:engines/l79/302-z28-4spd" },
     "al_pontiac_fire68": { "engine": "sbc350:engines/sbc350/sbc-350-th350" },
     "atcc_60s_chevy_nova": { "engine": "l79:engines/l79/l79-327-4spd" },
