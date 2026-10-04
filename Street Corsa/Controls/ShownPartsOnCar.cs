@@ -81,9 +81,12 @@ public static class ShownPartsOnCar
         }
 
         // The engine parts that stand out of the car, where they sit in its model (its root's children)
-        if (shown.Extras.Count > 0 && car.RootObject is { } root && Matrix4x4.Invert(ToNumerics(root.LocalMatrix), out var fromRoot))
+        // The model's space is its KN5's: the root's own transform as the file has it, not what the scene adds to the root's
+        // matrix (the garage lifts the car onto its ground there: 25 cm on the Chevelle '70)
+        var kn5Root = ToNumerics(car.OriginalFile.RootNode.Transform);
+        if (shown.Extras.Count > 0 && car.RootObject is { } root && Matrix4x4.Invert(kn5Root, out var fromRoot))
         {
-            var surface = Surface(root);
+            var surface = Surface(root, kn5Root);
             var standing = await Task.Run(() => shown.Extras.Where(e =>
             {
                 var stands = ShownEngineParts.StandsOut(e, surface.Above);
@@ -136,12 +139,12 @@ public static class ShownPartsOnCar
     }
 
     /// <summary>The car's meshes that are on (the ones we put in are not in yet), read on the caller's thread</summary>
-    private static CarSurface Surface(RenderableList root)
+    private static CarSurface Surface(RenderableList root, Matrix4x4 kn5Root)
     {
         var triangles = new List<(Vector3, Vector3, Vector3, float, float, float, float, string)>();
-        // World to the model's space: the root's own matrix kept, what it is placed by taken off
+        // World to the model's space: everything the root is placed by taken off, the KN5 root's own transform put back
         if (!Matrix4x4.Invert(ToNumerics(root.Matrix), out var fromWorld)) return new CarSurface(triangles);
-        var toModel = fromWorld * ToNumerics(root.LocalMatrix);
+        var toModel = fromWorld * kn5Root;
         foreach (var mesh in root.GetAllChildren().OfType<Kn5RenderableObject>())
         {
             if (!mesh.IsEnabled || mesh.Vertices is not { Length: > 0 } vertices || mesh.Indices is not { } indices) continue;
