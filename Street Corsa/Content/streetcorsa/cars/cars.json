@@ -71,6 +71,7 @@
     "gcp_camaro": { "engine": "l79:engines/l79/l79-327-4spd" },
     "gd_chevy_vette_c3_zr1": { "engine": "l79:engines/l79/350-lt1-4spd" },
     "gd_che_corvette_53": { "engine": "chevy_six:engines/chevy_six/chevy-235-1953-blueflame-powerglide" },
+    "gd_pontiac_trans_am_77": { "engine_offset": [0,0.01,0.045] },
     "hd_corvette67": { "engine": "sbc350:engines/sbc350/sbc-350-th350" },
     "j8_shelby_gt500_67": { "price": 4850, "common": 0.6 },
     "lm_camaro_ss": { "engine": "sbc350:engines/sbc350/sbc-350-th350" },
