@@ -104,6 +104,27 @@ namespace StreetCorsa.Services.Parts
                 ? ShownParts.Wheels(parts, Catalog, RunningGearFactory.Choose(Catalog, specs))
                 : new ShownWheel?[RunningGear.Corners];
 
+        /// <summary>Where the car's engine is moved from its place by hand (cars.json); zero when it is not</summary>
+        System.Numerics.Vector3 EngineOffsetOf(string carDefinitionId) => CarBook.Current.Car(carDefinitionId)?.EngineShift ?? System.Numerics.Vector3.Zero;
+
+        /// <summary>
+        /// Moves the car's engine from its place (the garage's placement mode): into the car book now, and into the base
+        /// game's cars.json beside. Null when it is kept; otherwise why it could not be written (the book has it anyway)
+        /// </summary>
+        string? SetEngineOffset(string carDefinitionId, System.Numerics.Vector3 offset)
+        {
+            CarBook.Current.SetEngineOffset(carDefinitionId, offset);
+            try
+            {
+                StreetCorsa.Services.Catalog.BaseCarsFile.SaveEngineOffset(carDefinitionId, offset);
+                return null;
+            }
+            catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException or System.IO.InvalidDataException)
+            {
+                return ex.Message;
+            }
+        }
+
         /// <summary>
         /// Everything the car shows, in a race and in the game's scenes, that its own model does not have: its wheels and
         /// the engine parts that stand out (<see cref="ShownEngineParts"/>); null when it shows nothing but its model
@@ -120,7 +141,8 @@ namespace StreetCorsa.Services.Parts
             if (parts.FirstOrDefault(p => p.ParentSlot == PartInstance.CarEngineSlot) is { } engine && PartTrees.ToInstalled(Catalog, engine) is { } tree)
             {
                 var hubs = CarHubs.Of(System.IO.Path.Combine(StreetCorsa.Configuration.AppSettings.Instance.CarsPath, carDefinitionId));
-                extras = ShownEngineParts.Of(Catalog, tree.Root, hubs, EngineLayoutOf(carDefinitionId));
+                extras = ShownEngineParts.Of(Catalog, tree.Root, hubs == null ? null : hubs with { EngineOffset = EngineOffsetOf(carDefinitionId) },
+                    EngineLayoutOf(carDefinitionId));
             }
             return ShownSet.Of(ShownWheels(carDefinitionId, parts), extras);
         }

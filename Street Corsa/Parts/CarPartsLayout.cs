@@ -7,6 +7,12 @@ namespace StreetCorsa.Parts;
 /// <summary>Wheel hub centres of a car, in the space the car is drawn in</summary>
 public sealed record CarAnchors(Vector3 WheelLF, Vector3 WheelRF, Vector3 WheelLR, Vector3 WheelRR)
 {
+    /// <summary>
+    /// How far the engine sits from where the hubs and the layout put it, in the car's space (metres): moved by hand in
+    /// the garage's placement mode and kept in the car's entry in cars.json (<see cref="Cars.CarEntry.EngineOffset"/>)
+    /// </summary>
+    public Vector3 EngineOffset { get; init; }
+
     public Vector3 FrontAxle => (WheelLF + WheelRF) / 2f;
     public Vector3 RearAxle => (WheelLR + WheelRR) / 2f;
     public float Wheelbase => Vector3.Distance(FrontAxle, RearAxle);
@@ -148,7 +154,8 @@ public static class CarPartsLayout
             _ => (crankLocal, anchors.FrontAxle - forward * EngineBehindFrontAxle + lift)
         };
 
-        var origin = target - Vector3.TransformNormal(local, frame);
+        // Then where the car's entry moves it to, by hand
+        var origin = target - Vector3.TransformNormal(local, frame) + anchors.EngineOffset;
         return frame * Matrix4x4.CreateTranslation(origin);
     }
 

@@ -232,6 +232,27 @@ namespace StreetCorsa.Screens.Garage
             private set => SetProperty(ref _gear, value);
         }
 
+        private System.Numerics.Vector3 _engineOffset;
+
+        /// <summary>Where the car's engine is moved from its place by hand (cars.json)</summary>
+        public System.Numerics.Vector3 EngineOffset
+        {
+            get => _engineOffset;
+            private set => SetProperty(ref _engineOffset, value);
+        }
+
+        /// <summary>
+        /// The garage's placement mode moved the engine block: the car keeps the new place (cars.json), and everything
+        /// shown by it follows
+        /// </summary>
+        public void MoveEngine(System.Numerics.Vector3 offset)
+        {
+            if (_car == null) return;
+            if (_parts.SetEngineOffset(_car.DefinitionId, offset) is { } problem)
+                _logger.Warning("The engine of {Car} moved, but cars.json could not be written: {Problem}", _car.DefinitionId, problem);
+            Refresh();
+        }
+
         private ShownSet? _shown;
 
         /// <summary>What the car shows that its own model does not have: its wheels, the engine parts that stand out</summary>
@@ -725,6 +746,7 @@ namespace StreetCorsa.Screens.Garage
                 }
 
                 Gear = _gearTrees.Select(g => new CarPart(g.CarSlot, g.Tree.Root)).ToList();
+                EngineOffset = _car != null ? _parts.EngineOffsetOf(_car.DefinitionId) : System.Numerics.Vector3.Zero;
                 Shown = catalog != null && _car != null ? _parts.Shown(_car) : null;
 
                 Shelf.Clear();

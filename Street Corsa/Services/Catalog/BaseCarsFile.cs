@@ -53,6 +53,47 @@ namespace StreetCorsa.Services.Catalog
         }
 
         /// <summary>
+        /// A car's engine offset into every copy of the file (zero takes it out), the car's other fields kept; the copies
+        /// written, the installed one first
+        /// </summary>
+        public static IReadOnlyList<string> SaveEngineOffset(string carId, System.Numerics.Vector3 offset)
+        {
+            var written = new List<string>();
+            foreach (var path in new[] { InstalledPath, SourcePath(AppContext.BaseDirectory) }.OfType<string>()
+                         .Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                SafeFile.WriteAllText(path, WithEngineOffset(File.Exists(path) ? File.ReadAllText(path) : null, carId, offset), SafeFile.Utf8NoBom);
+                written.Add(path);
+            }
+            return written;
+        }
+
+        /// <summary>The file's text with the car's engine offset set (to the millimetre); throws as <see cref="With"/> does</summary>
+        public static string WithEngineOffset(string? text, string carId, System.Numerics.Vector3 offset)
+        {
+            var file = ModMerge.Parse(text);
+            if (file == null)
+            {
+                if (!string.IsNullOrWhiteSpace(text))
+                    throw new InvalidDataException($"{CarBook.CarsFile} does not read as JSON (a missing comma, a car named twice?): mend it by hand and save again");
+                file = ModMerge.NewObject();
+            }
+            if (file["cars"] is not JsonObject entries)
+            {
+                entries = ModMerge.NewObject();
+                file["cars"] = entries;
+            }
+
+            var entry = entries[carId] as JsonObject ?? ModMerge.NewObject();
+            var value = offset == System.Numerics.Vector3.Zero ? null
+                : new JsonArray(Math.Round(offset.X, 3), Math.Round(offset.Y, 3), Math.Round(offset.Z, 3));
+            Set(entry, "engine_offset", value);
+            if (entry.Count == 0) entries.Remove(carId);
+            else entries[carId] = entry;
+            return Write(file);
+        }
+
+        /// <summary>
         /// What the base game's own cars.json gives each car (not the mods'), as the editor writes it back; nothing when
         /// the file is not there or does not read
         /// </summary>
