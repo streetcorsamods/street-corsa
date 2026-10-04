@@ -232,13 +232,13 @@ namespace StreetCorsa.Screens.Garage
             private set => SetProperty(ref _gear, value);
         }
 
-        private IReadOnlyList<ShownWheel?>? _wheels;
+        private ShownSet? _shown;
 
-        /// <summary>The wheels the car shows that its own model does not have (AC's corner order, null keeps its own)</summary>
-        public IReadOnlyList<ShownWheel?>? Wheels
+        /// <summary>What the car shows that its own model does not have: its wheels, the engine parts that stand out</summary>
+        public ShownSet? Shown
         {
-            get => _wheels;
-            private set => SetProperty(ref _wheels, value);
+            get => _shown;
+            private set => SetProperty(ref _shown, value);
         }
 
         private EngineLayout _engineLayout;
@@ -725,7 +725,7 @@ namespace StreetCorsa.Screens.Garage
                 }
 
                 Gear = _gearTrees.Select(g => new CarPart(g.CarSlot, g.Tree.Root)).ToList();
-                Wheels = catalog != null && _car != null ? _parts.ShownWheels(_car) : null;
+                Shown = catalog != null && _car != null ? _parts.Shown(_car) : null;
 
                 Shelf.Clear();
                 if (catalog != null)

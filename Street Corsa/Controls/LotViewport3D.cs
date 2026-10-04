@@ -25,7 +25,7 @@ public readonly record struct LotCarPlacement(
     float Z,
     float Heading,
     string Label,
-    StreetCorsa.Parts.Cars.WheelSet? Wheels = null);
+    StreetCorsa.Parts.Cars.ShownSet? Shown = null);
 
 /// <summary>Where the camera looks at the whole lot from: orbiting a point <paramref name="TargetHeight"/> over the middle of the floor</summary>
 public sealed record LotView(float Alpha, float Beta, float TargetHeight);
@@ -453,7 +453,7 @@ public class LotViewport3D : D3DViewportBase
                     car.SkinId ?? Kn5RenderableCar.DefaultSkin, RendererToken));
 
                 if (Renderer != renderer || !IsLoaded) return;
-                await WheelParts.SetAsync(slot.CarNode, car.Wheels?.Corners);
+                await ShownPartsOnCar.SetAsync(slot.CarNode, car.Shown);
                 if (Renderer != renderer || !IsLoaded) return;
 
                 Place(slot, car);
@@ -562,7 +562,7 @@ public class LotViewport3D : D3DViewportBase
                     car.SkinId ?? Kn5RenderableCar.DefaultSkin, RendererToken));
 
                 if (Renderer != renderer || !IsLoaded) return;
-                await WheelParts.SetAsync(slot.CarNode, car.Wheels?.Corners);
+                await ShownPartsOnCar.SetAsync(slot.CarNode, car.Shown);
                 if (Renderer != renderer || !IsLoaded) return;
 
                 Place(slot, car);

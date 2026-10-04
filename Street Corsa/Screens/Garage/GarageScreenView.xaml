@@ -47,7 +47,7 @@
                                 EngineTurnedOver="{Binding Workbench.IsEngineTurnedOver}"
                                 Engine="{Binding Workbench.Engine}"
                                 Gear="{Binding Workbench.Gear}"
-                                Wheels="{Binding Workbench.Wheels}"
+                                Shown="{Binding Workbench.Shown}"
                                 EngineLayout="{Binding Workbench.EngineLayout}"
                                 Candidates="{Binding Workbench.Candidates}"
                                 SelectedPart="{Binding Workbench.SelectedPart}"

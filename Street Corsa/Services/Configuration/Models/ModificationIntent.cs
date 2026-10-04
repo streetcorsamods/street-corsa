@@ -148,8 +148,8 @@ namespace StreetCorsa.Services.Configuration.Models
         public string TrackId { get; set; } = string.Empty;
         public string? TrackConfig { get; set; }
 
-        /// <summary>The wheels the car shows that its model does not have; any runs the free run in sc_free</summary>
-        public StreetCorsa.Parts.Cars.ShownWheel?[] Wheels { get; set; } = new StreetCorsa.Parts.Cars.ShownWheel?[4];
+        /// <summary>What the car shows that its model does not have; any runs the free run in sc_free</summary>
+        public StreetCorsa.Parts.Cars.ShownSet? Shown { get; set; }
 
         public override string Description => $"Configure free run: {CarId} on {TrackId}{(string.IsNullOrEmpty(TrackConfig) ? "" : "/" + TrackConfig)}";
 

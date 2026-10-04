@@ -494,7 +494,7 @@ namespace StreetCorsa.Services.Configuration
             sb.AppendLine($"SKIN={IniId(intent.Skin, "skin")}");
             sb.AppendLine($"TRACK={IniId(intent.TrackId, "track")}");
             // A car with parts its model does not have runs in sc_free, which puts them on and leaves the session to AC
-            var shown = intent.Wheels.Any(w => w != null);
+            var shown = intent.Shown != null;
             if (shown) sb.AppendLine($"__CM_CUSTOM_MODE={FreeRunModeId}");
             sb.AppendLine();
 
@@ -503,7 +503,7 @@ namespace StreetCorsa.Services.Configuration
             if (shown)
             {
                 sb.AppendLine("[STREET_CORSA]");
-                foreach (var (key, value) in StreetCorsa.Models.Race.RaceStartState.WheelKeys(0, intent.Wheels)) sb.AppendLine($"{key}={value}");
+                foreach (var (key, value) in StreetCorsa.Models.Race.RaceStartState.ShownKeys(0, intent.Shown)) sb.AppendLine($"{key}={value}");
                 sb.AppendLine();
             }
 

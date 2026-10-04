@@ -69,13 +69,14 @@ public sealed class ShownPartsTests : IDisposable
     }
 
     [Fact]
-    public void A_corner_with_a_wheel_names_it_in_race_ini_by_acs_wheel_name()
+    public void A_corner_with_a_wheel_names_it_in_race_ini_by_acs_wheel_name_and_an_engine_part_by_its_number()
     {
         var rim = new ShownModel(ShownParts.FileName(Cragar), "x.kn5");
         var tyre = new ShownModel(ShownParts.FileName(Slick), "y.kn5");
         var start = new RaceStartState
         {
-            Wheels = [null, null, new ShownWheel(rim), new ShownWheel(rim, tyre, Matrix4x4.CreateTranslation(0.027f, 0, 0))]
+            Shown = ShownSet.Of([null, null, new ShownWheel(rim), new ShownWheel(rim, tyre, Matrix4x4.CreateTranslation(0.027f, 0, 0))],
+                [new ShownModelAt(new ShownModel(ShownParts.FileName("engines/gm/blower"), "z.kn5"), Matrix4x4.CreateTranslation(0, 0.8f, 1.2f))])
         };
 
         var keys = start.IniKeys(1).ToDictionary(k => k.Key, k => k.Value);
@@ -85,7 +86,10 @@ public sealed class ShownPartsTests : IDisposable
         Assert.False(keys.ContainsKey("CAR_1_TYRE_LR"));
         Assert.Equal(@"parts\tyres_mopar_Firestone_11_slick_3.kn5", keys["CAR_1_TYRE_RR"]);
         Assert.Equal("1,0,0,0,1,0,0,0,1,0.027,0,0", keys["CAR_1_TYRE_RR_AT"]);
-        Assert.Equal(2, start.Models.Count());
+        // An engine part that stands out: its model and where it sits in the car's model
+        Assert.Equal(@"parts\engines_gm_blower.kn5", keys["CAR_1_PART_1"]);
+        Assert.Equal("1,0,0,0,1,0,0,0,1,0,0.8,1.2", keys["CAR_1_PART_1_AT"]);
+        Assert.Equal(3, start.Models.Count());
     }
 
     [Fact]
@@ -115,7 +119,7 @@ public sealed class ShownPartsTests : IDisposable
 
         Assert.True(ini.ApplyIntent(new StreetCorsa.Services.Configuration.Models.FreeRunIntent
         {
-            CarId = "car", PlayerName = "P", TrackId = "track", Wheels = [new ShownWheel(rim), null, null, null]
+            CarId = "car", PlayerName = "P", TrackId = "track", Shown = ShownSet.Of([new ShownWheel(rim), null, null, null])
         }));
         var race = File.ReadAllLines(Path.Combine(cfg, "race.ini"));
         Assert.Contains("__CM_CUSTOM_MODE=" + StreetCorsa.Services.Configuration.IniModificationService.FreeRunModeId, race);
@@ -146,5 +150,36 @@ public sealed class ShownPartsTests : IDisposable
         Assert.Equal("-- free", File.ReadAllText(Path.Combine(free, "mode.lua")));
         Assert.Equal("-- parts", File.ReadAllText(Path.Combine(free, "car_parts.lua")));
         Assert.Equal("kn5", File.ReadAllText(Path.Combine(free, "parts", "rims_mopar_cragar_8.kn5")));
+    }
+
+    [Fact]
+    public void A_supercharger_and_what_sits_on_it_are_shown_the_rest_of_the_engine_is_not()
+    {
+        // A GM small-block with a blower, mounted by the workbench's rules
+        var catalog = Catalog.Value;
+        var parts = new List<PartInstance> { new("engines/gm/GM_327_block") { ParentSlot = PartInstance.CarEngineSlot } };
+        foreach (var id in new[] { "engines/gm/GM_small_block_L_head", "engines/gm/GM_small_block_R_head", "engines/gm/Weiand_pro_street_manifold",
+                     "engines/generic/Weiand_8_71_supercharger", "engines/gm/stock_4brl_carburator" })
+        {
+            var loose = new PartInstance(id);
+            Workbench.Mount(parts, Workbench.FindPlaces(catalog, parts, loose)[0], loose);
+        }
+        var hubs = new CarAnchors(new Vector3(0.74f, 0.08f, 1.6f), new Vector3(-0.74f, 0.08f, 1.6f), new Vector3(0.77f, 0.05f, -1.3f), new Vector3(-0.77f, 0.05f, -1.3f));
+
+        var shown = ShownEngineParts.Of(catalog, PartTrees.ToInstalled(catalog, parts[0])!.Root, hubs, EngineLayout.Front);
+
+        Assert.Equal(["engines_generic_Weiand_8_71_supercharger.kn5", "engines_gm_stock_4brl_carburator.kn5"], shown.Select(s => Path.GetFileName(s.Model.Name)));
+        Assert.True(shown[1].At.Translation.Y > shown[0].At.Translation.Y);
+        Assert.Empty(ShownEngineParts.Of(catalog, PartTrees.ToInstalled(catalog, parts[0])!.Root, null, EngineLayout.Front));
+    }
+
+    [Fact]
+    public void Engine_parts_under_the_hood_go_up_onto_it_never_down()
+    {
+        ShownModelAt Part(float y) => new(new ShownModel("p.kn5", "p.kn5"), Matrix4x4.CreateTranslation(0, y, 1.3f));
+
+        Assert.Equal(0.34f, ShownEngineParts.Lift([Part(0.38f), Part(0.67f)], _ => 0.72f), 3);
+        Assert.Equal(0f, ShownEngineParts.Lift([Part(0.38f)], _ => 0.2f));
+        Assert.Equal(0f, ShownEngineParts.Lift([Part(0.38f)], _ => null));
     }
 }

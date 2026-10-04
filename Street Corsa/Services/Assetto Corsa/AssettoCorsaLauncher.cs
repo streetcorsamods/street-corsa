@@ -445,7 +445,7 @@ namespace StreetCorsa.Services
                     else if (intent is FreeRunLaunchIntent { HasShownParts: true } freeRun)
                     {
                         prepareWhy = "the free run mode could not be installed";
-                        prepareError = _raceMode.InstallFreeRun(AppSettings.Instance.AssettoCorsaPath, RaceStartState.ModelsOf(freeRun.Wheels));
+                        prepareError = _raceMode.InstallFreeRun(AppSettings.Instance.AssettoCorsaPath, freeRun.Shown!.Models);
                     }
 
                     foreach (var configIntent in prepareError == null ? configIntents : [])

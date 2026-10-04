@@ -10,6 +10,12 @@
   car's WHEEL_xx node, so they turn and steer with it, and the car's own meshes they replace are hidden. Nothing is
   written to the car's folder.
 
+  Engine parts that stand out (a supercharger and what sits on it): CAR_n_PART_1, _2... name a model, CAR_n_PART_k_AT
+  where it sits in the space of the car's model (placed by the game as its garage places the engine), loaded under the
+  car's root so it moves with the body. The game's place is an estimate that can leave the whole stack under the hood:
+  the parts go up until the first one's base (the supercharger's) sits on the car's surface straight above it (never
+  down), as the game's scenes do. A hood they go through stays as it is.
+
   What the car's meshes are: under the wheel node, the tyre and the brake by mesh or material name (TYRE and BRAKE
   below), the rim everything else. With a rim alone the car keeps its tyre, and the part fills the hole the hidden rim
   leaves: its outer lip as big as the car's, flush with where the car's lip was (no further out than the tyre's
@@ -269,8 +275,58 @@ local function setUpCorner(carIndex, root, corner, files)
   return { shown = shown, hidden = hidden }
 end
 
+-- How far over a part's place the ray that finds the hood starts, metres (ShownEngineParts.RayFrom)
+local RAY_FROM = 3
+
+-- The height of the car's surface straight above a point of its model, in the model's space; nil when nothing is there
+local function surfaceAbove(root, x, y, z)
+  local world = root:getWorldTransformationRaw()
+  local from = world:transformPoint(vec3(x, y + RAY_FROM, z))
+  local down = world:transformVector(vec3(0, -1, 0)):normalize()
+  -- Both sides of every face: the first one hit from above is the top of the hood
+  local distance = root:raycast(render.createRay(from, down, RAY_FROM * 2), nil, nil, nil, nil, 0)
+  if type(distance) ~= 'number' or distance < 0 then return nil end
+  return y + RAY_FROM - distance
+end
+
+-- The engine parts that stand out, under the car's root, lifted onto the hood
+local function setUpExtras(carIndex, root)
+  local parts = {}
+  for k = 1, 32 do
+    local key = 'CAR_' .. carIndex .. '_PART_' .. k
+    local file = raceText(key)
+    if not file then break end
+    parts[#parts + 1] = { file = file, at = raceMatrix(key .. '_AT') }
+  end
+
+  -- Measured before anything of ours is in: the ray would find our own parts
+  local lift = 0
+  local first = parts[1] and parts[1].at
+  if first then
+    local ok, surface = pcall(surfaceAbove, root, first.row4.x, first.row4.y, first.row4.z)
+    if ok and surface then lift = math.max(0, surface - first.row4.y) end
+    log(string.format('car %d: engine parts lifted %.3f m onto the hood%s', carIndex, lift, ok and '' or (' (no ray: ' .. tostring(surface) .. ')')))
+  end
+
+  local loaded = {}
+  for _, part in ipairs(parts) do
+    local file, at = part.file, part.at
+    local model = at and root:loadKN5(file)
+    if model then
+      at = at:clone()
+      at.row4.y = at.row4.y + lift
+      model:getTransformationRaw():set(at)
+      loaded[#loaded + 1] = model
+      log('car ' .. carIndex .. ': ' .. file .. ' in')
+    else
+      log('car ' .. carIndex .. ': ' .. file .. (at and ' did not load' or ' has no place'))
+    end
+  end
+  return loaded
+end
+
 local function setUpCar(carIndex)
-  local files, any = {}, false
+  local files, any = {}, raceText('CAR_' .. carIndex .. '_PART_1') ~= nil
   for corner = 1, 4 do
     local key = 'CAR_' .. carIndex .. '_'
     local rim = raceText(key .. 'RIM_' .. CORNERS[corner])
@@ -290,6 +346,9 @@ local function setUpCar(carIndex)
     return false
   end
 
+  local extrasOk, extras = pcall(setUpExtras, carIndex, root)
+  if not extrasOk then log('car ' .. carIndex .. ' engine parts failed: ' .. tostring(extras)) end
+
   local corners = {}
   for corner = 1, 4 do
     if files[corner] then
@@ -298,7 +357,7 @@ local function setUpCar(carIndex)
       if ok and result then corners[#corners + 1] = result end
     end
   end
-  return #corners > 0 and { corners = corners } or false
+  return (#corners > 0 or (extrasOk and #extras > 0)) and { corners = corners } or false
 end
 
 -- Every frame: each car set up once its model is there, then its own kept hidden and the wheel kept shown (AC shows and

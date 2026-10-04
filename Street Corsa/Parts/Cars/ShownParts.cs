@@ -83,28 +83,53 @@ public static class ShownParts
         tyre.OwnSlot != 0 ? tyre.OwnSlot : definition.Slots.FirstOrDefault()?.Id ?? 0;
 }
 
+/// <summary>A part's model a car shows, and where it sits in the space of the car's model (its main KN5)</summary>
+public sealed record ShownModelAt(ShownModel Model, Matrix4x4 At);
+
 /// <summary>
-/// The wheels of a car's corners (AC's order) as a scene is given them: equal when every corner is, so a scene that
-/// compares what it is shown sees the same car as the same
+/// What a car shows that its own model does not have, as a race or a scene is given it: the wheels of its corners (AC's
+/// order, null keeps the car's own) and the engine parts that stand out (ShownEngineParts). Equal when all of it is, so a
+/// scene that compares what it is shown sees the same car as the same.
 /// </summary>
-public sealed class WheelSet : IEquatable<WheelSet>
+public sealed class ShownSet : IEquatable<ShownSet>
 {
-    private WheelSet(IReadOnlyList<ShownWheel?> corners) => Corners = corners;
+    private ShownSet(IReadOnlyList<ShownWheel?> wheels, IReadOnlyList<ShownModelAt> extras)
+    {
+        Wheels = wheels;
+        Extras = extras;
+    }
 
-    public IReadOnlyList<ShownWheel?> Corners { get; }
+    public IReadOnlyList<ShownWheel?> Wheels { get; }
 
-    /// <summary>The set of <paramref name="corners"/>; null when every corner keeps the car's own</summary>
-    public static WheelSet? Of(IReadOnlyList<ShownWheel?>? corners) =>
-        corners == null || corners.All(c => c == null) ? null : new WheelSet(corners.ToArray());
+    public IReadOnlyList<ShownModelAt> Extras { get; }
 
-    public bool Equals(WheelSet? other) => other != null && Corners.SequenceEqual(other.Corners);
+    /// <summary>The models of all of it, once each</summary>
+    public IEnumerable<ShownModel> Models =>
+        Wheels.OfType<ShownWheel>().SelectMany(w => w.Tyre is { } tyre ? new[] { w.Rim, tyre } : [w.Rim])
+            .Concat(Extras.Select(e => e.Model))
+            .DistinctBy(m => m.Name, StringComparer.OrdinalIgnoreCase);
 
-    public override bool Equals(object? obj) => Equals(obj as WheelSet);
+    /// <summary>The set; null when the car shows nothing but its own model</summary>
+    public static ShownSet? Of(IReadOnlyList<ShownWheel?>? wheels, IReadOnlyList<ShownModelAt>? extras = null)
+    {
+        var someWheel = wheels != null && wheels.Any(w => w != null);
+        if (!someWheel && (extras == null || extras.Count == 0)) return null;
+        return new ShownSet(someWheel ? wheels!.ToArray() : new ShownWheel?[RunningGear.Corners], extras?.ToArray() ?? []);
+    }
+
+    /// <summary>The same set without its engine parts (the garage's parts view draws the whole engine itself)</summary>
+    public ShownSet? WithoutExtras() => Of(Wheels);
+
+    public bool Equals(ShownSet? other) =>
+        other != null && Wheels.SequenceEqual(other.Wheels) && Extras.SequenceEqual(other.Extras);
+
+    public override bool Equals(object? obj) => Equals(obj as ShownSet);
 
     public override int GetHashCode()
     {
         var hash = new HashCode();
-        foreach (var corner in Corners) hash.Add(corner);
+        foreach (var wheel in Wheels) hash.Add(wheel);
+        foreach (var extra in Extras) hash.Add(extra);
         return hash.ToHashCode();
     }
 }

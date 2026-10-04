@@ -6,27 +6,29 @@ using AcTools.Kn5File;
 using AcTools.Render.Base.Objects;
 using AcTools.Render.Kn5Specific.Objects;
 using StreetCorsa.Logging;
+using StreetCorsa.Parts;
 using StreetCorsa.Parts.Cars;
 
 namespace StreetCorsa.Controls;
 
 /// <summary>
-/// The wheels a car shows in the game's own scenes that its model does not have (<see cref="ShownParts"/>): the part
-/// models go in a node of their own under the car's WHEEL_xx node, so they turn and steer with it in every scripted
-/// move, and the car's meshes they replace are switched off. Placed by <see cref="WheelFit"/>, as the race mode places
-/// them in AC. Only the car's main model is loaded here, so there are no far LODs to leave alone.
+/// What a car shows in the game's own scenes that its model does not have (<see cref="ShownSet"/>), as the race mode puts
+/// it on in AC. The wheels: the part models go in a node of their own under the car's WHEEL_xx node, so they turn and
+/// steer with it in every scripted move, and the car's meshes they replace are switched off (placed by
+/// <see cref="WheelFit"/>). The engine parts that stand out: under the car's root, where they sit in its model. Only the
+/// car's main model is loaded here, so there are no far LODs to leave alone.
 /// </summary>
-public static class WheelParts
+public static class ShownPartsOnCar
 {
-    private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger("WheelParts");
+    private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger("ShownParts");
 
     /// <summary>The part models read so far, by file: a part's model is the same in every scene</summary>
     private static readonly ConcurrentDictionary<string, IKn5> Models = new(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>What is on a car: the wheels asked for, the nodes put in and the car's meshes switched off</summary>
+    /// <summary>What is on a car: the set asked for, the nodes put in and the car's meshes switched off</summary>
     private sealed class OnCar
     {
-        public IReadOnlyList<ShownWheel?> Wheels = [];
+        public ShownSet? Shown;
         public readonly List<(RenderableList Wheel, RenderableList Parts)> Nodes = [];
         public readonly List<Kn5RenderableObject> Hidden = [];
         public int Version;
@@ -35,37 +37,36 @@ public static class WheelParts
     private static readonly ConditionalWeakTable<Kn5RenderableCar, OnCar> Cars = new();
 
     /// <summary>
-    /// Makes <paramref name="car"/> show <paramref name="wheels"/> (AC's corner order; null keeps the car's own): what an
-    /// earlier call put on comes off first, and the same wheels again change nothing. The models are read off the UI
-    /// thread; the car is changed on the caller's. True when the car changed.
+    /// Makes <paramref name="car"/> show <paramref name="shown"/> (null: the car as it is): what an earlier call put on
+    /// comes off first, and the same set again changes nothing. The models are read off the UI thread; the car is changed
+    /// on the caller's. True when the car changed.
     /// </summary>
-    public static async Task<bool> SetAsync(Kn5RenderableCar? car, IReadOnlyList<ShownWheel?>? wheels)
+    public static async Task<bool> SetAsync(Kn5RenderableCar? car, ShownSet? shown)
     {
         if (car == null) return false;
-        wheels ??= [];
         var on = Cars.GetOrCreateValue(car);
-        if (on.Wheels.SequenceEqual(wheels)) return false;
+        if (Equals(on.Shown, shown)) return false;
 
         var version = ++on.Version;
-        on.Wheels = wheels;
+        on.Shown = shown;
         Clear(on);
-        if (wheels.All(w => w == null)) return true;
+        if (shown == null) return true;
 
-        var files = wheels.OfType<ShownWheel>().SelectMany(w => w.Tyre is { } tyre ? new[] { w.Rim.Source, tyre.Source } : [w.Rim.Source])
-            .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var files = shown.Models.Select(m => m.Source).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         try
         {
             await Task.Run(() => { foreach (var file in files) Models.GetOrAdd(file, f => Kn5.FromFile(f)); });
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
         {
-            Logger.Warning("A wheel part's model could not be read, the car keeps its own wheels: {Error}", ex.Message);
+            Logger.Warning("A part's model could not be read, the car is shown as it is: {Error}", ex.Message);
             return true;
         }
 
         // Asked again while the models were read: the later call puts its own on
         if (version != on.Version) return false;
 
+        var wheels = shown.Wheels;
         for (var corner = 0; corner < Math.Min(wheels.Count, WheelFit.WheelNodes.Length); corner++)
         {
             if (wheels[corner] is not { } wheel) continue;
@@ -78,7 +79,56 @@ public static class WheelParts
                 Logger.Warning(ex, "Wheel {Corner} of {Car} keeps its own", WheelFit.WheelNodes[corner], car.RootObject?.Name);
             }
         }
+
+        // The engine parts that stand out, where they sit in the car's model (its root's children), lifted onto the hood
+        if (shown.Extras.Count > 0 && car.RootObject is { } root && Matrix4x4.Invert(ToNumerics(root.LocalMatrix), out var fromRoot))
+        {
+            var lift = Matrix4x4.CreateTranslation(0, ShownEngineParts.Lift(shown.Extras, SurfaceAbove(car, root)), 0);
+            var extras = new RenderableList("sc_parts", SlimDX.Matrix.Identity);
+            foreach (var extra in shown.Extras) extras.Add(new Kn5RenderableFile(Models[extra.Model.Source], ToSlim(extra.At * lift * fromRoot)));
+            root.Add(extras);
+            extras.ParentMatrix = root.Matrix;
+            on.Nodes.Add((root, extras));
+        }
         return true;
+    }
+
+    /// <summary>
+    /// Where the car's surface is highest over a point of its model (the height in the model's space), null when nothing
+    /// of it is there: every triangle of its meshes the vertical line through the point crosses, whichever way it faces
+    /// </summary>
+    private static Func<Vector3, float?> SurfaceAbove(Kn5RenderableCar car, RenderableList root) => point =>
+    {
+        // World to the model's space: the root's own matrix kept, what it is placed by taken off
+        if (!Matrix4x4.Invert(ToNumerics(root.Matrix), out var fromWorld)) return null;
+        var toModel = fromWorld * ToNumerics(root.LocalMatrix);
+        float? highest = null;
+        foreach (var mesh in root.GetAllChildren().OfType<Kn5RenderableObject>())
+        {
+            if (!mesh.IsEnabled || mesh.Vertices is not { Length: > 0 } vertices || mesh.Indices is not { } indices) continue;
+            var m = ToNumerics(mesh.ParentMatrix) * toModel;
+            for (var t = 0; t + 2 < indices.Length; t += 3)
+            {
+                var a = Model(vertices[indices[t]].Position, m);
+                var b = Model(vertices[indices[t + 1]].Position, m);
+                var c = Model(vertices[indices[t + 2]].Position, m);
+                if (HeightAt(a, b, c, point.X, point.Z) is { } y && (highest == null || y > highest)) highest = y;
+            }
+        }
+        return highest;
+    };
+
+    private static Vector3 Model(SlimDX.Vector3 p, Matrix4x4 m) => Vector3.Transform(new Vector3(p.X, p.Y, p.Z), m);
+
+    /// <summary>The height of triangle abc over (x, z), null when (x, z) is outside it seen from above</summary>
+    private static float? HeightAt(Vector3 a, Vector3 b, Vector3 c, float x, float z)
+    {
+        var d = (b.Z - c.Z) * (a.X - c.X) + (c.X - b.X) * (a.Z - c.Z);
+        if (Math.Abs(d) < 1e-9f) return null;
+        var u = ((b.Z - c.Z) * (x - c.X) + (c.X - b.X) * (z - c.Z)) / d;
+        var v = ((c.Z - a.Z) * (x - c.X) + (a.X - c.X) * (z - c.Z)) / d;
+        var w = 1 - u - v;
+        return u < 0 || v < 0 || w < 0 ? null : u * a.Y + v * b.Y + w * c.Y;
     }
 
     /// <summary>Takes off what was put on: the car's meshes back on, the part nodes out and let go</summary>

@@ -258,6 +258,7 @@ public class CarViewport3D : D3DViewportBase
             if (viewport.StandMode) viewport.ResetCamera();
             viewport.QueueApplyParts();
             viewport.QueueApplyScenery();
+            viewport.ApplyShown();
         }));
 
     /// <summary>X-ray view: the car fades to a shell and its parts show in their places</summary>
@@ -451,15 +452,18 @@ public class CarViewport3D : D3DViewportBase
         set => SetValue(GearProperty, value);
     }
 
-    public static readonly DependencyProperty WheelsProperty = DependencyProperty.Register(
-        nameof(Wheels), typeof(IReadOnlyList<ShownWheel?>), typeof(CarViewport3D),
-        new PropertyMetadata(null, (d, _) => ((CarViewport3D)d).ApplyWheels()));
+    public static readonly DependencyProperty ShownProperty = DependencyProperty.Register(
+        nameof(Shown), typeof(ShownSet), typeof(CarViewport3D),
+        new PropertyMetadata(null, (d, _) => ((CarViewport3D)d).ApplyShown()));
 
-    /// <summary>The wheels the car shows that its own model does not have (<see cref="WheelParts"/>); null keeps its own</summary>
-    public IReadOnlyList<ShownWheel?>? Wheels
+    /// <summary>
+    /// What the car shows that its own model does not have (<see cref="ShownPartsOnCar"/>): its wheels, and the engine
+    /// parts that stand out except in the parts view, which draws the whole engine
+    /// </summary>
+    public ShownSet? Shown
     {
-        get => (IReadOnlyList<ShownWheel?>?)GetValue(WheelsProperty);
-        set => SetValue(WheelsProperty, value);
+        get => (ShownSet?)GetValue(ShownProperty);
+        set => SetValue(ShownProperty, value);
     }
 
     public static readonly DependencyProperty EngineLayoutProperty = DependencyProperty.Register(
@@ -596,7 +600,7 @@ public class CarViewport3D : D3DViewportBase
         ApplySkin();
         ApplyCarState();
         ApplyParts();
-        ApplyWheels();
+        ApplyShown();
         ApplyScenery();
         ApplyRadio();
         Invalidate();
@@ -1225,13 +1229,13 @@ public class CarViewport3D : D3DViewportBase
         });
     }
 
-    /// <summary>Puts <see cref="Wheels"/> on the car; from property callbacks too, so nothing escapes: the car keeps its own</summary>
-    private async void ApplyWheels()
+    /// <summary>Puts <see cref="Shown"/> on the car; from property callbacks too, so nothing escapes: the car keeps its own</summary>
+    private async void ApplyShown()
     {
         try
         {
             if (Renderer is not { } renderer) return;
-            if (await WheelParts.SetAsync(renderer.CarNode, Wheels) && renderer == Renderer)
+            if (await ShownPartsOnCar.SetAsync(renderer.CarNode, PartsVisible ? Shown?.WithoutExtras() : Shown) && renderer == Renderer)
             {
                 renderer.RefreshShadows();
                 Invalidate();
@@ -1239,7 +1243,7 @@ public class CarViewport3D : D3DViewportBase
         }
         catch (Exception ex)
         {
-            Logger.Error(ex, "The car's wheels could not be put on");
+            Logger.Error(ex, "The parts the car shows could not be put on");
         }
     }
 

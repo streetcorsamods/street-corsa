@@ -103,5 +103,30 @@ namespace StreetCorsa.Services.Parts
             IsAvailable && Specs(carDefinitionId) is { } specs
                 ? ShownParts.Wheels(parts, Catalog, RunningGearFactory.Choose(Catalog, specs))
                 : new ShownWheel?[RunningGear.Corners];
+
+        /// <summary>
+        /// Everything the car shows, in a race and in the game's scenes, that its own model does not have: its wheels and
+        /// the engine parts that stand out (<see cref="ShownEngineParts"/>); null when it shows nothing but its model
+        /// </summary>
+        ShownSet? Shown(Car car) => Shown(car.DefinitionId, car.Parts);
+
+        /// <summary>What a car of <paramref name="carDefinitionId"/> with <paramref name="parts"/> shows (a car for sale)</summary>
+        ShownSet? Shown(string carDefinitionId, List<PartInstance> parts)
+        {
+            if (!IsAvailable) return null;
+
+            // The engine is placed only when it has a part that stands out: placing it reads the car's model
+            var extras = new List<ShownModelAt>();
+            if (parts.FirstOrDefault(p => p.ParentSlot == PartInstance.CarEngineSlot) is { } engine && HasSupercharger(engine)
+                && PartTrees.ToInstalled(Catalog, engine) is { } tree)
+            {
+                var hubs = CarHubs.Of(System.IO.Path.Combine(StreetCorsa.Configuration.AppSettings.Instance.CarsPath, carDefinitionId));
+                extras = ShownEngineParts.Of(Catalog, tree.Root, hubs, EngineLayoutOf(carDefinitionId));
+            }
+            return ShownSet.Of(ShownWheels(carDefinitionId, parts), extras);
+
+            bool HasSupercharger(PartInstance part) =>
+                Catalog.Get(part.DefinitionId) is { } definition && PartKinds.Is(definition, "SuperCharger") || part.Children.Any(HasSupercharger);
+        }
     }
 }

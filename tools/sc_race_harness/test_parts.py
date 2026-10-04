@@ -27,13 +27,33 @@ V.__index = V
 function vec3(x, y, z) return setmetatable({ x = x or 0, y = y or 0, z = z or 0 }, V) end
 function vec4(x, y, z, w) local v = vec3(x, y, z); v.w = w or 0; return v end
 function V:set(x, y, z) self.x, self.y, self.z = x, y, z; return self end
+function V:normalize()
+  local l = math.sqrt(self.x ^ 2 + self.y ^ 2 + self.z ^ 2)
+  if l > 0 then self.x, self.y, self.z = self.x / l, self.y / l, self.z / l end
+  return self
+end
 
--- Row-major, a point a row vector (p * M), as CSP's mat4x4
+-- Row-major, a point a row vector (p * M), as CSP's mat4x4; a row is m[i][j] here and m.rowN.x/y/z/w as CSP has it
 local M = {}
-M.__index = M
+local ROW = { x = 1, y = 2, z = 3, w = 4 }
+local Row = {
+  __index = function(t, k) return rawget(t, ROW[k] or k) end,
+  __newindex = function(t, k, v) rawset(t, ROW[k] or k, v) end
+}
+M.__index = function(t, k)
+  local n = type(k) == 'string' and k:match('^row(%d)$')
+  if n then return rawget(t, tonumber(n)) end
+  return M[k]
+end
 function mat4x4(r1, r2, r3, r4)
-  local function row(r, d) return r and { r.x, r.y, r.z, r.w } or d end
+  local function row(r, d) return setmetatable(r and { r.x, r.y, r.z, r.w } or d, Row) end
   return setmetatable({ row(r1, { 1, 0, 0, 0 }), row(r2, { 0, 1, 0, 0 }), row(r3, { 0, 0, 1, 0 }), row(r4, { 0, 0, 0, 1 }) }, M)
+end
+function M:clone() local r = mat4x4(); r:set(self); return r end
+function M:transformVector(p)
+  local o = {}
+  for j = 1, 3 do o[j] = p.x * self[1][j] + p.y * self[2][j] + p.z * self[3][j] end
+  return vec3(o[1], o[2], o[3])
 end
 function M:set(o) for i = 1, 4 do for j = 1, 4 do self[i][j] = o[i][j] end end; return self end
 function M:mul(o)
@@ -105,6 +125,11 @@ function R:getTransformationRaw() return self.items[1].transform end
 function R:getLocalAABB() return self.items[1].min, self.items[1].max end
 function R:setVisible(v) for _, n in ipairs(self.items) do n.visible = v end; return self end
 function R:dispose() end
+-- The car's surface: world.hood is its height over every point (nil: nothing there)
+function R:raycast(ray)
+  if not world.hood then return -1 end
+  return ray.pos.y - world.hood
+end
 function R:loadKN5(file)
   local root = node(file, self.items[1])
   world.loaded[#world.loaded + 1] = { file = file, node = root }
@@ -191,13 +216,14 @@ ac = {
   }
 }
 io = { save = function() return true end }
+render = { createRay = function(pos, dir, length) return { pos = pos, dir = dir, length = length } end }
 '''
 
 
-def run(ini, blurred=None):
+def run(ini, blurred=None, hood=None):
     lua = lupa.LuaRuntime()
     world = lua.table_from({'ini': lua.table_from(ini), 'log': lua.table(), 'loaded': lua.table(),
-                            'blurred': lua.table_from(blurred or [])})
+                            'blurred': lua.table_from(blurred or []), 'hood': hood})
     lua.execute(STUB, world)
     with open(PARTS, encoding='utf-8') as f:
         parts = lua.execute(f.read())
@@ -314,7 +340,29 @@ def blurred_objects_go_and_a_blurred_wheel_node_is_kept_shown():
     check('a blurred wheel node is kept shown, its blurred one hidden again', world.wheels.LF.visible and not world.blur.visible, log)
 
 
+def an_engine_part_goes_under_the_car_where_it_sits():
+    _, world = run({'CAR_0_PART_1': r'parts\engines_blower.kn5', 'CAR_0_PART_1_AT': '1,0,0, 0,1,0, 0,0,1, 0,0.8,1.2'})
+    part = [i for i in world.loaded.values() if i.file.endswith('engines_blower.kn5')]
+    t = part and matrix(part[0].node.transform)
+    check('an engine part goes under the car where it sits',
+          part and part[0].node.parent.name == 'carRoot' and near(t[3][1], 0.8) and near(t[3][2], 1.2), list(world.log.values()))
+
+
+def engine_parts_under_the_hood_go_up_onto_it_and_never_down():
+    ini = {'CAR_0_PART_1': 'blower.kn5', 'CAR_0_PART_1_AT': '1,0,0, 0,1,0, 0,0,1, 0,0.38,1.3',
+           'CAR_0_PART_2': 'carb.kn5', 'CAR_0_PART_2_AT': '1,0,0, 0,1,0, 0,0,1, 0,0.67,1.44'}
+    _, world = run(ini, hood=0.72)
+    at = {i.file: matrix(i.node.transform) for i in world.loaded.values()}
+    check('engine parts under the hood go up onto it, all of them alike',
+          near(at['blower.kn5'][3][1], 0.72) and near(at['carb.kn5'][3][1], 1.01), list(world.log.values()))
+    _, world = run(ini, hood=0.2)
+    at = {i.file: matrix(i.node.transform) for i in world.loaded.values()}
+    check('engine parts already over the surface stay where they are', near(at['blower.kn5'][3][1], 0.38), list(world.log.values()))
+
+
 a_corner_not_named_keeps_its_own_rim()
+an_engine_part_goes_under_the_car_where_it_sits()
+engine_parts_under_the_hood_go_up_onto_it_and_never_down()
 a_tyre_makes_the_whole_wheel_ours_as_big_as_acs_tyre()
 a_tyre_without_its_place_on_the_rim_leaves_the_car_its_tyre()
 blurred_objects_go_and_a_blurred_wheel_node_is_kept_shown()

@@ -247,7 +247,7 @@ namespace StreetCorsa.Screens.Station
             Light = StreetLights.At(_gameState.Date);
             Stage.Time = _gameState.Date;
             PlayerCar = new StreetCar(Path.Combine(AppSettings.Instance.CarsPath, _car.DefinitionId), string.IsNullOrEmpty(_car.SkinId) ? null : _car.SkinId,
-                WheelSet.Of(_partsService.ShownWheels(_car)));
+                _partsService.Shown(_car));
             OnPropertyChanged(nameof(Station));
             OnPropertyChanged(nameof(Title));
             OnPropertyChanged(nameof(Light));
