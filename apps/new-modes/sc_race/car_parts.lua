@@ -21,6 +21,10 @@
   it (a model loaded straight under the car's root was placed but never drawn, one in the node over a wheel went round
   with the wheel: found in the game 2026-10-03). A hood a part goes through stays as it is.
 
+  Wear: CAR_n_LOOK=looks\....kn5 names the car's wear layer (rust, worn paint, scrapes, a cracked windscreen; the game
+  draws it for the car, docs/roadmap.md step 28 ideas 3 and 4): a model over the car's body in the space of its model,
+  loaded into the body node like the engine parts, always.
+
   Blur: the car's blurred_objects.ini objects of a named corner are hidden (our parts have no blurred model), except a
   tyre's while the car keeps its tyre; one that is the wheel node itself or holds it (some cars swap the whole wheel at
   speed) is kept shown.
@@ -453,8 +457,24 @@ local function setUpExtras(carIndex, root)
   return loaded
 end
 
+-- The car's wear layer over its body, where the car's model is
+local function setUpLook(carIndex, root)
+  local file = raceText('CAR_' .. carIndex .. '_LOOK')
+  if not file then return nil end
+  local holder = bodyNode(root) or root
+  local fromCar = modelSpace(carIndex, root):mul(holder:getWorldTransformationRaw():inverse())
+  local layer = holder:loadKN5(file)
+  if not layer then
+    log('car ' .. carIndex .. ': its wear ' .. file .. ' did not load')
+    return nil
+  end
+  layer:getTransformationRaw():set(fromCar)
+  log('car ' .. carIndex .. ': wear ' .. file .. ' put on in ' .. tostring(holder:name()))
+  return layer
+end
+
 local function setUpCar(carIndex)
-  local files, any = {}, raceText('CAR_' .. carIndex .. '_PART_1') ~= nil
+  local files, any = {}, raceText('CAR_' .. carIndex .. '_PART_1') ~= nil or raceText('CAR_' .. carIndex .. '_LOOK') ~= nil
   for corner = 1, 4 do
     local key = 'CAR_' .. carIndex .. '_'
     local rim = raceText(key .. 'RIM_' .. CORNERS[corner])
@@ -480,6 +500,10 @@ local function setUpCar(carIndex)
   local extrasOk, extras = pcall(setUpExtras, carIndex, root)
   if not extrasOk then log('car ' .. carIndex .. ' engine parts failed: ' .. tostring(extras)) end
 
+  -- After the engine parts: their rays must not find the layer
+  local lookOk, look = pcall(setUpLook, carIndex, root)
+  if not lookOk then log('car ' .. carIndex .. ' wear failed: ' .. tostring(look)) end
+
   local corners = {}
   for corner = 1, 4 do
     if files[corner] then
@@ -488,7 +512,7 @@ local function setUpCar(carIndex)
       if ok and result then corners[#corners + 1] = result end
     end
   end
-  return (#corners > 0 or (extrasOk and #extras > 0)) and { corners = corners } or false
+  return (#corners > 0 or (extrasOk and #extras > 0) or (lookOk and look)) and { corners = corners } or false
 end
 
 -- Every frame: each car set up once its model is there, then its own kept hidden and the wheel kept shown (AC shows and

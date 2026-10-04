@@ -24,6 +24,49 @@ public sealed class ConditionRules
     /// <summary>Dirt a body picks up per km of racing, on top of what AC gives it (on dirt, in the wet)</summary>
     public double DirtPerKm { get; set; } = 0.01;
 
+    /// <summary>
+    /// A used car's rust and worn paint as it comes into the game, at the worst condition (they shrink with a better one,
+    /// rolled between 0.3 and 1.2 of it for rust, 0.4 and 1.2 for paint): a dealer's lot cleans its cars up, a private car
+    /// comes as its owner left it (<see cref="Parts.Cars.CarLooks.Roll"/>)
+    /// </summary>
+    public double DealerRust { get; set; } = 0.35;
+
+    public double PrivateRust { get; set; } = 0.8;
+
+    public double DealerPaintWear { get; set; } = 0.6;
+
+    public double PrivatePaintWear { get; set; } = 1.1;
+
+    /// <summary>The chance a used car comes with a cracked windscreen, at the worst condition</summary>
+    public double DealerCrackChance { get; set; } = 0.05;
+
+    public double PrivateCrackChance { get; set; } = 0.35;
+
+    /// <summary>The dirt a used car comes with: up to this on a dealer's washed car; between these on a private one</summary>
+    public double DealerDirt { get; set; } = 0.08;
+
+    public double PrivateDirtMin { get; set; } = 0.15;
+
+    public double PrivateDirtMax { get; set; } = 0.6;
+
+    /// <summary>
+    /// Rust a day: this times the rust there is plus <see cref="RustStart"/> times the worn paint (a sound body with sound
+    /// paint does not start to rust). A car with a third of its body rusted gains about a tenth more in two months.
+    /// </summary>
+    public double RustPerDay { get; set; } = 0.0015;
+
+    public double RustStart { get; set; } = 0.1;
+
+    /// <summary>A front zone hit this hard (km/h) cracks the windscreen; one this hard cracks it right across</summary>
+    public double CrackFromKmh { get; set; } = 25;
+
+    public double ShatteredKmh { get; set; } = 70;
+
+    /// <summary>A spring bent past this (its condition, 0..1) lets its corner sag, by up to <see cref="MostSag"/> metres broken</summary>
+    public double SagFrom { get; set; } = 0.6;
+
+    public double MostSag { get; set; } = 0.05;
+
     /// <summary>Less fuel than this, in litres, and the tank is dry</summary>
     public double EmptyTankLitres { get; set; } = 0.25;
 

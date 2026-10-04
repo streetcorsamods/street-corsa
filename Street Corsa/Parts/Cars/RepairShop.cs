@@ -64,7 +64,23 @@ public static class RepairShop
     /// <summary>The job that puts a can of gas in a dry car</summary>
     public const string CanOfGas = "can_of_gas";
 
+    /// <summary>Rust cut out and the body resprayed (<see cref="Rules.RepairRules.RustCost"/>)</summary>
+    public static decimal RustCost => Rules.RuleBook.Current.Repairs.RustCost;
+
+    /// <summary>A respray for paint worn all over</summary>
+    public static decimal PaintCost => Rules.RuleBook.Current.Repairs.PaintCost;
+
+    public static decimal WindscreenCost => Rules.RuleBook.Current.Repairs.WindscreenCost;
+
+    /// <summary>Less rust than this is not worth a body shop's while; less worn paint than this is not worth a respray</summary>
+    private const double SomeRust = 0.02;
+
+    private const double SomePaintWear = 0.05;
+
     public const string Body = "body";
+    public const string Rust = "rust";
+    public const string Paint = "paint";
+    public const string Windscreen = "windscreen";
     public const string Engine = "engine";
     public const string Gearbox = "gearbox";
 
@@ -109,6 +125,29 @@ public static class RepairShop
             jobs.Add(new RepairJob(Body, PartWords.Say("repair.job.body"), detail, LabourAt(prices) + Math.Round(BodyCostPerKmh * (decimal)body * (decimal)prices),
                 body < SmallBodyJobKmh ? GameAction.GarageWorkMinor : GameAction.GarageWorkMajor,
                 () => { car.BodyDamageKmh = new double[CarCondition.Zones]; Refresh(); }));
+        }
+
+        // Rust cut out and the body resprayed, or the paint alone; a cracked windscreen replaced
+        var rust = Unit.Clamp01(car.Rust, 0);
+        var paint = Unit.Clamp01(car.PaintWear, 0);
+        if (rust >= SomeRust)
+        {
+            jobs.Add(new RepairJob(Rust, PartWords.Say("repair.job.rust"), PartWords.Say("repair.job.rust.detail", ("rust", rust * 100), ("paint", paint * 100)),
+                LabourAt(prices) + Math.Round((RustCost * (decimal)rust + PaintCost * (decimal)paint) * (decimal)prices),
+                rust < 0.25 ? GameAction.GarageWorkMinor : GameAction.GarageWorkMajor,
+                () => { car.Rust = 0; car.PaintWear = 0; }));
+        }
+        else if (paint >= SomePaintWear)
+        {
+            jobs.Add(new RepairJob(Paint, PartWords.Say("repair.job.paint"), PartWords.Say("repair.job.paint.detail", ("paint", paint * 100)),
+                LabourAt(prices) + Math.Round(PaintCost * (decimal)paint * (decimal)prices), GameAction.GarageWorkMinor,
+                () => { car.Rust = 0; car.PaintWear = 0; }));
+        }
+
+        if (Unit.Clamp01(car.GlassCracks, 0) >= 0.01)
+        {
+            jobs.Add(new RepairJob(Windscreen, PartWords.Say("repair.job.windscreen"), PartWords.Say("repair.job.windscreen.detail"),
+                LabourAt(prices) + PartPricing.Round((double)WindscreenCost * prices), GameAction.GarageWorkMinor, () => car.GlassCracks = 0));
         }
 
         if (catalog == null || groupOf == null) return jobs;

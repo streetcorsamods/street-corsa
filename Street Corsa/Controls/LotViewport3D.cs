@@ -9,6 +9,7 @@ using AcTools.Render.Kn5SpecificForward;
 using AcTools.Render.Kn5SpecificForwardDark.Lights;
 using StreetCorsa.Controls.Street;
 using StreetCorsa.Logging;
+using StreetCorsa.Looks;
 using StreetCorsa.Services.Catalog;
 using StreetCorsa.Services.Scripting;
 using StreetCorsa.Services.Street;
@@ -404,6 +405,9 @@ public class LotViewport3D : D3DViewportBase
 
         var budget = CarByteBudget;
 
+        // Every car's wear is made at once, on the side, while the cars load one by one: each finds its own ready
+        WarmWear(cars);
+
         for (var i = 0; i < cars.Count; i++)
         {
             if (Renderer != renderer || !IsLoaded) return;
@@ -453,7 +457,7 @@ public class LotViewport3D : D3DViewportBase
                     car.SkinId ?? Kn5RenderableCar.DefaultSkin, RendererToken));
 
                 if (Renderer != renderer || !IsLoaded) return;
-                await ShownPartsOnCar.SetAsync(slot.CarNode, car.Shown);
+                await ShownPartsOnCar.SetAsync(slot.CarNode, car.Shown, WearLayer.LotPicture);
                 if (Renderer != renderer || !IsLoaded) return;
 
                 Place(slot, car);
@@ -515,12 +519,22 @@ public class LotViewport3D : D3DViewportBase
     /// taking the renderer's lock, so two at once race each other and the drawing. Reading the .kn5 off disk
     /// is the slow part and that is already off this thread.
     /// </summary>
+    /// <summary>Starts making the wear of <paramref name="cars"/> off the UI thread, all at once</summary>
+    private static void WarmWear(IReadOnlyList<LotCarPlacement> cars)
+    {
+        foreach (var car in cars)
+            if (car.Shown?.Look is { } look && Directory.Exists(car.CarDirectory)) _ = WearLayer.WarmAsync(car.CarDirectory, look, WearLayer.LotPicture);
+    }
+
     private async Task LoadCarsAsync(IReadOnlyList<LotCarPlacement> cars)
     {
         // The slot the scene is built around: shadows and reflections are worked out from it, so give it the
         // car standing nearest the middle of the lot
         var main = MostCentralIndex(cars);
         var budget = CarByteBudget;
+
+        // Every car's wear is made at once, on the side, while the cars load one by one: each finds its own ready
+        WarmWear(cars);
 
         for (var i = 0; i < cars.Count; i++)
         {
@@ -562,7 +576,7 @@ public class LotViewport3D : D3DViewportBase
                     car.SkinId ?? Kn5RenderableCar.DefaultSkin, RendererToken));
 
                 if (Renderer != renderer || !IsLoaded) return;
-                await ShownPartsOnCar.SetAsync(slot.CarNode, car.Shown);
+                await ShownPartsOnCar.SetAsync(slot.CarNode, car.Shown, WearLayer.LotPicture);
                 if (Renderer != renderer || !IsLoaded) return;
 
                 Place(slot, car);

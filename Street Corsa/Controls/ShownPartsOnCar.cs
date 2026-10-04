@@ -8,6 +8,7 @@ using AcTools.Render.Base.Structs;
 using AcTools.Render.Kn5Specific.Objects;
 using AcTools.Render.Kn5Specific.Textures;
 using StreetCorsa.Logging;
+using StreetCorsa.Looks;
 using StreetCorsa.Parts;
 using StreetCorsa.Parts.Cars;
 using static StreetCorsa.Helpers.Matrices;
@@ -57,12 +58,21 @@ public static class ShownPartsOnCar
 
     private static readonly ConditionalWeakTable<Kn5RenderableCar, OnCar> Cars = new();
 
+    /// <summary>
+    /// How the corners of <paramref name="car"/> sit as it was last asked to show (<see cref="ShownSet.Heights"/>): what
+    /// the scene's body rock leans its body by (CarBodyRock); null when as its model has them
+    /// </summary>
+    public static CornerHeights? HeightsOf(Kn5RenderableCar? car) =>
+        car != null && Cars.TryGetValue(car, out var on) ? on.Shown?.Heights : null;
+
     /// <summary>A part model drawn with the car's one set of its textures</summary>
-    private sealed class PartFile(IKn5 kn5, SlimDX.Matrix matrix, OnCar on) : Kn5RenderableFile(kn5, matrix)
+    /// <param name="loadAtOnce">Its pictures loaded as it is first drawn, not on the side: the wear layer's, which are DDS
+    /// with their mips (nothing to decode) and must not be drawn a frame without them</param>
+    private sealed class PartFile(IKn5 kn5, SlimDX.Matrix matrix, OnCar on, bool loadAtOnce = false) : Kn5RenderableFile(kn5, matrix)
     {
         protected override ITexturesProvider InitializeTextures(IDeviceContextHolder contextHolder)
         {
-            if (!on.Textures.TryGetValue(OriginalFile, out var textures)) on.Textures[OriginalFile] = textures = new Kn5TexturesProvider(OriginalFile, true);
+            if (!on.Textures.TryGetValue(OriginalFile, out var textures)) on.Textures[OriginalFile] = textures = new Kn5TexturesProvider(OriginalFile, !loadAtOnce);
             return new Lent(textures);
         }
 
@@ -80,7 +90,9 @@ public static class ShownPartsOnCar
     /// comes off first, and the same set again changes nothing. The models are read off the UI thread; the car is changed
     /// on the caller's. True when the car changed. Never throws for what the part models or the car hold.
     /// </summary>
-    public static async Task<bool> SetAsync(Kn5RenderableCar? car, ShownSet? shown)
+    /// <param name="wearPicture">How big the car's wear picture is drawn (<see cref="WearLayer.FullPicture"/>, or
+    /// <see cref="WearLayer.LotPicture"/> for a car among many)</param>
+    public static async Task<bool> SetAsync(Kn5RenderableCar? car, ShownSet? shown, int wearPicture = WearLayer.FullPicture)
     {
         if (car == null) return false;
         var on = Cars.GetOrCreateValue(car);
@@ -121,16 +133,48 @@ public static class ShownPartsOnCar
             }
         }
 
-        if (shown.Extras.Count == 0) return true;
+        if (shown.Extras.Count > 0)
+        {
+            try
+            {
+                if (!await PutExtrasAsync(car, shown, models, on, version)) return false;
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                Logger.Warning(ex, "The engine parts of {Car} are not shown", car.RootObject?.Name);
+            }
+        }
+
+        if (shown.Look is not { } look) return true;
         try
         {
-            return await PutExtrasAsync(car, shown, models, on, version);
+            return await PutLookAsync(car, look, on, version, wearPicture);
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            Logger.Warning(ex, "The engine parts of {Car} are not shown", car.RootObject?.Name);
+            Logger.Warning(ex, "The wear of {Car} is not shown", car.RootObject?.Name);
             return true;
         }
+    }
+
+    /// <summary>
+    /// The car's wear layer (<see cref="WearLayer"/>) over its body, in its model's space; made off the UI thread (the first
+    /// time for a model it looks the car over). False when the car was asked to show something else in the meantime.
+    /// </summary>
+    private static async Task<bool> PutLookAsync(Kn5RenderableCar car, CarLook look, OnCar on, int version, int picture)
+    {
+        var model = car.OriginalFile;
+        var kn5Root = ToNumerics(model.RootNode.Transform);
+        if (car.RootObject is not { } root || !Matrix4x4.Invert(kn5Root, out var fromRoot)) return true;
+
+        var layer = await Task.Run(() => WearLayer.For(model, look, picture));
+        if (version != on.Version) return false;
+        if (layer == null) return true;
+
+        var node = new RenderableList("sc_look", SlimDX.Matrix.Identity) { new PartFile(layer, ToSlim(fromRoot), on, loadAtOnce: true) };
+        root.Add(node);
+        on.Nodes.Add((root, node));
+        return true;
     }
 
     /// <summary>A part's model, read once while it is asked for; the least lately asked for of too many is let go of</summary>

@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using AcTools.Render.Base.Objects;
 using AcTools.Render.Kn5Specific.Objects;
 using StreetCorsa.Audio;
+using StreetCorsa.Parts.Cars;
 using Sx = SlimDX;
 
 namespace StreetCorsa.Controls;
@@ -93,6 +94,8 @@ internal sealed class CarBodyRock
         {
             _leftSign = lf.X >= rr.X ? 1f : -1f;
             _frontSign = lf.Z >= rr.Z ? 1f : -1f;
+            if (MathF.Abs(lf.X - rr.X) > 0.5f) _track = MathF.Abs(lf.X - rr.X);
+            if (MathF.Abs(lf.Z - rr.Z) > 1f) _wheelbase = MathF.Abs(lf.Z - rr.Z);
             _pivot = new Sx.Vector3((lf.X + rr.X) / 2f, RollCentreHeight, (lf.Z + rr.Z) / 2f);
         }
         else
@@ -104,6 +107,24 @@ internal sealed class CarBodyRock
     }
 
     public Kn5RenderableCar Car => _car;
+
+    // Between the wheels, across and along: what a corner's height turns into a lean by
+    private readonly float _track = 1.5f;
+    private readonly float _wheelbase = 2.7f;
+
+    /// <summary>
+    /// The lean that sets the body's corners at <paramref name="heights"/> on its wheels (a broken spring's corner low):
+    /// the mean as a lift, the difference between the sides as a roll, between the ends as a pitch. Rest for none.
+    /// </summary>
+    public BodyPose PoseOf(CornerHeights? heights)
+    {
+        if (heights == null) return BodyPose.Rest;
+        var left = (heights.LeftFront + heights.LeftRear) / 2;
+        var right = (heights.RightFront + heights.RightRear) / 2;
+        var front = (heights.LeftFront + heights.RightFront) / 2;
+        var rear = (heights.LeftRear + heights.RightRear) / 2;
+        return new BodyPose((left - right) / _track, (front - rear) / _wheelbase, (left + right) / 2);
+    }
 
     /// <summary>Where the car stands, the lean left out</summary>
     public Sx.Matrix Base => _base;

@@ -431,7 +431,16 @@ def a_car_whose_model_comes_late_gets_its_parts_once_it_is_there():
     check('a car whose model is not there at first gets its parts once it is', rim(world, 'LF') is not None, list(world.log.values()))
 
 
+def the_wear_layer_goes_on_the_body_in_the_models_space():
+    """The car's wear layer is always loaded, into the body node, where the model is (35 cm down on the Chevelle)"""
+    _, world = run({'CAR_0_MODEL_NODE': 'FLOOR', 'CAR_0_MODEL_AT': '1,0,0, 0,1,0, 0,0,1, 0,0,0', 'CAR_0_LOOK': 'looks/car_1.kn5'}, floor_y=-0.35)
+    layer = [i for i in world.loaded.values() if i.file == 'looks/car_1.kn5']
+    check('the wear layer goes into the body node, in the model space',
+          layer and layer[0].node.parent.name == 'BODYTR' and near(matrix(layer[0].node.transform)[3][1], -0.35), list(world.log.values()))
+
+
 a_wheel_that_names_no_tyre_keeps_the_mesh_well_outside_the_rest_as_its_tyre()
+the_wear_layer_goes_on_the_body_in_the_models_space()
 a_car_whose_model_comes_late_gets_its_parts_once_it_is_there()
 a_corner_not_named_keeps_its_own_rim()
 engine_parts_are_placed_and_judged_in_the_models_own_space()

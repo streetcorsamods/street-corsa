@@ -590,6 +590,9 @@ public class CarViewport3D : D3DViewportBase
         var car = hasCar ? CarDescription.FromDirectory(carDirectory) : null;
         var skinId = SkinId;
 
+        // The car's wear is made while its model loads, so it comes with the car
+        if (hasCar && Shown?.Look is { } look) _ = Looks.WearLayer.WarmAsync(carDirectory, look);
+
         var renderer = Renderer;
         if (renderer == null)
         {
@@ -1252,7 +1255,23 @@ public class CarViewport3D : D3DViewportBase
     }
 
     /// <summary>Puts <see cref="Shown"/> on the car; from property callbacks too, so nothing escapes: the car keeps its own</summary>
-    private async void ApplyShown()
+    // What the car was last asked to show, being put on
+    private Task _shownApplied = Task.CompletedTask;
+
+    /// <summary>
+    /// Waits, at most <paramref name="most"/>, until the car asked for is up with what it shows on (its wheels, its wear):
+    /// a screen holds the car back until then, so its wear does not come on in front of the player (the first time for a
+    /// model it takes a moment to make)
+    /// </summary>
+    public async Task ShownSettledAsync(TimeSpan most)
+    {
+        var until = DateTime.Now + most;
+        while (DateTime.Now < until && (!IsUpToDate || !_shownApplied.IsCompleted)) await Task.Delay(40);
+    }
+
+    private void ApplyShown() => _shownApplied = ApplyShownAsync();
+
+    private async Task ApplyShownAsync()
     {
         try
         {
@@ -1261,6 +1280,8 @@ public class CarViewport3D : D3DViewportBase
             {
                 renderer.RefreshShadows();
                 Invalidate();
+                // A sagging corner leans the body
+                OnPoseChanged();
             }
         }
         catch (Exception ex)

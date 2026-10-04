@@ -99,6 +99,16 @@ public sealed class MarketRules
     /// <summary>Share of the base price a car without its engine loses: the engine is what most of a car's worth is</summary>
     public decimal MissingEngineShare { get; set; } = 0.4m;
 
+    /// <summary>
+    /// Share of the base price a body all rust loses (cutting it out and welding in new metal costs that much), one with
+    /// its paint worn all over, and one with a cracked windscreen; each in proportion to how far it goes
+    /// </summary>
+    public decimal RustLoss { get; set; } = 0.3m;
+
+    public decimal PaintWearLoss { get; set; } = 0.08m;
+
+    public decimal CrackedScreenLoss { get; set; } = 0.02m;
+
     /// <summary>Share of the base price a corner loses without its rim and tyre (a car on blocks)</summary>
     public decimal MissingWheelShare { get; set; } = 0.03m;
 

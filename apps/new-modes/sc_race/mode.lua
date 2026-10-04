@@ -410,8 +410,9 @@ end
 --   fan:     the share of that the fan keeps up at a standstill (moving air does the rest by FULL_AIR_KMH)
 --   oil:     the g the sump holds its oil to (a stock pan surges first)
 -- The fuel the car goes in with (CAR_n_FUEL, litres; below 0 fills the tank) and its dirt (CAR_n_DIRT, 0 to 1) are
--- the career's too. A car that runs its tank dry is out of the race. One local for all of it: the chunk is at Lua's
--- limit of 200.
+-- the career's too. A car that runs its tank dry is out of the race. The body gets dirtier while its wheels run off the
+-- track, on grass, dirt or gravel (docs/roadmap.md, step 28 ideas 3 and 4): DIRT_PER_S with all four wheels there at
+-- speed, set into AC as it goes so it shows, and reported. One local for all of it: the chunk is at Lua's limit of 200.
 local engineHeat = (function()
   local M = {}
 
@@ -435,6 +436,9 @@ local engineHeat = (function()
   local OIL_LIFE = 10       -- life a dry sump costs each second at the limiter under throttle (off it, the bearings
                             -- carry little)
   local DRY_TANK = 0.02     -- litres: the engine dies
+  local DIRT_PER_S = 0.015  -- dirt a second with all four wheels off the track at DIRT_KMH or faster (20 s of it: 0.3)
+  local DIRT_KMH = 30
+  local DIRT_SET_S = 0.5    -- how often the dirt is set into AC
 
   local function clamp01(x) return math.max(0, math.min(1, x)) end
   local function rounded(x, places) local k = 10 ^ places; return math.floor(x * k + 0.5) / k end
@@ -461,6 +465,8 @@ local engineHeat = (function()
     end
     local dirt = readNumbers(prefix .. 'DIRT', 1)
     if dirt then pcall(ac.setBodyDirt, carIndex, clamp01(dirt[1])) end
+    h.dirt = dirt and clamp01(dirt[1]) or 0
+    h.dirtSetIn = 0
 
     local fuel = readNumbers(prefix .. 'FUEL', 1)
     if physics.allowed() then
@@ -553,6 +559,27 @@ local engineHeat = (function()
     end
   end
 
+  -- The body's dirt, one frame: the share of the wheels off the track (grass, dirt, gravel, sand, or off the track's
+  -- own surface) adds to it
+  local function soil(carIndex, car, h, dt)
+    local types = ac.SurfaceType or {}
+    local off = 0
+    for w = 0, 3 do
+      local wheel = car.wheels and car.wheels[w]
+      if wheel and ((types.Grass and wheel.surfaceType == types.Grass) or (types.Dirt and wheel.surfaceType == types.Dirt)
+          or (wheel.surfaceDirt or 0) > 0 or wheel.surfaceValidTrack == false) then
+        off = off + 0.25
+      end
+    end
+    if off <= 0 then return end
+    h.dirt = clamp01((h.dirt or 0) + DIRT_PER_S * off * math.min(1, car.speedKmh / DIRT_KMH) * dt)
+    h.dirtSetIn = (h.dirtSetIn or 0) - dt
+    if h.dirtSetIn <= 0 then
+      h.dirtSetIn = DIRT_SET_S
+      pcall(ac.setBodyDirt, carIndex, h.dirt)
+    end
+  end
+
   -- Every frame: the racers still running (running(data) says who), from the green; the police are left alone
   function M.update(dt, running)
     if not sim.isSessionStarted or dt <= 0 then return end
@@ -564,6 +591,12 @@ local engineHeat = (function()
         if not ok and not data.heatFault then
           data.heatFault = true
           ac.log('[Street Corsa] The heat model failed for car ' .. carIndex .. ': ' .. tostring(err))
+        end
+        -- Apart, so dirt that cannot be read never stops the heat
+        local soiled, soilErr = pcall(soil, carIndex, car, state(data), dt)
+        if not soiled and not data.dirtFault then
+          data.dirtFault = true
+          ac.log('[Street Corsa] The dirt failed for car ' .. carIndex .. ': ' .. tostring(soilErr))
         end
       end
     end
@@ -580,7 +613,7 @@ local engineHeat = (function()
     local car = ac.getCar(carIndex)
     if car then
       pcall(function() condition.max_fuel_litres = rounded(car.maxFuel, 2) end)
-      pcall(function() condition.dirt = rounded(clamp01(car.dirt), 3) end)
+      pcall(function() condition.dirt = rounded(clamp01(math.max(car.dirt, data and data.heat and data.heat.dirt or 0)), 3) end)
     end
     local h = data and data.heat
     if not h then return end

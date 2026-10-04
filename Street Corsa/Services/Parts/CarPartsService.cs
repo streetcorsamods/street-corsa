@@ -321,16 +321,17 @@ namespace StreetCorsa.Services.Parts
             }
         }
 
-        public ShownSet? Shown(string carDefinitionId, List<PartInstance> parts)
+        public ShownSet? Shown(string carDefinitionId, List<PartInstance> parts, CarLook? look = null, CornerHeights? heights = null)
         {
-            if (!IsAvailable) return null;
+            var directory = Path.Combine(AppSettings.Instance.CarsPath, carDefinitionId);
+            if (look is { IsClean: true }) look = null;
+            if (!IsAvailable) return look == null ? null : ShownSet.Of(null, null, CarHubs.FrameOf(directory), look, heights);
 
             // The engine's upper parts, any of which may stand out of the hood: whether they do is for whoever has the car's meshes
             var extras = new List<ShownModelAt>();
-            ModelFrame? frame = null;
+            var frame = look == null ? null : CarHubs.FrameOf(directory);
             if (parts.FirstOrDefault(p => p.ParentSlot == PartInstance.CarEngineSlot) is { } engine && PartTrees.ToInstalled(Catalog, engine) is { } tree)
             {
-                var directory = Path.Combine(AppSettings.Instance.CarsPath, carDefinitionId);
                 var hubs = CarHubs.Of(directory);
                 extras = ShownEngineParts.Of(Catalog, tree.Root, hubs == null ? null : hubs with { EngineOffset = EngineOffsetOf(carDefinitionId) },
                     EngineLayoutOf(carDefinitionId), FactoryEngineParts(carDefinitionId, tree.Root.Definition.Id));
@@ -340,7 +341,7 @@ namespace StreetCorsa.Services.Parts
             var wheels = Specs(carDefinitionId) is { } specs
                 ? ShownParts.Wheels(parts, Catalog, RunningGearFactory.Choose(Catalog, specs))
                 : new ShownWheel?[RunningGear.Corners];
-            return ShownSet.Of(wheels, extras, frame);
+            return ShownSet.Of(wheels, extras, frame, look, heights);
         }
 
         /// <summary>
