@@ -150,7 +150,7 @@ public abstract class OnboardViewport3D : D3DViewportBase
         var skin = SkinOrDefault(player.Directory, player.Skin);
 
         // The car's wear is made while its model loads, so it comes with the car
-        if (player.Shown?.Look is { } look && Directory.Exists(player.Directory)) _ = WearLayer.WarmAsync(player.Directory, look);
+        _ = WearLayer.WarmAsync(player.Directory, player.Shown);
 
         var data = SceneLights.DataOf(player.Directory, ex => Logger.Warning(ex, "The data of {Car} could not be read: it sits and looks as most cars do", player.Directory));
         var frame = SceneLights.FrameOf(data);

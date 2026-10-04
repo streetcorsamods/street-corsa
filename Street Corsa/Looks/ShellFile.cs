@@ -1,44 +1,49 @@
 using System.IO;
 using AcTools.Kn5File;
 using AcTools.Numerics;
+using StreetCorsa.Helpers;
 
 namespace StreetCorsa.Looks;
 
 /// <summary>
 /// A car model's <see cref="BodyShell"/> kept on disk, so it is worked out once for a model, not once a session: by the
-/// model file's path, size and time, so a model changed is looked at again. A file that cannot be read is no file: the
-/// shell is worked out again. A model with no paint is kept too, as such.
+/// model file's path, size and time and the way shells are worked out (<see cref="BodyShell.Version"/>), so a model
+/// changed, or a shell an older game worked out, is looked at again. A file that cannot be read is no file: the shell is
+/// worked out again. A model with no paint is kept too, as such.
 /// </summary>
 internal static class ShellFile
 {
-    private const string Magic = "SCSHELL2";
+    private static readonly string Magic = "SCSHELL" + BodyShell.Version;
 
-    /// <summary>The model as it is, what its kept shell and its race layers are named for: its path, size and time</summary>
+    /// <summary>
+    /// The model as it is, what its kept shell and its race layers are named for: its path, size and time, and the way its
+    /// shell is worked out
+    /// </summary>
     public static string KeyOf(string model)
     {
         var info = new FileInfo(model);
-        return $"{Path.GetFullPath(model).ToLowerInvariant()}|{info.Length}|{info.LastWriteTimeUtc.Ticks}";
+        return $"{Path.GetFullPath(model).ToLowerInvariant()}|{info.Length}|{info.LastWriteTimeUtc.Ticks}|{BodyShell.Version}";
     }
 
     /// <summary>The kept file for the model in <paramref name="model"/>, in <paramref name="folder"/></summary>
     public static string PathFor(string folder, string model)
     {
-        var hash = 2166136261u;
-        foreach (var c in KeyOf(model)) hash = (hash ^ c) * 16777619u;
-        return Path.Combine(folder, $"{Path.GetFileNameWithoutExtension(model)}_{hash:x8}.shell");
+        return Path.Combine(folder, $"{Path.GetFileNameWithoutExtension(model)}_{StableHash.Fnv(KeyOf(model)):x8}.shell");
     }
 
     /// <summary>
     /// The most of anything a file may say it holds: a count past it (a bad int, a file of some other kind with the same
-    /// magic) is a bad file, not an array of that size
+    /// magic) is a bad file, not an array of that size. A mesh's indices are bound by what is left of the file, not by a
+    /// count: a heavy model's mesh has many triangles to each of its (at most 65,536) corners.
     /// </summary>
     private const int MostMeshes = 100_000;
 
     private const int MostVertices = 65_536;
 
-    private const int MostIndices = 3 * 65_536;
-
     private const int MostOthers = 10_000;
+
+    /// <summary>A vertex's bytes in the file: position, normal, picture place, tangent</summary>
+    private const int VertexBytes = 11 * sizeof(float);
 
     /// <summary>The kept shell: found (null for a model with no paint), or not found when there is no good file</summary>
     public static bool TryRead(string path, out BodyShell? shell)
@@ -84,11 +89,15 @@ internal static class ShellFile
         }
     }
 
-    /// <summary>A count read, within <paramref name="most"/>; a bad file otherwise</summary>
-    private static int Count(BinaryReader reader, int most)
+    /// <summary>
+    /// A count read, within <paramref name="most"/> and within what is left of the file at <paramref name="bytesEach"/>
+    /// bytes each; a bad file otherwise
+    /// </summary>
+    private static int Count(BinaryReader reader, int most, int bytesEach = 1)
     {
         var count = reader.ReadInt32();
-        if (count < 0 || count > most) throw new InvalidDataException($"a count of {count} in a shell file");
+        var left = reader.BaseStream.Length - reader.BaseStream.Position;
+        if (count < 0 || count > most || (long)count * bytesEach > left) throw new InvalidDataException($"a count of {count} in a shell file");
         return count;
     }
 
@@ -96,8 +105,8 @@ internal static class ShellFile
     public static void Write(string path, BodyShell? shell)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        var temp = path + ".tmp";
-        using (var writer = new BinaryWriter(File.Create(temp)))
+        var bytes = new MemoryStream();
+        using (var writer = new BinaryWriter(bytes))
         {
             writer.Write(Magic);
             writer.Write(shell != null);
@@ -135,7 +144,7 @@ internal static class ShellFile
                 foreach (var name in shell.Paint) writer.Write(name);
             }
         }
-        File.Move(temp, path, overwrite: true);
+        SafeFile.WriteAllBytes(path, bytes.ToArray());
     }
 
     private static System.Numerics.Vector3 ReadVector(BinaryReader r) => new(r.ReadSingle(), r.ReadSingle(), r.ReadSingle());
@@ -152,12 +161,12 @@ internal static class ShellFile
         var meshes = new List<BodyShell.Mesh>();
         for (var m = Count(r, MostMeshes); m > 0; m--)
         {
-            var vertices = new Kn5Node.Vertex[Count(r, MostVertices)];
+            var vertices = new Kn5Node.Vertex[Count(r, MostVertices, VertexBytes)];
             for (var i = 0; i < vertices.Length; i++)
                 vertices[i] = new Kn5Node.Vertex(new Vec3(r.ReadSingle(), r.ReadSingle(), r.ReadSingle()),
                     new Vec3(r.ReadSingle(), r.ReadSingle(), r.ReadSingle()), new Vec2(r.ReadSingle(), r.ReadSingle()),
                     new Vec3(r.ReadSingle(), r.ReadSingle(), r.ReadSingle()));
-            var indices = new ushort[Count(r, MostIndices)];
+            var indices = new ushort[Count(r, int.MaxValue, sizeof(ushort))];
             for (var i = 0; i < indices.Length; i++) indices[i] = r.ReadUInt16();
             meshes.Add(new BodyShell.Mesh(vertices, indices));
         }

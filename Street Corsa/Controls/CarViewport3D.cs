@@ -591,7 +591,7 @@ public class CarViewport3D : D3DViewportBase
         var skinId = SkinId;
 
         // The car's wear is made while its model loads, so it comes with the car
-        if (hasCar && Shown?.Look is { } look) _ = Looks.WearLayer.WarmAsync(carDirectory, look);
+        if (hasCar) _ = Looks.WearLayer.WarmAsync(carDirectory, Shown);
 
         var renderer = Renderer;
         if (renderer == null)
@@ -1254,8 +1254,7 @@ public class CarViewport3D : D3DViewportBase
         });
     }
 
-    /// <summary>Puts <see cref="Shown"/> on the car; from property callbacks too, so nothing escapes: the car keeps its own</summary>
-    // What the car was last asked to show, being put on
+    /// <summary>What the car was last asked to show, being put on</summary>
     private Task _shownApplied = Task.CompletedTask;
 
     /// <summary>
@@ -1269,6 +1268,7 @@ public class CarViewport3D : D3DViewportBase
         while (DateTime.Now < until && (!IsUpToDate || !_shownApplied.IsCompleted)) await Task.Delay(40);
     }
 
+    /// <summary>Puts <see cref="Shown"/> on the car; from property callbacks too, so nothing escapes: the car keeps its own</summary>
     private void ApplyShown() => _shownApplied = ApplyShownAsync();
 
     private async Task ApplyShownAsync()

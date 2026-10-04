@@ -87,6 +87,9 @@ public static class RepairShop
     public const string Engine = "engine";
     public const string Gearbox = "gearbox";
 
+    /// <summary>A job for the car's looks (rust, paint, the windscreen): it does not get a car racing</summary>
+    public static bool IsCosmetic(RepairJob job) => job.Id is Rust or Paint or Windscreen;
+
     /// <summary>The springs and shocks of a corner (<see cref="RunningGear.CornerName"/>'s index after the dot)</summary>
     public static string Corner(int corner) => $"corner.{corner}";
 

@@ -21,6 +21,12 @@ namespace StreetCorsa.Looks;
 /// </summary>
 internal sealed class BodyShell
 {
+    /// <summary>
+    /// The way a shell is worked out: up by one whenever what <see cref="Of"/> picks changes, so the shells kept on disk
+    /// (<see cref="ShellFile"/>) and the races' layers worked out the old way are worked out again
+    /// </summary>
+    public const int Version = 3;
+
     /// <summary>How far the layer stands off the body, metres: enough that the two never fight over a pixel</summary>
     public const float StandOff = 0.0025f;
 
@@ -72,7 +78,7 @@ internal sealed class BodyShell
 
     /// <summary>Materials that are never the paint, by a word in their name</summary>
     private static readonly Regex NotPaint = new(
-        "glass|window|screen|shield|lens|light|lamp|tyre|tire|rim|wheel|chrome|chrom|grill|badge|logo|emblem|decal|plate|interior|^int_|_int_|seat|dash|carbon|exhaust|mirror|shadow|black|rubber|plastic|engine|brake|disc|caliper|gauge|steer|leather|carpet|headliner|ao_",
+        "glass|window|screen|shield|lens|light|lamp|tyre|tire|rim|wheel|chrome|chrom|grill|badge|logo|emblem|decal|plate|interior|^int_|_int_|seat|dash|carbon|exhaust|mirror|shadow|black|rubber|plastic|engine|brake|disc|caliper|gauge|steer|leather|leat|alcantara|upholst|fabric|cloth|cockpit|cpit|carpet|headliner|ao_",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private static readonly Regex Glass = new("glass|window|windscreen|windshield|vetro", RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -94,6 +100,9 @@ internal sealed class BodyShell
         public uint Material;
         public bool Wheel;
         public bool Seen;
+
+        /// <summary>The looks (<see cref="Looks"/>) it was seen from, one bit each</summary>
+        public int SeenFrom;
     }
 
     private sealed record SourceMesh(Kn5Node Node, Matrix4x4 ToModel, bool UnderWheel);
@@ -137,7 +146,9 @@ internal sealed class BodyShell
         }
         if (min.X > max.X) return null;
 
-        See(tris, min, max, t => MaterialOf(t.Material) is { } mat && IsGlass(mat));
+        // Glass hides what is behind it as the paint does: the cabin seen through the windows is not outside, and its seats
+        // and panels in a material no word catches would pass for paint
+        See(tris, min, max);
 
         // What is seen of each material, by area
         var seenArea = new Dictionary<uint, float>();
@@ -170,19 +181,31 @@ internal sealed class BodyShell
         var body = Build(tris.Where(t => t.Seen && !t.Wheel && paint.Contains(t.Material)), meshes, positions,
             (t, n) => Place(panels, pictureSize, SideOf(n, frontSign, leftSign), t));
 
-        // The windscreen: glass seen from outside that faces forwards, above the hood (headlamp lenses face forwards too,
-        // lower down). The way it faces is its corners' normals, as the body's views are: a face's winding is not to be
-        // trusted in a mod, and the rear window wound the wrong way would pass for the windscreen
+        // The windscreen: the cabin's glass, seen from ahead of the car, that faces forwards, above the hood (headlamp
+        // lenses face forwards too, lower down). Which way a pane faces is away from the middle of the cabin's glass: in a
+        // mod neither a face's winding nor its normals are to be trusted (many point the glass's normals inwards, and the
+        // rear window passes for the windscreen by them)
         var screenFloor = min.Y + (max.Y - min.Y) * 0.55f;
-        Vector3 Facing(Tri t)
+        var fromAhead = LooksFrom(new Vector3(0, 0, frontSign));
+
+        // Glass by its name or shader; for a model whose glass is "Material #53", whatever is see-through there
+        List<Tri> ScreenBy(Func<Kn5Material, bool> glass)
         {
-            var (node, toModel, _) = meshes[t.Mesh];
-            var face = FaceNormal(t);
-            var mean = NormalOf(node.Vertices[t.I0], toModel, face) + NormalOf(node.Vertices[t.I1], toModel, face) + NormalOf(node.Vertices[t.I2], toModel, face);
-            return mean.LengthSquared() > 1e-8f ? Vector3.Normalize(mean) : face;
+            var panes = tris.Where(t => t.Seen && !t.Wheel && MaterialOf(t.Material) is { } mat && glass(mat)
+                                        && (t.A.Y + t.B.Y + t.C.Y) / 3 > screenFloor).ToList();
+            var cabin = Vector3.Zero;
+            var area = 0f;
+            foreach (var t in panes)
+            {
+                cabin += (t.A + t.B + t.C) / 3 * Area(t);
+                area += Area(t);
+            }
+            if (area <= 0) return [];
+            cabin /= area;
+            return MainBand(panes.Where(t => (t.SeenFrom & fromAhead) != 0 && Outward(t, cabin).Z * frontSign > 0.25f).ToList(), min.Z, max.Z);
         }
-        var screenTris = tris.Where(t => t.Seen && !t.Wheel && MaterialOf(t.Material) is { } mat && IsGlass(mat)
-                                         && Facing(t).Z * frontSign > 0.25f && (t.A.Y + t.B.Y + t.C.Y) / 3 > screenFloor).ToList();
+        var screenTris = ScreenBy(IsGlass);
+        if (screenTris.Count == 0) screenTris = ScreenBy(SeeThrough);
         var screenMin = new Vector2(float.MaxValue);
         var screenMax = new Vector2(float.MinValue);
         foreach (var t in screenTris)
@@ -229,6 +252,46 @@ internal sealed class BodyShell
 
     private static float Area(Tri t) => Vector3.Cross(t.B - t.A, t.C - t.A).Length() / 2;
 
+    /// <summary>How finely the car's length is cut to find the windscreen's band, a share of it</summary>
+    private const float BandShare = 0.04f;
+
+    /// <summary>
+    /// Of the glass facing forwards, the windscreen's: the run of it along the car's length (no gap of a band) that holds the
+    /// most of its area. Headlamp lenses standing high at the nose, a light bar or a rear spoiler's glass are runs of their own.
+    /// </summary>
+    private static List<Tri> MainBand(List<Tri> panes, float minZ, float maxZ)
+    {
+        if (panes.Count == 0) return panes;
+        var bands = (int)MathF.Ceiling(1 / BandShare);
+        int BandOf(Tri t) => Math.Clamp((int)(((t.A.Z + t.B.Z + t.C.Z) / 3 - minZ) / Math.Max(1e-3f, maxZ - minZ) / BandShare), 0, bands - 1);
+        var areas = new float[bands];
+        foreach (var t in panes) areas[BandOf(t)] += Area(t);
+
+        // The runs of bands with glass in them; the one with the most area
+        var (bestFrom, bestTo, bestArea) = (0, -1, -1f);
+        for (var from = 0; from < bands;)
+        {
+            if (areas[from] <= 0)
+            {
+                from++;
+                continue;
+            }
+            var to = from;
+            var sum = 0f;
+            while (to < bands && areas[to] > 0) sum += areas[to++];
+            if (sum > bestArea) (bestFrom, bestTo, bestArea) = (from, to - 1, sum);
+            from = to;
+        }
+        return panes.Where(t => BandOf(t) >= bestFrom && BandOf(t) <= bestTo).ToList();
+    }
+
+    /// <summary>The way a face looks out of <paramref name="inside"/>: its normal, turned round when it points in</summary>
+    private static Vector3 Outward(Tri t, Vector3 inside)
+    {
+        var n = FaceNormal(t);
+        return Vector3.Dot(n, (t.A + t.B + t.C) / 3 - inside) < 0 ? -n : n;
+    }
+
     private static Vector3 FaceNormal(Tri t)
     {
         var n = Vector3.Cross(t.B - t.A, t.C - t.A);
@@ -251,28 +314,19 @@ internal sealed class BodyShell
     /// Marks the triangles seen from outside the car: it is looked at from 18 ways round (sides, ends, above, and between
     /// them), each time every triangle drawn into a depth buffer, then each triangle asked whether its middle or a point
     /// near a corner is at the front there. A triangle too small to fill a pixel is still asked, so the fine parts of a
-    /// mesh are not lost. See-through ones (glass, <paramref name="seeThrough"/>) are seen but hide nothing.
+    /// mesh are not lost. Every triangle hides what is behind it, glass too: what is seen only through a window is inside.
     /// </summary>
-    private static void See(List<Tri> tris, Vector3 min, Vector3 max, Func<Tri, bool> seeThrough)
+    private static void See(List<Tri> tris, Vector3 min, Vector3 max)
     {
-        var looks = new List<Vector3>();
-        foreach (var y in new[] { 0f, 0.6f })
-            for (var k = 0; k < 8; k++)
-            {
-                var a = k * MathF.PI / 4;
-                looks.Add(Vector3.Normalize(new Vector3(MathF.Cos(a), -y, MathF.Sin(a))));
-            }
-        looks.Add(-Vector3.UnitY);
-        looks.Add(Vector3.Normalize(new Vector3(0.3f, -1f, 0.2f)));
-
-        var hides = tris.Select(t => !seeThrough(t)).ToArray();
         var middle = (min + max) / 2;
         var radius = (max - min).Length() / 2 + 0.05f;
         var array = tris.ToArray();
-        var seen = new bool[array.Length];
+        var seen = new int[array.Length];
         // The looks at once, each with a depth buffer of its own: a triangle any of them sees is seen
-        Parallel.ForEach(looks, WearLayer.Work, look =>
+        Parallel.For(0, Looks.Length, WearLayer.Work, k =>
         {
+            var look = Looks[k];
+            var bit = 1 << k;
             var depth = System.Buffers.ArrayPool<float>.Shared.Rent(SeeResolution * SeeResolution);
             // The buffer's axes: across and up as seen along the look
             var up = MathF.Abs(look.Y) > 0.9f ? Vector3.UnitZ : Vector3.UnitY;
@@ -287,24 +341,51 @@ internal sealed class BodyShell
 
             Array.Fill(depth, float.MaxValue, 0, SeeResolution * SeeResolution);
             for (var i = 0; i < array.Length; i++)
-                if (hides[i]) Raster(depth, Project(array[i].A), Project(array[i].B), Project(array[i].C));
+                Raster(depth, Project(array[i].A), Project(array[i].B), Project(array[i].C));
 
             for (var i = 0; i < array.Length; i++)
             {
                 // A face seen edge on is not seen (it would find the empty pixels along the car's outline); either way
                 // round, since a mod's faces do not always wind the same way
-                if (Volatile.Read(ref seen[i]) || MathF.Abs(Vector3.Dot(FaceNormal(array[i]), look)) < EdgeOn) continue;
+                if (MathF.Abs(Vector3.Dot(FaceNormal(array[i]), look)) < EdgeOn) continue;
                 var a = Project(array[i].A);
                 var b = Project(array[i].B);
                 var c = Project(array[i].C);
                 var mid = (a + b + c) / 3;
                 if (Front(depth, mid) || Front(depth, Vector3.Lerp(mid, a, 0.8f)) || Front(depth, Vector3.Lerp(mid, b, 0.8f)) || Front(depth, Vector3.Lerp(mid, c, 0.8f)))
-                    Volatile.Write(ref seen[i], true);
+                    Interlocked.Or(ref seen[i], bit);
             }
             System.Buffers.ArrayPool<float>.Shared.Return(depth);
         });
 
-        for (var i = 0; i < array.Length; i++) tris[i] = array[i] with { Seen = seen[i] };
+        for (var i = 0; i < array.Length; i++) tris[i] = array[i] with { Seen = seen[i] != 0, SeenFrom = seen[i] };
+    }
+
+    /// <summary>The ways the car is looked at (where each look goes): round it level and from above, and down on it</summary>
+    private static readonly Vector3[] Looks = MakeLooks();
+
+    private static Vector3[] MakeLooks()
+    {
+        var looks = new List<Vector3>();
+        foreach (var y in new[] { 0f, 0.6f })
+            for (var k = 0; k < 8; k++)
+            {
+                var a = k * MathF.PI / 4;
+                looks.Add(Vector3.Normalize(new Vector3(MathF.Cos(a), -y, MathF.Sin(a))));
+            }
+        looks.Add(-Vector3.UnitY);
+        looks.Add(Vector3.Normalize(new Vector3(0.3f, -1f, 0.2f)));
+        return looks.ToArray();
+    }
+
+    /// <summary>The looks from the side <paramref name="side"/> points to (from ahead of the car, say), as bits</summary>
+    private static int LooksFrom(Vector3 side)
+    {
+        var bits = 0;
+        // A look from that side goes the other way, back across the car
+        for (var k = 0; k < Looks.Length; k++)
+            if (Vector3.Dot(Looks[k], side) < -0.3f) bits |= 1 << k;
+        return bits;
     }
 
     private static bool Front(float[] depth, Vector3 p)

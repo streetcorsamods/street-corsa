@@ -155,7 +155,7 @@ public class CarViewingViewport3D : D3DViewportBase
         var started = DateTime.Now;
 
         // The car's wear is made while the scene and its model load, so it comes with the car
-        if (stage.Shown?.Look is { } look && Directory.Exists(stage.CarDirectory)) _ = WearLayer.WarmAsync(stage.CarDirectory, look);
+        _ = WearLayer.WarmAsync(stage.CarDirectory, stage.Shown);
 
         var renderer = NewRenderer(null, scene);
         renderer.AutoAdjustTarget = false;

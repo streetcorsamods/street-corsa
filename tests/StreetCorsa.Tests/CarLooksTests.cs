@@ -325,4 +325,103 @@ public sealed class CarLooksTests
         // No cracks, no windscreen in the layer
         Assert.DoesNotContain(WearLayer.ScreenMaterial, WearLayer.For(car, new CarLook(0.4, 0, 0, 0, 0, 0, 0, 0, 3))!.Materials.Keys);
     }
+
+    [Fact]
+    public void AC_rounding_the_front_to_a_tenth_or_a_touch_on_a_dented_nose_cracks_no_windscreen()
+    {
+        // A rival's simulated race left 27.26 on the front; AC hands back 27.3
+        var rounded = WithGear();
+        rounded.BodyDamageKmh = [27.26, 0, 0, 0];
+        var report = CarCondition.ApplyRace(rounded, new RaceCarCondition { BodyDamageKmh = [27.3, 0, 0, 0] }, 1, null);
+        Assert.Equal(0, rounded.GlassCracks);
+        Assert.DoesNotContain(report, l => l.Text.Contains("windscreen", StringComparison.OrdinalIgnoreCase));
+
+        // A nose dented at 60 with a new windscreen, touched for a tenth more
+        var touched = WithGear();
+        touched.BodyDamageKmh = [60, 0, 0, 0];
+        CarCondition.ApplyRace(touched, new RaceCarCondition { BodyDamageKmh = [61, 0, 0, 0] }, 1, null);
+        Assert.Equal(0, touched.GlassCracks);
+
+        // The crack is as big as the hit, not as the dents the car came in with
+        var hit = WithGear();
+        hit.BodyDamageKmh = [60, 0, 0, 0];
+        CarCondition.ApplyRace(hit, new RaceCarCondition { BodyDamageKmh = [100, 0, 0, 0] }, 1, null);
+        var fresh = WithGear();
+        CarCondition.ApplyRace(fresh, new RaceCarCondition { BodyDamageKmh = [40, 0, 0, 0] }, 1, null);
+        Assert.Equal(fresh.GlassCracks, hit.GlassCracks, 6);
+    }
+
+    [Fact]
+    public void A_listing_from_an_older_save_keeps_its_scrapes_when_bought()
+    {
+        var listing = new UsedCarListing { CarDefinitionId = "car_a", Condition = 0.5f, Rust = 0.3, BodyDamageKmh = [20, 0, 0, 0] };
+
+        var car = CarPurchaseService.CarFrom(listing, new DateTime(1969, 5, 1), "Player");
+
+        Assert.Equal(CarLooks.Of(listing).Seed, CarLooks.Of(car).Seed);
+    }
+
+    [Fact]
+    public void A_car_on_sale_sags_on_its_broken_spring_as_the_car_bought_does()
+    {
+        var car = WithGear();
+        RunningGear.Mounted(car.Parts)[0].Spring!.Tear = 0;
+        var listing = new UsedCarListing { CarDefinitionId = "car_a", Parts = car.Parts, HasRunningGearAssigned = true };
+
+        Assert.Equal(CarLooks.RideHeight(car), CarLooks.RideHeight(listing));
+        Assert.True(CarLooks.RideHeight(listing)[0] < 0);
+    }
+
+    [Fact]
+    public void The_looks_jobs_are_cosmetic_the_rest_get_a_car_racing()
+    {
+        var car = new Car("car_a") { Rust = 0.4, PaintWear = 0.3, GlassCracks = 0.5, BodyDamageKmh = [30, 0, 0, 0] };
+
+        var jobs = RepairShop.Jobs(car, null);
+
+        Assert.Equal([RepairShop.Body], jobs.Where(j => !RepairShop.IsCosmetic(j)).Select(j => j.Id));
+        Assert.Equal(2, jobs.Count(RepairShop.IsCosmetic));
+    }
+
+    [Fact]
+    public void A_heavy_models_shell_comes_back_from_disk_however_many_triangles_a_mesh_has()
+    {
+        using var temp = new TempDir();
+        var box = BodyShell.Of(BoxCar(), 512)!;
+        // A mesh as BodyShell.Build cuts them: under 65,000 corners, but many triangles to each
+        var vertices = box.BodyMeshes[0].Vertices[..3];
+        var indices = Enumerable.Range(0, 300_000).Select(i => (ushort)(i % 3)).ToArray();
+        var heavy = new BodyShell
+        {
+            Min = box.Min, Max = box.Max, FrontSign = box.FrontSign, LeftSign = box.LeftSign, Hubs = box.Hubs, PictureSize = box.PictureSize,
+            Panels = box.Panels, BodyMeshes = [new BodyShell.Mesh(vertices, indices)], ScreenMeshes = [], ScreenMin = box.ScreenMin,
+            ScreenMax = box.ScreenMax, Ambient = box.Ambient, Diffuse = box.Diffuse, Paint = box.Paint
+        };
+        var path = temp.Combine("heavy.shell");
+
+        ShellFile.Write(path, heavy);
+
+        Assert.True(ShellFile.TryRead(path, out var back));
+        Assert.Equal(300_000, back!.BodyMeshes[0].Indices.Length);
+    }
+
+    [Fact]
+    public void A_race_layer_used_again_is_touched_so_the_other_cars_prune_keeps_it_and_its_shell_is_kept_beside_it()
+    {
+        using var temp = new TempDir();
+        var carFolder = temp.Combine("box_car");
+        Directory.CreateDirectory(carFolder);
+        BoxCar().Save(Path.Combine(carFolder, "box_car.kn5"));
+        var look = new CarLook(0.4, 0.3, 0, 0, 0, 0, 0, 0, 3);
+        var folder = temp.Combine("looks");
+
+        var name = WearLayer.WriteFor(carFolder, look, folder)!;
+        var old = DateTime.UtcNow.AddDays(-3);
+        File.SetLastWriteTimeUtc(Path.Combine(folder, name), old);
+        Assert.Equal(name, WearLayer.WriteFor(carFolder, look, folder));
+
+        Assert.True(File.GetLastWriteTimeUtc(Path.Combine(folder, name)) > old.AddDays(2));
+        // The model's shell is kept with the layers it was written for, not in the player's own folder
+        Assert.Single(Directory.GetFiles(Path.Combine(folder, "shells"), "*.shell"));
+    }
 }

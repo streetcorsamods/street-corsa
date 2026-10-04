@@ -234,8 +234,7 @@ public class StreetViewport3D : OnboardViewport3D
         var before = _rivalLoads;
 
         // The rival's wear is made now, while the loads before it finish and its model loads, not as it is drawn
-        if (stage.RivalCar is { Shown.Look: { } look } rival && rival != _rivalShown && Directory.Exists(rival.Directory))
-            _ = WearLayer.WarmAsync(rival.Directory, look);
+        if (stage.RivalCar is { } rival && rival != _rivalShown) _ = WearLayer.WarmAsync(rival.Directory, rival.Shown);
         _rivalLoads = After(before, () => ShowRivalAsync(renderer, stage, load));
 
         static async Task After(Task before, Func<Task> next)

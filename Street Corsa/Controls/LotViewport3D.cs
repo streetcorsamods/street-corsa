@@ -463,6 +463,8 @@ public class LotViewport3D : D3DViewportBase
 
                 Place(slot, car);
                 _standing[i] = car;
+                // The car looked at came in: a sagging corner leans it
+                if (i == SelectedIndex) OnPoseChanged();
                 Invalidate();
             }
             catch (Exception ex)
@@ -513,6 +515,21 @@ public class LotViewport3D : D3DViewportBase
         if (index < _standing.Count) _standing[index] = null;
     }
 
+    /// <summary>The wear being made ahead for the cars on the lot: called off when they change or the scene goes</summary>
+    private CancellationTokenSource? _warming;
+
+    /// <summary>
+    /// Starts making the wear of <paramref name="cars"/> off the UI thread (WearLayer makes them one at a time); what is
+    /// still waiting for the cars before is not made
+    /// </summary>
+    private void WarmWear(IReadOnlyList<LotCarPlacement> cars)
+    {
+        _warming?.Cancel();
+        _warming?.Dispose();
+        _warming = CancellationTokenSource.CreateLinkedTokenSource(RendererToken);
+        foreach (var car in cars) _ = WearLayer.WarmAsync(car.CarDirectory, car.Shown, WearLayer.LotPicture, _warming.Token);
+    }
+
     /// <summary>
     /// Puts the cars on the lot one after another.
     ///
@@ -520,13 +537,6 @@ public class LotViewport3D : D3DViewportBase
     /// taking the renderer's lock, so two at once race each other and the drawing. Reading the .kn5 off disk
     /// is the slow part and that is already off this thread.
     /// </summary>
-    /// <summary>Starts making the wear of <paramref name="cars"/> off the UI thread (WearLayer makes them one at a time)</summary>
-    private static void WarmWear(IReadOnlyList<LotCarPlacement> cars)
-    {
-        foreach (var car in cars)
-            if (car.Shown?.Look is { } look && Directory.Exists(car.CarDirectory)) _ = WearLayer.WarmAsync(car.CarDirectory, look, WearLayer.LotPicture);
-    }
-
     private async Task LoadCarsAsync(IReadOnlyList<LotCarPlacement> cars)
     {
         // The slot the scene is built around: shadows and reflections are worked out from it, so give it the
@@ -584,6 +594,7 @@ public class LotViewport3D : D3DViewportBase
                 Place(slot, car);
                 _standing[i] = car;
                 LoadedCount++;
+                if (i == SelectedIndex) OnPoseChanged();
 
                 Invalidate();
             }
@@ -736,6 +747,8 @@ public class LotViewport3D : D3DViewportBase
         // Come round to its front three-quarter, until the player takes the camera over
         _alphaGoal = (car.Heading + ModelHeadingOffset + 140f) * (float)Math.PI / 180f;
 
+        // Stood on its wheels again as the car chosen: a sagging corner leans it at rest, its engine off
+        OnPoseChanged();
         Invalidate();
     }
 

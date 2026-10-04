@@ -67,32 +67,22 @@ public static class CarLooks
     }
 
     /// <summary>The car's looks onto the listing it is sold through (a car relisted, a rival's ad)</summary>
-    public static void CopyTo(Car car, UsedCarListing listing)
-    {
-        listing.Rust = car.Rust;
-        listing.PaintWear = car.PaintWear;
-        listing.GlassCracks = car.GlassCracks;
-        listing.BodyDirt = car.BodyDirt;
-        listing.LookSeed = SeedOf(car);
-    }
+    public static void CopyTo(Car car, UsedCarListing listing) =>
+        Give(listing, new Rolled(car.Rust, car.PaintWear, car.GlassCracks, car.BodyDirt, SeedOf(car)));
 
     /// <summary>The listing's looks onto the car bought from it: the car looks as it did on the lot</summary>
-    public static void CopyTo(UsedCarListing listing, Car car)
-    {
-        car.Rust = listing.Rust;
-        car.PaintWear = listing.PaintWear;
-        car.GlassCracks = listing.GlassCracks;
-        car.BodyDirt = listing.BodyDirt;
-        car.LookSeed = listing.LookSeed != 0 ? listing.LookSeed : SeedOf(car);
-    }
+    public static void CopyTo(UsedCarListing listing, Car car) =>
+        Give(car, new Rolled(listing.Rust, listing.PaintWear, listing.GlassCracks, listing.BodyDirt, SeedOf(listing)));
+
+    /// <summary>The listing's pattern: its own, or one from its id (a listing from an older save), as the lot drew it</summary>
+    private static int SeedOf(UsedCarListing listing) => listing.LookSeed != 0 ? listing.LookSeed : SeedOf(listing.Id);
 
     /// <summary>The car's pattern: its own, or one from its id (a car from an older save)</summary>
     public static int SeedOf(Car car) => car.LookSeed != 0 ? car.LookSeed : SeedOf(car.InstanceId.ToString());
 
     private static int SeedOf(string id)
     {
-        var hash = 17;
-        foreach (var c in id) hash = unchecked(hash * 31 + c);
+        var hash = unchecked((int)StableHash.Of(id));
         return hash == 0 ? 1 : hash;
     }
 
@@ -112,7 +102,7 @@ public static class CarLooks
     {
         var body = listing.BodyDamageKmh is { Length: >= 4 } b ? b : new double[4];
         return new CarLook(Clean(listing.Rust), Clean(listing.PaintWear), Clean(listing.GlassCracks), Clean(listing.BodyDirt),
-            Kmh(body[0]), Kmh(body[1]), Kmh(body[2]), Kmh(body[3]), listing.LookSeed != 0 ? listing.LookSeed : SeedOf(listing.Id)).Rounded();
+            Kmh(body[0]), Kmh(body[1]), Kmh(body[2]), Kmh(body[3]), SeedOf(listing)).Rounded();
     }
 
     /// <summary>
@@ -130,18 +120,20 @@ public static class CarLooks
     }
 
     /// <summary>
-    /// A race's hit at the front cracks the windscreen: from <see cref="Rules.ConditionRules.CrackFromKmh"/> of damage on the
-    /// front zone, across it at <see cref="Rules.ConditionRules.ShatteredKmh"/>; a crack never mends on its own. True when the
-    /// screen is cracked now and was not before.
+    /// A race's hit at the front cracks the windscreen: a hit of <see cref="Rules.ConditionRules.CrackFromKmh"/> on the front
+    /// zone (what this race added to it, not what the body carried in), across it at
+    /// <see cref="Rules.ConditionRules.ShatteredKmh"/>; a crack never mends on its own. True when the screen is cracked now
+    /// and was not before.
     /// </summary>
     public static bool CrackFromHit(Car car, double frontKmhBefore)
     {
         var rules = Rules;
-        var front = CarCondition.Body(car)[0];
-        if (front < rules.CrackFromKmh || front <= frontKmhBefore) return false;
+        // The hit as the race report tells it: less than half a km/h is AC's rounding, no hit
+        var hit = CarCondition.Body(car)[0] - Kmh(frontKmhBefore);
+        if (hit <= HitTolerance || hit < rules.CrackFromKmh) return false;
 
         var was = Clean(car.GlassCracks);
-        var cracks = Math.Clamp((front - rules.CrackFromKmh) / Math.Max(1, rules.ShatteredKmh - rules.CrackFromKmh) * 0.8 + 0.2, 0, 1);
+        var cracks = Math.Clamp((hit - rules.CrackFromKmh) / Math.Max(1, rules.ShatteredKmh - rules.CrackFromKmh) * 0.8 + 0.2, 0, 1);
         car.GlassCracks = Math.Max(was, cracks);
         return was < 0.01;
     }
@@ -152,13 +144,18 @@ public static class CarLooks
     /// for a broken one. The one place a corner's height is worked out: springs that set the height (lowering, lifting)
     /// add theirs here.
     /// </summary>
-    public static double[] RideHeight(Car car)
+    public static double[] RideHeight(Car car) => RideHeight(car.Parts, car.HasRunningGearAssigned);
+
+    /// <summary>How the car on sale sits, as <see cref="RideHeight(Car)"/>: the car bought sits the same</summary>
+    public static double[] RideHeight(UsedCarListing listing) => RideHeight(listing.Parts, listing.HasRunningGearAssigned);
+
+    private static double[] RideHeight(List<PartInstance> parts, bool hasRunningGear)
     {
         var heights = new double[RunningGear.Corners];
-        if (!car.HasRunningGearAssigned) return heights;
+        if (!hasRunningGear) return heights;
 
         var rules = Rules;
-        var corners = RunningGear.Mounted(car.Parts);
+        var corners = RunningGear.Mounted(parts);
         for (var i = 0; i < corners.Length && i < heights.Length; i++)
         {
             if (corners[i].Spring is not { } spring) continue;
@@ -167,6 +164,9 @@ public static class CarLooks
         }
         return heights;
     }
+
+    /// <summary>Less than this on a zone is no hit (the race report's own line: AC gives the damage to a tenth)</summary>
+    private const double HitTolerance = 0.5;
 
     private static double Clean(double v) => Unit.Clamp01(v, 0);
 

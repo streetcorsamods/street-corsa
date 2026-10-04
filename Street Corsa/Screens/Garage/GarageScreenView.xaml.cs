@@ -38,10 +38,10 @@ namespace StreetCorsa.Screens.Garage
                 await Viewport3D.ShownSettledAsync(MostWearWait);
 
                 // Once the scene has done setting itself up (the camera framing the car included)
-                Dispatcher.BeginInvoke(DispatcherPriority.Background, DriveIn);
+                _ = Dispatcher.BeginInvoke(DispatcherPriority.Background, DriveIn);
                 RevealAfter(SettleDelay);
                 // A garage revealed before its first frame (the timeout) is ready only now
-                Dispatcher.BeginInvoke(DispatcherPriority.Background, TellSceneReady);
+                _ = Dispatcher.BeginInvoke(DispatcherPriority.Background, TellSceneReady);
             };
 
             // The car comes after the first frame: the flow's enter script plays with it, not before it is there
@@ -333,13 +333,13 @@ namespace StreetCorsa.Screens.Garage
             e.Handled = true;
         }
 
+        /// <summary>The longest the garage holds its car back for its wear to come on</summary>
+        private static readonly TimeSpan MostWearWait = TimeSpan.FromSeconds(4);
+
         /// <summary>
         /// The car just taken out of the lot drives in as the garage comes up (once: the garage is only arrived at once).
         /// Asked for only for a car that drove off out of the lot; one that did not was towed in, and is simply there.
         /// </summary>
-        /// <summary>The longest the garage holds its car back for its wear to come on</summary>
-        private static readonly TimeSpan MostWearWait = TimeSpan.FromSeconds(4);
-
         private async void DriveIn()
         {
             if (_droveIn || DataContext is not GarageScreenViewModel { CarArriving: true } viewModel) return;

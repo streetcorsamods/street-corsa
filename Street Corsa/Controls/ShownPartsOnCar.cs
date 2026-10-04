@@ -37,15 +37,24 @@ public static class ShownPartsOnCar
 
     private static long _asks;
 
-    /// <summary>What is on a car: the set asked for, the nodes put in, what of the car was switched and how it was before</summary>
+    /// <summary>
+    /// What is on a car: the set asked for, the part nodes put in, what of the car was switched and how it was before, and
+    /// its wear layer (kept apart: it stays on while only the parts change)
+    /// </summary>
     private sealed class OnCar
     {
         public ShownSet? Shown;
         public readonly List<(RenderableList Holder, RenderableList Parts)> Nodes = [];
         public readonly List<(IRenderableObject Object, bool Was)> Switched = [];
 
-        /// <summary>Each part model's textures, once for the car: its four rims draw from the same</summary>
-        public readonly Dictionary<IKn5, ITexturesProvider> Textures = [];
+        /// <summary>
+        /// Each model's textures, once for the car (its four rims draw from the same), with how many of its files draw from
+        /// them: the last file let go of (taken off, or the car itself let go of with everything in it) lets them go
+        /// </summary>
+        public readonly Dictionary<IKn5, (ITexturesProvider Textures, int Users)> Textures = [];
+
+        /// <summary>The wear layer on the car: for what look, at what picture size, and its node</summary>
+        public (CarLook Look, int Picture, RenderableList Holder, RenderableList Node)? Wear;
 
         public int Version;
 
@@ -72,23 +81,50 @@ public static class ShownPartsOnCar
     {
         protected override ITexturesProvider InitializeTextures(IDeviceContextHolder contextHolder)
         {
-            if (!on.Textures.TryGetValue(OriginalFile, out var textures)) on.Textures[OriginalFile] = textures = new Kn5TexturesProvider(OriginalFile, !loadAtOnce);
-            return new Lent(textures);
+            lock (on.Textures)
+            {
+                var (textures, users) = on.Textures.TryGetValue(OriginalFile, out var kept) ? kept : (new Kn5TexturesProvider(OriginalFile, !loadAtOnce), 0);
+                on.Textures[OriginalFile] = (textures, users + 1);
+                return new Lent(textures, OriginalFile, on);
+            }
         }
 
-        /// <summary>The car's textures, let go of with its parts (<see cref="Clear"/>), not with each file</summary>
-        private sealed class Lent(ITexturesProvider textures) : ITexturesProvider
+        /// <summary>
+        /// The car's textures, lent to one file: let go of when the last file drawing from them is (the file taken off, or
+        /// the car let go of by its scene with all it holds), not with each. SlimDX's views have no finalizer: textures
+        /// never let go of stay on the card.
+        /// </summary>
+        private sealed class Lent(ITexturesProvider textures, IKn5 model, OnCar on) : ITexturesProvider
         {
+            private bool _returned;
+
             public IRenderableTexture GetTexture(IDeviceContextHolder contextHolder, string key) => textures.GetTexture(contextHolder, key);
 
-            public void Dispose() { }
+            public void Dispose()
+            {
+                lock (on.Textures)
+                {
+                    if (_returned) return;
+                    _returned = true;
+                    if (!on.Textures.TryGetValue(model, out var kept) || !ReferenceEquals(kept.Textures, textures)) return;
+                    if (kept.Users > 1)
+                    {
+                        on.Textures[model] = (textures, kept.Users - 1);
+                        return;
+                    }
+                    on.Textures.Remove(model);
+                }
+                textures.Dispose();
+            }
         }
     }
 
     /// <summary>
     /// Makes <paramref name="car"/> show <paramref name="shown"/> (null: the car as it is): what an earlier call put on
-    /// comes off first, and the same set again changes nothing. The models are read off the UI thread; the car is changed
-    /// on the caller's. True when the car changed. Never throws for what the part models or the car hold.
+    /// comes off first, and the same set again changes nothing. The wear layer is the exception: one for the same look
+    /// stays on, and one for another look stays until the new one is made, then they swap. The models are read off the UI
+    /// thread; the car is changed on the caller's. True when the car changed. Never throws for what the part models or the
+    /// car hold.
     /// </summary>
     /// <param name="wearPicture">How big the car's wear picture is drawn (<see cref="WearLayer.FullPicture"/>, or
     /// <see cref="WearLayer.LotPicture"/> for a car among many)</param>
@@ -101,24 +137,44 @@ public static class ShownPartsOnCar
         var version = ++on.Version;
         on.Shown = shown;
         Clear(on);
+        var keepWear = on.Wear is { } wear && shown?.Look is { } wanted && wear.Look == wanted && wear.Picture == wearPicture;
+        if (!keepWear && shown?.Look == null) ClearWear(on);
         if (shown == null) return true;
 
         var files = shown.Models.Select(m => m.Source).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-        Dictionary<string, IKn5> models;
+        Dictionary<string, IKn5>? models;
         try
         {
             models = await Task.Run(() => files.ToDictionary(f => f, Read, StringComparer.OrdinalIgnoreCase));
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            // AcTools throws a plain Exception for a file that is no KN5
-            Logger.Warning("A part's model could not be read, the car is shown as it is: {Error}", ex.Message);
-            return true;
+            // AcTools throws a plain Exception for a file that is no KN5. The wear still goes on: AC draws it all the same.
+            Logger.Warning("A part's model could not be read, the car is shown without its parts: {Error}", ex.Message);
+            models = null;
         }
 
         // Asked again while the models were read: the later call puts its own on
         if (version != on.Version) return false;
 
+        if (models != null && !await PutPartsAsync(car, shown, models, on, version)) return false;
+
+        if (shown.Look is not { } look || keepWear) return true;
+        try
+        {
+            return await PutLookAsync(car, look, on, version, wearPicture);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            Logger.Warning(ex, "The wear of {Car} is not shown", car.RootObject?.Name);
+            if (version == on.Version) ClearWear(on);
+            return true;
+        }
+    }
+
+    /// <summary>The wheels and the engine parts that stand out; false when the car was asked to show something else meanwhile</summary>
+    private static async Task<bool> PutPartsAsync(Kn5RenderableCar car, ShownSet shown, Dictionary<string, IKn5> models, OnCar on, int version)
+    {
         var wheels = shown.Wheels;
         for (var corner = 0; corner < Math.Min(wheels.Count, WheelFit.WheelNodes.Length); corner++)
         {
@@ -133,33 +189,22 @@ public static class ShownPartsOnCar
             }
         }
 
-        if (shown.Extras.Count > 0)
-        {
-            try
-            {
-                if (!await PutExtrasAsync(car, shown, models, on, version)) return false;
-            }
-            catch (Exception ex) when (ex is not OutOfMemoryException)
-            {
-                Logger.Warning(ex, "The engine parts of {Car} are not shown", car.RootObject?.Name);
-            }
-        }
-
-        if (shown.Look is not { } look) return true;
+        if (shown.Extras.Count == 0) return true;
         try
         {
-            return await PutLookAsync(car, look, on, version, wearPicture);
+            return await PutExtrasAsync(car, shown, models, on, version);
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            Logger.Warning(ex, "The wear of {Car} is not shown", car.RootObject?.Name);
+            Logger.Warning(ex, "The engine parts of {Car} are not shown", car.RootObject?.Name);
             return true;
         }
     }
 
     /// <summary>
     /// The car's wear layer (<see cref="WearLayer"/>) over its body, in its model's space; made off the UI thread (the first
-    /// time for a model it looks the car over). False when the car was asked to show something else in the meantime.
+    /// time for a model it looks the car over), the layer of an earlier look on till then. False when the car was asked to
+    /// show something else in the meantime.
     /// </summary>
     private static async Task<bool> PutLookAsync(Kn5RenderableCar car, CarLook look, OnCar on, int version, int picture)
     {
@@ -169,12 +214,22 @@ public static class ShownPartsOnCar
 
         var layer = await Task.Run(() => WearLayer.For(model, look, picture));
         if (version != on.Version) return false;
-        if (layer == null) return true;
 
+        ClearWear(on);
+        if (layer == null) return true;
         var node = new RenderableList("sc_look", SlimDX.Matrix.Identity) { new PartFile(layer, ToSlim(fromRoot), on, loadAtOnce: true) };
         root.Add(node);
-        on.Nodes.Add((root, node));
+        on.Wear = (look, picture, root, node);
         return true;
+    }
+
+    /// <summary>Takes the wear layer off, its textures let go of with it</summary>
+    private static void ClearWear(OnCar on)
+    {
+        if (on.Wear is not { } wear) return;
+        on.Wear = null;
+        wear.Holder.Remove(wear.Node);
+        wear.Node.Dispose();
     }
 
     /// <summary>A part's model, read once while it is asked for; the least lately asked for of too many is let go of</summary>
@@ -289,7 +344,10 @@ public static class ShownPartsOnCar
         return u < 0 || v < 0 || w < 0 ? null : u * a.Y + v * b.Y + w * c.Y;
     }
 
-    /// <summary>Takes off what was put on: the car's own switched back as they were, the part nodes out and let go, their textures too</summary>
+    /// <summary>
+    /// Takes off the parts put on: the car's own switched back as they were, the part nodes out and let go (their textures
+    /// with the last file drawing from them). The wear layer is <see cref="ClearWear"/>'s.
+    /// </summary>
     private static void Clear(OnCar on)
     {
         for (var i = on.Switched.Count - 1; i >= 0; i--) on.Switched[i].Object.IsEnabled = on.Switched[i].Was;
@@ -298,10 +356,8 @@ public static class ShownPartsOnCar
             holder.Remove(parts);
             parts.Dispose();
         }
-        foreach (var textures in on.Textures.Values) textures.Dispose();
         on.Switched.Clear();
         on.Nodes.Clear();
-        on.Textures.Clear();
     }
 
     private static void Apply(Kn5RenderableCar car, int corner, ShownWheel wheel, Dictionary<string, IKn5> models, OnCar on)

@@ -353,36 +353,43 @@ internal static class WearPainter
 
     /// <summary>
     /// The scratches and scrapes, drawn as lines into a cover of their own: a few for worn paint along the sides at hip
-    /// height (keys, bags, brushes), many more along the zones that were hit
+    /// height (keys, bags, brushes), many more along the zones that were hit. Each view and each line has a pattern of its
+    /// own from the look's seed, and a line's wavering is drawn in steps of the view, not of pixels: the lines are where
+    /// they are at any picture size (a lot's car is the car bought).
     /// </summary>
     private static void Lines(byte[] cover, BodyShell shell, IReadOnlyList<BodyShell.Panel> panels, CarLook look, int size)
     {
         Array.Clear(cover, 0, size * size);
-        var random = new Random(look.Seed * 31 + 7);
         foreach (var panel in panels)
         {
+            var random = new Random(Seeded(look.Seed, 31 + (int)panel.Side));
             var sides = panel.Side is BodyShell.Side.Left or BodyShell.Side.Right;
             var area = panel.Width * (float)panel.Height / (size * (float)size);
             var worn = (int)(look.Paint * (sides ? 22 : 6) * area / 0.08f);
             for (var i = 0; i < worn; i++)
             {
                 var v = sides ? 0.3f + (float)random.NextDouble() * 0.45f : (float)random.NextDouble();
-                Scratch(cover, size, panel, random, (float)random.NextDouble(), v, 0.015f + (float)random.NextDouble() * 0.07f, 0.35f, 0.3f);
+                Scratch(cover, size, panel, new Random(random.Next()), (float)random.NextDouble(), v, 0.015f + (float)random.NextDouble() * 0.07f, 0.35f, 0.3f);
             }
 
             // Scrapes where the car was hit: long, near level, many side by side
+            var zone = 0;
             foreach (var (kmh, where) in Zones(look, panel.Side, shell.FrontSign))
             {
+                var scrapes = new Random(Seeded(look.Seed, 101 + 7 * (int)panel.Side + zone++));
                 var hit = (float)Math.Clamp(kmh / 70, 0, 1);
                 var count = (int)(hit * 60 * area / 0.08f);
                 for (var i = 0; i < count; i++)
                 {
-                    var (u, v) = where(random);
-                    Scratch(cover, size, panel, random, u, v, 0.03f + (float)random.NextDouble() * 0.12f, 0.2f, 0.7f);
+                    var (u, v) = where(scrapes);
+                    Scratch(cover, size, panel, new Random(scrapes.Next()), u, v, 0.03f + (float)scrapes.NextDouble() * 0.12f, 0.2f, 0.7f);
                 }
             }
         }
     }
+
+    /// <summary>A seed of its own for one part of a look's pattern</summary>
+    private static int Seeded(int seed, int part) => unchecked(seed * 31 + part * 7919);
 
     /// <summary>The hit zones that lie on a view, each with where on it (u, v) a scrape goes</summary>
     private static IEnumerable<(double Kmh, Func<Random, (float U, float V)> Where)> Zones(CarLook look, BodyShell.Side side, float frontSign)
@@ -415,13 +422,17 @@ internal static class WearPainter
         var length = lengthShare * panel.Width;
         var x = panel.X + u * panel.Width;
         var y = panel.Y + v * panel.Height;
-        var steps = (int)(length * 2);
+        // A fixed number of steps for the scratch, each a share of its length (under half a pixel of the full picture): the
+        // same line at any picture size, wavering as much as a full picture's line drawn half a pixel at a time does
+        const int steps = 400;
+        var step = length / steps;
+        var wander = 0.05f * MathF.Sqrt(Math.Max(1f, length * WearLayer.FullPicture / size * 2) / steps);
         var a = strength * (0.6f + 0.4f * (float)random.NextDouble());
         for (var s = 0; s < steps; s++)
         {
-            angle += ((float)random.NextDouble() - 0.5f) * 0.05f;
-            x += MathF.Cos(angle) * 0.5f;
-            y += MathF.Sin(angle) * 0.5f;
+            angle += ((float)random.NextDouble() - 0.5f) * wander;
+            x += MathF.Cos(angle) * step;
+            y += MathF.Sin(angle) * step;
             var px = (int)x;
             var py = (int)y;
             if (px < panel.X || py < panel.Y || px >= panel.X + panel.Width || py >= panel.Y + panel.Height) break;

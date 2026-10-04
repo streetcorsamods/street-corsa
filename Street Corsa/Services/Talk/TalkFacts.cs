@@ -137,10 +137,28 @@ namespace StreetCorsa.Services.Talk
             yield return GameText.Say(listing.IsModified ? "chat.fact.car_modified" : "chat.fact.car_original");
             yield return GameText.Say("chat.fact.car_condition", ("condition", car.ConditionDisplay), ("label", car.ConditionLabel),
                 ("mileage", car.MileageDisplay));
+            yield return Looks(listing);
             if (car.HistoryDisplay.Length > 0) yield return GameText.Say("chat.fact.car_history", ("history", car.HistoryDisplay));
             if (!string.IsNullOrWhiteSpace(listing.Description)) yield return GameText.Say("chat.fact.ad", ("ad", listing.Description));
             yield return GameText.Say("chat.fact.on_sale", ("days", Math.Max(0, (int)(today.Date - onSaleSince.Date).TotalDays)));
         }
+
+        /// <summary>How the car looks, as the buyer standing by it sees it: its rust, paint, windscreen, dirt and dents</summary>
+        private static string Looks(UsedCarListing listing)
+        {
+            var looks = CarAdLooks.Of(listing);
+            var seen = new List<string>();
+            if (looks.BadlyRusty) seen.Add(GameText.Say("chat.fact.looks.rust_bad"));
+            else if (looks.Rusty) seen.Add(GameText.Say("chat.fact.looks.rust"));
+            if (looks.WornPaint) seen.Add(GameText.Say("chat.fact.looks.paint"));
+            if (looks.Cracked) seen.Add(GameText.Say("chat.fact.looks.cracks"));
+            if (listing.BodyDamageKmh?.Any(k => double.IsFinite(k) && k > DentsKmh) == true) seen.Add(GameText.Say("chat.fact.looks.dents"));
+            if (looks.Dirty) seen.Add(GameText.Say("chat.fact.looks.dirt"));
+            return GameText.Say("chat.fact.car_looks", ("looks", seen.Count == 0 ? GameText.Say("chat.fact.looks.clean") : string.Join(", ", seen)));
+        }
+
+        /// <summary>A hit that left this much on a zone shows as dents</summary>
+        private const double DentsKmh = 5;
 
         /// <summary>
         /// What is on a car, part by part, as the game knows it: a line a kind of part (the order of the mods'

@@ -14,7 +14,32 @@ namespace StreetCorsa.Services.Market
     /// A car's facts for its ad: what the seller says about the engine, whether it was worked on, its condition (0 to 1)
     /// and mileage (km), and the parts worth a word, the most telling first
     /// </summary>
-    public sealed record CarAdFacts(string? Engine, bool Modified, double Condition, int MileageKm, IReadOnlyList<AdStandout> Standouts) : AdFacts;
+    public sealed record CarAdFacts(string? Engine, bool Modified, double Condition, int MileageKm, IReadOnlyList<AdStandout> Standouts,
+        CarAdLooks? Looks = null) : AdFacts;
+
+    /// <summary>
+    /// How a car for sale looks (each 0..1): what an honest ad cannot call shiny, and what a seller cannot deny. From how
+    /// much each shows: the words' choice, not the game's figures (the price goes by the looks themselves).
+    /// </summary>
+    public sealed record CarAdLooks(double Rust, double PaintWear, double Cracks, double Dirt)
+    {
+        public bool Rusty => Rust >= 0.15;
+
+        public bool BadlyRusty => Rust >= 0.5;
+
+        public bool WornPaint => PaintWear >= 0.3;
+
+        public bool Cracked => Cracks >= 0.01;
+
+        public bool Dirty => Dirt >= 0.5;
+
+        /// <summary>Anything a buyer sees at a glance</summary>
+        public bool Shows => Rusty || WornPaint || Cracked || Dirty;
+
+        public static CarAdLooks Of(UsedCarListing listing) => new(listing.Rust, listing.PaintWear, listing.GlassCracks, listing.BodyDirt);
+
+        public static CarAdLooks Of(Car car) => new(car.Rust, car.PaintWear, car.GlassCracks, car.BodyDirt);
+    }
 
     /// <summary>A part worth naming in a car's ad: what sort of thing it is (<see cref="AdBlurbs.StandoutKinds"/>) and its name</summary>
     public sealed record AdStandout(string Kind, string Part);
@@ -75,6 +100,7 @@ namespace StreetCorsa.Services.Market
         private const double FreshWear = 0.8;
         private const double WornWear = 0.5;
 
+
         // How often a car's ad adds a word on its condition to what else it says, when there is one to say
         private const double ConditionAside = 0.4;
 
@@ -85,7 +111,7 @@ namespace StreetCorsa.Services.Market
         /// a part among them is what the car came with, no news. Null when the car's factory build is not known: then
         /// a worked-on car's parts all count.</param>
         public static CarAdFacts FactsOf(IReadOnlyList<PartInstance> parts, PartsCatalog? catalog, IReadOnlySet<string>? factory,
-            string? engine, bool modified, double condition, int mileageKm)
+            string? engine, bool modified, double condition, int mileageKm, CarAdLooks? looks = null)
         {
             var standouts = new List<AdStandout>();
             if (catalog != null)
@@ -103,16 +129,17 @@ namespace StreetCorsa.Services.Market
             // What the seller says about the engine, without the catalog's notes in brackets on the block's name
             var said = string.IsNullOrWhiteSpace(engine) ? null : Bracketed().Replace(engine, string.Empty).Trim();
             return new CarAdFacts(string.IsNullOrEmpty(said) ? null : said, modified, condition, mileageKm,
-                standouts.OrderBy(s => Array.IndexOf(Ranked, s.Kind)).ToList());
+                standouts.OrderBy(s => Array.IndexOf(Ranked, s.Kind)).ToList(), looks);
         }
 
         public static CarAdFacts FactsOf(UsedCarListing listing, PartsCatalog? catalog, IReadOnlySet<string>? factory) =>
-            FactsOf(listing.Parts, catalog, factory, listing.EngineSummary, listing.IsModified, listing.Condition, listing.Mileage);
+            FactsOf(listing.Parts, catalog, factory, listing.EngineSummary, listing.IsModified, listing.Condition, listing.Mileage,
+                CarAdLooks.Of(listing));
 
         /// <summary>A rival's ad or the player's own: the car as it is, what the seller says about its engine</summary>
         public static CarAdFacts FactsOf(ICarAdWords ad, Car car, PartsCatalog? catalog, IReadOnlySet<string>? factory) =>
             FactsOf(car.Parts, catalog, factory, ad.EngineSummary, ad.IsModified, CarValuation.ConditionOf(car),
-                double.IsFinite(car.OdometerKM) ? (int)Math.Clamp(car.OdometerKM, 0, int.MaxValue) : 0);
+                double.IsFinite(car.OdometerKM) ? (int)Math.Clamp(car.OdometerKM, 0, int.MaxValue) : 0, CarAdLooks.Of(car));
 
         /// <summary>A part's facts; null when the catalog does not know it</summary>
         public static PartAdFacts? FactsOf(PartAd ad, PartsCatalog catalog)
@@ -158,7 +185,9 @@ namespace StreetCorsa.Services.Market
         public static string Write(CarAdFacts facts, Random random)
         {
             var values = new TextValues { ["engine"] = facts.Engine, ["km"] = facts.MileageKm };
-            var condition = facts.Condition >= MintCondition ? "ads.car.mint" : facts.Condition <= RoughCondition ? "ads.car.rough" : null;
+            // A car that shows its rust, worn paint, a cracked windscreen or its dirt is no mint car, whatever is under it
+            var looks = facts.Looks;
+            var condition = facts.Condition >= MintCondition && looks?.Shows != true ? "ads.car.mint" : facts.Condition <= RoughCondition ? "ads.car.rough" : null;
 
             var choices = new List<(string Key, double Weight, AdStandout? Part)>();
             if (facts.Standouts.Count > 0) choices.Add(("ads.car." + facts.Standouts[0].Kind, 5, facts.Standouts[0]));
@@ -168,6 +197,10 @@ namespace StreetCorsa.Services.Market
             if (!facts.Modified) choices.Add(("ads.car.original", 3, null));
             if (condition != null) choices.Add((condition, condition == "ads.car.rough" ? 3 : 2, null));
             if (facts.MileageKm is > 0 and < LowMileageKm) choices.Add(("ads.car.low_miles", 1.5, null));
+            // What the buyer will see anyway, said plainly
+            if (looks?.Rusty == true) choices.Add(("ads.car.rust", 2, null));
+            else if (looks?.WornPaint == true) choices.Add(("ads.car.paint", 1.5, null));
+            if (looks?.Cracked == true) choices.Add(("ads.car.cracked_screen", 1.5, null));
             choices.Add(("ads.car.character", 2.5, null));
 
             var (key, _, part) = Pick(choices, random);
