@@ -45,11 +45,17 @@ M.__index = function(t, k)
   if n then return rawget(t, tonumber(n)) end
   return M[k]
 end
-function mat4x4(r1, r2, r3, r4)
-  local function row(r, d) return setmetatable(r and { r.x, r.y, r.z, r.w } or d, Row) end
-  return setmetatable({ row(r1, { 1, 0, 0, 0 }), row(r2, { 0, 1, 0, 0 }), row(r3, { 0, 0, 1, 0 }), row(r4, { 0, 0, 0, 1 }) }, M)
+local function rows(r1, r2, r3, r4, d)
+  local function row(r, i) return setmetatable(r and { r.x, r.y, r.z, r.w } or d(i), Row) end
+  return setmetatable({ row(r1, 1), row(r2, 2), row(r3, 3), row(r4, 4) }, M)
 end
-function M:clone() local r = mat4x4(); r:set(self); return r end
+-- A row not given is zeros here: code that wants the identity asks for mat4x4.identity()
+mat4x4 = setmetatable({
+  identity = function()
+    return rows(nil, nil, nil, nil, function(i) local r = { 0, 0, 0, 0 }; r[i] = 1; return r end)
+  end
+}, { __call = function(_, r1, r2, r3, r4) return rows(r1, r2, r3, r4, function() return { 0, 0, 0, 0 } end) end })
+function M:clone() local r = mat4x4.identity(); r:set(self); return r end
 function M:transformVector(p)
   local o = {}
   for j = 1, 3 do o[j] = p.x * self[1][j] + p.y * self[2][j] + p.z * self[3][j] end
@@ -57,7 +63,7 @@ function M:transformVector(p)
 end
 function M:set(o) for i = 1, 4 do for j = 1, 4 do self[i][j] = o[i][j] end end; return self end
 function M:mul(o)
-  local r = mat4x4()
+  local r = mat4x4.identity()
   for i = 1, 4 do for j = 1, 4 do
     local s = 0
     for k = 1, 4 do s = s + self[i][k] * o[k][j] end
@@ -67,7 +73,7 @@ function M:mul(o)
 end
 -- Only scales, half turns and moves here: the inverse of the 3x3 is its transpose over the scales squared
 function M:inverse()
-  local r = mat4x4()
+  local r = mat4x4.identity()
   for i = 1, 3 do for j = 1, 3 do
     local s2 = self[j][1] ^ 2 + self[j][2] ^ 2 + self[j][3] ^ 2
     r[i][j] = self[j][i] / s2
@@ -87,7 +93,7 @@ local R = {}
 R.__index = R
 local function ref(items) return setmetatable({ items = items }, R) end
 local function node(name, parent)
-  local n = { name = name, parent = parent, children = {}, transform = mat4x4(), visible = true }
+  local n = { name = name, parent = parent, children = {}, transform = mat4x4.identity(), visible = true }
   if parent then table.insert(parent.children, n) end
   return n
 end
@@ -120,6 +126,7 @@ function R:materialName(i) return self.items[i or 1].material or self.items[i or
 function R:findNodes(name) return ref(walk(self.items[1], {}, function(c) return not c.mesh and c.name == name end)) end
 function R:findMeshes() return ref(walk(self.items[1], {}, function(c) return c.mesh end)) end
 function R:getParent() return ref({ self.items[1].parent }) end
+function R:contains(other) for _, n in ipairs(self.items) do if n == other.items[1] then return true end end return false end
 function R:getWorldTransformationRaw() return worldOf(self.items[1]) end
 function R:getTransformationRaw() return self.items[1].transform end
 function R:getLocalAABB() return self.items[1].min, self.items[1].max end
@@ -147,7 +154,8 @@ function R:loadKN5(file)
 end
 
 -- The Valiant: the left front wheel as measured, the right front its mirror
-local car = node('carRoot')
+local carRoot = node('carRoot')
+local car = node('chevelle.kn5', carRoot)
 local function wheel(name, side, suffix)
   local w = node(name, car)
   local function m(n, x0, x1, r)
@@ -190,7 +198,7 @@ ac = {
   log = function(s) world.log[#world.log + 1] = s end,
   getSim = function() return { carsCount = 1 } end,
   getCar = function() return { wheels = { [0] = { tyreRadius = 0.30 }, [1] = { tyreRadius = 0.30 }, [2] = { tyreRadius = 0.30 }, [3] = { tyreRadius = 0.30 } } } end,
-  findNodes = function(f) return f == 'carRoot:0' and ref({ car }) or ref({}) end,
+  findNodes = function(f) return f == 'carRoot:0' and ref({ carRoot }) or ref({}) end,
   getFolder = function() return 'docs' end,
   FolderID = { ACDocuments = 1 },
   INIConfig = {
@@ -340,12 +348,12 @@ def blurred_objects_go_and_a_blurred_wheel_node_is_kept_shown():
     check('a blurred wheel node is kept shown, its blurred one hidden again', world.wheels.LF.visible and not world.blur.visible, log)
 
 
-def an_engine_part_goes_under_the_car_where_it_sits():
+def an_engine_part_goes_into_the_cars_main_model_where_it_sits():
     _, world = run({'CAR_0_PART_1': r'parts\engines_blower.kn5', 'CAR_0_PART_1_AT': '1,0,0, 0,1,0, 0,0,1, 0,0.8,1.2'})
     part = [i for i in world.loaded.values() if i.file.endswith('engines_blower.kn5')]
     t = part and matrix(part[0].node.transform)
-    check('an engine part goes under the car where it sits',
-          part and part[0].node.parent.name == 'carRoot' and near(t[3][1], 0.8) and near(t[3][2], 1.2), list(world.log.values()))
+    check('an engine part goes into the car main model where it sits',
+          part and part[0].node.parent.name == 'chevelle.kn5' and near(t[3][1], 0.8) and near(t[3][2], 1.2), list(world.log.values()))
 
 
 def engine_parts_under_the_hood_go_up_onto_it_and_never_down():
@@ -361,7 +369,7 @@ def engine_parts_under_the_hood_go_up_onto_it_and_never_down():
 
 
 a_corner_not_named_keeps_its_own_rim()
-an_engine_part_goes_under_the_car_where_it_sits()
+an_engine_part_goes_into_the_cars_main_model_where_it_sits()
 engine_parts_under_the_hood_go_up_onto_it_and_never_down()
 a_tyre_makes_the_whole_wheel_ours_as_big_as_acs_tyre()
 a_tyre_without_its_place_on_the_rim_leaves_the_car_its_tyre()

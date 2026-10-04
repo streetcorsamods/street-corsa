@@ -11,8 +11,9 @@
   written to the car's folder.
 
   Engine parts that stand out (a supercharger and what sits on it): CAR_n_PART_1, _2... name a model, CAR_n_PART_k_AT
-  where it sits in the space of the car's model (placed by the game as its garage places the engine), loaded under the
-  car's root so it moves with the body. The game's place is an estimate that can leave the whole stack under the hood:
+  where it sits in the space of the car's model (placed by the game as its garage places the engine), loaded into the
+  car's main model (the node over its wheel nodes, right under the car's root) so it moves with the body and is drawn
+  with it (a model loaded straight under the car's root was placed but never drawn, found in the game 2026-10-03). The game's place is an estimate that can leave the whole stack under the hood:
   the parts go up until the first one's base (the supercharger's) sits on the car's surface straight above it (never
   down), as the game's scenes do. A hood they go through stays as it is.
 
@@ -250,7 +251,7 @@ local function setUpCorner(carIndex, root, corner, files)
       scale, radius, partTyre.radius, centre))
   else
     local ownRadius, ownFace = lipOf(rimBoxes, out)
-    local partRadius, partFace = lipOf(modelBoxes(rim, mat4x4()), -1)
+    local partRadius, partFace = lipOf(modelBoxes(rim, mat4x4.identity()), -1)
     if ownRadius <= 0 or partRadius <= 0 or not ownFace or not partFace then
       log(where .. ': nothing to measure, its own wheel stays')
       group:dispose()
@@ -289,7 +290,21 @@ local function surfaceAbove(root, x, y, z)
   return y + RAY_FROM - distance
 end
 
--- The engine parts that stand out, under the car's root, lifted onto the hood
+-- The car's main model: the node right under the car's root that holds its wheel nodes; nil without wheel nodes
+local function mainModel(root)
+  local node = root:findNodes('WHEEL_LF')
+  if node:size() == 0 then return nil end
+  node = node:at(1)
+  for _ = 1, 64 do
+    local parent = node:getParent()
+    if parent:size() == 0 then return nil end
+    if root:contains(parent) then return node end
+    node = parent
+  end
+  return nil
+end
+
+-- The engine parts that stand out, in the car's main model, lifted onto the hood
 local function setUpExtras(carIndex, root)
   local parts = {}
   for k = 1, 32 do
@@ -308,14 +323,19 @@ local function setUpExtras(carIndex, root)
     log(string.format('car %d: engine parts lifted %.3f m onto the hood%s', carIndex, lift, ok and '' or (' (no ray: ' .. tostring(surface) .. ')')))
   end
 
+  -- Where they go, and what takes them from the car's space to its own (the main model's own matrix taken off)
+  local holder = mainModel(root) or root
+  local fromHolder = holder == root and mat4x4.identity() or holder:getTransformationRaw():inverse()
+  log('car ' .. carIndex .. ': engine parts go into ' .. tostring(holder:name()))
+
   local loaded = {}
   for _, part in ipairs(parts) do
     local file, at = part.file, part.at
-    local model = at and root:loadKN5(file)
+    local model = at and holder:loadKN5(file)
     if model then
       at = at:clone()
       at.row4.y = at.row4.y + lift
-      model:getTransformationRaw():set(at)
+      model:getTransformationRaw():set(at:mul(fromHolder))
       loaded[#loaded + 1] = model
       log('car ' .. carIndex .. ': ' .. file .. ' in')
     else
