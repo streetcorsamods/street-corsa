@@ -38,7 +38,7 @@ public sealed class ShownPartsTests : IDisposable
         }).ToList();
 
     [Fact]
-    public void Only_the_corners_off_their_factory_rim_show_a_rim_round_the_cars_tyre()
+    public void Only_the_corners_off_their_factory_rim_show_a_rim_their_factory_tyre_optional()
     {
         var shown = ShownParts.Wheels(Wheels([Factory, Factory, Cragar, Cragar]), Catalog.Value, FactoryGear());
 
@@ -46,7 +46,9 @@ public sealed class ShownPartsTests : IDisposable
         Assert.Null(shown[1]);
         Assert.Equal(Path.Combine("parts", "rims_mopar_cragar_8.kn5"), shown[2]!.Rim.Name);
         Assert.True(File.Exists(shown[3]!.Rim.Source));
-        Assert.Null(shown[3]!.Tyre);
+        // The factory tyre comes with it, only to be shown should the rim be too wide for the car's own
+        Assert.Equal(Path.Combine("parts", "tyres_mopar_Tyre_15_8.kn5"), shown[3]!.Tyre!.Name);
+        Assert.True(shown[3]!.TyreOptional);
     }
 
     [Fact]
@@ -58,6 +60,7 @@ public sealed class ShownPartsTests : IDisposable
         Assert.Null(shown[0]);
         Assert.Equal(Path.Combine("parts", "rims_mopar_rim_8_5.kn5"), shown[2]!.Rim.Name);
         Assert.Equal(Path.Combine("parts", "tyres_mopar_Firestone_11_slick_3.kn5"), shown[2]!.Tyre!.Name);
+        Assert.False(shown[2]!.TyreOptional);
         // The E-T mag's tyre slot is 27 mm out along the axle
         Assert.Equal(0.027f, shown[2]!.TyreOnRim.M41, 3);
     }

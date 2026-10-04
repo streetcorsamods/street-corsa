@@ -145,6 +145,12 @@ function R:loadKN5(file)
     mesh('Tyre_15_8_0', root, { -0.101, -0.312, -0.313 }, { 0.097, 0.312, 0.312 })
     return ref({ root })
   end
+  if file:find('wide') then
+    -- rims/mopar/cragar_11, a 15x11
+    mesh('cragar_11_0', root, { -0.095, -0.165, -0.165 }, { 0.13, 0.165, 0.165 })
+    mesh('cragar_11_1', root, { -0.129, -0.187, -0.187 }, { 0.13, 0.187, 0.187 })
+    return ref({ root })
+  end
   -- rims/mopar/rim_8_5 as the converter wrote it
   mesh('rim_8_5_0', root, { -0.029, -0.028, -0.028 }, { -0.029, 0.029, 0.028 })
   mesh('rim_8_5_1', root, { -0.031, -0.052, -0.059 }, { 0.01, 0.062, 0.059 })
@@ -368,7 +374,20 @@ def engine_parts_under_the_hood_go_up_onto_it_and_never_down():
     check('engine parts already over the surface stay where they are', near(at['blower.kn5'][3][1], 0.38), list(world.log.values()))
 
 
+def a_rim_too_wide_for_the_cars_tyre_brings_its_factory_tyre_along():
+    at = '1,0,0, 0,1,0, 0,0,1, 0.027,0,0'
+    _, world = run({'CAR_0_RIM_LR': 'wide_rim.kn5', 'CAR_0_TYRE_LR': 'tyre.kn5', 'CAR_0_TYRE_LR_AT': at, 'CAR_0_TYRE_LR_OPTIONAL': '1'})
+    shown = visible(world, 'LR')
+    check('a rim too wide for the car tyre brings its factory tyre along',
+          not shown['WHEEL_LR_SUB4'] and any(i.file == 'tyre.kn5' for i in world.loaded.values()), list(world.log.values()))
+    _, world = run({'CAR_0_RIM_LR': 'rim.kn5', 'CAR_0_TYRE_LR': 'tyre.kn5', 'CAR_0_TYRE_LR_AT': at, 'CAR_0_TYRE_LR_OPTIONAL': '1'})
+    shown = visible(world, 'LR')
+    check('a rim that fits the car tyre leaves the factory tyre out',
+          shown['WHEEL_LR_SUB4'] and not any(i.file == 'tyre.kn5' for i in world.loaded.values()), list(world.log.values()))
+
+
 a_corner_not_named_keeps_its_own_rim()
+a_rim_too_wide_for_the_cars_tyre_brings_its_factory_tyre_along()
 an_engine_part_goes_into_the_cars_main_model_where_it_sits()
 engine_parts_under_the_hood_go_up_onto_it_and_never_down()
 a_tyre_makes_the_whole_wheel_ours_as_big_as_acs_tyre()

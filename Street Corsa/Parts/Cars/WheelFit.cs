@@ -36,8 +36,10 @@ public sealed record WheelFitting(IReadOnlyList<int> Hidden, Matrix4x4 Placement
 /// The car's meshes under its wheel node: the tyre and the brake by mesh or material name, the rim everything else. A
 /// rim alone keeps the car's tyre and fills the hole the hidden rim leaves: its outer lip as big as the car's, flush with
 /// where the car's lip was (no further out than the tyre's sidewall), the barrel going in. A tyre makes the whole wheel
-/// the parts', scaled together so the tyre is as big as wanted, centred on the car's tyre. Part models are SLRR's: the
-/// axle along X, the face towards -X. A left wheel's outboard side is +X, a right one's -X.
+/// the parts', scaled together so the tyre is as big as wanted, centred on the car's tyre. An optional tyre (the factory
+/// one, with another rim) is shown only when the rim alone would come out wider than the car's tyre by more than
+/// <see cref="RimWiderThanTyre"/>: a 15x11 Cragar round a Chevelle's narrow tyre. Part models are SLRR's: the axle along
+/// X, the face towards -X. A left wheel's outboard side is +X, a right one's -X.
 /// </summary>
 public static class WheelFit
 {
@@ -46,6 +48,12 @@ public static class WheelFit
 
     /// <summary>A part mesh at least this share of the biggest one's radius is the lip</summary>
     private const float LipShare = 0.9f;
+
+    /// <summary>
+    /// How much wider than the car's tyre a rim alone may come out before the corner shows the tyre on it as well: a
+    /// 15x8 Cragar on a Chevelle's front is 1.09 of its tyre and looks right, a 15x11 on its rear 1.21 and does not
+    /// </summary>
+    public const float RimWiderThanTyre = 1.15f;
 
     /// <summary>AC's wheels in its order (0 left front, 1 right front, 2 left rear, 3 right rear)</summary>
     public static readonly string[] WheelNodes = ["WHEEL_LF", "WHEEL_RF", "WHEEL_LR", "WHEEL_RR"];
@@ -60,9 +68,19 @@ public static class WheelFit
     /// <param name="partRim">The rim model's meshes, in its own space</param>
     /// <param name="partTyre">The tyre model's meshes in the rim's space; null keeps the car's tyre</param>
     /// <param name="tyreRadius">How big the tyre is to be; 0 or less: as big as the car's</param>
+    /// <param name="tyreOptional">Show the tyre only when the rim alone would be too wide for the car's</param>
     public static WheelFitting? Fit(int corner, IReadOnlyList<WheelMesh> car, IReadOnlyList<AxleBox> partRim,
-        IReadOnlyList<AxleBox>? partTyre, float tyreRadius = 0)
+        IReadOnlyList<AxleBox>? partTyre, float tyreRadius = 0, bool tyreOptional = false)
     {
+        if (partTyre != null && tyreOptional)
+        {
+            var alone = Fit(corner, car, partRim, null);
+            var own = Union(car.Where(IsTyre).Select(m => m.Box).ToList());
+            var rim = Union(partRim);
+            if (alone != null && own is { } o && rim is { } r
+                && (r.MaxX - r.MinX) * Math.Abs(alone.Placement.M22) <= (o.MaxX - o.MinX) * RimWiderThanTyre) return alone;
+        }
+
         var withTyre = partTyre != null;
         var outboard = corner % 2 == 0 ? 1 : -1;
         var side = outboard > 0 ? -1 : 1;

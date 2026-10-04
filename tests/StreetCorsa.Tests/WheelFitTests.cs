@@ -101,4 +101,22 @@ public class WheelFitTests
 
         Assert.Equal(new AxleBox(0.4f, 0.6f, 0.3f), box);
     }
+
+    // rims/mopar/cragar_8 and cragar_11, their outer meshes
+    private static readonly AxleBox[] Cragar8 = [new(-0.039f, 0.131f, 0.165f), new(-0.073f, 0.131f, 0.187f)];
+    private static readonly AxleBox[] Cragar11 = [new(-0.095f, 0.13f, 0.165f), new(-0.129f, 0.13f, 0.187f)];
+
+    [Fact]
+    public void A_rim_too_wide_for_the_cars_tyre_brings_its_factory_tyre_along()
+    {
+        // A 15x11 Cragar alone would be 1.21 of the Chevelle's tyre: the slick on it comes along, the car's tyre goes
+        var wide = WheelFit.Fit(0, Chevelle, Cragar11, Tyre, 0.32f, tyreOptional: true)!;
+        Assert.Contains("WHEEL_LF_SUB4", Names(Chevelle, wide));
+        Assert.Equal(0.32f / 0.313f, Math.Abs(wide.Placement.M11), 3);
+
+        // A 15x8 one is 1.09 of it: the car keeps its tyre, the rim fits in it
+        var fits = WheelFit.Fit(0, Chevelle, Cragar8, Tyre, 0.32f, tyreOptional: true)!;
+        Assert.DoesNotContain("WHEEL_LF_SUB4", Names(Chevelle, fits));
+        Assert.Equal(0.231f / 0.187f, Math.Abs(fits.Placement.M11), 3);
+    }
 }

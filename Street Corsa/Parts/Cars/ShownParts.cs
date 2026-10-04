@@ -17,12 +17,16 @@ public sealed record ShownModel(string Name, string Source);
 /// <param name="TyreOnRim">Where the tyre sits in the rim's model, as it mounts on the rim's slot</param>
 /// <param name="TyreScale">The tyre's size over the factory tyre's, as the car's data scales AC's tyre for the race: the
 /// game's scenes size the tyre by it (AC by its own tyre)</param>
-public sealed record ShownWheel(ShownModel Rim, ShownModel? Tyre = null, Matrix4x4 TyreOnRim = default, float TyreScale = 1);
+/// <param name="TyreOptional">The tyre is the factory one: the car keeps its own round the rim when the rim fits in it,
+/// and shows this one only when the rim is too wide for the car's (<see cref="WheelFit"/>)</param>
+public sealed record ShownWheel(ShownModel Rim, ShownModel? Tyre = null, Matrix4x4 TyreOnRim = default, float TyreScale = 1,
+    bool TyreOptional = false);
 
 /// <summary>
 /// The parts a car shows that its own model does not have (the race mode's <c>car_parts.lua</c>): the wheels. A corner
 /// on its factory rim and tyre keeps the car's own wheel: the car's model is what those look like. Another rim goes in
-/// round the car's tyre; another tyre brings the whole wheel, the rim's model with it (the factory rim's too).
+/// round the car's tyre, or with the factory tyre's model when it is too wide for the car's; another tyre brings the
+/// whole wheel, the rim's model with it (the factory rim's too).
 /// </summary>
 public static class ShownParts
 {
@@ -48,16 +52,19 @@ public static class ShownParts
             var tyre = rim.Children.FirstOrDefault(c => c.ParentSlot == RunningGear.TyreSlotOnRim);
             var tyreDefinition = tyre == null ? null : catalog.Get(tyre.DefinitionId);
             var otherTyre = tyreDefinition != null && !Same(tyreDefinition, own.Tyre);
+            var otherRim = !Same(rimDefinition, own.Rim);
+            if (!otherTyre && !otherRim) continue;
 
-            // Another tyre: the whole wheel, the tyre where the rim's slot puts it (one without that place is no tyre to show)
-            if (otherTyre && Model(catalog, tyreDefinition!) is { } tyreModel
-                && PartSlots.ChildWorld(rimDefinition, RunningGear.TyreSlotOnRim, tyreDefinition!, MountedBy(tyre!, tyreDefinition!), Matrix4x4.Identity) is { } onRim)
+            // The tyre where the rim's slot puts it (one without that place is no tyre to show): always for another tyre,
+            // and for another rim in case the rim is too wide for the car's own
+            if (tyreDefinition != null && Model(catalog, tyreDefinition) is { } tyreModel
+                && PartSlots.ChildWorld(rimDefinition, RunningGear.TyreSlotOnRim, tyreDefinition, MountedBy(tyre!, tyreDefinition), Matrix4x4.Identity) is { } onRim)
             {
                 var factoryRadius = RunningGear.TyreRadius(own.Tyre);
-                var scale = factoryRadius > 0 ? (float)(RunningGear.TyreRadius(tyreDefinition!) / factoryRadius) : 1;
-                wheels[corner] = new ShownWheel(rimModel, tyreModel, onRim, scale > 0 ? scale : 1);
+                var scale = factoryRadius > 0 ? (float)(RunningGear.TyreRadius(tyreDefinition) / factoryRadius) : 1;
+                wheels[corner] = new ShownWheel(rimModel, tyreModel, onRim, scale > 0 ? scale : 1, TyreOptional: !otherTyre);
             }
-            else if (!Same(rimDefinition, own.Rim))
+            else if (otherRim)
             {
                 wheels[corner] = new ShownWheel(rimModel);
             }

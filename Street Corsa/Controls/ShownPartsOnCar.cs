@@ -162,7 +162,7 @@ public static class ShownPartsOnCar
         var partTyre = tyre == null ? null : Boxes(tyre, wheel.TyreOnRim);
         var ownTyre = meshes.Where(m => WheelFit.IsTyre(m.Fit)).Select(m => m.Fit.Box.Radius).DefaultIfEmpty(0).Max();
         if (WheelFit.Fit(corner, meshes.Select(m => m.Fit).ToList(), Boxes(rim, Matrix4x4.Identity), partTyre,
-                ownTyre * wheel.TyreScale) is not { } fitting)
+                ownTyre * wheel.TyreScale, wheel.TyreOptional) is not { } fitting)
         {
             Logger.Information("{Wheel} of {Car}: nothing to measure, its own wheel stays", name, car.RootObject?.Name);
             return;

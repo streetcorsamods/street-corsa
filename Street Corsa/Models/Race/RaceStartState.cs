@@ -105,6 +105,7 @@ namespace StreetCorsa.Models.Race
                 if (wheel.Tyre is not { } tyre) continue;
                 yield return (prefix + "TYRE_" + name, tyre.Name);
                 yield return (prefix + "TYRE_" + name + "_AT", Matrix(wheel.TyreOnRim));
+                if (wheel.TyreOptional) yield return (prefix + "TYRE_" + name + "_OPTIONAL", "1");
             }
         }
 

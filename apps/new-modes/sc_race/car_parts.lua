@@ -6,6 +6,8 @@
     CAR_n_TYRE_xx=parts\....kn5       the tyre's model, when the tyre is not the car's own (then the rim is always named)
     CAR_n_TYRE_xx_AT=m11,...,m43      where the tyre sits in the rim's space (rows of a 4x3 matrix, as PartAssembler
                                       mounts it on the rim's slot)
+    CAR_n_TYRE_xx_OPTIONAL=1          the tyre is the factory one: it comes along only when the rim alone would be
+                                      too wide for the car's tyre (RIM_WIDER_THAN_TYRE)
   A corner not named keeps the car's own wheel. On a named corner the part models go in a node of their own under the
   car's WHEEL_xx node, so they turn and steer with it, and the car's own meshes they replace are hidden. Nothing is
   written to the car's folder.
@@ -43,6 +45,9 @@ local BRAKE = { 'brake', 'drum', 'disc', 'disk', 'caliper', 'rotor' }
 
 -- A part mesh at least this share of the biggest one's radius is the lip
 local LIP_SHARE = 0.9
+
+-- How much wider than the car's tyre a rim alone may come out before the tyre on it comes along too (WheelFit)
+local RIM_WIDER_THAN_TYRE = 1.15
 
 local cars = {}   -- by car index: { corners = { { shown, hidden } ... } }, false once nothing is to be done
 
@@ -176,6 +181,19 @@ local function holders(wheel)
   return found
 end
 
+-- Where a rim alone goes: its scale and where along the axle (x), nil when there is nothing to measure. The part fills
+-- the hole the hidden rim leaves: its lip as big as the car's, flush with where the car's lip was, no further out than the
+-- tyre's sidewall (a hubcap bulges past the lip)
+local function rimAlone(rimBoxes, tyreBoxes, partBoxes, out, side)
+  local ownRadius, ownFace = lipOf(rimBoxes, out)
+  local partRadius, partFace = lipOf(partBoxes, -1)
+  if ownRadius <= 0 or partRadius <= 0 or not ownFace or not partFace then return nil end
+  local tyreFace = faceOf(tyreBoxes, out)
+  if tyreFace then ownFace = out > 0 and math.min(ownFace, tyreFace) or math.max(ownFace, tyreFace) end
+  local scale = ownRadius / partRadius
+  return scale, ownFace - side * partFace * scale, ownRadius, partRadius, ownFace
+end
+
 local function setUpCorner(carIndex, root, corner, files)
   local where = 'car ' .. carIndex .. ' ' .. CORNERS[corner]
   local wheel = root:findNodes('WHEEL_' .. CORNERS[corner])
@@ -185,25 +203,94 @@ local function setUpCorner(carIndex, root, corner, files)
   end
   wheel = wheel:at(1)
   local toWheel = wheel:getWorldTransformationRaw():inverse()
-  local withTyre = files.tyre ~= nil
 
-  -- Left wheels have their outboard side towards +X, right ones towards -X
+  -- Left wheels have their outboard side towards +X, right ones towards -X; a left wheel's part gets half a turn
   local out = (corner == 1 or corner == 3) and 1 or -1
+  local side = out > 0 and -1 or 1
 
+  -- The car's meshes under the wheel: what each is and where
   local meshes = wheel:findMeshes('?')
-  local hidden, rimBoxes, tyreBoxes = {}, {}, {}
+  local own, rimBoxes, tyreBoxes = {}, {}, {}
   for j = 1, meshes:size() do
-    local mesh = meshes:at(j)
     local name, material = meshes:name(j), meshes:materialName(j)
-    local box = boxInWheel(mesh, toWheel)
+    local box = boxInWheel(meshes:at(j), toWheel)
     local tyre = named(name, TYRE) or named(material, TYRE)
     local brake = not tyre and (named(name, BRAKE) or named(material, BRAKE))
-    local hide = not brake and (withTyre or not tyre)
-    log(string.format('%s mesh %s (%s): %s, x %.3f..%.3f, radius %.3f', where, tostring(name), tostring(material),
-      hide and 'hidden' or 'kept', box and box.minX or 0, box and box.maxX or 0, box and box.radius or 0))
-    if hide then hidden[#hidden + 1] = mesh end
+    own[#own + 1] = { mesh = meshes:at(j), name = name, material = material, box = box, tyre = tyre, brake = brake }
     if box and tyre then tyreBoxes[#tyreBoxes + 1] = box end
     if box and not tyre and not brake then rimBoxes[#rimBoxes + 1] = box end
+  end
+
+  local group = wheel:createNode('sc_wheel_' .. CORNERS[corner], false)
+  local rim = group and group:loadKN5(files.rim)
+  if not rim then
+    log(where .. ': ' .. files.rim .. ' did not load, its own wheel stays')
+    if group then group:dispose() end
+    return nil
+  end
+  local partRim = modelBoxes(rim, mat4x4.identity())
+
+  -- The factory tyre comes along only when the rim alone would be too wide for the car's tyre (WheelFit.RimWiderThanTyre)
+  local withTyre = files.tyre ~= nil
+  local aloneScale, aloneX, ownRadius, partRadius, ownFace = rimAlone(rimBoxes, tyreBoxes, partRim, out, side)
+  if withTyre and files.tyreOptional then
+    local ownTyre, partWidth = union(tyreBoxes), union(partRim)
+    local rimWidth = aloneScale and partWidth and (partWidth.maxX - partWidth.minX) * aloneScale
+    local tyreWidth = ownTyre and (ownTyre.maxX - ownTyre.minX)
+    withTyre = not (rimWidth and tyreWidth and rimWidth <= tyreWidth * RIM_WIDER_THAN_TYRE)
+    log(string.format('%s: the rim alone %.3f wide, the car\'s tyre %.3f: %s', where, rimWidth or 0, tyreWidth or 0,
+      withTyre and 'the tyre comes along' or 'the car keeps its tyre'))
+  end
+
+  local tyre = withTyre and group:loadKN5(files.tyre)
+  if withTyre and not tyre then
+    log(where .. ': ' .. files.tyre .. ' did not load, its own wheel stays')
+    group:dispose()
+    return nil
+  end
+  if tyre then tyre:getTransformationRaw():set(files.tyreAt) end
+
+  local scale, x
+  if withTyre then
+    -- The tyre as big as AC's, centred on the car's tyre (or the wheel node, when the car's tyre is not found)
+    local partTyre = union(modelBoxes(tyre, files.tyreAt))
+    local ownTyre = union(tyreBoxes)
+    local car = ac.getCar(carIndex)
+    local acRadius = car and car.wheels and car.wheels[corner - 1] and car.wheels[corner - 1].tyreRadius or 0
+    local radius = acRadius > 0 and acRadius or (ownTyre and ownTyre.radius or 0)
+    if not partTyre or partTyre.radius <= 0 or radius <= 0 then
+      log(where .. ': nothing to measure, its own wheel stays')
+      group:dispose()
+      return nil
+    end
+    scale = radius / partTyre.radius
+    local centre = ownTyre and (ownTyre.minX + ownTyre.maxX) / 2 or 0
+    x = centre - side * (partTyre.minX + partTyre.maxX) / 2 * scale
+    log(string.format('%s: %s on %s, scale %.3f (tyre %.3f over %.3f), centred at %.3f', where, files.tyre, files.rim,
+      scale, radius, partTyre.radius, centre))
+  else
+    if not aloneScale then
+      log(where .. ': nothing to measure, its own wheel stays')
+      group:dispose()
+      return nil
+    end
+    scale, x = aloneScale, aloneX
+    log(string.format('%s: %s in, scale %.3f (lip %.3f over %.3f), face at %.3f', where, files.rim, scale, ownRadius,
+      partRadius, ownFace))
+  end
+  group:getTransformationRaw():set(mat4x4(
+    vec4(side * scale, 0, 0, 0),
+    vec4(0, scale, 0, 0),
+    vec4(0, 0, side * scale, 0),
+    vec4(x, 0, 0, 1)))
+
+  -- The car's own that go: the rim always, the tyre too when ours comes along; never the brake
+  local hidden = {}
+  for _, m in ipairs(own) do
+    local hide = not m.brake and (withTyre or not m.tyre)
+    log(string.format('%s mesh %s (%s): %s, x %.3f..%.3f, radius %.3f', where, tostring(m.name), tostring(m.material),
+      hide and 'hidden' or 'kept', m.box and m.box.minX or 0, m.box and m.box.maxX or 0, m.box and m.box.radius or 0))
+    if hide then hidden[#hidden + 1] = m.mesh end
   end
 
   -- The car's blurred objects of this wheel
@@ -218,58 +305,6 @@ local function setUpCorner(carIndex, root, corner, files)
       log(where .. ': blurred object ' .. name .. ' hidden (' .. objects:size() .. ')')
     end
   end
-
-  local group = wheel:createNode('sc_wheel_' .. CORNERS[corner], false)
-  local rim = group and group:loadKN5(files.rim)
-  local tyre = rim and withTyre and group:loadKN5(files.tyre)
-  if not rim or (withTyre and not tyre) then
-    log(where .. ': ' .. (rim and files.tyre or files.rim) .. ' did not load, its own wheel stays')
-    if group then group:dispose() end
-    return nil
-  end
-  if tyre then tyre:getTransformationRaw():set(files.tyreAt) end
-
-  -- Scaled, turned to face out (a left wheel: half a turn about the vertical), moved along the axle to x
-  local scale, x
-  local side = out > 0 and -1 or 1
-  if withTyre then
-    -- The tyre as big as AC's, centred on the car's tyre (or the wheel node, when the car's tyre is not found)
-    local partTyre = union(modelBoxes(tyre, files.tyreAt))
-    local own = union(tyreBoxes)
-    local car = ac.getCar(carIndex)
-    local acRadius = car and car.wheels and car.wheels[corner - 1] and car.wheels[corner - 1].tyreRadius or 0
-    local radius = acRadius > 0 and acRadius or (own and own.radius or 0)
-    if not partTyre or partTyre.radius <= 0 or radius <= 0 then
-      log(where .. ': nothing to measure, its own wheel stays')
-      group:dispose()
-      return nil
-    end
-    scale = radius / partTyre.radius
-    local centre = own and (own.minX + own.maxX) / 2 or 0
-    x = centre - side * (partTyre.minX + partTyre.maxX) / 2 * scale
-    log(string.format('%s: %s on %s, scale %.3f (tyre %.3f over %.3f), centred at %.3f', where, files.tyre, files.rim,
-      scale, radius, partTyre.radius, centre))
-  else
-    local ownRadius, ownFace = lipOf(rimBoxes, out)
-    local partRadius, partFace = lipOf(modelBoxes(rim, mat4x4.identity()), -1)
-    if ownRadius <= 0 or partRadius <= 0 or not ownFace or not partFace then
-      log(where .. ': nothing to measure, its own wheel stays')
-      group:dispose()
-      return nil
-    end
-    -- A hubcap bulges past the lip: the face goes no further out than the tyre's sidewall
-    local tyreFace = faceOf(tyreBoxes, out)
-    if tyreFace then ownFace = out > 0 and math.min(ownFace, tyreFace) or math.max(ownFace, tyreFace) end
-    scale = ownRadius / partRadius
-    x = ownFace - side * partFace * scale
-    log(string.format('%s: %s in, scale %.3f (lip %.3f over %.3f), face at %.3f', where, files.rim, scale, ownRadius,
-      partRadius, ownFace))
-  end
-  group:getTransformationRaw():set(mat4x4(
-    vec4(side * scale, 0, 0, 0),
-    vec4(0, scale, 0, 0),
-    vec4(0, 0, side * scale, 0),
-    vec4(x, 0, 0, 1)))
 
   for _, object in ipairs(hidden) do object:setVisible(false) end
   log(where .. ': ' .. #hidden .. ' of the car\'s own hidden')
@@ -353,7 +388,8 @@ local function setUpCar(carIndex)
     local tyre = raceText(key .. 'TYRE_' .. CORNERS[corner])
     local tyreAt = tyre and raceMatrix(key .. 'TYRE_' .. CORNERS[corner] .. '_AT')
     if rim then
-      files[corner] = { rim = rim, tyre = tyreAt and tyre, tyreAt = tyreAt }
+      files[corner] = { rim = rim, tyre = tyreAt and tyre, tyreAt = tyreAt,
+        tyreOptional = raceText(key .. 'TYRE_' .. CORNERS[corner] .. '_OPTIONAL') == '1' }
       any = true
       if tyre and not tyreAt then log('car ' .. carIndex .. ' ' .. CORNERS[corner] .. ': the tyre has no place on the rim, the car keeps its tyre') end
     end
