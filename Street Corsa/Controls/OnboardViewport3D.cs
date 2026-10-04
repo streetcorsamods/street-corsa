@@ -154,6 +154,8 @@ public abstract class OnboardViewport3D : D3DViewportBase
         if (placement is { } before) renderer.MainSlot.LocalMatrix = before;
         await TrackDeviceWork(renderer.MainSlot.SetCarAsync(CarDescription.FromDirectory(player.Directory), skin, RendererToken));
         if (Renderer != renderer || !IsLoaded) return false;
+        await ShownPartsOnCar.SetAsync(renderer.CarNode, player.Shown);
+        if (Renderer != renderer || !IsLoaded) return false;
 
         if (placement is { } after) renderer.MainSlot.LocalMatrix = after;
         renderer.MainSlot.ResetCarBoundingBox();

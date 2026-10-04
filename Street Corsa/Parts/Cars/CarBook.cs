@@ -1,5 +1,8 @@
+using System.Collections.Concurrent;
+using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using StreetCorsa.Mods;
 
 namespace StreetCorsa.Parts.Cars;
@@ -51,7 +54,8 @@ public sealed class CarBook
     private readonly Dictionary<string, MakeEntry> _makes;
     private readonly Dictionary<string, CountryEntry> _countries;
     private readonly Dictionary<string, string> _countryNames;
-    private readonly Dictionary<string, CarEntry> _cars;
+    // Read by workers while the garage's placement mode gives a car its engine offset on the UI thread
+    private readonly ConcurrentDictionary<string, CarEntry> _cars;
     private readonly Dictionary<string, string> _aliases;
     private readonly HashSet<string> _noise;
 
@@ -64,7 +68,7 @@ public sealed class CarBook
         _makes = makes;
         _countries = countries;
         _countryNames = countryNames;
-        _cars = cars;
+        _cars = new ConcurrentDictionary<string, CarEntry>(cars, cars.Comparer);
         _aliases = aliases;
         _noise = noise;
         Problems = problems;
@@ -99,6 +103,15 @@ public sealed class CarBook
 
     /// <summary>What a car is given by the mods, by its AC folder name; null when nothing is</summary>
     public CarEntry? Car(string? carId) => carId != null && _cars.TryGetValue(carId, out var car) ? car : null;
+
+    /// <summary>
+    /// Gives a car its engine offset in this book (what the garage's placement mode moved it to, written to cars.json
+    /// beside): the car gets an entry if it had none; zero takes the offset away
+    /// </summary>
+    public void SetEngineOffset(string carId, Vector3 offset)
+    {
+        _cars.GetOrAdd(carId, _ => new CarEntry()).EngineOffset = offset == Vector3.Zero ? null : [offset.X, offset.Y, offset.Z];
+    }
 
     /// <summary>
     /// The make of a car: the one its entry names, else the first its brand's words tell, else its name's; null when none
@@ -370,5 +383,19 @@ public sealed class CarEntry
     /// <summary>How often it turns up for sale, 0 rare to 1 common</summary>
     public float? Common { get; set; }
 
+    /// <summary>
+    /// Where its engine sits from where the hubs and the layout put it, x y z metres in the car's space (moved by hand in
+    /// the garage's placement mode, F5 on the engine block)
+    /// </summary>
+    [JsonPropertyName("engine_offset")]
+    public float[]? EngineOffset { get; set; }
+
     public EngineLayout? EngineLayout => EngineLayouts.Parse(Layout);
+
+    /// <summary>The engine offset; zero when none is given or it is not three numbers within a metre</summary>
+    public Vector3 EngineShift =>
+        EngineOffset is { Length: 3 } o && o.All(v => float.IsFinite(v) && Math.Abs(v) <= MaxEngineOffset) ? new Vector3(o[0], o[1], o[2]) : Vector3.Zero;
+
+    /// <summary>The furthest an engine is moved from its place, metres</summary>
+    public const float MaxEngineOffset = 1f;
 }

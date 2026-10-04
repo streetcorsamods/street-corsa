@@ -49,6 +49,15 @@ namespace StreetCorsa.Models.Race
         /// <summary>How the engine is cooled and oiled; null leaves the race mode to take a factory car's</summary>
         public EngineCoolingRating? Cooling { get; init; }
 
+        /// <summary>
+        /// What the car shows that its model does not have (its wheels, the engine parts that stand out); the race mode
+        /// puts it on the car (see <see cref="Parts.Cars.ShownParts"/>). Null shows the car as it is.
+        /// </summary>
+        public Parts.Cars.ShownSet? Shown { get; init; }
+
+        /// <summary>The models the race mode loads for the car, once each</summary>
+        public IEnumerable<Parts.Cars.ShownModel> Models => Shown?.Models ?? [];
+
         /// <summary>Nothing wrong with the car</summary>
         public bool IsPristine =>
             BodyKmh.All(z => z <= 0) && EngineLife >= 1000 && GearboxWear <= 0 && SuspensionBend.All(b => b <= 0);
@@ -68,7 +77,48 @@ namespace StreetCorsa.Models.Race
             yield return (prefix + "DIRT", Unit.Clamp01(Dirt, ifNotFinite: 0).ToString("0.000", CultureInfo.InvariantCulture));
             if (Cooling is { } cooling)
                 yield return (prefix + "COOLING", List([cooling.Cooling, cooling.Fan, cooling.OilG], "0.000"));
+            foreach (var key in ShownKeys(carIndex, Shown)) yield return key;
         }
+
+        /// <summary>
+        /// The race.ini keys of what the car at <paramref name="carIndex"/> shows (the race mode's and the free run's
+        /// car_parts.lua): per wheel the rim's model, and the tyre's with where it sits on the rim; per engine part
+        /// standing out (CAR_n_PART_1, _2...) its model and where it sits in the car's model
+        /// </summary>
+        public static IEnumerable<(string Key, string Value)> ShownKeys(int carIndex, Parts.Cars.ShownSet? shown)
+        {
+            if (shown == null) yield break;
+            var prefix = $"CAR_{carIndex}_";
+            if (shown.Frame is { } frame)
+            {
+                yield return (prefix + "MODEL_NODE", frame.Node);
+                yield return (prefix + "MODEL_AT", Matrix(frame.At));
+            }
+            for (var i = 0; i < shown.Extras.Count; i++)
+            {
+                var extra = shown.Extras[i];
+                yield return (prefix + "PART_" + (i + 1), extra.Model.Name);
+                yield return (prefix + "PART_" + (i + 1) + "_AT", Matrix(extra.At));
+                yield return (prefix + "PART_" + (i + 1) + "_BOX",
+                    List([extra.Min.X, extra.Min.Y, extra.Min.Z, extra.Max.X, extra.Max.Y, extra.Max.Z], "0.######"));
+            }
+            var wheels = shown.Wheels;
+            for (var corner = 0; corner < Math.Min(wheels.Count, Parts.Cars.WheelFit.WheelNodes.Length); corner++)
+            {
+                if (wheels[corner] is not { } wheel) continue;
+                // AC's own names for the wheels, in the same order
+                var name = Parts.Cars.WheelFit.WheelNodes[corner]["WHEEL_".Length..];
+                yield return (prefix + "RIM_" + name, wheel.Rim.Name);
+                if (wheel.Tyre is not { } tyre) continue;
+                yield return (prefix + "TYRE_" + name, tyre.Name);
+                yield return (prefix + "TYRE_" + name + "_AT", Matrix(wheel.TyreOnRim));
+                if (wheel.TyreOptional) yield return (prefix + "TYRE_" + name + "_OPTIONAL", "1");
+            }
+        }
+
+        /// <summary>A matrix as race.ini carries it: its rows of 4x3, the last column left out</summary>
+        private static string Matrix(System.Numerics.Matrix4x4 m) =>
+            List([m.M11, m.M12, m.M13, m.M21, m.M22, m.M23, m.M31, m.M32, m.M33, m.M41, m.M42, m.M43], "0.######");
 
         private static string List(double[] values, string format) =>
             string.Join(",", values.Select(v => (double.IsFinite(v) ? v : 0).ToString(format, CultureInfo.InvariantCulture)));

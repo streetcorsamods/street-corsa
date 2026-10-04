@@ -3,6 +3,7 @@ using System.Numerics;
 using AcTools.Kn5File;
 using AcTools.Numerics;
 using StreetCorsa.Parts.Logic;
+using static StreetCorsa.Helpers.Matrices;
 
 namespace StreetCorsa.Parts;
 
@@ -55,25 +56,14 @@ public static class PartAssembler
         }
     }
 
-    /// <summary>
-    /// Where a part ends up when one of its slots is brought onto a slot of a placed part; null when either slot is not
-    /// there.
-    /// </summary>
-    public static Matrix4x4? ChildWorld(PartDefinition parent, int parentSlotId, PartDefinition child, int childSlotId, Matrix4x4 parentWorld)
-    {
-        var parentSlot = parent.Slots.FirstOrDefault(s => s.Id == parentSlotId);
-        var childSlot = child.Slots.FirstOrDefault(s => s.Id == childSlotId);
-        if (parentSlot == null || childSlot == null || !Matrix4x4.Invert(SlotMatrix(childSlot), out var childSlotInverse)) return null;
-
-        return childSlotInverse * SlotMatrix(parentSlot) * parentWorld;
-    }
+    /// <inheritdoc cref="PartSlots.ChildWorld"/>
+    public static Matrix4x4? ChildWorld(PartDefinition parent, int parentSlotId, PartDefinition child, int childSlotId, Matrix4x4 parentWorld) =>
+        PartSlots.ChildWorld(parent, parentSlotId, child, childSlotId, parentWorld);
 
     /// <summary>Name of the node a part gets in a merged model</summary>
     public static string NodeName(int index) => $"part{index}";
 
-    public static Matrix4x4 SlotMatrix(PartSlot slot) =>
-        Matrix4x4.CreateFromYawPitchRoll(slot.Rotation[0], slot.Rotation[1], slot.Rotation[2]) *
-        Matrix4x4.CreateTranslation(slot.Position[0], slot.Position[1], slot.Position[2]);
+    public static Matrix4x4 SlotMatrix(PartSlot slot) => PartSlots.SlotMatrix(slot);
 
     public static AssemblyModel BuildModel(PartsCatalog catalog, string name, IEnumerable<PlacedPart> parts)
     {
@@ -282,9 +272,4 @@ public static class PartAssembler
         BoundingSphereRadius = mesh.BoundingSphereRadius
     };
 
-    private static Mat4x4 ToMat4x4(Matrix4x4 m) => new(
-        m.M11, m.M12, m.M13, m.M14,
-        m.M21, m.M22, m.M23, m.M24,
-        m.M31, m.M32, m.M33, m.M34,
-        m.M41, m.M42, m.M43, m.M44);
 }

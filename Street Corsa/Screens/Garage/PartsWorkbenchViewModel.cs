@@ -232,6 +232,37 @@ namespace StreetCorsa.Screens.Garage
             private set => SetProperty(ref _gear, value);
         }
 
+        private System.Numerics.Vector3 _engineOffset;
+
+        /// <summary>Where the car's engine is moved from its place by hand (cars.json)</summary>
+        public System.Numerics.Vector3 EngineOffset
+        {
+            get => _engineOffset;
+            private set => SetProperty(ref _engineOffset, value);
+        }
+
+        /// <summary>
+        /// The garage's placement mode moved the engine block: the car keeps the new place (cars.json), and what it shows
+        /// follows. The trees are left as they are: placement holds on to the block it moves, and a tree made anew would
+        /// end it after the first step
+        /// </summary>
+        public void MoveEngine(System.Numerics.Vector3 offset)
+        {
+            if (_car == null) return;
+            _parts.SetEngineOffset(_car.DefinitionId, offset);
+            EngineOffset = _parts.EngineOffsetOf(_car.DefinitionId);
+            if (Catalog != null) Shown = _parts.Shown(_car);
+        }
+
+        private ShownSet? _shown;
+
+        /// <summary>What the car shows that its own model does not have: its wheels, the engine parts that stand out</summary>
+        public ShownSet? Shown
+        {
+            get => _shown;
+            private set => SetProperty(ref _shown, value);
+        }
+
         private EngineLayout _engineLayout;
 
         /// <summary>Where the car carries its engine, which is where the 3D view draws it</summary>
@@ -716,6 +747,8 @@ namespace StreetCorsa.Screens.Garage
                 }
 
                 Gear = _gearTrees.Select(g => new CarPart(g.CarSlot, g.Tree.Root)).ToList();
+                EngineOffset = _car != null ? _parts.EngineOffsetOf(_car.DefinitionId) : System.Numerics.Vector3.Zero;
+                Shown = catalog != null && _car != null ? _parts.Shown(_car) : null;
 
                 Shelf.Clear();
                 if (catalog != null)

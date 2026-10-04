@@ -1,4 +1,5 @@
 using System.IO;
+using StreetCorsa.Parts.Cars;
 using StreetCorsa.Configuration;
 using StreetCorsa.Controls;
 using StreetCorsa.Dialogs;
@@ -206,6 +207,7 @@ namespace StreetCorsa.Screens.CarViewing
         {
             var carDirectory = Path.Combine(AppSettings.Instance.CarsPath, carId);
             var skin = string.IsNullOrWhiteSpace(_listing.SkinId) ? null : _listing.SkinId;
+            var shown = _partsService.Shown(carId, _listing.Parts);
 
             if (_seller.Spot == CarViewingSpot.DealerLot && _dealerCatalog.Get(_seller.DealerId!) is { } dealer)
             {
@@ -215,7 +217,7 @@ namespace StreetCorsa.Screens.CarViewing
                     PlaceLine = GameText.Say("preview.car.at_dealer", ("dealer", Car?.DealerName ?? dealer.Name));
                     var walls = _dealerCatalog.GetShowroom(dealer.ShowroomId ?? string.Empty).WallRadius;
                     return new CarViewingStage(showroom, null, null, carDirectory, skin, 0f, 0f, LotHeading, CameraFromSide,
-                        Math.Clamp(walls - LotWallMargin, 5f, LotMaxRadius));
+                        Math.Clamp(walls - LotWallMargin, 5f, LotMaxRadius), shown);
                 }
 
                 _logger.Warning("The showroom of {Dealer} is not installed: the car is seen at the curb", dealer.Name);
@@ -226,14 +228,14 @@ namespace StreetCorsa.Screens.CarViewing
             {
                 _logger.Warning("No street is installed: the car is shown without a scene");
                 PlaceLine = SellerLine;
-                return new CarViewingStage(null, null, null, carDirectory, skin, 0f, 0f, LotHeading, CameraFromSide, StreetMaxRadius);
+                return new CarViewingStage(null, null, null, carDirectory, skin, 0f, 0f, LotHeading, CameraFromSide, StreetMaxRadius, shown);
             }
 
             var (street, time) = found;
             PlaceLine = GameText.Say("preview.car.at_curb", ("street", street.Title), ("seller", Car?.DealerName ?? string.Empty));
             var spot = street.Player;
             return new CarViewingStage(street.Kn5For(time), street.LightingFor(time), street.Sun, carDirectory, skin,
-                spot.X, spot.Z, spot.Heading, CurbCameraFromSide, StreetMaxRadius);
+                spot.X, spot.Z, spot.Heading, CurbCameraFromSide, StreetMaxRadius, shown);
         }
 
         private async Task LoadEngineAsync(UsedCarListingViewModel car)

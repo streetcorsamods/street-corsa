@@ -8,9 +8,11 @@ using AcTools.Render.Kn5SpecificForwardDark;
 using StreetCorsa.Configuration;
 using StreetCorsa.Logging;
 using StreetCorsa.Parts;
+using StreetCorsa.Parts.Cars;
 using StreetCorsa.Parts.Logic;
 using StreetCorsa.Services.Scripting;
 using StreetCorsa.Services.Text;
+using static StreetCorsa.Helpers.Matrices;
 
 namespace StreetCorsa.Controls;
 
@@ -257,6 +259,7 @@ public class CarViewport3D : D3DViewportBase
             if (viewport.StandMode) viewport.ResetCamera();
             viewport.QueueApplyParts();
             viewport.QueueApplyScenery();
+            viewport.ApplyShown();
         }));
 
     /// <summary>X-ray view: the car fades to a shell and its parts show in their places</summary>
@@ -450,6 +453,41 @@ public class CarViewport3D : D3DViewportBase
         set => SetValue(GearProperty, value);
     }
 
+    public static readonly DependencyProperty EngineOffsetProperty = DependencyProperty.Register(
+        nameof(EngineOffset), typeof(System.Numerics.Vector3), typeof(CarViewport3D),
+        new PropertyMetadata(System.Numerics.Vector3.Zero, (d, _) => ((CarViewport3D)d).OnEngineOffsetChanged()));
+
+    /// <summary>Where the car's engine is moved from its place by hand (cars.json): the parts are laid out with it</summary>
+    public System.Numerics.Vector3 EngineOffset
+    {
+        get => (System.Numerics.Vector3)GetValue(EngineOffsetProperty);
+        set => SetValue(EngineOffsetProperty, value);
+    }
+
+    /// <summary>The placement mode moved the engine block to this offset: for the screen to keep (cars.json)</summary>
+    public event Action<System.Numerics.Vector3>? EngineMoved;
+
+    private void OnEngineOffsetChanged()
+    {
+        if (_anchors is { } anchors) _anchors = anchors with { EngineOffset = EngineOffset };
+        Relayout();
+        ReportPlacement();
+    }
+
+    public static readonly DependencyProperty ShownProperty = DependencyProperty.Register(
+        nameof(Shown), typeof(ShownSet), typeof(CarViewport3D),
+        new PropertyMetadata(null, (d, _) => ((CarViewport3D)d).ApplyShown()));
+
+    /// <summary>
+    /// What the car shows that its own model does not have (<see cref="ShownPartsOnCar"/>): its wheels, and the engine
+    /// parts that stand out except in the parts view, which draws the whole engine
+    /// </summary>
+    public ShownSet? Shown
+    {
+        get => (ShownSet?)GetValue(ShownProperty);
+        set => SetValue(ShownProperty, value);
+    }
+
     public static readonly DependencyProperty EngineLayoutProperty = DependencyProperty.Register(
         nameof(EngineLayout), typeof(EngineLayout), typeof(CarViewport3D),
         new PropertyMetadata(EngineLayout.Front, (d, _) => ((CarViewport3D)d).QueueApplyParts()));
@@ -477,7 +515,12 @@ public class CarViewport3D : D3DViewportBase
 
     public static readonly DependencyProperty SelectedPartProperty = DependencyProperty.Register(
         nameof(SelectedPart), typeof(InstalledPart), typeof(CarViewport3D),
-        new PropertyMetadata(null, (d, _) => ((CarViewport3D)d).ApplySelection()));
+        new PropertyMetadata(null, (d, _) =>
+        {
+            var viewport = (CarViewport3D)d;
+            viewport.ApplySelection();
+            viewport.FollowSelection();
+        }));
 
     /// <summary>The mounted part that is marked as selected</summary>
     public InstalledPart? SelectedPart
@@ -584,6 +627,7 @@ public class CarViewport3D : D3DViewportBase
         ApplySkin();
         ApplyCarState();
         ApplyParts();
+        ApplyShown();
         ApplyScenery();
         ApplyRadio();
         Invalidate();
@@ -807,7 +851,7 @@ public class CarViewport3D : D3DViewportBase
         _isLoadingParts = true;
         try
         {
-            var anchors = GetAnchors(carNode);
+            var anchors = GetAnchors(carNode) is { } hubs ? hubs with { EngineOffset = EngineOffset } : null;
             if (anchors == null)
             {
                 Logger.Warning("Car has no wheel nodes to place the parts by: {Car}", carDirectory);
@@ -912,12 +956,8 @@ public class CarViewport3D : D3DViewportBase
                 ApplyHiddenParts(fade: false);
                 AnimateFor(AnimationWindow);
 
-                // The part being placed is gone, or the tree was made anew: the mode is over
-                if (_placing != null && !_partWorlds.ContainsKey(_placing))
-                {
-                    _placing = null;
-                    PlacementChanged?.Invoke(null);
-                }
+                // The tree may be made anew: placement goes on with the selected part in it
+                FollowSelection();
 
                 Logger.Information("Parts of {Car} laid out in {Ms} ms ({Count} parts, engine {Engine})", Path.GetFileName(carDirectory),
                     (int)(DateTime.Now - started).TotalMilliseconds, placed.Count, engine?.Definition.Id ?? "none");
@@ -974,6 +1014,9 @@ public class CarViewport3D : D3DViewportBase
         // Catch up with whatever changed in the meantime, a renderer rebuilt under it included (device lost, or a
         // quick unload and load): its own load found this run in progress and left the parts to it
         if (Renderer != null && (renderer != Renderer || !PartsVisible || IsOnStand || _loadedCarDirectory != carDirectory || !ReferenceEquals(Engine, engine) || !ReferenceEquals(Gear, gear) || EngineLayout != layout)) ApplyParts();
+
+        // The engine moved while this run laid it out where it was: placed again where it is now
+        else if (_anchors is { } laidOut && laidOut.EngineOffset != EngineOffset) OnEngineOffsetChanged();
     }
 
     /// <summary>The parts on screen are none: whatever is bound next is laid out from scratch</summary>
@@ -1098,11 +1141,7 @@ public class CarViewport3D : D3DViewportBase
                 _partWorlds = placed.Where(p => p.Source != null).ToDictionary(p => p.Source!, p => p.World);
                 AnimateFor(AnimationWindow);
 
-                if (_placing != null && !_partWorlds.ContainsKey(_placing))
-                {
-                    _placing = null;
-                    PlacementChanged?.Invoke(null);
-                }
+                FollowSelection();
 
                 Logger.Information("Engine stand laid out in {Ms} ms ({Count} parts, engine {Engine})",
                     (int)(DateTime.Now - started).TotalMilliseconds, placed.Count, engine?.Definition.Id ?? "none");
@@ -1210,6 +1249,24 @@ public class CarViewport3D : D3DViewportBase
             _applySceneryQueued = false;
             ApplyScenery();
         });
+    }
+
+    /// <summary>Puts <see cref="Shown"/> on the car; from property callbacks too, so nothing escapes: the car keeps its own</summary>
+    private async void ApplyShown()
+    {
+        try
+        {
+            if (Renderer is not { } renderer) return;
+            if (await ShownPartsOnCar.SetAsync(renderer.CarNode, PartsVisible ? Shown?.WithoutExtras() : Shown) && renderer == Renderer)
+            {
+                renderer.RefreshShadows();
+                Invalidate();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error(ex, "The parts the car shows could not be put on");
+        }
     }
 
     /// <summary>Runs from property callbacks, so nothing may escape it: the garage goes on without the stand</summary>
@@ -1376,13 +1433,6 @@ public class CarViewport3D : D3DViewportBase
         }
     }
 
-    private static SlimDX.Matrix ToSlim(System.Numerics.Matrix4x4 m) => new()
-    {
-        M11 = m.M11, M12 = m.M12, M13 = m.M13, M14 = m.M14,
-        M21 = m.M21, M22 = m.M22, M23 = m.M23, M24 = m.M24,
-        M31 = m.M31, M32 = m.M32, M33 = m.M33, M34 = m.M34,
-        M41 = m.M41, M42 = m.M42, M43 = m.M43, M44 = m.M44
-    };
 
     /// <summary>The node of a part; null when it has none, or there is no part</summary>
     private static int? NodeOf(IReadOnlyList<PlacedPart> nodes, InstalledPart? part)
@@ -1410,10 +1460,19 @@ public class CarViewport3D : D3DViewportBase
 
     /// <summary>
     /// Enters placement mode on the selected part: nudges move it (or the pad it sits on) and are written to the
-    /// catalog's slot shifts. Leaves the mode when there is no selected part or it is already on.
+    /// catalog's slot shifts; on the engine block in the car, they move the whole engine and are kept for the car
+    /// (<see cref="EngineMoved"/>). Leaves the mode when there is no selected part or it is already on.
     /// </summary>
     public void TogglePlacement()
     {
+        // The engine block itself, in the car: moved with everything on it, kept per car (EngineMoved)
+        if (_placing == null && SelectedPart is { Parent: null } block && ReferenceEquals(block, Engine) && !StandMode && PartsCatalog != null)
+        {
+            _placing = block;
+            ReportPlacement();
+            return;
+        }
+
         if (_placing != null || SelectedPart is not { Parent: not null } part || PartsCatalog == null)
         {
             _placing = null;
@@ -1425,6 +1484,32 @@ public class CarViewport3D : D3DViewportBase
         // dual quad along with each other. One of several on the same parent is placed by its pad, which is its own
         _placing = part;
         _placementTarget = IsOneOfSeveral(part) ? PlacementTarget.Pad : PlacementTarget.Part;
+        ReportPlacement();
+    }
+
+    /// <summary>
+    /// Keeps placement on the selected part: another part picked is placed from then on, the same part in a tree made
+    /// anew (known by its id) goes on being placed; nothing placeable selected ends the mode
+    /// </summary>
+    private void FollowSelection()
+    {
+        if (_placing == null) return;
+
+        var selected = SelectedPart;
+        var next = selected == null ? null
+            : _partWorlds.ContainsKey(selected) ? selected
+            : selected.InstanceId == Guid.Empty ? null
+            : _partWorlds.Keys.FirstOrDefault(p => p.InstanceId == selected.InstanceId);
+        if (next == null || !(next.Parent != null || (ReferenceEquals(next, Engine) && !StandMode)))
+        {
+            _placing = null;
+            PlacementChanged?.Invoke(null);
+            return;
+        }
+
+        var samePart = ReferenceEquals(next, _placing) || (next.InstanceId != Guid.Empty && next.InstanceId == _placing.InstanceId);
+        _placing = next;
+        if (!samePart && next.Parent != null) _placementTarget = IsOneOfSeveral(next) ? PlacementTarget.Pad : PlacementTarget.Part;
         ReportPlacement();
     }
 
@@ -1446,6 +1531,19 @@ public class CarViewport3D : D3DViewportBase
     /// </summary>
     public void NudgePlacement(float right, float up, float forward)
     {
+        // The block: the whole engine moves, in the car's space, by the engine's axes
+        if (_placing is { Parent: null } block)
+        {
+            if (!_partWorlds.TryGetValue(block, out var blockWorld)) return;
+            var axes = blockWorld;
+            axes.Translation = System.Numerics.Vector3.Zero;
+            // Kept to the millimetre (back at the start is zero, not a residue) and within what the car book takes
+            var next = EngineOffset + System.Numerics.Vector3.TransformNormal(new System.Numerics.Vector3(right, up, -forward), axes);
+            static float Kept(float v) => Math.Clamp(MathF.Round(v * 1000) / 1000, -CarEntry.MaxEngineOffset, CarEntry.MaxEngineOffset);
+            EngineMoved?.Invoke(new System.Numerics.Vector3(Kept(next.X), Kept(next.Y), Kept(next.Z)));
+            return;
+        }
+
         var catalog = PartsCatalog;
         if (_placing is not { Parent: { } parent } part || catalog == null || Engine == null) return;
         if (!_partWorlds.TryGetValue(Engine, out var engineWorld) || !_partWorlds.TryGetValue(part, out var partWorld)
@@ -1469,6 +1567,12 @@ public class CarViewport3D : D3DViewportBase
     /// <summary>Takes the slot being placed back to where the packs put it</summary>
     public void ResetPlacement()
     {
+        if (_placing is { Parent: null })
+        {
+            EngineMoved?.Invoke(System.Numerics.Vector3.Zero);
+            return;
+        }
+
         var catalog = PartsCatalog;
         if (_placing is not { Parent: { } parent } part || catalog == null) return;
 
@@ -1493,6 +1597,16 @@ public class CarViewport3D : D3DViewportBase
     private void ReportPlacement()
     {
         var catalog = PartsCatalog;
+        if (_placing is { Parent: null } block)
+        {
+            var o = EngineOffset;
+            PlacementChanged?.Invoke(
+                $"PLACEMENT: moving the engine, everything on it with it (kept for this car in cars.json)\n{block.Definition.Id}\n" +
+                $"moved so far: x {o.X * 100:+0.0;-0.0} cm  y {o.Y * 100:+0.0;-0.0} cm  z {o.Z * 100:+0.0;-0.0} cm\n" +
+                "arrows: across / fore-aft   PgUp PgDn: height   Ctrl 1 mm  Shift 2 cm\nR: back to its place   F5 or Esc: done");
+            return;
+        }
+
         if (_placing is not { Parent: { } parent } part || catalog == null)
         {
             PlacementChanged?.Invoke(null);
@@ -1675,7 +1789,7 @@ public class CarViewport3D : D3DViewportBase
 
     private static CarAnchors? GetAnchors(Kn5RenderableCar carNode)
     {
-        var hubs = new[] { "WHEEL_LF", "WHEEL_RF", "WHEEL_LR", "WHEEL_RR" }
+        var hubs = WheelFit.WheelNodes
             .Select(name => carNode.RootObject.GetDummyByName(name)?.Matrix)
             .ToArray();
         if (hubs.Any(h => h == null)) return null;

@@ -20,6 +20,10 @@ namespace StreetCorsa.Services
     /// The mods' race formats go in with it (<see cref="Race.RaceFormats"/>): every mod's format module next to the mode's
     /// own (<c>format_&lt;mod&gt;_&lt;module&gt;.lua</c>), and a format's own mode, when the race is one, in a folder of its
     /// own (<c>new-modes\&lt;mod&gt;_&lt;mode&gt;</c>).
+    ///
+    /// So do the part models the race's cars show (<see cref="StreetCorsa.Parts.Cars.ShownParts"/>, in <c>parts\</c>): the mode loads
+    /// them from its own folder, and a race's models leave with the next race. A format's own mode gets them too, with the
+    /// script that puts them on (<c>car_parts.lua</c>), for it to run as sc_race does.
     /// </summary>
     public sealed class ScRaceMode(string sourceFolder, Func<Race.RaceFormats>? formats = null)
     {
@@ -44,11 +48,11 @@ namespace StreetCorsa.Services
             Path.Combine(acRoot, "extension", "lua", "new-modes", IniModificationService.RaceModeId);
 
         /// <summary>
-        /// Puts the mode into <paramref name="acRoot"/> as this build has it, with the mods' format modules, and the mode
-        /// of <paramref name="format"/> when it has its own. Null when it is there; otherwise why the race cannot run, for
-        /// the player.
+        /// Puts the mode into <paramref name="acRoot"/> as this build has it, with the mods' format modules, the mode
+        /// of <paramref name="format"/> when it has its own, and the part <paramref name="models"/> the cars show. Null when
+        /// it is there; otherwise why the race cannot run, for the player.
         /// </summary>
-        public string? Install(string acRoot, Models.Race.RaceFormat? format = null)
+        public string? Install(string acRoot, Models.Race.RaceFormat? format = null, IEnumerable<StreetCorsa.Parts.Cars.ShownModel>? models = null)
         {
             if (!Directory.Exists(Path.Combine(acRoot, "extension")))
                 return GameText.Say("launch.no_csp");
@@ -59,8 +63,10 @@ namespace StreetCorsa.Services
             try
             {
                 var target = InstalledFolder(acRoot);
+                var modelFiles = (models ?? []).Select(m => (m.Name, m.Source)).ToList();
                 var files = Directory.GetFiles(sourceFolder).Select(f => (Name: Path.GetFileName(f), Source: f))
-                    .Concat(formats?.Invoke().ModuleFiles ?? []).ToList();
+                    .Concat(formats?.Invoke().ModuleFiles ?? [])
+                    .Concat(modelFiles).ToList();
                 var written = Mirror(files, target);
                 if (written > 0)
                     _logger.Information("Race mode installed in {Target} ({Count} file(s) changed)", target, written);
@@ -72,8 +78,12 @@ namespace StreetCorsa.Services
                         return GameText.Say("launch.mode_missing", ("folder", modeFolder));
 
                     var modeTarget = Path.Combine(acRoot, "extension", "lua", "new-modes", Race.RaceFormats.ModeIdOf(format));
+                    // With the parts and their script: the mod's own files first, so a car_parts.lua of its own wins
+                    var partsScript = Path.Combine(sourceFolder, PartsScript);
                     var modeFiles = Directory.GetFiles(modeFolder, "*", SearchOption.AllDirectories)
-                        .Select(f => (Name: Path.GetRelativePath(modeFolder, f), Source: f)).ToList();
+                        .Select(f => (Name: Path.GetRelativePath(modeFolder, f), Source: f))
+                        .Concat(File.Exists(partsScript) ? [(PartsScript, partsScript)] : [])
+                        .Concat(modelFiles).ToList();
                     var modeWritten = Mirror(modeFiles, modeTarget);
                     if (modeWritten > 0)
                         _logger.Information("Race format {Format}'s mode installed in {Target} ({Count} file(s) changed)", format.Id, modeTarget, modeWritten);
@@ -88,6 +98,42 @@ namespace StreetCorsa.Services
                 return GameText.Say("launch.mode_not_installed", ("problem", ex.Message));
             }
         }
+
+        /// <summary>
+        /// Puts the free run's mode (<c>sc_free</c>, built next to this one) into <paramref name="acRoot"/> with this
+        /// mode's car_parts.lua and the part <paramref name="models"/> the car shows. Null when it is there; otherwise why
+        /// the free run cannot go, for the player.
+        /// </summary>
+        public string? InstallFreeRun(string acRoot, IEnumerable<StreetCorsa.Parts.Cars.ShownModel> models)
+        {
+            if (!Directory.Exists(Path.Combine(acRoot, "extension")))
+                return GameText.Say("launch.no_csp");
+
+            var freeSource = Path.Combine(Path.GetDirectoryName(sourceFolder) ?? sourceFolder, IniModificationService.FreeRunModeId);
+            var parts = Path.Combine(sourceFolder, PartsScript);
+            if (!File.Exists(Path.Combine(freeSource, "mode.lua")) || !File.Exists(parts))
+                return GameText.Say("launch.mode_missing", ("folder", freeSource));
+
+            try
+            {
+                var target = Path.Combine(acRoot, "extension", "lua", "new-modes", IniModificationService.FreeRunModeId);
+                var files = Directory.GetFiles(freeSource).Select(f => (Name: Path.GetFileName(f), Source: f))
+                    .Append((PartsScript, parts))
+                    .Concat(models.Select(m => (m.Name, m.Source))).ToList();
+                var written = Mirror(files, target);
+                if (written > 0)
+                    _logger.Information("Free run mode installed in {Target} ({Count} file(s) changed)", target, written);
+                return null;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                _logger.Error(ex, "Could not install the free run mode into {AcRoot}", acRoot);
+                return GameText.Say("launch.mode_not_installed", ("problem", ex.Message));
+            }
+        }
+
+        /// <summary>The race mode's script that puts the parts on, which the free run's mode runs too</summary>
+        private const string PartsScript = "car_parts.lua";
 
         /// <summary>
         /// Makes <paramref name="target"/> hold exactly <paramref name="files"/> (by their names there, which may have

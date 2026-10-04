@@ -63,8 +63,11 @@
     <None Update="Content\**">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <!-- The CSP mode races run in, installed into AC before each race by ScRaceMode -->
+    <!-- The CSP modes races and free runs run in, installed into AC before each by ScRaceMode -->
     <None Include="..\apps\new-modes\sc_race\*" LinkBase="AcModes\sc_race">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\apps\new-modes\sc_free\*" LinkBase="AcModes\sc_free">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

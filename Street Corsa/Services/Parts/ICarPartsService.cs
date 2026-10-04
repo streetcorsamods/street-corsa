@@ -91,5 +91,23 @@ namespace StreetCorsa.Services.Parts
 
         /// <summary>The running gear the car left the factory with, matched to its data; null without a catalog or data</summary>
         (RunningGearFactory.AxleParts Front, RunningGearFactory.AxleParts Rear)? FactoryRunningGear(Car car);
+
+        /// <summary>Where the car's engine is moved from its place by hand (cars.json); zero when it is not</summary>
+        System.Numerics.Vector3 EngineOffsetOf(string carDefinitionId);
+
+        /// <summary>
+        /// Moves the car's engine from its place (the garage's placement mode): into the car book now, and into the base
+        /// game's cars.json beside, off the caller's thread (a file that cannot be written is told in the log)
+        /// </summary>
+        void SetEngineOffset(string carDefinitionId, System.Numerics.Vector3 offset);
+
+        /// <summary>
+        /// Everything the car shows, in a race and in the game's scenes, that its own model does not have: its wheels and
+        /// the engine parts that stand out (<see cref="ShownEngineParts"/>); null when it shows nothing but its model
+        /// </summary>
+        ShownSet? Shown(Car car) => Shown(car.DefinitionId, car.Parts);
+
+        /// <summary>What a car of <paramref name="carDefinitionId"/> with <paramref name="parts"/> shows (a car for sale)</summary>
+        ShownSet? Shown(string carDefinitionId, List<PartInstance> parts);
     }
 }

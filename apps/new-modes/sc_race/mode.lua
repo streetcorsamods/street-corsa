@@ -1952,6 +1952,9 @@ local PREPARE_SECONDS = 0.5
 local preparedFor = 0
 
 function script.prepare(dt)
+  -- The parts each car shows that are not its own (car_parts.lua): from the first frame its model is there
+  local partsOk, partsError = pcall(function() require('car_parts').update() end)
+  if not partsOk and preparedFor == 0 then ac.log('[Street Corsa] Parts: ' .. tostring(partsError)) end
   preparedFor = preparedFor + dt
   if preparedFor < PREPARE_SECONDS then return false end
   ac.log('[Street Corsa] Ready to race')
@@ -1959,6 +1962,8 @@ function script.prepare(dt)
 end
 
 function script.update(dt)
+  pcall(function() require('car_parts').update() end)
+
   -- The result is written: nothing more to track until AC quits
   if sessionEnded then return end
 

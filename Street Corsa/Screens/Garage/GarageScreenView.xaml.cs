@@ -82,6 +82,7 @@ namespace StreetCorsa.Screens.Garage
             {
                 if (DataContext is GarageScreenViewModel viewModel) viewModel.Workbench.PlacementDisplay = text ?? string.Empty;
             };
+            Viewport3D.EngineMoved += offset => (DataContext as GarageScreenViewModel)?.Workbench.MoveEngine(offset);
 
             // Placement mode is driven from the keyboard, wherever the focus is on the screen
             Unloaded += (_, _) => { if (_window != null) _window.PreviewKeyDown -= OnWindowKeyDown; };

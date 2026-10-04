@@ -439,7 +439,15 @@ namespace StreetCorsa.Services
                     {
                         prepareWhy = "the race mode could not be installed";
                         var format = race.TunePasses != null ? null : Race.RaceFormats.Current.Of(race.Format);
-                        prepareError = _raceMode.Install(AppSettings.Instance.AssettoCorsaPath, format);
+                        var models = (race.PlayerStart?.Models ?? []).Concat(race.OpponentStart?.Models ?? []);
+                        prepareError = _raceMode.Install(AppSettings.Instance.AssettoCorsaPath, format, models);
+                    }
+                    else if (intent is FreeRunLaunchIntent { HasShownParts: true } freeRun
+                             && _raceMode.InstallFreeRun(AppSettings.Instance.AssettoCorsaPath, freeRun.Shown!.Models) is { } noMode)
+                    {
+                        // The parts are a look, never worth the run: without CSP (or the mode) it goes as a plain practice, as before
+                        _logger.Warning("The free run goes without its mode, so without the car's parts: {Problem}", noMode);
+                        foreach (var freeRunIntent in configIntents.OfType<FreeRunIntent>()) freeRunIntent.Shown = null;
                     }
 
                     foreach (var configIntent in prepareError == null ? configIntents : [])
