@@ -354,11 +354,11 @@ def blurred_objects_go_and_a_blurred_wheel_node_is_kept_shown():
     check('a blurred wheel node is kept shown, its blurred one hidden again', world.wheels.LF.visible and not world.blur.visible, log)
 
 
-def an_engine_part_goes_into_the_cars_main_model_where_it_sits():
+def an_engine_part_goes_into_the_node_holding_the_wheels():
     _, world = run({'CAR_0_PART_1': r'parts\engines_blower.kn5', 'CAR_0_PART_1_AT': '1,0,0, 0,1,0, 0,0,1, 0,0.8,1.2'})
     part = [i for i in world.loaded.values() if i.file.endswith('engines_blower.kn5')]
     t = part and matrix(part[0].node.transform)
-    check('an engine part goes into the car main model where it sits',
+    check('an engine part goes into the node holding the wheels, where it sits',
           part and part[0].node.parent.name == 'chevelle.kn5' and near(t[3][1], 0.8) and near(t[3][2], 1.2), list(world.log.values()))
 
 
@@ -388,7 +388,7 @@ def a_rim_too_wide_for_the_cars_tyre_brings_its_factory_tyre_along():
 
 a_corner_not_named_keeps_its_own_rim()
 a_rim_too_wide_for_the_cars_tyre_brings_its_factory_tyre_along()
-an_engine_part_goes_into_the_cars_main_model_where_it_sits()
+an_engine_part_goes_into_the_node_holding_the_wheels()
 engine_parts_under_the_hood_go_up_onto_it_and_never_down()
 a_tyre_makes_the_whole_wheel_ours_as_big_as_acs_tyre()
 a_tyre_without_its_place_on_the_rim_leaves_the_car_its_tyre()
