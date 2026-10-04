@@ -1,7 +1,7 @@
 # Modding Street Corsa
 
 Everything the game knows beyond Assetto Corsa's cars and tracks is **content in mods**: parts, engine sounds, dealers,
-racers, events, milestones, victory paths, streets, gas stations, warehouses, the main screen's rooms, garages, the
+racers, events, milestones, victory paths, streets, gas stations, warehouses, the part shops' room, the main screen's rooms, garages, the
 words the game says, and the rules it plays by (what things cost, how long they take, how the police and the rivals
 behave). The base game is itself a mod, `Content\streetcorsa`, loaded through the same loader as any other, first.
 
@@ -21,7 +21,7 @@ Content\
   mymod\
     mod.json
     game.json
-    rules\  parts\  sounds\  sfx\  props\  dealers\  partshops\  racers\  events\  milestones\  victories\  streets\  stations\  warehouses\  showcase\  garages\  text\  theme\  ai\
+    rules\  parts\  sounds\  sfx\  props\  dealers\  partshops\  racers\  events\  milestones\  victories\  streets\  stations\  warehouses\  shopscenes\  showcase\  garages\  text\  theme\  ai\
 ```
 
 `mod.json`:
@@ -52,7 +52,7 @@ Content\
   out, or older is told, and this mod is left out (and so is a mod that requires it in turn).
 - `gameVersion`: the lowest version of the game it works with. On an older game it is left out, told.
 - `removes`: entries of the mods before it (the base game's included) it takes out of the game, by kind of content, full
-  ids: `dealers`, `partshops`, `racers`, `events`, `milestones`, `victories`, `streets`, `stations`, `warehouses`,
+  ids: `dealers`, `partshops`, `racers`, `events`, `milestones`, `victories`, `streets`, `stations`, `warehouses`, `shopscenes`,
   `text` (pools, by key) and `sfx` (cues, by name). What the mod itself or a later mod adds under the same id stays: a
   mod can take out a base game's pool or cue and give its own. An id no mod before it has is told. Parts can't be
   removed (yet): other parts and engine builds hang off them.
@@ -569,6 +569,12 @@ name plates overlap; the dealers' pins are on their own map. `kind` is one of th
 too) makes a specialist. A make with no specialist of its own is still sold by the speed shops (its hot
 parts), the junkyards and the mail order.
 
+Inside, a shop is the part shops' room (`shopscenes`, below) dressed in the look for its kind, or the one it names in
+`"look"` (a look's id). Whoever is behind the counter, talked to while the player's AI is on, is drawn from the
+`names.clerks.*` pools with a temperament `for` `clerk` (ai/people.json), unless the shop gives `"clerk"` as a dealer
+gives its salesman: `{ "name": "Big Bob Vance", "age": 58, "sex": "man", "temperament": "old_mechanic", "portrait":
+"clerks/bob.png" }` (the portrait under the mod's `partshops` folder; each field optional).
+
 ### racers
 
 A list under `opponents`, or one racer per file (its id as `opponentId` or `id`):
@@ -770,6 +776,25 @@ it (`..\`, a full path) is not read, so the station goes on without its picture 
 picture a warehouse names (`surfaces`, `digits`) is a plain file name with no folder in it; any other is left out and
 logged. The lights of the day in `lights` are named `day`, `dusk` and `night` (any case): a number or another name is
 logged and ignored, and a light written as `null` is skipped, as if it were not there.
+
+### shopscenes
+
+One folder per part shop room, as the base game's `shopscenes\shop`: a `shop.json` and its model (`"model"`, default
+`shop.kn5`). Every part shop is seen in the last one the mods give, so a mod's room takes the base game's place. The file
+gives the `camera` (`alpha`, `beta`, `radius`, `targetX`, `targetHeight`, `targetZ` the point it turns round, and `fov`
+the lens, degrees high), the `room` the camera stays inside (`halfWidth` either side of the middle along x, `halfDepth`
+along z, the ceiling `height`), the `sun`, the `lights` of the day with `lampScale` and the `lamps` as a warehouse's, how
+bright the material `sh_window` glows at each light (`window`), the `places` the shop's stock stands in, and the `looks`.
+
+A place is the middle of its floor (`x`, `y`, `z`), its room (`width` along its own x, `depth` along its own z,
+`height`), the way it faces (`heading`, degrees; 0 faces +z) and what it `holds`: `engine` (a whole engine; a shop with
+none puts its biggest part there), `wheel` (tyres and rims first), `large` or `shelf` (anything that fits). When the
+player walks in, the shop's stock is stood in them, one part a place, in the file's order, so put the places the eye
+goes to first; a part too big for every place left is not shown (it is still at the counter). A look has an `id`, the
+shop `kinds` it is for (`speed`, `specialist`, `wheels`, `junkyard`), the picture each material wears (`surfaces`, the
+sign among them) and its `lampColor`; a shop wears the look it names, else the first for its kind, else the first.
+`tools/ShopScene` builds the base game's (see [screens/part-shop.md](screens/part-shop.md)). What a scene file may name is
+held as a warehouse's is.
 
 ### showcase and garages
 
@@ -1028,7 +1053,7 @@ without repeating the rest.
   answered as the headline on the first line and the body after), `ad` (an
   ad's blurb), `portrait_look` (a new rival's looks for the picture, in English) and `test` (Settings' Test button).
   A use with no prompt is not asked for.
-- Talking to people: `chat_seller`, `chat_salesman`, `chat_rival`, `chat_buyer` (who answered the player's own ad) are sent after the persona as the rest of who the AI
+- Talking to people: `chat_seller`, `chat_salesman`, `chat_rival`, `chat_buyer` (who answered the player's own ad), `chat_clerk` (behind a part shop's counter) are sent after the persona as the rest of who the AI
   is, with the talk as the messages; they name `{name}`, `{nickname}`, `{age}`, `{sex}`, `{temperament}`, `{place}`,
   `{player}` and `{facts}` (the game's fact sheet, the text pools `chat.fact.*` and `chat.deal.*`, in sections headed by
   `chat.section` and `chat.section.*`; best at the prompt's end, as the base game's are, so a local model reads again
@@ -1036,7 +1061,11 @@ without repeating the rest.
   writes what a person keeps of a talk (`{name}`, `{player}`, `{talk}`); `chat_summary` sums up the start of a long talk
   (`{name}`, `{player}`, `{earlier}` the summary so far, `{talk}` the turns to add). The fact sheet also tells how the person
   feels about the player (`chat.fact.feeling.*`) and what happened between them (`chat.fact.events`, `chat.fact.event.*`),
-  moved by the rules' `ai.talk.feeling*` weights. The stage lines, the window's words and the
+  moved by the rules' `ai.talk.feeling*` weights. A clerk's sheet has the shop (`chat.fact.shop*`) and what the game
+  found in its stock for the player's last ask (`chat.fact.stock.*`); `clerk_search` reads that ask first, answered as a
+  JSON object (`asks`, `kind`, `fits`, `maxPrice`, `words`, `want`; Ollama and OpenAI-compatible providers are held to
+  the schema, Anthropic by the prompt), from `{said}`, `{talk}` (the last turns), `{kinds}` (the kinds in stock) and
+  `{player}`. The stage lines, the window's words and the
   words that make a number an offer are the text pools `chat.*` (the base game's `text/chat.json`).
 
 `ai\people.json`: the temperaments people are drawn with, merged key by key:

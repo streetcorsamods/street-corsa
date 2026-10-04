@@ -44,6 +44,14 @@ namespace StreetCorsa.Services.Ai
         /// </summary>
         Task<string?> ChatAsync(string use, TextValues values, IReadOnlyList<AiTurn> turns, CancellationToken cancellationToken = default);
 
+        /// <summary>
+        /// The mods' prompt <paramref name="use"/> filled with <paramref name="values"/> answered as a JSON object of
+        /// <paramref name="schema"/>, as written: not cleaned or cut, for the game to read (a clerk's search). The player's
+        /// own request. Null as for <see cref="WriteAsync"/>; an answer that is no such object is the caller's to throw away.
+        /// </summary>
+        Task<string?> JsonAsync(string use, TextValues values, System.Text.Json.Nodes.JsonObject schema, CancellationToken cancellationToken = default) =>
+            Task.FromResult<string?>(null);
+
         /// <summary>Tries <paramref name="settings"/> (not yet saved, maybe): the models the provider offers, and a short answer</summary>
         Task<AiTestResult> TestAsync(AiSettings settings, string? apiKey, CancellationToken cancellationToken = default);
     }
@@ -99,6 +107,11 @@ namespace StreetCorsa.Services.Ai
         public Task<string?> WriteAsync(string use, TextValues values, AiPriority priority = AiPriority.Background, CancellationToken cancellationToken = default) =>
             AskAsync(use, priority, (prompts, prompt) =>
                 new AiTextRequest(SystemPrompt(prompts), GameText.Fill(prompt.Prompt, values), prompt.MaxTokens, prompt.Temperature), cancellationToken);
+
+        public Task<string?> JsonAsync(string use, TextValues values, System.Text.Json.Nodes.JsonObject schema, CancellationToken cancellationToken = default) =>
+            AskAsync(use, AiPriority.Now, (prompts, prompt) =>
+                new AiTextRequest(SystemPrompt(prompts), GameText.Fill(prompt.Prompt, values), prompt.MaxTokens, prompt.Temperature, Format: schema),
+                cancellationToken);
 
         public int? ContextTokens
         {
@@ -196,7 +209,8 @@ namespace StreetCorsa.Services.Ai
                 var request = ask(prompts, prompt);
                 var started = DateTime.UtcNow;
                 var answer = await Provider().CompleteAsync(request, timeout.Token).ConfigureAwait(false);
-                var cleaned = Clean(answer, prompt.MaxLength, prompt.Lines);
+                // A JSON answer is the game's to read, as written
+                var cleaned = request.Format != null ? answer.Trim() : Clean(answer, prompt.MaxLength, prompt.Lines);
                 _logger.Debug("AI {Use} in {Ms} ms: {Text}", use, (int)(DateTime.UtcNow - started).TotalMilliseconds, cleaned);
                 return (false, cleaned.Length == 0 ? null : cleaned);
             }

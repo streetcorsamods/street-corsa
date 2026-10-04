@@ -1,3 +1,5 @@
+using System.IO;
+using StreetCorsa.Helpers;
 using StreetCorsa.Logging;
 using StreetCorsa.Mods;
 using StreetCorsa.Models.GameState;
@@ -40,11 +42,13 @@ namespace StreetCorsa.Services.PartShops
             {
                 var shops = ModJson.Load(mods, ContentTypes.PartShops, ShopsList, "part shop", problems, entry =>
                     entry.Id == null && entry.Replaces == null ? null : entry.As<PartShopDefinition>());
-                foreach (var (id, shop, _) in shops.Entries)
+                foreach (var (id, shop, mod) in shops.Entries)
                 {
                     shop.Id = id;
                     shop.Makes ??= [];
                     shop.Groups ??= [];
+                    shop.Look ??= string.Empty;
+                    FindPortrait(shop, mod, problems);
                     _byId[id] = shop;
                     _shops.Add(shop);
                 }
@@ -59,6 +63,18 @@ namespace StreetCorsa.Services.PartShops
 
             foreach (var problem in problems) _logger.Warning("Part shops: {Problem}", problem);
             ModProblems.Add("Part shops", problems);
+        }
+
+        /// <summary>A clerk's portrait, next to the part shop files of the mod that gives them; told when it is not there</summary>
+        private static void FindPortrait(PartShopDefinition shop, ModInfo mod, List<string> problems)
+        {
+            if (shop.Clerk is not { Portrait.Length: > 0 } clerk) return;
+
+            var folder = Path.Combine(mod.Folder, ContentTypes.PartShops);
+            if (PathNames.TryCombineUnder(folder, clerk.Portrait, out var file) && File.Exists(file))
+                clerk.PortraitFile = file;
+            else
+                problems.Add($"{mod.Id}/{ContentTypes.PartShops}: shop {shop.Id}: no clerk portrait \"{clerk.Portrait}\"; they are shown without one");
         }
 
         public IReadOnlyList<PartShopDefinition> All => _shops;

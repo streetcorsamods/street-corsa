@@ -23,7 +23,10 @@ namespace StreetCorsa.Services.Talk
         Diner,
 
         /// <summary>Pulled up alongside on the street</summary>
-        Cruise
+        Cruise,
+
+        /// <summary>At a part shop's counter: the clerk finds the player parts in the shop's stock</summary>
+        Shop
     }
 
     /// <summary>
@@ -42,7 +45,7 @@ namespace StreetCorsa.Services.Talk
         private bool _sessionsLoaded;
 
         internal Conversation(TalkDesk desk, GameState game, Person person, Opponent? rival, TalkPlace place, TalkSubject? subject,
-            IReadOnlyList<UsedCarListingViewModel>? lot = null)
+            IReadOnlyList<UsedCarListingViewModel>? lot = null, IShopCounter? counter = null)
         {
             _desk = desk;
             _game = game;
@@ -50,6 +53,7 @@ namespace StreetCorsa.Services.Talk
             Rival = rival;
             Place = place;
             Lot = lot ?? [];
+            Counter = counter;
             if (subject != null) Focus(subject);
         }
 
@@ -72,12 +76,19 @@ namespace StreetCorsa.Services.Talk
         /// <summary>A salesman's cars</summary>
         public IReadOnlyList<UsedCarListingViewModel> Lot { get; }
 
+        /// <summary>A clerk's shop: what they search when the player asks for parts</summary>
+        public IShopCounter? Counter { get; }
+
+        /// <summary>What the clerk last found in the shop's stock for the player; null before the player asked for anything</summary>
+        public ClerkFindings? Found { get; private set; }
+
         /// <summary>The prompt asked: chat_seller, chat_salesman, chat_rival, chat_buyer (a rival buying is still a rival)</summary>
         public string Use => Person.Kind switch
         {
             PersonKind.Salesman => "chat_salesman",
             PersonKind.Rival => "chat_rival",
             PersonKind.Buyer => "chat_buyer",
+            PersonKind.Clerk => "chat_clerk",
             _ => "chat_seller"
         };
 
@@ -119,6 +130,7 @@ namespace StreetCorsa.Services.Talk
                 TalkPlace.Lot => Subject == null ? "chat.stage.lot" : "chat.stage.lot_car",
                 TalkPlace.Curb => "chat.stage.curb",
                 TalkPlace.Diner => "chat.stage.diner",
+                TalkPlace.Shop => "chat.stage.shop",
                 _ => "chat.stage.cruise"
             };
             return await AskAsync(GameText.Say(key, ("thing", Subject?.Name ?? string.Empty), ("player", _game.Player.Name)), null, cancellationToken).ConfigureAwait(true);
@@ -171,7 +183,44 @@ namespace StreetCorsa.Services.Talk
                 BuyerSubject buyer => Ask(text, buyer) ?? Agree(text, buyer),
                 _ => Offer(text, Subject) ?? Agree(text, Subject)
             };
-            return AskAsync(text, outcome, cancellationToken);
+            return Counter != null ? SearchThenAskAsync(text, cancellationToken) : AskAsync(text, outcome, cancellationToken);
+        }
+
+        /// <summary>
+        /// A clerk asked for something: the AI reads what the player wants out of their words (a search, as JSON), the game
+        /// looks for it in the shop's stock, and the clerk answers with what was found among the facts. Small talk searches
+        /// nothing, and what was found before stays; an AI that gives no search leaves the clerk to talk without one.
+        /// </summary>
+        private async Task<string?> SearchThenAskAsync(string text, CancellationToken cancellationToken)
+        {
+            var kinds = Counter!.Kinds;
+            var values = new TextValues
+            {
+                ["said"] = text,
+                ["kinds"] = string.Join(", ", kinds),
+                ["talk"] = TalkDesk.Transcript(Person, _turns.TakeLast(4)),
+                ["player"] = _game.Player.Name
+            };
+            try
+            {
+                var answer = await _desk.Text.JsonAsync("clerk_search", values, ClerkSearch.Schema(kinds), cancellationToken).ConfigureAwait(true);
+                var search = ClerkSearch.Parse(answer, kinds);
+                // "...that fits?": what fits, whatever the AI read
+                if (search is { Fits: false } && Haggle.HasWord(text, GameText.Installed.Lines("chat.fit_words"))) search = search with { Fits = true, Asks = true };
+                _logger.Information("{Player} asked the clerk \"{Said}\": {Search}", _game.Player.Name, text, search?.ToString() ?? "no search read");
+                if (search is { Asks: true }) Found = await Counter.FindAsync(search, cancellationToken).ConfigureAwait(true);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                return null;
+            }
+            catch (Exception ex)
+            {
+                // The clerk still answers, from what was found before
+                _logger.Warning("The clerk's search for \"{Said}\" failed: {Error}", text, ex.Message);
+            }
+
+            return await AskAsync(text, null, cancellationToken).ConfigureAwait(true);
         }
 
         /// <summary>The talk is over: what the person makes of it is written in the background and kept with them</summary>
@@ -331,6 +380,14 @@ namespace StreetCorsa.Services.Talk
                     if (said != null && Strays(said))
                         said = GameText.Say(buyer ? "chat.deal.buyer.held" : "chat.deal.held", ("price", new Helpers.Money(subject.Price)));
                 }
+            }
+            // A clerk names only the prices of the parts they were given: one made up is asked again, once
+            else if (said != null && Person.Kind == PersonKind.Clerk && Found is { Picks.Count: > 0 } found
+                     && Haggle.NamesUnknownSum(said, KnownSums(sections), UnitWords, found.Picks.Min(p => p.Price) * (decimal)_desk.Rules.OfferLowest))
+            {
+                _logger.Information("{Person} named a price that is no part's in the stock told: asked again", Person.Name);
+                values["facts"] = Facts(sections, GameText.Say("chat.fact.shop_price_warning"));
+                said = await _desk.Text.ChatAsync(Use, values, Window(), cancellationToken).ConfigureAwait(true) ?? said;
             }
             // A salesman going over his lot names only its prices: one made up is asked again, once (a sum far under the
             // cheapest car is small talk)
@@ -513,8 +570,8 @@ namespace StreetCorsa.Services.Talk
                 TalkPeople.Seeded($"{Person.Key}:{today:yyyy-MM-dd}"))], FactSection.Lore));
             if (Rival != null) sections.Add(new("you", [.. TalkFacts.Rival(Rival, _desk.CarName)], FactSection.Always));
             sections.Add(new("feeling", [.. TalkFacts.Feeling(TalkPeople.Feeling(Person, today, rules))], FactSection.Always));
-            // A racer sizes up what the player drives
-            if (Rival != null && TalkFacts.CarDriven(_game) is { } playersCar)
+            // A racer sizes up what the player drives; a clerk is told it, to find parts for it
+            if ((Rival != null || Counter != null) && TalkFacts.CarDriven(_game) is { } playersCar)
                 sections.Add(new("player_car", [.. TalkFacts.Build(playersCar.Parts, _desk.Parts, Factory(playersCar.DefinitionId), rules.BuildPartsPerKind)],
                     FactSection.PlayersCar, HeadLines: 1));
 
@@ -526,6 +583,11 @@ namespace StreetCorsa.Services.Talk
                 _ => []
             };
             sections.Add(new("thing", [.. thing], FactSection.Always));
+            if (Counter != null)
+            {
+                sections.Add(new("shop", [.. Counter.Facts()], FactSection.Always));
+                sections.Add(new("stock", [.. TalkFacts.Stock(Found)], FactSection.Always));
+            }
             if (Subject switch { CarSubject car => car.Car, BuyerSubject buyer => buyer.Car, _ => null } is { } subjectCar)
                 sections.Add(new("build", [.. TalkFacts.Build(subjectCar.Listing.Parts, _desk.Parts, Factory(subjectCar.Listing.CarDefinitionId), rules.BuildPartsPerKind)],
                     FactSection.Build, HeadLines: 1));

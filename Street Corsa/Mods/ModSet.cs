@@ -23,6 +23,9 @@ public static class ContentTypes
     public const string Showcase = "showcase";
     public const string Garages = "garages";
     public const string Warehouses = "warehouses";
+
+    /// <summary>The inside of the part shops (shopscenes/&lt;folder&gt;/shop.json and its model); see <c>Services.PartShops.ShopScenes</c></summary>
+    public const string ShopScenes = "shopscenes";
     public const string Text = "text";
     public const string Sfx = "sfx";
     public const string Props = "props";

@@ -230,6 +230,12 @@ namespace StreetCorsa.Screens.UsedParts
         public bool Fits { get; set; }
         public bool CanAfford { get; set; }
 
+        /// <summary>One the clerk picked out for the player: shown first, marked</summary>
+        public bool IsPicked { get; set; }
+
+        /// <summary>How many there are of it: a shelf's count, else one</summary>
+        public int InStock => Shelf?.Count ?? 1;
+
         public static PartOfferViewModel ForNew(PartDefinition definition, decimal price) =>
             new(definition, price, GameText.Say("usedparts.action.order"))
             {

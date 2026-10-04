@@ -8,9 +8,11 @@ namespace StreetCorsa.Services.Ai
     /// <summary>
     /// What one request asks: who the AI is, what it is to write, and how long the answer may be. With
     /// <paramref name="Turns"/> it is a talk: those are sent as the messages so far (the first the player's), and
-    /// <paramref name="Prompt"/> is not sent.
+    /// <paramref name="Prompt"/> is not sent. With <paramref name="Format"/> the answer is a JSON object of that schema:
+    /// asked of the providers that can be held to one (Ollama, OpenAI-compatible), and only by the prompt of the rest.
     /// </summary>
-    public sealed record AiTextRequest(string System, string Prompt, int MaxTokens, double Temperature, IReadOnlyList<AiTurn>? Turns = null)
+    public sealed record AiTextRequest(string System, string Prompt, int MaxTokens, double Temperature, IReadOnlyList<AiTurn>? Turns = null,
+        JsonObject? Format = null)
     {
         /// <summary>The messages after the system prompt: the talk's turns, or the prompt as the one user message</summary>
         public IEnumerable<AiTurn> Messages => Turns is { Count: > 0 } turns ? turns : [new AiTurn(false, Prompt)];
@@ -213,6 +215,7 @@ namespace StreetCorsa.Services.Ai
                 ["options"] = Options(request)
             };
             if (_tuning is { KeepAlive.Length: > 0 }) body["keep_alive"] = _tuning.KeepAlive;
+            if (request.Format != null) body["format"] = request.Format.DeepClone();
             var answer = await SendAsync(HttpMethod.Post, Endpoint + "/api/chat", body, cancellationToken).ConfigureAwait(false);
             LogTokens(request, answer);
             return Text(answer["message"]?["content"]);
@@ -334,6 +337,12 @@ namespace StreetCorsa.Services.Ai
                 ["temperature"] = request.Temperature,
                 ["stream"] = false
             };
+            if (request.Format != null)
+                body["response_format"] = new JsonObject
+                {
+                    ["type"] = "json_schema",
+                    ["json_schema"] = new JsonObject { ["name"] = "answer", ["schema"] = request.Format.DeepClone() }
+                };
             var answer = await SendAsync(HttpMethod.Post, Base + "/chat/completions", body, cancellationToken).ConfigureAwait(false);
             return Text(answer["choices"]?[0]?["message"]?["content"]);
         }

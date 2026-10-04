@@ -16,7 +16,7 @@
 | GasStation | `Screens/Station/` | Drive to the gas station: fill up, top up the oil, a wash, the attendant's remarks (see `gas-station.md`) |
 | Newspaper | `Screens/Newspaper/` | The classifieds, set as a period paper's ads under the masthead (the paper's name in the top band between the back button and the money card, the date line under the thick rule): used cars (every dealer's and racer's, and the player's own among them at a place drawn from the ad's id, written like the others and circled in pencil with the buyer's offer pencilled under it; clicked, `Dialogs/PlayerAd`: the car, the offer to take or turn down, "Call the buyer" with the AI on) and used parts, a page at a time as the player scrolls; an ad is bought from here or clicked to look at it |
 | DealerMap | `Screens/DealerMap/` | The city, with a pin per car dealer (the garage's Car dealers button) or per part shop (Parts dealers: gold squares) |
-| PartShop | `Screens/PartShop/` | One part shop's counter: its shelves or yard at today's prices, haggling at a junkyard, selling to it |
+| PartShop | `Screens/PartShop/` | Inside one part shop in 3D, its own stock on its shelves; the counter (a window over it) has its shelves or yard at today's prices, haggling at a junkyard, selling to it, and the clerk while the AI is on (see `part-shop.md`) |
 | DealerLot | `Screens/DealerLot/` | One dealer's cars parked in 3D; click one to look at it |
 | UsedParts | `Screens/UsedParts/` | The mail order (the part shops' map's button): new parts by mail, selling off the shelf |
 

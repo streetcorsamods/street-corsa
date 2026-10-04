@@ -35,6 +35,7 @@ namespace StreetCorsa.Services.Talk
             PersonKind.Salesman => "salesman",
             PersonKind.Rival => "rival",
             PersonKind.Buyer => "buyer",
+            PersonKind.Clerk => "clerk",
             _ => "seller"
         };
 
@@ -74,6 +75,37 @@ namespace StreetCorsa.Services.Talk
                 Age = AgeBetween(rules.SalesmanMinAge, rules.SalesmanMaxAge, random),
                 Gender = gender,
                 Temperament = Draw(prompts ?? AiPrompts.Installed, PersonKind.Salesman, 50, random)
+            });
+            if (given != null) As(person, given);
+            return person;
+        }
+
+        public static string ShopKey(string shopId) => $"shop:{shopId}";
+
+        /// <summary>
+        /// Whoever is behind a part shop's counter, one per shop: who the shop's mod data says (<paramref name="given"/>), else
+        /// drawn from the clerks' names
+        /// </summary>
+        public static Person Clerk(GameState game, string shopId, DealerSalesman? given = null, AiPrompts? prompts = null, TalkRules? rules = null)
+        {
+            var key = ShopKey(shopId);
+            if (Find(game, key) is { } found)
+            {
+                if (given != null) As(found, given);
+                return found;
+            }
+
+            rules ??= RuleBook.Current.Ai.Talk;
+            var random = Seeded(key);
+            var gender = random.NextDouble() < rules.WomenSalesmen ? Gender.Female : Gender.Male;
+            var person = Add(game, new Person
+            {
+                Key = key,
+                Kind = PersonKind.Clerk,
+                Name = NameFor("names.clerks", gender, random),
+                Age = AgeBetween(rules.SalesmanMinAge, rules.SalesmanMaxAge, random),
+                Gender = gender,
+                Temperament = Draw(prompts ?? AiPrompts.Installed, PersonKind.Clerk, 50, random)
             });
             if (given != null) As(person, given);
             return person;
@@ -143,7 +175,7 @@ namespace StreetCorsa.Services.Talk
             return WomenPools.Any(pool => text.Lines(pool).Contains(name, StringComparer.OrdinalIgnoreCase)) ? Gender.Female : Gender.Male;
         }
 
-        private static readonly string[] WomenPools = ["names.people.women", "names.salesmen.women", "names.car_buyers.women"];
+        private static readonly string[] WomenPools = ["names.people.women", "names.salesmen.women", "names.clerks.women", "names.car_buyers.women"];
 
         private static int AgeBetween(int least, int most, Random random) => least + random.Next(Math.Max(1, most - least + 1));
 

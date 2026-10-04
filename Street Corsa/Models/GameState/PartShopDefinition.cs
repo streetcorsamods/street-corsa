@@ -66,6 +66,15 @@ namespace StreetCorsa.Models.GameState
         /// <summary>In business when a game starts; false: it opens some day, as the dealers do</summary>
         public bool StartsOpen { get; set; } = true;
 
+        /// <summary>
+        /// Who is behind the counter, as a dealer's salesman is given (the portrait under the mod's partshops folder);
+        /// left out, somebody is drawn
+        /// </summary>
+        public DealerSalesman? Clerk { get; set; }
+
+        /// <summary>Which of the shop scene's looks the shop wears (<c>shops/shop.json</c>); empty: its kind's</summary>
+        public string Look { get; set; } = string.Empty;
+
         /// <summary>The kind by its name; a name that is none of them (a number, or two names) is a specialist</summary>
         public PartShopKind KindOf =>
             Kind?.Trim() is { Length: > 0 } name && name.All(char.IsAsciiLetter)

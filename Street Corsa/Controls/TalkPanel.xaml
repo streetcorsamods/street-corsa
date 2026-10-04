@@ -142,7 +142,7 @@
             </TextBox>
             <!-- The hint, until something is typed -->
             <TextBlock Grid.Column="0"
-                       Text="{t:Text chat.ui.hint}"
+                       Text="{Binding Hint}"
                        IsHitTestVisible="False"
                        FontStyle="Italic"
                        FontSize="{StaticResource FontSizeCompact}"

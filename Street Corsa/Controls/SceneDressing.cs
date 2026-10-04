@@ -1,0 +1,52 @@
+using AcTools.Numerics;
+using AcTools.Render.Kn5SpecificForwardDark.Lights;
+using StreetCorsa.Controls.Street;
+using StreetCorsa.Logging;
+
+namespace StreetCorsa.Controls;
+
+/// <summary>What the rooms of the game's own scenes (the warehouse, the part shop) share: dressed without loading them again</summary>
+internal static class SceneDressing
+{
+    /// <summary>
+    /// Dresses the standing room as <paramref name="dressing"/> says: its light and lamps (the ones hung before,
+    /// <paramref name="lamps"/>, taken down first), then each material pointed at its picture (every picture a look can wear
+    /// is in the model already, so this is a pointer changed, not a texture loaded) and the self-lit ones set glowing
+    /// </summary>
+    public static void Apply(GarageRenderer renderer, LotDressing dressing, List<DarkLightBase> lamps, IAppLogger logger)
+    {
+        foreach (var lamp in lamps) renderer.RemoveLight(lamp);
+        lamps.Clear();
+        lamps.AddRange(SceneLights.Apply(renderer, dressing.Lighting, dressing.Sun));
+
+        if (renderer.ShowroomNode?.OriginalFile is not { } kn5) return;
+
+        var ids = kn5.Materials.Keys.Select((name, i) => (name, i)).ToDictionary(p => p.name, p => (uint)p.i, StringComparer.Ordinal);
+        foreach (var (material, picture) in dressing.Pictures)
+        {
+            if (!ids.TryGetValue(material, out var id) || kn5.Materials[material].GetMappingByName("txDiffuse") is not { } mapping)
+            {
+                logger.Warning("The room has no material {Material} to dress", material);
+                continue;
+            }
+
+            // Only a picture the room's file holds: the renderer uploads the file's textures, so any other name
+            // (a room without textures included) would leave the material with none
+            if (!kn5.Textures.ContainsKey(picture))
+            {
+                logger.Warning("The room has no picture {Picture} for {Material}", picture, material);
+                continue;
+            }
+
+            if (mapping.Texture == picture) continue;
+            mapping.Texture = picture;
+            renderer.RefreshMaterial(kn5, id);
+        }
+
+        foreach (var (material, glow) in dressing.Glow)
+        {
+            if (ids.TryGetValue(material, out var id))
+                renderer.UpdateMaterialPropertyC(kn5, id, "ksEmissive", new Vec3(glow, glow, glow));
+        }
+    }
+}

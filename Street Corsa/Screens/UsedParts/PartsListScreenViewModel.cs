@@ -86,6 +86,39 @@ namespace StreetCorsa.Screens.UsedParts
 
         public bool CanFilterByFit => SelectedCar != null && !IsSellTab;
 
+        private decimal? _maxPrice;
+
+        /// <summary>Only what costs at most this (a clerk asked for something under a price); null: any price</summary>
+        public decimal? MaxPrice
+        {
+            get => _maxPrice;
+            set
+            {
+                if (!SetProperty(ref _maxPrice, value is > 0 ? value : null)) return;
+                OnPropertyChanged(nameof(HasMaxPrice));
+                OnPropertyChanged(nameof(MaxPriceLabel));
+                LoadOffers();
+            }
+        }
+
+        public bool HasMaxPrice => MaxPrice != null;
+
+        /// <summary>"Under $150": the price limit's chip</summary>
+        public string MaxPriceLabel => MaxPrice is { } most ? GameText.Say("usedparts.under", ("price", new Helpers.Money(most))) : string.Empty;
+
+        public ViewModels.RelayCommand ClearMaxPriceCommand => _clearMaxPrice ??= new ViewModels.RelayCommand(() => MaxPrice = null);
+        private ViewModels.RelayCommand? _clearMaxPrice;
+
+        /// <summary>The ids of the parts the clerk picked out: listed first, marked</summary>
+        protected IReadOnlyList<string> Picked { get; private set; } = [];
+
+        /// <summary>The clerk's picks, in their order; none to clear them</summary>
+        protected void Pick(IReadOnlyList<string> ids)
+        {
+            Picked = ids;
+            LoadOffers();
+        }
+
         public string FitFilterLabel => SelectedCar == null
             ? GameText.Say("usedparts.fit_filter")
             : GameText.Say("usedparts.fit_filter.car", ("car", CarName));
@@ -134,8 +167,12 @@ namespace StreetCorsa.Screens.UsedParts
         {
             _selectedGroup = AllGroups;
             _searchText = string.Empty;
+            _maxPrice = null;
+            Picked = [];
             OnPropertyChanged(nameof(SelectedGroup));
             OnPropertyChanged(nameof(SearchText));
+            OnPropertyChanged(nameof(MaxPrice));
+            OnPropertyChanged(nameof(HasMaxPrice));
             OnPropertyChanged(nameof(CanFilterByFit));
             if (Entering) return;
             RefillGroups();
@@ -199,15 +236,9 @@ namespace StreetCorsa.Screens.UsedParts
                 return;
             }
 
-            var offers = TabOffers();
-            if (_selectedGroup != AllGroups) offers = offers.Where(o => o.Group == _selectedGroup);
-            if (_searchText.Length > 0) offers = offers.Where(o => o.Name.Contains(_searchText, StringComparison.OrdinalIgnoreCase));
-            if (_onlyFitting && CanFilterByFit) offers = offers.Where(o => _fitting.Contains(o.Definition.Id));
-
-            var matching = offers.ToList();
+            var matching = Matching();
             foreach (var offer in matching.Take(MaxRows))
             {
-                offer.Fits = _fitting.Contains(offer.Definition.Id);
                 offer.CanAfford = CanTake(offer);
                 Offers.Add(offer);
             }
@@ -220,6 +251,32 @@ namespace StreetCorsa.Screens.UsedParts
                 1 => GameText.Say("usedparts.count.one", ("count", 1)),
                 _ => GameText.Say("usedparts.count.other", ("count", matching.Count))
             } + StatusNote;
+        }
+
+        /// <summary>
+        /// Every row of the tab showing that the filters let through, unfiltered by the cap on rows: the clerk's picks first,
+        /// in their order, marked; each told whether it fits the player's car
+        /// </summary>
+        protected List<PartOfferViewModel> Matching()
+        {
+            var offers = TabOffers();
+            if (_selectedGroup != AllGroups) offers = offers.Where(o => o.Group == _selectedGroup);
+            if (_searchText.Length > 0) offers = offers.Where(o => o.Name.Contains(_searchText, StringComparison.OrdinalIgnoreCase));
+            if (_onlyFitting && CanFilterByFit) offers = offers.Where(o => _fitting.Contains(o.Definition.Id));
+            if (_maxPrice is { } most && !IsSellTab) offers = offers.Where(o => o.Price <= most);
+
+            var matching = offers.ToList();
+            foreach (var offer in matching)
+            {
+                offer.Fits = _fitting.Contains(offer.Definition.Id);
+                offer.IsPicked = !IsSellTab && Picked.Contains(offer.Definition.Id, StringComparer.OrdinalIgnoreCase);
+            }
+
+            if (Picked.Count == 0 || IsSellTab) return matching;
+
+            // Picked first, in the clerk's order; the rest as the tab has them (a part on two shelves is picked once)
+            var order = Picked.Select((id, i) => (id, i)).ToDictionary(p => p.id, p => p.i, StringComparer.OrdinalIgnoreCase);
+            return matching.OrderBy(o => o.IsPicked ? order[o.Definition.Id] : int.MaxValue).ToList();
         }
 
         /// <summary>The rows after a deal</summary>

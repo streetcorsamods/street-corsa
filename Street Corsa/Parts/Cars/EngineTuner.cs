@@ -378,6 +378,45 @@ public static class EngineTuner
         return best;
     }
 
+    /// <summary>
+    /// What <paramref name="engine"/> makes on the dyno now, and the most it makes with <paramref name="part"/> in the place
+    /// of a part of its kind (what was on the old part moved over, as a tuner does it); null when the engine does not run,
+    /// or the part takes the place of none of its parts. A whole engine is no part to try (<see cref="BlockGroup"/>).
+    /// </summary>
+    public static (double Before, double After)? PowerWith(PartsCatalog catalog, PartInstance engine, PartDefinition part)
+    {
+        var group = PartKinds.GroupOf(part);
+        if (group == BlockGroup) return null;
+        if (EngineFactory.Evaluate(catalog, engine) is not { Runs: true, Dyno: { } dyno }) return null;
+
+        double? best = null;
+        foreach (var old in engine.SelfAndDescendants().Where(p => !ReferenceEquals(p, engine)).ToList())
+        {
+            if (catalog.Get(old.DefinitionId) is not { } oldDefinition || PartKinds.GroupOf(oldDefinition) != group) continue;
+            if (oldDefinition.Id.Equals(part.Id, StringComparison.OrdinalIgnoreCase)) return (dyno.MaxPowerHp, dyno.MaxPowerHp);
+
+            var parent = PartTrees.FindParent(engine, old);
+            var parentDefinition = parent == null ? null : catalog.Get(parent.DefinitionId);
+            var parentSlot = parentDefinition?.Slots.FirstOrDefault(s => s.Id == old.ParentSlot);
+            if (parentDefinition == null || parentSlot == null) continue;
+
+            foreach (var (_, ownSlot) in catalog.FindMountable(parentDefinition, parentSlot).Where(c => c.Part.Id.Equals(part.Id, StringComparison.OrdinalIgnoreCase)))
+            {
+                var extra = 0m;
+                var replacement = Rebuild(catalog, part, ownSlot.Id, old, _ => 0m, 0, [], ref extra);
+                if (replacement == null) continue;
+
+                var tuned = PartTrees.Clone(engine, keepIds: true);
+                var tunedParent = tuned.SelfAndDescendants().First(p => p.InstanceId == parent!.InstanceId);
+                tunedParent.Children[tunedParent.Children.FindIndex(c => c.InstanceId == old.InstanceId)] = replacement;
+                if (EngineFactory.Evaluate(catalog, tuned) is { Runs: true, Dyno: { } after } && (best == null || after.MaxPowerHp > best))
+                    best = after.MaxPowerHp;
+            }
+        }
+
+        return best is { } most ? (dyno.MaxPowerHp, most) : null;
+    }
+
     /// <summary>A part that came off, as it goes on a shelf or into the paper: a copy, loose, without what was on it unless said</summary>
     private static PartInstance Loose(PartInstance part, bool withChildren = false)
     {

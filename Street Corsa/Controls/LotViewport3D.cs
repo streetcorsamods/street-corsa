@@ -669,41 +669,7 @@ public class LotViewport3D : D3DViewportBase
         // A dressing for a room still to be loaded waits for it: the load dresses the room when it is up
         if (renderer == null || dressing == null || ShowroomKn5 != _showroomAskedFor) return;
 
-        foreach (var lamp in _lamps) renderer.RemoveLight(lamp);
-        _lamps.Clear();
-        _lamps.AddRange(SceneLights.Apply(renderer, dressing.Lighting, dressing.Sun));
-
-        if (renderer.ShowroomNode?.OriginalFile is { } kn5)
-        {
-            var ids = kn5.Materials.Keys.Select((name, i) => (name, i)).ToDictionary(p => p.name, p => (uint)p.i, StringComparer.Ordinal);
-
-            foreach (var (material, picture) in dressing.Pictures)
-            {
-                if (!ids.TryGetValue(material, out var id) || kn5.Materials[material].GetMappingByName("txDiffuse") is not { } mapping)
-                {
-                    Logger.Warning("The lot's room has no material {Material} to dress", material);
-                    continue;
-                }
-
-                // Only a picture the room's file holds: the renderer uploads the file's textures, so any other name
-                // (a room without textures included) would leave the material with none
-                if (!kn5.Textures.ContainsKey(picture))
-                {
-                    Logger.Warning("The lot's room has no picture {Picture} for {Material}", picture, material);
-                    continue;
-                }
-
-                if (mapping.Texture == picture) continue;
-                mapping.Texture = picture;
-                renderer.RefreshMaterial(kn5, id);
-            }
-
-            foreach (var (material, glow) in dressing.Glow)
-            {
-                if (ids.TryGetValue(material, out var id))
-                    renderer.UpdateMaterialPropertyC(kn5, id, "ksEmissive", new Vec3(glow, glow, glow));
-            }
-        }
+        SceneDressing.Apply(renderer, dressing, _lamps, Logger);
 
         Invalidate();
     }
