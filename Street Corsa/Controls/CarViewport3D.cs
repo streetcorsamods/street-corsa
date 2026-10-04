@@ -514,7 +514,12 @@ public class CarViewport3D : D3DViewportBase
 
     public static readonly DependencyProperty SelectedPartProperty = DependencyProperty.Register(
         nameof(SelectedPart), typeof(InstalledPart), typeof(CarViewport3D),
-        new PropertyMetadata(null, (d, _) => ((CarViewport3D)d).ApplySelection()));
+        new PropertyMetadata(null, (d, _) =>
+        {
+            var viewport = (CarViewport3D)d;
+            viewport.ApplySelection();
+            viewport.FollowSelection();
+        }));
 
     /// <summary>The mounted part that is marked as selected</summary>
     public InstalledPart? SelectedPart
@@ -950,12 +955,8 @@ public class CarViewport3D : D3DViewportBase
                 ApplyHiddenParts(fade: false);
                 AnimateFor(AnimationWindow);
 
-                // The part being placed is gone, or the tree was made anew: the mode is over
-                if (_placing != null && !_partWorlds.ContainsKey(_placing))
-                {
-                    _placing = null;
-                    PlacementChanged?.Invoke(null);
-                }
+                // The tree may be made anew: placement goes on with the selected part in it
+                FollowSelection();
 
                 Logger.Information("Parts of {Car} laid out in {Ms} ms ({Count} parts, engine {Engine})", Path.GetFileName(carDirectory),
                     (int)(DateTime.Now - started).TotalMilliseconds, placed.Count, engine?.Definition.Id ?? "none");
@@ -1136,11 +1137,7 @@ public class CarViewport3D : D3DViewportBase
                 _partWorlds = placed.Where(p => p.Source != null).ToDictionary(p => p.Source!, p => p.World);
                 AnimateFor(AnimationWindow);
 
-                if (_placing != null && !_partWorlds.ContainsKey(_placing))
-                {
-                    _placing = null;
-                    PlacementChanged?.Invoke(null);
-                }
+                FollowSelection();
 
                 Logger.Information("Engine stand laid out in {Ms} ms ({Count} parts, engine {Engine})",
                     (int)(DateTime.Now - started).TotalMilliseconds, placed.Count, engine?.Definition.Id ?? "none");
@@ -1490,6 +1487,32 @@ public class CarViewport3D : D3DViewportBase
         // dual quad along with each other. One of several on the same parent is placed by its pad, which is its own
         _placing = part;
         _placementTarget = IsOneOfSeveral(part) ? PlacementTarget.Pad : PlacementTarget.Part;
+        ReportPlacement();
+    }
+
+    /// <summary>
+    /// Keeps placement on the selected part: another part picked is placed from then on, the same part in a tree made
+    /// anew (known by its id) goes on being placed; nothing placeable selected ends the mode
+    /// </summary>
+    private void FollowSelection()
+    {
+        if (_placing == null) return;
+
+        var selected = SelectedPart;
+        var next = selected == null ? null
+            : _partWorlds.ContainsKey(selected) ? selected
+            : selected.InstanceId == Guid.Empty ? null
+            : _partWorlds.Keys.FirstOrDefault(p => p.InstanceId == selected.InstanceId);
+        if (next == null || !(next.Parent != null || (ReferenceEquals(next, Engine) && !StandMode)))
+        {
+            _placing = null;
+            PlacementChanged?.Invoke(null);
+            return;
+        }
+
+        var samePart = ReferenceEquals(next, _placing) || (next.InstanceId != Guid.Empty && next.InstanceId == _placing.InstanceId);
+        _placing = next;
+        if (!samePart && next.Parent != null) _placementTarget = IsOneOfSeveral(next) ? PlacementTarget.Pad : PlacementTarget.Part;
         ReportPlacement();
     }
 

@@ -242,15 +242,17 @@ namespace StreetCorsa.Screens.Garage
         }
 
         /// <summary>
-        /// The garage's placement mode moved the engine block: the car keeps the new place (cars.json), and everything
-        /// shown by it follows
+        /// The garage's placement mode moved the engine block: the car keeps the new place (cars.json), and what it shows
+        /// follows. The trees are left as they are: placement holds on to the block it moves, and a tree made anew would
+        /// end it after the first step
         /// </summary>
         public void MoveEngine(System.Numerics.Vector3 offset)
         {
             if (_car == null) return;
             if (_parts.SetEngineOffset(_car.DefinitionId, offset) is { } problem)
                 _logger.Warning("The engine of {Car} moved, but cars.json could not be written: {Problem}", _car.DefinitionId, problem);
-            Refresh();
+            EngineOffset = _parts.EngineOffsetOf(_car.DefinitionId);
+            if (Catalog != null) Shown = _parts.Shown(_car);
         }
 
         private ShownSet? _shown;
