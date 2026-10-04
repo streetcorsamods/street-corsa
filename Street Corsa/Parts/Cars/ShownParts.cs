@@ -97,17 +97,28 @@ public static class ShownParts
 public sealed record ShownModelAt(ShownModel Model, Matrix4x4 At, Vector3 Min = default, Vector3 Max = default);
 
 /// <summary>
+/// A node of a car's model that never moves on the car (its floor, say) and where it sits in the model's KN5: how AC's
+/// race mode finds the model's own space, which AC moves by the car's GRAPHICS_OFFSET and pitch (the Chevelle '70's
+/// model is drawn 35 cm lower than its KN5 says)
+/// </summary>
+public sealed record ModelFrame(string Node, Matrix4x4 At);
+
+/// <summary>
 /// What a car shows that its own model does not have, as a race or a scene is given it: the wheels of its corners (AC's
 /// order, null keeps the car's own) and the engine parts that stand out (ShownEngineParts). Equal when all of it is, so a
 /// scene that compares what it is shown sees the same car as the same.
 /// </summary>
 public sealed class ShownSet : IEquatable<ShownSet>
 {
-    private ShownSet(IReadOnlyList<ShownWheel?> wheels, IReadOnlyList<ShownModelAt> extras)
+    private ShownSet(IReadOnlyList<ShownWheel?> wheels, IReadOnlyList<ShownModelAt> extras, ModelFrame? frame)
     {
         Wheels = wheels;
         Extras = extras;
+        Frame = frame;
     }
+
+    /// <summary>The model's space for the engine parts, in AC; null without engine parts or such a node</summary>
+    public ModelFrame? Frame { get; }
 
     public IReadOnlyList<ShownWheel?> Wheels { get; }
 
@@ -120,18 +131,19 @@ public sealed class ShownSet : IEquatable<ShownSet>
             .DistinctBy(m => m.Name, StringComparer.OrdinalIgnoreCase);
 
     /// <summary>The set; null when the car shows nothing but its own model</summary>
-    public static ShownSet? Of(IReadOnlyList<ShownWheel?>? wheels, IReadOnlyList<ShownModelAt>? extras = null)
+    public static ShownSet? Of(IReadOnlyList<ShownWheel?>? wheels, IReadOnlyList<ShownModelAt>? extras = null, ModelFrame? frame = null)
     {
         var someWheel = wheels != null && wheels.Any(w => w != null);
-        if (!someWheel && (extras == null || extras.Count == 0)) return null;
-        return new ShownSet(someWheel ? wheels!.ToArray() : new ShownWheel?[RunningGear.Corners], extras?.ToArray() ?? []);
+        var someExtra = extras is { Count: > 0 };
+        if (!someWheel && !someExtra) return null;
+        return new ShownSet(someWheel ? wheels!.ToArray() : new ShownWheel?[RunningGear.Corners], extras?.ToArray() ?? [], someExtra ? frame : null);
     }
 
     /// <summary>The same set without its engine parts (the garage's parts view draws the whole engine itself)</summary>
     public ShownSet? WithoutExtras() => Of(Wheels);
 
     public bool Equals(ShownSet? other) =>
-        other != null && Wheels.SequenceEqual(other.Wheels) && Extras.SequenceEqual(other.Extras);
+        other != null && Wheels.SequenceEqual(other.Wheels) && Extras.SequenceEqual(other.Extras) && Equals(Frame, other.Frame);
 
     public override bool Equals(object? obj) => Equals(obj as ShownSet);
 

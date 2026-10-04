@@ -84,7 +84,15 @@ public static class ShownPartsOnCar
         if (shown.Extras.Count > 0 && car.RootObject is { } root && Matrix4x4.Invert(ToNumerics(root.LocalMatrix), out var fromRoot))
         {
             var surface = Surface(root);
-            var standing = await Task.Run(() => shown.Extras.Where(e => ShownEngineParts.StandsOut(e, surface.Above)).ToList());
+            var standing = await Task.Run(() => shown.Extras.Where(e =>
+            {
+                var stands = ShownEngineParts.StandsOut(e, surface.Above);
+                var top = Vector3.Transform(new Vector3((e.Min.X + e.Max.X) / 2, e.Max.Y, (e.Min.Z + e.Max.Z) / 2), e.At);
+                var (height, mesh) = surface.Highest(top);
+                Logger.Debug("{Part}: {Verdict} (its top {Top:0.000}, the car over it {Surface:0.000}, {Mesh})", e.Model.Name,
+                    stands ? "stands out" : "stays under the hood", top.Y, height, mesh);
+                return stands;
+            }).ToList());
             if (version != on.Version) return false;
 
             var extras = new RenderableList("sc_parts", SlimDX.Matrix.Identity);
@@ -97,8 +105,20 @@ public static class ShownPartsOnCar
     }
 
     /// <summary>The car's triangles in its model's space, each with the stretch of ground it covers seen from above</summary>
-    private sealed class CarSurface(List<(Vector3 A, Vector3 B, Vector3 C, float MinX, float MaxX, float MinZ, float MaxZ)> triangles)
+    private sealed class CarSurface(List<(Vector3 A, Vector3 B, Vector3 C, float MinX, float MaxX, float MinZ, float MaxZ, string Mesh)> triangles)
     {
+        /// <summary>The highest surface over a point and the mesh it is on, for the log</summary>
+        public (float? Height, string? Mesh) Highest(Vector3 point)
+        {
+            (float? Height, string? Mesh) best = (null, null);
+            foreach (var t in triangles)
+            {
+                if (point.X < t.MinX || point.X > t.MaxX || point.Z < t.MinZ || point.Z > t.MaxZ) continue;
+                if (HeightAt(t.A, t.B, t.C, point.X, point.Z) is { } y && (best.Height == null || y > best.Height)) best = (y, t.Mesh);
+            }
+            return best;
+        }
+
         /// <summary>
         /// The car's highest surface over a point of its model (the height in the model's space), null when nothing of it
         /// is there: every triangle the vertical line through the point crosses, whichever way it faces
@@ -118,7 +138,7 @@ public static class ShownPartsOnCar
     /// <summary>The car's meshes that are on (the ones we put in are not in yet), read on the caller's thread</summary>
     private static CarSurface Surface(RenderableList root)
     {
-        var triangles = new List<(Vector3, Vector3, Vector3, float, float, float, float)>();
+        var triangles = new List<(Vector3, Vector3, Vector3, float, float, float, float, string)>();
         // World to the model's space: the root's own matrix kept, what it is placed by taken off
         if (!Matrix4x4.Invert(ToNumerics(root.Matrix), out var fromWorld)) return new CarSurface(triangles);
         var toModel = fromWorld * ToNumerics(root.LocalMatrix);
@@ -132,7 +152,7 @@ public static class ShownPartsOnCar
                 var b = Model(vertices[indices[t + 1]].Position, m);
                 var c = Model(vertices[indices[t + 2]].Position, m);
                 triangles.Add((a, b, c, Math.Min(a.X, Math.Min(b.X, c.X)), Math.Max(a.X, Math.Max(b.X, c.X)),
-                    Math.Min(a.Z, Math.Min(b.Z, c.Z)), Math.Max(a.Z, Math.Max(b.Z, c.Z))));
+                    Math.Min(a.Z, Math.Min(b.Z, c.Z)), Math.Max(a.Z, Math.Max(b.Z, c.Z)), mesh.OriginalNode.Name));
             }
         }
         return new CarSurface(triangles);

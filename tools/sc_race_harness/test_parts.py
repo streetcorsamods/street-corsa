@@ -27,6 +27,7 @@ V.__index = V
 function vec3(x, y, z) return setmetatable({ x = x or 0, y = y or 0, z = z or 0 }, V) end
 function vec4(x, y, z, w) local v = vec3(x, y, z); v.w = w or 0; return v end
 function V:set(x, y, z) self.x, self.y, self.z = x, y, z; return self end
+function V:length() return math.sqrt(self.x ^ 2 + self.y ^ 2 + self.z ^ 2) end
 function V:normalize()
   local l = math.sqrt(self.x ^ 2 + self.y ^ 2 + self.z ^ 2)
   if l > 0 then self.x, self.y, self.z = self.x / l, self.y / l, self.z / l end
@@ -162,7 +163,8 @@ end
 -- The Valiant: the left front wheel as measured, the right front its mirror
 local carRoot = node('carRoot')
 local car = node('CARNODE', carRoot)
-node('BODYTR', car)
+local body = node('BODYTR', car)
+world.floor = node('FLOOR', body)
 local function wheel(name, side, suffix)
   local w = node(name, node('WHEEL_TR', car))
   local function m(n, x0, x1, r)
@@ -235,11 +237,13 @@ render = { createRay = function(pos, dir, length) return { pos = pos, dir = dir,
 '''
 
 
-def run(ini, blurred=None, hood=None):
+def run(ini, blurred=None, hood=None, floor_y=None):
     lua = lupa.LuaRuntime()
     world = lua.table_from({'ini': lua.table_from(ini), 'log': lua.table(), 'loaded': lua.table(),
                             'blurred': lua.table_from(blurred or []), 'hood': hood})
     lua.execute(STUB, world)
+    if floor_y is not None:
+        world.floor.transform[4][2] = floor_y
     with open(PARTS, encoding='utf-8') as f:
         parts = lua.execute(f.read())
     parts.update()
@@ -376,6 +380,21 @@ def only_the_parts_that_stand_out_of_the_hood_are_shown_never_moved():
           'filter.kn5' in at and near(at['filter.kn5'][3][1], 0.67), log)
 
 
+def engine_parts_are_placed_and_judged_in_the_models_own_space():
+    """AC draws the model by the car's graphics offset (35 cm down on the Chevelle): the parts and the rays follow it"""
+    ini = {'CAR_0_MODEL_NODE': 'FLOOR', 'CAR_0_MODEL_AT': '1,0,0, 0,1,0, 0,0,1, 0,0,0',
+           'CAR_0_PART_1': 'filter.kn5', 'CAR_0_PART_1_AT': '1,0,0, 0,1,0, 0,0,1, 0,0.67,1.44', 'CAR_0_PART_1_BOX': '-0.18,0,-0.18, 0.18,0.1,0.18'}
+    lua = lupa.LuaRuntime()
+    # The hood at 0.72 in the world is 1.07 in the model's space: the filter (top 0.77) stays under it
+    _, world = run(ini, hood=0.72, floor_y=-0.35)
+    log = list(world.log.values())
+    check('in the model space the filter stays under a hood the offset puts higher', not any(i.file == 'filter.kn5' for i in world.loaded.values()), log)
+    _, world = run(ini, hood=0.38, floor_y=-0.35)
+    part = [i for i in world.loaded.values() if i.file == 'filter.kn5']
+    check('and one that stands out is placed in the model space, the offset with it',
+          part and near(matrix(part[0].node.transform)[3][1], 0.32), list(world.log.values()))
+
+
 def a_rim_too_wide_for_the_cars_tyre_brings_its_factory_tyre_along():
     at = '1,0,0, 0,1,0, 0,0,1, 0.027,0,0'
     _, world = run({'CAR_0_RIM_LR': 'wide_rim.kn5', 'CAR_0_TYRE_LR': 'tyre.kn5', 'CAR_0_TYRE_LR_AT': at, 'CAR_0_TYRE_LR_OPTIONAL': '1'})
@@ -389,6 +408,7 @@ def a_rim_too_wide_for_the_cars_tyre_brings_its_factory_tyre_along():
 
 
 a_corner_not_named_keeps_its_own_rim()
+engine_parts_are_placed_and_judged_in_the_models_own_space()
 a_rim_too_wide_for_the_cars_tyre_brings_its_factory_tyre_along()
 an_engine_part_goes_into_the_node_holding_the_wheels()
 only_the_parts_that_stand_out_of_the_hood_are_shown_never_moved()

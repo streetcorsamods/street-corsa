@@ -138,13 +138,16 @@ namespace StreetCorsa.Services.Parts
 
             // The engine's upper parts, any of which may stand out of the hood: whether they do is for whoever has the car's meshes
             var extras = new List<ShownModelAt>();
+            ModelFrame? frame = null;
             if (parts.FirstOrDefault(p => p.ParentSlot == PartInstance.CarEngineSlot) is { } engine && PartTrees.ToInstalled(Catalog, engine) is { } tree)
             {
-                var hubs = CarHubs.Of(System.IO.Path.Combine(StreetCorsa.Configuration.AppSettings.Instance.CarsPath, carDefinitionId));
+                var directory = System.IO.Path.Combine(StreetCorsa.Configuration.AppSettings.Instance.CarsPath, carDefinitionId);
+                var hubs = CarHubs.Of(directory);
                 extras = ShownEngineParts.Of(Catalog, tree.Root, hubs == null ? null : hubs with { EngineOffset = EngineOffsetOf(carDefinitionId) },
                     EngineLayoutOf(carDefinitionId));
+                frame = CarHubs.FrameOf(directory);
             }
-            return ShownSet.Of(ShownWheels(carDefinitionId, parts), extras);
+            return ShownSet.Of(ShownWheels(carDefinitionId, parts), extras, frame);
         }
     }
 }

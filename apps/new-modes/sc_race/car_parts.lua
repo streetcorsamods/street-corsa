@@ -310,15 +310,31 @@ end
 -- How far over a point the ray that finds the car's surface starts, metres (ShownEngineParts.RayFrom)
 local RAY_FROM = 3
 
--- The car's highest surface straight over a point of its model (the height in the model's space); nil when nothing is there
-local function surfaceAbove(root, x, y, z)
-  local world = root:getWorldTransformationRaw()
-  local from = world:transformPoint(vec3(x, y + RAY_FROM, z))
-  local down = world:transformVector(vec3(0, -1, 0)):normalize()
+-- The car's highest surface straight over a point of its model (the height in the model's space); nil when nothing is
+-- there. `model` takes the model's space to the world's
+local function surfaceAbove(root, model, x, y, z)
+  local from = model:transformPoint(vec3(x, y + RAY_FROM, z))
+  local down = model:transformVector(vec3(0, -1, 0))
+  local scale = down:length()
   -- Both sides of every face: the first one hit from above is the car's highest surface there
-  local distance = root:raycast(render.createRay(from, down, RAY_FROM * 2), nil, nil, nil, nil, 0)
+  local distance = root:raycast(render.createRay(from, down:normalize(), RAY_FROM * 2 * scale), nil, nil, nil, nil, 0)
   if type(distance) ~= 'number' or distance < 0 then return nil end
-  return y + RAY_FROM - distance
+  return y + RAY_FROM - distance / scale
+end
+
+-- What takes the space of the car's model (its KN5's) to the world: by the frame node the game names (CAR_n_MODEL_NODE,
+-- where it sits in the KN5 in CAR_n_MODEL_AT), since AC moves the model by the car's GRAPHICS_OFFSET and pitch (the
+-- Chevelle '70's is drawn 35 cm lower than its KN5 says); the car's root, as before, without one
+local function modelSpace(carIndex, root)
+  local name = raceText('CAR_' .. carIndex .. '_MODEL_NODE')
+  local at = name and raceMatrix('CAR_' .. carIndex .. '_MODEL_AT')
+  local node = at and root:findNodes(name)
+  if node and node:size() > 0 then
+    log('car ' .. carIndex .. ': the model space found by ' .. name)
+    return at:inverse():mul(node:at(1):getWorldTransformationRaw())
+  end
+  if name then log('car ' .. carIndex .. ': no ' .. name .. ' in the model, the car root is taken for its space') end
+  return root:getWorldTransformationRaw()
 end
 
 -- The node of the car's body, models in it drawn with the car and moving with its body: AC's BODYTR, else its CARNODE.
@@ -349,9 +365,9 @@ end
 
 -- Whether a part stands out of the car (ShownEngineParts.StandsOut): a point of its box higher than the car's surface
 -- straight over it, or with nothing of the car over it
-local function standsOut(root, box, at)
+local function standsOut(root, model, box, at)
   for _, p in ipairs(boxPoints(box, at)) do
-    local surface = surfaceAbove(root, p.x, p.y, p.z)
+    local surface = surfaceAbove(root, model, p.x, p.y, p.z)
     if not surface or p.y > surface + OUT_BY then return true end
   end
   return false
@@ -377,10 +393,11 @@ local function setUpExtras(carIndex, root)
   end
 
   -- Which stand out, judged before anything of ours is in (the rays would find our own parts)
+  local model = modelSpace(carIndex, root)
   local standing = {}
   for _, part in ipairs(parts) do
     if part.at and part.box then
-      local ok, out = pcall(standsOut, root, part.box, part.at)
+      local ok, out = pcall(standsOut, root, model, part.box, part.at)
       if not ok then log('car ' .. carIndex .. ': ' .. part.file .. ' could not be judged: ' .. tostring(out)) end
       if ok and out then standing[#standing + 1] = part end
       log('car ' .. carIndex .. ': ' .. part.file .. (ok and out and ' stands out' or ' stays under the hood'))
@@ -388,9 +405,9 @@ local function setUpExtras(carIndex, root)
   end
   if #standing == 0 then return {} end
 
-  -- Where they go, and what takes them from the car's space to the holder's: through the world, whatever lies between
+  -- Where they go, and what takes them from the model's space to the holder's: through the world, whatever lies between
   local holder = bodyNode(root) or root
-  local fromCar = root:getWorldTransformationRaw():mul(holder:getWorldTransformationRaw():inverse())
+  local fromCar = model:mul(holder:getWorldTransformationRaw():inverse())
   log('car ' .. carIndex .. ': engine parts go into ' .. tostring(holder:name()) .. ' (in ' .. tostring(holder:getParent():name()) .. ')')
 
   local loaded = {}

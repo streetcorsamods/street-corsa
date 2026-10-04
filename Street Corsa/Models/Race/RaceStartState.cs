@@ -89,6 +89,11 @@ namespace StreetCorsa.Models.Race
         {
             if (shown == null) yield break;
             var prefix = $"CAR_{carIndex}_";
+            if (shown.Frame is { } frame)
+            {
+                yield return (prefix + "MODEL_NODE", frame.Node);
+                yield return (prefix + "MODEL_AT", Matrix(frame.At));
+            }
             for (var i = 0; i < shown.Extras.Count; i++)
             {
                 var extra = shown.Extras[i];

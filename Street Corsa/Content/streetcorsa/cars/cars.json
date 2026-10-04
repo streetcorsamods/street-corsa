@@ -94,7 +94,7 @@
     "pb_chevy_150_powerglide": { "engine": "chevy_six:engines/chevy_six/chevy-235-1955-powerglide" },
     "pb_chevy_c10_65": { "engine": "l79:engines/l79/283-4bbl-4spd" },
     "pb_chevy_c10_t1_60": { "engine": "l79:engines/l79/283-2bbl-3spd" },
-    "pb_chevy_chevelle_ss_1970": { "engine": "sbc350:engines/sbc350/sbc-350-th350" },
+    "pb_chevy_chevelle_ss_1970": { "engine": "sbc350:engines/sbc350/sbc-350-th350", "engine_offset": [-0.005,0.07,0.01] },
     "pb_ford_coupe_1932": { "engine": "flathead:engines/flathead/ford-221-1932-3spd" },
     "pb_pontiac_gto_65": { "engine": "sbc350:engines/sbc350/sbc-350-th350" },
     "pontiac_firebird_468_70": { "engine": "sbc350:engines/sbc350/sbc-350-th350" },

@@ -75,38 +75,61 @@ public static class ShownEngineParts
 /// </summary>
 public static class CarHubs
 {
-    private static readonly ConcurrentDictionary<string, CarAnchors?> Read = new(StringComparer.OrdinalIgnoreCase);
+    private sealed record Model(CarAnchors? Hubs, ModelFrame? Frame);
+
+    private static readonly ConcurrentDictionary<string, Model> Read = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Names of nodes that move on a car (wheels, doors, the hood, the steering...): no frame to find the model by</summary>
+    private static readonly string[] Moving =
+        ["WHEEL", "SUSP", "HUB", "DISC", "BRAKE", "DOOR", "STEER", "WIPER", "HOOD", "BONNET", "TRUNK", "BOOT", "LIGHT", "FAN",
+         "SHIFT", "GEAR", "DRIVER", "CINTURE", "NEEDLE", "ARROW", "MIRROR", "WING", "SPOILER", "FLAP", "HANDBRAKE", "PEDAL"];
 
     /// <summary>The hubs of the car in <paramref name="carDirectory"/>; null when its model or a wheel node is not there</summary>
-    public static CarAnchors? Of(string carDirectory) => Read.GetOrAdd(carDirectory, Load);
+    public static CarAnchors? Of(string carDirectory) => Read.GetOrAdd(carDirectory, Load).Hubs;
 
-    private static CarAnchors? Load(string carDirectory)
+    /// <summary>
+    /// A node of the car's model that does not move on the car, right under its root (none of <see cref="Moving"/>, with
+    /// meshes in it), and where it sits in the model; null when there is none
+    /// </summary>
+    public static ModelFrame? FrameOf(string carDirectory) => Read.GetOrAdd(carDirectory, Load).Frame;
+
+    private static Model Load(string carDirectory)
     {
         try
         {
             var file = AcPaths.GetMainCarFilename(carDirectory, false);
-            if (file == null || !File.Exists(file)) return null;
+            if (file == null || !File.Exists(file)) return new Model(null, null);
 
             var kn5 = Kn5.FromFile(file, SkippingTextureLoader.Instance, SkippingMaterialLoader.Instance, HierarchyOnlyNodeLoader.Instance);
             var hubs = new Dictionary<string, Vector3>(StringComparer.Ordinal);
             Walk(kn5.RootNode, Matrix4x4.Identity, hubs);
-            return WheelFit.WheelNodes.All(hubs.ContainsKey)
+            var anchors = WheelFit.WheelNodes.All(hubs.ContainsKey)
                 ? new CarAnchors(hubs["WHEEL_LF"], hubs["WHEEL_RF"], hubs["WHEEL_LR"], hubs["WHEEL_RR"])
                 : null;
+
+            var root = ToNumerics(kn5.RootNode.Transform);
+            var frame = kn5.RootNode.Children
+                .Where(n => n.NodeClass == Kn5NodeClass.Base && !string.IsNullOrEmpty(n.Name) && HasMesh(n)
+                            && !Moving.Any(m => n.Name.Contains(m, StringComparison.OrdinalIgnoreCase)))
+                .Select(n => new ModelFrame(n.Name, ToNumerics(n.Transform) * root))
+                .FirstOrDefault();
+            return new Model(anchors, frame);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or EndOfStreamException)
         {
-            return null;
+            return new Model(null, null);
         }
     }
+
+    private static bool HasMesh(Kn5Node node) => node.Children.Any(c => c.NodeClass != Kn5NodeClass.Base || HasMesh(c));
+
+    private static Matrix4x4 ToNumerics(AcTools.Numerics.Mat4x4 t) =>
+        new(t.M11, t.M12, t.M13, t.M14, t.M21, t.M22, t.M23, t.M24, t.M31, t.M32, t.M33, t.M34, t.M41, t.M42, t.M43, t.M44);
 
     /// <summary>Each wheel node's place in the model, the first of each name (the main LOD's)</summary>
     private static void Walk(Kn5Node node, Matrix4x4 parent, Dictionary<string, Vector3> hubs)
     {
-        var t = node.Transform;
-        var world = node.NodeClass == Kn5NodeClass.Base
-            ? new Matrix4x4(t.M11, t.M12, t.M13, t.M14, t.M21, t.M22, t.M23, t.M24, t.M31, t.M32, t.M33, t.M34, t.M41, t.M42, t.M43, t.M44) * parent
-            : parent;
+        var world = node.NodeClass == Kn5NodeClass.Base ? ToNumerics(node.Transform) * parent : parent;
         if (node.NodeClass == Kn5NodeClass.Base && Array.IndexOf(WheelFit.WheelNodes, node.Name) >= 0)
             hubs.TryAdd(node.Name, world.Translation);
         foreach (var child in node.Children) Walk(child, world, hubs);

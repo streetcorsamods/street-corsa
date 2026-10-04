@@ -194,4 +194,18 @@ public sealed class ShownPartsTests : IDisposable
         // Only one corner over the surface is enough (a hood sloping down at the front)
         Assert.True(ShownEngineParts.StandsOut(Part(0.5f), p => p.Z > 1.4f ? 0.55f : 0.72f));
     }
+
+    [Fact]
+    public void The_engine_parts_go_with_the_node_that_finds_the_models_space_in_ac()
+    {
+        var part = new ShownModelAt(new ShownModel(ShownParts.FileName("engines/gm/blower"), "z.kn5"), Matrix4x4.Identity);
+        var start = new RaceStartState { Shown = ShownSet.Of(null, [part], new ModelFrame("FLOOR", Matrix4x4.CreateTranslation(0, 0.1f, 0))) };
+
+        var keys = start.IniKeys(0).ToDictionary(k => k.Key, k => k.Value);
+
+        Assert.Equal("FLOOR", keys["CAR_0_MODEL_NODE"]);
+        Assert.Equal("1,0,0,0,1,0,0,0,1,0,0.1,0", keys["CAR_0_MODEL_AT"]);
+        // Without engine parts there is nothing to place by it
+        Assert.Null(ShownSet.Of(null, null, new ModelFrame("FLOOR", Matrix4x4.Identity)));
+    }
 }
