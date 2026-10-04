@@ -179,6 +179,15 @@ public sealed class ShownPartsTests : IDisposable
         Assert.DoesNotContain("engines_gm_GM_327_crank.kn5", names);
         Assert.All(shown, s => Assert.True(s.Max.Y > s.Min.Y));
         Assert.Empty(ShownEngineParts.Of(catalog, PartTrees.ToInstalled(catalog, parts[0])!.Root, null, EngineLayout.Front));
+
+        // Where the factory put them they are the car's model's own: what sits on a part of another's is shown all the same
+        var root = PartTrees.ToInstalled(catalog, parts[0])!.Root;
+        var all = parts[0].SelfAndDescendants().Select(p => p.DefinitionId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        Assert.Empty(ShownEngineParts.Of(catalog, root, hubs, EngineLayout.Front, all));
+        var notTheBlower = all.Where(id => !id.Contains("supercharger")).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var onTheBlower = ShownEngineParts.Of(catalog, root, hubs, EngineLayout.Front, notTheBlower).Select(s => Path.GetFileName(s.Model.Name)).ToList();
+        Assert.Contains("engines_generic_Weiand_8_71_supercharger.kn5", onTheBlower);
+        Assert.Contains("engines_gm_stock_4brl_carburator.kn5", onTheBlower);
     }
 
     [Fact]

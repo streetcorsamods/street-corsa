@@ -39,6 +39,11 @@ local CORNERS = { 'LF', 'RF', 'LR', 'RR' }
 local TYRE = { 'tyre', 'tire', 'tread', 'wall' }
 local BRAKE = { 'brake', 'drum', 'disc', 'disk', 'caliper', 'rotor' }
 
+-- A car that names no tyre (a mod's 'rubber', 'pneu', 'Reifen'): the meshes at least TYRE_SHARE of the biggest radius are
+-- its tyre, when every other is within RIM_IN_TYRE of it (WheelFit.Tyres)
+local TYRE_SHARE = 0.97
+local RIM_IN_TYRE = 0.85
+
 -- A part mesh at least this share of the biggest one's radius is the lip
 local LIP_SHARE = 0.9
 
@@ -46,6 +51,7 @@ local LIP_SHARE = 0.9
 local RIM_WIDER_THAN_TYRE = 1.15
 
 local cars = {}   -- by car index: { corners = { { shown, hidden } ... } }, false once nothing is to be done
+local waiting = {}   -- by car index: true while its model is not there yet (told once)
 
 -- What was put where, also kept in Documents\Assetto Corsa\out\sc_race_parts.log (AC keeps no file of ac.log)
 local logLines = {}
@@ -190,6 +196,28 @@ local function rimAlone(rimBoxes, tyreBoxes, partBoxes, out, side)
   return scale, ownFace - side * partFace * scale, ownRadius, partRadius, ownFace
 end
 
+-- The tyre of a wheel that names none: the meshes well outside all the rest (WheelFit.Tyres)
+local function tyreBySize(own)
+  for _, m in ipairs(own) do if m.tyre then return end end
+  local others, biggest = {}, 0
+  for _, m in ipairs(own) do
+    if not m.brake and m.box then
+      others[#others + 1] = m
+      biggest = math.max(biggest, m.box.radius)
+    end
+  end
+  if #others < 2 then return end
+  local outer = 0
+  for _, m in ipairs(others) do
+    if m.box.radius >= biggest * TYRE_SHARE then outer = outer + 1
+    elseif m.box.radius > biggest * RIM_IN_TYRE then return end
+  end
+  if outer == #others then return end
+  for _, m in ipairs(others) do
+    if m.box.radius >= biggest * TYRE_SHARE then m.tyre = true end
+  end
+end
+
 local function setUpCorner(carIndex, root, corner, files)
   local where = 'car ' .. carIndex .. ' ' .. CORNERS[corner]
   local wheel = root:findNodes('WHEEL_' .. CORNERS[corner])
@@ -209,12 +237,14 @@ local function setUpCorner(carIndex, root, corner, files)
   local own, rimBoxes, tyreBoxes = {}, {}, {}
   for j = 1, meshes:size() do
     local name, material = meshes:name(j), meshes:materialName(j)
-    local box = boxInWheel(meshes:at(j), toWheel)
     local tyre = named(name, TYRE) or named(material, TYRE)
-    local brake = not tyre and (named(name, BRAKE) or named(material, BRAKE))
-    own[#own + 1] = { mesh = meshes:at(j), name = name, material = material, box = box, tyre = tyre, brake = brake }
-    if box and tyre then tyreBoxes[#tyreBoxes + 1] = box end
-    if box and not tyre and not brake then rimBoxes[#rimBoxes + 1] = box end
+    own[#own + 1] = { mesh = meshes:at(j), name = name, material = material, box = boxInWheel(meshes:at(j), toWheel), tyre = tyre,
+      brake = not tyre and (named(name, BRAKE) or named(material, BRAKE)) }
+  end
+  tyreBySize(own)
+  for _, m in ipairs(own) do
+    if m.box and m.tyre then tyreBoxes[#tyreBoxes + 1] = m.box end
+    if m.box and not m.tyre and not m.brake then rimBoxes[#rimBoxes + 1] = m.box end
   end
 
   local group = wheel:createNode('sc_wheel_' .. CORNERS[corner], false)
@@ -412,10 +442,10 @@ local function setUpExtras(carIndex, root)
 
   local loaded = {}
   for _, part in ipairs(standing) do
-    local model = holder:loadKN5(part.file)
-    if model then
-      model:getTransformationRaw():set(part.at:mul(fromCar))
-      loaded[#loaded + 1] = model
+    local partModel = holder:loadKN5(part.file)
+    if partModel then
+      partModel:getTransformationRaw():set(part.at:mul(fromCar))
+      loaded[#loaded + 1] = partModel
     else
       log('car ' .. carIndex .. ': ' .. part.file .. ' did not load')
     end
@@ -439,10 +469,12 @@ local function setUpCar(carIndex)
   end
   if not any then return false end
 
+  -- No model yet (CSP may build a car's node after the first frame): nil, tried again the next frame
   local root = ac.findNodes('carRoot:' .. carIndex)
   if root:size() == 0 then
-    log('car ' .. carIndex .. ' has no model to put parts on')
-    return false
+    if not waiting[carIndex] then log('car ' .. carIndex .. ' has no model to put parts on yet') end
+    waiting[carIndex] = true
+    return nil
   end
 
   local extrasOk, extras = pcall(setUpExtras, carIndex, root)
@@ -466,10 +498,12 @@ function M.update()
   for carIndex = 0, math.min(1, sim.carsCount - 1) do
     local car = cars[carIndex]
     if car == nil then
+      local told = #logLines
       local ok, result = pcall(setUpCar, carIndex)
       if not ok then log('car ' .. carIndex .. ' failed: ' .. tostring(result)) end
-      cars[carIndex] = ok and result or false
-      if #logLines > 0 then saveLog() end
+      -- A failure is for good; nil (no model yet) leaves the car to the next frame
+      if not ok then cars[carIndex] = false elseif result ~= nil then cars[carIndex] = result end
+      if #logLines > told then saveLog() end
     elseif car then
       for _, corner in ipairs(car.corners) do
         for _, object in ipairs(corner.hidden) do object:setVisible(false) end

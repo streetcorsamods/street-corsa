@@ -12,6 +12,7 @@ using StreetCorsa.Parts.Cars;
 using StreetCorsa.Parts.Logic;
 using StreetCorsa.Services.Scripting;
 using StreetCorsa.Services.Text;
+using static StreetCorsa.Helpers.Matrices;
 
 namespace StreetCorsa.Controls;
 
@@ -1013,6 +1014,9 @@ public class CarViewport3D : D3DViewportBase
         // Catch up with whatever changed in the meantime, a renderer rebuilt under it included (device lost, or a
         // quick unload and load): its own load found this run in progress and left the parts to it
         if (Renderer != null && (renderer != Renderer || !PartsVisible || IsOnStand || _loadedCarDirectory != carDirectory || !ReferenceEquals(Engine, engine) || !ReferenceEquals(Gear, gear) || EngineLayout != layout)) ApplyParts();
+
+        // The engine moved while this run laid it out where it was: placed again where it is now
+        else if (_anchors is { } laidOut && laidOut.EngineOffset != EngineOffset) OnEngineOffsetChanged();
     }
 
     /// <summary>The parts on screen are none: whatever is bound next is laid out from scratch</summary>
@@ -1429,13 +1433,6 @@ public class CarViewport3D : D3DViewportBase
         }
     }
 
-    private static SlimDX.Matrix ToSlim(System.Numerics.Matrix4x4 m) => new()
-    {
-        M11 = m.M11, M12 = m.M12, M13 = m.M13, M14 = m.M14,
-        M21 = m.M21, M22 = m.M22, M23 = m.M23, M24 = m.M24,
-        M31 = m.M31, M32 = m.M32, M33 = m.M33, M34 = m.M34,
-        M41 = m.M41, M42 = m.M42, M43 = m.M43, M44 = m.M44
-    };
 
     /// <summary>The node of a part; null when it has none, or there is no part</summary>
     private static int? NodeOf(IReadOnlyList<PlacedPart> nodes, InstalledPart? part)
@@ -1540,7 +1537,10 @@ public class CarViewport3D : D3DViewportBase
             if (!_partWorlds.TryGetValue(block, out var blockWorld)) return;
             var axes = blockWorld;
             axes.Translation = System.Numerics.Vector3.Zero;
-            EngineMoved?.Invoke(EngineOffset + System.Numerics.Vector3.TransformNormal(new System.Numerics.Vector3(right, up, -forward), axes));
+            // Kept to the millimetre (back at the start is zero, not a residue) and within what the car book takes
+            var next = EngineOffset + System.Numerics.Vector3.TransformNormal(new System.Numerics.Vector3(right, up, -forward), axes);
+            static float Kept(float v) => Math.Clamp(MathF.Round(v * 1000) / 1000, -CarEntry.MaxEngineOffset, CarEntry.MaxEngineOffset);
+            EngineMoved?.Invoke(new System.Numerics.Vector3(Kept(next.X), Kept(next.Y), Kept(next.Z)));
             return;
         }
 
@@ -1789,7 +1789,7 @@ public class CarViewport3D : D3DViewportBase
 
     private static CarAnchors? GetAnchors(Kn5RenderableCar carNode)
     {
-        var hubs = new[] { "WHEEL_LF", "WHEEL_RF", "WHEEL_LR", "WHEEL_RR" }
+        var hubs = WheelFit.WheelNodes
             .Select(name => carNode.RootObject.GetDummyByName(name)?.Matrix)
             .ToArray();
         if (hubs.Any(h => h == null)) return null;

@@ -249,8 +249,7 @@ namespace StreetCorsa.Screens.Garage
         public void MoveEngine(System.Numerics.Vector3 offset)
         {
             if (_car == null) return;
-            if (_parts.SetEngineOffset(_car.DefinitionId, offset) is { } problem)
-                _logger.Warning("The engine of {Car} moved, but cars.json could not be written: {Problem}", _car.DefinitionId, problem);
+            _parts.SetEngineOffset(_car.DefinitionId, offset);
             EngineOffset = _parts.EngineOffsetOf(_car.DefinitionId);
             if (Catalog != null) Shown = _parts.Shown(_car);
         }

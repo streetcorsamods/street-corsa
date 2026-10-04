@@ -656,7 +656,10 @@ The kinds of race (`formats/formats.json`, `{ "formats": [ ... ] }`), merged by 
   `-` is in no module or mode name, so no two mods' modules, nor the mode's own, ever share a file).
 - `mode`: a whole CSP mode instead, the mod's `formats/<mode>/` folder with its `mode.lua` (and `manifest.ini`), put
   into AC as `extension/lua/new-modes/<mod>-<mode>` and selected for the race. It reads race.ini and writes its result
-  as sc_race does (below), with `metadata.source` its folder name in AC.
+  as sc_race does (below), with `metadata.source` its folder name in AC. The game puts sc_race's `car_parts.lua` and
+  the race's part models (`parts\`) in its folder too: `require('car_parts').update()` in `script.prepare` and
+  `script.update`, as sc_race does, shows the cars' rims, tyres and engine parts that stand out (without it the cars
+  race as their models are).
 - `laps`: what the race is over (1 to 50; a drag race 1); an event may set its own. `sessionLaps`: the laps AC's
   session is given, when the format runs past its laps (a time attack's warm-up lap and its wait for the rival: 99),
   so AC never ends the race before the mode does. A race of more than one lap of AC's is never offered or picked on a

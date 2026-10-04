@@ -38,59 +38,25 @@ namespace StreetCorsa.Services.Catalog
         /// Each car's fields as given (a null figure takes the field out; a car left with none is taken out), into every
         /// copy of the file; the copies written, the installed one first
         /// </summary>
-        public static IReadOnlyList<string> Save(IReadOnlyDictionary<string, CarFields> cars)
-        {
-            var written = new List<string>();
-            foreach (var path in new[] { InstalledPath, SourcePath(AppContext.BaseDirectory) }.OfType<string>()
-                         .Distinct(StringComparer.OrdinalIgnoreCase))
-            {
-                // In one go (temp file and rename): a crash halfway leaves the old file, never half of one
-                SafeFile.WriteAllText(path, With(File.Exists(path) ? File.ReadAllText(path) : null, cars), SafeFile.Utf8NoBom);
-                written.Add(path);
-            }
-
-            return written;
-        }
+        public static IReadOnlyList<string> Save(IReadOnlyDictionary<string, CarFields> cars) => SaveAll(text => With(text, cars));
 
         /// <summary>
         /// A car's engine offset into every copy of the file (zero takes it out), the car's other fields kept; the copies
         /// written, the installed one first
         /// </summary>
-        public static IReadOnlyList<string> SaveEngineOffset(string carId, System.Numerics.Vector3 offset)
-        {
-            var written = new List<string>();
-            foreach (var path in new[] { InstalledPath, SourcePath(AppContext.BaseDirectory) }.OfType<string>()
-                         .Distinct(StringComparer.OrdinalIgnoreCase))
-            {
-                SafeFile.WriteAllText(path, WithEngineOffset(File.Exists(path) ? File.ReadAllText(path) : null, carId, offset), SafeFile.Utf8NoBom);
-                written.Add(path);
-            }
-            return written;
-        }
+        public static IReadOnlyList<string> SaveEngineOffset(string carId, System.Numerics.Vector3 offset) =>
+            SaveAll(text => WithEngineOffset(text, carId, offset));
 
-        /// <summary>The file's text with the car's engine offset set (to the millimetre); throws as <see cref="With"/> does</summary>
+        /// <summary>
+        /// The file's text with the car's engine offset set, to the millimetre (one that comes to nothing takes it out); throws
+        /// as <see cref="With"/> does
+        /// </summary>
         public static string WithEngineOffset(string? text, string carId, System.Numerics.Vector3 offset)
         {
-            var file = ModMerge.Parse(text);
-            if (file == null)
-            {
-                if (!string.IsNullOrWhiteSpace(text))
-                    throw new InvalidDataException($"{CarBook.CarsFile} does not read as JSON (a missing comma, a car named twice?): mend it by hand and save again");
-                file = ModMerge.NewObject();
-            }
-            if (file["cars"] is not JsonObject entries)
-            {
-                entries = ModMerge.NewObject();
-                file["cars"] = entries;
-            }
-
-            var entry = entries[carId] as JsonObject ?? ModMerge.NewObject();
-            var value = offset == System.Numerics.Vector3.Zero ? null
-                : new JsonArray(Math.Round(offset.X, 3), Math.Round(offset.Y, 3), Math.Round(offset.Z, 3));
-            Set(entry, "engine_offset", value);
-            if (entry.Count == 0) entries.Remove(carId);
-            else entries[carId] = entry;
-            return Write(file);
+            // + 0.0: a nudge back to the start leaves -0, which would be written as such
+            var mm = new[] { offset.X, offset.Y, offset.Z }.Select(v => Math.Round((double)v, 3) + 0.0).ToArray();
+            var value = mm.All(v => v == 0) ? null : new JsonArray(mm[0], mm[1], mm[2]);
+            return WithCars(text, entries => SetFields(entries, carId, entry => Set(entry, "engine_offset", value)));
         }
 
         /// <summary>
@@ -118,7 +84,37 @@ namespace StreetCorsa.Services.Catalog
         /// The file's text with the cars' fields set. A file that is there but does not read throws
         /// <see cref="InvalidDataException"/>: written over, it would lose every car it holds.
         /// </summary>
-        public static string With(string? text, IReadOnlyDictionary<string, CarFields> cars)
+        public static string With(string? text, IReadOnlyDictionary<string, CarFields> cars) => WithCars(text, entries =>
+        {
+            foreach (var (id, fields) in cars)
+            {
+                SetFields(entries, id, entry =>
+                {
+                    Set(entry, "engine", fields.Engine is { Length: > 0 } engine ? JsonValue.Create(engine) : null);
+                    Set(entry, "layout", fields.Layout is { } layout ? JsonValue.Create(StreetCorsa.Parts.EngineLayouts.Name(layout)) : null);
+                    Set(entry, "price", fields.Price is { } price ? JsonValue.Create(price) : null);
+                    Set(entry, "common", fields.Common is { } common ? JsonValue.Create(Math.Round((double)common, 2)) : null);
+                });
+            }
+        });
+
+        /// <summary>The file's text changed into every copy of it, each in one go; the copies written, the installed one first</summary>
+        private static IReadOnlyList<string> SaveAll(Func<string?, string> change)
+        {
+            var written = new List<string>();
+            foreach (var path in new[] { InstalledPath, SourcePath(AppContext.BaseDirectory) }.OfType<string>()
+                         .Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                // In one go (temp file and rename): a crash halfway leaves the old file, never half of one
+                SafeFile.WriteAllText(path, change(File.Exists(path) ? File.ReadAllText(path) : null), SafeFile.Utf8NoBom);
+                written.Add(path);
+            }
+
+            return written;
+        }
+
+        /// <summary>The file's text with its cars changed; a file that is there but does not read throws (see <see cref="With"/>)</summary>
+        private static string WithCars(string? text, Action<JsonObject> change)
         {
             var file = ModMerge.Parse(text);
             if (file == null)
@@ -133,18 +129,17 @@ namespace StreetCorsa.Services.Catalog
                 file["cars"] = entries;
             }
 
-            foreach (var (id, fields) in cars)
-            {
-                var entry = entries[id] as JsonObject ?? ModMerge.NewObject();
-                Set(entry, "engine", fields.Engine is { Length: > 0 } engine ? JsonValue.Create(engine) : null);
-                Set(entry, "layout", fields.Layout is { } layout ? JsonValue.Create(StreetCorsa.Parts.EngineLayouts.Name(layout)) : null);
-                Set(entry, "price", fields.Price is { } price ? JsonValue.Create(price) : null);
-                Set(entry, "common", fields.Common is { } common ? JsonValue.Create(Math.Round((double)common, 2)) : null);
-                if (entry.Count == 0) entries.Remove(id);
-                else entries[id] = entry;
-            }
-
+            change(entries);
             return Write(file);
+        }
+
+        /// <summary>A car's entry changed; one left with no field is taken out</summary>
+        private static void SetFields(JsonObject entries, string id, Action<JsonObject> change)
+        {
+            var entry = entries[id] as JsonObject ?? ModMerge.NewObject();
+            change(entry);
+            if (entry.Count == 0) entries.Remove(id);
+            else entries[id] = entry;
         }
 
         private static void Set(JsonObject entry, string name, JsonNode? value)

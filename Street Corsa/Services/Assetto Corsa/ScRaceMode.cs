@@ -22,7 +22,8 @@ namespace StreetCorsa.Services
     /// own (<c>new-modes\&lt;mod&gt;_&lt;mode&gt;</c>).
     ///
     /// So do the part models the race's cars show (<see cref="StreetCorsa.Parts.Cars.ShownParts"/>, in <c>parts\</c>): the mode loads
-    /// them from its own folder, and a race's models leave with the next race.
+    /// them from its own folder, and a race's models leave with the next race. A format's own mode gets them too, with the
+    /// script that puts them on (<c>car_parts.lua</c>), for it to run as sc_race does.
     /// </summary>
     public sealed class ScRaceMode(string sourceFolder, Func<Race.RaceFormats>? formats = null)
     {
@@ -62,9 +63,10 @@ namespace StreetCorsa.Services
             try
             {
                 var target = InstalledFolder(acRoot);
+                var modelFiles = (models ?? []).Select(m => (m.Name, m.Source)).ToList();
                 var files = Directory.GetFiles(sourceFolder).Select(f => (Name: Path.GetFileName(f), Source: f))
                     .Concat(formats?.Invoke().ModuleFiles ?? [])
-                    .Concat((models ?? []).Select(m => (m.Name, m.Source))).ToList();
+                    .Concat(modelFiles).ToList();
                 var written = Mirror(files, target);
                 if (written > 0)
                     _logger.Information("Race mode installed in {Target} ({Count} file(s) changed)", target, written);
@@ -76,8 +78,12 @@ namespace StreetCorsa.Services
                         return GameText.Say("launch.mode_missing", ("folder", modeFolder));
 
                     var modeTarget = Path.Combine(acRoot, "extension", "lua", "new-modes", Race.RaceFormats.ModeIdOf(format));
+                    // With the parts and their script: the mod's own files first, so a car_parts.lua of its own wins
+                    var partsScript = Path.Combine(sourceFolder, PartsScript);
                     var modeFiles = Directory.GetFiles(modeFolder, "*", SearchOption.AllDirectories)
-                        .Select(f => (Name: Path.GetRelativePath(modeFolder, f), Source: f)).ToList();
+                        .Select(f => (Name: Path.GetRelativePath(modeFolder, f), Source: f))
+                        .Concat(File.Exists(partsScript) ? [(PartsScript, partsScript)] : [])
+                        .Concat(modelFiles).ToList();
                     var modeWritten = Mirror(modeFiles, modeTarget);
                     if (modeWritten > 0)
                         _logger.Information("Race format {Format}'s mode installed in {Target} ({Count} file(s) changed)", format.Id, modeTarget, modeWritten);

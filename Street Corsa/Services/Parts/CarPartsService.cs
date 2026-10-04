@@ -270,6 +270,91 @@ namespace StreetCorsa.Services.Parts
         public (RunningGearFactory.AxleParts Front, RunningGearFactory.AxleParts Rear)? FactoryRunningGear(Car car) =>
             IsAvailable && Specs(car.DefinitionId) is { } specs ? RunningGearFactory.Choose(Catalog, specs) : null;
 
+        public System.Numerics.Vector3 EngineOffsetOf(string carDefinitionId) =>
+            CarBook.Current.Car(carDefinitionId)?.EngineShift ?? System.Numerics.Vector3.Zero;
+
+        // The offsets still to go into cars.json, by car: the latest of each, written by one worker at a time
+        private readonly Dictionary<string, System.Numerics.Vector3> _offsetsToWrite = new(StringComparer.OrdinalIgnoreCase);
+        private bool _writingOffsets;
+
+        /// <remarks>Each arrow press (key repeat too) moves the engine: the file is written behind, with the latest offset</remarks>
+        public void SetEngineOffset(string carDefinitionId, System.Numerics.Vector3 offset)
+        {
+            CarBook.Current.SetEngineOffset(carDefinitionId, offset);
+            lock (_offsetsToWrite)
+            {
+                _offsetsToWrite[carDefinitionId] = offset;
+                if (_writingOffsets) return;
+                _writingOffsets = true;
+            }
+            _ = Task.Run(WriteOffsets);
+        }
+
+        private void WriteOffsets()
+        {
+            while (true)
+            {
+                KeyValuePair<string, System.Numerics.Vector3>[] offsets;
+                lock (_offsetsToWrite)
+                {
+                    if (_offsetsToWrite.Count == 0)
+                    {
+                        _writingOffsets = false;
+                        return;
+                    }
+                    offsets = _offsetsToWrite.ToArray();
+                    _offsetsToWrite.Clear();
+                }
+
+                foreach (var (carId, offset) in offsets)
+                {
+                    try
+                    {
+                        BaseCarsFile.SaveEngineOffset(carId, offset);
+                    }
+                    catch (Exception ex) when (ex is not OutOfMemoryException)
+                    {
+                        // The car book has it for the session all the same
+                        _logger.Warning("The engine of {Car} moved, but cars.json could not be written: {Error}", carId, ex.Message);
+                    }
+                }
+            }
+        }
+
+        public ShownSet? Shown(string carDefinitionId, List<PartInstance> parts)
+        {
+            if (!IsAvailable) return null;
+
+            // The engine's upper parts, any of which may stand out of the hood: whether they do is for whoever has the car's meshes
+            var extras = new List<ShownModelAt>();
+            ModelFrame? frame = null;
+            if (parts.FirstOrDefault(p => p.ParentSlot == PartInstance.CarEngineSlot) is { } engine && PartTrees.ToInstalled(Catalog, engine) is { } tree)
+            {
+                var directory = Path.Combine(AppSettings.Instance.CarsPath, carDefinitionId);
+                var hubs = CarHubs.Of(directory);
+                extras = ShownEngineParts.Of(Catalog, tree.Root, hubs == null ? null : hubs with { EngineOffset = EngineOffsetOf(carDefinitionId) },
+                    EngineLayoutOf(carDefinitionId), FactoryEngineParts(carDefinitionId, tree.Root.Definition.Id));
+                frame = CarHubs.FrameOf(directory);
+            }
+
+            var wheels = Specs(carDefinitionId) is { } specs
+                ? ShownParts.Wheels(parts, Catalog, RunningGearFactory.Choose(Catalog, specs))
+                : new ShownWheel?[RunningGear.Corners];
+            return ShownSet.Of(wheels, extras, frame);
+        }
+
+        /// <summary>
+        /// The parts of the car's factory build, by their catalog ids, when its engine is on the factory's block (the car's
+        /// model has those); null for a car with another engine, or no known factory build
+        /// </summary>
+        private IReadOnlySet<string>? FactoryEngineParts(string carDefinitionId, string blockId)
+        {
+            if (_catalogRepo.GetCar(carDefinitionId) is not { } definition || GetStockBuild(definition) is not { } stock) return null;
+            var parts = stock.Build.Parts.Select(p => p.Part is { } id ? Catalog.Get(id)?.Id : null).OfType<string>()
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            return parts.Contains(blockId) ? parts : null;
+        }
+
         public bool BringUpToDate(GameState game)
         {
             if (!IsAvailable) return false;

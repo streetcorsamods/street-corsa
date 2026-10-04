@@ -27,13 +27,15 @@ public sealed record WheelMesh(string Name, string? Material, AxleBox Box);
 /// <summary>What a wheel's fit comes to: the car's meshes that go, and where the parts' node goes in the wheel</summary>
 /// <param name="Hidden">Indices into the car's meshes</param>
 /// <param name="Placement">The parts' node in the wheel node's space: scaled, turned to face out, moved along the axle</param>
-public sealed record WheelFitting(IReadOnlyList<int> Hidden, Matrix4x4 Placement);
+/// <param name="WithTyre">The part's tyre is shown (and the car's hidden); false: the rim goes in round the car's tyre</param>
+public sealed record WheelFitting(IReadOnlyList<int> Hidden, Matrix4x4 Placement, bool WithTyre = false);
 
 /// <summary>
 /// How a part's wheel takes the place of a car's own (the race mode's <c>car_parts.lua</c> does the same in AC; the two
 /// are kept to the same rules and tested against the same cars).
 ///
-/// The car's meshes under its wheel node: the tyre and the brake by mesh or material name, the rim everything else. A
+/// The car's meshes under its wheel node: the tyre and the brake by mesh or material name, the rim everything else; on a
+/// car that names no tyre (a mod's "rubber", "pneu", "Reifen"), the tyre is the mesh well outside all the rest. A
 /// rim alone keeps the car's tyre and fills the hole the hidden rim leaves: its outer lip as big as the car's, flush with
 /// where the car's lip was (no further out than the tyre's sidewall), the barrel going in. A tyre makes the whole wheel
 /// the parts', scaled together so the tyre is as big as wanted, centred on the car's tyre. An optional tyre (the factory
@@ -50,6 +52,14 @@ public static class WheelFit
     private const float LipShare = 0.9f;
 
     /// <summary>
+    /// A car that names no tyre: the meshes at least this share of the biggest radius are its tyre, when every other is
+    /// within <see cref="RimInTyre"/> of it (a 15" rim's lip is 0.6 to 0.75 of its tyre)
+    /// </summary>
+    private const float TyreShare = 0.97f;
+
+    private const float RimInTyre = 0.85f;
+
+    /// <summary>
     /// How much wider than the car's tyre a rim alone may come out before the corner shows the tyre on it as well: a
     /// 15x8 Cragar on a Chevelle's front is 1.09 of its tyre and looks right, a 15x11 on its rear 1.21 and does not
     /// </summary>
@@ -58,9 +68,32 @@ public static class WheelFit
     /// <summary>AC's wheels in its order (0 left front, 1 right front, 2 left rear, 3 right rear)</summary>
     public static readonly string[] WheelNodes = ["WHEEL_LF", "WHEEL_RF", "WHEEL_LR", "WHEEL_RR"];
 
-    public static bool IsTyre(WheelMesh mesh) => Named(mesh.Name, Tyre) || Named(mesh.Material, Tyre);
+    /// <summary>Which of the car's meshes under a wheel are its tyre: by name, else by being well outside the rest</summary>
+    public static bool[] Tyres(IReadOnlyList<WheelMesh> car)
+    {
+        var tyres = car.Select(m => Named(m.Name, Tyre) || Named(m.Material, Tyre)).ToArray();
+        if (tyres.Any(t => t)) return tyres;
 
-    public static bool IsBrake(WheelMesh mesh) => !IsTyre(mesh) && (Named(mesh.Name, Brake) || Named(mesh.Material, Brake));
+        var others = Enumerable.Range(0, car.Count).Where(i => !Named(car[i].Name, Brake) && !Named(car[i].Material, Brake)).ToList();
+        if (others.Count < 2) return tyres;
+        var biggest = others.Max(i => car[i].Box.Radius);
+        var outer = others.Where(i => car[i].Box.Radius >= biggest * TyreShare).ToList();
+        if (outer.Count == others.Count || others.Except(outer).Any(i => car[i].Box.Radius > biggest * RimInTyre)) return tyres;
+        foreach (var i in outer) tyres[i] = true;
+        return tyres;
+    }
+
+    /// <summary>The radius of the car's tyre under a wheel (<see cref="Tyres"/>); 0 when none is found</summary>
+    public static float TyreRadius(IReadOnlyList<WheelMesh> car)
+    {
+        var tyres = Tyres(car);
+        return car.Where((_, i) => tyres[i]).Select(m => m.Box.Radius).DefaultIfEmpty(0).Max();
+    }
+
+    /// <summary>Whether a name says tyre (a blurred object's, say)</summary>
+    public static bool IsTyreName(string? name) => Named(name, Tyre);
+
+    private static bool IsBrake(WheelMesh mesh, bool tyre) => !tyre && (Named(mesh.Name, Brake) || Named(mesh.Material, Brake));
 
     /// <summary>
     /// The fit of a part's wheel on corner <paramref name="corner"/> (AC's order); null when there is nothing to measure.
@@ -75,7 +108,8 @@ public static class WheelFit
         if (partTyre != null && tyreOptional)
         {
             var alone = Fit(corner, car, partRim, null);
-            var own = Union(car.Where(IsTyre).Select(m => m.Box).ToList());
+            var tyres = Tyres(car);
+            var own = Union(car.Where((_, i) => tyres[i]).Select(m => m.Box).ToList());
             var rim = Union(partRim);
             if (alone != null && own is { } o && rim is { } r
                 && (r.MaxX - r.MinX) * Math.Abs(alone.Placement.M22) <= (o.MaxX - o.MinX) * RimWiderThanTyre) return alone;
@@ -88,10 +122,11 @@ public static class WheelFit
         var hidden = new List<int>();
         var rimBoxes = new List<AxleBox>();
         var tyreBoxes = new List<AxleBox>();
+        var isTyre = Tyres(car);
         for (var i = 0; i < car.Count; i++)
         {
-            var tyre = IsTyre(car[i]);
-            var brake = IsBrake(car[i]);
+            var tyre = isTyre[i];
+            var brake = IsBrake(car[i], tyre);
             if (!brake && (withTyre || !tyre)) hidden.Add(i);
             if (tyre) tyreBoxes.Add(car[i].Box);
             else if (!brake) rimBoxes.Add(car[i].Box);
@@ -126,7 +161,7 @@ public static class WheelFit
             side * scale, 0, 0, 0,
             0, scale, 0, 0,
             0, 0, side * scale, 0,
-            x, 0, 0, 1));
+            x, 0, 0, 1), withTyre);
     }
 
     private static bool Named(string? name, string[] words) =>

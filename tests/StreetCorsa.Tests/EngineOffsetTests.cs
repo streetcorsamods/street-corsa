@@ -49,6 +49,11 @@ public class EngineOffsetTests
 
         var cleared = ModMerge.Parse(BaseCarsFile.WithEngineOffset(text, "car_a", Vector3.Zero))!["cars"]!["car_a"]!.AsObject();
         Assert.False(cleared.ContainsKey("engine_offset"));
+
+        // Nudged back to the start leaves less than a millimetre, a minus zero among it: that is no offset either
+        var residue = ModMerge.Parse(BaseCarsFile.WithEngineOffset(text, "car_a", new Vector3(-0f, 0.0004f, -1e-9f)))!["cars"]!["car_a"]!.AsObject();
+        Assert.False(residue.ContainsKey("engine_offset"));
+        Assert.Equal("[-0.01,0,0]", ModMerge.Parse(BaseCarsFile.WithEngineOffset(text, "car_a", new Vector3(-0.01f, -1e-9f, 0)))!["cars"]!["car_a"]!["engine_offset"]!.ToJsonString());
     }
 
     [Fact]

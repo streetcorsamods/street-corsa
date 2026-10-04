@@ -112,11 +112,35 @@ public class WheelFitTests
         // A 15x11 Cragar alone would be 1.21 of the Chevelle's tyre: the slick on it comes along, the car's tyre goes
         var wide = WheelFit.Fit(0, Chevelle, Cragar11, Tyre, 0.32f, tyreOptional: true)!;
         Assert.Contains("WHEEL_LF_SUB4", Names(Chevelle, wide));
+        Assert.True(wide.WithTyre);
         Assert.Equal(0.32f / 0.313f, Math.Abs(wide.Placement.M11), 3);
 
         // A 15x8 one is 1.09 of it: the car keeps its tyre, the rim fits in it
         var fits = WheelFit.Fit(0, Chevelle, Cragar8, Tyre, 0.32f, tyreOptional: true)!;
         Assert.DoesNotContain("WHEEL_LF_SUB4", Names(Chevelle, fits));
+        Assert.False(fits.WithTyre);
         Assert.Equal(0.231f / 0.187f, Math.Abs(fits.Placement.M11), 3);
+    }
+
+    [Fact]
+    public void A_wheel_that_names_no_tyre_takes_the_mesh_well_outside_the_rest_as_its_tyre()
+    {
+        // As tools/sc_race_harness/test_parts.py has it: a mod's wheel in German
+        List<WheelMesh> car =
+        [
+            Mesh("Reifen", "gummi", -0.1f, 0.05f, 0.31f, 1),
+            Mesh("Felge", "chrom", -0.1f, 0.04f, 0.19f, 1),
+            Mesh("Stern", "chrom", 0f, 0.03f, 0.15f, 1),
+            Mesh("Bremse", "brake_disc", -0.09f, -0.06f, 0.14f, 1)
+        ];
+
+        Assert.Equal([true, false, false, false], WheelFit.Tyres(car));
+        Assert.Equal(0.31f, WheelFit.TyreRadius(car));
+        var fit = WheelFit.Fit(0, car, Rim, null)!;
+        Assert.Equal(["Felge", "Stern"], Names(car, fit));
+        Assert.Equal(0.19f / 0.187f, Math.Abs(fit.Placement.M11), 3);
+
+        // One mesh a little bigger than the rest is no tyre: the wheel is all rim (or all one mesh)
+        Assert.All(WheelFit.Tyres([Mesh("a", "a", 0, 0.1f, 0.2f, 1), Mesh("b", "b", 0, 0.1f, 0.19f, 1)]), Assert.False);
     }
 }

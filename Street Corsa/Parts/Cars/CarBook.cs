@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -53,7 +54,8 @@ public sealed class CarBook
     private readonly Dictionary<string, MakeEntry> _makes;
     private readonly Dictionary<string, CountryEntry> _countries;
     private readonly Dictionary<string, string> _countryNames;
-    private readonly Dictionary<string, CarEntry> _cars;
+    // Read by workers while the garage's placement mode gives a car its engine offset on the UI thread
+    private readonly ConcurrentDictionary<string, CarEntry> _cars;
     private readonly Dictionary<string, string> _aliases;
     private readonly HashSet<string> _noise;
 
@@ -66,7 +68,7 @@ public sealed class CarBook
         _makes = makes;
         _countries = countries;
         _countryNames = countryNames;
-        _cars = cars;
+        _cars = new ConcurrentDictionary<string, CarEntry>(cars, cars.Comparer);
         _aliases = aliases;
         _noise = noise;
         Problems = problems;
@@ -108,8 +110,7 @@ public sealed class CarBook
     /// </summary>
     public void SetEngineOffset(string carId, Vector3 offset)
     {
-        if (!_cars.TryGetValue(carId, out var car)) _cars[carId] = car = new CarEntry();
-        car.EngineOffset = offset == Vector3.Zero ? null : [offset.X, offset.Y, offset.Z];
+        _cars.GetOrAdd(carId, _ => new CarEntry()).EngineOffset = offset == Vector3.Zero ? null : [offset.X, offset.Y, offset.Z];
     }
 
     /// <summary>

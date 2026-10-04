@@ -5,6 +5,7 @@ using AcTools.Kn5File;
 using AcTools.Utils;
 using StreetCorsa.Parts.Cars;
 using StreetCorsa.Parts.Logic;
+using static StreetCorsa.Helpers.Matrices;
 
 namespace StreetCorsa.Parts;
 
@@ -13,7 +14,8 @@ namespace StreetCorsa.Parts;
 /// carburettor's air cleaner, a supercharger, a scoop), where the engine has it. Placed as the garage's parts view
 /// places the engine (<see cref="CarPartsLayout"/>), by the car's wheel hubs as its model has them, and never moved: a
 /// part is shown at its place when it stands out of the car (<see cref="StandsOut"/>, judged where the car's meshes are:
-/// the scenes, the race mode), and not at all when it does not. A hood a part goes through stays as it is.
+/// the scenes, the race mode), and not at all when it does not. A hood a part goes through stays as it is. A part where
+/// the factory put it is the car's model's own, as a factory rim is (<see cref="ShownParts"/>): never shown.
 /// </summary>
 public static class ShownEngineParts
 {
@@ -31,9 +33,11 @@ public static class ShownEngineParts
 
     /// <summary>
     /// The parts of <paramref name="engine"/> that may stand out of the car, each where it sits in the car's model with
-    /// its box; none without the car's hubs
+    /// its box; none without the car's hubs. A part of <paramref name="factory"/> (the ids of the car's factory build, given
+    /// when the engine is on its factory block) on nothing but such parts down to the block is where the car's model has it.
     /// </summary>
-    public static List<ShownModelAt> Of(PartsCatalog catalog, InstalledPart? engine, CarAnchors? hubs, EngineLayout layout)
+    public static List<ShownModelAt> Of(PartsCatalog catalog, InstalledPart? engine, CarAnchors? hubs, EngineLayout layout,
+        IReadOnlySet<string>? factory = null)
     {
         var shown = new List<ShownModelAt>();
         if (engine == null || hubs == null) return shown;
@@ -41,6 +45,7 @@ public static class ShownEngineParts
         var high = new[] { hubs.WheelLF.Y, hubs.WheelRF.Y, hubs.WheelLR.Y, hubs.WheelRR.Y }.Max() + UpperEngine;
         foreach (var placed in CarPartsLayout.Build(catalog, hubs, engine, null, layout))
         {
+            if (factory != null && placed.Source is { } source && AsFromFactory(source, factory)) continue;
             if (PartModelBounds.Of(catalog, placed.Part) is not { } box || catalog.GetModelPath(placed.Part) is not { } path) continue;
             if (Corners(box.Min, box.Max).Max(c => Vector3.Transform(c, placed.World).Y) <= high) continue;
             shown.Add(new ShownModelAt(new ShownModel(ShownParts.FileName(placed.Part.Id), path), placed.World, box.Min, box.Max));
@@ -60,6 +65,16 @@ public static class ShownEngineParts
             if (surfaceAbove(point) is not { } surface || point.Y > surface + OutBy) return true;
         }
         return false;
+    }
+
+    /// <summary>The part and everything under it down to the block are of the factory build: it sits where the factory put it</summary>
+    private static bool AsFromFactory(InstalledPart part, IReadOnlySet<string> factory)
+    {
+        for (InstalledPart? p = part; p != null; p = p.Parent)
+        {
+            if (!factory.Contains(p.Definition.Id)) return false;
+        }
+        return true;
     }
 
     private static IEnumerable<Vector3> Corners(Vector3 min, Vector3 max)
@@ -115,16 +130,14 @@ public static class CarHubs
                 .FirstOrDefault();
             return new Model(anchors, frame);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or EndOfStreamException)
+        catch (Exception ex) when (ex is not OutOfMemoryException)
         {
+            // AcTools throws a plain Exception for a file that is no KN5: kept as a car without hubs all the same, not read again
             return new Model(null, null);
         }
     }
 
     private static bool HasMesh(Kn5Node node) => node.Children.Any(c => c.NodeClass != Kn5NodeClass.Base || HasMesh(c));
-
-    private static Matrix4x4 ToNumerics(AcTools.Numerics.Mat4x4 t) =>
-        new(t.M11, t.M12, t.M13, t.M14, t.M21, t.M22, t.M23, t.M24, t.M31, t.M32, t.M33, t.M34, t.M41, t.M42, t.M43, t.M44);
 
     /// <summary>Each wheel node's place in the model, the first of each name (the main LOD's)</summary>
     private static void Walk(Kn5Node node, Matrix4x4 parent, Dictionary<string, Vector3> hubs)

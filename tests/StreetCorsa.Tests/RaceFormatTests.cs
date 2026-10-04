@@ -158,13 +158,19 @@ public sealed class RaceFormatTests : IDisposable
         Assert.Contains("jdm-gymkhana", formats.ModeIds);
         Assert.Contains(IniModificationService.RaceModeId, formats.ModeIds);
 
-        // Installed whole beside sc_race, sub-folders too
+        // Installed whole beside sc_race, sub-folders too, with the race's part models and the script that puts them on
         var ac = _temp.Combine("ac");
         Directory.CreateDirectory(Path.Combine(ac, "extension"));
-        Assert.Null(new ScRaceMode(ModeFolder(), () => formats).Install(ac, gymkhana));
+        var source = ModeFolder();
+        _temp.File(Path.Combine("build", "sc_race", "car_parts.lua"), "-- parts");
+        var model = _temp.File("cragar.kn5", "kn5");
+        Assert.Null(new ScRaceMode(source, () => formats).Install(ac, gymkhana,
+            [new StreetCorsa.Parts.Cars.ShownModel(StreetCorsa.Parts.Cars.ShownParts.FileName("rims/mopar/cragar_8"), model)]));
         var installed = Path.Combine(ac, "extension", "lua", "new-modes", "jdm-gymkhana");
         Assert.True(File.Exists(Path.Combine(installed, "mode.lua")));
         Assert.True(File.Exists(Path.Combine(installed, "lib", "util.lua")));
+        Assert.Equal("-- parts", File.ReadAllText(Path.Combine(installed, "car_parts.lua")));
+        Assert.Equal("kn5", File.ReadAllText(Path.Combine(installed, "parts", "rims_mopar_cragar_8.kn5")));
     }
 
     [Fact]

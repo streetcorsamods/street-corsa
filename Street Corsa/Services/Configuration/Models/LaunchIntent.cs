@@ -76,7 +76,10 @@ namespace StreetCorsa.Services.Configuration.Models
         public string TrackId { get; set; } = string.Empty;
         public string? TrackConfig { get; set; }
 
-        /// <summary>What the car shows that its model does not have; null runs without a mode</summary>
+        /// <summary>
+        /// What the car shows that its model does not have (never the factory's: a stock car has none); null runs without a
+        /// mode, as does a run whose mode cannot go in (no CSP)
+        /// </summary>
         public StreetCorsa.Parts.Cars.ShownSet? Shown { get; set; }
 
         /// <summary>Whether the free run needs its mode, sc_free: the car shows parts its model does not have</summary>

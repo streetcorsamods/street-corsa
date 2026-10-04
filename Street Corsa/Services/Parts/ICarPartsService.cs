@@ -92,38 +92,14 @@ namespace StreetCorsa.Services.Parts
         /// <summary>The running gear the car left the factory with, matched to its data; null without a catalog or data</summary>
         (RunningGearFactory.AxleParts Front, RunningGearFactory.AxleParts Rear)? FactoryRunningGear(Car car);
 
-        /// <summary>
-        /// The wheels the car shows, in a race and in the game's scenes, that its own model does not have (AC's corner
-        /// order, null where it keeps its own): none without a catalog
-        /// </summary>
-        ShownWheel?[] ShownWheels(Car car) => ShownWheels(car.DefinitionId, car.Parts);
-
-        /// <summary>The wheels a car of <paramref name="carDefinitionId"/> with <paramref name="parts"/> shows (a car for sale)</summary>
-        ShownWheel?[] ShownWheels(string carDefinitionId, List<PartInstance> parts) =>
-            IsAvailable && Specs(carDefinitionId) is { } specs
-                ? ShownParts.Wheels(parts, Catalog, RunningGearFactory.Choose(Catalog, specs))
-                : new ShownWheel?[RunningGear.Corners];
-
         /// <summary>Where the car's engine is moved from its place by hand (cars.json); zero when it is not</summary>
-        System.Numerics.Vector3 EngineOffsetOf(string carDefinitionId) => CarBook.Current.Car(carDefinitionId)?.EngineShift ?? System.Numerics.Vector3.Zero;
+        System.Numerics.Vector3 EngineOffsetOf(string carDefinitionId);
 
         /// <summary>
         /// Moves the car's engine from its place (the garage's placement mode): into the car book now, and into the base
-        /// game's cars.json beside. Null when it is kept; otherwise why it could not be written (the book has it anyway)
+        /// game's cars.json beside, off the caller's thread (a file that cannot be written is told in the log)
         /// </summary>
-        string? SetEngineOffset(string carDefinitionId, System.Numerics.Vector3 offset)
-        {
-            CarBook.Current.SetEngineOffset(carDefinitionId, offset);
-            try
-            {
-                StreetCorsa.Services.Catalog.BaseCarsFile.SaveEngineOffset(carDefinitionId, offset);
-                return null;
-            }
-            catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException or System.IO.InvalidDataException)
-            {
-                return ex.Message;
-            }
-        }
+        void SetEngineOffset(string carDefinitionId, System.Numerics.Vector3 offset);
 
         /// <summary>
         /// Everything the car shows, in a race and in the game's scenes, that its own model does not have: its wheels and
@@ -132,22 +108,6 @@ namespace StreetCorsa.Services.Parts
         ShownSet? Shown(Car car) => Shown(car.DefinitionId, car.Parts);
 
         /// <summary>What a car of <paramref name="carDefinitionId"/> with <paramref name="parts"/> shows (a car for sale)</summary>
-        ShownSet? Shown(string carDefinitionId, List<PartInstance> parts)
-        {
-            if (!IsAvailable) return null;
-
-            // The engine's upper parts, any of which may stand out of the hood: whether they do is for whoever has the car's meshes
-            var extras = new List<ShownModelAt>();
-            ModelFrame? frame = null;
-            if (parts.FirstOrDefault(p => p.ParentSlot == PartInstance.CarEngineSlot) is { } engine && PartTrees.ToInstalled(Catalog, engine) is { } tree)
-            {
-                var directory = System.IO.Path.Combine(StreetCorsa.Configuration.AppSettings.Instance.CarsPath, carDefinitionId);
-                var hubs = CarHubs.Of(directory);
-                extras = ShownEngineParts.Of(Catalog, tree.Root, hubs == null ? null : hubs with { EngineOffset = EngineOffsetOf(carDefinitionId) },
-                    EngineLayoutOf(carDefinitionId));
-                frame = CarHubs.FrameOf(directory);
-            }
-            return ShownSet.Of(ShownWheels(carDefinitionId, parts), extras, frame);
-        }
+        ShownSet? Shown(string carDefinitionId, List<PartInstance> parts);
     }
 }

@@ -199,6 +199,15 @@ sub(1, 'chevelle_rim_inner', -0.072, 0.162, 0.231)
 sub(0, 'chevelle_rim', 0.067, 0.164, 0.217)
 world.wheels.LR = chevelle
 
+-- A mod that names its wheel in German: no tyre by name, the tyre is the mesh well outside the rest (right side: -X out)
+local reifen = node('WHEEL_RR', node('WHEEL_TR', car))
+local function rr(n, x0, x1, r) mesh(n, node(n, reifen), { -x1, -r, -r }, { -x0, r, r }) end
+rr('Reifen_RR', -0.1, 0.05, 0.31)
+rr('Felge_RR', -0.1, 0.04, 0.19)
+rr('Stern_RR', 0.0, 0.03, 0.15)
+rr('Bremse_disc_RR', -0.09, -0.06, 0.14)
+world.wheels.RR = reifen
+
 -- A blurred rim outside the wheel, as some cars keep it
 mesh('RIM_BLUR_LF', node('RIM_BLUR_LF', car), { -0.1, -0.2, -0.2 }, { 0.1, 0.2, 0.2 })
 world.blur = car.children[#car.children].children[1]
@@ -207,7 +216,8 @@ ac = {
   log = function(s) world.log[#world.log + 1] = s end,
   getSim = function() return { carsCount = 1 } end,
   getCar = function() return { wheels = { [0] = { tyreRadius = 0.30 }, [1] = { tyreRadius = 0.30 }, [2] = { tyreRadius = 0.30 }, [3] = { tyreRadius = 0.30 } } } end,
-  findNodes = function(f) return f == 'carRoot:0' and ref({ carRoot }) or ref({}) end,
+  -- world.late: the car's model is not there yet
+  findNodes = function(f) return f == 'carRoot:0' and not world.late and ref({ carRoot }) or ref({}) end,
   getFolder = function() return 'docs' end,
   FolderID = { ACDocuments = 1 },
   INIConfig = {
@@ -237,16 +247,17 @@ render = { createRay = function(pos, dir, length) return { pos = pos, dir = dir,
 '''
 
 
-def run(ini, blurred=None, hood=None, floor_y=None):
+def run(ini, blurred=None, hood=None, floor_y=None, late=False):
     lua = lupa.LuaRuntime()
     world = lua.table_from({'ini': lua.table_from(ini), 'log': lua.table(), 'loaded': lua.table(),
-                            'blurred': lua.table_from(blurred or []), 'hood': hood})
+                            'blurred': lua.table_from(blurred or []), 'hood': hood, 'late': late})
     lua.execute(STUB, world)
     if floor_y is not None:
         world.floor.transform[4][2] = floor_y
     with open(PARTS, encoding='utf-8') as f:
         parts = lua.execute(f.read())
     parts.update()
+    world.late = False
     parts.update()
     world.parts = parts
     return lua, world
@@ -384,7 +395,6 @@ def engine_parts_are_placed_and_judged_in_the_models_own_space():
     """AC draws the model by the car's graphics offset (35 cm down on the Chevelle): the parts and the rays follow it"""
     ini = {'CAR_0_MODEL_NODE': 'FLOOR', 'CAR_0_MODEL_AT': '1,0,0, 0,1,0, 0,0,1, 0,0,0',
            'CAR_0_PART_1': 'filter.kn5', 'CAR_0_PART_1_AT': '1,0,0, 0,1,0, 0,0,1, 0,0.67,1.44', 'CAR_0_PART_1_BOX': '-0.18,0,-0.18, 0.18,0.1,0.18'}
-    lua = lupa.LuaRuntime()
     # The hood at 0.72 in the world is 1.07 in the model's space: the filter (top 0.77) stays under it
     _, world = run(ini, hood=0.72, floor_y=-0.35)
     log = list(world.log.values())
@@ -407,6 +417,22 @@ def a_rim_too_wide_for_the_cars_tyre_brings_its_factory_tyre_along():
           shown['WHEEL_LR_SUB4'] and not any(i.file == 'tyre.kn5' for i in world.loaded.values()), list(world.log.values()))
 
 
+def a_wheel_that_names_no_tyre_keeps_the_mesh_well_outside_the_rest_as_its_tyre():
+    _, world = run({'CAR_0_RIM_RR': 'a.kn5'})
+    shown = visible(world, 'RR')
+    group = rim(world, 'RR')
+    check('a wheel that names no tyre keeps its outermost mesh as the tyre, the brake too',
+          shown['Reifen_RR'] and shown['Bremse_disc_RR'] and not shown['Felge_RR'] and not shown['Stern_RR'], list(world.log.values()))
+    check('and the part is sized to the rim, not the tyre', group and near(group[1][1], 0.19 / 0.187), list(world.log.values()))
+
+
+def a_car_whose_model_comes_late_gets_its_parts_once_it_is_there():
+    _, world = run({'CAR_0_RIM_LF': 'a.kn5'}, late=True)
+    check('a car whose model is not there at first gets its parts once it is', rim(world, 'LF') is not None, list(world.log.values()))
+
+
+a_wheel_that_names_no_tyre_keeps_the_mesh_well_outside_the_rest_as_its_tyre()
+a_car_whose_model_comes_late_gets_its_parts_once_it_is_there()
 a_corner_not_named_keeps_its_own_rim()
 engine_parts_are_placed_and_judged_in_the_models_own_space()
 a_rim_too_wide_for_the_cars_tyre_brings_its_factory_tyre_along()
