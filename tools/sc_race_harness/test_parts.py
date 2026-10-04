@@ -356,23 +356,24 @@ def blurred_objects_go_and_a_blurred_wheel_node_is_kept_shown():
 
 
 def an_engine_part_goes_into_the_node_holding_the_wheels():
-    _, world = run({'CAR_0_PART_1': r'parts\engines_blower.kn5', 'CAR_0_PART_1_AT': '1,0,0, 0,1,0, 0,0,1, 0,0.8,1.2'})
+    """With no car over it (no hood in the stub), a part stands out: it goes into the body node, where it sits"""
+    _, world = run({'CAR_0_PART_1': 'parts/engines_blower.kn5', 'CAR_0_PART_1_AT': '1,0,0, 0,1,0, 0,0,1, 0,0.8,1.2',
+                    'CAR_0_PART_1_BOX': '-0.1,0,-0.2, 0.1,0.3,0.2'})
     part = [i for i in world.loaded.values() if i.file.endswith('engines_blower.kn5')]
     t = part and matrix(part[0].node.transform)
     check('an engine part goes into the body node, never a wheel, where it sits',
           part and part[0].node.parent.name == 'BODYTR' and near(t[3][1], 0.8) and near(t[3][2], 1.2), list(world.log.values()))
 
 
-def engine_parts_under_the_hood_go_up_onto_it_and_never_down():
-    ini = {'CAR_0_PART_1': 'blower.kn5', 'CAR_0_PART_1_AT': '1,0,0, 0,1,0, 0,0,1, 0,0.38,1.3',
-           'CAR_0_PART_2': 'carb.kn5', 'CAR_0_PART_2_AT': '1,0,0, 0,1,0, 0,0,1, 0,0.67,1.44'}
+def only_the_parts_that_stand_out_of_the_hood_are_shown_never_moved():
+    ini = {'CAR_0_PART_1': 'blower.kn5', 'CAR_0_PART_1_AT': '1,0,0, 0,1,0, 0,0,1, 0,0.38,1.3', 'CAR_0_PART_1_BOX': '-0.15,0,-0.3, 0.15,0.29,0.3',
+           'CAR_0_PART_2': 'filter.kn5', 'CAR_0_PART_2_AT': '1,0,0, 0,1,0, 0,0,1, 0,0.67,1.44', 'CAR_0_PART_2_BOX': '-0.18,0,-0.18, 0.18,0.1,0.18'}
     _, world = run(ini, hood=0.72)
     at = {i.file: matrix(i.node.transform) for i in world.loaded.values()}
-    check('engine parts under the hood go up onto it, all of them alike',
-          near(at['blower.kn5'][3][1], 0.72) and near(at['carb.kn5'][3][1], 1.01), list(world.log.values()))
-    _, world = run(ini, hood=0.2)
-    at = {i.file: matrix(i.node.transform) for i in world.loaded.values()}
-    check('engine parts already over the surface stay where they are', near(at['blower.kn5'][3][1], 0.38), list(world.log.values()))
+    log = list(world.log.values())
+    check('a part under the hood is not shown', 'blower.kn5' not in at, log)
+    check('a part standing out of the hood is shown where the engine has it',
+          'filter.kn5' in at and near(at['filter.kn5'][3][1], 0.67), log)
 
 
 def a_rim_too_wide_for_the_cars_tyre_brings_its_factory_tyre_along():
@@ -390,7 +391,7 @@ def a_rim_too_wide_for_the_cars_tyre_brings_its_factory_tyre_along():
 a_corner_not_named_keeps_its_own_rim()
 a_rim_too_wide_for_the_cars_tyre_brings_its_factory_tyre_along()
 an_engine_part_goes_into_the_node_holding_the_wheels()
-engine_parts_under_the_hood_go_up_onto_it_and_never_down()
+only_the_parts_that_stand_out_of_the_hood_are_shown_never_moved()
 a_tyre_makes_the_whole_wheel_ours_as_big_as_acs_tyre()
 a_tyre_without_its_place_on_the_rim_leaves_the_car_its_tyre()
 blurred_objects_go_and_a_blurred_wheel_node_is_kept_shown()

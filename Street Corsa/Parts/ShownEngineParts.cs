@@ -9,58 +9,63 @@ using StreetCorsa.Parts.Logic;
 namespace StreetCorsa.Parts;
 
 /// <summary>
-/// The engine parts a car shows from outside, that its own model does not have: a supercharger and what sits on it (the
-/// carburettors, the scoop), which stand up through the hood. Placed as the garage's parts view places the engine
-/// (<see cref="CarPartsLayout"/>), by the car's wheel hubs as its model has them, then lifted onto the hood where they
-/// would hide under it (<see cref="Lift"/>, done where the car's meshes are: the scenes, the race mode). A hood they go
-/// through stays as it is.
+/// The engine parts a car shows from outside, that its own model does not have: whatever stands up out of its hood (a
+/// carburettor's air cleaner, a supercharger, a scoop), where the engine has it. Placed as the garage's parts view
+/// places the engine (<see cref="CarPartsLayout"/>), by the car's wheel hubs as its model has them, and never moved: a
+/// part is shown at its place when it stands out of the car (<see cref="StandsOut"/>, judged where the car's meshes are:
+/// the scenes, the race mode), and not at all when it does not. A hood a part goes through stays as it is.
 /// </summary>
 public static class ShownEngineParts
 {
-    /// <summary>The part class that stands up through the hood, by simple name</summary>
-    private const string Standing = "SuperCharger";
+    /// <summary>
+    /// How far over the hubs a part's top must be to be worth asking whether it stands out, metres: the engine's upper
+    /// half (the heads, the intake and what is on it), not its block, crank or gearbox
+    /// </summary>
+    public const float UpperEngine = 0.35f;
+
+    /// <summary>How far over a part's place the ray that finds the car's surface above it starts, metres: over any car's roof</summary>
+    public const float RayFrom = 3f;
+
+    /// <summary>How far a part must reach past the car's surface to count as standing out of it, metres</summary>
+    public const float OutBy = 0.005f;
 
     /// <summary>
-    /// The parts of <paramref name="engine"/> the car shows, each where it sits in the car's model; none without a
-    /// supercharger or without the car's hubs
+    /// The parts of <paramref name="engine"/> that may stand out of the car, each where it sits in the car's model with
+    /// its box; none without the car's hubs
     /// </summary>
     public static List<ShownModelAt> Of(PartsCatalog catalog, InstalledPart? engine, CarAnchors? hubs, EngineLayout layout)
     {
         var shown = new List<ShownModelAt>();
         if (engine == null || hubs == null) return shown;
 
+        var high = new[] { hubs.WheelLF.Y, hubs.WheelRF.Y, hubs.WheelLR.Y, hubs.WheelRR.Y }.Max() + UpperEngine;
         foreach (var placed in CarPartsLayout.Build(catalog, hubs, engine, null, layout))
         {
-            if (placed.Source is not { } part || !OnSupercharger(part)) continue;
-            if (catalog.GetModelPath(placed.Part) is { } path && File.Exists(path))
-                shown.Add(new ShownModelAt(new ShownModel(ShownParts.FileName(placed.Part.Id), path), placed.World));
+            if (PartModelBounds.Of(catalog, placed.Part) is not { } box || catalog.GetModelPath(placed.Part) is not { } path) continue;
+            if (Corners(box.Min, box.Max).Max(c => Vector3.Transform(c, placed.World).Y) <= high) continue;
+            shown.Add(new ShownModelAt(new ShownModel(ShownParts.FileName(placed.Part.Id), path), placed.World, box.Min, box.Max));
         }
         return shown;
     }
 
-    /// <summary>How far over a part's place the ray that finds the hood above it starts, metres: over any car's roof</summary>
-    public const float RayFrom = 3f;
-
     /// <summary>
-    /// How far up the parts go so they stand out of the hood (the engine is placed by an estimate, and on a car whose
-    /// estimate is low the whole stack would hide under it): the first part's base (the supercharger's) onto the car's
-    /// surface straight above it, as <paramref name="surfaceAbove"/> finds it; never down, and nothing without a surface
+    /// Whether a part stands out of the car: a corner of its box, or the middle of its top, higher than the car's highest
+    /// surface straight over it (as <paramref name="surfaceAbove"/> finds it), or with nothing of the car over it at all
     /// </summary>
-    public static float Lift(IReadOnlyList<ShownModelAt> parts, Func<Vector3, float?> surfaceAbove)
+    public static bool StandsOut(ShownModelAt part, Func<Vector3, float?> surfaceAbove)
     {
-        if (parts.Count == 0) return 0;
-        var basePoint = parts[0].At.Translation;
-        return surfaceAbove(basePoint) is { } surface ? Math.Max(0, surface - basePoint.Y) : 0;
-    }
-
-    /// <summary>The part is a supercharger or sits on one</summary>
-    private static bool OnSupercharger(InstalledPart part)
-    {
-        for (var p = part; p != null; p = p.Parent)
+        var top = new Vector3((part.Min.X + part.Max.X) / 2, part.Max.Y, (part.Min.Z + part.Max.Z) / 2);
+        foreach (var point in Corners(part.Min, part.Max).Append(top).Select(p => Vector3.Transform(p, part.At)))
         {
-            if (PartKinds.Is(p.Definition, Standing)) return true;
+            if (surfaceAbove(point) is not { } surface || point.Y > surface + OutBy) return true;
         }
         return false;
+    }
+
+    private static IEnumerable<Vector3> Corners(Vector3 min, Vector3 max)
+    {
+        for (var i = 0; i < 8; i++)
+            yield return new Vector3((i & 1) == 0 ? min.X : max.X, (i & 2) == 0 ? min.Y : max.Y, (i & 4) == 0 ? min.Z : max.Z);
     }
 }
 

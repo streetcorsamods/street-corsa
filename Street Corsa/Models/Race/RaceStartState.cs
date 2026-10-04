@@ -91,9 +91,11 @@ namespace StreetCorsa.Models.Race
             var prefix = $"CAR_{carIndex}_";
             for (var i = 0; i < shown.Extras.Count; i++)
             {
-                var (model, at) = (shown.Extras[i].Model, shown.Extras[i].At);
-                yield return (prefix + "PART_" + (i + 1), model.Name);
-                yield return (prefix + "PART_" + (i + 1) + "_AT", Matrix(at));
+                var extra = shown.Extras[i];
+                yield return (prefix + "PART_" + (i + 1), extra.Model.Name);
+                yield return (prefix + "PART_" + (i + 1) + "_AT", Matrix(extra.At));
+                yield return (prefix + "PART_" + (i + 1) + "_BOX",
+                    List([extra.Min.X, extra.Min.Y, extra.Min.Z, extra.Max.X, extra.Max.Y, extra.Max.Z], "0.######"));
             }
             var wheels = shown.Wheels;
             for (var corner = 0; corner < Math.Min(wheels.Count, Parts.Cars.WheelFit.WheelNodes.Length); corner++)

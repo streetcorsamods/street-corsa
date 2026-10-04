@@ -90,8 +90,11 @@ public static class ShownParts
         tyre.OwnSlot != 0 ? tyre.OwnSlot : definition.Slots.FirstOrDefault()?.Id ?? 0;
 }
 
-/// <summary>A part's model a car shows, and where it sits in the space of the car's model (its main KN5)</summary>
-public sealed record ShownModelAt(ShownModel Model, Matrix4x4 At);
+/// <summary>
+/// A part's model a car may show, where it sits in the space of the car's model (its main KN5), and the box its model
+/// fills in its own space: what tells whether it stands out of the car (ShownEngineParts.StandsOut)
+/// </summary>
+public sealed record ShownModelAt(ShownModel Model, Matrix4x4 At, Vector3 Min = default, Vector3 Max = default);
 
 /// <summary>
 /// What a car shows that its own model does not have, as a race or a scene is given it: the wheels of its corners (AC's

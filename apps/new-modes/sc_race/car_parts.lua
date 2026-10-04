@@ -12,19 +12,14 @@
   car's WHEEL_xx node, so they turn and steer with it, and the car's own meshes they replace are hidden. Nothing is
   written to the car's folder.
 
-  Engine parts that stand out (a supercharger and what sits on it): CAR_n_PART_1, _2... name a model, CAR_n_PART_k_AT
-  where it sits in the space of the car's model (placed by the game as its garage places the engine), loaded into the
-  car's body node (AC's BODYTR) so it moves with the body and is drawn with it (a model loaded straight under the car's
-  root was placed but never drawn, one in the node over a wheel went round with the wheel: found in the game
-  2026-10-03). The game's place is an estimate that can leave the whole stack under the hood:
-  the parts go up until the first one's base (the supercharger's) sits on the car's surface straight above it (never
-  down), as the game's scenes do. A hood they go through stays as it is.
-
-  What the car's meshes are: under the wheel node, the tyre and the brake by mesh or material name (TYRE and BRAKE
-  below), the rim everything else. With a rim alone the car keeps its tyre, and the part fills the hole the hidden rim
-  leaves: its outer lip as big as the car's, flush with where the car's lip was (no further out than the tyre's
-  sidewall), the barrel going in. With a tyre the whole wheel is the parts', scaled together so the tyre is as big as
-  AC's tyre (the size the car's data gives it for that tyre), centred on the car's tyre.
+  Engine parts that stand out of the car (an air cleaner, a supercharger, a scoop up through the hood): CAR_n_PART_1,
+  _2... name a model of the engine's upper half, CAR_n_PART_k_AT where it sits in the space of the car's model (placed by
+  the game as its garage places the engine) and CAR_n_PART_k_BOX the box its model fills (min x, y, z, max x, y, z). A
+  part is loaded, where the engine has it, when it stands out of the car: a corner of its box or the middle of its top
+  above the car's highest surface straight over it (a ray down onto the car), or nothing of the car over it. One under
+  the hood is not loaded. They go into the car's body node (AC's BODYTR) so they move with the body and are drawn with
+  it (a model loaded straight under the car's root was placed but never drawn, one in the node over a wheel went round
+  with the wheel: found in the game 2026-10-03). A hood a part goes through stays as it is.
 
   Blur: the car's blurred_objects.ini objects of a named corner are hidden (our parts have no blurred model), except a
   tyre's while the car keeps its tyre; one that is the wheel node itself or holds it (some cars swap the whole wheel at
@@ -312,15 +307,15 @@ local function setUpCorner(carIndex, root, corner, files)
   return { shown = shown, hidden = hidden }
 end
 
--- How far over a part's place the ray that finds the hood starts, metres (ShownEngineParts.RayFrom)
+-- How far over a point the ray that finds the car's surface starts, metres (ShownEngineParts.RayFrom)
 local RAY_FROM = 3
 
--- The height of the car's surface straight above a point of its model, in the model's space; nil when nothing is there
+-- The car's highest surface straight over a point of its model (the height in the model's space); nil when nothing is there
 local function surfaceAbove(root, x, y, z)
   local world = root:getWorldTransformationRaw()
   local from = world:transformPoint(vec3(x, y + RAY_FROM, z))
   local down = world:transformVector(vec3(0, -1, 0)):normalize()
-  -- Both sides of every face: the first one hit from above is the top of the hood
+  -- Both sides of every face: the first one hit from above is the car's highest surface there
   local distance = root:raycast(render.createRay(from, down, RAY_FROM * 2), nil, nil, nil, nil, 0)
   if type(distance) ~= 'number' or distance < 0 then return nil end
   return y + RAY_FROM - distance
@@ -337,24 +332,61 @@ local function bodyNode(root)
   return nil
 end
 
--- The engine parts that stand out, in the car's main model, lifted onto the hood
+-- How far a part must reach past the car's surface to count as standing out of it, metres (ShownEngineParts.OutBy)
+local OUT_BY = 0.005
+
+-- A box's eight corners and the middle of its top, in the car's model by `at`
+local function boxPoints(box, at)
+  local points = {}
+  local min, max = box.min, box.max
+  for i = 0, 7 do
+    points[#points + 1] = at:transformPoint(vec3(i % 2 == 0 and min.x or max.x, math.floor(i / 2) % 2 == 0 and min.y or max.y,
+      i < 4 and min.z or max.z))
+  end
+  points[#points + 1] = at:transformPoint(vec3((min.x + max.x) / 2, max.y, (min.z + max.z) / 2))
+  return points
+end
+
+-- Whether a part stands out of the car (ShownEngineParts.StandsOut): a point of its box higher than the car's surface
+-- straight over it, or with nothing of the car over it
+local function standsOut(root, box, at)
+  for _, p in ipairs(boxPoints(box, at)) do
+    local surface = surfaceAbove(root, p.x, p.y, p.z)
+    if not surface or p.y > surface + OUT_BY then return true end
+  end
+  return false
+end
+
+-- The engine parts that stand out of the car, where the engine has them, in its body node
 local function setUpExtras(carIndex, root)
   local parts = {}
-  for k = 1, 32 do
+  for k = 1, 64 do
     local key = 'CAR_' .. carIndex .. '_PART_' .. k
     local file = raceText(key)
     if not file then break end
-    parts[#parts + 1] = { file = file, at = raceMatrix(key .. '_AT') }
+    local box = nil
+    local ok, raw = pcall(function() return ac.INIConfig.raceConfig():get('STREET_CORSA', key .. '_BOX') end)
+    local n = {}
+    if ok and raw ~= nil then
+      for _, item in ipairs(type(raw) == 'table' and raw or { raw }) do
+        for v in tostring(item):gmatch('[^,]+') do n[#n + 1] = tonumber(v) end
+      end
+    end
+    if #n == 6 then box = { min = vec3(n[1], n[2], n[3]), max = vec3(n[4], n[5], n[6]) } end
+    parts[#parts + 1] = { file = file, at = raceMatrix(key .. '_AT'), box = box }
   end
 
-  -- Measured before anything of ours is in: the ray would find our own parts
-  local lift = 0
-  local first = parts[1] and parts[1].at
-  if first then
-    local ok, surface = pcall(surfaceAbove, root, first.row4.x, first.row4.y, first.row4.z)
-    if ok and surface then lift = math.max(0, surface - first.row4.y) end
-    log(string.format('car %d: engine parts lifted %.3f m onto the hood%s', carIndex, lift, ok and '' or (' (no ray: ' .. tostring(surface) .. ')')))
+  -- Which stand out, judged before anything of ours is in (the rays would find our own parts)
+  local standing = {}
+  for _, part in ipairs(parts) do
+    if part.at and part.box then
+      local ok, out = pcall(standsOut, root, part.box, part.at)
+      if not ok then log('car ' .. carIndex .. ': ' .. part.file .. ' could not be judged: ' .. tostring(out)) end
+      if ok and out then standing[#standing + 1] = part end
+      log('car ' .. carIndex .. ': ' .. part.file .. (ok and out and ' stands out' or ' stays under the hood'))
+    end
   end
+  if #standing == 0 then return {} end
 
   -- Where they go, and what takes them from the car's space to the holder's: through the world, whatever lies between
   local holder = bodyNode(root) or root
@@ -362,17 +394,13 @@ local function setUpExtras(carIndex, root)
   log('car ' .. carIndex .. ': engine parts go into ' .. tostring(holder:name()) .. ' (in ' .. tostring(holder:getParent():name()) .. ')')
 
   local loaded = {}
-  for _, part in ipairs(parts) do
-    local file, at = part.file, part.at
-    local model = at and holder:loadKN5(file)
+  for _, part in ipairs(standing) do
+    local model = holder:loadKN5(part.file)
     if model then
-      at = at:clone()
-      at.row4.y = at.row4.y + lift
-      model:getTransformationRaw():set(at:mul(fromCar))
+      model:getTransformationRaw():set(part.at:mul(fromCar))
       loaded[#loaded + 1] = model
-      log('car ' .. carIndex .. ': ' .. file .. ' in')
     else
-      log('car ' .. carIndex .. ': ' .. file .. (at and ' did not load' or ' has no place'))
+      log('car ' .. carIndex .. ': ' .. part.file .. ' did not load')
     end
   end
   return loaded

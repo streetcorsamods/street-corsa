@@ -115,18 +115,14 @@ namespace StreetCorsa.Services.Parts
         {
             if (!IsAvailable) return null;
 
-            // The engine is placed only when it has a part that stands out: placing it reads the car's model
+            // The engine's upper parts, any of which may stand out of the hood: whether they do is for whoever has the car's meshes
             var extras = new List<ShownModelAt>();
-            if (parts.FirstOrDefault(p => p.ParentSlot == PartInstance.CarEngineSlot) is { } engine && HasSupercharger(engine)
-                && PartTrees.ToInstalled(Catalog, engine) is { } tree)
+            if (parts.FirstOrDefault(p => p.ParentSlot == PartInstance.CarEngineSlot) is { } engine && PartTrees.ToInstalled(Catalog, engine) is { } tree)
             {
                 var hubs = CarHubs.Of(System.IO.Path.Combine(StreetCorsa.Configuration.AppSettings.Instance.CarsPath, carDefinitionId));
                 extras = ShownEngineParts.Of(Catalog, tree.Root, hubs, EngineLayoutOf(carDefinitionId));
             }
             return ShownSet.Of(ShownWheels(carDefinitionId, parts), extras);
-
-            bool HasSupercharger(PartInstance part) =>
-                Catalog.Get(part.DefinitionId) is { } definition && PartKinds.Is(definition, "SuperCharger") || part.Children.Any(HasSupercharger);
         }
     }
 }

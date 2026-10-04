@@ -92,6 +92,7 @@ public sealed class ShownPartsTests : IDisposable
         // An engine part that stands out: its model and where it sits in the car's model
         Assert.Equal(@"parts\engines_gm_blower.kn5", keys["CAR_1_PART_1"]);
         Assert.Equal("1,0,0,0,1,0,0,0,1,0,0.8,1.2", keys["CAR_1_PART_1_AT"]);
+        Assert.Equal("0,0,0,0,0,0", keys["CAR_1_PART_1_BOX"]);
         Assert.Equal(3, start.Models.Count());
     }
 
@@ -156,13 +157,13 @@ public sealed class ShownPartsTests : IDisposable
     }
 
     [Fact]
-    public void A_supercharger_and_what_sits_on_it_are_shown_the_rest_of_the_engine_is_not()
+    public void The_upper_engine_parts_are_the_ones_that_may_stand_out_never_the_block_or_the_gearbox()
     {
         // A GM small-block with a blower, mounted by the workbench's rules
         var catalog = Catalog.Value;
         var parts = new List<PartInstance> { new("engines/gm/GM_327_block") { ParentSlot = PartInstance.CarEngineSlot } };
-        foreach (var id in new[] { "engines/gm/GM_small_block_L_head", "engines/gm/GM_small_block_R_head", "engines/gm/Weiand_pro_street_manifold",
-                     "engines/generic/Weiand_8_71_supercharger", "engines/gm/stock_4brl_carburator" })
+        foreach (var id in new[] { "engines/gm/GM_327_crank", "engines/gm/GM_small_block_L_head", "engines/gm/GM_small_block_R_head",
+                     "engines/gm/Weiand_pro_street_manifold", "engines/generic/Weiand_8_71_supercharger", "engines/gm/stock_4brl_carburator" })
         {
             var loose = new PartInstance(id);
             Workbench.Mount(parts, Workbench.FindPlaces(catalog, parts, loose)[0], loose);
@@ -170,19 +171,27 @@ public sealed class ShownPartsTests : IDisposable
         var hubs = new CarAnchors(new Vector3(0.74f, 0.08f, 1.6f), new Vector3(-0.74f, 0.08f, 1.6f), new Vector3(0.77f, 0.05f, -1.3f), new Vector3(-0.77f, 0.05f, -1.3f));
 
         var shown = ShownEngineParts.Of(catalog, PartTrees.ToInstalled(catalog, parts[0])!.Root, hubs, EngineLayout.Front);
+        var names = shown.Select(s => Path.GetFileName(s.Model.Name)).ToList();
 
-        Assert.Equal(["engines_generic_Weiand_8_71_supercharger.kn5", "engines_gm_stock_4brl_carburator.kn5"], shown.Select(s => Path.GetFileName(s.Model.Name)));
-        Assert.True(shown[1].At.Translation.Y > shown[0].At.Translation.Y);
+        Assert.Contains("engines_generic_Weiand_8_71_supercharger.kn5", names);
+        Assert.Contains("engines_gm_stock_4brl_carburator.kn5", names);
+        Assert.DoesNotContain("engines_gm_GM_327_block.kn5", names);
+        Assert.DoesNotContain("engines_gm_GM_327_crank.kn5", names);
+        Assert.All(shown, s => Assert.True(s.Max.Y > s.Min.Y));
         Assert.Empty(ShownEngineParts.Of(catalog, PartTrees.ToInstalled(catalog, parts[0])!.Root, null, EngineLayout.Front));
     }
 
     [Fact]
-    public void Engine_parts_under_the_hood_go_up_onto_it_never_down()
+    public void A_part_stands_out_when_its_box_reaches_over_the_cars_surface_or_nothing_of_the_car_is_over_it()
     {
-        ShownModelAt Part(float y) => new(new ShownModel("p.kn5", "p.kn5"), Matrix4x4.CreateTranslation(0, y, 1.3f));
+        ShownModelAt Part(float y) => new(new ShownModel("p.kn5", "p.kn5"), Matrix4x4.CreateTranslation(0, y, 1.3f),
+            new Vector3(-0.15f, 0, -0.2f), new Vector3(0.15f, 0.1f, 0.2f));
 
-        Assert.Equal(0.34f, ShownEngineParts.Lift([Part(0.38f), Part(0.67f)], _ => 0.72f), 3);
-        Assert.Equal(0f, ShownEngineParts.Lift([Part(0.38f)], _ => 0.2f));
-        Assert.Equal(0f, ShownEngineParts.Lift([Part(0.38f)], _ => null));
+        // A hood at 0.72: a part topping out at 0.77 stands out, one at 0.48 does not
+        Assert.True(ShownEngineParts.StandsOut(Part(0.67f), _ => 0.72f));
+        Assert.False(ShownEngineParts.StandsOut(Part(0.38f), _ => 0.72f));
+        Assert.True(ShownEngineParts.StandsOut(Part(0.38f), _ => null));
+        // Only one corner over the surface is enough (a hood sloping down at the front)
+        Assert.True(ShownEngineParts.StandsOut(Part(0.5f), p => p.Z > 1.4f ? 0.55f : 0.72f));
     }
 }
