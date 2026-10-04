@@ -118,7 +118,6 @@ public sealed class StationStage
         Changed?.Invoke();
     }
 
-    /// <summary>The viewport's word: the car has stopped at the pump</summary>
     /// <summary>The car drove in with nothing to show it (no 3D, no arrive script): the bell, and it is at the pump</summary>
     internal void DrivenInUnseen()
     {
@@ -127,6 +126,7 @@ public sealed class StationStage
         ReportAtPump();
     }
 
+    /// <summary>The viewport's word: the car has stopped at the pump</summary>
     internal void ReportAtPump()
     {
         if (Phase != StationPhase.Arriving) return;

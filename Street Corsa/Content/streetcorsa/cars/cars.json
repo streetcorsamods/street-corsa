@@ -75,11 +75,12 @@
     "j8_shelby_gt500_67": { "price": 4850, "common": 0.6 },
     "lm_camaro_ss": { "engine": "sbc350:engines/sbc350/sbc-350-th350" },
     "lm_camaro_ss_v2": { "engine": "sbc350:engines/sbc350/sbc-350-th350" },
+    "lm_chevy_cheyenne_v2": { "engine_offset": [0,0,0.355] },
     "lovetrain_impala_67": { "engine": "l79:engines/l79/l79-327-4spd" },
     "lovetrain_impala_67_drift": { "engine": "sbc350:engines/sbc350/sbc-350-th350" },
     "MRN_Desings_chevy_camaro_SS_396": { "engine": "sbc350:engines/sbc350/sbc-350-th350" },
     "MRN_Desings_oldsmobile_442": { "engine": "l79:engines/l79/olds-400-w30" },
-    "oneweek_corvette_c1": { "engine": "l79:engines/l79/283-4bbl-4spd" },
+    "oneweek_corvette_c1": { "engine": "l79:engines/l79/283-4bbl-4spd", "engine_offset": [0,0,-0.055] },
     "pb_camaro67": { "engine": "l79:engines/l79/350-l48-4spd" },
     "pb_camaro_67_lasse": { "engine": "l79:engines/l79/302-z28-4spd" },
     "pb_chevy_150": { "engine": "chevy_six:engines/chevy_six/chevy-235-1955-3spd" },
@@ -105,7 +106,7 @@
     "rpm_chevy_s2_1974": { "engine": "chevy_six:engines/chevy_six/chevy-250-serie2-4spd" },
     "rpm_chevy_s2_1974_TC_spec": { "engine": "chevy_six:engines/chevy_six/chevy-250-serie2-tc-4spd" },
     "shelby_cobra_427sc": { "price": 4600, "common": 0.2 },
-    "tmw_442_hurst": { "engine": "l79:engines/l79/olds-455" },
+    "tmw_442_hurst": { "engine": "l79:engines/l79/olds-455", "engine_offset": [0,0,-0.065] },
     "wild_stallions_pontiac_gto65_restomod": { "engine": "sbc350:engines/sbc350/sbc-350-th350" }
   }
 }

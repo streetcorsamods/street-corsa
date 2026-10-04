@@ -4,6 +4,7 @@ using AcTools.Render.Kn5Specific.Objects;
 using StreetCorsa.Audio;
 using StreetCorsa.Controls.Scripting;
 using StreetCorsa.Controls.Street;
+using StreetCorsa.Looks;
 using StreetCorsa.Services.Catalog;
 using StreetCorsa.Services.Scripting;
 using StreetCorsa.Services.Street;
@@ -231,6 +232,9 @@ public class StreetViewport3D : OnboardViewport3D
     {
         var load = ++_rivalLoad;
         var before = _rivalLoads;
+
+        // The rival's wear is made now, while the loads before it finish and its model loads, not as it is drawn
+        if (stage.RivalCar is { } rival && rival != _rivalShown) _ = WearLayer.WarmAsync(rival.Directory, rival.Shown);
         _rivalLoads = After(before, () => ShowRivalAsync(renderer, stage, load));
 
         static async Task After(Task before, Func<Task> next)

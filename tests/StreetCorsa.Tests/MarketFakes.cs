@@ -71,7 +71,7 @@ internal class NullCarPartsService : ICarPartsService
     public virtual (RunningGearFactory.AxleParts Front, RunningGearFactory.AxleParts Rear)? FactoryRunningGear(Car car) => null;
     public virtual System.Numerics.Vector3 EngineOffsetOf(string carDefinitionId) => System.Numerics.Vector3.Zero;
     public virtual void SetEngineOffset(string carDefinitionId, System.Numerics.Vector3 offset) { }
-    public virtual ShownSet? Shown(string carDefinitionId, List<PartInstance> parts) => null;
+    public virtual ShownSet? Shown(string carDefinitionId, List<PartInstance> parts, CarLook? look = null, CornerHeights? heights = null) => null;
 }
 
 /// <summary>No parts catalog</summary>

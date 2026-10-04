@@ -244,6 +244,7 @@ namespace StreetCorsa.Services.Market
                 History = listing.History?.Copy() ?? new CarHistory()
             };
             car.History.ChangeHands(buyer, date, CarAcquisition.Dealer);
+            CarLooks.CopyTo(listing, car);
 
             // A relisted car comes with its dents; the body's figure is then the dents', not the listing's average
             if (listing.BodyDamageKmh is { Length: > 0 } body)

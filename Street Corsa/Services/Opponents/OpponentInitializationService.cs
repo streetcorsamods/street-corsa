@@ -283,6 +283,8 @@ namespace StreetCorsa.Services.Opponents
                 TireCondition = 0.95,
                 PurchaseDate = today.AddDays(-_random.Next(60, 365))
             };
+            // Kept like a show car
+            CarLooks.Give(car, CarLooks.Roll(Rules.RuleBook.Current.Rivals.King.CarCondition, LookSource.Dealer, _random) with { Dirt = 0 });
 
             if (_parts is { IsAvailable: true } parts && parts.GetStockBuild(definition) is { } build)
             {
@@ -404,6 +406,9 @@ namespace StreetCorsa.Services.Opponents
                 TireCondition = 0.6f + (float)_random.NextDouble() * 0.3f, // Tires vary more
                 PurchaseDate = today.AddDays(-_random.Next(30, 365)) // Owned for 1 month to 1 year, in game time
             };
+
+            // A street racer's car, as its owner keeps it: rough cars rough to look at too
+            CarLooks.Give(car, CarLooks.Roll(condition, LookSource.Private, _random));
 
             // A car that has done that many miles has been through a few hands before theirs
             car.History.EarlierOwners = 1 + _random.Next(0, 1 + mileage / 50_000);

@@ -102,12 +102,16 @@ namespace StreetCorsa.Services.Parts
         void SetEngineOffset(string carDefinitionId, System.Numerics.Vector3 offset);
 
         /// <summary>
-        /// Everything the car shows, in a race and in the game's scenes, that its own model does not have: its wheels and
-        /// the engine parts that stand out (<see cref="ShownEngineParts"/>); null when it shows nothing but its model
+        /// Everything the car shows, in a race and in the game's scenes, that its own model does not have: its wheels, the
+        /// engine parts that stand out (<see cref="ShownEngineParts"/>) and how used it looks (<see cref="CarLooks"/>); null
+        /// when it shows nothing but its model
         /// </summary>
-        ShownSet? Shown(Car car) => Shown(car.DefinitionId, car.Parts);
+        ShownSet? Shown(Car car) => Shown(car.DefinitionId, car.Parts, CarLooks.Of(car), CornerHeights.Of(CarLooks.RideHeight(car)));
 
-        /// <summary>What a car of <paramref name="carDefinitionId"/> with <paramref name="parts"/> shows (a car for sale)</summary>
-        ShownSet? Shown(string carDefinitionId, List<PartInstance> parts);
+        /// <summary>
+        /// What a car of <paramref name="carDefinitionId"/> with <paramref name="parts"/> shows, looking as
+        /// <paramref name="look"/> says (a car for sale: <see cref="CarLooks.Of(UsedCarListing)"/>)
+        /// </summary>
+        ShownSet? Shown(string carDefinitionId, List<PartInstance> parts, CarLook? look = null, CornerHeights? heights = null);
     }
 }

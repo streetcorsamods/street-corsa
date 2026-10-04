@@ -295,15 +295,21 @@ in `condition` goes onto the car (`CarCondition.ApplyRace`), and back into AC at
 
 | AC | After the race | Next race |
 |----|----------------|-----------|
-| `body_damage_kmh[4]` | `Car.BodyDamageKmh` (a car's parts have no panels); the worse of the car's and AC's per zone | `CAR_n_BODY`, set with `physics.setCarBodyDamage`: the scratches and dents of `damage.ini` come with it |
+| `body_damage_kmh[4]` | `Car.BodyDamageKmh` (a car's parts have no panels); the worse of the car's and AC's per zone; a front zone of 25 km/h or more cracks the windscreen (`Car.GlassCracks`, `CarLooks.CrackFromHit`) | `CAR_n_BODY`, set with `physics.setCarBodyDamage`: the scratches and dents of `damage.ini` come with it; the car's wear layer (`CAR_n_LOOK`, below) draws the rust, worn paint, scrapes and cracks |
 | `engine_life` | The weakest rotating part (crankshaft, rods, pistons, camshafts; the rods first when two are as worn) is the one that gave: its `Tear` goes down to life/1000, and the others lose 35% of that loss. The report and the repair shop name it ("a connecting rod let go") | `CAR_n_ENGINE_LIFE` = 1000 x the weakest one's `Tear`, set with `physics.setCarEngineLife` |
 | `gearbox_damage` (AC starts at 0) | subtracted from the transmission's `Tear` | No setter: drivetrain.ini shifts slower and engages in a narrower window (`AcDamageData`); `CAR_n_GEARBOX` tells the mode, which adds it to the race's |
-| `suspension_damage` (metres of steering rod, AC's MAX_DAMAGE 0.05) | /0.05 subtracted from that corner's spring and shock `Tear` | No setter: suspensions.ini `TOE_OUT` of the axle gains the mean bend of its corners in metres; `CAR_n_SUSPENSION` tells the mode |
+| `suspension_damage` (metres of steering rod, AC's MAX_DAMAGE 0.05) | /0.05 subtracted from that corner's spring and shock `Tear` | No setter: suspensions.ini `TOE_OUT` of the axle gains the mean bend of its corners in metres; `CAR_n_SUSPENSION` tells the mode. A spring under 0.6 sags its corner, 5 cm broken (`CarLooks.RideHeight`): the axle's `ROD_LENGTH` is shortened by the mean of its corners |
 | `tyre_wear` (AC starts at 0) | subtracted from the tyre's `Wear`; `tyre_blown` sets its `Tear` to 0 | Nothing: the tyre's wear already lowers its grip in tyres.ini. AC's tyre km would count it twice |
 | distance | a little `Wear` on every engine part (1/40000 per km), and 0.01 of dirt per km | |
 | `fuel_litres`, `max_fuel_litres` | `Car.FuelLitres` (null is a full tank), `Car.FuelTankLitres`; kept only once the tank's size is known, and never for a rival's car | `CAR_n_FUEL`, set with `physics.setCarFuel`; -1 fills the tank to AC's `maxFuel`. A rival always goes in full |
-| `dirt` (0 to 1) | `Car.BodyDirt`, the worse of the car's and AC's (not for a rival's car) | `CAR_n_DIRT`, set with `ac.setBodyDirt` (no permission needed) |
+| `dirt` (0 to 1) | `Car.BodyDirt`, the worse of the car's and AC's (not for a rival's car). The mode adds 0.015 a second with all four wheels off the track (grass, dirt, a surface with dirt, off the track's own; `surfaceType`, `surfaceDirt`, `surfaceValidTrack`) at 30 km/h or more, sets it as it goes and reports the worse of AC's and its own | `CAR_n_DIRT`, set with `ac.setBodyDirt` (no permission needed) |
 | `heat` | the report says what the heat and the oil did; when they took at least half of the engine life lost, the whole bottom end comes down evenly and no one part is blamed | `CAR_n_COOLING` = cooling, fan, sump g (`EngineCooling`, see below) |
+
+**The wear layer** (`CAR_n_LOOK=looks\<car>_<hash>.kn5`, docs/roadmap.md step 28 ideas 3 and 4): a model the game draws
+for the car's rust, worn paint, scrapes and cracked windscreen (`Looks/WearLayer`, without the dirt), mirrored into the
+mode's `looks\` folder by `ScRaceMode.Install` like a part's model. `car_parts.lua` loads it into the car's body node
+(`BODYTR`, else `CARNODE`) in the space of the car's model (`CAR_n_MODEL_NODE` / `_AT`), after the engine parts are
+judged (their rays must not find it), always.
 
 The mode puts a car out of the race (a breakdown) when its engine life reaches 0, its gearbox's carried wear plus
 AC's gearbox damage reaches 1, a corner's carried bend plus AC's reaches 1, a tyre blows, or its tank runs dry. A car
@@ -313,7 +319,8 @@ or less than 2 litres in the tank does not race or go on a free run until it is 
 in, with just enough to leave the line (`CarCondition.Runnable`), until opponents look after their cars.
 
 The garage's Repairs button (`RepairShop`) takes `Tear` off: an engine rebuild, a gearbox rebuild, a straightened
-corner, a new tyre for a blown one, body work. A part repair costs 60% of the damaged parts' new price as far as the
+corner, a new tyre for a blown one, body work, rust repair and respray ($900 for a body all rust plus $300 for paint
+worn all over, by how far each goes; a respray alone for worn paint without rust), a new windscreen ($60). A part repair costs 60% of the damaged parts' new price as far as the
 damage goes, plus $15; body work $8 per km/h. Small jobs take `GarageWorkMinor` (30 min), big ones
 `GarageWorkMajor` (2 h). Mileage (`Wear`) is not repaired: a worn part is replaced. The same list fills the tank
 ($0.11 a litre, 1970 premium) and washes the car ($3 once its dirt is 0.1 or more), 15 minutes each (`GarageChore`).

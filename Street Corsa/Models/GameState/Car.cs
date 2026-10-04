@@ -33,6 +33,24 @@ namespace StreetCorsa.Models.GameState
         public double BodyDirt { get; set; }
 
         /// <summary>
+        /// Rust through the paint, 0 none to 1 a body more rust than steel: it comes with a used car, grows a little every
+        /// day, faster the more there is, and a body shop takes it off (<see cref="Parts.Cars.CarLooks"/>)
+        /// </summary>
+        public double Rust { get; set; }
+
+        /// <summary>Worn paint, 0 as new to 1 chipped, scratched and faded all over; a respray takes it off with the rust</summary>
+        public double PaintWear { get; set; }
+
+        /// <summary>A cracked windscreen, 0 sound to 1 cracked right across: from a hit at the front, or as the car came</summary>
+        public double GlassCracks { get; set; }
+
+        /// <summary>
+        /// Which rust and which scratches the car has (the pattern its wear layer is drawn with): the same for the car in
+        /// every scene and race, carried over from its ad when it is bought; 0 on a car from an older save (its id stands in)
+        /// </summary>
+        public int LookSeed { get; set; }
+
+        /// <summary>
         /// The oil in the engine, 1 full to 0 dry; null for full (a car that has not raced since it was bought or topped
         /// up). Every race burns a little, a worn engine more; the gas station tops it up
         /// (<see cref="Parts.Cars.CarCondition.OilLeft"/>).
@@ -144,6 +162,10 @@ namespace StreetCorsa.Models.GameState
             FuelLitres = FuelLitres,
             FuelTankLitres = FuelTankLitres,
             BodyDirt = BodyDirt,
+            Rust = Rust,
+            PaintWear = PaintWear,
+            GlassCracks = GlassCracks,
+            LookSeed = LookSeed,
             OilLevel = OilLevel,
             Parts = Parts.Select(p => StreetCorsa.Parts.Cars.PartTrees.Clone(p, keepIds: true)).ToList(),
             HasPartsAssigned = HasPartsAssigned,

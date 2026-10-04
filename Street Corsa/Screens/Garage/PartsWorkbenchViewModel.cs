@@ -748,7 +748,7 @@ namespace StreetCorsa.Screens.Garage
 
                 Gear = _gearTrees.Select(g => new CarPart(g.CarSlot, g.Tree.Root)).ToList();
                 EngineOffset = _car != null ? _parts.EngineOffsetOf(_car.DefinitionId) : System.Numerics.Vector3.Zero;
-                Shown = catalog != null && _car != null ? _parts.Shown(_car) : null;
+                Shown = _car != null ? _parts.Shown(_car) : null;
 
                 Shelf.Clear();
                 if (catalog != null)

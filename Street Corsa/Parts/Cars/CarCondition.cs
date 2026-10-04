@@ -158,6 +158,7 @@ public static class CarCondition
             EngineLife = withParts ? EngineLife(car, groupOf!) : NewEngineLife * Clamp01(car.EngineHealth),
             GearboxWear = withParts ? GearboxWear(car, groupOf!) : 1 - Clamp01(car.TransmissionHealth),
             SuspensionBend = groupOf != null && car.HasRunningGearAssigned ? SuspensionBend(car) : new double[4],
+            RideHeight = groupOf != null ? CarLooks.RideHeight(car) : new double[4],
             FuelLitres = FuelLeft(car),
             Dirt = Unit.Clamp01(car.BodyDirt, ifNotFinite: 0)
         };
@@ -336,6 +337,7 @@ public static class CarCondition
         // AC starts the race with the body as the car had it: what it reports is the whole of it. A start that did not
         // take (no physics API) reports less than the car had, so the worse of the two stands.
         var zones = Body(car);
+        var frontBefore = zones[0];
         var wasTotaled = zones.Sum() >= TotaledKmh;
         for (var i = 0; i < Zones && i < reported.Count; i++)
         {
@@ -346,6 +348,7 @@ public static class CarCondition
 
         car.BodyDamageKmh = zones;
         if (!wasTotaled && zones.Sum() >= TotaledKmh) report.Add(PartWords.Say("condition.body.totaled"));
+        if (CarLooks.CrackFromHit(car, frontBefore)) report.Add(PartWords.Say("condition.windscreen.cracked"));
     }
 
     private static void ApplyEngine(Car car, RaceCarCondition condition, Func<string, string?> groupOf, ConditionReport report)

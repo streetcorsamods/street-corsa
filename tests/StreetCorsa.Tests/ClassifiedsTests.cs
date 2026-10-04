@@ -114,6 +114,22 @@ public class ClassifiedsTests
     }
 
     [Fact]
+    public void A_car_that_shows_its_rust_or_a_cracked_windshield_is_never_called_mint_and_now_and_then_says_so()
+    {
+        var shiny = new CarAdFacts(null, Modified: false, Condition: 0.95, MileageKm: 20_000, [], new CarAdLooks(0, 0, 0, 0));
+        var rusty = shiny with { Looks = new CarAdLooks(0.3, 0.1, 0.5, 0.2) };
+        var mint = GameText.Installed.Lines("ads.car.mint");
+
+        var shinyLines = Enumerable.Range(0, 200).Select(seed => AdBlurbs.Write(shiny, new Random(seed))).ToList();
+        var rustyLines = Enumerable.Range(0, 200).Select(seed => AdBlurbs.Write(rusty, new Random(seed))).ToList();
+
+        Assert.Contains(shinyLines, line => mint.Any(line.Contains));
+        Assert.DoesNotContain(rustyLines, line => mint.Any(line.Contains));
+        Assert.Contains(rustyLines, line => GameText.Installed.Lines("ads.car.rust").Any(line.Contains));
+        Assert.Contains(rustyLines, line => GameText.Installed.Lines("ads.car.cracked_screen").Any(line.Contains));
+    }
+
+    [Fact]
     public void A_whole_engine_for_sale_mostly_says_so()
     {
         var facts = new PartAdFacts("Rocket 371", "Engine blocks", CompleteEngine: true, SpeedPart: false, Wear: 0.6, FromRacer: false);

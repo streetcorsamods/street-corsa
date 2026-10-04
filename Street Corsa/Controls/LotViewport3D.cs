@@ -9,6 +9,7 @@ using AcTools.Render.Kn5SpecificForward;
 using AcTools.Render.Kn5SpecificForwardDark.Lights;
 using StreetCorsa.Controls.Street;
 using StreetCorsa.Logging;
+using StreetCorsa.Looks;
 using StreetCorsa.Services.Catalog;
 using StreetCorsa.Services.Scripting;
 using StreetCorsa.Services.Street;
@@ -404,6 +405,10 @@ public class LotViewport3D : D3DViewportBase
 
         var budget = CarByteBudget;
 
+        // Every car's wear is started now, on the side (one made at a time, so the drawing keeps its cores), while the
+        // cars load one by one: each finds its own ready or being made
+        WarmWear(cars);
+
         for (var i = 0; i < cars.Count; i++)
         {
             if (Renderer != renderer || !IsLoaded) return;
@@ -453,11 +458,13 @@ public class LotViewport3D : D3DViewportBase
                     car.SkinId ?? Kn5RenderableCar.DefaultSkin, RendererToken));
 
                 if (Renderer != renderer || !IsLoaded) return;
-                await ShownPartsOnCar.SetAsync(slot.CarNode, car.Shown);
+                await ShownPartsOnCar.SetAsync(slot.CarNode, car.Shown, WearLayer.LotPicture);
                 if (Renderer != renderer || !IsLoaded) return;
 
                 Place(slot, car);
                 _standing[i] = car;
+                // The car looked at came in: a sagging corner leans it
+                if (i == SelectedIndex) OnPoseChanged();
                 Invalidate();
             }
             catch (Exception ex)
@@ -508,6 +515,21 @@ public class LotViewport3D : D3DViewportBase
         if (index < _standing.Count) _standing[index] = null;
     }
 
+    /// <summary>The wear being made ahead for the cars on the lot: called off when they change or the scene goes</summary>
+    private CancellationTokenSource? _warming;
+
+    /// <summary>
+    /// Starts making the wear of <paramref name="cars"/> off the UI thread (WearLayer makes them one at a time); what is
+    /// still waiting for the cars before is not made
+    /// </summary>
+    private void WarmWear(IReadOnlyList<LotCarPlacement> cars)
+    {
+        _warming?.Cancel();
+        _warming?.Dispose();
+        _warming = CancellationTokenSource.CreateLinkedTokenSource(RendererToken);
+        foreach (var car in cars) _ = WearLayer.WarmAsync(car.CarDirectory, car.Shown, WearLayer.LotPicture, _warming.Token);
+    }
+
     /// <summary>
     /// Puts the cars on the lot one after another.
     ///
@@ -521,6 +543,10 @@ public class LotViewport3D : D3DViewportBase
         // car standing nearest the middle of the lot
         var main = MostCentralIndex(cars);
         var budget = CarByteBudget;
+
+        // Every car's wear is started now, on the side (one made at a time, so the drawing keeps its cores), while the
+        // cars load one by one: each finds its own ready or being made
+        WarmWear(cars);
 
         for (var i = 0; i < cars.Count; i++)
         {
@@ -562,12 +588,13 @@ public class LotViewport3D : D3DViewportBase
                     car.SkinId ?? Kn5RenderableCar.DefaultSkin, RendererToken));
 
                 if (Renderer != renderer || !IsLoaded) return;
-                await ShownPartsOnCar.SetAsync(slot.CarNode, car.Shown);
+                await ShownPartsOnCar.SetAsync(slot.CarNode, car.Shown, WearLayer.LotPicture);
                 if (Renderer != renderer || !IsLoaded) return;
 
                 Place(slot, car);
                 _standing[i] = car;
                 LoadedCount++;
+                if (i == SelectedIndex) OnPoseChanged();
 
                 Invalidate();
             }
@@ -720,6 +747,8 @@ public class LotViewport3D : D3DViewportBase
         // Come round to its front three-quarter, until the player takes the camera over
         _alphaGoal = (car.Heading + ModelHeadingOffset + 140f) * (float)Math.PI / 180f;
 
+        // Stood on its wheels again as the car chosen: a sagging corner leans it at rest, its engine off
+        OnPoseChanged();
         Invalidate();
     }
 

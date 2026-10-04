@@ -1344,34 +1344,62 @@ decisions and what the research found.
 
 Tests: switch rules and the always-there Buy (2140 pass). `check.ps1` fails only on the old EngineBench Corvette build.
 
-### Idea 3 and 4: cars look used (planned)
+### Ideas 3 and 4: cars look used (built 2026-10-04 on `feature/cars-look-used`, not seen in game)
 
-- **Already there:** `Car.BodyDirt` is carried into AC (`ac.setBodyDirt`, step 14) and washed at the station.
 - **Owner's decisions:** dealer cars come in a bit better condition, newspaper cars noticeably crappier (rust, dirt,
   wear drawn when the car is made, by where it is sold). Ride height: suspension damage only (a broken spring sags its
   corner), but everything prepared for aftermarket springs with an adjustable height later.
-- **Plan, garage renderer:** dirt, rust, scratches and cracked glass blended into the car's materials at runtime (the
-  car lot's texture-swap technique); dents faked with normal maps on the damaged zones (real deformation is too hard).
-  Ride height: the body moved against the wheels per corner.
-- **Plan, AC:** CSP already draws scratches and deformation from the damage sent; rust as a temporary skin with the rust
-  baked into the body texture, written and restored by `CarDataOverlay`; ride height follows the suspension geometry.
-- **Rules:** rust grows with game time; dirt after a race rises with time off the track and dirt surfaces (the mode
-  samples the surface under the wheels).
+- **The car's looks** (`Car.Rust`, `PaintWear`, `GlassCracks`, `LookSeed`, with `BodyDirt` and the body zones; the same
+  on `UsedCarListing`), rolled when a car comes into the game by `CarLooks.Roll(condition, source)`: a dealer's listing
+  (`LookSource.Dealer`: less rust and worn paint, washed, rarely a cracked screen) or a private car (a rival's own, the
+  player's first: more of everything, dirty); the King's car is kept like a show car. The look goes with the car
+  through a purchase, a relisting and a rival's ad; the seed keeps its pattern the same everywhere. A dealer prices a
+  rusty car down (`CarValuation.LooksFactor`, `market.rustLoss` and the rest).
+- **Rules** (`condition.*`): rust grows every day (`RustTask`, every car in the game: `rustPerDay` times the rust there is
+  plus `rustStart` times the worn paint; sound paint and no rust stays sound); a front hit of `crackFromKmh` (25) cracks
+  the windscreen, across at `shatteredKmh` (70), and the race report says so; a spring under `sagFrom` (0.6) lets its
+  corner down, `mostSag` (5 cm) broken (`CarLooks.RideHeight`, the one place a corner's height is worked out: springs
+  that set a height add theirs there). The body shop (`RepairShop`): rust repair and respray (`repairs.rustCost` and
+  `paintCost` by how far each goes), a respray alone, a new windscreen (`windscreenCost`).
+- **The wear layer** (`Looks/`), one technique for the scenes and AC: AcTools' Dark renderer draws no dirt or damage, and
+  the car mods name their paint anything ("body", "EXT_Car_Paint", "c1", "Material"; only 41 of 199 game cars use AC's
+  dirt shader), so a model of its own is drawn over the car. `BodyShell` looks at the car from 18 ways round in a
+  software depth buffer: the triangles seen from outside (faces seen edge on do not count) of the materials that cover
+  most of what is seen (but for glass, tyres, rims, chrome, lights and the like) are the paint, and only those carry
+  wear (a dashboard in the paint's material stays clean); the windscreen is glass facing forwards above the hood. Each
+  triangle is laid on one of six views of the car (sides, front, back, top, bottom) by the way its corners face, and
+  copied 2.5 mm off the body. `WearPainter` paints the 2048 px picture from the point of the car each pixel stands for:
+  rust low down and round the wheel arches first (noise over a bias), stains and lifting paint at its edges; chips,
+  scratches at hip height and a sun-faded top for worn paint; scrapes and fake-lit creases at the end of the car that
+  was hit (dents as shading: the layer has no normal map); dirt low down and behind the wheels; cracks on the
+  windscreen. `WearLayer` keeps each model's shell and the last layers made (about 2 s the first time for a model, off
+  the UI thread).
+- **Scenes:** the look rides in `ShownSet.Look` (`ICarPartsService.Shown(car)`, `Shown(id, parts, CarLooks.Of(listing))`
+  for a car on sale), so every scene that shows parts shows wear (`ShownPartsOnCar.PutLookAsync`, under the car's root in
+  its model's space); the garage's parts view (a ghost car) leaves it off. Sag: `ShownSet.Heights` (`CornerHeights`);
+  the viewport's body rock (`CarBodyRock.PoseOf`) leans the body by it, the wheels left on the ground, also at rest
+  (garage, car viewing, a lot's chosen car, the player's car on the street; a lot's other cars and a rival stand level).
+- **AC:** the race (and a free run) gets the layer without the dirt, written to `%AppData%\StreetCorsa\Looks`
+  (`WearLayer.ForRaceAsync`, the newest 30 kept) and mirrored into the mode's `looks\` like a part's model;
+  `CAR_n_LOOK` in race.ini, `car_parts.lua` loads it into the body node in the model's space (`CAR_n_MODEL_NODE`).
+  AC keeps drawing its own dirt (`ac.setBodyDirt`) and its own scratches and deformation from the body damage. Ride
+  height: `RaceStartState.RideHeight` shortens suspensions.ini's `ROD_LENGTH` per axle by the mean of its corners
+  (`AcDamageData`). Dirt: the mode adds `DIRT_PER_S` (0.015) a second with all four wheels off the track (grass, dirt,
+  a surface with dirt, off the track's own) at 30 km/h or more, sets it into AC as it goes and reports the worse of
+  AC's and its own.
+- **Found in play: the wear came on after the car drove in.** The shell was kept per loaded model, so every garage visit worked it out again (3 s on the C10). Now it is kept per model file, made while the car loads (`WearLayer.WarmAsync`), its 18 looks run at once (1.6 s on the C10), and the garage holds its reveal and the drive-in for the wear, 4 s at most (`CarViewport3D.ShownSettledAsync`).
+- **Found in play: the drive-in stuttered now and then.** Not reproduced off screen (the harness drives in smoothly with the wear on), so what the layer costs while a scene moves was cut: its making uses half the cores at most (`WearLayer.Work`), lends its big arrays instead of making new ones (no picture-sized garbage for the collector), and each model's shell is kept on disk (`%AppData%\StreetCorsa\Looks\shells`, `ShellFile`; the C10 0.9 s instead of 2.6 s from the second time on). A car on the move now logs every late frame (Debug, `Slow frame on the move`, with a full garbage collection named) to find any stutter left.
+- **Found in play: a 20-car dealer took 28 s to come up** (3 s before the wear): each car waited for its own 2048 px picture to be painted, written as a PNG and read back, one after another. Now a lot's cars get 1024 px pictures (`WearLayer.LotPicture`), all made at once on the side as the lot starts loading (`LotViewport3D.WarmWear`; 18 cars in 3 s), and the scenes' pictures are DDS with their mips (`Dds`: nothing to decode, loaded as the layer is first drawn, never a frame without them); races keep PNGs. The layers kept are held to 200 MB of pictures.
+- **Not done / to watch in play:** the station's wash does not clean the car on its scene until it is shown again; the
+  layer has no LODs (AC's far LODs keep it as drawn over LOD A) and does not follow CSP's mesh deformation of a crashed
+  car; each car on a lot carries its own 1024 px picture (about 6 MB of video memory). Rolls and prices unbalanced.
+- **Harnesses** (session scratchpad): `lookshot` (the garage viewport off screen with a look: car, rust, paint, cracks,
+  dirt, hits, seed, then heights) and `texdump` (writes a car's layer and its pictures).
 
-### Idea 5: parts visible in AC (research done, spike next)
+### Idea 5: parts visible in AC (done, PR #66, merged as `6328dd4`)
 
-- **Owner's decision:** a blower or supercharger clipping through the hood is fine; something cleaner if possible.
-- **Research (2026-10-03, not tried in game):** the installed CSP SDK (`extension/internal/lua-sdk/ac_new_modes`) has
-  `ac.findNodes('carRoot:N')`, `SceneReference:loadKN5` / `loadKN5LOD` / `findMeshes` / `setVisible` / `setPosition` /
-  `setOrientation`; CSP's own `driver-interview` mode hides car meshes from a mode script, so a mode may touch car nodes.
-- **Plan:** race.ini carries each car's visible parts; `sc_race` loads our rim KN5 under `WHEEL_LF/RF/LR/RR` (the car's
-  `RIM_*` and blur meshes hidden), the blower under `BODYTR` at the engine layout's offset, the hood mesh hidden (the
-  cleaner way); per-car mesh name patterns as data, stock rims kept when unknown. Nothing written to car folders.
-  Distant AI LODs will not show the parts.
-- **Reserve:** CSP `[MODEL_REPLACEMENT_...]` and `extension/config/cars/common/custom_rims.ini` through a car's
-  `ext_config.ini` (whether it merges with the `loaded` config is untested). A merged KN5 is rejected (size, LODs, mesh
-  names, checksums).
-- **First spike:** one of our rims on `WHEEL_LF` of one car in a real race: facing, scale, blur meshes, materials.
+Rims, tyres, blur and the engine parts standing out of the hood, in AC and the game's scenes; see `parts-in-ac` notes in
+`docs/ac-integration/csp-lua-scripts.md` and the PR.
 
 ### Ideas 6 and 7: the diner street and the parts shop (planned)
 

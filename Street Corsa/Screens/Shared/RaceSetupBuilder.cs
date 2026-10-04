@@ -156,10 +156,18 @@ namespace StreetCorsa.Screens.Shared
 
             // The race mode runs each engine's heat from how its car is cooled, and puts on the parts it does not have
             var intent = BuildIntent(entry, opponentRacesAs, carData);
-            intent.PlayerStart = playerStart with { Cooling = playerData?.Cooling, Shown = _parts.Shown(entry.PlayerCar) };
-            intent.OpponentStart = opponentStart == null ? null : opponentStart with { Cooling = opponentData?.Cooling, Shown = _parts.Shown(entry.OpponentCar!) };
+            // Both cars' wear layers at once: each is a few seconds the first time for a car
+            var playerShown = ShownForRaceAsync(entry.PlayerCar);
+            var opponentShown = opponentStart == null ? Task.FromResult<ShownSet?>(null) : ShownForRaceAsync(entry.OpponentCar!);
+            await Task.WhenAll(playerShown, opponentShown);
+            intent.PlayerStart = playerStart with { Cooling = playerData?.Cooling, Shown = playerShown.Result };
+            intent.OpponentStart = opponentStart == null ? null : opponentStart with { Cooling = opponentData?.Cooling, Shown = opponentShown.Result };
             return new RaceSetupResult { Intent = intent };
         }
+
+        /// <summary>What the car shows in the race, its wear layer's model written for it</summary>
+        private Task<ShownSet?> ShownForRaceAsync(Car car) =>
+            Looks.WearLayer.ForRaceAsync(_parts.Shown(car), System.IO.Path.Combine(Configuration.AppSettings.Instance.CarsPath, car.DefinitionId));
 
         /// <summary>
         /// The folder the opponent's car races in, and its data: an opponent in the player's model races in a

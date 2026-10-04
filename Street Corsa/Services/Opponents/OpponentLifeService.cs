@@ -692,7 +692,9 @@ namespace StreetCorsa.Services.Opponents
         /// <summary>The whole bill or nothing: half a repair doesn't get a car racing</summary>
         private bool TryRepair(GameState gameState, Opponent racer, Car car, Func<string, string?>? groupOf, List<string> talk)
         {
-            var jobs = RepairShop.Jobs(car, _parts.IsAvailable ? _parts.Catalog : null, gameState.Rules.PartPriceMultiplier);
+            // What gets the car racing: a rival does not pay for its looks
+            var jobs = RepairShop.Jobs(car, _parts.IsAvailable ? _parts.Catalog : null, gameState.Rules.PartPriceMultiplier)
+                .Where(j => !RepairShop.IsCosmetic(j)).ToList();
             var bill = jobs.Sum(j => j.Cost);
             if (jobs.Count == 0 || bill > racer.Money) return false;
 

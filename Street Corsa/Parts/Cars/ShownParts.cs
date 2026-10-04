@@ -104,21 +104,54 @@ public sealed record ShownModelAt(ShownModel Model, Matrix4x4 At, Vector3 Min = 
 public sealed record ModelFrame(string Node, Matrix4x4 At);
 
 /// <summary>
+/// How far each corner of a car's body sits from where its model has it, metres, AC's wheel order (negative: lower): a
+/// corner on a broken spring sags (<see cref="CarLooks.RideHeight"/>)
+/// </summary>
+public sealed record CornerHeights(float LeftFront, float RightFront, float LeftRear, float RightRear)
+{
+    /// <summary>The heights; null when every corner is where it should be (within a millimetre)</summary>
+    public static CornerHeights? Of(IReadOnlyList<double> heights)
+    {
+        if (heights.Count < 4 || heights.All(h => !double.IsFinite(h) || Math.Abs(h) < 0.001)) return null;
+        float F(int i) => double.IsFinite(heights[i]) ? (float)Math.Round(heights[i], 3) : 0f;
+        return new CornerHeights(F(0), F(1), F(2), F(3));
+    }
+}
+
+/// <summary>
 /// What a car shows that its own model does not have, as a race or a scene is given it: the wheels of its corners (AC's
-/// order, null keeps the car's own) and the engine parts that stand out (ShownEngineParts). Equal when all of it is, so a
-/// scene that compares what it is shown sees the same car as the same.
+/// order, null keeps the car's own), the engine parts that stand out (ShownEngineParts) and how used it looks (its wear
+/// layer, <see cref="CarLook"/>). Equal when all of it is, so a scene that compares what it is shown sees the same car as
+/// the same.
 /// </summary>
 public sealed class ShownSet : IEquatable<ShownSet>
 {
-    private ShownSet(IReadOnlyList<ShownWheel?> wheels, IReadOnlyList<ShownModelAt> extras, ModelFrame? frame)
+    private ShownSet(IReadOnlyList<ShownWheel?> wheels, IReadOnlyList<ShownModelAt> extras, ModelFrame? frame, CarLook? look, CornerHeights? heights)
     {
         Wheels = wheels;
         Extras = extras;
         Frame = frame;
+        Look = look;
+        Heights = heights;
     }
 
-    /// <summary>The model's space for the engine parts, in AC; null without engine parts or such a node</summary>
+    /// <summary>How its corners sit, the body against the wheels; null when as the model has them</summary>
+    public CornerHeights? Heights { get; }
+
+    /// <summary>
+    /// The wear layer's model for a race, written for <see cref="Look"/> (WearLayer): the race mode loads it over the car's
+    /// body. Null in the scenes, which make their own.
+    /// </summary>
+    public ShownModel? Layer { get; private init; }
+
+    /// <summary>The same set with the race's wear layer model</summary>
+    public ShownSet WithLayer(ShownModel? layer) => new(Wheels, Extras, Frame, Look, Heights) { Layer = layer };
+
+    /// <summary>The model's space for the engine parts and the wear layer, in AC; null without either or such a node</summary>
     public ModelFrame? Frame { get; }
+
+    /// <summary>How used the car looks; null for a clean car (nothing to draw over it)</summary>
+    public CarLook? Look { get; }
 
     public IReadOnlyList<ShownWheel?> Wheels { get; }
 
@@ -128,22 +161,30 @@ public sealed class ShownSet : IEquatable<ShownSet>
     public IEnumerable<ShownModel> Models =>
         Wheels.OfType<ShownWheel>().SelectMany(w => w.Tyre is { } tyre ? new[] { w.Rim, tyre } : [w.Rim])
             .Concat(Extras.Select(e => e.Model))
+            .Concat(Layer is { } layer ? [layer] : [])
             .DistinctBy(m => m.Name, StringComparer.OrdinalIgnoreCase);
 
     /// <summary>The set; null when the car shows nothing but its own model</summary>
-    public static ShownSet? Of(IReadOnlyList<ShownWheel?>? wheels, IReadOnlyList<ShownModelAt>? extras = null, ModelFrame? frame = null)
+    public static ShownSet? Of(IReadOnlyList<ShownWheel?>? wheels, IReadOnlyList<ShownModelAt>? extras = null, ModelFrame? frame = null,
+        CarLook? look = null, CornerHeights? heights = null)
     {
         var someWheel = wheels != null && wheels.Any(w => w != null);
         var someExtra = extras is { Count: > 0 };
-        if (!someWheel && !someExtra) return null;
-        return new ShownSet(someWheel ? wheels!.ToArray() : new ShownWheel?[RunningGear.Corners], extras?.ToArray() ?? [], someExtra ? frame : null);
+        if (look is { IsClean: true }) look = null;
+        if (!someWheel && !someExtra && look == null && heights == null) return null;
+        return new ShownSet(someWheel ? wheels!.ToArray() : new ShownWheel?[RunningGear.Corners], extras?.ToArray() ?? [],
+            someExtra || look != null ? frame : null, look, heights);
     }
 
-    /// <summary>The same set without its engine parts (the garage's parts view draws the whole engine itself)</summary>
-    public ShownSet? WithoutExtras() => Of(Wheels);
+    /// <summary>
+    /// The same set without its engine parts and its wear (the garage's parts view draws the whole engine itself, and the
+    /// car as a ghost round it)
+    /// </summary>
+    public ShownSet? WithoutExtras() => Of(Wheels, heights: Heights);
 
     public bool Equals(ShownSet? other) =>
-        other != null && Wheels.SequenceEqual(other.Wheels) && Extras.SequenceEqual(other.Extras) && Equals(Frame, other.Frame);
+        other != null && Wheels.SequenceEqual(other.Wheels) && Extras.SequenceEqual(other.Extras) && Equals(Frame, other.Frame)
+        && Equals(Look, other.Look) && Equals(Heights, other.Heights) && Equals(Layer, other.Layer);
 
     public override bool Equals(object? obj) => Equals(obj as ShownSet);
 
@@ -152,6 +193,8 @@ public sealed class ShownSet : IEquatable<ShownSet>
         var hash = new HashCode();
         foreach (var wheel in Wheels) hash.Add(wheel);
         foreach (var extra in Extras) hash.Add(extra);
+        hash.Add(Look);
+        hash.Add(Heights);
         return hash.ToHashCode();
     }
 }

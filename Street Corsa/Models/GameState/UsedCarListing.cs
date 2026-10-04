@@ -85,6 +85,18 @@ namespace StreetCorsa.Models.GameState
         /// </summary>
         public double[]? BodyDamageKmh { get; set; }
 
+        /// <summary>How used the car looks, as on <see cref="Car"/> (<see cref="Car.Rust"/> and the rest): rolled when it is listed, by who sells it</summary>
+        public double Rust { get; set; }
+
+        public double PaintWear { get; set; }
+
+        public double GlassCracks { get; set; }
+
+        public double BodyDirt { get; set; }
+
+        /// <inheritdoc cref="Car.LookSeed"/>
+        public int LookSeed { get; set; }
+
         /// <summary>
         /// The car's history, as on <see cref="Car.History"/>: a relisted car keeps it, and new stock comes with the
         /// owners it had before. Empty on listings from before it was kept.

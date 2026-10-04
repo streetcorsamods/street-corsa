@@ -40,6 +40,13 @@ namespace StreetCorsa.Models.Race
         /// </summary>
         public double[] SuspensionBend { get; init; } = new double[4];
 
+        /// <summary>
+        /// How far each corner sits from its height (front left, front right, rear left, rear right), metres, negative
+        /// lower: a broken spring's corner sags (<see cref="Parts.Cars.CarLooks.RideHeight"/>). AC has no setter: the car's
+        /// data carries it, an axle the mean of its corners.
+        /// </summary>
+        public double[] RideHeight { get; init; } = new double[4];
+
         /// <summary>Litres in the tank; null fills it</summary>
         public double? FuelLitres { get; init; }
 
@@ -60,7 +67,7 @@ namespace StreetCorsa.Models.Race
 
         /// <summary>Nothing wrong with the car</summary>
         public bool IsPristine =>
-            BodyKmh.All(z => z <= 0) && EngineLife >= 1000 && GearboxWear <= 0 && SuspensionBend.All(b => b <= 0);
+            BodyKmh.All(z => z <= 0) && EngineLife >= 1000 && GearboxWear <= 0 && SuspensionBend.All(b => b <= 0) && RideHeight.All(h => h == 0);
 
         /// <summary>The race.ini keys for the car at <paramref name="carIndex"/>, in AC's invariant number format</summary>
         public IEnumerable<(string Key, string Value)> IniKeys(int carIndex)
@@ -94,6 +101,7 @@ namespace StreetCorsa.Models.Race
                 yield return (prefix + "MODEL_NODE", frame.Node);
                 yield return (prefix + "MODEL_AT", Matrix(frame.At));
             }
+            if (shown.Layer is { } layer) yield return (prefix + "LOOK", layer.Name);
             for (var i = 0; i < shown.Extras.Count; i++)
             {
                 var extra = shown.Extras[i];

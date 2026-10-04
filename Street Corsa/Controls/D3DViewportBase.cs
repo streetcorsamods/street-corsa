@@ -502,6 +502,9 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         if (_renderer.IsDirty) StartPump();
     }
 
+    /// <summary>A frame this long after the last, ms, is one the player sees stutter (three at 60 Hz)</summary>
+    private const double SlowFrameMs = 45;
+
     private void OnRendering(object? sender, EventArgs e)
     {
         // CompositionTarget.Rendering can fire more than once per frame
@@ -509,7 +512,10 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         if (args.RenderingTime == _lastRenderingTime) return;
 
         var dt = (float)(args.RenderingTime - _lastRenderingTime).TotalSeconds;
+        var gapMs = dt * 1000;
         _lastRenderingTime = args.RenderingTime;
+        var frameStarted = System.Diagnostics.Stopwatch.GetTimestamp();
+        var collections = GC.CollectionCount(2);
         if (dt <= 0f || dt > 0.25f) dt = 1f / 60f;
 
         var renderer = _renderer;
@@ -563,6 +569,13 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
             }
 
             OnFramePresented();
+
+            // A car on the move shows every frame that came late: what makes a scripted move stutter (not the first after the
+            // scene stood still, whose gap is the time it stood)
+            var workMs = System.Diagnostics.Stopwatch.GetElapsedTime(frameStarted).TotalMilliseconds;
+            if (_scripted != null && ((gapMs > SlowFrameMs && gapMs < 1000) || workMs > SlowFrameMs / 2))
+                Logger.Debug("Slow frame on the move: {Gap:0} ms since the last, {Work:0} ms to draw{Gc}", gapMs, workMs,
+                    GC.CollectionCount(2) != collections ? ", a full garbage collection in it" : "");
 
             // A scene that has drawn well for a while since it was rebuilt has earned another rebuild: a device lost
             // again soon after is still a failure, so this cannot loop
@@ -829,7 +842,9 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         // A car on the move squats or dives, and leans out of a bend
         var (moveRoll, movePitch) = moved?.Body ?? (0f, 0f);
         var pose = new Audio.BodyPose(running.Roll + bump.Roll + moveRoll, running.Pitch + bump.Pitch + movePitch, running.Heave + bump.Heave);
-        if (renderer == null || carNode == null || (moved == null && pose.IsRest && RunningEngine?.IsActive != true && _bumps.Count == 0))
+        // A corner on a broken spring sags: the body stays leaned that way, the car at rest too
+        var heights = ShownPartsOnCar.HeightsOf(carNode);
+        if (renderer == null || carNode == null || (moved == null && pose.IsRest && heights == null && RunningEngine?.IsActive != true && _bumps.Count == 0))
         {
             ReleaseRock();
             return;
@@ -841,6 +856,9 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
             _rock = new CarBodyRock(carNode);
             _shadowedPose = Audio.BodyPose.Rest;
         }
+
+        var sag = _rock.PoseOf(heights);
+        pose = new Audio.BodyPose(pose.Roll + sag.Roll, pose.Pitch + sag.Pitch, pose.Heave + sag.Heave);
 
         // A car on the move goes where its script has it, its wheels turning and its front wheels steered as it goes
         if (!_rock.Apply(pose, moved?.WheelSpin ?? 0f, moved == null ? null : Placement(moved.Pose), moved?.Steer ?? 0f)) return;

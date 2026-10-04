@@ -8,6 +8,12 @@
     "partShare": 0.6,
     "labour": 15,
     "bodyCostPerKmh": 8,
+    "rustCost": 900,
+    "paintCost": 300,
+    "windscreenCost": 60,
+    "someRust": 0.02,
+    "somePaintWear": 0.05,
+    "bigRustJob": 0.25,
     "smallBodyJobKmh": 40,
     "canOfGasLitres": 4
   }

@@ -100,6 +100,18 @@ namespace StreetCorsa.Services.Market
         public static decimal RoundToHundred(decimal price) => Math.Round(price / 100) * 100;
 
         /// <summary>
+        /// How much of its worth a car keeps for how it looks: rust, worn paint and a cracked windscreen each take a share
+        /// (<see cref="Rules.MarketRules.RustLoss"/> and the rest) as far as they go
+        /// </summary>
+        public static decimal LooksFactor(double rust, double paintWear, double cracks)
+        {
+            var market = Rules.RuleBook.Current.Market;
+            var loss = market.RustLoss * (decimal)Unit.Clamp01(rust, 0) + market.PaintWearLoss * (decimal)Unit.Clamp01(paintWear, 0)
+                       + market.CrackedScreenLoss * (decimal)Unit.Clamp01(cracks, 0);
+            return Math.Max(0m, 1m - loss);
+        }
+
+        /// <summary>
         /// What this very car is worth, the one way every part of the game asks: its model's base price (see
         /// <see cref="ValueOf"/>), or, for a model the catalog has no price for, what was paid for the car.
         /// </summary>
@@ -131,7 +143,7 @@ namespace StreetCorsa.Services.Market
             Func<CarDefinition, RatedBuild?>? stockBuildOf = null)
         {
             var condition = ConditionOf(car);
-            var whole = Math.Max(0m, basePrice) * (1m - MissingShare(car));
+            var whole = Math.Max(0m, basePrice) * (1m - MissingShare(car)) * LooksFactor(car.Rust, car.PaintWear, car.GlassCracks);
             return Value(whole, condition, ModificationsOf(car, condition, parts, definition, stockBuildOf), HistoryFactor(car));
         }
 

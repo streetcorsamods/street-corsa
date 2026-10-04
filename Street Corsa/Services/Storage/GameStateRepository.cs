@@ -249,6 +249,8 @@ namespace StreetCorsa.Services.Storage
                     TireCondition = condition,
                     PurchaseDate = state.Date
                 };
+                // The first car is somebody's old one
+                StreetCorsa.Parts.Cars.CarLooks.Give(car, StreetCorsa.Parts.Cars.CarLooks.Roll(condition, StreetCorsa.Parts.Cars.LookSource.Private, Random.Shared));
                 car.History.ChangeHands(state.Player.Name, state.Date, CarAcquisition.Unknown);
 
                 state.Player.Cars ??= [];

@@ -10,6 +10,8 @@ namespace StreetCorsa.Parts.Export;
 /// <item>a bent corner is the toe AC's own suspension damage gives: its steering rod is deflected by the bend, and
 /// suspensions.ini has one TOE_OUT per axle, a steering rod length in metres like AC's MAX_DAMAGE, so an axle
 /// gets the mean of its two corners;</item>
+/// <item>a sagging corner (a broken spring) lowers the car: suspensions.ini's ROD_LENGTH per axle, the push rod that sets
+/// the ride height, shortened by the mean of its two corners' sag;</item>
 /// <item>a worn gearbox shifts slower and only engages closer to the right revs (drivetrain.ini's CHANGE_UP_TIME,
 /// CHANGE_DN_TIME and VALID_SHIFT_RPM_WINDOW).</item>
 /// </list>
@@ -25,19 +27,33 @@ public static class AcDamageData
     /// <summary>...and engages within this share of the window a good one has</summary>
     private const double WornShiftWindowFactor = 0.4;
 
+    private static double Finite(double v) => double.IsFinite(v) ? v : 0;
+
     /// <summary>File name to new content, for the files the damage changes; nothing for a car in good shape</summary>
     public static Dictionary<string, string> Generate(RaceStartState damage, Func<string, string?> readFile)
     {
         var files = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         var bend = damage.SuspensionBend;
-        if (bend.Length >= 4 && bend.Any(b => b > 0) && readFile(SuspensionsFile) is { } suspensions)
+        var height = damage.RideHeight;
+        var bent = bend.Length >= 4 && bend.Any(b => b > 0);
+        var sags = height.Length >= 4 && height.Any(h => double.IsFinite(h) && h != 0);
+        if ((bent || sags) && readFile(SuspensionsFile) is { } suspensions)
         {
             var ini = new IniText(suspensions);
             foreach (var (section, left, right) in new[] { ("FRONT", 0, 1), ("REAR", 2, 3) })
             {
-                var toe = (Unit.Clamp01(bend[left], 0) + Unit.Clamp01(bend[right], 0)) / 2 * RaceStartState.MaxSuspensionBendMetres;
-                if (toe > 0 && ini.GetNumber(section, "TOE_OUT") is { } toeOut) ini.Set(section, "TOE_OUT", toeOut + toe, "0.000000");
+                if (bent)
+                {
+                    var toe = (Unit.Clamp01(bend[left], 0) + Unit.Clamp01(bend[right], 0)) / 2 * RaceStartState.MaxSuspensionBendMetres;
+                    if (toe > 0 && ini.GetNumber(section, "TOE_OUT") is { } toeOut) ini.Set(section, "TOE_OUT", toeOut + toe, "0.000000");
+                }
+
+                if (sags)
+                {
+                    var lift = (Finite(height[left]) + Finite(height[right])) / 2;
+                    if (lift != 0 && ini.GetNumber(section, "ROD_LENGTH") is { } rod) ini.Set(section, "ROD_LENGTH", rod + lift, "0.0000");
+                }
             }
 
             if (ini.Changed) files[SuspensionsFile] = ini.ToString();

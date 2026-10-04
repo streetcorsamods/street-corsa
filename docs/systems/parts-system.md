@@ -843,9 +843,17 @@ car's data (a worn gearbox shifts slower, a bent axle gets the mean bend of its 
 totaled body or under 2 litres in the tank (a tank whose size no race has reported yet counts as full).
 
 `RepairShop.Jobs` lists what the garage can fix, each with its cost and time: an engine rebuild (every engine part
-with `Tear`), a gearbox rebuild, a corner straightened, a new tyre for a blown one, body work. A part repair costs
+with `Tear`), a gearbox rebuild, a corner straightened, a new tyre for a blown one, body work, rust repair and respray
+(`RustCost` $900 and `PaintCost` $300 by how far each goes; a respray alone for worn paint without rust), a new
+windscreen (`WindscreenCost` $60). A part repair costs
 `PartShare` (60%) of the damaged parts' new price times the damage, plus `Labour` ($15); body work `BodyCostPerKmh`
-($8) per km/h. The same list fills the tank (`FuelPerLitre`, $0.11) and washes the car (`Wash`, $3), 15 minutes
+($8) per km/h.
+
+**How used a car looks** (`Parts/Cars/CarLooks`, docs/roadmap.md step 28 ideas 3 and 4): rust, worn paint and a cracked
+windscreen on the car (`Car.Rust`, `PaintWear`, `GlassCracks`), rolled when it comes into the game by who sells it,
+rust growing every day (`RustTask`), a front hit of 25 km/h cracking the windscreen. A spring under 0.6 sags its corner,
+5 cm broken (`CarLooks.RideHeight`): the scenes lean the body by it, AC gets a shorter `ROD_LENGTH` per axle. The game
+draws it all as a wear layer over the car's body (`Looks/WearLayer`), in its scenes and in AC. The same list fills the tank (`FuelPerLitre`, $0.11) and washes the car (`Wash`, $3), 15 minutes
 each. The garage's Repairs button shows them (`Dialogs/RepairShop`); the parts view shows a part's damage next to its
 wear.
 

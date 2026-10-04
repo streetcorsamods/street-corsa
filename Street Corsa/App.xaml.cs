@@ -313,6 +313,7 @@ namespace StreetCorsa
             Scheduler.RegisterTask(new CarAdsReviewTask(SaleService));
             // A game with no gas station fills the cars up overnight
             Scheduler.RegisterTask(new Services.Scheduler.Tasks.StationStandInTask());
+            Scheduler.RegisterTask(new Services.Scheduler.Tasks.RustTask());
 
             // Last: these two put engines together on a worker thread and hand the day back before they are
             // done. What comes before them is finished by the time whoever spent the time carries on.

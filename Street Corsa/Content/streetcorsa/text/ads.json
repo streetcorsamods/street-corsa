@@ -7,7 +7,8 @@
     "carburettor or injection: the game cannot tell them apart), heads, cam, intake, headers), {engine} what the seller says about the engine (\"GM 327, 275 hp\";",
     "ads.car.engine and ads.car.built only), {km} the mileage (ads.car.low_miles, as {km:distance}). A part's ad: {part}",
     "the part's name, {kind} its kind as a shop's shelf says it (\"Camshafts\"). ads.car.mint and ads.car.rough take",
-    "nothing, nor do the character lines."
+    "nothing, nor do the character lines, nor what the car shows (ads.car.rust, ads.car.paint, ads.car.cracked_screen):",
+    "a car that shows rust, worn paint, a cracked windshield or its dirt is never called mint."
   ],
   "lines": {
     "ads.car.blower": [
@@ -72,6 +73,21 @@
       "Project car. Runs, mostly.",
       "Rough but solid. Priced to go.",
       "Fixer-upper. Bring a trailer."
+    ],
+    "ads.car.rust": [
+      "Some rust. Nothing a welder can't fix.",
+      "Rust in the usual places. Solid underneath.",
+      "Body needs work, runs fine."
+    ],
+    "ads.car.paint": [
+      "Paint is tired. Runs good.",
+      "Needs paint. Mechanically sound.",
+      "Faded paint, honest car."
+    ],
+    "ads.car.cracked_screen": [
+      "Windshield cracked, otherwise solid.",
+      "Needs a windshield.",
+      "Cracked glass, priced to match."
     ],
     "ads.car.low_miles": [
       "Only {km:distance}. Hardly driven.",

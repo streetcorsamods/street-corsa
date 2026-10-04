@@ -40,6 +40,7 @@
     "king": {
       "money": 20000,
       "carChoices": 5,
+      "carCondition": 0.95,
       "races": 52,
       "wins": 48,
       "pinkSlipsWon": 12

@@ -49,9 +49,15 @@ opponent's car, a pink-slipped car going back on a lot and the pink-slip challen
 - × its history (`HistoryFactor`, step 10): +1% a win and +2% a car won on a pink slip; −2% an owner beyond the
   second and −1% every 10,000 km past 80,000 (each at most −8%); all together within ±15%. A car with no history
   (an older save) is ×1.
+- × how it looks (`LooksFactor`): a body all rust loses 30%, paint worn all over 8%, a cracked windscreen 2%, each as
+  far as it goes (`market.rustLoss`, `paintWearLoss`, `crackedScreenLoss`)
 - plus half of what the car's engine parts cost new beyond its factory build's, scaled by condition (`ValueOf`, with the
   parts catalog; without it the engine counts as the factory one)
 - rounded to the nearest $100
+
+A dealer's listing gets its looks rolled with it (`CarLooks.Roll`, `LookSource.Dealer`: a little rust and worn paint on
+a rough car, washed, rarely a cracked windscreen) and is priced as it looks; a rival's own car is a private one
+(`LookSource.Private`: more of everything, dirty), and its ad shows it as it is.
 
 A listing's price is that times the dealer's random variation of ±20%, then times the save's
 `GameRules.CarPriceMultiplier` (the difficulty: 0.85 Easy, 1 Normal, 1.15 Hard). The multiplier is on what sellers

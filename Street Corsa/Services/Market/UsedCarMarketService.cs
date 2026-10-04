@@ -388,6 +388,7 @@ namespace StreetCorsa.Services.Market
                 History = car.History?.Copy() ?? new CarHistory(),
                 CarInstanceId = car.InstanceId
             };
+            CarLooks.CopyTo(car, listing);
 
             if (describeEngine && listing.Parts.Count > 0 && DescribeEngine(car) is { } engine)
             {
@@ -487,7 +488,11 @@ namespace StreetCorsa.Services.Market
             var condition = GenerateCondition(definition);
             var mileage = GenerateMileage();
             var history = new CarHistory { EarlierOwners = GenerateEarlierOwners(mileage) };
-            var price = CalculatePrice(profile.BasePrice, condition, CarValuation.HistoryFactor(history, mileage));
+
+            // A dealer cleans its cars up for the lot: some rust and worn paint for a rough one, washed; priced as it looks
+            var looks = CarLooks.Roll(condition, LookSource.Dealer, _random);
+            var price = CalculatePrice(profile.BasePrice * CarValuation.LooksFactor(looks.Rust, looks.Paint, looks.Cracks), condition,
+                CarValuation.HistoryFactor(history, mileage));
 
             // Get random skin from available skins
             var skinId = "default";
@@ -510,6 +515,7 @@ namespace StreetCorsa.Services.Market
                 History = history
             };
 
+            CarLooks.Give(listing, looks);
             return listing;
         }
 

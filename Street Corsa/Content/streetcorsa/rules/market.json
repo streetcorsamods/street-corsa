@@ -38,6 +38,9 @@
     "maxMileagePenalty": 0.08,
     "maxHistoryShare": 0.15,
     "missingEngineShare": 0.4,
+    "rustLoss": 0.3,
+    "paintWearLoss": 0.08,
+    "crackedScreenLoss": 0.02,
     "missingWheelShare": 0.03,
     "missingCornerPartShare": 0.01
   }
