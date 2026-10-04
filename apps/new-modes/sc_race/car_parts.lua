@@ -14,8 +14,9 @@
 
   Engine parts that stand out (a supercharger and what sits on it): CAR_n_PART_1, _2... name a model, CAR_n_PART_k_AT
   where it sits in the space of the car's model (placed by the game as its garage places the engine), loaded into the
-  node that holds the car's wheel nodes so it moves with the body and is drawn with it (a model loaded straight under
-  the car's root was placed but never drawn, found in the game 2026-10-03). The game's place is an estimate that can leave the whole stack under the hood:
+  car's body node (AC's BODYTR) so it moves with the body and is drawn with it (a model loaded straight under the car's
+  root was placed but never drawn, one in the node over a wheel went round with the wheel: found in the game
+  2026-10-03). The game's place is an estimate that can leave the whole stack under the hood:
   the parts go up until the first one's base (the supercharger's) sits on the car's surface straight above it (never
   down), as the game's scenes do. A hood they go through stays as it is.
 
@@ -325,13 +326,15 @@ local function surfaceAbove(root, x, y, z)
   return y + RAY_FROM - distance
 end
 
--- The node that holds the car's wheel nodes: models in it are drawn with the car (our wheels are, a level down) and
--- move with its body; nil without wheel nodes
-local function wheelHolder(root)
-  local wheel = root:findNodes('WHEEL_LF')
-  if wheel:size() == 0 then return nil end
-  local holder = wheel:at(1):getParent()
-  return holder:size() > 0 and holder or nil
+-- The node of the car's body, models in it drawn with the car and moving with its body: AC's BODYTR, else its CARNODE.
+-- Not what holds a wheel node: AC puts each wheel in a WHEEL_TR of its own, which steers and turns (found in the game
+-- 2026-10-03, the supercharger going round with the front wheel)
+local function bodyNode(root)
+  for _, name in ipairs({ 'BODYTR', 'CARNODE' }) do
+    local node = root:findNodes(name)
+    if node:size() > 0 then return node:at(1) end
+  end
+  return nil
 end
 
 -- The engine parts that stand out, in the car's main model, lifted onto the hood
@@ -354,7 +357,7 @@ local function setUpExtras(carIndex, root)
   end
 
   -- Where they go, and what takes them from the car's space to the holder's: through the world, whatever lies between
-  local holder = wheelHolder(root) or root
+  local holder = bodyNode(root) or root
   local fromCar = root:getWorldTransformationRaw():mul(holder:getWorldTransformationRaw():inverse())
   log('car ' .. carIndex .. ': engine parts go into ' .. tostring(holder:name()) .. ' (in ' .. tostring(holder:getParent():name()) .. ')')
 

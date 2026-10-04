@@ -161,9 +161,10 @@ end
 
 -- The Valiant: the left front wheel as measured, the right front its mirror
 local carRoot = node('carRoot')
-local car = node('chevelle.kn5', carRoot)
+local car = node('CARNODE', carRoot)
+node('BODYTR', car)
 local function wheel(name, side, suffix)
-  local w = node(name, car)
+  local w = node(name, node('WHEEL_TR', car))
   local function m(n, x0, x1, r)
     local a, b = side * x0, side * x1
     mesh(n .. suffix, node(n .. suffix, w), { math.min(a, b), -r, -r }, { math.max(a, b), r, r })
@@ -184,7 +185,7 @@ end
 world.wheels = { LF = wheel('WHEEL_LF', 1, 'LF'), RF = wheel('WHEEL_RF', -1, 'RF') }
 
 -- The Chevelle '70's left rear as its KN5 has the left front: meshes named after the node, materials saying what they are
-local chevelle = node('WHEEL_LR', car)
+local chevelle = node('WHEEL_LR', node('WHEEL_TR', car))
 local function sub(n, material, x0, x1, r)
   mesh('WHEEL_LR_SUB' .. n, node('WHEEL_LR_SUB' .. n, chevelle), { x0, -r, -r }, { x1, r, r }, material)
 end
@@ -358,8 +359,8 @@ def an_engine_part_goes_into_the_node_holding_the_wheels():
     _, world = run({'CAR_0_PART_1': r'parts\engines_blower.kn5', 'CAR_0_PART_1_AT': '1,0,0, 0,1,0, 0,0,1, 0,0.8,1.2'})
     part = [i for i in world.loaded.values() if i.file.endswith('engines_blower.kn5')]
     t = part and matrix(part[0].node.transform)
-    check('an engine part goes into the node holding the wheels, where it sits',
-          part and part[0].node.parent.name == 'chevelle.kn5' and near(t[3][1], 0.8) and near(t[3][2], 1.2), list(world.log.values()))
+    check('an engine part goes into the body node, never a wheel, where it sits',
+          part and part[0].node.parent.name == 'BODYTR' and near(t[3][1], 0.8) and near(t[3][2], 1.2), list(world.log.values()))
 
 
 def engine_parts_under_the_hood_go_up_onto_it_and_never_down():
