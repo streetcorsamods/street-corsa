@@ -62,7 +62,9 @@ namespace StreetCorsa.Dialogs.RepairShop
         private void Refresh()
         {
             Jobs.Clear();
-            foreach (var job in Parts.Cars.RepairShop.Jobs(_car, _catalog, _priceMultiplier))
+            // The can of gas at a gas station's pump price (the mods' first), not a price of its own
+            var gas = Services.Station.StationScenes.Installed is { Count: > 0 } stations ? stations[0].Prices : null;
+            foreach (var job in Parts.Cars.RepairShop.Jobs(_car, _catalog, _priceMultiplier, gas))
             {
                 Jobs.Add(new RepairJobRow(job, new AsyncRelayCommand(() => Do(job), () => !_busy && _money() >= job.Cost, name: "Repair")));
             }

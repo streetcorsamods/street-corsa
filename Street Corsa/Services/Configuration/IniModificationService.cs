@@ -198,7 +198,7 @@ namespace StreetCorsa.Services.Configuration
         internal static string IniId(string? value, string what)
         {
             var id = value ?? string.Empty;
-            if (id.Any(c => char.IsControl(c) || c is '[' or ']' or '=' or ';'))
+            if (!RaceStartState.IsIniValue(id))
                 throw new ArgumentException($"The {what} id '{IniName(id)}' has characters that cannot go into an INI file");
             return id;
         }
@@ -431,11 +431,13 @@ namespace StreetCorsa.Services.Configuration
             }
 
             // The shape each car goes in, from its earlier races: the mode puts it into AC before the green
+            var leftOut = new List<string>();
             foreach (var (index, start) in new[] { (0, intent.PlayerStart), (1, intent.OpponentStart) })
             {
                 if (start == null || (tune != null && index > 0)) continue;
-                foreach (var (key, value) in start.IniKeys(index)) sb.AppendLine($"{key}={value}");
+                foreach (var (key, value) in start.IniKeys(index, leftOut)) sb.AppendLine($"{key}={value}");
             }
+            LogLeftOut(leftOut);
 
             // What the mode says in AC, in the player's language
             sb.AppendLine();
@@ -503,7 +505,9 @@ namespace StreetCorsa.Services.Configuration
             if (shown)
             {
                 sb.AppendLine("[STREET_CORSA]");
-                foreach (var (key, value) in StreetCorsa.Models.Race.RaceStartState.ShownKeys(0, intent.Shown)) sb.AppendLine($"{key}={value}");
+                var leftOut = new List<string>();
+                foreach (var (key, value) in StreetCorsa.Models.Race.RaceStartState.ShownKeys(0, intent.Shown, leftOut)) sb.AppendLine($"{key}={value}");
+                LogLeftOut(leftOut);
                 sb.AppendLine();
             }
 
@@ -593,11 +597,12 @@ namespace StreetCorsa.Services.Configuration
             var world = Rules.RuleBook.Current.World;
             var culture = System.Globalization.CultureInfo.InvariantCulture;
             sb.AppendLine($"__CM_WEATHER_TYPE={world.WeatherType.ToString(culture)}");
-            sb.AppendLine($"__TRACK_GEOTAG_LONG={world.Longitude.ToString("0.###############", culture)}");
+            var baseWorld = new Rules.WorldRules();
+            sb.AppendLine($"__TRACK_GEOTAG_LONG={Degrees(world.Longitude, 180, baseWorld.Longitude).ToString("0.###############", culture)}");
             sb.AppendLine($"__TRACK_TIMEZONE_BASE_OFFSET={world.TimeZoneOffset.ToString(culture)}");
             sb.AppendLine("__TRACK_TIMEZONE_DTS=0");
             sb.AppendLine($"__TRACK_TIMEZONE_OFFSET={world.TimeZoneOffset.ToString(culture)}");
-            sb.AppendLine($"__TRACK_GEOTAG_LAT={world.Latitude.ToString("0.###############", culture)}");
+            sb.AppendLine($"__TRACK_GEOTAG_LAT={Degrees(world.Latitude, 90, baseWorld.Latitude).ToString("0.###############", culture)}");
             sb.AppendLine("__CM_WEATHER_CONTROLLER=base");
             sb.AppendLine();
 
@@ -608,6 +613,29 @@ namespace StreetCorsa.Services.Configuration
             sb.AppendLine();
 
         }
+
+        /// <summary>A car's names that could not go into race.ini (<see cref="RaceStartState.ShownKeys"/>), told: the mode does without them</summary>
+        private void LogLeftOut(List<string> leftOut)
+        {
+            foreach (var name in leftOut) _logger.Warning("Left out of race.ini, its name cannot go into it: {Name}", IniName(name));
+        }
+
+        /// <summary>AC's weather the rules name, AC's clear sky when they name none or one that cannot go into race.ini as it is</summary>
+        internal static string WeatherName(string? weather)
+        {
+            const string clear = "4_mid_clear";
+            if (string.IsNullOrWhiteSpace(weather)) return clear;
+
+            var name = weather.Trim();
+            if (RaceStartState.IsIniValue(name)) return name;
+
+            AppLoggerFactory.CreateLogger("IniModification").Warning("The rules' weather '{Weather}' cannot go into race.ini; {Clear} is raced in", IniName(name), clear);
+            return clear;
+        }
+
+        /// <summary>A latitude or longitude of the rules' world, the base game's when it is no number or past <paramref name="most"/> either way</summary>
+        private static double Degrees(double value, double most, double baseFigure) =>
+            double.IsFinite(value) && Math.Abs(value) <= most ? value : baseFigure;
 
         /// <summary>The sections between [RACE] and the sessions that every launch shares</summary>
         private static void AppendTailSections(System.Text.StringBuilder sb)
@@ -644,7 +672,7 @@ namespace StreetCorsa.Services.Configuration
             sb.AppendLine();
 
             sb.AppendLine("[WEATHER]");
-            sb.AppendLine($"NAME={(string.IsNullOrWhiteSpace(world.Weather) ? "4_mid_clear" : world.Weather.Trim())}");
+            sb.AppendLine($"NAME={WeatherName(world.Weather)}");
             sb.AppendLine();
 
             sb.AppendLine("[WIND]");

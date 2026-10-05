@@ -863,10 +863,12 @@ namespace StreetCorsa.Services.Race
             return new PlayerMessage(formats.NameOf(format), string.Join("\n", lines));
         }
 
-        /// <summary>A lap time in milliseconds as the stopwatch shows it: 1:23.456</summary>
+        /// <summary>A lap time in milliseconds as the stopwatch shows it: 1:23.456 (one that is no number as 0:00.000)</summary>
         public static string LapTime(double milliseconds)
         {
-            var total = TimeSpan.FromMilliseconds(Math.Max(0, Math.Round(milliseconds)));
+            // The validator holds the times to a day; a score shown as a time is held only to its largest score
+            var shown = double.IsFinite(milliseconds) ? Math.Clamp(Math.Round(milliseconds), 0, Validation.RaceResultValidator.MaxScore) : 0;
+            var total = TimeSpan.FromMilliseconds(shown);
             var decimals = Locale.Culture.NumberFormat.NumberDecimalSeparator;
             return $"{(int)total.TotalMinutes}:{total.Seconds:00}{decimals}{total.Milliseconds:000}";
         }

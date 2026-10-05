@@ -249,9 +249,10 @@ namespace StreetCorsa
             ProfileRepository = new CarProfileRepository();
             ProfileService = new CarProfileService(CatalogRepository, ProfileRepository);
             CarPartsService = new Services.Parts.CarPartsService(CatalogRepository, ProfileRepository);
-            NewspaperPartsService = new Services.Parts.NewspaperPartsService(CarPartsService);
+            var partShops = new Services.PartShops.PartShopCatalog();
+            NewspaperPartsService = new Services.Parts.NewspaperPartsService(CarPartsService, partShops);
             DealerCatalog = new Services.Dealers.DealerCatalog();
-            PartShopService = new Services.PartShops.PartShopService(new Services.PartShops.PartShopCatalog(), CarPartsService, NewspaperPartsService);
+            PartShopService = new Services.PartShops.PartShopService(partShops, CarPartsService, NewspaperPartsService);
             MarketService = new UsedCarMarketService(CatalogRepository, ProfileRepository, CarPartsService, DealerCatalog);
 
             // Scheduler and Time Service

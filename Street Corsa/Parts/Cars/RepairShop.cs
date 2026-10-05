@@ -119,7 +119,8 @@ public static class RepairShop
 
     /// <param name="catalog">Null when there are no parts: only the body can be done</param>
     /// <param name="priceMultiplier">The save's <see cref="GameRules.PartPriceMultiplier"/>, on the whole bill</param>
-    public static List<RepairJob> Jobs(Car car, PartsCatalog? catalog, double priceMultiplier = 1.0)
+    /// <param name="gas">The gas station's prices, which the can of gas is paid at; the base game's when null</param>
+    public static List<RepairJob> Jobs(Car car, PartsCatalog? catalog, double priceMultiplier = 1.0, StationPrices? gas = null)
     {
         var prices = GameRules.Sane(priceMultiplier);
         var jobs = new List<RepairJob>();
@@ -135,7 +136,7 @@ public static class RepairShop
         {
             var litres = Math.Min(CanOfGasLitres, (CarCondition.TankLitres(car) ?? CanOfGasLitres) - fuel);
             jobs.Add(new RepairJob(CanOfGas, PartWords.Say("repair.job.can_of_gas"), PartWords.Say("repair.job.can_of_gas.detail"),
-                PartPricing.Round((double)StationPrices.Default.FuelPerLitre * litres * prices), GameAction.GarageChore,
+                GasStation.GasPrice(gas ?? StationPrices.Default, litres, prices), GameAction.GarageChore,
                 () => car.FuelLitres = fuel + litres, isChore: true));
         }
 

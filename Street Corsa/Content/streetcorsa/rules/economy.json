@@ -16,6 +16,8 @@
     "partAdMinWear": 0.35,
     "partAdMaxWear": 0.92,
     "partAdEngineChance": 0.08,
+    "rivalPartMinAskShare": 0.85,
+    "rivalPartMaxAskShare": 1.1,
     "camshaftPrizeCash": 500
   }
 }

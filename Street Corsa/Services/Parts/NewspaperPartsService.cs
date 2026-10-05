@@ -2,6 +2,7 @@ using StreetCorsa.Logging;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Parts;
 using StreetCorsa.Parts.Cars;
+using StreetCorsa.Services.PartShops;
 using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Services.Parts
@@ -29,12 +30,15 @@ namespace StreetCorsa.Services.Parts
         private static double CompleteEngineChance => Rules.RuleBook.Current.Economy.PartAdEngineChance;
 
         private readonly ICarPartsService _parts;
+        private readonly IPartShopCatalog? _shops;
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger(LogCategory.Parts);
         private readonly Lazy<IReadOnlyList<PartDefinition>> _assortment;
 
-        public NewspaperPartsService(ICarPartsService parts)
+        /// <param name="shops">The part shops of the game, so no ad asks less than one of them pays; the rules' figures alone when null</param>
+        public NewspaperPartsService(ICarPartsService parts, IPartShopCatalog? shops = null)
         {
             _parts = parts;
+            _shops = shops;
             _assortment = new Lazy<IReadOnlyList<PartDefinition>>(FindAssortment);
         }
 
@@ -58,7 +62,8 @@ namespace StreetCorsa.Services.Parts
 
             // Loose from the game state: the list of ads belongs to the caller's thread, which may be saving it right now
             var priceMultiplier = gameState.Rules.PartPriceMultiplier;
-            var fresh = await Task.Run(() => IsAvailable ? CreateAds(wanted, currentDate, priceMultiplier) : null);
+            var mostPaid = PartShopRules.MostPaidFactor(_shops?.All);
+            var fresh = await Task.Run(() => IsAvailable ? CreateAds(wanted, currentDate, priceMultiplier, mostPaid) : null);
             if (fresh == null) return;
 
             // A rival whose part nobody wanted lets a shop have it
@@ -79,10 +84,11 @@ namespace StreetCorsa.Services.Parts
 
         internal static bool IsExpired(PartAd ad, DateTime currentDate) => (currentDate - ad.PostedDate).TotalDays > AdLifetimeDays;
 
-        private List<PartAd> CreateAds(int count, DateTime currentDate, double priceMultiplier)
+        private List<PartAd> CreateAds(int count, DateTime currentDate, double priceMultiplier, double mostPaidFactor)
         {
             var ads = new List<PartAd>();
-            while (ads.Count < count && CreateAd(currentDate, priceMultiplier) is { } ad) ads.Add(ad);
+            while (ads.Count < count && CreateAd(currentDate, priceMultiplier, mostPaidFactor) is { } ad) ads.Add(ad);
+
             return ads;
         }
 
@@ -184,7 +190,14 @@ namespace StreetCorsa.Services.Parts
             return true;
         }
 
-        private PartAd? CreateAd(DateTime currentDate, double priceMultiplier)
+        /// <summary>
+        /// What a used part in the paper is asked: <paramref name="asking"/>, though never as little as the most a shop
+        /// pays for it (<see cref="PartShopRules.MostPaidFactor"/>), so nobody buys it here and sells it straight on at a profit
+        /// </summary>
+        public static decimal UsedAsk(PartsCatalog catalog, PartInstance part, double asking, double mostPaidFactor) =>
+            Math.Max(PartPricing.Round(asking), PartPricing.Above(PartPricing.Round(PartPricing.WorthOfAssembly(catalog, part) * mostPaidFactor)));
+
+        private PartAd? CreateAd(DateTime currentDate, double priceMultiplier, double mostPaidFactor)
         {
             var random = Random.Shared;
             var catalog = _parts.Catalog;
@@ -207,7 +220,7 @@ namespace StreetCorsa.Services.Parts
             // Private sellers ask around what a shop would, some more, some less, and more in a harder game
             var asking = PartPricing.WorthOfAssembly(catalog, part) * PartPricing.UsedShopFactor * (0.8 + random.NextDouble() * 0.4)
                          * GameRules.Sane(priceMultiplier);
-            var ad = new PartAd(part, PartPricing.Round(asking), GameText.Installed.Pick("names.part_sellers", random))
+            var ad = new PartAd(part, UsedAsk(catalog, part, asking, mostPaidFactor), GameText.Installed.Pick("names.part_sellers", random))
             {
                 PostedDate = currentDate.AddDays(-random.Next(0, 4))
             };

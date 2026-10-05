@@ -94,6 +94,10 @@ public static class GasStation
         return said == key ? null : said;
     }
 
+    /// <summary>What <paramref name="litres"/> of gas cost at <paramref name="prices"/>: at the pump, and in the can the garage brings a dry car</summary>
+    public static decimal GasPrice(StationPrices prices, double litres, double priceMultiplier) =>
+        PartPricing.Round((double)prices.FuelPerLitre * litres * GameRules.Sane(priceMultiplier));
+
     /// <param name="catalog">For the oil pan's size; null takes a V8's of the day</param>
     /// <param name="priceMultiplier">The save's <see cref="GameRules.PartPriceMultiplier"/>, on the whole bill</param>
     public static List<RepairJob> Jobs(Car car, PartsCatalog? catalog, StationPrices prices, double priceMultiplier = 1.0)
@@ -105,7 +109,7 @@ public static class GasStation
         if (litres >= FillFromLitres)
         {
             jobs.Add(new RepairJob(FillUp, PartWords.Say("station.job.fill_up"), PartWords.Say("station.job.fill_up.detail", ("left", CarCondition.FuelLeft(car)), ("tank", car.FuelTankLitres)),
-                PartPricing.Round((double)prices.FuelPerLitre * litres * multiplier), GameAction.GarageChore, () => car.FuelLitres = null, isChore: true));
+                GasPrice(prices, litres, multiplier), GameAction.GarageChore, () => car.FuelLitres = null, isChore: true));
         }
 
         if (car.Engine != null && 1 - CarCondition.OilLeft(car) >= TopUpFrom)

@@ -70,7 +70,7 @@ namespace StreetCorsa.Models.Race
             BodyKmh.All(z => z <= 0) && EngineLife >= 1000 && GearboxWear <= 0 && SuspensionBend.All(b => b <= 0) && RideHeight.All(h => h == 0);
 
         /// <summary>The race.ini keys for the car at <paramref name="carIndex"/>, in AC's invariant number format</summary>
-        public IEnumerable<(string Key, string Value)> IniKeys(int carIndex)
+        public IEnumerable<(string Key, string Value)> IniKeys(int carIndex, ICollection<string>? leftOut = null)
         {
             var prefix = $"CAR_{carIndex}_";
             yield return (prefix + "BODY", List(BodyKmh, "0.0"));
@@ -84,7 +84,7 @@ namespace StreetCorsa.Models.Race
             yield return (prefix + "DIRT", Unit.Clamp01(Dirt, ifNotFinite: 0).ToString("0.000", CultureInfo.InvariantCulture));
             if (Cooling is { } cooling)
                 yield return (prefix + "COOLING", List([cooling.Cooling, cooling.Fan, cooling.OilG], "0.000"));
-            foreach (var key in ShownKeys(carIndex, Shown)) yield return key;
+            foreach (var key in ShownKeys(carIndex, Shown, leftOut)) yield return key;
         }
 
         /// <summary>
@@ -92,26 +92,31 @@ namespace StreetCorsa.Models.Race
         /// car_parts.lua): per wheel the rim's model, and the tyre's with where it sits on the rim; per engine part
         /// standing out (CAR_n_PART_1, _2...) its model and where it sits in the car's model
         /// </summary>
-        public static IEnumerable<(string Key, string Value)> ShownKeys(int carIndex, Parts.Cars.ShownSet? shown)
+        public static IEnumerable<(string Key, string Value)> ShownKeys(int carIndex, Parts.Cars.ShownSet? shown, ICollection<string>? leftOut = null)
         {
             if (shown == null) yield break;
             var prefix = $"CAR_{carIndex}_";
-            if (shown.Frame is { } frame)
+            // A name from the car's own files (a node, a texture) goes in as it is, so one that would break its line of
+            // race.ini is left out (told in leftOut) rather than let it add or change a key; the mode then does without it
+            if (shown.Frame is { } frame && Fits(frame.Node, carIndex, "model node", leftOut))
             {
                 yield return (prefix + "MODEL_NODE", frame.Node);
                 yield return (prefix + "MODEL_AT", Matrix(frame.At));
             }
-            if (shown.Layer is { } layer) yield return (prefix + "LOOK", layer.Name);
-            for (var i = 0; i < shown.PaintFiles.Count; i++)
+            if (shown.Layer is { } layer && Fits(layer.Name, carIndex, "look", leftOut)) yield return (prefix + "LOOK", layer.Name);
+            // The mode reads the paints and the parts up to the first missing number: one left out is no gap
+            var paints = shown.PaintFiles.Where(p => Fits(p.File.Name, carIndex, "paint file", leftOut) && Fits(p.Texture, carIndex, "paint texture", leftOut)).ToList();
+            for (var i = 0; i < paints.Count; i++)
             {
                 // Each tinted texture, and the car's texture it takes the place of
-                var paint = shown.PaintFiles[i];
+                var paint = paints[i];
                 yield return (prefix + "PAINT_" + (i + 1), paint.File.Name);
                 yield return (prefix + "PAINT_" + (i + 1) + "_TEXTURE", paint.Texture);
             }
-            for (var i = 0; i < shown.Extras.Count; i++)
+            var extras = shown.Extras.Where(e => Fits(e.Model.Name, carIndex, "part model", leftOut)).ToList();
+            for (var i = 0; i < extras.Count; i++)
             {
-                var extra = shown.Extras[i];
+                var extra = extras[i];
                 yield return (prefix + "PART_" + (i + 1), extra.Model.Name);
                 yield return (prefix + "PART_" + (i + 1) + "_AT", Matrix(extra.At));
                 yield return (prefix + "PART_" + (i + 1) + "_BOX",
@@ -120,15 +125,30 @@ namespace StreetCorsa.Models.Race
             var wheels = shown.Wheels;
             for (var corner = 0; corner < Math.Min(wheels.Count, Parts.Cars.WheelFit.WheelNodes.Length); corner++)
             {
-                if (wheels[corner] is not { } wheel) continue;
+                if (wheels[corner] is not { } wheel || !Fits(wheel.Rim.Name, carIndex, "rim model", leftOut)) continue;
                 // AC's own names for the wheels, in the same order
                 var name = Parts.Cars.WheelFit.WheelNodes[corner]["WHEEL_".Length..];
                 yield return (prefix + "RIM_" + name, wheel.Rim.Name);
-                if (wheel.Tyre is not { } tyre) continue;
+                if (wheel.Tyre is not { } tyre || !Fits(tyre.Name, carIndex, "tyre model", leftOut)) continue;
                 yield return (prefix + "TYRE_" + name, tyre.Name);
                 yield return (prefix + "TYRE_" + name + "_AT", Matrix(wheel.TyreOnRim));
                 if (wheel.TyreOptional) yield return (prefix + "TYRE_" + name + "_OPTIONAL", "1");
             }
+        }
+
+        /// <summary>
+        /// Nothing in <paramref name="value"/> could end its line, open a section, start a comment or make it a key of its
+        /// own: it goes into a cfg file as it is
+        /// </summary>
+        public static bool IsIniValue(string value) => !value.Any(c => char.IsControl(c) || c is '[' or ']' or '=' or ';');
+
+        /// <summary>The name can go into race.ini as it is; else it is told in <paramref name="leftOut"/></summary>
+        private static bool Fits(string? value, int carIndex, string what, ICollection<string>? leftOut)
+        {
+            if (value != null && IsIniValue(value)) return true;
+
+            leftOut?.Add($"car {carIndex}: the {what} '{value}'");
+            return false;
         }
 
         /// <summary>A matrix as race.ini carries it: its rows of 4x3, the last column left out</summary>

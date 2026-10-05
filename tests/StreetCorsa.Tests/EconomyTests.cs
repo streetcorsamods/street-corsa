@@ -352,10 +352,12 @@ public class CarSaleServiceTests
 
     [Theory]
     [InlineData(1500, 2000, 0.0, 1500)]
+    [InlineData(2000, 2000, 0.0, 1700)]
     [InlineData(2400, 2000, 1.0, 2400)]
     [InlineData(2400, 2000, 0.0, 2040)]
-    [InlineData(3000, 2800, 0.0, 2800)]
-    public void Buyers_haggle_over_what_the_car_is_worth_but_not_below_it(int asking, int value, double roll, int offer) =>
+    [InlineData(3000, 2800, 0.0, 2550)]
+    [InlineData(3000, 3500, 0.0, 2800)]
+    public void Buyers_haggle_every_ask_but_not_below_four_fifths_of_the_worth(int asking, int value, double roll, int offer) =>
         Assert.Equal((decimal)offer, CarSaleService.OfferAmount(asking, value, roll));
 
     [Fact]

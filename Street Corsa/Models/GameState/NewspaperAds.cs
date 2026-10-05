@@ -125,6 +125,12 @@ namespace StreetCorsa.Models.GameState
         public string? RivalName { get; set; }
         public decimal Amount { get; set; }
 
+        /// <summary>
+        /// What the car was worth the day the buyer called: a car worth less when the offer is taken (its engine or
+        /// wheels taken off since) gets an offer cut to match. Null on offers from before it was kept.
+        /// </summary>
+        public decimal? ValueAtOffer { get; set; }
+
         /// <summary>Game time; after it the buyer has found another car</summary>
         public DateTime Expires { get; set; }
 

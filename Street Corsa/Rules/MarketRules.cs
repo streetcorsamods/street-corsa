@@ -69,6 +69,23 @@ public sealed class MarketRules
     /// <summary>The chance the buyer who calls is one of the rivals, when one of them wants the car and can pay</summary>
     public double RivalBuyerChance { get; set; } = 0.4;
 
+    /// <summary>
+    /// A buyer from the paper haggles every ask: the offer is drawn between this share of the asking price and all of it,
+    /// so a car bought cheap and put straight back in the paper leaves little over
+    /// </summary>
+    public double PaperHaggleShare { get; set; } = 0.85;
+
+    /// <summary>The least a paper buyer offers, as a share of what the car is worth (never more than the asking price)</summary>
+    public double PaperFloorShare { get; set; } = 0.8;
+
+    /// <summary>
+    /// A car the player has had fewer than <see cref="PaperFreshDays"/> days draws buyers this much less often: people
+    /// are wary of a car that is back in the paper the week after it was sold
+    /// </summary>
+    public double PaperFreshChanceFactor { get; set; } = 0.5;
+
+    public int PaperFreshDays { get; set; } = 14;
+
     /// <summary>Share of the money put into an engine beyond the factory one that shows in the car's worth</summary>
     public double ModificationsShare { get; set; } = 0.5;
 
@@ -150,4 +167,29 @@ public sealed class MarketRules
     public float BackLotMinCondition { get; set; } = 0.25f;
 
     public float BackLotMaxCondition { get; set; } = 0.55f;
+
+    /// <summary>
+    /// The paper buyers' figures held to what makes sense, told: a share outside 0 to 1 (or not a number) and a negative
+    /// number of days are the base game's
+    /// </summary>
+    public void Check(List<string> problems)
+    {
+        var fresh = new MarketRules();
+        PaperHaggleShare = Share(PaperHaggleShare, fresh.PaperHaggleShare, "paperHaggleShare", problems);
+        PaperFloorShare = Share(PaperFloorShare, fresh.PaperFloorShare, "paperFloorShare", problems);
+        PaperFreshChanceFactor = Share(PaperFreshChanceFactor, fresh.PaperFreshChanceFactor, "paperFreshChanceFactor", problems);
+        if (PaperFreshDays < 0)
+        {
+            problems.Add($"market.paperFreshDays ({PaperFreshDays}) is below 0; the base game's {fresh.PaperFreshDays} is kept");
+            PaperFreshDays = fresh.PaperFreshDays;
+        }
+    }
+
+    private static double Share(double value, double baseFigure, string name, List<string> problems)
+    {
+        if (double.IsFinite(value) && value is >= 0 and <= 1) return value;
+
+        problems.Add(FormattableString.Invariant($"market.{name} ({value}) is no share between 0 and 1; the base game's {baseFigure} is kept"));
+        return baseFigure;
+    }
 }

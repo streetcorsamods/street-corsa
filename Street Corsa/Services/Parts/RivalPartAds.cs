@@ -2,6 +2,7 @@ using StreetCorsa.Helpers;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Parts;
 using StreetCorsa.Parts.Cars;
+using StreetCorsa.Services.PartShops;
 
 namespace StreetCorsa.Services.Parts
 {
@@ -13,19 +14,21 @@ namespace StreetCorsa.Services.Parts
     public static class RivalPartAds
     {
         /// <summary>What a rival asks for a part, as a share of what a used parts shop asks: around the same, give or take</summary>
-        public const double MinAskShare = 0.85;
-        public const double MaxAskShare = 1.1;
+        public static double MinAskShare => Rules.RuleBook.Current.Economy.RivalPartMinAskShare;
+        public static double MaxAskShare => Rules.RuleBook.Current.Economy.RivalPartMaxAskShare;
 
         /// <summary>
-        /// The part in the paper under <paramref name="seller"/>'s name, at a price near a used shop's; null when it
-        /// is worth nothing to anybody
+        /// The part in the paper under <paramref name="seller"/>'s name, at a price near a used shop's, never as little as
+        /// a shop of <paramref name="shops"/> (or of the rules) pays for it; null when it is worth nothing to anybody
         /// </summary>
-        public static PartAd? Post(GameState gameState, PartsCatalog catalog, Racer seller, PartInstance part, DateTime date, double roll)
+        public static PartAd? Post(GameState gameState, PartsCatalog catalog, Racer seller, PartInstance part, DateTime date, double roll,
+            IEnumerable<PartShopDefinition>? shops = null)
         {
             roll = Unit.Clamp01(roll, ifNotFinite: 0);
-            var asking = PartPricing.Round(PartPricing.WorthOfAssembly(catalog, part) * PartPricing.UsedShopFactor
-                                           * (MinAskShare + roll * (MaxAskShare - MinAskShare)) * GameRules.Sane(gameState.Rules.PartPriceMultiplier));
+            var asking = NewspaperPartsService.UsedAsk(catalog, part, PartPricing.WorthOfAssembly(catalog, part) * PartPricing.UsedShopFactor
+                * (MinAskShare + roll * (MaxAskShare - MinAskShare)) * GameRules.Sane(gameState.Rules.PartPriceMultiplier), PartShopRules.MostPaidFactor(shops));
             if (asking <= 0) return null;
+
 
             var ad = new PartAd(part, asking, seller.Name) { SellerRival = seller.Name, PostedDate = date };
             Market.AdBlurbs.Describe(ad, catalog);

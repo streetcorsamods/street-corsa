@@ -324,9 +324,11 @@ public sealed class RuleBook
         Range(Market, "market", nameof(MarketRules.StockLow), nameof(MarketRules.StockHigh), problems);
         Range(Market, "market", nameof(MarketRules.MinCondition), nameof(MarketRules.MaxCondition), problems);
         Range(Market, "market", nameof(MarketRules.MinMileage), nameof(MarketRules.MaxMileage), problems);
+        Market.Check(problems);
         Range(Street, "street", nameof(StreetRules.ShortestWait), nameof(StreetRules.LongestWait), problems);
         Range(Economy, "economy", nameof(EconomyRules.PartAdsLow), nameof(EconomyRules.PartAdsHigh), problems);
         Range(Economy, "economy", nameof(EconomyRules.PartAdMinWear), nameof(EconomyRules.PartAdMaxWear), problems);
+        Range(Economy, "economy", nameof(EconomyRules.RivalPartMinAskShare), nameof(EconomyRules.RivalPartMaxAskShare), problems);
         Range(PartShops, "partShops", nameof(PartShopRules.JunkyardMinWear), nameof(PartShopRules.JunkyardMaxWear), problems);
         Range(PartShops, "partShops", nameof(PartShopRules.HaggleMinCut), nameof(PartShopRules.HaggleMaxCut), problems);
         foreach (var (path, rules) in PartShops.Kinds.Select(k => ($"partShops.kinds.{k.Key}", k.Value))

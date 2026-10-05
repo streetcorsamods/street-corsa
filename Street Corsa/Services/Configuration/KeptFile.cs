@@ -28,9 +28,8 @@ namespace StreetCorsa.Services.Configuration
         {
             if (!File.Exists(kept)) return false;
 
-            var bytes = File.ReadAllBytes(kept);
-            ClearReadOnly(target);
-            SafeFile.WriteAllBytes(target, bytes);
+            // SafeFile takes a read-only mark off the target for the rename, and puts it back if the write fails
+            SafeFile.WriteAllBytes(target, File.ReadAllBytes(kept));
             if (readOnly) File.SetAttributes(target, File.GetAttributes(target) | FileAttributes.ReadOnly);
             return true;
         }
@@ -40,18 +39,6 @@ namespace StreetCorsa.Services.Configuration
         /// in place. A file hard-linked to another name (a mod manager, a second install) is thereby unlinked rather
         /// than changed under both names, and what goes back after the race is the only copy that was changed.
         /// </summary>
-        public static void Replace(string target, byte[] content)
-        {
-            ClearReadOnly(target);
-            SafeFile.WriteAllBytes(target, content);
-        }
-
-        /// <summary>Clears the read-only flag of a file that is there (the rename over it needs that); nothing otherwise</summary>
-        public static void ClearReadOnly(string file)
-        {
-            if (!File.Exists(file)) return;
-            var attributes = File.GetAttributes(file);
-            if (attributes.HasFlag(FileAttributes.ReadOnly)) File.SetAttributes(file, attributes & ~FileAttributes.ReadOnly);
-        }
+        public static void Replace(string target, byte[] content) => SafeFile.WriteAllBytes(target, content);
     }
 }

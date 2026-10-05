@@ -36,6 +36,11 @@ public sealed class EconomyRules
     /// <summary>Now and then somebody sells a whole engine instead of its parts: the chance of each ad</summary>
     public double PartAdEngineChance { get; set; } = 0.08;
 
+    /// <summary>What a rival asks for a part they took off, as a share of what a used parts shop asks, least to most: around the same</summary>
+    public double RivalPartMinAskShare { get; set; } = 0.85;
+
+    public double RivalPartMaxAskShare { get; set; } = 1.1;
+
     /// <summary>What a prize camshaft is worth in cash when no better one fits the car that won it</summary>
     public decimal CamshaftPrizeCash { get; set; } = 500m;
 

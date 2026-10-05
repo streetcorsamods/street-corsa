@@ -27,6 +27,13 @@ namespace StreetCorsa.Services.Race.Validation
         /// </summary>
         public const long MaxFileBytes = 1024 * 1024;
 
+        /// <summary>
+        /// The largest score, and the longest lap in milliseconds (a day), a result may hold: past them it is no race the
+        /// mode ran, and a time that long is past what a <see cref="TimeSpan"/> shows
+        /// </summary>
+        public const double MaxScore = 1e12;
+        public const double MaxLapTimeMs = 24 * 60 * 60 * 1000;
+
         public RaceResultValidator()
         {
             _logger = AppLoggerFactory.CreateLogger(LogCategory.RaceIngestion);
@@ -248,6 +255,23 @@ namespace StreetCorsa.Services.Race.Validation
                     return ValidationResult.Failure(
                         ValidationFailureReason.InvalidParticipantData,
                         $"Participant '{participant.DriverName}' has an impossible distance: {distance}");
+                }
+
+                // The score and the lap times go on the score card once the result is applied and saved: one that
+                // cannot be shown would quarantine a result already in the save
+                if (participant.Score is { } score && (!double.IsFinite(score) || Math.Abs(score) > MaxScore))
+                {
+                    return ValidationResult.Failure(
+                        ValidationFailureReason.InvalidParticipantData,
+                        $"Participant '{participant.DriverName}' has an impossible score: {score}");
+                }
+
+                var badLap = participant.LapTimesMs?.Where(lap => !double.IsFinite(lap) || lap < 0 || lap > MaxLapTimeMs).Cast<double?>().FirstOrDefault();
+                if (badLap is { } lapTime)
+                {
+                    return ValidationResult.Failure(
+                        ValidationFailureReason.InvalidParticipantData,
+                        $"Participant '{participant.DriverName}' has an impossible lap time: {lapTime}");
                 }
             }
 

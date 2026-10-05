@@ -159,9 +159,14 @@ calls back with, on the UI thread, takes the built-in line's place; the game nev
 - **Through the paper**: an ad (`CarSaleAd` in `NewspaperAds.PlayerCars`) at the player's asking price ($100 up to
   three times the car's worth) costs $10 and half an hour (`GameAction.PlaceAd`) and runs 14 days. The car stays in the
   garage and can race. Each day (`CarAdsReviewTask`) a buyer may call: a 60% chance for a car asked at 90% of its worth
-  or less, 12 points less for each tenth more, nobody at 140%. A buyer pays the asking price up to the car's worth; over
-  it they haggle up to 15% off, never below the worth. An offer holds two days; the player takes it or turns it down in
-  the Sell dialog or under "Your Ads" in the newspaper. A buyer drives the car away: it leaves the game.
+  or less, 12 points less for each tenth more, nobody at 140%; half that (`paperFreshChanceFactor`) for a car the player
+  has had fewer than 14 days (`paperFreshDays`). Every buyer haggles: the offer is drawn between 85% (`paperHaggleShare`)
+  and all of the asking price, never below 80% of the car's worth (`paperFloorShare`) nor over the asking price, so a
+  car bought cheap and put straight back in the paper can still turn a profit, a thin one. An offer holds two days; the
+  player takes it or turns it down in the Sell dialog or under "Your Ads" in the newspaper. The buyer sees the car
+  before paying: one worth less than when they called (its engine or wheels taken off since) gets the offer cut in
+  proportion (`CarOffer.ValueAtOffer`), or the buyer walks away when that leaves less than the least asking price. A
+  buyer drives the car away: it leaves the game.
 
 A sale refuses a car that is out racing (`GameState.PendingRace`), moves the selected car on to another, and counts in
 `Player.Stats.CarsSold`.
