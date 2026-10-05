@@ -1,12 +1,11 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
-using System.Windows.Threading;
 using StreetCorsa.Audio;
 using StreetCorsa.Configuration;
 using StreetCorsa.Controls.Street;
 using StreetCorsa.Dialogs;
-using StreetCorsa.Dialogs.Information;
+using StreetCorsa.Dialogs.RepairShop;
 using StreetCorsa.Logging;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Navigation;
@@ -41,11 +40,8 @@ namespace StreetCorsa.Screens.Station
         public override bool InCar => true;
 
         private readonly NavigationService _navigationService;
-        private readonly DialogService _dialogService;
         private readonly GameState _gameState;
         private readonly IContentCatalogRepository _catalogRepository;
-        private readonly IGameTimeService _timeService;
-        private readonly IGameStateRepository _gameStateRepo;
         private readonly ICarPartsService _partsService;
         private readonly IAppLogger _logger;
         private readonly Random _random = new();
@@ -53,7 +49,6 @@ namespace StreetCorsa.Screens.Station
         private Car? _car;
         private PartsCatalog? _catalog;
         private bool _busy;
-        private bool _leaving;
 
         public GasStationScreenViewModel(
             NavigationService navigationService,
@@ -63,18 +58,16 @@ namespace StreetCorsa.Screens.Station
             IGameTimeService timeService,
             IGameStateRepository gameStateRepo,
             ICarPartsService partsService)
-            : base(gameState, new DriveInStage { UnseenArrivalCue = Audio.Sfx.StationBell }, AppLoggerFactory.CreateLogger("Station"))
+            : base(navigationService, dialogService, gameState, gameStateRepo, timeService,
+                new DriveInStage { UnseenArrivalCue = Audio.Sfx.StationBell }, AppLoggerFactory.CreateLogger("Station"))
         {
             _navigationService = navigationService;
-            _dialogService = dialogService;
             _gameState = gameState;
             _catalogRepository = catalogRepository;
-            _timeService = timeService;
-            _gameStateRepo = gameStateRepo;
             _partsService = partsService;
             _logger = AppLoggerFactory.CreateLogger("Station");
 
-            DriveOffCommand = new RelayCommand(DriveOff, () => IsAtPump && !_busy && !_leaving);
+            DriveOffCommand = new RelayCommand(DriveOff, () => IsAtPump && !_busy && !Leaving);
 
             Stage.Arrived += OnAtPump;
             Stage.Gone += OnGone;
@@ -133,7 +126,7 @@ namespace StreetCorsa.Screens.Station
         /// <summary>What the attendant has said, first to last, in quotes</summary>
         public ObservableCollection<string> AttendantLines { get; } = [];
 
-        public ObservableCollection<StationJobRow> Jobs { get; } = [];
+        public ObservableCollection<RepairJobRow> Jobs { get; } = [];
 
         public bool HasJobs => Jobs.Count > 0;
 
@@ -276,14 +269,6 @@ namespace StreetCorsa.Screens.Station
             EndVisit();
         }
 
-        private void SendHome(string message, string title)
-        {
-            // It says why and takes the player back to the garage, once the navigation that brought them here is over
-            _leaving = true;
-            _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, message, title));
-            _navigationService.GoHomeLater(_gameState);
-        }
-
         #endregion
 
         #region At the pump
@@ -294,7 +279,7 @@ namespace StreetCorsa.Screens.Station
 
             // At the pump: the station's own show is over. Once the viewport has started its station.at_pump script: the
             // flow's enter script, when a mod has one, plays in its place
-            _ = Dispatcher.CurrentDispatcher.BeginInvoke(() => _navigationService.ScreenReady(this));
+            ScreenUp();
 
             IsAtPump = true;
             StatusText = GameText.Say("station.ui.at_pump", ("station", Title));
@@ -330,7 +315,7 @@ namespace StreetCorsa.Screens.Station
             if (_car != null && Station != null)
             {
                 foreach (var job in GasStation.Jobs(_car, _catalog, Station.Prices, _gameState.Rules.PartPriceMultiplier))
-                    Jobs.Add(new StationJobRow(job, new AsyncRelayCommand(() => DoAsync(job), () => IsAtPump && !_busy && !_leaving && _gameState.Player.Money >= job.Cost, name: "StationJob")));
+                    Jobs.Add(new RepairJobRow(job, new AsyncRelayCommand(() => DoAsync(job), () => IsAtPump && !_busy && !Leaving && _gameState.Player.Money >= job.Cost, name: "StationJob")));
             }
 
             OnPropertyChanged(nameof(HasJobs));
@@ -435,38 +420,14 @@ namespace StreetCorsa.Screens.Station
             foreach (var row in Jobs) row.Command.RaiseCanExecuteChanged();
         }
 
-        private async Task SpendAsync(GameAction action)
-        {
-            try
-            {
-                await _timeService.SpendTimeAsync(_gameState, action);
-            }
-            catch (Exception ex)
-            {
-                _logger.Warning("Could not spend the time at the gas station: {Error}", ex.Message);
-            }
-        }
-
-        private void Save()
-        {
-            try
-            {
-                if (!string.IsNullOrEmpty(_gameState.SaveName)) _gameStateRepo.Save(_gameState, _gameState.SaveName);
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Could not save at the gas station");
-            }
-        }
-
         #endregion
 
         #region Driving off
 
         private async void DriveOff()
         {
-            if (!IsAtPump || _leaving || _car == null) return;
-            _leaving = true;
+            if (!IsAtPump || Leaving || _car == null) return;
+            Leaving = true;
             IsDrivingOff = true;
             RaiseAll();
 
@@ -514,7 +475,7 @@ namespace StreetCorsa.Screens.Station
                 _logger.Error(ex, "Could not drive off from the gas station");
                 if (!IsActive) return;
                 StatusText = GameText.Say("station.ui.still_at_pump");
-                _leaving = false;
+                Leaving = false;
                 IsDrivingOff = false;
                 RaiseAll();
             }
@@ -551,29 +512,11 @@ namespace StreetCorsa.Screens.Station
             Stage.BackToStand();
             StatusText = GameText.Say("station.ui.still_at_pump");
             LiftCurtain();
-            _leaving = false;
+            Leaving = false;
             IsDrivingOff = false;
             RaiseAll();
         }
 
         #endregion
-    }
-
-    public sealed class StationJobRow
-    {
-        public StationJobRow(RepairJob job, AsyncRelayCommand command)
-        {
-            Name = job.Name;
-            Detail = job.Detail;
-            CostDisplay = Money.Text(job.Cost);
-            TimeDisplay = job.Time.GetTimeDescription();
-            Command = command;
-        }
-
-        public string Name { get; }
-        public string Detail { get; }
-        public string CostDisplay { get; }
-        public string TimeDisplay { get; }
-        public AsyncRelayCommand Command { get; }
     }
 }

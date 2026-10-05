@@ -1,12 +1,17 @@
 using System.Windows.Threading;
 using StreetCorsa.Audio;
 using StreetCorsa.Controls.Street;
+using StreetCorsa.Dialogs;
+using StreetCorsa.Dialogs.Information;
 using StreetCorsa.Logging;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Navigation;
 using StreetCorsa.Services.Catalog;
+using StreetCorsa.Services.Market;
 using StreetCorsa.Services.Parts;
+using StreetCorsa.Services.Storage;
 using StreetCorsa.Services.Street;
+using StreetCorsa.Services.Time;
 
 namespace StreetCorsa.Screens.Shared
 {
@@ -14,7 +19,8 @@ namespace StreetCorsa.Screens.Shared
     /// A screen the player drives into, seen from the driver's seat (the gas station, the diner): what its
     /// <see cref="Controls.DriveInViewport3D"/> shows (<see cref="Stage"/>), the player's own engine, and the view's black
     /// curtain. The car comes once the place is on screen, or at once when it cannot be shown, or once it has been waited
-    /// on long enough; the flow's scripts play on the viewport through the stage.
+    /// on long enough; the flow's scripts play on the viewport through the stage. What every visit does the same way is
+    /// here too: the time spent, the save, sending the player home and telling the flow the car is in.
     /// </summary>
     public abstract class DriveInScreenViewModel : BaseScreenViewModel, IScriptedScreen
     {
@@ -23,14 +29,29 @@ namespace StreetCorsa.Screens.Shared
 
         private readonly GameState _visitState;
         private readonly IAppLogger _visitLogger;
+        private readonly NavigationService _visitNavigation;
+        private readonly DialogService _visitDialogs;
+        private readonly IGameStateRepository _visitSaves;
+        private readonly IGameTimeService _visitTime;
         private readonly DispatcherTimer _waitForPlace;
         private DateTime _waitingSince;
         private Func<bool> _canBeShown = () => false;
         private Action? _comeIn;
 
-        protected DriveInScreenViewModel(GameState gameState, DriveInStage stage, IAppLogger logger)
+        protected DriveInScreenViewModel(
+            NavigationService navigationService,
+            DialogService dialogService,
+            GameState gameState,
+            IGameStateRepository gameStateRepo,
+            IGameTimeService timeService,
+            DriveInStage stage,
+            IAppLogger logger)
         {
+            _visitNavigation = navigationService;
+            _visitDialogs = dialogService;
             _visitState = gameState;
+            _visitSaves = gameStateRepo;
+            _visitTime = timeService;
             _visitLogger = logger;
             Stage = stage;
             _waitForPlace = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(250) };
@@ -74,6 +95,9 @@ namespace StreetCorsa.Screens.Shared
 
         /// <summary>The player is here: off once they have left the screen</summary>
         protected bool IsActive { get; set; }
+
+        /// <summary>The player is on their way out (driving off, sent home): nothing new starts here</summary>
+        protected bool Leaving { get; set; }
 
         /// <summary>The car's engine once worked out: it goes home with the car, which drives into the garage</summary>
         protected EngineSpec? OwnEngine { get; private set; }
@@ -129,6 +153,39 @@ namespace StreetCorsa.Screens.Shared
                 _visitLogger.Warning(ex, "The player's engine could not be started");
             }
         }
+
+        /// <summary>
+        /// Says why the player cannot stay and takes them home, once the navigation that brought them here is over (from
+        /// <c>Enter</c>)
+        /// </summary>
+        protected void SendHome(string message, string title)
+        {
+            Leaving = true;
+            _visitDialogs.ShowDialog(new InformationDialogViewModel(_visitDialogs, message, title));
+            _visitNavigation.GoHomeLater(this, _visitState);
+        }
+
+        /// <summary>
+        /// The car is in and the place's own show is over: the flow's enter script, when a mod has one, plays once the
+        /// viewport has started what it was telling of
+        /// </summary>
+        protected void ScreenUp() => _visitNavigation.ScreenReadyLater(this);
+
+        /// <summary>The time a thing done here takes; one that could not be spent is logged, the visit goes on</summary>
+        protected async Task SpendAsync(GameAction action)
+        {
+            try
+            {
+                await _visitTime.SpendTimeAsync(_visitState, action);
+            }
+            catch (Exception ex)
+            {
+                _visitLogger.Warning(ex, "Could not spend the time here");
+            }
+        }
+
+        /// <summary>The game saved, as it stands after what was done here (a failed save is logged)</summary>
+        protected void Save() => GameSaves.TrySave(_visitSaves, _visitState, _visitLogger, "a visit");
 
         /// <summary>The player has left: nothing waits, the car is gone, the engine is quiet</summary>
         protected void EndVisit()

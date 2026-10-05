@@ -33,6 +33,7 @@ namespace StreetCorsa.Dialogs.PlayerAd
         /// <param name="changed">The offer changed (a call, turned down), for the screen behind</param>
         public PlayerAdDialogViewModel(DialogService dialogService, GameState game, CarAdViewModel ad, Car car, string? previewPath,
             Func<Conversation>? talk, Action<CarSaleAd> take, Action<CarSaleAd> decline, Action? changed = null)
+            : base(dialogService)
         {
             _dialogService = dialogService;
             _game = game;
@@ -45,7 +46,7 @@ namespace StreetCorsa.Dialogs.PlayerAd
             Preview = string.IsNullOrEmpty(previewPath) ? null : Thumbnails.Load(previewPath, 640);
             Lines = LinesOf(SaleAd, car, ad.Car, game.Date);
 
-            CloseCommand = new RelayCommand(() => _dialogService.CloseDialog());
+            CloseCommand = new RelayCommand(Close);
             CallCommand = new RelayCommand(OnCall, () => CanCall);
             TakeCommand = new RelayCommand(OnTake, () => HasOffer);
             TurnDownCommand = new RelayCommand(OnTurnDown, () => HasOffer);
@@ -121,7 +122,7 @@ namespace StreetCorsa.Dialogs.PlayerAd
         private void OnTake()
         {
             if (!HasOffer) return;
-            _dialogService.CloseDialog();
+            Close();
             _take(SaleAd);
         }
 

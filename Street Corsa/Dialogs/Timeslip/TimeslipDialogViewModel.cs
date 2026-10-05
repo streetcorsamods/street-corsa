@@ -12,16 +12,14 @@ namespace StreetCorsa.Dialogs.Timeslip
     /// </summary>
     public class TimeslipDialogViewModel : BaseDialogViewModel
     {
-        private readonly DialogService _dialogService;
-
         public TimeslipDialogViewModel(DialogService dialogService, TimeslipCard card)
+            : base(dialogService)
         {
-            _dialogService = dialogService;
             Title = card.Title ?? GameText.Say("timeslip.title");
             Names = card.Lanes.Select(l => l.Name).ToList();
             Rows = BuildRows(card.Lanes);
             Note = card.Note ?? string.Empty;
-            OkCommand = new RelayCommand(() => _dialogService.CloseDialog());
+            OkCommand = new RelayCommand(Close);
         }
 
         public string Title { get; }

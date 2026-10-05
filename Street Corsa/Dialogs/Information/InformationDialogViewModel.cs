@@ -6,7 +6,6 @@ namespace StreetCorsa.Dialogs.Information
 {
     public class InformationDialogViewModel : BaseDialogViewModel
     {
-        private readonly DialogService _dialogService;
         private readonly Action? _okCallback;
         private string _title;
         private string _message;
@@ -36,8 +35,8 @@ namespace StreetCorsa.Dialogs.Information
             string message,
             string? title = null,
             Action? okCallback = null)
+            : base(dialogService)
         {
-            _dialogService = dialogService;
             _okCallback = okCallback;
             _title = title ?? GameText.Say("dialog.title.information");
             _message = message;
@@ -48,7 +47,7 @@ namespace StreetCorsa.Dialogs.Information
         private void OnOk()
         {
             // Closed first, so a dialog the callback shows is not closed along with this one
-            _dialogService.CloseDialog();
+            Close();
             _okCallback?.Invoke();
         }
     }

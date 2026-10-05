@@ -79,6 +79,7 @@
     "garage.no_preview": "NO PREVIEW IMAGE",
     "garage.no_preview.hint": "(preview.jpg not found)",
     "garage.end_day": "End Day",
+    "garage.ui.loading": "Opening the garage...",
     "garage.end_day.tip": "Call it a day: the game picks up tomorrow morning",
     "garage.calendar.sun": "SUN",
     "garage.calendar.mon": "MON",

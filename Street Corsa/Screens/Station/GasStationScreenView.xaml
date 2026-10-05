@@ -203,6 +203,6 @@
                 IsHitTestVisible="False"/>
 
         <!-- Until the scene is up -->
-        <controls:LoadingIndicator WaitFor="{Binding ElementName=StationView}" Message="Pulling in to the station..."/>
+        <controls:LoadingIndicator WaitFor="{Binding ElementName=StationView}" Message="{t:Text station.ui.loading}"/>
     </Grid>
 </UserControl>

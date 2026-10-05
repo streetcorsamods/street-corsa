@@ -11,7 +11,8 @@ namespace StreetCorsa.Controls
     /// <summary>
     /// A wrap panel for items all of one size (cards) that only makes the cards in view, where a WrapPanel makes every
     /// card of the list at once. The rows are laid out as a centred WrapPanel lays them out: as many cards to a row as
-    /// fit, the block of them centred, the last row starting at the left. The size of a card is taken from the first one.
+    /// fit, the block of them centred, the last row starting at the left. The size of a card is taken from the first one,
+    /// again whenever the list changes; cards of one list must all be of its size.
     /// It scrolls by pixels, as a ScrollViewer does its content: put it in an ItemsControl whose template has a
     /// ScrollViewer with <c>CanContentScroll="True"</c>.
     /// </summary>
@@ -142,6 +143,10 @@ namespace StreetCorsa.Controls
             }
 
             base.OnItemsChanged(sender, args);
+
+            // The cards are measured again from the first of the list as it now is: a new list (another page, another
+            // filter) may be of cards of another size
+            _itemSize = Size.Empty;
             InvalidateMeasure();
         }
 

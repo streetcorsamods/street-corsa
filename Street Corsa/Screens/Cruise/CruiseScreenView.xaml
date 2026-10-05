@@ -26,7 +26,7 @@
                    Visibility="{Binding HasFailed, ElementName=Street, Converter={StaticResource BooleanToVisibilityConverter}}"/>
 
         <!-- Until the scene is up -->
-        <controls:LoadingIndicator WaitFor="{Binding ElementName=Street}" Message="Out on the street..."/>
+        <controls:LoadingIndicator WaitFor="{Binding ElementName=Street}" Message="{t:Text cruise.ui.loading}"/>
 
         <!-- The light out there (the clock is the window's money card) -->
         <Border Background="{StaticResource Glass10C0Brush}"

@@ -70,7 +70,7 @@ namespace StreetCorsa.Dialogs.Career
         public int TotalLosses => _gameState.Player.Stats.Losses;
         public int TotalRaces => _gameState.Player.Stats.Races;
         public string WinRate => TotalRaces > 0
-            ? $"{(_gameState.Player.Stats.WinRate * 100):F0}%"
+            ? Screens.Shared.ConditionDisplay.PercentOf(_gameState.Player.Stats.WinRate)
             : GameText.Say("career.win_rate.none");
 
         public int Reputation => _gameState.Player.Stats.Reputation;
@@ -103,6 +103,7 @@ namespace StreetCorsa.Dialogs.Career
             IGameStateRepository gameStateRepo,
             StrongBox<CareerSection> lastSection,
             Action toMainMenu)
+            : base(dialogService)
         {
             _lastSection = lastSection;
             _dialogService = dialogService;
@@ -112,7 +113,7 @@ namespace StreetCorsa.Dialogs.Career
             _gameStateRepo = gameStateRepo;
             _toMainMenu = toMainMenu;
 
-            CloseCommand = new RelayCommand(() => _dialogService.CloseDialog());
+            CloseCommand = new RelayCommand(Close);
             SetActiveVictoryCommand = new RelayCommand<string>(OnSetActiveVictory);
             ShowSectionCommand = new RelayCommand<string>(section =>
             {
@@ -192,7 +193,7 @@ namespace StreetCorsa.Dialogs.Career
                 // The victory screen takes this dialog's place, ahead of any dialog waiting behind it
                 var message = CareerProgressService.VictoryMessage(_gameState, won, [], []);
                 PlayerMessageDialogs.Show(_dialogService, message, _toMainMenu, jumpQueue: true);
-                _dialogService.Withdraw(this);
+                Close();
                 return;
             }
 

@@ -6,7 +6,6 @@ namespace StreetCorsa.Dialogs.Confirmation
 {
     public class ConfirmationDialogViewModel : BaseDialogViewModel
     {
-        private readonly DialogService _dialogService;
         private readonly Action<bool> _resultCallback;
         private string _title;
         private string _message;
@@ -40,8 +39,8 @@ namespace StreetCorsa.Dialogs.Confirmation
             string message,
             string? title = null,
             Action<bool>? resultCallback = null)
+            : base(dialogService)
         {
-            _dialogService = dialogService;
             _resultCallback = resultCallback ?? (_ => { });
             _title = title ?? GameText.Say("dialog.title.confirm");
             _message = message;
@@ -54,13 +53,13 @@ namespace StreetCorsa.Dialogs.Confirmation
         // come up after this dialog has gone, not be closed along with it
         private void OnYes()
         {
-            _dialogService.CloseDialog();
+            Close();
             _resultCallback(true);
         }
 
         private void OnNo()
         {
-            _dialogService.CloseDialog();
+            Close();
             _resultCallback(false);
         }
     }

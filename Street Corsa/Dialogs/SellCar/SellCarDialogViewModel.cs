@@ -29,6 +29,7 @@ namespace StreetCorsa.Dialogs.SellCar
         /// <param name="changed">The money or the clock moved (an ad was paid for)</param>
         public SellCarDialogViewModel(DialogService dialogService, GameState gameState, Car car, string carName,
             ICarSaleService saleService, Action sold, Action changed)
+            : base(dialogService)
         {
             _dialogService = dialogService;
             _gameState = gameState;
@@ -46,7 +47,7 @@ namespace StreetCorsa.Dialogs.SellCar
             AcceptOfferCommand = new AsyncRelayCommand(OnAcceptOffer, () => !_busy && HasOffer);
             DeclineOfferCommand = new RelayCommand(OnDeclineOffer, () => !_busy && HasOffer);
             WithdrawAdCommand = new RelayCommand(OnWithdrawAd, () => !_busy && HasAd);
-            CloseCommand = new RelayCommand(() => _dialogService.CloseDialog(), () => !_busy);
+            CloseCommand = new RelayCommand(() => Close(), () => !_busy);
         }
 
         public string CarName { get; }
@@ -225,7 +226,7 @@ namespace StreetCorsa.Dialogs.SellCar
 
             if (sold)
             {
-                _dialogService.CloseDialog();
+                Close();
                 _sold();
                 _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, message, GameText.Say("sell.sold.title")));
                 return;

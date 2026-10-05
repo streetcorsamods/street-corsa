@@ -18,7 +18,6 @@ namespace StreetCorsa.Dialogs.Quit
     /// <summary>The way out of a game: to the main menu, out to the desktop, or back to the game</summary>
     public class QuitDialogViewModel : BaseDialogViewModel
     {
-        private readonly DialogService _dialogService;
         private readonly Action<QuitChoice> _chosen;
 
         public RelayCommand MainMenuCommand { get; }
@@ -29,8 +28,8 @@ namespace StreetCorsa.Dialogs.Quit
         public override string? DuplicateKey => nameof(QuitDialogViewModel);
 
         public QuitDialogViewModel(DialogService dialogService, Action<QuitChoice> chosen)
+            : base(dialogService)
         {
-            _dialogService = dialogService;
             _chosen = chosen;
 
             MainMenuCommand = new RelayCommand(() => Choose(QuitChoice.MainMenu));
@@ -41,7 +40,7 @@ namespace StreetCorsa.Dialogs.Quit
         // Closed before the choice is acted on, as the other dialogs do: whatever it brings up comes after this one
         private void Choose(QuitChoice choice)
         {
-            _dialogService.CloseDialog();
+            Close();
             _chosen(choice);
         }
     }

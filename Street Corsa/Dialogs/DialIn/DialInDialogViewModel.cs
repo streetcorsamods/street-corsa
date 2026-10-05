@@ -13,14 +13,13 @@ namespace StreetCorsa.Dialogs.DialIn
     /// </summary>
     public class DialInDialogViewModel : BaseDialogViewModel
     {
-        private readonly DialogService _dialogService;
         private readonly Action<double?> _callback;
         private double _dialIn;
 
         public DialInDialogViewModel(DialogService dialogService, Car car, string carName, double estimate,
             string opponentName, double opponentDialIn, Action<double?> callback)
+            : base(dialogService)
         {
-            _dialogService = dialogService;
             _callback = callback;
             CarName = carName;
             OpponentName = opponentName;
@@ -102,13 +101,13 @@ namespace StreetCorsa.Dialogs.DialIn
         // Closed before the callback: it goes on to the race, and anything it shows must not close with this
         private void OnConfirm()
         {
-            _dialogService.CloseDialog();
+            Close();
             _callback(DialIn);
         }
 
         private void OnCancel()
         {
-            _dialogService.CloseDialog();
+            Close();
             _callback(null);
         }
     }

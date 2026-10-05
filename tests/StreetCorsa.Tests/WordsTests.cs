@@ -93,18 +93,20 @@ public partial class WordsTests : IDisposable
         return keys.Any(k => Regex.IsMatch(k, pattern, RegexOptions.IgnoreCase));
     }
 
-    // Tag is a GameButton's hover label
-    [GeneratedRegex(@"\b(Text|Content|Header|ToolTip|Title|Tag|Value)=""([^""{]*[A-Za-z]{2,}[^""]*)""")]
+    // Tag is a GameButton's hover label, Message a loader's line
+    [GeneratedRegex(@"\b(Text|Content|Header|ToolTip|Title|Tag|Value|Message)=""([^""{]*[A-Za-z]{2,}[^""]*)""")]
     private static partial Regex XamlLiteral();
 
-    // The developer's screens stay in English (the owner, 2026-09-30); the window's title is game.json's, set as it
-    // opens
+    // The developer's screens stay in English (the owner, 2026-09-30)
     private static readonly string[] EnglishOnPurpose =
     [
         $"{Path.DirectorySeparatorChar}CarCatalogEditor{Path.DirectorySeparatorChar}",
-        $"{Path.DirectorySeparatorChar}SoundBrowser{Path.DirectorySeparatorChar}",
-        $"{Path.DirectorySeparatorChar}MainWindow.xaml"
+        $"{Path.DirectorySeparatorChar}SoundBrowser{Path.DirectorySeparatorChar}"
     ];
+
+    // The window's title is game.json's, set as it opens: only the window's Title= is no word of the screens
+    private static bool IsWindowTitle(string file, Match match) =>
+        match.Groups[1].Value == "Title" && Path.GetFileName(file) == "MainWindow.xaml";
 
     [Fact]
     public void No_screen_writes_its_words_in_the_xaml()
@@ -119,6 +121,7 @@ public partial class WordsTests : IDisposable
             foreach (Match match in XamlLiteral().Matches(line))
             {
                 if (match.Groups[1].Value == "Value" && !wordsSetter) continue;
+                if (IsWindowTitle(file, match)) continue;
                 // A quote mark written &quot; is no word
                 if (Regex.IsMatch(System.Net.WebUtility.HtmlDecode(match.Groups[2].Value), "[A-Za-z]{2,}"))
                     literal.Add($"{Path.GetFileName(file)}:{number}: {match.Groups[2].Value}");

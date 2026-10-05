@@ -7,7 +7,6 @@ using StreetCorsa.Audio;
 using StreetCorsa.Configuration;
 using StreetCorsa.Controls.Street;
 using StreetCorsa.Dialogs;
-using StreetCorsa.Dialogs.Information;
 using StreetCorsa.Helpers;
 using StreetCorsa.Logging;
 using StreetCorsa.Looks;
@@ -51,11 +50,8 @@ namespace StreetCorsa.Screens.PaintBooth
         private static readonly TimeSpan PreviewDelay = TimeSpan.FromMilliseconds(350);
 
         private readonly NavigationService _navigationService;
-        private readonly DialogService _dialogService;
         private readonly GameState _gameState;
         private readonly IContentCatalogRepository _catalogRepository;
-        private readonly IGameTimeService _timeService;
-        private readonly IGameStateRepository _gameStateRepo;
         private readonly ICarPartsService _partsService;
         private readonly IAppLogger _logger;
         private readonly DispatcherTimer _previewTimer;
@@ -63,7 +59,6 @@ namespace StreetCorsa.Screens.PaintBooth
         private Car? _car;
         private string _carDirectory = "";
         private PartsCatalog? _catalog;
-        private bool _leaving;
         private int _tintCheck;
 
         // The skins' names, and the skin each id is drawn in (Looks.CarPaint.SkinOf), read once a visit
@@ -78,14 +73,11 @@ namespace StreetCorsa.Screens.PaintBooth
             IGameTimeService timeService,
             IGameStateRepository gameStateRepo,
             ICarPartsService partsService)
-            : base(gameState, new DriveInStage(), AppLoggerFactory.CreateLogger("PaintBooth"))
+            : base(navigationService, dialogService, gameState, gameStateRepo, timeService, new DriveInStage(), AppLoggerFactory.CreateLogger("PaintBooth"))
         {
             _navigationService = navigationService;
-            _dialogService = dialogService;
             _gameState = gameState;
             _catalogRepository = catalogRepository;
-            _timeService = timeService;
-            _gameStateRepo = gameStateRepo;
             _partsService = partsService;
             _logger = AppLoggerFactory.CreateLogger("PaintBooth");
 
@@ -97,7 +89,7 @@ namespace StreetCorsa.Screens.PaintBooth
             };
 
             SprayCommand = new AsyncRelayCommand(SprayAsync, CanSpray, name: "Spray");
-            LeaveCommand = new RelayCommand(Leave, () => !_leaving && !IsSpraying);
+            LeaveCommand = new RelayCommand(Leave, () => !Leaving && !IsSpraying);
             ResetCommand = new RelayCommand(() => Pick(_car?.SkinId, PaintColour.Parse(_car?.PaintColour)), () => IsPicking);
             Stage.Arrived += OnArrived;
         }
@@ -278,7 +270,7 @@ namespace StreetCorsa.Screens.PaintBooth
                 : skins.FirstOrDefault(s => string.Equals(s, _car.SkinId, StringComparison.OrdinalIgnoreCase)) ?? _car.SkinId;
             _colour = PaintColour.Parse(_car.PaintColour);
 
-            foreach (var skin in skins) Skins.Add(new BoothSkin(skin, SkinName(skin), PreviewOf(skin), new RelayCommand(() => Pick(skin, null), () => IsPicking)));
+            ListSkins(skins);
             foreach (var offered in Booth.Colours)
             {
                 var colour = offered.Colour;
@@ -323,17 +315,10 @@ namespace StreetCorsa.Screens.PaintBooth
             EndVisit();
         }
 
-        private void SendHome(string message, string title)
-        {
-            _leaving = true;
-            _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, message, title));
-            _navigationService.GoHomeLater(_gameState);
-        }
-
         private void OnArrived()
         {
             if (!IsActive || _car == null || IsPicking) return;
-            _ = Dispatcher.CurrentDispatcher.BeginInvoke(() => _navigationService.ScreenReady(this));
+            ScreenUp();
 
             // Nobody paints a running car
             if (PlayerEngine.IsRunning) PlayerEngine.Toggle();
@@ -343,14 +328,14 @@ namespace StreetCorsa.Screens.PaintBooth
 
         private void Leave()
         {
-            if (_leaving || IsSpraying) return;
+            if (Leaving || IsSpraying) return;
             _ = GoHomeAsync();
         }
 
         /// <summary>The curtain comes down and the player is home, where the car drives into the garage (or is simply there, pushed back in)</summary>
         private async Task GoHomeAsync()
         {
-            _leaving = true;
+            Leaving = true;
             IsPicking = false;
             RaiseAll();
             try
@@ -366,7 +351,7 @@ namespace StreetCorsa.Screens.PaintBooth
 
             // The garage would not open: back in the booth to try again
             LiftCurtain();
-            _leaving = false;
+            Leaving = false;
             IsPicking = !IsSpraying;
             StatusText = GameText.Say("booth.ui.still_here");
             RaiseAll();
@@ -464,6 +449,31 @@ namespace StreetCorsa.Screens.PaintBooth
             RaiseAll();
         }
 
+        /// <summary>
+        /// The make's skins on the booth's wall: their names and pictures read off the UI thread (a mod's car can have
+        /// dozens), then shown, the car's own marked
+        /// </summary>
+        private async void ListSkins(IReadOnlyList<string> skins)
+        {
+            var directory = _carDirectory;
+            try
+            {
+                var read = await Task.Run(() => skins.Select(skin => (Id: skin, Name: AcCarUi.SkinName(directory, skin), Preview: PreviewOf(directory, skin))).ToList());
+                if (!IsActive || directory != _carDirectory) return;
+
+                foreach (var (id, name, preview) in read)
+                {
+                    _skinNames[id] = name ?? id.Replace('_', ' ');
+                    Skins.Add(new BoothSkin(id, _skinNames[id], preview, new RelayCommand(() => Pick(id, null), () => IsPicking)));
+                }
+                MarkPicked();
+            }
+            catch (Exception ex)
+            {
+                _logger.Warning(ex, "Could not list the skins of {Car}", directory);
+            }
+        }
+
         /// <summary>A skin's name as its ui_skin.json gives it, else its folder's; read once a visit</summary>
         private string SkinName(string? skin)
         {
@@ -485,9 +495,10 @@ namespace StreetCorsa.Screens.PaintBooth
             return _drawnSkins[key] = CarPaint.SkinOf(_carDirectory, skin);
         }
 
-        private ImageSource? PreviewOf(string skin)
+        /// <summary>A skin's picture, small and frozen: read on a worker, shown on the UI thread</summary>
+        private static ImageSource? PreviewOf(string carDirectory, string skin)
         {
-            var file = Path.Combine(_carDirectory, "skins", skin, "preview.jpg");
+            var file = Path.Combine(carDirectory, "skins", skin, "preview.jpg");
             if (!File.Exists(file)) return null;
             try
             {
@@ -537,7 +548,7 @@ namespace StreetCorsa.Screens.PaintBooth
 
         #region Spraying
 
-        private bool CanSpray() => IsPicking && !_leaving && !IsSpraying && IsChange && _gameState.Player.Money >= Price && (_colour == null || CanTint);
+        private bool CanSpray() => IsPicking && !Leaving && !IsSpraying && IsChange && _gameState.Player.Money >= Price && (_colour == null || CanTint);
 
         private PlayingSound? _sprayLoop;
 
@@ -558,14 +569,18 @@ namespace StreetCorsa.Screens.PaintBooth
 
             // The car as it was before the job, worn and dirty as it came in: built before the job takes those away
             var before = ShownAs(oldSkin, oldColour);
-            Task? spent = null;
+
+            // Paid for: the time goes by from now on, and the job is saved however the show ends (a throw, the player
+            // taken away mid-spray by a script)
+            _gameState.Player.Money -= price;
+            car.SkinId = newSkin ?? car.SkinId;
+            car.PaintColour = newColour?.Hex;
+            car.PaintWear = 0;
+            car.BodyDirt = 0;
+            var spent = SpendAsync(GameAction.PaintJob);
+            var shownThrough = false;
             try
             {
-                _gameState.Player.Money -= price;
-                car.SkinId = newSkin ?? car.SkinId;
-                car.PaintColour = newColour?.Hex;
-                car.PaintWear = 0;
-                car.BodyDirt = 0;
                 _logger.Information("Painted {Car}: {Skin} {Colour} for ${Price}", car.DefinitionId, newSkin, newColour?.Hex ?? "(its own colours)", price);
                 Sfx.Play(Sfx.Purchase);
                 StatusText = GameText.Say("booth.ui.spraying", ("choice", ChoiceText));
@@ -585,7 +600,6 @@ namespace StreetCorsa.Screens.PaintBooth
                 var clock = System.Diagnostics.Stopwatch.StartNew();
                 Show.Spray(time);
                 _sprayLoop = AudioHub.Shared.PlayLoop("booth.spray", fadeSeconds: 0.6f);
-                spent = SpendAsync(GameAction.PaintJob);
 
                 var (from, to) = texels == null ? (null, null) : await texels;
                 var swapped = false;
@@ -622,11 +636,7 @@ namespace StreetCorsa.Screens.PaintBooth
                 Show.Wear(newSkin, ShownAs(newSkin, newColour, fresh: true));
                 IsSpraying = false;
                 StatusText = GameText.Say("booth.ui.done", ("cost", new Money(price)));
-
-                await spent;
-                Save();
-                await Task.Delay(Admire);
-                if (IsActive) await GoHomeAsync();
+                shownThrough = true;
             }
             catch (Exception ex)
             {
@@ -634,42 +644,22 @@ namespace StreetCorsa.Screens.PaintBooth
                 StopSprayLoop();
                 Show.StopSpraying();
                 IsSpraying = false;
-
-                // Paid for: the time is spent before the save and the way home, as on the job's own way there
-                if (spent != null) await spent;
-                Save();
-                if (IsActive) await GoHomeAsync();
             }
+            finally
+            {
+                // The time is spent before the save and the way home: a day that rolled over is saved as it now is
+                await spent;
+                Save();
+            }
+
+            if (shownThrough) await Task.Delay(Admire);
+            if (IsActive) await GoHomeAsync();
         }
 
         private void StopSprayLoop()
         {
             AudioHub.Shared.StopLoop(_sprayLoop, 0.5f);
             _sprayLoop = null;
-        }
-
-        private async Task SpendAsync(GameAction action)
-        {
-            try
-            {
-                await _timeService.SpendTimeAsync(_gameState, action);
-            }
-            catch (Exception ex)
-            {
-                _logger.Warning("Could not spend the time in the paint booth: {Error}", ex.Message);
-            }
-        }
-
-        private void Save()
-        {
-            try
-            {
-                if (!string.IsNullOrEmpty(_gameState.SaveName)) _gameStateRepo.Save(_gameState, _gameState.SaveName);
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Could not save at the paint booth");
-            }
         }
 
         private void RaiseAll()

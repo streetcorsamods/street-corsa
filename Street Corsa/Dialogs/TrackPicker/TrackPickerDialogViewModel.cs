@@ -12,7 +12,6 @@ namespace StreetCorsa.Dialogs.TrackPicker
     /// </summary>
     public sealed class TrackPickerDialogViewModel : BaseDialogViewModel
     {
-        private readonly DialogService _dialogService;
         private readonly IReadOnlyList<PracticeTrack> _tracks;
         private readonly Dictionary<PracticeTrack, TrackPickerCardViewModel> _cards;
         private readonly PracticeTrack? _last;
@@ -36,8 +35,8 @@ namespace StreetCorsa.Dialogs.TrackPicker
             PracticeTrack? last,
             Action<PracticeTrack> picked,
             Action back)
+            : base(dialogService)
         {
-            _dialogService = dialogService;
             Title = title;
             Note = note;
             _tracks = tracks;
@@ -126,7 +125,7 @@ namespace StreetCorsa.Dialogs.TrackPicker
         {
             if (Selected is not { } card || _answered) return;
             _answered = true;
-            _dialogService.Withdraw(this);
+            Close();
             _picked(card.Track);
         }
 
@@ -134,7 +133,7 @@ namespace StreetCorsa.Dialogs.TrackPicker
         {
             if (_answered) return;
             _answered = true;
-            _dialogService.Withdraw(this);
+            Close();
             _back();
         }
     }
