@@ -69,9 +69,29 @@ namespace StreetCorsa.Services.PartShops
         /// What it pays for a part, against what the part is worth: a shop's trade-in, a little more at a junkyard. Less
         /// than any shop sells a new part for in its closing-down sale to a good customer, in the easy game's prices
         /// (a wheel shop's: 0.9 × 0.85 × 0.65 × 0.9 ≈ 0.45), so nothing bought new sells on to a junkyard at a profit.
+        /// A used part in the paper is held over it the other way (<see cref="MostPaidFactor"/>).
         /// </summary>
         public static double BuyFactor(PartShopDefinition shop) =>
             Positive(shop.BuyFactor) ?? Positive(KindRules(shop).BuyFactor) ?? StreetCorsa.Parts.Cars.PartPricing.TradeInFactor;
+
+        /// <summary>
+        /// The most any shop pays for a part, against what the part is worth: the trade-in, each kind of shop's figure in
+        /// the rules and each of <paramref name="shops"/>' own. No used part in the paper is asked for under it
+        /// (<see cref="Parts.NewspaperPartsService.UsedAsk"/>): the ads' prices fall with the easy game's, the shops'
+        /// buying prices do not, and nothing from the paper may sell straight on to a shop at a profit.
+        /// </summary>
+        public static double MostPaidFactor(IEnumerable<PartShopDefinition>? shops = null)
+        {
+            var rules = Rules.RuleBook.Current.PartShops;
+            var most = StreetCorsa.Parts.Cars.PartPricing.TradeInFactor;
+            foreach (var kind in rules.Kinds.Values.Append(rules.OtherKind))
+            {
+                if (kind != null && Positive(kind.BuyFactor) is { } factor) most = Math.Max(most, factor);
+            }
+
+            foreach (var shop in shops ?? []) most = Math.Max(most, BuyFactor(shop));
+            return most;
+        }
 
         public static (int Low, int High) Stock(PartShopDefinition shop)
         {

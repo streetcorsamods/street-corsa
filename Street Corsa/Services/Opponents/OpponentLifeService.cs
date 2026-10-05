@@ -861,7 +861,7 @@ namespace StreetCorsa.Services.Opponents
                     // trade-in when the ad runs out); a shop takes at once what is worth nothing there
                     foreach (var removed in upgrade.Removed)
                     {
-                        if (RivalPartAds.Post(gameState, catalog, racer, removed, date, _random.NextDouble()) is { } ad)
+                        if (RivalPartAds.Post(gameState, catalog, racer, removed, date, _random.NextDouble(), _partShops?.Catalog.All) is { } ad)
                             _logger.Information("{Racer} put the {Part} in the paper for ${Price}", racer.Name, removed.DefinitionId, ad.AskingPrice);
                         else
                             racer.Money += PartPricing.TradeIn(catalog, removed);

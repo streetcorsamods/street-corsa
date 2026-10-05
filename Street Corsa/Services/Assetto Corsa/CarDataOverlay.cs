@@ -454,11 +454,7 @@ namespace StreetCorsa.Services
             var target = DataFile(dataDirectory, entry.Name);
             if (!entry.Existed)
             {
-                if (File.Exists(target))
-                {
-                    KeptFile.ClearReadOnly(target);
-                    File.Delete(target);
-                }
+                SafeFile.Delete(target);
 
                 return;
             }
@@ -559,10 +555,12 @@ namespace StreetCorsa.Services
 
             // Recorded before the folder exists: whatever becomes of the settings, the copy is found again
             // The copy's own files are plain writes: the folder is ours (made just now, deleted after the race), and
-            // what is written in it is new, never a link to the car's own
+            // what is written in it is new, never a link to the car's own. The marker alone is written whole or not at
+            // all: it is what a later clean-up trusts to delete the folder (AcCarFolder.IsClone), so a cut-short one
+            // must never be read as half a marker
             RecordClone(target);
             Directory.CreateDirectory(target);
-            File.WriteAllText(Path.Combine(target, AcCarFolder.CloneMarker),
+            SafeFile.WriteAllText(Path.Combine(target, AcCarFolder.CloneMarker),
                 JsonConvert.SerializeObject(new { Source = carId, Created = DateTime.Now }, Formatting.Indented));
 
             var dataFolder = Path.Combine(source, AcCarData.DataFolder);

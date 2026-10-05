@@ -74,7 +74,8 @@ public sealed class PartShopRules
         ["speed"] = new() { PriceFactor = 1.1, StockLow = 25, StockHigh = 35, RestockDays = 10, PerShelfLow = 1, PerShelfHigh = 2 },
         ["wheels"] = new() { PriceFactor = 0.9, StockLow = 40, StockHigh = 60, RestockDays = 5, PerShelfLow = 2, PerShelfHigh = 6 },
         // Against what the used part is worth: the paper's private sellers ask about 0.6; and a little more than a
-        // trade-in for the player's old parts, still less than any new part sells for in a closing-down sale
+        // trade-in for the player's old parts, still less than any new part sells for in a closing-down sale (and less
+        // than any used part in the paper, which is held over the most a shop pays at every difficulty)
         ["junkyard"] = new() { PriceFactor = 0.55, BuyFactor = 0.42, StockLow = 20, StockHigh = 35, RestockDays = 3, PerShelfLow = 2, PerShelfHigh = 5 }
     };
 

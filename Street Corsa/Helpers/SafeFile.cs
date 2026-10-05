@@ -94,6 +94,19 @@ public static class SafeFile
     }
 
     /// <summary>
+    /// Deletes a file that is there, read-only or not (a delete refuses a marked file, as the rename does); true when
+    /// there was one. Throws when it cannot go (locked).
+    /// </summary>
+    public static bool Delete(string path)
+    {
+        if (!File.Exists(path)) return false;
+
+        ClearReadOnly(path);
+        File.Delete(path);
+        return true;
+    }
+
+    /// <summary>
     /// Takes the read-only mark off an existing file and returns its attributes as they were; null for a file that is
     /// not there or not marked, which is left alone
     /// </summary>

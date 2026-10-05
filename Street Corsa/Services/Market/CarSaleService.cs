@@ -44,9 +44,10 @@ namespace StreetCorsa.Services.Market
     /// Selling the player's cars. A dealer buys at once, for <see cref="DealerShare"/> of what the car is worth, and
     /// puts it on its lot at the full price. A totaled car only goes to the scrapyard, for
     /// <see cref="ScrapShare"/> of its worth give or take <see cref="ScrapSpread"/> (as in the GameMaker version).
-    /// Or the player puts the car in the paper at a price of their own: buyers call over the days, fewer and
-    /// haggling harder the more is asked over what the car is worth (<see cref="OfferChance"/>). An offer holds
-    /// for <see cref="OfferDays"/> days. The car stays in the garage and can race until an offer is taken.
+    /// Or the player puts the car in the paper at a price of their own: buyers call over the days, fewer the more
+    /// is asked over what the car is worth and fewer for a car just bought (<see cref="OfferChance"/>), and every
+    /// one haggles (<see cref="OfferAmount"/>). An offer holds for <see cref="OfferDays"/> days, and is cut when the
+    /// car is worth less by the time it is taken. The car stays in the garage and can race until an offer is taken.
     /// </summary>
     public class CarSaleService(
         IUsedCarMarketService market,
@@ -185,6 +186,9 @@ namespace StreetCorsa.Services.Market
 
             if (WhyNotSellable(gameState, car) is { } refusal) return refusal;
 
+            // The buyer comes to see the car before paying: one worth less than when they called gets a lower offer
+            if (Revalued(gameState, ad, offer, car) is { } lowered) return lowered;
+
             // A rival who called has to have the money still; they may have spent it since
             Opponent? rival = null;
             if (offer.RivalName != null)
@@ -262,7 +266,7 @@ namespace StreetCorsa.Services.Market
                     continue;
                 }
 
-                if (random.NextDouble() >= OfferChance(ad.AskingPrice, value)) continue;
+                if (random.NextDouble() >= OfferChance(ad.AskingPrice, value, (currentDate - OwnedSince(car)).TotalDays)) continue;
 
                 var amount = OfferAmount(ad.AskingPrice, value, random.NextDouble());
                 var rival = RivalBuyer(gameState, car, amount, random);
@@ -272,6 +276,7 @@ namespace StreetCorsa.Services.Market
                     BuyerName = rival?.Name ?? GameText.Installed.Pick("names.car_buyers", random),
                     RivalName = rival?.Name,
                     Amount = amount,
+                    ValueAtOffer = value,
                     Expires = currentDate.Date.AddDays(OfferDays).AddHours(GameState.DayEndHour)
                 };
                 _logger.Information("{Buyer} offers ${Amount} for {Car} (asking ${Asking}, worth ${Value})",
@@ -304,25 +309,80 @@ namespace StreetCorsa.Services.Market
 
         /// <summary>
         /// The chance a buyer calls on a given day: 60% for a car asked at 90% of its worth or less, and down by 12
-        /// points for every tenth more, to nobody at 140%
+        /// points for every tenth more, to nobody at 140%. A car the player has had fewer than
+        /// <c>market.paperFreshDays</c> days (<paramref name="daysOwned"/>) draws <c>market.paperFreshChanceFactor</c> of that.
         /// </summary>
-        public static double OfferChance(decimal askingPrice, decimal value)
+        public static double OfferChance(decimal askingPrice, decimal value, double daysOwned = double.PositiveInfinity)
         {
-            if (value <= 0) return 0.1;
+            var rules = Rules.RuleBook.Current.Market;
+            var fresh = daysOwned < rules.PaperFreshDays ? rules.PaperFreshChanceFactor : 1.0;
+            if (value <= 0) return 0.1 * fresh;
             var ratio = (double)(askingPrice / value);
-            return ratio <= 0.9 ? 0.6 : Math.Max(0, 0.6 - (ratio - 0.9) * 1.2);
+            return fresh * (ratio <= 0.9 ? 0.6 : Math.Max(0, 0.6 - (ratio - 0.9) * 1.2));
         }
 
         /// <summary>
-        /// What a buyer offers: the asking price for a car asked at no more than its worth; over that they haggle
-        /// it down by up to 15% (<paramref name="roll"/> 0 to 1), though never below what the car is worth
+        /// What a buyer offers: every ask is haggled, the offer drawn between <c>market.paperHaggleShare</c> of the asking
+        /// price (<paramref name="roll"/> 0) and all of it (1), though never below <c>market.paperFloorShare</c> of what
+        /// the car is worth, nor over the asking price
         /// </summary>
         public static decimal OfferAmount(decimal askingPrice, decimal value, double roll)
         {
-            if (askingPrice <= value) return askingPrice;
+            var rules = Rules.RuleBook.Current.Market;
+            var share = rules.PaperHaggleShare + (1 - rules.PaperHaggleShare) * Unit.Clamp01(roll, ifNotFinite: 0);
+            var haggled = RoundToTen((double)askingPrice * share);
+            var floor = Math.Min(askingPrice, RoundToTen((double)value * rules.PaperFloorShare));
+            return Math.Clamp(haggled, Math.Max(0m, floor), Math.Max(0m, askingPrice));
+        }
 
-            var haggled = RoundToTen((double)askingPrice * (0.85 + 0.15 * Unit.Clamp01(roll, ifNotFinite: 0)));
-            return Math.Clamp(haggled, Math.Max(0m, value), askingPrice);
+        /// <summary>
+        /// A buyer's offer for a car now worth <paramref name="now"/>, made when it was worth <paramref name="then"/>:
+        /// cut in the same proportion, never raised
+        /// </summary>
+        public static decimal LoweredOffer(decimal amount, decimal then, decimal now) =>
+            then <= 0 || now >= then ? amount : Math.Min(amount, RoundToTen((double)(amount * Math.Max(0m, now) / then)));
+
+        /// <summary>When the player got the car: the last change of hands in its history, else its purchase date</summary>
+        public static DateTime OwnedSince(Car car) => car.History.Owners.LastOrDefault()?.Since ?? car.PurchaseDate;
+
+        /// <summary>
+        /// The buyer sees the car before paying. One worth less than the day they called (its engine or wheels taken off
+        /// since) gets the offer cut to match, for the player to take or leave; one worth too little for any offer sends
+        /// them away. Null when the offer stands as made.
+        /// </summary>
+        private SaleResult? Revalued(GameState gameState, CarSaleAd ad, CarOffer offer, Car car)
+        {
+            if (offer.ValueAtOffer is not { } then || then <= 0) return null;
+
+            decimal now;
+            try
+            {
+                now = _market.ValueOf(car);
+            }
+            catch (Exception ex)
+            {
+                _logger.Warning("Could not value {Car} again for its offer: {Error}", car.DefinitionId, ex.Message);
+                return null;
+            }
+
+            var amount = LoweredOffer(offer.Amount, then, now);
+            if (amount >= offer.Amount) return null;
+
+            if (amount < MinAskingPrice)
+            {
+                ad.Offer = null;
+                _logger.Information("{Buyer} walked away from {Car}: worth ${Now} now, ${Then} when they called", offer.BuyerName, car.DefinitionId, now, then);
+                return new SaleResult(SaleOutcome.NoOffer, GameText.Say("sell.offer.walked", ("buyer", Capitalized(offer.BuyerName))), !Save(gameState));
+            }
+
+            // What they first offered goes down with it, so haggling in the talk starts from the car as it is
+            if (offer.FirstAmount is { } first) offer.FirstAmount = LoweredOffer(first, then, now);
+            _logger.Information("{Buyer} lowered the offer for {Car} from ${Was} to ${Amount}: worth ${Now} now, ${Then} when they called",
+                offer.BuyerName, car.DefinitionId, offer.Amount, amount, now, then);
+            offer.Amount = amount;
+            offer.ValueAtOffer = now;
+            return new SaleResult(SaleOutcome.NoOffer,
+                GameText.Say("sell.offer.lowered", ("buyer", Capitalized(offer.BuyerName)), ("amount", new Money(amount))), !Save(gameState));
         }
 
         /// <summary>The scrapyard's price as a share of the car's worth: <see cref="ScrapShare"/> ± <see cref="ScrapSpread"/>, the same for a car every time it is asked</summary>

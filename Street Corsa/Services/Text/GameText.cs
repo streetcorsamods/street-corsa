@@ -368,7 +368,9 @@ namespace StreetCorsa.Services.Text
         /// {price:money}, {peak:temp} ("212 °F"), {kmh:speed}, a format after it ({left:fuel:0.0}), and ".number" for
         /// the figure alone in that unit ({left:fuel.number}). The kinds are in <see cref="Kinds"/>; the figures they
         /// take are metric (km/h, km, litres, °C, kg, N·m). Money and figures the game hands over already made
-        /// (<see cref="Helpers.Money"/>, <see cref="Helpers.Measure"/>) write themselves.
+        /// (<see cref="Helpers.Money"/>, <see cref="Helpers.Measure"/>) write themselves. A format .NET cannot use (a mod's
+        /// {amount:D} on a fraction) leaves the placeholder as it is written, as a name without a value does: the line is
+        /// still said, on the restore path too, and the typo shows.
         /// </summary>
         public static string Fill(string template, IReadOnlyDictionary<string, object?>? values)
         {
@@ -376,25 +378,39 @@ namespace StreetCorsa.Services.Text
 
             return Placeholder().Replace(template, match =>
             {
-                if (!values.TryGetValue(match.Groups[1].Value, out var value)) return match.Value;
-                if (value == null) return string.Empty;
-
-                var format = match.Groups[2].Success ? match.Groups[2].Value : null;
-                if (format != null && Kind(format, out var kind, out var numberOnly, out var numberFormat) && Number(value) is { } number)
+                try
                 {
-                    if (kind == null) return numberOnly ? new Helpers.Money(number).Number(numberFormat) : new Helpers.Money(number).ToString(numberFormat, null);
-                    var measure = value is Helpers.Measure made ? made : new Helpers.Measure(kind.Value, (double)number);
-                    return numberOnly ? measure.Number(numberFormat) : measure.ToString(numberFormat, null);
+                    return Filled(match, values);
                 }
-
-                return value switch
+                catch (Exception ex) when (ex is FormatException or ArgumentOutOfRangeException)
                 {
-                    IFormattable formattable when format != null => formattable.ToString(format, Helpers.Locale.Culture),
-                    // A fraction without a format reads as a person writes it, not to its last digit: "7.57"
-                    double or float => ((IFormattable)value).ToString("0.##", Helpers.Locale.Culture),
-                    _ => Convert.ToString(value, Helpers.Locale.Culture) ?? string.Empty
-                };
+                    // A date outside the culture's calendar too (as in Date)
+                    return match.Value;
+                }
             });
+        }
+
+        /// <summary>One placeholder of <see cref="Fill"/> filled in; throws <see cref="FormatException"/> on a format the value cannot take</summary>
+        private static string Filled(Match match, IReadOnlyDictionary<string, object?> values)
+        {
+            if (!values.TryGetValue(match.Groups[1].Value, out var value)) return match.Value;
+            if (value == null) return string.Empty;
+
+            var format = match.Groups[2].Success ? match.Groups[2].Value : null;
+            if (format != null && Kind(format, out var kind, out var numberOnly, out var numberFormat) && Number(value) is { } number)
+            {
+                if (kind == null) return numberOnly ? new Helpers.Money(number).Number(numberFormat) : new Helpers.Money(number).ToString(numberFormat, null);
+                var measure = value is Helpers.Measure made ? made : new Helpers.Measure(kind.Value, (double)number);
+                return numberOnly ? measure.Number(numberFormat) : measure.ToString(numberFormat, null);
+            }
+
+            return value switch
+            {
+                IFormattable formattable when format != null => formattable.ToString(format, Helpers.Locale.Culture),
+                // A fraction without a format reads as a person writes it, not to its last digit: "7.57"
+                double or float => ((IFormattable)value).ToString("0.##", Helpers.Locale.Culture),
+                _ => Convert.ToString(value, Helpers.Locale.Culture) ?? string.Empty
+            };
         }
 
         /// <summary>The kinds a number can be named in the text, and the quantity each measures (none for money)</summary>

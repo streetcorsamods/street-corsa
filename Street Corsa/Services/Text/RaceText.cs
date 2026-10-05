@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace StreetCorsa.Services.Text
 {
@@ -9,7 +10,7 @@ namespace StreetCorsa.Services.Text
     /// ASCII reaches the mode as written whatever AC's INI reader makes of them; the mode decodes it and fills its
     /// {placeholders}. A key the mode does not find there says the mode's own English.
     /// </summary>
-    public static class RaceText
+    public static partial class RaceText
     {
         public const string Section = "STREET_CORSA_TEXT";
 
@@ -21,6 +22,14 @@ namespace StreetCorsa.Services.Text
             yield return $"[{Section}]";
             foreach (var key in text.Keys.Where(k => k.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase)).Order(StringComparer.OrdinalIgnoreCase))
             {
+                // The values are encoded, the keys go as they are: a mod's key that would break its line (or add a
+                // section) is left out, and the mode says its own English there
+                if (!PlainKey().IsMatch(key))
+                {
+                    Logging.AppLoggerFactory.CreateLogger("Text").Warning("The race text key '{Key}' cannot go into race.ini; left out", key.ReplaceLineEndings(" "));
+                    continue;
+                }
+
                 var lines = text.Lines(key);
                 if (lines.Count > 0) yield return $"{IniKey(key)}={Encode(lines[0])}";
             }
@@ -36,6 +45,10 @@ namespace StreetCorsa.Services.Text
             // And the decimal mark the career writes its figures with, so a slip in AC reads like the one at home
             yield return $"DECIMAL={Encode(Helpers.Locale.Culture.NumberFormat.NumberDecimalSeparator)}";
         }
+
+        /// <summary>A key that goes into race.ini as it is: letters, digits, _ and . after <c>race.</c></summary>
+        [GeneratedRegex(@"^race\.[A-Za-z0-9_.]+\z", RegexOptions.IgnoreCase)]
+        private static partial Regex PlainKey();
 
         /// <summary><c>race.result.win</c> as the mode asks for it: <c>RESULT_WIN</c></summary>
         public static string IniKey(string key) =>

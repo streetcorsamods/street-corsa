@@ -186,10 +186,8 @@ namespace StreetCorsa.Services.Configuration
                 if (!KeptFile.PutBack(Path.Combine(_keep, entry.Kept), entry.Path, entry.ReadOnly)) return false;
                 _logger.Information("{File}: the original is back", entry.Path);
             }
-            else if (File.Exists(entry.Path))
+            else if (SafeFile.Delete(entry.Path))
             {
-                KeptFile.ClearReadOnly(entry.Path);
-                File.Delete(entry.Path);
                 _logger.Information("{File}: removed again, it was not there before", entry.Path);
             }
 
