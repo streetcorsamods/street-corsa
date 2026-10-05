@@ -59,6 +59,11 @@ public static class ShownPartsOnCar
         /// <summary>The colour the car's paint textures were tinted for, and the skin they were tinted in; null in its own colours</summary>
         public (PaintColour Colour, string? Skin)? Paint;
 
+        /// <summary>How many coats of a paint job went on (<see cref="Coat"/>), and whether the paint textures on are one</summary>
+        public int Coats;
+
+        public bool Coated;
+
         public int Version;
 
         public void Switch(IRenderableObject o, bool on)
@@ -239,8 +244,9 @@ public static class ShownPartsOnCar
     private static async Task<bool> PutPaintAsync(Kn5RenderableCar car, PaintColour colour, OnCar on, int version, DeviceContextHolder device)
     {
         var skin = car.CurrentSkin;
-        if (on.Paint is { } painted && painted.Colour == colour && string.Equals(painted.Skin, skin, StringComparison.OrdinalIgnoreCase)) return true;
+        if (!on.Coated && on.Paint is { } painted && painted.Colour == colour && string.Equals(painted.Skin, skin, StringComparison.OrdinalIgnoreCase)) return true;
 
+        var coats = on.Coats;
         IReadOnlyList<(string Texture, byte[] Bytes)> textures;
         try
         {
@@ -249,9 +255,14 @@ public static class ShownPartsOnCar
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             Logger.Warning(ex, "The paint of {Car} is not shown: it is drawn in its own colours", car.RootObject?.Name);
-            return version == on.Version;
+            if (version != on.Version) return false;
+            if (coats == on.Coats) ClearPaint(car, on);
+            return true;
         }
         if (version != on.Version) return false;
+
+        // A coat of a paint job went on while this was made: the job's paint stays, the next set asked for puts its own
+        if (coats != on.Coats) return true;
 
         ClearPaint(car, on);
         foreach (var (texture, bytes) in textures) car.OverrideTexture(device, texture, bytes);
@@ -262,8 +273,9 @@ public static class ShownPartsOnCar
     /// <summary>The car back in its skin's own colours</summary>
     private static void ClearPaint(Kn5RenderableCar car, OnCar on)
     {
-        if (on.Paint == null) return;
+        if (on.Paint == null && !on.Coated) return;
         on.Paint = null;
+        on.Coated = false;
         car.ClearProceduralOverrides();
     }
 
@@ -277,8 +289,11 @@ public static class ShownPartsOnCar
         var on = Cars.GetOrCreateValue(car);
         foreach (var (texture, bytes) in textures) car.OverrideTexture(device, texture, bytes);
 
-        // Not the paint it was given: whatever it is asked to show next puts its own on afresh
-        on.Paint = (PaintColour.Black, "\0");
+        // Not the paint it was given: a paint still being made for an earlier set is not put over it, and whatever the
+        // car is asked to show next puts its own on afresh
+        on.Coats++;
+        on.Coated = true;
+        on.Paint = null;
         on.Shown = null;
     }
 

@@ -594,10 +594,15 @@ namespace StreetCorsa.Screens.Garage
                 return;
             }
 
+            // Drives as it would home (gas for the way, nothing broken), with an engine that runs: the booth judges it so too
             var runs = true;
             try
             {
-                runs = DrivingHome.WhyWontRun(car, _partsService.IsAvailable ? _partsService.Catalog : null).Count == 0;
+                if (_partsService.IsAvailable && await _partsService.EnsurePartsAsync(car) && !string.IsNullOrEmpty(_gameState.SaveName))
+                    _gameStateRepo.Save(_gameState, _gameState.SaveName);
+                runs = DrivingHome.Drives(car, _partsService.IsAvailable ? _partsService.Catalog : null);
+                if (runs && _partsService.IsAvailable && car.Engine != null)
+                    runs = await EngineSpecs.ForAsync(_partsService, car, selected.DisplayName) is not { Runs: false };
             }
             catch (Exception ex)
             {

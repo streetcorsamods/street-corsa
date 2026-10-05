@@ -60,6 +60,13 @@ Nothing is written into the car's folder. A colour is the car's own textures, ti
    interior in another colour) are left. A colour through the detail is baked: diffuse × detail, shading out, tinted,
    shading back, into the diffuse (alpha kept), and the detail made plain white (alpha kept), so the diffuse alone gives
    the colour.
+6. **Other materials drawing that detail** (the textures go over the car's own by name, for every material): each one
+   that shows something of it (see-through texels where it draws, not near black) has the detail baked into its own
+   diffuse too (the interior's paint, a steering wheel in the body's colour), unless a material drawing that diffuse
+   without the detail draws see-through texels of it (an interior's AO atlas, each material coloured by a detail of its
+   own). Then the detail itself is tinted in place, the diffuses left, when everything drawing it shows the paint's hue
+   (`PaintLayer.InDetail`: the Plymouth Belvedere's dash); else the skin keeps its own colours. Survey 2026-10-05 after
+   the review fixes: 1810/1912 skins tintable (1830 before), the same 6 cars none.
 
 The tinted textures are PNGs in `%AppData%\StreetCorsa\Looks\paint`, named for the model, skin, colour and texture
 (`<car>_<stamp>_<RRGGBB>_<texture hash>.png`, a `.list` of what was written), pruned past about 60 jobs. The scenes put
@@ -83,7 +90,8 @@ goggles and respirator, a gravity-cup gun on an air hose; his right arm a node (
 see-through cone (`MIST`, alpha-blended, no depth write) at the nozzle.
 
 `booth.json`: `arrive` (the way in), `round` (`gap` off the body, `low`/`high` the gun's swing in degrees, `strokes` a
-side, `wait` where he stands in the shop), `camera` (`distance`, `height`, `min`/`max` the box it never leaves),
+side, `wait` where he stands by his cart, clear of the way in), `camera` (`distance`, `height`, `min`/`max` the box it
+never leaves), `colours` (the swatches offered: `name` a text pool key or the name itself, `hex`; none without them),
 `sun` and `lights` (indoors: `day` only, every hour falls back to it). A mod can add or replace a booth (`booths`
 content type); the base game uses the first.
 

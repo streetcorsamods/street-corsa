@@ -8,11 +8,13 @@
     "its heading along the path.",
     "round: how the painter goes round the car: gap, metres off its body; low and high, how far his gun swings down and up,",
     "degrees from level; strokes, how many times up and down along a side; wait, where he stands while there is nothing",
-    "to paint (out in the shop, by the door: he walks in to the job).",
+    "to paint (by his cart in the front corner, clear of the way in: the car rolls in past him).",
     "camera: distance from the car's middle, height of its eye over the floor; min and max, the box it never leaves",
     "however far the player wheels it back (inside the walls).",
     "sun: the key light's direction, towards it (the ceiling's light boxes). lights: as a street's; a booth indoors needs",
-    "only \"day\", every hour of the day falls back to it."
+    "only \"day\", every hour of the day falls back to it.",
+    "colours: the colours of the day the player is offered to start from: name, a text pool key (or the name itself),",
+    "and hex, #RRGGBB. A booth without them offers none: the player mixes their own."
   ],
   "id": "booth",
   "title": "Paint Booth",
@@ -21,8 +23,18 @@
   "arrive": [
     [ 0, 9 ], [ 0, 4 ], [ 0, 0.4 ]
   ],
-  "round": { "gap": 0.75, "low": -32, "high": 6, "strokes": 5, "wait": [ 1.2, 6.8 ] },
+  "round": { "gap": 0.75, "low": -32, "high": 6, "strokes": 5, "wait": [ 2.25, 2.85 ] },
   "camera": { "distance": 4.4, "height": 1.5, "min": [ -2.55, -4.35 ], "max": [ 2.55, 4.4 ] },
+  "colours": [
+    { "name": "booth.colour.red", "hex": "#9E1B1B" }, { "name": "booth.colour.orange", "hex": "#D9531E" },
+    { "name": "booth.colour.yellow", "hex": "#E8C21A" }, { "name": "booth.colour.lime", "hex": "#8DB33A" },
+    { "name": "booth.colour.green", "hex": "#1F5F3A" }, { "name": "booth.colour.turquoise", "hex": "#2A9DA3" },
+    { "name": "booth.colour.lightblue", "hex": "#5B8FC7" }, { "name": "booth.colour.blue", "hex": "#1E3F8A" },
+    { "name": "booth.colour.purple", "hex": "#5B2A6E" }, { "name": "booth.colour.pink", "hex": "#D98AA6" },
+    { "name": "booth.colour.cream", "hex": "#EDE3C8" }, { "name": "booth.colour.white", "hex": "#F2F0E6" },
+    { "name": "booth.colour.silver", "hex": "#A9ADB0" }, { "name": "booth.colour.gold", "hex": "#B8913A" },
+    { "name": "booth.colour.brown", "hex": "#5A3B26" }, { "name": "booth.colour.black", "hex": "#121214" }
+  ],
   "sun": [ 0.25, 1.0, 0.35 ],
   "lights": {
     "day": {

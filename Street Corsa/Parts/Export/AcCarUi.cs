@@ -15,6 +15,9 @@ public static class AcCarUi
 {
     public static string PathIn(string carFolder) => Path.Combine(carFolder, "ui", "ui_car.json");
 
+    /// <summary>The largest ui_car.json or ui_skin.json read: a real one is a few kilobytes</summary>
+    public const long MaxUiJsonBytes = 1024 * 1024;
+
     /// <summary>The parsed file, or null with the reason (missing, unreadable, not an object)</summary>
     public static JObject? TryRead(string carFolder, out string? error)
     {
@@ -37,6 +40,25 @@ public static class AcCarUi
         }
 
         return TryParse(text, out error);
+    }
+
+    /// <summary>
+    /// The name a skin's ui_skin.json gives it ("skinname"), read as leniently as ui_car.json; null when it has none, says
+    /// "undefined", or cannot be read (missing, unreadable, larger than any real one)
+    /// </summary>
+    public static string? SkinName(string carFolder, string skin)
+    {
+        try
+        {
+            var file = new FileInfo(Path.Combine(carFolder, "skins", skin, "ui_skin.json"));
+            if (!file.Exists || file.Length > MaxUiJsonBytes) return null;
+            var name = GetString(TryParse(File.ReadAllText(file.FullName), out _), "skinname")?.Trim();
+            return string.IsNullOrEmpty(name) || name.Equals("undefined", StringComparison.OrdinalIgnoreCase) ? null : name;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            return null;
+        }
     }
 
     public static JObject? TryParse(string json, out string? error)

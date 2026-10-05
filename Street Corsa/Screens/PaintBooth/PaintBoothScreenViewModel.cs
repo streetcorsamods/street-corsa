@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.IO;
-using System.Text.Json;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -16,6 +15,7 @@ using StreetCorsa.Models.GameState;
 using StreetCorsa.Navigation;
 using StreetCorsa.Parts;
 using StreetCorsa.Parts.Cars;
+using StreetCorsa.Parts.Export;
 using StreetCorsa.Screens.Shared;
 using StreetCorsa.Services.Catalog;
 using StreetCorsa.Services.PaintBooth;
@@ -50,15 +50,6 @@ namespace StreetCorsa.Screens.PaintBooth
         // A colour picked by hand is put on the car once the hand has rested this long
         private static readonly TimeSpan PreviewDelay = TimeSpan.FromMilliseconds(350);
 
-        /// <summary>The colours of the day a player is offered first, as the makers called theirs</summary>
-        private static readonly (string Key, string Hex)[] PeriodColours =
-        [
-            ("booth.colour.red", "#9E1B1B"), ("booth.colour.orange", "#D9531E"), ("booth.colour.yellow", "#E8C21A"), ("booth.colour.lime", "#8DB33A"),
-            ("booth.colour.green", "#1F5F3A"), ("booth.colour.turquoise", "#2A9DA3"), ("booth.colour.lightblue", "#5B8FC7"), ("booth.colour.blue", "#1E3F8A"),
-            ("booth.colour.purple", "#5B2A6E"), ("booth.colour.pink", "#D98AA6"), ("booth.colour.cream", "#EDE3C8"), ("booth.colour.white", "#F2F0E6"),
-            ("booth.colour.silver", "#A9ADB0"), ("booth.colour.gold", "#B8913A"), ("booth.colour.brown", "#5A3B26"), ("booth.colour.black", "#121214")
-        ];
-
         private readonly NavigationService _navigationService;
         private readonly DialogService _dialogService;
         private readonly GameState _gameState;
@@ -74,6 +65,10 @@ namespace StreetCorsa.Screens.PaintBooth
         private PartsCatalog? _catalog;
         private bool _leaving;
         private int _tintCheck;
+
+        // The skins' names, and the skin each id is drawn in (Looks.CarPaint.SkinOf), read once a visit
+        private readonly Dictionary<string, string> _skinNames = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, string?> _drawnSkins = new(StringComparer.OrdinalIgnoreCase);
 
         public PaintBoothScreenViewModel(
             NavigationService navigationService,
@@ -220,8 +215,8 @@ namespace StreetCorsa.Screens.PaintBooth
             : _colour is { } c ? GameText.Say("booth.ui.choice.custom", ("skin", SkinName(_skin)), ("colour", c.Hex))
             : GameText.Say("booth.ui.choice.factory", ("skin", SkinName(_skin)));
 
-        /// <summary>The picked job differs from the car as it is</summary>
-        public bool IsChange => _car != null && (!string.Equals(_skin, _car.SkinId, StringComparison.OrdinalIgnoreCase) || _colour != PaintColour.Parse(_car.PaintColour));
+        /// <summary>The picked job differs from the car as it is: drawn in another skin, or another colour over it</summary>
+        public bool IsChange => _car != null && (!SameSkin(_skin, _car.SkinId) || _colour != PaintColour.Parse(_car.PaintColour));
 
         public decimal Price => _car == null ? 0
             : PartPricing.Round((double)(Rules.RuleBook.Current.Repairs.ColourChangeCost + (_colour != null ? Rules.RuleBook.Current.Repairs.CustomColourCost : 0))
@@ -274,14 +269,20 @@ namespace StreetCorsa.Screens.PaintBooth
 
             _catalog = _partsService.IsAvailable ? _partsService.Catalog : null;
             _carDirectory = Path.Combine(AppSettings.Instance.CarsPath, _car.DefinitionId);
-            _skin = string.IsNullOrEmpty(_car.SkinId) ? null : _car.SkinId;
+            _skinNames.Clear();
+            _drawnSkins.Clear();
+            var skins = definition.AvailableSkins ?? [];
+
+            // The car's skin as the catalog spells it, so the one it is in is marked picked
+            _skin = string.IsNullOrEmpty(_car.SkinId) ? null
+                : skins.FirstOrDefault(s => string.Equals(s, _car.SkinId, StringComparison.OrdinalIgnoreCase)) ?? _car.SkinId;
             _colour = PaintColour.Parse(_car.PaintColour);
 
-            foreach (var skin in definition.AvailableSkins ?? []) Skins.Add(new BoothSkin(skin, SkinName(skin), PreviewOf(skin), new RelayCommand(() => Pick(skin, null), () => IsPicking)));
-            foreach (var (key, hex) in PeriodColours)
+            foreach (var skin in skins) Skins.Add(new BoothSkin(skin, SkinName(skin), PreviewOf(skin), new RelayCommand(() => Pick(skin, null), () => IsPicking)));
+            foreach (var offered in Booth.Colours)
             {
-                var colour = PaintColour.Parse(hex)!.Value;
-                Swatches.Add(new BoothSwatch(GameText.Say(key), new SolidColorBrush(Color.FromRgb(colour.R, colour.G, colour.B)),
+                var colour = offered.Colour;
+                Swatches.Add(new BoothSwatch(GameText.Say(offered.Name), new SolidColorBrush(Color.FromRgb(colour.R, colour.G, colour.B)),
                     new RelayCommand(() => Pick(_skin, colour), () => IsPicking && CanTint)));
             }
             MarkPicked();
@@ -293,21 +294,24 @@ namespace StreetCorsa.Screens.PaintBooth
             OnPropertyChanged(nameof(PlayerCar));
             PlayerEngine.Place(null, StreetStage.OwnEngineVolume);
 
-            // A car that runs rolls in on its own; one that will not is pushed in, and stands there from the start
-            var problems = DrivingHome.WhyWontRun(_car, _catalog);
-            _ = StartOwnEngineAsync(_partsService, _catalogRepository, _car, running: problems.Count == 0);
+            // A car that runs rolls in on its own (as the garage judged it: it would drive home, and its engine runs); one
+            // that will not is pushed in, and stands there from the start. Either once the booth is on screen: the view's
+            // curtain is hung only then.
+            var drives = DrivingHome.Drives(_car, _catalog);
+            _ = StartOwnEngineAsync(_partsService, _catalogRepository, _car, running: drives);
             CheckTint();
-            if (problems.Count == 0)
+            StatusText = GameText.Say(drives ? "booth.ui.rolling_in" : "booth.ui.pushed_in");
+            ComeInOnceShown(() => Booth?.HasModel == true, () =>
             {
-                StatusText = GameText.Say("booth.ui.rolling_in");
-                ComeInOnceShown(() => Booth?.HasModel == true, () => Stage.Arrive(PlayerEngine, false));
-            }
-            else
-            {
+                if (drives && OwnEngine is not { Runs: false })
+                {
+                    Stage.Arrive(PlayerEngine, false);
+                    return;
+                }
                 StatusText = GameText.Say("booth.ui.pushed_in");
-                StandThereAtOnce();
+                Stage.StandThere(PlayerEngine);
                 OnArrived();
-            }
+            });
         }
 
         public override void Exit()
@@ -361,7 +365,7 @@ namespace StreetCorsa.Screens.PaintBooth
             }
 
             // The garage would not open: back in the booth to try again
-            OpenCurtain?.Invoke();
+            LiftCurtain();
             _leaving = false;
             IsPicking = !IsSpraying;
             StatusText = GameText.Say("booth.ui.still_here");
@@ -460,26 +464,25 @@ namespace StreetCorsa.Screens.PaintBooth
             RaiseAll();
         }
 
+        /// <summary>A skin's name as its ui_skin.json gives it, else its folder's; read once a visit</summary>
         private string SkinName(string? skin)
         {
             if (string.IsNullOrEmpty(skin)) return GameText.Say("booth.ui.skin.own");
-            try
-            {
-                var file = Path.Combine(_carDirectory, "skins", skin, "ui_skin.json");
-                if (File.Exists(file))
-                {
-                    using var document = JsonDocument.Parse(File.ReadAllText(file), new JsonDocumentOptions { AllowTrailingCommas = true, CommentHandling = JsonCommentHandling.Skip });
-                    if (document.RootElement.ValueKind == JsonValueKind.Object && document.RootElement.TryGetProperty("skinname", out var name)
-                        && name.ValueKind == JsonValueKind.String && name.GetString()?.Trim() is { Length: > 0 } named
-                        && !named.Equals("undefined", StringComparison.OrdinalIgnoreCase))
-                        return named;
-                }
-            }
-            catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
-            {
-                // A mod's file that cannot be read: the folder's name
-            }
-            return skin.Replace('_', ' ');
+            if (_skinNames.TryGetValue(skin, out var known)) return known;
+            var name = AcCarUi.SkinName(_carDirectory, skin) ?? skin.Replace('_', ' ');
+            _skinNames[skin] = name;
+            return name;
+        }
+
+        /// <summary>Two skin ids the car is drawn alike in (Looks.CarPaint.SkinOf: case, an id with no folder, none)</summary>
+        private bool SameSkin(string? a, string? b) =>
+            string.Equals(a, b, StringComparison.OrdinalIgnoreCase) || string.Equals(DrawnSkin(a), DrawnSkin(b), StringComparison.OrdinalIgnoreCase);
+
+        private string? DrawnSkin(string? skin)
+        {
+            var key = skin ?? "";
+            if (_drawnSkins.TryGetValue(key, out var drawn)) return drawn;
+            return _drawnSkins[key] = CarPaint.SkinOf(_carDirectory, skin);
         }
 
         private ImageSource? PreviewOf(string skin)
@@ -553,6 +556,9 @@ namespace StreetCorsa.Screens.PaintBooth
             IsPicking = false;
             IsSpraying = true;
 
+            // The car as it was before the job, worn and dirty as it came in: built before the job takes those away
+            var before = ShownAs(oldSkin, oldColour);
+            Task? spent = null;
             try
             {
                 _gameState.Player.Money -= price;
@@ -564,9 +570,9 @@ namespace StreetCorsa.Screens.PaintBooth
                 Sfx.Play(Sfx.Purchase);
                 StatusText = GameText.Say("booth.ui.spraying", ("choice", ChoiceText));
 
-                // The car as it was before the job, the coats over it from there
-                Show.Wear(oldSkin, ShownAs(oldSkin, oldColour));
-                var sameSkin = string.Equals(oldSkin, newSkin, StringComparison.OrdinalIgnoreCase);
+                // The coats over the car as it was; its old wear and dirt go with the last of them
+                Show.Wear(oldSkin, before);
+                var sameSkin = SameSkin(oldSkin, newSkin);
                 var texels = sameSkin
                     ? Task.Run(() =>
                     {
@@ -579,7 +585,7 @@ namespace StreetCorsa.Screens.PaintBooth
                 var clock = System.Diagnostics.Stopwatch.StartNew();
                 Show.Spray(time);
                 _sprayLoop = AudioHub.Shared.PlayLoop("booth.spray", fadeSeconds: 0.6f);
-                var spent = SpendAsync(GameAction.PaintJob);
+                spent = SpendAsync(GameAction.PaintJob);
 
                 var (from, to) = texels == null ? (null, null) : await texels;
                 var swapped = false;
@@ -628,6 +634,9 @@ namespace StreetCorsa.Screens.PaintBooth
                 StopSprayLoop();
                 Show.StopSpraying();
                 IsSpraying = false;
+
+                // Paid for: the time is spent before the save and the way home, as on the job's own way there
+                if (spent != null) await spent;
                 Save();
                 if (IsActive) await GoHomeAsync();
             }

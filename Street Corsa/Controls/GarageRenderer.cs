@@ -1137,6 +1137,9 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     {
         if (_fixture == null) return;
         _fixture.LocalMatrix = placement;
+
+        // Its box where it stands now: the shadows' cameras leave out what their box is not in
+        _fixture.UpdateBoundingBox();
         SetShadowsDirty();
         IsDirty = true;
     }

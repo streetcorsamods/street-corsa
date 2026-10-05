@@ -22,7 +22,9 @@ namespace StreetCorsa.Looks;
 /// diffuse is see-through (diffuse × lerp(detail, 1, diffuse's alpha)). The colour most of the paint shows is the
 /// paint's; the texels close to it, in hue and not far off in lightness, are repainted, shaded as they were. A paint
 /// whose colour comes through its detail (the AMC Javelin's, the Dodge Monaco's) has the two baked into its diffuse,
-/// tinted there, and its detail made plain white, so the diffuse alone gives the colour. A car whose paint shows no one
+/// tinted there, and its detail made plain white, so the diffuse alone gives the colour; other materials that draw that
+/// detail are baked with it too, or the detail is tinted in place when they cannot be (<see cref="PaintLayer.InDetail"/>),
+/// or the skin keeps its colours when they show another (docs/screens/paint-booth.md). A car whose paint shows no one
 /// colour over most of it (a two-tone skin, a livery) cannot be tinted: it is painted in its mod's colours only.
 /// </summary>
 public static class CarPaint
@@ -62,11 +64,19 @@ public static class CarPaint
     private const float Hue = 0.2f;
     private const float HueMost = 0.3f;
 
+    // A texel this opaque takes nothing from a detail baked in; a material drawing at most this share of see-through ones
+    // of a baked diffuse is not changed by it
+    private const float Opaque = 0.98f;
+    private const float SeeThroughAtMost = 0.03f;
+
+    // A material showing a colour this dark shows nothing of a detail multiplied in
+    private const float Dark = 0.03f;
+
     /// <summary>A diffuse with fewer of its texels changed than this is left as it is</summary>
     private const double SomeChanged = 0.01;
 
     /// <summary>The way tints are made: in the file names, so one made another way is made again</summary>
-    private const int Version = 2;
+    private const int Version = 3;
 
     /// <summary>How many paint jobs' textures are kept written (a car's few, for this many cars)</summary>
     private const int KeptFiles = 60;
@@ -85,9 +95,9 @@ public static class CarPaint
     #region What the paint is
 
     /// <summary>
-    /// What the paint of the car in <paramref name="carDirectory"/> is in its skin <paramref name="skin"/> (null or empty:
-    /// its model's own textures); null when the car has no model, or nothing of it is paint. Slow the first time for a car
-    /// and skin: off the UI thread. Never throws for what the car holds.
+    /// What the paint of the car in <paramref name="carDirectory"/> is in its skin <paramref name="skin"/> (as the scenes
+    /// and AC draw it: <see cref="SkinOf"/>); null when the car has no model, or nothing of it is paint. Slow the first
+    /// time for a car and skin: off the UI thread. Never throws for what the car holds.
     /// </summary>
     public static PaintSurface? SurfaceOf(string carDirectory, string? skin)
     {
@@ -169,6 +179,33 @@ public static class CarPaint
             var (cr0, cg0, cb0) = colour.Unit;
             var layers = looked.Where((l, i) => i == 0 || Dominant(l.Samples) is var (c, _) && Closeness(c.Unit.R, c.Unit.G, c.Unit.B, cr0, cg0, cb0) >= 1f)
                 .Select(l => l.Layer).Distinct().ToList();
+
+            // The tinted textures go over the car's own by their names, for every material drawing them: a detail made
+            // white, every other material that draws it too would lose what it took from it
+            Picture? PictureOf(string name)
+            {
+                if (pictures.TryGetValue(name, out var known)) return known;
+                foreach (var (read, bytes) in TextureBytes(model, carDirectory, skin, [name]))
+                    if (Decode(bytes, LookSize) is { } picture) pictures[read] = picture;
+                return pictures.GetValueOrDefault(name);
+            }
+            if (DrawingTheDetail(kn5, materials, layers, PictureOf) is { } others) layers.AddRange(others);
+            else if (OnlyPaintDraws(kn5, materials, shell.Paint, layers, colour, PictureOf))
+            {
+                // Its colour cannot be baked in for every material drawing the detail (an interior's atlas, each of its
+                // materials coloured by a detail of its own), and all that draws it shows the paint's colour (the
+                // interior's paint, the rims'): the detail itself is tinted, all of it changing together, the diffuses
+                // left as they are
+                layers = layers.Select(l => l.Detail != null ? l with { InDetail = true } : l).ToList();
+                Logger.Information("{Car} ({Skin}): the interior's paint draws its paint's detail too, the detail is tinted", Path.GetFileName(carDirectory), skin ?? "its model's");
+            }
+            else
+            {
+                // Its detail is drawn by what is no paint (trim, an interior's black) and cannot be baked for them
+                Logger.Information("{Car} ({Skin}): its paint's colour comes through a detail other materials draw too, it is painted in its own colours only",
+                    Path.GetFileName(carDirectory), skin ?? "its model's");
+                return new PaintSurface([], colour, share, false);
+            }
             var baked = layers.Any(l => l.Detail != null);
             var surface = new PaintSurface(layers, colour, share, baked);
             Logger.Information("{Car} ({Skin}): paint {Colour} over {Share:P0} of it, in {Textures}{Baked} ({Ms} ms)", Path.GetFileName(carDirectory),
@@ -181,6 +218,111 @@ public static class CarPaint
             Logger.Warning(ex, "{Car}: its paint could not be looked at, it is painted in its own colours only", Path.GetFileName(carDirectory));
             return null;
         }
+    }
+
+    /// <summary>
+    /// The other materials that draw a detail the paint's colour comes through (<paramref name="layers"/>' with a detail):
+    /// the interior's paint, a trim. That detail is made white, so each has the detail baked into its own diffuse as the
+    /// paint has (and tinted there: one of the paint's colour takes the new one, another stays as it was). The bake changes
+    /// only a diffuse's see-through texels, so a material drawing that diffuse without the detail (an interior's atlas)
+    /// is no matter where it draws only opaque ones. Null when one of them cannot be so: it has no diffuse, or a material
+    /// drawing it without the detail draws see-through texels of it, which would take the detail's colour.
+    /// </summary>
+    private static List<PaintLayer>? DrawingTheDetail(IKn5 kn5, List<Kn5Material> materials, List<PaintLayer> layers, Func<string, Picture?> pictureOf)
+    {
+        var details = layers.Select(l => l.Detail).OfType<string>().ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var others = new List<PaintLayer>();
+        if (details.Count == 0) return others;
+
+        var drawn = Meshes(kn5.RootNode).Select(n => n.MaterialId).ToHashSet();
+        var drawing = materials.Where((m, i) => drawn.Contains((uint)i)).ToList();
+        string? DetailOf(Kn5Material m) => UsesDetail(m) ? m.GetMappingByName(Detail)?.Texture : null;
+        string? DiffuseOf(Kn5Material m) => m.GetMappingByName(Diffuse)?.Texture;
+
+        // A diffuse two paint materials draw is baked with the first's detail (as Tinted makes it)
+        var painted = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        foreach (var layer in layers) painted.TryAdd(layer.Diffuse, layer.Detail);
+        foreach (var material in drawing)
+        {
+            if (DetailOf(material) is not { } detail || !details.Contains(detail)) continue;
+            if (DiffuseOf(material) is not { } diffuse) return null;
+
+            // Drawing only opaque texels of its diffuse, it shows nothing of the detail: nothing to bake
+            if (!painted.ContainsKey(diffuse) && pictureOf(diffuse) is { } own && !SeesThrough(SamplesOf(kn5, materials.IndexOf(material), own))) continue;
+
+            // Its diffuse baked with this detail already (the paint's own, or another of these)
+            if (painted.TryGetValue(diffuse, out var with))
+            {
+                if (string.Equals(with, detail, StringComparison.OrdinalIgnoreCase)) continue;
+                return null;
+            }
+
+            // Every material drawing that diffuse without this detail draws only opaque texels of it, or the bake shows on it
+            var without = drawing.Where(m => string.Equals(DiffuseOf(m), diffuse, StringComparison.OrdinalIgnoreCase)
+                                             && !string.Equals(DetailOf(m), detail, StringComparison.OrdinalIgnoreCase)).ToList();
+            if (without.Count > 0)
+            {
+                if (pictureOf(diffuse) is not { } picture) return null;
+                if (without.Any(other => SeesThrough(SamplesOf(kn5, materials.IndexOf(other), picture)))) return null;
+            }
+            painted[diffuse] = detail;
+            others.Add(new PaintLayer(diffuse, detail, DetailScale(material), 0f));
+        }
+        return others;
+    }
+
+    /// <summary>What a material's meshes show of a diffuse (<see cref="SampleMesh"/>)</summary>
+    private static List<RawSample> SamplesOf(IKn5 kn5, int material, Picture diffuse)
+    {
+        var raw = new List<RawSample>();
+        foreach (var node in Meshes(kn5.RootNode).Where(n => n.MaterialId == (uint)material)) SampleMesh(node, diffuse, null, 1f, raw);
+        return raw;
+    }
+
+    /// <summary>More than <see cref="SeeThroughAtMost"/> of what the samples cover is see-through: a detail multiplied in shows there</summary>
+    private static bool SeesThrough(List<RawSample> raw)
+    {
+        var total = raw.Sum(r => r.Weight);
+        return total > 0f && raw.Where(r => r.Diffuse.A < Opaque).Sum(r => r.Weight) > total * SeeThroughAtMost;
+    }
+
+    /// <summary>
+    /// Every material drawing a detail the paint's colour comes through shows the paint's colour (<paramref name="colour"/>):
+    /// the body's own (<paramref name="paint"/>), or one coloured as the body by design (the interior's paint, a steering
+    /// wheel in the body's colour), which changes with it. One that shows another colour through it would be tinted too.
+    /// </summary>
+    private static bool OnlyPaintDraws(IKn5 kn5, List<Kn5Material> materials, IReadOnlyList<string> paint, List<PaintLayer> layers,
+        PaintColour colour, Func<string, Picture?> pictureOf)
+    {
+        var details = layers.Select(l => l.Detail).OfType<string>().ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var drawn = Meshes(kn5.RootNode).Select(n => n.MaterialId).ToHashSet();
+        var (cr, cg, cb) = colour.Unit;
+        for (var i = 0; i < materials.Count; i++)
+        {
+            var m = materials[i];
+            if (!drawn.Contains((uint)i) || paint.Contains(m.Name) || !UsesDetail(m) || m.GetMappingByName(Detail)?.Texture is not { } d || !details.Contains(d)) continue;
+            if (m.GetMappingByName(Diffuse)?.Texture is not { } diffuseName || pictureOf(diffuseName) is not { } diffuse || pictureOf(d) is not { } detail) return false;
+
+            var scale = DetailScale(m);
+            var raw = new List<RawSample>();
+            foreach (var node in Meshes(kn5.RootNode).Where(n => n.MaterialId == (uint)i)) SampleMesh(node, diffuse, Fine(detail, scale), scale, raw);
+            // One drawing only opaque texels of its diffuse shows nothing of the detail
+            if (raw.Count == 0 || !SeesThrough(raw)) continue;
+
+            // Its colour as the paint's is judged: its diffuse's shading (an interior's ambient occlusion) taken out
+            var under = raw.Sum(r => (1 - r.Diffuse.A) * r.Weight);
+            var shade = under > 0f ? raw.Sum(r => Lum(r.Diffuse.R, r.Diffuse.G, r.Diffuse.B) * (1 - r.Diffuse.A) * r.Weight) / under : 0f;
+            var (shows, _) = Dominant(raw.Select(r => (Colour: Unshaded(Drawn(r.Diffuse, r.Detail), r.Diffuse, shade), r))
+                .Select(s => new Sample(s.Colour.R, s.Colour.G, s.Colour.B, s.r.Weight * Math.Min(1f, ShadingOf(s.r.Diffuse, shade)))).ToList());
+            // Too dark to show anything of the detail (an interior's black), it is no matter; else its hue is the paint's,
+            // lighter or darker as its shading has it
+            var (sr, sg, sb) = shows.Unit;
+            var lum = Lum(sr, sg, sb);
+            if (lum < Dark) continue;
+            var level = Lum(cr, cg, cb) / lum;
+            if (Closeness(sr * level, sg * level, sb * level, cr, cg, cb) < 1f) return false;
+        }
+        return true;
     }
 
     /// <summary>A multi-map shader with its detail on multiplies its detail texture in where the diffuse is see-through</summary>
@@ -315,7 +457,14 @@ public static class CarPaint
     /// <paramref name="colour"/>, written once and kept (<see cref="Cache"/>): each texture's name and the file. Empty when
     /// the car's paint cannot be tinted. Slow the first time: off the UI thread.
     /// </summary>
-    public static IReadOnlyList<TintedTexture> Tinted(string carDirectory, string? skin, PaintColour colour)
+    public static IReadOnlyList<TintedTexture> Tinted(string carDirectory, string? skin, PaintColour colour) =>
+        TintedPictures(carDirectory, skin, colour).Select(t => t.Tinted).ToList();
+
+    /// <summary>
+    /// <see cref="Tinted"/>, with each texture's texels when they were made just now (null when read back from before):
+    /// what is made is used as it is, not written and read straight back
+    /// </summary>
+    private static List<(TintedTexture Tinted, Picture? Made)> TintedPictures(string carDirectory, string? skin, PaintColour colour)
     {
         if (SurfaceOf(carDirectory, skin) is not { CanTint: true } surface || WearLayer.ModelOf(carDirectory) is not { } model) return [];
 
@@ -334,7 +483,7 @@ public static class CarPaint
             {
                 foreach (var t in kept) Touch(t.File);
                 Touch(listed);
-                return kept;
+                return kept.Select(t => (t, (Picture?)null)).ToList();
             }
         }
 
@@ -346,6 +495,13 @@ public static class CarPaint
         var made = new Dictionary<string, Picture>(StringComparer.OrdinalIgnoreCase);
         foreach (var layer in surface.Layers)
         {
+            if (layer is { InDetail: true, Detail: { } inDetail })
+            {
+                // The colour through a detail other materials draw too: tinted there, against the colour it shows most
+                if (!made.ContainsKey(inDetail) && pictures.TryGetValue(inDetail, out var shared) && TintPicture(shared, DominantOf(shared), colour) >= SomeChanged)
+                    made[inDetail] = shared;
+                continue;
+            }
             if (made.ContainsKey(layer.Diffuse) || !pictures.TryGetValue(layer.Diffuse, out var diffuse)) continue;
             if (layer.Detail != null && pictures.TryGetValue(layer.Detail, out var detail))
             {
@@ -359,17 +515,27 @@ public static class CarPaint
             }
         }
 
-        var result = new List<TintedTexture>();
+        var result = new List<(TintedTexture Tinted, Picture? Made)>();
         foreach (var (texture, picture) in made)
         {
             var file = FileOf(texture);
             SafeFile.WriteAllBytes(file, Png.Encode(picture.Rgba, picture.Width, picture.Height));
-            result.Add(new TintedTexture(texture, file));
+            result.Add((new TintedTexture(texture, file), picture));
         }
-        SafeFile.WriteAllText(listed, string.Join(Environment.NewLine, result.Select(r => r.Texture)));
-        Logger.Information("{Car}: paint {Colour} made in {Ms} ms ({Textures})", car, colour, Environment.TickCount64 - started, string.Join(", ", result.Select(r => r.Texture)));
-        Prune(folder, result.Select(r => r.File).Append(listed).ToHashSet(StringComparer.OrdinalIgnoreCase));
+        SafeFile.WriteAllText(listed, string.Join(Environment.NewLine, result.Select(r => r.Tinted.Texture)));
+        Logger.Information("{Car}: paint {Colour} made in {Ms} ms ({Textures})", car, colour, Environment.TickCount64 - started, string.Join(", ", result.Select(r => r.Tinted.Texture)));
+        Prune(folder, result.Select(r => r.Tinted.File).Append(listed).ToHashSet(StringComparer.OrdinalIgnoreCase));
         return result;
+    }
+
+    /// <summary>The colour most of a picture's texels show (<see cref="Dominant(List{Sample})"/>), looked at over at most some 64k of them</summary>
+    private static PaintColour DominantOf(Picture picture)
+    {
+        var rgba = picture.Rgba;
+        var step = Math.Max(1, rgba.Length / 4 / 65536) * 4;
+        var samples = new List<Sample>();
+        for (var i = 0; i + 3 < rgba.Length; i += step) samples.Add(new Sample(rgba[i] / 255f, rgba[i + 1] / 255f, rgba[i + 2] / 255f, 1f));
+        return Dominant(samples).Colour;
     }
 
     /// <summary>Repaints a picture's texels of <paramref name="paint"/> in <paramref name="colour"/>; the share of its texels changed</summary>
@@ -448,7 +614,7 @@ public static class CarPaint
     /// UI thread.
     /// </summary>
     public static IReadOnlyList<(string Texture, byte[] Bytes)> ForScene(string carDirectory, string? skin, PaintColour colour) =>
-        Tinted(carDirectory, skin, colour).Select(t => (t.Texture, ForRenderer(ReadPng(File.ReadAllBytes(t.File))))).ToList();
+        TintedPictures(carDirectory, skin, colour).Select(t => (t.Tinted.Texture, ForRenderer(t.Made ?? ReadPng(File.ReadAllBytes(t.Tinted.File))))).ToList();
 
     /// <summary>
     /// The texels of the car's paint textures as it is in <paramref name="skin"/>, painted <paramref name="colour"/> (null:
@@ -460,14 +626,25 @@ public static class CarPaint
         var result = new Dictionary<string, PaintTexels>(StringComparer.OrdinalIgnoreCase);
         if (WearLayer.ModelOf(carDirectory) is not { } model || SurfaceOf(carDirectory, skin) is not { } surface) return result;
 
-        var tinted = colour is { } c ? Tinted(carDirectory, skin, c).ToDictionary(t => t.Texture, StringComparer.OrdinalIgnoreCase) : null;
+        var tinted = colour is { } c ? TintedPictures(carDirectory, skin, c).ToDictionary(t => t.Tinted.Texture, StringComparer.OrdinalIgnoreCase) : null;
         names ??= tinted?.Keys.ToList() ?? surface.Textures;
-        foreach (var (name, bytes) in TextureBytes(model, carDirectory, skin, names))
+
+        // The tinted ones as they were made or from their own files; the car's own read (its model opened) only for the rest
+        var own = new List<string>();
+        foreach (var name in names)
         {
-            var picture = tinted != null && tinted.TryGetValue(name, out var t) ? ReadPng(File.ReadAllBytes(t.File)) : Decode(bytes, null);
+            if (tinted != null && tinted.TryGetValue(name, out var t)) Add(name, t.Made ?? ReadPng(File.ReadAllBytes(t.Tinted.File)));
+            else own.Add(name);
+        }
+        if (own.Count > 0)
+            foreach (var (name, bytes) in TextureBytes(model, carDirectory, skin, own))
+                Add(name, Decode(bytes, null));
+        return result;
+
+        void Add(string name, Picture? picture)
+        {
             if (picture != null) result[name] = new PaintTexels(picture.Width, picture.Height, picture.Rgba);
         }
-        return result;
     }
 
     /// <summary>
@@ -530,9 +707,30 @@ public static class CarPaint
 
     #region Textures
 
-    /// <summary>The skin's folder, or "" for the model's own textures</summary>
+    /// <summary>
+    /// The skin the car is drawn in when asked for in <paramref name="skin"/>, as the scenes (AcTools) and AC have it: that
+    /// skin's folder when there is one, in lower case as AcTools names it (whatever the case it was asked in: one look and
+    /// one tint for both); else its first skin (an id with no folder, or none); null for a car without skins, drawn in its
+    /// model's own textures
+    /// </summary>
+    public static string? SkinOf(string carDirectory, string? skin)
+    {
+        try
+        {
+            var skins = new DirectoryInfo(Path.Combine(carDirectory, "skins"));
+            if (!skins.Exists) return null;
+            var folders = skins.GetDirectories().Select(d => d.Name.ToLowerInvariant()).ToList();
+            return folders.FirstOrDefault(f => string.Equals(f, skin, StringComparison.OrdinalIgnoreCase)) ?? folders.FirstOrDefault();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            return string.IsNullOrEmpty(skin) ? null : skin.ToLowerInvariant();
+        }
+    }
+
+    /// <summary>The folder of the skin the car is drawn in (<see cref="SkinOf"/>), or "" for the model's own textures</summary>
     private static string SkinFolder(string carDirectory, string? skin) =>
-        string.IsNullOrEmpty(skin) ? "" : Path.Combine(carDirectory, "skins", skin);
+        SkinOf(carDirectory, skin) is { } drawn ? Path.Combine(carDirectory, "skins", drawn) : "";
 
     /// <summary>
     /// The bytes of each of <paramref name="names"/> as AC draws the car in <paramref name="skin"/>: the skin's file of that
@@ -692,7 +890,11 @@ public sealed record TintedTexture(string Texture, string File);
 /// see-through (repeated <paramref name="DetailScale"/> times over it), and how light the diffuse is there on average
 /// (its shading is taken out to judge the paint's colour, and put back after)
 /// </summary>
-public sealed record PaintLayer(string Diffuse, string? Detail, float DetailScale, float Shade);
+public sealed record PaintLayer(string Diffuse, string? Detail, float DetailScale, float Shade)
+{
+    /// <summary>The colour is tinted in the detail itself, not baked into the diffuse: other materials draw the detail too</summary>
+    public bool InDetail { get; init; }
+}
 
 /// <summary>
 /// A car's paint in a skin: its layers, the colour most of it shows, how much of it shows that colour, and whether its

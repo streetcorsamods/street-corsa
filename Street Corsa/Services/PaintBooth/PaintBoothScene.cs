@@ -59,6 +59,9 @@ namespace StreetCorsa.Services.PaintBooth
         /// <summary>The scene's own marks and paths for the scripts</summary>
         public Scripting.SceneMarks Marks { get; init; } = Scripting.SceneMarks.None;
 
+        /// <summary>The colours of the day the player is offered to start from (<c>colours</c>); none without them, they mix their own</summary>
+        public IReadOnlyList<BoothColour> Colours { get; init; } = [];
+
         /// <summary>
         /// What the scripts drive along and to: the file's own, the way in (<c>arrive</c>) and where the car is painted at
         /// its end (<c>paint</c>) unless the file names its own
@@ -74,6 +77,9 @@ namespace StreetCorsa.Services.PaintBooth
         }
     }
 
+    /// <summary>A colour the booth offers: its name (a text pool key, or the name itself) and the colour</summary>
+    public sealed record BoothColour(string Name, StreetCorsa.Parts.Cars.PaintColour Colour);
+
     /// <summary>
     /// How the painter goes round the car: <see cref="Gap"/> metres off its sides, nose and tail, his gun swinging from
     /// <see cref="Low"/> to <see cref="High"/> degrees (down negative), <see cref="Strokes"/> strokes up and down a side;
@@ -81,7 +87,7 @@ namespace StreetCorsa.Services.PaintBooth
     /// </summary>
     public sealed record BoothRound(float Gap, float Low, float High, int Strokes, GroundPoint Wait)
     {
-        public static readonly BoothRound Default = new(0.75f, -32f, 6f, 5, new GroundPoint(1.2f, 6.8f));
+        public static readonly BoothRound Default = new(0.75f, -32f, 6f, 5, new GroundPoint(2.25f, 2.85f));
     }
 
     /// <summary>
@@ -103,8 +109,10 @@ namespace StreetCorsa.Services.PaintBooth
 
         private sealed record CameraEntry(float? Distance, float? Height, float[]? Min, float[]? Max);
 
+        private sealed record ColourEntry(string? Name, string? Hex);
+
         private sealed record BoothEntry(string? Id, string? Title, string? Model, string? Painter, List<float[]>? Arrive, RoundEntry? Round,
-            CameraEntry? Camera, float[]? Sun, Dictionary<string, SceneLighting.LightEntry?>? Lights);
+            CameraEntry? Camera, float[]? Sun, Dictionary<string, SceneLighting.LightEntry?>? Lights, List<ColourEntry?>? Colours);
 
         /// <summary>Every paint booth of every mod that loads, by full id; empty when none does</summary>
         public static IReadOnlyList<PaintBoothScene> LoadAll(ModSet mods) =>
@@ -162,6 +170,13 @@ namespace StreetCorsa.Services.PaintBooth
             var id = entry.Id ?? Path.GetFileName(folder);
             var booth = new PaintBoothScene(id, entry.Title ?? id, folder, entry.Model ?? "booth.kn5", entry.Painter ?? "painter.kn5", arrive, round, camera,
                 entry.Sun is { Length: 3 } sun ? sun : [0.15f, 1f, 0.25f], SceneLighting.Read(entry.Lights, id, Logger));
+            var colours = new List<BoothColour>();
+            foreach (var colour in entry.Colours ?? [])
+            {
+                if (colour?.Name is { Length: > 0 } name && StreetCorsa.Parts.Cars.PaintColour.Parse(colour.Hex) is { } paint) colours.Add(new BoothColour(name, paint));
+                else ModProblems.Add("Paint booths", $"{file}: a colour needs a name and a hex (#RRGGBB); {colour?.Name ?? "one"} left out");
+            }
+            booth = booth with { Colours = colours };
             if (booth.Kn5.Length == 0)
                 Logger.Warning("The paint booth {Id} names a model outside its folder ({Model}): it is shown without its picture", booth.Id, booth.Model);
             else if (!booth.HasModel)

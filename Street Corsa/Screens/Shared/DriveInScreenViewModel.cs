@@ -43,8 +43,31 @@ namespace StreetCorsa.Screens.Shared
         /// <summary>The player's engine: it runs on the way in and out, off while the car stands there</summary>
         public EngineRunner PlayerEngine { get; } = new(EngineChannel.Main);
 
-        /// <summary>The view's curtain lifting off the place, as the car comes in (set by the view)</summary>
-        public Action? OpenCurtain { get; set; }
+        private Action? _openCurtain;
+        private bool _liftWhenHung;
+
+        /// <summary>
+        /// The view's curtain lifting off the place, as the car comes in (set by the view). Asked to lift before the view
+        /// hung it (the car stands there from Enter, before the screen's view is made), it lifts as it is hung.
+        /// </summary>
+        public Action? OpenCurtain
+        {
+            get => _openCurtain;
+            set
+            {
+                _openCurtain = value;
+                if (value == null || !_liftWhenHung) return;
+                _liftWhenHung = false;
+                value();
+            }
+        }
+
+        /// <summary>The curtain lifts now, or as soon as the view hangs it</summary>
+        protected void LiftCurtain()
+        {
+            if (_openCurtain is { } open) open();
+            else _liftWhenHung = true;
+        }
 
         /// <summary>The view's curtain coming down once the car has gone (set by the view)</summary>
         public Func<Task>? CloseCurtain { get; set; }
@@ -75,7 +98,7 @@ namespace StreetCorsa.Screens.Shared
 
             _waitForPlace.Stop();
             _comeIn?.Invoke();
-            OpenCurtain?.Invoke();
+            LiftCurtain();
         }
 
         /// <summary>The car stands there at once, nothing waited on (the place could not be set up), and the curtain lifts</summary>
@@ -83,7 +106,7 @@ namespace StreetCorsa.Screens.Shared
         {
             _waitForPlace.Stop();
             Stage.StandThere(PlayerEngine);
-            OpenCurtain?.Invoke();
+            LiftCurtain();
         }
 
         /// <summary>
@@ -99,7 +122,7 @@ namespace StreetCorsa.Screens.Shared
                 OwnEngine = spec;
                 await PlayerEngine.SetEngineAsync(spec);
 
-                if (IsActive && running && Stage.Phase is DriveInPhase.Waiting or DriveInPhase.Arriving) PlayerEngine.StartRunning();
+                if (IsActive && running && spec is not { Runs: false } && Stage.Phase is DriveInPhase.Waiting or DriveInPhase.Arriving) PlayerEngine.StartRunning();
             }
             catch (Exception ex)
             {

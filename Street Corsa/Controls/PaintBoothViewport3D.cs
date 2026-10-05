@@ -149,9 +149,10 @@ public class PaintBoothViewport3D : DriveInViewport3D
         if (_show is not { } show || renderer.CarNode is not { } car) return;
         try
         {
-            var skin = SkinOrDefault(PlayerCar?.Directory ?? car.RootDirectory, show.Skin);
-            if (!string.Equals(car.CurrentSkin, string.IsNullOrEmpty(skin) ? car.CurrentSkin : skin, StringComparison.OrdinalIgnoreCase))
-                renderer.MainSlot.SelectSkin(skin);
+            // The skin as the paint is worked out in (Looks.CarPaint.SkinOf): an id with no folder is the car's first skin
+            var skin = Looks.CarPaint.SkinOf(PlayerCar?.Directory ?? car.RootDirectory, show.Skin);
+            if (!string.Equals(car.CurrentSkin, skin, StringComparison.OrdinalIgnoreCase))
+                renderer.MainSlot.SelectSkin(skin ?? Kn5RenderableCar.DefaultSkin);
             await ShownPartsOnCar.SetAsync(car, show.Shown, renderer.DeviceContextHolder);
             Invalidate();
         }

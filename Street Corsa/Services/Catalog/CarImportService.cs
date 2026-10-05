@@ -191,7 +191,7 @@ namespace StreetCorsa.Services.Catalog
         }
 
         /// <summary>The largest ui_car.json or ui_skin.json read: a real one is a few kilobytes</summary>
-        public const long MaxUiJsonBytes = 1024 * 1024;
+        public const long MaxUiJsonBytes = AcCarUi.MaxUiJsonBytes;
 
         private CarDefinition? ImportCar(string carFolder, string carId)
         {

@@ -127,6 +127,86 @@ public class PaintBoothTests
     }
 
     [Fact]
+    public void The_shipped_booth_offers_its_colours_of_the_day_with_their_words()
+    {
+        var booth = PaintBooths.Load(Path.Combine(RepoPaths.BaseContent, ContentTypes.Booths, "booth"))!;
+
+        Assert.Equal(16, booth.Colours.Count);
+        Assert.Equal(booth.Colours.Count, booth.Colours.Select(c => c.Colour).Distinct().Count());
+        var text = Services.Text.GameText.Load(ModSet.Installed);
+        foreach (var colour in booth.Colours) Assert.True(text.Has(colour.Name), colour.Name);
+    }
+
+    [Fact]
+    public void The_painter_waits_clear_of_the_way_the_car_comes_in()
+    {
+        var booth = PaintBooths.Load(Path.Combine(RepoPaths.BaseContent, ContentTypes.Booths, "booth"))!;
+        var wait = booth.Round.Wait;
+
+        // A wide car of the time is 2.05 m across with its mirrors, a man's shoulders 0.6 m: the way's middle line kept
+        // half of each away, and a little more
+        for (var i = 0; i + 1 < booth.Arrive.Count; i++)
+        {
+            var (a, b) = (booth.Arrive[i], booth.Arrive[i + 1]);
+            var (dx, dz) = (b.X - a.X, b.Z - a.Z);
+            var t = Math.Clamp(((wait.X - a.X) * dx + (wait.Z - a.Z) * dz) / (dx * dx + dz * dz), 0f, 1f);
+            var (px, pz) = (a.X + dx * t - wait.X, a.Z + dz * t - wait.Z);
+            Assert.True(MathF.Sqrt(px * px + pz * pz) > 1.05f + 0.3f + 0.2f, $"the painter waits in the way between {a} and {b}");
+        }
+    }
+
+    [Fact]
+    public void A_skin_is_named_as_the_scenes_draw_it()
+    {
+        var car = Path.Combine(Path.GetTempPath(), "sc_skin_of_" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            Assert.Null(CarPaint.SkinOf(car, "red"));
+            Directory.CreateDirectory(Path.Combine(car, "skins", "00_Bolero_Red"));
+            Directory.CreateDirectory(Path.Combine(car, "skins", "blue"));
+
+            // Any case asked for is the folder in AcTools' lower case; an id with no folder, or none, the first skin
+            Assert.Equal("00_bolero_red", CarPaint.SkinOf(car, "00_BOLERO_RED"));
+            Assert.Equal("blue", CarPaint.SkinOf(car, "Blue"));
+            Assert.Equal("00_bolero_red", CarPaint.SkinOf(car, "default"));
+            Assert.Equal("00_bolero_red", CarPaint.SkinOf(car, null));
+            Assert.Equal("00_bolero_red", CarPaint.SkinOf(car, ""));
+        }
+        finally
+        {
+            if (Directory.Exists(car)) Directory.Delete(car, true);
+        }
+    }
+
+    [Fact]
+    public void A_skins_name_is_read_leniently_and_never_from_a_file_too_big()
+    {
+        var car = Path.Combine(Path.GetTempPath(), "sc_skin_name_" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            void Write(string skin, string json)
+            {
+                Directory.CreateDirectory(Path.Combine(car, "skins", skin));
+                File.WriteAllText(Path.Combine(car, "skins", skin, "ui_skin.json"), json);
+            }
+            Write("red", "{ // a mod's\n \"skinname\": \" Bolero Red \", }");
+            Write("none", "{ \"skinname\": \"undefined\" }");
+            Write("big", "{ \"skinname\": \"Big\", \"x\": \"" + new string('x', (int)Services.Catalog.CarImportService.MaxUiJsonBytes) + "\" }");
+            Write("broken", "not json");
+
+            Assert.Equal("Bolero Red", Parts.Export.AcCarUi.SkinName(car, "red"));
+            Assert.Null(Parts.Export.AcCarUi.SkinName(car, "none"));
+            Assert.Null(Parts.Export.AcCarUi.SkinName(car, "big"));
+            Assert.Null(Parts.Export.AcCarUi.SkinName(car, "broken"));
+            Assert.Null(Parts.Export.AcCarUi.SkinName(car, "missing"));
+        }
+        finally
+        {
+            if (Directory.Exists(car)) Directory.Delete(car, true);
+        }
+    }
+
+    [Fact]
     public void The_car_rolls_into_the_booth_by_the_base_games_script()
     {
         var book = ScriptBook.Load(ModSet.Load(RepoPaths.Content), []);

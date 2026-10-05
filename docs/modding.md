@@ -775,8 +775,9 @@ holding `MIST`, the spray, along +z; `tools/PaintBoothScene` builds both). The f
 the door to where the car is painted), how the painter goes round the car (`round`: `gap` off its body, `low` and `high`
 the gun's swing in degrees, `strokes` up and down a side, `wait` where he stands while there is nothing to paint), the
 camera (`camera`: `distance`, `height`, `min` and `max` the `[x, z]` corners of the box it stays in), the key light
-(`sun`) and the lights (`lights`, as a street's; `day` serves every hour). The garage's Paint button drives to the first
-booth. See [screens/paint-booth.md](screens/paint-booth.md).
+(`sun`), the lights (`lights`, as a street's; `day` serves every hour) and the colours of the day offered to start from
+(`colours`: each a `name`, a text pool key or the name itself, and a `hex`, `#RRGGBB`; a booth without them offers none,
+the player mixes their own). The garage's Paint button drives to the first booth. See [screens/paint-booth.md](screens/paint-booth.md).
 
 ### warehouses
 
