@@ -108,9 +108,13 @@ viewport share a `DriveInStage` (the gas station's `StationStage`, renamed): Wai
 - The driver looks ahead and 12° up in the bay; while driving, as the station's (into a bend).
 - **Shadows**: the renderer centres its sun shadows on the main car slot's box (sharp to about 10 m, gone past about
   23 m) and keeps the box from where the car loaded. `DriveInViewport3D.FocusShadows` tells it again where the car is
-  as it moves; the diner's widens it to take in the bays while the car is near the lot, so the racers' cars, 20 m and
-  more from the player's bay, have shadows. The box is a private field of actools' `CarSlot`, set by reflection
-  (`ShadowsPosition` is not virtual); without the field the shadows are only the player's.
+  as it moves; while the car is near the lot the diner's centres them between it and the bays with a car in them
+  (`GarageRenderer.ShadowsCentre`, through the renderer's virtual `UpdateShadows`), so the racers' cars, 20 m and more
+  from the player's bay, have shadows. The main car's box stays the car's: its reflections and its light probe are
+  worked out from it. The base renders the shadows again whenever the box's middle is not where they were last
+  centred, so the override tells it (actools' private `_previousShadowsTarget`, by reflection) the car's middle after
+  drawing them; without the field the shadows are only the player's.
+- The racers' cars keep a slot per bay: a new day's racers reuse them, and a car already in its bay stays there.
 
 ## The screen (`Screens/Diner/`)
 

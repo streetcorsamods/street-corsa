@@ -73,12 +73,15 @@ public class DinerStreetTests
         File.WriteAllText(Path.Combine(folder, "diner.json"), """{ "id": "a", "arrive": [[0, 0]], "leave": [[0, 0], [1, 1]] }""");
         Assert.Null(DinerScenes.Load(folder));
 
+        // The diner's scripts back the car out of its bay: a diner with no way back out is left out
+        File.WriteAllText(Path.Combine(folder, "diner.json"), """{ "id": "a", "arrive": [[0, 10], [0, 0]], "leave": [[0, 0], [5, 5]], "backOut": [[0, 0]] }""");
+        Assert.Null(DinerScenes.Load(folder));
+
         File.WriteAllText(Path.Combine(folder, "diner.json"),
-            """{ "id": "a", "arrive": [[0, 10], [0, 0]], "leave": [[0, 0], [5, 5]], "backOut": [[0, 0]], "bays": [null, { "x": 1, "z": 2, "heading": 90 }] }""");
+            """{ "id": "a", "arrive": [[0, 10], [0, 0]], "leave": [[0, 0], [5, 5]], "backOut": [[0, 0], [0, 3]], "bays": [null, { "x": 1, "z": 2, "heading": 90 }] }""");
         var diner = DinerScenes.Load(folder)!;
         Assert.False(diner.HasModel);
-        Assert.Empty(diner.BackOut);
-        Assert.False(diner.ScriptMarks.Paths.ContainsKey("back_out"));
+        Assert.Equal(diner.BackOut, diner.ScriptMarks.Paths["back_out"]);
         Assert.Equal(new DinerBay(1, 2, MathF.PI / 2), Assert.Single(diner.Bays));
     }
 

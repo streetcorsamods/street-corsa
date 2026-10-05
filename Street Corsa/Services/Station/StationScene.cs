@@ -41,9 +41,14 @@ namespace StreetCorsa.Services.Station
         public string GroundFile => Path.Combine(Folder, "ground.bin");
 
         /// <summary>The sky dome drawn at a light of the day; the others are hidden</summary>
-        public static string SkyNode(StreetLight light) => "STATION_SKY_" + StreetLights.Describe(light).ToUpperInvariant();
+        public static string SkyNode(StreetLight light) => SkyPrefix + StreetLights.Describe(light).ToUpperInvariant();
+
+        /// <summary>What the names of the station's sky domes start with</summary>
+        public const string SkyPrefix = "STATION_SKY_";
 
         string IDriveInScene.SkyNodeAt(StreetLight light) => SkyNode(light);
+
+        string IDriveInScene.SkyPrefix => SkyPrefix;
 
         /// <summary>The car stands at the pump, at the end of the way in</summary>
         public string StandMark => "pump";

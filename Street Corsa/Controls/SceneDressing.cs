@@ -46,6 +46,21 @@ internal static class SceneDressing
         Glow(renderer, dressing.Glow);
     }
 
+    /// <summary>
+    /// The scene's sky dome for the light of the day (<paramref name="wanted"/>); the others, whose names start with
+    /// <paramref name="skies"/>, hidden
+    /// </summary>
+    public static void ShowSky(GarageRenderer renderer, string skies, string wanted)
+    {
+        if (renderer.ShowroomNode is not { } scene || skies.Length == 0) return;
+
+        foreach (var mesh in scene.Meshes)
+        {
+            var name = mesh.OriginalNode.Name;
+            if (name.StartsWith(skies, StringComparison.Ordinal)) mesh.IsEnabled = name == wanted;
+        }
+    }
+
     /// <summary>The self-lit materials of the scene (glass, a sign) glowing as bright as <paramref name="glows"/> says; one it has not, skipped</summary>
     public static void Glow(GarageRenderer renderer, IReadOnlyDictionary<string, float> glows)
     {

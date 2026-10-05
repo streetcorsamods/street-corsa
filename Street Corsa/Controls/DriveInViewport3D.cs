@@ -140,7 +140,7 @@ public abstract class DriveInViewport3D : OnboardViewport3D
 
         LightScene(renderer, scene.LightingFor(light), scene.Sun);
         SceneDressing.Glow(renderer, scene.GlowAt(light));
-        ShowSky(renderer, scene.SkyNodeAt(light));
+        SceneDressing.ShowSky(renderer, scene.SkyPrefix, scene.SkyNodeAt(light));
 
         // The car stands where the drive puts it (CarBodyRock), not where its slot is
         if (!await LoadPlayerCarAsync(renderer, player, light, placementOf: null)) return;
@@ -165,6 +165,9 @@ public abstract class DriveInViewport3D : OnboardViewport3D
     protected virtual void OnSceneUp(GarageRenderer renderer)
     {
     }
+
+    /// <summary>The place and the player's car are up (<see cref="OnSceneUp"/> has been or is being told)</summary>
+    protected bool IsSceneUp => Renderer != null && _kn5 != null;
 
     /// <summary>The height of the place's ground at a point</summary>
     protected float GroundAt(float x, float z) => _ground.HeightAt(x, z);
@@ -467,8 +470,9 @@ public abstract class DriveInViewport3D : OnboardViewport3D
         _speed = car.Speed;
         if (car.Plan != null)
         {
-            // The wheel turns into a bend a moment before the car gets there
-            _steer += ((car.Ahead(SteerAhead)?.Curvature ?? 0f) - _steer) * (1f - MathF.Exp(-dt / SteerSeconds));
+            // The wheel turns into a bend a moment before the car gets there; backing, the other way
+            var bend = (car.Ahead(SteerAhead)?.Curvature ?? 0f) * (car.Plan.Reverse ? -1f : 1f);
+            _steer += (bend - _steer) * (1f - MathF.Exp(-dt / SteerSeconds));
 
             // The head turns a little into a bend: the heading's turn over the next second, to the left positive
             var ahead = car.Ahead(1f)?.Heading ?? car.Pose.Heading;
@@ -505,7 +509,6 @@ public abstract class DriveInViewport3D : OnboardViewport3D
     protected override void LookBack()
     {
         _lookHeld = false;
-        LookPitch = SceneLights.SeatPitch;
         AnimateFor(TimeSpan.FromSeconds(LookSeconds * 3));
     }
 

@@ -28,6 +28,9 @@ namespace StreetCorsa.Services.Street
         /// <summary>The sky dome drawn at a light of the day; the model's other domes are hidden</summary>
         string SkyNodeAt(StreetLight light);
 
+        /// <summary>What the names of all the model's sky domes start with (<see cref="SkyNodeAt"/>'s among them)</summary>
+        string SkyPrefix { get; }
+
         /// <summary>
         /// What the scripts drive along and to: the way in (<c>arrive</c>), the way out (<c>leave</c>), the place the car
         /// stands at the end of the way in (<see cref="StandMark"/>) and the file's own

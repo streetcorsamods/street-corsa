@@ -1,6 +1,5 @@
 using System.IO;
 using System.Windows.Threading;
-using StreetCorsa.Audio;
 using StreetCorsa.Configuration;
 using StreetCorsa.Controls.Street;
 using StreetCorsa.Models.GameState;
@@ -20,31 +19,16 @@ namespace StreetCorsa.Screens.Diner
     /// and talk) opens in one window over it. Leaving, the car backs out and drives off, to the garage or the street.
     /// Back from a race that started here, the car stands in its bay already.
     /// </summary>
-    public partial class DinerScreenViewModel : IScriptedScreen
+    public partial class DinerScreenViewModel
     {
-        // A street that is loading is waited on this long at most before the car is simply there
-        private static readonly TimeSpan StreetLoadWait = TimeSpan.FromSeconds(25);
-
-        private DispatcherTimer? _waitForStreet;
-        private DateTime _waitingSince;
-        private bool _active;
         private bool _leaving;
         private Car? _car;
 
         // Where the player goes once the car has driven off
         private string _exit = "back";
 
-        // The car's engine once worked out: it goes home with the car, which drives into the garage
-        private EngineSpec? _engine;
-
         /// <summary>At the wheel: the radio is the car's</summary>
         public override bool InCar => true;
-
-        /// <summary>What the car does, which the street's viewport shows</summary>
-        public DriveInStage Stage { get; } = new();
-
-        /// <summary>The player's engine: it runs on the way in and out, off while the car stands in its bay</summary>
-        public EngineRunner PlayerEngine { get; } = new(EngineChannel.Main);
 
         public DinerScene? Scene { get; private set; }
 
@@ -59,12 +43,6 @@ namespace StreetCorsa.Screens.Diner
 
         /// <summary>The street has its model to show; without it the diner is a picture</summary>
         public bool HasStreetModel => Scene?.HasModel == true;
-
-        /// <summary>The view's curtain lifting off the street, as the car comes down it (set by the view)</summary>
-        public Action? OpenCurtain { get; set; }
-
-        /// <summary>The view's curtain coming down once the car has driven off (set by the view)</summary>
-        public Func<Task>? CloseCurtain { get; set; }
 
         /// <summary>The car stands in its bay and nobody is leaving: the diner's door is open</summary>
         public bool IsParked => Stage.Phase == DriveInPhase.Standing && !_leaving;
@@ -122,48 +100,32 @@ namespace StreetCorsa.Screens.Diner
             OnPropertyChanged(nameof(Light));
             OnPropertyChanged(nameof(PlayerCar));
             PlayerEngine.Place(null, StreetStage.OwnEngineVolume);
-            if (_car != null) _ = StartOwnEngineAsync(_car, running: !_returning);
+            if (_car != null) _ = StartOwnEngineAsync(_partsService, _catalogRepository, _car, running: !_returning);
 
-            _waitForStreet = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(250) };
-            _waitForStreet.Tick += (_, _) => PullInWhenShown();
-            _waitingSince = DateTime.UtcNow;
-            _waitForStreet.Start();
+            ComeInOnceShown(() => Scene?.HasModel == true && PlayerCar != null, () =>
+            {
+                if (_returning) Stage.StandThere(PlayerEngine);
+                else Stage.Arrive(PlayerEngine, towed: false);
+            });
         }
 
-        private void PullInWhenShown()
+        /// <summary>
+        /// The street in the light of the hour now: the visit's half hour, spent once the car is on its way, can turn dusk
+        /// to night or a late night into the next morning
+        /// </summary>
+        private void FollowTheClock()
         {
-            if (!_active) return;
-            var waited = DateTime.UtcNow - _waitingSince;
-            if (!Stage.IsShown && !Stage.CannotShow && Scene?.HasModel == true && PlayerCar != null && waited < StreetLoadWait) return;
-
-            _waitForStreet?.Stop();
-            if (_returning) Stage.StandThere(PlayerEngine);
-            else Stage.Arrive(PlayerEngine, towed: false);
-            OpenCurtain?.Invoke();
-        }
-
-        private async Task StartOwnEngineAsync(Car car, bool running)
-        {
-            try
-            {
-                var spec = await Services.Parts.EngineSpecs.ForAsync(_partsService, car, Services.Catalog.CarNames.Of(_catalogRepository, car.DefinitionId));
-                if (!_active) return;
-                _engine = spec;
-                await PlayerEngine.SetEngineAsync(spec);
-
-                // Only on the way in: an engine worked out after the car parked stays off, and driving off starts it itself
-                if (_active && running && Stage.Phase is DriveInPhase.Waiting or DriveInPhase.Arriving) PlayerEngine.StartRunning();
-            }
-            catch (Exception ex)
-            {
-                _logger.Warning(ex, "The player's engine could not be started at the diner");
-            }
+            Stage.Time = _gameState.Date;
+            var light = StreetLights.At(_gameState.Date);
+            if (light == Light) return;
+            Light = light;
+            OnPropertyChanged(nameof(Light));
         }
 
         /// <summary>In the bay: the engine off, the diner's door open; the flow's enter script, when a mod has one, plays now</summary>
         private void OnParked()
         {
-            if (!_active) return;
+            if (!IsActive) return;
             if (PlayerEngine.IsRunning) PlayerEngine.Toggle();
             RaiseStreet();
             _ = Dispatcher.CurrentDispatcher.BeginInvoke(() => _navigationService.ScreenReady(this));
@@ -184,27 +146,27 @@ namespace StreetCorsa.Screens.Diner
             // Nothing may escape an async void; a throw leaves the player in the bay to try again
             try
             {
-                await DrivingHome.StartUpAsync(PlayerEngine, () => _active);
-                if (!_active) return;
+                await DrivingHome.StartUpAsync(PlayerEngine, () => IsActive);
+                if (!IsActive) return;
                 Stage.Time = _gameState.Date;
                 Stage.Leave();
             }
             catch (Exception ex)
             {
                 _logger.Error(ex, "Could not drive off from the diner");
-                if (!_active) return;
+                if (!IsActive) return;
                 StayParked();
             }
         }
 
         private async void OnGone()
         {
-            if (!_active) return;
+            if (!IsActive) return;
             try
             {
                 // Home, the car drives into the garage (its engine worked out here), as from the street
                 var catalog = _partsService.IsAvailable ? _partsService.Catalog : null;
-                var args = _exit == "back" ? new FlowArgs { Arrival = DrivingHome.Arrival(_gameState, _engine, catalog) } : null;
+                var args = _exit == "back" ? new FlowArgs { Arrival = DrivingHome.Arrival(_gameState, OwnEngine, catalog) } : null;
                 if (await _navigationService.LeaveAsync(this, _exit, _gameState, args, first: CloseCurtain)) return;
             }
             catch (Exception ex)
@@ -235,14 +197,6 @@ namespace StreetCorsa.Screens.Diner
             OnPropertyChanged(nameof(ParkedCars));
         }
 
-        private void LeaveStreet()
-        {
-            _active = false;
-            _waitForStreet?.Stop();
-            Stage.Clear();
-            PlayerEngine.Detach();
-        }
-
         private void RaiseStreet()
         {
             OnPropertyChanged(nameof(IsParked));
@@ -250,18 +204,5 @@ namespace StreetCorsa.Screens.Diner
             OnPropertyChanged(nameof(CanCruise));
             RelayCommand.RaiseCanExecuteChanged();
         }
-
-        // The flow's scripts play on the street's viewport, through the stage
-        Func<string, Services.Scripting.ScriptFacts, Task?>? IScriptedScreen.PlayScreenScript
-        {
-            get => Stage.PlayTrigger;
-            set { }
-        }
-
-        /// <inheritdoc cref="IScriptedScreen.ScriptFacts"/>
-        public Services.Scripting.ScriptFacts ScriptFacts => new(_gameState.Date, StreetLights.At(_gameState.Date), Stage.Towed);
-
-        /// <summary>A leave script played and the way out went nowhere: the car is in its bay again</summary>
-        void IScriptedScreen.PutBackAfterLeave() => Stage.BackToStand();
     }
 }

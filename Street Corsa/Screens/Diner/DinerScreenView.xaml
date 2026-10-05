@@ -318,8 +318,9 @@
                                    BorderThickness="1,0,0,0"
                                    Padding="15,10"
                                    Visibility="{Binding HasStreetTalk, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                <StackPanel>
-                                    <TextBlock Text="{t:Text diner.word_on_street}"
+                                <DockPanel LastChildFill="True">
+                                    <TextBlock DockPanel.Dock="Top"
+                                              Text="{t:Text diner.word_on_street}"
                                               FontSize="{StaticResource FontSizeCaption}"
                                               FontWeight="Bold"
                                               Foreground="{StaticResource TextSecondaryBrush}"
@@ -349,7 +350,7 @@
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
                                     </ScrollViewer>
-                                </StackPanel>
+                                </DockPanel>
                             </Border>
                         </Grid>
                     </Border>

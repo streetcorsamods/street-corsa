@@ -46,6 +46,8 @@ namespace StreetCorsa.Services.Diner
 
         string IDriveInScene.SkyNodeAt(StreetLight light) => StreetScene.SkyNode(light);
 
+        string IDriveInScene.SkyPrefix => StreetScene.SkyPrefix;
+
         public StreetLighting LightingFor(StreetLight light) => SceneLighting.For(Lights, light);
 
         /// <summary>How bright each self-lit material (the signs, the windows) glows, by light of the day</summary>
@@ -72,8 +74,7 @@ namespace StreetCorsa.Services.Diner
         {
             get
             {
-                var paths = new Dictionary<string, IReadOnlyList<GroundPoint>> { ["arrive"] = Arrive, ["leave"] = Leave };
-                if (BackOut.Count >= 2) paths["back_out"] = BackOut;
+                var paths = new Dictionary<string, IReadOnlyList<GroundPoint>> { ["arrive"] = Arrive, ["back_out"] = BackOut, ["leave"] = Leave };
                 var marks = Marks.With(paths: paths);
                 var end = marks.Paths["arrive"][^1];
                 return marks.With(new Dictionary<string, Scripting.MarkSpec> { ["bay"] = new(X: end.X, Z: end.Z) });
@@ -133,21 +134,22 @@ namespace StreetCorsa.Services.Diner
 
         private static DinerScene? Build(string folder, string file, SceneEntry? entry, StreetScene? street)
         {
+            // The car leaves the way it came in, backwards out of its bay: the diner's scripts drive all three
             var arrive = ScenePaths.Points(entry?.Arrive);
+            var backOut = ScenePaths.Points(entry?.BackOut);
             var leave = ScenePaths.Points(entry?.Leave);
-            if (entry == null || !ScenePaths.GoesSomewhere(arrive) || !ScenePaths.GoesSomewhere(leave))
+            if (entry == null || !ScenePaths.GoesSomewhere(arrive) || !ScenePaths.GoesSomewhere(backOut) || !ScenePaths.GoesSomewhere(leave))
             {
-                Logger.Warning("The diner street {Path} has no way in or no way out (two points each at least, a metre apart)", file);
-                ModProblems.Add("Diners", $"{file} has no way in or no way out (two points each at least, a metre apart); left out");
+                Logger.Warning("The diner street {Path} has no way in, back out or out (two points each at least, a metre apart)", file);
+                ModProblems.Add("Diners", $"{file} has no way in, back out or out (two points each at least, a metre apart); left out");
                 return null;
             }
 
-            var backOut = ScenePaths.Points(entry.BackOut);
             var bays = (entry.Bays ?? []).Where(b => b != null && float.IsFinite(b.X) && float.IsFinite(b.Z) && float.IsFinite(b.Heading))
                 .Select(b => new DinerBay(b!.X, b.Z, b.Heading * MathF.PI / 180f)).ToList();
             var id = entry.Id ?? Path.GetFileName(folder);
             var scene = new DinerScene(id, entry.Title ?? GameText.Say("diner.title"), folder, entry.Model ?? street?.Model ?? "street.kn5",
-                entry.Credit ?? street?.Credit ?? string.Empty, arrive, ScenePaths.GoesSomewhere(backOut) ? backOut : [], leave,
+                entry.Credit ?? street?.Credit ?? string.Empty, arrive, backOut, leave,
                 entry.LookWhileParked ?? 0f, Math.Clamp(entry.LookUpWhileParked ?? 0f, -15f, 15f), bays,
                 entry.Sun is { Length: 3 } sun ? sun : street?.Sun ?? [0.3f, 0.7f, 0.65f],
                 entry.Lights == null && street != null ? street.Lights : SceneLighting.Read(entry.Lights, id, Logger))

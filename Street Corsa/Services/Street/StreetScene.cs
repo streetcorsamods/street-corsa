@@ -108,7 +108,10 @@ namespace StreetCorsa.Services.Street
             : Helpers.PathNames.TryCombineUnder(Folder, Model, out var kn5) ? kn5 : string.Empty;
 
         /// <summary>A one-model street's sky dome drawn at a light of the day; the others are hidden</summary>
-        public static string SkyNode(StreetLight light) => "STREET_SKY_" + StreetLights.Describe(light).ToUpperInvariant();
+        public static string SkyNode(StreetLight light) => SkyPrefix + StreetLights.Describe(light).ToUpperInvariant();
+
+        /// <summary>What the names of a one-model street's sky domes start with</summary>
+        public const string SkyPrefix = "STREET_SKY_";
 
         public IReadOnlyDictionary<string, float> GlowAt(StreetLight light) => SceneLighting.GlowAt(Glow, light);
 

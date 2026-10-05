@@ -139,19 +139,6 @@ public abstract class OnboardViewport3D : D3DViewportBase
         renderer.BackgroundColor = System.Drawing.Color.FromArgb(lighting.AmbientUp[0], lighting.AmbientUp[1], lighting.AmbientUp[2]);
     }
 
-    /// <summary>The scene's sky dome for the light of the day (<paramref name="wanted"/>); the others, named alike up to the light, hidden</summary>
-    protected static void ShowSky(GarageRenderer renderer, string wanted)
-    {
-        if (renderer.ShowroomNode is not { } scene) return;
-
-        var skies = wanted[..(wanted.LastIndexOf('_') + 1)];
-        foreach (var mesh in scene.Meshes)
-        {
-            var name = mesh.OriginalNode.Name;
-            if (name.StartsWith(skies, StringComparison.Ordinal)) mesh.IsEnabled = name == wanted;
-        }
-    }
-
     /// <summary>
     /// Puts the player's car in the main slot and the driver in it: how it sits (<see cref="Frame"/>), where the eyes
     /// are, the lens, the seat's look down, the gauges, and the headlights at night. <paramref name="placementOf"/>

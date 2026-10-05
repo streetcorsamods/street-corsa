@@ -750,7 +750,7 @@ fits. When no street fits the hour, the one in view stays, in the nearest light 
 
 A street may have **the diner** on it: a `diner.json` next to its `street.json`, as the base game's Main Street. It gives
 the diner's ways (`arrive`: down the street and into the player's bay, the car stopping at the last point; `backOut`:
-out of the bay backwards; `leave`: from there off down the street), as `[x, z]` points in metres; where the driver
+out of the bay backwards; `leave`: from there off down the street), as `[x, z]` points in metres, all three needed; where the driver
 looks in the bay (`lookWhileParked`, degrees to the left; `lookUpWhileParked`, degrees up, −15 to 15); and the `bays`
 the racers' cars are parked in (`x`, `z`, `heading` in degrees, 0 facing +z), in the order they fill. What it leaves out
 (`model`, `sun`, `lights`, `glow`, `credit`) is the street's. The diner is seen on the last mod's street that has one.

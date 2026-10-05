@@ -25,7 +25,7 @@ namespace StreetCorsa.Screens.Diner
     /// <summary>One line of the street talk, with when it happened ("Today", "Yesterday", "Jun 3")</summary>
     public sealed record StreetTalkLine(string When, string Text);
 
-    public partial class DinerScreenViewModel : BaseScreenViewModel
+    public partial class DinerScreenViewModel : DriveInScreenViewModel
     {
         /// <summary>The sound of the place: out on Main Street, in the car</summary>
         public override string? Ambience => "ambience.street";
@@ -414,6 +414,7 @@ namespace StreetCorsa.Screens.Diner
             RaceSetupBuilder raceSetup,
             Services.Parts.ICarPartsService partsService,
             bool returning = false)
+            : base(gameState, new Controls.Street.DriveInStage(), AppLoggerFactory.CreateLogger("Diner"))
         {
             _returning = returning;
             _navigationService = navigationService;
@@ -895,9 +896,18 @@ namespace StreetCorsa.Screens.Diner
                 _logger.Error(ex, "Could not list the racers at the diner");
             }
 
-            // The car on the street: it comes down Main Street into its bay, or stands there already when back from a race
-            _active = true;
-            SetUpStreet();
+            // The car on the street: it comes down Main Street into its bay, or stands there already when back from a race.
+            // A street that cannot be set up still leaves the car in its bay, the ways out open
+            IsActive = true;
+            try
+            {
+                SetUpStreet();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not set up the diner's street: the car stands in its bay");
+                StandThereAtOnce();
+            }
 
             if (_returning) return;
 
@@ -911,6 +921,7 @@ namespace StreetCorsa.Screens.Diner
                 // the racers at the tables have changed: the room is shown again, and the new day is saved.
                 var spent = await _timeService.SpendTimeAsync(_gameState, GameAction.VisitDiner);
                 if (spent.NewDayStarted) LoadOpponents();
+                FollowTheClock();
 
                 if (!string.IsNullOrEmpty(_gameState.SaveName)) _gameStateRepo.Save(_gameState, _gameState.SaveName);
             }
@@ -928,7 +939,7 @@ namespace StreetCorsa.Screens.Diner
         public override void Exit()
         {
             base.Exit();
-            LeaveStreet();
+            EndVisit();
             _logger.Information("Exited diner screen");
         }
     }
