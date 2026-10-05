@@ -34,6 +34,7 @@
   <ItemGroup>
     <Compile Include="..\..\Street Corsa\Helpers\SafeFile.cs" Link="Helpers\SafeFile.cs" />
     <Compile Include="..\..\Street Corsa\Mods\ModIds.cs" Link="Mods\ModIds.cs" />
+    <Compile Include="..\..\Street Corsa\Mods\ModJsonOptions.cs" Link="Mods\ModJsonOptions.cs" />
     <Compile Include="..\..\Street Corsa\Helpers\PathNames.cs" Link="Helpers\PathNames.cs" />
     <Compile Include="..\..\Street Corsa\Helpers\Unit.cs" Link="Helpers\Unit.cs" />
   </ItemGroup>

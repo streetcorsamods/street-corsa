@@ -130,4 +130,14 @@ public sealed class ConditionRules
     public double CrashBodyWear { get; set; } = 0.10;
 
     public double CrashTyreWear { get; set; } = 0.05;
+
+    /// <summary>Each figure the game divides by, loops over or pays held to what it can play by (<see cref="Figures"/>)</summary>
+    internal void Check(string path, List<string> problems)
+    {
+        Figures.Above0(this, path, nameof(TotaledKmh), 10000, problems);
+        Figures.Above0(this, path, nameof(NewEngineLife), 1_000_000, problems);
+        Figures.Within(this, path, nameof(CrackFromKmh), 0, 1000, problems);
+        Figures.Above0(this, path, nameof(ShatteredKmh), 1000, problems);
+        Figures.Above0(this, path, nameof(SagFrom), 1, problems);
+    }
 }

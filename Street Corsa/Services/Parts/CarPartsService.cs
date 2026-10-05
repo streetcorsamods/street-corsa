@@ -35,6 +35,10 @@ namespace StreetCorsa.Services.Parts
         private readonly object _assignLock = new();
         private readonly ConcurrentDictionary<string, AcCarSpecs?> _specs = new();
 
+        // The parts of a car's factory build on its block, for Shown: a lot page shows car after car, and each would read
+        // the catalog twice and gather the build again (ForgetFactoryBuilds when the catalog editor changes one)
+        private readonly ConcurrentDictionary<(string Car, string Block), IReadOnlySet<string>?> _factoryParts = new();
+
         // Whether a race has the car's data changed right now (CarDataOverlay): what is read then is not the car's own
         private readonly Func<string, bool> _isCarDataApplied;
 
@@ -349,13 +353,18 @@ namespace StreetCorsa.Services.Parts
         /// The parts of the car's factory build, by their catalog ids, when its engine is on the factory's block (the car's
         /// model has those); null for a car with another engine, or no known factory build
         /// </summary>
-        private IReadOnlySet<string>? FactoryEngineParts(string carDefinitionId, string blockId)
+        private IReadOnlySet<string>? FactoryEngineParts(string carDefinitionId, string blockId) =>
+            _factoryParts.GetOrAdd((carDefinitionId, blockId), key => ReadFactoryEngineParts(key.Car, key.Block));
+
+        private IReadOnlySet<string>? ReadFactoryEngineParts(string carDefinitionId, string blockId)
         {
             if (_catalogRepo.GetCar(carDefinitionId) is not { } definition || GetStockBuild(definition) is not { } stock) return null;
             var parts = stock.Build.Parts.Select(p => p.Part is { } id ? Catalog.Get(id)?.Id : null).OfType<string>()
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
             return parts.Contains(blockId) ? parts : null;
         }
+
+        public void ForgetFactoryBuilds() => _factoryParts.Clear();
 
         public bool BringUpToDate(GameState game)
         {

@@ -119,5 +119,11 @@ namespace StreetCorsa.Services.Parts
         /// <paramref name="paint"/> over its skin's colours
         /// </summary>
         ShownSet? Shown(string carDefinitionId, List<PartInstance> parts, CarLook? look = null, CornerHeights? heights = null, PaintColour? paint = null);
+
+        /// <summary>
+        /// Forgets what <see cref="Shown(string, List{PartInstance}, CarLook?, CornerHeights?, PaintColour?)"/> keeps of
+        /// the cars' factory builds: the catalog editor has changed a car's factory engine
+        /// </summary>
+        void ForgetFactoryBuilds() { }
     }
 }

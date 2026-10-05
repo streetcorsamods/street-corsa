@@ -61,4 +61,14 @@ public sealed class PoliceRules
     /// (<c>"street_corsa_police": true</c> in its ui_skin.json) can be one, these are picked first
     /// </summary>
     public string[] PreferredCars { get; set; } = ["monaco"];
+
+    /// <summary>Each figure the game divides by, loops over or pays held to what it can play by (<see cref="Figures"/>)</summary>
+    internal void Check(string path, List<string> problems)
+    {
+        Figures.Money(this, path, problems, 10_000_000, nameof(BigWager), nameof(BaseFine), nameof(FinePerBust), nameof(MaxFine), nameof(ImpoundFeePerDay));
+        Figures.Within(this, path, nameof(CopsPerRace), 0, 20, problems);
+        Figures.Within(this, path, nameof(BaseImpoundDays), 0, 365, problems);
+        Figures.Within(this, path, nameof(MaxImpoundDays), 0, 365, problems);
+        Figures.Within(this, path, nameof(AuctionAfterDays), 0, 3650, problems);
+    }
 }

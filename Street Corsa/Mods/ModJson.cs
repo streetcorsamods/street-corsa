@@ -20,21 +20,8 @@ public readonly record struct ModEntry(ModInfo Mod, string Source, JsonElement E
 /// (<c>{ "dealers": [ ... ] }</c>), or is a list itself, or is one entry: a mod can ship one file per entry or
 /// all of them in one. Files that do not read are one line each in the problems, the rest stand.
 /// </summary>
-public static class ModJson
+public static partial class ModJson
 {
-    public static readonly JsonSerializerOptions Options = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        ReadCommentHandling = JsonCommentHandling.Skip,
-        AllowTrailingCommas = true
-    };
-
-    private static readonly JsonDocumentOptions DocumentOptions = new()
-    {
-        CommentHandling = JsonCommentHandling.Skip,
-        AllowTrailingCommas = true
-    };
-
     /// <param name="listName">The name the entries are listed under in a file ("dealers")</param>
     /// <param name="problems">Where a file that does not read is reported</param>
     /// <param name="idName">What an entry's id is called besides "id": a file that is one entry has one of them</param>

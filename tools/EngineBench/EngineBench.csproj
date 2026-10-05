@@ -40,6 +40,7 @@
     <Compile Include="..\..\Street Corsa\Mods\ModSet.cs" Link="Mods\ModSet.cs" />
     <Compile Include="..\..\Street Corsa\Mods\ModVersion.cs" Link="Mods\ModVersion.cs" />
     <Compile Include="..\..\Street Corsa\Mods\ModJson.cs" Link="Mods\ModJson.cs" />
+    <Compile Include="..\..\Street Corsa\Mods\ModJsonOptions.cs" Link="Mods\ModJsonOptions.cs" />
     <Compile Include="..\..\Street Corsa\Mods\ModMerge.cs" Link="Mods\ModMerge.cs" />
     <Compile Include="..\..\Street Corsa\Mods\ContentRegistry.cs" Link="Mods\ContentRegistry.cs" />
     <Compile Include="..\..\Street Corsa\Mods\ModRemovals.cs" Link="Mods\ModRemovals.cs" />

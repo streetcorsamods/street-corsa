@@ -1,5 +1,4 @@
 using System.IO;
-using System.Text.Json;
 using StreetCorsa.Logging;
 using StreetCorsa.Mods;
 using StreetCorsa.Services.Station;
@@ -86,8 +85,6 @@ namespace StreetCorsa.Services.Diner
     {
         private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger("Diner");
 
-        private static readonly JsonSerializerOptions Options = new() { PropertyNameCaseInsensitive = true };
-
         private sealed record BayEntry(float X, float Z, float Heading);
 
         private sealed record SceneEntry(string? Id, string? Title, string? Model, string? Credit, List<float[]>? Arrive, List<float[]>? BackOut,
@@ -114,22 +111,8 @@ namespace StreetCorsa.Services.Diner
         public static DinerScene? Load(string folder)
         {
             var file = Path.Combine(folder, "diner.json");
-            try
-            {
-                if (!File.Exists(file)) return null;
-                using var document = Scripting.SceneMarks.Parse(file);
-                if (Build(folder, file, document.RootElement.Deserialize<SceneEntry>(Options), StreetScenes.Load(folder)) is not { } scene) return null;
-                var problems = new List<string>();
-                scene = scene with { Marks = Scripting.SceneMarks.Read(document.RootElement, file, problems) };
-                ModProblems.Add("Diners", problems);
-                return scene;
-            }
-            catch (Exception ex)
-            {
-                Logger.Error(ex, "Could not read the diner street {Path}", file);
-                ModProblems.Add("Diners", $"{file} could not be read ({ex.Message}); left out");
-                return null;
-            }
+            return SceneFiles.Load<SceneEntry, DinerScene>(file, "Diners", "diner street", Logger, entry => Build(folder, file, entry, StreetScenes.Load(folder)),
+                (scene, marks) => scene with { Marks = marks });
         }
 
         private static DinerScene? Build(string folder, string file, SceneEntry? entry, StreetScene? street)

@@ -53,4 +53,15 @@ public sealed class TimeRules
     /// <summary>The minutes an action takes: the table's, never less than 0</summary>
     public int Of(GameAction action) =>
         Math.Max(0, Actions.TryGetValue(action.ToString(), out var minutes) ? minutes : OtherAction);
+
+    /// <summary>Each figure the game divides by, loops over or pays held to what it can play by (<see cref="Figures"/>)</summary>
+    internal void Check(string path, List<string> problems)
+    {
+        Figures.Within(this, path, nameof(CruiseTick), 1, 1440, problems);
+        Figures.Within(this, path, nameof(OtherAction), 0, 1440, problems);
+        Figures.Within(this, path, nameof(PerPart), 0, 1440, problems);
+        Figures.Within(this, path, nameof(EngineInOut), 0, 1440, problems);
+        Figures.Within(this, path, nameof(Stand), 0, 1440, problems);
+        Figures.Within(this, path, nameof(ShortestTrip), 0, 1440, problems);
+    }
 }

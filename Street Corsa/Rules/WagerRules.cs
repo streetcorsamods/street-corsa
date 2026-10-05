@@ -26,4 +26,12 @@ public sealed class WagerRules
     public int StakesReputation { get; set; } = 50;
 
     public int ReputationPerStake { get; set; } = 25;
+
+    /// <summary>Each figure the game divides by, loops over or pays held to what it can play by (<see cref="Figures"/>)</summary>
+    internal void Check(string path, List<string> problems)
+    {
+        Figures.Money(this, path, problems, 10_000_000, nameof(DragMinimum), nameof(RoadMinimum), nameof(DragMaximum), nameof(RoadMaximum));
+        Figures.Within(this, path, nameof(NightStakes), 0, 100, problems);
+        Figures.Above0(this, path, nameof(ReputationPerStake), 1000, problems);
+    }
 }

@@ -1,4 +1,5 @@
 using System.IO;
+using System.Text.Json;
 using StreetCorsa.Helpers;
 using StreetCorsa.Logging;
 using StreetCorsa.Mods;
@@ -6,11 +7,40 @@ using StreetCorsa.Mods;
 namespace StreetCorsa.Services.Street
 {
     /// <summary>
-    /// What the indoor scenes' files (a warehouse's warehouse.json, a part shop's shop.json) have alike, read the one way:
-    /// the model next to the file, the lamps of every hour, the glow of the self-lit glass and the pictures a look wears
+    /// What the scenes' files have alike, read the one way: the file itself (every scene's), and for the indoor scenes (a
+    /// warehouse's warehouse.json, a part shop's shop.json) the model next to the file, the lamps of every hour, the glow
+    /// of the self-lit glass and the pictures a look wears
     /// </summary>
     internal static class SceneFiles
     {
+        /// <summary>
+        /// The scene in <paramref name="file"/>, made by <paramref name="build"/> from what the file says (names whatever their
+        /// case, comments and trailing commas allowed), its marks and paths given to <paramref name="marked"/> for a scene that
+        /// has them; null when the file is missing or broken (logged, and in the mods' problems under <paramref name="area"/>)
+        /// </summary>
+        /// <param name="what">The kind of scene, for the log ("gas station")</param>
+        internal static TScene? Load<TEntry, TScene>(string file, string area, string what, IAppLogger logger, Func<TEntry?, TScene?> build,
+            Func<TScene, Scripting.SceneMarks, TScene>? marked = null) where TScene : class
+        {
+            try
+            {
+                if (!File.Exists(file)) return null;
+                using var document = Scripting.SceneMarks.Parse(file);
+                if (build(document.RootElement.Deserialize<TEntry>(ModJson.Options)) is not { } scene) return null;
+                if (marked == null) return scene;
+                var problems = new List<string>();
+                scene = marked(scene, Scripting.SceneMarks.Read(document.RootElement, file, problems));
+                ModProblems.Add(area, problems);
+                return scene;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Could not read the " + what + " {Path}", file);
+                ModProblems.Add(area, $"{file} could not be read ({ex.Message}); left out");
+                return null;
+            }
+        }
+
         /// <summary>A scene that is left out: in the log, and in the mods' problems for the player under <paramref name="area"/></summary>
         internal static void LeftOut(IAppLogger logger, string area, string problem)
         {

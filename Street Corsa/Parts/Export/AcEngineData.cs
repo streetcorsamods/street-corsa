@@ -56,7 +56,7 @@ public static class AcEngineData
     private const string DefaultPowerCurve = "power.lut";
 
     private const double LutStep = 250;
-    private const int MaxTurbos = 8;
+    private const int MaxTurbos = PartFigures.MaxTurbos;
     private const int MaxGears = PartFigures.MaxGears;
 
     // A downshift point this far below where the widest upshift lands keeps the gearbox from hunting
@@ -270,6 +270,9 @@ public static class AcEngineData
         var scriptTurbo = report.Turbocharged && inputs.BoostMax > 0;
         if (scriptTurbo) turbos.Add((rpm => EngineDyno.ScriptBoostBar(inputs, rpm), report.TurboLagUp, report.TurboLagDown));
         foreach (var charger in inputs.Chargers.Where(c => c.Turbo)) turbos.Add((charger.BoostAt, charger.LagUp, charger.LagDown));
+
+        // The car's data has sections for so many: parts that bring more (one each, on several parts) give the first
+        if (turbos.Count > MaxTurbos) turbos.RemoveRange(MaxTurbos, turbos.Count - MaxTurbos);
         if (turbos.Count == 0) return Array.Empty<AcTurbo>();
 
         var natural = EngineDyno.Run(inputs with

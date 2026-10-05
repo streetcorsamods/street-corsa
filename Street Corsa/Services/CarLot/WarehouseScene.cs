@@ -1,5 +1,4 @@
 using System.IO;
-using System.Text.Json;
 using StreetCorsa.Helpers;
 using StreetCorsa.Logging;
 using StreetCorsa.Mods;
@@ -89,7 +88,7 @@ namespace StreetCorsa.Services.CarLot
         public WarehouseDressing Dress(int number, int round, StreetLight light)
         {
             var look = Looks.Count == 0 ? null : Looks[round % Looks.Count];
-            var lighting = Lights.TryGetValue(light, out var l) ? l : Lights.Values.FirstOrDefault() ?? SceneLighting.Default;
+            var lighting = SceneLighting.For(Lights, light);
             if (look != null)
                 lighting = lighting with { Lamps = lighting.Lamps.Select(lamp => lamp with { Color = look.LampColor }).ToList() };
 
@@ -112,8 +111,6 @@ namespace StreetCorsa.Services.CarLot
     public static class WarehouseScenes
     {
         private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger("Warehouse");
-
-        private static readonly JsonSerializerOptions Options = new() { PropertyNameCaseInsensitive = true };
 
         private sealed record BayEntry(float X, float Z, float Heading);
 
@@ -152,22 +149,8 @@ namespace StreetCorsa.Services.CarLot
         public static WarehouseScene? Load(string folder)
         {
             var file = Path.Combine(folder, "warehouse.json");
-            try
-            {
-                if (!File.Exists(file)) return null;
-                using var document = Scripting.SceneMarks.Parse(file);
-                if (Build(folder, document.RootElement.Deserialize<SceneEntry>(Options)) is not { } warehouse) return null;
-                var problems = new List<string>();
-                warehouse = warehouse with { Marks = Scripting.SceneMarks.Read(document.RootElement, file, problems) };
-                ModProblems.Add("Warehouses", problems);
-                return warehouse;
-            }
-            catch (Exception ex)
-            {
-                Logger.Error(ex, "Could not read the warehouse {Path}", file);
-                ModProblems.Add("Warehouses", $"{file} could not be read ({ex.Message}); left out");
-                return null;
-            }
+            return SceneFiles.Load<SceneEntry, WarehouseScene>(file, "Warehouses", "warehouse", Logger, entry => Build(folder, entry),
+                (warehouse, marks) => warehouse with { Marks = marks });
         }
 
         private static WarehouseScene? Build(string folder, SceneEntry? entry)

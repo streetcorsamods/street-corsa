@@ -39,4 +39,15 @@ public sealed class DealerRules
 
     /// <summary>What a new lot starts with in <see cref="DealerLocation.Trade"/>: the custom of its first weeks</summary>
     public double OpeningTrade { get; set; } = 1;
+
+    /// <summary>Each figure the game divides by, loops over or pays held to what it can play by (<see cref="Figures"/>)</summary>
+    internal void Check(string path, List<string> problems)
+    {
+        Figures.Above0(this, path, nameof(DaysPerChange), 100_000, problems);
+        Figures.Above0(this, path, nameof(TradeHalfLifeDays), 100_000, problems);
+        Figures.Within(this, path, nameof(SaleDiscount), 0, 1, problems);
+        Figures.Within(this, path, nameof(FinalDiscount), 0, 1, problems);
+        Figures.Within(this, path, nameof(SaleDays), 0, 3650, problems);
+        Figures.Within(this, path, nameof(FinalDays), 0, 3650, problems);
+    }
 }
