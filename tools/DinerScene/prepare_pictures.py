@@ -15,10 +15,12 @@ Needs numpy and Pillow; the letters are Windows' Impact (Arial Black failing tha
 import io
 import os
 import sys
-import urllib.request
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Shared"))
+from scene_tools import poly_haven  # noqa: E402
 
 FONTS = os.path.join(os.environ.get("WINDIR", r"C:\Windows"), "Fonts")
 
@@ -100,9 +102,8 @@ def pylon(out):
     weathered(image, 2).save(os.path.join(out, "sign_pylon.jpg"), quality=90)
 
 
-# The houses' paints (RGB), and Poly Haven's pictures (CC0, https://polyhaven.com/license)
+# The houses' paints (RGB)
 PAINTS = [(236, 234, 226), (238, 226, 188), (196, 218, 190), (190, 210, 226)]
-POLY_HAVEN = "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/{id}/{id}_diff_1k.jpg"
 
 
 def siding(out):
@@ -121,8 +122,8 @@ def siding(out):
 
 
 def download(texture_id):
-    data = urllib.request.urlopen(POLY_HAVEN.format(id=texture_id), timeout=60).read()
-    return Image.open(io.BytesIO(data)).convert("RGB")
+    """A Poly Haven picture (CC0, https://polyhaven.com/license)"""
+    return Image.open(io.BytesIO(poly_haven(texture_id))).convert("RGB")
 
 
 def poly_haven(out):

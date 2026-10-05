@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using StreetCorsa.Parts.Scripting;
+using static StreetCorsa.Tests.TestScripts;
 
 namespace StreetCorsa.Tests;
 
@@ -13,21 +14,6 @@ public sealed class ScriptVmTests : IDisposable
     private readonly TempDir _temp = new();
 
     public void Dispose() => _temp.Dispose();
-
-    private static ScriptInstruction I(byte op, int operand = 0) => new(op, 1, operand);
-
-    /// <summary>A class in memory with one instance method "m" whose body is the tree; pool[0] is the class name</summary>
-    private static ScriptClass ClassWith(ScriptInstruction[] tree, params string[] extraTexts)
-    {
-        var type = new ScriptClass();
-        type.Pool.Add(new ScriptConstant(ScriptConstantKind.String, "java.game.test.T", 0, 0));
-        type.Pool.Add(new ScriptConstant(ScriptConstantKind.String, "m", 0, 0));
-        type.Pool.Add(new ScriptConstant(ScriptConstantKind.String, "java.lang.Object", 0, 0));
-        foreach (var text in extraTexts) type.Pool.Add(new ScriptConstant(ScriptConstantKind.String, text, 0, 0));
-        type.Methods.Add(new ScriptMethod(0, "m", "()Ljava.lang.Object;", 0));
-        type.Trees.Add(tree);
-        return type;
-    }
 
     private ScriptValue Run(ScriptClass type, out ScriptVm vm)
     {

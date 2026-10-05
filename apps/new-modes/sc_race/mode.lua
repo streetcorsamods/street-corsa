@@ -1984,9 +1984,17 @@ ac.setStartMessage(say('START', 'Street Corsa'))
 local PREPARE_SECONDS = 0.5
 local preparedFor = 0
 
+-- The parts each car shows that are not its own (car_parts.lua), loaded once rather than looked up every frame; one
+-- that does not load fails its update, told in the log as any failure of it is
+local carParts = (function()
+  local ok, module = pcall(require, 'car_parts')
+  if ok and type(module) == 'table' and module.update then return module end
+  return { update = function() error('car_parts did not load: ' .. tostring(module), 0) end }
+end)()
+
 function script.prepare(dt)
-  -- The parts each car shows that are not its own (car_parts.lua): from the first frame its model is there
-  local partsOk, partsError = pcall(function() require('car_parts').update() end)
+  -- The parts on each car from the first frame its model is there
+  local partsOk, partsError = pcall(carParts.update)
   if not partsOk and preparedFor == 0 then ac.log('[Street Corsa] Parts: ' .. tostring(partsError)) end
   preparedFor = preparedFor + dt
   if preparedFor < PREPARE_SECONDS then return false end
@@ -1995,7 +2003,7 @@ function script.prepare(dt)
 end
 
 function script.update(dt)
-  pcall(function() require('car_parts').update() end)
+  pcall(carParts.update)
 
   -- The result is written: nothing more to track until AC quits
   if sessionEnded then return end

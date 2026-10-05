@@ -1,4 +1,3 @@
-using System.Globalization;
 using AcTools.Kn5File;
 using AcTools.Numerics;
 using StreetCorsa.Tools;
@@ -20,17 +19,24 @@ namespace PropBuilder;
 /// </summary>
 internal static class Program
 {
+    private const string Usage = "PropBuilder <prepared folder> <name> <out folder> --scale <metres a unit> [--turn <degrees>] [--mirror]";
+
     private static int Main(string[] args)
     {
-        var positional = args.Where(a => !a.StartsWith("--")).ToList();
-        if (positional.Count < 3 || !TryOption(args, "--scale", out var scale))
+        // A word after --scale or --turn is its number, never the folder
+        var options = new BuilderArgs(args, "--mirror");
+        var positional = options.Positional;
+        if (positional.Count != 3 || options.Option("--scale") == null)
         {
-            Console.Error.WriteLine("PropBuilder <prepared folder> <name> <out folder> --scale <metres a unit> [--turn <degrees>] [--mirror]");
+            Console.Error.WriteLine(Usage);
             return 1;
         }
 
-        var turn = TryOption(args, "--turn", out var degrees) ? degrees : 0f;
-        var mirror = args.Contains("--mirror");
+        if (!options.NumbersOk(Usage, "--scale", "--turn")) return 1;
+
+        var scale = options.Number("--scale")!.Value;
+        var turn = options.Number("--turn") ?? 0f;
+        var mirror = options.Flag("--mirror");
         var (prepared, name, output) = (positional[0], positional[1], positional[2]);
 
         var groups = ObjModel.ReadObj(Path.Combine(prepared, name + ".obj"), scale, turn, mirror);
@@ -55,12 +61,5 @@ internal static class Program
         Save(kn5, path);
         Console.WriteLine($"{path}: {new FileInfo(path).Length / 1024} KB");
         return 0;
-    }
-
-    private static bool TryOption(string[] args, string name, out float value)
-    {
-        value = 0f;
-        var at = Array.IndexOf(args, name);
-        return at >= 0 && at + 1 < args.Length && float.TryParse(args[at + 1], NumberStyles.Float, CultureInfo.InvariantCulture, out value);
     }
 }

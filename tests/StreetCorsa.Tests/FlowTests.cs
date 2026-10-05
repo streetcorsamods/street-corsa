@@ -322,9 +322,7 @@ public sealed class FlowTests : IDisposable
         public void Resume() { }
     }
 
-    private static NavigationService Navigation(DialogService dialogs) => new(
-        dialogs, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!,
-        null!, null!, null!, null!, null!, null!, null!, null!, null!, _ => { }, BaseFlow);
+    private static NavigationService Navigation(DialogService dialogs) => TestNavigation.WithoutServices(dialogs, BaseFlow);
 
     [Fact]
     public void A_race_comes_back_to_the_screen_it_was_set_up_from()
@@ -381,8 +379,7 @@ public sealed class FlowTests : IDisposable
     {
         var problems = new List<string>();
         var noLot = Read("""{ "screens": { "garage": { "kind": "garage", "exits": { "car_lot": "car_lot" } }, "main_menu": { "kind": "main_menu" }, "car_lot": { "kind": "car_lot", "off": true } } }""", problems);
-        var navigation = new NavigationService(new DialogService(), null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!,
-            null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, _ => { }, noLot);
+        var navigation = TestNavigation.WithoutServices(new DialogService(), noLot);
         var garage = new StagedScreen();
         navigation.SafeNavigate("garage", () => garage, "garage");
 
@@ -426,8 +423,7 @@ public sealed class FlowTests : IDisposable
         var problems = new List<string>();
         var bare = Read("""{ "screens": { "garage": { "kind": "garage" }, "main_menu": { "kind": "main_menu" } } }""", problems);
         var dialogs = new DialogService();
-        var navigation = new NavigationService(dialogs, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!,
-            null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, _ => { }, bare);
+        var navigation = TestNavigation.WithoutServices(dialogs, bare);
 
         Assert.False(navigation.GoKind(ScreenKinds.SoundBrowser, null));
         Assert.True(dialogs.IsDialogOpen);
@@ -445,8 +441,7 @@ public sealed class FlowTests : IDisposable
 
         var problems = new List<string>();
         var dinerNight = Read("""{ "screens": { "garage": { "kind": "garage" }, "main_menu": { "kind": "main_menu" }, "diner": { "kind": "diner", "endDay": true } } }""", problems);
-        var withNights = new NavigationService(new DialogService(), null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!,
-            null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, _ => { }, dinerNight);
+        var withNights = TestNavigation.WithoutServices(new DialogService(), dinerNight);
         withNights.SafeNavigate("diner", () => new Screen(), "diner");
         Assert.True(withNights.CanEndDayHere);
         Assert.Empty(problems);

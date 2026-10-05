@@ -61,6 +61,14 @@
     <Compile Include="..\..\tools\SlrrPartsConverter\Slrr\SlrrRpk.cs" Link="Converter\SlrrRpk.cs" />
   </ItemGroup>
 
+  <!-- What the scene builders share, tried on models in memory: their meshes, a prop's OBJ meshes and their command lines -->
+  <ItemGroup>
+    <Compile Include="..\..\tools\Shared\Kn5SceneWriter.cs" Link="Tools\Kn5SceneWriter.cs" />
+    <Compile Include="..\..\tools\Shared\ObjModel.cs" Link="Tools\ObjModel.cs" />
+    <Compile Include="..\..\tools\Shared\SceneMesh.cs" Link="Tools\SceneMesh.cs" />
+    <Compile Include="..\..\tools\Shared\BuilderArgs.cs" Link="Tools\BuilderArgs.cs" />
+  </ItemGroup>
+
   <ItemGroup>
     <Using Include="Xunit" />
     <!-- The WPF SDK leaves System.IO out of the implicit usings; nearly every test here works on files -->

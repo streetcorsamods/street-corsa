@@ -17,7 +17,7 @@
   ],
   "id": "mainstreet",
   "title": "Main Street",
-  "credit": "Downtown City MegaKit by Quaternius (CC0); Diner Exterior Asset Reworked by WaajaaH (CC BY 4.0); skies by Poly Haven (CC0)",
+  "credit": "Downtown City MegaKit by Quaternius (CC0); \"Diner Exterior Asset Reworked\" by WaajaaH (https://sketchfab.com/3d-models/7c2d2bf3f5be4ad7b1a7732b69493c06), CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/), scaled, set into the street and converted to KN5 (see CREDITS.txt); skies by Poly Haven (CC0)",
   "model": "street.kn5",
   "player": { "x": 35.0, "z": -4.5, "heading": -90.0 },
   "laneOffset": 3.0,

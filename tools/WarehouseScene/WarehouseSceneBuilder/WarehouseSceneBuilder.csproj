@@ -22,6 +22,7 @@
   <!-- What the scene builders share, and the game's atomic writes: a builder stopped half way leaves the shipped scene as it was -->
   <ItemGroup>
     <Compile Include="..\..\Shared\Kn5SceneWriter.cs" Link="Shared\Kn5SceneWriter.cs" />
+    <Compile Include="..\..\Shared\SceneMesh.cs" Link="Shared\SceneMesh.cs" />
     <Compile Include="..\..\..\Street Corsa\Helpers\SafeFile.cs" Link="Helpers\SafeFile.cs" />
   </ItemGroup>
 

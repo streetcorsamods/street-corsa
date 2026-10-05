@@ -21,8 +21,8 @@ namespace PaintBoothSceneBuilder;
 ///
 ///   PaintBoothSceneBuilder &lt;prepared folder&gt; &lt;out folder&gt;
 ///
-/// The base game's booth: PaintBoothSceneBuilder &lt;pictures&gt; "Street Corsa/Content/streetcorsa/booths/booth"
-/// (build_booth.py runs both steps).
+/// The base game's booth, in two steps: <c>python tools/PaintBoothScene/prepare_booth.py &lt;pictures&gt;</c>, then
+/// PaintBoothSceneBuilder &lt;pictures&gt; "Street Corsa/Content/streetcorsa/booths/booth".
 /// </summary>
 internal static class Program
 {
@@ -404,62 +404,9 @@ internal static class Program
 
     #region Geometry
 
-    private sealed class Mesh
+    // The flat shapes are the scene builders' (tools/Shared/SceneMesh.cs); the round ones, the painter's, are the booth's own
+    private sealed class Mesh : SceneMesh
     {
-        public readonly List<Kn5Node.Vertex> Vertices = [];
-        public readonly List<int> Indices = [];
-
-        /// <summary>A flat four-cornered face seen from the side <paramref name="normal"/> points to, the corners in order round its edge</summary>
-        public void Quad(Vec3 a, Vec3 b, Vec3 c, Vec3 d, Vec3 normal, Func<Vec3, Vec2> uv)
-        {
-            var i = Vertices.Count;
-            var tangent = Vec3.Normalize(b - a);
-            foreach (var p in new[] { a, b, c, d }) Vertices.Add(new Kn5Node.Vertex(p, normal, uv(p), tangent));
-            Facing(i, i + 1, i + 2, normal);
-            Facing(i, i + 2, i + 3, normal);
-        }
-
-        private void Facing(int a, int b, int c, Vec3 normal)
-        {
-            var pa = Vertices[a].Position;
-            var cross = Vec3.Cross(Vertices[b].Position - pa, Vertices[c].Position - pa);
-            if (Vec3.Dot(cross, normal) > 0f) Indices.AddRange([a, b, c]);
-            else Indices.AddRange([a, c, b]);
-        }
-
-        /// <summary>A box between two corners, its faces looking out; the bottom left out unless asked for</summary>
-        public void Box(Vec3 min, Vec3 max, float tile, bool bottom = false)
-        {
-            Vec2 Xy(Vec3 p) => new(p.X / tile, -p.Y / tile);
-            Vec2 Zy(Vec3 p) => new(p.Z / tile, -p.Y / tile);
-            Vec2 Xz(Vec3 p) => new(p.X / tile, p.Z / tile);
-
-            Quad(V(min.X, min.Y, max.Z), V(max.X, min.Y, max.Z), V(max.X, max.Y, max.Z), V(min.X, max.Y, max.Z), Vec3.UnitZ, Xy);
-            Quad(V(min.X, min.Y, min.Z), V(max.X, min.Y, min.Z), V(max.X, max.Y, min.Z), V(min.X, max.Y, min.Z), -Vec3.UnitZ, Xy);
-            Quad(V(max.X, min.Y, min.Z), V(max.X, min.Y, max.Z), V(max.X, max.Y, max.Z), V(max.X, max.Y, min.Z), Vec3.UnitX, Zy);
-            Quad(V(min.X, min.Y, min.Z), V(min.X, min.Y, max.Z), V(min.X, max.Y, max.Z), V(min.X, max.Y, min.Z), -Vec3.UnitX, Zy);
-            Quad(V(min.X, max.Y, min.Z), V(max.X, max.Y, min.Z), V(max.X, max.Y, max.Z), V(min.X, max.Y, max.Z), Vec3.UnitY, Xz);
-            if (bottom) Quad(V(min.X, min.Y, min.Z), V(max.X, min.Y, min.Z), V(max.X, min.Y, max.Z), V(min.X, min.Y, max.Z), -Vec3.UnitY, Xz);
-        }
-
-        /// <summary>A square-section bar from <paramref name="from"/> to <paramref name="to"/>, <paramref name="size"/> across</summary>
-        public void Bar(Vec3 from, Vec3 to, float size, float tile)
-        {
-            var axis = Vec3.Normalize(to - from);
-            var helper = MathF.Abs(axis.Y) > 0.9f ? Vec3.UnitX : Vec3.UnitY;
-            var side = Vec3.Normalize(Vec3.Cross(axis, helper)) * (size / 2f);
-            var up = Vec3.Normalize(Vec3.Cross(side, axis)) * (size / 2f);
-
-            var corners = new[] { side + up, -side + up, -side - up, side - up };
-            for (var k = 0; k < 4; k++)
-            {
-                var p = corners[k];
-                var q = corners[(k + 1) % 4];
-                var normal = Vec3.Normalize(p + q);
-                Quad(from + p, from + q, to + q, to + p, normal, v => new Vec2(Vec3.Dot(v - from, axis) / tile, Vec3.Dot(v - from, Vec3.Normalize(q - p)) / tile));
-            }
-        }
-
         /// <summary>
         /// A closed cylinder standing on <paramref name="bottom"/> (upright), or lying along +z from it when
         /// <paramref name="alongZ"/>
@@ -600,6 +547,6 @@ internal static class Program
     #endregion
 
     // The booth is lit as a whole (booth.json's lights): nothing of it stands in the light's way
-    private static void AddMesh(IKn5 kn5, string name, Mesh mesh, uint material) =>
+    private static void AddMesh(IKn5 kn5, string name, SceneMesh mesh, uint material) =>
         Kn5SceneWriter.AddMesh(kn5, name, mesh.Vertices, mesh.Indices, material);
 }

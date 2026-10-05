@@ -133,9 +133,14 @@ function R:getTransformationRaw() return self.items[1].transform end
 function R:getLocalAABB() return self.items[1].min, self.items[1].max end
 function R:setVisible(v) for _, n in ipairs(self.items) do n.visible = v end; return self end
 function R:dispose() end
--- The car's surface: world.hood is its height over every point (nil: nothing there)
-function R:raycast(ray)
+-- The car's surface: world.hood is its height over every point (nil: nothing there), one-sided as most hoods are, its
+-- face up (world.hoodDown: its face down, as a hood drawn from inside). Culling as CSP's (lib_scene.lua): 1, the
+-- default, hits front faces only, 0 back faces only, -1 both; a ray coming down meets the face of a face-up hood
+function R:raycast(ray, _, _, _, _, culling)
   if not world.hood then return -1 end
+  culling = culling or 1
+  local front = not world.hoodDown
+  if (front and culling == 0) or (not front and culling == 1) then return -1 end
   return ray.pos.y - world.hood
 end
 function R:loadKN5(file)
@@ -221,7 +226,7 @@ ac = {
   getFolder = function() return 'docs' end,
   FolderID = { ACDocuments = 1 },
   INIConfig = {
-    raceConfig = function() return { get = function(_, section, key, default)
+    raceConfig = function() world.iniLoads = (world.iniLoads or 0) + 1; return { get = function(_, section, key, default)
       return world.ini[key] or default
     end } end,
     -- blurred_objects.ini: world.blurred = { 'WHEEL_LF', 'RIM_BLUR_LF' }, all of wheel 0
@@ -247,10 +252,10 @@ render = { createRay = function(pos, dir, length) return { pos = pos, dir = dir,
 '''
 
 
-def run(ini, blurred=None, hood=None, floor_y=None, late=False):
+def run(ini, blurred=None, hood=None, floor_y=None, late=False, hood_down=False):
     lua = lupa.LuaRuntime()
     world = lua.table_from({'ini': lua.table_from(ini), 'log': lua.table(), 'loaded': lua.table(),
-                            'blurred': lua.table_from(blurred or []), 'hood': hood, 'late': late})
+                            'blurred': lua.table_from(blurred or []), 'hood': hood, 'late': late, 'hoodDown': hood_down})
     lua.execute(STUB, world)
     if floor_y is not None:
         world.floor.transform[4][2] = floor_y
@@ -391,6 +396,23 @@ def only_the_parts_that_stand_out_of_the_hood_are_shown_never_moved():
           'filter.kn5' in at and near(at['filter.kn5'][3][1], 0.67), log)
 
 
+def the_hood_is_found_whichever_way_its_faces_look():
+    """The rays take both sides of every face: a one-sided hood is found from above whether its face is up or down"""
+    ini = {'CAR_0_PART_1': 'blower.kn5', 'CAR_0_PART_1_AT': '1,0,0, 0,1,0, 0,0,1, 0,0.38,1.3', 'CAR_0_PART_1_BOX': '-0.15,0,-0.3, 0.15,0.29,0.3'}
+    _, world = run(ini, hood=0.72)
+    check('a part under a face-up hood stays under it', not any(i.file == 'blower.kn5' for i in world.loaded.values()),
+          list(world.log.values()))
+    _, world = run(ini, hood=0.72, hood_down=True)
+    check('a part under a face-down hood stays under it', not any(i.file == 'blower.kn5' for i in world.loaded.values()),
+          list(world.log.values()))
+
+
+def a_race_ini_value_is_read_once():
+    """A car whose model comes late is tried every frame: race.ini is loaded once, each value read once"""
+    _, world = run({'CAR_0_RIM_LF': 'a.kn5', 'CAR_0_PART_1': 'filter.kn5'}, late=True)
+    check('race.ini is loaded once however many frames a car waits', world.iniLoads == 1, list(world.log.values()))
+
+
 def engine_parts_are_placed_and_judged_in_the_models_own_space():
     """AC draws the model by the car's graphics offset (35 cm down on the Chevelle): the parts and the rays follow it"""
     ini = {'CAR_0_MODEL_NODE': 'FLOOR', 'CAR_0_MODEL_AT': '1,0,0, 0,1,0, 0,0,1, 0,0,0',
@@ -444,6 +466,8 @@ the_wear_layer_goes_on_the_body_in_the_models_space()
 a_car_whose_model_comes_late_gets_its_parts_once_it_is_there()
 a_corner_not_named_keeps_its_own_rim()
 engine_parts_are_placed_and_judged_in_the_models_own_space()
+the_hood_is_found_whichever_way_its_faces_look()
+a_race_ini_value_is_read_once()
 a_rim_too_wide_for_the_cars_tyre_brings_its_factory_tyre_along()
 an_engine_part_goes_into_the_node_holding_the_wheels()
 only_the_parts_that_stand_out_of_the_hood_are_shown_never_moved()

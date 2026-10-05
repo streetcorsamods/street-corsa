@@ -6,6 +6,7 @@ using StreetCorsa.Parts;
 using StreetCorsa.Parts.Cars;
 using StreetCorsa.Parts.Logic;
 using StreetCorsa.Parts.Scripting;
+using static StreetCorsa.Tests.TestScripts;
 
 namespace StreetCorsa.Tests;
 
@@ -22,12 +23,7 @@ public sealed class AuditFixesCTests : IDisposable
 
     // ---- The tuner: a radiator bought first is never thrown away with a swapped block ----
 
-    private static readonly Lazy<(PartsCatalog Catalog, EngineBuildIndex Builds, EngineCooling Cooling)> Real = new(() =>
-    {
-        var catalog = PartsCatalog.Load(RepoPaths.PartsFolder);
-        var builds = EngineBuildIndex.Create(catalog);
-        return (catalog, builds, EngineCooling.Create(catalog, builds));
-    });
+    private static Lazy<(PartsCatalog Catalog, EngineBuildIndex Builds, EngineCooling Cooling)> Real => TestCars.Cooling;
 
     [Fact]
     public void An_engine_cooled_first_is_not_swapped_for_another_block_in_the_same_tune_up()
@@ -69,21 +65,6 @@ public sealed class AuditFixesCTests : IDisposable
     }
 
     // ---- The script VM: budgets a hostile script cannot get round ----
-
-    private static ScriptInstruction I(byte op, int operand = 0) => new(op, 1, operand);
-
-    /// <summary>A class in memory with one instance method "m" whose body is the tree; pool[0] is the class name</summary>
-    private static ScriptClass ClassWith(ScriptInstruction[] tree, params string[] extraTexts)
-    {
-        var type = new ScriptClass();
-        type.Pool.Add(new ScriptConstant(ScriptConstantKind.String, "java.game.test.T", 0, 0));
-        type.Pool.Add(new ScriptConstant(ScriptConstantKind.String, "m", 0, 0));
-        type.Pool.Add(new ScriptConstant(ScriptConstantKind.String, "java.lang.Object", 0, 0));
-        foreach (var text in extraTexts) type.Pool.Add(new ScriptConstant(ScriptConstantKind.String, text, 0, 0));
-        type.Methods.Add(new ScriptMethod(0, "m", "()Ljava.lang.Object;", 0));
-        type.Trees.Add(tree);
-        return type;
-    }
 
     [Fact]
     public void The_steps_of_every_entry_on_one_VM_add_up_to_a_budget_that_stays_spent()

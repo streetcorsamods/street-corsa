@@ -89,9 +89,7 @@ public class AuditFixesETests
     }
 
     // The services only go to the screens the typed factories build: the garage is built on none of them here
-    private static NavigationService Navigation(DialogService dialogs) => new(
-        dialogs, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!,
-        null!, null!, null!, null!, null!, null!, null!, null!, null!, _ => { });
+    private static NavigationService Navigation(DialogService dialogs) => TestNavigation.WithoutServices(dialogs);
 
     // ---- the new game ----
 

@@ -51,10 +51,11 @@ if (-not $lupa) {
     Write-Warning "check: the sc_race harness is skipped: no python with lupa's LuaJIT (pip install -r tools\sc_race_harness\requirements.txt)"
 }
 else {
-    foreach ($test in "test_chase.py", "test_heat.py", "test_strip.py", "test_time_attack.py", "test_parts.py") {
-        & $python.Source (Join-Path $PSScriptRoot "sc_race_harness\$test")
+    # Every suite in the folder, so a new one runs without being listed here
+    foreach ($test in Get-ChildItem (Join-Path $PSScriptRoot "sc_race_harness") -Filter "test_*.py" | Sort-Object Name) {
+        & $python.Source $test.FullName
         if ($LASTEXITCODE -ne 0) {
-            [Console]::Error.WriteLine("check: the sc_race harness failed ($test)")
+            [Console]::Error.WriteLine("check: the sc_race harness failed ($($test.Name))")
             exit 1
         }
     }
