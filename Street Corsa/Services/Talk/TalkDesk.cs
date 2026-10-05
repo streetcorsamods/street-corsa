@@ -149,6 +149,16 @@ namespace StreetCorsa.Services.Talk
                 Prompts, Rules), null, TalkPlace.Phone, subject);
         }
 
+        /// <summary>
+        /// Whoever is behind a part shop's counter (<paramref name="clerk"/> as the shop's data gives them, else drawn): they
+        /// find the player parts in <paramref name="counter"/>'s stock
+        /// </summary>
+        public Conversation ForShop(GameState game, string shopId, DealerSalesman? clerk, IShopCounter counter)
+        {
+            Forget(game);
+            return new Conversation(this, game, TalkPeople.Clerk(game, shopId, clerk, Prompts, Rules), null, TalkPlace.Shop, null, counter: counter);
+        }
+
         /// <summary>A racer, at the diner or pulled up alongside</summary>
         public Conversation ForRival(GameState game, Opponent rival, TalkPlace place)
         {

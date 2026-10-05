@@ -378,6 +378,72 @@ public static class EngineTuner
         return best;
     }
 
+    /// <summary>
+    /// The kinds of part on <paramref name="engine"/> (not the block): the only kinds <see cref="PowerWith"/> can try, so
+    /// nothing else need go on the dyno
+    /// </summary>
+    public static HashSet<string> KindsOn(PartsCatalog catalog, PartInstance engine) =>
+        engine.SelfAndDescendants()
+            .Where(p => !ReferenceEquals(p, engine))
+            .Select(p => catalog.Get(p.DefinitionId))
+            .OfType<PartDefinition>()
+            .Select(PartKinds.GroupOf)
+            .Where(g => g != BlockGroup)
+            .ToHashSet(StringComparer.Ordinal);
+
+    /// <summary>
+    /// What <paramref name="engine"/> makes on the dyno now, and the most it makes with <paramref name="part"/> in the place
+    /// of a part of its kind (what was on the old part moved over, as a tuner does it); null when the engine does not run,
+    /// or the part takes the place of none of its parts. A whole engine is no part to try (<see cref="BlockGroup"/>).
+    /// <paramref name="powerNow"/> is what the engine makes now, when the caller has it (many parts tried on one engine).
+    /// </summary>
+    public static (double Before, double After)? PowerWith(PartsCatalog catalog, PartInstance engine, PartDefinition part, double? powerNow = null)
+    {
+        var group = PartKinds.GroupOf(part);
+        if (group == BlockGroup) return null;
+
+        // A part of a kind not on the engine takes the place of nothing: no dyno run at all
+        var olds = engine.SelfAndDescendants()
+            .Where(p => !ReferenceEquals(p, engine))
+            .Select(p => (Part: p, Definition: catalog.Get(p.DefinitionId)))
+            .Where(o => o.Definition != null && PartKinds.GroupOf(o.Definition) == group)
+            .ToList();
+        if (olds.Count == 0) return null;
+
+        var before = powerNow ?? PowerOf(catalog, engine);
+        if (before is not { } now) return null;
+
+        double? best = null;
+        foreach (var (old, oldDefinition) in olds)
+        {
+            if (oldDefinition!.Id.Equals(part.Id, StringComparison.OrdinalIgnoreCase)) return (now, now);
+
+            var parent = PartTrees.FindParent(engine, old);
+            var parentDefinition = parent == null ? null : catalog.Get(parent.DefinitionId);
+            var parentSlot = parentDefinition?.Slots.FirstOrDefault(s => s.Id == old.ParentSlot);
+            if (parentDefinition == null || parentSlot == null) continue;
+
+            foreach (var (_, ownSlot) in catalog.FindMountable(parentDefinition, parentSlot).Where(c => c.Part.Id.Equals(part.Id, StringComparison.OrdinalIgnoreCase)))
+            {
+                var extra = 0m;
+                var replacement = Rebuild(catalog, part, ownSlot.Id, old, _ => 0m, 0, [], ref extra);
+                if (replacement == null) continue;
+
+                var tuned = PartTrees.Clone(engine, keepIds: true);
+                var tunedParent = tuned.SelfAndDescendants().First(p => p.InstanceId == parent!.InstanceId);
+                tunedParent.Children[tunedParent.Children.FindIndex(c => c.InstanceId == old.InstanceId)] = replacement;
+                if (EngineFactory.Evaluate(catalog, tuned) is { Runs: true, Dyno: { } after } && (best == null || after.MaxPowerHp > best))
+                    best = after.MaxPowerHp;
+            }
+        }
+
+        return best is { } most ? (now, most) : null;
+    }
+
+    /// <summary>What <paramref name="engine"/> makes on the dyno; null when it does not run</summary>
+    public static double? PowerOf(PartsCatalog catalog, PartInstance engine) =>
+        EngineFactory.Evaluate(catalog, engine) is { Runs: true, Dyno: { } dyno } ? dyno.MaxPowerHp : null;
+
     /// <summary>A part that came off, as it goes on a shelf or into the paper: a copy, loose, without what was on it unless said</summary>
     private static PartInstance Loose(PartInstance part, bool withChildren = false)
     {

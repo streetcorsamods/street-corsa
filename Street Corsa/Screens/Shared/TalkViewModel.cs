@@ -68,6 +68,7 @@ namespace StreetCorsa.Screens.Shared
             TalkPlace.Lot => "chat.ui.on_lot",
             TalkPlace.Curb => "chat.ui.at_curb",
             TalkPlace.Diner => "chat.ui.at_diner",
+            TalkPlace.Shop => "chat.ui.at_counter",
             _ => "chat.ui.on_street"
         });
 
@@ -126,6 +127,9 @@ namespace StreetCorsa.Screens.Shared
                 OnPropertyChanged(nameof(ShowsHint));
             }
         }
+
+        /// <summary>What the box says before anything is typed: a clerk is asked for parts, everybody else about the thing and its price</summary>
+        public string Hint => GameText.Say(Talk.Place == TalkPlace.Shop ? "chat.ui.hint_clerk" : "chat.ui.hint");
 
         /// <summary>Nothing typed yet: the hint shows in the box</summary>
         public bool ShowsHint => Draft.Length == 0;

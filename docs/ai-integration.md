@@ -61,6 +61,19 @@ See `docs/modding.md`, "ai".
 
 ## Talking to people
 
+**The part shop's clerk** (step 28, idea 7): behind every part shop's counter while the AI is on
+(`TalkDesk.ForShop`, `PersonKind.Clerk`, `TalkPlace.Shop`, prompt `chat_clerk`). The game does the search and the AI
+only voices it: each line the player types is first read by `clerk_search` as a JSON search (`IAiText.JsonAsync`,
+`ClerkSearch.Parse`: a kind the shop lists, fits my car, a price limit, a name, power or cheap; a kind or a price read
+makes it an ask whatever the model's `asks` says, and the `chat.fit_words` make it one for what fits). The screen
+(`IShopCounter`, the part shop's view model) applies it to the real stock, so the list's filters change where the player
+sees them, picks the best five (power: what each part does to the player's engine on the dyno, `EngineTuner.PowerWith`;
+cheap: the price; else fit, gain, price) and marks them first in the list as the clerk's picks; the clerk is told them
+(`chat.fact.stock.*`, a plain line when none of them fits) and recommends among them. Small talk searches nothing.
+Clerks never haggle (a junkyard keeps its Haggle button); what the player buys over the counter is an event they
+remember. Measured on `streetcorsa` (llama3.1:8b, 2026-10-04): the search and the answer each about 1-2 s; the 8B often
+says `asks: false` while filling in a kind, hence the rule above.
+
 Built in step 26 (2026-10-01). While the AI is on, the player can talk to the people of the game, typing what they say:
 "Call the seller" on a part ad's preview, "Talk to the seller" on the car viewing screen, "Talk" with the rival picked at
 the Diner and with the one pulled up at the Cruise curb. A dealer's salesman does not wait: on his lot (and on the car

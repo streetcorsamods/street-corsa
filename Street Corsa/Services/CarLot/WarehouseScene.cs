@@ -143,13 +143,6 @@ namespace StreetCorsa.Services.CarLot
         /// <summary>The warehouses of the mods next to the game, read once</summary>
         public static IReadOnlyList<WarehouseScene> Installed => InstalledScenes.Value;
 
-        /// <summary>A warehouse that is left out: in the log, and in the mods' problems for the player</summary>
-        private static void LeftOut(string problem)
-        {
-            Logger.Warning("{Problem}", problem);
-            ModProblems.Add("Warehouses", problem);
-        }
-
         /// <summary>
         /// The warehouse in <paramref name="folder"/>; null when its file or model is missing or broken, or it has no bays
         /// (logged). A mod's file is not trusted to be whole: an empty entry in a list is skipped, a sign picture that is
@@ -185,21 +178,11 @@ namespace StreetCorsa.Services.CarLot
             var bays = (entry.Bays ?? []).OfType<BayEntry>().Select(b => new WarehouseBay(b.X, b.Z, b.Heading)).ToList();
             if (bays.Count == 0)
             {
-                LeftOut($"the warehouse {id} has no bays; left out");
+                SceneFiles.LeftOut(Logger, "Warehouses", $"the warehouse {id} has no bays; left out");
                 return null;
             }
 
-            if (!PathNames.TryCombineUnder(folder, entry.Model ?? "warehouse.kn5", out var kn5))
-            {
-                LeftOut($"the warehouse {id} names a model outside its folder ({entry.Model}); left out");
-                return null;
-            }
-
-            if (!File.Exists(kn5))
-            {
-                LeftOut($"the warehouse {id} has no model {kn5}; left out");
-                return null;
-            }
+            if (!SceneFiles.TryModel(folder, entry.Model, "warehouse.kn5", $"the warehouse {id}", Logger, "Warehouses", out var kn5)) return null;
 
             var camera = entry.Camera is { } c && c.Radius > 0f
                 ? new WarehouseCamera(c.Alpha, c.Beta, c.Radius, c.TargetHeight)
@@ -210,17 +193,12 @@ namespace StreetCorsa.Services.CarLot
                 : (WarehouseRoom?)null;
 
             // A warehouse's lamps are white and the same at every hour, only scaled by it (a look colours them)
-            var lamps = (entry.Lamps ?? []).Select(l => l == null ? null : l with { Color = null }).ToList();
-            var lights = SceneLighting.Read(entry.Lights, id, Logger, cubemapAmbient: 0f, sharedLamps: lamps);
-
-            var skylight = new Dictionary<StreetLight, float>();
-            foreach (var (name, glow) in entry.Skylight ?? [])
-            {
-                if (SceneLighting.TryParse(name, out var which)) skylight[which] = glow;
-            }
+            var lights = SceneFiles.Lights(entry.Lights, entry.Lamps, id, Logger);
+            var skylight = SceneFiles.Glow(entry.Skylight);
 
             var looks = (entry.Looks ?? []).OfType<LookEntry>()
-                .Select((l, i) => new WarehouseLook(l.Id ?? $"look{i + 1}", Surfaces(id, l.Surfaces), SceneLighting.Rgb(l.LampColor, 255)))
+                .Select((l, i) => new WarehouseLook(l.Id ?? $"look{i + 1}", SceneFiles.Surfaces(l.Surfaces, "warehouse", id, Logger),
+                    SceneLighting.Rgb(l.LampColor, 255)))
                 .ToList();
 
             var digitPicture = entry.Digits?.Picture;
@@ -251,24 +229,6 @@ namespace StreetCorsa.Services.CarLot
             {
                 return false;
             }
-        }
-
-        /// <summary>
-        /// The surfaces of a look, material to picture. The lot points each material at a texture of the model by this
-        /// name (<c>Controls/LotViewport3D</c>): a name that is not a plain file name (a path out of the folder, a device)
-        /// is dropped here, so no model ever asks the renderer for one.
-        /// </summary>
-        private static Dictionary<string, string> Surfaces(string id, Dictionary<string, string?>? surfaces)
-        {
-            var kept = new Dictionary<string, string>(StringComparer.Ordinal);
-            foreach (var (material, picture) in surfaces ?? [])
-            {
-                if (picture == null) continue;
-                if (IsPictureName(picture)) kept[material] = picture;
-                else Logger.Warning("The warehouse {Id} dresses {Material} in \"{Picture}\", which is no picture name: it keeps its own", id, material, picture);
-            }
-
-            return kept;
         }
 
         /// <summary>A texture's name in the model: one plain file name, no folder in it</summary>

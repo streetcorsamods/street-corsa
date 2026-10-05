@@ -64,6 +64,15 @@ public sealed class FakeAiText(Func<string, TextValues, Task<string?>> answer, b
         return answer(use, values);
     }
 
+    /// <summary>The JSON answers asked, with the schema each was held to</summary>
+    public List<(string Use, TextValues Values, System.Text.Json.Nodes.JsonObject Schema)> Jsons { get; } = [];
+
+    public Task<string?> JsonAsync(string use, TextValues values, System.Text.Json.Nodes.JsonObject schema, CancellationToken cancellationToken = default)
+    {
+        lock (Jsons) Jsons.Add((use, values, schema));
+        return answer(use, values);
+    }
+
     public Task<AiTestResult> TestAsync(AiSettings settings, string? apiKey, CancellationToken cancellationToken = default) =>
         Task.FromResult(new AiTestResult(true, "ok"));
 }

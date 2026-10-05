@@ -13,7 +13,10 @@ namespace StreetCorsa.Models.GameState
         Rival,
 
         /// <summary>Somebody who answered the player's own ad in the paper, from home: they want to buy</summary>
-        Buyer
+        Buyer,
+
+        /// <summary>Behind a part shop's counter: finds the player what they ask for in the shop's own stock</summary>
+        Clerk
     }
 
     /// <summary>

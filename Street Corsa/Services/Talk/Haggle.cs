@@ -119,6 +119,13 @@ namespace StreetCorsa.Services.Talk
                                          && Regex.IsMatch(line, $@"(^|\W){Regex.Escape(phrase.ToLowerInvariant())}(\W|$)"));
         }
 
+        /// <summary>One of <paramref name="words"/> (or phrases) in <paramref name="text"/> as a whole word, in any case</summary>
+        public static bool HasWord(string text, IReadOnlyList<string> words)
+        {
+            var line = text.ToLowerInvariant();
+            return words.Any(word => word.Length > 0 && Regex.IsMatch(line, $@"(^|\W){Regex.Escape(word.ToLowerInvariant())}(\W|$)"));
+        }
+
         /// <summary>
         /// The sums of money <paramref name="text"/> names: with a currency sign ("$1,250"), "k"/"grand"/"thousand" on
         /// them ("1.2 grand"), or "bucks"/"dollars" after them ("900 bucks"); a number with one of

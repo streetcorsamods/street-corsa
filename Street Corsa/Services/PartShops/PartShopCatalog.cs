@@ -40,11 +40,14 @@ namespace StreetCorsa.Services.PartShops
             {
                 var shops = ModJson.Load(mods, ContentTypes.PartShops, ShopsList, "part shop", problems, entry =>
                     entry.Id == null && entry.Replaces == null ? null : entry.As<PartShopDefinition>());
-                foreach (var (id, shop, _) in shops.Entries)
+                foreach (var (id, shop, mod) in shops.Entries)
                 {
                     shop.Id = id;
                     shop.Makes ??= [];
                     shop.Groups ??= [];
+                    shop.Look ??= string.Empty;
+                    DealerCatalog.FindPortrait(shop.Clerk, mod, ContentTypes.PartShops,
+                        portrait => $"shop {shop.Id}: no clerk portrait \"{portrait}\"; they are shown without one", problems);
                     _byId[id] = shop;
                     _shops.Add(shop);
                 }

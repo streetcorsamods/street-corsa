@@ -1401,7 +1401,27 @@ Tests: switch rules and the always-there Buy (2140 pass). `check.ps1` fails only
 Rims, tyres, blur and the engine parts standing out of the hood, in AC and the game's scenes; see `parts-in-ac` notes in
 `docs/ac-integration/csp-lua-scripts.md` and the PR.
 
-### Ideas 6 and 7: the diner street and the parts shop (planned)
+### Idea 7: the parts shop and its clerk (built 2026-10-04 on `feature/parts-shop`, not seen in game)
+
+Taken before idea 6 (the owner agreed): its room is our own, so no outside models to license. One PR.
+- **The room:** `tools/ShopScene` builds `shopscenes/shop` (Poly Haven CC0, own signs, pegboard and checker floor):
+  counter and till, back-wall shelving under the sign, tyre rack, gondola, engine stand, display table, tubes; four looks
+  by shop kind (a shop may name its own `look`). The camera stands inside the door, sways, can be dragged and wheeled.
+- **The stock in it:** the shop's real shelves (a junkyard's yard, with what is bolted on) stood in the scene's 103
+  `places` by `ShopStockLayout` (engines on the stand, wheels in the rack, the big parts low, one part a place) and drawn
+  as the renderer's scenery; stood again after a purchase.
+- **The counter:** one window over the room: the clerk's talk and the shop's list (as before, plus a price limit chip
+  and the clerk's picks marked first). Without a scene the counter is the screen.
+- **The clerk** (`PersonKind.Clerk`, `chat_clerk` + `clerk_search`, `IAiText.JsonAsync`): the owner's design, the game
+  searches and the AI voices it; dyno gain per part for the player's engine (`EngineTuner.PowerWith`); a shop's own
+  `clerk` in its data, else drawn; clerks never haggle; purchases are remembered. Live on `streetcorsa`: the 8B often
+  says `asks: false` while filling in a kind, so anything read makes it an ask, and `chat.fit_words` force the fit filter.
+- Not done: no clerk standing in the room (a portrait only when the shop's data gives one); clicking a part in the
+  room does not pick its row.
+- Docs: `docs/screens/part-shop.md`, `docs/modding.md` (`shopscenes`, `partshops` clerk/look, the prompts),
+  `docs/ai-integration.md`.
+
+### Idea 6: the diner street (planned; the parts shop notes below are idea 7's, built above)
 
 - **Diner refactor (owner):** a full 1960s/70s American street model instead of the street dome; a cinematic arriving
   and leaving like the gas station's; the street scene is the screen, with no data by default: a toggle opens one modal

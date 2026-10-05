@@ -323,6 +323,54 @@ namespace StreetCorsa.Services.Talk
                     ("amount", new Helpers.Money(happened.Amount ?? 0)));
         }
 
+        /// <summary>
+        /// What a clerk found in the shop's stock for the player's last ask: the ask as the game read it, how many parts
+        /// match, and the best few with their prices, whether they fit the player's car and what they do on the dyno
+        /// </summary>
+        public static IEnumerable<string> Stock(ClerkFindings? found)
+        {
+            if (found == null)
+            {
+                yield return GameText.Say("chat.fact.stock.not_asked");
+                yield break;
+            }
+
+            var asked = Asked(found.Search);
+            if (found.NoName is { } name) yield return GameText.Say("chat.fact.stock.no_name", ("words", name));
+            if (found.Picks.Count == 0)
+            {
+                yield return GameText.Say("chat.fact.stock.nothing", ("asked", asked));
+                yield break;
+            }
+
+            yield return GameText.Say("chat.fact.stock.found", ("asked", asked), ("count", found.Matching), ("shown", found.Picks.Count));
+            foreach (var pick in found.Picks)
+            {
+                var dyno = pick is { PowerBefore: { } before, PowerAfter: { } after }
+                    ? Math.Round(after) > Math.Round(before)
+                        ? GameText.Say("chat.fact.stock.dyno", ("from", (int)Math.Round(before)), ("to", (int)Math.Round(after)))
+                        : GameText.Say("chat.fact.stock.dyno_none")
+                    : string.Empty;
+                yield return GameText.Say("chat.fact.stock.pick", ("name", pick.Name), ("kind", pick.Kind), ("price", new Helpers.Money(pick.Price)),
+                    ("fits", GameText.Say(pick.Fits ? "chat.fact.stock.fits" : "chat.fact.stock.no_fit")), ("dyno", dyno),
+                    ("left", pick.InStock == 1 ? GameText.Say("chat.fact.stock.last") : string.Empty));
+            }
+
+            // A small model reads "does not go on" past a part it likes: said once more, plainly
+            if (found.Picks.All(p => !p.Fits)) yield return GameText.Say("chat.fact.stock.none_fit");
+        }
+
+        /// <summary>A search as the clerk is told it was asked: "carburetors for their car, under $200, the most power"</summary>
+        public static string Asked(ClerkSearch search)
+        {
+            var parts = new List<string> { search.Kind ?? GameText.Say("chat.fact.stock.ask.any") };
+            if (search.Words is { } words) parts.Add(GameText.Say("chat.fact.stock.ask.words", ("words", words)));
+            if (search.Fits) parts.Add(GameText.Say("chat.fact.stock.ask.fits"));
+            if (search.MaxPrice is { } most) parts.Add(GameText.Say("chat.fact.stock.ask.under", ("price", new Helpers.Money(most))));
+            if (search.Want is { } want) parts.Add(GameText.Say($"chat.fact.stock.ask.{want}"));
+            return string.Join(", ", parts);
+        }
+
         /// <summary>How the person feels about the player (-2..+2), in words; nothing when they feel nothing either way</summary>
         public static IEnumerable<string> Feeling(int feeling)
         {

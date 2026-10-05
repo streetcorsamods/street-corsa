@@ -4,6 +4,7 @@
     "in the paper, and the stand-in racers of an event nobody on the street can enter.",
     "names.people.men/women: a private seller of a car, met when the player talks to them (their sex is the pool's).",
     "names.salesmen.men/women: a dealer's salesman, one per dealer.",
+    "names.clerks.men/women: whoever is behind a part shop's counter, one per shop (a shop's own clerk in its data goes first).",
     "names.car_buyers.women: the names of names.car_buyers that are women's, for how they talk when the player calls them back."
   ],
   "lines": {
@@ -32,6 +33,12 @@
       "Vic Castellano", "Gus Papadakis", "Red Dunleavy", "Sid Feldman", "Johnny Boy Callahan", "Lyle Swenson"
     ],
     "names.salesmen.women": [ "Rita Mae Dawson", "Gloria Benedetti", "Dottie Vance", "Peggy Sue Hartwell" ],
+    "names.clerks.men": [
+      "Mel Hargrove", "Dutch Vanderveer", "Skip Mulligan", "Arnie Kaplan", "Pops Delaney", "Tony Bruno", "Hal Petersen",
+      "Shorty Gaines", "Wes Buckner", "Nicky Fiore", "Junior Pruett", "Clem Rasmussen", "Bobby Tran", "Moose Kozlowski",
+      "Ray Escobar", "Lefty Doyle"
+    ],
+    "names.clerks.women": [ "Jeanie Holt", "Bev Mancuso", "Pat Ostrowski" ],
     "names.event_racers": [ "Speed Demon", "Road Runner", "Night Rider", "Street King", "Drag Master" ],
     "names.event_nicknames": [ "The Flash", "Quick Draw", "Burnout", "Smokey", "Rev Head" ]
   }
