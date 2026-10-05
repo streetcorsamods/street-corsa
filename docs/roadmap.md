@@ -1472,6 +1472,24 @@ that cannot (3). The owner picked 1 and 3 first, one PR (branch `feature/ideas-b
   greyed out, and the note under the buttons turns amber with why. The diner checks the same rule (without the dyno)
   when entered, for a mod's way in that skips the hub, and sends the player home with why.
 
+### Code review fixes (2026-10-05, not seen in game)
+
+- **The paper:** the car each lot prints is picked by other numbers than the paper's order (`PaperAds`): by the same
+  ones, every dealer's ad was on the first page. A private ad's engine work is asked at the private share too, so the
+  whole car is 85% of a lot's. The day's count of private ads and of each dealer's cars out back is drawn afresh and the
+  oldest past it come down (`TakeDown`, bought by somebody else): the paper used to sit at the most. An older save's
+  market gets its private ads and back lots when the paper is opened (`FirstMarket`, `SpawnPaperOnlyAsync`), not only
+  after the day turns over (never with the market's turnover off). The AI tells a car out back as in the paper.
+- **Buying a private car:** the history says bought from the seller by name (the seller one of its known owners, one
+  fewer earlier owner), and the message is the private sale's.
+- **The rivals** buy, go bankrupt and are helped by the lots' cars only (`UsedCarListing.IsOnALot`): the private and
+  back-lot cars are the player's finds, and the rivals' living stays as it was tuned.
+- **The streets:** `StreetReady` is the one rule for the racing hub, the diner and the strip (Cruise's own check is
+  gone; a car with no engine got onto the strip), says why under a title of its own (no car, a car no longer
+  installed, the impound, won't run), and a check that throws lets the player in. The engine's problem words are
+  `EngineSpecs.ProblemOf`/`WontRun`, shared with the garage's gas station check; `TalkPeople` draws a private seller's
+  sex and name in one place for the paper and the phone, and copes with a save without its people.
+
 ### Idea 2: the paint booth (not planned yet)
 
 - **Owner:** a paint booth in 3D. The Paint button (`icons/paint_spray.png`, the owner's) in the garage's bottom bar

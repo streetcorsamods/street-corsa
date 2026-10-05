@@ -89,6 +89,81 @@ public class PaperAdsTests
         Assert.Equal(printed, TalkPeople.SellerName(game, key));
     }
 
+    [Fact]
+    public void The_car_each_lot_prints_is_not_the_one_the_paper_puts_first()
+    {
+        // Picked by the same numbers as the shuffle, every lot's car went to the front of the paper
+        List<UsedCarListing> forSale =
+        [
+            .. Enumerable.Range(0, 40).Select(i => Private($"p{i}")),
+            .. Enumerable.Range(0, 40).SelectMany(d => Enumerable.Range(0, 10).Select(i => OnLot($"lot{d}-{i}", $"dealer{d}")))
+        ];
+
+        var printed = ClassifiedOrder.Shuffled(PaperAds.Listings(forSale, perLot: 1), l => l.Id).ToList();
+        var dealersUpFront = printed.Take(printed.Count / 2).Count(l => !l.PaperOnly);
+
+        Assert.Equal(80, printed.Count);
+        Assert.InRange(dealersUpFront, 10, 30);
+    }
+
+    [Fact]
+    public void A_car_bought_from_a_private_seller_says_whom_it_was_bought_from()
+    {
+        var listing = new UsedCarListing { CarDefinitionId = "car_a", PaperOnly = true, ListedDate = new DateTime(1969, 4, 20), History = new CarHistory { EarlierOwners = 2 } };
+        var owners = listing.History.OwnerCount;
+
+        var car = CarPurchaseService.CarFrom(listing, new DateTime(1969, 5, 1), "Player", privateSeller: "Frank");
+
+        Assert.Equal(["Frank", "Player"], car.History.Owners.Select(o => o.Name));
+        Assert.Equal(CarAcquisition.PrivateSale, car.History.Owners[^1].How);
+        Assert.Equal(owners + 1, car.History.OwnerCount);
+        Assert.Equal(CarAcquisition.Dealer, CarPurchaseService.CarFrom(OnLot("lot", "downtown"), new DateTime(1969, 5, 1), "Player").History.Owners[^1].How);
+    }
+
+    [Fact]
+    public async Task On_a_day_with_fewer_private_ads_the_oldest_went_to_somebody_else()
+    {
+        var catalog = new MemoryCatalog();
+        var profiles = new MemoryProfiles();
+        catalog.UpsertCar(new CarDefinition { Id = "car_a", Name = "A", Brand = "Ford" });
+        profiles.UpsertProfile(new CarProfile { CarDefinitionId = "car_a", BasePrice = 10000m });
+        var market = new UsedCarMarketService(catalog, profiles);
+        var rules = Rules.RuleBook.Current.Market;
+
+        var today = new DateTime(1971, 6, 30, 8, 0, 0);
+        var ads = Enumerable.Range(0, rules.PrivateAdsHigh + 10)
+            .Select(i => new UsedCarListing { Id = $"p{i:00}", CarDefinitionId = "car_a", PaperOnly = true, ListedDate = today.AddDays(-1 - i % 10) })
+            .ToList();
+
+        var kept = (await market.RefreshMarketAsync(ads, [], today, 1.0)).Where(l => l.IsPrivate).ToList();
+
+        Assert.InRange(kept.Count, rules.PrivateAdsLow, rules.PrivateAdsHigh);
+        var newestGone = ads.Except(kept).Max(l => l.ListedDate);
+        Assert.All(kept, l => Assert.True(l.ListedDate >= newestGone));
+    }
+
+    [Fact]
+    public void A_save_without_its_people_still_names_the_paper_s_sellers()
+    {
+        var game = GameState.CreateNew("P");
+        game.People = null!;
+
+        Assert.False(string.IsNullOrEmpty(TalkPeople.SellerName(game, TalkPeople.CarKey(Private("ad-7")))));
+    }
+
+    [Fact]
+    public void A_dealer_s_car_out_back_is_told_as_in_the_paper_not_on_the_lot()
+    {
+        var car = new UsedCarListing { Id = "mine", CarDefinitionId = "car_a", Price = 1000m };
+        List<UsedCarListing> market = [car, OutBack("back", "downtown"), OnLot("lot", "downtown")];
+        foreach (var l in market) l.CarDefinitionId = "car_a";
+
+        var facts = TalkFacts.Market(car, market, _ => "A", 5).ToList();
+
+        Assert.Equal(1, facts.Count(f => f.Contains(GameText.Say("chat.fact.market_paper"))));
+        Assert.Equal(1, facts.Count(f => f.Contains(GameText.Say("chat.fact.market_dealer"))));
+    }
+
     // ----- going out on the streets -----
 
     private static (GameState Game, Car Car) Selected(Car car)
@@ -105,11 +180,11 @@ public class PaperAdsTests
     public void Nobody_goes_out_on_the_streets_with_no_car_or_one_the_catalog_lacks()
     {
         var game = GameState.CreateNew("P");
-        Assert.Equal(GameText.Say("streets.no_car"), StreetReady.WhyNot(game, Listed, null));
+        Assert.Equal(GameText.Say("streets.no_car"), StreetReady.WhyNot(game, Listed, null)?.Why);
 
         var (withCar, _) = Selected(new Car("car_a") { FuelLitres = 40, FuelTankLitres = 60 });
         Assert.Null(StreetReady.WhyNot(withCar, Listed, null));
-        Assert.Equal(GameText.Say("streets.no_car"), StreetReady.WhyNot(withCar, _ => false, null));
+        Assert.Equal(GameText.Say("streets.not_installed"), StreetReady.WhyNot(withCar, _ => false, null)?.Why);
     }
 
     [Fact]
@@ -118,15 +193,15 @@ public class PaperAdsTests
         var (game, car) = Selected(new Car("car_a") { FuelLitres = 40, FuelTankLitres = 60 });
 
         car.ImpoundedUntil = game.Date.AddDays(3);
-        Assert.Equal(GameText.Say("racehub.practice.impounded"), StreetReady.WhyNot(game, Listed, null));
+        Assert.Equal(GameText.Say("racehub.practice.impounded"), StreetReady.WhyNot(game, Listed, null)?.Why);
         car.ImpoundedUntil = null;
 
         car.FuelLitres = 0;
-        Assert.Equal(GameText.Say("streets.wont_run", ("problems", PartWords.Say("condition.problem.tank_empty"))), StreetReady.WhyNot(game, Listed, null));
+        Assert.Equal(GameText.Say("streets.wont_run", ("problems", PartWords.Say("condition.problem.tank_empty"))), StreetReady.WhyNot(game, Listed, null)?.Why);
         car.FuelLitres = 40;
 
         car.BodyDamageKmh = [CarCondition.TotaledKmh, 0, 0, 0];
-        Assert.Contains(PartWords.Say("condition.problem.totaled"), StreetReady.WhyNot(game, Listed, null));
+        Assert.Contains(PartWords.Say("condition.problem.totaled"), StreetReady.WhyNot(game, Listed, null)?.Why);
     }
 
     [Fact]
@@ -142,11 +217,11 @@ public class PaperAdsTests
         Assert.Null(await StreetReady.WhyNotAsync(game, Listed, runs));
 
         var dead = new Parts(catalog, _ => null);
-        Assert.Contains(GameText.Say("enginespecs.incomplete"), await StreetReady.WhyNotAsync(game, Listed, dead));
+        Assert.Contains(GameText.Say("enginespecs.incomplete"), (await StreetReady.WhyNotAsync(game, Listed, dead))?.Why);
 
         // No engine at all: said without the dyno
         car.Parts.Remove(car.Engine!);
-        Assert.Contains(GameText.Say("station.ui.no_engine"), await StreetReady.WhyNotAsync(game, Listed, runs));
+        Assert.Contains(GameText.Say("station.ui.no_engine"), (await StreetReady.WhyNotAsync(game, Listed, runs))?.Why);
     }
 
     private sealed class Parts(PartsCatalog catalog, Func<Car, EngineReport?> evaluate) : NullCarPartsService

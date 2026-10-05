@@ -67,7 +67,7 @@ namespace StreetCorsa.Screens.Shared
 
         /// <summary>Why the selected car cannot go out on the streets (<see cref="StreetReady"/>); null when it can</summary>
         /// <param name="listed">Whether the catalog has the car</param>
-        public Task<string?> WhyNotOnTheStreetsAsync(GameState gameState, Func<string, bool> listed) =>
+        public Task<NotStreetReady?> WhyNotOnTheStreetsAsync(GameState gameState, Func<string, bool> listed) =>
             StreetReady.WhyNotAsync(gameState, listed, _partsService);
 
         /// <summary>Where a free run can go: every track of the install, one entry per layout</summary>

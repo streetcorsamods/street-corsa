@@ -10,6 +10,10 @@ namespace StreetCorsa.Services.Market
     /// </summary>
     public static class PaperAds
     {
+        // The pick is drawn from other numbers than the paper's order (ClassifiedOrder.Shuffled, by the id alone): by the
+        // same ones, the car each lot printed would be the first it shuffles to, and every dealer's ad on the first page
+        private const string PickSalt = "lot:";
+
         /// <summary>
         /// The ones of <paramref name="forSale"/> in the paper: every car in the paper only, and <paramref name="perLot"/>
         /// off each dealer's lot, the same ones each time the paper is opened
@@ -20,7 +24,7 @@ namespace StreetCorsa.Services.Market
             var offTheLots = all
                 .Where(l => !l.PaperOnly)
                 .GroupBy(l => l.DealerLocation, StringComparer.OrdinalIgnoreCase)
-                .SelectMany(lot => lot.OrderBy(l => StableHash.Fnv(l.Id)).ThenBy(l => l.Id, StringComparer.Ordinal).Take(Math.Max(0, perLot)));
+                .SelectMany(lot => lot.OrderBy(l => StableHash.Fnv(PickSalt + l.Id)).ThenBy(l => l.Id, StringComparer.Ordinal).Take(Math.Max(0, perLot)));
             return all.Where(l => l.PaperOnly).Concat(offTheLots);
         }
     }

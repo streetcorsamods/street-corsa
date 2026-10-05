@@ -172,7 +172,7 @@ namespace StreetCorsa.Dialogs.RaceHub
         {
             try
             {
-                _streetsWhyNot = await _practice.WhyNotOnTheStreetsAsync(_gameState, _ => _carListed);
+                _streetsWhyNot = (await _practice.WhyNotOnTheStreetsAsync(_gameState, _ => _carListed))?.Why;
             }
             catch (Exception ex)
             {

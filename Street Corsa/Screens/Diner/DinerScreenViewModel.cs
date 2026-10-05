@@ -846,17 +846,31 @@ namespace StreetCorsa.Screens.Diner
             _navigationService.Leave(this, "back", _gameState, new FlowArgs { Arrival = DrivingHome.Arrival(_gameState, null, catalog) });
         }
 
+        /// <summary>Why the player's car cannot be out on the streets (<see cref="StreetReady"/>); null when it can, or nobody can tell</summary>
+        private NotStreetReady? WhyNotHere()
+        {
+            try
+            {
+                return StreetReady.WhyNot(_gameState, id => _catalogRepository.GetCar(id) != null, _partsService.IsAvailable ? _partsService.Catalog : null);
+            }
+            catch (Exception ex)
+            {
+                // The catalog waiting on its lock, or the parts catalog not loading: not knowing is no reason to send them home
+                _logger.Error(ex, "Could not tell whether the car can be out on the streets");
+                return null;
+            }
+        }
+
         public override async void Enter()
         {
             base.Enter();
             _logger.Information("Entered diner screen");
 
             // Not out in a car that could not have got here (a mod's way in that skips the racing hub's check): home again
-            if (!_returning && StreetReady.WhyNot(_gameState, id => _catalogRepository.GetCar(id) != null,
-                    _partsService.IsAvailable ? _partsService.Catalog : null) is { } why)
+            if (!_returning && WhyNotHere() is { } why)
             {
-                _logger.Information("The car cannot be out on the streets: {Why}", why);
-                _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, why, GameText.Say("challenge.car_wont_run.title")));
+                _logger.Information("The car cannot be out on the streets: {Why}", why.Why);
+                _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, why.Why, why.Title));
                 _navigationService.GoHomeLater(_gameState);
                 return;
             }

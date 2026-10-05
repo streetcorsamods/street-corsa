@@ -73,10 +73,13 @@ namespace StreetCorsa.Services.Market
             currentListing.SoldDate = gameState.Date;
             gameState.Player.Money -= listing.Price;
 
+            // A private person's car out of the paper is bought from them, by the name the paper gave them
+            var privateSeller = currentListing.IsPrivate ? Talk.TalkPeople.SellerName(gameState, Talk.TalkPeople.CarKey(currentListing)) : null;
+
             Car carInstance;
             try
             {
-                carInstance = await CreateCarAsync(gameState, listing);
+                carInstance = await CreateCarAsync(gameState, currentListing, privateSeller);
             }
             catch
             {
@@ -118,9 +121,12 @@ namespace StreetCorsa.Services.Market
 
             var saveFailed = !GameSaves.TrySave(_gameStateRepository, gameState, _logger, "a purchase");
 
+            var carName = $"{carDef.Brand} {carDef.Name}";
             return new PurchaseResult(PurchaseOutcome.Bought,
-                GameText.Say("purchase.bought", ("car", $"{carDef.Brand} {carDef.Name}"), ("price", new Money(listing.Price)),
-                    ("where", WhereItIs(askToSwitch))),
+                privateSeller != null
+                    ? GameText.Say("purchase.bought_private", ("seller", privateSeller), ("car", carName), ("price", new Money(listing.Price)),
+                        ("where", WhereItIs(askToSwitch)))
+                    : GameText.Say("purchase.bought", ("car", carName), ("price", new Money(listing.Price)), ("where", WhereItIs(askToSwitch))),
                 saveFailed, carInstance, $"{carDef.Brand} {carDef.Name}", askToSwitch);
         }
 
@@ -220,7 +226,9 @@ namespace StreetCorsa.Services.Market
         /// given its factory ones (<see cref="ICarPartsService.EnsureParts"/>), which is the buyer's to do. The car's
         /// history comes with it, <paramref name="buyer"/> its newest owner.
         /// </summary>
-        public static Car CarFrom(UsedCarListing listing, DateTime date, string buyer)
+        /// <param name="privateSeller">The private person it was bought from (<see cref="UsedCarListing.IsPrivate"/>): one of
+        /// its earlier owners, now known by name; null for a car off a lot</param>
+        public static Car CarFrom(UsedCarListing listing, DateTime date, string buyer, string? privateSeller = null)
         {
             var car = new Car
             {
@@ -243,7 +251,13 @@ namespace StreetCorsa.Services.Market
                 PowerHp = listing.PowerHp,
                 History = listing.History?.Copy() ?? new CarHistory()
             };
-            car.History.ChangeHands(buyer, date, CarAcquisition.Dealer);
+            if (privateSeller != null)
+            {
+                car.History.EarlierOwners = Math.Max(0, car.History.EarlierOwners - 1);
+                car.History.ChangeHands(privateSeller, listing.ListedDate, CarAcquisition.Unknown);
+            }
+
+            car.History.ChangeHands(buyer, date, privateSeller != null ? CarAcquisition.PrivateSale : CarAcquisition.Dealer);
             CarLooks.CopyTo(listing, car);
 
             // A relisted car comes with its dents; the body's figure is then the dents', not the listing's average
@@ -258,9 +272,9 @@ namespace StreetCorsa.Services.Market
         }
 
         /// <summary>The car that was for sale, with the parts it came with, or its factory engine if it came without</summary>
-        private async Task<Car> CreateCarAsync(Models.GameState.GameState gameState, UsedCarListing listing)
+        private async Task<Car> CreateCarAsync(Models.GameState.GameState gameState, UsedCarListing listing, string? privateSeller)
         {
-            var carInstance = CarFrom(listing, gameState.Date, gameState.Player.Name);
+            var carInstance = CarFrom(listing, gameState.Date, gameState.Player.Name, privateSeller);
 
             try
             {

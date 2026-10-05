@@ -109,7 +109,7 @@ namespace StreetCorsa.Services.Talk
             foreach (var other in others)
                 yield return GameText.Say("chat.fact.market_car", ("car", carName(other.CarDefinitionId)), ("price", new Helpers.Money(other.Price)),
                     ("condition", ConditionDisplay.Of(other.Condition).Label), ("mileage", Helpers.Measure.Distance(other.Mileage).ToString()),
-                    ("where", GameText.Say(string.IsNullOrEmpty(other.DealerLocation) ? "chat.fact.market_paper" : "chat.fact.market_dealer")));
+                    ("where", GameText.Say(other.PaperOnly || string.IsNullOrEmpty(other.DealerLocation) ? "chat.fact.market_paper" : "chat.fact.market_dealer")));
         }
 
         /// <summary>A car for sale: what it is, the engine, its shape and mileage, its past, the ad's words, how long on sale</summary>

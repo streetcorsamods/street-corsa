@@ -451,13 +451,17 @@ namespace StreetCorsa.Services.Opponents
         /// <summary>A car for sale as a buyer weighs it: off a lot, or out of a rival's ad</summary>
         private sealed record ForSale(decimal Price, double Hp, double Condition, UsedCarListing? Listing, RivalCarAds.Offer? Ad);
 
-        /// <summary>Everything for sale a racer could buy with <paramref name="budget"/>: the lots and the other rivals' ads</summary>
+        /// <summary>
+        /// Everything for sale a racer could buy with <paramref name="budget"/>: the lots and the other rivals' ads. The
+        /// private people's cars and the dealers' out back (<see cref="UsedCarListing.PaperOnly"/>) are the player's finds:
+        /// the rivals' living was tuned against the lots, and is still worked out from them.
+        /// </summary>
         private List<ForSale> CarsForSale(GameState gameState, Opponent racer, decimal budget, Func<string, string?>? groupOf)
         {
             List<ForSale> all =
             [
                 .. gameState.UsedCarMarket
-                    .Where(l => !l.IsSold && l.Price > 0 && l.Price <= budget)
+                    .Where(l => l.IsOnALot && l.Price > 0 && l.Price <= budget)
                     .Select(l => new ForSale(l.Price, l.PowerHp ?? 0, l.Condition, l, null)),
                 .. LiveAds(gameState)
                     .Where(o => !ReferenceEquals(o.Seller, racer) && o.Ad.AskingPrice > 0 && o.Ad.AskingPrice <= budget)
@@ -576,7 +580,7 @@ namespace StreetCorsa.Services.Opponents
             var closing = Services.Dealers.DealerRoster.ClosingDown(gameState).Select(d => d.Id).ToHashSet();
             return closing.Count == 0
                 ? []
-                : (gameState.UsedCarMarket ?? []).Where(l => !l.IsSold && l.PriceBeforeSale != null && closing.Contains(l.DealerLocation));
+                : (gameState.UsedCarMarket ?? []).Where(l => l.IsOnALot && l.PriceBeforeSale != null && closing.Contains(l.DealerLocation));
         }
 
         private bool TryBargain(GameState gameState, Opponent racer, DateTime date, Func<string, string?>? groupOf, List<string> talk)
@@ -709,7 +713,7 @@ namespace StreetCorsa.Services.Opponents
         /// <summary>A car too dear to fix is sold, when what it fetches buys one that runs</summary>
         private void SellAndBuyAnother(GameState gameState, Opponent racer, Car car, DateTime date, Func<string, string?>? groupOf, List<string> talk)
         {
-            var cheapestRunner = gameState.UsedCarMarket.Where(l => !l.IsSold && (l.PowerHp ?? 0) > 0).Select(l => (decimal?)l.Price).Min();
+            var cheapestRunner = gameState.UsedCarMarket.Where(l => l.IsOnALot && (l.PowerHp ?? 0) > 0).Select(l => (decimal?)l.Price).Min();
             if (cheapestRunner == null) return;
 
             var value = ValueOf(car);
@@ -994,8 +998,9 @@ namespace StreetCorsa.Services.Opponents
         private static bool IsReady(Racer racer, Func<string, string?>? groupOf) =>
             racer.Cars.FirstOrDefault() is { } car && CanRace(car, groupOf);
 
+        /// <summary>The cheapest car on a lot (<see cref="CarsForSale"/>: the lots are what the rivals' living goes by)</summary>
         private static decimal? CheapestCar(GameState gameState) =>
-            gameState.UsedCarMarket.Where(l => !l.IsSold && l.Price > 0).Select(l => (decimal?)l.Price).Min();
+            gameState.UsedCarMarket.Where(l => l.IsOnALot && l.Price > 0).Select(l => (decimal?)l.Price).Min();
 
         private decimal ValueOf(Car car)
         {
