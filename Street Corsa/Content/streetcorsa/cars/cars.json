@@ -84,7 +84,7 @@
     "MRN_Desings_chevy_camaro_SS_396": { "engine": "sbc350:engines/sbc350/sbc-350-th350" },
     "MRN_Desings_oldsmobile_442": { "engine": "l79:engines/l79/olds-400-w30" },
     "oneweek_corvette_c1": { "engine": "l79:engines/l79/283-4bbl-4spd", "engine_offset": [0,0,-0.055] },
-    "pb_camaro67": { "engine": "l79:engines/l79/350-l48-4spd" },
+    "pb_camaro67": { "engine": "l79:engines/l79/350-l48-4spd", "engine_offset": [0,0,0.05] },
     "pb_camaro_67_lasse": { "engine": "l79:engines/l79/302-z28-4spd" },
     "pb_chevy_150": { "engine": "chevy_six:engines/chevy_six/chevy-235-1955-3spd", "engine_offset": [0,0,0.25] },
     "pb_chevy_150_265": { "engine": "l79:engines/l79/265-2bbl-3spd" },
