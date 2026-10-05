@@ -207,7 +207,7 @@ namespace StreetCorsa.Screens.CarViewing
         {
             var carDirectory = Path.Combine(AppSettings.Instance.CarsPath, carId);
             var skin = string.IsNullOrWhiteSpace(_listing.SkinId) ? null : _listing.SkinId;
-            var shown = _partsService.Shown(carId, _listing.Parts, CarLooks.Of(_listing), CornerHeights.Of(CarLooks.RideHeight(_listing)));
+            var shown = _partsService.Shown(_listing);
 
             if (_seller.Spot == CarViewingSpot.DealerLot && _dealerCatalog.Get(_seller.DealerId!) is { } dealer)
             {

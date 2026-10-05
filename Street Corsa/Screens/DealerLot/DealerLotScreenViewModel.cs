@@ -307,8 +307,7 @@ namespace StreetCorsa.Screens.DealerLot
                     bays[i].Z,
                     bays[i].Heading,
                     car.DisplayName,
-                    _partsService.Shown(car.CarDefinition.Id, car.Listing.Parts, CarLooks.Of(car.Listing),
-                        CornerHeights.Of(CarLooks.RideHeight(car.Listing)))));
+                    _partsService.Shown(car.Listing)));
             }
 
             LotCars = placements;

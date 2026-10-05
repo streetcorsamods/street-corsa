@@ -56,6 +56,9 @@ public static class ShownPartsOnCar
         /// <summary>The wear layer on the car: for what look, at what picture size, and its node</summary>
         public (CarLook Look, int Picture, RenderableList Holder, RenderableList Node)? Wear;
 
+        /// <summary>The colour the car's paint textures were tinted for, and the skin they were tinted in; null in its own colours</summary>
+        public (PaintColour Colour, string? Skin)? Paint;
+
         public int Version;
 
         public void Switch(IRenderableObject o, bool on)
@@ -126,9 +129,10 @@ public static class ShownPartsOnCar
     /// thread; the car is changed on the caller's. True when the car changed. Never throws for what the part models or the
     /// car hold.
     /// </summary>
+    /// <param name="device">The renderer's device, the car's paint textures go onto it (<see cref="ShownSet.Paint"/>)</param>
     /// <param name="wearPicture">How big the car's wear picture is drawn (<see cref="WearLayer.FullPicture"/>, or
     /// <see cref="WearLayer.LotPicture"/> for a car among many)</param>
-    public static async Task<bool> SetAsync(Kn5RenderableCar? car, ShownSet? shown, int wearPicture = WearLayer.FullPicture)
+    public static async Task<bool> SetAsync(Kn5RenderableCar? car, ShownSet? shown, DeviceContextHolder device, int wearPicture = WearLayer.FullPicture)
     {
         if (car == null) return false;
         var on = Cars.GetOrCreateValue(car);
@@ -139,7 +143,11 @@ public static class ShownPartsOnCar
         Clear(on);
         var keepWear = on.Wear is { } wear && shown?.Look is { } wanted && wear.Look == wanted && wear.Picture == wearPicture;
         if (!keepWear && shown?.Look == null) ClearWear(on);
+        if (shown?.Paint == null) ClearPaint(car, on);
         if (shown == null) return true;
+
+        // The paint first: a car painted is seen in its colour from the start, not after its parts are put on
+        if (shown.Paint is { } colour && !await PutPaintAsync(car, colour, on, version, device)) return false;
 
         var files = shown.Models.Select(m => m.Source).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         Dictionary<string, IKn5>? models;
@@ -221,6 +229,57 @@ public static class ShownPartsOnCar
         root.Add(node);
         on.Wear = (look, picture, root, node);
         return true;
+    }
+
+    /// <summary>
+    /// The car's paint textures tinted <paramref name="colour"/> (Looks.CarPaint) over its own, in the skin it is drawn in;
+    /// made off the UI thread (the first time for a car, skin and colour they are written). False when the car was asked to
+    /// show something else in the meantime. A car whose paint cannot be tinted stays in its own colours.
+    /// </summary>
+    private static async Task<bool> PutPaintAsync(Kn5RenderableCar car, PaintColour colour, OnCar on, int version, DeviceContextHolder device)
+    {
+        var skin = car.CurrentSkin;
+        if (on.Paint is { } painted && painted.Colour == colour && string.Equals(painted.Skin, skin, StringComparison.OrdinalIgnoreCase)) return true;
+
+        IReadOnlyList<(string Texture, byte[] Bytes)> textures;
+        try
+        {
+            textures = await Task.Run(() => CarPaint.ForScene(car.RootDirectory, skin, colour));
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            Logger.Warning(ex, "The paint of {Car} is not shown: it is drawn in its own colours", car.RootObject?.Name);
+            return version == on.Version;
+        }
+        if (version != on.Version) return false;
+
+        ClearPaint(car, on);
+        foreach (var (texture, bytes) in textures) car.OverrideTexture(device, texture, bytes);
+        on.Paint = (colour, skin);
+        return true;
+    }
+
+    /// <summary>The car back in its skin's own colours</summary>
+    private static void ClearPaint(Kn5RenderableCar car, OnCar on)
+    {
+        if (on.Paint == null) return;
+        on.Paint = null;
+        car.ClearProceduralOverrides();
+    }
+
+    /// <summary>
+    /// <paramref name="car"/>'s paint textures as <paramref name="textures"/> have them (a coat of a paint job on its way,
+    /// Looks.CarPaint.Blend); what it shows (<see cref="SetAsync"/>) puts its own back the next time it is asked to show
+    /// something else
+    /// </summary>
+    public static void Coat(Kn5RenderableCar car, DeviceContextHolder device, IEnumerable<(string Texture, byte[] Bytes)> textures)
+    {
+        var on = Cars.GetOrCreateValue(car);
+        foreach (var (texture, bytes) in textures) car.OverrideTexture(device, texture, bytes);
+
+        // Not the paint it was given: whatever it is asked to show next puts its own on afresh
+        on.Paint = (PaintColour.Black, "\0");
+        on.Shown = null;
     }
 
     /// <summary>Takes the wear layer off, its textures let go of with it</summary>

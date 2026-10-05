@@ -131,12 +131,13 @@ public partial class ThemeTests : IDisposable
     private static partial Regex XamlTypeface();
 
     // The colours code makes of its own: the 3D scenes' lights (data from the scenes), a converter whose brushes the
-    // view always sets
+    // view always sets, the paint booth's paints (the colours a car is painted)
     private static readonly string[] OwnColoursOnPurpose =
     [
         $"{Path.DirectorySeparatorChar}Controls{Path.DirectorySeparatorChar}Street{Path.DirectorySeparatorChar}",
         "OnboardViewport3D.cs",
-        "DifficultyToBrushConverter.cs"
+        "DifficultyToBrushConverter.cs",
+        "PaintBoothScreenViewModel.cs"
     ];
 
     [GeneratedRegex(@"Color\.FromRgb|Color\.FromArgb\(\s*\w+\s*,\s*0x|Brushes\.(?!Transparent\b)[A-Z]\w+|(?<!theme\.)Colors\.(?!Black\b|Transparent\b)[A-Z]\w+")]

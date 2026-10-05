@@ -121,19 +121,34 @@ public sealed record CornerHeights(float LeftFront, float RightFront, float Left
 /// <summary>
 /// What a car shows that its own model does not have, as a race or a scene is given it: the wheels of its corners (AC's
 /// order, null keeps the car's own), the engine parts that stand out (ShownEngineParts) and how used it looks (its wear
-/// layer, <see cref="CarLook"/>). Equal when all of it is, so a scene that compares what it is shown sees the same car as
-/// the same.
+/// layer, <see cref="CarLook"/>) and the colour of its paint when the player had it painted one of their own. Equal when
+/// all of it is, so a scene that compares what it is shown sees the same car as the same.
 /// </summary>
 public sealed class ShownSet : IEquatable<ShownSet>
 {
-    private ShownSet(IReadOnlyList<ShownWheel?> wheels, IReadOnlyList<ShownModelAt> extras, ModelFrame? frame, CarLook? look, CornerHeights? heights)
+    private ShownSet(IReadOnlyList<ShownWheel?> wheels, IReadOnlyList<ShownModelAt> extras, ModelFrame? frame, CarLook? look, CornerHeights? heights,
+        PaintColour? paint)
     {
         Wheels = wheels;
         Extras = extras;
         Frame = frame;
         Look = look;
         Heights = heights;
+        Paint = paint;
     }
+
+    /// <summary>The colour the car is painted, over its skin's own (Looks.CarPaint); null in its skin's colours</summary>
+    public PaintColour? Paint { get; }
+
+    /// <summary>
+    /// The paint's tinted textures for a race (Looks.CarPaint.ForRaceAsync): the race mode sets them on the car's
+    /// materials. Empty in the scenes, which make their own.
+    /// </summary>
+    public IReadOnlyList<ShownPaint> PaintFiles { get; private init; } = [];
+
+    /// <summary>The same set with the race's paint textures</summary>
+    public ShownSet WithPaintFiles(IReadOnlyList<ShownPaint> files) =>
+        new(Wheels, Extras, Frame, Look, Heights, Paint) { Layer = Layer, PaintFiles = files };
 
     /// <summary>How its corners sit, the body against the wheels; null when as the model has them</summary>
     public CornerHeights? Heights { get; }
@@ -145,7 +160,7 @@ public sealed class ShownSet : IEquatable<ShownSet>
     public ShownModel? Layer { get; private init; }
 
     /// <summary>The same set with the race's wear layer model</summary>
-    public ShownSet WithLayer(ShownModel? layer) => new(Wheels, Extras, Frame, Look, Heights) { Layer = layer };
+    public ShownSet WithLayer(ShownModel? layer) => new(Wheels, Extras, Frame, Look, Heights, Paint) { Layer = layer, PaintFiles = PaintFiles };
 
     /// <summary>The model's space for the engine parts and the wear layer, in AC; null without either or such a node</summary>
     public ModelFrame? Frame { get; }
@@ -162,29 +177,31 @@ public sealed class ShownSet : IEquatable<ShownSet>
         Wheels.OfType<ShownWheel>().SelectMany(w => w.Tyre is { } tyre ? new[] { w.Rim, tyre } : [w.Rim])
             .Concat(Extras.Select(e => e.Model))
             .Concat(Layer is { } layer ? [layer] : [])
+            .Concat(PaintFiles.Select(p => p.File))
             .DistinctBy(m => m.Name, StringComparer.OrdinalIgnoreCase);
 
     /// <summary>The set; null when the car shows nothing but its own model</summary>
     public static ShownSet? Of(IReadOnlyList<ShownWheel?>? wheels, IReadOnlyList<ShownModelAt>? extras = null, ModelFrame? frame = null,
-        CarLook? look = null, CornerHeights? heights = null)
+        CarLook? look = null, CornerHeights? heights = null, PaintColour? paint = null)
     {
         var someWheel = wheels != null && wheels.Any(w => w != null);
         var someExtra = extras is { Count: > 0 };
         if (look is { IsClean: true }) look = null;
-        if (!someWheel && !someExtra && look == null && heights == null) return null;
+        if (!someWheel && !someExtra && look == null && heights == null && paint == null) return null;
         return new ShownSet(someWheel ? wheels!.ToArray() : new ShownWheel?[RunningGear.Corners], extras?.ToArray() ?? [],
-            someExtra || look != null ? frame : null, look, heights);
+            someExtra || look != null ? frame : null, look, heights, paint);
     }
 
     /// <summary>
     /// The same set without its engine parts and its wear (the garage's parts view draws the whole engine itself, and the
     /// car as a ghost round it)
     /// </summary>
-    public ShownSet? WithoutExtras() => Of(Wheels, heights: Heights);
+    public ShownSet? WithoutExtras() => Of(Wheels, heights: Heights, paint: Paint);
 
     public bool Equals(ShownSet? other) =>
         other != null && Wheels.SequenceEqual(other.Wheels) && Extras.SequenceEqual(other.Extras) && Equals(Frame, other.Frame)
-        && Equals(Look, other.Look) && Equals(Heights, other.Heights) && Equals(Layer, other.Layer);
+        && Equals(Look, other.Look) && Equals(Heights, other.Heights) && Equals(Layer, other.Layer) && Equals(Paint, other.Paint)
+        && PaintFiles.Select(p => p.File).SequenceEqual(other.PaintFiles.Select(p => p.File));
 
     public override bool Equals(object? obj) => Equals(obj as ShownSet);
 
@@ -195,6 +212,7 @@ public sealed class ShownSet : IEquatable<ShownSet>
         foreach (var extra in Extras) hash.Add(extra);
         hash.Add(Look);
         hash.Add(Heights);
+        hash.Add(Paint);
         return hash.ToHashCode();
     }
 }

@@ -236,6 +236,7 @@ namespace StreetCorsa.Services.Market
                 InstanceId = listing.CarInstanceId ?? Guid.NewGuid(),
                 DefinitionId = listing.CarDefinitionId,
                 SkinId = listing.SkinId,
+                PaintColour = listing.PaintColour,
                 PurchasePrice = listing.Price,
                 PurchaseDate = date,
                 OdometerKM = listing.Mileage,

@@ -1,4 +1,5 @@
 file,title,author,license,source
+ambience/booth.ogg,Paint booth fans,Street Corsa (synthesised by tools/PaintBoothScene/make_sounds.py),the game's own,
 ambience/diner.ogg,Diner in Virginia,Laggardson,CC0 1.0,https://freesound.org/s/627079/
 ambience/garage.ogg,"Workshop ambiance inside with a closed door, subtle road hum from outside, motor machine far away, birds singing outside, recorded in Missouri",felix.blume,CC0 1.0,https://freesound.org/s/667765/
 ambience/junkyard.ogg,"Industrial area ambiance in a junkyard with city hum, train at a distance sometimes, low bird singing, machine motor and plane passing","recorded in Tucson, Arizona by felix.blume",CC0 1.0,https://freesound.org/s/667662/
@@ -7,6 +8,7 @@ ambience/shop.ogg,Convenience Store Interior Ambiance,JohnsonBrandEditing,CC0 1.
 ambience/station.ogg,gas station walkaround.wav,tennisers,CC0 1.0,https://freesound.org/s/643342/
 ambience/street.ogg,"street light activity people passing cars slow small town Oaxaca, Mexico.flac",kyles,CC0 1.0,https://freesound.org/s/455834/
 ambience/warehouse.ogg,Room_Tone_Ambience_Large_Parking Garage_Car_Passbys.wav,gchase,CC0 1.0,https://freesound.org/s/144043/
+booth/spray.ogg,Spray gun,Street Corsa (synthesised by tools/PaintBoothScene/make_sounds.py),the game's own,
 engine/chain/chain_453383_1.ogg,metal shop hoist chains thick rattle pull on track1.flac,kyles,CC0 1.0,https://freesound.org/s/453383/
 engine/chain_light/chain_light_637356_1.ogg,chain light solid rattle various rough and soft SM leash3.flac,kyles,CC0 1.0,https://freesound.org/s/637356/
 engine/crank/crank_588466_1.ogg,creaky ratchet.aiff,cartoonrob,CC0 1.0,https://freesound.org/s/588466/

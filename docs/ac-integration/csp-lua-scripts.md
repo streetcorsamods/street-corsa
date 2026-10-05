@@ -311,6 +311,11 @@ mode's `looks\` folder by `ScRaceMode.Install` like a part's model. `car_parts.l
 (`BODYTR`, else `CARNODE`) in the space of the car's model (`CAR_n_MODEL_NODE` / `_AT`), after the engine parts are
 judged (their rays must not find it), always.
 
+**The paint** (`CAR_n_PAINT_k=paint\<file>.png` and `CAR_n_PAINT_k_TEXTURE=<the car's texture>`, docs/screens/paint-booth.md):
+a car painted a colour of the player's own has its paint textures tinted (`Looks/CarPaint`), mirrored into the mode's
+`paint\` folder like a part's model. `car_parts.lua` puts them over the car's own by name with
+`root:applySkin{ [texture] = file }`, as a skin's files would be, wherever the car draws from them (every LOD).
+
 The mode puts a car out of the race (a breakdown) when its engine life reaches 0, its gearbox's carried wear plus
 AC's gearbox damage reaches 1, a corner's carried bend plus AC's reaches 1, a tyre blows, or its tank runs dry. A car
 the last races left blown, with a gearbox or a corner under 10%, a blown tyre, a body of 200 km/h or more (totaled),

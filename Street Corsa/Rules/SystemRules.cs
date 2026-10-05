@@ -43,6 +43,9 @@ public sealed class SystemRules
     /// <summary>The career screen: milestones and picking the victory path</summary>
     public bool Career { get; set; } = true;
 
+    /// <summary>The paint booth: a car sprayed another colour, its mod's or the player's own</summary>
+    public bool PaintBooth { get; set; } = true;
+
     /// <summary>
     /// With no career screen, the victory path the game is won on (a victory's id); none, or one there is not: whichever
     /// the player reaches first
@@ -51,7 +54,7 @@ public sealed class SystemRules
 
     /// <summary>The names of the switches, as the flow's screens and tiles name them</summary>
     public static readonly IReadOnlyList<string> Names =
-        ["police", "station", "paper", "carDealers", "partShops", "mailOrder", "street", "diner", "engineStand", "talk", "career"];
+        ["police", "station", "paper", "carDealers", "partShops", "mailOrder", "street", "diner", "engineStand", "talk", "career", "paintBooth"];
 
     /// <summary>Whether a system is on; no name at all is always on, and so is one there is not (the loaders tell it)</summary>
     public bool IsOn(string? system) => system?.ToLowerInvariant() switch
@@ -68,6 +71,7 @@ public sealed class SystemRules
         "enginestand" => EngineStand,
         "talk" => Talk,
         "career" => Career,
+        "paintbooth" => PaintBooth,
         _ => true
     };
 

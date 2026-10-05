@@ -575,6 +575,48 @@ namespace StreetCorsa.Screens.Garage
             // Out here too: a check that threw never got to it, and the player may have left meanwhile
             if (!ReferenceEquals(_navigationService.CurrentScreen, this) || !CanLeave()) return;
 
+            await DriveOutTo(station);
+        }
+
+        /// <summary>
+        /// To the paint booth: a car that runs drives out of the garage to it, one that will not is pushed over (the booth
+        /// takes it as it comes)
+        /// </summary>
+        private async Task OnPaintBooth(string booth)
+        {
+            if (SelectedCar is not { } selected) return;
+            var car = selected.CarInstance;
+
+            // The painter sprays over no rust and no dents: the repair shop's first, and the car stays home
+            if (PaintFirst.WhyNot(car) is { } why)
+            {
+                _dialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(_dialogService, why, PaintFirst.Title));
+                return;
+            }
+
+            var runs = true;
+            try
+            {
+                runs = DrivingHome.WhyWontRun(car, _partsService.IsAvailable ? _partsService.Catalog : null).Count == 0;
+            }
+            catch (Exception ex)
+            {
+                // Not worked out: it drives out, and the booth finds out for itself
+                _logger.Warning(ex, "Could not check {Car} before the paint booth", car.DefinitionId);
+            }
+
+            if (!ReferenceEquals(_navigationService.CurrentScreen, this) || !CanLeave()) return;
+            if (!runs)
+            {
+                LeaveTo(() => _navigationService.Go(booth, _gameState));
+                return;
+            }
+            await DriveOutTo(booth);
+        }
+
+        /// <summary>The car drives out of the garage as a mod's script has it, and the garage goes to <paramref name="to"/></summary>
+        private async Task DriveOutTo(string to)
+        {
             // The car drives out as a mod's script has it; the garage goes when the script lets it
             var droveOut = false;
             if (DriveCarOut is { } driveOut)
@@ -593,9 +635,9 @@ namespace StreetCorsa.Screens.Garage
             // The script may have taken a while: the player may have gone some other way meanwhile
             if (!ReferenceEquals(_navigationService.CurrentScreen, this)) return;
 
-            LeaveTo(() => _navigationService.Go(station, _gameState));
+            LeaveTo(() => _navigationService.Go(to, _gameState));
 
-            // Still here (the station would not open): the car back in its place
+            // Still here (the place would not open): the car back in its place
             if (droveOut && ReferenceEquals(_navigationService.CurrentScreen, this)) PutCarBack?.Invoke();
         }
 
@@ -820,6 +862,12 @@ namespace StreetCorsa.Screens.Garage
             if (kind == ScreenKinds.GasStation)
             {
                 await OnGasStation(to);
+                return;
+            }
+
+            if (kind == ScreenKinds.PaintBooth)
+            {
+                await OnPaintBooth(to);
                 return;
             }
 

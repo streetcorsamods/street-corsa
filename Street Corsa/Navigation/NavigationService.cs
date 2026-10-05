@@ -373,6 +373,9 @@ namespace StreetCorsa.Navigation
                 case ScreenKinds.GasStation:
                     return SafeNavigate(name, () => new Screens.Station.GasStationScreenViewModel(
                         this, _dialogService, game, _catalogRepository, _timeService, _gameStateRepository, _carPartsService), id);
+                case ScreenKinds.PaintBooth:
+                    return SafeNavigate(name, () => new Screens.PaintBooth.PaintBoothScreenViewModel(
+                        this, _dialogService, game, _catalogRepository, _timeService, _gameStateRepository, _carPartsService), id);
                 case ScreenKinds.Newspaper:
                     return SafeNavigate(name, () => new Screens.Newspaper.NewspaperScreenViewModel(
                         this, _dialogService, game, _catalogRepository, _profileRepository, _marketService, _carPartsService,

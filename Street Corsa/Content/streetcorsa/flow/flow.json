@@ -18,6 +18,7 @@
     "diner": { "kind": "diner", "exits": { "back": "garage", "cruise": "street" } },
     "street": { "kind": "street", "exits": { "back": "garage", "diner": "diner" } },
     "gas_station": { "kind": "gas_station", "exits": { "back": "garage" } },
+    "paint_booth": { "kind": "paint_booth", "exits": { "back": "garage" } },
     "newspaper": { "kind": "newspaper", "exits": { "back": "garage", "car_ad": "car_viewing" } },
     "car_viewing": { "kind": "car_viewing", "exits": { "back": "newspaper", "gone": "newspaper", "bought": "garage", "garage": "garage" } },
     "dealer_map": { "kind": "dealer_map", "exits": { "back": "garage", "lot": "dealer_lot" } },
@@ -38,7 +39,8 @@
       "newspaper": { "to": "newspaper", "text": "garage.tile.newspaper", "icon": "icons/newspaper", "spot": "bottom_left", "order": 3, "size": "large" },
       "mail_order": { "to": "mail_order", "text": "garage.tile.mail_order", "icon": "icons/parts_filled", "spot": "bottom_left", "order": 4, "size": "large", "without": [ "partShops" ] },
       "car_info": { "to": "car_info", "text": "garage.tile.car_info", "icon": "icons/car_info", "spot": "right", "requires": [ "car" ] },
-      "gas_station": { "to": "gas_station", "text": "garage.tile.gas_station", "icon": "icons/fuel_pump", "spot": "bottom_right", "requires": [ "car_here" ] },
+      "gas_station": { "to": "gas_station", "text": "garage.tile.gas_station", "icon": "icons/fuel_pump", "spot": "bottom_right", "order": 1, "requires": [ "car_here" ] },
+      "paint_booth": { "to": "paint_booth", "text": "garage.tile.paint_booth", "icon": "icons/paint_spray", "spot": "bottom_right", "order": 2, "requires": [ "car_here" ] },
       "career": { "to": "career", "text": "garage.tile.career", "icon": "icons/trophy", "spot": "top_right", "order": 1 },
       "calendar": { "to": "calendar", "text": "garage.tile.calendar", "icon": "icons/calendar", "spot": "top_right", "order": 2 },
       "radio": { "to": "radio", "text": "garage.tile.radio", "icon": "icons/radio", "spot": "top_right", "order": 3 }

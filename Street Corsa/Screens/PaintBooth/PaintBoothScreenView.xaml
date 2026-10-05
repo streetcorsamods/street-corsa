@@ -1,0 +1,278 @@
+<UserControl x:Class="StreetCorsa.Screens.PaintBooth.PaintBoothScreenView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:t="clr-namespace:StreetCorsa.Services.Text"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:controls="clr-namespace:StreetCorsa.Controls"
+             xmlns:helpers="clr-namespace:StreetCorsa.Helpers"
+             mc:Ignorable="d"
+             d:DesignHeight="720" d:DesignWidth="1280">
+    <Grid Background="{StaticResource StageBrush}">
+        <!-- The booth, the car in it, the painter -->
+        <controls:PaintBoothViewport3D x:Name="BoothView"
+                                       Scene="{Binding Booth}"
+                                       Light="{Binding Light}"
+                                       PlayerCar="{Binding PlayerCar}"
+                                       Stage="{Binding Stage}"
+                                       Show="{Binding Show}"/>
+
+        <!-- No 3D: the job is done all the same -->
+        <TextBlock Text="{t:Text booth.ui.no_view}"
+                   FontSize="{StaticResource FontSizeBody}"
+                   Foreground="{StaticResource TextSecondaryBrush}"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   Visibility="{Binding HasFailed, ElementName=BoothView, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+        <!-- Where -->
+        <Border Background="{StaticResource Glass10C0Brush}"
+                BorderBrush="{StaticResource PaleGold60Brush}"
+                BorderThickness="1"
+                CornerRadius="5"
+                Padding="18,12"
+                Margin="20,20,0,0"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                IsHitTestVisible="False">
+            <TextBlock Text="{Binding Title}"
+                       FontSize="{StaticResource FontSizeHeading}"
+                       FontWeight="Bold"
+                       Foreground="{StaticResource GoldBrush}"/>
+        </Border>
+
+        <!-- What is going on -->
+        <Border Background="{StaticResource Glass10C0Brush}"
+                BorderBrush="{StaticResource PaleGold60Brush}"
+                BorderThickness="1"
+                CornerRadius="5"
+                Padding="14,10"
+                Margin="20,0,0,20"
+                MaxWidth="560"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Bottom"
+                IsHitTestVisible="False">
+            <TextBlock Text="{Binding StatusText}"
+                       FontSize="{StaticResource FontSizeSmall}"
+                       Foreground="{StaticResource TextPrimaryBrush}"
+                       TextWrapping="Wrap"/>
+        </Border>
+
+        <!-- Drag to walk round -->
+        <TextBlock Text="{t:Text booth.ui.look_hint}"
+                   FontSize="{StaticResource FontSizeTiny}"
+                   Foreground="{StaticResource White90Brush}"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Bottom"
+                   Margin="0,0,0,8"
+                   IsHitTestVisible="False"/>
+
+        <!-- The colour: a colour of the player's own over the skin, or another of the car's skins; it goes as the painter starts -->
+        <Border Width="440"
+                Background="{StaticResource Glass10C0Brush}"
+                BorderBrush="{StaticResource GoldBrush}"
+                BorderThickness="2"
+                CornerRadius="6"
+                Padding="18"
+                Margin="0,20,20,20"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Center"
+                helpers:Reveal.IsShown="{Binding IsPicking}"
+                helpers:Reveal.OffsetX="40">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel>
+                    <TextBlock Text="{t:Text booth.ui.panel}"
+                               FontSize="{StaticResource FontSizeSubheading}"
+                               FontWeight="Bold"
+                               Foreground="{StaticResource GoldBrush}"/>
+                    <TextBlock Text="{Binding ChoiceText}"
+                               FontSize="{StaticResource FontSizeSmall}"
+                               Foreground="{StaticResource TextPrimaryBrush}"
+                               TextWrapping="Wrap"
+                               Margin="0,4,0,0"/>
+                </StackPanel>
+
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,12,0,0" MaxHeight="520">
+                    <StackPanel>
+                        <!-- A colour of the player's own, over the skin picked -->
+                        <TextBlock Text="{t:Text booth.ui.custom}"
+                                   FontSize="{StaticResource FontSizeCaption}"
+                                   FontWeight="Bold"
+                                   Foreground="{StaticResource GoldBrush}"
+                                   Margin="0,0,0,6"/>
+                        <TextBlock Text="{Binding TintNote}"
+                                   FontSize="{StaticResource FontSizeCaption}"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   TextWrapping="Wrap"
+                                   Margin="0,0,0,6">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding TintNote}" Value="">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <StackPanel IsEnabled="{Binding CanTint}">
+                            <ItemsControl ItemsSource="{Binding Swatches}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <UniformGrid Columns="8"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Command="{Binding Pick}" ToolTip="{Binding Name}" Cursor="Hand" Margin="3" Height="38">
+                                            <Button.Template>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border x:Name="Chip"
+                                                            Background="{Binding Brush}"
+                                                            BorderBrush="{StaticResource PaleGold60Brush}"
+                                                            BorderThickness="1"
+                                                            CornerRadius="19"/>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="Chip" Property="BorderBrush" Value="{StaticResource GoldBrush}"/>
+                                                            <Setter TargetName="Chip" Property="BorderThickness" Value="2"/>
+                                                        </Trigger>
+                                                        <Trigger Property="IsEnabled" Value="False">
+                                                            <Setter TargetName="Chip" Property="Opacity" Value="0.35"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Button.Template>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- Mixed by hand -->
+                            <Grid Margin="0,10,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="90"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <TextBlock Text="{t:Text booth.ui.hue}" FontSize="{StaticResource FontSizeCaption}" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                                <Slider Grid.Column="1" Minimum="0" Maximum="359" Value="{Binding Hue}" Margin="0,4"/>
+                                <TextBlock Grid.Row="1" Text="{t:Text booth.ui.saturation}" FontSize="{StaticResource FontSizeCaption}" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                                <Slider Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="1" Value="{Binding Saturation}" Margin="0,4"/>
+                                <TextBlock Grid.Row="2" Text="{t:Text booth.ui.brightness}" FontSize="{StaticResource FontSizeCaption}" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                                <Slider Grid.Row="2" Grid.Column="1" Minimum="0.03" Maximum="1" Value="{Binding Brightness}" Margin="0,4"/>
+                                <Border Grid.Column="2" Grid.RowSpan="3"
+                                        Width="54" Height="54" Margin="12,0,0,0"
+                                        CornerRadius="27"
+                                        Background="{Binding ColourBrush}"
+                                        BorderBrush="{StaticResource GoldBrush}"
+                                        BorderThickness="2"
+                                        Visibility="{Binding HasColour, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                            </Grid>
+                        </StackPanel>
+                        <!-- The make's colours: the mod's skins -->
+                        <TextBlock Text="{t:Text booth.ui.factory}"
+                                   FontSize="{StaticResource FontSizeCaption}"
+                                   FontWeight="Bold"
+                                   Foreground="{StaticResource GoldBrush}"
+                                   Margin="0,14,0,6"/>
+                        <ItemsControl ItemsSource="{Binding Skins}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Command="{Binding Pick}"
+                                            Width="126"
+                                            Margin="0,0,6,6"
+                                            Padding="0"
+                                            Cursor="Hand"
+                                            ToolTip="{Binding Name}">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border x:Name="Card"
+                                                        Background="{StaticResource BgMediumBrush}"
+                                                        BorderBrush="{StaticResource PaleGold60Brush}"
+                                                        BorderThickness="1"
+                                                        CornerRadius="4"
+                                                        Padding="4">
+                                                    <StackPanel>
+                                                        <Image Source="{Binding Preview}" Height="62" Stretch="UniformToFill"
+                                                               Visibility="{Binding HasPreview, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                        <TextBlock Text="{Binding Name}"
+                                                                   FontSize="{StaticResource FontSizeTiny}"
+                                                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                                                   TextTrimming="CharacterEllipsis"
+                                                                   Margin="2,4,2,0"/>
+                                                    </StackPanel>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <DataTrigger Binding="{Binding IsPicked}" Value="True">
+                                                        <Setter TargetName="Card" Property="BorderBrush" Value="{StaticResource GoldBrush}"/>
+                                                        <Setter TargetName="Card" Property="BorderThickness" Value="2"/>
+                                                    </DataTrigger>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="Card" Property="Background" Value="{StaticResource BgLightBrush}"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsEnabled" Value="False">
+                                                        <Setter TargetName="Card" Property="Opacity" Value="0.5"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- What it costs, and the way out -->
+                <StackPanel Grid.Row="2" Margin="0,14,0,0">
+                    <TextBlock Text="{Binding PriceText}"
+                               FontSize="{StaticResource FontSizeSmall}"
+                               Foreground="{StaticResource TextPrimaryBrush}"
+                               TextWrapping="Wrap"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+                        <Button Content="{t:Text booth.ui.reset}"
+                                Command="{Binding ResetCommand}"
+                                Style="{StaticResource DialogSecondaryButtonStyle}"
+                                Padding="16,8"
+                                Margin="0,0,10,0"/>
+                        <Button Content="{t:Text booth.ui.leave}"
+                                Command="{Binding LeaveCommand}"
+                                Style="{StaticResource DialogSecondaryButtonStyle}"
+                                Padding="16,8"
+                                Margin="0,0,10,0"/>
+                        <Button Content="{t:Text booth.ui.spray}"
+                                Command="{Binding SprayCommand}"
+                                Style="{StaticResource DialogPrimaryButtonStyle}"
+                                Padding="22,8"/>
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- The curtain: black until the car rolls in, black again as the player goes home -->
+        <Border x:Name="Curtain"
+                Background="{StaticResource StageBrush}"
+                IsHitTestVisible="False"/>
+
+        <!-- Until the scene is up -->
+        <controls:LoadingIndicator WaitFor="{Binding ElementName=BoothView}" Message="{t:Text booth.ui.loading}"/>
+    </Grid>
+</UserControl>

@@ -38,6 +38,9 @@ namespace StreetCorsa.Models.GameState
         /// </summary>
         public string SkinId { get; set; } = string.Empty;
 
+        /// <summary>The colour a player painted the car over its skin's, #RRGGBB (Car.PaintColour); null in its skin's colours</summary>
+        public string? PaintColour { get; set; }
+
         /// <summary>
         /// When this listing was created
         /// </summary>

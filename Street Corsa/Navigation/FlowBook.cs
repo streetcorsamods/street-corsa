@@ -332,6 +332,7 @@ public static class ScreenKinds
     public const string Diner = "diner";
     public const string Street = "street";
     public const string GasStation = "gas_station";
+    public const string PaintBooth = "paint_booth";
     public const string Newspaper = "newspaper";
     public const string CarViewing = "car_viewing";
     public const string DealerMap = "dealer_map";
@@ -345,7 +346,7 @@ public static class ScreenKinds
 
     public static readonly IReadOnlyList<string> All =
     [
-        MainMenu, Garage, CarLot, RacingHub, Career, Diner, Street, GasStation, Newspaper, CarViewing, DealerMap,
+        MainMenu, Garage, CarLot, RacingHub, Career, Diner, Street, GasStation, PaintBooth, Newspaper, CarViewing, DealerMap,
         DealerLot, PartShopsMap, PartShop, MailOrder, Race, SoundBrowser, CarCatalogEditor
     ];
 
@@ -368,6 +369,7 @@ public static class ScreenKinds
         Diner => "diner",
         Street => "street",
         GasStation => "station",
+        PaintBooth => "paintBooth",
         Newspaper => "paper",
         DealerMap or DealerLot => "carDealers",
         PartShopsMap or PartShop => "partShops",

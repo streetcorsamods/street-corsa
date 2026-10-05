@@ -103,15 +103,21 @@ namespace StreetCorsa.Services.Parts
 
         /// <summary>
         /// Everything the car shows, in a race and in the game's scenes, that its own model does not have: its wheels, the
-        /// engine parts that stand out (<see cref="ShownEngineParts"/>) and how used it looks (<see cref="CarLooks"/>); null
-        /// when it shows nothing but its model
+        /// engine parts that stand out (<see cref="ShownEngineParts"/>), how used it looks (<see cref="CarLooks"/>) and the
+        /// colour it was painted; null when it shows nothing but its model
         /// </summary>
-        ShownSet? Shown(Car car) => Shown(car.DefinitionId, car.Parts, CarLooks.Of(car), CornerHeights.Of(CarLooks.RideHeight(car)));
+        ShownSet? Shown(Car car) => Shown(car.DefinitionId, car.Parts, CarLooks.Of(car), CornerHeights.Of(CarLooks.RideHeight(car)),
+            PaintColour.Parse(car.PaintColour));
+
+        /// <summary>A car for sale: as <see cref="Shown(Car)"/>, for the listing's car</summary>
+        ShownSet? Shown(UsedCarListing listing) => Shown(listing.CarDefinitionId, listing.Parts, CarLooks.Of(listing),
+            CornerHeights.Of(CarLooks.RideHeight(listing)), PaintColour.Parse(listing.PaintColour));
 
         /// <summary>
         /// What a car of <paramref name="carDefinitionId"/> with <paramref name="parts"/> shows, looking as
-        /// <paramref name="look"/> says (a car for sale: <see cref="CarLooks.Of(UsedCarListing)"/>)
+        /// <paramref name="look"/> says (a car for sale: <see cref="CarLooks.Of(UsedCarListing)"/>), painted
+        /// <paramref name="paint"/> over its skin's colours
         /// </summary>
-        ShownSet? Shown(string carDefinitionId, List<PartInstance> parts, CarLook? look = null, CornerHeights? heights = null);
+        ShownSet? Shown(string carDefinitionId, List<PartInstance> parts, CarLook? look = null, CornerHeights? heights = null, PaintColour? paint = null);
     }
 }

@@ -21,6 +21,9 @@ public static class ContentTypes
     public const string Streets = "streets";
     public const string Stations = "stations";
 
+    /// <summary>The paint booths (booths/&lt;folder&gt;/booth.json, its model and its painter's); see <c>Services.PaintBooth.PaintBooths</c></summary>
+    public const string Booths = "booths";
+
     public const string Showcase = "showcase";
     public const string Garages = "garages";
     public const string Warehouses = "warehouses";

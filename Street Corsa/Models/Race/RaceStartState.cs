@@ -102,6 +102,13 @@ namespace StreetCorsa.Models.Race
                 yield return (prefix + "MODEL_AT", Matrix(frame.At));
             }
             if (shown.Layer is { } layer) yield return (prefix + "LOOK", layer.Name);
+            for (var i = 0; i < shown.PaintFiles.Count; i++)
+            {
+                // Each tinted texture, and the car's texture it takes the place of
+                var paint = shown.PaintFiles[i];
+                yield return (prefix + "PAINT_" + (i + 1), paint.File.Name);
+                yield return (prefix + "PAINT_" + (i + 1) + "_TEXTURE", paint.Texture);
+            }
             for (var i = 0; i < shown.Extras.Count; i++)
             {
                 var extra = shown.Extras[i];
