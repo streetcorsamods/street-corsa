@@ -22,6 +22,7 @@ namespace StreetCorsa.Dialogs.PartPreview
         /// <param name="talked">After a call, for the screen behind</param>
         public PartPreviewDialogViewModel(DialogService dialogService, PartsCatalog catalog, PartInstance part, string title, string priceLine, Action? buy,
             Func<Services.Talk.Conversation>? talk = null, Action? talked = null)
+            : base(dialogService)
         {
             _dialogService = dialogService;
             _buy = buy;
@@ -38,7 +39,7 @@ namespace StreetCorsa.Dialogs.PartPreview
             Condition = PartTrees.Describe(part);
 
             BuyCommand = new RelayCommand(OnBuy, () => _buy != null);
-            CloseCommand = new RelayCommand(() => _dialogService.CloseDialog());
+            CloseCommand = new RelayCommand(Close);
             CallCommand = new RelayCommand(OnCall, () => CanCall);
         }
 
@@ -103,7 +104,7 @@ namespace StreetCorsa.Dialogs.PartPreview
         private void OnBuy()
         {
             // Closed first: the purchase's own question and its answer come after this one, not under it
-            _dialogService.CloseDialog();
+            Close();
             _buy?.Invoke();
         }
     }

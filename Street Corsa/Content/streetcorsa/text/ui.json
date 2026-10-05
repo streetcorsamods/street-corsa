@@ -2,7 +2,8 @@
   "_comment": [
     "The words on the game's screens and in its messages that every screen shares; each screen's own are in its",
     "ui_<screen>.json. A label is said one way (the first line of its pool). {name} is a value the game fills in.",
-    "language.name: this language's name in the Settings picker; a translation (text/<language>/) gives its own."
+    "language.name: this language's name in the Settings picker; a translation (text/<language>/) gives its own.",
+    "format.percent: a share in whole percent, {percent} the number (0 to 100; {percent:0} writes it without decimals)."
   ],
   "lines": {
     "language.name": "English",
@@ -21,6 +22,7 @@
     "settings.units.imperial": "Imperial: mph, miles, gallons, °F",
     "settings.units.metric": "Metric: km/h, km, litres, °C",
     "settings.restart.title": "Restart Needed",
-    "settings.not_saved": "The settings could not be saved. The details are in the log."
+    "settings.not_saved": "The settings could not be saved. The details are in the log.",
+    "format.percent": "{percent:0}%"
   }
 }

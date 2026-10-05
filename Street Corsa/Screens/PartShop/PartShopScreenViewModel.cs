@@ -432,6 +432,9 @@ namespace StreetCorsa.Screens.PartShop
                         _carPower = await Task.Run(() => _partsService.Evaluate(car)?.Dyno?.MaxPowerHp);
                 }
 
+                // The player may have walked out meanwhile: no clerk is started for a shop already left
+                if (!ReferenceEquals(_navigationService.CurrentScreen, this)) return;
+
                 OnPropertyChanged(nameof(Notice));
                 OnPropertyChanged(nameof(HasNotice));
                 _buyOffers = null;

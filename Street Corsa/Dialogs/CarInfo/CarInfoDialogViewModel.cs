@@ -21,7 +21,9 @@ namespace StreetCorsa.Dialogs.CarInfo
         public System.Windows.Thickness Indent => new(Depth * 18, 0, 0, 0);
 
         /// <summary>"82%", or "82%, damaged (40% left)"</summary>
-        public string ConditionDisplay => Tear < 0.995 ? $"{Wear * 100:0}%" + GameText.Say("garage.part.damaged", ("left", $"{Tear * 100:0}")) : $"{Wear * 100:0}%";
+        public string ConditionDisplay => Tear < 0.995
+            ? Screens.Shared.ConditionDisplay.PercentOf(Wear) + GameText.Say("garage.part.damaged", ("left", $"{Tear * 100:0}"))
+            : Screens.Shared.ConditionDisplay.PercentOf(Wear);
 
         /// <summary>What the bar shows: the part's shape, wear and damage together</summary>
         public double Condition => Helpers.Unit.Clamp01(Wear, 0) * Helpers.Unit.Clamp01(Tear, 0);
@@ -35,8 +37,6 @@ namespace StreetCorsa.Dialogs.CarInfo
     /// </summary>
     public class CarInfoDialogViewModel : BaseDialogViewModel
     {
-        private readonly DialogService _dialogService;
-
         public string Title { get; }
         public IReadOnlyList<CarInfoLine> Lines { get; }
         public IReadOnlyList<CarInfoPart> Parts { get; }
@@ -48,13 +48,13 @@ namespace StreetCorsa.Dialogs.CarInfo
         /// <param name="catalog">The parts catalog, for the parts' names; null when the parts are not available</param>
         /// <param name="engine">The car's engine as the garage worked it out, if it has</param>
         public CarInfoDialogViewModel(DialogService dialogService, Car car, string title, PartsCatalog? catalog, Audio.EngineSpec? engine)
+            : base(dialogService)
         {
-            _dialogService = dialogService;
             Title = title;
             Lines = LinesOf(car, catalog, engine);
             Parts = catalog == null ? Array.Empty<CarInfoPart>() : PartsOf(car, catalog);
             History = CarHistoryDisplay.Summary(car.History, forSale: false);
-            CloseCommand = new RelayCommand(() => _dialogService.CloseDialog());
+            CloseCommand = new RelayCommand(Close);
         }
 
         private static List<CarInfoLine> LinesOf(Car car, PartsCatalog? catalog, Audio.EngineSpec? engine)
@@ -72,8 +72,8 @@ namespace StreetCorsa.Dialogs.CarInfo
             if (car.PowerHp is { } hp) lines.Add(new(GameText.Say("carinfo.power"), hp > 0 ? GameText.Say("carinfo.power.dyno", ("hp", $"{hp:0}")) : GameText.Say("carinfo.power.no_run")));
 
             lines.Add(new(GameText.Say("carinfo.fuel"), ConditionDisplay.Fuel(car)));
-            lines.Add(new(GameText.Say("carinfo.oil"), $"{CarCondition.OilLeft(car) * 100:0}%"));
-            lines.Add(new(GameText.Say("carinfo.body"), CarCondition.IsTotaled(car) ? GameText.Say("carinfo.body.totaled") : $"{CarCondition.BodyCondition(car) * 100:0}%"));
+            lines.Add(new(GameText.Say("carinfo.oil"), ConditionDisplay.PercentOf(CarCondition.OilLeft(car))));
+            lines.Add(new(GameText.Say("carinfo.body"), CarCondition.IsTotaled(car) ? GameText.Say("carinfo.body.totaled") : ConditionDisplay.PercentOf(CarCondition.BodyCondition(car))));
             lines.Add(new(GameText.Say("carinfo.dirt"), DirtOf(car.BodyDirt)));
 
             if (car.PurchaseDate != default)

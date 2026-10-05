@@ -38,7 +38,6 @@ namespace StreetCorsa.Screens.Diner
         private readonly IAssettoCorsaContentService _contentService;
         private readonly ITalkService _talkService;
         private readonly IGameTimeService _timeService;
-        private readonly IGameStateRepository _gameStateRepo;
         private readonly RaceSetupBuilder _raceSetup;
         private readonly Services.Parts.ICarPartsService _partsService;
         private readonly ChallengeLauncher _launcher;
@@ -414,7 +413,7 @@ namespace StreetCorsa.Screens.Diner
             RaceSetupBuilder raceSetup,
             Services.Parts.ICarPartsService partsService,
             bool returning = false)
-            : base(gameState, new Controls.Street.DriveInStage(), AppLoggerFactory.CreateLogger("Diner"))
+            : base(navigationService, dialogService, gameState, gameStateRepo, timeService, new Controls.Street.DriveInStage(), AppLoggerFactory.CreateLogger("Diner"))
         {
             _returning = returning;
             _navigationService = navigationService;
@@ -425,7 +424,6 @@ namespace StreetCorsa.Screens.Diner
             _contentService = contentService;
             _talkService = talkService;
             _timeService = timeService;
-            _gameStateRepo = gameStateRepo;
             _raceSetup = raceSetup;
             _partsService = partsService;
             _logger = AppLoggerFactory.CreateLogger("Diner");
@@ -752,6 +750,9 @@ namespace StreetCorsa.Screens.Diner
         // The visit is being paid for: the day may turn over meanwhile, and the racers at the tables with it
         private bool _entering;
 
+        // The visit's time being spent: done when there is none (back from a race, or paid for)
+        private Task _visit = Task.CompletedTask;
+
         private bool CanChallenge()
         {
             return !_entering &&
@@ -872,8 +873,7 @@ namespace StreetCorsa.Screens.Diner
             if (!_returning && WhyNotHere() is { } why)
             {
                 _logger.Information("The car cannot be out on the streets: {Why}", why.Why);
-                _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, why.Why, why.Title));
-                _navigationService.GoHomeLater(_gameState);
+                SendHome(why.Why, why.Title);
                 return;
             }
 
@@ -915,6 +915,16 @@ namespace StreetCorsa.Screens.Diner
             // would stay against them
             _entering = true;
             RelayCommand.RaiseCanExecuteChanged();
+            _visit = PayForVisitAsync();
+            await _visit;
+        }
+
+        /// <summary>
+        /// The visit's half hour, spent and saved; leaving waits for it (<see cref="OnGone"/>), as the day may roll over
+        /// meanwhile
+        /// </summary>
+        private async Task PayForVisitAsync()
+        {
             try
             {
                 // Spend time for visiting the diner (30 min). Late in the evening that is the next morning, when
@@ -922,8 +932,7 @@ namespace StreetCorsa.Screens.Diner
                 var spent = await _timeService.SpendTimeAsync(_gameState, GameAction.VisitDiner);
                 if (spent.NewDayStarted) LoadOpponents();
                 FollowTheClock();
-
-                if (!string.IsNullOrEmpty(_gameState.SaveName)) _gameStateRepo.Save(_gameState, _gameState.SaveName);
+                Save();
             }
             catch (Exception ex)
             {

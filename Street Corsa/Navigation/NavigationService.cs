@@ -436,6 +436,7 @@ namespace StreetCorsa.Navigation
         /// </summary>
         public bool Leave(IScreen from, string exit, GameState? gameState, FlowArgs? args = null)
         {
+            if (!IsOnShow(from, exit)) return false;
             var id = IdOf(from);
             return Depart(from, LeadsTo(id, exit, gameState), () => LeaveFrom(id, exit, gameState, args));
         }
@@ -449,6 +450,7 @@ namespace StreetCorsa.Navigation
         {
             var id = IdOf(from);
             if (IsLeaving(from)) return true;
+            if (!IsOnShow(from, exit)) return false;
 
             var playing = StartLeaveScript(from, LeadsTo(id, exit, gameState));
             if (playing != null) _departing.AddOrUpdate(from, new object());
@@ -488,7 +490,18 @@ namespace StreetCorsa.Navigation
         /// script first. An overlay opens over it, and the screen is not left.
         /// </summary>
         public bool GoFrom(IScreen from, string to, GameState? gameState, FlowArgs? args = null, Action<Func<bool>>? leaveVia = null) =>
-            Depart(from, to, () => Go(to, gameState, args, leaveVia));
+            IsOnShow(from, to) && Depart(from, to, () => Go(to, gameState, args, leaveVia));
+
+        /// <summary>
+        /// The screen leaving is the one on show. One the player has already left (it went on after an await: time spent,
+        /// a check) takes nobody anywhere from wherever they are now.
+        /// </summary>
+        private bool IsOnShow(IScreen from, string way)
+        {
+            if (ReferenceEquals(CurrentScreen, from)) return true;
+            _logger.Warning("The {Screen} screen is not on show: not left by {Way}", IdOf(from) ?? from.GetType().Name, way);
+            return false;
+        }
 
         /// <summary>A leave script is taking the player off this screen: what they do meanwhile is not done</summary>
         public bool IsLeaving(IScreen screen) => _departing.TryGetValue(screen, out _);
@@ -637,14 +650,56 @@ namespace StreetCorsa.Navigation
 
         /// <summary>
         /// Home, once what runs on the UI thread now is over: for a screen that sends the player home from its
-        /// <c>Enter</c>, while the navigation that brought them there is still going on
+        /// <c>Enter</c>, while the navigation that brought them there is still going on. Only while that screen is still
+        /// on show then: a second ask, or one from a screen already left, goes nowhere.
         /// </summary>
-        public void GoHomeLater(GameState gameState)
+        public void GoHomeLater(IScreen from, GameState gameState)
         {
             // Home sending the player home would build it again, and again
-            if (IsHome(CurrentId)) return;
-            _ = System.Windows.Threading.Dispatcher.CurrentDispatcher.InvokeAsync(() => GoHome(gameState));
+            if (IsHome(IdOf(from))) return;
+            LaterOn(from, () =>
+            {
+                if (!IsHome(CurrentId)) GoHome(gameState);
+            });
         }
+
+        /// <summary>
+        /// <see cref="ScreenReady"/>, once what runs on the UI thread now is over (the viewport has started the show it
+        /// was telling of), while the screen is still on show
+        /// </summary>
+        public void ScreenReadyLater(IScriptedScreen screen) => LaterOn(screen, () => ScreenReady(screen));
+
+        /// <summary>
+        /// The day ended at home (<paramref name="endDay"/>), once the screen that asked is up and still on show: for home
+        /// reached from a screen where the player said to end the day
+        /// </summary>
+        public void EndDayLater(IScreen home, Action endDay) => LaterOn(home, endDay);
+
+        /// <summary>
+        /// Runs <paramref name="run"/> on the UI thread once what runs there now is over (a picker done with its pick).
+        /// The app's dispatcher, not the calling thread's: one off the UI thread would never run it.
+        /// </summary>
+        public void Later(Action run, System.Windows.Threading.DispatcherPriority priority = System.Windows.Threading.DispatcherPriority.Normal)
+        {
+            var dispatcher = System.Windows.Application.Current?.Dispatcher ?? System.Windows.Threading.Dispatcher.CurrentDispatcher;
+            _ = dispatcher.InvokeAsync(() =>
+            {
+                try
+                {
+                    run();
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "What was put off to later failed");
+                }
+            }, priority);
+        }
+
+        /// <summary><see cref="Later"/>, only while <paramref name="asker"/> is the screen on show when it comes to it</summary>
+        private void LaterOn(IScreen asker, Action run) => Later(() =>
+        {
+            if (ReferenceEquals(CurrentScreen, asker)) run();
+        });
 
         /// <summary>Where the game opens: the main screen, under its title while the cars load behind it</summary>
         public bool NavigateToStart() => Go(_flow.Menu, null, new FlowArgs { Intro = true });

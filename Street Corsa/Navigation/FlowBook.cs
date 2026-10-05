@@ -163,7 +163,15 @@ public sealed class FlowBook
         foreach (var (id, screen) in Screens)
         foreach (var (exit, to) in screen.Exits.ToList())
         {
-            if (Screens.ContainsKey(to)) continue;
+            if (Screens.TryGetValue(to, out var target))
+            {
+                // A screen that must be told what to show opens only by a way out that tells it, as no tile opens one
+                if (!ScreenKinds.NeedsWhat(target.Kind) || ScreenKinds.IsToldBy(target.Kind, exit)) continue;
+                problems.Add($"screens.{id}.exits.{exit}: a {target.Kind} screen cannot be opened by this way out (it needs to be told what to show); the way out goes home");
+                screen.Exits.Remove(exit);
+                continue;
+            }
+
             if (!off.Contains(to)) problems.Add($"screens.{id}.exits.{exit}: there is no screen \"{to}\"; the way out goes home");
             screen.Exits.Remove(exit);
         }
@@ -357,6 +365,13 @@ public static class ScreenKinds
 
     /// <summary>The kinds that must be told what to show (a shop, a car, a race), so no tile can open them</summary>
     public static bool NeedsWhat(string? kind) => kind is CarViewing or DealerLot or PartShop or Race;
+
+    /// <summary>
+    /// Whether the way out of this name tells a screen of this kind what to show (<see cref="NeedsWhat"/>): the paper's
+    /// car ad its car, a map's lot its dealer and shop its shop. A race is never gone to by a way out.
+    /// </summary>
+    public static bool IsToldBy(string? kind, string exit) => (kind, exit.ToLowerInvariant()) is
+        (CarViewing, "car_ad") or (DealerLot, "lot") or (PartShop, "shop");
 
     /// <summary>The kinds the day may be ended from: a game's own screens, not the menus, a race or an overlay</summary>
     public static bool CanEndDay(string? kind) =>

@@ -71,6 +71,9 @@ namespace StreetCorsa.Screens.Cruise
         private readonly DispatcherTimer _clock;
         private readonly DispatcherTimer _blips;
 
+        // A blip's throttle let up again: one timer, stopped with the screen
+        private readonly DispatcherTimer _blipRelease;
+
         private List<TrackInfo> _tracks = [];
         private DateTime _dueAt;
         private bool _ticking;
@@ -131,6 +134,12 @@ namespace StreetCorsa.Screens.Cruise
             _clock.Tick += OnClockTick;
             _blips = new DispatcherTimer(DispatcherPriority.Background) { Interval = BlipEvery };
             _blips.Tick += (_, _) => Blip();
+            _blipRelease = new DispatcherTimer(DispatcherPriority.Background);
+            _blipRelease.Tick += (_, _) =>
+            {
+                _blipRelease.Stop();
+                RivalEngine.SetPedal(null);
+            };
 
             Stage.RivalAlongside += OnRivalAlongside;
             Stage.RivalGone += OnRivalGone;
@@ -416,6 +425,7 @@ namespace StreetCorsa.Screens.Cruise
             _ticking = false;
             _clock.Stop();
             _blips.Stop();
+            _blipRelease.Stop();
             _encounterVersion++;
             Stage.Clear();
             PlayerEngine.Detach();
@@ -477,7 +487,7 @@ namespace StreetCorsa.Screens.Cruise
             // It says why and takes the player back to the garage, once the navigation that brought them here is over
             _leaving = true;
             _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, message, title));
-            _navigationService.GoHomeLater(_gameState);
+            _navigationService.GoHomeLater(this, _gameState);
         }
 
         private async void Leave(bool toGarage)
@@ -508,17 +518,7 @@ namespace StreetCorsa.Screens.Cruise
             _clock.Start();
         }
 
-        private void Save()
-        {
-            try
-            {
-                if (!string.IsNullOrEmpty(_gameState.SaveName)) _gameStateRepo.Save(_gameState, _gameState.SaveName);
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Could not save after cruising");
-            }
-        }
+        private void Save() => Services.Market.GameSaves.TrySave(_gameStateRepo, _gameState, _logger, "cruising");
 
         #endregion
 
@@ -783,13 +783,9 @@ namespace StreetCorsa.Screens.Cruise
             if (Stage.Phase != RivalPhase.Alongside || !RivalEngine.IsRunning) return;
 
             RivalEngine.SetPedal(0.55 + 0.35 * _random.NextDouble());
-            var release = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(220 + _random.Next(120)) };
-            release.Tick += (_, _) =>
-            {
-                release.Stop();
-                RivalEngine.SetPedal(null);
-            };
-            release.Start();
+            _blipRelease.Stop();
+            _blipRelease.Interval = TimeSpan.FromMilliseconds(220 + _random.Next(120));
+            _blipRelease.Start();
         }
 
         private void WaveOff()

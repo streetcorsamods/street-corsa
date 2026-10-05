@@ -16,7 +16,6 @@ namespace StreetCorsa.Dialogs.RepairShop
     /// </summary>
     public class RepairShopDialogViewModel : BaseDialogViewModel
     {
-        private readonly DialogService _dialogService;
         private readonly Car _car;
         private readonly PartsCatalog? _catalog;
         private readonly double _priceMultiplier;
@@ -29,15 +28,15 @@ namespace StreetCorsa.Dialogs.RepairShop
         /// <param name="perform">Takes the money, does the job, runs the clock and saves</param>
         public RepairShopDialogViewModel(DialogService dialogService, Car car, string carName, PartsCatalog? catalog,
             double priceMultiplier, Func<decimal> money, Func<RepairJob, Task> perform)
+            : base(dialogService)
         {
-            _dialogService = dialogService;
             _car = car;
             _catalog = catalog;
             _priceMultiplier = priceMultiplier;
             _money = money;
             _perform = perform;
             CarName = carName;
-            CloseCommand = new RelayCommand(() => _dialogService.CloseDialog(), () => !_busy);
+            CloseCommand = new RelayCommand(() => Close(), () => !_busy);
             Refresh();
         }
 

@@ -144,18 +144,21 @@ namespace StreetCorsa.Screens.LoadGame
             if (saveInfo == null || IsBusy)
                 return;
 
+            // Busy until the save is handed on (opened, or a question about it asked and answered): a second save picked
+            // meanwhile would ask a second question
+            IsBusy = true;
+            var handedOn = false;
+
             // Nothing may escape an async void
             try
             {
-                GameState? gameState;
-                IsBusy = true;
-                try
+                var gameState = await Task.Run(() => _repository.Load(saveInfo.SaveName));
+
+                // Backed out of (Back, Escape, another card) while it was read: nothing is asked over the main menu
+                if (_closed)
                 {
-                    gameState = await Task.Run(() => _repository.Load(saveInfo.SaveName));
-                }
-                finally
-                {
-                    IsBusy = false;
+                    _logger.Information("Save {SaveName} read after its card was closed; not opened", saveInfo.SaveName);
+                    return;
                 }
 
                 if (gameState == null)
@@ -178,17 +181,25 @@ namespace StreetCorsa.Screens.LoadGame
                     _dialogService.ShowDialog(new ConfirmationDialogViewModel(_dialogService, ModsInSave.Warning(missing, older), title,
                         confirmed =>
                         {
-                            if (confirmed) Open(saveInfo, gameState);
+                            IsBusy = false;
+                            if (confirmed && !_closed) Open(saveInfo, gameState);
                         }));
+                    handedOn = true;
                     return;
                 }
 
+                IsBusy = false;
+                handedOn = true;
                 Open(saveInfo, gameState);
             }
             catch (Exception ex)
             {
                 _logger.Error(ex, "Could not load save {SaveName}", saveInfo.SaveName);
                 ErrorMessage = GameText.Say("loadgame.load_failed", ("error", ex.Message));
+            }
+            finally
+            {
+                if (!handedOn) IsBusy = false;
             }
         }
 

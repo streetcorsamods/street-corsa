@@ -13,7 +13,6 @@ namespace StreetCorsa.Dialogs.EventEntry
     /// </summary>
     public class EventEntryDialogViewModel : BaseDialogViewModel
     {
-        private readonly DialogService _dialogService;
         private readonly Action<EventEntryResult?> _callback;
 
         public RelayCommand ConfirmCommand { get; }
@@ -75,8 +74,8 @@ namespace StreetCorsa.Dialogs.EventEntry
             EventOpponentResult opponent,
             string opponentCarDisplay,
             Action<EventEntryResult?> callback)
+            : base(dialogService)
         {
-            _dialogService = dialogService;
             _eventVm = eventVm;
             _eventDef = eventDef;
             _opponent = opponent;
@@ -127,13 +126,13 @@ namespace StreetCorsa.Dialogs.EventEntry
             };
 
             // Closed before the callback: it goes on to the race, and anything it shows must not close with this
-            _dialogService.CloseDialog();
+            Close();
             _callback?.Invoke(result);
         }
 
         private void OnCancel()
         {
-            _dialogService.CloseDialog();
+            Close();
             _callback?.Invoke(null);
         }
     }

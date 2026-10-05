@@ -79,12 +79,14 @@
         <Grid x:Name="RacingLayer"
               Background="{StaticResource BgPanelBrush}"
               helpers:Reveal.IsShown="False">
-            <controls:LoadingIndicator x:Name="RacingIndicator" Message="Out on the track..."/>
+            <controls:LoadingIndicator x:Name="RacingIndicator" Message="{t:Text shell.racing}"/>
         </Grid>
 
-        <!-- The radio's panel, over any screen (F2, the garage's radio). The screen behind is disabled as for a dialog. -->
+        <!-- The radio's panel, over any screen (F2, the garage's radio). The screen behind is disabled as for a dialog;
+             Tab goes round the panel and never out of it. -->
         <Grid x:Name="RadioHost"
               Background="{StaticResource OverlayBrush}"
+              KeyboardNavigation.TabNavigation="Cycle"
               helpers:Reveal.IsShown="False">
             <radio:RadioPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="30"/>
         </Grid>
@@ -115,27 +117,35 @@
         </Canvas>
 
         <!-- Dialog Host Overlay: fades in and out (see OnDialogChanged); the dialog that closed stays in it while it
-             fades -->
+             fades. Tab goes round the dialog and never out of it to the window's End Day button. -->
         <Grid x:Name="DialogHost"
               Background="{StaticResource OverlayBrush}"
+              KeyboardNavigation.TabNavigation="Cycle"
               helpers:Reveal.IsShown="False">
-            <Border x:Name="DialogCard"
-                    Background="{StaticResource UiGlassCardBrush}"
-                    BorderBrush="{StaticResource UiOutlineBrush}"
-                    BorderThickness="3"
-                    CornerRadius="10"
-                    Margin="40"
-                    Padding="0"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    Effect="{StaticResource DropShadowEffect}">
-                <!-- As tall as the window allows, and scrolling beyond that: a long message or the event entry's
-                     car list is never cut off on a small or high-DPI screen -->
-                <ScrollViewer VerticalScrollBarVisibility="Auto"
-                              HorizontalScrollBarVisibility="Disabled">
-                    <ContentControl x:Name="DialogContent"/>
-                </ScrollViewer>
-            </Border>
+            <Grid x:Name="DialogFrame"
+                  Margin="40"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center">
+                <!-- The card's glass and its shadow, behind it: the shadow's effect is drawn over a plain border that never
+                     changes, not over the dialog, whose live 3D views and streaming text would have it drawn again
+                     every frame -->
+                <Border Background="{StaticResource UiGlassCardBrush}"
+                        CornerRadius="10"
+                        Effect="{StaticResource DropShadowEffect}"/>
+                <Border x:Name="DialogCard"
+                        Background="Transparent"
+                        BorderBrush="{StaticResource UiOutlineBrush}"
+                        BorderThickness="3"
+                        CornerRadius="10"
+                        Padding="0">
+                    <!-- As tall as the window allows, and scrolling beyond that: a long message or the event entry's
+                         car list is never cut off on a small or high-DPI screen -->
+                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled">
+                        <ContentControl x:Name="DialogContent"/>
+                    </ScrollViewer>
+                </Border>
+            </Grid>
         </Grid>
     </Grid>
 </Window>

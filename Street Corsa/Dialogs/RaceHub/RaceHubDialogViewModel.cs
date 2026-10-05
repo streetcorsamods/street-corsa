@@ -105,6 +105,7 @@ namespace StreetCorsa.Dialogs.RaceHub
             Func<bool> stillHome,
             Action<DragRaceLaunchIntent, bool> race,
             Action? hitTheStreets)
+            : base(dialogService)
         {
             _dialogService = dialogService;
             _gameState = gameState;
@@ -118,7 +119,7 @@ namespace StreetCorsa.Dialogs.RaceHub
             _race = race;
             _hitTheStreets = hitTheStreets;
 
-            CloseCommand = new RelayCommand(() => _dialogService.CloseDialog(), () => !IsSettingUp);
+            CloseCommand = new RelayCommand(() => Close(), () => !IsSettingUp);
             HitTheStreetsCommand = new RelayCommand(OnHitTheStreets, () => !IsSettingUp && _hitTheStreets != null && _streetsChecked && _streetsWhyNot == null);
             EnterEventCommand = new RelayCommand<EventInvitationViewModel>(OnEnterEvent, _ => !_isEntering);
             _carListed = IsCarListed();
@@ -190,7 +191,7 @@ namespace StreetCorsa.Dialogs.RaceHub
         private void OnHitTheStreets()
         {
             if (_hitTheStreets == null || _streetsWhyNot != null) return;
-            _dialogService.CloseDialog();
+            Close();
             _hitTheStreets();
         }
 
@@ -264,12 +265,12 @@ namespace StreetCorsa.Dialogs.RaceHub
                     last,
                     picked: track => OnPracticePicked(track, strip),
                     back: ShowAgain), jumpQueue: true);
-                _dialogService.Withdraw(this);
+                Close();
             }
             catch (Exception ex)
             {
                 _logger.Error(ex, "Could not open the track picker");
-                _dialogService.Withdraw(this);
+                Close();
                 ShowPracticeError(ex, strip);
             }
         }
@@ -308,7 +309,7 @@ namespace StreetCorsa.Dialogs.RaceHub
                 }
                 finally
                 {
-                    _dialogService.Withdraw(this);
+                    Close();
                     IsSettingUp = false;
                     SetPractice(false);
                 }
@@ -385,7 +386,7 @@ namespace StreetCorsa.Dialogs.RaceHub
                         _dialogService,
                         GameText.Say(eventDef.IsPinkSlip ? "paper.enter.no_pink_slip" : "paper.enter.no_opponent"),
                         GameText.Say("paper.enter.cannot.title")), jumpQueue: true);
-                    _dialogService.Withdraw(this);
+                    Close();
                     return;
                 }
 
@@ -401,12 +402,12 @@ namespace StreetCorsa.Dialogs.RaceHub
                     opponent,
                     opponentCarDisplay,
                     OnEventEntryComplete), jumpQueue: true);
-                _dialogService.Withdraw(this);
+                Close();
             }
             catch (Exception ex)
             {
                 _logger.Error(ex, "Could not open the entry for {Event}", eventVm.EventId);
-                _dialogService.Withdraw(this);
+                Close();
                 ShowRaceError(ex);
             }
         }
@@ -502,7 +503,7 @@ namespace StreetCorsa.Dialogs.RaceHub
             }
             finally
             {
-                _dialogService.Withdraw(this);
+                Close();
                 IsSettingUp = false;
             }
 

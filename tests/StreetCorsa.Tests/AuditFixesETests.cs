@@ -217,7 +217,7 @@ public class AuditFixesETests
         var stuck = new StuckScreen();
         navigation.SafeNavigate("stuck", () => stuck);
 
-        navigation.GoHomeLater(new GameState());
+        navigation.GoHomeLater(stuck, new GameState());
 
         Assert.Same(stuck, navigation.CurrentScreen);
     }

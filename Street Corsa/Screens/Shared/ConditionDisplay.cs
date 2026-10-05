@@ -30,8 +30,11 @@ namespace StreetCorsa.Screens.Shared
         public static ConditionText Of(double condition)
         {
             var clamped = Helpers.Unit.Clamp01(condition, ifNotFinite: 0);
-            return new ConditionText($"{(int)(clamped * 100)}%", LabelFor(clamped));
+            return new ConditionText(PercentOf((int)(clamped * 100) / 100.0), LabelFor(clamped));
         }
+
+        /// <summary>A share (0 to 1) in whole percent, as the player's language writes one ("82%")</summary>
+        public static string PercentOf(double share) => GameText.Say("format.percent", ("percent", share * 100));
 
         /// <summary>What is in the tank: "Full" until a race says otherwise, then "12 of 60 l" ("1.4 of 60 l" when too low to race on)</summary>
         public static string Fuel(Car car) =>

@@ -34,20 +34,33 @@ namespace StreetCorsa.Screens.Garage
 
             Viewport3D.Ready += async (_, _) =>
             {
-                // The car's wear on before it is shown: the first time for a model it takes a moment to make
-                await Viewport3D.ShownSettledAsync(MostWearWait);
+                // Nothing may escape an async void: a throw here would end the game
+                try
+                {
+                    // The car's wear on before it is shown: the first time for a model it takes a moment to make
+                    await Viewport3D.ShownSettledAsync(MostWearWait);
 
-                // Once the scene has done setting itself up (the camera framing the car included)
-                _ = Dispatcher.BeginInvoke(DispatcherPriority.Background, DriveIn);
-                RevealAfter(SettleDelay);
-                // A garage revealed before its first frame (the timeout) is ready only now
-                _ = Dispatcher.BeginInvoke(DispatcherPriority.Background, TellSceneReady);
+                    // Once the scene has done setting itself up (the camera framing the car included)
+                    _ = Dispatcher.BeginInvoke(DispatcherPriority.Background, DriveIn);
+                    RevealAfter(SettleDelay);
+                    // A garage revealed before its first frame (the timeout) is ready only now
+                    _ = Dispatcher.BeginInvoke(DispatcherPriority.Background, TellSceneReady);
+                }
+                catch (Exception ex)
+                {
+                    StreetCorsa.Logging.AppLoggerFactory.CreateLogger("Garage").Error(ex, "The garage could not be shown once its scene was up");
+                    RevealAfter(TimeSpan.Zero);
+                }
             };
 
-            // The car comes after the first frame: the flow's enter script plays with it, not before it is there
-            System.ComponentModel.DependencyPropertyDescriptor
-                .FromProperty(StreetCorsa.Controls.CarViewport3D.HasCarProperty, typeof(StreetCorsa.Controls.CarViewport3D))
-                .AddValueChanged(Viewport3D, (_, _) => Dispatcher.BeginInvoke(DispatcherPriority.Background, TellSceneReady));
+            // The car comes after the first frame: the flow's enter script plays with it, not before it is there. Watched
+            // only while the view is up: the descriptor's table would otherwise hold every garage view ever made.
+            Loaded += (_, _) =>
+            {
+                HasCarDescriptor.RemoveValueChanged(Viewport3D, OnHasCarChanged);
+                HasCarDescriptor.AddValueChanged(Viewport3D, OnHasCarChanged);
+            };
+            Unloaded += (_, _) => HasCarDescriptor.RemoveValueChanged(Viewport3D, OnHasCarChanged);
             Viewport3D.Failed += (_, _) => RevealAfter(TimeSpan.Zero);
 
             DataContextChanged += (_, e) =>
@@ -256,6 +269,11 @@ namespace StreetCorsa.Screens.Garage
             slide.BeginAnimation(System.Windows.Media.TranslateTransform.YProperty,
                 new DoubleAnimation(show ? 0 : BarSwapDrop, BarSwapDuration) { EasingFunction = ease });
         }
+
+        private static readonly System.ComponentModel.DependencyPropertyDescriptor HasCarDescriptor =
+            System.ComponentModel.DependencyPropertyDescriptor.FromProperty(StreetCorsa.Controls.CarViewport3D.HasCarProperty, typeof(StreetCorsa.Controls.CarViewport3D));
+
+        private void OnHasCarChanged(object? sender, EventArgs e) => Dispatcher.BeginInvoke(DispatcherPriority.Background, TellSceneReady);
 
         private Window? _window;
 

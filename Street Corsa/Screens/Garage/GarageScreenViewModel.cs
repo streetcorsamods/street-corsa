@@ -573,7 +573,7 @@ namespace StreetCorsa.Screens.Garage
             }
 
             // Out here too: a check that threw never got to it, and the player may have left meanwhile
-            if (!ReferenceEquals(_navigationService.CurrentScreen, this) || !CanLeave()) return;
+            if (!ReferenceEquals(_navigationService.CurrentScreen, this) || _endingDay) return;
 
             await DriveOutTo(station);
         }
@@ -610,7 +610,7 @@ namespace StreetCorsa.Screens.Garage
                 _logger.Warning(ex, "Could not check {Car} before the paint booth", car.DefinitionId);
             }
 
-            if (!ReferenceEquals(_navigationService.CurrentScreen, this) || !CanLeave()) return;
+            if (!ReferenceEquals(_navigationService.CurrentScreen, this) || _endingDay) return;
             if (!runs)
             {
                 LeaveTo(() => _navigationService.Go(booth, _gameState));
@@ -670,7 +670,7 @@ namespace StreetCorsa.Screens.Garage
         /// <summary>Leaves the garage (the window fades the screens over), unless the day is being ended</summary>
         private void LeaveTo(Func<bool> navigate)
         {
-            if (!CanLeave()) return;
+            if (_endingDay) return;
 
             try
             {
@@ -684,8 +684,14 @@ namespace StreetCorsa.Screens.Garage
 
         private bool _endingDay;
 
-        /// <summary>Nothing leads out of the garage, nor launches a race, while the day is being ended</summary>
-        private bool CanLeave() => !_endingDay;
+        // A tile is taking the player out (its checks, the car driving out): no other tile leads out meanwhile
+        private bool _goingOut;
+
+        /// <summary>
+        /// Nothing leads out of the garage, nor launches a race, while the day is being ended or a tile is taking the
+        /// player out
+        /// </summary>
+        private bool CanLeave() => !_endingDay && !_goingOut;
 
         /// <summary>Asks, then ends the day: the night's scheduled work runs, and the new day is saved</summary>
         private void OnEndDay() => Dialogs.Confirmation.EndDayQuestion.Ask(_dialogService, _timeService, _gameState, EndDay);
@@ -856,7 +862,21 @@ namespace StreetCorsa.Screens.Garage
         private async Task OnTileAsync(string to)
         {
             if (!CanLeave()) return;
+            _goingOut = true;
+            RelayCommand.RaiseCanExecuteChanged();
+            try
+            {
+                await GoOutAsync(to);
+            }
+            finally
+            {
+                _goingOut = false;
+                RelayCommand.RaiseCanExecuteChanged();
+            }
+        }
 
+        private async Task GoOutAsync(string to)
+        {
             var kind = _navigationService.Flow.KindOf(to);
             if (ScreenKinds.IsOverlay(kind))
             {
@@ -902,7 +922,7 @@ namespace StreetCorsa.Screens.Garage
             if (_endDayOnArrival)
             {
                 _endDayOnArrival = false;
-                _ = System.Windows.Threading.Dispatcher.CurrentDispatcher.InvokeAsync(EndDay);
+                _navigationService.EndDayLater(this, EndDay);
             }
         }
 

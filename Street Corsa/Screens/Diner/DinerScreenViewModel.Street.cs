@@ -1,5 +1,4 @@
 using System.IO;
-using System.Windows.Threading;
 using StreetCorsa.Configuration;
 using StreetCorsa.Controls.Street;
 using StreetCorsa.Models.GameState;
@@ -21,7 +20,6 @@ namespace StreetCorsa.Screens.Diner
     /// </summary>
     public partial class DinerScreenViewModel
     {
-        private bool _leaving;
         private Car? _car;
 
         // Where the player goes once the car has driven off
@@ -45,7 +43,7 @@ namespace StreetCorsa.Screens.Diner
         public bool HasStreetModel => Scene?.HasModel == true;
 
         /// <summary>The car stands in its bay and nobody is leaving: the diner's door is open</summary>
-        public bool IsParked => Stage.Phase == DriveInPhase.Standing && !_leaving;
+        public bool IsParked => Stage.Phase == DriveInPhase.Standing && !Leaving;
 
         private bool _isDinerOpen;
 
@@ -128,7 +126,7 @@ namespace StreetCorsa.Screens.Diner
             if (!IsActive) return;
             if (PlayerEngine.IsRunning) PlayerEngine.Toggle();
             RaiseStreet();
-            _ = Dispatcher.CurrentDispatcher.BeginInvoke(() => _navigationService.ScreenReady(this));
+            ScreenUp();
         }
 
         /// <summary>
@@ -138,7 +136,7 @@ namespace StreetCorsa.Screens.Diner
         private async void DriveOff(string exit)
         {
             if (!IsParked) return;
-            _leaving = true;
+            Leaving = true;
             _exit = exit;
             IsDinerOpen = false;
             RaiseStreet();
@@ -164,6 +162,10 @@ namespace StreetCorsa.Screens.Diner
             if (!IsActive) return;
             try
             {
+                // The visit's time first: a day that rolled over is saved, and the player leaves into it
+                await _visit;
+                if (!IsActive) return;
+
                 // Home, the car drives into the garage (its engine worked out here), as from the street
                 var catalog = _partsService.IsAvailable ? _partsService.Catalog : null;
                 var args = _exit == "back" ? new FlowArgs { Arrival = DrivingHome.Arrival(_gameState, OwnEngine, catalog) } : null;
@@ -183,7 +185,7 @@ namespace StreetCorsa.Screens.Diner
         private void StayParked()
         {
             if (PlayerEngine.IsRunning) PlayerEngine.Toggle();
-            _leaving = false;
+            Leaving = false;
             RaiseStreet();
         }
 

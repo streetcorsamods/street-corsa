@@ -80,7 +80,7 @@ namespace StreetCorsa
             // What a dialog has room for: the host less the card's margin and outline
             DialogHost.SizeChanged += (_, e) =>
             {
-                var (margin, outline) = (DialogCard.Margin, DialogCard.BorderThickness);
+                var (margin, outline) = (DialogFrame.Margin, DialogCard.BorderThickness);
                 DialogRoom.SetWidth(DialogContent, Math.Max(0, e.NewSize.Width - margin.Left - margin.Right - outline.Left - outline.Right));
                 DialogRoom.SetHeight(DialogContent, Math.Max(0, e.NewSize.Height - margin.Top - margin.Bottom - outline.Top - outline.Bottom));
             };
@@ -154,6 +154,8 @@ namespace StreetCorsa
             Reveal.SetIsShown(DialogHost, dialog);
             DialogHost.IsEnabled = dialog;
             ScreenHost.IsEnabled = !dialog && !radio && !_racingShown;
+            // The window's End Day button is the screen's, outside its host: it takes no click or key while the screen does not
+            EndDayButton.IsEnabled = ScreenHost.IsEnabled;
         }
 
         /// <summary>The keyboard back to what had it on the screen, once nothing is in front of it any more</summary>

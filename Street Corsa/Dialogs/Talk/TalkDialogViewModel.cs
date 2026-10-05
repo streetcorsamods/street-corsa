@@ -13,14 +13,13 @@ namespace StreetCorsa.Dialogs.Talk
     /// </summary>
     public sealed class TalkDialogViewModel : BaseDialogViewModel
     {
-        private readonly DialogService _dialogService;
         private readonly Action? _closed;
         private readonly Action? _buy;
         private bool _buying;
 
         public TalkDialogViewModel(DialogService dialogService, TalkViewModel talk, Action? closed = null, Action? buy = null)
+            : base(dialogService)
         {
-            _dialogService = dialogService;
             _closed = closed;
             _buy = buy;
             Talk = talk;
@@ -29,11 +28,11 @@ namespace StreetCorsa.Dialogs.Talk
                 talk.Buy = () =>
                 {
                     _buying = true;
-                    _dialogService.CloseDialog();
+                    Close();
                 };
             }
 
-            CloseCommand = new RelayCommand(() => _dialogService.CloseDialog());
+            CloseCommand = new RelayCommand(Close);
         }
 
         public TalkViewModel Talk { get; }

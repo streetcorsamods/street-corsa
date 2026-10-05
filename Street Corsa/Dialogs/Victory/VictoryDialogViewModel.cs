@@ -9,19 +9,18 @@ namespace StreetCorsa.Dialogs.Victory
     /// </summary>
     public class VictoryDialogViewModel : BaseDialogViewModel
     {
-        private readonly DialogService _dialogService;
         private readonly Action _toMainMenu;
 
         public VictoryDialogViewModel(DialogService dialogService, VictoryCard card, Action toMainMenu)
+            : base(dialogService)
         {
-            _dialogService = dialogService;
             _toMainMenu = toMainMenu;
             VictoryName = card.VictoryName;
             Description = card.Description;
             Stats = card.Stats;
             Footnote = card.Footnote;
 
-            KeepRacingCommand = new RelayCommand(() => _dialogService.CloseDialog());
+            KeepRacingCommand = new RelayCommand(Close);
             MainMenuCommand = new RelayCommand(OnMainMenu);
         }
 
@@ -37,7 +36,7 @@ namespace StreetCorsa.Dialogs.Victory
         // Closed first: the main menu comes up without the dialog over it
         private void OnMainMenu()
         {
-            _dialogService.CloseDialog();
+            Close();
             _toMainMenu();
         }
     }
