@@ -740,10 +740,21 @@ steps done, a counter counting by how far along it is. Path ids are kept in save
 
 ### streets
 
-One folder per street, as the base game's `streets\pretville`: a `street.json` and a model per light of the day
-(`street_day.kn5`, `street_dusk.kn5`, `street_night.kn5`). `"times": ["night"]` says when the street is used (left
-out: every light it has a model for). The Cruise screen picks a street at random among those that fit the hour, and
-keeps it while it still fits. When no street fits the hour, the one in view stays, in the nearest light it has.
+One folder per street, as the base game's `streets\mainstreet`: a `street.json` and its model, either one for every light
+of the day (`"model": "street.kn5"`, with a sky dome for each named `STREET_SKY_DAY`, `_DUSK` and `_NIGHT`; the
+ground's height next to it as `ground.bin`) or one per light (`street_day.kn5`, `street_dusk.kn5`, `street_night.kn5`,
+as `tools/StreetScene` makes from a panorama). `"times": ["night"]` says when the street is used (left out: every light
+it has a model for). `"glow"` makes the street's self-lit materials glow by light of the day (`"night": { "sign_roof":
+1.1 }`, 0 to 4). The Cruise screen picks a street at random among those that fit the hour, and keeps it while it still
+fits. When no street fits the hour, the one in view stays, in the nearest light it has.
+
+A street may have **the diner** on it: a `diner.json` next to its `street.json`, as the base game's Main Street. It gives
+the diner's ways (`arrive`: down the street and into the player's bay, the car stopping at the last point; `backOut`:
+out of the bay backwards; `leave`: from there off down the street), as `[x, z]` points in metres; where the driver
+looks in the bay (`lookWhileParked`, degrees to the left; `lookUpWhileParked`, degrees up, −15 to 15); and the `bays`
+the racers' cars are parked in (`x`, `z`, `heading` in degrees, 0 facing +z), in the order they fill. What it leaves out
+(`model`, `sun`, `lights`, `glow`, `credit`) is the street's. The diner is seen on the last mod's street that has one.
+`tools/DinerScene` builds the base game's (see [screens/diner.md](screens/diner.md)).
 
 ### stations
 
@@ -908,8 +919,11 @@ base game's the rest of the time. No script on a trigger: nothing moves, and the
 station; the base game has none), `station.arrive` (in off the road to the pump; the pump's buttons wait for the
 script to let go), `station.at_pump` (stopped at the pump, or towed there; the base game has none), `station.leave`
 (out onto the road; the screen goes when the script lets it), `street.rival_arrive` (a rival up the lane, stopping
-alongside), `street.rival_leave` (the rival away; it is gone when the script ends). And the flow's own, on the
-screens with the player's car on a 3D scene (the garage, the car lot, the gas station; not the street, where the
+alongside), `street.rival_leave` (the rival away; it is gone when the script ends), `diner.arrive` (down the street and
+into the bay at the diner; its buttons wait for the script to let go), `diner.parked` (in the bay, or back from a race;
+the base game has none), `diner.leave` (out of the bay and off down the street; the screen goes when the script lets
+it). And the flow's own, on the
+screens with the player's car on a 3D scene (the garage, the car lot, the gas station, the diner; not the street, where the
 player's car is the camera): `screen.<id>.enter` (the screen of that id in the flow is up and its own show is over: the
 garage once it is revealed and any car has driven in, the lot once its warehouse is up, the station once the car is at
 the pump, in place of a `station.at_pump` script still playing) and `screen.<id>.leave` (the player leaves it by a way
@@ -958,7 +972,8 @@ scene's middle, a measured one within 1000 of the car, in a scene's file as in a
 `"marks": { "kerb": [3, -4.5] }` and `"paths": { "round_back": [[0, 0], [5, 5], [0, 10]] }`, next to what it has.
 Besides these, the lot's warehouses have `exit` (their `exit`; without one, straight ahead), the garage has `door`
 (from `garages\<id>\scene.json`; without it, 7 metres behind the car), the gas stations have the paths `arrive` and
-`leave` and the mark `pump` (the end of `arrive`), and the streets have the paths `arrive` (up the lane to the stop)
+`leave` and the mark `pump` (the end of `arrive`), the diner has the paths `arrive`, `back_out` and `leave` and the mark
+`bay` (the end of `arrive`), and the streets have the paths `arrive` (up the lane to the stop)
 and `leave`, and the marks `alongside` (the end of `arrive`) and `gone` (out of sight up the lane). The car stands at
 the pump, the rival alongside, when nothing moves them: a scene that names its own `arrive` moves where they stand
 with it.

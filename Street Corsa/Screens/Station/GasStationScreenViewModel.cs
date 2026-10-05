@@ -83,7 +83,7 @@ namespace StreetCorsa.Screens.Station
             _waitForStation = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(250) };
             _waitForStation.Tick += (_, _) => PullInWhenShown();
 
-            Stage.AtPump += OnAtPump;
+            Stage.Arrived += OnAtPump;
             Stage.Gone += OnGone;
         }
 
@@ -98,7 +98,7 @@ namespace StreetCorsa.Screens.Station
         #region The station
 
         /// <summary>What the car does, which the station's viewport shows</summary>
-        public StationStage Stage { get; } = new();
+        public DriveInStage Stage { get; } = new() { UnseenArrivalCue = Audio.Sfx.StationBell };
 
         public StationScene? Station { get; private set; }
 
@@ -328,7 +328,7 @@ namespace StreetCorsa.Screens.Station
 
                 // Only on the way in: an engine worked out after the car stopped at the pump stays off (nobody fills a
                 // running car), and driving off starts it itself
-                if (_active && running && Stage.Phase is StationPhase.Waiting or StationPhase.Arriving) PlayerEngine.StartRunning();
+                if (_active && running && Stage.Phase is DriveInPhase.Waiting or DriveInPhase.Arriving) PlayerEngine.StartRunning();
             }
             catch (Exception ex)
             {
@@ -359,7 +359,7 @@ namespace StreetCorsa.Screens.Station
         public Services.Scripting.ScriptFacts ScriptFacts => new(_gameState.Date, StreetLights.At(_gameState.Date), Stage.Towed);
 
         /// <summary>A leave script played and the way home went nowhere: the car is at the pump again</summary>
-        void IScriptedScreen.PutBackAfterLeave() => Stage.BackToPump();
+        void IScriptedScreen.PutBackAfterLeave() => Stage.BackToStand();
 
         private void OnAtPump()
         {
@@ -570,7 +570,7 @@ namespace StreetCorsa.Screens.Station
                 StatusText = GameText.Say("station.ui.start_up");
                 try
                 {
-                    await StartUpAsync();
+                    await DrivingHome.StartUpAsync(PlayerEngine, () => _active);
                 }
                 catch (Exception ex)
                 {
@@ -593,24 +593,6 @@ namespace StreetCorsa.Screens.Station
             }
         }
 
-        /// <summary>
-        /// The starter, and a moment at idle before pulling away. An engine that will not catch (or has no sound to
-        /// start) is waited on a few seconds at most: the car drives off all the same.
-        /// </summary>
-        private async Task StartUpAsync()
-        {
-            if (!PlayerEngine.IsRunning) PlayerEngine.Toggle();
-
-            var clock = System.Diagnostics.Stopwatch.StartNew();
-            while (_active && PlayerEngine.State != Audio.EngineState.Running && clock.Elapsed < StartWait)
-                await Task.Delay(50);
-
-            await Task.Delay(IdleBeforePullingAway);
-            if (_active && PlayerEngine.State != Audio.EngineState.Running) PlayerEngine.StartRunning();
-        }
-
-        private static readonly TimeSpan StartWait = TimeSpan.FromSeconds(4);
-        private static readonly TimeSpan IdleBeforePullingAway = TimeSpan.FromSeconds(1.2);
 
         private void OnGone()
         {
@@ -629,7 +611,7 @@ namespace StreetCorsa.Screens.Station
                 await _trip;
                 Save();
                 // Driven off, the car drives into the garage; towed home, it is simply there
-                var home = new FlowArgs { Arrival = _car != null && Stage.Phase == StationPhase.Gone ? DrivingHome.Arrival(_gameState, _engine, _catalog) : null };
+                var home = new FlowArgs { Arrival = _car != null && Stage.Phase == DriveInPhase.Gone ? DrivingHome.Arrival(_gameState, _engine, _catalog) : null };
                 if (await _navigationService.LeaveAsync(this, "back", _gameState, home, first: CloseCurtain)) return;
             }
             catch (Exception ex)
@@ -639,7 +621,7 @@ namespace StreetCorsa.Screens.Station
 
             // Back at the pump, engine off, so DRIVE OFF can try again
             if (PlayerEngine.IsRunning) PlayerEngine.Toggle();
-            Stage.BackToPump();
+            Stage.BackToStand();
             StatusText = GameText.Say("station.ui.still_at_pump");
             OpenCurtain?.Invoke();
             _leaving = false;

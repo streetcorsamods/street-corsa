@@ -25,10 +25,10 @@ namespace StreetCorsa.Screens.Diner
     /// <summary>One line of the street talk, with when it happened ("Today", "Yesterday", "Jun 3")</summary>
     public sealed record StreetTalkLine(string When, string Text);
 
-    public class DinerScreenViewModel : BaseScreenViewModel
+    public partial class DinerScreenViewModel : BaseScreenViewModel
     {
-        /// <summary>The sound of the place</summary>
-        public override string? Ambience => "ambience.diner";
+        /// <summary>The sound of the place: out on Main Street, in the car</summary>
+        public override string? Ambience => "ambience.street";
 
         private readonly NavigationService _navigationService;
         private readonly DialogService _dialogService;
@@ -52,8 +52,8 @@ namespace StreetCorsa.Screens.Diner
         /// <summary>Out to the street, to sit at the curb and wait for a rival to pull up</summary>
         public RelayCommand CruiseCommand { get; }
 
-        /// <summary>The way out to the street leads somewhere: a game may have no street</summary>
-        public bool CanCruise => _navigationService.CanLeave(this, "cruise");
+        /// <summary>Parked, and the way out to the street leads somewhere: a game may have no street</summary>
+        public bool CanCruise => IsParked && _navigationService.CanLeave(this, "cruise");
         public RelayCommand<OpponentDisplayViewModel> SelectOpponentCommand { get; }
         public RelayCommand<TrackCardViewModel> SelectTrackCommand { get; }
         public AsyncRelayCommand ChallengeCommand { get; }
@@ -431,8 +431,9 @@ namespace StreetCorsa.Screens.Diner
             _launcher = new ChallengeLauncher(navigationService, dialogService, gameState, catalogRepository, challengeService,
                 raceSetup, _logger);
 
-            GarageCommand = new RelayCommand(OnGarage);
-            CruiseCommand = new RelayCommand(() => _navigationService.Leave(this, "cruise", _gameState));
+            GarageCommand = new RelayCommand(OnGarage, () => IsParked);
+            CruiseCommand = new RelayCommand(() => DriveOff("cruise"), () => CanCruise);
+            MakeStreetCommands();
             TalkCommand = new RelayCommand(() =>
             {
                 if (SelectedOpponent?.Opponent is { } rival && Services.Talk.TalkDesk.Shared.IsAvailable)
@@ -479,11 +480,11 @@ namespace StreetCorsa.Screens.Diner
             // Notify UI about opponents availability
             OnPropertyChanged(nameof(HasOpponents));
 
-            // Keep the one picked before if they are still here, else the first; with nobody here, nobody
+            // Keep the one picked before if they are still here; else nobody, and the diner opens on everyone who is in
             var keep = Opponents.FirstOrDefault(o => ReferenceEquals(o.Opponent, previous));
-            if (keep != null || Opponents.Count > 0)
+            if (keep != null)
             {
-                OnSelectOpponent(keep ?? Opponents[0]);
+                OnSelectOpponent(keep);
             }
             else
             {
@@ -498,6 +499,8 @@ namespace StreetCorsa.Screens.Diner
                 _talkService.Prepare(TalkContextFor(opponentVm, TalkTrigger.OpponentSelected));
 
             LoadStreetTalk();
+            OnPropertyChanged(nameof(RacersIn));
+            ParkRacersCars();
         }
 
         private void LoadStreetTalk()
@@ -751,6 +754,7 @@ namespace StreetCorsa.Screens.Diner
         private bool CanChallenge()
         {
             return !_entering &&
+                   IsParked &&
                    SelectedOpponent != null &&
                    SelectedTrack != null &&
                    _gameState.Player.Cars.Count > 0 &&
@@ -836,14 +840,11 @@ namespace StreetCorsa.Screens.Diner
             if (outcome.Status == ChallengeStatus.Declined) OpponentMessage = outcome.Message ?? "";
         }
 
+        /// <summary>Home: the car backs out of its bay and drives off, and drives into the garage</summary>
         private void OnGarage()
         {
-            _logger.Information("Navigating to garage");
-
-            // Home in the car from a night out: it drives into the garage (its engine worked out there), when it has one
-            // that runs, as from the street
-            var catalog = _partsService.IsAvailable ? _partsService.Catalog : null;
-            _navigationService.Leave(this, "back", _gameState, new FlowArgs { Arrival = DrivingHome.Arrival(_gameState, null, catalog) });
+            _logger.Information("Driving home from the diner");
+            DriveOff("back");
         }
 
         /// <summary>Why the player's car cannot be out on the streets (<see cref="StreetReady"/>); null when it can, or nobody can tell</summary>
@@ -894,6 +895,10 @@ namespace StreetCorsa.Screens.Diner
                 _logger.Error(ex, "Could not list the racers at the diner");
             }
 
+            // The car on the street: it comes down Main Street into its bay, or stands there already when back from a race
+            _active = true;
+            SetUpStreet();
+
             if (_returning) return;
 
             // Nobody is challenged until the visit is paid for: a race set up against a racer who left with the old day
@@ -923,6 +928,7 @@ namespace StreetCorsa.Screens.Diner
         public override void Exit()
         {
             base.Exit();
+            LeaveStreet();
             _logger.Information("Exited diner screen");
         }
     }

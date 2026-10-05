@@ -112,6 +112,10 @@ public class StreetViewport3D : OnboardViewport3D
 
         LightScene(renderer, scene.LightingFor(light), scene.Sun);
 
+        // A street of one model for every light: its sky for the hour, its signs and windows lit for it
+        if (scene.Model != null) ShowSky(renderer, StreetScene.SkyNode(light));
+        SceneDressing.Glow(renderer, scene.GlowAt(light));
+
         // Parked where the scene has the player, lifted onto the road as the car's own data says
         if (!await LoadPlayerCarAsync(renderer, player, light, frame => Placement(scene, scene.Player, 0f, lift: frame.Lift))) return;
 

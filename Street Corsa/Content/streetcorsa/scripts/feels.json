@@ -29,6 +29,18 @@
       "gear": 2
     },
     {
+      "id": "back_out",
+      "kind": "road",
+      "_comment": "Backing out of a parking bay: a walking pace in reverse, the clutch slipping the whole way",
+      "cruiseSpeed": 1.6,
+      "acceleration": 0.9,
+      "brake": 1.8,
+      "cornerAccel": 0.8,
+      "clutchSpeed": 3,
+      "cruiseThrottle": 0.1,
+      "gear": 1
+    },
+    {
       "id": "launch",
       "kind": "launch",
       "_comment": "A rival leaving: hard off the line, a little less in each gear, never past what a street car does",

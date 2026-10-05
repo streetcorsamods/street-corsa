@@ -21,11 +21,16 @@ Diner ──[CRUISE THE STREETS]──▶ Cruise ──[DINER] / [GARAGE]──�
 
 ## The street
 
-`Content/streetcorsa/streets/pretville/`: `street_day.kn5`, `street_dusk.kn5`, `street_night.kn5` and `street.json`. It is Poly
-Haven's **Pretville Street** (Dimitrios Savva and Jarod Guest, CC0: free to ship, no credit asked; it is given in
-`street.json` all the same), a 1950s American film-set street.
+**Main Street** since step 28, idea 6 (2026-10-05; see [diner.md](diner.md)): `Content/streetcorsa/streets/mainstreet/`,
+one model for every light of the day with a sky dome each, the street the diner is on, built from the Quaternius kit.
+The player is parked in the parking lane on the diner's side east of its lot, facing west; the rivals come up the
+westbound lane behind and stop alongside. The owner found the dome below poor ("the street dome looks bad"), so
+Pretville left the base game; the tools that made it stay, for a mod's panorama street, and are described here.
 
-**How the scene is made** (`tools/StreetScene`):
+The first street was Poly Haven's **Pretville Street** (Dimitrios Savva and Jarod Guest, CC0), a 1950s American film-set
+street: `street_day.kn5`, `street_dusk.kn5`, `street_night.kn5` and `street.json` (in git history).
+
+**How a panorama street is made** (`tools/StreetScene`):
 1. `prepare_street.py <panorama.hdr> <out> [capture height] [floor half-size]` (numpy and opencv-python) tone-maps the
    8k HDR into `sky_<light>.jpg` (the whole panorama, 4096 × 2048) and `floor_<light>.jpg` (the ground seen from
    above, 40 m square, 4096²), for day, dusk and night. Dusk and night are graded from the day's photo: dimmer, tinted,

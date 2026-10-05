@@ -62,6 +62,26 @@ namespace StreetCorsa.Services.Street
         }
 
         /// <summary>The light of the day as the renderer gets it; the day's when the file leaves one out, else <see cref="Default"/></summary>
+        /// <summary>
+        /// How bright each self-lit material (a sign, the windows) glows at each light of the day a scene's file names; a
+        /// light named for no time of day, or a glow out of 0 to 4, is skipped
+        /// </summary>
+        public static IReadOnlyDictionary<StreetLight, IReadOnlyDictionary<string, float>> MaterialGlows(Dictionary<string, Dictionary<string, float>?>? entries)
+        {
+            var glows = new Dictionary<StreetLight, IReadOnlyDictionary<string, float>>();
+            foreach (var (name, materials) in entries ?? [])
+            {
+                if (materials != null && TryParse(name, out var light))
+                    glows[light] = materials.Where(m => float.IsFinite(m.Value) && m.Value is >= 0 and <= 4).ToDictionary(m => m.Key, m => m.Value, StringComparer.Ordinal);
+            }
+
+            return glows;
+        }
+
+        /// <summary>The glows of a light of the day out of <see cref="MaterialGlows"/>; none when it names none</summary>
+        public static IReadOnlyDictionary<string, float> GlowAt(IReadOnlyDictionary<StreetLight, IReadOnlyDictionary<string, float>> glows, StreetLight light) =>
+            glows.TryGetValue(light, out var glow) ? glow : new Dictionary<string, float>();
+
         public static StreetLighting For(IReadOnlyDictionary<StreetLight, StreetLighting> lights, StreetLight light) =>
             lights.TryGetValue(light, out var lighting) ? lighting
             : lights.TryGetValue(StreetLight.Day, out var day) ? day

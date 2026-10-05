@@ -151,6 +151,18 @@ internal static class Kn5SceneWriter
     }
 
     /// <summary>
+    /// A dome round the scene for a light of the day, drawn with an equirectangular panorama and lit by itself, from a
+    /// little below the horizon to the top: its material &lt;prefix&gt;&lt;light&gt;, its mesh the same in capitals
+    /// (STATION_SKY_DUSK), which the game shows at that light and hides at the others
+    /// </summary>
+    public static void AddSky(IKn5 kn5, string prefix, string light, string panorama, float radius)
+    {
+        var key = AddTexture(kn5, panorama, $"{prefix}{light}{Path.GetExtension(panorama).ToLowerInvariant()}");
+        var material = AddMaterial(kn5, prefix + light, key, ambient: 0f, diffuse: 0f, emissive: 1f);
+        SkyDome(kn5, (prefix + light).ToUpperInvariant(), material, radius, segments: 128, rings: 48, below: -0.08f);
+    }
+
+    /// <summary>
     /// Saves the model whole or not at all: to a temp file next to it (named as SafeFile names its own, so its sweep
     /// knows it), flushed to the disk, then renamed over the target. A builder that stops half way leaves the shipped
     /// scene as it was

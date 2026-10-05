@@ -27,7 +27,7 @@ namespace StreetCorsa.Services.Station
         float LookAtPump,
         float[] Sun,
         IReadOnlyDictionary<StreetLight, StreetLighting> Lights,
-        StationPrices Prices)
+        StationPrices Prices) : IDriveInScene
     {
         /// <summary>
         /// The station's model, a KN5 in its folder; the screen works without it (no 3D), the drive and all. Empty when
@@ -42,6 +42,17 @@ namespace StreetCorsa.Services.Station
 
         /// <summary>The sky dome drawn at a light of the day; the others are hidden</summary>
         public static string SkyNode(StreetLight light) => "STATION_SKY_" + StreetLights.Describe(light).ToUpperInvariant();
+
+        string IDriveInScene.SkyNodeAt(StreetLight light) => SkyNode(light);
+
+        /// <summary>The car stands at the pump, at the end of the way in</summary>
+        public string StandMark => "pump";
+
+        float IDriveInScene.LookWhileStanding => LookAtPump;
+
+        float IDriveInScene.LookUpWhileStanding => 0f;
+
+        IReadOnlyDictionary<string, float> IDriveInScene.GlowAt(StreetLight light) => new Dictionary<string, float>();
 
         public StreetLighting LightingFor(StreetLight light) => SceneLighting.For(Lights, light);
 
@@ -111,9 +122,9 @@ namespace StreetCorsa.Services.Station
 
         private static StationScene? Build(string folder, string file, SceneEntry? entry)
         {
-            var arrive = Points(entry?.Arrive);
-            var leave = Points(entry?.Leave);
-            if (entry == null || !GoesSomewhere(arrive) || !GoesSomewhere(leave))
+            var arrive = ScenePaths.Points(entry?.Arrive);
+            var leave = ScenePaths.Points(entry?.Leave);
+            if (entry == null || !ScenePaths.GoesSomewhere(arrive) || !ScenePaths.GoesSomewhere(leave))
             {
                 Logger.Warning("The gas station {Path} has no way in or no way out (two points each at least, a metre apart)", file);
                 ModProblems.Add("Stations", $"{file} has no way in or no way out (two points each at least, a metre apart); left out");
@@ -134,13 +145,6 @@ namespace StreetCorsa.Services.Station
                 Logger.Warning("The gas station {Id} has no model {Path}: it is shown without its picture", station.Id, station.Kn5);
             return station;
         }
-
-        /// <summary>A way that gets a car somewhere: two points at least, not all on one spot</summary>
-        private static bool GoesSomewhere(IReadOnlyList<GroundPoint> points) =>
-            points.Count >= 2 && points.Any(p => MathF.Abs(p.X - points[0].X) + MathF.Abs(p.Z - points[0].Z) >= 1f);
-
-        private static List<GroundPoint> Points(List<float[]>? points) =>
-            (points ?? []).Where(p => p is { Length: 2 } && float.IsFinite(p[0]) && float.IsFinite(p[1])).Select(p => new GroundPoint(p[0], p[1])).ToList();
 
         // A price a mod left out, or one no station would ask, is the base game's
         private static decimal Price(decimal? price, decimal fallback) => price is > 0 and < 10000 ? price.Value : fallback;

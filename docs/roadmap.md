@@ -1421,7 +1421,23 @@ Taken before idea 6 (the owner agreed): its room is our own, so no outside model
 - Docs: `docs/screens/part-shop.md`, `docs/modding.md` (`shopscenes`, `partshops` clerk/look, the prompts),
   `docs/ai-integration.md`.
 
-### Idea 6: the diner street (planned; the parts shop notes below are idea 7's, built above)
+### Idea 6: the diner street (built 2026-10-05 on `feature/diner-street`, see [screens/diner.md](screens/diner.md))
+
+- **As built:** Main Street (`streets/mainstreet`), our own block of the Quaternius kit (CC0) and WaajaaH's diner
+  (CC BY), one KN5 with a sky dome per light, signs of our own, glowing at dusk and night; the Cruise screen is set there
+  too and Pretville left the base game (the owner: "the street dome looks bad"). The diner: down Main Street from the
+  driver's seat into a bay facing the diner, the racers' cars parked along its front; its name and Into the diner over
+  the street; one window with the racers and the word on the street, a racer's card, races, stakes and talk in the same
+  window; out of the bay backwards and off down the street to the garage or the curb. The gas station's viewport became
+  `DriveInViewport3D` (with `DriveInStage`, `IDriveInScene`), shared by both; `tools/Shared` gained `ObjModel` and
+  `Ground`. Pipeline: `tools/DinerScene/build_street.py`.
+- **After the owner's first look (2026-10-05, "works like a charm"):** houses on their lawns beyond downtown in place
+  of most of the brick ("too many buildings"), and shadows for the racers' parked cars (the shadow box widened over
+  the bays, the street lit more by the sun).
+- **Not done:** clicking a racer's car in the lot does not open them; the parts store download was left out (a generated
+  kiosk); the street has no lamp posts or traffic; the diner's ground floor is the model's plain front.
+
+The plan as it was:
 
 - **Diner refactor (owner):** a full 1960s/70s American street model instead of the street dome; a cinematic arriving
   and leaving like the gas station's; the street scene is the screen, with no data by default: a toggle opens one modal

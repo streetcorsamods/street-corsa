@@ -48,7 +48,8 @@ public class StreetEncounterTests
     {
         var scene = Assert.Single(StreetScenes.LoadAll(ModSet.Load(RepoPaths.Content)));
 
-        Assert.Equal("pretville", scene.Id);
+        Assert.Equal("mainstreet", scene.Id);
+        Assert.Equal("street.kn5", scene.Model);
         foreach (var light in Enum.GetValues<StreetLight>())
         {
             Assert.True(File.Exists(scene.Kn5For(light)), light.ToString());
