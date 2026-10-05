@@ -28,6 +28,9 @@ public class DinerViewport3D : DriveInViewport3D
     private readonly List<StreetCar?> _parked = [];
     private int _parkedLoad;
 
+    // The parks asked for, one after another: two at once would put two cars in the same bay's slot
+    private Task _parks = Task.CompletedTask;
+
     public DinerViewport3D()
         : base("Diner")
     {
@@ -52,12 +55,39 @@ public class DinerViewport3D : DriveInViewport3D
         set => SetValue(ParkedCarsProperty, value);
     }
 
-    protected override void OnSceneUp(GarageRenderer renderer) => _ = ParkAsync(renderer, ++_parkedLoad);
+    protected override void OnSceneUp(GarageRenderer renderer) => QueuePark(renderer);
 
     // Before the scene is up the racers wait: their cars come once the street and the player's car are in (OnSceneUp)
     private void OnParkedCarsChanged()
     {
-        if (IsSceneUp && Renderer is { } renderer) _ = ParkAsync(renderer, ++_parkedLoad);
+        if (IsSceneUp && Renderer is { } renderer) QueuePark(renderer);
+    }
+
+    /// <summary>
+    /// Parks the racers once the parks asked for before are done (<see cref="ParkAsync"/>). The newest ask is the one
+    /// that counts: one overtaken while it waited does nothing.
+    /// </summary>
+    private void QueuePark(GarageRenderer renderer)
+    {
+        var load = ++_parkedLoad;
+        _parks = After(_parks, () => ParkInTurnAsync(renderer, load));
+    }
+
+    /// <summary>A park nobody waits on: what goes wrong in it ends here, a lost device rebuilt as a load's is</summary>
+    private async Task ParkInTurnAsync(GarageRenderer renderer, int load)
+    {
+        try
+        {
+            await ParkAsync(renderer, load);
+        }
+        catch (Exception ex) when (IsDeviceLost(ex))
+        {
+            if (Renderer == renderer) RebuildAfterDeviceLost(ex, "parking the racers' cars");
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            Logger.Error(ex, "The racers' cars could not be parked at the diner");
+        }
     }
 
     protected override void OnRendererDisposed()
@@ -74,7 +104,7 @@ public class DinerViewport3D : DriveInViewport3D
     /// </summary>
     private async Task ParkAsync(GarageRenderer renderer, int load)
     {
-        if (Scene is not DinerScene scene) return;
+        if (load != _parkedLoad || Renderer != renderer || !IsLoaded || Scene is not DinerScene scene) return;
         var cars = ParkedCars ?? [];
 
         // Parked, their lights are off: at night the renderer would read (or guess) every car's lights, a long stall for
@@ -113,7 +143,7 @@ public class DinerViewport3D : DriveInViewport3D
                 slot.LocalMatrix = standing;
                 await TrackDeviceWork(slot.SetCarAsync(CarDescription.FromDirectory(car.Directory), SkinOrDefault(car.Directory, car.Skin), RendererToken));
                 if (load != _parkedLoad || Renderer != renderer || !IsLoaded) return;
-                await ShownPartsOnCar.SetAsync(slot.CarNode, car.Shown, renderer.DeviceContextHolder, WearLayer.LotPicture);
+                await ShowPartsAsync(renderer, slot.CarNode, car.Shown, WearLayer.LotPicture);
                 if (load != _parkedLoad || Renderer != renderer || !IsLoaded) return;
 
                 slot.LocalMatrix = standing;

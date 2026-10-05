@@ -1276,7 +1276,7 @@ public class CarViewport3D : D3DViewportBase
         try
         {
             if (Renderer is not { } renderer) return;
-            if (await ShownPartsOnCar.SetAsync(renderer.CarNode, PartsVisible ? Shown?.WithoutExtras() : Shown, renderer.DeviceContextHolder) && renderer == Renderer)
+            if (await ShowPartsAsync(renderer, renderer.CarNode, PartsVisible ? Shown?.WithoutExtras() : Shown) && renderer == Renderer)
             {
                 renderer.RefreshShadows();
                 Invalidate();

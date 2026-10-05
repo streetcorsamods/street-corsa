@@ -77,20 +77,23 @@ namespace StreetCorsa.Services.Station
             var fu = u - column;
             var fv = v - row;
 
-            // Between the four cells round the point, the ones with ground counting by how near they are
+            // Between the four cells round the point, the ones with ground counting by how near they are (unrolled: this
+            // is asked four times a frame while a car drives)
             float sum = 0f, weight = 0f;
-            foreach (var (dc, dr, w) in new[] { (0, 0, (1 - fu) * (1 - fv)), (1, 0, fu * (1 - fv)), (0, 1, (1 - fu) * fv), (1, 1, fu * fv) })
+            Add(column, row, (1 - fu) * (1 - fv));
+            Add(column + 1, row, fu * (1 - fv));
+            Add(column, row + 1, (1 - fu) * fv);
+            Add(column + 1, row + 1, fu * fv);
+            return weight > 0f ? sum / weight : 0f;
+
+            void Add(int c, int r, float w)
             {
-                var c = column + dc;
-                var r = row + dr;
-                if (c < 0 || r < 0 || c >= _columns || r >= _rows) continue;
+                if (c < 0 || r < 0 || c >= _columns || r >= _rows) return;
                 var height = _heights[r * _columns + c];
-                if (!float.IsFinite(height) || w <= 0f) continue;
+                if (!float.IsFinite(height) || w <= 0f) return;
                 sum += height * w;
                 weight += w;
             }
-
-            return weight > 0f ? sum / weight : 0f;
         }
     }
 }

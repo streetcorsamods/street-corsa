@@ -112,6 +112,12 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     private Dictionary<RenderableList, float>? _fading;
     private Func<IRenderableObject, bool>? _settled;
 
+    // UpdateFading's working, kept from frame to frame so a fade makes no garbage: the nodes fading as worked out now,
+    // the nodes looked at already, and how far each moving part is in sight on its way (the first motion of a node's)
+    private Dictionary<RenderableList, float> _fadingNow = new();
+    private readonly HashSet<PartNode> _fadeLooked = new();
+    private readonly Dictionary<PartNode, float> _travel = new();
+
     // Whether the prop and the candidates lean with the car's body: not the ones made for the stand
     private bool _propLeans;
     private bool _candidatesLean;
@@ -175,13 +181,23 @@ public class GarageRenderer : DarkKn5ObjectRenderer
 
     // The base draws the shadows again whenever the main car's middle is not where they were last centred: told the
     // car's middle after drawing them round another point, it only does so when the car moves or the scene changes
-    private static readonly FieldInfo? PreviousShadowsTarget =
+    internal static readonly FieldInfo? PreviousShadowsTarget =
         typeof(ForwardKn5ObjectRenderer).GetField("_previousShadowsTarget", BindingFlags.NonPublic | BindingFlags.Instance);
+
+    // A renderer built from an AcTools without that field draws the shadows round the car: said once, not every frame
+    private static bool _shadowsFieldMissingTold;
 
     protected override void UpdateShadows(ShadowsDirectional shadows, Vector3 center)
     {
         if (ShadowsCentre is not { } wanted || PreviousShadowsTarget == null)
         {
+            if (ShadowsCentre != null && PreviousShadowsTarget == null && !_shadowsFieldMissingTold)
+            {
+                _shadowsFieldMissingTold = true;
+                Logging.AppLoggerFactory.CreateLogger("Renderer").Warning(
+                    "AcTools.Render has no _previousShadowsTarget: the shadows stay centred on the main car, and cars parked away from it may stand without theirs");
+            }
+
             base.UpdateShadows(shadows, center);
             return;
         }
@@ -729,29 +745,69 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     /// </summary>
     private void UpdateFading()
     {
-        Dictionary<RenderableList, float>? fading = null;
-        foreach (var node in _motions.Select(m => m.Node).Concat(_hiddenNodes).Concat(_hideFades.Keys).Distinct())
+        _travel.Clear();
+        foreach (var motion in _motions)
         {
-            if (!node.List.IsEnabled) continue;
-            var step = (float)Math.Round(OpacityOf(node) * FadeSteps);
-            if (step < FadeSteps) (fading ??= new())[node.List] = step;
+            if (motion is PartMotion part) _travel.TryAdd(part.Node, part.Opacity);
         }
 
-        var same = fading == null ? _fading == null : _fading != null && _fading.Count == fading.Count && fading.Keys.All(_fading.ContainsKey);
-        _fading = fading;
-        if (same) return;
+        var fading = _fadingNow;
+        fading.Clear();
+        _fadeLooked.Clear();
+        foreach (var motion in _motions) LookAt(motion.Node);
+        foreach (var node in _hiddenNodes) LookAt(node);
+        foreach (var node in _hideFades.Keys) LookAt(node);
 
-        _settled = fading == null ? null : o => o is not RenderableList list || !fading.ContainsKey(list);
+        if (fading.Count == 0)
+        {
+            if (_fading == null) return;
+            _fading = null;
+            _settled = null;
+            SetShadowsDirty();
+            return;
+        }
+
+        // The same nodes fading: only how far each is along changes, and the filter on every other pass stays
+        if (_fading != null && _fading.Count == fading.Count && SameKeys(fading, _fading))
+        {
+            foreach (var (list, step) in fading) _fading[list] = step;
+            return;
+        }
+
+        // The worked-out set becomes the one drawn; the one drawn before is the working for the next frame
+        _fadingNow = _fading ?? new();
+        _fading = fading;
+        _settled = LeavingOut(fading);
         SetShadowsDirty();
+
+        void LookAt(PartNode node)
+        {
+            if (!_fadeLooked.Add(node) || !node.List.IsEnabled) return;
+            var step = (float)Math.Round(OpacityOf(node) * FadeSteps);
+            if (step < FadeSteps) fading[node.List] = step;
+        }
+
+        static bool SameKeys(Dictionary<RenderableList, float> a, Dictionary<RenderableList, float> b)
+        {
+            foreach (var key in a.Keys)
+            {
+                if (!b.ContainsKey(key)) return false;
+            }
+            return true;
+        }
     }
+
+    /// <summary>The filter that leaves the <paramref name="fading"/> nodes out of every other pass</summary>
+    private static Func<IRenderableObject, bool> LeavingOut(Dictionary<RenderableList, float> fading) =>
+        o => o is not RenderableList list || !fading.ContainsKey(list);
 
     /// <summary>
     /// How much of a part node is in sight, drawn see-through over the scene below 1 (<see cref="DrawFading"/>): the way
-    /// it is going (a part fades as it travels) and whether the player hid it
+    /// it is going (a part fades as it travels, as UpdateFading has found its motion) and whether the player hid it
     /// </summary>
     private float OpacityOf(PartNode node)
     {
-        var travel = _motions.OfType<PartMotion>().FirstOrDefault(m => ReferenceEquals(m.Node, node))?.Opacity ?? 1f;
+        var travel = _travel.TryGetValue(node, out var opacity) ? opacity : 1f;
         var shown = _hideFades.TryGetValue(node, out var fade) ? fade : _hiddenNodes.Contains(node) ? 0f : 1f;
         return travel * shown;
     }

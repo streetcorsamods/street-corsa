@@ -1,4 +1,5 @@
 using System.Numerics;
+using AcTools.Render.Kn5Specific.Objects;
 
 namespace StreetCorsa.Controls.Showcase;
 
@@ -68,6 +69,35 @@ public readonly record struct CarFrame(float FrontAxle, float RearAxle, float Ha
         if (wheelbase is < 1.5f or > 4.5f || halfTrack is < 0.4f or > 1.2f || wheelY is < 0.1f or > 0.7f) return null;
 
         return new CarFrame(front, rear, halfTrack, wheelY, height is > 0.8f and < 3f ? height : Nominal.Height);
+    }
+
+    /// <summary>
+    /// The frame of the car in <paramref name="slot"/>, from its wheels; something car-sized when they cannot be found
+    /// or there is no car
+    /// </summary>
+    public static CarFrame Of(AcTools.Render.Kn5SpecificForward.ForwardKn5ObjectRenderer.CarSlot slot)
+    {
+        if (slot.CarNode is not { } node) return Nominal;
+
+        // A node's Matrix is where it is in the scene, placement included: taken back into the car's own space through
+        // the car's own matrix, or every car but one standing in the middle is framed somewhere it is not
+        var toCar = SlimDX.Matrix.Invert(node.Matrix);
+        Vector3? Hub(string name)
+        {
+            if (node.RootObject.GetDummyByName(name)?.Matrix is not { } m) return null;
+            var local = SlimDX.Vector3.TransformCoordinate(new SlimDX.Vector3(m.M41, m.M42, m.M43), toCar);
+            return new Vector3(local.X, local.Y, local.Z);
+        }
+
+        if (Hub("WHEEL_LF") is not { } lf || Hub("WHEEL_RF") is not { } rf ||
+            Hub("WHEEL_LR") is not { } lr || Hub("WHEEL_RR") is not { } rr)
+        {
+            return Nominal;
+        }
+
+        // The box is in the scene's space, the road at nought, and the car may stand anywhere in it: only its top is wanted
+        var height = slot.GetCarBoundingBox()?.Maximum.Y ?? Nominal.Height;
+        return FromWheels(lf, rf, lr, rr, height) ?? Nominal;
     }
 }
 

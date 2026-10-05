@@ -98,9 +98,6 @@ public class ShopViewport3D : D3DViewportBase
     // How far short of a wall or the ceiling the camera stops
     private const float WallMargin = 0.35f;
 
-    // Frames drawn before the picture is faded up
-    private const int SettleFrames = 4;
-
     private readonly List<DarkLightBase> _lamps = [];
     private string? _loadedScene;
     private IReadOnlyList<ShopStockPart>? _loadedStock;
@@ -114,7 +111,6 @@ public class ShopViewport3D : D3DViewportBase
     private float _betaGoal;
     private float _radiusGoal;
     private System.Windows.Point? _dragFrom;
-    private int _fadeInAfter = -1;
 
     public ShopViewport3D()
         : base("ShopViewport", new LabelLook(13, 0xD8, 0x90, new Thickness(8, 4, 8, 4), new System.Windows.Vector(16, 16)))
@@ -304,7 +300,7 @@ public class ShopViewport3D : D3DViewportBase
         renderer.SetScenery(model?.Kn5);
         renderer.RefreshShadows();
         // Shown once the screen has said what the shop has (none at all is an answer too): never bare shelves filling up
-        if (stock != null) _fadeInAfter = SettleFrames;
+        if (stock != null) FadeInAfterSettled(settled: () => IsShopReady = true);
         Invalidate();
     }
 
@@ -320,17 +316,7 @@ public class ShopViewport3D : D3DViewportBase
         _lamps.Clear();
         _loadedScene = null;
         _loadedStock = null;
-        _fadeInAfter = -1;
         IsShopReady = false;
-    }
-
-    protected override void OnFramePresented()
-    {
-        if (_fadeInAfter < 0) return;
-        if (_fadeInAfter-- > 0) return;
-
-        IsShopReady = true;
-        if (IsPictureHidden) FadeIn();
     }
 
     #endregion

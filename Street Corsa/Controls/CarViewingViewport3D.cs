@@ -72,9 +72,6 @@ public class CarViewingViewport3D : D3DViewportBase
     private const float YardLightBrightness = 2.5f;
     private const float YardLightRange = 12f;
 
-    // Frames drawn with the car in before the picture is faded up
-    private const int SettleFrames = 4;
-
     private CarViewingStage? _loaded;
     private Sx.Vector3 _target;
     private float _radiusGoal = 6f;
@@ -84,7 +81,6 @@ public class CarViewingViewport3D : D3DViewportBase
     private bool _touched;
     private System.Windows.Threading.DispatcherTimer? _resume;
     private float _turnSpeed;
-    private int _fadeInAfter = -1;
 
     public CarViewingViewport3D()
         : base("CarViewing", new LabelLook(14, 0xD8, 0x90, new Thickness(9, 5, 9, 5), new Vector(18, 18)))
@@ -173,10 +169,7 @@ public class CarViewingViewport3D : D3DViewportBase
 
         if (stage.Lighting is { } lighting)
         {
-            SceneLights.Apply(renderer, lighting, stage.Sun is { Length: 3 } sun ? sun : [0.2f, 1f, 0.8f]);
-
-            // What the reflections see past the sky's reach is the sky's colour, not the renderer's white
-            renderer.BackgroundColor = System.Drawing.Color.FromArgb(lighting.AmbientUp[0], lighting.AmbientUp[1], lighting.AmbientUp[2]);
+            SceneLights.ApplyWithSky(renderer, lighting, stage.Sun is { Length: 3 } sun ? sun : [0.2f, 1f, 0.8f]);
 
             // After dark the seller has a light on over the car, or there would be nothing to see
             if (lighting.Brightness < DarkBelow) renderer.AddLight(YardLight(stage));
@@ -192,7 +185,7 @@ public class CarViewingViewport3D : D3DViewportBase
         await TrackDeviceWork(renderer.MainSlot.SetCarAsync(CarDescription.FromDirectory(stage.CarDirectory),
             SkinOrDefault(stage.CarDirectory, stage.Skin), RendererToken));
         if (Renderer != renderer || !IsLoaded) return;
-        await ShownPartsOnCar.SetAsync(renderer.CarNode, stage.Shown, renderer.DeviceContextHolder);
+        await ShowPartsAsync(renderer, renderer.CarNode, stage.Shown);
         if (Renderer != renderer || !IsLoaded) return;
 
         renderer.MainSlot.LocalMatrix = placement;
@@ -209,7 +202,10 @@ public class CarViewingViewport3D : D3DViewportBase
 
         AimAtCar(renderer, stage);
         _loaded = stage;
-        _fadeInAfter = SettleFrames;
+        FadeInAfterSettled(settled: () =>
+        {
+            if (IsPictureHidden) IsSettled = true;
+        });
         OnPoseChanged();
         Invalidate();
 
@@ -249,7 +245,6 @@ public class CarViewingViewport3D : D3DViewportBase
     protected override void OnRendererDisposed()
     {
         _loaded = null;
-        _fadeInAfter = -1;
         _resume?.Stop();
     }
 
@@ -265,7 +260,7 @@ public class CarViewingViewport3D : D3DViewportBase
     {
         if (renderer.CameraOrbit is not { } orbit || renderer.CarNode is not { } car) return;
 
-        var frame = FrameOf(car, renderer);
+        var frame = CarFrame.Of(renderer.MainSlot);
         // Over the middle of its length, a little under half its height above the road
         var middle = Sx.Vector3.TransformCoordinate(new Sx.Vector3(0f, 0f, frame.MidZ), car.Matrix);
         _target = new Sx.Vector3(middle.X, frame.Height * 0.42f, middle.Z);
@@ -286,26 +281,6 @@ public class CarViewingViewport3D : D3DViewportBase
     }
 
     private float MaxRadius(CarViewingStage stage) => Math.Max(MinRadius + 0.5f, stage.MaxRadius);
-
-    /// <summary>The car's size from its wheels, in its own space; something car-sized when they cannot be found</summary>
-    private static CarFrame FrameOf(Kn5RenderableCar car, GarageRenderer renderer)
-    {
-        // A node's Matrix is where it is in the scene, placement included: back into the car's own space
-        var toCar = Sx.Matrix.Invert(car.Matrix);
-        System.Numerics.Vector3? Hub(string name)
-        {
-            if (car.RootObject.GetDummyByName(name)?.Matrix is not { } m) return null;
-            var local = Sx.Vector3.TransformCoordinate(new Sx.Vector3(m.M41, m.M42, m.M43), toCar);
-            return new System.Numerics.Vector3(local.X, local.Y, local.Z);
-        }
-
-        if (Hub("WHEEL_LF") is not { } lf || Hub("WHEEL_RF") is not { } rf || Hub("WHEEL_LR") is not { } lr || Hub("WHEEL_RR") is not { } rr)
-            return CarFrame.Nominal;
-
-        // The box is in the scene's space, the road at nought: only its top is wanted
-        var height = renderer.MainSlot.GetCarBoundingBox()?.Maximum.Y ?? CarFrame.Nominal.Height;
-        return CarFrame.FromWheels(lf, rf, lr, rr, height) ?? CarFrame.Nominal;
-    }
 
     /// <summary>Eases the camera to where it is meant to be; true while it still moves</summary>
     private bool StepCamera(float dt)
@@ -364,18 +339,6 @@ public class CarViewingViewport3D : D3DViewportBase
     #region Rendering
 
     protected override bool StepFrame(GarageRenderer renderer, float dt) => StepCamera(dt);
-
-    protected override void OnFramePresented()
-    {
-        if (_fadeInAfter < 0) return;
-        if (_fadeInAfter-- > 0) return;
-
-        if (IsPictureHidden)
-        {
-            FadeIn();
-            IsSettled = true;
-        }
-    }
 
     /// <summary>The car's running engine rocks it</summary>
     protected override void OnPoseChanged() => RockCar(_loaded != null ? Renderer?.CarNode : null);

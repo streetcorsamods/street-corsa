@@ -111,7 +111,7 @@ public class StreetViewport3D : OnboardViewport3D
         var renderer = await StartSceneAsync(kn5, light);
         if (renderer == null) return;
 
-        LightScene(renderer, scene.LightingFor(light), scene.Sun);
+        SceneLights.ApplyWithSky(renderer, scene.LightingFor(light), scene.Sun);
 
         // A street of one model for every light: its sky for the hour, its signs and windows lit for it
         if (scene.Model != null) SceneDressing.ShowSky(renderer, StreetScene.SkyPrefix, StreetScene.SkyNode(light));
@@ -243,20 +243,6 @@ public class StreetViewport3D : OnboardViewport3D
         // The rival's wear is made now, while the loads before it finish and its model loads, not as it is drawn
         if (stage.RivalCar is { } rival && rival != _rivalShown) _ = WearLayer.WarmAsync(rival.Directory, rival.Shown);
         _rivalLoads = After(before, () => ShowRivalAsync(renderer, stage, load));
-
-        static async Task After(Task before, Func<Task> next)
-        {
-            try
-            {
-                await before;
-            }
-            catch
-            {
-                // The load before has said how it ended; this one goes ahead all the same
-            }
-
-            await next();
-        }
     }
 
     /// <summary>
@@ -289,7 +275,7 @@ public class StreetViewport3D : OnboardViewport3D
                 var skin = SkinOrDefault(car.Directory, car.Skin);
                 await TrackDeviceWork(_rivalSlot.SetCarAsync(CarDescription.FromDirectory(car.Directory), skin, RendererToken));
                 if (Renderer != renderer || load != _rivalLoad) return;
-                await ShownPartsOnCar.SetAsync(_rivalSlot.CarNode, car.Shown, renderer.DeviceContextHolder);
+                await ShowPartsAsync(renderer, _rivalSlot.CarNode, car.Shown);
                 if (Renderer != renderer || load != _rivalLoad) return;
 
                 _rivalShown = car;

@@ -141,15 +141,7 @@ internal static class Ground
         }
     }
 
-    /// <summary>The height of a triangle over a point, seen from above; null when the point is outside it</summary>
-    private static float? Height(Vec3 a, Vec3 b, Vec3 c, float x, float z)
-    {
-        var d = (b.Z - c.Z) * (a.X - c.X) + (c.X - b.X) * (a.Z - c.Z);
-        if (MathF.Abs(d) < 1e-9f) return null;
-        var u = ((b.Z - c.Z) * (x - c.X) + (c.X - b.X) * (z - c.Z)) / d;
-        var v = ((c.Z - a.Z) * (x - c.X) + (a.X - c.X) * (z - c.Z)) / d;
-        var w = 1 - u - v;
-        const float e = -1e-4f;
-        return u < e || v < e || w < e ? null : u * a.Y + v * b.Y + w * c.Y;
-    }
+    /// <summary>The height of a triangle over a point, seen from above; null when the point is outside it (the game's own probe)</summary>
+    private static float? Height(Vec3 a, Vec3 b, Vec3 c, float x, float z) =>
+        Triangles.HeightAt(new(a.X, a.Y, a.Z), new(b.X, b.Y, b.Z), new(c.X, c.Y, c.Z), x, z);
 }
