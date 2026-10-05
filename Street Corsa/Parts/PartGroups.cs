@@ -49,7 +49,7 @@ public sealed class PartGroups
     public const string Accessories = "accessories";
 
     private static readonly Lazy<PartGroups> InstalledGroups = new(() => Load(ModSet.Installed.Folders(ContentTypes.Parts).Select(f => f.Dir)));
-    private static PartGroups? _current;
+    private static volatile PartGroups? _current;
 
     /// <summary>The groups of the mods next to the game, read once</summary>
     public static PartGroups Installed => InstalledGroups.Value;
@@ -127,7 +127,8 @@ public sealed class PartGroups
             List<PartShow?>? readShows;
             try
             {
-                var root = JsonDocument.Parse(File.ReadAllText(file), new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true }).RootElement;
+                using var document = JsonDocument.Parse(File.ReadAllText(file), ModJson.DocumentOptions);
+                var root = document.RootElement;
                 read = root.GetProperty("groups").Deserialize<List<PartGroup?>>(ModJson.Options);
                 readShows = root.TryGetProperty("shows", out var showsElement) ? showsElement.Deserialize<List<PartShow?>>(ModJson.Options) : null;
             }

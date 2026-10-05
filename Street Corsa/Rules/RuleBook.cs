@@ -242,6 +242,7 @@ public sealed class RuleBook
             }
         }
 
+        book.HoldDomains(problems);
         book.HoldRanges(problems);
         return book;
     }
@@ -284,6 +285,34 @@ public sealed class RuleBook
 
                 break;
         }
+    }
+
+    /// <summary>
+    /// Each figure the game divides by, loops over or pays inside what it can play by, part by part (each part's
+    /// <c>Check</c>); one outside is the base game's, told. The engines' rules are linked into the tools, so theirs are
+    /// here. The market's and the part shops' figures are held where they are used.
+    /// </summary>
+    private void HoldDomains(List<string> problems)
+    {
+        Start.Check("start", problems);
+        Time.Check("time", problems);
+        Difficulty.Check("difficulty", problems);
+        Police.Check("police", problems);
+        Rivals.Check("rivals", problems);
+        Dealers.Check("dealers", problems);
+        Economy.Check("economy", problems);
+        Cars.Check("cars", problems);
+        Repairs.Check("repairs", problems);
+        Condition.Check("condition", problems);
+        Street.Check("street", problems);
+        Wagers.Check("wagers", problems);
+        Events.Check("events", problems);
+        News.Check("news", problems);
+
+        // A bolt-on and each try at one is a run of the part scripts for every used car made
+        Figures.Within(Engines.Factory, "engines.factory", nameof(Parts.Cars.EngineFactoryRules.MaxBoltOns), 0, 50, problems);
+        Figures.Within(Engines.Factory, "engines.factory", nameof(Parts.Cars.EngineFactoryRules.AttemptsPerBoltOn), 0, 100, problems);
+        Figures.Within(Engines.Tuner, "engines.tuner", nameof(Parts.Cars.EngineTunerRules.MaxReplacementDepth), 0, 20, problems);
     }
 
     /// <summary>
@@ -384,7 +413,7 @@ public sealed class RuleBook
 
     private static bool IsSection(Type type) => type.IsClass && type != typeof(string) && !type.IsArray;
 
-    private static string Camel(string name) => name.Length == 0 ? name : char.ToLowerInvariant(name[0]) + name[1..];
+    internal static string Camel(string name) => name.Length == 0 ? name : char.ToLowerInvariant(name[0]) + name[1..];
 
     private static void Report(List<string> problems)
     {

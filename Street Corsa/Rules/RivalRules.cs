@@ -93,6 +93,23 @@ public sealed class RivalRules
     public int AskReducedAfterDays { get; set; } = 7;
 
     public decimal AskReduction { get; set; } = 0.9m;
+
+    /// <summary>Each figure the game divides by, loops over or pays held to what it can play by (<see cref="Figures"/>)</summary>
+    internal void Check(string path, List<string> problems)
+    {
+        Figures.Within(this, path, nameof(BaseActiveRacers), 0, 1000, problems);
+        Figures.Within(this, path, nameof(ActiveRacersPerWeek), 0, 1000, problems);
+        Figures.Within(this, path, nameof(MaxCars), 1, 100, problems);
+        Figures.Within(this, path, nameof(MaxBargainsPerDay), 0, 100, problems);
+        Figures.Within(this, path, nameof(MaxTimesBroke), 0, 1000, problems);
+        Figures.Money(this, path, problems, 10_000_000, nameof(BankruptFloor), nameof(MinCashInjection), nameof(MaxCashInjection));
+        Figures.Within(this, path, nameof(TuningReserveShare), 0, 1, problems);
+        Figures.Within(this, path, nameof(TuningShare), 0, 1, problems);
+        Figures.Within(this, path, nameof(FlipMargin), 0, 10, problems);
+        Figures.Within(this, path, nameof(AskReduction), 0, 1, problems);
+        Money.Check($"{path}.money", problems);
+        King.Check($"{path}.king", problems);
+    }
 }
 
 /// <summary>What a new rival has in the bank: a base, more for skill, age and reputation, give or take a little</summary>
@@ -127,6 +144,15 @@ public sealed class RivalMoneyRules
     public decimal RoundTo { get; set; } = 100m;
 
     public decimal Least { get; set; } = 1000m;
+
+    /// <summary>Each figure the game divides by, loops over or pays held to what it can play by (<see cref="Figures"/>)</summary>
+    internal void Check(string path, List<string> problems)
+    {
+        Figures.Money(this, path, problems, 10_000_000, nameof(BaseLow), nameof(BaseHigh), nameof(PerSkill), nameof(PerReputation), nameof(Least));
+        Figures.Above0(this, path, nameof(RoundTo), 1_000_000, problems);
+        for (var i = 0; i < ByAge.Length; i++)
+            Figures.Money(ByAge[i], $"{path}.byAge[{i}]", problems, 10_000_000, nameof(RivalMoneyByAge.Low), nameof(RivalMoneyByAge.High));
+    }
 }
 
 /// <summary>An age band's money: somewhere between low and high for a racer under <see cref="Under"/></summary>
@@ -157,4 +183,11 @@ public sealed class KingRules
     public int Wins { get; set; } = 48;
 
     public int PinkSlipsWon { get; set; } = 12;
+
+    /// <summary>Each figure the game divides by, loops over or pays held to what it can play by (<see cref="Figures"/>)</summary>
+    internal void Check(string path, List<string> problems)
+    {
+        Figures.Money(this, path, problems, (double)Parts.Cars.CarBook.MaxCarPrice, nameof(Money));
+        Figures.Within(this, path, nameof(CarChoices), 1, 100, problems);
+    }
 }

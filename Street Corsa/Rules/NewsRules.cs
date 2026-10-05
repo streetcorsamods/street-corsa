@@ -19,4 +19,14 @@ public sealed class NewsRules
 
     /// <summary>How much higher the rival's name has to be for the player's win to be an upset</summary>
     public int UpsetReputation { get; set; } = 20;
+
+    /// <summary>Each figure the game divides by, loops over or pays held to what it can play by (<see cref="Figures"/>)</summary>
+    internal void Check(string path, List<string> problems)
+    {
+        Figures.Within(this, path, nameof(DaysPrinted), 0, 365, problems);
+        Figures.Within(this, path, nameof(OnThePage), 0, 100, problems);
+        Figures.Within(this, path, nameof(DaysKept), 0, 3650, problems);
+        Figures.Within(this, path, nameof(MaxKept), 0, 10_000, problems);
+        Figures.Money(this, path, problems, 10_000_000, nameof(BigWager));
+    }
 }

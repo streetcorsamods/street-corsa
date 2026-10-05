@@ -38,6 +38,16 @@ public static class PartFigures
 
     public const double DefaultIdleRpm = 800;
 
+    /// <summary>
+    /// The slowest tick-over a part may give an engine, and the most of its limiter: an idle past them would put the
+    /// car's least revs under nothing or over its limiter, and the damage and downshift points that follow it
+    /// </summary>
+    public const double MinIdleRpm = 300;
+    public const double MostIdleOfLimiter = 0.5;
+
+    /// <summary>Most turbos an engine of figures may have: what the car's data is given sections for</summary>
+    public const int MaxTurbos = 8;
+
     private const double CycleDegrees = 720;
     private const double MaxBoost = 5;
     private const int MaxCylinders = 32;
@@ -141,7 +151,14 @@ public static class PartFigures
                 case TurboKey or BlowerKey:
                     foreach (var charger in token is JArray list ? list.ToList() : new List<JToken> { token })
                     {
-                        if (Charger(charger, key == TurboKey, label, problems) is { } read) chargers.Add(read);
+                        if (Charger(charger, key == TurboKey, label, problems) is not { } read) continue;
+                        if (read.Turbo && chargers.Count(c => c.Turbo) >= MaxTurbos)
+                        {
+                            problems.Add($"{label}: more than {MaxTurbos} turbos; the rest left out");
+                            break;
+                        }
+
+                        chargers.Add(read);
                     }
                     break;
                 default:

@@ -46,4 +46,11 @@ public sealed class StreetRules
     public int TalkAggressive { get; set; } = 70;
 
     public int TalkBold { get; set; } = 60;
+
+    /// <summary>Each figure the game divides by, loops over or pays held to what it can play by (<see cref="Figures"/>)</summary>
+    internal void Check(string path, List<string> problems)
+    {
+        Figures.Within(this, path, nameof(ShortestWait), 1, 1440, problems);
+        Figures.Within(this, path, nameof(LongestWait), 1, 1440, problems);
+    }
 }

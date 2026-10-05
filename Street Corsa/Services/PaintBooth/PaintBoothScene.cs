@@ -1,5 +1,4 @@
 using System.IO;
-using System.Text.Json;
 using StreetCorsa.Helpers;
 using StreetCorsa.Logging;
 using StreetCorsa.Mods;
@@ -103,8 +102,6 @@ namespace StreetCorsa.Services.PaintBooth
     {
         private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger("PaintBooth");
 
-        private static readonly JsonSerializerOptions Options = new() { PropertyNameCaseInsensitive = true };
-
         private sealed record RoundEntry(float? Gap, float? Low, float? High, int? Strokes, float[]? Wait);
 
         private sealed record CameraEntry(float? Distance, float? Height, float[]? Min, float[]? Max);
@@ -127,22 +124,8 @@ namespace StreetCorsa.Services.PaintBooth
         public static PaintBoothScene? Load(string folder)
         {
             var file = Path.Combine(folder, "booth.json");
-            try
-            {
-                if (!File.Exists(file)) return null;
-                using var document = Scripting.SceneMarks.Parse(file);
-                if (Build(folder, file, document.RootElement.Deserialize<BoothEntry>(Options)) is not { } booth) return null;
-                var problems = new List<string>();
-                booth = booth with { Marks = Scripting.SceneMarks.Read(document.RootElement, file, problems) };
-                ModProblems.Add("Paint booths", problems);
-                return booth;
-            }
-            catch (Exception ex)
-            {
-                Logger.Error(ex, "Could not read the paint booth {Path}", file);
-                ModProblems.Add("Paint booths", $"{file} could not be read ({ex.Message}); left out");
-                return null;
-            }
+            return SceneFiles.Load<BoothEntry, PaintBoothScene>(file, "Paint booths", "paint booth", Logger, entry => Build(folder, file, entry),
+                (booth, marks) => booth with { Marks = marks });
         }
 
         private static PaintBoothScene? Build(string folder, string file, BoothEntry? entry)

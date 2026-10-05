@@ -16,12 +16,6 @@ public static class ModMerge
 {
     public static readonly JsonNodeOptions NodeOptions = new() { PropertyNameCaseInsensitive = true };
 
-    private static readonly JsonDocumentOptions DocumentOptions = new()
-    {
-        CommentHandling = JsonCommentHandling.Skip,
-        AllowTrailingCommas = true
-    };
-
     /// <summary>An empty object that matches names whatever their case</summary>
     public static JsonObject NewObject() => new(NodeOptions);
 
@@ -62,7 +56,7 @@ public static class ModMerge
     {
         try
         {
-            var node = JsonNode.Parse(File.ReadAllText(file), NodeOptions, DocumentOptions);
+            var node = JsonNode.Parse(File.ReadAllText(file), NodeOptions, ModJson.DocumentOptions);
             if (node is JsonObject read)
             {
                 // A name twice in an object (whatever its case) only shows when the object is first looked into: all
@@ -91,7 +85,7 @@ public static class ModMerge
         if (string.IsNullOrWhiteSpace(json)) return null;
         try
         {
-            if (JsonNode.Parse(json, NodeOptions, DocumentOptions) is not JsonObject read) return null;
+            if (JsonNode.Parse(json, NodeOptions, ModJson.DocumentOptions) is not JsonObject read) return null;
             Unpack(read);
             return read;
         }

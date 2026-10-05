@@ -351,6 +351,7 @@ namespace StreetCorsa.Screens.CarCatalogEditor
 
             foreach (var item in dirtyItems) item.ApplyChanges();
             Parts.Cars.CarBook.Current = Parts.Cars.CarBook.Load(Mods.ModSet.Installed);
+            _partsService?.ForgetFactoryBuilds();
         }
 
         private void OnResetAll()

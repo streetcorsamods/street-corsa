@@ -101,6 +101,16 @@ public sealed class CarRules
 
         return none;
     }
+
+    /// <summary>Each figure the game divides by, loops over or pays held to what it can play by (<see cref="Figures"/>)</summary>
+    internal void Check(string path, List<string> problems)
+    {
+        Figures.Above0(this, path, nameof(ReferencePrice), (double)Parts.Cars.CarBook.MaxCarPrice, problems);
+        Figures.Above0(this, path, nameof(ReferenceHpPerTonne), 100_000, problems);
+        Figures.Within(this, path, nameof(PriceExponent), 0, 10, problems);
+        Figures.Above0(this, path, nameof(PriceStep), 1_000_000, problems);
+        Figures.Money(this, path, problems, (double)Parts.Cars.CarBook.MaxCarPrice, nameof(NoSpecsPrice), nameof(MinPrice), nameof(MaxPrice));
+    }
 }
 
 /// <summary>A step by the car's year: from that year on (none: any year), the value</summary>

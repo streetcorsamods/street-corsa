@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
 using System.IO;
+using System.Text.Json;
 using StreetCorsa.Helpers;
+using StreetCorsa.Mods;
 
 namespace StreetCorsa.Parts.Scripting;
 
@@ -63,8 +65,7 @@ public sealed class ScriptClassLoader
         if (!File.Exists(file)) return;
         try
         {
-            using var document = System.Text.Json.JsonDocument.Parse(File.ReadAllText(file),
-                new System.Text.Json.JsonDocumentOptions { CommentHandling = System.Text.Json.JsonCommentHandling.Skip, AllowTrailingCommas = true });
+            using var document = System.Text.Json.JsonDocument.Parse(File.ReadAllText(file), ModJson.DocumentOptions);
             if (!document.RootElement.TryGetProperty("stand_ins", out var standIns) || standIns.ValueKind != System.Text.Json.JsonValueKind.Object)
             {
                 _problems.Add($"{file}: no \"stand_ins\" object; left out");
@@ -74,7 +75,7 @@ public sealed class ScriptClassLoader
             foreach (var entry in standIns.EnumerateObject())
             {
                 var standIn = entry.Value.ValueKind == System.Text.Json.JsonValueKind.Object
-                    ? System.Text.Json.JsonSerializer.Deserialize<StandIn>(entry.Value.GetRawText())
+                    ? entry.Value.Deserialize<StandIn>(ModJson.Options)
                     : null;
                 if (standIn is not { Copy.Length: > 0, Extends.Length: > 0 })
                 {
@@ -82,6 +83,8 @@ public sealed class ScriptClassLoader
                     continue;
                 }
 
+                // "drop": null is no method dropped, not a stand-in that cannot be made
+                standIn.Drop ??= [];
                 _standIns[entry.Name] = standIn;
             }
         }

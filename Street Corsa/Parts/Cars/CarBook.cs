@@ -34,7 +34,7 @@ public sealed class CarBook
     public const decimal MaxCarPrice = 1_000_000_000m;
 
     private static readonly Lazy<CarBook> InstalledBook = new(() => Load(ModSet.Installed));
-    private static CarBook? _current;
+    private static volatile CarBook? _current;
 
     /// <summary>The makes and cars of the mods next to the game, read once</summary>
     public static CarBook Installed => InstalledBook.Value;

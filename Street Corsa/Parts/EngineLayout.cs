@@ -56,13 +56,8 @@ public static class EngineLayouts
         _ => layout.ToString().ToLowerInvariant()
     };
 
-    /// <summary>What a person reads for the layout: "Front", "Front, across"</summary>
-    public static string Label(this EngineLayout layout) => layout switch
-    {
-        EngineLayout.FrontTransverse => "Front, across",
-        EngineLayout.MidTransverse => "Mid, across",
-        _ => layout.ToString()
-    };
+    /// <summary>What a person reads for the layout ("Front", "Front, across"): the words of its name (<c>layout.front_transverse</c>)</summary>
+    public static string Label(this EngineLayout layout) => Cars.PartWords.Say($"layout.{layout.Name()}");
 
     /// <summary>A layout by its name in content (<see cref="Name"/>), case and underscores aside; null for none</summary>
     /// <remarks>Matched by name, not by <see cref="Enum.TryParse(Type, string?, bool, out object?)"/>, which takes numbers and "mid, rear" (two OR'd into a third)</remarks>

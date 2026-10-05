@@ -179,13 +179,23 @@ public static class EngineEvaluator
             ? (dyno?.Displacement ?? 0) * 1000 * PartFigures.InertiaPerLitre / PartFigures.KgM2PerInertiaUnit
             : Finite(block?.Number("inertia"), MaxFigure);
         var limiter = fromFigures || PartFigures.ApplyEngine(figures, "rev_limit", 0) != null ? inputs?.RpmLimit : block?.Number("RPM_limit");
+
+        // A part's idle is held to what an engine ticks over at, below the limiter the car will have (the curve's end
+        // without one): a mod's 9000 or -900 would put the car's least revs over its limiter or under nothing
+        var idle = Engine("idle_rpm", fromFigures ? PartFigures.DefaultIdleRpm : Finite(block?.Number("rpm_idle"), MaxRpm), MaxRpm);
+        if (PartFigures.ApplyEngine(figures, "idle_rpm", 0) != null)
+        {
+            var revsTo = Finite(limiter, MaxRpm) is > 0 and var given ? given : dyno?.Curve.Count > 0 ? dyno.Curve[^1].Rpm : MaxRpm;
+            idle = Math.Clamp(idle, PartFigures.MinIdleRpm, Math.Max(PartFigures.MinIdleRpm, revsTo * PartFigures.MostIdleOfLimiter));
+        }
+
         return new EngineReport
         {
             Problem = problem,
             Inputs = inputs,
             Dyno = dyno,
             FromFigures = fromFigures,
-            IdleRpm = Engine("idle_rpm", fromFigures ? PartFigures.DefaultIdleRpm : Finite(block?.Number("rpm_idle"), MaxRpm), MaxRpm),
+            IdleRpm = idle,
             LimiterRpm = Finite(limiter, MaxRpm),
             Inertia = Engine("inertia", inertia, MaxFigure, PartFigures.KgM2PerInertiaUnit),
             GearRatios = gearRatios,

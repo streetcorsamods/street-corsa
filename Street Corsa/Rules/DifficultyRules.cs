@@ -50,6 +50,14 @@ public sealed class DifficultyRules
         PinkSlipFrequency.High => HighPinkSlips,
         _ => 1.0
     };
+
+    /// <summary>Each figure the game divides by, loops over or pays held to what it can play by (<see cref="Figures"/>)</summary>
+    internal void Check(string path, List<string> problems)
+    {
+        Easy.Check($"{path}.easy", problems);
+        Normal.Check($"{path}.normal", problems);
+        Hard.Check($"{path}.hard", problems);
+    }
 }
 
 /// <summary>One difficulty's figures (see <see cref="GameRules"/> for what each does)</summary>
@@ -62,4 +70,13 @@ public sealed class DifficultyPreset
     public int OpponentAggressionModifier { get; set; }
     public double CarWearMultiplier { get; set; } = 1.0;
     public PinkSlipFrequency PinkSlipFrequency { get; set; } = PinkSlipFrequency.Medium;
+
+    /// <summary>Each figure the game divides by, loops over or pays held to what it can play by (<see cref="Figures"/>)</summary>
+    internal void Check(string path, List<string> problems)
+    {
+        Figures.Above0(this, path, nameof(CarPriceMultiplier), 100, problems);
+        Figures.Above0(this, path, nameof(PartPriceMultiplier), 100, problems);
+        Figures.Within(this, path, nameof(RacePrizeMultiplier), 0, 100, problems);
+        Figures.Within(this, path, nameof(CarWearMultiplier), 0, 100, problems);
+    }
 }

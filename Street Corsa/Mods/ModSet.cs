@@ -498,9 +498,20 @@ public sealed class ModSet
         try
         {
             var info = JsonSerializer.Deserialize<ModInfo>(File.ReadAllText(file), ModJson.Options) ?? new ModInfo();
-            // "removes": null reads as no table at all
-            info.Removes ??= new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
-            info.Requires ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            // "removes": null reads as no table at all. The reader makes its own tables, which match names in their case
+            // only: they are made again whatever the case, so "Racers" is "racers" (a kind given twice keeps every id)
+            var removes = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+            foreach (var (type, ids) in info.Removes ?? [])
+            {
+                if (ids == null) continue;
+                if (removes.TryGetValue(type, out var listed)) listed.AddRange(ids);
+                else removes[type] = [.. ids];
+            }
+
+            info.Removes = removes;
+            var requires = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var (id, version) in info.Requires ?? []) requires[id] = version;
+            info.Requires = requires;
             return info;
         }
         catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)

@@ -2,6 +2,7 @@ using StreetCorsa.Models.Catalog;
 using StreetCorsa.Parts;
 using StreetCorsa.ViewModels;
 using StreetCorsa.Helpers;
+using StreetCorsa.Services.Text;
 
 namespace StreetCorsa.Screens.CarCatalogEditor
 {
@@ -329,7 +330,7 @@ namespace StreetCorsa.Screens.CarCatalogEditor
         /// <summary>The guess first, its label filled in once <paramref name="guess"/> has read the car's data off the UI thread</summary>
         public static IReadOnlyList<EngineLayoutOptionViewModel> All(Func<EngineLayout> guess)
         {
-            var guessed = new EngineLayoutOptionViewModel(null, "Guessed: …");
+            var guessed = new EngineLayoutOptionViewModel(null, GameText.Say("layout.guessing"));
             guessed.Guessing = guessed.GuessAsync(guess);
 
             return new[] { guessed }
@@ -350,7 +351,7 @@ namespace StreetCorsa.Screens.CarCatalogEditor
                 layout = EngineLayout.Front;
             }
 
-            Label = $"Guessed: {layout.Label()}";
+            Label = GameText.Say("layout.guessed", ("layout", layout.Label()));
         }
     }
 }

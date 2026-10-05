@@ -38,4 +38,17 @@ public sealed class EconomyRules
 
     /// <summary>What a prize camshaft is worth in cash when no better one fits the car that won it</summary>
     public decimal CamshaftPrizeCash { get; set; } = 500m;
+
+    /// <summary>Each figure the game divides by, loops over or pays held to what it can play by (<see cref="Figures"/>)</summary>
+    internal void Check(string path, List<string> problems)
+    {
+        Figures.Above0(this, path, nameof(PartsPriceScale), 1000, problems);
+        Figures.Within(this, path, nameof(UsedShopFactor), 0, 10, problems);
+        Figures.Within(this, path, nameof(TradeInFactor), 0, 1, problems);
+        Figures.Within(this, path, nameof(MailOrderPremium), 0, 100, problems);
+        Figures.Within(this, path, nameof(MailOrderDays), 0, 365, problems);
+        Figures.Within(this, path, nameof(PartAdsLow), 0, 1000, problems);
+        Figures.Within(this, path, nameof(PartAdsHigh), 0, 1000, problems);
+        Figures.Money(this, path, problems, 10_000_000, nameof(CamshaftPrizeCash));
+    }
 }

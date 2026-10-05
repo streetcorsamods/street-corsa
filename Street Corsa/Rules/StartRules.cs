@@ -19,6 +19,12 @@ public sealed class StartRules
 
     /// <summary>The career's first moment: <see cref="Date"/> at the day's first hour</summary>
     public DateTime FirstMorning(DayRules day) => Date.ToDateTime(new TimeOnly(day.FirstHour, 0));
+
+    /// <summary>Each figure the game divides by, loops over or pays held to what it can play by (<see cref="Figures"/>)</summary>
+    internal void Check(string path, List<string> problems)
+    {
+        Figures.Money(this, path, problems, (double)Parts.Cars.CarBook.MaxCarPrice, nameof(Money));
+    }
 }
 
 /// <summary>A car the player starts with: its factory parts, in the shape given</summary>

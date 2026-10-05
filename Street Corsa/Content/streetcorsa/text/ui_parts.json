@@ -10,7 +10,8 @@
     "station.job.*: the gas station's jobs; {left} and {tank} the fuel, {quarts} the oil short as station.oil_short.* says it",
     "(\"a quart\"; the game puts a capital on the first letter of the oil job's detail). parts.describe*: a part's",
     "condition ({wear} %) and how many parts come with it ({count}). part_group.*: the shelves of part_groups.json, by id.",
-    "part_show.*: the parts view's buttons of part_groups.json's shows, by id."
+    "part_show.*: the parts view's buttons of part_groups.json's shows, by id. layout.*: where a car carries its engine,",
+    "by the layout's name in cars.json; layout.guessed: the Car Catalog Editor's guess, {layout} a layout.* line."
   ],
   "lines": {
     "condition.zone.front": "front",
@@ -152,6 +153,13 @@
     "part_show.engine": "The engine",
     "part_show.drivetrain": "The gearbox",
     "part_show.brakes": "The brakes",
-    "part_show.suspension": "The springs and shocks"
+    "part_show.suspension": "The springs and shocks",
+    "layout.front": "Front",
+    "layout.mid": "Mid",
+    "layout.rear": "Rear",
+    "layout.front_transverse": "Front, across",
+    "layout.mid_transverse": "Mid, across",
+    "layout.guessing": "Guessed: …",
+    "layout.guessed": "Guessed: {layout}"
   }
 }
