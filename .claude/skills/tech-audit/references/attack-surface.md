@@ -1,64 +1,49 @@
 # Trust-Surface Inventory
 
-> Overwritten by Phase 3 of each security/all run. Generated 2026-09-29 @ e5bfd8c. The diff window 6aa3d39..e5bfd8c includes the `Street Rod AC/` → `Street Corsa/` rename, so this is a full re-inventory. Paths are relative to `Street Corsa/` unless they start with `tools/` or `apps/`. Previous snapshot: `git show 6aa3d39:.claude/skills/tech-audit/references/attack-surface.md`. Findings against these surfaces: `findings/2026-09-29-all.md`.
+> Overwritten by Phase 3 of each security/all run. Generated 2026-10-05 @ b1e3c1d, diff mode (window e5bfd8c..b1e3c1d, 204 commits). Only **new or changed** surfaces are listed; everything else is as in the previous snapshot: `git show e5bfd8c:.claude/skills/tech-audit/references/attack-surface.md`. Paths are relative to `Street Corsa/` unless they start with `tools/` or `apps/`. Findings against these surfaces: `findings/2026-10-05-all.md`.
 
-## 1. Writes outside the app's own folders
+## 1. Writes outside the app's own folders (changed)
 
 | Target | Site | Restore |
 | ------ | ---- | ------- |
-| AC car `data\*.ini`/`*.lut` (unpacked from data.acd when packed) | `Services/Assetto Corsa/CarDataOverlay.cs` Apply (keep copy, then **in-place `File.WriteAllText` :276**), manifest via `SafeFile` | `Restore` :353-471 (SafeFile put-back, per file, failures stay in manifest); launcher finally / background wait after AC exits; start-up; exit; fatal path under `AcInstallGate.TryRun` |
-| AC car sound bank + GUIDs.txt | `CarDataOverlay.cs` (original moved to keep folder, donor hard-linked or copied) | same restore paths |
-| Same-model clones `content\cars\<id>__sr_opponent` | `CarDataOverlay.CreateClone` (recorded in `AcRestore\clones.json` first, marker `streetrod_clone.json`) | `RemoveClones`: suffix + inside `cars` + marker (or empty); current and every recorded install |
-| AC `Documents\Assetto Corsa\cfg\race.ini`, `assists.ini`, showroom INI | `Services/Configuration/IniModificationService.cs` via `SafeFile` | `Services/Configuration/AcConfigBackup.cs` (`~cfg` keep + `ini-manifest.json`) — a lost kept copy is retried forever (drift vs CarDataOverlay) |
-| CSP mode `extension\lua\new-modes\sc_race\` | `Services/Assetto Corsa/ScRaceMode.cs` (SafeFile); retired `apps\lua\sr_race_manager`, `new-modes\sr_race` deleted | reinstalled each race, not restored (documented) |
-| Result archive/quarantine `Documents\Assetto Corsa\out\sc_race\…` | `Services/Race/RaceResultIngestionService.cs` | app-owned |
-| Saves `saves\*.db` + backups, `settings.json`, `%AppData%\StreetCorsa\*` caches | `Services/Storage/SaveDatabase.cs`, `GameSettingsService`, `EngineLoudness`, `EncryptedCars` (SafeFile) | n/a |
-| Tools: `Content\streetcorsa\parts` (converter), scene KN5/`ground.bin`/`warehouse.json` (scene builders), `tools/slot_shifts.json` + deletes `bin\…\slot_shifts.json` (convert-parts.ps1) | `tools/SlrrPartsConverter/Program.cs` (staging + swap), `tools/*Scene/*Builder/Program.cs` (**direct writes**), `tools/convert-parts.ps1:476-514` | converter: commit marker + recover; builders: none |
+| AC car `data\*` | `Services/Assetto Corsa/CarDataOverlay.cs` Apply now goes through `KeptFile.Replace` (:272) — the 2026-09-29 raw write is fixed | as before (manifest-first) |
+| AC car sound GUIDs | `CarDataOverlay.cs:294` raw `File.WriteAllText` (after the original is kept) | manifest `sfx` entry, :496-503 |
+| Clone data + GUIDs | `CarDataOverlay.cs:565-607` raw writes into the `__sr_opponent` clone (own folder, marker first) | `RemoveClones` |
+| `CarDataOverlay.cs:821` | raw `File.WriteAllBytes` batch (unpacked ACD files) | manifest |
+| CSP modes `extension\lua\new-modes\sc_race\` **and `sc_free\`** (new: free run with parts the model lacks) | `Services/Assetto Corsa/ScRaceMode.cs:103-177` (SafeFile, stale-file delete, folder delete) | reinstalled each launch |
+| AC `race.ini` new keys: car part lists, `CAR_n_PAINT_k` tints, wear, free-run mode id | `Services/Configuration/IniModificationService.cs` (values partly from mod content: part KN5 paths, skin names) | `AcConfigBackup` |
+| Tinted paint textures, wear layers, shell files | `Looks/CarPaint.cs:522-525`, `Looks/WearLayer.cs:267`, `Looks/ShellFile.cs:147` (SafeFile, app cache folders) | app-owned; never into the car folder (by design) |
+| AI pictures | `Services/Ai/AiWriter.cs:328` (SafeFile) | app-owned |
+| Radio/sound caches | `Audio/Radio/RadioLibrary.cs:57, 203`, `Audio/SoundFiles.cs:203` (SafeFile) | app-owned |
 
-**Gap:** the launch pipeline doesn't check for an AC process it didn't start before writing any of the above (`AssettoCorsaLauncher.cs:226-266`), and `CarDataOverlay.RestoreLeftover` restores with no AC check.
+## 2. Untrusted-input parsers (new)
 
-## 2. Untrusted-input parsers
+- **Mod JSON through `ModJson.Options` (STJ)**: `Mods/ModSet.cs:500` (`mod.json`), `Audio/SoundCues.cs:82`, `Services/Garage/GarageProps.cs:59`, `Services/PartShops/ShopScene.cs:120` (own `Options`), `Rules/*` (data engines, formats, booth colours, market), car scripts (`Services/Scripting`). Paths inside these files (KN5, textures, sounds) must stay under the mod folder.
+- **Skin and car textures** decoded and tinted: `Looks/CarPaint.cs`, `Looks/WearLayer.cs` (dimensions from the file → allocations).
+- **Radio audio files** from user folders, read into unmanaged memory: `Audio/AudioHub.Radio.cs:83-112`, tags read back with `Marshal.PtrToStringAnsi`/`Marshal.Copy` :154, :185.
+- **AI replies** (LLM text and JSON, ComfyUI images): `Services/Ai/AiProviders.cs:154-160` (`JsonNode` of the whole response), `Services/Ai/ComfyImageService.cs:139+`, talk/clerk JSON search parsed in `Services/Talk`. The game must decide prices and stock, never the model.
+- Newtonsoft readers unchanged in kind: `Parts/PartsCatalog.cs:93, 205, 231`, `Parts/WorkOrder.cs:195`, `Parts/SlotShifts.cs:45`, `Parts/Sounds/SoundLibrary.cs:155, 218`, `Services/Race/Validation/RaceResultValidator.cs:65`, `Services/Settings/GameSettingsService.cs:124`, `CarDataOverlay.cs:369, 737`, `AcConfigBackup.cs:211`.
 
-| Input (who writes it) | Parser | Bounds today | Gap |
-| --- | --- | --- | --- |
-| Result JSON (`sc_race` mode) | `RaceResultIngestionService` → `RaceResultValidator` (Newtonsoft default) | GUID name, 1..1 MB, required fields, finite distance, condition clamped | bracket ET unbounded (`BracketRules.cs:42-47`) |
-| `data.acd` (car mods) | `Parts/Export/AcdFile.cs` | name/entry lengths vs remaining bytes (64-bit), every name `IsSafeSegment` | — |
-| car `data\*.ini`, POWER_CURVE | `IniText`, `AcEngineData` | Latin-1 round trip, `.lut` safe segment | huge finite figures reach AC |
-| `ui_car.json`, `ui_skin.json` | `AcCarUi` (MaxDepth 64), `AcSpecs`, `PoliceCars` | culture-free numbers, weight window | no size cap; bhp → decimal overflow (`CarProfileService.cs:231`) |
-| `ui_track.json`, `ui/ui_*.json` | STJ in `AssettoCorsaContentService` | caught per track/layout | phantom layouts from `ui_*.json` |
-| Car/part KN5 | AcTools `Kn5.FromFile` | caught in `PartModelBounds`, `EncryptedCars` | uncaught in `PartAssembler.cs:89`; Debug AcTools shows a MessageBox on a bad car |
-| SLRR `.class` bytecode (part packs) | `Parts/Scripting/ScriptClass.Load` | every length checked, per-file catch | whole-file read |
-| Script execution | `ScriptVm`, `ScriptHost`, `PartScriptRuntime` | 1M steps/entry, depth 24, statics 64, text 64K, array stores in range | budget per entry not VM; array length unbounded; natives 1 step; `Float.toString` output uncapped |
-| `pack.json`, `part_aliases.json`, `engine_builds.json`, overrides | Newtonsoft (TypeNameHandling None) | nulls normalized, ids namespaced, paths `TryCombineUnder`, alias hops ≤ 8 | `PartsCatalog.cs:87` enumeration unguarded |
-| `work_order.json` | `Parts/WorkOrder.cs` | strict enum names | `Loops` DFS exponential |
-| `mod.json`, content JSON (racers, dealers, shops, events, victories, text, showcase) | `Mods/ModSet` (Newtonsoft), `ModJson`/`ContentRegistry` (STJ) | id regex, per-entry catch, portrait/map paths contained | lazy enumeration unguarded; special opponents' cars not checked installed |
-| Scene JSON (streets, stations, warehouses) | STJ in `StreetScene`, `StationScene`, `WarehouseScene` | nulls defaulted (warehouse), finite points, price window | null light → NRE (street/station); `"model"` path not contained; numeric enum names; texture names unverified (cross-check) |
-| `ground.bin` | `Services/Station/StationGround.cs` | magic, grid bounds | 400 MB allocated before the length check |
-| sound `sounds.json`/`sound.json` | `Parts/Sounds/SoundLibrary.cs` | bank path `TryCombineUnder` + `.bank` | bare catches |
-| LiteDB saves / catalog.db | `SaveDatabase` (custom `ITypeNameBinder`), `CatalogDatabase` | single instance + lock, read-only `Peek`, corrupt catalog set aside | — |
-| SLRR SCX/RPK/cfg (converter) | `tools/SlrrPartsConverter/Slrr/*` | counts/offsets range-checked, `TryCombineUnder` | untested |
+## 3. Process launches (new)
 
-## 3. Process launches
+- `Audio/Radio/RadioPanelViewModel.cs:293` — `explorer.exe "<radio folder>"`, `UseShellExecute=false`.
+- `Screens/SoundBrowser/SoundBrowserScreenViewModel.cs:267` — `explorer.exe /select,"<file>"` (path from the sound list).
+- `Services/Assetto Corsa/AssettoCorsaLauncher.cs:548-556` — `acs.exe` (unchanged in kind).
 
-- `Services/Assetto Corsa/AssettoCorsaLauncher.cs:466-474`: `Process.Start` with `UseShellExecute = true` and `FileName = Path.Combine(AssettoCorsaPath, intent.Executable)`. The executable name is a code constant, and the folder comes from the user's settings. The exit is awaited async, with a relaunch watch and a bounded kill. There is no check for a pre-existing AC process.
+## 4. Native interop (new)
 
-## 4. Deserialization
+- `Audio/Radio/RaceKeys.cs:44-98` — global low-level keyboard hook (`SetWindowsHookEx(WH_KEYBOARD_LL)`) during races for the radio keys; must unhook on every exit path and keep `_proc` alive.
+- `Audio/AudioHub.Radio.cs` — `AllocHGlobal` sound memory handed to FMOD `OPENMEMORY`, freed in a release callback; `unsafe` block :88.
+- `Audio/FmodPlugins.cs`, `Audio/FmodStudio.cs` — 53 `LibraryImport`, `NativeLibrary.SetDllImportResolver` :109.
 
-- Newtonsoft 13.0.4 with default settings everywhere in the game (no `TypeNameHandling`; only a test sets `Auto`). System.Text.Json for scenes, mods' content and caches (MaxDepth 64 by default). LiteDB 5.0.21 uses a direct exclusive connection with `SaveTypeNames` mapping short names. No BinaryFormatter or XmlSerializer.
+## 5. Network (new — first network surface in the game)
 
-## 5. Native interop
+- One shared `HttpClient` (`Services/Ai/AiHttp.cs:11`, `SocketsHttpHandler`). Providers: Ollama (`/api/chat`, `/api/ps`, `/api/create`, `/api/tags`), OpenAI-compatible (`/chat/completions`, `/models`), Anthropic (`/v1/messages`, `/v1/models`, `x-api-key`), ComfyUI (`/prompt`, history, view). Endpoint and model from Settings; **off by default**.
+- API key: DPAPI-protected in settings (`Services/Ai/AiKeys.cs`, `AiSettings.ApiKeyProtected`), sent as `Authorization: Bearer` or `x-api-key` to the configured endpoint only.
+- What leaves the machine when on: game facts for talk (car, seller, prices, player's name/messages), clerk search prompts, portrait prompts.
 
-- FMOD Studio/Core 1.08 from the AC install: 25 `LibraryImport` (blittable), 4 `delegate* unmanaged` exports, `[UnmanagedCallersOnly]` DSP callbacks, and process-lifetime `NativeMemory` descriptions. The struct layouts match the header. `unsafe` code lives in `Audio/FmodPlugins.cs` and `Audio/FmodStudio.cs` and is bounded by FMOD buffer lengths.
-- 1 `DllImport` (`CarDataOverlay.cs:836`, kernel32 CreateHardLink).
-- D3D9Ex via Vortice (`Controls/SharedTextureBridge.cs`): shared texture into D3DImage, Lock/Unlock in try/finally, no `CheckDeviceState`. DX11 via AcTools.Render + SlimDX (Debug build).
+## 6. Cross-unit trust boundaries (changed)
 
-## 6. Network
-
-- None. No `HttpClient`/`WebClient`/sockets in any unit.
-
-## 7. Cross-unit trust boundaries
-
-- `sc_race` mode → `Documents\Assetto Corsa\out\sc_race\{uuid}.json` (temp + `io.move`, written before `ac.shutdownAssettoCorsa()`) → `RaceResultIngestionService` (GUID + size + validation + transactional apply).
-- Converter → `Content\streetcorsa\parts` → `PartsCatalog`. The content is now hand-maintained, and the script still defaults to overwriting it.
-- Game ↔ AC process: `AcProcesses` (unknown = running), `AcInstallGate`, launcher lock held until restore.
-- Mods folder → every content loader (`ModSet.SubFolders`/`JsonFiles`), part packs and scenes.
+- Game → `race.ini` → `sc_race/car_parts.lua`: part KN5 paths, engine offsets, paint tints, wear layers loaded with `loadKN5` / `applySkin` inside AC.
+- Game → `sc_free` mode for free runs with parts.
+- Ollama `streetcorsa` model created by the game (`/api/create`) from a Modelfile in content.
