@@ -12,7 +12,16 @@ namespace StreetCorsa.Services.Market
         /// The engines of the cars are put together on a worker thread: that takes a moment.
         /// </summary>
         /// <param name="priceMultiplier">The save's <see cref="GameRules.CarPriceMultiplier"/></param>
-        Task<List<UsedCarListing>> SpawnListingsAsync(List<DealerLocation> dealers, DateTime currentDate, double priceMultiplier);
+        /// <param name="privateAds">The private people's cars in the paper too: not when only new lots are being stocked</param>
+        Task<List<UsedCarListing>> SpawnListingsAsync(List<DealerLocation> dealers, DateTime currentDate, double priceMultiplier,
+            bool privateAds = true);
+
+        /// <summary>
+        /// The cars in the paper only (<see cref="UsedCarListing.PaperOnly"/>): the private people's and what each of
+        /// <paramref name="dealers"/> keeps out back, for a market from before there were any. The lots are left as they are.
+        /// </summary>
+        /// <param name="priceMultiplier">The save's <see cref="GameRules.CarPriceMultiplier"/></param>
+        Task<List<UsedCarListing>> SpawnPaperOnlyAsync(List<DealerLocation> dealers, DateTime currentDate, double priceMultiplier);
 
         /// <summary>
         /// Refreshes the market: removes old listings, spawns new ones. The listings that are there are only

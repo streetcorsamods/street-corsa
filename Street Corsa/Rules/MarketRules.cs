@@ -114,4 +114,40 @@ public sealed class MarketRules
 
     /// <summary>Share of the base price a corner loses for each of its brake, spring and shock that is missing</summary>
     public decimal MissingCornerPartShare { get; set; } = 0.01m;
+
+    /// <summary>
+    /// How many cars private people have in the paper at once, least to most: most of the classifieds are theirs, a few
+    /// are the dealers' (<see cref="DealerAdsInPaper"/>)
+    /// </summary>
+    public int PrivateAdsLow { get; set; } = 24;
+
+    public int PrivateAdsHigh { get; set; } = 34;
+
+    /// <summary>The condition of a private seller's car, worst to best: as its owner left it, rougher than a lot's</summary>
+    public float PrivateMinCondition { get; set; } = 0.3f;
+
+    public float PrivateMaxCondition { get; set; } = 0.85f;
+
+    /// <summary>The mileage of a private seller's car, least to most, km</summary>
+    public int PrivateMinMileage { get; set; } = 30000;
+
+    public int PrivateMaxMileage { get; set; } = 150000;
+
+    /// <summary>What a private seller asks against what a lot would for the same car: no showroom to pay for</summary>
+    public decimal PrivatePriceShare { get; set; } = 0.85m;
+
+    /// <summary>How many of the cars on its lot each dealer puts in the paper</summary>
+    public int DealerAdsInPaper { get; set; } = 1;
+
+    /// <summary>
+    /// How many cars each dealer keeps out back, least to most: not good enough for the lot, advertised in the paper only
+    /// </summary>
+    public int BackLotLow { get; set; } = 0;
+
+    public int BackLotHigh { get; set; } = 2;
+
+    /// <summary>The condition of a dealer's car out back, worst to best</summary>
+    public float BackLotMinCondition { get; set; } = 0.25f;
+
+    public float BackLotMaxCondition { get; set; } = 0.55f;
 }

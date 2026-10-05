@@ -86,7 +86,7 @@ namespace StreetCorsa.Services.Dealers
         /// <summary>The share of a lot's cars that have stood there a while without a buyer; none for a lot sold out</summary>
         private static double StaleShare(GameState gameState, DealerLocation dealer, DateTime date)
         {
-            var onTheLot = (gameState.UsedCarMarket ?? []).Where(l => !l.IsSold && l.DealerLocation == dealer.Id).ToList();
+            var onTheLot = (gameState.UsedCarMarket ?? []).Where(l => l.IsOnLotOf(dealer.Id)).ToList();
             if (onTheLot.Count == 0) return 0;
             return onTheLot.Count(l => (date.Date - l.ListedDate.Date).TotalDays >= DealerRules.StaleDays) / (double)onTheLot.Count;
         }

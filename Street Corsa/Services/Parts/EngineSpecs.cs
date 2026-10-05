@@ -18,6 +18,18 @@ namespace StreetCorsa.Services.Parts
         private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger("EngineAudio");
 
         /// <summary>
+        /// What keeps the engine the dyno ran (<paramref name="report"/>) from running, in words for the player; null when
+        /// it runs. No report is an engine missing what it takes to run at all.
+        /// </summary>
+        public static string? ProblemOf(StreetCorsa.Parts.Logic.EngineReport? report) =>
+            report == null ? GameText.Say("enginespecs.incomplete")
+            : report.Runs ? null
+            : report.Problem ?? GameText.Say("enginespecs.no_power");
+
+        /// <summary>"the engine won't run (no spark)": the car's <paramref name="problem"/> (<see cref="ProblemOf"/>) among the others</summary>
+        public static string WontRun(string? problem) => GameText.Say("garage.station.engine_wont_run", ("problem", problem));
+
+        /// <summary>
         /// The engine of a car, worked out away from the UI thread. Null when the car has no engine to start (or
         /// the parts catalog is not there).
         /// </summary>
@@ -78,9 +90,7 @@ namespace StreetCorsa.Services.Parts
 
             var report = parts.Evaluate(car);
             var dyno = report?.Dyno;
-            var problem = report == null ? GameText.Say("enginespecs.incomplete")
-                : report.Runs ? null
-                : report.Problem ?? GameText.Say("enginespecs.no_power");
+            var problem = ProblemOf(report);
 
             var sound = parts.ChooseSound(car, report)
                         ?? AcCarSound.FromCar(Path.Combine(AppSettings.Instance.CarsPath, car.DefinitionId), AppSettings.Instance.SfxGuidsPath);

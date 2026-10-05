@@ -1,25 +1,8 @@
-1. Car into scene:
-	- When buying a car and no car is in the garage. Ask the player if they want to switch to it.
+1. Newspaper
+	- Car ads: they're all from dealers. I want them to be mostly from racers and a few from dealers. Maybe some cars that the dealers don't show because they're not as good as the ones showed.
+	- Ads are sorted alphabetically. Make it random.
 	
-2. Handshake with the dealers:
-	With AI enabled Sometimes I say something that confirms the buy but the model doesn't understand it and doesn't display the buy button. Let's show it always.
-	Get back the chat window to the full height, but keep it in its current place.
+2. Paint job
+	- Cars: let's create a paint chamber in 3d and an animation for the paint process. The car is in the garage, the player hits the paing button at the bottom section (I've left the file icons/paint_spray.png for the button) and the screen fades away and moves to the paint chamber. The car makes its entrance and a nice spray animations goes on while the car changes its skin. It would be nice to be able to pick a custom color, not only the skins the mod has. After painting, the car doesn't back up and the screens fades out and moves back to the garage. There, the car does its entrance with the new shinny color!
 	
-3. Visual damage to the cars.
-	- Check what we can do in our renderer. Some dents, scratches, broken windows would be really awesome.
-	- Rust and dirt: some base textures that applies randomly to the used cars when they are created. Rust can appear after some time in the cars. Dirt after a race, enhanced if the track has dirt surfaces or if the car when off the track often.
-	
-4. Car height variations due to suspension damage or tuned parts.
-
-5. Addons and replacements in the car mod and visible in AC
-	- Tyres and rims: they're a part of the mod. Is it possible to switch them?
-	- Superchargers and blowers: the tracks in AC support a list of loadable models. I don't know if it's possible with cars. Make a web search and some tests to confirm it.
-	
-6. Diner refactor
-	- The street dome looks bad. I want a full model. Search for a model that fits the game: some american city of the 60s or 70s. It doesn't matter if they're not for AC, we'll port it. If you can't find anything, build one basic model.
-	- Build a cinematic for arriving and leaving the diner, just like the gas station does.
-	- The streets scene is the main screen. Don't show any data by default. Add a toggle button for opening a modal window with the rivals list and the word on the streets. Switch to the rival options and chat when clicking them inside the same modal window.
-	
-7. Part dealers
-	- Currently, we have a black screen with a part list. I want a 3d scene of a parts shop and integration with AI for talking to the dealer.
-	- The chat and the part list should be in a unique modal window. The player should be able to search and buy as it does today but the AI dealer should have the ability to answer questions about the parts and suggest parts. The player talks the dealer about the car, engine or part that he's looking for and the dealer make suggestions and maybe filters the list. Propose something nice and check if it'll work or it'll be tricky.
+3. Don't allow the player to hit the streets if they have no car selected or if the car isn't running.

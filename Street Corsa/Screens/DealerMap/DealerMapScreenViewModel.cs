@@ -233,7 +233,7 @@ namespace StreetCorsa.Screens.DealerMap
                 IsLoading = true;
                 try
                 {
-                    var fresh = await _marketService.SpawnListingsAsync(newcomers, _gameState.Date, _gameState.Rules.CarPriceMultiplier);
+                    var fresh = await _marketService.SpawnListingsAsync(newcomers, _gameState.Date, _gameState.Rules.CarPriceMultiplier, privateAds: false);
                     _gameState.UsedCarMarket.AddRange(fresh);
                     _logger.Information("Stocked {Count} cars on the lots of {Dealers}", fresh.Count, string.Join(", ", newcomers.Select(d => d.Name)));
                 }
@@ -259,7 +259,7 @@ namespace StreetCorsa.Screens.DealerMap
 
             foreach (var dealer in _dealerCatalog.All)
             {
-                var onTheLot = listings.Count(l => !l.IsSold && l.DealerLocation == dealer.Id);
+                var onTheLot = listings.Count(l => l.IsOnLotOf(dealer.Id));
 
                 if (onTheLot > dealer.StockHigh * 2)
                 {

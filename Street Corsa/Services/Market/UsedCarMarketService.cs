@@ -32,14 +32,21 @@ namespace StreetCorsa.Services.Market
         private static int MinMileage => Rules.RuleBook.Current.Market.MinMileage;
         private static int MaxMileage => Rules.RuleBook.Current.Market.MaxMileage;
         private static float PriceVariationPercent => Rules.RuleBook.Current.Market.PriceSpread;
+        private static int PrivateAdsLow => Rules.RuleBook.Current.Market.PrivateAdsLow;
+        private static int PrivateAdsHigh => Rules.RuleBook.Current.Market.PrivateAdsHigh;
+        private static int BackLotLow => Rules.RuleBook.Current.Market.BackLotLow;
+        private static int BackLotHigh => Rules.RuleBook.Current.Market.BackLotHigh;
+        private static float BackLotMinCondition => Rules.RuleBook.Current.Market.BackLotMinCondition;
+        private static float BackLotMaxCondition => Rules.RuleBook.Current.Market.BackLotMaxCondition;
 
         /// <summary>How hard a dealer pulls condition toward its own standard. At 1 the shift is the full
         /// distance between that standard and the middle of the range</summary>
         private static float DealerConditionPull => Rules.RuleBook.Current.Market.DealerConditionPull;
 
-        public async Task<List<UsedCarListing>> SpawnListingsAsync(List<DealerLocation> dealers, DateTime currentDate, double priceMultiplier)
+        public async Task<List<UsedCarListing>> SpawnListingsAsync(List<DealerLocation> dealers, DateTime currentDate, double priceMultiplier,
+            bool privateAds = true)
         {
-            var (listings, pool) = CreateListings(dealers, currentDate);
+            var (listings, pool) = CreateListings(dealers, currentDate, privateAds);
             await AddEnginesAsync(listings, pool);
             ApplyPriceMultiplier(listings, priceMultiplier);
             Describe(listings);
@@ -90,7 +97,7 @@ namespace StreetCorsa.Services.Market
         /// down. Cutting a list built in catalog order kept whichever cars happened to come first and starved
         /// every dealer whose kind of car came later - a lot with nothing on it, while another held a hundred.
         /// </summary>
-        private (List<UsedCarListing> Listings, List<PoolEntry> Pool) CreateListings(List<DealerLocation> dealers, DateTime currentDate)
+        private (List<UsedCarListing> Listings, List<PoolEntry> Pool) CreateListings(List<DealerLocation> dealers, DateTime currentDate, bool privateAds)
         {
             _logger.Information("Spawning used car market listings for date {Date}", currentDate);
 
@@ -107,11 +114,12 @@ namespace StreetCorsa.Services.Market
             var listings = new List<UsedCarListing>();
             foreach (var dealer in dealers)
             {
-                var wanted = StockWantedBy(dealer);
-                listings.AddRange(FillDealer(dealer, wanted, pool, currentDate));
+                listings.AddRange(FillDealer(dealer, StockWantedBy(dealer), Between(BackLotLow, BackLotHigh), pool, currentDate));
             }
 
-            _logger.Information("Spawned {ListingCount} listings across {DealerCount} dealers",
+            if (privateAds) listings.AddRange(FillPrivate(Between(PrivateAdsLow, PrivateAdsHigh), pool, currentDate));
+
+            _logger.Information("Spawned {ListingCount} listings across {DealerCount} dealers and the paper",
                 listings.Count, dealers.Count);
 
             return (listings, pool);
@@ -194,11 +202,14 @@ namespace StreetCorsa.Services.Market
         }
 
         /// <summary>
-        /// Stocks one lot. Cars are drawn from the slice of the market the dealer deals in, weighted by how
-        /// common they are, and no model turns up more than twice on the same lot.
+        /// Stocks one lot with <paramref name="wanted"/> cars, and <paramref name="outBack"/> the dealer keeps out back for
+        /// the paper. Cars are drawn from the slice of the market the dealer deals in, worked out once for both, weighted by
+        /// how common they are, and no model turns up more than twice on the same lot.
         /// </summary>
-        private List<UsedCarListing> FillDealer(DealerLocation dealer, int wanted, List<PoolEntry> pool, DateTime currentDate)
+        private List<UsedCarListing> FillDealer(DealerLocation dealer, int wanted, int outBack, List<PoolEntry> pool, DateTime currentDate)
         {
+            if (wanted <= 0 && outBack <= 0) return [];
+
             var definition = _dealerCatalog?.Get(dealer.Id);
 
             // A lot that deals in one kind of car (imports) takes its price band of the cars of that kind, the share of
@@ -225,12 +236,34 @@ namespace StreetCorsa.Services.Market
                 // Nothing installed sits in this dealer's slice: let it take whatever comes nearest instead of
                 // standing empty
                 var middle = (definition.PriceBandLow + definition.PriceBandHigh) / 2f;
-                candidates = pool.OrderBy(e => Math.Abs(e.Rank - middle)).Take(Math.Max(4, wanted)).ToList();
+                candidates = pool.OrderBy(e => Math.Abs(e.Rank - middle)).Take(Math.Max(4, wanted + outBack)).ToList();
                 _logger.Warning("{Dealer} deals in {Low:0.00}-{High:0.00} of the market and nothing installed fits; " +
                     "taking the nearest {Count}", dealer.Name, definition.PriceBandLow, definition.PriceBandHigh, candidates.Count);
             }
 
-            if (candidates.Count == 0) return [];
+            UsedCarListing? Make(PoolEntry entry, bool backLot)
+            {
+                var listing = CreateListing(entry.Car, entry.Profile, dealer, currentDate, backLot);
+                return kind != null && !kind.MatchesOffer(entry.Car, null, listing.Price, listing.PowerHp) ? null : listing;
+            }
+
+            return [.. Draw(candidates, wanted, e => Make(e, backLot: false)), .. Draw(candidates, outBack, e => Make(e, backLot: true))];
+        }
+
+        /// <summary>
+        /// The private people's cars in the paper: any car of the market, weighted by how common it is, as its owner left
+        /// it and asking less than a lot would
+        /// </summary>
+        private List<UsedCarListing> FillPrivate(int wanted, List<PoolEntry> pool, DateTime currentDate) =>
+            wanted <= 0 ? [] : Draw(pool, wanted, entry => CreatePrivateListing(entry.Car, entry.Profile, currentDate));
+
+        /// <summary>
+        /// <paramref name="wanted"/> cars drawn from <paramref name="candidates"/> by how common each is, no model more than
+        /// twice; <paramref name="make"/> lists one, or turns it down (null)
+        /// </summary>
+        private List<UsedCarListing> Draw(List<PoolEntry> candidates, int wanted, Func<PoolEntry, UsedCarListing?> make)
+        {
+            if (candidates.Count == 0 || wanted <= 0) return [];
 
             var listings = new List<UsedCarListing>(wanted);
             var used = new Dictionary<string, int>();
@@ -253,8 +286,7 @@ namespace StreetCorsa.Services.Market
                 used.TryGetValue(entry.Car.Id, out var already);
                 if (already >= MaxSameModelPerDealer) continue;
 
-                var listing = CreateListing(entry.Car, entry.Profile, dealer, currentDate);
-                if (kind != null && !kind.MatchesOffer(entry.Car, null, listing.Price, listing.PowerHp)) continue;
+                if (make(entry) is not { } listing) continue;
 
                 used[entry.Car.Id] = already + 1;
                 listings.Add(listing);
@@ -262,6 +294,9 @@ namespace StreetCorsa.Services.Market
 
             return listings;
         }
+
+        /// <summary>A number from <paramref name="low"/> to <paramref name="high"/>, both in; nothing below 0</summary>
+        private int Between(int low, int high) => Math.Max(0, _random.Next(Math.Min(low, high), Math.Max(low, high) + 1));
 
         public async Task<List<UsedCarListing>> RefreshMarketAsync(List<UsedCarListing> currentListings, List<DealerLocation> dealers, DateTime currentDate, double priceMultiplier)
         {
@@ -290,6 +325,15 @@ namespace StreetCorsa.Services.Market
                 _logger.Information("Despawned {Count} old unsold listings", removedUnsold);
             }
 
+            // The cars in the paper only come and go like the rest: one that ran its time came down, new ones go in. The
+            // day's count is drawn afresh, and on a day there are fewer the oldest went to somebody else, so the paper
+            // holds anything from the least to the most
+            var outBack = dealers.Select(_ => Between(BackLotLow, BackLotHigh)).ToList();
+            for (var i = 0; i < dealers.Count; i++)
+                TakeDown(kept, kept.Where(l => MayComeDown(l) && l.DealerLocation == dealers[i].Id).ToList(), outBack[i]);
+            var privateAds = Between(PrivateAdsLow, PrivateAdsHigh);
+            TakeDown(kept, kept.Where(l => MayComeDown(l) && l.IsPrivate).ToList(), privateAds);
+
             // Every lot is topped back up to its own target. Spawning a whole market and cutting it down to
             // size used to keep whichever cars came first in the catalog, which left some lots bare.
             // Engines only for the ones that make it into the market: putting one together is the costly part.
@@ -298,14 +342,15 @@ namespace StreetCorsa.Services.Market
             {
                 var fresh = new List<UsedCarListing>();
 
-                foreach (var dealer in dealers)
+                for (var i = 0; i < dealers.Count; i++)
                 {
-                    var onTheLot = kept.Count(l => !l.IsSold && l.DealerLocation == dealer.Id);
-                    var shortBy = StockWantedBy(dealer) - onTheLot;
-                    if (shortBy <= 0) continue;
-
-                    fresh.AddRange(FillDealer(dealer, shortBy, pool, currentDate));
+                    var dealer = dealers[i];
+                    var onTheLot = kept.Count(l => l.IsOnLotOf(dealer.Id));
+                    var keptBack = kept.Count(l => !l.IsSold && l.PaperOnly && l.DealerLocation == dealer.Id);
+                    fresh.AddRange(FillDealer(dealer, StockWantedBy(dealer) - onTheLot, outBack[i] - keptBack, pool, currentDate));
                 }
+
+                fresh.AddRange(FillPrivate(privateAds - kept.Count(l => !l.IsSold && l.IsPrivate), pool, currentDate));
 
                 if (fresh.Count > 0)
                 {
@@ -324,6 +369,38 @@ namespace StreetCorsa.Services.Market
             return kept;
         }
 
+        /// <summary>A car in the paper only that may come down: not one in its dealer's closing-down sale</summary>
+        private static bool MayComeDown(UsedCarListing listing) => !listing.IsSold && listing.PaperOnly && listing.PriceBeforeSale == null;
+
+        /// <summary>
+        /// The oldest of <paramref name="ads"/> past <paramref name="wanted"/> come out of <paramref name="kept"/>: bought by
+        /// somebody else, so the paper holds anything from the least to the most, not ever the most
+        /// </summary>
+        private void TakeDown(List<UsedCarListing> kept, List<UsedCarListing> ads, int wanted)
+        {
+            var surplus = ads.OrderBy(l => l.ListedDate).ThenBy(l => l.Id, StringComparer.Ordinal).Take(ads.Count - wanted).ToList();
+            if (surplus.Count == 0) return;
+
+            foreach (var listing in surplus) kept.Remove(listing);
+            _logger.Information("Took {Count} cars out of the paper: bought by somebody else", surplus.Count);
+        }
+
+        public async Task<List<UsedCarListing>> SpawnPaperOnlyAsync(List<DealerLocation> dealers, DateTime currentDate, double priceMultiplier)
+        {
+            var pool = BuildPool(_catalogRepo.GetCarsByStatus(ContentStatus.Active));
+            if (pool.Count == 0) return [];
+
+            var listings = new List<UsedCarListing>();
+            foreach (var dealer in dealers) listings.AddRange(FillDealer(dealer, 0, Between(BackLotLow, BackLotHigh), pool, currentDate));
+            listings.AddRange(FillPrivate(Between(PrivateAdsLow, PrivateAdsHigh), pool, currentDate));
+
+            await AddEnginesAsync(listings, pool);
+            ApplyPriceMultiplier(listings, priceMultiplier);
+            Describe(listings);
+            _logger.Information("Put {Count} private people's and dealers' back-lot cars in the paper", listings.Count);
+            return listings;
+        }
+
         public List<UsedCarListing> GetAvailableListings(List<UsedCarListing> allListings)
         {
             return allListings.Where(l => !l.IsSold).ToList();
@@ -331,7 +408,7 @@ namespace StreetCorsa.Services.Market
 
         public List<UsedCarListing> GetListingsByDealer(List<UsedCarListing> allListings, string dealerLocationId)
         {
-            return allListings.Where(l => !l.IsSold && l.DealerLocation == dealerLocationId).ToList();
+            return allListings.Where(l => l.IsOnLotOf(dealerLocationId)).ToList();
         }
 
         public List<DealerLocation> GetDefaultDealers()
@@ -480,19 +557,43 @@ namespace StreetCorsa.Services.Market
                 ?? known[^1]).Id;
         }
 
-        private UsedCarListing CreateListing(CarDefinition carDef, CarProfile profile, DealerLocation dealer, DateTime currentDate)
+        /// <param name="backLot">One the dealer keeps out back, for the paper only: rougher than its lot's, and not cleaned up</param>
+        private UsedCarListing CreateListing(CarDefinition carDef, CarProfile profile, DealerLocation dealer, DateTime currentDate, bool backLot = false)
         {
             // A cheap lot's cars are rougher, and that is what the price is worked out from
-            var definition = _dealerCatalog?.Get(dealer.Id);
+            var condition = backLot ? Roll(BackLotMinCondition, BackLotMaxCondition) : GenerateCondition(_dealerCatalog?.Get(dealer.Id));
 
-            var condition = GenerateCondition(definition);
-            var mileage = GenerateMileage();
+            // A dealer cleans its cars up for the lot: some rust and worn paint for a rough one, washed
+            var listing = NewListing(carDef, profile, currentDate, condition, GenerateMileage(), backLot ? LookSource.Private : LookSource.Dealer, 1m);
+            listing.DealerLocation = dealer.Id;
+            listing.PaperOnly = backLot;
+            return listing;
+        }
+
+        /// <summary>A private person's car in the paper: as its owner left it, more miles on it, asking less than a lot would</summary>
+        private UsedCarListing CreatePrivateListing(CarDefinition carDef, CarProfile profile, DateTime currentDate)
+        {
+            var market = Rules.RuleBook.Current.Market;
+            var condition = Roll(market.PrivateMinCondition, market.PrivateMaxCondition);
+            var mileage = _random.Next(Math.Min(market.PrivateMinMileage, market.PrivateMaxMileage),
+                Math.Max(market.PrivateMinMileage, market.PrivateMaxMileage) + 1);
+            var listing = NewListing(carDef, profile, currentDate, condition, mileage, LookSource.Private, market.PrivatePriceShare);
+            listing.PaperOnly = true;
+            return listing;
+        }
+
+        /// <summary>
+        /// A car for sale as it looks (<paramref name="source"/>) and priced as it looks, by its condition and its past, at
+        /// <paramref name="priceShare"/> of what a lot would ask; nobody's yet
+        /// </summary>
+        private UsedCarListing NewListing(CarDefinition carDef, CarProfile profile, DateTime currentDate, float condition, int mileage,
+            LookSource source, decimal priceShare)
+        {
             var history = new CarHistory { EarlierOwners = GenerateEarlierOwners(mileage) };
-
-            // A dealer cleans its cars up for the lot: some rust and worn paint for a rough one, washed; priced as it looks
-            var looks = CarLooks.Roll(condition, LookSource.Dealer, _random);
+            var looks = CarLooks.Roll(condition, source, _random);
             var price = CalculatePrice(profile.BasePrice * CarValuation.LooksFactor(looks.Rust, looks.Paint, looks.Cracks), condition,
                 CarValuation.HistoryFactor(history, mileage));
+            if (priceShare != 1m) price = CarValuation.RoundToHundred(Math.Max(MinListPrice, price * priceShare));
 
             // Get random skin from available skins
             var skinId = "default";
@@ -510,7 +611,6 @@ namespace StreetCorsa.Services.Market
                 Condition = condition,
                 SkinId = skinId,
                 ListedDate = currentDate,
-                DealerLocation = dealer.Id,
                 IsSold = false,
                 History = history
             };
@@ -518,6 +618,10 @@ namespace StreetCorsa.Services.Market
             CarLooks.Give(listing, looks);
             return listing;
         }
+
+        /// <summary>A condition from <paramref name="low"/> to <paramref name="high"/></summary>
+        private float Roll(float low, float high) =>
+            Math.Clamp(Math.Min(low, high) + (float)(_random.NextDouble() * Math.Abs(high - low)), 0f, 1f);
 
         /// <summary>
         /// A worked-on engine is tried out on the dyno a couple of dozen times: not on the caller's thread.
@@ -562,8 +666,10 @@ namespace StreetCorsa.Services.Market
                     listing.IsModified = CarValuation.IsModified(engine.Root, stockBuild);
                     if (listing.IsModified)
                     {
+                        // A private seller asks the same share of it as of the rest of the car (CreatePrivateListing)
+                        var share = listing.IsPrivate ? Rules.RuleBook.Current.Market.PrivatePriceShare : 1m;
                         listing.Price += CarValuation.RoundToHundred(
-                            CarValuation.EngineModifications(parts.Catalog, engine.Root, stockBuild, listing.Condition));
+                            share * CarValuation.EngineModifications(parts.Catalog, engine.Root, stockBuild, listing.Condition));
                     }
                 }
             }

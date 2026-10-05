@@ -241,6 +241,8 @@
                     Content="{t:Text racehub.streets}"
                     Style="{StaticResource DialogPrimaryButtonStyle}"
                     Command="{Binding HitTheStreetsCommand}"
+                    ToolTip="{Binding StreetsNote}"
+                    ToolTipService.ShowOnDisabled="True"
                     Visibility="{Binding CanHitTheStreets, Converter={StaticResource BooleanToVisibilityConverter}}"
                     FontSize="{StaticResource FontSizeBodyLarge}"
                     Width="220"
@@ -267,12 +269,24 @@
                     Height="44"
                     Margin="12,0,0,0"/>
             <Grid VerticalAlignment="Center">
-                <TextBlock Text="{t:Text racehub.streets.note}"
-                           Foreground="{StaticResource TextSecondaryBrush}"
+                <!-- The word on going out, or why the car cannot (the streets button waits greyed out) -->
+                <TextBlock Text="{Binding StreetsNote}"
                            FontSize="{StaticResource FontSizeSmall}"
-                           FontStyle="Italic"
                            TextWrapping="Wrap"
-                           Visibility="{Binding IsSettingUp, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                           Visibility="{Binding IsSettingUp, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                            <Setter Property="FontStyle" Value="Italic"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasStreetsProblem}" Value="True">
+                                    <Setter Property="Foreground" Value="{StaticResource AmberBrush}"/>
+                                    <Setter Property="FontStyle" Value="Normal"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
                 <!-- While the race entered, or the car taken out, is set up the hub waits in front, nothing to press -->
                 <TextBlock Text="{Binding SettingUpText}"
                            Foreground="{StaticResource AmberBrush}"

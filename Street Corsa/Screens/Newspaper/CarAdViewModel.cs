@@ -6,7 +6,7 @@ using StreetCorsa.ViewModels;
 namespace StreetCorsa.Screens.Newspaper
 {
     /// <summary>
-    /// A car ad in the classifieds: a dealer's car, a racer's own (<see cref="UsedCarListingViewModel.RivalAd"/>), or the
+    /// A car ad in the classifieds: a dealer's car, a private person's, a racer's own (<see cref="UsedCarListingViewModel.RivalAd"/>), or the
     /// player's own (<see cref="PlayerAd"/>), circled in pencil. Set as a period paper sets one: the car in bold, the ad's
     /// few words, the price, who to call. The rest (condition, mileage, history, engine) is in its tooltip, the purchase
     /// question and a look at the car; the player's own opens on the ad and the buyer who called.
@@ -29,7 +29,6 @@ namespace StreetCorsa.Screens.Newspaper
                     ? GameText.Say("paper.ad.car.headline", ("yy", (year % 100).ToString("00", Locale.Culture)), ("year", year), ("car", name))
                     : GameText.Say("paper.ad.car.headline.no_year", ("car", name)))
                 .ToUpper(Locale.Culture);
-            SortKey = $"{name} {definition.Year}";
         }
 
         /// <summary>
@@ -71,8 +70,6 @@ namespace StreetCorsa.Screens.Newspaper
         /// <summary>The car in the ad's bold run-in: "'63 CHEVROLET IMPALA"</summary>
         public string Headline { get; }
 
-        /// <summary>Where the ad goes among the others: by make, as a paper sorts its car ads</summary>
-        public string SortKey { get; }
 
         /// <summary>The ad's few words (<see cref="Services.Market.AdBlurbs"/>), with the space after them when there are any</summary>
         public string Blurb => string.IsNullOrEmpty(Car.Listing.Description) ? string.Empty : Car.Listing.Description + " ";
@@ -82,7 +79,7 @@ namespace StreetCorsa.Screens.Newspaper
         /// <summary>What it was marked at before its dealer's closing-down sale, struck through before the price; empty when not on sale</summary>
         public string WasPriceDisplay => Car.IsOnSale ? Car.WasPriceDisplay + " " : string.Empty;
 
-        /// <summary>Who to call: the dealer, the racer selling their own, or the player</summary>
+        /// <summary>Who to call: the dealer, the person or racer selling their own, or the player</summary>
         public string SellerDisplay => IsPlayerAd
             ? GameText.Say("paper.ad.seller.player", ("player", Car.PrivateSeller ?? string.Empty))
             : Car.PrivateSeller is { } rival

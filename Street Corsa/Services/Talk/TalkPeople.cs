@@ -134,17 +134,37 @@ namespace StreetCorsa.Services.Talk
 
             rules ??= RuleBook.Current.Ai.Talk;
             var random = Seeded(key);
-            var drawn = random.NextDouble() < rules.WomenSellers ? Gender.Female : Gender.Male;
-            var gender = string.IsNullOrWhiteSpace(name) ? drawn : GenderOf(name);
+            var (gender, sellerName) = SexAndName(random, rules, name);
             return Add(game, new Person
             {
                 Key = key,
                 Kind = PersonKind.PrivateSeller,
-                Name = string.IsNullOrWhiteSpace(name) ? NameFor("names.people", gender, random) : name,
+                Name = sellerName,
                 Age = AgeBetween(rules.SellerMinAge, rules.SellerMaxAge, random),
                 Gender = gender,
                 Temperament = Draw(prompts ?? AiPrompts.Installed, PersonKind.PrivateSeller, 50, random)
             });
+        }
+
+        /// <summary>
+        /// The name of the private seller <see cref="Seller"/> gives <paramref name="key"/> when the ad gives none, without
+        /// putting them in the game: the paper names everybody selling a car, few of them are ever called
+        /// </summary>
+        public static string SellerName(GameState game, string key, TalkRules? rules = null)
+        {
+            if (Find(game, key) is { } found) return found.Name;
+            return SexAndName(Seeded(key), rules ?? RuleBook.Current.Ai.Talk, null).Name;
+        }
+
+        /// <summary>
+        /// A private seller's sex and name, the first of their draws from <paramref name="random"/>: <see cref="Seller"/> and
+        /// <see cref="SellerName"/> both, so the name the paper prints is the person who answers. <paramref name="name"/>
+        /// given (a part's seller), it is theirs, a woman's only when it is one of the women's.
+        /// </summary>
+        private static (Gender Gender, string Name) SexAndName(Random random, TalkRules rules, string? name)
+        {
+            var drawn = random.NextDouble() < rules.WomenSellers ? Gender.Female : Gender.Male;
+            return string.IsNullOrWhiteSpace(name) ? (drawn, NameFor("names.people", drawn, random)) : (GenderOf(name), name);
         }
 
         /// <summary>
@@ -179,11 +199,12 @@ namespace StreetCorsa.Services.Talk
 
         private static int AgeBetween(int least, int most, Random random) => least + random.Next(Math.Max(1, most - least + 1));
 
-        public static Person? Find(GameState game, string key) => game.People.FirstOrDefault(p => p.Key == key);
+        public static Person? Find(GameState game, string key) => game.People?.FirstOrDefault(p => p.Key == key);
 
         private static Person Add(GameState game, Person person)
         {
             person.Met = game.Date;
+            game.People ??= [];
             game.People.Add(person);
             return person;
         }

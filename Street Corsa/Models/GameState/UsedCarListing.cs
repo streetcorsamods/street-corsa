@@ -49,6 +49,23 @@ namespace StreetCorsa.Models.GameState
         public string DealerLocation { get; set; } = string.Empty;
 
         /// <summary>
+        /// In the paper only, never on a lot: a private person's car (no <see cref="DealerLocation"/>), or one a dealer
+        /// keeps out back, not good enough for the lot
+        /// </summary>
+        public bool PaperOnly { get; set; }
+
+        /// <summary>A private person's car in the paper: no dealer has it</summary>
+        [LiteDB.BsonIgnore]
+        public bool IsPrivate => PaperOnly && string.IsNullOrEmpty(DealerLocation);
+
+        /// <summary>For sale on <paramref name="dealerId"/>'s lot, where the player walks round it</summary>
+        public bool IsOnLotOf(string dealerId) => IsOnALot && DealerLocation == dealerId;
+
+        /// <summary>For sale on a lot, any lot: not sold, not in the paper only</summary>
+        [LiteDB.BsonIgnore]
+        public bool IsOnALot => !IsSold && !PaperOnly;
+
+        /// <summary>
         /// Whether this listing has been sold
         /// </summary>
         public bool IsSold { get; set; }

@@ -555,7 +555,7 @@ namespace StreetCorsa.Screens.Garage
 
                     var spec = car.Engine == null ? null : await EngineSpecs.ForAsync(_partsService, car, selected.DisplayName);
                     var problem = car.HasPartsAssigned && car.Engine == null ? GameText.Say("garage.station.no_engine")
-                        : spec is { Runs: false } ? GameText.Say("garage.station.engine_wont_run", ("problem", spec.Problem))
+                        : spec is { Runs: false } ? EngineSpecs.WontRun(spec.Problem)
                         : null;
                     if (!ReferenceEquals(_navigationService.CurrentScreen, this)) return;
                     if (problem != null)

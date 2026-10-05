@@ -33,9 +33,11 @@ namespace StreetCorsa.Screens.Shared
         /// (<paramref name="catalog"/>; without it the car is judged by its overall health). The one rule for driving to
         /// the gas station and back home.
         /// </summary>
-        public static List<string> WhyWontRun(Car car, PartsCatalog? catalog)
+        /// <param name="counting">True counts the tank in too (<see cref="CarCondition.WhyCannotRace"/>): out on the streets
+        /// the car races</param>
+        public static List<string> WhyWontRun(Car car, PartsCatalog? catalog, bool counting = false)
         {
-            var problems = CarCondition.WhyCannotRace(car, catalog == null ? null : CarCondition.Groups(catalog), counting: false);
+            var problems = CarCondition.WhyCannotRace(car, catalog == null ? null : CarCondition.Groups(catalog), counting);
             if (catalog != null && car.HasPartsAssigned && car.Engine == null) problems.Add(Services.Text.GameText.Say("station.ui.no_engine"));
             return problems;
         }

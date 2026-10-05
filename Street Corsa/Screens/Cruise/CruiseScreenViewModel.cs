@@ -348,18 +348,15 @@ namespace StreetCorsa.Screens.Cruise
                 _gameState.MetOnTheStreet.Clear();
             }
 
-            var playerCar = SelectedCar();
-            if (playerCar == null || _catalogRepository.GetCar(playerCar.DefinitionId) == null)
+            // The one rule for the streets, the diner's and the racing hub's too
+            if (WhyNotHere() is { } why)
             {
-                SendHome(GameText.Say("cruise.no_car"), GameText.Say("cruise.no_car.title"));
+                _logger.Information("The car cannot be out on the streets: {Why}", why.Why);
+                SendHome(why.Why, why.Title);
                 return;
             }
 
-            if (playerCar.IsImpounded || !_challengeService.CanRace(playerCar))
-            {
-                SendHome(GameText.Say("cruise.car_wont_run"), GameText.Say("challenge.car_wont_run.title"));
-                return;
-            }
+            var playerCar = SelectedCar()!;
 
             try
             {
@@ -434,6 +431,20 @@ namespace StreetCorsa.Screens.Cruise
         /// <summary>Home in the car: it drives into the garage, unless it is out of gas or the police kept it</summary>
         private FlowArgs DriveHome() =>
             new() { Arrival = DrivingHome.Arrival(_gameState, _engine, _partsService.IsAvailable ? _partsService.Catalog : null) };
+
+        /// <summary>Why the player's car cannot be out on the street (<see cref="StreetReady"/>); null when it can, or nobody can tell</summary>
+        private NotStreetReady? WhyNotHere()
+        {
+            try
+            {
+                return StreetReady.WhyNot(_gameState, id => _catalogRepository.GetCar(id) != null, _partsService.IsAvailable ? _partsService.Catalog : null);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not tell whether the car can be out on the street");
+                return SelectedCar() == null ? new NotStreetReady(GameText.Say("streets.no_car"), GameText.Say("streets.no_car.title")) : null;
+            }
+        }
 
         private Car? SelectedCar() =>
             _gameState.Player.Cars.FirstOrDefault(c => c.InstanceId == _gameState.Player.SelectedCarInstanceId);
