@@ -26,7 +26,8 @@ internal static class ObjModel
             var (vertices, indices) = Merge(byMaterial.Select(g => g.Value));
             var mesh = kn5.Materials.Keys.ElementAt((int)byMaterial.Key).ToUpperInvariant();
             foreach (var (piece, part) in Split(vertices, indices).Select((p, i) => (p, i)))
-                AddMesh(kn5, part == 0 ? mesh : $"{mesh}_{part}", piece.Vertices, piece.Indices, byMaterial.Key, castShadows);
+                AddMesh(kn5, part == 0 ? mesh : $"{mesh}_{part}", piece.Vertices, piece.Indices, byMaterial.Key,
+                    castShadows: castShadows);
         }
     }
 

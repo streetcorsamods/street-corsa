@@ -22,23 +22,20 @@ internal static class Program
 
     private static int Main(string[] args)
     {
-        var positional = new List<string>();
-        for (var i = 0; i < args.Length; i++)
-        {
-            if (args[i].StartsWith("--")) i++;
-            else positional.Add(args[i]);
-        }
-
-        var sky = Option(args, "--sky");
+        var options = new BuilderArgs(args);
+        var positional = options.Positional;
+        var sky = options.Option("--sky");
         if (positional.Count != 3 || sky == null)
         {
             Console.Error.WriteLine(Usage);
             return 1;
         }
 
+        if (!options.NumbersOk(Usage, "--sky-radius", "--ground-half")) return 1;
+
         var (prepared, name, output) = (positional[0], positional[1], positional[2]);
-        var skyRadius = Number(Option(args, "--sky-radius")) ?? 700f;
-        var groundHalf = Number(Option(args, "--ground-half")) ?? 180f;
+        var skyRadius = options.Number("--sky-radius") ?? 700f;
+        var groundHalf = options.Number("--ground-half") ?? 180f;
 
         var groups = ObjModel.ReadObj(Path.Combine(prepared, name + ".obj"), scale: 1f, turn: 0f, mirror: false, recentre: false);
         Console.WriteLine($"{name}: {groups.Values.Sum(g => g.Vertices.Count)} vertices, {groups.Values.Sum(g => g.Indices.Count) / 3} triangles, {groups.Count} material group(s)");
@@ -51,11 +48,9 @@ internal static class Program
         // The scene is lit as a whole, like the gas station's: nothing of it stands in the light's way
         ObjModel.AddMeshes(scene, groups, materialOf, fallback: null, castShadows: false);
 
-        // The ground under the street's own faces, before the sky goes round it
+        // The ground under the street's own faces, before the sky goes round it; written after the model, so a build
+        // that fails leaves the old ground under the old street
         var ground = Ground.Build(scene.RootNode.Children.ToList(), groundHalf);
-        var groundFile = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(output))!, "ground.bin");
-        ground.Write(groundFile);
-        Console.WriteLine($"The ground, ±{groundHalf} m: {groundFile}");
 
         foreach (var entry in sky.Split(',', StringSplitOptions.RemoveEmptyEntries))
         {
@@ -65,15 +60,10 @@ internal static class Program
 
         Kn5SceneWriter.Save(scene, output);
         Console.WriteLine($"{output}: {new FileInfo(output).Length / 1024 / 1024} MB, {scene.Textures.Count} textures, {scene.Materials.Count} materials, {scene.RootNode.Children.Count} meshes");
+
+        var groundFile = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(output))!, "ground.bin");
+        ground.Write(groundFile);
+        Console.WriteLine($"The ground, ±{groundHalf} m: {groundFile}");
         return 0;
     }
-
-    private static string? Option(string[] args, string name)
-    {
-        var i = Array.IndexOf(args, name);
-        return i >= 0 && i + 1 < args.Length ? args[i + 1] : null;
-    }
-
-    private static float? Number(string? text) =>
-        text != null && float.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var value) ? value : null;
 }

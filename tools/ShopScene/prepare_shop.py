@@ -16,11 +16,13 @@ Needs numpy, opencv-python and Pillow. Downloads about 20 MB.
 """
 import os
 import sys
-import urllib.request
 
 import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Shared"))
+from scene_tools import poly_haven_surface  # noqa: E402
 
 # Poly Haven ids, by the surface they are used for. All CC0 (https://polyhaven.com/license).
 SURFACES = {
@@ -31,7 +33,6 @@ SURFACES = {
     "ceiling": ["grey_plaster", "beige_wall_001", "concrete_wall_004", "roof_planks"],
 }
 
-URL = "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/{id}/{id}_diff_1k.jpg"
 SIZE = 1024
 QUALITY = 85
 
@@ -48,15 +49,6 @@ SIGNS = {
 
 def save(path, image):
     cv2.imwrite(path, image, [cv2.IMWRITE_JPEG_QUALITY, QUALITY])
-
-
-def download(out, surface, texture_id):
-    path = os.path.join(out, f"{surface}_{texture_id}.jpg")
-    if os.path.exists(path):
-        return
-    data = urllib.request.urlopen(URL.format(id=texture_id), timeout=60).read()
-    image = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
-    save(path, cv2.resize(image, (SIZE, SIZE), interpolation=cv2.INTER_AREA))
 
 
 def font(size):
@@ -149,7 +141,7 @@ def main():
     for surface, ids in SURFACES.items():
         for texture_id in ids:
             print(f"{surface}: {texture_id}")
-            download(out, surface, texture_id)
+            poly_haven_surface(out, surface, texture_id, SIZE, QUALITY)
 
     for kind, (text, board, letters) in SIGNS.items():
         sign(out, kind, text, board, letters)

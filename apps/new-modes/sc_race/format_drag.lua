@@ -203,6 +203,16 @@ function F.pastTheLine(data)
   return data.lapsCompleted >= SC.laps
 end
 
+-- When a car went past a mark between the last frame and this one, on the race clock; nil when it did not
+local function crossed(mark, data, metres, previousClock, tick)
+  if data.lastMetres >= mark or metres < mark then return nil end
+  local share = (mark - data.lastMetres) / math.max(metres - data.lastMetres, 1e-6)
+  return previousClock + share * tick
+end
+
+-- Where a car is from its lane start, made once: this runs for every car every frame
+local _fromStart = vec3()
+
 -- The timeslips: each car's time at every mark down the strip, from the moment it left the line. The moment a mark is
 -- passed is found between two frames, from where the car was on each side of it. The race clock runs from AC's start;
 -- previousClock is where it stood a tick ago. A car that leaves before its own green (a bracket race, a test-and-tune
@@ -216,16 +226,11 @@ local function updateTimeslips(previousClock, tick)
     local data = carData[carIndex]
     local car = ac.getCar(carIndex)
     if data and car and data.laneStart then
-      local metres = (car.position - data.laneStart):dot(stripForward) - data.stagedAt
+      local metres = _fromStart:set(car.position):sub(data.laneStart):dot(stripForward) - data.stagedAt
       local timing = not tune or tune.state == 'TREE' or tune.state == 'RUN'
-      local function crossed(mark)
-        if data.lastMetres >= mark or metres < mark then return nil end
-        local share = (mark - data.lastMetres) / math.max(metres - data.lastMetres, 1e-6)
-        return previousClock + share * tick
-      end
 
       if timing and not data.leftAt then
-        data.leftAt = crossed(STAGE_METRES)
+        data.leftAt = crossed(STAGE_METRES, data, metres, previousClock, tick)
         if data.leftAt and data.leftAt < data.greenAt then
           data.redLight = true
           ac.log(string.format('[Street Corsa] Car %d RED LIGHT: left %.3f s before its green', carIndex, data.greenAt - data.leftAt))
@@ -234,7 +239,7 @@ local function updateTimeslips(previousClock, tick)
       if timing and data.leftAt then
         for _, mark in ipairs(MARKS) do
           if data.slip[mark.key] == nil then
-            local at = crossed(mark.metres)
+            local at = crossed(mark.metres, data, metres, previousClock, tick)
             if at then
               data.slip[mark.key] = at - data.leftAt
               if mark.trap and data.slip[mark.trap] then

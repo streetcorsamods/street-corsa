@@ -2,7 +2,7 @@
 Builds the diner's street, start to end, out of the three downloads (the Quaternius Downtown City MegaKit, WaajaaH's
 Diner Exterior Asset Reworked, both from their pages as .zip):
 
-  python build_street.py <folder with the zips> [<work folder>]
+  python build_street.py <folder with the zips> [<work folder>] [--blender <blender.exe>]
 
   1. unpacks the zips into the work folder (default: a "diner_street" folder in the system's temp)
   2. prepare_pictures.py draws the signs
@@ -12,7 +12,8 @@ Diner Exterior Asset Reworked, both from their pages as .zip):
   5. DinerSceneBuilder writes Street Corsa/Content/streetcorsa/streets/mainstreet/street.kn5 and ground.bin, the
      station's skies round it: Main Street, the Cruise screen's street with the diner on it
 
-Needs Blender (found in Program Files), Python with numpy and Pillow, and the .NET SDK.
+Needs Blender (--blender <blender.exe>, the BLENDER variable, else the newest in Program Files), Python with numpy and
+Pillow, and the .NET SDK.
 """
 import glob
 import os
@@ -21,6 +22,9 @@ import subprocess
 import sys
 import tempfile
 import zipfile
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Shared"))
+from scene_tools import blender, without_blender_option  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.normpath(os.path.join(HERE, "..", ".."))
@@ -31,13 +35,6 @@ ZIPS = {
     "kit": "Downtown City MegaKit*.zip",
     "diner": "diner-exterior-asset-reworked*.zip",
 }
-
-
-def blender():
-    found = sorted(glob.glob(r"C:\Program Files\Blender Foundation\Blender *\blender.exe"))
-    if not found:
-        sys.exit("Blender not found")
-    return found[-1]
 
 
 def unpack(downloads, work):
@@ -83,6 +80,7 @@ def main(downloads, work):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) not in (2, 3):
+    args = without_blender_option(sys.argv)
+    if len(args) not in (2, 3):
         sys.exit(__doc__)
-    main(sys.argv[1], sys.argv[2] if len(sys.argv) == 3 else os.path.join(tempfile.gettempdir(), "diner_street"))
+    main(args[1], args[2] if len(args) == 3 else os.path.join(tempfile.gettempdir(), "diner_street"))

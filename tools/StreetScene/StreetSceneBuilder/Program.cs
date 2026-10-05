@@ -1,4 +1,3 @@
-using System.Globalization;
 using AcTools.Kn5File;
 using AcTools.Numerics;
 using Newtonsoft.Json.Linq;
@@ -32,24 +31,20 @@ internal static class Program
 
     private static int Main(string[] args)
     {
-        var positional = args.Where(a => !a.StartsWith("--")).ToList();
+        var options = new BuilderArgs(args, "--flip");
+        var positional = options.Positional;
         if (positional.Count < 2)
         {
             Console.Error.WriteLine(Usage);
             return 1;
         }
 
+        if (!options.NumbersOk(Usage, "--dome-radius")) return 1;
+
         var prepared = positional[0];
         var output = positional[1];
-        if (!TryOption(args, "--dome-radius", out var domeRadiusOption))
-        {
-            Console.Error.WriteLine("--dome-radius takes a number of metres, e.g. --dome-radius 35");
-            Console.Error.WriteLine(Usage);
-            return 1;
-        }
-
-        var domeRadius = domeRadiusOption ?? 35f;
-        var flip = args.Contains("--flip");
+        var domeRadius = options.Number("--dome-radius") ?? 35f;
+        var flip = options.Flag("--flip");
 
         var light = JObject.Parse(File.ReadAllText(Path.Combine(prepared, "light.json")));
         var height = light.Value<float>("captureHeight");
@@ -89,18 +84,6 @@ internal static class Program
         }
 
         return 0;
-    }
-
-    /// <summary>A number option: null when not given, false when given without a number</summary>
-    private static bool TryOption(string[] args, string name, out float? value)
-    {
-        value = null;
-        var i = Array.IndexOf(args, name);
-        if (i < 0) return true;
-        if (i + 1 >= args.Length || !float.TryParse(args[i + 1], NumberStyles.Float, CultureInfo.InvariantCulture, out var number)) return false;
-
-        value = number;
-        return true;
     }
 
     private sealed record Mesh(List<Kn5Node.Vertex> Vertices, List<int> Indices);

@@ -1,0 +1,10 @@
+street.kn5 is made in part from "Diner Exterior Asset Reworked" by WaajaaH (https://sketchfab.com/WaajaaH),
+licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/):
+https://sketchfab.com/3d-models/7c2d2bf3f5be4ad7b1a7732b69493c06
+
+Changes: scaled 13.5 times and set into Main Street beside the Quaternius kit's road and buildings, its glass left out,
+its materials turned into AC's ksPerPixelMultiMap (pictures scaled to 2048 at most, the PBR maps turned into txMaps),
+converted to KN5 with the rest of the street (tools/DinerScene: compose_street.py, prepare_prop.py, DinerSceneBuilder).
+
+The rest of the street: the Downtown City MegaKit by Quaternius (CC0, https://quaternius.com), our own houses and signs,
+Poly Haven's textures and skies (CC0, https://polyhaven.com/license).

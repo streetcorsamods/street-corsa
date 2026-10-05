@@ -26,32 +26,25 @@ internal static class Program
 
     private static int Main(string[] args)
     {
-        var positional = args.Where((a, i) => !a.StartsWith("--") && (i == 0 || !args[i - 1].StartsWith("--"))).ToList();
-        var at = Option(args, "--at");
+        var options = new BuilderArgs(args);
+        var positional = options.Positional;
+        var at = options.Option("--at");
         if (positional.Count < 2 || at == null)
         {
             Console.Error.WriteLine(Usage);
             return 1;
         }
 
-        foreach (var option in NumberOptions)
-        {
-            if (Option(args, option) is { } text && Number(text) == null)
-            {
-                Console.Error.WriteLine($"{option} takes a number of metres, not {text}");
-                Console.Error.WriteLine(Usage);
-                return 1;
-            }
-        }
+        if (!options.NumbersOk(Usage, "--radius", "--sky-radius", "--ground-half")) return 1;
 
         var track = positional[0];
         var output = positional[1];
-        var radius = Number(Option(args, "--radius")) ?? 300f;
-        var models = (Option(args, "--models") ?? Path.GetFileName(track.TrimEnd('/', '\\')) + ".kn5").Split(',', StringSplitOptions.RemoveEmptyEntries);
-        var sky = Option(args, "--sky");
-        var skyRadius = Number(Option(args, "--sky-radius")) ?? radius * 3f;
-        var exclude = (Option(args, "--exclude") ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries);
-        var groundHalf = Number(Option(args, "--ground-half")) ?? 150f;
+        var radius = options.Number("--radius") ?? 300f;
+        var models = (options.Option("--models") ?? Path.GetFileName(track.TrimEnd('/', '\\')) + ".kn5").Split(',', StringSplitOptions.RemoveEmptyEntries);
+        var sky = options.Option("--sky");
+        var skyRadius = options.Number("--sky-radius") ?? radius * 3f;
+        var exclude = (options.Option("--exclude") ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries);
+        var groundHalf = options.Number("--ground-half") ?? 150f;
 
         var scene = Kn5.CreateEmpty();
         scene.RootNode.Name = Path.GetFileNameWithoutExtension(output);
@@ -125,23 +118,12 @@ internal static class Program
         return 0;
     }
 
-    private static string? Option(string[] args, string name)
-    {
-        var i = Array.IndexOf(args, name);
-        return i >= 0 && i + 1 < args.Length ? args[i + 1] : null;
-    }
-
-    private static readonly string[] NumberOptions = ["--radius", "--sky-radius", "--ground-half"];
-
-    /// <summary>A number as the command line gives it; null when there is none, or it is no number (checked up front)</summary>
-    private static float? Number(string? text) =>
-        text != null && float.TryParse(text, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out var value) ? value : null;
-
     private static Vec3? ParsePoint(string text)
     {
         var parts = text.Split(',');
-        return parts.Length == 3 && parts.All(p => float.TryParse(p, NumberStyles.Float, CultureInfo.InvariantCulture, out _))
-            ? new Vec3(Number(parts[0])!.Value, Number(parts[1])!.Value, Number(parts[2])!.Value)
+        var n = new float[3];
+        return parts.Length == 3 && Enumerable.Range(0, 3).All(i => float.TryParse(parts[i], NumberStyles.Float, CultureInfo.InvariantCulture, out n[i]))
+            ? new Vec3(n[0], n[1], n[2])
             : null;
     }
 

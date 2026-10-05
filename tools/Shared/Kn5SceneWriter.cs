@@ -1,5 +1,6 @@
 using AcTools.Kn5File;
 using AcTools.Numerics;
+using StreetCorsa.Helpers;
 
 namespace StreetCorsa.Tools;
 
@@ -160,6 +161,40 @@ internal static class Kn5SceneWriter
         var key = AddTexture(kn5, panorama, $"{prefix}{light}{Path.GetExtension(panorama).ToLowerInvariant()}");
         var material = AddMaterial(kn5, prefix + light, key, ambient: 0f, diffuse: 0f, emissive: 1f);
         SkyDome(kn5, (prefix + light).ToUpperInvariant(), material, radius, segments: 128, rings: 48, below: -0.08f);
+    }
+
+    /// <summary>
+    /// Every picture of a prepared folder (its .jpg files, in name order) into the model, whether the first look wears
+    /// it or not: a scene with looks switches its surfaces to the others at run time
+    /// </summary>
+    public static void AddTextures(IKn5 kn5, string folder)
+    {
+        foreach (var file in Directory.GetFiles(folder, "*.jpg").OrderBy(f => f, StringComparer.Ordinal))
+            AddTexture(kn5, file);
+    }
+
+    /// <summary>
+    /// The credit line of a scene whose surfaces are Poly Haven's: each texture once, by its Poly Haven name (the
+    /// prepared file's name less its surface prefix, "floor_garage_floor.jpg" giving "garage_floor"), in name order
+    /// </summary>
+    public static string PolyHavenCredit(IEnumerable<string> textures) =>
+        "Surface textures by Poly Haven (CC0): " + string.Join(", ", textures
+            .Select(t => t[(t.IndexOf('_') + 1)..^4]).Distinct().Order(StringComparer.Ordinal));
+
+    /// <summary>
+    /// A scene and its description into the out folder: &lt;name&gt;.kn5 (<see cref="Save"/>) and &lt;name&gt;.json, both
+    /// written whole or not at all, each told on the console
+    /// </summary>
+    public static void SaveScene(IKn5 kn5, string output, string name, string description)
+    {
+        Directory.CreateDirectory(output);
+        var path = Path.Combine(output, name + ".kn5");
+        Save(kn5, path);
+        Console.WriteLine($"{path}: {new FileInfo(path).Length / 1024} KB");
+
+        var json = Path.Combine(output, name + ".json");
+        SafeFile.WriteAllText(json, description + Environment.NewLine);
+        Console.WriteLine(json);
     }
 
     /// <summary>

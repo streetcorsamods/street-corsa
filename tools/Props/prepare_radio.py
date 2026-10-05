@@ -11,17 +11,19 @@ Readies the garage's radio for PropBuilder, out of its Sketchfab download:
   maps        AC's ksPerPixelMultiMap maps out of the PBR ones: red the specular, green the gloss (both from how smooth
               it is), blue the reflection (the metal, and a little of any smooth surface)
 
-  python prepare_radio.py <the unzipped download> <out folder>
+  python prepare_radio.py <the unzipped download> <out folder> [--blender <blender.exe>]
 
-Needs Blender (found in Program Files), numpy and Pillow.
+Needs Blender (--blender <blender.exe>, the BLENDER variable, else the newest in Program Files), numpy and Pillow.
 """
-import glob
 import os
 import subprocess
 import sys
 
 import numpy as np
 from PIL import Image
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Shared"))
+from scene_tools import blender, without_blender_option  # noqa: E402
 
 SIZE = 1024
 
@@ -36,13 +38,6 @@ bpy.context.view_layer.objects.active = radio
 bpy.ops.wm.obj_export(filepath=out, export_selected_objects=True, export_triangulated_mesh=True, export_materials=False,
                       export_uv=True, export_normals=True, apply_modifiers=True, forward_axis='NEGATIVE_Z', up_axis='Y')
 """
-
-
-def blender():
-    found = sorted(glob.glob(r"C:\Program Files\Blender Foundation\Blender *\blender.exe"))
-    if not found:
-        sys.exit("Blender not found")
-    return found[-1]
 
 
 def texture(src, name, mode):
@@ -75,6 +70,7 @@ def main(src, out):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
+    args = without_blender_option(sys.argv)
+    if len(args) != 3:
         sys.exit(__doc__)
-    main(sys.argv[1], sys.argv[2])
+    main(args[1], args[2])

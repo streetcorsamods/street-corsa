@@ -18,10 +18,10 @@ A picture reached through a multiply by the vertex colours (as Blender brings a 
 Materials that come out the same are one. The pictures are taken out of the model as they are (a .glb carries them).
 
   python prepare_prop.py <model.glb|.blend> <name> <out folder> [largest picture, pixels: 1024] [--jpg] [--keep-names]
+      [--blender <blender.exe>]
 
-Needs Blender (found in Program Files), numpy and Pillow.
+Needs Blender (--blender <blender.exe>, the BLENDER variable, else the newest in Program Files), numpy and Pillow.
 """
-import glob
 import io
 import json
 import os
@@ -30,6 +30,9 @@ import sys
 
 import numpy as np
 from PIL import Image
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Shared"))
+from scene_tools import blender, without_blender_option  # noqa: E402
 
 SIZE = 1024
 
@@ -144,13 +147,6 @@ with open(os.path.join(out, "blender_materials.json"), "w", encoding="utf-8") as
 """
 
 
-def blender():
-    found = sorted(glob.glob(r"C:\Program Files\Blender Foundation\Blender *\blender.exe"))
-    if not found:
-        sys.exit("Blender not found")
-    return found[-1]
-
-
 def srgb(linear):
     """Blender's colour values are linear; a picture's are sRGB"""
     c = np.clip(np.asarray(linear, np.float32), 0, 1)
@@ -242,12 +238,13 @@ def prepare(out, key, m):
 
 
 if __name__ == "__main__":
-    positional = [a for a in sys.argv[1:] if not a.startswith("--")]
+    args = without_blender_option(sys.argv)
+    positional = [a for a in args[1:] if not a.startswith("--")]
     if len(positional) not in (3, 4):
         sys.exit(__doc__)
     if len(positional) == 4:
         SIZE = int(positional[3])
-    if "--jpg" in sys.argv:
+    if "--jpg" in args:
         MAPS, SAVE = ".jpg", {"quality": 92}
-    KEEP_NAMES = "--keep-names" in sys.argv
+    KEEP_NAMES = "--keep-names" in args
     main(positional[0], positional[1], positional[2])

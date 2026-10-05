@@ -9,11 +9,16 @@ credited). Each cue is cut, trimmed and levelled here, so the game only plays wh
   loops      a stretch of an ambience recording, its end crossfaded into its start so it loops without a seam,
              levelled to one loudness for all places
 
-The mix between cues is sfx.json's "volume", not the files'. Needs numpy and soundfile (pip install soundfile).
+The mix between cues is sfx.json's "volume", not the files'. Needs numpy and soundfile (pip install -r
+tools/requirements.txt).
+
+sfx.json and credits.csv also hold cues made elsewhere (the pump's, cut by hand; the paint booth's, synthesised by
+tools/PaintBoothScene/make_sounds.py): a build replaces only its own cues and their credit rows, and keeps those.
 
   python tools/sfx/build_sfx.py            builds into Content/streetcorsa/sfx
 """
 import csv
+import io
 import json
 import os
 import sys
@@ -279,14 +284,36 @@ def build():
     cue("radio.tune", "radio", [one_shot("radio/tune_1.ogg", "261873"), one_shot("radio/tune_2.ogg", "812929")], 0.3, pitch=0.05)
     cue("radio.knob", "interface", [one_shot("radio/knob_1.ogg", "369964"), one_shot("radio/knob_2.ogg", "257948")], 0.5, pitch=0.03)
 
-    with open(os.path.join(OUT, "sfx.json"), "w", encoding="utf-8", newline="\n") as fh:
-        json.dump({"cues": cues}, fh, indent=2)
-        fh.write("\n")
-    write_credits()
-    print(f"{len(cues)} cues, {len(sources)} files")
+    kept = merge_cues(cues)
+    write_credits(kept)
+    print(f"{len(cues)} cues, {len(sources)} files; kept as they were: {', '.join(kept) or 'none'}")
 
 
-def write_credits():
+def merge_cues(cues):
+    """
+    The cues built here into sfx.json, each in its old place (a new one at the end), every other cue there kept as it
+    is; the cues kept, by name
+    """
+    path = os.path.join(OUT, "sfx.json")
+    merged = {}
+    if os.path.isfile(path):
+        with open(path, encoding="utf-8") as fh:
+            merged = json.load(fh).get("cues", {})
+    kept = {name: entry for name, entry in merged.items() if name not in cues}
+    merged.update(cues)
+    replace_with(path, json.dumps({"cues": merged}, indent=2) + "\n")
+    return kept
+
+
+def replace_with(path, text):
+    """A file written whole or not at all: a temp file next to it, renamed over it"""
+    temp = path + ".tmp"
+    with open(temp, "w", encoding="utf-8", newline="\n") as fh:
+        fh.write(text)
+    os.replace(temp, path)
+
+
+def write_credits(kept):
     credits = {}
     with open(os.path.join(CANDIDATES, "credits.csv"), encoding="utf-8") as fh:
         for row in csv.DictReader(fh):
@@ -301,12 +328,25 @@ def write_credits():
                 rows.append([rel, os.path.basename(path), "Kenney (kenney.nl)", "CC0 1.0", "https://kenney.nl/assets/impact-sounds"])
             else:
                 raise ValueError("no credit for " + path)
-    with open(os.path.join(OUT, "credits.csv"), "w", encoding="utf-8", newline="") as fh:
-        w = csv.writer(fh, lineterminator="\n")
-        w.writerow(["file", "title", "author", "license", "source"])
-        w.writerows(rows)
+
+    # The rows of the files the kept cues play, as they were
+    out = os.path.join(OUT, "credits.csv")
+    theirs = {f for entry in kept.values() for f in entry.get("files", [])} - set(sources)
+    if os.path.isfile(out):
+        with open(out, encoding="utf-8", newline="") as fh:
+            for row in csv.DictReader(fh):
+                if row["file"] in theirs:
+                    rows.append([row["file"], row["title"], row["author"], row["license"], row["source"]])
+    rows.sort(key=lambda r: r[0])
+
+    text = io.StringIO()
+    w = csv.writer(text, lineterminator="\n")
+    w.writerow(["file", "title", "author", "license", "source"])
+    w.writerows(rows)
+    replace_with(out, text.getvalue())
     by = sorted({r[3] for r in rows})
-    if any(l != "CC0 1.0" for l in by):
+    # The booth's sounds are the game's own (make_sounds.py)
+    if any(l not in ("CC0 1.0", "the game's own") for l in by):
         print("NOTE: not all CC0:", by)
 
 

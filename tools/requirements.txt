@@ -1,0 +1,10 @@
+# What the Python asset scripts under tools/ need (pip install -r tools/requirements.txt): the scene, prop and picture
+# scripts (numpy, Pillow, OpenCV), the sound builders (soundfile). Blender and ComfyUI are programs of their own, not
+# packages: Blender is found by --blender, the BLENDER variable or Program Files (tools/Shared/scene_tools.py), and
+# ComfyUI is reached by its address (tools/SalesmanPortraits/paint_salesmen.py --comfy).
+numpy>=2.0
+Pillow>=10.0
+opencv-python-headless>=4.8
+soundfile>=0.12
+# The race mode's harness (tools/sc_race_harness): lupa's LuaJIT 2.1 runtime
+-r sc_race_harness/requirements.txt

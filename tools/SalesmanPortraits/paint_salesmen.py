@@ -19,6 +19,7 @@ Needs ComfyUI running with the checkpoint the graph names (juggernautXL_ragnarok
 """
 import argparse
 import json
+import os
 import random
 import sys
 import time
@@ -45,10 +46,13 @@ def read_json(path):
 
 
 def write_json(path, data):
+    """Whole or not at all: a temp file next to it, renamed over it, so a Ctrl-C mid-write leaves the shipped file as it was"""
     raw = path.read_bytes()
     newline = "\r\n" if b"\r\n" in raw else "\n"
     text = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
-    path.write_bytes(text.replace("\n", newline).encode("utf-8"))
+    temp = path.with_name(path.name + ".tmp")
+    temp.write_bytes(text.replace("\n", newline).encode("utf-8"))
+    os.replace(temp, path)
 
 
 def http_json(url, body=None, timeout=60):

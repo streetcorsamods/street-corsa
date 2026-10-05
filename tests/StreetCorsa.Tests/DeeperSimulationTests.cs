@@ -21,12 +21,7 @@ public sealed class DeeperSimulationTests : IDisposable
 
     // ---- The cooling, on the real catalog ----
 
-    private static readonly Lazy<(PartsCatalog Catalog, EngineBuildIndex Builds, EngineCooling Cooling)> Real = new(() =>
-    {
-        var catalog = PartsCatalog.Load(RepoPaths.PartsFolder);
-        var builds = EngineBuildIndex.Create(catalog);
-        return (catalog, builds, EngineCooling.Create(catalog, builds));
-    });
+    private static Lazy<(PartsCatalog Catalog, EngineBuildIndex Builds, EngineCooling Cooling)> Real => TestCars.Cooling;
 
     private const string Charger440 = "cars/Charger69_RT/0006/stock";
 

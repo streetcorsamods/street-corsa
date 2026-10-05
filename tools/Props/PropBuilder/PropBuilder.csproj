@@ -18,6 +18,7 @@
   <!-- What the scene builders share, and the game's atomic writes: a builder stopped half way leaves the shipped prop as it was -->
   <ItemGroup>
     <Compile Include="..\..\Shared\Kn5SceneWriter.cs" Link="Shared\Kn5SceneWriter.cs" />
+    <Compile Include="..\..\Shared\BuilderArgs.cs" Link="Shared\BuilderArgs.cs" />
     <Compile Include="..\..\Shared\ObjModel.cs" Link="Shared\ObjModel.cs" />
     <Compile Include="..\..\..\Street Corsa\Helpers\SafeFile.cs" Link="Helpers\SafeFile.cs" />
   </ItemGroup>

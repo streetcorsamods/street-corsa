@@ -3,7 +3,6 @@ using AcTools.Kn5File;
 using AcTools.Numerics;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using StreetCorsa.Helpers;
 using StreetCorsa.Tools;
 using static StreetCorsa.Tools.Kn5SceneWriter;
 
@@ -68,8 +67,7 @@ internal static class Program
         kn5.RootNode.Name = "warehouse";
 
         // Every picture goes in, whether the first look wears it or not: the others are switched to at run time
-        foreach (var file in Directory.GetFiles(prepared, "*.jpg").OrderBy(f => f, StringComparer.Ordinal))
-            AddTexture(kn5, file);
+        AddTextures(kn5, prepared);
 
         var first = Looks[0];
         var floor = AddMaterial(kn5, "wh_floor", first.Floor, ambient: 0.32f, diffuse: 0.45f, specular: 0.12f, specularExp: 30f);
@@ -107,14 +105,7 @@ internal static class Program
         AddMesh(kn5, "WH_BULB", bulbs, bulb);
         AddMesh(kn5, "WH_CABLE", cables, cable);
 
-        Directory.CreateDirectory(output);
-        var path = Path.Combine(output, "warehouse.kn5");
-        Kn5SceneWriter.Save(kn5, path);
-        Console.WriteLine($"{path}: {new FileInfo(path).Length / 1024} KB");
-
-        var json = Path.Combine(output, "warehouse.json");
-        SafeFile.WriteAllText(json, Description().ToString(Formatting.Indented) + Environment.NewLine);
-        Console.WriteLine(json);
+        SaveScene(kn5, output, "warehouse", Description().ToString(Formatting.Indented));
         return 0;
     }
 
@@ -141,81 +132,8 @@ internal static class Program
 
     #region Geometry
 
-    private sealed class Mesh
-    {
-        public readonly List<Kn5Node.Vertex> Vertices = [];
-        public readonly List<int> Indices = [];
-
-        public Mesh Append(Mesh other)
-        {
-            var offset = Vertices.Count;
-            Vertices.AddRange(other.Vertices);
-            Indices.AddRange(other.Indices.Select(i => i + offset));
-            return this;
-        }
-
-        /// <summary>
-        /// A flat four-cornered face seen from the side <paramref name="normal"/> points to, the corners in order round
-        /// its edge; the picture laid on it by <paramref name="uv"/>, from where a corner is
-        /// </summary>
-        public void Quad(Vec3 a, Vec3 b, Vec3 c, Vec3 d, Vec3 normal, Func<Vec3, Vec2> uv)
-        {
-            var i = Vertices.Count;
-            var tangent = Vec3.Normalize(b - a);
-            foreach (var p in new[] { a, b, c, d }) Vertices.Add(new Kn5Node.Vertex(p, normal, uv(p), tangent));
-            Facing(i, i + 1, i + 2, normal);
-            Facing(i, i + 2, i + 3, normal);
-        }
-
-        public void Triangle(Vec3 a, Vec3 b, Vec3 c, Vec3 normal, Func<Vec3, Vec2> uv)
-        {
-            var i = Vertices.Count;
-            var tangent = Vec3.Normalize(b - a);
-            foreach (var p in new[] { a, b, c }) Vertices.Add(new Kn5Node.Vertex(p, normal, uv(p), tangent));
-            Facing(i, i + 1, i + 2, normal);
-        }
-
-        /// <summary>A triangle wound so its front is the side <paramref name="normal"/> points to</summary>
-        private void Facing(int a, int b, int c, Vec3 normal)
-        {
-            var pa = Vertices[a].Position;
-            var cross = Vec3.Cross(Vertices[b].Position - pa, Vertices[c].Position - pa);
-            var along = Vec3.Dot(cross, normal) > 0f;
-            if (along != _flip) Indices.AddRange([a, b, c]);
-            else Indices.AddRange([a, c, b]);
-        }
-
-        /// <summary>
-        /// A square-section bar from <paramref name="from"/> to <paramref name="to"/>, <paramref name="size"/> across:
-        /// its four sides (the ends are never seen)
-        /// </summary>
-        public void Bar(Vec3 from, Vec3 to, float size, float tile)
-        {
-            var axis = Vec3.Normalize(to - from);
-            var helper = MathF.Abs(axis.Y) > 0.9f ? Vec3.UnitX : Vec3.UnitY;
-            var side = Vec3.Normalize(Vec3.Cross(axis, helper)) * (size / 2f);
-            var up = Vec3.Normalize(Vec3.Cross(side, axis)) * (size / 2f);
-            var length = Vec3.Distance(from, to);
-
-            var corners = new[] { side + up, -side + up, -side - up, side - up };
-            for (var k = 0; k < 4; k++)
-            {
-                var p = corners[k];
-                var q = corners[(k + 1) % 4];
-                var normal = Vec3.Normalize(p + q);
-                var a = from + p;
-                var b = from + q;
-                var c = to + q;
-                var d = to + p;
-                Quad(a, b, c, d, normal, v =>
-                {
-                    var along = Vec3.Dot(v - from, axis);
-                    var across = Vec3.Dot(v - from, Vec3.Normalize(q - p)) + size;
-                    return new Vec2(along / tile, across / tile);
-                });
-            }
-        }
-    }
+    // The shapes the scene builders share (tools/Shared/SceneMesh.cs), wound the other way round with --flip
+    private sealed class Mesh() : SceneMesh(_flip);
 
     private static float RoofHeight(float z) => Ridge - (Ridge - Eaves) * MathF.Abs(z) / HalfWidth;
 
@@ -523,9 +441,7 @@ internal static class Program
                 "Textures: Poly Haven (CC0), the rest drawn by prepare_warehouse.py."),
             ["id"] = "warehouse",
             ["title"] = "The warehouse",
-            ["credit"] = "Surface textures by Poly Haven (CC0): " + string.Join(", ", Looks
-                .SelectMany(l => new[] { l.Floor, l.Wall, l.Upper, l.Roof, l.Door, l.Steel })
-                .Select(t => t[(t.IndexOf('_') + 1)..^4]).Distinct().Order(StringComparer.Ordinal)),
+            ["credit"] = PolyHavenCredit(Looks.SelectMany(l => new[] { l.Floor, l.Wall, l.Upper, l.Roof, l.Door, l.Steel })),
             ["bays"] = new JArray(Bays().Select(b => new JObject { ["x"] = Round(b.X), ["z"] = Round(b.Z), ["heading"] = b.Heading })),
             ["camera"] = new JObject { ["alpha"] = 0f, ["beta"] = 0.16f, ["radius"] = 12.5f, ["targetHeight"] = 1.6f },
             ["room"] = new JObject { ["halfLength"] = HalfLength, ["halfWidth"] = HalfWidth, ["height"] = Eaves },
@@ -562,7 +478,7 @@ internal static class Program
 
     // The key light comes in from overhead, through the roof: nothing of the building may stand in its way, and
     // Kn5SceneWriter.AddMesh makes every mesh shadowless
-    private static void AddMesh(IKn5 kn5, string name, Mesh mesh, uint material) =>
+    private static void AddMesh(IKn5 kn5, string name, SceneMesh mesh, uint material) =>
         Kn5SceneWriter.AddMesh(kn5, name, mesh.Vertices, mesh.Indices, material);
 
     #endregion

@@ -116,9 +116,7 @@ public class AuditFixesFTests
         public void Resume() => Calls.Add("Resume");
     }
 
-    private static NavigationService NewNavigation(DialogService dialogs) => new(
-        dialogs, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!,
-        null!, null!, null!, null!, null!, null!, null!, null!, null!, _ => { });
+    private static NavigationService NewNavigation(DialogService dialogs) => TestNavigation.WithoutServices(dialogs);
 
     [Fact]
     public void A_screen_that_fails_to_leave_does_not_keep_the_player_on_it()

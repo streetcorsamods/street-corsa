@@ -1,11 +1,14 @@
 using System.Runtime.CompilerServices;
 using System.Text;
+using StreetCorsa.Dialogs;
 using StreetCorsa.Logging;
 using StreetCorsa.Models.GameState;
+using StreetCorsa.Navigation;
 using StreetCorsa.Parts;
 using StreetCorsa.Parts.Cars;
 using StreetCorsa.Parts.Export;
 using StreetCorsa.Parts.Logic;
+using StreetCorsa.Parts.Scripting;
 
 namespace StreetCorsa.Tests;
 
@@ -131,6 +134,13 @@ public static class TestCars
     /// <summary>The parts the game ships, read once</summary>
     public static readonly Lazy<PartsCatalog> Catalog = new(() => PartsCatalog.Load(RepoPaths.PartsFolder));
 
+    /// <summary>The parts the game ships, their rated builds and the cooling each engine needs, made once</summary>
+    public static readonly Lazy<(PartsCatalog Catalog, EngineBuildIndex Builds, EngineCooling Cooling)> Cooling = new(() =>
+    {
+        var builds = EngineBuildIndex.Create(Catalog.Value);
+        return (Catalog.Value, builds, EngineCooling.Create(Catalog.Value, builds));
+    });
+
     /// <summary>A real Mopar 340 in a car, its tree as the factory puts one in</summary>
     public static Car WithRealEngine(PartsCatalog catalog)
     {
@@ -166,5 +176,37 @@ public static class TestCars
         File.WriteAllText(Path.Combine(data, "car.ini"), carIni);
         File.WriteAllText(Path.Combine(data, "suspensions.ini"), "[FRONT]\nBASEY=-0.145\n[REAR]\nBASEY=-0.155\n");
         File.WriteAllText(Path.Combine(data, "tyres.ini"), "[FRONT]\nRADIUS=0.34\n[REAR]\nRADIUS=0.34\n");
+    }
+}
+
+/// <summary>A navigation service for the tests that move between screens they make themselves</summary>
+public static class TestNavigation
+{
+    /// <summary>
+    /// The services only go to the screens the typed factories build: none of them is given here, and SafeNavigate is
+    /// handed its screen. Without a flow, the service reads the base game's
+    /// </summary>
+    public static NavigationService WithoutServices(DialogService dialogs, FlowBook? flow = null) => new(
+        dialogs, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!,
+        null!, null!, null!, null!, null!, null!, null!, null!, null!, _ => { }, flow);
+}
+
+/// <summary>Part-script classes made in memory, for the script VM's tests</summary>
+public static class TestScripts
+{
+    /// <summary>An instruction on line 1</summary>
+    public static ScriptInstruction I(byte op, int operand = 0) => new(op, 1, operand);
+
+    /// <summary>A class in memory with one instance method "m" whose body is the tree; pool[0] is the class name</summary>
+    public static ScriptClass ClassWith(ScriptInstruction[] tree, params string[] extraTexts)
+    {
+        var type = new ScriptClass();
+        type.Pool.Add(new ScriptConstant(ScriptConstantKind.String, "java.game.test.T", 0, 0));
+        type.Pool.Add(new ScriptConstant(ScriptConstantKind.String, "m", 0, 0));
+        type.Pool.Add(new ScriptConstant(ScriptConstantKind.String, "java.lang.Object", 0, 0));
+        foreach (var text in extraTexts) type.Pool.Add(new ScriptConstant(ScriptConstantKind.String, text, 0, 0));
+        type.Methods.Add(new ScriptMethod(0, "m", "()Ljava.lang.Object;", 0));
+        type.Trees.Add(tree);
+        return type;
     }
 }

@@ -17,10 +17,12 @@ Needs numpy and opencv-python. Downloads about 15 MB.
 """
 import os
 import sys
-import urllib.request
 
 import cv2
 import numpy as np
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Shared"))
+from scene_tools import poly_haven_surface  # noqa: E402
 
 # Poly Haven ids, by the surface they are used for. All CC0 (https://polyhaven.com/license).
 SURFACES = {
@@ -31,7 +33,6 @@ SURFACES = {
     "steel": ["blue_metal_plate", "rusty_painted_metal", "green_metal_rust", "metal_plate"],
 }
 
-URL = "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/{id}/{id}_diff_1k.jpg"
 SIZE = 1024
 QUALITY = 85
 
@@ -42,15 +43,6 @@ LETTERS = (200, 226, 236)
 
 def save(path, image):
     cv2.imwrite(path, image, [cv2.IMWRITE_JPEG_QUALITY, QUALITY])
-
-
-def download(out, surface, texture_id):
-    path = os.path.join(out, f"{surface}_{texture_id}.jpg")
-    if os.path.exists(path):
-        return
-    data = urllib.request.urlopen(URL.format(id=texture_id), timeout=60).read()
-    image = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
-    save(path, cv2.resize(image, (SIZE, SIZE), interpolation=cv2.INTER_AREA))
 
 
 def enamel(width, height, seed):
@@ -139,7 +131,7 @@ def main():
     os.makedirs(out, exist_ok=True)
     for surface, ids in SURFACES.items():
         for texture_id in ids:
-            download(out, surface, texture_id)
+            poly_haven_surface(out, surface, texture_id, SIZE, QUALITY)
     sign(out)
     paint(out)
     skylight(out)

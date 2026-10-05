@@ -69,23 +69,51 @@ local function saveLog()
   end)
 end
 
+-- race.ini is loaded once and each [STREET_CORSA] value read once: a car whose model comes late is tried every frame,
+-- some 15 keys a try, and each raceConfig() loads the file again. A value as text (with a default) and as CSP splits it
+-- at its commas (without one) are kept apart; false is a value not there
+local raceIni = nil
+local raceRead = {}
+local function raceValue(key, asText)
+  local memo = (asText and 'text:' or 'raw:') .. key
+  local value = raceRead[memo]
+  if value == nil then
+    local ok, read = pcall(function()
+      raceIni = raceIni or ac.INIConfig.raceConfig()
+      if asText then return raceIni:get('STREET_CORSA', key, '') end
+      return raceIni:get('STREET_CORSA', key)
+    end)
+    value = ok and read ~= nil and read or false
+    raceRead[memo] = value
+  end
+  if value == false then return nil end
+  return value
+end
+
 local function raceText(key)
-  local ok, value = pcall(function() return ac.INIConfig.raceConfig():get('STREET_CORSA', key, '') end)
-  if ok and type(value) == 'string' and value ~= '' then return value end
+  local value = raceValue(key, true)
+  if type(value) == 'string' and value ~= '' then return value end
   return nil
 end
 
--- A matrix from 12 numbers (rows of 4x3); nil when the key is not there or is not 12 numbers. Read without a default:
--- CSP splits a value at its commas
-local function raceMatrix(key)
-  local ok, value = pcall(function() return ac.INIConfig.raceConfig():get('STREET_CORSA', key) end)
-  if not ok or value == nil then return nil end
+-- `count` numbers from a comma list; nil when the key is not there or is not that many numbers. Read without a
+-- default: CSP splits a value at its commas
+local function raceNumbers(key, count)
+  local value = raceValue(key, false)
+  if value == nil then return nil end
   local n = {}
   for _, item in ipairs(type(value) == 'table' and value or { value }) do
     for part in tostring(item):gmatch('[^,]+') do n[#n + 1] = tonumber(part) end
   end
-  if #n ~= 12 then return nil end
-  for i = 1, 12 do if not n[i] then return nil end end
+  if #n ~= count then return nil end
+  for i = 1, count do if not n[i] then return nil end end
+  return n
+end
+
+-- A matrix from 12 numbers (rows of 4x3); nil when the key is not there or is not 12 numbers
+local function raceMatrix(key)
+  local n = raceNumbers(key, 12)
+  if not n then return nil end
   return mat4x4(vec4(n[1], n[2], n[3], 0), vec4(n[4], n[5], n[6], 0), vec4(n[7], n[8], n[9], 0), vec4(n[10], n[11], n[12], 1))
 end
 
@@ -350,8 +378,9 @@ local function surfaceAbove(root, model, x, y, z)
   local from = model:transformPoint(vec3(x, y + RAY_FROM, z))
   local down = model:transformVector(vec3(0, -1, 0))
   local scale = down:length()
-  -- Both sides of every face: the first one hit from above is the car's highest surface there
-  local distance = root:raycast(render.createRay(from, down:normalize(), RAY_FROM * 2 * scale), nil, nil, nil, nil, 0)
+  -- Both sides of every face (culling -1; 0 would hit back faces only, and miss a one-sided hood's top): the first one
+  -- hit from above is the car's highest surface there
+  local distance = root:raycast(render.createRay(from, down:normalize(), RAY_FROM * 2 * scale), nil, nil, nil, nil, -1)
   if type(distance) ~= 'number' or distance < 0 then return nil end
   return y + RAY_FROM - distance / scale
 end
@@ -414,15 +443,8 @@ local function setUpExtras(carIndex, root)
     local key = 'CAR_' .. carIndex .. '_PART_' .. k
     local file = raceText(key)
     if not file then break end
-    local box = nil
-    local ok, raw = pcall(function() return ac.INIConfig.raceConfig():get('STREET_CORSA', key .. '_BOX') end)
-    local n = {}
-    if ok and raw ~= nil then
-      for _, item in ipairs(type(raw) == 'table' and raw or { raw }) do
-        for v in tostring(item):gmatch('[^,]+') do n[#n + 1] = tonumber(v) end
-      end
-    end
-    if #n == 6 then box = { min = vec3(n[1], n[2], n[3]), max = vec3(n[4], n[5], n[6]) } end
+    local n = raceNumbers(key .. '_BOX', 6)
+    local box = n and { min = vec3(n[1], n[2], n[3]), max = vec3(n[4], n[5], n[6]) }
     parts[#parts + 1] = { file = file, at = raceMatrix(key .. '_AT'), box = box }
   end
 
@@ -494,6 +516,7 @@ local function setUpPaint(carIndex, root)
 end
 
 local function setUpCar(carIndex)
+  -- What the car has, from the values read once (a car that has nothing is done with before its model is looked for)
   local files, any = {}, raceText('CAR_' .. carIndex .. '_PART_1') ~= nil or raceText('CAR_' .. carIndex .. '_LOOK') ~= nil
     or raceText('CAR_' .. carIndex .. '_PAINT_1') ~= nil
   for corner = 1, 4 do
