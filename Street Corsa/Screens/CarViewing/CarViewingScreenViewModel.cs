@@ -234,8 +234,10 @@ namespace StreetCorsa.Screens.CarViewing
             var (street, time) = found;
             PlaceLine = GameText.Say("preview.car.at_curb", ("street", street.Title), ("seller", Car?.DealerName ?? string.Empty));
             var spot = street.Player;
+            var oneModel = street.Model != null;
             return new CarViewingStage(street.Kn5For(time), street.LightingFor(time), street.Sun, carDirectory, skin,
-                spot.X, spot.Z, spot.Heading, CurbCameraFromSide, StreetMaxRadius, shown);
+                spot.X, spot.Z, spot.Heading, CurbCameraFromSide, StreetMaxRadius, shown,
+                oneModel ? StreetScene.SkyPrefix : null, oneModel ? StreetScene.SkyNode(time) : null, street.GlowAt(time));
         }
 
         private async Task LoadEngineAsync(UsedCarListingViewModel car)

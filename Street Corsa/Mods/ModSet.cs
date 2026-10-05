@@ -20,6 +20,7 @@ public static class ContentTypes
     public const string Victories = "victories";
     public const string Streets = "streets";
     public const string Stations = "stations";
+
     public const string Showcase = "showcase";
     public const string Garages = "garages";
     public const string Warehouses = "warehouses";

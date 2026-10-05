@@ -410,51 +410,51 @@ public class GasStationTests
     [Fact]
     public void With_nothing_on_screen_the_car_is_at_the_pump_at_once_and_gone_at_once()
     {
-        var stage = new StationStage();
+        var stage = new DriveInStage { UnseenArrivalCue = Audio.Sfx.StationBell };
         var events = new List<string>();
-        stage.AtPump += () => events.Add("pump");
+        stage.Arrived += () => events.Add("pump");
         stage.Gone += () => events.Add("gone");
 
         stage.Leave();
         Assert.Empty(events);
 
         stage.Arrive(new Audio.EngineRunner(), towed: false);
-        Assert.Equal(StationPhase.AtPump, stage.Phase);
+        Assert.Equal(DriveInPhase.Standing, stage.Phase);
         stage.Leave();
-        Assert.Equal(StationPhase.Gone, stage.Phase);
+        Assert.Equal(DriveInPhase.Gone, stage.Phase);
         Assert.Equal(["pump", "gone"], events);
     }
 
     [Fact]
     public void A_car_towed_in_is_at_the_pump_even_while_the_station_is_shown()
     {
-        var stage = new StationStage { IsShown = true };
+        var stage = new DriveInStage { IsShown = true };
         var atPump = 0;
-        stage.AtPump += () => atPump++;
+        stage.Arrived += () => atPump++;
 
         stage.Arrive(new Audio.EngineRunner(), towed: true);
-        Assert.Equal(StationPhase.AtPump, stage.Phase);
+        Assert.Equal(DriveInPhase.Standing, stage.Phase);
         Assert.Equal(1, atPump);
         Assert.True(stage.Towed);
 
         // Shown and driven: the viewport says when it is there
-        var driven = new StationStage { IsShown = true };
+        var driven = new DriveInStage { IsShown = true };
         driven.Arrive(new Audio.EngineRunner(), towed: false);
-        Assert.Equal(StationPhase.Arriving, driven.Phase);
+        Assert.Equal(DriveInPhase.Arriving, driven.Phase);
     }
 
     [Fact]
     public void A_car_that_could_not_get_home_is_back_at_the_pump_and_can_leave_again()
     {
-        var stage = new StationStage();
+        var stage = new DriveInStage { UnseenArrivalCue = Audio.Sfx.StationBell };
         var gone = 0;
         stage.Gone += () => gone++;
         stage.Arrive(new Audio.EngineRunner(), towed: false);
         stage.Leave();
-        Assert.Equal(StationPhase.Gone, stage.Phase);
+        Assert.Equal(DriveInPhase.Gone, stage.Phase);
 
-        stage.BackToPump();
-        Assert.Equal(StationPhase.AtPump, stage.Phase);
+        stage.BackToStand();
+        Assert.Equal(DriveInPhase.Standing, stage.Phase);
         stage.Leave();
         Assert.Equal(2, gone);
     }
@@ -462,7 +462,7 @@ public class GasStationTests
     [Fact]
     public void The_fuel_gauge_hears_every_change_of_the_tank()
     {
-        var stage = new StationStage();
+        var stage = new DriveInStage { UnseenArrivalCue = Audio.Sfx.StationBell };
         var heard = 0;
         stage.FuelChanged += () => heard++;
         stage.FuelLitres = 10;

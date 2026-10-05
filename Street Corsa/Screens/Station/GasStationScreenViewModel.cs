@@ -32,16 +32,13 @@ namespace StreetCorsa.Screens.Station
     /// an hour each, and while he is at it says what he noticed about the car (<see cref="AttendantCheck"/>). A car with
     /// too little gas to make it there is brought in by the tow truck, at a price. Then the player drives off, home.
     /// </summary>
-    public class GasStationScreenViewModel : BaseScreenViewModel, IScriptedScreen
+    public class GasStationScreenViewModel : DriveInScreenViewModel
     {
         /// <summary>The sound of the place</summary>
         public override string? Ambience => "ambience.station";
 
         /// <summary>At the wheel: the radio is the car's</summary>
         public override bool InCar => true;
-
-        // A station that is loading is waited on this long at most before the car is simply there
-        private static readonly TimeSpan StationLoadWait = TimeSpan.FromSeconds(25);
 
         private readonly NavigationService _navigationService;
         private readonly DialogService _dialogService;
@@ -52,12 +49,9 @@ namespace StreetCorsa.Screens.Station
         private readonly ICarPartsService _partsService;
         private readonly IAppLogger _logger;
         private readonly Random _random = new();
-        private readonly DispatcherTimer _waitForStation;
 
         private Car? _car;
         private PartsCatalog? _catalog;
-        private DateTime _waitingSince;
-        private bool _active;
         private bool _busy;
         private bool _leaving;
 
@@ -69,6 +63,7 @@ namespace StreetCorsa.Screens.Station
             IGameTimeService timeService,
             IGameStateRepository gameStateRepo,
             ICarPartsService partsService)
+            : base(gameState, new DriveInStage { UnseenArrivalCue = Audio.Sfx.StationBell }, AppLoggerFactory.CreateLogger("Station"))
         {
             _navigationService = navigationService;
             _dialogService = dialogService;
@@ -80,34 +75,20 @@ namespace StreetCorsa.Screens.Station
             _logger = AppLoggerFactory.CreateLogger("Station");
 
             DriveOffCommand = new RelayCommand(DriveOff, () => IsAtPump && !_busy && !_leaving);
-            _waitForStation = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(250) };
-            _waitForStation.Tick += (_, _) => PullInWhenShown();
 
-            Stage.AtPump += OnAtPump;
+            Stage.Arrived += OnAtPump;
             Stage.Gone += OnGone;
         }
 
         public RelayCommand DriveOffCommand { get; }
 
-        /// <summary>The view's curtain lifting off the scene, as the car rolls in (set by the view)</summary>
-        public Action? OpenCurtain { get; set; }
-
-        /// <summary>The view's curtain coming down, before the garage (set by the view)</summary>
-        public Func<Task>? CloseCurtain { get; set; }
-
         #region The station
-
-        /// <summary>What the car does, which the station's viewport shows</summary>
-        public StationStage Stage { get; } = new();
 
         public StationScene? Station { get; private set; }
 
         public StreetLight Light { get; private set; }
 
         public StreetCar? PlayerCar { get; private set; }
-
-        /// <summary>The player's own engine, driven by the viewport while the car moves</summary>
-        public EngineRunner PlayerEngine { get; } = new(EngineChannel.Main);
 
         public string Title => Station?.Title ?? GameText.Say("station.ui.default_title");
 
@@ -202,7 +183,7 @@ namespace StreetCorsa.Screens.Station
         {
             base.Enter();
             _logger.Information("Went to the gas station");
-            _active = true;
+            IsActive = true;
 
             _car = _gameState.Player.Cars.FirstOrDefault(c => c.InstanceId == _gameState.Player.SelectedCarInstanceId);
             if (_car == null || _catalogRepository.GetCar(_car.DefinitionId) == null)
@@ -272,19 +253,12 @@ namespace StreetCorsa.Screens.Station
 
             // The jobs are priced on what the trip left in the tank
             Refresh();
-            _ = StartOwnEngineAsync(_car, running: !towed);
+            _ = StartOwnEngineAsync(_partsService, _catalogRepository, _car, running: !towed);
 
+            // The car rolls in once the station is up on screen, or at once when it cannot be shown
             Stage.FuelLitres = FuelInTank();
-            _waitingSince = DateTime.UtcNow;
-            _comesOnTheTow = towed;
-            _waitForStation.Start();
+            ComeInOnceShown(() => Station?.HasModel == true, () => Stage.Arrive(PlayerEngine, towed));
         }
-
-        // How the car comes, until it does (then the stage has it: Stage.Towed)
-        private bool _comesOnTheTow;
-
-        // The car's engine once worked out: it goes home with the car, which drives into the garage
-        private Audio.EngineSpec? _engine;
 
         private Task _trip = Task.CompletedTask;
 
@@ -299,41 +273,7 @@ namespace StreetCorsa.Screens.Station
         {
             base.Exit();
             _logger.Information("Left the gas station");
-            _active = false;
-            _waitForStation.Stop();
-            Stage.Clear();
-            PlayerEngine.Detach();
-        }
-
-        /// <summary>The car rolls in once the station is up on screen, or at once when it cannot be shown</summary>
-        private void PullInWhenShown()
-        {
-            if (!_active) return;
-            var waited = DateTime.UtcNow - _waitingSince;
-            if (!Stage.IsShown && !Stage.CannotShow && Station?.HasModel == true && waited < StationLoadWait) return;
-
-            _waitForStation.Stop();
-            Stage.Arrive(PlayerEngine, _comesOnTheTow);
-            OpenCurtain?.Invoke();
-        }
-
-        private async Task StartOwnEngineAsync(Car car, bool running)
-        {
-            try
-            {
-                var spec = await EngineSpecs.ForAsync(_partsService, car, CarNames.Of(_catalogRepository, car.DefinitionId));
-                if (!_active) return;
-                _engine = spec;
-                await PlayerEngine.SetEngineAsync(spec);
-
-                // Only on the way in: an engine worked out after the car stopped at the pump stays off (nobody fills a
-                // running car), and driving off starts it itself
-                if (_active && running && Stage.Phase is StationPhase.Waiting or StationPhase.Arriving) PlayerEngine.StartRunning();
-            }
-            catch (Exception ex)
-            {
-                _logger.Warning(ex, "The player's engine could not be started at the gas station");
-            }
+            EndVisit();
         }
 
         private void SendHome(string message, string title)
@@ -348,22 +288,9 @@ namespace StreetCorsa.Screens.Station
 
         #region At the pump
 
-        // The flow's scripts play on the station's viewport, through the stage
-        Func<string, Services.Scripting.ScriptFacts, Task?>? IScriptedScreen.PlayScreenScript
-        {
-            get => Stage.PlayTrigger;
-            set { }
-        }
-
-        /// <inheritdoc cref="IScriptedScreen.ScriptFacts"/>
-        public Services.Scripting.ScriptFacts ScriptFacts => new(_gameState.Date, StreetLights.At(_gameState.Date), Stage.Towed);
-
-        /// <summary>A leave script played and the way home went nowhere: the car is at the pump again</summary>
-        void IScriptedScreen.PutBackAfterLeave() => Stage.BackToPump();
-
         private void OnAtPump()
         {
-            if (!_active || _car == null) return;
+            if (!IsActive || _car == null) return;
 
             // At the pump: the station's own show is over. Once the viewport has started its station.at_pump script: the
             // flow's enter script, when a mod has one, plays in its place
@@ -419,7 +346,7 @@ namespace StreetCorsa.Screens.Station
             try
             {
                 await WatchAsync(job);
-                if (!_active) return;
+                if (!IsActive) return;
 
                 // The work first: a job that fails to go on costs nothing
                 job.Apply();
@@ -471,7 +398,7 @@ namespace StreetCorsa.Screens.Station
             var full = false;
             try
             {
-                while (_active)
+                while (IsActive)
                 {
                     var done = Math.Min(1, clock.Elapsed.TotalSeconds / seconds);
                     WorkProgress = done;
@@ -562,7 +489,7 @@ namespace StreetCorsa.Screens.Station
                         await SpendAsync(GameAction.TowToStation);
                     }
 
-                    if (_active) GoHome();
+                    if (IsActive) GoHome();
                     return;
                 }
 
@@ -570,14 +497,14 @@ namespace StreetCorsa.Screens.Station
                 StatusText = GameText.Say("station.ui.start_up");
                 try
                 {
-                    await StartUpAsync();
+                    await DrivingHome.StartUpAsync(PlayerEngine, () => IsActive);
                 }
                 catch (Exception ex)
                 {
                     _logger.Warning(ex, "The engine could not be started to drive off");
                 }
 
-                if (!_active) return;
+                if (!IsActive) return;
                 StatusText = GameText.Say("station.ui.pull_out");
                 Stage.Time = _gameState.Date;
                 Stage.Leave();
@@ -585,7 +512,7 @@ namespace StreetCorsa.Screens.Station
             catch (Exception ex)
             {
                 _logger.Error(ex, "Could not drive off from the gas station");
-                if (!_active) return;
+                if (!IsActive) return;
                 StatusText = GameText.Say("station.ui.still_at_pump");
                 _leaving = false;
                 IsDrivingOff = false;
@@ -593,28 +520,10 @@ namespace StreetCorsa.Screens.Station
             }
         }
 
-        /// <summary>
-        /// The starter, and a moment at idle before pulling away. An engine that will not catch (or has no sound to
-        /// start) is waited on a few seconds at most: the car drives off all the same.
-        /// </summary>
-        private async Task StartUpAsync()
-        {
-            if (!PlayerEngine.IsRunning) PlayerEngine.Toggle();
-
-            var clock = System.Diagnostics.Stopwatch.StartNew();
-            while (_active && PlayerEngine.State != Audio.EngineState.Running && clock.Elapsed < StartWait)
-                await Task.Delay(50);
-
-            await Task.Delay(IdleBeforePullingAway);
-            if (_active && PlayerEngine.State != Audio.EngineState.Running) PlayerEngine.StartRunning();
-        }
-
-        private static readonly TimeSpan StartWait = TimeSpan.FromSeconds(4);
-        private static readonly TimeSpan IdleBeforePullingAway = TimeSpan.FromSeconds(1.2);
 
         private void OnGone()
         {
-            if (_active) GoHome();
+            if (IsActive) GoHome();
         }
 
         /// <summary>
@@ -629,7 +538,7 @@ namespace StreetCorsa.Screens.Station
                 await _trip;
                 Save();
                 // Driven off, the car drives into the garage; towed home, it is simply there
-                var home = new FlowArgs { Arrival = _car != null && Stage.Phase == StationPhase.Gone ? DrivingHome.Arrival(_gameState, _engine, _catalog) : null };
+                var home = new FlowArgs { Arrival = _car != null && Stage.Phase == DriveInPhase.Gone ? DrivingHome.Arrival(_gameState, OwnEngine, _catalog) : null };
                 if (await _navigationService.LeaveAsync(this, "back", _gameState, home, first: CloseCurtain)) return;
             }
             catch (Exception ex)
@@ -639,7 +548,7 @@ namespace StreetCorsa.Screens.Station
 
             // Back at the pump, engine off, so DRIVE OFF can try again
             if (PlayerEngine.IsRunning) PlayerEngine.Toggle();
-            Stage.BackToPump();
+            Stage.BackToStand();
             StatusText = GameText.Say("station.ui.still_at_pump");
             OpenCurtain?.Invoke();
             _leaving = false;

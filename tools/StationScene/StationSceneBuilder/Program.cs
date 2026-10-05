@@ -21,8 +21,6 @@ namespace StationSceneBuilder;
 /// </summary>
 internal static class Program
 {
-    private const int SkySegments = 128;
-    private const int SkyRings = 48;
 
     private const string Usage = "StationSceneBuilder <track folder> <out.kn5> --at <node name | x,y,z> [--radius 300] [--models a.kn5,b.kn5] [--exclude word,word] [--ground-half 150] [--sky day=a.jpg,dusk=b.jpg,night=c.jpg] [--sky-radius 900]";
 
@@ -118,7 +116,7 @@ internal static class Program
             foreach (var entry in sky.Split(',', StringSplitOptions.RemoveEmptyEntries))
             {
                 var parts = entry.Split('=', 2);
-                AddSky(scene, parts.Length == 2 ? parts[0] : "day", parts[^1], skyRadius);
+                Kn5SceneWriter.AddSky(scene, "station_sky_", parts.Length == 2 ? parts[0] : "day", parts[^1], skyRadius);
             }
         }
 
@@ -260,15 +258,5 @@ internal static class Program
 
         to.Materials[material.Name] = material;
         return (uint)(to.Materials.Count - 1);
-    }
-
-    /// <summary>A dome round the scene drawn with an equirectangular panorama, lit by itself: STATION_SKY_&lt;LIGHT&gt;</summary>
-    private static void AddSky(IKn5 scene, string light, string panorama, float radius)
-    {
-        var key = Kn5SceneWriter.AddTexture(scene, panorama, $"station_sky_{light}{Path.GetExtension(panorama).ToLowerInvariant()}");
-        var material = Kn5SceneWriter.AddMaterial(scene, "station_sky_" + light, key, ambient: 0f, diffuse: 0f, emissive: 1f);
-
-        // From a little below the horizon to the top
-        Kn5SceneWriter.SkyDome(scene, "STATION_SKY_" + light.ToUpperInvariant(), material, radius, SkySegments, SkyRings, below: -0.08f);
     }
 }

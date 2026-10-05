@@ -40,12 +40,22 @@ namespace StreetCorsa.Services.Scripting
         /// <summary>The rival pulls away; it is gone once the script ends</summary>
         public const string StreetRivalLeave = "street.rival_leave";
 
+        /// <summary>The player's car comes down Main Street and parks in its bay at the diner; the screen goes on once it lets go</summary>
+        public const string DinerArrive = "diner.arrive";
+
+        /// <summary>The player's car stands in its bay at the diner (driven in, or back from a race)</summary>
+        public const string DinerParked = "diner.parked";
+
+        /// <summary>The player's car backs out of its bay and drives off; the screen goes once it lets go</summary>
+        public const string DinerLeave = "diner.leave";
+
         public static readonly IReadOnlyList<string> All =
-            [LotTakeOut, GarageArrive, GarageLeave, StationArrive, StationAtPump, StationLeave, StreetRivalArrive, StreetRivalLeave];
+            [LotTakeOut, GarageArrive, GarageLeave, StationArrive, StationAtPump, StationLeave, StreetRivalArrive, StreetRivalLeave,
+             DinerArrive, DinerParked, DinerLeave];
 
         /// <summary>
         /// A screen of the flow is up, its own show over (<c>screen.&lt;id&gt;.enter</c>): played on the screens with a
-        /// car on a 3D scene (the garage, the car lot, the gas station)
+        /// car on a 3D scene (the garage, the car lot, the gas station, the diner)
         /// </summary>
         public static string ScreenEnter(string screenId) => $"screen.{screenId}.enter";
 

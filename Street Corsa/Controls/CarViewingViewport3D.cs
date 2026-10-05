@@ -16,7 +16,9 @@ namespace StreetCorsa.Controls;
 /// (<paramref name="Lighting"/> and <paramref name="Sun"/>; none leaves a showroom in the renderer's own light), and the
 /// car standing at <paramref name="X"/>, <paramref name="Z"/> facing <paramref name="Heading"/> degrees (0 faces +z).
 /// The camera comes round to it from <paramref name="CameraFromSide"/> radians off its left side towards its nose, and
-/// is never wheeled further out than <paramref name="MaxRadius"/> (a showroom's walls, the street's backdrop).
+/// is never wheeled further out than <paramref name="MaxRadius"/> (a showroom's walls, the street's backdrop). A street
+/// of one model for every light shows its sky for the hour (<paramref name="SkyNode"/>, its other domes, named from
+/// <paramref name="SkyPrefix"/>, hidden) and has its signs and windows lit as <paramref name="Glow"/> says.
 /// </summary>
 public sealed record CarViewingStage(
     string? SceneKn5,
@@ -29,7 +31,10 @@ public sealed record CarViewingStage(
     float Heading,
     float CameraFromSide,
     float MaxRadius,
-    StreetCorsa.Parts.Cars.ShownSet? Shown = null);
+    StreetCorsa.Parts.Cars.ShownSet? Shown = null,
+    string? SkyPrefix = null,
+    string? SkyNode = null,
+    IReadOnlyDictionary<string, float>? Glow = null);
 
 /// <summary>
 /// One car in a scene, to walk round: the car viewing screen's view of a car for sale. The scene and the car load
@@ -176,6 +181,9 @@ public class CarViewingViewport3D : D3DViewportBase
             // After dark the seller has a light on over the car, or there would be nothing to see
             if (lighting.Brightness < DarkBelow) renderer.AddLight(YardLight(stage));
         }
+
+        if (stage is { SkyPrefix: { } skies, SkyNode: { } sky }) SceneDressing.ShowSky(renderer, skies, sky);
+        if (stage.Glow is { } glow) SceneDressing.Glow(renderer, glow);
 
         var placement = Sx.Matrix.RotationY(stage.Heading * MathF.PI / 180f) * Sx.Matrix.Translation(stage.X, 0f, stage.Z);
 

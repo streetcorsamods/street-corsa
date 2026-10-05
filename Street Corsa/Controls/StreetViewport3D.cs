@@ -31,6 +31,7 @@ public class StreetViewport3D : OnboardViewport3D
 
     // What stands in the scene
     private string? _kn5;
+    private StreetLight? _light;
     private StreetCar? _player;
     private StreetScene? _scene;
     private StreetStage? _stageListened;
@@ -91,7 +92,7 @@ public class StreetViewport3D : OnboardViewport3D
 
     protected override bool IsUpToDate => Scene == null || PlayerCar == null
         ? Renderer == null
-        : Renderer != null && _kn5 == WantedKn5 && _player == PlayerCar;
+        : Renderer != null && _kn5 == WantedKn5 && _player == PlayerCar && _light == Light;
 
     protected override string LoadDescription => $"{PlayerCar?.Directory} in {WantedKn5}";
 
@@ -112,10 +113,15 @@ public class StreetViewport3D : OnboardViewport3D
 
         LightScene(renderer, scene.LightingFor(light), scene.Sun);
 
+        // A street of one model for every light: its sky for the hour, its signs and windows lit for it
+        if (scene.Model != null) SceneDressing.ShowSky(renderer, StreetScene.SkyPrefix, StreetScene.SkyNode(light));
+        SceneDressing.Glow(renderer, scene.GlowAt(light));
+
         // Parked where the scene has the player, lifted onto the road as the car's own data says
         if (!await LoadPlayerCarAsync(renderer, player, light, frame => Placement(scene, scene.Player, 0f, lift: frame.Lift))) return;
 
         _kn5 = kn5;
+        _light = light;
         _player = player;
         _scene = scene;
         LookYaw = DefaultLookYaw;
@@ -158,6 +164,7 @@ public class StreetViewport3D : OnboardViewport3D
         base.OnRendererDisposed();
         if (_stageListened != null) _stageListened.IsShown = false;
         _kn5 = null;
+        _light = null;
         _player = null;
         _scene = null;
         _rivalSlot = null;

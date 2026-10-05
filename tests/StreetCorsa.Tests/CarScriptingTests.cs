@@ -27,11 +27,11 @@ public class CarScriptingTests : IDisposable
         var book = ScriptBook.Load(ModSet.Load(RepoPaths.Content), problems);
 
         Assert.Empty(problems);
-        Assert.Equal(["road", "lane", "launch", "pull_away", "roll_in"], book.Feels.Keys);
+        Assert.Equal(["road", "lane", "back_out", "launch", "pull_away", "roll_in"], book.Feels.Keys);
         foreach (var trigger in new[]
                  {
                      ScriptTriggers.LotTakeOut, ScriptTriggers.GarageArrive, ScriptTriggers.StationArrive, ScriptTriggers.StationLeave,
-                     ScriptTriggers.StreetRivalArrive, ScriptTriggers.StreetRivalLeave
+                     ScriptTriggers.StreetRivalArrive, ScriptTriggers.StreetRivalLeave, ScriptTriggers.DinerArrive, ScriptTriggers.DinerLeave
                  })
         {
             Assert.NotNull(book.For(trigger, ScriptFacts.None, null));

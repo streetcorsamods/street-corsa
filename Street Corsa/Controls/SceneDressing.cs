@@ -43,7 +43,31 @@ internal static class SceneDressing
             renderer.RefreshMaterial(kn5, id);
         }
 
-        foreach (var (material, glow) in dressing.Glow)
+        Glow(renderer, dressing.Glow);
+    }
+
+    /// <summary>
+    /// The scene's sky dome for the light of the day (<paramref name="wanted"/>); the others, whose names start with
+    /// <paramref name="skies"/>, hidden
+    /// </summary>
+    public static void ShowSky(GarageRenderer renderer, string skies, string wanted)
+    {
+        if (renderer.ShowroomNode is not { } scene || skies.Length == 0) return;
+
+        foreach (var mesh in scene.Meshes)
+        {
+            var name = mesh.OriginalNode.Name;
+            if (name.StartsWith(skies, StringComparison.Ordinal)) mesh.IsEnabled = name == wanted;
+        }
+    }
+
+    /// <summary>The self-lit materials of the scene (glass, a sign) glowing as bright as <paramref name="glows"/> says; one it has not, skipped</summary>
+    public static void Glow(GarageRenderer renderer, IReadOnlyDictionary<string, float> glows)
+    {
+        if (glows.Count == 0 || renderer.ShowroomNode?.OriginalFile is not { } kn5) return;
+
+        var ids = kn5.Materials.Keys.Select((name, i) => (name, i)).ToDictionary(p => p.name, p => (uint)p.i, StringComparer.Ordinal);
+        foreach (var (material, glow) in glows)
         {
             if (ids.TryGetValue(material, out var id))
                 renderer.UpdateMaterialPropertyC(kn5, id, "ksEmissive", new Vec3(glow, glow, glow));

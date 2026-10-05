@@ -87,8 +87,33 @@ namespace StreetCorsa.Services.Street
         public StreetLight NearestTime(StreetLight light) =>
             Times.Contains(light) || Times.Count == 0 ? light : Times.OrderBy(t => Math.Abs(t - light)).ThenByDescending(t => t).First();
 
-        /// <summary>The model of the street in that light: street_day.kn5 and so on</summary>
-        public string Kn5For(StreetLight light) => Path.Combine(Folder, $"street_{StreetLights.Describe(light)}.kn5");
+        /// <summary>
+        /// One model for every light of the day (<c>"model"</c>), with a sky dome for each (<see cref="SkyNode"/>); null
+        /// when the street has a model for each light instead (street_day.kn5 and so on)
+        /// </summary>
+        public string? Model { get; init; }
+
+        /// <summary>How bright each self-lit material of the street glows, by light of the day</summary>
+        public IReadOnlyDictionary<StreetLight, IReadOnlyDictionary<string, float>> Glow { get; init; } =
+            new Dictionary<StreetLight, IReadOnlyDictionary<string, float>>();
+
+        /// <summary>Who made what the street is built of</summary>
+        public string Credit { get; init; } = string.Empty;
+
+        /// <summary>
+        /// The model of the street in that light: its one model, else street_day.kn5 and so on. Empty when the file names
+        /// a model outside the folder: the game reads no file a mod points it to elsewhere.
+        /// </summary>
+        public string Kn5For(StreetLight light) => Model == null ? Path.Combine(Folder, $"street_{StreetLights.Describe(light)}.kn5")
+            : Helpers.PathNames.TryCombineUnder(Folder, Model, out var kn5) ? kn5 : string.Empty;
+
+        /// <summary>A one-model street's sky dome drawn at a light of the day; the others are hidden</summary>
+        public static string SkyNode(StreetLight light) => SkyPrefix + StreetLights.Describe(light).ToUpperInvariant();
+
+        /// <summary>What the names of a one-model street's sky domes start with</summary>
+        public const string SkyPrefix = "STREET_SKY_";
+
+        public IReadOnlyDictionary<string, float> GlowAt(StreetLight light) => SceneLighting.GlowAt(Glow, light);
 
         /// <summary>The light of the day as the renderer gets it; the day's when the file leaves one out</summary>
         public StreetLighting LightingFor(StreetLight light) => SceneLighting.For(Lights, light);
@@ -139,8 +164,9 @@ namespace StreetCorsa.Services.Street
 
         private sealed record SpotEntry(float X, float Z, float Heading);
 
-        private sealed record SceneEntry(string? Id, string? Title, SpotEntry? Player, float LaneOffset, float RivalStop,
-            float ApproachFrom, float LeaveTo, float[]? Sun, Dictionary<string, SceneLighting.LightEntry?>? Lights, List<string?>? Times);
+        private sealed record SceneEntry(string? Id, string? Title, string? Model, string? Credit, SpotEntry? Player, float LaneOffset, float RivalStop,
+            float ApproachFrom, float LeaveTo, float[]? Sun, Dictionary<string, SceneLighting.LightEntry?>? Lights, List<string?>? Times,
+            Dictionary<string, Dictionary<string, float>?>? Glow);
 
         /// <summary>
         /// Every street of every mod (a folder under a mod's <c>streets</c>) that loads, by full id: a mod's streets get
@@ -210,7 +236,12 @@ namespace StreetCorsa.Services.Street
             var sun = entry.Sun is { Length: 3 } s ? s : [0.2f, 1f, 0.8f];
             var scene = new StreetScene(entry.Id ?? Path.GetFileName(folder), entry.Title ?? entry.Id ?? "The street", folder,
                 new StreetSpot(entry.Player.X, entry.Player.Z, entry.Player.Heading), entry.LaneOffset, entry.RivalStop,
-                entry.ApproachFrom, entry.LeaveTo, sun, lights);
+                entry.ApproachFrom, entry.LeaveTo, sun, lights)
+            {
+                Model = entry.Model,
+                Glow = SceneLighting.MaterialGlows(entry.Glow),
+                Credit = entry.Credit ?? string.Empty
+            };
 
             // Used at the lights it names, each of which needs its model; else at every light it has a model for
             var times = new HashSet<StreetLight>();

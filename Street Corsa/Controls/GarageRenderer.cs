@@ -1,11 +1,14 @@
+using System.Reflection;
 using AcTools.Kn5File;
 using AcTools.Render.Base;
 using AcTools.Render.Base.Cameras;
 using AcTools.Render.Base.Objects;
 using AcTools.Render.Base.PostEffects;
 using AcTools.Render.Base.TargetTextures;
+using AcTools.Render.Base.Shadows;
 using AcTools.Render.Base.Utils;
 using AcTools.Render.Kn5Specific.Objects;
+using AcTools.Render.Kn5SpecificForward;
 using AcTools.Render.Kn5SpecificForwardDark;
 using AcTools.Render.Shaders;
 using SlimDX;
@@ -163,6 +166,29 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     /// arrive stands there without a shadow until something else happens to ask for one.
     /// </summary>
     public void RefreshShadows() => SetShadowsDirty();
+
+    /// <summary>
+    /// Where the sun's shadows centre instead of the main car's middle (the diner's lot, so the racers' cars parked
+    /// there get theirs); null for the car's. Changed, the shadows are asked for again (<see cref="RefreshShadows"/>).
+    /// </summary>
+    public Vector3? ShadowsCentre { get; set; }
+
+    // The base draws the shadows again whenever the main car's middle is not where they were last centred: told the
+    // car's middle after drawing them round another point, it only does so when the car moves or the scene changes
+    private static readonly FieldInfo? PreviousShadowsTarget =
+        typeof(ForwardKn5ObjectRenderer).GetField("_previousShadowsTarget", BindingFlags.NonPublic | BindingFlags.Instance);
+
+    protected override void UpdateShadows(ShadowsDirectional shadows, Vector3 center)
+    {
+        if (ShadowsCentre is not { } wanted || PreviousShadowsTarget == null)
+        {
+            base.UpdateShadows(shadows, center);
+            return;
+        }
+
+        base.UpdateShadows(shadows, wanted);
+        PreviousShadowsTarget.SetValue(this, (Vector3?)center);
+    }
 
     /// <summary>
     /// Works the scene's boxes out again after cars were moved by hand. Setting a slot's matrix leaves its box where

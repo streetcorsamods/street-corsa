@@ -2,7 +2,7 @@ using AcTools.Kn5File;
 using AcTools.Numerics;
 using StreetCorsa.Helpers;
 
-namespace StationSceneBuilder;
+namespace StreetCorsa.Tools;
 
 /// <summary>
 /// The ground's height over a square round the middle of the scene, from the faces of the scene that look up, as the

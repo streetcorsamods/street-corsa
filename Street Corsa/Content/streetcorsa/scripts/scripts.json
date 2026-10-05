@@ -5,7 +5,8 @@
     "takes the place of one of these with \"replaces\" (\"replaces\": \"lot_take_out\"), or adds its own for a trigger",
     "with a \"when\": the latest mod's whose \"when\" holds is played. The marks and paths are the scene's: the lot's",
     "\"exit\", the garage's \"door\", the gas station's \"arrive\", \"leave\" and \"pump\", the street's \"arrive\",",
-    "\"leave\", \"alongside\" and \"gone\"; \"home\" is where the car stands, \"here\" where it is now."
+    "\"leave\", \"alongside\" and \"gone\", the diner's \"arrive\", \"back_out\", \"leave\" and \"bay\"; \"home\" is",
+    "where the car stands, \"here\" where it is now."
   ],
   "scripts": [
     {
@@ -57,6 +58,30 @@
       "_comment": "Out onto the road; the screen goes a moment before the way out ends, the car still rolling.",
       "steps": [
         { "if": { "light": "night" }, "then": [ { "do": "lights", "head": true } ] },
+        { "do": "drive", "path": "leave", "feel": "road", "end": "keep_going", "wait": false },
+        { "do": "wait", "until": "drive_end", "early": 1.2 },
+        { "do": "release" },
+        { "do": "wait", "until": "drive_end" }
+      ]
+    },
+    {
+      "id": "diner_arrive",
+      "trigger": "diner.arrive",
+      "_comment": "Down Main Street, the headlights on after dark, right into the diner's lot and nose first into the bay; the lights off once it stands there.",
+      "steps": [
+        { "if": { "light": "night" }, "then": [ { "do": "lights", "head": true } ] },
+        { "do": "drive", "path": "arrive", "feel": "road", "start": "rolling" },
+        { "do": "lights", "head": false }
+      ]
+    },
+    {
+      "id": "diner_leave",
+      "trigger": "diner.leave",
+      "_comment": "Out of the bay backwards, the brake lights on as it stops, then across the lot and away down Main Street; the screen goes a moment before the way out ends, the car still rolling.",
+      "steps": [
+        { "if": { "light": "night" }, "then": [ { "do": "lights", "head": true } ] },
+        { "do": "drive", "path": "back_out", "reverse": true, "feel": "back_out" },
+        { "do": "wait", "seconds": 0.4 },
         { "do": "drive", "path": "leave", "feel": "road", "end": "keep_going", "wait": false },
         { "do": "wait", "until": "drive_end", "early": 1.2 },
         { "do": "release" },

@@ -6,6 +6,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:converters="clr-namespace:StreetCorsa.Converters"
              xmlns:helpers="clr-namespace:StreetCorsa.Helpers"
+             xmlns:controls="clr-namespace:StreetCorsa.Controls"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="800">
     <UserControl.Resources>
@@ -21,7 +22,7 @@
                                                Hard="{StaticResource DangerStrongBrush}"
                                                Other="{StaticResource BorderLightBrush}"/>
     </UserControl.Resources>
-    <Grid Background="{StaticResource DinerBackgroundBrush}"
+    <Grid Background="{StaticResource StageBrush}"
           Opacity="0">
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
@@ -41,6 +42,60 @@
             </EventTrigger>
         </Grid.Triggers>
 
+        <!-- Main Street from the driver's seat: the car comes down it into its bay, the diner ahead -->
+        <controls:DinerViewport3D x:Name="StreetView"
+                                  Scene="{Binding Scene}"
+                                  Light="{Binding Light}"
+                                  PlayerCar="{Binding PlayerCar}"
+                                  Stage="{Binding Stage}"
+                                  ParkedCars="{Binding ParkedCars}"/>
+
+        <!-- No street to show (no 3D here, or no street's model): the diner as a picture -->
+        <Border Background="{StaticResource DinerBackgroundBrush}"
+                Visibility="{Binding HasStreetModel, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+        <Border Background="{StaticResource DinerBackgroundBrush}"
+                Visibility="{Binding HasFailed, ElementName=StreetView, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+        <!-- The diner: its name and who is in tonight, once the car is in its bay -->
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,20,0,0" IsHitTestVisible="False"
+                    helpers:Reveal.IsShown="{Binding IsParked}">
+            <Border Background="{StaticResource BgPanelCCBrush}"
+                    CornerRadius="5"
+                    Padding="28,4"
+                    HorizontalAlignment="Center">
+                <TextBlock Text="{Binding Title}"
+                           FontSize="{StaticResource FontSizeScreenTitle}"
+                           FontWeight="Bold"
+                           Foreground="{StaticResource TextPrimaryBrush}"/>
+            </Border>
+            <Border Background="{StaticResource BgPanelCCBrush}" CornerRadius="4" Padding="14,3" Margin="0,6,0,0" HorizontalAlignment="Center">
+                <TextBlock Text="{Binding RacersIn}"
+                           FontSize="{StaticResource FontSizeCompact}"
+                           Foreground="{StaticResource TextSecondaryBrush}"/>
+            </Border>
+        </StackPanel>
+
+        <!-- Drag to look round -->
+        <TextBlock Text="{t:Text station.ui.look_hint}"
+                   FontSize="{StaticResource FontSizeTiny}"
+                   Foreground="{StaticResource White90Brush}"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Bottom"
+                   Margin="0,0,0,8"
+                   IsHitTestVisible="False"
+                   helpers:Reveal.IsShown="{Binding ShowsDinerButton}"/>
+
+        <!-- Into the diner -->
+        <Button HorizontalAlignment="Center"
+                VerticalAlignment="Bottom"
+                Margin="0,0,0,34"
+                Padding="30,12"
+                Style="{StaticResource DialogPrimaryButtonStyle}"
+                FontSize="{StaticResource FontSizeBodyLarge}"
+                Content="{t:Text diner.ui.go_in}"
+                Command="{Binding ToggleDinerCommand}"
+                helpers:Reveal.IsShown="{Binding ShowsDinerButton}"/>
+
         <!-- Garage Button -->
         <Button x:Name="GarageButton"
                 Grid.Row="0"
@@ -51,22 +106,7 @@
                 HorizontalAlignment="Left"
                 VerticalAlignment="Top"
                 Margin="20,20,0,0"
-                Opacity="0">
-            <Button.Triggers>
-                <EventTrigger RoutedEvent="FrameworkElement.Loaded">
-                    <BeginStoryboard>
-                        <Storyboard>
-                            <!-- Fade in -->
-                            <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                           From="0.0"
-                                           To="1.0"
-                                           BeginTime="0:0:0.3"
-                                           Duration="0:0:0.5"/>
-                        </Storyboard>
-                    </BeginStoryboard>
-                </EventTrigger>
-            </Button.Triggers>
-        </Button>
+                helpers:Reveal.IsShown="{Binding IsParked}"/>
 
         <!-- Out to the street: beside the garage button, above the panels (the money card has the top right) -->
         <Button Grid.Row="0"
@@ -84,1177 +124,1196 @@
                 Margin="100,30,0,0"
                 ToolTip="{t:Text diner.cruise.tooltip}"/>
 
-        <!-- Main Content -->
-        <Grid Grid.Row="0" Margin="20,100,20,20">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="400"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-
-            <!-- Opponent List -->
-            <Border Grid.Column="0"
-                   Background="{StaticResource BgDarkDFBrush}"
-                   BorderBrush="{StaticResource BorderLightBrush}"
-                   BorderThickness="2"
-                   CornerRadius="5"
-                   Margin="0,0,10,0">
+        <!-- In the diner, over the street: who is in tonight and the word on the street; a racer picked, their options,
+             the race and a word with them in the same window -->
+        <Grid helpers:Reveal.IsShown="{Binding IsDinerOpen}" helpers:Reveal.OffsetY="24">
+            <Border Background="{StaticResource OverlayBrush}"/>
+            <Border Style="{StaticResource GlassPanelStyle}"
+                    Margin="90,120,90,40"
+                    MaxWidth="1500"
+                    Padding="18">
                 <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
 
-                    <!-- Header -->
-                    <Border Grid.Row="0"
-                           Background="{StaticResource BgPanelBrush}"
+                    <!-- Everyone who is in, and the word on the street beside them, while nobody is picked -->
+                    <Border Background="{StaticResource BgDarkDFBrush}"
                            BorderBrush="{StaticResource BorderLightBrush}"
-                           BorderThickness="0,0,0,1"
-                           Padding="15">
-                        <TextBlock Text="{t:Text diner.opponents}"
-                                  FontSize="{StaticResource FontSizeSubheading}"
-                                  FontWeight="Bold"
-                                  Foreground="{StaticResource TextPrimaryBrush}"/>
-                    </Border>
+                           BorderThickness="2"
+                           CornerRadius="5"
+                           Visibility="{Binding HasSelectedOpponent, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="460"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
 
-                    <!-- Empty State -->
-                    <Border Grid.Row="1"
-                           Visibility="{Binding HasOpponents, Converter={StaticResource InverseBooleanToVisibilityConverter}}"
-                           Padding="20">
-                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                            <TextBlock Text="{t:Text diner.no_racers}"
-                                      FontSize="{StaticResource FontSizeBody}"
-                                      Foreground="{StaticResource TextSecondaryBrush}"
-                                      HorizontalAlignment="Center"
-                                      TextWrapping="Wrap"/>
-                            <TextBlock Text="{t:Text diner.check_back}"
-                                      FontSize="{StaticResource FontSizeSmall}"
-                                      Foreground="{StaticResource TextDisabledBrush}"
-                                      HorizontalAlignment="Center"
-                                      Margin="0,5,0,0"/>
-                        </StackPanel>
-                    </Border>
+                            <!-- Header -->
+                            <Border Grid.Row="0"
+                                   Background="{StaticResource BgPanelBrush}"
+                                   BorderBrush="{StaticResource BorderLightBrush}"
+                                   BorderThickness="0,0,0,1"
+                                   Padding="15">
+                                <TextBlock Text="{t:Text diner.opponents}"
+                                          FontSize="{StaticResource FontSizeSubheading}"
+                                          FontWeight="Bold"
+                                          Foreground="{StaticResource TextPrimaryBrush}"/>
+                            </Border>
 
-                    <!-- List -->
-                    <ScrollViewer Grid.Row="1"
-                                 VerticalScrollBarVisibility="Auto"
-                                 HorizontalScrollBarVisibility="Disabled"
-                                 Visibility="{Binding HasOpponents, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <ItemsControl ItemsSource="{Binding Opponents}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <!-- Opponent Card -->
-                                    <Button Command="{Binding DataContext.SelectOpponentCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                           CommandParameter="{Binding}"
-                                           Background="Transparent"
-                                           BorderThickness="0"
-                                           Padding="0"
-                                           Margin="10"
-                                           HorizontalContentAlignment="Stretch"
-                                           Cursor="Hand">
-                                        <Button.Style>
-                                            <Style TargetType="Button">
-                                                <Setter Property="Template">
-                                                    <Setter.Value>
-                                                        <ControlTemplate TargetType="Button">
-                                                            <Border x:Name="CardBorder"
-                                                                   BorderBrush="{Binding Difficulty, Converter={StaticResource DifficultyBorderBrushConverter}}"
-                                                                   Background="{StaticResource BgPanelBrush}"
-                                                                   BorderThickness="2"
-                                                                   CornerRadius="5"
-                                                                   Padding="10">
+                            <!-- Empty State -->
+                            <Border Grid.Row="1"
+                                   Visibility="{Binding HasOpponents, Converter={StaticResource InverseBooleanToVisibilityConverter}}"
+                                   Padding="20">
+                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                    <TextBlock Text="{t:Text diner.no_racers}"
+                                              FontSize="{StaticResource FontSizeBody}"
+                                              Foreground="{StaticResource TextSecondaryBrush}"
+                                              HorizontalAlignment="Center"
+                                              TextWrapping="Wrap"/>
+                                    <TextBlock Text="{t:Text diner.check_back}"
+                                              FontSize="{StaticResource FontSizeSmall}"
+                                              Foreground="{StaticResource TextDisabledBrush}"
+                                              HorizontalAlignment="Center"
+                                              Margin="0,5,0,0"/>
+                                </StackPanel>
+                            </Border>
 
-                                                                <Grid>
-                                                                    <Grid.ColumnDefinitions>
-                                                                        <ColumnDefinition Width="80"/>
-                                                                        <ColumnDefinition Width="*"/>
-                                                                    </Grid.ColumnDefinitions>
-
-                                                                    <!-- Portrait -->
-                                                                    <Border Grid.Column="0"
-                                                                           Width="70"
-                                                                           Height="70"
-                                                                           Background="{StaticResource BgMediumBrush}"
-                                                                           BorderBrush="{StaticResource BorderLightBrush}"
-                                                                           BorderThickness="1"
-                                                                           CornerRadius="5"
-                                                                           Margin="0,0,10,0">
-                                                                        <Grid>
-                                                                            <Image Source="{Binding PortraitImage}"
-                                                                                  Stretch="UniformToFill"
-                                                                                  Visibility="{Binding HasPortrait, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-
-                                                                            <TextBlock Text="?"
-                                                                                      FontSize="{StaticResource FontSizeScreenTitle}"
-                                                                                      FontWeight="Bold"
-                                                                                      Foreground="{StaticResource BorderLightBrush}"
-                                                                                      HorizontalAlignment="Center"
-                                                                                      VerticalAlignment="Center"
-                                                                                      Visibility="{Binding HasPortrait, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
-                                                                        </Grid>
-                                                                    </Border>
-
-                                                                    <!-- Info -->
-                                                                    <StackPanel Grid.Column="1"
-                                                                               VerticalAlignment="Center">
-                                                                        <!-- Name -->
-                                                                        <TextBlock FontSize="{StaticResource FontSizeSubheading}"
-                                                                                  FontWeight="Bold"
-                                                                                  Foreground="{StaticResource TextPrimaryBrush}">
-                                                                            <Run Text="{Binding Name, Mode=OneWay}"/>
-                                                                        </TextBlock>
-
-                                                                        <!-- Nickname -->
-                                                                        <TextBlock FontSize="{StaticResource FontSizeSmall}"
-                                                                                  Foreground="{StaticResource GoldBrush}"
-                                                                                  Margin="0,2,0,5">
-                                                                            <Run Text="&quot;"/>
-                                                                            <Run Text="{Binding Nickname, Mode=OneWay}"/>
-                                                                            <Run Text="&quot;"/>
-                                                                        </TextBlock>
-
-                                                                        <!-- Reputation -->
-                                                                        <StackPanel Orientation="Horizontal"
-                                                                                   Margin="0,0,0,2">
-                                                                            <TextBlock Text="{t:Text diner.reputation}"
-                                                                                      FontSize="{StaticResource FontSizeCaption}"
-                                                                                      Foreground="{StaticResource TextSecondaryBrush}"/>
-                                                                            <TextBlock Foreground="{Binding Difficulty, Converter={StaticResource DifficultyTextBrushConverter}}"
-                                                                                       FontSize="{StaticResource FontSizeCaption}"
-                                                                                      FontWeight="Bold">
-                                                                                <Run Text="{Binding ReputationTier, Mode=OneWay}"/>
-                                                                                <Run Text=" ("/>
-                                                                                <Run Text="{Binding Reputation, Mode=OneWay}"/>
-                                                                                <Run Text=")"/>
-                                                                            </TextBlock>
-                                                                        </StackPanel>
-
-                                                                        <!-- Record -->
-                                                                        <TextBlock Text="{Binding RecordDisplay}"
-                                                                                  FontSize="{StaticResource FontSizeTiny}"
-                                                                                  Foreground="{StaticResource TextSecondaryBrush}"/>
-
-                                                                        <!-- Lost a pink slip to the player and wants it settled -->
-                                                                        <Border Background="{StaticResource DangerBrush}"
-                                                                                CornerRadius="3"
-                                                                                Padding="6,2"
-                                                                                Margin="0,4,0,0"
-                                                                                HorizontalAlignment="Left"
-                                                                                Visibility="{Binding WantsRematch, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                                            <TextBlock Text="{Binding RematchDisplay}"
-                                                                                       FontSize="{StaticResource FontSizeTiny}"
-                                                                                       FontWeight="Bold"
-                                                                                       Foreground="{StaticResource TextPrimaryBrush}"/>
-                                                                        </Border>
-                                                                    </StackPanel>
-                                                                </Grid>
-                                                            </Border>
-                                                            <ControlTemplate.Triggers>
-                                                                <Trigger Property="IsMouseOver" Value="True">
-                                                                    <Setter TargetName="CardBorder" Property="Background" Value="{StaticResource BgMediumBrush}"/>
-                                                                </Trigger>
-                                                            </ControlTemplate.Triggers>
-                                                        </ControlTemplate>
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </Style>
-                                        </Button.Style>
-                                    </Button>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
-
-                    <!-- Word on the street: what the rivals have been up to -->
-                    <Border Grid.Row="2"
-                           Background="{StaticResource BgPanelBrush}"
-                           BorderBrush="{StaticResource BorderLightBrush}"
-                           BorderThickness="0,1,0,0"
-                           Padding="15,10"
-                           Visibility="{Binding HasStreetTalk, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <StackPanel>
-                            <TextBlock Text="{t:Text diner.word_on_street}"
-                                      FontSize="{StaticResource FontSizeCaption}"
-                                      FontWeight="Bold"
-                                      Foreground="{StaticResource TextSecondaryBrush}"
-                                      Margin="0,0,0,6"/>
-                            <ScrollViewer MaxHeight="200"
+                            <!-- List -->
+                            <ScrollViewer Grid.Row="1"
                                          VerticalScrollBarVisibility="Auto"
-                                         HorizontalScrollBarVisibility="Disabled">
-                                <ItemsControl ItemsSource="{Binding StreetTalk}">
+                                         HorizontalScrollBarVisibility="Disabled"
+                                         Visibility="{Binding HasOpponents, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <ItemsControl ItemsSource="{Binding Opponents}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Grid Margin="0,0,0,6">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="62"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                </Grid.ColumnDefinitions>
-                                                <TextBlock Grid.Column="0"
-                                                          Text="{Binding When}"
-                                                          FontSize="{StaticResource FontSizeTiny}"
-                                                          Foreground="{StaticResource TextDisabledBrush}"
-                                                          Margin="0,2,0,0"/>
-                                                <TextBlock Grid.Column="1"
-                                                          Text="{Binding Text}"
-                                                          FontSize="{StaticResource FontSizeSmall}"
-                                                          Foreground="{StaticResource TextPrimaryBrush}"
-                                                          TextWrapping="Wrap"/>
-                                            </Grid>
+                                            <!-- Opponent Card -->
+                                            <Button Command="{Binding DataContext.SelectOpponentCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                   CommandParameter="{Binding}"
+                                                   Background="Transparent"
+                                                   BorderThickness="0"
+                                                   Padding="0"
+                                                   Margin="10"
+                                                   HorizontalContentAlignment="Stretch"
+                                                   Cursor="Hand">
+                                                <Button.Style>
+                                                    <Style TargetType="Button">
+                                                        <Setter Property="Template">
+                                                            <Setter.Value>
+                                                                <ControlTemplate TargetType="Button">
+                                                                    <Border x:Name="CardBorder"
+                                                                           BorderBrush="{Binding Difficulty, Converter={StaticResource DifficultyBorderBrushConverter}}"
+                                                                           Background="{StaticResource BgPanelBrush}"
+                                                                           BorderThickness="2"
+                                                                           CornerRadius="5"
+                                                                           Padding="10">
+
+                                                                        <Grid>
+                                                                            <Grid.ColumnDefinitions>
+                                                                                <ColumnDefinition Width="80"/>
+                                                                                <ColumnDefinition Width="*"/>
+                                                                            </Grid.ColumnDefinitions>
+
+                                                                            <!-- Portrait -->
+                                                                            <Border Grid.Column="0"
+                                                                                   Width="70"
+                                                                                   Height="70"
+                                                                                   Background="{StaticResource BgMediumBrush}"
+                                                                                   BorderBrush="{StaticResource BorderLightBrush}"
+                                                                                   BorderThickness="1"
+                                                                                   CornerRadius="5"
+                                                                                   Margin="0,0,10,0">
+                                                                                <Grid>
+                                                                                    <Image Source="{Binding PortraitImage}"
+                                                                                          Stretch="UniformToFill"
+                                                                                          Visibility="{Binding HasPortrait, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+                                                                                    <TextBlock Text="?"
+                                                                                              FontSize="{StaticResource FontSizeScreenTitle}"
+                                                                                              FontWeight="Bold"
+                                                                                              Foreground="{StaticResource BorderLightBrush}"
+                                                                                              HorizontalAlignment="Center"
+                                                                                              VerticalAlignment="Center"
+                                                                                              Visibility="{Binding HasPortrait, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                                                                                </Grid>
+                                                                            </Border>
+
+                                                                            <!-- Info -->
+                                                                            <StackPanel Grid.Column="1"
+                                                                                       VerticalAlignment="Center">
+                                                                                <!-- Name -->
+                                                                                <TextBlock FontSize="{StaticResource FontSizeSubheading}"
+                                                                                          FontWeight="Bold"
+                                                                                          Foreground="{StaticResource TextPrimaryBrush}">
+                                                                                    <Run Text="{Binding Name, Mode=OneWay}"/>
+                                                                                </TextBlock>
+
+                                                                                <!-- Nickname -->
+                                                                                <TextBlock FontSize="{StaticResource FontSizeSmall}"
+                                                                                          Foreground="{StaticResource GoldBrush}"
+                                                                                          Margin="0,2,0,5">
+                                                                                    <Run Text="&quot;"/>
+                                                                                    <Run Text="{Binding Nickname, Mode=OneWay}"/>
+                                                                                    <Run Text="&quot;"/>
+                                                                                </TextBlock>
+
+                                                                                <!-- Reputation -->
+                                                                                <StackPanel Orientation="Horizontal"
+                                                                                           Margin="0,0,0,2">
+                                                                                    <TextBlock Text="{t:Text diner.reputation}"
+                                                                                              FontSize="{StaticResource FontSizeCaption}"
+                                                                                              Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                                                    <TextBlock Foreground="{Binding Difficulty, Converter={StaticResource DifficultyTextBrushConverter}}"
+                                                                                               FontSize="{StaticResource FontSizeCaption}"
+                                                                                              FontWeight="Bold">
+                                                                                        <Run Text="{Binding ReputationTier, Mode=OneWay}"/>
+                                                                                        <Run Text=" ("/>
+                                                                                        <Run Text="{Binding Reputation, Mode=OneWay}"/>
+                                                                                        <Run Text=")"/>
+                                                                                    </TextBlock>
+                                                                                </StackPanel>
+
+                                                                                <!-- Record -->
+                                                                                <TextBlock Text="{Binding RecordDisplay}"
+                                                                                          FontSize="{StaticResource FontSizeTiny}"
+                                                                                          Foreground="{StaticResource TextSecondaryBrush}"/>
+
+                                                                                <!-- Lost a pink slip to the player and wants it settled -->
+                                                                                <Border Background="{StaticResource DangerBrush}"
+                                                                                        CornerRadius="3"
+                                                                                        Padding="6,2"
+                                                                                        Margin="0,4,0,0"
+                                                                                        HorizontalAlignment="Left"
+                                                                                        Visibility="{Binding WantsRematch, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                                                    <TextBlock Text="{Binding RematchDisplay}"
+                                                                                               FontSize="{StaticResource FontSizeTiny}"
+                                                                                               FontWeight="Bold"
+                                                                                               Foreground="{StaticResource TextPrimaryBrush}"/>
+                                                                                </Border>
+                                                                            </StackPanel>
+                                                                        </Grid>
+                                                                    </Border>
+                                                                    <ControlTemplate.Triggers>
+                                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                                            <Setter TargetName="CardBorder" Property="Background" Value="{StaticResource BgMediumBrush}"/>
+                                                                        </Trigger>
+                                                                    </ControlTemplate.Triggers>
+                                                                </ControlTemplate>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                    </Style>
+                                                </Button.Style>
+                                            </Button>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
                             </ScrollViewer>
-                        </StackPanel>
+
+                            <!-- Word on the street: what the rivals have been up to -->
+                            <Border Grid.Column="1"
+                                   Grid.RowSpan="2"
+                                   Background="{StaticResource BgPanelBrush}"
+                                   BorderBrush="{StaticResource BorderLightBrush}"
+                                   BorderThickness="1,0,0,0"
+                                   Padding="15,10"
+                                   Visibility="{Binding HasStreetTalk, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <DockPanel LastChildFill="True">
+                                    <TextBlock DockPanel.Dock="Top"
+                                              Text="{t:Text diner.word_on_street}"
+                                              FontSize="{StaticResource FontSizeCaption}"
+                                              FontWeight="Bold"
+                                              Foreground="{StaticResource TextSecondaryBrush}"
+                                              Margin="0,0,0,6"/>
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                                 HorizontalScrollBarVisibility="Disabled">
+                                        <ItemsControl ItemsSource="{Binding StreetTalk}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid Margin="0,0,0,6">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="62"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Grid.Column="0"
+                                                                  Text="{Binding When}"
+                                                                  FontSize="{StaticResource FontSizeTiny}"
+                                                                  Foreground="{StaticResource TextDisabledBrush}"
+                                                                  Margin="0,2,0,0"/>
+                                                        <TextBlock Grid.Column="1"
+                                                                  Text="{Binding Text}"
+                                                                  FontSize="{StaticResource FontSizeSmall}"
+                                                                  Foreground="{StaticResource TextPrimaryBrush}"
+                                                                  TextWrapping="Wrap"/>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </DockPanel>
+                            </Border>
+                        </Grid>
                     </Border>
-                </Grid>
-            </Border>
 
-            <!-- Opponent Detail Panel -->
-            <Border Grid.Column="1"
-                   Background="{StaticResource BgDarkDFBrush}"
-                   BorderBrush="{StaticResource BorderLightBrush}"
-                   BorderThickness="2"
-                   CornerRadius="5"
-                   Margin="10,0,0,0"
-                   Visibility="{Binding HasSelectedOpponent, Converter={StaticResource BooleanToVisibilityConverter}}">
-                <Grid Margin="20">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
+                    <!-- A racer picked: who they are, their car, the race and the stakes -->
+                    <Border Background="{StaticResource BgDarkDFBrush}"
+                           BorderBrush="{StaticResource BorderLightBrush}"
+                           BorderThickness="2"
+                           CornerRadius="5"
+                           Visibility="{Binding HasSelectedOpponent, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Grid Margin="20">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
 
-                    <!-- Racer Header Section: Portrait+Info Left, Cards Right -->
-                    <Grid Grid.Row="0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <!-- Left: Portrait, Speech Bubble, and Identity -->
-                        <StackPanel Grid.Column="0"
-                                   Margin="0,0,20,0"
-                                   VerticalAlignment="Top">
-                            <!-- Portrait and Speech Bubble Row -->
-                            <Grid Margin="0,0,0,10">
+                            <!-- Racer Header Section: Portrait+Info Left, Cards Right -->
+                            <Grid Grid.Row="0">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
 
-                                <!-- Portrait -->
-                                <Border Grid.Column="0"
-                                       Width="150"
-                                       Height="150"
-                                       Background="{StaticResource BgPanelBrush}"
-                                       BorderBrush="{StaticResource BorderLightBrush}"
-                                       BorderThickness="2"
-                                       CornerRadius="5">
-                                    <Grid>
-                                        <Image Source="{Binding SelectedOpponent.PortraitImage}"
-                                              Stretch="UniformToFill"
-                                              Visibility="{Binding SelectedOpponent.HasPortrait, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                <!-- Left: Portrait, Speech Bubble, and Identity -->
+                                <StackPanel Grid.Column="0"
+                                           Margin="0,0,20,0"
+                                           VerticalAlignment="Top">
+                                    <!-- Portrait and Speech Bubble Row -->
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
 
-                                        <TextBlock Text="?"
-                                                  FontSize="{StaticResource FontSizeHero}"
-                                                  FontWeight="Bold"
-                                                  Foreground="{StaticResource BorderLightBrush}"
-                                                  HorizontalAlignment="Center"
-                                                  VerticalAlignment="Center"
-                                                  Visibility="{Binding SelectedOpponent.HasPortrait, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                                        <!-- Portrait -->
+                                        <Border Grid.Column="0"
+                                               Width="150"
+                                               Height="150"
+                                               Background="{StaticResource BgPanelBrush}"
+                                               BorderBrush="{StaticResource BorderLightBrush}"
+                                               BorderThickness="2"
+                                               CornerRadius="5">
+                                            <Grid>
+                                                <Image Source="{Binding SelectedOpponent.PortraitImage}"
+                                                      Stretch="UniformToFill"
+                                                      Visibility="{Binding SelectedOpponent.HasPortrait, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+                                                <TextBlock Text="?"
+                                                          FontSize="{StaticResource FontSizeHero}"
+                                                          FontWeight="Bold"
+                                                          Foreground="{StaticResource BorderLightBrush}"
+                                                          HorizontalAlignment="Center"
+                                                          VerticalAlignment="Center"
+                                                          Visibility="{Binding SelectedOpponent.HasPortrait, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                                            </Grid>
+                                        </Border>
+
+                                        <!-- Speech Bubble with fade animation -->
+                                        <Grid Grid.Column="1"
+                                             x:Name="SpeechBubble"
+                                             Margin="5,0,0,0"
+                                             VerticalAlignment="Center"
+                                             Visibility="{Binding HasOpponentMessage, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <Grid.Style>
+                                                <Style TargetType="Grid">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding HasOpponentMessage}" Value="True">
+                                                            <DataTrigger.EnterActions>
+                                                                <BeginStoryboard>
+                                                                    <Storyboard>
+                                                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                                       From="0" To="1"
+                                                                                       Duration="0:0:0.3"/>
+                                                                    </Storyboard>
+                                                                </BeginStoryboard>
+                                                            </DataTrigger.EnterActions>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Grid.Style>
+
+                                            <!-- Triangle pointer pointing left -->
+                                            <Path Data="M 10,0 L 0,12 L 10,24 Z"
+                                                 Fill="{StaticResource BgMediumBrush}"
+                                                 HorizontalAlignment="Left"
+                                                 VerticalAlignment="Center"
+                                                 Margin="0,0,0,0"/>
+
+                                            <!-- Bubble content -->
+                                            <Border Background="{StaticResource BgMediumBrush}"
+                                                   BorderBrush="{StaticResource Gray50Brush}"
+                                                   BorderThickness="1"
+                                                   CornerRadius="8"
+                                                   Padding="12,10"
+                                                   Margin="10,0,0,0"
+                                                   Width="300">
+                                                <TextBlock Text="{Binding OpponentMessage}"
+                                                          FontSize="{StaticResource FontSizeCompact}"
+                                                          FontStyle="Italic"
+                                                          Foreground="{StaticResource TextPrimaryBrush}"
+                                                          TextWrapping="Wrap"/>
+                                            </Border>
+                                        </Grid>
                                     </Grid>
-                                </Border>
 
-                                <!-- Speech Bubble with fade animation -->
-                                <Grid Grid.Column="1"
-                                     x:Name="SpeechBubble"
-                                     Margin="5,0,0,0"
-                                     VerticalAlignment="Center"
-                                     Visibility="{Binding HasOpponentMessage, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                    <Grid.Style>
-                                        <Style TargetType="Grid">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding HasOpponentMessage}" Value="True">
-                                                    <DataTrigger.EnterActions>
-                                                        <BeginStoryboard>
-                                                            <Storyboard>
-                                                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                                                               From="0" To="1"
-                                                                               Duration="0:0:0.3"/>
-                                                            </Storyboard>
-                                                        </BeginStoryboard>
-                                                    </DataTrigger.EnterActions>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Grid.Style>
+                                    <!-- Name -->
+                                    <TextBlock Text="{Binding SelectedOpponent.Name}"
+                                              FontSize="{StaticResource FontSizeSubtitle}"
+                                              FontWeight="Bold"
+                                              Foreground="{StaticResource TextPrimaryBrush}"
+                                              Margin="0,0,0,3"/>
 
-                                    <!-- Triangle pointer pointing left -->
-                                    <Path Data="M 10,0 L 0,12 L 10,24 Z"
-                                         Fill="{StaticResource BgMediumBrush}"
-                                         HorizontalAlignment="Left"
-                                         VerticalAlignment="Center"
-                                         Margin="0,0,0,0"/>
+                                    <!-- Nickname -->
+                                    <TextBlock FontSize="{StaticResource FontSizeBody}"
+                                              Foreground="{StaticResource GoldBrush}"
+                                              Margin="0,0,0,8">
+                                        <Run Text="&quot;"/>
+                                        <Run Text="{Binding SelectedOpponent.Nickname, Mode=OneWay}"/>
+                                        <Run Text="&quot;"/>
+                                    </TextBlock>
 
-                                    <!-- Bubble content -->
-                                    <Border Background="{StaticResource BgMediumBrush}"
-                                           BorderBrush="{StaticResource Gray50Brush}"
-                                           BorderThickness="1"
-                                           CornerRadius="8"
-                                           Padding="12,10"
-                                           Margin="10,0,0,0"
-                                           Width="300">
-                                        <TextBlock Text="{Binding OpponentMessage}"
+                                    <!-- A word with them, while the player's AI speaks for them -->
+                                    <Button Content="{t:Text chat.ui.talk}"
+                                            Command="{Binding TalkCommand}"
+                                            Visibility="{Binding CanTalk, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                            FontSize="{StaticResource FontSizeCompact}"
+                                            HorizontalAlignment="Left"
+                                            MinWidth="110"
+                                            Height="30"
+                                            Margin="0,0,0,10"/>
+
+                                    <!-- Reputation Badge -->
+                                    <Border Background="{StaticResource BgPanelBrush}"
+                                           BorderBrush="{Binding SelectedOpponent.Difficulty, Converter={StaticResource DifficultyBorderBrushConverter}}"
+                                           BorderThickness="2"
+                                           CornerRadius="5"
+                                           Padding="10,5"
+                                           HorizontalAlignment="Left">
+                                        <TextBlock Foreground="{Binding SelectedOpponent.Difficulty, Converter={StaticResource DifficultyTextBrushConverter}}"
                                                   FontSize="{StaticResource FontSizeCompact}"
-                                                  FontStyle="Italic"
-                                                  Foreground="{StaticResource TextPrimaryBrush}"
-                                                  TextWrapping="Wrap"/>
+                                                  FontWeight="Bold">
+                                            <Run Text="{Binding SelectedOpponent.ReputationTier, Mode=OneWay}"/>
+                                            <Run Text=" ("/>
+                                            <Run Text="{Binding SelectedOpponent.Reputation, Mode=OneWay}"/>
+                                            <Run Text=")"/>
+                                        </TextBlock>
+                                    </Border>
+                                </StackPanel>
+
+                                <!-- Right: Info Cards -->
+                                <Grid Grid.Column="1" VerticalAlignment="Top">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Record Card -->
+                                    <Border Grid.Column="0"
+                                           Background="{StaticResource BgPanelBrush}"
+                                           BorderBrush="{StaticResource BorderLightBrush}"
+                                           BorderThickness="1"
+                                           CornerRadius="5"
+                                           Padding="12"
+                                           Height="150"
+                                           Margin="0,0,10,0">
+                                        <StackPanel>
+                                            <TextBlock Text="{t:Text diner.record}"
+                                                      FontSize="{StaticResource FontSizeCaption}"
+                                                      FontWeight="Bold"
+                                                      Foreground="{StaticResource TextSecondaryBrush}"
+                                                      Margin="0,0,0,8"/>
+
+                                            <!-- Overall Record -->
+                                            <TextBlock Text="{Binding SelectedOpponent.RecordDisplay}"
+                                                      FontSize="{StaticResource FontSizeHeading}"
+                                                      FontWeight="Bold"
+                                                      Foreground="{StaticResource TextPrimaryBrush}"
+                                                      Margin="0,0,0,8"/>
+
+                                            <!-- Drag Race Record -->
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                                <TextBlock Text="{t:Text diner.drag}"
+                                                          FontSize="{StaticResource FontSizeMicro}"
+                                                          Foreground="{StaticResource WarningBrush}"
+                                                          Width="28"/>
+                                                <TextBlock Text="{Binding SelectedOpponent.DragRecordDisplay}"
+                                                          FontSize="{StaticResource FontSizeMicro}"
+                                                          FontWeight="Bold"
+                                                          Foreground="{StaticResource TextPrimaryBrush}"/>
+                                            </StackPanel>
+
+                                            <!-- Road Race Record -->
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                                <TextBlock Text="{t:Text diner.road}"
+                                                          FontSize="{StaticResource FontSizeMicro}"
+                                                          Foreground="{StaticResource RoyalBlueBrush}"
+                                                          Width="28"/>
+                                                <TextBlock Text="{Binding SelectedOpponent.RoadRecordDisplay}"
+                                                          FontSize="{StaticResource FontSizeMicro}"
+                                                          FontWeight="Bold"
+                                                          Foreground="{StaticResource TextPrimaryBrush}"/>
+                                            </StackPanel>
+
+                                            <!-- Pink Slips -->
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{t:Text diner.pink_slips}"
+                                                          FontSize="{StaticResource FontSizeTiny}"
+                                                          Foreground="{StaticResource GoldBrush}"
+                                                          Margin="0,0,5,0"/>
+                                                <TextBlock Text="{Binding SelectedOpponent.PinkSlipsDisplay}"
+                                                          FontSize="{StaticResource FontSizeTiny}"
+                                                          FontWeight="Bold"
+                                                          Foreground="{StaticResource TextPrimaryBrush}"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Current Car Card -->
+                                    <Border Grid.Column="1"
+                                           Background="{StaticResource BgPanelBrush}"
+                                           BorderBrush="{StaticResource BorderLightBrush}"
+                                           BorderThickness="1"
+                                           CornerRadius="5"
+                                           Padding="12"
+                                           Height="150"
+                                           Margin="10,0,0,0">
+                                        <StackPanel>
+                                            <TextBlock Text="{t:Text diner.current_car}"
+                                                      FontSize="{StaticResource FontSizeCaption}"
+                                                      FontWeight="Bold"
+                                                      Foreground="{StaticResource TextSecondaryBrush}"
+                                                      Margin="0,0,0,8"/>
+
+                                            <!-- Car Brand & Name -->
+                                            <TextBlock Text="{Binding SelectedOpponent.CarBrand}"
+                                                      FontSize="{StaticResource FontSizeBody}"
+                                                      FontWeight="Bold"
+                                                      Foreground="{StaticResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="{Binding SelectedOpponent.CarName}"
+                                                      FontSize="{StaticResource FontSizeSmall}"
+                                                      Foreground="{StaticResource TextPrimaryBrush}"
+                                                      Margin="0,0,0,6"/>
+
+                                            <!-- Car Year -->
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                                <TextBlock Text="{t:Text diner.year}"
+                                                          FontSize="{StaticResource FontSizeTiny}"
+                                                          Foreground="{StaticResource TextSecondaryBrush}"
+                                                          Width="50"/>
+                                                <TextBlock Text="{Binding SelectedOpponent.CarYear}"
+                                                          FontSize="{StaticResource FontSizeTiny}"
+                                                          Foreground="{StaticResource TextPrimaryBrush}"/>
+                                            </StackPanel>
+
+                                            <!-- Car Power -->
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                                <TextBlock Text="{t:Text diner.power}"
+                                                          FontSize="{StaticResource FontSizeTiny}"
+                                                          Foreground="{StaticResource TextSecondaryBrush}"
+                                                          Width="50"/>
+                                                <TextBlock Text="{Binding SelectedOpponent.CarPower}"
+                                                          FontSize="{StaticResource FontSizeTiny}"
+                                                          Foreground="{StaticResource AccentSuccessBrush}"
+                                                          FontWeight="Bold"/>
+                                            </StackPanel>
+
+                                            <!-- Car Weight -->
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                                <TextBlock Text="{t:Text diner.weight}"
+                                                          FontSize="{StaticResource FontSizeTiny}"
+                                                          Foreground="{StaticResource TextSecondaryBrush}"
+                                                          Width="50"/>
+                                                <TextBlock Text="{Binding SelectedOpponent.CarWeight}"
+                                                          FontSize="{StaticResource FontSizeTiny}"
+                                                          Foreground="{StaticResource TextPrimaryBrush}"/>
+                                             </StackPanel>
+                                        </StackPanel>
                                     </Border>
                                 </Grid>
                             </Grid>
 
-                            <!-- Name -->
-                            <TextBlock Text="{Binding SelectedOpponent.Name}"
-                                      FontSize="{StaticResource FontSizeSubtitle}"
-                                      FontWeight="Bold"
-                                      Foreground="{StaticResource TextPrimaryBrush}"
-                                      Margin="0,0,0,3"/>
-
-                            <!-- Nickname -->
-                            <TextBlock FontSize="{StaticResource FontSizeBody}"
-                                      Foreground="{StaticResource GoldBrush}"
-                                      Margin="0,0,0,8">
-                                <Run Text="&quot;"/>
-                                <Run Text="{Binding SelectedOpponent.Nickname, Mode=OneWay}"/>
-                                <Run Text="&quot;"/>
-                            </TextBlock>
-
-                            <!-- A word with them, while the player's AI speaks for them -->
-                            <Button Content="{t:Text chat.ui.talk}"
-                                    Command="{Binding TalkCommand}"
-                                    Visibility="{Binding CanTalk, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                    FontSize="{StaticResource FontSizeCompact}"
-                                    HorizontalAlignment="Left"
-                                    MinWidth="110"
-                                    Height="30"
-                                    Margin="0,0,0,10"/>
-
-                            <!-- Reputation Badge -->
-                            <Border Background="{StaticResource BgPanelBrush}"
-                                   BorderBrush="{Binding SelectedOpponent.Difficulty, Converter={StaticResource DifficultyBorderBrushConverter}}"
-                                   BorderThickness="2"
-                                   CornerRadius="5"
-                                   Padding="10,5"
-                                   HorizontalAlignment="Left">
-                                <TextBlock Foreground="{Binding SelectedOpponent.Difficulty, Converter={StaticResource DifficultyTextBrushConverter}}"
-                                          FontSize="{StaticResource FontSizeCompact}"
-                                          FontWeight="Bold">
-                                    <Run Text="{Binding SelectedOpponent.ReputationTier, Mode=OneWay}"/>
-                                    <Run Text=" ("/>
-                                    <Run Text="{Binding SelectedOpponent.Reputation, Mode=OneWay}"/>
-                                    <Run Text=")"/>
-                                </TextBlock>
-                            </Border>
-                        </StackPanel>
-
-                        <!-- Right: Info Cards -->
-                        <Grid Grid.Column="1" VerticalAlignment="Top">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-
-                            <!-- Record Card -->
-                            <Border Grid.Column="0"
-                                   Background="{StaticResource BgPanelBrush}"
-                                   BorderBrush="{StaticResource BorderLightBrush}"
-                                   BorderThickness="1"
-                                   CornerRadius="5"
-                                   Padding="12"
-                                   Height="150"
-                                   Margin="0,0,10,0">
+                            <!-- Race Options Section -->
+                            <ScrollViewer Grid.Row="1"
+                                         VerticalScrollBarVisibility="Auto"
+                                         HorizontalScrollBarVisibility="Disabled"
+                                         Margin="0,20,0,0">
                                 <StackPanel>
-                                    <TextBlock Text="{t:Text diner.record}"
-                                              FontSize="{StaticResource FontSizeCaption}"
-                                              FontWeight="Bold"
-                                              Foreground="{StaticResource TextSecondaryBrush}"
-                                              Margin="0,0,0,8"/>
-
-                                    <!-- Overall Record -->
-                                    <TextBlock Text="{Binding SelectedOpponent.RecordDisplay}"
-                                              FontSize="{StaticResource FontSizeHeading}"
-                                              FontWeight="Bold"
-                                              Foreground="{StaticResource TextPrimaryBrush}"
-                                              Margin="0,0,0,8"/>
-
-                                    <!-- Drag Race Record -->
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                        <TextBlock Text="{t:Text diner.drag}"
-                                                  FontSize="{StaticResource FontSizeMicro}"
-                                                  Foreground="{StaticResource WarningBrush}"
-                                                  Width="28"/>
-                                        <TextBlock Text="{Binding SelectedOpponent.DragRecordDisplay}"
-                                                  FontSize="{StaticResource FontSizeMicro}"
-                                                  FontWeight="Bold"
-                                                  Foreground="{StaticResource TextPrimaryBrush}"/>
-                                    </StackPanel>
-
-                                    <!-- Road Race Record -->
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                        <TextBlock Text="{t:Text diner.road}"
-                                                  FontSize="{StaticResource FontSizeMicro}"
-                                                  Foreground="{StaticResource RoyalBlueBrush}"
-                                                  Width="28"/>
-                                        <TextBlock Text="{Binding SelectedOpponent.RoadRecordDisplay}"
-                                                  FontSize="{StaticResource FontSizeMicro}"
-                                                  FontWeight="Bold"
-                                                  Foreground="{StaticResource TextPrimaryBrush}"/>
-                                    </StackPanel>
-
-                                    <!-- Pink Slips -->
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="{t:Text diner.pink_slips}"
-                                                  FontSize="{StaticResource FontSizeTiny}"
-                                                  Foreground="{StaticResource GoldBrush}"
-                                                  Margin="0,0,5,0"/>
-                                        <TextBlock Text="{Binding SelectedOpponent.PinkSlipsDisplay}"
-                                                  FontSize="{StaticResource FontSizeTiny}"
-                                                  FontWeight="Bold"
-                                                  Foreground="{StaticResource TextPrimaryBrush}"/>
-                                    </StackPanel>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- Current Car Card -->
-                            <Border Grid.Column="1"
-                                   Background="{StaticResource BgPanelBrush}"
-                                   BorderBrush="{StaticResource BorderLightBrush}"
-                                   BorderThickness="1"
-                                   CornerRadius="5"
-                                   Padding="12"
-                                   Height="150"
-                                   Margin="10,0,0,0">
-                                <StackPanel>
-                                    <TextBlock Text="{t:Text diner.current_car}"
-                                              FontSize="{StaticResource FontSizeCaption}"
-                                              FontWeight="Bold"
-                                              Foreground="{StaticResource TextSecondaryBrush}"
-                                              Margin="0,0,0,8"/>
-
-                                    <!-- Car Brand & Name -->
-                                    <TextBlock Text="{Binding SelectedOpponent.CarBrand}"
-                                              FontSize="{StaticResource FontSizeBody}"
-                                              FontWeight="Bold"
-                                              Foreground="{StaticResource TextPrimaryBrush}"/>
-                                    <TextBlock Text="{Binding SelectedOpponent.CarName}"
-                                              FontSize="{StaticResource FontSizeSmall}"
-                                              Foreground="{StaticResource TextPrimaryBrush}"
-                                              Margin="0,0,0,6"/>
-
-                                    <!-- Car Year -->
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                        <TextBlock Text="{t:Text diner.year}"
-                                                  FontSize="{StaticResource FontSizeTiny}"
-                                                  Foreground="{StaticResource TextSecondaryBrush}"
-                                                  Width="50"/>
-                                        <TextBlock Text="{Binding SelectedOpponent.CarYear}"
-                                                  FontSize="{StaticResource FontSizeTiny}"
-                                                  Foreground="{StaticResource TextPrimaryBrush}"/>
-                                    </StackPanel>
-
-                                    <!-- Car Power -->
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                        <TextBlock Text="{t:Text diner.power}"
-                                                  FontSize="{StaticResource FontSizeTiny}"
-                                                  Foreground="{StaticResource TextSecondaryBrush}"
-                                                  Width="50"/>
-                                        <TextBlock Text="{Binding SelectedOpponent.CarPower}"
-                                                  FontSize="{StaticResource FontSizeTiny}"
-                                                  Foreground="{StaticResource AccentSuccessBrush}"
-                                                  FontWeight="Bold"/>
-                                    </StackPanel>
-
-                                    <!-- Car Weight -->
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                        <TextBlock Text="{t:Text diner.weight}"
-                                                  FontSize="{StaticResource FontSizeTiny}"
-                                                  Foreground="{StaticResource TextSecondaryBrush}"
-                                                  Width="50"/>
-                                        <TextBlock Text="{Binding SelectedOpponent.CarWeight}"
-                                                  FontSize="{StaticResource FontSizeTiny}"
-                                                  Foreground="{StaticResource TextPrimaryBrush}"/>
-                                     </StackPanel>
-                                </StackPanel>
-                            </Border>
-                        </Grid>
-                    </Grid>
-
-                    <!-- Race Options Section -->
-                    <ScrollViewer Grid.Row="1"
-                                 VerticalScrollBarVisibility="Auto"
-                                 HorizontalScrollBarVisibility="Disabled"
-                                 Margin="0,20,0,0">
-                        <StackPanel>
-                            <!-- No Tracks Available Message -->
-                            <Border Background="{StaticResource BgPanelBrush}"
-                                   BorderBrush="{StaticResource BorderLightBrush}"
-                                   BorderThickness="1"
-                                   CornerRadius="5"
-                                   Padding="20"
-                                   Visibility="{Binding HasAnyTracks, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
-                                <TextBlock Text="{t:Text diner.no_tracks}"
-                                          FontSize="{StaticResource FontSizeCompact}"
-                                          Foreground="{StaticResource TextSecondaryBrush}"
-                                          HorizontalAlignment="Center"
-                                          TextWrapping="Wrap"/>
-                            </Border>
-
-                            <!-- Track Selection -->
-                            <Grid Visibility="{Binding HasAnyTracks, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-
-                                <!-- Drag Race Tracks -->
-                                <Border Grid.Column="0"
-                                       Background="{StaticResource BgPanelBrush}"
-                                       BorderBrush="{StaticResource BorderLightBrush}"
-                                       BorderThickness="1"
-                                       CornerRadius="5"
-                                       Padding="10"
-                                       Margin="0,0,5,0"
-                                       Visibility="{Binding HasDragTracks, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                    <StackPanel>
-                                        <TextBlock Text="{t:Text diner.drag_race}"
-                                                  FontSize="{StaticResource FontSizeBody}"
-                                                  FontWeight="Bold"
-                                                  Foreground="{StaticResource TextPrimaryBrush}"
-                                                  Margin="0,0,0,10"/>
-
-                                        <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                                                     VerticalScrollBarVisibility="Disabled"
-                                                     MaxHeight="140">
-                                            <ItemsControl ItemsSource="{Binding DragTracks}">
-                                                <ItemsControl.ItemsPanel>
-                                                    <ItemsPanelTemplate>
-                                                        <StackPanel Orientation="Horizontal"/>
-                                                    </ItemsPanelTemplate>
-                                                </ItemsControl.ItemsPanel>
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <!-- Track Card -->
-                                                        <Button Command="{Binding DataContext.SelectTrackCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                               CommandParameter="{Binding}"
-                                                               Background="Transparent"
-                                                               BorderThickness="0"
-                                                               Padding="0"
-                                                               Margin="0,0,8,0"
-                                                               Cursor="Hand">
-                                                            <Button.Template>
-                                                                <ControlTemplate TargetType="Button">
-                                                                    <Border x:Name="TrackBorder"
-                                                                           Width="110"
-                                                                           Height="90"
-                                                                           Background="{StaticResource BgMediumBrush}"
-                                                                           BorderThickness="2"
-                                                                           CornerRadius="5">
-                                                                        <Border.BorderBrush>
-                                                                            <SolidColorBrush x:Name="BorderColor" Color="{StaticResource BorderLight}"/>
-                                                                        </Border.BorderBrush>
-                                                                        <Grid>
-                                                                            <!-- Preview Image -->
-                                                                            <Image Source="{Binding PreviewImage}"
-                                                                                  Stretch="UniformToFill"
-                                                                                  Opacity="0.6"
-                                                                                  Visibility="{Binding HasPreview, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-
-                                                                            <!-- Placeholder when no preview -->
-                                                                            <Border Background="{StaticResource BgLightBrush}"
-                                                                                   Visibility="{Binding HasPreview, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
-                                                                                <TextBlock Text="{t:Text diner.drag}"
-                                                                                          FontSize="{StaticResource FontSizeSubheading}"
-                                                                                          FontWeight="Bold"
-                                                                                          Foreground="{StaticResource Gray50Brush}"
-                                                                                          HorizontalAlignment="Center"
-                                                                                          VerticalAlignment="Center"/>
-                                                                            </Border>
-
-                                                                            <!-- Track Name Overlay -->
-                                                                            <Border Background="{StaticResource BlackCCBrush}"
-                                                                                   VerticalAlignment="Bottom"
-                                                                                   Padding="5,3">
-                                                                                <TextBlock Text="{Binding DisplayName}"
-                                                                                          FontSize="{StaticResource FontSizeTiny}"
-                                                                                          Foreground="{StaticResource TextPrimaryBrush}"
-                                                                                          TextWrapping="NoWrap"
-                                                                                          TextTrimming="CharacterEllipsis"/>
-                                                                            </Border>
-
-                                                                            <!-- Selection Indicator -->
-                                                                            <Border Background="{StaticResource GoldCCBrush}"
-                                                                                   Width="20"
-                                                                                   Height="20"
-                                                                                   CornerRadius="10"
-                                                                                   HorizontalAlignment="Right"
-                                                                                   VerticalAlignment="Top"
-                                                                                   Margin="5"
-                                                                                   Visibility="{Binding IsSelected, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                                                <TextBlock Text="*"
-                                                                                          FontSize="{StaticResource FontSizeBody}"
-                                                                                          FontWeight="Bold"
-                                                                                          Foreground="{StaticResource BgPanelBrush}"
-                                                                                          HorizontalAlignment="Center"
-                                                                                          VerticalAlignment="Center"/>
-                                                                            </Border>
-                                                                        </Grid>
-                                                                    </Border>
-                                                                    <ControlTemplate.Triggers>
-                                                                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                                            <Setter TargetName="TrackBorder" Property="BorderBrush" Value="{StaticResource GoldBrush}"/>
-                                                                        </DataTrigger>
-                                                                        <Trigger Property="IsMouseOver" Value="True">
-                                                                            <Setter TargetName="TrackBorder" Property="Background" Value="{StaticResource BgLightBrush}"/>
-                                                                        </Trigger>
-                                                                    </ControlTemplate.Triggers>
-                                                                </ControlTemplate>
-                                                            </Button.Template>
-                                                        </Button>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                        </ScrollViewer>
-                                    </StackPanel>
-                                </Border>
-
-                                <!-- Road Race Tracks -->
-                                <Border Grid.Column="1"
-                                       Background="{StaticResource BgPanelBrush}"
-                                       BorderBrush="{StaticResource BorderLightBrush}"
-                                       BorderThickness="1"
-                                       CornerRadius="5"
-                                       Padding="10"
-                                       Margin="5,0,0,0"
-                                       Visibility="{Binding HasRoadTracks, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                    <StackPanel>
-                                        <TextBlock Text="{t:Text diner.road_race}"
-                                                  FontSize="{StaticResource FontSizeBody}"
-                                                  FontWeight="Bold"
-                                                  Foreground="{StaticResource TextPrimaryBrush}"
-                                                  Margin="0,0,0,10"/>
-
-                                        <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                                                     VerticalScrollBarVisibility="Disabled"
-                                                     MaxHeight="140">
-                                            <ItemsControl ItemsSource="{Binding RoadTracks}">
-                                                <ItemsControl.ItemsPanel>
-                                                    <ItemsPanelTemplate>
-                                                        <StackPanel Orientation="Horizontal"/>
-                                                    </ItemsPanelTemplate>
-                                                </ItemsControl.ItemsPanel>
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <!-- Track Card -->
-                                                        <Button Command="{Binding DataContext.SelectTrackCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                               CommandParameter="{Binding}"
-                                                               Background="Transparent"
-                                                               BorderThickness="0"
-                                                               Padding="0"
-                                                               Margin="0,0,8,0"
-                                                               Cursor="Hand">
-                                                            <Button.Template>
-                                                                <ControlTemplate TargetType="Button">
-                                                                    <Border x:Name="TrackBorder"
-                                                                           Width="110"
-                                                                           Height="90"
-                                                                           Background="{StaticResource BgMediumBrush}"
-                                                                           BorderThickness="2"
-                                                                           CornerRadius="5">
-                                                                        <Border.BorderBrush>
-                                                                            <SolidColorBrush x:Name="BorderColor" Color="{StaticResource BorderLight}"/>
-                                                                        </Border.BorderBrush>
-                                                                        <Grid>
-                                                                            <!-- Preview Image -->
-                                                                            <Image Source="{Binding PreviewImage}"
-                                                                                  Stretch="UniformToFill"
-                                                                                  Opacity="0.6"
-                                                                                  Visibility="{Binding HasPreview, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-
-                                                                            <!-- Placeholder when no preview -->
-                                                                            <Border Background="{StaticResource BgLightBrush}"
-                                                                                   Visibility="{Binding HasPreview, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
-                                                                                <TextBlock Text="{t:Text diner.road}"
-                                                                                          FontSize="{StaticResource FontSizeSubheading}"
-                                                                                          FontWeight="Bold"
-                                                                                          Foreground="{StaticResource Gray50Brush}"
-                                                                                          HorizontalAlignment="Center"
-                                                                                          VerticalAlignment="Center"/>
-                                                                            </Border>
-
-                                                                            <!-- Track Name Overlay -->
-                                                                            <Border Background="{StaticResource BlackCCBrush}"
-                                                                                   VerticalAlignment="Bottom"
-                                                                                   Padding="5,3">
-                                                                                <TextBlock Text="{Binding DisplayName}"
-                                                                                          FontSize="{StaticResource FontSizeTiny}"
-                                                                                          Foreground="{StaticResource TextPrimaryBrush}"
-                                                                                          TextWrapping="NoWrap"
-                                                                                          TextTrimming="CharacterEllipsis"/>
-                                                                            </Border>
-
-                                                                            <!-- Selection Indicator -->
-                                                                            <Border Background="{StaticResource GoldCCBrush}"
-                                                                                   Width="20"
-                                                                                   Height="20"
-                                                                                   CornerRadius="10"
-                                                                                   HorizontalAlignment="Right"
-                                                                                   VerticalAlignment="Top"
-                                                                                   Margin="5"
-                                                                                   Visibility="{Binding IsSelected, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                                                <TextBlock Text="*"
-                                                                                          FontSize="{StaticResource FontSizeBody}"
-                                                                                          FontWeight="Bold"
-                                                                                          Foreground="{StaticResource BgPanelBrush}"
-                                                                                          HorizontalAlignment="Center"
-                                                                                          VerticalAlignment="Center"/>
-                                                                            </Border>
-                                                                        </Grid>
-                                                                    </Border>
-                                                                    <ControlTemplate.Triggers>
-                                                                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                                            <Setter TargetName="TrackBorder" Property="BorderBrush" Value="{StaticResource GoldBrush}"/>
-                                                                        </DataTrigger>
-                                                                        <Trigger Property="IsMouseOver" Value="True">
-                                                                            <Setter TargetName="TrackBorder" Property="Background" Value="{StaticResource BgLightBrush}"/>
-                                                                        </Trigger>
-                                                                    </ControlTemplate.Triggers>
-                                                                </ControlTemplate>
-                                                            </Button.Template>
-                                                        </Button>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                        </ScrollViewer>
-                                    </StackPanel>
-                                </Border>
-                            </Grid>
-
-                            <!-- Matchup Stats -->
-                            <Border Background="{StaticResource BgPanelBrush}"
-                                   BorderBrush="{StaticResource BorderLightBrush}"
-                                   BorderThickness="1"
-                                   CornerRadius="5"
-                                   Padding="15"
-                                   Margin="0,15,0,0"
-                                   Visibility="{Binding HasMatchupStats, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                <StackPanel>
-                                    <TextBlock Text="{t:Text diner.matchup}"
-                                              FontSize="{StaticResource FontSizeBody}"
-                                              FontWeight="Bold"
-                                              Foreground="{StaticResource TextPrimaryBrush}"
-                                              Margin="0,0,0,12"/>
-
-                                    <!-- Headers -->
-                                    <Grid Margin="0,0,0,8">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="80"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="35"/>
-                                        </Grid.ColumnDefinitions>
-
-                                        <TextBlock Grid.Column="0"
-                                                  Text="{t:Text diner.you}"
-                                                  FontSize="{StaticResource FontSizeSmall}"
-                                                  FontWeight="Bold"
-                                                  Foreground="{StaticResource TextSecondaryBrush}"
-                                                  HorizontalAlignment="Center"/>
-                                        <TextBlock Grid.Column="2"
-                                                  Text="{t:Text diner.them}"
-                                                  FontSize="{StaticResource FontSizeSmall}"
-                                                  FontWeight="Bold"
-                                                  Foreground="{StaticResource TextSecondaryBrush}"
-                                                  HorizontalAlignment="Center"/>
-                                    </Grid>
-
-                                    <!-- Stats List -->
-                                    <ItemsControl ItemsSource="{Binding MatchupStats}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Grid Margin="0,4">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="80"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="35"/>
-                                                    </Grid.ColumnDefinitions>
-
-                                                    <!-- Player Value -->
-                                                    <TextBlock Grid.Column="0"
-                                                              Text="{Binding PlayerValue}"
-                                                              FontSize="{StaticResource FontSizeCompact}"
-                                                              Foreground="{StaticResource TextPrimaryBrush}"
-                                                              HorizontalAlignment="Center"/>
-
-                                                    <!-- Label -->
-                                                    <TextBlock Grid.Column="1"
-                                                              Text="{Binding Label}"
-                                                              FontSize="{StaticResource FontSizeCaption}"
-                                                              Foreground="{StaticResource TextSecondaryBrush}"
-                                                              HorizontalAlignment="Center"
-                                                              VerticalAlignment="Center"/>
-
-                                                    <!-- Opponent Value -->
-                                                    <TextBlock Grid.Column="2"
-                                                              Text="{Binding OpponentValue}"
-                                                              FontSize="{StaticResource FontSizeCompact}"
-                                                              Foreground="{StaticResource TextPrimaryBrush}"
-                                                              HorizontalAlignment="Center"/>
-
-                                                    <!-- Advantage Indicator -->
-                                                    <TextBlock Grid.Column="3"
-                                                              Text="{Binding AdvantageIndicator}"
-                                                              FontSize="{StaticResource FontSizeSmall}"
-                                                              FontWeight="Bold"
-                                                              HorizontalAlignment="Center">
-                                                        <!-- Green when the player has the edge, red when the opponent has, grey when even -->
-                                                        <TextBlock.Style>
-                                                            <Style TargetType="TextBlock">
-                                                                <Setter Property="Foreground" Value="{StaticResource Gray80Brush}"/>
-                                                                <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding Advantage}" Value="1">
-                                                                        <Setter Property="Foreground" Value="{StaticResource AccentSuccessBrush}"/>
-                                                                    </DataTrigger>
-                                                                    <DataTrigger Binding="{Binding Advantage}" Value="-1">
-                                                                        <Setter Property="Foreground" Value="{StaticResource DangerBrush}"/>
-                                                                    </DataTrigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </TextBlock.Style>
-                                                    </TextBlock>
-                                                </Grid>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- The race: when the track takes more than one the diner offers (a circuit race or a time attack) -->
-                            <Border Background="{StaticResource BgPanelBrush}"
-                                   BorderBrush="{StaticResource BorderLightBrush}"
-                                   BorderThickness="1"
-                                   CornerRadius="5"
-                                   Padding="15"
-                                   Margin="0,15,0,0"
-                                   Visibility="{Binding HasFormatChoice, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                <StackPanel>
-                                    <TextBlock Text="{t:Text diner.format}"
-                                               FontSize="{StaticResource FontSizeBody}"
-                                               FontWeight="Bold"
-                                               Foreground="{StaticResource TextPrimaryBrush}"/>
-                                    <ComboBox ItemsSource="{Binding FormatChoices}"
-                                              SelectedItem="{Binding SelectedFormat}"
-                                              DisplayMemberPath="Name"
-                                              Margin="0,6,0,0"/>
-                                    <TextBlock Text="{Binding FormatNote}"
-                                               FontSize="{StaticResource FontSizeSmall}"
-                                               Foreground="{StaticResource TextSecondaryBrush}"
-                                               TextWrapping="Wrap"
-                                               Margin="0,6,0,0"
-                                               Visibility="{Binding HasFormatNote, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- Bracket race: on a strip that runs the quarter -->
-                            <Border Background="{StaticResource BgPanelBrush}"
-                                   BorderBrush="{StaticResource BorderLightBrush}"
-                                   BorderThickness="1"
-                                   CornerRadius="5"
-                                   Padding="15"
-                                   Margin="0,15,0,0"
-                                   Visibility="{Binding CanBracket, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                <StackPanel>
-                                    <CheckBox Content="{t:Text diner.bracket}"
-                                              IsChecked="{Binding IsBracket}"
-                                              FontSize="{StaticResource FontSizeBody}"
-                                              FontWeight="Bold"
-                                              Foreground="{StaticResource TextPrimaryBrush}"/>
-                                    <TextBlock Text="{t:Text diner.bracket.about}"
-                                               FontSize="{StaticResource FontSizeSmall}"
-                                               Foreground="{StaticResource TextSecondaryBrush}"
-                                               TextWrapping="Wrap"
-                                               Margin="0,6,0,0"/>
-                                    <TextBlock Text="{Binding BracketNote}"
-                                               FontSize="{StaticResource FontSizeSmall}"
-                                               Foreground="{StaticResource GoldBrush}"
-                                               TextWrapping="Wrap"
-                                               Margin="0,6,0,0"
-                                               Visibility="{Binding IsBracket, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- Bet Options Section -->
-                            <Border Background="{StaticResource BgPanelBrush}"
-                                   BorderBrush="{StaticResource BorderLightBrush}"
-                                   BorderThickness="1"
-                                   CornerRadius="5"
-                                   Padding="15"
-                                   Margin="0,15,0,0">
-                                <StackPanel>
-                                    <TextBlock Text="{t:Text diner.bet_type}"
-                                              FontSize="{StaticResource FontSizeBody}"
-                                              FontWeight="Bold"
-                                              Foreground="{StaticResource TextPrimaryBrush}"
-                                              Margin="0,0,0,12"/>
-
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-
-                                        <!-- Cash Wager Option -->
-                                        <Border Grid.Column="0"
-                                               x:Name="CashBetBorder"
-                                               Background="{StaticResource BgMediumBrush}"
-                                               BorderThickness="2"
-                                               CornerRadius="5"
-                                               Padding="12"
-                                               Margin="0,0,5,0"
-                                               Cursor="Hand">
-                                            <Border.InputBindings>
-                                                <MouseBinding MouseAction="LeftClick" Command="{Binding CashBetCommand}"/>
-                                            </Border.InputBindings>
-                                            <Border.Style>
-                                                <Style TargetType="Border">
-                                                    <Setter Property="BorderBrush" Value="{StaticResource BorderLightBrush}"/>
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsCashBet}" Value="True">
-                                                            <Setter Property="BorderBrush" Value="{StaticResource GoldBrush}"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Border.Style>
-                                            <StackPanel>
-                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                                    <!-- Radio indicator -->
-                                                    <Border Width="18" Height="18"
-                                                           BorderBrush="{StaticResource AccentPrimaryBrush}"
-                                                           BorderThickness="2"
-                                                           CornerRadius="9"
-                                                           Margin="0,0,10,0">
-                                                        <Ellipse Width="8" Height="8"
-                                                                Fill="{StaticResource AccentPrimaryBrush}"
-                                                                Visibility="{Binding IsCashBet, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                                                    </Border>
-                                                    <TextBlock Text="{t:Text diner.cash_wager}"
-                                                              FontSize="{StaticResource FontSizeCompact}"
-                                                              FontWeight="Bold"
-                                                              Foreground="{StaticResource TextPrimaryBrush}"/>
-                                                </StackPanel>
-
-                                                <!-- Wager amount display and slider -->
-                                                <StackPanel Visibility="{Binding IsCashBet, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                    <TextBlock Text="{Binding WagerAmountDisplay}"
-                                                              FontSize="{StaticResource FontSizeHeadingLarge}"
-                                                              FontWeight="Bold"
-                                                              Foreground="{StaticResource AccentSuccessBrush}"
-                                                              HorizontalAlignment="Center"
-                                                              Margin="0,5,0,8"/>
-
-                                                    <Slider Value="{Binding WagerAmount}"
-                                                           Minimum="{Binding MinWager, Mode=OneWay}"
-                                                           Maximum="{Binding MaxWager, Mode=OneWay}"
-                                                           TickFrequency="10"
-                                                           IsSnapToTickEnabled="True"
-                                                           Margin="0,0,0,5"/>
-
-                                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                                        <TextBlock FontSize="{StaticResource FontSizeTiny}"
-                                                                  Foreground="{StaticResource TextSecondaryBrush}">
-                                                            <Run Text="{Binding MinWager, Converter={StaticResource MoneyConverter}, Mode=OneWay}"/>
-                                                        </TextBlock>
-                                                        <TextBlock Text=" - "
-                                                                  FontSize="{StaticResource FontSizeTiny}"
-                                                                  Foreground="{StaticResource TextSecondaryBrush}"/>
-                                                        <TextBlock FontSize="{StaticResource FontSizeTiny}"
-                                                                  Foreground="{StaticResource TextSecondaryBrush}">
-                                                            <Run Text="{Binding MaxWager, Converter={StaticResource MoneyConverter}, Mode=OneWay}"/>
-                                                        </TextBlock>
-                                                    </StackPanel>
-
-                                                    <TextBlock Text="{Binding StakesNote}"
-                                                              FontSize="{StaticResource FontSizeTiny}"
-                                                              Foreground="{StaticResource GoldBrush}"
-                                                              HorizontalAlignment="Center"
-                                                              Margin="0,3,0,0"
-                                                              Visibility="{Binding HasStakesNote, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                                                </StackPanel>
-
-                                                <!-- Placeholder when not selected -->
-                                                <TextBlock Text="{t:Text diner.cash_wager.about}"
-                                                          FontSize="{StaticResource FontSizeCaption}"
-                                                          Foreground="{StaticResource TextSecondaryBrush}"
-                                                          Visibility="{Binding IsCashBet, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
-                                            </StackPanel>
-                                        </Border>
-
-                                        <!-- Pink Slip Option -->
-                                        <Border Grid.Column="1"
-                                               x:Name="PinkSlipBorder"
-                                               Background="{StaticResource BgMediumBrush}"
-                                               BorderThickness="2"
-                                               CornerRadius="5"
-                                               Padding="12"
-                                               Margin="5,0,0,0"
-                                               Cursor="Hand">
-                                            <Border.InputBindings>
-                                                <MouseBinding MouseAction="LeftClick" Command="{Binding PinkSlipBetCommand}"/>
-                                            </Border.InputBindings>
-                                            <Border.Style>
-                                                <Style TargetType="Border">
-                                                    <Setter Property="BorderBrush" Value="{StaticResource BorderLightBrush}"/>
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsPinkSlipBet}" Value="True">
-                                                            <Setter Property="BorderBrush" Value="{StaticResource DangerBrush}"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Border.Style>
-                                            <StackPanel>
-                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                                    <!-- Radio indicator -->
-                                                    <Border Width="18" Height="18"
-                                                           BorderBrush="{StaticResource DangerBrush}"
-                                                           BorderThickness="2"
-                                                           CornerRadius="9"
-                                                           Margin="0,0,10,0">
-                                                        <Ellipse Width="8" Height="8"
-                                                                Fill="{StaticResource DangerBrush}"
-                                                                Visibility="{Binding IsPinkSlipBet, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                                                    </Border>
-                                                    <TextBlock Text="{t:Text diner.pink_slips}"
-                                                              FontSize="{StaticResource FontSizeCompact}"
-                                                              FontWeight="Bold"
-                                                              Foreground="{StaticResource DangerBrush}"/>
-                                                </StackPanel>
-
-                                                <TextBlock Text="{t:Text diner.pink_slips.about}"
-                                                          FontSize="{StaticResource FontSizeCaption}"
-                                                          Foreground="{StaticResource TextSecondaryBrush}"
-                                                          TextWrapping="Wrap"/>
-
-                                                <!-- Warning when selected -->
-                                                <Border Background="{StaticResource DangerBgBrush}"
-                                                       CornerRadius="3"
-                                                       Padding="8,5"
-                                                       Margin="0,8,0,0"
-                                                       Visibility="{Binding IsPinkSlipBet, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                    <TextBlock Text="{t:Text diner.high_stakes}"
-                                                              FontSize="{StaticResource FontSizeTiny}"
-                                                              FontWeight="Bold"
-                                                              Foreground="{StaticResource DangerBrush}"
-                                                              HorizontalAlignment="Center"/>
-                                                </Border>
-                                            </StackPanel>
-                                        </Border>
-                                    </Grid>
-
-                                    <!-- The police risk of a road race -->
-                                    <TextBlock Text="{Binding PoliceNote}"
-                                              FontSize="{StaticResource FontSizeTiny}"
-                                              Foreground="{StaticResource WarningBrush}"
-                                              HorizontalAlignment="Center"
-                                              Margin="0,8,0,0"
-                                              Visibility="{Binding HasPoliceNote, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-
-                                    <!-- Insufficient Funds Warning -->
-                                    <Border Background="{StaticResource WarningBgBrush}"
-                                           BorderBrush="{StaticResource WarningBrush}"
+                                    <!-- No Tracks Available Message -->
+                                    <Border Background="{StaticResource BgPanelBrush}"
+                                           BorderBrush="{StaticResource BorderLightBrush}"
                                            BorderThickness="1"
                                            CornerRadius="5"
-                                           Padding="10"
-                                           Margin="0,10,0,0"
-                                           Visibility="{Binding CanAffordMinBet, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
-                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                            <TextBlock Text="!"
+                                           Padding="20"
+                                           Visibility="{Binding HasAnyTracks, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                                        <TextBlock Text="{t:Text diner.no_tracks}"
+                                                  FontSize="{StaticResource FontSizeCompact}"
+                                                  Foreground="{StaticResource TextSecondaryBrush}"
+                                                  HorizontalAlignment="Center"
+                                                  TextWrapping="Wrap"/>
+                                    </Border>
+
+                                    <!-- Track Selection -->
+                                    <Grid Visibility="{Binding HasAnyTracks, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Drag Race Tracks -->
+                                        <Border Grid.Column="0"
+                                               Background="{StaticResource BgPanelBrush}"
+                                               BorderBrush="{StaticResource BorderLightBrush}"
+                                               BorderThickness="1"
+                                               CornerRadius="5"
+                                               Padding="10"
+                                               Margin="0,0,5,0"
+                                               Visibility="{Binding HasDragTracks, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <StackPanel>
+                                                <TextBlock Text="{t:Text diner.drag_race}"
+                                                          FontSize="{StaticResource FontSizeBody}"
+                                                          FontWeight="Bold"
+                                                          Foreground="{StaticResource TextPrimaryBrush}"
+                                                          Margin="0,0,0,10"/>
+
+                                                <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                                                             VerticalScrollBarVisibility="Disabled"
+                                                             MaxHeight="140">
+                                                    <ItemsControl ItemsSource="{Binding DragTracks}">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate>
+                                                                <StackPanel Orientation="Horizontal"/>
+                                                            </ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <!-- Track Card -->
+                                                                <Button Command="{Binding DataContext.SelectTrackCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                       CommandParameter="{Binding}"
+                                                                       Background="Transparent"
+                                                                       BorderThickness="0"
+                                                                       Padding="0"
+                                                                       Margin="0,0,8,0"
+                                                                       Cursor="Hand">
+                                                                    <Button.Template>
+                                                                        <ControlTemplate TargetType="Button">
+                                                                            <Border x:Name="TrackBorder"
+                                                                                   Width="110"
+                                                                                   Height="90"
+                                                                                   Background="{StaticResource BgMediumBrush}"
+                                                                                   BorderThickness="2"
+                                                                                   CornerRadius="5">
+                                                                                <Border.BorderBrush>
+                                                                                    <SolidColorBrush x:Name="BorderColor" Color="{StaticResource BorderLight}"/>
+                                                                                </Border.BorderBrush>
+                                                                                <Grid>
+                                                                                    <!-- Preview Image -->
+                                                                                    <Image Source="{Binding PreviewImage}"
+                                                                                          Stretch="UniformToFill"
+                                                                                          Opacity="0.6"
+                                                                                          Visibility="{Binding HasPreview, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+                                                                                    <!-- Placeholder when no preview -->
+                                                                                    <Border Background="{StaticResource BgLightBrush}"
+                                                                                           Visibility="{Binding HasPreview, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                                                                                        <TextBlock Text="{t:Text diner.drag}"
+                                                                                                  FontSize="{StaticResource FontSizeSubheading}"
+                                                                                                  FontWeight="Bold"
+                                                                                                  Foreground="{StaticResource Gray50Brush}"
+                                                                                                  HorizontalAlignment="Center"
+                                                                                                  VerticalAlignment="Center"/>
+                                                                                    </Border>
+
+                                                                                    <!-- Track Name Overlay -->
+                                                                                    <Border Background="{StaticResource BlackCCBrush}"
+                                                                                           VerticalAlignment="Bottom"
+                                                                                           Padding="5,3">
+                                                                                        <TextBlock Text="{Binding DisplayName}"
+                                                                                                  FontSize="{StaticResource FontSizeTiny}"
+                                                                                                  Foreground="{StaticResource TextPrimaryBrush}"
+                                                                                                  TextWrapping="NoWrap"
+                                                                                                  TextTrimming="CharacterEllipsis"/>
+                                                                                    </Border>
+
+                                                                                    <!-- Selection Indicator -->
+                                                                                    <Border Background="{StaticResource GoldCCBrush}"
+                                                                                           Width="20"
+                                                                                           Height="20"
+                                                                                           CornerRadius="10"
+                                                                                           HorizontalAlignment="Right"
+                                                                                           VerticalAlignment="Top"
+                                                                                           Margin="5"
+                                                                                           Visibility="{Binding IsSelected, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                                                        <TextBlock Text="*"
+                                                                                                  FontSize="{StaticResource FontSizeBody}"
+                                                                                                  FontWeight="Bold"
+                                                                                                  Foreground="{StaticResource BgPanelBrush}"
+                                                                                                  HorizontalAlignment="Center"
+                                                                                                  VerticalAlignment="Center"/>
+                                                                                    </Border>
+                                                                                </Grid>
+                                                                            </Border>
+                                                                            <ControlTemplate.Triggers>
+                                                                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                                    <Setter TargetName="TrackBorder" Property="BorderBrush" Value="{StaticResource GoldBrush}"/>
+                                                                                </DataTrigger>
+                                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                                    <Setter TargetName="TrackBorder" Property="Background" Value="{StaticResource BgLightBrush}"/>
+                                                                                </Trigger>
+                                                                            </ControlTemplate.Triggers>
+                                                                        </ControlTemplate>
+                                                                    </Button.Template>
+                                                                </Button>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </ScrollViewer>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <!-- Road Race Tracks -->
+                                        <Border Grid.Column="1"
+                                               Background="{StaticResource BgPanelBrush}"
+                                               BorderBrush="{StaticResource BorderLightBrush}"
+                                               BorderThickness="1"
+                                               CornerRadius="5"
+                                               Padding="10"
+                                               Margin="5,0,0,0"
+                                               Visibility="{Binding HasRoadTracks, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <StackPanel>
+                                                <TextBlock Text="{t:Text diner.road_race}"
+                                                          FontSize="{StaticResource FontSizeBody}"
+                                                          FontWeight="Bold"
+                                                          Foreground="{StaticResource TextPrimaryBrush}"
+                                                          Margin="0,0,0,10"/>
+
+                                                <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                                                             VerticalScrollBarVisibility="Disabled"
+                                                             MaxHeight="140">
+                                                    <ItemsControl ItemsSource="{Binding RoadTracks}">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate>
+                                                                <StackPanel Orientation="Horizontal"/>
+                                                            </ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <!-- Track Card -->
+                                                                <Button Command="{Binding DataContext.SelectTrackCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                       CommandParameter="{Binding}"
+                                                                       Background="Transparent"
+                                                                       BorderThickness="0"
+                                                                       Padding="0"
+                                                                       Margin="0,0,8,0"
+                                                                       Cursor="Hand">
+                                                                    <Button.Template>
+                                                                        <ControlTemplate TargetType="Button">
+                                                                            <Border x:Name="TrackBorder"
+                                                                                   Width="110"
+                                                                                   Height="90"
+                                                                                   Background="{StaticResource BgMediumBrush}"
+                                                                                   BorderThickness="2"
+                                                                                   CornerRadius="5">
+                                                                                <Border.BorderBrush>
+                                                                                    <SolidColorBrush x:Name="BorderColor" Color="{StaticResource BorderLight}"/>
+                                                                                </Border.BorderBrush>
+                                                                                <Grid>
+                                                                                    <!-- Preview Image -->
+                                                                                    <Image Source="{Binding PreviewImage}"
+                                                                                          Stretch="UniformToFill"
+                                                                                          Opacity="0.6"
+                                                                                          Visibility="{Binding HasPreview, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+                                                                                    <!-- Placeholder when no preview -->
+                                                                                    <Border Background="{StaticResource BgLightBrush}"
+                                                                                           Visibility="{Binding HasPreview, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                                                                                        <TextBlock Text="{t:Text diner.road}"
+                                                                                                  FontSize="{StaticResource FontSizeSubheading}"
+                                                                                                  FontWeight="Bold"
+                                                                                                  Foreground="{StaticResource Gray50Brush}"
+                                                                                                  HorizontalAlignment="Center"
+                                                                                                  VerticalAlignment="Center"/>
+                                                                                    </Border>
+
+                                                                                    <!-- Track Name Overlay -->
+                                                                                    <Border Background="{StaticResource BlackCCBrush}"
+                                                                                           VerticalAlignment="Bottom"
+                                                                                           Padding="5,3">
+                                                                                        <TextBlock Text="{Binding DisplayName}"
+                                                                                                  FontSize="{StaticResource FontSizeTiny}"
+                                                                                                  Foreground="{StaticResource TextPrimaryBrush}"
+                                                                                                  TextWrapping="NoWrap"
+                                                                                                  TextTrimming="CharacterEllipsis"/>
+                                                                                    </Border>
+
+                                                                                    <!-- Selection Indicator -->
+                                                                                    <Border Background="{StaticResource GoldCCBrush}"
+                                                                                           Width="20"
+                                                                                           Height="20"
+                                                                                           CornerRadius="10"
+                                                                                           HorizontalAlignment="Right"
+                                                                                           VerticalAlignment="Top"
+                                                                                           Margin="5"
+                                                                                           Visibility="{Binding IsSelected, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                                                        <TextBlock Text="*"
+                                                                                                  FontSize="{StaticResource FontSizeBody}"
+                                                                                                  FontWeight="Bold"
+                                                                                                  Foreground="{StaticResource BgPanelBrush}"
+                                                                                                  HorizontalAlignment="Center"
+                                                                                                  VerticalAlignment="Center"/>
+                                                                                    </Border>
+                                                                                </Grid>
+                                                                            </Border>
+                                                                            <ControlTemplate.Triggers>
+                                                                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                                    <Setter TargetName="TrackBorder" Property="BorderBrush" Value="{StaticResource GoldBrush}"/>
+                                                                                </DataTrigger>
+                                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                                    <Setter TargetName="TrackBorder" Property="Background" Value="{StaticResource BgLightBrush}"/>
+                                                                                </Trigger>
+                                                                            </ControlTemplate.Triggers>
+                                                                        </ControlTemplate>
+                                                                    </Button.Template>
+                                                                </Button>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </ScrollViewer>
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+
+                                    <!-- Matchup Stats -->
+                                    <Border Background="{StaticResource BgPanelBrush}"
+                                           BorderBrush="{StaticResource BorderLightBrush}"
+                                           BorderThickness="1"
+                                           CornerRadius="5"
+                                           Padding="15"
+                                           Margin="0,15,0,0"
+                                           Visibility="{Binding HasMatchupStats, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <StackPanel>
+                                            <TextBlock Text="{t:Text diner.matchup}"
                                                       FontSize="{StaticResource FontSizeBody}"
                                                       FontWeight="Bold"
-                                                      Foreground="{StaticResource WarningBrush}"
-                                                      Margin="0,0,8,0"/>
-                                            <TextBlock Text="{Binding InsufficientFundsMessage, Mode=OneWay}"
-                                                      FontSize="{StaticResource FontSizeSmall}"
                                                       Foreground="{StaticResource TextPrimaryBrush}"
-                                                      VerticalAlignment="Center"/>
+                                                      Margin="0,0,0,12"/>
+
+                                            <!-- Headers -->
+                                            <Grid Margin="0,0,0,8">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="80"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="35"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <TextBlock Grid.Column="0"
+                                                          Text="{t:Text diner.you}"
+                                                          FontSize="{StaticResource FontSizeSmall}"
+                                                          FontWeight="Bold"
+                                                          Foreground="{StaticResource TextSecondaryBrush}"
+                                                          HorizontalAlignment="Center"/>
+                                                <TextBlock Grid.Column="2"
+                                                          Text="{t:Text diner.them}"
+                                                          FontSize="{StaticResource FontSizeSmall}"
+                                                          FontWeight="Bold"
+                                                          Foreground="{StaticResource TextSecondaryBrush}"
+                                                          HorizontalAlignment="Center"/>
+                                            </Grid>
+
+                                            <!-- Stats List -->
+                                            <ItemsControl ItemsSource="{Binding MatchupStats}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid Margin="0,4">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="80"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="35"/>
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <!-- Player Value -->
+                                                            <TextBlock Grid.Column="0"
+                                                                      Text="{Binding PlayerValue}"
+                                                                      FontSize="{StaticResource FontSizeCompact}"
+                                                                      Foreground="{StaticResource TextPrimaryBrush}"
+                                                                      HorizontalAlignment="Center"/>
+
+                                                            <!-- Label -->
+                                                            <TextBlock Grid.Column="1"
+                                                                      Text="{Binding Label}"
+                                                                      FontSize="{StaticResource FontSizeCaption}"
+                                                                      Foreground="{StaticResource TextSecondaryBrush}"
+                                                                      HorizontalAlignment="Center"
+                                                                      VerticalAlignment="Center"/>
+
+                                                            <!-- Opponent Value -->
+                                                            <TextBlock Grid.Column="2"
+                                                                      Text="{Binding OpponentValue}"
+                                                                      FontSize="{StaticResource FontSizeCompact}"
+                                                                      Foreground="{StaticResource TextPrimaryBrush}"
+                                                                      HorizontalAlignment="Center"/>
+
+                                                            <!-- Advantage Indicator -->
+                                                            <TextBlock Grid.Column="3"
+                                                                      Text="{Binding AdvantageIndicator}"
+                                                                      FontSize="{StaticResource FontSizeSmall}"
+                                                                      FontWeight="Bold"
+                                                                      HorizontalAlignment="Center">
+                                                                <!-- Green when the player has the edge, red when the opponent has, grey when even -->
+                                                                <TextBlock.Style>
+                                                                    <Style TargetType="TextBlock">
+                                                                        <Setter Property="Foreground" Value="{StaticResource Gray80Brush}"/>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding Advantage}" Value="1">
+                                                                                <Setter Property="Foreground" Value="{StaticResource AccentSuccessBrush}"/>
+                                                                            </DataTrigger>
+                                                                            <DataTrigger Binding="{Binding Advantage}" Value="-1">
+                                                                                <Setter Property="Foreground" Value="{StaticResource DangerBrush}"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBlock.Style>
+                                                            </TextBlock>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- The race: when the track takes more than one the diner offers (a circuit race or a time attack) -->
+                                    <Border Background="{StaticResource BgPanelBrush}"
+                                           BorderBrush="{StaticResource BorderLightBrush}"
+                                           BorderThickness="1"
+                                           CornerRadius="5"
+                                           Padding="15"
+                                           Margin="0,15,0,0"
+                                           Visibility="{Binding HasFormatChoice, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <StackPanel>
+                                            <TextBlock Text="{t:Text diner.format}"
+                                                       FontSize="{StaticResource FontSizeBody}"
+                                                       FontWeight="Bold"
+                                                       Foreground="{StaticResource TextPrimaryBrush}"/>
+                                            <ComboBox ItemsSource="{Binding FormatChoices}"
+                                                      SelectedItem="{Binding SelectedFormat}"
+                                                      DisplayMemberPath="Name"
+                                                      Margin="0,6,0,0"/>
+                                            <TextBlock Text="{Binding FormatNote}"
+                                                       FontSize="{StaticResource FontSizeSmall}"
+                                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                                       TextWrapping="Wrap"
+                                                       Margin="0,6,0,0"
+                                                       Visibility="{Binding HasFormatNote, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Bracket race: on a strip that runs the quarter -->
+                                    <Border Background="{StaticResource BgPanelBrush}"
+                                           BorderBrush="{StaticResource BorderLightBrush}"
+                                           BorderThickness="1"
+                                           CornerRadius="5"
+                                           Padding="15"
+                                           Margin="0,15,0,0"
+                                           Visibility="{Binding CanBracket, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <StackPanel>
+                                            <CheckBox Content="{t:Text diner.bracket}"
+                                                      IsChecked="{Binding IsBracket}"
+                                                      FontSize="{StaticResource FontSizeBody}"
+                                                      FontWeight="Bold"
+                                                      Foreground="{StaticResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="{t:Text diner.bracket.about}"
+                                                       FontSize="{StaticResource FontSizeSmall}"
+                                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                                       TextWrapping="Wrap"
+                                                       Margin="0,6,0,0"/>
+                                            <TextBlock Text="{Binding BracketNote}"
+                                                       FontSize="{StaticResource FontSizeSmall}"
+                                                       Foreground="{StaticResource GoldBrush}"
+                                                       TextWrapping="Wrap"
+                                                       Margin="0,6,0,0"
+                                                       Visibility="{Binding IsBracket, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Bet Options Section -->
+                                    <Border Background="{StaticResource BgPanelBrush}"
+                                           BorderBrush="{StaticResource BorderLightBrush}"
+                                           BorderThickness="1"
+                                           CornerRadius="5"
+                                           Padding="15"
+                                           Margin="0,15,0,0">
+                                        <StackPanel>
+                                            <TextBlock Text="{t:Text diner.bet_type}"
+                                                      FontSize="{StaticResource FontSizeBody}"
+                                                      FontWeight="Bold"
+                                                      Foreground="{StaticResource TextPrimaryBrush}"
+                                                      Margin="0,0,0,12"/>
+
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <!-- Cash Wager Option -->
+                                                <Border Grid.Column="0"
+                                                       x:Name="CashBetBorder"
+                                                       Background="{StaticResource BgMediumBrush}"
+                                                       BorderThickness="2"
+                                                       CornerRadius="5"
+                                                       Padding="12"
+                                                       Margin="0,0,5,0"
+                                                       Cursor="Hand">
+                                                    <Border.InputBindings>
+                                                        <MouseBinding MouseAction="LeftClick" Command="{Binding CashBetCommand}"/>
+                                                    </Border.InputBindings>
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="BorderBrush" Value="{StaticResource BorderLightBrush}"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsCashBet}" Value="True">
+                                                                    <Setter Property="BorderBrush" Value="{StaticResource GoldBrush}"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <StackPanel>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                                            <!-- Radio indicator -->
+                                                            <Border Width="18" Height="18"
+                                                                   BorderBrush="{StaticResource AccentPrimaryBrush}"
+                                                                   BorderThickness="2"
+                                                                   CornerRadius="9"
+                                                                   Margin="0,0,10,0">
+                                                                <Ellipse Width="8" Height="8"
+                                                                        Fill="{StaticResource AccentPrimaryBrush}"
+                                                                        Visibility="{Binding IsCashBet, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                            </Border>
+                                                            <TextBlock Text="{t:Text diner.cash_wager}"
+                                                                      FontSize="{StaticResource FontSizeCompact}"
+                                                                      FontWeight="Bold"
+                                                                      Foreground="{StaticResource TextPrimaryBrush}"/>
+                                                        </StackPanel>
+
+                                                        <!-- Wager amount display and slider -->
+                                                        <StackPanel Visibility="{Binding IsCashBet, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                            <TextBlock Text="{Binding WagerAmountDisplay}"
+                                                                      FontSize="{StaticResource FontSizeHeadingLarge}"
+                                                                      FontWeight="Bold"
+                                                                      Foreground="{StaticResource AccentSuccessBrush}"
+                                                                      HorizontalAlignment="Center"
+                                                                      Margin="0,5,0,8"/>
+
+                                                            <Slider Value="{Binding WagerAmount}"
+                                                                   Minimum="{Binding MinWager, Mode=OneWay}"
+                                                                   Maximum="{Binding MaxWager, Mode=OneWay}"
+                                                                   TickFrequency="10"
+                                                                   IsSnapToTickEnabled="True"
+                                                                   Margin="0,0,0,5"/>
+
+                                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                                <TextBlock FontSize="{StaticResource FontSizeTiny}"
+                                                                          Foreground="{StaticResource TextSecondaryBrush}">
+                                                                    <Run Text="{Binding MinWager, Converter={StaticResource MoneyConverter}, Mode=OneWay}"/>
+                                                                </TextBlock>
+                                                                <TextBlock Text=" - "
+                                                                          FontSize="{StaticResource FontSizeTiny}"
+                                                                          Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                                <TextBlock FontSize="{StaticResource FontSizeTiny}"
+                                                                          Foreground="{StaticResource TextSecondaryBrush}">
+                                                                    <Run Text="{Binding MaxWager, Converter={StaticResource MoneyConverter}, Mode=OneWay}"/>
+                                                                </TextBlock>
+                                                            </StackPanel>
+
+                                                            <TextBlock Text="{Binding StakesNote}"
+                                                                      FontSize="{StaticResource FontSizeTiny}"
+                                                                      Foreground="{StaticResource GoldBrush}"
+                                                                      HorizontalAlignment="Center"
+                                                                      Margin="0,3,0,0"
+                                                                      Visibility="{Binding HasStakesNote, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                        </StackPanel>
+
+                                                        <!-- Placeholder when not selected -->
+                                                        <TextBlock Text="{t:Text diner.cash_wager.about}"
+                                                                  FontSize="{StaticResource FontSizeCaption}"
+                                                                  Foreground="{StaticResource TextSecondaryBrush}"
+                                                                  Visibility="{Binding IsCashBet, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                                                    </StackPanel>
+                                                </Border>
+
+                                                <!-- Pink Slip Option -->
+                                                <Border Grid.Column="1"
+                                                       x:Name="PinkSlipBorder"
+                                                       Background="{StaticResource BgMediumBrush}"
+                                                       BorderThickness="2"
+                                                       CornerRadius="5"
+                                                       Padding="12"
+                                                       Margin="5,0,0,0"
+                                                       Cursor="Hand">
+                                                    <Border.InputBindings>
+                                                        <MouseBinding MouseAction="LeftClick" Command="{Binding PinkSlipBetCommand}"/>
+                                                    </Border.InputBindings>
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="BorderBrush" Value="{StaticResource BorderLightBrush}"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsPinkSlipBet}" Value="True">
+                                                                    <Setter Property="BorderBrush" Value="{StaticResource DangerBrush}"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <StackPanel>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                                            <!-- Radio indicator -->
+                                                            <Border Width="18" Height="18"
+                                                                   BorderBrush="{StaticResource DangerBrush}"
+                                                                   BorderThickness="2"
+                                                                   CornerRadius="9"
+                                                                   Margin="0,0,10,0">
+                                                                <Ellipse Width="8" Height="8"
+                                                                        Fill="{StaticResource DangerBrush}"
+                                                                        Visibility="{Binding IsPinkSlipBet, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                            </Border>
+                                                            <TextBlock Text="{t:Text diner.pink_slips}"
+                                                                      FontSize="{StaticResource FontSizeCompact}"
+                                                                      FontWeight="Bold"
+                                                                      Foreground="{StaticResource DangerBrush}"/>
+                                                        </StackPanel>
+
+                                                        <TextBlock Text="{t:Text diner.pink_slips.about}"
+                                                                  FontSize="{StaticResource FontSizeCaption}"
+                                                                  Foreground="{StaticResource TextSecondaryBrush}"
+                                                                  TextWrapping="Wrap"/>
+
+                                                        <!-- Warning when selected -->
+                                                        <Border Background="{StaticResource DangerBgBrush}"
+                                                               CornerRadius="3"
+                                                               Padding="8,5"
+                                                               Margin="0,8,0,0"
+                                                               Visibility="{Binding IsPinkSlipBet, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                            <TextBlock Text="{t:Text diner.high_stakes}"
+                                                                      FontSize="{StaticResource FontSizeTiny}"
+                                                                      FontWeight="Bold"
+                                                                      Foreground="{StaticResource DangerBrush}"
+                                                                      HorizontalAlignment="Center"/>
+                                                        </Border>
+                                                    </StackPanel>
+                                                </Border>
+                                            </Grid>
+
+                                            <!-- The police risk of a road race -->
+                                            <TextBlock Text="{Binding PoliceNote}"
+                                                      FontSize="{StaticResource FontSizeTiny}"
+                                                      Foreground="{StaticResource WarningBrush}"
+                                                      HorizontalAlignment="Center"
+                                                      Margin="0,8,0,0"
+                                                      Visibility="{Binding HasPoliceNote, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+                                            <!-- Insufficient Funds Warning -->
+                                            <Border Background="{StaticResource WarningBgBrush}"
+                                                   BorderBrush="{StaticResource WarningBrush}"
+                                                   BorderThickness="1"
+                                                   CornerRadius="5"
+                                                   Padding="10"
+                                                   Margin="0,10,0,0"
+                                                   Visibility="{Binding CanAffordMinBet, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                    <TextBlock Text="!"
+                                                              FontSize="{StaticResource FontSizeBody}"
+                                                              FontWeight="Bold"
+                                                              Foreground="{StaticResource WarningBrush}"
+                                                              Margin="0,0,8,0"/>
+                                                    <TextBlock Text="{Binding InsufficientFundsMessage, Mode=OneWay}"
+                                                              FontSize="{StaticResource FontSizeSmall}"
+                                                              Foreground="{StaticResource TextPrimaryBrush}"
+                                                              VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Border>
                                         </StackPanel>
                                     </Border>
                                 </StackPanel>
-                            </Border>
-                        </StackPanel>
-                    </ScrollViewer>
+                            </ScrollViewer>
 
-                    <!-- Challenge Button -->
-                    <Button Grid.Row="2"
-                           Content="{t:Text diner.challenge}"
-                           Command="{Binding ChallengeCommand}"
-                           FontSize="{StaticResource FontSizeHeading}"
-                           FontWeight="Bold"
-                           Foreground="{StaticResource BgPanelBrush}"
-                           Background="{StaticResource GoldBrush}"
-                           BorderThickness="0"
-                           Padding="20,15"
-                           Cursor="Hand"
-                           HorizontalAlignment="Stretch">
-                        <Button.Style>
-                            <Style TargetType="Button">
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="Button">
-                                            <Border x:Name="ButtonBorder"
-                                                   Background="{TemplateBinding Background}"
-                                                   BorderBrush="{TemplateBinding BorderBrush}"
-                                                   BorderThickness="{TemplateBinding BorderThickness}"
-                                                   CornerRadius="5"
-                                                   Padding="{TemplateBinding Padding}">
-                                                <ContentPresenter HorizontalAlignment="Center"
-                                                                VerticalAlignment="Center"/>
-                                            </Border>
-                                            <ControlTemplate.Triggers>
-                                                <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter TargetName="ButtonBorder" Property="Background" Value="{StaticResource WarningBrush}"/>
-                                                </Trigger>
-                                                <Trigger Property="IsPressed" Value="True">
-                                                    <Setter TargetName="ButtonBorder" Property="Background" Value="{StaticResource WarningStrongBrush}"/>
-                                                </Trigger>
-                                                <Trigger Property="IsEnabled" Value="False">
-                                                    <Setter TargetName="ButtonBorder" Property="Background" Value="{StaticResource BorderLightBrush}"/>
-                                                    <Setter Property="Foreground" Value="{StaticResource Gray80Brush}"/>
-                                                </Trigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </Button.Style>
-                    </Button>
+                            <!-- Challenge Button -->
+                            <Button Grid.Row="2"
+                                   Content="{t:Text diner.challenge}"
+                                   Command="{Binding ChallengeCommand}"
+                                   FontSize="{StaticResource FontSizeHeading}"
+                                   FontWeight="Bold"
+                                   Foreground="{StaticResource BgPanelBrush}"
+                                   Background="{StaticResource GoldBrush}"
+                                   BorderThickness="0"
+                                   Padding="20,15"
+                                   Cursor="Hand"
+                                   HorizontalAlignment="Stretch">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border x:Name="ButtonBorder"
+                                                           Background="{TemplateBinding Background}"
+                                                           BorderBrush="{TemplateBinding BorderBrush}"
+                                                           BorderThickness="{TemplateBinding BorderThickness}"
+                                                           CornerRadius="5"
+                                                           Padding="{TemplateBinding Padding}">
+                                                        <ContentPresenter HorizontalAlignment="Center"
+                                                                        VerticalAlignment="Center"/>
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="ButtonBorder" Property="Background" Value="{StaticResource WarningBrush}"/>
+                                                        </Trigger>
+                                                        <Trigger Property="IsPressed" Value="True">
+                                                            <Setter TargetName="ButtonBorder" Property="Background" Value="{StaticResource WarningStrongBrush}"/>
+                                                        </Trigger>
+                                                        <Trigger Property="IsEnabled" Value="False">
+                                                            <Setter TargetName="ButtonBorder" Property="Background" Value="{StaticResource BorderLightBrush}"/>
+                                                            <Setter Property="Foreground" Value="{StaticResource Gray80Brush}"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                        </Grid>
+                    </Border>
+
                 </Grid>
             </Border>
 
-            <!-- No Opponent Selected Message -->
-            <Border Grid.Column="1"
-                   Background="{StaticResource BgDarkDFBrush}"
-                   BorderBrush="{StaticResource BorderLightBrush}"
-                   BorderThickness="2"
-                   CornerRadius="5"
-                   Margin="10,0,0,0"
-                   Visibility="{Binding HasSelectedOpponent, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
-                <TextBlock Text="{t:Text diner.select_opponent}"
-                          FontSize="{StaticResource FontSizeHeading}"
-                          Foreground="{StaticResource TextSecondaryBrush}"
-                          HorizontalAlignment="Center"
-                          VerticalAlignment="Center"/>
-            </Border>
+            <!-- From a racer back to everyone who is in -->
+            <Button Style="{StaticResource PanelCloseButtonStyle}"
+                    Tag="{StaticResource BackIcon}"
+                    ToolTip="{t:Text diner.ui.everyone}"
+                    Command="{Binding BackToListCommand}"
+                    Visibility="{Binding HasSelectedOpponent, Converter={StaticResource BooleanToVisibilityConverter}}"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    Margin="66,96,0,0"/>
+
+            <!-- Out of the diner, back to the street -->
+            <Button Style="{StaticResource PanelCloseButtonStyle}"
+                    Tag="{StaticResource CloseIcon}"
+                    ToolTip="{t:Text diner.ui.go_out}"
+                    Command="{Binding ToggleDinerCommand}"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    Margin="0,96,66,0"/>
         </Grid>
+
+        <!-- Black until the car comes down the street, and again once it has driven off -->
+        <Border x:Name="Curtain"
+                Background="{StaticResource StageBrush}"
+                IsHitTestVisible="False"/>
+
+        <!-- Until the street is up -->
+        <controls:LoadingIndicator WaitFor="{Binding ElementName=StreetView}" Message="{t:Text diner.ui.loading}"/>
 
     </Grid>
 </UserControl>

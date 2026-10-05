@@ -12,6 +12,26 @@ namespace StreetCorsa.Screens.Shared
     /// </summary>
     public static class DrivingHome
     {
+        private static readonly TimeSpan StartWait = TimeSpan.FromSeconds(4);
+        private static readonly TimeSpan IdleBeforePullingAway = TimeSpan.FromSeconds(1.2);
+
+        /// <summary>
+        /// Before driving off (from the pump, out of a bay at the diner): the starter, and a moment at idle before pulling
+        /// away. An engine that will not catch (or has no sound to start) is waited on a few seconds at most: the car drives
+        /// off all the same. <paramref name="stillThere"/> false (the screen went) stops the waiting.
+        /// </summary>
+        public static async Task StartUpAsync(Audio.EngineRunner engine, Func<bool> stillThere)
+        {
+            if (!engine.IsRunning) engine.Toggle();
+
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            while (stillThere() && engine.State != Audio.EngineState.Running && clock.Elapsed < StartWait)
+                await Task.Delay(50);
+
+            await Task.Delay(IdleBeforePullingAway);
+            if (stillThere() && engine.State != Audio.EngineState.Running) engine.StartRunning();
+        }
+
         /// <summary>
         /// The garage's arrival for the selected car; <paramref name="engine"/> is its engine when the trip worked it out
         /// already (the garage works it out otherwise). Null when no car is selected.

@@ -11,7 +11,7 @@
     <Grid Background="{StaticResource StageBrush}">
         <!-- The station, from the driver's seat -->
         <controls:StationViewport3D x:Name="StationView"
-                                    Station="{Binding Station}"
+                                    Scene="{Binding Station}"
                                     Light="{Binding Light}"
                                     PlayerCar="{Binding PlayerCar}"
                                     Stage="{Binding Stage}"/>
