@@ -138,7 +138,7 @@ public abstract class DriveInViewport3D : OnboardViewport3D
         var ground = await Task.Run(() => StationGround.Load(scene.GroundFile));
         if (Renderer != renderer || !IsLoaded) return;
 
-        LightScene(renderer, scene.LightingFor(light), scene.Sun);
+        SceneLights.ApplyWithSky(renderer, scene.LightingFor(light), scene.Sun);
         SceneDressing.Glow(renderer, scene.GlowAt(light));
         SceneDressing.ShowSky(renderer, scene.SkyPrefix, scene.SkyNodeAt(light));
 
@@ -445,7 +445,12 @@ public abstract class DriveInViewport3D : OnboardViewport3D
         var pose = new BodyPose(engine.Roll + roll, engine.Pitch + pitch, engine.Heave);
         var fresh = _rock == null || !ReferenceEquals(_rock.Car, node);
         if (fresh) _rock = new CarBodyRock(node);
-        if (_rock!.Apply(pose, _car?.WheelSpin ?? 0f, _placement, _car?.Steer ?? 0f) || fresh)
+        var moved = _rock!.Base != _placement;
+        if (!_rock.Apply(pose, _car?.WheelSpin ?? 0f, _placement, _car?.Steer ?? 0f) && !fresh) return;
+
+        // As the base's rock does (RockCar): the shadow maps are drawn again for a car that moved, not for every shake
+        // of its engine idling where it stands
+        if (_rock.TakeShadows(pose, moving: moved || fresh))
         {
             FocusShadows(Renderer);
             Renderer.RefreshShadows();

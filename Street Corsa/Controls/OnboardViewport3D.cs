@@ -30,15 +30,10 @@ public abstract class OnboardViewport3D : D3DViewportBase
     private const float MaxLookPitch = 20f;
     private const float LookDegreesPerPixel = 0.18f;
 
-    // Frames drawn with the new scene before it is faded up: the first ones are still working out shadows and reflections
-    private const int SettleFrames = 4;
     private static readonly TimeSpan SceneFadeOut = TimeSpan.FromMilliseconds(600);
     private static readonly TimeSpan SceneFadeIn = TimeSpan.FromMilliseconds(900);
 
     private System.Windows.Point? _dragFrom;
-
-    // Frames still to draw before the scene is faded up, or -1 when there is nothing to fade up
-    private int _fadeInAfter = -1;
 
     protected OnboardViewport3D(string logCategory)
         : base(logCategory, new LabelLook(13, 0xD8, 0x90, new Thickness(8, 4, 8, 4), new Vector(16, 16)))
@@ -130,16 +125,6 @@ public abstract class OnboardViewport3D : D3DViewportBase
     }
 
     /// <summary>
-    /// The scene lit for the light of the day. What the reflections see past the sky's reach (a chrome mirror) is the
-    /// sky's colour, not the renderer's white.
-    /// </summary>
-    protected static void LightScene(GarageRenderer renderer, StreetLighting lighting, float[] sun)
-    {
-        SceneLights.Apply(renderer, lighting, sun);
-        renderer.BackgroundColor = System.Drawing.Color.FromArgb(lighting.AmbientUp[0], lighting.AmbientUp[1], lighting.AmbientUp[2]);
-    }
-
-    /// <summary>
     /// Puts the player's car in the main slot and the driver in it: how it sits (<see cref="Frame"/>), where the eyes
     /// are, the lens, the seat's look down, the gauges, and the headlights at night. <paramref name="placementOf"/>
     /// stands the slot where the car goes, from how it sits; null leaves it where it is. False when the scene went
@@ -160,7 +145,7 @@ public abstract class OnboardViewport3D : D3DViewportBase
         if (placement is { } before) renderer.MainSlot.LocalMatrix = before;
         await TrackDeviceWork(renderer.MainSlot.SetCarAsync(CarDescription.FromDirectory(player.Directory), skin, RendererToken));
         if (Renderer != renderer || !IsLoaded) return false;
-        await ShownPartsOnCar.SetAsync(renderer.CarNode, player.Shown, renderer.DeviceContextHolder);
+        await ShowPartsAsync(renderer, renderer.CarNode, player.Shown);
         if (Renderer != renderer || !IsLoaded) return false;
 
         if (placement is { } after) renderer.MainSlot.LocalMatrix = after;
@@ -185,7 +170,7 @@ public abstract class OnboardViewport3D : D3DViewportBase
     }
 
     /// <summary>The scene is up: its picture fades in once a few frames have drawn it</summary>
-    protected void FadeInOnceSettled() => _fadeInAfter = SettleFrames;
+    protected void FadeInOnceSettled() => FadeInAfterSettled(SceneFadeIn);
 
     /// <summary>The screen's stage is listened to while the control is loaded, and let go of while it is not</summary>
     protected abstract void ListenToStage(bool listen);
@@ -193,7 +178,6 @@ public abstract class OnboardViewport3D : D3DViewportBase
     protected override void OnRendererDisposed()
     {
         Instruments = null;
-        _fadeInAfter = -1;
     }
 
     #endregion
@@ -319,18 +303,6 @@ public abstract class OnboardViewport3D : D3DViewportBase
         {
             Logger.Error(ex, "{Viewport}: the screen could not go on after the script {Trigger}", ViewportName, run.Script?.Trigger);
         }
-    }
-
-    #endregion
-
-    #region Rendering
-
-    protected override void OnFramePresented()
-    {
-        if (_fadeInAfter < 0) return;
-        if (_fadeInAfter-- > 0) return;
-
-        if (IsPictureHidden) FadeIn(SceneFadeIn);
     }
 
     #endregion

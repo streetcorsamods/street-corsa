@@ -137,7 +137,10 @@ public static class ShownPartsOnCar
     /// <param name="device">The renderer's device, the car's paint textures go onto it (<see cref="ShownSet.Paint"/>)</param>
     /// <param name="wearPicture">How big the car's wear picture is drawn (<see cref="WearLayer.FullPicture"/>, or
     /// <see cref="WearLayer.LotPicture"/> for a car among many)</param>
-    public static async Task<bool> SetAsync(Kn5RenderableCar? car, ShownSet? shown, DeviceContextHolder device, int wearPicture = WearLayer.FullPicture)
+    /// <param name="gone">Cancelled as the car's renderer goes: nothing more is put on the car after a wait, as its device
+    /// may be disposed by then (false then)</param>
+    public static async Task<bool> SetAsync(Kn5RenderableCar? car, ShownSet? shown, DeviceContextHolder device, int wearPicture = WearLayer.FullPicture,
+        CancellationToken gone = default)
     {
         if (car == null) return false;
         var on = Cars.GetOrCreateValue(car);
@@ -152,7 +155,7 @@ public static class ShownPartsOnCar
         if (shown == null) return true;
 
         // The paint first: a car painted is seen in its colour from the start, not after its parts are put on
-        if (shown.Paint is { } colour && !await PutPaintAsync(car, colour, on, version, device)) return false;
+        if (shown.Paint is { } colour && !await PutPaintAsync(car, colour, on, version, device, gone)) return false;
 
         var files = shown.Models.Select(m => m.Source).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         Dictionary<string, IKn5>? models;
@@ -168,25 +171,32 @@ public static class ShownPartsOnCar
         }
 
         // Asked again while the models were read: the later call puts its own on
-        if (version != on.Version) return false;
+        if (Stale(on, version, gone)) return false;
 
-        if (models != null && !await PutPartsAsync(car, shown, models, on, version)) return false;
+        if (models != null && !await PutPartsAsync(car, shown, models, on, version, gone)) return false;
 
         if (shown.Look is not { } look || keepWear) return true;
         try
         {
-            return await PutLookAsync(car, look, on, version, wearPicture);
+            return await PutLookAsync(car, look, on, version, wearPicture, gone);
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             Logger.Warning(ex, "The wear of {Car} is not shown", car.RootObject?.Name);
-            if (version == on.Version) ClearWear(on);
+            if (!Stale(on, version, gone)) ClearWear(on);
             return true;
         }
     }
 
+    /// <summary>
+    /// Another set was asked for since <paramref name="version"/>, or the car's renderer went (<paramref name="gone"/>):
+    /// what this call was putting on goes no further
+    /// </summary>
+    private static bool Stale(OnCar on, int version, CancellationToken gone) => version != on.Version || gone.IsCancellationRequested;
+
     /// <summary>The wheels and the engine parts that stand out; false when the car was asked to show something else meanwhile</summary>
-    private static async Task<bool> PutPartsAsync(Kn5RenderableCar car, ShownSet shown, Dictionary<string, IKn5> models, OnCar on, int version)
+    private static async Task<bool> PutPartsAsync(Kn5RenderableCar car, ShownSet shown, Dictionary<string, IKn5> models, OnCar on, int version,
+        CancellationToken gone)
     {
         var wheels = shown.Wheels;
         for (var corner = 0; corner < Math.Min(wheels.Count, WheelFit.WheelNodes.Length); corner++)
@@ -205,7 +215,7 @@ public static class ShownPartsOnCar
         if (shown.Extras.Count == 0) return true;
         try
         {
-            return await PutExtrasAsync(car, shown, models, on, version);
+            return await PutExtrasAsync(car, shown, models, on, version, gone);
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
@@ -219,14 +229,14 @@ public static class ShownPartsOnCar
     /// time for a model it looks the car over), the layer of an earlier look on till then. False when the car was asked to
     /// show something else in the meantime.
     /// </summary>
-    private static async Task<bool> PutLookAsync(Kn5RenderableCar car, CarLook look, OnCar on, int version, int picture)
+    private static async Task<bool> PutLookAsync(Kn5RenderableCar car, CarLook look, OnCar on, int version, int picture, CancellationToken gone)
     {
         var model = car.OriginalFile;
         var kn5Root = ToNumerics(model.RootNode.Transform);
         if (car.RootObject is not { } root || !Matrix4x4.Invert(kn5Root, out var fromRoot)) return true;
 
         var layer = await Task.Run(() => WearLayer.For(model, look, picture));
-        if (version != on.Version) return false;
+        if (Stale(on, version, gone)) return false;
 
         ClearWear(on);
         if (layer == null) return true;
@@ -241,7 +251,8 @@ public static class ShownPartsOnCar
     /// made off the UI thread (the first time for a car, skin and colour they are written). False when the car was asked to
     /// show something else in the meantime. A car whose paint cannot be tinted stays in its own colours.
     /// </summary>
-    private static async Task<bool> PutPaintAsync(Kn5RenderableCar car, PaintColour colour, OnCar on, int version, DeviceContextHolder device)
+    private static async Task<bool> PutPaintAsync(Kn5RenderableCar car, PaintColour colour, OnCar on, int version, DeviceContextHolder device,
+        CancellationToken gone)
     {
         var skin = car.CurrentSkin;
         if (!on.Coated && on.Paint is { } painted && painted.Colour == colour && string.Equals(painted.Skin, skin, StringComparison.OrdinalIgnoreCase)) return true;
@@ -255,11 +266,11 @@ public static class ShownPartsOnCar
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             Logger.Warning(ex, "The paint of {Car} is not shown: it is drawn in its own colours", car.RootObject?.Name);
-            if (version != on.Version) return false;
+            if (Stale(on, version, gone)) return false;
             if (coats == on.Coats) ClearPaint(car, on);
             return true;
         }
-        if (version != on.Version) return false;
+        if (Stale(on, version, gone)) return false;
 
         // A coat of a paint job went on while this was made: the job's paint stays, the next set asked for puts its own
         if (coats != on.Coats) return true;
@@ -323,7 +334,8 @@ public static class ShownPartsOnCar
     /// The engine parts that stand out of the car, where they sit in its model (its root's children); false when the car
     /// was asked to show something else in the meantime
     /// </summary>
-    private static async Task<bool> PutExtrasAsync(Kn5RenderableCar car, ShownSet shown, Dictionary<string, IKn5> models, OnCar on, int version)
+    private static async Task<bool> PutExtrasAsync(Kn5RenderableCar car, ShownSet shown, Dictionary<string, IKn5> models, OnCar on, int version,
+        CancellationToken gone)
     {
         // The model's space is its KN5's: the root's own transform as the file has it, not what the scene adds to the root's
         // matrix (the garage lifts the car onto its ground there: 25 cm on the Chevelle '70)
@@ -342,7 +354,7 @@ public static class ShownPartsOnCar
                 return stands;
             }).ToList();
         });
-        if (version != on.Version) return false;
+        if (Stale(on, version, gone)) return false;
 
         var extras = new RenderableList("sc_parts", SlimDX.Matrix.Identity);
         foreach (var extra in standing) extras.Add(new PartFile(models[extra.Model.Source], ToSlim(extra.At * fromRoot), on));
@@ -364,7 +376,7 @@ public static class ShownPartsOnCar
             foreach (var t in triangles)
             {
                 if (point.X < t.MinX || point.X > t.MaxX || point.Z < t.MinZ || point.Z > t.MaxZ) continue;
-                if (HeightAt(t.A, t.B, t.C, point.X, point.Z) is { } y && (highest == null || y > highest)) highest = y;
+                if (Helpers.Triangles.HeightAt(t.A, t.B, t.C, point.X, point.Z) is { } y && (highest == null || y > highest)) highest = y;
             }
             return highest;
         }
@@ -406,17 +418,6 @@ public static class ShownPartsOnCar
     }
 
     private static Vector3 Model(SlimDX.Vector3 p, Matrix4x4 m) => Vector3.Transform(new Vector3(p.X, p.Y, p.Z), m);
-
-    /// <summary>The height of triangle abc over (x, z), null when (x, z) is outside it seen from above</summary>
-    private static float? HeightAt(Vector3 a, Vector3 b, Vector3 c, float x, float z)
-    {
-        var d = (b.Z - c.Z) * (a.X - c.X) + (c.X - b.X) * (a.Z - c.Z);
-        if (Math.Abs(d) < 1e-9f) return null;
-        var u = ((b.Z - c.Z) * (x - c.X) + (c.X - b.X) * (z - c.Z)) / d;
-        var v = ((c.Z - a.Z) * (x - c.X) + (a.X - c.X) * (z - c.Z)) / d;
-        var w = 1 - u - v;
-        return u < 0 || v < 0 || w < 0 ? null : u * a.Y + v * b.Y + w * c.Y;
-    }
 
     /// <summary>
     /// Takes off the parts put on: the car's own switched back as they were, the part nodes out and let go (their textures

@@ -146,14 +146,15 @@ public class PaintBoothViewport3D : DriveInViewport3D
     /// <summary>The car in the skin and paint the show has it in</summary>
     private async Task WearAsync(GarageRenderer renderer)
     {
-        if (_show is not { } show || renderer.CarNode is not { } car) return;
+        if (Renderer != renderer || _show is not { } show || renderer.CarNode is not { } car) return;
         try
         {
             // The skin as the paint is worked out in (Looks.CarPaint.SkinOf): an id with no folder is the car's first skin
             var skin = Looks.CarPaint.SkinOf(PlayerCar?.Directory ?? car.RootDirectory, show.Skin);
             if (!string.Equals(car.CurrentSkin, skin, StringComparison.OrdinalIgnoreCase))
                 renderer.MainSlot.SelectSkin(skin ?? Kn5RenderableCar.DefaultSkin);
-            await ShownPartsOnCar.SetAsync(car, show.Shown, renderer.DeviceContextHolder);
+            await ShowPartsAsync(renderer, car, show.Shown);
+            if (Renderer != renderer) return;
             Invalidate();
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)

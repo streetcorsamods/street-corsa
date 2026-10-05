@@ -27,9 +27,6 @@ public class ShowcaseViewport3D : D3DViewportBase
     // A room whose cars will not load is skipped. This many in a row and something is wrong with more than one room.
     private const int MaxFailedSets = 3;
 
-    // Frames drawn with the new scene before it is faded up: the first ones are still working out shadows and reflections
-    private const int SettleFrames = 4;
-
     /// <summary>
     /// How much car geometry a room will hold. Models run from 11 MB to over 400 MB: past this, the rest of the cars
     /// of the room are left out.
@@ -68,9 +65,6 @@ public class ShowcaseViewport3D : D3DViewportBase
 
     /// <summary>The next room has been asked for and the picture is on its way out</summary>
     private bool _leaving;
-
-    /// <summary>Frames still to draw before the scene is faded up, or -1 when there is nothing to fade up</summary>
-    private int _fadeInAfter = -1;
 
     public ShowcaseViewport3D()
         : base("Showcase", new LabelLook(14, 0xD8, 0x90, new Thickness(9, 5, 9, 5), new Vector(18, 18)))
@@ -235,7 +229,10 @@ public class ShowcaseViewport3D : D3DViewportBase
         _leaving = false;
 
         renderer.RefreshShadows();
-        _fadeInAfter = SettleFrames;
+        FadeInAfterSettled(SceneFadeIn, () =>
+        {
+            if (IsPictureHidden) SceneShown?.Invoke(this, EventArgs.Empty);
+        });
         Invalidate();
     }
 
@@ -289,7 +286,7 @@ public class ShowcaseViewport3D : D3DViewportBase
 
                 spare = null;
                 budget -= bytes;
-                _lineup.Add(new LineupCar(entry, slot, placements[i], FrameOf(slot)));
+                _lineup.Add(new LineupCar(entry, slot, placements[i], CarFrame.Of(slot)));
                 Invalidate();
             }
             catch (Exception ex) when (!IsDeviceLost(ex))
@@ -327,40 +324,13 @@ public class ShowcaseViewport3D : D3DViewportBase
 
         _lineup.Clear();
         for (var i = 0; i < cars.Count; i++)
-            _lineup.Add(cars[i] with { Placement = layout[i], Frame = FrameOf(cars[i].Slot) });
+            _lineup.Add(cars[i] with { Placement = layout[i], Frame = CarFrame.Of(cars[i].Slot) });
     }
 
     private static void Place(CarSlot slot, CarPlacement placement)
     {
         slot.LocalMatrix = Sx.Matrix.RotationY(placement.Heading) * Sx.Matrix.Translation(placement.X, 0f, placement.Z);
         slot.ResetCarBoundingBox();
-    }
-
-    /// <summary>The car's size, from its wheels; something car-sized when they cannot be found</summary>
-    private static CarFrame FrameOf(CarSlot slot)
-    {
-        var node = slot.CarNode;
-        if (node == null) return CarFrame.Nominal;
-
-        // A node's Matrix is where it is in the room, placement included: taken back into the car's own space through
-        // the car's own matrix, or every car but one standing in the middle is framed somewhere it is not
-        var toCar = Sx.Matrix.Invert(node.Matrix);
-        System.Numerics.Vector3? Hub(string name)
-        {
-            if (node.RootObject.GetDummyByName(name)?.Matrix is not { } m) return null;
-            var local = Sx.Vector3.TransformCoordinate(new Sx.Vector3(m.M41, m.M42, m.M43), toCar);
-            return new System.Numerics.Vector3(local.X, local.Y, local.Z);
-        }
-
-        if (Hub("WHEEL_LF") is not { } lf || Hub("WHEEL_RF") is not { } rf ||
-            Hub("WHEEL_LR") is not { } lr || Hub("WHEEL_RR") is not { } rr)
-        {
-            return CarFrame.Nominal;
-        }
-
-        // The box is in the room's space and the car may stand anywhere in it: only its height is wanted
-        var height = slot.GetCarBoundingBox()?.Maximum.Y ?? CarFrame.Nominal.Height;
-        return CarFrame.FromWheels(lf, rf, lr, rr, height) ?? CarFrame.Nominal;
     }
 
     #endregion
@@ -484,17 +454,6 @@ public class ShowcaseViewport3D : D3DViewportBase
         return true;
     }
 
-    protected override void OnFramePresented()
-    {
-        if (_fadeInAfter < 0) return;
-        if (_fadeInAfter-- > 0) return;
-
-        if (!IsPictureHidden) return;
-
-        FadeIn(SceneFadeIn);
-        SceneShown?.Invoke(this, EventArgs.Empty);
-    }
-
     protected override void OnRendererDisposed()
     {
         _standing = null;
@@ -502,8 +461,8 @@ public class ShowcaseViewport3D : D3DViewportBase
         _heroes.Clear();
         _shot = null;
         _leaving = false;
-        _fadeInAfter = -1;
         CurrentTitle = null;
+
         ClearStill();
     }
 

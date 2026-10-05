@@ -31,6 +31,9 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
 
     protected static readonly TimeSpan FadeInDuration = TimeSpan.FromMilliseconds(600);
 
+    // Frames drawn with a new scene before it is faded up: the first ones are still working out shadows and reflections
+    private const int SettleFrames = 4;
+
     // A drag-resize is dozens of sizes a second. Each one would make the renderer new targets and the bridge a new
     // shared texture, so only the size the drag ends on is applied (the picture stretches meanwhile).
     private static readonly TimeSpan ResizeDelay = TimeSpan.FromMilliseconds(100);
@@ -82,11 +85,14 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     private TimeSpan _lastRenderingTime;
     private DateTime _animateUntil = DateTime.MinValue;
 
+    // Frames still to draw before the picture is faded up, or -1 when there is nothing to fade up; how long the fade
+    // takes, and who hears the scene has settled (FadeInAfterSettled)
+    private int _fadeInAfter = -1;
+    private TimeSpan _fadeInFor;
+    private Action? _settled;
+
     private Audio.EngineRunner? _poseSource;
     private CarBodyRock? _rock;
-
-    // The lean the shadows were last worked out for (CarBodyRock.ShadowsDue)
-    private Audio.BodyPose _shadowedPose = Audio.BodyPose.Rest;
 
     // Kicks to the body that ring out on the springs, by how long they have been going (less than 0 while they wait):
     // +1 lifts the body (an engine coming out), -1 drops it (one going in); the nose goes with it for an engine in the
@@ -290,16 +296,14 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         catch (Exception ex) when (!_recovered && IsDeviceLost(ex))
         {
             // The GPU went away while the scene was loading: built again from scratch, once, as the render loop does
-            Logger.Warning(ex, "{Viewport}: the graphics device was lost loading {What}, starting the scene again", ViewportName, what);
-            _recovered = true;
-            _recoveredAt = DateTime.Now;
-            DisposeRenderer(releaseDevice: true);
-            _ = Dispatcher.InvokeAsync(RequestLoad);
+            RebuildAfterDeviceLost(ex, $"loading {what}");
         }
         catch (Exception ex)
         {
-            // Leave the viewport transparent so whatever is behind it stays visible
+            // Leave the viewport transparent so whatever is behind it stays visible. A control unloaded meanwhile has
+            // had its failure of that visit cleared already: the next visit tries again, not failed by this one.
             Logger.Error(ex, "{Viewport} failed to load {What}", ViewportName, what);
+            if (!IsLoaded) return;
             Fail();
         }
         finally
@@ -388,6 +392,45 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     protected CancellationToken RendererToken => _rendererGone.Token;
 
     /// <summary>
+    /// <paramref name="next"/> once <paramref name="before"/> is done, however that ended: loads into the same slots
+    /// made one after another, never two at once. The newest ask is the one that counts: each load checks its own
+    /// counter as it starts and after every await.
+    /// </summary>
+    internal static async Task After(Task before, Func<Task> next)
+    {
+        try
+        {
+            await before;
+        }
+        catch
+        {
+            // The load before has said how it ended; this one goes ahead all the same
+        }
+
+        await next();
+    }
+
+    /// <summary>
+    /// The GPU went away under the scene (a driver update, a reset), found <paramref name="doing"/>. Everything on it is
+    /// gone, the scene included, so it is built again from scratch, once: a device lost again soon after is a failure.
+    /// </summary>
+    protected void RebuildAfterDeviceLost(Exception ex, string doing)
+    {
+        if (_recovered)
+        {
+            Logger.Error(ex, "{Viewport}: the graphics device was lost again {Doing}", ViewportName, doing);
+            Fail();
+            return;
+        }
+
+        Logger.Warning(ex, "{Viewport}: the graphics device was lost {Doing}, starting the scene again", ViewportName, doing);
+        _recovered = true;
+        _recoveredAt = DateTime.Now;
+        DisposeRenderer(releaseDevice: true);
+        _ = Dispatcher.InvokeAsync(RequestLoad);
+    }
+
+    /// <summary>
     /// Device work done for the current renderer that may still be running when the control goes: a car being put
     /// in a slot ends with device calls made from a worker thread, outside the renderer's lock. The renderer waits
     /// for it before it is disposed.
@@ -397,6 +440,22 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         _deviceWork = _deviceWork.IsCompleted ? work : Task.WhenAll(_deviceWork, work);
         return work;
     }
+
+    /// <inheritdoc cref="TrackDeviceWork(Task)"/>
+    protected Task<T> TrackDeviceWork<T>(Task<T> work)
+    {
+        TrackDeviceWork((Task)work);
+        return work;
+    }
+
+    /// <summary>
+    /// Makes <paramref name="car"/>, in <paramref name="renderer"/>, show <paramref name="shown"/>
+    /// (<see cref="ShownPartsOnCar.SetAsync"/>): device work the renderer waits for before it is disposed, which stops
+    /// short of its device calls once the renderer has gone. True when the car changed.
+    /// </summary>
+    protected Task<bool> ShowPartsAsync(GarageRenderer renderer, Kn5RenderableCar? car, Parts.Cars.ShownSet? shown,
+        int wearPicture = Looks.WearLayer.FullPicture) =>
+        TrackDeviceWork(ShownPartsOnCar.SetAsync(car, shown, renderer.DeviceContextHolder, wearPicture, RendererToken));
 
     #endregion
 
@@ -423,6 +482,29 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     protected void FadeIn() => FadeIn(FadeInDuration);
 
     protected void FadeIn(TimeSpan duration) => _image.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, duration));
+
+    /// <summary>
+    /// The scene is up: once a few frames have drawn it, <paramref name="settled"/> hears so (the picture still as it
+    /// was, held back or not) and a picture held back fades in over <paramref name="duration"/> (the usual fade when null)
+    /// </summary>
+    protected void FadeInAfterSettled(TimeSpan? duration = null, Action? settled = null)
+    {
+        _fadeInAfter = SettleFrames;
+        _fadeInFor = duration ?? FadeInDuration;
+        _settled = settled;
+    }
+
+    /// <summary>A frame of the settling counted; at the end of it, the scene shown</summary>
+    private void StepFadeIn()
+    {
+        if (_fadeInAfter < 0) return;
+        if (_fadeInAfter-- > 0) return;
+
+        var settled = _settled;
+        _settled = null;
+        settled?.Invoke();
+        if (IsPictureHidden) FadeIn(_fadeInFor);
+    }
 
     /// <summary>
     /// Fades the picture to nothing. Done when it is dark, or when the fade was cut short (the renderer went): never
@@ -569,6 +651,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
             }
 
             OnFramePresented();
+            StepFadeIn();
 
             // A car on the move shows every frame that came late: what makes a scripted move stutter (not the first after the
             // scene stood still, whose gap is the time it stood)
@@ -583,13 +666,8 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         }
         catch (Exception ex) when (!_recovered && IsDeviceLost(ex))
         {
-            // The GPU went away under the renderer (a driver update, a reset). Everything on it is gone, the scene
-            // included, so it is built again from scratch, once: a device that keeps going is a failure after all.
-            Logger.Warning(ex, "{Viewport}: the graphics device was lost, starting the scene again", ViewportName);
-            _recovered = true;
-            _recoveredAt = DateTime.Now;
-            DisposeRenderer(releaseDevice: true);
-            _ = Dispatcher.InvokeAsync(RequestLoad);
+            // The GPU went away under the renderer: the scene is built again from scratch, once
+            RebuildAfterDeviceLost(ex, "drawing");
         }
         catch (Exception ex)
         {
@@ -658,6 +736,8 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         _firstFrameTimer.Stop();
         _rock = null;
         _bumps.Clear();
+        _fadeInAfter = -1;
+        _settled = null;
         DropScript();
 
         var renderer = _renderer;
@@ -854,7 +934,6 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         {
             ReleaseRock();
             _rock = new CarBodyRock(carNode);
-            _shadowedPose = Audio.BodyPose.Rest;
         }
 
         var sag = _rock.PoseOf(heights);
@@ -867,11 +946,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
 
         // The shadow maps are drawn again only for a lean that shows in them, not for every shake at idle; a car on the
         // move takes its shadow along every frame
-        if (moved != null || CarBodyRock.ShadowsDue(_shadowedPose, pose))
-        {
-            renderer.RefreshShadows();
-            _shadowedPose = pose;
-        }
+        if (_rock.TakeShadows(pose, moving: moved != null)) renderer.RefreshShadows();
 
         Invalidate();
     }
@@ -883,7 +958,6 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
 
         _rock.Release();
         _rock = null;
-        _shadowedPose = Audio.BodyPose.Rest;
         if (_renderer != null)
         {
             if (LeansParts) _renderer.BodyLean = SlimDX.Matrix.Identity;
@@ -921,7 +995,6 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         {
             ReleaseRock();
             _rock = new CarBodyRock(car);
-            _shadowedPose = Audio.BodyPose.Rest;
         }
 
         _scriptFrom = _rock.Base;

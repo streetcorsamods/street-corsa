@@ -47,6 +47,17 @@ internal static class SceneLights
         return lamps;
     }
 
+    /// <summary>
+    /// The renderer lit for a light of the day (<see cref="Apply"/>), and what the reflections see past the sky's reach
+    /// (a chrome mirror) the sky's colour, not the renderer's white
+    /// </summary>
+    public static IReadOnlyList<DarkLightBase> ApplyWithSky(GarageRenderer renderer, StreetLighting lighting, float[] sun)
+    {
+        var lamps = Apply(renderer, lighting, sun);
+        renderer.BackgroundColor = System.Drawing.Color.FromArgb(lighting.AmbientUp[0], lighting.AmbientUp[1], lighting.AmbientUp[2]);
+        return lamps;
+    }
+
     // A car's headlights as the renderer guesses them reach 13.5 m and barely light the road: at night, seen from the
     // driver's seat, they carry this far down it and this many times as bright
     public const float HeadlightReach = 40f;

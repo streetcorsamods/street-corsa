@@ -221,6 +221,21 @@ internal sealed class CarBodyRock
         || Math.Abs(now.Pitch - shadowed.Pitch) >= ShadowLeanStep
         || Math.Abs(now.Heave - shadowed.Heave) >= ShadowHeaveStep;
 
+    // The pose the car's shadows were last drawn for
+    private BodyPose _shadowed = BodyPose.Rest;
+
+    /// <summary>
+    /// The shadows are to be drawn again for the body at <paramref name="pose"/>: it leans far enough from where they were
+    /// last drawn to show (<see cref="ShadowsDue(BodyPose, BodyPose)"/>), or the car itself moves
+    /// (<paramref name="moving"/>, its shadow goes with it every frame). True, and the pose kept as the one drawn, when so.
+    /// </summary>
+    public bool TakeShadows(BodyPose pose, bool moving)
+    {
+        if (!moving && !ShadowsDue(_shadowed, pose)) return false;
+        _shadowed = pose;
+        return true;
+    }
+
     /// <summary>Everything back where it was</summary>
     public void Release()
     {
@@ -229,6 +244,7 @@ internal sealed class CarBodyRock
         _pose = BodyPose.Rest;
         _wheelSpin = 0f;
         _steer = 0f;
+        _shadowed = BodyPose.Rest;
         WorldLean = Sx.Matrix.Identity;
     }
 }

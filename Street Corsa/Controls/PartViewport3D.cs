@@ -38,9 +38,6 @@ public class PartViewport3D : D3DViewportBase
     private const float WheelStep = 0.0008f;
     private const float ZoomSettleRate = 8f;
 
-    // Frames drawn before the picture is faded up: the first ones are still working out shadows and reflections
-    private const int SettleFrames = 4;
-
     private PartInstance? _shown;
     private PartsCatalog? _shownCatalog;
     private Sx.Vector3 _target;
@@ -48,7 +45,6 @@ public class PartViewport3D : D3DViewportBase
     private float _radiusGoal = 1f;
     private bool _touched;
     private System.Windows.Point? _dragFrom;
-    private int _fadeInAfter = -1;
 
     public PartViewport3D()
         : base("PartPreview", new LabelLook(13, 0xD8, 0x90, new Thickness(8, 4, 8, 4), new Vector(16, 16)))
@@ -166,7 +162,7 @@ public class PartViewport3D : D3DViewportBase
         _touched = false;
         (_shown, _shownCatalog) = (part, catalog);
         renderer.RefreshShadows();
-        _fadeInAfter = SettleFrames;
+        FadeInAfterSettled();
 
         Logger.Information("Part preview of {Part} up, {Size:0.00} m across", part.DefinitionId, radius * 2f);
         Invalidate();
@@ -174,7 +170,6 @@ public class PartViewport3D : D3DViewportBase
 
     protected override void OnRendererDisposed()
     {
-        _fadeInAfter = -1;
         _shown = null;
         _shownCatalog = null;
     }
@@ -206,14 +201,6 @@ public class PartViewport3D : D3DViewportBase
 
         if (moving) renderer.IsDirty = true;
         return moving;
-    }
-
-    protected override void OnFramePresented()
-    {
-        if (_fadeInAfter < 0) return;
-        if (_fadeInAfter-- > 0) return;
-
-        if (IsPictureHidden) FadeIn();
     }
 
     /// <summary>Nothing rocks a part</summary>
