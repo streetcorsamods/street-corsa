@@ -321,12 +321,12 @@ namespace StreetCorsa.Services.Parts
             }
         }
 
-        public ShownSet? Shown(string carDefinitionId, List<PartInstance> parts, CarLook? look = null, CornerHeights? heights = null)
+        public ShownSet? Shown(string carDefinitionId, List<PartInstance> parts, CarLook? look = null, CornerHeights? heights = null, PaintColour? paint = null)
         {
             var directory = Path.Combine(AppSettings.Instance.CarsPath, carDefinitionId);
             if (look is { IsClean: true }) look = null;
-            // Without the parts the car still shows its wear and how it sits (a sagging corner on a clean car too)
-            if (!IsAvailable) return ShownSet.Of(null, null, look == null ? null : CarHubs.FrameOf(directory), look, heights);
+            // Without the parts the car still shows its wear, its paint and how it sits (a sagging corner on a clean car too)
+            if (!IsAvailable) return ShownSet.Of(null, null, look == null ? null : CarHubs.FrameOf(directory), look, heights, paint);
 
             // The engine's upper parts, any of which may stand out of the hood: whether they do is for whoever has the car's meshes
             var extras = new List<ShownModelAt>();
@@ -342,7 +342,7 @@ namespace StreetCorsa.Services.Parts
             var wheels = Specs(carDefinitionId) is { } specs
                 ? ShownParts.Wheels(parts, Catalog, RunningGearFactory.Choose(Catalog, specs))
                 : new ShownWheel?[RunningGear.Corners];
-            return ShownSet.Of(wheels, extras, frame, look, heights);
+            return ShownSet.Of(wheels, extras, frame, look, heights, paint);
         }
 
         /// <summary>

@@ -165,9 +165,16 @@ namespace StreetCorsa.Screens.Shared
             return new RaceSetupResult { Intent = intent };
         }
 
-        /// <summary>What the car shows in the race, its wear layer's model written for it</summary>
-        private Task<ShownSet?> ShownForRaceAsync(Car car) =>
-            Looks.WearLayer.ForRaceAsync(_parts.Shown(car), System.IO.Path.Combine(Configuration.AppSettings.Instance.CarsPath, car.DefinitionId));
+        /// <summary>What the car shows in the race, its wear layer's model and its paint's textures written for it</summary>
+        private Task<ShownSet?> ShownForRaceAsync(Car car) => ShownForRaceAsync(_parts.Shown(car), car);
+
+        /// <summary><paramref name="shown"/> of <paramref name="car"/>, its wear layer's model and its paint's textures written for the race</summary>
+        public static async Task<ShownSet?> ShownForRaceAsync(ShownSet? shown, Car car)
+        {
+            var directory = System.IO.Path.Combine(Configuration.AppSettings.Instance.CarsPath, car.DefinitionId);
+            var worn = await Looks.WearLayer.ForRaceAsync(shown, directory);
+            return await Looks.CarPaint.ForRaceAsync(worn, directory, car.SkinId);
+        }
 
         /// <summary>
         /// The folder the opponent's car races in, and its data: an opponent in the player's model races in a

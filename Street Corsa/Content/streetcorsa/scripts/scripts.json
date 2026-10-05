@@ -75,6 +75,16 @@
       ]
     },
     {
+      "id": "booth_arrive",
+      "trigger": "booth.arrive",
+      "_comment": "From the body shop through the open door into the paint booth, rolling in and braking to a stop over the grate.",
+      "steps": [
+        { "do": "lights", "head": false },
+        { "do": "drive", "path": "arrive", "feel": "roll_in" },
+        { "do": "wait", "seconds": 0.5 }
+      ]
+    },
+    {
       "id": "diner_leave",
       "trigger": "diner.leave",
       "_comment": "Out of the bay backwards, the brake lights on as it stops, then across the lot and away down Main Street; the screen goes a moment before the way out ends, the car still rolling.",

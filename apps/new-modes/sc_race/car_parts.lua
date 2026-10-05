@@ -473,8 +473,29 @@ local function setUpLook(carIndex, root)
   return layer
 end
 
+-- The car's paint in the player's own colour: each tinted texture (CAR_n_PAINT_k) in the place of the car's texture of
+-- that name (CAR_n_PAINT_k_TEXTURE), as a skin's file would be, wherever the car draws from it
+local function setUpPaint(carIndex, root)
+  local folder = ac.getFolder(ac.FolderID.ScriptOrigin)
+  local skin = {}
+  local count = 0
+  for k = 1, 16 do
+    local key = 'CAR_' .. carIndex .. '_PAINT_' .. k
+    local file = raceText(key)
+    local texture = raceText(key .. '_TEXTURE')
+    if not file or not texture then break end
+    skin[texture] = folder .. '\\' .. file
+    count = count + 1
+  end
+  if count == 0 then return false end
+  root:applySkin(skin)
+  log('car ' .. carIndex .. ': painted (' .. count .. ' texture(s))')
+  return true
+end
+
 local function setUpCar(carIndex)
   local files, any = {}, raceText('CAR_' .. carIndex .. '_PART_1') ~= nil or raceText('CAR_' .. carIndex .. '_LOOK') ~= nil
+    or raceText('CAR_' .. carIndex .. '_PAINT_1') ~= nil
   for corner = 1, 4 do
     local key = 'CAR_' .. carIndex .. '_'
     local rim = raceText(key .. 'RIM_' .. CORNERS[corner])
@@ -504,6 +525,9 @@ local function setUpCar(carIndex)
   local lookOk, look = pcall(setUpLook, carIndex, root)
   if not lookOk then log('car ' .. carIndex .. ' wear failed: ' .. tostring(look)) end
 
+  local paintOk, painted = pcall(setUpPaint, carIndex, root)
+  if not paintOk then log('car ' .. carIndex .. ' paint failed: ' .. tostring(painted)) end
+
   local corners = {}
   for corner = 1, 4 do
     if files[corner] then
@@ -512,7 +536,7 @@ local function setUpCar(carIndex)
       if ok and result then corners[#corners + 1] = result end
     end
   end
-  return (#corners > 0 or (extrasOk and #extras > 0) or (lookOk and look)) and { corners = corners } or false
+  return (#corners > 0 or (extrasOk and #extras > 0) or (lookOk and look) or (paintOk and painted)) and { corners = corners } or false
 end
 
 -- Every frame: each car set up once its model is there, then its own kept hidden and the wheel kept shown (AC shows and

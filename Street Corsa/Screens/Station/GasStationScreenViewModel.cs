@@ -550,7 +550,7 @@ namespace StreetCorsa.Screens.Station
             if (PlayerEngine.IsRunning) PlayerEngine.Toggle();
             Stage.BackToStand();
             StatusText = GameText.Say("station.ui.still_at_pump");
-            OpenCurtain?.Invoke();
+            LiftCurtain();
             _leaving = false;
             IsDrivingOff = false;
             RaiseAll();

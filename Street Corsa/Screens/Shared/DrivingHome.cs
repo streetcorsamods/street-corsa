@@ -34,12 +34,12 @@ namespace StreetCorsa.Screens.Shared
 
         /// <summary>
         /// The garage's arrival for the selected car; <paramref name="engine"/> is its engine when the trip worked it out
-        /// already (the garage works it out otherwise). Null when no car is selected.
+        /// already (the garage works it out otherwise; one that will not run is pushed in). Null when no car is selected.
         /// </summary>
         public static CarArrival? Arrival(GameState game, Audio.EngineSpec? engine, PartsCatalog? catalog)
         {
             if (game.Player.Cars.FirstOrDefault(c => c.InstanceId == game.Player.SelectedCarInstanceId) is not { } car) return null;
-            return new CarArrival(car.InstanceId, engine, Drives(car, catalog));
+            return new CarArrival(car.InstanceId, engine, Drives(car, catalog) && engine is not { Runs: false });
         }
 
         /// <summary>

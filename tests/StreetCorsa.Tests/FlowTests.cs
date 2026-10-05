@@ -96,7 +96,7 @@ public sealed class FlowTests : IDisposable
         Assert.Equal(["go_race"], Spot(TileSpots.Left));
         Assert.Equal(["car_dealers", "part_dealers", "newspaper"], Spot(TileSpots.BottomLeft));
         Assert.Equal(["car_info"], Spot(TileSpots.Right));
-        Assert.Equal(["gas_station"], Spot(TileSpots.BottomRight));
+        Assert.Equal(["gas_station", "paint_booth"], Spot(TileSpots.BottomRight));
         Assert.Equal(["career", "calendar", "radio"], Spot(TileSpots.TopRight));
 
         var large = tiles.Where(t => t.Tile.IsLarge).Select(t => t.Id).OrderBy(i => i);

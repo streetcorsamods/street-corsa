@@ -113,7 +113,7 @@ public class DinerViewport3D : DriveInViewport3D
                 slot.LocalMatrix = standing;
                 await TrackDeviceWork(slot.SetCarAsync(CarDescription.FromDirectory(car.Directory), SkinOrDefault(car.Directory, car.Skin), RendererToken));
                 if (load != _parkedLoad || Renderer != renderer || !IsLoaded) return;
-                await ShownPartsOnCar.SetAsync(slot.CarNode, car.Shown, WearLayer.LotPicture);
+                await ShownPartsOnCar.SetAsync(slot.CarNode, car.Shown, renderer.DeviceContextHolder, WearLayer.LotPicture);
                 if (load != _parkedLoad || Renderer != renderer || !IsLoaded) return;
 
                 slot.LocalMatrix = standing;

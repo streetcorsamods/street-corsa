@@ -291,7 +291,7 @@ public abstract class DriveInViewport3D : OnboardViewport3D
                 Car.Place(_scene!.ScriptMarks.PathStart(Arrive) ?? Car.Home);
                 PlaceCar(Car.Pose);
                 LookYaw = 0f;
-                AimCamera();
+                AimView();
                 break;
         }
     }
@@ -383,7 +383,7 @@ public abstract class DriveInViewport3D : OnboardViewport3D
         LookYaw = _scene.LookWhileStanding;
         LookPitch = SceneLights.SeatPitch + _scene.LookUpWhileStanding;
         _lookHeld = false;
-        AimCamera();
+        AimView();
         Play(StandTrigger);
         Invalidate();
     }
@@ -461,6 +461,9 @@ public abstract class DriveInViewport3D : OnboardViewport3D
     /// <summary>Where the player's car stands now, in the world</summary>
     protected Sx.Vector3 CarPosition => new(_placement.M41, _placement.M42, _placement.M43);
 
+    /// <summary>Which way the player's car faces now, radians (0 faces +z)</summary>
+    protected float CarHeading => MathF.Atan2(_placement.M31, _placement.M33);
+
     /// <summary>Moves the car along its drive by a frame; true while it moves or its body settles</summary>
     private bool StepCar(float dt)
     {
@@ -499,8 +502,8 @@ public abstract class DriveInViewport3D : OnboardViewport3D
 
     private bool IsStandingStill => _stageListened?.Phase == DriveInPhase.Standing && _car?.Plan == null;
 
-    /// <summary>From the driver's eyes, the car where the drive has it and its body as it leans</summary>
-    private void AimCamera()
+    /// <summary>From the driver's eyes, the car where the drive has it and its body as it leans; a place seen from outside the car aims its own</summary>
+    protected virtual void AimView()
     {
         if (Renderer is { } renderer) AimCamera(renderer, _placement, _rock?.WorldLean ?? Sx.Matrix.Identity);
     }
@@ -515,7 +518,7 @@ public abstract class DriveInViewport3D : OnboardViewport3D
     protected override void OnLookDragged()
     {
         _lookHeld = true;
-        AimCamera();
+        AimView();
     }
 
     #endregion
@@ -539,7 +542,7 @@ public abstract class DriveInViewport3D : OnboardViewport3D
             LookYaw += (target - LookYaw) * step;
             LookPitch += (pitch - LookPitch) * step;
         }
-        AimCamera();
+        AimView();
 
         return moving || turning || _engineListened is { IsActive: true };
     }

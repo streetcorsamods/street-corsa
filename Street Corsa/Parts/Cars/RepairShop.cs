@@ -99,6 +99,21 @@ public static class RepairShop
     /// <summary>What the can holds, litres: about a gallon</summary>
     public static double CanOfGasLitres => Rules.RuleBook.Current.Repairs.CanOfGasLitres;
 
+    /// <summary>
+    /// The jobs the body needs before it is painted (<see cref="Rust"/>, <see cref="Body"/>: its rust cut out, its dents
+    /// and scratches taken out; the painter sprays over neither), as <see cref="Jobs"/> has them; empty when none
+    /// </summary>
+    public static IReadOnlyList<string> BeforePaint(Car car)
+    {
+        var needs = new List<string>();
+        if (Unit.Clamp01(car.Rust, 0) >= SomeRust) needs.Add(Rust);
+        if (CarCondition.BodyTotal(car) > BodyWorth) needs.Add(Body);
+        return needs;
+    }
+
+    /// <summary>Less damage than this on a body, km/h of collision, is not worth a body shop's while</summary>
+    private const double BodyWorth = 0.5;
+
     /// <summary>A part at this or better needs nothing done</summary>
     private const double Straight = 0.995;
 
@@ -125,7 +140,7 @@ public static class RepairShop
         }
 
         var body = CarCondition.BodyTotal(car);
-        if (body > 0.5)
+        if (body > BodyWorth)
         {
             var detail = CarCondition.IsTotaled(car) ? PartWords.Say("repair.job.body.totaled") : PartWords.Say("repair.job.body.dents", ("kmh", body));
             jobs.Add(new RepairJob(Body, PartWords.Say("repair.job.body"), detail, LabourAt(prices) + Math.Round(BodyCostPerKmh * (decimal)body * (decimal)prices),

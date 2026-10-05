@@ -21,7 +21,7 @@ Content\
   mymod\
     mod.json
     game.json
-    rules\  parts\  sounds\  sfx\  props\  dealers\  partshops\  racers\  events\  milestones\  victories\  streets\  stations\  warehouses\  shopscenes\  showcase\  garages\  text\  theme\  ai\
+    rules\  parts\  sounds\  sfx\  props\  dealers\  partshops\  racers\  events\  milestones\  victories\  streets\  stations\  booths\  warehouses\  shopscenes\  showcase\  garages\  text\  theme\  ai\
 ```
 
 `mod.json`:
@@ -52,7 +52,7 @@ Content\
   out, or older is told, and this mod is left out (and so is a mod that requires it in turn).
 - `gameVersion`: the lowest version of the game it works with. On an older game it is left out, told.
 - `removes`: entries of the mods before it (the base game's included) it takes out of the game, by kind of content, full
-  ids: `dealers`, `partshops`, `racers`, `events`, `milestones`, `victories`, `streets`, `stations`, `warehouses`, `shopscenes`,
+  ids: `dealers`, `partshops`, `racers`, `events`, `milestones`, `victories`, `streets`, `stations`, `booths`, `warehouses`, `shopscenes`,
   `text` (pools, by key) and `sfx` (cues, by name). What the mod itself or a later mod adds under the same id stays: a
   mod can take out a base game's pool or cue and give its own. An id no mod before it has is told. Parts can't be
   removed (yet): other parts and engine builds hang off them.
@@ -169,7 +169,7 @@ it changes:
 | `simulation` | the rivals racing among themselves: crashes, pink slips |
 | `race` | AC's damage, tyre wear and fuel rates in a race, how the police drive |
 | `world` | the sunset through the year, the seasons the rivals race in, AC's weather, temperature, wind, latitude and time zone |
-| `systems` | the systems the game has, each `true` in the base game: `police`, `station` (the gas station), `paper`, `carDealers`, `partShops`, `mailOrder`, `street`, `diner`, `engineStand`, `talk`, `career`; and `careerPath`, the victory a game with no career screen is won on (none: whichever comes first). See "flow" for what goes with one switched off |
+| `systems` | the systems the game has, each `true` in the base game: `police`, `station` (the gas station), `paper`, `carDealers`, `partShops`, `mailOrder`, `street`, `diner`, `engineStand`, `talk`, `career`, `paintBooth`; and `careerPath`, the victory a game with no career screen is won on (none: whichever comes first). See "flow" for what goes with one switched off |
 | `ai` | the player's AI (Settings, "AI"): how long a rival's line waits for it (`talkWaitSeconds`), a request's and a picture's timeouts, requests at once and the gap between them, the queue, the rest after a failure, lines written ahead, the chance a line of street talk or a piece in the paper is written again, whether new faces are painted, and how many of its words a save keeps |
 
 ## Ids
@@ -767,6 +767,18 @@ stopping at the last point) and out (`leave`), as `[x, z]` points in metres; whe
 `fuelPerLitre`, `oilPerLitre`, `wash`, `tow`; left out, the base game's). The garage's Gas Station button drives to one
 of them at random. A station without its model still works, without the picture.
 
+### booths
+
+One folder per paint booth, as the base game's `booths\booth`: a `booth.json`, the room's model (`"model"`, default
+`booth.kn5`) and the painter's (`"painter"`, default `painter.kn5`: a node `ARM` at his shoulder, the gun in his hand,
+holding `MIST`, the spray, along +z; `tools/PaintBoothScene` builds both). The file gives the way in (`arrive`, through
+the door to where the car is painted), how the painter goes round the car (`round`: `gap` off its body, `low` and `high`
+the gun's swing in degrees, `strokes` up and down a side, `wait` where he stands while there is nothing to paint), the
+camera (`camera`: `distance`, `height`, `min` and `max` the `[x, z]` corners of the box it stays in), the key light
+(`sun`), the lights (`lights`, as a street's; `day` serves every hour) and the colours of the day offered to start from
+(`colours`: each a `name`, a text pool key or the name itself, and a `hex`, `#RRGGBB`; a booth without them offers none,
+the player mixes their own). The garage's Paint button drives to the first booth. See [screens/paint-booth.md](screens/paint-booth.md).
+
 ### warehouses
 
 One folder per warehouse the player's cars are kept in, as the base game's `warehouses\warehouse`: a `warehouse.json`
@@ -866,7 +878,8 @@ career. The base game's is `flow\flow.json`; its comment says what each part is.
   - `mailOrder`, `street`, `diner`: the screens and the ways to them;
   - `engineStand`: no stand in the garage; an engine pulled goes on the shelf;
   - `talk`: nobody can be called or talked to, whatever the player's AI;
-  - `career`: no career screen; the game is won on `systems.careerPath`, or on whichever victory comes first.
+  - `career`: no career screen; the game is won on `systems.careerPath`, or on whichever victory comes first;
+  - `paintBooth`: no paint booth; a car keeps the colours it came in.
 - **`endDay`**: the day can be ended from that screen. The garage has its own End Day button (shown only while its
   screen says so); anywhere else the window shows one under the money, which asks and then goes home for the night.
   Not on the main menu, a race, an overlay or the tools.
@@ -876,8 +889,8 @@ career. The base game's is `flow\flow.json`; its comment says what each part is.
   from the top; top left stays while the car is being worked on), `order` (in its spot), `size` (`large`), `padding`,
   `requires` (`car`: a car picked; `car_here`: one that is not impounded), `system` (shown only while it is on),
   `without` (shown only while all of these are off), `off`. A tile cannot open a screen that needs to be told what to
-  show (`car_viewing`, `dealer_lot`, `part_shop`, `race`). A tile to the gas station drives the car out first
-  (`garage.leave`).
+  show (`car_viewing`, `dealer_lot`, `part_shop`, `race`). A tile to the gas station or the paint booth drives the car
+  out first (`garage.leave`; one that will not run is pushed to the booth).
 - **`cards`**: the main menu's buttons, from the left: `card` (`load_game`, `new_game`, `settings`: each has its
   picture), `text` (a text key; none: `menu.<card>`), `order`, `off`.
 

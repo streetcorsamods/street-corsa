@@ -1506,14 +1506,22 @@ that cannot (3). The owner picked 1 and 3 first, one PR (branch `feature/ideas-b
   `EngineSpecs.ProblemOf`/`WontRun`, shared with the garage's gas station check; `TalkPeople` draws a private seller's
   sex and name in one place for the paper and the phone, and copes with a save without its people.
 
-### Idea 2: the paint booth (not planned yet)
+### Idea 2: the paint booth (built 2026-10-05, feature/paint-booth)
 
 - **Owner:** a paint booth in 3D. The Paint button (`icons/paint_spray.png`, the owner's) in the garage's bottom bar
   fades to the booth, the car drives in, a spray animation runs while its skin changes; a custom colour, not only the
   mod's skins; after painting the car does not back out, the screen fades back to the garage and the car makes its
   entrance in its new colour.
-- **Open:** a custom colour means tinting the body texture into a skin of our own (made like the wear layer, through
-  `CarDataOverlay`): not every car mod has a clean body texture to tint. Whether a paint job costs money and time.
+- **Owner's decisions (2026-10-05):** a paint job costs money and time; a colour of the player's own is tinted where
+  the car's paint can take it, the mod's skins only where it cannot (with a note why).
+- **As built** (see `docs/screens/paint-booth.md`): our own booth and painter (`tools/PaintBoothScene`, every picture
+  and sound made there), the car rolling in from the body shop, the pick on the car as the player picks (the mod's
+  skins, sixteen colours of the day, hue / depth / lightness), $350 (+$75 mixed) and 4 hours, the painter walking in
+  and round the car spraying while the colour goes on in 8 coats, then home where the car drives into the garage. No
+  temp skin through `CarDataOverlay` after all: the colour is the car's own textures tinted (`Looks/CarPaint`), put over
+  its own by name in every scene (AcTools' procedural override) and in AC (CSP `applySkin` in `car_parts.lua`,
+  `CAR_n_PAINT_k`). The car's files are never touched. The icon is a stand-in drawn in the icons' style until the
+  owner's `paint_spray.png` comes.
 
 ## Epic: total conversion (planned 2026-09-30)
 

@@ -23,7 +23,8 @@
       "TestAndTune": 60,
       "GarageChore": 15,
       "DriveToStation": 20,
-      "TowToStation": 60
+      "TowToStation": 60,
+      "PaintJob": 240
     },
     "otherAction": 30,
     "perPart": 5,

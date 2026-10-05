@@ -49,9 +49,18 @@ namespace StreetCorsa.Services.Scripting
         /// <summary>The player's car backs out of its bay and drives off; the screen goes once it lets go</summary>
         public const string DinerLeave = "diner.leave";
 
+        /// <summary>The player's car rolls into the paint booth; the screen goes on once it lets go</summary>
+        public const string BoothArrive = "booth.arrive";
+
+        /// <summary>The player's car stands in the paint booth (rolled in, or pushed in)</summary>
+        public const string BoothStanding = "booth.standing";
+
+        /// <summary>The player's car leaves the booth: the base game has no script for it, the car is painted where it stands and the screen fades home</summary>
+        public const string BoothLeave = "booth.leave";
+
         public static readonly IReadOnlyList<string> All =
             [LotTakeOut, GarageArrive, GarageLeave, StationArrive, StationAtPump, StationLeave, StreetRivalArrive, StreetRivalLeave,
-             DinerArrive, DinerParked, DinerLeave];
+             DinerArrive, DinerParked, DinerLeave, BoothArrive, BoothStanding, BoothLeave];
 
         /// <summary>
         /// A screen of the flow is up, its own show over (<c>screen.&lt;id&gt;.enter</c>): played on the screens with a

@@ -20,6 +20,17 @@ public sealed class RepairRules
 
     public decimal PaintCost { get; set; } = 300m;
 
+    /// <summary>
+    /// A paint job in the paint booth: the car sprayed another of its make's colours (its mod's skins), door shuts and
+    /// all, the old paint's wear gone with it; and on top of it, a colour mixed to the player's own order
+    /// </summary>
+    public decimal ColourChangeCost { get; set; } = 350m;
+
+    public decimal CustomColourCost { get; set; } = 75m;
+
+    /// <summary>How long the painter takes going round the car, seconds of the player's time (the game's clock is the job's own, a paint job's time)</summary>
+    public double SpraySeconds { get; set; } = 18;
+
     /// <summary>A new windscreen, fitted</summary>
     public decimal WindscreenCost { get; set; } = 60m;
 

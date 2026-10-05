@@ -59,7 +59,10 @@ namespace StreetCorsa.Services.Time
         DriveToStation,
 
         /// <summary>Wait for the tow truck and ride in it to the gas station, or home from it (1 hour)</summary>
-        TowToStation
+        TowToStation,
+
+        /// <summary>A paint job in the paint booth: masked, sprayed, left to dry (4 hours)</summary>
+        PaintJob
     }
 
     /// <summary>

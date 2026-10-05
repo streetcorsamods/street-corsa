@@ -458,7 +458,7 @@ public class LotViewport3D : D3DViewportBase
                     car.SkinId ?? Kn5RenderableCar.DefaultSkin, RendererToken));
 
                 if (Renderer != renderer || !IsLoaded) return;
-                await ShownPartsOnCar.SetAsync(slot.CarNode, car.Shown, WearLayer.LotPicture);
+                await ShownPartsOnCar.SetAsync(slot.CarNode, car.Shown, renderer.DeviceContextHolder, WearLayer.LotPicture);
                 if (Renderer != renderer || !IsLoaded) return;
 
                 Place(slot, car);
@@ -588,7 +588,7 @@ public class LotViewport3D : D3DViewportBase
                     car.SkinId ?? Kn5RenderableCar.DefaultSkin, RendererToken));
 
                 if (Renderer != renderer || !IsLoaded) return;
-                await ShownPartsOnCar.SetAsync(slot.CarNode, car.Shown, WearLayer.LotPicture);
+                await ShownPartsOnCar.SetAsync(slot.CarNode, car.Shown, renderer.DeviceContextHolder, WearLayer.LotPicture);
                 if (Renderer != renderer || !IsLoaded) return;
 
                 Place(slot, car);

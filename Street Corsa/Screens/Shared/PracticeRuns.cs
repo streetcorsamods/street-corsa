@@ -157,7 +157,7 @@ namespace StreetCorsa.Screens.Shared
                     PlayerName = gameState.Player.Name,
                     TrackId = track.TrackId,
                     TrackConfig = track.Configuration,
-                    Shown = await Looks.WearLayer.ForRaceAsync(_partsService.Shown(car), System.IO.Path.Combine(Configuration.AppSettings.Instance.CarsPath, car.DefinitionId))
+                    Shown = await RaceSetupBuilder.ShownForRaceAsync(_partsService.Shown(car), car)
                 };
                 if (data != null) intent.CarData.Add(data);
                 return intent;

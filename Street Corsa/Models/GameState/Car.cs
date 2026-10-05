@@ -6,6 +6,12 @@ namespace StreetCorsa.Models.GameState
         public string DefinitionId { get; set; } // Reference to catalog (AC car folder)
         public string SkinId { get; set; } = "default"; // Selected skin/livery
 
+        /// <summary>
+        /// The colour the car was painted in the paint booth, #RRGGBB, over its skin's own (Looks.CarPaint); null in its
+        /// skin's colours
+        /// </summary>
+        public string? PaintColour { get; set; }
+
         // Condition & Mileage (Street Rod style)
         public double OdometerKM { get; set; }
         public double EngineHealth { get; set; } // 0.0 to 1.0
@@ -153,6 +159,7 @@ namespace StreetCorsa.Models.GameState
         {
             InstanceId = InstanceId,
             SkinId = SkinId,
+            PaintColour = PaintColour,
             OdometerKM = OdometerKM,
             EngineHealth = EngineHealth,
             TransmissionHealth = TransmissionHealth,

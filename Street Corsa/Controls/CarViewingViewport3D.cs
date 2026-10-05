@@ -192,7 +192,7 @@ public class CarViewingViewport3D : D3DViewportBase
         await TrackDeviceWork(renderer.MainSlot.SetCarAsync(CarDescription.FromDirectory(stage.CarDirectory),
             SkinOrDefault(stage.CarDirectory, stage.Skin), RendererToken));
         if (Renderer != renderer || !IsLoaded) return;
-        await ShownPartsOnCar.SetAsync(renderer.CarNode, stage.Shown);
+        await ShownPartsOnCar.SetAsync(renderer.CarNode, stage.Shown, renderer.DeviceContextHolder);
         if (Renderer != renderer || !IsLoaded) return;
 
         renderer.MainSlot.LocalMatrix = placement;

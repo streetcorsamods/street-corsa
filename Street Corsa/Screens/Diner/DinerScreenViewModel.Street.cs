@@ -176,7 +176,7 @@ namespace StreetCorsa.Screens.Diner
 
             // The way out went nowhere: back in the bay, engine off, to try again
             Stage.BackToStand();
-            OpenCurtain?.Invoke();
+            LiftCurtain();
             StayParked();
         }
 

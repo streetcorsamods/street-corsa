@@ -112,7 +112,7 @@ public static class WearLayer
     /// when the car has it, as AcTools' CarDescription picks it): the shell made ahead or for a race is the shell of the
     /// model the scenes draw. Null when there is none.
     /// </summary>
-    private static string? ModelOf(string carDirectory) =>
+    internal static string? ModelOf(string carDirectory) =>
         AcPaths.GetMainCarFilename(carDirectory, true) is { } file && File.Exists(file) ? file : null;
 
     /// <summary>
@@ -148,6 +148,14 @@ public static class WearLayer
             Logger.Warning("The wear of {Car} could not be made ahead: {Error}", Path.GetFileName(carDirectory), ex.Message);
         }
     }, CancellationToken.None);
+
+    /// <summary>
+    /// The shell of the main model of the car in <paramref name="carDirectory"/>, kept as the wear's is (what its paint is,
+    /// for a paint job: <see cref="CarPaint"/>); null without a model, or nothing of it paint. Slow the first time for a
+    /// model: off the UI thread.
+    /// </summary>
+    internal static BodyShell? ShellFor(string carDirectory) =>
+        ModelOf(carDirectory) is { } file ? ShellOf(file, null, ShellsIn(Cache)) : null;
 
     /// <summary>Where the models' shells are kept beside a folder's layers, worked out once for a model (<see cref="ShellFile"/>)</summary>
     private static string ShellsIn(string folder) => Path.Combine(folder, "shells");

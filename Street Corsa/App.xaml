@@ -16,6 +16,7 @@
              xmlns:diner="clr-namespace:StreetCorsa.Screens.Diner"
              xmlns:cruise="clr-namespace:StreetCorsa.Screens.Cruise"
              xmlns:station="clr-namespace:StreetCorsa.Screens.Station"
+             xmlns:booth="clr-namespace:StreetCorsa.Screens.PaintBooth"
              xmlns:settings="clr-namespace:StreetCorsa.Screens.Settings"
              xmlns:carCatalogEditor="clr-namespace:StreetCorsa.Screens.CarCatalogEditor"
              xmlns:soundBrowser="clr-namespace:StreetCorsa.Screens.SoundBrowser"
@@ -95,6 +96,9 @@
                 <cruise:CruiseScreenView/>
             </DataTemplate>
 
+            <DataTemplate DataType="{x:Type booth:PaintBoothScreenViewModel}">
+                <booth:PaintBoothScreenView/>
+            </DataTemplate>
             <DataTemplate DataType="{x:Type station:GasStationScreenViewModel}">
                 <station:GasStationScreenView/>
             </DataTemplate>

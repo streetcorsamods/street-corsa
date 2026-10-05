@@ -16,6 +16,7 @@
     "engineStand": true,
     "talk": true,
     "career": true,
+    "paintBooth": true,
     "careerPath": ""
   }
 }

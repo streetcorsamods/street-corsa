@@ -28,7 +28,8 @@ public sealed class TimeRules
         [nameof(GameAction.TestAndTune)] = 60,
         [nameof(GameAction.GarageChore)] = 15,
         [nameof(GameAction.DriveToStation)] = 20,
-        [nameof(GameAction.TowToStation)] = 60
+        [nameof(GameAction.TowToStation)] = 60,
+        [nameof(GameAction.PaintJob)] = 240
     };
 
     /// <summary>An action the table has no time for</summary>

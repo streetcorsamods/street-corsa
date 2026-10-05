@@ -1129,6 +1129,21 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         IsDirty = true;
     }
 
+    /// <summary>The fixture as it is drawn, to move its nodes (the paint booth's painter swings his arm); null without one</summary>
+    public Kn5RenderableFile? Fixture => _fixture;
+
+    /// <summary>The fixture stood somewhere else (the paint booth's painter walks round the car). Must be called on the thread that draws.</summary>
+    public void MoveFixture(Matrix placement)
+    {
+        if (_fixture == null) return;
+        _fixture.LocalMatrix = placement;
+
+        // Its box where it stands now: the shadows' cameras leave out what their box is not in
+        _fixture.UpdateBoundingBox();
+        SetShadowsDirty();
+        IsDirty = true;
+    }
+
     /// <summary>True when a point of the picture is on the fixture, and nothing solid of the car or the stand is in front of it</summary>
     public bool HitsFixture(float x, float y)
     {

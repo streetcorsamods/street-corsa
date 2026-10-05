@@ -452,6 +452,7 @@ namespace StreetCorsa.Services.Market
                 Mileage = double.IsFinite(car.OdometerKM) ? (int)Math.Clamp(car.OdometerKM, 0, int.MaxValue) : 0,
                 Condition = (float)Unit.Clamp01(condition, ifNotFinite: 0),
                 SkinId = string.IsNullOrEmpty(car.SkinId) ? "default" : car.SkinId,
+                PaintColour = car.PaintColour,
                 ListedDate = listedDate,
                 DealerLocation = location,
                 IsSold = false,
