@@ -142,26 +142,54 @@ public sealed class RadioQueue(Random? random = null, Func<string, string?>? art
     {
         if (order.Count < 3) return;
 
-        var left = order.Skip(1).ToList();
+        // Each song's artist looked up once (in one spelling for every case of it), and how many songs each artist has
+        // left, the most first: a place's pick is a walk from the front of what is left, not a count of all of it
+        var spelling = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var artists = new string?[_songs.Count];
+        var counts = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var index in order.Skip(1))
+        {
+            if (Artist(index) is not { } artist) continue;
+            if (!spelling.TryGetValue(artist, out var known)) spelling[artist] = known = artist;
+            artists[index] = known;
+            counts[known] = counts.GetValueOrDefault(known) + 1;
+        }
+        artists[order[0]] = Artist(order[0]) is { } first ? spelling.GetValueOrDefault(first, first) : null;
+
+        var most = new SortedSet<(int Count, string Artist)>(counts.Select(c => (c.Value, c.Key)),
+            Comparer<(int Count, string Artist)>.Create((a, b) => a.Count != b.Count ? a.Count.CompareTo(b.Count) : string.CompareOrdinal(a.Artist, b.Artist)));
+        var left = new LinkedList<int>(order.Skip(1));
         var spread = new List<int>(order.Count) { order[0] };
         while (left.Count > 0)
         {
-            var before = Artist(spread[^1]);
-            var crowded = left.Select(Artist).OfType<string>()
-                .GroupBy(a => a, StringComparer.OrdinalIgnoreCase)
-                .FirstOrDefault(g => g.Count() > left.Count / 2)?.Key;
+            var before = artists[spread[^1]];
+            var crowded = most.Count > 0 && most.Max.Count > left.Count / 2 ? most.Max.Artist : null;
 
             var pick = crowded != null && !Same(crowded, before)
-                ? left.FindIndex(i => Same(Artist(i), crowded))
-                : left.FindIndex(i => Artist(i) == null || !Same(Artist(i), before));
-            if (pick < 0) pick = 0;
+                ? Find(i => Same(artists[i], crowded))
+                : Find(i => artists[i] == null || !Same(artists[i], before));
+            pick ??= left.First!;
 
-            spread.Add(left[pick]);
-            left.RemoveAt(pick);
+            spread.Add(pick.Value);
+            left.Remove(pick);
+            if (artists[pick.Value] is { } placed)
+            {
+                var count = counts[placed];
+                most.Remove((count, placed));
+                counts[placed] = --count;
+                if (count > 0) most.Add((count, placed));
+            }
         }
 
         order.Clear();
         order.AddRange(spread);
+
+        LinkedListNode<int>? Find(Func<int, bool> fits)
+        {
+            for (var node = left.First; node != null; node = node.Next)
+                if (fits(node.Value)) return node;
+            return null;
+        }
 
         static bool Same(string? a, string? b) => a != null && b != null && string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
     }

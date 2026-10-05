@@ -1,6 +1,7 @@
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using StreetCorsa.Audio.Radio;
 using static StreetCorsa.Audio.FmodStudio;
 
 namespace StreetCorsa.Audio;
@@ -32,10 +33,19 @@ public sealed class SongSound
     {
         var (sound, memory) = (Sound, Memory);
         Sound = Memory = IntPtr.Zero;
-        if (sound != IntPtr.Zero && !AudioHub.Shared.IsShutDown) Warn(FMOD_Sound_Release(sound), "release song");
 
         // After the exit the system frees the sound; its memory goes with the process
-        if (memory != IntPtr.Zero && !AudioHub.Shared.IsShutDown) Marshal.FreeHGlobal(memory);
+        var hub = AudioHub.Shared;
+        if (!hub.TryEnterFmod()) return;
+        try
+        {
+            if (sound != IntPtr.Zero) Warn(FMOD_Sound_Release(sound), "release song");
+            if (memory != IntPtr.Zero) Marshal.FreeHGlobal(memory);
+        }
+        finally
+        {
+            hub.LeaveFmod();
+        }
     }
 }
 
@@ -55,42 +65,69 @@ public sealed partial class AudioHub
     /// <summary>How long the car radio's sound takes to come in, or to go</summary>
     public const float AmFadeSeconds = 1.5f;
 
+    // The biggest song read into memory: about 50 minutes of a CD's WAV, a few hours of MP3 or FLAC. A bigger file (a long
+    // DJ mix as WAV) is passed over, said in the log, rather than costing its size in memory
+    private const long LargestSong = 512L * 1024 * 1024;
+
     /// <summary>
-    /// A song file read into memory and opened on it; null when there is no system, the file cannot be read, or FMOD
-    /// cannot play it (logged). On a worker: a long FLAC is tens of MB.
+    /// A song file read into memory and opened on it; null when there is no system, the file cannot be read, is bigger
+    /// than <see cref="LargestSong"/>, or FMOD cannot play it (logged). On a worker: a long FLAC is tens of MB.
     /// </summary>
     public SongSound? OpenSong(string path)
     {
-        var core = _core;
-        if (_system == IntPtr.Zero || core == IntPtr.Zero || _shutDown) return null;
-
-        byte[] bytes;
+        if (!TryEnterFmod()) return null;
         try
         {
-            // Read whole and closed at once; shared, so a file another program has open can still be played
-            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-            bytes = new byte[stream.Length];
-            stream.ReadExactly(bytes);
+            return OpenSongInside(path);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        finally
         {
+            LeaveFmod();
+        }
+    }
+
+    private SongSound? OpenSongInside(string path)
+    {
+        var core = _core;
+        if (core == IntPtr.Zero) return null;
+
+        // Read whole, straight into the memory FMOD plays it from, and closed at once; shared, so a file another program
+        // has open can still be played
+        var memory = IntPtr.Zero;
+        int length;
+        try
+        {
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            if (stream.Length > LargestSong)
+            {
+                _logger.Warning("The song {File} is too big to play ({Mb} MB; at most {Most} MB)", path, stream.Length / (1024 * 1024), LargestSong / (1024 * 1024));
+                return null;
+            }
+
+            length = (int)stream.Length;
+            if (length == 0) return null;
+            memory = Marshal.AllocHGlobal(length);
+            unsafe
+            {
+                stream.ReadExactly(new Span<byte>((void*)memory, length));
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or OutOfMemoryException)
+        {
+            if (memory != IntPtr.Zero) Marshal.FreeHGlobal(memory);
             _logger.Warning("The song {File} could not be read: {Error}", path, ex.Message);
             return null;
         }
 
-        if (bytes.Length == 0) return null;
-
-        var memory = Marshal.AllocHGlobal(bytes.Length);
         var exInfo = Marshal.AllocHGlobal(CreateSoundExInfoSize);
         try
         {
-            Marshal.Copy(bytes, 0, memory, bytes.Length);
             unsafe
             {
                 new Span<byte>((void*)exInfo, CreateSoundExInfoSize).Clear();
             }
             Marshal.WriteInt32(exInfo, 0, CreateSoundExInfoSize);
-            Marshal.WriteInt32(exInfo, 4, bytes.Length);
+            Marshal.WriteInt32(exInfo, 4, length);
 
             var result = FMOD_System_CreateSoundFromMemory(core, memory, ModeOpenMemory | ModeCreateStream | Mode2D | ModeLoopNormal | ModeAccurateTime, exInfo, out var sound);
             if (result != ResultOk)
@@ -133,13 +170,28 @@ public sealed partial class AudioHub
     }
 
     /// <summary>
-    /// A song file's title, artist, album and length, as its tags have them (ID3v1/v2, Vorbis comments, FLAC); null
-    /// when FMOD cannot open it. Opens the file for a moment only. On a worker.
+    /// A song file's title, artist, album and length, as its tags have them (ID3v1/v2, Vorbis comments, FLAC); no
+    /// tags when FMOD cannot open it, and not asked when there is no FMOD to ask (none yet, or the exit under way).
+    /// Opens the file for a moment only. On a worker.
     /// </summary>
-    public SongInfo? ReadSongInfo(string path)
+    public RadioLibrary.SongRead ReadSongInfo(string path)
     {
-        var core = _core;
-        if (_system == IntPtr.Zero || core == IntPtr.Zero || _shutDown) return null;
+        if (!TryEnterFmod()) return new RadioLibrary.SongRead(null, Asked: false);
+        try
+        {
+            var core = _core;
+            return core == IntPtr.Zero
+                ? new RadioLibrary.SongRead(null, Asked: false)
+                : new RadioLibrary.SongRead(ReadSongInfo(core, path), Asked: true);
+        }
+        finally
+        {
+            LeaveFmod();
+        }
+    }
+
+    private static SongInfo? ReadSongInfo(IntPtr core, string path)
+    {
         if (FMOD_System_CreateSound(core, Utf8(path), ModeOpenOnly | ModeCreateStream | Mode2D, IntPtr.Zero, out var sound) != ResultOk) return null;
 
         try

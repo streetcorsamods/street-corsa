@@ -87,11 +87,25 @@ public static class RadioLibrary
     }
 
     /// <summary>
+    /// What reading a song's tags came to: its tags, or null when the file cannot be read for them; not
+    /// <paramref name="Asked"/> when there was nothing to read them with (no FMOD yet, or the exit under way), and then
+    /// not kept, the file asked about again at the next scan
+    /// </summary>
+    public readonly record struct SongRead(SongInfo? Info, bool Asked);
+
+    /// <summary>
     /// Every playable song under the folders, with its tags: from the cache when the file has not changed, through
     /// <paramref name="read"/> when it has. A folder that is not there, or a subfolder that cannot be read, is skipped.
     /// On a worker.
     /// </summary>
-    public static ScanResult Scan(IReadOnlyList<string> folders, string cachePath, Func<string, SongInfo?> read, CancellationToken cancel = default)
+    public static ScanResult Scan(IReadOnlyList<string> folders, string cachePath, Func<string, SongInfo?> read, CancellationToken cancel = default) =>
+        Scan(folders, cachePath, path => new SongRead(read(path), true), cancel);
+
+    /// <summary>
+    /// <see cref="Scan(IReadOnlyList{string}, string, Func{string, SongInfo?}, CancellationToken)"/>, a read that may find
+    /// nothing to read with. A scan called off keeps what it read so far: the next one starts from there.
+    /// </summary>
+    public static ScanResult Scan(IReadOnlyList<string> folders, string cachePath, Func<string, SongRead> read, CancellationToken cancel = default)
     {
         var cache = LoadCache(cachePath);
         var fresh = new Dictionary<string, CacheEntry>(StringComparer.OrdinalIgnoreCase);
@@ -99,56 +113,85 @@ public static class RadioLibrary
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var missing = new List<string>();
         var notPlayable = 0;
+        var readAny = false;
         var options = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.Hidden | FileAttributes.System };
 
-        foreach (var folder in folders)
+        try
         {
-            if (!Directory.Exists(folder))
+            ScanFolders();
+        }
+        catch (OperationCanceledException)
+        {
+            // What was read is kept, over what was known: a scan called off again and again (music still being copied
+            // in) still gets through the library a part at a time
+            if (readAny)
             {
-                missing.Add(folder);
-                continue;
+                foreach (var (file, entry) in fresh) cache[file] = entry;
+                SaveCache(cachePath, cache);
             }
-
-            foreach (var file in Directory.EnumerateFiles(folder, "*", options))
-            {
-                cancel.ThrowIfCancellationRequested();
-                var extension = Path.GetExtension(file);
-                if (NotPlayable.Contains(extension, StringComparer.OrdinalIgnoreCase)) notPlayable++;
-                if (!Playable.Contains(extension, StringComparer.OrdinalIgnoreCase) || !seen.Add(file)) continue;
-
-                FileInfo info;
-                try
-                {
-                    info = new FileInfo(file);
-                    if (info.Length == 0) continue;
-                }
-                catch (IOException)
-                {
-                    continue;
-                }
-
-                var written = info.LastWriteTimeUtc.Ticks;
-                if (!cache.TryGetValue(file, out var entry) || entry.Version != CacheVersion || entry.Size != info.Length || entry.Written != written)
-                {
-                    var tags = read(file);
-                    entry = new CacheEntry
-                    {
-                        Version = CacheVersion, Size = info.Length, Written = written, Title = tags?.Title, Artist = tags?.Artist,
-                        Album = tags?.Album, LengthMs = tags?.LengthMs ?? 0
-                    };
-                }
-
-                fresh[file] = entry;
-
-                // Untagged: "Artist - Title" is often in the name
-                var named = FromName(file);
-                songs.Add(new RadioSong(file, entry.Title ?? named.Title, entry.Artist ?? (entry.Title == null ? named.Artist : null), entry.Album, entry.LengthMs));
-            }
+            throw;
         }
 
         SaveCache(cachePath, fresh);
         songs.Sort((a, b) => string.Compare(a.Display, b.Display, StringComparison.CurrentCultureIgnoreCase));
         return new ScanResult(songs, notPlayable, missing);
+
+        void ScanFolders()
+        {
+            foreach (var folder in folders)
+            {
+                if (!Directory.Exists(folder))
+                {
+                    missing.Add(folder);
+                    continue;
+                }
+
+                foreach (var file in Directory.EnumerateFiles(folder, "*", options))
+                {
+                    cancel.ThrowIfCancellationRequested();
+                    var extension = Path.GetExtension(file);
+                    if (NotPlayable.Contains(extension, StringComparer.OrdinalIgnoreCase)) notPlayable++;
+                    if (!Playable.Contains(extension, StringComparer.OrdinalIgnoreCase) || !seen.Add(file)) continue;
+
+                    FileInfo info;
+                    try
+                    {
+                        info = new FileInfo(file);
+                        if (info.Length == 0) continue;
+                    }
+                    catch (IOException)
+                    {
+                        continue;
+                    }
+
+                    var written = info.LastWriteTimeUtc.Ticks;
+                    if (!cache.TryGetValue(file, out var entry) || entry.Version != CacheVersion || entry.Size != info.Length || entry.Written != written)
+                    {
+                        var (tags, asked) = read(file);
+                        entry = new CacheEntry
+                        {
+                            Version = CacheVersion, Size = info.Length, Written = written, Title = tags?.Title, Artist = tags?.Artist,
+                            Album = tags?.Album, LengthMs = tags?.LengthMs ?? 0
+                        };
+
+                        // Listed by its name for now, and not kept as a song with no tags: it was never asked
+                        if (asked)
+                        {
+                            fresh[file] = entry;
+                            readAny = true;
+                        }
+                    }
+                    else
+                    {
+                        fresh[file] = entry;
+                    }
+
+                    // Untagged: "Artist - Title" is often in the name
+                    var named = FromName(file);
+                    songs.Add(new RadioSong(file, entry.Title ?? named.Title, entry.Artist ?? (entry.Title == null ? named.Artist : null), entry.Album, entry.LengthMs));
+                }
+            }
+        }
     }
 
     /// <summary>

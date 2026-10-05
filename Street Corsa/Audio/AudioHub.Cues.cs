@@ -60,15 +60,31 @@ public sealed partial class AudioHub
         foreach (var problem in cues.Problems) _logger.Warning("Sound cues: {Problem}", problem);
         ModProblems.Add("Sound cues", cues.Problems);
 
-        var core = _core;
-        if (core != IntPtr.Zero && FMOD_System_GetSoftwareFormat(core, out var rate, out _, out _) == ResultOk && rate > 0) _mixRate = rate;
+        if (!TryEnterFmod()) return;
+        try
+        {
+            var core = _core;
+            if (core != IntPtr.Zero && FMOD_System_GetSoftwareFormat(core, out var rate, out _, out _) == ResultOk && rate > 0) _mixRate = rate;
+        }
+        finally
+        {
+            LeaveFmod();
+        }
 
         _cues = cues;
         var files = cues.All.Where(c => !c.Loop).SelectMany(c => c.Files).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         foreach (var file in files)
         {
-            if (_shutDown) return;
-            lock (_cueLock) Sample(file);
+            // Each file inside FMOD on its own: the exit waits for one, not for all of them
+            if (!TryEnterFmod()) return;
+            try
+            {
+                lock (_cueLock) Sample(file);
+            }
+            finally
+            {
+                LeaveFmod();
+            }
         }
 
         _cuesLoaded = true;
@@ -98,8 +114,7 @@ public sealed partial class AudioHub
     {
         try
         {
-            var core = _core;
-            if (_system == IntPtr.Zero || core == IntPtr.Zero || _shutDown || _racing || !_cuesLoaded) return;
+            if (_system == IntPtr.Zero || _shutDown || _racing || !_cuesLoaded) return;
 
             if (_cues.Get(name) is not { Loop: false } cue)
             {
@@ -110,34 +125,51 @@ public sealed partial class AudioHub
                 return;
             }
 
-            IntPtr sound;
-            float pitch;
-            lock (_cueLock)
+            // From any thread: inside FMOD only while the exit waits for it
+            if (!TryEnterFmod()) return;
+            try
             {
-                var now = DateTime.UtcNow;
-                var last = _lastPlayed.TryGetValue(name, out var played) ? played : (File: -1, At: DateTime.MinValue);
-                if (cue.Cooldown > 0f && (now - last.At).TotalSeconds < cue.Cooldown) return;
-
-                var file = SoundCues.NextFile(cue.Files.Count, last.File, _random);
-                _lastPlayed[name] = (file, now);
-                sound = Sample(cue.Files[file]);
-                pitch = SoundCues.Pitch(cue.Pitch, _random);
+                PlayCue(name, cue, delaySeconds);
             }
-
-            if (sound == IntPtr.Zero) return;
-            if (!Warn(FMOD_System_PlaySound(core, sound, _groups[(int)cue.Bus], 1, out var channel), "play " + name)) return;
-
-            // Set up while paused: released at its end by FMOD itself, nobody keeps the channel
-            Warn(FMOD_Channel_SetVolume(channel, cue.Volume), "set cue volume");
-            if (pitch != 1f) Warn(FMOD_Channel_SetPitch(channel, pitch), "set cue pitch");
-            if (delaySeconds > 0f && Warn(FMOD_Channel_GetDSPClock(channel, out _, out var clock), "read the mixer's clock"))
-                Warn(FMOD_Channel_SetDelay(channel, clock + (ulong)(delaySeconds * _mixRate), 0, 0), "delay cue");
-            Warn(FMOD_Channel_SetPaused(channel, 0), "start cue");
+            finally
+            {
+                LeaveFmod();
+            }
         }
         catch (Exception ex)
         {
             _logger.Warning("The {Cue} sound could not be played: {Error}", name, ex.Message);
         }
+    }
+
+    private void PlayCue(string name, SoundCue cue, float delaySeconds)
+    {
+        var core = _core;
+        if (core == IntPtr.Zero) return;
+
+        IntPtr sound;
+        float pitch;
+        lock (_cueLock)
+        {
+            var now = DateTime.UtcNow;
+            var last = _lastPlayed.TryGetValue(name, out var played) ? played : (File: -1, At: DateTime.MinValue);
+            if (cue.Cooldown > 0f && (now - last.At).TotalSeconds < cue.Cooldown) return;
+
+            var file = SoundCues.NextFile(cue.Files.Count, last.File, _random);
+            _lastPlayed[name] = (file, now);
+            sound = Sample(cue.Files[file]);
+            pitch = SoundCues.Pitch(cue.Pitch, _random);
+        }
+
+        if (sound == IntPtr.Zero) return;
+        if (!Warn(FMOD_System_PlaySound(core, sound, _groups[(int)cue.Bus], 1, out var channel), "play " + name)) return;
+
+        // Set up while paused: released at its end by FMOD itself, nobody keeps the channel
+        Warn(FMOD_Channel_SetVolume(channel, cue.Volume), "set cue volume");
+        if (pitch != 1f) Warn(FMOD_Channel_SetPitch(channel, pitch), "set cue pitch");
+        if (delaySeconds > 0f && Warn(FMOD_Channel_GetDSPClock(channel, out _, out var clock), "read the mixer's clock"))
+            Warn(FMOD_Channel_SetDelay(channel, clock + (ulong)(delaySeconds * _mixRate), 0, 0), "delay cue");
+        Warn(FMOD_Channel_SetPaused(channel, 0), "start cue");
     }
 
     /// <summary>

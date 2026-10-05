@@ -50,6 +50,10 @@ public sealed partial class AudioHub
     private bool _resumeFailureTold;
     private volatile bool _shutDown;
 
+    // Workers inside FMOD without the lock (a song read in, its tags, a cue): counted in and out, and the release of the
+    // system waits for them to be out (TryEnterFmod)
+    private int _inFmod;
+
     // The AC folder FMOD could not be started from, and when: not tried again from there for a while, but a new
     // folder in the settings is at once
     private string? _failedFolder;
@@ -126,8 +130,24 @@ public sealed partial class AudioHub
     internal bool IsShutDown => _shutDown;
 
     /// <summary>
+    /// A way into FMOD for a call made without the hub's lock (on a worker, or any thread): false when there is no
+    /// system or the exit has begun. Each true is paired with <see cref="LeaveFmod"/>; the release of the system waits
+    /// for every one of them to be out.
+    /// </summary>
+    internal bool TryEnterFmod()
+    {
+        Interlocked.Increment(ref _inFmod);
+        if (_system != IntPtr.Zero && !_shutDown) return true;
+        Interlocked.Decrement(ref _inFmod);
+        return false;
+    }
+
+    internal void LeaveFmod() => Interlocked.Decrement(ref _inFmod);
+
+    /// <summary>
     /// Plays a sound file on <paramref name="bus"/>, streamed from disk, once or round and round. Null when there is no
-    /// system (yet), or FMOD cannot read the file (logged). UI thread.
+    /// system (yet), or FMOD cannot read the file (logged). UI thread: the file is opened without FMOD's accurate time,
+    /// which reads a whole MP3 through first (a loop never seeks, and its length is not asked).
     /// </summary>
     /// <param name="paused">Left paused, for the caller to set it up (a fade in) before it is heard</param>
     public PlayingSound? Play(AudioBus bus, string path, bool loop, bool paused = false)
@@ -136,7 +156,7 @@ public sealed partial class AudioHub
         if (_system == IntPtr.Zero || core == IntPtr.Zero || _shutDown) return null;
 
         var group = _groups[(int)bus];
-        if (!Warn(FMOD_System_CreateSound(core, Utf8(path), ModeLoopNormal | Mode2D | ModeCreateStream | ModeAccurateTime, IntPtr.Zero, out var sound), "open " + Path.GetFileName(path)))
+        if (!Warn(FMOD_System_CreateSound(core, Utf8(path), ModeLoopNormal | Mode2D | ModeCreateStream, IntPtr.Zero, out var sound), "open " + Path.GetFileName(path)))
             return null;
 
         // Paused until the loop count is set: a short sound could otherwise be over before it is told to loop
@@ -321,7 +341,15 @@ public sealed partial class AudioHub
     /// </summary>
     private bool Shutdown(DateTime deadline)
     {
+        // Set before the workers are counted: one that comes in after sees it and goes (TryEnterFmod)
         _shutDown = true;
+        Interlocked.MemoryBarrier();
+        if (!SpinWait.SpinUntil(() => Volatile.Read(ref _inFmod) == 0, Remaining(deadline)))
+        {
+            _logger.Warning("A worker was still inside FMOD at exit: the system is left to the end of the process rather than freed under it");
+            return false;
+        }
+
         if (!TryEnterUntil(deadline))
         {
             _logger.Warning("FMOD was still starting at exit: it is left to the end of the process rather than freed under it");
@@ -361,9 +389,11 @@ public sealed partial class AudioHub
         }
     }
 
-    private bool TryEnterUntil(DateTime deadline)
+    private bool TryEnterUntil(DateTime deadline) => Monitor.TryEnter(_lock, Remaining(deadline));
+
+    private static TimeSpan Remaining(DateTime deadline)
     {
         var wait = deadline - DateTime.UtcNow;
-        return Monitor.TryEnter(_lock, wait > TimeSpan.Zero ? wait : TimeSpan.Zero);
+        return wait > TimeSpan.Zero ? wait : TimeSpan.Zero;
     }
 }

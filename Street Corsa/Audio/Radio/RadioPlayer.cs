@@ -241,7 +241,8 @@ public sealed class RadioPlayer : ObservableObject
             _logger.Warning("The radio's folder {Folder} could not be made: {Error}", RadioState.DefaultFolder, ex.Message);
         }
 
-        _raceKeys = new RaceKeys(Dispatcher.CurrentDispatcher);
+        var dispatcher = Dispatcher.CurrentDispatcher;
+        _raceKeys = new RaceKeys(action => dispatcher.BeginInvoke(action));
         _restoreOnGame = _state.WasOn;
         Rescan(resume: false);
     }
@@ -250,6 +251,22 @@ public sealed class RadioPlayer : ObservableObject
 
     /// <summary>Lists the songs again, on a worker; the radio plays on meanwhile</summary>
     public void Rescan() => Rescan(resume: false);
+
+    /// <summary>
+    /// The app is closing: a listing under way is called off (keeping what it read so far), so it is out of FMOD before
+    /// FMOD goes. Any thread.
+    /// </summary>
+    public void StopScanning()
+    {
+        try
+        {
+            Volatile.Read(ref _scanCancel)?.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // Over already
+        }
+    }
 
     private async void Rescan(bool resume)
     {
@@ -665,15 +682,24 @@ public sealed class RadioPlayer : ObservableObject
         Current = _byPath.GetValueOrDefault(path) ?? new RadioSong(path, RadioLibrary.TitleFromName(path), null, null, 0);
 
         SongSound? song;
-        if (_preload is { } preload && string.Equals(preload.Path, path, StringComparison.OrdinalIgnoreCase))
+        try
         {
-            _preload = null;
-            song = await preload.Load;
+            if (_preload is { } preload && string.Equals(preload.Path, path, StringComparison.OrdinalIgnoreCase))
+            {
+                _preload = null;
+                song = await preload.Load;
+            }
+            else
+            {
+                DropPreload();
+                song = await Task.Run(() => AudioHub.Shared.OpenSong(path));
+            }
         }
-        else
+        catch (Exception ex)
         {
-            DropPreload();
-            song = await Task.Run(() => AudioHub.Shared.OpenSong(path));
+            // Nothing may leave an async void: a song that could not be read in is one that cannot be played
+            _logger.Warning("Radio: the song {File} could not be read in: {Error}", path, ex.Message);
+            song = null;
         }
 
         if (version != _version)

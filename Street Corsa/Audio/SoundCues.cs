@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using StreetCorsa.Helpers;
 using StreetCorsa.Mods;
 
 namespace StreetCorsa.Audio;
@@ -26,9 +27,14 @@ public sealed record SoundCue(
 /// { "cues": { "ui.click": { "bus": "interface", "volume": 0.45, "pitch": 0.04, "files": ["ui/click.ogg"] } } }
 /// </code>
 /// A cue marked <c>"optional": true</c> may name files that are not there: it is no problem, the cue is only silent.
+/// A file outside the mod's folder is never played, nor is a one-shot's file bigger than <see cref="LargestOneShot"/>
+/// (each is held in memory, decoded, from the start).
 /// </summary>
 public sealed class SoundCues
 {
+    /// <summary>The biggest file a one-shot cue plays: a click or a part coming off is a few hundred KB</summary>
+    public const long LargestOneShot = 5L * 1024 * 1024;
+
     private readonly Dictionary<string, SoundCue> _cues = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> _problems = [];
 
@@ -65,7 +71,7 @@ public sealed class SoundCues
         foreach (var (mod, file) in mods.JsonFiles(ContentTypes.Sfx))
         {
             removals.Before(mod);
-            cues.Read(file, $"{mod.Id}/{ContentTypes.Sfx}/{Path.GetFileName(file)}");
+            cues.Read(file, $"{mod.Id}/{ContentTypes.Sfx}/{Path.GetFileName(file)}", mod.Folder);
         }
 
         removals.Rest();
@@ -73,8 +79,8 @@ public sealed class SoundCues
         return cues;
     }
 
-    /// <summary>The cues of one file, over those read before</summary>
-    public void Read(string file, string shownAs)
+    /// <summary>The cues of one file, over those read before; their sounds inside <paramref name="root"/> (the mod's folder; the file's own when none)</summary>
+    public void Read(string file, string shownAs, string? root = null)
     {
         FileJson? parsed;
         try
@@ -88,13 +94,14 @@ public sealed class SoundCues
         }
 
         var dir = Path.GetDirectoryName(file)!;
+        root = string.IsNullOrEmpty(root) ? dir : root;
         foreach (var (name, json) in parsed?.Cues ?? [])
         {
-            if (Parse(name, json, dir, shownAs) is { } cue) _cues[name] = cue;
+            if (Parse(name, json, dir, root, shownAs) is { } cue) _cues[name] = cue;
         }
     }
 
-    private SoundCue? Parse(string name, CueJson json, string dir, string shownAs)
+    private SoundCue? Parse(string name, CueJson json, string dir, string root, string shownAs)
     {
         if (!Enum.TryParse<AudioBus>(json.Bus, ignoreCase: true, out var bus))
         {
@@ -105,12 +112,31 @@ public sealed class SoundCues
         // An optional cue's files may be missing (music a copy of the game is not allowed to ship): it plays what is
         // there, and nothing, without a word, when none is
         var optional = json.Optional ?? false;
+        var loop = json.Loop ?? false;
         var files = new List<string>();
         foreach (var relative in json.Files ?? [])
         {
-            var path = Path.GetFullPath(Path.Combine(dir, relative));
-            if (File.Exists(path)) files.Add(path);
-            else if (!optional) _problems.Add($"{shownAs}: {name} names {relative}, which is not there");
+            // Named from the json's folder, and kept inside the mod's: never a path on another drive or another machine
+            // (a share's name alone makes Windows sign in to it)
+            if (string.IsNullOrWhiteSpace(relative) || !PathNames.TryCombineUnder(root, Path.Combine(Path.GetRelativePath(root, dir), relative), out var path))
+            {
+                _problems.Add($"{shownAs}: {name} names {relative}, which is not inside its mod");
+                continue;
+            }
+
+            var found = new FileInfo(path);
+            if (!found.Exists)
+            {
+                if (!optional) _problems.Add($"{shownAs}: {name} names {relative}, which is not there");
+            }
+            else if (!loop && found.Length > LargestOneShot)
+            {
+                _problems.Add($"{shownAs}: {name} names {relative}, too big for a short sound ({found.Length / 1024} KB; at most {LargestOneShot / 1024} KB): a long sound is a loop");
+            }
+            else
+            {
+                files.Add(path);
+            }
         }
 
         if (files.Count == 0)
@@ -122,7 +148,7 @@ public sealed class SoundCues
         return new SoundCue(name, bus, files,
             Math.Clamp(json.Volume ?? 1f, 0f, 2f),
             Math.Clamp(json.Pitch ?? 0f, 0f, 0.5f),
-            json.Loop ?? false,
+            loop,
             Math.Max(0f, json.Cooldown ?? 0f));
     }
 

@@ -4,7 +4,6 @@ using System.Numerics;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using AcTools.Kn5File;
-using TextureReader = AcTools.Render.Base.Utils.TextureReader;
 using StreetCorsa.Helpers;
 using StreetCorsa.Logging;
 using StreetCorsa.Parts.Cars;
@@ -86,9 +85,9 @@ public static class CarPaint
     /// <summary>What each model's paint is, by its model, skin and file stamp: looked at once</summary>
     private static readonly ConcurrentDictionary<string, Lazy<PaintSurface?>> Surfaces = new(StringComparer.OrdinalIgnoreCase);
 
-    // AcTools' reader of any texture it can draw (DDS of any kind, PNG, JPEG) as a PNG: a device of its own, one user at a time
+    // The reader of any texture AcTools can draw (DDS of any kind, PNG, JPEG) as texels: a device of its own, one user at a time
     private static readonly object Reading = new();
-    private static TextureReader? _reader;
+    private static TexelReader? _reader;
 
     private static readonly object Pruning = new();
 
@@ -106,7 +105,7 @@ public static class CarPaint
         try
         {
             var info = new FileInfo(model);
-            key = $"{Path.GetFullPath(model)}|{info.Length}|{info.LastWriteTimeUtc.Ticks}|{SkinFolder(carDirectory, skin)}";
+            key = $"{Path.GetFullPath(model)}|{info.Length}|{info.LastWriteTimeUtc.Ticks}|{SkinStamp(carDirectory, skin)}";
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -470,7 +469,7 @@ public static class CarPaint
 
         var folder = Cache;
         Directory.CreateDirectory(folder);
-        var stamp = StableHash.Fnv($"{ShellFile.KeyOf(model)}|{SkinFolder(carDirectory, skin)}|{surface.Colour}|{Version}");
+        var stamp = StableHash.Fnv($"{ShellFile.KeyOf(model)}|{SkinStamp(carDirectory, skin)}|{surface.Colour}|{Version}");
         var car = Path.GetFileName(carDirectory);
         string FileOf(string texture) => Path.Combine(folder, $"{car}_{stamp:x8}_{colour.Hex.TrimStart('#')}_{StableHash.Fnv(texture.ToLowerInvariant()):x8}.png");
 
@@ -733,6 +732,26 @@ public static class CarPaint
         SkinOf(carDirectory, skin) is { } drawn ? Path.Combine(carDirectory, "skins", drawn) : "";
 
     /// <summary>
+    /// The skin's folder and each of its files' name, size and time written: a skin pack updated, or the player's own
+    /// repaint of its textures, is looked at and tinted again rather than kept as it was
+    /// </summary>
+    internal static string SkinStamp(string carDirectory, string? skin)
+    {
+        var folder = SkinFolder(carDirectory, skin);
+        if (folder.Length == 0) return "";
+        try
+        {
+            var files = new DirectoryInfo(folder).GetFiles().OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase)
+                .Select(f => $"{f.Name.ToLowerInvariant()}:{f.Length}:{f.LastWriteTimeUtc.Ticks}");
+            return $"{folder}|{StableHash.Fnv(string.Join("|", files)):x8}";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return folder;
+        }
+    }
+
+    /// <summary>
     /// The bytes of each of <paramref name="names"/> as AC draws the car in <paramref name="skin"/>: the skin's file of that
     /// name, else the model's own
     /// </summary>
@@ -803,20 +822,18 @@ public static class CarPaint
 
     /// <summary>
     /// A texture's bytes (any kind AcTools draws) as texels, made at most <paramref name="most"/> a side; null when it
-    /// cannot be read. Its colour is read apart from its alpha: where a diffuse is see-through, its colour still counts
-    /// (AC multiplies the detail by it), and a reading with the alpha loses it.
+    /// cannot be read. Read once, colour and alpha together: where a diffuse is see-through its colour still counts (AC
+    /// multiplies the detail by it), and <see cref="TexelReader"/> keeps it.
     /// </summary>
     private static Picture? Decode(byte[] bytes, int? most)
     {
-        byte[] colour, alpha;
         try
         {
             lock (Reading)
             {
-                _reader ??= new TextureReader();
-                var size = most is { } m ? new System.Drawing.Size(m, m) : (System.Drawing.Size?)null;
-                colour = _reader.ToPng(bytes, true, size);
-                alpha = _reader.ToPng(bytes, false, size);
+                _reader ??= new TexelReader();
+                var (width, height, rgba) = _reader.Read(bytes, most);
+                return new Picture(width, height, rgba);
             }
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
@@ -824,12 +841,6 @@ public static class CarPaint
             Logger.Warning("A paint texture could not be read: {Error}", ex.Message);
             return null;
         }
-
-        var picture = ReadPng(colour);
-        var withAlpha = ReadPng(alpha);
-        if (withAlpha.Width != picture.Width || withAlpha.Height != picture.Height) return withAlpha;
-        for (var i = 3; i < picture.Rgba.Length; i += 4) picture.Rgba[i] = withAlpha.Rgba[i];
-        return picture;
     }
 
     private static IEnumerable<Kn5Node> Meshes(Kn5Node node)

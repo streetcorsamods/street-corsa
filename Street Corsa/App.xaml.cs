@@ -1040,6 +1040,7 @@ namespace StreetCorsa
             {
                 GameSettingsService?.Save();
                 Audio.Radio.RadioPlayer.Shared.Save();
+                Audio.Radio.RadioPlayer.Shared.StopScanning();
                 Audio.FmodLifetime.Shutdown();
             }
             catch (Exception ex)
