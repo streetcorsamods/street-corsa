@@ -38,7 +38,13 @@ namespace StreetCorsa.Services.Ai
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger("Ai");
         private readonly SemaphoreSlim _one = new(1, 1);
         private readonly Random _random = new();
-        private DateTime _restUntil = DateTime.MinValue;
+        private readonly AiBackoff _rest = new();
+
+        /// <summary>The most a picture may be: a 512x512 PNG is well under a megabyte</summary>
+        public const int MostPictureBytes = 16 * 1024 * 1024;
+
+        /// <summary>The most ComfyUI's JSON answers may be (/prompt, /history, /system_stats)</summary>
+        public const int MostJsonBytes = 4 * 1024 * 1024;
 
         public ComfyImageService(Func<AiSettings> settings, HttpClient http, Func<AiPrompts>? prompts = null)
         {
@@ -49,7 +55,7 @@ namespace StreetCorsa.Services.Ai
 
         private static Rules.AiRules Rules => StreetCorsa.Rules.RuleBook.Current.Ai;
 
-        public bool IsAvailable => _settings().ComfyEnabled && DateTime.UtcNow >= _restUntil;
+        public bool IsAvailable => _settings().ComfyEnabled && !_rest.IsResting;
 
         private string Endpoint(string? endpoint = null)
         {
@@ -95,8 +101,8 @@ namespace StreetCorsa.Services.Ai
             }
             catch (HttpRequestException ex)
             {
-                _restUntil = DateTime.UtcNow.AddSeconds(Math.Max(0, Rules.RetryAfterFailureSeconds));
-                _logger.Warning("ComfyUI could not be reached ({Error}); tried again in {Seconds} s", ex.Message, Rules.RetryAfterFailureSeconds);
+                if (_rest.Rest(Rules.RetryAfterFailureSeconds))
+                    _logger.Warning("ComfyUI could not be reached ({Error}); tried again in {Seconds} s", ex.Message, Rules.RetryAfterFailureSeconds);
                 return null;
             }
             catch (Exception ex)
@@ -110,6 +116,9 @@ namespace StreetCorsa.Services.Ai
             }
         }
 
+        /// <summary>The name ComfyUI saves the game's pictures under, in its own output folder</summary>
+        public const string Prefix = "StreetCorsa";
+
         /// <summary>The graph with the game's values in the nodes the workflow names</summary>
         public JsonObject Graph(ComfyWorkflow workflow, TextValues values, long seed)
         {
@@ -120,7 +129,14 @@ namespace StreetCorsa.Services.Ai
             Set("width", workflow.Width);
             Set("height", workflow.Height);
             if (!string.IsNullOrWhiteSpace(workflow.Checkpoint)) Set("checkpoint", workflow.Checkpoint);
-            Set("prefix", "StreetCorsa");
+            Set("prefix", Prefix);
+            // Every save node writes under the game's own name, whatever the graph says: a mod's graph picks no file names
+            foreach (var (_, node) in graph)
+            {
+                if (node?["class_type"]?.ToString() is { } kind && ComfyWorkflow.SaveNodes.Contains(kind) && node["inputs"] is JsonObject inputs)
+                    inputs["filename_prefix"] = Prefix;
+            }
+
             return graph;
 
             void Set(string what, JsonNode? value)
@@ -136,18 +152,22 @@ namespace StreetCorsa.Services.Ai
             var seed = (long)(_random.NextDouble() * 1_000_000_000_000);
             var body = new JsonObject { ["prompt"] = Graph(workflow, values, seed), ["client_id"] = Guid.NewGuid().ToString("N") };
 
-            using var queued = await _http.PostAsync(endpoint + "/prompt",
-                new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json"), cancellationToken).ConfigureAwait(false);
-            var queuedText = await queued.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-            if (!queued.IsSuccessStatusCode) throw new AiProviderException($"HTTP {(int)queued.StatusCode} from /prompt: {Snippet(queuedText)}");
+            string queuedText;
+            using (var post = new HttpRequestMessage(HttpMethod.Post, endpoint + "/prompt"))
+            {
+                post.Content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json");
+                using var queued = await _http.SendAsync(post, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                queuedText = await AiHttp.ReadTextAsync(queued, MostJsonBytes, cancellationToken).ConfigureAwait(false);
+                if (!queued.IsSuccessStatusCode) throw new AiProviderException($"HTTP {(int)queued.StatusCode} from /prompt: {AiProviders.Snippet(queuedText)}");
+            }
 
             var promptId = JsonNode.Parse(queuedText)?["prompt_id"]?.ToString();
-            if (string.IsNullOrEmpty(promptId)) throw new AiProviderException($"/prompt gave no prompt_id: {Snippet(queuedText)}");
+            if (string.IsNullOrEmpty(promptId)) throw new AiProviderException($"/prompt gave no prompt_id: {AiProviders.Snippet(queuedText)}");
 
             while (true)
             {
                 await Task.Delay(PollEvery, cancellationToken).ConfigureAwait(false);
-                var history = JsonNode.Parse(await _http.GetStringAsync($"{endpoint}/history/{Uri.EscapeDataString(promptId)}", cancellationToken).ConfigureAwait(false));
+                var history = JsonNode.Parse(await GetTextAsync($"{endpoint}/history/{Uri.EscapeDataString(promptId)}", cancellationToken).ConfigureAwait(false));
                 if (history?[promptId] is not JsonObject run) continue;
 
                 if (run["status"]?["status_str"]?.ToString() == "error") throw new AiProviderException("ComfyUI reported an error running the workflow");
@@ -158,9 +178,26 @@ namespace StreetCorsa.Services.Ai
                 }
 
                 var query = $"filename={Uri.EscapeDataString(image.File)}&subfolder={Uri.EscapeDataString(image.Subfolder)}&type={Uri.EscapeDataString(image.Type)}";
-                return await _http.GetByteArrayAsync($"{endpoint}/view?{query}", cancellationToken).ConfigureAwait(false);
+                using var view = await _http.GetAsync($"{endpoint}/view?{query}", HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                view.EnsureSuccessStatusCode();
+                var picture = await AiHttp.ReadBytesAsync(view, MostPictureBytes, cancellationToken).ConfigureAwait(false);
+                if (!IsPicture(picture)) throw new AiProviderException("/view gave something that is not a PNG or JPEG picture");
+                return picture;
             }
         }
+
+        /// <summary>A GET of ComfyUI's JSON, as text: an error status throws as <see cref="HttpClient.GetStringAsync(string)"/> does</summary>
+        private async Task<string> GetTextAsync(string url, CancellationToken cancellationToken)
+        {
+            using var response = await _http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            return await AiHttp.ReadTextAsync(response, MostJsonBytes, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>The bytes start as a PNG or a JPEG file does: only a picture is saved as a portrait</summary>
+        public static bool IsPicture(byte[]? bytes) =>
+            bytes != null && (bytes.AsSpan().StartsWith((ReadOnlySpan<byte>)[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
+                              || bytes.AsSpan().StartsWith((ReadOnlySpan<byte>)[0xFF, 0xD8, 0xFF]));
 
         /// <summary>The first picture among a run's outputs</summary>
         private static (string File, string Subfolder, string Type)? FirstImage(JsonObject? outputs)
@@ -180,10 +217,10 @@ namespace StreetCorsa.Services.Ai
             timeout.CancelAfter(TimeSpan.FromSeconds(10));
             try
             {
-                var stats = JsonNode.Parse(await _http.GetStringAsync(Endpoint(endpoint) + "/system_stats", timeout.Token).ConfigureAwait(false));
+                var stats = JsonNode.Parse(await GetTextAsync(Endpoint(endpoint) + "/system_stats", timeout.Token).ConfigureAwait(false));
                 var version = stats?["system"]?["comfyui_version"]?.ToString() ?? "?";
                 var device = (stats?["devices"] as JsonArray)?.FirstOrDefault()?["name"]?.ToString() ?? "?";
-                _restUntil = DateTime.MinValue;
+                _rest.Clear();
                 var workflow = _prompts().Workflow(AiWriter.PortraitUse);
                 return new AiTestResult(true, GameText.Say("settings.ai.comfy.ok", ("version", version), ("device", device),
                     ("checkpoint", workflow?.Checkpoint ?? "?")));
@@ -194,7 +231,5 @@ namespace StreetCorsa.Services.Ai
                 return new AiTestResult(false, GameText.Say("settings.ai.test.failed", ("error", reason)));
             }
         }
-
-        private static string Snippet(string text) => text.Length <= 300 ? text.Trim() : text[..300].Trim() + "...";
     }
 }

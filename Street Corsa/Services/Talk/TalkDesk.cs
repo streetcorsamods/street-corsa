@@ -57,7 +57,14 @@ namespace StreetCorsa.Services.Talk
             _onGameThread = onGameThread ?? (change => change());
             _prompts = prompts ?? (() => AiPrompts.Installed);
             _rules = rules ?? (() => RuleBook.Current.Ai.Talk);
+            Background = new AiBackground(_logger, "Talk background work");
         }
+
+        /// <summary>What a talk asks of the AI that nobody waits on (a memory, a summary): tracked, so the tests can wait for it</summary>
+        internal AiBackground Background { get; }
+
+        /// <summary>Everything the talks started in the background so far, done (for the tests)</summary>
+        public Task WhenIdle() => Background.WhenIdle();
 
         public static TalkDesk Shared => _shared;
 
@@ -185,7 +192,7 @@ namespace StreetCorsa.Services.Talk
             var language = AiWriter.Language;
             var rules = Rules;
             var date = talk.Date;
-            _ = Task.Run(async () =>
+            Background.Run(async () =>
             {
                 try
                 {

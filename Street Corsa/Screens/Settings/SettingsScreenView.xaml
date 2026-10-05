@@ -314,6 +314,12 @@
                             </TextBlock.Style>
                         </TextBlock>
                     </Grid>
+                    <TextBlock Text="{t:Text settings.ai.sent_away}"
+                               Visibility="{Binding SentAway, Converter={StaticResource BooleanToVisibilityConverter}}"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               FontSize="{StaticResource FontSizeSmall}"
+                               TextWrapping="Wrap"
+                               Margin="0,8,0,0"/>
                     <DockPanel Margin="0,10,0,0" IsEnabled="{Binding Enabled}">
                         <Button DockPanel.Dock="Right"
                                 Content="{t:Text settings.ai.test}"

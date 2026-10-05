@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text.Json;
 using StreetCorsa.Logging;
 using StreetCorsa.Mods;
@@ -432,14 +431,7 @@ namespace StreetCorsa.Services.Scripting
             private static bool Bool(JsonElement v, string where) =>
                 v.ValueKind is JsonValueKind.True or JsonValueKind.False ? v.GetBoolean() : throw new FormatException($"{where}: {v} is not true or false");
 
-            private static float Number(JsonElement v, string where, float min, float max)
-            {
-                if (v.ValueKind != JsonValueKind.Number || !float.IsFinite(v.GetSingle())) throw new FormatException($"{where}: {v} is not a number");
-                var value = v.GetSingle();
-                return value >= min && value <= max
-                    ? value
-                    : throw new FormatException(string.Format(CultureInfo.InvariantCulture, "{0}: {1} is not between {2} and {3}", where, value, min, max));
-            }
+            private static float Number(JsonElement v, string where, float min, float max) => SceneMarks.Number(v, where, min, max);
         }
     }
 }

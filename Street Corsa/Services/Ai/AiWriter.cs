@@ -41,7 +41,7 @@ namespace StreetCorsa.Services.Ai
 
         private readonly object _lock = new();
         private readonly Dictionary<string, Task<string?>> _writing = new(StringComparer.Ordinal);
-        private readonly HashSet<Task> _background = [];
+        private readonly AiBackground _background;
 
         /// <param name="currentGame">The game in play, where a dealer's word and an ad's blurb are kept</param>
         /// <param name="onGameThread">Runs a change to the game state where the game changes it (the UI thread); at once when not given</param>
@@ -58,6 +58,7 @@ namespace StreetCorsa.Services.Ai
             _carName = carName ?? (id => id);
             _portraitsRoot = portraitsRoot ?? Path.Combine(AppSettings.AppDataPath, PortraitsFolder);
             _random = random ?? new Random();
+            _background = new AiBackground(_logger);
         }
 
         private readonly Func<StreetCorsa.Rules.AiRules> _rules;
@@ -71,27 +72,9 @@ namespace StreetCorsa.Services.Ai
         public static string Language => GameText.Language is { Length: > 0 } language ? language : StreetCorsa.Rules.GameFile.Installed.Language;
 
         /// <summary>Everything started in the background so far, done (for the tests)</summary>
-        public Task WhenIdle()
-        {
-            lock (_lock) return Task.WhenAll(_background.ToList());
-        }
+        public Task WhenIdle() => _background.WhenIdle();
 
-        private void Background(Func<Task> work)
-        {
-            var task = Task.Run(async () =>
-            {
-                try
-                {
-                    await work().ConfigureAwait(false);
-                }
-                catch (Exception ex)
-                {
-                    _logger.Warning("AI background work failed: {Error}", ex.Message);
-                }
-            });
-            lock (_lock) _background.Add(task);
-            task.ContinueWith(t => { lock (_lock) _background.Remove(t); }, TaskScheduler.Default);
-        }
+        private void Background(Func<Task> work) => _background.Run(work);
 
         private bool Chance(double chance)
         {
@@ -323,6 +306,11 @@ namespace StreetCorsa.Services.Ai
                 values["look"] = await _text.WriteAsync(PortraitLookUse, values).ConfigureAwait(false) ?? string.Empty;
                 var picture = await _images.PaintAsync(PortraitUse, values).ConfigureAwait(false);
                 if (picture == null || picture.Length == 0) return;
+                if (!ComfyImageService.IsPicture(picture))
+                {
+                    _logger.Warning("The portrait for {Name} is not a PNG or JPEG picture: not saved", opponent.Name);
+                    return;
+                }
 
                 Directory.CreateDirectory(Path.GetDirectoryName(file)!);
                 SafeFile.WriteAllBytes(file, picture);

@@ -75,7 +75,7 @@ namespace StreetCorsa.Services.Ai
         private readonly LinkedList<TaskCompletionSource<bool>> _waitingLater = new();
         private int _running;
         private DateTime _nextStart = DateTime.MinValue;
-        private DateTime _restUntil = DateTime.MinValue;
+        private readonly AiBackoff _rest = new();
 
         private (string Signature, IAiTextProvider Provider)? _provider;
 
@@ -99,8 +99,9 @@ namespace StreetCorsa.Services.Ai
             {
                 var settings = _settings();
                 if (!settings.Enabled) return false;
-                if (AiProviders.Normalize(settings.TextProvider) == AiProviders.Anthropic && AiKeys.Unprotect(settings.ApiKeyProtected) == null) return false;
-                lock (_lock) return DateTime.UtcNow >= _restUntil;
+                if (AiProviders.Normalize(settings.TextProvider) == AiProviders.Anthropic && AiKeys.KeyFor(settings, settings.TextProvider, settings.Endpoint) == null)
+                    return false;
+                return !_rest.IsResting;
             }
         }
 
@@ -284,26 +285,39 @@ namespace StreetCorsa.Services.Ai
         /// </summary>
         public void SetRacing(bool racing)
         {
-            TaskCompletionSource? over = null;
-            lock (_lock)
-            {
-                if (_racing == racing) return;
-                _racing = racing;
-                if (racing) _raceOver = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-                else over = _raceOver;
-            }
-
+            OllamaTextProvider? ollama = null;
             try
             {
-                if (Rules.Ollama.UnloadForRaces && _settings().Enabled && Provider() is OllamaTextProvider ollama)
-                {
-                    if (racing) _letGo = LetGoAsync(ollama);
-                    else _ = LoadAgainAsync(ollama, _letGo);
-                }
+                if (Rules.Ollama.UnloadForRaces && _settings().Enabled) ollama = Provider() as OllamaTextProvider;
             }
             catch (Exception ex)
             {
                 _logger.Warning("Could not {What} the AI model for the race: {Error}", racing ? "let go of" : "load", ex.Message);
+            }
+
+            // The start and the end of a race may be told on different threads: the flip and what was let go at the start
+            // change together, so the end always loads again after the start it ends
+            TaskCompletionSource? over = null;
+            Task<bool>? letGo = null;
+            lock (_lock)
+            {
+                if (_racing == racing) return;
+                _racing = racing;
+                if (racing)
+                {
+                    _raceOver = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                    _letGo = ollama != null ? Task.Run(() => LetGoAsync(ollama)) : Task.FromResult(false);
+                }
+                else
+                {
+                    over = _raceOver;
+                    letGo = _letGo;
+                }
+            }
+
+            try
+            {
+                if (ollama != null && letGo != null) _ = LoadAgainAsync(ollama, letGo);
             }
             finally
             {
@@ -367,12 +381,7 @@ namespace StreetCorsa.Services.Ai
         /// <summary>The provider could not be reached: left alone for a while, told once</summary>
         private void Rest(string reason)
         {
-            lock (_lock)
-            {
-                if (DateTime.UtcNow < _restUntil) return;
-                _restUntil = DateTime.UtcNow.AddSeconds(Math.Max(0, Rules.RetryAfterFailureSeconds));
-            }
-
+            if (!_rest.Rest(Rules.RetryAfterFailureSeconds)) return;
             _logger.Warning("The AI could not be reached ({Reason}); tried again in {Seconds} s", reason, Rules.RetryAfterFailureSeconds);
         }
 
@@ -393,17 +402,18 @@ namespace StreetCorsa.Services.Ai
         private IAiTextProvider Provider()
         {
             var settings = _settings();
-            var key = AiKeys.Unprotect(settings.ApiKeyProtected);
+            // The key only for the provider and address it was typed for
+            var key = AiKeys.KeyFor(settings, settings.TextProvider, settings.Endpoint);
             // The rules' Ollama tuning too: a career whose mod sets other values gets a provider that sends them
             var ollama = Rules.Ollama;
             var signature = string.Join("|", AiProviders.Normalize(settings.TextProvider), settings.Endpoint, settings.Model, settings.ApiKeyProtected,
-                ollama.ContextTokens, ollama.KeepAlive, ollama.RepeatPenalty);
+                settings.KeyProvider, settings.KeyEndpoint, ollama.ContextTokens, ollama.KeepAlive, ollama.RepeatPenalty);
             lock (_lock)
             {
                 if (_provider is { } made && made.Signature == signature) return made.Provider;
                 var provider = AiProviders.Create(_http, settings.TextProvider, settings.Endpoint, settings.Model, key, ollama, GameModel);
                 _provider = (signature, provider);
-                _restUntil = DateTime.MinValue;
+                _rest.Clear();
                 return provider;
             }
         }
@@ -423,7 +433,7 @@ namespace StreetCorsa.Services.Ai
                 var answer = await provider.CompleteAsync(new AiTextRequest(SystemPrompt(prompts),
                     GameText.Fill(prompt?.Prompt ?? "Say hello in five words.", PlayerValues()), prompt?.MaxTokens ?? 40, prompt?.Temperature ?? 0.7), timeout.Token).ConfigureAwait(false);
                 var said = Clean(answer, prompt?.MaxLength ?? 120, prompt?.Lines ?? 1);
-                lock (_lock) _restUntil = DateTime.MinValue;
+                _rest.Clear();
                 _logger.Information("AI test: {Provider} {Model} answered \"{Answer}\"", settings.TextProvider, model, said);
                 return new AiTestResult(said.Length > 0, GameText.Say(said.Length > 0 ? "settings.ai.test.ok" : "settings.ai.test.empty",
                     ("model", model), ("models", models.Count), ("answer", said)));
@@ -457,7 +467,7 @@ namespace StreetCorsa.Services.Ai
                 var node = (priority == AiPriority.Now ? _waitingNow : _waitingLater).AddLast(waiting);
                 if (cancellationToken.CanBeCanceled)
                 {
-                    cancellationToken.Register(() =>
+                    var registration = cancellationToken.Register(() =>
                     {
                         lock (_lock)
                         {
@@ -467,6 +477,9 @@ namespace StreetCorsa.Services.Ai
 
                         waiting.TrySetResult(false);
                     });
+                    // A talk's token lives as long as the talk: once the place is had (or given up), the token lets go of it
+                    waiting.Task.ContinueWith(_ => registration.Unregister(), CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously,
+                        TaskScheduler.Default);
                 }
 
                 return waiting.Task;

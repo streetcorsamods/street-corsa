@@ -22,6 +22,24 @@ address. The key is saved only encrypted with DPAPI for the Windows user (`AiKey
 card's AI section has a Test button for each kind; the ticks are saved at once, the provider with its address, model
 and key by Save, so the game never asks one provider at another's address.
 
+The key belongs to the provider and address it was typed for (`AiSettings.KeyProvider`, `KeyEndpoint`), and
+`AiKeys.KeyFor` gives it only while both are the ones asked: switching from Anthropic or OpenRouter to another provider
+or address does not take the key along (type it again there). Ollama is never sent a key (Settings has no box for one).
+A key never goes over plain `http://` to another machine (`AiProviders.KeySafeAt`): Save refuses one, and a provider
+made for such an address is made without it. A settings.json from before keys were tied loads as it was: its key is
+the saved provider's and address's (`AiKeys.Tie`, done at the next Save), never Ollama's. Test tries a key typed in
+the box, else the saved one only when it matches.
+
+### What is sent
+
+With a provider that is not on this PC (any address that is not localhost, 127.x or ::1), everything a request holds
+leaves the machine, and the Settings section says so under the address (`settings.ai.sent_away`): the persona and the
+prompts, and with them the game's facts of the career (the player's name, their cars and parts, money and prices,
+races and results, the people met and what they remember of the player, the town and its market), the street talk and
+the paper's pieces told again, and in a talk every line the player types. The Talk detail setting sets how much of the
+fact sheet goes with each line. The key goes in the provider's own header. ComfyUI is sent the portrait's prompt (a
+new rival's looks, name, age). Nothing else (no files, no save) is sent.
+
 ## Code
 
 `Services/Ai`:
@@ -31,6 +49,12 @@ and key by Save, so the game never asks one provider at another's address.
   The cap drops background work only: the player's own request (`AiPriority.Now`) waits ahead of it, refused only
   when that many of the player's own wait already.
 - `ComfyImageService` (`IAiImages`): a mod's workflow JSON with the nodes it names filled (prompt, seed, size, checkpoint).
+  A graph may use only ComfyUI's own picture nodes (`ComfyWorkflow.CoreNodes`); one that names any other node (a custom
+  node can run scripts or write files) is left out with a problem line, and every save node saves under the game's
+  own name (`ComfyImageService.Prefix`). A picture is taken only when it is a PNG or a JPEG.
+- Answers are read up to a size (`AiHttp.ReadBytesAsync`): 4 MB of JSON, 16 MB for a picture; more is no answer.
+- `AiBackground`: the work nobody waits on (a portrait, a memory, a summary, a line written ahead), tracked
+  (`WhenIdle`) and logged when it fails; `AiBackoff`: the rest after a provider could not be reached.
 - `AiWriter`: what the game asks for, and where it goes:
   - rivals' lines: `Services/Talk/AiTalkService` wraps `StaticTalkService`, says a line written ahead at once, else
     waits at most `ai.talkWaitSeconds` and says the game's, keeping the late one for the next time; the Diner
@@ -201,7 +225,9 @@ shows the portrait at the top of the talk. It never calls ComfyUI for them.
 No training: what a Modelfile does. Settings' AI section has "Make the game's model" while the provider is Ollama: it
 makes `streetcorsa` in Ollama (`POST /api/create`) from `ai/ollama.json`: a base model (`from`, llama3.1:8b; or the
 model typed in the box), its own system prompt, parameters (temperature, top_p, repeat_penalty, num_ctx) and a few
-example exchanges in the game's voice, then puts its name in the model box to Save. Every Ollama request is also sent
+example exchanges in the game's voice, then puts its name in the model box to Save. It asks Ollama's list
+(`/api/tags`) first: a base model not pulled yet would be downloaded by the create, gigabytes long past the wait, so
+the player is told to `ollama pull` it instead. Every Ollama request is also sent
 the rules' `ai.ollama`: `num_ctx` (16384, room for a talk and a full fact sheet), `keep_alive` (10m: the next line does
 not wait for the model to load, and it is out of the GPU soon after the player goes racing; Ollama's own is 5m) and
 `repeat_penalty`. The Settings test sends them too, so testing does not make Ollama load the model again.

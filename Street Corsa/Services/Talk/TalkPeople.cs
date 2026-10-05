@@ -55,30 +55,8 @@ namespace StreetCorsa.Services.Talk
         /// A dealer's salesman, one per dealer: who the dealer's mod data says (<paramref name="given"/>; it is the truth, a
         /// salesman met before it gave one becomes him), else drawn from the salesmen's names
         /// </summary>
-        public static Person Salesman(GameState game, string dealerId, DealerSalesman? given = null, AiPrompts? prompts = null, TalkRules? rules = null)
-        {
-            var key = DealerKey(dealerId);
-            if (Find(game, key) is { } found)
-            {
-                if (given != null) As(found, given);
-                return found;
-            }
-
-            rules ??= RuleBook.Current.Ai.Talk;
-            var random = Seeded(key);
-            var gender = random.NextDouble() < rules.WomenSalesmen ? Gender.Female : Gender.Male;
-            var person = Add(game, new Person
-            {
-                Key = key,
-                Kind = PersonKind.Salesman,
-                Name = NameFor("names.salesmen", gender, random),
-                Age = AgeBetween(rules.SalesmanMinAge, rules.SalesmanMaxAge, random),
-                Gender = gender,
-                Temperament = Draw(prompts ?? AiPrompts.Installed, PersonKind.Salesman, 50, random)
-            });
-            if (given != null) As(person, given);
-            return person;
-        }
+        public static Person Salesman(GameState game, string dealerId, DealerSalesman? given = null, AiPrompts? prompts = null, TalkRules? rules = null) =>
+            Staff(game, DealerKey(dealerId), PersonKind.Salesman, "names.salesmen", given, prompts, rules);
 
         public static string ShopKey(string shopId) => $"shop:{shopId}";
 
@@ -86,9 +64,15 @@ namespace StreetCorsa.Services.Talk
         /// Whoever is behind a part shop's counter, one per shop: who the shop's mod data says (<paramref name="given"/>), else
         /// drawn from the clerks' names
         /// </summary>
-        public static Person Clerk(GameState game, string shopId, DealerSalesman? given = null, AiPrompts? prompts = null, TalkRules? rules = null)
+        public static Person Clerk(GameState game, string shopId, DealerSalesman? given = null, AiPrompts? prompts = null, TalkRules? rules = null) =>
+            Staff(game, ShopKey(shopId), PersonKind.Clerk, "names.clerks", given, prompts, rules);
+
+        /// <summary>
+        /// Someone who works at a place (a dealer's salesman, a shop's clerk), one per place by <paramref name="key"/>: who
+        /// the place's mod data says, else drawn from the <paramref name="names"/> pool, the same draw every time
+        /// </summary>
+        private static Person Staff(GameState game, string key, PersonKind kind, string names, DealerSalesman? given, AiPrompts? prompts, TalkRules? rules)
         {
-            var key = ShopKey(shopId);
             if (Find(game, key) is { } found)
             {
                 if (given != null) As(found, given);
@@ -101,11 +85,11 @@ namespace StreetCorsa.Services.Talk
             var person = Add(game, new Person
             {
                 Key = key,
-                Kind = PersonKind.Clerk,
-                Name = NameFor("names.clerks", gender, random),
+                Kind = kind,
+                Name = NameFor(names, gender, random),
                 Age = AgeBetween(rules.SalesmanMinAge, rules.SalesmanMaxAge, random),
                 Gender = gender,
-                Temperament = Draw(prompts ?? AiPrompts.Installed, PersonKind.Clerk, 50, random)
+                Temperament = Draw(prompts ?? AiPrompts.Installed, kind, 50, random)
             });
             if (given != null) As(person, given);
             return person;
