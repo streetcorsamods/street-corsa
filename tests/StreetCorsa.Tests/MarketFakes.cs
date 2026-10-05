@@ -34,7 +34,7 @@ internal sealed class FakeMarket(decimal value, List<DealerLocation>? dealers = 
     public EngineDescription? DescribeEngine(Car car) => null;
     public IReadOnlySet<string>? FactoryParts(string carDefinitionId) => null;
 
-    public Task<List<UsedCarListing>> SpawnListingsAsync(List<DealerLocation> dealers, DateTime currentDate, double priceMultiplier) => throw new NotSupportedException();
+    public Task<List<UsedCarListing>> SpawnListingsAsync(List<DealerLocation> dealers, DateTime currentDate, double priceMultiplier, bool privateAds = true) => throw new NotSupportedException();
     /// <summary>What a refresh does with the listings there are; unset, a refresh is not expected</summary>
     public Func<List<UsedCarListing>, Task<List<UsedCarListing>>>? Refresh { get; set; }
 

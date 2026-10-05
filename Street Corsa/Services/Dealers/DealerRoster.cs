@@ -23,7 +23,7 @@ namespace StreetCorsa.Services.Dealers
 
             gameState.DealerLocations = roster;
             var known = roster.Select(d => d.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            gameState.UsedCarMarket?.RemoveAll(l => !l.IsSold && !known.Contains(l.DealerLocation));
+            gameState.UsedCarMarket?.RemoveAll(l => !l.IsSold && !l.IsPrivate && !known.Contains(l.DealerLocation));
         }
 
         /// <summary>The dealers selling cars: open, or in their closing-down sale. The map shows these.</summary>

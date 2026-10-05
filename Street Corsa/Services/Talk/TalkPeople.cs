@@ -148,6 +148,21 @@ namespace StreetCorsa.Services.Talk
         }
 
         /// <summary>
+        /// The name of the private seller <see cref="Seller"/> gives <paramref name="key"/> when the ad gives none, without
+        /// putting them in the game: the paper names everybody selling a car, few of them are ever called
+        /// </summary>
+        public static string SellerName(GameState game, string key, TalkRules? rules = null)
+        {
+            if (Find(game, key) is { } found) return found.Name;
+
+            // Drawn as Seller draws them: the sex, then the name, from the key's own numbers
+            rules ??= RuleBook.Current.Ai.Talk;
+            var random = Seeded(key);
+            var gender = random.NextDouble() < rules.WomenSellers ? Gender.Female : Gender.Male;
+            return NameFor("names.people", gender, random);
+        }
+
+        /// <summary>
         /// The buyer who answered the player's ad (by <see cref="BuyerKey"/>): the name they gave the player ("Gary", "a man
         /// from out of town"), a woman only when the name is one of the women's, the rest drawn
         /// </summary>

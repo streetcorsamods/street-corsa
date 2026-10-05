@@ -42,6 +42,18 @@
     "paintWearLoss": 0.08,
     "crackedScreenLoss": 0.02,
     "missingWheelShare": 0.03,
-    "missingCornerPartShare": 0.01
+    "missingCornerPartShare": 0.01,
+    "privateAdsLow": 24,
+    "privateAdsHigh": 34,
+    "privateMinCondition": 0.3,
+    "privateMaxCondition": 0.85,
+    "privateMinMileage": 30000,
+    "privateMaxMileage": 150000,
+    "privatePriceShare": 0.85,
+    "dealerAdsInPaper": 1,
+    "backLotLow": 0,
+    "backLotHigh": 2,
+    "backLotMinCondition": 0.25,
+    "backLotMaxCondition": 0.55
   }
 }

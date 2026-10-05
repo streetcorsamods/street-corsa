@@ -1444,6 +1444,43 @@ Taken before idea 6 (the owner agreed): its room is our own, so no outside model
   highlight rows. Vague asks ("something fast") fall back to the biggest dyno gain for the player's engine. Cost: two
   calls a message (about 3 to 6 s).
 
+## Step 29: from `docs/ideas.txt`, batch 9 (planned 2026-10-04)
+
+The owner's list: the newspaper's car ads (1), a paint job in a 3D paint booth (2), no going out on the streets in a car
+that cannot (3). The owner picked 1 and 3 first, one PR (branch `feature/ideas-batch-9`); 2 after the diner street
+(step 28, idea 6).
+
+### Built: ideas 1 and 3 (2026-10-04, not seen in game)
+
+- **The paper is mostly private people's cars (1).** Before, every car on every lot was in the paper, sorted by make.
+  Now private people sell their own cars (`UsedCarListing.PaperOnly` with no dealer): 24 to 34 at a time
+  (`market.privateAdsLow/High`), any car of the market by how common it is, rougher (`privateMin/MaxCondition` 0.3 to
+  0.85, 30,000 to 150,000 km, looks rolled as a private car's) and asking 85% of what a lot would (`privatePriceShare`).
+  They turn over like the lots' cars (14 days) and are topped up by the daily market refresh. The seller's name comes
+  from the ad's key (`TalkPeople.SellerName`, the same draw as `TalkPeople.Seller`, without putting everyone in the
+  save); looking at the car meets them at the curb, as a rival's ad does. The dealers put `dealerAdsInPaper` (1) car
+  off each lot in the paper, the same one each read, and keep 0 to 2 cars out back (`backLotLow/High`, condition 0.25
+  to 0.55, not cleaned up): in the paper only, seen at the dealer's showroom, never on the lot, not counted in its
+  stock (a sale out back still counts in its trade). The racers' own ads stay as they were. Every lot's whole stock
+  is still on the dealer map.
+- **The ads run in no order (1).** Car and part ads in an order drawn from each ad's id (`ClassifiedOrder.Shuffled`):
+  random, but an ad keeps its place for as long as it runs, so it can be found again; the player's ads go in among
+  them as before.
+- **No streets without a car that runs (3).** `StreetReady` is the rule: a car picked and in the catalog, not in the
+  impound, and `DrivingHome.WhyWontRun` with the tank counted (nothing broken, gas for a race, an engine in it), then
+  the dyno says the engine starts (off the UI thread). The racing hub works it out as it opens: "Hit the streets" waits
+  greyed out, and the note under the buttons turns amber with why. The diner checks the same rule (without the dyno)
+  when entered, for a mod's way in that skips the hub, and sends the player home with why.
+
+### Idea 2: the paint booth (not planned yet)
+
+- **Owner:** a paint booth in 3D. The Paint button (`icons/paint_spray.png`, the owner's) in the garage's bottom bar
+  fades to the booth, the car drives in, a spray animation runs while its skin changes; a custom colour, not only the
+  mod's skins; after painting the car does not back out, the screen fades back to the garage and the car makes its
+  entrance in its new colour.
+- **Open:** a custom colour means tinting the body texture into a skin of our own (made like the wear layer, through
+  `CarDataOverlay`): not every car mod has a clean body texture to tint. Whether a paint job costs money and time.
+
 ## Epic: total conversion (planned 2026-09-30)
 
 The owner wants the whole game moddable, so the community can add game modes and whole new games (a Tokyo Drift game

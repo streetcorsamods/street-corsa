@@ -227,18 +227,29 @@ namespace StreetCorsa.Screens.Newspaper
 
         private PartsCatalog? Catalog => _partsService.IsAvailable ? _partsService.Catalog : null;
 
-        /// <summary>Every car for sale, the lots' and the racers' own by make, the player's own in among them</summary>
+        /// <summary>
+        /// The cars in the paper, in no order: mostly private people's and the racers' own, a few of the dealers' (a car or
+        /// so off each lot and what they keep out back, <see cref="PaperAds.Listings"/>), the player's own in among them
+        /// </summary>
         private void LoadCarAds()
         {
             try
             {
                 var catalog = Catalog;
                 var ads = new List<CarAdViewModel>();
-                foreach (var listing in _marketService.GetAvailableListings(_gameState.UsedCarMarket ?? []))
+                foreach (var listing in PaperAds.Listings(_marketService.GetAvailableListings(_gameState.UsedCarMarket ?? []),
+                             Rules.RuleBook.Current.Market.DealerAdsInPaper))
                 {
                     _wroteBlurbs |= AdBlurbs.Ensure(listing, catalog, () => _marketService.FactoryParts(listing.CarDefinitionId));
                     // Words still the game's own go to the player's AI; they show the next time the paper is opened
                     AdBlurbs.Polish(listing, catalog, () => _marketService.FactoryParts(listing.CarDefinitionId));
+                    if (listing.IsPrivate)
+                    {
+                        var name = Services.Talk.TalkPeople.SellerName(_gameState, Services.Talk.TalkPeople.CarKey(listing));
+                        if (CarAd(listing, null, name, privateSeller: name) is { } own) ads.Add(own);
+                        continue;
+                    }
+
                     var dealer = _gameState.DealerLocations?.FirstOrDefault(d => d.Id == listing.DealerLocation);
                     if (CarAd(listing, null, dealer?.Name ?? GameText.Say("market.unknown_dealer")) is { } ad) ads.Add(ad);
                 }
@@ -271,7 +282,7 @@ namespace StreetCorsa.Screens.Newspaper
                     }
                 }
 
-                CarAds.Fill(ClassifiedOrder.Mix(ads.OrderBy(a => a.SortKey, StringComparer.CurrentCultureIgnoreCase), mine));
+                CarAds.Fill(ClassifiedOrder.Mix(ClassifiedOrder.Shuffled(ads, a => a.Car.Listing.Id), mine));
             }
             catch (Exception ex)
             {
@@ -306,7 +317,9 @@ namespace StreetCorsa.Screens.Newspaper
             return CarAd(listing, null, _gameState.Player.Name, sale);
         }
 
-        private CarAdViewModel? CarAd(UsedCarListing listing, RivalCarAds.Offer? rivalOffer, string seller, CarSaleAd? playerAd = null)
+        /// <param name="privateSeller">The private person selling it, when it is no dealer's, rival's or the player's</param>
+        private CarAdViewModel? CarAd(UsedCarListing listing, RivalCarAds.Offer? rivalOffer, string seller, CarSaleAd? playerAd = null,
+            string? privateSeller = null)
         {
             var definition = _catalogRepository.GetCar(listing.CarDefinitionId);
             var profile = _profileRepository.GetProfile(listing.CarDefinitionId);
@@ -322,7 +335,7 @@ namespace StreetCorsa.Screens.Newspaper
                 CarDefinition = definition,
                 CarProfile = profile,
                 RivalAd = rivalOffer?.Ad,
-                PrivateSeller = rivalOffer?.Seller.Name ?? (playerAd != null ? seller : null),
+                PrivateSeller = rivalOffer?.Seller.Name ?? (playerAd != null ? seller : privateSeller),
                 DealerName = seller,
                 CanAfford = _gameState.Player.Money >= listing.Price
             };
@@ -336,7 +349,7 @@ namespace StreetCorsa.Screens.Newspaper
             return ad;
         }
 
-        /// <summary>Every used part ad the catalog knows the part of, by name</summary>
+        /// <summary>Every used part ad the catalog knows the part of, in no order</summary>
         private void LoadPartAds()
         {
             try
@@ -357,7 +370,7 @@ namespace StreetCorsa.Screens.Newspaper
                     }
                 }
 
-                PartAds.Fill(ads.OrderBy(a => a.Headline, StringComparer.CurrentCultureIgnoreCase));
+                PartAds.Fill(ClassifiedOrder.Shuffled(ads, a => a.Ad.AdId.ToString("N")));
             }
             catch (Exception ex)
             {

@@ -65,6 +65,11 @@ namespace StreetCorsa.Screens.Shared
         public static Car? CarOf(GameState gameState) =>
             gameState.Player.SelectedCarInstanceId is { } id ? gameState.Player.Cars?.FirstOrDefault(c => c.InstanceId == id) : null;
 
+        /// <summary>Why the selected car cannot go out on the streets (<see cref="StreetReady"/>); null when it can</summary>
+        /// <param name="listed">Whether the catalog has the car</param>
+        public Task<string?> WhyNotOnTheStreetsAsync(GameState gameState, Func<string, bool> listed) =>
+            StreetReady.WhyNotAsync(gameState, listed, _partsService);
+
         /// <summary>Where a free run can go: every track of the install, one entry per layout</summary>
         public List<PracticeTrack> FreeRunTracks() => List(PracticeTracks.All, "free run");
 

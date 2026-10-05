@@ -119,11 +119,12 @@ namespace StreetCorsa.Dialogs.RaceHub
             _hitTheStreets = hitTheStreets;
 
             CloseCommand = new RelayCommand(() => _dialogService.CloseDialog(), () => !IsSettingUp);
-            HitTheStreetsCommand = new RelayCommand(OnHitTheStreets, () => !IsSettingUp && _hitTheStreets != null);
+            HitTheStreetsCommand = new RelayCommand(OnHitTheStreets, () => !IsSettingUp && _hitTheStreets != null && _streetsChecked && _streetsWhyNot == null);
             EnterEventCommand = new RelayCommand<EventInvitationViewModel>(OnEnterEvent, _ => !_isEntering);
             _carListed = IsCarListed();
             _freeRunTracks = practice.FreeRunTracks();
             _strips = practice.Strips();
+            if (hitTheStreets != null) CheckStreets();
             FreeRunCommand = new RelayCommand(OnFreeRun, () => CanPractice && _freeRunTracks.Count > 0);
             TestAndTuneCommand = new RelayCommand(OnTestAndTune, () => CanPractice && _strips.Count > 0);
 
@@ -156,9 +157,39 @@ namespace StreetCorsa.Dialogs.RaceHub
         /// <summary>The way out onto the streets is there (a game may have none)</summary>
         public bool CanHitTheStreets => _hitTheStreets != null;
 
+        // Why the selected car cannot go out on the streets, worked out once as the hub opens (whether the engine starts takes
+        // the dyno); the button waits for it
+        private string? _streetsWhyNot;
+        private bool _streetsChecked;
+
+        /// <summary>Under the buttons: why the car cannot go out on the streets, or the word on going out</summary>
+        public string StreetsNote => _streetsWhyNot ?? GameText.Say("racehub.streets.note");
+
+        /// <summary>The car cannot go out on the streets now (<see cref="StreetsNote"/> says why)</summary>
+        public bool HasStreetsProblem => _streetsWhyNot != null;
+
+        private async void CheckStreets()
+        {
+            try
+            {
+                _streetsWhyNot = await _practice.WhyNotOnTheStreetsAsync(_gameState, _ => _carListed);
+            }
+            catch (Exception ex)
+            {
+                // Nothing may escape an async void; not knowing is no reason to keep the player in
+                _logger.Error(ex, "Could not tell whether the car can go out on the streets");
+                _streetsWhyNot = null;
+            }
+
+            _streetsChecked = true;
+            OnPropertyChanged(nameof(StreetsNote));
+            OnPropertyChanged(nameof(HasStreetsProblem));
+            RelayCommand.RaiseCanExecuteChanged();
+        }
+
         private void OnHitTheStreets()
         {
-            if (_hitTheStreets == null) return;
+            if (_hitTheStreets == null || _streetsWhyNot != null) return;
             _dialogService.CloseDialog();
             _hitTheStreets();
         }

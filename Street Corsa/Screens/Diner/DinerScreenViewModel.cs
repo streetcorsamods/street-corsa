@@ -851,6 +851,16 @@ namespace StreetCorsa.Screens.Diner
             base.Enter();
             _logger.Information("Entered diner screen");
 
+            // Not out in a car that could not have got here (a mod's way in that skips the racing hub's check): home again
+            if (!_returning && StreetReady.WhyNot(_gameState, id => _catalogRepository.GetCar(id) != null,
+                    _partsService.IsAvailable ? _partsService.Catalog : null) is { } why)
+            {
+                _logger.Information("The car cannot be out on the streets: {Why}", why);
+                _dialogService.ShowDialog(new InformationDialogViewModel(_dialogService, why, GameText.Say("challenge.car_wont_run.title")));
+                _navigationService.GoHomeLater(_gameState);
+                return;
+            }
+
             // Each on its own: a track folder that can't be read still leaves the racers at their tables
             try
             {
