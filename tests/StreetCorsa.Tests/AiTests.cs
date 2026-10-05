@@ -587,7 +587,7 @@ public class AiTests
     [Fact]
     public async Task ComfyUI_gets_the_workflow_filled_and_the_picture_is_fetched()
     {
-        var png = new byte[] { 0x89, 0x50, 0x4E, 0x47, 1, 2, 3 };
+        var png = new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3 };
         var polls = 0;
         var http = new FakeHttp((sent, _) => Task.FromResult(sent.Uri.AbsolutePath switch
         {
@@ -732,7 +732,7 @@ public class AiTests
         using var temp = new TempDir();
         var game = new GameState { SaveName = "My Save" };
         var racer = new Opponent("Rosa Diaz", 24, Gender.Female, 93, 60) { Nickname = "Spark" };
-        var images = new FakeImages([1, 2, 3]);
+        var images = new FakeImages([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3]);
         var text = new FakeAiText((_, _) => Task.FromResult<string?>("short dark curls, cat-eye glasses"));
         var writer = Writer(text, game, images, temp.Path);
 
@@ -743,7 +743,7 @@ public class AiTests
         var file = writer.PortraitOf(racer);
         Assert.NotNull(file);
         Assert.StartsWith(Path.Combine(temp.Path, "My Save"), file);
-        Assert.Equal(new byte[] { 1, 2, 3 }, File.ReadAllBytes(file!));
+        Assert.Equal(new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3 }, File.ReadAllBytes(file!));
         Assert.Equal("short dark curls, cat-eye glasses", images.Values!["look"]);
         Assert.Equal("woman", images.Values["sex"]);
 

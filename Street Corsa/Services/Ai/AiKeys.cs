@@ -34,5 +34,33 @@ namespace StreetCorsa.Services.Ai
                 return null;
             }
         }
+
+        /// <summary>
+        /// The saved key, only for the provider and address it was typed for: a key for Anthropic or OpenRouter never goes to
+        /// another provider or address the player switches to, and never to Ollama. A key saved before keys were tied to one
+        /// belongs to the provider and address it was saved with. Null when there is none for them.
+        /// </summary>
+        public static string? KeyFor(Services.Settings.AiSettings settings, string? provider, string? endpoint)
+        {
+            var kind = AiProviders.Normalize(provider);
+            if (kind == AiProviders.Ollama || string.IsNullOrWhiteSpace(settings.ApiKeyProtected)) return null;
+
+            var (keyProvider, keyEndpoint) = settings.KeyProvider is { Length: > 0 }
+                ? (settings.KeyProvider, settings.KeyEndpoint)
+                : (settings.TextProvider, settings.Endpoint);
+            if (AiProviders.Normalize(keyProvider) != kind || !AiProviders.SameAddress(kind, keyEndpoint, endpoint)) return null;
+            return Unprotect(settings.ApiKeyProtected);
+        }
+
+        /// <summary>
+        /// The key of <paramref name="settings"/> tied to the provider and address it belongs to, when it was saved before keys
+        /// were: those of the settings it was saved with
+        /// </summary>
+        public static void Tie(Services.Settings.AiSettings settings)
+        {
+            if (string.IsNullOrWhiteSpace(settings.ApiKeyProtected) || settings.KeyProvider is { Length: > 0 }) return;
+            settings.KeyProvider = AiProviders.Normalize(settings.TextProvider);
+            settings.KeyEndpoint = settings.Endpoint;
+        }
     }
 }

@@ -472,7 +472,9 @@ namespace StreetCorsa.Services.Talk
             if (_summing || outside - _summed < least) return;
 
             _summing = true;
-            _ = SumUpAsync(_turns.Skip(_summed).Take(outside - _summed).ToList(), outside);
+            var turns = _turns.Skip(_summed).Take(outside - _summed).ToList();
+            // Started here: the summary is kept on the talk's own thread, as the turns are
+            _desk.Background.Start(() => SumUpAsync(turns, outside));
         }
 
         private async Task SumUpAsync(List<AiTurn> turns, int upTo)

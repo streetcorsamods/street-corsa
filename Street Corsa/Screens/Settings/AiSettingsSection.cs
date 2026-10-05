@@ -116,6 +116,21 @@ namespace StreetCorsa.Screens.Settings
             {
                 var endpoint = Endpoint.Trim().Length > 0 ? Endpoint.Trim() : AiProviders.DefaultEndpoint(AiProviders.Ollama);
                 var ollama = new OllamaTextProvider(AiHttp.Shared, endpoint, null, null);
+
+                // A base model not pulled yet would be downloaded by the create (gigabytes, long past any wait here): the
+                // player pulls it first, and sees it come down
+                using (var asking = new CancellationTokenSource(TimeSpan.FromSeconds(Math.Max(1, StreetCorsa.Rules.RuleBook.Current.Ai.RequestTimeoutSeconds))))
+                {
+                    var pulled = await ollama.ModelsAsync(asking.Token);
+                    if (!pulled.Any(listed => AiProviders.SameModel(listed, from)))
+                    {
+                        _logger.Information("The Ollama model {Model} is not made: {From} is not pulled at {Endpoint}", model.Name, from, endpoint);
+                        MakeModelOk = false;
+                        MakeModelResult = GameText.Say("settings.ai.ollama.not_pulled", ("from", from));
+                        return;
+                    }
+                }
+
                 var examples = model.Examples
                     .Where(e => e.Player.Length > 0 && e.Answer.Length > 0)
                     .SelectMany(e => new[] { new AiTurn(false, e.Player), new AiTurn(true, e.Answer) })
@@ -211,6 +226,7 @@ namespace StreetCorsa.Screens.Settings
                 OnPropertyChanged(nameof(NeedsKey));
                 OnPropertyChanged(nameof(IsOllama));
                 OnPropertyChanged(nameof(ModelHint));
+                OnPropertyChanged(nameof(SentAway));
                 if (string.IsNullOrWhiteSpace(Endpoint) || Endpoint.Trim() == oldDefault) Endpoint = AiProviders.DefaultEndpoint(value.Id);
             }
         }
@@ -220,8 +236,17 @@ namespace StreetCorsa.Screens.Settings
         public string Endpoint
         {
             get => _endpoint;
-            set => SetProperty(ref _endpoint, value ?? string.Empty);
+            set
+            {
+                if (SetProperty(ref _endpoint, value ?? string.Empty)) OnPropertyChanged(nameof(SentAway));
+            }
         }
+
+        /// <summary>
+        /// The address is not on this PC: what a request holds (the facts of the player's career, what they type in a talk)
+        /// leaves it, and the section says so
+        /// </summary>
+        public bool SentAway => !AiProviders.IsLocal(_provider.Id, Endpoint);
 
         private string _model = string.Empty;
 
@@ -327,6 +352,8 @@ namespace StreetCorsa.Screens.Settings
         private AiSettings Typed()
         {
             var typed = Ai.Clone();
+            // A key saved before keys were tied to a provider stays with the one it was saved with
+            AiKeys.Tie(typed);
             typed.TextProvider = _provider.Id;
             typed.Endpoint = Endpoint.Trim() == AiProviders.DefaultEndpoint(_provider.Id) || Endpoint.Trim().Length == 0 ? null : Endpoint.Trim();
             typed.Model = Model.Trim().Length == 0 ? null : Model.Trim();
@@ -338,9 +365,22 @@ namespace StreetCorsa.Screens.Settings
         {
             var saved = Ai.Clone();
             var typed = Typed();
+            var newKey = TypedKeyFor(typed);
+            if (newKey != null && !AiProviders.KeySafeAt(typed.TextProvider, typed.Endpoint))
+            {
+                _notSaved(GameText.Say("settings.ai.key.insecure"));
+                return;
+            }
+
             try
             {
-                if (_typedKey.Trim().Length > 0) typed.ApiKeyProtected = AiKeys.Protect(_typedKey);
+                if (newKey != null)
+                {
+                    // The key is the provider's at this address: only ever sent to it
+                    typed.ApiKeyProtected = AiKeys.Protect(newKey);
+                    typed.KeyProvider = typed.TextProvider;
+                    typed.KeyEndpoint = typed.Endpoint;
+                }
             }
             catch (System.Security.Cryptography.CryptographicException ex)
             {
@@ -362,13 +402,17 @@ namespace StreetCorsa.Screens.Settings
             Reload();
         }
 
+        /// <summary>The key typed in the box, for a provider that takes one (the box is hidden for Ollama); null when none</summary>
+        private string? TypedKeyFor(AiSettings typed) =>
+            AiProviders.Normalize(typed.TextProvider) != AiProviders.Ollama && _typedKey.Trim().Length > 0 ? _typedKey.Trim() : null;
+
         private void OnForgetKey()
         {
-            var saved = Ai.ApiKeyProtected;
-            Ai.ApiKeyProtected = null;
+            var saved = Ai.Clone();
+            Ai.ApiKeyProtected = Ai.KeyProvider = Ai.KeyEndpoint = null;
             if (!_settingsService.Save())
             {
-                Ai.ApiKeyProtected = saved;
+                _settingsService.Current.Ai = saved;
                 _notSaved(GameText.Say("settings.not_saved"));
             }
 
@@ -382,8 +426,17 @@ namespace StreetCorsa.Screens.Settings
             TestResult = GameText.Say("settings.ai.testing");
             try
             {
-                var key = _typedKey.Trim().Length > 0 ? _typedKey.Trim() : AiKeys.Unprotect(Ai.ApiKeyProtected);
-                var result = await _text.TestAsync(Typed(), key);
+                // The key typed, else the saved one only when it was typed for this provider and address
+                var typed = Typed();
+                var key = TypedKeyFor(typed) ?? AiKeys.KeyFor(typed, typed.TextProvider, typed.Endpoint);
+                if (key != null && !AiProviders.KeySafeAt(typed.TextProvider, typed.Endpoint))
+                {
+                    TestOk = false;
+                    TestResult = GameText.Say("settings.ai.key.insecure");
+                    return;
+                }
+
+                var result = await _text.TestAsync(typed, key);
                 TestOk = result.Ok;
                 TestResult = result.Message;
             }

@@ -34,6 +34,19 @@ namespace StreetCorsa.Services.Talk
         {
             public TaskCompletionSource<string> Said { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
             public CancellationTokenSource Superseded { get; } = new();
+
+            /// <summary>A newer line is asked: this call stops waiting (one already said and let go is left as it is)</summary>
+            public void Supersede()
+            {
+                try
+                {
+                    Superseded.Cancel();
+                }
+                catch (ObjectDisposedException)
+                {
+                    // Said and done already
+                }
+            }
         }
 
         private readonly Func<StreetCorsa.Rules.AiRules> _rules;
@@ -46,7 +59,13 @@ namespace StreetCorsa.Services.Talk
             _own = own;
             _ai = ai;
             _rules = rules ?? (() => StreetCorsa.Rules.RuleBook.Current.Ai);
+            _background = new AiBackground(_logger, "Writing a line ahead");
         }
+
+        private readonly AiBackground _background;
+
+        /// <summary>The lines being written ahead, done (for the tests)</summary>
+        public Task WhenIdle() => _background.WhenIdle();
 
         private StreetCorsa.Rules.AiRules Rules => _rules();
 
@@ -56,7 +75,7 @@ namespace StreetCorsa.Services.Talk
         {
             var call = new Call();
             var previous = Interlocked.Exchange(ref _current, call);
-            previous?.Superseded.Cancel();
+            previous?.Supersede();
 
             var own = string.Empty;
             try
@@ -80,6 +99,11 @@ namespace StreetCorsa.Services.Talk
                 call.Said.TrySetResult(own);
                 return own;
             }
+            finally
+            {
+                // One a line said: a newer call that supersedes it finds it let go
+                call.Superseded.Dispose();
+            }
         }
 
         /// <summary>
@@ -89,7 +113,7 @@ namespace StreetCorsa.Services.Talk
         public void Prepare(TalkContext context)
         {
             if (!_ai.IsAvailable) return;
-            _ = PrepareAsync(context);
+            _background.Start(() => PrepareAsync(context));
         }
 
         private async Task PrepareAsync(TalkContext context)

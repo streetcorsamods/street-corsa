@@ -100,6 +100,29 @@ namespace StreetCorsa.Services.Ai
 
         /// <summary>Where it came from, for the log ("streetcorsa/ai/comfy_portrait.json")</summary>
         public string Source { get; set; } = string.Empty;
+
+        /// <summary>
+        /// The node types a mod's graph may use: ComfyUI's own nodes for painting a picture from a prompt (load a model, a
+        /// LoRA, encode the prompt, sample, decode, scale, save). A custom node the player installed can run scripts or write
+        /// files anywhere, so a graph that names any other node is left out.
+        /// </summary>
+        public static IReadOnlySet<string> CoreNodes { get; } = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "CheckpointLoaderSimple", "CheckpointLoader", "UNETLoader", "CLIPLoader", "DualCLIPLoader", "VAELoader", "LoraLoader",
+            "LoraLoaderModelOnly", "CLIPSetLastLayer", "CLIPTextEncode", "ConditioningCombine", "ConditioningSetArea", "FluxGuidance",
+            "ModelSamplingDiscrete", "EmptyLatentImage", "EmptySD3LatentImage", "KSampler", "KSamplerAdvanced", "VAEDecode", "VAEEncode",
+            "LatentUpscale", "LatentUpscaleBy", "ImageScale", "ImageScaleBy", "ImageInvert", "SaveImage", "PreviewImage"
+        };
+
+        /// <summary>The nodes that write a file: their file name is always the game's own (<see cref="ComfyImageService.Prefix"/>)</summary>
+        public static IReadOnlySet<string> SaveNodes { get; } = new HashSet<string>(StringComparer.Ordinal) { "SaveImage" };
+
+        /// <summary>The node types of <paramref name="graph"/> that are not <see cref="CoreNodes"/> (a node with no type among them)</summary>
+        public static IReadOnlyList<string> NotCore(JsonObject graph) =>
+            graph.Select(node => node.Value?["class_type"]?.ToString() ?? $"(node {node.Key} with no class_type)")
+                .Where(kind => !CoreNodes.Contains(kind))
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
     }
 
     /// <summary>
@@ -398,6 +421,12 @@ namespace StreetCorsa.Services.Ai
                 if (workflow == null || workflow.Workflow.Count == 0)
                 {
                     problems.Add($"{source}: no \"workflow\" graph; left out");
+                    return null;
+                }
+
+                if (ComfyWorkflow.NotCore(workflow.Workflow) is { Count: > 0 } unknown)
+                {
+                    problems.Add($"{source}: the graph uses nodes that are not ComfyUI's own ({string.Join(", ", unknown)}); left out");
                     return null;
                 }
 

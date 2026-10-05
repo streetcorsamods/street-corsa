@@ -61,6 +61,11 @@ namespace StreetCorsa.Services.Ai
 
         public static IReadOnlyList<string> All { get; } = [Ollama, OpenAi, Anthropic];
 
+        /// <summary>The most a provider's answer may be: a chat answer or a list of models is a few KB</summary>
+        public const int MostAnswerBytes = 4 * 1024 * 1024;
+
+        private static readonly StreetCorsa.Logging.IAppLogger Logger = StreetCorsa.Logging.AppLoggerFactory.CreateLogger("Ai");
+
         public static string DefaultEndpoint(string? provider) => Normalize(provider) switch
         {
             OpenAi => "http://127.0.0.1:1234/v1",
@@ -80,7 +85,35 @@ namespace StreetCorsa.Services.Ai
         public static bool SameModel(string listed, string named) =>
             Tagged(listed).Equals(Tagged(named), StringComparison.OrdinalIgnoreCase);
 
-        private static string Tagged(string model) => model.Trim().Contains(':') ? model.Trim() : model.Trim() + ":latest";
+        /// <summary>A model's name as Ollama lists it: "latest" when no tag is given (nothing stays nothing)</summary>
+        internal static string Tagged(string model)
+        {
+            var name = model.Trim();
+            return name.Length == 0 || name.Contains(':') ? name : name + ":latest";
+        }
+
+        /// <summary>The start of what a provider answered, for the log and the Test button</summary>
+        public static string Snippet(string text) => text.Length <= 300 ? text.Trim() : text[..300].Trim() + "...";
+
+        /// <summary>The address a provider is asked at: the one typed, else its usual one, without a slash at the end</summary>
+        public static string Address(string? provider, string? endpoint) =>
+            (string.IsNullOrWhiteSpace(endpoint) ? DefaultEndpoint(provider) : endpoint.Trim()).TrimEnd('/');
+
+        /// <summary>Two addresses of one provider are the same place (an empty one is its usual address)</summary>
+        public static bool SameAddress(string? provider, string? one, string? other) =>
+            Address(provider, one).Equals(Address(provider, other), StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>The address is on this machine (localhost, 127.x.x.x, ::1): what is sent there never leaves it</summary>
+        public static bool IsLocal(string? provider, string? endpoint) =>
+            Uri.TryCreate(Address(provider, endpoint), UriKind.Absolute, out var uri) && uri.IsLoopback;
+
+        /// <summary>
+        /// A key may go to the address: over https, or to this machine. Plain http to anywhere else would put the key on the
+        /// network for anyone to read, so it is not sent there.
+        /// </summary>
+        public static bool KeySafeAt(string? provider, string? endpoint) =>
+            Uri.TryCreate(Address(provider, endpoint), UriKind.Absolute, out var uri)
+            && (uri.Scheme == Uri.UriSchemeHttps || uri.IsLoopback);
 
         /// <summary><paramref name="endpoint"/> without the given path at its end ("…/v1" typed for an API that adds its own)</summary>
         public static string Without(string endpoint, params string[] paths)
@@ -110,11 +143,18 @@ namespace StreetCorsa.Services.Ai
             var kind = Normalize(provider);
             var address = string.IsNullOrWhiteSpace(endpoint) ? DefaultEndpoint(kind) : endpoint.Trim();
             var named = string.IsNullOrWhiteSpace(model) ? null : model.Trim();
+            if (!string.IsNullOrWhiteSpace(apiKey) && !KeySafeAt(kind, address))
+            {
+                Logger.Warning("The API key is not sent to {Endpoint}: plain http to another machine", address);
+                apiKey = null;
+            }
+
+            // Ollama takes no key (Settings has no box for one): a key never goes to it
             return kind switch
             {
                 OpenAi => new OpenAiTextProvider(http, address, named, apiKey),
                 Anthropic => new AnthropicTextProvider(http, address, named, apiKey),
-                _ => new OllamaTextProvider(http, address, named, apiKey, ollama, gameModel)
+                _ => new OllamaTextProvider(http, address, named, null, ollama, gameModel)
             };
         }
     }
@@ -157,8 +197,8 @@ namespace StreetCorsa.Services.Ai
             Authorize(request);
             if (body != null) request.Content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json");
 
-            using var response = await Http.SendAsync(request, cancellationToken).ConfigureAwait(false);
-            var text = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            using var response = await Http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+            var text = await AiHttp.ReadTextAsync(response, AiProviders.MostAnswerBytes, cancellationToken).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
                 throw new AiProviderException($"HTTP {(int)response.StatusCode} {response.ReasonPhrase}: {Snippet(ErrorOf(text) ?? text)}");
 
@@ -190,7 +230,7 @@ namespace StreetCorsa.Services.Ai
         protected static JsonArray WithSystem(AiTextRequest request) =>
             new([new JsonObject { ["role"] = "system", ["content"] = request.System }, .. request.Messages.Select(turn => (JsonNode)turn.ToJson())]);
 
-        protected static string Snippet(string text) => text.Length <= 200 ? text.Trim() : text[..200].Trim() + "...";
+        protected static string Snippet(string text) => AiProviders.Snippet(text);
 
         protected static string Text(JsonNode? node) =>
             node?.GetValueKind() == System.Text.Json.JsonValueKind.String ? node.GetValue<string>() : string.Empty;
@@ -265,15 +305,12 @@ namespace StreetCorsa.Services.Ai
         /// <summary>The model is on the GPU now (GET /api/ps): asked before it is let go, so only a model that was is loaded again</summary>
         public async Task<bool> IsLoadedAsync(CancellationToken cancellationToken)
         {
-            var model = Tagged(await ModelAsync(cancellationToken).ConfigureAwait(false));
+            var model = AiProviders.Tagged(await ModelAsync(cancellationToken).ConfigureAwait(false));
             var answer = await SendAsync(HttpMethod.Get, Endpoint + "/api/ps", null, cancellationToken).ConfigureAwait(false);
             return (answer["models"] as JsonArray ?? []).Any(m =>
-                string.Equals(Tagged(Text(m?["name"])), model, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(Tagged(Text(m?["model"])), model, StringComparison.OrdinalIgnoreCase));
+                string.Equals(AiProviders.Tagged(Text(m?["name"])), model, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(AiProviders.Tagged(Text(m?["model"])), model, StringComparison.OrdinalIgnoreCase));
         }
-
-        /// <summary>A model's name as Ollama lists it: "latest" when no tag is given</summary>
-        private static string Tagged(string name) => name.Length == 0 || name.Contains(':') ? name : name + ":latest";
 
         /// <summary>Lets go of the model, so its memory on the card is free (a chat of no messages kept alive for 0)</summary>
         public async Task UnloadAsync(CancellationToken cancellationToken)

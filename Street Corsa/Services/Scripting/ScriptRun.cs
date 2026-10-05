@@ -52,6 +52,9 @@ namespace StreetCorsa.Services.Scripting
         // Over: the time limit stops counting
         private readonly CancellationTokenSource _over = new();
 
+        // The engines still being started behind the steps: the run lets go of its tokens once they are done too
+        private readonly List<Task> _starting = [];
+
         private readonly TaskCompletionSource _released = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly TaskCompletionSource<ScriptEnd> _end = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -114,7 +117,7 @@ namespace StreetCorsa.Services.Scripting
             if (IsOver) return;
             _cancelled = true;
             _fast = true;
-            _cut.Cancel();
+            Cut();
         }
 
         private void FastForward()
@@ -125,7 +128,7 @@ namespace StreetCorsa.Services.Scripting
                 if (car.DriveLeft > 0f) car.Jump(plan);
             }
 
-            _cut.Cancel();
+            Cut();
         }
 
         private async Task RunAsync()
@@ -134,6 +137,7 @@ namespace StreetCorsa.Services.Scripting
             {
                 _released.TrySetResult();
                 _end.TrySetResult(ScriptEnd.None);
+                LetGo();
                 return;
             }
 
@@ -154,6 +158,25 @@ namespace StreetCorsa.Services.Scripting
                 _released.TrySetResult();
                 _end.TrySetResult(_cancelled ? ScriptEnd.Cancelled : _failed ? ScriptEnd.Failed : _skipped ? ScriptEnd.Skipped : ScriptEnd.Finished);
             }
+
+            // Over: nothing cuts or skips it any more (both look at IsOver first); an engine still starting may wait on the cut
+            await Task.WhenAll(_starting);
+            LetGo();
+        }
+
+        private void LetGo()
+        {
+            _letGo = true;
+            _cut.Dispose();
+            _over.Dispose();
+        }
+
+        // The tokens were let go: a skip that ended the run on its way (a car's jump plays the rest) has nothing left to cut
+        private bool _letGo;
+
+        private void Cut()
+        {
+            if (!_letGo) _cut.Cancel();
         }
 
         /// <summary>A script that goes on past the time it may take is skipped to its end</summary>
@@ -309,7 +332,7 @@ namespace StreetCorsa.Services.Scripting
             }
 
             // On behind the next steps: an engine still being worked out starts the moment it is there
-            _ = KeepStartingAsync(engine, step.Crank, most);
+            _starting.Add(KeepStartingAsync(engine, step.Crank, most));
         }
 
         private async Task KeepStartingAsync(IScriptEngine engine, bool crank, TimeSpan most)

@@ -166,7 +166,8 @@ namespace StreetCorsa.Services.Scripting
             return xz.Count == 2 ? new GroundPoint(xz[0], xz[1]) : throw new FormatException($"{where} is not a point [x, z]");
         }
 
-        private static float Number(JsonElement v, string where, float min, float max)
+        /// <summary>A finite number from <paramref name="min"/> to <paramref name="max"/>, else a problem naming <paramref name="where"/></summary>
+        internal static float Number(JsonElement v, string where, float min, float max)
         {
             if (v.ValueKind != JsonValueKind.Number || !float.IsFinite(v.GetSingle())) throw new FormatException($"{where}: {v} is not a number");
             var value = v.GetSingle();

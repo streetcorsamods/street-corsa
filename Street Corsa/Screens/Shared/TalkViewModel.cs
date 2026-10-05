@@ -31,6 +31,9 @@ namespace StreetCorsa.Screens.Shared
     {
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger("Talk");
         private readonly CancellationTokenSource _cancel = new();
+
+        // The talk's token, kept: it is still asked for after End let go of its source (cancelled first, so it reads as such)
+        private readonly CancellationToken _token;
         private readonly TalkLineViewModel _thinking = new(string.Empty, GameText.Say("chat.ui.thinking"), false);
         private Task _current = Task.CompletedTask;
         private bool _opened;
@@ -44,6 +47,7 @@ namespace StreetCorsa.Screens.Shared
         public TalkViewModel(Conversation talk, string? portrait = null)
         {
             Talk = talk;
+            _token = _cancel.Token;
             Portrait = portrait ?? TalkDesk.Shared.PortraitOf(talk.Person);
             SendCommand = new AsyncRelayCommand(SendAsync, () => CanSend, name: "Talk.Send");
             BuyCommand = new RelayCommand(OnBuy, () => CanBuy);
@@ -183,7 +187,7 @@ namespace StreetCorsa.Screens.Shared
         {
             if (_opened) return _current;
             _opened = true;
-            return Run(() => Talk.OpenAsync(_cancel.Token), "chat.ui.no_answer");
+            return Run(() => Talk.OpenAsync(_token), "chat.ui.no_answer");
         }
 
         /// <summary>
@@ -199,7 +203,7 @@ namespace StreetCorsa.Screens.Shared
             {
                 try
                 {
-                    await Task.Delay(settle, _cancel.Token);
+                    await Task.Delay(settle, _token);
                 }
                 catch (OperationCanceledException)
                 {
@@ -223,7 +227,7 @@ namespace StreetCorsa.Screens.Shared
             // The talk is about it at once, before the salesman has gone on about it: Buy is for this car at its price
             Talk.Look(subject);
             RefreshPrice();
-            await Run(() => Talk.TurnToAsync(subject, _cancel.Token), null);
+            await Run(() => Talk.TurnToAsync(subject, _token), null);
             RefreshPrice();
         }
 
@@ -235,7 +239,7 @@ namespace StreetCorsa.Screens.Shared
             Draft = string.Empty;
             SettlePick();
             Lines.Add(new TalkLineViewModel(GameText.Say("chat.ui.you"), text, true));
-            await Run(() => Talk.SayAsync(text, _cancel.Token), "chat.ui.dead_line");
+            await Run(() => Talk.SayAsync(text, _token), "chat.ui.dead_line");
         }
 
         /// <summary>The thing the screen shows is the one bought, even when the talk has not turned to it yet</summary>
@@ -276,6 +280,10 @@ namespace StreetCorsa.Screens.Shared
             catch (Exception ex)
             {
                 _logger.Warning("Ending the talk with {Person} failed: {Error}", Talk.Person.Name, ex.Message);
+            }
+            finally
+            {
+                _cancel.Dispose();
             }
         }
 

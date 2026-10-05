@@ -84,15 +84,23 @@ namespace StreetCorsa.Services.Talk
             return words.Any(word => Regex.IsMatch(before, $@"\b{Regex.Escape(word)}(\s+(you|me))?\s*$", RegexOptions.IgnoreCase));
         }
 
+        private const int MostDigits = 12;
+
         private static decimal? Value(Match match)
         {
             var digits = match.Groups["num"].Value;
             var thousands = match.Groups["k"].Success;
 
+            // No price runs to more than a dozen digits: a longer run is no sum, and would overflow the decimal
+            if (digits.Count(char.IsAsciiDigit) > MostDigits) return null;
+
             // "1,200" and "1.200" are twelve hundred; "1.2k" one and a fifth thousand
             decimal value;
             if (ThousandsGrouped().IsMatch(digits))
-                value = decimal.Parse(digits.Replace(",", string.Empty).Replace(".", string.Empty), CultureInfo.InvariantCulture);
+            {
+                if (!decimal.TryParse(digits.Replace(",", string.Empty).Replace(".", string.Empty), NumberStyles.None, CultureInfo.InvariantCulture, out value))
+                    return null;
+            }
             else if (!decimal.TryParse(digits.Replace(',', '.'), NumberStyles.Number, CultureInfo.InvariantCulture, out value))
                 return null;
 
