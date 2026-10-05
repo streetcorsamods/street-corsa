@@ -223,7 +223,8 @@ namespace StreetCorsa.Services.Talk
         /// <summary>Days the kind remembers a talk</summary>
         public static int ForgetDays(PersonKind kind, TalkRules rules) => kind switch
         {
-            PersonKind.Salesman => rules.ForgetDaysSalesman,
+            // A clerk is there for good, like a lot's salesman: one behind each shop's counter
+            PersonKind.Salesman or PersonKind.Clerk => rules.ForgetDaysSalesman,
             PersonKind.Rival => rules.ForgetDaysRival,
             _ => rules.ForgetDaysSeller
         };

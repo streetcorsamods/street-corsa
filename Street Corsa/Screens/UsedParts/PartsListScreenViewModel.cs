@@ -119,6 +119,25 @@ namespace StreetCorsa.Screens.UsedParts
             LoadOffers();
         }
 
+        /// <summary>
+        /// Every filter set at once and the picks cleared (the clerk's search), nothing listed yet: the <see cref="Pick"/>
+        /// that follows lists the rows once, not once a filter
+        /// </summary>
+        protected void SetFilters(string group, string searchText, bool onlyFitting, decimal? maxPrice)
+        {
+            _selectedGroup = group;
+            _searchText = searchText;
+            _onlyFitting = onlyFitting;
+            _maxPrice = maxPrice is > 0 ? maxPrice : null;
+            Picked = [];
+            OnPropertyChanged(nameof(SelectedGroup));
+            OnPropertyChanged(nameof(SearchText));
+            OnPropertyChanged(nameof(OnlyFitting));
+            OnPropertyChanged(nameof(MaxPrice));
+            OnPropertyChanged(nameof(HasMaxPrice));
+            OnPropertyChanged(nameof(MaxPriceLabel));
+        }
+
         public string FitFilterLabel => SelectedCar == null
             ? GameText.Say("usedparts.fit_filter")
             : GameText.Say("usedparts.fit_filter.car", ("car", CarName));
@@ -133,7 +152,7 @@ namespace StreetCorsa.Screens.UsedParts
 
         #endregion
 
-        protected Car? SelectedCar =>
+        protected virtual Car? SelectedCar =>
             _gameState.Player.Cars.FirstOrDefault(c => c.InstanceId == _gameState.Player.SelectedCarInstanceId);
 
         private string CarName => (SelectedCar == null ? null : _catalogRepo.GetCar(SelectedCar.DefinitionId))?.Name ?? GameText.Say("usedparts.fit_filter.no_name");
@@ -162,8 +181,8 @@ namespace StreetCorsa.Screens.UsedParts
         /// </summary>
         protected bool Entering { get; set; }
 
-        /// <summary>A tab was picked: it starts unfiltered, with the kinds of what is on it</summary>
-        protected void TabChanged()
+        /// <summary>A tab was picked: it starts unfiltered, with the kinds of what is on it; listed unless <paramref name="list"/> is false</summary>
+        protected void TabChanged(bool list = true)
         {
             _selectedGroup = AllGroups;
             _searchText = string.Empty;
@@ -176,7 +195,7 @@ namespace StreetCorsa.Screens.UsedParts
             OnPropertyChanged(nameof(CanFilterByFit));
             if (Entering) return;
             RefillGroups();
-            LoadOffers();
+            if (list) LoadOffers();
         }
 
         /// <summary>After the page is opened: the fit filter's label, the kinds and the rows</summary>

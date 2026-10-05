@@ -135,6 +135,7 @@ public class PartsShopSceneTests
     [InlineData("""{"asks": true, "kind": "any", "fits": false, "maxPrice": 0, "words": "", "want": "any"}""")]
     [InlineData("""{"asks": true, "kind": "Blowers", "maxPrice": -5, "want": "fast"}""")]
     [InlineData("""{"asks": "true", "kind": "", "fits": "no", "maxPrice": "", "words": "any"}""")]
+    [InlineData("""{"asks": true, "kind": "any", "maxPrice": 1e30}""")]
     public void A_kind_the_shop_lacks_no_limit_and_blanks_are_no_part_of_the_search(string json)
     {
         Assert.Equal(new ClerkSearch(true, null, false, null, null, null), ClerkSearch.Parse(json, Kinds));
@@ -171,6 +172,9 @@ public class PartsShopSceneTests
     {
         public List<ClerkSearch> Searches { get; } = [];
 
+        /// <summary>What the last search returned</summary>
+        public ClerkFindings? Last { get; private set; }
+
         public IReadOnlyList<string> Kinds { get; } = PartsShopSceneTests.Kinds;
 
         public IEnumerable<string> Facts() => ["You work at Al's Speed Shop."];
@@ -178,12 +182,15 @@ public class PartsShopSceneTests
         public Task<ClerkFindings> FindAsync(ClerkSearch search, CancellationToken cancellationToken)
         {
             Searches.Add(search);
-            return Task.FromResult(new ClerkFindings(search, 7,
+            Last = new ClerkFindings(search, 7,
             [
                 new ClerkPick("holley_2bbl", "Holley 2-barrel", "Carburetors", 95m, true, 1, 180, 192),
                 new ClerkPick("carter_afb", "Carter AFB", "Carburetors", 140m, false, 3)
-            ]));
+            ]);
+            return Task.FromResult(Last);
         }
+
+        public ClerkFindings Recheck(ClerkFindings found) => found with { Picks = [.. found.Picks.Where(p => p.Id != "holley_2bbl")] };
     }
 
     private static GameState Game()
@@ -221,7 +228,7 @@ public class PartsShopSceneTests
         Assert.Contains("Holley 2-barrel", facts);
         Assert.Contains("from 180 hp to 192 hp", facts);
         Assert.Contains(GameText.Say("chat.fact.stock.no_fit").TrimStart(','), facts);
-        Assert.Same(talk.Found, talk.Found);
+        Assert.Same(counter.Last, talk.Found);
         Assert.Equal(7, talk.Found!.Matching);
     }
 
@@ -257,6 +264,58 @@ public class PartsShopSceneTests
         await talk.SayAsync("anything that bolts on?", Ct);
 
         Assert.True(counter.Searches.Single().Fits);
+    }
+
+    [Theory]
+    [InlineData("go on, tell me about the drag strip")]
+    [InlineData("what goes on round here at night?")]
+    public async Task Small_talk_with_go_on_in_it_is_no_ask_for_parts(string said)
+    {
+        var counter = new FakeCounter();
+        var ai = new FakeAiText((use, _) => Task.FromResult<string?>(use == "clerk_search"
+            ? """{"asks": false, "kind": "any", "fits": false, "maxPrice": 0, "words": "", "want": "any"}"""
+            : "Friday nights, out on the old airstrip."));
+        var desk = new TalkDesk(ai, prompts: BasePrompts, rules: () => new Rules.TalkRules());
+        var talk = desk.ForShop(Game(), "al", null, counter);
+
+        await talk.SayAsync(said, Ct);
+
+        Assert.Empty(counter.Searches);
+    }
+
+    [Fact]
+    public async Task After_a_deal_the_clerk_talks_of_the_picks_as_they_are_now()
+    {
+        var counter = new FakeCounter();
+        var ai = new FakeAiText((use, _) => Task.FromResult<string?>(use == "clerk_search"
+            ? """{"asks": true, "kind": "Carburetors", "fits": false, "maxPrice": 0, "words": "", "want": "any"}"""
+            : "Take the Holley."));
+        var desk = new TalkDesk(ai, prompts: BasePrompts, rules: () => new Rules.TalkRules());
+        var talk = desk.ForShop(Game(), "al", null, counter);
+        await talk.SayAsync("got a carb?", Ct);
+
+        // The Holley bought, the last one: the counter says what is left
+        talk.StockChanged();
+
+        Assert.Equal(["carter_afb"], talk.Found!.Picks.Select(p => p.Id));
+    }
+
+    [Fact]
+    public void A_name_asked_for_that_no_part_has_is_told_to_the_clerk_and_not_said_as_the_ask()
+    {
+        var found = new ClerkFindings(ClerkSearch.Anything, 3, [new ClerkPick("cam", "Mopar cam", "Camshafts", 100m, true, 1)], NoName: "Edelbrock");
+        var facts = TalkFacts.Stock(found).ToList();
+
+        Assert.Contains(GameText.Say("chat.fact.stock.no_name", ("words", "Edelbrock")), facts);
+        Assert.DoesNotContain(facts, f => f.Contains(GameText.Say("chat.fact.stock.ask.words", ("words", "Edelbrock"))));
+    }
+
+    [Fact]
+    public void A_clerk_remembers_as_long_as_a_lots_salesman()
+    {
+        var rules = new Rules.TalkRules();
+
+        Assert.Equal(rules.ForgetDaysSalesman, TalkPeople.ForgetDays(PersonKind.Clerk, rules));
     }
 
     [Fact]

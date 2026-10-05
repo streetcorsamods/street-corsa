@@ -51,7 +51,8 @@
                                  Places="{Binding Places}"
                                  Dressing="{Binding Dressing}"
                                  View="{Binding View}"
-                                 Room="{Binding Room}"/>
+                                 Room="{Binding Room}"
+                                 IsCovered="{Binding IsCounterOpen}"/>
 
         <!-- Covered until the shop stands with its stock in it -->
         <Grid Background="{StaticResource BgDarkBrush}"

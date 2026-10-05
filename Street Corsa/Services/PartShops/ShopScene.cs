@@ -1,6 +1,5 @@
 using System.IO;
 using System.Text.Json;
-using StreetCorsa.Helpers;
 using StreetCorsa.Logging;
 using StreetCorsa.Mods;
 using StreetCorsa.Services.CarLot;
@@ -108,12 +107,6 @@ namespace StreetCorsa.Services.PartShops
         /// <summary>The scene the part shops are seen in: the last mod's, so a mod's shop takes the base game's place; null when there is none</summary>
         public static ShopScene? Current => Installed.Count == 0 ? null : Installed[^1];
 
-        private static void LeftOut(string problem)
-        {
-            Logger.Warning("{Problem}", problem);
-            ModProblems.Add("Shop scenes", problem);
-        }
-
         /// <summary>
         /// The shop in <paramref name="folder"/>; null when its file or model is missing or broken (logged). A place that
         /// is not whole (no room in it, no number) is skipped; a picture name that is not a plain file name is dropped.
@@ -138,17 +131,7 @@ namespace StreetCorsa.Services.PartShops
         private static ShopScene? Build(string folder, SceneEntry entry)
         {
             var id = entry.Id ?? Path.GetFileName(folder);
-            if (!PathNames.TryCombineUnder(folder, entry.Model ?? "shop.kn5", out var kn5))
-            {
-                LeftOut($"the shop scene {id} names a model outside its folder ({entry.Model}); left out");
-                return null;
-            }
-
-            if (!File.Exists(kn5))
-            {
-                LeftOut($"the shop scene {id} has no model {kn5}; left out");
-                return null;
-            }
+            if (!SceneFiles.TryModel(folder, entry.Model, "shop.kn5", $"the shop scene {id}", Logger, "Shop scenes", out var kn5)) return null;
 
             var camera = entry.Camera is { } c && c.Radius > 0f
                 ? new ShopCamera(c.Alpha, c.Beta, c.Radius, c.TargetX, c.TargetHeight, c.TargetZ, c.Fov is > 10f and < 120f ? c.Fov : 0f)
@@ -156,14 +139,8 @@ namespace StreetCorsa.Services.PartShops
             var room = entry.Room is { HalfWidth: > 0f, HalfDepth: > 0f, Height: > 0f } r ? new ShopRoom(r.HalfWidth, r.HalfDepth, r.Height) : (ShopRoom?)null;
 
             // The tubes are lit at every hour, only scaled by it; a look colours them
-            var lamps = (entry.Lamps ?? []).Select(l => l == null ? null : l with { Color = null }).ToList();
-            var lights = SceneLighting.Read(entry.Lights, id, Logger, cubemapAmbient: 0f, sharedLamps: lamps);
-
-            var window = new Dictionary<StreetLight, float>();
-            foreach (var (name, glow) in entry.Window ?? [])
-            {
-                if (SceneLighting.TryParse(name, out var which)) window[which] = glow;
-            }
+            var lights = SceneFiles.Lights(entry.Lights, entry.Lamps, id, Logger);
+            var window = SceneFiles.Glow(entry.Window);
 
             var places = (entry.Places ?? []).OfType<PlaceEntry>()
                 .Where(p => p.Width > 0f && p.Depth > 0f && p.Height > 0f && float.IsFinite(p.X) && float.IsFinite(p.Y) && float.IsFinite(p.Z) && float.IsFinite(p.Heading))
@@ -171,25 +148,12 @@ namespace StreetCorsa.Services.PartShops
                 .ToList();
 
             var looks = (entry.Looks ?? []).OfType<LookEntry>()
-                .Select((l, i) => new ShopLook(l.Id ?? $"look{i + 1}", (l.Kinds ?? []).OfType<string>().ToList(), Surfaces(id, l.Surfaces),
+                .Select((l, i) => new ShopLook(l.Id ?? $"look{i + 1}", (l.Kinds ?? []).OfType<string>().ToList(), SceneFiles.Surfaces(l.Surfaces, "shop scene", id, Logger),
                     SceneLighting.Rgb(l.LampColor, 255)))
                 .ToList();
 
             var sun = entry.Sun is { Length: 3 } s ? s : [0.2f, 0.8f, 0.6f];
             return new ShopScene(id, entry.Title ?? "The part shop", kn5, camera, room, sun, lights, window, places, looks);
-        }
-
-        private static Dictionary<string, string> Surfaces(string id, Dictionary<string, string?>? surfaces)
-        {
-            var kept = new Dictionary<string, string>(StringComparer.Ordinal);
-            foreach (var (material, picture) in surfaces ?? [])
-            {
-                if (picture == null) continue;
-                if (PathNames.IsSafeSegment(picture)) kept[material] = picture;
-                else Logger.Warning("The shop scene {Id} dresses {Material} in \"{Picture}\", which is no picture name: it keeps its own", id, material, picture);
-            }
-
-            return kept;
         }
     }
 }

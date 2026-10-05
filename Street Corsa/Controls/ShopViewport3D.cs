@@ -196,6 +196,22 @@ public class ShopViewport3D : D3DViewportBase
         set => SetValue(RoomProperty, value);
     }
 
+    public static readonly DependencyProperty IsCoveredProperty = DependencyProperty.Register(
+        nameof(IsCovered), typeof(bool), typeof(ShopViewport3D), new PropertyMetadata(false, (d, _) => ((ShopViewport3D)d).Invalidate()));
+
+    /// <summary>
+    /// Something is up over the room (the counter): the camera stops swaying and nothing is drawn once it settles, so the
+    /// GPU is left to the clerk's AI; uncovered, it sways on
+    /// </summary>
+    public bool IsCovered
+    {
+        get => (bool)GetValue(IsCoveredProperty);
+        set => SetValue(IsCoveredProperty, value);
+    }
+
+    // A camera this near where it is going is still
+    private const float Still = 1e-4f;
+
     // A scene that gives no view is looked into from its door, at its middle
     private ShopCamera ViewOrDefault => View ?? new ShopCamera(MathF.PI / 2f, 0.1f, 5f, 0f, 1.2f, 0f);
 
@@ -340,11 +356,11 @@ public class ShopViewport3D : D3DViewportBase
     protected override bool StepFrame(GarageRenderer renderer, float dt)
     {
         dt = Math.Min(dt, GarageRenderer.MaxTickSeconds);
-        _time += dt;
+        if (!IsCovered) _time += dt;
 
         // Untouched, the view sways round where it looks from, as somebody standing there looks about
         var view = ViewOrDefault;
-        if (!_touched)
+        if (!_touched && !IsCovered)
         {
             var phase = _time * 2f * MathF.PI / SwaySeconds;
             _alphaGoal = view.Alpha + SwayAlpha * MathF.Sin(phase);
@@ -357,7 +373,9 @@ public class ShopViewport3D : D3DViewportBase
         _radius += (_radiusGoal - _radius) * k;
         Place();
         renderer.IsDirty = true;
-        return true;
+
+        // Covered, drawing stops once the camera has come to rest
+        return !IsCovered || MathF.Abs(_alphaGoal - _alpha) > Still || MathF.Abs(_betaGoal - _beta) > Still || MathF.Abs(_radiusGoal - _radius) > Still;
     }
 
     /// <summary>The camera where the angles say, pulled in short of the walls and the ceiling</summary>

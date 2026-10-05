@@ -43,7 +43,7 @@
     "chat.fact.stock.* what the game found in the stock for the player's last ask: found {asked}, {count} (matching), {shown};",
     "nothing {asked}; pick {name}, {kind}, {price}, {fits} (stock.fits or stock.no_fit), {dyno} (stock.dyno {from} {to} hp,",
     "stock.dyno_none, or nothing), {left} (stock.last or nothing); ask.* make {asked}: ask.any or the kind, ask.words {words},",
-    "ask.fits, ask.under {price}, ask.power, ask.cheap; stock.none_fit when no pick fits. chat.fact.shop_price_warning: a clerk named a",
+    "ask.fits, ask.under {price}, ask.power, ask.cheap; stock.none_fit when no pick fits; stock.no_name {words} a name asked for that no part in stock has. chat.fact.shop_price_warning: a clerk named a",
     "price no part told has. chat.fit_words: words that make an ask at the counter one for parts that fit the player's car."
   ],
   "lines": {
@@ -153,6 +153,7 @@
     "chat.fact.stock.dyno_none": ", gains the player's engine nothing on the dyno",
     "chat.fact.stock.last": ", the last one in stock",
     "chat.fact.stock.none_fit": "None of these goes on the player's car: say so plainly, never that one fits.",
+    "chat.fact.stock.no_name": "Nothing in stock has \"{words}\" in its name: say so, and never call any of these that.",
     "chat.fact.stock.ask.any": "anything",
     "chat.fact.stock.ask.words": "by the name \"{words}\"",
     "chat.fact.stock.ask.fits": "that fits their car",
@@ -241,7 +242,7 @@
     "chat.ask_words": [ "want", "need", "asking", "get", "make it", "at least", "no less" ],
     "chat.agree_not": [ "not", "no", "never", "don't", "dont", "won't", "wont", "can't", "cant", "nope", "didn't", "didnt" ],
 
-    "chat.fit_words": [ "fit", "fits", "goes on", "go on", "bolt on", "bolts on", "for my car", "for my engine" ],
+    "chat.fit_words": [ "fit", "fits", "bolt on", "bolts on", "for my car", "for my engine" ],
     "chat.unit_words": [
       "miles", "mile", "mi", "km", "kilometers", "mph", "hp", "horsepower", "horses", "cubes", "cubic", "ci", "cc", "inch",
       "inches", "rpm", "years", "year", "yrs", "owners", "owner", "cylinders", "speed", "barrel", "barrels", "days", "weeks", "times",

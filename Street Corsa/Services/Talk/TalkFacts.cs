@@ -336,6 +336,7 @@ namespace StreetCorsa.Services.Talk
             }
 
             var asked = Asked(found.Search);
+            if (found.NoName is { } name) yield return GameText.Say("chat.fact.stock.no_name", ("words", name));
             if (found.Picks.Count == 0)
             {
                 yield return GameText.Say("chat.fact.stock.nothing", ("asked", asked));

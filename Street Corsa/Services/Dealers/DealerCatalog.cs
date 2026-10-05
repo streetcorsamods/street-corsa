@@ -83,7 +83,8 @@ namespace StreetCorsa.Services.Dealers
                 foreach (var (id, dealer, mod) in dealers.Entries)
                 {
                     dealer.Id = id;
-                    FindPortrait(dealer, mod, problems);
+                    FindPortrait(dealer.Salesman, mod, ContentTypes.Dealers,
+                        portrait => $"dealer {dealer.Id}: no salesman portrait \"{portrait}\"; he is shown without one", problems);
                     ReadCars(dealer, problems);
                     _byId[id] = dealer;
                     _dealers.Add(dealer);
@@ -117,16 +118,19 @@ namespace StreetCorsa.Services.Dealers
             }
         }
 
-        /// <summary>A salesman's portrait, next to the dealer files of the mod that gives him; told when it is not there</summary>
-        private static void FindPortrait(DealerDefinition dealer, ModInfo mod, List<string> problems)
+        /// <summary>
+        /// A salesman's or a clerk's portrait, next to the <paramref name="contentType"/> files of the mod that gives them;
+        /// told when it is not there (<paramref name="missing"/>: what the player is told, given the picture's name)
+        /// </summary>
+        internal static void FindPortrait(DealerSalesman? person, ModInfo mod, string contentType, Func<string, string> missing, List<string> problems)
         {
-            if (dealer.Salesman is not { Portrait.Length: > 0 } salesman) return;
+            if (person is not { Portrait.Length: > 0 }) return;
 
-            var folder = Path.Combine(mod.Folder, ContentTypes.Dealers);
-            if (PathNames.TryCombineUnder(folder, salesman.Portrait, out var file) && File.Exists(file))
-                salesman.PortraitFile = file;
+            var folder = Path.Combine(mod.Folder, contentType);
+            if (PathNames.TryCombineUnder(folder, person.Portrait, out var file) && File.Exists(file))
+                person.PortraitFile = file;
             else
-                problems.Add($"{mod.Id}/{ContentTypes.Dealers}: dealer {dealer.Id}: no salesman portrait \"{salesman.Portrait}\"; he is shown without one");
+                problems.Add($"{mod.Id}/{contentType}: {missing(person.Portrait)}");
         }
 
         private const string DealersList = "dealers";

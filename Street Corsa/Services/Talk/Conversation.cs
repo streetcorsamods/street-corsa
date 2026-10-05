@@ -223,6 +223,12 @@ namespace StreetCorsa.Services.Talk
             return await AskAsync(text, null, cancellationToken).ConfigureAwait(true);
         }
 
+        /// <summary>A deal at the counter: what the clerk found is told at its prices and stock now, not as it was</summary>
+        public void StockChanged()
+        {
+            if (Counter != null && Found != null) Found = Counter.Recheck(Found);
+        }
+
         /// <summary>The talk is over: what the person makes of it is written in the background and kept with them</summary>
         public void End()
         {

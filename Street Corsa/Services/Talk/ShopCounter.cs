@@ -97,7 +97,8 @@ namespace StreetCorsa.Services.Talk
 
         private static decimal? Number(JsonNode? node) => node?.GetValueKind() switch
         {
-            JsonValueKind.Number => node.GetValue<decimal>(),
+            // A number too big for a price (1e30) is no price, as is one that will not read
+            JsonValueKind.Number => node.AsValue().TryGetValue<decimal>(out var n) ? n : null,
             JsonValueKind.String => decimal.TryParse(node.GetValue<string>().Trim().TrimStart('$').Replace(",", ""), NumberStyles.Number,
                 CultureInfo.InvariantCulture, out var d) ? d : null,
             _ => null
@@ -112,8 +113,12 @@ namespace StreetCorsa.Services.Talk
     public sealed record ClerkPick(string Id, string Name, string Kind, decimal Price, bool Fits, int InStock, double? PowerBefore = null,
         double? PowerAfter = null);
 
-    /// <summary>What the game found for a search: how many parts in stock match it, and the few best of them</summary>
-    public sealed record ClerkFindings(ClerkSearch Search, int Matching, IReadOnlyList<ClerkPick> Picks);
+    /// <summary>
+    /// What the game found for a search: the search as it was run (a name no part has, or a fit with no car to fit, left
+    /// out), how many parts in stock match it, and the few best of them; <paramref name="NoName"/> the name asked for that
+    /// no part in stock has
+    /// </summary>
+    public sealed record ClerkFindings(ClerkSearch Search, int Matching, IReadOnlyList<ClerkPick> Picks, string? NoName = null);
 
     /// <summary>
     /// The part shop's counter, as a clerk's talk sees it (the screen is it): the kinds of part the shop has, what the clerk
@@ -129,5 +134,8 @@ namespace StreetCorsa.Services.Talk
 
         /// <summary>The stock searched: the list shows what matches and the picks; the best few are the clerk's to talk about</summary>
         Task<ClerkFindings> FindAsync(ClerkSearch search, CancellationToken cancellationToken);
+
+        /// <summary>The picks after a deal: at their prices now, with what is left of them; one sold out is gone</summary>
+        ClerkFindings Recheck(ClerkFindings found);
     }
 }
