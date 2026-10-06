@@ -138,7 +138,7 @@ public abstract class OnboardViewport3D : D3DViewportBase
         _ = WearLayer.WarmAsync(player.Directory, player.Shown);
 
         var data = SceneLights.DataOf(player.Directory, ex => Logger.Warning(ex, "The data of {Car} could not be read: it sits and looks as most cars do", player.Directory));
-        var frame = SceneLights.FrameOf(data, player.Directory);
+        var frame = SceneLights.FrameOf(data, player.Directory, player.Shown);
         var placement = placementOf?.Invoke(frame);
 
         // The slot hands a matrix set while it was empty to the car it is given: set before and after

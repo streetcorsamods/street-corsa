@@ -86,11 +86,18 @@ internal static class SceneLights
     public static AcCarFrame FrameOf(string carDirectory, Action<Exception>? failed = null) => FrameOf(DataOf(carDirectory, failed), carDirectory);
 
     /// <summary>
-    /// <see cref="FrameOf(string, Action{Exception}?)"/> from data already read (<see cref="DataOf"/>); the car's folder
-    /// for its model's wheel hubs, which stand it on its tyres (<see cref="AcCarFrame.FromData"/>)
+    /// <see cref="FrameOf(string, Action{Exception}?)"/> for the car as it shows <paramref name="shown"/>: on tyres of
+    /// another size it stands that much higher or lower
     /// </summary>
-    public static AcCarFrame FrameOf(CarData? data, string? carDirectory) =>
-        data == null ? new AcCarFrame(FallbackEye, 0f) : AcCarFrame.FromData(data, carDirectory == null ? null : Parts.CarHubs.Of(carDirectory));
+    public static AcCarFrame FrameOf(string carDirectory, Parts.Cars.ShownSet? shown) => FrameOf(DataOf(carDirectory), carDirectory, shown);
+
+    /// <summary>
+    /// <see cref="FrameOf(string, Action{Exception}?)"/> from data already read (<see cref="DataOf"/>); the car's folder
+    /// for its model's wheel hubs, which stand it on its tyres, and what it shows for the size of those
+    /// (<see cref="AcCarFrame.FromData"/>)
+    /// </summary>
+    public static AcCarFrame FrameOf(CarData? data, string? carDirectory, Parts.Cars.ShownSet? shown = null) =>
+        data == null ? new AcCarFrame(FallbackEye, 0f) : AcCarFrame.FromData(data, carDirectory == null ? null : Parts.CarHubs.Of(carDirectory), shown);
 
     /// <summary>
     /// A car's data files (data.acd decrypted when it has one), read once for all that wants them, the way the race
@@ -175,9 +182,10 @@ internal sealed record AcCarFrame(float EyeX, float EyeY, float EyeZ, float Lift
     /// The car's frame from its data. A car that gives no driver's eyes has them where most cars do: how it sits does
     /// not hang on them. With its model's wheel hubs (<paramref name="hubs"/>) the car stands on its tyres: each axle's
     /// hubs a tyre's radius over the road. The data's own frame put most cars 2 to 10 cm over the road (their models do
-    /// not sit as their physics have them), seen from outside at the diner; it is what a car without hubs gets.
+    /// not sit as their physics have them), seen from outside at the diner; it is what a car without hubs gets. On tyres
+    /// of another size than its own (<paramref name="shown"/>, the scenes draw them scaled) it stands as high as they make it.
     /// </summary>
-    public static AcCarFrame FromData(CarData data, Parts.CarAnchors? hubs = null)
+    public static AcCarFrame FromData(CarData data, Parts.CarAnchors? hubs = null, Parts.Cars.ShownSet? shown = null)
     {
         var car = data.Ini("car.ini");
         var given = CarData.Vector3(car, "GRAPHICS", "DRIVEREYES");
@@ -194,6 +202,7 @@ internal sealed record AcCarFrame(float EyeX, float EyeY, float EyeZ, float Lift
         var cog = front > 0 && rear > 0 ? (front + rear) / 2f : 0f;
         var lift = cog > 0 ? cog + offset[1] : 0f;
         if (OnItsTyres(tyres, hubs) is { } onTyres) lift = onTyres;
+        lift += OtherTyres(tyres, shown);
 
         return new AcCarFrame(eyes[0], eyes[1], eyes[2], float.IsFinite(lift) && Math.Abs(lift) < 2f ? lift : 0f);
     }
@@ -212,6 +221,23 @@ internal sealed record AcCarFrame(float EyeX, float EyeY, float EyeZ, float Lift
         var rear = rearRadius - (hubs.WheelLR.Y + hubs.WheelRR.Y) / 2f;
         var lift = (front + rear) / 2f;
         return float.IsFinite(lift) && Math.Abs(lift) < 2f ? lift : null;
+    }
+
+    /// <summary>
+    /// How much higher tyres of another size stand the car (lower when smaller): each axle's tyre radius times how much
+    /// bigger its shown tyres are (<see cref="Parts.Cars.ShownWheel.TyreScale"/>), the two axles' mean. The scenes scale a
+    /// shown tyre round the car's hub; a car on smaller ones hung over the road with them.
+    /// </summary>
+    internal static float OtherTyres(IniText tyres, Parts.Cars.ShownSet? shown)
+    {
+        if (shown == null) return 0f;
+        float Scale(int corner) => corner < shown.Wheels.Count && shown.Wheels[corner] is { } wheel && float.IsFinite(wheel.TyreScale) ? wheel.TyreScale : 1f;
+        float Axle(string axle, int left, int right) =>
+            CarData.Float(tyres, axle, "RADIUS", 0f) is var radius && radius > 0 ? radius * ((Scale(left) + Scale(right)) / 2f - 1f) : 0f;
+
+        // The corners as WheelFit.WheelNodes has them: LF, RF, LR, RR
+        var change = (Axle("FRONT", 0, 1) + Axle("REAR", 2, 3)) / 2f;
+        return float.IsFinite(change) && Math.Abs(change) < 0.5f ? change : 0f;
     }
 }
 

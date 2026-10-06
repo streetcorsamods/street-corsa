@@ -279,7 +279,7 @@ public class StreetViewport3D : OnboardViewport3D
                 if (Renderer != renderer || load != _rivalLoad) return;
 
                 _rivalShown = car;
-                _rivalLift = SceneLights.FrameOf(car.Directory).Lift;
+                _rivalLift = SceneLights.FrameOf(car.Directory, car.Shown).Lift;
                 if (_rivalSlot.CarNode is { } node && Light == StreetLight.Night)
                 {
                     node.HeadlightsEnabled = true;

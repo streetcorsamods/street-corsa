@@ -419,6 +419,20 @@ public class GasStationTests
         Assert.Null(AcCarFrame.OnItsTyres(new StreetCorsa.Parts.Export.IniText(""), hubs));
     }
 
+    [Fact]
+    public void A_car_on_smaller_tyres_stands_lower_and_on_bigger_ones_higher()
+    {
+        var tyres = new StreetCorsa.Parts.Export.IniText("[FRONT]\nRADIUS=0.30\n[REAR]\nRADIUS=0.30\n");
+        var rim = new ShownModel("rim.kn5", "rim");
+        var smaller = new ShownWheel(rim, new ShownModel("tyre.kn5", "tyre"), System.Numerics.Matrix4x4.Identity, 0.9f);
+        var bigger = smaller with { TyreScale = 1.1f };
+
+        // The tyres the car shows are drawn that much smaller or bigger round its hubs: the car goes down or up with them
+        Assert.Equal(-0.03f, AcCarFrame.OtherTyres(tyres, ShownSet.Of([smaller, smaller, smaller, smaller])), 4);
+        Assert.Equal(0.015f, AcCarFrame.OtherTyres(tyres, ShownSet.Of([null, null, bigger, bigger])), 4);
+        Assert.Equal(0f, AcCarFrame.OtherTyres(tyres, null));
+    }
+
     // ---- The stage ----
 
     [Fact]
