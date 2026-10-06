@@ -1,8 +1,2 @@
-1. Newspaper
-	- Car ads: they're all from dealers. I want them to be mostly from racers and a few from dealers. Maybe some cars that the dealers don't show because they're not as good as the ones showed.
-	- Ads are sorted alphabetically. Make it random.
-	
-2. Paint job
-	- Cars: let's create a paint chamber in 3d and an animation for the paint process. The car is in the garage, the player hits the paing button at the bottom section (I've left the file icons/paint_spray.png for the button) and the screen fades away and moves to the paint chamber. The car makes its entrance and a nice spray animations goes on while the car changes its skin. It would be nice to be able to pick a custom color, not only the skins the mod has. After painting, the car doesn't back up and the screens fades out and moves back to the garage. There, the car does its entrance with the new shinny color!
-	
-3. Don't allow the player to hit the streets if they have no car selected or if the car isn't running.
+1. Car and parts prices
+	- We need to review the prices to follow some game logic. The Cadillac 49 would be an expensive car in real life but it's not a good ride for racing, so we must estimate the price based on the car capabilities. We could infer the price based on the car specs, engine

@@ -191,18 +191,18 @@
                                             Orientation="Horizontal"
                                             VerticalAlignment="Center"
                                             Margin="20,0">
-                                    <TextBlock Text="Base Price: $"
+                                    <TextBlock Text="New price:"
                                                FontSize="{StaticResource FontSizeBody}"
                                                Foreground="{StaticResource TextSecondaryBrush}"
                                                VerticalAlignment="Center"
                                                Margin="0,0,5,0"/>
-                                    <TextBox Text="{Binding BasePrice, StringFormat=N0, UpdateSourceTrigger=PropertyChanged}"
-                                             Width="100"
-                                             Height="28"
-                                             FontSize="{StaticResource FontSizeBody}"
-                                             Padding="5,3"
-                                             VerticalContentAlignment="Center"
-                                             HorizontalContentAlignment="Right"/>
+                                    <TextBlock Text="{Binding BasePriceDisplay}"
+                                               ToolTip="{Binding PriceBreakdown}"
+                                               Width="100"
+                                               FontSize="{StaticResource FontSizeBody}"
+                                               Foreground="{StaticResource TextPrimaryBrush}"
+                                               VerticalAlignment="Center"
+                                               TextAlignment="Right"/>
                                 </StackPanel>
 
                                 <!-- Dealer Precedence -->

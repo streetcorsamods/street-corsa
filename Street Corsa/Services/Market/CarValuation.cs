@@ -11,44 +11,33 @@ namespace StreetCorsa.Services.Market
     /// <summary>
     /// What a car is worth: the one formula for it. The market prices its cars with it, an opponent's car is
     /// bought for it, a pink-slipped car goes back on a lot at it, and an opponent weighs a pink-slip challenge
-    /// with it. Before, each of those had its own sum, so a car at condition 0.5 was worth 0.8 of its base price
-    /// on a lot, 0.5 in an opponent's hands, 0.4 when relisted and 1.0 to the challenge logic.
+    /// with it.
     ///
-    /// Worth is the profile's base price (the car in perfect shape with its factory engine) times how straight
-    /// the car is and a little for its past (<see cref="HistoryFactor"/>), plus part of what has been put into the
-    /// engine: money put into an engine never comes back in full.
+    /// Worth is the source game's (its Vehicle.getTotalPrice): the body in the shape it is in, and every part on the car
+    /// in its wear and damage (<see cref="PartPricing.Worth"/>). What has been put into the car shows in full, what has
+    /// been taken off it is not there to count, a worn engine is worth what its worn parts are. The whole is moved by how
+    /// the car looks (<see cref="LooksFactor"/>) and a little by its past (<see cref="HistoryFactor"/>).
     /// </summary>
     public static class CarValuation
     {
         private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger("Market");
 
-        /// <summary>Share of the money put into an engine beyond the factory one that shows in the car's worth</summary>
-        public static double ModificationsShare => Rules.RuleBook.Current.Market.ModificationsShare;
-
         /// <summary>
-        /// How much of its base price a car is worth in this condition: 0.5 at condition 0, 1.1 at condition 1
-        /// (a car in better shape than the average one the base price stands for)
+        /// How much of its new price a thing in this shape is worth (0 to 1): the source game's wear, 0.3 at nothing left
+        /// of it and all of it new, as a part's (<see cref="PartPricing.Worth"/>)
         /// </summary>
-        public static decimal ConditionFactor(double condition) =>
-            0.5m + (decimal)Unit.Clamp01(condition, ifNotFinite: 0) * 0.6m;
+        public static decimal Shape(double condition) => 0.3m + (decimal)Unit.Clamp01(condition, ifNotFinite: 0) * 0.7m;
 
         /// <summary>One condition for the whole car: the average of engine, gearbox, body and tyres</summary>
         public static double ConditionOf(Car car) =>
             (car.EngineHealth + car.TransmissionHealth + car.BodyCondition + car.TireCondition) / 4.0;
 
-        /// <summary>What an engine worth <paramref name="engineWorth"/> adds over the factory one worth <paramref name="stockWorth"/></summary>
-        public static decimal ModificationsValue(double engineWorth, double stockWorth)
-        {
-            var extra = (engineWorth - stockWorth) * ModificationsShare;
-            return double.IsFinite(extra) && extra > 0 ? (decimal)Math.Min(extra, 1e9) : 0m;
-        }
-
         /// <summary>
-        /// A car of this base price in this condition, with this much put into it, to the nearest hundred.
-        /// <paramref name="history"/> is <see cref="HistoryFactor"/>: it moves the car's worth, not what was put into the engine.
+        /// A car worth <paramref name="newPrice"/> new in this condition, its past counted (<see cref="HistoryFactor"/>),
+        /// to the nearest hundred
         /// </summary>
-        public static decimal Value(decimal basePrice, double condition, decimal modifications = 0m, decimal history = 1m) =>
-            RoundToHundred(Math.Max(0m, basePrice) * ConditionFactor(condition) * history + modifications);
+        public static decimal Value(decimal newPrice, double condition, decimal history = 1m) =>
+            RoundToHundred(Math.Max(0m, newPrice) * Shape(condition) * history);
 
         /// <summary>What wins add to a car's worth: a point each, two for a car won with it, at most <see cref="MaxHistoryShare"/></summary>
         public static decimal WinShare => Rules.RuleBook.Current.Market.WinShare;
@@ -71,7 +60,7 @@ namespace StreetCorsa.Services.Market
         /// <summary>
         /// What a car's past does to its worth, as a factor on it: wins (a car that took pink slips most) put up to 15%
         /// on, a car that has been through many hands or has a lot of miles loses up to 15%. The car's condition still
-        /// says far more (<see cref="ConditionFactor"/>). A car nobody knows anything about (null, an older save) is 1.
+        /// says far more. A car nobody knows anything about (null, an older save) is 1.
         /// </summary>
         public static decimal HistoryFactor(CarHistory? history, double odometerKm)
         {
@@ -112,73 +101,81 @@ namespace StreetCorsa.Services.Market
         }
 
         /// <summary>
-        /// What this very car is worth, the one way every part of the game asks: its model's base price (see
+        /// What this very car is worth, the one way every part of the game asks: by its model's profile (see
         /// <see cref="ValueOf"/>), or, for a model the catalog has no price for, what was paid for the car.
         /// </summary>
         /// <param name="profileOf">The profile of a car definition id</param>
-        /// <param name="definitionOf">The catalog entry of a car definition id; only asked for a priced model</param>
-        /// <param name="stockBuildOf">The factory build of a catalog entry; by default the parts service's</param>
-        public static decimal WorthOf(Car car, Func<string, CarProfile?> profileOf, Func<string, CarDefinition?> definitionOf,
-            ICarPartsService? parts, Func<CarDefinition, RatedBuild?>? stockBuildOf = null)
+        /// <param name="parts">The parts, to weigh the car's own; null or none: the car is weighed as it left the factory</param>
+        public static decimal WorthOf(Car car, Func<string, CarProfile?> profileOf, ICarPartsService? parts)
         {
             var profile = profileOf(car.DefinitionId);
             if (profile == null || profile.BasePrice <= 0) return PaidFor(car);
 
-            return ValueOf(car, profile.BasePrice, parts, definitionOf(car.DefinitionId), stockBuildOf);
+            return ValueOf(car, profile, parts is { IsAvailable: true } ? parts.Catalog : null);
         }
 
         /// <summary>A car nobody can price is worth what was paid for it: the best guess there is</summary>
         public static decimal PaidFor(Car car) => RoundToHundred(car.PurchasePrice);
 
         /// <summary>
-        /// What this very car is worth: its condition and, when the parts catalog is there, what has been done to
-        /// its engine. The engine is weighed at new prices against the factory build's parts, scaled by the car's
-        /// condition; putting the factory engine together to weigh it worn would take a dyno run.
+        /// What this very car is worth: its body in the shape it is in, and each part on it in its own (the parts it was
+        /// never given yet, an older save's, as the factory's in the car's shape), how it looks and its past. A profile
+        /// from before the body and parts were priced apart is the whole car in the car's shape.
         /// </summary>
-        /// <param name="basePrice">The profile's base price of the car's model</param>
-        /// <param name="parts">Null, or no catalog: the engine is taken to be the factory one</param>
-        /// <param name="definition">The car's catalog entry, to find its factory engine; null for the same</param>
-        /// <param name="stockBuildOf">The factory build of a catalog entry; by default the parts service's</param>
-        public static decimal ValueOf(Car car, decimal basePrice, ICarPartsService? parts = null, CarDefinition? definition = null,
-            Func<CarDefinition, RatedBuild?>? stockBuildOf = null)
+        /// <param name="catalog">The parts catalog; null: every part is taken as the factory's, in the car's shape</param>
+        public static decimal ValueOf(Car car, CarProfile profile, PartsCatalog? catalog = null)
         {
-            var condition = ConditionOf(car);
-            var whole = Math.Max(0m, basePrice) * (1m - MissingShare(car)) * LooksFactor(car.Rust, car.PaintWear, car.GlassCracks);
-            return Value(whole, condition, ModificationsOf(car, condition, parts, definition, stockBuildOf), HistoryFactor(car));
+            var looks = LooksFactor(car.Rust, car.PaintWear, car.GlassCracks);
+            if (profile.BodyPrice <= 0 && profile.EnginePrice <= 0 && profile.RunningGearPrice <= 0)
+                return Value(profile.BasePrice * looks, ConditionOf(car), HistoryFactor(car));
+
+            var worth = profile.BodyPrice * Shape(car.BodyCondition);
+            worth += (car.HasPartsAssigned ? PartsWorth(car, catalog, engine: true) : null) ?? profile.EnginePrice * Shape(car.EngineHealth);
+            worth += (car.HasRunningGearAssigned ? PartsWorth(car, catalog, engine: false) : null) ?? profile.RunningGearPrice * Shape(car.TireCondition);
+            return RoundToHundred(Math.Max(0m, worth) * looks * HistoryFactor(car));
         }
 
-        /// <summary>Share of the base price a car without its engine loses: the engine is what most of a car's worth is</summary>
-        public static decimal MissingEngineShare => Rules.RuleBook.Current.Market.MissingEngineShare;
-
-        /// <summary>Share of the base price a corner loses without its rim and tyre (a car on blocks)</summary>
-        public static decimal MissingWheelShare => Rules.RuleBook.Current.Market.MissingWheelShare;
-
-        /// <summary>Share of the base price a corner loses for each of its brake, spring and shock that is missing</summary>
-        public static decimal MissingCornerPartShare => Rules.RuleBook.Current.Market.MissingCornerPartShare;
+        /// <summary>
+        /// What a car of this model for sale in this condition is worth before its engine is known: the body and the
+        /// factory parts all in the car's shape, how it looks and its past. <see cref="EngineWorthOver"/> puts the engine
+        /// it turns out to have in its place.
+        /// </summary>
+        public static decimal ListingValue(CarProfile profile, double condition, decimal looks, decimal history)
+        {
+            var whole = profile.BodyPrice + profile.EnginePrice + profile.RunningGearPrice;
+            return Value((whole > 0 ? whole : profile.BasePrice) * looks, condition, history);
+        }
 
         /// <summary>
-        /// How much of its base price a car is short for the parts taken off it: its engine (on the stand, on the shelf,
-        /// sold) and the running gear off its corners. The car's own figures (<see cref="ConditionOf"/>) only follow the
-        /// parts that are there, so without this a stripped car was worth as much as a whole one. A car that never had
-        /// parts given to it (an older save) is short of nothing. At most the whole base price.
+        /// What <paramref name="engine"/>, as it is, is worth over the factory engine of <paramref name="profile"/> in the
+        /// car's shape: the difference a listing priced by <see cref="ListingValue"/> is out by once its engine is known
+        /// (below nothing for a tired one, above for one worked on)
         /// </summary>
-        public static decimal MissingShare(Car car)
+        public static decimal EngineWorthOver(PartsCatalog catalog, PartInstance engine, CarProfile profile, double condition)
         {
-            var share = 0m;
-            if (car.HasPartsAssigned && car.Engine == null) share += MissingEngineShare;
+            var worth = PartPricing.WorthOfAssembly(catalog, engine);
+            return double.IsFinite(worth) ? (decimal)Math.Min(worth, 1e9) - profile.EnginePrice * Shape(condition) : 0m;
+        }
 
-            if (car.HasRunningGearAssigned)
+        /// <remarks>
+        /// Parts work can fail on a bad part. Worth is asked for in places that must not fail over it - a pink-slip
+        /// challenge in the diner, a race nobody watches - so a failure (or no catalog) is null: the factory's parts count.
+        /// </remarks>
+        private static decimal? PartsWorth(Car car, PartsCatalog? catalog, bool engine)
+        {
+            if (catalog == null) return null;
+
+            try
             {
-                foreach (var corner in RunningGear.Mounted(car.Parts))
-                {
-                    if (corner.Rim == null || corner.Tyre == null) share += MissingWheelShare;
-                    if (corner.Brake == null) share += MissingCornerPartShare;
-                    if (corner.Spring == null) share += MissingCornerPartShare;
-                    if (corner.Shock == null) share += MissingCornerPartShare;
-                }
+                var roots = engine ? (car.Engine is { } root ? [root] : []) : car.Parts.Where(p => !ReferenceEquals(p, car.Engine));
+                var worth = roots.Sum(p => PartPricing.WorthOfAssembly(catalog, p));
+                return double.IsFinite(worth) ? (decimal)Math.Clamp(worth, 0, 1e9) : 0m;
             }
-
-            return Math.Min(1m, share);
+            catch (Exception ex)
+            {
+                Logger.Warning("Could not weigh the parts of a {CarId}; weighed as the factory's: {Error}", car.DefinitionId, ex.Message);
+                return null;
+            }
         }
 
         /// <summary>Worked on: the engine is not made of the factory build's parts</summary>
@@ -186,42 +183,6 @@ namespace StreetCorsa.Services.Market
         {
             var factory = stock.Build.Parts.Where(p => p.Part != null).Select(p => p.Part!).ToHashSet(StringComparer.OrdinalIgnoreCase);
             return !engine.SelfAndDescendants().All(p => factory.Contains(p.DefinitionId));
-        }
-
-        /// <summary>
-        /// What has been put into <paramref name="engine"/> beyond the factory build that shows in the car's worth:
-        /// its parts' new prices against the factory build's, scaled by the car's condition. The one rule for a
-        /// worked-on engine, on a lot and in anybody's hands.
-        /// </summary>
-        public static decimal EngineModifications(PartsCatalog catalog, PartInstance engine, RatedBuild stock, double condition)
-        {
-            var engineNew = engine.SelfAndDescendants().Sum(p => catalog.Get(p.DefinitionId) is { } d ? PartPricing.NewPrice(d) : 0);
-            var stockNew = stock.Build.Parts.Sum(p => p.Part != null && catalog.Get(p.Part) is { } d ? PartPricing.NewPrice(d) : 0);
-
-            var shape = Unit.Clamp01(condition, ifNotFinite: 0);
-            return ModificationsValue(engineNew * shape, stockNew * shape);
-        }
-
-        /// <remarks>
-        /// Parts work (the factory build, the parts catalog) can fail on a bad part. Worth is asked for in places
-        /// that must not fail over it - a pink-slip challenge in the diner, a race nobody watches - so a failure
-        /// counts the engine as the factory one, the way a listing whose engine could not be described still sells.
-        /// </remarks>
-        private static decimal ModificationsOf(Car car, double condition, ICarPartsService? parts, CarDefinition? definition,
-            Func<CarDefinition, RatedBuild?>? stockBuildOf)
-        {
-            try
-            {
-                if (parts is not { IsAvailable: true } || definition == null || car.Engine is not { } engine) return 0m;
-                if ((stockBuildOf ?? parts.GetStockBuild)(definition) is not { } stock) return 0m;
-
-                return EngineModifications(parts.Catalog, engine, stock, condition);
-            }
-            catch (Exception ex)
-            {
-                Logger.Warning("Could not weigh the engine of a {CarId}; valued as the factory one: {Error}", car.DefinitionId, ex.Message);
-                return 0m;
-            }
         }
     }
 }

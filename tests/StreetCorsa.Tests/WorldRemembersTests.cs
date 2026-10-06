@@ -49,8 +49,9 @@ public class CarHistoryTests
         var plain = new Car("car_a");
         var winner = new Car("car_a") { History = new CarHistory { Wins = 5, Races = 6 } };
 
-        Assert.Equal(10000m * CarValuation.ConditionFactor(1), CarValuation.ValueOf(plain, 10000m));
-        Assert.True(CarValuation.ValueOf(winner, 10000m) > CarValuation.ValueOf(plain, 10000m));
+        var model = new CarProfile { CarDefinitionId = "car_a", BasePrice = 10000m };
+        Assert.Equal(10000m, CarValuation.ValueOf(plain, model));
+        Assert.True(CarValuation.ValueOf(winner, model) > CarValuation.ValueOf(plain, model));
     }
 
     [Fact]

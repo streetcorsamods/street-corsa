@@ -247,8 +247,9 @@ namespace StreetCorsa
             CatalogRepository = new ContentCatalogRepository();
             CarImportService = new CarImportService(CatalogRepository);
             ProfileRepository = new CarProfileRepository();
-            ProfileService = new CarProfileService(CatalogRepository, ProfileRepository);
             CarPartsService = new Services.Parts.CarPartsService(CatalogRepository, ProfileRepository);
+            // Cars are priced by their factory engine and running gear: the parts first
+            ProfileService = new CarProfileService(CatalogRepository, ProfileRepository, CarPartsService);
             var partShops = new Services.PartShops.PartShopCatalog();
             NewspaperPartsService = new Services.Parts.NewspaperPartsService(CarPartsService, partShops);
             DealerCatalog = new Services.Dealers.DealerCatalog();

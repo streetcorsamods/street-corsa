@@ -155,9 +155,9 @@ it changes:
 | `rivals` | how many race, their money (`money`, by age band), going broke, trading up, leaving and coming back, selling cars on, a boss's money and record (`king`) |
 | `dealers` | dealers opening and closing, closing-down sales, trade |
 | `partShops` | the junkyard, haggling, the regulars' discount, trade, and each kind of shop's prices and shelves (`kinds`) where a shop's own file says nothing |
-| `economy` | what parts cost against their scripts (`partsPriceScale`), used and trade-in shares, mail order, the paper's part ads, a prize camshaft's cash |
-| `market` | the dealers' lots, selling a car, and what a car is worth (condition, history, mileage, missing parts) |
-| `cars` | what a car is worth new and how common it is where cars.json gives neither: the price for its power to weight (`referencePrice` at `referenceHpPerTonne`, rising as the ratio to `priceExponent`), a car without specs, the least and most, the rounding, the believable weights, the factor of its year (`priceByYear`: the first step it is in, `{ "from": 1960, "value": 1.2 }`, a step without `from` takes any year) and source (`kunos`, `dlc`, `mod`, `unknown`), and how common it is by year, source and power to weight. Unlike the rest these follow the mods next to the game, not the career: the catalog is the program's, and a change works every price out again |
+| `economy` | a factor on every part's price (`partsPriceFactor`; the prices themselves are part_groups.json's), used and trade-in shares, mail order, the paper's part ads, a prize camshaft's cash |
+| `market` | the dealers' lots, selling a car, and what a car's looks and history do to its worth |
+| `cars` | what a car's bare body costs new (`bodyPrice` at `bodyKg`, more for a lighter one and less for a heavier one as the ratio to `bodyWeightPower`, within `minBodyPrice` and `maxBodyPrice`), the least and most a whole car costs, the rounding, the believable weights, and how common a car is (where cars.json does not say) by year, source and power to weight. A car costs its body and its factory engine's and running gear's parts (see "parts", the shelves' `price`). Unlike the rest these follow the mods next to the game, not the career: the catalog is the program's, priced again at every start |
 | `engines` | how an engine is cooled and oiled by its parts (`cooling`), how the cars on the lots were worked on (`factory`: swaps, bolt-ons), how the rivals' tuners work (`tuner`), and the points an AC car's name and power give an engine build when the game picks its factory engine (`matcher`) |
 | `repairs` | the garage's repairs: parts, labour, body work |
 | `condition` | damage, wear, dirt, fuel and oil, and what a race takes out of a car |
@@ -244,7 +244,19 @@ game does with it. A part is in the first group with a class its script descends
 what it changes (a group keeps its place). `never_stacks`: never mounts on its own kind (a head on a head);
 `bolt_on`: what the cars on the lots were worked on with; `tune`: how much a rival's tuner goes for it (10 the most,
 none: not at all); `speed_shop`: a speed shop sells it. The player reads `part_group.<id>` in the text, else the
-group's `name`, else its id. The ids `engine_blocks`, `cylinder_heads`, `camshafts`, `crankshafts`, `connecting_rods`,
+group's `name`, else its id.
+
+`price`: what a part of the kind costs new, in the game's dollars, by what it does, as the source game priced its
+parts. `base` for every part, and `per_hp` for every horsepower it is worth on the game's dyno: an engine block the
+power of its own engine (the least of its factory builds), any other part what it makes over the factory part in its
+place on the build it does the most for (measured once at every start), the horsepower raised to `hp_power` first
+(none: 1). A kind priced `by` a figure of its own costs as much more or less as its figure stands against the middle
+one of its kind, to the power `by_power`: `grip` (a tyre's friction by its width), `brake_torque`, `rim_size`,
+`spring_rate`, `damping`, `carb_mounts` (the carburettors a manifold takes: a dual-quad is a kit no dyno run of the
+manifold alone measures). The `accessories` group takes no classes: it prices the parts no group takes in. A part's
+own `value` (the source game's price, kept in `properties`) prices nothing.
+`EngineBench <Content folder> prices [AC cars folder | part id]` lists the prices by kind, every installed car's new
+price, or the power and price of the parts whose id holds what is given. The ids `engine_blocks`, `cylinder_heads`, `camshafts`, `crankshafts`, `connecting_rods`,
 `pistons`, `transmissions`, `air_filters`, `exhaust`, `oil_pans`, `tyres`, `rims`, `brakes`, `springs` and `shocks`
 are the game's own: the engine's internals wear and break, the running gear has a slot on each wheel, the attendant
 looks at the air filter and the exhaust. A mod may change their classes, never their meaning. The base game's groups are
@@ -452,22 +464,23 @@ naming only that; a list (a make's words) is taken whole. What does not read is 
 - `makes`, by id: `words` that tell the make in a car's brand, else in its name (any case; two words allowed,
   `"alfa romeo"`; a word is one make's); `family`, the corporate family its cars and engines belong to (`gm`: a Pontiac
   turns up with a Chevrolet V8, never a Hemi; the engine builds' and sounds' families come from the same words), none
-  for a make whose words name no engine; `country`, a country's id or name; `price`, what the badge does to a car's
-  price (`2.5`: two and a half times); `common`, added to how common its cars are (0 rare to 1 common).
+  for a make whose words name no engine; `country`, a country's id or name; `common`, added to how common its cars
+  are (0 rare to 1 common). A badge does nothing to a car's price.
 - `countries`, by id: `names` a `ui_car.json` writes for it (`"Great Britain"` is the `UK`) and `regions` it is in
   (`"Europe"`); a region is a country entry too, with its names (`"European"`).
 - `words`: `aliases` (a nickname read as the word it stands for, `"vette": "corvette"`) and `noise` (words that say
   nothing about which car or engine it is), for matching a car's name to an engine build's.
 - `cars`, by the AC car's folder name: what is given here is not worked out from the car's data. `engine`, the
   engine build it leaves the factory with (`engine_builds.json`, namespaced); `layout`, `front`, `mid`, `rear`, or `front_transverse` and `mid_transverse` for an engine lying across the car (guessed for a front-wheel-drive car; the garage draws it so);
-  `price`, in perfect condition in the game's money; `common`, how often it turns up for sale, 0 to 1; `make`, a make
-  of `makes`. The base game's holds the factory engines and prices set by hand in the catalog editor (a developer's
-  screen, which saves into the base game's `cars.json`).
+  `common`, how often it turns up for sale, 0 to 1; `make`, a make of `makes`. The base game's holds the factory
+  engines set by hand in the catalog editor (a developer's screen, which saves into the base game's `cars.json`).
+  A car's price is never given: it costs its body by its weight (the rules' `cars`) and its factory parts (the
+  shelves' `price`). A `price` a mod still gives is told as no longer read.
 
 ```json
 {
-  "makes": { "datsun": { "family": "nissan", "country": "Japan", "words": [ "datsun" ], "price": 0.9 } },
-  "cars": { "ks_nissan_skyline_r34": { "engine": "mymod:engines/rb26/stock", "price": 42000, "common": 0.3 } }
+  "makes": { "datsun": { "family": "nissan", "country": "Japan", "words": [ "datsun" ] } },
+  "cars": { "ks_nissan_skyline_r34": { "engine": "mymod:engines/rb26/stock", "common": 0.3 } }
 }
 ```
 

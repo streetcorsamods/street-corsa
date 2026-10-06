@@ -613,9 +613,12 @@ mail order (`Screens/UsedParts`, the part shops' map's Mail order button) has tw
 `NewspaperPartsService.MailOrderPremium`, paid when ordered and on the shelf three days later: `Player.PartOrders`, brought by
 `PartsAdsRefreshTask` each morning, told of in the garage from `Player.Delivered`), and selling from the shelf. Filters: kind
 (`PartKinds.GroupOf`, from the script classes), name, and "only what fits my car" (`FindFittingParts`: everything that
-goes on any slot of the selected car's tree, taken slots included). New price is the script's `value`; a used part is
-worth `value x tear x (0.3 + 0.7 x wear)` as in SLRR, ads ask around 60% of that, a trade-in pays 40%.
-`AppSettings.PartsPriceScale` (0.2) brings the scripts' early-2000s dollars to the game's 1970 ones.
+goes on any slot of the selected car's tree, taken slots included). New price is what the part does
+(`PartPriceBook`, 2026-10-06: its kind's `price` in part_groups.json, a base and dollars per horsepower the part is
+worth on the dyno, measured once a session over every build that runs; the scripts' `value` no longer prices
+anything); a used part is worth `new x tear x (0.3 + 0.7 x wear)` as in SLRR, ads ask around 60% of that, a trade-in
+pays 40%. A car is priced the SLRR way too (`CarPricing`, `CarValuation`): its body by its weight, and every part on it
+in its wear and damage.
 Every part model is drawn at the size it was made. A `model_scales.json` that drew the ported packs 1.2x (brakes
 1.35x) came in on 2026-09-26 and went out on 2026-09-27: the user checked and the models are well sized. Measured on 2026-09-26, the models are about real size: the GM small blocks 0.74 × 0.54 × 0.34 m, the big
 Mopar and Ford blocks 0.75 × 0.63 m, the stock disc 0.265 m, a four-barrel 0.26 × 0.17 m; only the stock coil spring

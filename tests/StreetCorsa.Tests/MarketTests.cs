@@ -48,7 +48,7 @@ public class MarketTests
     }
 
     [Fact]
-    public void A_valuer_reads_each_model_from_the_catalog_once_and_values_like_ValueOf()
+    public void A_valuer_reads_each_model_once_and_values_like_ValueOf()
     {
         var cars = Enumerable.Range(0, 5).Select(_ => new Car("car_a") { EngineHealth = 0.5 }).ToList();
         var expected = _market.ValueOf(cars[0]);
@@ -58,8 +58,9 @@ public class MarketTests
         var valueOf = _market.Valuer();
         Assert.All(cars, c => Assert.Equal(expected, valueOf(c)));
 
+        // The model's profile once; the car catalog not at all: a car's worth is its profile's and its parts'
         Assert.Equal(1, _profiles.Reads - profileReads);
-        Assert.Equal(1, _catalog.Reads - catalogReads);
+        Assert.Equal(0, _catalog.Reads - catalogReads);
     }
 
     [Fact]

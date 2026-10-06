@@ -40,6 +40,8 @@ public static class Program
             Console.WriteLine("       EngineBench <parts folder> bench <build id>            take every part off and find where it goes back");
             Console.WriteLine("       EngineBench <parts folder> renew <older parts folder>  engines saved with an older conversion, brought up to date");
             Console.WriteLine("       EngineBench <parts folder> gear <AC cars folder>       factory running gear chosen for every car");
+            Console.WriteLine("       EngineBench <parts folder> prices [AC cars folder]     what the parts cost new by kind, and every car new");
+            Console.WriteLine("       EngineBench <parts folder> prices <part id fragment>   the power and price of every part whose id holds it");
             Console.WriteLine("       EngineBench <parts folder> layout <AC cars folder>     where every car carries its engine, guessed from its data");
             Console.WriteLine("       EngineBench <parts folder> car <AC car folder> <build id> [output folder]   every data file the car's parts change");
             Console.WriteLine("       EngineBench <parts folder> sound <AC car folder> <car id> [output folder]   the car's sound written for another car id");
@@ -56,6 +58,9 @@ public static class Program
 
         switch (args[1])
         {
+            case "prices":
+                return Prices(catalog, args.Length > 2 ? args[2] : null);
+
             case "list":
                 foreach (var build in catalog.EngineBuilds) Console.WriteLine($"  {build.Id,-62} {build.Name}");
                 return 0;
@@ -204,7 +209,7 @@ public static class Program
         Console.WriteLine($"\nRuns: {report.Runs}{(report.Problem != null ? " - " + report.Problem : "")}");
         Console.WriteLine($"Inputs: {report.Inputs}");
         Console.WriteLine($"Idle {report.IdleRpm:0} rpm, limiter {report.LimiterRpm:0} rpm, inertia {report.Inertia:0.000} kg m2, " +
-                          $"mass {report.Mass:0} kg, value ${report.Value:0}, friction {report.Friction:0.000000}, clutch {report.ClutchCapacity:0}{(report.Turbocharged ? ", turbo" : "")}");
+                          $"mass {report.Mass:0} kg, value ${tree.Root.SelfAndDescendants().Sum(p => PartPricing.NewPrice(p.Definition)):0}, friction {report.Friction:0.000000}, clutch {report.ClutchCapacity:0}{(report.Turbocharged ? ", turbo" : "")}");
         Console.WriteLine($"Gears {string.Join(" / ", report.GearRatios.Select(r => r.ToString("0.00")))}  reverse {report.ReverseRatio:0.00}  " +
                           $"final {report.FinalRatio:0.00}  drive {report.DriveType}  lock {report.DiffLock:0.00}");
 
@@ -303,6 +308,67 @@ public static class Program
     /// Whether the folder's makes and part groups become the ones in use (process-wide): false for a second catalog
     /// (renew's old one), which must not change the rules the first is worked by
     /// </param>
+    /// <summary>
+    /// What the parts cost new, kind by kind (the dyno's price book), and what every installed car costs new: its body by
+    /// its weight, its factory engine and running gear
+    /// </summary>
+    private static int Prices(PartsCatalog catalog, string? carsFolder)
+    {
+        var watch = Stopwatch.StartNew();
+        var index = EngineBuildIndex.Create(catalog);
+        var book = PartPriceBook.Create(catalog, index);
+        PartPricing.Book = () => book;
+        Console.WriteLine($"{index.Runnable.Count} builds run, {book.Measured} parts measured on the dyno in {watch.ElapsedMilliseconds} ms\n");
+
+        Console.WriteLine($"  {"kind",-18} {"parts",5} {"least",8} {"middle",8} {"most",8}   dearest");
+        foreach (var kind in catalog.Parts.Values.GroupBy(PartKinds.GroupOf).OrderBy(g => g.Key, StringComparer.Ordinal))
+        {
+            var priced = kind.Select(p => (Part: p, Price: PartPricing.NewPrice(p))).OrderBy(p => p.Price).ToList();
+            var dearest = priced[^1];
+            Console.WriteLine($"  {kind.Key,-18} {priced.Count,5} {priced[0].Price,8:0} {priced[priced.Count / 2].Price,8:0} {dearest.Price,8:0}   " +
+                              $"{dearest.Part.Id} ({book.PowerOf(dearest.Part.Id) ?? 0:0} hp)");
+        }
+
+        if (carsFolder == null) return 0;
+
+        // Not a folder: the parts whose id holds it, each with its power and price
+        if (!Directory.Exists(carsFolder))
+        {
+            Console.WriteLine();
+            foreach (var part in catalog.Parts.Values.Where(p => p.Id.Contains(carsFolder, StringComparison.OrdinalIgnoreCase)).OrderBy(p => p.Id))
+                Console.WriteLine($"  {part.Id,-60} {PartKinds.GroupOf(part),-18} {book.PowerOf(part.Id) ?? 0,6:0.0} hp  ${PartPricing.NewPrice(part):0}");
+            return 0;
+        }
+
+        Console.WriteLine($"\n  {"car",-36} {"kg",5} {"hp",4} {"hp/t",5} {"body",7} {"engine",7} {"gear",6} {"new",7}   factory engine");
+        var rows = new List<(string Line, double Total)>();
+        foreach (var (folder, specs) in InstalledCarSpecs(carsFolder))
+        {
+            var carId = Path.GetFileName(folder);
+            var build = index.Get(CarBook.Current.Car(carId)?.Engine) ?? FirstMatch(index, folder, carId);
+            var gear = RunningGearFactory.Create(catalog, specs, 1).SelectMany(p => p.SelfAndDescendants())
+                .Select(p => catalog.Get(p.DefinitionId)).OfType<PartDefinition>();
+            var car = CarPricing.New(catalog, specs.TotalMass, build, gear);
+            var power = build?.PowerHp ?? 0;
+            rows.Add(($"  {carId,-36} {specs.TotalMass,5:0} {power,4:0} {power * 1000 / specs.TotalMass,5:0} {car.Body,7:0} {car.Engine,7:0} {car.RunningGear,6:0} {car.Total,7:0}   {build?.Build.Name ?? "none"}", car.Total));
+        }
+
+        foreach (var (line, _) in rows.OrderBy(r => r.Total)) Console.WriteLine(line);
+        return 0;
+    }
+
+    /// <summary>The build the engine matcher ranks first for a car without one in cars.json</summary>
+    private static RatedBuild? FirstMatch(EngineBuildIndex index, string folder, string carId)
+    {
+        var ui = AcCarUi.TryRead(folder, out _);
+        if (ui == null) return null;
+
+        var brand = AcCarUi.GetString(ui, "brand") ?? "";
+        var name = AcCarUi.GetString(ui, "name") ?? "";
+        var bhp = AcSpecs.ParsePower(AcCarUi.GetString(AcCarUi.GetObject(ui, "specs"), "bhp"));
+        return StockEngineMatcher.Rank(index, carId, brand, name, bhp).FirstOrDefault()?.Build;
+    }
+
     private static PartsCatalog LoadCatalog(string folder, bool useContent = true)
     {
         folder = Path.TrimEndingDirectorySeparator(Path.GetFullPath(folder));

@@ -86,20 +86,18 @@ public class CarsAndMakesTests : IDisposable
         var book = CarBook.Load(WithMod(("cars/mine.json", """
             {
               "makes": {
-                "ford": { "price": 1.3 },
+                "ford": { "common": 0.4 },
                 "datsun": { "family": "nissan", "country": "Japan", "words": [ "datsun" ] }
               },
-              "cars": { "datsun_240z": { "make": "datsun", "price": 4200, "layout": "front" } }
+              "cars": { "datsun_240z": { "make": "datsun", "layout": "front" } }
             }
             """)));
 
         Assert.Empty(book.Problems);
-        Assert.Equal(1.3, book.Make("ford")!.Price);
-        Assert.Equal(0.2f, book.Make("ford")!.Common);
+        Assert.Equal(0.4f, book.Make("ford")!.Common);
         Assert.Contains("mustang", book.Make("ford")!.Words);
         Assert.Equal("nissan", book.FamilyOf("Datsun 240Z"));
         Assert.Equal("datsun", book.MakeOf("datsun_240z", "Nissan", "Fairlady"));
-        Assert.Equal(4200m, book.Car("datsun_240z")!.Price);
         Assert.Equal(EngineLayout.Front, book.Car("datsun_240z")!.EngineLayout);
 
         // The make given gives the family too, whatever the brand says
@@ -115,7 +113,7 @@ public class CarsAndMakesTests : IDisposable
     }
 
     [Fact]
-    public void A_mods_null_list_or_wild_price_is_none_and_no_crash()
+    public void A_mods_null_list_is_none_and_a_price_is_told_and_not_taken()
     {
         var book = CarBook.Load(WithMod(("cars/mine.json", """
             {
@@ -127,9 +125,8 @@ public class CarsAndMakesTests : IDisposable
             """)));
 
         Assert.Empty(book.Make("jeep")!.Words);
-        Assert.Equal(1, book.Make("ford")!.Price);
-        Assert.Contains(book.Problems, p => p.Contains("makes.ford.price"));
-        Assert.Null(book.Car("a")?.Price);
+        Assert.Contains(book.Problems, p => p.Contains("makes.ford.price is no longer read"));
+        Assert.Contains(book.Problems, p => p.Contains("cars.a.price is no longer read"));
         Assert.False(book.IsIn("USA", "Europe"));
         Assert.Contains("camaro", book.Tokens("Chevrolet Camaro"));
     }
@@ -139,23 +136,20 @@ public class CarsAndMakesTests : IDisposable
     {
         var book = CarBook.Load(WithMod(("cars/mine.json", """
             {
-              "makes": { "datsun": { "words": [ "ford" ], "price": -2 } },
-              "cars": { "a": { "make": "nobody", "layout": "sideways", "price": -5, "common": 3 } },
+              "makes": { "datsun": { "words": [ "ford" ] } },
+              "cars": { "a": { "make": "nobody", "layout": "sideways", "common": 3 } },
               "trucks": { }
             }
             """)));
 
         Assert.Contains(book.Problems, p => p.Contains("\"ford\" is a word of both"));
-        Assert.Contains(book.Problems, p => p.Contains("makes.datsun.price"));
         Assert.Contains(book.Problems, p => p.Contains("cars.a.make"));
         Assert.Contains(book.Problems, p => p.Contains("cars.a.layout"));
-        Assert.Contains(book.Problems, p => p.Contains("cars.a.price"));
         Assert.Contains(book.Problems, p => p.Contains("cars.a.common"));
         Assert.Contains(book.Problems, p => p.Contains("\"trucks\""));
         var car = book.Car("a")!;
         Assert.Null(car.Make);
         Assert.Null(car.EngineLayout);
-        Assert.Null(car.Price);
         Assert.Null(car.Common);
     }
 
@@ -165,11 +159,12 @@ public class CarsAndMakesTests : IDisposable
         var before = CarBook.Current;
         try
         {
-            CarBook.Current = CarBook.Load(WithMod(("cars/mine.json", """{ "cars": { "c": { "engine": "b1", "price": 900, "common": 0.9, "layout": "rear" } } }""")));
+            CarBook.Current = CarBook.Load(WithMod(("cars/mine.json", """{ "cars": { "c": { "engine": "b1", "common": 0.9, "layout": "rear" } } }""")));
             var stored = new CarProfile { CarDefinitionId = "c", BasePrice = 20000, DealerPrecedence = 0.4f };
             var given = CarProfileRepository.Given(stored)!;
 
-            Assert.Equal(900m, given.BasePrice);
+            // The price is the game's, always
+            Assert.Equal(20000m, given.BasePrice);
             Assert.Equal(0.9f, given.DealerPrecedence);
             Assert.Equal("b1", given.StockEngineBuildId);
             Assert.True(given.StockEngineIsManual);
@@ -293,16 +288,17 @@ public class CarsAndMakesTests : IDisposable
             """;
         var written = BaseCarsFile.With(text, new Dictionary<string, CarFields>
         {
-            ["b"] = new(null, null, 250m, 0.75f),
-            ["a"] = new(null, null, null, null),
-            ["c"] = new("e2", EngineLayout.Rear, null, null)
+            ["b"] = new(null, null, 0.75f),
+            ["a"] = new(null, null, null),
+            ["c"] = new("e2", EngineLayout.Rear, null)
         });
 
         var file = ModMerge.Parse(written)!;
         Assert.Equal("notes", file["_comment"]![0]!.GetValue<string>());
         var cars = file["cars"]!.AsObject();
         Assert.False(cars.ContainsKey("a"));
-        Assert.Equal(250m, cars["b"]!["price"]!.GetValue<decimal>());
+        // An older editor's price goes: prices are the game's
+        Assert.False(cars["b"]!.AsObject().ContainsKey("price"));
         Assert.Equal(0.75, cars["b"]!["common"]!.GetValue<double>());
         Assert.False(cars["b"]!.AsObject().ContainsKey("engine"));
         Assert.Equal("rear", cars["c"]!["layout"]!.GetValue<string>());
@@ -344,7 +340,7 @@ public class CarsAndMakesTests : IDisposable
     [Fact]
     public void The_editor_never_writes_over_a_cars_json_that_does_not_read()
     {
-        var fields = new Dictionary<string, CarFields> { ["a"] = new("e1", null, null, null) };
+        var fields = new Dictionary<string, CarFields> { ["a"] = new("e1", null, null) };
         Assert.Throws<InvalidDataException>(() => BaseCarsFile.With("""{ "cars": { "b": { "price": 1 } "c": { } } }""", fields));
         Assert.Throws<InvalidDataException>(() => BaseCarsFile.With("""{ "cars": { "b": { }, "B": { } } }""", fields));
         Assert.Contains("\"a\"", BaseCarsFile.With(null, fields));

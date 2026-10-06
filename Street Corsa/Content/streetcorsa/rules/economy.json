@@ -5,7 +5,7 @@
     "(see docs/modding.md, \"rules\"). A career keeps the rules it was started with."
   ],
   "economy": {
-    "partsPriceScale": 0.2,
+    "partsPriceFactor": 1,
     "usedShopFactor": 0.6,
     "tradeInFactor": 0.4,
     "mailOrderPremium": 1.2,

@@ -4,14 +4,11 @@ using StreetCorsa.Models.GameState;
 namespace StreetCorsa.Parts.Cars;
 
 /// <summary>
-/// What parts cost. New price is the part script's own value; a used part is worth what the source game
-/// gave for one: damage scales it, wear takes up to 70% off.
+/// What parts cost. New price is what the part does (<see cref="PartPriceBook"/>), as the source game priced its parts;
+/// a used part is worth what the source game gave for one: damage scales it, wear takes up to 70% off.
 /// </summary>
 public static class PartPricing
 {
-    /// <summary>Parts without a script (batteries, plates) carry no value of their own</summary>
-    private const double ValueWithoutScript = 35.0;
-
     private const double WearFloor = 0.3;
 
     // More than anything in the game costs, well inside what a decimal holds
@@ -31,26 +28,25 @@ public static class PartPricing
 
     private static Figures Now => Source?.Invoke() ?? new Figures(1.0, 0.6, 0.4);
 
+    /// <summary>
+    /// The price book every new price is read from, asked each time: process-wide like <see cref="Source"/>. The game
+    /// points it at the parts service's book (made from the catalog once, when first asked); a tool makes its own. Null,
+    /// or a book being made: every part at its kind's base price and figure (<see cref="PartPriceBook.Empty"/>).
+    /// </summary>
+    public static Func<PartPriceBook?>? Book { get; set; }
+
     /// <summary>What a shop asks for a used part, against the same part new in the same shape</summary>
     public static double UsedShopFactor => Sane(Now.UsedShopFactor, 0.6);
 
     /// <summary>What a shop pays when it buys a part</summary>
     public static double TradeInFactor => Sane(Now.TradeInFactor, 0.4);
 
-    /// <summary>
-    /// From the money of the part scripts to the money of the game. The scripts price parts in the dollars of
-    /// the source game's day; the game's cars cost what cars cost in its own day.
-    /// </summary>
+    /// <summary>The economy's factor on every part's price: part_groups.json's prices are the game's dollars at 1</summary>
     public static double Scale => Sane(Now.Scale, 1.0);
 
     private static double Sane(double value, double otherwise) => double.IsFinite(value) && value > 0 ? value : otherwise;
 
-    public static double NewPrice(PartDefinition part)
-    {
-        // pack.json may hold "NaN", "Infinity" or 1e400 (which Newtonsoft reads as infinity): no price is the default one
-        var value = part.Number("value");
-        return (value > 0 && double.IsFinite(value) ? value : ValueWithoutScript) * Scale;
-    }
+    public static double NewPrice(PartDefinition part) => (Book?.Invoke() ?? PartPriceBook.Empty).Price(part) * Scale;
 
     /// <summary>Worth of one part in its condition, nothing mounted on it counted; a wear or damage that is no number is as new</summary>
     public static double Worth(PartDefinition part, PartInstance instance) =>
@@ -79,6 +75,15 @@ public static class PartPricing
 
         var step = Step(price);
         return Math.Floor(price / step) * step + step;
+    }
+
+    /// <summary>The first price under this one that <see cref="Round"/> can give; $1 at the least</summary>
+    public static decimal Below(decimal price)
+    {
+        if (price <= 1) return 1;
+
+        var step = Step(price - 1);
+        return Math.Max(1, Math.Ceiling(price / step) * step - step);
     }
 
     /// <summary>How far apart the prices are around this one: whole dollars below $20, fives from there</summary>

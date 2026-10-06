@@ -86,9 +86,6 @@ public sealed class MarketRules
 
     public int PaperFreshDays { get; set; } = 14;
 
-    /// <summary>Share of the money put into an engine beyond the factory one that shows in the car's worth</summary>
-    public double ModificationsShare { get; set; } = 0.5;
-
     /// <summary>What wins add to a car's worth: a point each, two for a car won with it, at most <see cref="MaxHistoryShare"/></summary>
     public decimal WinShare { get; set; } = 0.01m;
 
@@ -113,24 +110,15 @@ public sealed class MarketRules
     /// <summary>The most a car's history moves its worth, either way</summary>
     public decimal MaxHistoryShare { get; set; } = 0.15m;
 
-    /// <summary>Share of the base price a car without its engine loses: the engine is what most of a car's worth is</summary>
-    public decimal MissingEngineShare { get; set; } = 0.4m;
-
     /// <summary>
-    /// Share of the base price a body all rust loses (cutting it out and welding in new metal costs that much), one with
-    /// its paint worn all over, and one with a cracked windscreen; each in proportion to how far it goes
+    /// Share of its worth a car all rust loses (cutting it out and welding in new metal costs that much), one with its
+    /// paint worn all over, and one with a cracked windscreen; each in proportion to how far it goes
     /// </summary>
     public decimal RustLoss { get; set; } = 0.3m;
 
     public decimal PaintWearLoss { get; set; } = 0.08m;
 
     public decimal CrackedScreenLoss { get; set; } = 0.02m;
-
-    /// <summary>Share of the base price a corner loses without its rim and tyre (a car on blocks)</summary>
-    public decimal MissingWheelShare { get; set; } = 0.03m;
-
-    /// <summary>Share of the base price a corner loses for each of its brake, spring and shock that is missing</summary>
-    public decimal MissingCornerPartShare { get; set; } = 0.01m;
 
     /// <summary>
     /// How many cars private people have in the paper at once, least to most: most of the classifieds are theirs, a few

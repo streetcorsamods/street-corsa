@@ -60,9 +60,6 @@ public sealed class EngineReport
     /// <summary>Kilograms, all parts of the build</summary>
     public double Mass { get; init; }
 
-    /// <summary>What the parts cost new, in the game's money (<see cref="PartPricing.NewPrice"/>, before a career's price multiplier)</summary>
-    public double Value { get; init; }
-
     public IReadOnlyList<PartDefinition> Unplaced { get; init; } = Array.Empty<PartDefinition>();
 
     /// <summary>
@@ -212,7 +209,6 @@ public static class EngineEvaluator
             TurboLagUp = LagOf("lag_up", PartFigures.DefaultLagUp),
             TurboLagDown = LagOf("lag_down", PartFigures.DefaultLagDown),
             Mass = Finite(parts.Sum(p => (double)p.Definition.Mass), MaxFigure),
-            Value = Finite(parts.Sum(p => PartPricing.NewPrice(p.Definition)), MaxFigure * 1000),
             ScriptFaults = faults,
             Unplaced = tree.Unplaced
         };

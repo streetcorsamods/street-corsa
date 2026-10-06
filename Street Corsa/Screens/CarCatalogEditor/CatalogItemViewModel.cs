@@ -8,16 +8,15 @@ namespace StreetCorsa.Screens.CarCatalogEditor
 {
     /// <summary>
     /// View model for a single car catalog item in the editor
-    /// Wraps CarDefinition + CarProfile for display and editing. What is set by hand (the price and how common the car
-    /// is, the factory engine, the layout) is saved into the base game's cars.json (<see cref="ToFields"/>); what is not
-    /// is left to the game to work out.
+    /// Wraps CarDefinition + CarProfile for display and editing. What is set by hand (how common the car is, the factory
+    /// engine, the layout) is saved into the base game's cars.json (<see cref="ToFields"/>); what is not is left to the
+    /// game to work out. The price is the game's, always: the car's body and its parts (<see cref="Parts.Cars.CarPricing"/>).
     /// </summary>
     public class CatalogItemViewModel : ObservableObject
     {
         public CarDefinition Definition { get; }
         public CarProfile Profile { get; }
 
-        private decimal _basePrice;
         private float _dealerPrecedence;
         private EngineOptionViewModel? _stockEngine;
         private bool _stockEngineResolved;
@@ -26,7 +25,7 @@ namespace StreetCorsa.Screens.CarCatalogEditor
         private readonly bool _hasEngineCatalog;
         private readonly Lazy<IReadOnlyList<EngineLayoutOptionViewModel>> _layoutOptions;
         private EngineLayout? _engineLayout;
-        private bool _priceGiven;
+        private bool _commonGiven;
         private bool _engineGiven;
         private bool _layoutGiven;
         private bool _engineReset;
@@ -56,10 +55,9 @@ namespace StreetCorsa.Screens.CarCatalogEditor
         {
             Definition = definition;
             Profile = profile;
-            _basePrice = profile.BasePrice;
             _dealerPrecedence = profile.DealerPrecedence;
             _engineLayout = profile.EngineLayout;
-            _priceGiven = given?.Price != null || given?.Common != null;
+            _commonGiven = given?.Common != null;
             _engineGiven = given?.Engine is { Length: > 0 };
             _layoutGiven = given?.EngineLayout != null;
             _hasEngineCatalog = hasEngineCatalog;
@@ -142,23 +140,14 @@ namespace StreetCorsa.Screens.CarCatalogEditor
         public string YearDisplay => Definition.Year?.ToString() ?? "Unknown";
         public string BrandDisplay => Definition.Brand;
 
-        public decimal BasePrice
-        {
-            get => _basePrice;
-            set
-            {
-                if (_basePrice != value)
-                {
-                    _basePrice = value;
-                    _priceGiven = true;
-                    IsDirty = true;
-                    OnPropertyChanged();
-                    OnPropertyChanged(nameof(BasePriceDisplay));
-                }
-            }
-        }
+        /// <summary>What the car costs new, as the game worked it out at its start (a new factory engine shows from the next)</summary>
+        public decimal BasePrice => Profile.BasePrice;
 
-        public string BasePriceDisplay => Money.Text(_basePrice);
+        public string BasePriceDisplay => Money.Text(Profile.BasePrice);
+
+        /// <summary>What the price is made of: the body, the factory engine's parts, the running gear's</summary>
+        public string PriceBreakdown =>
+            $"Body {Money.Text(Profile.BodyPrice)}, engine {Money.Text(Profile.EnginePrice)}, running gear {Money.Text(Profile.RunningGearPrice)}";
 
         public float DealerPrecedence
         {
@@ -169,7 +158,7 @@ namespace StreetCorsa.Screens.CarCatalogEditor
                 if (_dealerPrecedence != clamped)
                 {
                     _dealerPrecedence = clamped;
-                    _priceGiven = true;
+                    _commonGiven = true;
                     IsDirty = true;
                     OnPropertyChanged();
                     OnPropertyChanged(nameof(DealerPrecedencePercent));
@@ -215,7 +204,6 @@ namespace StreetCorsa.Screens.CarCatalogEditor
         /// </summary>
         public void ApplyChanges()
         {
-            Profile.BasePrice = _basePrice;
             Profile.DealerPrecedence = _dealerPrecedence;
             Profile.EngineLayout = _engineLayout;
 
@@ -232,21 +220,19 @@ namespace StreetCorsa.Screens.CarCatalogEditor
         }
 
         /// <summary>
-        /// What is set by hand for the car, for cars.json: the price and how common it is together, the engine, the
-        /// layout. Read before <see cref="ApplyChanges"/>: what is shown, saved or not.
+        /// What is set by hand for the car, for cars.json: how common it is, the engine, the layout. Read before
+        /// <see cref="ApplyChanges"/>: what is shown, saved or not.
         /// </summary>
         public Services.Catalog.CarFields ToFields() => new(
             _engineGiven ? PendingEngine : null,
             _layoutGiven ? _engineLayout : null,
-            _priceGiven ? _basePrice : null,
-            _priceGiven ? _dealerPrecedence : null);
+            _commonGiven ? _dealerPrecedence : null);
 
         /// <summary>
         /// Resets to the current profile values
         /// </summary>
         public void ResetToProfile()
         {
-            _basePrice = Profile.BasePrice;
             _dealerPrecedence = Profile.DealerPrecedence;
             _engineLayout = Profile.EngineLayout;
             _stockEngineResolved = false;
@@ -254,8 +240,6 @@ namespace StreetCorsa.Screens.CarCatalogEditor
             IsDirty = false;
             OnPropertyChanged(nameof(StockEngine));
             OnPropertyChanged(nameof(EngineLayoutOption));
-            OnPropertyChanged(nameof(BasePrice));
-            OnPropertyChanged(nameof(BasePriceDisplay));
             OnPropertyChanged(nameof(DealerPrecedence));
             OnPropertyChanged(nameof(DealerPrecedencePercent));
         }
@@ -265,9 +249,8 @@ namespace StreetCorsa.Screens.CarCatalogEditor
         /// </summary>
         public void SetFromGeneratedProfile(CarProfile generatedProfile)
         {
-            _basePrice = generatedProfile.BasePrice;
             _dealerPrecedence = generatedProfile.DealerPrecedence;
-            _priceGiven = false;
+            _commonGiven = false;
             _engineGiven = false;
             _engineReset = true;
 
@@ -281,8 +264,6 @@ namespace StreetCorsa.Screens.CarCatalogEditor
             _layoutGiven = false;
             OnPropertyChanged(nameof(EngineLayoutOption));
             IsDirty = true;
-            OnPropertyChanged(nameof(BasePrice));
-            OnPropertyChanged(nameof(BasePriceDisplay));
             OnPropertyChanged(nameof(DealerPrecedence));
             OnPropertyChanged(nameof(DealerPrecedencePercent));
         }

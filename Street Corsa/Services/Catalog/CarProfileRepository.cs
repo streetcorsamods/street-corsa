@@ -120,14 +120,13 @@ namespace StreetCorsa.Services.Catalog
         }
 
         /// <summary>
-        /// The profile with what the mods give its car laid over it: the price, how common it is, the factory engine
+        /// The profile with what the mods give its car laid over it: how common it is, the factory engine
         /// (picked, so no suggestion takes its place) and the engine layout
         /// </summary>
         public static CarProfile? Given(CarProfile? profile)
         {
             if (profile == null || StreetCorsa.Parts.Cars.CarBook.Current.Car(profile.CarDefinitionId) is not { } given) return profile;
 
-            if (given.Price is { } price) profile.BasePrice = price;
             if (given.Common is { } common) profile.DealerPrecedence = common;
             if (given.Engine is { Length: > 0 } engine)
             {

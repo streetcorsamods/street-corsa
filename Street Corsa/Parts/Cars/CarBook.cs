@@ -17,8 +17,8 @@ namespace StreetCorsa.Parts.Cars;
 /// price and to how common the car is. A make without a family has none: its words name no engine. The countries know
 /// the names a ui_car.json writes for them ("Great Britain" is the UK) and the regions they are in ("Europe").
 ///
-/// A car (by its AC folder name) may be given its make, factory engine, engine layout, price and how common it is: what
-/// is not given is worked out from its data as before.
+/// A car (by its AC folder name) may be given its make, factory engine, engine layout and how common it is: what is not
+/// given is worked out from its data as before. Its price is always worked out: its body and its parts.
 ///
 /// Plain BCL and linked into EngineBench: the problems are kept (<see cref="Problems"/>) for the game to tell.
 /// </summary>
@@ -27,10 +27,7 @@ public sealed class CarBook
     public const string MakesFile = "makes.json";
     public const string CarsFile = "cars.json";
 
-    /// <summary>The most a badge may multiply a price by: far past any make, and well inside what money can hold</summary>
-    public const double MaxPriceFactor = 1000;
-
-    /// <summary>The most a car may be given as its price</summary>
+    /// <summary>The most any car price figure of the rules may be: well inside what money can hold</summary>
     public const decimal MaxCarPrice = 1_000_000_000m;
 
     private static readonly Lazy<CarBook> InstalledBook = new(() => Load(ModSet.Installed));
@@ -219,16 +216,21 @@ public sealed class CarBook
             problems.Add($"cars: \"{name}\" is none of makes, countries, cars, words; left out");
         }
 
+        // Prices are the game's own (the car's body and parts): a mod's older figure is told, not taken
+        foreach (var table in new[] { "makes", "cars" })
+        {
+            if (merged[table] is not JsonObject entries) continue;
+            foreach (var (id, entry) in entries)
+            {
+                if (entry is JsonObject fields && fields.Any(f => f.Key.Equals("price", StringComparison.OrdinalIgnoreCase)))
+                    problems.Add($"{table}.{id}.price is no longer read: a car costs what its body and parts do");
+            }
+        }
+
         foreach (var (id, make) in makes)
         {
             // A mod may write null for a list: as good as none
             make.Words = (make.Words ?? []).Where(w => !string.IsNullOrWhiteSpace(w)).ToList();
-            if (!double.IsFinite(make.Price) || make.Price is <= 0 or > MaxPriceFactor)
-            {
-                problems.Add($"makes.{id}.price {make.Price} is not a number above 0 and up to {MaxPriceFactor}; 1 is used");
-                make.Price = 1;
-            }
-
             if (!float.IsFinite(make.Common))
             {
                 problems.Add($"makes.{id}.common is not a number; 0 is used");
@@ -263,12 +265,6 @@ public sealed class CarBook
             {
                 problems.Add($"cars.{id}.layout \"{layout}\" is none of front, mid, rear, front_transverse, mid_transverse; guessed from the car");
                 car.Layout = null;
-            }
-
-            if (car.Price is { } price && price is <= 0 or > MaxCarPrice)
-            {
-                problems.Add($"cars.{id}.price {price} is not a figure above 0 and up to {MaxCarPrice}; worked out from the car");
-                car.Price = null;
             }
 
             if (car.Common is { } common && (!float.IsFinite(common) || common is < 0 or > 1))
@@ -348,9 +344,6 @@ public sealed class MakeEntry
     /// <summary>Words of a brand or a car's name that tell the make, any case; a word may be two ("alfa romeo")</summary>
     public List<string> Words { get; set; } = new();
 
-    /// <summary>What the badge does to a car's price: 2.5 is two and a half times</summary>
-    public double Price { get; set; } = 1;
-
     /// <summary>What the badge does to how common a car is, added to it (0 rare to 1 common): -0.3 rarer</summary>
     public float Common { get; set; }
 }
@@ -376,9 +369,6 @@ public sealed class CarEntry
 
     /// <summary>"front", "mid", "rear", "front_transverse" or "mid_transverse"</summary>
     public string? Layout { get; set; }
-
-    /// <summary>What it costs in perfect condition, in the game's money</summary>
-    public decimal? Price { get; set; }
 
     /// <summary>How often it turns up for sale, 0 rare to 1 common</summary>
     public float? Common { get; set; }

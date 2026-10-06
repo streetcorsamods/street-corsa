@@ -287,40 +287,41 @@ public class SafeFileTests
 public class CarValuationTests
 {
     [Theory]
-    [InlineData(0.0, 0.5)]
-    [InlineData(1.0, 1.1)]
-    [InlineData(0.5, 0.8)]
-    [InlineData(-3.0, 0.5)]
-    [InlineData(7.0, 1.1)]
-    [InlineData(double.NaN, 0.5)]
-    [InlineData(double.PositiveInfinity, 0.5)]
-    public void ConditionFactor(double condition, double expected) =>
-        Assert.Equal((decimal)expected, CarValuation.ConditionFactor(condition));
-
-    [Theory]
-    [InlineData(900, 1000, 0)]
-    [InlineData(2000, 1000, 500)]
-    [InlineData(double.NaN, 1000, 0)]
-    [InlineData(double.PositiveInfinity, 0, 0)]
-    [InlineData(1e300, 0, 1e9)]
-    public void ModificationsValue(double engine, double stock, double expected) =>
-        Assert.Equal((decimal)expected, CarValuation.ModificationsValue(engine, stock));
+    [InlineData(0.0, 0.3)]
+    [InlineData(1.0, 1.0)]
+    [InlineData(0.5, 0.65)]
+    [InlineData(-3.0, 0.3)]
+    [InlineData(7.0, 1.0)]
+    [InlineData(double.NaN, 0.3)]
+    [InlineData(double.PositiveInfinity, 0.3)]
+    public void Shape(double condition, double expected) =>
+        Assert.Equal((decimal)expected, CarValuation.Shape(condition));
 
     [Fact]
     public void Value_rounds_to_the_hundred_and_never_goes_below_zero()
     {
-        Assert.Equal(16000m, CarValuation.Value(20000m, 0.5));
-        Assert.Equal(16500m, CarValuation.Value(20000m, 0.5, 500m));
+        Assert.Equal(13000m, CarValuation.Value(20000m, 0.5));
+        Assert.Equal(14300m, CarValuation.Value(20000m, 0.5, 1.1m));
         Assert.Equal(0m, CarValuation.Value(-5000m, 1));
-        Assert.Equal(1100m, CarValuation.Value(1000m, 1));
+        Assert.Equal(1000m, CarValuation.Value(1000m, 1));
     }
 
     [Fact]
-    public void ValueOf_a_car_uses_its_average_condition()
+    public void ValueOf_a_car_of_a_model_priced_as_a_whole_uses_its_average_condition()
     {
         var car = new Car("x") { EngineHealth = 1, TransmissionHealth = 0, BodyCondition = 0.5, TireCondition = 0.5 };
         Assert.Equal(0.5, CarValuation.ConditionOf(car));
-        Assert.Equal(16000m, CarValuation.ValueOf(car, 20000m));
+        Assert.Equal(13000m, CarValuation.ValueOf(car, new CarProfile { CarDefinitionId = "x", BasePrice = 20000m }));
+    }
+
+    [Fact]
+    public void ValueOf_a_car_without_parts_is_its_body_and_factory_parts_each_in_its_shape()
+    {
+        var car = new Car("x") { EngineHealth = 1, TransmissionHealth = 1, BodyCondition = 0, TireCondition = 0 };
+        var model = new CarProfile { CarDefinitionId = "x", BasePrice = 10000m, BodyPrice = 2000m, EnginePrice = 7000m, RunningGearPrice = 1000m };
+
+        // 2000 * 0.3 + 7000 * 1 + 1000 * 0.3
+        Assert.Equal(7900m, CarValuation.ValueOf(car, model));
     }
 }
 
@@ -451,14 +452,40 @@ public class PartPricingTests
     [InlineData(double.PositiveInfinity)]
     [InlineData(-10.0)]
     [InlineData(0.0)]
-    public void A_price_that_is_no_number_is_the_default(double value) =>
+    [InlineData(250.0)]
+    public void The_source_games_price_prices_nothing(double value) =>
         Assert.Equal(PartPricing.NewPrice(PartWorth(null)), PartPricing.NewPrice(PartWorth(value)));
 
     [Fact]
-    public void A_real_price_is_used()
+    public void A_part_no_group_takes_in_costs_an_accessorys_base()
     {
-        Assert.Equal(250.0 * PartPricing.Scale, PartPricing.NewPrice(PartWorth(250.0)));
-        Assert.Equal(250.0 * PartPricing.Scale, PartPricing.NewPrice(PartWorth(250L)));
+        var accessory = PartGroups.Current.PriceOf(PartGroups.Accessories).Base!.Value;
+        Assert.Equal(accessory * PartPricing.Scale, PartPricing.NewPrice(PartWorth(250.0)));
+    }
+
+    [Fact]
+    public void A_part_costs_its_kinds_base_and_the_power_it_makes()
+    {
+        var book = TestCars.Prices.Value;
+        var all = PartsCatalog.Load(StreetCorsa.Mods.ModSet.Load(RepoPaths.Content).Folders(StreetCorsa.Mods.ContentTypes.Parts).ToList());
+        var cam = all.Parts.Values.First(p => PartKinds.GroupOf(p) == PartGroups.Camshafts && book.PowerOf(p.Id) > 20);
+        var price = PartGroups.Current.PriceOf(PartGroups.Camshafts);
+
+        Assert.Equal(price.Base!.Value + price.PerHp!.Value * book.PowerOf(cam.Id)!.Value, book.Price(cam), 6);
+
+        // A block is worth its engine's power, raised to its kind's power of it
+        var block = all.Parts.Values.First(p => PartKinds.GroupOf(p) == PartGroups.Blocks && book.PowerOf(p.Id) > 100);
+        var blocks = PartGroups.Current.PriceOf(PartGroups.Blocks);
+        Assert.Equal(blocks.Base!.Value + blocks.PerHp!.Value * Math.Pow(book.PowerOf(block.Id)!.Value, blocks.HpPower!.Value), book.Price(block), 6);
+    }
+
+    [Fact]
+    public void A_mods_figure_goes_over_the_kinds_price_and_keeps_the_rest()
+    {
+        var price = new PartPrice { Base = 30, PerHp = 4, HpPower = 1.2 }.Over(new PartPrice { PerHp = 9 });
+        Assert.Equal(30, price.Base);
+        Assert.Equal(9, price.PerHp);
+        Assert.Equal(1.2, price.HpPower);
     }
 
     [Theory]

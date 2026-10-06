@@ -1,4 +1,5 @@
 using StreetCorsa.Models.Catalog;
+using StreetCorsa.Parts.Cars;
 using StreetCorsa.Services.Catalog;
 
 namespace StreetCorsa.Tests;
@@ -27,42 +28,71 @@ public class CarProfileServiceTests
         Specs = bhp == null && weight == null ? null : new CarSpecsData { Bhp = bhp, Weight = weight }
     };
 
-    [Theory]
-    [InlineData("70bhp", "1000kg", 7000)] // an economy car: 70 hp per tonne
-    [InlineData("100bhp", "1400kg", 7200)]
-    [InlineData("150bhp", "1000kg", 18900)] // a muscle car
-    [InlineData("350bhp", "1000kg", 56700)] // a supercar
-    [InlineData("60bhp", "1200kg", 5000)] // below the floor
-    public void Power_to_weight_in_hp_per_tonne_prices_the_car(string bhp, string weight, int expected)
+    /// <summary>The real parts, every car leaving the factory with the build whose id ends with what the car's name says</summary>
+    private sealed class FactoryEngines : NullCarPartsService
     {
-        Assert.Equal(expected, _service.CalculateBasePrice(Car(bhp, weight)));
-    }
+        private readonly CatalogParts _parts = new();
 
-    [Fact]
-    public void Brand_year_and_source_scale_the_price()
-    {
-        // 187.5 hp/t, a 1960s classic (1.2) from a mod (0.9)
-        Assert.Equal(27200m, _service.CalculateBasePrice(Car("300bhp", "1600kg", "Chevrolet", 1969, ContentSource.Mod)));
+        public override StreetCorsa.Parts.PartsCatalog Catalog => _parts.Catalog;
+        public override EngineBuildIndex Builds => _parts.Builds;
+        public override bool IsAvailable => true;
 
-        // 357 hp/t, a Ferrari (2.5) of the 2000s from Kunos (1.2)
-        Assert.Equal(174700m, _service.CalculateBasePrice(Car("500bhp", "1400kg", "Ferrari", 2005, ContentSource.Kunos)));
-    }
-
-    [Fact]
-    public void Quicker_is_dearer()
-    {
-        var prices = new[] { 80, 120, 160, 200, 300, 400 }.Select(hp => _service.CalculateBasePrice(Car($"{hp}bhp", "1000kg"))).ToList();
-        Assert.Equal(prices.OrderBy(p => p), prices);
-        Assert.Equal(prices.Count, prices.Distinct().Count());
+        public override RatedBuild? GetStockBuild(CarDefinition car) =>
+            Builds.Runnable.FirstOrDefault(b => b.Build.Id.EndsWith(car.Name, StringComparison.Ordinal));
     }
 
     [Theory]
-    [InlineData(null, null)]
-    [InlineData("300bhp", null)]
-    [InlineData("300bhp", "90kg")] // not believable
-    public void A_car_without_specs_is_priced_at_the_default(string? bhp, string? weight)
+    [InlineData("1400kg", 2500)] // the reference body
+    [InlineData("1000kg", 4100)] // lighter: dearer
+    [InlineData("2000kg", 1500)] // a heavy cruiser: cheaper
+    [InlineData(null, 2500)] // no weight: the reference
+    [InlineData("90kg", 2500)] // not believable: the same
+    public void Without_parts_a_car_is_priced_by_its_body_the_lighter_the_dearer(string? weight, int expected)
     {
-        Assert.Equal(15000m, _service.CalculateBasePrice(Car(bhp, weight)));
+        Assert.Equal(expected, _service.CalculateBasePrice(Car("150bhp", weight)));
+    }
+
+    [Fact]
+    public void Its_badge_year_and_source_do_nothing_to_its_price()
+    {
+        Assert.Equal(_service.CalculateBasePrice(Car("300bhp", "1600kg")),
+            _service.CalculateBasePrice(Car("300bhp", "1600kg", "Ferrari", 2005, ContentSource.Kunos)));
+    }
+
+    [Fact]
+    public void A_car_costs_its_body_and_its_factory_engines_parts()
+    {
+        var service = new CarProfileService(_catalog, _profiles, new FactoryEngines());
+        var car = Car("275bhp", "1400kg");
+        car.Name = "chrysler-la-340-275-hp";
+
+        var price = service.PriceNew(car);
+        var engine = new FactoryEngines().GetStockBuild(car)!;
+        var catalog = new CatalogParts().Catalog;
+        var parts = engine.Build.Parts.Sum(p => p.Part != null && catalog.Get(p.Part) is { } d ? PartPricing.NewPrice(d) : 0);
+
+        Assert.Equal(2500m, price.Body);
+        Assert.Equal(Math.Round((decimal)parts), price.Engine);
+        Assert.Equal(Math.Round((2500m + price.Engine) / 100) * 100, price.BasePrice);
+    }
+
+    [Fact]
+    public void A_stronger_factory_engine_makes_a_dearer_car_and_a_heavier_body_a_cheaper_one()
+    {
+        var service = new CarProfileService(_catalog, _profiles, new FactoryEngines());
+        CarDefinition With(string build, string weight)
+        {
+            var car = Car("100bhp", weight);
+            car.Name = build;
+            return car;
+        }
+
+        var builds = new FactoryEngines().Builds.Runnable.OrderBy(b => b.PowerHp).ToList();
+        var weak = builds.First(b => !b.Build.Aftermarket).Build.Id;
+        var strong = builds.Last(b => !b.Build.Aftermarket).Build.Id;
+
+        Assert.True(service.CalculateBasePrice(With(strong, "1400kg")) > service.CalculateBasePrice(With(weak, "1400kg")));
+        Assert.True(service.CalculateBasePrice(With(strong, "2000kg")) < service.CalculateBasePrice(With(strong, "1400kg")));
     }
 
     [Fact]
@@ -75,17 +105,26 @@ public class CarProfileServiceTests
     }
 
     [Fact]
-    public async Task Generated_profiles_of_an_older_reading_are_priced_again_and_hand_edited_ones_are_left()
+    public async Task Every_profile_is_priced_again_at_the_start_and_how_common_a_hand_edited_one_is_left()
     {
         _catalog.UpsertCar(Car("150bhp", "1000kg", id: "generated"));
         _catalog.UpsertCar(Car("150bhp", "1000kg", id: "manual"));
-        _profiles.UpsertProfile(new CarProfile { CarDefinitionId = "generated", BasePrice = 5000m, Source = ProfileDataSource.Generated, DefinitionHash = "hash|specs2" });
-        _profiles.UpsertProfile(new CarProfile { CarDefinitionId = "manual", BasePrice = 1234m, Source = ProfileDataSource.Manual, DefinitionHash = "hash|specs2" });
+        _profiles.UpsertProfile(new CarProfile
+        {
+            CarDefinitionId = "generated", BasePrice = 5000m, DealerPrecedence = 0.1f, Source = ProfileDataSource.Generated, DefinitionHash = "hash|specs2"
+        });
+        _profiles.UpsertProfile(new CarProfile
+        {
+            CarDefinitionId = "manual", BasePrice = 1234m, DealerPrecedence = 0.1f, Source = ProfileDataSource.Manual, DefinitionHash = "hash|specs2"
+        });
 
         await _service.EnsureProfilesExistAsync();
 
-        Assert.Equal(18900m, _profiles.Profiles["generated"].BasePrice);
-        Assert.Equal(1234m, _profiles.Profiles["manual"].BasePrice);
+        Assert.Equal(4100m, _profiles.Profiles["generated"].BasePrice);
+        Assert.Equal(4141m, _profiles.Profiles["generated"].BodyPrice);
+        Assert.Equal(0.5f, _profiles.Profiles["generated"].DealerPrecedence, 3);
+        Assert.Equal(4100m, _profiles.Profiles["manual"].BasePrice);
+        Assert.Equal(0.1f, _profiles.Profiles["manual"].DealerPrecedence, 3);
         Assert.Equal("hash|specs2", _profiles.Profiles["manual"].DefinitionHash);
     }
 }

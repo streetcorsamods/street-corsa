@@ -187,7 +187,8 @@ public sealed class CarLooksTests
         var clean = new Car("car_a") { EngineHealth = 0.8, TransmissionHealth = 0.8, BodyCondition = 0.8, TireCondition = 0.8 };
         var rusty = new Car("car_a") { EngineHealth = 0.8, TransmissionHealth = 0.8, BodyCondition = 0.8, TireCondition = 0.8, Rust = 0.5, PaintWear = 0.5 };
 
-        Assert.True(CarValuation.ValueOf(rusty, 10000m) < CarValuation.ValueOf(clean, 10000m) * 0.85m);
+        var model = new StreetCorsa.Models.Catalog.CarProfile { CarDefinitionId = "car_a", BasePrice = 10000m };
+        Assert.True(CarValuation.ValueOf(rusty, model) < CarValuation.ValueOf(clean, model) * 0.85m);
         Assert.Equal(1m, CarValuation.LooksFactor(0, 0, 0));
     }
 
