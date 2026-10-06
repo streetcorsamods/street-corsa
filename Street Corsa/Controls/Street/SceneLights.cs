@@ -83,10 +83,14 @@ internal static class SceneLights
     /// How a car sits and where its driver looks, from its own data, as AC has it (<see cref="AcCarFrame.Read"/>);
     /// a car that does not say sits with its model's origin on the road, the eyes where most cars have them
     /// </summary>
-    public static AcCarFrame FrameOf(string carDirectory, Action<Exception>? failed = null) => FrameOf(DataOf(carDirectory, failed));
+    public static AcCarFrame FrameOf(string carDirectory, Action<Exception>? failed = null) => FrameOf(DataOf(carDirectory, failed), carDirectory);
 
-    /// <summary><see cref="FrameOf(string, Action{Exception}?)"/> from data already read (<see cref="DataOf"/>)</summary>
-    public static AcCarFrame FrameOf(CarData? data) => data == null ? new AcCarFrame(FallbackEye, 0f) : AcCarFrame.FromData(data);
+    /// <summary>
+    /// <see cref="FrameOf(string, Action{Exception}?)"/> from data already read (<see cref="DataOf"/>); the car's folder
+    /// for its model's wheel hubs, which stand it on its tyres (<see cref="AcCarFrame.FromData"/>)
+    /// </summary>
+    public static AcCarFrame FrameOf(CarData? data, string? carDirectory) =>
+        data == null ? new AcCarFrame(FallbackEye, 0f) : AcCarFrame.FromData(data, carDirectory == null ? null : Parts.CarHubs.Of(carDirectory));
 
     /// <summary>
     /// A car's data files (data.acd decrypted when it has one), read once for all that wants them, the way the race
@@ -164,13 +168,16 @@ internal sealed record AcCarFrame(float EyeX, float EyeY, float EyeZ, float Lift
     public Sx.Vector3 Eye => new(EyeX, EyeY, EyeZ);
 
     /// <summary>The car's frame; null when it has no data</summary>
-    public static AcCarFrame? Read(string carDirectory) => CarData.Open(carDirectory) is { } data ? FromData(data) : null;
+    public static AcCarFrame? Read(string carDirectory) =>
+        CarData.Open(carDirectory) is { } data ? FromData(data, Parts.CarHubs.Of(carDirectory)) : null;
 
     /// <summary>
     /// The car's frame from its data. A car that gives no driver's eyes has them where most cars do: how it sits does
-    /// not hang on them
+    /// not hang on them. With its model's wheel hubs (<paramref name="hubs"/>) the car stands on its tyres: each axle's
+    /// hubs a tyre's radius over the road. The data's own frame put most cars 2 to 10 cm over the road (their models do
+    /// not sit as their physics have them), seen from outside at the diner; it is what a car without hubs gets.
     /// </summary>
-    public static AcCarFrame FromData(CarData data)
+    public static AcCarFrame FromData(CarData data, Parts.CarAnchors? hubs = null)
     {
         var car = data.Ini("car.ini");
         var given = CarData.Vector3(car, "GRAPHICS", "DRIVEREYES");
@@ -186,8 +193,25 @@ internal sealed record AcCarFrame(float EyeX, float EyeY, float EyeZ, float Lift
         var (front, rear) = (Height("FRONT"), Height("REAR"));
         var cog = front > 0 && rear > 0 ? (front + rear) / 2f : 0f;
         var lift = cog > 0 ? cog + offset[1] : 0f;
+        if (OnItsTyres(tyres, hubs) is { } onTyres) lift = onTyres;
 
         return new AcCarFrame(eyes[0], eyes[1], eyes[2], float.IsFinite(lift) && Math.Abs(lift) < 2f ? lift : 0f);
+    }
+
+    /// <summary>
+    /// How far over the road the model's origin is with its tyres on it: each axle's tyre radius over its hubs' mean
+    /// height, the two axles' mean; null without hubs, radii or a sane answer
+    /// </summary>
+    internal static float? OnItsTyres(IniText tyres, Parts.CarAnchors? hubs)
+    {
+        if (hubs == null) return null;
+        var (frontRadius, rearRadius) = (CarData.Float(tyres, "FRONT", "RADIUS", 0f), CarData.Float(tyres, "REAR", "RADIUS", 0f));
+        if (!(frontRadius > 0) || !(rearRadius > 0)) return null;
+
+        var front = frontRadius - (hubs.WheelLF.Y + hubs.WheelRF.Y) / 2f;
+        var rear = rearRadius - (hubs.WheelLR.Y + hubs.WheelRR.Y) / 2f;
+        var lift = (front + rear) / 2f;
+        return float.IsFinite(lift) && Math.Abs(lift) < 2f ? lift : null;
     }
 }
 

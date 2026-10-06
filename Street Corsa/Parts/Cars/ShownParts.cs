@@ -193,10 +193,11 @@ public sealed class ShownSet : IEquatable<ShownSet>
     }
 
     /// <summary>
-    /// The same set without its engine parts and its wear (the garage's parts view draws the whole engine itself, and the
-    /// car as a ghost round it)
+    /// The same set without its engine parts (the garage's parts view draws the whole engine itself, and the car as a ghost
+    /// round it). The wear stays: the car keeps its rust as a ghost, and solid beside the engine stand, where the parts
+    /// view goes on.
     /// </summary>
-    public ShownSet? WithoutExtras() => Of(Wheels, heights: Heights, paint: Paint);
+    public ShownSet? WithoutExtras() => Of(Wheels, frame: Frame, look: Look, heights: Heights, paint: Paint);
 
     public bool Equals(ShownSet? other) =>
         other != null && Wheels.SequenceEqual(other.Wheels) && Extras.SequenceEqual(other.Extras) && Equals(Frame, other.Frame)

@@ -405,6 +405,20 @@ public class GasStationTests
         Assert.Null(StreetCorsa.Controls.Street.AcCarFrame.Read(Path.Combine(temp.Path, "none")));
     }
 
+    [Fact]
+    public void A_car_with_wheel_hubs_stands_on_its_tyres()
+    {
+        var tyres = new StreetCorsa.Parts.Export.IniText("[FRONT]\nRADIUS=0.33\n[REAR]\nRADIUS=0.35\n");
+        var hubs = new CarAnchors(new(0.7f, 0.08f, 1.4f), new(-0.7f, 0.10f, 1.4f), new(0.7f, 0.12f, -1.3f), new(-0.7f, 0.12f, -1.3f));
+
+        // Each axle's hubs a tyre's radius over the road: the front's 0.33 - 0.09, the rear's 0.35 - 0.12, their mean
+        Assert.Equal(((0.33f - 0.09f) + (0.35f - 0.12f)) / 2f, AcCarFrame.OnItsTyres(tyres, hubs)!.Value, 4);
+
+        // Without hubs or radii the data's own frame stands
+        Assert.Null(AcCarFrame.OnItsTyres(tyres, null));
+        Assert.Null(AcCarFrame.OnItsTyres(new StreetCorsa.Parts.Export.IniText(""), hubs));
+    }
+
     // ---- The stage ----
 
     [Fact]

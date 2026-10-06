@@ -199,8 +199,8 @@ public sealed class CarLooksTests
         Assert.NotNull(shown);
         Assert.Equal(shown, ShownSet.Of(null, look: look with { }));
         Assert.Null(ShownSet.Of(null, look: new CarLook(0, 0, 0, 0, 0, 0, 0, 0, 7)));
-        // The garage's parts view draws the car as a ghost: no wear on it
-        Assert.Null(shown!.WithoutExtras());
+        // The garage's parts view draws the engine itself, the car keeps its wear (as a ghost, and solid by the stand)
+        Assert.Equal(shown, shown!.WithoutExtras());
 
         // A race names the layer's model; AC gets no dirt in it (it draws its own)
         var raced = shown.WithLayer(new ShownModel(Path.Combine(WearLayer.Folder, "car_a_1.kn5"), "x"));
