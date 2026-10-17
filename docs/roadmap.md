@@ -1800,6 +1800,10 @@ differential case), the rest not (a modern coil-over, a cross-car torsion bar, C
 chose to generate the housings rather than use a downloaded one: `tools/RunningGearParts` makes them and everything
 else (see docs/systems/parts-system.md "The running gear's models"). Checked in Blender renders of the axle put
 together as `CarPartsLayout` places it; not seen in game.
+The owner then liked "Pickup truck chassis" (Sketchfab, CC BY-NC 4.0: a clean game model with a live axle, multi-leaf
+springs with U-bolts, hangers and shackles, drums, shocks): built as a private, git-ignored mod (`Content\truckparts`,
+`prepare_truck_parts.py`) through a new `models.json` (a mod gives other parts its models); the owner asks its author
+for permission before the release. Its U-bolts, plates, hangers and shackles are a good base for phase 5's pieces.
 Next: phase 5 (part tree and work).
 
 ### Phase 0 findings and design (2026-10-17)

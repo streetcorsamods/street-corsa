@@ -1,11 +1,16 @@
 using System.Numerics;
+using StreetCorsa.Mods;
 using StreetCorsa.Parts;
 
 namespace StreetCorsa.Tests;
 
 /// <summary>Step 31 phase 4: the running gear's models (tools/RunningGearParts and its stand-ins) are there and placed right</summary>
-public class RunningGearModelsTests
+public sealed class RunningGearModelsTests : IDisposable
 {
+    private readonly TempDir _temp = new();
+
+    public void Dispose() => _temp.Dispose();
+
     private static PartsCatalog Catalog => TestCars.Catalog.Value;
 
     private static IEnumerable<PartDefinition> RunningGearParts =>
@@ -38,5 +43,32 @@ public class RunningGearModelsTests
             Assert.InRange(left.X, 0.6f, 0.7f);
             Assert.InRange(right.X, -0.7f, -0.6f);
         }
+    }
+
+    [Fact]
+    public void A_mod_gives_other_parts_models_of_its_own_by_id_or_by_the_start_of_one_and_the_parts_stay_as_they_are()
+    {
+        _temp.File("base/parts/gear/pack.json", """
+            { "id": "gear", "parts": [ { "id": "gear/drum_9", "name": "d", "model": "drum.kn5", "properties": { "force": 1 } },
+                                       { "id": "gear/drum_11", "name": "e", "model": "drum.kn5" }, { "id": "gear/leaf", "name": "l", "model": "leaf.kn5" } ] }
+            """);
+        _temp.File("mod/parts/models.json", """
+            { "models": { "gear/drum_*": "truck/drum.kn5", "gear/leaf": "truck/leaf.kn5", "gear/nothing": "truck/leaf.kn5", "gear/drum_9x": "truck/gone.kn5" } }
+            """);
+        _temp.Bytes("mod/parts/truck/drum.kn5", [1]);
+        _temp.Bytes("mod/parts/truck/leaf.kn5", [1]);
+
+        var catalog = PartsCatalog.Load([
+            (new ModInfo { Id = ModIds.BaseId }, Path.Combine(_temp.Path, "base", "parts")),
+            (new ModInfo { Id = "truckparts" }, Path.Combine(_temp.Path, "mod", "parts"))
+        ]);
+
+        var truck = Path.Combine(_temp.Path, "mod", "parts", "truck");
+        Assert.Equal(Path.Combine(truck, "drum.kn5"), catalog.GetModelPath(catalog.Get("gear/drum_9")!));
+        Assert.Equal(Path.Combine(truck, "drum.kn5"), catalog.GetModelPath(catalog.Get("gear/drum_11")!));
+        Assert.Equal(Path.Combine(truck, "leaf.kn5"), catalog.GetModelPath(catalog.Get("gear/leaf")!));
+        Assert.Equal(1, catalog.Get("gear/drum_9")!.Number("force"));
+        Assert.Contains(catalog.Problems, p => p.Contains("gear/nothing names no part"));
+        Assert.Contains(catalog.Problems, p => p.Contains("no model truck/gone.kn5"));
     }
 }

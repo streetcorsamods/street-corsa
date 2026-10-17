@@ -224,6 +224,12 @@ anywhere under the folder (a `pack.json` with the parts' `.kn5` models next to i
 - `part_aliases.json` — `{ "old id": "new id" }` for parts the mod renamed; the old id is the mod's own unless written
   in full.
 - Part models are drawn at the size they were made: ship them at AC's scale (metres).
+- `models.json` — models of the mod's own for parts of any mod, the base game's too, without replacing the parts (a model
+  pack): `{ "models": { "running_gear/springs_leaf/rear_150": "truck/leaf.kn5", "running_gear/sway_bars/front_*": "bars/front.kn5" } }`.
+  A key is a part's full id, or the start of one ending in `*`; the model is a KN5 under the mod's parts folder, in the
+  part's own space (its origin where it mounts; see parts-system.md, "The running gear's models"). The part's figures,
+  slots and price stay its own; of two mods the later one's model wins. A key that names no part, or a model that is not
+  there, is a line in the log and left out.
 - `work_order.json` — what comes off an engine before what (see below). Most mods need none: the base game's covers
   every kind of engine part there is.
 - `"make"` in a `pack.json` (`"make": "gm"`) says which make the pack's parts are for: every part shop specialising in

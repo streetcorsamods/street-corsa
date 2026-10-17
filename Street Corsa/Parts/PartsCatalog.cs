@@ -81,6 +81,7 @@ public sealed class PartsCatalog
         var registry = new ContentRegistry<PartDefinition>("part");
         var builds = new ContentRegistry<EngineBuild>("engine build");
         var aliases = new List<(ModInfo Mod, string Gone, string Current)>();
+        var models = new List<(ModInfo Mod, string Root, string Label, string Part, string Model)>();
 
         foreach (var (mod, root) in roots)
         {
@@ -117,6 +118,7 @@ public sealed class PartsCatalog
             }
 
             ReadAliases(catalog, root, label, mod, aliases);
+            ReadModels(catalog, root, label, mod, models);
             ReadBuilds(catalog, root, label, mod, builds);
         }
 
@@ -173,6 +175,29 @@ public sealed class PartsCatalog
             catalog._aliases[from] = Resolve(mod.Id, current);
         }
 
+        // Models a mod gives other parts, in load order: the latest mod's wins
+        foreach (var (mod, root, label, key, model) in models)
+        {
+            if (!PathNames.TryCombineUnder(root, model, out var file) || !File.Exists(file))
+            {
+                catalog._problems.Add($"{label}{PartPack.ModelsFileName}: {key}: no model {model}; left out");
+                continue;
+            }
+
+            var prefix = key.EndsWith('*') ? key[..^1] : null;
+            var exact = prefix == null ? Resolve(mod.Id, key) : null;
+            var matched = 0;
+            foreach (var part in catalog._parts.Values.Where(p => prefix != null ? p.Id.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+                                                                                 : p.Id.Equals(exact, StringComparison.OrdinalIgnoreCase)))
+            {
+                part.Model = model;
+                part.ModelFolder = root;
+                matched++;
+            }
+
+            if (matched == 0) catalog._problems.Add($"{label}{PartPack.ModelsFileName}: {key} names no part; left out");
+        }
+
         // Slots nudged into place in the garage since the last conversion, by full id: the file is the base game's
         catalog.Shifts = SlotShifts.Load(baseRoot);
         if (catalog.Shifts.Problem != null) catalog._problems.Add(catalog.Shifts.Problem);
@@ -225,6 +250,39 @@ public sealed class PartsCatalog
         {
             catalog._problems.Add($"{label}{PartPack.AliasesFileName}: {ex.Message}; parts that changed ids are not found by their old ones");
         }
+    }
+
+    private static void ReadModels(PartsCatalog catalog, string root, string label, ModInfo mod,
+        List<(ModInfo, string, string, string, string)> models)
+    {
+        var modelsFile = Path.Combine(root, PartPack.ModelsFileName);
+        try
+        {
+            if (!File.Exists(modelsFile)) return;
+
+            var read = JsonConvert.DeserializeObject<ModelsFile>(File.ReadAllText(modelsFile));
+            foreach (var (part, model) in read?.Models ?? new())
+            {
+                if (string.IsNullOrWhiteSpace(part) || string.IsNullOrWhiteSpace(model) || part.Trim() == "*")
+                {
+                    catalog._problems.Add($"{label}{PartPack.ModelsFileName}: \"{part}\": \"{model}\" names no part or no model; left out");
+                    continue;
+                }
+
+                models.Add((mod, root, label, part.Trim(), model.Trim()));
+            }
+        }
+        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+        {
+            catalog._problems.Add($"{label}{PartPack.ModelsFileName}: {ex.Message}; the parts keep their own models");
+        }
+    }
+
+    /// <summary>A mod's <see cref="PartPack.ModelsFileName"/>: part id (or the start of one, ending in <c>*</c>) to model</summary>
+    private sealed class ModelsFile
+    {
+        [JsonProperty("models")]
+        public Dictionary<string, string>? Models { get; set; }
     }
 
     private static void ReadBuilds(PartsCatalog catalog, string root, string label, ModInfo mod, ContentRegistry<EngineBuild> builds)
@@ -429,8 +487,8 @@ public sealed class PartsCatalog
     {
         if (part.Model == null) return null;
 
-        if (part.PackFolder != null)
-            return PathNames.TryCombineUnder(part.PackFolder, part.Model, out var own) ? own : null;
+        if ((part.ModelFolder ?? part.PackFolder) is { } folder)
+            return PathNames.TryCombineUnder(folder, part.Model, out var own) ? own : null;
 
         var packEnd = part.Id.LastIndexOf('/');
         if (packEnd <= 0) return null;

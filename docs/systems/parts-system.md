@@ -808,6 +808,11 @@ tools, never by hand:
   on every housing is turned half round (`"rotation": [3.14159265, 0, 0]`), so the one shaft model points out both sides.
   The shocks' studs are staggered, behind the axle on the left and ahead on the right, as the side turns a shock round.
 - Not modelled: the source game's parts keep their own; a mod's running gear part without a model is drawn as a small box.
+- **A private truck mod** (`Content\truckparts`, git-ignored): `tools/RunningGearParts/prepare_truck_parts.py` cuts the
+  leaf spring (with its hangers, shackle and clip), the drum (four sizes), the axle housing (for the Dana 44 and 60) and
+  a shock (for the Gabriel) out of "Pickup truck chassis" (Sketchfab, CC BY-NC 4.0) and gives them to the base game's
+  parts through the mod's `models.json` (docs/modding.md). The owner is asking its author before it can go in the game;
+  until then a clone of the repo draws the base game's own models.
 
 **Threads.** The game state and the save file belong to the UI thread. Whatever takes long (loading the catalog,
 putting engines together for ads, market listings and cars without parts) runs on a worker thread on objects nobody
