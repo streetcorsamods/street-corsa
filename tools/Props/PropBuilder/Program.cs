@@ -11,20 +11,21 @@ namespace PropBuilder;
 /// (prepare_prop.py) each of the OBJ's materials is one of it, its pictures named there; without, the model is one
 /// material of &lt;name&gt;_diffuse.jpg, &lt;name&gt;_normal.png and &lt;name&gt;_maps.png (prepare_radio.py). The model
 /// comes out in metres, stood on its base: its origin the middle of its footprint, on the floor. Where it stands in a
-/// scene is the game's to say (prop.json).
+/// scene is the game's to say (prop.json). With --keep-origin the model keeps the origin it was made with: a part's
+/// model, whose origin is where it mounts (tools/RunningGearParts/prepare_standins.py).
 ///
-///   PropBuilder &lt;prepared folder&gt; &lt;name&gt; &lt;out folder&gt; --scale 0.112 [--turn degrees] [--mirror]
+///   PropBuilder &lt;prepared folder&gt; &lt;name&gt; &lt;out folder&gt; --scale 0.112 [--turn degrees] [--mirror] [--keep-origin]
 ///
 /// The Bush radio: PropBuilder &lt;prepared&gt; radio "Street Corsa/Content/bushradio/props/radio" --scale 0.112
 /// </summary>
 internal static class Program
 {
-    private const string Usage = "PropBuilder <prepared folder> <name> <out folder> --scale <metres a unit> [--turn <degrees>] [--mirror]";
+    private const string Usage = "PropBuilder <prepared folder> <name> <out folder> --scale <metres a unit> [--turn <degrees>] [--mirror] [--keep-origin]";
 
     private static int Main(string[] args)
     {
         // A word after --scale or --turn is its number, never the folder
-        var options = new BuilderArgs(args, "--mirror");
+        var options = new BuilderArgs(args, "--mirror", "--keep-origin");
         var positional = options.Positional;
         if (positional.Count != 3 || options.Option("--scale") == null)
         {
@@ -39,7 +40,7 @@ internal static class Program
         var mirror = options.Flag("--mirror");
         var (prepared, name, output) = (positional[0], positional[1], positional[2]);
 
-        var groups = ObjModel.ReadObj(Path.Combine(prepared, name + ".obj"), scale, turn, mirror);
+        var groups = ObjModel.ReadObj(Path.Combine(prepared, name + ".obj"), scale, turn, mirror, recentre: !options.Flag("--keep-origin"));
         Console.WriteLine($"{name}: {groups.Values.Sum(g => g.Vertices.Count)} vertices, {groups.Values.Sum(g => g.Indices.Count) / 3} triangles, {groups.Count} material group(s)");
 
         var kn5 = Kn5.CreateEmpty();

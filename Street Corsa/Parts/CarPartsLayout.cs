@@ -134,8 +134,10 @@ public static class CarPartsLayout
         var side = SideFrame(anchors.Forward, inboard);
         if (carSlot == RunningGear.BrakeSlot(corner)) return BySlot(part, side, hub + inboard * BrakeInboard);
 
+        // A spring faces the way the car does on both sides: a leaf spring with its traction bar, a torsion bar, run along
+        // the car and are not the same end to end, which turning them round would swap on the right (a coil is round)
         var springSeat = hub + inboard * SpringInboard - Vector3.UnitY * SpringSeatBelowHub;
-        return BySlot(part, side, springSeat);
+        return BySlot(part, carSlot == RunningGear.SpringSlot(corner) ? CarFrame(anchors.Forward) : side, springSeat);
     }
 
     /// <summary>Where an engine block sits in the car by the car's layout, its model measured through the catalog</summary>

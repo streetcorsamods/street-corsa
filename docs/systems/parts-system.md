@@ -787,6 +787,28 @@ source game's discs carry no fade of their own.
 - Not done: lowering springs and blocks (ride height), the leaf's U-bolts, plate and shackles as parts (phase 5),
   pickers for brakes and springs in the Car Catalog Editor (cars.json by hand meanwhile).
 
+**The running gear's models** (step 31 phase 4). Every part under `parts/running_gear` has a KN5 beside its pack, made by
+tools, never by hand:
+- `tools/RunningGearParts` (C#, on `tools/Shared` `SceneMesh`, with a lathe, a tube, a swept rod, turned boxes and hex
+  heads in `GearMesh`): the nine axle housings (a Salisbury's snout and bolted cover shaped per family: the Danas'
+  lopsided, the 12-bolt's twelve bolts; a banjo's third member bolted in front for the Ford 8 and 9-inch and the 8-3/4),
+  a ring and pinion per family (sized by its ring gear), the axle shaft, the drum's wheel cylinder, the four period shocks,
+  a torsion bar and a sway bar at each size their packs give (`diameter_in`), the four traction bars. Plain ksPerPixel
+  materials of small swatches (cast iron, steel, black paint, rubber, chrome, the shocks' colours).
+  `RunningGearParts build <parts folder>`; `RunningGearParts obj <kn5> <obj>` dumps one to look at.
+- `tools/RunningGearParts/prepare_standins.py`: stand-ins cut out of CC BY 4.0 Sketchfab downloads (Blender, then
+  `tools/Props` `prepare_prop.py` and `PropBuilder --keep-origin`): the drum at four sizes (by the drum's `diam_mm`), the
+  period disc with its caliper, the shoes (two to a drum), the leaf spring, the carrier's case. Each pack with one has a
+  `CREDITS.txt`. They are to be replaced by generated ones in time; the downloads stay out of the repo (the
+  script names the zips it takes and where each came from).
+- **Spaces**: a part's model has its origin where it mounts. On the car (the housing at the middle of the rear hubs, the
+  sway bars, a leaf with its traction bars): +X the car's left, the front -Z. At a wheel (a drum and what is on it, a
+  shock): +X outboard, the hub's axis along X; `CarPartsLayout` turns it round for the right side. A spring's slot faces
+  the way the car does on both sides (a leaf or a torsion bar is not the same end to end). The right axle shaft's slot
+  on every housing is turned half round (`"rotation": [3.14159265, 0, 0]`), so the one shaft model points out both sides.
+  The shocks' studs are staggered, behind the axle on the left and ahead on the right, as the side turns a shock round.
+- Not modelled: the source game's parts keep their own; a mod's running gear part without a model is drawn as a small box.
+
 **Threads.** The game state and the save file belong to the UI thread. Whatever takes long (loading the catalog,
 putting engines together for ads, market listings and cars without parts) runs on a worker thread on objects nobody
 else has yet, and the result goes into the game state back on the calling thread (`RefreshAdsAsync`,

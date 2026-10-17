@@ -1794,7 +1794,13 @@ untouched (checked on a Firebird, a Charger and a Nova). Not done: lowering spri
 springs in the Car Catalog Editor; GM's coil-sprung live axles get leaves by the guess until cars.json picks a coil. To
 check in game: axle hop on a hard launch with soft leaves and slicks, less with ladder bars (the 60-foot); a bigger front
 bar's understeer.
-Next: phases 4 (meshes: CC-BY stand-ins need a Sketchfab login, ask the owner) and 5 (part tree and work).
+Phase 4 (meshes) built after it: every running gear part has a model. The owner downloaded the CC BY stand-ins
+(Sketchfab); four were usable (the drums and discs of "Low Poly Brakes", a scanned brake shoe, a scanned leaf spring, a
+differential case), the rest not (a modern coil-over, a cross-car torsion bar, CC BY-NC models, GrabCAD files). The owner
+chose to generate the housings rather than use a downloaded one: `tools/RunningGearParts` makes them and everything
+else (see docs/systems/parts-system.md "The running gear's models"). Checked in Blender renders of the axle put
+together as `CarPartsLayout` places it; not seen in game.
+Next: phase 5 (part tree and work).
 
 ### Phase 0 findings and design (2026-10-17)
 

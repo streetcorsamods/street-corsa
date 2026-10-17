@@ -613,7 +613,9 @@ the game shows its credits (Settings), as a CC BY licence asks. The published `b
 welder: clicking it opens the radio. The base game's `workbench` is where a loose part's "Work on it" job is shown; it names
 no model and the game draws its own (a mod's `workbench` may name one, its top 0.9 m up, its front +Z); a garage it has no place in
 has no bench, and a loose part's job is shown there without the part. `tools\Props` makes a prop's KN5: `prepare_prop.py` takes any model with PBR
-materials (a Sketchfab .glb, a .blend) through Blender, `PropBuilder` writes the KN5.
+materials (a Sketchfab .glb, a .blend) through Blender, `PropBuilder` writes the KN5 (`--keep-origin` for a part's model,
+whose origin is where it mounts: see docs/systems/parts-system.md "The running gear's models" for the spaces).
+`tools\RunningGearParts` makes the base game's running gear models out of shapes.
 
 ### dealers
 

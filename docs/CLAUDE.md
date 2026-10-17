@@ -34,7 +34,7 @@ Street Rod-style career mode manager for Assetto Corsa. WPF app manages game log
 | CarProfile | catalog.db | Gameplay properties: BasePrice, DealerPrecedence; read with what the mods' `cars/cars.json` gives the car laid over it (`CarProfileRepository.Given`), never stored |
 | UsedCarListing | saves/*.db | Car for sale in market |
 | Car | saves/*.db | Player-owned car (`SkinId`, and `PaintColour` over it from the paint booth) |
-| PartInstance | saves/*.db | A part somebody owns, with what is mounted on it: `Car.Parts` (engine on car slot 1, the wheels' running gear on 101-314, the rear axle on 401), `Player.Parts` (shelf), `Player.EngineStand` (the engine on the stand), `Player.PartOrders` (mail order on its way), `Player.MachineWork` (left at a machine shop), `UsedCarListing.Parts`, `NewspaperAds.Parts`, a junkyard's `PartShopLocation.Yard`; `Cuts` is what a machine shop has cut on it (empty: as from the factory) |
+| PartInstance | saves/*.db | A part somebody owns, with what is mounted on it: `Car.Parts` (engine on car slot 1, the wheels' running gear on 101-314, the rear axle on 401, the sway bars on 402-403), `Player.Parts` (shelf), `Player.EngineStand` (the engine on the stand), `Player.PartOrders` (mail order on its way), `Player.MachineWork` (left at a machine shop), `UsedCarListing.Parts`, `NewspaperAds.Parts`, a junkyard's `PartShopLocation.Yard`; `Cuts` is what a machine shop has cut on it (empty: as from the factory) |
 | PartShopLocation | saves/*.db | A part shop's business (a `DealerLocation`), its shelves or yard, what the player has spent there |
 | Opponent | saves/*.db | AI racer with Skill/Aggression traits |
 | GameState | saves/*.db | Player money, date, cars, market |
