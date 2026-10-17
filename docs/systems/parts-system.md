@@ -699,7 +699,10 @@ same. Only a live axle carries them (the car's data's rear suspension `AXLE`), a
 on those, so they stay on the car's own slots, while coil springs go on the axle (`RearAxle.Carries`); an independent
 rear (the Corvettes' Dana 44 carrier) keeps all its running gear on the car. The workbench follows the same rule (the
 garage tells it whether the car is on a live axle), the factory builds cars that way (`RunningGearFactory.HangOnAxle`,
-which also moves parts back off the axle), and `GearVersion` 3 and 4 bring an older car's rear corners where they belong. The garage
+which also moves parts back off the axle), and `GearVersion` 3 and 4 bring an older car's rear corners where they belong.
+In the garage the axle and its leaves go on and come off in their order (`AxleWork`, asked as the engine's work order
+is): on a car sprung on leaves (a leaf on a rear spring slot, or the factory's rear spring a leaf) the axle goes on once
+both rear leaves are on, and a leaf comes off once the axle is off; the reasons are the player's words (`workbench.axle.*`). The garage
 draws them at their wheel as before (`CarPartsLayout`: a part on a corner slot of the housing is placed where it would be
 on the car's slot, whatever the track), and taking the axle off takes them with it. They are parts of data (`parts/running_gear/`:
 `axles_gm`, `axles_ford`, `axles_mopar`, `axles_dana`, and the aftermarket's `axle_speed`) and mate by standard

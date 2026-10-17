@@ -385,12 +385,23 @@ namespace StreetCorsa.Screens.Garage
             ? string.Join("  ·  ", Machining.Describe(catalog, saved))
             : string.Empty;
 
-        /// <summary>Why the picked part cannot come off now, in the work order's words; empty when it can</summary>
-        public string SelectedBlockedDisplay =>
-            _selectedPart != null && Catalog is { } catalog && SavedOf(_selectedPart) is { } saved && CurrentEngine is { } engine
-            && engine.SelfAndDescendants().Contains(saved)
-                ? EngineWork.WhyNotOff(catalog, engine, saved, _isStand) ?? string.Empty
-                : string.Empty;
+        /// <summary>
+        /// Why the picked part cannot come off now, in the work order's words (an engine's part) or the axle's (a leaf spring
+        /// under the rear axle); empty when it can
+        /// </summary>
+        public string SelectedBlockedDisplay
+        {
+            get
+            {
+                if (_selectedPart == null || Catalog is not { } catalog || SavedOf(_selectedPart) is not { } saved) return string.Empty;
+                if (CurrentEngine is { } engine && engine.SelfAndDescendants().Contains(saved)) return EngineWork.WhyNotOff(catalog, engine, saved, _isStand) ?? string.Empty;
+                return !_isStand && _car != null ? AxleWork.WhyNotOff(catalog, _car.Parts, saved) ?? string.Empty : string.Empty;
+            }
+        }
+
+        /// <summary>Whether the car's rear is sprung on leaves, which its rear axle sits on (<see cref="AxleWork"/>)</summary>
+        private bool LeafSprung(PartsCatalog catalog) =>
+            _car != null && AxleWork.LeafSprung(catalog, _car.Parts, _parts.Specs(_car.DefinitionId)?.HasLiveAxle ?? false, _parts.FactoryRunningGear(_car)?.Rear.Spring);
 
         private bool SelectedIsEngine => _selectedPart != null && ReferenceEquals(_selectedPart, _engine);
 
@@ -1203,6 +1214,14 @@ namespace StreetCorsa.Screens.Garage
                 ? EngineWork.WhyNotOn(catalog, engine!, item.Part, _isStand)
                 : null;
             if (blocked != null) places = places.Where(p => !Workbench.IsOnEngine(onEngine!, p)).ToList();
+
+            // A rear axle sits on its leaf springs: on a car sprung on leaves it goes on once both are on
+            if (!_isStand && AxleWork.WhyNotOn(catalog, _car!.Parts, item.Part, LeafSprung(catalog)) is { } axleWhy)
+            {
+                blocked = axleWhy;
+                places = [];
+            }
+
             var installedOf = Trees.SelectMany(t => t.Saved).ToDictionary(p => p.Value, p => p.Key);
 
             var candidates = new List<MountCandidate>();
