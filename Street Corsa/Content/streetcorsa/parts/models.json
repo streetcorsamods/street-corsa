@@ -1,0 +1,10 @@
+{
+  "_comment": [
+    "Models for parts whose own are not the ones to draw (docs/modding.md, models.json): a part's full id, or the start of",
+    "one ending in *, to a KN5 under this folder. The source game's coil springs are small for the cars of the day: they",
+    "are drawn with running_gear/coil_springs (tools/RunningGearParts/prepare_standins.py, credited beside it)."
+  ],
+  "models": {
+    "suspension/stock/spring*": "running_gear/coil_springs/coil_spring.kn5"
+  }
+}

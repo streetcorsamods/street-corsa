@@ -814,7 +814,12 @@ tools, never by hand:
   The drums and period discs mount 0.08 m outboard of the brake slot (their own slot 1 at `[-0.08, 0, 0]`), their shoes
   and wheel cylinder with them. The middle of an axle (the housing's centre section, cover and nose, the ring and pinion,
   the carrier's case) is drawn 1.1 times its ring gear's size (`Parts.CentreScale`; the truck housing's 1.05).
-- Not modelled: the source game's parts keep their own; a mod's running gear part without a model is drawn as a small box.
+- **The source game's coil springs** are drawn with a CC BY coil (`running_gear/coil_springs`, "COIL SPRING" by VR DESIGNER,
+  credited beside it) through the base game's own `parts/models.json` (`suspension/stock/spring*`), so the converter's
+  pack is left as it is. The source game's was 96 mm across and 277 mm tall, small for the cars of the day; this one is
+  135 mm across and 320 mm tall, standing up from the hub's height (its model's space is theirs: their mount slot 0.4 m
+  under the origin).
+- Not modelled: the source game's other parts keep their own; a mod's running gear part without a model is drawn as a small box.
 - **A private truck mod** (`Content\truckparts`, git-ignored): `tools/RunningGearParts/prepare_truck_parts.py` cuts the
   leaf spring (with its hangers, shackle and clip), the drum (four sizes), the axle housing (for the Dana 44 and 60) and
   a shock (for the Gabriel) out of "Pickup truck chassis" (Sketchfab, CC BY-NC 4.0) and gives them to the base game's

@@ -26,8 +26,17 @@ public sealed class RunningGearModelsTests : IDisposable
         });
 
         // Each model is credited or ours: a pack with a stand-in of a download says so beside it
-        foreach (var pack in new[] { "brakes_drum", "brakes_disc", "springs_leaf", "axles_gm", "axles_ford", "axles_mopar", "axles_dana", "axle_speed" })
+        foreach (var pack in new[] { "brakes_drum", "brakes_disc", "springs_leaf", "axles_gm", "axles_ford", "axles_mopar", "axles_dana", "axle_speed", "coil_springs" })
             Assert.True(File.Exists(Path.Combine(Catalog.Root, "running_gear", pack, "CREDITS.txt")), pack);
+    }
+
+    [Fact]
+    public void The_source_games_coil_springs_are_drawn_with_the_base_games_own_coil()
+    {
+        var springs = Catalog.Parts.Values.Where(p => p.Id.StartsWith("suspension/stock/spring", StringComparison.Ordinal)).ToList();
+        Assert.NotEmpty(springs);
+        Assert.All(springs, s => Assert.EndsWith(Path.Combine("running_gear", "coil_springs", "coil_spring.kn5"), Catalog.GetModelPath(s)));
+        Assert.DoesNotContain(Catalog.Problems, p => p.Contains("models.json"));
     }
 
     [Fact]

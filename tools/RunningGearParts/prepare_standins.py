@@ -9,6 +9,7 @@ CREDITS.txt there naming what it was made from.
   "Brake Shoe" by Addere Creations            the drum's shoes, two to a drum
   "Leaf Spring" by 3dsl                       every leaf spring
   "Differential Gear box" by Anoopbg          every differential carrier (the case only: the gears are ours)
+  "COIL SPRING" by VR DESIGNER                the source game's coil springs (the base game's parts/models.json)
 
 A part's own space: metres, Y up, its front towards -Z. A wheel-side part (a drum, its shoes) has its +X towards the
 outside of the car and the hub's axis along X; a leaf spring runs along Z with its top at the axle seat; a carrier's
@@ -43,6 +44,8 @@ SOURCES = {
                     "https://sketchfab.com/3d-models/leaf-spring-02cea2df054242f099c3c70721ca5b81"),
     "differential_gear_box": ("Differential Gear box", "Anoopbg", "https://sketchfab.com/Anoopbg",
                               "https://sketchfab.com/3d-models/differential-gear-box-1e3b1c25370b467887d982c1011f3b1e"),
+    "coil_spring": ("COIL SPRING", "VR DESIGNER", "https://sketchfab.com/vr.designer_09",
+                    "https://sketchfab.com/3d-models/coil-spring-3bf2215ce5f34e83a966c780393956fc"),
 }
 
 # Drum diameters, inches: the drum's model at each size (the drums' diam_mm picks one)
@@ -55,6 +58,8 @@ MODELS.update({
     "shoes": ("brake_shoe", ["brakes_drum"], 512),
     "leaf": ("leaf_spring", ["springs_leaf"], 512),
     "diff_case": ("differential_gear_box", ["axles_gm", "axles_ford", "axles_mopar", "axles_dana", "axle_speed"], 256),
+    # Not a pack: the folder the base game's parts/models.json names for the source game's springs
+    "coil_spring": ("coil_spring", ["coil_springs"], 256),
 })
 
 # Run inside Blender: each model out of its download into a .blend of its own, in the part's space. Blender's space is
@@ -180,6 +185,17 @@ decimate(o, 6000)
 lo, hi = bounds(o)
 o.data.transform(scale(0.17 * 1.1 / (hi.y - lo.y)) @ at(-(lo + hi) / 2))
 save("diff_case")
+
+# The coil spring for the source game's springs, in their model's space: their mount slot is 0.4 m under the origin, so
+# the coil's foot goes 0.34 m under it (at the hub's height: the seat is 0.06 m under the hub) and it stands up from
+# there. The source game's coil was 96 mm across and 277 mm tall, small for the cars of the day (front coils about 5.5
+# inches across, 12 to 13 inches tall installed): this one 135 mm across, its own build making it 320 mm tall
+o = load("coil_spring")
+decimate(o, 6000)
+lo, hi = bounds(o)
+across = max(hi.x - lo.x, hi.y - lo.y)
+o.data.transform(at((0, 0, -0.34)) @ scale(0.135 / across) @ at((-(lo.x + hi.x) / 2, -(lo.y + hi.y) / 2, -lo.z)))
+save("coil_spring")
 """
 
 
@@ -227,6 +243,7 @@ def main(downloads, parts):
                            check=True)
             for pack in packs:
                 target = os.path.join(running_gear, pack)
+                os.makedirs(target, exist_ok=True)
                 subprocess.run(["dotnet", PROP_BUILDER, prepared, name, target, "--scale", "1", "--keep-origin"], check=True)
                 credits.setdefault(pack, []).append((name + ".kn5", source))
 
