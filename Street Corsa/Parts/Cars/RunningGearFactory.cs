@@ -44,9 +44,9 @@ public static class RunningGearFactory
             // is the smallest the catalog has more often than not: what the shop sells is an upgrade
             var rim = rims.Where(r => RunningGear.TyreFitsRim(tyre, r))
                 .OrderBy(r => r.Number("rim_type")).ThenBy(r => Math.Abs(RunningGear.RimOffset(r)))
-                .ThenBy(r => r.Number("value")).ThenBy(r => r.Id, StringComparer.Ordinal).First();
+                .ThenBy(PartPricing.NewPrice).ThenBy(r => r.Id, StringComparer.Ordinal).First();
             var brake = brakes.OrderBy(b => Math.Abs(RunningGear.BrakeTorque(b) - axle.BrakeTorque))
-                .ThenBy(b => b.Number("value")).ThenBy(b => b.Id, StringComparer.Ordinal).First();
+                .ThenBy(PartPricing.NewPrice).ThenBy(b => b.Id, StringComparer.Ordinal).First();
             var spring = springs.OrderBy(s => Math.Abs(RunningGear.SpringRate(s) - axle.SpringRate))
                 .ThenBy(s => Math.Abs(RunningGear.SpringDesignLoad(s) - axle.CornerLoad)).ThenBy(s => s.Id, StringComparer.Ordinal).First();
             var shock = shocks.OrderBy(s => Math.Abs(RunningGear.Damping(s).Bump - axle.DampBump))

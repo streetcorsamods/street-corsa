@@ -407,7 +407,7 @@ namespace StreetCorsa.Services.Opponents
 
         /// <summary>The car's worth by <see cref="CarValuation"/>; a model without a price is worth what was paid for the car</summary>
         private decimal ValueOf(Car car, CarDefinition definition) =>
-            CarValuation.WorthOf(car, _carProfileRepository.GetProfile, _ => definition, _partsService);
+            CarValuation.WorthOf(car, _carProfileRepository.GetProfile, _partsService);
 
         #region Message Generation
 

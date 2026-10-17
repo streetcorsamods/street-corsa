@@ -36,6 +36,7 @@ public sealed class PartGroups
     public const string ConnectingRods = "connecting_rods";
     public const string Pistons = "pistons";
     public const string Transmissions = "transmissions";
+    public const string Carburettors = "carburettors";
     public const string AirFilters = "air_filters";
     public const string Exhaust = "exhaust";
     public const string OilPans = "oil_pans";
@@ -111,6 +112,9 @@ public sealed class PartGroups
 
     /// <summary>The kinds of part a speed shop sells: the ones that make power</summary>
     public bool SoldBySpeedShops(string group) => Get(group)?.SpeedShop == true;
+
+    /// <summary>What a part of the kind costs new: its group's price, else an accessory's, else <see cref="PartPrice.Fallback"/></summary>
+    public PartPrice PriceOf(string group) => Get(group)?.Price ?? Get(Accessories)?.Price ?? PartPrice.Fallback;
 
     /// <summary>Every mod's file, in load order (the base game's first)</summary>
     public static PartGroups Load(IEnumerable<string> partsFolders)
@@ -213,6 +217,52 @@ public sealed class PartShow
     }
 }
 
+/// <summary>
+/// What a part of a kind costs new, in the game's dollars, as the source game priced its parts: by what they do. A part
+/// costs <see cref="Base"/>, and <see cref="PerHp"/> for every horsepower it is worth on the dyno (an engine block the
+/// power of its own engine, any other part what it makes over the poorest of its kind in its place,
+/// <see cref="PartPriceBook"/>), the horsepower raised to <see cref="HpPower"/> first: above 1, a big engine's every
+/// horsepower costs more than a small one's; a kind priced <see cref="By"/> a figure of its own (tyres by their grip, brakes by their
+/// torque) costs that much more or less as its figure stands against the middle one of its kind, to the power of
+/// <see cref="ByPower"/>.
+/// </summary>
+public sealed class PartPrice
+{
+    /// <summary>A kind no file prices: an accessory's</summary>
+    public static PartPrice Fallback { get; } = new() { Base = 15 };
+
+    /// <summary>
+    /// The figures a kind can be priced by: <c>grip</c>, <c>brake_torque</c>, <c>rim_size</c>, <c>spring_rate</c>,
+    /// <c>damping</c>, <c>carb_mounts</c>
+    /// </summary>
+    public static readonly IReadOnlyList<string> Figures = ["grip", "brake_torque", "rim_size", "spring_rate", "damping", "carb_mounts"];
+
+    [JsonPropertyName("base")]
+    public double? Base { get; set; }
+
+    [JsonPropertyName("per_hp")]
+    public double? PerHp { get; set; }
+
+    [JsonPropertyName("hp_power")]
+    public double? HpPower { get; set; }
+
+    [JsonPropertyName("by")]
+    public string? By { get; set; }
+
+    [JsonPropertyName("by_power")]
+    public double? ByPower { get; set; }
+
+    /// <summary>A copy with another mod's figures over these where it gives them</summary>
+    internal PartPrice Over(PartPrice other) => new()
+    {
+        Base = other.Base ?? Base,
+        PerHp = other.PerHp ?? PerHp,
+        HpPower = other.HpPower ?? HpPower,
+        By = other.By ?? By,
+        ByPower = other.ByPower ?? ByPower
+    };
+}
+
 /// <summary>A kind of part in part_groups.json</summary>
 public sealed class PartGroup
 {
@@ -240,9 +290,14 @@ public sealed class PartGroup
     [JsonPropertyName("speed_shop")]
     public bool? SpeedShop { get; set; }
 
+    /// <summary>What a part of the kind costs new (<see cref="PartPriceBook"/>); none: <see cref="PartPrice.Fallback"/></summary>
+    [JsonPropertyName("price")]
+    public PartPrice? Price { get; set; }
+
     /// <summary>Another mod's group of the same id, over this one where it says something</summary>
     internal void Over(PartGroup other)
     {
+        if (other.Price != null) Price = Price == null ? other.Price : Price.Over(other.Price);
         if (other.Name != null) Name = other.Name;
         if (other.Classes.Count > 0) Classes = other.Classes;
         if (other.NeverStacks != null) NeverStacks = other.NeverStacks;

@@ -6,15 +6,15 @@
     "V8 out of a Mustang. The cars are Kunos cars every Assetto Corsa has, each with its engine build and layout."
   ],
   "makes": {
-    "abarth": { "family": "fiat", "country": "Italy", "words": [ "abarth" ], "price": 1.3 },
+    "abarth": { "family": "fiat", "country": "Italy", "words": [ "abarth" ] },
     "fiat": { "family": "fiat" },
     "alfa_romeo": { "family": "alfa_romeo" },
     "ford_uk": { "family": "ford_uk", "country": "UK", "words": [ "escort", "cortina", "anglia", "capri" ] }
   },
   "cars": {
-    "ks_abarth_595ss": { "engine": "small_imports:cars/abarth_595ss/stock", "layout": "rear", "price": 900, "common": 0.6, "make": "abarth" },
-    "ks_alfa_romeo_gta": { "engine": "small_imports:cars/alfa_gta/stock", "layout": "front", "price": 3800, "common": 0.25 },
-    "ks_ford_escort_mk1": { "engine": "small_imports:cars/escort_rs1600/stock", "layout": "front", "price": 2600, "common": 0.4, "make": "ford_uk" },
-    "abarth500": { "engine": "small_imports:cars/abarth_500/stock", "layout": "front_transverse", "price": 5200, "common": 0.3, "make": "abarth" }
+    "ks_abarth_595ss": { "engine": "small_imports:cars/abarth_595ss/stock", "layout": "rear", "common": 0.6, "make": "abarth" },
+    "ks_alfa_romeo_gta": { "engine": "small_imports:cars/alfa_gta/stock", "layout": "front", "common": 0.25 },
+    "ks_ford_escort_mk1": { "engine": "small_imports:cars/escort_rs1600/stock", "layout": "front", "common": 0.4, "make": "ford_uk" },
+    "abarth500": { "engine": "small_imports:cars/abarth_500/stock", "layout": "front_transverse", "common": 0.3, "make": "abarth" }
   }
 }

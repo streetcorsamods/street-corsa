@@ -92,7 +92,8 @@ namespace StreetCorsa.Services.Catalog
                 {
                     Set(entry, "engine", fields.Engine is { Length: > 0 } engine ? JsonValue.Create(engine) : null);
                     Set(entry, "layout", fields.Layout is { } layout ? JsonValue.Create(StreetCorsa.Parts.EngineLayouts.Name(layout)) : null);
-                    Set(entry, "price", fields.Price is { } price ? JsonValue.Create(price) : null);
+                    // Prices are the game's own now (the car's body and parts): a price an older editor wrote goes
+                    Set(entry, "price", null);
                     Set(entry, "common", fields.Common is { } common ? JsonValue.Create(Math.Round((double)common, 2)) : null);
                 });
             }
@@ -175,5 +176,5 @@ namespace StreetCorsa.Services.Catalog
     }
 
     /// <summary>What the editor sets for a car: a null field is not given (worked out from the car)</summary>
-    public sealed record CarFields(string? Engine, StreetCorsa.Parts.EngineLayout? Layout, decimal? Price, float? Common);
+    public sealed record CarFields(string? Engine, StreetCorsa.Parts.EngineLayout? Layout, float? Common);
 }

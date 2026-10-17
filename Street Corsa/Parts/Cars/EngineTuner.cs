@@ -453,9 +453,9 @@ public static class EngineTuner
         return loose;
     }
 
-    /// <summary>A used engine out of the paper: its parts at a used shop's price</summary>
+    /// <summary>A used engine out of the paper: what it makes (<see cref="PartPricing.EngineNewPrice"/>) at a used shop's price</summary>
     public static decimal UsedEnginePrice(PartsCatalog catalog, RatedBuild build, double priceMultiplier) =>
-        PartPricing.Round(build.Build.Parts.Sum(p => p.Part != null && catalog.Get(p.Part) is { } d ? PartPricing.NewPrice(d) : 0)
+        PartPricing.Round(PartPricing.EngineNewPrice(CarPricing.PartsOf(catalog, build), build.PowerHp)
                           * PartPricing.UsedShopFactor * UsedEngineCondition * Multiplier.Sane(priceMultiplier));
 
     /// <summary>What a shop pays for a part that came off, without what is on it</summary>

@@ -202,8 +202,9 @@ namespace StreetCorsa.Services.PartShops
             item.Haggled = true;
             if (random.NextDouble() >= PartShopRules.HaggleChance) return false;
 
+            // Down at least one step of the prices: a cheap part's cut rounded back to what was asked is no cut
             var cut = PartShopRules.HaggleMinCut + random.NextDouble() * (PartShopRules.HaggleMaxCut - PartShopRules.HaggleMinCut);
-            item.AskingPrice = Math.Max(1m, PartPricing.Round((double)item.AskingPrice * (1 - cut)));
+            item.AskingPrice = Math.Max(1m, Math.Min(PartPricing.Round((double)item.AskingPrice * (1 - cut)), PartPricing.Below(item.AskingPrice)));
             return true;
         }
 

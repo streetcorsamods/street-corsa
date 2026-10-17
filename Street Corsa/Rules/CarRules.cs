@@ -1,30 +1,31 @@
 namespace StreetCorsa.Rules;
 
 /// <summary>
-/// What a car is worth new and how common it is, worked out from its data where the mods give it neither
-/// (<c>"cars"</c> in the rules; a car's own figures are cars.json's, its badge's makes.json's). The catalog's prices are
-/// the program's, not a career's: they follow the mods next to the game (<see cref="RuleBook.Installed"/>), and a
-/// change to these figures works every generated price out again.
+/// What a car is worth new and how common it is (<c>"cars"</c> in the rules; how common a car is may be cars.json's, its
+/// badge's makes.json's). A car costs what its body and its parts cost (<see cref="Parts.Cars.CarPricing"/>): the body by
+/// its weight, here, the parts by what they do (part_groups.json). The catalog's prices are the program's, not a career's:
+/// they follow the mods next to the game (<see cref="RuleBook.Installed"/>), worked out again at every start.
 /// </summary>
 public sealed class CarRules
 {
-    /// <summary>What a car costs at <see cref="ReferenceHpPerTonne"/>, before its year, badge and source</summary>
-    public double ReferencePrice { get; set; } = 7000;
+    /// <summary>What the bare body of a car of <see cref="BodyKg"/> costs, and one whose weight is not known</summary>
+    public double BodyPrice { get; set; } = Parts.Cars.CarPricing.Defaults.BodyPrice;
 
-    /// <summary>Power to weight, hp per tonne, of a car worth <see cref="ReferencePrice"/>: an economy car</summary>
-    public double ReferenceHpPerTonne { get; set; } = 70;
+    public double BodyKg { get; set; } = Parts.Cars.CarPricing.Defaults.BodyKg;
 
     /// <summary>
-    /// How fast the price climbs with the power to weight: as its ratio to the reference to this power. At 1.3 a muscle
-    /// car (150 hp/t) is worth about $18,000 and a supercar (350 hp/t) $57,000. Dearer the quicker, always.
+    /// How much more a lighter body costs, and less a heavier one: as <see cref="BodyKg"/> over its weight to this power.
+    /// A racer is its power to weight; the power is in the price of its engine.
     /// </summary>
-    public double PriceExponent { get; set; } = 1.3;
+    public double BodyWeightPower { get; set; } = Parts.Cars.CarPricing.Defaults.WeightPower;
 
-    /// <summary>What a car whose data gives no power or weight is worth, before its year, badge and source</summary>
-    public decimal NoSpecsPrice { get; set; } = 15000m;
+    /// <summary>The cheapest and dearest a body costs</summary>
+    public double MinBodyPrice { get; set; } = Parts.Cars.CarPricing.Defaults.MinBody;
+
+    public double MaxBodyPrice { get; set; } = Parts.Cars.CarPricing.Defaults.MaxBody;
 
     /// <summary>The cheapest and dearest a car is worth new</summary>
-    public decimal MinPrice { get; set; } = 5000m;
+    public decimal MinPrice { get; set; } = 500m;
 
     public decimal MaxPrice { get; set; } = 500000m;
 
@@ -33,32 +34,11 @@ public sealed class CarRules
 
     /// <summary>
     /// Weights outside this are misprints ("1.250" read the wrong way, a weight in tonnes or pounds): no road car weighs
-    /// under 300 kg or over 5 t. The car is then priced as one without specs.
+    /// under 300 kg or over 5 t. The body is then priced as one whose weight is not known.
     /// </summary>
-    public double MinPlausibleWeightKg { get; set; } = 300;
+    public double MinPlausibleWeightKg { get; set; } = Parts.Cars.CarPricing.Defaults.MinPlausibleKg;
 
-    public double MaxPlausibleWeightKg { get; set; } = 5000;
-
-    /// <summary>What the car's year does to its price: the first step it is in, newest first; a car with no year has none</summary>
-    public YearStep[] PriceByYear { get; set; } =
-    [
-        new() { From = 2010, Value = 1.1 },
-        new() { From = 2000, Value = 1.0 },
-        new() { From = 1990, Value = 0.9 },
-        new() { From = 1980, Value = 0.7 },
-        new() { From = 1970, Value = 0.6 },
-        new() { From = 1960, Value = 1.2 },
-        new() { Value = 1.5 }
-    ];
-
-    /// <summary>What where the car comes from does to its price: <c>kunos</c>, <c>dlc</c>, <c>mod</c>, <c>unknown</c></summary>
-    public Dictionary<string, double> PriceBySource { get; set; } = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["kunos"] = 1.2,
-        ["dlc"] = 1.2,
-        ["mod"] = 0.9,
-        ["unknown"] = 1.0
-    };
+    public double MaxPlausibleWeightKg { get; set; } = Parts.Cars.CarPricing.Defaults.MaxPlausibleKg;
 
     /// <summary>How common a car is before its year, source, badge and power (0 rare to 1 common)</summary>
     public float Common { get; set; } = 0.5f;
@@ -105,11 +85,12 @@ public sealed class CarRules
     /// <summary>Each figure the game divides by, loops over or pays held to what it can play by (<see cref="Figures"/>)</summary>
     internal void Check(string path, List<string> problems)
     {
-        Figures.Above0(this, path, nameof(ReferencePrice), (double)Parts.Cars.CarBook.MaxCarPrice, problems);
-        Figures.Above0(this, path, nameof(ReferenceHpPerTonne), 100_000, problems);
-        Figures.Within(this, path, nameof(PriceExponent), 0, 10, problems);
+        Figures.Above0(this, path, nameof(BodyPrice), (double)Parts.Cars.CarBook.MaxCarPrice, problems);
+        Figures.Above0(this, path, nameof(BodyKg), 100_000, problems);
+        Figures.Within(this, path, nameof(BodyWeightPower), 0, 10, problems);
         Figures.Above0(this, path, nameof(PriceStep), 1_000_000, problems);
-        Figures.Money(this, path, problems, (double)Parts.Cars.CarBook.MaxCarPrice, nameof(NoSpecsPrice), nameof(MinPrice), nameof(MaxPrice));
+        Figures.Money(this, path, problems, (double)Parts.Cars.CarBook.MaxCarPrice, nameof(MinBodyPrice), nameof(MaxBodyPrice), nameof(MinPrice),
+            nameof(MaxPrice));
     }
 }
 

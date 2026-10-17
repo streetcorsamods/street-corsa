@@ -31,6 +31,7 @@ namespace StreetCorsa.Services.Parts
         private readonly Lazy<EngineBuildIndex> _builds;
         private readonly Lazy<SoundLibrary> _sounds;
         private readonly Lazy<EngineCooling> _cooling;
+        private readonly Lazy<PartPriceBook> _priceBook;
         private readonly ConcurrentDictionary<string, RatedBuild?> _suggestedBuilds = new(StringComparer.OrdinalIgnoreCase);
         private readonly object _assignLock = new();
         private readonly ConcurrentDictionary<string, AcCarSpecs?> _specs = new();
@@ -61,7 +62,7 @@ namespace StreetCorsa.Services.Parts
             PartPricing.Source = () =>
             {
                 var economy = Rules.RuleBook.Current.Economy;
-                return new PartPricing.Figures(economy.PartsPriceScale, economy.UsedShopFactor, economy.TradeInFactor);
+                return new PartPricing.Figures(economy.PartsPriceFactor, economy.UsedShopFactor, economy.TradeInFactor);
             };
             // And the engines' figures (cooling, factory, tuners, the engine matcher): the same rules
             EngineRules.Source = () => Rules.RuleBook.Current.Engines;
@@ -71,6 +72,78 @@ namespace StreetCorsa.Services.Parts
             _builds = new Lazy<EngineBuildIndex>(CreateIndex);
             _sounds = new Lazy<SoundLibrary>(LoadSounds);
             _cooling = new Lazy<EngineCooling>(() => EngineCooling.Create(Catalog, Builds));
+            _priceBook = new Lazy<PartPriceBook>(CreatePriceBook);
+            // Every new part's price, process-wide like the figures: this catalog's parts measured on its builds
+            PartPricing.Book = () => PriceBook;
+        }
+
+        public PartPriceBook PriceBook => _priceBook.Value;
+
+        /// <summary>The power kept for these parts; null when none is, or it is of other parts, or it does not read</summary>
+        private Dictionary<string, double>? ReadMeasuring(string fingerprint)
+        {
+            try
+            {
+                if (!File.Exists(PriceBookPath)) return null;
+                var kept = System.Text.Json.JsonSerializer.Deserialize<KeptMeasuring>(File.ReadAllText(PriceBookPath));
+                return kept?.Fingerprint == fingerprint ? kept.Power : null;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
+            {
+                _logger.Warning("The parts' kept measuring could not be read; they are measured again: {Error}", ex.Message);
+                return null;
+            }
+        }
+
+        private void KeepMeasuring(string fingerprint, PartPriceBook book)
+        {
+            try
+            {
+                Helpers.SafeFile.WriteAllText(PriceBookPath,
+                    System.Text.Json.JsonSerializer.Serialize(new KeptMeasuring(fingerprint, new Dictionary<string, double>(book.Power))));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                _logger.Warning("The parts' measuring could not be kept; the next start measures them again: {Error}", ex.Message);
+            }
+        }
+
+        /// <summary>Where the measuring of the parts on the dyno is kept, with the fingerprint of the parts it was made from</summary>
+        private static string PriceBookPath => Path.Combine(AppSettings.AppDataPath, "part_power.json");
+
+        private sealed record KeptMeasuring(string Fingerprint, Dictionary<string, double> Power);
+
+        /// <summary>
+        /// Every part measured on the dyno, once a session: several seconds, so the measuring is kept on disk and taken
+        /// back while the parts in the mods are the same ones
+        /// </summary>
+        private PartPriceBook CreatePriceBook()
+        {
+            if (!IsAvailable) return PartPriceBook.Empty;
+
+            try
+            {
+                var started = DateTime.Now;
+                var fingerprint = PartPriceBook.Fingerprint(Mods.ModSet.Installed.Folders(Mods.ContentTypes.Parts).Select(f => f.Dir));
+                if (ReadMeasuring(fingerprint) is { } kept)
+                {
+                    var known = PartPriceBook.Create(Catalog, Builds, kept);
+                    _logger.Information("Part prices: {Measured} parts as measured before, in {Ms} ms", known.Measured,
+                        (int)(DateTime.Now - started).TotalMilliseconds);
+                    return known;
+                }
+
+                var book = PartPriceBook.Create(Catalog, Builds);
+                _logger.Information("Part prices: {Measured} parts measured on the dyno in {Ms} ms", book.Measured,
+                    (int)(DateTime.Now - started).TotalMilliseconds);
+                KeepMeasuring(fingerprint, book);
+                return book;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not measure the parts on the dyno: every part at its kind's base price");
+                return PartPriceBook.Empty;
+            }
         }
 
         public PartsCatalog Catalog => _catalog.Value;
@@ -90,6 +163,9 @@ namespace StreetCorsa.Services.Parts
                 }
 
                 SuggestStockEngines();
+
+                // Every part's price, before the first shop or lot asks for one
+                _ = PriceBook;
 
                 // Every installed car's bank is read for the library: here, not on the way to the first race
                 _ = Sounds;

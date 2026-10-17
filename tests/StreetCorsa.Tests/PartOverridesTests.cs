@@ -74,8 +74,9 @@ public class PartOverridesTests
         Assert.Empty(engine.Override(block, """{ "value": 900, "RPM_limit": 5000 }"""));
         Assert.Empty(engine.Override(gearbox, """{ "ratio": [0, 3.1] }"""));
 
+        // The source game's price is read like any figure, and prices nothing: a part costs what it does
         Assert.Equal(900, block.Definition.Number("value"));
-        Assert.Equal(900, Parts.Cars.PartPricing.NewPrice(block.Definition) / Parts.Cars.PartPricing.Scale);
+        Assert.Equal(Parts.Cars.PartPricing.NewPrice(Stock().Part("Block").Definition), Parts.Cars.PartPricing.NewPrice(block.Definition));
         Assert.Equal(5000, block.Definition.Number("RPM_limit"));
         Assert.Equal(3.1, (double)((Newtonsoft.Json.Linq.JArray)gearbox.Definition.Properties["ratio"])[1]);
     }

@@ -3,11 +3,8 @@ namespace StreetCorsa.Rules;
 /// <summary>What parts cost, and the paper's parts ads (<c>"economy"</c> in the rules)</summary>
 public sealed class EconomyRules
 {
-    /// <summary>
-    /// From the money of the part scripts to the money of the game: the scripts price parts in the dollars of the early
-    /// 2000s, the base game's cars cost what cars cost in 1970, about a fifth
-    /// </summary>
-    public double PartsPriceScale { get; set; } = 0.2;
+    /// <summary>A factor on every part's new price: part_groups.json's prices (what the parts do) are the game's dollars at 1</summary>
+    public double PartsPriceFactor { get; set; } = 1.0;
 
     /// <summary>What a shop asks for a used part, against the same part new in the same shape</summary>
     public double UsedShopFactor { get; set; } = 0.6;
@@ -47,7 +44,7 @@ public sealed class EconomyRules
     /// <summary>Each figure the game divides by, loops over or pays held to what it can play by (<see cref="Figures"/>)</summary>
     internal void Check(string path, List<string> problems)
     {
-        Figures.Above0(this, path, nameof(PartsPriceScale), 1000, problems);
+        Figures.Above0(this, path, nameof(PartsPriceFactor), 1000, problems);
         Figures.Within(this, path, nameof(UsedShopFactor), 0, 10, problems);
         Figures.Within(this, path, nameof(TradeInFactor), 0, 1, problems);
         Figures.Within(this, path, nameof(MailOrderPremium), 0, 100, problems);

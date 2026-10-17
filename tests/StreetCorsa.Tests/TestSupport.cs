@@ -20,6 +20,10 @@ namespace StreetCorsa.Tests;
 ///
 /// LiteDB's shared mapper builds a type's mapping the first time it meets it, and two tests meeting the same type
 /// at once can see it half built. The types the saves are made of are mapped here, once, before any test runs.
+///
+/// Every part is priced as the game prices it: by the shipped parts measured on their builds (<see cref="TestCars.Prices"/>),
+/// made the first time a test asks for a price. No test makes the game's parts service, which would point the prices
+/// at its own catalog.
 /// </summary>
 internal static class TestLogging
 {
@@ -27,6 +31,7 @@ internal static class TestLogging
     internal static void SilenceLogging()
     {
         AppLoggerFactory.InitializeSilent();
+        PartPricing.Book = () => TestCars.Prices.Value;
 
         LiteDB.BsonMapper.Global.ToDocument(new StreetCorsa.Models.Race.ProcessedRaceSession());
         LiteDB.BsonMapper.Global.ToDocument(new StreetCorsa.Models.GameState.GameState());
@@ -139,6 +144,13 @@ public static class TestCars
     {
         var builds = EngineBuildIndex.Create(Catalog.Value);
         return (Catalog.Value, builds, EngineCooling.Create(Catalog.Value, builds));
+    });
+
+    /// <summary>The parts of every mod the game ships measured on their builds, as the game does: what every test's prices are</summary>
+    public static readonly Lazy<PartPriceBook> Prices = new(() =>
+    {
+        var all = PartsCatalog.Load(StreetCorsa.Mods.ModSet.Load(RepoPaths.Content).Folders(StreetCorsa.Mods.ContentTypes.Parts).ToList());
+        return PartPriceBook.Create(all, EngineBuildIndex.Create(all));
     });
 
     /// <summary>A real Mopar 340 in a car, its tree as the factory puts one in</summary>

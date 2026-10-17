@@ -502,23 +502,14 @@ namespace StreetCorsa.Services.Market
         /// <summary>The dyno's horsepower; 0 for an engine that does not run</summary>
         public static double PowerOf(StreetCorsa.Parts.Logic.EngineReport? report) => report is { Runs: true } ? report.Dyno!.MaxPowerHp : 0;
 
-        public decimal ValueOf(Car car) =>
-            CarValuation.WorthOf(car, _profileRepo.GetProfile, _catalogRepo.GetCar, _partsService);
+        public decimal ValueOf(Car car) => CarValuation.WorthOf(car, _profileRepo.GetProfile, _partsService);
 
         public Func<Car, decimal> Valuer()
         {
-            // Each model's profile, catalog entry and factory build read once, not once per car and per ask. Only
-            // those: the cars themselves change as the review goes (a repair, a new engine) and are weighed each time.
+            // Each model's profile read once, not once per car and per ask. Only that: the cars themselves change as the
+            // review goes (a repair, a new engine) and are weighed each time.
             var profiles = new Dictionary<string, CarProfile?>(StringComparer.OrdinalIgnoreCase);
-            var definitions = new Dictionary<string, CarDefinition?>(StringComparer.OrdinalIgnoreCase);
-            var stockBuilds = new Dictionary<string, RatedBuild?>(StringComparer.OrdinalIgnoreCase);
-            var parts = _partsService;
-
-            return car => CarValuation.WorthOf(car,
-                id => Remembered(profiles, id, _profileRepo.GetProfile),
-                id => Remembered(definitions, id, _catalogRepo.GetCar),
-                parts,
-                definition => Remembered(stockBuilds, definition.Id, _ => parts!.GetStockBuild(definition)));
+            return car => CarValuation.WorthOf(car, id => Remembered(profiles, id, _profileRepo.GetProfile), _partsService);
         }
 
         private static T? Remembered<T>(Dictionary<string, T?> seen, string key, Func<string, T?> read)
@@ -592,7 +583,7 @@ namespace StreetCorsa.Services.Market
         {
             var history = new CarHistory { EarlierOwners = GenerateEarlierOwners(mileage) };
             var looks = CarLooks.Roll(condition, source, _random);
-            var price = CalculatePrice(profile.BasePrice * CarValuation.LooksFactor(looks.Rust, looks.Paint, looks.Cracks), condition,
+            var price = CalculatePrice(profile, condition, CarValuation.LooksFactor(looks.Rust, looks.Paint, looks.Cracks),
                 CarValuation.HistoryFactor(history, mileage));
             if (priceShare != 1m) price = CarValuation.RoundToHundred(Math.Max(MinListPrice, price * priceShare));
 
@@ -634,23 +625,23 @@ namespace StreetCorsa.Services.Market
         {
             if (_partsService is not { IsAvailable: true } parts) return;
 
-            var definitions = new Dictionary<string, CarDefinition>(StringComparer.OrdinalIgnoreCase);
-            foreach (var entry in pool) definitions.TryAdd(entry.Car.Id, entry.Car);
+            var models = new Dictionary<string, PoolEntry>(StringComparer.OrdinalIgnoreCase);
+            foreach (var entry in pool) models.TryAdd(entry.Car.Id, entry);
             var stockBuilds = new Dictionary<string, RatedBuild?>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var listing in listings)
             {
-                if (definitions.TryGetValue(listing.CarDefinitionId, out var carDef))
-                    AddEngine(parts, listing, carDef, () => Remembered(stockBuilds, carDef.Id, _ => parts.GetStockBuild(carDef)));
+                if (models.TryGetValue(listing.CarDefinitionId, out var model))
+                    AddEngine(parts, listing, model.Car, model.Profile, () => Remembered(stockBuilds, model.Car.Id, _ => parts.GetStockBuild(model.Car)));
             }
         });
 
         /// <summary>
-        /// The car is sold with the engine it has: mostly the factory one, now and then worked on.
-        /// What was put into it shows in the price, though never in full.
+        /// The car is sold with the engine it has: mostly the factory one, now and then worked on. The price was worked
+        /// out with the factory engine in the car's shape: the engine it has takes its place, worth what its parts are.
         /// </summary>
         /// <param name="stockBuildOf">The model's factory build (<see cref="ICarPartsService.GetStockBuild"/>)</param>
-        private void AddEngine(ICarPartsService parts, UsedCarListing listing, CarDefinition carDef, Func<RatedBuild?> stockBuildOf)
+        private void AddEngine(ICarPartsService parts, UsedCarListing listing, CarDefinition carDef, CarProfile profile, Func<RatedBuild?> stockBuildOf)
         {
             try
             {
@@ -661,18 +652,16 @@ namespace StreetCorsa.Services.Market
                 listing.EngineSummary = parts.Describe(engine.Root, engine.Report);
                 listing.PowerHp = PowerOf(engine.Report);
 
-                // Worked on, and what that adds, by the same rules the car is valued by once it is somebody's
-                if (stockBuildOf() is { } stockBuild)
-                {
-                    listing.IsModified = CarValuation.IsModified(engine.Root, stockBuild);
-                    if (listing.IsModified)
-                    {
-                        // A private seller asks the same share of it as of the rest of the car (CreatePrivateListing)
-                        var share = listing.IsPrivate ? Rules.RuleBook.Current.Market.PrivatePriceShare : 1m;
-                        listing.Price += CarValuation.RoundToHundred(
-                            share * CarValuation.EngineModifications(parts.Catalog, engine.Root, stockBuild, listing.Condition));
-                    }
-                }
+                if (stockBuildOf() is { } stockBuild) listing.IsModified = CarValuation.IsModified(engine.Root, stockBuild);
+
+                // The engine it has in the place of the factory one in the car's shape, by the same sum the car is valued
+                // by once it is somebody's; a private seller asks the same share of it as of the rest of the car
+                // (CreatePrivateListing), the car's looks and past count on it as on the rest
+                var share = listing.IsPrivate ? Rules.RuleBook.Current.Market.PrivatePriceShare : 1m;
+                var over = CarValuation.EngineWorthOver(parts.Catalog, engine.Root, profile, listing.Condition)
+                           * CarValuation.LooksFactor(listing.Rust, listing.PaintWear, listing.GlassCracks)
+                           * CarValuation.HistoryFactor(listing.History, listing.Mileage);
+                listing.Price = Math.Max(MinListPrice, CarValuation.RoundToHundred(listing.Price + share * over));
             }
             catch (Exception ex)
             {
@@ -721,12 +710,12 @@ namespace StreetCorsa.Services.Market
 
         private static double KmPerEarlierOwner => Rules.RuleBook.Current.Market.KmPerEarlierOwner;
 
-        private decimal CalculatePrice(decimal basePrice, float condition, decimal history)
+        private decimal CalculatePrice(CarProfile profile, float condition, decimal looks, decimal history)
         {
-            // What the car is worth (the one formula every price in the game uses: its condition and a little for its
-            // past), at what this dealer makes of the car on the day: a random variation of ±20%
+            // What the car is worth (the one formula every price in the game uses: its body and parts in its condition,
+            // its looks and a little for its past), at what this dealer makes of the car on the day: a random variation of ±20%
             var variation = 1.0m + ((decimal)_random.NextDouble() * (decimal)PriceVariationPercent * 2) - (decimal)PriceVariationPercent;
-            return CarValuation.Value(basePrice * variation, condition, history: history);
+            return CarValuation.ListingValue(profile, condition, looks * variation, history);
         }
     }
 }

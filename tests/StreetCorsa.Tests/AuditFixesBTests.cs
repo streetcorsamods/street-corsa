@@ -20,67 +20,93 @@ public class AuditFixesBTests
 {
     public AuditFixesBTests() => TestLogging.SilenceLogging();
 
-    // ----- a stripped car is not worth a whole one -----
+    // ----- a stripped car is not worth a whole one: a car is worth its body and the parts on it -----
 
-    /// <summary>A car that has had its factory engine and running gear given to it, all of it on</summary>
+    /// <summary>A real Mopar 340 and real running gear on every corner, all of it on</summary>
     private static Car Whole()
     {
-        var car = new Car("car_a") { HasPartsAssigned = true, HasRunningGearAssigned = true };
-        car.Parts.Add(new PartInstance("block") { ParentSlot = PartInstance.CarEngineSlot });
+        var car = TestCars.WithRealEngine(TestCars.Catalog.Value);
+        car.HasRunningGearAssigned = true;
         for (var corner = 0; corner < RunningGear.Corners; corner++)
         {
-            var rim = new PartInstance("rim") { ParentSlot = RunningGear.WheelSlot(corner) };
-            rim.Children.Add(new PartInstance("tyre") { ParentSlot = RunningGear.TyreSlotOnRim });
+            var rim = new PartInstance("rims/falcon/rim_01") { ParentSlot = RunningGear.WheelSlot(corner) };
+            rim.Children.Add(new PartInstance("tyres/camaro69/tire11") { ParentSlot = RunningGear.TyreSlotOnRim });
             car.Parts.Add(rim);
-            car.Parts.Add(new PartInstance("brake") { ParentSlot = RunningGear.BrakeSlot(corner) });
-            car.Parts.Add(new PartInstance("spring") { ParentSlot = RunningGear.SpringSlot(corner) });
-            car.Parts.Add(new PartInstance("shock") { ParentSlot = RunningGear.ShockSlot(corner) });
+            car.Parts.Add(new PartInstance("brakes/stock/disc_brake") { ParentSlot = RunningGear.BrakeSlot(corner) });
+            car.Parts.Add(new PartInstance("suspension/stock/spring") { ParentSlot = RunningGear.SpringSlot(corner) });
+            car.Parts.Add(new PartInstance("suspension/stock/shock_absorber") { ParentSlot = RunningGear.ShockSlot(corner) });
         }
 
         return car;
     }
 
-    [Fact]
-    public void A_whole_car_and_a_car_from_an_older_save_are_short_of_nothing()
+    /// <summary>A model of $10,000 new: $3,000 its body, $6,000 its factory engine, $1,000 its running gear</summary>
+    private static CarProfile Model() => new()
     {
-        Assert.Equal(0m, CarValuation.MissingShare(Whole()));
-        Assert.Equal(0m, CarValuation.MissingShare(new Car("car_a")));
-        Assert.Equal(CarValuation.ValueOf(new Car("car_a"), 10000m), CarValuation.ValueOf(Whole(), 10000m));
+        CarDefinitionId = "car_a", BasePrice = 10000m, BodyPrice = 3000m, EnginePrice = 6000m, RunningGearPrice = 1000m
+    };
+
+    private static decimal Worth(PartInstance part) => (decimal)PartPricing.WorthOfAssembly(TestCars.Catalog.Value, part);
+
+    [Fact]
+    public void A_car_is_worth_its_body_and_every_part_on_it()
+    {
+        var catalog = TestCars.Catalog.Value;
+        var whole = Whole();
+        Assert.Equal(CarValuation.RoundToHundred(3000m + whole.Parts.Sum(Worth)), CarValuation.ValueOf(whole, Model(), catalog));
+
+        // A car from an older save was never given its parts: it is worth the factory's, in its shape
+        Assert.Equal(10000m, CarValuation.ValueOf(new Car("car_a"), Model(), catalog));
     }
 
     [Fact]
-    public void A_car_with_its_engine_on_the_stand_is_worth_a_good_deal_less()
+    public void A_listing_is_priced_with_the_factory_parts_until_its_engine_takes_their_place()
     {
+        var catalog = TestCars.Catalog.Value;
+        Assert.Equal(10000m, CarValuation.ListingValue(Model(), 1, 1m, 1m));
+        Assert.Equal(6500m, CarValuation.ListingValue(Model(), 0.5, 1m, 1m));
+
+        // The engine it turns out to have, against the factory one in the car's shape
+        var engine = Whole().Engine!;
+        Assert.Equal(Worth(engine) - 6000m, CarValuation.EngineWorthOver(catalog, engine, Model(), 1));
+        Assert.Equal(Worth(engine) - 3900m, CarValuation.EngineWorthOver(catalog, engine, Model(), 0.5));
+    }
+
+    [Fact]
+    public void A_car_with_its_engine_on_the_stand_is_worth_its_engine_less()
+    {
+        var catalog = TestCars.Catalog.Value;
         var whole = Whole();
         var stripped = Whole();
         stripped.Parts.RemoveAll(p => p.ParentSlot == PartInstance.CarEngineSlot);
 
-        // The car's own figures still say the engine is fine: it was the worth that ignored the missing engine
+        // The car's own figures still say the engine is fine: it is the parts on the car that count
         Assert.Equal(whole.EngineHealth, stripped.EngineHealth);
-        Assert.Equal(CarValuation.MissingEngineShare, CarValuation.MissingShare(stripped));
-        Assert.Equal(CarValuation.RoundToHundred(CarValuation.ValueOf(whole, 10000m) * (1 - CarValuation.MissingEngineShare)),
-            CarValuation.ValueOf(stripped, 10000m));
+        Assert.Equal(CarValuation.RoundToHundred(3000m + stripped.Parts.Sum(Worth)), CarValuation.ValueOf(stripped, Model(), catalog));
+        Assert.True(CarValuation.ValueOf(stripped, Model(), catalog) < CarValuation.ValueOf(whole, Model(), catalog) - Worth(whole.Engine!) / 2);
     }
 
     [Fact]
     public void A_car_on_blocks_loses_its_wheels_worth_and_never_goes_below_nothing()
     {
+        var catalog = TestCars.Catalog.Value;
         var onBlocks = Whole();
         onBlocks.Parts.RemoveAll(p => RunningGear.IsWheelSlot(p.ParentSlot));
-        Assert.Equal(RunningGear.Corners * CarValuation.MissingWheelShare, CarValuation.MissingShare(onBlocks));
-        Assert.True(CarValuation.ValueOf(onBlocks, 10000m) < CarValuation.ValueOf(Whole(), 10000m));
+        Assert.True(CarValuation.ValueOf(onBlocks, Model(), catalog) < CarValuation.ValueOf(Whole(), Model(), catalog));
 
+        // A bare shell is its body
         var shell = Whole();
         shell.Parts.Clear();
-        Assert.InRange(CarValuation.MissingShare(shell), 0m, 1m);
-        Assert.True(CarValuation.ValueOf(shell, 10000m) >= 0m);
-        Assert.True(CarValuation.ValueOf(shell, 10000m) < CarValuation.ValueOf(onBlocks, 10000m));
+        Assert.Equal(3000m, CarValuation.ValueOf(shell, Model(), catalog));
+        Assert.True(CarValuation.ValueOf(shell, Model(), catalog) < CarValuation.ValueOf(onBlocks, Model(), catalog));
     }
 
     [Fact]
     public void The_dealer_quotes_a_stripped_car_below_a_whole_one()
     {
-        var market = new UsedCarMarketService(new MemoryCatalog(), Profiles(10000m));
+        var profiles = new MemoryProfiles();
+        profiles.Profiles["car_a"] = Model();
+        var market = new UsedCarMarketService(new MemoryCatalog(), profiles, new CatalogParts());
         var sale = new CarSaleService(market, null!, null!);
         var state = GameState.CreateNew("P");
 
@@ -333,16 +359,17 @@ public class AuditFixesBTests
     // ----- the catalog -----
 
     [Fact]
-    public void A_mod_car_of_absurd_power_is_priced_at_the_top_not_thrown_out()
+    public void A_mod_car_of_absurd_figures_is_priced_not_thrown_out()
     {
         var service = new CarProfileService(new MemoryCatalog(), new MemoryProfiles());
         var car = new CarDefinition
         {
             Id = "rocket", Name = "Rocket", Brand = "Plymouth", ContentHash = "hash",
-            Specs = new CarSpecsData { Bhp = "9999999999999999999999bhp", Weight = "1000kg" }
+            Specs = new CarSpecsData { Bhp = "9999999999999999999999bhp", Weight = "0.000001kg" }
         };
 
-        Assert.Equal(500000m, service.CalculateBasePrice(car));
+        // A weight no car has is no weight: the reference body
+        Assert.Equal(2500m, service.CalculateBasePrice(car));
     }
 
     [Fact]

@@ -173,6 +173,14 @@ public sealed class RuleBook
     /// </summary>
     public string ToJson() => JsonSerializer.Serialize(this, Options);
 
+    /// <summary>Figures of the rules the game no longer has, by part: a save's are dropped as it is read</summary>
+    private static readonly (string Part, string[] Names)[] Retired =
+    [
+        ("economy", ["partsPriceScale"]),
+        ("market", ["modificationsShare", "missingEngineShare", "missingWheelShare", "missingCornerPartShare"]),
+        ("cars", ["referencePrice", "referenceHpPerTonne", "priceExponent", "noSpecsPrice", "priceByYear", "priceBySource"])
+    ];
+
     /// <summary>
     /// The rules a save plays by: the figures it was started with, over the mods' as they are now (for figures the
     /// game has gained since); the mods' own for a save from before rules were kept
@@ -186,6 +194,14 @@ public sealed class RuleBook
         {
             day.Remove("firstHour");
             day.Remove("lastHour");
+        }
+
+        // Figures the game no longer plays by (prices by what the body and parts are, 2026-10): the save's go, so its
+        // parts are not priced at a fifth of what they cost now, nor a stripped car taken off a share of a price
+        foreach (var (part, names) in Retired)
+        {
+            if (kept[part] is not JsonObject figures) continue;
+            foreach (var name in names) figures.Remove(name);
         }
 
         var merged = ModMerge.Copy(InstalledBook.Value.Merged);

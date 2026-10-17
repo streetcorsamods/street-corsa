@@ -461,7 +461,7 @@ namespace StreetCorsa.Services.Opponents
             }
 
             // Paid what a car like that is worth: the same sum the market prices its cars with
-            car.PurchasePrice = CarValuation.ValueOf(car, profile.BasePrice, _parts, definition);
+            car.PurchasePrice = CarValuation.ValueOf(car, profile, _parts is { IsAvailable: true } withParts ? withParts.Catalog : null);
         }
     }
 }

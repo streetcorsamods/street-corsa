@@ -16,10 +16,20 @@ namespace StreetCorsa.Models.Catalog
         public string CarDefinitionId { get; set; } = string.Empty;
 
         /// <summary>
-        /// Base price for this car in perfect condition
-        /// Market listings will vary from this based on condition
+        /// What the car costs new, in perfect condition with its factory engine and running gear (the parts' new prices
+        /// and its body's, rounded and held to the rules' least and most). Worked out by the game at every start; market
+        /// listings vary from it by condition.
         /// </summary>
         public decimal BasePrice { get; set; }
+
+        /// <summary>What the bare body costs new: by the car's weight (<see cref="StreetCorsa.Parts.Cars.CarPricing"/>)</summary>
+        public decimal BodyPrice { get; set; }
+
+        /// <summary>What the factory engine's parts cost new; 0 for a car priced without parts</summary>
+        public decimal EnginePrice { get; set; }
+
+        /// <summary>What the factory running gear's parts cost new; 0 for a car priced without parts</summary>
+        public decimal RunningGearPrice { get; set; }
 
         /// <summary>
         /// Spawn probability (0.0 = rare, 1.0 = common)
