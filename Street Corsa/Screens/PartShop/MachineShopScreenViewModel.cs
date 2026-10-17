@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using StreetCorsa.Audio;
 using StreetCorsa.Controls;
 using StreetCorsa.Dialogs;
 using StreetCorsa.Dialogs.Information;
@@ -159,7 +160,8 @@ namespace StreetCorsa.Screens.PartShop
         {
             if (_othersWork != null) return _othersWork;
 
-            var random = new Random(HashCode.Combine(_shopId.ToLowerInvariant().GetHashCode(StringComparison.Ordinal), _gameState.Date.Date.DayOfYear, _gameState.Date.Year));
+            // A hash that is the same in every run of the game, so the same day of the same save shows the same work
+            var random = new Random((int)Helpers.StableHash.Of($"{_shopId.ToLowerInvariant()}|{_gameState.Date:yyyy-MM-dd}"));
             var kinds = catalog.Rebuilds.All.Where(j => j.IsMachine).SelectMany(j => j.Kinds).ToHashSet(StringComparer.OrdinalIgnoreCase);
             var candidates = catalog.EngineBuilds.SelectMany(b => b.Parts).Select(p => p.Part).OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase)
                 .Select(catalog.Get).OfType<PartDefinition>()
@@ -284,19 +286,46 @@ namespace StreetCorsa.Screens.PartShop
             private set => SetProperty(ref _isPricing, value);
         }
 
+        private CancellationTokenSource? _pricingCancel;
+
         private void PriceWork() => _pricing = PriceWorkAsync();
 
+        /// <summary>
+        /// Prices every job on what the player has. The trees belong to the UI thread: the work is priced on copies of the
+        /// pieces made here, at the shop's prices read here, and each job is put back on the player's own part after
+        /// </summary>
         private async Task PriceWorkAsync()
         {
             var run = ++_pricingRun;
+            _pricingCancel?.Cancel();
+            var cancel = _pricingCancel = new CancellationTokenSource();
             var work = new List<MachineWork>();
-            if (Shop is { } shop && Catalog != null)
+            if (Shop is { } shop && Catalog != null && Machine.QuoteAt(_gameState, shop) is { } quote)
             {
                 IsPricing = true;
                 var pieces = Machine.Pieces(_gameState, shop);
+                var copies = pieces.Select(p => (Piece: p, Copy: p with { Part = PartTrees.Clone(p.Part, keepIds: true) })).ToList();
                 try
                 {
-                    work = await Task.Run(() => pieces.SelectMany(p => Machine.Offers(_gameState, shop, p)).ToList());
+                    var priced = await Task.Run(() => copies.Select(c =>
+                    {
+                        cancel.Token.ThrowIfCancellationRequested();
+                        return (c.Piece, Work: Machine.Offers(quote, c.Copy));
+                    }).ToList(), cancel.Token);
+                    if (run != _pricingRun) return;
+
+                    foreach (var (piece, offers) in priced)
+                    {
+                        var parts = piece.Part.SelfAndDescendants().ToDictionary(p => p.InstanceId);
+                        foreach (var offer in offers)
+                        {
+                            if (parts.TryGetValue(offer.Part.InstanceId, out var part)) work.Add(new MachineWork(piece, part, offer.Offer));
+                        }
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
                 }
                 catch (Exception ex)
                 {
@@ -349,9 +378,9 @@ namespace StreetCorsa.Screens.PartShop
             }, TalkPeople.ShopKey(Definition.Id));
             Save();
 
-            StatusText = GameText.Say("machine.left", ("part", job.PartName), ("work", job.Name), ("day", order.ReadyOn));
             _picks.Clear();
             Refresh();
+            _ = ShowWorkAsync(job.Work.Offer.Job, GameText.Say("machine.left", ("part", job.PartName), ("work", job.Name), ("day", order.ReadyOn)));
             // The piece is here now: it stays picked
             SelectedPiece = Pieces.FirstOrDefault(p => ReferenceEquals(p.Piece.Part, job.Work.Piece.Part)) ?? SelectedPiece;
         }
@@ -361,9 +390,62 @@ namespace StreetCorsa.Screens.PartShop
             OnPropertyChanged(nameof(Notice));
             OnPropertyChanged(nameof(HasNotice));
             OnPropertyChanged(nameof(MoneyDisplay));
+
+            // What was priced is the parts as they were: none of it is offered, nor its power told, until they are priced again
+            _allWork = [];
+            _power.Clear();
+            IsPricing = true;
             FillPieces();
             RefreshStockShown();
             PriceWork();
+        }
+
+        /// <summary>Real time each step of a job is shown as the machinist starts on it</summary>
+        private const int ShowStepMs = 1100;
+
+        private int _showRun;
+        private PlayingSound? _showLoop;
+
+        /// <summary>
+        /// The machinist starts on the job just left: each of its steps' captions on the counter over its sound, a moment
+        /// each, then <paramref name="done"/>. Only the showing: the job is ordered and paid for already.
+        /// </summary>
+        private async Task ShowWorkAsync(RebuildJob job, string done)
+        {
+            var run = ++_showRun;
+            try
+            {
+                foreach (var step in job.Steps)
+                {
+                    if (run != _showRun) return;
+
+                    StatusText = Rebuilding.CaptionOf(job, step);
+                    AudioHub.Shared.StopLoop(_showLoop, 0.3f);
+                    _showLoop = AudioHub.Shared.PlayLoop(string.IsNullOrWhiteSpace(step.Sound) ? Garage.RebuildShow.BenchSound : step.Sound!, 0.3f);
+                    if (!string.IsNullOrWhiteSpace(step.Start)) Sfx.Play(step.Start!);
+                    await Task.Delay(ShowStepMs);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Warning("The machinist's show stopped: {Error}", ex.Message);
+            }
+            finally
+            {
+                if (run == _showRun)
+                {
+                    AudioHub.Shared.StopLoop(_showLoop, 0.4f);
+                    _showLoop = null;
+                    StatusText = done;
+                }
+            }
+        }
+
+        private void EndShow()
+        {
+            _showRun++;
+            AudioHub.Shared.StopLoop(_showLoop, 0.2f);
+            _showLoop = null;
         }
 
         private void Save()
@@ -428,7 +510,23 @@ namespace StreetCorsa.Screens.PartShop
         private string KindOf(MachineWork work) =>
             Catalog?.Get(work.Part.DefinitionId) is { } definition ? PartKinds.GroupName(PartKinds.GroupOf(definition)) : string.Empty;
 
-        IReadOnlyList<string> IShopCounter.Kinds => AllWork().Select(KindOf).Where(k => k.Length > 0).Distinct().Order(StringComparer.OrdinalIgnoreCase).ToList();
+        /// <summary>
+        /// The kinds of part the shop works on among what the player has: read off the parts themselves, not the priced
+        /// work, so an ask made while the work is still being priced knows them
+        /// </summary>
+        IReadOnlyList<string> IShopCounter.Kinds
+        {
+            get
+            {
+                if (Catalog is not { } catalog) return [];
+
+                return Pieces.SelectMany(p => p.Piece.Part.SelfAndDescendants())
+                    .Select(p => catalog.Get(p.DefinitionId)).OfType<PartDefinition>()
+                    .Where(d => catalog.Rebuilds.For(d, catalog.WorkOrder.KindOf(d)).Any(j => j.IsMachine))
+                    .Select(d => PartKinds.GroupName(PartKinds.GroupOf(d)))
+                    .Where(k => k.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase).ToList();
+            }
+        }
 
         IEnumerable<string> IShopCounter.Facts()
         {
@@ -474,12 +572,19 @@ namespace StreetCorsa.Screens.PartShop
             // A whole engine's work goes on the dyno, the cheapest first, so the machinist can say what it does
             if (Catalog is { } catalog && search.Want != ClerkSearch.Cheap)
             {
+                // The engines are copied here, on the UI thread they belong to, and go on the dyno as copies
                 var trying = matching.Where(w => IsEngine(catalog, w.Piece.Part) && !_power.ContainsKey(PowerKey(w)))
-                    .OrderBy(w => w.Offer.Cost).Take(MostDynoRuns).ToList();
+                    .OrderBy(w => w.Offer.Cost).Take(MostDynoRuns)
+                    .Select(w => (Key: PowerKey(w), Work: w, Engine: PartTrees.Clone(w.Piece.Part, keepIds: true))).ToList();
                 if (trying.Count > 0)
                 {
-                    var found = await Task.Run(() => trying.Select(w => (Key: PowerKey(w), Gain: PowerWith(catalog, w))).ToList(), cancellationToken);
-                    foreach (var (key, gain) in found) _power[key] = gain;
+                    var pricedAt = _pricingRun;
+                    var found = await Task.Run(() => trying.Select(t => (t.Key, Gain: PowerWith(catalog, t.Work, t.Engine))).ToList(), cancellationToken);
+                    // Not when the parts changed meanwhile: the gains are of the engine as it was
+                    if (pricedAt == _pricingRun)
+                    {
+                        foreach (var (key, gain) in found) _power[key] = gain;
+                    }
                 }
             }
 
@@ -526,11 +631,11 @@ namespace StreetCorsa.Screens.PartShop
             return new ClerkPick(KeyOf(work), work.Offer.Name, NameOf(work.Part), work.Offer.Cost, work.Offer.Job.Speed, work.Offer.Days, power?.Before, power?.After);
         }
 
-        private (double Before, double After)? PowerWith(PartsCatalog catalog, MachineWork work)
+        /// <summary>What the job does for the whole engine on the dyno, measured on <paramref name="engine"/>, a copy of the piece nobody else has</summary>
+        private (double Before, double After)? PowerWith(PartsCatalog catalog, MachineWork work, PartInstance engine)
         {
             try
             {
-                var engine = PartTrees.Clone(work.Piece.Part, keepIds: true);
                 if (EngineTuner.PowerOf(catalog, engine) is not { } before) return null;
 
                 var part = engine.SelfAndDescendants().First(p => p.InstanceId == work.Part.InstanceId);
@@ -575,6 +680,11 @@ namespace StreetCorsa.Screens.PartShop
         {
             base.Exit();
             Talk?.End();
+
+            // Nothing is priced, nor shown, once the player has gone: the parts are the garage's again
+            _pricingRun++;
+            _pricingCancel?.Cancel();
+            EndShow();
         }
 
         private void OnBack()

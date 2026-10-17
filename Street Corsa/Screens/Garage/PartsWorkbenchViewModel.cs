@@ -702,7 +702,12 @@ namespace StreetCorsa.Screens.Garage
                 _workLoop = null;
                 Sfx.Play(Sfx.Clank);
                 if (show.Verdict is { } verdict) WorkCaption = verdict;
-                await Task.Delay(show.Verdict != null ? 1600 : _workSkipped ? 250 : 700);
+
+                // A moment to read it, shorter for a show skipped, and a skip now ends it there
+                var hold = show.Verdict != null ? _workSkipped ? 900 : 1600 : _workSkipped ? 250 : 700;
+                _workSkipped = false;
+                var held = System.Diagnostics.Stopwatch.StartNew();
+                while (run == _workRun && !_workSkipped && held.ElapsedMilliseconds < hold) await Task.Delay(30);
             }
             catch (Exception ex)
             {

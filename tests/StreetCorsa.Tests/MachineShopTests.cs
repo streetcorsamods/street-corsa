@@ -60,7 +60,51 @@ public sealed class MachineShopTests
         Assert.Empty(_state.Player.MachineWork);
         Assert.Equal(2, _state.Player.Parts.Count);
         Assert.All(_state.Player.Parts, p => Assert.Equal(1, p.CutOf("bore")));
-        Assert.Equal(2, _state.Player.Delivered.Count);
+        // Told of as back from the shop, not as the mail
+        Assert.Empty(_state.Player.Delivered);
+        Assert.Equal(2, _state.Player.MachineReturned.Count);
+    }
+
+    [Fact]
+    public void A_bare_blocks_new_pistons_wait_as_long_as_the_block_does()
+    {
+        var block = new PartInstance(Engine().DefinitionId) { Wear = 0.3 };
+        _state.Player.Parts.Add(block);
+        Machine.Order(_state, Shop, Work(Machine.Pieces(_state, Shop).Single(), "bore"), new Random(1));
+
+        var atShop = Machine.Pieces(_state, Shop).Single(p => ReferenceEquals(p.Part, block));
+        var order = Machine.Order(_state, Shop, Work(atShop, "blueprint"), new Random(1))!;
+
+        Assert.All(_state.Player.MachineWork, o => Assert.Equal(order.ReadyOn, o.ReadyOn));
+    }
+
+    [Fact]
+    public void An_engine_back_on_the_stand_is_said_to_be_there()
+    {
+        _state.Player.EngineStand = Engine();
+        var order = Machine.Order(_state, Shop, Work(Machine.Pieces(_state, Shop).Single(p => p.FromStand), "blueprint"), new Random(1))!;
+
+        Machine.Deliver(_state, order.ReadyOn);
+
+        Assert.Contains(Services.Text.GameText.Say("machine.delivered.stand", ("part", Parts.Catalog.Get(order.Part.DefinitionId)!.DisplayName ?? Parts.Catalog.Get(order.Part.DefinitionId)!.Name), ("shop", order.ShopName)),
+            _state.Player.MachineReturned);
+    }
+
+    [Fact]
+    public void The_offers_priced_on_a_quote_are_the_offers_at_the_shop()
+    {
+        var engine = Engine();
+        foreach (var part in engine.SelfAndDescendants()) part.Wear = 0.4;
+        _state.Player.EngineStand = engine;
+        var piece = Machine.Pieces(_state, Shop).Single(p => p.FromStand);
+        var quote = Machine.QuoteAt(_state, Shop)!;
+
+        // On a copy, as the counter prices them off the UI thread
+        var copy = piece with { Part = PartTrees.Clone(engine, keepIds: true) };
+        var shop = Machine.Offers(_state, Shop, piece).Select(w => (w.Part.InstanceId, w.Offer.Job.Id, w.Offer.Step, w.Offer.Cost)).ToList();
+        var copied = Machine.Offers(quote, copy).Select(w => (w.Part.InstanceId, w.Offer.Job.Id, w.Offer.Step, w.Offer.Cost)).ToList();
+        Assert.Equal(shop, copied);
+        Assert.Empty(engine.Cuts);
     }
 
     [Fact]

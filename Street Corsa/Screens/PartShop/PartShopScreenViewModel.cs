@@ -82,7 +82,8 @@ namespace StreetCorsa.Screens.PartShop
 
             // A shop the map offered and the files have since lost cannot be shown: the navigation says so and stays put
             Definition = shops.Catalog.Get(shopId) ?? throw new InvalidOperationException($"No part shop \"{shopId}\"");
-            _scene = scene ?? ShopScenes.Current;
+            // A mod's scene for this kind of shop (wheels, speed shops) before the one for any
+            _scene = scene ?? ShopScenes.For(Definition.KindOf.ToString().ToLowerInvariant());
 
             BackCommand = new RelayCommand(OnBack);
             ShowTabCommand = new RelayCommand<string>(tab => ShowTab(tab == "Sell"));

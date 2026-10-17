@@ -72,15 +72,21 @@ public static class Machining
         return (next, next >= 1 && next <= job.Sizes.Count ? job.Sizes[next - 1] : null);
     }
 
-    /// <summary>Why the machine job cannot be done on the part (at <paramref name="step"/>, a job made to any size); null when it can</summary>
+    /// <summary>
+    /// Why the machine job cannot be done on the part (at <paramref name="step"/>, a job made to any size); null when it
+    /// can. A repair cut that changes nothing on the dyno (a crank ground, drums turned) is no use on a part with no wear
+    /// or damage for it to take off; one that does (a bore, a head milled) is the speed work it was in the day, and speed
+    /// work is wanted on any part.
+    /// </summary>
     public static string? WhyNot(RebuildJob job, PartInstance part, int? step = null)
     {
         if (job.Bare && part.Children is { Count: > 0 }) return PartWords.Say("rebuild.why.bare");
         if (job.Cut != null)
         {
             if (job.AnySize && step == part.CutOf(job.Cut)) return PartWords.Say("rebuild.why.that_size");
-            if (NextOf(job, part, step).Size != null) return null;
-            return PartWords.Say(job.Sizes.Count == 1 ? "rebuild.why.done_already" : "rebuild.why.no_cuts_left");
+            if (NextOf(job, part, step).Size is not { } size)
+                return PartWords.Say(job.Sizes.Count == 1 ? "rebuild.why.done_already" : "rebuild.why.no_cuts_left");
+            if (job.Speed || job.AnySize || size.ReadFigures != null) return null;
         }
 
         var wear = Unit.Clamp01(part.Wear, 1);
@@ -95,8 +101,10 @@ public static class Machining
     /// not always the better buy than a good one)
     /// </summary>
     /// <param name="root">What the part is on, as it was brought (a whole engine): the worth the work adds is its</param>
+    /// <param name="wanted">The jobs and sizes (by step) offered at all, asked before any is priced; every one when null</param>
+    /// <param name="rootWorth">What <paramref name="root"/> is worth as it is, when the caller has it already</param>
     public static IReadOnlyList<MachineOffer> Offers(PartsCatalog catalog, PartInstance part, double shopFactor = 1.0, double priceMultiplier = 1.0,
-        double valueShare = 0, PartInstance? root = null)
+        double valueShare = 0, PartInstance? root = null, Func<RebuildJob, int, bool>? wanted = null, double? rootWorth = null)
     {
         if (catalog.Get(part.DefinitionId) is not { } definition) return [];
 
@@ -108,10 +116,13 @@ public static class Machining
             foreach (var picked in steps)
             {
                 var (step, size) = NextOf(job, part, picked);
+                if (wanted != null && !wanted(job, step)) continue;
+
                 var shown = size ?? (job.Cut != null && job.Sizes.Count > 0 ? job.Sizes[^1] : null);
                 var whyNot = WhyNot(job, part, picked);
                 var fitted = whyNot == null ? FittedNames(catalog, job, part) : [];
-                var cost = whyNot == null ? CostFor(catalog, job, definition, part, shopFactor, priceMultiplier, valueShare, picked, root) : 0;
+                if (whyNot == null && valueShare > 0) rootWorth ??= PartPricing.WorthOfAssembly(catalog, root ?? part);
+                var cost = whyNot == null ? CostFor(catalog, job, definition, part, shopFactor, priceMultiplier, valueShare, picked, root, rootWorth) : 0;
                 var after = job.Restores > 0 ? Math.Max(Unit.Clamp01(part.Wear, 1), job.Restores) : Unit.Clamp01(part.Wear, 1);
                 offers.Add(new MachineOffer(job, shown, step, NameOf(job, shown), cost, job.Days, whyNot, after, fitted));
             }
@@ -123,15 +134,16 @@ public static class Machining
     /// <summary>
     /// The work's price: its share of the part's new price at the shop's prices (<see cref="Rebuilding.CostOf"/>), and the
     /// new parts it fits at their share; never under <paramref name="valueShare"/> of what it adds to the worth of the
-    /// part and what comes with it, at the shop's prices too
+    /// part and what comes with it (at the best the work comes out), at the shop's prices too
     /// </summary>
     /// <param name="step">The size of a job made to any size; the next size else</param>
     /// <param name="root">
     /// What the part is on (a whole engine): the worth added is the whole's, so heads ported on an engine are charged for
     /// the power the engine gains; the part itself when null
     /// </param>
+    /// <param name="rootWorth">What the whole is worth before the work, when the caller has it already</param>
     public static decimal CostFor(PartsCatalog catalog, RebuildJob job, PartDefinition definition, PartInstance part, double shopFactor = 1.0,
-        double priceMultiplier = 1.0, double valueShare = 0, int? step = null, PartInstance? root = null)
+        double priceMultiplier = 1.0, double valueShare = 0, int? step = null, PartInstance? root = null, double? rootWorth = null)
     {
         var work = (double)Rebuilding.CostOf(job, definition, priceMultiplier)
                    + Fitted(catalog, job, part).Sum(d => PartPricing.NewPrice(d) * job.FitsNewCost) * Multiplier.Sane(priceMultiplier);
@@ -140,9 +152,9 @@ public static class Machining
             var whole = root ?? part;
             var after = PartTrees.Clone(whole, keepIds: true);
             var worked = after.SelfAndDescendants().FirstOrDefault(p => p.InstanceId == part.InstanceId) ?? after;
-            var extras = Apply(catalog, job, worked, step);
+            var extras = Apply(catalog, job, worked, Rebuilding.Best(job), step);
             var gained = PartPricing.WorthOfAssembly(catalog, after) + extras.Sum(e => PartPricing.WorthOfAssembly(catalog, e))
-                         - PartPricing.WorthOfAssembly(catalog, whole);
+                         - (rootWorth ?? PartPricing.WorthOfAssembly(catalog, whole));
             work = Math.Max(work, gained * valueShare);
         }
 
@@ -169,7 +181,8 @@ public static class Machining
         return (new RebuildOutcome(Unit.Clamp01(part.Wear, 1), null), extras);
     }
 
-    private static List<PartInstance> Apply(PartsCatalog catalog, RebuildJob job, PartInstance part, double restores, int? picked)
+    /// <summary>The job done with the part's wear taken up to <paramref name="restores"/>: how it came out, or the best it can</summary>
+    internal static List<PartInstance> Apply(PartsCatalog catalog, RebuildJob job, PartInstance part, double restores, int? picked)
     {
         var (step, size) = NextOf(job, part, picked);
         if (job.Cut != null && size == null) return [];

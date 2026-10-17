@@ -18,6 +18,13 @@ namespace StreetCorsa.Services.PartShops
     /// <summary>A machine job on one part of a piece the player brought: the part (the piece's root, or a part on it) and the offer</summary>
     public sealed record MachineWork(MachinePiece Piece, PartInstance Part, MachineOffer Offer);
 
+    /// <summary>
+    /// What a machine shop asks today, read off the game once: its price factor against the work's list price (its own
+    /// prices, a closing-down sale, a regular's discount) and the save's part prices. Priced with it, the offers need
+    /// nothing more of the game and can be worked out off the UI thread.
+    /// </summary>
+    public sealed record MachineQuote(double Factor, double PriceMultiplier);
+
     /// <summary>The machine shops' work: see <see cref="MachineShopService"/></summary>
     public interface IMachineShopService
     {
@@ -26,6 +33,15 @@ namespace StreetCorsa.Services.PartShops
 
         /// <summary>Every machine job on a piece and the parts on it, at the shop's prices today, the root's first</summary>
         IReadOnlyList<MachineWork> Offers(GameState gameState, PartShopLocation shop, MachinePiece piece);
+
+        /// <summary>What the shop asks today (<see cref="MachineQuote"/>); null when it or the parts are not there</summary>
+        MachineQuote? QuoteAt(GameState gameState, PartShopLocation shop);
+
+        /// <summary>
+        /// Every machine job on a piece and the parts on it at <paramref name="quote"/>, the root's first. Reads nothing
+        /// but the piece: on a copy of it nobody else changes, it may run on any thread.
+        /// </summary>
+        IReadOnlyList<MachineWork> Offers(MachineQuote quote, MachinePiece piece);
 
         /// <summary>
         /// The player has the job done: paid now, the piece left at the shop (or kept there longer, for work on a part it
@@ -77,36 +93,52 @@ namespace StreetCorsa.Services.PartShops
         }
 
         public IReadOnlyList<MachineWork> Offers(GameState gameState, PartShopLocation shop, MachinePiece piece) =>
-            piece.Part.SelfAndDescendants().SelectMany(part => OffersOn(gameState, shop, piece, part)).Where(w => Suits(piece, w)).ToList();
+            QuoteAt(gameState, shop) is { } quote ? Offers(quote, piece) : [];
+
+        public MachineQuote? QuoteAt(GameState gameState, PartShopLocation shop) =>
+            _parts.IsAvailable && _catalog.Get(shop.Id) is { } definition
+                ? new MachineQuote(FactorAt(gameState, definition, shop), gameState.Rules.PartPriceMultiplier)
+                : null;
+
+        public IReadOnlyList<MachineWork> Offers(MachineQuote quote, MachinePiece piece)
+        {
+            if (!_parts.IsAvailable) return [];
+
+            var catalog = _parts.Catalog;
+            var parts = piece.Part.SelfAndDescendants().ToList();
+            if (!parts.Any(p => HasMachineWork(catalog, p))) return [];
+
+            // What the piece is worth as it is: every job's price measures its gain against it, so once for them all
+            var worth = PartPricing.WorthOfAssembly(catalog, piece.Part);
+            return parts.SelectMany(part => OffersOn(quote, piece, part, (job, step) => Suits(piece, part, job, step), worth)).ToList();
+        }
+
+        private static bool HasMachineWork(PartsCatalog catalog, PartInstance part) =>
+            catalog.Get(part.DefinitionId) is { } definition && catalog.Rebuilds.For(definition, catalog.WorkOrder.KindOf(definition)).Any(j => j.IsMachine);
 
         /// <summary>
         /// A job made to any size on a part inside a block (new pistons) is offered at the block's size only: any other
-        /// would not go back in it
+        /// would not go back in it. Asked before the job is priced.
         /// </summary>
-        private bool Suits(MachinePiece piece, MachineWork work)
+        private bool Suits(MachinePiece piece, PartInstance part, RebuildJob job, int step)
         {
-            if (!work.Offer.Job.AnySize || work.Offer.Job.Cut is not { } cut || ReferenceEquals(work.Part, piece.Part)) return true;
+            if (!job.AnySize || job.Cut is not { } cut || ReferenceEquals(part, piece.Part)) return true;
 
             var catalog = _parts.Catalog;
             foreach (var (matched, kinds, _) in catalog.Rebuilds.MatchedCuts().Where(m => m.Cut == cut))
             {
                 var holder = piece.Part.SelfAndDescendants().FirstOrDefault(p => catalog.Get(p.DefinitionId) is { } d && catalog.WorkOrder.KindOf(d) is { } k
                                                                                   && kinds.Contains(k, StringComparer.OrdinalIgnoreCase));
-                if (holder != null) return work.Offer.Step == holder.CutOf(matched);
+                if (holder != null) return step == holder.CutOf(matched);
             }
 
             return true;
         }
 
-        /// <summary>The jobs on one part of a piece, at the shop's prices today</summary>
-        private IEnumerable<MachineWork> OffersOn(GameState gameState, PartShopLocation shop, MachinePiece piece, PartInstance part)
-        {
-            if (!_parts.IsAvailable || _catalog.Get(shop.Id) is not { } definition) return [];
-
-            var factor = FactorAt(gameState, definition, shop);
-            return Machining.Offers(_parts.Catalog, part, factor, gameState.Rules.PartPriceMultiplier, PartShopRules.MachineValueShare, piece.Part)
+        /// <summary>The jobs on one part of a piece at the quote, those <paramref name="wanted"/> only</summary>
+        private IEnumerable<MachineWork> OffersOn(MachineQuote quote, MachinePiece piece, PartInstance part, Func<RebuildJob, int, bool> wanted, double? worth = null) =>
+            Machining.Offers(_parts.Catalog, part, quote.Factor, quote.PriceMultiplier, PartShopRules.MachineValueShare, piece.Part, wanted, worth)
                 .Select(o => new MachineWork(piece, part, o));
-        }
 
         /// <summary>What the shop asks against the work's list price today: its own prices, a closing-down sale, a regular's discount</summary>
         private static double FactorAt(GameState gameState, PartShopDefinition definition, PartShopLocation shop) =>
@@ -114,7 +146,7 @@ namespace StreetCorsa.Services.PartShops
 
         public MachineOrder? Order(GameState gameState, PartShopLocation shop, MachineWork work, Random random)
         {
-            if (!shop.IsTrading || !_parts.IsAvailable || _catalog.Get(shop.Id) is not { } definition) return null;
+            if (!shop.IsTrading || QuoteAt(gameState, shop) is not { } quote || _catalog.Get(shop.Id) is not { } definition) return null;
 
             var player = gameState.Player;
             var piece = work.Piece;
@@ -125,8 +157,9 @@ namespace StreetCorsa.Services.PartShops
                 : player.Parts.Contains(piece.Part);
             if (!there || !piece.Part.SelfAndDescendants().Contains(work.Part)) return null;
 
-            // The job as it stands now, at its price now: the part or the money may have changed since it was listed
-            var now = OffersOn(gameState, shop, piece, work.Part).FirstOrDefault(w => w.Offer.Job == work.Offer.Job && w.Offer.Step == work.Offer.Step);
+            // The job as it stands now, at its price now: the part or the money may have changed since it was listed. Only
+            // that job is priced again
+            var now = OffersOn(quote, piece, work.Part, (job, step) => job == work.Offer.Job && step == work.Offer.Step).FirstOrDefault();
             if (now is not { Offer.CanDo: true } || now.Offer.Cost != work.Offer.Cost || player.Money < now.Offer.Cost) return null;
 
             var catalog = _parts.Catalog;
@@ -137,6 +170,7 @@ namespace StreetCorsa.Services.PartShops
             shop.Trade += PartShopRules.TradePerSale;
 
             var ready = gameState.Date.Date.AddDays(now.Offer.Days);
+            var away = player.MachineWork ??= [];
             var order = piece.Order;
             if (order == null)
             {
@@ -148,22 +182,27 @@ namespace StreetCorsa.Services.PartShops
                     Part = piece.Part, ShopId = shop.Id, ShopName = definition.Name, Work = now.Offer.Name, Paid = now.Offer.Cost,
                     LeftOn = gameState.Date, ReadyOn = ready, FromStand = piece.FromStand
                 };
-                (player.MachineWork ??= []).Add(order);
+                away.Add(order);
             }
             else
             {
-                // More work on a part it has: it stays till the longest job is done
+                // More work on a part it has: it stays till the longest job is done, and what comes back with it too
                 order.Work = string.IsNullOrEmpty(order.Work) ? now.Offer.Name : $"{order.Work}; {now.Offer.Name}";
                 order.Paid += now.Offer.Cost;
-                if (ready > order.ReadyOn) order.ReadyOn = ready;
+                if (ready > order.ReadyOn)
+                {
+                    order.ReadyOn = ready;
+                    foreach (var with in away.Where(o => o.ComesWith == piece.Part.InstanceId)) with.ReadyOn = ready;
+                }
             }
 
             // A set of pistons made for a bare block comes back with it
             foreach (var extra in extras)
             {
-                player.MachineWork.Add(new MachineOrder
+                away.Add(new MachineOrder
                 {
-                    Part = extra, ShopId = shop.Id, ShopName = definition.Name, Work = now.Offer.Name, LeftOn = gameState.Date, ReadyOn = order.ReadyOn
+                    Part = extra, ShopId = shop.Id, ShopName = definition.Name, Work = now.Offer.Name, LeftOn = gameState.Date, ReadyOn = order.ReadyOn,
+                    ComesWith = piece.Part.InstanceId
                 });
             }
 
@@ -174,10 +213,11 @@ namespace StreetCorsa.Services.PartShops
         public List<MachineOrder> Deliver(GameState gameState, DateTime date)
         {
             var player = gameState.Player;
-            var ready = (player.MachineWork ?? []).Where(o => o.ReadyOn.Date <= date.Date).ToList();
+            var away = player.MachineWork ??= [];
+            var ready = away.Where(o => o.ReadyOn.Date <= date.Date).ToList();
             foreach (var order in ready)
             {
-                player.MachineWork.Remove(order);
+                away.Remove(order);
                 if (order.FromStand && player.EngineStand == null)
                 {
                     order.Part.ParentSlot = 0;
@@ -189,7 +229,8 @@ namespace StreetCorsa.Services.PartShops
                 }
 
                 var name = _parts.IsAvailable && _parts.Catalog.Get(order.Part.DefinitionId) is { } definition ? definition.DisplayName ?? definition.Name : order.Part.DefinitionId;
-                player.Delivered.Add(Text.GameText.Say("machine.delivered", ("part", name), ("shop", order.ShopName)));
+                var onStand = ReferenceEquals(player.EngineStand, order.Part);
+                (player.MachineReturned ??= []).Add(Text.GameText.Say(onStand ? "machine.delivered.stand" : "machine.delivered", ("part", name), ("shop", order.ShopName)));
             }
 
             if (ready.Count > 0) _logger.Information("The machine shops brought back {Count} part(s)", ready.Count);

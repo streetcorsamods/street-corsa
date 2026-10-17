@@ -56,7 +56,8 @@ public static class Rebuilding
     /// <summary>
     /// The kit or the rebuilt unit for the part as it is: <see cref="CostOf"/>, and never less than what the job adds to
     /// what a shop would pay for the part (<paramref name="resaleFactor"/> of its worth, with what is mounted on it,
-    /// after the job less before), so a part bought worn, worked on and sold on is never money made
+    /// after the job at the best it can come out (<see cref="Best"/>) less before), so a part bought worn, worked on and
+    /// sold on is never money made
     /// </summary>
     /// <param name="resaleFactor">The most any shop pays for a part, against its worth; 0 for no such floor</param>
     public static decimal CostFor(RebuildJob job, PartsCatalog catalog, PartDefinition definition, PartInstance part, double priceMultiplier = 1.0, double resaleFactor = 0)
@@ -65,7 +66,7 @@ public static class Rebuilding
         if (!(resaleFactor > 0) || !double.IsFinite(resaleFactor)) return cost;
 
         var after = PartTrees.Clone(part, keepIds: true);
-        Apply(job, after);
+        Apply(job, after, Best(job));
         var gained = PartPricing.WorthOfAssembly(catalog, after) - PartPricing.WorthOfAssembly(catalog, part);
         return gained > 0 ? Math.Max(cost, Math.Ceiling(PartPricing.Round(gained * resaleFactor))) : cost;
     }
@@ -107,7 +108,7 @@ public static class Rebuilding
 
     /// <summary>
     /// Does the job on the part as it comes out (<see cref="Landing"/>): the work lands round what it can do, a little
-    /// under it now and then for the player's own, never worse than the part was
+    /// over or under it for the player's own, never worse than the part was
     /// </summary>
     public static RebuildOutcome Do(RebuildJob job, PartInstance part, Random random)
     {
@@ -117,16 +118,24 @@ public static class Rebuilding
     }
 
     /// <summary>
-    /// Where the work lands for a draw of 0..1, and how good it was: from <see cref="RebuildJob.RollOf"/> under what the
-    /// job can do to a quarter of it over, no further than new. No roll: on what it can do, and nothing said of it.
+    /// Where the work lands for a draw of 0..1, and how good it was: round what the job can do, half of
+    /// <see cref="RebuildJob.RollOf"/> either side of it, no further than new, so on the whole it does what it says.
+    /// Half the time on it or over (good), a little under (fair), and one time in ten well under it (rough). No roll: on
+    /// what it can do, and nothing said of it.
     /// </summary>
     public static (double Wear, string? Quality) Landing(RebuildJob job, double draw)
     {
         var roll = job.RollOf;
         if (!(roll > 0) || job.Restores <= 0) return (job.Restores, null);
 
-        var lands = Math.Min(1, job.Restores - roll + Math.Clamp(draw, 0, 1) * roll * 1.25);
-        var quality = lands >= job.Restores - 0.005 ? Good : lands >= job.Restores - roll / 2 ? Fair : Rough;
+        var lands = Math.Min(1, job.Restores + (Math.Clamp(draw, 0, 1) - 0.5) * roll);
+        var quality = lands >= job.Restores - 0.005 ? Good : lands >= job.Restores - roll * RoughUnder ? Fair : Rough;
         return (lands, quality);
     }
+
+    /// <summary>Work landing further under what the job can do than this share of its roll is rough</summary>
+    private const double RoughUnder = 0.4;
+
+    /// <summary>The best the job can come out (<see cref="Landing"/> of the top draw): what a price that keeps resale from paying is set at</summary>
+    public static double Best(RebuildJob job) => Landing(job, 1).Wear;
 }

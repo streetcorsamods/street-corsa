@@ -60,7 +60,8 @@
     "machine.left": "{work} on the {part}: back in your garage {day:dddd, MMMM d}.",
     "machine.changed": "That job is not what it was a moment ago: look again.",
     "machine.changed.title": "Look Again",
-    "machine.delivered": "{part}, back from {shop}",
+    "machine.delivered": "{part}, back from {shop}: on your shelf",
+    "machine.delivered.stand": "{part}, back from {shop}: on the engine stand",
 
     "partshop.detail.closing": "Closing-down sale: {discount}% off everything, and less still in the last {finalDays} days. Last day {day:dddd, MMMM d}.",
     "partshop.detail.closing_final": "Closing-down sale: {discount}% off whatever is left, as low as it goes. Last day {day:dddd, MMMM d}.",

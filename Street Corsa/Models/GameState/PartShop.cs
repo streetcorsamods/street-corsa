@@ -67,5 +67,11 @@ namespace StreetCorsa.Models.GameState
 
         /// <summary>It came off the engine stand: back on it if the stand is free, else on the shelf</summary>
         public bool FromStand { get; set; }
+
+        /// <summary>
+        /// The part it was made for and comes back with (a bare block's new pistons): kept there as long as that is; null
+        /// for a part the player left here
+        /// </summary>
+        public Guid? ComesWith { get; set; }
     }
 }

@@ -36,6 +36,9 @@ namespace StreetCorsa.Models.GameState
         /// <summary>Names of the mail-order parts that came since the player was last in the garage, to be told of there</summary>
         public List<string> Delivered { get; set; } = [];
 
+        /// <summary>What the machine shops brought back since the player was last in the garage, and where it is, to be told of there</summary>
+        public List<string> MachineReturned { get; set; } = [];
+
         /// <summary>What a new player starts with (the rules' <c>start.money</c>)</summary>
         public static decimal StartingMoney => Rules.RuleBook.Current.Start.Money;
 

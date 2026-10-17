@@ -77,6 +77,8 @@
     "garage.end_day.failed.title": "End of Day",
     "garage.delivery": "The mailman brought what you ordered. It's on your shelf:",
     "garage.delivery.title": "Delivery",
+    "garage.machine_back": "Back from the machine shop:",
+    "garage.machine_back.title": "Back from the Shop",
     "garage.year_unknown": "Unknown",
     "garage.cars.tip": "Your cars: pick another one from the lot",
     "garage.no_preview": "NO PREVIEW IMAGE",

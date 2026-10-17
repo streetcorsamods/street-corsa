@@ -164,7 +164,7 @@ public sealed class MachiningTests : IDisposable
         var before = PartPricing.WorthOfAssembly(Catalog, block);
         var offer = Machining.Offers(Catalog, block, valueShare: share).Single(o => o.Job.Id == "bore");
         var after = PartTrees.Clone(block);
-        Machining.Apply(Catalog, job, after);
+        Machining.Apply(Catalog, job, after, Rebuilding.Best(job), null);
         var gained = PartPricing.WorthOfAssembly(Catalog, after) - before;
         Assert.True(offer.Cost > own);
         Assert.True((double)offer.Cost < gained, $"${offer.Cost} for ${gained:0} more worth");
@@ -172,6 +172,48 @@ public sealed class MachiningTests : IDisposable
 
         // A block that gains little: the work's own price
         Assert.Equal(own, Machining.Offers(Catalog, new PartInstance(block.DefinitionId), valueShare: share).Single(o => o.Job.Id == "bore").Cost);
+    }
+
+    [Fact]
+    public void A_repair_cut_that_makes_no_power_wants_a_worn_or_damaged_part()
+    {
+        var crank = new PartInstance(OfKind(Engine(), "crankshaft").DefinitionId);
+        var grind = Job("crank_grind");
+        Assert.Equal(PartWords.Say("rebuild.why.no_need"), Machining.WhyNot(grind, crank));
+
+        crank.Wear = 0.5;
+        Assert.Null(Machining.WhyNot(grind, crank));
+        crank.Wear = 1;
+        crank.Tear = 0.5;
+        Assert.Null(Machining.WhyNot(grind, crank));
+
+        // A cut that makes power is the speed work it was in the day: on a new part too
+        var head = new PartInstance(OfKind(Engine(), "cylinder_head").DefinitionId);
+        Assert.Null(Machining.WhyNot(Job("head_mill"), head));
+        Assert.Null(Machining.WhyNot(Job("bore"), new PartInstance(Engine().DefinitionId)));
+    }
+
+    [Fact]
+    public void A_cut_on_one_of_a_v8s_two_heads_works_on_its_own_cylinders()
+    {
+        var engine = Engine();
+        var heads = engine.SelfAndDescendants().Where(p => Catalog.Get(p.DefinitionId) is { } d && Catalog.WorkOrder.KindOf(d) == "cylinder_head").ToList();
+        Assert.Equal(2, heads.Count);
+        foreach (var head in heads) head.Cuts["port"] = 1;
+
+        // Both ported: the job's figures once over the engine, a share each
+        var live = PartTrees.ToInstalled(Catalog, engine)!;
+        var flows = live.Root.SelfAndDescendants().Where(p => p.CutFigures != null)
+            .Select(p => p.CutFigures!.Numbers.Single(f => f.Name == "intake_flow").Value).ToList();
+        Assert.Equal(2, flows.Count);
+        Assert.Equal(1.07, flows[0] * flows[1], 6);
+
+        // One head: about half the gain of both
+        var stock = Power(Engine());
+        var both = Power(engine);
+        heads[1].Cuts.Clear();
+        var one = Power(engine);
+        Assert.True(one > stock && one < both, $"stock {stock:0}, one head {one:0}, both {both:0}");
     }
 
     [Fact]
@@ -225,7 +267,9 @@ public sealed class MachiningTests : IDisposable
     {
         var kit = Job("carb_kit");
 
-        Assert.Equal((kit.Restores - PartRebuilds.KitRoll, Rebuilding.Rough), Rebuilding.Landing(kit, 0));
+        Assert.Equal((kit.Restores - PartRebuilds.KitRoll / 2, Rebuilding.Rough), Rebuilding.Landing(kit, 0));
+        Assert.Equal((kit.Restores, Rebuilding.Good), Rebuilding.Landing(kit, 0.5));
+        Assert.Equal(Rebuilding.Fair, Rebuilding.Landing(kit, 0.3).Quality);
         var (top, quality) = Rebuilding.Landing(kit, 1);
         Assert.True(top > kit.Restores);
         Assert.Equal(Rebuilding.Good, quality);
