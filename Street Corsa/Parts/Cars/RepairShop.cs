@@ -115,7 +115,7 @@ public static class RepairShop
     private const double BodyWorth = 0.5;
 
     /// <summary>A part at this or better needs nothing done</summary>
-    private const double Straight = 0.995;
+    private const double Straight = PartInstance.Undamaged;
 
     /// <param name="catalog">Null when there are no parts: only the body can be done</param>
     /// <param name="priceMultiplier">The save's <see cref="GameRules.PartPriceMultiplier"/>, on the whole bill</param>

@@ -254,4 +254,92 @@ public sealed class RebuildingTests : IDisposable
         Assert.True(StreetCorsa.Looks.PartGrime.Of(0.3) > StreetCorsa.Looks.PartGrime.Of(0.6));
         Assert.Equal(0, StreetCorsa.Looks.PartGrime.Of(double.NaN));
     }
+
+    [Fact]
+    public void A_show_ends_on_the_games_clock_once_the_time_is_spent()
+    {
+        var start = new DateTime(1965, 6, 1, 19, 0, 0);
+        var show = new RebuildShow(new RebuildJob { Id = "x", Kinds = ["transmission"] }, "Gearbox", 0.4, 0.9, 360, start);
+        var nextMorning = new DateTime(1965, 6, 2, 8, 0, 0);
+
+        // Not spent yet: the job's own minutes
+        Assert.Equal(start.AddMinutes(360), show.ClockAt(1, start));
+
+        // Spent, past the end of the day: the show ends where the game is
+        Assert.Equal(nextMorning, show.ClockAt(1, nextMorning));
+        Assert.Equal(start, show.ClockAt(0, nextMorning));
+        Assert.True(show.ClockAt(0.5, nextMorning) > start.AddMinutes(180));
+    }
+
+    [Fact]
+    public void A_part_bought_worn_worked_on_and_sold_on_is_no_money_made()
+    {
+        const double mostPaid = 0.42;
+        foreach (var jobId in new[] { "carb_kit", "rebuilt_exchange" })
+        {
+            var carb = new PartInstance(OfKind(TestCars.WithRealEngine(Catalog).Engine!, "carburettor").DefinitionId) { Wear = 0.05, Tear = 0.3 };
+            var before = PartPricing.WorthOfAssembly(Catalog, carb);
+            var offer = Rebuilding.Offers(Catalog, carb, loose: true, resaleFactor: mostPaid).Single(o => o.Job.Id == jobId);
+            Assert.True(offer.Cost >= Rebuilding.CostOf(offer.Job, Catalog.Get(carb.DefinitionId)!));
+
+            Rebuilding.Apply(offer.Job, carb);
+            var gained = (decimal)((PartPricing.WorthOfAssembly(Catalog, carb) - before) * mostPaid);
+            Assert.True(offer.Cost >= gained, $"{jobId}: ${offer.Cost} for ${gained} more at the shop");
+        }
+    }
+
+    [Fact]
+    public void Jobs_for_kinds_shelves_or_sounds_nobody_has_are_told()
+    {
+        _temp.File("mod/rebuilds.json", """
+            { "jobs": [ { "id": "a", "kinds": [ "carburetor" ], "restores": 0.9, "steps": [ { "id": "s", "sound": "work.wsh", "start": "work.bench" } ] },
+                        { "id": "b", "groups": [ "brakes", "flux" ], "restores": 0.9 } ] }
+            """);
+        var book = PartRebuilds.Load([("mymod", false, _temp.Combine("mod"))], []);
+
+        var names = book.UnknownNames(["carburettor"], ["brakes"]);
+        Assert.Equal(2, names.Count);
+        Assert.Contains(names, p => p.StartsWith("mymod/rebuilds.json: a ", StringComparison.Ordinal) && p.Contains("\"carburetor\""));
+        Assert.Contains(names, p => p.StartsWith("mymod/rebuilds.json: b ", StringComparison.Ordinal) && p.Contains("\"flux\""));
+
+        var sounds = book.UnknownSounds(cue => cue == "work.bench");
+        Assert.Contains("\"work.wsh\"", Assert.Single(sounds));
+    }
+
+    [Fact]
+    public void A_part_on_the_bench_turns_round_or_lies_along_it_clear_of_the_board_and_the_vise()
+    {
+        var bench = System.Numerics.Matrix4x4.CreateRotationY(0.6f) * System.Numerics.Matrix4x4.CreateTranslation(3f, 0f, -1.75f);
+
+        // A carburettor turns round
+        var small = new System.Numerics.Vector3(0.2f, 0.15f, 0.2f);
+        Assert.Equal(1.3f, WorkbenchLayout.YawOf(-small, small, 1.3f));
+
+        // A gearbox lies along the bench, whichever way its model runs, and never reaches the tool board
+        foreach (var half in new[] { new System.Numerics.Vector3(0.4f, 0.2f, 0.15f), new System.Numerics.Vector3(0.15f, 0.2f, 0.4f) })
+        {
+            for (var turn = 0f; turn < 20f; turn += 0.1f)
+            {
+                var placement = WorkbenchLayout.PlacementOf(System.Numerics.Matrix4x4.Identity, -half, half, turn, 0f);
+                foreach (var x in new[] { -half.X, half.X })
+                {
+                    foreach (var z in new[] { -half.Z, half.Z })
+                    {
+                        var corner = System.Numerics.Vector3.Transform(new System.Numerics.Vector3(x, 0f, z), placement);
+                        Assert.InRange(corner.Z - WorkbenchLayout.WorkSpot.Z, -WorkbenchLayout.ClearHalfDepth - 1e-4f, WorkbenchLayout.ClearHalfDepth + 1e-4f);
+                        Assert.InRange(corner.X, -WorkbenchLayout.HalfLength, WorkbenchLayout.HalfLength - 0.3f);
+                    }
+                }
+            }
+        }
+
+        // On a bench stood anywhere, the part's middle is over the bench's work spot, its bottom on the top
+        var box = new System.Numerics.Vector3(0.1f, 0.1f, 0.1f);
+        var lying = WorkbenchLayout.PlacementOf(bench, -box, box, 0.7f, 0f);
+        var middle = System.Numerics.Vector3.Transform(new System.Numerics.Vector3(0f, -0.1f, 0f), lying);
+        var top = WorkbenchLayout.TopOf(bench);
+        Assert.Equal(top.X, middle.X, 4);
+        Assert.Equal(top.Y, middle.Y, 4);
+        Assert.Equal(top.Z, middle.Z, 4);
+    }
 }

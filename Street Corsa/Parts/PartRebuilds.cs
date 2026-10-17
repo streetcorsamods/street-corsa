@@ -41,6 +41,42 @@ public sealed class PartRebuilds
             .ToList();
     }
 
+    /// <summary>
+    /// The kinds and shelves the jobs name that no part of <paramref name="kinds"/> and <paramref name="groups"/> is: a
+    /// job for them is never offered. One problem line each, for the mod's author; the jobs stay as they are.
+    /// </summary>
+    public IReadOnlyList<string> UnknownNames(IEnumerable<string> kinds, IEnumerable<string> groups)
+    {
+        var knownKinds = kinds.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var knownGroups = groups.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var problems = new List<string>();
+        foreach (var job in _jobs)
+        {
+            foreach (var kind in job.Kinds.Where(k => !knownKinds.Contains(k)))
+                problems.Add($"{job.Source}: {job.Id} is for the kind \"{kind}\", which no part is (work_order.json's kinds)");
+            foreach (var group in job.Groups.Where(g => !knownGroups.Contains(g)))
+                problems.Add($"{job.Source}: {job.Id} is for the shelf \"{group}\", which no part is on (part_groups.json)");
+        }
+
+        return problems;
+    }
+
+    /// <summary>The sounds the jobs' steps name that are no sound cue (<paramref name="isCue"/>): those steps are silent</summary>
+    public IReadOnlyList<string> UnknownSounds(Func<string, bool> isCue)
+    {
+        var problems = new List<string>();
+        foreach (var job in _jobs)
+        {
+            foreach (var step in job.Steps)
+            {
+                foreach (var sound in new[] { step.Sound, step.Start }.Where(s => !string.IsNullOrWhiteSpace(s) && !isCue(s!)))
+                    problems.Add($"{job.Source}: {job.Id}'s step {step.Id} plays \"{sound}\", which is no sound cue (sfx.json); it is silent");
+            }
+        }
+
+        return problems;
+    }
+
     public static PartRebuilds Load(IEnumerable<(string ModId, bool IsBase, string Dir)> roots, List<string> problems)
     {
         var book = new PartRebuilds();
@@ -77,6 +113,7 @@ public sealed class PartRebuilds
                 }
 
                 if (Check(job, $"{label}: {job.Id}", problems) is not { } good) continue;
+                good.Source = label;
 
                 if (index >= 0) book._jobs[index] = good;
                 else book._jobs.Add(good);
@@ -162,6 +199,10 @@ public sealed class RebuildStep
 /// <summary>One job of <see cref="PartRebuilds"/>: what it is for, what it costs and takes, what it brings a part up to</summary>
 public sealed class RebuildJob
 {
+    /// <summary>The file the job was read from, as the mod problems name it</summary>
+    [JsonIgnore]
+    public string Source { get; set; } = PartRebuilds.FileName;
+
     /// <summary>The player reads <c>rebuild.&lt;id&gt;</c> in the text, else <see cref="Name"/></summary>
     [JsonProperty("id")]
     public string Id { get; set; } = string.Empty;

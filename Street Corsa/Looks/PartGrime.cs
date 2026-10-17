@@ -26,32 +26,38 @@ internal static class PartGrime
     private const float Skin = 0.0015f;
 
     /// <summary>
-    /// The grime's model of the parts: each a skin's width bigger round the middle of them all, so it is drawn over the
-    /// clean part rather than fighting it for the same depth
+    /// The grime's model of the parts: a skin's width bigger round the middle of them all, so it is drawn over the clean
+    /// part rather than fighting it for the same depth. Built once, its parts under a node that grows them.
     /// </summary>
     public static AssemblyModel Model(PartsCatalog catalog, IReadOnlyList<PlacedPart> parts)
     {
-        var fitted = PartAssembler.BuildModel(catalog, "work_grime", parts);
-        var size = fitted.Max - fitted.Min;
-        var largest = MathF.Max(size.X, MathF.Max(size.Y, size.Z));
-        if (!(largest > 0.01f)) return Dirtied(fitted);
-
-        var centre = (fitted.Min + fitted.Max) / 2f;
-        var scale = 1f + 2f * Skin / largest;
-        var grow = Matrix4x4.CreateTranslation(-centre) * Matrix4x4.CreateScale(scale) * Matrix4x4.CreateTranslation(centre);
-        return Dirtied(PartAssembler.BuildModel(catalog, "work_grime", parts.Select(p => p with { World = p.World * grow }).ToList()));
-    }
-
-    private static AssemblyModel Dirtied(AssemblyModel model)
-    {
+        var model = PartAssembler.BuildModel(catalog, "work_grime", parts);
         Dirty(model.Kn5);
+
+        var size = model.Max - model.Min;
+        var largest = MathF.Max(size.X, MathF.Max(size.Y, size.Z));
+        if (!(largest > 0.01f)) return model;
+
+        var centre = (model.Min + model.Max) / 2f;
+        var scale = 1f + 2f * Skin / largest;
+        var g = Matrix4x4.CreateTranslation(-centre) * Matrix4x4.CreateScale(scale) * Matrix4x4.CreateTranslation(centre);
+        var grown = Kn5Node.CreateBaseNode("work_grime_skin");
+        grown.Transform = new AcTools.Numerics.Mat4x4(g.M11, g.M12, g.M13, g.M14, g.M21, g.M22, g.M23, g.M24, g.M31, g.M32, g.M33, g.M34, g.M41, g.M42, g.M43, g.M44);
+        grown.Children.AddRange(model.Kn5.RootNode.Children);
+        model.Kn5.RootNode.Children.Clear();
+        model.Kn5.RootNode.Children.Add(grown);
         return model;
     }
 
-    /// <summary>Makes every material of the model grime, in place: give it a model of its own, built for this</summary>
+    /// <summary>
+    /// Makes every material of the model grime, in place: give it a model of its own, built for this. Its own textures
+    /// go, nothing samples them any more.
+    /// </summary>
     public static void Dirty(IKn5 kn5)
     {
         var picture = Picture.Value;
+        kn5.Textures.Clear();
+        kn5.TexturesData.Clear();
         kn5.Textures[Texture] = new Kn5Texture { Name = Texture, Active = true, Length = picture.Length };
         kn5.TexturesData[Texture] = picture;
 

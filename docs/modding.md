@@ -541,7 +541,9 @@ folder name), where it stands and which way it faces: `{ "name": "Radio", "model
 mod's prop of an id the base game has replaces it, so a mod can swap the radio for another set or put it elsewhere in
 its own garage; one without a place in a garage takes it out of that garage. `credit` names the model's maker where
 the game shows its credits (Settings), as a CC BY licence asks. The published `bushradio` mod has `radio`, the set on the
-welder: clicking it opens the radio. `tools\Props` makes a prop's KN5: `prepare_prop.py` takes any model with PBR
+welder: clicking it opens the radio. The base game's `workbench` is where a loose part's "Work on it" job is shown; it names
+no model and the game draws its own (a mod's `workbench` may name one, its top 0.9 m up, its front +Z); a garage it has no place in
+has no bench, and a loose part's job is shown there without the part. `tools\Props` makes a prop's KN5: `prepare_prop.py` takes any model with PBR
 materials (a Sketchfab .glb, a .blend) through Blender, `PropBuilder` writes the KN5.
 
 ### dealers

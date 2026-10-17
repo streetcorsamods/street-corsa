@@ -65,6 +65,14 @@ public sealed class RebuildShow
         return WearBefore + (WearAfter - WearBefore) * eased;
     }
 
-    /// <summary>The game's clock at a point of the show</summary>
-    public DateTime ClockAt(double progress) => StartClock.AddMinutes(Minutes * Math.Clamp(progress, 0, 1));
+    /// <summary>
+    /// The game's clock at a point of the show: from when the job started to <paramref name="now"/>, the game's clock
+    /// once the job's time is spent (a job past the end of the day ends the next morning); to the start and the job's
+    /// minutes while it is not spent yet
+    /// </summary>
+    public DateTime ClockAt(double progress, DateTime? now = null)
+    {
+        var end = now is { } spent && spent > StartClock ? spent : StartClock.AddMinutes(Minutes);
+        return StartClock + (end - StartClock) * Math.Clamp(progress, 0, 1);
+    }
 }

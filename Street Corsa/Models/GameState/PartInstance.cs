@@ -21,6 +21,9 @@ namespace StreetCorsa.Models.GameState
         /// <summary>1 = straight, 0 = wrecked (damage)</summary>
         public double Tear { get; set; } = 1.0;
 
+        /// <summary>A <see cref="Tear"/> at this or better is no damage: nothing to mend, nothing to tell the player</summary>
+        public const double Undamaged = 0.995;
+
         /// <summary>Settings changed from the part's defaults, by script field ("rpm_idle", "ratio[2]")</summary>
         public Dictionary<string, double> Tuning { get; set; } = new();
 

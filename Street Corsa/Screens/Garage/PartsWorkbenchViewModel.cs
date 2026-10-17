@@ -363,7 +363,7 @@ namespace StreetCorsa.Screens.Garage
         public double SelectedCondition => _selectedPart?.Wear ?? 0;
         public string SelectedConditionDisplay => _selectedPart == null
             ? string.Empty
-            : $"{_selectedPart.Wear * 100:0}%" + (_selectedPart.Tear < 0.995 ? GameText.Say("garage.part.damaged", ("left", $"{_selectedPart.Tear * 100:0}")) : string.Empty);
+            : $"{_selectedPart.Wear * 100:0}%" + (_selectedPart.Tear < PartInstance.Undamaged ? GameText.Say("garage.part.damaged", ("left", $"{_selectedPart.Tear * 100:0}")) : string.Empty);
 
         public string SelectedWorthDisplay => _selectedPart != null && SavedOf(_selectedPart) is { } saved
             ? Money.Text(PartPricing.Round(PartPricing.Worth(_selectedPart.Definition, saved)))
@@ -484,8 +484,11 @@ namespace StreetCorsa.Screens.Garage
             {
                 if (Catalog is { } catalog && RebuildTarget is var (part, loose))
                 {
+                    // Never under what the work adds to the part at the most a shop pays: a part bought worn, worked on
+                    // and sold on is no money made
                     var money = _gameState.Player.Money;
-                    foreach (var offer in Rebuilding.Offers(catalog, part, loose, _gameState.Rules.PartPriceMultiplier))
+                    var resale = Services.PartShops.PartShopRules.MostPaidFactor();
+                    foreach (var offer in Rebuilding.Offers(catalog, part, loose, _gameState.Rules.PartPriceMultiplier, resale))
                         Rebuilds.Add(new RebuildOfferViewModel(offer, part, money));
                 }
             }
@@ -502,7 +505,12 @@ namespace StreetCorsa.Screens.Garage
         private void Rebuild(RebuildOfferViewModel? offer)
         {
             if (IsWorking || offer is not { CanDo: true } || RebuildTarget is not var (part, _) || !ReferenceEquals(part, offer.Part)) return;
-            if (_gameState.Player.Money < offer.Offer.Cost) return;
+            if (_gameState.Player.Money < offer.Offer.Cost)
+            {
+                // The money changed since the jobs were listed: they say so now
+                UpdateRebuilds();
+                return;
+            }
 
             var onCar = _car != null && !_isStand && _selectedShelfItem == null;
             var picked = _selectedPart;
@@ -520,11 +528,20 @@ namespace StreetCorsa.Screens.Garage
             // What the car's sheet and the gas station read off its parts
             if (onCar && Catalog is { } catalog) CarCondition.RefreshFigures(_car!, CarCondition.Groups(catalog));
 
-            Finish(1, offer.Offer.Minutes, carChanged: onCar);
+            // A shelf part is no car's nor the stand's: only the shelf is made anew, and the same part picked again in it.
+            // Otherwise the trees are, and the same part is picked again in them
+            if (shelfPart != null)
+            {
+                FillShelf();
+                Finish(1, offer.Offer.Minutes, carChanged: false, refresh: false);
+                SelectedShelfItem = Shelf.FirstOrDefault(s => ReferenceEquals(s.Part, shelfPart));
+            }
+            else
+            {
+                Finish(1, offer.Offer.Minutes, carChanged: onCar);
+                SelectedPart = InCurrentTree(picked);
+            }
 
-            // The trees and the shelf are made anew: the same part is picked again in them
-            if (shelfPart != null) SelectedShelfItem = Shelf.FirstOrDefault(s => ReferenceEquals(s.Part, shelfPart));
-            else SelectedPart = InCurrentTree(picked);
             UpdateRebuilds();
 
             var piece = benchPart != null ? new Controls.WorkPiece(benchPart, OnBench: true)
@@ -633,6 +650,7 @@ namespace StreetCorsa.Screens.Garage
         /// </summary>
         private async void ShowWork(RebuildShow show, Controls.WorkPiece? piece)
         {
+            CheckRebuildSounds();
             var run = ++_workRun;
             _workSkipped = false;
             IsWorking = true;
@@ -661,7 +679,7 @@ namespace StreetCorsa.Screens.Garage
                     WorkProgress = progress;
                     WorkGrime = PartGrime.Of(wear);
                     WorkCondition = $"{wear * 100:0}%";
-                    WorkClock = GameText.Date(show.ClockAt(progress), "format.time");
+                    WorkClock = GameText.Date(show.ClockAt(progress, _gameState.Date), "format.time");
                     if (progress >= 1) break;
 
                     await Task.Delay(30);
@@ -683,6 +701,21 @@ namespace StreetCorsa.Screens.Garage
             {
                 if (run == _workRun) EndShow();
             }
+        }
+
+        // The jobs whose sounds were checked against the sound cues: once, as the first job is shown (the cues are read
+        // at start-up, on the sound's own thread)
+        private static PartRebuilds? _soundsChecked;
+
+        private void CheckRebuildSounds()
+        {
+            var cues = AudioHub.Shared.Cues;
+            if (Catalog?.Rebuilds is not { } rebuilds || ReferenceEquals(rebuilds, _soundsChecked) || cues.All.Count == 0) return;
+
+            _soundsChecked = rebuilds;
+            var problems = rebuilds.UnknownSounds(name => cues.Get(name) != null);
+            foreach (var problem in problems) _logger.Warning("Parts: {Problem}", problem);
+            Mods.ModProblems.Add("Parts", problems);
         }
 
         /// <summary>Stops the show of the job on at once, its sound and all (the parts view closed, another car, leaving)</summary>
@@ -922,11 +955,15 @@ namespace StreetCorsa.Screens.Garage
         /// <summary>After the car changed: show it, let the clock run for the work, and save it all</summary>
         /// <param name="minutes">What the job took, when it is more than a few parts</param>
         /// <param name="carChanged">The car itself was worked on, not only the stand or the shelf</param>
-        private async void Finish(int partsHandled, int? minutes = null, bool? carChanged = null)
+        /// <param name="refresh">The car's and the stand's trees are made anew; not for work on the shelf alone</param>
+        private async void Finish(int partsHandled, int? minutes = null, bool? carChanged = null, bool refresh = true)
         {
-            // The stand's engine changed when the work was on it; one put on or taken off is another engine anyway
-            if (_isStand) _standStale = true;
-            Refresh();
+            if (refresh)
+            {
+                // The stand's engine changed when the work was on it; one put on or taken off is another engine anyway
+                if (_isStand) _standStale = true;
+                Refresh();
+            }
 
             if (carChanged ?? !_isStand)
             {
@@ -951,6 +988,9 @@ namespace StreetCorsa.Screens.Garage
             }
 
             Save();
+
+            // The money moved, and the day may have: what the picked part's jobs say about paying for them
+            UpdateRebuilds();
 
             try
             {
@@ -1009,16 +1049,7 @@ namespace StreetCorsa.Screens.Garage
                 EngineOffset = _car != null ? _parts.EngineOffsetOf(_car.DefinitionId) : System.Numerics.Vector3.Zero;
                 Shown = _car != null ? _parts.Shown(_car) : null;
 
-                Shelf.Clear();
-                if (catalog != null)
-                {
-                    foreach (var part in _gameState.Player.Parts)
-                    {
-                        if (catalog.Get(part.DefinitionId) is { } definition) Shelf.Add(new ShelfItemViewModel(part, definition, catalog));
-                    }
-                }
-
-                OnPropertyChanged(nameof(HasShelfItems));
+                FillShelf();
                 OnPropertyChanged(nameof(CanPutOnStand));
                 OnPropertyChanged(nameof(CanInstallFromStand));
                 OnPropertyChanged(nameof(SelectedBlockedDisplay));
@@ -1050,6 +1081,21 @@ namespace StreetCorsa.Screens.Garage
             {
                 _logger.Error(ex, "Could not show the parts of {Car}", _car?.DefinitionId ?? "(none)");
             }
+        }
+
+        /// <summary>The shelf as the player's loose parts are now</summary>
+        private void FillShelf()
+        {
+            Shelf.Clear();
+            if (Catalog is { } catalog)
+            {
+                foreach (var part in _gameState.Player.Parts)
+                {
+                    if (catalog.Get(part.DefinitionId) is { } definition) Shelf.Add(new ShelfItemViewModel(part, definition, catalog));
+                }
+            }
+
+            OnPropertyChanged(nameof(HasShelfItems));
         }
 
         /// <summary>The stand's engine brought to life, the one built before while nothing changed on it</summary>

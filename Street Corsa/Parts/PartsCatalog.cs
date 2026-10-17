@@ -150,6 +150,9 @@ public sealed class PartsCatalog
         catalog.WorkOrder = WorkOrder.Load(roots.Select(r => (r.Mod.Id, r.Mod.IsBase, r.Dir)), catalog._problems);
         WorkOrder.CheckWays(catalog._parts.Values, catalog._problems);
         catalog.Rebuilds = PartRebuilds.Load(roots.Select(r => (r.Mod.Id, r.Mod.IsBase, r.Dir)), catalog._problems);
+        catalog._problems.AddRange(catalog.Rebuilds.UnknownNames(
+            catalog._parts.Values.Select(catalog.WorkOrder.KindOf).OfType<string>(),
+            catalog._parts.Values.Select(PartKinds.GroupOf)));
 
         // What each part does for the cooling, where its kind says: the cooling reads it off the part
         if (catalog.WorkOrder.TellsCooling)

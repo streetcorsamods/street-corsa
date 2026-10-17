@@ -568,29 +568,41 @@ public class CarViewport3D : D3DViewportBase
     private const float WorkRadius = 1.5f;
     private const float WorkBeta = 0.35f;
 
-    // The loose part on the bench: its model's box, how long it has been there or since it began to go, and the
-    // version of the job it belongs to (a new job, or none, while one is still being built, leaves the old one out)
+    // The loose part on the bench: its model's box, how long it has been there, when it began to go and how far in
+    // sight and above the bench it was then, and the version of the job it belongs to (a new job, or none, while one
+    // is still being built, leaves the old one out)
     private System.Numerics.Vector3 _workMin;
     private System.Numerics.Vector3 _workMax;
     private float _workTime;
+    private float _workLeftAt;
+    private float _workLeaveOpacity;
+    private float _workLeaveLift;
     private bool _workOnBench;
     private bool _workLeaving;
     private int _workVersion;
+
+    // The camera went to the work: it comes back to the car, or the stand, when the work is done
+    private bool _cameraOnWork;
 
     private void OnWorkPieceChanged(WorkPiece? piece)
     {
         var version = ++_workVersion;
         if (piece == null)
         {
-            if (_workOnBench && Renderer != null)
+            if (_workOnBench && !_workLeaving && Renderer != null)
             {
+                // Goes from where it is and as it looks: a part still coming down fades out where it is
+                _workLeaveLift = WorkLift();
+                _workLeaveOpacity = Renderer.WorkOpacity;
+                _workLeftAt = _workTime;
                 _workLeaving = true;
-                _workTime = 0f;
                 AnimateFor(TimeSpan.FromSeconds(WorkLeaveSeconds) + AnimationWindow);
             }
-            else Renderer?.SetWork(null, null, SlimDX.Matrix.Identity, false);
+            else if (!_workOnBench) Renderer?.SetWork(null, null, SlimDX.Matrix.Identity, false);
 
-            if (Renderer != null && PartsVisible) ResetCamera();
+            // Whether or not the parts are still on show: the view may have closed as the work ended
+            if (Renderer != null && _cameraOnWork) ResetCamera();
+            _cameraOnWork = false;
             return;
         }
 
@@ -607,6 +619,9 @@ public class CarViewport3D : D3DViewportBase
         {
             if (piece.OnBench)
             {
+                // A garage without a workbench shows the job without the part
+                if (_bench is not { } bench) return;
+
                 // Built where it lies: its box puts it on the bench's top, whatever its own origin
                 var built = await Task.Run(() =>
                 {
@@ -627,17 +642,19 @@ public class CarViewport3D : D3DViewportBase
 
                 renderer.AutoAdjustTarget = false;
                 _autoAdjustWhenSettled = false;
-                var top = WorkbenchLayout.Top;
+                _cameraOnWork = true;
+                var top = WorkbenchLayout.TopOf(bench.Placement);
                 _targetGoal = new SlimDX.Vector3(top.X, top.Y + Math.Min(0.25f, (_workMax.Y - _workMin.Y) / 2f), top.Z);
                 _radiusGoal = BenchRadius;
-                _alphaGoal = BenchAlpha;
+                _alphaGoal = BenchAlpha - bench.Heading * MathF.PI / 180f;
                 _betaGoal = BenchBeta;
                 AnimateFor(TimeSpan.FromSeconds(WorkArriveSeconds) + AnimationWindow);
                 return;
             }
 
-            // A mounted part: once the parts are built again after the job, its place among them, and its grime there
-            for (var waited = 0; _isLoadingParts && waited < 3000 && version == _workVersion; waited += 30) await Task.Delay(30);
+            // A mounted part: once the parts are built again after the job (queued to the dispatcher by the new engine
+            // and gear, then building), its place among them, and its grime there
+            for (var waited = 0; (_applyPartsQueued || _isLoadingParts) && waited < 3000 && version == _workVersion; waited += 30) await Task.Delay(30);
             if (version != _workVersion || renderer != Renderer) return;
 
             var mounted = _partWorlds.FirstOrDefault(p => piece.Part.InstanceId != Guid.Empty && p.Key.InstanceId == piece.Part.InstanceId);
@@ -654,6 +671,7 @@ public class CarViewport3D : D3DViewportBase
             {
                 renderer.AutoAdjustTarget = false;
                 _autoAdjustWhenSettled = false;
+                _cameraOnWork = true;
                 _targetGoal = centre;
                 _radiusGoal = WorkRadius;
                 _betaGoal = WorkBeta;
@@ -676,13 +694,15 @@ public class CarViewport3D : D3DViewportBase
         Invalidate();
     }
 
+    /// <summary>How high above the bench the loose part is now: coming down, or where it was when it began to go</summary>
+    private float WorkLift() =>
+        _workLeaving ? _workLeaveLift : WorkDrop * (1f - EaseWork(Math.Clamp(_workTime / WorkArriveSeconds, 0f, 1f)));
+
     /// <summary>The loose part on the bench as it is now: coming down, turning</summary>
-    private SlimDX.Matrix BenchPlacement()
-    {
-        var arrive = Math.Clamp(_workTime / WorkArriveSeconds, 0f, 1f);
-        var lift = _workLeaving ? 0f : WorkDrop * (1f - EaseWork(arrive));
-        return ToSlim(WorkbenchLayout.PlacementOf(_workMin, _workMax, _workTime * WorkTurnRate, lift));
-    }
+    private SlimDX.Matrix BenchPlacement() =>
+        _bench is { } bench
+            ? ToSlim(WorkbenchLayout.PlacementOf(bench.Placement, _workMin, _workMax, _workTime * WorkTurnRate, WorkLift()))
+            : SlimDX.Matrix.Identity;
 
     private static float EaseWork(float t) => t * t * (3f - 2f * t);
 
@@ -694,8 +714,9 @@ public class CarViewport3D : D3DViewportBase
         _workTime += dt;
         if (_workLeaving)
         {
-            var gone = Math.Clamp(_workTime / WorkLeaveSeconds, 0f, 1f);
-            renderer.WorkOpacity = 1f - gone;
+            var gone = Math.Clamp((_workTime - _workLeftAt) / WorkLeaveSeconds, 0f, 1f);
+            renderer.WorkOpacity = _workLeaveOpacity * (1f - gone);
+            renderer.MoveWork(BenchPlacement());
             if (gone < 1f) return true;
 
             renderer.SetWork(null, null, SlimDX.Matrix.Identity, false);
@@ -814,6 +835,7 @@ public class CarViewport3D : D3DViewportBase
         ApplyShown();
         ApplyScenery();
         ApplyRadio();
+        ApplyBench();
         Invalidate();
 
         Logger.Information("Loaded {Car} in {Ms} ms", hasCar ? Path.GetFileName(carDirectory) : "(empty garage)",
@@ -1553,6 +1575,45 @@ public class CarViewport3D : D3DViewportBase
         Invalidate();
     }
 
+    // The renderer the workbench was put into, and where it stands in the garage; null in a garage without one
+    private GarageRenderer? _benchRenderer;
+    private Services.Garage.PlacedProp? _bench;
+
+    /// <summary>
+    /// The workbench, where the garage's props put it (<see cref="WorkbenchLayout.PropId"/>): the game's own model drawn
+    /// from boxes unless a mod names one, set into the renderer once. A garage with no place for it has none, and a
+    /// loose part's job is shown there without the part.
+    /// </summary>
+    private async void ApplyBench()
+    {
+        var renderer = Renderer;
+        if (renderer == null || ReferenceEquals(renderer, _benchRenderer)) return;
+        _benchRenderer = renderer;
+        _bench = null;
+
+        var problems = new List<string>();
+        var bench = Services.Garage.GarageProps.Find(Mods.ModSet.Installed, WorkbenchLayout.PropId, ShowroomKn5, problems, builtIn: true);
+        foreach (var problem in problems) Logger.Warning("Garage props: {Problem}", problem);
+        Mods.ModProblems.Add("Garage props", problems);
+        if (bench == null) return;
+
+        AcTools.Kn5File.IKn5 kn5;
+        try
+        {
+            kn5 = await Task.Run(() => bench.Model.Length > 0 ? AcTools.Kn5File.Kn5.FromFile(bench.Model) : WorkbenchLayout.CreateModel());
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning("The garage's workbench could not be read from {Model}: {Error}", bench.Model, ex.Message);
+            return;
+        }
+
+        if (renderer != Renderer) return;
+        renderer.SetBench(kn5, ToSlim(bench.Placement));
+        _bench = bench;
+        Invalidate();
+    }
+
     private bool HitsRadio(System.Windows.Point position) =>
         Renderer != null && ActualWidth > 0 && ActualHeight > 0
         && Renderer.HitsFixture((float)(position.X / ActualWidth), (float)(position.Y / ActualHeight));
@@ -2149,6 +2210,8 @@ public class CarViewport3D : D3DViewportBase
         _workOnBench = false;
         _workLeaving = false;
         _workVersion++;
+        _cameraOnWork = false;
+        _benchRenderer = null;
         _sceneryRenderer = null;
         _sceneryKey = null;
         _partsOnStand = false;

@@ -5,14 +5,15 @@ using AcTools.Numerics;
 namespace StreetCorsa.Parts;
 
 /// <summary>
-/// The garage's workbench, behind the engine stand: where a loose part is worked on (the parts view's "Work on it"
-/// jobs). Drawn from boxes as the stand is, a wooden top on steel legs with a shelf under it, always there with the
-/// stand (<see cref="EngineStandLayout.AddTo"/>).
+/// The garage's workbench: where a loose part is worked on (the parts view's "Work on it" jobs). A garage prop of its
+/// own (<c>props/workbench</c>), placed by garage as any prop is; its model, unless a mod gives one, is drawn here from
+/// boxes as the stand is: a wooden top on steel legs with a shelf under it, a tool board along the back and a vise on
+/// the front corner. Everything here is in the bench's own space: its middle on the floor at the origin, its front +Z.
 /// </summary>
 public static class WorkbenchLayout
 {
-    /// <summary>The middle of the bench on the floor: behind the stand (the car's rear is -Z), clear of its base</summary>
-    public static readonly Vector3 Spot = new(EngineStandLayout.Spot.X, 0f, -1.75f);
+    /// <summary>The prop's id in the mods' props folders</summary>
+    public const string PropId = "workbench";
 
     /// <summary>Height of the bench's top</summary>
     public const float TopHeight = 0.9f;
@@ -22,25 +23,77 @@ public static class WorkbenchLayout
 
     public const float HalfDepth = 0.34f;
 
-    /// <summary>Where a part lies on the bench: the middle of its top</summary>
-    public static Vector3 Top => Spot + new Vector3(0f, TopHeight, 0f);
+    /// <summary>
+    /// Where a part lies on the top: left of the middle and a little forward, clear of the vise on the right front
+    /// corner and of the tool board along the back
+    /// </summary>
+    public static readonly Vector3 WorkSpot = new(-0.12f, TopHeight, 0.01f);
+
+    /// <summary>How far round <see cref="WorkSpot"/> a part may reach and still turn whole circles without touching the board or the vise</summary>
+    public const float ClearRadius = 0.3f;
+
+    /// <summary>How far in front of and behind <see cref="WorkSpot"/> a part may reach: the tool board behind it</summary>
+    public const float ClearHalfDepth = 0.3f;
+
+    /// <summary>The most a part too long to turn round sways either way, radians</summary>
+    public const float MostSway = 0.35f;
 
     private const string BenchNode = "workbench";
 
+    /// <summary>Where a part lies on a bench placed by <paramref name="bench"/>: the middle of its top, where the part goes</summary>
+    public static Vector3 TopOf(Matrix4x4 bench) => Vector3.Transform(WorkSpot, bench);
+
     /// <summary>
-    /// A model lying on the bench: its middle over <see cref="Top"/>, its lowest point on the wood, turned
-    /// <paramref name="yaw"/> about the upright and raised <paramref name="lift"/> above it (on its way down to it)
+    /// How a part of this box is turned about the upright at <paramref name="turn"/> radians of its turning: a part that
+    /// fits <see cref="ClearRadius"/> turns round; a longer one lies along the bench and sways only as far as stays in
+    /// front of the tool board
     /// </summary>
-    public static Matrix4x4 PlacementOf(Vector3 min, Vector3 max, float yaw, float lift)
+    public static float YawOf(Vector3 min, Vector3 max, float turn)
+    {
+        var halfX = (max.X - min.X) / 2f;
+        var halfZ = (max.Z - min.Z) / 2f;
+        if (MathF.Sqrt(halfX * halfX + halfZ * halfZ) <= ClearRadius) return turn;
+
+        // Its long side along the bench
+        var along = halfX >= halfZ ? 0f : MathF.PI / 2f;
+        var (length, width) = halfX >= halfZ ? (halfX, halfZ) : (halfZ, halfX);
+
+        // Turned by a, its corners reach length * sin a + width * cos a forward and back
+        var sway = 0f;
+        for (var a = 0.01f; a <= MostSway; a += 0.01f)
+        {
+            if (length * MathF.Sin(a) + width * MathF.Cos(a) > ClearHalfDepth) break;
+            sway = a;
+        }
+
+        return along + sway * MathF.Sin(turn);
+    }
+
+    /// <summary>
+    /// A model lying on a bench placed by <paramref name="bench"/>: its middle over <see cref="WorkSpot"/>, its lowest
+    /// point on the wood, turned as <see cref="YawOf"/> has it and raised <paramref name="lift"/> above the top (on its
+    /// way down to it)
+    /// </summary>
+    public static Matrix4x4 PlacementOf(Matrix4x4 bench, Vector3 min, Vector3 max, float turn, float lift)
     {
         var centre = (min + max) / 2f;
         return Matrix4x4.CreateTranslation(-centre.X, -min.Y, -centre.Z)
-               * Matrix4x4.CreateRotationY(yaw)
-               * Matrix4x4.CreateTranslation(Top + new Vector3(0f, lift, 0f));
+               * Matrix4x4.CreateRotationY(YawOf(min, max, turn))
+               * Matrix4x4.CreateTranslation(WorkSpot + new Vector3(0f, lift, 0f))
+               * bench;
+    }
+
+    /// <summary>The bench drawn from boxes, as a model of its own</summary>
+    public static IKn5 CreateModel()
+    {
+        var kn5 = Kn5.CreateEmpty();
+        kn5.RootNode.Name = BenchNode;
+        AddTo(kn5);
+        return kn5;
     }
 
     /// <summary>The bench added to a model, as a node of its own that is no part's</summary>
-    public static void AddTo(IKn5 kn5)
+    private static void AddTo(IKn5 kn5)
     {
         const float top = TopHeight;
         const float l = HalfLength;
@@ -73,10 +126,10 @@ public static class WorkbenchLayout
 
         var timber = PlaceholderMesh.SolidMaterial(kn5, "bench_wood", 0x6E, 0x4A, 0x2C, 0.45f, 0.55f, 0.08f, 12f);
         var paint = PlaceholderMesh.SolidMaterial(kn5, "bench_steel", 0x2E, 0x4A, 0x3A, 0.4f, 0.55f, 0.3f, 40f);
-        var node = Kn5Node.CreateBaseNode(BenchNode);
+        var node = Kn5Node.CreateBaseNode(BenchNode + "_boxes");
         node.Children.Add(PlaceholderMesh.Boxes("bench_wood", wood, timber));
         node.Children.Add(PlaceholderMesh.Boxes("bench_steel", steel, paint));
-        node.Transform = new Mat4x4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, Spot.X, Spot.Y, Spot.Z, 1);
+        node.Transform = new Mat4x4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
         kn5.RootNode.Children.Add(node);
     }
 }

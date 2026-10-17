@@ -20,9 +20,6 @@ public static class Rebuilding
     /// <summary>A part this close to what the job leaves it in gains nothing from it</summary>
     private const double Enough = 0.01;
 
-    /// <summary>A part at this or better has no damage to take off</summary>
-    private const double Sound = 0.995;
-
     /// <summary>The job's name: <c>rebuild.&lt;id&gt;</c> in the text, else its own</summary>
     public static string NameOf(RebuildJob job)
     {
@@ -46,12 +43,29 @@ public static class Rebuilding
     public static decimal CostOf(RebuildJob job, PartDefinition part, double priceMultiplier = 1.0) =>
         PartPricing.Round(Math.Max(job.CostAtLeast, job.Cost * PartPricing.NewPrice(part)) * Multiplier.Sane(priceMultiplier));
 
+    /// <summary>
+    /// The kit or the rebuilt unit for the part as it is: <see cref="CostOf"/>, and never less than what the job adds to
+    /// what a shop would pay for the part (<paramref name="resaleFactor"/> of its worth, with what is mounted on it,
+    /// after the job less before), so a part bought worn, worked on and sold on is never money made
+    /// </summary>
+    /// <param name="resaleFactor">The most any shop pays for a part, against its worth; 0 for no such floor</param>
+    public static decimal CostFor(RebuildJob job, PartsCatalog catalog, PartDefinition definition, PartInstance part, double priceMultiplier = 1.0, double resaleFactor = 0)
+    {
+        var cost = CostOf(job, definition, priceMultiplier);
+        if (!(resaleFactor > 0) || !double.IsFinite(resaleFactor)) return cost;
+
+        var after = PartTrees.Clone(part, keepIds: true);
+        Apply(job, after);
+        var gained = PartPricing.WorthOfAssembly(catalog, after) - PartPricing.WorthOfAssembly(catalog, part);
+        return gained > 0 ? Math.Max(cost, Math.Ceiling(PartPricing.Round(gained * resaleFactor))) : cost;
+    }
+
     /// <summary>Why the job cannot be done on the part now; null when it can</summary>
     /// <param name="loose">The part is off: on the shelf, or the engine on the stand; not on a car, nor on another part</param>
     public static string? WhyNot(RebuildJob job, PartInstance part, bool loose)
     {
         var wear = Unit.Clamp01(part.Wear, 1);
-        var damaged = job.FixesDamage && Unit.Clamp01(part.Tear, 1) < Sound;
+        var damaged = job.FixesDamage && Unit.Clamp01(part.Tear, 1) < PartInstance.Undamaged;
         if (wear >= job.Restores - Enough && !damaged) return PartWords.Say("rebuild.why.no_need");
         if (wear < job.MinWear) return PartWords.Say("rebuild.why.too_worn");
         if (job.Off && !loose) return PartWords.Say(job.IsExchange ? "rebuild.why.off.exchange" : "rebuild.why.off");
@@ -60,12 +74,13 @@ public static class Rebuilding
     }
 
     /// <summary>Every job for the part, as it stands; none for a part the catalog does not know</summary>
-    public static IReadOnlyList<RebuildOffer> Offers(PartsCatalog catalog, PartInstance part, bool loose, double priceMultiplier = 1.0)
+    /// <param name="resaleFactor">The most any shop pays for a part, against its worth (<see cref="CostFor"/>)</param>
+    public static IReadOnlyList<RebuildOffer> Offers(PartsCatalog catalog, PartInstance part, bool loose, double priceMultiplier = 1.0, double resaleFactor = 0)
     {
         if (catalog.Get(part.DefinitionId) is not { } definition) return [];
 
         return catalog.Rebuilds.For(definition, catalog.WorkOrder.KindOf(definition))
-            .Select(job => new RebuildOffer(job, NameOf(job), CostOf(job, definition, priceMultiplier), job.Minutes,
+            .Select(job => new RebuildOffer(job, NameOf(job), CostFor(job, catalog, definition, part, priceMultiplier, resaleFactor), job.Minutes,
                 WhyNot(job, part, loose), Math.Max(Unit.Clamp01(part.Wear, 1), job.Restores)))
             .ToList();
     }
