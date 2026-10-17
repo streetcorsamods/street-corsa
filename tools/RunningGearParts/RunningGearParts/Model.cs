@@ -33,6 +33,20 @@ internal sealed class Model(string name)
 
     public int Triangles => _meshes.Values.Sum(m => m.Indices.Count / 3);
 
+    /// <summary>Another model's shapes added to this one's, finish by finish, made bigger about the origin by <paramref name="scale"/></summary>
+    public Model Add(Model other, float scale = 1f)
+    {
+        foreach (var (finish, mesh) in other._meshes)
+        {
+            var target = this[finish];
+            var offset = target.Vertices.Count;
+            target.Vertices.AddRange(mesh.Vertices.Select(v => new Kn5Node.Vertex(v.Position * scale, v.Normal, v.Tex, v.Tangent)));
+            target.Indices.AddRange(mesh.Indices.Select(i => i + offset));
+        }
+
+        return this;
+    }
+
     public void Save(string path)
     {
         var kn5 = Kn5.CreateEmpty();

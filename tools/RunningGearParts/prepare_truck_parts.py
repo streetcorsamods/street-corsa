@@ -41,7 +41,7 @@ args = sys.argv[sys.argv.index("--") + 1:]
 source, out, drums = args[0], args[1], json.loads(args[2])
 K = 0.655 / 54.3
 
-def load(pick, drop=None):
+def load(pick, drop=None, grow=None):
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.ops.import_scene.gltf(filepath=source)
     meshes = [o for o in bpy.data.objects if o.type == 'MESH']
@@ -59,6 +59,14 @@ def load(pick, drop=None):
             keep.append(o)
     for o in [x for x in bpy.data.objects if x not in keep]:
         bpy.data.objects.remove(o)
+    if grow is not None:
+        # Pieces made bigger about a point before they are one mesh (the housing's middle)
+        which, factor, about = grow
+        for o in keep:
+            vs = [v.co for v in o.data.vertices]
+            if which(Vector((min(v.x for v in vs), min(v.y for v in vs), min(v.z for v in vs))),
+                     Vector((max(v.x for v in vs), max(v.y for v in vs), max(v.z for v in vs)))):
+                o.data.transform(Matrix.Translation(Vector(about)) @ Matrix.Scale(factor, 4) @ Matrix.Translation(-Vector(about)))
     for o in keep:
         o.select_set(True)
     bpy.context.view_layer.objects.active = keep[0]
@@ -114,11 +122,14 @@ for name, inches in drums.items():
     finish(o, (17.3, 62.7, 134.8), inches * 0.0254 / 24.2, name)
 
 # The axle housing: its middle, tubes, flanges, cover, the pinion's yoke and the shocks' lower mounts
-pieces = [((9.9, 8.3, 140.5), (25.5, 57.0, 29.5)), ((24.5, 0.0, 135.1), (7.6, 22.4, 18.7)), ((-4.7, 0.0, 135.0), (7.7, 6.7, 7.0))]
+middle = [((9.9, 8.3, 140.5), (25.5, 57.0, 29.5)), ((24.5, 0.0, 135.1), (7.6, 22.4, 18.7)), ((-4.7, 0.0, 135.0), (7.7, 6.7, 7.0))]
+pieces = list(middle)
 for side in (1, -1):
     pieces += [((17.5, side * 28.4, 134.8), (8.0, 51.1, 8.0)), ((17.5, side * 54.3, 134.7), (8.9, 1.7, 8.9)),
                ((17.6, side * 36.3, 135.8), (7.1, 6.0, 5.0))]
-o = load(one_of(pieces), drop=lambda lo, hi: hi.z > 150)
+# The middle a little bigger, as the game's own housings' (Parts.CentreScale): the owner found the diffs small
+# (the vent hose, grown with it, still rises over the grown middle's top)
+o = load(one_of(pieces), drop=lambda lo, hi: hi.z > 153, grow=(one_of(middle), 1.15, (17.5, 0.0, 134.8)))
 finish(o, (17.5, 0.0, 134.8), K, "housing")
 
 # The left shock with its boot and mounts; the origin at the game's spring seat (0.24 m in from the hub, 0.06 m under it)

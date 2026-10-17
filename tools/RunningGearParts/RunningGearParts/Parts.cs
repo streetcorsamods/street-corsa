@@ -21,6 +21,12 @@ internal static class Parts
     private const float HousingEnd = 0.655f;
     private const float PerchX = 0.47f;
 
+    /// <summary>
+    /// How much bigger the middle of an axle (the housing's centre section, the ring and pinion, the carrier's case) is drawn
+    /// than its ring gear alone would make it: the cast iron round the gears is thick, and the owner found them small in game
+    /// </summary>
+    public const float CentreScale = 1.25f;
+
     private static Vec3 X(float x) => new(x, 0, 0);
     private static Vec3 V(float x, float y, float z) => new(x, y, z);
 
@@ -54,18 +60,22 @@ internal static class Parts
     public static Model Housing(AxleFamily family)
     {
         var model = new Model(family.Id);
-        var iron = model[Finish.CastIron];
         var paint = model[Finish.Paint];
         var r = Belly(family);
         var tube = family.TubeRadius;
+
+        // The middle (its bosses, the centre section, the cover, the nose and yoke) made at the ring gear's size, put in at
+        // CentreScale; the tubes start inside it
+        var centre = new Model(family.Id);
+        var iron = centre[Finish.CastIron];
 
         foreach (var side in new[] { 1f, -1f })
         {
             paint.Tube(X(side * r * 0.5f), X(side * (HousingEnd - 0.05f)), tube, 20);
             iron.Tube(X(side * r * 0.4f), X(side * r * 1.05f), tube * 1.4f, 20);
             // The end: the backing plate's flange and the bearing's bore
-            iron.Tube(X(side * (HousingEnd - 0.055f)), X(side * (HousingEnd - 0.043f)), 0.068f, 20);
-            iron.Tube(X(side * (HousingEnd - 0.05f)), X(side * HousingEnd), tube * 1.22f, 20);
+            model[Finish.CastIron].Tube(X(side * (HousingEnd - 0.055f)), X(side * (HousingEnd - 0.043f)), 0.068f, 20);
+            model[Finish.CastIron].Tube(X(side * (HousingEnd - 0.05f)), X(side * HousingEnd), tube * 1.22f, 20);
             // The spring perch the leaf is clamped to, under the tube
             paint.Block(V(side * PerchX - 0.035f, -tube - 0.012f, -0.05f), V(side * PerchX + 0.035f, -tube + 0.006f, 0.05f));
             // The shock's stud on the perch: behind the axle on the left, ahead of it on the right (staggered, as the shocks
@@ -83,10 +93,10 @@ internal static class Parts
             for (var k = 0; k < family.CoverBolts; k++)
             {
                 var at = nose + AroundZ(MathF.Tau * k / family.CoverBolts + 0.3f) * (r * 0.92f);
-                model[Finish.Steel].Hex(at + V(0, 0, -0.09f), at + V(0, 0, -0.099f), 0.008f);
+                centre[Finish.Steel].Hex(at + V(0, 0, -0.09f), at + V(0, 0, -0.099f), 0.008f);
             }
 
-            Yoke(model, nose + V(0, 0, -0.32f));
+            Yoke(centre, nose + V(0, 0, -0.32f));
         }
         else
         {
@@ -95,20 +105,20 @@ internal static class Parts
             var nose = V(0, -0.03f, 0);
             iron.Lathe(nose, Vec3.UnitZ, [(-0.25f, 0f), (-0.25f, 0.03f), (-0.21f, 0.03f), (-0.21f, 0.045f), (-0.15f, 0.05f), (-0.085f, 0.062f), (-0.085f, 0f)], 20);
             var cover = r * 1.06f;
-            paint.Lathe(Vec3.Zero, Vec3.UnitZ, [(0.06f, 0f), (0.06f, cover), (0.072f, cover), (0.088f, cover * 0.9f), (0.105f, cover * 0.68f), (0.114f, cover * 0.38f), (0.117f, 0f)], 32, family.Cover);
+            centre[Finish.Paint].Lathe(Vec3.Zero, Vec3.UnitZ, [(0.06f, 0f), (0.06f, cover), (0.072f, cover), (0.088f, cover * 0.9f), (0.105f, cover * 0.68f), (0.114f, cover * 0.38f), (0.117f, 0f)], 32, family.Cover);
             for (var k = 0; k < family.CoverBolts; k++)
             {
                 var angle = MathF.Tau * k / family.CoverBolts + 0.2f;
                 var at = AroundZ(angle) * (cover * 0.93f * family.Cover(angle));
-                model[Finish.Steel].Hex(at + V(0, 0, 0.072f), at + V(0, 0, 0.081f), 0.0075f);
+                centre[Finish.Steel].Hex(at + V(0, 0, 0.072f), at + V(0, 0, 0.081f), 0.0075f);
             }
 
             // The fill plug
-            model[Finish.Steel].Hex(V(r * 0.55f, r * 0.2f, 0.088f), V(r * 0.55f, r * 0.2f, 0.096f), 0.01f);
-            Yoke(model, nose + V(0, 0, -0.25f));
+            centre[Finish.Steel].Hex(V(r * 0.55f, r * 0.2f, 0.088f), V(r * 0.55f, r * 0.2f, 0.096f), 0.01f);
+            Yoke(centre, nose + V(0, 0, -0.25f));
         }
 
-        return model;
+        return model.Add(centre, CentreScale);
     }
 
     /// <summary>The pinion's yoke, the driveshaft's U-joint's other half, in front of the snout</summary>
@@ -164,7 +174,8 @@ internal static class Parts
             steel.Block(centre + V(0, 0, -head - 0.005f) + radial * 0.029f, Vec3.UnitZ, radial, Vec3.Cross(Vec3.UnitZ, radial), V(0.016f, 0.004f, 0.004f));
         }
 
-        return model;
+        // At the size of the housing's middle it turns in
+        return new Model(model.Name).Add(model, CentreScale);
     }
 
     /// <summary>

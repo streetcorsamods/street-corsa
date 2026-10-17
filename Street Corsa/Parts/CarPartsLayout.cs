@@ -70,6 +70,12 @@ public static class CarPartsLayout
     private const float SpringSeatBelowHub = 0.06f;
     private const float SwayBarAheadOfAxle = 0.15f;
 
+    // The rear axle housing's models end 0.655 m out each side (tools/RunningGearParts); on the car each end reaches the
+    // brake's backing plate, this far in from the hub (the drum's own slot puts it 0.04 m out of the brake slot, and a
+    // drum is about 0.1 m deep), so the housing is stretched along its length to the car's track
+    private const float HousingHalfWidth = 0.655f;
+    private const float HousingEndInsideHub = 0.12f;
+
     /// <param name="engine">The car's engine block with everything on it; null for an empty engine bay</param>
     /// <param name="gear">What sits on the car's wheel slots, each with what is on it (the tyre on the rim)</param>
     public static List<PlacedPart> Build(PartsCatalog catalog, CarAnchors anchors, InstalledPart? engine, IReadOnlyList<CarPart>? gear = null,
@@ -106,9 +112,15 @@ public static class CarPartsLayout
 
     /// <summary>
     /// The rear axle housing: its mount (slot 1) in the middle of the rear hubs, facing the way the car does, so its +X
-    /// (the left shaft's side) is the car's left
+    /// (the left shaft's side) is the car's left; stretched along its length (with what is on it: the carrier, the gears,
+    /// the shafts) so its ends meet the brakes at the car's own track
     /// </summary>
-    public static Matrix4x4 AxlePlacement(CarAnchors anchors, PartDefinition housing) => BySlot(housing, CarFrame(anchors.Forward), anchors.RearAxle);
+    public static Matrix4x4 AxlePlacement(CarAnchors anchors, PartDefinition housing)
+    {
+        var halfTrack = Vector3.Distance(anchors.WheelLR, anchors.WheelRR) / 2f;
+        var stretch = halfTrack > 0.3f ? Math.Clamp((halfTrack - HousingEndInsideHub) / HousingHalfWidth, 0.8f, 1.4f) : 1f;
+        return BySlot(housing, Matrix4x4.CreateScale(stretch, 1f, 1f) * CarFrame(anchors.Forward), anchors.RearAxle);
+    }
 
     /// <summary>
     /// A sway bar across its axle: its mount (slot 1) a little ahead of the middle of the axle's hubs, facing the way the
