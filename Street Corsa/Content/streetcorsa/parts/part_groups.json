@@ -24,7 +24,7 @@
   "shows": [
     { "id": "engine", "icon": "icons/engine", "rest_of_engine": true },
     { "id": "drivetrain", "icon": "icons/gears", "groups": [ "transmissions", "rear_axles", "differentials", "ring_pinions", "axle_shafts", "transfer_cases" ] },
-    { "id": "brakes", "icon": "icons/disc_brake", "groups": [ "brakes" ] },
+    { "id": "brakes", "icon": "icons/disc_brake", "groups": [ "brakes", "brake_shoes", "wheel_cylinders" ] },
     { "id": "suspension", "icon": "icons/parts_filled", "groups": [ "springs", "shocks", "sway_bars", "suspension_arms" ] }
   ],
   "groups": [
@@ -49,6 +49,8 @@
     { "id": "tyres", "classes": [ "Tyre" ], "price": { "base": 35, "by": "grip", "by_power": 1.5 } },
     { "id": "rims", "classes": [ "Wheel" ], "price": { "base": 15, "by": "rim_size", "by_power": 1 } },
     { "id": "brakes", "classes": [ "Brake" ], "price": { "base": 60, "by": "brake_torque", "by_power": 1 } },
+    { "id": "brake_shoes", "classes": [ "BrakeShoes" ], "never_stacks": true, "price": { "base": 12 } },
+    { "id": "wheel_cylinders", "classes": [ "WheelCylinder" ], "never_stacks": true, "price": { "base": 8 } },
     { "id": "springs", "classes": [ "Spring" ], "price": { "base": 25, "by": "spring_rate", "by_power": 0.5 } },
     { "id": "shocks", "classes": [ "ShockAbsorber" ], "price": { "base": 25, "by": "damping", "by_power": 0.5 } },
     { "id": "rear_axles", "classes": [ "RearAxle" ], "never_stacks": true, "price": { "base": 150, "by": "strength", "by_power": 1 } },

@@ -109,6 +109,10 @@ namespace StreetCorsa.Services.Catalog
             if (picks.Diff is { Length: > 0 } diff) gear["diff"] = diff;
             if (picks.Ratio is { } ratio) gear["ratio"] = Math.Round(ratio, 2);
             if (picks.Shafts is { Length: > 0 } shafts) gear["shafts"] = shafts;
+            if (picks.BrakesFront is { Length: > 0 } brakesFront) gear["brakes_front"] = brakesFront;
+            if (picks.BrakesRear is { Length: > 0 } brakesRear) gear["brakes_rear"] = brakesRear;
+            if (picks.SpringsFront is { Length: > 0 } springsFront) gear["springs_front"] = springsFront;
+            if (picks.SpringsRear is { Length: > 0 } springsRear) gear["springs_rear"] = springsRear;
             return gear;
         }
 

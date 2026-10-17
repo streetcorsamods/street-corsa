@@ -2,8 +2,8 @@ using StreetCorsa.Parts.Export;
 
 namespace StreetCorsa.Parts.Cars;
 
-/// <summary>What the guess knows of a car beyond its data: its make (makes.json), the make's family and its model year</summary>
-public sealed record CarFacts(string? Make, string? Family, int? Year)
+/// <summary>What the guess knows of a car beyond its data: its make (makes.json), the make's family and country, its model year</summary>
+public sealed record CarFacts(string? Make, string? Family, int? Year, string? Country = null)
 {
     public static CarFacts None { get; } = new(null, null, null);
 }
@@ -86,7 +86,8 @@ public static class RunningGearGuess
             .FirstOrDefault();
     }
 
-    private static int Rank(CameIn? came, CarFacts car) => came switch
+    /// <summary>0 a part naming the car's make, 1 its family, 2 one for any car, 3 one naming other makes, 4 one no car came with</summary>
+    internal static int Rank(CameIn? came, CarFacts car) => came switch
     {
         null => 4,
         _ when came.NamesMake(car.Make) => 0,

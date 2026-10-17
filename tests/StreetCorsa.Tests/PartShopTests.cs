@@ -234,7 +234,8 @@ public class PartShopServiceTests
         var yard = Shop("yard");
         Assert.Equal(4, yard.Yard.Count);
 
-        var part = new PartInstance(Parts.Catalog.Parts.Values.First(p => p.IsScripted && PartPricing.NewPrice(p) > 50).Id) { Wear = 0.8 };
+        // Dear enough that the junkyard's 42% and a trade-in's 40% are whole dollars apart
+        var part = new PartInstance(Parts.Catalog.Parts.Values.Where(p => p.IsScripted && PartPricing.NewPrice(p) > 300).MinBy(p => p.Id, StringComparer.Ordinal)!.Id) { Wear = 0.8 };
         _state.Player.Parts.Add(part);
         var paid = _service.BuyingPrice(yard, part);
         Assert.True(paid > PartPricing.TradeIn(Parts.Catalog, part));

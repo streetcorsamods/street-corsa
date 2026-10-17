@@ -519,7 +519,16 @@ and the shafts on 3 and 4; the carrier carries the gears on its slot 2. Give the
 what the axle cannot do without. `"came_in"` on a part says which cars it left the factory on, for the guess of a car's
 factory running gear: `{ "families": ["gm"], "makes": ["pontiac"], "torque": [460, null], "years": [1965, null] }` (Nm of
 the car's peak torque, model years; any may be left out, `{}` is any car's). A part without `came_in` (a spool, an alloy
-shaft) is never a factory part while there is one with it.
+shaft) is never a factory part while there is one with it. For brakes and springs also `"countries"` (makes.json's: the
+base game's drums `["USA"]`), `"mass"` (the car's kg, `[1600, 2100]`), `"axle"` (`"front"` or `"rear"`), `"suspension"`
+(the axle's suspensions.ini `TYPE`s, `["AXLE"]` for a leaf spring) and `"option": true` (a dealer's option, only for a car
+cars.json picks it for). A corner part no `came_in` names a car for leaves that car on the source game's nearest.
+
+A **drum brake** (`"class_chain": ["DrumBrake", "Brake"]`) has the source game's brake figures (`force`, `friction`,
+`radius`, `number_of_calipers`) and how it heats: `torque_k` (°C per kJ of braking), `cool_transfer`, `cool_speed_factor`
+(Assetto Corsa's brakes.ini `[TEMPS_*]`); its shoes (`["BrakeShoes"]`, on its slot 2 by `shoes:drum`) a `friction` that
+multiplies the drum's and a `perf_curve`, an inline lut of °C to torque (`"(|0=0.9|230=1.0|380=0.55|)"`), and its wheel
+cylinder (`["WheelCylinder"]`, slot 3, `wcyl:drum`) a `force_factor`. A disc that fades says it all itself.
 
 ```json
 { "id": "running_gear/banjo/housing", "display_name": "Banjo rear axle housing", "class_chain": [ "RearAxle" ], "mass": 60,
@@ -552,7 +561,8 @@ naming only that; a list (a make's words) is taken whole. What does not read is 
   engine build it leaves the factory with (`engine_builds.json`, namespaced); `layout`, `front`, `mid`, `rear`, or `front_transverse` and `mid_transverse` for an engine lying across the car (guessed for a front-wheel-drive car; the garage draws it so);
   `common`, how often it turns up for sale, 0 to 1; `make`, a make of `makes`; `running_gear`, the factory rear axle as
   far as it is given: `axle` (a housing's part id), `diff` (a carrier's), `ratio` (the gear set of that ratio that goes on
-  the carrier, the nearest there is), `shafts`; what is left out is guessed from the parts' `"came_in"` (see `parts`). The base game's holds the factory
+  the carrier, the nearest there is), `shafts`, `brakes_front`, `brakes_rear`, `springs_front`, `springs_rear` (part ids); what
+is left out is guessed from the parts' `"came_in"` (see `parts`). The base game's holds the factory
   engines set by hand in the catalog editor (a developer's screen, which saves into the base game's `cars.json`).
   A car's price is never given: it costs its body by its weight (the rules' `cars`) and its factory parts (the
   shelves' `price`). A `price` a mod still gives is told as no longer read.

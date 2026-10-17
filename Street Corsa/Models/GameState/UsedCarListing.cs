@@ -99,8 +99,8 @@ namespace StreetCorsa.Models.GameState
         /// </summary>
         public bool HasRunningGearAssigned { get; set; }
 
-        /// <summary>True when <see cref="Parts"/> already holds the car's rear axle, as <see cref="HasRunningGearAssigned"/> the rest</summary>
-        public bool HasAxleAssigned { get; set; }
+        /// <summary>What the running gear in <see cref="Parts"/> is brought up to, as <see cref="Car.GearVersion"/></summary>
+        public int GearVersion { get; set; }
 
         /// <summary>
         /// The body's damage per zone, as on <see cref="Car.BodyDamageKmh"/>: a relisted car is sold with its dents.

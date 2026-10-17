@@ -422,7 +422,30 @@ public sealed class RunningGearPicks
     [JsonPropertyName("shafts")]
     public string? Shafts { get; set; }
 
-    public bool IsEmpty => string.IsNullOrEmpty(Axle) && string.IsNullOrEmpty(Diff) && Ratio == null && string.IsNullOrEmpty(Shafts);
+    /// <summary>The brakes of each axle (a drum brake gets its shoes and wheel cylinder as the guess gives them)</summary>
+    [JsonPropertyName("brakes_front")]
+    public string? BrakesFront { get; set; }
 
-    public RunningGearPicks Copy() => new() { Axle = Axle, Diff = Diff, Ratio = Ratio, Shafts = Shafts };
+    [JsonPropertyName("brakes_rear")]
+    public string? BrakesRear { get; set; }
+
+    /// <summary>The springs of each axle: a coil, a leaf spring, a torsion bar</summary>
+    [JsonPropertyName("springs_front")]
+    public string? SpringsFront { get; set; }
+
+    [JsonPropertyName("springs_rear")]
+    public string? SpringsRear { get; set; }
+
+    public string? Brakes(bool front) => front ? BrakesFront : BrakesRear;
+
+    public string? Springs(bool front) => front ? SpringsFront : SpringsRear;
+
+    public bool IsEmpty => string.IsNullOrEmpty(Axle) && string.IsNullOrEmpty(Diff) && Ratio == null && string.IsNullOrEmpty(Shafts) &&
+                           string.IsNullOrEmpty(BrakesFront) && string.IsNullOrEmpty(BrakesRear) && string.IsNullOrEmpty(SpringsFront) && string.IsNullOrEmpty(SpringsRear);
+
+    public RunningGearPicks Copy() => new()
+    {
+        Axle = Axle, Diff = Diff, Ratio = Ratio, Shafts = Shafts, BrakesFront = BrakesFront, BrakesRear = BrakesRear,
+        SpringsFront = SpringsFront, SpringsRear = SpringsRear
+    };
 }

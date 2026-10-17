@@ -20,6 +20,10 @@ public static class PartKinds
     public const string Springs = PartGroups.Springs;
     public const string Shocks = PartGroups.Shocks;
 
+    // What goes on a drum brake
+    public const string BrakeShoes = PartGroups.BrakeShoes;
+    public const string WheelCylinders = PartGroups.WheelCylinders;
+
     // The rear axle: on the car's own axle slot, with its carrier, gears and shafts on it
     public const string RearAxles = PartGroups.RearAxles;
     public const string Differentials = PartGroups.Differentials;

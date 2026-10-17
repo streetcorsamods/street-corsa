@@ -45,6 +45,8 @@ public sealed class PartGroups
     public const string Brakes = "brakes";
     public const string Springs = "springs";
     public const string Shocks = "shocks";
+    public const string BrakeShoes = "brake_shoes";
+    public const string WheelCylinders = "wheel_cylinders";
     public const string RearAxles = "rear_axles";
     public const string Differentials = "differentials";
     public const string RingPinions = "ring_pinions";

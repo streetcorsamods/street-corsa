@@ -727,6 +727,33 @@ car home in the pack's words. The garage draws the housing with its slot 1 betwe
   junkyards whatever comes off a wreck.
 Check: `EngineBench <parts> axles <AC cars folder>`.
 
+**Period brakes** (step 31 phase 2, `parts/running_gear/brakes_drum`, `brakes_disc`). A drum brake on a corner's brake
+slot takes its shoes (slot 2) and its wheel cylinder (slot 3), both enforced: the drum gives the size (`force`, `radius`,
+in the source game's units, every drum under its smallest disc so a disc is an upgrade) and how it heats and cools, the
+shoes their friction (organic 1.0, semi-metallic 0.95, sintered 0.9 cold) and their fade curve, the wheel cylinder its
+force (a big bore 1.1). `RunningGear.BrakeTorque(catalog, brake)` puts them together, the lining's wear the shoes'. The
+period discs (Kelsey-Hayes, Delco-Moraine and Budd 4-pistons, dealer's options: `"option": true`, only a car cars.json
+picks them for; a single-piston caliper standard on American cars from 1969) carry their pads' curve themselves. The
+source game's discs carry no fade of their own.
+- **The factory's** (`RunningGearFactory.Choose` with the car's `CarFacts`): a part whose `came_in` fits the axle, the
+  car's country (the drums are American: a Jaguar keeps the source game's disc), its make, family or any car, and its
+  years, a standard one before an option; then the car's weight (each drum size has its band: a 9-inch under 1250 kg,
+  an 11 x 2.75 from 1600 kg) and the torque nearest the car's own. Front drums until 1972, rear drums always: every
+  American car of the drum years is on drums (EngineBench `gear` shows each car's with its shoes and fade). No such part:
+  the source game's nearest, as before. cars.json's `brakes_front`/`brakes_rear` pick.
+- **Fade in Assetto Corsa** (`AcRunningGearData`): brakes.ini `[TEMPS_FRONT]`/`[TEMPS_REAR]` get `TORQUE_K`, `COOL_TRANSFER`,
+  `COOL_SPEED_FACTOR` and `PERF_CURVE` from the brake (`torque_k`, `cool_transfer`, `cool_speed_factor`) and its shoes'
+  `perf_curve`. On the factory brakes the car keeps its author's section when there is one; a car whose author wrote none
+  gets its factory drums' (the one change a stock car gets: its drums fade, about 300 °C after one hard stop from 80 mph
+  at 0.9 °C a kJ, the organic curve down to 55% by 380 °C; to calibrate against the Car Life tests in game). Other brakes
+  write theirs; a source game disc leaves the section as it was.
+- **Older saves** (`Car.GearVersion`, 0 before step 31): brought up once, the rear axle added and every brake or spring
+  that is what the factory gave the car then (the source game's nearest) swapped for what it gives now, in its wear and
+  damage, a drum with its shoes and cylinder (`RunningGearFactory.BringUpToDate`). What the player put on stays.
+- **Work**: `brake_reline` takes the shoes too, `wheel_cylinder_kit`, `drums_turned` at the machine shop.
+- Not done: a master cylinder, a booster and a proportioning valve. Assetto Corsa has no pedal effort: full pedal is the
+  brakes' whole torque, so a booster would be a gate that changes nothing, a proportioning valve only `FRONT_SHARE`.
+
 **Threads.** The game state and the save file belong to the UI thread. Whatever takes long (loading the catalog,
 putting engines together for ads, market listings and cars without parts) runs on a worker thread on objects nobody
 else has yet, and the result goes into the game state back on the calling thread (`RefreshAdsAsync`,
@@ -775,7 +802,7 @@ weaker (brake torque `0.2 + 0.8 √wear`, grip `0.85 + 0.15 wear`).
 | File | Scaled by mounted / factory |
 |---|---|
 | `tyres.ini`, every `FRONT*`/`REAR*` compound | `WIDTH`, `RADIUS`, `RIM_RADIUS` (and `ANGULAR_INERTIA` by radius²), `DX_REF`/`DY_REF`/`DX0`/`DY0` by grip, `FZ0` by load capacity, `ROLLING_RESISTANCE_0/1`, `PRESSURE_STATIC`/`PRESSURE_IDEAL` |
-| `brakes.ini` | `MAX_TORQUE` and `FRONT_SHARE` from the front and rear torques scaled separately; `HANDBRAKE_TORQUE` by the rear |
+| `brakes.ini` | `MAX_TORQUE` and `FRONT_SHARE` from the front and rear torques scaled separately (a brake's torque with its shoes and wheel cylinder); `HANDBRAKE_TORQUE` by the rear; `[TEMPS_FRONT]`/`[TEMPS_REAR]` written, not scaled: the period brakes' fade (see "Period brakes") |
 | `suspensions.ini` | `SPRING_RATE` (or a coil-over's `RATE`), `DAMP_BUMP`/`DAMP_FAST_BUMP`, `DAMP_REBOUND`/`DAMP_FAST_REBOUND`; `TRACK` moves by twice the rim offset difference, `HUB_MASS` by the unsprung mass difference |
 | `car.ini` | `TOTALMASS` by the running gear's mass difference |
 

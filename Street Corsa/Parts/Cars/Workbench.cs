@@ -107,7 +107,9 @@ public static class Workbench
         foreach (var parent in roots.SelectMany(p => p.SelfAndDescendants()))
         {
             if (catalog.Get(parent.DefinitionId) is not { } definition) continue;
-            if (RunningGear.IsRunningGear(PartKinds.GroupOf(definition))) continue;
+            // A brake's own slots are free for what goes on it (a drum's shoes); the rest of the running gear takes nothing
+            var group = PartKinds.GroupOf(definition);
+            if (RunningGear.IsRunningGear(group) && group != PartKinds.Brakes) continue;
 
             foreach (var slot in definition.Slots)
             {

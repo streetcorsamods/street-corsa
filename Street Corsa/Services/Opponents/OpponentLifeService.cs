@@ -923,7 +923,7 @@ namespace StreetCorsa.Services.Opponents
         {
             if (!_parts.IsAvailable) return;
 
-            foreach (var car in AllRivalCars(gameState).Where(c => !c.HasPartsAssigned || !c.HasRunningGearAssigned || !c.HasAxleAssigned).ToList())
+            foreach (var car in AllRivalCars(gameState).Where(c => !c.HasPartsAssigned || !c.HasRunningGearAssigned || c.GearVersion < RunningGearFactory.GearVersion).ToList())
             {
                 try
                 {

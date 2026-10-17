@@ -1780,7 +1780,11 @@ spool: a job that turns one part into another, which the rebuilds cannot do yet)
 tuned used cars going for gears and a posi. To check in game: the axle between the rear hubs (a grey box until the
 meshes of phase 4), the pickers in the Car Catalog Editor, a hard launch on a 10-bolt with slicks (the log's "the rear
 tyres put down ... Nm at most" says how near it came), the 12 Corvettes on their Dana 44.
-Next: phase 2 (brakes).
+Phase 2 (brakes) built after it: period drums with shoes and wheel cylinders, period discs, their fade written into
+brakes.ini, older saves brought up once (`Car.GearVersion`); see docs/systems/parts-system.md "Period brakes". Not done:
+master cylinder, booster, proportioning valve (AC has no pedal effort). To check in game: a stock car's drums fading
+after a hard stop or two from speed (the Car Life GTO: one 80 mph stop), discs lasting.
+Next: phase 3 (springs, shocks, bars).
 
 ### Phase 0 findings and design (2026-10-17)
 

@@ -189,30 +189,34 @@ namespace StreetCorsa.Services.Parts
         /// <summary>The build the matcher picks for a car without a factory engine on its profile: weighed once a session (the matcher weighs every build)</summary>
         private RatedBuild? Suggested(CarDefinition car) => _suggestedBuilds.GetOrAdd(car.Id, _ => Suggest(car));
 
+        /// <summary>Whether the car still lacks what it left the factory with, or its running gear is from before <see cref="RunningGearFactory.GearVersion"/></summary>
+        private static bool Lacks(Car car) =>
+            !car.HasPartsAssigned || !car.HasRunningGearAssigned || car.GearVersion < RunningGearFactory.GearVersion;
+
         public bool EnsureParts(Car car)
         {
-            if (car.HasPartsAssigned && car.HasRunningGearAssigned && car.HasAxleAssigned) return false;
-            if (!IsAvailable) return false;
+            if (!Lacks(car) || !IsAvailable) return false;
 
             var engine = car.HasPartsAssigned ? null : CreateFactoryEngine(car.DefinitionId, car.EngineHealth);
             var gear = car.HasRunningGearAssigned ? null : CreateFactoryRunningGear(car.DefinitionId, car.TireCondition);
-            var axle = car.HasAxleAssigned ? null : CreateFactoryAxle(car.DefinitionId, car.TireCondition);
-            return Assign(car, engine, gear, axle);
+            var renewal = car.HasRunningGearAssigned && car.GearVersion < RunningGearFactory.GearVersion ? CreateRenewal(car.DefinitionId, car.TireCondition) : null;
+            return Assign(car, engine, gear, renewal);
         }
 
         public async Task<bool> EnsurePartsAsync(Car car)
         {
-            if (car.HasPartsAssigned && car.HasRunningGearAssigned && car.HasAxleAssigned) return false;
+            if (!Lacks(car)) return false;
 
             // The parts are put together away from the caller's thread; the car is only touched back on it
             var definitionId = car.DefinitionId;
-            var (needsEngine, needsGear, needsAxle) = (!car.HasPartsAssigned, !car.HasRunningGearAssigned, !car.HasAxleAssigned);
+            var (needsEngine, needsGear) = (!car.HasPartsAssigned, !car.HasRunningGearAssigned);
+            var needsRenewal = car.HasRunningGearAssigned && car.GearVersion < RunningGearFactory.GearVersion;
             var (engineCondition, tyreCondition) = (car.EngineHealth, car.TireCondition);
-            var (engine, gear, axle) = await Task.Run(() => IsAvailable
+            var (engine, gear, renewal) = await Task.Run(() => IsAvailable
                 ? (needsEngine ? CreateFactoryEngine(definitionId, engineCondition) : null, needsGear ? CreateFactoryRunningGear(definitionId, tyreCondition) : null,
-                    needsAxle ? CreateFactoryAxle(definitionId, tyreCondition) : null)
+                    needsRenewal ? CreateRenewal(definitionId, tyreCondition) : null)
                 : (null, null, null));
-            return Assign(car, engine, gear, axle);
+            return Assign(car, engine, gear, renewal);
         }
 
         /// <remarks>
@@ -352,20 +356,24 @@ namespace StreetCorsa.Services.Parts
         }
 
         public (RunningGearFactory.AxleParts Front, RunningGearFactory.AxleParts Rear)? FactoryRunningGear(Car car) =>
-            IsAvailable && Specs(car.DefinitionId) is { } specs ? RunningGearFactory.Choose(Catalog, specs) : null;
+            IsAvailable && Specs(car.DefinitionId) is { } specs ? RunningGearFactory.Choose(Catalog, specs, FactsOf(car.DefinitionId), PicksOf(car.DefinitionId)) : null;
 
-        public RearAxleChoice? FactoryAxle(string carDefinitionId) => AxleFor(carDefinitionId, CarBook.Current.Car(carDefinitionId)?.RunningGear);
+        public RearAxleChoice? FactoryAxle(string carDefinitionId) => AxleFor(carDefinitionId, PicksOf(carDefinitionId));
 
-        public RearAxleChoice? AxleFor(string carDefinitionId, RunningGearPicks? picks)
+        public RearAxleChoice? AxleFor(string carDefinitionId, RunningGearPicks? picks) =>
+            IsAvailable && Specs(carDefinitionId) is { } specs ? RunningGearGuess.ChooseAxle(Catalog, specs, FactsOf(carDefinitionId), picks) : null;
+
+        public CarFacts FactsOf(string carDefinitionId)
         {
-            if (!IsAvailable || Specs(carDefinitionId) is not { } specs) return null;
-
             var definition = _catalogRepo.GetCar(carDefinitionId);
             var book = CarBook.Current;
-            var facts = new CarFacts(book.MakeOf(carDefinitionId, definition?.Brand, definition?.Name),
-                book.FamilyOfCar(carDefinitionId, definition?.Brand, definition?.Name), definition?.Year);
-            return RunningGearGuess.ChooseAxle(Catalog, specs, facts, picks);
+            var make = book.MakeOf(carDefinitionId, definition?.Brand, definition?.Name);
+            var country = book.CountryOfMake(make) ?? (definition?.Country is { Length: > 0 } named ? book.Country(named) : null);
+            return new CarFacts(make, book.FamilyOfCar(carDefinitionId, definition?.Brand, definition?.Name), definition?.Year, country);
         }
+
+        /// <summary>What the mods' cars.json picks for the car's running gear</summary>
+        private static RunningGearPicks? PicksOf(string carDefinitionId) => CarBook.Current.Car(carDefinitionId)?.RunningGear;
 
         public System.Numerics.Vector3 EngineOffsetOf(string carDefinitionId) =>
             CarBook.Current.Car(carDefinitionId)?.EngineShift ?? System.Numerics.Vector3.Zero;
@@ -437,7 +445,7 @@ namespace StreetCorsa.Services.Parts
             // The model's space, for the parts that stand out and the wear layer: worked out once, when either needs it
             var frame = look != null || extras.Count > 0 ? CarHubs.FrameOf(directory) : null;
             var wheels = Specs(carDefinitionId) is { } specs
-                ? ShownParts.Wheels(parts, Catalog, RunningGearFactory.Choose(Catalog, specs))
+                ? ShownParts.Wheels(parts, Catalog, RunningGearFactory.Choose(Catalog, specs, FactsOf(carDefinitionId), PicksOf(carDefinitionId)))
                 : new ShownWheel?[RunningGear.Corners];
             return ShownSet.Of(wheels, extras, frame, look, heights, paint);
         }
@@ -593,26 +601,37 @@ namespace StreetCorsa.Services.Parts
         private List<PartInstance>? CreateFactoryRunningGear(string carDefinitionId, double condition)
         {
             var specs = Specs(carDefinitionId);
-            var gear = specs == null ? null : RunningGearFactory.Create(Catalog, specs, condition);
+            var gear = specs == null ? null : RunningGearFactory.Create(Catalog, specs, condition, specs.DrivesRear ? FactoryAxle(carDefinitionId) : null,
+                FactsOf(carDefinitionId), PicksOf(carDefinitionId));
             if (gear is not { Count: > 0 }) _logger.Warning("No factory running gear for {Car}", carDefinitionId);
             return gear is { Count: > 0 } ? gear : null;
         }
 
         /// <summary>
-        /// The car's factory rear axle: a part, or no part for a car whose rear wheels are not driven (the gearbox has its
-        /// differential); null when it cannot be told yet (no data, no axle in the catalog for it), so it is asked again
+        /// What a car of an older save is brought up to <see cref="RunningGearFactory.GearVersion"/> with: its factory rear axle
+        /// (none for a car whose rear wheels are not driven: the gearbox has its differential), and what the factory's brakes
+        /// and springs are now. Null when it cannot be told yet (no data, no axle in the catalog for it), so it is asked again.
         /// </summary>
-        private AxleAssignment? CreateFactoryAxle(string carDefinitionId, double condition)
+        private GearRenewal? CreateRenewal(string carDefinitionId, double condition)
         {
             if (Specs(carDefinitionId) is not { } specs) return null;
-            if (!specs.DrivesRear) return new AxleAssignment(null);
 
-            if (FactoryAxle(carDefinitionId) is { } choice) return new AxleAssignment(RunningGearFactory.CreateAxle(choice, condition));
-            _logger.Warning("No factory rear axle for {Car}", carDefinitionId);
-            return null;
+            PartInstance? axle = null;
+            if (specs.DrivesRear)
+            {
+                if (FactoryAxle(carDefinitionId) is not { } choice)
+                {
+                    _logger.Warning("No factory rear axle for {Car}", carDefinitionId);
+                    return null;
+                }
+
+                axle = RunningGearFactory.CreateAxle(choice, condition);
+            }
+
+            return new GearRenewal(axle, specs, FactsOf(carDefinitionId), PicksOf(carDefinitionId));
         }
 
-        private sealed record AxleAssignment(PartInstance? Axle);
+        private sealed record GearRenewal(PartInstance? Axle, AcCarSpecs Specs, CarFacts Facts, RunningGearPicks? Picks);
 
         private BuiltEngine? CreateFactoryEngine(string carDefinitionId, double condition)
         {
@@ -624,7 +643,7 @@ namespace StreetCorsa.Services.Parts
         }
 
         /// <summary>Two screens may ask for the same car at the same moment: only the first engine goes in</summary>
-        private bool Assign(Car car, BuiltEngine? engine, List<PartInstance>? gear, AxleAssignment? axle)
+        private bool Assign(Car car, BuiltEngine? engine, List<PartInstance>? gear, GearRenewal? renewal)
         {
             var changed = false;
             lock (_assignLock)
@@ -642,21 +661,20 @@ namespace StreetCorsa.Services.Parts
                 {
                     car.Parts.AddRange(gear);
                     car.HasRunningGearAssigned = true;
+                    car.GearVersion = RunningGearFactory.GearVersion;
                     changed = true;
                     _logger.Information("{Car} given its factory running gear: {Count} parts", car.DefinitionId, gear.Count);
                 }
 
-                // Its running gear first: an axle on a car still without wheels would be the only gear the car is given
-                if (axle != null && car.HasRunningGearAssigned && !car.HasAxleAssigned)
+                // An older car's running gear brought up to now, once: the axle, and its factory brakes and springs as they are now
+                if (renewal != null && car.HasRunningGearAssigned && car.GearVersion < RunningGearFactory.GearVersion)
                 {
-                    if (axle.Axle is { } part && car.Parts.All(p => p.ParentSlot != RearAxle.CarSlot))
-                    {
-                        car.Parts.Add(part);
-                        _logger.Information("{Car} given its factory rear axle: {Housing}", car.DefinitionId, part.DefinitionId);
-                    }
-
-                    car.HasAxleAssigned = true;
+                    var renewed = RunningGearFactory.BringUpToDate(Catalog, renewal.Specs, renewal.Facts, renewal.Picks, car.Parts);
+                    if (renewal.Axle is { } axle && car.Parts.All(p => p.ParentSlot != RearAxle.CarSlot)) car.Parts.Add(axle);
+                    car.GearVersion = RunningGearFactory.GearVersion;
                     changed = true;
+                    _logger.Information("{Car} brought up to running gear {Version}: {Renewed} factory part(s) of today's, rear axle {Housing}", car.DefinitionId,
+                        RunningGearFactory.GearVersion, renewed, renewal.Axle?.DefinitionId ?? "none");
                 }
             }
 

@@ -2,6 +2,9 @@ using StreetCorsa.Models.GameState;
 
 namespace StreetCorsa.Parts.Cars;
 
+/// <summary>How a brake heats and fades: Assetto Corsa's brakes.ini temperatures (<see cref="RunningGear.Heat(PartDefinition, PartDefinition?)"/>)</summary>
+public sealed record BrakeHeat(double TorqueK, double CoolTransfer, double CoolSpeedFactor, string Curve);
+
 /// <summary>What one corner of a car carries: the rim with its tyre, the brake, the spring and the shock</summary>
 public sealed class CornerParts
 {
@@ -118,6 +121,53 @@ public static class RunningGear
         var torque = brake.Number("force") * (1 + (calipers - 1) * 0.333) * brake.Number("friction", 1) * brake.Number("radius");
         return (0.2 + Math.Sqrt(Math.Clamp(wear, 0, 1)) * 0.8) * torque;
     }
+
+    /// <summary>The slots of a drum brake: its shoes and its wheel cylinder (step 31)</summary>
+    public const int ShoesSlot = 2;
+    public const int WheelCylinderSlot = 3;
+
+    /// <summary>
+    /// A brake's torque as it is put together: its own figures, its shoes' friction (<c>friction</c>, times the drum's)
+    /// and its wheel cylinder's force (<c>force_factor</c>) when it has them, less with the lining's wear (the shoes', else
+    /// the brake's own)
+    /// </summary>
+    public static double BrakeTorque(PartDefinition brake, PartDefinition? shoes, PartDefinition? cylinder, double wear = 1) =>
+        BrakeTorque(brake, wear) * (shoes?.Number("friction", 1) ?? 1) * (cylinder?.Number("force_factor", 1) ?? 1);
+
+    /// <summary>A mounted brake's torque, its shoes and wheel cylinder read off the parts on it</summary>
+    public static double BrakeTorque(PartsCatalog catalog, PartInstance brake)
+    {
+        if (catalog.Get(brake.DefinitionId) is not { } definition) return 0;
+        var shoes = brake.Children.FirstOrDefault(c => c.ParentSlot == ShoesSlot);
+        var cylinder = brake.Children.FirstOrDefault(c => c.ParentSlot == WheelCylinderSlot);
+        return BrakeTorque(definition, shoes == null ? null : catalog.Get(shoes.DefinitionId), cylinder == null ? null : catalog.Get(cylinder.DefinitionId),
+            (shoes ?? brake).Wear);
+    }
+
+    /// <summary>
+    /// How a brake heats and fades, as Assetto Corsa's brakes.ini [TEMPS_FRONT]/[TEMPS_REAR] has it: °C per kJ of braking
+    /// (<c>torque_k</c>), cooling standing (<c>cool_transfer</c>) and with speed (<c>cool_speed_factor</c>), and the lining's
+    /// torque by temperature (<c>perf_curve</c>, the shoes', else the brake's own). Null for a brake that says none: the
+    /// source game's discs, which leave the car's own as they are.
+    /// </summary>
+    public static BrakeHeat? Heat(PartDefinition brake, PartDefinition? shoes)
+    {
+        var k = brake.Number("torque_k");
+        var curve = Curve(shoes) ?? Curve(brake);
+        if (k <= 0 || !double.IsFinite(k) || curve == null) return null;
+        return new BrakeHeat(k, Math.Max(0, brake.Number("cool_transfer")), Math.Max(0, brake.Number("cool_speed_factor")), curve);
+    }
+
+    /// <summary>A mounted brake's heat, its shoes read off the part on it</summary>
+    public static BrakeHeat? Heat(PartsCatalog catalog, PartInstance brake) =>
+        catalog.Get(brake.DefinitionId) is { } definition
+            ? Heat(definition, brake.Children.FirstOrDefault(c => c.ParentSlot == ShoesSlot) is { } shoes ? catalog.Get(shoes.DefinitionId) : null)
+            : null;
+
+    /// <summary>A part's <c>perf_curve</c>, an inline lut <c>(|0=0.9|300=1.0|)</c>; null when it has none, or not one of those</summary>
+    private static string? Curve(PartDefinition? part) =>
+        part?.Properties.GetValueOrDefault("perf_curve") is string curve && System.Text.RegularExpressions.Regex.IsMatch(curve.Trim(),
+            @"^\(\|(-?\d+(\.\d+)?=-?\d+(\.\d+)?\|)+\)$") ? curve.Trim() : null;
 
     /// <summary>Wheel rate, N/m</summary>
     public static double SpringRate(PartDefinition spring) => spring.Number("force");

@@ -22,6 +22,10 @@ public static class AcRunningGearData
         public double TyreWidth = 1, TyreRadius = 1, RimRadius = 1, Grip = 1, LoadCapacity = 1, RollingResistance = 1, Pressure = 1;
         public double BrakeTorque = 1, SpringRate = 1, Bump = 1, Rebound = 1;
         public double TrackDelta, HubMassDelta, MassDelta;
+
+        /// <summary>How the axle's brakes heat and fade as mounted, and as the factory's; whether they are the factory's</summary>
+        public BrakeHeat? Heat, FactoryHeat;
+        public bool FactoryBrakes = true;
     }
 
     /// <param name="mounted">What is on the car's wheel slots, by corner</param>
@@ -54,8 +58,8 @@ public static class AcRunningGearData
 
     private static AxleChange Change(PartsCatalog catalog, List<CornerParts> corners, RunningGearFactory.AxleParts factory, int firstCorner, List<string> problems)
     {
-        var change = new AxleChange();
-        var factoryBrake = RunningGear.BrakeTorque(factory.Brake);
+        var change = new AxleChange { FactoryHeat = RunningGear.Heat(factory.Brake, factory.Shoes) };
+        var factoryBrake = factory.BrakeTorque;
         var factoryGrip = RunningGear.TyreGrip(factory.Tyre);
         var (factoryBump, factoryRebound) = RunningGear.Damping(factory.Shock);
         var factoryMass = factory.Rim.Mass + factory.Tyre.Mass + factory.Brake.Mass + factory.Spring.Mass + factory.Shock.Mass;
@@ -77,6 +81,16 @@ public static class AcRunningGearData
             if (rim == null) problems.Add($"no wheel {name}");
             else if (tyre == null) problems.Add($"no tyre on the {name} wheel");
             if (brakeDef == null) problems.Add($"no brake {name}");
+            else
+            {
+                // What the brake cannot do without (a drum's shoes and wheel cylinder), in its pack's words
+                foreach (var required in brakeDef.RequiredSlots.Where(r => r.Enforce && corner.Brake!.Children.All(c => c.ParentSlot != r.Slot)))
+                    problems.Add($"{Lower(required.Message) ?? "the brake is missing a part"} ({name})");
+
+                change.Heat ??= RunningGear.Heat(catalog, corner.Brake!);
+                var shoes = corner.Brake!.Children.FirstOrDefault(c => c.ParentSlot == RunningGear.ShoesSlot)?.DefinitionId;
+                if (brakeDef.Id != factory.Brake.Id || !string.Equals(shoes, factory.Shoes?.Id, StringComparison.OrdinalIgnoreCase)) change.FactoryBrakes = false;
+            }
             if (springDef == null) problems.Add($"no spring {name}");
             if (shockDef == null) problems.Add($"no shock absorber {name}");
 
@@ -88,7 +102,7 @@ public static class AcRunningGearData
             load += Ratio(tyre == null ? 0 : RunningGear.TyreLoadCapacity(tyre), RunningGear.TyreLoadCapacity(factory.Tyre));
             rolling += Ratio(tyre == null ? 0 : RunningGear.TyreRollingResistance(tyre), RunningGear.TyreRollingResistance(factory.Tyre));
             pressure += Ratio(tyre == null ? 0 : RunningGear.TyrePressure(tyre), RunningGear.TyrePressure(factory.Tyre));
-            brake += Ratio(brakeDef == null ? 0 : RunningGear.BrakeTorque(brakeDef, corner.Brake!.Wear), factoryBrake);
+            brake += Ratio(brakeDef == null ? 0 : RunningGear.BrakeTorque(catalog, corner.Brake!), factoryBrake);
             spring += Ratio(springDef == null ? 0 : RunningGear.SpringRate(springDef), RunningGear.SpringRate(factory.Spring));
             bump += Ratio(shockDef == null ? 0 : RunningGear.Damping(shockDef).Bump, factoryBump);
             rebound += Ratio(shockDef == null ? 0 : RunningGear.Damping(shockDef).Rebound, factoryRebound);
@@ -120,6 +134,12 @@ public static class AcRunningGearData
     }
 
     private static PartDefinition? Definition(PartsCatalog catalog, PartInstance? part) => part == null ? null : catalog.Get(part.DefinitionId);
+
+    private static string? Lower(string? message)
+    {
+        var text = message?.Trim().TrimEnd('.');
+        return string.IsNullOrEmpty(text) ? null : char.ToLowerInvariant(text[0]) + text[1..];
+    }
 
     /// <summary>Mounted over factory; a part without a figure, or none at all, counts as the factory part</summary>
     // Figures from pack.json may be anything Newtonsoft reads, "Infinity" and 1e400 among them: no figure is no change
@@ -156,6 +176,19 @@ public static class AcRunningGearData
 
     private static IniText Brakes(IniText ini, AxleChange front, AxleChange rear)
     {
+        // How each axle's brakes heat and fade: on the factory's, the car's author's if they wrote it, else the factory
+        // brakes' (the one change a stock car gets: drums that fade); on others, theirs, or the car's own for a brake that
+        // says none (the source game's discs)
+        foreach (var (section, change) in new[] { ("TEMPS_FRONT", front), ("TEMPS_REAR", rear) })
+        {
+            var heat = change.FactoryBrakes ? ini.Sections.Contains(section) ? null : change.FactoryHeat : change.Heat;
+            if (heat == null) continue;
+            ini.Set(section, "TORQUE_K", heat.TorqueK, "0.000");
+            ini.Set(section, "COOL_TRANSFER", heat.CoolTransfer, "0.0000");
+            ini.Set(section, "COOL_SPEED_FACTOR", heat.CoolSpeedFactor, "0.0000");
+            ini.Set(section, "PERF_CURVE", heat.Curve);
+        }
+
         if (Math.Abs(front.BrakeTorque - 1) < 1e-9 && Math.Abs(rear.BrakeTorque - 1) < 1e-9) return ini;
 
         var max = ini.GetNumber("DATA", "MAX_TORQUE") ?? 0;

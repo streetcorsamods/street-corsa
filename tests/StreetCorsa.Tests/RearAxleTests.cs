@@ -105,7 +105,7 @@ public class RearAxleTests
     [Fact]
     public void The_workbench_puts_a_housing_on_a_free_axle_slot_and_a_carrier_into_a_housing_it_fits()
     {
-        var car = new Car("car_a") { HasPartsAssigned = true, HasRunningGearAssigned = true, HasAxleAssigned = true };
+        var car = new Car("car_a") { HasPartsAssigned = true, HasRunningGearAssigned = true, GearVersion = RunningGearFactory.GearVersion };
         var housing = new PartInstance(Gm + "gm_10bolt");
         Assert.Equal([new MountPlace(null, RearAxle.CarSlot, 1)], Workbench.FindPlaces(Catalog, car.Parts, housing));
 
@@ -180,7 +180,7 @@ public class RearAxleTests
 
     private static Car CarWithAxle(string shaft = Gm + "gm_10bolt_shaft_28")
     {
-        var car = new Car("car_a") { HasPartsAssigned = true, HasRunningGearAssigned = true, HasAxleAssigned = true };
+        var car = new Car("car_a") { HasPartsAssigned = true, HasRunningGearAssigned = true, GearVersion = RunningGearFactory.GearVersion };
         var choice = RunningGearGuess.ChooseAxle(Catalog, Specs(), Chevy69, null)!;
         car.Parts.Add(RunningGearFactory.CreateAxle(choice with { Shaft = Catalog.Get(shaft)! }, 1));
         return car;

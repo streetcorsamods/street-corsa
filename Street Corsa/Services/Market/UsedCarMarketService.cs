@@ -460,7 +460,7 @@ namespace StreetCorsa.Services.Market
                 // The car goes with everything on it; the buyer gets exactly this car
                 Parts = car.Parts,
                 HasRunningGearAssigned = car.HasRunningGearAssigned,
-                HasAxleAssigned = car.HasAxleAssigned,
+                GearVersion = car.GearVersion,
                 BodyDamageKmh = CarCondition.BodyTotal(car) > 0 ? CarCondition.Body(car) : null,
 
                 // Its past goes with it: who had it, how it raced

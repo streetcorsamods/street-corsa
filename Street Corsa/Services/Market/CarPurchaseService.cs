@@ -249,7 +249,7 @@ namespace StreetCorsa.Services.Market
                 Parts = listing.Parts,
                 HasPartsAssigned = listing.Parts.Count > 0,
                 HasRunningGearAssigned = listing.HasRunningGearAssigned,
-                HasAxleAssigned = listing.HasAxleAssigned,
+                GearVersion = listing.GearVersion,
                 PowerHp = listing.PowerHp,
                 History = listing.History?.Copy() ?? new CarHistory()
             };
