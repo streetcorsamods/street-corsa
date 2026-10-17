@@ -61,6 +61,12 @@ public sealed class PartShopRules
     /// <summary>A delivery drops this share of the lines on the shelves for others: what a shop carries changes over the weeks</summary>
     public double DropLineChance { get; set; } = 0.35;
 
+    /// <summary>
+    /// A machine shop asks at least this share of what its work adds to the part's worth (and what comes with it): a
+    /// worn engine bored is a little cheaper than a good one, never a giveaway
+    /// </summary>
+    public double MachineValueShare { get; set; } = 0.85;
+
     /// <summary>A closing-down sale: the rivals and everybody else clear out this share of what is left each day</summary>
     public double SaleClearOutShare { get; set; } = 0.2;
 

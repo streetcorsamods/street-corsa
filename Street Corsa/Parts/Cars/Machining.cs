@@ -90,10 +90,13 @@ public static class Machining
 
     /// <summary>
     /// Every machine job for the part, as it stands, at a shop asking <paramref name="shopFactor"/> of the work's list
-    /// price; none for a part the catalog does not know. The price is the work's own, whatever the part is worth (the
-    /// owner, 2026-10-17: no resale floor at the machine shop, unlike the kits)
+    /// price; none for a part the catalog does not know. Never under <paramref name="valueShare"/> of what the work adds
+    /// to the part's worth (the owner, 2026-10-17: a little cheaper than the value it adds, so boring a worn block is
+    /// not always the better buy than a good one)
     /// </summary>
-    public static IReadOnlyList<MachineOffer> Offers(PartsCatalog catalog, PartInstance part, double shopFactor = 1.0, double priceMultiplier = 1.0)
+    /// <param name="root">What the part is on, as it was brought (a whole engine): the worth the work adds is its</param>
+    public static IReadOnlyList<MachineOffer> Offers(PartsCatalog catalog, PartInstance part, double shopFactor = 1.0, double priceMultiplier = 1.0,
+        double valueShare = 0, PartInstance? root = null)
     {
         if (catalog.Get(part.DefinitionId) is not { } definition) return [];
 
@@ -108,7 +111,7 @@ public static class Machining
                 var shown = size ?? (job.Cut != null && job.Sizes.Count > 0 ? job.Sizes[^1] : null);
                 var whyNot = WhyNot(job, part, picked);
                 var fitted = whyNot == null ? FittedNames(catalog, job, part) : [];
-                var cost = whyNot == null ? CostFor(catalog, job, definition, part, shopFactor, priceMultiplier) : 0;
+                var cost = whyNot == null ? CostFor(catalog, job, definition, part, shopFactor, priceMultiplier, valueShare, picked, root) : 0;
                 var after = job.Restores > 0 ? Math.Max(Unit.Clamp01(part.Wear, 1), job.Restores) : Unit.Clamp01(part.Wear, 1);
                 offers.Add(new MachineOffer(job, shown, step, NameOf(job, shown), cost, job.Days, whyNot, after, fitted));
             }
@@ -119,15 +122,31 @@ public static class Machining
 
     /// <summary>
     /// The work's price: its share of the part's new price at the shop's prices (<see cref="Rebuilding.CostOf"/>), and the
-    /// new parts it fits at their share
+    /// new parts it fits at their share; never under <paramref name="valueShare"/> of what it adds to the worth of the
+    /// part and what comes with it, at the shop's prices too
     /// </summary>
+    /// <param name="step">The size of a job made to any size; the next size else</param>
+    /// <param name="root">
+    /// What the part is on (a whole engine): the worth added is the whole's, so heads ported on an engine are charged for
+    /// the power the engine gains; the part itself when null
+    /// </param>
     public static decimal CostFor(PartsCatalog catalog, RebuildJob job, PartDefinition definition, PartInstance part, double shopFactor = 1.0,
-        double priceMultiplier = 1.0)
+        double priceMultiplier = 1.0, double valueShare = 0, int? step = null, PartInstance? root = null)
     {
-        var factor = Multiplier.Sane(shopFactor);
-        var work = (double)Rebuilding.CostOf(job, definition, priceMultiplier) * factor;
-        var fitted = Fitted(catalog, job, part).Sum(d => PartPricing.NewPrice(d) * job.FitsNewCost) * Multiplier.Sane(priceMultiplier) * factor;
-        return PartPricing.Round(work + fitted);
+        var work = (double)Rebuilding.CostOf(job, definition, priceMultiplier)
+                   + Fitted(catalog, job, part).Sum(d => PartPricing.NewPrice(d) * job.FitsNewCost) * Multiplier.Sane(priceMultiplier);
+        if (valueShare > 0 && double.IsFinite(valueShare))
+        {
+            var whole = root ?? part;
+            var after = PartTrees.Clone(whole, keepIds: true);
+            var worked = after.SelfAndDescendants().FirstOrDefault(p => p.InstanceId == part.InstanceId) ?? after;
+            var extras = Apply(catalog, job, worked, step);
+            var gained = PartPricing.WorthOfAssembly(catalog, after) + extras.Sum(e => PartPricing.WorthOfAssembly(catalog, e))
+                         - PartPricing.WorthOfAssembly(catalog, whole);
+            work = Math.Max(work, gained * valueShare);
+        }
+
+        return PartPricing.Round(work * Multiplier.Sane(shopFactor));
     }
 
     /// <summary>

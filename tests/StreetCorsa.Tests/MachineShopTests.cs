@@ -141,6 +141,19 @@ public sealed class MachineShopTests
     }
 
     [Fact]
+    public void Work_on_a_part_of_an_engine_is_charged_for_what_the_engine_gains()
+    {
+        var engine = Engine();
+        foreach (var part in engine.SelfAndDescendants()) part.Wear = 0.35;
+        _state.Player.EngineStand = engine;
+        var piece = Machine.Pieces(_state, Shop).Single(p => p.FromStand);
+        var cam = Machine.Offers(_state, Shop, piece).First(w => w.Offer.Job.Id == "hot_grind");
+
+        var alone = Machining.CostFor(Parts.Catalog, cam.Offer.Job, Parts.Catalog.Get(cam.Part.DefinitionId)!, cam.Part, valueShare: PartShopRules.MachineValueShare);
+        Assert.True(cam.Offer.Cost >= alone);
+    }
+
+    [Fact]
     public void A_machine_shop_buys_nothing_and_stocks_nothing()
     {
         var part = new PartInstance(Engine().DefinitionId);

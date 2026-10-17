@@ -133,7 +133,7 @@ public sealed class MachiningTests : IDisposable
     }
 
     [Fact]
-    public void A_cut_takes_from_the_parts_worth_and_speed_work_adds_to_it()
+    public void A_cut_takes_from_the_parts_worth_and_speed_work_leaves_it()
     {
         var block = new PartInstance(Engine().DefinitionId);
         var definition = Catalog.Get(block.DefinitionId)!;
@@ -146,20 +146,32 @@ public sealed class MachiningTests : IDisposable
         var headDefinition = Catalog.Get(head.DefinitionId)!;
         var plain = PartPricing.Worth(headDefinition, head);
         head.Cuts["port"] = 1;
-        Assert.True(PartPricing.Worth(headDefinition, head) > plain);
+        // Speed work is worth what it does: an engine is priced by its power on the dyno, a loose head as it was
+        Assert.Equal(plain, PartPricing.Worth(headDefinition, head), 6);
     }
 
     [Fact]
-    public void The_machine_shops_price_is_the_works_own_whatever_the_engine_is_worth()
+    public void Machine_work_costs_a_little_less_than_the_worth_it_adds_and_never_less_than_its_own_price()
     {
+        const double share = 0.85;
         var block = Engine();
         foreach (var part in block.SelfAndDescendants()) part.Wear = 0.05;
         var job = Job("bore");
         var pistons = Catalog.Get(OfKind(block, "pistons").DefinitionId)!;
         var own = PartPricing.Round((double)Rebuilding.CostOf(job, Catalog.Get(block.DefinitionId)!) + PartPricing.NewPrice(pistons) * job.FitsNewCost);
 
-        Assert.Equal(own, Machining.Offers(Catalog, block).Single(o => o.Job.Id == "bore").Cost);
-        Assert.Equal(own, Machining.Offers(Catalog, new PartInstance(block.DefinitionId) { Wear = 0.95 }).Single(o => o.Job.Id == "bore").Cost);
+        // A worn engine: the worth the bore adds, at the share
+        var before = PartPricing.WorthOfAssembly(Catalog, block);
+        var offer = Machining.Offers(Catalog, block, valueShare: share).Single(o => o.Job.Id == "bore");
+        var after = PartTrees.Clone(block);
+        Machining.Apply(Catalog, job, after);
+        var gained = PartPricing.WorthOfAssembly(Catalog, after) - before;
+        Assert.True(offer.Cost > own);
+        Assert.True((double)offer.Cost < gained, $"${offer.Cost} for ${gained:0} more worth");
+        Assert.Equal((double)PartPricing.Round(gained * share), (double)offer.Cost, 0);
+
+        // A block that gains little: the work's own price
+        Assert.Equal(own, Machining.Offers(Catalog, new PartInstance(block.DefinitionId), valueShare: share).Single(o => o.Job.Id == "bore").Cost);
     }
 
     [Fact]
@@ -256,13 +268,15 @@ public sealed class MachiningTests : IDisposable
     {
         var output = TestContext.Current.TestOutputHelper!;
         var engine = Engine();
+        foreach (var part in engine.SelfAndDescendants()) part.Wear = 0.35;
         var stock = Power(engine);
-        output.WriteLine($"stock {stock:0} hp");
+        output.WriteLine($"stock {stock:0} hp, worn 35%, worth {PartPricing.WorthOfAssembly(Catalog, engine):0}");
         foreach (var part in engine.SelfAndDescendants())
         {
-            foreach (var offer in Machining.Offers(Catalog, part))
+            foreach (var offer in Machining.Offers(Catalog, part, valueShare: 0.85, root: engine).Where(o => o.CanDo))
             {
                 var trial = Engine();
+                foreach (var each in trial.SelfAndDescendants()) each.Wear = 0.35;
                 var same = trial.SelfAndDescendants().First(p => p.DefinitionId == part.DefinitionId);
                 Machining.Apply(Catalog, offer.Job, same, offer.Job.AnySize ? offer.Step : null);
                 output.WriteLine($"{part.DefinitionId}: {offer.Name} ${offer.Cost} {offer.Days}d -> {Power(trial):0} hp; worth new {PartPricing.NewPrice(Catalog.Get(part.DefinitionId)!):0}");

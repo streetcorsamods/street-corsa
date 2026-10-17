@@ -22,6 +22,7 @@
     "townBuysShare": 0.03,
     "dropLineChance": 0.35,
     "saleClearOutShare": 0.2,
+    "machineValueShare": 0.85,
     "kinds": {
       "speed": {
         "priceFactor": 1.1,
