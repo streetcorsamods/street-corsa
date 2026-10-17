@@ -247,7 +247,7 @@ namespace StreetCorsa.Services.Parts
             return catalog.Parts.Values
                 .Where(p => usedByBuilds.Contains(p.Id) ||
                             (p.LocalId.StartsWith(EnginePacks, StringComparison.OrdinalIgnoreCase) && p.IsScripted) ||
-                            (p.IsScripted && RunningGear.IsRunningGear(PartKinds.GroupOf(p))) ||
+                            (p.IsScripted && RunningGear.IsRunningGear(PartKinds.GroupOf(p)) && (PartKinds.GroupOf(p) != PartKinds.SwayBars || RunningGear.IsWorkingSwayBar(p))) ||
                             RearAxle.IsAxleGroup(PartKinds.GroupOf(p)))
                 .OrderBy(p => p.DisplayName ?? p.Name, StringComparer.OrdinalIgnoreCase)
                 .ToList();

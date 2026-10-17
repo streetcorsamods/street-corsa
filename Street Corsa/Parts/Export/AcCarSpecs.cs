@@ -25,6 +25,9 @@ public sealed record AcAxleSpecs
 
     /// <summary>Whether brakes.ini gives this axle's brakes temperatures ([TEMPS_FRONT]/[TEMPS_REAR]): its author's fade</summary>
     public bool HasBrakeTemps { get; init; }
+
+    /// <summary>The axle's sway bar, N/m (suspensions.ini [ARB] FRONT/REAR); 0 for none</summary>
+    public double SwayBarRate { get; init; }
 }
 
 /// <summary>
@@ -90,7 +93,8 @@ public sealed record AcCarSpecs
                 DampRebound = suspensions.GetNumber(section, "DAMP_REBOUND") ?? 0,
                 CornerLoad = mass * (front ? frontShare : 1 - frontShare) / 2,
                 SuspensionType = suspensions.Get(section, "TYPE")?.Trim().ToUpperInvariant() is { Length: > 0 } type ? type : null,
-                HasBrakeTemps = brakes.Sections.Contains(front ? "TEMPS_FRONT" : "TEMPS_REAR")
+                HasBrakeTemps = brakes.Sections.Contains(front ? "TEMPS_FRONT" : "TEMPS_REAR"),
+                SwayBarRate = Math.Max(0, suspensions.GetNumber("ARB", section) ?? 0)
             };
         }
 

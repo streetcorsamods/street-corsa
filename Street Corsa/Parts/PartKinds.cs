@@ -19,6 +19,10 @@ public static class PartKinds
     public const string Brakes = PartGroups.Brakes;
     public const string Springs = PartGroups.Springs;
     public const string Shocks = PartGroups.Shocks;
+    public const string SwayBars = PartGroups.SwayBars;
+
+    // What goes on a leaf spring
+    public const string TractionBars = PartGroups.TractionBars;
 
     // What goes on a drum brake
     public const string BrakeShoes = PartGroups.BrakeShoes;

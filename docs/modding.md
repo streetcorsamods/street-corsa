@@ -530,6 +530,15 @@ A **drum brake** (`"class_chain": ["DrumBrake", "Brake"]`) has the source game's
 multiplies the drum's and a `perf_curve`, an inline lut of °C to torque (`"(|0=0.9|230=1.0|380=0.55|)"`), and its wheel
 cylinder (`["WheelCylinder"]`, slot 3, `wcyl:drum`) a `force_factor`. A disc that fades says it all itself.
 
+A **leaf spring** (`["LeafSpring", "Spring"]`) has its rate in `force` (N/m at the wheel) and a `wrap` (how much it winds
+up under the axle's torque: the base game's multi-leaf 1); a **traction bar** (`["TractionBar"]`, on the leaf's slot 2 by
+`traction:leaf`) a `wrap_factor`. A **torsion bar** is `["TorsionBar", "Spring"]`. A **sway bar** (`["Swaybar"]`, on the
+car's own slots 402 front and 403 rear) gives its `arb_rate` (N/m, as suspensions.ini `[ARB]` counts it); one without does
+nothing and is not sold. Any running gear part can say the axle it goes on, `"fits_axle": "front"` or `"rear"` (the
+workbench offers it only there), and the suspension it needs, `"fits_suspension": "AXLE"` (the axle's suspensions.ini
+`TYPE`: a car whose data is otherwise cannot race on it). A spring, shock or bar of data without `came_in` is an
+aftermarket part, never a car's factory one.
+
 ```json
 { "id": "running_gear/banjo/housing", "display_name": "Banjo rear axle housing", "class_chain": [ "RearAxle" ], "mass": 60,
   "came_in": { "makes": [ "mymake" ] }, "properties": { "strength": 3500, "drag": 0.012 },

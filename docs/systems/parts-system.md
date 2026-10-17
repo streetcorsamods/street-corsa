@@ -754,6 +754,39 @@ source game's discs carry no fade of their own.
 - Not done: a master cylinder, a booster and a proportioning valve. Assetto Corsa has no pedal effort: full pedal is the
   brakes' whole torque, so a booster would be a gate that changes nothing, a proportioning valve only `FRONT_SHARE`.
 
+**Springs, traction bars, sway bars, shocks** (step 31 phase 3, `parts/running_gear/springs_leaf`, `springs_torsion`,
+`sway_bars`, `shocks_period`). Parts of data like the drums:
+- **Leaf springs** (`["LeafSpring", "Spring"]`, the springs shelf, a corner's spring slot): a ladder of stock rates from 90
+  to 370 lb/in (`force` in N/m, 1 lb/in = 175.1 N/m), `came_in` American cars' rear on an `AXLE`, so every live-axle car's
+  own rate has one near it; aftermarket mono-leaves and Super Stock springs (no `came_in`). Each has a `wrap` (multi-leaf
+  1, mono-leaf 1.3, Super Stock 0.8) and a slot 2 a **traction bar** goes on (`["TractionBar"]`, the traction_bars shelf,
+  speed shops: Traction Master 0.6, Lakewood 0.55, slapper 0.5, ladder bars 0.25 of the wrap, `wrap_factor`).
+  `fits_axle` `"rear"` and `fits_suspension` `"AXLE"`: the workbench offers a leaf only the rear spring slots, and one
+  under a car whose rear is not a live axle keeps the car home (a problem). GM's coil-sprung live axles (the A-bodies, the
+  full-size cars) get leaves too by the guess: cars.json's `springs_rear` picks a coil for them.
+- **Torsion bars** (`["TorsionBar", "Spring"]`, the springs group takes the `TorsionBar` class): Chrysler's front springs,
+  .85 to .92 inch by the car's weight (`came_in` family mopar, front, `DWB`), rate by the diameter's fourth power;
+  heavy-duty 1.00 and Super Stock 1.03 aftermarket. `fits_axle` `"front"`, `fits_suspension` `"DWB"`: a Mopar whose data
+  is a strut front keeps the source game's coil.
+- **Sway bars** (class `Swaybar`, the sway_bars shelf, now running gear): on the car's own slots 402 (front) and 403 (rear,
+  `RunningGear.SwayBarSlot`), drawn across the axle a little ahead of it. `arb_rate` in N/m as `[ARB]` counts it, by the
+  diameter's fourth power, front 11/16 to 1 inch stock, rear 9/16 to 7/8; bigger ones aftermarket. The factory's is the
+  stock bar nearest to the car's own `[ARB]`, none on an axle whose data has none (`RunningGearFactory.Choose`, the axle's
+  `SwayBar`). The source game's 48 sway bars have no rate (they did nothing in it either): nobody sells them.
+- **Period shocks** (`ShockAbsorber`, no `came_in`): Gabriel heavy-duty, Koni adjustable, a 90/10 front drag shock (stiff
+  bump, a sixth of the rebound: the front comes up easily) and a 50/50 rear drag shock. The factory shock is still the
+  source game's nearest: aftermarket parts of data never count as the factory's (`SourceGame` takes parts of a script).
+- **In Assetto Corsa** (`AcRunningGearData`): the spring rate by mounted over factory as before; the rear springs' wrap
+  (each spring's `wrap` times its traction bar's `wrap_factor`, against the factory spring's) scales `[AXLE]
+  TORQUE_REACTION`, its sign kept (a ladder bar on a stock leaf: a quarter of it); `[ARB] FRONT`/`REAR` by the mounted
+  bar's rate over the factory's, the bar's own rate added where the factory gave none, 0 with the bar taken off. A stock
+  car's suspensions.ini comes out untouched. What it does on the strip is to see in game: axle hop on a hard launch on
+  soft leaves, less with bars (the timeslip's 60-foot).
+- **Older saves** (`GearVersion` 2): `BringUpToDate` swaps the factory coils that are now leaves or torsion bars and adds
+  the factory sway bars, worn like the axle's springs.
+- Not done: lowering springs and blocks (ride height), the leaf's U-bolts, plate and shackles as parts (phase 5),
+  pickers for brakes and springs in the Car Catalog Editor (cars.json by hand meanwhile).
+
 **Threads.** The game state and the save file belong to the UI thread. Whatever takes long (loading the catalog,
 putting engines together for ads, market listings and cars without parts) runs on a worker thread on objects nobody
 else has yet, and the result goes into the game state back on the calling thread (`RefreshAdsAsync`,
@@ -803,7 +836,7 @@ weaker (brake torque `0.2 + 0.8 √wear`, grip `0.85 + 0.15 wear`).
 |---|---|
 | `tyres.ini`, every `FRONT*`/`REAR*` compound | `WIDTH`, `RADIUS`, `RIM_RADIUS` (and `ANGULAR_INERTIA` by radius²), `DX_REF`/`DY_REF`/`DX0`/`DY0` by grip, `FZ0` by load capacity, `ROLLING_RESISTANCE_0/1`, `PRESSURE_STATIC`/`PRESSURE_IDEAL` |
 | `brakes.ini` | `MAX_TORQUE` and `FRONT_SHARE` from the front and rear torques scaled separately (a brake's torque with its shoes and wheel cylinder); `HANDBRAKE_TORQUE` by the rear; `[TEMPS_FRONT]`/`[TEMPS_REAR]` written, not scaled: the period brakes' fade (see "Period brakes") |
-| `suspensions.ini` | `SPRING_RATE` (or a coil-over's `RATE`), `DAMP_BUMP`/`DAMP_FAST_BUMP`, `DAMP_REBOUND`/`DAMP_FAST_REBOUND`; `TRACK` moves by twice the rim offset difference, `HUB_MASS` by the unsprung mass difference |
+| `suspensions.ini` | `SPRING_RATE` (or a coil-over's `RATE`), `DAMP_BUMP`/`DAMP_FAST_BUMP`, `DAMP_REBOUND`/`DAMP_FAST_REBOUND`; `TRACK` moves by twice the rim offset difference, `HUB_MASS` by the unsprung mass difference; `[AXLE] TORQUE_REACTION` by the leaves' wrap, `[ARB]` by the sway bars (see "Springs, traction bars, sway bars, shocks") |
 | `car.ini` | `TOTALMASS` by the running gear's mass difference |
 
 What has no lever on either side stays a gate: batteries, alternators, water pumps, radiators, distributors and the

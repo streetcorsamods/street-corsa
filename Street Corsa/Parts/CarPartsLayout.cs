@@ -68,6 +68,7 @@ public static class CarPartsLayout
     private const float BrakeInboard = 0.06f;
     private const float SpringInboard = 0.24f;
     private const float SpringSeatBelowHub = 0.06f;
+    private const float SwayBarAheadOfAxle = 0.15f;
 
     /// <param name="engine">The car's engine block with everything on it; null for an empty engine bay</param>
     /// <param name="gear">What sits on the car's wheel slots, each with what is on it (the tyre on the rim)</param>
@@ -85,7 +86,9 @@ public static class CarPartsLayout
             // bought, sold and exported to the car's physics as before - they just have no model here.
             if (RunningGear.IsWheelSlot(part.CarSlot)) continue;
 
-            var world = part.CarSlot == Cars.RearAxle.CarSlot ? AxlePlacement(anchors, part.Root.Definition) : CornerPlacement(anchors, part.Root.Definition, part.CarSlot);
+            var world = part.CarSlot == Cars.RearAxle.CarSlot ? AxlePlacement(anchors, part.Root.Definition)
+                : RunningGear.IsSwayBarSlot(part.CarSlot) ? SwayBarPlacement(anchors, part.Root.Definition, part.CarSlot)
+                : CornerPlacement(anchors, part.Root.Definition, part.CarSlot);
             if (world is { } placed) result.AddRange(PartAssembler.Assemble(part.Root, placed));
         }
 
@@ -98,6 +101,7 @@ public static class CarPartsLayout
     /// </summary>
     public static Matrix4x4? CarLevelPlacement(PartsCatalog catalog, CarAnchors anchors, PartDefinition part, int carSlot, EngineLayout layout) =>
         carSlot == Cars.RearAxle.CarSlot ? AxlePlacement(anchors, part)
+        : RunningGear.IsSwayBarSlot(carSlot) ? SwayBarPlacement(anchors, part, carSlot)
         : RunningGear.CornerOf(carSlot) < 0 ? EnginePlacement(catalog, anchors, part, layout) : CornerPlacement(anchors, part, carSlot);
 
     /// <summary>
@@ -105,6 +109,14 @@ public static class CarPartsLayout
     /// (the left shaft's side) is the car's left
     /// </summary>
     public static Matrix4x4 AxlePlacement(CarAnchors anchors, PartDefinition housing) => BySlot(housing, CarFrame(anchors.Forward), anchors.RearAxle);
+
+    /// <summary>
+    /// A sway bar across its axle: its mount (slot 1) a little ahead of the middle of the axle's hubs, facing the way the
+    /// car does
+    /// </summary>
+    public static Matrix4x4 SwayBarPlacement(CarAnchors anchors, PartDefinition bar, int carSlot) =>
+        BySlot(bar, CarFrame(anchors.Forward),
+            (carSlot == RunningGear.FrontSwayBarSlot ? anchors.FrontAxle : anchors.RearAxle) + anchors.Forward * SwayBarAheadOfAxle);
 
     /// <summary>A wheel-side part on its hub: the brake on it, a spring or a shock next to it; null for a slot of no corner</summary>
     private static Matrix4x4? CornerPlacement(CarAnchors anchors, PartDefinition part, int carSlot)

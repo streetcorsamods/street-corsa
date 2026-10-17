@@ -80,14 +80,18 @@ namespace StreetCorsa.Models.GameState
 
         /// <summary>
         /// What its running gear has been brought up to (<see cref="StreetCorsa.Parts.Cars.RunningGearFactory.GearVersion"/>):
-        /// 0 for a car of an older save, which gets its rear axle and its period brakes once (step 31); what the player
-        /// took off or put on since stays as it is
+        /// 0 for a car of an older save, which gets its rear axle and its period brakes once (step 31), 1 one that gets its
+        /// leaf springs, torsion bars and sway bars once; what the player took off or put on since stays as it is
         /// </summary>
         public int GearVersion { get; set; }
 
         /// <summary>Whether the car has been given the rear axle it left the factory with (step 31 on)</summary>
         [LiteDB.BsonIgnore]
         public bool HasAxleAssigned => GearVersion >= 1;
+
+        /// <summary>Whether the car has been given the sway bars it left the factory with (step 31 phase 3 on)</summary>
+        [LiteDB.BsonIgnore]
+        public bool HasSwayBarsAssigned => GearVersion >= 2;
 
         [LiteDB.BsonIgnore]
         public PartInstance? Engine => Parts.FirstOrDefault(p => p.ParentSlot == PartInstance.CarEngineSlot);

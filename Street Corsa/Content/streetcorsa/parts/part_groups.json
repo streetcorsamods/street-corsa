@@ -19,13 +19,15 @@
     "one by its id. The drivetrain is the gearbox (the flywheel and clutch are the engine's) and the rear axle with its",
     "carrier, gears and shafts; a transfer case group a mod adds goes in it too. rear_axles to axle_shafts are the game's own",
     "too: the rear axle has a slot on the car and takes the final drive and the differential over from the gearbox.",
-    "strength prices a kind by what it holds (Nm at the axle), diff_lock by how hard it locks."
+    "strength prices a kind by what it holds (Nm at the axle), diff_lock by how hard it locks. sway_bars and traction_bars",
+    "are the game's own as well: a sway bar has a slot across each axle (arb_rate prices it by its stiffness; the source",
+    "game's, with none, stay off the shelves), a traction bar goes on a leaf spring."
   ],
   "shows": [
     { "id": "engine", "icon": "icons/engine", "rest_of_engine": true },
     { "id": "drivetrain", "icon": "icons/gears", "groups": [ "transmissions", "rear_axles", "differentials", "ring_pinions", "axle_shafts", "transfer_cases" ] },
     { "id": "brakes", "icon": "icons/disc_brake", "groups": [ "brakes", "brake_shoes", "wheel_cylinders" ] },
-    { "id": "suspension", "icon": "icons/parts_filled", "groups": [ "springs", "shocks", "sway_bars", "suspension_arms" ] }
+    { "id": "suspension", "icon": "icons/parts_filled", "groups": [ "springs", "traction_bars", "shocks", "sway_bars", "suspension_arms" ] }
   ],
   "groups": [
     {
@@ -51,13 +53,14 @@
     { "id": "brakes", "classes": [ "Brake" ], "price": { "base": 60, "by": "brake_torque", "by_power": 1 } },
     { "id": "brake_shoes", "classes": [ "BrakeShoes" ], "never_stacks": true, "price": { "base": 12 } },
     { "id": "wheel_cylinders", "classes": [ "WheelCylinder" ], "never_stacks": true, "price": { "base": 8 } },
-    { "id": "springs", "classes": [ "Spring" ], "price": { "base": 25, "by": "spring_rate", "by_power": 0.5 } },
+    { "id": "springs", "classes": [ "Spring", "TorsionBar" ], "price": { "base": 25, "by": "spring_rate", "by_power": 0.5 } },
+    { "id": "traction_bars", "classes": [ "TractionBar" ], "never_stacks": true, "speed_shop": true, "price": { "base": 45 } },
     { "id": "shocks", "classes": [ "ShockAbsorber" ], "price": { "base": 25, "by": "damping", "by_power": 0.5 } },
     { "id": "rear_axles", "classes": [ "RearAxle" ], "never_stacks": true, "price": { "base": 150, "by": "strength", "by_power": 1 } },
     { "id": "differentials", "classes": [ "Differential" ], "never_stacks": true, "speed_shop": true, "price": { "base": 120, "by": "diff_lock", "by_power": 1 } },
     { "id": "ring_pinions", "classes": [ "RingPinion" ], "never_stacks": true, "speed_shop": true, "price": { "base": 70 } },
     { "id": "axle_shafts", "classes": [ "AxleShaft" ], "never_stacks": true, "price": { "base": 30, "by": "strength", "by_power": 1 } },
-    { "id": "sway_bars", "classes": [ "Swaybar" ], "price": { "base": 40 } },
+    { "id": "sway_bars", "classes": [ "Swaybar" ], "price": { "base": 40, "by": "arb_rate", "by_power": 0.5 } },
     { "id": "suspension_arms", "classes": [ "Suspension" ], "price": { "base": 50 } },
     { "id": "accessories", "price": { "base": 15 } }
   ]

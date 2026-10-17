@@ -136,6 +136,7 @@ public sealed class PartPriceBook
         "carb_mounts" => _carbMounts.TryGetValue(part.Id, out var mounts) ? mounts : null,
         "strength" => RearAxle.Strength(part),
         "diff_lock" => RearAxle.LockFigure(part),
+        "arb_rate" => RunningGear.SwayBarRate(part),
         _ => null
     };
 

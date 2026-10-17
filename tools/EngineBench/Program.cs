@@ -575,7 +575,7 @@ public static class Program
 
             foreach (var (axle, parts, name) in new[] { (specs.Front, front, "front"), (specs.Rear, rear, "rear") })
             {
-                Console.WriteLine($"  {name}: tyre {axle.TyreWidth * 1000:0}/{axle.TyreRadius:0.000}/{axle.RimRadius:0.000} m, brake {axle.BrakeTorque:0} Nm, spring {axle.SpringRate:0} N/m, damp {axle.DampBump:0}/{axle.DampRebound:0}, {axle.CornerLoad:0} kg/wheel");
+                Console.WriteLine($"  {name}: {axle.SuspensionType ?? "?"}, tyre {axle.TyreWidth * 1000:0}/{axle.TyreRadius:0.000}/{axle.RimRadius:0.000} m, brake {axle.BrakeTorque:0} Nm, spring {axle.SpringRate:0} N/m, damp {axle.DampBump:0}/{axle.DampRebound:0}, sway bar {axle.SwayBarRate:0} N/m, {axle.CornerLoad:0} kg/wheel");
                 Console.WriteLine($"    tyre   {RunningGear.TyreWidth(parts.Tyre) * 1000:0}/{RunningGear.TyreRadius(parts.Tyre):0.000}/{RunningGear.TyreRimRadius(parts.Tyre):0.000} m  grip {RunningGear.TyreGrip(parts.Tyre):0.00}  {parts.Tyre.Id}");
                 Console.WriteLine($"    rim    {RunningGear.RimWidth(parts.Rim):0.0}\" offset {RunningGear.RimOffset(parts.Rim) * 1000:0} mm, {parts.Rim.Mass:0.0} kg  {parts.Rim.Id}");
                 Console.WriteLine($"    brake  {parts.BrakeTorque:0} Nm  {parts.Brake.DisplayName ?? parts.Brake.Id}" +
@@ -583,6 +583,7 @@ public static class Program
                                   (RunningGear.Heat(parts.Brake, parts.Shoes) is { } heat ? $"  fade {heat.TorqueK:0.00} C/kJ {heat.Curve}" : "  no fade of its own"));
                 Console.WriteLine($"    spring {RunningGear.SpringRate(parts.Spring):0} N/m for {RunningGear.SpringDesignLoad(parts.Spring):0} kg  {parts.Spring.DisplayName ?? parts.Spring.Id}");
                 Console.WriteLine($"    shock  {RunningGear.Damping(parts.Shock).Bump:0}/{RunningGear.Damping(parts.Shock).Rebound:0}  {parts.Shock.DisplayName ?? parts.Shock.Id}");
+                Console.WriteLine(parts.SwayBar is { } bar ? $"    bar    {RunningGear.SwayBarRate(bar):0} N/m  {bar.DisplayName ?? bar.Id}" : "    bar    none");
             }
         }
 
@@ -711,7 +712,8 @@ public static class Program
         var specs = AcCarSpecs.Read(readFile);
         var (facts, picks) = (FactsOf(carFolder), CarBook.Current.Car(Path.GetFileName(Path.TrimEndingDirectorySeparator(carFolder)))?.RunningGear);
         var factory = RunningGearFactory.Choose(catalog, specs, facts, picks);
-        var mounted = RunningGear.Mounted(RunningGearFactory.Create(catalog, specs, 1, null, facts, picks));
+        var gear = RunningGearFactory.Create(catalog, specs, 1, null, facts, picks);
+        var mounted = RunningGear.Mounted(gear);
 
         var report = EngineEvaluator.Evaluate(catalog, tree);
         var result = AcCarBuild.Generate(catalog, new CarBuild
@@ -719,6 +721,7 @@ public static class Program
             Engine = report,
             FactoryEngineMass = report.Mass,
             RunningGear = mounted,
+            SwayBars = RunningGear.SwayBars(gear),
             FactoryRunningGear = factory
         }, readFile);
 

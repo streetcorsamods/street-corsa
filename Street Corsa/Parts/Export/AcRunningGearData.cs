@@ -8,6 +8,9 @@ namespace StreetCorsa.Parts.Export;
 /// whatever the units either side thinks in: what is mounted moves each figure by its ratio to the factory
 /// part (a brake with twice the torque doubles the car's brake torque, a tyre with a fifth more grip lifts
 /// the car's grip by a fifth). A car on its factory parts comes out byte for byte as its author left it.
+/// The rear springs' wrap (a leaf spring's, less with a traction bar on it) moves <c>[AXLE] TORQUE_REACTION</c>, its sign
+/// kept; the sway bars move <c>[ARB]</c>: by their ratio to the factory bar, the bar's own rate on an axle the factory gave
+/// none, nothing left of it with the bar taken off.
 /// </summary>
 public static class AcRunningGearData
 {
@@ -20,8 +23,12 @@ public static class AcRunningGearData
     private sealed class AxleChange
     {
         public double TyreWidth = 1, TyreRadius = 1, RimRadius = 1, Grip = 1, LoadCapacity = 1, RollingResistance = 1, Pressure = 1;
-        public double BrakeTorque = 1, SpringRate = 1, Bump = 1, Rebound = 1;
+        public double BrakeTorque = 1, SpringRate = 1, Bump = 1, Rebound = 1, Wrap = 1;
         public double TrackDelta, HubMassDelta, MassDelta;
+
+        /// <summary>The sway bar's rate as mounted and the factory's (0 for none); <see cref="SwayBars"/> false leaves [ARB] as it is</summary>
+        public double SwayBar, FactorySwayBar;
+        public bool SwayBars;
 
         /// <summary>How the axle's brakes heat and fade as mounted, and as the factory's; whether they are the factory's</summary>
         public BrakeHeat? Heat, FactoryHeat;
@@ -30,22 +37,36 @@ public static class AcRunningGearData
 
     /// <param name="mounted">What is on the car's wheel slots, by corner</param>
     /// <param name="factory">The parts the car's data describes</param>
-    /// <param name="problems">What keeps the car from being driven: a corner without a wheel, brake, spring or shock</param>
+    /// <param name="problems">What keeps the car from being driven: a corner without a wheel, brake, spring or shock, a
+    /// spring on a suspension it does not fit (a leaf spring under a car whose rear is not a live axle)</param>
+    /// <param name="swayBars">The sway bars on the car, front and rear; null leaves the car's [ARB] as its data has it</param>
     /// <returns>File name to new content, for the files that change</returns>
     public static Dictionary<string, string> Generate(PartsCatalog catalog, CornerParts[] mounted, (RunningGearFactory.AxleParts Front, RunningGearFactory.AxleParts Rear) factory,
-        Func<string, string?> readFile, List<string> problems)
+        Func<string, string?> readFile, List<string> problems, (PartInstance? Front, PartInstance? Rear)? swayBars = null)
     {
         var files = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-        var front = Change(catalog, mounted.Take(2).ToList(), factory.Front, 0, problems);
-        var rear = Change(catalog, mounted.Skip(2).Take(2).ToList(), factory.Rear, 2, problems);
+        var suspensionsText = readFile(SuspensionsFile);
+        var types = new IniText(suspensionsText);
+        var front = Change(catalog, mounted.Take(2).ToList(), factory.Front, 0, types.Get("FRONT", "TYPE")?.Trim(), problems);
+        var rear = Change(catalog, mounted.Skip(2).Take(2).ToList(), factory.Rear, 2, types.Get("REAR", "TYPE")?.Trim(), problems);
+
+        if (swayBars is var (frontBar, rearBar))
+        {
+            foreach (var (change, bar, factoryBar) in new[] { (front, frontBar, factory.Front.SwayBar), (rear, rearBar, factory.Rear.SwayBar) })
+            {
+                change.SwayBars = true;
+                change.SwayBar = Definition(catalog, bar) is { } definition ? Positive(RunningGear.SwayBarRate(definition)) : 0;
+                change.FactorySwayBar = factoryBar == null ? 0 : Positive(RunningGear.SwayBarRate(factoryBar));
+            }
+        }
 
         // A car on its factory parts changes nothing: only files with an edit are handed back
         void Keep(string name, IniText ini) { if (ini.Changed) files[name] = ini.ToString(); }
 
         if (readFile(TyresFile) is { } tyres) Keep(TyresFile, Tyres(new IniText(tyres), front, rear));
         if (readFile(BrakesFile) is { } brakes) Keep(BrakesFile, Brakes(new IniText(brakes), front, rear));
-        if (readFile(SuspensionsFile) is { } suspensions) Keep(SuspensionsFile, Suspensions(new IniText(suspensions), front, rear));
+        if (suspensionsText != null) Keep(SuspensionsFile, Suspensions(new IniText(suspensionsText), front, rear));
         if (readFile(CarFile) is { } car)
         {
             var ini = new IniText(car);
@@ -56,7 +77,9 @@ public static class AcRunningGearData
         return files;
     }
 
-    private static AxleChange Change(PartsCatalog catalog, List<CornerParts> corners, RunningGearFactory.AxleParts factory, int firstCorner, List<string> problems)
+    /// <param name="suspension">The axle's suspensions.ini TYPE, for the springs that need one; null when the data does not say</param>
+    private static AxleChange Change(PartsCatalog catalog, List<CornerParts> corners, RunningGearFactory.AxleParts factory, int firstCorner, string? suspension,
+        List<string> problems)
     {
         var change = new AxleChange { FactoryHeat = RunningGear.Heat(factory.Brake, factory.Shoes) };
         var factoryBrake = factory.BrakeTorque;
@@ -65,7 +88,7 @@ public static class AcRunningGearData
         var factoryMass = factory.Rim.Mass + factory.Tyre.Mass + factory.Brake.Mass + factory.Spring.Mass + factory.Shock.Mass;
 
         double tyreWidth = 0, tyreRadius = 0, rimRadius = 0, grip = 0, load = 0, rolling = 0, pressure = 0;
-        double brake = 0, spring = 0, bump = 0, rebound = 0, track = 0, hubMass = 0, mass = 0;
+        double brake = 0, spring = 0, bump = 0, rebound = 0, wrap = 0, track = 0, hubMass = 0, mass = 0;
 
         for (var i = 0; i < corners.Count; i++)
         {
@@ -92,6 +115,8 @@ public static class AcRunningGearData
                 if (brakeDef.Id != factory.Brake.Id || !string.Equals(shoes, factory.Shoes?.Id, StringComparison.OrdinalIgnoreCase)) change.FactoryBrakes = false;
             }
             if (springDef == null) problems.Add($"no spring {name}");
+            else if (suspension != null && RunningGear.NeedsSuspension(springDef) is { } needs && !string.Equals(needs, suspension, StringComparison.OrdinalIgnoreCase))
+                problems.Add($"the {Lower(springDef.DisplayName ?? springDef.Name) ?? "spring"} does not fit this car's suspension ({name})");
             if (shockDef == null) problems.Add($"no shock absorber {name}");
 
             // A corner that lacks a part is measured as the factory part, the problem says what is missing
@@ -104,6 +129,7 @@ public static class AcRunningGearData
             pressure += Ratio(tyre == null ? 0 : RunningGear.TyrePressure(tyre), RunningGear.TyrePressure(factory.Tyre));
             brake += Ratio(brakeDef == null ? 0 : RunningGear.BrakeTorque(catalog, corner.Brake!), factoryBrake);
             spring += Ratio(springDef == null ? 0 : RunningGear.SpringRate(springDef), RunningGear.SpringRate(factory.Spring));
+            wrap += Ratio(springDef == null ? 0 : RunningGear.Wrap(catalog, corner.Spring!), RunningGear.Wrap(factory.Spring));
             bump += Ratio(shockDef == null ? 0 : RunningGear.Damping(shockDef).Bump, factoryBump);
             rebound += Ratio(shockDef == null ? 0 : RunningGear.Damping(shockDef).Rebound, factoryRebound);
 
@@ -125,6 +151,7 @@ public static class AcRunningGearData
         change.Pressure = pressure / n;
         change.BrakeTorque = brake / n;
         change.SpringRate = spring / n;
+        change.Wrap = wrap / n;
         change.Bump = bump / n;
         change.Rebound = rebound / n;
         change.TrackDelta = track / n;
@@ -134,6 +161,8 @@ public static class AcRunningGearData
     }
 
     private static PartDefinition? Definition(PartsCatalog catalog, PartInstance? part) => part == null ? null : catalog.Get(part.DefinitionId);
+
+    private static double Positive(double value) => value > 0 && double.IsFinite(value) ? value : 0;
 
     private static string? Lower(string? message)
     {
@@ -214,7 +243,24 @@ public static class AcRunningGearData
             ini.Scale(section, "DAMP_FAST_REBOUND", change.Rebound, "0");
             if (ini.GetNumber(section, "TRACK") is { } track && Math.Abs(change.TrackDelta) > 0.0005) ini.Set(section, "TRACK", track + change.TrackDelta, "0.000");
             if (ini.GetNumber(section, "HUB_MASS") is { } hub && Math.Abs(change.HubMassDelta) > 0.05) ini.Set(section, "HUB_MASS", Math.Max(hub * 0.5, hub + change.HubMassDelta), "0.0");
+
+            // The sway bar: by its ratio to the factory's, its own rate where the factory gave none, none with it taken off
+            if (!change.SwayBars) continue;
+            var own = Math.Max(0, ini.GetNumber("ARB", section) ?? 0);
+            double? arb = (change.SwayBar, change.FactorySwayBar) switch
+            {
+                ( > 0, > 0) when Math.Abs(change.SwayBar - change.FactorySwayBar) < 1e-9 => null,
+                ( > 0, > 0) => own * change.SwayBar / change.FactorySwayBar,
+                ( > 0, _) => own + change.SwayBar,
+                (_, > 0) => 0,
+                _ => null
+            };
+            if (arb is { } rate) ini.Set("ARB", section, rate, "0");
         }
+
+        // A live axle winds its springs up under power: the leaves' wrap against the factory's, its sign as the author wrote it
+        if (Math.Abs(rear.Wrap - 1) > 1e-9 && ini.GetNumber("AXLE", "TORQUE_REACTION") is { } reaction)
+            ini.Set("AXLE", "TORQUE_REACTION", reaction * rear.Wrap, "0.000");
 
         return ini;
     }

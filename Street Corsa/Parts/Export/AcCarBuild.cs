@@ -1,3 +1,4 @@
+using StreetCorsa.Models.GameState;
 using StreetCorsa.Parts.Cars;
 using StreetCorsa.Parts.Logic;
 
@@ -14,6 +15,9 @@ public sealed class CarBuild
 
     /// <summary>What is on the wheel slots; null leaves the car's running gear as its data has it</summary>
     public CornerParts[]? RunningGear { get; init; }
+
+    /// <summary>The sway bars on the car, front and rear; null leaves the car's [ARB] as its data has it</summary>
+    public (PartInstance? Front, PartInstance? Rear)? SwayBars { get; init; }
 
     /// <summary>The running gear the car's data describes</summary>
     public (RunningGearFactory.AxleParts Front, RunningGearFactory.AxleParts Rear)? FactoryRunningGear { get; init; }
@@ -66,7 +70,7 @@ public static class AcCarBuild
         {
             // The running gear reads what the engine left (the mass in car.ini) before the car's own files
             string? Read(string name) => result.Files.GetValueOrDefault(name) ?? readFile(name);
-            foreach (var (name, content) in AcRunningGearData.Generate(catalog, build.RunningGear, factory, Read, result.Problems)) result.Files[name] = content;
+            foreach (var (name, content) in AcRunningGearData.Generate(catalog, build.RunningGear, factory, Read, result.Problems, build.SwayBars)) result.Files[name] = content;
         }
 
         // The axle after the engine: its final drive and differential over the gearbox's, its weight over the running gear's

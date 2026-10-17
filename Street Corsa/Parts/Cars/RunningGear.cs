@@ -45,6 +45,17 @@ public static class RunningGear
 
     public static bool IsFront(int corner) => corner < 2;
 
+    /// <summary>The car's own slots of the sway bars (step 31), beside the rear axle's 401: one across each axle</summary>
+    public const int FrontSwayBarSlot = 402;
+    public const int RearSwayBarSlot = 403;
+
+    public static int SwayBarSlot(bool front) => front ? FrontSwayBarSlot : RearSwayBarSlot;
+
+    public static bool IsSwayBarSlot(int carSlot) => carSlot is FrontSwayBarSlot or RearSwayBarSlot;
+
+    /// <summary>The slot of a leaf spring its traction bar goes on</summary>
+    public const int TractionBarSlot = 2;
+
     /// <summary>Whether a car slot is one the rims go on</summary>
     public static bool IsWheelSlot(int carSlot) => carSlot >= 101 && carSlot < 101 + Corners;
 
@@ -64,6 +75,7 @@ public static class RunningGear
     /// <summary>The car slots a part of a group goes on, none for parts that do not sit on the car itself</summary>
     public static IEnumerable<int> CarSlotsFor(string group)
     {
+        if (group == PartKinds.SwayBars) return [FrontSwayBarSlot, RearSwayBarSlot];
         Func<int, int>? slot = group switch
         {
             PartKinds.Rims => WheelSlot,
@@ -75,7 +87,29 @@ public static class RunningGear
         return slot == null ? Enumerable.Empty<int>() : Enumerable.Range(0, Corners).Select(slot);
     }
 
-    public static bool IsRunningGear(string group) => group is PartKinds.Rims or PartKinds.Tyres or PartKinds.Brakes or PartKinds.Springs or PartKinds.Shocks;
+    /// <summary>The car slots a part goes on: its group's, on the axle it is made for (<see cref="FitsAxle"/>)</summary>
+    public static IEnumerable<int> CarSlotsFor(PartDefinition part) =>
+        CarSlotsFor(PartKinds.GroupOf(part)).Where(slot => FitsAxle(part, IsSwayBarSlot(slot) ? slot == FrontSwayBarSlot : IsFront(CornerOf(slot))));
+
+    /// <summary>
+    /// Whether a part goes on this axle: its <c>fits_axle</c> (<c>"front"</c> or <c>"rear"</c>: a leaf spring the rear, a
+    /// torsion bar the front, a sway bar the one it was bent for); a part that says none goes on either
+    /// </summary>
+    public static bool FitsAxle(PartDefinition part, bool front) =>
+        Text(part, "fits_axle") is not { } axle || string.Equals(axle, front ? "front" : "rear", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// The suspension a part needs under it (suspensions.ini TYPE: a leaf spring an <c>AXLE</c>, a torsion bar a
+    /// <c>DWB</c>), its <c>fits_suspension</c>; null for one that goes on any
+    /// </summary>
+    public static string? NeedsSuspension(PartDefinition part) => Text(part, "fits_suspension");
+
+    public static bool IsRunningGear(string group) =>
+        group is PartKinds.Rims or PartKinds.Tyres or PartKinds.Brakes or PartKinds.Springs or PartKinds.Shocks or PartKinds.SwayBars;
+
+    /// <summary>The sway bars on the car's own slots, front and rear</summary>
+    public static (PartInstance? Front, PartInstance? Rear) SwayBars(List<PartInstance> carParts) =>
+        (carParts.FirstOrDefault(p => p.ParentSlot == FrontSwayBarSlot), carParts.FirstOrDefault(p => p.ParentSlot == RearSwayBarSlot));
 
     /// <summary>The tyre script's own fit check: same rim diameter, rim width within what the tyre takes</summary>
     public static bool TyreFitsRim(PartDefinition tyre, PartDefinition rim)
@@ -172,6 +206,30 @@ public static class RunningGear
     /// <summary>Wheel rate, N/m</summary>
     public static double SpringRate(PartDefinition spring) => spring.Number("force");
 
+    /// <summary>
+    /// How much a leaf spring winds up under the axle's torque (<c>wrap</c>: a multi-leaf 1, a mono-leaf more, a Super Stock
+    /// less); 0 for a spring that says none (a coil, whose links hold the axle)
+    /// </summary>
+    public static double Wrap(PartDefinition spring) => spring.Number("wrap");
+
+    /// <summary>What a traction bar leaves of a leaf spring's wrap (<c>wrap_factor</c>: a ladder bar a quarter); 1 for none</summary>
+    public static double WrapFactor(PartDefinition? bar) => bar?.Number("wrap_factor", 1) is > 0 and var factor ? factor : 1;
+
+    /// <summary>A mounted spring's wrap with the traction bar on it; 0 for a spring that does not wind up</summary>
+    public static double Wrap(PartsCatalog catalog, PartInstance spring) =>
+        catalog.Get(spring.DefinitionId) is { } definition
+            ? Wrap(definition) * WrapFactor(spring.Children.FirstOrDefault(c => c.ParentSlot == TractionBarSlot) is { } bar ? catalog.Get(bar.DefinitionId) : null)
+            : 0;
+
+    /// <summary>
+    /// A sway bar's roll stiffness, N/m as Assetto Corsa's [ARB] counts it (<c>arb_rate</c>); 0 for one that says none (the
+    /// source game's, which do nothing in it)
+    /// </summary>
+    public static double SwayBarRate(PartDefinition bar) => bar.Number("arb_rate");
+
+    /// <summary>Whether a part is a sway bar that does something: the source game's have no rate and stay off the shelves</summary>
+    public static bool IsWorkingSwayBar(PartDefinition part) => PartKinds.GroupOf(part) == PartKinds.SwayBars && SwayBarRate(part) > 0;
+
     /// <summary>The load the spring was made for, kg on the wheel</summary>
     public static double SpringDesignLoad(PartDefinition spring) => spring.Number("designedMassOnWheel");
 
@@ -205,4 +263,8 @@ public static class RunningGear
     public static double RimOffset(PartDefinition rim) => rim.Number("offset");
 
     public static double RimWidth(PartDefinition rim) => rim.Number("rim_width");
+
+    /// <summary>A text property of a part, trimmed; null when it has none</summary>
+    private static string? Text(PartDefinition part, string property) =>
+        part.Properties.GetValueOrDefault(property) is string text && text.Trim() is { Length: > 0 } trimmed ? trimmed : null;
 }

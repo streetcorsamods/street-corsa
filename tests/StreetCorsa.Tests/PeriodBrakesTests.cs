@@ -142,7 +142,10 @@ public class PeriodBrakesTests
         var upgrade = Catalog.Parts.Values.First(p => PartKinds.GroupOf(p) == PartKinds.Brakes && p.CameIn == null && p.Id != oldFront.Brake.Id && p.Number("force") > 0);
         parts.Single(p => p.ParentSlot == RunningGear.BrakeSlot(1)).DefinitionId = upgrade.Id;
 
-        Assert.Equal(3, RunningGearFactory.BringUpToDate(Catalog, specs, Chevy66, null, parts));
+        // Three brakes and the two rear coils (leaf springs on a live axle now); the player's brake stays
+        Assert.Equal(5, RunningGearFactory.BringUpToDate(Catalog, specs, Chevy66, null, parts));
+        Assert.All(parts.Where(p => p.ParentSlot == RunningGear.SpringSlot(2) || p.ParentSlot == RunningGear.SpringSlot(3)),
+            s => Assert.StartsWith("running_gear/springs_leaf/", s.DefinitionId));
         var left = parts.Single(p => p.ParentSlot == RunningGear.BrakeSlot(0));
         Assert.Equal(Drum + "front_11x2_75", left.DefinitionId);
         Assert.Equal(0.6, left.Wear);
