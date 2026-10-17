@@ -127,16 +127,19 @@ public static class PartFigures
         foreach (var part in parts) part.ReadFigures = Read(part, problems);
     }
 
-    public static PartFigureSet? Read(PartDefinition part, List<string> problems)
+    public static PartFigureSet? Read(PartDefinition part, List<string> problems) => Read(part.Id, part.Figures, problems);
+
+    /// <summary>Figures given by <paramref name="owner"/> (a part, a machine shop's cut), checked; null when none read</summary>
+    public static PartFigureSet? Read(string owner, IEnumerable<KeyValuePair<string, JToken>>? given, List<string> problems)
     {
-        if (part.Figures is not { Count: > 0 } figures) return null;
+        if (given is not { } figures || !figures.Any()) return null;
 
         var numbers = new List<PartFigure>();
         var chargers = new List<DynoCharger>();
         List<double>? gears = null;
         foreach (var (key, token) in figures)
         {
-            var label = $"{part.Id} figure \"{key}\"";
+            var label = $"{owner} figure \"{key}\"";
             if (!Known.Contains(key))
             {
                 problems.Add($"{label}: no such figure (see the modding guide's list); left out");
@@ -181,7 +184,8 @@ public static class PartFigures
         var level = new List<InstalledPart> { root };
         while (level.Count > 0)
         {
-            sets.AddRange(level.Select(p => p.Definition.ReadFigures).OfType<PartFigureSet>());
+            // A part's own figures, then what a machine shop's cuts on it change
+            sets.AddRange(level.SelectMany(p => new[] { p.Definition.ReadFigures, p.CutFigures }).OfType<PartFigureSet>());
             level = level.SelectMany(p => p.Children.OrderBy(c => c.Key).Select(c => c.Value)).ToList();
         }
 

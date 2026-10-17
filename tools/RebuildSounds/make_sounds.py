@@ -11,6 +11,13 @@ here (no recordings, nothing to credit but the game itself). Each loops under a 
   sfx/work/press.ogg    bearings and seals driven home: a hammer on a drift
   sfx/work/road.ogg     the drive to the parts counter and back: the road under the car
 
+And the machine shop's (the machine jobs' steps, and the shop's own air):
+
+  sfx/work/bore.ogg     a boring bar cutting a cylinder: the motor's drone, the tool's chatter going down the bore
+  sfx/work/crank.ogg    the crank grinder: a big wheel's roar, the journal turning against it, coolant
+  sfx/work/mill.ogg     a surfacing mill across a head: the cutter's whirr, the bite of each pass
+  sfx/ambience/machine_shop.ogg   the shop round the counter: machines running out back, an air hose, a radio far off
+
   python make_sounds.py [<sfx folder>]   (default: the base game's, Street Corsa/Content/streetcorsa/sfx)
 
 Each loop's end is crossfaded into its start, so it goes round without a seam, and levelled as the paint booth's are
@@ -225,14 +232,107 @@ def road():
     return level(seamless(band(engine, 25, 400) + tyres + wind, 1.0), LOOP_RMS_DB)
 
 
-SOUNDS = {"bench": bench, "wash": wash, "hone": hone, "lap": lap, "air": air, "grind": grind, "press": press, "road": road}
+def bore():
+    n = total()
+    t = np.arange(n) / RATE
+    white = RNG.standard_normal(n)
+    speed = wander(SECONDS + 1.0, 0.4, 0.02)
+    phase = np.cumsum(2 * np.pi * 24 * speed / RATE)
+    motor = 0.3 * np.sin(phase) + 0.18 * np.sin(2 * phase) + 0.1 * np.sin(3 * phase)
+    # The tool goes down the bore over about three seconds, chattering, then comes back up quiet
+    track = np.zeros(n)
+    at = 0.2
+    while at < SECONDS + 0.5:
+        down = 2.6 + RNG.random() * 0.8
+        m = int(down * RATE)
+        tt = np.arange(m) / RATE
+        chatter = band(RNG.standard_normal(m), 1800, 7000) * (0.6 + 0.4 * np.sin(2 * np.pi * 31 * tt)) * np.minimum(1, tt / 0.15)
+        squeal = 0.05 * np.sin(2 * np.pi * (1320 + 40 * tt) * tt)
+        place(track, (chatter + squeal) * np.minimum(1, (down - tt) / 0.2), at, 0.7)
+        at += down + 1.0 + RNG.random() * 0.6
+    return level(seamless(band(motor, 20, 500) + band(white, 300, 1200) * 0.08 + track, 0.6), LOOP_RMS_DB)
+
+
+def crank():
+    n = total()
+    t = np.arange(n) / RATE
+    white = RNG.standard_normal(n)
+    roar = band(white, 700, 4500) * (0.75 + 0.25 * np.sin(2 * np.pi * 0.9 * t)) * 0.7
+    wheel = 0.08 * np.sin(2 * np.pi * 1760 * t) + 0.12 * np.sin(2 * np.pi * 29 * t)
+    # The journal turning: a slow beat as the throw comes round, and the coolant splashing
+    beat = band(white, 150, 600) * (0.5 + 0.5 * np.sin(2 * np.pi * 1.6 * t) ** 8) * 0.4
+    coolant = band(white, 2500, 10000) * 0.12 * wander(SECONDS + 1.0, 2, 0.4)
+    return level(seamless(roar + wheel + beat + coolant, 0.6), LOOP_RMS_DB)
+
+
+def mill():
+    n = total()
+    t = np.arange(n) / RATE
+    white = RNG.standard_normal(n)
+    speed = wander(SECONDS + 1.0, 0.5, 0.02)
+    whirr = 0.1 * np.sin(np.cumsum(2 * np.pi * 410 * speed / RATE)) + 0.06 * np.sin(np.cumsum(2 * np.pi * 820 * speed / RATE))
+    track = np.zeros(n)
+    at = 0.3
+    while at < SECONDS + 0.5:
+        length = 1.8 + RNG.random() * 1.2
+        m = int(length * RATE)
+        tt = np.arange(m) / RATE
+        # Each tooth of the cutter bites: a fast flutter of noise
+        flutter = 0.55 + 0.45 * np.sign(np.sin(2 * np.pi * 54 * tt))
+        place(track, band(RNG.standard_normal(m), 1200, 9000) * flutter * np.hanning(m) ** 0.3, at, 0.6)
+        at += length + 0.6 + RNG.random() * 0.8
+    return level(seamless(whirr + band(white, 100, 700) * 0.1 + track, 0.5), LOOP_RMS_DB)
+
+
+def machine_shop():
+    """The shop's air round the counter: 20 seconds of machines out back, an air hose now and then, a radio far off"""
+    seconds = 20.0
+    n = int((seconds + 1.0) * RATE)
+    t = np.arange(n) / RATE
+    white = RNG.standard_normal(n)
+    hum = 0.08 * np.sin(2 * np.pi * 60 * t) + 0.05 * np.sin(2 * np.pi * 120 * t) + band(white, 80, 400) * 0.15
+    machines = band(white, 600, 3500) * 0.18 * wander(seconds + 1.0, 0.15, 0.5)
+    track = np.zeros(n)
+    at = 1.0
+    while at < seconds:
+        kind = RNG.random()
+        if kind < 0.4:
+            m = int((0.3 + RNG.random() * 0.6) * RATE)
+            place(track, band(RNG.standard_normal(m), 2500, 11000) * np.hanning(m), at, 0.25)
+        elif kind < 0.7:
+            place(track, ring(0.8, [1100 + RNG.random() * 800, 2300, 3900], 7), at, 0.12)
+        else:
+            m = int(2.5 * RATE)
+            tt = np.arange(m) / RATE
+            radio = band(np.sin(2 * np.pi * 220 * tt) * np.sin(2 * np.pi * 3 * tt) + RNG.standard_normal(m) * 0.3, 400, 2500)
+            place(track, radio * np.hanning(m), at, 0.05)
+        at += 1.2 + RNG.random() * 2.5
+    return level(seamless(hum + machines + track, 1.0), -27.0)
+
+
+SOUNDS = {"bench": bench, "wash": wash, "hone": hone, "lap": lap, "air": air, "grind": grind, "press": press, "road": road,
+          "bore": bore, "crank": crank, "mill": mill}
+
+# Made after the work's, so a sound added here leaves the others as they were (they share one random draw)
+AMBIENCE = {"machine_shop": machine_shop}
+
+
+def write(path, x):
+    """An OGG written a block at a time: libsndfile falls over writing a long one in one go"""
+    with sf.SoundFile(path, "w", RATE, 1, format="OGG", subtype="VORBIS") as f:
+        for start in range(0, len(x), 16384):
+            f.write(x[start:start + 16384].astype(np.float32))
 
 
 def main(out):
     folder = os.path.join(out, "work")
     os.makedirs(folder, exist_ok=True)
     for name, make in SOUNDS.items():
-        sf.write(os.path.join(folder, name + ".ogg"), make().astype(np.float32), RATE, format="OGG", subtype="VORBIS")
+        write(os.path.join(folder, name + ".ogg"), make())
+    ambience = os.path.join(out, "ambience")
+    os.makedirs(ambience, exist_ok=True)
+    for name, make in AMBIENCE.items():
+        write(os.path.join(ambience, name + ".ogg"), make())
     print(folder)
 
 

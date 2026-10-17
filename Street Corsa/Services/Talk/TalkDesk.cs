@@ -166,6 +166,13 @@ namespace StreetCorsa.Services.Talk
             return new Conversation(this, game, TalkPeople.Clerk(game, shopId, clerk, Prompts, Rules), null, TalkPlace.Shop, null, counter: counter);
         }
 
+        /// <summary>A machine shop's machinist, behind the counter: they talk the player through the work on their parts</summary>
+        public Conversation ForMachineShop(GameState game, string shopId, DealerSalesman? machinist, IShopCounter counter)
+        {
+            Forget(game);
+            return new Conversation(this, game, TalkPeople.Clerk(game, shopId, machinist, Prompts, Rules), null, TalkPlace.MachineShop, null, counter: counter);
+        }
+
         /// <summary>A racer, at the diner or pulled up alongside</summary>
         public Conversation ForRival(GameState game, Opponent rival, TalkPlace place)
         {

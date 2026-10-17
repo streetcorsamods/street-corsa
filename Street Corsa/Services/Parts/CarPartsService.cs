@@ -75,6 +75,8 @@ namespace StreetCorsa.Services.Parts
             _priceBook = new Lazy<PartPriceBook>(CreatePriceBook);
             // Every new part's price, process-wide like the figures: this catalog's parts measured on its builds
             PartPricing.Book = () => PriceBook;
+            // And what a machine shop's cuts do to a part's worth: this catalog's jobs, once it is loaded
+            PartPricing.Jobs = () => _catalog.IsValueCreated ? _catalog.Value : null;
         }
 
         public PartPriceBook PriceBook => _priceBook.Value;

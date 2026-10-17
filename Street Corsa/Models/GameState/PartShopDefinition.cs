@@ -13,7 +13,13 @@ namespace StreetCorsa.Models.GameState
         Wheels,
 
         /// <summary>Used parts and whole engines out of wrecks, cheap; buys the player's old parts for more than a trade-in</summary>
-        Junkyard
+        Junkyard,
+
+        /// <summary>
+        /// Sells no parts: bores blocks, grinds cranks, mills heads and does the speed work on the player's own, left there
+        /// for a few days (<c>MachineShopService</c>)
+        /// </summary>
+        Machine
     }
 
     /// <summary>
@@ -31,7 +37,7 @@ namespace StreetCorsa.Models.GameState
         /// <summary>A line for the map card: what sort of place this is</summary>
         public string Blurb { get; set; } = string.Empty;
 
-        /// <summary>"specialist", "speed", "wheels" or "junkyard"</summary>
+        /// <summary>"specialist", "speed", "wheels", "junkyard" or "machine"</summary>
         public string Kind { get; set; } = "specialist";
 
         /// <summary>

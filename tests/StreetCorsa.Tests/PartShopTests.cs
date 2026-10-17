@@ -97,12 +97,12 @@ public class BaseGamePartShopsTests
     private static readonly PartShopCatalog Shops = new(ModSet.Load(RepoPaths.Content));
 
     [Fact]
-    public void Ten_shops_six_open_and_every_kind_open_from_the_start()
+    public void Twelve_shops_seven_open_and_every_kind_open_from_the_start()
     {
         var shops = Shops.All.Where(s => ModIds.IsBase(ModIds.ModOf(s.Id))).ToList();
-        Assert.Equal(10, shops.Count);
-        Assert.Equal(6, shops.Count(s => s.StartsOpen));
-        Assert.Equal(DealerRules.TargetOpen(10), shops.Count(s => s.StartsOpen));
+        Assert.Equal(12, shops.Count);
+        Assert.Equal(7, shops.Count(s => s.StartsOpen));
+        Assert.Equal(DealerRules.TargetOpen(12), shops.Count(s => s.StartsOpen));
         foreach (var kind in Enum.GetValues<PartShopKind>()) Assert.Contains(shops, s => s.StartsOpen && s.KindOf == kind);
         Assert.Equal(shops.Count, shops.Select(s => s.Id).Distinct().Count());
     }
@@ -125,11 +125,15 @@ public class BaseGamePartShopsTests
     }
 
     [Fact]
-    public void Every_base_game_shop_has_something_to_sell()
+    public void Every_base_game_shop_has_something_to_sell_but_a_machine_shop_nothing()
     {
         var parts = new CatalogParts();
         var service = new PartShopService(Shops, parts, new NewspaperPartsService(parts));
-        foreach (var shop in Shops.All) Assert.True(service.AssortmentOf(shop).Count >= 10, $"{shop.Name} deals in almost nothing");
+        foreach (var shop in Shops.All)
+        {
+            if (shop.KindOf == PartShopKind.Machine) Assert.Empty(service.AssortmentOf(shop));
+            else Assert.True(service.AssortmentOf(shop).Count >= 10, $"{shop.Name} deals in almost nothing");
+        }
     }
 }
 

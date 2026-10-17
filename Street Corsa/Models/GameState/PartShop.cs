@@ -41,4 +41,37 @@ namespace StreetCorsa.Models.GameState
         /// <summary>The morning it comes; it is on the shelf from the first review of that day</summary>
         public DateTime ArrivesOn { get; set; }
     }
+
+    /// <summary>
+    /// A part left at a machine shop: the work is done and paid for as it is dropped off (the part as it comes back), and
+    /// the shop brings it back to the garage on <see cref="ReadyOn"/>
+    /// </summary>
+    public class MachineOrder
+    {
+        /// <summary>The part as it comes back: cut, and with what the machinist fitted to it</summary>
+        public PartInstance Part { get; set; } = new();
+
+        /// <summary>The shop that has it (<c>partshops</c>' id) and its name when it was left there, for the note</summary>
+        public string ShopId { get; set; } = string.Empty;
+        public string ShopName { get; set; } = string.Empty;
+
+        /// <summary>The job, as the player read it: "Bored +.030, oversize pistons"</summary>
+        public string Work { get; set; } = string.Empty;
+
+        public decimal Paid { get; set; }
+
+        public DateTime LeftOn { get; set; }
+
+        /// <summary>The morning it is back in the garage, from the first review of that day</summary>
+        public DateTime ReadyOn { get; set; }
+
+        /// <summary>It came off the engine stand: back on it if the stand is free, else on the shelf</summary>
+        public bool FromStand { get; set; }
+
+        /// <summary>
+        /// The part it was made for and comes back with (a bare block's new pistons): kept there as long as that is; null
+        /// for a part the player left here
+        /// </summary>
+        public Guid? ComesWith { get; set; }
+    }
 }

@@ -98,6 +98,13 @@ Clerks never haggle (a junkyard keeps its Haggle button); what the player buys o
 remember. Measured on `streetcorsa` (llama3.1:8b, 2026-10-04): the search and the answer each about 1-2 s; the 8B often
 says `asks: false` while filling in a kind, hence the rule above.
 
+**The machine shop's machinist** (roadmap step 30, phase 2): the same desk (`TalkDesk.ForMachineShop`, a `Clerk` at
+`TalkPlace.MachineShop`, prompts `chat_machinist` and `machinist_search`). The search's kinds are the kinds of part the
+player has to bring; the screen (`MachineShopScreenViewModel`) matches it against every machine job on the player's
+parts at the shop's prices, runs the jobs on a whole engine through the dyno (power: the most gained first, then speed
+work), marks the best five in the list, and the machinist is told them (`chat.fact.work.*`: the job, the part, the
+price, the days, what the engine gains) with what the player has at the shop and could bring.
+
 Built in step 26 (2026-10-01). While the AI is on, the player can talk to the people of the game, typing what they say:
 "Call the seller" on a part ad's preview, "Talk to the seller" on the car viewing screen, "Talk" with the rival picked at
 the Diner and with the one pulled up at the Cruise curb. A dealer's salesman does not wait: on his lot (and on the car

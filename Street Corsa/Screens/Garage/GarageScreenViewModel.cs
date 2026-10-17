@@ -701,6 +701,7 @@ namespace StreetCorsa.Screens.Garage
             if (_endingDay) return;
             _endingDay = true;
             RelayCommand.RaiseCanExecuteChanged();
+            var away = _gameState.Player.MachineWork?.Count ?? 0;
 
             try
             {
@@ -728,6 +729,11 @@ namespace StreetCorsa.Screens.Garage
                     // The night may have brought an offer for a car in the paper, or the impound's release date
                     RaiseSaleChanged();
                     RaiseImpoundChanged();
+
+                    // A machine shop may have brought an engine back onto the stand, a part onto the shelf: the parts view
+                    // shows them
+                    if ((_gameState.Player.MachineWork?.Count ?? 0) != away)
+                        Workbench.SetCar(SelectedCar?.CarInstance is { IsImpounded: false } car ? car : null);
 
                     // And the mail order, the morning after
                     TellOfDeliveries();
@@ -931,17 +937,28 @@ namespace StreetCorsa.Screens.Garage
         /// <summary>The flow lets the day be ended here: the End Day button is shown</summary>
         public bool CanEndDayHere => _navigationService.Flow.Screen(_navigationService.IdOf(this)) is not { EndDay: false };
 
-        /// <summary>What the mail order brought while the player was out: on the shelf already, told of once</summary>
+        /// <summary>
+        /// What the mail order and the machine shops brought while the player was out: on the shelf (or the stand) already,
+        /// told of once, each under its own heading
+        /// </summary>
         private void TellOfDeliveries()
         {
-            var delivered = _gameState.Player.Delivered;
-            if (delivered is not { Count: > 0 }) return;
+            var delivered = _gameState.Player.Delivered ?? [];
+            var returned = _gameState.Player.MachineReturned ?? [];
+            if (delivered.Count == 0 && returned.Count == 0) return;
 
-            var lines = delivered.GroupBy(n => n).Select(g => g.Count() == 1 ? g.Key : $"{g.Key} (x{g.Count()})");
-            var message = GameText.Say("garage.delivery") + Environment.NewLine + Environment.NewLine +
-                          string.Join(Environment.NewLine, lines.Select(l => "  •  " + l));
+            static string Section(string heading, List<string> names) =>
+                heading + Environment.NewLine + Environment.NewLine + string.Join(Environment.NewLine,
+                    names.GroupBy(n => n).Select(g => g.Count() == 1 ? g.Key : $"{g.Key} (x{g.Count()})").Select(l => "  •  " + l));
+
+            var sections = new List<string>();
+            if (delivered.Count > 0) sections.Add(Section(GameText.Say("garage.delivery"), delivered));
+            if (returned.Count > 0) sections.Add(Section(GameText.Say("garage.machine_back"), returned));
+            var title = GameText.Say(delivered.Count > 0 ? "garage.delivery.title" : "garage.machine_back.title");
             delivered.Clear();
-            _dialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(_dialogService, message, GameText.Say("garage.delivery.title")));
+            returned.Clear();
+            _dialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(_dialogService,
+                string.Join(Environment.NewLine + Environment.NewLine, sections), title));
 
             try
             {

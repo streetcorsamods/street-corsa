@@ -31,6 +31,12 @@ public sealed class InstalledPart
     /// </summary>
     public Dictionary<string, double> Tuning { get; } = new();
 
+    /// <summary>What a machine shop has cut on the part, by the cut: the sizes of it gone (<c>PartInstance.Cuts</c>)</summary>
+    public Dictionary<string, int> Cuts { get; } = new();
+
+    /// <summary>What the cuts do to the engine's figures (a bore over, a head milled), after the part's own; null for none</summary>
+    public PartFigureSet? CutFigures { get; set; }
+
     public InstalledPart? Parent { get; private set; }
 
     /// <summary>Slot of the parent this part sits on; 0 for the root</summary>

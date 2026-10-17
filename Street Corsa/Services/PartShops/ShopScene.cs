@@ -6,7 +6,7 @@ using StreetCorsa.Services.Street;
 
 namespace StreetCorsa.Services.PartShops;
 
-/// <summary>What a place in a shop takes: a whole engine, a tyre or a rim, or anything that fits</summary>
+/// <summary>What a place in a shop takes: a whole engine, a tyre or a rim, or anything that fits; or a shelf's group by its id, that kind of part alone</summary>
 public static class ShopHolds
 {
     public const string Engine = "engine";
@@ -36,7 +36,8 @@ public sealed record ShopLook(string Id, IReadOnlyList<string> Kinds, IReadOnlyD
 /// <summary>
 /// The inside of a part shop, as a mod's shopscenes/&lt;folder&gt;/shop.json describes it: its model, the view from
 /// the door and the walls the camera stays inside, the places the shop's stock stands in, its light at each hour, and
-/// the looks each kind of shop wears. The base game's is built by tools/ShopScene.
+/// the looks each kind of shop wears. A scene that names <see cref="Kinds"/> is those kinds' only (the machine shop's);
+/// one that names none is every other shop's. The base game's are built by tools/ShopScene.
 /// </summary>
 public sealed record ShopScene(
     string Id,
@@ -50,6 +51,9 @@ public sealed record ShopScene(
     IReadOnlyList<ShopPlace> Places,
     IReadOnlyList<ShopLook> Looks)
 {
+    /// <summary>The kinds of shop the scene is for alone ("machine"); empty: any kind no scene of its own is for</summary>
+    public IReadOnlyList<string> Kinds { get; init; } = [];
+
     /// <summary>The self-lit windows, whose glow follows the hour</summary>
     public const string WindowMaterial = "sh_window";
 
@@ -90,7 +94,7 @@ public static class ShopScenes
 
     private sealed record SceneEntry(string? Id, string? Title, string? Model, CameraEntry? Camera, RoomEntry? Room, float[]? Sun,
         Dictionary<string, SceneLighting.LightEntry?>? Lights, Dictionary<string, float>? Window, List<SceneLighting.LampEntry?>? Lamps,
-        List<PlaceEntry?>? Places, List<LookEntry?>? Looks);
+        List<PlaceEntry?>? Places, List<LookEntry?>? Looks, List<string?>? Kinds);
 
     /// <summary>Every shop scene of every mod (a folder under a mod's <c>shopscenes</c>) that loads, by full id</summary>
     public static IReadOnlyList<ShopScene> LoadAll(ModSet mods) =>
@@ -101,8 +105,19 @@ public static class ShopScenes
     /// <summary>The shop scenes of the mods next to the game, read once; the last mod's first (a mod's own shop over the base game's)</summary>
     public static IReadOnlyList<ShopScene> Installed => InstalledScenes.Value;
 
-    /// <summary>The scene the part shops are seen in: the last mod's, so a mod's shop takes the base game's place; null when there is none</summary>
-    public static ShopScene? Current => Installed.Count == 0 ? null : Installed[^1];
+    /// <summary>
+    /// The scene the part shops are seen in: the last mod's that is for no kind of its own, so a mod's shop takes the base
+    /// game's place; null when there is none
+    /// </summary>
+    public static ShopScene? Current => For(null);
+
+    /// <summary>The scene a kind of shop is seen in: the last mod's for that kind, else <see cref="Current"/>'s</summary>
+    public static ShopScene? For(string? kind) => Pick(Installed, kind);
+
+    /// <summary>Of <paramref name="scenes"/> (the last mod's last), the one for <paramref name="kind"/>, else the last for no kind</summary>
+    public static ShopScene? Pick(IReadOnlyList<ShopScene> scenes, string? kind) =>
+        (kind == null ? null : scenes.LastOrDefault(s => s.Kinds.Contains(kind, StringComparer.OrdinalIgnoreCase)))
+        ?? scenes.LastOrDefault(s => s.Kinds.Count == 0);
 
     /// <summary>
     /// The shop in <paramref name="folder"/>; null when its file or model is missing or broken (logged). A place that
@@ -139,6 +154,9 @@ public static class ShopScenes
             .ToList();
 
         var sun = entry.Sun is { Length: 3 } s ? s : [0.2f, 0.8f, 0.6f];
-        return new ShopScene(id, entry.Title ?? "The part shop", kn5, camera, room, sun, lights, window, places, looks);
+        return new ShopScene(id, entry.Title ?? "The part shop", kn5, camera, room, sun, lights, window, places, looks)
+        {
+            Kinds = (entry.Kinds ?? []).OfType<string>().Select(k => k.Trim()).Where(k => k.Length > 0).ToList()
+        };
     }
 }

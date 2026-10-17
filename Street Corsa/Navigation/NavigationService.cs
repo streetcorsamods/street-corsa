@@ -398,6 +398,10 @@ namespace StreetCorsa.Navigation
                         this, _dialogService, game, dealerId, _dealerCatalog, _marketService, _catalogRepository,
                         _profileRepository, _gameStateRepository, _purchaseService, _carPartsService), id);
                 case ScreenKinds.PartShop when args.ShopId is { } shopId:
+                    // A machine shop is a counter of its own: it works on the player's parts and sells none
+                    if (_partShopService.Catalog.Get(shopId) is { KindOf: Models.GameState.PartShopKind.Machine })
+                        return SafeNavigate(name, () => new Screens.PartShop.MachineShopScreenViewModel(
+                            this, _dialogService, game, shopId, _partShopService, _carPartsService, _gameStateRepository), id);
                     return SafeNavigate(name, () => new Screens.PartShop.PartShopScreenViewModel(
                         this, _dialogService, game, shopId, _partShopService, _carPartsService, _partsShopService,
                         _gameStateRepository, _catalogRepository), id);

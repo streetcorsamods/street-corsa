@@ -43,12 +43,19 @@ public static class PartTrees
         var saved = new Dictionary<InstalledPart, PartInstance>();
         var installedRoot = Create(rootDefinition, root);
         AddChildren(installedRoot, root, 0);
+        ShareCutFigures(catalog, installedRoot);
         return new LiveTree(installedRoot, saved);
 
         InstalledPart Create(PartDefinition definition, PartInstance instance)
         {
             var installed = new InstalledPart(definition) { InstanceId = instance.InstanceId, Wear = instance.Wear, Tear = instance.Tear };
             foreach (var (field, value) in instance.Tuning ?? []) installed.Tuning[field] = value;
+            foreach (var (cut, done) in instance.Cuts ?? [])
+            {
+                if (done > 0) installed.Cuts[cut] = done;
+            }
+
+            if (installed.Cuts.Count > 0) installed.CutFigures = catalog.Rebuilds.CutFigures(definition, catalog.WorkOrder.KindOf(definition), installed.Cuts);
             saved[installed] = instance;
             return installed;
         }
@@ -73,6 +80,25 @@ public static class PartTrees
         }
     }
 
+    /// <summary>
+    /// A cut on one of several parts of a kind (a V8's left and right heads) works on that part's cylinders only: its
+    /// figures, which are the whole engine's, go on as that part's share of them (a multiplier to the root of the
+    /// count, an addition divided by it), so both heads milled are the job's figure once and one head is half of it
+    /// </summary>
+    private static void ShareCutFigures(PartsCatalog catalog, InstalledPart root)
+    {
+        var cut = root.SelfAndDescendants().Where(p => p.CutFigures != null).ToList();
+        if (cut.Count == 0) return;
+
+        var kinds = root.SelfAndDescendants().Select(p => catalog.WorkOrder.KindOf(p.Definition)).OfType<string>()
+            .GroupBy(k => k, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+        foreach (var part in cut)
+        {
+            if (catalog.WorkOrder.KindOf(part.Definition) is { } kind && kinds.GetValueOrDefault(kind) is > 1 and var count)
+                part.CutFigures = part.CutFigures!.SharedBy(count);
+        }
+    }
+
     /// <param name="parentSlot">Where the root goes: a slot of the car, or 0 for a loose part</param>
     public static PartInstance FromInstalled(InstalledPart root, int parentSlot = 0)
     {
@@ -89,7 +115,8 @@ public static class PartTrees
                 Tear = part.Tear,
                 ParentSlot = part.ParentSlot,
                 OwnSlot = part.OwnSlot,
-                Tuning = new Dictionary<string, double>(part.Tuning)
+                Tuning = new Dictionary<string, double>(part.Tuning),
+                Cuts = new Dictionary<string, int>(part.Cuts)
             };
             if (depth < MaxDepth)
             {
@@ -114,7 +141,8 @@ public static class PartTrees
             Tear = part.Tear,
             ParentSlot = part.ParentSlot,
             OwnSlot = part.OwnSlot,
-            Tuning = new Dictionary<string, double>(part.Tuning ?? [])
+            Tuning = new Dictionary<string, double>(part.Tuning ?? []),
+            Cuts = new Dictionary<string, int>(part.Cuts ?? [])
         };
         if (keepIds) copy.InstanceId = part.InstanceId;
         if (depth >= MaxDepth) return copy;

@@ -30,8 +30,14 @@ namespace StreetCorsa.Models.GameState
         /// <summary>Parts ordered by mail and not here yet (<c>NewspaperPartsService.BuyNew</c>)</summary>
         public List<PartOrder> PartOrders { get; set; } = [];
 
+        /// <summary>Parts left at a machine shop and not back yet (<c>MachineShopService.DropOff</c>)</summary>
+        public List<MachineOrder> MachineWork { get; set; } = [];
+
         /// <summary>Names of the mail-order parts that came since the player was last in the garage, to be told of there</summary>
         public List<string> Delivered { get; set; } = [];
+
+        /// <summary>What the machine shops brought back since the player was last in the garage, and where it is, to be told of there</summary>
+        public List<string> MachineReturned { get; set; } = [];
 
         /// <summary>What a new player starts with (the rules' <c>start.money</c>)</summary>
         public static decimal StartingMoney => Rules.RuleBook.Current.Start.Money;

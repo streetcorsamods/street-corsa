@@ -1570,7 +1570,34 @@ PR #73 to dev, open. The owner played it: "I really love it". `tools/check.ps1` 
   (the road, the shop's air, its door bell). The owner's picks: a workbench spot, 4 to 10 seconds, a fade with sounds
   for the exchange (the parts shop's counter scene later). The job is done, paid and its time spent before the show:
   leaving or skipping only ends the showing.
-- **Phase 2: the machine shop (next).** Blocks bored oversize (+.030, +.040, +.060; past that a sleeve or scrap), cranks
+**Phases 2 and 4 built (2026-10-17, branch `feature/machine-shop`, not played yet).** The owner's picks at the start: parts
+go to the machine shop from the shelf (or the engine off the stand) and come back in days, as the mail order does; the
+machine shop is a fifth kind of shop on the part shops' map (`kind: machine`) with a 3D room of its own; phases 2 and 4
+in one PR. As built:
+
+- **Cuts as data:** machine jobs in `rebuilds.json` (`way: machine`, `cut`, `sizes` with `figures` and `worth`, `days`,
+  `fits_new`, `any_size`, `speed`; see docs/modding.md). `PartInstance.Cuts` (no schema bump: LiteDB reads an older
+  part as standard). The base game's: bore +.030/.040/.060 with new pistons to suit, new pistons for a bored block,
+  crank ground .010/.020/.030 under, head milled .010/.020/.030 (chamber smaller), cam reground (twice at most),
+  flywheel resurfaced, radiator re-cored, drums turned; speed work: a 3/4-race or full-race regrind, heads ported and
+  polished, balanced and blueprinted (less friction, more revs), a lightened flywheel.
+- **Dyno:** a part's cut figures go on after its own (`InstalledPart.CutFigures`, `PartFigures.Of`). On the 340: +.030
+  +5 hp, milled .010 +2, ported +15, 3/4 race +6. **Worth:** `PartPricing.CutWorth`. **Matching:** a cut part and the
+  kind fitted to suit it go together only at one size (`Machining.WhyNotTogether`, in `EngineWork.WhyNotOn`).
+- **The shop:** `MachineShopService` (offers at the shop's prices with its sale and regular's discount, never under 85% of
+  the worth the work adds, the owner's call: a little cheaper than the value it adds, so a worn engine bored is not always
+  the better buy; `Order` pays and leaves the piece; `Deliver` by the `machine_work` task), the screen
+  `MachineShopScreenView` (see docs/screens/machine-shop.md), the machinist on the AI (`chat_machinist`,
+  `machinist_search`, `TalkFacts.Work`), the room by `tools/MachineShopScene`, sounds `work.bore`, `work.crank`,
+  `work.mill`, `ambience.machine_shop`. Two shops: Gardena Machine & Engine (open), Glendale Engine Rebuilders (opens
+  some day).
+- **Quality roll:** the player's own kit work lands from `roll` (0.08) under what the job can to a quarter over, never
+  worse than before; the show ends saying how it came out. The offer says "about" the condition now.
+- **To check when the owner plays it:** prices (the jobs' own prices are first guesses; `machineValueShare` 0.85 in
+  rules/partshops.json), the room, the
+  machinist's talk (not run on the live model), the parts' cut lines on the card and the shelf's "away" line.
+
+- **Phase 2: the machine shop (built).** Blocks bored oversize (+.030, +.040, +.060; past that a sleeve or scrap), cranks
   ground undersize (.010, .020, .030) with bearings to match, oversize pistons for an oversize bore, heads milled
   (a little compression), cams reground, flywheels resurfaced, radiators re-cored, drums turned. Each part keeps its
   sizes and the cuts it has left, so a standard-bore block is worth more than one at +.060. Parts dropped off, ready in
@@ -1607,7 +1634,7 @@ PR #73 to dev, open. The owner played it: "I really love it". `tools/check.ps1` 
 - **Phase 3: hidden flaws (shelved by the owner 2026-10-17: too punishing; maybe later).** A cracked block, a spun bearing, a burnt valve, a scored bore: found by a compression test
   or the oil pressure in the garage, by tearing the engine down, or by the machinist's crack check (the machinist talks,
   as the parts shop's clerk). Buying a battered car is a gamble.
-- **Phase 4: speed machining.** A cam reground to a hotter grind, heads ported and polished, the engine balanced and
+- **Phase 4: speed machining (built).** A cam reground to a hotter grind, heads ported and polished, the engine balanced and
   blueprinted: the repairs become tuning.
 
 The owner's answers (2026-10-17): a quality roll on the player's own work, yes; the machine shop a 3D place; hidden

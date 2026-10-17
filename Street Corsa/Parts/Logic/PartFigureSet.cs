@@ -38,4 +38,22 @@ public sealed class PartFigureSet
     public IReadOnlyList<double>? Gears { get; init; }
 
     public IReadOnlyList<DynoCharger> Chargers { get; init; } = Array.Empty<DynoCharger>();
+
+    /// <summary>
+    /// One of <paramref name="count"/> parts' share of the figures: a multiplier to the root of the count, an addition
+    /// divided by it, so the shares of every one together are the figures once; a part's own numbers, gears and
+    /// chargers as they are
+    /// </summary>
+    public PartFigureSet SharedBy(int count)
+    {
+        if (count <= 1) return this;
+
+        var numbers = Numbers.Select(f => f.Op switch
+        {
+            FigureOp.Times => f with { Value = Math.Pow(f.Value, 1.0 / count) },
+            FigureOp.Add => f with { Value = f.Value / count },
+            _ => f
+        }).ToList();
+        return new PartFigureSet { Numbers = numbers, Gears = Gears, Chargers = Chargers };
+    }
 }

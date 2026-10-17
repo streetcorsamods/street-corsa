@@ -6,8 +6,10 @@ namespace StreetCorsa.Parts;
 /// <summary>
 /// The work a part can have done on it to take its mileage off, the 1960s way: rebuilt with a kit (a carburettor, a
 /// water pump), a tune-up, a valve job or a ring job, or swapped at the parts counter for a rebuilt one, the old part
-/// going back as the core. Read from <see cref="FileName"/> in every mod's parts folder; a job is for the parts of its
-/// work order kinds (<see cref="WorkOrder.KindOf"/>) or of its shelves (<see cref="PartKinds.GroupOf"/>).
+/// going back as the core; or left at a machine shop (<see cref="Machine"/>): a block bored oversize, a crank ground
+/// undersize, a head milled, and the speed work (a hotter cam grind, heads ported). Read from <see cref="FileName"/> in
+/// every mod's parts folder; a job is for the parts of its work order kinds (<see cref="WorkOrder.KindOf"/>) or of its
+/// shelves (<see cref="PartKinds.GroupOf"/>).
 /// </summary>
 /// <remarks>
 /// A later mod's job of the same id takes the place of the one before, whole; one with <c>"disabled": true</c> takes
@@ -23,6 +25,15 @@ public sealed class PartRebuilds
     /// <summary>The player's own work, with a kit</summary>
     public const string Kit = "kit";
 
+    /// <summary>Left at a machine shop, back in a few days: cut to its next size, or speed work</summary>
+    public const string Machine = "machine";
+
+    /// <summary>How far the player's own work may land below what the job can do, unless the job says (<see cref="RebuildJob.Roll"/>)</summary>
+    public const double KitRoll = 0.08;
+
+    /// <summary>A machinist's: a professional's work lands about where it should</summary>
+    public const double MachineRoll = 0.02;
+
     private readonly List<RebuildJob> _jobs = new();
 
     public static PartRebuilds Empty => new();
@@ -30,16 +41,66 @@ public sealed class PartRebuilds
     /// <summary>Every job, in the order the mods list them, the base game's first</summary>
     public IReadOnlyList<RebuildJob> All => _jobs;
 
-    /// <summary>The jobs for a part, kits before exchange units, in the order listed</summary>
+    /// <summary>The jobs for a part, kits before exchange units before the machine shop's, in the order listed</summary>
     public IReadOnlyList<RebuildJob> For(PartDefinition part, string? workKind)
     {
         var group = PartKinds.GroupOf(part);
         return _jobs
-            .Where(j => (workKind != null && j.Kinds.Contains(workKind, StringComparer.OrdinalIgnoreCase))
-                        || j.Groups.Contains(group, StringComparer.OrdinalIgnoreCase))
-            .OrderBy(j => j.IsExchange ? 1 : 0)
+            .Where(j => IsFor(j, group, workKind))
+            .OrderBy(j => j.IsMachine ? 2 : j.IsExchange ? 1 : 0)
             .ToList();
     }
+
+    private static bool IsFor(RebuildJob job, string group, string? workKind) =>
+        (workKind != null && job.Kinds.Contains(workKind, StringComparer.OrdinalIgnoreCase)) || job.Groups.Contains(group, StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The machine job that makes the cut on the part (its sizes, what each does); null when none does</summary>
+    public RebuildJob? CutJob(PartDefinition part, string? workKind, string cut)
+    {
+        var group = PartKinds.GroupOf(part);
+        return _jobs.LastOrDefault(j => j.Cut != null && j.Cut.Equals(cut, StringComparison.OrdinalIgnoreCase) && IsFor(j, group, workKind));
+    }
+
+    /// <summary>The size a part's cut has reached (1 for the first), as its job gives it; null for a cut no job of the part makes</summary>
+    public CutSize? SizeOf(PartDefinition part, string? workKind, string cut, int done) =>
+        done > 0 && CutJob(part, workKind, cut) is { Sizes.Count: > 0 } job ? job.Sizes[Math.Min(done, job.Sizes.Count) - 1] : null;
+
+    /// <summary>
+    /// What the cuts on a part do to the engine's figures, every size's figures together (a bore over adds to the bore, a
+    /// head milled takes from the chamber); null when they do nothing a job says
+    /// </summary>
+    public Logic.PartFigureSet? CutFigures(PartDefinition part, string? workKind, IReadOnlyDictionary<string, int> cuts)
+    {
+        var numbers = new List<Logic.PartFigure>();
+        var chargers = new List<Logic.DynoCharger>();
+        foreach (var (cut, done) in cuts.OrderBy(c => c.Key, StringComparer.Ordinal))
+        {
+            if (SizeOf(part, workKind, cut, done)?.ReadFigures is not { } figures) continue;
+            numbers.AddRange(figures.Numbers);
+            chargers.AddRange(figures.Chargers);
+        }
+
+        return numbers.Count == 0 && chargers.Count == 0 ? null : new Logic.PartFigureSet { Numbers = numbers, Chargers = chargers };
+    }
+
+    /// <summary>What the cuts on a part leave it worth against the factory's: each size's <see cref="CutSize.Worth"/>, multiplied</summary>
+    public double WorthOf(PartDefinition part, string? workKind, IReadOnlyDictionary<string, int> cuts)
+    {
+        var worth = 1.0;
+        foreach (var (cut, done) in cuts)
+        {
+            if (SizeOf(part, workKind, cut, done) is { } size) worth *= size.Worth;
+        }
+
+        return worth;
+    }
+
+    /// <summary>
+    /// The cuts parts must agree on to go together: a block bored +.030 takes only pistons of +.030. The machine jobs that
+    /// fit new parts to suit (<see cref="RebuildJob.FitsNew"/>), each with the kinds the cut is made on and the kind fitted.
+    /// </summary>
+    public IEnumerable<(string Cut, IReadOnlyList<string> Kinds, string Fitted)> MatchedCuts() =>
+        _jobs.Where(j => j.Cut != null && j.FitsNew != null).Select(j => (j.Cut!, (IReadOnlyList<string>)j.Kinds, j.FitsNew!));
 
     /// <summary>
     /// The kinds and shelves the jobs name that no part of <paramref name="kinds"/> and <paramref name="groups"/> is: a
@@ -138,16 +199,78 @@ public sealed class PartRebuilds
         }
 
         job.Way = string.IsNullOrWhiteSpace(job.Way) ? Kit : job.Way.Trim().ToLowerInvariant();
-        if (job.Way is not (Kit or Exchange))
+        if (job.Way is not (Kit or Exchange or Machine))
         {
-            problems.Add($"{label}: is done the \"{job.Way}\" way, which is neither {Kit} nor {Exchange}; done as a {Kit}");
+            problems.Add($"{label}: is done the \"{job.Way}\" way, which is none of {Kit}, {Exchange} and {Machine}; done as a {Kit}");
             job.Way = Kit;
         }
 
-        if (!double.IsFinite(job.Restores) || job.Restores is <= 0 or > 1)
+        job.Cut = string.IsNullOrWhiteSpace(job.Cut) ? null : job.Cut.Trim().ToLowerInvariant();
+        job.FitsNew = string.IsNullOrWhiteSpace(job.FitsNew) ? null : job.FitsNew.Trim();
+        job.Sizes = PartDefinition.NonNull(job.Sizes);
+        if (!job.IsMachine && (job.Cut != null || job.Sizes.Count > 0 || job.FitsNew != null || job.Speed || job.AnySize))
+        {
+            problems.Add($"{label}: a cut, sizes, fits_new, any_size and speed are a machine shop's; left as they are not");
+            job.Cut = null;
+            job.Sizes = new();
+            job.FitsNew = null;
+            job.Speed = false;
+            job.AnySize = false;
+        }
+
+        if (job.AnySize && (job.Cut == null || job.FitsNew != null))
+        {
+            problems.Add($"{label}: any_size wants a cut and no fits_new; cut to the next size instead");
+            job.AnySize = job.Cut != null && job.FitsNew == null && job.AnySize;
+        }
+
+        if (job.Cut == null && job.Sizes.Count > 0)
+        {
+            problems.Add($"{label}: has sizes but no cut to give them; they are left out");
+            job.Sizes = new();
+        }
+
+        if (job.Cut != null)
+        {
+            if (job.Sizes.RemoveAll(z => string.IsNullOrWhiteSpace(z.Id)) > 0) problems.Add($"{label}: a size without an id is left out");
+            if (job.Sizes.Count == 0)
+            {
+                problems.Add($"{label}: cuts \"{job.Cut}\" in no sizes; left out");
+                return null;
+            }
+
+            foreach (var size in job.Sizes)
+            {
+                size.ReadFigures = Logic.PartFigures.Read($"{label} size {size.Id}", size.Figures, problems);
+                size.Worth = Within(size.Worth, 0.05, 5, $"size {size.Id}'s worth", label, problems, 1);
+            }
+        }
+
+        if (job.FitsNew != null && job.Cut == null)
+        {
+            problems.Add($"{label}: fits new {job.FitsNew} to suit no cut; they are not fitted");
+            job.FitsNew = null;
+        }
+
+        // A cut for speed alone leaves the part's wear as it is: restores 0
+        var keepsWear = job.Cut != null && job.Restores == 0;
+        if (!double.IsFinite(job.Restores) || (!keepsWear && job.Restores is <= 0 or > 1))
         {
             problems.Add($"{label}: restores {job.Restores}, not above 0 and up to 1; left out");
             return null;
+        }
+
+        if (job.Roll is { } roll && (!double.IsFinite(roll) || roll is < 0 or > 0.5))
+        {
+            problems.Add($"{label}: roll {roll} is not 0 to 0.5; its way's own it is");
+            job.Roll = null;
+        }
+
+        job.FitsNewCost = Within(job.FitsNewCost, 0, 5, "fits_new_cost", label, problems, 1);
+        if (job.IsMachine && job.Days is < 1 or > 60)
+        {
+            problems.Add($"{label}: takes {job.Days} days, not 1 to 60; takes 3");
+            job.Days = 3;
         }
 
         job.MinWear = Within(job.MinWear, 0, job.Restores, nameof(job.MinWear), label, problems);
@@ -162,12 +285,13 @@ public sealed class PartRebuilds
         return job;
     }
 
-    private static double Within(double value, double low, double high, string name, string label, List<string> problems)
+    private static double Within(double value, double low, double high, string name, string label, List<string> problems, double? otherwise = null)
     {
         if (double.IsFinite(value) && value >= low && value <= high) return value;
 
-        problems.Add($"{label}: {name} {value} is not {low} to {high}; {low} it is");
-        return low;
+        var instead = otherwise ?? low;
+        problems.Add($"{label}: {name} {value} is not {low} to {high}; {instead} it is");
+        return instead;
     }
 
     private sealed class RebuildsFile
@@ -194,6 +318,32 @@ public sealed class RebuildStep
     /// <summary>An sfx cue played once as it starts: the bell over the parts counter's door</summary>
     [JsonProperty("start")]
     public string? Start { get; set; }
+}
+
+/// <summary>
+/// One size a machine shop cuts a part to, in turn: +.030, then +.040, then +.060 over. What it does to the engine's
+/// figures (<see cref="Logic.PartFigures"/>: <c>"bore": { "add": 0.76 }</c>), and what it leaves the part worth against
+/// the factory's.
+/// </summary>
+public sealed class CutSize
+{
+    /// <summary>The player reads <c>rebuild.&lt;job id&gt;.size.&lt;id&gt;</c> in the text, else <see cref="Say"/></summary>
+    [JsonProperty("id")]
+    public string Id { get; set; } = string.Empty;
+
+    [JsonProperty("say")]
+    public string? Say { get; set; }
+
+    [JsonProperty("figures")]
+    public Dictionary<string, Newtonsoft.Json.Linq.JToken>? Figures { get; set; }
+
+    /// <summary><see cref="Figures"/> as read, checked; null for none</summary>
+    [JsonIgnore]
+    public Logic.PartFigureSet? ReadFigures { get; set; }
+
+    /// <summary>The part's worth at this size against the factory's: under 1 for every cut a block has left fewer of, over for speed work</summary>
+    [JsonProperty("worth")]
+    public double Worth { get; set; } = 1;
 }
 
 /// <summary>One job of <see cref="PartRebuilds"/>: what it is for, what it costs and takes, what it brings a part up to</summary>
@@ -224,7 +374,58 @@ public sealed class RebuildJob
 
     public bool IsExchange => Way == PartRebuilds.Exchange;
 
-    /// <summary>The condition the part is in after it (0..1]: a kit is not a new part</summary>
+    public bool IsMachine => Way == PartRebuilds.Machine;
+
+    /// <summary>
+    /// A machine job's cut ("bore", "grind", "mill", "port"): each time it is done the part goes to the next of
+    /// <see cref="Sizes"/>, and past the last it cannot be. None: the job takes no metal off (a radiator re-cored) and can be
+    /// done again.
+    /// </summary>
+    [JsonProperty("cut")]
+    public string? Cut { get; set; }
+
+    /// <summary>The sizes of the cut, the first first</summary>
+    [JsonProperty("sizes")]
+    public List<CutSize> Sizes { get; set; } = new();
+
+    /// <summary>A machine job's days at the shop: dropped off today, back that many mornings on</summary>
+    [JsonProperty("days")]
+    public int Days { get; set; } = 3;
+
+    /// <summary>
+    /// Made to any of the sizes, not cut to the next: new pistons for a block bored before. The shop offers each size
+    /// but the one the part is.
+    /// </summary>
+    [JsonProperty("any_size")]
+    public bool AnySize { get; set; }
+
+    /// <summary>Speed work, not a repair: the machine shop lists it apart</summary>
+    [JsonProperty("speed")]
+    public bool Speed { get; set; }
+
+    /// <summary>
+    /// A work order kind the machinist fits new to suit the cut ("pistons" for a bore): the part's own of that kind are
+    /// swapped for new ones of the cut's size, or a set comes with it when it has none, and only those go with it after
+    /// </summary>
+    [JsonProperty("fits_new")]
+    public string? FitsNew { get; set; }
+
+    /// <summary>What the new parts fitted cost in the job's price, a share of their new price</summary>
+    [JsonProperty("fits_new_cost")]
+    public double FitsNewCost { get; set; } = 1;
+
+    /// <summary>
+    /// How far below <see cref="Restores"/> the work may land (0..0.5): the player's own is a little rough now and then, a
+    /// machinist's lands about where it should; never worse than the part was. Left out: the way's own
+    /// (<see cref="PartRebuilds.KitRoll"/>, none for an exchange unit, <see cref="PartRebuilds.MachineRoll"/>).
+    /// </summary>
+    [JsonProperty("roll")]
+    public double? Roll { get; set; }
+
+    /// <summary>The roll the job is done with</summary>
+    public double RollOf => Roll ?? (IsExchange ? 0 : IsMachine ? PartRebuilds.MachineRoll : PartRebuilds.KitRoll);
+
+    /// <summary>The condition the part is in after it (0..1]: a kit is not a new part. A cut for speed alone: 0, its wear left as it is.</summary>
     [JsonProperty("restores")]
     public double Restores { get; set; } = 0.9;
 

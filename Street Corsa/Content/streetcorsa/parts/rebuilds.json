@@ -8,7 +8,19 @@
     "dollars; minutes: the work, or the trip to the counter; off: done with the part off the car and off any other part",
     "(on the shelf, or the engine on the stand); bare: done with nothing mounted on it; fixes_damage: takes its damage off",
     "too. The player reads rebuild.<id> in the text, else name. A mod's job of the same id takes the place of this one,",
-    "whole; \"disabled\": true takes it out."
+    "whole; \"disabled\": true takes it out.",
+    "roll: how far under restores the work may land (0 to 0.5; left out, 0.08 for a kit, none for an exchange unit, 0.02 at",
+    "a machine shop): the player's own work comes out a little rough now and then, never worse than the part was.",
+    "",
+    "way machine: left at a machine shop, back in days. cut: what it cuts (bore, grind, mill...); each time the part goes",
+    "to the next of sizes, and past the last it cannot be cut again (no cut: the job takes no metal off and can be done",
+    "again). A size: id, say, figures (the engine figures it changes from then on, as a part pack's \"figures\": add to the",
+    "bore, times the chamber...) and worth (the part's worth at that size against the factory's; speed work needs none: an engine is priced by its dyno power). restores 0 with a cut:",
+    "the part's wear is left as it is (speed work). fits_new: a kind the machinist fits new to suit the cut (pistons for a",
+    "bore; the part's own swapped, or the block's stock set when it has none), in the price at fits_new_cost of their new",
+    "price; those parts and the cut part only go together at the same size. any_size: made to any size the part is not",
+    "(new pistons for a block bored before). speed: speed work, listed apart. The player reads rebuild.<id>.size.<size>",
+    "and rebuild.<id>.done (\"bored {size}\") in the text."
   ],
   "jobs": [
     { "id": "carb_kit", "name": "Rebuild with a kit", "kinds": [ "carburettor" ], "restores": 0.95, "cost": 0.12, "cost_at_least": 8, "minutes": 90, "off": true, "steps": [ { "id": "strip", "sound": "work.bench" }, { "id": "soak", "sound": "work.wash" }, { "id": "needle", "sound": "work.bench" }, { "id": "float", "sound": "work.bench" } ] },
@@ -33,6 +45,88 @@
       "kinds": [ "carburettor", "distributor", "side_distributor", "water_pump", "fuel_pump", "alternator", "starter", "steering_pump", "clutch" ],
       "restores": 0.92, "cost": 0.45, "cost_at_least": 10, "minutes": 45, "off": true, "fixes_damage": true,
       "steps": [ { "id": "drive", "sound": "work.road" }, { "id": "counter", "sound": "work.counter", "start": "station.bell" }, { "id": "back", "sound": "work.road" } ]
+    },
+    {
+      "id": "bore", "name": "Bore oversize, new pistons to suit", "way": "machine", "kinds": [ "block" ], "cut": "bore",
+      "sizes": [
+        { "id": "030", "say": "+.030", "figures": { "bore": { "add": 0.762 } }, "worth": 0.9 },
+        { "id": "040", "say": "+.040", "figures": { "bore": { "add": 1.016 } }, "worth": 0.8 },
+        { "id": "060", "say": "+.060", "figures": { "bore": { "add": 1.524 } }, "worth": 0.65 }
+      ],
+      "fits_new": "pistons", "fits_new_cost": 0.9, "restores": 0.97, "cost": 0.003, "cost_at_least": 45, "days": 4, "fixes_damage": true,
+      "steps": [ { "id": "tank", "sound": "work.wash" }, { "id": "bore", "sound": "work.bore" }, { "id": "hone", "sound": "work.hone" }, { "id": "pistons", "sound": "work.press" } ]
+    },
+    {
+      "id": "pistons_to_suit", "name": "New pistons for a bored block", "way": "machine", "kinds": [ "pistons" ], "cut": "bore", "any_size": true,
+      "sizes": [ { "id": "030", "say": "+.030" }, { "id": "040", "say": "+.040" }, { "id": "060", "say": "+.060" } ],
+      "restores": 1.0, "cost": 0.9, "cost_at_least": 30, "days": 2, "fixes_damage": true,
+      "steps": [ { "id": "order", "sound": "work.counter" }, { "id": "fit", "sound": "work.bench" } ]
+    },
+    {
+      "id": "crank_grind", "name": "Grind the journals undersize, bearings to match", "way": "machine", "kinds": [ "crankshaft" ], "cut": "grind",
+      "sizes": [ { "id": "010", "say": ".010 under", "worth": 0.9 }, { "id": "020", "say": ".020 under", "worth": 0.8 }, { "id": "030", "say": ".030 under", "worth": 0.65 } ],
+      "restores": 0.97, "cost": 0.1, "cost_at_least": 30, "days": 3, "fixes_damage": true,
+      "steps": [ { "id": "check", "sound": "work.bench" }, { "id": "grind", "sound": "work.crank" }, { "id": "polish", "sound": "work.grind" } ]
+    },
+    {
+      "id": "head_mill", "name": "Mill the head, cut the seats, new guides", "way": "machine", "kinds": [ "cylinder_head" ], "cut": "mill",
+      "sizes": [
+        { "id": "010", "say": ".010 off", "figures": { "chamber": { "times": 0.965 } }, "worth": 0.92 },
+        { "id": "020", "say": ".020 off", "figures": { "chamber": { "times": 0.93 } }, "worth": 0.84 },
+        { "id": "030", "say": ".030 off", "figures": { "chamber": { "times": 0.895 } }, "worth": 0.72 }
+      ],
+      "restores": 0.97, "cost": 0.1, "cost_at_least": 30, "days": 3, "bare": true, "fixes_damage": true,
+      "steps": [ { "id": "tank", "sound": "work.wash" }, { "id": "mill", "sound": "work.mill" }, { "id": "seats", "sound": "work.grind" }, { "id": "guides", "sound": "work.press" } ]
+    },
+    {
+      "id": "cam_regrind", "name": "Regrind the lobes, new lifters", "way": "machine", "kinds": [ "camshaft" ], "cut": "regrind",
+      "sizes": [ { "id": "1", "say": "once", "worth": 0.9 }, { "id": "2", "say": "twice", "worth": 0.78 } ],
+      "restores": 0.95, "cost": 0.2, "cost_at_least": 20, "days": 3,
+      "steps": [ { "id": "check", "sound": "work.bench" }, { "id": "grind", "sound": "work.grind" }, { "id": "lifters", "sound": "work.bench" } ]
+    },
+    {
+      "id": "flywheel_resurface", "name": "Resurface the flywheel", "way": "machine", "kinds": [ "flywheel" ], "cut": "resurface",
+      "sizes": [ { "id": "1", "say": "once", "worth": 0.92 }, { "id": "2", "say": "twice", "worth": 0.8 } ],
+      "restores": 0.97, "cost": 0.15, "cost_at_least": 10, "days": 1, "fixes_damage": true,
+      "steps": [ { "id": "face", "sound": "work.mill" } ]
+    },
+    {
+      "id": "radiator_recore", "name": "Re-core the radiator", "way": "machine", "kinds": [ "radiator" ],
+      "restores": 0.97, "cost": 0.35, "cost_at_least": 15, "days": 2, "fixes_damage": true,
+      "steps": [ { "id": "tanks", "sound": "work.bench" }, { "id": "core", "sound": "work.press" }, { "id": "test", "sound": "work.air" } ]
+    },
+    {
+      "id": "drums_turned", "name": "Turn the drums true", "way": "machine", "groups": [ "brakes" ], "cut": "turn",
+      "sizes": [ { "id": "030", "say": ".030 over", "worth": 0.9 }, { "id": "060", "say": ".060 over", "worth": 0.75 } ],
+      "restores": 0.98, "cost": 0.2, "cost_at_least": 6, "days": 1, "fixes_damage": true,
+      "steps": [ { "id": "turn", "sound": "work.mill" } ]
+    },
+    {
+      "id": "hot_grind", "name": "Regrind to a hotter cam", "way": "machine", "kinds": [ "camshaft" ], "cut": "hot_grind", "speed": true,
+      "sizes": [
+        { "id": "three_quarter", "say": "3/4 race", "figures": { "intake_duration": { "add": 14 }, "exhaust_duration": { "add": 14 } } },
+        { "id": "full_race", "say": "full race", "figures": { "intake_duration": { "add": 28 }, "exhaust_duration": { "add": 28 } } }
+      ],
+      "restores": 0.95, "cost": 0.4, "cost_at_least": 35, "days": 5,
+      "steps": [ { "id": "blank", "sound": "work.bench" }, { "id": "grind", "sound": "work.grind" }, { "id": "harden", "sound": "work.wash" } ]
+    },
+    {
+      "id": "port_polish", "name": "Port and polish the head", "way": "machine", "kinds": [ "cylinder_head" ], "cut": "port", "speed": true,
+      "sizes": [ { "id": "ported", "say": "ported", "figures": { "intake_flow": { "times": 1.07 }, "exhaust_flow": { "times": 1.09 } } } ],
+      "restores": 0, "cost": 0.3, "cost_at_least": 60, "days": 5, "bare": true,
+      "steps": [ { "id": "grind", "sound": "work.grind" }, { "id": "polish", "sound": "work.grind" }, { "id": "flow", "sound": "work.air" } ]
+    },
+    {
+      "id": "blueprint", "name": "Balance and blueprint", "way": "machine", "kinds": [ "block" ], "cut": "blueprint", "speed": true,
+      "sizes": [ { "id": "done", "say": "blueprinted", "figures": { "friction": { "times": 0.9 }, "max_rpm": { "times": 1.06 }, "rev_limit": { "times": 1.04 } } } ],
+      "restores": 0, "cost": 0.005, "cost_at_least": 250, "days": 6,
+      "steps": [ { "id": "weigh", "sound": "work.bench" }, { "id": "balance", "sound": "work.crank" }, { "id": "deck", "sound": "work.mill" }, { "id": "measure", "sound": "work.bench" } ]
+    },
+    {
+      "id": "flywheel_lighten", "name": "Lighten the flywheel", "way": "machine", "kinds": [ "flywheel" ], "cut": "lighten", "speed": true,
+      "sizes": [ { "id": "done", "say": "lightened", "figures": { "inertia": { "times": 0.9 } } } ],
+      "restores": 0, "cost": 0.3, "cost_at_least": 20, "days": 2,
+      "steps": [ { "id": "turn", "sound": "work.mill" }, { "id": "balance", "sound": "work.bench" } ]
     }
   ]
 }

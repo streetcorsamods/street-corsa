@@ -58,6 +58,9 @@ namespace StreetCorsa.Services.PartShops
         /// <summary>A closing-down sale: the rivals and everybody else clear out this share of what is left each day</summary>
         public static double SaleClearOutShare => Rules.RuleBook.Current.PartShops.SaleClearOutShare;
 
+        /// <summary>A machine shop's least price, as a share of what its work adds to the part's worth</summary>
+        public static double MachineValueShare => Rules.RuleBook.Current.PartShops.MachineValueShare;
+
 
         /// <summary>The rules' figures for the shop's kind of shop (<c>partShops.kinds</c>), for what the shop's own file leaves out</summary>
         private static Rules.PartShopKindRules KindRules(PartShopDefinition shop) =>
@@ -141,6 +144,7 @@ namespace StreetCorsa.Services.PartShops
                 PartShopKind.Specialist => !runningGear && part.Make != null && ofItsMakes,
                 PartShopKind.Speed => !runningGear && ofItsMakes && PartGroups.Current.SoldBySpeedShops(group) && !factoryParts.Contains(part.Id),
                 PartShopKind.Wheels => runningGear,
+                PartShopKind.Machine => false,
                 _ => ofItsMakes || runningGear
             };
         }

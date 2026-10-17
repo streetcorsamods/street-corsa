@@ -344,6 +344,34 @@ one-shot cue `start` played as it begins. The base game's work sounds are `work.
 over the bench's sound. A job of the same id as an earlier mod's takes its place, whole;
 `"disabled": true` takes it out. The base game's jobs are in `Content\streetcorsa\parts\rebuilds.json`.
 
+The player's own work (a kit) lands round what the job can do: `roll` (0 to 0.5) is how far under `restores` it may come
+out, up to a quarter of it over, never worse than the part was; left out, 0.08 for a kit, none for an exchange unit,
+0.02 at a machine shop. The show ends saying how it came out (`rebuild.quality.good`, `.fair`, `.rough`).
+
+**Machine shop jobs** (`"way": "machine"`) are not in the parts view: the player leaves the part at a machine shop
+(`partshops`, kind `machine`) and it is back in the garage `days` later.
+
+```json
+{ "id": "bore", "way": "machine", "kinds": [ "block" ], "cut": "bore",
+  "sizes": [ { "id": "030", "say": "+.030", "figures": { "bore": { "add": 0.762 } }, "worth": 0.9 },
+             { "id": "060", "say": "+.060", "figures": { "bore": { "add": 1.524 } }, "worth": 0.65 } ],
+  "fits_new": "pistons", "fits_new_cost": 0.9, "restores": 0.97, "cost": 0.003, "cost_at_least": 45, "days": 4 }
+```
+
+`cut` names what is cut; each time the job is done the part goes to the next of `sizes`, and past the last it cannot
+be cut again (the part keeps how far it has gone, `PartInstance.Cuts`). A size's `figures` change the engine's figures
+from then on, as a pack's `"figures"` do (see "Engine figures"; they go on after the part's own), and its `worth` is the
+part's worth at that size against the factory's (under 1 for a cut gone, over for speed work). A job with no `cut` takes
+no metal off (a radiator re-cored) and can be done again once the part wants it. `restores` 0 with a cut leaves the
+part's wear as it is (speed work). `fits_new` is a work order kind the machinist fits new to suit the cut: the part's own
+of that kind are swapped for new ones of the size, or, on a bare part, a set of what the part's first engine build has
+comes back with it, in the price at `fits_new_cost` of their new price; from then on that kind and the cut part only go
+together at the same size (the work order says so). `any_size`: made to any size but the part's own, each offered
+(new pistons for a block bored before; inside a block, only at its size). `speed`: speed work, listed apart. The player
+reads `rebuild.<id>.size.<size>` (else `say`) and `rebuild.<id>.done` with `{size}` ("bored {size} over") on the
+part's card. The machine shop's prices are the job's, never under the rules' `partShops.machineValueShare` (0.85) of
+what the work adds to the part's worth, at the shop's `priceFactor`.
+
 **A part's figures.** A part's stats come from its SLRR script (`source_script`): the game builds the script and runs it
 to work the engine out; a part without one gives its own (`"figures"`, see an engine of figures below). The rest is read from the pack: `"class_chain"` says what the part is (a crankshaft, a clutch:
 without it the work order and the engine can't tell), and `"properties"` holds the script's
@@ -610,9 +638,15 @@ buys the player's parts for a little more than a trade-in, and can be haggled wi
 the ids of part_groups.json (`"camshafts"`; see "parts"). `priceFactor`, `buyFactor`, `stockLow`/`stockHigh` and `restockDays` are optional
 (the kind's own otherwise; see `PartShopRules`). `"startsOpen": false` keeps a shop out of business when a game starts:
 the shops come and go as the dealers do. Keep a pin about 0.055 across or 0.035 down from every other shop's pin, or the
-name plates overlap; the dealers' pins are on their own map. `kind` is one of the four names; anything else (a number
+name plates overlap; the dealers' pins are on their own map. `kind` is one of the five names; anything else (a number
 too) makes a specialist. A make with no specialist of its own is still sold by the speed shops (its hot
 parts), the junkyards and the mail order.
+
+`machine` is a machine shop: it sells and buys no parts. The player brings it parts off the garage's shelf or the
+engine off its stand, and has the machine jobs of `rebuilds.json` done on them and the parts on them, paid as they are
+left; the shop brings them back on the morning they are ready (an engine back on the stand if it is free). Its
+`priceFactor` is against the jobs' prices. Its machinist talks while the AI is on (`chat_machinist`, `machinist_search`;
+`"clerk"` as above), and it is seen in the shop scene for its kind.
 
 Inside, a shop is the part shops' room (`shopscenes`, below) dressed in the look for its kind, or the one it names in
 `"look"` (a look's id). Whoever is behind the counter, talked to while the player's AI is on, is drawn from the
@@ -848,15 +882,18 @@ logged and ignored, and a light written as `null` is skipped, as if it were not 
 ### shopscenes
 
 One folder per part shop room, as the base game's `shopscenes\shop`: a `shop.json` and its model (`"model"`, default
-`shop.kn5`). Every part shop is seen in the last one the mods give, so a mod's room takes the base game's place. The file
+`shop.kn5`). Every part shop is seen in the last one the mods give, so a mod's room takes the base game's place; a scene
+with `"kinds": ["machine"]` is those kinds' alone (the base game's `shopscenes\machine_shop`), and the others are seen in
+the last scene with no kinds. The file
 gives the `camera` (`alpha`, `beta`, `radius`, `targetX`, `targetHeight`, `targetZ` the point it turns round, and `fov`
 the lens, degrees high), the `room` the camera stays inside (`halfWidth` either side of the middle along x, `halfDepth`
 along z, the ceiling `height`), the `sun`, the `lights` of the day with `lampScale` and the `lamps` as a warehouse's, how
 bright the material `sh_window` glows at each light (`window`), the `places` the shop's stock stands in, and the `looks`.
 
 A place is the middle of its floor (`x`, `y`, `z`), its room (`width` along its own x, `depth` along its own z,
-`height`), the way it faces (`heading`, degrees; 0 faces +z) and what it `holds`: `engine` (a whole engine; a shop with
-none puts its biggest part there), `wheel` (tyres and rims first), `large` or `shelf` (anything that fits). When the
+`height`), the way it faces (`heading`, degrees; 0 faces +z) and what it `holds`: `engine` (a whole engine; with none on
+any stand, the biggest part goes on one), `wheel` (tyres and rims first), `large` or `shelf` (anything that fits), or a
+shelf's group by its id (`crankshafts`: a part of that group goes there before anywhere else, and nothing else). When the
 player walks in, the shop's stock is stood in them, one part a place, in the file's order, so put the places the eye
 goes to first; a part too big for every place left is not shown (it is still at the counter). A look has an `id`, the
 shop `kinds` it is for (`speed`, `specialist`, `wheels`, `junkyard`), the picture each material wears (`surfaces`, the

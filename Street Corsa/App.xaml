@@ -76,6 +76,9 @@
             <DataTemplate DataType="{x:Type usedParts:UsedPartsScreenViewModel}">
                 <usedParts:UsedPartsScreenView/>
             </DataTemplate>
+            <DataTemplate DataType="{x:Type partShop:MachineShopScreenViewModel}">
+                <partShop:MachineShopScreenView/>
+            </DataTemplate>
             <DataTemplate DataType="{x:Type partShop:PartShopScreenViewModel}">
                 <partShop:PartShopScreenView/>
             </DataTemplate>

@@ -360,6 +360,40 @@ namespace StreetCorsa.Services.Talk
             if (found.Picks.All(p => !p.Fits)) yield return GameText.Say("chat.fact.stock.none_fit");
         }
 
+        /// <summary>
+        /// What a machinist found to do on the player's parts for their last ask: the ask as the game read it, how many jobs
+        /// match, and the best few with their prices, their days and what they do for a whole engine on the dyno
+        /// </summary>
+        public static IEnumerable<string> Work(ClerkFindings? found)
+        {
+            if (found == null)
+            {
+                yield return GameText.Say("chat.fact.work.not_asked");
+                yield break;
+            }
+
+            var asked = Asked(found.Search);
+            if (found.NoName is { } name) yield return GameText.Say("chat.fact.work.no_name", ("words", name));
+            if (found.Picks.Count == 0)
+            {
+                yield return GameText.Say("chat.fact.work.nothing", ("asked", asked));
+                yield break;
+            }
+
+            yield return GameText.Say("chat.fact.work.found", ("asked", asked), ("count", found.Matching), ("shown", found.Picks.Count));
+            foreach (var pick in found.Picks)
+            {
+                var dyno = pick is { PowerBefore: { } before, PowerAfter: { } after }
+                    ? Math.Round(after) > Math.Round(before)
+                        ? GameText.Say("chat.fact.work.dyno", ("from", (int)Math.Round(before)), ("to", (int)Math.Round(after)))
+                        : GameText.Say("chat.fact.work.dyno_none")
+                    : string.Empty;
+                // A machinist's pick: its kind is the part it is on, Fits that it is speed work, InStock its days
+                yield return GameText.Say("chat.fact.work.pick", ("name", pick.Name), ("part", pick.Kind), ("price", new Helpers.Money(pick.Price)),
+                    ("days", pick.InStock), ("speed", pick.Fits ? GameText.Say("chat.fact.work.speed") : string.Empty), ("dyno", dyno));
+            }
+        }
+
         /// <summary>A search as the clerk is told it was asked: "carburetors for their car, under $200, the most power"</summary>
         public static string Asked(ClerkSearch search)
         {

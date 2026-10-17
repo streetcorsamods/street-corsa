@@ -33,7 +33,9 @@ public class PartsShopSceneTests
         Assert.Contains(scene.Places, p => p.Holds == ShopHolds.Engine);
         Assert.Contains(scene.Places, p => p.Holds == ShopHolds.Wheel);
         Assert.True(scene.Places.Count(p => p.Holds == ShopHolds.Shelf) >= 40);
-        foreach (var kind in Enum.GetNames<PartShopKind>().Select(k => k.ToLowerInvariant()))
+        // Every kind but the machine shop, which has a scene of its own
+        Assert.Empty(scene.Kinds);
+        foreach (var kind in Enum.GetValues<PartShopKind>().Where(k => k != PartShopKind.Machine).Select(k => k.ToString().ToLowerInvariant()))
             Assert.Contains(kind, scene.LookFor(null, kind)!.Kinds);
         foreach (var light in Enum.GetValues<StreetLight>())
             Assert.True(scene.Lights.ContainsKey(light), $"no {light} light");
@@ -54,6 +56,54 @@ public class PartsShopSceneTests
 
         // A shop's own look by name goes before its kind's
         Assert.Equal("tire_shop", scene.LookFor("tire_shop", "speed")!.Id);
+    }
+
+    [Fact]
+    public void The_machine_shop_has_a_scene_of_its_own_with_its_machines_places()
+    {
+        var scene = ShopScenes.Load(Path.Combine(RepoPaths.BaseContent, ContentTypes.ShopScenes, "machine_shop"));
+
+        Assert.NotNull(scene);
+        Assert.True(File.Exists(scene.Kn5));
+        Assert.Equal(["machine"], scene.Kinds);
+        Assert.Contains(scene.Places, p => p.Holds == PartGroups.Blocks);
+        Assert.Contains(scene.Places, p => p.Holds == "crankshafts");
+        Assert.Contains(scene.Places, p => p.Holds == ShopHolds.Engine);
+        Assert.Equal("machine_shop", scene.LookFor(null, "machine")!.Id);
+        foreach (var light in Enum.GetValues<StreetLight>())
+            Assert.True(scene.Lights.ContainsKey(light), $"no {light} light");
+
+        // The part shops keep theirs: a scene for a kind is that kind's alone
+        var shop = ShopScenes.Load(Path.Combine(RepoPaths.BaseContent, ContentTypes.ShopScenes, "shop"))!;
+        Assert.Same(scene, ShopScenes.Pick([shop, scene], "machine"));
+        Assert.Same(shop, ShopScenes.Pick([shop, scene], "speed"));
+        Assert.Same(shop, ShopScenes.Pick([shop, scene], null));
+        Assert.Same(shop, ShopScenes.Pick([shop], "machine"));
+    }
+
+    [Fact]
+    public void A_place_for_a_group_takes_a_part_of_it_first_and_nothing_else()
+    {
+        var places = new[] { Place(ShopHolds.Shelf, width: 2f), Place("crankshafts", width: 2f, depth: 0.4f), Place(ShopHolds.Shelf, width: 2f) };
+        var crank = Item("crank", "crankshafts", 0.7f, 0.18f, 0.18f);
+        var head = Item("head", "cylinder_heads", 0.65f, 0.22f, 0.33f);
+
+        var standing = ShopStockLayout.Place([head, crank], places);
+
+        Assert.Equal("crankshafts", standing.Single(s => s.Item.Key == "crank").Place.Holds);
+        Assert.Equal(ShopHolds.Shelf, standing.Single(s => s.Item.Key == "head").Place.Holds);
+    }
+
+    [Fact]
+    public void A_second_stand_stays_bare_when_the_first_has_an_engine()
+    {
+        var places = new[] { Place(ShopHolds.Engine, 1.7f, 1f, 1.3f), Place(ShopHolds.Engine, 1.7f, 1f, 1.3f), Place(ShopHolds.Shelf, 1f, 1f, 1f) };
+        var engine = Item("engine", PartGroups.Blocks, 0.7f, 0.7f, 0.9f);
+        var pistons = Item("pistons", "pistons", 0.5f, 0.25f, 0.5f);
+
+        var standing = ShopStockLayout.Place([engine, pistons], places);
+
+        Assert.Equal(ShopHolds.Shelf, standing.Single(s => s.Item.Key == "pistons").Place.Holds);
     }
 
     // ----- the stock in its places -----

@@ -346,7 +346,14 @@ namespace StreetCorsa.Screens.DealerMap
                     MapX = shop.MapX,
                     MapY = shop.MapY,
 
-                    StockCount = shop.KindOf == PartShopKind.Junkyard ? location.Yard.Count : location.Shelves.Sum(s => Math.Max(0, s.Count)),
+                    IsMachineShop = shop.KindOf == PartShopKind.Machine,
+                    StockCount = shop.KindOf switch
+                    {
+                        PartShopKind.Junkyard => location.Yard.Count,
+                        // A machine shop: what the player has there
+                        PartShopKind.Machine => (_gameState.Player.MachineWork ?? []).Count(o => string.Equals(o.ShopId, shop.Id, StringComparison.OrdinalIgnoreCase)),
+                        _ => location.Shelves.Sum(s => Math.Max(0, s.Count))
+                    },
                     TravelHours = shop.TravelHours,
                     MinutesLeftToday = remainingToday,
 
@@ -467,6 +474,9 @@ namespace StreetCorsa.Screens.DealerMap
         /// <summary>What sort of part shop ("Speed shop"); empty for a car lot</summary>
         public string KindLabel { get; set; } = string.Empty;
 
+        /// <summary>A machine shop: its count is what the player has left there</summary>
+        public bool IsMachineShop { get; set; }
+
         public string Id { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string Region { get; set; } = string.Empty;
@@ -493,7 +503,9 @@ namespace StreetCorsa.Screens.DealerMap
         /// <summary>What the trip does to the day, for the card</summary>
         public string DayCostDisplay => GameText.Say(FitsToday ? "dealermap.day.fits" : "dealermap.day.late");
 
-        public string StockDisplay => IsPartShop
+        public string StockDisplay => IsMachineShop
+            ? GameText.Say(StockCount switch { 0 => "dealermap.stock.machine.none", 1 => "dealermap.stock.machine.one", _ => "dealermap.stock.machine.other" }, ("count", StockCount))
+            : IsPartShop
             ? GameText.Say(StockCount == 1 ? "dealermap.stock.parts.one" : "dealermap.stock.parts.other", ("count", StockCount))
             : GameText.Say(StockCount == 1 ? "dealermap.stock.cars.one" : "dealermap.stock.cars.other", ("count", StockCount));
 

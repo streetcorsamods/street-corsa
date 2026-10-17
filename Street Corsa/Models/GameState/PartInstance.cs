@@ -28,6 +28,16 @@ namespace StreetCorsa.Models.GameState
         public Dictionary<string, double> Tuning { get; set; } = new();
 
         /// <summary>
+        /// What a machine shop has cut on the part, by the cut (<c>rebuilds.json</c>'s machine jobs: "bore", "grind",
+        /// "mill", "port"): how many of the cut's sizes are gone, 1 for the first (+.030 over). Empty: as it left the
+        /// factory. Pistons fitted to a bored block carry the block's bore.
+        /// </summary>
+        public Dictionary<string, int> Cuts { get; set; } = new();
+
+        /// <summary>The sizes of the cut gone on the part; 0 for none</summary>
+        public int CutOf(string cut) => Cuts != null && Cuts.TryGetValue(cut, out var done) && done > 0 ? done : 0;
+
+        /// <summary>
         /// Slot of whatever this part is mounted on: a slot of the parent part, or of the car for the parts
         /// that sit on the car itself (<see cref="CarEngineSlot"/>). 0 while the part is loose.
         /// </summary>
