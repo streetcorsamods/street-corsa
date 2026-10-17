@@ -91,6 +91,16 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     private Kn5RenderableFile? _fixture;
     private List<IKn5RenderableObject> _fixtureMeshes = new();
     private bool _fixtureHovered;
+    private Kn5RenderableFile? _bench;
+    private List<IKn5RenderableObject> _benchMeshes = new();
+
+    // The part a job of the parts view's "Work on it" is being done on: a loose one lying on the workbench (drawn whole,
+    // at how far it is in sight), and over it, or over the mounted part itself, its grime, fading as the work goes
+    private Kn5RenderableFile? _work;
+    private Kn5RenderableFile? _workGrime;
+    private bool _workFollowsParts;
+    private float _workOpacity = 1f;
+    private float _workGrimeAmount;
     private bool _sceneryHovered;
     private bool _carHovered;
     private bool _standActive;
@@ -1185,6 +1195,88 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         IsDirty = true;
     }
 
+    /// <summary>
+    /// The workbench (<see cref="Parts.WorkbenchLayout"/>), put where <paramref name="placement"/> says; null takes it
+    /// away. Drawn and in the way of what is behind it, never picked nor lit up. Must be called on the thread that draws.
+    /// </summary>
+    public void SetBench(IKn5? kn5, Matrix placement)
+    {
+        _bench?.Dispose();
+        _bench = kn5 == null ? null : new Kn5RenderableFile(kn5, placement, asyncTexturesLoading: false);
+        _bench?.UpdateBoundingBox();
+        _benchMeshes = _bench?.GetAllChildren().OfType<IKn5RenderableObject>().ToList() ?? new();
+        SetShadowsDirty();
+        IsDirty = true;
+    }
+
+    /// <summary>
+    /// The part a job is being done on: <paramref name="clean"/> drawn where <paramref name="placement"/> puts it (a loose
+    /// part on the workbench; null for a mounted part, which is drawn already), <paramref name="grime"/> over it at
+    /// <see cref="WorkGrime"/>. With <paramref name="followsParts"/> both are models of the mounted parts' space and go
+    /// where the mounted parts go (the body's lean, the stand's turn). Nulls take it away. Must be called on the thread
+    /// that draws.
+    /// </summary>
+    public void SetWork(IKn5? clean, IKn5? grime, Matrix placement, bool followsParts)
+    {
+        _work?.Dispose();
+        _workGrime?.Dispose();
+        _workFollowsParts = followsParts;
+        var where = followsParts && _prop != null ? _prop.LocalMatrix : placement;
+        // The part's own textures come in off the thread that draws, while it fades in; the grime has one small texture
+        _work = clean == null ? null : new Kn5RenderableFile(clean, where, asyncTexturesLoading: true);
+        _workGrime = grime == null ? null : new Kn5RenderableFile(grime, where, asyncTexturesLoading: false);
+        _work?.UpdateBoundingBox();
+        _workGrime?.UpdateBoundingBox();
+        SetShadowsDirty();
+        IsDirty = true;
+    }
+
+    /// <summary>The loose part on the workbench put somewhere else (on its way down to the bench, turning on it)</summary>
+    public void MoveWork(Matrix placement)
+    {
+        if (_workFollowsParts) return;
+
+        foreach (var file in new[] { _work, _workGrime })
+        {
+            if (file == null) continue;
+            file.LocalMatrix = placement;
+            file.UpdateBoundingBox();
+        }
+
+        SetShadowsDirty();
+        IsDirty = true;
+    }
+
+    /// <summary>How far the part on the workbench is in sight, 0 to 1</summary>
+    public float WorkOpacity
+    {
+        get => _workOpacity;
+        set
+        {
+            var clamped = Math.Clamp(value, 0f, 1f);
+            if (clamped == _workOpacity) return;
+            _workOpacity = clamped;
+            SetShadowsDirty();
+            IsDirty = true;
+        }
+    }
+
+    /// <summary>How much of the part's grime is drawn over it, 0 clean to 1</summary>
+    public float WorkGrime
+    {
+        get => _workGrimeAmount;
+        set
+        {
+            var clamped = Math.Clamp(value, 0f, 1f);
+            if (clamped == _workGrimeAmount) return;
+            _workGrimeAmount = clamped;
+            IsDirty = true;
+        }
+    }
+
+    /// <summary>The middle of the part a job is being done on, in the garage's space; null without one</summary>
+    public Vector3? WorkCentre => (_work ?? _workGrime) is { } file ? (file.BoundingBox is { } box ? (box.Minimum + box.Maximum) / 2f : null) : null;
+
     /// <summary>The fixture as it is drawn, to move its nodes (the paint booth's painter swings his arm); null without one</summary>
     public Kn5RenderableFile? Fixture => _fixture;
 
@@ -1208,6 +1300,7 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         var ray = Camera.GetPickingRay(new Vector2(x * ActualWidth, y * ActualHeight), new Vector2(ActualWidth, ActualHeight));
         if (Nearest(ray, _fixtureMeshes) is not { } fixture) return false;
         if (Nearest(ray, _sceneryMeshes) is { } scenery && scenery < fixture) return false;
+        if (Nearest(ray, _benchMeshes) is { } bench && bench < fixture) return false;
 
         return IsGhosting || CarNode == null || CarDistance(ray) is not { } car || car > fixture;
     }
@@ -1259,7 +1352,7 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         var ray = Camera.GetPickingRay(new Vector2(x * ActualWidth, y * ActualHeight), new Vector2(ActualWidth, ActualHeight));
         if (CarDistance(ray) is not { } car) return false;
 
-        var cover = new[] { Nearest(ray, _sceneryMeshes), Nearest(ray, _fixtureMeshes), _standActive ? Nearest(_propNodes, ray) : null }.Min();
+        var cover = new[] { Nearest(ray, _sceneryMeshes), Nearest(ray, _fixtureMeshes), Nearest(ray, _benchMeshes), _standActive ? Nearest(_propNodes, ray) : null }.Min();
         return cover == null || cover > car;
     }
 
@@ -1267,8 +1360,8 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         nodes.Select(n => n.Intersect(ray)).Where(d => d != null).Min();
 
     /// <summary>
-    /// True when a point of the picture is on the scenery (the engine stand, or the engine on it), and the car is not
-    /// in front of it there. A ghost car is no cover.
+    /// True when a point of the picture is on the scenery (the engine stand, or the engine on it), and neither the car
+    /// nor the workbench is in front of it there. A ghost car is no cover.
     /// </summary>
     public bool HitsScenery(float x, float y)
     {
@@ -1276,6 +1369,7 @@ public class GarageRenderer : DarkKn5ObjectRenderer
 
         var ray = Camera.GetPickingRay(new Vector2(x * ActualWidth, y * ActualHeight), new Vector2(ActualWidth, ActualHeight));
         if (Nearest(ray, _sceneryMeshes) is not { } scenery) return false;
+        if (Nearest(ray, _benchMeshes) is { } bench && bench < scenery) return false;
         if (IsGhosting || CarNode == null) return true;
 
         return CarDistance(ray) is not { } car || car > scenery;
@@ -1407,6 +1501,11 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     {
         _scenery?.Draw(holder, camera, mode);
         _fixture?.Draw(holder, camera, mode);
+        _bench?.Draw(holder, camera, mode);
+        FollowParts();
+
+        // The part on the workbench, once it is all there; on its way in or out it is drawn see-through after the rest
+        if (_work != null && _workOpacity >= 1f) _work.Draw(holder, camera, mode);
 
         // Parts on their way are left out of every pass, shadows included, and drawn over the scene see-through
         if (!IsGhosting)
@@ -1427,6 +1526,7 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         if (mode != SpecialRenderMode.SimpleTransparent) return;
 
         DrawFading(holder, camera);
+        DrawWork(holder, camera);
         if (IsGhosting) DrawGhost(holder, camera);
         holder.DeviceContext.OutputMerger.DepthStencilState = holder.States.ReadOnlyDepthState;
     }
@@ -1441,13 +1541,7 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     {
         if (_prop == null || _fading == null) return;
 
-        var context = holder.DeviceContext;
-        var scene = InnerBuffer;
-        var copy = holder.GetHelper<CopyHelper>();
-        _fadeBuffer ??= TargetResourceTexture.Create(scene.Format);
-        _fadeBuffer.Resize(holder, Width, Height, null);
-        _ghostBlend ??= CreateGhostBlend(holder.Device);
-
+        var prop = _prop;
         var siblings = _propNodes.Count > 0 ? _propNodes[0].Siblings : new HashSet<RenderableList>();
         foreach (var group in _fading.GroupBy(f => f.Value))
         {
@@ -1457,23 +1551,68 @@ public class GarageRenderer : DarkKn5ObjectRenderer
             var lists = group.Select(f => f.Key).ToHashSet();
             bool Only(IRenderableObject o) => o is not RenderableList list || !siblings.Contains(list) || lists.Contains(list);
 
-            // In the scene's depth, so what is in front of them still is
-            copy.Draw(holder, scene.View, _fadeBuffer.TargetView);
-            context.OutputMerger.SetTargets(DepthStencilView, _fadeBuffer.TargetView);
-            context.OutputMerger.BlendState = null;
-            context.OutputMerger.DepthStencilState = holder.States.LessEqualDepthState;
-            _prop.Draw(holder, camera, SpecialRenderMode.Simple, Only);
-            context.OutputMerger.DepthStencilState = holder.States.ReadOnlyDepthState;
-            _prop.Draw(holder, camera, SpecialRenderMode.SimpleTransparent, Only);
-
-            context.OutputMerger.BlendState = _ghostBlend;
-            context.OutputMerger.BlendFactor = new Color4(opacity, opacity, opacity, opacity);
-            context.OutputMerger.DepthStencilState = holder.States.DisabledDepthState;
-            context.Rasterizer.State = null;
-            copy.Draw(holder, _fadeBuffer.View, scene.TargetView);
+            DrawSeeThrough(holder, opacity, mode => prop.Draw(holder, camera, mode, Only));
         }
+    }
 
-        // Back to what the scene pass expects
+    /// <summary>The grime over a mounted part goes where the mounted parts go: the car's body leans, the stand turns</summary>
+    private void FollowParts()
+    {
+        if (!_workFollowsParts || _prop == null) return;
+
+        foreach (var file in new[] { _work, _workGrime })
+        {
+            if (file == null || file.LocalMatrix == _prop.LocalMatrix) continue;
+            file.LocalMatrix = _prop.LocalMatrix;
+            file.UpdateBoundingBox();
+        }
+    }
+
+    /// <summary>The part on the workbench on its way in or out, and the grime over the part a job is being done on</summary>
+    private void DrawWork(DeviceContextHolder holder, ICamera camera)
+    {
+        if (_work != null && _workOpacity is > 0f and < 1f) DrawOver(holder, camera, _work, _workOpacity);
+
+        var grime = _workGrimeAmount * (_work != null ? _workOpacity : 1f);
+        if (_workGrime != null && grime > 0.004f) DrawOver(holder, camera, _workGrime, grime);
+    }
+
+    /// <summary>
+    /// A model drawn over the scene see-through, as the parts on their way are (<see cref="DrawFading"/>): over a copy of
+    /// the scene in its depth, blended back at <paramref name="opacity"/>. A surface the scene has at the same depth (the
+    /// mounted part under its grime) is drawn over, not hidden.
+    /// </summary>
+    private void DrawOver(DeviceContextHolder holder, ICamera camera, Kn5RenderableFile file, float opacity) =>
+        DrawSeeThrough(holder, opacity, mode => file.Draw(holder, camera, mode));
+
+    /// <summary>
+    /// One see-through pass: <paramref name="draw"/>'s solid then transparent surfaces over a copy of the scene, in the
+    /// scene's depth so what is in front of them still is, the copy blended back at <paramref name="opacity"/>; the
+    /// output left as the scene pass expects it
+    /// </summary>
+    private void DrawSeeThrough(DeviceContextHolder holder, float opacity, Action<SpecialRenderMode> draw)
+    {
+        var context = holder.DeviceContext;
+        var scene = InnerBuffer;
+        var copy = holder.GetHelper<CopyHelper>();
+        _fadeBuffer ??= TargetResourceTexture.Create(scene.Format);
+        _fadeBuffer.Resize(holder, Width, Height, null);
+        _ghostBlend ??= CreateGhostBlend(holder.Device);
+
+        copy.Draw(holder, scene.View, _fadeBuffer.TargetView);
+        context.OutputMerger.SetTargets(DepthStencilView, _fadeBuffer.TargetView);
+        context.OutputMerger.BlendState = null;
+        context.OutputMerger.DepthStencilState = holder.States.LessEqualDepthState;
+        draw(SpecialRenderMode.Simple);
+        context.OutputMerger.DepthStencilState = holder.States.ReadOnlyDepthState;
+        draw(SpecialRenderMode.SimpleTransparent);
+
+        context.OutputMerger.BlendState = _ghostBlend;
+        context.OutputMerger.BlendFactor = new Color4(opacity, opacity, opacity, opacity);
+        context.OutputMerger.DepthStencilState = holder.States.DisabledDepthState;
+        context.Rasterizer.State = null;
+        copy.Draw(holder, _fadeBuffer.View, scene.TargetView);
+
         context.OutputMerger.BlendState = null;
         context.OutputMerger.SetTargets(DepthStencilView, scene.TargetView);
         context.OutputMerger.DepthStencilState = holder.States.LessEqualDepthState;
@@ -1611,6 +1750,7 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         context.OutputMerger.DepthStencilState = holder.States.LessEqualDepthState;
         _scenery?.Draw(holder, camera, SpecialRenderMode.Simple);
         _fixture?.Draw(holder, camera, SpecialRenderMode.Simple);
+        _bench?.Draw(holder, camera, SpecialRenderMode.Simple);
         base.DrawCars(holder, camera, SpecialRenderMode.Simple);
         context.OutputMerger.DepthStencilState = holder.States.ReadOnlyDepthState;
         base.DrawCars(holder, camera, SpecialRenderMode.SimpleTransparent);
@@ -1673,6 +1813,12 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         _scenery = null;
         _fixture?.Dispose();
         _fixture = null;
+        _bench?.Dispose();
+        _bench = null;
+        _work?.Dispose();
+        _work = null;
+        _workGrime?.Dispose();
+        _workGrime = null;
         _candidates?.Dispose();
         _candidates = null;
         _ghostBuffer?.Dispose();

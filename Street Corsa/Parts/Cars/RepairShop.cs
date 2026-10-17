@@ -42,8 +42,8 @@ public sealed class RepairJob
 }
 
 /// <summary>
-/// Repairs: what takes damage (<c>Tear</c>, and the body) off a car. Mileage (<c>Wear</c>) is not repaired: a worn
-/// part is replaced, in the parts view. A job costs a share of the damaged parts' new price, as much of it as the
+/// Repairs: what takes damage (<c>Tear</c>, and the body) off a car. Mileage (<c>Wear</c>) is not repaired here: a
+/// worn part is replaced, or rebuilt, in the parts view (<see cref="Rebuilding"/>). A job costs a share of the damaged parts' new price, as much of it as the
 /// damage goes, plus the labour; the body shop charges by how hard the body was hit. Small jobs take half an hour,
 /// big ones two hours. Filling up, the oil and the wash are the gas station's (<see cref="GasStation"/>); a car too dry to
 /// get there gets a can of gas (<see cref="CanOfGas"/>).
@@ -115,7 +115,7 @@ public static class RepairShop
     private const double BodyWorth = 0.5;
 
     /// <summary>A part at this or better needs nothing done</summary>
-    private const double Straight = 0.995;
+    private const double Straight = PartInstance.Undamaged;
 
     /// <param name="catalog">Null when there are no parts: only the body can be done</param>
     /// <param name="priceMultiplier">The save's <see cref="GameRules.PartPriceMultiplier"/>, on the whole bill</param>

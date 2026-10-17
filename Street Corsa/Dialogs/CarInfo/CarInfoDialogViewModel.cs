@@ -21,7 +21,7 @@ namespace StreetCorsa.Dialogs.CarInfo
         public System.Windows.Thickness Indent => new(Depth * 18, 0, 0, 0);
 
         /// <summary>"82%", or "82%, damaged (40% left)"</summary>
-        public string ConditionDisplay => Tear < 0.995
+        public string ConditionDisplay => Tear < PartInstance.Undamaged
             ? Screens.Shared.ConditionDisplay.PercentOf(Wear) + GameText.Say("garage.part.damaged", ("left", $"{Tear * 100:0}"))
             : Screens.Shared.ConditionDisplay.PercentOf(Wear);
 

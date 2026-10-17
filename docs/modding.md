@@ -230,6 +230,8 @@ anywhere under the folder (a `pack.json` with the parts' `.kn5` models next to i
   that make stocks them (see `partshops` below). The base game's makes are `mopar`, `ford` and `gm` (the families of
   makes.json); a pack of parts for any make (the universal-fit carburettors and air cleaners) has none.
 - `part_groups.json` — the shelves (see below). Most mods need none.
+- `rebuilds.json` — the work a part can have done on it to take its mileage off (see below). A mod's parts of the base
+  game's kinds and shelves get the base game's jobs.
 - `stand_ins.json` — script classes the mod's parts extend that the source game never shipped, made from the class
   their author copied: `{ "stand_ins": { "<class>": { "copy": "<class copied>", "extends": "<what it extends
   instead>", "drop": [ "<methods left out>" ] } } }`. A later mod's replaces one of the same name. The base game's makes
@@ -313,6 +315,34 @@ set stay set), so a mod's rule still counts when a later base game rules the sam
 other on, or a rule needing a kind it waits for) are reported. A kind of the same id adds its classes, words and
 `"serves"` to the kind; the name the player reads is the first mod's. The base game's kinds and
 rules are in `Content\streetcorsa\parts\work_order.json`.
+
+**Rebuilds.** `rebuilds.json` lists the jobs the parts view offers on a part ("Work on it") to take its mileage off:
+
+```json
+{
+  "jobs": [
+    { "id": "carb_kit", "name": "Rebuild with a kit", "kinds": [ "carburettor" ], "restores": 0.95, "cost": 0.12,
+      "cost_at_least": 8, "minutes": 90, "off": true },
+    { "id": "brake_reline", "groups": [ "brakes" ], "restores": 0.95, "cost": 0.2, "minutes": 60 },
+    { "id": "rebuilt_exchange", "way": "exchange", "kinds": [ "water_pump", "starter" ], "restores": 0.92, "cost": 0.45,
+      "minutes": 45, "off": true, "fixes_damage": true }
+  ]
+}
+```
+
+A job is for the parts of its `kinds` (the work order's) or its `groups` (the shelves). `way` is `kit` (the player's own
+work, the default) or `exchange` (a rebuilt one from the parts counter, the old part back as the core). `restores` is
+the condition the part is in after it (0 to 1; a part in better shape gains nothing), `min_wear` the least it can be in
+for the job (below it, it wants a machine shop), `cost` a share of the part's new price, never under `cost_at_least`
+dollars, `minutes` the time it takes. `off`: done with the part off the car and off any other part (on the shelf, or
+the engine on the stand); `bare`: with nothing mounted on it; `fixes_damage`: takes its damage off too. The player reads
+`rebuild.<id>` in the text, else `name`. `steps` is what the player sees done while the job runs, in turn, each as long
+as the others: `{ "id": "soak", "say": "Soaking it in carb cleaner", "sound": "work.wash", "start": "station.bell" }`,
+read as `rebuild.<job>.<step>` in the text (else `say`) over the looping sfx cue `sound` (none: `work.bench`), with the
+one-shot cue `start` played as it begins. The base game's work sounds are `work.bench`, `work.wash`, `work.hone`,
+`work.lap`, `work.air`, `work.grind`, `work.press`, `work.road` and `work.counter`. A job without steps shows its name
+over the bench's sound. A job of the same id as an earlier mod's takes its place, whole;
+`"disabled": true` takes it out. The base game's jobs are in `Content\streetcorsa\parts\rebuilds.json`.
 
 **A part's figures.** A part's stats come from its SLRR script (`source_script`): the game builds the script and runs it
 to work the engine out; a part without one gives its own (`"figures"`, see an engine of figures below). The rest is read from the pack: `"class_chain"` says what the part is (a crankshaft, a clutch:
@@ -511,7 +541,9 @@ folder name), where it stands and which way it faces: `{ "name": "Radio", "model
 mod's prop of an id the base game has replaces it, so a mod can swap the radio for another set or put it elsewhere in
 its own garage; one without a place in a garage takes it out of that garage. `credit` names the model's maker where
 the game shows its credits (Settings), as a CC BY licence asks. The published `bushradio` mod has `radio`, the set on the
-welder: clicking it opens the radio. `tools\Props` makes a prop's KN5: `prepare_prop.py` takes any model with PBR
+welder: clicking it opens the radio. The base game's `workbench` is where a loose part's "Work on it" job is shown; it names
+no model and the game draws its own (a mod's `workbench` may name one, its top 0.9 m up, its front +Z); a garage it has no place in
+has no bench, and a loose part's job is shown there without the part. `tools\Props` makes a prop's KN5: `prepare_prop.py` takes any model with PBR
 materials (a Sketchfab .glb, a .blend) through Blender, `PropBuilder` writes the KN5.
 
 ### dealers

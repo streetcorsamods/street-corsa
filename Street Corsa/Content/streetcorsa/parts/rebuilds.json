@@ -1,0 +1,38 @@
+{
+  "_comment": [
+    "The work a part can have done on it to take its mileage off (see docs/modding.md, \"rebuilds.json\"). A job is for the",
+    "parts of its kinds (work_order.json's) or of its groups (part_groups.json's shelves). way: kit (the player's own work)",
+    "or exchange (swapped at the parts counter for a rebuilt one, the old part the core). restores: the condition the part",
+    "is in after it, 0 to 1 (a kit is not a new part); min_wear: a part worn below it is too far gone for the job (it wants",
+    "a machine shop); cost: the kit or the rebuilt unit, a share of the part's new price, never less than cost_at_least",
+    "dollars; minutes: the work, or the trip to the counter; off: done with the part off the car and off any other part",
+    "(on the shelf, or the engine on the stand); bare: done with nothing mounted on it; fixes_damage: takes its damage off",
+    "too. The player reads rebuild.<id> in the text, else name. A mod's job of the same id takes the place of this one,",
+    "whole; \"disabled\": true takes it out."
+  ],
+  "jobs": [
+    { "id": "carb_kit", "name": "Rebuild with a kit", "kinds": [ "carburettor" ], "restores": 0.95, "cost": 0.12, "cost_at_least": 8, "minutes": 90, "off": true, "steps": [ { "id": "strip", "sound": "work.bench" }, { "id": "soak", "sound": "work.wash" }, { "id": "needle", "sound": "work.bench" }, { "id": "float", "sound": "work.bench" } ] },
+    { "id": "tune_up", "name": "Tune-up: points, condenser, cap and rotor", "kinds": [ "distributor", "side_distributor" ], "restores": 0.95, "cost": 0.15, "cost_at_least": 6, "minutes": 30, "steps": [ { "id": "points", "sound": "work.bench" }, { "id": "condenser", "sound": "work.bench" }, { "id": "cap", "sound": "work.bench" }, { "id": "dwell", "sound": "work.bench" } ] },
+    { "id": "plugs_wires", "name": "New plugs and wires", "kinds": [ "ignition" ], "restores": 1.0, "cost": 0.3, "cost_at_least": 4, "minutes": 20, "steps": [ { "id": "plugs", "sound": "work.bench" }, { "id": "wires", "sound": "work.bench" } ] },
+    { "id": "filter_element", "name": "New filter element", "kinds": [ "air_filter" ], "restores": 1.0, "cost": 0.15, "cost_at_least": 2, "minutes": 5, "steps": [ { "id": "element", "sound": "work.bench" } ] },
+    { "id": "valve_job", "name": "Valve job: lap the valves, new seals", "kinds": [ "cylinder_head" ], "restores": 0.85, "min_wear": 0.35, "cost": 0.08, "cost_at_least": 15, "minutes": 240, "off": true, "bare": true, "steps": [ { "id": "springs", "sound": "work.press" }, { "id": "clean", "sound": "work.grind" }, { "id": "lap", "sound": "work.lap" }, { "id": "seals", "sound": "work.press" } ] },
+    { "id": "ring_job", "name": "Ring job: hone the bores, new rings", "kinds": [ "pistons" ], "restores": 0.85, "min_wear": 0.35, "cost": 0.15, "cost_at_least": 20, "minutes": 180, "off": true, "bare": true, "steps": [ { "id": "glaze", "sound": "work.hone" }, { "id": "gap", "sound": "work.bench" }, { "id": "rings", "sound": "work.bench" }, { "id": "wash", "sound": "work.wash" } ] },
+    { "id": "rod_bearings", "name": "New rod bearings", "kinds": [ "connecting_rods" ], "restores": 0.9, "min_wear": 0.35, "cost": 0.12, "cost_at_least": 12, "minutes": 60, "off": true, "steps": [ { "id": "caps", "sound": "work.air" }, { "id": "shells", "sound": "work.bench" }, { "id": "torque", "sound": "work.bench" } ] },
+    { "id": "main_bearings", "name": "New main bearings, journals polished", "kinds": [ "crankshaft" ], "restores": 0.85, "min_wear": 0.4, "cost": 0.1, "cost_at_least": 15, "minutes": 90, "off": true, "steps": [ { "id": "polish", "sound": "work.grind" }, { "id": "shells", "sound": "work.bench" }, { "id": "torque", "sound": "work.bench" } ] },
+    { "id": "cam_lifters", "name": "New lifters, cam broken in", "kinds": [ "camshaft" ], "restores": 0.85, "min_wear": 0.4, "cost": 0.15, "cost_at_least": 15, "minutes": 60, "off": true, "steps": [ { "id": "lifters", "sound": "work.bench" }, { "id": "lube", "sound": "work.bench" }, { "id": "new", "sound": "work.bench" } ] },
+    { "id": "block_cleanup", "name": "Hot wash, hone, new freeze plugs", "kinds": [ "block" ], "restores": 0.8, "min_wear": 0.4, "cost": 0.02, "cost_at_least": 25, "minutes": 240, "off": true, "bare": true, "steps": [ { "id": "wash", "sound": "work.wash" }, { "id": "plugs", "sound": "work.press" }, { "id": "hone", "sound": "work.hone" }, { "id": "new_plugs", "sound": "work.press" } ] },
+    { "id": "gearbox_kit", "name": "Rebuild with a kit: synchros, bearings, seals", "kinds": [ "transmission" ], "restores": 0.9, "min_wear": 0.25, "cost": 0.2, "cost_at_least": 25, "minutes": 360, "off": true, "steps": [ { "id": "open", "sound": "work.air" }, { "id": "wash", "sound": "work.wash" }, { "id": "bearings", "sound": "work.press" }, { "id": "synchros", "sound": "work.bench" }, { "id": "close", "sound": "work.bench" } ] },
+    { "id": "water_pump_kit", "name": "Rebuild: new seal and bearing", "kinds": [ "water_pump" ], "restores": 0.9, "cost": 0.25, "cost_at_least": 5, "minutes": 60, "off": true, "steps": [ { "id": "apart", "sound": "work.bench" }, { "id": "bearing", "sound": "work.press" }, { "id": "seal", "sound": "work.bench" } ] },
+    { "id": "fuel_pump_kit", "name": "Rebuild: new diaphragm and valves", "kinds": [ "fuel_pump" ], "restores": 0.9, "cost": 0.25, "cost_at_least": 4, "minutes": 45, "off": true, "steps": [ { "id": "apart", "sound": "work.bench" }, { "id": "diaphragm", "sound": "work.bench" } ] },
+    { "id": "brushes_bearings", "name": "New brushes and bearings", "kinds": [ "alternator", "starter" ], "restores": 0.85, "cost": 0.15, "cost_at_least": 4, "minutes": 60, "off": true, "steps": [ { "id": "apart", "sound": "work.bench" }, { "id": "brushes", "sound": "work.bench" }, { "id": "bearings", "sound": "work.press" } ] },
+    { "id": "blower_kit", "name": "Rebuild: seals and bearings", "kinds": [ "charger" ], "restores": 0.9, "min_wear": 0.25, "cost": 0.12, "cost_at_least": 30, "minutes": 240, "off": true, "steps": [ { "id": "apart", "sound": "work.air" }, { "id": "wash", "sound": "work.wash" }, { "id": "bearings", "sound": "work.press" } ] },
+    { "id": "radiator_flush", "name": "Flush and pressure-test", "kinds": [ "radiator", "radiator_fan" ], "restores": 0.85, "min_wear": 0.3, "cost": 0.05, "cost_at_least": 3, "minutes": 60, "steps": [ { "id": "flush", "sound": "work.wash" }, { "id": "test", "sound": "work.air" } ] },
+    { "id": "brake_reline", "name": "Reline the shoes, adjust", "groups": [ "brakes" ], "restores": 0.95, "cost": 0.2, "cost_at_least": 6, "minutes": 60, "steps": [ { "id": "drum", "sound": "work.air" }, { "id": "shoes", "sound": "work.press" }, { "id": "adjust", "sound": "work.bench" } ] },
+    {
+      "id": "rebuilt_exchange", "name": "Swap for a rebuilt one (old one back as the core)", "way": "exchange",
+      "kinds": [ "carburettor", "distributor", "side_distributor", "water_pump", "fuel_pump", "alternator", "starter", "steering_pump", "clutch" ],
+      "restores": 0.92, "cost": 0.45, "cost_at_least": 10, "minutes": 45, "off": true, "fixes_damage": true,
+      "steps": [ { "id": "drive", "sound": "work.road" }, { "id": "counter", "sound": "work.counter", "start": "station.bell" }, { "id": "back", "sound": "work.road" } ]
+    }
+  ]
+}

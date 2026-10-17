@@ -44,3 +44,11 @@ station/pump/pump_stop_382268.ogg,Fueling a car,XiiiSamples,CC0 1.0,https://free
 ui/click.ogg,Toggle Switch,pillwave,CC0 1.0,https://freesound.org/s/423957/
 ui/lights.ogg,LIGHT SWITCH 018,leonelmail,CC0 1.0,https://freesound.org/s/508071/
 ui/purchase.ogg,Cash Register Purchase,Zott820,CC0 1.0,https://freesound.org/s/209578/
+work/air.ogg,Air ratchet and compressor,Street Corsa (synthesised by tools/RebuildSounds/make_sounds.py),the game's own,
+work/bench.ogg,Hand tools at the bench,Street Corsa (synthesised by tools/RebuildSounds/make_sounds.py),the game's own,
+work/grind.ogg,Bench grinder wire wheel,Street Corsa (synthesised by tools/RebuildSounds/make_sounds.py),the game's own,
+work/hone.ogg,Cylinder hone in a drill,Street Corsa (synthesised by tools/RebuildSounds/make_sounds.py),the game's own,
+work/lap.ogg,Valve lapping,Street Corsa (synthesised by tools/RebuildSounds/make_sounds.py),the game's own,
+work/press.ogg,Hammer on a drift,Street Corsa (synthesised by tools/RebuildSounds/make_sounds.py),the game's own,
+work/road.ogg,The drive to the parts counter,Street Corsa (synthesised by tools/RebuildSounds/make_sounds.py),the game's own,
+work/wash.ogg,Parts washer brush,Street Corsa (synthesised by tools/RebuildSounds/make_sounds.py),the game's own,

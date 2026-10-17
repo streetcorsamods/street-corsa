@@ -115,4 +115,40 @@ public class GaragePropsTests : IDisposable
 
         Assert.Equal("\"Radio\" by Someone, CC BY 4.0", GarageProps.Find(ModSet.Load(_temp.Path), "radio", Showroom("garage"))!.Credit);
     }
+
+    [Fact]
+    public void A_prop_the_game_draws_itself_needs_no_model_but_a_named_one_is_used()
+    {
+        _temp.File($"{ModIds.BaseId}/{ModSet.ManifestFileName}", """{ "id": "streetcorsa" }""");
+        _temp.File($"{ModIds.BaseId}/props/workbench/prop.json", """
+            { "name": "Workbench", "places": { "garage": { "position": [3, 0, -1.75], "heading": 90 } } }
+            """);
+
+        var bench = GarageProps.Find(ModSet.Load(_temp.Path), "workbench", Showroom("garage"), builtIn: true)!;
+        Assert.Equal("", bench.Model);
+        Assert.Equal(new Vector3(3, 0, -1.75f), bench.Position);
+        Assert.Equal(90, bench.Heading);
+
+        // Not a prop the game draws: a missing model is a problem, and no prop
+        var problems = new List<string>();
+        Assert.Null(GarageProps.Find(ModSet.Load(_temp.Path), "workbench", Showroom("garage"), problems));
+        Assert.Single(problems);
+
+        // A mod's own model takes the game's place
+        _temp.File($"{ModIds.BaseId}/props/workbench/bench.kn5", "x");
+        _temp.File($"{ModIds.BaseId}/props/workbench/prop.json", """
+            { "model": "bench.kn5", "places": { "garage": { "position": [3, 0, -1.75] } } }
+            """);
+        Assert.EndsWith("bench.kn5", GarageProps.Find(ModSet.Load(_temp.Path), "workbench", Showroom("garage"), builtIn: true)!.Model);
+    }
+
+    [Fact]
+    public void The_base_games_workbench_stands_in_its_garage()
+    {
+        var bench = GarageProps.Find(ModSet.Load(RepoPaths.Content), StreetCorsa.Parts.WorkbenchLayout.PropId,
+            Path.Combine(RepoPaths.BaseContent, "garages", "garage", "garage.kn5"), builtIn: true);
+
+        Assert.NotNull(bench);
+        Assert.Equal("", bench.Model);
+    }
 }

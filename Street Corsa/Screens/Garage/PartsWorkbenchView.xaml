@@ -32,6 +32,35 @@
             <Setter Property="Margin" Value="0,2"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
+        <!-- A job the picked part can have done: its button, and why it cannot be done now under it -->
+        <DataTemplate x:Key="RebuildOfferTemplate">
+            <StackPanel Margin="0,3">
+                <Button Command="{Binding DataContext.RebuildCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        CommandParameter="{Binding}"
+                        Style="{StaticResource DialogSecondaryButtonStyle}"
+                        HorizontalAlignment="Stretch"
+                        Padding="10,5">
+                    <StackPanel>
+                        <TextBlock Text="{Binding Name}"
+                                   FontSize="{StaticResource FontSizeCompact}"
+                                   TextWrapping="Wrap"
+                                   TextAlignment="Center"/>
+                        <TextBlock Text="{Binding PriceDisplay}"
+                                   FontSize="{StaticResource FontSizeCaption}"
+                                   FontWeight="Normal"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   TextWrapping="Wrap"
+                                   TextAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+                <TextBlock Text="{Binding WhyNot}"
+                           FontSize="{StaticResource FontSizeCaption}"
+                           Foreground="{StaticResource SalmonBrush}"
+                           TextWrapping="Wrap"
+                           Margin="2,2,0,0"
+                           Visibility="{Binding WhyNot, Converter={StaticResource StringToVisibilityConverter}}"/>
+            </StackPanel>
+        </DataTemplate>
     </UserControl.Resources>
 
     <!-- No background: the 3D view below takes every click that does not land on a panel -->
@@ -40,6 +69,7 @@
         <Border Style="{StaticResource PanelStyle}"
                 helpers:Reveal.IsShown="{Binding IsOpen}"
                 helpers:Reveal.OffsetX="-60"
+                IsEnabled="{Binding IsIdle}"
                 Width="260"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Stretch"
@@ -155,6 +185,12 @@
                                 FontSize="{StaticResource FontSizeCompact}"
                                 Margin="8,0,0,0"/>
                     </StackPanel>
+
+                    <!-- The work the picked part can have done, here on the shelf -->
+                    <StackPanel Margin="0,10,0,0" Visibility="{Binding HasShelfRebuilds, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <TextBlock Text="{t:Text workbench.rebuild}" Style="{StaticResource PanelTitleStyle}"/>
+                        <ItemsControl ItemsSource="{Binding Rebuilds}" ItemTemplate="{StaticResource RebuildOfferTemplate}"/>
+                    </StackPanel>
                 </StackPanel>
             </Grid>
         </Border>
@@ -162,6 +198,7 @@
         <!-- Engine sheet and the part that is clicked on -->
         <StackPanel helpers:Reveal.IsShown="{Binding IsOpen}"
                     helpers:Reveal.OffsetX="60"
+                    IsEnabled="{Binding IsIdle}"
                     Width="260"
                     HorizontalAlignment="Right"
                     VerticalAlignment="Top"
@@ -277,6 +314,12 @@
                                 FontSize="{StaticResource FontSizeBody}"
                                 Margin="8,0,0,0"/>
                     </StackPanel>
+
+                    <!-- The work the picked part can have done where it is -->
+                    <StackPanel Margin="0,12,0,0" Visibility="{Binding HasPartRebuilds, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <TextBlock Text="{t:Text workbench.rebuild}" Style="{StaticResource PanelTitleStyle}"/>
+                        <ItemsControl ItemsSource="{Binding Rebuilds}" ItemTemplate="{StaticResource RebuildOfferTemplate}"/>
+                    </StackPanel>
                 </StackPanel>
             </Border>
 
@@ -287,5 +330,54 @@
                        Margin="4,10,0,0"
                        Visibility="{Binding HasSelection, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
         </StackPanel>
+
+        <!-- A job being done: its name, the step on now, how far it is, the game's clock and the part's condition going up -->
+        <Border Style="{StaticResource PanelStyle}"
+                helpers:Reveal.IsShown="{Binding IsWorking}"
+                helpers:Reveal.OffsetY="30"
+                Width="420"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Bottom"
+                Margin="0,0,0,40">
+            <StackPanel>
+                <TextBlock Text="{Binding WorkTitle}" Style="{StaticResource PanelTitleStyle}" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding WorkCaption}"
+                           FontSize="{StaticResource FontSizeBodyLarge}"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource TextPrimaryBrush}"
+                           TextWrapping="Wrap"
+                           Margin="0,0,0,8"/>
+                <ProgressBar Minimum="0" Maximum="1"
+                             Value="{Binding WorkProgress, Mode=OneWay}"
+                             Height="6"
+                             Foreground="{StaticResource AccentPrimaryBrush}"
+                             Background="{StaticResource Gray30Brush}"
+                             BorderThickness="0"/>
+                <Grid Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0"
+                               Text="{Binding WorkClock}"
+                               FontFamily="{StaticResource NumbersFont}"
+                               FontSize="{StaticResource FontSizeBody}"
+                               Foreground="{StaticResource TextPrimaryBrush}"
+                               VerticalAlignment="Center"/>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock Text="{t:Text workbench.condition}" Style="{StaticResource LabelStyle}"/>
+                        <TextBlock Text="{Binding WorkCondition}" Style="{StaticResource ValueStyle}" Foreground="{StaticResource AccentSuccessBrush}" FontWeight="SemiBold"/>
+                    </StackPanel>
+                    <Button Grid.Column="2"
+                            Content="{t:Text workbench.work.skip}"
+                            Command="{Binding SkipWorkCommand}"
+                            ToolTip="{t:Text workbench.work.skip.tip}"
+                            Style="{StaticResource DialogSecondaryButtonStyle}"
+                            Padding="12,4"
+                            FontSize="{StaticResource FontSizeCompact}"/>
+                </Grid>
+            </StackPanel>
+        </Border>
     </Grid>
 </UserControl>

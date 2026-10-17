@@ -1523,6 +1523,96 @@ that cannot (3). The owner picked 1 and 3 first, one PR (branch `feature/ideas-b
   `CAR_n_PAINT_k`). The car's files are never touched. The icon is a stand-in drawn in the icons' style until the
   owner's `paint_spray.png` comes.
 
+## Step 30: parts that can be fixed (planned 2026-10-17)
+
+**Owner:** car parts should be fixable, kept real: a battered car bought to have its whole engine refurbished. Until now
+a part's mileage (`Wear`) was never fixed (a worn part was replaced) and the repair shop only took damage (`Tear`) off.
+The owner picked the plan below and phase 1 first (branch `feature/part-rebuilds`).
+
+The idea, the 1960s way: a worn engine is not made new, it is cut to the next size and fitted with parts made for that
+size, and the small parts are rebuilt with a kit or swapped at the parts counter for a rebuilt one.
+
+**Where it stands (2026-10-17):** phases 1 and 1b built on `feature/part-rebuilds` (commits `949d33d`, `f912586`),
+PR #73 to dev, open. The owner played it: "I really love it". `tools/check.ps1` passes but for the rated
+`vette-63-fuelie` build, which failed before this step too. Not pushed to gitlab (done after the merge, as ever).
+
+**To pick up in a new session:**
+
+1. Merge PR #73 into dev once the owner says so (squash or merge, as they ask), then sync dev to gitlab.
+2. Not yet seen anywhere: the grime over a part still mounted (a tune-up on the car, the block clean-up on the stand);
+   only a loose part on the bench was rendered off-screen. Ask the owner how it looked, or render it: the off-screen
+   harness is a console app on `GarageRenderer` (the garage KN5, `SetScenery(EngineStandLayout.CreateModel(..))`,
+   `SetWork(clean, grime, placement, followsParts)`, `Shot`), not in the repo.
+3. Ask whether the synthesised work sounds pass or want recordings (CC0, credited in `sfx/credits.csv`).
+4. Balance: the job prices (`cost`, `cost_at_least` in `rebuilds.json`) are first guesses.
+5. The owner answered the open questions (below): build phase 2 with a quality roll on the player's own work and the
+   machine shop as a 3D place; hidden flaws are out for now.
+
+- **Phase 1: kits and exchange units (built).** Jobs per part kind in the parts view (the part card, and a part on the
+  shelf), as data: `parts/rebuilds.json` in every mod (`PartRebuilds` on `PartsCatalog.Rebuilds`), jobs matched by
+  the work order's kinds or the shelves' groups (`Parts/Cars/Rebuilding`: offers, why not, apply). A carburettor
+  rebuilt with a kit, a tune-up (points, condenser, cap and rotor), a valve job, a ring job, bearings, a gearbox kit,
+  brakes relined; a water pump, generator, starter, fuel pump, distributor, carburettor or clutch swapped for a rebuilt
+  one (its damage gone too, the old one the core). Each job costs its kit (a share of the part's new price), takes
+  time, brings the part up to what the job can (a kit is not a new part), and some need the part off, or bare. A part
+  too far gone for a kit (a head too worn to lap, a bore past a ring job: `min_wear`) says it wants a machine shop.
+  No new save state.
+- **Phase 1b: the job seen done (built).** A job plays out over 4 to 10 seconds, longer for a longer job
+  (`RebuildShow.SecondsFor`), skippable. A loose part floats down onto a workbench behind the engine stand
+  (`WorkbenchLayout`, drawn from boxes with the stand) and turns slowly there; for a part on the car or the stand the
+  camera goes to it where it is (`CarViewport3D.WorkPiece`). The part's grime (`Looks/PartGrime`: oil, road dirt and a
+  little rust, drawn a millimetre and a half over the part, since two surfaces at one depth hide the second, and blended
+  at its amount through `GarageRenderer.SetWork`/`WorkGrime`) fades from what its old condition carried to what the
+  new one does. Captions per step (`steps` in rebuilds.json) over looping work sounds synthesised by
+  `tools/RebuildSounds/make_sounds.py` (hand tools, the parts washer, a hone, valve lapping, an air ratchet, the bench
+  grinder, a hammer on a drift, the road); a clank between steps; the game's clock and the part's condition going up
+  under a progress bar (`PartsWorkbenchViewModel.ShowWork`). An exchange unit is a drive to the parts counter and back
+  (the road, the shop's air, its door bell). The owner's picks: a workbench spot, 4 to 10 seconds, a fade with sounds
+  for the exchange (the parts shop's counter scene later). The job is done, paid and its time spent before the show:
+  leaving or skipping only ends the showing.
+- **Phase 2: the machine shop (next).** Blocks bored oversize (+.030, +.040, +.060; past that a sleeve or scrap), cranks
+  ground undersize (.010, .020, .030) with bearings to match, oversize pistons for an oversize bore, heads milled
+  (a little compression), cams reground, flywheels resurfaced, radiators re-cored, drums turned. Each part keeps its
+  sizes and the cuts it has left, so a standard-bore block is worth more than one at +.060. Parts dropped off, ready in
+  a few days. A draft of how, from what is there now:
+  - **Data:** machine jobs in `rebuilds.json` too (`"way": "machine"`): a `cut` (`bore`, `grind`, `mill`, `regrind`,
+    `resurface`), its steps of size (`[0.030, 0.040, 0.060]` in inches, or a mill's thousandths), what each step does to
+    the dyno, `restores` (a machined part is as good as new: 0.97 or so), the days it takes.
+  - **Save:** `PartInstance` gets the cuts made (`Dictionary<string, int> Cuts`, empty = standard). LiteDB reads an
+    older save's parts with it empty; check `GameStateRepository`'s load fix-ups (`PartOrders ??= []` is the pattern)
+    and the saves' schema stamp before calling it a bump.
+  - **Matching parts:** an oversize bore wants pistons of its size, an undersize crank bearings of its size. The
+    simplest real way: the machine job sells the matching pistons/bearings with it (in its price), and the pistons
+    remember the size (`Cuts["bore"]` on the pistons too); a work order `needs`-style rule keeps standard pistons out of
+    a bored block (`EngineWork.WhyNotOn` is where a part is refused, in the work order's words).
+  - **Dyno:** bore and the clearance volume come from the block and head scripts (`DynoInputs.Bore`,
+    `ClearanceVolume` from `"Vmin"`); the cuts go on after them as the parts' figures do (`Parts/Logic/PartFigures`,
+    E11: "compression last, from the bore and stroke it ends with"): bore + oversize, `Vmin` less for a milled head.
+    Then the engine's price follows by itself (`PartPricing.EngineNewPrice` from the dyno).
+  - **Worth:** a part's worth (`PartPricing.Worth`) less for every cut gone, nothing at the last (a block past +.060).
+  - **Drop-off:** `Player.PartOrders` (`PartOrder`: part, paid, ordered, `ArrivesOn`; delivered by
+    `NewspaperPartsService` at the first review of its day) already brings parts to the shelf on a day: a machine
+    job takes the part off the shelf and puts it in an order that comes back cut. The shelf or the paper says what is
+    at the machine shop.
+  - **Where (owner: a 3D place):** a machine shop scene of its own, as the parts shop is one (`shopscenes`, see
+    `docs/screens/part-shop.md`): a boring bar, a crank grinder, a valve seat cutter, a hot tank; the
+    machinist as the parts shop's clerk is (the AI talk, the game deciding every price and every size). On the part
+    shops' map, or a place of its own reached from the garage; how the player brings parts there (the car's trunk, or a
+    drop-off from the shelf) to settle with the owner when phase 2 starts.
+  - **Quality roll (owner: yes):** the player's own work (kits, phase 1) lands near what the job can do rather than on
+    it: a roll round `restores` (say within 0.08 below it to a little above), never worse than the part was, the show
+    saying how it came out ("good job" / "a bit rough"). The machine shop's work is a professional's: no roll, or a
+    small one. Kept un-punishing (the owner turned hidden flaws down as too punishing): no botched job that ruins a
+    part. Figures in `rebuilds.json` (`roll` per job) or the rules.
+- **Phase 3: hidden flaws (shelved by the owner 2026-10-17: too punishing; maybe later).** A cracked block, a spun bearing, a burnt valve, a scored bore: found by a compression test
+  or the oil pressure in the garage, by tearing the engine down, or by the machinist's crack check (the machinist talks,
+  as the parts shop's clerk). Buying a battered car is a gamble.
+- **Phase 4: speed machining.** A cam reground to a hotter grind, heads ported and polished, the engine balanced and
+  blueprinted: the repairs become tuning.
+
+The owner's answers (2026-10-17): a quality roll on the player's own work, yes; the machine shop a 3D place; hidden
+flaws too punishing, shelved (maybe in the future). Jobs are shown done in 3D (phase 1b). Next up: phase 2, then 4.
+
 ## Epic: total conversion (planned 2026-09-30)
 
 The owner wants the whole game moddable, so the community can add game modes and whole new games (a Tokyo Drift game
