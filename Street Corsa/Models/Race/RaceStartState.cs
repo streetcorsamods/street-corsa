@@ -47,6 +47,12 @@ namespace StreetCorsa.Models.Race
         /// </summary>
         public double[] RideHeight { get; init; } = new double[4];
 
+        /// <summary>
+        /// Nm at the axle the rear axle's weakest part holds as it is (<see cref="Parts.Cars.RearAxle.Weakest"/>): the race
+        /// mode breaks it when the rear tyres put down more. Null for a car without an axle of parts: nothing breaks.
+        /// </summary>
+        public double? AxleStrength { get; init; }
+
         /// <summary>Litres in the tank; null fills it</summary>
         public double? FuelLitres { get; init; }
 
@@ -82,6 +88,8 @@ namespace StreetCorsa.Models.Race
                 ? Math.Max(0, fuel).ToString("0.00", CultureInfo.InvariantCulture)
                 : "-1");
             yield return (prefix + "DIRT", Unit.Clamp01(Dirt, ifNotFinite: 0).ToString("0.000", CultureInfo.InvariantCulture));
+            if (AxleStrength is { } axle && double.IsFinite(axle) && axle > 0)
+                yield return (prefix + "AXLE", Math.Min(axle, 1e6).ToString("0", CultureInfo.InvariantCulture));
             if (Cooling is { } cooling)
                 yield return (prefix + "COOLING", List([cooling.Cooling, cooling.Fan, cooling.OilG], "0.000"));
             foreach (var key in ShownKeys(carIndex, Shown, leftOut)) yield return key;

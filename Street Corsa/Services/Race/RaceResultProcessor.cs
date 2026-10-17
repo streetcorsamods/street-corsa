@@ -971,7 +971,9 @@ namespace StreetCorsa.Services.Race
         {
             if (participant.Condition is { } condition)
             {
-                var report = CarCondition.ApplyRace(car, condition, RaceDistance(participant), groupOf, wearMultiplier, keepsFuelAndDirt: !rival);
+                var report = CarCondition.ApplyRace(car, condition, RaceDistance(participant), groupOf, wearMultiplier, keepsFuelAndDirt: !rival,
+                    catalog: _parts is { IsAvailable: true } parts ? parts.Catalog : null);
+                if (condition.AxlePeakNm is { } peak) _logger.Information("{Car}: the rear tyres put down {Peak:0} Nm at most", car.DefinitionId, peak);
                 _logger.Information("{Car}: {Report}", car.DefinitionId, report.Count == 0 ? "no damage" : string.Join(" ", report));
                 return report;
             }

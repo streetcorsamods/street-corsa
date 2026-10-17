@@ -45,6 +45,10 @@ public sealed class PartGroups
     public const string Brakes = "brakes";
     public const string Springs = "springs";
     public const string Shocks = "shocks";
+    public const string RearAxles = "rear_axles";
+    public const string Differentials = "differentials";
+    public const string RingPinions = "ring_pinions";
+    public const string AxleShafts = "axle_shafts";
 
     /// <summary>A part no group takes in</summary>
     public const string Accessories = "accessories";
@@ -233,9 +237,9 @@ public sealed class PartPrice
 
     /// <summary>
     /// The figures a kind can be priced by: <c>grip</c>, <c>brake_torque</c>, <c>rim_size</c>, <c>spring_rate</c>,
-    /// <c>damping</c>, <c>carb_mounts</c>
+    /// <c>damping</c>, <c>carb_mounts</c>, <c>strength</c> (what an axle part holds), <c>diff_lock</c> (how hard a carrier locks)
     /// </summary>
-    public static readonly IReadOnlyList<string> Figures = ["grip", "brake_torque", "rim_size", "spring_rate", "damping", "carb_mounts"];
+    public static readonly IReadOnlyList<string> Figures = ["grip", "brake_torque", "rim_size", "spring_rate", "damping", "carb_mounts", "strength", "diff_lock"];
 
     [JsonPropertyName("base")]
     public double? Base { get; set; }

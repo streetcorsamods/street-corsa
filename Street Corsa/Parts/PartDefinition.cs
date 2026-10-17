@@ -120,6 +120,13 @@ public class PartDefinition
     public bool? Performance { get; set; }
 
     /// <summary>
+    /// The cars a running gear part left the factory on (<see cref="Parts.CameIn"/>): what the factory running gear of a car
+    /// is guessed from, where the mods' cars.json picks none. Null for a part no car came with (a spool, an alloy shaft).
+    /// </summary>
+    [JsonProperty("came_in", NullValueHandling = NullValueHandling.Ignore)]
+    public CameIn? CameIn { get; set; }
+
+    /// <summary>
     /// What the part does for the engine's cooling as its kind in the work order says (<see cref="Parts.WorkKind.Cooling"/>):
     /// "radiator", "water_pump", "fan" or "none". Null when its kind does not say, which leaves it to the words of
     /// its name. Set by the catalog as it loads.

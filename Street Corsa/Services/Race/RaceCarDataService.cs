@@ -106,6 +106,8 @@ namespace StreetCorsa.Services.Race
                 FactoryEngineMass = _parts.FactoryEngineMass(car),
                 RunningGear = car.HasRunningGearAssigned ? RunningGear.Mounted(car.Parts) : null,
                 FactoryRunningGear = car.HasRunningGearAssigned ? _parts.FactoryRunningGear(car) : null,
+                RearAxle = car.HasAxleAssigned ? RearAxle.Mounted(car.Parts) : null,
+                FactoryAxle = car.HasAxleAssigned ? _parts.FactoryAxle(car.DefinitionId) : null,
                 Damage = damage ?? CarCondition.StartState(car, CarCondition.Groups(catalog))
             };
 

@@ -19,6 +19,12 @@ public sealed record AcAxleSpecs
 
     /// <summary>Kilograms the axle carries at rest, per wheel</summary>
     public double CornerLoad { get; init; }
+
+    /// <summary>suspensions.ini's TYPE: DWB, STRUT, AXLE (rear only), ML, COSMIC; null when the car does not say</summary>
+    public string? SuspensionType { get; init; }
+
+    /// <summary>Whether brakes.ini gives this axle's brakes temperatures ([TEMPS_FRONT]/[TEMPS_REAR]): its author's fade</summary>
+    public bool HasBrakeTemps { get; init; }
 }
 
 /// <summary>
@@ -37,6 +43,21 @@ public sealed record AcCarSpecs
 
     public AcAxleSpecs Front { get; init; } = new();
     public AcAxleSpecs Rear { get; init; } = new();
+
+    /// <summary>drivetrain.ini's [GEARS] FINAL, 0 when the car does not say</summary>
+    public double FinalRatio { get; init; }
+
+    /// <summary>drivetrain.ini's [DIFFERENTIAL] POWER, COAST and PRELOAD (Nm)</summary>
+    public (double Power, double Coast, double Preload) Differential { get; init; }
+
+    /// <summary>The most torque of the car's own engine curve (power.lut, or the file engine.ini names), Nm; 0 when none reads</summary>
+    public double PeakTorque { get; init; }
+
+    /// <summary>Whether the rear wheels hang on a live axle (suspensions.ini [REAR] TYPE=AXLE): leaf springs and traction bars fit</summary>
+    public bool HasLiveAxle => string.Equals(Rear.SuspensionType, "AXLE", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Whether the rear wheels are driven (RWD, or four-wheel drive)</summary>
+    public bool DrivesRear => Traction is null or "RWD" or "AWD" or "AWD2";
 
     public AcAxleSpecs Axle(bool front) => front ? Front : Rear;
 
@@ -67,7 +88,9 @@ public sealed record AcCarSpecs
                 SpringRate = suspensions.GetNumber(rateSection, rateKey) ?? 0,
                 DampBump = suspensions.GetNumber(section, "DAMP_BUMP") ?? 0,
                 DampRebound = suspensions.GetNumber(section, "DAMP_REBOUND") ?? 0,
-                CornerLoad = mass * (front ? frontShare : 1 - frontShare) / 2
+                CornerLoad = mass * (front ? frontShare : 1 - frontShare) / 2,
+                SuspensionType = suspensions.Get(section, "TYPE")?.Trim().ToUpperInvariant() is { Length: > 0 } type ? type : null,
+                HasBrakeTemps = brakes.Sections.Contains(front ? "TEMPS_FRONT" : "TEMPS_REAR")
             };
         }
 
@@ -77,7 +100,26 @@ public sealed record AcCarSpecs
             FrontWeightShare = frontShare,
             Traction = drivetrain.Get("TRACTION", "TYPE")?.Trim().ToUpperInvariant() is { Length: > 0 } traction ? traction : null,
             Front = Axle("FRONT", true),
-            Rear = Axle("REAR", false)
+            Rear = Axle("REAR", false),
+            FinalRatio = drivetrain.GetNumber("GEARS", "FINAL") ?? 0,
+            Differential = (drivetrain.GetNumber("DIFFERENTIAL", "POWER") ?? 0, drivetrain.GetNumber("DIFFERENTIAL", "COAST") ?? 0,
+                drivetrain.GetNumber("DIFFERENTIAL", "PRELOAD") ?? 0),
+            PeakTorque = PeakOf(readFile(new IniText(readFile("engine.ini")).Get("HEADER", "POWER_CURVE")?.Trim() is { Length: > 0 } curve ? curve : "power.lut"))
         };
+    }
+
+    /// <summary>The highest torque of a lut ("rpm|Nm" a line)</summary>
+    private static double PeakOf(string? lut)
+    {
+        if (lut == null) return 0;
+        var peak = 0.0;
+        foreach (var line in lut.Split('\n'))
+        {
+            var parts = line.Split(';')[0].Split('|');
+            if (parts.Length >= 2 && double.TryParse(parts[1].Trim(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var torque)
+                && double.IsFinite(torque)) peak = Math.Max(peak, torque);
+        }
+
+        return peak;
     }
 }

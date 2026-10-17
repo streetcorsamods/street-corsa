@@ -1767,6 +1767,51 @@ rules (step 17's work kinds), the part motion of step 22's part moves, the job s
 5. The diff in the parts view as a separate part (CMS hides it), and gear setup as a machine shop job only or own work
    too?
 
+**The owner's answers (2026-10-17):** one PR for all phases (branch `feature/running-gear`); factory running gear
+hand-picked per car in `cars.json` (Car Catalog Editor) with the guess from the car's AC data as the fallback; broken
+axle shafts and stripped ring gears as damage, harsh (past the axle's tier a break is likely: the right axle matters);
+CC-BY stand-in meshes first (credited), our own generated ones after; the carrier and the ring and pinion separate
+parts in the tree and the parts view; gear setup at the machine shop or as the player's own work (with the quality
+roll).
+
+### Phase 0 findings and design (2026-10-17)
+
+**Survey** (the 104 folder cars by script, the 4 ACD cars to read through `AcCarSpecs` with the guess's EngineBench
+check): all 104 are RWD. 63 rear `AXLE` as above. `TORQUE_REACTION` has a **sign** (-0.9 to 1.0; 15 at 0.2, 13 at
+0.5, 5 at -0.5): wrap is scaled by its size, its sign kept. Rear `HUB_MASS` of the AXLE cars 50 to 170 kg (median 85);
+their rear `SPRING_RATE` 16 to 65 kN/m (median 26 kN/m, about 150 lb/in: the leaf figures of the research fit). The
+dyno and the engine's price never read the final drive (only the export and the workbench's sheet do), so the axle can
+take it over without moving a price.
+
+**Design:**
+- **Parts of data**, as E11's: packs under `parts/running_gear/` with `class_chain` and `properties` (the figures the
+  running gear reads with `PartDefinition.Number`), no SLRR script. New shelves (part_groups.json): `rear_axles`
+  (class `RearAxle`), `differentials` (`Differential`, already in the drivetrain show), `ring_pinions` (`RingPinion`),
+  `axle_shafts` (`AxleShaft`), `traction_bars` (`TractionBar`). Drums are `["DrumBrake", "Brake"]` (the brakes shelf,
+  the brake slots, `RunningGear.BrakeTorque` from the same fields); leaf springs `["LeafSpring", "Spring"]` and torsion
+  bars `["TorsionBar", "Spring"]` (the spring slots).
+- **The tree:** the rear axle on car slot 401 (`RunningGear.RearAxleSlot`), mating by standard fittings so any mod's
+  axle and carrier meet: the housing's carrier slot `takes` `axle:<family>`, a carrier `fits` it; the carrier's gear
+  slot `takes` `gears:<family>` (the GM 12-bolt's two carrier series as two fittings); axle shafts on the housing's
+  slots 2 and 3, by spline. The rear brakes and springs stay on their corner slots (moving them under the axle would
+  move every save's parts for nothing the player sees).
+- **Factory set:** `cars.json` per car `running_gear`: `axle`, `diff`, `ratio` (a number: the family's gear set of
+  that ratio), `brakes_front`, `brakes_rear`, `springs_front`, `springs_rear` (part ids), any of them left out guessed
+  (`RunningGearGuess`): the family of the car's make and the engine's torque pick the axle (GM 10-bolt up to the small
+  blocks, 12-bolt behind the big ones; Ford 8"/9"; Mopar 8¼/8¾, Dana 60 behind a Hemi or a 440 with a four-speed), the
+  car's own POWER picks open or posi, its `FINAL` the nearest ratio; drums unless the car is past the drum years or not
+  American; leaves at the rear of an AXLE car, coils elsewhere, torsion bars at the front of a Mopar.
+- **Factory exact:** with the factory axle mounted the car keeps its own `FINAL` and `[DIFFERENTIAL]` (as authored,
+  over what the engine's SLRR gearbox wrote); a different gear set writes its ratio, a different carrier its figures.
+  No axle part (an old save before its fix-up, a mod's front-drive car): the gearbox's figures as today. Brake
+  temperatures are the one deliberate change on a stock car: a car whose data has no `[TEMPS_*]` gets its factory
+  brakes' (drum fade is the point of the step); a car whose author wrote them keeps them on its factory brakes.
+- **Old saves:** `Car.HasAxleAssigned` as `HasRunningGearAssigned` is: the factory axle added once. The SLRR discs an
+  older save's cars carry as factory brakes are swapped once for the new factory brakes, same wear (phase 2).
+- **Breakage (harsh):** the axle's and the shafts' `strength` (Nm at the axle) against the engine's peak torque × first
+  gear × ratio, the tyres' grip and the launch (a spool and slicks load it most); the race mode gets the odds in
+  race.ini and breaks it at a hard launch (drive gone, a breakdown in the result, the tow), the part's `Tear` to 0.
+
 ## Epic: total conversion (planned 2026-09-30)
 
 The owner wants the whole game moddable, so the community can add game modes and whole new games (a Tokyo Drift game

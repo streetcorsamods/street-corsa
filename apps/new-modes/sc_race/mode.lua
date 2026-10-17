@@ -40,7 +40,7 @@
 ]]
 
 -- manifest.ini [ABOUT] VERSION goes with it
-local SCRIPT_VERSION = "4.0.0"
+local SCRIPT_VERSION = "4.1.0"
 -- 1.1: session.context_id, participants[].car_index and participants[].is_player
 -- 1.2: session.end_reason, participants[].false_start, participants[].condition
 -- 1.3: participants[].disqualified, session.race_type
@@ -50,11 +50,18 @@ local SCRIPT_VERSION = "4.0.0"
 --      timeslip.red_light; participants[].dial_in_s and participants[].breakout in a bracket race
 -- 1.7: condition.max_fuel_litres, condition.dirt and condition.heat; participants[].breakdown FUEL, OVERHEAT and OIL
 -- 1.8: session.format; participants[].score and participants[].lap_times_ms in a format won on score (a time attack)
-local SCHEMA_VERSION = "1.8"
+-- 1.9: participants[].breakdown AXLE; condition.axle_peak_nm
+local SCHEMA_VERSION = "1.9"
 
 -- How far AC bends a steering rod at most, in metres (suspensions.ini MAX_DAMAGE, 0.05 on every car the game has):
 -- a corner bent this far, with what it carried in, has given out
 local MAX_SUSPENSION_BEND = 0.05
+
+-- The rear axle (race.ini CAR_n_AXLE: the Nm its weakest part holds): the drive the rear tyres put down past it may break
+-- it, the more likely the further past and the longer. Per second, at twice what it holds; harsh, at the owner's word.
+local AXLE_BREAK_RATE = 20.0
+-- Below this much throttle the tyres' force is not the engine's (a kerb, a landing): it does not load the axle
+local AXLE_GAS = 0.2
 
 -- A crash: a collision with a change of velocity of at least this, in g over one frame
 local CRASH_G = 15.0
@@ -198,7 +205,8 @@ local MSG = {
     TYRE = say('BROKE_DOWN_TYRE', "A tyre blew!\nYou're out of the race."),
     OVERHEAT = say('BROKE_DOWN_OVERHEAT', "The engine boiled over and cooked itself!\nYou're out of the race."),
     OIL = say('BROKE_DOWN_OIL', "The oil pressure went, and the bottom end with it!\nYou're out of the race."),
-    FUEL = say('BROKE_DOWN_FUEL', "You ran out of gas!\nYou're out of the race.")
+    FUEL = say('BROKE_DOWN_FUEL', "You ran out of gas!\nYou're out of the race."),
+    AXLE = say('BROKE_DOWN_AXLE', "The rear end let go!\nYou're out of the race.")
   },
   BUSTED = say('RESULT_BUSTED', "Busted!\nThe cops have you and your car."),
   ESCAPED = say('RESULT_ESCAPED', "You lost the cops!"),
@@ -304,6 +312,9 @@ local function createCarData(carIndex)
     -- Breakdown: what the car carried in from its earlier races (race.ini), and what gave out
     startGearbox = 0,
     startSuspension = { 0, 0, 0, 0 },
+    -- The rear axle: what it holds (nil: the career gave none, nothing breaks) and the most the race put on it, Nm
+    axleStrength = nil,
+    axlePeak = 0.0,
     brokeDown = false,
     breakdown = nil,
 
@@ -643,6 +654,8 @@ local function applyStartState(carIndex, data)
   if suspension then
     for w = 1, 4 do data.startSuspension[w] = math.max(0, suspension[w]) end
   end
+  local axle = readNumbers(prefix .. 'AXLE', 1)
+  if axle and axle[1] > 0 then data.axleStrength = axle[1] end
 
   if not physics.allowed() then return end
   local body = readNumbers(prefix .. 'BODY', 4)
@@ -996,9 +1009,28 @@ local function updateCrashes(dt)
   end
 end
 
+-- The torque the rear tyres put down, Nm at the axle: the force each drives the car with at its loaded radius. Launch
+-- shock and wheel hop show in it as they come, with no need to know the gearing.
+local function axleLoad(car)
+  if car.gas < AXLE_GAS then return 0 end
+  local load = 0
+  for w = 2, 3 do
+    local wheel = car.wheels[w]
+    load = load + math.abs(wheel.fx) * math.max(0.1, wheel.tyreLoadedRadius)
+  end
+  return load
+end
+
 -- What gave out on a car, or nil: the engine's life run out (OVERHEAT or OIL when its heat or its oil took the last of
--- it), the gearbox or a corner past what it could take with what it carried in, a blown tyre, an empty tank
-local function findBreakdown(car, data)
+-- it), the gearbox or a corner past what it could take with what it carried in, a blown tyre, an empty tank, the rear
+-- axle loaded past what it holds
+local function findBreakdown(car, data, dt)
+  if data.axleStrength then
+    local load = axleLoad(car)
+    if load > data.axlePeak then data.axlePeak = load end
+    local over = load / data.axleStrength - 1
+    if over > 0 and math.random() < 1 - math.exp(-AXLE_BREAK_RATE * over * dt) then return 'AXLE' end
+  end
   if car.engineLifeLeft <= 0 then return engineHeat.cause(data) or 'ENGINE' end
   if engineHeat.outOfFuel(car) then return 'FUEL' end
   if data.startGearbox + math.max(0, car.gearboxDamage) >= 1 then return 'GEARBOX' end
@@ -1012,13 +1044,13 @@ end
 
 -- Every frame between the green and the line: a car that breaks down is out. The player's breakdown ends the race;
 -- a rival's is held where it stopped, and the player finishes to win. Both broken is a draw, which the career calls.
-local function updateBreakdowns()
+local function updateBreakdowns(dt)
   if not sim.isSessionStarted then return end
   for carIndex = 0, carCount - 1 do
     local data = carData[carIndex]
     local car = ac.getCar(carIndex)
     if data and car and not policeOf[carIndex] and not data.crashed and not data.disqualified and not data.brokeDown and not pastTheLine(data) then
-      local ok, what = pcall(findBreakdown, car, data)
+      local ok, what = pcall(findBreakdown, car, data, dt)
       if ok and what then
         data.brokeDown = true
         data.breakdown = what
@@ -1130,6 +1162,11 @@ local function carCondition(carIndex)
   pcall(function() condition.oil_pressure = round(car.oilPressure, 2) end)
   pcall(function() condition.fuel_litres = round(car.fuel, 2) end)
   pcall(engineHeat.report, carIndex, carData[carIndex], condition)
+  local data = carData[carIndex]
+  if data and data.axleStrength then
+    condition.axle_peak_nm = round(data.axlePeak, 0)
+    condition.axle_broken = data.breakdown == 'AXLE'
+  end
 
   -- One entry per corner, in AC's order, whatever fails to read: a wheel that cannot be read keeps its place, never
   -- leaves a gap that moves the later wheels into the wrong corners. Each entry names its corner, which also keeps an
@@ -2033,7 +2070,7 @@ function script.update(dt)
   updateCrashes(dt)
   if sessionEnded then return end
 
-  updateBreakdowns()
+  updateBreakdowns(dt)
   if sessionEnded then return end
 
   local tick = measureTick()

@@ -55,6 +55,13 @@ public static class Workbench
             return places;
         }
 
+        // A rear axle housing goes under the car on its axle slot; what goes on a housing finds it as on any part
+        if (looseGroup == PartKinds.RearAxles)
+        {
+            if (carParts.All(p => p.ParentSlot != RearAxle.CarSlot)) places.Add(new MountPlace(null, RearAxle.CarSlot, mountsBy));
+            return places;
+        }
+
         places.AddRange(PlacesOn(catalog, carParts, loose, looseDefinition, looseGroup, looseSlots));
         return places;
     }
@@ -65,7 +72,7 @@ public static class Workbench
         if (catalog.Get(loose.DefinitionId) is not { } looseDefinition || PartKinds.IsBlock(looseDefinition)) return new();
 
         var looseGroup = PartKinds.GroupOf(looseDefinition);
-        if (looseGroup == PartKinds.Tyres || RunningGear.IsRunningGear(looseGroup)) return new();
+        if (looseGroup == PartKinds.Tyres || RunningGear.IsRunningGear(looseGroup) || RearAxle.IsAxleGroup(looseGroup)) return new();
 
         var looseSlots = looseDefinition.Slots.Where(s => loose.Children.All(c => c.ParentSlot != s.Id)).ToList();
         return PlacesOn(catalog, new[] { engine }, loose, looseDefinition, looseGroup, looseSlots).ToList();

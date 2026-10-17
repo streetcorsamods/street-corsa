@@ -20,6 +20,12 @@ public static class PartKinds
     public const string Springs = PartGroups.Springs;
     public const string Shocks = PartGroups.Shocks;
 
+    // The rear axle: on the car's own axle slot, with its carrier, gears and shafts on it
+    public const string RearAxles = PartGroups.RearAxles;
+    public const string Differentials = PartGroups.Differentials;
+    public const string RingPinions = PartGroups.RingPinions;
+    public const string AxleShafts = PartGroups.AxleShafts;
+
     /// <summary>
     /// Simple name of the framework class nearest to the part (a simple name as the part gives it, for a part of
     /// figures), "" for parts without a script class.

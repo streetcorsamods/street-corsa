@@ -62,6 +62,7 @@ namespace StreetCorsa.Services.Parts
                 Parts = listing.Parts,
                 HasPartsAssigned = listing.Parts.Count > 0,
                 HasRunningGearAssigned = true,
+                HasAxleAssigned = true,
                 EngineHealth = listing.Condition
             };
 

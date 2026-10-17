@@ -40,7 +40,7 @@ public sealed class RaceResultContractTests : IDisposable
 
         Assert.True(validation.IsValid, string.Join("; ", validation.Errors));
         var result = validation.ParsedResult!;
-        Assert.Equal("1.8", result.Metadata.SchemaVersion);
+        Assert.Equal("1.9", result.Metadata.SchemaVersion);
         Assert.Equal(RaceMetadata.ModeSource, result.Metadata.Source);
         Assert.True(Guid.TryParse(result.Session.SessionId, out _));
         Assert.Equal(Guid.Parse("6f1c2d3e-4b5a-4c6d-8e7f-90a1b2c3d4e5"), Guid.Parse(result.Session.ContextId!));
@@ -62,6 +62,8 @@ public sealed class RaceResultContractTests : IDisposable
         Assert.All(player.Condition.Wheels!, w => Assert.NotNull(w.TyreWear));
         // Step 14: the tank, the dirt, the engine's heat and oil
         Assert.True(player.Condition.MaxFuelLitres > 0);
+        Assert.Equal(3120, player.Condition.AxlePeakNm);
+        Assert.False(player.Condition.AxleBroken);
         Assert.NotNull(player.Condition.Dirt);
         Assert.NotNull(player.Condition.Heat!.PeakWaterC);
         Assert.Equal(1.0, player.Condition.Heat.LowestOilSupply);

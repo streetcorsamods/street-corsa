@@ -52,8 +52,9 @@ public class FlatheadSpeedPartsTests
     [Fact]
     public void Rules_read_out_of_scripts_are_left_to_the_scripts()
     {
-        // The converted packs' required_slots hold rules their scripts ask only on some cars: none is enforced
-        var converted = Catalog.Value.Parts.Values.Where(p => ModIds.IsBase(ModIds.ModOf(p.Id))).SelectMany(p => p.RequiredSlots);
+        // The converted packs' required_slots hold rules their scripts ask only on some cars: none is enforced (the parts
+        // of data, the rear axles, say their own)
+        var converted = Catalog.Value.Parts.Values.Where(p => ModIds.IsBase(ModIds.ModOf(p.Id)) && p.SourceScript != null).SelectMany(p => p.RequiredSlots);
         Assert.DoesNotContain(converted, r => r.Enforce);
     }
 

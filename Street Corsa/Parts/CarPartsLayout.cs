@@ -39,7 +39,7 @@ public sealed record CarAnchors(Vector3 WheelLF, Vector3 WheelRF, Vector3 WheelL
 /// nothing about engine bays or suspension mounts: a longitudinal engine with the gearbox bolted to its back (in the
 /// front or ahead of the rear axle facing forward, behind the rear axle turned around) or one lying across the car,
 /// the wheel and the brake on the
-/// hub, a coil spring and a shock next to every wheel.
+/// hub, a coil spring and a shock next to every wheel, the rear axle on the line between the rear hubs.
 /// Part models have their front towards -Z while AC cars face +Z, hence the frames below.
 /// </summary>
 public static class CarPartsLayout
@@ -85,7 +85,8 @@ public static class CarPartsLayout
             // bought, sold and exported to the car's physics as before - they just have no model here.
             if (RunningGear.IsWheelSlot(part.CarSlot)) continue;
 
-            if (CornerPlacement(anchors, part.Root.Definition, part.CarSlot) is { } world) result.AddRange(PartAssembler.Assemble(part.Root, world));
+            var world = part.CarSlot == Cars.RearAxle.CarSlot ? AxlePlacement(anchors, part.Root.Definition) : CornerPlacement(anchors, part.Root.Definition, part.CarSlot);
+            if (world is { } placed) result.AddRange(PartAssembler.Assemble(part.Root, placed));
         }
 
         return result;
@@ -96,7 +97,14 @@ public static class CarPartsLayout
     /// (an engine) in the engine's place. Null for a slot of a wheel's corner whose hubs don't tell which way is in.
     /// </summary>
     public static Matrix4x4? CarLevelPlacement(PartsCatalog catalog, CarAnchors anchors, PartDefinition part, int carSlot, EngineLayout layout) =>
-        RunningGear.CornerOf(carSlot) < 0 ? EnginePlacement(catalog, anchors, part, layout) : CornerPlacement(anchors, part, carSlot);
+        carSlot == Cars.RearAxle.CarSlot ? AxlePlacement(anchors, part)
+        : RunningGear.CornerOf(carSlot) < 0 ? EnginePlacement(catalog, anchors, part, layout) : CornerPlacement(anchors, part, carSlot);
+
+    /// <summary>
+    /// The rear axle housing: its mount (slot 1) in the middle of the rear hubs, facing the way the car does, so its +X
+    /// (the left shaft's side) is the car's left
+    /// </summary>
+    public static Matrix4x4 AxlePlacement(CarAnchors anchors, PartDefinition housing) => BySlot(housing, CarFrame(anchors.Forward), anchors.RearAxle);
 
     /// <summary>A wheel-side part on its hub: the brake on it, a spring or a shock next to it; null for a slot of no corner</summary>
     private static Matrix4x4? CornerPlacement(CarAnchors anchors, PartDefinition part, int carSlot)

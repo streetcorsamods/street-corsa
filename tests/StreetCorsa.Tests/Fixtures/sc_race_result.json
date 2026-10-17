@@ -1,7 +1,7 @@
 {
   "metadata": {
     "generated_at": "2026-10-03T16:48:38Z",
-    "schema_version": "1.8",
+    "schema_version": "1.9",
     "script_version": "4.0.0",
     "source": "sc_race"
   },
@@ -30,7 +30,9 @@
           "peak_fade": 0,
           "peak_water_c": 88
         },
-        "max_fuel_litres": 60,
+        "max_fuel_litres": 60,
+        "axle_peak_nm": 3120,
+        "axle_broken": false,
         "oil_pressure": 4,
         "oil_temperature_c": 100,
         "water_temperature_c": 88,

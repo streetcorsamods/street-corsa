@@ -342,8 +342,18 @@ namespace StreetCorsa.Screens.Garage
             : "-";
 
         public string GearsDisplay => _report is { GearRatios.Count: > 0 } report
-            ? GameText.Say("workbench.gears", ("gears", report.GearRatios.Count), ("final", $"{report.FinalRatio:0.00}"))
+            ? GameText.Say("workbench.gears", ("gears", report.GearRatios.Count), ("final", $"{_axleFinal ?? report.FinalRatio:0.00}"))
             : GameText.Say("workbench.no_transmission");
+
+        /// <summary>The final drive of the car's rear axle (its own figure on the factory gears), null with no gears on an axle: the gearbox's</summary>
+        private double? _axleFinal;
+
+        private double? AxleFinal(PartsCatalog catalog, Car car)
+        {
+            if (RearAxle.Mounted(car.Parts).Gears is not { } gears || catalog.Get(gears.DefinitionId) is not { } definition) return null;
+            if (_parts.FactoryAxle(car.DefinitionId)?.Gears.Id == definition.Id && _parts.Specs(car.DefinitionId) is { FinalRatio: > 0 } specs) return specs.FinalRatio;
+            return RearAxle.Ratio(definition) is var ratio and > 0 ? ratio : null;
+        }
 
         public string MassDisplay => _report == null ? "-" : Measure.Mass(_report.Mass).ToString();
 
@@ -1055,13 +1065,14 @@ namespace StreetCorsa.Screens.Garage
                 _gearTrees.Clear();
                 if (catalog != null && _car != null && !_isStand)
                 {
-                    foreach (var part in _car.Parts.Where(p => RunningGear.CornerOf(p.ParentSlot) >= 0))
+                    foreach (var part in _car.Parts.Where(p => RunningGear.CornerOf(p.ParentSlot) >= 0 || p.ParentSlot == RearAxle.CarSlot))
                     {
                         if (PartTrees.ToInstalled(catalog, part) is { } tree) _gearTrees.Add((part.ParentSlot, tree));
                     }
                 }
 
                 Gear = _gearTrees.Select(g => new CarPart(g.CarSlot, g.Tree.Root)).ToList();
+                _axleFinal = catalog != null && _car != null && !_isStand ? AxleFinal(catalog, _car) : null;
                 EngineOffset = _car != null ? _parts.EngineOffsetOf(_car.DefinitionId) : System.Numerics.Vector3.Zero;
                 Shown = _car != null ? _parts.Shown(_car) : null;
 

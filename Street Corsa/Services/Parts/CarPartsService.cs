@@ -191,26 +191,28 @@ namespace StreetCorsa.Services.Parts
 
         public bool EnsureParts(Car car)
         {
-            if (car.HasPartsAssigned && car.HasRunningGearAssigned) return false;
+            if (car.HasPartsAssigned && car.HasRunningGearAssigned && car.HasAxleAssigned) return false;
             if (!IsAvailable) return false;
 
             var engine = car.HasPartsAssigned ? null : CreateFactoryEngine(car.DefinitionId, car.EngineHealth);
             var gear = car.HasRunningGearAssigned ? null : CreateFactoryRunningGear(car.DefinitionId, car.TireCondition);
-            return Assign(car, engine, gear);
+            var axle = car.HasAxleAssigned ? null : CreateFactoryAxle(car.DefinitionId, car.TireCondition);
+            return Assign(car, engine, gear, axle);
         }
 
         public async Task<bool> EnsurePartsAsync(Car car)
         {
-            if (car.HasPartsAssigned && car.HasRunningGearAssigned) return false;
+            if (car.HasPartsAssigned && car.HasRunningGearAssigned && car.HasAxleAssigned) return false;
 
             // The parts are put together away from the caller's thread; the car is only touched back on it
             var definitionId = car.DefinitionId;
-            var (needsEngine, needsGear) = (!car.HasPartsAssigned, !car.HasRunningGearAssigned);
+            var (needsEngine, needsGear, needsAxle) = (!car.HasPartsAssigned, !car.HasRunningGearAssigned, !car.HasAxleAssigned);
             var (engineCondition, tyreCondition) = (car.EngineHealth, car.TireCondition);
-            var (engine, gear) = await Task.Run(() => IsAvailable
-                ? (needsEngine ? CreateFactoryEngine(definitionId, engineCondition) : null, needsGear ? CreateFactoryRunningGear(definitionId, tyreCondition) : null)
-                : (null, null));
-            return Assign(car, engine, gear);
+            var (engine, gear, axle) = await Task.Run(() => IsAvailable
+                ? (needsEngine ? CreateFactoryEngine(definitionId, engineCondition) : null, needsGear ? CreateFactoryRunningGear(definitionId, tyreCondition) : null,
+                    needsAxle ? CreateFactoryAxle(definitionId, tyreCondition) : null)
+                : (null, null, null));
+            return Assign(car, engine, gear, axle);
         }
 
         /// <remarks>
@@ -351,6 +353,17 @@ namespace StreetCorsa.Services.Parts
 
         public (RunningGearFactory.AxleParts Front, RunningGearFactory.AxleParts Rear)? FactoryRunningGear(Car car) =>
             IsAvailable && Specs(car.DefinitionId) is { } specs ? RunningGearFactory.Choose(Catalog, specs) : null;
+
+        public RearAxleChoice? FactoryAxle(string carDefinitionId)
+        {
+            if (!IsAvailable || Specs(carDefinitionId) is not { } specs) return null;
+
+            var definition = _catalogRepo.GetCar(carDefinitionId);
+            var book = CarBook.Current;
+            var facts = new CarFacts(book.MakeOf(carDefinitionId, definition?.Brand, definition?.Name),
+                book.FamilyOfCar(carDefinitionId, definition?.Brand, definition?.Name), definition?.Year);
+            return RunningGearGuess.ChooseAxle(Catalog, specs, facts, book.Car(carDefinitionId)?.RunningGear);
+        }
 
         public System.Numerics.Vector3 EngineOffsetOf(string carDefinitionId) =>
             CarBook.Current.Car(carDefinitionId)?.EngineShift ?? System.Numerics.Vector3.Zero;
@@ -583,6 +596,22 @@ namespace StreetCorsa.Services.Parts
             return gear is { Count: > 0 } ? gear : null;
         }
 
+        /// <summary>
+        /// The car's factory rear axle: a part, or no part for a car whose rear wheels are not driven (the gearbox has its
+        /// differential); null when it cannot be told yet (no data, no axle in the catalog for it), so it is asked again
+        /// </summary>
+        private AxleAssignment? CreateFactoryAxle(string carDefinitionId, double condition)
+        {
+            if (Specs(carDefinitionId) is not { } specs) return null;
+            if (!specs.DrivesRear) return new AxleAssignment(null);
+
+            if (FactoryAxle(carDefinitionId) is { } choice) return new AxleAssignment(RunningGearFactory.CreateAxle(choice, condition));
+            _logger.Warning("No factory rear axle for {Car}", carDefinitionId);
+            return null;
+        }
+
+        private sealed record AxleAssignment(PartInstance? Axle);
+
         private BuiltEngine? CreateFactoryEngine(string carDefinitionId, double condition)
         {
             var definition = _catalogRepo.GetCar(carDefinitionId);
@@ -593,7 +622,7 @@ namespace StreetCorsa.Services.Parts
         }
 
         /// <summary>Two screens may ask for the same car at the same moment: only the first engine goes in</summary>
-        private bool Assign(Car car, BuiltEngine? engine, List<PartInstance>? gear)
+        private bool Assign(Car car, BuiltEngine? engine, List<PartInstance>? gear, AxleAssignment? axle)
         {
             var changed = false;
             lock (_assignLock)
@@ -613,6 +642,19 @@ namespace StreetCorsa.Services.Parts
                     car.HasRunningGearAssigned = true;
                     changed = true;
                     _logger.Information("{Car} given its factory running gear: {Count} parts", car.DefinitionId, gear.Count);
+                }
+
+                // Its running gear first: an axle on a car still without wheels would be the only gear the car is given
+                if (axle != null && car.HasRunningGearAssigned && !car.HasAxleAssigned)
+                {
+                    if (axle.Axle is { } part && car.Parts.All(p => p.ParentSlot != RearAxle.CarSlot))
+                    {
+                        car.Parts.Add(part);
+                        _logger.Information("{Car} given its factory rear axle: {Housing}", car.DefinitionId, part.DefinitionId);
+                    }
+
+                    car.HasAxleAssigned = true;
+                    changed = true;
                 }
             }
 

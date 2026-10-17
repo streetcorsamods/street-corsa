@@ -223,6 +223,8 @@ public static class CarCondition
             if (car.TransmissionHealth < BrokenBelow) problems.Add(PartWords.Say("condition.problem.gearbox"));
         }
 
+        if (car.HasAxleAssigned && RearAxle.Mounted(car.Parts).All.Any(p => p.Tear < BrokenBelow)) problems.Add(PartWords.Say("condition.problem.axle"));
+
         if (groupOf != null && car.HasRunningGearAssigned)
         {
             var corners = RunningGear.Mounted(car.Parts);
@@ -248,8 +250,9 @@ public static class CarCondition
     /// damage is already the difficulty's (<see cref="GameRules.RaceDamagePercent"/>)</param>
     /// <param name="keepsFuelAndDirt">False for a rival's car: the racers fill up, top up the oil and wash before every
     /// race, so the tank, the oil and the dirt a race leaves are not kept</param>
+    /// <param name="catalog">The parts, to tell which of the rear axle's let go when it broke; null leaves the axle as it was</param>
     public static ConditionReport ApplyRace(Car car, RaceCarCondition condition, double distanceKm, Func<string, string?>? groupOf,
-        double wearMultiplier = 1.0, bool keepsFuelAndDirt = true)
+        double wearMultiplier = 1.0, bool keepsFuelAndDirt = true, PartsCatalog? catalog = null)
     {
         var report = new ConditionReport();
         ApplyBody(car, condition, report);
@@ -267,6 +270,7 @@ public static class CarCondition
         }
 
         if (groupOf != null && car.HasRunningGearAssigned) ApplyRunningGear(car, condition, report);
+        if (catalog != null && car.HasAxleAssigned) ApplyAxle(car, condition, distanceKm * GameRules.Sane(wearMultiplier), catalog, report);
 
         if (groupOf != null) RefreshFigures(car, groupOf);
         else car.BodyCondition = BodyCondition(car);
@@ -458,6 +462,25 @@ public static class CarCondition
         if (wear <= 0 || car.Engine == null) return;
         foreach (var part in car.Engine.SelfAndDescendants()) part.Wear = Math.Max(0, Clamp01(part.Wear) - wear);
     }
+
+    /// <summary>
+    /// The rear axle: its mileage (slower than the engine's), and when the race broke it, its weakest part wrecked: the
+    /// shaft, the gears or the carrier that held the least
+    /// </summary>
+    private static void ApplyAxle(Car car, RaceCarCondition condition, double distanceKm, PartsCatalog catalog, ConditionReport report)
+    {
+        var axle = RearAxle.Mounted(car.Parts);
+        var wear = Clean(distanceKm) * MileageWearPerKm * AxleMileageShare;
+        foreach (var part in axle.All) part.Wear = Math.Max(0, Clamp01(part.Wear) - wear);
+
+        if (condition.AxleBroken != true || RearAxle.Weakest(catalog, axle) is not { } weakest) return;
+        weakest.Part.Tear = 0;
+        var name = catalog.Get(weakest.Part.DefinitionId) is { } definition ? definition.DisplayName ?? definition.Name : weakest.Part.DefinitionId;
+        report.Add(PartWords.Say("condition.axle.broke", ("part", name)));
+    }
+
+    /// <summary>How fast the rear axle's parts wear against the engine's, per km</summary>
+    private const double AxleMileageShare = 0.5;
 
     private static void ApplyRunningGear(Car car, RaceCarCondition condition, ConditionReport report)
     {

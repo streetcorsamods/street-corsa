@@ -57,11 +57,12 @@ public static class RunningGearFactory
         return (Axle(specs.Front, frontTyre), Axle(specs.Rear, rearTyre));
     }
 
-    /// <summary>The factory running gear as parts on the car's wheel slots, worn like the car</summary>
-    public static List<PartInstance> Create(PartsCatalog catalog, AcCarSpecs specs, double condition)
+    /// <summary>The factory running gear as parts on the car's wheel slots, worn like the car, and its rear axle when given</summary>
+    public static List<PartInstance> Create(PartsCatalog catalog, AcCarSpecs specs, double condition, RearAxleChoice? rearAxle = null)
     {
         var parts = new List<PartInstance>();
         if (Choose(catalog, specs) is not var (front, rear)) return parts;
+        if (rearAxle != null) parts.Add(CreateAxle(rearAxle, condition));
 
         var wear = Math.Clamp(condition, 0, 1);
         for (var corner = 0; corner < RunningGear.Corners; corner++)
@@ -77,6 +78,22 @@ public static class RunningGearFactory
         }
 
         return parts;
+    }
+
+    /// <summary>
+    /// The factory rear axle as a part tree on the car's axle slot. It wears slower than the tyres the car's figures
+    /// give the condition of: a well worn car's axle is tired, not gone.
+    /// </summary>
+    public static PartInstance CreateAxle(RearAxleChoice axle, double condition)
+    {
+        var wear = 0.4 + 0.6 * Math.Clamp(condition, 0, 1);
+        var housing = Instance(axle.Housing, RearAxle.CarSlot, 1, wear);
+        var carrier = Instance(axle.Carrier, RearAxle.CarrierSlot, 1, wear);
+        carrier.Children.Add(Instance(axle.Gears, RearAxle.GearsSlot, 1, wear));
+        housing.Children.Add(carrier);
+        housing.Children.Add(Instance(axle.Shaft, RearAxle.LeftShaftSlot, 1, wear));
+        housing.Children.Add(Instance(axle.Shaft, RearAxle.RightShaftSlot, 1, wear));
+        return housing;
     }
 
     private static PartInstance Instance(PartDefinition definition, int parentSlot, int ownSlot, double wear) => new(definition.Id)

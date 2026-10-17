@@ -78,6 +78,12 @@ namespace StreetCorsa.Models.GameState
         /// <summary>False until the car has been given the wheels, brakes, springs and shocks it left the factory with</summary>
         public bool HasRunningGearAssigned { get; set; }
 
+        /// <summary>
+        /// False until the car has been given the rear axle it left the factory with (step 31): a car of an older save has
+        /// its running gear and gets its axle once, and an axle the player took off does not come back
+        /// </summary>
+        public bool HasAxleAssigned { get; set; }
+
         [LiteDB.BsonIgnore]
         public PartInstance? Engine => Parts.FirstOrDefault(p => p.ParentSlot == PartInstance.CarEngineSlot);
 
@@ -177,6 +183,7 @@ namespace StreetCorsa.Models.GameState
             Parts = Parts.Select(p => StreetCorsa.Parts.Cars.PartTrees.Clone(p, keepIds: true)).ToList(),
             HasPartsAssigned = HasPartsAssigned,
             HasRunningGearAssigned = HasRunningGearAssigned,
+            HasAxleAssigned = HasAxleAssigned,
             PowerHp = PowerHp,
             PurchasePrice = PurchasePrice,
             ImpoundedUntil = ImpoundedUntil,

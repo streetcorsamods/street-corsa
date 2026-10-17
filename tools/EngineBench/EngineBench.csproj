@@ -15,6 +15,7 @@
   <!-- The part logic is the game's; the bench only drives it from the command line -->
   <ItemGroup>
     <Compile Include="..\..\Street Corsa\Parts\PartDefinition.cs" Link="Parts\PartDefinition.cs" />
+    <Compile Include="..\..\Street Corsa\Parts\CameIn.cs" Link="Parts\CameIn.cs" />
     <Compile Include="..\..\Street Corsa\Parts\PartOverrides.cs" Link="Parts\PartOverrides.cs" />
     <Compile Include="..\..\Street Corsa\Parts\EngineBuild.cs" Link="Parts\EngineBuild.cs" />
     <Compile Include="..\..\Street Corsa\Parts\PartsCatalog.cs" Link="Parts\PartsCatalog.cs" />

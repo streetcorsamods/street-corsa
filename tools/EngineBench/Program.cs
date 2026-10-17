@@ -40,6 +40,7 @@ public static class Program
             Console.WriteLine("       EngineBench <parts folder> bench <build id>            take every part off and find where it goes back");
             Console.WriteLine("       EngineBench <parts folder> renew <older parts folder>  engines saved with an older conversion, brought up to date");
             Console.WriteLine("       EngineBench <parts folder> gear <AC cars folder>       factory running gear chosen for every car");
+            Console.WriteLine("       EngineBench <parts folder> axles <AC cars folder>      factory rear axle chosen for every car, against its own data");
             Console.WriteLine("       EngineBench <parts folder> prices [AC cars folder]     what the parts cost new by kind, and every car new");
             Console.WriteLine("       EngineBench <parts folder> prices <part id fragment>   the power and price of every part whose id holds it");
             Console.WriteLine("       EngineBench <parts folder> layout <AC cars folder>     where every car carries its engine, guessed from its data");
@@ -102,6 +103,9 @@ public static class Program
 
             case "gear" when args.Length > 2:
                 return Gear(catalog, args[2]);
+
+            case "axles" when args.Length > 2:
+                return Axles(catalog, args[2]);
 
             case "car" when args.Length > 3:
                 return Car(catalog, args[2], args[3], args.Length > 4 ? args[4] : null);
@@ -346,7 +350,11 @@ public static class Program
         {
             var carId = Path.GetFileName(folder);
             var build = index.Get(CarBook.Current.Car(carId)?.Engine) ?? FirstMatch(index, folder, carId);
-            var gear = RunningGearFactory.Create(catalog, specs, 1).SelectMany(p => p.SelfAndDescendants())
+            var ui = AcCarUi.TryRead(folder, out _);
+            var (brand, name) = (AcCarUi.GetString(ui, "brand"), AcCarUi.GetString(ui, "name"));
+            var axle = RunningGearGuess.ChooseAxle(catalog, specs, new CarFacts(CarBook.Current.MakeOf(carId, brand, name),
+                CarBook.Current.FamilyOfCar(carId, brand, name), AcCarUi.GetInt(ui, "year")), CarBook.Current.Car(carId)?.RunningGear);
+            var gear = RunningGearFactory.Create(catalog, specs, 1, axle).SelectMany(p => p.SelfAndDescendants())
                 .Select(p => catalog.Get(p.DefinitionId)).OfType<PartDefinition>();
             var car = CarPricing.New(catalog, specs.TotalMass, build, gear);
             var power = build?.PowerHp ?? 0;
@@ -565,6 +573,43 @@ public static class Program
             }
         }
 
+        return 0;
+    }
+
+    /// <summary>
+    /// The rear axle every car leaves the factory with (cars.json's picks, else the guess from the parts' "came_in"),
+    /// beside what its own data says: the rear suspension, the final drive, the differential and the engine's peak torque
+    /// </summary>
+    private static int Axles(PartsCatalog catalog, string carsFolder)
+    {
+        var housings = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var (folder, specs) in InstalledCarSpecs(carsFolder))
+        {
+            // The game's cars, when the mods name any
+            var id = Path.GetFileName(folder);
+            if (CarBook.Current.Cars.Count > 0 && CarBook.Current.Car(id) == null) continue;
+            var ui = AcCarUi.TryRead(folder, out _);
+            var (brand, name, year) = (AcCarUi.GetString(ui, "brand"), AcCarUi.GetString(ui, "name"), AcCarUi.GetInt(ui, "year"));
+            var facts = new CarFacts(CarBook.Current.MakeOf(id, brand, name), CarBook.Current.FamilyOfCar(id, brand, name), year);
+            var (power, coast, preload) = specs.Differential;
+            Console.WriteLine($"{id}: {brand} {name} {year}, make {facts.Make ?? "?"} ({facts.Family}), {specs.Traction ?? "?"}, rear {specs.Rear.SuspensionType ?? "?"}, " +
+                              $"{specs.PeakTorque:0} Nm, final {specs.FinalRatio:0.00}, diff {power:0.00}/{coast:0.00}/{preload:0}, brake temps {(specs.Front.HasBrakeTemps ? "front" : "-")}/{(specs.Rear.HasBrakeTemps ? "rear" : "-")}");
+
+            var picks = CarBook.Current.Car(id)?.RunningGear;
+            if (RunningGearGuess.ChooseAxle(catalog, specs, facts, picks) is not { } axle)
+            {
+                Console.WriteLine(specs.DrivesRear ? "    NO AXLE in the catalog for it" : "    no rear axle: the rear wheels are not driven");
+                continue;
+            }
+
+            var (lockPower, lockCoast, lockPreload) = RearAxle.Lock(axle.Carrier);
+            Console.WriteLine($"    {axle.Housing.DisplayName}{(picks?.Axle != null ? " (picked)" : "")}, {RearAxle.Strength(axle.Housing):0} Nm");
+            Console.WriteLine($"    {axle.Carrier.DisplayName}, {lockPower:0.00}/{lockCoast:0.00}/{lockPreload:0}; {axle.Gears.DisplayName}; {axle.Shaft.DisplayName}");
+            housings[axle.Housing.DisplayName ?? axle.Housing.Id] = housings.GetValueOrDefault(axle.Housing.DisplayName ?? axle.Housing.Id) + 1;
+        }
+
+        Console.WriteLine();
+        foreach (var (housing, count) in housings.OrderByDescending(h => h.Value)) Console.WriteLine($"{count,4}  {housing}");
         return 0;
     }
 

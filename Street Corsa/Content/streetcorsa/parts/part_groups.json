@@ -16,12 +16,14 @@
     "shows: the parts view's buttons that put kinds of part out of sight, as the source game had them. Each names its",
     "groups (the first that names a part's group takes it); rest_of_engine takes every other part of the engine; a part",
     "no show takes stays in sight. The player reads part_show.<id> as the button's tooltip. A mod adds shows, or changes",
-    "one by its id. The drivetrain is the gearbox (the flywheel and clutch are the engine's); a differential or a transfer case",
-    "group a mod adds goes in it too."
+    "one by its id. The drivetrain is the gearbox (the flywheel and clutch are the engine's) and the rear axle with its",
+    "carrier, gears and shafts; a transfer case group a mod adds goes in it too. rear_axles to axle_shafts are the game's own",
+    "too: the rear axle has a slot on the car and takes the final drive and the differential over from the gearbox.",
+    "strength prices a kind by what it holds (Nm at the axle), diff_lock by how hard it locks."
   ],
   "shows": [
     { "id": "engine", "icon": "icons/engine", "rest_of_engine": true },
-    { "id": "drivetrain", "icon": "icons/gears", "groups": [ "transmissions", "differentials", "transfer_cases" ] },
+    { "id": "drivetrain", "icon": "icons/gears", "groups": [ "transmissions", "rear_axles", "differentials", "ring_pinions", "axle_shafts", "transfer_cases" ] },
     { "id": "brakes", "icon": "icons/disc_brake", "groups": [ "brakes" ] },
     { "id": "suspension", "icon": "icons/parts_filled", "groups": [ "springs", "shocks", "sway_bars", "suspension_arms" ] }
   ],
@@ -49,6 +51,10 @@
     { "id": "brakes", "classes": [ "Brake" ], "price": { "base": 60, "by": "brake_torque", "by_power": 1 } },
     { "id": "springs", "classes": [ "Spring" ], "price": { "base": 25, "by": "spring_rate", "by_power": 0.5 } },
     { "id": "shocks", "classes": [ "ShockAbsorber" ], "price": { "base": 25, "by": "damping", "by_power": 0.5 } },
+    { "id": "rear_axles", "classes": [ "RearAxle" ], "never_stacks": true, "price": { "base": 150, "by": "strength", "by_power": 1 } },
+    { "id": "differentials", "classes": [ "Differential" ], "never_stacks": true, "speed_shop": true, "price": { "base": 120, "by": "diff_lock", "by_power": 1 } },
+    { "id": "ring_pinions", "classes": [ "RingPinion" ], "never_stacks": true, "speed_shop": true, "price": { "base": 70 } },
+    { "id": "axle_shafts", "classes": [ "AxleShaft" ], "never_stacks": true, "price": { "base": 30, "by": "strength", "by_power": 1 } },
     { "id": "sway_bars", "classes": [ "Swaybar" ], "price": { "base": 40 } },
     { "id": "suspension_arms", "classes": [ "Suspension" ], "price": { "base": 50 } },
     { "id": "accessories", "price": { "base": 15 } }

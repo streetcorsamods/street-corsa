@@ -191,6 +191,9 @@ namespace StreetCorsa.Models.Race
         public const string Suspension = "SUSPENSION";
         public const string Tyre = "TYRE";
 
+        /// <summary>The rear axle let go: a shaft, the gears or the carrier (schema 1.9)</summary>
+        public const string Axle = "AXLE";
+
         /// <summary>The engine boiled over: its heat took the last of its life (schema 1.7)</summary>
         public const string Overheat = "OVERHEAT";
 
@@ -207,6 +210,7 @@ namespace StreetCorsa.Models.Race
             Gearbox => "result.breakdown.gearbox",
             Suspension => "result.breakdown.suspension",
             Tyre => "result.breakdown.tyre",
+            Axle => "result.breakdown.axle",
             _ => "result.breakdown.car"
         });
 
@@ -373,6 +377,14 @@ namespace StreetCorsa.Models.Race
 
         [JsonProperty("fuel_litres")]
         public double? FuelLitres { get; set; }
+
+        /// <summary>The rear axle let go (schema 1.9): its weakest part is wrecked</summary>
+        [JsonProperty("axle_broken")]
+        public bool? AxleBroken { get; set; }
+
+        /// <summary>The most torque the rear tyres put down in the race, Nm at the axle (schema 1.9), against what the axle holds</summary>
+        [JsonProperty("axle_peak_nm")]
+        public double? AxlePeakNm { get; set; }
 
         /// <summary>What the tank holds (schema 1.7)</summary>
         [JsonProperty("max_fuel_litres")]
