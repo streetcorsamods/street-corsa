@@ -49,6 +49,12 @@ public static class PartTrees
         {
             var installed = new InstalledPart(definition) { InstanceId = instance.InstanceId, Wear = instance.Wear, Tear = instance.Tear };
             foreach (var (field, value) in instance.Tuning ?? []) installed.Tuning[field] = value;
+            foreach (var (cut, done) in instance.Cuts ?? [])
+            {
+                if (done > 0) installed.Cuts[cut] = done;
+            }
+
+            if (installed.Cuts.Count > 0) installed.CutFigures = catalog.Rebuilds.CutFigures(definition, catalog.WorkOrder.KindOf(definition), installed.Cuts);
             saved[installed] = instance;
             return installed;
         }
@@ -89,7 +95,8 @@ public static class PartTrees
                 Tear = part.Tear,
                 ParentSlot = part.ParentSlot,
                 OwnSlot = part.OwnSlot,
-                Tuning = new Dictionary<string, double>(part.Tuning)
+                Tuning = new Dictionary<string, double>(part.Tuning),
+                Cuts = new Dictionary<string, int>(part.Cuts)
             };
             if (depth < MaxDepth)
             {
@@ -114,7 +121,8 @@ public static class PartTrees
             Tear = part.Tear,
             ParentSlot = part.ParentSlot,
             OwnSlot = part.OwnSlot,
-            Tuning = new Dictionary<string, double>(part.Tuning ?? [])
+            Tuning = new Dictionary<string, double>(part.Tuning ?? []),
+            Cuts = new Dictionary<string, int>(part.Cuts ?? [])
         };
         if (keepIds) copy.InstanceId = part.InstanceId;
         if (depth >= MaxDepth) return copy;

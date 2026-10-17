@@ -76,7 +76,9 @@ public sealed class PartShopRules
         // Against what the used part is worth: the paper's private sellers ask about 0.6; and a little more than a
         // trade-in for the player's old parts, still less than any new part sells for in a closing-down sale (and less
         // than any used part in the paper, which is held over the most a shop pays at every difficulty)
-        ["junkyard"] = new() { PriceFactor = 0.55, BuyFactor = 0.42, StockLow = 20, StockHigh = 35, RestockDays = 3, PerShelfLow = 2, PerShelfHigh = 5 }
+        ["junkyard"] = new() { PriceFactor = 0.55, BuyFactor = 0.42, StockLow = 20, StockHigh = 35, RestockDays = 3, PerShelfLow = 2, PerShelfHigh = 5 },
+        // A machine shop: what it asks against the work's list price (rebuilds.json); it stocks and buys nothing
+        ["machine"] = new() { PriceFactor = 1.0, StockLow = 1, StockHigh = 1, RestockDays = 30, PerShelfLow = 1, PerShelfHigh = 1 }
     };
 
     /// <summary>A kind of shop <see cref="Kinds"/> leaves out (a specialist, in the base game)</summary>

@@ -63,6 +63,9 @@ namespace StreetCorsa.Services.PartShops
 
         /// <summary>A rival bought the part at the shop: one fewer on its shelf. False when it had none left.</summary>
         bool TakeForRival(GameState gameState, string shopId, string partId);
+
+        /// <summary>The machine shops' work on the player's parts</summary>
+        IMachineShopService Machine { get; }
     }
 
     /// <summary>
@@ -87,9 +90,12 @@ namespace StreetCorsa.Services.PartShops
             Catalog = catalog;
             _parts = parts;
             _paper = paper;
+            Machine = new MachineShopService(catalog, parts);
         }
 
         public IPartShopCatalog Catalog { get; }
+
+        public IMachineShopService Machine { get; }
 
         public bool IsAvailable => _parts.IsAvailable;
 
@@ -210,7 +216,8 @@ namespace StreetCorsa.Services.PartShops
 
         public bool Sell(GameState gameState, PartShopLocation shop, PartInstance part)
         {
-            if (!shop.IsTrading || Catalog.Get(shop.Id) is not { } definition) return false;
+            // A machine shop works on parts; it buys none
+            if (!shop.IsTrading || Catalog.Get(shop.Id) is not { } definition || definition.KindOf == PartShopKind.Machine) return false;
 
             var price = BuyingPrice(shop, part);
             if (!gameState.Player.Parts.Remove(part)) return false;
@@ -237,7 +244,7 @@ namespace StreetCorsa.Services.PartShops
 
             foreach (var shop in gameState.PartShops.Where(s => s.Status == DealerStatus.Open && (!firstOnly || s.RestockedOn == null)).ToList())
             {
-                if (Catalog.Get(shop.Id) is not { } definition || !PartShopRules.RestockDue(definition, shop, date)) continue;
+                if (Catalog.Get(shop.Id) is not { } definition || definition.KindOf == PartShopKind.Machine || !PartShopRules.RestockDue(definition, shop, date)) continue;
 
                 // Marked before the wrecks are waited for: a second caller meanwhile (the map opened during the morning's
                 // review) finds the shop stocked and leaves it be, rather than filling the yard twice

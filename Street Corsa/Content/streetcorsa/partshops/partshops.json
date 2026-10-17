@@ -4,6 +4,7 @@
     "its stock and what the player has spent there; everything else is read from here and merged over the save, so a",
     "field added here reaches every existing save.",
     "",
+    "kind machine: a machine shop; it sells no parts, it works on the player's (parts/rebuilds.json's machine jobs).",
     "kind: specialist (new parts for its makes: every part pack whose \"make\" is one of them, a mod's too), speed (new",
     "performance parts for any make, or its makes: carburettors, blowers, cams, manifolds, heads, headers, nitrous, none",
     "a car came with), wheels (new tyres, rims, brakes, springs and shocks) or junkyard (used parts and whole engines out",
@@ -94,6 +95,27 @@
       "mapX": 0.505,
       "mapY": 0.625,
       "travelHours": 3,
+      "startsOpen": false
+    },
+    {
+      "id": "gardena_machine",
+      "name": "Gardena Machine & Engine",
+      "region": "Gardena",
+      "blurb": "Boring bars, crank grinders and a man who has rebuilt more Flatheads than you have seen. Leave it, come back Thursday.",
+      "kind": "machine",
+      "mapX": 0.27,
+      "mapY": 0.62,
+      "travelHours": 1.5
+    },
+    {
+      "id": "glendale_engine",
+      "name": "Glendale Engine Rebuilders",
+      "region": "Glendale",
+      "blurb": "They build the strip's fastest engines and still bore your grandma's Plymouth. Ports, cams and blueprinting, if you ask.",
+      "kind": "machine",
+      "mapX": 0.31,
+      "mapY": 0.395,
+      "travelHours": 1.5,
       "startsOpen": false
     },
     {

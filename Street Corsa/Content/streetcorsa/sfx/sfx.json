@@ -128,6 +128,14 @@
       ],
       "loop": true
     },
+    "ambience.machine_shop": {
+      "bus": "ambience",
+      "volume": 0.5,
+      "files": [
+        "ambience/machine_shop.ogg"
+      ],
+      "loop": true
+    },
     "ambience.booth": {
       "bus": "ambience",
       "volume": 0.45,
@@ -293,6 +301,30 @@
       "volume": 0.4,
       "files": [
         "ambience/shop.ogg"
+      ],
+      "loop": true
+    },
+    "work.bore": {
+      "bus": "effects",
+      "volume": 0.45,
+      "files": [
+        "work/bore.ogg"
+      ],
+      "loop": true
+    },
+    "work.crank": {
+      "bus": "effects",
+      "volume": 0.45,
+      "files": [
+        "work/crank.ogg"
+      ],
+      "loop": true
+    },
+    "work.mill": {
+      "bus": "effects",
+      "volume": 0.45,
+      "files": [
+        "work/mill.ogg"
       ],
       "loop": true
     }

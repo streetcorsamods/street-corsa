@@ -312,6 +312,7 @@ public static class EngineTuner
                     replacement.Wear = offer.Part.Wear;
                     replacement.Tear = offer.Part.Tear;
                     replacement.Tuning = new Dictionary<string, double>(offer.Part.Tuning ?? []);
+                    replacement.Cuts = new Dictionary<string, int>(offer.Part.Cuts ?? []);
                 }
 
                 var cost = (offer?.Price ?? newPrice) + extra;

@@ -32,6 +32,7 @@ internal static class TestLogging
     {
         AppLoggerFactory.InitializeSilent();
         PartPricing.Book = () => TestCars.Prices.Value;
+        PartPricing.Jobs = () => TestCars.Catalog.Value;
 
         LiteDB.BsonMapper.Global.ToDocument(new StreetCorsa.Models.Race.ProcessedRaceSession());
         LiteDB.BsonMapper.Global.ToDocument(new StreetCorsa.Models.GameState.GameState());

@@ -312,6 +312,7 @@ namespace StreetCorsa.Screens.Garage
                 OnPropertyChanged(nameof(SelectedConditionDisplay));
                 OnPropertyChanged(nameof(SelectedWorthDisplay));
                 OnPropertyChanged(nameof(SelectedAttachedDisplay));
+                OnPropertyChanged(nameof(SelectedCutsDisplay));
                 OnPropertyChanged(nameof(SelectedBlockedDisplay));
                 OnPropertyChanged(nameof(RemoveButtonText));
                 OnPropertyChanged(nameof(CanInstallFromStand));
@@ -367,6 +368,11 @@ namespace StreetCorsa.Screens.Garage
 
         public string SelectedWorthDisplay => _selectedPart != null && SavedOf(_selectedPart) is { } saved
             ? Money.Text(PartPricing.Round(PartPricing.Worth(_selectedPart.Definition, saved)))
+            : string.Empty;
+
+        /// <summary>What a machine shop has done to the picked part ("bored +.030 over · ported and polished"); empty for none</summary>
+        public string SelectedCutsDisplay => _selectedPart != null && Catalog is { } catalog && SavedOf(_selectedPart) is { } saved
+            ? string.Join("  ·  ", Machining.Describe(catalog, saved))
             : string.Empty;
 
         /// <summary>Why the picked part cannot come off now, in the work order's words; empty when it can</summary>
@@ -515,13 +521,17 @@ namespace StreetCorsa.Screens.Garage
             var onCar = _car != null && !_isStand && _selectedShelfItem == null;
             var picked = _selectedPart;
             var shelfPart = _selectedShelfItem?.Part;
-            var show = new RebuildShow(offer.Offer.Job, offer.Name, Unit.Clamp01(part.Wear, 1), offer.Offer.After, offer.Offer.Minutes, _gameState.Date);
+            var wearBefore = Unit.Clamp01(part.Wear, 1);
 
             // The loose part goes on the bench as it was: a tree of its own, before the job changes it
             var benchPart = shelfPart != null && Catalog is { } shelfCatalog ? PartTrees.ToInstalled(shelfCatalog, shelfPart)?.Root : null;
 
-            // The work first: a job that fails to go on costs nothing
-            Rebuilding.Apply(offer.Offer.Job, part);
+            // The work first: a job that fails to go on costs nothing. The player's own lands round what it can do
+            var outcome = Rebuilding.Do(offer.Offer.Job, part, Random.Shared);
+            var show = new RebuildShow(offer.Offer.Job, offer.Name, wearBefore, outcome.Wear, offer.Offer.Minutes, _gameState.Date)
+            {
+                Verdict = outcome.Quality is { } quality ? GameText.Say($"rebuild.quality.{quality}") : null
+            };
             _gameState.Player.Money -= offer.Offer.Cost;
             _logger.Information("{Job} on {Part} for ${Cost}: now {Wear:P0}", offer.Offer.Job.Id, part.DefinitionId, offer.Offer.Cost, part.Wear);
 
@@ -687,11 +697,12 @@ namespace StreetCorsa.Screens.Garage
 
                 if (run != _workRun) return;
 
-                // Done: the last of the work's sound goes, a part set down, a moment to see it clean
+                // Done: the last of the work's sound goes, a part set down, a moment to see it clean and hear how it came out
                 AudioHub.Shared.StopLoop(_workLoop, 0.4f);
                 _workLoop = null;
                 Sfx.Play(Sfx.Clank);
-                await Task.Delay(_workSkipped ? 250 : 700);
+                if (show.Verdict is { } verdict) WorkCaption = verdict;
+                await Task.Delay(show.Verdict != null ? 1600 : _workSkipped ? 250 : 700);
             }
             catch (Exception ex)
             {
@@ -1096,7 +1107,13 @@ namespace StreetCorsa.Screens.Garage
             }
 
             OnPropertyChanged(nameof(HasShelfItems));
+            OnPropertyChanged(nameof(AwayDisplay));
         }
+
+        /// <summary>The player's parts at a machine shop, a line each: what, where, back when; empty for none</summary>
+        public string AwayDisplay => string.Join(Environment.NewLine, (_gameState.Player.MachineWork ?? []).Select(order =>
+            GameText.Say("workbench.away", ("part", Catalog?.Get(order.Part.DefinitionId) is { } d ? d.DisplayName ?? d.Name : order.Part.DefinitionId),
+                ("shop", order.ShopName), ("day", order.ReadyOn))));
 
         /// <summary>The stand's engine brought to life, the one built before while nothing changed on it</summary>
         private LiveTree? StandLive(PartsCatalog? catalog)
@@ -1220,7 +1237,7 @@ namespace StreetCorsa.Screens.Garage
             Kind = PartKinds.GroupName(PartKinds.GroupOf(definition));
             IsEngine = PartKinds.IsBlock(definition);
 
-            Detail = PartTrees.Describe(part);
+            Detail = string.Join("  ·  ", new[] { PartTrees.Describe(part) }.Concat(Machining.Describe(catalog, part)));
             WorthDisplay = Money.Text(PartPricing.Round(PartPricing.WorthOfAssembly(catalog, part)));
         }
 

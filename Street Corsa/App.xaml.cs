@@ -321,6 +321,7 @@ namespace StreetCorsa
             // done. What comes before them is finished by the time whoever spent the time carries on.
             Scheduler.RegisterTask(new MarketRefreshTask(MarketService));
             Scheduler.RegisterTask(new PartsAdsRefreshTask(NewspaperPartsService));
+            Scheduler.RegisterTask(new Services.Scheduler.Tasks.MachineWorkTask(PartShopService.Machine));
 
             // Race result services
             var raceResultValidator = new Services.Race.Validation.RaceResultValidator();

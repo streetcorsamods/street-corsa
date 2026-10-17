@@ -53,9 +53,29 @@ public static class PartPricing
 
     public static double NewPrice(PartDefinition part) => (Book?.Invoke() ?? PartPriceBook.Empty).Price(part) * Scale;
 
-    /// <summary>Worth of one part in its condition, nothing mounted on it counted; a wear or damage that is no number is as new</summary>
+    /// <summary>
+    /// Worth of one part in its condition, nothing mounted on it counted; a wear or damage that is no number is as new. A
+    /// part a machine shop has cut is worth what its cuts leave it (<see cref="CutWorth"/>): less for every size gone, more
+    /// for speed work.
+    /// </summary>
     public static double Worth(PartDefinition part, PartInstance instance) =>
-        NewPrice(part) * Unit.Clamp01(instance.Tear, 1) * (WearFloor + (1 - WearFloor) * Unit.Clamp01(instance.Wear, 1));
+        NewPrice(part) * Unit.Clamp01(instance.Tear, 1) * (WearFloor + (1 - WearFloor) * Unit.Clamp01(instance.Wear, 1)) * CutWorth(part, instance);
+
+    /// <summary>
+    /// What the cuts on a part do to its worth, against the part as it left the factory: the product of each cut's size's
+    /// <c>worth</c> (<c>rebuilds.json</c>), 1 with no cuts or no catalog to read the jobs from (<see cref="Jobs"/>)
+    /// </summary>
+    public static double CutWorth(PartDefinition part, PartInstance instance)
+    {
+        if (instance.Cuts is not { Count: > 0 } cuts || Jobs?.Invoke() is not { } catalog) return 1;
+        return catalog.Rebuilds.WorthOf(part, catalog.WorkOrder.KindOf(part), cuts);
+    }
+
+    /// <summary>
+    /// The catalog whose machine shop jobs <see cref="CutWorth"/> reads, asked each time: process-wide as <see cref="Book"/>
+    /// is, pointed at the parts service's catalog when it is made. Null: cuts change no worth.
+    /// </summary>
+    public static Func<PartsCatalog?>? Jobs { get; set; }
 
     /// <summary>
     /// Worth of a part with everything that is mounted on it. A whole engine (a block with what is on it) that runs is
@@ -142,6 +162,8 @@ public static class PartPricing
             text.Append(part.DefinitionId).Append('@').Append(part.ParentSlot).Append(':').Append(part.OwnSlot);
             foreach (var (field, value) in (part.Tuning ?? []).OrderBy(t => t.Key, StringComparer.Ordinal))
                 text.Append(';').Append(field).Append('=').Append(value.ToString("R", CultureInfo.InvariantCulture));
+            foreach (var (cut, done) in (part.Cuts ?? []).Where(c => c.Value > 0).OrderBy(c => c.Key, StringComparer.Ordinal))
+                text.Append(";cut:").Append(cut).Append('=').Append(done.ToString(CultureInfo.InvariantCulture));
 
             text.Append('(');
             foreach (var child in part.Children.OrderBy(c => c.ParentSlot).ThenBy(c => c.DefinitionId, StringComparer.OrdinalIgnoreCase))

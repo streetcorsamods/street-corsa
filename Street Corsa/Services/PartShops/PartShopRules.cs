@@ -141,6 +141,7 @@ namespace StreetCorsa.Services.PartShops
                 PartShopKind.Specialist => !runningGear && part.Make != null && ofItsMakes,
                 PartShopKind.Speed => !runningGear && ofItsMakes && PartGroups.Current.SoldBySpeedShops(group) && !factoryParts.Contains(part.Id),
                 PartShopKind.Wheels => runningGear,
+                PartShopKind.Machine => false,
                 _ => ofItsMakes || runningGear
             };
         }

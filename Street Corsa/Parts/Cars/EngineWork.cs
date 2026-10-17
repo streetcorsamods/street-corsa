@@ -92,7 +92,8 @@ public static class EngineWork
             if (missing.Count > 0) return PartWords.Say("work.put_on_first", ("parts", JoinAnd(missing.Select(k => The(order.NameOf(k))).ToList())));
         }
 
-        return null;
+        // A bored block takes pistons of its size only
+        return Machining.WhyNotTogether(catalog, whole, looseParts);
     }
 
     /// <summary>

@@ -81,7 +81,16 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <TextBlock Grid.Row="0" Text="{t:Text workbench.shelf}" Style="{StaticResource PanelTitleStyle}"/>
+                <StackPanel Grid.Row="0">
+                    <TextBlock Text="{t:Text workbench.shelf}" Style="{StaticResource PanelTitleStyle}"/>
+                    <!-- What is away at a machine shop, and when it is back -->
+                    <TextBlock Text="{Binding AwayDisplay}"
+                               Style="{StaticResource LabelStyle}"
+                               Foreground="{StaticResource AmberBrush}"
+                               TextWrapping="Wrap"
+                               Margin="0,0,0,6"
+                               Visibility="{Binding AwayDisplay, Converter={StaticResource StringToVisibilityConverter}}"/>
+                </StackPanel>
 
                 <TextBlock Grid.Row="1"
                            Text="{t:Text workbench.shelf.empty}"
@@ -279,6 +288,12 @@
                         <TextBlock Text="{t:Text workbench.worth}" Style="{StaticResource LabelStyle}"/>
                         <TextBlock Text="{Binding SelectedWorthDisplay}" Style="{StaticResource ValueStyle}" Foreground="{StaticResource AccentSuccessBrush}"/>
                     </StackPanel>
+
+                    <TextBlock Text="{Binding SelectedCutsDisplay}"
+                               Style="{StaticResource LabelStyle}"
+                               Foreground="{StaticResource AmberBrush}"
+                               TextWrapping="Wrap"
+                               Visibility="{Binding SelectedCutsDisplay, Converter={StaticResource StringToVisibilityConverter}}"/>
 
                     <TextBlock Text="{Binding SelectedAttachedDisplay}"
                                Style="{StaticResource LabelStyle}"

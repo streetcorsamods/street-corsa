@@ -19,7 +19,9 @@ public sealed record ShopStanding(ShopShownItem Item, ShopPlace Place, Matrix4x4
 /// Which part of the stock stands in which of a shop's places (<see cref="ShopScene.Places"/>), as a shopkeeper would lay
 /// it out: a whole engine on the stand, tyres and rims in the rack, the big parts on the table and the bottom shelves,
 /// the rest on the shelves; one part a place, the places in the scene's order (the best seen first), turned a quarter
-/// when it fits that way only. A part too big for every place left is not shown. Pure figures, for the tests.
+/// when it fits that way only. A place that holds a shelf's group by its id ("crankshafts": the machine shop's crank
+/// grinder) takes a part of that group before any other place does, and nothing else. A part too big for every place
+/// left is not shown. Pure figures, for the tests.
 /// </summary>
 public static class ShopStockLayout
 {
@@ -39,7 +41,7 @@ public static class ShopStockLayout
 
         foreach (var item in ordered)
         {
-            foreach (var holds in Takes(ClassOf(item)))
+            foreach (var holds in Takes(ClassOf(item)).Prepend(item.Group))
             {
                 var found = free.FirstOrDefault(f => f.Place.Holds == holds && Turn(item.Size, f.Place) != null);
                 if (found.Place == null) continue;
@@ -50,8 +52,8 @@ public static class ShopStockLayout
             }
         }
 
-        // Nothing on the stand (a shop with no engines): the biggest part shown elsewhere goes on it, so it is never bare
-        if (free.FirstOrDefault(f => f.Place.Holds == ShopHolds.Engine) is { Place: { } stand } standFree)
+        // Nothing on any stand (a shop with no engines): the biggest part shown elsewhere goes on one, so they are never all bare
+        if (standing.All(s => s.Place.Holds != ShopHolds.Engine) && free.FirstOrDefault(f => f.Place.Holds == ShopHolds.Engine) is { Place: { } stand } standFree)
         {
             var biggest = standing
                 .Where(s => s.Place.Holds is ShopHolds.Large or ShopHolds.Shelf && Turn(s.Item.Size, stand) != null)

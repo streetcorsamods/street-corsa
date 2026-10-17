@@ -26,7 +26,10 @@ namespace StreetCorsa.Services.Talk
         Cruise,
 
         /// <summary>At a part shop's counter: the clerk finds the player parts in the shop's stock</summary>
-        Shop
+        Shop,
+
+        /// <summary>At a machine shop's counter: the machinist picks out the work on the player's parts</summary>
+        MachineShop
     }
 
     /// <summary>
@@ -88,6 +91,7 @@ namespace StreetCorsa.Services.Talk
             PersonKind.Salesman => "chat_salesman",
             PersonKind.Rival => "chat_rival",
             PersonKind.Buyer => "chat_buyer",
+            PersonKind.Clerk when Place == TalkPlace.MachineShop => "chat_machinist",
             PersonKind.Clerk => "chat_clerk",
             _ => "chat_seller"
         };
@@ -131,6 +135,7 @@ namespace StreetCorsa.Services.Talk
                 TalkPlace.Curb => "chat.stage.curb",
                 TalkPlace.Diner => "chat.stage.diner",
                 TalkPlace.Shop => "chat.stage.shop",
+                TalkPlace.MachineShop => "chat.stage.machine_shop",
                 _ => "chat.stage.cruise"
             };
             return await AskAsync(GameText.Say(key, ("thing", Subject?.Name ?? string.Empty), ("player", _game.Player.Name)), null, cancellationToken).ConfigureAwait(true);
@@ -203,7 +208,8 @@ namespace StreetCorsa.Services.Talk
             };
             try
             {
-                var answer = await _desk.Text.JsonAsync("clerk_search", values, ClerkSearch.Schema(kinds), cancellationToken).ConfigureAwait(true);
+                var prompt = Place == TalkPlace.MachineShop ? "machinist_search" : "clerk_search";
+                var answer = await _desk.Text.JsonAsync(prompt, values, ClerkSearch.Schema(kinds), cancellationToken).ConfigureAwait(true);
                 var search = ClerkSearch.Parse(answer, kinds);
                 // "...that fits?": what fits, whatever the AI read
                 if (search is { Fits: false } && Haggle.HasWord(text, GameText.Installed.Lines("chat.fit_words"))) search = search with { Fits = true, Asks = true };
@@ -594,7 +600,7 @@ namespace StreetCorsa.Services.Talk
             if (Counter != null)
             {
                 sections.Add(new("shop", [.. Counter.Facts()], FactSection.Always));
-                sections.Add(new("stock", [.. TalkFacts.Stock(Found)], FactSection.Always));
+                sections.Add(new("stock", [.. Place == TalkPlace.MachineShop ? TalkFacts.Work(Found) : TalkFacts.Stock(Found)], FactSection.Always));
             }
             if (Subject switch { CarSubject car => car.Car, BuyerSubject buyer => buyer.Car, _ => null } is { } subjectCar)
                 sections.Add(new("build", [.. TalkFacts.Build(subjectCar.Listing.Parts, _desk.Parts, Factory(subjectCar.Listing.CarDefinitionId), rules.BuildPartsPerKind)],

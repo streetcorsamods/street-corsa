@@ -49,6 +49,15 @@
         "restockDays": 3,
         "perShelfLow": 2,
         "perShelfHigh": 5
+      },
+      "machine": {
+        "priceFactor": 1.0,
+        "buyFactor": 0,
+        "stockLow": 1,
+        "stockHigh": 1,
+        "restockDays": 30,
+        "perShelfLow": 1,
+        "perShelfHigh": 1
       }
     },
     "otherKind": {

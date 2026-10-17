@@ -30,6 +30,9 @@ public sealed class RebuildShow
 
     public RebuildJob Job { get; }
 
+    /// <summary>How the player's own work came out ("A good job"), said as it ends; null when nothing is said of it</summary>
+    public string? Verdict { get; init; }
+
     /// <summary>The job's name, the show's title</summary>
     public string Name { get; }
 

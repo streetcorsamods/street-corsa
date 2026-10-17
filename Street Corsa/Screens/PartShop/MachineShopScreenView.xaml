@@ -1,0 +1,372 @@
+<UserControl x:Class="StreetCorsa.Screens.PartShop.MachineShopScreenView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:t="clr-namespace:StreetCorsa.Services.Text"
+             xmlns:controls="clr-namespace:StreetCorsa.Controls"
+             xmlns:helpers="clr-namespace:StreetCorsa.Helpers"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="720" d:DesignWidth="1280">
+    <UserControl.Resources>
+        <!-- A row of a list: a line under it, lit under the mouse -->
+        <Style x:Key="RowStyle" TargetType="ListBoxItem">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="row"
+                                Background="Transparent"
+                                BorderBrush="{StaticResource Gray30Brush}"
+                                BorderThickness="0,0,0,1"
+                                Padding="14,7">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="row" Property="Background" Value="{StaticResource White20Brush}"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="row" Property="Background" Value="{StaticResource Glass14E0Brush}"/>
+                                <Setter TargetName="row" Property="BorderBrush" Value="{StaticResource AccentPrimaryBrush}"/>
+                                <Setter TargetName="row" Property="BorderThickness" Value="3,0,0,1"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="JobRowStyle" TargetType="ListBoxItem" BasedOn="{StaticResource RowStyle}">
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="row"
+                                Background="Transparent"
+                                BorderBrush="{StaticResource Gray30Brush}"
+                                BorderThickness="0,0,0,1"
+                                Padding="14,7">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <DataTrigger Binding="{Binding IsPicked}" Value="True">
+                                <Setter TargetName="row" Property="Background" Value="{StaticResource Glass14E0Brush}"/>
+                                <Setter TargetName="row" Property="BorderBrush" Value="{StaticResource AmberBrush}"/>
+                                <Setter TargetName="row" Property="BorderThickness" Value="3,0,0,1"/>
+                            </DataTrigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="row" Property="Background" Value="{StaticResource White20Brush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ColumnTitleStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+            <Setter Property="Margin" Value="4,0,0,6"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Background="{StaticResource BgDarkBrush}">
+
+        <!-- Inside the shop, behind everything: the machines, and on them the work in -->
+        <controls:ShopViewport3D x:Name="Viewport"
+                                 SceneKn5="{Binding SceneKn5}"
+                                 Stock="{Binding StockShown}"
+                                 Catalog="{Binding Catalog}"
+                                 Places="{Binding Places}"
+                                 Dressing="{Binding Dressing}"
+                                 View="{Binding View}"
+                                 Room="{Binding Room}"
+                                 IsCovered="{Binding IsCounterOpen}"/>
+
+        <Grid Background="{StaticResource BgDarkBrush}"
+              Visibility="{Binding HasScene, Converter={StaticResource BooleanToVisibilityConverter}}"
+              helpers:Reveal.IsShown="{Binding IsShopReady, ElementName=Viewport, Converter={StaticResource InverseBooleanConverter}}">
+            <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"
+                       FontSize="{StaticResource FontSizeTitleSmall}"
+                       Foreground="{StaticResource TextPrimaryBrush}">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Text" Value="{t:Text partshop.walking_in}"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding HasFailed, ElementName=Viewport}" Value="True">
+                                <Setter Property="Text" Value="{t:Text partshop.no_3d}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+        </Grid>
+
+        <!-- The shop: its name, what kind of place it is, and what is off today -->
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,20,0,0" IsHitTestVisible="False">
+            <Border Background="{StaticResource BgPanelCCBrush}" CornerRadius="5" Padding="28,4" HorizontalAlignment="Center">
+                <TextBlock Text="{Binding ShopName}"
+                           FontSize="{StaticResource FontSizeScreenTitle}"
+                           FontWeight="Bold"
+                           Foreground="{StaticResource TextPrimaryBrush}"/>
+            </Border>
+            <Border Background="{StaticResource BgPanelCCBrush}" CornerRadius="4" Padding="14,3" Margin="0,6,0,0" HorizontalAlignment="Center">
+                <StackPanel>
+                    <TextBlock HorizontalAlignment="Center"
+                               FontSize="{StaticResource FontSizeCompact}"
+                               Foreground="{StaticResource TextSecondaryBrush}">
+                        <Run Text="{Binding KindLabel, Mode=OneWay}"/>
+                        <Run Text="  ·  "/>
+                        <Run Text="{Binding Region, Mode=OneWay}"/>
+                    </TextBlock>
+                    <TextBlock Text="{Binding Blurb}"
+                               HorizontalAlignment="Center"
+                               FontSize="{StaticResource FontSizeSmall}"
+                               FontStyle="Italic"
+                               TextWrapping="Wrap"
+                               TextAlignment="Center"
+                               MaxWidth="700"
+                               Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <TextBlock Text="{Binding Notice}"
+                               Visibility="{Binding HasNotice, Converter={StaticResource BooleanToVisibilityConverter}}"
+                               HorizontalAlignment="Center"
+                               Margin="0,4,0,0"
+                               FontSize="{StaticResource FontSizeCompact}"
+                               FontWeight="Bold"
+                               Foreground="{StaticResource GoldBrush}"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <!-- Up to the counter -->
+        <Button HorizontalAlignment="Center"
+                VerticalAlignment="Bottom"
+                Margin="0,0,0,34"
+                Padding="30,12"
+                Style="{StaticResource DialogPrimaryButtonStyle}"
+                FontSize="{StaticResource FontSizeBodyLarge}"
+                Command="{Binding ToggleCounterCommand}"
+                helpers:Reveal.IsShown="{Binding ShowsCounterButton}">
+            <StackPanel Orientation="Horizontal">
+                <Ellipse Width="10" Height="10" Margin="0,0,10,0" Fill="{StaticResource AmberBrush}" VerticalAlignment="Center"
+                         Visibility="{Binding Talk.HasUnread, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}"/>
+                <TextBlock Text="{t:Text partshop.counter}" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Button>
+
+        <!-- The counter, over the shop: the machinist on the left, the player's parts and the work on them on the right -->
+        <Grid helpers:Reveal.IsShown="{Binding IsCounterOpen}" helpers:Reveal.OffsetY="24">
+            <Border Background="{StaticResource OverlayBrush}"/>
+            <Border Style="{StaticResource GlassPanelStyle}"
+                    Margin="90,120,90,40"
+                    MaxWidth="1500"
+                    Padding="18">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="5*"/>
+                        <ColumnDefinition Width="6*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- The machinist, while the player's AI is on -->
+                    <Border Grid.Column="0"
+                            Grid.RowSpan="2"
+                            Width="360"
+                            Margin="0,0,18,0"
+                            Padding="14"
+                            CornerRadius="5"
+                            Background="{StaticResource BgPanelCCBrush}"
+                            BorderBrush="{StaticResource BorderLightBrush}"
+                            BorderThickness="1"
+                            Visibility="{Binding HasTalk, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <controls:TalkPanel DataContext="{Binding Talk}"/>
+                    </Border>
+
+                    <!-- What the player has here and can bring -->
+                    <DockPanel Grid.Column="1" Margin="0,0,12,0">
+                        <TextBlock DockPanel.Dock="Top" Text="{t:Text machine.yours}" Style="{StaticResource ColumnTitleStyle}"/>
+                        <Border Background="{StaticResource Glass14E0Brush}"
+                                BorderBrush="{StaticResource BorderLightBrush}"
+                                BorderThickness="1"
+                                CornerRadius="5">
+                            <Grid>
+                                <ListBox ItemsSource="{Binding Pieces}"
+                                         SelectedItem="{Binding SelectedPiece}"
+                                         ItemContainerStyle="{StaticResource RowStyle}"
+                                         Background="Transparent"
+                                         BorderThickness="0"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Where}"
+                                                           FontSize="{StaticResource FontSizeCaption}"
+                                                           FontWeight="Bold">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding AtShop}" Value="True">
+                                                                    <Setter Property="Foreground" Value="{StaticResource AmberBrush}"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                                <TextBlock Text="{Binding Name}"
+                                                           FontSize="{StaticResource FontSizeBodyLarge}"
+                                                           Foreground="{StaticResource TextPrimaryBrush}"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock FontSize="{StaticResource FontSizeSmall}"
+                                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                                           TextWrapping="Wrap">
+                                                    <Run Text="{Binding Group, Mode=OneWay}"/>
+                                                    <Run Text="  ·  "/>
+                                                    <Run Text="{Binding Detail, Mode=OneWay}"/>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                                <TextBlock Text="{t:Text machine.no_pieces}"
+                                           Visibility="{Binding HasPieces, Converter={StaticResource InverseBooleanToVisibilityConverter}}"
+                                           TextWrapping="Wrap"
+                                           TextAlignment="Center"
+                                           Margin="24"
+                                           VerticalAlignment="Center"
+                                           FontSize="{StaticResource FontSizeBody}"
+                                           Foreground="{StaticResource TextSecondaryBrush}"/>
+                            </Grid>
+                        </Border>
+                    </DockPanel>
+
+                    <!-- The work on the one picked and the parts on it -->
+                    <DockPanel Grid.Column="2">
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
+                            <TextBlock Text="{t:Text machine.work}" Style="{StaticResource ColumnTitleStyle}"/>
+                            <TextBlock Text="{t:Text machine.pricing}" Style="{StaticResource ColumnTitleStyle}" Foreground="{StaticResource AmberBrush}"
+                                       Visibility="{Binding IsPricing, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                        </StackPanel>
+                        <Border Background="{StaticResource Glass14E0Brush}"
+                                BorderBrush="{StaticResource BorderLightBrush}"
+                                BorderThickness="1"
+                                CornerRadius="5">
+                            <Grid>
+                                <ListBox ItemsSource="{Binding Jobs}"
+                                         ItemContainerStyle="{StaticResource JobRowStyle}"
+                                         Background="Transparent"
+                                         BorderThickness="0"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="90"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <StackPanel Grid.Column="0">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="{t:Text machine.picked}"
+                                                                   Visibility="{Binding IsPicked, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                   FontSize="{StaticResource FontSizeCaption}"
+                                                                   FontWeight="Bold"
+                                                                   Margin="0,0,10,0"
+                                                                   Foreground="{StaticResource AmberBrush}"/>
+                                                        <TextBlock Text="{t:Text machine.speed}"
+                                                                   Visibility="{Binding IsSpeed, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                   FontSize="{StaticResource FontSizeCaption}"
+                                                                   FontWeight="Bold"
+                                                                   Foreground="{StaticResource AccentPrimaryBrush}"/>
+                                                    </StackPanel>
+                                                    <TextBlock Text="{Binding Name}"
+                                                               FontSize="{StaticResource FontSizeBodyLarge}"
+                                                               Foreground="{StaticResource TextPrimaryBrush}"
+                                                               TextWrapping="Wrap"/>
+                                                    <TextBlock FontSize="{StaticResource FontSizeSmall}"
+                                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                                               TextWrapping="Wrap">
+                                                        <Run Text="{Binding PartName, Mode=OneWay}"/>
+                                                        <Run Text="  ·  "/>
+                                                        <Run Text="{Binding Detail, Mode=OneWay}"/>
+                                                    </TextBlock>
+                                                </StackPanel>
+
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding PriceDisplay}"
+                                                           FontSize="{StaticResource FontSizeBodyLarge}"
+                                                           FontWeight="Bold"
+                                                           Foreground="{StaticResource AccentSuccessBrush}"
+                                                           HorizontalAlignment="Right"
+                                                           VerticalAlignment="Center"/>
+
+                                                <Button Grid.Column="2"
+                                                        Content="{Binding ActionLabel}"
+                                                        Command="{Binding DataContext.OrderCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                        CommandParameter="{Binding}"
+                                                        IsEnabled="{Binding CanAfford}"
+                                                        Visibility="{Binding CanDo, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                        Style="{StaticResource DialogPrimaryButtonStyle}"
+                                                        Padding="16,4"
+                                                        FontSize="{StaticResource FontSizeCompact}"
+                                                        MinWidth="70"
+                                                        VerticalAlignment="Center"
+                                                        Margin="14,0,0,0"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                                <TextBlock Text="{t:Text machine.no_jobs}"
+                                           Visibility="{Binding HasJobs, Converter={StaticResource InverseBooleanToVisibilityConverter}}"
+                                           TextAlignment="Center"
+                                           Margin="24"
+                                           VerticalAlignment="Center"
+                                           FontSize="{StaticResource FontSizeBody}"
+                                           Foreground="{StaticResource TextSecondaryBrush}"/>
+                            </Grid>
+                        </Border>
+                    </DockPanel>
+
+                    <!-- What was left here, and the player's money -->
+                    <Grid Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,8,0,0">
+                        <TextBlock Text="{Binding StatusText}"
+                                   FontSize="{StaticResource FontSizeCompact}"
+                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                   HorizontalAlignment="Center"
+                                   TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding MoneyDisplay}"
+                                   FontSize="{StaticResource FontSizeCompact}"
+                                   FontWeight="Bold"
+                                   Foreground="{StaticResource AccentSuccessBrush}"
+                                   HorizontalAlignment="Right"/>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <Button Style="{StaticResource PanelCloseButtonStyle}"
+                    Tag="{StaticResource CloseIcon}"
+                    ToolTip="{t:Text partshop.counter_close}"
+                    Command="{Binding ToggleCounterCommand}"
+                    Visibility="{Binding HasScene, Converter={StaticResource BooleanToVisibilityConverter}}"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    Margin="0,96,66,0"/>
+        </Grid>
+
+        <Button Style="{StaticResource RoundIconButtonStyle}"
+                Tag="{StaticResource BackIcon}"
+                ToolTip="{t:Text common.back}"
+                Command="{Binding BackCommand}"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                Margin="20,20,0,0"/>
+
+    </Grid>
+</UserControl>

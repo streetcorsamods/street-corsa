@@ -72,7 +72,7 @@ namespace StreetCorsa.Screens.Shared
             TalkPlace.Lot => "chat.ui.on_lot",
             TalkPlace.Curb => "chat.ui.at_curb",
             TalkPlace.Diner => "chat.ui.at_diner",
-            TalkPlace.Shop => "chat.ui.at_counter",
+            TalkPlace.Shop or TalkPlace.MachineShop => "chat.ui.at_counter",
             _ => "chat.ui.on_street"
         });
 
