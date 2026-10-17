@@ -57,6 +57,7 @@ namespace StreetCorsa.Screens.Garage
             TakeApartCommand = new RelayCommand(TakeApart, () => CanTakeApart);
             PutOnStandCommand = new RelayCommand(PutOnStand, () => CanPutOnStand);
             InstallFromStandCommand = new RelayCommand(InstallFromStand, () => CanInstallFromStand);
+            RebuildCommand = new RelayCommand<RebuildOfferViewModel>(Rebuild, offer => offer?.CanDo == true);
         }
 
         /// <summary>Raised when money or time moved, for the screen around the workbench</summary>
@@ -76,6 +77,7 @@ namespace StreetCorsa.Screens.Garage
         public RelayCommand TakeApartCommand { get; }
         public RelayCommand PutOnStandCommand { get; }
         public RelayCommand InstallFromStandCommand { get; }
+        public RelayCommand<RebuildOfferViewModel> RebuildCommand { get; }
 
         #region What the 3D view shows
 
@@ -309,6 +311,7 @@ namespace StreetCorsa.Screens.Garage
                 OnPropertyChanged(nameof(SelectedBlockedDisplay));
                 OnPropertyChanged(nameof(RemoveButtonText));
                 OnPropertyChanged(nameof(CanInstallFromStand));
+                UpdateRebuilds();
                 RelayCommand.RaiseCanExecuteChanged();
             }
         }
@@ -424,6 +427,7 @@ namespace StreetCorsa.Screens.Garage
                 OnPropertyChanged(nameof(CanPutOnStand));
                 OnPropertyChanged(nameof(IsShelfEngine));
                 UpdateCandidates();
+                UpdateRebuilds();
                 RelayCommand.RaiseCanExecuteChanged();
             }
         }
@@ -445,6 +449,75 @@ namespace StreetCorsa.Screens.Garage
         {
             get => _shelfHint;
             private set => SetProperty(ref _shelfHint, value);
+        }
+
+        #endregion
+
+        #region Rebuilds
+
+        /// <summary>The jobs for the picked part, on the car or the stand, or on the shelf (<see cref="Rebuilding"/>)</summary>
+        public ObservableCollection<RebuildOfferViewModel> Rebuilds { get; } = new();
+
+        /// <summary>The part card shows the picked part's jobs</summary>
+        public bool HasPartRebuilds => Rebuilds.Count > 0 && _selectedPart != null;
+
+        /// <summary>The shelf shows the picked loose part's jobs</summary>
+        public bool HasShelfRebuilds => Rebuilds.Count > 0 && _selectedShelfItem != null;
+
+        /// <summary>
+        /// The part the jobs are for, and whether it is off: a shelf part is, and so is the engine on the stand; a part on
+        /// the car, or on another part, is not
+        /// </summary>
+        private (PartInstance Part, bool Loose)? RebuildTarget =>
+            _selectedShelfItem is { } item ? (item.Part, true)
+            : _selectedPart != null && SavedOf(_selectedPart) is { } saved ? (saved, _isStand && SelectedIsEngine)
+            : null;
+
+        private void UpdateRebuilds()
+        {
+            Rebuilds.Clear();
+            try
+            {
+                if (Catalog is { } catalog && RebuildTarget is var (part, loose))
+                {
+                    var money = _gameState.Player.Money;
+                    foreach (var offer in Rebuilding.Offers(catalog, part, loose, _gameState.Rules.PartPriceMultiplier))
+                        Rebuilds.Add(new RebuildOfferViewModel(offer, part, money));
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not tell what work the picked part can have done");
+            }
+
+            OnPropertyChanged(nameof(HasPartRebuilds));
+            OnPropertyChanged(nameof(HasShelfRebuilds));
+        }
+
+        /// <summary>Does the job on the picked part, pays for it and lets the clock run; the part stays picked</summary>
+        private void Rebuild(RebuildOfferViewModel? offer)
+        {
+            if (offer is not { CanDo: true } || RebuildTarget is not var (part, _) || !ReferenceEquals(part, offer.Part)) return;
+            if (_gameState.Player.Money < offer.Offer.Cost) return;
+
+            var onCar = _car != null && !_isStand && _selectedShelfItem == null;
+            var picked = _selectedPart;
+            var shelfPart = _selectedShelfItem?.Part;
+
+            // The work first: a job that fails to go on costs nothing
+            Rebuilding.Apply(offer.Offer.Job, part);
+            _gameState.Player.Money -= offer.Offer.Cost;
+            _logger.Information("{Job} on {Part} for ${Cost}: now {Wear:P0}", offer.Offer.Job.Id, part.DefinitionId, offer.Offer.Cost, part.Wear);
+
+            // What the car's sheet and the gas station read off its parts
+            if (onCar && Catalog is { } catalog) CarCondition.RefreshFigures(_car!, CarCondition.Groups(catalog));
+
+            Finish(1, offer.Offer.Minutes, carChanged: onCar);
+
+            // The trees and the shelf are made anew: the same part is picked again in them
+            if (shelfPart != null) SelectedShelfItem = Shelf.FirstOrDefault(s => ReferenceEquals(s.Part, shelfPart));
+            else SelectedPart = InCurrentTree(picked);
+            UpdateRebuilds();
         }
 
         #endregion
@@ -928,5 +1001,38 @@ namespace StreetCorsa.Screens.Garage
 
         public string Detail { get; }
         public string WorthDisplay { get; }
+    }
+
+    /// <summary>A job the picked part can have done (<see cref="RebuildOffer"/>), as its button reads</summary>
+    public class RebuildOfferViewModel
+    {
+        public RebuildOfferViewModel(RebuildOffer offer, PartInstance part, decimal money)
+        {
+            Offer = offer;
+            Part = part;
+            Name = offer.Name;
+
+            var values = new (string, object?)[]
+            {
+                ("cost", Money.Text(offer.Cost)),
+                ("time", Services.Time.GameActionExtensions.DescribeMinutes(offer.Minutes)),
+                ("after", Math.Round(offer.After * 100))
+            };
+            PriceDisplay = GameText.Say(offer.Job.IsExchange ? "workbench.rebuild.price.exchange" : "workbench.rebuild.price", values);
+            WhyNot = offer.WhyNot ?? (money < offer.Cost ? GameText.Say("workbench.rebuild.cant_afford", ("cost", Money.Text(offer.Cost))) : string.Empty);
+        }
+
+        public RebuildOffer Offer { get; }
+
+        /// <summary>The part it was offered for</summary>
+        public PartInstance Part { get; }
+
+        public string Name { get; }
+        public string PriceDisplay { get; }
+
+        /// <summary>Why it cannot be done now; empty when it can</summary>
+        public string WhyNot { get; }
+
+        public bool CanDo => WhyNot.Length == 0;
     }
 }

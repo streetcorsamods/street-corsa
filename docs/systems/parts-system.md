@@ -826,7 +826,8 @@ with the factory running gear mounted (so only the engine files differ).
 
 ## Damage and repairs (`Parts/Cars/CarCondition`, `RepairShop`, `Parts/Export/AcDamageData`)
 
-A part's `Wear` is mileage and only replacing the part undoes it; its `Tear` is damage and a repair takes it off.
+A part's `Wear` is mileage: a new part, or a job of `parts/rebuilds.json` (below), undoes it; its `Tear` is damage and a
+repair takes it off.
 Races set both from what Assetto Corsa reports at the end (`CarCondition.ApplyRace`, called by
 `RaceResultProcessor`):
 
@@ -864,6 +865,15 @@ rust growing every day (`RustTask`), a front hit of 25 km/h cracking the windscr
 draws it all as a wear layer over the car's body (`Looks/WearLayer`), in its scenes and in AC. The same list fills the tank (`FuelPerLitre`, $0.11) and washes the car (`Wash`, $3), 15 minutes
 each. The garage's Repairs button shows them (`Dialogs/RepairShop`); the parts view shows a part's damage next to its
 wear.
+
+**Rebuilds** (`Parts/PartRebuilds`, `Parts/Cars/Rebuilding`, docs/roadmap.md step 30): the parts view's "Work on it"
+jobs take a part's mileage off, the 1960s way. Each job of the mods' `parts/rebuilds.json` is for parts of its work order
+kinds or shelves: a kit (a carburettor rebuilt, a tune-up, a valve job, a ring job, bearings, a gearbox kit, brakes
+relined) or a rebuilt unit from the parts counter, the old part its core (the exchange also takes the damage off). A job
+brings `Wear` up to its `restores`, never down; costs its `cost` share of the part's new price (at least
+`cost_at_least`) at the save's part prices; takes its `minutes`; may need the part off (on the shelf, or the engine on
+the stand) or bare; and a part worn below its `min_wear` is too far gone for it (the machine shop, phase 2). The car's
+figures are worked out again after a job on a part in it.
 
 ## Cooling and oil (`Parts/Cars/EngineCooling`)
 

@@ -1523,6 +1523,37 @@ that cannot (3). The owner picked 1 and 3 first, one PR (branch `feature/ideas-b
   `CAR_n_PAINT_k`). The car's files are never touched. The icon is a stand-in drawn in the icons' style until the
   owner's `paint_spray.png` comes.
 
+## Step 30: parts that can be fixed (planned 2026-10-17)
+
+**Owner:** car parts should be fixable, kept real: a battered car bought to have its whole engine refurbished. Until now
+a part's mileage (`Wear`) was never fixed (a worn part was replaced) and the repair shop only took damage (`Tear`) off.
+The owner picked the plan below and phase 1 first (branch `feature/part-rebuilds`).
+
+The idea, the 1960s way: a worn engine is not made new, it is cut to the next size and fitted with parts made for that
+size, and the small parts are rebuilt with a kit or swapped at the parts counter for a rebuilt one.
+
+- **Phase 1: kits and exchange units.** Jobs per part kind in the parts view (the part card, and a part on the shelf),
+  as data: `parts/rebuilds.json` in every mod, jobs matched by the work order's kinds or the shelves' groups. A
+  carburettor rebuilt with a kit, a tune-up (points, condenser, cap and rotor), a valve job, a ring job, bearings, a
+  gearbox kit, brakes relined; a water pump, generator, starter, fuel pump, distributor, carburettor or clutch swapped
+  for a rebuilt one (its damage gone too, the old one the core). Each job costs its kit (a share of the part's new
+  price), takes time, brings the part up to what the job can (a kit is not a new part), and some need the part off, or
+  bare. A part too far gone for a kit (a head too worn to lap, a bore past a ring job) says it wants a machine shop.
+  No new save state.
+- **Phase 2: the machine shop.** Blocks bored oversize (+.030, +.040, +.060; past that a sleeve or scrap), cranks
+  ground undersize (.010, .020, .030) with bearings to match, oversize pistons for an oversize bore, heads milled
+  (a little compression), cams reground, flywheels resurfaced, radiators re-cored, drums turned. Each part keeps its
+  sizes and the cuts it has left, so a standard-bore block is worth more than one at +.060. Parts dropped off, ready in
+  a few days (the mail order's delivery). Save schema bump.
+- **Phase 3: hidden flaws.** A cracked block, a spun bearing, a burnt valve, a scored bore: found by a compression test
+  or the oil pressure in the garage, by tearing the engine down, or by the machinist's crack check (the machinist talks,
+  as the parts shop's clerk). Buying a battered car is a gamble.
+- **Phase 4: speed machining.** A cam reground to a hotter grind, heads ported and polished, the engine balanced and
+  blueprinted: the repairs become tuning.
+
+Open questions for the owner: a quality roll on the player's own work or a fixed result; the machine shop as a 3D
+place or a counter window; hidden flaws or too punishing; jobs shown with the parts moving in 3D or only timed.
+
 ## Epic: total conversion (planned 2026-09-30)
 
 The owner wants the whole game moddable, so the community can add game modes and whole new games (a Tokyo Drift game

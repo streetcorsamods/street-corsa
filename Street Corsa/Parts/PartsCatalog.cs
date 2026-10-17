@@ -51,6 +51,9 @@ public sealed class PartsCatalog
     /// <summary>What has to come off an engine before what, and what only comes off on the stand</summary>
     public WorkOrder WorkOrder { get; internal set; } = WorkOrder.Empty;
 
+    /// <summary>The work a part can have done on it to take its mileage off: kits and exchange units</summary>
+    public PartRebuilds Rebuilds { get; internal set; } = PartRebuilds.Empty;
+
     /// <summary>A catalog without parts, for when the parts under the folder cannot be read</summary>
     public static PartsCatalog Empty(string root) => new(root, new[] { Path.Combine(root, PartScripts.Folder) });
 
@@ -146,6 +149,7 @@ public sealed class PartsCatalog
         catalog._problems.AddRange(catalog.Scripts.Problems);
         catalog.WorkOrder = WorkOrder.Load(roots.Select(r => (r.Mod.Id, r.Mod.IsBase, r.Dir)), catalog._problems);
         WorkOrder.CheckWays(catalog._parts.Values, catalog._problems);
+        catalog.Rebuilds = PartRebuilds.Load(roots.Select(r => (r.Mod.Id, r.Mod.IsBase, r.Dir)), catalog._problems);
 
         // What each part does for the cooling, where its kind says: the cooling reads it off the part
         if (catalog.WorkOrder.TellsCooling)

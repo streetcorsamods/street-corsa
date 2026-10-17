@@ -32,6 +32,35 @@
             <Setter Property="Margin" Value="0,2"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
+        <!-- A job the picked part can have done: its button, and why it cannot be done now under it -->
+        <DataTemplate x:Key="RebuildOfferTemplate">
+            <StackPanel Margin="0,3">
+                <Button Command="{Binding DataContext.RebuildCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        CommandParameter="{Binding}"
+                        Style="{StaticResource DialogSecondaryButtonStyle}"
+                        HorizontalAlignment="Stretch"
+                        Padding="10,5">
+                    <StackPanel>
+                        <TextBlock Text="{Binding Name}"
+                                   FontSize="{StaticResource FontSizeCompact}"
+                                   TextWrapping="Wrap"
+                                   TextAlignment="Center"/>
+                        <TextBlock Text="{Binding PriceDisplay}"
+                                   FontSize="{StaticResource FontSizeCaption}"
+                                   FontWeight="Normal"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   TextWrapping="Wrap"
+                                   TextAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+                <TextBlock Text="{Binding WhyNot}"
+                           FontSize="{StaticResource FontSizeCaption}"
+                           Foreground="{StaticResource SalmonBrush}"
+                           TextWrapping="Wrap"
+                           Margin="2,2,0,0"
+                           Visibility="{Binding WhyNot, Converter={StaticResource StringToVisibilityConverter}}"/>
+            </StackPanel>
+        </DataTemplate>
     </UserControl.Resources>
 
     <!-- No background: the 3D view below takes every click that does not land on a panel -->
@@ -155,6 +184,12 @@
                                 FontSize="{StaticResource FontSizeCompact}"
                                 Margin="8,0,0,0"/>
                     </StackPanel>
+
+                    <!-- The work the picked part can have done, here on the shelf -->
+                    <StackPanel Margin="0,10,0,0" Visibility="{Binding HasShelfRebuilds, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <TextBlock Text="{t:Text workbench.rebuild}" Style="{StaticResource PanelTitleStyle}"/>
+                        <ItemsControl ItemsSource="{Binding Rebuilds}" ItemTemplate="{StaticResource RebuildOfferTemplate}"/>
+                    </StackPanel>
                 </StackPanel>
             </Grid>
         </Border>
@@ -276,6 +311,12 @@
                                 Padding="15,5"
                                 FontSize="{StaticResource FontSizeBody}"
                                 Margin="8,0,0,0"/>
+                    </StackPanel>
+
+                    <!-- The work the picked part can have done where it is -->
+                    <StackPanel Margin="0,12,0,0" Visibility="{Binding HasPartRebuilds, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <TextBlock Text="{t:Text workbench.rebuild}" Style="{StaticResource PanelTitleStyle}"/>
+                        <ItemsControl ItemsSource="{Binding Rebuilds}" ItemTemplate="{StaticResource RebuildOfferTemplate}"/>
                     </StackPanel>
                 </StackPanel>
             </Border>

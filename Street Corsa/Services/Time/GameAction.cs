@@ -78,9 +78,11 @@ namespace StreetCorsa.Services.Time
         /// <summary>
         /// Gets a human-readable description of the time cost
         /// </summary>
-        public static string GetTimeDescription(this GameAction action)
+        public static string GetTimeDescription(this GameAction action) => DescribeMinutes(action.GetTimeInMinutes());
+
+        /// <summary>A time in minutes as the player reads it: "45 min", "2 hours", "1h 30min"</summary>
+        public static string DescribeMinutes(int minutes)
         {
-            var minutes = action.GetTimeInMinutes();
             if (minutes >= 60)
             {
                 var hours = minutes / 60;

@@ -42,8 +42,8 @@ public sealed class RepairJob
 }
 
 /// <summary>
-/// Repairs: what takes damage (<c>Tear</c>, and the body) off a car. Mileage (<c>Wear</c>) is not repaired: a worn
-/// part is replaced, in the parts view. A job costs a share of the damaged parts' new price, as much of it as the
+/// Repairs: what takes damage (<c>Tear</c>, and the body) off a car. Mileage (<c>Wear</c>) is not repaired here: a
+/// worn part is replaced, or rebuilt, in the parts view (<see cref="Rebuilding"/>). A job costs a share of the damaged parts' new price, as much of it as the
 /// damage goes, plus the labour; the body shop charges by how hard the body was hit. Small jobs take half an hour,
 /// big ones two hours. Filling up, the oil and the wash are the gas station's (<see cref="GasStation"/>); a car too dry to
 /// get there gets a can of gas (<see cref="CanOfGas"/>).

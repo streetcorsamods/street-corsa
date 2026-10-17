@@ -11,7 +11,8 @@
     "(\"a quart\"; the game puts a capital on the first letter of the oil job's detail). parts.describe*: a part's",
     "condition ({wear} %) and how many parts come with it ({count}). part_group.*: the shelves of part_groups.json, by id.",
     "part_show.*: the parts view's buttons of part_groups.json's shows, by id. layout.*: where a car carries its engine,",
-    "by the layout's name in cars.json; layout.guessed: the Car Catalog Editor's guess, {layout} a layout.* line."
+    "by the layout's name in cars.json; layout.guessed: the Car Catalog Editor's guess, {layout} a layout.* line.",
+    "rebuild.*: the jobs of parts/rebuilds.json, by id; rebuild.why.*: why a job cannot be done on a part now."
   ],
   "lines": {
     "condition.zone.front": "front",
@@ -160,6 +161,29 @@
     "layout.front_transverse": "Front, across",
     "layout.mid_transverse": "Mid, across",
     "layout.guessing": "Guessed: …",
-    "layout.guessed": "Guessed: {layout}"
+    "layout.guessed": "Guessed: {layout}",
+    "rebuild.carb_kit": "Rebuild with a kit",
+    "rebuild.tune_up": "Tune-up: points, condenser, cap and rotor",
+    "rebuild.plugs_wires": "New plugs and wires",
+    "rebuild.filter_element": "New filter element",
+    "rebuild.valve_job": "Valve job: lap the valves, new seals",
+    "rebuild.ring_job": "Ring job: hone the bores, new rings",
+    "rebuild.rod_bearings": "New rod bearings",
+    "rebuild.main_bearings": "New main bearings, journals polished",
+    "rebuild.cam_lifters": "New lifters, cam broken in",
+    "rebuild.block_cleanup": "Hot wash, hone, new freeze plugs",
+    "rebuild.gearbox_kit": "Rebuild with a kit: synchros, bearings, seals",
+    "rebuild.water_pump_kit": "Rebuild: new seal and bearing",
+    "rebuild.fuel_pump_kit": "Rebuild: new diaphragm and valves",
+    "rebuild.brushes_bearings": "New brushes and bearings",
+    "rebuild.blower_kit": "Rebuild: seals and bearings",
+    "rebuild.radiator_flush": "Flush and pressure-test",
+    "rebuild.brake_reline": "Reline the shoes, adjust",
+    "rebuild.rebuilt_exchange": "Swap for a rebuilt one at the parts counter, the old one back as the core",
+    "rebuild.why.no_need": "Nothing to gain: it is in better shape than the job would leave it.",
+    "rebuild.why.too_worn": "Too far gone for that: it wants a machine shop.",
+    "rebuild.why.off": "Take it off first.",
+    "rebuild.why.off.exchange": "Take it off first: the counter wants the old one as the core.",
+    "rebuild.why.bare": "Take off what is mounted on it first."
   }
 }
