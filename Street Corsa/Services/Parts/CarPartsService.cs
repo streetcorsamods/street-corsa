@@ -669,8 +669,9 @@ namespace StreetCorsa.Services.Parts
                 // An older car's running gear brought up to now, once: the axle, and its factory brakes and springs as they are now
                 if (renewal != null && car.HasRunningGearAssigned && car.GearVersion < RunningGearFactory.GearVersion)
                 {
-                    var renewed = RunningGearFactory.BringUpToDate(Catalog, renewal.Specs, renewal.Facts, renewal.Picks, car.Parts);
+                    // The axle first: the rear brakes, springs and shocks go onto it
                     if (renewal.Axle is { } axle && car.Parts.All(p => p.ParentSlot != RearAxle.CarSlot)) car.Parts.Add(axle);
+                    var renewed = RunningGearFactory.BringUpToDate(Catalog, renewal.Specs, renewal.Facts, renewal.Picks, car.Parts);
                     car.GearVersion = RunningGearFactory.GearVersion;
                     changed = true;
                     _logger.Information("{Car} brought up to running gear {Version}: {Renewed} factory part(s) of today's, rear axle {Housing}", car.DefinitionId,

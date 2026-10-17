@@ -1969,7 +1969,8 @@ public class CarViewport3D : D3DViewportBase
                     var world = candidate.Parent == null
                         ? anchors == null ? null : CarPartsLayout.CarLevelPlacement(catalog, anchors, candidate.Part.Definition, candidate.ParentSlot, layout)
                         : worlds.TryGetValue(candidate.Parent, out var parentWorld)
-                            ? PartAssembler.ChildWorld(candidate.Parent.Definition, candidate.ParentSlot, candidate.Part.Definition, candidate.OwnSlot, parentWorld)
+                            ? CarPartsLayout.PlacementOn(catalog, anchors, candidate.Parent.Definition, candidate.ParentSlot, parentWorld,
+                                candidate.Part.Definition, candidate.OwnSlot, layout)
                             : null;
                     if (world == null) continue;
 

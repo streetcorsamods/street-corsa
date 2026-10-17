@@ -135,26 +135,50 @@ public static class CarPartsLayout
 
     /// <summary>
     /// The rear axle and what is on it: the housing with its tubes drawn out to the car's track (<see cref="AxleStretch"/>),
-    /// the carrier and gears in its middle as they are, the shafts (inside the tubes) moved out as far as the tubes' ends
+    /// the carrier and gears in its middle as they are, the shafts (inside the tubes) moved out as far as the tubes' ends,
+    /// and the brakes, springs, shocks and sway bar it carries (with what is on them) where they would be on the car's own
+    /// slots they stand for: at the wheel, whatever the car's track
     /// </summary>
-    private static IEnumerable<PlacedPart> Axle(CarAnchors anchors, InstalledPart housing)
+    private static List<PlacedPart> Axle(CarAnchors anchors, InstalledPart housing)
     {
         var world = AxlePlacement(anchors, housing.Definition);
         var stretch = AxleStretch(anchors);
         var across = Vector3.Normalize(Vector3.TransformNormal(Vector3.UnitX, world));
         var outward = stretch.At(HousingHalfWidth) - HousingHalfWidth;
 
-        foreach (var placed in PartAssembler.Assemble(housing, world))
+        var placed = PartAssembler.Assemble(housing, world);
+        var at = new Dictionary<InstalledPart, Matrix4x4>(ReferenceEqualityComparer.Instance);
+        foreach (var p in placed.Where(p => p.Source != null)) at[p.Source!] = p.World;
+
+        // What each part on a corner slot of the housing moves by, with everything on it
+        var moved = new Dictionary<InstalledPart, Matrix4x4>(ReferenceEqualityComparer.Instance);
+        foreach (var (slot, child) in housing.Children)
         {
-            if (ReferenceEquals(placed.Source, housing)) yield return placed with { Stretch = stretch };
-            else if (PartKinds.GroupOf(placed.Part) == PartKinds.AxleShafts)
-            {
-                var side = MathF.Sign(Vector3.Dot(placed.World.Translation - world.Translation, across));
-                yield return placed with { World = placed.World * Matrix4x4.CreateTranslation(across * (side * outward)) };
-            }
-            else yield return placed;
+            if (RearAxle.CarSlotFor(slot) is not { } carSlot || !at.TryGetValue(child, out var old) || !Matrix4x4.Invert(old, out var undo)) continue;
+            var wanted = RunningGear.IsSwayBarSlot(carSlot) ? SwayBarPlacement(anchors, child.Definition, carSlot) : CornerPlacement(anchors, child.Definition, carSlot);
+            if (wanted is not { } target) continue;
+            foreach (var part in child.SelfAndDescendants()) moved[part] = undo * target;
         }
+
+        return placed.Select(p =>
+        {
+            if (ReferenceEquals(p.Source, housing)) return p with { Stretch = stretch };
+            if (p.Source != null && moved.TryGetValue(p.Source, out var by)) return p with { World = p.World * by };
+            if (PartKinds.GroupOf(p.Part) != PartKinds.AxleShafts) return p;
+            var side = MathF.Sign(Vector3.Dot(p.World.Translation - world.Translation, across));
+            return p with { World = p.World * Matrix4x4.CreateTranslation(across * (side * outward)) };
+        }).ToList();
     }
+
+    /// <summary>
+    /// Where a loose part goes on a mounted part's slot: on the rear axle's slot that stands for one of the car's own (a
+    /// rear brake, spring, shock or sway bar), where it would on that car slot; elsewhere where the slot puts it
+    /// </summary>
+    public static Matrix4x4? PlacementOn(PartsCatalog catalog, CarAnchors? anchors, PartDefinition parent, int parentSlot, Matrix4x4 parentWorld,
+        PartDefinition part, int ownSlot, EngineLayout layout) =>
+        anchors != null && PartKinds.GroupOf(parent) == PartKinds.RearAxles && RearAxle.CarSlotFor(parentSlot) is { } carSlot
+            ? CarLevelPlacement(catalog, anchors, part, carSlot, layout)
+            : PartAssembler.ChildWorld(parent, parentSlot, part, ownSlot, parentWorld);
 
     /// <summary>
     /// A sway bar across its axle: its mount (slot 1) a little ahead of the middle of the axle's hubs, facing the way the

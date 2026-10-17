@@ -31,6 +31,54 @@ public static class RearAxle
     /// <summary>The carrier's slot for the ring and pinion</summary>
     public const int GearsSlot = 2;
 
+    /// <summary>
+    /// The housing's slots for what a live axle carries at the rear corners (the owner's "diferencial": the whole rear axle
+    /// with its brakes, springs and shocks): each side's brake, spring and shock, and the rear sway bar. A car with a housing
+    /// that has them carries its rear running gear on it; the export, the condition and the garage find it there as on the
+    /// car's own corner slots (<see cref="RunningGear.Mounted"/>).
+    /// </summary>
+    public const int LeftBrakeSlot = 5, RightBrakeSlot = 6, LeftSpringSlot = 7, RightSpringSlot = 8, LeftShockSlot = 9, RightShockSlot = 10, SwayBarSlot = 11;
+
+    /// <summary>The housing's slot that stands for one of the car's own rear corner slots (a rear brake, spring or shock, the rear sway bar); null for another</summary>
+    public static int? HousingSlotFor(int carSlot) => carSlot switch
+    {
+        _ when carSlot == RunningGear.BrakeSlot(2) => LeftBrakeSlot,
+        _ when carSlot == RunningGear.BrakeSlot(3) => RightBrakeSlot,
+        _ when carSlot == RunningGear.SpringSlot(2) => LeftSpringSlot,
+        _ when carSlot == RunningGear.SpringSlot(3) => RightSpringSlot,
+        _ when carSlot == RunningGear.ShockSlot(2) => LeftShockSlot,
+        _ when carSlot == RunningGear.ShockSlot(3) => RightShockSlot,
+        RunningGear.RearSwayBarSlot => SwayBarSlot,
+        _ => null
+    };
+
+    /// <summary>The car's own slot a housing's slot stands for; null for a slot of the axle's own (the carrier, the shafts)</summary>
+    public static int? CarSlotFor(int housingSlot) => housingSlot switch
+    {
+        LeftBrakeSlot => RunningGear.BrakeSlot(2),
+        RightBrakeSlot => RunningGear.BrakeSlot(3),
+        LeftSpringSlot => RunningGear.SpringSlot(2),
+        RightSpringSlot => RunningGear.SpringSlot(3),
+        LeftShockSlot => RunningGear.ShockSlot(2),
+        RightShockSlot => RunningGear.ShockSlot(3),
+        SwayBarSlot => RunningGear.RearSwayBarSlot,
+        _ => null
+    };
+
+    /// <summary>The housing on the car's axle slot that has a slot standing for a car slot, and that slot; null when there is none</summary>
+    public static (PartInstance Housing, int Slot)? HousingFor(PartsCatalog catalog, List<PartInstance> carParts, int carSlot)
+    {
+        if (HousingSlotFor(carSlot) is not { } slot || carParts.FirstOrDefault(p => p.ParentSlot == CarSlot) is not { } housing) return null;
+        return catalog.Get(housing.DefinitionId)?.Slots.Any(s => s.Id == slot) == true ? (housing, slot) : null;
+    }
+
+    /// <summary>The parts on the housing that stand for the car's rear corner slots, each with the car slot it stands for</summary>
+    public static IEnumerable<(PartInstance Part, int CarSlot)> CornerParts(List<PartInstance> carParts) =>
+        carParts.FirstOrDefault(p => p.ParentSlot == CarSlot)?.Children
+            .Select(c => (Part: c, CarSlot: CarSlotFor(c.ParentSlot)))
+            .Where(c => c.CarSlot != null)
+            .Select(c => (c.Part, c.CarSlot!.Value)) ?? [];
+
     /// <summary>Whether a group is one of the axle's (housing, carrier, gears, shafts)</summary>
     public static bool IsAxleGroup(string group) =>
         group is PartKinds.RearAxles or PartKinds.Differentials or PartKinds.RingPinions or PartKinds.AxleShafts;

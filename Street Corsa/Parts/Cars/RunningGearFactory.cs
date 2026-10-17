@@ -15,9 +15,10 @@ public static class RunningGearFactory
 {
     /// <summary>
     /// What a car's running gear is brought up to once (<see cref="Car.GearVersion"/>): 1 is step 31, the rear axle and the
-    /// period brakes and springs; 2 the leaf springs, the torsion bars and the sway bars
+    /// period brakes and springs; 2 the leaf springs, the torsion bars and the sway bars; 3 the rear brakes, springs, shocks
+    /// and sway bar carried on the rear axle's housing
     /// </summary>
-    public const int GearVersion = 2;
+    public const int GearVersion = 3;
 
     /// <summary>The factory parts of one axle; a drum brake's shoes and wheel cylinder with it, the sway bar across it (none for an axle without)</summary>
     public sealed record AxleParts(PartDefinition Tyre, PartDefinition Rim, PartDefinition Brake, PartDefinition Spring, PartDefinition Shock,
@@ -153,6 +154,7 @@ public static class RunningGearFactory
             if (axle.SwayBar != null) parts.Add(Instance(axle.SwayBar, RunningGear.SwayBarSlot(isFront), 1, wear));
         }
 
+        HangOnAxle(catalog, parts);
         return parts;
     }
 
@@ -177,13 +179,14 @@ public static class RunningGearFactory
         if (Choose(catalog, specs) is not var (oldFront, oldRear) || Choose(catalog, specs, car, picks) is not var (front, rear)) return 0;
 
         var changed = 0;
-        foreach (var part in carParts.ToList())
+        // On the car's own corner slots, and on the rear axle's that stand for them
+        foreach (var (part, carSlot) in carParts.Select(p => (p, p.ParentSlot)).Concat(RearAxle.CornerParts(carParts)).ToList())
         {
-            var corner = RunningGear.CornerOf(part.ParentSlot);
+            var corner = RunningGear.CornerOf(carSlot);
             if (corner < 0) continue;
 
             var (was, now) = RunningGear.IsFront(corner) ? (oldFront, front) : (oldRear, rear);
-            if (part.ParentSlot == RunningGear.BrakeSlot(corner) && part.DefinitionId == was.Brake.Id && now.Brake.Id != was.Brake.Id)
+            if (carSlot == RunningGear.BrakeSlot(corner) && part.DefinitionId == was.Brake.Id && now.Brake.Id != was.Brake.Id)
             {
                 part.DefinitionId = now.Brake.Id;
                 part.Children.Clear();
@@ -191,7 +194,7 @@ public static class RunningGearFactory
                 if (now.Cylinder != null) part.Children.Add(Instance(now.Cylinder, RunningGear.WheelCylinderSlot, 1, part.Wear));
                 changed++;
             }
-            else if (part.ParentSlot == RunningGear.SpringSlot(corner) && part.DefinitionId == was.Spring.Id && now.Spring.Id != was.Spring.Id)
+            else if (carSlot == RunningGear.SpringSlot(corner) && part.DefinitionId == was.Spring.Id && now.Spring.Id != was.Spring.Id)
             {
                 part.DefinitionId = now.Spring.Id;
                 part.Children.Clear();
@@ -202,14 +205,35 @@ public static class RunningGearFactory
         foreach (var (now, isFront) in new[] { (front, true), (rear, false) })
         {
             var slot = RunningGear.SwayBarSlot(isFront);
-            if (now.SwayBar == null || carParts.Any(p => p.ParentSlot == slot)) continue;
+            var (frontBar, rearBar) = RunningGear.SwayBars(carParts);
+            if (now.SwayBar == null || (isFront ? frontBar : rearBar) != null) continue;
 
-            var springs = carParts.Where(p => RunningGear.CornerOf(p.ParentSlot) is var c and >= 0 && RunningGear.IsFront(c) == isFront && p.ParentSlot == RunningGear.SpringSlot(c)).ToList();
+            var springs = RunningGear.Mounted(carParts).Where((_, c) => RunningGear.IsFront(c) == isFront).Select(c => c.Spring).OfType<PartInstance>().ToList();
             carParts.Add(Instance(now.SwayBar, slot, 1, springs.Count > 0 ? springs.Average(p => p.Wear) : 1));
             changed++;
         }
 
-        return changed;
+        return changed + HangOnAxle(catalog, carParts);
+    }
+
+    /// <summary>
+    /// The rear brakes, springs, shocks and sway bar on the car's own slots moved onto the rear axle's housing, where it has a
+    /// slot for each (<see cref="RearAxle.HousingSlotFor"/>), with what is on them; what the housing has a part on already stays
+    /// </summary>
+    /// <returns>How many parts moved</returns>
+    public static int HangOnAxle(PartsCatalog catalog, List<PartInstance> carParts)
+    {
+        var moved = 0;
+        foreach (var part in carParts.ToList())
+        {
+            if (RearAxle.HousingFor(catalog, carParts, part.ParentSlot) is not var (housing, slot) || housing.Children.Any(c => c.ParentSlot == slot)) continue;
+            carParts.Remove(part);
+            part.ParentSlot = slot;
+            housing.Children.Add(part);
+            moved++;
+        }
+
+        return moved;
     }
 
     /// <summary>

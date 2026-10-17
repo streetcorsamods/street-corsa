@@ -1,0 +1,107 @@
+using System.Numerics;
+using StreetCorsa.Models.GameState;
+using StreetCorsa.Parts;
+using StreetCorsa.Parts.Cars;
+using StreetCorsa.Parts.Export;
+
+namespace StreetCorsa.Tests;
+
+/// <summary>The rear axle carries the rear brakes, springs, shocks and sway bar (the owner's "diferencial": the whole rear axle)</summary>
+public class AxleCarriesCornersTests
+{
+    private static PartsCatalog Catalog => TestCars.Catalog.Value;
+
+    private static readonly CarFacts Chevy66 = new("chevrolet", "gm", 1966, "USA");
+
+    private static AcCarSpecs Specs() => new()
+    {
+        Traction = "RWD", TotalMass = 1600, FrontWeightShare = 0.55, PeakTorque = 390, FinalRatio = 3.55,
+        Front = new AcAxleSpecs { TyreWidth = 0.205, TyreRadius = 0.33, BrakeTorque = 1600, SpringRate = 30000, DampBump = 3000, DampRebound = 4000, CornerLoad = 450, SuspensionType = "DWB", SwayBarRate = 8000 },
+        Rear = new AcAxleSpecs { TyreWidth = 0.205, TyreRadius = 0.33, BrakeTorque = 900, SpringRate = 25000, DampBump = 3000, DampRebound = 4000, CornerLoad = 400, SuspensionType = "AXLE", SwayBarRate = 1300 }
+    };
+
+    private static List<PartInstance> FactoryParts(double condition = 1)
+    {
+        var axle = RunningGearGuess.ChooseAxle(Catalog, Specs(), Chevy66, null)!;
+        return RunningGearFactory.Create(Catalog, Specs(), condition, axle, Chevy66);
+    }
+
+    [Fact]
+    public void A_car_leaves_the_factory_with_its_rear_brakes_springs_shocks_and_bar_on_its_rear_axle()
+    {
+        var parts = FactoryParts();
+        var housing = parts.Single(p => p.ParentSlot == RearAxle.CarSlot);
+        Assert.Equal([RearAxle.LeftBrakeSlot, RearAxle.RightBrakeSlot, RearAxle.LeftSpringSlot, RearAxle.RightSpringSlot, RearAxle.LeftShockSlot, RearAxle.RightShockSlot, RearAxle.SwayBarSlot],
+            housing.Children.Select(c => c.ParentSlot).Where(s => s >= RearAxle.LeftBrakeSlot).Order());
+        Assert.DoesNotContain(parts, p => p.ParentSlot == RunningGear.BrakeSlot(2) || p.ParentSlot == RunningGear.SpringSlot(3) || p.ParentSlot == RunningGear.RearSwayBarSlot);
+        Assert.Contains(parts, p => p.ParentSlot == RunningGear.BrakeSlot(0));
+
+        // Read as if on the car's own corners: every corner whole, the drums with their shoes
+        var corners = RunningGear.Mounted(parts);
+        Assert.All(corners, c => Assert.True(c.Brake != null && c.Spring != null && c.Shock != null && c.Rim != null));
+        Assert.Contains(corners[2].Brake!.Children, c => c.ParentSlot == RunningGear.ShoesSlot);
+        Assert.NotNull(RunningGear.SwayBars(parts).Rear);
+    }
+
+    [Fact]
+    public void The_workbench_puts_a_rear_part_on_the_axle_and_a_front_one_on_the_car()
+    {
+        var parts = FactoryParts();
+        var housing = parts.Single(p => p.ParentSlot == RearAxle.CarSlot);
+        housing.Children.RemoveAll(c => c.ParentSlot == RearAxle.LeftBrakeSlot);
+        parts.RemoveAll(p => p.ParentSlot == RunningGear.BrakeSlot(0));
+
+        var drum = "running_gear/brakes_drum/front_10x2_5";
+        var places = Workbench.FindPlaces(Catalog, parts, new PartInstance(drum));
+        Assert.Contains(places, p => p.Parent == housing && p.ParentSlot == RearAxle.LeftBrakeSlot);
+        Assert.Contains(places, p => p.Parent == null && p.ParentSlot == RunningGear.BrakeSlot(0));
+        Assert.DoesNotContain(places, p => p.Parent == null && p.ParentSlot == RunningGear.BrakeSlot(2));
+    }
+
+    [Fact]
+    public void An_older_cars_rear_corners_go_onto_its_axle_once_with_what_is_on_them()
+    {
+        var parts = FactoryParts(0.7);
+        var housing = parts.Single(p => p.ParentSlot == RearAxle.CarSlot);
+        // As a car of an older save has them: on the car's own slots
+        foreach (var (part, carSlot) in RearAxle.CornerParts(parts).ToList())
+        {
+            housing.Children.Remove(part);
+            part.ParentSlot = carSlot;
+            parts.Add(part);
+        }
+
+        Assert.Equal(7, RunningGearFactory.BringUpToDate(Catalog, Specs(), Chevy66, null, parts));
+        Assert.Equal(7, RearAxle.CornerParts(parts).Count());
+        Assert.Equal(0, RunningGearFactory.BringUpToDate(Catalog, Specs(), Chevy66, null, parts));
+    }
+
+    [Fact]
+    public void A_stock_car_races_the_same_with_its_rear_corners_on_the_axle()
+    {
+        var parts = FactoryParts();
+        var problems = new List<string>();
+        var files = AcRunningGearData.Generate(Catalog, RunningGear.Mounted(parts), RunningGearFactory.Choose(Catalog, Specs(), Chevy66)!.Value,
+            name => name == "suspensions.ini" ? "[FRONT]\nTYPE=DWB\nSPRING_RATE=30000\n\n[REAR]\nTYPE=AXLE\nSPRING_RATE=25000\n\n[ARB]\nFRONT=8000\nREAR=1300\n" : null,
+            problems, RunningGear.SwayBars(parts));
+        Assert.Empty(problems);
+        Assert.DoesNotContain("suspensions.ini", files.Keys);
+    }
+
+    [Fact]
+    public void A_drum_on_the_axle_is_drawn_where_it_would_be_on_the_car()
+    {
+        var anchors = new CarAnchors(new Vector3(0.75f, 0.3f, -1.3f), new Vector3(-0.75f, 0.3f, -1.3f), new Vector3(0.78f, 0.3f, 1.3f), new Vector3(-0.78f, 0.3f, 1.3f));
+        var parts = FactoryParts();
+        var housing = parts.Single(p => p.ParentSlot == RearAxle.CarSlot);
+        var drum = housing.Children.Single(c => c.ParentSlot == RearAxle.RightBrakeSlot);
+
+        var tree = PartTrees.ToInstalled(Catalog, housing)!;
+        var placed = CarPartsLayout.Build(Catalog, anchors, null, [new CarPart(RearAxle.CarSlot, tree.Root)]);
+        var onAxle = placed.Single(p => p.Source?.Definition.Id == drum.DefinitionId && p.Source.ParentSlot == RearAxle.RightBrakeSlot).World;
+        var onCar = CarPartsLayout.CarLevelPlacement(Catalog, anchors, Catalog.Get(drum.DefinitionId)!, RunningGear.BrakeSlot(3), EngineLayout.Front)!.Value;
+        Assert.Equal(onCar.Translation.X, onAxle.Translation.X, 3);
+        Assert.Equal(onCar.Translation.Z, onAxle.Translation.Z, 3);
+        Assert.Equal(onCar.M11, onAxle.M11, 3);
+    }
+}

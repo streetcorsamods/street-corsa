@@ -690,7 +690,16 @@ Check: `EngineBench <parts> gear <AC cars folder>`.
 
 **The rear axle** (step 31, `Parts/Cars/RearAxle`, `RunningGearGuess`). A car whose rear wheels are driven carries a rear
 axle on its own car slot 401: the housing, a differential carrier on the housing's slot 2, the ring and pinion on the
-carrier's slot 2, an axle shaft on each of the housing's slots 3 and 4. They are parts of data (`parts/running_gear/`:
+carrier's slot 2, an axle shaft on each of the housing's slots 3 and 4. The axle also carries the rear corners (the
+owner's "diferencial", the whole rear axle): each side's brake (housing slots 5 and 6), spring (7, 8) and shock (9, 10)
+and the rear sway bar (11), with what is on them (a drum's shoes, a leaf's traction bars). `RearAxle.HousingSlotFor` /
+`CarSlotFor` pair them with the car's own slots they stand for; `RunningGear.Mounted` and `SwayBars` read them there as
+from the car's corners (one on the car's own slot first), so the export, the condition, the repairs and the looks are the
+same; the workbench puts a rear brake, spring, shock or bar on the housing when it has the slot (the car's slot only
+without one: a car with no live axle, a mod's housing without them); the factory builds cars that way
+(`RunningGearFactory.HangOnAxle`), and `GearVersion` 3 moves an older car's rear corners onto its axle once. The garage
+draws them at their wheel as before (`CarPartsLayout`: a part on a corner slot of the housing is placed where it would be
+on the car's slot, whatever the track), and taking the axle off takes them with it. They are parts of data (`parts/running_gear/`:
 `axles_gm`, `axles_ford`, `axles_mopar`, `axles_dana`, and the aftermarket's `axle_speed`) and mate by standard
 fittings, so a mod's axle meets the base game's carriers and the other way round: `axle:<family>` for the carrier,
 `gears:<family>` for the gears (the GM 10 and 12-bolts' two carrier series as `_low` and `_high`), `shaft:<family>`. What

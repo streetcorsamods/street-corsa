@@ -107,9 +107,10 @@ public static class RunningGear
     public static bool IsRunningGear(string group) =>
         group is PartKinds.Rims or PartKinds.Tyres or PartKinds.Brakes or PartKinds.Springs or PartKinds.Shocks or PartKinds.SwayBars;
 
-    /// <summary>The sway bars on the car's own slots, front and rear</summary>
+    /// <summary>The sway bars, front and rear: on the car's own slots, the rear one on the rear axle's when it is there</summary>
     public static (PartInstance? Front, PartInstance? Rear) SwayBars(List<PartInstance> carParts) =>
-        (carParts.FirstOrDefault(p => p.ParentSlot == FrontSwayBarSlot), carParts.FirstOrDefault(p => p.ParentSlot == RearSwayBarSlot));
+        (carParts.FirstOrDefault(p => p.ParentSlot == FrontSwayBarSlot),
+         carParts.FirstOrDefault(p => p.ParentSlot == RearSwayBarSlot) ?? RearAxle.CornerParts(carParts).FirstOrDefault(c => c.CarSlot == RearSwayBarSlot).Part);
 
     /// <summary>The tyre script's own fit check: same rim diameter, rim width within what the tyre takes</summary>
     public static bool TyreFitsRim(PartDefinition tyre, PartDefinition rim)
@@ -123,16 +124,19 @@ public static class RunningGear
         return (min <= 0 || width >= min - 0.01) && (max <= 0 || width <= max + 0.01);
     }
 
-    /// <summary>The parts on the car's wheel slots, by corner</summary>
+    /// <summary>
+    /// The parts on the car's wheel slots, by corner; a rear brake, spring or shock on the rear axle's housing
+    /// (<see cref="RearAxle.CornerParts"/>) as if on the car's own slot it stands for (one on the car's own slot first)
+    /// </summary>
     public static CornerParts[] Mounted(List<PartInstance> carParts)
     {
         var corners = Enumerable.Range(0, Corners).Select(_ => new CornerParts()).ToArray();
-        foreach (var part in carParts)
+        foreach (var (part, carSlot) in RearAxle.CornerParts(carParts).Concat(carParts.Select(p => (p, p.ParentSlot))))
         {
-            var corner = CornerOf(part.ParentSlot);
+            var corner = CornerOf(carSlot);
             if (corner < 0) continue;
 
-            var slot = part.ParentSlot;
+            var slot = carSlot;
             if (IsWheelSlot(slot))
             {
                 corners[corner].Rim = part;
