@@ -91,6 +91,9 @@ public sealed class PartRebuilds
     {
         job.Kinds = PartDefinition.NonNull(job.Kinds);
         job.Groups = PartDefinition.NonNull(job.Groups);
+        job.Steps = PartDefinition.NonNull(job.Steps);
+        if (job.Steps.RemoveAll(s => string.IsNullOrWhiteSpace(s.Id)) > 0)
+            problems.Add($"{label}: a step without an id is left out");
         if (job.Kinds.Count == 0 && job.Groups.Count == 0)
         {
             problems.Add($"{label}: names no kinds and no groups, so it is no part's job; left out");
@@ -135,6 +138,25 @@ public sealed class PartRebuilds
         [JsonProperty("jobs")]
         public List<RebuildJob?>? Jobs { get; set; }
     }
+}
+
+/// <summary>A step of a job as the player sees it done: its caption and the sound of the work</summary>
+public sealed class RebuildStep
+{
+    /// <summary>The player reads <c>rebuild.&lt;job id&gt;.&lt;id&gt;</c> in the text, else <see cref="Say"/></summary>
+    [JsonProperty("id")]
+    public string Id { get; set; } = string.Empty;
+
+    [JsonProperty("say")]
+    public string? Say { get; set; }
+
+    /// <summary>The sfx cue that loops under it (the mods' sfx.json); none: the bench's own</summary>
+    [JsonProperty("sound")]
+    public string? Sound { get; set; }
+
+    /// <summary>An sfx cue played once as it starts: the bell over the parts counter's door</summary>
+    [JsonProperty("start")]
+    public string? Start { get; set; }
 }
 
 /// <summary>One job of <see cref="PartRebuilds"/>: what it is for, what it costs and takes, what it brings a part up to</summary>
@@ -192,6 +214,13 @@ public sealed class RebuildJob
     /// <summary>Takes the part's damage off too (<c>Tear</c>): a rebuilt unit from the counter is a sound one</summary>
     [JsonProperty("fixes_damage")]
     public bool FixesDamage { get; set; }
+
+    /// <summary>
+    /// What the player sees done while the job runs, in turn: a caption each (<c>rebuild.&lt;job&gt;.&lt;step&gt;</c> in the
+    /// text, else its <see cref="RebuildStep.Say"/>) over the sound of the work. None: the job's name over the bench's sound.
+    /// </summary>
+    [JsonProperty("steps")]
+    public List<RebuildStep> Steps { get; set; } = new();
 
     /// <summary>In a mod: takes the job of this id out</summary>
     [JsonProperty("disabled")]

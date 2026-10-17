@@ -982,6 +982,8 @@ namespace StreetCorsa.Screens.Garage
 
         public override void Exit()
         {
+            // A job's show on the workbench stops with its sound: the job itself is done
+            Workbench.EndWork();
             base.Exit();
             // The part models are the garage's: the lots, the menus and a race have no use for them in memory
             StreetCorsa.Parts.PartAssembler.ClearModelCache();

@@ -61,7 +61,7 @@ public partial class WordsTests : IDisposable
         "common.bank", "engine.hoist", "engine.land", "engine.turn", "station.bell", "station.pump", "station.pump.start", "station.pump.stop", "radio.knob", "radio.tune", "radio.static",
         "rivals.money", "station.quarts.{count}", "station.quarts.many",
         "garage.arrive", "garage.leave", "station.arrive", "station.at_pump", "station.leave", "street.rival_arrive", "street.rival_leave",
-        "diner.arrive", "diner.parked", "diner.leave", "booth.arrive", "booth.standing", "booth.leave", "booth.spray"
+        "diner.arrive", "diner.parked", "diner.leave", "booth.arrive", "booth.standing", "booth.leave", "booth.spray", "work.bench"
     ];
 
     [Fact]

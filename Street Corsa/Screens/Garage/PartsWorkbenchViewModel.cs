@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using StreetCorsa.Audio;
+using StreetCorsa.Looks;
 using StreetCorsa.Logging;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Parts;
@@ -57,7 +59,7 @@ namespace StreetCorsa.Screens.Garage
             TakeApartCommand = new RelayCommand(TakeApart, () => CanTakeApart);
             PutOnStandCommand = new RelayCommand(PutOnStand, () => CanPutOnStand);
             InstallFromStandCommand = new RelayCommand(InstallFromStand, () => CanInstallFromStand);
-            RebuildCommand = new RelayCommand<RebuildOfferViewModel>(Rebuild, offer => offer?.CanDo == true);
+            RebuildCommand = new RelayCommand<RebuildOfferViewModel>(Rebuild, offer => offer?.CanDo == true && !_isWorking);
         }
 
         /// <summary>Raised when money or time moved, for the screen around the workbench</summary>
@@ -93,6 +95,7 @@ namespace StreetCorsa.Screens.Garage
 
                 if (!value)
                 {
+                    EndWork();
                     SelectedPart = null;
                     SelectedShelfItem = null;
                     IsStand = false;
@@ -114,6 +117,7 @@ namespace StreetCorsa.Screens.Garage
             {
                 if (!SetProperty(ref _isStand, value)) return;
 
+                EndWork();
                 SelectedPart = null;
                 SelectedShelfItem = null;
                 OnPropertyChanged(nameof(IsCarView));
@@ -497,12 +501,16 @@ namespace StreetCorsa.Screens.Garage
         /// <summary>Does the job on the picked part, pays for it and lets the clock run; the part stays picked</summary>
         private void Rebuild(RebuildOfferViewModel? offer)
         {
-            if (offer is not { CanDo: true } || RebuildTarget is not var (part, _) || !ReferenceEquals(part, offer.Part)) return;
+            if (IsWorking || offer is not { CanDo: true } || RebuildTarget is not var (part, _) || !ReferenceEquals(part, offer.Part)) return;
             if (_gameState.Player.Money < offer.Offer.Cost) return;
 
             var onCar = _car != null && !_isStand && _selectedShelfItem == null;
             var picked = _selectedPart;
             var shelfPart = _selectedShelfItem?.Part;
+            var show = new RebuildShow(offer.Offer.Job, offer.Name, Unit.Clamp01(part.Wear, 1), offer.Offer.After, offer.Offer.Minutes, _gameState.Date);
+
+            // The loose part goes on the bench as it was: a tree of its own, before the job changes it
+            var benchPart = shelfPart != null && Catalog is { } shelfCatalog ? PartTrees.ToInstalled(shelfCatalog, shelfPart)?.Root : null;
 
             // The work first: a job that fails to go on costs nothing
             Rebuilding.Apply(offer.Offer.Job, part);
@@ -518,6 +526,181 @@ namespace StreetCorsa.Screens.Garage
             if (shelfPart != null) SelectedShelfItem = Shelf.FirstOrDefault(s => ReferenceEquals(s.Part, shelfPart));
             else SelectedPart = InCurrentTree(picked);
             UpdateRebuilds();
+
+            var piece = benchPart != null ? new Controls.WorkPiece(benchPart, OnBench: true)
+                : _selectedPart != null ? new Controls.WorkPiece(_selectedPart, OnBench: false)
+                : null;
+            ShowWork(show, piece);
+        }
+
+        #endregion
+
+        #region The job as it is done
+
+        // The show of the job on: told to stop (skipped, or the view closed), and the version of it, so one stopped and
+        // another started at once is told apart
+        private bool _workSkipped;
+        private int _workRun;
+        private PlayingSound? _workLoop;
+
+        private bool _isWorking;
+
+        /// <summary>A job is being shown done: the rest of the workbench waits</summary>
+        public bool IsWorking
+        {
+            get => _isWorking;
+            private set
+            {
+                if (!SetProperty(ref _isWorking, value)) return;
+                OnPropertyChanged(nameof(IsIdle));
+                RelayCommand.RaiseCanExecuteChanged();
+            }
+        }
+
+        public bool IsIdle => !_isWorking;
+
+        private Controls.WorkPiece? _workPiece;
+
+        /// <summary>The part the 3D view shows worked on: on the workbench, or where it is mounted</summary>
+        public Controls.WorkPiece? WorkPiece
+        {
+            get => _workPiece;
+            private set => SetProperty(ref _workPiece, value);
+        }
+
+        private double _workGrime;
+
+        /// <summary>How much grime the part being worked on still carries, for the 3D view</summary>
+        public double WorkGrime
+        {
+            get => _workGrime;
+            private set => SetProperty(ref _workGrime, value);
+        }
+
+        private string _workTitle = string.Empty;
+        public string WorkTitle
+        {
+            get => _workTitle;
+            private set => SetProperty(ref _workTitle, value);
+        }
+
+        private string _workCaption = string.Empty;
+
+        /// <summary>The step of the job on now</summary>
+        public string WorkCaption
+        {
+            get => _workCaption;
+            private set => SetProperty(ref _workCaption, value);
+        }
+
+        private double _workProgress;
+        public double WorkProgress
+        {
+            get => _workProgress;
+            private set => SetProperty(ref _workProgress, value);
+        }
+
+        private string _workClock = string.Empty;
+
+        /// <summary>The game's clock as the job goes, from when it started to when it is done</summary>
+        public string WorkClock
+        {
+            get => _workClock;
+            private set => SetProperty(ref _workClock, value);
+        }
+
+        private string _workCondition = string.Empty;
+
+        /// <summary>The part's condition as the job goes</summary>
+        public string WorkCondition
+        {
+            get => _workCondition;
+            private set => SetProperty(ref _workCondition, value);
+        }
+
+        public RelayCommand SkipWorkCommand => _skipWorkCommand ??= new RelayCommand(SkipWork, () => _isWorking);
+        private RelayCommand? _skipWorkCommand;
+
+        /// <summary>The show of the job jumps to its end (the job is done already)</summary>
+        public void SkipWork()
+        {
+            if (_isWorking) _workSkipped = true;
+        }
+
+        /// <summary>
+        /// Plays the job done: each step's caption over the sound of the work, the part's grime fading, its condition and
+        /// the game's clock going up, over <see cref="RebuildShow.Seconds"/>. Only the showing: the job is done already.
+        /// </summary>
+        private async void ShowWork(RebuildShow show, Controls.WorkPiece? piece)
+        {
+            var run = ++_workRun;
+            _workSkipped = false;
+            IsWorking = true;
+            WorkTitle = show.Name;
+            WorkPiece = piece;
+            var step = -1;
+            try
+            {
+                var clock = System.Diagnostics.Stopwatch.StartNew();
+                while (run == _workRun)
+                {
+                    var progress = _workSkipped ? 1 : Math.Min(1, clock.Elapsed.TotalSeconds / show.Seconds);
+                    var now = show.StepAt(progress);
+                    if (now != step)
+                    {
+                        step = now;
+                        var (caption, sound, start) = show.Steps[now];
+                        WorkCaption = caption;
+                        AudioHub.Shared.StopLoop(_workLoop, 0.3f);
+                        _workLoop = progress < 1 ? AudioHub.Shared.PlayLoop(sound, 0.3f) : null;
+                        if (start != null && progress < 1) Sfx.Play(start);
+                        else if (now > 0 && progress < 1) Sfx.Play(Sfx.Clank);
+                    }
+
+                    var wear = show.WearAt(progress);
+                    WorkProgress = progress;
+                    WorkGrime = PartGrime.Of(wear);
+                    WorkCondition = $"{wear * 100:0}%";
+                    WorkClock = GameText.Date(show.ClockAt(progress), "format.time");
+                    if (progress >= 1) break;
+
+                    await Task.Delay(30);
+                }
+
+                if (run != _workRun) return;
+
+                // Done: the last of the work's sound goes, a part set down, a moment to see it clean
+                AudioHub.Shared.StopLoop(_workLoop, 0.4f);
+                _workLoop = null;
+                Sfx.Play(Sfx.Clank);
+                await Task.Delay(_workSkipped ? 250 : 700);
+            }
+            catch (Exception ex)
+            {
+                _logger.Warning("The job's show stopped: {Error}", ex.Message);
+            }
+            finally
+            {
+                if (run == _workRun) EndShow();
+            }
+        }
+
+        /// <summary>Stops the show of the job on at once, its sound and all (the parts view closed, another car, leaving)</summary>
+        public void EndWork()
+        {
+            if (!_isWorking) return;
+
+            _workRun++;
+            EndShow();
+        }
+
+        private void EndShow()
+        {
+            AudioHub.Shared.StopLoop(_workLoop, 0.3f);
+            _workLoop = null;
+            WorkPiece = null;
+            WorkGrime = 0;
+            IsWorking = false;
         }
 
         #endregion
@@ -525,6 +708,7 @@ namespace StreetCorsa.Screens.Garage
         /// <summary>The car being worked on; null for an empty garage</summary>
         public async void SetCar(Car? car)
         {
+            EndWork();
             _car = car;
             SelectedPart = null;
             SelectedShelfItem = null;
@@ -572,6 +756,8 @@ namespace StreetCorsa.Screens.Garage
 
         public void OnPartClicked(InstalledPart? part)
         {
+            if (_isWorking) return;
+
             if (SelectedShelfItem != null && part == null) return;
 
             SelectedShelfItem = null;
@@ -608,7 +794,7 @@ namespace StreetCorsa.Screens.Garage
 
         public void OnCandidateClicked(MountCandidate candidate)
         {
-            if (CurrentRoots is not { } roots || candidate.Tag is not MountPlace place || SelectedShelfItem is not { } item) return;
+            if (_isWorking || CurrentRoots is not { } roots || candidate.Tag is not MountPlace place || SelectedShelfItem is not { } item) return;
 
             // The 3D view shows the places of the part picked before until those of this one are built:
             // a place is only good for the part it was found for

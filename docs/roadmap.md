@@ -1540,6 +1540,18 @@ size, and the small parts are rebuilt with a kit or swapped at the parts counter
   price), takes time, brings the part up to what the job can (a kit is not a new part), and some need the part off, or
   bare. A part too far gone for a kit (a head too worn to lap, a bore past a ring job) says it wants a machine shop.
   No new save state.
+- **Phase 1b: the job seen done (owner, 2026-10-17).** A job plays out over 4 to 10 seconds, longer for a longer job
+  (`RebuildShow.SecondsFor`), skippable. A loose part floats down onto a workbench behind the engine stand
+  (`WorkbenchLayout`, drawn from boxes with the stand) and turns slowly there; for a part on the car or the stand the
+  camera goes to it where it is. The part's grime (`Looks/PartGrime`: oil, road dirt and a little rust, drawn a
+  millimetre and a half over the part and blended at its amount) fades from what its old condition carried to what the
+  new one does. Captions per step (`steps` in rebuilds.json) over looping work sounds synthesised by
+  `tools/RebuildSounds/make_sounds.py` (hand tools, the parts washer, a hone, valve lapping, an air ratchet, the bench
+  grinder, a hammer on a drift, the road); a clank between steps; the game's clock and the part's condition going up
+  under a progress bar. An exchange unit is a drive to the parts counter and back (the road, the shop's air, its door
+  bell). The owner's picks: a workbench spot, 4 to 10 seconds, a fade with sounds for the exchange (the parts shop's
+  counter scene later). The job is done, paid and its time spent before the show: leaving or skipping only ends the
+  showing.
 - **Phase 2: the machine shop.** Blocks bored oversize (+.030, +.040, +.060; past that a sleeve or scrap), cranks
   ground undersize (.010, .020, .030) with bearings to match, oversize pistons for an oversize bore, heads milled
   (a little compression), cams reground, flywheels resurfaced, radiators re-cored, drums turned. Each part keeps its

@@ -3,6 +3,7 @@ using StreetCorsa.Models.GameState;
 using StreetCorsa.Mods;
 using StreetCorsa.Parts;
 using StreetCorsa.Parts.Cars;
+using StreetCorsa.Screens.Garage;
 
 namespace StreetCorsa.Tests;
 
@@ -174,5 +175,83 @@ public sealed class RebuildingTests : IDisposable
 
         Assert.Empty(book.All);
         Assert.StartsWith("rebuilds.json: ", Assert.Single(problems));
+    }
+
+    [Fact]
+    public void Every_base_jobs_steps_have_words_and_sounds_there_are()
+    {
+        var lines = (JObject)JObject.Parse(File.ReadAllText(Path.Combine(RepoPaths.BaseContent, "text", "ui_parts.json")))["lines"]!;
+        var cues = (JObject)JObject.Parse(File.ReadAllText(Path.Combine(RepoPaths.BaseContent, ContentTypes.Sfx, "sfx.json")))["cues"]!;
+        Assert.NotNull(cues[RebuildShow.BenchSound]);
+
+        foreach (var job in Catalog.Rebuilds.All)
+        {
+            Assert.NotEmpty(job.Steps);
+            foreach (var step in job.Steps)
+            {
+                Assert.NotNull(lines[$"rebuild.{job.Id}.{step.Id}"]);
+                Assert.True(cues[step.Sound!]?["loop"]?.Value<bool>() == true, $"{job.Id}.{step.Id}: {step.Sound} is no looping cue");
+                if (step.Start != null) Assert.True(cues[step.Start]?["loop"]?.Value<bool>() != true, $"{job.Id}.{step.Id}: {step.Start} is no one-shot cue");
+            }
+        }
+    }
+
+    [Fact]
+    public void A_step_without_an_id_is_told_and_left_out()
+    {
+        _temp.File("base/rebuilds.json", """
+            { "jobs": [ { "id": "a", "kinds": [ "carburettor" ], "steps": [ { "id": "strip" }, { "sound": "work.wash" } ] } ] }
+            """);
+        var problems = new List<string>();
+
+        var book = PartRebuilds.Load([(ModIds.BaseId, true, _temp.Combine("base"))], problems);
+
+        Assert.Equal(["strip"], book.All.Single().Steps.Select(s => s.Id));
+        Assert.Equal("rebuilds.json: a: a step without an id is left out", Assert.Single(problems));
+    }
+
+    [Fact]
+    public void A_show_is_longer_for_a_longer_job_but_never_keeps_the_player_long()
+    {
+        Assert.Equal(4, RebuildShow.SecondsFor(5));
+        Assert.Equal(10, RebuildShow.SecondsFor(24 * 60));
+        Assert.InRange(RebuildShow.SecondsFor(60), 6, 7);
+        Assert.True(RebuildShow.SecondsFor(240) > RebuildShow.SecondsFor(90));
+    }
+
+    [Fact]
+    public void A_show_goes_through_its_steps_its_condition_and_its_clock()
+    {
+        var job = Catalog.Rebuilds.All.Single(j => j.Id == "carb_kit");
+        var start = new DateTime(1965, 6, 1, 9, 0, 0);
+        var show = new RebuildShow(job, "Rebuild", 0.4, 0.95, 90, start);
+
+        Assert.Equal(job.Steps.Count, show.Steps.Count);
+        Assert.Equal(0, show.StepAt(0));
+        Assert.Equal(show.Steps.Count - 1, show.StepAt(1));
+        Assert.Equal(1, show.StepAt(1.0 / show.Steps.Count + 0.01));
+        Assert.Equal(0.4, show.WearAt(0), 6);
+        Assert.Equal(0.95, show.WearAt(1), 6);
+        Assert.Equal(0.675, show.WearAt(0.5), 6);
+        Assert.Equal(start, show.ClockAt(0));
+        Assert.Equal(start.AddMinutes(90), show.ClockAt(1));
+        Assert.Equal(start.AddMinutes(90), show.ClockAt(5));
+    }
+
+    [Fact]
+    public void A_job_without_steps_shows_its_name_over_the_bench()
+    {
+        var show = new RebuildShow(new RebuildJob { Id = "x", Kinds = ["block"] }, "Clean it", 0.5, 0.8, 30, DateTime.Today);
+
+        Assert.Equal([("Clean it", RebuildShow.BenchSound, (string?)null)], show.Steps);
+    }
+
+    [Fact]
+    public void A_worn_part_carries_more_grime_and_a_new_one_none()
+    {
+        Assert.Equal(0, StreetCorsa.Looks.PartGrime.Of(1));
+        Assert.Equal(StreetCorsa.Looks.PartGrime.MostGrime, StreetCorsa.Looks.PartGrime.Of(0));
+        Assert.True(StreetCorsa.Looks.PartGrime.Of(0.3) > StreetCorsa.Looks.PartGrime.Of(0.6));
+        Assert.Equal(0, StreetCorsa.Looks.PartGrime.Of(double.NaN));
     }
 }

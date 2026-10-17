@@ -79,7 +79,7 @@ public static class EngineStandLayout
         return kn5;
     }
 
-    /// <summary>The stand added to a model of parts, as nodes of its own that are no part's: the head, and the rest</summary>
+    /// <summary>The stand added to a model of parts, as nodes of its own that are no part's: the head, and the rest; the workbench with it</summary>
     public static void AddTo(IKn5 kn5, float headZ)
     {
         const float h = CrankHeight;
@@ -124,6 +124,9 @@ public static class EngineStandLayout
         headNode.Children.Add(PlaceholderMesh.Boxes("stand_head", head, paint));
         headNode.Transform = Translation(Spot.X);
         kn5.RootNode.Children.Add(headNode);
+
+        // The workbench stands with it, behind it
+        WorkbenchLayout.AddTo(kn5);
     }
 
     /// <summary>The stand's boxes are laid out on the car's centre line; the node moves them over to <see cref="Spot"/></summary>

@@ -32,6 +32,15 @@ public static class Rebuilding
         return job.Name is { Length: > 0 } name ? name : job.Id.Replace('_', ' ');
     }
 
+    /// <summary>A step's caption: <c>rebuild.&lt;job&gt;.&lt;step&gt;</c> in the text, else its own</summary>
+    public static string CaptionOf(RebuildJob job, RebuildStep step)
+    {
+        var key = $"rebuild.{job.Id}.{step.Id}";
+        var said = PartWords.Say(key);
+        if (said != key) return said;
+        return step.Say is { Length: > 0 } say ? say : step.Id.Replace('_', ' ');
+    }
+
     /// <summary>The kit or the rebuilt unit: its share of the part's new price, never less than its least, at the save's part prices</summary>
     /// <param name="priceMultiplier">The save's part prices (<c>GameRules.PartPriceMultiplier</c>)</param>
     public static decimal CostOf(RebuildJob job, PartDefinition part, double priceMultiplier = 1.0) =>

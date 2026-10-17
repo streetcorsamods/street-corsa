@@ -52,6 +52,8 @@
                                 EngineLayout="{Binding Workbench.EngineLayout}"
                                 Candidates="{Binding Workbench.Candidates}"
                                 SelectedPart="{Binding Workbench.SelectedPart}"
+                                WorkPiece="{Binding Workbench.WorkPiece}"
+                                WorkGrime="{Binding Workbench.WorkGrime}"
                                 RunningEngine="{Binding Runner, ElementName=EnginePanel}"
                                 FadeInOnReady="False"/>
 

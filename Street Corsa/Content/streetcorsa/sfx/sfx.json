@@ -223,6 +223,78 @@
         "radio/knob_2.ogg"
       ],
       "pitch": 0.03
+    },
+    "work.bench": {
+      "bus": "effects",
+      "volume": 0.45,
+      "files": [
+        "work/bench.ogg"
+      ],
+      "loop": true
+    },
+    "work.wash": {
+      "bus": "effects",
+      "volume": 0.45,
+      "files": [
+        "work/wash.ogg"
+      ],
+      "loop": true
+    },
+    "work.hone": {
+      "bus": "effects",
+      "volume": 0.45,
+      "files": [
+        "work/hone.ogg"
+      ],
+      "loop": true
+    },
+    "work.lap": {
+      "bus": "effects",
+      "volume": 0.45,
+      "files": [
+        "work/lap.ogg"
+      ],
+      "loop": true
+    },
+    "work.air": {
+      "bus": "effects",
+      "volume": 0.45,
+      "files": [
+        "work/air.ogg"
+      ],
+      "loop": true
+    },
+    "work.grind": {
+      "bus": "effects",
+      "volume": 0.45,
+      "files": [
+        "work/grind.ogg"
+      ],
+      "loop": true
+    },
+    "work.press": {
+      "bus": "effects",
+      "volume": 0.45,
+      "files": [
+        "work/press.ogg"
+      ],
+      "loop": true
+    },
+    "work.road": {
+      "bus": "effects",
+      "volume": 0.45,
+      "files": [
+        "work/road.ogg"
+      ],
+      "loop": true
+    },
+    "work.counter": {
+      "bus": "effects",
+      "volume": 0.4,
+      "files": [
+        "ambience/shop.ogg"
+      ],
+      "loop": true
     }
   }
 }

@@ -873,7 +873,11 @@ relined) or a rebuilt unit from the parts counter, the old part its core (the ex
 brings `Wear` up to its `restores`, never down; costs its `cost` share of the part's new price (at least
 `cost_at_least`) at the save's part prices; takes its `minutes`; may need the part off (on the shelf, or the engine on
 the stand) or bare; and a part worn below its `min_wear` is too far gone for it (the machine shop, phase 2). The car's
-figures are worked out again after a job on a part in it.
+figures are worked out again after a job on a part in it. The job is then shown done (`Screens/Garage/RebuildShow`,
+`PartsWorkbenchViewModel.ShowWork`): its `steps` in turn over their looping sounds, the part on the workbench
+(`WorkbenchLayout`, `CarViewport3D.WorkPiece`) or where it is mounted, its grime (`Looks/PartGrime`,
+`GarageRenderer.SetWork`/`WorkGrime`) fading from its old condition's to its new one's, the clock and its condition
+going up; Skip ends the showing, not the job.
 
 ## Cooling and oil (`Parts/Cars/EngineCooling`)
 

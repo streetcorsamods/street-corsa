@@ -336,7 +336,12 @@ the condition the part is in after it (0 to 1; a part in better shape gains noth
 for the job (below it, it wants a machine shop), `cost` a share of the part's new price, never under `cost_at_least`
 dollars, `minutes` the time it takes. `off`: done with the part off the car and off any other part (on the shelf, or
 the engine on the stand); `bare`: with nothing mounted on it; `fixes_damage`: takes its damage off too. The player reads
-`rebuild.<id>` in the text, else `name`. A job of the same id as an earlier mod's takes its place, whole;
+`rebuild.<id>` in the text, else `name`. `steps` is what the player sees done while the job runs, in turn, each as long
+as the others: `{ "id": "soak", "say": "Soaking it in carb cleaner", "sound": "work.wash", "start": "station.bell" }`,
+read as `rebuild.<job>.<step>` in the text (else `say`) over the looping sfx cue `sound` (none: `work.bench`), with the
+one-shot cue `start` played as it begins. The base game's work sounds are `work.bench`, `work.wash`, `work.hone`,
+`work.lap`, `work.air`, `work.grind`, `work.press`, `work.road` and `work.counter`. A job without steps shows its name
+over the bench's sound. A job of the same id as an earlier mod's takes its place, whole;
 `"disabled": true` takes it out. The base game's jobs are in `Content\streetcorsa\parts\rebuilds.json`.
 
 **A part's figures.** A part's stats come from its SLRR script (`source_script`): the game builds the script and runs it
