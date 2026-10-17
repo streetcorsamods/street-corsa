@@ -95,6 +95,9 @@ namespace StreetCorsa.Services.Parts
         /// <summary>The rear axle the car leaves the factory with (cars.json's picks, else the guess); null for a car whose rear wheels are not driven</summary>
         RearAxleChoice? FactoryAxle(string carDefinitionId);
 
+        /// <summary>The axle the car would leave the factory with on these picks, what they leave out guessed (the catalog editor's)</summary>
+        RearAxleChoice? AxleFor(string carDefinitionId, RunningGearPicks? picks);
+
         /// <summary>Where the car's engine is moved from its place by hand (cars.json); zero when it is not</summary>
         System.Numerics.Vector3 EngineOffsetOf(string carDefinitionId);
 

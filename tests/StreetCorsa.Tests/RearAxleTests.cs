@@ -118,6 +118,64 @@ public class RearAxleTests
         Assert.Equal(2, Workbench.FindPlaces(Catalog, car.Parts, new PartInstance(Gm + "gm_10bolt_shaft_28")).Count);
     }
 
+    // ----- the catalog editor -----
+
+    [Fact]
+    public void The_editor_writes_only_what_is_picked_and_cars_json_reads_it_back()
+    {
+        var picks = new RunningGearPicks { Axle = Dana + "dana_44", Ratio = 3.7 };
+        var text = StreetCorsa.Services.Catalog.BaseCarsFile.With("{ \"cars\": { \"vette\": { \"common\": 0.4 } } }",
+            new Dictionary<string, StreetCorsa.Services.Catalog.CarFields> { ["vette"] = new(null, null, 0.4f, picks) });
+        Assert.Contains("\"running_gear\": {\"axle\":\"running_gear/axles_dana/dana_44\",\"ratio\":3.7}", text);
+
+        var read = CarBook.Read(StreetCorsa.Mods.ModMerge.Parse(text)!, []).Car("vette")!.RunningGear!;
+        Assert.Equal(Dana + "dana_44", read.Axle);
+        Assert.Equal(3.7, read.Ratio);
+
+        var cleared = StreetCorsa.Services.Catalog.BaseCarsFile.With(text,
+            new Dictionary<string, StreetCorsa.Services.Catalog.CarFields> { ["vette"] = new(null, null, 0.4f, new RunningGearPicks()) });
+        Assert.DoesNotContain("running_gear", cleared);
+    }
+
+    [Fact]
+    public void The_editor_offers_the_guess_first_and_lets_a_carrier_go_that_the_new_housing_does_not_take()
+    {
+        var picks = new StreetCorsa.Screens.CarCatalogEditor.AxlePicks(Catalog, p => RunningGearGuess.ChooseAxle(Catalog, Specs(), Chevy69, p), null);
+        Assert.Equal("Guessed: Chevy 10-bolt 8.2-inch rear axle housing", picks.Housing!.Label);
+        Assert.Null(picks.Picks);
+        Assert.All(picks.CarrierOptions.Skip(1), o => Assert.Contains("10-bolt 8.2", o.Label));
+
+        var changed = 0;
+        picks.Changed += () => changed++;
+        picks.Carrier = picks.CarrierOptions.First(o => o.Id == Gm + "gm_10bolt_posi_high");
+        picks.Housing = picks.HousingOptions.First(o => o.Id == Ford + "ford_9");
+        Assert.Equal(2, changed);
+        Assert.Equal(Ford + "ford_9", picks.Picks!.Axle);
+        Assert.Null(picks.Picks.Diff);
+        Assert.Contains(picks.RatioOptions, o => o.Id == "5.14");
+
+        // Something that is not this row's is no pick
+        picks.Housing = new StreetCorsa.Screens.CarCatalogEditor.PickOption("nothing", "nothing");
+        Assert.Equal(Ford + "ford_9", picks.Picks!.Axle);
+    }
+
+    // ----- working on it -----
+
+    [Fact]
+    public void Gears_are_set_up_at_home_with_a_rougher_roll_or_by_the_machinist_and_a_posi_is_rebuilt_off_the_car()
+    {
+        var gears = new PartInstance(Gm + "gm_10bolt_gears_373") { Wear = 0.5 };
+        var setup = Rebuilding.Offers(Catalog, gears, loose: false).Single(o => o.Job.Id == "gear_setup");
+        Assert.Null(setup.WhyNot);
+        Assert.True(setup.Job.Roll > 0.08);
+        Assert.Contains(Machining.Offers(Catalog, gears), o => o.Job.Id == "gear_setup_shop");
+
+        var posi = new PartInstance(Gm + "gm_10bolt_posi_high") { Wear = 0.4 };
+        Assert.NotNull(Rebuilding.Offers(Catalog, posi, loose: false).Single(o => o.Job.Id == "posi_rebuild").WhyNot);
+        Assert.Null(Rebuilding.Offers(Catalog, posi, loose: true).Single(o => o.Job.Id == "posi_rebuild").WhyNot);
+        Assert.Contains(Machining.Offers(Catalog, new PartInstance(Gm + "gm_10bolt") { Tear = 0.4 }), o => o.Job.Id == "housing_true");
+    }
+
     // ----- breaking it -----
 
     private static Car CarWithAxle(string shaft = Gm + "gm_10bolt_shaft_28")

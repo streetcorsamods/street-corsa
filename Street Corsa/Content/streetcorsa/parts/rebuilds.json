@@ -40,6 +40,9 @@
     { "id": "blower_kit", "name": "Rebuild: seals and bearings", "kinds": [ "charger" ], "restores": 0.9, "min_wear": 0.25, "cost": 0.12, "cost_at_least": 30, "minutes": 240, "off": true, "steps": [ { "id": "apart", "sound": "work.air" }, { "id": "wash", "sound": "work.wash" }, { "id": "bearings", "sound": "work.press" } ] },
     { "id": "radiator_flush", "name": "Flush and pressure-test", "kinds": [ "radiator", "radiator_fan" ], "restores": 0.85, "min_wear": 0.3, "cost": 0.05, "cost_at_least": 3, "minutes": 60, "steps": [ { "id": "flush", "sound": "work.wash" }, { "id": "test", "sound": "work.air" } ] },
     { "id": "brake_reline", "name": "Reline the shoes, adjust", "groups": [ "brakes" ], "restores": 0.95, "cost": 0.2, "cost_at_least": 6, "minutes": 60, "steps": [ { "id": "drum", "sound": "work.air" }, { "id": "shoes", "sound": "work.press" }, { "id": "adjust", "sound": "work.bench" } ] },
+    { "id": "gear_setup", "name": "Set up the gears: pinion depth, backlash, bearing preload", "groups": [ "ring_pinions" ], "restores": 0.97, "roll": 0.12, "cost": 0.06, "cost_at_least": 8, "minutes": 240, "steps": [ { "id": "shims", "sound": "work.bench" }, { "id": "bearings", "sound": "work.press" }, { "id": "pattern", "sound": "work.bench" } ] },
+    { "id": "posi_rebuild", "name": "Rebuild: clutch packs, springs, bearings", "groups": [ "differentials" ], "restores": 0.95, "cost": 0.25, "cost_at_least": 15, "minutes": 180, "off": true, "steps": [ { "id": "apart", "sound": "work.air" }, { "id": "clutches", "sound": "work.bench" }, { "id": "together", "sound": "work.press" } ] },
+    { "id": "axle_bearing", "name": "New axle bearing and seal", "groups": [ "axle_shafts" ], "restores": 0.92, "cost": 0.2, "cost_at_least": 5, "minutes": 60, "steps": [ { "id": "pull", "sound": "work.air" }, { "id": "press", "sound": "work.press" } ] },
     {
       "id": "rebuilt_exchange", "name": "Swap for a rebuilt one (old one back as the core)", "way": "exchange",
       "kinds": [ "carburettor", "distributor", "side_distributor", "water_pump", "fuel_pump", "alternator", "starter", "steering_pump", "clutch" ],
@@ -94,6 +97,16 @@
       "id": "radiator_recore", "name": "Re-core the radiator", "way": "machine", "kinds": [ "radiator" ],
       "restores": 0.97, "cost": 0.35, "cost_at_least": 15, "days": 2, "fixes_damage": true,
       "steps": [ { "id": "tanks", "sound": "work.bench" }, { "id": "core", "sound": "work.press" }, { "id": "test", "sound": "work.air" } ]
+    },
+    {
+      "id": "gear_setup_shop", "name": "Gears set up by the machinist", "way": "machine", "groups": [ "ring_pinions" ], "restores": 0.99,
+      "cost": 0.3, "cost_at_least": 20, "days": 2,
+      "steps": [ { "id": "shims", "sound": "work.bench" }, { "id": "pattern", "sound": "work.bench" } ]
+    },
+    {
+      "id": "housing_true", "name": "Straighten the housing, true the tubes", "way": "machine", "groups": [ "rear_axles" ], "restores": 0.97,
+      "cost": 0.2, "cost_at_least": 25, "days": 2, "fixes_damage": true,
+      "steps": [ { "id": "measure", "sound": "work.bench" }, { "id": "press", "sound": "work.press" } ]
     },
     {
       "id": "drums_turned", "name": "Turn the drums true", "way": "machine", "groups": [ "brakes" ], "cut": "turn",

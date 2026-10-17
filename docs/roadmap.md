@@ -1774,10 +1774,18 @@ CC-BY stand-in meshes first (credited), our own generated ones after; the carrie
 parts in the tree and the parts view; gear setup at the machine shop or as the player's own work (with the quality
 roll).
 
+**Where it stands (2026-10-17):** phase 0 and phase 1 built on `feature/running-gear` (the rear axle: see
+docs/systems/parts-system.md "The rear axle"), not seen in game. Left out of phase 1: welding the spiders (a poor man's
+spool: a job that turns one part into another, which the rebuilds cannot do yet), the diff's oil, the rivals and the
+tuned used cars going for gears and a posi. To check in game: the axle between the rear hubs (a grey box until the
+meshes of phase 4), the pickers in the Car Catalog Editor, a hard launch on a 10-bolt with slicks (the log's "the rear
+tyres put down ... Nm at most" says how near it came), the 12 Corvettes on their Dana 44.
+Next: phase 2 (brakes).
+
 ### Phase 0 findings and design (2026-10-17)
 
-**Survey** (the 104 folder cars by script, the 4 ACD cars to read through `AcCarSpecs` with the guess's EngineBench
-check): all 104 are RWD. 63 rear `AXLE` as above. `TORQUE_REACTION` has a **sign** (-0.9 to 1.0; 15 at 0.2, 13 at
+**Survey** (the 104 installed cars; the "4 ACD cars" of the research are in cars.json but not installed at all): all 104
+are RWD. 63 rear `AXLE` as above. `TORQUE_REACTION` has a **sign** (-0.9 to 1.0; 15 at 0.2, 13 at
 0.5, 5 at -0.5): wrap is scaled by its size, its sign kept. Rear `HUB_MASS` of the AXLE cars 50 to 170 kg (median 85);
 their rear `SPRING_RATE` 16 to 65 kN/m (median 26 kN/m, about 150 lb/in: the leaf figures of the research fit). The
 dyno and the engine's price never read the final drive (only the export and the workbench's sheet do), so the axle can

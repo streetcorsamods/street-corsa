@@ -255,13 +255,14 @@ place on the build it does the most for (measured once at every start), the hors
 (none: 1). A kind priced `by` a figure of its own costs as much more or less as its figure stands against the middle
 one of its kind, to the power `by_power`: `grip` (a tyre's friction by its width), `brake_torque`, `rim_size`,
 `spring_rate`, `damping`, `carb_mounts` (the carburettors a manifold takes: a dual-quad is a kit no dyno run of the
-manifold alone measures). The `accessories` group takes no classes: it prices the parts no group takes in. A part's
+manifold alone measures), `strength` (what a rear axle part holds), `diff_lock` (how hard a carrier locks). The `accessories` group takes no classes: it prices the parts no group takes in. A part's
 own `value` (the source game's price, kept in `properties`) prices nothing.
 `EngineBench <Content folder> prices [AC cars folder | part id]` lists the prices by kind, every installed car's new
 price, or the power and price of the parts whose id holds what is given. The ids `engine_blocks`, `cylinder_heads`, `camshafts`, `crankshafts`, `connecting_rods`,
-`pistons`, `transmissions`, `air_filters`, `exhaust`, `oil_pans`, `tyres`, `rims`, `brakes`, `springs` and `shocks`
-are the game's own: the engine's internals wear and break, the running gear has a slot on each wheel, the attendant
-looks at the air filter and the exhaust. A mod may change their classes, never their meaning. The base game's groups are
+`pistons`, `transmissions`, `air_filters`, `exhaust`, `oil_pans`, `tyres`, `rims`, `brakes`, `springs`, `shocks`,
+`rear_axles`, `differentials`, `ring_pinions` and `axle_shafts` are the game's own: the engine's internals wear and break,
+the running gear has a slot on each wheel, the rear axle one under the car, the attendant looks at the air filter and the
+exhaust. A mod may change their classes, never their meaning. The base game's groups are
 `Content\streetcorsa\parts\part_groups.json`.
 
 **The shows.** The same file's `shows` are the garage parts view's buttons that put kinds of part out of sight, as the
@@ -509,6 +510,25 @@ decide. The base game declares neither.
 The base game's reading of every part is held in `tests/StreetCorsa.Tests/Fixtures/part_roles.txt`: a rename that
 changes what a part does fails `PartRolesSnapshotTests`.
 
+**Running gear of data** (step 31). The rear axle's parts are parts of data whose figures are `properties`: a housing
+(`"class_chain": ["RearAxle"]`, `strength` in Nm at the axle, `drag`), a carrier (`["Differential"]`, `diff_power`,
+`diff_coast`, `diff_preload` in Nm, `strength`), a ring and pinion (`["RingPinion"]`, `ratio`, `strength`) and an axle shaft
+(`["AxleShaft"]`, `strength`). The housing goes on the car's axle slot by its slot 1 and carries the carrier on its slot 2
+and the shafts on 3 and 4; the carrier carries the gears on its slot 2. Give them standard fittings of your own family
+(`"takes": ["axle:mymod_banjo"]` on the housing, `"fits"` on the carrier) and `required_slots` with `"enforce": true` for
+what the axle cannot do without. `"came_in"` on a part says which cars it left the factory on, for the guess of a car's
+factory running gear: `{ "families": ["gm"], "makes": ["pontiac"], "torque": [460, null], "years": [1965, null] }` (Nm of
+the car's peak torque, model years; any may be left out, `{}` is any car's). A part without `came_in` (a spool, an alloy
+shaft) is never a factory part while there is one with it.
+
+```json
+{ "id": "running_gear/banjo/housing", "display_name": "Banjo rear axle housing", "class_chain": [ "RearAxle" ], "mass": 60,
+  "came_in": { "makes": [ "mymake" ] }, "properties": { "strength": 3500, "drag": 0.012 },
+  "slots": [ { "id": 1, "name": "mount" }, { "id": 2, "name": "carrier", "takes": [ "axle:banjo" ] },
+             { "id": 3, "name": "left shaft", "takes": [ "shaft:banjo" ] }, { "id": 4, "name": "right shaft", "takes": [ "shaft:banjo" ] } ],
+  "required_slots": [ { "slot": 2, "message": "The rear axle needs its differential carrier.", "enforce": true } ] }
+```
+
 A part mounts by what its slots name (`attaches_to`, `compatible_with`: a part id and a slot, a reference as above)
 or by a standard fitting (`fits`/`takes`, e.g. `carb:4bbl`), which works across mods with no ids at all.
 `tools\SlrrPartsConverter` makes packs from SLRR `.rpk` files.
@@ -530,7 +550,9 @@ naming only that; a list (a make's words) is taken whole. What does not read is 
   nothing about which car or engine it is), for matching a car's name to an engine build's.
 - `cars`, by the AC car's folder name: what is given here is not worked out from the car's data. `engine`, the
   engine build it leaves the factory with (`engine_builds.json`, namespaced); `layout`, `front`, `mid`, `rear`, or `front_transverse` and `mid_transverse` for an engine lying across the car (guessed for a front-wheel-drive car; the garage draws it so);
-  `common`, how often it turns up for sale, 0 to 1; `make`, a make of `makes`. The base game's holds the factory
+  `common`, how often it turns up for sale, 0 to 1; `make`, a make of `makes`; `running_gear`, the factory rear axle as
+  far as it is given: `axle` (a housing's part id), `diff` (a carrier's), `ratio` (the gear set of that ratio that goes on
+  the carrier, the nearest there is), `shafts`; what is left out is guessed from the parts' `"came_in"` (see `parts`). The base game's holds the factory
   engines set by hand in the catalog editor (a developer's screen, which saves into the base game's `cars.json`).
   A car's price is never given: it costs its body by its weight (the rules' `cars`) and its factory parts (the
   shelves' `price`). A `price` a mod still gives is told as no longer read.

@@ -354,7 +354,9 @@ namespace StreetCorsa.Services.Parts
         public (RunningGearFactory.AxleParts Front, RunningGearFactory.AxleParts Rear)? FactoryRunningGear(Car car) =>
             IsAvailable && Specs(car.DefinitionId) is { } specs ? RunningGearFactory.Choose(Catalog, specs) : null;
 
-        public RearAxleChoice? FactoryAxle(string carDefinitionId)
+        public RearAxleChoice? FactoryAxle(string carDefinitionId) => AxleFor(carDefinitionId, CarBook.Current.Car(carDefinitionId)?.RunningGear);
+
+        public RearAxleChoice? AxleFor(string carDefinitionId, RunningGearPicks? picks)
         {
             if (!IsAvailable || Specs(carDefinitionId) is not { } specs) return null;
 
@@ -362,7 +364,7 @@ namespace StreetCorsa.Services.Parts
             var book = CarBook.Current;
             var facts = new CarFacts(book.MakeOf(carDefinitionId, definition?.Brand, definition?.Name),
                 book.FamilyOfCar(carDefinitionId, definition?.Brand, definition?.Name), definition?.Year);
-            return RunningGearGuess.ChooseAxle(Catalog, specs, facts, book.Car(carDefinitionId)?.RunningGear);
+            return RunningGearGuess.ChooseAxle(Catalog, specs, facts, picks);
         }
 
         public System.Numerics.Vector3 EngineOffsetOf(string carDefinitionId) =>

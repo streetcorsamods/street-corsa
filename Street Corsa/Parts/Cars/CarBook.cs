@@ -423,4 +423,6 @@ public sealed class RunningGearPicks
     public string? Shafts { get; set; }
 
     public bool IsEmpty => string.IsNullOrEmpty(Axle) && string.IsNullOrEmpty(Diff) && Ratio == null && string.IsNullOrEmpty(Shafts);
+
+    public RunningGearPicks Copy() => new() { Axle = Axle, Diff = Diff, Ratio = Ratio, Shafts = Shafts };
 }

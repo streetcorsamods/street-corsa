@@ -304,6 +304,7 @@ in `condition` goes onto the car (`CarCondition.ApplyRace`), and back into AC at
 | `fuel_litres`, `max_fuel_litres` | `Car.FuelLitres` (null is a full tank), `Car.FuelTankLitres`; kept only once the tank's size is known, and never for a rival's car | `CAR_n_FUEL`, set with `physics.setCarFuel`; -1 fills the tank to AC's `maxFuel`. A rival always goes in full |
 | `dirt` (0 to 1) | `Car.BodyDirt`, the worse of the car's and AC's (not for a rival's car). The mode adds 0.015 a second with all four wheels off the track (grass, dirt, a surface with dirt, off the track's own; `surfaceType`, `surfaceDirt`, `surfaceValidTrack`) at 30 km/h or more, sets it as it goes and reports the worse of AC's and its own | `CAR_n_DIRT`, set with `ac.setBodyDirt` (no permission needed) |
 | `heat` | the report says what the heat and the oil did; when they took at least half of the engine life lost, the whole bottom end comes down evenly and no one part is blamed | `CAR_n_COOLING` = cooling, fan, sump g (`EngineCooling`, see below) |
+| `axle_broken`, `axle_peak_nm` (schema 1.9) | the rear axle's weakest part (`RearAxle.Weakest`: its strength in its wear and damage) is wrecked, `Tear` 0, and the car stays home until the repair shop rebuilds the axle; a little `Wear` on every axle part (half the engine's per km); the peak goes in the log | `CAR_n_AXLE` = the Nm the weakest part holds. The mode adds up the torque the rear tyres put down (`wheel.fx` x `tyreLoadedRadius`, with 20% throttle or more) and past it breaks the axle (breakdown `AXLE`), likelier the further past and the longer: `1 - e^(-20 x over x dt)`, harsh at the owner's word |
 
 **The wear layer** (`CAR_n_LOOK=looks\<car>_<hash>.kn5`, docs/roadmap.md step 28 ideas 3 and 4): a model the game draws
 for the car's rust, worn paint, scrapes and cracked windscreen (`Looks/WearLayer`, without the dirt), mirrored into the
@@ -455,6 +456,14 @@ Schema 1.7 added (step 14):
 | `participants[].condition.dirt` | number | The body's dirt, 0 to 1 |
 | `participants[].condition.heat` | object | `peak_water_c`, `overheated_s` (time at 110 °C or more), `peak_fade` (the most restrictor), `heat_life_lost`, `oil_starved_s`, `oil_life_lost`, `lowest_oil_supply` (1 always, 0 dry) |
 | `participants[].breakdown` | string | Now also `OVERHEAT`, `OIL` and `FUEL` |
+
+Schema 1.9 added (step 31, the rear axle; mode 4.1.0):
+
+| Field | Type | Meaning |
+|-------|------|---------|
+| `participants[].breakdown` | string | Now also `AXLE`: the rear axle let go |
+| `participants[].condition.axle_broken` | bool or absent | The axle broke; absent for a car the career gave no `CAR_n_AXLE` |
+| `participants[].condition.axle_peak_nm` | number or absent | The most torque the rear tyres put down in the race, Nm at the axle: what to set the axles' `strength` against |
 
 ```json
 {

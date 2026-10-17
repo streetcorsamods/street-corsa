@@ -688,6 +688,45 @@ the source game (their physics calls are commented out) and stay out of the shop
 drawn at the hubs (`CarPartsLayout`, `CarViewport3D.Gear`) and picked, taken off and put back like engine parts.
 Check: `EngineBench <parts> gear <AC cars folder>`.
 
+**The rear axle** (step 31, `Parts/Cars/RearAxle`, `RunningGearGuess`). A car whose rear wheels are driven carries a rear
+axle on its own car slot 401: the housing, a differential carrier on the housing's slot 2, the ring and pinion on the
+carrier's slot 2, an axle shaft on each of the housing's slots 3 and 4. They are parts of data (`parts/running_gear/`:
+`axles_gm`, `axles_ford`, `axles_mopar`, `axles_dana`, and the aftermarket's `axle_speed`) and mate by standard
+fittings, so a mod's axle meets the base game's carriers and the other way round: `axle:<family>` for the carrier,
+`gears:<family>` for the gears (the GM 10 and 12-bolts' two carrier series as `_low` and `_high`), `shaft:<family>`. What
+each does is in its `properties`: `strength` (Nm at the axle it holds new; a worn part a quarter less at the end of its
+mileage, a damaged one down to 30%), `ratio`, `diff_power`/`diff_coast`/`diff_preload` (Assetto Corsa's lock), `drag`
+(the share of the engine's torque the housing's gears take: a 9-inch's 3.5%, the others 1 to 1.5%). The housing's
+`required_slots` (its carrier, both shafts) and the carrier's (its gears) are enforced: an axle short of one keeps the
+car home in the pack's words. The garage draws the housing with its slot 1 between the rear hubs, facing the car's way.
+- **The factory axle** comes from cars.json's `running_gear` (`axle`, `diff`, `ratio`, `shafts`; the Car Catalog Editor's
+  three pickers write them) and, for what they leave out, from the parts' `"came_in"` against the car: a part naming the
+  car's make before one naming its family, before one for any car (the Dana 44: any make no other axle names), one made
+  in the car's years before one that was not, then the engine torque (the peak of the car's own lut) and the years it
+  is off by, then the plainest. The ratio is the nearest to the car's own `FINAL`, the carrier the one that locks most
+  like its `[DIFFERENTIAL]`. Of the 104 installed cars (2026-10-17): 74 Chevy 10-bolts, 13 Pontiac/Olds/Buick 10-bolts,
+  5 GM 12-bolts, 4 Chrysler 8-3/4s, 3 Dana 44s, 3 Ford 8-inch and 2 9-inch; the 12 Corvettes of 1963 on are picked by
+  hand onto a Dana 44 (their independent rear's centre section). AC's curves run under the factory figures, so the bands
+  are low: a Chevy past 460 Nm gets the 12-bolt, a Ford past 380 Nm the 9-inch.
+- **Older saves** (`Car.HasAxleAssigned`): a car that has its running gear but never had an axle gets its factory one
+  once, as it is looked at; an axle the player took off stays off. A car whose rear wheels are not driven is marked
+  with no axle (its gearbox has the differential).
+- **Assetto Corsa** (`AcAxleData`, after the engine, before the damage): the axle takes `[GEARS] FINAL` and `[DIFFERENTIAL]`
+  over from the gearbox. On its factory gears and carrier the car keeps its own figures as written (put back over what
+  the engine's SLRR gearbox wrote, so a stock car's diff and final drive are its author's again); other gears write their
+  ratio, another carrier its `POWER`, `COAST` and `PRELOAD` (a clutch posi's falling off to 55% as its clutches wear; a
+  spool's and a Locker's never). The axle's weight against the factory one moves `TOTALMASS`, and on a live axle (`[REAR]
+  TYPE=AXLE`, all of it unsprung) the rear `HUB_MASS`; the housing's drag against the factory one's scales the power
+  curve. No axle part is no change: a car of an older save before its axle, a mod's front-drive car.
+- **Breaking it** (harsh, the owner's call): see docs/ac-integration/csp-lua-scripts.md "Damage", `CAR_n_AXLE`. The
+  repair shop's "Rear axle rebuild" takes the damage off every axle part; the rivals' daily repairs take it too.
+- **Work**: `gear_setup` (own work, a rougher roll: 0.12), `posi_rebuild` (the carrier off the car), `axle_bearing`; at the
+  machine shop `gear_setup_shop` and `housing_true` (a bent housing straightened).
+- Prices: `rear_axles` and `axle_shafts` by `strength`, `differentials` by `diff_lock` (0.3 open, about 1 a posi, 2.3 a
+  spool), `ring_pinions` flat. Shops: the make specialists stock their make's packs, speed shops the carriers and gears,
+  junkyards whatever comes off a wreck.
+Check: `EngineBench <parts> axles <AC cars folder>`.
+
 **Threads.** The game state and the save file belong to the UI thread. Whatever takes long (loading the catalog,
 putting engines together for ads, market listings and cars without parts) runs on a worker thread on objects nobody
 else has yet, and the result goes into the game state back on the calling thread (`RefreshAdsAsync`,
