@@ -1784,7 +1784,23 @@ Phase 2 (brakes) built after it: period drums with shoes and wheel cylinders, pe
 brakes.ini, older saves brought up once (`Car.GearVersion`); see docs/systems/parts-system.md "Period brakes". Not done:
 master cylinder, booster, proportioning valve (AC has no pedal effort). To check in game: a stock car's drums fading
 after a hard stop or two from speed (the Car Life GTO: one 80 mph stop), discs lasting.
-Next: phase 3 (springs, shocks, bars).
+Next: phase 3 (springs, shocks, bars). **To pick up in a new session** (nothing of phase 3 built yet):
+- Figures read 2026-10-17: the source game's coil springs are 41 to 123 kN/m (235 to 700 lb/in), all stiffer than the
+  cars' own (front median 31 kN/m, rear 26 kN/m: the factory takes the softest); its shocks 2900 to 6300 (`damping`,
+  `rebound_factor` 1); its 48 sway bars are inert (25000, no physics), so they stay out of the shop. The cars' `[ARB]`:
+  front median 8000 N/m, rear 1230, 24 cars with no rear bar.
+- The draft: leaf springs `["LeafSpring", "Spring"]` (rate in `force`, N/m; a ladder of rates 90 to 370 lb/in so every
+  AXLE car's own rate has a near one, `came_in` `{ "axle": "rear", "suspension": ["AXLE"], "countries": ["USA"] }`;
+  aftermarket mono-leaf and Super Stock), a `wrap` figure each (multi-leaf 1, mono 1.3, Super Stock 0.8) and traction bars
+  on the leaf's slot 2 (`["TractionBar"]`, Traction Master 0.6, Lakewood 0.55, slapper 0.5, ladder bars 0.25): `[AXLE]
+  TORQUE_REACTION` scaled by mounted over factory wrap, its sign kept. Leaves and bars only on rear corners (a
+  `rear_only` property the workbench reads) and a problem on a car whose rear is not AXLE. Mopar front torsion bars
+  `["TorsionBar", "Spring"]` (.85/.87/.89/.92, aftermarket 1.03"; `came_in` families mopar, axle front). Sway bars of data
+  on car slots 402 (front) and 403 (rear) with an `arb_rate`: `[ARB]` scaled by mounted over factory, or the car's own plus
+  the bar's where the factory had none. Period shocks (Gabriel HD, 90/10 drag, Koni) as aftermarket `ShockAbsorber`s near
+  the source game's softest. `RunningGearFactory.BringUpToDate` already swaps factory springs (old saves' coils become leaf
+  springs/torsion bars); add the sway bars there. Lowering leaves (ride height) left for later.
+- Then phases 4 (meshes: CC-BY stand-ins need a Sketchfab login, ask the owner) and 5 (part tree and work).
 
 ### Phase 0 findings and design (2026-10-17)
 
