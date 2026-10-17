@@ -90,11 +90,10 @@ public static class Machining
 
     /// <summary>
     /// Every machine job for the part, as it stands, at a shop asking <paramref name="shopFactor"/> of the work's list
-    /// price; none for a part the catalog does not know. Never under what the work adds to what a shop would pay for the
-    /// part and what comes with it (<paramref name="resaleFactor"/>), so junk bought, machined and sold is no money made.
+    /// price; none for a part the catalog does not know. The price is the work's own, whatever the part is worth (the
+    /// owner, 2026-10-17: no resale floor at the machine shop, unlike the kits)
     /// </summary>
-    public static IReadOnlyList<MachineOffer> Offers(PartsCatalog catalog, PartInstance part, double shopFactor = 1.0, double priceMultiplier = 1.0,
-        double resaleFactor = 0)
+    public static IReadOnlyList<MachineOffer> Offers(PartsCatalog catalog, PartInstance part, double shopFactor = 1.0, double priceMultiplier = 1.0)
     {
         if (catalog.Get(part.DefinitionId) is not { } definition) return [];
 
@@ -109,7 +108,7 @@ public static class Machining
                 var shown = size ?? (job.Cut != null && job.Sizes.Count > 0 ? job.Sizes[^1] : null);
                 var whyNot = WhyNot(job, part, picked);
                 var fitted = whyNot == null ? FittedNames(catalog, job, part) : [];
-                var cost = whyNot == null ? CostFor(catalog, job, definition, part, shopFactor, priceMultiplier, resaleFactor, picked) : 0;
+                var cost = whyNot == null ? CostFor(catalog, job, definition, part, shopFactor, priceMultiplier) : 0;
                 var after = job.Restores > 0 ? Math.Max(Unit.Clamp01(part.Wear, 1), job.Restores) : Unit.Clamp01(part.Wear, 1);
                 offers.Add(new MachineOffer(job, shown, step, NameOf(job, shown), cost, job.Days, whyNot, after, fitted));
             }
@@ -120,22 +119,15 @@ public static class Machining
 
     /// <summary>
     /// The work's price: its share of the part's new price at the shop's prices (<see cref="Rebuilding.CostOf"/>), and the
-    /// new parts it fits at their share; never under what it adds to the part's resale (see <see cref="Offers"/>)
+    /// new parts it fits at their share
     /// </summary>
     public static decimal CostFor(PartsCatalog catalog, RebuildJob job, PartDefinition definition, PartInstance part, double shopFactor = 1.0,
-        double priceMultiplier = 1.0, double resaleFactor = 0, int? step = null)
+        double priceMultiplier = 1.0)
     {
         var factor = Multiplier.Sane(shopFactor);
         var work = (double)Rebuilding.CostOf(job, definition, priceMultiplier) * factor;
         var fitted = Fitted(catalog, job, part).Sum(d => PartPricing.NewPrice(d) * job.FitsNewCost) * Multiplier.Sane(priceMultiplier) * factor;
-        var cost = PartPricing.Round(work + fitted);
-        if (!(resaleFactor > 0) || !double.IsFinite(resaleFactor)) return cost;
-
-        var after = PartTrees.Clone(part, keepIds: true);
-        var extras = Apply(catalog, job, after, step);
-        var gained = PartPricing.WorthOfAssembly(catalog, after) + extras.Sum(e => PartPricing.WorthOfAssembly(catalog, e))
-                     - PartPricing.WorthOfAssembly(catalog, part);
-        return gained > 0 ? Math.Max(cost, Math.Ceiling(PartPricing.Round(gained * resaleFactor))) : cost;
+        return PartPricing.Round(work + fitted);
     }
 
     /// <summary>

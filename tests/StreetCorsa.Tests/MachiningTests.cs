@@ -150,18 +150,16 @@ public sealed class MachiningTests : IDisposable
     }
 
     [Fact]
-    public void Junk_machined_and_sold_on_is_no_money_made()
+    public void The_machine_shops_price_is_the_works_own_whatever_the_engine_is_worth()
     {
-        const double mostPaid = 0.42;
         var block = Engine();
         foreach (var part in block.SelfAndDescendants()) part.Wear = 0.05;
-        var before = PartPricing.WorthOfAssembly(Catalog, block);
+        var job = Job("bore");
+        var pistons = Catalog.Get(OfKind(block, "pistons").DefinitionId)!;
+        var own = PartPricing.Round((double)Rebuilding.CostOf(job, Catalog.Get(block.DefinitionId)!) + PartPricing.NewPrice(pistons) * job.FitsNewCost);
 
-        var offer = Machining.Offers(Catalog, block, resaleFactor: mostPaid).Single(o => o.Job.Id == "bore");
-        var extras = Machining.Apply(Catalog, offer.Job, block);
-        var gained = (decimal)((PartPricing.WorthOfAssembly(Catalog, block) + extras.Sum(e => PartPricing.WorthOfAssembly(Catalog, e)) - before) * mostPaid);
-
-        Assert.True(offer.Cost >= gained, $"${offer.Cost} for ${gained} more at the shop");
+        Assert.Equal(own, Machining.Offers(Catalog, block).Single(o => o.Job.Id == "bore").Cost);
+        Assert.Equal(own, Machining.Offers(Catalog, new PartInstance(block.DefinitionId) { Wear = 0.95 }).Single(o => o.Job.Id == "bore").Cost);
     }
 
     [Fact]

@@ -45,8 +45,8 @@ namespace StreetCorsa.Services.PartShops
     /// A machine shop (<see cref="PartShopKind.Machine"/>) on the part shops' map: the player brings a part off the
     /// garage's shelf or the engine off its stand, picks the work (<see cref="Machining"/>: a bore, a crank grind, a head
     /// milled, speed work), pays as they leave it, and the shop brings it back on the morning it is ready. The prices are
-    /// the shop's (<see cref="PartShopRules.PriceFactor"/>), less a closing-down sale and a regular's discount, never under
-    /// what the work adds to the part's resale. A part at the shop is the player's all along (<see cref="Player.MachineWork"/>):
+    /// the shop's (<see cref="PartShopRules.PriceFactor"/>), less a closing-down sale and a regular's discount. A part at the
+    /// shop is the player's all along (<see cref="Player.MachineWork"/>):
     /// a shop going under still brings it back.
     /// </summary>
     public sealed class MachineShopService : IMachineShopService
@@ -103,8 +103,7 @@ namespace StreetCorsa.Services.PartShops
             if (!_parts.IsAvailable || _catalog.Get(shop.Id) is not { } definition) return [];
 
             var factor = FactorAt(gameState, definition, shop);
-            var resale = PartShopRules.MostPaidFactor(_catalog.All);
-            return Machining.Offers(_parts.Catalog, part, factor, gameState.Rules.PartPriceMultiplier, resale).Select(o => new MachineWork(piece, part, o));
+            return Machining.Offers(_parts.Catalog, part, factor, gameState.Rules.PartPriceMultiplier).Select(o => new MachineWork(piece, part, o));
         }
 
         /// <summary>What the shop asks against the work's list price today: its own prices, a closing-down sale, a regular's discount</summary>

@@ -1584,16 +1584,16 @@ in one PR. As built:
 - **Dyno:** a part's cut figures go on after its own (`InstalledPart.CutFigures`, `PartFigures.Of`). On the 340: +.030
   +5 hp, milled .010 +2, ported +15, 3/4 race +6. **Worth:** `PartPricing.CutWorth`. **Matching:** a cut part and the
   kind fitted to suit it go together only at one size (`Machining.WhyNotTogether`, in `EngineWork.WhyNotOn`).
-- **The shop:** `MachineShopService` (offers at the shop's prices with its sale and regular's discount, never under what
-  the work adds to the resale; `Order` pays and leaves the piece; `Deliver` by the `machine_work` task), the screen
+- **The shop:** `MachineShopService` (offers at the shop's prices with its sale and regular's discount; no resale floor,
+  the owner's call: a bore costs what a bore costs; `Order` pays and leaves the piece; `Deliver` by the `machine_work` task), the screen
   `MachineShopScreenView` (see docs/screens/machine-shop.md), the machinist on the AI (`chat_machinist`,
   `machinist_search`, `TalkFacts.Work`), the room by `tools/MachineShopScene`, sounds `work.bore`, `work.crank`,
   `work.mill`, `ambience.machine_shop`. Two shops: Gardena Machine & Engine (open), Glendale Engine Rebuilders (opens
   some day).
 - **Quality roll:** the player's own kit work lands from `roll` (0.08) under what the job can to a quarter over, never
   worse than before; the show ends saying how it came out. The offer says "about" the condition now.
-- **To check when the owner plays it:** prices (a bore or blueprint on a whole worn engine costs the resale floor,
-  thousands, as the block carries the engine's worth; the jobs' own prices are first guesses), the room, the
+- **To check when the owner plays it:** prices (the jobs' own prices are first guesses; with no floor, a worn engine
+  machined is worth far more than the work cost, on purpose), the room, the
   machinist's talk (not run on the live model), the parts' cut lines on the card and the shelf's "away" line.
 
 - **Phase 2: the machine shop (built).** Blocks bored oversize (+.030, +.040, +.060; past that a sleeve or scrap), cranks

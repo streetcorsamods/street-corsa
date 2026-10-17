@@ -369,8 +369,8 @@ comes back with it, in the price at `fits_new_cost` of their new price; from the
 together at the same size (the work order says so). `any_size`: made to any size but the part's own, each offered
 (new pistons for a block bored before; inside a block, only at its size). `speed`: speed work, listed apart. The player
 reads `rebuild.<id>.size.<size>` (else `say`) and `rebuild.<id>.done` with `{size}` ("bored {size} over") on the
-part's card. The machine shop's prices are the job's at the shop's `priceFactor`, never under what the work adds to the
-part's resale at the most any shop pays.
+part's card. The machine shop's prices are the job's at the shop's `priceFactor`, whatever the part is worth (no resale
+floor, unlike the parts view's jobs).
 
 **A part's figures.** A part's stats come from its SLRR script (`source_script`): the game builds the script and runs it
 to work the engine out; a part without one gives its own (`"figures"`, see an engine of figures below). The rest is read from the pack: `"class_chain"` says what the part is (a crankshaft, a clutch:
