@@ -5,7 +5,7 @@ namespace StreetCorsa.Parts.Cars;
 /// <summary>
 /// What a car costs new, the source game's way (its Chassis.currentPrice): the body, and every part on it. The body is
 /// priced by its weight, the lighter the dearer: a car is a racer by its power to weight, and the power is in the price of
-/// its engine's parts (<see cref="PartPriceBook"/>), the block most of all. A heavy car with a tired engine is a cheap car,
+/// its engine, priced by what it makes (<see cref="PartPricing.EngineNewPrice"/>). A heavy car with a tired engine is a cheap car,
 /// whatever it cost when it was new.
 ///
 /// Plain BCL and linked into EngineBench: the figures come from <see cref="Source"/> (the game's rules), the base game's
@@ -44,7 +44,7 @@ public static class CarPricing
         return double.IsFinite(scaled) ? Math.Clamp(scaled, low, Math.Max(low, Sane(figures.MaxBody, price))) : price;
     }
 
-    /// <summary>A car new, its body and its parts' new prices (<see cref="PartPricing.NewPrice"/>)</summary>
+    /// <summary>A car new: its body, its engine (<see cref="PartPricing.EngineNewPrice"/>) and its running gear's new prices</summary>
     public readonly record struct NewCar(double Body, double Engine, double RunningGear)
     {
         public double Total => Body + Engine + RunningGear;
@@ -56,8 +56,12 @@ public static class CarPricing
     /// </summary>
     public static NewCar New(PartsCatalog catalog, double? weightKg, RatedBuild? build, IEnumerable<PartDefinition> runningGear) => new(
         BodyPrice(weightKg),
-        build == null ? 0 : build.Build.Parts.Sum(p => p.Part != null && catalog.Get(p.Part) is { } part ? PartPricing.NewPrice(part) : 0),
+        build == null ? 0 : PartPricing.EngineNewPrice(PartsOf(catalog, build), build.PowerHp),
         runningGear.Sum(PartPricing.NewPrice));
+
+    /// <summary>The parts of a factory engine the catalog has</summary>
+    public static List<PartDefinition> PartsOf(PartsCatalog catalog, RatedBuild build) =>
+        build.Build.Parts.Select(p => p.Part != null ? catalog.Get(p.Part) : null).OfType<PartDefinition>().ToList();
 
     private static double Sane(double value, double otherwise) => double.IsFinite(value) && value > 0 ? value : otherwise;
 }

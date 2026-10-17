@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using StreetCorsa.Helpers;
 using StreetCorsa.Models.Catalog;
 using StreetCorsa.Models.GameState;
@@ -507,5 +507,73 @@ public class PartPricingTests
         var worth = PartPricing.Worth(part, new PartInstance { Tear = double.NaN, Wear = double.PositiveInfinity });
         Assert.InRange(PartPricing.Round(worth), 0m, 1e12m);
         Assert.Equal(PartPricing.NewPrice(part), PartPricing.Worth(part, new PartInstance { Tear = 5, Wear = 5 }));
+    }
+
+    // The '69 Camaro SS 396 (the '72 Camaro's engine): a 327 block made a stroker by its crank, heads and carburettor
+    private const string StrokerBuild = "cars/Camaro69/0006/stock";
+
+    private static (PartsCatalog Catalog, RatedBuild Build) Stroker()
+    {
+        var (catalog, builds, _) = TestCars.Cooling.Value;
+        return (catalog, builds.Get(StrokerBuild)!);
+    }
+
+    [Fact]
+    public void A_whole_engine_costs_what_it_makes_wherever_its_power_is()
+    {
+        var (catalog, build) = Stroker();
+        var parts = CarPricing.PartsOf(catalog, build);
+        var loose = parts.Sum(PartPricing.NewPrice);
+        var bases = parts.Where(p => PartKinds.GroupOf(p) != PartGroups.Blocks).Sum(TestCars.Prices.Value.BasePrice);
+
+        var engine = PartPricing.EngineNewPrice(parts, build.PowerHp);
+
+        // Its power is in its speed parts, priced loose far under a block of that power
+        Assert.True(engine > loose * 1.5, $"engine ${engine:0}, its parts ${loose:0}");
+        Assert.Equal((PartPriceBook.PowerPrice(build.PowerHp) + bases) * PartPricing.Scale, engine, 6);
+    }
+
+    [Fact]
+    public void An_engine_is_never_worth_less_than_its_parts()
+    {
+        var (catalog, build) = Stroker();
+        var parts = CarPricing.PartsOf(catalog, build);
+        var loose = parts.Sum(PartPricing.NewPrice);
+
+        Assert.Equal(loose, PartPricing.EngineNewPrice(parts, 1), 6);
+        Assert.Equal(loose, PartPricing.EngineNewPrice(parts, null), 6);
+        Assert.Equal(loose, PartPricing.EngineNewPrice(parts, double.NaN), 6);
+    }
+
+    [Fact]
+    public void A_worn_engine_is_worth_its_power_in_its_wear()
+    {
+        var (catalog, build) = Stroker();
+        var engine = EngineFactory.CreateStock(catalog, build, 1.0, new Random(0))!.Root;
+        foreach (var part in engine.SelfAndDescendants()) part.Wear = 1;
+        var asNew = PartPricing.WorthOfAssembly(catalog, engine);
+
+        Assert.Equal(PartPricing.EngineNewPrice(CarPricing.PartsOf(catalog, build).Where(p => engine.SelfAndDescendants().Any(i => i.DefinitionId == p.Id)).ToList(),
+            PartPricing.PowerAsNew(catalog, engine)), asNew, 0);
+
+        // Half worn: the source game's wear, on the whole engine's worth; the power it was built to make stays
+        foreach (var part in engine.SelfAndDescendants()) part.Wear = 0.5;
+        Assert.Equal(asNew * 0.65, PartPricing.WorthOfAssembly(catalog, engine), 0);
+    }
+
+    [Fact]
+    public void An_engine_that_does_not_run_is_worth_its_parts()
+    {
+        var (catalog, build) = Stroker();
+        var engine = EngineFactory.CreateStock(catalog, build, 1.0, new Random(0))!.Root;
+        var withCarb = PartPricing.WorthOfAssembly(catalog, engine);
+
+        var carb = engine.SelfAndDescendants().First(p => catalog.Get(p.DefinitionId) is { } d && PartKinds.GroupOf(d) == PartGroups.Carburettors);
+        PartTrees.FindParent(engine, carb)!.Children.Remove(carb);
+
+        Assert.Null(PartPricing.PowerAsNew(catalog, engine));
+        var parts = engine.SelfAndDescendants().Sum(p => catalog.Get(p.DefinitionId) is { } d ? PartPricing.Worth(d, p) : 0);
+        Assert.Equal(parts, PartPricing.WorthOfAssembly(catalog, engine), 6);
+        Assert.True(withCarb > parts * 1.5);
     }
 }

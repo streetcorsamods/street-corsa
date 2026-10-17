@@ -1,11 +1,16 @@
+using System.Collections.Concurrent;
+using System.Globalization;
+using System.Runtime.CompilerServices;
+using System.Text;
 using StreetCorsa.Helpers;
 using StreetCorsa.Models.GameState;
 
 namespace StreetCorsa.Parts.Cars;
 
 /// <summary>
-/// What parts cost. New price is what the part does (<see cref="PartPriceBook"/>), as the source game priced its parts;
-/// a used part is worth what the source game gave for one: damage scales it, wear takes up to 70% off.
+/// What parts cost. New price is what the part does (<see cref="PartPriceBook"/>), as the source game priced its parts,
+/// and a whole engine what it makes (<see cref="EngineNewPrice"/>); a used part is worth what the source game gave for one: damage scales it, wear
+/// takes up to 70% off.
 /// </summary>
 public static class PartPricing
 {
@@ -52,9 +57,98 @@ public static class PartPricing
     public static double Worth(PartDefinition part, PartInstance instance) =>
         NewPrice(part) * Unit.Clamp01(instance.Tear, 1) * (WearFloor + (1 - WearFloor) * Unit.Clamp01(instance.Wear, 1));
 
-    /// <summary>Worth of a part with everything that is mounted on it</summary>
-    public static double WorthOfAssembly(PartsCatalog catalog, PartInstance root) =>
-        root.SelfAndDescendants().Sum(p => catalog.Get(p.DefinitionId) is { } definition ? Worth(definition, p) : 0);
+    /// <summary>
+    /// Worth of a part with everything that is mounted on it. A whole engine (a block with what is on it) that runs is
+    /// worth what it makes (<see cref="EngineNewPrice"/>), shared over its parts by their own prices, each share in its
+    /// part's wear and damage.
+    /// </summary>
+    public static double WorthOfAssembly(PartsCatalog catalog, PartInstance root)
+    {
+        var parts = root.SelfAndDescendants()
+            .Select(p => (Instance: p, Definition: catalog.Get(p.DefinitionId)))
+            .Where(p => p.Definition != null)
+            .ToList();
+        var worth = parts.Sum(p => Worth(p.Definition!, p.Instance));
+        if (catalog.Get(root.DefinitionId) is not { } definition || PartKinds.GroupOf(definition) != PartGroups.Blocks) return worth;
+
+        var loose = parts.Sum(p => NewPrice(p.Definition!));
+        if (loose <= 0) return worth;
+
+        var whole = EngineNewPrice(parts.Select(p => p.Definition!).ToList(), PowerAsNew(catalog, root));
+        return worth * (whole / loose);
+    }
+
+    /// <summary>
+    /// What an engine of <paramref name="parts"/> making <paramref name="powerHp"/> on the dyno costs new: its power on the
+    /// blocks' curve (<see cref="PartPriceBook.PowerPrice"/>), wherever in the engine the power is, and every other part
+    /// for being what it is; or its parts' own prices when they come to more, an engine being worth no less than what it
+    /// is made of. No power (it does not run, or nobody knows): its parts.
+    /// </summary>
+    public static double EngineNewPrice(IReadOnlyCollection<PartDefinition> parts, double? powerHp)
+    {
+        var loose = parts.Sum(NewPrice);
+        if (powerHp is not { } hp || !double.IsFinite(hp) || hp <= 0) return loose;
+
+        var book = Book?.Invoke() ?? PartPriceBook.Empty;
+        var whole = (PartPriceBook.PowerPrice(hp) + parts.Where(p => PartKinds.GroupOf(p) != PartGroups.Blocks).Sum(book.BasePrice)) * Scale;
+        return double.IsFinite(whole) ? Math.Max(loose, whole) : loose;
+    }
+
+    // Engines measured, by catalog and make-up: a car's worth is asked for often, a dyno run takes milliseconds
+    private static readonly ConditionalWeakTable<PartsCatalog, ConcurrentDictionary<string, double?>> Powers = new();
+    private const int MaxKeptPowers = 4096;
+
+    /// <summary>
+    /// What <paramref name="engine"/> makes on the dyno with every part of it as new: what it is built to make, its
+    /// wear aside (that is in its worth already); null when it does not run
+    /// </summary>
+    public static double? PowerAsNew(PartsCatalog catalog, PartInstance engine)
+    {
+        var kept = Powers.GetValue(catalog, _ => new ConcurrentDictionary<string, double?>(StringComparer.OrdinalIgnoreCase));
+        var makeUp = MakeUp(engine);
+        if (kept.TryGetValue(makeUp, out var power)) return power;
+
+        var asNew = PartTrees.Clone(engine, keepIds: true);
+        foreach (var part in asNew.SelfAndDescendants())
+        {
+            part.Wear = 1;
+            part.Tear = 1;
+        }
+
+        try
+        {
+            power = EngineTuner.PowerOf(catalog, asNew);
+        }
+        catch (Exception)
+        {
+            // A part that breaks the dyno makes an engine that is worth its parts
+            power = null;
+        }
+
+        if (kept.Count >= MaxKeptPowers) kept.Clear();
+        kept[makeUp] = power;
+        return power;
+    }
+
+    /// <summary>What an engine is made of, as text: every part, where it goes and how it is set, wear aside</summary>
+    private static string MakeUp(PartInstance engine)
+    {
+        var text = new StringBuilder();
+        Append(engine);
+        return text.ToString();
+
+        void Append(PartInstance part)
+        {
+            text.Append(part.DefinitionId).Append('@').Append(part.ParentSlot).Append(':').Append(part.OwnSlot);
+            foreach (var (field, value) in (part.Tuning ?? []).OrderBy(t => t.Key, StringComparer.Ordinal))
+                text.Append(';').Append(field).Append('=').Append(value.ToString("R", CultureInfo.InvariantCulture));
+
+            text.Append('(');
+            foreach (var child in part.Children.OrderBy(c => c.ParentSlot).ThenBy(c => c.DefinitionId, StringComparer.OrdinalIgnoreCase))
+                Append(child);
+            text.Append(')');
+        }
+    }
 
     /// <summary>What a shop pays for a part with everything that is mounted on it: the one trade-in rule for the player and the rivals</summary>
     public static decimal TradeIn(PartsCatalog catalog, PartInstance part) =>

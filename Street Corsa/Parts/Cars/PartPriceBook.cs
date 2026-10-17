@@ -15,7 +15,8 @@ namespace StreetCorsa.Parts.Cars;
 /// the most for (what was on the factory part moved over, as a tuner does it). A factory part is worth nothing over
 /// itself: its kind's base price, the engine's power being its block's.</item>
 /// </list>
-/// A part no engine takes, and running gear, is worth no power: its kind's base price and figure only.
+/// A part no engine takes, and running gear, is worth no power: its kind's base price and figure only. These are the
+/// prices of loose parts; a whole engine is priced by its own power (<see cref="PartPricing.EngineNewPrice"/>).
 ///
 /// Plain BCL and linked into EngineBench, which makes its own; the game makes it once per session from the catalog, the
 /// measuring (several seconds) kept on disk against the <see cref="Fingerprint"/> of the parts it was made from.
@@ -77,15 +78,35 @@ public sealed class PartPriceBook
     }
 
     /// <summary>
-    /// What <paramref name="part"/> costs new, in the game's dollars before the economy's and a career's factors: its
-    /// kind's base, its power (to the kind's power of it) at the kind's dollars per hp, scaled by its figure against the middle one of its kind
+    /// What <paramref name="part"/> costs new, loose, in the game's dollars before the economy's and a career's factors:
+    /// its kind's base, its power (to the kind's power of it) at the kind's dollars per hp, scaled by its figure against
+    /// the middle one of its kind
     /// </summary>
-    public double Price(PartDefinition part)
+    public double Price(PartDefinition part) => Price(part, PowerOf(part.Id) ?? 0);
+
+    /// <summary>What <paramref name="part"/> costs new for nothing but being what it is: its price at no power</summary>
+    public double BasePrice(PartDefinition part) => Price(part, 0);
+
+    /// <summary>
+    /// What a whole engine making <paramref name="hp"/> on the dyno is worth for its power: a block of that power, on the
+    /// blocks' curve. An engine is priced by what it makes as a whole (<see cref="PartPricing.EngineNewPrice"/>), wherever
+    /// in it the power is: in the block, or in its heads, crank and carburettors.
+    /// </summary>
+    public static double PowerPrice(double hp)
+    {
+        var price = PartGroups.Current.PriceOf(PartGroups.Blocks);
+        var value = Positive(price.Base) + Positive(price.PerHp) * Powered(Math.Clamp(double.IsFinite(hp) ? hp : 0, 0, MaxPower), price);
+        return double.IsFinite(value) ? Math.Max(0, value) : 0;
+    }
+
+    private static double Powered(double hp, PartPrice price) =>
+        price.HpPower is { } power && double.IsFinite(power) && power > 0 ? Math.Pow(hp, power) : hp;
+
+    private double Price(PartDefinition part, double hp)
     {
         var group = PartKinds.GroupOf(part);
         var price = PartGroups.Current.PriceOf(group);
-        var hp = PowerOf(part.Id) ?? 0;
-        var value = Positive(price.Base) + Positive(price.PerHp) * (price.HpPower is { } power && double.IsFinite(power) && power > 0 ? Math.Pow(hp, power) : hp);
+        var value = Positive(price.Base) + Positive(price.PerHp) * Powered(hp, price);
 
         if (price.By is { } by && Figure(part, by) is { } figure && figure > 0 && Middle(group, by) is { } middle && middle > 0)
         {
