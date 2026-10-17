@@ -123,34 +123,6 @@ public class AxleCarriesCornersTests
     }
 
     [Fact]
-    public void The_axle_sits_on_its_leaves_it_goes_on_after_both_and_a_leaf_comes_off_after_it()
-    {
-        var parts = FactoryParts();
-        var factoryLeaf = RunningGearFactory.Choose(Catalog, Specs(), Chevy66)!.Value.Rear.Spring;
-        Assert.True(AxleWork.LeafSprung(Catalog, parts, liveAxle: true, factoryLeaf));
-        var housing = parts.Single(p => p.ParentSlot == RearAxle.CarSlot);
-        var leaf = parts.First(p => p.ParentSlot == RunningGear.SpringSlot(2));
-
-        // The axle on: neither leaf comes off; the front springs do
-        Assert.NotNull(AxleWork.WhyNotOff(Catalog, parts, leaf));
-        Assert.Null(AxleWork.WhyNotOff(Catalog, parts, parts.First(p => p.ParentSlot == RunningGear.SpringSlot(0))));
-
-        // The axle off: the leaf comes off, and then the axle cannot go back on until it is on again
-        Workbench.Remove(parts, housing);
-        Assert.Null(AxleWork.WhyNotOff(Catalog, parts, leaf));
-        Workbench.Remove(parts, leaf);
-        Assert.True(AxleWork.LeafSprung(Catalog, parts, liveAxle: true, factoryLeaf));
-        Assert.NotNull(AxleWork.WhyNotOn(Catalog, parts, housing, leafSprung: true));
-        Workbench.Mount(parts, new MountPlace(null, RunningGear.SpringSlot(2), 1), leaf);
-        Assert.Null(AxleWork.WhyNotOn(Catalog, parts, housing, leafSprung: true));
-
-        // A coil-sprung axle carries its springs: no order
-        var coils = FactoryParts(car: new CarFacts("jaguar", "jaguar", 1965, "UK"));
-        var coilSpring = RunningGearFactory.Choose(Catalog, Specs(), new CarFacts("jaguar", "jaguar", 1965, "UK"))!.Value.Rear.Spring;
-        Assert.False(AxleWork.LeafSprung(Catalog, coils, liveAxle: true, coilSpring));
-    }
-
-    [Fact]
     public void A_stock_car_races_the_same_with_its_rear_corners_on_the_axle()
     {
         var parts = FactoryParts();

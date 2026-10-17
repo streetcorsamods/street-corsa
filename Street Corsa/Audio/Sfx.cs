@@ -29,14 +29,11 @@ public static class Sfx
     public const string Pump = "station.pump";
     public const string PumpStop = "station.pump.stop";
 
-    // The drivetrain's big bolts come off with the air gun; everything else with a socket wrench
-    private static readonly HashSet<string> ImpactKinds = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "transmission", "clutch", "flywheel", "crank_pulley", "damper", "crankshaft", "bearing_bridge"
-    };
-
-    /// <summary>The tool a part of a work-order kind is heard to come off and go on with</summary>
-    public static string ToolFor(string? kind) => kind != null && ImpactKinds.Contains(kind) ? Impact : Ratchet;
+    /// <summary>
+    /// The cue of the tool a part is heard to come off and go on with, as its work-order kind says
+    /// (<see cref="Parts.WorkOrder.ToolOf"/>): the air gun for <c>"impact"</c>, else the socket wrench
+    /// </summary>
+    public static string ToolFor(string? tool) => string.Equals(tool, "impact", StringComparison.OrdinalIgnoreCase) ? Impact : Ratchet;
 
     /// <summary>Plays a cue, after <paramref name="delaySeconds"/> when given; nothing when there is no such cue</summary>
     public static void Play(string cue, float delaySeconds = 0f) => AudioHub.Shared.PlayCue(cue, delaySeconds);

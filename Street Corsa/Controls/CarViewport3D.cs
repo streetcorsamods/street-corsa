@@ -1677,7 +1677,7 @@ public class CarViewport3D : D3DViewportBase
     /// <summary>
     /// Nodes on their way, as the moves they make: a part comes off the way its kind does, and what is on it goes
     /// along, so an engine lifts out whole. With a <paramref name="stagger"/> they go one after another, in the order
-    /// an engine is stripped for the stand.
+    /// an engine is stripped for the stand. A part that is not the engine's (the running gear) goes along the car's axes.
     /// </summary>
     private static List<PartMove> MovesOf(PartsCatalog catalog, IReadOnlyList<PlacedPart> nodes, List<int> moving, float stagger = 0f)
     {
@@ -1686,13 +1686,21 @@ public class CarViewport3D : D3DViewportBase
         return moving
             .GroupBy(i => TopOf(nodes[i].Source!))
             .OrderBy(g => order.KindOf(g.Key.Definition) is { } kind ? order.StandStripTurnOf(kind) : int.MaxValue)
-            .Select((g, turn) => new PartMove(g.ToList(), order.WayOf(g.Key.Definition), turn * stagger, order.KindOf(g.Key.Definition)))
+            .Select((g, turn) => new PartMove(g.ToList(), order.WayOf(g.Key.Definition), turn * stagger, order.ToolOf(order.KindOf(g.Key.Definition)),
+                CarAxes: !IsEngines(g.Key)))
             .ToList();
 
         InstalledPart TopOf(InstalledPart part)
         {
             while (part.Parent is { } parent && ids.Contains(parent.InstanceId)) part = parent;
             return part;
+        }
+
+        // The engine's parts hang off its block, whatever the block is on
+        static bool IsEngines(InstalledPart part)
+        {
+            while (part.Parent is { } parent) part = parent;
+            return PartKinds.IsBlock(part.Definition);
         }
     }
 

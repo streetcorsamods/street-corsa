@@ -27,6 +27,9 @@ public static class RunningGearFactory
     {
         /// <summary>The axle's brake torque, its shoes and wheel cylinder in it</summary>
         public double BrakeTorque => RunningGear.BrakeTorque(Brake, Shoes, Cylinder);
+
+        /// <summary>Every part of it there is</summary>
+        public IEnumerable<PartDefinition> All => new[] { Tyre, Rim, Brake, Spring, Shock, Shoes, Cylinder, SwayBar }.OfType<PartDefinition>();
     }
 
     /// <param name="car">The car's make, family, country and year, for the parts' <c>came_in</c>; null chooses among the

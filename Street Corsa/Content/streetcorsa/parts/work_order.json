@@ -1,14 +1,14 @@
 {
   "kinds": [
     { "id": "block", "name": "engine block", "classes": [ "Block" ], "comes_off": [ "up" ] },
-    { "id": "crankshaft", "name": "crankshaft", "classes": [ "Crankshaft" ], "comes_off": [ "down" ], "worked_from": "below" },
+    { "id": "crankshaft", "name": "crankshaft", "classes": [ "Crankshaft" ], "comes_off": [ "down" ], "worked_from": "below", "tool": "impact" },
     { "id": "connecting_rods", "name": "connecting rods", "classes": [ "ConnectingRod" ], "comes_off": [ "up" ] },
     { "id": "pistons", "name": "pistons", "classes": [ "Piston" ], "comes_off": [ "up" ], "worked_from": "above" },
     { "id": "camshaft", "name": "camshaft", "classes": [ "Camshaft" ], "comes_off": [ "forward" ] },
     { "id": "cylinder_head", "name": "cylinder head", "classes": [ "CylinderHead" ], "comes_off": [ "up" ], "worked_from": "above" },
-    { "id": "flywheel", "name": "flywheel", "classes": [ "Flywheel" ], "comes_off": [ "back" ] },
-    { "id": "clutch", "name": "clutch", "plural": "clutches", "classes": [ "Clutch" ], "comes_off": [ "back" ] },
-    { "id": "transmission", "name": "transmission", "classes": [ "Transmission" ], "comes_off": [ "back", "down" ] },
+    { "id": "flywheel", "name": "flywheel", "classes": [ "Flywheel" ], "comes_off": [ "back" ], "tool": "impact" },
+    { "id": "clutch", "name": "clutch", "plural": "clutches", "classes": [ "Clutch" ], "comes_off": [ "back" ], "tool": "impact" },
+    { "id": "transmission", "name": "transmission", "classes": [ "Transmission" ], "comes_off": [ "back", "down" ], "tool": "impact" },
     { "id": "intake_manifold", "name": "intake manifold", "classes": [ "IntakeManifold" ], "comes_off": [ "up" ], "worked_from": "above" },
     { "id": "charger", "name": "supercharger", "classes": [ "SuperCharger", "TurboCharger" ], "comes_off": [ "up" ], "worked_from": "above" },
     { "id": "nitrous", "name": "nitrous kit", "classes": [ "NOSInjectorSystem", "Canister" ], "comes_off": [ "up" ] },
@@ -17,7 +17,7 @@
     { "id": "exhaust_header", "name": "exhaust header", "classes": [ "ExhaustHeader" ], "comes_off": [ "out" ] },
     { "id": "exhaust", "name": "exhaust", "plural": "exhaust parts", "classes": [ "ExhaustPipe", "ExhaustTip" ], "comes_off": [ "down" ] },
     { "id": "oil_pan", "name": "oil pan", "classes": [ "OilPan" ], "comes_off": [ "down" ], "worked_from": "below" },
-    { "id": "crank_pulley", "name": "crankshaft pulley", "classes": [ "Pulley" ], "comes_off": [ "forward" ] },
+    { "id": "crank_pulley", "name": "crankshaft pulley", "classes": [ "Pulley" ], "comes_off": [ "forward" ], "tool": "impact" },
 
     { "id": "charger_belt", "name": "supercharger belt", "names": [ "supercharger drive belt", "supercharger belt" ], "comes_off": [ "forward" ] },
     { "id": "steering_belt", "name": "power steering belt", "names": [ "steering pump belt", "steering pomp belt", "belt power steering" ], "comes_off": [ "forward" ] },
@@ -27,7 +27,7 @@
     { "id": "timing_cover", "name": "timing cover", "names": [ "timing chain cover", "timing gear cover", "timing cover" ], "comes_off": [ "forward" ] },
     { "id": "timing_chain", "name": "timing chain", "names": [ "timing chain" ], "comes_off": [ "forward" ] },
     { "id": "timing_gear", "name": "timing gear", "names": [ "timing gear", "driving gear" ], "comes_off": [ "forward" ] },
-    { "id": "damper", "name": "harmonic damper", "names": [ "harmonic damper", "harmonic balancer", "damper", "balancer" ], "comes_off": [ "forward" ] },
+    { "id": "damper", "name": "harmonic damper", "names": [ "harmonic damper", "harmonic balancer", "damper", "balancer" ], "comes_off": [ "forward" ], "tool": "impact" },
     { "id": "distributor", "name": "distributor", "names": [ "distributor" ], "comes_off": [ "up" ], "worked_from": "above" },
     { "id": "side_distributor", "name": "distributor", "comes_off": [ "out" ] },
     { "id": "fan", "name": "fan", "names": [ "fan" ], "comes_off": [ "forward" ] },
@@ -39,10 +39,32 @@
     { "id": "valve_cover", "name": "valve cover", "names": [ "valve cover", "head cover", "righthead cover" ], "comes_off": [ "up" ], "worked_from": "above" },
     { "id": "breather", "name": "breather", "names": [ "breather" ], "comes_off": [ "up" ], "worked_from": "above" },
     { "id": "oil_filter", "name": "oil filter", "names": [ "oil filter" ], "comes_off": [ "out" ] },
-    { "id": "bearing_bridge", "name": "main bearing bridge", "names": [ "bearing bridge" ], "comes_off": [ "down" ], "worked_from": "below" },
+    { "id": "bearing_bridge", "name": "main bearing bridge", "names": [ "bearing bridge" ], "comes_off": [ "down" ], "worked_from": "below", "tool": "impact" },
     { "id": "pulley", "name": "pulley", "names": [ "pulley" ], "comes_off": [ "forward" ] },
     { "id": "ignition", "name": "ignition coil", "names": [ "spark plug", "ignition coil" ], "comes_off": [ "up" ], "worked_from": "above" },
-    { "id": "starter", "name": "starter", "names": [ "starter" ], "comes_off": [ "down" ] }
+    { "id": "starter", "name": "starter", "names": [ "starter" ], "comes_off": [ "down" ] },
+
+    { "id": "rim", "name": "wheel", "classes": [ "Wheel" ], "comes_off": [ "out" ], "tool": "impact" },
+    { "id": "tyre", "name": "tyre", "classes": [ "Tyre" ], "comes_off": [ "out" ] },
+    { "id": "hub", "name": "hub", "classes": [ "Hub" ], "comes_off": [ "out" ] },
+    { "id": "drum", "name": "brake drum", "classes": [ "DrumBrake" ], "comes_off": [ "out" ] },
+    { "id": "brake", "name": "brake", "classes": [ "Brake" ], "comes_off": [ "out" ] },
+    { "id": "brake_shoes", "name": "brake shoes", "classes": [ "BrakeShoes" ], "comes_off": [ "out" ] },
+    { "id": "wheel_cylinder", "name": "wheel cylinder", "classes": [ "WheelCylinder" ], "comes_off": [ "out" ] },
+    { "id": "backing_plate", "name": "backing plate", "classes": [ "BackingPlate" ], "comes_off": [ "out" ] },
+    { "id": "rear_axle", "name": "rear axle", "classes": [ "RearAxle" ], "comes_off": [ "down" ], "tool": "impact" },
+    { "id": "differential", "name": "differential carrier", "classes": [ "Differential" ], "comes_off": [ "back" ] },
+    { "id": "ring_pinion", "name": "ring and pinion", "plural": "ring and pinion sets", "classes": [ "RingPinion" ], "comes_off": [ "back" ] },
+    { "id": "axle_shaft", "name": "axle shaft", "classes": [ "AxleShaft" ], "comes_off": [ "out" ] },
+    { "id": "u_bolts", "name": "U-bolts", "plural": "U-bolts", "classes": [ "UBolts" ], "comes_off": [ "down" ], "tool": "impact" },
+    { "id": "leaf_spring", "name": "leaf spring", "classes": [ "LeafSpring" ], "comes_off": [ "down" ] },
+    { "id": "spring_hanger", "name": "spring hanger", "classes": [ "SpringHanger" ], "comes_off": [ "down" ] },
+    { "id": "spring_shackle", "name": "spring shackle", "classes": [ "SpringShackle" ], "comes_off": [ "down" ] },
+    { "id": "traction_bar", "name": "traction bar", "classes": [ "TractionBar" ], "comes_off": [ "down" ] },
+    { "id": "torsion_bar", "name": "torsion bar", "classes": [ "TorsionBar" ], "comes_off": [ "back" ] },
+    { "id": "spring", "name": "spring", "classes": [ "Spring" ], "comes_off": [ "down" ] },
+    { "id": "shock", "name": "shock absorber", "classes": [ "ShockAbsorber" ], "comes_off": [ "down" ] },
+    { "id": "sway_bar", "name": "sway bar", "classes": [ "Swaybar" ], "comes_off": [ "down" ] }
   ],
 
   "rules": [
@@ -72,7 +94,14 @@
     { "kind": "charger", "after": [ "charger_belt" ] },
     { "kind": "alternator", "after": [ "belt" ] },
     { "kind": "steering_pump", "after": [ "belt", "steering_belt" ] },
-    { "kind": "steering_belt", "needs": [ "steering_pump" ] }
+    { "kind": "steering_belt", "needs": [ "steering_pump" ] },
+
+    { "kind": "drum", "after": [ "rim" ] },
+    { "kind": "brake", "after": [ "rim" ] },
+    { "kind": "axle_shaft", "after": [ "drum", "brake" ], "needs": [ "differential" ] },
+    { "kind": "differential", "after": [ "axle_shaft" ] },
+    { "kind": "ring_pinion", "after": [ "axle_shaft" ] },
+    { "kind": "rear_axle", "after": [ "rim" ], "hangs_on": [ "leaf_spring" ] }
   ],
 
   "stand_strips": [ "radiator", "radiator_fan", "starter", "transmission", "clutch", "flywheel" ]

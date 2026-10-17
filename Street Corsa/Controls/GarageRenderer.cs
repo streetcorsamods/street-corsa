@@ -34,9 +34,10 @@ public readonly record struct PartHit(PartLayer Layer, int Node);
 /// <summary>
 /// Part nodes that move as one, off the car or onto it, the way the part they are on comes off
 /// (<see cref="WorkOrder.WayOf"/>), after <paramref name="Delay"/> seconds. An empty way is away from what stays.
-/// <paramref name="Kind"/> is the part's work-order kind, for the tool it is heard to take (<see cref="Audio.Sfx.ToolFor"/>).
+/// <paramref name="Tool"/> is the tool its work-order kind is heard to take (<see cref="WorkOrder.ToolOf"/>). A part of the
+/// car's running gear (<paramref name="CarAxes"/>) goes along the car's own axes, an engine's along its block's.
 /// </summary>
-public sealed record PartMove(IReadOnlyList<int> Nodes, IReadOnlyList<PartWay> Way, float Delay = 0f, string? Kind = null);
+public sealed record PartMove(IReadOnlyList<int> Nodes, IReadOnlyList<PartWay> Way, float Delay = 0f, string? Tool = null, bool CarAxes = false);
 
 /// <summary>
 /// Dark renderer with one extra model (the car's parts) in the scene, and an x-ray mode for the car.
@@ -583,18 +584,23 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         var staying = CentreOf(_propNodes.Where(n => !moving.Contains(n)));
         var frame = frameNode is { } f && f >= 0 && f < _propNodes.Count ? _propNodes[f] : null;
 
-        // Part models face -Z; with no block to go by, one set in the car the way the car faces (+Z)
-        var axes = frame?.List.LocalMatrix ?? Matrix.RotationY((float)Math.PI);
-        var right = Direction(Vector3.TransformNormal(Vector3.UnitX, axes), Vector3.UnitX);
-        var up = Direction(Vector3.TransformNormal(Vector3.UnitY, axes), Vector3.UnitY);
-        var forward = Direction(Vector3.TransformNormal(-Vector3.UnitZ, axes), Vector3.UnitZ);
+        // Part models face -Z; with no block to go by, one set in the car the way the car faces (+Z). The running gear goes
+        // by the car's axes whatever way its engine sits
+        var carAxes = Matrix.RotationY((float)Math.PI);
+        var blockAxes = frame?.List.LocalMatrix ?? carAxes;
 
         foreach (var (move, nodes) in groups)
         {
             if (CentreOf(nodes) is not { } centre) continue;
 
-            // Out is to the side of the engine the part is on; the block itself has none, so it goes by what stays
-            var middle = frame == null || nodes.Contains(frame) ? staying : CentreOf(new[] { frame });
+            var axes = move.CarAxes ? carAxes : blockAxes;
+            var right = Direction(Vector3.TransformNormal(Vector3.UnitX, axes), Vector3.UnitX);
+            var up = Direction(Vector3.TransformNormal(Vector3.UnitY, axes), Vector3.UnitY);
+            var forward = Direction(Vector3.TransformNormal(-Vector3.UnitZ, axes), Vector3.UnitZ);
+
+            // Out is to the side of the engine the part is on, or of the car for its running gear; the block itself has
+            // none, so it goes by what stays
+            var middle = frame == null || move.CarAxes || nodes.Contains(frame) ? staying : CentreOf(new[] { frame });
             var outward = middle is { } m && Vector3.Dot(Vector3.TransformNormal(centre - m, toProp), right) < 0f ? -right : right;
 
             var legs = move.Way.Count == 0
@@ -610,7 +616,7 @@ public class GarageRenderer : DarkKn5ObjectRenderer
 
             // One sound a part, however many nodes it is: the tool as it comes off; the clank as it goes into its
             // place, and the tool turning it tight
-            var tool = Audio.Sfx.ToolFor(move.Kind);
+            var tool = Audio.Sfx.ToolFor(move.Tool);
             var first = true;
             foreach (var node in nodes)
             {

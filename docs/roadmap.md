@@ -1840,6 +1840,31 @@ Next: phase 5 (part tree and work). **To pick up in a new session:**
   render_preview; a wheel-side part's frame turns round for the right side, a spring's and a car-level part's do not;
   the housing's corner slots are drawn at the wheel by `CarPartsLayout.Axle`, not at their slot positions.
 
+**Phase 5 started (2026-10-17, new session). The owner's answers:** the running gear comes off **piece by piece** (its
+own work order kinds, `comes_off`, `needs`, part moves); new parts: the leaf's U-bolts and plate, its hanger and shackle,
+the backing plate, front hubs (generated meshes for the base game); `AxleWork`'s rule becomes data so mods add their own;
+and in this PR too: the job show for the running gear's jobs, the Car Catalog Editor's pickers for brakes and springs,
+welding the spiders, the rivals and tuned used cars going for gears and a posi.
+
+**Phase 5 design** (mine, from those answers):
+- **The car's work order**: the running gear's kinds and rules go in `work_order.json` beside the engine's, read by a
+  `CarWork` as `EngineWork` reads the engine's. Two differences: a rule counts **per corner** (the left drum waits for the
+  left wheel only; a part of no corner, the axle or a sway bar, counts with every corner), and what goes along with a part
+  (what is mounted on it) never stands in its way, so the rear axle still drops whole with its corners (only `bare` asks
+  for a part's own children off). New in a rule: `hangs_on` (the axle on its leaves: on a car that has a part of the kind,
+  or whose factory set has one, the part goes on once every place for the kind holds one, and those come off once the part
+  is off); `AxleWork` goes. The ways are the car's own axes (forward is the car's nose), not the engine block's.
+- **The brake's tree**: the backing plate goes on the corner's brake slot (the housing's flange at the rear, the spindle in
+  front) and carries the shoes, the wheel cylinder and the drum, as a drum brake is built, so it comes apart in its order:
+  wheel, drum, shoes, wheel cylinder, plate (`bare`; at the rear after the axle shaft). A disc stays on the brake slot.
+  `RunningGear.Mounted` finds the drum on its plate; the brake's figures read the shoes and cylinder there.
+- **The leaf's hardware**: a hanger and a shackle on the car's own slots at each rear corner (a leaf `needs` them); the
+  U-bolts and plate on the leaf (they clamp it to the axle: they `need` the axle, the axle comes off `after` them). Order
+  off: U-bolts, axle, leaf, shackle and hanger; on the other way round.
+- **Front hubs**: on the front drum or disc (a hub-and-drum comes off as one, as on the cars of the day), enforced.
+- Older saves: `GearVersion` 5 puts each drum on its factory plate (shoes and cylinder moved onto the plate), gives the
+  front drums and discs their hubs and the leaf cars their hangers, shackles and U-bolts, in the car's wear.
+
 ### Phase 0 findings and design (2026-10-17)
 
 **Survey** (the 104 installed cars; the "4 ACD cars" of the research are in cars.json but not installed at all): all 104

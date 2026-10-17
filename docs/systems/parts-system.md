@@ -582,6 +582,24 @@ each other, or need each other) is told once per set of kinds that lead to each 
 components, linear and without recursion): a work order is any mod's, and listing every simple loop of a dense one would
 not end.
 
+**The running gear's work order** (step 31 phase 5, `CarWork`, the same `work_order.json`). Everything on a car that is
+not its engine has kinds too (rim, tyre, hub, drum, brake, brake shoes, wheel cylinder, backing plate, rear axle,
+differential carrier, ring and pinion, axle shaft, U-bolts, leaf spring, spring hanger and shackle, traction bar, torsion
+bar, spring, shock, sway bar: by class) and rules, asked as the engine's are (`CarWork.WhyNotOff`/`WhyNotOn`, the card's
+reason and the shelf hint; the engine's parts stay `EngineWork`'s). A rule counts at the part's own corner: each part on
+the car works at the corners of its slot (a wheel's, brake's, spring's or shock's own; what is on the rear axle's housing
+at a corner or shaft slot that side's; the axle and a rear sway bar both rear corners, the front bar both front ones;
+anything else all four), and what is on a part works where it does. So the left front drum waits for the left front
+wheel only. What is mounted on the part goes along and is never in its way (the engine's rules count it): the rear axle
+drops whole with its brakes, coil springs, shocks and bar once the rear wheels are off; `"bare"` asks for the part's own
+parts off it first. A shelf place is told by place: the hint is the first reason, the places that may be taken stay.
+`"hangs_on"` replaced `AxleWork`: on a car that has a leaf spring on it, or whose factory running gear has one
+(`AxleParts.All`), the rear axle goes on once every place for a leaf holds one (`Workbench.FindPlaces` for any part of the
+kind finds none free), and a leaf comes off once the axle is off. The base game's rules: a drum or a disc after the
+wheel; an axle shaft after its drum, and only into a carrier; the carrier and the ring and pinion after both shafts; the
+rear axle after the rear wheels, hanging on its leaves. The running gear comes off along the car's axes, whatever way the
+engine sits (`PartMove.CarAxes`); a kind's `"tool"` says whether it is heard with the air gun (`Sfx.ToolFor`).
+
 Nothing pops. The cards and the navigation tiles they replace slide and fade through `Helpers/Reveal`
 (`Reveal.IsShown` in place of a Visibility binding, `OffsetX/Y` for where an element comes from). Parts move too: a tree
 is made anew after every change, so `InstalledPart.InstanceId` (the saved part's id) is how the viewport tells what left
@@ -700,9 +718,9 @@ on those, so they stay on the car's own slots, while coil springs go on the axle
 rear (the Corvettes' Dana 44 carrier) keeps all its running gear on the car. The workbench follows the same rule (the
 garage tells it whether the car is on a live axle), the factory builds cars that way (`RunningGearFactory.HangOnAxle`,
 which also moves parts back off the axle), and `GearVersion` 3 and 4 bring an older car's rear corners where they belong.
-In the garage the axle and its leaves go on and come off in their order (`AxleWork`, asked as the engine's work order
-is): on a car sprung on leaves (a leaf on a rear spring slot, or the factory's rear spring a leaf) the axle goes on once
-both rear leaves are on, and a leaf comes off once the axle is off; the reasons are the player's words (`workbench.axle.*`). The garage
+In the garage the axle and its leaves go on and come off in their order (the work order's `"hangs_on"`, see "The running
+gear's work order"): on a car sprung on leaves (a leaf on a rear spring slot, or the factory's rear spring a leaf) the
+axle goes on once both rear leaves are on, and a leaf comes off once the axle is off. The garage
 draws them at their wheel as before (`CarPartsLayout`: a part on a corner slot of the housing is placed where it would be
 on the car's slot, whatever the track), and taking the axle off takes them with it. They are parts of data (`parts/running_gear/`:
 `axles_gm`, `axles_ford`, `axles_mopar`, `axles_dana`, and the aftermarket's `axle_speed`) and mate by standard

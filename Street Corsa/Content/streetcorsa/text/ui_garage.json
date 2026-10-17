@@ -160,8 +160,6 @@
     "workbench.attached.one": "Comes off with the part that is on it.",
     "workbench.attached.other": "Comes off with the {count} parts that are on it.",
     "workbench.hint.stand_empty": "The stand is empty. Put an engine on it first.",
-    "workbench.axle.on_leaves": "The rear axle sits on this leaf spring. Take the axle off first.",
-    "workbench.axle.needs_leaves": "The rear axle sits on its leaf springs. Put both rear leaves on first.",
     "workbench.hint.to_stand": "Put it on the stand to take it apart.",
     "workbench.hint.stand_taken": "The stand is taken. Take its engine off first.",
     "workbench.hint.no_car": "There is no car here to put it on.",

@@ -5,9 +5,10 @@ using Newtonsoft.Json;
 namespace StreetCorsa.Parts;
 
 /// <summary>
-/// What kind of job a part is on an engine, and what has to be off before it comes off (or goes back on): the
-/// crankshaft only on the stand, with nothing on it and the oil pan off; the intake with the distributor out; the belt
-/// only over the water pump and the fan.
+/// What kind of job a part is on an engine or a car's running gear, and what has to be off before it comes off (or goes
+/// back on): the crankshaft only on the stand, with nothing on it and the oil pan off; the intake with the distributor
+/// out; the belt only over the water pump and the fan; a drum with its wheel off, the rear axle on its leaf springs.
+/// <see cref="Cars.EngineWork"/> puts it to an engine, <see cref="Cars.CarWork"/> to the rest of a car.
 /// Read from <see cref="FileName"/> in every mod's parts folder, so a mod's blocks get rules of their own.
 /// </summary>
 /// <remarks>
@@ -36,6 +37,7 @@ public sealed class WorkOrder
     private readonly Dictionary<string, IReadOnlyList<PartWay>> _ways = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, EngineSide> _sides = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> _cooling = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, string> _tools = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> _standStrips = new();
     private readonly ConcurrentDictionary<PartDefinition, string?> _kindOf = new(ReferenceEqualityComparer.Instance);
     private readonly ConcurrentDictionary<PartDefinition, IReadOnlyList<PartWay>?> _ownWayOf = new(ReferenceEqualityComparer.Instance);
@@ -82,6 +84,12 @@ public sealed class WorkOrder
 
         return KindOf(part) is { } kind && _ways.TryGetValue(kind, out var way) ? way : Array.Empty<PartWay>();
     }
+
+    /// <summary>
+    /// The tool a part of the kind is heard to come off and go on with (<see cref="WorkKind.Tool"/>): <c>"impact"</c> for the
+    /// air gun; null for a kind that does not say, which takes the socket wrench
+    /// </summary>
+    public string? ToolOf(string? kind) => kind != null ? _tools.GetValueOrDefault(kind) : null;
 
     /// <summary>Whether any kind says what it does for the cooling (<see cref="WorkKind.Cooling"/>)</summary>
     public bool TellsCooling => _cooling.Count > 0;
@@ -242,6 +250,9 @@ public sealed class WorkOrder
                     else problems.Add($"{label}: {kind.Id} does \"{cooling}\" for the cooling, which is none of {string.Join(", ", CoolingRoles)}; left out");
                 }
 
+                // The tool it is heard to take is only sound: the last mod to say so says so
+                if (kind.Tool is { } tool && tool.Trim() is { Length: > 0 } named) order._tools[kind.Id] = named.ToLowerInvariant();
+
                 // Which side it is worked from is only looks too
                 if (kind.WorkedFrom is { } from)
                 {
@@ -262,6 +273,7 @@ public sealed class WorkOrder
 
                 rule.After = PartDefinition.NonNull(rule.After);
                 rule.Needs = PartDefinition.NonNull(rule.Needs);
+                rule.HangsOn = PartDefinition.NonNull(rule.HangsOn);
 
                 // A rule for a kind that has one already only adds to it: more to wait for, more it needs. Taking any
                 // of it back is on purpose ("replace"), so a mod written before the base game ruled a kind still counts
@@ -271,6 +283,7 @@ public sealed class WorkOrder
                     ruled.Bare |= rule.Bare;
                     ruled.After = ruled.After.Union(rule.After, StringComparer.OrdinalIgnoreCase).ToList();
                     ruled.Needs = ruled.Needs.Union(rule.Needs, StringComparer.OrdinalIgnoreCase).ToList();
+                    ruled.HangsOn = ruled.HangsOn.Union(rule.HangsOn, StringComparer.OrdinalIgnoreCase).ToList();
                     continue;
                 }
 
@@ -294,6 +307,8 @@ public sealed class WorkOrder
                 problems.Add($"{FileName}: the rule of {rule.Kind} waits for {after}, a kind no work order lists");
             foreach (var need in rule.Needs.Where(n => !order._kindsById.ContainsKey(n)))
                 problems.Add($"{FileName}: the rule of {rule.Kind} needs {need}, a kind no work order lists");
+            foreach (var on in rule.HangsOn.Where(h => !order._kindsById.ContainsKey(h)))
+                problems.Add($"{FileName}: the rule of {rule.Kind} hangs on {on}, a kind no work order lists");
             foreach (var both in rule.Needs.Intersect(rule.After, StringComparer.OrdinalIgnoreCase))
                 problems.Add($"{FileName}: the rule of {rule.Kind} both needs {both} and waits for it to be off: {rule.Kind} would never go on");
         }
@@ -489,6 +504,13 @@ public sealed class WorkKind
     /// </summary>
     [JsonProperty("cooling")]
     public string? Cooling { get; set; }
+
+    /// <summary>
+    /// The tool a part of the kind is heard to come off and go on with: <c>"impact"</c> (the air gun: the drivetrain's big
+    /// bolts, the wheels' lug nuts), else the socket wrench. Only sound. Null leaves it to another mod, or the wrench.
+    /// </summary>
+    [JsonProperty("tool")]
+    public string? Tool { get; set; }
 }
 
 /// <summary>The side of the engine a part is worked on from, as the engine sits in a car</summary>
@@ -535,6 +557,14 @@ public sealed class WorkRule
     /// </summary>
     [JsonProperty("needs")]
     public List<string> Needs { get; set; } = new();
+
+    /// <summary>
+    /// Kinds the part sits on, on a car (<see cref="Cars.CarWork"/>; an engine's work has no use for it): the rear axle on
+    /// its leaf springs. On a car that has a part of the kind, or whose factory running gear has one, the part goes on once
+    /// every place the car has for the kind holds one, and a part of the kind comes off once this part is off.
+    /// </summary>
+    [JsonProperty("hangs_on")]
+    public List<string> HangsOn { get; set; } = new();
 
     /// <summary>A mod taking back some of a rule it did not write: on purpose, or its rule only adds to it</summary>
     [JsonProperty("replace")]

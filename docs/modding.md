@@ -230,8 +230,8 @@ anywhere under the folder (a `pack.json` with the parts' `.kn5` models next to i
   part's own space (its origin where it mounts; see parts-system.md, "The running gear's models"). The part's figures,
   slots and price stay its own; of two mods the later one's model wins. A key that names no part, or a model that is not
   there, is a line in the log and left out.
-- `work_order.json` — what comes off an engine before what (see below). Most mods need none: the base game's covers
-  every kind of engine part there is.
+- `work_order.json` — what comes off an engine or a car's running gear before what (see below). Most mods need none:
+  the base game's covers every kind of engine and running gear part there is.
 - `"make"` in a `pack.json` (`"make": "gm"`) says which make the pack's parts are for: every part shop specialising in
   that make stocks them (see `partshops` below). The base game's makes are `mopar`, `ford` and `gm` (the families of
   makes.json); a pack of parts for any make (the universal-fit carburettors and air cleaners) has none.
@@ -306,7 +306,20 @@ coming off, leg by leg, in the engine's own directions: `up`, `down`, `forward` 
 part goes along. A later mod's `"comes_off"` for a kind replaces the earlier one's, and a part's own beats its kind's.
 A kind's `"worked_from"`, `"above"` or `"below"`, is the side of the engine it goes on from: picking one on the stand turns
 the engine that side up (an oil pan turns it over, a cylinder head back). Only looks; a later mod's replaces the earlier
-one's, and a kind without one leaves the engine as it is.
+one's, and a kind without one leaves the engine as it is. A kind's `"tool"`, `"impact"`, has it heard coming off with the
+air gun (the drivetrain's big bolts, the wheels' lug nuts), else a socket wrench; a later mod's replaces the earlier one's.
+
+The running gear (everything on a car that is not its engine: wheels, brakes, springs, the rear axle) has kinds and rules
+in the same file, read the same way with two differences. A rule counts at the part's own corner: the base game's drum
+waits for its own wheel to be off (`{ "kind": "drum", "after": [ "rim" ] }`), not the other three; a part across an axle
+(the rear axle, a sway bar) counts at both its corners. And what is mounted on a part goes along without being in its way,
+so the rear axle drops whole with the brakes and springs it carries; only `"bare"` asks for them off first. `"stand_only"`
+means nothing to the running gear. `"hangs_on"` is the running gear's alone: the kinds a part sits on. On a car that has
+a part of such a kind, or whose factory running gear has one, the part goes on only once every place the car has for the
+kind holds one, and those come off only once the part is off: the base game's rear axle hangs on its leaf springs
+(`{ "kind": "rear_axle", "after": [ "rim" ], "hangs_on": [ "leaf_spring" ] }`), so a coil-sprung car's axle goes on freely.
+`"comes_off"` legs are the car's own directions for the running gear: `forward` is the car's nose, `out` the side of the
+car the part is on.
 
 ```json
 {

@@ -130,6 +130,8 @@
     "work.take_off_first": "Take off {parts} first.",
     "work.cut_mismatch": "The {part} is {size} and the {other} {other_size}: they only go together at the same size. A machine shop has pistons made to suit.",
     "work.put_on_first": "Put on {parts} first.",
+    "work.hangs_on.off": "This carries {part}. Take {part} off first.",
+    "work.hangs_on.on": "The {name} sits on its {kinds}: put them all on first.",
     "work.the": "the {name}",
     "work.nothing": "nothing",
     "work.list": "{first} and {last}",

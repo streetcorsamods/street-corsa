@@ -386,8 +386,8 @@ namespace StreetCorsa.Screens.Garage
             : string.Empty;
 
         /// <summary>
-        /// Why the picked part cannot come off now, in the work order's words (an engine's part) or the axle's (a leaf spring
-        /// under the rear axle); empty when it can
+        /// Why the picked part cannot come off now, in the work order's words: an engine's part (<see cref="EngineWork"/>) or
+        /// the car's running gear (<see cref="CarWork"/>); empty when it can
         /// </summary>
         public string SelectedBlockedDisplay
         {
@@ -395,13 +395,9 @@ namespace StreetCorsa.Screens.Garage
             {
                 if (_selectedPart == null || Catalog is not { } catalog || SavedOf(_selectedPart) is not { } saved) return string.Empty;
                 if (CurrentEngine is { } engine && engine.SelfAndDescendants().Contains(saved)) return EngineWork.WhyNotOff(catalog, engine, saved, _isStand) ?? string.Empty;
-                return !_isStand && _car != null ? AxleWork.WhyNotOff(catalog, _car.Parts, saved) ?? string.Empty : string.Empty;
+                return !_isStand && _car != null ? CarWork.WhyNotOff(catalog, _car.Parts, saved) ?? string.Empty : string.Empty;
             }
         }
-
-        /// <summary>Whether the car's rear is sprung on leaves, which its rear axle sits on (<see cref="AxleWork"/>)</summary>
-        private bool LeafSprung(PartsCatalog catalog) =>
-            _car != null && AxleWork.LeafSprung(catalog, _car.Parts, _parts.Specs(_car.DefinitionId)?.HasLiveAxle ?? false, _parts.FactoryRunningGear(_car)?.Rear.Spring);
 
         private bool SelectedIsEngine => _selectedPart != null && ReferenceEquals(_selectedPart, _engine);
 
@@ -1203,8 +1199,9 @@ namespace StreetCorsa.Screens.Garage
                 return;
             }
 
+            var liveAxle = _car != null && (_parts.Specs(_car.DefinitionId)?.HasLiveAxle ?? true);
             var places = _isStand ? Workbench.FindPlacesOnStand(catalog, stand!, item.Part)
-                : Workbench.FindPlaces(catalog, _car!.Parts, item.Part, _parts.Specs(_car.DefinitionId)?.HasLiveAxle ?? true);
+                : Workbench.FindPlaces(catalog, _car!.Parts, item.Part, liveAxle);
 
             // Where it fits, but the work order says not yet: the reason is the hint, and the place is no place
             var engine = CurrentEngine;
@@ -1215,11 +1212,19 @@ namespace StreetCorsa.Screens.Garage
                 : null;
             if (blocked != null) places = places.Where(p => !Workbench.IsOnEngine(onEngine!, p)).ToList();
 
-            // A rear axle sits on its leaf springs: on a car sprung on leaves it goes on once both are on
-            if (!_isStand && AxleWork.WhyNotOn(catalog, _car!.Parts, item.Part, LeafSprung(catalog)) is { } axleWhy)
+            // The running gear's work order the same way, place by place: the left drum waits for the left wheel only
+            if (!_isStand)
             {
-                blocked = axleWhy;
-                places = [];
+                var factory = _parts.FactoryRunningGear(_car!) is var (front, rear) ? front.All.Concat(rear.All).ToList() : null;
+                var free = new List<MountPlace>();
+                foreach (var place in places)
+                {
+                    if (onEngine != null && Workbench.IsOnEngine(onEngine, place)) free.Add(place);
+                    else if (CarWork.WhyNotOn(catalog, _car!.Parts, item.Part, place, liveAxle, factory) is { } why) blocked ??= why;
+                    else free.Add(place);
+                }
+
+                places = free;
             }
 
             var installedOf = Trees.SelectMany(t => t.Saved).ToDictionary(p => p.Value, p => p.Key);

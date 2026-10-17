@@ -8,7 +8,7 @@ namespace StreetCorsa.Parts.Cars;
 /// so an engine taken apart can always be put together again in the opposite order. What a part needs
 /// (<see cref="WorkRule.Needs"/>) holds both ways too: it stays on while the part is on, and an engine that comes into
 /// the game with a part lacking what it needs has that part taken off first (<see cref="TakeOffWhatLacksItsNeeds"/>).
-/// Only engines have rules; the running gear comes and goes freely.
+/// The running gear's rules are <see cref="CarWork"/>'s.
 /// </summary>
 public static class EngineWork
 {
@@ -241,15 +241,15 @@ public static class EngineWork
     private static bool IsPlural(WorkOrder order, string kind) => order.NameOf(kind).EndsWith('s');
 
     /// <summary>The key's <c>.one</c> or <c>.other</c>, as the kind's name reads one or many ("the radiator", "the cylinder heads")</summary>
-    private static string Plural(WorkOrder order, string kind, string key) => key + (IsPlural(order, kind) ? ".other" : ".one");
+    internal static string Plural(WorkOrder order, string kind, string key) => key + (IsPlural(order, kind) ? ".other" : ".one");
 
     /// <summary>"the radiator"</summary>
-    private static string The(string name) => PartWords.Say("work.the", ("name", name));
+    internal static string The(string name) => PartWords.Say("work.the", ("name", name));
 
     private static IEnumerable<PartInstance> SelfAndDescendantsOf(this IEnumerable<PartInstance> parts) => parts.SelectMany(p => p.SelfAndDescendants());
 
     /// <summary>"the oil pan, the timing cover and the cylinder heads", in the order the engine holds them</summary>
-    private static string List(PartsCatalog catalog, IEnumerable<PartInstance> parts)
+    internal static string List(PartsCatalog catalog, IEnumerable<PartInstance> parts)
     {
         var order = catalog.WorkOrder;
         var names = new List<string>();
@@ -265,7 +265,7 @@ public static class EngineWork
     }
 
     /// <summary>"a, b and c"; null when there is nothing</summary>
-    private static string? JoinAnd(IReadOnlyList<string> names) => names.Count switch
+    internal static string? JoinAnd(IReadOnlyList<string> names) => names.Count switch
     {
         0 => null,
         1 => names[0],
