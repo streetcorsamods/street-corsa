@@ -16,9 +16,10 @@ public static class RunningGearFactory
     /// <summary>
     /// What a car's running gear is brought up to once (<see cref="Car.GearVersion"/>): 1 is step 31, the rear axle and the
     /// period brakes and springs; 2 the leaf springs, the torsion bars and the sway bars; 3 the rear brakes, springs, shocks
-    /// and sway bar carried on the rear axle's housing
+    /// and sway bar carried on the rear axle's housing; 4 the leaf springs and an independent rear's running gear back on the
+    /// car's own slots
     /// </summary>
-    public const int GearVersion = 3;
+    public const int GearVersion = 4;
 
     /// <summary>The factory parts of one axle; a drum brake's shoes and wheel cylinder with it, the sway bar across it (none for an axle without)</summary>
     public sealed record AxleParts(PartDefinition Tyre, PartDefinition Rim, PartDefinition Brake, PartDefinition Spring, PartDefinition Shock,
@@ -154,7 +155,7 @@ public static class RunningGearFactory
             if (axle.SwayBar != null) parts.Add(Instance(axle.SwayBar, RunningGear.SwayBarSlot(isFront), 1, wear));
         }
 
-        HangOnAxle(catalog, parts);
+        HangOnAxle(catalog, parts, specs.HasLiveAxle);
         return parts;
     }
 
@@ -213,20 +214,34 @@ public static class RunningGearFactory
             changed++;
         }
 
-        return changed + HangOnAxle(catalog, carParts);
+        return changed + HangOnAxle(catalog, carParts, specs.HasLiveAxle);
     }
 
     /// <summary>
-    /// The rear brakes, springs, shocks and sway bar on the car's own slots moved onto the rear axle's housing, where it has a
-    /// slot for each (<see cref="RearAxle.HousingSlotFor"/>), with what is on them; what the housing has a part on already stays
+    /// The rear running gear where it belongs (<see cref="RearAxle.Carries"/>), with what is on each part: a brake, coil spring,
+    /// shock or sway bar on the car's own slots onto a live rear axle's housing where it has a slot for it; a leaf spring, or
+    /// any of them on an independent rear's carrier, off the housing back onto the car's slot. A slot taken already keeps
+    /// what is on it.
     /// </summary>
+    /// <param name="liveAxle">Whether the car's rear is a live axle (its data's rear suspension <c>AXLE</c>)</param>
     /// <returns>How many parts moved</returns>
-    public static int HangOnAxle(PartsCatalog catalog, List<PartInstance> carParts)
+    public static int HangOnAxle(PartsCatalog catalog, List<PartInstance> carParts, bool liveAxle)
     {
         var moved = 0;
+        foreach (var (part, carSlot) in RearAxle.CornerParts(carParts).ToList())
+        {
+            if (catalog.Get(part.DefinitionId) is not { } definition || RearAxle.Carries(definition, carSlot, liveAxle) || carParts.Any(p => p.ParentSlot == carSlot)) continue;
+            carParts.Single(p => p.ParentSlot == RearAxle.CarSlot).Children.Remove(part);
+            part.ParentSlot = carSlot;
+            carParts.Add(part);
+            moved++;
+        }
+
         foreach (var part in carParts.ToList())
         {
-            if (RearAxle.HousingFor(catalog, carParts, part.ParentSlot) is not var (housing, slot) || housing.Children.Any(c => c.ParentSlot == slot)) continue;
+            if (catalog.Get(part.DefinitionId) is not { } definition ||
+                RearAxle.HousingFor(catalog, carParts, part.ParentSlot, definition, liveAxle) is not var (housing, slot) ||
+                housing.Children.Any(c => c.ParentSlot == slot)) continue;
             carParts.Remove(part);
             part.ParentSlot = slot;
             housing.Children.Add(part);

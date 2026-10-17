@@ -6,34 +6,41 @@ using StreetCorsa.Parts.Export;
 
 namespace StreetCorsa.Tests;
 
-/// <summary>The rear axle carries the rear brakes, springs, shocks and sway bar (the owner's "diferencial": the whole rear axle)</summary>
+/// <summary>
+/// The rear axle carries the rear brakes, coil springs, shocks and sway bar (the owner's "diferencial": the whole rear axle);
+/// it hangs on its leaf springs, which stay on the car, and an independent rear keeps all of it on the car
+/// </summary>
 public class AxleCarriesCornersTests
 {
     private static PartsCatalog Catalog => TestCars.Catalog.Value;
 
     private static readonly CarFacts Chevy66 = new("chevrolet", "gm", 1966, "USA");
 
-    private static AcCarSpecs Specs() => new()
+    private static AcCarSpecs Specs(string rear = "AXLE") => new()
     {
         Traction = "RWD", TotalMass = 1600, FrontWeightShare = 0.55, PeakTorque = 390, FinalRatio = 3.55,
         Front = new AcAxleSpecs { TyreWidth = 0.205, TyreRadius = 0.33, BrakeTorque = 1600, SpringRate = 30000, DampBump = 3000, DampRebound = 4000, CornerLoad = 450, SuspensionType = "DWB", SwayBarRate = 8000 },
-        Rear = new AcAxleSpecs { TyreWidth = 0.205, TyreRadius = 0.33, BrakeTorque = 900, SpringRate = 25000, DampBump = 3000, DampRebound = 4000, CornerLoad = 400, SuspensionType = "AXLE", SwayBarRate = 1300 }
+        Rear = new AcAxleSpecs { TyreWidth = 0.205, TyreRadius = 0.33, BrakeTorque = 900, SpringRate = 25000, DampBump = 3000, DampRebound = 4000, CornerLoad = 400, SuspensionType = rear, SwayBarRate = 1300 }
     };
 
-    private static List<PartInstance> FactoryParts(double condition = 1)
+    private static List<PartInstance> FactoryParts(double condition = 1, string rear = "AXLE", CarFacts? car = null)
     {
-        var axle = RunningGearGuess.ChooseAxle(Catalog, Specs(), Chevy66, null)!;
-        return RunningGearFactory.Create(Catalog, Specs(), condition, axle, Chevy66);
+        var axle = RunningGearGuess.ChooseAxle(Catalog, Specs(rear), car ?? Chevy66, null)!;
+        return RunningGearFactory.Create(Catalog, Specs(rear), condition, axle, car ?? Chevy66);
     }
 
+    private static int[] OnTheAxle(List<PartInstance> parts) =>
+        parts.Single(p => p.ParentSlot == RearAxle.CarSlot).Children.Select(c => c.ParentSlot).Where(s => s >= RearAxle.LeftBrakeSlot).Order().ToArray();
+
     [Fact]
-    public void A_car_leaves_the_factory_with_its_rear_brakes_springs_shocks_and_bar_on_its_rear_axle()
+    public void A_car_leaves_the_factory_with_its_rear_brakes_shocks_and_bar_on_its_rear_axle_and_the_axle_on_its_leaves()
     {
         var parts = FactoryParts();
-        var housing = parts.Single(p => p.ParentSlot == RearAxle.CarSlot);
-        Assert.Equal([RearAxle.LeftBrakeSlot, RearAxle.RightBrakeSlot, RearAxle.LeftSpringSlot, RearAxle.RightSpringSlot, RearAxle.LeftShockSlot, RearAxle.RightShockSlot, RearAxle.SwayBarSlot],
-            housing.Children.Select(c => c.ParentSlot).Where(s => s >= RearAxle.LeftBrakeSlot).Order());
-        Assert.DoesNotContain(parts, p => p.ParentSlot == RunningGear.BrakeSlot(2) || p.ParentSlot == RunningGear.SpringSlot(3) || p.ParentSlot == RunningGear.RearSwayBarSlot);
+        Assert.Equal([RearAxle.LeftBrakeSlot, RearAxle.RightBrakeSlot, RearAxle.LeftShockSlot, RearAxle.RightShockSlot, RearAxle.SwayBarSlot], OnTheAxle(parts));
+        Assert.DoesNotContain(parts, p => p.ParentSlot == RunningGear.BrakeSlot(2) || p.ParentSlot == RunningGear.RearSwayBarSlot);
+        Assert.All(parts.Where(p => p.ParentSlot == RunningGear.SpringSlot(2) || p.ParentSlot == RunningGear.SpringSlot(3)),
+            s => Assert.StartsWith("running_gear/springs_leaf/", s.DefinitionId));
+        Assert.Equal(2, parts.Count(p => p.ParentSlot == RunningGear.SpringSlot(2) || p.ParentSlot == RunningGear.SpringSlot(3)));
         Assert.Contains(parts, p => p.ParentSlot == RunningGear.BrakeSlot(0));
 
         // Read as if on the car's own corners: every corner whole, the drums with their shoes
@@ -41,6 +48,21 @@ public class AxleCarriesCornersTests
         Assert.All(corners, c => Assert.True(c.Brake != null && c.Spring != null && c.Shock != null && c.Rim != null));
         Assert.Contains(corners[2].Brake!.Children, c => c.ParentSlot == RunningGear.ShoesSlot);
         Assert.NotNull(RunningGear.SwayBars(parts).Rear);
+    }
+
+    [Fact]
+    public void A_live_axle_on_coils_carries_its_springs_and_an_independent_rear_keeps_everything_on_the_car()
+    {
+        // A British car's live axle: the source game's coil springs, carried on the axle
+        var coils = FactoryParts(car: new CarFacts("jaguar", "jaguar", 1965, "UK"));
+        Assert.Contains(RearAxle.LeftSpringSlot, OnTheAxle(coils));
+        Assert.Contains(RearAxle.RightSpringSlot, OnTheAxle(coils));
+
+        var independent = FactoryParts(rear: "DWB");
+        Assert.Empty(OnTheAxle(independent));
+        Assert.Contains(independent, p => p.ParentSlot == RunningGear.BrakeSlot(2));
+        Assert.Contains(independent, p => p.ParentSlot == RunningGear.RearSwayBarSlot);
+        Assert.Contains(independent, p => p.ParentSlot == RunningGear.ShockSlot(3));
     }
 
     [Fact]
@@ -56,6 +78,12 @@ public class AxleCarriesCornersTests
         Assert.Contains(places, p => p.Parent == housing && p.ParentSlot == RearAxle.LeftBrakeSlot);
         Assert.Contains(places, p => p.Parent == null && p.ParentSlot == RunningGear.BrakeSlot(0));
         Assert.DoesNotContain(places, p => p.Parent == null && p.ParentSlot == RunningGear.BrakeSlot(2));
+
+        // A leaf spring goes on the car, never on the axle; an independent rear's brake on the car too
+        parts.RemoveAll(p => p.ParentSlot == RunningGear.SpringSlot(2));
+        var leaf = Workbench.FindPlaces(Catalog, parts, new PartInstance("running_gear/springs_leaf/rear_150"));
+        Assert.Equal([new MountPlace(null, RunningGear.SpringSlot(2), 1)], leaf);
+        Assert.Contains(Workbench.FindPlaces(Catalog, parts, new PartInstance(drum), liveAxle: false), p => p.Parent == null && p.ParentSlot == RunningGear.BrakeSlot(2));
     }
 
     [Fact]
@@ -71,9 +99,27 @@ public class AxleCarriesCornersTests
             parts.Add(part);
         }
 
-        Assert.Equal(7, RunningGearFactory.BringUpToDate(Catalog, Specs(), Chevy66, null, parts));
-        Assert.Equal(7, RearAxle.CornerParts(parts).Count());
+        Assert.Equal(5, RunningGearFactory.BringUpToDate(Catalog, Specs(), Chevy66, null, parts));
+        Assert.Equal(5, RearAxle.CornerParts(parts).Count());
         Assert.Equal(0, RunningGearFactory.BringUpToDate(Catalog, Specs(), Chevy66, null, parts));
+    }
+
+    [Fact]
+    public void A_car_whose_leaves_went_onto_its_axle_gets_them_back_on_the_car_and_an_independent_rear_all_of_it()
+    {
+        var parts = FactoryParts();
+        var housing = parts.Single(p => p.ParentSlot == RearAxle.CarSlot);
+        foreach (var leaf in parts.Where(p => p.ParentSlot == RunningGear.SpringSlot(2) || p.ParentSlot == RunningGear.SpringSlot(3)).ToList())
+        {
+            parts.Remove(leaf);
+            leaf.ParentSlot = RearAxle.HousingSlotFor(leaf.ParentSlot)!.Value;
+            housing.Children.Add(leaf);
+        }
+
+        Assert.Equal(2, RunningGearFactory.HangOnAxle(Catalog, parts, liveAxle: true));
+        Assert.DoesNotContain(RearAxle.LeftSpringSlot, OnTheAxle(parts));
+        Assert.Equal(5, RunningGearFactory.HangOnAxle(Catalog, parts, liveAxle: false));
+        Assert.Empty(OnTheAxle(parts));
     }
 
     [Fact]

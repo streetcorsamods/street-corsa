@@ -207,6 +207,9 @@ public static class RunningGear
         part?.Properties.GetValueOrDefault("perf_curve") is string curve && System.Text.RegularExpressions.Regex.IsMatch(curve.Trim(),
             @"^\(\|(-?\d+(\.\d+)?=-?\d+(\.\d+)?\|)+\)$") ? curve.Trim() : null;
 
+    /// <summary>Whether a spring is a leaf spring: the rear axle hangs on it (<see cref="RearAxle.Carries"/>)</summary>
+    public static bool IsLeafSpring(PartDefinition part) => PartKinds.Is(part, "LeafSpring");
+
     /// <summary>Wheel rate, N/m</summary>
     public static double SpringRate(PartDefinition spring) => spring.Number("force");
 

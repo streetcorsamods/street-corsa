@@ -15,7 +15,8 @@ public sealed record MountPlace(PartInstance? Parent, int ParentSlot, int OwnSlo
 public static class Workbench
 {
     /// <param name="carParts">The parts mounted on the car itself (Car.Parts)</param>
-    public static List<MountPlace> FindPlaces(PartsCatalog catalog, List<PartInstance> carParts, PartInstance loose)
+    /// <param name="liveAxle">Whether the car's rear is a live axle, which carries the rear running gear (<see cref="RearAxle.Carries"/>)</param>
+    public static List<MountPlace> FindPlaces(PartsCatalog catalog, List<PartInstance> carParts, PartInstance loose, bool liveAxle = true)
     {
         var places = new List<MountPlace>();
         if (catalog.Get(loose.DefinitionId) is not { } looseDefinition) return places;
@@ -32,9 +33,9 @@ public static class Workbench
         var mountsBy = looseSlots.FirstOrDefault(s => s.Id == 1)?.Id ?? looseSlots.FirstOrDefault()?.Id ?? 0;
 
         // The running gear goes on the car's own wheel slots: a rim, a brake, a spring or a shock on every free
-        // corner of the axle it is made for, a sway bar across one; a rear one on the rear axle's housing when it has a slot
-        // for it (the axle carries its brakes, springs, shocks and bar). A tyre goes on a mounted rim it fits (same
-        // diameter, a rim width the tyre takes).
+        // corner of the axle it is made for, a sway bar across one; a rear one on a live rear axle's housing when it has a
+        // slot for it (the axle carries its brakes, coil springs, shocks and bar; it hangs on its leaf springs, which stay on
+        // the car). A tyre goes on a mounted rim it fits (same diameter, a rim width the tyre takes).
         if (looseGroup == PartKinds.Tyres)
         {
             foreach (var rim in RunningGear.Rims(carParts))
@@ -52,7 +53,7 @@ public static class Workbench
             foreach (var carSlot in RunningGear.CarSlotsFor(looseDefinition))
             {
                 if (carParts.Any(p => p.ParentSlot == carSlot)) continue;
-                if (RearAxle.HousingFor(catalog, carParts, carSlot) is var (housing, slot))
+                if (RearAxle.HousingFor(catalog, carParts, carSlot, looseDefinition, liveAxle) is var (housing, slot))
                 {
                     if (housing.Children.All(c => c.ParentSlot != slot)) places.Add(new MountPlace(housing, slot, mountsBy));
                 }

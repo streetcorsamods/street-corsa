@@ -82,7 +82,8 @@ namespace StreetCorsa.Models.GameState
         /// What its running gear has been brought up to (<see cref="StreetCorsa.Parts.Cars.RunningGearFactory.GearVersion"/>):
         /// 0 for a car of an older save, which gets its rear axle and its period brakes once (step 31), 1 one that gets its
         /// leaf springs, torsion bars and sway bars once, 2 one whose rear brakes, springs, shocks and bar go onto the rear
-        /// axle once; what the player took off or put on since stays as it is (moved with the rear axle's)
+        /// axle once, 3 one whose leaf springs (and an independent rear's running gear) go back onto the car's own slots;
+        /// what the player took off or put on since stays as it is (moved with the rear axle's)
         /// </summary>
         public int GearVersion { get; set; }
 

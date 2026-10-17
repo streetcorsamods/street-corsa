@@ -523,8 +523,9 @@ changes what a part does fails `PartRolesSnapshotTests`.
 and the shafts on 3 and 4; the carrier carries the gears on its slot 2. A live axle's housing also has the rear corners'
 slots, by these ids: 5 and 6 the left and right brake, 7 and 8 the springs, 9 and 10 the shocks, 11 the rear sway bar (the
 right side's brake and shock slots turned half round, `"rotation": [3.14159265, 0, 0]`; the game draws them at the
-wheels whatever their positions). A housing without them leaves the rear running gear on the car's own slots (an
-independent rear's carrier). Give them standard fittings of your own family
+wheels whatever their positions). Only a car on a live axle (its data's rear suspension `AXLE`) carries them there, and
+never its leaf springs (`["LeafSpring", ...]`: the axle hangs on them, they stay on the car); a housing without them, or a
+car with an independent rear, leaves the rear running gear on the car's own slots. Give them standard fittings of your own family
 (`"takes": ["axle:mymod_banjo"]` on the housing, `"fits"` on the carrier) and `required_slots` with `"enforce": true` for
 what the axle cannot do without. `"came_in"` on a part says which cars it left the factory on, for the guess of a car's
 factory running gear: `{ "families": ["gm"], "makes": ["pontiac"], "torque": [460, null], "years": [1965, null] }` (Nm of

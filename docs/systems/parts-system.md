@@ -695,9 +695,11 @@ owner's "diferencial", the whole rear axle): each side's brake (housing slots 5 
 and the rear sway bar (11), with what is on them (a drum's shoes, a leaf's traction bars). `RearAxle.HousingSlotFor` /
 `CarSlotFor` pair them with the car's own slots they stand for; `RunningGear.Mounted` and `SwayBars` read them there as
 from the car's corners (one on the car's own slot first), so the export, the condition, the repairs and the looks are the
-same; the workbench puts a rear brake, spring, shock or bar on the housing when it has the slot (the car's slot only
-without one: a car with no live axle, a mod's housing without them); the factory builds cars that way
-(`RunningGearFactory.HangOnAxle`), and `GearVersion` 3 moves an older car's rear corners onto its axle once. The garage
+same. Only a live axle carries them (the car's data's rear suspension `AXLE`), and never its leaf springs: the axle hangs
+on those, so they stay on the car's own slots, while coil springs go on the axle (`RearAxle.Carries`); an independent
+rear (the Corvettes' Dana 44 carrier) keeps all its running gear on the car. The workbench follows the same rule (the
+garage tells it whether the car is on a live axle), the factory builds cars that way (`RunningGearFactory.HangOnAxle`,
+which also moves parts back off the axle), and `GearVersion` 3 and 4 bring an older car's rear corners where they belong. The garage
 draws them at their wheel as before (`CarPartsLayout`: a part on a corner slot of the housing is placed where it would be
 on the car's slot, whatever the track), and taking the axle off takes them with it. They are parts of data (`parts/running_gear/`:
 `axles_gm`, `axles_ford`, `axles_mopar`, `axles_dana`, and the aftermarket's `axle_speed`) and mate by standard

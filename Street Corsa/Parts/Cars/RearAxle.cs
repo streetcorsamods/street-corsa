@@ -33,9 +33,10 @@ public static class RearAxle
 
     /// <summary>
     /// The housing's slots for what a live axle carries at the rear corners (the owner's "diferencial": the whole rear axle
-    /// with its brakes, springs and shocks): each side's brake, spring and shock, and the rear sway bar. A car with a housing
-    /// that has them carries its rear running gear on it; the export, the condition and the garage find it there as on the
-    /// car's own corner slots (<see cref="RunningGear.Mounted"/>).
+    /// with its brakes, springs and shocks): each side's brake, spring and shock, and the rear sway bar. A car on a live
+    /// axle carries its rear running gear on it, but for its leaf springs: the axle hangs on those, they stay on the car's
+    /// own slots (<see cref="Carries"/>); a car with an independent rear keeps all of it on the car. The export, the
+    /// condition and the garage find it in either place (<see cref="RunningGear.Mounted"/>).
     /// </summary>
     public const int LeftBrakeSlot = 5, RightBrakeSlot = 6, LeftSpringSlot = 7, RightSpringSlot = 8, LeftShockSlot = 9, RightShockSlot = 10, SwayBarSlot = 11;
 
@@ -65,10 +66,21 @@ public static class RearAxle
         _ => null
     };
 
-    /// <summary>The housing on the car's axle slot that has a slot standing for a car slot, and that slot; null when there is none</summary>
-    public static (PartInstance Housing, int Slot)? HousingFor(PartsCatalog catalog, List<PartInstance> carParts, int carSlot)
+    /// <summary>
+    /// Whether the rear axle carries a part that goes on one of the car's own slots: only on a live axle (the car's data's
+    /// rear suspension is <c>AXLE</c>), and never a leaf spring, which the axle hangs on
+    /// </summary>
+    public static bool Carries(PartDefinition part, int carSlot, bool liveAxle) =>
+        liveAxle && HousingSlotFor(carSlot) != null && !(carSlot == RunningGear.SpringSlot(RunningGear.CornerOf(carSlot)) && RunningGear.IsLeafSpring(part));
+
+    /// <summary>
+    /// The housing on the car's axle slot that has the slot a part on a car slot goes on instead (<see cref="Carries"/>), and
+    /// that slot; null when the part stays on the car's own
+    /// </summary>
+    public static (PartInstance Housing, int Slot)? HousingFor(PartsCatalog catalog, List<PartInstance> carParts, int carSlot, PartDefinition part, bool liveAxle)
     {
-        if (HousingSlotFor(carSlot) is not { } slot || carParts.FirstOrDefault(p => p.ParentSlot == CarSlot) is not { } housing) return null;
+        if (!Carries(part, carSlot, liveAxle) || HousingSlotFor(carSlot) is not { } slot || carParts.FirstOrDefault(p => p.ParentSlot == CarSlot) is not { } housing)
+            return null;
         return catalog.Get(housing.DefinitionId)?.Slots.Any(s => s.Id == slot) == true ? (housing, slot) : null;
     }
 

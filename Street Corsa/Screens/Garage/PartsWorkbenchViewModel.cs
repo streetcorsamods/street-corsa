@@ -1192,7 +1192,8 @@ namespace StreetCorsa.Screens.Garage
                 return;
             }
 
-            var places = _isStand ? Workbench.FindPlacesOnStand(catalog, stand!, item.Part) : Workbench.FindPlaces(catalog, _car!.Parts, item.Part);
+            var places = _isStand ? Workbench.FindPlacesOnStand(catalog, stand!, item.Part)
+                : Workbench.FindPlaces(catalog, _car!.Parts, item.Part, _parts.Specs(_car.DefinitionId)?.HasLiveAxle ?? true);
 
             // Where it fits, but the work order says not yet: the reason is the hint, and the place is no place
             var engine = CurrentEngine;
