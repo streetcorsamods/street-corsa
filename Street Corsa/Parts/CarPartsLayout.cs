@@ -70,11 +70,11 @@ public static class CarPartsLayout
     private const float SpringSeatBelowHub = 0.06f;
     private const float SwayBarAheadOfAxle = 0.15f;
 
-    // The rear axle housing's models end 0.655 m out each side (tools/RunningGearParts); on the car each end reaches the
-    // brake's backing plate, this far in from the hub (the drum's own slot puts it 0.04 m out of the brake slot, and a
-    // drum is about 0.1 m deep), so the housing is stretched along its length to the car's track
+    // The rear axle housing's models end 0.655 m out each side (tools/RunningGearParts); on the car each end goes into
+    // the drum, this far in from the hub, so the housing is stretched along its length to the car's track. Into it, not
+    // just to its backing plate: the drum hides an end that goes too far, a gap shows (0.12 m left them short in game)
     private const float HousingHalfWidth = 0.655f;
-    private const float HousingEndInsideHub = 0.12f;
+    private const float HousingEndInsideHub = 0.06f;
 
     /// <param name="engine">The car's engine block with everything on it; null for an empty engine bay</param>
     /// <param name="gear">What sits on the car's wheel slots, each with what is on it (the tyre on the rim)</param>

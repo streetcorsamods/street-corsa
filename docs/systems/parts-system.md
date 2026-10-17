@@ -808,8 +808,8 @@ tools, never by hand:
   on every housing is turned half round (`"rotation": [3.14159265, 0, 0]`), so the one shaft model points out both sides.
   The shocks' studs are staggered, behind the axle on the left and ahead on the right, as the side turns a shock round.
 - **Fitted to the car** (after the owner's look in game): the housing is stretched along its length to the car's own
-  track (`CarPartsLayout.AxlePlacement`: its ends, 0.655 m out in the models, meet the brakes' backing plates 0.12 m in
-  from the rear hubs; 0.8 to 1.4 times), the carrier, gears and shafts with it. The drums and period discs mount 0.04 m
+  track (`CarPartsLayout.AxlePlacement`: its ends, 0.655 m out in the models, go into the drums 0.06 m in
+  from the rear hubs, where a drum hides them; 0.8 to 1.4 times), the carrier, gears and shafts with it. The drums and period discs mount 0.04 m
   outboard of the brake slot (their own slot 1 at `[-0.04, 0, 0]`), their shoes and wheel cylinder with them. The
   middle of an axle (the housing's centre section, cover and nose, the ring and pinion, the carrier's case) is drawn 1.25
   times its ring gear's size (`Parts.CentreScale`; the truck housing's 1.15).
