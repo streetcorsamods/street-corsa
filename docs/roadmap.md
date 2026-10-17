@@ -1545,7 +1545,8 @@ PR #73 to dev, open. The owner played it: "I really love it". `tools/check.ps1` 
    `SetWork(clean, grime, placement, followsParts)`, `Shot`), not in the repo.
 3. Ask whether the synthesised work sounds pass or want recordings (CC0, credited in `sfx/credits.csv`).
 4. Balance: the job prices (`cost`, `cost_at_least` in `rebuilds.json`) are first guesses.
-5. Get the owner's answers to the open questions below, then build phase 2.
+5. The owner answered the open questions (below): build phase 2 with a quality roll on the player's own work and the
+   machine shop as a 3D place; hidden flaws are out for now.
 
 - **Phase 1: kits and exchange units (built).** Jobs per part kind in the parts view (the part card, and a part on the
   shelf), as data: `parts/rebuilds.json` in every mod (`PartRebuilds` on `PartsCatalog.Rebuilds`), jobs matched by
@@ -1593,17 +1594,24 @@ PR #73 to dev, open. The owner played it: "I really love it". `tools/check.ps1` 
     `NewspaperPartsService` at the first review of its day) already brings parts to the shelf on a day: a machine
     job takes the part off the shelf and puts it in an order that comes back cut. The shelf or the paper says what is
     at the machine shop.
-  - **Where:** depends on the owner's answer (below). A counter window reuses the parts shop's (`shopscenes`, the AI
-    clerk as the machinist); a 3D place is a new scene.
-- **Phase 3: hidden flaws.** A cracked block, a spun bearing, a burnt valve, a scored bore: found by a compression test
+  - **Where (owner: a 3D place):** a machine shop scene of its own, as the parts shop is one (`shopscenes`, see
+    `docs/screens/part-shop.md`): a boring bar, a crank grinder, a valve seat cutter, a hot tank; the
+    machinist as the parts shop's clerk is (the AI talk, the game deciding every price and every size). On the part
+    shops' map, or a place of its own reached from the garage; how the player brings parts there (the car's trunk, or a
+    drop-off from the shelf) to settle with the owner when phase 2 starts.
+  - **Quality roll (owner: yes):** the player's own work (kits, phase 1) lands near what the job can do rather than on
+    it: a roll round `restores` (say within 0.08 below it to a little above), never worse than the part was, the show
+    saying how it came out ("good job" / "a bit rough"). The machine shop's work is a professional's: no roll, or a
+    small one. Kept un-punishing (the owner turned hidden flaws down as too punishing): no botched job that ruins a
+    part. Figures in `rebuilds.json` (`roll` per job) or the rules.
+- **Phase 3: hidden flaws (shelved by the owner 2026-10-17: too punishing; maybe later).** A cracked block, a spun bearing, a burnt valve, a scored bore: found by a compression test
   or the oil pressure in the garage, by tearing the engine down, or by the machinist's crack check (the machinist talks,
   as the parts shop's clerk). Buying a battered car is a gamble.
 - **Phase 4: speed machining.** A cam reground to a hotter grind, heads ported and polished, the engine balanced and
   blueprinted: the repairs become tuning.
 
-Open questions for the owner (ask before phase 2): a quality roll on the player's own work, or a fixed result as now;
-the machine shop as a 3D place, or a counter window like the parts shop's; hidden flaws (phase 3), or too punishing.
-Settled: jobs are shown done in 3D (phase 1b).
+The owner's answers (2026-10-17): a quality roll on the player's own work, yes; the machine shop a 3D place; hidden
+flaws too punishing, shelved (maybe in the future). Jobs are shown done in 3D (phase 1b). Next up: phase 2, then 4.
 
 ## Epic: total conversion (planned 2026-09-30)
 
