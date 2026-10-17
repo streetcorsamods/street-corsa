@@ -46,6 +46,21 @@ public sealed class RunningGearModelsTests : IDisposable
     }
 
     [Fact]
+    public void A_housing_reaches_into_the_drums_at_the_cars_track_with_its_middle_its_own_size()
+    {
+        var anchors = new CarAnchors(new Vector3(0.8f, 0.3f, -1.3f), new Vector3(-0.8f, 0.3f, -1.3f), new Vector3(0.82f, 0.3f, 1.3f), new Vector3(-0.82f, 0.3f, 1.3f));
+        var stretch = CarPartsLayout.AxleStretch(anchors);
+        Assert.Equal(0.8f, stretch.At(0.655f), 3);
+        Assert.Equal(-0.8f, stretch.At(-0.655f), 3);
+        Assert.Equal(0.2f, stretch.At(0.2f));
+
+        // A narrow car's tubes are drawn shorter, never through the middle
+        var narrow = CarPartsLayout.AxleStretch(anchors with { WheelLR = new Vector3(0.6f, 0.3f, 1.3f), WheelRR = new Vector3(-0.6f, 0.3f, 1.3f) });
+        Assert.InRange(narrow.At(0.655f), 0.5f, 0.6f);
+        Assert.Equal(0.25f, narrow.At(0.25f));
+    }
+
+    [Fact]
     public void A_mod_gives_other_parts_models_of_its_own_by_id_or_by_the_start_of_one_and_the_parts_stay_as_they_are()
     {
         _temp.File("base/parts/gear/pack.json", """

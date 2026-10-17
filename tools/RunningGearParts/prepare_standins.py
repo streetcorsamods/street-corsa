@@ -174,11 +174,11 @@ save("leaf")
 
 # The carrier's case: millimetres, its axis along X already, the ring gear's flange at the low end (the car's right),
 # 94 across: about 170 mm, a carrier for an 8 to 9-inch ring gear, made as much bigger as the housings' middles
-# (RunningGearParts' Parts.CentreScale, 1.25)
+# (RunningGearParts' Parts.CentreScale, 1.1)
 o = load("differential_gear_box")
 decimate(o, 6000)
 lo, hi = bounds(o)
-o.data.transform(scale(0.17 * 1.25 / (hi.y - lo.y)) @ at(-(lo + hi) / 2))
+o.data.transform(scale(0.17 * 1.1 / (hi.y - lo.y)) @ at(-(lo + hi) / 2))
 save("diff_case")
 """
 

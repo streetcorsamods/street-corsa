@@ -129,7 +129,7 @@ for side in (1, -1):
                ((17.6, side * 36.3, 135.8), (7.1, 6.0, 5.0))]
 # The middle a little bigger, as the game's own housings' (Parts.CentreScale): the owner found the diffs small
 # (the vent hose, grown with it, still rises over the grown middle's top)
-o = load(one_of(pieces), drop=lambda lo, hi: hi.z > 153, grow=(one_of(middle), 1.15, (17.5, 0.0, 134.8)))
+o = load(one_of(pieces), drop=lambda lo, hi: hi.z > 153, grow=(one_of(middle), 1.05, (17.5, 0.0, 134.8)))
 finish(o, (17.5, 0.0, 134.8), K, "housing")
 
 # The left shock with its boot and mounts; the origin at the game's spring seat (0.24 m in from the hub, 0.06 m under it)

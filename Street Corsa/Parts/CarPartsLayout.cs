@@ -71,10 +71,12 @@ public static class CarPartsLayout
     private const float SwayBarAheadOfAxle = 0.15f;
 
     // The rear axle housing's models end 0.655 m out each side (tools/RunningGearParts); on the car each end goes into
-    // the drum, this far in from the hub, so the housing is stretched along its length to the car's track. Into it, not
-    // just to its backing plate: the drum hides an end that goes too far, a gap shows (0.12 m left them short in game)
+    // the drum, this far in from the hub, its tubes drawn longer to the car's track and its middle (this far either side
+    // of the centre) its own size. Into the drum, not just to its backing plate: the drum hides an end that goes too far,
+    // a gap shows (the owner's look in game)
     private const float HousingHalfWidth = 0.655f;
-    private const float HousingEndInsideHub = 0.06f;
+    private const float HousingEndInsideHub = 0.02f;
+    private const float HousingMiddle = 0.25f;
 
     /// <param name="engine">The car's engine block with everything on it; null for an empty engine bay</param>
     /// <param name="gear">What sits on the car's wheel slots, each with what is on it (the tyre on the rim)</param>
@@ -92,8 +94,13 @@ public static class CarPartsLayout
             // bought, sold and exported to the car's physics as before - they just have no model here.
             if (RunningGear.IsWheelSlot(part.CarSlot)) continue;
 
-            var world = part.CarSlot == Cars.RearAxle.CarSlot ? AxlePlacement(anchors, part.Root.Definition)
-                : RunningGear.IsSwayBarSlot(part.CarSlot) ? SwayBarPlacement(anchors, part.Root.Definition, part.CarSlot)
+            if (part.CarSlot == Cars.RearAxle.CarSlot)
+            {
+                result.AddRange(Axle(anchors, part.Root));
+                continue;
+            }
+
+            var world = RunningGear.IsSwayBarSlot(part.CarSlot) ? SwayBarPlacement(anchors, part.Root.Definition, part.CarSlot)
                 : CornerPlacement(anchors, part.Root.Definition, part.CarSlot);
             if (world is { } placed) result.AddRange(PartAssembler.Assemble(part.Root, placed));
         }
@@ -112,14 +119,41 @@ public static class CarPartsLayout
 
     /// <summary>
     /// The rear axle housing: its mount (slot 1) in the middle of the rear hubs, facing the way the car does, so its +X
-    /// (the left shaft's side) is the car's left; stretched along its length (with what is on it: the carrier, the gears,
-    /// the shafts) so its ends meet the brakes at the car's own track
+    /// (the left shaft's side) is the car's left
     /// </summary>
-    public static Matrix4x4 AxlePlacement(CarAnchors anchors, PartDefinition housing)
+    public static Matrix4x4 AxlePlacement(CarAnchors anchors, PartDefinition housing) => BySlot(housing, CarFrame(anchors.Forward), anchors.RearAxle);
+
+    /// <summary>How much longer a housing's tubes are drawn so its ends go into the drums at the car's own track</summary>
+    public static PartStretch AxleStretch(CarAnchors anchors)
     {
         var halfTrack = Vector3.Distance(anchors.WheelLR, anchors.WheelRR) / 2f;
-        var stretch = halfTrack > 0.3f ? Math.Clamp((halfTrack - HousingEndInsideHub) / HousingHalfWidth, 0.8f, 1.4f) : 1f;
-        return BySlot(housing, Matrix4x4.CreateScale(stretch, 1f, 1f) * CarFrame(anchors.Forward), anchors.RearAxle);
+        var factor = halfTrack > 0.3f
+            ? Math.Clamp((halfTrack - HousingEndInsideHub - HousingMiddle) / (HousingHalfWidth - HousingMiddle), 0.5f, 2f)
+            : 1f;
+        return new PartStretch(HousingMiddle, factor);
+    }
+
+    /// <summary>
+    /// The rear axle and what is on it: the housing with its tubes drawn out to the car's track (<see cref="AxleStretch"/>),
+    /// the carrier and gears in its middle as they are, the shafts (inside the tubes) moved out as far as the tubes' ends
+    /// </summary>
+    private static IEnumerable<PlacedPart> Axle(CarAnchors anchors, InstalledPart housing)
+    {
+        var world = AxlePlacement(anchors, housing.Definition);
+        var stretch = AxleStretch(anchors);
+        var across = Vector3.Normalize(Vector3.TransformNormal(Vector3.UnitX, world));
+        var outward = stretch.At(HousingHalfWidth) - HousingHalfWidth;
+
+        foreach (var placed in PartAssembler.Assemble(housing, world))
+        {
+            if (ReferenceEquals(placed.Source, housing)) yield return placed with { Stretch = stretch };
+            else if (PartKinds.GroupOf(placed.Part) == PartKinds.AxleShafts)
+            {
+                var side = MathF.Sign(Vector3.Dot(placed.World.Translation - world.Translation, across));
+                yield return placed with { World = placed.World * Matrix4x4.CreateTranslation(across * (side * outward)) };
+            }
+            else yield return placed;
+        }
     }
 
     /// <summary>

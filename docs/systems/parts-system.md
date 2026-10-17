@@ -807,12 +807,13 @@ tools, never by hand:
   the way the car does on both sides (a leaf or a torsion bar is not the same end to end). The right axle shaft's slot
   on every housing is turned half round (`"rotation": [3.14159265, 0, 0]`), so the one shaft model points out both sides.
   The shocks' studs are staggered, behind the axle on the left and ahead on the right, as the side turns a shock round.
-- **Fitted to the car** (after the owner's look in game): the housing is stretched along its length to the car's own
-  track (`CarPartsLayout.AxlePlacement`: its ends, 0.655 m out in the models, go into the drums 0.06 m in
-  from the rear hubs, where a drum hides them; 0.8 to 1.4 times), the carrier, gears and shafts with it. The drums and period discs mount 0.04 m
-  outboard of the brake slot (their own slot 1 at `[-0.04, 0, 0]`), their shoes and wheel cylinder with them. The
-  middle of an axle (the housing's centre section, cover and nose, the ring and pinion, the carrier's case) is drawn 1.25
-  times its ring gear's size (`Parts.CentreScale`; the truck housing's 1.15).
+- **Fitted to the car** (after the owner's looks in game): the housing reaches the car's own track with its tubes drawn
+  longer beyond its middle (`CarPartsLayout.AxleStretch`, a `PartStretch` on the housing's placed part: what is farther
+  than 0.25 m from the centre moves out, so its ends, 0.655 m out in the models, go into the drums 0.02 m in from the
+  rear hubs, where a drum hides them; the centre section keeps its size), the shafts inside the tubes moved out as far.
+  The drums and period discs mount 0.08 m outboard of the brake slot (their own slot 1 at `[-0.08, 0, 0]`), their shoes
+  and wheel cylinder with them. The middle of an axle (the housing's centre section, cover and nose, the ring and pinion,
+  the carrier's case) is drawn 1.1 times its ring gear's size (`Parts.CentreScale`; the truck housing's 1.05).
 - Not modelled: the source game's parts keep their own; a mod's running gear part without a model is drawn as a small box.
 - **A private truck mod** (`Content\truckparts`, git-ignored): `tools/RunningGearParts/prepare_truck_parts.py` cuts the
   leaf spring (with its hangers, shackle and clip), the drum (four sizes), the axle housing (for the Dana 44 and 60) and

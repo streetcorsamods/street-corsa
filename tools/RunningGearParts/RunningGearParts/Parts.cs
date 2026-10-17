@@ -23,9 +23,10 @@ internal static class Parts
 
     /// <summary>
     /// How much bigger the middle of an axle (the housing's centre section, the ring and pinion, the carrier's case) is drawn
-    /// than its ring gear alone would make it: the cast iron round the gears is thick, and the owner found them small in game
+    /// than its ring gear alone would make it: the cast iron round the gears is thick (the owner found them small in game at
+    /// 1, big at 1.25)
     /// </summary>
-    public const float CentreScale = 1.25f;
+    public const float CentreScale = 1.1f;
 
     private static Vec3 X(float x) => new(x, 0, 0);
     private static Vec3 V(float x, float y, float z) => new(x, y, z);
