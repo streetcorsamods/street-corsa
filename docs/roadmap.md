@@ -1804,7 +1804,41 @@ The owner then liked "Pickup truck chassis" (Sketchfab, CC BY-NC 4.0: a clean ga
 springs with U-bolts, hangers and shackles, drums, shocks): built as a private, git-ignored mod (`Content\truckparts`,
 `prepare_truck_parts.py`) through a new `models.json` (a mod gives other parts its models); the owner asks its author
 for permission before the release. Its U-bolts, plates, hangers and shackles are a good base for phase 5's pieces.
-Next: phase 5 (part tree and work).
+After the owner's looks in game (2026-10-17): the housing reaches each car's track with its tubes drawn longer beyond
+its middle (`PartStretch`), the drums sit 0.08 m out of the brake slot, the axle's middle is 1.1 times its ring gear's
+size; the source game's coil springs are drawn with a CC BY coil of the right size (the base game's `parts/models.json`).
+And the start of phase 5's tree came from the owner then: in Spanish "diferencial" is the whole rear axle, which carries
+the rear brakes, coil springs, shocks and sway bar (housing slots 5-11); leaf springs stay on the car (the axle hangs on
+them) and an independent rear keeps everything on the car (`RearAxle.Carries`, `GearVersion` 4); the axle goes on after
+both leaves and a leaf comes off after the axle (`AxleWork`). The owner: "Looks great now!"
+
+Next: phase 5 (part tree and work). **To pick up in a new session:**
+- **Built already** (see docs/systems/parts-system.md "The rear axle", "Period brakes", "Springs, traction bars, sway
+  bars, shocks", "The running gear's models"): drum -> shoes, wheel cylinder (enforced); housing -> carrier -> ring and
+  pinion, shafts; the axle carrying the rear corners; leaf -> traction bars; the axle/leaf order. Jobs in rebuilds.json:
+  brake_reline, wheel_cylinder_kit, gear_setup (own work) and gear_setup_shop, posi_rebuild, axle_bearing, housing_true,
+  drums_turned.
+- **Left, from the plan:** the backing plate as a part (on the housing's flange or the drum's?); the leaf's U-bolts and
+  plate (tie the axle to the leaves: a kit per side on the housing, needing the leaf under it?) and its shackle and
+  hangers; hubs (the rear's is the shaft's flange; the front drums carry theirs); the running gear in the work order:
+  today `work_order.json`'s 42 kinds are the engine's alone, so the running gear has no `comes_off` legs, no `needs`
+  rules and no part moves of step 22 (it comes off as a whole tree, at once); the job show of step 30 for its jobs. Worth
+  asking whether `AxleWork`'s rule should become data (a "hangs_on" in a pack or a running gear work order) so mods add
+  their own.
+- **Left over from earlier phases:** the Car Catalog Editor's pickers for brakes and springs (cars.json by hand
+  meanwhile; GM's coil-rear live axles get leaves by the guess until picked); welding the spiders (a job that turns one
+  part into another); the diff's oil; the rivals and tuned used cars going for gears and a posi; lowering springs.
+- **Ask the owner first:** which of the left items, in what order; whether U-bolts and the backing plate are worth parts
+  (the truck model has nice ones, but it is the private mod until its author agrees: generated ones would be needed for the
+  base game); whether running gear should come off piece by piece (work order and moves) or stay whole.
+- **Tools:** `tools/RunningGearParts` (`build <parts folder>` writes the generated models; `obj <kn5> <obj>` dumps one),
+  `prepare_standins.py <downloads> <parts folder>` (CC BY stand-ins, the coil), `prepare_truck_parts.py <zip> <Content
+  folder>` (the private truck mod), `render_preview.py <spec> <out>` (Blender pictures of OBJs placed as the garage does:
+  how every placement was checked before the owner looked). Downloads are the owner's, outside the repo.
+- **Gotchas:** a glTF import needs `parent_clear(KEEP_TRANSFORM)` before applying transforms (Sketchfab's root turns
+  the model upright); a scan's unlit materials need a Principled BSDF for prepare_prop; matplotlib cannot depth-sort, use
+  render_preview; a wheel-side part's frame turns round for the right side, a spring's and a car-level part's do not;
+  the housing's corner slots are drawn at the wheel by `CarPartsLayout.Axle`, not at their slot positions.
 
 ### Phase 0 findings and design (2026-10-17)
 

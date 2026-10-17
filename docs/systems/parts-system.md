@@ -810,6 +810,7 @@ tools, never by hand:
   a torsion bar and a sway bar at each size their packs give (`diameter_in`), the four traction bars. Plain ksPerPixel
   materials of small swatches (cast iron, steel, black paint, rubber, chrome, the shocks' colours).
   `RunningGearParts build <parts folder>`; `RunningGearParts obj <kn5> <obj>` dumps one to look at.
+  `render_preview.py <spec> <out>` renders OBJs placed as the garage does (Blender's Workbench), to check places and sizes.
 - `tools/RunningGearParts/prepare_standins.py`: stand-ins cut out of CC BY 4.0 Sketchfab downloads (Blender, then
   `tools/Props` `prepare_prop.py` and `PropBuilder --keep-origin`): the drum at four sizes (by the drum's `diam_mm`), the
   period disc with its caliper, the shoes (two to a drum), the leaf spring, the carrier's case. Each pack with one has a
