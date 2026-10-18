@@ -60,6 +60,7 @@ internal class NullCarPartsService : ICarPartsService
     public virtual Task<bool> EnsurePartsAsync(Car car) => Task.FromResult(false);
     public virtual bool BringUpToDate(GameState game) => false;
     public virtual BuiltEngine? CreateUsedEngine(CarDefinition car, double condition) => null;
+    public virtual List<PartInstance>? CreateTunedRunningGear(string carDefinitionId, double condition, double powerHp, Random random) => null;
     public virtual string? Describe(PartInstance engine, EngineReport? report) => null;
     public virtual EngineReport? Evaluate(Car car) => null;
     public virtual StreetCorsa.Models.Race.EngineCoolingRating? RateCooling(Car car, EngineReport? engine) => null;

@@ -53,6 +53,12 @@ namespace StreetCorsa.Services.Parts
         /// <summary>The engine of a car that has been around: the factory build, now and then worked on</summary>
         BuiltEngine? CreateUsedEngine(CarDefinition car, double condition);
 
+        /// <summary>
+        /// The running gear of a car that has been around with a worked-on engine: the factory set, its rear axle given now
+        /// and then what a racer puts in behind an engine of <paramref name="powerHp"/> (a posi, gears); null without data
+        /// </summary>
+        List<PartInstance>? CreateTunedRunningGear(string carDefinitionId, double condition, double powerHp, Random random);
+
         /// <summary>An engine in a few words, e.g. "Chevy 327-396 V8, 258 hp"</summary>
         string? Describe(PartInstance engine, EngineReport? report);
 

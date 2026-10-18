@@ -37,7 +37,11 @@
       "maxSwapPower": 1.6,
       "usedEngineCondition": 0.75,
       "coolEnough": 1,
-      "runsHotBelow": 0.85
+      "runsHotBelow": 0.85,
+      "posiPower": 300,
+      "gearsPower": 380,
+      "maxRatio": 4.11,
+      "usedAxleChance": 0.6
     },
     "matcher": {
       "sameFamily": 3,

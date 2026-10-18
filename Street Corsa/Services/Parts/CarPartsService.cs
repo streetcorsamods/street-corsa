@@ -606,6 +606,16 @@ namespace StreetCorsa.Services.Parts
             return name;
         }
 
+        public List<PartInstance>? CreateTunedRunningGear(string carDefinitionId, double condition, double powerHp, Random random)
+        {
+            if (!IsAvailable || CreateFactoryRunningGear(carDefinitionId, condition) is not { } gear) return null;
+
+            // Worn like the axle it goes in: tired, not gone
+            var fitted = AxleTuner.TuneUsed(Catalog, gear, powerHp, EngineRules.Now.Tuner.UsedAxleChance, 0.4 + 0.6 * Math.Clamp(condition, 0, 1), random);
+            if (fitted.Count > 0) _logger.Information("A worked-on {Car} for sale has {Parts} in its rear axle", carDefinitionId, string.Join(", ", fitted.Select(p => p.Id)));
+            return gear;
+        }
+
         private List<PartInstance>? CreateFactoryRunningGear(string carDefinitionId, double condition)
         {
             var specs = Specs(carDefinitionId);

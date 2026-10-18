@@ -179,6 +179,48 @@ public class RearAxleTests
         Assert.Equal(coil.Id, RunningGearFactory.Choose(Catalog, Specs(), Chevy69, picks.Picks)!.Value.Rear.Spring.Id);
     }
 
+    [Fact]
+    public void A_racer_puts_a_posi_behind_enough_power_then_shorter_gears_one_at_a_time()
+    {
+        var parts = RunningGearFactory.Create(Catalog, Specs(), 1, RunningGearGuess.ChooseAxle(Catalog, Specs(), Chevy69, null), Chevy69);
+        decimal Price(PartDefinition p) => (decimal)PartPricing.NewPrice(p);
+        var gears = RearAxle.Mounted(parts).Gears!;
+        var ratio = RearAxle.Ratio(Catalog.Get(gears.DefinitionId)!);
+
+        Assert.Null(AxleTuner.NextPart(Catalog, parts, AxleTuner.PosiPower - 1, 10_000, Price));
+        Assert.Null(AxleTuner.NextPart(Catalog, parts, 500, 1, Price));
+
+        var posi = AxleTuner.NextPart(Catalog, parts, AxleTuner.PosiPower, 10_000, Price)!;
+        Assert.Equal(PartKinds.Differentials, PartKinds.GroupOf(posi));
+        Assert.InRange(RearAxle.Lock(posi).Power, 0.01, 0.99);
+        var old = AxleTuner.Fit(Catalog, parts, posi)!;
+        Assert.Empty(old.Children);
+        Assert.Equal(posi.Id, RearAxle.Mounted(parts).Carrier!.DefinitionId);
+        Assert.Same(gears, RearAxle.Mounted(parts).Gears);
+
+        // The posi in, the gears wait for more power; then they go a step at a time up to the street's shortest
+        Assert.Null(AxleTuner.NextPart(Catalog, parts, AxleTuner.GearsPower - 1, 10_000, Price));
+        var steps = 0;
+        while (AxleTuner.NextPart(Catalog, parts, 500, 10_000, Price) is { } shorter)
+        {
+            Assert.True(RearAxle.Ratio(shorter) > ratio);
+            Assert.True(RearAxle.Ratio(shorter) <= AxleTuner.MaxRatio + 0.005);
+            ratio = RearAxle.Ratio(shorter);
+            AxleTuner.Fit(Catalog, parts, shorter);
+            Assert.True(++steps < 10);
+        }
+
+        Assert.True(steps > 0);
+
+        // A car that has been around: the same, worn like it, now and then
+        var used = RunningGearFactory.Create(Catalog, Specs(), 1, RunningGearGuess.ChooseAxle(Catalog, Specs(), Chevy69, null), Chevy69);
+        var fitted = AxleTuner.TuneUsed(Catalog, used, 500, 1, 0.7, new Random(3));
+        Assert.Equal(3, fitted.Count);
+        Assert.Equal(0.7, RearAxle.Mounted(used).Carrier!.Wear);
+        Assert.Empty(AxleTuner.TuneUsed(Catalog, RunningGearFactory.Create(Catalog, Specs(), 1, RunningGearGuess.ChooseAxle(Catalog, Specs(), Chevy69, null), Chevy69),
+            500, 0, 0.7, new Random(3)));
+    }
+
     // ----- working on it -----
 
     [Fact]

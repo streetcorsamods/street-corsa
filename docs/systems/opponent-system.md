@@ -96,6 +96,13 @@ leaves without a place is replaced by the cheapest that fits (depth 5). The bloc
 family, used (`UsedEnginePrice`), at most 1.6× the power it replaces. There is no ceiling on a car's power: money is
 the limit (the user's call, 2026-09-24). New parts at the mail-order price, or used out of the paper when an ad asks
 less (step 12); the old ones go into the paper under the racer's name.
+Before the engine, the rear axle (step 31 phase 5, `AxleTuner`): gears and a posi make no power on the dyno, so they go
+by the engine's power (`rules/engines.json` `tuner`): past `posiPower` (300 hp) an open carrier gives way to the cheapest
+posi that takes the gears it has, then past `gearsPower` (380 hp) the next shorter gears its carrier takes, up to
+`maxRatio` (4.11). One part a day, the day's tuning for that racer, from the shops' shelves; the old part into the paper,
+a word on the street (`street.tuned_axle`). A used car whose engine was worked on (`IsModified`) leaves the lot with its
+running gear, its axle given the same now and then (`usedAxleChance` 0.6 a part, up to three, worn like the car:
+`ICarPartsService.CreateTunedRunningGear`, `AxleTuner.TuneUsed`).
 
 **Races between rivals** (`RaceSimulatorService`): by `Car.PowerHp`; the race's wear lands on the parts through
 `CarCondition.ApplyRace` (`SimulatedCondition`: engine life, gearbox, tyres, knocks, a loser's hard blow now and then);
@@ -178,6 +185,7 @@ for lapse, and the street hears. `RaceResultProcessor.ApplyGrudge` does the race
 | Grudges | A rival's rematch after a pink slip lost to the player (pure) |
 | OpponentRules | The numbers of a rival's life (pure) |
 | EngineTuner | Dyno-checked tuning within a budget (Parts/Cars, pure) |
+| AxleTuner | A posi and shorter gears once the engine makes the power for them (Parts/Cars, pure) |
 | OpponentGenerationService | Create new opponents (unused) |
 | OpponentEvolutionService | Apply race outcome changes |
 | OpponentAIAdapter | Convert to AC parameters (static) |

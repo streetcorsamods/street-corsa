@@ -655,6 +655,14 @@ namespace StreetCorsa.Services.Market
 
                 if (stockBuildOf() is { } stockBuild) listing.IsModified = CarValuation.IsModified(engine.Root, stockBuild);
 
+                // A car whose engine was worked on had its rear axle seen to now and then: a posi, shorter gears
+                if (listing.IsModified && parts.CreateTunedRunningGear(carDef.Id, listing.Condition, listing.PowerHp ?? 0, _random) is { } gear)
+                {
+                    listing.Parts.AddRange(gear);
+                    listing.HasRunningGearAssigned = true;
+                    listing.GearVersion = StreetCorsa.Parts.Cars.RunningGearFactory.GearVersion;
+                }
+
                 // The engine it has in the place of the factory one in the car's shape, by the same sum the car is valued
                 // by once it is somebody's; a private seller asks the same share of it as of the rest of the car
                 // (CreatePrivateListing), the car's looks and past count on it as on the rest

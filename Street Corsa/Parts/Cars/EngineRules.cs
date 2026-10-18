@@ -126,6 +126,18 @@ public sealed class EngineTunerRules
 
     /// <summary>Cooled less than this, an engine goes flat at full throttle: a tuner does not make that upgrade</summary>
     public double RunsHotBelow { get; set; } = 0.85;
+
+    /// <summary>An engine of this many horsepower and more is worth a carrier that locks (<see cref="AxleTuner"/>)</summary>
+    public double PosiPower { get; set; } = 300;
+
+    /// <summary>An engine of this many horsepower and more, behind a carrier that locks, is worth shorter gears</summary>
+    public double GearsPower { get; set; } = 380;
+
+    /// <summary>The shortest gears a racer puts in a car that goes on the street</summary>
+    public double MaxRatio { get; set; } = 4.11;
+
+    /// <summary>A used car with a worked-on engine had its rear axle seen to as well, part by part, this often (<see cref="AxleTuner.TuneUsed"/>)</summary>
+    public double UsedAxleChance { get; set; } = 0.6;
 }
 
 /// <summary>How an AC car's engine is matched to an engine build (<see cref="StockEngineMatcher"/>): points for each likeness</summary>
