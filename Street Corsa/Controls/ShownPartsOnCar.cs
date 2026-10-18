@@ -608,8 +608,7 @@ public static class ShownPartsOnCar
                 case Kn5RenderableList group:
                     Collect(file, group, ToNumerics(group.LocalMatrix) * toWheel, meshes);
                     break;
-                case Kn5RenderableObject mesh when mesh.OriginalNode.Vertices is { Length: > 0 } vertices:
-                    var (min, max) = Bounds(vertices);
+                case Kn5RenderableObject mesh when mesh.OriginalNode.Vertices is { Length: > 0 } vertices && StreetCorsa.Parts.Kn5Bounds.Of(vertices) is var (min, max):
                     meshes.Add((mesh, new WheelMesh(mesh.OriginalNode.Name, file.GetMaterial(mesh.OriginalNode.MaterialId)?.Name,
                         AxleBox.Of(min, max, toWheel))));
                     break;
@@ -628,9 +627,8 @@ public static class ShownPartsOnCar
                 var local = ToNumerics(node.Transform) * m;
                 foreach (var child in node.Children) Walk(child, local);
             }
-            else if (node.Vertices is { Length: > 0 } vertices)
+            else if (node.Vertices is { Length: > 0 } vertices && StreetCorsa.Parts.Kn5Bounds.Of(vertices) is var (min, max))
             {
-                var (min, max) = Bounds(vertices);
                 boxes.Add(AxleBox.Of(min, max, m));
             }
         }
@@ -638,16 +636,4 @@ public static class ShownPartsOnCar
         return boxes;
     }
 
-    private static (Vector3 Min, Vector3 Max) Bounds(Kn5Node.Vertex[] vertices)
-    {
-        var min = new Vector3(float.MaxValue);
-        var max = new Vector3(float.MinValue);
-        foreach (var v in vertices)
-        {
-            var p = new Vector3(v.Position.X, v.Position.Y, v.Position.Z);
-            min = Vector3.Min(min, p);
-            max = Vector3.Max(max, p);
-        }
-        return (min, max);
-    }
 }

@@ -32,6 +32,7 @@ public sealed class PartShopRules
         Figures.Within(this, path, nameof(MostDynoRuns), 0, 1000, problems);
         Figures.Within(this, path, nameof(MachineDynoRuns), 0, 1000, problems);
         Figures.Within(this, path, nameof(OthersWork), 0, 100, problems);
+        Figures.Within(this, path, nameof(TopUpChance), 0, 1, problems);
     }
 
     /// <summary>A junkyard's whole engines: one yard item in so many</summary>
@@ -137,12 +138,6 @@ public sealed class PartShopRules
 
     /// <summary>A delivery tops up this share of the lines it keeps on the shelves (to a full shelf's count)</summary>
     public double TopUpChance { get; set; } = 0.5;
-
-    /// <summary>Each figure the game divides by, loops over or pays held to what it can play by (<see cref="Figures"/>)</summary>
-    internal void Check(string path, List<string> problems)
-    {
-        Figures.Within(this, path, nameof(TopUpChance), 0, 1, problems);
-    }
 }
 
 /// <summary>A kind of part shop's figures, where a shop's own file says nothing</summary>

@@ -76,7 +76,7 @@ public static class Rebuilding
     public static string? WhyNot(RebuildJob job, PartInstance part, bool loose)
     {
         var wear = Unit.Clamp01(part.Wear, 1);
-        var damaged = job.FixesDamage && Unit.Clamp01(part.Tear, 1) < PartInstance.Undamaged;
+        var damaged = job.FixesDamage && Unit.Clamp01(part.Tear, 1) < PartInstance.UndamagedTear;
         if (wear >= job.Restores - Enough && !damaged && !job.Becomes) return PartWords.Say("rebuild.why.no_need");
         if (wear < job.MinWear) return PartWords.Say("rebuild.why.too_worn");
         if (job.Off && !loose) return PartWords.Say(job.IsExchange ? "rebuild.why.off.exchange" : "rebuild.why.off");

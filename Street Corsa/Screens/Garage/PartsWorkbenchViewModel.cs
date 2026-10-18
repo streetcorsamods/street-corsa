@@ -380,7 +380,7 @@ namespace StreetCorsa.Screens.Garage
         public double SelectedCondition => _selectedPart?.Wear ?? 0;
         public string SelectedConditionDisplay => _selectedPart == null
             ? string.Empty
-            : $"{_selectedPart.Wear * 100:0}%" + (_selectedPart.Tear < PartInstance.Undamaged ? GameText.Say("garage.part.damaged", ("left", $"{_selectedPart.Tear * 100:0}")) : string.Empty);
+            : $"{_selectedPart.Wear * 100:0}%" + (_selectedPart.Tear < PartInstance.UndamagedTear ? GameText.Say("garage.part.damaged", ("left", $"{_selectedPart.Tear * 100:0}")) : string.Empty);
 
         public string SelectedWorthDisplay => _selectedPart != null && SavedOf(_selectedPart) is { } saved
             ? Money.Text(PartPricing.Round(PartPricing.Worth(_selectedPart.Definition, saved)))

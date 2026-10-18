@@ -388,7 +388,7 @@ public sealed class Audit1018DTests : IDisposable
     {
         var rules = RuleBook.Current.Race.Damage;
         Assert.Equal(rules, new DragRaceIntent().DamagePercent);
-        Assert.Equal(rules, new RaceEntry().DamagePercent);
+        Assert.Equal(rules, new RaceEntry { PlayerCar = new Car("car") }.DamagePercent);
         Assert.Equal(rules, new DragRaceLaunchIntent().Race.DamagePercent);
     }
 

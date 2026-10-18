@@ -348,7 +348,6 @@ public sealed class RuleBook
         Range(Economy, "economy", nameof(EconomyRules.PartAdMinWear), nameof(EconomyRules.PartAdMaxWear), problems);
         Range(Economy, "economy", nameof(EconomyRules.PartAdMinAskShare), nameof(EconomyRules.PartAdMaxAskShare), problems);
         Range(Economy, "economy", nameof(EconomyRules.RivalPartMinAskShare), nameof(EconomyRules.RivalPartMaxAskShare), problems);
-        PartShops.Check("partShops", problems);
         Range(PartShops, "partShops", nameof(PartShopRules.JunkyardMinWear), nameof(PartShopRules.JunkyardMaxWear), problems);
         Range(PartShops, "partShops", nameof(PartShopRules.HaggleMinCut), nameof(PartShopRules.HaggleMaxCut), problems);
         foreach (var (path, rules) in PartShops.Kinds.Select(k => ($"partShops.kinds.{k.Key}", k.Value))

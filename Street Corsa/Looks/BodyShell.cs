@@ -129,8 +129,7 @@ internal sealed class BodyShell
 
         // Every triangle drawn, in the model's space
         var tris = new List<Tri>();
-        var hubs = new Dictionary<string, Vector3>(StringComparer.OrdinalIgnoreCase);
-        CollectHubs(kn5.RootNode, Matrix4x4.Identity, hubs);
+        var hubs = new Dictionary<string, Vector3>(WheelFit.HubsOf(kn5), StringComparer.OrdinalIgnoreCase);
         var positions = new List<Vector3[]>();
         for (var m = 0; m < meshes.Count; m++)
         {
@@ -313,14 +312,6 @@ internal sealed class BodyShell
             Logger.Warning("The animations of {Car} could not be listed, its wear moves with nothing: {Error}", carDirectory, ex.Message);
             return null;
         }
-    }
-
-    private static void CollectHubs(Kn5Node node, Matrix4x4 parent, Dictionary<string, Vector3> hubs)
-    {
-        if (node.NodeClass != Kn5NodeClass.Base) return;
-        var local = ToNumerics(node.Transform) * parent;
-        if (node.Name is { } name && WheelFit.WheelNodes.Contains(name)) hubs.TryAdd(name, local.Translation);
-        foreach (var child in node.Children) CollectHubs(child, local, hubs);
     }
 
     private static float Area(Tri t) => Vector3.Cross(t.B - t.A, t.C - t.A).Length() / 2;

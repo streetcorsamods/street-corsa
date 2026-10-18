@@ -47,6 +47,9 @@ namespace StreetCorsa.Services.Parts
                 var kept = ReadMeasuring(fingerprint);
                 if (_measure(kept) is not { } book) return PartPriceBook.Empty;
 
+                // A build the dyno could not run prices nothing: each is told once, so a broken part is found
+                foreach (var fault in book.Faults) _logger.Warning("Part prices: {Fault}", fault);
+
                 if (kept != null)
                 {
                     _logger.Information("Part prices: {Measured} parts as measured before, in {Ms} ms", book.Measured,
