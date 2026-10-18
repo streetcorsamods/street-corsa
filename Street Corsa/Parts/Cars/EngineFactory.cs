@@ -84,7 +84,7 @@ public static class EngineFactory
         return new BuiltEngine(root, report, changes);
     }
 
-    /// <summary>Runs a saved engine through the part scripts and the dyno; null when its block is not in the catalog</summary>
+    /// <summary>Works a saved engine out from its parts and runs it on the dyno; null when its block is not in the catalog</summary>
     public static EngineReport? Evaluate(PartsCatalog catalog, PartInstance root) =>
         PartTrees.ToInstalled(catalog, root) is { } live ? EngineEvaluator.Evaluate(catalog, live.AsPartTree()) : null;
 

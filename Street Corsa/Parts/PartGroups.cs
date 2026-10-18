@@ -1,4 +1,3 @@
-using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using StreetCorsa.Mods;
@@ -7,12 +6,12 @@ namespace StreetCorsa.Parts;
 
 /// <summary>
 /// The kinds of part on a shop's shelves ("engine blocks", "tyres"), from <see cref="FileName"/> in every mod's parts
-/// folder: which script classes of the source game's framework each takes in, and what the game does with it (a part
+/// folder: which classes of part (<see cref="PartClasses"/>) each takes in, and what the game does with it (a part
 /// that never mounts on its own kind, the bolt-ons the cars on the lots were worked on with, what the rivals' tuners go
 /// for and how much, what a speed shop sells). The player reads a group by its words, <c>part_group.&lt;id&gt;</c> in
 /// the text, else its <c>name</c>.
 ///
-/// A part is in the first group with a class its script descends from ("ends with", the nearest framework class), in
+/// A part is in the first group with a class its own class counts as (<see cref="PartClasses"/>: a disc brake is a brake), in
 /// the order the groups are listed: a later mod's new groups before the ones before them. A group of an id another mod
 /// has goes over it field by field, where it was. A part no group takes in is an accessory.
 ///
@@ -59,17 +58,16 @@ public sealed class PartGroups
     /// <summary>A part no group takes in</summary>
     public const string Accessories = "accessories";
 
-    private static readonly Lazy<PartGroups> InstalledGroups = new(() => Load(ModSet.Installed.Folders(ContentTypes.Parts).Select(f => f.Dir)));
-    private static volatile PartGroups? _current;
+    private static readonly PartsFiles<PartGroups> Files = new(Load);
 
     /// <summary>The groups of the mods next to the game, read once</summary>
-    public static PartGroups Installed => InstalledGroups.Value;
+    public static PartGroups Installed => Files.Installed;
 
     /// <summary>The groups in use: the installed ones, or ones a test or a tool sets</summary>
     public static PartGroups Current
     {
-        get => _current ?? Installed;
-        set => _current = value;
+        get => Files.Current;
+        set => Files.Current = value;
     }
 
     private readonly List<PartGroup> _groups;
@@ -100,12 +98,13 @@ public sealed class PartGroups
 
     public PartGroup? Get(string? id) => id != null && _byId.TryGetValue(id, out var group) ? group : null;
 
-    /// <summary>The group a part with this framework class is in; <see cref="Accessories"/> for none</summary>
-    public string GroupOfClass(string frameworkClass)
+    /// <summary>The first group with a class the part's class counts as (<see cref="PartClasses.IsA"/>); <see cref="Accessories"/> for none</summary>
+    public string GroupOf(string? partClass)
     {
+        var classes = PartClasses.Current;
         foreach (var group in _groups)
         {
-            if (group.Classes.Any(suffix => suffix.Length > 0 && frameworkClass.EndsWith(suffix, StringComparison.Ordinal))) return group.Id;
+            if (group.Classes.Any(c => classes.IsA(partClass, c))) return group.Id;
         }
 
         return Accessories;
@@ -132,25 +131,13 @@ public sealed class PartGroups
         var problems = new List<string>();
         var groups = new List<PartGroup>();
         var shows = new List<PartShow>();
-        foreach (var dir in partsFolders)
-        {
-            var file = Path.Combine(dir, FileName);
-            if (!File.Exists(file)) continue;
+        var files = new List<(string File, List<PartGroup?>? Groups, List<PartShow?>? Shows)>();
+        PartsFiles.ReadEach(partsFolders, FileName, problems, (file, root) =>
+            files.Add((file, root.GetProperty("groups").Deserialize<List<PartGroup?>>(ModJson.Options),
+                root.TryGetProperty("shows", out var showsElement) ? showsElement.Deserialize<List<PartShow?>>(ModJson.Options) : null)));
 
-            List<PartGroup?>? read;
-            List<PartShow?>? readShows;
-            try
-            {
-                using var document = JsonDocument.Parse(File.ReadAllText(file), ModJson.DocumentOptions);
-                var root = document.RootElement;
-                read = root.GetProperty("groups").Deserialize<List<PartGroup?>>(ModJson.Options);
-                readShows = root.TryGetProperty("shows", out var showsElement) ? showsElement.Deserialize<List<PartShow?>>(ModJson.Options) : null;
-            }
-            catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException or KeyNotFoundException or InvalidOperationException)
-            {
-                problems.Add($"{file}: {ex.Message}; left out");
-                continue;
-            }
+        foreach (var (file, read, readShows) in files)
+        {
 
             var added = new List<PartGroup>();
             foreach (var group in read ?? [])
@@ -228,7 +215,7 @@ public sealed class PartShow
 }
 
 /// <summary>
-/// What a part of a kind costs new, in the game's dollars, as the source game priced its parts: by what they do. A part
+/// What a part of a kind costs new, in the game's dollars, by what they do. A part
 /// costs <see cref="Base"/>, and <see cref="PerHp"/> for every horsepower it is worth on the dyno (an engine block the
 /// power of its own engine, any other part what it makes over the poorest of its kind in its place,
 /// <see cref="PartPriceBook"/>), the horsepower raised to <see cref="HpPower"/> first: above 1, a big engine's every
@@ -284,7 +271,7 @@ public sealed class PartGroup
     [JsonPropertyName("name")]
     public string? Name { get; set; }
 
-    /// <summary>Simple names of the source game's framework classes, matched by "ends with": "Block" takes in Block_Vee_OHV</summary>
+    /// <summary>Classes of part (<see cref="PartClasses"/>); each takes in the classes under it: "brake" takes in a disc brake</summary>
     [JsonPropertyName("classes")]
     public List<string> Classes { get; set; } = new();
 

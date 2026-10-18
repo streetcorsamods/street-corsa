@@ -12,10 +12,10 @@ public sealed class ShownPartsTests : IDisposable
 {
     private static readonly Lazy<PartsCatalog> Catalog = new(() => PartsCatalog.Load(RepoPaths.PartsFolder));
 
-    private const string Factory = "rims/mopar/rim_8_5";
-    private const string Cragar = "rims/mopar/cragar_8";
-    private const string FactoryTyre = "tyres/mopar/Tyre_15_8";
-    private const string Slick = "tyres/mopar/Firestone_11_slick_3";
+    private const string Factory = "rims/mopar/e_t_mag_wheel_15x5";
+    private const string Cragar = "rims/mopar/cragar_torq_thrust_wheel_15x8";
+    private const string FactoryTyre = "tyres/mopar/hurst_tire_15x8";
+    private const string Slick = "tyres/mopar/firestone_bias_ply_tire_15x11_no_1";
 
     private readonly TempDir _temp = new();
 
@@ -44,10 +44,10 @@ public sealed class ShownPartsTests : IDisposable
 
         Assert.Null(shown[0]);
         Assert.Null(shown[1]);
-        Assert.Equal(Path.Combine("parts", "rims_mopar_cragar_8.kn5"), shown[2]!.Rim.Name);
+        Assert.Equal(Path.Combine("parts", "rims_mopar_cragar_torq_thrust_wheel_15x8.kn5"), shown[2]!.Rim.Name);
         Assert.True(File.Exists(shown[3]!.Rim.Source));
         // The factory tyre comes with it, only to be shown should the rim be too wide for the car's own
-        Assert.Equal(Path.Combine("parts", "tyres_mopar_Tyre_15_8.kn5"), shown[3]!.Tyre!.Name);
+        Assert.Equal(Path.Combine("parts", "tyres_mopar_hurst_tire_15x8.kn5"), shown[3]!.Tyre!.Name);
         Assert.True(shown[3]!.TyreOptional);
     }
 
@@ -58,8 +58,8 @@ public sealed class ShownPartsTests : IDisposable
             Catalog.Value, FactoryGear());
 
         Assert.Null(shown[0]);
-        Assert.Equal(Path.Combine("parts", "rims_mopar_rim_8_5.kn5"), shown[2]!.Rim.Name);
-        Assert.Equal(Path.Combine("parts", "tyres_mopar_Firestone_11_slick_3.kn5"), shown[2]!.Tyre!.Name);
+        Assert.Equal(Path.Combine("parts", "rims_mopar_e_t_mag_wheel_15x5.kn5"), shown[2]!.Rim.Name);
+        Assert.Equal(Path.Combine("parts", "tyres_mopar_firestone_bias_ply_tire_15x11_no_1.kn5"), shown[2]!.Tyre!.Name);
         Assert.False(shown[2]!.TyreOptional);
         // The E-T mag's tyre slot is 27 mm out along the axle
         Assert.Equal(0.027f, shown[2]!.TyreOnRim.M41, 3);
@@ -85,9 +85,9 @@ public sealed class ShownPartsTests : IDisposable
         var keys = start.IniKeys(1).ToDictionary(k => k.Key, k => k.Value);
 
         Assert.False(keys.ContainsKey("CAR_1_RIM_LF"));
-        Assert.Equal(@"parts\rims_mopar_cragar_8.kn5", keys["CAR_1_RIM_LR"]);
+        Assert.Equal(@"parts\rims_mopar_cragar_torq_thrust_wheel_15x8.kn5", keys["CAR_1_RIM_LR"]);
         Assert.False(keys.ContainsKey("CAR_1_TYRE_LR"));
-        Assert.Equal(@"parts\tyres_mopar_Firestone_11_slick_3.kn5", keys["CAR_1_TYRE_RR"]);
+        Assert.Equal(@"parts\tyres_mopar_firestone_bias_ply_tire_15x11_no_1.kn5", keys["CAR_1_TYRE_RR"]);
         Assert.Equal("1,0,0,0,1,0,0,0,1,0.027,0,0", keys["CAR_1_TYRE_RR_AT"]);
         // An engine part that stands out: its model and where it sits in the car's model
         Assert.Equal(@"parts\engines_gm_blower.kn5", keys["CAR_1_PART_1"]);
@@ -104,7 +104,7 @@ public sealed class ShownPartsTests : IDisposable
         _temp.File("cragar.kn5", "kn5");
         var ac = _temp.Combine("ac");
         Directory.CreateDirectory(Path.Combine(ac, "extension"));
-        var installed = Path.Combine(ScRaceMode.InstalledFolder(ac), "parts", "rims_mopar_cragar_8.kn5");
+        var installed = Path.Combine(ScRaceMode.InstalledFolder(ac), "parts", "rims_mopar_cragar_torq_thrust_wheel_15x8.kn5");
 
         Assert.Null(new ScRaceMode(source).Install(ac, models: [new ShownModel(ShownParts.FileName(Cragar), _temp.Combine("cragar.kn5"))]));
         Assert.Equal("kn5", File.ReadAllText(installed));
@@ -128,7 +128,7 @@ public sealed class ShownPartsTests : IDisposable
         var race = File.ReadAllLines(Path.Combine(cfg, "race.ini"));
         Assert.Contains("__CM_CUSTOM_MODE=" + StreetCorsa.Services.Configuration.IniModificationService.FreeRunModeId, race);
         Assert.Contains("[STREET_CORSA]", race);
-        Assert.Contains(@"CAR_0_RIM_LF=parts\rims_mopar_cragar_8.kn5", race);
+        Assert.Contains(@"CAR_0_RIM_LF=parts\rims_mopar_cragar_torq_thrust_wheel_15x8.kn5", race);
 
         // On its own wheels: no mode, as a free run always was
         Assert.True(ini.ApplyIntent(new StreetCorsa.Services.Configuration.Models.FreeRunIntent { CarId = "car", PlayerName = "P", TrackId = "track" }));
@@ -153,7 +153,7 @@ public sealed class ShownPartsTests : IDisposable
         var free = Path.Combine(ac, "extension", "lua", "new-modes", "sc_free");
         Assert.Equal("-- free", File.ReadAllText(Path.Combine(free, "mode.lua")));
         Assert.Equal("-- parts", File.ReadAllText(Path.Combine(free, "car_parts.lua")));
-        Assert.Equal("kn5", File.ReadAllText(Path.Combine(free, "parts", "rims_mopar_cragar_8.kn5")));
+        Assert.Equal("kn5", File.ReadAllText(Path.Combine(free, "parts", "rims_mopar_cragar_torq_thrust_wheel_15x8.kn5")));
     }
 
     [Fact]
@@ -161,9 +161,9 @@ public sealed class ShownPartsTests : IDisposable
     {
         // A GM small-block with a blower, mounted by the workbench's rules
         var catalog = Catalog.Value;
-        var parts = new List<PartInstance> { new("engines/gm/GM_327_block") { ParentSlot = PartInstance.CarEngineSlot } };
-        foreach (var id in new[] { "engines/gm/GM_327_crank", "engines/gm/GM_small_block_L_head", "engines/gm/GM_small_block_R_head",
-                     "engines/gm/Weiand_pro_street_manifold", "engines/generic/Weiand_8_71_supercharger", "engines/gm/stock_4brl_carburator" })
+        var parts = new List<PartInstance> { new("engines/gm/chevy_327_396_v8_block") { ParentSlot = PartInstance.CarEngineSlot } };
+        foreach (var id in new[] { "engines/gm/chevy_327_stock_crankshaft", "engines/gm/chevy_327_stock_left_cylinder_head", "engines/gm/chevy_327_stock_right_cylinder_head",
+                     "engines/gm/weiand_pro_street_supercharger_intake_manifold_chevy_327_396", "engines/generic/weiand_8_71_street_supercharger", "engines/gm/gm_stock_4_bbl_carburetor" })
         {
             var loose = new PartInstance(id);
             Workbench.Mount(parts, Workbench.FindPlaces(catalog, parts, loose)[0], loose);
@@ -173,10 +173,10 @@ public sealed class ShownPartsTests : IDisposable
         var shown = ShownEngineParts.Of(catalog, PartTrees.ToInstalled(catalog, parts[0])!.Root, hubs, EngineLayout.Front);
         var names = shown.Select(s => Path.GetFileName(s.Model.Name)).ToList();
 
-        Assert.Contains("engines_generic_Weiand_8_71_supercharger.kn5", names);
-        Assert.Contains("engines_gm_stock_4brl_carburator.kn5", names);
-        Assert.DoesNotContain("engines_gm_GM_327_block.kn5", names);
-        Assert.DoesNotContain("engines_gm_GM_327_crank.kn5", names);
+        Assert.Contains("engines_generic_weiand_8_71_street_supercharger.kn5", names);
+        Assert.Contains("engines_gm_gm_stock_4_bbl_carburetor.kn5", names);
+        Assert.DoesNotContain("engines_gm_chevy_327_396_v8_block.kn5", names);
+        Assert.DoesNotContain("engines_gm_chevy_327_stock_crankshaft.kn5", names);
         Assert.All(shown, s => Assert.True(s.Max.Y > s.Min.Y));
         Assert.Empty(ShownEngineParts.Of(catalog, PartTrees.ToInstalled(catalog, parts[0])!.Root, null, EngineLayout.Front));
 
@@ -186,8 +186,8 @@ public sealed class ShownPartsTests : IDisposable
         Assert.Empty(ShownEngineParts.Of(catalog, root, hubs, EngineLayout.Front, all));
         var notTheBlower = all.Where(id => !id.Contains("supercharger")).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var onTheBlower = ShownEngineParts.Of(catalog, root, hubs, EngineLayout.Front, notTheBlower).Select(s => Path.GetFileName(s.Model.Name)).ToList();
-        Assert.Contains("engines_generic_Weiand_8_71_supercharger.kn5", onTheBlower);
-        Assert.Contains("engines_gm_stock_4brl_carburator.kn5", onTheBlower);
+        Assert.Contains("engines_generic_weiand_8_71_street_supercharger.kn5", onTheBlower);
+        Assert.Contains("engines_gm_gm_stock_4_bbl_carburetor.kn5", onTheBlower);
     }
 
     [Fact]

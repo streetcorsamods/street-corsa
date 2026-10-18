@@ -13,7 +13,7 @@ namespace StreetCorsa.Services.Market
     /// bought for it, a pink-slipped car goes back on a lot at it, and an opponent weighs a pink-slip challenge
     /// with it.
     ///
-    /// Worth is the source game's (its Vehicle.getTotalPrice): the body in the shape it is in, and every part on the car
+    /// Worth is the body in the shape it is in, and every part on the car
     /// in its wear and damage (<see cref="PartPricing.Worth"/>). What has been put into the car shows in full, what has
     /// been taken off it is not there to count, a worn engine is worth what its worn parts are. The whole is moved by how
     /// the car looks (<see cref="LooksFactor"/>) and a little by its past (<see cref="HistoryFactor"/>).
@@ -23,7 +23,7 @@ namespace StreetCorsa.Services.Market
         private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger("Market");
 
         /// <summary>
-        /// How much of its new price a thing in this shape is worth (0 to 1): the source game's wear, 0.3 at nothing left
+        /// How much of its new price a thing in this shape is worth (0 to 1): wear takes 0.7 of it, 0.3 at nothing left
         /// of it and all of it new, as a part's (<see cref="PartPricing.Worth"/>)
         /// </summary>
         public static decimal Shape(double condition) => 0.3m + (decimal)Unit.Clamp01(condition, ifNotFinite: 0) * 0.7m;
@@ -181,7 +181,7 @@ namespace StreetCorsa.Services.Market
         /// <summary>Worked on: the engine is not made of the factory build's parts</summary>
         public static bool IsModified(PartInstance engine, RatedBuild stock)
         {
-            var factory = stock.Build.Parts.Where(p => p.Part != null).Select(p => p.Part!).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var factory = stock.Build.Parts.ToHashSet(StringComparer.OrdinalIgnoreCase);
             return !engine.SelfAndDescendants().All(p => factory.Contains(p.DefinitionId));
         }
     }

@@ -138,12 +138,12 @@ public sealed class AcDataExportTests : IDisposable
             {
               "id": "gear/test",
               "parts": [
-                { "id": "gear/test/rim", "mass": 8, "properties": { "offset": 0.0, "wheel_radius": 0.1905 } },
-                { "id": "gear/test/tyre", "mass": 10, "properties": { "friction": 1.0, "radius": 0.32, "tyre_width": 205, "wheel_radius": 190.5 } },
-                { "id": "gear/test/sticky", "mass": 10, "properties": { "friction": 1.2, "radius": 0.32, "tyre_width": 205, "wheel_radius": 190.5 } },
-                { "id": "gear/test/brake", "mass": 5, "properties": { "force": 1000, "radius": 0.1 } },
-                { "id": "gear/test/bigbrake", "mass": 5, "properties": { "force": 2000, "radius": 0.1 } },
-                { "id": "gear/test/spring", "mass": 2, "properties": { "force": 30000 } },
+                { "id": "gear/test/rim", "mass": 8, "specs": { "offset": 0.0, "wheel_radius": 0.1905 } },
+                { "id": "gear/test/tyre", "mass": 10, "specs": { "friction": 1.0, "radius": 0.32, "tyre_width": 205, "wheel_radius": 190.5 } },
+                { "id": "gear/test/sticky", "mass": 10, "specs": { "friction": 1.2, "radius": 0.32, "tyre_width": 205, "wheel_radius": 190.5 } },
+                { "id": "gear/test/brake", "mass": 5, "specs": { "force": 1000, "radius": 0.1 } },
+                { "id": "gear/test/bigbrake", "mass": 5, "specs": { "force": 2000, "radius": 0.1 } },
+                { "id": "gear/test/spring", "mass": 2, "specs": { "force": 30000 } },
                 { "id": "gear/test/shock", "mass": 2 }
               ]
             }

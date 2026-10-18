@@ -8,7 +8,7 @@ namespace StreetCorsa.Parts.Cars;
 /// shock nearest to what the car's own Assetto Corsa data describes. The choice is deterministic, so the same
 /// car always gets the same factory parts and what the player mounts can be measured against them.
 /// A brake or a spring a part's <c>"came_in"</c> says the car left the factory with (step 31: the period drums, leaf
-/// springs, torsion bars) wins over the nearest of the source game's, which stay the choice for a car no such part names.
+/// springs, torsion bars) wins over the nearest of the stock ones, which stay the choice for a car no such part names.
 /// The sway bars are the stock bars nearest to the car's own <c>[ARB]</c>, none on an axle whose data has none.
 /// </summary>
 public static class RunningGearFactory
@@ -41,7 +41,7 @@ public static class RunningGearFactory
     }
 
     /// <param name="car">The car's make, family, country and year, for the parts' <c>came_in</c>; null chooses among the
-    /// source game's parts alone, as before step 31</param>
+    /// stock parts alone, as before step 31</param>
     /// <param name="picks">cars.json's picks for the car's brakes and springs</param>
     /// <returns>The factory parts of both axles, null when the catalog lacks a kind</returns>
     public static (AxleParts Front, AxleParts Rear)? Choose(PartsCatalog catalog, AcCarSpecs specs, CarFacts? car = null, RunningGearPicks? picks = null)
@@ -50,7 +50,7 @@ public static class RunningGearFactory
         var rims = ByGroup(catalog, PartKinds.Rims);
         var brakes = ByGroup(catalog, PartKinds.Brakes);
         var springs = ByGroup(catalog, PartKinds.Springs);
-        var shocks = SourceGame(ByGroup(catalog, PartKinds.Shocks));
+        var shocks = Plain(ByGroup(catalog, PartKinds.Shocks));
         if (tyres.Count == 0 || rims.Count == 0 || brakes.Count == 0 || springs.Count == 0 || shocks.Count == 0) return null;
 
         // A tyre is only as good as a rim it goes on
@@ -68,9 +68,9 @@ public static class RunningGearFactory
         var frontTyre = Tyre(specs.Front.TyreWidth, specs.Front.TyreRadius);
         var rearTyre = Math.Abs(specs.Rear.TyreWidth - specs.Front.TyreWidth) < 0.03 ? frontTyre : Tyre(specs.Rear.TyreWidth, specs.Rear.TyreRadius);
 
-        // The source game's own, nearest to the car's figures: what a car no part's came_in names leaves the factory on
-        var plainBrakes = SourceGame(brakes);
-        var plainSprings = SourceGame(springs);
+        // The stock parts, nearest to the car's figures: what a car no part's came_in names leaves the factory on
+        var plainBrakes = Plain(brakes);
+        var plainSprings = Plain(springs);
 
         AxleParts Axle(AcAxleSpecs axle, PartDefinition tyre, bool front)
         {
@@ -217,7 +217,7 @@ public static class RunningGearFactory
         {
             var corner = RunningGear.CornerOf(carSlot);
             if (corner < 0 || carSlot != RunningGear.BrakeSlot(corner) || catalog.Get(drum.DefinitionId) is not { } definition
-                || !PartKinds.Is(definition, "DrumBrake") || PlateFor(catalog, definition, RunningGear.IsFront(corner)) is not { } plateDefinition)
+                || !PartKinds.Is(definition, PartClasses.DrumBrake) || PlateFor(catalog, definition, RunningGear.IsFront(corner)) is not { } plateDefinition)
                 continue;
 
             var plate = new PartInstance(plateDefinition.Id) { ParentSlot = drum.ParentSlot, OwnSlot = 1, Wear = drum.Wear };
@@ -276,7 +276,7 @@ public static class RunningGearFactory
 
     /// <summary>
     /// A car's running gear from before <see cref="GearVersion"/>, brought up to it: a brake or a spring that is what the
-    /// factory gave it then (the source game's nearest) becomes what the factory gives it now (a period drum, a leaf
+    /// factory gave it then (the nearest stock part) becomes what the factory gives it now (a period drum, a leaf
     /// spring, a torsion bar), in the same wear and damage, with what goes on it. What the player put on stays. An axle the
     /// factory gives a sway bar gets it, worn like the axle's springs, and a brake its hub, only when the car's running gear
     /// is from before them: one the player took off since stays off.
@@ -384,12 +384,12 @@ public static class RunningGearFactory
     };
 
     /// <summary>
-    /// The source game's parts of a kind: of a script, no <c>came_in</c>; a part of data no car came with is an aftermarket
-    /// one (a Super Stock spring, a 90/10 shock). Failing those the parts without <c>came_in</c>, failing those all of them.
+    /// The plain parts of a kind, for a car none came in: no <c>came_in</c>, and not <c>aftermarket</c> (a Super Stock spring,
+    /// a 90/10 shock). Failing those the parts without <c>came_in</c>, failing those all of them.
     /// </summary>
-    private static List<PartDefinition> SourceGame(List<PartDefinition> parts) =>
-        parts.Where(p => p.CameIn == null && p.SourceScript != null).ToList() is { Count: > 0 } scripted ? scripted
+    private static List<PartDefinition> Plain(List<PartDefinition> parts) =>
+        parts.Where(p => p.CameIn == null && !p.Aftermarket).ToList() is { Count: > 0 } stock ? stock
         : parts.Where(p => p.CameIn == null).ToList() is { Count: > 0 } plain ? plain : parts;
 
-    private static List<PartDefinition> ByGroup(PartsCatalog catalog, string group) => catalog.InGroup(group).Where(p => p.IsScripted).ToList();
+    private static List<PartDefinition> ByGroup(PartsCatalog catalog, string group) => catalog.InGroup(group).Where(p => p.IsRealPart).ToList();
 }

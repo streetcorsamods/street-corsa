@@ -3,7 +3,7 @@ using StreetCorsa.Parts.Logic;
 namespace StreetCorsa.Parts.Cars;
 
 /// <summary>
-/// What a car costs new, the source game's way (its Chassis.currentPrice): the body, and every part on it. The body is
+/// What a car costs new: the body, and every part on it. The body is
 /// priced by its weight, the lighter the dearer: a car is a racer by its power to weight, and the power is in the price of
 /// its engine, priced by what it makes (<see cref="PartPricing.EngineNewPrice"/>). A heavy car with a tired engine is a cheap car,
 /// whatever it cost when it was new.
@@ -61,7 +61,7 @@ public static class CarPricing
 
     /// <summary>The parts of a factory engine the catalog has</summary>
     public static List<PartDefinition> PartsOf(PartsCatalog catalog, RatedBuild build) =>
-        build.Build.Parts.Select(p => p.Part != null ? catalog.Get(p.Part) : null).OfType<PartDefinition>().ToList();
+        build.Build.Parts.Select(catalog.Get).OfType<PartDefinition>().ToList();
 
     private static double Sane(double value, double otherwise) => double.IsFinite(value) && value > 0 ? value : otherwise;
 }

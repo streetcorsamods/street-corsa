@@ -35,7 +35,7 @@ Solution-aware, autonomous audit of Street Corsa. Discovers the audit units from
 This is a single-user Windows desktop game, not a web service. There is no login, no network API, no multi-tenant data. The threat model is:
 
 1. **The user's Assetto Corsa install and saves.** The app writes into `content\cars` (car data + sound swaps, same-model clones) and AC's INI files, and must always put them back. A crash, exception or kill mid-race that leaves a car modified or an INI changed is the worst class of bug this project has. See `docs/CLAUDE.md` → "AC Content" and the `CarDataOverlay` manifest/restore design.
-2. **Untrusted content parsed by the app.** AC car folders (`data.acd`, `.ini`, `.kn5`, sound banks), SLRR part packs (SCX/RPK/cfg and compiled script bytecode run by `Parts/Scripting/ScriptVm`), `pack.json`/`part_aliases.json`, the Lua app's result JSON in `Documents\Assetto Corsa\out`, and LiteDB save files the user may copy around. Mods come from the internet — treat every one of those as attacker-controllable input.
+2. **Untrusted content parsed by the app.** AC car folders (`data.acd`, `.ini`, `.kn5`, sound banks), part packs (`pack.json`, `part_aliases.json`, `build_aliases.json`, `part_classes.json`, `fuels.json` and their KN5 models), the Lua app's result JSON in `Documents\Assetto Corsa\out`, and LiteDB save files the user may copy around. Mods come from the internet — treat every one of those as attacker-controllable input.
 3. **Native code.** FMOD P/Invoke, D3D9/D3DImage interop (Vortice, SlimDX, AcTools.Render), `unsafe` blocks. Memory-safety bugs here crash the game or corrupt memory.
 4. **Supply chain.** NuGet packages plus unversioned local DLLs (`..\..\actools\Output\...`) referenced by `HintPath`.
 
@@ -48,7 +48,7 @@ This is a single-user Windows desktop game, not a web service. There is no login
 - Bundles: `quality` = `stability` + `patterns` + `duplication`. `all` = every section. A bundle shares Phases 0–3 and writes one combined findings file named after the bundle.
 - Output is durable: a dated findings file under `references/findings/`. Chat output is the executive summary only.
 - Diff-aware: if `references/analysis-log.md` records a prior run, scope code review to files changed since the last logged commit (`git diff --name-only <sha>..HEAD`), but still run the deterministic checks (Phase 0b) in full. Pass `full` as a second arg (e.g. `security full`) to force a full sweep.
-- **Read-only against the world.** Never launch the game or AC, never run `SlrrPartsConverter` or `tools/convert-parts.ps1` (they rewrite `Content\streetcorsa\parts`), never run an `EngineBench` mode that writes, never touch the AC install (`C:\GAMES\...`) or `saves\*.db`. `tools/slot_shifts.json` is the user's work in progress — read it, never "fix" it.
+- **Read-only against the world.** Never launch the game or AC, never run an `EngineBench` mode that writes, never touch the AC install (`C:\GAMES\...`) or `saves\*.db`. A `slot_shifts.json` next to the content the game runs on is the user's work in progress — read it, never "fix" it.
 
 ## Phase 0 — Discovery (deterministic, no model judgment)
 
@@ -131,14 +131,14 @@ For `security`, in addition to per-library docs, fetch:
 Before reading code, build an inventory per unit. `Grep` for the patterns in `references/security-checklist.md` → "Discovery greps" and list, with file:line:
 
 - **Writes outside the app's own folders**: AC install (`content\cars`, `cfg\*.ini`, `Documents\Assetto Corsa\cfg`), clones, sound swaps — and for each, where it is restored and whether the restore runs in `finally`, at start-up recovery, and on a second crash during restore
-- **Untrusted-input parsers**: every reader of AC car data, KN5/ACD, SLRR SCX/RPK/cfg, script bytecode, `pack.json`, result JSON, INI — and whether sizes/counts/offsets read from the file are bounds-checked before allocating or indexing
+- **Untrusted-input parsers**: every reader of AC car data, KN5/ACD, `pack.json`, result JSON, INI — and whether sizes/counts/offsets read from the file are bounds-checked before allocating or indexing
 - **Paths built from content**: file/folder names taken from car ids, part ids, JSON fields, INI values → `Path.Combine` → file IO
 - **Process launches**: `Process.Start` sites, the argument source, `UseShellExecute`
 - **Deserialization**: Newtonsoft settings (`TypeNameHandling`, `MaxDepth`), LiteDB `BsonMapper` custom mappings, anything `BinaryFormatter`/`XmlSerializer` over files
-- **Script VM**: instruction budget, call-depth limit, array/heap bounds, what host functions the scripts can call (file/process access?)
+- **Engine model** (`Parts/Logic/EngineAssembly`): pack figures that break the sum (NaN, negatives, huge counts) are contained and never reach AC's data
 - **Native interop**: `DllImport`/`LibraryImport` sites, handle ownership, `unsafe` blocks and their pointer bounds, COM/D3D object disposal
 - **Network**: `HttpClient` sites (the planned Ollama/LM Studio integration in `docs/ai-integration.md`) — endpoint source, timeouts, what content leaves the machine
-- **Cross-unit trust boundaries**: Lua app → result JSON → launcher; converter → `Content\streetcorsa\parts` → runtime catalog; game ↔ AC process
+- **Cross-unit trust boundaries**: Lua app → result JSON → launcher; mods' `Content\<mod>\parts` → runtime catalog; game ↔ AC process
 
 Write the inventory to `references/attack-surface.md` (overwrite each run; in diff mode, list only new/changed surfaces and point to the prior snapshot via `git show <sha>:<path>`). Subsequent code review uses it as the worklist.
 
@@ -273,7 +273,7 @@ The chat output is the executive summary only — point the user to the findings
 - **Acknowledge good patterns.** Not just a fault-finding exercise.
 - **Don't duplicate `docs/CLAUDE.md` rules.** If a convention is already documented, only flag it when violated.
 - **Audit linked source once.** Files compiled into the tools by `<Compile Include="..\..\Street Corsa\...">` belong to the game slice.
-- **Respect deliberate decisions.** The project's memory and docs record choices that look odd out of context (running SLRR's compiled scripts in a VM instead of porting them, carbs of different packs never merged, re-implementing AC's FMOD DSP plugins). Flag how they are implemented, not that they were chosen. Opponent skill never goes below 90 (`Opponent.MinSkill`): AC's AI drives too badly under that. A doc that says otherwise is the thing to fix.
+- **Respect deliberate decisions.** The project's memory and docs record choices that look odd out of context (the parts as data with the engine worked out in C#, carbs of different packs never merged, re-implementing AC's FMOD DSP plugins). Flag how they are implemented, not that they were chosen. Opponent skill never goes below 90 (`Opponent.MinSkill`): AC's AI drives too badly under that. A doc that says otherwise is the thing to fix.
 - **No interactive prompts in autonomous mode.** Default to `security` and proceed.
 - **Cap subagent output.** Slices × 40 findings × 1 sentence is readable; unbounded prose is not.
 

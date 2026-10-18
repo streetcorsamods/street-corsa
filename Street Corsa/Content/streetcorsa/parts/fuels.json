@@ -1,0 +1,15 @@
+{
+  "_comment": [
+    "What a fuel system can run on (see docs/modding.md, \"fuels.json\"): heat is what a kg of the mixture gives off",
+    "burning, MJ; best_ratio the air to fuel ratio by mass it burns best at; burn_time how long it takes to burn there,",
+    "ms, and burn_time_off how much longer at the worst ratio. A fuel system names its fuel (\"fuel\": \"methanol\");",
+    "one that names none runs on regular. A mod's fuels.json adds fuels or changes one by its id."
+  ],
+  "fuels": {
+    "regular": { "heat": 1.0995, "best_ratio": 12.5, "burn_time": 2.5, "burn_time_off": 0.8 },
+    "premium": { "heat": 1.1, "best_ratio": 13.5, "burn_time": 2.47, "burn_time_off": 0.75 },
+    "high_octane": { "heat": 1.10025, "best_ratio": 14.0, "burn_time": 2.42, "burn_time_off": 0.65 },
+    "methanol": { "heat": 1.4, "best_ratio": 16.0, "burn_time": 2.25, "burn_time_off": 0.4 },
+    "diesel": { "heat": 1.6, "best_ratio": 11.0, "burn_time": 3.4, "burn_time_off": 0.3 }
+  }
+}

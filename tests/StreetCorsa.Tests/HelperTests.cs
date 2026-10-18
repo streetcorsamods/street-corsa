@@ -445,7 +445,7 @@ public class AcdFileTests
 public class PartPricingTests
 {
     private static PartDefinition PartWorth(object? value) =>
-        new() { Id = "p", Properties = value == null ? new() : new() { ["value"] = value } };
+        new() { Id = "p", Specs = value == null ? new() : new() { ["value"] = value } };
 
     [Theory]
     [InlineData(double.NaN)]
@@ -510,7 +510,7 @@ public class PartPricingTests
     }
 
     // The '69 Camaro SS 396 (the '72 Camaro's engine): a 327 block made a stroker by its crank, heads and carburettor
-    private const string StrokerBuild = "cars/Camaro69/0006/stock";
+    private const string StrokerBuild = "factory/chevrolet-camaro-ss-396-69";
 
     private static (PartsCatalog Catalog, RatedBuild Build) Stroker()
     {
@@ -556,7 +556,7 @@ public class PartPricingTests
         Assert.Equal(PartPricing.EngineNewPrice(CarPricing.PartsOf(catalog, build).Where(p => engine.SelfAndDescendants().Any(i => i.DefinitionId == p.Id)).ToList(),
             PartPricing.PowerAsNew(catalog, engine)), asNew, 0);
 
-        // Half worn: the source game's wear, on the whole engine's worth; the power it was built to make stays
+        // Half worn: wear on the whole engine's worth; the power it was built to make stays
         foreach (var part in engine.SelfAndDescendants()) part.Wear = 0.5;
         Assert.Equal(asNew * 0.65, PartPricing.WorthOfAssembly(catalog, engine), 0);
     }

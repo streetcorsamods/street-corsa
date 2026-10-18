@@ -1,195 +1,71 @@
 {
   "id": "exhaust/stock",
-  "source": "parts.rpk",
   "parts": [
     {
-      "id": "exhaust/stock/ExhaustPipe",
-      "name": "ExhaustPipe",
-      "display_name": null,
-      "base_class": null,
-      "class_chain": [],
-      "properties": {},
-      "derived": {},
-      "slot_roles": {},
-      "stock_parts": [],
-      "required_slots": [],
-      "categories": [
-        "enginepart",
-        "root"
-      ],
-      "model": null,
+      "id": "exhaust/stock/exhaustpipe",
       "mass": 0.0,
       "slots": [
         {
           "id": 1,
           "name": "towards exhaust header",
-          "position": [
-            0.0,
-            0.0,
-            0.0
-          ],
-          "rotation": [
-            0.0,
-            0.0,
-            0.0
-          ],
-          "damage_mode": null,
-          "attaches_to": [],
-          "compatible_with": []
+          "position": [0.0, 0.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0]
         },
         {
           "id": 101,
           "name": "exhaust tip #1",
-          "position": [
-            0.0,
-            0.0,
-            0.0
-          ],
-          "rotation": [
-            0.0,
-            0.0,
-            0.0
-          ],
-          "damage_mode": null,
-          "attaches_to": [],
-          "compatible_with": []
+          "position": [0.0, 0.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0]
         },
         {
           "id": 102,
           "name": "exhaust tip #2",
-          "position": [
-            0.0,
-            0.0,
-            0.0
-          ],
-          "rotation": [
-            0.0,
-            0.0,
-            0.0
-          ],
-          "damage_mode": null,
-          "attaches_to": [],
-          "compatible_with": []
+          "position": [0.0, 0.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0]
         },
         {
           "id": 103,
           "name": "exhaust tip #3",
-          "position": [
-            0.0,
-            0.0,
-            0.0
-          ],
-          "rotation": [
-            0.0,
-            0.0,
-            0.0
-          ],
-          "damage_mode": null,
-          "attaches_to": [],
-          "compatible_with": []
+          "position": [0.0, 0.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0]
         },
         {
           "id": 104,
           "name": "exhaust tip #4",
-          "position": [
-            0.0,
-            0.0,
-            0.0
-          ],
-          "rotation": [
-            0.0,
-            0.0,
-            0.0
-          ],
-          "damage_mode": null,
-          "attaches_to": [],
-          "compatible_with": []
+          "position": [0.0, 0.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0]
         }
-      ],
-      "config": {
-        "category": [
-          "1"
-        ],
-        "damage": [
-          "10.0"
-        ],
-        "intdamage": [
-          "1000000000.0"
-        ]
-      },
-      "source_type_id": 70,
-      "source_script": "java.game.parts.enginepart.ExhaustPipe"
+      ]
     },
     {
-      "id": "exhaust/stock/ExhaustTip",
-      "name": "ExhaustTip",
-      "display_name": null,
-      "base_class": null,
-      "class_chain": [],
-      "properties": {},
-      "derived": {},
-      "slot_roles": {},
-      "stock_parts": [],
-      "required_slots": [],
-      "categories": [
-        "enginepart",
-        "root"
-      ],
-      "model": null,
+      "id": "exhaust/stock/exhausttip",
       "mass": 0.0,
       "slots": [
         {
           "id": 1,
           "name": "towards exhaust pipe",
-          "position": [
-            0.0,
-            0.0,
-            0.0
-          ],
-          "rotation": [
-            0.0,
-            0.0,
-            0.0
-          ],
-          "damage_mode": null,
+          "position": [0.0, 0.0, 0.0],
+          "rotation": [0.0, 0.0, 0.0],
           "attaches_to": [
             {
-              "part": "exhaust/stock/ExhaustPipe",
-              "slot": 101,
-              "source": "parts.rpk#0x0046"
+              "part": "exhaust/stock/exhaustpipe",
+              "slot": 101
             },
             {
-              "part": "exhaust/stock/ExhaustPipe",
-              "slot": 102,
-              "source": "parts.rpk#0x0046"
+              "part": "exhaust/stock/exhaustpipe",
+              "slot": 102
             },
             {
-              "part": "exhaust/stock/ExhaustPipe",
-              "slot": 103,
-              "source": "parts.rpk#0x0046"
+              "part": "exhaust/stock/exhaustpipe",
+              "slot": 103
             },
             {
-              "part": "exhaust/stock/ExhaustPipe",
-              "slot": 104,
-              "source": "parts.rpk#0x0046"
+              "part": "exhaust/stock/exhaustpipe",
+              "slot": 104
             }
-          ],
-          "compatible_with": []
+          ]
         }
-      ],
-      "config": {
-        "category": [
-          "1"
-        ],
-        "damage": [
-          "10.0"
-        ],
-        "intdamage": [
-          "1000000000.0"
-        ]
-      },
-      "source_type_id": 71,
-      "source_script": "java.game.parts.enginepart.ExhaustTip"
+      ]
     }
   ]
 }

@@ -209,7 +209,7 @@ public sealed class Audit1005ATests : IDisposable
         state.Racers.AddRacer(seller);
 
         for (var i = 0; i < 4; i++) await paper.RefreshAdsAsync(state, state.Date);
-        foreach (var definition in parts.Catalog.Parts.Values.Where(p => p.IsScripted).Take(400))
+        foreach (var definition in parts.Catalog.Parts.Values.Where(p => p.IsRealPart).Take(400))
         {
             // The cheapest a rival ever asks (roll 0), in every shape
             foreach (var wear in new[] { 0.0, 0.5, 1.0 })

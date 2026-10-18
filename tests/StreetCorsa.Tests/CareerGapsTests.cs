@@ -167,7 +167,7 @@ public class CareerGapsTests
     {
         var catalog = Catalog.Value;
         var build = EngineBuildIndex.Create(catalog).Runnable
-            .Single(b => b.Build.Id.EndsWith("chrysler-v8-pack/chrysler-la-340-275-hp", StringComparison.Ordinal));
+            .Single(b => b.Build.Id.EndsWith("rated/chrysler-la-340-275-hp", StringComparison.Ordinal));
         var engine = EngineFactory.CreateStock(catalog, build, 0.8, new Random(1))!.Root;
         var current = engine.SelfAndDescendants()
             .Select(p => catalog.Get(p.DefinitionId))

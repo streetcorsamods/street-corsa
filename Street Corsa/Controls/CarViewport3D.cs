@@ -1865,7 +1865,7 @@ public class CarViewport3D : D3DViewportBase
         if (!_partWorlds.TryGetValue(Engine, out var engineWorld) || !_partWorlds.TryGetValue(part, out var partWorld)
             || !_partWorlds.TryGetValue(parent, out var parentWorld)) return;
 
-        // SLRR parts look down their +Z at the firewall: forward is -Z of the engine
+        // Part models look down their +Z at the firewall: forward is -Z of the engine
         var engineAxes = engineWorld;
         engineAxes.Translation = System.Numerics.Vector3.Zero;
         var worldDelta = System.Numerics.Vector3.TransformNormal(new System.Numerics.Vector3(right, up, -forward), engineAxes);
@@ -2103,7 +2103,7 @@ public class CarViewport3D : D3DViewportBase
         }
     }
 
-    // The camera on a part the player picked, as SLRR has it: it turns round the part, near enough to see it, and
+    // The camera on a part the player picked: it turns round the part, near enough to see it, and
     // goes back to the car (or the stand) as nothing is picked any more, as close as it was before
     private const float FocusFill = 2.4f;
     private const float FocusMargin = 0.7f;

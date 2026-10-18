@@ -163,7 +163,7 @@ namespace StreetCorsa.Screens.PartShop
             // A hash that is the same in every run of the game, so the same day of the same save shows the same work
             var random = new Random((int)Helpers.StableHash.Of($"{_shopId.ToLowerInvariant()}|{_gameState.Date:yyyy-MM-dd}"));
             var kinds = catalog.Rebuilds.All.Where(j => j.IsMachine).SelectMany(j => j.Kinds).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            var candidates = catalog.EngineBuilds.SelectMany(b => b.Parts).Select(p => p.Part).OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase)
+            var candidates = catalog.EngineBuilds.SelectMany(b => b.Parts).Distinct(StringComparer.OrdinalIgnoreCase)
                 .Select(catalog.Get).OfType<PartDefinition>()
                 .Where(d => catalog.WorkOrder.KindOf(d) is { } k && kinds.Contains(k) && d.Model != null)
                 .OrderBy(d => d.Id, StringComparer.Ordinal)

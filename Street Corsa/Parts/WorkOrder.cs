@@ -12,7 +12,7 @@ namespace StreetCorsa.Parts;
 /// Read from <see cref="FileName"/> in every mod's parts folder, so a mod's blocks get rules of their own.
 /// </summary>
 /// <remarks>
-/// Only the big parts have a class of the source game's framework to tell them by. Timing covers, chains, dampers,
+/// Only the big parts have a class of their own to tell them by. Timing covers, chains, dampers,
 /// distributors, water pumps, fans and belts are plain engine parts in every pack, but their names say what they are
 /// in the same words across makes. So a part's kind is, in turn: the <c>"kind"</c> its pack gives it
 /// (<see cref="PartDefinition.WorkKind"/>), the first kind listing one of its classes, the first kind with a word

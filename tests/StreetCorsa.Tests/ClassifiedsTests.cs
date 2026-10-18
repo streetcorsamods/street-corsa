@@ -18,16 +18,16 @@ public class ClassifiedsTests
     private static readonly Lazy<PartsCatalog> Catalog = new(() => PartsCatalog.Load(RepoPaths.PartsFolder));
 
     private static PartDefinition FirstOf(string className) =>
-        Catalog.Value.Parts.Values.OrderBy(p => p.Id, StringComparer.Ordinal).First(p => p.IsScripted && PartKinds.Is(p, className));
+        Catalog.Value.Parts.Values.OrderBy(p => p.Id, StringComparer.Ordinal).First(p => p.IsRealPart && PartKinds.Is(p, className));
 
     // ----- the facts -----
 
     [Fact]
     public void A_cars_blower_stands_out_first_and_a_stock_cars_cam_is_no_news()
     {
-        var blower = FirstOf("SuperCharger");
-        var cam = FirstOf("Camshaft");
-        var block = new PartInstance(FirstOf("Block").Id) { Children = [new PartInstance(cam.Id), new PartInstance(blower.Id)] };
+        var blower = FirstOf(PartClasses.Supercharger);
+        var cam = FirstOf(PartClasses.Camshaft);
+        var block = new PartInstance(FirstOf(PartClasses.EngineBlock).Id) { Children = [new PartInstance(cam.Id), new PartInstance(blower.Id)] };
 
         var worked = AdBlurbs.FactsOf([block], Catalog.Value, null, "GM 327, 300 hp", modified: true, 0.7, 80_000);
         Assert.Equal(["blower", "cam"], worked.Standouts.Select(s => s.Kind));
@@ -52,8 +52,8 @@ public class ClassifiedsTests
     [Fact]
     public void A_part_ad_knows_a_whole_engine_from_a_bare_block_and_a_racers_spare()
     {
-        var blockId = FirstOf("Block").Id;
-        var engine = new PartAd(new PartInstance(blockId) { Children = [new PartInstance(FirstOf("Camshaft").Id)] }, 900m, "Ace") { SellerRival = "Ace" };
+        var blockId = FirstOf(PartClasses.EngineBlock).Id;
+        var engine = new PartAd(new PartInstance(blockId) { Children = [new PartInstance(FirstOf(PartClasses.Camshaft).Id)] }, 900m, "Ace") { SellerRival = "Ace" };
         var bare = new PartAd(new PartInstance(blockId) { Wear = 0.3 }, 200m, "Joe");
 
         var engineFacts = AdBlurbs.FactsOf(engine, Catalog.Value)!;

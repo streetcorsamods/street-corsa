@@ -156,6 +156,6 @@ public sealed class EngineMatchRules
     /// <summary>Taken off for each step of the power ratio's log away from what the car's data claims</summary>
     public double PowerWeight { get; set; } = 4.0;
 
-    /// <summary>A build the source game made for a car over a kit or a note</summary>
+    /// <summary>A build a car left the factory with over a kit or a rated build</summary>
     public double FactoryBuildBonus { get; set; } = 0.2;
 }

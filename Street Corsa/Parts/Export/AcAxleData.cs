@@ -40,7 +40,7 @@ public static class AcAxleData
         }
 
         // What the housing must carry, in its pack's words
-        foreach (var required in housing.RequiredSlots.Where(r => r.Enforce))
+        foreach (var required in housing.Needs)
         {
             if (mounted.Housing.Children.All(c => c.ParentSlot != required.Slot)) problems.Add(Lower(required.Message) ?? "the rear axle is missing a part");
         }
@@ -48,7 +48,7 @@ public static class AcAxleData
         var carrier = mounted.Carrier == null ? null : catalog.Get(mounted.Carrier.DefinitionId);
         if (carrier != null)
         {
-            foreach (var required in carrier.RequiredSlots.Where(r => r.Enforce))
+            foreach (var required in carrier.Needs)
             {
                 if (mounted.Carrier!.Children.All(c => c.ParentSlot != required.Slot)) problems.Add(Lower(required.Message) ?? "the differential is missing a part");
             }

@@ -58,7 +58,7 @@ public static class AttendantCheck
             foreach (var (kind, key) in new[] { (EngineCooling.Kind.Radiator, "station.hint.radiator"), (EngineCooling.Kind.WaterPump, "station.hint.water_pump"), (EngineCooling.Kind.Fan, "station.hint.fan") })
                 Worn(hints, key, parts.Where(p => EngineCooling.KindOf(p.Definition!) == kind).Select(p => p.Part));
 
-            // An open velocity stack is among the air filters but has no element to go black (it loses nothing dusted)
+            // An open velocity stack or scoop loses nothing to dirt (clogging 0): among the air filters, but nothing to clean
             foreach (var (group, key) in UnderTheHood)
                 Worn(hints, key, parts.Where(p => PartKinds.GroupOf(p.Definition!) == group && !(group == AirFiltersGroup && NeverClogs(p.Definition!))).Select(p => p.Part));
 
@@ -89,8 +89,8 @@ public static class AttendantCheck
         return hints.OrderBy(h => h.Condition).Take(MostHints).ToList();
     }
 
-    /// <summary>An air part whose script keeps all its flow however dusty it gets (<c>dusted_efficiency</c> 1): nothing to clean or replace</summary>
-    private static bool NeverClogs(PartDefinition part) => part.Number("dusted_efficiency") >= 1;
+    /// <summary>An air part that keeps all its flow however dusty it gets (<c>clogging</c> 0): nothing to clean or replace</summary>
+    private static bool NeverClogs(PartDefinition part) => Logic.EngineAssembly.Clogging(part) <= 0;
 
     /// <summary>The most worn of the parts, when it is worn enough to mention</summary>
     private static void Worn(List<AttendantHint> hints, string key, IEnumerable<PartInstance> parts, string? where = null)

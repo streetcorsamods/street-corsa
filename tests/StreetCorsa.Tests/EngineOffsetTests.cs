@@ -80,9 +80,9 @@ public class EngineOffsetTests
     public void The_parts_that_may_stand_out_follow_the_engine()
     {
         var catalog = PartsCatalog.Load(RepoPaths.PartsFolder);
-        var parts = new List<PartInstance> { new("engines/gm/GM_327_block") { ParentSlot = PartInstance.CarEngineSlot } };
-        foreach (var id in new[] { "engines/gm/GM_small_block_L_head", "engines/gm/GM_small_block_R_head", "engines/gm/Weiand_pro_street_manifold",
-                     "engines/generic/Weiand_8_71_supercharger" })
+        var parts = new List<PartInstance> { new("engines/gm/chevy_327_396_v8_block") { ParentSlot = PartInstance.CarEngineSlot } };
+        foreach (var id in new[] { "engines/gm/chevy_327_stock_left_cylinder_head", "engines/gm/chevy_327_stock_right_cylinder_head", "engines/gm/weiand_pro_street_supercharger_intake_manifold_chevy_327_396",
+                     "engines/generic/weiand_8_71_street_supercharger" })
         {
             var loose = new PartInstance(id);
             Workbench.Mount(parts, Workbench.FindPlaces(catalog, parts, loose)[0], loose);
@@ -90,8 +90,8 @@ public class EngineOffsetTests
         var tree = PartTrees.ToInstalled(catalog, parts[0])!.Root;
         var up = new Vector3(0, 0.3f, 0);
 
-        var at = ShownEngineParts.Of(catalog, tree, Car, EngineLayout.Front).Single(p => p.Model.Name.Contains("supercharger")).At;
-        var raised = ShownEngineParts.Of(catalog, tree, Car with { EngineOffset = up }, EngineLayout.Front).Single(p => p.Model.Name.Contains("supercharger")).At;
+        var at = ShownEngineParts.Of(catalog, tree, Car, EngineLayout.Front).Single(p => p.Model.Name.Contains("weiand_8_71_street_supercharger")).At;
+        var raised = ShownEngineParts.Of(catalog, tree, Car with { EngineOffset = up }, EngineLayout.Front).Single(p => p.Model.Name.Contains("weiand_8_71_street_supercharger")).At;
 
         Assert.True(Vector3.Distance(at.Translation + up, raised.Translation) < 1e-5f);
     }

@@ -201,7 +201,7 @@ public static class CarPartsLayout
         if (carSlot == RunningGear.BrakeSlot(corner)) return BySlot(part, side, hub + inboard * BrakeInboard);
 
         // A wheel by the middle of its tyre on the hub, where the car's own wheel has its middle (its WHEEL_* dummy): the
-        // rim's tyre seat, else the face it bolts on by. The source game's rims are modelled the other way round from the
+        // rim's tyre seat, else the face it bolts on by. The stock rims are modelled the other way round from the
         // running gear: their face is -X (the owner's look in game), so a wheel is turned round
         if (carSlot == RunningGear.WheelSlot(corner)) return BySlot(part, SideFrame(anchors.Forward, -inboard), hub, RunningGear.TyreSlotOnRim);
 

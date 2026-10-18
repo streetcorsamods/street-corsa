@@ -128,7 +128,7 @@ namespace StreetCorsa.Services.Catalog
         }
 
         /// <summary>
-        /// What a car costs new, the source game's way: its body by its weight (AC's own, else its ui_car.json's), and
+        /// What a car costs new: its body by its weight (AC's own, else its ui_car.json's), and
         /// its factory engine and running gear (the rear axle too) at their parts' new prices. Without the parts, the body alone.
         /// </summary>
         public NewPrice PriceNew(CarDefinition carDefinition)

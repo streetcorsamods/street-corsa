@@ -49,7 +49,7 @@ public class LiftTests
             var rim = Wheel(parts, corner);
             var drawn = placed.Single(p => p.Source?.InstanceId == rim.InstanceId);
 
-            // The middle of its tyre (the rim's tyre seat) on the hub, its outer face (-X in the source game's rims) away from the car
+            // The middle of its tyre (the rim's tyre seat) on the hub, its outer face (-X in the stock rims) away from the car
             var seat = drawn.Part.Slots.FirstOrDefault(s => s.Id == RunningGear.TyreSlotOnRim) ?? drawn.Part.Slots.First(s => s.Id == 1);
             var middle = Vector3.Transform(new Vector3(seat.Position[0], seat.Position[1], seat.Position[2]), drawn.World);
             Assert.Equal(Anchors.Hub(corner).X, middle.X, 3);

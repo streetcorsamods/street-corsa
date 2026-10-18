@@ -69,7 +69,7 @@ namespace StreetCorsa.Services.Market
             try
             {
                 return parts.GetStockBuild(carDef) is { } stock
-                    ? stock.Build.Parts.Where(p => p.Part != null).Select(p => p.Part!).ToHashSet(StringComparer.OrdinalIgnoreCase)
+                    ? stock.Build.Parts.ToHashSet(StringComparer.OrdinalIgnoreCase)
                     : null;
             }
             catch (Exception ex)

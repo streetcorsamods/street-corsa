@@ -29,12 +29,12 @@ public class AuditFixesBTests
         car.HasRunningGearAssigned = true;
         for (var corner = 0; corner < RunningGear.Corners; corner++)
         {
-            var rim = new PartInstance("rims/falcon/rim_01") { ParentSlot = RunningGear.WheelSlot(corner) };
-            rim.Children.Add(new PartInstance("tyres/camaro69/tire11") { ParentSlot = RunningGear.TyreSlotOnRim });
+            var rim = new PartInstance("rims/falcon/ford_falcon_steel_wheel_15x8") { ParentSlot = RunningGear.WheelSlot(corner) };
+            rim.Children.Add(new PartInstance("tyres/camaro69/wide_255_tire_19_inch_front") { ParentSlot = RunningGear.TyreSlotOnRim });
             car.Parts.Add(rim);
-            car.Parts.Add(new PartInstance("brakes/stock/disc_brake") { ParentSlot = RunningGear.BrakeSlot(corner) });
-            car.Parts.Add(new PartInstance("suspension/stock/spring") { ParentSlot = RunningGear.SpringSlot(corner) });
-            car.Parts.Add(new PartInstance("suspension/stock/shock_absorber") { ParentSlot = RunningGear.ShockSlot(corner) });
+            car.Parts.Add(new PartInstance("brakes/stock/11_2_inch_4_piston_disc_brake_no_1") { ParentSlot = RunningGear.BrakeSlot(corner) });
+            car.Parts.Add(new PartInstance("suspension/stock/409_lb_in_coil_spring_8_5_in") { ParentSlot = RunningGear.SpringSlot(corner) });
+            car.Parts.Add(new PartInstance("suspension/stock/firm_shock_absorber_20_0_lb_s_in_no_2") { ParentSlot = RunningGear.ShockSlot(corner) });
         }
 
         return car;

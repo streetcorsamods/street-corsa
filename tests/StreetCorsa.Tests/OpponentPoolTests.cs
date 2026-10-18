@@ -298,7 +298,7 @@ public class RivalPartAdsTests
     }
 
     private PartInstance SomePart() =>
-        new(_parts.Catalog.Parts.Values.First(p => p.IsScripted && PartPricing.NewPrice(p) > 100).Id) { Wear = 0.8 };
+        new(_parts.Catalog.Parts.Values.First(p => p.IsRealPart && PartPricing.NewPrice(p) > 100).Id) { Wear = 0.8 };
 
     [Fact]
     public void The_player_buying_a_rivals_part_pays_the_rival()
@@ -353,7 +353,7 @@ public class RivalPartAdsTests
 public class UsedTuningTests(ITestOutputHelper output)
 {
     private static readonly CatalogParts Parts = new();
-    private const string La340 = "chrysler-v8-pack/chrysler-la-340-275-hp";
+    private const string La340 = "rated/chrysler-la-340-275-hp";
 
     private static RatedBuild Build(string idEnd) => Parts.Builds.Runnable.Single(b => b.Build.Id.EndsWith(idEnd, StringComparison.Ordinal));
 

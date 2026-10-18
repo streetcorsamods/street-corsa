@@ -165,7 +165,7 @@ namespace StreetCorsa.Services.Parts
             {
                 if (!IsAvailable)
                 {
-                    _logger.Warning("No converted parts in the mods (base game: {Path}): cars go without part trees", AppSettings.Instance.PartsPath);
+                    _logger.Warning("No parts in the mods (base game: {Path}): cars go without part trees", AppSettings.Instance.PartsPath);
                     return;
                 }
 
@@ -225,7 +225,7 @@ namespace StreetCorsa.Services.Parts
         }
 
         /// <remarks>
-        /// Never throws for what the content does: a part script that faults, or anything else the parts hold, is an
+        /// Never throws for what the content does: figures that break the sum, or anything else the parts hold, is an
         /// engine that does not run, with the reason as its problem and in the log
         /// </remarks>
         public EngineReport? Evaluate(Car car)
@@ -243,7 +243,7 @@ namespace StreetCorsa.Services.Parts
                 return new EngineReport { Problem = GameText.Say("garage.engine.not_evaluated", ("error", ex.Message)) };
             }
 
-            if (report != null) TellFaults(car.DefinitionId, report.ScriptFaults);
+            if (report != null) TellFaults(car.DefinitionId, report.Faults);
             return report;
         }
 
@@ -251,7 +251,7 @@ namespace StreetCorsa.Services.Parts
         {
             foreach (var fault in faults)
             {
-                if (_toldFaults.TryAdd((carId, fault), 0)) _logger.Warning("{Car}: a part script faulted: {Fault}", carId, fault);
+                if (_toldFaults.TryAdd((carId, fault), 0)) _logger.Warning("{Car}: its engine could not be worked out: {Fault}", carId, fault);
             }
         }
 
@@ -488,7 +488,7 @@ namespace StreetCorsa.Services.Parts
         private IReadOnlySet<string>? ReadFactoryEngineParts(string carDefinitionId, string blockId)
         {
             if (_catalogRepo.GetCar(carDefinitionId) is not { } definition || GetStockBuild(definition) is not { } stock) return null;
-            var parts = stock.Build.Parts.Select(p => p.Part is { } id ? Catalog.Get(id)?.Id : null).OfType<string>()
+            var parts = stock.Build.Parts.Select(id => Catalog.Get(id)?.Id).OfType<string>()
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
             return parts.Contains(blockId) ? parts : null;
         }
@@ -575,6 +575,12 @@ namespace StreetCorsa.Services.Parts
             var forSale = game.UsedCarMarket.SelectMany(l => l.Parts)
                 .Concat(game.NewspaperAds.Parts.Select(ad => ad.Part));
             changed += Renew(forSale, new List<PartInstance>());
+
+            // The part shops' shelves and yards, and what is on its way to the player, under the ids the parts go by now
+            changed += PartShops.PartShopService.RenameShelves(Catalog, game.PartShops);
+            changed += Renew(game.PartShops.SelectMany(shop => shop.Yard.Select(ad => ad.Part)), new List<PartInstance>());
+
+            changed += Renew(game.Player.PartOrders.Select(o => o.Part).Concat(game.Player.MachineWork.Select(o => o.Part)), new List<PartInstance>());
 
             if (changed > 0) _logger.Information("{Count} change(s) to the save's parts to keep up with the parts catalog", changed);
             return changed > 0;
@@ -756,7 +762,7 @@ namespace StreetCorsa.Services.Parts
             try
             {
                 var started = DateTime.Now;
-                var library = SoundLibrary.Load(Mods.ModSet.Installed.Folders(Mods.ContentTypes.Sounds).ToList(), id => Catalog.Get(id) != null);
+                var library = SoundLibrary.Load(Mods.ModSet.Installed.Folders(Mods.ContentTypes.Sounds).ToList(), id => Catalog.Get(id) != null, Catalog.CurrentId);
                 var cars = library.Harvest(settings.CarsPath, settings.SfxGuidsPath, SoundLibrary.StockFacts(Builds, Catalog));
                 _logger.Information("Sound library: {Curated} sound(s) from the mods (base game: {Path}), {Harvested} more off {Cars} installed car(s), in {Ms} ms",
                     library.Curated.Count, settings.SoundsPath, library.Harvested.Count, cars, (int)(DateTime.Now - started).TotalMilliseconds);
@@ -779,7 +785,7 @@ namespace StreetCorsa.Services.Parts
                 var index = EngineBuildIndex.Create(Catalog);
                 _logger.Information("{Count} engine builds run, put on the dyno in {Ms} ms", index.Runnable.Count,
                     (int)(DateTime.Now - started).TotalMilliseconds);
-                foreach (var fault in index.ScriptFaults) _logger.Warning("Engine builds: a part script faulted and was left out: {Fault}", fault);
+                foreach (var fault in index.Faults) _logger.Warning("Engine builds: a build could not be worked out and was left out: {Fault}", fault);
                 return index;
             }
             catch (Exception ex)
@@ -800,6 +806,19 @@ namespace StreetCorsa.Services.Parts
         {
             foreach (var profile in _profileRepo.GetAllProfiles())
             {
+                // A build since renamed goes by its new id, picked by hand or not: the editor finds it among its options
+                if (profile.StockEngineBuildId is { Length: > 0 } stockId && Catalog.CurrentBuildId(stockId) is var currentId && currentId != stockId)
+                {
+                    _profileRepo.UpdateProfile(profile.CarDefinitionId, stored =>
+                    {
+                        if (stored.StockEngineBuildId != stockId) return null;
+
+                        stored.StockEngineBuildId = currentId;
+                        return stored;
+                    });
+                    profile.StockEngineBuildId = currentId;
+                }
+
                 if (NeedsNoSuggestion(profile)) continue;
 
                 var car = _catalogRepo.GetCar(profile.CarDefinitionId);

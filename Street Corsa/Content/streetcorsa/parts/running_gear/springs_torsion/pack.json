@@ -1,12 +1,173 @@
 {
   "id": "running_gear/springs_torsion",
-  "source": "Street Corsa step 31 (generated once, hand-maintained since)",
   "parts": [
-    {"id": "running_gear/springs_torsion/bar_85", "name": "torsion bar 0.85", "display_name": "0.85-inch torsion bar (93 lb/in)", "class_chain": ["TorsionBar", "Spring"], "mass": 0, "model": "bar_85.kn5", "came_in": {"families": ["mopar"], "axle": "front", "suspension": ["DWB"], "mass": [null, 1350], "years": [1957, null]}, "properties": {"force": 16316, "diameter_in": 0.85, "fits_axle": "front", "fits_suspension": "DWB"}, "slots": [{"id": 1, "name": "mount", "position": [0, 0, 0]}]},
-    {"id": "running_gear/springs_torsion/bar_87", "name": "torsion bar 0.87", "display_name": "0.87-inch torsion bar (102 lb/in)", "class_chain": ["TorsionBar", "Spring"], "mass": 0, "model": "bar_87.kn5", "came_in": {"families": ["mopar"], "axle": "front", "suspension": ["DWB"], "mass": [1250, 1550], "years": [1957, null]}, "properties": {"force": 17907, "diameter_in": 0.87, "fits_axle": "front", "fits_suspension": "DWB"}, "slots": [{"id": 1, "name": "mount", "position": [0, 0, 0]}]},
-    {"id": "running_gear/springs_torsion/bar_89", "name": "torsion bar 0.89", "display_name": "0.89-inch torsion bar (112 lb/in)", "class_chain": ["TorsionBar", "Spring"], "mass": 0, "model": "bar_89.kn5", "came_in": {"families": ["mopar"], "axle": "front", "suspension": ["DWB"], "mass": [1450, 1700], "years": [1957, null]}, "properties": {"force": 19611, "diameter_in": 0.89, "fits_axle": "front", "fits_suspension": "DWB"}, "slots": [{"id": 1, "name": "mount", "position": [0, 0, 0]}]},
-    {"id": "running_gear/springs_torsion/bar_92", "name": "torsion bar 0.92", "display_name": "0.92-inch torsion bar (128 lb/in)", "class_chain": ["TorsionBar", "Spring"], "mass": 0, "model": "bar_92.kn5", "came_in": {"families": ["mopar"], "axle": "front", "suspension": ["DWB"], "mass": [1650, null], "years": [1957, null]}, "properties": {"force": 22392, "diameter_in": 0.92, "fits_axle": "front", "fits_suspension": "DWB"}, "slots": [{"id": 1, "name": "mount", "position": [0, 0, 0]}]},
-    {"id": "running_gear/springs_torsion/bar_100", "name": "torsion bar 1.00", "display_name": "Heavy-duty 1.00-inch torsion bar (179 lb/in)", "class_chain": ["TorsionBar", "Spring"], "mass": 0, "model": "bar_100.kn5", "properties": {"force": 31257, "diameter_in": 1.0, "fits_axle": "front", "fits_suspension": "DWB"}, "slots": [{"id": 1, "name": "mount", "position": [0, 0, 0]}]},
-    {"id": "running_gear/springs_torsion/bar_103", "name": "torsion bar 1.03", "display_name": "Super Stock 1.03-inch torsion bar (201 lb/in)", "class_chain": ["TorsionBar", "Spring"], "mass": 0, "model": "bar_103.kn5", "properties": {"force": 35180, "diameter_in": 1.03, "fits_axle": "front", "fits_suspension": "DWB"}, "slots": [{"id": 1, "name": "mount", "position": [0, 0, 0]}]}
+    {
+      "id": "running_gear/springs_torsion/bar_85",
+      "display_name": "0.85-inch torsion bar (93 lb/in)",
+      "class": "torsion_bar",
+      "model": "bar_85.kn5",
+      "mass": 0,
+      "specs": {
+        "force": 16316,
+        "diameter_in": 0.85,
+        "fits_axle": "front",
+        "fits_suspension": "DWB"
+      },
+      "came_in": {
+        "families": ["mopar"],
+        "axle": "front",
+        "suspension": ["DWB"],
+        "mass": [
+          null,
+          1350
+        ],
+        "years": [
+          1957,
+          null
+        ]
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "position": [0, 0, 0]
+        }
+      ]
+    },
+    {
+      "id": "running_gear/springs_torsion/bar_87",
+      "display_name": "0.87-inch torsion bar (102 lb/in)",
+      "class": "torsion_bar",
+      "model": "bar_87.kn5",
+      "mass": 0,
+      "specs": {
+        "force": 17907,
+        "diameter_in": 0.87,
+        "fits_axle": "front",
+        "fits_suspension": "DWB"
+      },
+      "came_in": {
+        "families": ["mopar"],
+        "axle": "front",
+        "suspension": ["DWB"],
+        "mass": [1250, 1550],
+        "years": [
+          1957,
+          null
+        ]
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "position": [0, 0, 0]
+        }
+      ]
+    },
+    {
+      "id": "running_gear/springs_torsion/bar_89",
+      "display_name": "0.89-inch torsion bar (112 lb/in)",
+      "class": "torsion_bar",
+      "model": "bar_89.kn5",
+      "mass": 0,
+      "specs": {
+        "force": 19611,
+        "diameter_in": 0.89,
+        "fits_axle": "front",
+        "fits_suspension": "DWB"
+      },
+      "came_in": {
+        "families": ["mopar"],
+        "axle": "front",
+        "suspension": ["DWB"],
+        "mass": [1450, 1700],
+        "years": [
+          1957,
+          null
+        ]
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "position": [0, 0, 0]
+        }
+      ]
+    },
+    {
+      "id": "running_gear/springs_torsion/bar_92",
+      "display_name": "0.92-inch torsion bar (128 lb/in)",
+      "class": "torsion_bar",
+      "model": "bar_92.kn5",
+      "mass": 0,
+      "specs": {
+        "force": 22392,
+        "diameter_in": 0.92,
+        "fits_axle": "front",
+        "fits_suspension": "DWB"
+      },
+      "came_in": {
+        "families": ["mopar"],
+        "axle": "front",
+        "suspension": ["DWB"],
+        "mass": [
+          1650,
+          null
+        ],
+        "years": [
+          1957,
+          null
+        ]
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "position": [0, 0, 0]
+        }
+      ]
+    },
+    {
+      "id": "running_gear/springs_torsion/bar_100",
+      "display_name": "Heavy-duty 1.00-inch torsion bar (179 lb/in)",
+      "class": "torsion_bar",
+      "aftermarket": true,
+      "model": "bar_100.kn5",
+      "mass": 0,
+      "specs": {
+        "force": 31257,
+        "diameter_in": 1.0,
+        "fits_axle": "front",
+        "fits_suspension": "DWB"
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "position": [0, 0, 0]
+        }
+      ]
+    },
+    {
+      "id": "running_gear/springs_torsion/bar_103",
+      "display_name": "Super Stock 1.03-inch torsion bar (201 lb/in)",
+      "class": "torsion_bar",
+      "aftermarket": true,
+      "model": "bar_103.kn5",
+      "mass": 0,
+      "specs": {
+        "force": 35180,
+        "diameter_in": 1.03,
+        "fits_axle": "front",
+        "fits_suspension": "DWB"
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "position": [0, 0, 0]
+        }
+      ]
+    }
   ]
 }

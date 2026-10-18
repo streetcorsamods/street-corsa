@@ -2043,6 +2043,28 @@ take it over without moving a price.
 5. **Installer art.** `installer/make_art.py` puts the game's icon and its title lettered as the intro letters it (Impact,
    italic, the intro's chrome) on the wizard's side panel and banner.
 
+## Step 33: the parts become the game's own (built 2026-10-18, feature/own-part-logic)
+
+The owner asked for every leftover of the original packs' game to go, and the part logic to be Street Corsa's. Until
+now the engine was worked out by running the packs' compiled scripts (1707 class files) in a small VM; the parts kept
+that game's field names, class chains, ids and words.
+
+- **Logic in C#** (`Parts/Logic/EngineAssembly.cs`): one model for every block (inline or vee, any number of heads),
+  the heads' breathing, the cam's valve events, the fuel systems' mixture and air, chargers, the moving parts' inertia
+  and friction, the gearbox. Checked against the VM on all 201 builds before the VM went: 176 the same, none changed
+  whether it runs, the Opala blower six +3% (its carburettor's own mixture now counts). The owner's call: free to
+  improve, numbers may move.
+- **Data of the game's own**: a part has a `class` (`part_classes.json`, a hierarchy a mod extends), `specs` in plain
+  metric with the figures' names, `slot_roles` and `needs` (only the rules the game held: the block's and those a pack
+  enforced; the messages in one style). Fuels are `fuels.json`. Running gear specs renamed to match (`min_rim_width`,
+  `load_capacity`...). Our own running gear no car came with is `"aftermarket": true`.
+- **New ids**: every part of the base game and the owner's mods by its display name (`engines/chrysler/chrysler_340_v8_block`),
+  its model renamed with it; builds by their names (`factory/dodge-charger-r-t-69`, `rated/...`, `kits/...`). Every old
+  id is in `part_aliases.json` / `build_aliases.json`; a save's tuning is renamed on load (`SavedParts`).
+- **Gone**: the VM (`Parts/Scripting`), the scripts (`_scripts`), `stand_ins.json`, `script_constants.json`, the
+  converter (`tools/SlrrPartsConverter`, `convert-parts.ps1`, `tools/slot_shifts.json`) and their tests; code and docs
+  describe the parts as they are. Research notes and dated reports are kept as they were.
+
 ## Epic: total conversion (planned 2026-09-30)
 
 The owner wants the whole game moddable, so the community can add game modes and whole new games (a Tokyo Drift game

@@ -11,15 +11,15 @@ using StreetCorsa.Parts.Sounds;
 namespace StreetCorsa;
 
 /// <summary>
-/// Puts engine builds of the converted parts on the dyno from the command line:
+/// Puts engine builds on the dyno from the command line:
 /// lists them, shows one in detail, or checks all builds with a known power against the engine model.
 /// </summary>
 public static class Program
 {
     /// <summary>
     /// How far a rated build's modelled power may be off its rated figure before <c>rated</c>/<c>all</c> fail. The model
-    /// is fitted to about 15% mean absolute error (the ratings mix SLRR dyno readings and factory figures); a build
-    /// several times further off has lost a part in a conversion or the model broke
+    /// is fitted to about 15% mean absolute error (the ratings mix old dyno readings and factory figures); a build
+    /// several times further off has lost a part or the model broke
     /// </summary>
     private const double MaxRatedError = 0.5;
 
@@ -38,7 +38,7 @@ public static class Program
             Console.WriteLine("       EngineBench <parts folder> cars <AC cars folder>       factory engine suggested for every car");
             Console.WriteLine("       EngineBench <parts folder> tune <build id> [count]     engines a used car of that build may turn up with");
             Console.WriteLine("       EngineBench <parts folder> bench <build id>            take every part off and find where it goes back");
-            Console.WriteLine("       EngineBench <parts folder> renew <older parts folder>  engines saved with an older conversion, brought up to date");
+            Console.WriteLine("       EngineBench <parts folder> renew <older parts folder>  engines saved with older parts, brought up to date");
             Console.WriteLine("       EngineBench <parts folder> gear <AC cars folder>       factory running gear chosen for every car");
             Console.WriteLine("       EngineBench <parts folder> axles <AC cars folder>      factory rear axle chosen for every car, against its own data");
             Console.WriteLine("       EngineBench <parts folder> prices [AC cars folder]     what the parts cost new by kind, and every car new");
@@ -72,6 +72,9 @@ public static class Program
 
             case "all":
                 return Table(catalog, catalog.EngineBuilds);
+
+            case "snapshot" when args.Length > 2:
+                return Snapshot(catalog, args[2]);
 
             case "inputs":
                 return Inputs(catalog, catalog.EngineBuilds.Where(b => b.RatedPower != null));
@@ -162,6 +165,49 @@ public static class Program
         Console.WriteLine($"\n{failures.Count} rated build(s) do not run or are more than {MaxRatedError:0%} off:");
         foreach (var failure in failures) Console.WriteLine("  " + failure);
         return 1;
+    }
+
+    /// <summary>
+    /// Every build's whole report, one JSON object a line, to compare the part logic of two versions of the game by:
+    /// what feeds the dyno, the curve, and everything the car's data is given
+    /// </summary>
+    private static int Snapshot(PartsCatalog catalog, string file)
+    {
+        using var writer = new StreamWriter(file);
+        foreach (var build in catalog.EngineBuilds.OrderBy(b => b.Id, StringComparer.Ordinal))
+        {
+            var tree = PartTreeBuilder.BuildEngine(catalog, build);
+            var report = tree == null ? null : EngineEvaluator.Evaluate(catalog, tree);
+            var dyno = report?.Dyno;
+            writer.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(new
+            {
+                build.Id,
+                report?.Problem,
+                report?.Inputs,
+                report?.IdleRpm,
+                report?.LimiterRpm,
+                report?.Inertia,
+                report?.GearRatios,
+                report?.ReverseRatio,
+                report?.FinalRatio,
+                report?.DriveType,
+                report?.DiffLock,
+                report?.Friction,
+                report?.ClutchCapacity,
+                report?.Turbocharged,
+                report?.Mass,
+                Hp = dyno?.MaxPowerHp,
+                HpRpm = dyno?.MaxPowerRpm,
+                Nm = dyno?.MaxTorque,
+                NmRpm = dyno?.MaxTorqueRpm,
+                dyno?.Displacement,
+                dyno?.Compression,
+                Curve = dyno?.Curve.Select(p => new[] { p.Rpm, Math.Round(p.Torque, 3) }),
+                Unplaced = tree?.Unplaced.Select(p => p.Id)
+            }));
+        }
+
+        return 0;
     }
 
     /// <summary>What the scripts feed the engine model, side by side</summary>
@@ -419,7 +465,9 @@ public static class Program
         var folders = mods?.Folders(Mods.ContentTypes.Parts).Select(f => f.Dir).ToList() ?? new List<string>();
         if (partsFolder != null) folders.Add(partsFolder);
         PartGroups.Current = PartGroups.Load(folders);
-        foreach (var problem in CarBook.Current.Problems.Concat(PartGroups.Current.Problems)) Console.WriteLine($"content: {problem}");
+        PartClasses.Current = PartClasses.Load(folders);
+        Fuels.Current = Fuels.Load(folders);
+        foreach (var problem in CarBook.Current.Problems.Concat(PartGroups.Current.Problems).Concat(PartClasses.Current.Problems).Concat(Fuels.Current.Problems)) Console.WriteLine($"content: {problem}");
     }
 
     private static int Tune(PartsCatalog catalog, string id, int count)
@@ -488,7 +536,7 @@ public static class Program
     }
 
     /// <summary>
-    /// What a save made with an older conversion goes through: every engine of the old catalog that holds parts
+    /// What a save made with older parts goes through: every engine of the old catalog that holds parts
     /// the current one knows by another id is brought up to date and has to run again with all its parts on.
     /// </summary>
     private static int Renew(PartsCatalog catalog, string oldPartsFolder)
@@ -498,7 +546,18 @@ public static class Program
         var failures = 0;
         var renewed = 0;
 
-        foreach (var stock in EngineBuildIndex.Create(old).Runnable)
+        // A parts folder of before the parts had classes and specs of their own reads, but none of its engines runs on
+        // this model: there is nothing to check, which is no pass
+        var runnable = EngineBuildIndex.Create(old).Runnable;
+        if (runnable.Count == 0)
+        {
+            Console.WriteLine($"No engine of {oldPartsFolder} runs ({old.Problems.Count} problem(s) reading it): nothing was checked. " +
+                              "A parts folder of the format before classes and specs cannot be read by this model.");
+            foreach (var problem in old.Problems.Take(10)) Console.WriteLine($"  {problem}");
+            return 1;
+        }
+
+        foreach (var stock in runnable)
         {
             var engine = EngineFactory.CreateStock(old, stock, 1.0, new Random(1));
             if (engine == null) continue;

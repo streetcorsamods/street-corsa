@@ -46,8 +46,7 @@ These signals drive Phase 3 (trust-surface inventory) and Phase 4 (subagent work
 ## Signal detection heuristics
 
 - **writes_ac_install:** `CarDataOverlay`, `IniModificationService`, writes under `content\cars` or AC `cfg`
-- **parses_untrusted_binary:** `BinaryReader` over files from AC content or SLRR packs; AcTools `Kn5`/`DataWrapper` use
-- **runs_script_vm:** `Parts/Scripting` referenced (the game and both tools link it)
+- **parses_untrusted_binary:** `BinaryReader` over files from AC content or part packs; AcTools `Kn5`/`DataWrapper` use
 - **native_interop:** `DllImport`/`LibraryImport` (FMOD in `Audio/`), `Vortice.Direct3D9`, SlimDX, `AcTools.Render`, `D3DImage`
 - **unsafe_code:** `AllowUnsafeBlocks=true` and actual `unsafe` blocks
 - **network:** `HttpClient`, `WebClient`, sockets (none today; planned LLM integration)

@@ -9,13 +9,9 @@ public sealed record PartTree(InstalledPart Root, IReadOnlyList<PartDefinition> 
 /// </summary>
 public static class PartTreeBuilder
 {
-    private const string BlockClass = "Block";
+    public static PartTree? BuildEngine(PartsCatalog catalog, EngineBuild build) => Build(catalog, build.Parts, PartClasses.EngineBlock);
 
-    public static PartTree? BuildEngine(PartsCatalog catalog, EngineBuild build) =>
-        Build(catalog, build.Parts.Where(p => p.Part != null).Select(p => p.Part!), BlockClass,
-            build.Parts.Where(p => p.Part == null).Select(p => p.Source));
-
-    /// <param name="rootClass">Simple class name of the part everything hangs off</param>
+    /// <param name="rootClass">Class of the part everything hangs off</param>
     public static PartTree? Build(PartsCatalog catalog, IEnumerable<string> partIds, string rootClass, IEnumerable<string>? unresolved = null)
     {
         var missing = new List<string>(unresolved ?? Array.Empty<string>());

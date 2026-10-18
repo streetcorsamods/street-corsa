@@ -54,7 +54,7 @@ public class AxleCarriesCornersTests
     [Fact]
     public void A_live_axle_on_coils_carries_its_springs_and_an_independent_rear_keeps_everything_on_the_car()
     {
-        // A British car's live axle: the source game's coil springs, carried on the axle
+        // A British car's live axle: the stock coil springs, carried on the axle
         var coils = FactoryParts(car: new CarFacts("jaguar", "jaguar", 1965, "UK"));
         Assert.Contains(RearAxle.LeftSpringSlot, OnTheAxle(coils));
         Assert.Contains(RearAxle.RightSpringSlot, OnTheAxle(coils));

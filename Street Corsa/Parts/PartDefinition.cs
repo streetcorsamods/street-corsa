@@ -5,7 +5,7 @@ using Newtonsoft.Json.Linq;
 namespace StreetCorsa.Parts;
 
 /// <summary>
-/// A group of parts converted together (one SLRR rpk), stored as pack.json next to the part models
+/// A group of parts kept together, stored as pack.json next to the part models
 /// </summary>
 public class PartPack
 {
@@ -24,13 +24,9 @@ public class PartPack
     /// </summary>
     public const string ModelsFileName = "models.json";
 
-    /// <summary>Pack id, also its folder under the parts root, e.g. "engines/Mopar"</summary>
+    /// <summary>Pack id, also its folder under the parts root, e.g. "engines/chrysler"</summary>
     [JsonProperty("id")]
     public string Id { get; set; } = string.Empty;
-
-    /// <summary>Where the pack was converted from, relative to the source game</summary>
-    [JsonProperty("source")]
-    public string Source { get; set; } = string.Empty;
 
     /// <summary>
     /// The make the pack's parts are for, as the part shops name it ("mopar", "ford", "gm"): a make specialist stocks
@@ -45,11 +41,11 @@ public class PartPack
 
 /// <summary>
 /// One physical part: its 3D model plus the slots that say where it mounts and what mounts on it.
-/// Geometry data follows the SLRR part cfg: metres, left-handed, Y up.
+/// Geometry is in metres in the part's own space: left-handed, Y up.
 /// </summary>
 public class PartDefinition
 {
-    /// <summary>Unique id: pack id + config name, e.g. "engines/Mopar/block_340"</summary>
+    /// <summary>Unique id: pack id + the part's own name, e.g. "engines/chrysler/chrysler_340_v8_block"</summary>
     [JsonProperty("id")]
     public string Id { get; set; } = string.Empty;
 
@@ -89,27 +85,39 @@ public class PartDefinition
     [JsonIgnore]
     public string? Make { get; set; }
 
-    /// <summary>The compiled scripts of the part's mod: its <see cref="SourceScript"/> is found there</summary>
-    [JsonIgnore]
-    public string? ScriptRoot { get; set; }
+    /// <summary>A short name of the part's own (optional): the last part of its id when the pack gives none</summary>
+    [JsonProperty("name", NullValueHandling = NullValueHandling.Ignore)]
+    public string Name
+    {
+        get => string.IsNullOrEmpty(_name) ? LocalId[(LocalId.LastIndexOf('/') + 1)..] : _name;
+        set => _name = value;
+    }
 
-    [JsonProperty("name")]
-    public string Name { get; set; } = string.Empty;
+    private string? _name;
 
-    /// <summary>The name the player reads, e.g. "Chrysler 340 V8 block": the script's at conversion, written for the game since (docs/modding.md)</summary>
+    public bool ShouldSerializeName() => !string.IsNullOrEmpty(_name);
+
+    /// <summary>The name the player reads, e.g. "Chrysler 340 V8 block" (docs/modding.md, "A part's name")</summary>
     [JsonProperty("display_name")]
     public string? DisplayName { get; set; }
 
     /// <summary>
-    /// Script base class that defines how the part behaves,
-    /// e.g. "java.game.parts.enginepart.block.block_vee.Block_Vee_OHV"
+    /// What the part is: a class of <see cref="PartClasses"/> ("engine_block", "camshaft", "disc_brake"), which says how
+    /// it works and what it counts as (a disc brake is a brake). Null for a fitting of the base game that only gives
+    /// other parts something to mount against (the scriptless roots wheels and blocks fit by).
     /// </summary>
-    [JsonProperty("base_class")]
-    public string? BaseClass { get; set; }
+    [JsonProperty("class", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Class { get; set; }
 
-    /// <summary>Every script class above the part, nearest first, ending at "java.game.parts.Part"</summary>
-    [JsonProperty("class_chain")]
-    public List<string> ClassChain { get; set; } = new();
+    // The fields of the pack format before the parts had classes and specs of their own: read only to say so
+    private static readonly string[] OlderFormatNames = { "class_chain", "properties", "required_slots" };
+
+    [JsonExtensionData]
+    private IDictionary<string, JToken>? OtherFields { get; set; }
+
+    /// <summary>The fields of the older pack format the part still has, which nothing reads (docs/modding.md, "A part")</summary>
+    [JsonIgnore]
+    public IEnumerable<string> OlderFormatFields => OlderFormatNames.Where(name => OtherFields?.ContainsKey(name) == true);
 
     /// <summary>
     /// What job the part is on an engine, for a mod whose part names do not say it: a kind of
@@ -128,7 +136,7 @@ public class PartDefinition
 
     /// <summary>
     /// Whether the part does its job better than a factory one: a performance radiator, water pump or fan, a deep race
-    /// oil pan. Null leaves it to the words of the part's name, as the source game's parts are read.
+    /// oil pan. Null leaves it to the words of the part's name.
     /// </summary>
     [JsonProperty("performance", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Performance { get; set; }
@@ -140,6 +148,13 @@ public class PartDefinition
     /// </summary>
     [JsonProperty("becomes", NullValueHandling = NullValueHandling.Ignore)]
     public Dictionary<string, string>? Becomes { get; set; }
+
+    /// <summary>
+    /// A part made for speed or strength, never put on a car at the factory: no car's factory running gear is guessed
+    /// from it, however close its figures (a Super Stock spring, a 90/10 shock)
+    /// </summary>
+    [JsonProperty("aftermarket", DefaultValueHandling = DefaultValueHandling.Ignore)]
+    public bool Aftermarket { get; set; }
 
     /// <summary>
     /// The cars a running gear part left the factory on (<see cref="Parts.CameIn"/>): what the factory running gear of a car
@@ -164,41 +179,23 @@ public class PartDefinition
     public bool CoolingOwnFan { get; set; }
 
     /// <summary>
-    /// Whether the part has a script of its own that was run: the base game's root entries (what mods declare their
-    /// fit against) have none, so no properties and no classes. A script whose parent class is missing still counts:
-    /// it has no chain, but it was constructed.
+    /// Whether the part is one at all: a fitting of the base game (what other parts declare their fit against) has no
+    /// class, no specs and no figures, and is never sold, fitted or shown on its own
     /// </summary>
     [JsonIgnore]
-    public bool IsScripted => ClassChain.Count > 0 || Properties.Count > 0 || ReadFigures != null;
+    public bool IsRealPart => Class != null || Specs.Count > 0 || ReadFigures != null;
 
     /// <summary>
-    /// The part's script fields once constructed (bore, stroke, ratio, value, max_wear...), in the script's
-    /// own names and units, with the pack's <see cref="Overrides"/> over them. Values are numbers, strings,
-    /// "rpk path#0xID" resources or lists of those. What is read from the pack about the part (its price, running
-    /// gear, sump) is read here; the engine is worked out by running the script itself.
+    /// What the part is made like, in the figures its class reads (docs/modding.md, "Specs"): a block's "bore" and
+    /// "cylinders", a camshaft's "intake_duration", a tyre's "friction". Plain metric units. Values are numbers, words
+    /// or lists of numbers.
     /// </summary>
-    [JsonProperty("properties")]
-    public Dictionary<string, object> Properties { get; set; } = new();
+    [JsonProperty("specs")]
+    public Dictionary<string, object> Specs { get; set; } = new();
 
     /// <summary>
-    /// Script fields a mod sets over what the part's script constructs, before the player's tuning: a number
-    /// ("stroke": 76.2), a number for one element of an array field ("ratio[2]": 1.0), or a list of numbers for an
-    /// array field from its first element on ("ratio": [0, 1.76, 1.0]; null keeps an element). This is how a part
-    /// sharing a stock script gets its own figures. As written in the pack; what is used is <see cref="FieldOverrides"/>.
-    /// </summary>
-    [JsonProperty("overrides", NullValueHandling = NullValueHandling.Ignore)]
-    public Dictionary<string, JToken>? Overrides { get; set; }
-
-    /// <summary>
-    /// <see cref="Overrides"/> as the catalog read them (<see cref="PartOverrides"/>): checked against the script's
-    /// fields, whole fields cut to whole numbers, lists before single elements. Also put in <see cref="Properties"/>.
-    /// </summary>
-    [JsonIgnore]
-    public IReadOnlyList<PartOverride> FieldOverrides { get; internal set; } = Array.Empty<PartOverride>();
-
-    /// <summary>
-    /// Engine figures of the part's own, in plain metric units, for a part without a script of the source game or over
-    /// what its script works out (<see cref="Logic.PartFigures"/>): "bore": 86, "intake_flow": { "times": 1.1 },
+    /// Engine figures of the part's own, in plain metric units, over what the engine's parts work out from their specs
+    /// (<see cref="Logic.PartFigures"/>): "bore": 86, "intake_flow": { "times": 1.1 },
     /// "gears": [3.5, 2.1, 1.4, 1.0], "turbo": { "boost": 0.6, "full_boost_rpm": 4000 }. As written in the pack;
     /// what is used is <see cref="ReadFigures"/>.
     /// </summary>
@@ -209,37 +206,22 @@ public class PartDefinition
     [JsonIgnore]
     public Logic.PartFigureSet? ReadFigures { get; internal set; }
 
-    /// <summary>
-    /// Fields the script recomputes in updatevariables(), as they come out for a brand new part on its own.
-    /// Reference values to check the game's own part logic against.
-    /// </summary>
-    [JsonProperty("derived")]
-    public Dictionary<string, object> Derived { get; set; } = new();
-
-    /// <summary>What the script expects on which of the part's slots, e.g. "crankshaft" -> 8</summary>
+    /// <summary>Which of the part's slots takes what its class works with, e.g. "crankshaft" -> 8</summary>
     [JsonProperty("slot_roles")]
     public Dictionary<string, int> SlotRoles { get; set; } = new();
 
-    /// <summary>Parts the script mounts on a factory build of this part</summary>
-    [JsonProperty("stock_parts")]
-    public List<PartStockReference> StockParts { get; set; } = new();
-
-    /// <summary>Slots that must be filled for the part to work, with the script's explanation</summary>
-    [JsonProperty("required_slots")]
-    public List<PartSlotRule> RequiredSlots { get; set; } = new();
+    /// <summary>Slots that must be filled for the part to work, with what the player reads when one is empty</summary>
+    [JsonProperty("needs")]
+    public List<PartSlotRule> Needs { get; set; } = new();
 
     /// <summary>
-    /// A number among <see cref="Properties"/>. They come back from JSON as long or double, whichever the
-    /// script's number happened to look like, so they are never to be read by type.
+    /// A number among <see cref="Specs"/>. They come back from JSON as long or double, whichever the number
+    /// happened to look like, so they are never to be read by type.
     /// </summary>
-    public double Number(string property, double fallback = 0) =>
-        Properties.GetValueOrDefault(property) is { } value and (long or int or double or float or decimal)
+    public double Number(string spec, double fallback = 0) =>
+        Specs.GetValueOrDefault(spec) is { } value and (long or int or double or float or decimal)
             ? System.Convert.ToDouble(value, System.Globalization.CultureInfo.InvariantCulture)
             : fallback;
-
-    /// <summary>Catalog categories from the most specific up, e.g. ["blocks", "Main", "engine", "parts"]</summary>
-    [JsonProperty("categories")]
-    public List<string> Categories { get; set; } = new();
 
     /// <summary>Model file next to pack.json; null for parts without usable geometry</summary>
     [JsonProperty("model")]
@@ -251,17 +233,6 @@ public class PartDefinition
     [JsonProperty("slots")]
     public List<PartSlot> Slots { get; set; } = new();
 
-    /// <summary>Remaining cfg lines by keyword (category, damage, wing, wheel, ...), kept verbatim for the part logic</summary>
-    [JsonProperty("config")]
-    public Dictionary<string, List<string>> Config { get; set; } = new();
-
-    /// <summary>Source ids, to trace a part back to the original data</summary>
-    [JsonProperty("source_type_id")]
-    public int SourceTypeId { get; set; }
-
-    [JsonProperty("source_script")]
-    public string? SourceScript { get; set; }
-
     /// <summary>
     /// A pack.json that says null for a list (or has a null in one) gets it empty: the catalog's mating index is
     /// built once, and one null in it would fail every lookup after
@@ -269,17 +240,10 @@ public class PartDefinition
     [OnDeserialized]
     internal void OnDeserialized(StreamingContext context)
     {
-        Name ??= string.Empty;
-        ClassChain = NonNull(ClassChain);
-        Properties ??= new();
-        Derived ??= new();
+        Specs ??= new();
         SlotRoles ??= new();
-        StockParts = NonNull(StockParts);
-        RequiredSlots = NonNull(RequiredSlots);
-        Categories = NonNull(Categories);
+        Needs = NonNull(Needs);
         Slots = NonNull(Slots);
-        Config ??= new();
-        foreach (var key in Config.Where(c => c.Value == null).Select(c => c.Key).ToList()) Config.Remove(key);
     }
 
     /// <summary>The list without its nulls; an empty one for null</summary>
@@ -323,10 +287,7 @@ public class PartSlot
     [JsonProperty("rotation")]
     public float[] Rotation { get; set; } = new float[3];
 
-    [JsonProperty("damage_mode")]
-    public int? DamageMode { get; set; }
-
-    /// <summary>Parent slots this slot mounts on. Empty for slots that only receive other parts.</summary>
+    /// <summary>Parent slots this slot mounts on, by part and slot. Empty for slots that only receive other parts.</summary>
     [JsonProperty("attaches_to")]
     public List<PartSlotReference> AttachesTo { get; set; } = new();
 
@@ -378,53 +339,22 @@ public class PartSlot
     }
 }
 
-public class PartStockReference
-{
-    /// <summary>Id of the mounted part; null when it is outside the converted parts</summary>
-    [JsonProperty("part")]
-    public string? Part { get; set; }
-
-    /// <summary>The script's label for it, e.g. "103er crankshaft"</summary>
-    [JsonProperty("name")]
-    public string? Name { get; set; }
-
-    /// <summary>True when the script only mounts it on some cars or at random</summary>
-    [JsonProperty("conditional")]
-    public bool Conditional { get; set; }
-
-    /// <summary>Original reference, "rpk path#0xTYPEID", always set</summary>
-    [JsonProperty("source")]
-    public string Source { get; set; } = string.Empty;
-}
-
 public class PartSlotRule
 {
     [JsonProperty("slot")]
     public int Slot { get; set; }
 
-    /// <summary>The script's words when the slot is empty, e.g. "the engine is missing the alternator."</summary>
+    /// <summary>What the player reads when the slot is empty, e.g. "the engine is missing the alternator."</summary>
     [JsonProperty("message")]
     public string Message { get; set; } = string.Empty;
-
-    /// <summary>
-    /// True when the game holds the part to the rule itself (<c>EngineEvaluator</c>): a rule a pack adds of its own,
-    /// such as the extra pads of a manifold whose stock script reads only one. A rule read out of a script is left to
-    /// that script, which may ask it only on some cars.
-    /// </summary>
-    [JsonProperty("enforce", DefaultValueHandling = DefaultValueHandling.Ignore)]
-    public bool Enforce { get; set; }
 }
 
 public class PartSlotReference
 {
-    /// <summary>Id of the target part; null when the target is outside the converted parts (cars, base game)</summary>
+    /// <summary>Id of the target part</summary>
     [JsonProperty("part")]
     public string? Part { get; set; }
 
     [JsonProperty("slot")]
     public int Slot { get; set; }
-
-    /// <summary>Original reference, "rpk path#0xTYPEID", always set</summary>
-    [JsonProperty("source")]
-    public string Source { get; set; } = string.Empty;
 }

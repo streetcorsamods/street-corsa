@@ -15,7 +15,7 @@ public sealed class AcEngineDataOptions
     /// </summary>
     public double DrivetrainEfficiency { get; set; } = 1.0;
 
-    /// <summary>The part scripts' inertia figures (mass * 0.09, summed) to kg m2 of a spinning engine</summary>
+    /// <summary>The engine report's inertia figures (the parts' old units) to kg m2 of a spinning engine</summary>
     public double InertiaScale { get; set; } = PartFigures.KgM2PerInertiaUnit;
 
     /// <summary>Whether the build's transmission replaces the car's gears, final drive and differential lock</summary>
@@ -28,7 +28,7 @@ public sealed class AcEngineDataOptions
     public double? FactoryEngineMass { get; set; }
 
     /// <summary>
-    /// Nm the clutch holds per unit of the scripts' clamp figure. Set so that every factory engine's clutch
+    /// Nm the clutch holds per unit of the report's clamp figure. Set so that every factory engine's clutch
     /// holds it (the big-block packs put a 300 behind 770 Nm); a built engine outgrows its stock clutch.
     /// </summary>
     public double ClutchTorquePerUnit { get; set; } = PartFigures.ClutchNmPerUnit;
@@ -36,7 +36,7 @@ public sealed class AcEngineDataOptions
     /// <summary>Engine braking of a stock oil pan, Nm per litre at the limiter</summary>
     public double CoastTorquePerLitre { get; set; } = 12;
 
-    /// <summary>The scripts' friction figure of a stock oil pan on a stock bottom end (the median of the builds); more drag means more braking</summary>
+    /// <summary>The friction figure of a stock oil pan on a stock bottom end (the median of the builds); more drag means more braking</summary>
     public double ReferenceFriction { get; set; } = PartFigures.ReferenceFriction;
 }
 
@@ -265,7 +265,7 @@ public static class AcEngineData
     {
         if (report.Inputs is not { } inputs) return Array.Empty<AcTurbo>();
 
-        // Each turbo with the boost it makes at a speed, bar: the scripts' own, then the parts' figures'
+        // Each turbo with the boost it makes at a speed, bar: the parts' specs', then their figures'
         var turbos = new List<(Func<double, double> Boost, double LagUp, double LagDown)>();
         var scriptTurbo = report.Turbocharged && inputs.BoostMax > 0;
         if (scriptTurbo) turbos.Add((rpm => EngineDyno.ScriptBoostBar(inputs, rpm), report.TurboLagUp, report.TurboLagDown));

@@ -11,11 +11,17 @@ public class EngineBuild
 {
     public const string FileName = "engine_builds.json";
 
-    public const string OriginCar = "car";
-    public const string OriginNotes = "notes";
+    /// <summary>Next to the builds: ids of builds that are gone, with the build that took their place</summary>
+    public const string AliasesFileName = "build_aliases.json";
+
+    public const string OriginCar = "factory";
+    public const string OriginRated = "rated";
     public const string OriginKit = "kit";
 
-    /// <summary>Unique id, e.g. "cars/Charger69_RT/stock" or "notes/MOPAR/mopar-340-six-pack-290-hp"</summary>
+    /// <summary><see cref="OriginCar"/> as the builds' files said it before</summary>
+    public const string OriginCarBefore = "car";
+
+    /// <summary>Unique id, e.g. "factory/dodge-charger-r-t-69" or "rated/mopar-340-six-pack-290-hp"</summary>
     [JsonProperty("id")]
     public string Id { get; set; } = string.Empty;
 
@@ -26,14 +32,14 @@ public class EngineBuild
     [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>Where the list comes from: a car script of the source game, a text file of build notes, or an engine kit of a pack</summary>
+    /// <summary>
+    /// What the build is: what a car left the factory with (<see cref="OriginCar"/>), an engine with a known output to
+    /// hold the engine model to (<see cref="OriginRated"/>), a pack's engine kit (<see cref="OriginKit"/>) or a mod's
+    /// </summary>
     [JsonProperty("origin")]
     public string Origin { get; set; } = string.Empty;
 
-    [JsonProperty("source")]
-    public string Source { get; set; } = string.Empty;
-
-    /// <summary>Power the build is known to make in the source game, in hp; the engine model is tuned against these</summary>
+    /// <summary>Power the build is known to make, in hp; the engine model is held to these (EngineBench rated)</summary>
     [JsonProperty("rated_power")]
     public double? RatedPower { get; set; }
 
@@ -45,9 +51,9 @@ public class EngineBuild
     [JsonProperty("aftermarket", DefaultValueHandling = DefaultValueHandling.Ignore)]
     public bool Aftermarket { get; set; }
 
-    /// <summary>The engine block first, then everything that goes on it; parts outside the converted packs have no id</summary>
+    /// <summary>Part ids, the engine block first, then everything that goes on it</summary>
     [JsonProperty("parts")]
-    public List<PartStockReference> Parts { get; set; } = new();
+    public List<string> Parts { get; set; } = new();
 
     /// <summary>An engine_builds.json that says null for the name or the parts, or has a null part, reads as if it had none</summary>
     [OnDeserialized]
@@ -55,8 +61,7 @@ public class EngineBuild
     {
         Name ??= string.Empty;
         Origin ??= string.Empty;
-        Source ??= string.Empty;
         Parts ??= new();
-        Parts.RemoveAll(p => p is null);
+        Parts.RemoveAll(string.IsNullOrWhiteSpace);
     }
 }

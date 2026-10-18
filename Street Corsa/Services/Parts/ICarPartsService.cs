@@ -19,7 +19,7 @@ namespace StreetCorsa.Services.Parts
         EngineBuildIndex Builds { get; }
 
         /// <summary>
-        /// False when there are no converted parts to work with, or they could not be read; cars then simply
+        /// False when there are no parts to work with, or they could not be read; cars then simply
         /// have no part trees. Never throws.
         /// </summary>
         bool IsAvailable { get; }

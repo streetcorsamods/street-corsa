@@ -9,7 +9,7 @@ CREDITS.txt there naming what it was made from.
   "Brake Shoe" by Addere Creations            the drum's shoes, two to a drum
   "Leaf Spring" by 3dsl                       every leaf spring
   "Differential Gear box" by Anoopbg          every differential carrier (the case only: the gears are ours)
-  "COIL SPRING" by VR DESIGNER                the source game's coil springs (the base game's parts/models.json)
+  "COIL SPRING" by VR DESIGNER                the stock coil springs (the base game's parts/models.json)
 
 A part's own space: metres, Y up, its front towards -Z. A wheel-side part (a drum, its shoes) has its +X towards the
 outside of the car and the hub's axis along X; a leaf spring runs along Z with its top at the axle seat; a carrier's
@@ -58,7 +58,7 @@ MODELS.update({
     "shoes": ("brake_shoe", ["brakes_drum"], 512),
     "leaf": ("leaf_spring", ["springs_leaf"], 512),
     "diff_case": ("differential_gear_box", ["axles_gm", "axles_ford", "axles_mopar", "axles_dana", "axle_speed"], 256),
-    # Not a pack: the folder the base game's parts/models.json names for the source game's springs
+    # Not a pack: the folder the base game's parts/models.json names for the stock springs
     "coil_spring": ("coil_spring", ["coil_springs"], 256),
 })
 
@@ -186,9 +186,9 @@ lo, hi = bounds(o)
 o.data.transform(scale(0.17 * 1.1 / (hi.y - lo.y)) @ at(-(lo + hi) / 2))
 save("diff_case")
 
-# The coil spring for the source game's springs, in their model's space: their mount slot is 0.4 m under the origin, so
+# The coil spring for the stock springs, in their model's space: their mount slot is 0.4 m under the origin, so
 # the coil's foot goes 0.34 m under it (at the hub's height: the seat is 0.06 m under the hub) and it stands up from
-# there. The source game's coil was 96 mm across and 277 mm tall, small for the cars of the day (front coils about 5.5
+# there. The stock coil was 96 mm across and 277 mm tall, small for the cars of the day (front coils about 5.5
 # inches across, 12 to 13 inches tall installed): this one 135 mm across, its own build making it 320 mm tall
 o = load("coil_spring")
 decimate(o, 6000)

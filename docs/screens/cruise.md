@@ -1,6 +1,6 @@
 # Cruise Screen
 
-Roadmap step 13, "the street encounter". Not SLRR's open city: the player sits in their own car at the curb, engine
+Roadmap step 13, "the street encounter". Not an open city: the player sits in their own car at the curb, engine
 running, looking out of the driver's window at the lane beside them. Now and then a rival pulls up alongside, blips
 the throttle, and makes an offer: a race, where, and for what. The player takes it, changes the stakes, or waves them
 off, and they pull away. It is the way Street Rod did it, in 3D.

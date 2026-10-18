@@ -12,7 +12,7 @@ namespace StreetCorsa.Services.PartShops
     {
         IPartShopCatalog Catalog { get; }
 
-        /// <summary>False when there are no converted parts: the shops have nothing to sell</summary>
+        /// <summary>False when there are no parts: the shops have nothing to sell</summary>
         bool IsAvailable { get; }
 
         /// <summary>Every part the shop deals in, whether it has it today or not</summary>
@@ -111,8 +111,6 @@ namespace StreetCorsa.Services.PartShops
                 _factoryParts ??= _parts.Catalog.EngineBuilds
                     .Where(b => string.Equals(b.Origin, EngineBuild.OriginCar, StringComparison.OrdinalIgnoreCase))
                     .SelectMany(b => b.Parts)
-                    .Where(p => p.Part != null)
-                    .Select(p => p.Part!)
                     .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
                 var assortment = _paper.Assortment.Where(p => PartShopRules.Deals(shop, p, _factoryParts)).ToList();
@@ -159,6 +157,23 @@ namespace StreetCorsa.Services.PartShops
         {
             if (!IsAvailable || Catalog.Get(shop.Id) is not { } definition) return 0;
             return PartPricing.Round(PartPricing.WorthOfAssembly(_parts.Catalog, part) * PartShopRules.BuyFactor(definition));
+        }
+
+        /// <summary>The part shops' shelves under the ids their parts go by now: a shelf is sold from by its part's id</summary>
+        /// <returns>How many shelves changed</returns>
+        public static int RenameShelves(PartsCatalog catalog, IEnumerable<PartShopLocation> shops)
+        {
+            var changed = 0;
+            foreach (var shelf in shops.SelectMany(shop => shop.Shelves))
+            {
+                var current = catalog.CurrentId(shelf.DefinitionId);
+                if (current == shelf.DefinitionId) continue;
+
+                shelf.DefinitionId = current;
+                changed++;
+            }
+
+            return changed;
         }
 
         // ----- the player at the counter -----

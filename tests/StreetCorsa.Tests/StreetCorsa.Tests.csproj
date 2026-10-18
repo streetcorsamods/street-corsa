@@ -42,6 +42,8 @@
     <None Include="..\..\Street Corsa\Content\streetcorsa\flow\*.json" LinkBase="Content\streetcorsa\flow" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\Street Corsa\Content\streetcorsa\cars\*.json" LinkBase="Content\streetcorsa\cars" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\Street Corsa\Content\streetcorsa\parts\part_groups.json" Link="Content\streetcorsa\parts\part_groups.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\Street Corsa\Content\streetcorsa\parts\part_classes.json" Link="Content\streetcorsa\parts\part_classes.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\Street Corsa\Content\streetcorsa\parts\fuels.json" Link="Content\streetcorsa\parts\fuels.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\Street Corsa\Content\streetcorsa\text\*.json" LinkBase="Content\streetcorsa\text" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\Street Corsa\Content\streetcorsa\ai\*.json" LinkBase="Content\streetcorsa\ai" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\Street Corsa\Content\streetcorsa\events\*.json" LinkBase="Content\streetcorsa\events" CopyToOutputDirectory="PreserveNewest" />
@@ -52,13 +54,6 @@
     <None Include="..\..\Street Corsa\Content\streetcorsa\partshops\*.json" LinkBase="Content\streetcorsa\partshops" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\Street Corsa\Content\streetcorsa\racers\*.json" LinkBase="Content\streetcorsa\racers" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\Street Corsa\Content\streetcorsa\stations\*\station.json" LinkBase="Content\streetcorsa\stations" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
-
-  <!-- The converter's plain-BCL code, tried on temp folders and made-up files: its commit and its SCX and RPK readers -->
-  <ItemGroup>
-    <Compile Include="..\..\tools\SlrrPartsConverter\ConversionOutput.cs" Link="Converter\ConversionOutput.cs" />
-    <Compile Include="..\..\tools\SlrrPartsConverter\Slrr\SlrrMesh.cs" Link="Converter\SlrrMesh.cs" />
-    <Compile Include="..\..\tools\SlrrPartsConverter\Slrr\SlrrRpk.cs" Link="Converter\SlrrRpk.cs" />
   </ItemGroup>
 
   <!-- What the scene builders share, tried on models in memory: their meshes, a prop's OBJ meshes and their command lines -->

@@ -3,12 +3,11 @@ using System.IO;
 using Newtonsoft.Json;
 using StreetCorsa.Helpers;
 using StreetCorsa.Mods;
-using StreetCorsa.Parts.Scripting;
 
 namespace StreetCorsa.Parts;
 
 /// <summary>
-/// All converted parts found under a folder, with the attach graph indexed both ways:
+/// All parts found under the mods' parts folders, with the attach graph indexed both ways:
 /// parts know what they mount on, the catalog answers what can be mounted on a given slot.
 /// </summary>
 public sealed class PartsCatalog
@@ -25,12 +24,12 @@ public sealed class PartsCatalog
     // A slot and those it stands in for: the graph does not change once loaded, and CanMate asks in nested loops
     private readonly ConcurrentDictionary<(PartDefinition Part, PartSlot Slot), List<(PartDefinition Part, PartSlot Slot)>> _equivalents = new();
 
+    private readonly Dictionary<string, string> _buildAliases = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> _problems = new();
 
-    private PartsCatalog(string root, IReadOnlyList<string> scriptRoots)
+    private PartsCatalog(string root)
     {
         _root = root;
-        Scripts = new ScriptClassLoader(scriptRoots);
         _mating = new Lazy<MatingIndex>(() => new MatingIndex(this));
     }
 
@@ -39,13 +38,7 @@ public sealed class PartsCatalog
     /// <summary>The base game's parts folder: where the slot shifts are written</summary>
     public string Root => _root;
 
-    /// <summary>
-    /// The compiled scripts of the parts. One loader for the catalog: a class is read and parsed once,
-    /// however many times an assembly of parts is brought to life.
-    /// </summary>
-    public ScriptClassLoader Scripts { get; }
-
-    /// <summary>Complete engines as part lists: factory builds of the source game's cars and written-down builds</summary>
+    /// <summary>Complete engines as part lists: what the cars left the factory with, rated builds, kits and the mods' builds</summary>
     public IReadOnlyList<EngineBuild> EngineBuilds { get; private set; } = Array.Empty<EngineBuild>();
 
     /// <summary>What has to come off an engine before what, and what only comes off on the stand</summary>
@@ -55,7 +48,7 @@ public sealed class PartsCatalog
     public PartRebuilds Rebuilds { get; internal set; } = PartRebuilds.Empty;
 
     /// <summary>A catalog without parts, for when the parts under the folder cannot be read</summary>
-    public static PartsCatalog Empty(string root) => new(root, new[] { Path.Combine(root, PartScripts.Folder) });
+    public static PartsCatalog Empty(string root) => new(root);
 
     /// <summary>What could not be read, or was left out and why: one line each, for the log</summary>
     public IReadOnlyList<string> Problems => _problems;
@@ -67,8 +60,8 @@ public sealed class PartsCatalog
     /// <summary>The parts of every mod that has any, in load order; the first folder is the base game's</summary>
     /// <remarks>
     /// Every mod's parts folder is laid out as the base game's: packs (a pack.json with its models) anywhere under
-    /// it, and next to them <c>_scripts</c>, <see cref="EngineBuild.FileName"/>, and
-    /// <see cref="PartPack.AliasesFileName"/>, each about the mod's own parts. A mod's ids get its namespace,
+    /// it, and next to them <see cref="EngineBuild.FileName"/>, <see cref="PartPack.AliasesFileName"/> and
+    /// <see cref="EngineBuild.AliasesFileName"/>, each about the mod's own parts and builds. A mod's ids get its namespace,
     /// and what its files name (the parts a slot attaches to, the parts of a build, an alias) is found in the mod
     /// first, then in the base game (<see cref="ModIds.Resolve"/>).
     /// A pack that does not read is a pack that is not there, and a part without an id is no part: each is one line
@@ -77,11 +70,13 @@ public sealed class PartsCatalog
     public static PartsCatalog Load(IReadOnlyList<(ModInfo Mod, string Dir)> roots)
     {
         var baseRoot = roots.FirstOrDefault(r => r.Mod.IsBase).Dir ?? roots.FirstOrDefault().Dir ?? string.Empty;
-        var catalog = new PartsCatalog(baseRoot, roots.Select(r => Path.Combine(r.Dir, PartScripts.Folder)).ToList());
+        var catalog = new PartsCatalog(baseRoot);
         var registry = new ContentRegistry<PartDefinition>("part");
         var builds = new ContentRegistry<EngineBuild>("engine build");
         var aliases = new List<(ModInfo Mod, string Gone, string Current)>();
+        var buildAliases = new List<(ModInfo Mod, string Gone, string Current)>();
         var models = new List<(ModInfo Mod, string Root, string Label, string Part, string Model)>();
+        var classes = PartClasses.Load(roots.Select(r => r.Dir));
 
         foreach (var (mod, root) in roots)
         {
@@ -112,12 +107,19 @@ public sealed class PartsCatalog
                     part.LocalId = part.Id;
                     part.PackFolder = Path.GetDirectoryName(file);
                     part.Make = string.IsNullOrWhiteSpace(pack.Make) ? null : pack.Make.Trim();
-                    part.ScriptRoot = Path.Combine(root, PartScripts.Folder);
                     if (registry.Add(mod, part.Id, part.Replaces, part, packName) is { } id) part.Id = id;
+
+                    // A mod written for the pack format of before, or a class of no file, loads but does nothing
+                    if (part.OlderFormatFields.ToList() is { Count: > 0 } older)
+                        catalog._problems.Add($"{packName}: {part.Id}: {string.Join(", ", older)} are of the older pack format and not read; a part has a class, specs and needs now (docs/modding.md)");
+                    if (!string.IsNullOrWhiteSpace(part.Class) && !classes.Parents.ContainsKey(part.Class) && !PartClasses.Current.Parents.ContainsKey(part.Class)
+                        && !part.Class.Equals(PartClasses.Part, StringComparison.OrdinalIgnoreCase))
+                        catalog._problems.Add($"{packName}: {part.Id}: the class {part.Class} is in no {PartClasses.FileName}; the part counts as no kind of part");
                 }
             }
 
             ReadAliases(catalog, root, label, mod, aliases);
+            ReadBuildAliases(catalog, root, label, mod, buildAliases);
             ReadModels(catalog, root, label, mod, models);
             ReadBuilds(catalog, root, label, mod, builds);
         }
@@ -134,8 +136,6 @@ public sealed class PartsCatalog
                 foreach (var target in slot.AttachesTo.Concat(slot.CompatibleWith).Where(t => t.Part != null))
                     target.Part = Resolve(part.ModId, target.Part!);
             }
-
-            foreach (var stock in part.StockParts.Where(s => s.Part != null)) stock.Part = Resolve(part.ModId, stock.Part!);
         }
 
         foreach (var (id, build, mod) in builds.Entries)
@@ -143,12 +143,10 @@ public sealed class PartsCatalog
             build.Id = id;
             if (mod.IsBase) continue;
 
-            foreach (var entry in build.Parts.Where(p => p.Part != null)) entry.Part = Resolve(mod.Id, entry.Part!);
+            for (var i = 0; i < build.Parts.Count; i++) build.Parts[i] = Resolve(mod.Id, build.Parts[i]);
         }
 
         catalog.EngineBuilds = builds.All.ToList();
-        foreach (var (_, dir) in roots) catalog.Scripts.UseStandIns(Path.Combine(dir, ScriptClassLoader.StandInsFile));
-        catalog._problems.AddRange(catalog.Scripts.Problems);
         catalog.WorkOrder = WorkOrder.Load(roots.Select(r => (r.Mod.Id, r.Mod.IsBase, r.Dir)), catalog._problems);
         WorkOrder.CheckWays(catalog._parts.Values, catalog._problems);
         catalog.Rebuilds = PartRebuilds.Load(roots.Select(r => (r.Mod.Id, r.Mod.IsBase, r.Dir)), catalog._problems);
@@ -166,7 +164,6 @@ public sealed class PartsCatalog
                 part.CoolingOwnFan = part.CoolingRole != null && catalog.WorkOrder.HasOwnFan(part);
             }
         }
-        PartOverrides.Apply(catalog.Scripts, catalog._parts.Values, catalog._problems);
         Logic.PartFigures.Read(catalog._parts.Values, catalog._problems);
 
         foreach (var (mod, gone, current) in aliases)
@@ -174,6 +171,14 @@ public sealed class PartsCatalog
             // An alias names a part that was: it has no entry to find, so it is the mod's own unless written in full
             var from = ModIds.IsQualified(gone) ? ModIds.Normalize(gone) : ModIds.Qualify(mod.Id, gone);
             catalog._aliases[from] = Resolve(mod.Id, current);
+        }
+
+        // A build alias names a build that was, as a part alias does a part
+        var buildIds = catalog.EngineBuilds.Select(b => b.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var (mod, gone, current) in buildAliases)
+        {
+            var from = ModIds.IsQualified(gone) ? ModIds.Normalize(gone) : ModIds.Qualify(mod.Id, gone);
+            catalog._buildAliases[from] = ModIds.Resolve(mod.Id, current, buildIds.Contains);
         }
 
         // Models a mod gives other parts, in load order: the latest mod's wins
@@ -186,7 +191,7 @@ public sealed class PartsCatalog
             }
 
             var prefix = key.EndsWith('*') ? key[..^1] : null;
-            var exact = prefix == null ? Resolve(mod.Id, key) : null;
+            var exact = prefix == null ? catalog.CurrentId(Resolve(mod.Id, key)) : null;
             var matched = 0;
             foreach (var part in catalog._parts.Values.Where(p => prefix != null ? p.Id.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
                                                                                  : p.Id.Equals(exact, StringComparison.OrdinalIgnoreCase)))
@@ -199,10 +204,14 @@ public sealed class PartsCatalog
             if (matched == 0) catalog._problems.Add($"{label}{PartPack.ModelsFileName}: {key} names no part; left out");
         }
 
-        // Slots nudged into place in the garage since the last conversion, by full id: the file is the base game's
+        // Slots nudged into place in the garage, by full id: the file is the base game's. A part since renamed keeps its
+        // shifts under its new id, which the file gets the next time it is written.
         catalog.Shifts = SlotShifts.Load(baseRoot);
         if (catalog.Shifts.Problem != null) catalog._problems.Add(catalog.Shifts.Problem);
-        catalog.Shifts.ApplyTo(catalog._parts);
+        catalog.Shifts.Rename(catalog.CurrentId);
+        catalog._problems.AddRange(catalog.Shifts.ApplyTo(catalog._parts)
+            .Where(id => !ModIds.IsQualified(id))
+            .Select(id => $"{SlotShifts.FileName}: {id} names no part; its shifts are kept but move nothing"));
 
         return catalog;
 
@@ -286,6 +295,25 @@ public sealed class PartsCatalog
         public Dictionary<string, string>? Models { get; set; }
     }
 
+    private static void ReadBuildAliases(PartsCatalog catalog, string root, string label, ModInfo mod, List<(ModInfo, string, string)> aliases)
+    {
+        var file = Path.Combine(root, EngineBuild.AliasesFileName);
+        try
+        {
+            if (!File.Exists(file)) return;
+
+            foreach (var (gone, current) in JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText(file)) ?? new())
+            {
+                if (string.IsNullOrWhiteSpace(current)) catalog._problems.Add($"{label}{EngineBuild.AliasesFileName}: {gone} leads nowhere; left out");
+                else aliases.Add((mod, gone, current));
+            }
+        }
+        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+        {
+            catalog._problems.Add($"{label}{EngineBuild.AliasesFileName}: {ex.Message}; builds that changed ids are not found by their old ones");
+        }
+    }
+
     private static void ReadBuilds(PartsCatalog catalog, string root, string label, ModInfo mod, ContentRegistry<EngineBuild> builds)
     {
         var buildsFile = Path.Combine(root, EngineBuild.FileName);
@@ -304,6 +332,13 @@ public sealed class PartsCatalog
                     continue;
                 }
 
+                // What the builds a car left the factory with were called before
+                if (build.Origin.Equals(EngineBuild.OriginCarBefore, StringComparison.OrdinalIgnoreCase))
+                {
+                    catalog._problems.Add($"{label}{EngineBuild.FileName}: {build.Id}: the origin \"{build.Origin}\" is \"{EngineBuild.OriginCar}\" now; read as that");
+                    build.Origin = EngineBuild.OriginCar;
+                }
+
                 builds.Add(mod, build.Id, build.Replaces, build, label + EngineBuild.FileName);
             }
 
@@ -315,13 +350,13 @@ public sealed class PartsCatalog
         }
     }
 
-    /// <summary>Slots moved after conversion (the garage's placement mode); already applied to the parts</summary>
+    /// <summary>Slots moved in the garage's placement mode since the packs were written; already applied to the parts</summary>
     public SlotShifts Shifts { get; private set; } = new();
 
     /// <summary>
     /// Moves a slot in its part's space, for good: the part is changed in place (every slot of that id, as a
-    /// loaded shift does: a cfg may declare an id twice) and the move is written next to the packs, to be folded
-    /// into the packs by the next conversion.
+    /// loaded shift does: a pack may declare an id twice) and the move is written next to the packs, applied on every
+    /// load from then on.
     /// </summary>
     /// <returns>False when the part moved but the move could not be written</returns>
     public bool ShiftSlot(PartDefinition part, int slotId, float[] delta)
@@ -336,6 +371,13 @@ public sealed class PartsCatalog
 
     /// <summary>A part by its id, or by the id it had in a pack that has since been replaced</summary>
     public PartDefinition? Get(string id) => _parts.GetValueOrDefault(id) ?? _parts.GetValueOrDefault(CurrentId(id));
+
+    /// <summary>The id an engine build goes by now: its own, or the one of the build that took its place</summary>
+    public string CurrentBuildId(string id)
+    {
+        for (var hops = 0; hops < MaxAliasHops && _buildAliases.TryGetValue(id, out var current); hops++) id = current;
+        return id;
+    }
 
     /// <summary>True when parts have changed ids: saves made before may hold the old ones</summary>
     public bool HasAliases => _aliases.Count > 0;

@@ -7,12 +7,12 @@ namespace StreetCorsa.Models.GameState
     /// </summary>
     public class PartInstance
     {
-        /// <summary>Slot of a car the engine block sits on, as the part scripts number it</summary>
+        /// <summary>Slot of a car the engine block sits on</summary>
         public const int CarEngineSlot = 1;
 
         public Guid InstanceId { get; set; } = Guid.NewGuid();
 
-        /// <summary>Id of the part in the parts catalog, e.g. "engines/Mopar/block_340"</summary>
+        /// <summary>Id of the part in the parts catalog, e.g. "engines/chrysler/chrysler_340_v8_block"</summary>
         public string DefinitionId { get; set; } = string.Empty;
 
         /// <summary>1 = new, 0 = worn out (mileage)</summary>
@@ -24,7 +24,7 @@ namespace StreetCorsa.Models.GameState
         /// <summary>A <see cref="Tear"/> at this or better is no damage: nothing to mend, nothing to tell the player</summary>
         public const double Undamaged = 0.995;
 
-        /// <summary>Settings changed from the part's defaults, by script field ("rpm_idle", "ratio[2]")</summary>
+        /// <summary>Settings changed from the part's defaults, by spec ("idle_rpm", "gears[1]")</summary>
         public Dictionary<string, double> Tuning { get; set; } = new();
 
         /// <summary>

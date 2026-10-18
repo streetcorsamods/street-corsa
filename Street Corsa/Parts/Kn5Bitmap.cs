@@ -1,8 +1,8 @@
 namespace StreetCorsa.Parts;
 
 /// <summary>
-/// Textures a KN5 model can carry without an image file behind them. Plain BCL on purpose: the parts converter
-/// compiles it by link for the same textures it writes into converted parts.
+/// Textures a KN5 model can carry without an image file behind them, for the models the game writes itself (a
+/// placeholder part's). Plain BCL.
 /// </summary>
 public static class Kn5Bitmap
 {

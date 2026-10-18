@@ -1,7 +1,7 @@
 # Small Imports: the example mod
 
 An add-on made of data alone, to copy when you make your own. It brings four small European cars into Street Corsa
-with engines that have no SLRR scripts behind them, their speed parts, a shop that sells those parts, a lot that sells
+with engines made of figures alone, their speed parts, a shop that sells those parts, a lot that sells
 the cars, a rival who drives them, and a race night of their own. Every file is read by the game's own loaders; the
 modding guide (`docs/modding.md`) explains each kind of content in full.
 
@@ -22,8 +22,8 @@ A game already under way gets the new rival, the lot and the shop as it goes on;
 |---|---|
 | `mod.json` | The mod's id (`small_imports`: every id below gets it as its namespace), version, `gameVersion` |
 | `cars/cars.json` | Makes merged over the base game's (Abarth in Fiat's family, Ford of Britain apart from the American Ford) and each car's factory engine, layout (`rear`, `front`, `front_transverse`), price and make |
-| `parts/*/pack.json` | Four engines made of figures alone (`"figures"`: bore, stroke, compression, breathing, cam, fuel, gears, a turbo), each part with a simple `class_chain` so it lands on its shelf, `required_slots` the engine can't run without, and the speed parts that go on the same fittings |
-| `parts/engine_builds.json` | Each car's factory engine (`origin: car`, with the power the real one made) and a speed-shop build of each (`aftermarket`) |
+| `parts/*/pack.json` | Four engines made of figures alone (`"figures"`: bore, stroke, compression, breathing, cam, fuel, gears, a turbo), each part with a `class` so it lands on its shelf, the `needs` the engine can't run without, and the speed parts that go on the same fittings |
+| `parts/engine_builds.json` | Each car's factory engine (`origin: factory`, with the power the real one made) and a speed-shop build of each (`aftermarket`) |
 | `sounds/sounds.json` | Each engine pinned to the sound of the car it came in (`car:<car id>`) |
 | `partshops/partshops.json` | Euro Speed & Sport, a specialist in the packs' makes |
 | `dealers/dealers.json` | Continental Imports, a lot that deals in European cars only (`"cars"`: a car filter) |

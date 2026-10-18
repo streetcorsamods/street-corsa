@@ -65,7 +65,7 @@ public sealed class EngineSim
 
     private const double IdleGain = 1.6;
 
-    // The blocks' inertia figures are the source game's own (5 to 10 for an eight), not kg m2: this brings them
+    // The engine report's inertia figures are in the parts' old units (5 to 10 for an eight), not kg m2: this brings them
     // to what a crank and flywheel weigh in at, so a blip takes the time it does on a real engine out of gear
     private const double InertiaScale = 0.05;
     private const double LimiterHysteresisRpm = 180;

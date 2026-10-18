@@ -218,9 +218,11 @@ where a number goes) is left out on its own, logged.
 Laid out as the base game's `Content\streetcorsa\parts` (see [parts-system.md](systems/parts-system.md)): packs
 anywhere under the folder (a `pack.json` with the parts' `.kn5` models next to it), and next to them:
 
-- `_scripts\` — the compiled SLRR scripts of the mod's parts; `source_script` is found here. A script class the mod
-  does not have is looked for in the base game's, then in the other mods'.
-- `engine_builds.json` — complete engines; build ids are namespaced like parts.
+- `engine_builds.json` — complete engines: `[ { "id": "rated/my-327", "name": "Chevy 327 350 hp", "origin": "rated",
+  "rated_power": 350, "parts": [ "<block id>", "<every part on it>" ] } ]`, the block first. `origin` is `factory` (what
+  a car left the factory with), `rated` (a known output the engine model is held to), `kit` or the mod's own word;
+  `aftermarket: true` marks a speed-shop build no car gets from the factory. Build ids are namespaced like parts.
+- `build_aliases.json` — `{ "old build id": "new build id" }` for builds the mod renamed, as for parts.
 - `part_aliases.json` — `{ "old id": "new id" }` for parts the mod renamed; the old id is the mod's own unless written
   in full.
 - Part models are drawn at the size they were made: ship them at AC's scale (metres).
@@ -238,31 +240,25 @@ anywhere under the folder (a `pack.json` with the parts' `.kn5` models next to i
 - `part_groups.json` — the shelves (see below). Most mods need none.
 - `rebuilds.json` — the work a part can have done on it to take its mileage off (see below). A mod's parts of the base
   game's kinds and shelves get the base game's jobs.
-- `stand_ins.json` — script classes the mod's parts extend that the source game never shipped, made from the class
-  their author copied: `{ "stand_ins": { "<class>": { "copy": "<class copied>", "extends": "<what it extends
-  instead>", "drop": [ "<methods left out>" ] } } }`. A later mod's replaces one of the same name. The base game's makes
-  the Ford six's `Block_Inline_OHV` out of `Block_Vee_OHV`. A stand-in that copies itself, or two that copy each
-  other, is no class (the parts that extend it do not load). The parts converter reads the file from its output
-  folder, else from its `--previous` content's.
+- `part_classes.json` — the classes of part and what each is a kind of (see "A part" below). Most mods need none.
+- `fuels.json` — the fuels a fuel system can run on (see "A part" below). Most mods need none.
 
 **The shelves.** Every part is in a group: the shelf it is on in a shop, what the player reads as its kind, and what the
-game does with it. A part is in the first group with a class its script descends from, by the end of the class's name
-(`"Block"` takes in `Block_Vee_OHV`), the groups in the order listed; a part no group takes in is an accessory. A mod's
+game does with it. A part is in the first group with a class its own class counts as (`"brake"` takes in a
+`disc_brake`, see `part_classes.json`), the groups in the order listed; a part no group takes in is an accessory. A mod's
 `part_groups.json` adds groups, tried before the ones before it, or changes a group of an id already there, naming only
 what it changes (a group keeps its place). `never_stacks`: never mounts on its own kind (a head on a head);
 `bolt_on`: what the cars on the lots were worked on with; `tune`: how much a rival's tuner goes for it (10 the most,
 none: not at all); `speed_shop`: a speed shop sells it. The player reads `part_group.<id>` in the text, else the
 group's `name`, else its id.
 
-`price`: what a part of the kind costs new, in the game's dollars, by what it does, as the source game priced its
-parts. `base` for every part, and `per_hp` for every horsepower it is worth on the game's dyno: an engine block the
+`price`: what a part of the kind costs new, in the game's dollars, by what it does. `base` for every part, and `per_hp` for every horsepower it is worth on the game's dyno: an engine block the
 power of its own engine (the least of its factory builds), any other part what it makes over the factory part in its
 place on the build it does the most for (measured once at every start), the horsepower raised to `hp_power` first
 (none: 1). A kind priced `by` a figure of its own costs as much more or less as its figure stands against the middle
 one of its kind, to the power `by_power`: `grip` (a tyre's friction by its width), `brake_torque`, `rim_size`,
 `spring_rate`, `damping`, `carb_mounts` (the carburettors a manifold takes: a dual-quad is a kit no dyno run of the
-manifold alone measures), `strength` (what a rear axle part holds), `diff_lock` (how hard a carrier locks). The `accessories` group takes no classes: it prices the parts no group takes in. A part's
-own `value` (the source game's price, kept in `properties`) prices nothing.
+manifold alone measures), `strength` (what a rear axle part holds), `diff_lock` (how hard a carrier locks). The `accessories` group takes no classes: it prices the parts no group takes in.
 `EngineBench <Content folder> prices [AC cars folder | part id]` lists the prices by kind, every installed car's new
 price, or the power and price of the parts whose id holds what is given. The ids `engine_blocks`, `cylinder_heads`, `camshafts`, `crankshafts`, `connecting_rods`,
 `pistons`, `transmissions`, `air_filters`, `exhaust`, `oil_pans`, `tyres`, `rims`, `brakes`, `springs`, `shocks`,
@@ -271,19 +267,18 @@ the running gear has a slot on each wheel, the rear axle one under the car, the 
 exhaust. A mod may change their classes, never their meaning. The base game's groups are
 `Content\streetcorsa\parts\part_groups.json`.
 
-**The shows.** The same file's `shows` are the garage parts view's buttons that put kinds of part out of sight, as the
-source game had them: each has an `id`, an `icon` (a theme image name, `"icons/engine"`) and the `groups` it takes; the
+**The shows.** The same file's `shows` are the garage parts view's buttons that put kinds of part out of sight: each has an `id`, an `icon` (a theme image name, `"icons/engine"`) and the `groups` it takes; the
 first show naming a part's group takes it, `rest_of_engine: true` takes every other part of the engine, and a part no
 show takes stays in sight. The tooltip is `part_show.<id>` in the text. A mod adds shows (after the ones before) or
 changes one by its id. The base game has `engine` (the rest of the engine), `drivetrain` (the gearbox, the clutch and flywheel being the engine's,
 and `differentials` and `transfer_cases` should a mod add those groups), `brakes` and `suspension` (the part dealers' icon).
 
 ```json
-{ "groups": [ { "id": "intercoolers", "classes": [ "Intercooler" ], "tune": 4, "speed_shop": true } ] }
+{ "groups": [ { "id": "intercoolers", "classes": [ "intercooler" ], "tune": 4, "speed_shop": true } ] }
 ```
 
 **The work order.** Every engine part has a *kind*: `"kind": "timing_cover"` on the part in its `pack.json` if the pack
-says so, else the first kind of the work orders listing one of its script classes (`"classes": ["Crankshaft"]`), else
+says so, else the first kind of the work orders listing its class or one above it (`"classes": ["crankshaft"]`), else
 the first kind with a word its name holds (`"names": ["timing chain cover", "timing cover"]`, whole words, a plural s
 allowed). A mod's kinds are tried before the base game's. A rule says, for a kind, what has to be off the engine first
 (`"after"`, the parts on this very part included), whether it comes out only on the engine stand (`"stand_only"`) and
@@ -401,40 +396,89 @@ reads `rebuild.<id>.size.<size>` (else `say`) and `rebuild.<id>.done` with `{siz
 part's card. The machine shop's prices are the job's, never under the rules' `partShops.machineValueShare` (0.85) of
 what the work adds to the part's worth, at the shop's `priceFactor`.
 
-**A part's figures.** A part's stats come from its SLRR script (`source_script`): the game builds the script and runs it
-to work the engine out; a part without one gives its own (`"figures"`, see an engine of figures below). The rest is read from the pack: `"class_chain"` says what the part is (a crankshaft, a clutch:
-without it the work order and the engine can't tell), and `"properties"` holds the script's
-fields as it built them, which is where the price (`value`), the running gear's figures (tyres, springs, shocks,
-brakes), an oil pan's `capacity` and a block's `cylinders` for its sound are read; a part with neither is a bare
-fitting with no script of its own (and no figures), left out of the shops and the running gear. `tools\SlrrPartsConverter` writes
-both; a part made by hand copies them from the part whose script it shares.
+**A part.** Each entry of a pack's `"parts"` is one part:
 
-A part that shares a stock script but has figures of its own says so in `"overrides"`: script fields set over what the
-script built, before the player's tuning, and over `"properties"` too, so the price and the running gear get them as
-well. A number (`"stroke": 76.2`), one element of an array field (`"ratio[2]": 1.0`), or a list for an array field from
-its first element on (`"ratio": [0, 1.76, 1.0, 0, 0, 0, 0, -1.76]`, `null` keeps an element). A list goes on before
-the single elements, whatever order they are written in, so `"ratio[3]"` wins over the list's fourth number. Names are
-the script's, case and all, and units its own (mm, cc); a field that holds whole numbers takes the whole part of what
-it is given. An override the game can't use is reported in the log and left out: a field the script doesn't have, one
-that holds something other than numbers, a number for an array field or a list for a number, an element past the
-end of the array (and a list's numbers past it), anything not a finite number, and a field the script works out itself
-from others (the part's `"derived"`, such as a camshaft's `time_in_open`). The engine takes the bore from the block,
-the stroke from the crankshaft, the combustion space from the heads, the deck and the pistons' `crown_volume`, and
-the gearing from the transmission (`gears`, `ratio`: element 0 unused, the last one reverse).
+| Field | What it is |
+|---|---|
+| `id` | the part's id, `<pack id>/<name>` in lower case and `_` (the mod's namespace is added) |
+| `display_name` | what the player reads (see "A part's name" below) |
+| `class` | what the part is, a class of `part_classes.json` (below): `engine_block`, `camshaft`, `disc_brake`... It says how the part works, which shelf it is on and which work order kind it is. A part without one is a bare fitting other parts mount against, never sold or fitted on its own |
+| `model`, `mass` | the KN5 next to the pack.json (in the part's own space, its origin where it mounts) and kg |
+| `specs` | the figures its class reads, in plain metric units (the tables below) |
+| `slot_roles` | which of its slots takes what its class works with: `{ "crankshaft": 8, "left_head": 45 }` |
+| `needs` | slots that must be filled for the part to work, with what the player reads when one is empty: `[ { "slot": 20, "message": "the engine is missing the alternator." } ]`. A block's are asked in their order, before the compression; then every other part's |
+| `slots` | where it mounts and what mounts on it: `id`, `name`, `position` (m), `rotation` (yaw, pitch, roll in radians), and `attaches_to`/`compatible_with` (a part id and a slot) or standard fittings `fits`/`takes` |
+| `figures` | engine figures over what the specs work out (see "An engine of figures") |
+| `kind`, `comes_off`, `performance`, `came_in`, `becomes`, `aftermarket`, `replaces` | see the work order, the running gear and the rebuilds below |
+| `name` | optional: a short name of its own, read with the display name for the words the game looks for; the last part of the id when left out |
+
+What a part costs is the game's (the shelves' `price`, by what it does on the dyno), never written in the pack.
+
+**How an engine is worked out.** The block is the root: what is on the slots its `slot_roles` name is what it works
+with, and each part's class says what it adds (`Parts/Logic/EngineAssembly.cs` is the whole model, a page long).
+
+- **The bottom end.** The block's `bore` and `cylinders`; the crankshaft's `stroke`; with the block's `deck_height`
+  (crank centre to deck), the rods' `rod_length`, the pistons' `pin_height` (pin centre to crown) and `dome` (cc taken
+  out of the chamber) and the head's `chamber` (cc), the volume left over the piston, and so the compression.
+- **The heads.** Each head (each bank of a vee, the banks averaged) breathes through its valves (`intake_valve`,
+  `exhaust_valve` in mm, `intake_valves`, `exhaust_valves` per cylinder) opened by the camshaft's lift (`intake_lift`,
+  `exhaust_lift`, mm) over the cylinder's volume, times the intake manifold's and the header's `flow` (0 to 1) and the
+  head's own `intake_port`/`exhaust_port` (1 when left out). Worn valves pass a tenth less. `heat_loss` is what the
+  head takes out of the burn.
+- **The camshaft** (on the block's `camshaft` slot, or the head's for an overhead cam): `intake_duration`,
+  `exhaust_duration` and `lobe_separation` in degrees, `advance` (degrees, held between `advance_min` and `advance_max`
+  in `advance_step` steps).
+- **The intake.** Every fuel system (`fuel_system`: a carburettor or an injection) on the manifold and what hangs on it
+  gives its `mixture_ratio` (air to fuel by mass), the `fuel` it burns (`fuels.json`: `regular` when left out) and the
+  most fuel it passes (`fuel_flow`, g/s); the air it takes in comes through its air cleaner (`air_cleaner`: its
+  `air_flow` g/s, less as it clogs by `clogging`: 0 never clogs, 1 passes nothing worn out) or, without one, its open horn (its own `air_flow`). With
+  several, the least of each counts. The fuel's best ratio, heat and burn time make the burn: off its best ratio the
+  mixture burns cooler and slower, and it takes a static compression of 4 to 10 times its heat in MJ (about 6.8:1 to
+  17:1 for pump gas at its best ratio).
+- **Chargers.** A `supercharger`'s `boost` (bar) at its `normal_drive_ratio`, more or less as its `drive_ratio` is
+  changed, best at `boost_rpm` over `boost_rpm_range`; a `turbocharger`'s `boost`, held by its `wastegate`.
+- **Everything that turns.** The engine's top speed is the lowest `max_rpm` of its parts (a quarter over the block's
+  `rev_limit` when none gives one); their `inertia` (kg m2) adds up; each part's `friction_loss` (the share it takes,
+  0.02 for 2%) over the oil pan's `friction` is how hard the engine turns.
+- **The block's own.** `idle_rpm`, `rev_limit`, and the spark: `spark_advance` (degrees before top dead centre) up to
+  `spark_rpm_low`, moving to `spark_advance_high` by `spark_rpm_high`.
+- **The gearbox** (`transmission`): `gears` (forward ratios, first gear first), `reverse`, `final_drive`, `drive`
+  (`rear`, `front` or `all`), `diff_lock` (0 to 1). The clutch's `torque` (Nm) is what it holds.
+
+The figures (`"figures"`) go over what the specs come to before the dyno runs, and the game's dyno makes the curve. The
+player's tuning is kept by spec name (`"rev_limit"`, one gear as `"gears[1]"`) and goes over the part's own.
 
 ```json
 {
-  "id": "engines/l79/CV8_crank_283", "source_script": "...V8_small_block_crank.class",
-  "class_chain": [ "...", "java.game.parts.Part" ], "properties": { "value": 180.0, "stroke": 82.55, "...": "..." },
-  "overrides": { "stroke": 76.2, "value": 150 }
+  "id": "engines/l79/chevy_283_crankshaft", "display_name": "Chevy 283 stock crankshaft", "class": "crankshaft",
+  "model": "chevy_283_crankshaft.kn5", "mass": 22,
+  "specs": { "stroke": 76.2, "max_rpm": 8500, "inertia": 0.0261 },
+  "slot_roles": { "connecting_rods": 40, "flywheel": 6 },
+  "slots": [ { "id": 1, "name": "mount", "attaches_to": [ { "part": "engines/l79/chevy_327_block", "slot": 8 } ] },
+             { "id": 40, "name": "rods" }, { "id": 6, "name": "flywheel" } ]
 }
 ```
 
-**An engine of figures.** A part needs no SLRR script to work in an engine: `"figures"` gives its engine figures in
-plain metric units. An engine whose block has no script (no `source_script`) is made of its parts' figures alone, whichever of its
-parts give them (the block may give none); on
-an engine of SLRR scripts, the figures go over what the scripts worked out before the dyno runs, so a part of figures
-(a turbo, a five-speed) also goes on a source-game engine. Either way the game's own dyno makes the curve from them,
+**The classes** (`part_classes.json`): each class with the one it is a kind of (`"disc_brake": "brake"`, `"brake":
+"running_gear_part"`). A part of a class counts as one of every class above it, so a shelf or a work order kind that
+names `brake` takes in disc and drum brakes. The engine reads `engine_block`, `cylinder_head`, `camshaft`, `crankshaft`,
+`connecting_rods`, `pistons`, `flywheel`, `clutch`, `transmission`, `oil_pan`, `intake_manifold`, `fuel_system`,
+`air_cleaner`, `supercharger`, `turbocharger` and `exhaust_header`; the running gear `tyre`, `rim`, `brake`,
+`disc_brake`, `drum_brake`, `brake_shoes`, `wheel_cylinder`, `backing_plate`, `hub`, `spring`, `leaf_spring`,
+`torsion_bar`, `traction_bar`, `shock`, `sway_bar`, `rear_axle`, `differential`, `ring_pinion` and `axle_shaft`. A mod
+adds classes of its own (an `intercooler` under `engine_part`) or puts one under another parent; a class no file names
+is a kind of nothing, and only its own name takes it in.
+
+**The fuels** (`fuels.json`): `{ "fuels": { "methanol": { "heat": 1.4, "best_ratio": 16, "burn_time": 2.25,
+"burn_time_off": 0.4 } } }`: what a kg of the mixture gives off burning (MJ), the air to fuel ratio it burns best at,
+and how long it takes to burn there and how much longer at the worst ratio (ms). The base game has `regular`,
+`premium`, `high_octane`, `methanol` and `diesel`; a mod adds fuels or changes one by its id, giving only the figures
+it changes (`"methanol": { "heat": 1.5 }`).
+
+**An engine of figures.** A part needs no specs to work in an engine: `"figures"` gives its engine figures in plain
+metric units. An engine whose block has no specs is made of its parts' figures alone, whichever of its parts give them
+(the block may give none); on an engine of specs, the figures go over what the specs worked out before the dyno runs, so
+a part of figures (a turbo, a five-speed) also goes on any other engine. Either way the game's own dyno makes the curve from them,
 so tuning works the same: a bigger cam, a header or a second carburettor changes the figures, and the dyno the power.
 
 A number puts the part's own figure; `{ "add": n }` adds to the engine's and `{ "times": n }` multiplies it. Of the
@@ -467,32 +511,30 @@ of none, or past 30000 rpm) says why.
 | `diff_lock` | 0 to 1 | the limited slip's lock; with a gearbox of figures and no part giving it, the car keeps its own differential |
 | `turbo` | `{ "boost": bar, "spool_rpm": rpm, "full_boost_rpm": rpm, "lag_up": 0.992, "lag_down": 0.985 }` | a turbo, or a list of them; boost builds from `spool_rpm` (0 when left out) to all of it at `full_boost_rpm`, then holds; the lags are Assetto Corsa's (closer to 1, slower) |
 | `blower` | `{ "boost": bar, "spool_rpm": rpm, "full_boost_rpm": rpm }` | a crank-driven charger: no lag, its boost stays in the power curve |
-| `lag_up`, `lag_down` | 0 to 1 | the lag of an SLRR turbo's script, on any part of its engine |
+| `lag_up`, `lag_down` | 0 to 1 | the lag of a turbocharger of specs, on any part of its engine |
 
 Chargers add up, as in Assetto Corsa: twin turbos side by side are two turbos of half the boost each, a sequential pair
 a small one that spools early and a big one that comes in later. Each turbo of the engine is an Assetto Corsa turbo of
 its own, with its own lag and gauge. An engine of figures starts from a small-block V8's breathing, cam, spark and
 mixture, and from nothing for its cylinders, bore, stroke, compression and fuel: what it lacks to run is its problem,
-in words ("nothing feeds the engine"), and the pack's `required_slots` hold its parts to their slots as on any part.
+in words ("nothing feeds the engine"), and the pack's `needs` hold its parts to their slots as on any part.
 A figure that does not read (a name not in the table, a word for a number, `times` 0, a turbo without its `boost`) is
 told in the log and left out.
 
-A part of figures says what it is by `"class_chain"`, which for such a part may name the classes simply (`["Block"]`,
-`["Camshaft"]`, `["TurboCharger"]`): that puts it on its shelf and in the work order like any other. Its price is
-`"properties": { "value": 300 }` as for any part. On an SLRR engine, a part of figures the scripts look for (a
-carburettor the block needs on its pad) is not there to them: give such a part the script of a similar one
-(`source_script`) and its own figures over it. `tools\EngineBench <parts> show <build>` puts a build on the dyno.
+A part of figures says what it is by its `"class"` (`engine_block`, `camshaft`, `turbocharger`): that puts it on its
+shelf and in the work order like any other. On an engine of specs, a part the engine looks for on a slot (a fuel system
+on the intake) works by its specs: give such a part the specs of a similar one and its own figures over them.
+`tools\EngineBench <parts> show <build>` puts a build on the dyno.
 
 ```json
 {
-  "id": "engines/four/block", "name": "2.0 four block", "class_chain": [ "Block" ], "mass": 120,
-  "properties": { "value": 400 },
+  "id": "engines/four/block", "display_name": "2.0 four block", "class": "engine_block", "mass": 120,
   "slots": [ { "id": 10, "takes": [ "four:head" ] } ],
   "figures": { "cylinders": 4, "bore": 86, "stroke": 86, "compression": 9.5, "rev_limit": 6500, "max_rpm": 7000,
                "idle_rpm": 850, "inertia": 0.12 }
 },
 {
-  "id": "engines/four/big_turbo", "name": "big turbo", "class_chain": [ "TurboCharger" ],
+  "id": "engines/four/big_turbo", "display_name": "big turbo", "class": "turbocharger",
   "slots": [ { "id": 1, "fits": [ "four:turbo" ] } ],
   "figures": { "turbo": { "boost": 0.5, "spool_rpm": 3500, "full_boost_rpm": 5500, "lag_up": 0.995 } }
 }
@@ -508,9 +550,9 @@ see get a number (`(No. 2)`). The makers are the period's, named to say what a p
 owners' trademarks, and the game is not tied to any of them. A mod may name its own makers.
 
 The game reads words in names (the cooling and the oil pans read the part's `name` and id with them), so a name
-decides what a part does as much as its script:
+decides what a part does as much as its specs:
 
-- a part whose script class doesn't tell its kind gets it from its name (the work order's `"names"`, above);
+- a part whose class doesn't tell its kind gets it from its name (the work order's `"names"`, above);
 - the cooling: `radiator` makes a radiator, `water` then `pump` (or `pomp`) a water pump, `fan` as a word a fan; but
   `hardware`, `bracket`, `pulley`, `gasket` or `bolt` anywhere makes the part none of them (`fan with pulley` is no
   fan). A radiator with `alumin`, `racing`, `race`, `champion`, `be cool` or `electric fan` carries off a third more
@@ -538,51 +580,58 @@ decide. The base game declares neither.
 The base game's reading of every part is held in `tests/StreetCorsa.Tests/Fixtures/part_roles.txt`: a rename that
 changes what a part does fails `PartRolesSnapshotTests`.
 
-**Running gear of data** (step 31). The rear axle's parts are parts of data whose figures are `properties`: a housing
-(`"class_chain": ["RearAxle"]`, `strength` in Nm at the axle, `drag`), a carrier (`["Differential"]`, `diff_power`,
-`diff_coast`, `diff_preload` in Nm, `strength`), a ring and pinion (`["RingPinion"]`, `ratio`, `strength`) and an axle shaft
-(`["AxleShaft"]`, `strength`). The housing goes on the car's axle slot by its slot 1 and carries the carrier on its slot 2
+**The running gear.** The rear axle's figures are its parts' `specs`: a housing (`"class": "rear_axle"`, `strength`
+in Nm at the axle, `drag`), a carrier (`differential`: `diff_power`, `diff_coast`, `diff_preload` in Nm, `strength`), a
+ring and pinion (`ring_pinion`: `ratio`, `strength`) and an axle shaft (`axle_shaft`: `strength`). The housing goes on the car's axle slot by its slot 1 and carries the carrier on its slot 2
 and the shafts on 3 and 4; the carrier carries the gears on its slot 2. A live axle's housing also has the rear corners'
 slots, by these ids: 5 and 6 the left and right brake, 7 and 8 the springs, 9 and 10 the shocks, 11 the rear sway bar (the
 right side's brake and shock slots turned half round, `"rotation": [3.14159265, 0, 0]`; the game draws them at the
 wheels whatever their positions). Only a car on a live axle (its data's rear suspension `AXLE`) carries them there, and
-never its leaf springs (`["LeafSpring", ...]`: the axle hangs on them, they stay on the car); a housing without them, or a
+never its leaf springs (`leaf_spring`: the axle hangs on them, they stay on the car); a housing without them, or a
 car with an independent rear, leaves the rear running gear on the car's own slots. Give them standard fittings of your own family
-(`"takes": ["axle:mymod_banjo"]` on the housing, `"fits"` on the carrier) and `required_slots` with `"enforce": true` for
-what the axle cannot do without. `"came_in"` on a part says which cars it left the factory on, for the guess of a car's
+(`"takes": ["axle:mymod_banjo"]` on the housing, `"fits"` on the carrier) and `needs` for what the axle cannot do
+without. `"came_in"` on a part says which cars it left the factory on, for the guess of a car's
 factory running gear: `{ "families": ["gm"], "makes": ["pontiac"], "torque": [460, null], "years": [1965, null] }` (Nm of
 the car's peak torque, model years; any may be left out, `{}` is any car's). A part without `came_in` (a spool, an alloy
 shaft) is never a factory part while there is one with it. For brakes and springs also `"countries"` (makes.json's: the
 base game's drums `["USA"]`), `"mass"` (the car's kg, `[1600, 2100]`), `"axle"` (`"front"` or `"rear"`), `"suspension"`
 (the axle's suspensions.ini `TYPE`s, `["AXLE"]` for a leaf spring) and `"option": true` (a dealer's option, only for a car
-cars.json picks it for). A corner part no `came_in` names a car for leaves that car on the source game's nearest.
+cars.json picks it for). A corner part no `came_in` names a car for leaves that car on the nearest plain part (one with
+no `came_in` that is not `aftermarket`).
 
-A **drum brake** (`"class_chain": ["DrumBrake", "Brake"]`) has the source game's brake figures (`force`, `friction`,
-`radius`, `number_of_calipers`) and how it heats: `torque_k` (°C per kJ of braking), `cool_transfer`, `cool_speed_factor`
-(Assetto Corsa's brakes.ini `[TEMPS_*]`); its shoes (`["BrakeShoes"]`, on its slot 2 by `shoes:drum`) a `friction` that
+A **drum brake** (`drum_brake`) has a brake's figures (`force`, `friction`, `radius`, `calipers`) and how it heats: `torque_k` (°C per kJ of braking), `cool_transfer`, `cool_speed_factor`
+(Assetto Corsa's brakes.ini `[TEMPS_*]`); its shoes (`brake_shoes`, on its slot 2 by `shoes:drum`) a `friction` that
 multiplies the drum's and a `perf_curve`, an inline lut of °C to torque (`"(|0=0.9|230=1.0|380=0.55|)"`), and its wheel
-cylinder (`["WheelCylinder"]`, slot 3, `wcyl:drum`) a `force_factor`. A disc that fades says it all itself.
+cylinder (`wheel_cylinder`, slot 3, `wcyl:drum`) a `force_factor`. A disc that fades says it all itself.
 
-A **leaf spring** (`["LeafSpring", "Spring"]`) has its rate in `force` (N/m at the wheel) and a `wrap` (how much it winds
-up under the axle's torque: the base game's multi-leaf 1); a **traction bar** (`["TractionBar"]`, on the leaf's slot 2 by
-`traction:leaf`) a `wrap_factor`. A **torsion bar** is `["TorsionBar", "Spring"]`. A **sway bar** (`["Swaybar"]`, on the
-car's own slots 402 front and 403 rear) gives its `arb_rate` (N/m, as suspensions.ini `[ARB]` counts it); one without does
+A **leaf spring** (`leaf_spring`) has its rate in `force` (N/m at the wheel) and a `wrap` (how much it winds
+up under the axle's torque: the base game's multi-leaf 1); a **traction bar** (`traction_bar`, on the leaf's slot 2 by
+`traction:leaf`) a `wrap_factor`. A **torsion bar** is a `torsion_bar`. A **sway bar** (`sway_bar`, on the car's own
+slots 402 front and 403 rear) gives its `arb_rate` (N/m, as suspensions.ini `[ARB]` counts it); one without does
 nothing and is not sold. Any running gear part can say the axle it goes on, `"fits_axle": "front"` or `"rear"` (the
 workbench offers it only there), and the suspension it needs, `"fits_suspension": "AXLE"` (the axle's suspensions.ini
-`TYPE`: a car whose data is otherwise cannot race on it). A spring, shock or bar of data without `came_in` is an
-aftermarket part, never a car's factory one.
+`TYPE`: a car whose data is otherwise cannot race on it). A spring, shock or bar with `"aftermarket": true` is never a
+car's factory one. A tyre gives `tyre_width` (mm), `radius` (m), `wheel_radius` (mm, its rim), `friction`,
+`load_capacity`, `rolling_resistance`, `optimal_inflation`, `min_rim_width` and `max_rim_width`; a rim `wheel_radius`
+(m), `rim_width`, `offset` and `rim_type`; a coil `spring` its `force` and `design_load` (kg on the wheel); a `shock`
+its `damping` and `rebound_factor`.
 
 ```json
-{ "id": "running_gear/banjo/housing", "display_name": "Banjo rear axle housing", "class_chain": [ "RearAxle" ], "mass": 60,
-  "came_in": { "makes": [ "mymake" ] }, "properties": { "strength": 3500, "drag": 0.012 },
+{ "id": "running_gear/banjo/housing", "display_name": "Banjo rear axle housing", "class": "rear_axle", "mass": 60,
+  "came_in": { "makes": [ "mymake" ] }, "specs": { "strength": 3500, "drag": 0.012 },
   "slots": [ { "id": 1, "name": "mount" }, { "id": 2, "name": "carrier", "takes": [ "axle:banjo" ] },
              { "id": 3, "name": "left shaft", "takes": [ "shaft:banjo" ] }, { "id": 4, "name": "right shaft", "takes": [ "shaft:banjo" ] } ],
-  "required_slots": [ { "slot": 2, "message": "The rear axle needs its differential carrier.", "enforce": true } ] }
+  "needs": [ { "slot": 2, "message": "The rear axle needs its differential carrier." } ] }
 ```
 
 A part mounts by what its slots name (`attaches_to`, `compatible_with`: a part id and a slot, a reference as above)
 or by a standard fitting (`fits`/`takes`, e.g. `carb:4bbl`), which works across mods with no ids at all.
-`tools\SlrrPartsConverter` makes packs from SLRR `.rpk` files.
+
+**A new pack.** A folder anywhere under the mod's `parts` with a `pack.json` (`{ "id": "engines/mymake", "make": "gm",
+"parts": [ ... ] }`) and the parts' KN5 models next to it. Give each part a `class`, its `specs`, the `slot_roles` its
+class works with and its slots' fittings; list complete engines in the mod's `engine_builds.json`; and check them on
+the dyno with `tools\EngineBench <Content folder> show <build id>` (`all` lists every build, `rated` holds the rated
+ones to their power). The base game's packs are the examples: a pack of the same kind of parts is the one to copy.
 
 ### cars
 

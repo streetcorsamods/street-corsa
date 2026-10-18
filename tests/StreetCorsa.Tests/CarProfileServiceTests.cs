@@ -69,7 +69,7 @@ public class CarProfileServiceTests
         var price = service.PriceNew(car);
         var engine = new FactoryEngines().GetStockBuild(car)!;
         var catalog = new CatalogParts().Catalog;
-        var parts = engine.Build.Parts.Sum(p => p.Part != null && catalog.Get(p.Part) is { } d ? PartPricing.NewPrice(d) : 0);
+        var parts = engine.Build.Parts.Sum(p => catalog.Get(p) is { } d ? PartPricing.NewPrice(d) : 0);
 
         Assert.Equal(2500m, price.Body);
         Assert.Equal(Math.Round((decimal)parts), price.Engine);

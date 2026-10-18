@@ -12,7 +12,7 @@ namespace StreetCorsa.Parts.Cars;
 /// A car's cooling was sized for its engine as it left the factory: the car's factory power, or the factory power of
 /// the block in it now when that is more (a swap brings its own radiator), taken from the least powerful factory
 /// build on that block. A swapped-in block is cooled for its own factory power only: the radiator is part of the engine
-/// and goes with it. Tuning past it is what makes an engine run hot. The source game's radiators, fans and water pumps
+/// and goes with it. Tuning past it is what makes an engine run hot. The stock radiators, fans and water pumps
 /// are plain parts with no figures, so they count by kind: a performance radiator (aluminium, racing, one with an
 /// electric fan) carries off a third more, a performance water pump a tenth more, and an engine that left the factory
 /// with a radiator or a water pump has next to no cooling without it. The fan decides how much of the work is done
@@ -67,7 +67,7 @@ public sealed class EngineCooling
     // "fan" not in "fantastic". A letter on either side ends a match, an underscore, a digit or a space does not, so
     // "Water_pomp_small_B" is read as the words it is. Only for parts that do not say what they are (PartDefinition.
     // CoolingRole, PartDefinition.Performance); a few stems stay open at the end: "alumin" is aluminium and aluminum,
-    // "hardware" is also the source game's "hardwarer".
+    // "hardware" is also an old pack's "hardwarer".
     private const RegexOptions Words_ = RegexOptions.IgnoreCase | RegexOptions.CultureInvariant;
     private static readonly Regex RadiatorWord = Word("radiator");
     private static readonly Regex FanWord = Word("fan");
@@ -106,7 +106,7 @@ public sealed class EngineCooling
 
     /// <summary>
     /// What a part does for the cooling: what its kind in the work order says (<see cref="PartDefinition.CoolingRole"/>),
-    /// else what its name says (the source game gave these parts no figures)
+    /// else what its name says (these parts have no figures of their own)
     /// </summary>
     public static Kind KindOf(PartDefinition part)
     {
@@ -120,8 +120,7 @@ public sealed class EngineCooling
 
         var text = Words(part);
         if (HardwareWords.IsMatch(text)) return Kind.Other;
-        if (PartKinds.Is(part, "Radiator") || part.SourceScript?.EndsWith(".Radiator", StringComparison.Ordinal) == true
-            || RadiatorWord.IsMatch(text)) return Kind.Radiator;
+        if (PartKinds.Is(part, PartClasses.Radiator) || RadiatorWord.IsMatch(text)) return Kind.Radiator;
         if (WaterPumpWords.IsMatch(text)) return Kind.WaterPump;
         if (FanWord.IsMatch(text)) return Kind.Fan;
         return Kind.Other;
@@ -149,7 +148,7 @@ public sealed class EngineCooling
         if (stock == null) return FactoryCooling.Unknown;
         return _factory.GetOrAdd(stock.Build.Id, _ =>
         {
-            var kinds = stock.Build.Parts.Select(r => r.Part is { } id ? _catalog.Get(id) : null).OfType<PartDefinition>().Select(KindOf).ToHashSet();
+            var kinds = stock.Build.Parts.Select(_catalog.Get).OfType<PartDefinition>().Select(KindOf).ToHashSet();
             return new FactoryCooling(stock.PowerHp, stock.BlockId, kinds.Contains(Kind.Radiator), kinds.Contains(Kind.Fan), kinds.Contains(Kind.WaterPump));
         });
     }

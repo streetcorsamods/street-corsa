@@ -49,7 +49,7 @@ public class PartShopRulesTests
 
         var moparCam = Find(p => p.Make == "mopar" && PartKinds.GroupOf(p) == PartGroups.Camshafts);
         var fordBlock = Find(p => p.Make == "ford" && PartKinds.IsBlock(p));
-        var tyre = Find(p => p.IsScripted && PartKinds.GroupOf(p) == PartKinds.Tyres);
+        var tyre = Find(p => p.IsRealPart && PartKinds.GroupOf(p) == PartKinds.Tyres);
         var genericCarb = Find(p => p.Make == null && PartKinds.GroupOf(p) == "carburettors");
         var noFactory = new HashSet<string>();
 
@@ -235,7 +235,7 @@ public class PartShopServiceTests
         Assert.Equal(4, yard.Yard.Count);
 
         // Dear enough that the junkyard's 42% and a trade-in's 40% are whole dollars apart
-        var part = new PartInstance(Parts.Catalog.Parts.Values.Where(p => p.IsScripted && PartPricing.NewPrice(p) > 300).MinBy(p => p.Id, StringComparer.Ordinal)!.Id) { Wear = 0.8 };
+        var part = new PartInstance(Parts.Catalog.Parts.Values.Where(p => p.IsRealPart && PartPricing.NewPrice(p) > 300).MinBy(p => p.Id, StringComparer.Ordinal)!.Id) { Wear = 0.8 };
         _state.Player.Parts.Add(part);
         var paid = _service.BuyingPrice(yard, part);
         Assert.True(paid > PartPricing.TradeIn(Parts.Catalog, part));
@@ -529,7 +529,7 @@ public class TunerShopPriceTests
     [Fact]
     public void A_tuner_pays_what_it_is_told_a_part_costs()
     {
-        var build = Parts.Builds.Runnable.Single(b => b.Build.Id.EndsWith("chrysler-v8-pack/chrysler-la-340-275-hp", StringComparison.Ordinal));
+        var build = Parts.Builds.Runnable.Single(b => b.Build.Id.EndsWith("rated/chrysler-la-340-275-hp", StringComparison.Ordinal));
         var stock = EngineFactory.CreateStock(Parts.Catalog, build, 0.8, new Random(1))!;
 
         var listed = EngineTuner.TuneUp(Parts.Catalog, Parts.Builds, stock.Root, 1_000_000m, 1.0, new Random(7), maxUpgrades: 1);
@@ -544,7 +544,7 @@ public class TunerShopPriceTests
     [Fact]
     public void An_upgrade_names_the_new_parts_it_put_on_and_a_swap_none()
     {
-        var build = Parts.Builds.Runnable.Single(b => b.Build.Id.EndsWith("chrysler-v8-pack/chrysler-la-340-275-hp", StringComparison.Ordinal));
+        var build = Parts.Builds.Runnable.Single(b => b.Build.Id.EndsWith("rated/chrysler-la-340-275-hp", StringComparison.Ordinal));
         var stock = EngineFactory.CreateStock(Parts.Catalog, build, 0.8, new Random(1))!;
         var had = stock.Root.SelfAndDescendants().Select(p => p.InstanceId).ToHashSet();
 

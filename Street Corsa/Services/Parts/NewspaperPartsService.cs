@@ -236,21 +236,19 @@ namespace StreetCorsa.Services.Parts
         /// What is for sale: the engine packs, whatever else the engine builds use (batteries, mufflers), and
         /// the running gear: tyres, rims, brakes, springs and shocks. The base game's scriptless entries (the
         /// roots other parts declare their fit against) are nothing to buy, and neither is what has no say in
-        /// how the car drives (sway bars and suspension arms are inert in the source game).
+        /// how the car drives (the stock sway bars and suspension arms are inert).
         /// </summary>
         private IReadOnlyList<PartDefinition> FindAssortment()
         {
             var catalog = _parts.Catalog;
             var usedByBuilds = catalog.EngineBuilds
                 .SelectMany(b => b.Parts)
-                .Where(p => p.Part != null)
-                .Select(p => p.Part!)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
             return catalog.Parts.Values
                 .Where(p => usedByBuilds.Contains(p.Id) ||
-                            (p.LocalId.StartsWith(EnginePacks, StringComparison.OrdinalIgnoreCase) && p.IsScripted) ||
-                            (p.IsScripted && RunningGear.IsRunningGear(PartKinds.GroupOf(p)) && (PartKinds.GroupOf(p) != PartKinds.SwayBars || RunningGear.IsWorkingSwayBar(p))) ||
+                            (p.LocalId.StartsWith(EnginePacks, StringComparison.OrdinalIgnoreCase) && p.IsRealPart) ||
+                            (p.IsRealPart && RunningGear.IsRunningGear(PartKinds.GroupOf(p)) && (PartKinds.GroupOf(p) != PartKinds.SwayBars || RunningGear.IsWorkingSwayBar(p))) ||
                             RearAxle.IsAxleGroup(PartKinds.GroupOf(p)))
                 .OrderBy(p => p.DisplayName ?? p.Name, StringComparer.OrdinalIgnoreCase)
                 .ToList();

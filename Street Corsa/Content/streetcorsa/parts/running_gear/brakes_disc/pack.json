@@ -1,10 +1,155 @@
 {
   "id": "running_gear/brakes_disc",
-  "source": "Street Corsa step 31 (generated once, hand-maintained since)",
   "parts": [
-    {"id": "running_gear/brakes_disc/kelsey_hayes", "name": "kelsey hayes", "display_name": "Kelsey-Hayes 11.3-inch 4-piston front disc brake", "class_chain": ["DiscBrake", "Brake"], "mass": 0, "model": "disc.kn5", "came_in": {"families": ["ford"], "axle": "front", "years": [1965, 1967], "option": true}, "properties": {"force": 18759, "friction": 1.0, "radius": 0.122, "number_of_calipers": 2, "diam_mm": 287, "torque_k": 0.55, "cool_transfer": 0.008, "cool_speed_factor": 0.014, "perf_curve": "(|0=0.80|150=0.95|250=1.0|500=1.0|650=0.85|800=0.60|1000=0.35|)"}, "slots": [{"id": 1, "name": "mount", "position": [-0.08, 0, 0]}, {"id": 5, "name": "hub", "position": [0, 0, 0], "takes": ["hub:front"]}]},
-    {"id": "running_gear/brakes_disc/delco_moraine", "name": "delco moraine", "display_name": "Delco-Moraine 11-inch 4-piston front disc brake", "class_chain": ["DiscBrake", "Brake"], "mass": 0, "model": "disc.kn5", "came_in": {"families": ["gm"], "axle": "front", "years": [1965, 1968], "option": true}, "properties": {"force": 19585, "friction": 1.0, "radius": 0.1187, "number_of_calipers": 2, "diam_mm": 279, "torque_k": 0.55, "cool_transfer": 0.008, "cool_speed_factor": 0.014, "perf_curve": "(|0=0.80|150=0.95|250=1.0|500=1.0|650=0.85|800=0.60|1000=0.35|)"}, "slots": [{"id": 1, "name": "mount", "position": [-0.08, 0, 0]}, {"id": 5, "name": "hub", "position": [0, 0, 0], "takes": ["hub:front"]}]},
-    {"id": "running_gear/brakes_disc/budd", "name": "budd", "display_name": "Budd 11.04-inch 4-piston front disc brake", "class_chain": ["DiscBrake", "Brake"], "mass": 0, "model": "disc.kn5", "came_in": {"families": ["mopar"], "axle": "front", "years": [1966, 1968], "option": true}, "properties": {"force": 18885, "friction": 1.0, "radius": 0.1192, "number_of_calipers": 2, "diam_mm": 280, "torque_k": 0.55, "cool_transfer": 0.008, "cool_speed_factor": 0.014, "perf_curve": "(|0=0.80|150=0.95|250=1.0|500=1.0|650=0.85|800=0.60|1000=0.35|)"}, "slots": [{"id": 1, "name": "mount", "position": [-0.08, 0, 0]}, {"id": 5, "name": "hub", "position": [0, 0, 0], "takes": ["hub:front"]}]},
-    {"id": "running_gear/brakes_disc/single_piston", "name": "single piston", "display_name": "11-inch single-piston front disc brake", "class_chain": ["DiscBrake", "Brake"], "mass": 0, "model": "disc.kn5", "came_in": {"countries": ["USA"], "axle": "front", "years": [1969, null]}, "properties": {"force": 24843, "friction": 1.0, "radius": 0.1187, "number_of_calipers": 1, "diam_mm": 279, "torque_k": 0.55, "cool_transfer": 0.008, "cool_speed_factor": 0.014, "perf_curve": "(|0=0.80|150=0.95|250=1.0|500=1.0|650=0.85|800=0.60|1000=0.35|)"}, "slots": [{"id": 1, "name": "mount", "position": [-0.08, 0, 0]}, {"id": 5, "name": "hub", "position": [0, 0, 0], "takes": ["hub:front"]}]}
+    {
+      "id": "running_gear/brakes_disc/kelsey_hayes",
+      "display_name": "Kelsey-Hayes 11.3-inch 4-piston front disc brake",
+      "class": "disc_brake",
+      "model": "disc.kn5",
+      "mass": 0,
+      "specs": {
+        "force": 18759,
+        "friction": 1.0,
+        "radius": 0.122,
+        "calipers": 2,
+        "diam_mm": 287,
+        "torque_k": 0.55,
+        "cool_transfer": 0.008,
+        "cool_speed_factor": 0.014,
+        "perf_curve": "(|0=0.80|150=0.95|250=1.0|500=1.0|650=0.85|800=0.60|1000=0.35|)"
+      },
+      "came_in": {
+        "families": ["ford"],
+        "axle": "front",
+        "years": [1965, 1967],
+        "option": true
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "position": [-0.08, 0, 0]
+        },
+        {
+          "id": 5,
+          "name": "hub",
+          "position": [0, 0, 0],
+          "takes": ["hub:front"]
+        }
+      ]
+    },
+    {
+      "id": "running_gear/brakes_disc/delco_moraine",
+      "display_name": "Delco-Moraine 11-inch 4-piston front disc brake",
+      "class": "disc_brake",
+      "model": "disc.kn5",
+      "mass": 0,
+      "specs": {
+        "force": 19585,
+        "friction": 1.0,
+        "radius": 0.1187,
+        "calipers": 2,
+        "diam_mm": 279,
+        "torque_k": 0.55,
+        "cool_transfer": 0.008,
+        "cool_speed_factor": 0.014,
+        "perf_curve": "(|0=0.80|150=0.95|250=1.0|500=1.0|650=0.85|800=0.60|1000=0.35|)"
+      },
+      "came_in": {
+        "families": ["gm"],
+        "axle": "front",
+        "years": [1965, 1968],
+        "option": true
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "position": [-0.08, 0, 0]
+        },
+        {
+          "id": 5,
+          "name": "hub",
+          "position": [0, 0, 0],
+          "takes": ["hub:front"]
+        }
+      ]
+    },
+    {
+      "id": "running_gear/brakes_disc/budd",
+      "display_name": "Budd 11.04-inch 4-piston front disc brake",
+      "class": "disc_brake",
+      "model": "disc.kn5",
+      "mass": 0,
+      "specs": {
+        "force": 18885,
+        "friction": 1.0,
+        "radius": 0.1192,
+        "calipers": 2,
+        "diam_mm": 280,
+        "torque_k": 0.55,
+        "cool_transfer": 0.008,
+        "cool_speed_factor": 0.014,
+        "perf_curve": "(|0=0.80|150=0.95|250=1.0|500=1.0|650=0.85|800=0.60|1000=0.35|)"
+      },
+      "came_in": {
+        "families": ["mopar"],
+        "axle": "front",
+        "years": [1966, 1968],
+        "option": true
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "position": [-0.08, 0, 0]
+        },
+        {
+          "id": 5,
+          "name": "hub",
+          "position": [0, 0, 0],
+          "takes": ["hub:front"]
+        }
+      ]
+    },
+    {
+      "id": "running_gear/brakes_disc/single_piston",
+      "display_name": "11-inch single-piston front disc brake",
+      "class": "disc_brake",
+      "model": "disc.kn5",
+      "mass": 0,
+      "specs": {
+        "force": 24843,
+        "friction": 1.0,
+        "radius": 0.1187,
+        "calipers": 1,
+        "diam_mm": 279,
+        "torque_k": 0.55,
+        "cool_transfer": 0.008,
+        "cool_speed_factor": 0.014,
+        "perf_curve": "(|0=0.80|150=0.95|250=1.0|500=1.0|650=0.85|800=0.60|1000=0.35|)"
+      },
+      "came_in": {
+        "countries": ["USA"],
+        "axle": "front",
+        "years": [
+          1969,
+          null
+        ]
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "position": [-0.08, 0, 0]
+        },
+        {
+          "id": 5,
+          "name": "hub",
+          "position": [0, 0, 0],
+          "takes": ["hub:front"]
+        }
+      ]
+    }
   ]
 }
