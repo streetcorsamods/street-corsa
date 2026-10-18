@@ -28,16 +28,16 @@ namespace StreetCorsa.Services.Ai
             lock (_lock) return Task.WhenAll(_running.ToList());
         }
 
-        /// <summary><paramref name="work"/> on the thread pool</summary>
-        public void Run(Func<Task> work) => Track(Guarded(() => Task.Run(work)));
+        /// <summary><paramref name="work"/> on the thread pool; <paramref name="what"/> names it in the log when it fails (else the constructor's)</summary>
+        public void Run(Func<Task> work, string? what = null) => Track(Guarded(() => Task.Run(work), what));
 
         /// <summary>
         /// <paramref name="work"/> started here, on the caller's thread: its awaits come back to the caller's context (a
         /// talk's summary, kept by the screen's thread)
         /// </summary>
-        public void Start(Func<Task> work) => Track(Guarded(work));
+        public void Start(Func<Task> work, string? what = null) => Track(Guarded(work, what));
 
-        private async Task Guarded(Func<Task> work)
+        private async Task Guarded(Func<Task> work, string? what)
         {
             try
             {
@@ -45,7 +45,7 @@ namespace StreetCorsa.Services.Ai
             }
             catch (Exception ex)
             {
-                _logger.Warning("{What} failed: {Error}", _what, ex.Message);
+                _logger.Warning(ex, "{What} failed", what ?? _what);
             }
         }
 

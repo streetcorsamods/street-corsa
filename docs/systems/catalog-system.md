@@ -45,7 +45,11 @@ is set aside as `catalog.db.bad` and a new one made (a file in use is not taken 
 
 ### 4. Profile Generation
 - Create `CarProfile` if missing
-- Calculate `BasePrice` from power/weight (`AcSpecs`, culture-free; a weight outside 300-5000 kg counts as no specs)
+- Calculate `BasePrice` from power/weight (`AcSpecs`, culture-free; a weight outside 300-5000 kg counts as no specs).
+  At start-up a new profile is priced by the body alone (start-up waits for the profiles, and the parts are not up
+  yet); once the parts' warm-up is done every active car is priced again at its parts' prices
+  (`CarProfileService.RepriceAsync`, chained to `CarPartsService.WarmUpAsync` in `App.xaml.cs`), so a price never
+  forces the parts catalog, the dyno or the price book before the first screen
 - Calculate `DealerPrecedence` from year/make/source
 - The figures are the mods' rules (`rules/cars.json`, `RuleBook.Installed.Cars`, not a career's), the badge's the
   mods' makes (`cars/makes.json`, `CarBook`)

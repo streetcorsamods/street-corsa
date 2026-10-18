@@ -310,7 +310,9 @@ career counts (the record, wagers, the street's share and milestones stay drag/r
   `format_time_attack.lua` (ghosts via `physics.disableCarCollisions`, a warm-up lap then `LAPS` timed laps, the best
   lap the score, a wait of 90 s for the rival, a stopwatch on screen). A module that does not load runs a road race.
   `ScRaceMode.Install` mirrors the mods' modules in as `format_<mod>_<module>.lua` and a format's own mode as
-  `new-modes/<mod>_<mode>`; the validator takes a result from any format's mode.
+  `new-modes/<mod>_<mode>` (with the game's marker file; a folder of that name already there with files and no
+  marker is somebody else's mode and is left alone, and the race is refused with `launch.mode_folder_taken`); the
+  validator takes a result from any format's mode.
 - **The result**: schema 1.8, `session.format`, `participants[].score` and `lap_times_ms`. `DetermineOutcome` decides a
   `score` format on the scores (`WinCondition.ScoreFinish`) after crashes and breakdowns; a score card comes first.
 - **Tests**: `RaceFormatTests`, the contract fixture `sc_race_time_attack_result.json`, `tools/sc_race_harness/test_time_attack.py`

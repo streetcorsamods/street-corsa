@@ -72,10 +72,10 @@ public class RaceSetupBuilderTests
         var intent = RaceSetupBuilder.BuildIntent(entry, "car_b", new List<RaceCarData>());
 
         Assert.Equal("car_a", intent.PlayerCarId);
-        Assert.Equal("red", intent.PlayerSkin);
+        Assert.Equal("red", intent.Race.PlayerSkin);
         Assert.Equal("car_b", intent.OpponentCarId);
-        Assert.Equal(95, intent.OpponentAILevel);
-        Assert.Equal(40, intent.OpponentAIAggression);
+        Assert.Equal(95, intent.Race.OpponentAILevel);
+        Assert.Equal(40, intent.Race.OpponentAIAggression);
         Assert.Equal(500, intent.CashWager);
 
         var context = Assert.IsType<RaceContext>(intent.Metadata["RaceContext"]);

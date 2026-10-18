@@ -489,8 +489,9 @@ namespace StreetCorsa
                 logger.Information("Car profiles ready. Total profiles: {ProfileCount}",
                     ProfileRepository.GetProfileCount());
 
-                // Parts catalog and factory engines load in the background; nothing needs them before the garage
-                partsWarmUp = CarPartsService.WarmUpAsync();
+                // Parts catalog and factory engines load in the background; nothing needs them before the garage. The cars
+                // are priced at their parts' prices once they are up (a new car's profile has its body's price until then)
+                partsWarmUp = CarPartsService.WarmUpAsync().ContinueWith(_ => ProfileService.RepriceAsync(), TaskScheduler.Default).Unwrap();
 
                 // Load track content
                 logger.Information("Loading track content");

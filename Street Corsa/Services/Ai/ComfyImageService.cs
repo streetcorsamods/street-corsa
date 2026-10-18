@@ -173,7 +173,7 @@ namespace StreetCorsa.Services.Ai
                 if (run["status"]?["status_str"]?.ToString() == "error") throw new AiProviderException("ComfyUI reported an error running the workflow");
                 if (FirstImage(run["outputs"] as JsonObject) is not { } image)
                 {
-                    if (run["status"]?["completed"]?.GetValue<bool>() == true) throw new AiProviderException("The workflow finished without a picture");
+                    if (Completed(run["status"])) throw new AiProviderException("The workflow finished without a picture");
                     continue;
                 }
 
@@ -200,6 +200,23 @@ namespace StreetCorsa.Services.Ai
                               || bytes.AsSpan().StartsWith((ReadOnlySpan<byte>)[0xFF, 0xD8, 0xFF]));
 
         /// <summary>The first picture among a run's outputs</summary>
+        /// <summary>
+        /// Whether a run's status says the workflow is done. ComfyUI writes <c>"completed": true</c>; a proxy or another
+        /// build may write the word or a number, and anything else (or nothing) is read as not done rather than thrown on,
+        /// which would fail every picture
+        /// </summary>
+        internal static bool Completed(JsonNode? status)
+        {
+            var completed = status is JsonObject known ? known["completed"] : null;
+            return completed?.GetValueKind() switch
+            {
+                System.Text.Json.JsonValueKind.True => true,
+                System.Text.Json.JsonValueKind.String => bool.TryParse(completed.GetValue<string>(), out var said) && said,
+                System.Text.Json.JsonValueKind.Number => completed.GetValue<double>() != 0,
+                _ => false
+            };
+        }
+
         private static (string File, string Subfolder, string Type)? FirstImage(JsonObject? outputs)
         {
             foreach (var (_, output) in outputs ?? [])

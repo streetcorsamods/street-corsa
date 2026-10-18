@@ -232,7 +232,7 @@ namespace StreetCorsa.Services.Ai
             catch (Exception ex)
             {
                 // A provider that answered badly (a wrong model, a refused key): the game's own words, and a line in the log
-                _logger.Warning("AI {Use} failed: {Error}", use, ex.Message);
+                _logger.Warning(ex, "AI {Use} failed", use);
                 return (false, null);
             }
             finally

@@ -504,7 +504,7 @@ namespace StreetCorsa.Services.Talk
             catch (Exception ex)
             {
                 // The turns are still sent, up to twice the rules' many: nothing is lost yet
-                _logger.Warning("Could not sum up the start of the talk with {Person}: {Error}", Person.Name, ex.Message);
+                _logger.Warning(ex, "Could not sum up the start of the talk with {Person}", Person.Name);
             }
             finally
             {
