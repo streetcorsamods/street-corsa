@@ -966,7 +966,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
             : (SlimDX.Matrix?)null;
         _appliedLift = lift;
         _liftedNode = carNode;
-        if (!_rock.Apply(pose, moved?.WheelSpin ?? 0f, placement, moved?.Steer ?? 0f)) return;
+        if (!_rock.Apply(pose, moved?.WheelSpin ?? 0f, placement, moved?.Steer ?? 0f, StreetCorsa.Parts.LiftLayout.Droop(lift))) return;
 
         if (LeansParts) renderer.BodyLean = _rock.WorldLean * SlimDX.Matrix.Translation(0f, lift, 0f);
 

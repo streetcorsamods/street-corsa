@@ -154,6 +154,9 @@ public static class ShownPartsOnCar
         if (shown?.Paint == null) ClearPaint(car, on);
         if (shown == null) return true;
 
+        // A wheel taken off: the car's own goes out of sight there, whatever else it shows
+        SwitchOffMissing(car, shown.MissingWheels, on);
+
         // The paint first: a car painted is seen in its colour from the start, not after its parts are put on
         if (shown.Paint is { } colour && !await PutPaintAsync(car, colour, on, version, device, gone)) return false;
 
@@ -433,6 +436,17 @@ public static class ShownPartsOnCar
         }
         on.Switched.Clear();
         on.Nodes.Clear();
+    }
+
+    private static void SwitchOffMissing(Kn5RenderableCar car, int missing, OnCar on)
+    {
+        if (missing == 0) return;
+        for (var corner = 0; corner < WheelFit.WheelNodes.Length; corner++)
+        {
+            if ((missing & (1 << corner)) == 0) continue;
+            var name = WheelFit.WheelNodes[corner];
+            if (car.RootObject?.GetAllChildren().OfType<Kn5RenderableList>().FirstOrDefault(n => n.OriginalNode.Name == name) is { } node) on.Switch(node, false);
+        }
     }
 
     private static void Apply(Kn5RenderableCar car, int corner, ShownWheel wheel, Dictionary<string, IKn5> models, OnCar on)

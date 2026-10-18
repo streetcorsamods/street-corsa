@@ -33,6 +33,12 @@ public static class LiftLayout
     /// <summary>How fast the lift goes, metres a second: the first stop in about two seconds, full height in seven</summary>
     public const float Speed = 0.2f;
 
+    /// <summary>
+    /// How far the wheels drop from the body as it comes up off them, metres: the springs let out to the end of their
+    /// travel. Until the body is this high the wheels stay on the floor; past it they hang this far down.
+    /// </summary>
+    public const float WheelDrop = 0.1f;
+
     /// <summary>The saddle's top down in the floor, on its plate</summary>
     public const float SaddleDown = 0.07f;
 
@@ -48,6 +54,9 @@ public static class LiftLayout
         LiftStop.Full => FullHeight,
         _ => 0f
     };
+
+    /// <summary>How far the wheels hang below where they sit on the floor with the car <paramref name="height"/> up (<see cref="WheelDrop"/>)</summary>
+    public static float Droop(float height) => Math.Clamp(height, 0f, WheelDrop);
 
     /// <summary>The stop after this one as the lift's button steps it: down, the wheels clear, full height, down again</summary>
     public static LiftStop Next(LiftStop stop) => stop switch

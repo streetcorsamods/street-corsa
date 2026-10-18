@@ -1152,6 +1152,7 @@ public class CarViewport3D : D3DViewportBase
             if (renderer == Renderer && PartsVisible && !IsOnStand && _loadedCarDirectory == carDirectory)
             {
                 renderer.SetProp(model.Kn5, SlimDX.Matrix.Identity);
+                renderer.SetUnsprung(PartLayer.Mounted, NodesHanging(model.Nodes, Unsprung(catalog, gear)));
                 propReplaced = true;
 
                 // The engine off the hoist and onto the stand, in the same frame
@@ -2043,6 +2044,9 @@ public class CarViewport3D : D3DViewportBase
             if (renderer == Renderer && ReferenceEquals(candidates, Candidates))
             {
                 renderer.SetCandidates(model?.Kn5);
+                var hanging = Unsprung(catalog, Gear);
+                renderer.SetUnsprung(PartLayer.Candidate, Enumerable.Range(0, owners.Length).Where(i =>
+                    owners[i].Parent is { } parent ? hanging.Contains(parent) : HangsOnLift(catalog, owners[i].ParentSlot, owners[i].Part.Definition)));
                 _candidateNodes = owners;
                 _shownCandidates = candidates;
                 AnimateFor(AnimationWindow);
@@ -2102,7 +2106,8 @@ public class CarViewport3D : D3DViewportBase
             .ToArray();
         if (hubs.Any(h => h == null)) return null;
 
-        var lifted = LiftedBy(carNode);
+        // The wheels hang below the lifted body as well: they are back up on it, where the car on the floor has them
+        var lifted = LiftedBy(carNode) - LiftLayout.Droop(LiftedBy(carNode));
         var points = hubs.Select(h => new System.Numerics.Vector3(h!.Value.M41, h.Value.M42 - lifted, h.Value.M43)).ToArray();
         return new CarAnchors(points[0], points[1], points[2], points[3]);
     }
@@ -2276,9 +2281,34 @@ public class CarViewport3D : D3DViewportBase
         }
 
         renderer.LiftSaddle = LiftLayout.SaddleTop(_liftNow);
+        renderer.Droop = LiftLayout.Droop(_liftNow);
         OnPoseChanged();
         return true;
     }
+
+    /// <summary>
+    /// Whether a part on this car slot hangs with the wheels as the lift takes the body up: a wheel, a brake, the rear axle
+    /// (with all it carries), a leaf spring (with its traction bar); not a coil, a shock or a torsion bar on the body
+    /// </summary>
+    private static bool HangsOnLift(PartsCatalog catalog, int carSlot, PartDefinition part)
+    {
+        if (carSlot == RearAxle.CarSlot) return true;
+        var corner = RunningGear.CornerOf(carSlot);
+        return corner >= 0 && (carSlot == RunningGear.WheelSlot(corner) || carSlot == RunningGear.BrakeSlot(corner)
+                               || carSlot == RunningGear.SpringSlot(corner) && string.Equals(catalog.WorkOrder.KindOf(part), "leaf_spring", StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>The running gear that hangs with the wheels (<see cref="HangsOnLift"/>), with everything on it</summary>
+    private static HashSet<InstalledPart> Unsprung(PartsCatalog catalog, IReadOnlyList<CarPart>? gear)
+    {
+        var hanging = new HashSet<InstalledPart>(ReferenceEqualityComparer.Instance);
+        foreach (var part in gear ?? Array.Empty<CarPart>())
+            if (HangsOnLift(catalog, part.CarSlot, part.Root.Definition)) hanging.UnionWith(part.Root.SelfAndDescendants());
+        return hanging;
+    }
+
+    private static IEnumerable<int> NodesHanging(IReadOnlyList<PlacedPart> nodes, HashSet<InstalledPart> hanging) =>
+        Enumerable.Range(0, nodes.Count).Where(i => nodes[i].Source is { } source && hanging.Contains(source));
 
     /// <summary>A car just loaded comes at its stop, the lift under it with no move to hear</summary>
     private void SnapLift()
@@ -2290,6 +2320,7 @@ public class CarViewport3D : D3DViewportBase
         if (Renderer is { } renderer)
         {
             renderer.LiftSaddle = LiftLayout.SaddleTop(_liftNow);
+            renderer.Droop = LiftLayout.Droop(_liftNow);
             PlaceLift(renderer);
         }
 

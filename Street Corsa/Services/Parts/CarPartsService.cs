@@ -450,7 +450,7 @@ namespace StreetCorsa.Services.Parts
             var wheels = Specs(carDefinitionId) is { } specs
                 ? ShownParts.Wheels(parts, Catalog, RunningGearFactory.Choose(Catalog, specs, FactsOf(carDefinitionId), PicksOf(carDefinitionId)))
                 : new ShownWheel?[RunningGear.Corners];
-            return ShownSet.Of(wheels, extras, frame, look, heights, paint);
+            return ShownSet.Of(wheels, extras, frame, look, heights, paint, ShownParts.MissingWheels(parts));
         }
 
         /// <summary>

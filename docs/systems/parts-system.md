@@ -906,7 +906,11 @@ down. In the 3D view (`CarViewport3D` "Lift") the whole car rises, its wheels ha
 placement (`D3DViewportBase.LiftHeight`), and the parts with it (`BodyLean`); the hubs the parts are placed by are taken
 with the lift's height off. The lift is a garage prop (`props/lift`, drawn from boxes unless a mod gives a model with a
 `lift_post` node), standing under the middle of the car in the bay, its post rising to catch the body by the first stop
-(`LiftLayout.SaddleTop`). The camera may look up from under the car while it is up. Sounds: `lift.move` (a loop) and
+(`LiftLayout.SaddleTop`). The wheels stay on the floor for the first 0.1 m and then hang that far below the body
+(`LiftLayout.Droop`): the body rock lowers the AC model's WHEEL/HUB/SUSP/DISC groups, and the renderer the parts that
+hang with them (`GarageRenderer.SetUnsprung`/`Droop`: on a wheel or brake slot, the rear axle with all it carries, a leaf
+spring), parts on their way included. A wheel taken off takes the car's own out of sight at that corner in every scene
+(`ShownSet.MissingWheels`). The camera may look up from under the car while it is up. Sounds: `lift.move` (a loop) and
 `lift.stop`, synthesised by `tools/RebuildSounds`.
 
 **Threads.** The game state and the save file belong to the UI thread. Whatever takes long (loading the catalog,

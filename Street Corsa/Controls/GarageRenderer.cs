@@ -102,6 +102,11 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     private Matrix _liftPostHome = Matrix.Identity;
     private float _liftSaddle = Parts.LiftLayout.SaddleDown;
 
+    // The parts that hang with the wheels as the lift takes the body up (the wheels, the brakes, the rear axle), in the
+    // mounted parts and the places a loose part could go, and how far they hang now (Parts.LiftLayout.Droop)
+    private readonly HashSet<PartNode> _unsprung = new();
+    private float _droop;
+
     // The car's own wheels (its model's WHEEL_xx nodes, the part wheels shown on them in the scenes among what they hold),
     // found once a car: left out of the ghost while the parts are on show, which draw the wheels as parts of their own
     private static readonly Regex CarWheel = new("^WHEEL_(LF|RF|LR|RR)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -734,7 +739,7 @@ public class GarageRenderer : DarkKn5ObjectRenderer
             if (node < 0 || node >= _propNodes.Count) continue;
 
             _motions.RemoveAll(m => ReferenceEquals(m.Node, _propNodes[node]));
-            _propNodes[node].List.LocalMatrix = world;
+            _propNodes[node].List.LocalMatrix = _unsprung.Contains(_propNodes[node]) ? world * Matrix.Translation(0f, -_droop, 0f) : world;
             moved = true;
         }
 
@@ -880,7 +885,10 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         public PartNode Node { get; }
 
         /// <summary>The node where it was put</summary>
-        protected Matrix Home { get; }
+        protected Matrix Home { get; private set; }
+
+        /// <summary>Its place moved by <paramref name="by"/> (the part hanging further with the wheels), on its way or not</summary>
+        public void Shift(Matrix by) => Home *= by;
 
         public bool HasStarted => _elapsed > _delay;
 
@@ -1165,6 +1173,7 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         var hiddenAtFirst = _prop == null && !_standActive && !IsGhosting;
 
         _prop?.Dispose();
+        _unsprung.RemoveWhere(n => _propNodes.Contains(n));
         _propLeans = !_standActive;
         _propPlacement = placement;
         _prop = kn5 == null ? null : new Kn5RenderableFile(kn5, placement * (_propLeans ? _bodyLean : Matrix.Identity), asyncTexturesLoading: hiddenAtFirst);
@@ -1191,6 +1200,7 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     public void SetCandidates(IKn5? kn5)
     {
         _candidates?.Dispose();
+        _unsprung.RemoveWhere(n => _candidateNodes.Contains(n));
         _candidatesLean = !_standActive;
         _candidates = kn5 == null ? null : new Kn5RenderableFile(kn5, _candidatesLean ? _bodyLean : StandTurn, asyncTexturesLoading: false);
         _candidateNodes = PartNode.Of(_candidates);
@@ -1252,6 +1262,48 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         _lift.UpdateBoundingBox();
         SetShadowsDirty();
         IsDirty = true;
+    }
+
+    /// <summary>
+    /// The nodes of the mounted parts (<see cref="PartLayer.Mounted"/>) or of the places a loose part could go
+    /// (<see cref="PartLayer.Candidate"/>) that hang with the wheels (<see cref="Droop"/>): given once for each model put in,
+    /// right after it, its nodes where the layout has them
+    /// </summary>
+    public void SetUnsprung(PartLayer layer, IEnumerable<int> nodes)
+    {
+        var all = layer == PartLayer.Mounted ? _propNodes : _candidateNodes;
+        var hang = Matrix.Translation(0f, -_droop, 0f);
+        foreach (var index in nodes)
+        {
+            if (index < 0 || index >= all.Count || !_unsprung.Add(all[index])) continue;
+            if (_droop != 0f) all[index].List.LocalMatrix *= hang;
+        }
+
+        if (_droop == 0f) return;
+        if (layer == PartLayer.Mounted) _prop?.UpdateBoundingBox();
+        else _candidates?.UpdateBoundingBox();
+        IsDirty = true;
+    }
+
+    /// <summary>
+    /// How far the parts that hang with the wheels (<see cref="SetUnsprung"/>) are below where the layout puts them, metres:
+    /// the lift taking the body up off its wheels. A part on its way off or on hangs with them.
+    /// </summary>
+    public float Droop
+    {
+        get => _droop;
+        set
+        {
+            if (_droop == value) return;
+            var by = Matrix.Translation(0f, _droop - value, 0f);
+            _droop = value;
+            foreach (var node in _unsprung) node.List.LocalMatrix *= by;
+            foreach (var motion in _motions.Where(m => _unsprung.Contains(m.Node))) motion.Shift(by);
+            _prop?.UpdateBoundingBox();
+            _candidates?.UpdateBoundingBox();
+            SetShadowsDirty();
+            IsDirty = true;
+        }
     }
 
     /// <summary>How high the top of the lift's saddle is off the floor, metres (<see cref="Parts.LiftLayout.SaddleTop"/>)</summary>

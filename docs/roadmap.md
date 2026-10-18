@@ -1948,6 +1948,12 @@ its own way:
 - The lift button waits while the lift moves; the gas station and the paint booth refuse a car up ("On the lift"), so it
   is never pushed out as a car that will not run is.
 
+The owner's first look (2026-10-17) asked for two more, built the same day: the suspension lets out as the car goes up
+(the wheels stay on the floor for the first 0.1 m, `LiftLayout.WheelDrop`, then hang that far below the body: the AC
+model's wheel, hub and suspension groups through the body rock, and in the parts view the wheels, brakes, rear axle and
+leaf springs, `GarageRenderer.Droop`); and a wheel taken off no longer shows the car's own wheel out of the parts view
+(`ShownSet.MissingWheels`: the scenes switch that corner's WHEEL_xx off).
+
 To check in game: the wheels drawn in the parts view on every corner, faces out, no AC wheel doubling them; the wheels
 show; a wheel refused on the floor ("Raise the car on the lift first."), off and on with the car up; the drums and the
 rear axle then (the bug this phase was for); the lift's two stops, its post, the sounds and the camera under the car;

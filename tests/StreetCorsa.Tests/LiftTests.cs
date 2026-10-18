@@ -144,6 +144,34 @@ public class LiftTests
     }
 
     [Fact]
+    public void The_wheels_stay_on_the_floor_until_the_springs_are_let_out_then_hang()
+    {
+        Assert.Equal(0f, LiftLayout.Droop(0f));
+        Assert.Equal(0.05f, LiftLayout.Droop(0.05f), 4);
+        Assert.Equal(LiftLayout.WheelDrop, LiftLayout.Droop(LiftLayout.WheelsClearHeight), 4);
+        Assert.Equal(LiftLayout.WheelDrop, LiftLayout.Droop(LiftLayout.FullHeight), 4);
+
+        // At the first stop the wheels hang clear of the floor all the same
+        Assert.True(LiftLayout.WheelsClearHeight - LiftLayout.Droop(LiftLayout.WheelsClearHeight) > 0.15f);
+    }
+
+    [Fact]
+    public void A_wheel_taken_off_takes_the_cars_own_out_of_sight_there()
+    {
+        var parts = FactoryParts();
+        Assert.Equal(0, ShownParts.MissingWheels(parts));
+
+        Workbench.Remove(parts, Wheel(parts, 2));
+        Assert.Equal(1 << 2, ShownParts.MissingWheels(parts));
+        var shown = ShownSet.Of(null, missingWheels: ShownParts.MissingWheels(parts));
+        Assert.NotNull(shown);
+        Assert.NotEqual(shown, ShownSet.Of(null, missingWheels: 1));
+
+        // A car without its running gear as parts keeps its own wheels
+        Assert.Equal(0, ShownParts.MissingWheels([]));
+    }
+
+    [Fact]
     public void The_lifts_own_model_has_a_post_that_rises()
     {
         var kn5 = LiftLayout.CreateModel();
