@@ -173,6 +173,15 @@ internal static class Kn5SceneWriter
             AddTexture(kn5, file);
     }
 
+    /// <summary>An empty model named <paramref name="rootName"/> at its root, with every picture of the prepared folder in it</summary>
+    public static IKn5 Begin(string rootName, string prepared)
+    {
+        var kn5 = Kn5.CreateEmpty();
+        kn5.RootNode.Name = rootName;
+        AddTextures(kn5, prepared);
+        return kn5;
+    }
+
     /// <summary>
     /// The credit line of a scene whose surfaces are Poly Haven's: each texture once, by its Poly Haven name (the
     /// prepared file's name less its surface prefix, "floor_garage_floor.jpg" giving "garage_floor"), in name order

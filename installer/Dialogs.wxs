@@ -32,6 +32,9 @@
       <DialogRef Id="ResumeDlg" />
       <DialogRef Id="UserExit" />
 
+      <!-- What the progress bar says while the game's clean-up runs on an uninstall (it may wait for Assetto Corsa to close) -->
+      <ProgressText Action="RestoreAc" Message="Putting Assetto Corsa back the way it was (waiting for it to close if it is running)" />
+
       <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchGame" Order="1" Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 AND NOT Installed" />
       <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="OpenOllamaPage" Order="2" Condition="OLLAMA_OPEN = 1 AND NOT Installed" />
       <Publish Dialog="ExitDialog" Control="Finish" Event="EndDialog" Value="Return" Order="999" />

@@ -169,6 +169,7 @@ namespace StreetCorsa.Services.Ai
                     }
 
                     _logger.Debug("AI {Use} waits for the race to end: the model is off the GPU", use);
+                    HeldForRaceTold?.Invoke(use);
                     if (!await RaceOverAsync(cancellationToken).ConfigureAwait(false)) return null;
                     continue;
                 }
@@ -261,6 +262,17 @@ namespace StreetCorsa.Services.Ai
         /// <summary>A race runs and the local model was let go for it: nothing is asked, which would load it again</summary>
         private bool HeldForRace => _racing && Rules.Ollama.UnloadForRaces && AiProviders.Normalize(_settings().TextProvider) == AiProviders.Ollama;
 
+        // ----- what the tests wait on, instead of sleeping -----
+
+        /// <summary>
+        /// The model let go of the GPU for a race, or loaded again after it (<see cref="SetRacing"/>), done once it is:
+        /// nobody in the game waits on it, the tests do
+        /// </summary>
+        public Task RaceWork { get; private set; } = Task.CompletedTask;
+
+        /// <summary>A background request (its use) held for the end of a race; the tests wait on it</summary>
+        public event Action<string>? HeldForRaceTold;
+
         /// <summary>The race is over (true), or the wait was called off (false)</summary>
         private async Task<bool> RaceOverAsync(CancellationToken cancellationToken)
         {
@@ -307,6 +319,7 @@ namespace StreetCorsa.Services.Ai
                 {
                     _raceOver = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
                     _letGo = ollama != null ? Task.Run(() => LetGoAsync(ollama)) : Task.FromResult(false);
+                    RaceWork = _letGo;
                 }
                 else
                 {
@@ -317,7 +330,8 @@ namespace StreetCorsa.Services.Ai
 
             try
             {
-                if (ollama != null && letGo != null) _ = LoadAgainAsync(ollama, letGo);
+                // The end of a race: let go, nobody waits on the load but the tests (RaceWork); LoadAgainAsync never throws
+                if (letGo != null) RaceWork = ollama != null ? LoadAgainAsync(ollama, letGo) : Task.CompletedTask;
             }
             finally
             {

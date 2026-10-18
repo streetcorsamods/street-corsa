@@ -87,13 +87,14 @@ git grep -nEi '(api[_-]?key|secret|password|token)\s*[:=]' -- ':!*.md'
 | `HttpClient` | Endpoint from settings, defaulting to `localhost`; no silent fallback to a remote host; what leaves the machine is documented |
 | LLM output   | Model output is treated as untrusted text: never used as a path, command, or deserialized type; length capped before display |
 
-## CLI tool (`EngineBench`)
+## CLI tools (`EngineBench`, the scene builders, `RunningGearParts`)
 
 | Signal       | Check                                                                                                                         |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| CLI args     | Output paths validated; a tool refuses to write outside the intended output root                                       |
-| Parsers      | SCX/RPK/cfg readers apply the same bounds rules as the game's parsers (these read community mods)                            |
-| Determinism  | Output is deterministic (the re-run workflow diffs scratch runs) — flag dictionary-order or time-dependent output              |
+| CLI args     | Output paths validated; a tool refuses to write outside the intended output root (`RunningGearParts` writes only into a pack that has its `pack.json`) |
+| Parsers      | The OBJ reader (`tools/Shared/ObjModel.cs`) and the prepared folders' JSON hold indices and names against what the file gives, and name the line that fails |
+| Writes       | Files the game ships or a workflow diffs (KN5s, scene JSON, the EngineBench snapshot) are written temp-and-move                 |
+| Determinism  | Output is deterministic (the re-run workflow diffs scratch runs; the builders' output is byte-identical run to run) — flag dictionary-order or time-dependent output |
 | Exit codes   | Non-zero exit on failure so `check.ps1` can stop                                                                       |
 
 ## CSP race mode (`apps/new-modes/sc_race`, was the Lua app `apps/lua/sr_race_manager`)

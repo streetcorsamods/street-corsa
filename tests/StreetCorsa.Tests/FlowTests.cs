@@ -10,16 +10,6 @@ using StreetCorsa.Services.Scripting;
 
 namespace StreetCorsa.Tests;
 
-/// <summary>
-/// The tests that change the rules of the game in play (the systems a game has), which the whole game reads: run on
-/// their own, so no other test plays by a book one of them set
-/// </summary>
-[CollectionDefinition(Name, DisableParallelization = true)]
-public sealed class SystemsCollection
-{
-    public const string Name = "Systems";
-}
-
 /// <summary>E8: the flow (screens, ways out, tiles, cards) as data, and the systems a game can do without</summary>
 public sealed class FlowTests : IDisposable
 {
@@ -449,7 +439,7 @@ public sealed class FlowTests : IDisposable
 }
 
 /// <summary>The systems switched off in the rules of the game in play</summary>
-[Collection(SystemsCollection.Name)]
+[Collection(GlobalsCollection.Name)]
 public sealed class SystemSwitchTests
 {
     private sealed class CountingTask(string? system) : IScheduledTask

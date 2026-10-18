@@ -28,6 +28,18 @@ namespace StreetCorsa.Services.Settings
         {
         }
 
+        /// <summary>
+        /// The AC folder the game runs on, worked out as the game works it out at start-up (the settings, the installer's
+        /// folder when it is new, Steam's) and made the one the process uses (<see cref="AppSettings.Instance"/>), but
+        /// without moving or writing settings.json: for the uninstall, which is no time to write the settings
+        /// </summary>
+        public static string ReadInstallPath()
+        {
+            _ = new GameSettingsService(Path.Combine(AppSettings.AppDataPath, SettingsFileName), legacyPath: null,
+                AcInstallFinder.Find, AcInstallFinder.InstallerChoice, writeBack: false);
+            return AppSettings.Instance.AssettoCorsaPath;
+        }
+
         /// <param name="settingsPath">Where the settings are kept</param>
         /// <param name="legacyPath">Where earlier versions kept them (next to the program); moved over once</param>
         /// <param name="findInstall">
@@ -37,15 +49,29 @@ namespace StreetCorsa.Services.Settings
         /// <param name="installerChoice">
         /// The AC folder the installer last set (<see cref="AcInstallFinder.InstallerChoice"/>); none when not given
         /// </param>
-        public GameSettingsService(string settingsPath, string? legacyPath, Func<string?>? findInstall = null, Func<string?>? installerChoice = null)
+        /// <param name="writeBack">
+        /// Whether what the load works out (the installer's folder taken, Steam's found) is written into settings.json,
+        /// as the game does; false reads only (<see cref="ReadInstallPath"/>)
+        /// </param>
+        public GameSettingsService(string settingsPath, string? legacyPath, Func<string?>? findInstall = null, Func<string?>? installerChoice = null,
+            bool writeBack = true)
         {
             _logger = AppLoggerFactory.CreateLogger("GameSettings");
             _settingsPath = settingsPath;
             _findInstall = findInstall ?? AcInstallFinder.Find;
             _installerChoice = installerChoice ?? (() => null);
+            _writeBack = writeBack;
             MigrateLegacy(legacyPath);
             _currentSettings = Load();
             ApplyInstallPath(_currentSettings);
+        }
+
+        private readonly bool _writeBack;
+
+        /// <summary>A change the load itself made, kept in the file when the service may write it</summary>
+        private void SaveIfWriting(GameSettings settings)
+        {
+            if (_writeBack) Save(settings);
         }
 
         /// <summary>
@@ -111,7 +137,7 @@ namespace StreetCorsa.Services.Settings
 
             settings.AssettoCorsaPath = found;
             _logger.Information("Assetto Corsa found at {ACPath}: kept in the settings", found);
-            Save(settings);
+            SaveIfWriting(settings);
         }
 
         private readonly Func<string?> _findInstall;
@@ -134,7 +160,7 @@ namespace StreetCorsa.Services.Settings
                 settings.AssettoCorsaPath = chosen;
             }
 
-            Save(settings);
+            SaveIfWriting(settings);
         }
 
         private readonly Func<string?> _installerChoice;

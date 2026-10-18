@@ -15,6 +15,7 @@ namespace StreetCorsa.Tests;
 /// The rules of a career as data (rules/*.json, <see cref="RuleBook"/>): the base game's files hold exactly the code's
 /// figures, a mod changes one figure without repeating the rest, a save keeps the rules it was started with
 /// </summary>
+[Collection(GlobalsCollection.Name)]
 public class RuleBookTests : IDisposable
 {
     private readonly TempDir _temp = new();

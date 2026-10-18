@@ -159,10 +159,11 @@ namespace StreetCorsa.Services.Talk
             // claims the answer first has it: the line said now, or the one kept
             var claimed = 0;
             var writing = _ai.WriteAsync(TalkUse, ValuesFor(context, own), AiPriority.Now);
-            _ = writing.ContinueWith(t =>
+            // Kept as background work (WhenIdle): a late line's keeping is something the tests wait for
+            _background.Start(() => writing.ContinueWith(t =>
             {
                 if (t.Status == TaskStatus.RanToCompletion && t.Result is { } late && Interlocked.Exchange(ref claimed, 1) == 0) Keep(key, late);
-            }, TaskScheduler.Default);
+            }, TaskScheduler.Default));
 
             var wait = Task.Delay(TimeSpan.FromSeconds(Math.Max(0, Rules.TalkWaitSeconds)), superseded);
             var first = await Task.WhenAny(writing, wait).ConfigureAwait(true);

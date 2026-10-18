@@ -172,8 +172,8 @@ namespace StreetCorsa
 
             if (uninstall)
             {
-                Services.AcUninstall.Run();
-                Environment.Exit(0);
+                // The exit code is what the installer reads: AcUninstall.ExitAcRunning has it ask the player to close AC and retry
+                Environment.Exit(Services.AcUninstall.Run());
             }
 
             // The last line of defence before anything that can fail: the rename and the log's folder below touch

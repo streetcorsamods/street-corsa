@@ -4,6 +4,8 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using StreetCorsa.Tools;
 using static StreetCorsa.Tools.Kn5SceneWriter;
+using static StreetCorsa.Tools.SceneJson;
+using static StreetCorsa.Tools.SceneMesh;
 
 namespace ShopSceneBuilder;
 
@@ -28,11 +30,12 @@ internal static class Program
     private const float HalfDepth = 6f;
     private const float Height = 3.6f;
 
+    // The windows' sills: the front wall under them, and the panes from there up
+    private const float Sill = 0.9f;
+
     // How big a picture is on the surface, in metres
-    private const float FloorTile = 2f;
-    private const float WallTile = 2.4f;
-    private const float WoodTile = 1.2f;
-    private const float SteelTile = 1f;
+    private const float WoodTile = RoomBox.WoodTile;
+    private const float SteelTile = RoomBox.SteelTile;
 
     // The back wall's shelving: four units of three places a level, five levels
     private const float BackFront = -3.98f;
@@ -60,23 +63,24 @@ internal static class Program
 
     private static bool _flip;
 
-    private static int Main(string[] args)
+    // The room itself and what every shop has in it (tools/Shared/RoomBox.cs)
+    private static RoomBox _room = null!;
+
+    private static int Main(string[] argv)
     {
-        var positional = args.Where(a => !a.StartsWith("--")).ToList();
-        if (positional.Count < 2)
+        var args = new BuilderArgs(argv, "--flip");
+        if (args.Positional.Count < 2)
         {
             Console.Error.WriteLine("ShopSceneBuilder <prepared folder> <out folder> [--flip]");
             return 1;
         }
 
-        var prepared = positional[0];
-        var output = positional[1];
-        _flip = args.Contains("--flip");
+        var prepared = args.Positional[0];
+        var output = args.Positional[1];
+        _flip = args.Flag("--flip");
+        _room = new RoomBox(HalfWidth, HalfDepth, Height, Sill, Tubes, _flip);
 
-        var kn5 = Kn5.CreateEmpty();
-        kn5.RootNode.Name = "shop";
-
-        AddTextures(kn5, prepared);
+        var kn5 = Begin("shop", prepared);
 
         var first = Looks[0];
         var floor = AddMaterial(kn5, "sh_floor", first.Floor, ambient: 0.34f, diffuse: 0.5f, specular: 0.18f, specularExp: 40f);
@@ -92,15 +96,17 @@ internal static class Program
         var chrome = AddMaterial(kn5, "sh_chrome", "chrome.jpg", ambient: 0.3f, diffuse: 0.4f, specular: 0.8f, specularExp: 80f);
         var rubber = AddMaterial(kn5, "sh_rubber", "rubber.jpg", ambient: 0.3f, diffuse: 0.4f);
 
-        AddMesh(kn5, "SH_FLOOR", Floor(), floor);
-        AddMesh(kn5, "SH_WALL", Walls(), wall);
-        AddMesh(kn5, "SH_CEILING", Ceiling(), ceiling);
+        // The key light comes in through the windows and the tubes light from overhead: nothing of the room stands in the
+        // way of either (every mesh shadowless, SceneMesh.AddMesh); the parts on the shelves cast their own
+        AddMesh(kn5, "SH_FLOOR", _room.Floor(), floor);
+        AddMesh(kn5, "SH_WALL", _room.Walls(), wall);
+        AddMesh(kn5, "SH_CEILING", _room.Ceiling(), ceiling);
         AddMesh(kn5, "SH_WOOD", Woodwork(), wood);
         AddMesh(kn5, "SH_STEEL", Steelwork(), steel);
-        AddMesh(kn5, "SH_SIGN", Sign(), sign);
+        AddMesh(kn5, "SH_SIGN", _room.Sign(-2.6f, 2.6f, 2.66f, 3.31f), sign);
         AddMesh(kn5, "SH_PEGBOARD", Pegboard(), pegboard);
-        AddMesh(kn5, "SH_TUBE", TubeLights(), tube);
-        AddMesh(kn5, "SH_WINDOW", Windows(), window);
+        AddMesh(kn5, "SH_TUBE", _room.TubeLights(), tube);
+        AddMesh(kn5, "SH_WINDOW", _room.Windows(), window);
         AddMesh(kn5, "SH_TILL", Till(), till);
         AddMesh(kn5, "SH_CHROME", Chrome(), chrome);
         AddMesh(kn5, "SH_RUBBER", Skirting(), rubber);
@@ -130,58 +136,10 @@ internal static class Program
 
     #region Geometry
 
-    // The shapes the scene builders share (tools/Shared/SceneMesh.cs), wound the other way round with --flip
-    private sealed class Mesh() : SceneMesh(_flip);
-
-    private static Vec3 V(float x, float y, float z) => new(x, y, z);
-
-    private static Mesh Floor()
-    {
-        var mesh = new Mesh();
-        mesh.Quad(V(-HalfWidth, 0f, -HalfDepth), V(HalfWidth, 0f, -HalfDepth), V(HalfWidth, 0f, HalfDepth), V(-HalfWidth, 0f, HalfDepth),
-            Vec3.UnitY, p => new Vec2(p.X / FloorTile, p.Z / FloorTile));
-        return mesh;
-    }
-
-    /// <summary>The four walls, facing in; the front one round the door and the two windows</summary>
-    private static Mesh Walls()
-    {
-        var mesh = new Mesh();
-        Vec2 Xy(Vec3 p) => new(p.X / WallTile, -p.Y / WallTile);
-        Vec2 Zy(Vec3 p) => new(p.Z / WallTile, -p.Y / WallTile);
-
-        mesh.Quad(V(-HalfWidth, 0f, -HalfDepth), V(HalfWidth, 0f, -HalfDepth), V(HalfWidth, Height, -HalfDepth), V(-HalfWidth, Height, -HalfDepth), Vec3.UnitZ, Xy);
-        foreach (var x in new[] { -HalfWidth, HalfWidth })
-            mesh.Quad(V(x, 0f, -HalfDepth), V(x, 0f, HalfDepth), V(x, Height, HalfDepth), V(x, Height, -HalfDepth), V(-MathF.Sign(x), 0f, 0f), Zy);
-
-        // The front: under and over the windows, between them and the door, over the door
-        const float z = HalfDepth;
-        var normal = -Vec3.UnitZ;
-        void Panel(float x0, float x1, float y0, float y1) =>
-            mesh.Quad(V(x0, y0, z), V(x1, y0, z), V(x1, y1, z), V(x0, y1, z), normal, Xy);
-        Panel(-HalfWidth, HalfWidth, 2.5f, Height);
-        Panel(-HalfWidth, -5f, 0f, 2.5f);
-        Panel(5f, HalfWidth, 0f, 2.5f);
-        Panel(-5f, -1.6f, 0f, 0.9f);
-        Panel(1.6f, 5f, 0f, 0.9f);
-        Panel(-1.6f, -0.6f, 0f, 2.5f);
-        Panel(0.6f, 1.6f, 0f, 2.5f);
-        Panel(-0.6f, 0.6f, 2.2f, 2.5f);
-        return mesh;
-    }
-
-    private static Mesh Ceiling()
-    {
-        var mesh = new Mesh();
-        mesh.Quad(V(-HalfWidth, Height, -HalfDepth), V(HalfWidth, Height, -HalfDepth), V(HalfWidth, Height, HalfDepth), V(-HalfWidth, Height, HalfDepth),
-            -Vec3.UnitY, p => new Vec2(p.X / WallTile, p.Z / WallTile));
-        return mesh;
-    }
-
     /// <summary>The counter, the shelves' boards, the display table's top and the door</summary>
-    private static Mesh Woodwork()
+    private static SceneMesh Woodwork()
     {
-        var mesh = new Mesh();
+        var mesh = _room.Mesh();
 
         // The counter: its body, and a top a little proud of it
         mesh.Box(V(-2.6f, 0f, -2.4f), V(2.6f, 0.92f, -1.8f), WoodTile);
@@ -198,16 +156,14 @@ internal static class Program
         // The display table's top
         mesh.Box(V(TableAt.X - 0.95f, 0.72f, TableAt.Z - 0.5f), V(TableAt.X + 0.95f, 0.76f, TableAt.Z + 0.5f), WoodTile, bottom: true);
 
-        // The door, shut
-        mesh.Quad(V(-0.6f, 0f, HalfDepth - 0.02f), V(0.6f, 0f, HalfDepth - 0.02f), V(0.6f, 2.2f, HalfDepth - 0.02f), V(-0.6f, 2.2f, HalfDepth - 0.02f),
-            -Vec3.UnitZ, p => new Vec2(p.X / WoodTile, -p.Y / WoodTile));
+        _room.Door(mesh);
         return mesh;
     }
 
     /// <summary>The shelving's uprights, the gondola, the tyre rack, the engine stand and the table's legs</summary>
-    private static Mesh Steelwork()
+    private static SceneMesh Steelwork()
     {
-        var mesh = new Mesh();
+        var mesh = _room.Mesh();
 
         // Back wall: an upright at each corner of each unit
         for (var unit = 0; unit <= 4; unit++)
@@ -240,12 +196,7 @@ internal static class Program
         mesh.Bar(V(RackFront, 0.06f, RackFrom), V(RackFront, 0.06f, rackTo), 0.04f, SteelTile);
         mesh.Bar(V(RackFront, RackLevels[1] + 0.06f, RackFrom), V(RackFront, RackLevels[1] + 0.06f, rackTo), 0.04f, SteelTile);
 
-        // The engine stand: a cross of legs on the floor, a post, the arm and the head the engine bolts to
-        var s = StandAt;
-        mesh.Bar(V(s.X - 0.5f, 0.04f, s.Z), V(s.X + 0.5f, 0.04f, s.Z), 0.07f, SteelTile);
-        mesh.Bar(V(s.X, 0.04f, s.Z - 0.45f), V(s.X, 0.04f, s.Z + 0.45f), 0.07f, SteelTile);
-        mesh.Bar(V(s.X, 0f, s.Z), V(s.X, 0.42f, s.Z), 0.08f, SteelTile);
-        mesh.Box(V(s.X - 0.2f, 0.42f, s.Z - 0.2f), V(s.X + 0.2f, 0.45f, s.Z + 0.2f), SteelTile, bottom: true);
+        _room.Stand(mesh, StandAt);
 
         // The display table's legs
         var t = TableAt;
@@ -253,83 +204,42 @@ internal static class Program
         foreach (var dz in new[] { -0.45f, 0.45f })
             mesh.Bar(V(t.X + dx, 0f, t.Z + dz), V(t.X + dx, 0.72f, t.Z + dz), 0.05f, SteelTile);
 
-        // The tubes' fittings
-        foreach (var (x, z) in Tubes)
-            mesh.Box(V(x - 0.66f, Height - 0.06f, z - 0.1f), V(x + 0.66f, Height, z + 0.1f), SteelTile, bottom: false);
-
-        return mesh;
-    }
-
-    /// <summary>The board over the back shelves, the shop's word on it</summary>
-    private static Mesh Sign()
-    {
-        const float x0 = -2.6f;
-        const float x1 = 2.6f;
-        const float y0 = 2.66f;
-        const float y1 = 3.31f;
-        const float z = -HalfDepth + 0.04f;
-        var mesh = new Mesh();
-        mesh.Quad(V(x0, y0, z), V(x1, y0, z), V(x1, y1, z), V(x0, y1, z), Vec3.UnitZ, p => new Vec2((p.X - x0) / (x1 - x0), (y1 - p.Y) / (y1 - y0)));
+        _room.TubeFittings(mesh);
         return mesh;
     }
 
     /// <summary>Hardboard over the tyre rack, a metre to the picture</summary>
-    private static Mesh Pegboard()
+    private static SceneMesh Pegboard()
     {
         const float x = -HalfWidth + 0.02f;
-        var mesh = new Mesh();
+        var mesh = _room.Mesh();
         mesh.Quad(V(x, 2.1f, RackFrom), V(x, 2.1f, RackFrom + 7 * RackPitch), V(x, 3f, RackFrom + 7 * RackPitch), V(x, 3f, RackFrom), Vec3.UnitX,
             p => new Vec2(p.Z, -p.Y));
         return mesh;
     }
 
-    private static Mesh TubeLights()
-    {
-        var mesh = new Mesh();
-        foreach (var (x, z) in Tubes)
-        {
-            foreach (var dz in new[] { -0.045f, 0.045f })
-                mesh.Box(V(x - 0.6f, Height - 0.1f, z + dz - 0.018f), V(x + 0.6f, Height - 0.064f, z + dz + 0.018f), 1f, bottom: true);
-        }
-
-        return mesh;
-    }
-
-    /// <summary>The front windows, seen from inside: the bright day beyond them</summary>
-    private static Mesh Windows()
-    {
-        var mesh = new Mesh();
-        const float z = HalfDepth - 0.01f;
-        foreach (var (x0, x1) in new[] { (-5f, -1.6f), (1.6f, 5f) })
-            mesh.Quad(V(x0, 0.9f, z), V(x1, 0.9f, z), V(x1, 2.5f, z), V(x0, 2.5f, z), -Vec3.UnitZ, p => new Vec2(0.5f, 0.5f));
-        return mesh;
-    }
-
     /// <summary>The till on the counter: a body with its keys sloping to the front, and the drawer under it</summary>
-    private static Mesh Till()
+    private static SceneMesh Till()
     {
-        var mesh = new Mesh();
+        var mesh = _room.Mesh();
         mesh.Box(V(1.6f, 0.96f, -2.32f), V(2.05f, 1.06f, -1.94f), 0.5f);
         mesh.Box(V(1.65f, 1.06f, -2.32f), V(2f, 1.3f, -2.12f), 0.5f);
         return mesh;
     }
 
     /// <summary>The till's sign holder and the counter's edge trim</summary>
-    private static Mesh Chrome()
+    private static SceneMesh Chrome()
     {
-        var mesh = new Mesh();
+        var mesh = _room.Mesh();
         mesh.Box(V(1.7f, 1.3f, -2.27f), V(1.95f, 1.42f, -2.24f), 0.5f);
         mesh.Bar(V(-2.66f, 0.94f, -1.73f), V(2.66f, 0.94f, -1.73f), 0.025f, 0.5f);
         return mesh;
     }
 
     /// <summary>Black rubber along the foot of the walls and the counter</summary>
-    private static Mesh Skirting()
+    private static SceneMesh Skirting()
     {
-        var mesh = new Mesh();
-        mesh.Box(V(-HalfWidth, 0f, -HalfDepth), V(HalfWidth, 0.1f, -HalfDepth + 0.015f), 0.5f);
-        mesh.Box(V(-HalfWidth, 0f, -HalfDepth), V(-HalfWidth + 0.015f, 0.1f, HalfDepth), 0.5f);
-        mesh.Box(V(HalfWidth - 0.015f, 0f, -HalfDepth), V(HalfWidth, 0.1f, HalfDepth), 0.5f);
+        var mesh = _room.Skirting();
         mesh.Box(V(-2.62f, 0f, -1.79f), V(2.62f, 0.1f, -1.775f), 0.5f);
         return mesh;
     }
@@ -337,12 +247,6 @@ internal static class Program
     #endregion
 
     #region Places
-
-    /// <summary>
-    /// A place a part stands in: the middle of its floor, how much room it has (width along its own x, depth along its
-    /// own z, height), the way it faces (degrees about the vertical; 0 faces +z, towards the door), and what goes there
-    /// </summary>
-    private sealed record Place(float X, float Y, float Z, float Width, float Depth, float Height, float Heading, string Holds);
 
     private static IEnumerable<Place> Places()
     {
@@ -390,19 +294,7 @@ internal static class Program
 
     private static JObject Description()
     {
-        static JArray Rgb(int r, int g, int b) => new(r, g, b);
-        static float Round(float v) => MathF.Round(v, 3);
-
-        var lamps = new JArray(Tubes.Select(t => new JObject
-        {
-            ["x"] = t.X, ["y"] = Round(Height - 0.3f), ["z"] = t.Z, ["brightness"] = 0.7f, ["range"] = 8f
-        }));
-
-        JObject Light(float brightness, JArray color, float ambient, JArray up, JArray down, float lampScale) => new()
-        {
-            ["brightness"] = brightness, ["color"] = color, ["ambient"] = ambient, ["ambientUp"] = up, ["ambientDown"] = down,
-            ["cubemapAmbient"] = 0f, ["lampScale"] = lampScale
-        };
+        var lamps = new JArray(Tubes.Select(t => Lamp(t.X, Round(Height - 0.3f), t.Z, 0.7f, 8f)));
 
         return new JObject
         {
@@ -425,43 +317,21 @@ internal static class Program
             ["id"] = "shop",
             ["title"] = "The part shop",
             ["credit"] = PolyHavenCredit(Looks.SelectMany(l => new[] { l.Floor, l.Wall, l.Ceiling, l.Wood, l.Steel })),
-            ["camera"] = new JObject
-            {
-                ["alpha"] = Round(MathF.PI / 2f), ["beta"] = 0.17f, ["radius"] = 6.8f, ["targetX"] = 0f, ["targetHeight"] = 1.05f, ["targetZ"] = -1.0f, ["fov"] = 50f
-            },
-            ["room"] = new JObject { ["halfWidth"] = HalfWidth, ["halfDepth"] = HalfDepth, ["height"] = Height },
-            ["sun"] = new JArray(0.2f, 0.8f, 0.6f),
-            ["lights"] = new JObject
-            {
-                ["day"] = Light(0.45f, Rgb(250, 240, 220), 0.8f, Rgb(175, 180, 185), Rgb(120, 112, 100), 0.85f),
-                ["dusk"] = Light(0.25f, Rgb(255, 190, 150), 0.75f, Rgb(140, 130, 135), Rgb(100, 90, 80), 1f),
-                ["night"] = Light(0.05f, Rgb(140, 160, 220), 0.65f, Rgb(110, 112, 120), Rgb(80, 72, 64), 1.1f)
-            },
+            ["camera"] = Camera(Round(MathF.PI / 2f), 0.17f, 6.8f, 1.05f, targetX: 0f, targetZ: -1.0f, fov: 50f),
+            ["room"] = Room(HalfWidth, HalfDepth, Height),
+            ["sun"] = Sun(0.2f, 0.8f, 0.6f),
+            ["lights"] = Lights(
+                Light(0.45f, Rgb(250, 240, 220), 0.8f, Rgb(175, 180, 185), Rgb(120, 112, 100), 0.85f),
+                Light(0.25f, Rgb(255, 190, 150), 0.75f, Rgb(140, 130, 135), Rgb(100, 90, 80), 1f),
+                Light(0.05f, Rgb(140, 160, 220), 0.65f, Rgb(110, 112, 120), Rgb(80, 72, 64), 1.1f)),
             ["window"] = new JObject { ["day"] = 1.1f, ["dusk"] = 0.6f, ["night"] = 0.06f },
             ["lamps"] = lamps,
-            ["places"] = new JArray(Places().Select(p => new JObject
-            {
-                ["x"] = Round(p.X), ["y"] = Round(p.Y), ["z"] = Round(p.Z), ["width"] = p.Width, ["depth"] = p.Depth, ["height"] = p.Height,
-                ["heading"] = p.Heading, ["holds"] = p.Holds
-            })),
-            ["looks"] = new JArray(Looks.Select(l => new JObject
-            {
-                ["id"] = l.Id,
-                ["kinds"] = new JArray(l.Kinds),
-                ["surfaces"] = new JObject
-                {
-                    ["sh_floor"] = l.Floor, ["sh_wall"] = l.Wall, ["sh_ceiling"] = l.Ceiling, ["sh_wood"] = l.Wood, ["sh_steel"] = l.Steel,
-                    ["sh_sign"] = l.Sign
-                },
-                ["lampColor"] = new JArray(l.Lamps)
-            }))
+            ["places"] = new JArray(Places().Select(p => p.ToJson())),
+            ["looks"] = new JArray(Looks.Select(l => SceneJson.Look(l.Id, l.Kinds,
+                [("sh_floor", l.Floor), ("sh_wall", l.Wall), ("sh_ceiling", l.Ceiling), ("sh_wood", l.Wood), ("sh_steel", l.Steel), ("sh_sign", l.Sign)],
+                l.Lamps)))
         };
     }
 
     #endregion
-
-    // The key light comes in through the windows and the tubes light from overhead: nothing of the room stands in the
-    // way of either (Kn5SceneWriter.AddMesh makes every mesh shadowless); the parts on the shelves cast their own
-    private static void AddMesh(IKn5 kn5, string name, SceneMesh mesh, uint material) =>
-        Kn5SceneWriter.AddMesh(kn5, name, mesh.Vertices, mesh.Indices, material);
 }

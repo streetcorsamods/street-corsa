@@ -8,6 +8,7 @@ using StreetCorsa.Services.Settings;
 namespace StreetCorsa.Tests;
 
 /// <summary>The free run and the test-and-tune from the racing hub: the tracks they offer, the search, the pick remembered</summary>
+[Collection(GlobalsCollection.Name)]
 public class PracticeRunsTests
 {
     private static TrackInfo Track(string id, string name, string run = "clockwise", string length = "", params (string Folder, string Name, string Length)[] layouts) => new()

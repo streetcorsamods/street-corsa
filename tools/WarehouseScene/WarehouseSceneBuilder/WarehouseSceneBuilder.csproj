@@ -23,6 +23,8 @@
   <ItemGroup>
     <Compile Include="..\..\Shared\Kn5SceneWriter.cs" Link="Shared\Kn5SceneWriter.cs" />
     <Compile Include="..\..\Shared\SceneMesh.cs" Link="Shared\SceneMesh.cs" />
+    <Compile Include="..\..\Shared\SceneJson.cs" Link="Shared\SceneJson.cs" />
+    <Compile Include="..\..\Shared\BuilderArgs.cs" Link="Shared\BuilderArgs.cs" />
     <Compile Include="..\..\..\Street Corsa\Helpers\SafeFile.cs" Link="Helpers\SafeFile.cs" />
   </ItemGroup>
 

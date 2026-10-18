@@ -101,8 +101,9 @@ Moved to [`security-checklist.md`](./security-checklist.md).
 
 ### Discovery & mapping
 
-- Locate test projects (`*Tests.csproj`, xUnit/NUnit/MSTest references) — **there are none today**. The report should say so plainly and propose where tests pay off most, not list every untested file.
-- Existing regression harness: `tools/EngineBench` drives the real part logic from the command line — note what it covers (engine curves, rated checks) and what it could cover cheaply.
+- The test project is `tests/StreetCorsa.Tests` (xunit.v3 on Microsoft.Testing.Platform, `net10.0-windows` + WPF, about 2,450 tests; `dotnet test --project tests\StreetCorsa.Tests\StreetCorsa.Tests.csproj`, as `tools/check.ps1` runs it). Map what it covers by area (`*Tests.cs` by name, the `Audit*Tests.cs` files for each audit's fixes) and report the gaps against the risk list below, not every untested file.
+- Tests that set a process-wide static go in the `Globals` collection (`TestSupport.cs`, `DisableParallelization`); one that writes a `.Current`/`.Instance` outside it is a finding.
+- Other regression harnesses: `tools/EngineBench` drives the real part logic from the command line (`rated --base-only` in check.ps1, `snapshot` to compare versions); `tools/sc_race_harness/test_*.py` runs the race mode's Lua on LuaJIT in a stub world (police, heat, strip, parts, time attack), run by check.ps1 when Python has lupa.
 
 ### Prioritization (risk-ranked)
 
@@ -114,13 +115,13 @@ Moved to [`security-checklist.md`](./security-checklist.md).
 6. Market / opponent evolution / scheduler — pure logic, cheap to test
 7. ViewModels — lowest priority
 
-### Test quality (once tests exist)
+### Test quality
 
-- Happy-path only; no meaningful assertions; over-mocked; tests that touch the real AC install or `Documents` folder; order dependence; `Thread.Sleep` timing
+- Happy-path only; no meaningful assertions; over-mocked; tests that touch the real AC install, `%AppData%\StreetCorsa` or the `Documents` folder (every filesystem test works in a `TempDir`); order dependence; `Thread.Sleep`/`Task.Delay` polling where the service could expose a completion (the AI tests wait on `FakeHttp.WhenSent`, `AiTextService.RaceWork` and `WhenIdle`)
 
 ### Infrastructure
 
-- Suggest a `tests/` folder with one test project per production project, added to `Street Corsa.slnx`; note the `net10.0-windows` + WPF constraint for tests that reference the game project, and that linked-source files can be tested from a plain `net10.0` project the way the tools do
+- One test project for the game and the linked tool sources (`tools/Shared/*.cs` are compiled into it by link); a tool with logic of its own that is not linked there is a gap to name
 
 ## PERFORMANCE
 

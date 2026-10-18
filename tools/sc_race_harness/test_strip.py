@@ -116,6 +116,47 @@ def leaving_before_the_green_is_a_red_light():
     check('the player is marked', player['false_start'] is True, log)
 
 
+# The rear axle (race.ini CAR_0_AXLE, the Nm it holds): the drive the rear tyres put down, |fx| at the loaded radius
+# (0.3 m in the stub) summed over both, may break it when past that. math.random is pinned at 0.5: a load twice the
+# strength breaks on the first frame (1 - e^-2 = 0.86 a frame), one under it never rolls at all. Run as a bracket race:
+# the harness's drivers leave on the green the tree logs, which a plain drag race has not got
+def axle_ini(strength):
+    return dict(bracket_ini(10.20, 12.20, reaction=0.3), **{'STREET_CORSA.CAR_0_AXLE': str(strength)})
+
+
+def the_rear_axle_holds_under_its_load():
+    # 1500 N a tyre at 0.3 m is 900 Nm on a 1000 Nm axle: it holds, and the slip carries the peak
+    result, log, _, _ = run('axle holds', 2, axle_ini(1000), None, None, None, length=STRIP_LENGTH,
+                            strip=strip(driver(8, 0.1), driver(6, 0)), max_seconds=60, axle_force=lambda i, t: 1500, random=0.5)
+    player = participant(result, 0)
+    check('the race ran to the quarter', result['session']['end_reason'] == 'FINISHED', log)
+    check(f"nothing broke ({player.get('breakdown')})", player.get('breakdown') is None, log)
+    check(f"the peak load is on the slip ({player['condition'].get('axle_peak_nm')})", abs(player['condition']['axle_peak_nm'] - 900) < 1, log)
+    check('and the axle is whole', player['condition']['axle_broken'] is False, log)
+
+
+def the_rear_axle_lets_go_past_its_load():
+    # 5000 N a tyre is 3000 Nm on a 1000 Nm axle: it lets go as soon as the car drives, and the race is over for the player
+    result, log, _, _ = run('axle breaks', 2, axle_ini(1000), None, None, None, length=STRIP_LENGTH,
+                            strip=strip(driver(8, 0.1), driver(6, 0)), max_seconds=60, axle_force=lambda i, t: 5000, random=0.5)
+    player = participant(result, 0)
+    check('the player broke down', result['session']['end_reason'] == 'BROKE_DOWN', log)
+    check(f"the rear end let go ({player.get('breakdown')})", player.get('breakdown') == 'AXLE', log)
+    check('the slip says so', player['condition']['axle_broken'] is True and player['condition']['axle_peak_nm'] >= 3000, log)
+    check('the log says so', 'BROKE DOWN: AXLE' in log, log)
+
+
+def a_csp_without_the_wheels_drive_keeps_the_axle_whole_and_says_so():
+    # No fx on the wheels (this CSP, or a field renamed): the car goes on, the axle holds, and the log has one line on it
+    result, log, _, _ = run('axle unread', 2, axle_ini(1000), None, None, None, length=STRIP_LENGTH,
+                            strip=strip(driver(8, 0.1), driver(6, 0)), max_seconds=60, random=0.5)
+    player = participant(result, 0)
+    check('the race ran to the quarter', result['session']['end_reason'] == 'FINISHED', log)
+    check(f"nothing broke ({player.get('breakdown')})", player.get('breakdown') is None, log)
+    check('the log says the load could not be read, once', log.count('The rear axle load cannot be read, the axle holds') == 1, log)
+    check('the peak stays at nothing', player['condition']['axle_peak_nm'] == 0, log)
+
+
 # When the harness takes the player to the pits (seconds of its clock): 3 s past pass 1's quarter, still at full
 # speed; and part way down pass 3
 MENU_PAST_QUARTER = 20
@@ -219,6 +260,8 @@ if __name__ == '__main__':
         golden_files(write=True)
     for test in (golden_files, the_slower_dial_in_gets_the_green_first, the_rival_takes_the_stripe, a_breakout_loses,
                  first_to_the_quarter_on_the_dial_wins, leaving_before_the_green_is_a_red_light,
+                 the_rear_axle_holds_under_its_load, the_rear_axle_lets_go_past_its_load,
+                 a_csp_without_the_wheels_drive_keeps_the_axle_whole_and_says_so,
                  test_and_tune_runs_its_passes, going_to_the_pits_leaves_the_strip,
                  leaving_past_the_quarter_keeps_the_pass, every_pass_is_written_over_the_last,
                  put_back_past_the_line_still_stages, a_red_light_on_a_pass_is_only_a_red_light):

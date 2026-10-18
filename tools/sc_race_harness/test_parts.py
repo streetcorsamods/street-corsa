@@ -238,6 +238,15 @@ world.wheels.RR = reifen
 mesh('RIM_BLUR_LF', node('RIM_BLUR_LF', car), { -0.1, -0.2, -0.2 }, { 0.1, 0.2, 0.2 })
 world.blur = car.children[#car.children].children[1]
 
+-- world.farModel: a far LOD loaded before the near one, with a TRUNK of its own; the near model's trunk hangs beside
+-- BODYTR, not in it. A search from the car's root finds the far one first
+if world.farModel then
+  local far = node('LOD_B', carRoot)
+  table.insert(carRoot.children, 1, table.remove(carRoot.children))
+  node('TRUNK', far)
+  world.trunk = node('TRUNK', car)
+end
+
 ac = {
   log = function(s) world.log[#world.log + 1] = s end,
   getSim = function() return { carsCount = 1 } end,
@@ -273,10 +282,11 @@ render = { createRay = function(pos, dir, length) return { pos = pos, dir = dir,
 '''
 
 
-def run(ini, blurred=None, hood=None, floor_y=None, late=False, hood_down=False):
+def run(ini, blurred=None, hood=None, floor_y=None, late=False, hood_down=False, far_model=False):
     lua = lupa.LuaRuntime()
     world = lua.table_from({'ini': lua.table_from(ini), 'log': lua.table(), 'loaded': lua.table(),
-                            'blurred': lua.table_from(blurred or []), 'hood': hood, 'late': late, 'hoodDown': hood_down})
+                            'blurred': lua.table_from(blurred or []), 'hood': hood, 'late': late, 'hoodDown': hood_down,
+                            'farModel': far_model})
     lua.execute(STUB, world)
     if floor_y is not None:
         world.floor.transform[4][2] = floor_y
@@ -482,6 +492,16 @@ def a_doors_wear_goes_into_the_door_where_it_stands():
           list(world.log.values()))
 
 
+def a_movers_wear_goes_into_the_node_of_the_near_model_not_a_far_lods():
+    """Two nodes of the name, a far LOD's found first: the wear goes into the one in the body node's own model, and the log says which"""
+    _, world = run({'CAR_0_MODEL_NODE': 'FLOOR', 'CAR_0_MODEL_AT': '1,0,0, 0,1,0, 0,0,1, 0,0,0', 'CAR_0_LOOK': 'looks/car_1.kn5'}, far_model=True)
+    group = [c for c in world.trunk.children.values() if c.name == 'sc_move_TRUNK']
+    check('the trunk wear went into the near model\'s trunk, beside the body node', len(group) == 1 and group[0].parent.parent.name == 'CARNODE',
+          list(world.log.values()))
+    check('and the log says two were found and which was taken',
+          any('2 nodes named TRUNK, the one at carRoot/CARNODE/TRUNK taken' in line for line in world.log.values()), list(world.log.values()))
+
+
 def a_car_whose_model_comes_late_gets_its_parts_once_it_is_there():
     _, world = run({'CAR_0_RIM_LF': 'a.kn5'}, late=True)
     check('a car whose model is not there at first gets its parts once it is', rim(world, 'LF') is not None, list(world.log.values()))
@@ -498,6 +518,7 @@ def the_wear_layer_goes_on_the_body_in_the_models_space():
 a_wheel_that_names_no_tyre_keeps_the_mesh_well_outside_the_rest_as_its_tyre()
 the_wear_layer_goes_on_the_body_in_the_models_space()
 a_doors_wear_goes_into_the_door_where_it_stands()
+a_movers_wear_goes_into_the_node_of_the_near_model_not_a_far_lods()
 a_car_whose_model_comes_late_gets_its_parts_once_it_is_there()
 a_corner_not_named_keeps_its_own_rim()
 engine_parts_are_placed_and_judged_in_the_models_own_space()
