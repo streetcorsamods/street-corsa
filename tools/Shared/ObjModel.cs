@@ -127,8 +127,10 @@ internal static class ObjModel
         var corners = new List<(int P, int T, int N, string Material)>();
         var material = "";
 
+        var lineNumber = 0;
         foreach (var raw in File.ReadLines(path))
         {
+            lineNumber++;
             var parts = raw.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length == 0) continue;
             switch (parts[0])
@@ -148,13 +150,17 @@ internal static class ObjModel
                 case "f" when parts.Length == 4:
                     foreach (var corner in parts.Skip(1))
                     {
+                        // Each corner's indices held against what the file has given so far (a face names only vertices
+                        // written before it), so another exporter's OBJ fails on its own line rather than deep in the
+                        // meshes with no word of where; a negative index counts back from the last one given, as OBJ allows
                         var ids = corner.Split('/');
-                        corners.Add((int.Parse(ids[0]) - 1, ids.Length > 1 && ids[1].Length > 0 ? int.Parse(ids[1]) - 1 : -1,
-                            ids.Length > 2 ? int.Parse(ids[2]) - 1 : -1, material));
+                        corners.Add((Index(ids[0], positions.Count, "vertex", lineNumber),
+                            ids.Length > 1 && ids[1].Length > 0 ? Index(ids[1], uvs.Count, "texture coordinate", lineNumber) : -1,
+                            ids.Length > 2 ? Index(ids[2], normals.Count, "normal", lineNumber) : -1, material));
                     }
                     break;
                 case "f":
-                    throw new InvalidDataException("the OBJ is not all triangles: export it triangulated");
+                    throw new InvalidDataException($"line {lineNumber}: the OBJ is not all triangles: export it triangulated");
             }
         }
 
@@ -207,6 +213,21 @@ internal static class ObjModel
     }
 
     private static float F(string text) => float.Parse(text, NumberStyles.Float, CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// A face corner's index as the list's (OBJ counts from 1, and back from the end when negative), which must name one
+    /// of the <paramref name="count"/> given so far; told with the OBJ's line otherwise
+    /// </summary>
+    private static int Index(string text, int count, string what, int line)
+    {
+        if (!int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var given) || given == 0)
+            throw new InvalidDataException($"line {line}: '{text}' is no {what} index");
+
+        var index = given > 0 ? given - 1 : count + given;
+        if (index < 0 || index >= count)
+            throw new InvalidDataException($"line {line}: {what} index {given} is out of range: the OBJ has {count} so far");
+        return index;
+    }
 
     /// <summary>Each vertex's tangent: the way its texture's U runs across its triangles, square to its normal</summary>
     public static List<Kn5Node.Vertex> WithTangents(List<Kn5Node.Vertex> vertices, List<int> indices)

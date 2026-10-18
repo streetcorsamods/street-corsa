@@ -13,7 +13,7 @@ namespace StreetCorsa.Tests;
 /// the installed cars, the part groups of part_groups.json, the catalog editor's cars.json, the stand-in classes. Some
 /// set the book and the groups in use, which every other test reads: run on their own.
 /// </summary>
-[Collection(CarBookCollection.Name)]
+[Collection(GlobalsCollection.Name)]
 public class CarsAndMakesTests : IDisposable
 {
     private readonly TempDir _temp = new();
@@ -322,9 +322,3 @@ public class CarsAndMakesTests : IDisposable
     }
 }
 
-/// <summary>The tests that set the car book or the part groups in use: run on their own</summary>
-[CollectionDefinition(Name, DisableParallelization = true)]
-public sealed class CarBookCollection
-{
-    public const string Name = "CarBook";
-}

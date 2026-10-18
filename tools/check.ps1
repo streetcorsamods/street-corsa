@@ -19,6 +19,14 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
+# The installer's custom actions live in their own solution (installer\Installer.slnx, with the wixproj, which needs a
+# staged game: build.ps1's); the actions project alone compiles with nothing staged, so it is checked here
+dotnet build (Join-Path $root "installer\Actions\InstallerActions.csproj") -c $Configuration -v q -clp:NoSummary
+if ($LASTEXITCODE -ne 0) {
+    [Console]::Error.WriteLine("check: the installer's custom actions do not build")
+    exit 1
+}
+
 dotnet test --project (Join-Path $root "tests\StreetCorsa.Tests\StreetCorsa.Tests.csproj") -c $Configuration --no-build
 if ($LASTEXITCODE -ne 0) {
     [Console]::Error.WriteLine("check: tests failed")
@@ -26,9 +34,11 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # The content's rated builds still run, near their ratings: a part logic change can break them with every test green.
-# rated only reads the content (the catalog, the builds, the dyno); it writes nothing
+# rated only reads the content (the catalog, the builds, the dyno); it writes nothing. --base-only: the makes, groups,
+# classes and fuels come from the base game alone, not from whatever mods the developer's Content folder holds, so the
+# check passes or fails the same on a clean clone
 $bench = Join-Path $root "tools\EngineBench\bin\$Configuration\net10.0\EngineBench.dll"
-dotnet $bench (Join-Path $root "Street Corsa\Content\streetcorsa\parts") rated
+dotnet $bench (Join-Path $root "Street Corsa\Content\streetcorsa\parts") rated --base-only
 if ($LASTEXITCODE -ne 0) {
     [Console]::Error.WriteLine("check: EngineBench rated failed (a rated build does not run or is far off its rating)")
     exit 1

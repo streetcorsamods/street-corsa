@@ -75,6 +75,7 @@ public class AudioMixTests
         Assert.Equal(target, AudioMix.FadeTarget(racing, focused, mute));
 }
 
+[Collection(GlobalsCollection.Name)]
 public class AudioSettingsTests
 {
     [Fact]

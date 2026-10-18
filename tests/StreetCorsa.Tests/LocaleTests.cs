@@ -8,20 +8,10 @@ using StreetCorsa.Services.Text;
 namespace StreetCorsa.Tests;
 
 /// <summary>
-/// The tests that change the game's locale, which every word the game writes reads: run on their own, after the
-/// others, so no other test reads a currency or a unit one of them set
-/// </summary>
-[CollectionDefinition(Name, DisableParallelization = true)]
-public sealed class LocaleCollection
-{
-    public const string Name = "Locale";
-}
-
-/// <summary>
 /// Money, units, numbers and dates as the player reads them (step E4): in the game's currency and culture from its
 /// game.json, in the units the game or the player picks; the text names what a number is
 /// </summary>
-[Collection(LocaleCollection.Name)]
+[Collection(GlobalsCollection.Name)]
 public partial class LocaleTests : IDisposable
 {
     private readonly CultureInfo _culture = Locale.Culture;

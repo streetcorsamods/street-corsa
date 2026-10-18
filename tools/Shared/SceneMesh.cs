@@ -14,6 +14,16 @@ internal class SceneMesh(bool flip = false)
     public readonly List<Kn5Node.Vertex> Vertices = [];
     public readonly List<int> Indices = [];
 
+    /// <summary>A point, short enough to write a face's corners on one line</summary>
+    public static Vec3 V(float x, float y, float z) => new(x, y, z);
+
+    /// <summary>
+    /// The mesh into the model as a scene's own (<see cref="Kn5SceneWriter.AddMesh"/>: drawn and shadowless, since the
+    /// scenes are lit the way their pictures were taken and nothing of them stands in the light's way)
+    /// </summary>
+    public static void AddMesh(IKn5 kn5, string name, SceneMesh mesh, uint material) =>
+        Kn5SceneWriter.AddMesh(kn5, name, mesh.Vertices, mesh.Indices, material);
+
     /// <summary>Another mesh's faces added to this one's; this one</summary>
     public SceneMesh Append(SceneMesh other)
     {

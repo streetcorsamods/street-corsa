@@ -18,7 +18,7 @@ namespace StreetCorsa.Tests;
 /// E10: the kinds of race as data (Content/*/formats): the base game's four, a mod's own with its Lua module or its
 /// own mode, what race.ini tells the mode, a format won on score, and races saved before formats
 /// </summary>
-[Collection(RaceSessionTests.Name)]
+[Collection(GlobalsCollection.Name)]
 public sealed class RaceFormatTests : IDisposable
 {
     private readonly TempDir _temp = new();

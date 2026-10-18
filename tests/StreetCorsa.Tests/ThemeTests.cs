@@ -14,7 +14,7 @@ namespace StreetCorsa.Tests;
 /// a mod's theme.json goes over them key by key, its fonts and pictures stand in for the game's, and the base game's
 /// theme.json lists every key at the game's own value
 /// </summary>
-[Collection(ThemeCollection.Name)]
+[Collection(GlobalsCollection.Name)]
 public partial class ThemeTests : IDisposable
 {
     private readonly TempDir _temp = new();
@@ -367,9 +367,3 @@ public partial class ThemeTests : IDisposable
     }
 }
 
-/// <summary>The theme's pictures are looked up through one static resolver: its tests run one at a time</summary>
-[CollectionDefinition(Name, DisableParallelization = true)]
-public sealed class ThemeCollection
-{
-    public const string Name = "Theme";
-}

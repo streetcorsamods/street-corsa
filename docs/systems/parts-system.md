@@ -836,7 +836,8 @@ game does: `EngineBench "Street Corsa/Content" bench mercury-255-race` benches a
 
 ```
 EngineBench <parts folder> list | rated | all | inputs | show <build id>
-EngineBench <parts folder> snapshot <file>             every build's whole report, one JSON line each, to diff two versions by
+EngineBench <parts folder> rated --base-only           the same with the base game's makes, groups, classes and fuels alone (check.ps1's gate; --base-only goes with any command)
+EngineBench <parts folder> snapshot <file>             every build's whole report, one JSON line each, to diff two versions by (written whole or not at all)
 EngineBench <parts folder> export <build id> <car data folder> <output folder>
 EngineBench <parts folder> cars <AC cars folder>       factory engine suggested for every car, with the runners-up
 EngineBench <parts folder> tune <build id> [count]     engines a used car of that build may turn up with

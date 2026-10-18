@@ -25,10 +25,27 @@ public sealed class FakeHttp(Func<SentRequest, CancellationToken, Task<HttpRespo
 {
     public List<SentRequest> Sent { get; } = [];
 
+    private readonly List<(Func<SentRequest, bool> Fits, TaskCompletionSource Reached)> _watchers = [];
+
     public static HttpResponseMessage Json(string json, HttpStatusCode status = HttpStatusCode.OK) =>
         new(status) { Content = new StringContent(json, Encoding.UTF8, "application/json") };
 
     public HttpClient Client() => new(this);
+
+    /// <summary>
+    /// Done once a request that <paramref name="fits"/> has reached the answer (its part before any await run, so what
+    /// it noted is there to assert on); at once when one has already. The tests wait on this instead of sleeping.
+    /// </summary>
+    public Task WhenSent(Func<SentRequest, bool> fits)
+    {
+        lock (Sent)
+        {
+            if (Sent.Any(fits)) return Task.CompletedTask;
+            var reached = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            _watchers.Add((fits, reached));
+            return reached.Task;
+        }
+    }
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
@@ -36,7 +53,18 @@ public sealed class FakeHttp(Func<SentRequest, CancellationToken, Task<HttpRespo
         var body = request.Content == null ? string.Empty : await request.Content.ReadAsStringAsync(cancellationToken);
         var sent = new SentRequest(request.Method, request.RequestUri!, headers, body);
         lock (Sent) Sent.Add(sent);
-        return await answer(sent, cancellationToken);
+
+        // The answer is started before the watchers are told: one that holds the request has noted it by then
+        var reply = answer(sent, cancellationToken);
+        List<TaskCompletionSource> reached;
+        lock (Sent)
+        {
+            reached = _watchers.Where(w => w.Fits(sent)).Select(w => w.Reached).ToList();
+            _watchers.RemoveAll(w => w.Fits(sent));
+        }
+
+        foreach (var watcher in reached) watcher.TrySetResult();
+        return await reply;
     }
 }
 
@@ -280,21 +308,22 @@ public class AiTests
         List<SentRequest> Chats() { lock (http.Sent) return http.Sent.Where(s => s.Uri.AbsolutePath == "/api/chat").ToList(); }
 
         service.SetRacing(true);
-        for (var i = 0; i < 50 && Chats().Count == 0; i++) await Task.Delay(10, Ct);
+        await service.RaceWork.WaitAsync(Ct);
         var unload = Assert.Single(Chats()).Json!;
         Assert.Equal(0, unload["keep_alive"]!.GetValue<int>());
         Assert.Empty(unload["messages"]!.AsArray());
 
         // The player's own is not asked; the background's waits for the end of the race
         Assert.Null(await service.ChatAsync("talk", new TextValues { ["line"] = "Move it." }, [new AiTurn(false, "Hi.")], Ct));
+        var held = Held(service, "talk");
         var waiting = service.WriteAsync("talk", new TextValues { ["line"] = "Move it." }, cancellationToken: Ct);
-        await Task.Delay(50, Ct);
+        await held.WaitAsync(Ct);
         Assert.False(waiting.IsCompleted);
         Assert.Single(Chats());
 
         service.SetRacing(false);
         Assert.Equal("Hey.", await waiting);
-        for (var i = 0; i < 50 && Chats().Count < 3; i++) await Task.Delay(10, Ct);
+        await service.RaceWork.WaitAsync(Ct);
         var load = Assert.Single(Chats(), s => s.Json!["messages"]!.AsArray().Count == 0 && s.Json!["keep_alive"]!.GetValueKind() == System.Text.Json.JsonValueKind.String).Json!;
         Assert.Equal(new OllamaRules().KeepAlive, load["keep_alive"]!.GetValue<string>());
         Assert.Equal(new OllamaRules().ContextTokens, load["options"]!["num_ctx"]!.GetValue<int>());
@@ -309,12 +338,22 @@ public class AiTests
         var service = Service(http);
 
         service.SetRacing(true);
-        for (var i = 0; i < 50 && http.Sent.Count == 0; i++) await Task.Delay(10, Ct);
-        await Task.Delay(30, Ct);
+        await service.RaceWork.WaitAsync(Ct);
         service.SetRacing(false);
-        await Task.Delay(100, Ct);
+        await service.RaceWork.WaitAsync(Ct);
 
         Assert.Equal("/api/ps", Assert.Single(http.Sent).Uri.AbsolutePath);
+    }
+
+    /// <summary>Done when the service holds a background request of <paramref name="use"/> for the end of a race</summary>
+    private static Task Held(AiTextService service, string use)
+    {
+        var held = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        service.HeldForRaceTold += told =>
+        {
+            if (told == use) held.TrySetResult();
+        };
+        return held.Task;
     }
 
     [Fact]
@@ -331,12 +370,13 @@ public class AiTests
         List<SentRequest> Chats() { lock (http.Sent) return http.Sent.Where(s => s.Uri.AbsolutePath == "/api/chat").ToList(); }
 
         var first = service.WriteAsync("talk", new TextValues { ["line"] = "first" }, cancellationToken: Ct);
-        for (var i = 0; i < 50 && Chats().Count == 0; i++) await Task.Delay(10, Ct);
+        await http.WhenSent(s => s.Uri.AbsolutePath == "/api/chat" && s.Body.Contains("first")).WaitAsync(Ct);
+        var held = Held(service, "talk");
         var second = service.WriteAsync("talk", new TextValues { ["line"] = "second" }, cancellationToken: Ct);
         service.SetRacing(true);
         release.SetResult();
         Assert.Equal("Hey.", await first);
-        await Task.Delay(50, Ct);
+        await held.WaitAsync(Ct);
         Assert.DoesNotContain(Chats(), s => s.Body.Contains("second"));
 
         service.SetRacing(false);
@@ -432,10 +472,10 @@ public class AiTests
         var service = Service(http);
 
         var first = service.WriteAsync("street_talk", new TextValues { ["line"] = "first" }, cancellationToken: Ct);
-        await Task.Delay(100, Ct);
+        await http.WhenSent(s => s.Body.Contains("first")).WaitAsync(Ct);
+        // Both take their place in the line as they are asked (the one place is the first's): nothing more is sent
         var background = service.WriteAsync("street_talk", new TextValues { ["line"] = "background" }, cancellationToken: Ct);
         var now = service.WriteAsync("street_talk", new TextValues { ["line"] = "now" }, AiPriority.Now, cancellationToken: Ct);
-        await Task.Delay(100, Ct);
         Assert.Single(order);
 
         release.SetResult();
@@ -459,7 +499,7 @@ public class AiTests
         var service = Service(http, rules: new AiRules { MaxQueued = 1, MinSecondsBetween = 0 });
 
         var running = service.WriteAsync("street_talk", new TextValues { ["line"] = "a" }, cancellationToken: Ct);
-        await Task.Delay(100, Ct);
+        await http.WhenSent(_ => true).WaitAsync(Ct);
         var queued = service.WriteAsync("street_talk", new TextValues { ["line"] = "b" }, cancellationToken: Ct);
         Assert.Null(await service.WriteAsync("street_talk", new TextValues { ["line"] = "c" }, cancellationToken: Ct));
 
@@ -480,7 +520,7 @@ public class AiTests
         var service = Service(http, rules: new AiRules { MaxQueued = 1, MinSecondsBetween = 0 });
 
         var running = service.WriteAsync("street_talk", new TextValues { ["line"] = "a" }, cancellationToken: Ct);
-        await Task.Delay(100, Ct);
+        await http.WhenSent(_ => true).WaitAsync(Ct);
         var queued = service.WriteAsync("street_talk", new TextValues { ["line"] = "b" }, cancellationToken: Ct);
         var now = service.WriteAsync("street_talk", new TextValues { ["line"] = "now" }, AiPriority.Now, cancellationToken: Ct);
         Assert.Null(await service.WriteAsync("street_talk", new TextValues { ["line"] = "c" }, AiPriority.Now, cancellationToken: Ct));
@@ -806,7 +846,8 @@ public class AiTests
         var slow = new AiTalkService(new OwnLines(), slowAi, () => TalkRules(0.2));
         Assert.Equal("own OpponentSelected Eddie", await slow.GetMessageAsync(Talk(eddie)));
         release.SetResult("late but good");
-        await Task.Delay(100, Ct);
+        // The late line's keeping is background work: done when the service is idle
+        await slow.WhenIdle().WaitAsync(Ct);
         Assert.Equal("late but good", await slow.GetMessageAsync(Talk(eddie)));
     }
 
@@ -832,7 +873,7 @@ public class AiTests
         var rosa = new Opponent("Rosa", 24, Gender.Female, 93, 80);
 
         talk.Prepare(Talk(rosa));
-        await Task.Delay(100, Ct);
+        await talk.WhenIdle().WaitAsync(Ct);
 
         Assert.Equal("ready: Rosa", await talk.GetMessageAsync(Talk(rosa)));
         Assert.Equal(AiPriority.Background, ai.Asked[0].Priority);

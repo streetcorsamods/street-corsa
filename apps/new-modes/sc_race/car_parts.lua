@@ -483,6 +483,39 @@ end
 -- The start of the name of a group of the wear layer that moves with a node of the car (WearLayer.MoverPrefix)
 local MOVER_PREFIX = 'sc_move_'
 
+-- The names from the top of the scene down to a node, as one text: two nodes of one name in two models of the car (a
+-- far LOD has its doors too) tell apart by what they hang from
+local function pathOf(node)
+  local names = {}
+  local at = node
+  for _ = 1, 64 do
+    table.insert(names, 1, tostring(at:name()))
+    local parent = at:getParent()
+    if not parent or parent:size() == 0 then break end
+    at = parent
+  end
+  return table.concat(names, '/')
+end
+
+-- How many leading characters two paths share: the more, the nearer the two hang in the scene
+local function shared(a, b)
+  local n = math.min(#a, #b)
+  for i = 1, n do
+    if a:sub(i, i) ~= b:sub(i, i) then return i - 1 end
+  end
+  return n
+end
+
+-- The one of several nodes of a name that hangs nearest the body node (the model drawn up close), not a far LOD's
+local function nearest(found, holder)
+  local home, node, best = pathOf(holder), found:at(1), -1
+  for i = 1, found:size() do
+    local common = shared(pathOf(found:at(i)), home)
+    if common > best then node, best = found:at(i), common end
+  end
+  return node
+end
+
 -- The wear of what the car's animations move (a door's, the hood's) into the car's node each moves with: its meshes are in
 -- that node's own space (WearLayer), so the group stands at the node itself, in whatever pose the node is now, and opens
 -- with the door. One whose node the car does not have stays put, where it stands at rest.
@@ -505,7 +538,14 @@ local function putOnMovers(carIndex, root, holder, layer)
     local found = holder:findNodes(g.node)
     if found:size() == 0 then found = root:findNodes(g.node) end
     if found:size() > 0 then
-      g.group:setParent(found:at(1))
+      -- Several of the name (a far LOD's door too): the one in the body node's own model, which is the one drawn up
+      -- close; the wear would ride a hidden node otherwise
+      local node = found:at(1)
+      if found:size() > 1 then
+        node = nearest(found, holder)
+        log('car ' .. carIndex .. ': ' .. found:size() .. ' nodes named ' .. g.node .. ', the one at ' .. pathOf(node) .. ' taken')
+      end
+      g.group:setParent(node)
       g.group:getTransformationRaw():set(mat4x4.identity())
       log('car ' .. carIndex .. ': wear of ' .. g.node .. ' moves with it')
     else

@@ -98,5 +98,8 @@ try {
     Write-Host "Done: $(Join-Path $out (Split-Path -Leaf $msi)) ($size MB)"
 }
 finally {
+    # Set at the process's scope above: left there, a later dotnet build of the wixproj in this console would read a stale stage
+    Remove-Item Env:\StageDir -ErrorAction SilentlyContinue
+    Remove-Item Env:\ProductVersion -ErrorAction SilentlyContinue
     Pop-Location
 }

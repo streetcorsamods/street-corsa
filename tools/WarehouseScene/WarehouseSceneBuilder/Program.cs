@@ -1,10 +1,11 @@
-using System.Globalization;
 using AcTools.Kn5File;
 using AcTools.Numerics;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using StreetCorsa.Tools;
 using static StreetCorsa.Tools.Kn5SceneWriter;
+using static StreetCorsa.Tools.SceneJson;
+using static StreetCorsa.Tools.SceneMesh;
 
 namespace WarehouseSceneBuilder;
 
@@ -50,24 +51,21 @@ internal static class Program
 
     private static bool _flip;
 
-    private static int Main(string[] args)
+    private static int Main(string[] argv)
     {
-        var positional = args.Where(a => !a.StartsWith("--")).ToList();
-        if (positional.Count < 2)
+        var args = new BuilderArgs(argv, "--flip");
+        if (args.Positional.Count < 2)
         {
             Console.Error.WriteLine("WarehouseSceneBuilder <prepared folder> <out folder> [--flip]");
             return 1;
         }
 
-        var prepared = positional[0];
-        var output = positional[1];
-        _flip = args.Contains("--flip");
-
-        var kn5 = Kn5.CreateEmpty();
-        kn5.RootNode.Name = "warehouse";
+        var prepared = args.Positional[0];
+        var output = args.Positional[1];
+        _flip = args.Flag("--flip");
 
         // Every picture goes in, whether the first look wears it or not: the others are switched to at run time
-        AddTextures(kn5, prepared);
+        var kn5 = Begin("warehouse", prepared);
 
         var first = Looks[0];
         var floor = AddMaterial(kn5, "wh_floor", first.Floor, ambient: 0.32f, diffuse: 0.45f, specular: 0.12f, specularExp: 30f);
@@ -85,6 +83,8 @@ internal static class Program
         var bulb = AddMaterial(kn5, "wh_bulb", "bulb.jpg", ambient: 0f, diffuse: 0f, emissive: 1f);
         var cable = AddMaterial(kn5, "wh_cable", "cable.jpg", ambient: 0.3f, diffuse: 0.3f);
 
+        // The key light comes in from overhead, through the roof: nothing of the building may stand in its way, and
+        // every mesh is shadowless (SceneMesh.AddMesh)
         AddMesh(kn5, "WH_FLOOR", Floor(), floor);
         AddMesh(kn5, "WH_WALL", Walls(0f, BrickTop, WallTile), wall);
         AddMesh(kn5, "WH_UPPER", Walls(BrickTop, Eaves, UpperTile).Append(Gables()), upper);
@@ -133,24 +133,22 @@ internal static class Program
     #region Geometry
 
     // The shapes the scene builders share (tools/Shared/SceneMesh.cs), wound the other way round with --flip
-    private sealed class Mesh() : SceneMesh(_flip);
+    private static SceneMesh Mesh() => new(_flip);
 
     private static float RoofHeight(float z) => Ridge - (Ridge - Eaves) * MathF.Abs(z) / HalfWidth;
 
-    private static Vec3 V(float x, float y, float z) => new(x, y, z);
-
-    private static Mesh Floor()
+    private static SceneMesh Floor()
     {
-        var mesh = new Mesh();
+        var mesh = Mesh();
         mesh.Quad(V(-HalfLength, 0f, -HalfWidth), V(HalfLength, 0f, -HalfWidth), V(HalfLength, 0f, HalfWidth), V(-HalfLength, 0f, HalfWidth),
             Vec3.UnitY, p => new Vec2(p.X / FloorTile, p.Z / FloorTile));
         return mesh;
     }
 
     /// <summary>The four walls between two heights, facing in</summary>
-    private static Mesh Walls(float bottom, float top, float tile)
+    private static SceneMesh Walls(float bottom, float top, float tile)
     {
-        var mesh = new Mesh();
+        var mesh = Mesh();
 
         // The long sides
         foreach (var z in new[] { -HalfWidth, HalfWidth })
@@ -170,9 +168,9 @@ internal static class Program
     }
 
     /// <summary>The ends' triangles up to the ridge</summary>
-    private static Mesh Gables()
+    private static SceneMesh Gables()
     {
-        var mesh = new Mesh();
+        var mesh = Mesh();
         foreach (var x in new[] { -HalfLength, HalfLength })
         {
             var normal = V(-MathF.Sign(x), 0f, 0f);
@@ -185,9 +183,9 @@ internal static class Program
     }
 
     /// <summary>The underside of the two slopes, the corrugations running down them</summary>
-    private static Mesh Roof()
+    private static SceneMesh Roof()
     {
-        var mesh = new Mesh();
+        var mesh = Mesh();
         var slope = (Ridge - Eaves) / HalfWidth;
         foreach (var side in new[] { -1f, 1f })
         {
@@ -202,20 +200,20 @@ internal static class Program
     }
 
     /// <summary>The roller door at the near end of the aisle, a little proud of the brick, with a steel frame round it</summary>
-    private static Mesh Door()
+    private static SceneMesh Door()
     {
         const float half = 3f;
         const float height = 4.4f;
         const float x = HalfLength - 0.03f;
-        var mesh = new Mesh();
+        var mesh = Mesh();
         mesh.Quad(V(x, 0f, -half), V(x, 0f, half), V(x, height, half), V(x, height, -half), V(-1f, 0f, 0f),
             p => new Vec2((p.Z + half) / (2f * half), (height - p.Y) / height));
         return mesh;
     }
 
-    private static Mesh Steelwork()
+    private static SceneMesh Steelwork()
     {
-        var mesh = new Mesh();
+        var mesh = Mesh();
 
         foreach (var x in Trusses)
         {
@@ -265,11 +263,11 @@ internal static class Program
     }
 
     /// <summary>The yellow lines between the bays, and along the aisle's edge</summary>
-    private static Mesh BayLines()
+    private static SceneMesh BayLines()
     {
         const float width = 0.12f;
         const float y = 0.004f;
-        var mesh = new Mesh();
+        var mesh = Mesh();
         Vec2 Uv(Vec3 p) => new(p.X / 1.5f, p.Z / 1.5f);
 
         var near = RowOffset - BayDepth / 2f;
@@ -297,7 +295,7 @@ internal static class Program
     /// The enamel plate on the far wall: WAREHOUSE, then the two digits of the warehouse's number, reading left to
     /// right as seen from the door
     /// </summary>
-    private static (Mesh Plate, Mesh Tens, Mesh Units) Sign()
+    private static (SceneMesh Plate, SceneMesh Tens, SceneMesh Units) Sign()
     {
         const float x = -HalfLength + 0.05f;
         const float bottom = 3.9f;
@@ -310,9 +308,9 @@ internal static class Program
         // Seen from the door, looking down -x, the viewer's right is -z: the sign reads from +z towards -z
         var start = (plateWidth + gap + 2f * digitWidth + gap / 2f) / 2f;
 
-        Mesh Panel(float left, float width)
+        SceneMesh Panel(float left, float width)
         {
-            var mesh = new Mesh();
+            var mesh = Mesh();
             var right = left - width;
             mesh.Quad(V(x, bottom, left), V(x, bottom, right), V(x, bottom + height, right), V(x, bottom + height, left), normal,
                 p => new Vec2((left - p.Z) / width, (bottom + height - p.Y) / height));
@@ -326,9 +324,9 @@ internal static class Program
     }
 
     /// <summary>Panes of wired glass in the roof, in every other span between the trusses, on both slopes</summary>
-    private static Mesh Skylights()
+    private static SceneMesh Skylights()
     {
-        var mesh = new Mesh();
+        var mesh = Mesh();
         var slope = (Ridge - Eaves) / HalfWidth;
         for (var i = 0; i + 1 < Trusses.Length; i += 2)
         {
@@ -359,15 +357,15 @@ internal static class Program
     }
 
     /// <summary>An enamel shade on a cable for each lamp, and the bulb under it</summary>
-    private static (Mesh Shades, Mesh Bulbs, Mesh Cables) LampFittings()
+    private static (SceneMesh Shades, SceneMesh Bulbs, SceneMesh Cables) LampFittings()
     {
         const int segments = 20;
         const float topRadius = 0.09f;
         const float bottomRadius = 0.42f;
         const float shadeHeight = 0.34f;
-        var shades = new Mesh();
-        var bulbs = new Mesh();
-        var cables = new Mesh();
+        var shades = Mesh();
+        var bulbs = Mesh();
+        var cables = Mesh();
 
         foreach (var lamp in Lamps())
         {
@@ -406,19 +404,7 @@ internal static class Program
     /// </summary>
     private static JObject Description()
     {
-        static JArray Rgb(int r, int g, int b) => new(r, g, b);
-        static float Round(float v) => MathF.Round(v, 3);
-
-        var lamps = new JArray(Lamps().Select(l => new JObject
-        {
-            ["x"] = Round(l.X), ["y"] = Round(l.Y - 0.1f), ["z"] = Round(l.Z), ["brightness"] = 0.8f, ["range"] = 14f
-        }));
-
-        JObject Light(float brightness, JArray color, float ambient, JArray up, JArray down, float lampScale) => new()
-        {
-            ["brightness"] = brightness, ["color"] = color, ["ambient"] = ambient, ["ambientUp"] = up, ["ambientDown"] = down,
-            ["cubemapAmbient"] = 0f, ["lampScale"] = lampScale
-        };
+        var lamps = new JArray(Lamps().Select(l => Lamp(Round(l.X), Round(l.Y - 0.1f), Round(l.Z), 0.8f, 14f)));
 
         return new JObject
         {
@@ -443,43 +429,25 @@ internal static class Program
             ["title"] = "The warehouse",
             ["credit"] = PolyHavenCredit(Looks.SelectMany(l => new[] { l.Floor, l.Wall, l.Upper, l.Roof, l.Door, l.Steel })),
             ["bays"] = new JArray(Bays().Select(b => new JObject { ["x"] = Round(b.X), ["z"] = Round(b.Z), ["heading"] = b.Heading })),
-            ["camera"] = new JObject { ["alpha"] = 0f, ["beta"] = 0.16f, ["radius"] = 12.5f, ["targetHeight"] = 1.6f },
-            ["room"] = new JObject { ["halfLength"] = HalfLength, ["halfWidth"] = HalfWidth, ["height"] = Eaves },
+            ["camera"] = Camera(0f, 0.16f, 12.5f, 1.6f),
+            ["room"] = Hall(HalfLength, HalfWidth, Eaves),
             ["exit"] = new JObject { ["x"] = HalfLength, ["z"] = 0f },
-            ["sun"] = new JArray(0.25f, 1f, 0.35f),
-            ["lights"] = new JObject
-            {
-                ["day"] = Light(0.8f, Rgb(235, 235, 225), 1.0f, Rgb(170, 180, 190), Rgb(120, 115, 105), 0.7f),
-                ["dusk"] = Light(0.45f, Rgb(255, 190, 150), 1.0f, Rgb(130, 115, 125), Rgb(95, 85, 75), 1f),
-                ["night"] = Light(0.15f, Rgb(140, 160, 220), 0.7f, Rgb(70, 80, 105), Rgb(65, 58, 50), 1.15f)
-            },
+            ["sun"] = Sun(0.25f, 1f, 0.35f),
+            ["lights"] = Lights(
+                Light(0.8f, Rgb(235, 235, 225), 1.0f, Rgb(170, 180, 190), Rgb(120, 115, 105), 0.7f),
+                Light(0.45f, Rgb(255, 190, 150), 1.0f, Rgb(130, 115, 125), Rgb(95, 85, 75), 1f),
+                Light(0.15f, Rgb(140, 160, 220), 0.7f, Rgb(70, 80, 105), Rgb(65, 58, 50), 1.15f)),
             ["skylight"] = new JObject { ["day"] = 1.1f, ["dusk"] = 0.55f, ["night"] = 0.08f },
             ["lamps"] = lamps,
-            ["looks"] = new JArray(Looks.Select(l => new JObject
-            {
-                ["id"] = l.Id,
-                ["surfaces"] = new JObject
-                {
-                    ["wh_floor"] = l.Floor, ["wh_wall"] = l.Wall, ["wh_upper"] = l.Upper, ["wh_roof"] = l.Roof,
-                    ["wh_door"] = l.Door, ["wh_steel"] = l.Steel
-                },
-                ["lampColor"] = new JArray(l.Lamps)
-            })),
+            ["looks"] = new JArray(Looks.Select(l => SceneJson.Look(l.Id, null,
+                [("wh_floor", l.Floor), ("wh_wall", l.Wall), ("wh_upper", l.Upper), ("wh_roof", l.Roof), ("wh_door", l.Door), ("wh_steel", l.Steel)],
+                l.Lamps))),
             ["digits"] = new JObject
             {
                 ["tens"] = "wh_digit_tens", ["units"] = "wh_digit_units", ["picture"] = "sign_digit_{0}.jpg"
             }
         };
     }
-
-    #endregion
-
-    #region Writing
-
-    // The key light comes in from overhead, through the roof: nothing of the building may stand in its way, and
-    // Kn5SceneWriter.AddMesh makes every mesh shadowless
-    private static void AddMesh(IKn5 kn5, string name, SceneMesh mesh, uint material) =>
-        Kn5SceneWriter.AddMesh(kn5, name, mesh.Vertices, mesh.Indices, material);
 
     #endregion
 }
