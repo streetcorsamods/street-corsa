@@ -796,7 +796,10 @@ source game's discs carry no fade of their own.
   with no slot for them); a loose drum on a shelf has them taken off onto the shelf. `GearVersion` 5 then adds a hub to
   every front drum or disc that takes one and each leaf spring's U-bolts, hanger and shackle, worn like the brake or the
   leaf.
-- **Work**: `brake_reline` takes the shoes too, `wheel_cylinder_kit`, `drums_turned` at the machine shop.
+- **Work**: `brake_reline` on the shoes (on a disc, the disc itself: its pads are part of it; never a drum, whose lining is
+  its shoes'), `wheel_cylinder_kit`, `hub_repack` on a hub, `drums_turned` at the machine shop. Each is shown done where
+  the part is (step 30's job show: the grime clearing off it in place, or on the workbench for a part that is off), the
+  same for the running gear as for the engine.
 - Not done: a master cylinder, a booster and a proportioning valve. Assetto Corsa has no pedal effort: full pedal is the
   brakes' whole torque, so a booster would be a gate that changes nothing, a proportioning valve only `FRONT_SHARE`.
 
@@ -835,7 +838,8 @@ source game's discs carry no fade of their own.
   `RunningGear.HangerSlot`/`ShackleSlot`, rear only), and is clamped to the axle by its **U-bolts and plate** (`UBolts`, on
   the leaf's slot 3, `ubolts:leaf`, enforced). A leaf short of its U-bolts, hanger or shackle keeps the car home
   (`AcRunningGearData`). The work order: the U-bolts need the axle, the axle comes off after them, a leaf needs its hanger
-  and shackle (which stay on while it is).
+  and shackle (which stay on while it is). Work: `spring_bushings` in a hanger or shackle, `leaf_rearch` at the machine
+  shop (a sagged or damaged leaf bent back to its arch, its eye bushings new).
 - Not done: lowering springs and blocks (ride height), pickers for brakes and springs in the Car Catalog Editor
   (cars.json by hand meanwhile).
 

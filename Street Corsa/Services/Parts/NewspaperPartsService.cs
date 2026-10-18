@@ -105,12 +105,14 @@ namespace StreetCorsa.Services.Parts
                 foreach (var part in Assortment.Where(PartKinds.IsBlock)) fitting.Add(part.Id);
             }
 
-            // The running gear goes on the car itself; a tyre on a rim it fits; a rear axle under any car
+            // The running gear goes on the car itself (a drum's backing plate, a leaf's hanger and shackle too); a tyre on a
+            // rim it fits; a rear axle under any car
             var rims = RunningGear.Rims(car.Parts).Select(p => catalog.Get(p.DefinitionId)).Where(r => r != null).ToList();
             foreach (var part in Assortment)
             {
                 var group = PartKinds.GroupOf(part);
-                if (group == PartKinds.Tyres ? rims.Any(r => RunningGear.TyreFitsRim(part, r!)) : RunningGear.IsRunningGear(group) || group == PartKinds.RearAxles)
+                if (group == PartKinds.Tyres ? rims.Any(r => RunningGear.TyreFitsRim(part, r!))
+                    : RunningGear.IsRunningGear(group) || group == PartKinds.RearAxles || RunningGear.CarSlotsFor(part).Any())
                     fitting.Add(part.Id);
             }
 

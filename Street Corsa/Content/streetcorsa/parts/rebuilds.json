@@ -39,11 +39,13 @@
     { "id": "brushes_bearings", "name": "New brushes and bearings", "kinds": [ "alternator", "starter" ], "restores": 0.85, "cost": 0.15, "cost_at_least": 4, "minutes": 60, "off": true, "steps": [ { "id": "apart", "sound": "work.bench" }, { "id": "brushes", "sound": "work.bench" }, { "id": "bearings", "sound": "work.press" } ] },
     { "id": "blower_kit", "name": "Rebuild: seals and bearings", "kinds": [ "charger" ], "restores": 0.9, "min_wear": 0.25, "cost": 0.12, "cost_at_least": 30, "minutes": 240, "off": true, "steps": [ { "id": "apart", "sound": "work.air" }, { "id": "wash", "sound": "work.wash" }, { "id": "bearings", "sound": "work.press" } ] },
     { "id": "radiator_flush", "name": "Flush and pressure-test", "kinds": [ "radiator", "radiator_fan" ], "restores": 0.85, "min_wear": 0.3, "cost": 0.05, "cost_at_least": 3, "minutes": 60, "steps": [ { "id": "flush", "sound": "work.wash" }, { "id": "test", "sound": "work.air" } ] },
-    { "id": "brake_reline", "name": "Reline the shoes, adjust", "groups": [ "brakes", "brake_shoes" ], "restores": 0.95, "cost": 0.2, "cost_at_least": 6, "minutes": 60, "steps": [ { "id": "drum", "sound": "work.air" }, { "id": "shoes", "sound": "work.press" }, { "id": "adjust", "sound": "work.bench" } ] },
+    { "id": "brake_reline", "name": "Reline the shoes, adjust", "kinds": [ "brake" ], "groups": [ "brake_shoes" ], "restores": 0.95, "cost": 0.2, "cost_at_least": 6, "minutes": 60, "steps": [ { "id": "drum", "sound": "work.air" }, { "id": "shoes", "sound": "work.press" }, { "id": "adjust", "sound": "work.bench" } ] },
     { "id": "wheel_cylinder_kit", "name": "Hone it, new cups and boots", "groups": [ "wheel_cylinders" ], "restores": 0.92, "cost": 0.3, "cost_at_least": 2, "minutes": 30, "steps": [ { "id": "hone", "sound": "work.hone" }, { "id": "cups", "sound": "work.bench" } ] },
     { "id": "gear_setup", "name": "Set up the gears: pinion depth, backlash, bearing preload", "groups": [ "ring_pinions" ], "restores": 0.97, "roll": 0.12, "cost": 0.06, "cost_at_least": 8, "minutes": 240, "steps": [ { "id": "shims", "sound": "work.bench" }, { "id": "bearings", "sound": "work.press" }, { "id": "pattern", "sound": "work.bench" } ] },
     { "id": "posi_rebuild", "name": "Rebuild: clutch packs, springs, bearings", "groups": [ "differentials" ], "restores": 0.95, "cost": 0.25, "cost_at_least": 15, "minutes": 180, "off": true, "steps": [ { "id": "apart", "sound": "work.air" }, { "id": "clutches", "sound": "work.bench" }, { "id": "together", "sound": "work.press" } ] },
     { "id": "axle_bearing", "name": "New axle bearing and seal", "groups": [ "axle_shafts" ], "restores": 0.92, "cost": 0.2, "cost_at_least": 5, "minutes": 60, "steps": [ { "id": "pull", "sound": "work.air" }, { "id": "press", "sound": "work.press" } ] },
+    { "id": "hub_repack", "name": "Repack the wheel bearings, new seal", "groups": [ "hubs" ], "restores": 0.95, "cost": 0.15, "cost_at_least": 3, "minutes": 45, "steps": [ { "id": "clean", "sound": "work.wash" }, { "id": "pack", "sound": "work.bench" }, { "id": "adjust", "sound": "work.bench" } ] },
+    { "id": "spring_bushings", "name": "New bushings", "kinds": [ "spring_hanger", "spring_shackle" ], "restores": 0.95, "cost": 0.3, "cost_at_least": 3, "minutes": 40, "steps": [ { "id": "out", "sound": "work.press" }, { "id": "in", "sound": "work.press" } ] },
     {
       "id": "rebuilt_exchange", "name": "Swap for a rebuilt one (old one back as the core)", "way": "exchange",
       "kinds": [ "carburettor", "distributor", "side_distributor", "water_pump", "fuel_pump", "alternator", "starter", "steering_pump", "clutch" ],
@@ -114,6 +116,11 @@
       "sizes": [ { "id": "030", "say": ".030 over", "worth": 0.9 }, { "id": "060", "say": ".060 over", "worth": 0.75 } ],
       "restores": 0.98, "cost": 0.2, "cost_at_least": 6, "days": 1, "fixes_damage": true,
       "steps": [ { "id": "turn", "sound": "work.mill" } ]
+    },
+    {
+      "id": "leaf_rearch", "name": "Re-arch the leaves, new bushings", "way": "machine", "kinds": [ "leaf_spring" ], "restores": 0.95,
+      "cost": 0.25, "cost_at_least": 10, "days": 1, "fixes_damage": true,
+      "steps": [ { "id": "apart", "sound": "work.bench" }, { "id": "arch", "sound": "work.press" }, { "id": "bushings", "sound": "work.press" } ]
     },
     {
       "id": "hot_grind", "name": "Regrind to a hotter cam", "way": "machine", "kinds": [ "camshaft" ], "cut": "hot_grind", "speed": true,
