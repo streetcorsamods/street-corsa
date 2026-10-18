@@ -1886,7 +1886,51 @@ the rear: the axle (drops whole once the rear wheels are off), then a leaf; the 
 the air gun on wheels and the axle; the new models' places (plates behind the drums, hubs); an older save's car (drums
 onto plates, hubs added); a job on a hub; welding a carrier's spiders and a hard launch on it; the editor's pickers.
 **Left, not asked for:** the diff's oil, lowering springs (ride height), a master cylinder/booster (AC has no pedal
-effort). Next: the owner's look in game, then the one PR of step 31.
+effort). Next: phase 6 (below), then the one PR of step 31.
+
+The owner partly tested phase 5 in game (2026-10-17): "looks great", but **the rear axle cannot come off**: it asks for the
+rear wheels off, and the wheels cannot be taken off. Cause (a phase 5 bug): the garage never draws the rims and tyres as
+parts (`CarPartsLayout.Build` skips the wheel slots: the AC model's own wheels show instead), so there is nothing to click,
+and the work order's `drum`/`brake`/`rear_axle` rules wait for the `rim`. The owner chose to fix it with a lift rather
+than drop those rules.
+
+**Phase 6: the lift and the wheels** (planned 2026-10-17, to build in a new session). The owner's answers:
+- **Wheels in the parts view:** the rims and tyres are drawn as parts at the hubs while the parts are on show (the car
+  is ghosted then, so the AC wheels do not double them), picked and taken off like any part; a new show button hides
+  them (the owner's icon `Assets/Images/Icons/wheel.png`, theme image `icons/wheel`).
+- **A lift, always in the garage** (no purchase), with **two stops**: a little (the wheels clear the floor) and full
+  height (room to work underneath). The owner's icon `Assets/Images/Icons/car_lifted.png` (`icons/car_lifted`) for its
+  button.
+- **Only the wheels need the car up** (not the oil pan, gearbox or exhaust); what is behind the wheels (drums, the axle,
+  the shafts) follows from the rules there already.
+
+Design (mine, from those answers):
+- **Wheels drawn:** `CarPartsLayout.Build` stops skipping the wheel slots; a rim goes at its hub (`anchors.Hub(corner)`,
+  the AC model's WHEEL_* dummy) in the wheel-side frame (`SideFrame`, +X outboard, turned round on the right), the tyre on
+  the rim's slot 2 as its pack has it. The rim and tyre models (SLRR packs `rims/*`, `tyres/*`) turn about X with their
+  origin at the wheel's middle (an AMracing 8: X -0.071..0.133, radius 0.187; a 15-inch tyre X -0.101..0.097, radius
+  0.312); which side of the rim is its face (outboard) is still to check in a render (render_preview.py, as phase 4's
+  parts were; a spec with the rim, tyre, plate, drum and hub at a left rear hub was started in the scratchpad). Also drop
+  the candidates' skip of the wheel slots (`CarViewport3D`, "Rims and tyres are not drawn (see CarPartsLayout.Build), so
+  their ghosts go too"). `ShownEngineParts` passes no gear: the scenes are unaffected. Check the x-ray ghost hides the AC
+  wheels while the part wheels show, and that out of the parts view nothing doubles.
+- **The wheels' show:** `part_groups.json` `shows` gets `{ "id": "wheels", "icon": "icons/wheel", "groups": [ "rims",
+  "tyres" ] }` and a `part_show.wheels` text: the existing show buttons (`Workbench.PartShows`) do the rest.
+- **The lift:** a garage prop like the workbench (`Content/streetcorsa/props/lift/prop.json`, placed per garage; no model:
+  the game's own, an in-ground hydraulic post with a saddle under the car's middle between the axles; a mod may give a
+  KN5), its two stops' heights in its data (about 0.3 m for the wheels to hang free, about 1.4 m to work under it).
+  The car's stop is kept on the `Car` (saved, a schema step); only the car in the bay is up: switching cars lowers the one
+  that was. A button in the parts row (`GarageScreenView.xaml`'s `PartsRow`, beside Parts/Stand/Turn over) steps it: down,
+  wheels clear, full height, down; a few minutes of game time a move. The renderer raises the car body and its parts prop
+  together (eased, a few seconds, the post rising with it), and lets the camera go lower to look up from under the car
+  while it is up. Sounds: a hydraulic hum while it moves and a clunk at the stop, synthesised as the work sounds are
+  (`tools/RebuildSounds`), as sfx cues.
+- **The rules:** a rule may say `"lifted": true` (the car on the lift, any stop) for its kind to come off or go on; the
+  base game puts it on `rim` (`CarWork` gets whether the car is up; "Raise the car first."). The car does not come down
+  while a wheel is off ("Put the wheels back on first."), cannot race, drive off or go to the paint booth while it is up
+  (`CarCondition.WhyCannotRace` and the drive-off check), and the engine hoist only works with the car down.
+- Tests: the wheel placement, the show, the rules with the car up and down, lowering refused with a wheel off, the stop
+  saved and lowered on a car switch. Then the owner's look in game, then the one PR of step 31.
 
 ### Phase 0 findings and design (2026-10-17)
 
