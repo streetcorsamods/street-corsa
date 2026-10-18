@@ -118,13 +118,6 @@ public static class AcRunningGearData
             if (springDef == null) problems.Add($"no spring {name}");
             else if (suspension != null && RunningGear.NeedsSuspension(springDef) is { } needs && !string.Equals(needs, suspension, StringComparison.OrdinalIgnoreCase))
                 problems.Add($"the {Lower(springDef.DisplayName ?? springDef.Name) ?? "spring"} does not fit this car's suspension ({name})");
-            else if (RunningGear.IsLeafSpring(springDef))
-            {
-                // A leaf hangs from its hanger and shackle and is bolted to the axle by its U-bolts
-                Required(catalog, corner.Spring, name, "the leaf spring is missing a part", problems);
-                if (corner.Hanger == null) problems.Add($"the leaf spring has no front hanger ({name})");
-                if (corner.Shackle == null) problems.Add($"the leaf spring has no shackle ({name})");
-            }
             if (shockDef == null) problems.Add($"no shock absorber {name}");
 
             // A corner that lacks a part is measured as the factory part, the problem says what is missing

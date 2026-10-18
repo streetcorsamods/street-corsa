@@ -133,10 +133,6 @@ public class CarWorkTests
 
         Workbench.Remove(parts, OnSlot(parts, RunningGear.WheelSlot(2)));
         Workbench.Remove(parts, OnSlot(parts, RunningGear.WheelSlot(3)));
-        Assert.NotNull(CarWork.WhyNotOff(Catalog, parts, housing));
-
-        // Unbolted from its leaves
-        foreach (var corner in new[] { 2, 3 }) Workbench.Remove(parts, RunningGear.Mounted(parts, Catalog)[corner].UBolts!);
         Assert.Null(CarWork.WhyNotOff(Catalog, parts, housing));
     }
 
@@ -155,31 +151,12 @@ public class CarWorkTests
         // The axle off: the leaf comes off, and then the axle cannot go back on until it is on again
         Workbench.Remove(parts, OnSlot(parts, RunningGear.WheelSlot(2)));
         Workbench.Remove(parts, OnSlot(parts, RunningGear.WheelSlot(3)));
-        var uBolts = new[] { 2, 3 }.Select(c => RunningGear.Mounted(parts, Catalog)[c].UBolts!).ToList();
-        uBolts.ForEach(u => Workbench.Remove(parts, u));
         Workbench.Remove(parts, housing);
         Assert.Null(CarWork.WhyNotOff(Catalog, parts, leaf));
-
-        // Its hanger and shackle stay while it is on
-        var hanger = OnSlot(parts, RunningGear.HangerSlot(2));
-        Assert.NotNull(CarWork.WhyNotOff(Catalog, parts, hanger));
         Workbench.Remove(parts, leaf);
-        Assert.Null(CarWork.WhyNotOff(Catalog, parts, hanger));
-        Workbench.Remove(parts, hanger);
-        var leafPlace = new MountPlace(null, RunningGear.SpringSlot(2), 1);
-        Assert.NotNull(WhyNotOn(parts, leaf, leafPlace, Chevy66));
-        Workbench.Mount(parts, new MountPlace(null, RunningGear.HangerSlot(2), 1), hanger);
-        Assert.Null(WhyNotOn(parts, leaf, leafPlace, Chevy66));
-
         Assert.NotNull(WhyNotOn(parts, housing, axlePlace, Chevy66));
-        Workbench.Mount(parts, leafPlace, leaf);
+        Workbench.Mount(parts, new MountPlace(null, RunningGear.SpringSlot(2), 1), leaf);
         Assert.Null(WhyNotOn(parts, housing, axlePlace, Chevy66));
-
-        // The U-bolts go on over the axle
-        var uBoltsPlace = new MountPlace(leaf, RunningGear.UBoltsSlot, 1);
-        Assert.NotNull(WhyNotOn(parts, uBolts[0], uBoltsPlace, Chevy66));
-        Workbench.Mount(parts, axlePlace, housing);
-        Assert.Null(WhyNotOn(parts, uBolts[0], uBoltsPlace, Chevy66));
 
         // A coil-sprung axle carries its springs: no order
         var coils = FactoryParts(Jaguar65);

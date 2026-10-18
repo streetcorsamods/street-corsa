@@ -56,10 +56,7 @@
     { "id": "differential", "name": "differential carrier", "classes": [ "Differential" ], "comes_off": [ "back" ] },
     { "id": "ring_pinion", "name": "ring and pinion", "plural": "ring and pinion sets", "classes": [ "RingPinion" ], "comes_off": [ "back" ] },
     { "id": "axle_shaft", "name": "axle shaft", "classes": [ "AxleShaft" ], "comes_off": [ "out" ] },
-    { "id": "u_bolts", "name": "U-bolts", "plural": "U-bolts", "classes": [ "UBolts" ], "comes_off": [ "down" ], "tool": "impact" },
     { "id": "leaf_spring", "name": "leaf spring", "classes": [ "LeafSpring" ], "comes_off": [ "down" ] },
-    { "id": "spring_hanger", "name": "spring hanger", "classes": [ "SpringHanger" ], "comes_off": [ "down" ] },
-    { "id": "spring_shackle", "name": "spring shackle", "classes": [ "SpringShackle" ], "comes_off": [ "down" ] },
     { "id": "traction_bar", "name": "traction bar", "classes": [ "TractionBar" ], "comes_off": [ "down" ] },
     { "id": "torsion_bar", "name": "torsion bar", "classes": [ "TorsionBar" ], "comes_off": [ "back" ] },
     { "id": "spring", "name": "spring", "classes": [ "Spring" ], "comes_off": [ "down" ] },
@@ -104,9 +101,7 @@
     { "kind": "axle_shaft", "after": [ "drum", "brake" ], "needs": [ "differential" ] },
     { "kind": "differential", "after": [ "axle_shaft" ] },
     { "kind": "ring_pinion", "after": [ "axle_shaft" ] },
-    { "kind": "rear_axle", "after": [ "rim", "u_bolts" ], "hangs_on": [ "leaf_spring" ] },
-    { "kind": "u_bolts", "needs": [ "rear_axle" ] },
-    { "kind": "leaf_spring", "needs": [ "spring_hanger", "spring_shackle" ] }
+    { "kind": "rear_axle", "after": [ "rim" ], "hangs_on": [ "leaf_spring" ] }
   ],
 
   "stand_strips": [ "radiator", "radiator_fan", "starter", "transmission", "clutch", "flywheel" ]

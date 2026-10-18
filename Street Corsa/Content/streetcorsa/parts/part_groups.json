@@ -21,15 +21,14 @@
     "too: the rear axle has a slot on the car and takes the final drive and the differential over from the gearbox.",
     "strength prices a kind by what it holds (Nm at the axle), diff_lock by how hard it locks. sway_bars and traction_bars",
     "are the game's own as well: a sway bar has a slot across each axle (arb_rate prices it by its stiffness; the source",
-    "game's, with none, stay off the shelves), a traction bar goes on a leaf spring. backing_plates, hubs and leaf_hardware",
-    "too: a backing plate goes on a corner's brake slot and carries a drum brake, a hub goes on a front drum or disc, a",
-    "leaf spring's hanger and shackle have slots of their own on the car and its U-bolts go on the leaf."
+    "game's, with none, stay off the shelves), a traction bar goes on a leaf spring. backing_plates and hubs too:",
+    "a backing plate goes on a corner's brake slot and carries a drum brake, a hub goes on a front drum or disc."
   ],
   "shows": [
     { "id": "engine", "icon": "icons/engine", "rest_of_engine": true },
     { "id": "drivetrain", "icon": "icons/gears", "groups": [ "transmissions", "rear_axles", "differentials", "ring_pinions", "axle_shafts", "transfer_cases" ] },
     { "id": "brakes", "icon": "icons/disc_brake", "groups": [ "brakes", "backing_plates", "brake_shoes", "wheel_cylinders", "hubs" ] },
-    { "id": "suspension", "icon": "icons/parts_filled", "groups": [ "springs", "traction_bars", "leaf_hardware", "shocks", "sway_bars", "suspension_arms" ] }
+    { "id": "suspension", "icon": "icons/parts_filled", "groups": [ "springs", "traction_bars", "shocks", "sway_bars", "suspension_arms" ] }
   ],
   "groups": [
     {
@@ -59,7 +58,6 @@
     { "id": "hubs", "classes": [ "Hub" ], "never_stacks": true, "price": { "base": 14 } },
     { "id": "springs", "classes": [ "Spring", "TorsionBar" ], "price": { "base": 25, "by": "spring_rate", "by_power": 0.5 } },
     { "id": "traction_bars", "classes": [ "TractionBar" ], "never_stacks": true, "speed_shop": true, "price": { "base": 45 } },
-    { "id": "leaf_hardware", "classes": [ "SpringHanger", "SpringShackle", "UBolts" ], "never_stacks": true, "price": { "base": 9 } },
     { "id": "shocks", "classes": [ "ShockAbsorber" ], "price": { "base": 25, "by": "damping", "by_power": 0.5 } },
     { "id": "rear_axles", "classes": [ "RearAxle" ], "never_stacks": true, "price": { "base": 150, "by": "strength", "by_power": 1 } },
     { "id": "differentials", "classes": [ "Differential" ], "never_stacks": true, "speed_shop": true, "price": { "base": 120, "by": "diff_lock", "by_power": 1 } },

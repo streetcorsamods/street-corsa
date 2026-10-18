@@ -125,7 +125,7 @@ public sealed class PartRebuilds
                 }
 
                 problems.Add($"{part.Id}: {why}; left out");
-                part.Becomes.Remove(jobId);
+                part.Becomes!.Remove(jobId);
             }
         }
 

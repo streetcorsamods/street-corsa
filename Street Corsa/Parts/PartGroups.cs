@@ -55,7 +55,6 @@ public sealed class PartGroups
     public const string TractionBars = "traction_bars";
     public const string BackingPlates = "backing_plates";
     public const string Hubs = "hubs";
-    public const string LeafHardware = "leaf_hardware";
 
     /// <summary>A part no group takes in</summary>
     public const string Accessories = "accessories";

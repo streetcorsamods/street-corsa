@@ -9,8 +9,7 @@ namespace RunningGearParts;
 /// The running gear's own models (roadmap step 31 phases 4 and 5), made here out of lathe profiles, swept rods and boxes
 /// and written as KN5 next to the packs under parts/running_gear that name them: the rear axle housings of every family,
 /// their rings and pinions, the axle shaft, the drum's wheel cylinder, its backing plates and the front hub, the period
-/// shocks, the torsion bars and sway bars (one each, at the size its pack gives in diameter_in), the traction bars and a
-/// leaf spring's U-bolts, hanger and shackle. The stand-ins made of downloads (the
+/// shocks, the torsion bars and sway bars (one each, at the size its pack gives in diameter_in), and the traction bars. The stand-ins made of downloads (the
 /// drums, discs, shoes, leaves and the carrier's case) are prepare_standins.py's.
 ///
 ///   RunningGearParts build &lt;parts folder&gt;
@@ -61,9 +60,6 @@ internal static class Program
         // A backing plate for each drum size (the stand-in drums' open side and radius, as their models are), the front hub
         foreach (var (size, innerX, radius) in DrumSizes) Write(Parts.BackingPlate("plate_" + size, innerX, radius), "brakes_drum");
         Write(Parts.Hub(), "brakes_drum");
-        Write(Parts.UBolts(), "springs_leaf");
-        Write(Parts.Hanger(), "springs_leaf");
-        Write(Parts.Shackle(), "springs_leaf");
 
         Write(Parts.Shock("gabriel_hd", Finish.CastIron), "shocks_period");
         Write(Parts.Shock("koni", Finish.Red, collar: true), "shocks_period");

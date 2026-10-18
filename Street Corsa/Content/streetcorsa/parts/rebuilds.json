@@ -49,7 +49,6 @@
     { "id": "axle_bearing", "name": "New axle bearing and seal", "groups": [ "axle_shafts" ], "restores": 0.92, "cost": 0.2, "cost_at_least": 5, "minutes": 60, "steps": [ { "id": "pull", "sound": "work.air" }, { "id": "press", "sound": "work.press" } ] },
     { "id": "weld_spiders", "name": "Weld the spiders: a poor man's spool", "kinds": [ "differential" ], "becomes": true, "restores": 0, "cost": 0.04, "cost_at_least": 3, "minutes": 120, "steps": [ { "id": "cover", "sound": "work.bench" }, { "id": "weld", "sound": "work.grind" }, { "id": "cover_on", "sound": "work.bench" } ] },
     { "id": "hub_repack", "name": "Repack the wheel bearings, new seal", "groups": [ "hubs" ], "restores": 0.95, "cost": 0.15, "cost_at_least": 3, "minutes": 45, "steps": [ { "id": "clean", "sound": "work.wash" }, { "id": "pack", "sound": "work.bench" }, { "id": "adjust", "sound": "work.bench" } ] },
-    { "id": "spring_bushings", "name": "New bushings", "kinds": [ "spring_hanger", "spring_shackle" ], "restores": 0.95, "cost": 0.3, "cost_at_least": 3, "minutes": 40, "steps": [ { "id": "out", "sound": "work.press" }, { "id": "in", "sound": "work.press" } ] },
     {
       "id": "rebuilt_exchange", "name": "Swap for a rebuilt one (old one back as the core)", "way": "exchange",
       "kinds": [ "carburettor", "distributor", "side_distributor", "water_pump", "fuel_pump", "alternator", "starter", "steering_pump", "clutch" ],

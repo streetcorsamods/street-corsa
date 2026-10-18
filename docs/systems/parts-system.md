@@ -584,8 +584,8 @@ not end.
 
 **The running gear's work order** (step 31 phase 5, `CarWork`, the same `work_order.json`). Everything on a car that is
 not its engine has kinds too (rim, tyre, hub, drum, brake, brake shoes, wheel cylinder, backing plate, rear axle,
-differential carrier, ring and pinion, axle shaft, U-bolts, leaf spring, spring hanger and shackle, traction bar, torsion
-bar, spring, shock, sway bar: by class) and rules, asked as the engine's are (`CarWork.WhyNotOff`/`WhyNotOn`, the card's
+differential carrier, ring and pinion, axle shaft, leaf spring, traction bar, torsion bar, spring, shock, sway bar: by
+class) and rules, asked as the engine's are (`CarWork.WhyNotOff`/`WhyNotOn`, the card's
 reason and the shelf hint; the engine's parts stay `EngineWork`'s). A rule counts at the part's own corner: each part on
 the car works at the corners of its slot (a wheel's, brake's, spring's or shock's own; what is on the rear axle's housing
 at a corner or shaft slot that side's; the axle and a rear sway bar both rear corners, the front bar both front ones;
@@ -599,7 +599,8 @@ kind finds none free), and a leaf comes off once the axle is off. The base game'
 real one does: a drum or a disc after the wheel, the drum over its shoes and wheel cylinder; the shoes after the drum and
 over the cylinder; the cylinder after the shoes; the backing plate bare (and at the rear after the axle shaft); an axle
 shaft after its drum, and only into a carrier; the carrier and the ring and pinion after both shafts; the rear axle after
-the rear wheels and the U-bolts, hanging on its leaves; the U-bolts over the axle; a leaf on its hanger and shackle. The running gear comes off along the car's axes, whatever way the
+the rear wheels, hanging on its leaves (a leaf is one part, its hanger, shackle and U-bolts in it: the owner found them
+noise as parts of their own). The running gear comes off along the car's axes, whatever way the
 engine sits (`PartMove.CarAxes`); a kind's `"tool"` says whether it is heard with the air gun (`Sfx.ToolFor`).
 
 Nothing pops. The cards and the navigation tiles they replace slide and fade through `Helpers/Reveal`
@@ -798,8 +799,7 @@ source game's discs carry no fade of their own.
   size with them as the save is read, on every car and every car for sale (`RunningGearFactory.PutDrumsOnPlates`, in
   `CarPartsService.BringUpToDate` before the joints are checked against the catalog, which would take them off a drum
   with no slot for them); a loose drum on a shelf has them taken off onto the shelf. `GearVersion` 5 then adds a hub to
-  every front drum or disc that takes one and each leaf spring's U-bolts, hanger and shackle, worn like the brake or the
-  leaf.
+  every front drum or disc that takes one, worn like the brake.
 - **Work**: `brake_reline` on the shoes (on a disc, the disc itself: its pads are part of it; never a drum, whose lining is
   its shoes'), `wheel_cylinder_kit`, `hub_repack` on a hub, `drums_turned` at the machine shop. Each is shown done where
   the part is (step 30's job show: the grime clearing off it in place, or on the workbench for a part that is off), the
@@ -837,13 +837,9 @@ source game's discs carry no fade of their own.
   soft leaves, less with bars (the timeslip's 60-foot).
 - **Older saves** (`GearVersion` 2): `BringUpToDate` swaps the factory coils that are now leaves or torsion bars and adds
   the factory sway bars, worn like the axle's springs.
-- **The leaf's hardware** (phase 5, the leaf_hardware shelf): a leaf hangs from a **hanger** at its front eye and a
-  **shackle** at its back (`SpringHanger`, `SpringShackle`, on the car's own slots 321+corner and 331+corner,
-  `RunningGear.HangerSlot`/`ShackleSlot`, rear only), and is clamped to the axle by its **U-bolts and plate** (`UBolts`, on
-  the leaf's slot 3, `ubolts:leaf`, enforced). A leaf short of its U-bolts, hanger or shackle keeps the car home
-  (`AcRunningGearData`). The work order: the U-bolts need the axle, the axle comes off after them, a leaf needs its hanger
-  and shackle (which stay on while it is). Work: `spring_bushings` in a hanger or shackle, `leaf_rearch` at the machine
-  shop (a sagged or damaged leaf bent back to its arch, its eye bushings new).
+- **A leaf is one part** with its hanger, shackle and U-bolts (phase 5 made them parts of their own; the owner found them
+  noise and they went). Work: `leaf_rearch` at the machine shop (a sagged or damaged leaf bent back to its arch, its eye
+  bushings new).
 - **Picked per car** (phase 5): the Car Catalog Editor has a brake and a spring picker for each axle under the rear
   axle's (`AxlePicks`, `ICarPartsService.RunningGearFor`), "Guessed: ..." first, then the parts of the shelf made for that
   axle (its `came_in` naming that axle or none, `fits_axle`): a GM car on coils at the rear picks a coil there. They write
@@ -885,9 +881,7 @@ tools, never by hand:
   under the origin).
 - Phase 5's parts (`RunningGearParts build`): a backing plate per drum size (`plate_<size>`, a pressed dish just inboard of
   the drum's open side, its size and place from the stand-in drum's model), the front hub (boss, studs, dust cap, in the
-  drum's space), and in the leaf's space the U-bolts and plate (over a tube at the hubs' height, 0.06 m above the seat),
-  the hanger and the shackle (at the stand-in leaf's eyes, ±0.67 m, round its middle 18 mm left of its origin).
-  `CarPartsLayout` places the hanger and shackle as it does the leaf (the car's frame at the spring seat).
+  drum's space).
 - Not modelled: the source game's other parts keep their own; a mod's running gear part without a model is drawn as a small box.
 - **A private truck mod** (`Content\truckparts`, git-ignored): `tools/RunningGearParts/prepare_truck_parts.py` cuts the
   leaf spring (with its hangers, shackle and clip), the drum (four sizes), the axle housing (for the Dana 44 and 60) and

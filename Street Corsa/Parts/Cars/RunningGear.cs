@@ -7,8 +7,7 @@ public sealed record BrakeHeat(double TorqueK, double CoolTransfer, double CoolS
 
 /// <summary>
 /// What one corner of a car carries: the rim with its tyre, the brake (a drum on its backing plate, with the shoes and
-/// wheel cylinder there; a disc on the corner itself), the hub on the brake, the spring (a leaf with its U-bolts, its
-/// hanger and shackle on the car) and the shock
+/// wheel cylinder there; a disc on the corner itself), the hub on the brake, the spring and the shock
 /// </summary>
 public sealed class CornerParts
 {
@@ -20,9 +19,6 @@ public sealed class CornerParts
     public PartInstance? WheelCylinder { get; set; }
     public PartInstance? Hub { get; set; }
     public PartInstance? Spring { get; set; }
-    public PartInstance? UBolts { get; set; }
-    public PartInstance? Hanger { get; set; }
-    public PartInstance? Shackle { get; set; }
     public PartInstance? Shock { get; set; }
 }
 
@@ -54,10 +50,6 @@ public static class RunningGear
     public static int ShockSlot(int corner) => 301 + corner;
     public static int SpringSlot(int corner) => 311 + corner;
 
-    /// <summary>The car's own slots a leaf spring hangs from (step 31): its hanger at the front eye, its shackle at the back</summary>
-    public static int HangerSlot(int corner) => 321 + corner;
-    public static int ShackleSlot(int corner) => 331 + corner;
-
     public static bool IsFront(int corner) => corner < 2;
 
     /// <summary>The car's own slots of the sway bars (step 31), beside the rear axle's 401: one across each axle</summary>
@@ -84,8 +76,6 @@ public static class RunningGear
         >= 111 and < 111 + Corners => carSlot - 111,
         >= 301 and < 301 + Corners => carSlot - 301,
         >= 311 and < 311 + Corners => carSlot - 311,
-        >= 321 and < 321 + Corners => carSlot - 321,
-        >= 331 and < 331 + Corners => carSlot - 331,
         _ => -1
     };
 
@@ -106,17 +96,14 @@ public static class RunningGear
     }
 
     /// <summary>
-    /// The car slots a part goes on: its group's (a leaf spring's hanger and shackle their own), on the axle it is made for
-    /// (<see cref="FitsAxle"/>); none for a part that goes on another by a fitting (a drum on its backing plate)
+    /// The car slots a part goes on: its group's, on the axle it is made for (<see cref="FitsAxle"/>); none for a part that
+    /// goes on another by a fitting (a drum on its backing plate)
     /// </summary>
     public static IEnumerable<int> CarSlotsFor(PartDefinition part)
     {
         if (part.Slots.FirstOrDefault(s => s.Id == 1) is { Fits.Count: > 0 }) return [];
 
-        var slots = PartKinds.Is(part, "SpringHanger") ? Enumerable.Range(0, Corners).Select(HangerSlot)
-            : PartKinds.Is(part, "SpringShackle") ? Enumerable.Range(0, Corners).Select(ShackleSlot)
-            : CarSlotsFor(PartKinds.GroupOf(part));
-        return slots.Where(slot => FitsAxle(part, IsSwayBarSlot(slot) ? slot == FrontSwayBarSlot : IsFront(CornerOf(slot))));
+        return CarSlotsFor(PartKinds.GroupOf(part)).Where(slot => FitsAxle(part, IsSwayBarSlot(slot) ? slot == FrontSwayBarSlot : IsFront(CornerOf(slot))));
     }
 
     /// <summary>
@@ -155,8 +142,7 @@ public static class RunningGear
     /// <summary>
     /// The parts on the car's wheel slots, by corner; a rear brake, spring or shock on the rear axle's housing
     /// (<see cref="RearAxle.CornerParts"/>) as if on the car's own slot it stands for (one on the car's own slot first). A
-    /// backing plate on a brake slot is read for the drum, shoes and wheel cylinder on it, the hub off the brake, a leaf's
-    /// U-bolts off the leaf.
+    /// backing plate on a brake slot is read for the drum, shoes and wheel cylinder on it, the hub off the brake.
     /// </summary>
     /// <param name="groupOf">A part's group by its id (<see cref="CarCondition.Groups"/>), to tell a backing plate from a brake;
     /// without it a part with a drum on it is a backing plate</param>
@@ -185,14 +171,8 @@ public static class RunningGear
                 at.WheelCylinder = part.Children.FirstOrDefault(c => c.ParentSlot == WheelCylinderSlot);
                 at.Hub = at.Brake?.Children.FirstOrDefault(c => c.ParentSlot == HubSlot);
             }
-            else if (slot == SpringSlot(corner))
-            {
-                at.Spring = part;
-                at.UBolts = part.Children.FirstOrDefault(c => c.ParentSlot == UBoltsSlot);
-            }
+            else if (slot == SpringSlot(corner)) at.Spring = part;
             else if (slot == ShockSlot(corner)) at.Shock = part;
-            else if (slot == HangerSlot(corner)) at.Hanger = part;
-            else if (slot == ShackleSlot(corner)) at.Shackle = part;
         }
 
         return corners;
@@ -231,9 +211,6 @@ public static class RunningGear
 
     /// <summary>The slot of a front drum or disc its hub goes on</summary>
     public const int HubSlot = 5;
-
-    /// <summary>The slot of a leaf spring its U-bolts and plate go on</summary>
-    public const int UBoltsSlot = 3;
 
     /// <summary>
     /// A brake's torque as it is put together: its own figures, its shoes' friction (<c>friction</c>, times the drum's)

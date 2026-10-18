@@ -178,9 +178,8 @@ public class PeriodBrakesTests
         var upgrade = Catalog.Parts.Values.First(p => PartKinds.GroupOf(p) == PartKinds.Brakes && p.CameIn == null && p.Id != oldFront.Brake.Id && p.Number("force") > 0);
         parts.Single(p => p.ParentSlot == RunningGear.BrakeSlot(1)).DefinitionId = upgrade.Id;
 
-        // Three brakes and the two rear coils (leaf springs on a live axle now), and each leaf's U-bolts, hanger and shackle;
-        // the player's brake stays
-        Assert.Equal(11, RunningGearFactory.BringUpToDate(Catalog, specs, Chevy66, null, parts));
+        // Three brakes and the two rear coils (leaf springs on a live axle now); the player's brake stays
+        Assert.Equal(5, RunningGearFactory.BringUpToDate(Catalog, specs, Chevy66, null, parts));
         Assert.All(parts.Where(p => p.ParentSlot == RunningGear.SpringSlot(2) || p.ParentSlot == RunningGear.SpringSlot(3)),
             s => Assert.StartsWith("running_gear/springs_leaf/", s.DefinitionId));
         var left = parts.Single(p => p.ParentSlot == RunningGear.BrakeSlot(0));
@@ -191,10 +190,6 @@ public class PeriodBrakesTests
         Assert.Equal(Drum + "front_11x2_75", drum.DefinitionId);
         Assert.Equal([RunningGear.HubSlot], drum.Children.Select(c => c.ParentSlot));
         Assert.Equal(upgrade.Id, parts.Single(p => p.ParentSlot == RunningGear.BrakeSlot(1)).DefinitionId);
-        var rearLeft = RunningGear.Mounted(parts, Catalog)[2];
-        Assert.NotNull(rearLeft.UBolts);
-        Assert.NotNull(rearLeft.Hanger);
-        Assert.NotNull(rearLeft.Shackle);
 
         // Brought up once: nothing more to do
         Assert.Equal(0, RunningGearFactory.BringUpToDate(Catalog, specs, Chevy66, null, parts));
