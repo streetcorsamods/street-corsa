@@ -145,8 +145,8 @@ namespace StreetCorsa.Dialogs.EventEntry
         public string EventId { get; set; } = string.Empty;
         public Guid EventInstanceId { get; set; }
         public Guid PlayerCarInstanceId { get; set; }
-        public EventOpponentResult Opponent { get; set; } = null!;
-        public RaceEventDefinition EventDefinition { get; set; } = null!;
+        public required EventOpponentResult Opponent { get; set; }
+        public required RaceEventDefinition EventDefinition { get; set; }
         public bool IsPinkSlip { get; set; }
     }
 }

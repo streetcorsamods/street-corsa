@@ -5,6 +5,10 @@
     "(see docs/modding.md, \"rules\"). A career keeps the rules it was started with."
   ],
   "partShops": {
+    "mostPicks": 5,
+    "mostDynoRuns": 40,
+    "machineDynoRuns": 12,
+    "othersWork": 5,
     "junkyardEngineChance": 0.15,
     "junkyardMinWear": 0.15,
     "junkyardMaxWear": 0.75,

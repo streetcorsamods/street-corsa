@@ -16,11 +16,11 @@ namespace StreetCorsa.Screens.Shared
     /// <summary>A race the player puts to a rival, wherever they met: across a diner table or at the curb</summary>
     public sealed class ChallengeRequest
     {
-        public Opponent Opponent { get; init; } = null!;
-        public Car OpponentCar { get; init; } = null!;
-        public CarDefinition OpponentDefinition { get; init; } = null!;
-        public Car PlayerCar { get; init; } = null!;
-        public TrackInfo Track { get; init; } = null!;
+        public required Opponent Opponent { get; init; }
+        public required Car OpponentCar { get; init; }
+        public required CarDefinition OpponentDefinition { get; init; }
+        public required Car PlayerCar { get; init; }
+        public required TrackInfo Track { get; init; }
         public TrackConfiguration? Configuration { get; init; }
         /// <summary>The race's format id (<see cref="Services.Race.RaceFormats"/>)</summary>
         public string Format { get; init; } = string.Empty;

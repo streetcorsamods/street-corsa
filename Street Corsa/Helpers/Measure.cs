@@ -28,7 +28,10 @@ public enum Quantity
     Power,
 
     /// <summary>hp per tonne (per short ton in imperial)</summary>
-    PowerToWeight
+    PowerToWeight,
+
+    /// <summary>An engine's swept volume: litres (cubic inches in imperial)</summary>
+    Displacement
 }
 
 /// <summary>
@@ -48,6 +51,7 @@ public readonly record struct Measure(Quantity Quantity, double Metric) : IForma
     public static Measure Torque(double nm) => new(Quantity.Torque, nm);
     public static Measure Power(double hp) => new(Quantity.Power, hp);
     public static Measure PowerToWeight(double hpPerTonne) => new(Quantity.PowerToWeight, hpPerTonne);
+    public static Measure Displacement(double litres) => new(Quantity.Displacement, litres);
 
     /// <summary>The figure in the player's units</summary>
     public double Value => In(Locale.Units);
@@ -68,6 +72,7 @@ public readonly record struct Measure(Quantity Quantity, double Metric) : IForma
             Quantity.Mass => Metric / Conversion.KgPerLb,
             Quantity.Torque => Metric / Conversion.NmPerLbFt,
             Quantity.PowerToWeight => Metric * Conversion.TonnesPerShortTon,
+            Quantity.Displacement => Metric * Conversion.CubicInchesPerLitre,
             _ => Metric
         };
     }
@@ -91,6 +96,8 @@ public readonly record struct Measure(Quantity Quantity, double Metric) : IForma
             (Quantity.Torque, _) => "nm",
             (Quantity.PowerToWeight, UnitSystem.Imperial) => "hp_ton",
             (Quantity.PowerToWeight, _) => "hp_t",
+            (Quantity.Displacement, UnitSystem.Imperial) => "cui",
+            (Quantity.Displacement, _) => "l",
             _ => "hp"
         };
 
@@ -101,8 +108,9 @@ public readonly record struct Measure(Quantity Quantity, double Metric) : IForma
     public string Number(string? format = null) =>
         Value.ToString(string.IsNullOrWhiteSpace(format) ? DefaultFormat : format, Locale.Culture);
 
-    // Whole units, but a tank's gallons and the oil's quarts are small numbers
+    // Whole units, but a tank's gallons and the oil's quarts are small numbers, and so are an engine's litres
     private string DefaultFormat => Quantity is Quantity.Fuel or Quantity.Oil && Locale.Units == UnitSystem.Imperial ? "0.#"
+        : Quantity == Quantity.Displacement && Locale.Units == UnitSystem.Metric ? "0.0"
         : Quantity == Quantity.Distance ? "N0" : "0";
 
     public override string ToString() => Locale.UnitWords(Unit, Number());

@@ -10,4 +10,14 @@ public static class GlassButton
 
     public static System.Windows.Media.Brush? GetHoverBrush(DependencyObject element) => (System.Windows.Media.Brush?)element.GetValue(HoverBrushProperty);
     public static void SetHoverBrush(DependencyObject element, System.Windows.Media.Brush? value) => element.SetValue(HoverBrushProperty, value);
+
+    /// <summary>
+    /// A round icon button (<c>RoundIconButtonStyle</c>) lit as a pushed-in toggle is: for a button that shows a state it
+    /// does not set itself (the lift's, lit while the car is up, each click a step along)
+    /// </summary>
+    public static readonly DependencyProperty IsLitProperty = DependencyProperty.RegisterAttached(
+        "IsLit", typeof(bool), typeof(GlassButton), new PropertyMetadata(false));
+
+    public static bool GetIsLit(DependencyObject element) => (bool)element.GetValue(IsLitProperty);
+    public static void SetIsLit(DependencyObject element, bool value) => element.SetValue(IsLitProperty, value);
 }

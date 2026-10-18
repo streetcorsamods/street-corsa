@@ -307,6 +307,12 @@ namespace StreetCorsa.Screens.CarCatalogEditor
         private Parts.Cars.RunningGearPicks _picks;
         private IReadOnlyList<PickOption>? _housings, _carriers, _ratios, _frontBrakes, _rearBrakes, _frontSprings, _rearSprings;
 
+        // The guesses for what is picked now, made once: every option list and the housing read them, and a pick
+        // refreshes seven lists at once
+        private bool _choiceGuessed, _gearGuessed;
+        private Parts.Cars.RearAxleChoice? _choice;
+        private (Parts.Cars.RunningGearFactory.AxleParts Front, Parts.Cars.RunningGearFactory.AxleParts Rear)? _gear;
+
         public AxlePicks(PartsCatalog catalog, Func<Parts.Cars.RunningGearPicks?, Parts.Cars.RearAxleChoice?> axleFor, Parts.Cars.RunningGearPicks? given,
             Func<Parts.Cars.RunningGearPicks?, (Parts.Cars.RunningGearFactory.AxleParts Front, Parts.Cars.RunningGearFactory.AxleParts Rear)?>? gearFor = null)
         {
@@ -387,6 +393,7 @@ namespace StreetCorsa.Screens.CarCatalogEditor
         public void Reset()
         {
             _picks = _given.Copy();
+            Forget();
             Refresh();
         }
 
@@ -394,6 +401,7 @@ namespace StreetCorsa.Screens.CarCatalogEditor
         public void Clear()
         {
             _picks = new Parts.Cars.RunningGearPicks();
+            Forget();
             Refresh();
             Changed?.Invoke();
         }
@@ -408,14 +416,22 @@ namespace StreetCorsa.Screens.CarCatalogEditor
             }
 
             set(value.Id);
+            Forget();
 
             // What no longer goes in with it is let go
             var housing = HousingPart();
             if (_picks.Diff != null && (housing == null || Mountable(housing, Parts.Cars.RearAxle.CarrierSlot, PartKinds.Differentials).All(c => c.Id != _picks.Diff)))
+            {
                 _picks.Diff = null;
+                Forget();
+            }
+
             Refresh();
             Changed?.Invoke();
         }
+
+        /// <summary>The picks changed: the guesses are made again when next asked</summary>
+        private void Forget() => _choiceGuessed = _gearGuessed = false;
 
         private void Refresh()
         {
@@ -426,10 +442,28 @@ namespace StreetCorsa.Screens.CarCatalogEditor
                 OnPropertyChanged(name);
         }
 
-        private Parts.Cars.RearAxleChoice? Choice() => _axleFor(_picks.IsEmpty ? null : _picks);
+        private Parts.Cars.RearAxleChoice? Choice()
+        {
+            if (!_choiceGuessed)
+            {
+                _choice = _axleFor(_picks.IsEmpty ? null : _picks);
+                _choiceGuessed = true;
+            }
+
+            return _choice;
+        }
 
         /// <summary>What the car gets on its axles with what is picked: the guess of the brakes and springs not picked</summary>
-        private (Parts.Cars.RunningGearFactory.AxleParts Front, Parts.Cars.RunningGearFactory.AxleParts Rear)? Gear() => _gearFor(_picks.IsEmpty ? null : _picks);
+        private (Parts.Cars.RunningGearFactory.AxleParts Front, Parts.Cars.RunningGearFactory.AxleParts Rear)? Gear()
+        {
+            if (!_gearGuessed)
+            {
+                _gear = _gearFor(_picks.IsEmpty ? null : _picks);
+                _gearGuessed = true;
+            }
+
+            return _gear;
+        }
 
         /// <summary>
         /// The parts of a shelf made for an axle: those whose <c>came_in</c> names this axle or none, and that fit it

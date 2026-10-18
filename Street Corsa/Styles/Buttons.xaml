@@ -263,6 +263,18 @@
                             </Ellipse.Effect>
                         </Ellipse>
 
+                        <!-- Lit (helpers:GlassButton.IsLit): over the disc, as a toggle pushed in, for a button that shows
+                             a state each click moves along -->
+                        <Ellipse x:Name="lit"
+                                 Opacity="0"
+                                 StrokeThickness="3"
+                                 Fill="{StaticResource UiPrimaryGlassBrush}"
+                                 Stroke="{StaticResource AmberBrush}">
+                            <Ellipse.Effect>
+                                <DropShadowEffect Color="{StaticResource Amber}" ShadowDepth="0" BlurRadius="14" Opacity="0.55"/>
+                            </Ellipse.Effect>
+                        </Ellipse>
+
                         <!-- The icon, in the ring's colour -->
                         <Rectangle x:Name="icon" Margin="{TemplateBinding Padding}">
                             <Rectangle.Fill>
@@ -334,6 +346,9 @@
                         <Trigger Property="Tag" Value="{x:Null}">
                             <Setter TargetName="icon" Property="Visibility" Value="Collapsed"/>
                             <Setter TargetName="label" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                        <Trigger Property="helpers:GlassButton.IsLit" Value="True">
+                            <Setter TargetName="lit" Property="Opacity" Value="1"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

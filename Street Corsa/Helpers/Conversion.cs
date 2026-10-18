@@ -14,4 +14,5 @@ public static class Conversion
     public const double KgPerLb = 0.45359237;
     public const double NmPerLbFt = 1.3558179483;
     public const double TonnesPerShortTon = 0.90718474;
+    public const double CubicInchesPerLitre = 61.0237441;
 }

@@ -5,7 +5,6 @@ using StreetCorsa.Audio;
 using StreetCorsa.Configuration;
 using StreetCorsa.Controls.Street;
 using StreetCorsa.Dialogs;
-using StreetCorsa.Dialogs.RepairShop;
 using StreetCorsa.Logging;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Navigation;

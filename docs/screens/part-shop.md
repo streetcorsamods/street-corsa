@@ -18,7 +18,21 @@
   left (while the AI is on), the shop's list on the right as before (shelves or yard, sell, filters, haggle at a
   junkyard), with a price limit chip the clerk can set. Without a scene installed the counter is the screen.
 - **The clerk** (see `docs/ai-integration.md`, "The part shop's clerk"): greets the player as they walk in (the button's
-  dot calls while the counter is shut); asked for something, the list filters and their picks come first, marked.
+  dot calls while the counter is shut); asked for something, the list filters and their picks come first, marked. The
+  picks and the dyno runs per ask are the rules' `partShops.mostPicks` and `mostDynoRuns`.
+
+## What the two counters share
+
+The part shop and the machine shop (`docs/screens/machine-shop.md`) are one room and one counter in two screens:
+- `ShopRoomViewModel` (the screen's `Room`): the scene for the shop's kind dressed for the hour, what stands in it
+  (`StockShown`), the parts catalog loaded on a worker (`OpenAsync`, which also syncs the roster), the counter open or
+  not over the room (`IsCounterOpen`; without a scene it always is). The views bind `Room.SceneKn5`, `Room.Bounds`,
+  `Room.IsCounterOpen` and the rest.
+- `ClerkTalk` (the screen's `Clerk`): whoever is behind the counter while the AI is on: started once as the player
+  walks in, let go when the AI never answers, told of the stock changing, ended on Exit. The views bind `Clerk.Talk`.
+- `PartShopNotice` (`Services/PartShops`): the lines under the shop's name (the sale, the regular's discount) and the
+  same as facts for the clerk.
+- The rows of both counters are `Styles/Inputs.xaml`'s `CounterRowStyle`/`PickedRowStyle`.
 
 ## Building the room
 

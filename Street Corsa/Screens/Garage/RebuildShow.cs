@@ -22,11 +22,18 @@ public sealed class RebuildShow
         Minutes = Math.Max(0, minutes);
         StartClock = startClock;
         Seconds = SecondsFor(Minutes);
-        Steps = job.Steps.Count > 0
+        Steps = StepsOf(job, name);
+    }
+
+    /// <summary>
+    /// A job's steps as they are shown: each with its caption, the sound cue looping under it (<see cref="BenchSound"/>
+    /// for one that names none) and the cue played as it starts; a job without steps is one step, named after the job
+    /// </summary>
+    public static IReadOnlyList<(string Caption, string Sound, string? Start)> StepsOf(RebuildJob job, string name) =>
+        job.Steps.Count > 0
             ? job.Steps.Select(s => (Rebuilding.CaptionOf(job, s), string.IsNullOrWhiteSpace(s.Sound) ? BenchSound : s.Sound!,
                 string.IsNullOrWhiteSpace(s.Start) ? null : s.Start)).ToList()
             : [(name, BenchSound, (string?)null)];
-    }
 
     public RebuildJob Job { get; }
 

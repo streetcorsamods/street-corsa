@@ -45,6 +45,8 @@
     "unit.hp_ton.name": "HP/Ton",
     "unit.hp_t": "{n} hp/t",
     "unit.hp_t.name": "HP/t",
+    "unit.cui": "{n} cui",
+    "unit.cui.name": "cui",
 
     "format.time": "h:mm tt",
     "format.date": "MMMM d, yyyy",
