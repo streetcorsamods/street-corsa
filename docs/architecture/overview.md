@@ -40,11 +40,11 @@ Street Rod-style career mode for Assetto Corsa. External WPF manager handles all
 - Target: Windows x64
 
 ## Build Dependencies
-The game and the parts converter reference AcTools (`AcTools.dll`, `AcTools.Render.dll`) and SlimDX from a sibling
-checkout of [gro-ove/actools](https://github.com/gro-ove/actools), not from a package: `..\actools` next to this repo,
-built **Release x64** (`AcTools\bin\x64\Release`, `AcTools.Render\bin\x64\Release`; SlimDX from `Libraries\SlimDX-x64`).
-The DLLs are not versioned here, so a build is only reproducible with the same actools commit.
-Known good: actools `effa0e131a44ced7bbce24d8953cfc7db09faef7` (2025-10-02, "Update SimuCube.cs"). To build it:
+The game, the tests and the tools reference AcTools (`AcTools.dll`, `AcTools.Render.dll`) and SlimDX, Content Manager's
+libraries from [gro-ove/actools](https://github.com/gro-ove/actools), not from a package. Their Release x64 DLLs are
+kept in `lib\actools` (with their licences, Ms-PL and MIT), so a clone builds as it is; every project finds them
+through `$(AcToolsLib)` in `Directory.Build.props`. They were built from actools
+`effa0e131a44ced7bbce24d8953cfc7db09faef7` (2025-10-02, "Update SimuCube.cs"), unmodified. To build them again:
 
 ```
 git clone https://github.com/gro-ove/actools ..\actools
@@ -52,10 +52,15 @@ git -C ..\actools checkout effa0e131a44ced7bbce24d8953cfc7db09faef7
 MSBuild ..\actools\AcTools.Render\AcTools.Render.csproj -p:Configuration=Release -p:Platform=x64
 ```
 
-(MSBuild from Visual Studio, with the .NET Framework 4.5.2 targeting pack.) Not the Debug build: its
-`CarSlot.SetCarAsync` shows a raw exception MessageBox for any car that fails to load, and it is unoptimized.
-A different commit may change the KN5 reader or the renderer under the game without a line of this repo changing;
-check the commit (`git -C ..\actools rev-parse HEAD`) first when a build or a render differs between machines.
+(MSBuild from Visual Studio, with the .NET Framework 4.5.2 targeting pack.) Then copy `AcTools.dll` and
+`AcTools.dll.config` from `AcTools\bin\x64\Release`, `AcTools.Render.dll`, `AcTools.ExtraKn5Utils.dll`,
+`K4os.Compression.LZ4.dll`, `NBidi.dll`, `Nvidia.TextureTools.Compress.dll`, `StringBasedFilter.dll` and
+`xxHashSharp.dll` from `AcTools.Render\bin\x64\Release`, and `SlimDX.dll` from `Libraries\SlimDX-x64` into `lib\actools`.
+Not the Debug build: its `CarSlot.SetCarAsync` shows a raw exception MessageBox for any car that fails to load, and it
+is unoptimized.
+
+At run time SlimDX needs the Visual C++ 2015-2022 runtime (x64) and the DirectX End-User Runtime (June 2010, for
+`d3dx11_43.dll`); the installer checks for both (`installer\README.md`).
 
 ## Non-Goals
 - No AC binary patching

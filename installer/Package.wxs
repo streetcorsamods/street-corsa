@@ -1,0 +1,132 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+
+  <!--
+    Street Corsa for one player: no admin, installed in %LocalAppData%\Programs\Street Corsa, so mods can be dropped into
+    its Content folder. The wizard asks where Assetto Corsa is (Dialogs.wxs) and keeps it in HKCU\Software\Street Corsa,
+    where the game looks when its settings name no folder (AcInstallFinder). The UpgradeCode never changes: a newer MSI
+    replaces the older one.
+  -->
+  <Package Name="Street Corsa"
+           Manufacturer="Pablo Camardelli"
+           Version="$(ProductVersion)"
+           UpgradeCode="B2E61D38-8857-425F-B0EE-0F27F1F909D5"
+           Scope="perUser"
+           Compressed="yes">
+
+    <SummaryInformation Description="Street Corsa: a Street Rod-style career that runs on top of Assetto Corsa" />
+
+    <!-- Same version too: a rebuilt MSI of one version replaces the one installed rather than going in beside it -->
+    <MajorUpgrade DowngradeErrorMessage="A newer Street Corsa is already installed." Schedule="afterInstallInitialize" AllowSameVersionUpgrades="yes" />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" MaximumUncompressedMediaSize="200" />
+
+    <Icon Id="StreetCorsaIcon" SourceFile="..\Street Corsa\street_corsa.ico" />
+    <Property Id="ARPPRODUCTICON" Value="StreetCorsaIcon" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/pecamardelli/street-corsa" />
+    <Property Id="ARPNOMODIFY" Value="1" />
+
+    <!-- The game's folder -->
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="ProgramsDir" Name="Programs">
+        <Directory Id="INSTALLFOLDER" Name="Street Corsa" />
+      </Directory>
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder" />
+    <StandardDirectory Id="DesktopFolder" />
+
+    <!--
+      Assetto Corsa's folder: nothing is installed in it, it is a directory so the wizard's Browse can set it. The folder
+      picked last time first, else what FindAcFolder finds through Steam; on the command line ACFOLDER=... for a quiet install.
+    -->
+    <!-- Steam's own folder for AC when nothing better is known; the 32-bit Program Files, where Steam installs -->
+    <StandardDirectory Id="ProgramFilesFolder">
+      <Directory Id="SteamDir" Name="Steam">
+        <Directory Id="SteamAppsDir" Name="steamapps">
+          <Directory Id="SteamCommonDir" Name="common">
+            <Directory Id="ACFOLDER" Name="assettocorsa" />
+          </Directory>
+        </Directory>
+      </Directory>
+    </StandardDirectory>
+    <Property Id="ACFOLDER" Secure="yes">
+      <RegistrySearch Id="PreviousAcFolder" Root="HKCU" Key="Software\Street Corsa" Name="AssettoCorsaPath" Type="raw" />
+    </Property>
+
+    <!-- What the game needs beside AC, for the wizard's checks page: DirectX's June 2010 runtime and VC++ 2015-2022 (SlimDX) -->
+    <Property Id="HAS_D3DX">
+      <DirectorySearch Id="D3dxSearch" Path="[System64Folder]" Depth="0">
+        <FileSearch Id="D3dxFile" Name="d3dx11_43.dll" />
+      </DirectorySearch>
+    </Property>
+    <Property Id="HAS_VCRT">
+      <DirectorySearch Id="VcrtSearch" Path="[System64Folder]" Depth="0">
+        <FileSearch Id="VcrtFile" Name="msvcp140.dll" />
+      </DirectorySearch>
+    </Property>
+
+    <Property Id="DESKTOP_SHORTCUT" Value="1" Secure="yes" />
+
+    <Binary Id="InstallerActions" SourceFile="$(var.InstallerActions.TargetDir)InstallerActions.CA.dll" />
+    <CustomAction Id="FindAcFolder" BinaryRef="InstallerActions" DllEntry="FindAcFolder" Execute="immediate" Return="ignore" />
+    <CustomAction Id="CheckAcFolder" BinaryRef="InstallerActions" DllEntry="CheckAcFolder" Execute="immediate" Return="ignore" />
+    <CustomAction Id="FindOllama" BinaryRef="InstallerActions" DllEntry="FindOllama" Execute="immediate" Return="ignore" />
+    <CustomAction Id="OpenOllamaPage" BinaryRef="InstallerActions" DllEntry="OpenOllamaPage" Execute="immediate" Return="ignore" />
+    <CustomAction Id="LaunchGame" BinaryRef="InstallerActions" DllEntry="LaunchGame" Execute="immediate" Return="ignore" />
+
+    <!-- Uninstall: the game puts back what races changed in AC and takes its CSP modes out (AcUninstall); not on an upgrade -->
+    <CustomAction Id="RestoreAc" FileRef="GameExe" ExeCommand="--uninstall" Execute="deferred" Impersonate="yes" Return="ignore" />
+
+    <InstallUISequence>
+      <Custom Action="FindAcFolder" After="AppSearch" />
+      <Custom Action="FindOllama" After="FindAcFolder" />
+    </InstallUISequence>
+    <InstallExecuteSequence>
+      <Custom Action="FindAcFolder" After="AppSearch" Condition="NOT Installed" />
+      <Custom Action="CheckAcFolder" After="FindAcFolder" Condition="NOT Installed AND AC_LATER &lt;&gt; &quot;1&quot;" />
+      <Custom Action="RestoreAc" Before="RemoveFiles" Condition="REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE" />
+    </InstallExecuteSequence>
+
+    <Feature Id="Game" Title="Street Corsa" AllowAbsent="no">
+      <ComponentGroupRef Id="GameFiles" />
+      <ComponentRef Id="GameExe" />
+      <ComponentRef Id="AcFolderChoice" />
+      <ComponentRef Id="StartMenuShortcut" />
+      <ComponentRef Id="DesktopShortcut" />
+    </Feature>
+
+    <UIRef Id="StreetCorsaUI" />
+    <WixVariable Id="WixUILicenseRtf" Value="license.rtf" />
+    <!-- From the game's main screen background (make_art.py) -->
+    <WixVariable Id="WixUIBannerBmp" Value="banner.bmp" />
+    <WixVariable Id="WixUIDialogBmp" Value="dialog.bmp" />
+  </Package>
+
+  <Fragment>
+    <!-- Everything the build staged, but the exe, which the shortcuts and the uninstall point at -->
+    <ComponentGroup Id="GameFiles" Directory="INSTALLFOLDER">
+      <Files Include="!(bindpath.stage)\**">
+        <Exclude Files="!(bindpath.stage)\Street Corsa.exe" />
+      </Files>
+    </ComponentGroup>
+
+    <Component Id="GameExe" Directory="INSTALLFOLDER">
+      <File Id="GameExe" Source="!(bindpath.stage)\Street Corsa.exe" KeyPath="yes" />
+    </Component>
+
+    <!-- Only a folder that holds AC (CheckAcFolder): one the player put off setting stays for the game's Settings -->
+    <Component Id="AcFolderChoice" Directory="INSTALLFOLDER" Condition="AC_CHOSEN">
+      <RegistryValue Root="HKCU" Key="Software\Street Corsa" Name="AssettoCorsaPath" Type="string" Value="[AC_CHOSEN]" KeyPath="yes" />
+    </Component>
+
+    <Component Id="StartMenuShortcut" Directory="ProgramMenuFolder">
+      <Shortcut Id="StartMenuShortcut" Name="Street Corsa" Description="A Street Rod-style career on top of Assetto Corsa"
+                Target="[#GameExe]" WorkingDirectory="INSTALLFOLDER" Icon="StreetCorsaIcon" />
+      <RegistryValue Root="HKCU" Key="Software\Street Corsa" Name="StartMenuShortcut" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+
+    <Component Id="DesktopShortcut" Directory="DesktopFolder" Condition="DESKTOP_SHORTCUT = 1">
+      <Shortcut Id="DesktopShortcut" Name="Street Corsa" Description="A Street Rod-style career on top of Assetto Corsa"
+                Target="[#GameExe]" WorkingDirectory="INSTALLFOLDER" Icon="StreetCorsaIcon" />
+      <RegistryValue Root="HKCU" Key="Software\Street Corsa" Name="DesktopShortcut" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+  </Fragment>
+</Wix>

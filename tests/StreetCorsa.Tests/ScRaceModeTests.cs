@@ -59,6 +59,24 @@ public sealed class ScRaceModeTests : IDisposable
     }
 
     [Fact]
+    public void Uninstalling_takes_the_games_modes_out_and_leaves_the_others()
+    {
+        Assert.Null(new ScRaceMode(_source).Install(_ac));
+        _temp.File(Path.Combine("ac", "extension", "lua", "new-modes", "sc_free", "mode.lua"), "-- free run");
+        _temp.File(Path.Combine("ac", "extension", "lua", "new-modes", "mymod_derby", "mode.lua"), "-- a mod's format");
+        _temp.File(Path.Combine("ac", "extension", "lua", "new-modes", "drift-challenge", "mode.lua"), "-- CSP's own");
+
+        var removed = new ScRaceMode(_source).Uninstall(_ac, ["sc_race", "mymod_derby"]);
+
+        Assert.Equal(3, removed);
+        var modes = Path.Combine(_ac, "extension", "lua", "new-modes");
+        Assert.False(Directory.Exists(Path.Combine(modes, "sc_race")));
+        Assert.False(Directory.Exists(Path.Combine(modes, "sc_free")));
+        Assert.False(Directory.Exists(Path.Combine(modes, "mymod_derby")));
+        Assert.True(File.Exists(Path.Combine(modes, "drift-challenge", "mode.lua")));
+    }
+
+    [Fact]
     public void The_mode_under_its_old_id_is_removed()
     {
         _temp.File(Path.Combine("ac", "extension", "lua", "new-modes", "sr_race", "mode.lua"), "-- 3.7.0");

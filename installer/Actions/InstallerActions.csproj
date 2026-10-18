@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The installer's custom actions: Windows Installer runs them in .NET Framework, so this is not the game's .NET -->
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <RootNamespace>StreetCorsa.Installer</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="WixToolset.Dtf.CustomAction" Version="6.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Content goes into the .CA.dll: the runtime the actions run in -->
+    <Content Include="CustomAction.config" />
+  </ItemGroup>
+
+</Project>

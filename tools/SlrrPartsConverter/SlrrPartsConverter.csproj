@@ -11,7 +11,7 @@
 
   <ItemGroup>
     <Reference Include="AcTools">
-      <HintPath>..\..\..\actools\AcTools\bin\x64\Release\AcTools.dll</HintPath>
+      <HintPath>$(AcToolsLib)AcTools.dll</HintPath>
     </Reference>
   </ItemGroup>
 

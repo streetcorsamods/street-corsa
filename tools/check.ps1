@@ -1,6 +1,6 @@
 # Builds the whole solution and runs the tests: the check to pass before a merge or a push. The tools compile game
 # files by link, so a game change can break them without the game noticing (EngineBench did not build from PR #20 to
-# the 2026-09-25 audit). Nothing runs this automatically yet: CI would need the actools DLLs, which are not in the repo.
+# the 2026-09-25 audit). Nothing runs this automatically yet (the actools DLLs are in lib\actools now, so CI could).
 # Then the rated engine builds go on the dyno (EngineBench rated, which only reads the content), and the race mode's
 # harness runs when Python has lupa (pip install -r tools/sc_race_harness/requirements.txt); without it, it says so and
 # goes on.

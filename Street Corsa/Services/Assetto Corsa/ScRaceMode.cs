@@ -89,7 +89,7 @@ namespace StreetCorsa.Services
                         _logger.Information("Race format {Format}'s mode installed in {Target} ({Count} file(s) changed)", format.Id, modeTarget, modeWritten);
                 }
 
-                foreach (var retired in Retired) RemoveRetired(Path.Combine(acRoot, retired));
+                foreach (var retired in Retired) RemoveFolder(Path.Combine(acRoot, retired), "the race mode does its work now");
                 return null;
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -132,6 +132,28 @@ namespace StreetCorsa.Services
             }
         }
 
+        /// <summary>
+        /// Takes the game's modes out of <paramref name="acRoot"/> when the game is uninstalled: sc_race, sc_free, the
+        /// <paramref name="modeIds"/> of the mods' formats and what the modes replaced. Returns how many folders went;
+        /// one that cannot go is logged and left.
+        /// </summary>
+        public int Uninstall(string acRoot, IEnumerable<string> modeIds)
+        {
+            var removed = 0;
+            var folders = modeIds.Append(IniModificationService.RaceModeId).Append(IniModificationService.FreeRunModeId)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Select(id => Path.Combine(acRoot, "extension", "lua", "new-modes", id))
+                .Concat(Retired.Select(r => Path.Combine(acRoot, r)));
+            foreach (var folder in folders)
+            {
+                var existed = Directory.Exists(folder);
+                RemoveFolder(folder, "the game is uninstalled");
+                if (existed && !Directory.Exists(folder)) removed++;
+            }
+
+            return removed;
+        }
+
         /// <summary>The race mode's script that puts the parts on, which the free run's mode runs too</summary>
         private const string PartsScript = "car_parts.lua";
 
@@ -168,14 +190,14 @@ namespace StreetCorsa.Services
         }
 
         /// <summary>A clean-up, never worth a race: one that fails (a file locked or denied) is logged and tried next time</summary>
-        private void RemoveRetired(string folder)
+        private void RemoveFolder(string folder, string why)
         {
             try
             {
                 if (!Directory.Exists(folder)) return;
 
                 Directory.Delete(folder, recursive: true);
-                _logger.Information("Removed {Folder}: the race mode does its work now", folder);
+                _logger.Information("Removed {Folder}: {Why}", folder, why);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {

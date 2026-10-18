@@ -82,7 +82,8 @@ public class AppSettings
 
     /// <summary>
     /// Full path to the garage showroom model: a mod's garage by that id if one has it (the last mod to have it wins,
-    /// so a mod can dress the garage), else the AC install's showroom of that name
+    /// so a mod can dress the garage), else the AC install's showroom of that name, else AC's own showroom
+    /// (<see cref="FallbackShowroomId"/>): the released game ships without the garage's model, which is not ours to give
     /// </summary>
     public string GarageShowroomKn5
     {
@@ -94,9 +95,14 @@ public class AppSettings
                 if (File.Exists(own)) return own;
             }
 
-            return Path.Combine(ShowroomsPath, GarageShowroomId, GarageShowroomId + ".kn5");
+            var installed = Path.Combine(ShowroomsPath, GarageShowroomId, GarageShowroomId + ".kn5");
+            var fallback = Path.Combine(ShowroomsPath, FallbackShowroomId, FallbackShowroomId + ".kn5");
+            return File.Exists(installed) || !File.Exists(fallback) ? installed : fallback;
         }
     }
+
+    /// <summary>The showroom every AC install has (Kunos'), for a garage whose model is nowhere</summary>
+    public const string FallbackShowroomId = "showroom";
 
     /// <summary>
     /// The base game's converted part packs (see tools/convert-parts.ps1); the catalog reads every mod's

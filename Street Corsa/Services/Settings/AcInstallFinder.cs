@@ -6,13 +6,17 @@ using StreetCorsa.Configuration;
 namespace StreetCorsa.Services.Settings
 {
     /// <summary>
-    /// Where Assetto Corsa is installed, for a player whose settings name no folder: Steam's own record of the game
-    /// (its uninstall entry), else each of Steam's library folders. Never throws: nothing found is null.
+    /// Where Assetto Corsa is installed, for a player whose settings name no folder: the one picked in the installer,
+    /// else Steam's own record of the game (its uninstall entry), else each of Steam's library folders. Never throws: nothing found is null.
     /// </summary>
     public static partial class AcInstallFinder
     {
         /// <summary>Assetto Corsa's Steam app id</summary>
         private const string SteamAppId = "244210";
+
+        /// <summary>Where the installer keeps the AC folder the player picked in its wizard (installer/Package.wxs)</summary>
+        public const string InstallerKey = @"Software\Street Corsa";
+        public const string InstallerValue = "AssettoCorsaPath";
 
         [GeneratedRegex("\"path\"\\s+\"(?<path>[^\"]+)\"", RegexOptions.IgnoreCase)]
         private static partial Regex LibraryPath();
@@ -23,8 +27,14 @@ namespace StreetCorsa.Services.Settings
         /// <summary>Where to look, most likely first</summary>
         public static IEnumerable<string> Candidates()
         {
-            if (Read(Registry.LocalMachine, $@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App {SteamAppId}", "InstallLocation") is { } own)
-                yield return own;
+            if (Read(Registry.CurrentUser, InstallerKey, InstallerValue) is { } chosen)
+                yield return chosen;
+            // Steam is a 32-bit program: its uninstall entries are in the 32-bit view, which this x64 process reads under WOW6432Node
+            foreach (var uninstall in new[] { @"SOFTWARE\WOW6432Node\Microsoft", @"SOFTWARE\Microsoft" })
+            {
+                if (Read(Registry.LocalMachine, $@"{uninstall}\Windows\CurrentVersion\Uninstall\Steam App {SteamAppId}", "InstallLocation") is { } own)
+                    yield return own;
+            }
 
             var steams = new[]
             {

@@ -1,0 +1,6 @@
+<Solution>
+  <!-- The installer on its own, apart from Street Corsa.slnx: it builds over the stage build.ps1 makes, which a plain
+       solution build has not got. Visual Studio needs the HeatWave extension (FireGiant) to open the .wixproj. -->
+  <Project Path="StreetCorsa.Installer.wixproj" />
+  <Project Path="Actions/InstallerActions.csproj" />
+</Solution>
