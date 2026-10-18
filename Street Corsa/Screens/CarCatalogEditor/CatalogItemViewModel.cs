@@ -32,6 +32,8 @@ namespace StreetCorsa.Screens.CarCatalogEditor
 
         // The factory rear axle: what is picked by hand (empty: all guessed), what the base game's file gave
         private readonly AxlePicks? _axle;
+        // What cars.json gives, kept as it is when there are no pickers for it (no parts catalog)
+        private readonly Parts.Cars.RunningGearPicks? _gearGiven;
 
         /// <param name="engineOptions">Engine builds the car could leave the factory with, best match first; empty without a parts catalog</param>
         public CatalogItemViewModel(CarDefinition definition, CarProfile profile, IReadOnlyList<EngineOptionViewModel>? engineOptions = null)
@@ -57,6 +59,7 @@ namespace StreetCorsa.Screens.CarCatalogEditor
             Func<EngineLayout> guessLayout, Parts.Cars.CarEntry? given = null, AxlePicks? axle = null)
         {
             _axle = axle;
+            _gearGiven = given?.RunningGear;
             if (_axle != null) _axle.Changed += () => IsDirty = true;
             Definition = definition;
             Profile = profile;
@@ -232,7 +235,7 @@ namespace StreetCorsa.Screens.CarCatalogEditor
             _engineGiven ? PendingEngine : null,
             _layoutGiven ? _engineLayout : null,
             _commonGiven ? _dealerPrecedence : null,
-            _axle?.Picks);
+            _axle != null ? _axle.Picks : _gearGiven);
 
         /// <summary>The factory rear axle's pickers; null without a parts catalog</summary>
         public AxlePicks? Axle => _axle;
@@ -446,10 +449,7 @@ namespace StreetCorsa.Screens.CarCatalogEditor
             : HousingPart() is { } housing ? Mountable(housing, Parts.Cars.RearAxle.CarrierSlot, PartKinds.Differentials) : [];
 
         private IEnumerable<PartDefinition> Mountable(PartDefinition parent, int slotId, string group) =>
-            parent.Slots.FirstOrDefault(s => s.Id == slotId) is { } slot
-                ? _catalog.FindMountable(parent, slot).Select(m => m.Part).Where(p => PartKinds.GroupOf(p) == group).DistinctBy(p => p.Id)
-                    .OrderBy(p => p.DisplayName ?? p.Id, StringComparer.OrdinalIgnoreCase)
-                : [];
+            _catalog.MountableOf(parent, slotId, group).OrderBy(p => p.DisplayName ?? p.Id, StringComparer.OrdinalIgnoreCase);
 
         /// <summary>The guess first ("Guessed: what the car gets"), then every pick</summary>
         private static IReadOnlyList<PickOption> Options(PartDefinition? guessed, IEnumerable<PickOption> picks)

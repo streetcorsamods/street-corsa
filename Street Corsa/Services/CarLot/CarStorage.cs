@@ -70,7 +70,8 @@ namespace StreetCorsa.Services.CarLot
 
         /// <summary>
         /// The player takes <paramref name="car"/> out to the garage, and the car that was there
-        /// (<paramref name="fromGarage"/>, null when there was none) is parked in the bay it leaves
+        /// (<paramref name="fromGarage"/>, null when there was none) is parked in the bay it leaves, down off the lift unless
+        /// a wheel is off it (only the car in the bay is ever up otherwise)
         /// </summary>
         public static void TakeOut(Car car, Car? fromGarage)
         {
@@ -78,6 +79,8 @@ namespace StreetCorsa.Services.CarLot
             {
                 fromGarage.Warehouse = car.Warehouse;
                 fromGarage.Bay = car.Bay;
+                if (fromGarage.IsLifted && StreetCorsa.Parts.Cars.CarWork.WhyNotDown(fromGarage.Parts, fromGarage.HasRunningGearAssigned) == null)
+                    fromGarage.LiftStop = LiftStop.Down;
             }
 
             car.Warehouse = null;

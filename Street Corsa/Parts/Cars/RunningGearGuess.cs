@@ -103,10 +103,7 @@ public static class RunningGearGuess
     private static PartDefinition? Picked(PartsCatalog catalog, string? id, string group) =>
         string.IsNullOrWhiteSpace(id) || catalog.Get(id) is not { } part || PartKinds.GroupOf(part) != group ? null : part;
 
-    private static List<PartDefinition> Mountable(PartsCatalog catalog, PartDefinition parent, PartSlot slot, string group) =>
-        catalog.FindMountable(parent, slot).Select(m => m.Part).Where(p => PartKinds.GroupOf(p) == group)
-            .DistinctBy(p => p.Id, StringComparer.OrdinalIgnoreCase).OrderBy(p => p.Id, StringComparer.Ordinal).ToList();
+    private static List<PartDefinition> Mountable(PartsCatalog catalog, PartDefinition parent, PartSlot slot, string group) => catalog.MountableOf(parent, slot, group);
 
-    private static List<PartDefinition> ByGroup(PartsCatalog catalog, string group) =>
-        catalog.Parts.Values.Where(p => PartKinds.GroupOf(p) == group).OrderBy(p => p.Id, StringComparer.Ordinal).ToList();
+    private static List<PartDefinition> ByGroup(PartsCatalog catalog, string group) => catalog.InGroup(group);
 }

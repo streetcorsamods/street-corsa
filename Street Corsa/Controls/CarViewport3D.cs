@@ -1152,7 +1152,7 @@ public class CarViewport3D : D3DViewportBase
             if (renderer == Renderer && PartsVisible && !IsOnStand && _loadedCarDirectory == carDirectory)
             {
                 renderer.SetProp(model.Kn5, SlimDX.Matrix.Identity);
-                renderer.SetUnsprung(PartLayer.Mounted, NodesHanging(model.Nodes, Unsprung(catalog, gear)));
+                renderer.SetUnsprung(PartLayer.Mounted, NodesHanging(model.Nodes, Unsprung(gear)));
                 renderer.SetStandIns(StandIns(model.Nodes, gear, Shown));
                 propReplaced = true;
 
@@ -2045,9 +2045,9 @@ public class CarViewport3D : D3DViewportBase
             if (renderer == Renderer && ReferenceEquals(candidates, Candidates))
             {
                 renderer.SetCandidates(model?.Kn5);
-                var hanging = Unsprung(catalog, Gear);
+                var hanging = Unsprung(Gear);
                 renderer.SetUnsprung(PartLayer.Candidate, Enumerable.Range(0, owners.Length).Where(i =>
-                    owners[i].Parent is { } parent ? hanging.Contains(parent) : HangsOnLift(catalog, owners[i].ParentSlot, owners[i].Part.Definition)));
+                    owners[i].Parent is { } parent ? hanging.Contains(parent) : HangsOnLift(owners[i].ParentSlot, owners[i].Part.Definition)));
                 _candidateNodes = owners;
                 _shownCandidates = candidates;
                 AnimateFor(AnimationWindow);
@@ -2273,8 +2273,8 @@ public class CarViewport3D : D3DViewportBase
             Audio.Sfx.Play(Audio.Sfx.LiftStops);
             IsLiftMoving = false;
 
-            // Down on the floor, the camera comes back up out from under it
-            if (_betaGoal < MinBeta) _betaGoal = MinBeta;
+            // Down on the floor, the camera comes back up out from under it; up at a stop, it stays under
+            if (goal < LiftLayout.WheelsClearHeight / 2f && _betaGoal < MinBeta) _betaGoal = MinBeta;
         }
         else
         {
@@ -2291,20 +2291,20 @@ public class CarViewport3D : D3DViewportBase
     /// Whether a part on this car slot hangs with the wheels as the lift takes the body up: a wheel, a brake, the rear axle
     /// (with all it carries), a leaf spring (with its traction bar); not a coil, a shock or a torsion bar on the body
     /// </summary>
-    private static bool HangsOnLift(PartsCatalog catalog, int carSlot, PartDefinition part)
+    private static bool HangsOnLift(int carSlot, PartDefinition part)
     {
         if (carSlot == RearAxle.CarSlot) return true;
         var corner = RunningGear.CornerOf(carSlot);
         return corner >= 0 && (carSlot == RunningGear.WheelSlot(corner) || carSlot == RunningGear.BrakeSlot(corner)
-                               || carSlot == RunningGear.SpringSlot(corner) && string.Equals(catalog.WorkOrder.KindOf(part), "leaf_spring", StringComparison.OrdinalIgnoreCase));
+                               || carSlot == RunningGear.SpringSlot(corner) && RunningGear.IsLeafSpring(part));
     }
 
     /// <summary>The running gear that hangs with the wheels (<see cref="HangsOnLift"/>), with everything on it</summary>
-    private static HashSet<InstalledPart> Unsprung(PartsCatalog catalog, IReadOnlyList<CarPart>? gear)
+    private static HashSet<InstalledPart> Unsprung(IReadOnlyList<CarPart>? gear)
     {
         var hanging = new HashSet<InstalledPart>(ReferenceEqualityComparer.Instance);
         foreach (var part in gear ?? Array.Empty<CarPart>())
-            if (HangsOnLift(catalog, part.CarSlot, part.Root.Definition)) hanging.UnionWith(part.Root.SelfAndDescendants());
+            if (HangsOnLift(part.CarSlot, part.Root.Definition)) hanging.UnionWith(part.Root.SelfAndDescendants());
         return hanging;
     }
 

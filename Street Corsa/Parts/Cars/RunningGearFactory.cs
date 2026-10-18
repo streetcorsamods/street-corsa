@@ -144,9 +144,7 @@ public static class RunningGearFactory
     private static PartDefinition? OnSlot(PartsCatalog catalog, PartDefinition part, int slotId, string group, CarFacts? car)
     {
         if (part.Slots.FirstOrDefault(s => s.Id == slotId) is not { } slot) return null;
-        var fits = catalog.FindMountable(part, slot).Select(m => m.Part).Where(p => PartKinds.GroupOf(p) == group)
-            .DistinctBy(p => p.Id, StringComparer.OrdinalIgnoreCase).OrderBy(p => p.Id, StringComparer.Ordinal).ToList();
-        return RunningGearGuess.Best(fits, car ?? CarFacts.None, 0);
+        return RunningGearGuess.Best(catalog.MountableOf(part, slot, group), car ?? CarFacts.None, 0);
     }
 
     /// <summary>The backing plate a drum goes on, for this axle; null for a brake that goes on the corner itself (a disc)</summary>
@@ -280,10 +278,12 @@ public static class RunningGearFactory
     /// A car's running gear from before <see cref="GearVersion"/>, brought up to it: a brake or a spring that is what the
     /// factory gave it then (the source game's nearest) becomes what the factory gives it now (a period drum, a leaf
     /// spring, a torsion bar), in the same wear and damage, with what goes on it. What the player put on stays. An axle the
-    /// factory gives a sway bar gets it, worn like the axle's springs.
+    /// factory gives a sway bar gets it, worn like the axle's springs, and a brake its hub, only when the car's running gear
+    /// is from before them: one the player took off since stays off.
     /// </summary>
+    /// <param name="fromVersion">The car's <see cref="Car.GearVersion"/> before this</param>
     /// <returns>How many parts changed</returns>
-    public static int BringUpToDate(PartsCatalog catalog, AcCarSpecs specs, CarFacts car, RunningGearPicks? picks, List<PartInstance> carParts)
+    public static int BringUpToDate(PartsCatalog catalog, AcCarSpecs specs, CarFacts car, RunningGearPicks? picks, List<PartInstance> carParts, int fromVersion = 0)
     {
         if (Choose(catalog, specs) is not var (oldFront, oldRear) || Choose(catalog, specs, car, picks) is not var (front, rear)) return 0;
 
@@ -312,7 +312,7 @@ public static class RunningGearFactory
             }
         }
 
-        foreach (var (now, isFront) in new[] { (front, true), (rear, false) })
+        foreach (var (now, isFront) in fromVersion < 2 ? new[] { (front, true), (rear, false) } : [])
         {
             var slot = RunningGear.SwayBarSlot(isFront);
             var (frontBar, rearBar) = RunningGear.SwayBars(carParts);
@@ -323,7 +323,7 @@ public static class RunningGearFactory
             changed++;
         }
 
-        return changed + AddHardware(catalog, car, carParts) + HangOnAxle(catalog, carParts, specs.HasLiveAxle);
+        return changed + (fromVersion < 5 ? AddHardware(catalog, car, carParts) : 0) + HangOnAxle(catalog, carParts, specs.HasLiveAxle);
     }
 
     /// <summary>
@@ -391,6 +391,5 @@ public static class RunningGearFactory
         parts.Where(p => p.CameIn == null && p.SourceScript != null).ToList() is { Count: > 0 } scripted ? scripted
         : parts.Where(p => p.CameIn == null).ToList() is { Count: > 0 } plain ? plain : parts;
 
-    private static List<PartDefinition> ByGroup(PartsCatalog catalog, string group) =>
-        catalog.Parts.Values.Where(p => p.IsScripted && PartKinds.GroupOf(p) == group).OrderBy(p => p.Id, StringComparer.Ordinal).ToList();
+    private static List<PartDefinition> ByGroup(PartsCatalog catalog, string group) => catalog.InGroup(group).Where(p => p.IsScripted).ToList();
 }

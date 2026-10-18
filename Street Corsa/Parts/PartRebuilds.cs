@@ -105,13 +105,16 @@ public sealed class PartRebuilds
     /// <summary>
     /// What the parts say jobs turn them into (<see cref="PartDefinition.Becomes"/>), told in <paramref name="problems"/>
     /// and left out where it cannot be: a job of no such id or that turns nothing, a part that is not there or not on the
-    /// same shelf. A job that turns parts that no part names is told too: it is never offered.
+    /// same shelf. A job that turns parts that no part names is told too: it is never offered. The job ids are looked up
+    /// as the jobs are, whatever their case.
     /// </summary>
     public void CheckBecomes(IEnumerable<PartDefinition> parts, Func<string, PartDefinition?> get, List<string> problems)
     {
         var named = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var part in parts.Where(p => p.Becomes is { Count: > 0 }))
         {
+            if (!ReferenceEquals(part.Becomes!.Comparer, StringComparer.OrdinalIgnoreCase))
+                part.Becomes = new Dictionary<string, string>(part.Becomes.DistinctBy(b => b.Key, StringComparer.OrdinalIgnoreCase), StringComparer.OrdinalIgnoreCase);
             foreach (var (jobId, target) in part.Becomes!.ToList())
             {
                 var why = _jobs.FirstOrDefault(j => j.Id.Equals(jobId, StringComparison.OrdinalIgnoreCase)) is not { Becomes: true } ? $"no job {jobId} turns parts into others"

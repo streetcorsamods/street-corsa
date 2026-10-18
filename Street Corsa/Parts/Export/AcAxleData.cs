@@ -88,7 +88,7 @@ public static class AcAxleData
             Keep(DrivetrainFile, drivetrain);
         }
 
-        // The weight: the whole axle against the factory one; unsprung on a live axle
+        // The weight: the whole axle against the factory one; unsprung on a live axle, half on each wheel's hub (HUB_MASS is a wheel's)
         var factoryMass = factory.Housing.Mass + factory.Carrier.Mass + factory.Gears.Mass + 2 * factory.Shaft.Mass;
         var mass = mounted.All.Sum(p => catalog.Get(p.DefinitionId)?.Mass ?? 0) - factoryMass;
         if (Math.Abs(mass) > 0.05)
@@ -98,7 +98,7 @@ public static class AcAxleData
                 var suspensions = new IniText(suspensionsText);
                 if (string.Equals(suspensions.Get("REAR", "TYPE")?.Trim(), "AXLE", StringComparison.OrdinalIgnoreCase) &&
                     suspensions.GetNumber("REAR", "HUB_MASS") is { } hub)
-                    suspensions.Set("REAR", "HUB_MASS", Math.Max(hub * 0.5, hub + mass), "0.0");
+                    suspensions.Set("REAR", "HUB_MASS", Math.Max(hub * 0.5, hub + mass / 2), "0.0");
                 Keep(SuspensionsFile, suspensions);
             }
 
@@ -134,12 +134,7 @@ public static class AcAxleData
         return (Math.Clamp(power * wear, 0, 1), Math.Clamp(coast * wear, 0, 1), Math.Max(0, preload * wear));
     }
 
-    private static string? Lower(string? message)
-    {
-        if (string.IsNullOrWhiteSpace(message)) return null;
-        var text = message.Trim().TrimEnd('.');
-        return text.Length == 0 ? null : char.ToLowerInvariant(text[0]) + text[1..];
-    }
+    private static string? Lower(string? message) => AcRunningGearData.Lower(message);
 
     /// <summary>Every torque of a lut times <paramref name="factor"/>, the rest of each line as it was</summary>
     private static string ScaleLut(string lut, double factor)

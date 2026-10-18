@@ -172,4 +172,15 @@ public class SpringsAndBarsTests
         Assert.Equal(0.7, bar.Wear, 6);
         Assert.Equal(0, RunningGearFactory.BringUpToDate(Catalog, specs, Chevy66, null, parts));
     }
+
+    [Fact]
+    public void A_sway_bar_the_player_took_off_is_not_given_back_to_a_car_that_had_its_bars()
+    {
+        var specs = Specs();
+        var parts = RunningGearFactory.Create(Catalog, specs, 0.7);
+        parts.RemoveAll(p => RunningGear.IsSwayBarSlot(p.ParentSlot));
+
+        RunningGearFactory.BringUpToDate(Catalog, specs, Chevy66, null, parts, fromVersion: 2);
+        Assert.DoesNotContain(parts, p => RunningGear.IsSwayBarSlot(p.ParentSlot));
+    }
 }

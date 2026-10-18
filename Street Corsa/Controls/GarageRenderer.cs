@@ -1353,6 +1353,7 @@ public class GarageRenderer : DarkKn5ObjectRenderer
 
             var node = _propNodes[index];
             foreach (var mesh in node.List.GetAllChildren().OfType<IRenderableObject>().Where(o => o is not RenderableList)) mesh.IsEnabled = false;
+            node.IsStandIn = true;
             _standIns[node] = wheel;
             if (!_standInPaths.ContainsKey(wheel) && PathTo(root, wheel) is { } path)
                 _standInPaths[wheel] = path.Concat(wheel.GetAllChildren()).Append(wheel).ToHashSet();
@@ -1368,6 +1369,7 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         foreach (var (other, _) in _standIns.Where(s => ReferenceEquals(s.Value, wheel)).ToList())
         {
             foreach (var mesh in other.List.GetAllChildren().OfType<IRenderableObject>().Where(o => o is not RenderableList)) mesh.IsEnabled = true;
+            other.IsStandIn = false;
             _standIns.Remove(other);
         }
     }
@@ -1629,13 +1631,17 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         CarNode != null && MainSlot.GetCarBoundingBox() is { } box && Ray.Intersects(ray, box, out float distance) ? distance : null;
 
     /// <summary>Distance along the ray to the nearest of the meshes; null when it misses them all</summary>
-    private static float? Nearest(Ray ray, IEnumerable<IKn5RenderableObject> meshes)
+    /// <param name="boxes">
+    /// Whether a mesh's box is asked first; not for meshes switched off (a stand-in's): the list's box update leaves
+    /// them out, so theirs stays where they were when it was last worked out
+    /// </param>
+    private static float? Nearest(Ray ray, IEnumerable<IKn5RenderableObject> meshes, bool boxes = true)
     {
         float? nearest = null;
         foreach (var mesh in meshes)
         {
             // Triangle tests run per vertex on the CPU: only for meshes whose box the ray goes through
-            if (mesh.BoundingBox is { } box && !Ray.Intersects(ray, box, out float _)) continue;
+            if (boxes && mesh.BoundingBox is { } box && !Ray.Intersects(ray, box, out float _)) continue;
 
             if (mesh.CheckIntersection(ray) is { } hit && (nearest == null || hit < nearest)) nearest = hit;
         }
@@ -1738,8 +1744,11 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         /// <summary>Put out of sight by the player (its kind's show button): not drawn, not picked</summary>
         public bool IsHidden { get; set; }
 
+        /// <summary>The car's own wheel is drawn for it (<see cref="SetStandIns"/>): its meshes are off, but it is picked</summary>
+        public bool IsStandIn { get; set; }
+
         /// <summary>Distance along the ray to the part's surface; null when the ray misses it</summary>
-        public float? Intersect(Ray ray) => List.IsEnabled && !IsHidden ? Nearest(ray, _meshes) : null;
+        public float? Intersect(Ray ray) => List.IsEnabled && !IsHidden ? Nearest(ray, _meshes, !IsStandIn) : null;
     }
 
     protected override void DrawCars(DeviceContextHolder holder, ICamera camera, SpecialRenderMode mode)

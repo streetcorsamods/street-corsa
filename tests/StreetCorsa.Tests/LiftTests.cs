@@ -287,4 +287,20 @@ public class LiftTests
         Assert.Equal(LiftStop.Down, other.LiftStop);
         Assert.Equal(LiftStop.Full, car.LiftStop);
     }
+
+    [Fact]
+    public void A_car_parked_in_the_car_lot_comes_down_off_the_lift_unless_a_wheel_is_off()
+    {
+        var up = new Car("camaro") { HasRunningGearAssigned = true, LiftStop = LiftStop.WheelsClear };
+        up.Parts.AddRange(FactoryParts());
+        StreetCorsa.Services.CarLot.CarStorage.TakeOut(new Car("nova") { Warehouse = 1, Bay = 2 }, up);
+        Assert.Equal(LiftStop.Down, up.LiftStop);
+        Assert.Equal((1, 2), (up.Warehouse, up.Bay));
+
+        var wheelOff = new Car("camaro") { HasRunningGearAssigned = true, LiftStop = LiftStop.Full };
+        wheelOff.Parts.AddRange(FactoryParts());
+        wheelOff.Parts.Remove(Wheel(wheelOff.Parts, 0));
+        StreetCorsa.Services.CarLot.CarStorage.TakeOut(new Car("nova") { Warehouse = 1, Bay = 3 }, wheelOff);
+        Assert.Equal(LiftStop.Full, wheelOff.LiftStop);
+    }
 }

@@ -992,6 +992,11 @@ namespace StreetCorsa.Screens.Garage
             _gameState.Player.Parts.Remove(item.Part);
             _logger.Information("Mounted {Part} on {Where}", item.Part.DefinitionId, _isStand ? "the engine on the stand" : _car?.DefinitionId);
 
+            // A rear axle back under the car takes on what it carries that went on the car's own slots while it was off
+            if (!_isStand && _car != null && place.Parent == null && place.ParentSlot == RearAxle.CarSlot && Catalog is { } catalog
+                && RunningGearFactory.HangOnAxle(catalog, _car.Parts, _parts.Specs(_car.DefinitionId)?.HasLiveAxle ?? true) is var moved and > 0)
+                _logger.Information("{Count} part(s) on {Car}'s own corner slots went onto its rear axle", moved, _car.DefinitionId);
+
             SelectedShelfItem = null;
             var engineIn = place.Parent == null && place.ParentSlot == PartInstance.CarEngineSlot;
             Finish(item.Part.SelfAndDescendants().Count(), engineIn ? EngineInOutMinutes : null);
@@ -1321,9 +1326,10 @@ namespace StreetCorsa.Screens.Garage
                 return;
             }
 
-            var liveAxle = _car != null && (_parts.Specs(_car.DefinitionId)?.HasLiveAxle ?? true);
+            var specs = _car == null ? null : _parts.Specs(_car.DefinitionId);
+            var liveAxle = _car != null && (specs?.HasLiveAxle ?? true);
             var places = _isStand ? Workbench.FindPlacesOnStand(catalog, stand!, item.Part)
-                : Workbench.FindPlaces(catalog, _car!.Parts, item.Part, liveAxle);
+                : Workbench.FindPlaces(catalog, _car!.Parts, item.Part, liveAxle, specs?.DrivesRear ?? true);
 
             // Where it fits, but the work order says not yet: the reason is the hint, and the place is no place
             var engine = CurrentEngine;

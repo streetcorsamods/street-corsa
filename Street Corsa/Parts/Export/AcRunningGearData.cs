@@ -173,7 +173,8 @@ public static class AcRunningGearData
 
     private static double Positive(double value) => value > 0 && double.IsFinite(value) ? value : 0;
 
-    private static string? Lower(string? message)
+    /// <summary>A part's message as part of a sentence: lower case first, no full stop; null for none</summary>
+    internal static string? Lower(string? message)
     {
         var text = message?.Trim().TrimEnd('.');
         return string.IsNullOrEmpty(text) ? null : char.ToLowerInvariant(text[0]) + text[1..];

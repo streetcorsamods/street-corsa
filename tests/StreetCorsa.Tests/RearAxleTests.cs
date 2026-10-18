@@ -103,6 +103,27 @@ public class RearAxleTests
     }
 
     [Fact]
+    public void A_rear_axle_goes_only_under_a_car_whose_rear_wheels_are_driven()
+    {
+        var car = new Car("car_a") { HasPartsAssigned = true, HasRunningGearAssigned = true, GearVersion = RunningGearFactory.GearVersion };
+        Assert.Empty(Workbench.FindPlaces(Catalog, car.Parts, new PartInstance(Gm + "gm_10bolt"), drivesRear: false));
+    }
+
+    [Fact]
+    public void A_parts_becomes_finds_its_job_whatever_the_case_of_its_id()
+    {
+        var open = Catalog.Get(Gm + "gm_10bolt_open_high")!;
+        // A copy as a mod's pack would give it, the job named in another case
+        var part = Newtonsoft.Json.JsonConvert.DeserializeObject<PartDefinition>(Newtonsoft.Json.JsonConvert.SerializeObject(open))!;
+        part.Becomes = new() { ["Weld_Spiders"] = open.Becomes!["weld_spiders"] };
+        var problems = new List<string>();
+
+        Catalog.Rebuilds.CheckBecomes([part], Catalog.Get, problems);
+        Assert.Empty(problems);
+        Assert.Equal(open.Becomes["weld_spiders"], part.Becomes!["weld_spiders"]);
+    }
+
+    [Fact]
     public void The_workbench_puts_a_housing_on_a_free_axle_slot_and_a_carrier_into_a_housing_it_fits()
     {
         var car = new Car("car_a") { HasPartsAssigned = true, HasRunningGearAssigned = true, GearVersion = RunningGearFactory.GearVersion };
@@ -392,7 +413,8 @@ public class RearAxleTests
         var heavier = nine.Housing.Mass + nine.Carrier.Mass + nine.Gears.Mass + 2 * nine.Shaft.Mass
                       - (factory.Housing.Mass + factory.Carrier.Mass + factory.Gears.Mass + 2 * factory.Shaft.Mass);
         Assert.True(heavier > 0);
-        Assert.Equal(85 + heavier, new IniText(files["suspensions.ini"]).GetNumber("REAR", "HUB_MASS")!.Value, 1);
+        // Half on each wheel's hub
+        Assert.Equal(85 + heavier / 2, new IniText(files["suspensions.ini"]).GetNumber("REAR", "HUB_MASS")!.Value, 1);
         Assert.Equal(1500 + heavier, new IniText(files["car.ini"]).GetNumber("BASIC", "TOTALMASS")!.Value, 1);
 
         var drag = (1 - RearAxle.Drag(nine.Housing)) / (1 - RearAxle.Drag(factory.Housing));

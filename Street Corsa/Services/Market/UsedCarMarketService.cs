@@ -655,8 +655,9 @@ namespace StreetCorsa.Services.Market
 
                 if (stockBuildOf() is { } stockBuild) listing.IsModified = CarValuation.IsModified(engine.Root, stockBuild);
 
-                // A car whose engine was worked on had its rear axle seen to now and then: a posi, shorter gears
-                if (listing.IsModified && parts.CreateTunedRunningGear(carDef.Id, listing.Condition, listing.PowerHp ?? 0, _random) is { } gear)
+                // A car whose engine was worked on had its rear axle seen to now and then: a posi, shorter gears. Off the
+                // UI thread, which has the service's own Random: the shared one, as the engine's
+                if (listing.IsModified && parts.CreateTunedRunningGear(carDef.Id, listing.Condition, listing.PowerHp ?? 0, Random.Shared) is { } gear)
                 {
                     listing.Parts.AddRange(gear);
                     listing.HasRunningGearAssigned = true;

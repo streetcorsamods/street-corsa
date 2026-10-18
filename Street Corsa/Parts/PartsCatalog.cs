@@ -376,6 +376,22 @@ public sealed class PartsCatalog
     }
 
     /// <summary>
+    /// The parts of a group that go on the parent's slot (<see cref="FindMountable"/>), each once whatever the case of its
+    /// id, in the order of their ids; none for a part without the slot
+    /// </summary>
+    public List<PartDefinition> MountableOf(PartDefinition parent, int slotId, string group) =>
+        parent.Slots.FirstOrDefault(s => s.Id == slotId) is { } slot ? MountableOf(parent, slot, group) : [];
+
+    /// <inheritdoc cref="MountableOf(PartDefinition, int, string)"/>
+    public List<PartDefinition> MountableOf(PartDefinition parent, PartSlot slot, string group) =>
+        FindMountable(parent, slot).Select(m => m.Part).Where(p => PartKinds.GroupOf(p) == group)
+            .DistinctBy(p => p.Id, StringComparer.OrdinalIgnoreCase).OrderBy(p => p.Id, StringComparer.Ordinal).ToList();
+
+    /// <summary>The parts of a group, in the order of their ids</summary>
+    public List<PartDefinition> InGroup(string group) =>
+        _parts.Values.Where(p => PartKinds.GroupOf(p) == group).OrderBy(p => p.Id, StringComparer.Ordinal).ToList();
+
+    /// <summary>
     /// Every part that goes on a slot, with the slot of its own it goes on by: the same answer as trying
     /// <see cref="CanMate"/> against the whole catalog. Part configs copy attach lines between siblings, so a
     /// part of the parent's own kind shows up now and then (a block "on" another block's alternator slot);

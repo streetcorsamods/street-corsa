@@ -1025,12 +1025,6 @@ end
 -- it), the gearbox or a corner past what it could take with what it carried in, a blown tyre, an empty tank, the rear
 -- axle loaded past what it holds
 local function findBreakdown(car, data, dt)
-  if data.axleStrength then
-    local load = axleLoad(car)
-    if load > data.axlePeak then data.axlePeak = load end
-    local over = load / data.axleStrength - 1
-    if over > 0 and math.random() < 1 - math.exp(-AXLE_BREAK_RATE * over * dt) then return 'AXLE' end
-  end
   if car.engineLifeLeft <= 0 then return engineHeat.cause(data) or 'ENGINE' end
   if engineHeat.outOfFuel(car) then return 'FUEL' end
   if data.startGearbox + math.max(0, car.gearboxDamage) >= 1 then return 'GEARBOX' end
@@ -1038,6 +1032,15 @@ local function findBreakdown(car, data, dt)
     local wheel = car.wheels[w]
     if wheel.isBlown then return 'TYRE' end
     if data.startSuspension[w + 1] + math.max(0, wheel.suspensionDamage) / MAX_SUSPENSION_BEND >= 1 then return 'SUSPENSION' end
+  end
+  -- Last and on its own: a field this CSP does not give keeps the axle whole, not the rest from breaking
+  if data.axleStrength then
+    local ok, load = pcall(axleLoad, car)
+    if ok and load then
+      if load > data.axlePeak then data.axlePeak = load end
+      local over = load / data.axleStrength - 1
+      if over > 0 and math.random() < 1 - math.exp(-AXLE_BREAK_RATE * over * dt) then return 'AXLE' end
+    end
   end
   return nil
 end

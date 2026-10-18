@@ -140,7 +140,8 @@ namespace StreetCorsa.Services.Parts
 
         /// <summary>
         /// Forgets what <see cref="Shown(string, List{PartInstance}, CarLook?, CornerHeights?, PaintColour?)"/> keeps of
-        /// the cars' factory builds: the catalog editor has changed a car's factory engine
+        /// the cars' factory builds, and their factory running gear: the catalog editor has changed a car's factory engine
+        /// or its picks
         /// </summary>
         void ForgetFactoryBuilds() { }
     }

@@ -16,7 +16,8 @@ public static class Workbench
 {
     /// <param name="carParts">The parts mounted on the car itself (Car.Parts)</param>
     /// <param name="liveAxle">Whether the car's rear is a live axle, which carries the rear running gear (<see cref="RearAxle.Carries"/>)</param>
-    public static List<MountPlace> FindPlaces(PartsCatalog catalog, List<PartInstance> carParts, PartInstance loose, bool liveAxle = true)
+    /// <param name="drivesRear">Whether the car's rear wheels are driven: only then is there a place for a rear axle</param>
+    public static List<MountPlace> FindPlaces(PartsCatalog catalog, List<PartInstance> carParts, PartInstance loose, bool liveAxle = true, bool drivesRear = true)
     {
         var places = new List<MountPlace>();
         if (catalog.Get(loose.DefinitionId) is not { } looseDefinition) return places;
@@ -66,10 +67,10 @@ public static class Workbench
             return places;
         }
 
-        // A rear axle housing goes under the car on its axle slot; what goes on a housing finds it as on any part
+        // A rear axle housing goes under a rear-drive car on its axle slot; what goes on a housing finds it as on any part
         if (looseGroup == PartKinds.RearAxles)
         {
-            if (carParts.All(p => p.ParentSlot != RearAxle.CarSlot)) places.Add(new MountPlace(null, RearAxle.CarSlot, mountsBy));
+            if (drivesRear && carParts.All(p => p.ParentSlot != RearAxle.CarSlot)) places.Add(new MountPlace(null, RearAxle.CarSlot, mountsBy));
             return places;
         }
 
