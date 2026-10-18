@@ -85,8 +85,7 @@ public static class PartAssembler
         var kn5 = Kn5.CreateEmpty();
         kn5.RootNode.Name = name;
 
-        var min = new Vector3(float.MaxValue);
-        var max = new Vector3(float.MinValue);
+        (Vector3 Min, Vector3 Max)? bounds = null;
         var models = new Dictionary<string, IKn5?>(StringComparer.OrdinalIgnoreCase);
         var nodes = new List<PlacedPart>();
         var index = 0;
@@ -145,13 +144,7 @@ public static class PartAssembler
                 var clone = CloneMesh(mesh, materialIds.GetValueOrDefault(mesh.MaterialId));
                 if (placed.Stretch is { } stretch) Stretched(clone, stretch);
                 partNode.Children.Add(clone);
-
-                foreach (var vertex in clone.Vertices)
-                {
-                    var position = Vector3.Transform(new Vector3(vertex.Position.X, vertex.Position.Y, vertex.Position.Z), placed.World);
-                    min = Vector3.Min(min, position);
-                    max = Vector3.Max(max, position);
-                }
+                bounds = Kn5Bounds.Union(bounds, Kn5Bounds.Of(clone.Vertices, placed.World));
             }
 
             if (partNode.Children.Count > 0)
@@ -166,7 +159,8 @@ public static class PartAssembler
         if (kn5.RootNode.Children.Count == 0)
             throw new InvalidOperationException($"No part of '{name}' has a model");
 
-        return new AssemblyModel(kn5, min, max, nodes);
+        var (boxMin, boxMax) = bounds ?? (new Vector3(float.MaxValue), new Vector3(float.MinValue));
+        return new AssemblyModel(kn5, boxMin, boxMax, nodes);
 
         void AddPlaceholder(PlacedPart placed)
         {
@@ -177,8 +171,7 @@ public static class PartAssembler
             nodes.Add(placed);
 
             var centre = placed.World.Translation;
-            min = Vector3.Min(min, centre - new Vector3(PlaceholderMesh.HalfSize));
-            max = Vector3.Max(max, centre + new Vector3(PlaceholderMesh.HalfSize));
+            bounds = Kn5Bounds.Union(bounds, (centre - new Vector3(PlaceholderMesh.HalfSize), centre + new Vector3(PlaceholderMesh.HalfSize)));
         }
     }
 

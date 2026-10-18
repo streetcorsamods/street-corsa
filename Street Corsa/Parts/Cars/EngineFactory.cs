@@ -136,22 +136,10 @@ public static class EngineFactory
             Wear = Math.Clamp(WearAround(condition, random) + NewerPartBonus, 0.05, 1.0)
         };
 
-        // Whatever was on the old part has to find its place on the new one
+        // Whatever was on the old part has to find its place on the new one, as a tuner moves it (EngineTuner.MoveOnto)
         foreach (var child in old.Children)
         {
-            var childDefinition = catalog.Get(child.DefinitionId);
-            var childSlot = childDefinition?.Slots.FirstOrDefault(s => s.Id == child.OwnSlot);
-            var target = childSlot == null
-                ? null
-                : newDefinition.Slots
-                    .Where(s => s.Id != replacement.OwnSlot && replacement.Children.All(c => c.ParentSlot != s.Id))
-                    .OrderByDescending(s => s.Id == child.ParentSlot)
-                    .FirstOrDefault(s => catalog.CanMate(childDefinition!, childSlot, newDefinition, s));
-            if (target == null) return null;
-
-            var moved = PartTrees.Clone(child, keepIds: true);
-            moved.ParentSlot = target.Id;
-            replacement.Children.Add(moved);
+            if (!EngineTuner.MoveOnto(catalog, child, newDefinition, replacement)) return null;
         }
 
         var index = parent.Children.IndexOf(old);

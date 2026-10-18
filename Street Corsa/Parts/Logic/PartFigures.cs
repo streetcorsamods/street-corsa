@@ -1,5 +1,6 @@
 using System.Globalization;
 using Newtonsoft.Json.Linq;
+using StreetCorsa.Parts.Cars;
 
 namespace StreetCorsa.Parts.Logic;
 
@@ -215,14 +216,14 @@ public static class PartFigures
     /// <summary>The gears the parts give, the part's furthest out from the block (the last of <see cref="Of"/>); null when none gives any</summary>
     public static IReadOnlyList<double>? GearsOf(IReadOnlyList<PartFigureSet> sets) => sets.LastOrDefault(s => s.Gears != null)?.Gears;
 
-    /// <summary>What an engine of figures lacks to run, in words; null when it has what it needs</summary>
+    /// <summary>What an engine of figures lacks to run, in the player's words; null when it has what it needs</summary>
     public static string? MissingOf(DynoInputs inputs)
     {
-        if (inputs.Cylinders <= 0) return "the engine has no cylinders: none of its parts gives \"cylinders\".";
-        if (inputs.Bore <= 0) return "the engine has no bore: none of its parts gives \"bore\".";
-        if (inputs.Stroke <= 0) return "the engine has no stroke: none of its parts gives \"stroke\".";
-        if (inputs.ClearanceVolume <= 0) return "the engine has no compression: none of its parts gives \"compression\" or \"chamber\".";
-        if (inputs.MaxFuelFlow <= 0) return "nothing feeds the engine: there is no carburettor or injection on the intake.";
+        if (inputs.Cylinders <= 0) return PartWords.Say("engine.problem.figures.no_cylinders");
+        if (inputs.Bore <= 0) return PartWords.Say("engine.problem.figures.no_bore");
+        if (inputs.Stroke <= 0) return PartWords.Say("engine.problem.figures.no_stroke");
+        if (inputs.ClearanceVolume <= 0) return PartWords.Say("engine.problem.figures.no_compression");
+        if (inputs.MaxFuelFlow <= 0) return PartWords.Say(EngineDyno.NotFedKey);
         return null;
     }
 

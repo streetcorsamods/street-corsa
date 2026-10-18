@@ -72,8 +72,9 @@ lacks today goes on a list to make).
   - the bore, stroke, deck height, rod length, pin height and dome with the head's chamber make the clearance volume
     and the compression;
   - each head breathes through its valves' area times the cam's lift over the cylinder volume, times the manifold's
-    and the header's flow (`BreatherFactor` 0.9); the banks of a vee are averaged, an engine with a head missing has
-    no breathing (and does not run);
+    and the header's flow (`BreatherFactor` 0.9); the banks of a vee are averaged (their limits are not: the engine's
+    top speed and its most fuel and air are the tighter of the two banks', and a bank without one leaves the other's
+    standing), an engine with a head missing has no breathing (and does not run);
   - the cam's durations, lobe separation and advance (held to its range, in its steps) make the valve events;
   - every part and what hangs on it is gone over, the last slot first: the weakest `max_rpm` is the engine's top
     speed, a fuel system gives its mixture, its fuel (`fuels.json`) and the least fuel and air of all of them (the air
@@ -91,6 +92,10 @@ lacks today goes on a list to make).
 - `EngineEvaluator` → `EngineReport`: runs or not and why (the parts' own words), curve, idle, limiter, inertia, gears,
   final, drive type, diff lock, mass. The block's `needs` are asked first, in order, then the compression its fuel
   takes ("too low", "too high"), then every other part's `needs`; an engine with no fuel system says nothing feeds it.
+  The reasons that are the game's own, not a pack's (the compression, nothing feeding it, no displacement, no rev
+  range, figures past any engine) are the `engine.problem.*` lines of `text/ui_parts.json` through `PartWords`, their
+  numbers written the same in every locale; the tools, which read no text, show the keys. The idle, from a block's
+  spec or a part's figure alike, is held between 300 rpm and half the limiter.
 - `PartFigures`: a part's own engine figures (pack.json `"figures"`, plain metric; see the modding guide's "An engine
   of figures") go over what the specs came to before the dyno runs; a block without specs makes an engine of figures
   alone on `PartFigures.DataEngineBase`. Turbos and blowers of figures are `DynoInputs.Chargers`, their boost added.

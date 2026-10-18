@@ -20,7 +20,7 @@ namespace StreetCorsa.Parts.Cars;
 /// </summary>
 public static partial class AcSpecs
 {
-    private const double HpPerKw = 1.34102;
+    private const double HpPerKw = Logic.EngineDyno.HpPerKw;
     private const double MetresPerMile = Helpers.Conversion.KmPerMile * 1000;
     private const double MetresPerFoot = 0.3048;
 

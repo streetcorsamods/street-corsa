@@ -76,7 +76,10 @@ public sealed class PartsCatalog
         var aliases = new List<(ModInfo Mod, string Gone, string Current)>();
         var buildAliases = new List<(ModInfo Mod, string Gone, string Current)>();
         var models = new List<(ModInfo Mod, string Root, string Label, string Part, string Model)>();
-        var classes = PartClasses.Load(roots.Select(r => r.Dir));
+
+        // The classes in use are the one source: what PartKinds.Is goes by (the installed mods' files, read once; a tool
+        // or a test sets its own before it loads a catalog), so a class the game would not know is the one told of
+        var classes = PartClasses.Current;
 
         foreach (var (mod, root) in roots)
         {
@@ -112,14 +115,14 @@ public sealed class PartsCatalog
                     // A mod written for the pack format of before, or a class of no file, loads but does nothing
                     if (part.OlderFormatFields.ToList() is { Count: > 0 } older)
                         catalog._problems.Add($"{packName}: {part.Id}: {string.Join(", ", older)} are of the older pack format and not read; a part has a class, specs and needs now (docs/modding.md)");
-                    if (!string.IsNullOrWhiteSpace(part.Class) && !classes.Parents.ContainsKey(part.Class) && !PartClasses.Current.Parents.ContainsKey(part.Class)
+                    if (!string.IsNullOrWhiteSpace(part.Class) && !classes.Parents.ContainsKey(part.Class)
                         && !part.Class.Equals(PartClasses.Part, StringComparison.OrdinalIgnoreCase))
                         catalog._problems.Add($"{packName}: {part.Id}: the class {part.Class} is in no {PartClasses.FileName}; the part counts as no kind of part");
                 }
             }
 
-            ReadAliases(catalog, root, label, mod, aliases);
-            ReadBuildAliases(catalog, root, label, mod, buildAliases);
+            ReadAliasFile(catalog, root, PartPack.AliasesFileName, label, mod, aliases, "parts that changed ids are not found by their old ones");
+            ReadAliasFile(catalog, root, EngineBuild.AliasesFileName, label, mod, buildAliases, "builds that changed ids are not found by their old ones");
             ReadModels(catalog, root, label, mod, models);
             ReadBuilds(catalog, root, label, mod, builds);
         }
@@ -237,28 +240,29 @@ public sealed class PartsCatalog
         }
     }
 
-    private static void ReadAliases(PartsCatalog catalog, string root, string label, ModInfo mod, List<(ModInfo, string, string)> aliases)
+    /// <summary>
+    /// A mod's file of old ids to current ones (<see cref="PartPack.AliasesFileName"/> for parts,
+    /// <see cref="EngineBuild.AliasesFileName"/> for builds), each alias onto <paramref name="aliases"/>. An alias to
+    /// nothing would leave a saved part (or a car's build) with no id at all: told and left out. A file that does not
+    /// read is told with <paramref name="lostMessage"/>, what the game loses without it.
+    /// </summary>
+    private static void ReadAliasFile(PartsCatalog catalog, string root, string fileName, string label, ModInfo mod,
+        List<(ModInfo, string, string)> aliases, string lostMessage)
     {
-        var aliasesFile = Path.Combine(root, PartPack.AliasesFileName);
+        var file = Path.Combine(root, fileName);
         try
         {
-            if (!File.Exists(aliasesFile)) return;
+            if (!File.Exists(file)) return;
 
-            foreach (var (gone, current) in JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText(aliasesFile)) ?? new())
+            foreach (var (gone, current) in JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText(file)) ?? new())
             {
-                // An alias to nothing would leave a saved part with no id at all
-                if (string.IsNullOrWhiteSpace(current))
-                {
-                    catalog._problems.Add($"{label}{PartPack.AliasesFileName}: {gone} leads nowhere; left out");
-                    continue;
-                }
-
-                aliases.Add((mod, gone, current));
+                if (string.IsNullOrWhiteSpace(current)) catalog._problems.Add($"{label}{fileName}: {gone} leads nowhere; left out");
+                else aliases.Add((mod, gone, current));
             }
         }
         catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
         {
-            catalog._problems.Add($"{label}{PartPack.AliasesFileName}: {ex.Message}; parts that changed ids are not found by their old ones");
+            catalog._problems.Add($"{label}{fileName}: {ex.Message}; {lostMessage}");
         }
     }
 
@@ -293,25 +297,6 @@ public sealed class PartsCatalog
     {
         [JsonProperty("models")]
         public Dictionary<string, string>? Models { get; set; }
-    }
-
-    private static void ReadBuildAliases(PartsCatalog catalog, string root, string label, ModInfo mod, List<(ModInfo, string, string)> aliases)
-    {
-        var file = Path.Combine(root, EngineBuild.AliasesFileName);
-        try
-        {
-            if (!File.Exists(file)) return;
-
-            foreach (var (gone, current) in JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText(file)) ?? new())
-            {
-                if (string.IsNullOrWhiteSpace(current)) catalog._problems.Add($"{label}{EngineBuild.AliasesFileName}: {gone} leads nowhere; left out");
-                else aliases.Add((mod, gone, current));
-            }
-        }
-        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
-        {
-            catalog._problems.Add($"{label}{EngineBuild.AliasesFileName}: {ex.Message}; builds that changed ids are not found by their old ones");
-        }
     }
 
     private static void ReadBuilds(PartsCatalog catalog, string root, string label, ModInfo mod, ContentRegistry<EngineBuild> builds)
@@ -369,8 +354,8 @@ public sealed class PartsCatalog
         return Shifts.Add(part.Id, slotId, delta);
     }
 
-    /// <summary>A part by its id, or by the id it had in a pack that has since been replaced</summary>
-    public PartDefinition? Get(string id) => _parts.GetValueOrDefault(id) ?? _parts.GetValueOrDefault(CurrentId(id));
+    /// <summary>A part by its id, or by the id it had in a pack that has since been replaced; null for no id at all</summary>
+    public PartDefinition? Get(string? id) => id == null ? null : _parts.GetValueOrDefault(id) ?? _parts.GetValueOrDefault(CurrentId(id));
 
     /// <summary>The id an engine build goes by now: its own, or the one of the build that took its place</summary>
     public string CurrentBuildId(string id)

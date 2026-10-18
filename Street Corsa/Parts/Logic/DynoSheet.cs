@@ -32,10 +32,19 @@ internal sealed class DynoSheet
 
     public DynoSheet Clone() => (DynoSheet)MemberwiseClone();
 
-    /// <summary>The engine of two banks: each figure halfway between them, the cylinders and the fuel's limits as they were</summary>
+    /// <summary>
+    /// The engine of two banks: each figure halfway between them, the cylinders and the fuel's limits as they were. The
+    /// top speed and the most fuel and air are limits, not figures: the engine's is the tighter of the banks', and a
+    /// bank without one (<see cref="NoMaxRpm"/>, 0 flow) leaves the other's standing, as the weakest part sets the top
+    /// speed of the whole (a V8 with one head short of <c>max_rpm</c> revs as far as the other head allows, not half
+    /// way to nowhere)
+    /// </summary>
     public void BeAverageOf(DynoSheet one, DynoSheet other)
     {
         static double Mid(double a, double b) => (a + b) * 0.5;
+
+        // The tighter of two limits; one bank's alone where the other has none
+        static double Tighter(double a, double b, double none) => a <= none ? b : b <= none ? a : Math.Min(a, b);
 
         Bore = Mid(one.Bore, other.Bore);
         Stroke = Mid(one.Stroke, other.Stroke);
@@ -62,9 +71,9 @@ internal sealed class DynoSheet
         BoostWastegate = Mid(one.BoostWastegate, other.BoostWastegate);
         MixtureRatio = Mid(one.MixtureRatio, other.MixtureRatio);
         MixtureHeat = Mid(one.MixtureHeat, other.MixtureHeat);
-        MaxFuelFlow = Mid(one.MaxFuelFlow, other.MaxFuelFlow);
-        MaxAirFlow = Mid(one.MaxAirFlow, other.MaxAirFlow);
-        MaxRpm = Mid(one.MaxRpm, other.MaxRpm);
+        MaxFuelFlow = Tighter(one.MaxFuelFlow, other.MaxFuelFlow, 0);
+        MaxAirFlow = Tighter(one.MaxAirFlow, other.MaxAirFlow, 0);
+        MaxRpm = Tighter(one.MaxRpm, other.MaxRpm, NoMaxRpm);
     }
 
     public DynoInputs ToInputs() => new()

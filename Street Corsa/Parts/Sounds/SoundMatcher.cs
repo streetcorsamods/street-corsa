@@ -146,15 +146,5 @@ public static class SoundMatcher
     }
 
     // FNV-1a over both ids: the same block always lands on the same sound, and blocks spread over equal sounds
-    private static uint Spread(string blockId, string soundId)
-    {
-        var hash = 2166136261u;
-        foreach (var c in blockId + "\n" + soundId)
-        {
-            hash ^= c;
-            hash *= 16777619u;
-        }
-
-        return hash;
-    }
+    private static uint Spread(string blockId, string soundId) => Helpers.StableHash.Fnv(blockId + "\n" + soundId);
 }

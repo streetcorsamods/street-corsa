@@ -31,9 +31,13 @@ public static class SavedParts
     }
 
     /// <param name="parent">What <paramref name="part"/> hangs on, when it hangs on something</param>
+    /// <param name="depth">How deep the part hangs: what hangs deeper than <see cref="PartInstance.MaxDepth"/> is left as it is,
+    /// as the save is read (a stack overflow cannot be caught, and a save is anyone's file)</param>
     /// <returns>True when a joint was made again or a part came off</returns>
-    private static bool Renew(PartsCatalog catalog, PartInstance part, List<PartInstance> loose, PartInstance? parent = null)
+    private static bool Renew(PartsCatalog catalog, PartInstance part, List<PartInstance> loose, PartInstance? parent = null, int depth = 0)
     {
+        if (depth >= PartInstance.MaxDepth) return false;
+
         part.DefinitionId = catalog.CurrentId(part.DefinitionId);
 
         var children = part.Children.ToList();
@@ -73,7 +77,7 @@ public static class SavedParts
 
         // A part knows the slot it hangs by now, so its own joints can be looked at; one that came off
         // still carries parts of its own
-        foreach (var child in children) changed |= Renew(catalog, child, loose, hangsOn[child]);
+        foreach (var child in children) changed |= Renew(catalog, child, loose, hangsOn[child], depth + 1);
 
         return changed;
     }

@@ -12,7 +12,10 @@
     "condition ({wear} %) and how many parts come with it ({count}). part_group.*: the shelves of part_groups.json, by id.",
     "part_show.*: the parts view's buttons of part_groups.json's shows, by id. layout.*: where a car carries its engine,",
     "by the layout's name in cars.json; layout.guessed: the Car Catalog Editor's guess, {layout} a layout.* line.",
-    "rebuild.*: the jobs of parts/rebuilds.json, by id; rebuild.why.*: why a job cannot be done on a part now."
+    "rebuild.*: the jobs of parts/rebuilds.json, by id; rebuild.why.*: why a job cannot be done on a part now.",
+    "engine.problem.*: why an engine does not run, as the engine sheet says it when no part's own words say why: {compression} a",
+    "compression ratio (\"7.5\"), {hp} and {nm} the dyno's figures, {rpm} and {most} engine speeds, {part} a part's name, {fault} what",
+    "went wrong in the code's words. engine.problem.figures.*: what an engine of figures alone lacks."
   ],
   "lines": {
     "condition.zone.front": "front",
@@ -381,6 +384,21 @@
     "rebuild.flywheel_lighten": "Lighten the flywheel",
     "rebuild.flywheel_lighten.done": "lightened",
     "rebuild.flywheel_lighten.turn": "Metal off on the lathe",
-    "rebuild.flywheel_lighten.balance": "Balanced again"
+    "rebuild.flywheel_lighten.balance": "Balanced again",
+    "engine.problem.not_evaluated": "the engine could not be evaluated: {fault}",
+    "engine.problem.compression_low": "the static compression is too low in the engine. At least {compression}:1 is needed. Try another air/fuel mixture ratio, or raise the compression with other cylinder heads, connecting rods or pistons.",
+    "engine.problem.compression_high": "the static compression is too high in the engine. Not more than {compression}:1 is allowed. Try another air/fuel mixture ratio, or lower the compression with other cylinder heads, connecting rods or pistons.",
+    "engine.problem.not_fed": "nothing feeds the engine: there is no carburettor or injection on the intake.",
+    "engine.problem.no_power": "the engine makes no power on the dyno.",
+    "engine.problem.absurd_power": "the dyno makes {hp} hp and {nm} Nm, past any engine: a part's figures are not what they should be.",
+    "engine.problem.missing_part": "{part} is missing a part.",
+    "engine.problem.no_displacement": "the engine has no displacement: its cylinders, bore and stroke come to none.",
+    "engine.problem.no_compression": "the engine has no compression to speak of ({compression}:1).",
+    "engine.problem.no_rev_range": "the engine has no rev range: neither \"rev_limit\" nor \"max_rpm\" is above 0.",
+    "engine.problem.revs_past_any": "the engine would rev to {rpm} rpm, past the {most} any engine may (\"max_rpm\", or a quarter past \"rev_limit\").",
+    "engine.problem.figures.no_cylinders": "the engine has no cylinders: none of its parts gives \"cylinders\".",
+    "engine.problem.figures.no_bore": "the engine has no bore: none of its parts gives \"bore\".",
+    "engine.problem.figures.no_stroke": "the engine has no stroke: none of its parts gives \"stroke\".",
+    "engine.problem.figures.no_compression": "the engine has no compression: none of its parts gives \"compression\" or \"chamber\"."
   }
 }

@@ -177,9 +177,13 @@ public sealed class OwnPartLogicReviewTests : IDisposable
         var both = new DynoSheet();
         both.BeAverageOf(one, other);
 
-        // The fuel's limits are checked against, never averaged: they are the same on every bank
-        foreach (var field in doubles.Where(f => f.Name is not (nameof(DynoSheet.MinCompression) or nameof(DynoSheet.MaxCompression))))
+        // The fuel's limits are checked against, never averaged: they are the same on every bank. The top speed and the
+        // most fuel and air are limits too: the tighter bank's, never the middle of the two
+        string[] limits = [nameof(DynoSheet.MaxRpm), nameof(DynoSheet.MaxFuelFlow), nameof(DynoSheet.MaxAirFlow)];
+        foreach (var field in doubles.Where(f => f.Name is not (nameof(DynoSheet.MinCompression) or nameof(DynoSheet.MaxCompression)) && !limits.Contains(f.Name)))
             Assert.True((double)field.GetValue(both)! == 1001.0 + 2 * doubles.IndexOf(field), $"{field.Name} is not averaged");
+        foreach (var field in doubles.Where(f => limits.Contains(f.Name)))
+            Assert.True((double)field.GetValue(both)! == 1000.0 + 2 * doubles.IndexOf(field), $"{field.Name} is not the tighter limit");
 
         one.Cylinders = 6;
         var inputs = one.ToInputs();

@@ -13,7 +13,7 @@ public sealed record RearAxleParts(PartInstance? Housing, PartInstance? Carrier,
 
 /// <summary>
 /// The rear axle (step 31): a housing on the car's own axle slot, a differential carrier on it, the ring and pinion on the
-/// carrier and an axle shaft each side. Parts of data: what each does is a figure in its pack's <c>properties</c>
+/// carrier and an axle shaft each side. Parts of data: what each does is a figure in its pack's <c>specs</c>
 /// (<c>strength</c> in Nm at the axle, <c>ratio</c>, <c>diff_power</c>, <c>diff_coast</c>, <c>diff_preload</c> in Nm,
 /// <c>drag</c> the share of the engine's torque the housing's gears take). They mate by standard fittings
 /// (<c>axle:&lt;family&gt;</c>, <c>gears:&lt;family&gt;</c>, <c>shaft:&lt;family&gt;</c>), so any mod's axle and carrier meet.

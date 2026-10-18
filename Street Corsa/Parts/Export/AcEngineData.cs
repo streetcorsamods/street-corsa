@@ -268,7 +268,7 @@ public static class AcEngineData
         // Each turbo with the boost it makes at a speed, bar: the parts' specs', then their figures'
         var turbos = new List<(Func<double, double> Boost, double LagUp, double LagDown)>();
         var scriptTurbo = report.Turbocharged && inputs.BoostMax > 0;
-        if (scriptTurbo) turbos.Add((rpm => EngineDyno.ScriptBoostBar(inputs, rpm), report.TurboLagUp, report.TurboLagDown));
+        if (scriptTurbo) turbos.Add((rpm => EngineDyno.SpecsBoostBar(inputs, rpm), report.TurboLagUp, report.TurboLagDown));
         foreach (var charger in inputs.Chargers.Where(c => c.Turbo)) turbos.Add((charger.BoostAt, charger.LagUp, charger.LagDown));
 
         // The car's data has sections for so many: parts that bring more (one each, on several parts) give the first
