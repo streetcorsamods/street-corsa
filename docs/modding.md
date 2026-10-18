@@ -365,7 +365,7 @@ A job with `"becomes": true` turns a part into another, with what is on it, its 
 in its pack, by the job's id (`"becomes": { "weld_spiders": "running_gear/axles_gm/gm_10bolt_welded_low" }` on the base
 game's open carriers, the welded carrier on the same shelf). It is offered only on parts that name one, and may restore
 nothing (`"restores": 0`): the part is no better, it is something else. Not for a machine shop. A target that is no part,
-or on another shelf, is told as a mod problem and left out. A welded carrier is priced by its own `price_lock` (how hard
+left null or blank, or on another shelf, is told as a mod problem and left out. A welded carrier is priced by its own `price_lock` (how hard
 it locks, as the differentials' price reads it) rather than as the spool it acts like.
 
 The player's own work (a kit) lands round what the job can do: `roll` (0 to 0.5) is how far under `restores` it may come
@@ -420,7 +420,8 @@ with, and each part's class says what it adds (`Parts/Logic/EngineAssembly.cs` i
 - **The bottom end.** The block's `bore` and `cylinders`; the crankshaft's `stroke`; with the block's `deck_height`
   (crank centre to deck), the rods' `rod_length`, the pistons' `pin_height` (pin centre to crown) and `dome` (cc taken
   out of the chamber) and the head's `chamber` (cc), the volume left over the piston, and so the compression.
-- **The heads.** Each head (each bank of a vee, the banks averaged) breathes through its valves (`intake_valve`,
+- **The heads.** Each head (each bank of a vee, the banks averaged; a limit, `max_rpm` or a fuel system's flow, is the
+  tighter bank's, and a bank without one leaves the other's standing) breathes through its valves (`intake_valve`,
   `exhaust_valve` in mm, `intake_valves`, `exhaust_valves` per cylinder) opened by the camshaft's lift (`intake_lift`,
   `exhaust_lift`, mm) over the cylinder's volume, times the intake manifold's and the header's `flow` (0 to 1) and the
   head's own `intake_port`/`exhaust_port` (1 when left out). Worn valves pass a tenth less. `heat_loss` is what the

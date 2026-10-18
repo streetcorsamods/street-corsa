@@ -27,7 +27,7 @@
     <Compile Include="..\..\Street Corsa\Parts\WorkOrder.cs" Link="Parts\WorkOrder.cs" />
     <Compile Include="..\..\Street Corsa\Parts\PartRebuilds.cs" Link="Parts\PartRebuilds.cs" />
     <Compile Include="..\..\Street Corsa\Parts\EngineLayout.cs" Link="Parts\EngineLayout.cs" />
-    <Compile Include="..\..\Street Corsa\Parts\Cars\*.cs" Exclude="..\..\Street Corsa\Parts\Cars\CarCondition.cs;..\..\Street Corsa\Parts\Cars\RepairShop.cs;..\..\Street Corsa\Parts\Cars\GasStation.cs;..\..\Street Corsa\Parts\Cars\AttendantCheck.cs;..\..\Street Corsa\Parts\Cars\CarLooks.cs" Link="Parts\Cars\%(Filename)%(Extension)" />
+    <Compile Include="..\..\Street Corsa\Parts\Cars\*.cs" Exclude="..\..\Street Corsa\Parts\Cars\CarCondition.cs;..\..\Street Corsa\Parts\Cars\RaceOutcome.cs;..\..\Street Corsa\Parts\Cars\RepairShop.cs;..\..\Street Corsa\Parts\Cars\GasStation.cs;..\..\Street Corsa\Parts\Cars\AttendantCheck.cs;..\..\Street Corsa\Parts\Cars\CarLooks.cs" Link="Parts\Cars\%(Filename)%(Extension)" />
     <Compile Include="..\..\Street Corsa\Models\Race\RaceStartState.cs" Link="Models\RaceStartState.cs" />
     <Compile Include="..\..\Street Corsa\Models\GameState\PartInstance.cs" Link="Models\PartInstance.cs" />
     <Compile Include="..\..\Street Corsa\Parts\Logic\*.cs" Link="Parts\Logic\%(Filename)%(Extension)" />
@@ -50,6 +50,7 @@
     <Compile Include="..\..\Street Corsa\Helpers\Multiplier.cs" Link="Helpers\Multiplier.cs" />
     <Compile Include="..\..\Street Corsa\Helpers\Unit.cs" Link="Helpers\Unit.cs" />
     <Compile Include="..\..\Street Corsa\Helpers\Conversion.cs" Link="Helpers\Conversion.cs" />
+    <Compile Include="..\..\Street Corsa\Helpers\StableHash.cs" Link="Helpers\StableHash.cs" />
   </ItemGroup>
 
 </Project>

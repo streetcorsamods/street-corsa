@@ -395,8 +395,13 @@ public sealed class SoundLibrary
             return null;
         }
 
-        // While a race has the car on another sound, its own bank is the kept one
-        var bank = AcCarSound.OwnBank(sound.BankPath)!;
+        // While a race has the car on another sound, its own bank is the kept one; a bank gone between the car's
+        // sound being found and read is the car's loss alone, not a bug of the game's
+        if (AcCarSound.OwnBank(sound.BankPath) is not { } bank)
+        {
+            _problems.Add($"{id}: its bank {Path.GetFileName(sound.BankPath)} is gone; the car's sound is left out");
+            return null;
+        }
 
         // A ui_car.json that is not there or does not parse says nothing; the car id will do for a name
         string brand = "", name = id;

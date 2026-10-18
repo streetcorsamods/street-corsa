@@ -340,7 +340,13 @@ public static class RunningGearFactory
         foreach (var (part, carSlot) in RearAxle.CornerParts(carParts).ToList())
         {
             if (catalog.Get(part.DefinitionId) is not { } definition || RearAxle.Carries(definition, carSlot, liveAxle) || carParts.Any(p => p.ParentSlot == carSlot)) continue;
-            carParts.Single(p => p.ParentSlot == RearAxle.CarSlot).Children.Remove(part);
+
+            // Off the housing that carries it: a save edited to hold two parts on the axle's slot is read as
+            // CornerParts reads it, the first one's; a part on neither stays where it is
+            var housing = carParts.FirstOrDefault(p => p.ParentSlot == RearAxle.CarSlot && p.Children.Contains(part));
+            if (housing == null) continue;
+
+            housing.Children.Remove(part);
             part.ParentSlot = carSlot;
             carParts.Add(part);
             moved++;

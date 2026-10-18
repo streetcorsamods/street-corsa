@@ -116,8 +116,7 @@ public static class CarHubs
             if (file == null || !File.Exists(file)) return new Model(null, null);
 
             var kn5 = Kn5.FromFile(file, SkippingTextureLoader.Instance, SkippingMaterialLoader.Instance, HierarchyOnlyNodeLoader.Instance);
-            var hubs = new Dictionary<string, Vector3>(StringComparer.Ordinal);
-            Walk(kn5.RootNode, Matrix4x4.Identity, hubs);
+            var hubs = WheelFit.HubsOf(kn5);
             var anchors = WheelFit.WheelNodes.All(hubs.ContainsKey)
                 ? new CarAnchors(hubs["WHEEL_LF"], hubs["WHEEL_RF"], hubs["WHEEL_LR"], hubs["WHEEL_RR"])
                 : null;
@@ -138,13 +137,4 @@ public static class CarHubs
     }
 
     private static bool HasMesh(Kn5Node node) => node.Children.Any(c => c.NodeClass != Kn5NodeClass.Base || HasMesh(c));
-
-    /// <summary>Each wheel node's place in the model, the first of each name (the main LOD's)</summary>
-    private static void Walk(Kn5Node node, Matrix4x4 parent, Dictionary<string, Vector3> hubs)
-    {
-        var world = node.NodeClass == Kn5NodeClass.Base ? ToNumerics(node.Transform) * parent : parent;
-        if (node.NodeClass == Kn5NodeClass.Base && Array.IndexOf(WheelFit.WheelNodes, node.Name) >= 0)
-            hubs.TryAdd(node.Name, world.Translation);
-        foreach (var child in node.Children) Walk(child, world, hubs);
-    }
 }

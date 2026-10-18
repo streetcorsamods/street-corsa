@@ -24,9 +24,8 @@ public sealed class CornerParts
 
 /// <summary>
 /// The running gear of a car: what sits on the car's own wheel slots, numbered as the game numbers them
-/// (the chassis script reads rim 101+i, brake 111+i, shock 301+i, spring 311+i for wheel i; 0-1 front, 2-3 rear,
-/// even numbers left). The tyre goes on the rim. What each part does to the car is read off its script fields
-/// with the framework's own formulas.
+/// (rim 101+i, brake 111+i, shock 301+i, spring 311+i for wheel i; 0-1 front, 2-3 rear, even numbers left). The tyre
+/// goes on the rim. What each part does to the car is read off its specs with the game's own formulas.
 /// </summary>
 public static class RunningGear
 {
@@ -319,6 +318,6 @@ public static class RunningGear
     public static double RimWidth(PartDefinition rim) => rim.Number("rim_width");
 
     /// <summary>A text property of a part, trimmed; null when it has none</summary>
-    private static string? Text(PartDefinition part, string property) =>
+    internal static string? Text(PartDefinition part, string property) =>
         part.Specs.GetValueOrDefault(property) is string text && text.Trim() is { Length: > 0 } trimmed ? trimmed : null;
 }

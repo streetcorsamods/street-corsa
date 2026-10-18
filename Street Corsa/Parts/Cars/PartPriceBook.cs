@@ -39,17 +39,24 @@ public sealed class PartPriceBook
     private readonly Dictionary<string, double> _middles = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, int> _carbMounts;
 
-    private PartPriceBook(Dictionary<string, double> power, Dictionary<string, int> carbMounts)
+    private PartPriceBook(Dictionary<string, double> power, Dictionary<string, int> carbMounts, IReadOnlyList<string> faults)
     {
         _power = power;
         _carbMounts = carbMounts;
+        Faults = faults;
     }
 
     /// <summary>No part measured: every part at its kind's base price and figure</summary>
-    public static PartPriceBook Empty { get; } = new(new(StringComparer.OrdinalIgnoreCase), new(StringComparer.OrdinalIgnoreCase));
+    public static PartPriceBook Empty { get; } = new(new(StringComparer.OrdinalIgnoreCase), new(StringComparer.OrdinalIgnoreCase), Array.Empty<string>());
 
     /// <summary>The parts measured on the dyno</summary>
     public int Measured => _power.Count;
+
+    /// <summary>
+    /// The builds that broke while the parts were measured on them, one line each, for the log (a build a part breaks
+    /// prices nothing, the rest still do); empty for a measuring taken back from disk
+    /// </summary>
+    public IReadOnlyList<string> Faults { get; }
 
     /// <summary>The power a part is worth on the dyno, hp; null for one no engine takes</summary>
     public double? PowerOf(string partId) => _power.TryGetValue(partId, out var power) ? power : null;
@@ -73,7 +80,11 @@ public sealed class PartPriceBook
             if (!Directory.Exists(folder)) continue;
 
             text.Append(Path.GetFullPath(folder)).Append('\n');
-            foreach (var file in Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories).Order(StringComparer.OrdinalIgnoreCase))
+
+            // A folder the game may not read is passed over, and a junction is not followed (a loop among them would
+            // never end): the measuring rests on what the catalog reads (PartsCatalog.PackFiles passes them over too)
+            var options = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.ReparsePoint };
+            foreach (var file in Directory.EnumerateFiles(folder, "*", options).Order(StringComparer.OrdinalIgnoreCase))
             {
                 var info = new FileInfo(file);
                 text.Append(Path.GetRelativePath(folder, file)).Append('|').Append(info.Length).Append('|').Append(info.LastWriteTimeUtc.Ticks).Append('\n');
@@ -152,10 +163,11 @@ public sealed class PartPriceBook
     /// </summary>
     public static PartPriceBook Create(PartsCatalog catalog, EngineBuildIndex index, IReadOnlyDictionary<string, double>? measured = null)
     {
+        var faults = new List<string>();
         var power = measured != null
             ? new Dictionary<string, double>(measured.Where(p => double.IsFinite(p.Value)).ToDictionary(p => p.Key, p => Math.Clamp(p.Value, 0, MaxPower)),
                 StringComparer.OrdinalIgnoreCase)
-            : Measure(catalog, index);
+            : Measure(catalog, index, faults);
 
         // The carburettors each part of the kinds priced by them takes
         var carbMounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
@@ -165,12 +177,13 @@ public sealed class PartPriceBook
             if (mounts > 0) carbMounts[part.Id] = mounts;
         }
 
-        var book = new PartPriceBook(power, carbMounts);
+        var book = new PartPriceBook(power, carbMounts, faults);
         book.FindMiddles(catalog);
         return book;
     }
 
-    private static Dictionary<string, double> Measure(PartsCatalog catalog, EngineBuildIndex index)
+    /// <param name="faults">Gets a line for every build that broke while measured</param>
+    private static Dictionary<string, double> Measure(PartsCatalog catalog, EngineBuildIndex index, List<string> faults)
     {
         var power = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
 
@@ -184,6 +197,7 @@ public sealed class PartPriceBook
 
         // Every other part: what it makes over the factory part in its place, on the build it does the most for
         var gains = new ConcurrentDictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+        var broke = new ConcurrentBag<string>();
         Parallel.ForEach(index.Runnable, new ParallelOptions { MaxDegreeOfParallelism = Threads }, build =>
         {
             try
@@ -191,9 +205,10 @@ public sealed class PartPriceBook
                 foreach (var (partId, gain) in Gains(catalog, build))
                     gains.AddOrUpdate(partId, gain, (_, most) => Math.Max(most, gain));
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // One build a part breaks is a build that prices nothing: the rest still do
+                // One build a part breaks is a build that prices nothing: the rest still do, and the log hears of it
+                broke.Add($"{build.Build.Id}: {ex.GetType().Name}: {ex.Message}; priced no part");
             }
         });
 
@@ -202,6 +217,7 @@ public sealed class PartPriceBook
             if (!power.ContainsKey(partId)) power[partId] = Math.Clamp(most, 0, MaxPower);
         }
 
+        faults.AddRange(broke.Order(StringComparer.Ordinal));
         return power;
     }
 

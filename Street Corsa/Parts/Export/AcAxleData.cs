@@ -63,7 +63,7 @@ public static class AcAxleData
             if (gears != null)
             {
                 if (gears.Id == factory.Gears.Id && own.Get("GEARS", "FINAL") is { } ownFinal) drivetrain.Set("GEARS", "FINAL", ownFinal);
-                else if (RearAxle.Ratio(gears) is var ratio and > 0 && double.IsFinite(ratio)) drivetrain.Set("GEARS", "FINAL", ratio, "0.000");
+                else if (AcCarIni.Bounded(RearAxle.Ratio(gears), AcCarIni.MaxRatio) is var ratio and > 0) drivetrain.Set("GEARS", "FINAL", ratio, "0.000");
             }
 
             if (carrier != null)
@@ -88,9 +88,10 @@ public static class AcAxleData
             Keep(DrivetrainFile, drivetrain);
         }
 
-        // The weight: the whole axle against the factory one; unsprung on a live axle, half on each wheel's hub (HUB_MASS is a wheel's)
-        var factoryMass = factory.Housing.Mass + factory.Carrier.Mass + factory.Gears.Mass + 2 * factory.Shaft.Mass;
-        var mass = mounted.All.Sum(p => catalog.Get(p.DefinitionId)?.Mass ?? 0) - factoryMass;
+        // The weight: the whole axle against the factory one; unsprung on a live axle, half on each wheel's hub (HUB_MASS is a
+        // wheel's). A pack's absurd weight is no figure (AcCarIni.MassOf): the part weighs nothing against the factory's
+        var factoryMass = AcCarIni.MassOf(factory.Housing) + AcCarIni.MassOf(factory.Carrier) + AcCarIni.MassOf(factory.Gears) + 2 * AcCarIni.MassOf(factory.Shaft);
+        var mass = mounted.All.Sum(p => AcCarIni.MassOf(catalog.Get(p.DefinitionId))) - factoryMass;
         if (Math.Abs(mass) > 0.05)
         {
             if (read(SuspensionsFile) is { } suspensionsText)

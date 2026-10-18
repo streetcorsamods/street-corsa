@@ -32,12 +32,8 @@ internal static class PlaceholderMesh
 
         var vertices = new List<Kn5Node.Vertex>();
         var indices = new List<ushort>();
-        var min = new Vector3(float.MaxValue);
-        var max = new Vector3(float.MinValue);
         foreach (var (centre, half) in boxes)
         {
-            min = Vector3.Min(min, centre - half);
-            max = Vector3.Max(max, centre + half);
             foreach (var (normal, u, v) in sides)
             {
                 var first = (ushort)vertices.Count;
@@ -55,6 +51,8 @@ internal static class PlaceholderMesh
             }
         }
 
+        // The box round every corner: the mesh's bounding sphere
+        var (min, max) = Kn5Bounds.Of(vertices) ?? (Vector3.Zero, Vector3.Zero);
         var middle = (min + max) / 2f;
         return new Kn5Node
         {

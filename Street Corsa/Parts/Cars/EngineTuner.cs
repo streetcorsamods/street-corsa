@@ -48,7 +48,7 @@ public sealed record TuneResult(PartInstance Engine, EngineReport Report, IReadO
 /// the radiator, a performance radiator or water pump goes on with the upgrade, and an upgrade that cannot be kept
 /// cool within the budget is not made. Keeping it cool does not count as one of the upgrades.
 ///
-/// The GameMaker version's rules (scr_get_car_upgrades, StructCar.tuneUp) on the part tree and the real dyno.
+/// The rules a rival tunes by, on the part tree and the game's own dyno.
 /// </summary>
 public static class EngineTuner
 {
@@ -476,28 +476,14 @@ public static class EngineTuner
         foreach (var child in old.Children)
         {
             var childDefinition = catalog.Get(child.DefinitionId);
-            var childSlot = childDefinition?.Slots.FirstOrDefault(s => s.Id == child.OwnSlot);
-            if (childDefinition == null || childSlot == null) return null;
-
-            var free = definition.Slots
-                .Where(s => s.Id != replacement.OwnSlot && replacement.Children.All(c => c.ParentSlot != s.Id))
-                .OrderByDescending(s => s.Id == child.ParentSlot)
-                .ToList();
-
-            var target = free.FirstOrDefault(s => catalog.CanMate(childDefinition, childSlot, definition, s));
-            if (target != null)
-            {
-                var moved = PartTrees.Clone(child, keepIds: true);
-                moved.ParentSlot = target.Id;
-                replacement.Children.Add(moved);
-                continue;
-            }
+            if (childDefinition == null || childDefinition.Slots.All(s => s.Id != child.OwnSlot)) return null;
+            if (MoveOnto(catalog, child, definition, replacement)) continue;
 
             // It does not go on the new part: the cheapest of its kind that does, with what was on it
             if (depth >= MaxReplacementDepth) return null;
 
             var group = PartKinds.GroupOf(childDefinition);
-            var options = free
+            var options = FreeSlotsFor(definition, replacement, child)
                 .SelectMany(s => catalog.FindMountable(definition, s).Select(c => (Slot: s, c.Part, OwnSlot: c.Slot)))
                 .Where(c => PartKinds.GroupOf(c.Part) == group)
                 .OrderBy(c => newPriceOf(c.Part));
@@ -523,6 +509,34 @@ public static class EngineTuner
 
         return replacement;
     }
+
+    /// <summary>
+    /// What was on the old part finds its place on the new one: <paramref name="child"/> (with what is on it, as a copy
+    /// keeping its ids) onto a free slot of <paramref name="replacement"/>, the slot of the same id as it sat on first,
+    /// else the first it mates with. False when it goes nowhere on the new part. The one way for the tuner and for the
+    /// factory's bolt-ons (<see cref="EngineFactory"/>).
+    /// </summary>
+    internal static bool MoveOnto(PartsCatalog catalog, PartInstance child, PartDefinition definition, PartInstance replacement)
+    {
+        var childDefinition = catalog.Get(child.DefinitionId);
+        var childSlot = childDefinition?.Slots.FirstOrDefault(s => s.Id == child.OwnSlot);
+        if (childDefinition == null || childSlot == null) return false;
+
+        var target = FreeSlotsFor(definition, replacement, child).FirstOrDefault(s => catalog.CanMate(childDefinition, childSlot, definition, s));
+        if (target == null) return false;
+
+        var moved = PartTrees.Clone(child, keepIds: true);
+        moved.ParentSlot = target.Id;
+        replacement.Children.Add(moved);
+        return true;
+    }
+
+    /// <summary>The slots of <paramref name="replacement"/> still free for <paramref name="child"/>, the one it sat on before first</summary>
+    private static List<PartSlot> FreeSlotsFor(PartDefinition definition, PartInstance replacement, PartInstance child) =>
+        definition.Slots
+            .Where(s => s.Id != replacement.OwnSlot && replacement.Children.All(c => c.ParentSlot != s.Id))
+            .OrderByDescending(s => s.Id == child.ParentSlot)
+            .ToList();
 
     private static string Name(PartDefinition part) => part.DisplayName ?? part.Name;
 }
