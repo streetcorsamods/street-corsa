@@ -153,13 +153,16 @@ calls back with, on the UI thread, takes the built-in line's place; the game nev
 ## Selling Cars
 `CarSaleService` (`ICarSaleService`), from the garage's Sell button (`Dialogs/SellCar`):
 - **To a dealer**, on the spot: `DealerShare` (60%) of what the car is worth, one hour (`GameAction.SellCar`). The
-  trade-in lot (`TradeInLocation`) puts it on sale at its worth times `CarPriceMultiplier`.
+  trade-in lot (`TradeInLocation`) puts it on sale at its worth times `CarPriceMultiplier`; the listing is made before
+  the car leaves the garage and the money is paid, so a listing that cannot be made leaves both where they were. The
+  dealers are the mods' alone (`dealers`): with none in any mod the market has no lots, and the player is told at start-up.
 - **To the scrapyard**, the only buyer of a totaled car (`CarCondition.IsTotaled`): 15% of its worth, ±20% (the same
   price every time for the same car, rolled from its instance id). It leaves the game.
 - **Through the paper**: an ad (`CarSaleAd` in `NewspaperAds.PlayerCars`) at the player's asking price ($100 up to
   three times the car's worth) costs $10 and half an hour (`GameAction.PlaceAd`) and runs 14 days. The car stays in the
-  garage and can race. Each day (`CarAdsReviewTask`) a buyer may call: a 60% chance for a car asked at 90% of its worth
-  or less, 12 points less for each tenth more, nobody at 140%; half that (`paperFreshChanceFactor`) for a car the player
+  garage and can race. Each day (`CarAdsReviewTask`) a buyer may call: a 60% chance (`paperBaseChance`) for a car asked
+  at 90% of its worth or less (`paperFairShare`), 12 points less for each tenth more (`paperChanceSlope` 1.2), nobody at
+  140%, 10% for a car nobody can put a worth on (`paperUnpricedChance`); half that (`paperFreshChanceFactor`) for a car the player
   has had fewer than 14 days (`paperFreshDays`). Every buyer haggles: the offer is drawn between 85% (`paperHaggleShare`)
   and all of the asking price, never below 80% of the car's worth (`paperFloorShare`) nor over the asking price, so a
   car bought cheap and put straight back in the paper can still turn a profit, a thin one. An offer holds two days; the

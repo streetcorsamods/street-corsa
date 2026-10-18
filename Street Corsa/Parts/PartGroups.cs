@@ -122,6 +122,13 @@ public sealed class PartGroups
     /// <summary>The kinds of part a speed shop sells: the ones that make power</summary>
     public bool SoldBySpeedShops(string group) => Get(group)?.SpeedShop == true;
 
+    /// <summary>
+    /// The kinds of part that are for sale at all: in the paper, by mail order, on the shops' shelves (the engine's parts
+    /// in the base game; the running gear is sold by what it is). A kind no file puts up for sale is sold only as far as an
+    /// engine build uses it.
+    /// </summary>
+    public bool ForSale(string group) => Get(group)?.ForSale == true;
+
     /// <summary>What a part of the kind costs new: its group's price, else an accessory's, else <see cref="PartPrice.Fallback"/></summary>
     public PartPrice PriceOf(string group) => Get(group)?.Price ?? Get(Accessories)?.Price ?? PartPrice.Fallback;
 
@@ -288,6 +295,10 @@ public sealed class PartGroup
     [JsonPropertyName("speed_shop")]
     public bool? SpeedShop { get; set; }
 
+    /// <summary>Whether parts of the kind are for sale at all: in the paper, by mail order, on the shelves (<see cref="PartGroups.ForSale"/>)</summary>
+    [JsonPropertyName("for_sale")]
+    public bool? ForSale { get; set; }
+
     /// <summary>What a part of the kind costs new (<see cref="PartPriceBook"/>); none: <see cref="PartPrice.Fallback"/></summary>
     [JsonPropertyName("price")]
     public PartPrice? Price { get; set; }
@@ -302,5 +313,6 @@ public sealed class PartGroup
         if (other.BoltOn != null) BoltOn = other.BoltOn;
         if (other.Tune != null) Tune = other.Tune;
         if (other.SpeedShop != null) SpeedShop = other.SpeedShop;
+        if (other.ForSale != null) ForSale = other.ForSale;
     }
 }

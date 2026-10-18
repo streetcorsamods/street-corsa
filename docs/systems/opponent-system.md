@@ -88,8 +88,8 @@ the mail-order price of parts, what a dealer or the scrapyard pays, a car's wort
 fallbacks for an empty market. Changing the prices changes what the rivals can do; the numbers below need no tuning
 with them.
 
-**Tuning** (`EngineTuner`): a few racers a day (`TuneChance` 15%, 30% while a part shop holds its closing-down sale;
-at most 3) keep a quarter of their car's worth back
+**Tuning** (`EngineTuner`): a few racers a day (`rivals.tuneChance` 15%, `saleTuneChance` 30% while a part shop holds
+its closing-down sale; at most `maxTunersPerDay` 3) keep a quarter of their car's worth back
 and spend up to 30% of the rest on one upgrade: the one with the best `gain% / cost × priority` (block swap 10, blower 8,
 carbs/injection 7, exhaust 6, manifold and camshaft 5, air 3), at least 3% more power on the dyno. A part the new one
 leaves without a place is replaced by the cheapest that fits (depth 5). The block swap is a bigger engine of the same
@@ -116,8 +116,9 @@ wins, 50 reputation), then sits at the diner. He only races for pink slips (a ca
 switches to pink slips when he is picked) and accepts any pink slip. Beating him is the King victory.
 
 **What the player sees:**
-- "Word on the street" at the diner (`GameState.StreetTalk`, the last 7 days, newest first): purchases, tuning,
-  repairs, going broke, coming back, new faces, pink slips and wrecks between rivals.
+- "Word on the street" at the diner (`GameState.StreetTalk`, the last 7 days (`rivals.streetTalkDays`), at most 40 things
+  (`maxStreetTalk`), newest first): purchases, tuning, repairs, going broke, coming back, new faces, pink slips and wrecks
+  between rivals.
 - A rival whose car can't race is not at the diner and not in events (`IOpponentChallengeService.CanRace`); rivals'
   cars race with their real damage.
 - Some buyers who answer the player's newspaper ads are rivals (`CarSaleService.RivalBuyer`, 40% when one wants the
@@ -181,7 +182,7 @@ for lapse, and the street hears. `RaceResultProcessor.ApplyGrudge` does the race
 | Service | Purpose |
 |---------|---------|
 | OpponentInitializationService | New career: the rivals with used cars with real parts, 6 on the street; the King |
-| OpponentLifeService | The daily review (buy, repair, sell, bankrupt, activate, tune, street talk, grudges lapse) |
+| OpponentLifeService | The daily review (buy, repair, sell, bankrupt, activate, tune, street talk, grudges lapse); what a review looks up once is its own `Review`, never the service's, so two overlapping reviews keep apart; the market half (`.Market.cs`) and the tuning (`.Tuning.cs`) are partial files |
 | Grudges | A rival's rematch after a pink slip lost to the player (pure) |
 | OpponentRules | The numbers of a rival's life (pure) |
 | EngineTuner | Dyno-checked tuning within a budget (Parts/Cars, pure) |

@@ -21,8 +21,8 @@
     "townTradePerDay": 0.2,
     "townBuysShare": 0.03,
     "dropLineChance": 0.35,
-    "saleClearOutShare": 0.2,
     "machineValueShare": 0.85,
+    "saleClearOutShare": 0.2,
     "kinds": {
       "speed": {
         "priceFactor": 1.1,
@@ -52,7 +52,7 @@
         "perShelfHigh": 5
       },
       "machine": {
-        "priceFactor": 1.0,
+        "priceFactor": 1,
         "buyFactor": 0,
         "stockLow": 1,
         "stockHigh": 1,
@@ -69,6 +69,7 @@
       "restockDays": 7,
       "perShelfLow": 2,
       "perShelfHigh": 5
-    }
+    },
+    "topUpChance": 0.5
   }
 }

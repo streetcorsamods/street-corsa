@@ -43,6 +43,21 @@ namespace StreetCorsa.Services.Parts
         Task<bool> EnsurePartsAsync(Car car);
 
         /// <summary>
+        /// <see cref="EnsurePartsAsync(Car)"/> for many cars at once (a day of the rivals'): their parts are put together on
+        /// one worker, the cars changed on the thread that called. How many cars changed.
+        /// </summary>
+        async Task<int> EnsurePartsAsync(IEnumerable<Car> cars)
+        {
+            var changed = 0;
+            foreach (var car in cars.ToList())
+            {
+                if (await EnsurePartsAsync(car)) changed++;
+            }
+
+            return changed;
+        }
+
+        /// <summary>
         /// Brings the parts of a loaded save in step with the catalog: a pack replaced by a later release gave its
         /// parts new ids and moved some slots. Parts of the player that no longer fit where they were go on the
         /// shelf; a car whose engine the catalog no longer has gets its factory engine again; parts and cars for

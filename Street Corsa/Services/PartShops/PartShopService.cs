@@ -159,18 +159,34 @@ namespace StreetCorsa.Services.PartShops
             return PartPricing.Round(PartPricing.WorthOfAssembly(_parts.Catalog, part) * PartShopRules.BuyFactor(definition));
         }
 
-        /// <summary>The part shops' shelves under the ids their parts go by now: a shelf is sold from by its part's id</summary>
+        /// <summary>
+        /// The part shops' shelves under the ids their parts go by now: a shelf is sold from by its part's id. Two old ids
+        /// aliased to one part (packs merged) leave two shelves of it: they become one, their counts together (the counter
+        /// sells from the first shelf with stock, a delivery counts the lines).
+        /// </summary>
         /// <returns>How many shelves changed</returns>
         public static int RenameShelves(PartsCatalog catalog, IEnumerable<PartShopLocation> shops)
         {
             var changed = 0;
-            foreach (var shelf in shops.SelectMany(shop => shop.Shelves))
+            foreach (var shop in shops)
             {
-                var current = catalog.CurrentId(shelf.DefinitionId);
-                if (current == shelf.DefinitionId) continue;
+                foreach (var shelf in shop.Shelves)
+                {
+                    var current = catalog.CurrentId(shelf.DefinitionId);
+                    if (current == shelf.DefinitionId) continue;
 
-                shelf.DefinitionId = current;
-                changed++;
+                    shelf.DefinitionId = current;
+                    changed++;
+                }
+
+                var first = new Dictionary<string, ShopShelf>(StringComparer.OrdinalIgnoreCase);
+                changed += shop.Shelves.RemoveAll(shelf =>
+                {
+                    if (first.TryAdd(shelf.DefinitionId, shelf)) return false;
+
+                    first[shelf.DefinitionId].Count += shelf.Count;
+                    return true;
+                });
             }
 
             return changed;
@@ -308,16 +324,17 @@ namespace StreetCorsa.Services.PartShops
             var dealsIn = assortment.Select(p => p.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
             var (perLow, perHigh) = PartShopRules.PerShelf(shop);
             var kept = shelves.Where(s => s.Count > 0 && dealsIn.Contains(s.DefinitionId) && random.NextDouble() >= PartShopRules.DropLineChance).ToList();
-            foreach (var shelf in kept.Where(_ => random.NextDouble() < 0.5)) shelf.Count = Math.Max(shelf.Count, random.Next(perLow, perHigh + 1));
+            foreach (var shelf in kept.Where(_ => random.NextDouble() < PartShopRules.TopUpChance)) shelf.Count = Math.Max(shelf.Count, random.Next(perLow, perHigh + 1));
 
             var (low, high) = PartShopRules.Stock(shop);
             var lines = Math.Min(assortment.Count, random.Next(low, high + 1));
             var candidates = assortment.Where(p => kept.All(s => !string.Equals(s.DefinitionId, p.Id, StringComparison.OrdinalIgnoreCase))).ToList();
             var weights = candidates.Select(p => shop.KindOf == PartShopKind.Speed ? 1 / Math.Sqrt(Math.Max(1, PartPricing.NewPrice(p))) : 1.0).ToList();
+            var total = weights.Sum();
 
             while (kept.Count < lines && candidates.Count > 0)
             {
-                var roll = random.NextDouble() * weights.Sum();
+                var roll = random.NextDouble() * total;
                 var pick = candidates.Count - 1;
                 for (var i = 0; i < candidates.Count; i++)
                 {
@@ -331,6 +348,7 @@ namespace StreetCorsa.Services.PartShops
 
                 kept.Add(new ShopShelf { DefinitionId = candidates[pick].Id, Count = random.Next(perLow, perHigh + 1) });
                 candidates.RemoveAt(pick);
+                total -= weights[pick];
                 weights.RemoveAt(pick);
             }
 

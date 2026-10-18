@@ -70,6 +70,19 @@ namespace StreetCorsa.Services.Street
             return true;
         }
 
+        /// <summary>
+        /// A scene that is shown without its picture, told in the log: its model is named outside its folder
+        /// (<paramref name="kn5"/> empty) or is not there (<paramref name="hasModel"/> false). Nothing for one that has it.
+        /// </summary>
+        /// <param name="what">The kind of scene, for the log ("gas station")</param>
+        internal static void WarnModel(IAppLogger logger, string what, string id, string model, string kn5, bool hasModel)
+        {
+            if (kn5.Length == 0)
+                logger.Warning("The " + what + " {Id} names a model outside its folder ({Model}): it is shown without its picture", id, model);
+            else if (!hasModel)
+                logger.Warning("The " + what + " {Id} has no model {Path}: it is shown without its picture", id, kn5);
+        }
+
         /// <summary>The lights of the day with the scene's lamps: white and the same at every hour, only scaled by it (a look colours them)</summary>
         internal static Dictionary<StreetLight, StreetLighting> Lights(Dictionary<string, SceneLighting.LightEntry?>? lights,
             List<SceneLighting.LampEntry?>? lamps, string id, IAppLogger logger)

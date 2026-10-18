@@ -69,6 +69,11 @@
     "minAskShare": 0.75,
     "maxAskShare": 0.9,
     "askReducedAfterDays": 7,
-    "askReduction": 0.9
+    "askReduction": 0.9,
+    "maxTunersPerDay": 3,
+    "tuneChance": 0.15,
+    "saleTuneChance": 0.3,
+    "streetTalkDays": 7,
+    "maxStreetTalk": 40
   }
 }

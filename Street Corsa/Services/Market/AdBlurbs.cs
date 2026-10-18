@@ -167,7 +167,7 @@ namespace StreetCorsa.Services.Market
         [GeneratedRegex(@"\s*\([^()]*\)")]
         private static partial Regex Bracketed();
 
-        /// <summary>The sort of standout a part is, by its script's classes; null for one not worth a word</summary>
+        /// <summary>The sort of standout a part is, by its class; null for one not worth a word</summary>
         private static string? KindOf(PartDefinition part) =>
             PartKinds.Is(part, PartClasses.Supercharger) ? "blower"
             : PartKinds.Is(part, PartClasses.Turbocharger) ? "turbo"

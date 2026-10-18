@@ -102,6 +102,22 @@ namespace StreetCorsa.Services.Opponents
         public static int AskReducedAfterDays => Rules.RuleBook.Current.Rivals.AskReducedAfterDays;
         public static decimal AskReduction => Rules.RuleBook.Current.Rivals.AskReduction;
 
+        /// <summary>At most this many racers tune their engines in a day (each is a few dozen dyno runs)</summary>
+        public static int MaxTunersPerDay => Rules.RuleBook.Current.Rivals.MaxTunersPerDay;
+
+        /// <summary>The chance a racer with money to spare works on the engine on a given day: now and then, not daily</summary>
+        public static double TuneChance => Rules.RuleBook.Current.Rivals.TuneChance;
+
+        /// <summary>
+        /// The same while a shop the tuners buy at (<see cref="PartShops.PartShopRules.SellsToTuners"/>) holds its closing-down
+        /// sale: the racers go after the bargains
+        /// </summary>
+        public static double SaleTuneChance => Rules.RuleBook.Current.Rivals.SaleTuneChance;
+
+        /// <summary>How long the street keeps talking about something, and how much it remembers at once</summary>
+        public static int StreetTalkDays => Rules.RuleBook.Current.Rivals.StreetTalkDays;
+        public static int MaxStreetTalk => Rules.RuleBook.Current.Rivals.MaxStreetTalk;
+
         /// <summary>
         /// Whether a racer gives up the scene today: gone broke once too often, laid up for too long, or, rarely, just
         /// moving on. <paramref name="roll"/> is 0 to 1.

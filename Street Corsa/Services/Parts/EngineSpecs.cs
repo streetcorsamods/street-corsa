@@ -96,15 +96,17 @@ namespace StreetCorsa.Services.Parts
             var sound = parts.ChooseSound(car, report)
                         ?? AcCarSound.FromCar(Path.Combine(AppSettings.Instance.CarsPath, car.DefinitionId), AppSettings.Instance.SfxGuidsPath);
 
+            // An engine without a dyno curve does not run (its problem says why): no torque and no cylinder count are
+            // made up here, the sim stands in its own figures for the cranking (EngineSim, BodyRock)
             Func<double, double> torque = dyno is { Curve.Count: > 0 }
                 ? rpm => dyno.TorqueAt(Math.Min(rpm, dyno.Curve[^1].Rpm))
-                : _ => 250;
+                : _ => 0;
 
             return new EngineSpec(
                 name,
                 report?.IdleRpm ?? 0,
                 report?.LimiterRpm ?? 0,
-                report?.Inputs?.Cylinders ?? 8,
+                report?.Inputs?.Cylinders ?? 0,
                 report?.Inertia ?? 0,
                 torque,
                 dyno?.MaxTorque ?? 0,

@@ -275,7 +275,7 @@ public class OpponentLifeServiceTests
     {
         var day = _state.Date;
         OpponentLifeService.AddTalk(_state, day, ["old news"]);
-        OpponentLifeService.AddTalk(_state, day.AddDays(OpponentLifeService.StreetTalkDays + 1), ["news"]);
+        OpponentLifeService.AddTalk(_state, day.AddDays(OpponentRules.StreetTalkDays + 1), ["news"]);
 
         Assert.Equal(new[] { "news" }, _state.StreetTalk.Select(t => t.Text));
     }

@@ -25,8 +25,24 @@ internal sealed class FakeMarket(decimal value, List<DealerLocation>? dealers = 
     public string TradeInLocation(IReadOnlyList<DealerLocation>? known, Car? car = null) => "industrial_motors";
     public List<DealerLocation> GetDefaultDealers() => dealers ?? [];
 
+    /// <summary>What each review's valuer (<see cref="Valuer"/>) values every car at, one review after another; unset: <see cref="Value"/></summary>
+    public Queue<decimal>? ValuersInTurn { get; set; }
+
+    public Func<Car, decimal> Valuer()
+    {
+        if (ValuersInTurn is not { Count: > 0 } turns) return ValueOf;
+
+        var value = turns.Dequeue();
+        return _ => value;
+    }
+
+    /// <summary>Set, every listing fails with it: a market whose ad words cannot be written</summary>
+    public Exception? ListCarThrows { get; set; }
+
     public UsedCarListing ListCar(Car car, decimal price, string location, DateTime listedDate, bool describeEngine = true)
     {
+        if (ListCarThrows != null) throw ListCarThrows;
+
         Listed.Add((car, price, location));
         return new UsedCarListing { CarDefinitionId = car.DefinitionId, Price = price, DealerLocation = location, ListedDate = listedDate };
     }

@@ -23,10 +23,10 @@ namespace StreetCorsa.Services.Market
         private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger("Market");
 
         /// <summary>
-        /// How much of its new price a thing in this shape is worth (0 to 1): wear takes 0.7 of it, 0.3 at nothing left
-        /// of it and all of it new, as a part's (<see cref="PartPricing.Worth"/>)
+        /// How much of its new price a thing in this shape is worth (0 to 1): the parts' one rule (<see cref="PartPricing.Shape"/>,
+        /// <c>economy.wearFloor</c> at nothing left of it, all of it new); a condition that is no number is as worn out
         /// </summary>
-        public static decimal Shape(double condition) => 0.3m + (decimal)Unit.Clamp01(condition, ifNotFinite: 0) * 0.7m;
+        public static decimal Shape(double condition) => (decimal)PartPricing.Shape(condition);
 
         /// <summary>One condition for the whole car: the average of engine, gearbox, body and tyres</summary>
         public static double ConditionOf(Car car) =>

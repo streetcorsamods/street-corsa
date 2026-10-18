@@ -149,8 +149,8 @@ namespace StreetCorsa.Services.Opponents
             Car opponentCar, CarDefinition opponentCarDef)
         {
             // What each car is worth as it stands: model, condition, engine. The same sum the market uses.
-            var playerCarValue = ValueOf(playerCar, playerCarDef);
-            var opponentCarValue = ValueOf(opponentCar, opponentCarDef);
+            var playerCarValue = ValueOf(playerCar);
+            var opponentCarValue = ValueOf(opponentCar);
 
             // A car worth nothing (no price for its model, a wreck) is nothing to stake either way. Without a
             // value to compare against, the ratio would divide by zero.
@@ -243,7 +243,7 @@ namespace StreetCorsa.Services.Opponents
             }
 
             // Car value ratio factor (more willing if player's car is worth more); both are worth something by now
-            var valueRatio = (double)(ValueOf(playerCar, playerCarDef) / ValueOf(opponentCar, opponentCarDef));
+            var valueRatio = (double)(ValueOf(playerCar) / ValueOf(opponentCar));
             if (valueRatio > 1.2)
             {
                 acceptanceChance += 0.15;
@@ -406,8 +406,7 @@ namespace StreetCorsa.Services.Opponents
         }
 
         /// <summary>The car's worth by <see cref="CarValuation"/>; a model without a price is worth what was paid for the car</summary>
-        private decimal ValueOf(Car car, CarDefinition definition) =>
-            CarValuation.WorthOf(car, _carProfileRepository.GetProfile, _partsService);
+        private decimal ValueOf(Car car) => CarValuation.WorthOf(car, _carProfileRepository.GetProfile, _partsService);
 
         #region Message Generation
 

@@ -71,13 +71,8 @@ namespace StreetCorsa.Services.Catalog
             _profileRepo = profileRepo;
             _parts = parts;
             _logger = AppLoggerFactory.CreateLogger(LogCategory.Catalog);
-            // The body's price, process-wide like the parts' (see CarPricing.Source): the catalog's figures, the mods' rules
-            CarPricing.Source = () =>
-            {
-                var cars = Figures;
-                return new CarPricing.Figures(cars.BodyPrice, cars.BodyKg, cars.BodyWeightPower, cars.MinBodyPrice, cars.MaxBodyPrice,
-                    cars.MinPlausibleWeightKg, cars.MaxPlausibleWeightKg);
-            };
+            // The body's price (CarPricing.Source, process-wide) is pointed at the mods' rules once, where the app is
+            // composed (Services.Parts.PartsWiring): not here, so a second service never takes it over
         }
 
         public CarProfile GenerateDefaultProfile(CarDefinition carDefinition)

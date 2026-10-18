@@ -258,7 +258,11 @@ namespace StreetCorsa
             CatalogRepository = new ContentCatalogRepository();
             CarImportService = new CarImportService(CatalogRepository);
             ProfileRepository = new CarProfileRepository();
-            CarPartsService = new Services.Parts.CarPartsService(CatalogRepository, ProfileRepository);
+            var carParts = new Services.Parts.CarPartsService(CatalogRepository, ProfileRepository);
+            CarPartsService = carParts;
+            // Every price and engine figure in the game reads the rules and this service's book from here on; the UI
+            // thread never waits for the book to be measured (the warm-up does that): base prices until it is
+            Services.Parts.PartsWiring.Wire(carParts, mayWait: () => Dispatcher.CheckAccess() == false);
             // Cars are priced by their factory engine and running gear: the parts first
             ProfileService = new CarProfileService(CatalogRepository, ProfileRepository, CarPartsService);
             var partShops = new Services.PartShops.PartShopCatalog();

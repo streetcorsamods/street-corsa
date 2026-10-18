@@ -152,11 +152,11 @@ it changes:
 | `time` | minutes each action takes (`actions`, by the game's action names), each part at the workbench, an engine in or out, the stand, the lift from one stop to the next, a tick of cruising, the shortest trip |
 | `difficulty` | the New Game screen's presets (`easy`, `normal`, `hard`) and how often pink slips come up at each frequency |
 | `police` | how likely a street race draws them, fines, the impound, cars per race, the AC cars they like best |
-| `rivals` | how many race, their money (`money`, by age band), going broke, trading up, leaving and coming back, selling cars on, a boss's money and record (`king`) |
+| `rivals` | how many race, their money (`money`, by age band), going broke, trading up, leaving and coming back, selling cars on, how many tune a day and how often (`maxTunersPerDay`, `tuneChance`, `saleTuneChance`), how long the street talks (`streetTalkDays`, `maxStreetTalk`), a boss's money and record (`king`) |
 | `dealers` | dealers opening and closing, closing-down sales, trade |
-| `partShops` | the junkyard, haggling, the regulars' discount, trade, and each kind of shop's prices and shelves (`kinds`) where a shop's own file says nothing |
-| `economy` | a factor on every part's price (`partsPriceFactor`; the prices themselves are part_groups.json's), used and trade-in shares, mail order, the paper's part ads, a prize camshaft's cash |
-| `market` | the dealers' lots, selling a car, and what a car's looks and history do to its worth |
+| `partShops` | the junkyard, haggling, the regulars' discount, trade, a delivery's top-ups (`topUpChance`), and each kind of shop's prices and shelves (`kinds`) where a shop's own file says nothing |
+| `economy` | a factor on every part's price (`partsPriceFactor`; the prices themselves are part_groups.json's), used and trade-in shares, what wear leaves of a part's and a body's worth (`wearFloor`), mail order, the paper's part ads (how many, how worn, what the sellers ask: `partAdMinAskShare` to `partAdMaxAskShare`), a prize camshaft's cash |
+| `market` | the dealers' lots, selling a car (the paper's buyers: `paperBaseChance`, `paperFairShare`, `paperChanceSlope`, `paperUnpricedChance`), how often a used car's engine was worked on (`usedCarTuneChance`, `usedCarMinTuneLevel`), and what a car's looks and history do to its worth |
 | `cars` | what a car's bare body costs new (`bodyPrice` at `bodyKg`, more for a lighter one and less for a heavier one as the ratio to `bodyWeightPower`, within `minBodyPrice` and `maxBodyPrice`), the least and most a whole car costs, the rounding, the believable weights, and how common a car is (where cars.json does not say) by year, source and power to weight. A car costs its body and its factory engine's and running gear's parts (see "parts", the shelves' `price`). Unlike the rest these follow the mods next to the game, not the career: the catalog is the program's, priced again at every start |
 | `engines` | how an engine is cooled and oiled by its parts (`cooling`), how the cars on the lots were worked on (`factory`: swaps, bolt-ons), how the rivals' tuners work (`tuner`), and the points an AC car's name and power give an engine build when the game picks its factory engine (`matcher`) |
 | `repairs` | the garage's repairs: parts, labour, body work |
@@ -249,8 +249,10 @@ game does with it. A part is in the first group with a class its own class count
 `part_groups.json` adds groups, tried before the ones before it, or changes a group of an id already there, naming only
 what it changes (a group keeps its place). `never_stacks`: never mounts on its own kind (a head on a head);
 `bolt_on`: what the cars on the lots were worked on with; `tune`: how much a rival's tuner goes for it (10 the most,
-none: not at all); `speed_shop`: a speed shop sells it. The player reads `part_group.<id>` in the text, else the
-group's `name`, else its id.
+none: not at all); `speed_shop`: a speed shop sells it; `for_sale`: parts of the kind are for sale at all (in the
+paper, by mail order, on the shops' shelves; the running gear is sold by what it is, and a kind without it only as far
+as an engine build uses it: the base game's mufflers, which only dress the tailpipe, are not for sale). The player
+reads `part_group.<id>` in the text, else the group's `name`, else its id.
 
 `price`: what a part of the kind costs new, in the game's dollars, by what it does. `base` for every part, and `per_hp` for every horsepower it is worth on the game's dyno: an engine block the
 power of its own engine (the least of its factory builds), any other part what it makes over the factory part in its
