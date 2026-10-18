@@ -780,7 +780,7 @@ source game's discs carry no fade of their own.
   years, a standard one before an option; then the car's weight (each drum size has its band: a 9-inch under 1250 kg,
   an 11 x 2.75 from 1600 kg) and the torque nearest the car's own. Front drums until 1972, rear drums always: every
   American car of the drum years is on drums (EngineBench `gear` shows each car's with its shoes and fade). No such part:
-  the source game's nearest, as before. cars.json's `brakes_front`/`brakes_rear` pick.
+  the source game's nearest, as before. cars.json's `brakes_front`/`brakes_rear` pick (the Car Catalog Editor's pickers).
 - **Fade in Assetto Corsa** (`AcRunningGearData`): brakes.ini `[TEMPS_FRONT]`/`[TEMPS_REAR]` get `TORQUE_K`, `COOL_TRANSFER`,
   `COOL_SPEED_FACTOR` and `PERF_CURVE` from the brake (`torque_k`, `cool_transfer`, `cool_speed_factor`) and its shoes'
   `perf_curve`. On the factory brakes the car keeps its author's section when there is one; a car whose author wrote none
@@ -840,8 +840,11 @@ source game's discs carry no fade of their own.
   (`AcRunningGearData`). The work order: the U-bolts need the axle, the axle comes off after them, a leaf needs its hanger
   and shackle (which stay on while it is). Work: `spring_bushings` in a hanger or shackle, `leaf_rearch` at the machine
   shop (a sagged or damaged leaf bent back to its arch, its eye bushings new).
-- Not done: lowering springs and blocks (ride height), pickers for brakes and springs in the Car Catalog Editor
-  (cars.json by hand meanwhile).
+- **Picked per car** (phase 5): the Car Catalog Editor has a brake and a spring picker for each axle under the rear
+  axle's (`AxlePicks`, `ICarPartsService.RunningGearFor`), "Guessed: ..." first, then the parts of the shelf made for that
+  axle (its `came_in` naming that axle or none, `fits_axle`): a GM car on coils at the rear picks a coil there. They write
+  cars.json's `brakes_front`, `brakes_rear`, `springs_front`, `springs_rear`.
+- Not done: lowering springs and blocks (ride height).
 
 **The running gear's models** (step 31 phase 4). Every part under `parts/running_gear` has a KN5 beside its pack, made by
 tools, never by hand:

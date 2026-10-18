@@ -72,6 +72,7 @@ internal class NullCarPartsService : ICarPartsService
     public virtual (RunningGearFactory.AxleParts Front, RunningGearFactory.AxleParts Rear)? FactoryRunningGear(Car car) => null;
     public virtual RearAxleChoice? FactoryAxle(string carDefinitionId) => null;
     public virtual RearAxleChoice? AxleFor(string carDefinitionId, RunningGearPicks? picks) => null;
+    public virtual (RunningGearFactory.AxleParts Front, RunningGearFactory.AxleParts Rear)? RunningGearFor(string carDefinitionId, RunningGearPicks? picks) => null;
     public virtual CarFacts FactsOf(string carDefinitionId) => CarFacts.None;
     public virtual System.Numerics.Vector3 EngineOffsetOf(string carDefinitionId) => System.Numerics.Vector3.Zero;
     public virtual void SetEngineOffset(string carDefinitionId, System.Numerics.Vector3 offset) { }

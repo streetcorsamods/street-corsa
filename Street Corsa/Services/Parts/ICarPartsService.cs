@@ -98,6 +98,9 @@ namespace StreetCorsa.Services.Parts
         /// <summary>The axle the car would leave the factory with on these picks, what they leave out guessed (the catalog editor's)</summary>
         RearAxleChoice? AxleFor(string carDefinitionId, RunningGearPicks? picks);
 
+        /// <summary>The brakes, springs and the rest the car would leave the factory with on these picks, what they leave out guessed (the catalog editor's)</summary>
+        (RunningGearFactory.AxleParts Front, RunningGearFactory.AxleParts Rear)? RunningGearFor(string carDefinitionId, RunningGearPicks? picks);
+
         /// <summary>The car's make, family, country and year, for the parts' <c>came_in</c></summary>
         CarFacts FactsOf(string carDefinitionId);
 

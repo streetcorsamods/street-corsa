@@ -159,6 +159,26 @@ public class RearAxleTests
         Assert.Equal(Ford + "ford_9", picks.Picks!.Axle);
     }
 
+    [Fact]
+    public void The_editor_picks_each_axles_brakes_and_springs_from_those_made_for_it()
+    {
+        var picks = new StreetCorsa.Screens.CarCatalogEditor.AxlePicks(Catalog, p => RunningGearGuess.ChooseAxle(Catalog, Specs(), Chevy69, p), null,
+            p => RunningGearFactory.Choose(Catalog, Specs(), Chevy69, p));
+        Assert.StartsWith("Guessed: ", picks.FrontBrake!.Label);
+        Assert.Contains(picks.FrontBrakeOptions, o => o.Id == "running_gear/brakes_disc/delco_moraine");
+        Assert.DoesNotContain(picks.FrontBrakeOptions, o => o.Id?.StartsWith("running_gear/brakes_drum/rear_") == true);
+        Assert.Contains(picks.RearSpringOptions, o => o.Id?.StartsWith("running_gear/springs_leaf/") == true);
+        Assert.DoesNotContain(picks.FrontSpringOptions, o => o.Id?.StartsWith("running_gear/springs_leaf/") == true);
+        Assert.Contains(picks.FrontSpringOptions, o => o.Id?.StartsWith("running_gear/springs_torsion/") == true);
+
+        // A GM car on coils at the rear: the coil picked, the guess of the rest kept
+        var coil = picks.RearSpringOptions.First(o => o.Id?.StartsWith("suspension/stock/") == true);
+        picks.RearSpring = coil;
+        Assert.Equal(coil.Id, picks.Picks!.SpringsRear);
+        Assert.Null(picks.Picks.BrakesFront);
+        Assert.Equal(coil.Id, RunningGearFactory.Choose(Catalog, Specs(), Chevy69, picks.Picks)!.Value.Rear.Spring.Id);
+    }
+
     // ----- working on it -----
 
     [Fact]

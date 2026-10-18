@@ -360,6 +360,9 @@ namespace StreetCorsa.Services.Parts
 
         public RearAxleChoice? FactoryAxle(string carDefinitionId) => AxleFor(carDefinitionId, PicksOf(carDefinitionId));
 
+        public (RunningGearFactory.AxleParts Front, RunningGearFactory.AxleParts Rear)? RunningGearFor(string carDefinitionId, RunningGearPicks? picks) =>
+            IsAvailable && Specs(carDefinitionId) is { } specs ? RunningGearFactory.Choose(Catalog, specs, FactsOf(carDefinitionId), picks) : null;
+
         public RearAxleChoice? AxleFor(string carDefinitionId, RunningGearPicks? picks) =>
             IsAvailable && Specs(carDefinitionId) is { } specs ? RunningGearGuess.ChooseAxle(Catalog, specs, FactsOf(carDefinitionId), picks) : null;
 

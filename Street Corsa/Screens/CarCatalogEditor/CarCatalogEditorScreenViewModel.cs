@@ -195,7 +195,7 @@ namespace StreetCorsa.Screens.CarCatalogEditor
                     var given = snapshot.Given.GetValueOrDefault(definition.Id);
                     var parts = _partsService;
                     var axle = parts is { IsAvailable: true }
-                        ? new AxlePicks(parts.Catalog, picks => parts.AxleFor(definition.Id, picks), given?.RunningGear)
+                        ? new AxlePicks(parts.Catalog, picks => parts.AxleFor(definition.Id, picks), given?.RunningGear, picks => parts.RunningGearFor(definition.Id, picks))
                         : null;
                     var itemVm = new CatalogItemViewModel(definition, profile, snapshot.HasEngines, () => EngineOptionsFor(definition), () => GuessLayout(definition),
                         given, axle);

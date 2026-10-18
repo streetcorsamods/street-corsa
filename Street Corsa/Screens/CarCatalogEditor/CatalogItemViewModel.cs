@@ -289,23 +289,27 @@ namespace StreetCorsa.Screens.CarCatalogEditor
     }
 
     /// <summary>
-    /// A car's factory rear axle in the editor: the housing, the carrier and the ratio, each guessed unless picked. The
-    /// carriers and the ratios on offer are those that go in the housing as it stands (picked or guessed); a pick that no
-    /// longer goes in is let go. The guess is worked out again with what is picked (<c>axleFor</c>), so "Guessed:" names
-    /// what the car would get.
+    /// A car's factory running gear in the editor: the rear axle's housing, carrier and ratio, and each axle's brakes and
+    /// springs, each guessed unless picked. The carriers and the ratios on offer are those that go in the housing as it
+    /// stands (picked or guessed); a pick that no longer goes in is let go. The brakes and springs on offer are those made
+    /// for that axle. The guess is worked out again with what is picked (<c>axleFor</c>, <c>gearFor</c>), so "Guessed:"
+    /// names what the car would get.
     /// </summary>
     public sealed class AxlePicks : ObservableObject
     {
         private readonly PartsCatalog _catalog;
         private readonly Func<Parts.Cars.RunningGearPicks?, Parts.Cars.RearAxleChoice?> _axleFor;
+        private readonly Func<Parts.Cars.RunningGearPicks?, (Parts.Cars.RunningGearFactory.AxleParts Front, Parts.Cars.RunningGearFactory.AxleParts Rear)?> _gearFor;
         private readonly Parts.Cars.RunningGearPicks _given;
         private Parts.Cars.RunningGearPicks _picks;
-        private IReadOnlyList<PickOption>? _housings, _carriers, _ratios;
+        private IReadOnlyList<PickOption>? _housings, _carriers, _ratios, _frontBrakes, _rearBrakes, _frontSprings, _rearSprings;
 
-        public AxlePicks(PartsCatalog catalog, Func<Parts.Cars.RunningGearPicks?, Parts.Cars.RearAxleChoice?> axleFor, Parts.Cars.RunningGearPicks? given)
+        public AxlePicks(PartsCatalog catalog, Func<Parts.Cars.RunningGearPicks?, Parts.Cars.RearAxleChoice?> axleFor, Parts.Cars.RunningGearPicks? given,
+            Func<Parts.Cars.RunningGearPicks?, (Parts.Cars.RunningGearFactory.AxleParts Front, Parts.Cars.RunningGearFactory.AxleParts Rear)?>? gearFor = null)
         {
             _catalog = catalog;
             _axleFor = axleFor;
+            _gearFor = gearFor ?? (_ => null);
             _given = given?.Copy() ?? new Parts.Cars.RunningGearPicks();
             _picks = _given.Copy();
         }
@@ -347,6 +351,35 @@ namespace StreetCorsa.Screens.CarCatalogEditor
             set => Pick(value, RatioOptions, id => _picks.Ratio = id == null ? null : double.Parse(id, System.Globalization.CultureInfo.InvariantCulture));
         }
 
+        public IReadOnlyList<PickOption> FrontBrakeOptions => _frontBrakes ??= Options(Gear()?.Front.Brake, ForAxle(PartKinds.Brakes, true));
+        public IReadOnlyList<PickOption> RearBrakeOptions => _rearBrakes ??= Options(Gear()?.Rear.Brake, ForAxle(PartKinds.Brakes, false));
+        public IReadOnlyList<PickOption> FrontSpringOptions => _frontSprings ??= Options(Gear()?.Front.Spring, ForAxle(PartKinds.Springs, true));
+        public IReadOnlyList<PickOption> RearSpringOptions => _rearSprings ??= Options(Gear()?.Rear.Spring, ForAxle(PartKinds.Springs, false));
+
+        public PickOption? FrontBrake
+        {
+            get => Selected(FrontBrakeOptions, _picks.BrakesFront);
+            set => Pick(value, FrontBrakeOptions, id => _picks.BrakesFront = id);
+        }
+
+        public PickOption? RearBrake
+        {
+            get => Selected(RearBrakeOptions, _picks.BrakesRear);
+            set => Pick(value, RearBrakeOptions, id => _picks.BrakesRear = id);
+        }
+
+        public PickOption? FrontSpring
+        {
+            get => Selected(FrontSpringOptions, _picks.SpringsFront);
+            set => Pick(value, FrontSpringOptions, id => _picks.SpringsFront = id);
+        }
+
+        public PickOption? RearSpring
+        {
+            get => Selected(RearSpringOptions, _picks.SpringsRear);
+            set => Pick(value, RearSpringOptions, id => _picks.SpringsRear = id);
+        }
+
         /// <summary>Back to what the base game's file gives</summary>
         public void Reset()
         {
@@ -383,16 +416,28 @@ namespace StreetCorsa.Screens.CarCatalogEditor
 
         private void Refresh()
         {
-            _housings = _carriers = _ratios = null;
-            OnPropertyChanged(nameof(HousingOptions));
-            OnPropertyChanged(nameof(CarrierOptions));
-            OnPropertyChanged(nameof(RatioOptions));
-            OnPropertyChanged(nameof(Housing));
-            OnPropertyChanged(nameof(Carrier));
-            OnPropertyChanged(nameof(Ratio));
+            _housings = _carriers = _ratios = _frontBrakes = _rearBrakes = _frontSprings = _rearSprings = null;
+            foreach (var name in new[] { nameof(HousingOptions), nameof(CarrierOptions), nameof(RatioOptions), nameof(FrontBrakeOptions), nameof(RearBrakeOptions),
+                         nameof(FrontSpringOptions), nameof(RearSpringOptions), nameof(Housing), nameof(Carrier), nameof(Ratio), nameof(FrontBrake), nameof(RearBrake),
+                         nameof(FrontSpring), nameof(RearSpring) })
+                OnPropertyChanged(name);
         }
 
         private Parts.Cars.RearAxleChoice? Choice() => _axleFor(_picks.IsEmpty ? null : _picks);
+
+        /// <summary>What the car gets on its axles with what is picked: the guess of the brakes and springs not picked</summary>
+        private (Parts.Cars.RunningGearFactory.AxleParts Front, Parts.Cars.RunningGearFactory.AxleParts Rear)? Gear() => _gearFor(_picks.IsEmpty ? null : _picks);
+
+        /// <summary>
+        /// The parts of a shelf made for an axle: those whose <c>came_in</c> names this axle or none, and that fit it
+        /// (<see cref="Parts.Cars.RunningGear.FitsAxle"/>: a leaf spring the rear, a torsion bar the front)
+        /// </summary>
+        private IEnumerable<PickOption> ForAxle(string group, bool front) =>
+            _catalog.Parts.Values
+                .Where(p => p.IsScripted && PartKinds.GroupOf(p) == group && Parts.Cars.RunningGear.FitsAxle(p, front)
+                            && (p.CameIn?.Axle is not { Length: > 0 } axle || axle.Equals(front ? "front" : "rear", StringComparison.OrdinalIgnoreCase)))
+                .OrderBy(p => p.DisplayName ?? p.Id, StringComparer.OrdinalIgnoreCase)
+                .Select(p => new PickOption(p.Id, p.DisplayName ?? p.Id));
 
         private PartDefinition? HousingPart() => _picks.Axle is { } id && _catalog.Get(id) is { } picked ? picked : Choice()?.Housing;
 
