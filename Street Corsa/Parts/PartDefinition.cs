@@ -134,6 +134,14 @@ public class PartDefinition
     public bool? Performance { get; set; }
 
     /// <summary>
+    /// What a job turns this part into, by the job's id (a job of <see cref="PartRebuilds"/> with <c>"becomes"</c>): an open
+    /// carrier with its spiders welded is a welded carrier, <c>{ "weld_spiders": "running_gear/axles_gm/gm_10bolt_welded_low" }</c>.
+    /// Null for a part no job turns into another.
+    /// </summary>
+    [JsonProperty("becomes", NullValueHandling = NullValueHandling.Ignore)]
+    public Dictionary<string, string>? Becomes { get; set; }
+
+    /// <summary>
     /// The cars a running gear part left the factory on (<see cref="Parts.CameIn"/>): what the factory running gear of a car
     /// is guessed from, where the mods' cars.json picks none. Null for a part no car came with (a spool, an alloy shaft).
     /// </summary>

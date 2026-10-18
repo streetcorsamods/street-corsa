@@ -116,9 +116,14 @@ public static class RearAxle
     public static (double Power, double Coast, double Preload) Lock(PartDefinition carrier) =>
         (carrier.Number("diff_power"), carrier.Number("diff_coast"), carrier.Number("diff_preload"));
 
-    /// <summary>How hard a carrier locks, as one figure to price it by: an open one 0.3, a posi about 1, a spool 2.3</summary>
+    /// <summary>
+    /// How hard a carrier locks, as one figure to price it by: an open one 0.3, a posi about 1, a spool 2.3; a carrier may say
+    /// its own (<c>price_lock</c>: a welded open one is priced near the open one it was, though it locks like a spool)
+    /// </summary>
     public static double LockFigure(PartDefinition carrier)
     {
+        if (carrier.Number("price_lock") is > 0 and var own && double.IsFinite(own)) return own;
+
         var (power, coast, preload) = Lock(carrier);
         return 0.3 + Math.Clamp(power, 0, 1) + Math.Clamp(coast, 0, 1) + Math.Clamp(preload, 0, 500) / 200;
     }

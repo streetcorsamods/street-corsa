@@ -155,6 +155,7 @@ public sealed class PartsCatalog
         catalog._problems.AddRange(catalog.Rebuilds.UnknownNames(
             catalog._parts.Values.Select(catalog.WorkOrder.KindOf).OfType<string>(),
             catalog._parts.Values.Select(PartKinds.GroupOf)));
+        catalog.Rebuilds.CheckBecomes(catalog._parts.Values, catalog.Get, catalog._problems);
 
         // What each part does for the cooling, where its kind says: the cooling reads it off the part
         if (catalog.WorkOrder.TellsCooling)

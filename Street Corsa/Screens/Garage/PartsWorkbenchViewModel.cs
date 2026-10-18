@@ -544,7 +544,7 @@ namespace StreetCorsa.Screens.Garage
             var benchPart = shelfPart != null && Catalog is { } shelfCatalog ? PartTrees.ToInstalled(shelfCatalog, shelfPart)?.Root : null;
 
             // The work first: a job that fails to go on costs nothing. The player's own lands round what it can do
-            var outcome = Rebuilding.Do(offer.Offer.Job, part, Random.Shared);
+            var outcome = Rebuilding.Do(offer.Offer.Job, part, Random.Shared, Catalog);
             var show = new RebuildShow(offer.Offer.Job, offer.Name, wearBefore, outcome.Wear, offer.Offer.Minutes, _gameState.Date)
             {
                 Verdict = outcome.Quality is { } quality ? GameText.Say($"rebuild.quality.{quality}") : null

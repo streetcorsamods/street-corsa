@@ -182,6 +182,32 @@ public class RearAxleTests
     // ----- working on it -----
 
     [Fact]
+    public void Welding_an_open_carriers_spiders_makes_it_a_weaker_spool_priced_near_the_open_one_it_was()
+    {
+        Assert.DoesNotContain(Catalog.Problems, p => p.Contains("weld", StringComparison.OrdinalIgnoreCase) || p.Contains("becomes", StringComparison.OrdinalIgnoreCase));
+
+        var open = new PartInstance(Gm + "gm_10bolt_open_high") { Wear = 0.6, Tear = 0.9 };
+        open.Children.Add(new PartInstance(Gm + "gm_10bolt_gears_373") { ParentSlot = RearAxle.GearsSlot, OwnSlot = 1 });
+        var weld = Rebuilding.Offers(Catalog, open, loose: false).Single(o => o.Job.Id == "weld_spiders");
+        Assert.Null(weld.WhyNot);
+        Assert.DoesNotContain(Rebuilding.Offers(Catalog, new PartInstance(Gm + "gm_10bolt_posi_high"), loose: false), o => o.Job.Id == "weld_spiders");
+
+        Rebuilding.Do(weld.Job, open, new Random(1), Catalog);
+        Assert.Equal(Gm + "gm_10bolt_welded_high", open.DefinitionId);
+        Assert.Equal(0.6, open.Wear);
+        Assert.Equal(0.9, open.Tear);
+        Assert.Single(open.Children);
+
+        var (openDef, welded, spool) = (Catalog.Get(Gm + "gm_10bolt_open_high")!, Catalog.Get(open.DefinitionId)!, Catalog.Get("running_gear/axle_speed/gm_10bolt_spool_high")!);
+        Assert.Equal((1.0, 1.0), (RearAxle.Lock(welded).Power, RearAxle.Lock(welded).Coast));
+        Assert.True(RearAxle.Strength(welded) < RearAxle.Strength(openDef));
+        Assert.True(PartPricing.NewPrice(welded) < PartPricing.NewPrice(spool) / 2);
+
+        // Once welded, there is nothing more to weld
+        Assert.DoesNotContain(Rebuilding.Offers(Catalog, open, loose: false), o => o.Job.Id == "weld_spiders");
+    }
+
+    [Fact]
     public void Gears_are_set_up_at_home_with_a_rougher_roll_or_by_the_machinist_and_a_posi_is_rebuilt_off_the_car()
     {
         var gears = new PartInstance(Gm + "gm_10bolt_gears_373") { Wear = 0.5 };
