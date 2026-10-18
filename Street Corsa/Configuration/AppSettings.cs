@@ -82,21 +82,29 @@ public class AppSettings
 
     /// <summary>
     /// Full path to the garage showroom model: a mod's garage by that id if one has it (the last mod to have it wins,
-    /// so a mod can dress the garage), else the AC install's showroom of that name
+    /// so a mod can dress the garage), else the AC install's showroom of that name, else AC's own showroom
+    /// (<see cref="FallbackShowroomId"/>): the released game ships without the garage's model, which is not ours to give
     /// </summary>
     public string GarageShowroomKn5
     {
         get
         {
-            foreach (var (_, dir) in Mods.ModSet.Installed.Folders(Mods.ContentTypes.Garages).Reverse())
-            {
-                var own = Path.Combine(dir, GarageShowroomId, GarageShowroomId + ".kn5");
-                if (File.Exists(own)) return own;
-            }
-
-            return Path.Combine(ShowroomsPath, GarageShowroomId, GarageShowroomId + ".kn5");
+            var garages = Services.Showcase.ShowcaseContent.GaragesOf(Mods.ModSet.Installed);
+            return Services.Showcase.ShowcaseContent.FindKn5(GarageShowroomId, garages, ShowroomsPath)
+                   ?? Services.Showcase.ShowcaseContent.FindKn5(FallbackShowroomId, garages, ShowroomsPath)
+                   ?? Path.Combine(ShowroomsPath, GarageShowroomId, GarageShowroomId + ".kn5");
         }
     }
+
+    /// <summary>
+    /// The garage the game is played in: the room folder <see cref="GarageShowroomKn5"/> is in, <see cref="GarageShowroomId"/>
+    /// or <see cref="FallbackShowroomId"/>. What its props (props/&lt;id&gt;/prop.json's places) and its marks
+    /// (garages/&lt;id&gt;/scene.json) are looked up by, so a room keeps the ones laid out for it.
+    /// </summary>
+    public string GarageId => Path.GetFileName(Path.GetDirectoryName(GarageShowroomKn5)) is { Length: > 0 } id ? id : GarageShowroomId;
+
+    /// <summary>The showroom every AC install has (Kunos'), for a garage whose model is nowhere; the base game's props have places in it too</summary>
+    public const string FallbackShowroomId = "showroom";
 
     /// <summary>
     /// The base game's converted part packs (see tools/convert-parts.ps1); the catalog reads every mod's

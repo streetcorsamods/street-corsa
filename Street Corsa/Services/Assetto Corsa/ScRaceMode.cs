@@ -84,12 +84,12 @@ namespace StreetCorsa.Services
                         .Select(f => (Name: Path.GetRelativePath(modeFolder, f), Source: f))
                         .Concat(File.Exists(partsScript) ? [(PartsScript, partsScript)] : [])
                         .Concat(modelFiles).ToList();
-                    var modeWritten = Mirror(modeFiles, modeTarget);
+                    var modeWritten = Mirror(modeFiles, modeTarget, marked: true);
                     if (modeWritten > 0)
                         _logger.Information("Race format {Format}'s mode installed in {Target} ({Count} file(s) changed)", format.Id, modeTarget, modeWritten);
                 }
 
-                foreach (var retired in Retired) RemoveRetired(Path.Combine(acRoot, retired));
+                foreach (var retired in Retired) RemoveFolder(Path.Combine(acRoot, retired), "the race mode does its work now", "the next race tries again");
                 return null;
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -132,19 +132,77 @@ namespace StreetCorsa.Services
             }
         }
 
+        /// <summary>
+        /// Takes the game's modes out of <paramref name="acRoot"/> when the game is uninstalled: sc_race, sc_free, the
+        /// <paramref name="modeIds"/> of the mods' formats, every mode folder holding the game's <see cref="Marker"/> (a
+        /// format of a mod removed since) and what the modes replaced. Returns how many folders went; one that cannot
+        /// go is logged and left.
+        /// </summary>
+        public int Uninstall(string acRoot, IEnumerable<string> modeIds)
+        {
+            var modes = Path.Combine(acRoot, "extension", "lua", "new-modes");
+            var removed = 0;
+            var folders = new[] { IniModificationService.RaceModeId, IniModificationService.FreeRunModeId }.Concat(modeIds)
+                .Where(PathNames.IsSafeSegment)
+                .Select(id => Path.Combine(modes, id))
+                .Concat(Marked(modes))
+                .Concat(Retired.Select(r => Path.Combine(acRoot, r)))
+                .Distinct(StringComparer.OrdinalIgnoreCase);
+            foreach (var folder in folders)
+            {
+                var existed = Directory.Exists(folder);
+                RemoveFolder(folder, "the game is uninstalled", "it stays in Assetto Corsa");
+                if (existed && !Directory.Exists(folder)) removed++;
+            }
+
+            return removed;
+        }
+
+        /// <summary>The file a mod's format mode gets in AC, so the uninstall finds it when the mod is gone</summary>
+        public const string Marker = "streetcorsa.mode";
+
+        private const string MarkerText = "Put here by Street Corsa for a race format of a mod; the game's uninstall takes this folder out.\n";
+
+        /// <summary>The mode folders under <paramref name="modes"/> with the <see cref="Marker"/> in them; none when it cannot be listed</summary>
+        private IEnumerable<string> Marked(string modes)
+        {
+            try
+            {
+                return Directory.Exists(modes)
+                    ? Directory.GetDirectories(modes).Where(d => File.Exists(Path.Combine(d, Marker))).ToList()
+                    : [];
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                _logger.Warning(ex, "Could not look through {Modes} for the game's modes", modes);
+                return [];
+            }
+        }
+
         /// <summary>The race mode's script that puts the parts on, which the free run's mode runs too</summary>
         private const string PartsScript = "car_parts.lua";
 
         /// <summary>
         /// Makes <paramref name="target"/> hold exactly <paramref name="files"/> (by their names there, which may have
         /// folders in them), each written only when it differs: files no longer wanted go, since the mode would still
-        /// load (or read) them. Returns how many changed.
+        /// load (or read) them. <paramref name="marked"/> keeps the game's <see cref="Marker"/> in it too. Returns how many changed.
         /// </summary>
-        private static int Mirror(IReadOnlyList<(string Name, string Source)> files, string target)
+        private static int Mirror(IReadOnlyList<(string Name, string Source)> files, string target, bool marked = false)
         {
             Directory.CreateDirectory(target);
             var written = 0;
             var wanted = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (marked)
+            {
+                var marker = Path.GetFullPath(Path.Combine(target, Marker));
+                wanted.Add(marker);
+                if (!File.Exists(marker))
+                {
+                    SafeFile.WriteAllText(marker, MarkerText);
+                    written++;
+                }
+            }
+
             foreach (var (name, source) in files)
             {
                 var installed = Path.GetFullPath(Path.Combine(target, name));
@@ -167,19 +225,19 @@ namespace StreetCorsa.Services
             return written;
         }
 
-        /// <summary>A clean-up, never worth a race: one that fails (a file locked or denied) is logged and tried next time</summary>
-        private void RemoveRetired(string folder)
+        /// <summary>A clean-up, never worth a race: one that fails (a file locked or denied) is logged with what becomes of it, <paramref name="then"/></summary>
+        private void RemoveFolder(string folder, string why, string then)
         {
             try
             {
                 if (!Directory.Exists(folder)) return;
 
                 Directory.Delete(folder, recursive: true);
-                _logger.Information("Removed {Folder}: the race mode does its work now", folder);
+                _logger.Information("Removed {Folder}: {Why}", folder, why);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                _logger.Warning(ex, "Could not remove {Folder}; the race goes ahead, the next one tries again", folder);
+                _logger.Warning(ex, "Could not remove {Folder} ({Why}): {Then}", folder, why, then);
             }
         }
     }

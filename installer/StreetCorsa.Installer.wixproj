@@ -1,0 +1,32 @@
+<Project Sdk="WixToolset.Sdk/6.0.2">
+
+  <!--
+    The game's installer, an MSI for one player (no admin, %LocalAppData%\Programs\Street Corsa). Build it with
+    installer\build.ps1: it publishes the game, keeps only the content the repository has (the local-only garage, station
+    models, private mods and music stay out) and passes the result here as StageDir.
+  -->
+  <PropertyGroup>
+    <InstallerPlatform>x64</InstallerPlatform>
+    <ProductVersion Condition="'$(ProductVersion)' == ''">0.1.0</ProductVersion>
+    <StageDir Condition="'$(StageDir)' == ''">$(MSBuildThisFileDirectory)..\artifacts\installer\stage\</StageDir>
+    <OutputName>StreetCorsa-$(ProductVersion)</OutputName>
+    <DefineConstants>ProductVersion=$(ProductVersion)</DefineConstants>
+    <!-- Per-user files in %LocalAppData% keyed by the files themselves, not HKCU values: what every per-user MSI of a
+         harvested folder does; the ICEs are about roaming profiles, which a game in Local AppData is not part of. ICE69: the shortcuts
+         point at the exe's component, in the same feature. ICE61: a rebuilt MSI of the same version upgrades too -->
+    <SuppressIces>ICE38;ICE64;ICE91;ICE69;ICE61</SuppressIces>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <BindPath Include="$(StageDir)" BindName="stage" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="WixToolset.UI.wixext" Version="6.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="Actions\InstallerActions.csproj" />
+  </ItemGroup>
+
+</Project>

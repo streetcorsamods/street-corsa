@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <!-- AcTools (Content Manager's library, Ms-PL) and SlimDX (MIT), built from gro-ove/actools @ effa0e13 and kept here so a clone builds -->
+    <AcToolsLib>$(MSBuildThisFileDirectory)lib\actools\</AcToolsLib>
+  </PropertyGroup>
+</Project>

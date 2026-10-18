@@ -18,13 +18,13 @@
 
   <ItemGroup>
     <Reference Include="AcTools">
-      <HintPath>..\..\actools\AcTools\bin\x64\Release\AcTools.dll</HintPath>
+      <HintPath>$(AcToolsLib)AcTools.dll</HintPath>
     </Reference>
     <Reference Include="AcTools.Render">
-      <HintPath>..\..\actools\AcTools.Render\bin\x64\Release\AcTools.Render.dll</HintPath>
+      <HintPath>$(AcToolsLib)AcTools.Render.dll</HintPath>
     </Reference>
     <Reference Include="SlimDX">
-      <HintPath>..\..\actools\Libraries\SlimDX-x64\SlimDX.dll</HintPath>
+      <HintPath>$(AcToolsLib)SlimDX.dll</HintPath>
     </Reference>
   </ItemGroup>
 
@@ -59,8 +59,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- The base game's content, the first mod (see Mods/ModSet.cs); other mods are dropped into Content next to it -->
-    <None Update="Content\**">
+    <!-- The base game's content, the first mod (see Mods/ModSet.cs); other mods are dropped into Content next to it.
+         CopyContent=false leaves it out: installer\build.ps1 stages only the content the repository has -->
+    <None Update="Content\**" Condition="'$(CopyContent)' != 'false'">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <!-- The CSP modes races and free runs run in, installed into AC before each by ScRaceMode -->

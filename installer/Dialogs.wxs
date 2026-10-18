@@ -1,0 +1,199 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+
+  <!--
+    The wizard: WixUI_InstallDir's pages (its source, v6.0.2, src/ext/UI/wixlib/WixUI_InstallDir.wxs) with three of
+    the game's between the game's folder and Install:
+
+      Welcome, Licence, Install folder, Assetto Corsa (AcFolderDlg), What the game needs (ChecksDlg),
+      Last touches (ExtrasDlg: desktop shortcut, the AI talk and Ollama), Ready, Progress, Finish (start the game)
+
+    The custom actions are installer/Actions; their properties: AC_VALID, CSP_FOUND, OLLAMA_FOUND. HAS_D3DX and
+    HAS_VCRT are file searches (Package.wxs).
+  -->
+  <Fragment>
+    <UI Id="StreetCorsaUI">
+      <TextStyle Id="WixUI_Font_Normal" FaceName="Tahoma" Size="8" />
+      <TextStyle Id="WixUI_Font_Bigger" FaceName="Tahoma" Size="12" />
+      <TextStyle Id="WixUI_Font_Title" FaceName="Tahoma" Size="9" Bold="yes" />
+      <Property Id="DefaultUIFont" Value="WixUI_Font_Normal" />
+      <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+      <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Start Street Corsa" />
+      <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
+
+      <DialogRef Id="BrowseDlg" />
+      <DialogRef Id="DiskCostDlg" />
+      <DialogRef Id="ErrorDlg" />
+      <DialogRef Id="FatalError" />
+      <DialogRef Id="FilesInUse" />
+      <DialogRef Id="InvalidDirDlg" />
+      <DialogRef Id="MsiRMFilesInUse" />
+      <DialogRef Id="PrepareDlg" />
+      <DialogRef Id="ProgressDlg" />
+      <DialogRef Id="ResumeDlg" />
+      <DialogRef Id="UserExit" />
+
+      <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchGame" Order="1" Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 AND NOT Installed" />
+      <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="OpenOllamaPage" Order="2" Condition="OLLAMA_OPEN = 1 AND NOT Installed" />
+      <Publish Dialog="ExitDialog" Control="Finish" Event="EndDialog" Value="Return" Order="999" />
+
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="LicenseAgreementDlg" Condition="NOT Installed" />
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg" Condition="Installed AND PATCH" />
+
+      <Publish Dialog="LicenseAgreementDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" />
+      <Publish Dialog="LicenseAgreementDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg" Condition="LicenseAccepted = &quot;1&quot;" />
+
+      <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="LicenseAgreementDlg" />
+      <!-- As WixUI_InstallDir has it: a folder not on a local disk (a share, a removable drive) or a drive's root is refused -->
+      <Publish Dialog="InstallDirDlg" Control="Next" Event="CheckTargetPath" Value="[WIXUI_INSTALLDIR]" Order="1" />
+      <Publish Dialog="InstallDirDlg" Control="Next" Event="SetTargetPath" Value="[WIXUI_INSTALLDIR]" Order="2" />
+      <Publish Dialog="InstallDirDlg" Control="Next" Event="DoAction" Value="WixUIValidatePath_$(sys.BUILDARCHSHORT)" Order="3" Condition="NOT WIXUI_DONTVALIDATEPATH" />
+      <Publish Dialog="InstallDirDlg" Control="Next" Event="SpawnDialog" Value="InvalidDirDlg" Order="4" Condition="NOT WIXUI_DONTVALIDATEPATH AND WIXUI_INSTALLDIR_VALID &lt;&gt; &quot;1&quot;" />
+      <Publish Dialog="InstallDirDlg" Control="Next" Event="NewDialog" Value="AcFolderDlg" Order="5" Condition="WIXUI_DONTVALIDATEPATH OR WIXUI_INSTALLDIR_VALID = &quot;1&quot;" />
+      <Publish Dialog="InstallDirDlg" Control="ChangeFolder" Property="_BrowseProperty" Value="[WIXUI_INSTALLDIR]" Order="1" />
+      <Publish Dialog="InstallDirDlg" Control="ChangeFolder" Event="SpawnDialog" Value="BrowseDlg" Order="2" />
+
+      <!-- The game's folder is checked again on the folder page's Next: Browse also picks AC's, which may be anywhere -->
+      <Publish Dialog="BrowseDlg" Control="OK" Event="CheckTargetPath" Value="[_BrowseProperty]" Order="1" />
+      <Publish Dialog="BrowseDlg" Control="OK" Event="SetTargetPath" Value="[_BrowseProperty]" Order="3" />
+      <Publish Dialog="BrowseDlg" Control="OK" Event="EndDialog" Value="Return" Order="4" />
+
+      <Publish Dialog="AcFolderDlg" Control="Back" Event="NewDialog" Value="InstallDirDlg" />
+      <Publish Dialog="AcFolderDlg" Control="ChangeFolder" Property="_BrowseProperty" Value="ACFOLDER" Order="1" />
+      <Publish Dialog="AcFolderDlg" Control="ChangeFolder" Event="SpawnDialog" Value="BrowseDlg" Order="2" />
+      <Publish Dialog="AcFolderDlg" Control="Next" Event="DoAction" Value="CheckAcFolder" Order="1" />
+      <Publish Dialog="AcFolderDlg" Control="Next" Event="SpawnDialog" Value="AcInvalidDlg" Order="2" Condition="AC_VALID &lt;&gt; &quot;1&quot; AND AC_LATER &lt;&gt; &quot;1&quot;" />
+      <Publish Dialog="AcFolderDlg" Control="Next" Event="NewDialog" Value="ChecksDlg" Order="3" Condition="AC_VALID = &quot;1&quot; OR AC_LATER = &quot;1&quot;" />
+
+      <Publish Dialog="ChecksDlg" Control="Back" Event="NewDialog" Value="AcFolderDlg" />
+      <Publish Dialog="ChecksDlg" Control="Next" Event="NewDialog" Value="ExtrasDlg" />
+
+      <Publish Dialog="ExtrasDlg" Control="Back" Event="NewDialog" Value="ChecksDlg" />
+      <Publish Dialog="ExtrasDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg" />
+
+      <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="ExtrasDlg" Order="1" Condition="NOT Installed" />
+      <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="MaintenanceTypeDlg" Order="2" Condition="Installed AND NOT PATCH" />
+      <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Order="2" Condition="Installed AND PATCH" />
+
+      <Publish Dialog="MaintenanceWelcomeDlg" Control="Next" Event="NewDialog" Value="MaintenanceTypeDlg" />
+
+      <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton" Event="NewDialog" Value="VerifyReadyDlg" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="RemoveButton" Event="NewDialog" Value="VerifyReadyDlg" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="Back" Event="NewDialog" Value="MaintenanceWelcomeDlg" />
+    </UI>
+
+    <UIRef Id="WixUI_Common" />
+  </Fragment>
+
+  <Fragment>
+    <Property Id="AC_LATER" Secure="yes" />
+
+    <UI>
+      <Dialog Id="AcFolderDlg" Width="370" Height="270" Title="[ProductName] Setup">
+        <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="!(loc.WixUINext)" />
+        <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="!(loc.WixUIBack)" />
+        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="!(loc.WixUICancel)">
+          <Publish Event="SpawnDialog" Value="CancelDlg" />
+        </Control>
+
+        <Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Transparent="yes" NoPrefix="yes" Text="Where is Assetto Corsa installed?" />
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Transparent="yes" NoPrefix="yes" Text="{\WixUI_Font_Title}Assetto Corsa" />
+        <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="!(loc.InstallDirDlgBannerBitmap)" />
+        <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="373" Height="0" />
+        <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="373" Height="0" />
+
+        <Control Id="Intro" Type="Text" X="20" Y="54" Width="330" Height="50" NoPrefix="yes"
+                 Text="Street Corsa runs its races in Assetto Corsa. Pick the folder that holds AssettoCorsa.exe; Steam puts it in steamapps\common\assettocorsa. The game changes a car's data there only for a race and puts it back afterwards." />
+        <Control Id="Folder" Type="PathEdit" X="20" Y="108" Width="320" Height="18" Property="ACFOLDER" DisableCondition="AC_LATER = &quot;1&quot;" EnableCondition="AC_LATER &lt;&gt; &quot;1&quot;" />
+        <Control Id="ChangeFolder" Type="PushButton" X="20" Y="130" Width="56" Height="17" Text="!(loc.InstallDirDlgChange)" DisableCondition="AC_LATER = &quot;1&quot;" EnableCondition="AC_LATER &lt;&gt; &quot;1&quot;" />
+        <Control Id="Later" Type="CheckBox" X="20" Y="170" Width="330" Height="17" Property="AC_LATER" CheckBoxValue="1"
+                 Text="I will set it later, in the game's Settings" />
+      </Dialog>
+
+      <Dialog Id="AcInvalidDlg" Width="260" Height="95" Title="[ProductName] Setup">
+        <Control Id="OK" Type="PushButton" X="102" Y="68" Width="56" Height="17" Default="yes" Cancel="yes" Text="!(loc.WixUIOK)">
+          <Publish Event="EndDialog" Value="Return" />
+        </Control>
+        <Control Id="Text" Type="Text" X="15" Y="12" Width="230" Height="50" NoPrefix="yes"
+                 Text="That folder has no Assetto Corsa in it (its content\cars and content\tracks folders). Pick the folder AssettoCorsa.exe is in, or tick &quot;I will set it later&quot;." />
+      </Dialog>
+    </UI>
+  </Fragment>
+
+  <Fragment>
+    <UI>
+      <!-- Each line says found or, with where to get it, missing. The game installs either way. -->
+      <Dialog Id="ChecksDlg" Width="370" Height="270" Title="[ProductName] Setup">
+        <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="!(loc.WixUINext)" />
+        <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="!(loc.WixUIBack)" />
+        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="!(loc.WixUICancel)">
+          <Publish Event="SpawnDialog" Value="CancelDlg" />
+        </Control>
+
+        <Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Transparent="yes" NoPrefix="yes" Text="What Street Corsa needs beside it" />
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Transparent="yes" NoPrefix="yes" Text="{\WixUI_Font_Title}Before you race" />
+        <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="!(loc.InstallDirDlgBannerBitmap)" />
+        <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="373" Height="0" />
+        <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="373" Height="0" />
+
+        <Control Id="AcLabel" Type="Text" X="20" Y="56" Width="330" Height="12" NoPrefix="yes" Text="{\WixUI_Font_Title}Assetto Corsa" />
+        <Control Id="AcFound" Type="Text" X="30" Y="69" Width="320" Height="12" NoPrefix="yes" Hidden="yes" Text="Found: [ACFOLDER]"
+                 ShowCondition="AC_VALID = &quot;1&quot; AND AC_LATER &lt;&gt; &quot;1&quot;" />
+        <Control Id="AcLater" Type="Text" X="30" Y="69" Width="320" Height="12" NoPrefix="yes" Hidden="yes" Text="Not set yet: the game asks for it in its Settings."
+                 ShowCondition="AC_LATER = &quot;1&quot;" />
+
+        <Control Id="CspLabel" Type="Text" X="20" Y="88" Width="330" Height="12" NoPrefix="yes" Text="{\WixUI_Font_Title}Custom Shaders Patch (the races run as its modes)" />
+        <Control Id="CspFound" Type="Text" X="30" Y="101" Width="320" Height="12" NoPrefix="yes" Hidden="yes" Text="Found."
+                 ShowCondition="CSP_FOUND = &quot;1&quot; AND AC_LATER &lt;&gt; &quot;1&quot;" />
+        <Control Id="CspMissing" Type="Hyperlink" X="30" Y="101" Width="320" Height="12" Hidden="yes"
+                 Text="Missing: install it with Content Manager, &lt;a href=&quot;https://acstuff.club/patch/&quot;&gt;acstuff.club/patch&lt;/a&gt;"
+                 ShowCondition="CSP_FOUND &lt;&gt; &quot;1&quot; OR AC_LATER = &quot;1&quot;" />
+
+        <Control Id="DxLabel" Type="Text" X="20" Y="120" Width="330" Height="12" NoPrefix="yes" Text="{\WixUI_Font_Title}DirectX End-User Runtime (June 2010)" />
+        <Control Id="DxFound" Type="Text" X="30" Y="133" Width="320" Height="12" NoPrefix="yes" Hidden="yes" Text="Found." ShowCondition="HAS_D3DX" />
+        <Control Id="DxMissing" Type="Hyperlink" X="30" Y="133" Width="320" Height="12" Hidden="yes"
+                 Text="Missing: &lt;a href=&quot;https://www.microsoft.com/download/details.aspx?id=8109&quot;&gt;download it from Microsoft&lt;/a&gt;"
+                 ShowCondition="NOT HAS_D3DX" />
+
+        <Control Id="VcLabel" Type="Text" X="20" Y="152" Width="330" Height="12" NoPrefix="yes" Text="{\WixUI_Font_Title}Visual C++ 2015-2022 runtime (x64)" />
+        <Control Id="VcFound" Type="Text" X="30" Y="165" Width="320" Height="12" NoPrefix="yes" Hidden="yes" Text="Found." ShowCondition="HAS_VCRT" />
+        <Control Id="VcMissing" Type="Hyperlink" X="30" Y="165" Width="320" Height="12" Hidden="yes"
+                 Text="Missing: &lt;a href=&quot;https://aka.ms/vs/17/release/vc_redist.x64.exe&quot;&gt;download it from Microsoft&lt;/a&gt;"
+                 ShowCondition="NOT HAS_VCRT" />
+
+        <Control Id="Footer" Type="Text" X="20" Y="192" Width="330" Height="30" NoPrefix="yes"
+                 Text="Street Corsa installs either way: anything missing can be added before you play. The 3D garage needs DirectX and Visual C++; the races need the patch." />
+      </Dialog>
+    </UI>
+  </Fragment>
+
+  <Fragment>
+    <Property Id="OLLAMA_OPEN" Secure="yes" />
+
+    <UI>
+      <Dialog Id="ExtrasDlg" Width="370" Height="270" Title="[ProductName] Setup">
+        <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="!(loc.WixUINext)" />
+        <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="!(loc.WixUIBack)" />
+        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="!(loc.WixUICancel)">
+          <Publish Event="SpawnDialog" Value="CancelDlg" />
+        </Control>
+
+        <Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Transparent="yes" NoPrefix="yes" Text="A shortcut, and people who talk back" />
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Transparent="yes" NoPrefix="yes" Text="{\WixUI_Font_Title}Last touches" />
+        <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="!(loc.InstallDirDlgBannerBitmap)" />
+        <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="373" Height="0" />
+        <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="373" Height="0" />
+
+        <Control Id="Desktop" Type="CheckBox" X="20" Y="54" Width="330" Height="17" Property="DESKTOP_SHORTCUT" CheckBoxValue="1"
+                 Text="Put a Street Corsa shortcut on the desktop" />
+
+        <Control Id="AiLabel" Type="Text" X="20" Y="82" Width="330" Height="12" NoPrefix="yes" Text="{\WixUI_Font_Title}Talking to people (optional)" />
+        <Control Id="AiText" Type="Text" X="20" Y="96" Width="330" Height="80" NoPrefix="yes"
+                 Text="Sellers, salesmen and rivals can talk with you through an AI model running on this PC in Ollama. It is off until you turn it on, and the game plays the same without it. To use it: install Ollama, run &quot;ollama pull llama3.1:8b&quot; (about 5 GB), then in the game's Settings, AI, pick Ollama and press &quot;Make the game's model&quot;. It runs on the graphics card beside the game, so it wants one with plenty of memory." />
+        <Control Id="OllamaFound" Type="Text" X="20" Y="184" Width="330" Height="12" NoPrefix="yes" Hidden="yes"
+                 Text="Ollama is installed on this PC." ShowCondition="OLLAMA_FOUND = &quot;1&quot;" />
+        <Control Id="OllamaOpen" Type="CheckBox" X="20" Y="182" Width="330" Height="17" Property="OLLAMA_OPEN" CheckBoxValue="1" Hidden="yes"
+                 Text="Open Ollama's download page when setup finishes" ShowCondition="OLLAMA_FOUND &lt;&gt; &quot;1&quot;" />
+      </Dialog>
+    </UI>
+  </Fragment>
+</Wix>

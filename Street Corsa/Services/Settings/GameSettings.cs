@@ -21,6 +21,12 @@ namespace StreetCorsa.Services.Settings
         public string? AssettoCorsaPath { get; set; }
 
         /// <summary>
+        /// The AC folder the installer last set (HKCU\Software\Street Corsa), once the game has taken it over: one that
+        /// differs is the installer run again with another folder picked, which then wins over <see cref="AssettoCorsaPath"/>
+        /// </summary>
+        public string? InstallerAcFolder { get; set; }
+
+        /// <summary>
         /// The language the game speaks: a folder in the mods' <c>text</c> ("es"); null for the game's own
         /// (game.json's <c>language</c>). Read once at start-up: a change takes effect at the next start.
         /// </summary>

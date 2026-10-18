@@ -147,9 +147,14 @@ namespace StreetCorsa
 
         public App()
         {
+            // The installer's clean-up (AcUninstall) runs with no window, and not beside the game, which puts the install
+            // back itself when it closes
+            var uninstall = Services.AcUninstall.Asked(Environment.GetCommandLineArgs());
+
             // One copy of the game at a time, before anything is touched: a second one would put the install back at
             // start-up in the middle of the first one's race, and could not open the save the first one holds
             _singleInstance = new Mutex(initiallyOwned: true, SingleInstanceName, out var firstInstance);
+            if (!firstInstance && uninstall) Environment.Exit(0);
             if (!firstInstance)
             {
                 System.Windows.MessageBox.Show("Street Corsa is already running.", "Street Corsa",
@@ -164,6 +169,12 @@ namespace StreetCorsa
             CultureInfo.DefaultThreadCurrentUICulture = englishCulture;
             Thread.CurrentThread.CurrentCulture = englishCulture;
             Thread.CurrentThread.CurrentUICulture = englishCulture;
+
+            if (uninstall)
+            {
+                Services.AcUninstall.Run();
+                Environment.Exit(0);
+            }
 
             // The last line of defence before anything that can fail: the rename and the log's folder below touch
             // %AppData%, and one that throws must still end with a message rather than a silent exit
@@ -553,7 +564,7 @@ namespace StreetCorsa
             try
             {
                 // Read here too, off the screens' thread: the first car to move would otherwise wait on every mod's scripts
-                var garage = AppSettings.Instance.GarageShowroomId;
+                var garage = AppSettings.Instance.GarageId;
                 await Task.WhenAll(partsWarmUp, Task.Run(() =>
                 {
                     _ = Mods.ModSet.Installed;
