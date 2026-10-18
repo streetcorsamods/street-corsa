@@ -364,6 +364,13 @@ one-shot cue `start` played as it begins. The base game's work sounds are `work.
 over the bench's sound. A job of the same id as an earlier mod's takes its place, whole;
 `"disabled": true` takes it out. The base game's jobs are in `Content\streetcorsa\parts\rebuilds.json`.
 
+A job with `"becomes": true` turns a part into another, with what is on it, its wear and its damage: the part names what
+in its pack, by the job's id (`"becomes": { "weld_spiders": "running_gear/axles_gm/gm_10bolt_welded_low" }` on the base
+game's open carriers, the welded carrier on the same shelf). It is offered only on parts that name one, and may restore
+nothing (`"restores": 0`): the part is no better, it is something else. Not for a machine shop. A target that is no part,
+or on another shelf, is told as a mod problem and left out. A welded carrier is priced by its own `price_lock` (how hard
+it locks, as the differentials' price reads it) rather than as the spool it acts like.
+
 The player's own work (a kit) lands round what the job can do: `roll` (0 to 0.5) is how far under `restores` it may come
 out, up to a quarter of it over, never worse than the part was; left out, 0.08 for a kit, none for an exchange unit,
 0.02 at a machine shop. The show ends saying how it came out (`rebuild.quality.good`, `.fair`, `.rough`).

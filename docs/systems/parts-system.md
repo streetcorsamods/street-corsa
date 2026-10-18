@@ -755,7 +755,11 @@ car home in the pack's words. The garage draws the housing with its slot 1 betwe
 - **Breaking it** (harsh, the owner's call): see docs/ac-integration/csp-lua-scripts.md "Damage", `CAR_n_AXLE`. The
   repair shop's "Rear axle rebuild" takes the damage off every axle part; the rivals' daily repairs take it too.
 - **Work**: `gear_setup` (own work, a rougher roll: 0.12), `posi_rebuild` (the carrier off the car), `axle_bearing`; at the
-  machine shop `gear_setup_shop` and `housing_true` (a bent housing straightened).
+  machine shop `gear_setup_shop` and `housing_true` (a bent housing straightened). `weld_spiders` (phase 5) welds an open
+  carrier's spider gears into a poor man's spool: a job that turns a part into another (`RebuildJob.Becomes`, the open
+  carrier's pack names its `_welded` twin in `"becomes"`, checked by `PartRebuilds.CheckBecomes`; `Rebuilding.Apply` with
+  the catalog swaps the part's id, keeping what is on it, its wear and damage). The welded carrier locks both ways (1/1, no
+  preload) at 85% of the open one's strength (the welds crack), and is priced near the open one it was (`price_lock` 0.45).
 - Prices: `rear_axles` and `axle_shafts` by `strength`, `differentials` by `diff_lock` (0.3 open, about 1 a posi, 2.3 a
   spool), `ring_pinions` flat. Shops: the make specialists stock their make's packs, speed shops the carriers and gears,
   junkyards whatever comes off a wreck.
