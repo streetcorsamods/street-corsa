@@ -12,7 +12,7 @@ namespace StreetCorsa.Models.GameState
 
         public Guid InstanceId { get; set; } = Guid.NewGuid();
 
-        /// <summary>Id of the part in the parts catalog, e.g. "engines/Mopar/block_340"</summary>
+        /// <summary>Id of the part in the parts catalog, e.g. "engines/chrysler/chrysler_340_v8_block"</summary>
         public string DefinitionId { get; set; } = string.Empty;
 
         /// <summary>1 = new, 0 = worn out (mileage)</summary>

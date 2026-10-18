@@ -1,4 +1,3 @@
-using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using StreetCorsa.Mods;
@@ -59,17 +58,16 @@ public sealed class PartGroups
     /// <summary>A part no group takes in</summary>
     public const string Accessories = "accessories";
 
-    private static readonly Lazy<PartGroups> InstalledGroups = new(() => Load(ModSet.Installed.Folders(ContentTypes.Parts).Select(f => f.Dir)));
-    private static volatile PartGroups? _current;
+    private static readonly PartsFiles<PartGroups> Files = new(Load);
 
     /// <summary>The groups of the mods next to the game, read once</summary>
-    public static PartGroups Installed => InstalledGroups.Value;
+    public static PartGroups Installed => Files.Installed;
 
     /// <summary>The groups in use: the installed ones, or ones a test or a tool sets</summary>
     public static PartGroups Current
     {
-        get => _current ?? Installed;
-        set => _current = value;
+        get => Files.Current;
+        set => Files.Current = value;
     }
 
     private readonly List<PartGroup> _groups;
@@ -133,25 +131,13 @@ public sealed class PartGroups
         var problems = new List<string>();
         var groups = new List<PartGroup>();
         var shows = new List<PartShow>();
-        foreach (var dir in partsFolders)
-        {
-            var file = Path.Combine(dir, FileName);
-            if (!File.Exists(file)) continue;
+        var files = new List<(string File, List<PartGroup?>? Groups, List<PartShow?>? Shows)>();
+        PartsFiles.ReadEach(partsFolders, FileName, problems, (file, root) =>
+            files.Add((file, root.GetProperty("groups").Deserialize<List<PartGroup?>>(ModJson.Options),
+                root.TryGetProperty("shows", out var showsElement) ? showsElement.Deserialize<List<PartShow?>>(ModJson.Options) : null)));
 
-            List<PartGroup?>? read;
-            List<PartShow?>? readShows;
-            try
-            {
-                using var document = JsonDocument.Parse(File.ReadAllText(file), ModJson.DocumentOptions);
-                var root = document.RootElement;
-                read = root.GetProperty("groups").Deserialize<List<PartGroup?>>(ModJson.Options);
-                readShows = root.TryGetProperty("shows", out var showsElement) ? showsElement.Deserialize<List<PartShow?>>(ModJson.Options) : null;
-            }
-            catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException or KeyNotFoundException or InvalidOperationException)
-            {
-                problems.Add($"{file}: {ex.Message}; left out");
-                continue;
-            }
+        foreach (var (file, read, readShows) in files)
+        {
 
             var added = new List<PartGroup>();
             foreach (var group in read ?? [])

@@ -112,9 +112,9 @@ public static class EngineEvaluator
         var inputs = fromFigures ? PartFigures.Apply(PartFigures.DataEngineBase, figures) : PartFigures.Apply(assembly!.Inputs, figures);
         var dyno = EngineDyno.Run(inputs);
 
-        // What the block needs on its slots, in its own order, then the compression its fuel takes, then what the
-        // other parts need
-        var problem = fromFigures ? PartFigures.MissingOf(inputs) : NeedOf(root);
+        // What the block needs on its slots, in its own order (an engine of figures, then what its figures lack), then
+        // the compression its fuel takes, then what the other parts need
+        var problem = NeedOf(root) ?? (fromFigures ? PartFigures.MissingOf(inputs) : null);
         if (problem == null && assembly != null && inputs is not { MaxFuelFlow: <= 0, MaxAirFlow: <= 0 })
         {
             if (dyno.Compression < assembly.MinCompression)

@@ -24,7 +24,7 @@ public class PartPack
     /// </summary>
     public const string ModelsFileName = "models.json";
 
-    /// <summary>Pack id, also its folder under the parts root, e.g. "engines/Mopar"</summary>
+    /// <summary>Pack id, also its folder under the parts root, e.g. "engines/chrysler"</summary>
     [JsonProperty("id")]
     public string Id { get; set; } = string.Empty;
 
@@ -45,7 +45,7 @@ public class PartPack
 /// </summary>
 public class PartDefinition
 {
-    /// <summary>Unique id: pack id + config name, e.g. "engines/Mopar/block_340"</summary>
+    /// <summary>Unique id: pack id + the part's own name, e.g. "engines/chrysler/chrysler_340_v8_block"</summary>
     [JsonProperty("id")]
     public string Id { get; set; } = string.Empty;
 
@@ -108,6 +108,16 @@ public class PartDefinition
     /// </summary>
     [JsonProperty("class", NullValueHandling = NullValueHandling.Ignore)]
     public string? Class { get; set; }
+
+    // The fields of the pack format before the parts had classes and specs of their own: read only to say so
+    private static readonly string[] OlderFormatNames = { "class_chain", "properties", "required_slots" };
+
+    [JsonExtensionData]
+    private IDictionary<string, JToken>? OtherFields { get; set; }
+
+    /// <summary>The fields of the older pack format the part still has, which nothing reads (docs/modding.md, "A part")</summary>
+    [JsonIgnore]
+    public IEnumerable<string> OlderFormatFields => OlderFormatNames.Where(name => OtherFields?.ContainsKey(name) == true);
 
     /// <summary>
     /// What job the part is on an engine, for a mod whose part names do not say it: a kind of

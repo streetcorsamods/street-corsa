@@ -30,41 +30,11 @@ public static class SavedParts
         return changed;
     }
 
-    // Tuning saved before the parts had specs of their own, by the old field names
-    private static readonly Dictionary<string, string> TuningNames = new(StringComparer.Ordinal)
-    {
-        ["rpm_idle"] = "idle_rpm",
-        ["RPM_limit"] = "rev_limit",
-        ["end_ratio"] = "final_drive",
-        ["P_turbo_waste"] = "wastegate",
-        ["rpm_turbo_mul"] = "drive_ratio",
-        ["ratio[1]"] = "gears[0]",
-        ["ratio[2]"] = "gears[1]",
-        ["ratio[3]"] = "gears[2]",
-        ["ratio[4]"] = "gears[3]",
-        ["ratio[5]"] = "gears[4]",
-        ["ratio[6]"] = "gears[5]",
-        ["ratio[7]"] = "reverse"
-    };
-
-    /// <summary>A saved part's tuning under the names its specs go by now; a reverse ratio is a plain number</summary>
-    private static void RenameTuning(PartInstance part)
-    {
-        if (part.Tuning is not { Count: > 0 } tuning) return;
-
-        foreach (var (old, current) in TuningNames)
-        {
-            if (!tuning.Remove(old, out var value)) continue;
-            tuning.TryAdd(current, current == "reverse" ? Math.Abs(value) : value);
-        }
-    }
-
     /// <param name="parent">What <paramref name="part"/> hangs on, when it hangs on something</param>
     /// <returns>True when a joint was made again or a part came off</returns>
     private static bool Renew(PartsCatalog catalog, PartInstance part, List<PartInstance> loose, PartInstance? parent = null)
     {
         part.DefinitionId = catalog.CurrentId(part.DefinitionId);
-        RenameTuning(part);
 
         var children = part.Children.ToList();
         foreach (var child in children) child.DefinitionId = catalog.CurrentId(child.DefinitionId);

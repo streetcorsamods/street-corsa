@@ -151,7 +151,8 @@ pad), `PartsCatalog.ShiftSlot` changes the part in place, and the parts are laid
 model (`GarageRenderer.PlacePart`).
 
 Every step is written to `slot_shifts.json` next to the content the game runs on (part id → slot id → offset, metres,
-the part's axes, the sum of every nudge), applied by the catalog on every load. To make a fit part of the packs, add the
+the part's axes, the sum of every nudge), applied by the catalog on every load; a part renamed since keeps its shifts
+under its new id (`part_aliases.json`), and a base game id that names no part is a problem line. To make a fit part of the packs, add the
 offset to the slot's `position` in the pack.json and take the line out of the file. `SlotShifts` is written atomically
 (`SafeFile`) and never throws on load: a file that does not read gives no shifts and a `Problem`, and then it is never
 written over.

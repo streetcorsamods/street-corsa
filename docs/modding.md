@@ -431,7 +431,7 @@ with, and each part's class says what it adds (`Parts/Logic/EngineAssembly.cs` i
 - **The intake.** Every fuel system (`fuel_system`: a carburettor or an injection) on the manifold and what hangs on it
   gives its `mixture_ratio` (air to fuel by mass), the `fuel` it burns (`fuels.json`: `regular` when left out) and the
   most fuel it passes (`fuel_flow`, g/s); the air it takes in comes through its air cleaner (`air_cleaner`: its
-  `air_flow` g/s, less as it clogs by `clogging`, 0 to 1) or, without one, its open horn (its own `air_flow`). With
+  `air_flow` g/s, less as it clogs by `clogging`: 0 never clogs, 1 passes nothing worn out) or, without one, its open horn (its own `air_flow`). With
   several, the least of each counts. The fuel's best ratio, heat and burn time make the burn: off its best ratio the
   mixture burns cooler and slower, and it takes a static compression of 4 to 10 times its heat in MJ (about 6.8:1 to
   17:1 for pump gas at its best ratio).
@@ -472,7 +472,8 @@ is a kind of nothing, and only its own name takes it in.
 **The fuels** (`fuels.json`): `{ "fuels": { "methanol": { "heat": 1.4, "best_ratio": 16, "burn_time": 2.25,
 "burn_time_off": 0.4 } } }`: what a kg of the mixture gives off burning (MJ), the air to fuel ratio it burns best at,
 and how long it takes to burn there and how much longer at the worst ratio (ms). The base game has `regular`,
-`premium`, `high_octane`, `methanol` and `diesel`; a mod adds fuels or changes one by its id.
+`premium`, `high_octane`, `methanol` and `diesel`; a mod adds fuels or changes one by its id, giving only the figures
+it changes (`"methanol": { "heat": 1.5 }`).
 
 **An engine of figures.** A part needs no specs to work in an engine: `"figures"` gives its engine figures in plain
 metric units. An engine whose block has no specs is made of its parts' figures alone, whichever of its parts give them

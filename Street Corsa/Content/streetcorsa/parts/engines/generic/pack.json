@@ -315,7 +315,7 @@
       "mass": 3.1,
       "specs": {
         "air_flow": 1000,
-        "clogging": 1.5
+        "clogging": 0
       },
       "slots": [
         {
@@ -361,7 +361,7 @@
       "mass": 3.1,
       "specs": {
         "air_flow": 1000,
-        "clogging": 1.5
+        "clogging": 0
       },
       "slots": [
         {
@@ -407,7 +407,7 @@
       "mass": 3.1,
       "specs": {
         "air_flow": 1500,
-        "clogging": 1.9
+        "clogging": 0
       },
       "slots": [
         {
@@ -449,7 +449,7 @@
       "mass": 3.1,
       "specs": {
         "air_flow": 1500,
-        "clogging": 1.9
+        "clogging": 0
       },
       "slots": [
         {
@@ -491,7 +491,7 @@
       "mass": 3.1,
       "specs": {
         "air_flow": 1500,
-        "clogging": 1.9
+        "clogging": 0
       },
       "slots": [
         {

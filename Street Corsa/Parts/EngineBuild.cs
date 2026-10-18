@@ -18,6 +18,9 @@ public class EngineBuild
     public const string OriginRated = "rated";
     public const string OriginKit = "kit";
 
+    /// <summary><see cref="OriginCar"/> as the builds' files said it before</summary>
+    public const string OriginCarBefore = "car";
+
     /// <summary>Unique id, e.g. "factory/dodge-charger-r-t-69" or "rated/mopar-340-six-pack-290-hp"</summary>
     [JsonProperty("id")]
     public string Id { get; set; } = string.Empty;

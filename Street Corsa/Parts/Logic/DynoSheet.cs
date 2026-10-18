@@ -3,7 +3,8 @@ namespace StreetCorsa.Parts.Logic;
 /// <summary>
 /// What an engine's parts hand the dyno, filled in as the block goes over them (<see cref="EngineAssembly"/>):
 /// the working copy behind <see cref="DynoInputs"/>, with what the parts check against besides (the compression the
-/// fuel takes). Each bank of a vee is filled on a copy and the engine is the average of its banks.
+/// fuel takes). Each bank of a vee is filled on a copy and the engine is the average of its banks. A figure added here
+/// goes into <see cref="BeAverageOf"/> and <see cref="ToInputs"/> too (OwnPartLogicReviewTests checks both).
 /// </summary>
 internal sealed class DynoSheet
 {
@@ -30,13 +31,6 @@ internal sealed class DynoSheet
     public double MinCompression, MaxCompression;
 
     public DynoSheet Clone() => (DynoSheet)MemberwiseClone();
-
-    /// <summary>Every figure of <paramref name="other"/> over this sheet's</summary>
-    public void CopyFrom(DynoSheet other)
-    {
-        foreach (var field in typeof(DynoSheet).GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public))
-            field.SetValue(this, field.GetValue(other));
-    }
 
     /// <summary>The engine of two banks: each figure halfway between them, the cylinders and the fuel's limits as they were</summary>
     public void BeAverageOf(DynoSheet one, DynoSheet other)

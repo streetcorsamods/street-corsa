@@ -5,10 +5,10 @@ using StreetCorsa.Helpers;
 namespace StreetCorsa.Parts;
 
 /// <summary>
-/// Slots moved in their parts' space after conversion, by part id and slot id: what the garage's placement mode
-/// writes when a part is nudged into place. The game applies the file over the packs when the catalog loads;
-/// the converter folds it into its own shift rules on the next conversion and takes it away, so the packs stay
-/// the truth. Metres, the part's own axes; a slot's entry is the sum of every nudge it got.
+/// Slots moved in their parts' space, by part id and slot id: what the garage's placement mode writes when a part is
+/// nudged into place. The game applies the file over the packs when the catalog loads, till the shifts are written
+/// into the packs by hand and the file's entries taken away. Metres, the part's own axes; a slot's entry is the sum of
+/// every nudge it got.
 /// </summary>
 public sealed class SlotShifts
 {
@@ -85,21 +85,43 @@ public sealed class SlotShifts
         return !save || Save();
     }
 
-    /// <summary>Moves the slots of the parts given by the offsets; a slot or part that is not there is skipped</summary>
-    public int ApplyTo(IReadOnlyDictionary<string, PartDefinition> parts)
+    /// <summary>Moves the slots of the parts given by the offsets; a slot that is not there is skipped</summary>
+    /// <returns>The part ids of the file that name no part</returns>
+    public IReadOnlyList<string> ApplyTo(IReadOnlyDictionary<string, PartDefinition> parts)
     {
-        var applied = 0;
-        foreach (var (partId, slotId, offset) in All)
+        var unknown = new List<string>();
+        foreach (var (partId, slots) in _shifts)
         {
-            if (!parts.TryGetValue(partId, out var part)) continue;
-            foreach (var slot in part.Slots.Where(s => s.Id == slotId))
+            if (!parts.TryGetValue(partId, out var part))
             {
-                for (var axis = 0; axis < 3; axis++) slot.Position[axis] += offset[axis];
-                applied++;
+                unknown.Add(partId);
+                continue;
+            }
+
+            foreach (var (slotId, offset) in slots)
+            {
+                foreach (var slot in part.Slots.Where(s => s.Id == slotId))
+                {
+                    for (var axis = 0; axis < 3; axis++) slot.Position[axis] += offset[axis];
+                }
             }
         }
 
-        return applied;
+        return unknown;
+    }
+
+    /// <summary>The shifts of a part that has since been renamed go under its new id, onto any it already has there</summary>
+    public void Rename(Func<string, string> currentId)
+    {
+        foreach (var partId in _shifts.Keys.ToList())
+        {
+            var current = currentId(partId);
+            if (current.Equals(partId, StringComparison.OrdinalIgnoreCase)) continue;
+
+            var slots = _shifts[partId];
+            _shifts.Remove(partId);
+            foreach (var (slotId, offset) in slots) Add(current, slotId, offset, save: false);
+        }
     }
 
     /// <summary>

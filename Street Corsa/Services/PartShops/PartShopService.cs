@@ -159,6 +159,23 @@ namespace StreetCorsa.Services.PartShops
             return PartPricing.Round(PartPricing.WorthOfAssembly(_parts.Catalog, part) * PartShopRules.BuyFactor(definition));
         }
 
+        /// <summary>The part shops' shelves under the ids their parts go by now: a shelf is sold from by its part's id</summary>
+        /// <returns>How many shelves changed</returns>
+        public static int RenameShelves(PartsCatalog catalog, IEnumerable<PartShopLocation> shops)
+        {
+            var changed = 0;
+            foreach (var shelf in shops.SelectMany(shop => shop.Shelves))
+            {
+                var current = catalog.CurrentId(shelf.DefinitionId);
+                if (current == shelf.DefinitionId) continue;
+
+                shelf.DefinitionId = current;
+                changed++;
+            }
+
+            return changed;
+        }
+
         // ----- the player at the counter -----
 
         public bool BuyNew(GameState gameState, PartShopLocation shop, PartDefinition part)

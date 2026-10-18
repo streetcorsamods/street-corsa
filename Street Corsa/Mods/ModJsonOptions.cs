@@ -4,7 +4,7 @@ namespace StreetCorsa.Mods;
 
 /// <summary>
 /// How every mod file is read: names whatever their case, comments and trailing commas allowed. Kept on its own so the
-/// tools that link the part code (the converter, the bench) read a mod's files the game's way without the rest of the
+/// tools that link the part code (EngineBench) read a mod's files the game's way without the rest of the
 /// mods' code.
 /// </summary>
 public static partial class ModJson

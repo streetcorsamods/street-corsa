@@ -1,7 +1,5 @@
-using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using StreetCorsa.Mods;
 
 namespace StreetCorsa.Parts.Logic;
 
@@ -18,16 +16,15 @@ public sealed class Fuels
     /// <summary>Pump gas as the game has always burnt it, when no file gives any fuel</summary>
     public static readonly Fuel Regular = new() { Heat = 1.0995, BestRatio = 12.5, BurnTime = 2.5, BurnTimeOff = 0.8 };
 
-    private static readonly Lazy<Fuels> InstalledFuels = new(() => Load(ModSet.Installed.Folders(ContentTypes.Parts).Select(f => f.Dir)));
-    private static volatile Fuels? _current;
+    private static readonly PartsFiles<Fuels> Files = new(Load);
 
-    public static Fuels Installed => InstalledFuels.Value;
+    public static Fuels Installed => Files.Installed;
 
     /// <summary>The fuels in use: the installed ones, or ones a test or a tool sets</summary>
     public static Fuels Current
     {
-        get => _current ?? Installed;
-        set => _current = value;
+        get => Files.Current;
+        set => Files.Current = value;
     }
 
     private readonly Dictionary<string, Fuel> _fuels;
@@ -45,35 +42,29 @@ public sealed class Fuels
     public Fuel Get(string? id) =>
         (id != null ? _fuels.GetValueOrDefault(id) : null) ?? _fuels.GetValueOrDefault(DefaultId) ?? Regular;
 
+    /// <summary>
+    /// Every mod's file, in load order (the base game's first). A fuel a later file names again takes the figures it
+    /// gives over the earlier ones (a mod's <c>"methanol": { "heat": 1.5 }</c> changes the heat alone).
+    /// </summary>
     public static Fuels Load(IEnumerable<string> partsFolders)
     {
         var problems = new List<string>();
         var fuels = new Dictionary<string, Fuel>(StringComparer.OrdinalIgnoreCase);
-        foreach (var dir in partsFolders)
+        PartsFiles.ReadEach(partsFolders, FileName, problems, (file, root) =>
         {
-            var file = Path.Combine(dir, FileName);
-            if (!File.Exists(file)) continue;
-
-            try
+            foreach (var entry in root.GetProperty("fuels").EnumerateObject())
             {
-                using var document = JsonDocument.Parse(File.ReadAllText(file), ModJson.DocumentOptions);
-                foreach (var entry in document.RootElement.GetProperty("fuels").EnumerateObject())
+                var fuel = fuels.TryGetValue(entry.Name, out var earlier) ? earlier.Copy() : new Fuel();
+                if (entry.Value.ValueKind != JsonValueKind.Object || !fuel.Over(entry.Value)
+                    || fuel is not { Heat: > 0 and < 100, BestRatio: > 0 and < 100 } || !(fuel.BurnTime > 0) || !double.IsFinite(fuel.BurnTimeOff))
                 {
-                    var fuel = entry.Value.Deserialize<Fuel>(ModJson.Options);
-                    if (fuel is not { Heat: > 0 and < 100, BestRatio: > 0 and < 100 } || !(fuel.BurnTime > 0) || !double.IsFinite(fuel.BurnTimeOff))
-                    {
-                        problems.Add($"{file}: fuel {entry.Name} needs a heat, a best ratio and a burn time over 0; left out");
-                        continue;
-                    }
-
-                    fuels[entry.Name] = fuel;
+                    problems.Add($"{file}: fuel {entry.Name} needs a heat, a best ratio and a burn time over 0; left out");
+                    continue;
                 }
+
+                fuels[entry.Name] = fuel;
             }
-            catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException or KeyNotFoundException or InvalidOperationException)
-            {
-                problems.Add($"{file}: {ex.Message}; left out");
-            }
-        }
+        });
 
         return new Fuels(fuels, problems);
     }
@@ -95,4 +86,22 @@ public sealed class Fuel
 
     [JsonPropertyName("burn_time_off")]
     public double BurnTimeOff { get; set; }
+
+    public Fuel Copy() => (Fuel)MemberwiseClone();
+
+    /// <summary>The figures <paramref name="entry"/> gives over this fuel's; false when one of them is not a number</summary>
+    public bool Over(JsonElement entry)
+    {
+        return Take("heat", v => Heat = v) && Take("best_ratio", v => BestRatio = v) && Take("burn_time", v => BurnTime = v)
+               && Take("burn_time_off", v => BurnTimeOff = v);
+
+        bool Take(string name, Action<double> set)
+        {
+            if (!entry.TryGetProperty(name, out var value)) return true;
+            if (value.ValueKind != JsonValueKind.Number || !value.TryGetDouble(out var number)) return false;
+
+            set(number);
+            return true;
+        }
+    }
 }

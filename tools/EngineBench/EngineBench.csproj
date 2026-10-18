@@ -23,6 +23,7 @@
     <Compile Include="..\..\Street Corsa\Parts\PartClasses.cs" Link="Parts\PartClasses.cs" />
     <Compile Include="..\..\Street Corsa\Parts\PartSlots.cs" Link="Parts\PartSlots.cs" />
     <Compile Include="..\..\Street Corsa\Parts\PartGroups.cs" Link="Parts\PartGroups.cs" />
+    <Compile Include="..\..\Street Corsa\Parts\PartsFiles.cs" Link="Parts\PartsFiles.cs" />
     <Compile Include="..\..\Street Corsa\Parts\WorkOrder.cs" Link="Parts\WorkOrder.cs" />
     <Compile Include="..\..\Street Corsa\Parts\PartRebuilds.cs" Link="Parts\PartRebuilds.cs" />
     <Compile Include="..\..\Street Corsa\Parts\EngineLayout.cs" Link="Parts\EngineLayout.cs" />

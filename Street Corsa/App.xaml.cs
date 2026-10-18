@@ -581,6 +581,8 @@ namespace StreetCorsa
                     _ = Services.Scripting.GarageScene.For(garage);
                     Tell("Cars", Parts.Cars.CarBook.Installed.Problems);
                     Tell("Part groups", Parts.PartGroups.Installed.Problems);
+                    Tell("Part classes", Parts.PartClasses.Installed.Problems);
+                    Tell("Fuels", Parts.Logic.Fuels.Installed.Problems);
                 }));
             }
             catch (Exception ex)

@@ -1,6 +1,4 @@
-using System.IO;
 using System.Text.Json;
-using StreetCorsa.Mods;
 
 namespace StreetCorsa.Parts;
 
@@ -41,17 +39,16 @@ public sealed class PartClasses
     // Most classes a class may have above it: a loop in a mod's file ends there
     private const int MaxDepth = 32;
 
-    private static readonly Lazy<PartClasses> InstalledClasses = new(() => Load(ModSet.Installed.Folders(ContentTypes.Parts).Select(f => f.Dir)));
-    private static volatile PartClasses? _current;
+    private static readonly PartsFiles<PartClasses> Files = new(Load);
 
     /// <summary>The classes of the mods next to the game, read once</summary>
-    public static PartClasses Installed => InstalledClasses.Value;
+    public static PartClasses Installed => Files.Installed;
 
     /// <summary>The classes in use: the installed ones, or ones a test or a tool sets</summary>
     public static PartClasses Current
     {
-        get => _current ?? Installed;
-        set => _current = value;
+        get => Files.Current;
+        set => Files.Current = value;
     }
 
     private readonly Dictionary<string, string> _parents;
@@ -84,30 +81,19 @@ public sealed class PartClasses
     {
         var problems = new List<string>();
         var parents = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var dir in partsFolders)
+        PartsFiles.ReadEach(partsFolders, FileName, problems, (file, root) =>
         {
-            var file = Path.Combine(dir, FileName);
-            if (!File.Exists(file)) continue;
-
-            try
+            foreach (var entry in root.GetProperty("classes").EnumerateObject())
             {
-                using var document = JsonDocument.Parse(File.ReadAllText(file), ModJson.DocumentOptions);
-                foreach (var entry in document.RootElement.GetProperty("classes").EnumerateObject())
+                if (entry.Value.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(entry.Name))
                 {
-                    if (entry.Value.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(entry.Name))
-                    {
-                        problems.Add($"{file}: class {entry.Name} names no parent class; left out");
-                        continue;
-                    }
-
-                    parents[entry.Name] = entry.Value.GetString()!;
+                    problems.Add($"{file}: class {entry.Name} names no parent class; left out");
+                    continue;
                 }
+
+                parents[entry.Name] = entry.Value.GetString()!;
             }
-            catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException or KeyNotFoundException or InvalidOperationException)
-            {
-                problems.Add($"{file}: {ex.Message}; left out");
-            }
-        }
+        });
 
         return new PartClasses(parents, problems);
     }

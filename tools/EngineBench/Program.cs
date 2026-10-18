@@ -546,7 +546,18 @@ public static class Program
         var failures = 0;
         var renewed = 0;
 
-        foreach (var stock in EngineBuildIndex.Create(old).Runnable)
+        // A parts folder of before the parts had classes and specs of their own reads, but none of its engines runs on
+        // this model: there is nothing to check, which is no pass
+        var runnable = EngineBuildIndex.Create(old).Runnable;
+        if (runnable.Count == 0)
+        {
+            Console.WriteLine($"No engine of {oldPartsFolder} runs ({old.Problems.Count} problem(s) reading it): nothing was checked. " +
+                              "A parts folder of the format before classes and specs cannot be read by this model.");
+            foreach (var problem in old.Problems.Take(10)) Console.WriteLine($"  {problem}");
+            return 1;
+        }
+
+        foreach (var stock in runnable)
         {
             var engine = EngineFactory.CreateStock(old, stock, 1.0, new Random(1));
             if (engine == null) continue;

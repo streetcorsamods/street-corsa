@@ -40,10 +40,13 @@ public sealed class EngineAssembly
     private const int DefaultCylinders = 4;
     private const double DefaultPinHeight = 25;
     private const double DefaultAdvanceStep = 0.1;
+
+    // More steps than any cam gear has: the advance is taken as it is
+    private const double MaxAdvanceSteps = 10_000;
     private const double DefaultClutchTorque = 1300;
 
     private readonly InstalledPart _block;
-    private readonly DynoSheet _sheet = new();
+    private DynoSheet _sheet = new();
     private readonly Dictionary<InstalledPart, Mixture> _mixtures = new();
     private double _sliding = 1;
 
@@ -143,11 +146,18 @@ public sealed class EngineAssembly
             var head = block.OnSlot(slot, PartClasses.CylinderHead);
             if (head == null) continue;
 
+            // An overhead cam turns with its head: its inertia and what it loses go with the head's
+            var headCamshaft = camshaft == null ? head.OnRole(Roles.Camshaft, PartClasses.Camshaft) : null;
             var bank = sheet.Clone();
             banks.Add(bank);
-            Head(head, bank, camshaft ?? head.OnRole(Roles.Camshaft, PartClasses.Camshaft), intake, piston, rod, crank, boreArea, cylinderVolume);
+            Head(head, bank, camshaft ?? headCamshaft, intake, piston, rod, crank, boreArea, cylinderVolume);
             _sliding *= HeadSliding(head, camshaft);
             inertia += InertiaOf(head) * 2;
+            if (headCamshaft != null)
+            {
+                inertia += 2 * InertiaOf(headCamshaft) * 2;
+                _sliding *= Sliding(headCamshaft);
+            }
         }
 
         // An engine with a head missing has no breathing at all (it does not run either); the banks of a vee average
@@ -161,7 +171,7 @@ public sealed class EngineAssembly
                 engine = both;
             }
 
-            sheet.CopyFrom(engine);
+            _sheet = sheet = engine;
         }
         else if (headSlots.Count == 0)
         {
@@ -170,7 +180,7 @@ public sealed class EngineAssembly
 
         if (camshaft != null)
         {
-            if (camshaft.Spec(Specs.MaxRpm, -1) is var camRpm && camRpm < sheet.MaxRpm) sheet.MaxRpm = camRpm;
+            LowerMaxRpm(camshaft, sheet);
             inertia += 2 * InertiaOf(camshaft) * 2;
             _sliding *= Sliding(camshaft);
         }
@@ -258,11 +268,12 @@ public sealed class EngineAssembly
         var advance = cam.Spec(Specs.Advance);
         if (advance < low) advance = low;
         else if (advance > high) advance = high;
-        else
+        else if (!(step > 0)) advance = low;
+        else if ((high - low) / step <= MaxAdvanceSteps)
         {
-            // The cam turns in steps on its gear
+            // The cam turns in steps on its gear; a gear of more steps than any is one it turns on smoothly
             var at = low;
-            while (step > 0 && at < high && at < advance) at += step;
+            while (at < high && at < advance) at += step;
             advance = at;
         }
 
@@ -284,11 +295,20 @@ public sealed class EngineAssembly
 
         return new[] { Roll(inOpen) / CycleDegrees, Roll(inClose) / CycleDegrees, Roll(outOpen) / CycleDegrees, Roll(outClose) / CycleDegrees };
 
-        // Into the cycle; a full cycle stays one
+        // Into the cycle; a full cycle stays one. A remainder, not a loop: a cam of absurd figures is still a cam
         static double Roll(double degrees)
         {
-            while (degrees < 0) degrees += CycleDegrees;
-            while (degrees > CycleDegrees) degrees -= CycleDegrees;
+            if (degrees < 0)
+            {
+                degrees %= CycleDegrees;
+                if (degrees < 0) degrees += CycleDegrees;
+            }
+            else if (degrees > CycleDegrees)
+            {
+                degrees %= CycleDegrees;
+                if (degrees == 0) degrees = CycleDegrees;
+            }
+
             return degrees;
         }
     }
@@ -311,7 +331,7 @@ public sealed class EngineAssembly
             if (part.Children.TryGetValue(id, out var child)) Fill(child, sheet);
         }
 
-        if (part.Spec(Specs.MaxRpm, -1) is >= 0 and var maxRpm && (sheet.MaxRpm < 0 || maxRpm < sheet.MaxRpm)) sheet.MaxRpm = maxRpm;
+        LowerMaxRpm(part, sheet);
 
         if (_mixtures.TryGetValue(part, out var fuel))
         {
@@ -343,6 +363,12 @@ public sealed class EngineAssembly
             if (part.Spec(Specs.Wastegate) is > 0 and var gate) sheet.BoostWastegate = gate;
             else sheet.BoostMax = 0;
         }
+    }
+
+    /// <summary>A part's top speed is the engine's when it is the lowest yet; a part without one leaves it as it is</summary>
+    private static void LowerMaxRpm(InstalledPart part, DynoSheet sheet)
+    {
+        if (part.Spec(Specs.MaxRpm, -1) is >= 0 and var maxRpm && (sheet.MaxRpm < 0 || maxRpm < sheet.MaxRpm)) sheet.MaxRpm = maxRpm;
     }
 
     private sealed record Mixture(double Ratio, double FuelFlow, double AirFlow, double Heat, double BurnTime, double MinCompression, double MaxCompression);
@@ -385,13 +411,19 @@ public sealed class EngineAssembly
         return null;
     }
 
-    /// <summary>What an air cleaner passes, kg/s: the dirt it lets clog it takes its share as it wears</summary>
+    /// <summary>
+    /// What an air cleaner passes, kg/s: the dirt it lets clog it takes its share as it wears. Clogging 0 never clogs, 1
+    /// passes nothing worn out (<see cref="Clogging"/>).
+    /// </summary>
     private static double AirCleanerFlow(InstalledPart cleaner)
     {
         var clean = cleaner.Spec(Specs.AirFlow, 0.01) / GramsPerKg;
-        var clogging = cleaner.Spec(Specs.Clogging);
+        var clogging = Clogging(cleaner.Definition);
         return clean * cleaner.Wear * clogging + clean * (1 - clogging) + 0.00001;
     }
+
+    /// <summary>How much of its flow an air cleaner loses to dirt as it wears, 0 (none) to 1 (all of it)</summary>
+    public static double Clogging(PartDefinition cleaner) => cleaner.Number(Specs.Clogging) is var clogging && double.IsFinite(clogging) ? Math.Clamp(clogging, 0, 1) : 0;
 
     /// <summary>What a part keeps of the engine's turning, 0..1: its own share, with what turns with it as one</summary>
     private static double Sliding(InstalledPart part) =>

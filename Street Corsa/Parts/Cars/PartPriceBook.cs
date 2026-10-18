@@ -26,8 +26,11 @@ public sealed class PartPriceBook
     // More than any engine makes, well inside what a price can hold
     private const double MaxPower = 100_000;
 
-    /// <summary>Moved on when the measuring changes (the dyno, what a part is measured against): every kept one is made again</summary>
-    private const int MeasuringVersion = 1;
+    /// <summary>
+    /// Moved on when the measuring changes (what a part is measured against): every kept one is made again. The engine
+    /// model and the dyno are code, and the code's own build stamp is in the <see cref="Fingerprint"/> besides.
+    /// </summary>
+    private const int MeasuringVersion = 2;
 
     // The dyno runs make garbage fast: more threads than this only fight over the heap
     private static int Threads => Math.Clamp(Environment.ProcessorCount / 2, 1, 8);
@@ -55,13 +58,16 @@ public sealed class PartPriceBook
     public IReadOnlyDictionary<string, double> Power => _power;
 
     /// <summary>
-    /// What the measuring rests on: every file under the parts folders (its path, size and time) and the game's version.
-    /// The same parts give the same fingerprint, and a kept measuring of it stands.
+    /// What the measuring rests on: every file under the parts folders (its path, size and time), the game's version and
+    /// the build of the code that works the engines out (<see cref="Logic.EngineAssembly"/>, the dyno: a deterministic
+    /// build's module id moves with its code). The same parts and code give the same fingerprint, and a kept measuring
+    /// of it stands.
     /// </summary>
     public static string Fingerprint(IEnumerable<string> partsFolders)
     {
         var text = new StringBuilder();
-        text.Append(MeasuringVersion).Append('|').Append(typeof(PartPriceBook).Assembly.GetName().Version).Append('\n');
+        text.Append(MeasuringVersion).Append('|').Append(typeof(PartPriceBook).Assembly.GetName().Version)
+            .Append('|').Append(typeof(Logic.EngineAssembly).Assembly.ManifestModule.ModuleVersionId).Append('\n');
         foreach (var folder in partsFolders)
         {
             if (!Directory.Exists(folder)) continue;

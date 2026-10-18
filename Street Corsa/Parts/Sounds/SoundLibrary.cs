@@ -131,6 +131,7 @@ public sealed class SoundLibrary
 
     /// <summary>The sounds of every mod that has any, in load order; the first folder is the base game's</summary>
     /// <param name="partExists">Whether a part id is known, to find what a mod's pins name (its own block first, then the base game's)</param>
+    /// <param name="currentId">The id a part goes by now (<c>PartsCatalog.CurrentId</c>): a pin of a block that has since been renamed is the renamed block's</param>
     /// <remarks>
     /// Each mod's sounds folder is laid out as the base game's: one sound per subfolder, and a sounds.json whose pins
     /// and car facts join those of the mods before it (a later mod's pin for the same block wins). A mod's sound ids
@@ -138,7 +139,7 @@ public sealed class SoundLibrary
     /// A sounds.json that does not read is no pins and no facts, a sound folder that does not read is not a sound: each
     /// is one line in <see cref="Problems"/>, and the rest of the library stands.
     /// </remarks>
-    public static SoundLibrary Load(IReadOnlyList<(ModInfo Mod, string Dir)> roots, Func<string, bool>? partExists = null)
+    public static SoundLibrary Load(IReadOnlyList<(ModInfo Mod, string Dir)> roots, Func<string, bool>? partExists = null, Func<string, string>? currentId = null)
     {
         partExists ??= _ => false;
         var baseRoot = roots.FirstOrDefault(r => r.Mod.IsBase).Dir ?? roots.FirstOrDefault().Dir ?? string.Empty;
@@ -202,6 +203,7 @@ public sealed class SoundLibrary
         foreach (var (mod, block, sound) in pins)
         {
             var blockId = ModIds.Resolve(mod.Id, block, partExists);
+            if (currentId != null) blockId = currentId(blockId);
             var soundId = sound.StartsWith(CarPrefix, StringComparison.OrdinalIgnoreCase)
                 ? sound
                 : ModIds.Resolve(mod.Id, sound, library._byId.ContainsKey);

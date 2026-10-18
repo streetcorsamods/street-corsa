@@ -56,10 +56,6 @@
     <None Include="..\..\Street Corsa\Content\streetcorsa\stations\*\station.json" LinkBase="Content\streetcorsa\stations" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
-  <!-- The converter's plain-BCL code, tried on temp folders and made-up files: its commit and its SCX and RPK readers -->
-  <ItemGroup>
-  </ItemGroup>
-
   <!-- What the scene builders share, tried on models in memory: their meshes, a prop's OBJ meshes and their command lines -->
   <ItemGroup>
     <Compile Include="..\..\tools\Shared\Kn5SceneWriter.cs" Link="Tools\Kn5SceneWriter.cs" />

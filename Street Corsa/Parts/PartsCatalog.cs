@@ -76,6 +76,7 @@ public sealed class PartsCatalog
         var aliases = new List<(ModInfo Mod, string Gone, string Current)>();
         var buildAliases = new List<(ModInfo Mod, string Gone, string Current)>();
         var models = new List<(ModInfo Mod, string Root, string Label, string Part, string Model)>();
+        var classes = PartClasses.Load(roots.Select(r => r.Dir));
 
         foreach (var (mod, root) in roots)
         {
@@ -107,6 +108,13 @@ public sealed class PartsCatalog
                     part.PackFolder = Path.GetDirectoryName(file);
                     part.Make = string.IsNullOrWhiteSpace(pack.Make) ? null : pack.Make.Trim();
                     if (registry.Add(mod, part.Id, part.Replaces, part, packName) is { } id) part.Id = id;
+
+                    // A mod written for the pack format of before, or a class of no file, loads but does nothing
+                    if (part.OlderFormatFields.ToList() is { Count: > 0 } older)
+                        catalog._problems.Add($"{packName}: {part.Id}: {string.Join(", ", older)} are of the older pack format and not read; a part has a class, specs and needs now (docs/modding.md)");
+                    if (!string.IsNullOrWhiteSpace(part.Class) && !classes.Parents.ContainsKey(part.Class) && !PartClasses.Current.Parents.ContainsKey(part.Class)
+                        && !part.Class.Equals(PartClasses.Part, StringComparison.OrdinalIgnoreCase))
+                        catalog._problems.Add($"{packName}: {part.Id}: the class {part.Class} is in no {PartClasses.FileName}; the part counts as no kind of part");
                 }
             }
 
@@ -183,7 +191,7 @@ public sealed class PartsCatalog
             }
 
             var prefix = key.EndsWith('*') ? key[..^1] : null;
-            var exact = prefix == null ? Resolve(mod.Id, key) : null;
+            var exact = prefix == null ? catalog.CurrentId(Resolve(mod.Id, key)) : null;
             var matched = 0;
             foreach (var part in catalog._parts.Values.Where(p => prefix != null ? p.Id.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
                                                                                  : p.Id.Equals(exact, StringComparison.OrdinalIgnoreCase)))
@@ -196,10 +204,14 @@ public sealed class PartsCatalog
             if (matched == 0) catalog._problems.Add($"{label}{PartPack.ModelsFileName}: {key} names no part; left out");
         }
 
-        // Slots nudged into place in the garage, by full id: the file is the base game's
+        // Slots nudged into place in the garage, by full id: the file is the base game's. A part since renamed keeps its
+        // shifts under its new id, which the file gets the next time it is written.
         catalog.Shifts = SlotShifts.Load(baseRoot);
         if (catalog.Shifts.Problem != null) catalog._problems.Add(catalog.Shifts.Problem);
-        catalog.Shifts.ApplyTo(catalog._parts);
+        catalog.Shifts.Rename(catalog.CurrentId);
+        catalog._problems.AddRange(catalog.Shifts.ApplyTo(catalog._parts)
+            .Where(id => !ModIds.IsQualified(id))
+            .Select(id => $"{SlotShifts.FileName}: {id} names no part; its shifts are kept but move nothing"));
 
         return catalog;
 
@@ -318,6 +330,13 @@ public sealed class PartsCatalog
                 {
                     unnamed++;
                     continue;
+                }
+
+                // What the builds a car left the factory with were called before
+                if (build.Origin.Equals(EngineBuild.OriginCarBefore, StringComparison.OrdinalIgnoreCase))
+                {
+                    catalog._problems.Add($"{label}{EngineBuild.FileName}: {build.Id}: the origin \"{build.Origin}\" is \"{EngineBuild.OriginCar}\" now; read as that");
+                    build.Origin = EngineBuild.OriginCar;
                 }
 
                 builds.Add(mod, build.Id, build.Replaces, build, label + EngineBuild.FileName);

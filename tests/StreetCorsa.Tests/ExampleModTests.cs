@@ -37,6 +37,14 @@ public class ExampleModTests
         Assert.DoesNotContain(Catalog.Value.Problems, p => p.Contains(ModId, StringComparison.Ordinal));
     }
 
+    [Fact]
+    public void Every_part_of_the_game_and_the_mod_is_of_the_pack_format_and_a_known_class()
+    {
+        Assert.DoesNotContain(Catalog.Value.Problems, p => p.Contains("older pack format", StringComparison.Ordinal)
+                                                          || p.Contains("is in no " + PartClasses.FileName, StringComparison.Ordinal)
+                                                          || p.Contains(SlotShifts.FileName, StringComparison.Ordinal));
+    }
+
     [Theory]
     [InlineData("cars/abarth_595ss/stock", 32)]
     [InlineData("cars/alfa_gta/stock", 115)]
