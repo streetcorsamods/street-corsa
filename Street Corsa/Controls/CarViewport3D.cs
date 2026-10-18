@@ -20,8 +20,10 @@ namespace StreetCorsa.Controls;
 /// Real-time 3D car viewport backed by the AcTools renderer.
 /// The renderer draws off-screen into a shared DX11 texture which is presented through a D3DImage,
 /// so the viewport composes like any other WPF element (overlays, opacity, dialogs on top all work).
+/// The camera and the pointer are in CarViewport3D.Camera.cs, the lift in CarViewport3D.Lift.cs, the placement mode
+/// and the candidates in CarViewport3D.Placement.cs, the work on a part and the workbench in CarViewport3D.Work.cs.
 /// </summary>
-public class CarViewport3D : D3DViewportBase
+public partial class CarViewport3D : D3DViewportBase
 {
     // Orbit camera limits: stay above the floor and inside the showroom walls
     private const float MinBeta = 0.02f;
@@ -154,11 +156,12 @@ public class CarViewport3D : D3DViewportBase
     private IReadOnlyList<MountCandidate>? _shownCandidates;
     private CarAnchors? _anchors;
 
-    // A press that does not turn into a drag is a click
+    // A press that does not turn into a drag is a click; the pointer is asked what it is on this often at most
+    // (Environment.TickCount64 ms: a clock change never holds the picks up)
     private const double ClickSlack = 4.0;
-    private static readonly TimeSpan HoverInterval = TimeSpan.FromMilliseconds(30);
+    private const long HoverIntervalMs = 30;
     private System.Windows.Point _pressedAt;
-    private DateTime _lastHoverPick = DateTime.MinValue;
+    private long _lastHoverPick = long.MinValue;
 
     public CarViewport3D()
         : base("Viewport3D", new LabelLook(13, 0xD0, 0x80, new Thickness(8, 4, 8, 4), new Vector(18, 14)))
@@ -411,43 +414,6 @@ public class CarViewport3D : D3DViewportBase
         AnimateFor(AnimationWindow);
     }
 
-    public static readonly DependencyProperty LiftStopProperty = DependencyProperty.Register(
-        nameof(LiftStop), typeof(Models.GameState.LiftStop), typeof(CarViewport3D),
-        new PropertyMetadata(Models.GameState.LiftStop.Down, (d, _) => ((CarViewport3D)d).OnLiftStopChanged()));
-
-    /// <summary>
-    /// Where the garage's lift has the car (<see cref="Models.GameState.Car.LiftStop"/>): it goes there over a few seconds,
-    /// the whole car with its parts, the lift's post rising under it; a car loaded comes at its stop at once
-    /// </summary>
-    public Models.GameState.LiftStop LiftStop
-    {
-        get => (Models.GameState.LiftStop)GetValue(LiftStopProperty);
-        set => SetValue(LiftStopProperty, value);
-    }
-
-    private static readonly DependencyPropertyKey IsLiftMovingPropertyKey = DependencyProperty.RegisterReadOnly(
-        nameof(IsLiftMoving), typeof(bool), typeof(CarViewport3D), new PropertyMetadata(false));
-
-    public static readonly DependencyProperty IsLiftMovingProperty = IsLiftMovingPropertyKey.DependencyProperty;
-
-    /// <summary>True while the lift is on its way to <see cref="LiftStop"/>: nothing is to be done to the car in the meantime</summary>
-    public bool IsLiftMoving
-    {
-        get => (bool)GetValue(IsLiftMovingProperty);
-        private set => SetValue(IsLiftMovingPropertyKey, value);
-    }
-
-    private void OnLiftStopChanged()
-    {
-        // A car on its way in comes at its stop as it is loaded (LoadAsync); the one going stays as it was
-        if (Renderer?.CarNode == null || RequestedCarDirectory != _loadedCarDirectory) return;
-        if (_liftNow == LiftGoal) return;
-
-        _liftHum ??= Audio.AudioHub.Shared.PlayLoop(Audio.Sfx.LiftMoves);
-        IsLiftMoving = true;
-        AnimateFor(AnimationWindow);
-    }
-
     public static readonly DependencyProperty PartsCatalogProperty = DependencyProperty.Register(
         nameof(PartsCatalog), typeof(PartsCatalog), typeof(CarViewport3D),
         new PropertyMetadata(null, (d, _) =>
@@ -569,208 +535,6 @@ public class CarViewport3D : D3DViewportBase
         set => SetValue(SelectedPartProperty, value);
     }
 
-    public static readonly DependencyProperty WorkPieceProperty = DependencyProperty.Register(
-        nameof(WorkPiece), typeof(WorkPiece), typeof(CarViewport3D),
-        new PropertyMetadata(null, (d, e) => ((CarViewport3D)d).OnWorkPieceChanged((WorkPiece?)e.NewValue)));
-
-    /// <summary>
-    /// The part a job of the parts view's "Work on it" is being done on: a loose one comes down onto the workbench and
-    /// turns there, the camera goes to a mounted one where it is; its grime is drawn over it at <see cref="WorkGrime"/>.
-    /// Null when no job is on: the part goes, the camera comes back.
-    /// </summary>
-    public WorkPiece? WorkPiece
-    {
-        get => (WorkPiece?)GetValue(WorkPieceProperty);
-        set => SetValue(WorkPieceProperty, value);
-    }
-
-    public static readonly DependencyProperty WorkGrimeProperty = DependencyProperty.Register(
-        nameof(WorkGrime), typeof(double), typeof(CarViewport3D),
-        new PropertyMetadata(0.0, (d, _) => ((CarViewport3D)d).ApplyWorkGrime()));
-
-    /// <summary>How much grime the part being worked on still carries, 0 clean to 1</summary>
-    public double WorkGrime
-    {
-        get => (double)GetValue(WorkGrimeProperty);
-        set => SetValue(WorkGrimeProperty, value);
-    }
-
-    // Coming down onto the bench from this high, over this long, at how far in sight; turning slowly while it is there
-    private const float WorkDrop = 0.45f;
-    private const float WorkArriveSeconds = 0.8f;
-    private const float WorkLeaveSeconds = 0.5f;
-    private const float WorkTurnRate = 0.22f;
-
-    // The camera on the bench (from in front of it and the stand's side), and on a mounted part
-    private const float BenchRadius = 1.7f;
-    private const float BenchAlpha = 0.9f;
-    private const float BenchBeta = 0.42f;
-    private const float WorkRadius = 1.5f;
-    private const float WorkBeta = 0.35f;
-
-    // The loose part on the bench: its model's box, how long it has been there, when it began to go and how far in
-    // sight and above the bench it was then, and the version of the job it belongs to (a new job, or none, while one
-    // is still being built, leaves the old one out)
-    private System.Numerics.Vector3 _workMin;
-    private System.Numerics.Vector3 _workMax;
-    private float _workTime;
-    private float _workLeftAt;
-    private float _workLeaveOpacity;
-    private float _workLeaveLift;
-    private bool _workOnBench;
-    private bool _workLeaving;
-    private int _workVersion;
-
-    // The camera went to the work: it comes back to the car, or the stand, when the work is done
-    private bool _cameraOnWork;
-
-    private void OnWorkPieceChanged(WorkPiece? piece)
-    {
-        var version = ++_workVersion;
-        if (piece == null)
-        {
-            if (_workOnBench && !_workLeaving && Renderer != null)
-            {
-                // Goes from where it is and as it looks: a part still coming down fades out where it is
-                _workLeaveLift = WorkLift();
-                _workLeaveOpacity = Renderer.WorkOpacity;
-                _workLeftAt = _workTime;
-                _workLeaving = true;
-                AnimateFor(TimeSpan.FromSeconds(WorkLeaveSeconds) + AnimationWindow);
-            }
-            else if (!_workOnBench) Renderer?.SetWork(null, null, SlimDX.Matrix.Identity, false);
-
-            // Whether or not the parts are still on show: the view may have closed as the work ended
-            if (Renderer != null && _cameraOnWork) ResetCamera();
-            _cameraOnWork = false;
-            return;
-        }
-
-        ApplyWorkAsync(piece, version);
-    }
-
-    private async void ApplyWorkAsync(WorkPiece piece, int version)
-    {
-        var renderer = Renderer;
-        var catalog = PartsCatalog;
-        if (renderer == null || catalog == null) return;
-
-        try
-        {
-            if (piece.OnBench)
-            {
-                // A garage without a workbench shows the job without the part
-                if (_bench is not { } bench) return;
-
-                // Built where it lies: its box puts it on the bench's top, whatever its own origin
-                var built = await Task.Run(() =>
-                {
-                    var placed = PartAssembler.Assemble(piece.Part, System.Numerics.Matrix4x4.Identity);
-                    var clean = PartAssembler.BuildModel(catalog, "work", placed);
-                    return (Clean: clean, Grime: Looks.PartGrime.Model(catalog, placed));
-                });
-                if (version != _workVersion || renderer != Renderer) return;
-
-                _workMin = built.Clean.Min;
-                _workMax = built.Clean.Max;
-                _workOnBench = true;
-                _workLeaving = false;
-                _workTime = 0f;
-                renderer.SetWork(built.Clean.Kn5, built.Grime.Kn5, BenchPlacement(), false);
-                renderer.WorkOpacity = 0f;
-                ApplyWorkGrime();
-
-                renderer.AutoAdjustTarget = false;
-                _autoAdjustWhenSettled = false;
-                _cameraOnWork = true;
-                var top = WorkbenchLayout.TopOf(bench.Placement);
-                _targetGoal = new SlimDX.Vector3(top.X, top.Y + Math.Min(0.25f, (_workMax.Y - _workMin.Y) / 2f), top.Z);
-                _radiusGoal = BenchRadius;
-                _alphaGoal = BenchAlpha - bench.Heading * MathF.PI / 180f;
-                _betaGoal = BenchBeta;
-                AnimateFor(TimeSpan.FromSeconds(WorkArriveSeconds) + AnimationWindow);
-                return;
-            }
-
-            // A mounted part: once the parts are built again after the job (queued to the dispatcher by the new engine
-            // and gear, then building), its place among them, and its grime there
-            for (var waited = 0; (_applyPartsQueued || _isLoadingParts) && waited < 3000 && version == _workVersion; waited += 30) await Task.Delay(30);
-            if (version != _workVersion || renderer != Renderer) return;
-
-            var mounted = _partWorlds.FirstOrDefault(p => piece.Part.InstanceId != Guid.Empty && p.Key.InstanceId == piece.Part.InstanceId);
-            if (mounted.Key == null) return;
-
-            var grimeModel = await Task.Run(() => Looks.PartGrime.Model(catalog, [new PlacedPart(mounted.Key.Definition, mounted.Value)]));
-            if (version != _workVersion || renderer != Renderer) return;
-
-            _workOnBench = false;
-            renderer.SetWork(null, grimeModel.Kn5, SlimDX.Matrix.Identity, true);
-            ApplyWorkGrime();
-
-            if (renderer.WorkCentre is { } centre)
-            {
-                renderer.AutoAdjustTarget = false;
-                _autoAdjustWhenSettled = false;
-                _cameraOnWork = true;
-                _targetGoal = centre;
-                _radiusGoal = WorkRadius;
-                _betaGoal = WorkBeta;
-            }
-
-            AnimateFor(AnimationWindow);
-        }
-        catch (Exception ex)
-        {
-            // Only the showing: the job is done whatever the view makes of it
-            Logger.Warning("Could not show the part being worked on: {Error}", ex.Message);
-        }
-    }
-
-    private void ApplyWorkGrime()
-    {
-        if (Renderer is not { } renderer) return;
-
-        renderer.WorkGrime = (float)Math.Clamp(WorkGrime, 0, 1);
-        Invalidate();
-    }
-
-    /// <summary>How high above the bench the loose part is now: coming down, or where it was when it began to go</summary>
-    private float WorkLift() =>
-        _workLeaving ? _workLeaveLift : WorkDrop * (1f - EaseWork(Math.Clamp(_workTime / WorkArriveSeconds, 0f, 1f)));
-
-    /// <summary>The loose part on the bench as it is now: coming down, turning</summary>
-    private SlimDX.Matrix BenchPlacement() =>
-        _bench is { } bench
-            ? ToSlim(WorkbenchLayout.PlacementOf(bench.Placement, _workMin, _workMax, _workTime * WorkTurnRate, WorkLift()))
-            : SlimDX.Matrix.Identity;
-
-    private static float EaseWork(float t) => t * t * (3f - 2f * t);
-
-    /// <summary>The loose part on the bench, a frame on; true while it moves</summary>
-    private bool StepWork(GarageRenderer renderer, float dt)
-    {
-        if (!_workOnBench) return false;
-
-        _workTime += dt;
-        if (_workLeaving)
-        {
-            var gone = Math.Clamp((_workTime - _workLeftAt) / WorkLeaveSeconds, 0f, 1f);
-            renderer.WorkOpacity = _workLeaveOpacity * (1f - gone);
-            renderer.MoveWork(BenchPlacement());
-            if (gone < 1f) return true;
-
-            renderer.SetWork(null, null, SlimDX.Matrix.Identity, false);
-            renderer.WorkOpacity = 1f;
-            _workOnBench = false;
-            _workLeaving = false;
-            return false;
-        }
-
-        renderer.WorkOpacity = EaseWork(Math.Clamp(_workTime / (WorkArriveSeconds * 0.6f), 0f, 1f));
-        renderer.MoveWork(BenchPlacement());
-        return true;
-    }
-
     private static readonly DependencyPropertyKey HasCarPropertyKey = DependencyProperty.RegisterReadOnly(
         nameof(HasCar), typeof(bool), typeof(CarViewport3D), new PropertyMetadata(false));
 
@@ -828,7 +592,7 @@ public class CarViewport3D : D3DViewportBase
         if (hasCar && !Directory.Exists(carDirectory))
             throw new DirectoryNotFoundException($"Car folder not found: {carDirectory}");
 
-        var started = DateTime.Now;
+        var started = System.Diagnostics.Stopwatch.GetTimestamp();
         var car = hasCar ? CarDescription.FromDirectory(carDirectory) : null;
         var skinId = SkinId;
 
@@ -881,126 +645,7 @@ public class CarViewport3D : D3DViewportBase
         Invalidate();
 
         Logger.Information("Loaded {Car} in {Ms} ms", hasCar ? Path.GetFileName(carDirectory) : "(empty garage)",
-            (int)(DateTime.Now - started).TotalMilliseconds);
-    }
-
-    /// <summary>
-    /// Frames the car. <paramref name="immediate"/> puts the camera there at once, which is right for the
-    /// first car of a session; otherwise it moves there over the next moment.
-    /// </summary>
-    private void ResetCamera(bool immediate = false)
-    {
-        var orbit = Renderer?.CameraOrbit;
-        if (orbit == null) return;
-
-        _radiusGoal = DefaultRadius;
-        _alphaGoal = DefaultAlpha;
-        _betaGoal = DefaultBeta;
-        _targetGoal = null;
-        _autoAdjustWhenSettled = false;
-        _followCarry = false;
-        _cameraOnPart = false;
-        _cameraWaitsOnStand = false;
-
-        if (IsOnStand)
-        {
-            // Close in on the engine on the stand, a little above the crankshaft
-            Renderer!.AutoAdjustTarget = false;
-            var spot = EngineStandLayout.Spot;
-            _targetGoal = new SlimDX.Vector3(spot.X, EngineStandLayout.CrankHeight - 0.05f, spot.Z - 0.1f);
-            _radiusGoal = StandRadius;
-            _alphaGoal = StandAlpha;
-            _betaGoal = StandBeta;
-        }
-        else if (Renderer!.CarNode == null)
-        {
-            // Empty garage: nothing to frame, so look across the room at eye level instead of at the floor
-            Renderer.AutoAdjustTarget = false;
-            _targetGoal = new SlimDX.Vector3(0f, EmptyGarageEyeHeight, 0f);
-            _radiusGoal = MaxRadius;
-            _betaGoal = MinBeta;
-        }
-        else if (!immediate && !Renderer.AutoAdjustTarget && Renderer.MainSlot.GetCarBoundingBox() is { } box)
-        {
-            // Coming back from the stand, or from an empty garage
-            _targetGoal = Renderer.FramedTarget(_alphaGoal, _betaGoal, _radiusGoal, (box.Minimum + box.Maximum) / 2f);
-            _autoAdjustWhenSettled = true;
-        }
-        else
-        {
-            Renderer.AutoAdjustTarget = true;
-        }
-
-        if (immediate)
-        {
-            orbit.Radius = _radiusGoal;
-            orbit.Alpha = _alphaGoal;
-            orbit.Beta = _betaGoal;
-            if (_targetGoal is { } target) orbit.Target = target;
-        }
-
-        AnimateFor(AnimationWindow);
-    }
-
-    /// <summary>
-    /// Eases the camera toward its framing. Returns true while it is still moving, so the render loop knows
-    /// to keep drawing. A share of what is left every second, so it comes out the same at any frame rate.
-    /// </summary>
-    private bool StepCamera(float dt)
-    {
-        var orbit = Renderer?.CameraOrbit;
-        if (orbit == null) return false;
-
-        var k = 1f - (float)Math.Exp(-CameraSettleRate * dt);
-        var moving = false;
-
-        if (Math.Abs(_radiusGoal - orbit.Radius) > CameraSettled)
-        {
-            orbit.Radius += (_radiusGoal - orbit.Radius) * k;
-            moving = true;
-        }
-
-        if (Math.Abs(_betaGoal - orbit.Beta) > CameraSettled)
-        {
-            orbit.Beta += (_betaGoal - orbit.Beta) * k;
-            moving = true;
-        }
-
-        if (Renderer!.AutoRotate)
-        {
-            // The renderer is turning the car itself, a little further every tick. Easing alpha back to a
-            // goal at the same time would cancel that out and leave the car shivering on the spot instead of
-            // going round, so the goal follows the renderer until auto-rotate is switched off.
-            _alphaGoal = orbit.Alpha;
-        }
-        else
-        {
-            // Round the short way
-            var delta = (float)Math.IEEERemainder(_alphaGoal - orbit.Alpha, Math.PI * 2);
-            if (Math.Abs(delta) > CameraSettled)
-            {
-                orbit.Alpha += delta * k;
-                moving = true;
-            }
-        }
-
-        if (_targetGoal is { } target)
-        {
-            var toTarget = target - orbit.Target;
-            if (toTarget.LengthSquared() > CameraSettled * CameraSettled)
-            {
-                orbit.Target += toTarget * k;
-                moving = true;
-            }
-            else if (_autoAdjustWhenSettled && !moving)
-            {
-                _autoAdjustWhenSettled = false;
-                _targetGoal = null;
-                Renderer.AutoAdjustTarget = true;
-            }
-        }
-
-        return moving;
+            (int)System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds);
     }
 
     /// <summary>
@@ -1012,18 +657,57 @@ public class CarViewport3D : D3DViewportBase
         if (_applyPartsQueued) return;
 
         _applyPartsQueued = true;
+        var queued = new TaskCompletionSource();
+        _partsApplied = Both(_partsApplied, queued.Task);
         Dispatcher.InvokeAsync(() =>
         {
             _applyPartsQueued = false;
             ApplyParts();
+
+            // The run is under way and recorded (its task is in _partsApplied now): whoever waited on the queue looks again
+            queued.SetResult();
         });
     }
 
     /// <summary>
-    /// Builds the parts view for what is bound now. Runs from property callbacks, so nothing may escape it: a throw
-    /// anywhere in it is logged and the garage goes on without the parts view.
+    /// The parts view being built for what is bound, or queued to be (<see cref="QueueApplyParts"/>): done once no run
+    /// is under way, so what waits for the parts to be laid out (<see cref="ApplyWorkAsync"/>) awaits this rather than
+    /// asking every few milliseconds. A run begun while this waited is a newer task: look again once it is done.
     /// </summary>
-    private async void ApplyParts()
+    private Task _partsApplied = Task.CompletedTask;
+
+    // How long a wait on the parts being laid out gives them before it goes on without them
+    private const int PartsPatienceMs = 3000;
+
+    /// <summary>Both done, however either ends: the one before (done already, as a rule) and the one begun now</summary>
+    private static Task Both(Task before, Task now) => before.IsCompleted ? now : Task.WhenAll(before, now);
+
+    /// <summary>
+    /// Waits until the task <paramref name="latest"/> gives is done, asking again for a newer one each time (a run that
+    /// queued another), while <paramref name="stillWanted"/> and for <paramref name="most"/> at the longest. True when the
+    /// latest task was done in time; false when the wait gave up, or was no longer wanted.
+    /// </summary>
+    internal static async Task<bool> AwaitLatestAsync(Func<Task> latest, Func<bool> stillWanted, TimeSpan most)
+    {
+        var patience = Task.Delay(most);
+        while (stillWanted())
+        {
+            var task = latest();
+            if (task.IsCompleted) return true;
+            if (await Task.WhenAny(task, patience) == patience) return false;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Builds the parts view for what is bound now. Runs from property callbacks, so nothing may escape it: a throw
+    /// anywhere in it is logged and the garage goes on without the parts view. The run is recorded in
+    /// <see cref="_partsApplied"/> for whoever waits on the parts.
+    /// </summary>
+    private void ApplyParts() => _partsApplied = Both(_partsApplied, ApplyPartsGuardedAsync());
+
+    private async Task ApplyPartsGuardedAsync()
     {
         try
         {
@@ -1107,7 +791,7 @@ public class CarViewport3D : D3DViewportBase
                 return;
             }
 
-            var started = DateTime.Now;
+            var started = System.Diagnostics.Stopwatch.GetTimestamp();
 
             // Same car, other parts: what is no longer there lifts off while the new model is put together
             var sameCar = renderer.HasProp && _partsCarDirectory == carDirectory;
@@ -1211,7 +895,7 @@ public class CarViewport3D : D3DViewportBase
                 FollowSelection();
 
                 Logger.Information("Parts of {Car} laid out in {Ms} ms ({Count} parts, engine {Engine})", Path.GetFileName(carDirectory),
-                    (int)(DateTime.Now - started).TotalMilliseconds, placed.Count, engine?.Definition.Id ?? "none");
+                    (int)System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds, placed.Count, engine?.Definition.Id ?? "none");
 
                 ApplySelection();
                 ApplyCandidates();
@@ -1311,10 +995,13 @@ public class CarViewport3D : D3DViewportBase
         }
     }
 
-    /// <summary>The camera goes after the engine on the hoist until it is down in the car, then frames the car again</summary>
+    /// <summary>
+    /// The camera goes after the engine on the hoist until it is down in the car, then frames the car again. The wait is
+    /// the one every motion is waited on with: given up on once the load has stopped getting anywhere for a while.
+    /// </summary>
     private async void FollowUntilDown(GarageRenderer renderer)
     {
-        while (renderer == Renderer && _followCarry && renderer.IsMovingParts) await Task.Delay(30);
+        await WaitForMotionsAsync(renderer, () => _followCarry);
 
         if (renderer != Renderer || !_followCarry) return;
 
@@ -1338,7 +1025,7 @@ public class CarViewport3D : D3DViewportBase
         _isLoadingParts = true;
         try
         {
-            var started = DateTime.Now;
+            var started = System.Diagnostics.Stopwatch.GetTimestamp();
 
             // Same stand, other parts: what is no longer there lifts off while the new model is put together
             var before = renderer.HasProp && _partsOnStand ? IdsOf(_partNodes) : null;
@@ -1395,7 +1082,7 @@ public class CarViewport3D : D3DViewportBase
                 FollowSelection();
 
                 Logger.Information("Engine stand laid out in {Ms} ms ({Count} parts, engine {Engine})",
-                    (int)(DateTime.Now - started).TotalMilliseconds, placed.Count, engine?.Definition.Id ?? "none");
+                    (int)System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds, placed.Count, engine?.Definition.Id ?? "none");
 
                 ApplySelection();
                 ApplyCandidates();
@@ -1512,8 +1199,8 @@ public class CarViewport3D : D3DViewportBase
     /// </summary>
     public async Task ShownSettledAsync(TimeSpan most)
     {
-        var until = DateTime.Now + most;
-        while (DateTime.Now < until && (!IsUpToDate || !_shownApplied.IsCompleted)) await Task.Delay(40);
+        var started = System.Diagnostics.Stopwatch.GetTimestamp();
+        while (System.Diagnostics.Stopwatch.GetElapsedTime(started) < most && (!IsUpToDate || !_shownApplied.IsCompleted)) await Task.Delay(40);
     }
 
     /// <summary>Puts <see cref="Shown"/> on the car; from property callbacks too, so nothing escapes: the car keeps its own</summary>
@@ -1598,70 +1285,48 @@ public class CarViewport3D : D3DViewportBase
         if (renderer == null || ReferenceEquals(renderer, _radioRenderer)) return;
         _radioRenderer = renderer;
 
-        var problems = new List<string>();
-        var radio = Services.Garage.GarageProps.Find(Mods.ModSet.Installed, "radio", ShowroomKn5, problems);
-        foreach (var problem in problems) Logger.Warning("Garage props: {Problem}", problem);
-        Mods.ModProblems.Add("Garage props", problems);
-        if (radio == null) return;
-
-        AcTools.Kn5File.IKn5 kn5;
-        try
-        {
-            kn5 = await Task.Run(() => AcTools.Kn5File.Kn5.FromFile(radio.Model));
-        }
-        catch (Exception ex)
-        {
-            Logger.Warning("The garage's radio could not be read from {Model}: {Error}", radio.Model, ex.Message);
-            return;
-        }
-
-        if (renderer != Renderer) return;
-        renderer.SetFixture(kn5, ToSlim(radio.Placement));
-        Invalidate();
+        await LoadPropAsync(renderer, "radio", builtIn: false, own: null, (kn5, radio) => renderer.SetFixture(kn5, ToSlim(radio.Placement)));
     }
-
-    // The renderer the workbench was put into, and where it stands in the garage; null in a garage without one
-    private GarageRenderer? _benchRenderer;
-    private Services.Garage.PlacedProp? _bench;
 
     /// <summary>
-    /// The workbench, where the garage's props put it (<see cref="WorkbenchLayout.PropId"/>): the game's own model drawn
-    /// from boxes unless a mod names one, set into the renderer once. A garage with no place for it has none, and a
-    /// loose part's job is shown there without the part.
+    /// One of the garage's props (<see cref="Services.Garage.GarageProps.Find"/>) put into <paramref name="renderer"/>
+    /// by <paramref name="set"/>: its model read off the UI thread (a mod's, or the game's <paramref name="own"/> drawn from
+    /// boxes when the prop is <paramref name="builtIn"/> and no mod names a model). Runs from the load, so nothing may
+    /// escape it: a garage whose prop cannot be put in goes on without it, and says so in the log. A place the garage
+    /// has not got for it is no prop at all; a renderer gone in the meantime gets nothing.
     /// </summary>
-    private async void ApplyBench()
+    private async Task LoadPropAsync(GarageRenderer renderer, string propId, bool builtIn, Func<AcTools.Kn5File.IKn5>? own,
+        Action<AcTools.Kn5File.IKn5, Services.Garage.PlacedProp> set)
     {
-        var renderer = Renderer;
-        if (renderer == null || ReferenceEquals(renderer, _benchRenderer)) return;
-        _benchRenderer = renderer;
-        _bench = null;
-
-        var problems = new List<string>();
-        var bench = Services.Garage.GarageProps.Find(Mods.ModSet.Installed, WorkbenchLayout.PropId, ShowroomKn5, problems, builtIn: true);
-        foreach (var problem in problems) Logger.Warning("Garage props: {Problem}", problem);
-        Mods.ModProblems.Add("Garage props", problems);
-        if (bench == null) return;
-
-        AcTools.Kn5File.IKn5 kn5;
         try
         {
-            kn5 = await Task.Run(() => bench.Model.Length > 0 ? AcTools.Kn5File.Kn5.FromFile(bench.Model) : WorkbenchLayout.CreateModel());
+            var problems = new List<string>();
+            var prop = Services.Garage.GarageProps.Find(Mods.ModSet.Installed, propId, ShowroomKn5, problems, builtIn);
+            foreach (var problem in problems) Logger.Warning("Garage props: {Problem}", problem);
+            Mods.ModProblems.Add("Garage props", problems);
+            if (prop == null) return;
+
+            AcTools.Kn5File.IKn5 kn5;
+            try
+            {
+                kn5 = await Task.Run(() => prop.Model.Length > 0 || own == null ? AcTools.Kn5File.Kn5.FromFile(prop.Model) : own());
+            }
+            catch (Exception ex)
+            {
+                // A mod's model the renderer's reader refuses: the mod's problem, not the garage's
+                Logger.Warning(ex, "The garage's {Prop} could not be read from {Model}", propId, prop.Model);
+                return;
+            }
+
+            if (renderer != Renderer) return;
+            set(kn5, prop);
+            Invalidate();
         }
         catch (Exception ex)
         {
-            Logger.Warning("The garage's workbench could not be read from {Model}: {Error}", bench.Model, ex.Message);
-            return;
+            Logger.Error(ex, "The garage's {Prop} could not be put in", propId);
         }
-
-        if (renderer != Renderer) return;
-        renderer.SetBench(kn5, ToSlim(bench.Placement));
-        _bench = bench;
-        Invalidate();
     }
-
-    private bool HitsRadio(System.Windows.Point position) =>
-        Renderer != null && ActualWidth > 0 && ActualHeight > 0
-        && Renderer.HitsFixture((float)(position.X / ActualWidth), (float)(position.Y / ActualHeight));
 
     /// <summary>What the scenery is to show now: the engine is in it unless the stand's parts view has it as the prop</summary>
     private (InstalledPart? Engine, bool WithEngine, PartsCatalog? Catalog) SceneryKey => (StandEngine, !_partsOnStand && !_standKeptEmpty, PartsCatalog);
@@ -1759,432 +1424,6 @@ public class CarViewport3D : D3DViewportBase
         }
 
         return null;
-    }
-
-    #region Placement mode
-
-    /// <summary>What a nudge in placement mode moves: the part's own mounting slot, or the slot it sits on</summary>
-    public enum PlacementTarget { Part, Pad }
-
-    /// <summary>Told what the placement mode is doing, for the screen to show; null when the mode is off</summary>
-    public event Action<string?>? PlacementChanged;
-
-    private InstalledPart? _placing;
-    private PlacementTarget _placementTarget;
-
-    public bool IsPlacing => _placing != null;
-
-    /// <summary>
-    /// Enters placement mode on the selected part: nudges move it (or the pad it sits on) and are written to the
-    /// catalog's slot shifts; on the engine block in the car, they move the whole engine and are kept for the car
-    /// (<see cref="EngineMoved"/>). Leaves the mode when there is no selected part or it is already on.
-    /// </summary>
-    public void TogglePlacement()
-    {
-        // The engine block itself, in the car: moved with everything on it, kept per car (EngineMoved)
-        if (_placing == null && SelectedPart is { Parent: null } block && ReferenceEquals(block, Engine) && !StandMode && PartsCatalog != null)
-        {
-            _placing = block;
-            ReportPlacement();
-            return;
-        }
-
-        if (_placing != null || SelectedPart is not { Parent: not null } part || PartsCatalog == null)
-        {
-            _placing = null;
-            PlacementChanged?.Invoke(null);
-            return;
-        }
-
-        // A part's own slot is the part's wherever it goes: nudging it moves every copy, the two carburettors of a
-        // dual quad along with each other. One of several on the same parent is placed by its pad, which is its own
-        _placing = part;
-        _placementTarget = IsOneOfSeveral(part) ? PlacementTarget.Pad : PlacementTarget.Part;
-        ReportPlacement();
-    }
-
-    /// <summary>
-    /// Keeps placement on the selected part: another part picked is placed from then on, the same part in a tree made
-    /// anew (known by its id) goes on being placed; nothing placeable selected ends the mode
-    /// </summary>
-    private void FollowSelection()
-    {
-        if (_placing == null) return;
-
-        var selected = SelectedPart;
-        var next = selected == null ? null
-            : _partWorlds.ContainsKey(selected) ? selected
-            : selected.InstanceId == Guid.Empty ? null
-            : _partWorlds.Keys.FirstOrDefault(p => p.InstanceId == selected.InstanceId);
-        if (next == null || !(next.Parent != null || (ReferenceEquals(next, Engine) && !StandMode)))
-        {
-            _placing = null;
-            PlacementChanged?.Invoke(null);
-            return;
-        }
-
-        var samePart = ReferenceEquals(next, _placing) || (next.InstanceId != Guid.Empty && next.InstanceId == _placing.InstanceId);
-        _placing = next;
-        if (!samePart && next.Parent != null) _placementTarget = IsOneOfSeveral(next) ? PlacementTarget.Pad : PlacementTarget.Part;
-        ReportPlacement();
-    }
-
-    /// <summary>True when the parent holds the same part on another slot too (a set of carburettors, their filters)</summary>
-    private static bool IsOneOfSeveral(InstalledPart part) =>
-        part.Parent != null && part.Parent.Children.Values.Count(c => c.Definition.Id.Equals(part.Definition.Id, StringComparison.OrdinalIgnoreCase)) > 1;
-
-    public void TogglePlacementTarget()
-    {
-        if (_placing == null) return;
-
-        _placementTarget = _placementTarget == PlacementTarget.Part ? PlacementTarget.Pad : PlacementTarget.Part;
-        ReportPlacement();
-    }
-
-    /// <summary>
-    /// Moves the placed part by a step in the engine's axes: right, up, and forward (towards the radiator). The
-    /// step becomes a move of a slot in that slot's own part's space, so it is what the packs store.
-    /// </summary>
-    public void NudgePlacement(float right, float up, float forward)
-    {
-        // The block: the whole engine moves, in the car's space, by the engine's axes
-        if (_placing is { Parent: null } block)
-        {
-            if (!_partWorlds.TryGetValue(block, out var blockWorld)) return;
-            var axes = blockWorld;
-            axes.Translation = System.Numerics.Vector3.Zero;
-            // Kept to the millimetre (back at the start is zero, not a residue) and within what the car book takes
-            var next = EngineOffset + System.Numerics.Vector3.TransformNormal(new System.Numerics.Vector3(right, up, -forward), axes);
-            static float Kept(float v) => Math.Clamp(MathF.Round(v * 1000) / 1000, -CarEntry.MaxEngineOffset, CarEntry.MaxEngineOffset);
-            EngineMoved?.Invoke(new System.Numerics.Vector3(Kept(next.X), Kept(next.Y), Kept(next.Z)));
-            return;
-        }
-
-        var catalog = PartsCatalog;
-        if (_placing is not { Parent: { } parent } part || catalog == null || Engine == null) return;
-        if (!_partWorlds.TryGetValue(Engine, out var engineWorld) || !_partWorlds.TryGetValue(part, out var partWorld)
-            || !_partWorlds.TryGetValue(parent, out var parentWorld)) return;
-
-        // Part models look down their +Z at the firewall: forward is -Z of the engine
-        var engineAxes = engineWorld;
-        engineAxes.Translation = System.Numerics.Vector3.Zero;
-        var worldDelta = System.Numerics.Vector3.TransformNormal(new System.Numerics.Vector3(right, up, -forward), engineAxes);
-
-        // The part hangs so that its own slot lands on the pad: moving its slot moves the part the other way
-        var (definition, slotId) = PlacedSlot(part, parent);
-        var (frame, sign) = _placementTarget == PlacementTarget.Part ? (partWorld, -1f) : (parentWorld, 1f);
-        frame.Translation = System.Numerics.Vector3.Zero;
-        if (!System.Numerics.Matrix4x4.Invert(frame, out var toLocal)) return;
-        var local = System.Numerics.Vector3.TransformNormal(worldDelta, toLocal) * sign;
-
-        Shift(catalog, definition, slotId, new[] { local.X, local.Y, local.Z });
-    }
-
-    /// <summary>Takes the slot being placed back to where the packs put it</summary>
-    public void ResetPlacement()
-    {
-        if (_placing is { Parent: null })
-        {
-            EngineMoved?.Invoke(System.Numerics.Vector3.Zero);
-            return;
-        }
-
-        var catalog = PartsCatalog;
-        if (_placing is not { Parent: { } parent } part || catalog == null) return;
-
-        var (definition, slotId) = PlacedSlot(part, parent);
-        var offset = catalog.Shifts.Of(definition.Id, slotId);
-        Shift(catalog, definition, slotId, new[] { -offset[0], -offset[1], -offset[2] });
-    }
-
-    /// <summary>The slot a nudge moves: the part's own mounting slot, or the pad of its parent it sits on</summary>
-    private (PartDefinition Definition, int SlotId) PlacedSlot(InstalledPart part, InstalledPart parent) =>
-        _placementTarget == PlacementTarget.Part ? (part.Definition, part.OwnSlot) : (parent.Definition, part.ParentSlot);
-
-    private void Shift(PartsCatalog catalog, PartDefinition definition, int slotId, float[] delta)
-    {
-        if (!catalog.ShiftSlot(definition, slotId, delta))
-            Logger.Warning("Slot {Slot} of {Part} moved in the garage, but the move could not be written to {File}", slotId, definition.Id, catalog.Shifts.Path);
-
-        Relayout();
-        ReportPlacement();
-    }
-
-    private void ReportPlacement()
-    {
-        var catalog = PartsCatalog;
-        if (_placing is { Parent: null } block)
-        {
-            var o = EngineOffset;
-            PlacementChanged?.Invoke(
-                $"PLACEMENT: moving the engine, everything on it with it (kept for this car in cars.json)\n{block.Definition.Id}\n" +
-                $"moved so far: x {o.X * 100:+0.0;-0.0} cm  y {o.Y * 100:+0.0;-0.0} cm  z {o.Z * 100:+0.0;-0.0} cm\n" +
-                "arrows: across / fore-aft   PgUp PgDn: height   Ctrl 1 mm  Shift 2 cm\nR: back to its place   F5 or Esc: done");
-            return;
-        }
-
-        if (_placing is not { Parent: { } parent } part || catalog == null)
-        {
-            PlacementChanged?.Invoke(null);
-            return;
-        }
-
-        var (definition, slotId) = PlacedSlot(part, parent);
-        var offset = catalog.Shifts.Of(definition.Id, slotId);
-        var what = _placementTarget == PlacementTarget.Part
-            ? "the part's own slot (every copy of the part)"
-            : IsOneOfSeveral(part) ? "the pad it sits on (this one of the set)" : "the pad it sits on";
-        PlacementChanged?.Invoke(
-            $"PLACEMENT: moving {what}\n{definition.Id} slot {slotId}\n" +
-            $"shift so far: x {offset[0] * 100:+0.0;-0.0} cm  y {offset[1] * 100:+0.0;-0.0} cm  z {offset[2] * 100:+0.0;-0.0} cm\n" +
-            "arrows: across / fore-aft   PgUp PgDn: height   Ctrl 1 mm  Shift 2 cm\nTab: part / pad   R: reset   F5 or Esc: done");
-    }
-
-    /// <summary>Puts every mounted part where the slots say now, without rebuilding the model</summary>
-    private void Relayout()
-    {
-        var renderer = Renderer;
-        var catalog = PartsCatalog;
-        if (renderer == null || catalog == null || !renderer.HasProp || LayOut(catalog) is not { } placed) return;
-
-        var worlds = placed.Where(p => p.Source != null).ToDictionary(p => p.Source!, p => p.World);
-        var moves = new List<(int Node, SlimDX.Matrix World)>();
-        for (var i = 0; i < _partNodes.Count; i++)
-        {
-            if (_partNodes[i].Source is { } source && worlds.TryGetValue(source, out var m))
-            {
-                moves.Add((i, ToSlim(m)));
-            }
-        }
-
-        renderer.PlaceParts(moves);
-        _partWorlds = worlds;
-        AnimateFor(AnimationWindow);
-
-        // The places a loose part could go were worked out from where its parent was
-        if (_shownCandidates is { Count: > 0 }) ApplyCandidates();
-    }
-
-    #endregion
-
-    /// <summary>
-    /// Shows the loose part of <see cref="Candidates"/> in the places it could go. Runs from property callbacks, so
-    /// nothing may escape it.
-    /// </summary>
-    private async void ApplyCandidates()
-    {
-        try
-        {
-            await ApplyCandidatesAsync();
-        }
-        catch (Exception ex)
-        {
-            Logger.Error(ex, "Could not show where the part goes");
-        }
-    }
-
-    private async Task ApplyCandidatesAsync()
-    {
-        var renderer = Renderer;
-        if (renderer == null) return;
-
-        // The places of the part picked before are no places for this one: they go at once, not when the
-        // new ones are built, or a click in between would mount this part where the other one fits
-        var candidates = Candidates;
-        if (!ReferenceEquals(candidates, _shownCandidates)) ClearCandidates(renderer);
-        if (_isLoadingCandidates) return;
-
-        var catalog = PartsCatalog;
-        var anchors = _anchors;
-
-        // The layout the parts on screen were built with: the candidates hang off them
-        var layout = _partsLayout;
-        if (candidates == null || candidates.Count == 0 || catalog == null || (anchors == null && !_partsOnStand) || !renderer.HasProp)
-        {
-            ClearCandidates(renderer);
-            return;
-        }
-
-        _isLoadingCandidates = true;
-        try
-        {
-            var worlds = _partWorlds;
-            var (model, owners) = await Task.Run<(AssemblyModel? Model, MountCandidate[] Owners)>(() =>
-            {
-                var placed = new List<PlacedPart>();
-                var ownerOf = new Dictionary<InstalledPart, MountCandidate>();
-                foreach (var candidate in candidates)
-                {
-                    var world = candidate.Parent == null
-                        ? anchors == null ? null : CarPartsLayout.CarLevelPlacement(catalog, anchors, candidate.Part.Definition, candidate.ParentSlot, layout)
-                        : worlds.TryGetValue(candidate.Parent, out var parentWorld)
-                            ? CarPartsLayout.PlacementOn(catalog, anchors, candidate.Parent.Definition, candidate.ParentSlot, parentWorld,
-                                candidate.Part.Definition, candidate.OwnSlot, layout)
-                            : null;
-                    if (world == null) continue;
-
-                    foreach (var part in PartAssembler.Assemble(candidate.Part, world.Value))
-                    {
-                        placed.Add(part);
-                        ownerOf[part.Source!] = candidate;
-                    }
-                }
-
-                if (placed.Count == 0) return (null, Array.Empty<MountCandidate>());
-
-                AssemblyModel built;
-                try
-                {
-                    built = PartAssembler.BuildModel(catalog, "candidates", placed);
-                }
-                catch (InvalidOperationException)
-                {
-                    // BuildModel's "no part has a model": nothing made it into the model, nothing to show or click
-                    return (null, Array.Empty<MountCandidate>());
-                }
-
-                return (built, built.Nodes.Select(n => ownerOf[n.Source!]).ToArray());
-            });
-
-            if (renderer == Renderer && ReferenceEquals(candidates, Candidates))
-            {
-                renderer.SetCandidates(model?.Kn5);
-                var hanging = Unsprung(Gear);
-                renderer.SetUnsprung(PartLayer.Candidate, Enumerable.Range(0, owners.Length).Where(i =>
-                    owners[i].Parent is { } parent ? hanging.Contains(parent) : HangsOnLift(owners[i].ParentSlot, owners[i].Part.Definition)));
-                _candidateNodes = owners;
-                _shownCandidates = candidates;
-                AnimateFor(AnimationWindow);
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.Error(ex, "Could not show where the part goes");
-        }
-        finally
-        {
-            _isLoadingCandidates = false;
-        }
-
-        // Likewise a renderer rebuilt while the candidates were put together
-        if (Renderer != null && (renderer != Renderer || !ReferenceEquals(candidates, Candidates))) ApplyCandidates();
-    }
-
-    private void ClearCandidates(GarageRenderer renderer)
-    {
-        renderer.SetCandidates(null);
-        _candidateNodes = Array.Empty<MountCandidate>();
-        _shownCandidates = null;
-        Invalidate();
-    }
-
-    /// <summary>Runs from property callbacks, so nothing may escape it</summary>
-    private void ApplySelection()
-    {
-        try
-        {
-            if (Renderer == null) return;
-
-            // The model on screen may still be the one of the tree before: the same part is known by its id there
-            var selected = SelectedPart;
-            var node = -1;
-            for (var i = 0; selected != null && i < _partNodes.Count; i++)
-            {
-                var source = _partNodes[i].Source;
-                if (ReferenceEquals(source, selected) || (source != null && selected.InstanceId != Guid.Empty && source.InstanceId == selected.InstanceId)) node = i;
-            }
-
-            Renderer.SelectedPart = node < 0 ? null : node;
-            InvalidateIfDirty();
-        }
-        catch (Exception ex)
-        {
-            Logger.Error(ex, "Could not show the selected part");
-        }
-    }
-
-    // The camera on a part the player picked: it turns round the part, near enough to see it, and
-    // goes back to the car (or the stand) as nothing is picked any more, as close as it was before
-    private const float FocusFill = 2.4f;
-    private const float FocusMargin = 0.7f;
-    private const float FocusMaxRadius = 3.6f;
-    private bool _cameraOnPart;
-    private float _radiusBeforeFocus = DefaultRadius;
-
-    /// <summary>
-    /// The camera goes to the selected part in the parts view and turns round it from where it looks now; back to the car
-    /// when none is selected, the view closes or a job takes the camera. Runs from property callbacks, so nothing may
-    /// escape it.
-    /// </summary>
-    private void FocusSelection()
-    {
-        try
-        {
-            if (Renderer is not { CameraOrbit: { } orbit } renderer || _cameraOnWork) return;
-
-            var box = PartsVisible && renderer.SelectedPart is { } node ? renderer.PartBox(node) : null;
-            if (box is { } b && float.IsFinite(b.Minimum.X) && float.IsFinite(b.Maximum.X))
-            {
-                if (!_cameraOnPart) _radiusBeforeFocus = _radiusGoal;
-                _cameraOnPart = true;
-
-                renderer.AutoAdjustTarget = false;
-                _autoAdjustWhenSettled = false;
-                _targetGoal = (b.Minimum + b.Maximum) / 2f;
-                var size = (b.Maximum - b.Minimum).Length();
-                var least = IsOnStand ? StandMinRadius : PartsMinRadius;
-                _radiusGoal = Math.Clamp(size * FocusFill + FocusMargin, least, FocusMaxRadius);
-                _alphaGoal = orbit.Alpha;
-                // Never under the floor, round a part low in the car
-                _betaGoal = Math.Max(orbit.Beta, LowestBeta(_radiusGoal, _targetGoal.Value.Y));
-                AnimateFor(AnimationWindow);
-                return;
-            }
-
-            if (!_cameraOnPart) return;
-            _cameraOnPart = false;
-
-            if (IsOnStand || renderer.CarNode == null)
-            {
-                ResetCamera();
-                return;
-            }
-
-            // Back round the car from where the camera looks now, as near as it was
-            _alphaGoal = orbit.Alpha;
-            _betaGoal = orbit.Beta;
-            _radiusGoal = Math.Clamp(_radiusBeforeFocus, renderer.HasProp ? PartsMinRadius : MinRadius, MaxRadius);
-            if (renderer.MainSlot.GetCarBoundingBox() is { } car)
-            {
-                _targetGoal = renderer.FramedTarget(_alphaGoal, _betaGoal, _radiusGoal, (car.Minimum + car.Maximum) / 2f);
-                _autoAdjustWhenSettled = true;
-            }
-            else
-            {
-                _targetGoal = null;
-                renderer.AutoAdjustTarget = true;
-            }
-
-            AnimateFor(AnimationWindow);
-        }
-        catch (Exception ex)
-        {
-            Logger.Error(ex, "Could not bring the camera to the selected part");
-        }
-    }
-
-    /// <summary>The car's hubs where they are with the car on the floor: the lift's height taken off (the parts go up with it)</summary>
-    private CarAnchors? GetAnchors(Kn5RenderableCar carNode)
-    {
-        var hubs = WheelFit.WheelNodes
-            .Select(name => carNode.RootObject.GetDummyByName(name)?.Matrix)
-            .ToArray();
-        if (hubs.Any(h => h == null)) return null;
-
-        // The wheels hang below the lifted body as well: they are back up on it, where the car on the floor has them
-        var lifted = LiftedBy(carNode) - LiftLayout.Droop(LiftedBy(carNode));
-        var points = hubs.Select(h => new System.Numerics.Vector3(h!.Value.M41, h.Value.M42 - lifted, h.Value.M43)).ToArray();
-        return new CarAnchors(points[0], points[1], points[2], points[3]);
     }
 
     /// <summary>Runs from property callbacks, so nothing may escape it: a broken skin folder leaves the skin as it was</summary>
@@ -2302,175 +1541,6 @@ public class CarViewport3D : D3DViewportBase
 
     #endregion
 
-    #region Lift
-
-    // How high the lift has the car now, and the pump heard while it goes
-    private float _liftNow;
-    private Audio.PlayingSound? _liftHum;
-
-    // The renderer the lift was put into, and where its prop stands in the garage; null in a garage without one
-    private GarageRenderer? _liftRenderer;
-    private Services.Garage.PlacedProp? _liftProp;
-
-    // The lift slows over its last few centimetres into a stop, and no slower than this share of its speed
-    private const float LiftEaseDistance = 0.06f;
-    private const float LiftSlowest = 0.25f;
-
-    // While the car is up, the camera may look up from under it: this far under level at most, its eye kept off the floor
-    private const float UnderCarBeta = 0.35f;
-    private const float EyeOffFloor = 0.12f;
-
-    private float LiftGoal => LiftLayout.HeightOf(LiftStop);
-
-    protected override float LiftHeight => _liftNow;
-
-    /// <summary>The lowest the camera may look from: under level only while the car is up off its wheels</summary>
-    private float LowestBeta(float radius, float targetY)
-    {
-        if (_liftNow < LiftLayout.WheelsClearHeight / 2f || radius <= 0f) return MinBeta;
-        return -MathF.Asin(Math.Clamp((targetY - EyeOffFloor) / radius, 0f, MathF.Sin(UnderCarBeta)));
-    }
-
-    /// <summary>The lift a step nearer its stop, the car and the post with it; false when it is there</summary>
-    private bool StepLift(GarageRenderer renderer, float dt)
-    {
-        var goal = LiftGoal;
-        if (_liftNow == goal || renderer.CarNode == null) return false;
-
-        var left = goal - _liftNow;
-        var step = LiftLayout.Speed * Math.Min(dt, GarageRenderer.MaxTickSeconds) * Math.Clamp(Math.Abs(left) / LiftEaseDistance, LiftSlowest, 1f);
-        if (step >= Math.Abs(left))
-        {
-            _liftNow = goal;
-            Audio.AudioHub.Shared.StopLoop(_liftHum);
-            _liftHum = null;
-            Audio.Sfx.Play(Audio.Sfx.LiftStops);
-            IsLiftMoving = false;
-
-            // Down on the floor, the camera comes back up out from under it; up at a stop, it stays under
-            if (goal < LiftLayout.WheelsClearHeight / 2f && _betaGoal < MinBeta) _betaGoal = MinBeta;
-        }
-        else
-        {
-            _liftNow += Math.Sign(left) * step;
-        }
-
-        renderer.LiftSaddle = LiftLayout.SaddleTop(_liftNow);
-        renderer.Droop = LiftLayout.Droop(_liftNow);
-        OnPoseChanged();
-        return true;
-    }
-
-    /// <summary>
-    /// Whether a part on this car slot hangs with the wheels as the lift takes the body up: a wheel, a brake, the rear axle
-    /// (with all it carries), a leaf spring (with its traction bar); not a coil, a shock or a torsion bar on the body
-    /// </summary>
-    private static bool HangsOnLift(int carSlot, PartDefinition part)
-    {
-        if (carSlot == RearAxle.CarSlot) return true;
-        var corner = RunningGear.CornerOf(carSlot);
-        return corner >= 0 && (carSlot == RunningGear.WheelSlot(corner) || carSlot == RunningGear.BrakeSlot(corner)
-                               || carSlot == RunningGear.SpringSlot(corner) && RunningGear.IsLeafSpring(part));
-    }
-
-    /// <summary>The running gear that hangs with the wheels (<see cref="HangsOnLift"/>), with everything on it</summary>
-    private static HashSet<InstalledPart> Unsprung(IReadOnlyList<CarPart>? gear)
-    {
-        var hanging = new HashSet<InstalledPart>(ReferenceEqualityComparer.Instance);
-        foreach (var part in gear ?? Array.Empty<CarPart>())
-            if (HangsOnLift(part.CarSlot, part.Root.Definition)) hanging.UnionWith(part.Root.SelfAndDescendants());
-        return hanging;
-    }
-
-    /// <summary>
-    /// The nodes of the wheels the car's own model stands in for, with their corners: a corner on its factory rim and tyre,
-    /// where the car shows its own wheel (<see cref="ShownSet.Wheels"/> has none there), shows it in the parts view too
-    /// </summary>
-    private static List<(int Node, int Corner)> StandIns(IReadOnlyList<PlacedPart> nodes, IReadOnlyList<CarPart>? gear, ShownSet? shown)
-    {
-        var standIns = new List<(int, int)>();
-        foreach (var part in gear ?? Array.Empty<CarPart>())
-        {
-            if (!RunningGear.IsWheelSlot(part.CarSlot)) continue;
-            var corner = RunningGear.CornerOf(part.CarSlot);
-            if (shown != null && corner < shown.Wheels.Count && shown.Wheels[corner] != null) continue;
-
-            var wheel = new HashSet<InstalledPart>(part.Root.SelfAndDescendants(), ReferenceEqualityComparer.Instance);
-            for (var i = 0; i < nodes.Count; i++)
-                if (nodes[i].Source is { } source && wheel.Contains(source)) standIns.Add((i, corner));
-        }
-
-        return standIns;
-    }
-
-    private static IEnumerable<int> NodesHanging(IReadOnlyList<PlacedPart> nodes, HashSet<InstalledPart> hanging) =>
-        Enumerable.Range(0, nodes.Count).Where(i => nodes[i].Source is { } source && hanging.Contains(source));
-
-    /// <summary>A car just loaded comes at its stop, the lift under it with no move to hear</summary>
-    private void SnapLift()
-    {
-        Audio.AudioHub.Shared.StopLoop(_liftHum);
-        _liftHum = null;
-        IsLiftMoving = false;
-        _liftNow = Renderer?.CarNode == null ? 0f : LiftGoal;
-        if (Renderer is { } renderer)
-        {
-            renderer.LiftSaddle = LiftLayout.SaddleTop(_liftNow);
-            renderer.Droop = LiftLayout.Droop(_liftNow);
-            PlaceLift(renderer);
-        }
-
-        if (_liftNow < LiftLayout.WheelsClearHeight / 2f && _betaGoal < MinBeta) _betaGoal = MinBeta;
-        OnPoseChanged();
-    }
-
-    /// <summary>
-    /// The lift, where the garage's props put it (<see cref="LiftLayout.PropId"/>): the game's own model drawn from boxes
-    /// unless a mod names one, set into the renderer once, and under the middle of whatever car is in the bay. A garage
-    /// with no place for it lifts the car with no lift to see.
-    /// </summary>
-    private async void ApplyLift()
-    {
-        var renderer = Renderer;
-        if (renderer == null || ReferenceEquals(renderer, _liftRenderer)) return;
-        _liftRenderer = renderer;
-        _liftProp = null;
-
-        var problems = new List<string>();
-        var lift = Services.Garage.GarageProps.Find(Mods.ModSet.Installed, LiftLayout.PropId, ShowroomKn5, problems, builtIn: true);
-        foreach (var problem in problems) Logger.Warning("Garage props: {Problem}", problem);
-        Mods.ModProblems.Add("Garage props", problems);
-        if (lift == null) return;
-
-        AcTools.Kn5File.IKn5 kn5;
-        try
-        {
-            kn5 = await Task.Run(() => lift.Model.Length > 0 ? AcTools.Kn5File.Kn5.FromFile(lift.Model) : LiftLayout.CreateModel());
-        }
-        catch (Exception ex)
-        {
-            Logger.Warning("The garage's lift could not be read from {Model}: {Error}", lift.Model, ex.Message);
-            return;
-        }
-
-        if (renderer != Renderer) return;
-        _liftProp = lift;
-        renderer.SetLift(kn5, ToSlim(LiftPlacement(renderer, lift)));
-        Invalidate();
-    }
-
-    /// <summary>The lift moved under the car now in the bay</summary>
-    private void PlaceLift(GarageRenderer renderer)
-    {
-        if (_liftProp is { } lift && ReferenceEquals(renderer, _liftRenderer)) renderer.MoveLift(ToSlim(LiftPlacement(renderer, lift)));
-    }
-
-    /// <summary>Under the middle of the car in the bay, at the prop's floor height; where the prop stands with no car</summary>
-    private System.Numerics.Matrix4x4 LiftPlacement(GarageRenderer renderer, Services.Garage.PlacedProp lift) =>
-        renderer.CarNode is { } car && GetAnchors(car) is { } anchors ? LiftLayout.UnderCar(anchors, lift.Placement) : lift.Placement;
-
-    #endregion
-
     #region Rendering
 
     protected override bool StepFrame(GarageRenderer renderer, float dt)
@@ -2511,217 +1581,13 @@ public class CarViewport3D : D3DViewportBase
         _benchRenderer = null;
         _liftRenderer = null;
         _liftProp = null;
-        Audio.AudioHub.Shared.StopLoop(_liftHum);
-        _liftHum = null;
+        QuietLift();
         _sceneryRenderer = null;
         _sceneryKey = null;
         _partsOnStand = false;
         _loadedCarDirectory = null;
         HasCar = false;
         HasDoors = false;
-    }
-
-    #endregion
-
-    #region Camera input
-
-    protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
-    {
-        base.OnMouseLeftButtonDown(e);
-        if (Renderer == null) return;
-
-        _isDragging = true;
-        _lastMouse = _pressedAt = e.GetPosition(this);
-        CaptureMouse();
-    }
-
-    protected override void ForgetPress() => _isDragging = false;
-
-    protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
-    {
-        base.OnMouseLeftButtonUp(e);
-        var wasDragging = _isDragging;
-        _isDragging = false;
-        ReleaseMouseCapture();
-
-        var position = e.GetPosition(this);
-        if (wasDragging && (position - _pressedAt).Length <= ClickSlack) OnClick(position);
-    }
-
-    protected override void OnMouseMove(System.Windows.Input.MouseEventArgs e)
-    {
-        base.OnMouseMove(e);
-
-        var orbit = Renderer?.CameraOrbit;
-        if (orbit == null) return;
-
-        var position = e.GetPosition(this);
-        if (!_isDragging)
-        {
-            UpdateHover(position);
-            return;
-        }
-
-        orbit.Alpha += (float)(position.X - _lastMouse.X) * 0.01f;
-        orbit.Beta = Math.Clamp(orbit.Beta + (float)(position.Y - _lastMouse.Y) * 0.01f, LowestBeta(orbit.Radius, orbit.Target.Y), MaxBeta);
-        _alphaGoal = orbit.Alpha;
-        _betaGoal = orbit.Beta;
-        _lastMouse = position;
-
-        if ((position - _pressedAt).Length > ClickSlack) ShowPartLabel(null, default);
-        Invalidate();
-    }
-
-    protected override void OnMouseLeave(System.Windows.Input.MouseEventArgs e)
-    {
-        base.OnMouseLeave(e);
-        if (Renderer != null)
-        {
-            Renderer.HoveredPart = null;
-            Renderer.SceneryHovered = false;
-            Renderer.CarHovered = false;
-            Renderer.FixtureHovered = false;
-        }
-
-        Cursor = null;
-        InvalidateIfDirty();
-        ShowPartLabel(null, default);
-    }
-
-    private PartHit? PickAt(System.Windows.Point position) =>
-        Renderer == null || ActualWidth <= 0 || ActualHeight <= 0
-            ? null
-            : Renderer.Pick((float)(position.X / ActualWidth), (float)(position.Y / ActualHeight));
-
-    private void UpdateHover(System.Windows.Point position)
-    {
-        if (Renderer == null) return;
-
-        // Picking tests triangles on the CPU; the pointer moves more often than it needs to be asked
-        var now = DateTime.Now;
-        if (now - _lastHoverPick < HoverInterval) return;
-        _lastHoverPick = now;
-
-        var hit = Renderer.HasProp && PartsVisible ? PickAt(position) : null;
-
-        // The radio on its bench: its panel is a click away
-        var onRadio = hit == null && !IsOnStand && HitsRadio(position);
-        Renderer.FixtureHovered = onRadio;
-        if (onRadio)
-        {
-            Renderer.SceneryHovered = false;
-            Renderer.CarHovered = false;
-            Renderer.HoveredPart = null;
-            Cursor = System.Windows.Input.Cursors.Hand;
-            InvalidateIfDirty();
-            ShowLabel(GameText.Say("garage.label.radio"), position);
-            return;
-        }
-
-        // The stand beside the car, while it is not the one being worked on, and the car while the stand is: a way over
-        var onStand = hit == null && !IsOnStand && HitsStand(position);
-        var onCar = hit == null && IsOnStand && HitsCar(position);
-        Renderer.SceneryHovered = onStand;
-        Renderer.CarHovered = onCar;
-        Cursor = onStand || onCar ? System.Windows.Input.Cursors.Hand : null;
-        if (onStand || onCar)
-        {
-            Renderer.HoveredPart = null;
-            InvalidateIfDirty();
-            ShowLabel(onStand ? GameText.Say("garage.label.stand") : GameText.Say("garage.label.back_to_car"), position);
-            return;
-        }
-
-        if (Renderer is not { HasProp: true } || !PartsVisible)
-        {
-            InvalidateIfDirty();
-            ShowPartLabel(null, default);
-            return;
-        }
-
-        Renderer.HoveredPart = hit;
-        InvalidateIfDirty();
-        ShowPartLabel(hit == null ? null : DefinitionOf(hit.Value), position);
-    }
-
-    private bool HitsStand(System.Windows.Point position) =>
-        Renderer != null && ActualWidth > 0 && ActualHeight > 0
-        && Renderer.HitsScenery((float)(position.X / ActualWidth), (float)(position.Y / ActualHeight));
-
-    private bool HitsCar(System.Windows.Point position) =>
-        Renderer != null && ActualWidth > 0 && ActualHeight > 0
-        && Renderer.HitsCar((float)(position.X / ActualWidth), (float)(position.Y / ActualHeight));
-
-    private void OnClick(System.Windows.Point position)
-    {
-        if (Renderer == null) return;
-
-        var partHit = Renderer.HasProp && PartsVisible ? PickAt(position) : null;
-        if (partHit == null && !IsOnStand && HitsRadio(position))
-        {
-            Renderer.FixtureHovered = false;
-            Cursor = null;
-            ShowPartLabel(null, default);
-            Audio.Radio.RadioPanelViewModel.Shared.IsOpen = true;
-            return;
-        }
-
-        if (partHit == null && !IsOnStand && HasStand && HitsStand(position))
-        {
-            Renderer.SceneryHovered = false;
-            Cursor = null;
-            ShowPartLabel(null, default);
-            StandClicked?.Invoke();
-            return;
-        }
-
-        if (partHit == null && IsOnStand && HitsCar(position))
-        {
-            Renderer.CarHovered = false;
-            Cursor = null;
-            ShowPartLabel(null, default);
-            CarClicked?.Invoke();
-            return;
-        }
-
-        if (Renderer is not { HasProp: true } || !PartsVisible) return;
-
-        var hit = partHit;
-        if (hit is { Layer: PartLayer.Candidate } candidate && candidate.Node < _candidateNodes.Count)
-        {
-            if (ReferenceEquals(_shownCandidates, Candidates)) CandidateClicked?.Invoke(_candidateNodes[candidate.Node]);
-            return;
-        }
-
-        var part = hit is { Layer: PartLayer.Mounted } mounted && mounted.Node < _partNodes.Count ? _partNodes[mounted.Node].Source : null;
-        PartClicked?.Invoke(part);
-    }
-
-    private PartDefinition? DefinitionOf(PartHit hit) => hit.Layer switch
-    {
-        PartLayer.Mounted when hit.Node < _partNodes.Count => _partNodes[hit.Node].Part,
-        PartLayer.Candidate when hit.Node < _candidateNodes.Count => _candidateNodes[hit.Node].Part.Definition,
-        _ => null
-    };
-
-    private void ShowPartLabel(PartDefinition? part, System.Windows.Point position) =>
-        ShowLabel(part == null ? null : part.DisplayName ?? part.Name, position);
-
-    protected override void OnMouseWheel(MouseWheelEventArgs e)
-    {
-        base.OnMouseWheel(e);
-
-        var orbit = Renderer?.CameraOrbit;
-        if (orbit == null) return;
-
-        var minRadius = IsOnStand ? StandMinRadius : Renderer!.HasProp ? PartsMinRadius : MinRadius;
-        orbit.Radius = Math.Clamp(orbit.Radius - e.Delta * 0.002f, minRadius, MaxRadius);
-        _radiusGoal = orbit.Radius;
-
-        // Looking up from under the lifted car, the eye goes no lower than the floor further out either
-        if (orbit.Beta < LowestBeta(orbit.Radius, orbit.Target.Y)) _betaGoal = orbit.Beta = LowestBeta(orbit.Radius, orbit.Target.Y);
-        Invalidate();
-        e.Handled = true;
     }
 
     #endregion

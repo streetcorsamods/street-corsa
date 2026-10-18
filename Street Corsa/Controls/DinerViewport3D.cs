@@ -226,7 +226,8 @@ public class DinerViewport3D : DriveInViewport3D
     /// <summary>Where a car stands in a bay: facing the way the bay does, on the lot, sitting as AC has it sit</summary>
     private Sx.Matrix Standing(StreetCar car, DinerBay bay)
     {
-        var lift = SceneLights.FrameOf(car.Directory, car.Shown).Lift;
+        var lift = SceneLights.FrameOf(car.Directory, car.Shown,
+            ex => Logger.Warning(ex, "The data of {Car} could not be read: it sits as most cars do", car.Directory)).Lift;
         return Sx.Matrix.RotationY(bay.Heading) * Sx.Matrix.Translation(bay.X, GroundAt(bay.X, bay.Z) + lift, bay.Z);
     }
 }

@@ -87,9 +87,11 @@ internal static class SceneLights
 
     /// <summary>
     /// <see cref="FrameOf(string, Action{Exception}?)"/> for the car as it shows <paramref name="shown"/>: on tyres of
-    /// another size it stands that much higher or lower
+    /// another size it stands that much higher or lower. <paramref name="failed"/> hears why the car's data could not be
+    /// read, as the other overload's does: the car sits as most do then, and the caller says so in its log.
     /// </summary>
-    public static AcCarFrame FrameOf(string carDirectory, Parts.Cars.ShownSet? shown) => FrameOf(DataOf(carDirectory), carDirectory, shown);
+    public static AcCarFrame FrameOf(string carDirectory, Parts.Cars.ShownSet? shown, Action<Exception>? failed) =>
+        FrameOf(DataOf(carDirectory, failed), carDirectory, shown);
 
     /// <summary>
     /// <see cref="FrameOf(string, Action{Exception}?)"/> from data already read (<see cref="DataOf"/>); the car's folder

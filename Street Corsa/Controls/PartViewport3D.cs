@@ -44,7 +44,6 @@ public class PartViewport3D : D3DViewportBase
     private float _fitDistance = 1f;
     private float _radiusGoal = 1f;
     private bool _touched;
-    private System.Windows.Point? _dragFrom;
 
     public PartViewport3D()
         : base("PartPreview", new LabelLook(13, 0xD8, 0x90, new Thickness(8, 4, 8, 4), new Vector(16, 16)))
@@ -214,27 +213,23 @@ public class PartViewport3D : D3DViewportBase
     {
         base.OnMouseLeftButtonDown(e);
         _touched = true;
-        _dragFrom = e.GetPosition(this);
-        CaptureMouse();
+        BeginDrag(e);
         e.Handled = true;
     }
 
     protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
     {
         base.OnMouseLeftButtonUp(e);
-        _dragFrom = null;
-        ReleaseMouseCapture();
+        EndDrag();
     }
 
     protected override void OnMouseMove(System.Windows.Input.MouseEventArgs e)
     {
         base.OnMouseMove(e);
-        if (_dragFrom is not { } from || e.LeftButton != MouseButtonState.Pressed || Renderer?.CameraOrbit is not { } orbit) return;
+        if (DragDelta(e) is not { } moved || Renderer?.CameraOrbit is not { } orbit) return;
 
-        var now = e.GetPosition(this);
-        orbit.Alpha += (float)(now.X - from.X) * DragPerPixel;
-        orbit.Beta = Math.Clamp(orbit.Beta + (float)(now.Y - from.Y) * DragPerPixel, MinBeta, MaxBeta);
-        _dragFrom = now;
+        orbit.Alpha += (float)moved.X * DragPerPixel;
+        orbit.Beta = Math.Clamp(orbit.Beta + (float)moved.Y * DragPerPixel, MinBeta, MaxBeta);
         Invalidate();
     }
 

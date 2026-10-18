@@ -33,8 +33,6 @@ public abstract class OnboardViewport3D : D3DViewportBase
     private static readonly TimeSpan SceneFadeOut = TimeSpan.FromMilliseconds(600);
     private static readonly TimeSpan SceneFadeIn = TimeSpan.FromMilliseconds(900);
 
-    private System.Windows.Point? _dragFrom;
-
     protected OnboardViewport3D(string logCategory)
         : base(logCategory, new LabelLook(13, 0xD8, 0x90, new Thickness(8, 4, 8, 4), new Vector(16, 16)))
     {
@@ -225,29 +223,24 @@ public abstract class OnboardViewport3D : D3DViewportBase
             return;
         }
 
-        _dragFrom = e.GetPosition(this);
-        CaptureMouse();
+        BeginDrag(e);
         e.Handled = true;
     }
-
-    protected override void ForgetPress() => _dragFrom = null;
 
     protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
     {
         base.OnMouseLeftButtonUp(e);
-        _dragFrom = null;
-        ReleaseMouseCapture();
+        EndDrag();
     }
 
     protected override void OnMouseMove(System.Windows.Input.MouseEventArgs e)
     {
         base.OnMouseMove(e);
-        if (_dragFrom is not { } from || e.LeftButton != MouseButtonState.Pressed) return;
+        if (DragDelta(e) is not { } moved) return;
 
-        var now = e.GetPosition(this);
-        LookYaw = Math.Clamp(LookYaw + (float)(from.X - now.X) * LookDegreesPerPixel, MinLookYaw, MaxLookYaw);
-        LookPitch = Math.Clamp(LookPitch + (float)(from.Y - now.Y) * LookDegreesPerPixel, -MaxLookPitch, MaxLookPitch);
-        _dragFrom = now;
+        // Dragged to the right, the driver looks left: the view goes with the hand
+        LookYaw = Math.Clamp(LookYaw - (float)moved.X * LookDegreesPerPixel, MinLookYaw, MaxLookYaw);
+        LookPitch = Math.Clamp(LookPitch - (float)moved.Y * LookDegreesPerPixel, -MaxLookPitch, MaxLookPitch);
 
         OnLookDragged();
         Invalidate();

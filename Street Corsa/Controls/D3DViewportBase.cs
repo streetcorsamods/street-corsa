@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
@@ -81,10 +82,14 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     private bool _reloadRequested;
     private bool _failed;
     private bool _recovered;
-    private DateTime _recoveredAt;
     private bool _pumping;
     private TimeSpan _lastRenderingTime;
-    private DateTime _animateUntil = DateTime.MinValue;
+
+    // When the scene was rebuilt after a lost device, and until when the pump keeps drawing: Environment.TickCount64
+    // milliseconds, a clock the autumn's hour back or a time correction never moves (the wall clock would have the pump
+    // draw every frame for that hour)
+    private long _recoveredAt;
+    private long _animateUntil = long.MinValue;
 
     // Frames still to draw before the picture is faded up, or -1 when there is nothing to fade up; how long the fade
     // takes, and who hears the scene has settled (FadeInAfterSettled)
@@ -500,7 +505,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
 
         Logger.Warning(ex, "{Viewport}: the graphics device was lost {Doing}, starting the scene again", ViewportName, doing);
         _recovered = true;
-        _recoveredAt = DateTime.Now;
+        _recoveredAt = Environment.TickCount64;
         DisposeRenderer(releaseDevice: true);
         _ = Dispatcher.InvokeAsync(RequestLoad);
     }
@@ -618,7 +623,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     /// <summary>Keeps drawing for a while, for something that plays out by itself (doors, parts flying in)</summary>
     protected void AnimateFor(TimeSpan window)
     {
-        var until = DateTime.Now + window;
+        var until = Environment.TickCount64 + (long)window.TotalMilliseconds;
         if (until > _animateUntil) _animateUntil = until;
         if (_renderer != null) _renderer.IsDirty = true;
         StartPump();
@@ -703,10 +708,11 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
                 moving = true;
             }
 
-            var now = DateTime.Now;
-            if (renderer.IsDirty && _animateUntil < now + SettleWindow)
+            var now = Environment.TickCount64;
+            var settle = (long)SettleWindow.TotalMilliseconds;
+            if (renderer.IsDirty && _animateUntil < now + settle)
             {
-                _animateUntil = now + SettleWindow;
+                _animateUntil = now + settle;
             }
 
             if (!moving && now >= _animateUntil && _bridge.BoundTarget != IntPtr.Zero)
@@ -737,7 +743,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
 
             // A scene that has drawn well for a while since it was rebuilt has earned another rebuild: a device lost
             // again soon after is still a failure, so this cannot loop
-            if (_recovered && DateTime.Now - _recoveredAt >= RecoveryGrace) _recovered = false;
+            if (_recovered && Environment.TickCount64 - _recoveredAt >= (long)RecoveryGrace.TotalMilliseconds) _recovered = false;
         }
         catch (Exception ex) when (!_recovered && IsDeviceLost(ex))
         {
@@ -810,6 +816,8 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         _resizeTimer.Stop();
         _firstFrameTimer.Stop();
         _rock = null;
+        _liftedNode = null;
+        _shadowsCar = null;
         _bumps.Clear();
         _fadeInAfter = -1;
         _settled = null;
@@ -919,10 +927,16 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     /// The car model's own shadows (AC's body_shadow and tyre_N_shadow planes, under the car in its node) stay on the floor
     /// as the lift takes the car up: the body's moved down as far as the car is up, the tyres' gone once the wheels hang
     /// clear of the floor (<see cref="StreetCorsa.Parts.LiftLayout.WheelDrop"/>). A bare corner's parts shown on the car
-    /// (<see cref="ShownPartsOnCar.CornersNode"/>) hang as far as the wheels do.
+    /// (<see cref="ShownPartsOnCar.CornersNode"/>) hang as far as the wheels do. Walked only when something changed: the
+    /// car, how high it is, or what it shows (a corner's parts put on since are new nodes to hang); the rock asks every
+    /// frame, and most frames nothing has.
     /// </summary>
-    private static void KeepShadowsOnFloor(Kn5RenderableCar car, float lift)
+    private void KeepShadowsOnFloor(Kn5RenderableCar car, float lift)
     {
+        var changes = ShownPartsOnCar.ChangesOf(car);
+        if (ReferenceEquals(_shadowsCar, car) && _shadowsLift == lift && _shadowsChanges == changes) return;
+        (_shadowsCar, _shadowsLift, _shadowsChanges) = (car, lift, changes);
+
         if (car.OfType<AcTools.Render.Base.Objects.RenderableList>().FirstOrDefault(l => l.Name == "_shadows") is not { } shadows) return;
 
         var down = lift == 0f ? SlimDX.Matrix.Identity : SlimDX.Matrix.Translation(0f, -lift, 0f);
@@ -946,6 +960,12 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     private float _appliedLift;
     private Kn5RenderableCar? _liftedNode;
     private SlimDX.Matrix _liftHome = SlimDX.Matrix.Identity;
+
+    // What the car's own shadows were last kept on the floor for (KeepShadowsOnFloor): the car, its lift's height and
+    // what it showed then (ShownPartsOnCar.ChangesOf)
+    private Kn5RenderableCar? _shadowsCar;
+    private float _shadowsLift;
+    private int _shadowsChanges;
 
     private void OnRunningEngineChanged(Audio.EngineRunner? old, Audio.EngineRunner? runner)
     {
@@ -1129,7 +1149,17 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         var front = _rock.FrontSign;
         var home = new GroundPose(world.M41, world.M43, MathF.Atan2(world.M31 * front, world.M33 * front));
 
-        DrawUnseen(renderer, car);
+        try
+        {
+            DrawUnseen(renderer, car);
+        }
+        catch (Exception ex) when (IsDeviceLost(ex))
+        {
+            // The GPU went away under the frame: the scene is built again from scratch, as the render loop has it, and
+            // there is none left to play the script in
+            RebuildAfterDeviceLost(ex, "drawing the car ahead of its move");
+            return null;
+        }
 
         var scripted = new ScriptedCar(home, scriptEngine, (head, brake) =>
         {
@@ -1165,7 +1195,8 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     /// just put in its scene sends its pictures to the graphics card (its wear's among them), and takes a tenth of a second
     /// or more: the first frame of the car's move came late by that, and a car driving in jerked as it set off. Drawn now,
     /// while nothing moves, the move starts smooth. The camera goes back as it was; nothing of the frame is shown. Once for
-    /// a car, and again only when something was put on it since: a car already drawn so has nothing left to send.
+    /// a car, and again only when something was put on it since: a car already drawn so has nothing left to send. A frame
+    /// that fails is only a frame missed; a device lost under it goes to the caller's recovery.
     /// </summary>
     private void DrawUnseen(GarageRenderer renderer, Kn5RenderableCar car)
     {
@@ -1185,9 +1216,9 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
             renderer.Draw();
             _drawnUnseen.AddOrUpdate(car, new StrongBox<int>(changes));
         }
-        catch (Exception ex)
+        catch (Exception ex) when (!IsDeviceLost(ex))
         {
-            Logger.Warning("The frame drawn ahead of a move failed: {Error}", ex.Message);
+            Logger.Warning(ex, "The frame drawn ahead of a move failed");
         }
         finally
         {
@@ -1266,10 +1297,69 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         base.OnPreviewMouseLeftButtonUp(e);
     }
 
-    /// <summary>A press used up skipping a script: whatever the viewport's own handlers began with it (a drag) is over</summary>
-    protected virtual void ForgetPress()
+    /// <summary>
+    /// A press used up skipping a script: whatever the viewport's own handlers began with it (a drag) is over. The drag
+    /// of <see cref="BeginDrag"/> is; a viewport with a press of its own forgets that too.
+    /// </summary>
+    protected virtual void ForgetPress() => _dragFrom = null;
+
+    #endregion
+
+    #region Dragging
+
+    // Where the pointer was last seen while the left button is held on the view, for the viewports that drag their camera
+    // round by it (DragDelta); null while it is not held. Let go of on release, when the capture is lost to another
+    // window (or the drag would go on from where it was left, and the next move swing the camera by the whole gap) and
+    // when a press is used up skipping a script (ForgetPress).
+    private System.Windows.Point? _dragFrom;
+
+    /// <summary>True while the pointer is held down on the view for a drag (<see cref="BeginDrag"/>)</summary>
+    protected bool IsDragging => _dragFrom != null;
+
+    /// <summary>Takes hold of the pointer at <paramref name="e"/> for a drag: captured until it is let go (<see cref="EndDrag"/>)</summary>
+    protected void BeginDrag(MouseButtonEventArgs e)
+    {
+        _dragFrom = e.GetPosition(this);
+        CaptureMouse();
+    }
+
+    /// <summary>Lets go of the drag, and of the pointer</summary>
+    protected void EndDrag()
+    {
+        _dragFrom = null;
+        ReleaseMouseCapture();
+    }
+
+    /// <summary>
+    /// How far the pointer has come since it was last asked, in pixels, while it is held down for a drag; null when it is
+    /// not, or the button is up (a release the view did not hear of)
+    /// </summary>
+    protected Vector? DragDelta(System.Windows.Input.MouseEventArgs e)
+    {
+        if (_dragFrom is not { } from || e.LeftButton != MouseButtonState.Pressed) return null;
+
+        var now = e.GetPosition(this);
+        _dragFrom = now;
+        return now - from;
+    }
+
+    /// <summary>The drag was let go of elsewhere (another window took the pointer): a viewport that picks something up on a let-go hears so</summary>
+    protected virtual void OnDragLost()
     {
     }
+
+    protected override void OnLostMouseCapture(System.Windows.Input.MouseEventArgs e)
+    {
+        base.OnLostMouseCapture(e);
+        if (_dragFrom == null) return;
+
+        _dragFrom = null;
+        OnDragLost();
+    }
+
+    #endregion
+
+    #region Scripted moves (stepping)
 
     private void StepScripted(float dt)
     {
