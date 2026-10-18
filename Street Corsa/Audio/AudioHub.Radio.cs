@@ -65,9 +65,11 @@ public sealed partial class AudioHub
     /// <summary>How long the car radio's sound takes to come in, or to go</summary>
     public const float AmFadeSeconds = 1.5f;
 
-    // The biggest song read into memory: about 50 minutes of a CD's WAV, a few hours of MP3 or FLAC. A bigger file (a long
-    // DJ mix as WAV) is passed over, said in the log, rather than costing its size in memory
-    private const long LargestSong = 512L * 1024 * 1024;
+    // The biggest song read into memory: about 9 minutes of a CD's WAV, a quarter of an hour of hi-res FLAC, hours of
+    // MP3; any song of the radio's era, and twice this at most held at once (the one playing and the next, read ahead).
+    // A bigger file (a long DJ mix as WAV) is passed over, said in the log, rather than costing its size in memory: a
+    // stream from disk would hold the file, which the radio never does (the player may move or delete it as it plays)
+    internal const long LargestSong = 100L * 1024 * 1024;
 
     /// <summary>
     /// A song file read into memory and opened on it; null when there is no system, the file cannot be read, is bigger
@@ -335,8 +337,17 @@ public sealed partial class AudioHub
         void Add(int type, Action<IntPtr> setUp)
         {
             Check(FMOD_System_CreateDSPByType(core, type, out var dsp), "create the radio's DSP " + type);
-            setUp(dsp);
-            Check(FMOD_ChannelGroup_AddDSP(group, DspTail, dsp), "add the radio's DSP " + type);
+            try
+            {
+                setUp(dsp);
+                Check(FMOD_ChannelGroup_AddDSP(group, DspTail, dsp), "add the radio's DSP " + type);
+            }
+            catch
+            {
+                // Made but never in the chain: nobody else would release it before the system goes
+                Warn(FMOD_DSP_Release(dsp), "release the radio's DSP " + type);
+                throw;
+            }
             chain.Add(dsp);
         }
 

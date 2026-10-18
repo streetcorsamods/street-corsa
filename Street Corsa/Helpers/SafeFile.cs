@@ -18,7 +18,13 @@ public static class SafeFile
     public static readonly Encoding Utf8NoBom = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
 
     /// <summary>Tries at the rename: a reader holding the target without delete sharing (AC, an indexer, a scanner) lets go soon</summary>
-    private const int MoveAttempts = 5;
+    internal const int MoveAttempts = 5;
+
+    /// <summary>
+    /// How long a failed try at the rename of <c>path</c> (its number first, from 1) waits before the next: 50 ms more
+    /// each time, 100 at most. A test puts its own in to let a reader go at a known try instead of racing the clock.
+    /// </summary>
+    internal static Func<string, int, TimeSpan> MoveRetryDelay { get; set; } = (_, attempt) => TimeSpan.FromMilliseconds(Math.Min(50 * attempt, 100));
 
     private const string TempExtension = ".tmp";
 
@@ -73,7 +79,7 @@ public static class SafeFile
             }
             catch (Exception ex) when ((ex is IOException or UnauthorizedAccessException) && attempt < MoveAttempts)
             {
-                Thread.Sleep(Math.Min(50 * attempt, 100));
+                Thread.Sleep(MoveRetryDelay(path, attempt));
             }
             catch when (readOnly is { } attributes)
             {

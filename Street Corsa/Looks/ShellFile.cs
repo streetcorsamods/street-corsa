@@ -22,7 +22,8 @@ internal static class ShellFile
     public static string KeyOf(string model)
     {
         var info = new FileInfo(model);
-        // The car's animations say what of its body moves (BodyShell.MoversOf): a car given new ones is looked at again
+        // The car's animations say what of its body moves (BodyShell.MoversOf): a car given new ones, or one of them
+        // edited in place, is looked at again
         var animations = Path.GetDirectoryName(model) is { } car ? BodyShell.MoversStamp(car) : "";
         return $"{Path.GetFullPath(model).ToLowerInvariant()}|{info.Length}|{info.LastWriteTimeUtc.Ticks}|{BodyShell.Version}|{animations}";
     }
@@ -68,6 +69,10 @@ internal static class ShellFile
             var panels = Enumerable.Range(0, Count(reader, MostOthers)).Select(_ => new BodyShell.Panel((BodyShell.Side)reader.ReadInt32(),
                 reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(),
                 reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle())).ToList();
+            // A panel is painted row by row at its place in the picture: one outside it, or facing no side, is a bad file,
+            // not an index out of range in the painter
+            if (panels.Any(p => !Enum.IsDefined(p.Side) || p.X < 0 || p.Y < 0 || p.Width < 0 || p.Height < 0
+                                || p.X + (long)p.Width > pictureSize || p.Y + (long)p.Height > pictureSize)) return false;
             var body = ReadMeshes(reader);
             var screen = ReadMeshes(reader);
             var screenMin = new System.Numerics.Vector2(reader.ReadSingle(), reader.ReadSingle());
@@ -169,7 +174,12 @@ internal static class ShellFile
                     new Vec3(r.ReadSingle(), r.ReadSingle(), r.ReadSingle()), new Vec2(r.ReadSingle(), r.ReadSingle()),
                     new Vec3(r.ReadSingle(), r.ReadSingle(), r.ReadSingle()));
             var indices = new ushort[Count(r, int.MaxValue, sizeof(ushort))];
-            for (var i = 0; i < indices.Length; i++) indices[i] = r.ReadUInt16();
+            for (var i = 0; i < indices.Length; i++)
+            {
+                // Every corner must be one of the mesh's: the painter reads them unchecked
+                indices[i] = r.ReadUInt16();
+                if (indices[i] >= vertices.Length) throw new InvalidDataException($"an index of {indices[i]} in a mesh of {vertices.Length} corners in a shell file");
+            }
             string? mover = null;
             var rest = default(System.Numerics.Matrix4x4);
             if (r.ReadBoolean())

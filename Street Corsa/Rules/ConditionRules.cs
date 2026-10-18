@@ -16,6 +16,12 @@ public sealed class ConditionRules
     public double BrokenBelow { get; set; } = 0.1;
 
     /// <summary>
+    /// A part's damage (<see cref="Models.GameState.PartInstance.Tear"/>) at this or better is no damage: nothing to
+    /// mend, nothing to tell the player, no body work or rebuild offered for it
+    /// </summary>
+    public double UndamagedTear { get; set; } = Models.GameState.PartInstance.Undamaged;
+
+    /// <summary>
     /// Wear from plain driving, per km, on the engine and the gearbox. Small: what a race does to a car is AC's damage;
     /// a drag race costs a few thousandths of a percent.
     /// </summary>
@@ -136,6 +142,7 @@ public sealed class ConditionRules
     {
         Figures.Above0(this, path, nameof(TotaledKmh), 10000, problems);
         Figures.Above0(this, path, nameof(NewEngineLife), 1_000_000, problems);
+        Figures.Within(this, path, nameof(UndamagedTear), 0, 1, problems);
         Figures.Within(this, path, nameof(CrackFromKmh), 0, 1000, problems);
         Figures.Above0(this, path, nameof(ShatteredKmh), 1000, problems);
         Figures.Above0(this, path, nameof(SagFrom), 1, problems);

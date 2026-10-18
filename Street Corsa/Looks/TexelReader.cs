@@ -23,9 +23,24 @@ internal sealed class TexelReader : IDisposable
 
     private readonly Drawing _drawing = new();
 
+    // The copy's target, kept with the drawing and only resized between textures: making one (and the effect's shader,
+    // which the holder keeps) for every texture read cost more than the copy
+    private readonly TargetResourceTexture _output = TargetResourceTexture.Create(Format.R8G8B8A8_UNorm);
+
     public TexelReader()
     {
         _drawing.Initialize();
+    }
+
+    /// <summary>
+    /// The size a texture is drawn at: <paramref name="most"/> a side when given, its shape kept; never a side of nought
+    /// (a 1×4096 strip at most 256 rounds to 0×256, which no target can be)
+    /// </summary>
+    public static (int Width, int Height) SizeOf(int width, int height, int? most)
+    {
+        if (most is not { } side) return (width, height);
+        var scale = Math.Min((double)side / width, (double)side / height);
+        return (Math.Max(1, (int)Math.Round(width * scale)), Math.Max(1, (int)Math.Round(height * scale)));
     }
 
     /// <summary>
@@ -39,19 +54,12 @@ internal sealed class TexelReader : IDisposable
         Viewport[]? viewports = null;
         try
         {
-            using var effect = new EffectPpBasic();
-            using var output = TargetResourceTexture.Create(Format.R8G8B8A8_UNorm);
+            var effect = holder.GetEffect<EffectPpBasic>();
+            var output = _output;
             using var resource = ShaderResourceView.FromMemory(holder.Device, bytes);
             var loaded = ((Texture2D)resource.Resource).Description;
 
-            var (width, height) = (loaded.Width, loaded.Height);
-            if (most is { } side)
-            {
-                var scale = Math.Min((double)side / width, (double)side / height);
-                (width, height) = ((int)Math.Round(width * scale), (int)Math.Round(height * scale));
-            }
-
-            effect.Initialize(holder.Device);
+            var (width, height) = SizeOf(loaded.Width, loaded.Height, most);
             output.Resize(holder, width, height, null);
             context.ClearRenderTargetView(output.TargetView, BaseRenderer.ColorTransparent);
             context.OutputMerger.SetTargets(output.TargetView);
@@ -108,5 +116,9 @@ internal sealed class TexelReader : IDisposable
         return rgba;
     }
 
-    public void Dispose() => _drawing.Dispose();
+    public void Dispose()
+    {
+        _output.Dispose();
+        _drawing.Dispose();
+    }
 }

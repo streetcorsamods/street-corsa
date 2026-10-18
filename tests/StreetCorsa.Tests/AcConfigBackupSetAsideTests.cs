@@ -77,26 +77,34 @@ public sealed class AcConfigBackupSetAsideTests : IDisposable
     }
 
     [Fact]
-    public async Task A_write_waits_out_a_reader_that_holds_the_file_for_a_moment()
+    public void A_write_waits_out_a_reader_that_holds_the_file_for_a_moment()
     {
         var path = _temp.File("race.ini", "old");
         var reader = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-        // The reader lets go once the write has its temp file, which it makes before it tries the rename: from then on
-        // the write is in its tries, whatever the load. A thread of its own, not the pool's, which a busy test run
-        // can keep waiting past them
-        var released = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var watcher = new Thread(() =>
+        // The reader lets go in the wait after the first try at the rename, through the seam the write has for it: no
+        // clock to race, whatever the load of the run (a watcher polling for the temp file used to miss the tries under
+        // a full parallel run). Another file's write meanwhile keeps the usual waits
+        var attempts = 0;
+        var usual = SafeFile.MoveRetryDelay;
+        SafeFile.MoveRetryDelay = (file, attempt) =>
         {
-            var until = DateTime.UtcNow.AddSeconds(10);
-            while (Directory.GetFiles(_temp.Path, ".race.ini.*.tmp").Length == 0 && DateTime.UtcNow < until) Thread.Sleep(1);
+            if (!string.Equals(file, path, StringComparison.OrdinalIgnoreCase)) return usual(file, attempt);
+            attempts = attempt;
             reader.Dispose();
-            released.SetResult();
-        }) { IsBackground = true };
-        watcher.Start();
+            return TimeSpan.Zero;
+        };
+        try
+        {
+            SafeFile.WriteAllText(path, "new");
+        }
+        finally
+        {
+            SafeFile.MoveRetryDelay = usual;
+            reader.Dispose();
+        }
 
-        SafeFile.WriteAllText(path, "new");
-        await released.Task.WaitAsync(TestContext.Current.CancellationToken);
-
+        // One try failed on the reader, the next went
+        Assert.Equal(1, attempts);
         Assert.Equal("new", File.ReadAllText(path));
         Assert.Empty(Directory.GetFiles(_temp.Path, "*.tmp"));
     }

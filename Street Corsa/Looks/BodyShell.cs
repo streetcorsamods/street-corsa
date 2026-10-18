@@ -279,7 +279,11 @@ internal sealed class BodyShell
         return movers;
     }
 
-    /// <summary>What of the car's animations the shell depends on, for the name of a shell kept on disk: their names and sizes</summary>
+    /// <summary>
+    /// What of the car's animations the shell depends on, for the name of a shell kept on disk: their names, sizes and
+    /// times written, as <see cref="ShellFile.KeyOf"/> takes the model's (one edited in place to the same size is a
+    /// change too)
+    /// </summary>
     public static string MoversStamp(string carDirectory)
     {
         // A folder that cannot be listed now has a stamp of its own: the shell made without its movers is not taken for
@@ -288,7 +292,7 @@ internal sealed class BodyShell
         try
         {
             return string.Join(";", files.Select(f => new FileInfo(f))
-                .OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase).Select(f => $"{f.Name.ToLowerInvariant()}:{f.Length}"));
+                .OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase).Select(f => $"{f.Name.ToLowerInvariant()}:{f.Length}:{f.LastWriteTimeUtc.Ticks}"));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -468,27 +472,18 @@ internal sealed class BodyShell
     /// <summary>Draws a triangle's depth, nearest kept, at the pixels whose middles it covers</summary>
     private static void Raster(float[] depth, Vector3 a, Vector3 b, Vector3 c)
     {
-        var minX = Math.Max(0, (int)MathF.Floor(MathF.Min(a.X, MathF.Min(b.X, c.X))));
-        var maxX = Math.Min(SeeResolution - 1, (int)MathF.Ceiling(MathF.Max(a.X, MathF.Max(b.X, c.X))));
-        var minY = Math.Max(0, (int)MathF.Floor(MathF.Min(a.Y, MathF.Min(b.Y, c.Y))));
-        var maxY = Math.Min(SeeResolution - 1, (int)MathF.Ceiling(MathF.Max(a.Y, MathF.Max(b.Y, c.Y))));
-        var area = (b.X - a.X) * (c.Y - a.Y) - (b.Y - a.Y) * (c.X - a.X);
-        if (MathF.Abs(area) < 1e-9f) return;
-        var inverse = 1 / area;
-        for (var y = minY; y <= maxY; y++)
+        var nearest = new Nearest(depth, a.Z, b.Z, c.Z);
+        TriangleRaster.ForEachPixel(new Vector2(a.X, a.Y), new Vector2(b.X, b.Y), new Vector2(c.X, c.Y), SeeResolution, 0, ref nearest);
+    }
+
+    /// <summary>The depth pass's pixel: the triangle's depth there, kept when nearer than what is drawn</summary>
+    private readonly struct Nearest(float[] depth, float za, float zb, float zc) : TriangleRaster.IPixel
+    {
+        public void At(int x, int y, float w0, float w1, float w2)
         {
-            var py = y + 0.5f;
-            for (var x = minX; x <= maxX; x++)
-            {
-                var px = x + 0.5f;
-                var w0 = ((b.X - px) * (c.Y - py) - (b.Y - py) * (c.X - px)) * inverse;
-                var w1 = ((c.X - px) * (a.Y - py) - (c.Y - py) * (a.X - px)) * inverse;
-                var w2 = 1 - w0 - w1;
-                if (w0 < 0 || w1 < 0 || w2 < 0) continue;
-                var z = w0 * a.Z + w1 * b.Z + w2 * c.Z;
-                ref var d = ref depth[y * SeeResolution + x];
-                if (z < d) d = z;
-            }
+            var z = w0 * za + w1 * zb + w2 * zc;
+            ref var d = ref depth[y * SeeResolution + x];
+            if (z < d) d = z;
         }
     }
 
