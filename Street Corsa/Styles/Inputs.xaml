@@ -183,7 +183,7 @@
 
     <!-- Every list without a style of its own. Windows' own list paints itself white when it is disabled (a panel
          greyed while a job runs, the workbench's shelf): this one keeps its background and leaves the dimming to
-         whatever disabled it. Its rows stay the list's own. -->
+         whatever disabled it. Its rows stay the list's own. A style based on it rounds its corners by Border.CornerRadius. -->
     <Style TargetType="ListBox">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
@@ -197,6 +197,7 @@
                     <Border Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{TemplateBinding Border.CornerRadius}"
                             Padding="{TemplateBinding Padding}"
                             SnapsToDevicePixels="True">
                         <ScrollViewer Focusable="False" CanContentScroll="{TemplateBinding ScrollViewer.CanContentScroll}">
@@ -209,36 +210,19 @@
     </Style>
 
     <!-- A list in a glass well; its rows are GlassListBoxItemStyle -->
-    <Style x:Key="GlassListBoxStyle" TargetType="ListBox">
-        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+    <Style x:Key="GlassListBoxStyle" TargetType="ListBox" BasedOn="{StaticResource {x:Type ListBox}}">
         <Setter Property="Background" Value="{StaticResource UiGlassCardBrush}"/>
         <Setter Property="BorderBrush" Value="{StaticResource UiOutlineSoftBrush}"/>
         <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="Border.CornerRadius" Value="6"/>
         <Setter Property="Padding" Value="2,4"/>
         <Setter Property="ItemContainerStyle" Value="{StaticResource GlassListBoxItemStyle}"/>
         <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
-        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="ListBox">
-                    <Border x:Name="well"
-                            Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="6"
-                            Padding="{TemplateBinding Padding}">
-                        <ScrollViewer Focusable="False" CanContentScroll="{TemplateBinding ScrollViewer.CanContentScroll}">
-                            <ItemsPresenter/>
-                        </ScrollViewer>
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsEnabled" Value="False">
-                            <Setter TargetName="well" Property="Opacity" Value="0.5"/>
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Opacity" Value="0.5"/>
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
     <!-- ==================== DROPDOWN ==================== -->

@@ -2,6 +2,7 @@ using System.IO;
 using System.Numerics;
 using System.Text.RegularExpressions;
 using AcTools.Kn5File;
+using StreetCorsa.Logging;
 using StreetCorsa.Parts.Cars;
 using static StreetCorsa.Helpers.Matrices;
 
@@ -78,6 +79,8 @@ internal sealed class BodyShell
     public required IReadOnlyList<string> Paint { get; init; }
 
     public Vector3 Size => Max - Min;
+
+    private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger("Looks");
 
     /// <summary>Wheel groups: what is under them turns or steers, and is no body</summary>
     private static readonly Regex WheelGroup = new("^(WHEEL|SUSP|HUB|DISC)_(LF|RF|LR|RR)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -256,14 +259,13 @@ internal sealed class BodyShell
 
     /// <summary>
     /// The nodes the car in <paramref name="carDirectory"/> moves by its animations (its animations folder's .ksanim
-    /// files: doors, hood, trunk, pop-up lamps, wings): empty for a car with none, or none that read
+    /// files: doors, hood, trunk, pop-up lamps, wings): empty for a car with none, or none that read, or a folder that
+    /// cannot be listed
     /// </summary>
     public static IReadOnlySet<string> MoversOf(string carDirectory)
     {
         var movers = new HashSet<string>(StringComparer.Ordinal);
-        var folder = Path.Combine(carDirectory, "animations");
-        if (!Directory.Exists(folder)) return movers;
-        foreach (var file in Directory.EnumerateFiles(folder, "*.ksanim"))
+        foreach (var file in Animations(carDirectory) ?? [])
         {
             try
             {
@@ -280,10 +282,33 @@ internal sealed class BodyShell
     /// <summary>What of the car's animations the shell depends on, for the name of a shell kept on disk: their names and sizes</summary>
     public static string MoversStamp(string carDirectory)
     {
+        // A folder that cannot be listed now has a stamp of its own: the shell made without its movers is not taken for
+        // the one made once it lists again
+        if (Animations(carDirectory) is not { } files) return "unlisted";
+        try
+        {
+            return string.Join(";", files.Select(f => new FileInfo(f))
+                .OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase).Select(f => $"{f.Name.ToLowerInvariant()}:{f.Length}"));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return "unlisted";
+        }
+    }
+
+    /// <summary>The car's .ksanim files: none without an animations folder, null when it cannot be listed (its rights, a mod manager replacing it)</summary>
+    private static string[]? Animations(string carDirectory)
+    {
         var folder = Path.Combine(carDirectory, "animations");
-        if (!Directory.Exists(folder)) return "";
-        return string.Join(";", Directory.EnumerateFiles(folder, "*.ksanim").Select(f => new FileInfo(f))
-            .OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase).Select(f => $"{f.Name.ToLowerInvariant()}:{f.Length}"));
+        try
+        {
+            return Directory.Exists(folder) ? Directory.GetFiles(folder, "*.ksanim") : [];
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Logger.Warning("The animations of {Car} could not be listed, its wear moves with nothing: {Error}", carDirectory, ex.Message);
+            return null;
+        }
     }
 
     private static void CollectHubs(Kn5Node node, Matrix4x4 parent, Dictionary<string, Vector3> hubs)

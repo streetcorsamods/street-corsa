@@ -13,7 +13,6 @@
         <!-- The car where its seller has it, behind everything -->
         <controls:CarViewingViewport3D x:Name="Viewport"
                                        Stage="{Binding Stage}"
-                                       CoveredLeft="410"
                                        RunningEngine="{Binding Runner, ElementName=EnginePanel}"/>
 
         <!-- Covered until the car stands in its scene -->
@@ -99,6 +98,7 @@
         <Grid HorizontalAlignment="Left"
               Width="360"
               Margin="20,180,0,20"
+              controls:D3DViewportBase.Covers="{Binding ElementName=Viewport}"
               Visibility="{Binding HasTalk, Converter={StaticResource BooleanToVisibilityConverter}}">
             <controls:TalkCard DataContext="{Binding Talk}"/>
         </Grid>
@@ -108,6 +108,7 @@
                 VerticalAlignment="Top"
                 Width="360"
                 Margin="20,180,0,20"
+                controls:D3DViewportBase.Covers="{Binding ElementName=Viewport}"
                 Background="{StaticResource Glass15E8Brush}"
                 BorderBrush="{StaticResource Cream70Brush}"
                 BorderThickness="1"

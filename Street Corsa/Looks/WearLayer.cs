@@ -57,7 +57,7 @@ public static class WearLayer
     /// The painter's version, in a race layer's file name: a layer written by an older painter is not the one the scenes
     /// draw, so it is written again
     /// </summary>
-    private const int PainterVersion = 2;
+    private const int PainterVersion = 3;
 
     /// <summary>
     /// The shell of each car model read so far, by its file: the same for the model a scene loaded, a race's, and one read
@@ -449,47 +449,61 @@ public static class WearLayer
 
         var bodyId = Material(kn5, BodyMaterial, Encode(WearPainter.Body(shell, look, picture), picture, picture), shell, race);
         var k = 0;
-        foreach (var mesh in shell.BodyMeshes) Add(kn5, Node($"sc_wear_{k++}", mesh, bodyId), mesh);
+        foreach (var mesh in shell.BodyMeshes) Add(kn5, $"sc_wear_{k++}", mesh, bodyId);
 
         if (look.Cracks > 0.01 && shell.ScreenMeshes.Count > 0)
         {
             var screenId = Material(kn5, ScreenMaterial, Encode(WearPainter.Screen(look), WearPainter.ScreenWidth, WearPainter.ScreenHeight), shell, race);
             k = 0;
-            foreach (var mesh in shell.ScreenMeshes) Add(kn5, Node($"sc_cracks_{k++}", mesh, screenId), mesh);
+            foreach (var mesh in shell.ScreenMeshes) Add(kn5, $"sc_cracks_{k++}", mesh, screenId);
         }
         return kn5;
     }
 
     /// <summary>
     /// A mesh into the layer's model: under the root, or, for one that moves with a node of the car, into that node's group
-    /// (<see cref="MoverPrefix"/>), which stands where the node stands at rest
+    /// (<see cref="MoverPrefix"/>), which stands where the node stands at rest. A moving part whose rest cannot be undone
+    /// (a node scaled flat) stays under the root, in the model's space, where it stands at rest.
     /// </summary>
-    private static void Add(IKn5 kn5, Kn5Node node, BodyShell.Mesh mesh)
+    private static void Add(IKn5 kn5, string name, BodyShell.Mesh mesh, uint material)
     {
-        if (mesh.Mover is not { } mover)
+        if (mesh.Mover is not { } mover || !Matrix4x4.Invert(mesh.Rest, out var toNode))
         {
-            kn5.RootNode.Children.Add(node);
+            kn5.RootNode.Children.Add(Node(name, mesh.Vertices, mesh.Indices, material));
             return;
         }
 
-        var name = MoverPrefix + mover;
-        var group = kn5.RootNode.Children.FirstOrDefault(n => n.NodeClass == Kn5NodeClass.Base && n.Name == name);
+        var groupName = MoverPrefix + mover;
+        var group = kn5.RootNode.Children.FirstOrDefault(n => n.NodeClass == Kn5NodeClass.Base && n.Name == groupName);
         if (group == null)
         {
-            group = Kn5Node.CreateBaseNode(name);
-            group.Transform = ToMat(mesh.Rest);
+            group = Kn5Node.CreateBaseNode(groupName);
+            group.Transform = Matrices.ToMat4x4(mesh.Rest);
             kn5.RootNode.Children.Add(group);
         }
-        group.Children.Add(node);
+        group.Children.Add(Node(name, InNode(mesh.Vertices, mesh.Rest, toNode), mesh.Indices, material));
     }
 
-    private static AcTools.Numerics.Mat4x4 ToMat(Matrix4x4 m) => new()
+    /// <summary>
+    /// A moving part's vertices in the space of the node it moves with: its points and tangents by
+    /// <paramref name="toNode"/>, its normals by that inverted and turned over (<paramref name="rest"/> transposed), so a
+    /// node scaled unevenly leaves them square to the panel
+    /// </summary>
+    private static Kn5Node.Vertex[] InNode(Kn5Node.Vertex[] source, Matrix4x4 rest, Matrix4x4 toNode)
     {
-        M11 = m.M11, M12 = m.M12, M13 = m.M13, M14 = m.M14,
-        M21 = m.M21, M22 = m.M22, M23 = m.M23, M24 = m.M24,
-        M31 = m.M31, M32 = m.M32, M33 = m.M33, M34 = m.M34,
-        M41 = m.M41, M42 = m.M42, M43 = m.M43, M44 = m.M44
-    };
+        var forNormals = Matrix4x4.Transpose(rest);
+        var vertices = new Kn5Node.Vertex[source.Length];
+        for (var i = 0; i < vertices.Length; i++)
+        {
+            var v = source[i];
+            var p = Vector3.Transform(new Vector3(v.Position.X, v.Position.Y, v.Position.Z), toNode);
+            var n = Vector3.Normalize(Vector3.TransformNormal(new Vector3(v.Normal.X, v.Normal.Y, v.Normal.Z), forNormals));
+            var t = Vector3.Normalize(Vector3.TransformNormal(new Vector3(v.Tangent.X, v.Tangent.Y, v.Tangent.Z), toNode));
+            vertices[i] = new Kn5Node.Vertex(new AcTools.Numerics.Vec3(p.X, p.Y, p.Z), new AcTools.Numerics.Vec3(n.X, n.Y, n.Z), v.Tex,
+                new AcTools.Numerics.Vec3(t.X, t.Y, t.Z));
+        }
+        return vertices;
+    }
 
     /// <summary>
     /// A see-through material lit as the car's paint is lit, matt (rust and dirt do not shine), its picture's alpha what
@@ -521,24 +535,8 @@ public static class WearLayer
         return (uint)kn5.Materials.Keys.ToList().IndexOf(name);
     }
 
-    private static Kn5Node Node(string name, BodyShell.Mesh mesh, uint material)
+    private static Kn5Node Node(string name, Kn5Node.Vertex[] vertices, ushort[] indices, uint material)
     {
-        // A moving part's wear in the space of the node it moves with (its group stands where the node stands at rest)
-        var vertices = mesh.Vertices;
-        if (mesh.Mover != null && Matrix4x4.Invert(mesh.Rest, out var toNode))
-        {
-            vertices = new Kn5Node.Vertex[mesh.Vertices.Length];
-            for (var i = 0; i < vertices.Length; i++)
-            {
-                var v = mesh.Vertices[i];
-                var p = Vector3.Transform(new Vector3(v.Position.X, v.Position.Y, v.Position.Z), toNode);
-                var n = Vector3.Normalize(Vector3.TransformNormal(new Vector3(v.Normal.X, v.Normal.Y, v.Normal.Z), toNode));
-                var t = Vector3.Normalize(Vector3.TransformNormal(new Vector3(v.Tangent.X, v.Tangent.Y, v.Tangent.Z), toNode));
-                vertices[i] = new Kn5Node.Vertex(new AcTools.Numerics.Vec3(p.X, p.Y, p.Z), new AcTools.Numerics.Vec3(n.X, n.Y, n.Z), v.Tex,
-                    new AcTools.Numerics.Vec3(t.X, t.Y, t.Z));
-            }
-        }
-
         var min = new Vector3(float.MaxValue);
         var max = new Vector3(float.MinValue);
         foreach (var v in vertices)
@@ -560,7 +558,7 @@ public static class WearLayer
             IsRenderable = true,
             IsTransparent = true,
             Vertices = vertices,
-            Indices = mesh.Indices,
+            Indices = indices,
             MaterialId = material,
             BoundingSphereCenter = new AcTools.Numerics.Vec3(middle.X, middle.Y, middle.Z),
             BoundingSphereRadius = Vector3.Distance(min, max) / 2

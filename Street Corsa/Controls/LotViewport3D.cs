@@ -142,6 +142,10 @@ public class LotViewport3D : D3DViewportBase
     // What it looks at, on its way to the goal, and how far to its left of that it looks (SideShift)
     private Sx.Vector3 _lookAt = new(0f, LotEyeHeight, 0f);
     private float _shift;
+
+    // Where StepCamera last put the orbit's target: whatever moved it since (a script's camera following its car) moves
+    // what it looks at too
+    private Sx.Vector3 _placedTarget = new(0f, LotEyeHeight, 0f);
     private float _radiusGoal = DefaultLotRadius;
     private float _betaGoal = LotBeta;
     private float? _alphaGoal;
@@ -724,15 +728,21 @@ public class LotViewport3D : D3DViewportBase
     /// <summary>
     /// Where the camera looks at a car from: its front three-quarter, <see cref="QuarterOffNose"/> round from the nose.
     /// The left front (the nose points into the picture, over the panels on the left), unless the room leaves the
-    /// camera nearer the car there than on the right front.
+    /// camera nearer the car there than on the right front. The room is measured from where the camera will orbit,
+    /// the car's middle moved to its left by the side shift (<see cref="StepCamera"/>).
     /// </summary>
     private float FrontQuarter(float headingDegrees, Sx.Vector3 center)
     {
         var left = PreviewFraming.CarCameraAlpha(headingDegrees, MathF.PI / 2f - QuarterOffNose);
         var right = PreviewFraming.CarCameraAlpha(headingDegrees, MathF.PI / 2f + QuarterOffNose);
-        var roomLeft = Math.Min(CarRadius, RoomLimit(left, CarBeta, center));
-        var roomRight = Math.Min(CarRadius, RoomLimit(right, CarBeta, center));
-        return roomRight > roomLeft + 0.3f ? right : left;
+        var shift = Renderer?.CameraOrbit is { } orbit ? SideShift(CarRadius, orbit.FovY) : 0f;
+        return Room(right) > Room(left) + 0.3f ? right : left;
+
+        float Room(float alpha)
+        {
+            var side = PreviewFraming.CameraLeft(alpha) * shift;
+            return Math.Min(CarRadius, RoomLimit(alpha, CarBeta, center + new Sx.Vector3(side.X, side.Y, side.Z)));
+        }
     }
 
     private void ApplyLotCamera(bool immediate)
@@ -749,7 +759,7 @@ public class LotViewport3D : D3DViewportBase
 
         if (immediate)
         {
-            orbit.Target = _lookAt = _targetGoal;
+            orbit.Target = _lookAt = _placedTarget = _targetGoal;
             _shift = 0f;
             orbit.Radius = _radiusGoal;
             orbit.Beta = _betaGoal;
@@ -772,6 +782,10 @@ public class LotViewport3D : D3DViewportBase
         // dead. Worked out per second so it comes out the same whatever the frame rate.
         var k = 1f - (float)Math.Exp(-CameraSettleRate * dt);
         var moving = false;
+
+        // A script's camera following its car moved the target since the last frame: what it looks at goes along, and
+        // eases back to its goal from there
+        _lookAt += orbit.Target - _placedTarget;
 
         var toTarget = _targetGoal - _lookAt;
         if (toTarget.LengthSquared() > CameraSettled * CameraSettled)
@@ -819,7 +833,7 @@ public class LotViewport3D : D3DViewportBase
         }
 
         var left = PreviewFraming.CameraLeft(orbit.Alpha);
-        orbit.Target = _lookAt + new Sx.Vector3(left.X, left.Y, left.Z) * _shift;
+        orbit.Target = _placedTarget = _lookAt + new Sx.Vector3(left.X, left.Y, left.Z) * _shift;
 
         // Last, once the camera has swung: how far back it can stand depends on which way it looks from. Eased out to
         // the goal, but never let through a wall, not even for a frame.

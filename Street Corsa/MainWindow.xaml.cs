@@ -117,7 +117,7 @@ namespace StreetCorsa
             NavigationService.PropertyChanged -= OnFirstScreen;
             Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, () =>
             {
-                if (!Intro.IsClaimed) Intro.FadeOut(new Duration(TimeSpan.FromMilliseconds(900)));
+                if (!Intro.IsClaimed) Intro.FadeOut();
             });
         }
 

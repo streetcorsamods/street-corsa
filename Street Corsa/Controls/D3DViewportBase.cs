@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
@@ -250,6 +251,63 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     {
         get => (double)GetValue(CoveredLeftProperty);
         set => SetValue(CoveredLeftProperty, value);
+    }
+
+    /// <summary>How much clear of the right edge of the panels it is covered by the car stands</summary>
+    private const double CoverClearance = 30;
+
+    /// <summary>
+    /// Set on a screen's panel over the left of the view (the talk card, a car's details), the view it covers: that view's
+    /// <see cref="CoveredLeft"/> follows the right edge of whichever of its panels are shown, nothing when none is
+    /// </summary>
+    public static readonly DependencyProperty CoversProperty = DependencyProperty.RegisterAttached(
+        "Covers", typeof(D3DViewportBase), typeof(D3DViewportBase), new PropertyMetadata(null, OnCoversChanged));
+
+    public static D3DViewportBase? GetCovers(DependencyObject d) => (D3DViewportBase?)d.GetValue(CoversProperty);
+
+    public static void SetCovers(DependencyObject d, D3DViewportBase? value) => d.SetValue(CoversProperty, value);
+
+    private readonly List<FrameworkElement> _coveredBy = [];
+
+    private static void OnCoversChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is not FrameworkElement panel) return;
+        if (e.OldValue is D3DViewportBase old)
+        {
+            old._coveredBy.Remove(panel);
+            panel.SizeChanged -= old.OnCoverMoved;
+            panel.IsVisibleChanged -= old.OnCoverShown;
+            old.MeasureCovered();
+        }
+        if (e.NewValue is D3DViewportBase view)
+        {
+            view._coveredBy.Add(panel);
+            panel.SizeChanged += view.OnCoverMoved;
+            panel.IsVisibleChanged += view.OnCoverShown;
+            view.MeasureCovered();
+        }
+    }
+
+    private void OnCoverMoved(object sender, SizeChangedEventArgs e) => MeasureCovered();
+
+    private void OnCoverShown(object sender, DependencyPropertyChangedEventArgs e) => MeasureCovered();
+
+    private void MeasureCovered()
+    {
+        var covered = 0.0;
+        foreach (var panel in _coveredBy)
+        {
+            if (!panel.IsVisible || panel.ActualWidth <= 0) continue;
+            try
+            {
+                covered = Math.Max(covered, panel.TranslatePoint(new System.Windows.Point(panel.ActualWidth, 0), this).X + CoverClearance);
+            }
+            catch (InvalidOperationException)
+            {
+                // Not in the same tree as the view (yet): it covers nothing of it
+            }
+        }
+        CoveredLeft = covered;
     }
 
     /// <summary>How far to the camera's left it looks, for a car <paramref name="radius"/> away to stand clear of <see cref="CoveredLeft"/></summary>
@@ -1097,14 +1155,22 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     private const float UnseenRadius = 7f;
 
     /// <summary>
+    /// What each car was drawn unseen with (<see cref="ShownPartsOnCar.ChangesOf"/>): its pictures are on the graphics card
+    /// since, until something new is put on it
+    /// </summary>
+    private readonly ConditionalWeakTable<Kn5RenderableCar, StrongBox<int>> _drawnUnseen = new();
+
+    /// <summary>
     /// Draws a frame nobody sees, with the camera on <paramref name="car"/>, before it moves. The first frame that draws a car
     /// just put in its scene sends its pictures to the graphics card (its wear's among them), and takes a tenth of a second
     /// or more: the first frame of the car's move came late by that, and a car driving in jerked as it set off. Drawn now,
-    /// while nothing moves, the move starts smooth. The camera goes back as it was; nothing of the frame is shown.
+    /// while nothing moves, the move starts smooth. The camera goes back as it was; nothing of the frame is shown. Once for
+    /// a car, and again only when something was put on it since: a car already drawn so has nothing left to send.
     /// </summary>
     private void DrawUnseen(GarageRenderer renderer, Kn5RenderableCar car)
     {
-        if (renderer.CameraOrbit is not { } orbit) return;
+        var changes = ShownPartsOnCar.ChangesOf(car);
+        if (renderer.CameraOrbit is not { } orbit || _drawnUnseen.TryGetValue(car, out var drawn) && drawn.Value == changes) return;
 
         var (alpha, beta, radius, target, auto) = (orbit.Alpha, orbit.Beta, orbit.Radius, orbit.Target, renderer.AutoAdjustTarget);
         var started = System.Diagnostics.Stopwatch.GetTimestamp();
@@ -1117,6 +1183,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
             orbit.Beta = 0.25f;
             orbit.UpdateViewMatrix();
             renderer.Draw();
+            _drawnUnseen.AddOrUpdate(car, new StrongBox<int>(changes));
         }
         catch (Exception ex)
         {

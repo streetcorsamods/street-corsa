@@ -32,9 +32,6 @@ namespace StreetCorsa.Screens.MainMenu
         /// <summary>A screen took it over: it goes when that screen says</summary>
         public bool IsClaimed { get; private set; }
 
-        /// <summary>Gone, or going</summary>
-        public bool IsGoing => _going;
-
         /// <summary>Takes the title over; false when it is already going</summary>
         public bool Claim()
         {
@@ -43,13 +40,16 @@ namespace StreetCorsa.Screens.MainMenu
             return true;
         }
 
+        /// <summary>How long the title takes to fade away</summary>
+        private static readonly Duration FadeDuration = new(TimeSpan.FromMilliseconds(900));
+
         /// <summary>Fades the title off what is behind it, and stops it taking the clicks at once</summary>
-        public void FadeOut(Duration duration)
+        public void FadeOut()
         {
             if (_going) return;
             _going = true;
 
-            var fade = new DoubleAnimation(0, duration);
+            var fade = new DoubleAnimation(0, FadeDuration);
             fade.Completed += (_, _) => Visibility = Visibility.Collapsed;
             IsHitTestVisible = false;
             BeginAnimation(OpacityProperty, fade);

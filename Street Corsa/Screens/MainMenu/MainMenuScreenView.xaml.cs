@@ -27,7 +27,6 @@ namespace StreetCorsa.Screens.MainMenu
         private static readonly TimeSpan IntroLeast = TimeSpan.FromSeconds(4);
         // A showroom slower than this does not keep the player waiting: the menu comes up and the cars fade in later
         private static readonly TimeSpan IntroMost = TimeSpan.FromSeconds(15);
-        private static readonly Duration IntroFade = new(TimeSpan.FromMilliseconds(900));
 
         private DispatcherTimer? _introTimer;
         private bool _introStarted;
@@ -69,10 +68,9 @@ namespace StreetCorsa.Screens.MainMenu
                 Attach(null);
                 if (_window != null) _window.PreviewKeyDown -= OnWindowKeyDown;
                 _window = null;
-                _introTimer?.Stop();
 
-                // Left before the title went: it does not stay over the next screen
-                if (_intro != null && !_introOver) _intro.FadeOut(IntroFade);
+                // Left before the title went: it does not stay over the next screen, and the view loaded again shows its menu
+                StopIntro();
             };
 
             // No showroom to show at all: the old picture rather than a black screen
@@ -120,7 +118,16 @@ namespace StreetCorsa.Screens.MainMenu
             // The least time counts from when the title came up, not from when this screen did
             var shown = DateTime.UtcNow - _intro.ShownAt;
             var least = IntroLeast - shown;
-            if (least <= TimeSpan.Zero) _introLeastPassed = true;
+            if (least <= TimeSpan.Zero)
+            {
+                // The game took its time starting: the title has been up long enough, and the showroom may be too
+                _introLeastPassed = true;
+                if (_showroomUp)
+                {
+                    EndIntro();
+                    return;
+                }
+            }
 
             _introTimer = new DispatcherTimer { Interval = least > TimeSpan.Zero ? least : IntroMost - IntroLeast };
             _introTimer.Tick += (_, _) =>
@@ -151,7 +158,13 @@ namespace StreetCorsa.Screens.MainMenu
 
         private void EndIntro()
         {
-            if (!_introStarted || _introOver) return;
+            if (StopIntro()) ShowPanel(_viewModel?.CurrentCard);
+        }
+
+        /// <summary>The title goes, and lets go of this view (the window keeps it); false when it was not up</summary>
+        private bool StopIntro()
+        {
+            if (!_introStarted || _introOver) return false;
 
             _introOver = true;
             _introTimer?.Stop();
@@ -159,10 +172,9 @@ namespace StreetCorsa.Screens.MainMenu
             if (_intro != null)
             {
                 _intro.MouseDown -= Intro_MouseDown;
-                _intro.FadeOut(IntroFade);
+                _intro.FadeOut();
             }
-
-            ShowPanel(_viewModel?.CurrentCard);
+            return true;
         }
 
         #endregion
