@@ -160,7 +160,7 @@ it changes:
 | `cars` | what a car's bare body costs new (`bodyPrice` at `bodyKg`, more for a lighter one and less for a heavier one as the ratio to `bodyWeightPower`, within `minBodyPrice` and `maxBodyPrice`), the least and most a whole car costs, the rounding, the believable weights, and how common a car is (where cars.json does not say) by year, source and power to weight. A car costs its body and its factory engine's and running gear's parts (see "parts", the shelves' `price`). Unlike the rest these follow the mods next to the game, not the career: the catalog is the program's, priced again at every start |
 | `engines` | how an engine is cooled and oiled by its parts (`cooling`), how the cars on the lots were worked on (`factory`: swaps, bolt-ons), how the rivals' tuners work (`tuner`), and the points an AC car's name and power give an engine build when the game picks its factory engine (`matcher`) |
 | `repairs` | the garage's repairs: parts, labour, body work |
-| `condition` | damage, wear, dirt, fuel and oil, and what a race takes out of a car |
+| `condition` | damage (and how little of it counts as none, `undamagedTear`), wear, dirt, fuel and oil, and what a race takes out of a car |
 | `street` | who comes by while cruising and how soon, drag or road, pink-slip offers, grudge rematches, the diner's talk |
 | `wagers` | the smallest and largest cash wager, night stakes, a fair match |
 | `reputation` | how reputation is worked out: base, wins, pink slips, losing and winning streaks, false starts, escapes |

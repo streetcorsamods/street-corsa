@@ -295,8 +295,10 @@ internal static partial class FmodStudio
     [LibraryImport(CoreDll)]
     public static partial int FMOD_Channel_RemoveFadePoints(IntPtr channel, ulong start, ulong end);
 
-    // FMOD_OPENMEMORY: the sound is read out of memory (copied by FMOD), the file never opened; FMOD_OPENONLY: opened
-    // to read what it is (length, tags), not decoded
+    // FMOD_OPENMEMORY: the sound is read out of the caller's memory, the file never opened. FMOD copies the bytes only
+    // for a sample (FMOD_CREATESAMPLE); a stream (FMOD_CREATESTREAM, as the radio opens a song) reads from the caller's
+    // memory for as long as it plays, so that memory lives until the sound is released (SongSound keeps it).
+    // FMOD_OPENONLY: opened to read what it is (length, tags), not decoded
     public const uint ModeOpenMemory = 0x800;
     public const uint ModeOpenOnly = 0x2000;
 
@@ -357,6 +359,10 @@ internal static partial class FmodStudio
 
     [LibraryImport(CoreDll)]
     public static partial int FMOD_DSP_SetWetDryMix(IntPtr dsp, float preWet, float postWet, float dry);
+
+    /// <summary>Frees a DSP that is in no chain (one in a group's chain goes with the group)</summary>
+    [LibraryImport(CoreDll)]
+    public static partial int FMOD_DSP_Release(IntPtr dsp);
 
     [LibraryImport(CoreDll)]
     public static partial int FMOD_System_GetSoftwareFormat(IntPtr system, out int sampleRate, out int speakerMode, out int rawSpeakers);

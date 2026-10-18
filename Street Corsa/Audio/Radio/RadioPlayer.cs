@@ -293,7 +293,13 @@ public sealed class RadioPlayer : ObservableObject
             if (_current != null && _byPath.TryGetValue(_current.Path, out var fresh)) Current = fresh;
             Status = Describe(result);
             OnPropertyChanged(nameof(NowPlaying));
-            _logger.Information("Radio: {Songs} songs in {Folders} folder(s), {NotPlayable} it cannot play", result.Songs.Count, folders.Count, result.NotPlayable);
+            _logger.Information("Radio: {Songs} songs in {Folders} folder(s), {NotPlayable} it cannot play{Capped}", result.Songs.Count, folders.Count, result.NotPlayable,
+                result.Capped ? $" (cut short at {RadioLibrary.MostSongs})" : "");
+            if (result.Songs.Count > RadioLibrary.MostWatched && _watchers.Count > 0)
+            {
+                _logger.Information("Radio: a library of {Songs} songs is not watched for changes; \"Look again\" lists new music", result.Songs.Count);
+                StopWatching();
+            }
 
             if (resume) Resume();
             else if (!IsOn) Prime();
@@ -322,16 +328,21 @@ public sealed class RadioPlayer : ObservableObject
                 ? GameText.Say("radio.found.one", ("count", result.Songs.Count))
                 : GameText.Say("radio.found.other", ("count", result.Songs.Count))
         };
+        if (result.Capped) parts.Add(GameText.Say("radio.capped", ("count", result.Songs.Count)));
         if (result.NotPlayable > 0) parts.Add(GameText.Say("radio.not_playable", ("count", result.NotPlayable)));
         if (result.MissingFolders.Count > 0) parts.Add(GameText.Say("radio.not_found", ("folders", string.Join(", ", result.MissingFolders))));
         return string.Join(" · ", parts);
     }
 
-    /// <summary>Music dropped into a folder, or taken out, is picked up a moment later</summary>
+    /// <summary>
+    /// Music dropped into a folder, or taken out, is picked up a moment later. Not over a library of more than
+    /// <see cref="RadioLibrary.MostWatched"/> songs: a watcher on a tree that size fires on every write anywhere in it,
+    /// and each firing is a scan of all of it (the "Look again" button lists new music there)
+    /// </summary>
     private void WatchFolders(IReadOnlyList<string> folders)
     {
-        foreach (var watcher in _watchers) watcher.Dispose();
-        _watchers.Clear();
+        StopWatching();
+        if (_songs.Count > RadioLibrary.MostWatched) return;
 
         foreach (var folder in folders.Where(Directory.Exists))
         {
@@ -358,6 +369,12 @@ public sealed class RadioPlayer : ObservableObject
         }
     }
 
+    private void StopWatching()
+    {
+        foreach (var watcher in _watchers) watcher.Dispose();
+        _watchers.Clear();
+    }
+
     // From the watcher's thread: the rescan is started on the UI thread, once things have settled
     private void ScheduleRescan() => _rescanSoon.Dispatcher.BeginInvoke(() =>
     {
@@ -368,6 +385,15 @@ public sealed class RadioPlayer : ObservableObject
     public void AddFolder(string folder)
     {
         folder = Path.GetFullPath(folder.Trim());
+        if (RadioLibrary.IsRoot(folder))
+        {
+            // A whole drive or share would be listed end to end and watched for every write anywhere on it: a worker and
+            // the disk busy for the session. The player is told to pick the music folder in it
+            _logger.Information("Radio: {Folder} is a whole drive or share, not taken as a music folder", folder);
+            Status = GameText.Say("radio.folder_refused", ("folder", folder));
+            return;
+        }
+
         if (Folders.Contains(folder, StringComparer.OrdinalIgnoreCase)) return;
         Folders.Add(folder);
         SaveFolders();
@@ -790,6 +816,8 @@ public sealed class RadioPlayer : ObservableObject
         preload.Load.ContinueWith(t =>
         {
             if (t.IsCompletedSuccessfully) t.Result?.Release();
+            // Seen here, or it would surface as an unobserved exception at the next collection, far from its cause
+            else if (t.Exception is { } failed) _logger.Warning("Radio: the next song {File} could not be read ahead: {Error}", preload.Path, failed.GetBaseException().Message);
         }, TaskScheduler.Default);
     }
 
@@ -904,5 +932,5 @@ public sealed class RadioPlayer : ObservableObject
         }
     }
 
-    private static string Time(uint ms) => TimeSpan.FromMilliseconds(ms) is var t && t.TotalHours >= 1 ? t.ToString(@"h\:mm\:ss") : t.ToString(@"m\:ss");
+    private static string Time(uint ms) => RadioTime.Format(ms);
 }

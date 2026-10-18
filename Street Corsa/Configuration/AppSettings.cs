@@ -89,12 +89,27 @@ public class AppSettings
     {
         get
         {
+            // Found once for the garage and the AC folder it is looked for in: the mods' garages folders are walked and
+            // probed with File.Exists, and this is read at every scene (GarageId at every prop)
+            var (id, showrooms) = (GarageShowroomId, ShowroomsPath);
+            if (_garageKn5 is { } known && known.Id == id && known.Showrooms == showrooms) return known.Kn5;
+
             var garages = Services.Showcase.ShowcaseContent.GaragesOf(Mods.ModSet.Installed);
-            return Services.Showcase.ShowcaseContent.FindKn5(GarageShowroomId, garages, ShowroomsPath)
-                   ?? Services.Showcase.ShowcaseContent.FindKn5(FallbackShowroomId, garages, ShowroomsPath)
-                   ?? Path.Combine(ShowroomsPath, GarageShowroomId, GarageShowroomId + ".kn5");
+            var kn5 = Services.Showcase.ShowcaseContent.FindKn5(id, garages, showrooms)
+                      ?? Services.Showcase.ShowcaseContent.FindKn5(FallbackShowroomId, garages, showrooms)
+                      ?? Path.Combine(showrooms, id, id + ".kn5");
+            _garageKn5 = new FoundGarage(id, showrooms, kn5);
+            return kn5;
         }
     }
+
+    /// <summary>The garage model last found, and what it was found for; one object, so a read on another thread sees one answer</summary>
+    private sealed record FoundGarage(string Id, string Showrooms, string Kn5);
+
+    private volatile FoundGarage? _garageKn5;
+
+    /// <summary>Forgets the garage model found, so the next read looks again (a mod's garage put in while the game runs)</summary>
+    public void ForgetGarageKn5() => _garageKn5 = null;
 
     /// <summary>
     /// The garage the game is played in: the room folder <see cref="GarageShowroomKn5"/> is in, <see cref="GarageShowroomId"/>

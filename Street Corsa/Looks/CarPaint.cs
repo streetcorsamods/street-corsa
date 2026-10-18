@@ -180,12 +180,34 @@ public static class CarPaint
                 .Select(l => l.Layer).Distinct().ToList();
 
             // The tinted textures go over the car's own by their names, for every material drawing them: a detail made
-            // white, every other material that draws it too would lose what it took from it
+            // white, every other material that draws it too would lose what it took from it. The textures the two checks
+            // below may ask for (the diffuse and the detail of every drawn material whose detail the paint's colour comes
+            // through) are read in one pass through the model, as each pass parses the whole KN5; decoded only when asked
+            var details = layers.Select(l => l.Detail).OfType<string>().ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var unread = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
+            if (details.Count > 0)
+            {
+                var drawn = Meshes(kn5.RootNode).Select(n => n.MaterialId).ToHashSet();
+                var wanted = materials.Where((m, i) => drawn.Contains((uint)i) && UsesDetail(m) && m.GetMappingByName(Detail)?.Texture is { } d && details.Contains(d))
+                    .SelectMany(m => new[] { m.GetMappingByName(Diffuse)?.Texture, m.GetMappingByName(Detail)?.Texture }).OfType<string>()
+                    .Where(n => !pictures.ContainsKey(n)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+                if (wanted.Count > 0)
+                    foreach (var (name, bytes) in TextureBytes(model, carDirectory, skin, wanted)) unread[name] = bytes;
+            }
+
             Picture? PictureOf(string name)
             {
                 if (pictures.TryGetValue(name, out var known)) return known;
-                foreach (var (read, bytes) in TextureBytes(model, carDirectory, skin, [name]))
-                    if (Decode(bytes, LookSize) is { } picture) pictures[read] = picture;
+                if (unread.Remove(name, out var bytes))
+                {
+                    if (Decode(bytes, LookSize) is { } picture) pictures[name] = picture;
+                }
+                else
+                {
+                    // One the pass did not gather: read on its own, as before
+                    foreach (var (read, own) in TextureBytes(model, carDirectory, skin, [name]))
+                        if (Decode(own, LookSize) is { } picture) pictures[read] = picture;
+                }
                 return pictures.GetValueOrDefault(name);
             }
             if (DrawingTheDetail(kn5, materials, layers, PictureOf) is { } others) layers.AddRange(others);

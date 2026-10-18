@@ -162,7 +162,11 @@ public sealed partial class AudioHub
         }
 
         if (sound == IntPtr.Zero) return;
-        if (!Warn(FMOD_System_PlaySound(core, sound, _groups[(int)cue.Bus], 1, out var channel), "play " + name)) return;
+
+        // A cue of a bus with no group (SoundCues refuses them, but a cue is a mod's data): unheard, never a throw
+        var group = Group(cue.Bus);
+        if (group == IntPtr.Zero) return;
+        if (!Warn(FMOD_System_PlaySound(core, sound, group, 1, out var channel), "play " + name)) return;
 
         // Set up while paused: released at its end by FMOD itself, nobody keeps the channel
         Warn(FMOD_Channel_SetVolume(channel, cue.Volume), "set cue volume");
