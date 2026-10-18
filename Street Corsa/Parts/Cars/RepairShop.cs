@@ -86,6 +86,7 @@ public static class RepairShop
     public const string Windscreen = "windscreen";
     public const string Engine = "engine";
     public const string Gearbox = "gearbox";
+    public const string Axle = "axle";
 
     /// <summary>A job for the car's looks (rust, paint, the windscreen): it does not get a car racing</summary>
     public static bool IsCosmetic(RepairJob job) => job.Id is Rust or Paint or Windscreen;
@@ -198,7 +199,16 @@ public static class RepairShop
                 gearbox.Tear < 0.5 ? GameAction.GarageWorkMajor : GameAction.GarageWorkMinor, Refresh));
         }
 
-        var corners = RunningGear.Mounted(car.Parts);
+        // The rear axle's broken or hurt parts: a shaft, the gears, the carrier set right
+        var axle = RearAxle.Mounted(car.Parts).All.Where(p => p.Tear < Straight).ToList();
+        if (axle.Count > 0)
+        {
+            var broken = axle.Any(p => p.Tear < CarCondition.BrokenBelow);
+            jobs.Add(PartsJob(Axle, PartWords.Say("repair.job.axle"), PartWords.Say(broken ? "repair.job.axle.broken" : "repair.job.axle.worn"), axle, catalog, prices,
+                broken ? GameAction.GarageWorkMajor : GameAction.GarageWorkMinor, Refresh));
+        }
+
+        var corners = RunningGear.Mounted(car.Parts, CarCondition.Groups(catalog));
         for (var i = 0; i < corners.Length; i++)
         {
             var name = RunningGear.CornerName(i);

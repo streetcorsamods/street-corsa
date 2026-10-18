@@ -78,6 +78,34 @@ namespace StreetCorsa.Models.GameState
         /// <summary>False until the car has been given the wheels, brakes, springs and shocks it left the factory with</summary>
         public bool HasRunningGearAssigned { get; set; }
 
+        /// <summary>
+        /// What its running gear has been brought up to (<see cref="StreetCorsa.Parts.Cars.RunningGearFactory.GearVersion"/>):
+        /// 0 for a car of an older save, which gets its rear axle and its period brakes once (step 31), 1 one that gets its
+        /// leaf springs, torsion bars and sway bars once, 2 one whose rear brakes, springs, shocks and bar go onto the rear
+        /// axle once, 3 one whose leaf springs (and an independent rear's running gear) go back onto the car's own slots;
+        /// what the player took off or put on since stays as it is (moved with the rear axle's)
+        /// </summary>
+        public int GearVersion { get; set; }
+
+        /// <summary>Whether the car has been given the rear axle it left the factory with (step 31 on)</summary>
+        [LiteDB.BsonIgnore]
+        public bool HasAxleAssigned => GearVersion >= 1;
+
+        /// <summary>Whether the car has been given the sway bars it left the factory with (step 31 phase 3 on)</summary>
+        [LiteDB.BsonIgnore]
+        public bool HasSwayBarsAssigned => GearVersion >= 2;
+
+        /// <summary>
+        /// Where the garage's lift has the car: only the car in the bay is ever up, and it comes down as another takes its
+        /// place, unless a wheel is off it (<see cref="StreetCorsa.Parts.Cars.CarWork.WhyNotDown"/>). A car up on the lift goes nowhere: it does not
+        /// race, drive out or go to the paint booth, and its engine stays in it.
+        /// </summary>
+        public LiftStop LiftStop { get; set; }
+
+        /// <summary>The car is up on the lift, at either stop</summary>
+        [LiteDB.BsonIgnore]
+        public bool IsLifted => LiftStop != LiftStop.Down;
+
         [LiteDB.BsonIgnore]
         public PartInstance? Engine => Parts.FirstOrDefault(p => p.ParentSlot == PartInstance.CarEngineSlot);
 
@@ -121,12 +149,13 @@ namespace StreetCorsa.Models.GameState
 
         /// <summary>
         /// The car changes hands, and gives up its place in the warehouses: a car that comes back to the player later
-        /// takes the first free bay like any other, not the one it had before
+        /// takes the first free bay like any other, not the one it had before. It leaves the lift too.
         /// </summary>
         public void ClearPlace()
         {
             Warehouse = null;
             Bay = null;
+            LiftStop = LiftStop.Down;
         }
 
         /// <summary>Who has owned the car and how it has raced; see <see cref="CarHistory"/></summary>
@@ -177,6 +206,8 @@ namespace StreetCorsa.Models.GameState
             Parts = Parts.Select(p => StreetCorsa.Parts.Cars.PartTrees.Clone(p, keepIds: true)).ToList(),
             HasPartsAssigned = HasPartsAssigned,
             HasRunningGearAssigned = HasRunningGearAssigned,
+            GearVersion = GearVersion,
+            LiftStop = LiftStop,
             PowerHp = PowerHp,
             PurchasePrice = PurchasePrice,
             ImpoundedUntil = ImpoundedUntil,

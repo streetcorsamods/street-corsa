@@ -60,6 +60,7 @@ internal class NullCarPartsService : ICarPartsService
     public virtual Task<bool> EnsurePartsAsync(Car car) => Task.FromResult(false);
     public virtual bool BringUpToDate(GameState game) => false;
     public virtual BuiltEngine? CreateUsedEngine(CarDefinition car, double condition) => null;
+    public virtual List<PartInstance>? CreateTunedRunningGear(string carDefinitionId, double condition, double powerHp, Random random) => null;
     public virtual string? Describe(PartInstance engine, EngineReport? report) => null;
     public virtual EngineReport? Evaluate(Car car) => null;
     public virtual StreetCorsa.Models.Race.EngineCoolingRating? RateCooling(Car car, EngineReport? engine) => null;
@@ -70,6 +71,10 @@ internal class NullCarPartsService : ICarPartsService
     public virtual AcCarSpecs? Specs(string carDefinitionId) => null;
     public virtual EngineLayout EngineLayoutOf(string carDefinitionId) => EngineLayout.Front;
     public virtual (RunningGearFactory.AxleParts Front, RunningGearFactory.AxleParts Rear)? FactoryRunningGear(Car car) => null;
+    public virtual RearAxleChoice? FactoryAxle(string carDefinitionId) => null;
+    public virtual RearAxleChoice? AxleFor(string carDefinitionId, RunningGearPicks? picks) => null;
+    public virtual (RunningGearFactory.AxleParts Front, RunningGearFactory.AxleParts Rear)? RunningGearFor(string carDefinitionId, RunningGearPicks? picks) => null;
+    public virtual CarFacts FactsOf(string carDefinitionId) => CarFacts.None;
     public virtual System.Numerics.Vector3 EngineOffsetOf(string carDefinitionId) => System.Numerics.Vector3.Zero;
     public virtual void SetEngineOffset(string carDefinitionId, System.Numerics.Vector3 offset) { }
     public virtual ShownSet? Shown(string carDefinitionId, List<PartInstance> parts, CarLook? look = null, CornerHeights? heights = null, PaintColour? paint = null) => null;

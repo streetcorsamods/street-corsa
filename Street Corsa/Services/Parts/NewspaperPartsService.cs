@@ -105,12 +105,16 @@ namespace StreetCorsa.Services.Parts
                 foreach (var part in Assortment.Where(PartKinds.IsBlock)) fitting.Add(part.Id);
             }
 
-            // The running gear goes on the car itself; a tyre on a rim it fits
+            // The running gear goes on the car itself (a drum's backing plate, a leaf's hanger and shackle too); a tyre on a
+            // rim it fits; a rear axle under a car whose rear wheels are driven
             var rims = RunningGear.Rims(car.Parts).Select(p => catalog.Get(p.DefinitionId)).Where(r => r != null).ToList();
+            var drivesRear = _parts.Specs(car.DefinitionId)?.DrivesRear ?? true;
             foreach (var part in Assortment)
             {
                 var group = PartKinds.GroupOf(part);
-                if (group == PartKinds.Tyres ? rims.Any(r => RunningGear.TyreFitsRim(part, r!)) : RunningGear.IsRunningGear(group)) fitting.Add(part.Id);
+                if (group == PartKinds.Tyres ? rims.Any(r => RunningGear.TyreFitsRim(part, r!))
+                    : RunningGear.IsRunningGear(group) || group == PartKinds.RearAxles && drivesRear || RunningGear.CarSlotsFor(part).Any())
+                    fitting.Add(part.Id);
             }
 
             // Taken slots count as well: what is on them can come off
@@ -246,7 +250,8 @@ namespace StreetCorsa.Services.Parts
             return catalog.Parts.Values
                 .Where(p => usedByBuilds.Contains(p.Id) ||
                             (p.LocalId.StartsWith(EnginePacks, StringComparison.OrdinalIgnoreCase) && p.IsScripted) ||
-                            (p.IsScripted && RunningGear.IsRunningGear(PartKinds.GroupOf(p))))
+                            (p.IsScripted && RunningGear.IsRunningGear(PartKinds.GroupOf(p)) && (PartKinds.GroupOf(p) != PartKinds.SwayBars || RunningGear.IsWorkingSwayBar(p))) ||
+                            RearAxle.IsAxleGroup(PartKinds.GroupOf(p)))
                 .OrderBy(p => p.DisplayName ?? p.Name, StringComparer.OrdinalIgnoreCase)
                 .ToList();
         }

@@ -46,7 +46,7 @@ public sealed class PartRebuilds
     {
         var group = PartKinds.GroupOf(part);
         return _jobs
-            .Where(j => IsFor(j, group, workKind))
+            .Where(j => IsFor(j, group, workKind) && (!j.Becomes || part.Becomes?.ContainsKey(j.Id) == true))
             .OrderBy(j => j.IsMachine ? 2 : j.IsExchange ? 1 : 0)
             .ToList();
     }
@@ -101,6 +101,40 @@ public sealed class PartRebuilds
     /// </summary>
     public IEnumerable<(string Cut, IReadOnlyList<string> Kinds, string Fitted)> MatchedCuts() =>
         _jobs.Where(j => j.Cut != null && j.FitsNew != null).Select(j => (j.Cut!, (IReadOnlyList<string>)j.Kinds, j.FitsNew!));
+
+    /// <summary>
+    /// What the parts say jobs turn them into (<see cref="PartDefinition.Becomes"/>), told in <paramref name="problems"/>
+    /// and left out where it cannot be: a job of no such id or that turns nothing, a part that is not there or not on the
+    /// same shelf. A job that turns parts that no part names is told too: it is never offered. The job ids are looked up
+    /// as the jobs are, whatever their case.
+    /// </summary>
+    public void CheckBecomes(IEnumerable<PartDefinition> parts, Func<string, PartDefinition?> get, List<string> problems)
+    {
+        var named = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var part in parts.Where(p => p.Becomes is { Count: > 0 }))
+        {
+            if (!ReferenceEquals(part.Becomes!.Comparer, StringComparer.OrdinalIgnoreCase))
+                part.Becomes = new Dictionary<string, string>(part.Becomes.DistinctBy(b => b.Key, StringComparer.OrdinalIgnoreCase), StringComparer.OrdinalIgnoreCase);
+            foreach (var (jobId, target) in part.Becomes!.ToList())
+            {
+                var why = _jobs.FirstOrDefault(j => j.Id.Equals(jobId, StringComparison.OrdinalIgnoreCase)) is not { Becomes: true } ? $"no job {jobId} turns parts into others"
+                    : get(target) is not { } into ? $"{jobId} would make it {target}, which is no part"
+                    : PartKinds.GroupOf(into) != PartKinds.GroupOf(part) ? $"{jobId} would make it {target}, which is on another shelf"
+                    : null;
+                if (why == null)
+                {
+                    named.Add(jobId);
+                    continue;
+                }
+
+                problems.Add($"{part.Id}: {why}; left out");
+                part.Becomes!.Remove(jobId);
+            }
+        }
+
+        foreach (var job in _jobs.Where(j => j.Becomes && !named.Contains(j.Id)))
+            problems.Add($"{job.Source}: {job.Id} turns a part into another, but no part names what it becomes; it is no part's job");
+    }
 
     /// <summary>
     /// The kinds and shelves the jobs name that no part of <paramref name="kinds"/> and <paramref name="groups"/> is: a
@@ -205,6 +239,12 @@ public sealed class PartRebuilds
             job.Way = Kit;
         }
 
+        if (job.Becomes && job.IsMachine)
+        {
+            problems.Add($"{label}: turns a part into another, which the machine shop does not; it does not");
+            job.Becomes = false;
+        }
+
         job.Cut = string.IsNullOrWhiteSpace(job.Cut) ? null : job.Cut.Trim().ToLowerInvariant();
         job.FitsNew = string.IsNullOrWhiteSpace(job.FitsNew) ? null : job.FitsNew.Trim();
         job.Sizes = PartDefinition.NonNull(job.Sizes);
@@ -252,8 +292,8 @@ public sealed class PartRebuilds
             job.FitsNew = null;
         }
 
-        // A cut for speed alone leaves the part's wear as it is: restores 0
-        var keepsWear = job.Cut != null && job.Restores == 0;
+        // A cut for speed alone leaves the part's wear as it is: restores 0; so may a job that turns the part into another
+        var keepsWear = (job.Cut != null || job.Becomes) && job.Restores == 0;
         if (!double.IsFinite(job.Restores) || (!keepsWear && job.Restores is <= 0 or > 1))
         {
             problems.Add($"{label}: restores {job.Restores}, not above 0 and up to 1; left out");
@@ -467,4 +507,12 @@ public sealed class RebuildJob
     /// <summary>In a mod: takes the job of this id out</summary>
     [JsonProperty("disabled")]
     public bool Disabled { get; set; }
+
+    /// <summary>
+    /// The job turns the part into another: the one the part's pack names for this job (<see cref="PartDefinition.Becomes"/>),
+    /// with what is on it, its wear and its damage. Offered only on a part that names one; never needed less for a part in
+    /// good shape (restores may be 0: the part is no better for it, it is something else). Not a machine shop's.
+    /// </summary>
+    [JsonProperty("becomes")]
+    public bool Becomes { get; set; }
 }

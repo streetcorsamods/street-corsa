@@ -93,10 +93,14 @@ public class SoundCuesTests : IDisposable
     [Theory]
     [InlineData("transmission", Sfx.Impact)]
     [InlineData("Flywheel", Sfx.Impact)]
+    [InlineData("rim", Sfx.Impact)]
+    [InlineData("rear_axle", Sfx.Impact)]
     [InlineData("cylinder_head", Sfx.Ratchet)]
     [InlineData("water_pump", Sfx.Ratchet)]
+    [InlineData("drum", Sfx.Ratchet)]
     [InlineData(null, Sfx.Ratchet)]
-    public void Heavy_drivetrain_bolts_take_the_air_gun(string? kind, string cue) => Assert.Equal(cue, Sfx.ToolFor(kind));
+    public void Heavy_drivetrain_bolts_and_lug_nuts_take_the_air_gun(string? kind, string cue) =>
+        Assert.Equal(cue, Sfx.ToolFor(TestCars.Catalog.Value.WorkOrder.ToolOf(kind)));
 }
 
 /// <summary>The base game's own sound cues: every one the game plays is there, and plays something</summary>
@@ -125,10 +129,10 @@ public class SfxContentTests
             .Where(f => f.IsLiteral && f.FieldType == typeof(string))
             .Select(f => (string)f.GetRawConstantValue()!);
 
-        // The pump's flow plays round and round while the tank fills (AudioHub.PlayLoop); the rest once
+        // The pump's flow plays round and round while the tank fills (AudioHub.PlayLoop), the lift's pump while it moves; the rest once
         foreach (var name in named)
         {
-            var loop = name == Sfx.Pump;
+            var loop = name is Sfx.Pump or Sfx.LiftMoves;
             Assert.True(cues.Get(name) is { } cue && cue.Loop == loop, $"{name} is not a {(loop ? "looping" : "one-shot")} cue in sfx.json");
         }
     }

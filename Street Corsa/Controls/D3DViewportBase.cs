@@ -834,6 +834,44 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     /// <summary>Only the garage leans the parts it shows along with the body</summary>
     protected virtual bool LeansParts => false;
 
+    /// <summary>
+    /// How high the garage's lift has the rocked car right now, metres: the whole car goes up, its wheels hanging with it,
+    /// and the parts it shows with it (<see cref="LeansParts"/>). Only the garage has a lift.
+    /// </summary>
+    protected virtual float LiftHeight => 0f;
+
+    /// <summary>
+    /// The car model's own shadows (AC's body_shadow and tyre_N_shadow planes, under the car in its node) stay on the floor
+    /// as the lift takes the car up: the body's moved down as far as the car is up, the tyres' gone once the wheels hang
+    /// clear of the floor (<see cref="StreetCorsa.Parts.LiftLayout.WheelDrop"/>). A bare corner's parts shown on the car
+    /// (<see cref="ShownPartsOnCar.CornersNode"/>) hang as far as the wheels do.
+    /// </summary>
+    private static void KeepShadowsOnFloor(Kn5RenderableCar car, float lift)
+    {
+        if (car.OfType<AcTools.Render.Base.Objects.RenderableList>().FirstOrDefault(l => l.Name == "_shadows") is not { } shadows) return;
+
+        var down = lift == 0f ? SlimDX.Matrix.Identity : SlimDX.Matrix.Translation(0f, -lift, 0f);
+        if (shadows.LocalMatrix != down) shadows.LocalMatrix = down;
+
+        var onFloor = lift <= StreetCorsa.Parts.LiftLayout.WheelDrop;
+        foreach (var tyre in shadows.OfType<AmbientShadow>().Where(s => !ReferenceEquals(s, car.AmbientShadowNode)))
+            tyre.IsEnabled = onFloor;
+
+        // A bare corner's brake and suspension shown on the car hang with the wheels
+        var hang = StreetCorsa.Parts.LiftLayout.Droop(lift) is var droop and not 0f ? SlimDX.Matrix.Translation(0f, -droop, 0f) : SlimDX.Matrix.Identity;
+        foreach (var corners in car.RootObject?.OfType<AcTools.Render.Base.Objects.RenderableList>().Where(l => l.Name == ShownPartsOnCar.CornersNode) ?? [])
+            if (corners.LocalMatrix != hang) corners.LocalMatrix = hang;
+    }
+
+    /// <summary>How high the lift has <paramref name="node"/> as the rock last put it: what its hubs are up off their places on the floor</summary>
+    protected float LiftedBy(Kn5RenderableCar node) => ReferenceEquals(_liftedNode, node) ? _appliedLift : 0f;
+
+    // How high the lift had the car the rock last put, and that car: a rock let go of leaves the car where its lift had it,
+    // and the next one takes its place from there less the lift (the car's own place on the floor, _liftHome)
+    private float _appliedLift;
+    private Kn5RenderableCar? _liftedNode;
+    private SlimDX.Matrix _liftHome = SlimDX.Matrix.Identity;
+
     private void OnRunningEngineChanged(Audio.EngineRunner? old, Audio.EngineRunner? runner)
     {
         // An engine a car on the move was driving is out of gear: it would otherwise stay held at the wheels' speed
@@ -924,7 +962,10 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         var pose = new Audio.BodyPose(running.Roll + bump.Roll + moveRoll, running.Pitch + bump.Pitch + movePitch, running.Heave + bump.Heave);
         // A corner on a broken spring sags: the body stays leaned that way, the car at rest too
         var heights = ShownPartsOnCar.HeightsOf(carNode);
-        if (renderer == null || carNode == null || (moved == null && pose.IsRest && heights == null && RunningEngine?.IsActive != true && _bumps.Count == 0))
+        var lift = moved == null ? LiftHeight : 0f;
+        if (!ReferenceEquals(_liftedNode, carNode)) _appliedLift = 0f;
+        if (renderer == null || carNode == null
+            || (moved == null && pose.IsRest && heights == null && RunningEngine?.IsActive != true && _bumps.Count == 0 && lift == 0f && _appliedLift == 0f))
         {
             ReleaseRock();
             return;
@@ -934,19 +975,28 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         {
             ReleaseRock();
             _rock = new CarBodyRock(carNode);
+            _liftHome = _rock.Base * SlimDX.Matrix.Translation(0f, -_appliedLift, 0f);
         }
 
         var sag = _rock.PoseOf(heights);
         pose = new Audio.BodyPose(pose.Roll + sag.Roll, pose.Pitch + sag.Pitch, pose.Heave + sag.Heave);
 
-        // A car on the move goes where its script has it, its wheels turning and its front wheels steered as it goes
-        if (!_rock.Apply(pose, moved?.WheelSpin ?? 0f, moved == null ? null : Placement(moved.Pose), moved?.Steer ?? 0f)) return;
+        // A car on the move goes where its script has it, its wheels turning and its front wheels steered as it goes; one on
+        // the lift as high as it has it
+        var lifting = lift != _appliedLift;
+        var placement = moved != null ? Placement(moved.Pose)
+            : lift != 0f || _appliedLift != 0f ? _liftHome * SlimDX.Matrix.Translation(0f, lift, 0f)
+            : (SlimDX.Matrix?)null;
+        _appliedLift = lift;
+        _liftedNode = carNode;
+        KeepShadowsOnFloor(carNode, lift);
+        if (!_rock.Apply(pose, moved?.WheelSpin ?? 0f, placement, moved?.Steer ?? 0f, StreetCorsa.Parts.LiftLayout.Droop(lift))) return;
 
-        if (LeansParts) renderer.BodyLean = _rock.WorldLean;
+        if (LeansParts) renderer.BodyLean = _rock.WorldLean * SlimDX.Matrix.Translation(0f, lift, 0f);
 
         // The shadow maps are drawn again only for a lean that shows in them, not for every shake at idle; a car on the
-        // move takes its shadow along every frame
-        if (_rock.TakeShadows(pose, moving: moved != null)) renderer.RefreshShadows();
+        // move, or on the lift on its way, takes its shadow along every frame
+        if (_rock.TakeShadows(pose, moving: moved != null || lifting)) renderer.RefreshShadows();
 
         Invalidate();
     }

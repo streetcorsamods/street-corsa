@@ -582,6 +582,27 @@ each other, or need each other) is told once per set of kinds that lead to each 
 components, linear and without recursion): a work order is any mod's, and listing every simple loop of a dense one would
 not end.
 
+**The running gear's work order** (step 31 phase 5, `CarWork`, the same `work_order.json`). Everything on a car that is
+not its engine has kinds too (rim, tyre, hub, drum, brake, brake shoes, wheel cylinder, backing plate, rear axle,
+differential carrier, ring and pinion, axle shaft, leaf spring, traction bar, torsion bar, spring, shock, sway bar: by
+class) and rules, asked as the engine's are (`CarWork.WhyNotOff`/`WhyNotOn`, the card's
+reason and the shelf hint; the engine's parts stay `EngineWork`'s). A rule counts at the part's own corner: each part on
+the car works at the corners of its slot (a wheel's, brake's, spring's or shock's own; what is on the rear axle's housing
+at a corner or shaft slot that side's; the axle and a rear sway bar both rear corners, the front bar both front ones;
+anything else all four), and what is on a part works where it does. So the left front drum waits for the left front
+wheel only. What is mounted on the part goes along and is never in its way (the engine's rules count it): the rear axle
+drops whole with its brakes, coil springs, shocks and bar once the rear wheels are off; `"bare"` asks for the part's own
+parts off it first. A shelf place is told by place: the hint is the first reason, the places that may be taken stay.
+`"hangs_on"` replaced `AxleWork`: on a car that has a leaf spring on it, or whose factory running gear has one
+(`AxleParts.All`), the rear axle goes on once every place for a leaf holds one (`Workbench.FindPlaces` for any part of the
+kind finds none free), and a leaf comes off once the axle is off. The base game's rules, a drum brake coming apart as a
+real one does: a drum or a disc after the wheel, the drum over its shoes and wheel cylinder; the shoes after the drum and
+over the cylinder; the cylinder after the shoes; the backing plate bare (and at the rear after the axle shaft); an axle
+shaft after its drum, and only into a carrier; the carrier and the ring and pinion after both shafts; the rear axle after
+the rear wheels, hanging on its leaves (a leaf is one part, its hanger, shackle and U-bolts in it: the owner found them
+noise as parts of their own). The running gear comes off along the car's axes, whatever way the
+engine sits (`PartMove.CarAxes`); a kind's `"tool"` says whether it is heard with the air gun (`Sfx.ToolFor`).
+
 Nothing pops. The cards and the navigation tiles they replace slide and fade through `Helpers/Reveal`
 (`Reveal.IsShown` in place of a Visibility binding, `OffsetX/Y` for where an element comes from). Parts move too: a tree
 is made anew after every change, so `InstalledPart.InstanceId` (the saved part's id) is how the viewport tells what left
@@ -688,6 +709,210 @@ the source game (their physics calls are commented out) and stay out of the shop
 drawn at the hubs (`CarPartsLayout`, `CarViewport3D.Gear`) and picked, taken off and put back like engine parts.
 Check: `EngineBench <parts> gear <AC cars folder>`.
 
+**The rear axle** (step 31, `Parts/Cars/RearAxle`, `RunningGearGuess`). A car whose rear wheels are driven carries a rear
+axle on its own car slot 401: the housing, a differential carrier on the housing's slot 2, the ring and pinion on the
+carrier's slot 2, an axle shaft on each of the housing's slots 3 and 4. The axle also carries the rear corners (the
+owner's "diferencial", the whole rear axle): each side's brake (housing slots 5 and 6), spring (7, 8) and shock (9, 10)
+and the rear sway bar (11), with what is on them (a drum's shoes, a leaf's traction bars). `RearAxle.HousingSlotFor` /
+`CarSlotFor` pair them with the car's own slots they stand for; `RunningGear.Mounted` and `SwayBars` read them there as
+from the car's corners (one on the car's own slot first), so the export, the condition, the repairs and the looks are the
+same. Only a live axle carries them (the car's data's rear suspension `AXLE`), and never its leaf springs: the axle hangs
+on those, so they stay on the car's own slots, while coil springs go on the axle (`RearAxle.Carries`); an independent
+rear (the Corvettes' Dana 44 carrier) keeps all its running gear on the car. The workbench follows the same rule (the
+garage tells it whether the car is on a live axle), the factory builds cars that way (`RunningGearFactory.HangOnAxle`,
+which also moves parts back off the axle), and `GearVersion` 3 and 4 bring an older car's rear corners where they belong.
+In the garage the axle and its leaves go on and come off in their order (the work order's `"hangs_on"`, see "The running
+gear's work order"): on a car sprung on leaves (a leaf on a rear spring slot, or the factory's rear spring a leaf) the
+axle goes on once both rear leaves are on, and a leaf comes off once the axle is off. The garage
+draws them at their wheel as before (`CarPartsLayout`: a part on a corner slot of the housing is placed where it would be
+on the car's slot, whatever the track), and taking the axle off takes them with it. They are parts of data (`parts/running_gear/`:
+`axles_gm`, `axles_ford`, `axles_mopar`, `axles_dana`, and the aftermarket's `axle_speed`) and mate by standard
+fittings, so a mod's axle meets the base game's carriers and the other way round: `axle:<family>` for the carrier,
+`gears:<family>` for the gears (the GM 10 and 12-bolts' two carrier series as `_low` and `_high`), `shaft:<family>`. What
+each does is in its `properties`: `strength` (Nm at the axle it holds new; a worn part a quarter less at the end of its
+mileage, a damaged one down to 30%), `ratio`, `diff_power`/`diff_coast`/`diff_preload` (Assetto Corsa's lock), `drag`
+(the share of the engine's torque the housing's gears take: a 9-inch's 3.5%, the others 1 to 1.5%). The housing's
+`required_slots` (its carrier, both shafts) and the carrier's (its gears) are enforced: an axle short of one keeps the
+car home in the pack's words. The garage draws the housing with its slot 1 between the rear hubs, facing the car's way.
+- **The factory axle** comes from cars.json's `running_gear` (`axle`, `diff`, `ratio`, `shafts`; the Car Catalog Editor's
+  three pickers write them) and, for what they leave out, from the parts' `"came_in"` against the car: a part naming the
+  car's make before one naming its family, before one for any car (the Dana 44: any make no other axle names), one made
+  in the car's years before one that was not, then the engine torque (the peak of the car's own lut) and the years it
+  is off by, then the plainest. The ratio is the nearest to the car's own `FINAL`, the carrier the one that locks most
+  like its `[DIFFERENTIAL]`. Of the 104 installed cars (2026-10-17): 74 Chevy 10-bolts, 13 Pontiac/Olds/Buick 10-bolts,
+  5 GM 12-bolts, 4 Chrysler 8-3/4s, 3 Dana 44s, 3 Ford 8-inch and 2 9-inch; the 12 Corvettes of 1963 on are picked by
+  hand onto a Dana 44 (their independent rear's centre section). AC's curves run under the factory figures, so the bands
+  are low: a Chevy past 460 Nm gets the 12-bolt, a Ford past 380 Nm the 9-inch.
+- **Older saves** (`Car.HasAxleAssigned`): a car that has its running gear but never had an axle gets its factory one
+  once, as it is looked at; an axle the player took off stays off. A car whose rear wheels are not driven is marked
+  with no axle (its gearbox has the differential).
+- **Assetto Corsa** (`AcAxleData`, after the engine, before the damage): the axle takes `[GEARS] FINAL` and `[DIFFERENTIAL]`
+  over from the gearbox. On its factory gears and carrier the car keeps its own figures as written (put back over what
+  the engine's SLRR gearbox wrote, so a stock car's diff and final drive are its author's again); other gears write their
+  ratio, another carrier its `POWER`, `COAST` and `PRELOAD` (a clutch posi's falling off to 55% as its clutches wear; a
+  spool's and a Locker's never). The axle's weight against the factory one moves `TOTALMASS`, and on a live axle (`[REAR]
+  TYPE=AXLE`, all of it unsprung) the rear `HUB_MASS`; the housing's drag against the factory one's scales the power
+  curve. No axle part is no change: a car of an older save before its axle, a mod's front-drive car.
+- **Breaking it** (harsh, the owner's call): see docs/ac-integration/csp-lua-scripts.md "Damage", `CAR_n_AXLE`. The
+  repair shop's "Rear axle rebuild" takes the damage off every axle part; the rivals' daily repairs take it too.
+- **Work**: `gear_setup` (own work, a rougher roll: 0.12), `posi_rebuild` (the carrier off the car), `axle_bearing`; at the
+  machine shop `gear_setup_shop` and `housing_true` (a bent housing straightened). `weld_spiders` (phase 5) welds an open
+  carrier's spider gears into a poor man's spool: a job that turns a part into another (`RebuildJob.Becomes`, the open
+  carrier's pack names its `_welded` twin in `"becomes"`, checked by `PartRebuilds.CheckBecomes`; `Rebuilding.Apply` with
+  the catalog swaps the part's id, keeping what is on it, its wear and damage). The welded carrier locks both ways (1/1, no
+  preload) at 85% of the open one's strength (the welds crack), and is priced near the open one it was (`price_lock` 0.45).
+- Prices: `rear_axles` and `axle_shafts` by `strength`, `differentials` by `diff_lock` (0.3 open, about 1 a posi, 2.3 a
+  spool), `ring_pinions` flat. Shops: the make specialists stock their make's packs, speed shops the carriers and gears,
+  junkyards whatever comes off a wreck.
+Check: `EngineBench <parts> axles <AC cars folder>`.
+
+**Period brakes** (step 31 phase 2, `parts/running_gear/brakes_drum`, `brakes_disc`). A drum brake is built as the real
+ones are (phase 5): a **backing plate** (`BackingPlate`, the backing_plates shelf, one per drum size and axle, `fits_axle`)
+on the corner's brake slot (the car's, or the rear axle's housing slot 5/6) carries the shoes (slot 2), the wheel
+cylinder (slot 3) and the drum (slot 4, `takes` `drum:<size>`; the drum's own mount `fits` it, so a drum only goes on a
+plate of its size and never on the corner itself), all three enforced. A front drum or disc takes its **hub** (slot 5,
+`hub:front`, the hubs shelf: enforced on a drum, a hub-and-drum comes off as one). `RunningGear.Mounted` reads the drum
+off its plate (`CornerParts.BackingPlate`, `Brake`, `Shoes`, `WheelCylinder`, `Hub`; told by the part's group when a
+catalog is given, else by a drum on slot 4). The drum gives the size (`force`, `radius`,
+in the source game's units, every drum under its smallest disc so a disc is an upgrade) and how it heats and cools, the
+shoes their friction (organic 1.0, semi-metallic 0.95, sintered 0.9 cold) and their fade curve, the wheel cylinder its
+force (a big bore 1.1). `RunningGear.BrakeTorque(catalog, corner)` puts them together, the lining's wear the shoes'. The
+period discs (Kelsey-Hayes, Delco-Moraine and Budd 4-pistons, dealer's options: `"option": true`, only a car cars.json
+picks them for; a single-piston caliper standard on American cars from 1969) carry their pads' curve themselves. The
+source game's discs carry no fade of their own.
+- **The factory's** (`RunningGearFactory.Choose` with the car's `CarFacts`): a part whose `came_in` fits the axle, the
+  car's country (the drums are American: a Jaguar keeps the source game's disc), its make, family or any car, and its
+  years, a standard one before an option; then the car's weight (each drum size has its band: a 9-inch under 1250 kg,
+  an 11 x 2.75 from 1600 kg) and the torque nearest the car's own. Front drums until 1972, rear drums always: every
+  American car of the drum years is on drums (EngineBench `gear` shows each car's with its shoes and fade). No such part:
+  the source game's nearest, as before. cars.json's `brakes_front`/`brakes_rear` pick (the Car Catalog Editor's pickers).
+- **Fade in Assetto Corsa** (`AcRunningGearData`): brakes.ini `[TEMPS_FRONT]`/`[TEMPS_REAR]` get `TORQUE_K`, `COOL_TRANSFER`,
+  `COOL_SPEED_FACTOR` and `PERF_CURVE` from the brake (`torque_k`, `cool_transfer`, `cool_speed_factor`) and its shoes'
+  `perf_curve`. On the factory brakes the car keeps its author's section when there is one; a car whose author wrote none
+  gets its factory drums' (the one change a stock car gets: its drums fade, about 300 °C after one hard stop from 80 mph
+  at 0.9 °C a kJ, the organic curve down to 55% by 380 °C; to calibrate against the Car Life tests in game). Other brakes
+  write theirs; a source game disc leaves the section as it was.
+- **Older saves** (`Car.GearVersion`, 0 before step 31): brought up once, the rear axle added and every brake or spring
+  that is what the factory gave the car then (the source game's nearest) swapped for what it gives now, in its wear and
+  damage, a drum on its plate with its shoes and cylinder (`RunningGearFactory.BringUpToDate`). What the player put on
+  stays. A drum of a save from before the backing plates (its shoes and cylinder on itself) goes onto the plate of its
+  size with them as the save is read, on every car and every car for sale (`RunningGearFactory.PutDrumsOnPlates`, in
+  `CarPartsService.BringUpToDate` before the joints are checked against the catalog, which would take them off a drum
+  with no slot for them); a loose drum on a shelf has them taken off onto the shelf. `GearVersion` 5 then adds a hub to
+  every front drum or disc that takes one, worn like the brake.
+- **Work**: `brake_reline` on the shoes (on a disc, the disc itself: its pads are part of it; never a drum, whose lining is
+  its shoes'), `wheel_cylinder_kit`, `hub_repack` on a hub, `drums_turned` at the machine shop. Each is shown done where
+  the part is (step 30's job show: the grime clearing off it in place, or on the workbench for a part that is off), the
+  same for the running gear as for the engine.
+- Not done: a master cylinder, a booster and a proportioning valve. Assetto Corsa has no pedal effort: full pedal is the
+  brakes' whole torque, so a booster would be a gate that changes nothing, a proportioning valve only `FRONT_SHARE`.
+
+**Springs, traction bars, sway bars, shocks** (step 31 phase 3, `parts/running_gear/springs_leaf`, `springs_torsion`,
+`sway_bars`, `shocks_period`). Parts of data like the drums:
+- **Leaf springs** (`["LeafSpring", "Spring"]`, the springs shelf, a corner's spring slot): a ladder of stock rates from 90
+  to 370 lb/in (`force` in N/m, 1 lb/in = 175.1 N/m), `came_in` American cars' rear on an `AXLE`, so every live-axle car's
+  own rate has one near it; aftermarket mono-leaves and Super Stock springs (no `came_in`). Each has a `wrap` (multi-leaf
+  1, mono-leaf 1.3, Super Stock 0.8) and a slot 2 a **traction bar** goes on (`["TractionBar"]`, the traction_bars shelf,
+  speed shops: Traction Master 0.6, Lakewood 0.55, slapper 0.5, ladder bars 0.25 of the wrap, `wrap_factor`).
+  `fits_axle` `"rear"` and `fits_suspension` `"AXLE"`: the workbench offers a leaf only the rear spring slots, and one
+  under a car whose rear is not a live axle keeps the car home (a problem). GM's coil-sprung live axles (the A-bodies, the
+  full-size cars) get leaves too by the guess: cars.json's `springs_rear` picks a coil for them.
+- **Torsion bars** (`["TorsionBar", "Spring"]`, the springs group takes the `TorsionBar` class): Chrysler's front springs,
+  .85 to .92 inch by the car's weight (`came_in` family mopar, front, `DWB`), rate by the diameter's fourth power;
+  heavy-duty 1.00 and Super Stock 1.03 aftermarket. `fits_axle` `"front"`, `fits_suspension` `"DWB"`: a Mopar whose data
+  is a strut front keeps the source game's coil.
+- **Sway bars** (class `Swaybar`, the sway_bars shelf, now running gear): on the car's own slots 402 (front) and 403 (rear,
+  `RunningGear.SwayBarSlot`), drawn across the axle a little ahead of it. `arb_rate` in N/m as `[ARB]` counts it, by the
+  diameter's fourth power, front 11/16 to 1 inch stock, rear 9/16 to 7/8; bigger ones aftermarket. The factory's is the
+  stock bar nearest to the car's own `[ARB]`, none on an axle whose data has none (`RunningGearFactory.Choose`, the axle's
+  `SwayBar`). The source game's 48 sway bars have no rate (they did nothing in it either): nobody sells them.
+- **Period shocks** (`ShockAbsorber`, no `came_in`): Gabriel heavy-duty, Koni adjustable, a 90/10 front drag shock (stiff
+  bump, a sixth of the rebound: the front comes up easily) and a 50/50 rear drag shock. The factory shock is still the
+  source game's nearest: aftermarket parts of data never count as the factory's (`SourceGame` takes parts of a script).
+- **In Assetto Corsa** (`AcRunningGearData`): the spring rate by mounted over factory as before; the rear springs' wrap
+  (each spring's `wrap` times its traction bar's `wrap_factor`, against the factory spring's) scales `[AXLE]
+  TORQUE_REACTION`, its sign kept (a ladder bar on a stock leaf: a quarter of it); `[ARB] FRONT`/`REAR` by the mounted
+  bar's rate over the factory's, the bar's own rate added where the factory gave none, 0 with the bar taken off. A stock
+  car's suspensions.ini comes out untouched. What it does on the strip is to see in game: axle hop on a hard launch on
+  soft leaves, less with bars (the timeslip's 60-foot).
+- **Older saves** (`GearVersion` 2): `BringUpToDate` swaps the factory coils that are now leaves or torsion bars and adds
+  the factory sway bars, worn like the axle's springs.
+- **A leaf is one part** with its hanger, shackle and U-bolts (phase 5 made them parts of their own; the owner found them
+  noise and they went). Work: `leaf_rearch` at the machine shop (a sagged or damaged leaf bent back to its arch, its eye
+  bushings new).
+- **Picked per car** (phase 5): the Car Catalog Editor has a brake and a spring picker for each axle under the rear
+  axle's (`AxlePicks`, `ICarPartsService.RunningGearFor`), "Guessed: ..." first, then the parts of the shelf made for that
+  axle (its `came_in` naming that axle or none, `fits_axle`): a GM car on coils at the rear picks a coil there. They write
+  cars.json's `brakes_front`, `brakes_rear`, `springs_front`, `springs_rear`.
+- Not done: lowering springs and blocks (ride height).
+
+**The running gear's models** (step 31 phase 4). Every part under `parts/running_gear` has a KN5 beside its pack, made by
+tools, never by hand:
+- `tools/RunningGearParts` (C#, on `tools/Shared` `SceneMesh`, with a lathe, a tube, a swept rod, turned boxes and hex
+  heads in `GearMesh`): the nine axle housings (a Salisbury's snout and bolted cover shaped per family: the Danas'
+  lopsided, the 12-bolt's twelve bolts; a banjo's third member bolted in front for the Ford 8 and 9-inch and the 8-3/4),
+  a ring and pinion per family (sized by its ring gear), the axle shaft, the drum's wheel cylinder, the four period shocks,
+  a torsion bar and a sway bar at each size their packs give (`diameter_in`), the four traction bars. Plain ksPerPixel
+  materials of small swatches (cast iron, steel, black paint, rubber, chrome, the shocks' colours).
+  `RunningGearParts build <parts folder>`; `RunningGearParts obj <kn5> <obj>` dumps one to look at.
+  `render_preview.py <spec> <out>` renders OBJs placed as the garage does (Blender's Workbench), to check places and sizes.
+- `tools/RunningGearParts/prepare_standins.py`: stand-ins cut out of CC BY 4.0 Sketchfab downloads (Blender, then
+  `tools/Props` `prepare_prop.py` and `PropBuilder --keep-origin`): the drum at four sizes (by the drum's `diam_mm`), the
+  period disc with its caliper, the shoes (two to a drum), the leaf spring, the carrier's case. Each pack with one has a
+  `CREDITS.txt`. They are to be replaced by generated ones in time; the downloads stay out of the repo (the
+  script names the zips it takes and where each came from).
+- **Spaces**: a part's model has its origin where it mounts. On the car (the housing at the middle of the rear hubs, the
+  sway bars, a leaf with its traction bars): +X the car's left, the front -Z. At a wheel (a drum and what is on it, a
+  shock): +X outboard, the hub's axis along X; `CarPartsLayout` turns it round for the right side. A spring's slot faces
+  the way the car does on both sides (a leaf or a torsion bar is not the same end to end). The right axle shaft's slot
+  on every housing is turned half round (`"rotation": [3.14159265, 0, 0]`), so the one shaft model points out both sides.
+  The shocks' studs are staggered, behind the axle on the left and ahead on the right, as the side turns a shock round.
+- **Fitted to the car** (after the owner's looks in game): the housing reaches the car's own track with its tubes drawn
+  longer beyond its middle (`CarPartsLayout.AxleStretch`, a `PartStretch` on the housing's placed part: what is farther
+  than 0.25 m from the centre moves out, so its ends, 0.655 m out in the models, go into the drums 0.02 m in from the
+  rear hubs, where a drum hides them; the centre section keeps its size), the shafts inside the tubes moved out as far.
+  The drums and period discs mount 0.08 m outboard of the brake slot (their own slot 1 at `[-0.08, 0, 0]`), their shoes
+  and wheel cylinder with them. The middle of an axle (the housing's centre section, cover and nose, the ring and pinion,
+  the carrier's case) is drawn 1.1 times its ring gear's size (`Parts.CentreScale`; the truck housing's 1.05).
+- **The source game's coil springs** are drawn with a CC BY coil (`running_gear/coil_springs`, "COIL SPRING" by VR DESIGNER,
+  credited beside it) through the base game's own `parts/models.json` (`suspension/stock/spring*`), so the converter's
+  pack is left as it is. The source game's was 96 mm across and 277 mm tall, small for the cars of the day; this one is
+  135 mm across and 320 mm tall, standing up from the hub's height (its model's space is theirs: their mount slot 0.4 m
+  under the origin).
+- Phase 5's parts (`RunningGearParts build`): a backing plate per drum size (`plate_<size>`, a pressed dish just inboard of
+  the drum's open side, its size and place from the stand-in drum's model), the front hub (boss, studs, dust cap, in the
+  drum's space).
+- Not modelled: the source game's other parts keep their own; a mod's running gear part without a model is drawn as a small box.
+- **A private truck mod** (`Content\truckparts`, git-ignored): `tools/RunningGearParts/prepare_truck_parts.py` cuts the
+  leaf spring (with its hangers, shackle and clip), the drum (four sizes), the axle housing (for the Dana 44 and 60) and
+  a shock (for the Gabriel) out of "Pickup truck chassis" (Sketchfab, CC BY-NC 4.0) and gives them to the base game's
+  parts through the mod's `models.json` (docs/modding.md). The owner is asking its author before it can go in the game;
+  until then a clone of the repo draws the base game's own models.
+
+**The wheels and the lift** (step 31 phase 6). The parts view draws the rims and tyres as parts: a rim with the middle of
+its tyre (its slot 2, the tyre's seat) on the hub, the AC model's WHEEL_xx dummy, turned the other way from the drums: the
+SLRR rims' face is -X (the owner's look in game; a render had seemed to say +X), the tyre on the rim's slot 2. The car's own wheels (its WHEEL_xx nodes,
+with the part wheels the scenes put on them) are left out of the ghost while the parts are on show
+(`GarageRenderer.DrawCarWithoutWheels`), so the two never double; out of the parts view the car is solid with its own. The
+`wheels` show (`part_groups.json`, icon `icons/wheel`) hides them to see the drums.
+A wheel comes off and goes on only with the car up on the garage's lift (the work order's `"lifted": true` on `rim`;
+`CarWork` takes whether the car is up), and what is behind it waits for it as before. The lift is always in the garage:
+`Car.LiftStop` (saved; `Down`, `WheelsClear` 0.3 m, `Full` 1.4 m, `Parts/LiftLayout`), stepped by the parts row's lift
+button (down, the wheels clear, full height, down; the rules' `time.lift` minutes a move). The car comes down only on its
+four wheels (`CarWork.WhyNotDown`); only the car in the bay is up, and another taking its place lowers it, unless a wheel
+is off it (it stays up, and comes back up with it). A car up does not race, drive or get towed out
+(`CarCondition.WhyCannotRace`, the garage's gas station and paint booth exits), and the engine hoist works only with the car
+down. In the 3D view (`CarViewport3D` "Lift") the whole car rises, its wheels hanging with it, through the body rock's
+placement (`D3DViewportBase.LiftHeight`), and the parts with it (`BodyLean`); the hubs the parts are placed by are taken
+with the lift's height off. The lift is a garage prop (`props/lift`, drawn from boxes unless a mod gives a model with a
+`lift_post` node), standing under the middle of the car in the bay, its post rising to catch the body by the first stop
+(`LiftLayout.SaddleTop`). The wheels stay on the floor for the first 0.1 m and then hang that far below the body
+(`LiftLayout.Droop`): the body rock lowers the AC model's WHEEL/HUB/SUSP/DISC groups, and the renderer the parts that
+hang with them (`GarageRenderer.SetUnsprung`/`Droop`: on a wheel or brake slot, the rear axle with all it carries, a leaf
+spring), parts on their way included. A wheel taken off takes the car's own out of sight at that corner in every scene
+(`ShownSet.MissingWheels`). The camera may look up from under the car while it is up. Sounds: `lift.move` (a loop) and
+`lift.stop`, synthesised by `tools/RebuildSounds`.
+
 **Threads.** The game state and the save file belong to the UI thread. Whatever takes long (loading the catalog,
 putting engines together for ads, market listings and cars without parts) runs on a worker thread on objects nobody
 else has yet, and the result goes into the game state back on the calling thread (`RefreshAdsAsync`,
@@ -736,8 +961,8 @@ weaker (brake torque `0.2 + 0.8 √wear`, grip `0.85 + 0.15 wear`).
 | File | Scaled by mounted / factory |
 |---|---|
 | `tyres.ini`, every `FRONT*`/`REAR*` compound | `WIDTH`, `RADIUS`, `RIM_RADIUS` (and `ANGULAR_INERTIA` by radius²), `DX_REF`/`DY_REF`/`DX0`/`DY0` by grip, `FZ0` by load capacity, `ROLLING_RESISTANCE_0/1`, `PRESSURE_STATIC`/`PRESSURE_IDEAL` |
-| `brakes.ini` | `MAX_TORQUE` and `FRONT_SHARE` from the front and rear torques scaled separately; `HANDBRAKE_TORQUE` by the rear |
-| `suspensions.ini` | `SPRING_RATE` (or a coil-over's `RATE`), `DAMP_BUMP`/`DAMP_FAST_BUMP`, `DAMP_REBOUND`/`DAMP_FAST_REBOUND`; `TRACK` moves by twice the rim offset difference, `HUB_MASS` by the unsprung mass difference |
+| `brakes.ini` | `MAX_TORQUE` and `FRONT_SHARE` from the front and rear torques scaled separately (a brake's torque with its shoes and wheel cylinder); `HANDBRAKE_TORQUE` by the rear; `[TEMPS_FRONT]`/`[TEMPS_REAR]` written, not scaled: the period brakes' fade (see "Period brakes") |
+| `suspensions.ini` | `SPRING_RATE` (or a coil-over's `RATE`), `DAMP_BUMP`/`DAMP_FAST_BUMP`, `DAMP_REBOUND`/`DAMP_FAST_REBOUND`; `TRACK` moves by twice the rim offset difference, `HUB_MASS` by the unsprung mass difference; `[AXLE] TORQUE_REACTION` by the leaves' wrap, `[ARB]` by the sway bars (see "Springs, traction bars, sway bars, shocks") |
 | `car.ini` | `TOTALMASS` by the running gear's mass difference |
 
 What has no lever on either side stays a gate: batteries, alternators, water pumps, radiators, distributors and the

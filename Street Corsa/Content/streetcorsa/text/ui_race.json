@@ -361,6 +361,7 @@
     "result.breakdown.gearbox": "gearbox",
     "result.breakdown.suspension": "suspension",
     "result.breakdown.tyre": "tyre",
+    "result.breakdown.axle": "rear axle",
     "result.breakdown.car": "car",
     "result.breakdown.overheat": "engine boiled over",
     "result.breakdown.oil": "engine lost its oil pressure",

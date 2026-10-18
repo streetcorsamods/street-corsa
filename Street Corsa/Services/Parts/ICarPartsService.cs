@@ -53,6 +53,12 @@ namespace StreetCorsa.Services.Parts
         /// <summary>The engine of a car that has been around: the factory build, now and then worked on</summary>
         BuiltEngine? CreateUsedEngine(CarDefinition car, double condition);
 
+        /// <summary>
+        /// The running gear of a car that has been around with a worked-on engine: the factory set, its rear axle given now
+        /// and then what a racer puts in behind an engine of <paramref name="powerHp"/> (a posi, gears); null without data
+        /// </summary>
+        List<PartInstance>? CreateTunedRunningGear(string carDefinitionId, double condition, double powerHp, Random random);
+
         /// <summary>An engine in a few words, e.g. "Chevy 327-396 V8, 258 hp"</summary>
         string? Describe(PartInstance engine, EngineReport? report);
 
@@ -92,6 +98,18 @@ namespace StreetCorsa.Services.Parts
         /// <summary>The running gear the car left the factory with, matched to its data; null without a catalog or data</summary>
         (RunningGearFactory.AxleParts Front, RunningGearFactory.AxleParts Rear)? FactoryRunningGear(Car car);
 
+        /// <summary>The rear axle the car leaves the factory with (cars.json's picks, else the guess); null for a car whose rear wheels are not driven</summary>
+        RearAxleChoice? FactoryAxle(string carDefinitionId);
+
+        /// <summary>The axle the car would leave the factory with on these picks, what they leave out guessed (the catalog editor's)</summary>
+        RearAxleChoice? AxleFor(string carDefinitionId, RunningGearPicks? picks);
+
+        /// <summary>The brakes, springs and the rest the car would leave the factory with on these picks, what they leave out guessed (the catalog editor's)</summary>
+        (RunningGearFactory.AxleParts Front, RunningGearFactory.AxleParts Rear)? RunningGearFor(string carDefinitionId, RunningGearPicks? picks);
+
+        /// <summary>The car's make, family, country and year, for the parts' <c>came_in</c></summary>
+        CarFacts FactsOf(string carDefinitionId);
+
         /// <summary>Where the car's engine is moved from its place by hand (cars.json); zero when it is not</summary>
         System.Numerics.Vector3 EngineOffsetOf(string carDefinitionId);
 
@@ -122,7 +140,8 @@ namespace StreetCorsa.Services.Parts
 
         /// <summary>
         /// Forgets what <see cref="Shown(string, List{PartInstance}, CarLook?, CornerHeights?, PaintColour?)"/> keeps of
-        /// the cars' factory builds: the catalog editor has changed a car's factory engine
+        /// the cars' factory builds, and their factory running gear: the catalog editor has changed a car's factory engine
+        /// or its picks
         /// </summary>
         void ForgetFactoryBuilds() { }
     }

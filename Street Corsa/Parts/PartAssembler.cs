@@ -9,9 +9,24 @@ namespace StreetCorsa.Parts;
 
 /// <summary>
 /// A part with its place in an assembly, relative to the assembly's root part.
-/// <see cref="Source"/> is the installed part it stands for, when it stands for one.
+/// <see cref="Source"/> is the installed part it stands for, when it stands for one; <see cref="Stretch"/> draws it longer
+/// beyond its middle.
 /// </summary>
-public sealed record PlacedPart(PartDefinition Part, Matrix4x4 World, InstalledPart? Source = null);
+public sealed record PlacedPart(PartDefinition Part, Matrix4x4 World, InstalledPart? Source = null, PartStretch? Stretch = null);
+
+/// <summary>
+/// A part drawn longer along its own X beyond its middle: what is farther out than <see cref="Middle"/> (metres, either
+/// side) goes <see cref="Factor"/> times as far past it, the middle as it is (a rear axle housing's tubes out to the car's
+/// track, its centre section its own size)
+/// </summary>
+public sealed record PartStretch(float Middle, float Factor)
+{
+    public AcTools.Numerics.Vec3 Apply(AcTools.Numerics.Vec3 p) =>
+        MathF.Abs(p.X) <= Middle ? p : new AcTools.Numerics.Vec3(MathF.Sign(p.X) * (Middle + (MathF.Abs(p.X) - Middle) * Factor), p.Y, p.Z);
+
+    /// <summary>Where a point of the part's X at <paramref name="x"/> ends up</summary>
+    public float At(float x) => Apply(new AcTools.Numerics.Vec3(x, 0, 0)).X;
+}
 
 /// <summary>
 /// An assembly merged into one model, with its bounds in the model's own space.
@@ -127,9 +142,11 @@ public static class PartAssembler
 
             foreach (var mesh in model.RootNode.Children.Where(n => n.NodeClass == Kn5NodeClass.Mesh))
             {
-                partNode.Children.Add(CloneMesh(mesh, materialIds.GetValueOrDefault(mesh.MaterialId)));
+                var clone = CloneMesh(mesh, materialIds.GetValueOrDefault(mesh.MaterialId));
+                if (placed.Stretch is { } stretch) Stretched(clone, stretch);
+                partNode.Children.Add(clone);
 
-                foreach (var vertex in mesh.Vertices)
+                foreach (var vertex in clone.Vertices)
                 {
                     var position = Vector3.Transform(new Vector3(vertex.Position.X, vertex.Position.Y, vertex.Position.Z), placed.World);
                     min = Vector3.Min(min, position);
@@ -252,6 +269,13 @@ public static class PartAssembler
     }
 
     /// <summary>Geometry arrays are shared with the source, only the material binding differs</summary>
+    /// <summary>A copied mesh drawn longer beyond its middle: its own vertices (the model read once is shared), its bounds grown</summary>
+    private static void Stretched(Kn5Node mesh, PartStretch stretch)
+    {
+        mesh.Vertices = mesh.Vertices.Select(v => { var moved = v; moved.Position = stretch.Apply(v.Position); return moved; }).ToArray();
+        mesh.BoundingSphereRadius *= MathF.Max(1f, stretch.Factor);
+    }
+
     private static Kn5Node CloneMesh(Kn5Node mesh, uint materialId) => new()
     {
         NodeClass = Kn5NodeClass.Mesh,

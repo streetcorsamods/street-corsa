@@ -75,6 +75,9 @@ public static class ShownPartsOnCar
 
     private static readonly ConditionalWeakTable<Kn5RenderableCar, OnCar> Cars = new();
 
+    /// <summary>The node under the car's root the parts shown always go in (<see cref="ShownModelAt.Always"/>)</summary>
+    public const string CornersNode = "sc_corners";
+
     /// <summary>
     /// How the corners of <paramref name="car"/> sit as it was last asked to show (<see cref="ShownSet.Heights"/>): what
     /// the scene's body rock leans its body by (CarBodyRock); null when as its model has them
@@ -153,6 +156,9 @@ public static class ShownPartsOnCar
         if (!keepWear && shown?.Look == null) ClearWear(on);
         if (shown?.Paint == null) ClearPaint(car, on);
         if (shown == null) return true;
+
+        // A wheel taken off: the car's own goes out of sight there, whatever else it shows
+        SwitchOffMissing(car, shown.MissingWheels, on);
 
         // The paint first: a car painted is seen in its colour from the start, not after its parts are put on
         if (shown.Paint is { } colour && !await PutPaintAsync(car, colour, on, version, device, gone)) return false;
@@ -349,6 +355,7 @@ public static class ShownPartsOnCar
             var surface = Surface(meshes);
             return shown.Extras.Where(e =>
             {
+                if (e.Always) return true;
                 var stands = ShownEngineParts.StandsOut(e, surface.Above);
                 Logger.Debug("{Part}: {Verdict}", e.Model.Name, stands ? "stands out" : "stays under the hood");
                 return stands;
@@ -356,10 +363,17 @@ public static class ShownPartsOnCar
         });
         if (Stale(on, version, gone)) return false;
 
-        var extras = new RenderableList("sc_parts", SlimDX.Matrix.Identity);
-        foreach (var extra in standing) extras.Add(new PartFile(models[extra.Model.Source], ToSlim(extra.At * fromRoot), on));
-        root.Add(extras);
-        on.Nodes.Add((root, extras));
+        // The parts shown always (a bare corner's brake and suspension) in a node of their own: it hangs with the wheels as
+        // the lift takes the car up (D3DViewportBase)
+        foreach (var (name, group) in new[] { ("sc_parts", standing.Where(e => !e.Always)), (CornersNode, standing.Where(e => e.Always)) })
+        {
+            var list = new RenderableList(name, SlimDX.Matrix.Identity);
+            foreach (var extra in group) list.Add(new PartFile(models[extra.Model.Source], ToSlim(extra.At * fromRoot), on));
+            if (list.Count == 0) continue;
+            root.Add(list);
+            on.Nodes.Add((root, list));
+        }
+
         return true;
     }
 
@@ -433,6 +447,17 @@ public static class ShownPartsOnCar
         }
         on.Switched.Clear();
         on.Nodes.Clear();
+    }
+
+    private static void SwitchOffMissing(Kn5RenderableCar car, int missing, OnCar on)
+    {
+        if (missing == 0) return;
+        for (var corner = 0; corner < WheelFit.WheelNodes.Length; corner++)
+        {
+            if ((missing & (1 << corner)) == 0) continue;
+            var name = WheelFit.WheelNodes[corner];
+            if (car.RootObject?.GetAllChildren().OfType<Kn5RenderableList>().FirstOrDefault(n => n.OriginalNode.Name == name) is { } node) on.Switch(node, false);
+        }
     }
 
     private static void Apply(Kn5RenderableCar car, int corner, ShownWheel wheel, Dictionary<string, IKn5> models, OnCar on)

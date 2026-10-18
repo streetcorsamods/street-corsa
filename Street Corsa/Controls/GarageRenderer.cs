@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text.RegularExpressions;
 using AcTools.Kn5File;
 using AcTools.Render.Base;
 using AcTools.Render.Base.Cameras;
@@ -34,9 +35,10 @@ public readonly record struct PartHit(PartLayer Layer, int Node);
 /// <summary>
 /// Part nodes that move as one, off the car or onto it, the way the part they are on comes off
 /// (<see cref="WorkOrder.WayOf"/>), after <paramref name="Delay"/> seconds. An empty way is away from what stays.
-/// <paramref name="Kind"/> is the part's work-order kind, for the tool it is heard to take (<see cref="Audio.Sfx.ToolFor"/>).
+/// <paramref name="Tool"/> is the tool its work-order kind is heard to take (<see cref="WorkOrder.ToolOf"/>). A part of the
+/// car's running gear (<paramref name="CarAxes"/>) goes along the car's own axes, an engine's along its block's.
 /// </summary>
-public sealed record PartMove(IReadOnlyList<int> Nodes, IReadOnlyList<PartWay> Way, float Delay = 0f, string? Kind = null);
+public sealed record PartMove(IReadOnlyList<int> Nodes, IReadOnlyList<PartWay> Way, float Delay = 0f, string? Tool = null, bool CarAxes = false);
 
 /// <summary>
 /// Dark renderer with one extra model (the car's parts) in the scene, and an x-ray mode for the car.
@@ -93,6 +95,29 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     private bool _fixtureHovered;
     private Kn5RenderableFile? _bench;
     private List<IKn5RenderableObject> _benchMeshes = new();
+
+    // The lift under the car (Parts.LiftLayout): its post, and where that stands with the lift down
+    private Kn5RenderableFile? _lift;
+    private RenderableList? _liftPost;
+    private Matrix _liftPostHome = Matrix.Identity;
+    private float _liftSaddle = Parts.LiftLayout.SaddleDown;
+
+    // The parts that hang with the wheels as the lift takes the body up (the wheels, the brakes, the rear axle), in the
+    // mounted parts and the places a loose part could go, and how far they hang now (Parts.LiftLayout.Droop)
+    private readonly HashSet<PartNode> _unsprung = new();
+    private float _droop;
+
+    // The car's own wheels (its model's WHEEL_xx nodes, the part wheels shown on them in the scenes among what they hold),
+    // found once a car: left out of the ghost while the parts are on show, which draw the wheels as parts of their own
+    private static readonly Regex CarWheel = new("^WHEEL_(LF|RF|LR|RR)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    private Kn5RenderableCar? _wheelsOf;
+    private List<RenderableList> _carWheels = new();
+
+    // The car's own wheels standing in for the part wheels of the factory's at their corners (SetStandIns): the part's
+    // node, kept to be picked but not drawn, and the car's wheel drawn solid in its place, with what to let through when
+    // the car is drawn for that wheel alone (the wheel, what is in it and the nodes it hangs from)
+    private readonly Dictionary<PartNode, RenderableList> _standIns = new();
+    private readonly Dictionary<RenderableList, HashSet<IRenderableObject>> _standInPaths = new();
 
     // The part a job of the parts view's "Work on it" is being done on: a loose one lying on the workbench (drawn whole,
     // at how far it is in sight), and over it, or over the mounted part itself, its grime, fading as the work goes
@@ -580,21 +605,29 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         // over on the stand has its oil pan come off upwards, and out still on the side the part is on
         var toProp = Matrix.Invert(_prop.LocalMatrix);
         var moving = groups.SelectMany(g => g.Nodes).ToHashSet();
+
+        // A wheel on its way is seen as the part it is: the car's own no longer stands in for it
+        foreach (var node in moving) EndStandIn(node);
         var staying = CentreOf(_propNodes.Where(n => !moving.Contains(n)));
         var frame = frameNode is { } f && f >= 0 && f < _propNodes.Count ? _propNodes[f] : null;
 
-        // Part models face -Z; with no block to go by, one set in the car the way the car faces (+Z)
-        var axes = frame?.List.LocalMatrix ?? Matrix.RotationY((float)Math.PI);
-        var right = Direction(Vector3.TransformNormal(Vector3.UnitX, axes), Vector3.UnitX);
-        var up = Direction(Vector3.TransformNormal(Vector3.UnitY, axes), Vector3.UnitY);
-        var forward = Direction(Vector3.TransformNormal(-Vector3.UnitZ, axes), Vector3.UnitZ);
+        // Part models face -Z; with no block to go by, one set in the car the way the car faces (+Z). The running gear goes
+        // by the car's axes whatever way its engine sits
+        var carAxes = Matrix.RotationY((float)Math.PI);
+        var blockAxes = frame?.List.LocalMatrix ?? carAxes;
 
         foreach (var (move, nodes) in groups)
         {
             if (CentreOf(nodes) is not { } centre) continue;
 
-            // Out is to the side of the engine the part is on; the block itself has none, so it goes by what stays
-            var middle = frame == null || nodes.Contains(frame) ? staying : CentreOf(new[] { frame });
+            var axes = move.CarAxes ? carAxes : blockAxes;
+            var right = Direction(Vector3.TransformNormal(Vector3.UnitX, axes), Vector3.UnitX);
+            var up = Direction(Vector3.TransformNormal(Vector3.UnitY, axes), Vector3.UnitY);
+            var forward = Direction(Vector3.TransformNormal(-Vector3.UnitZ, axes), Vector3.UnitZ);
+
+            // Out is to the side of the engine the part is on, or of the car for its running gear; the block itself has
+            // none, so it goes by what stays
+            var middle = frame == null || move.CarAxes || nodes.Contains(frame) ? staying : CentreOf(new[] { frame });
             var outward = middle is { } m && Vector3.Dot(Vector3.TransformNormal(centre - m, toProp), right) < 0f ? -right : right;
 
             var legs = move.Way.Count == 0
@@ -610,7 +643,7 @@ public class GarageRenderer : DarkKn5ObjectRenderer
 
             // One sound a part, however many nodes it is: the tool as it comes off; the clank as it goes into its
             // place, and the tool turning it tight
-            var tool = Audio.Sfx.ToolFor(move.Kind);
+            var tool = Audio.Sfx.ToolFor(move.Tool);
             var first = true;
             foreach (var node in nodes)
             {
@@ -715,7 +748,7 @@ public class GarageRenderer : DarkKn5ObjectRenderer
             if (node < 0 || node >= _propNodes.Count) continue;
 
             _motions.RemoveAll(m => ReferenceEquals(m.Node, _propNodes[node]));
-            _propNodes[node].List.LocalMatrix = world;
+            _propNodes[node].List.LocalMatrix = _unsprung.Contains(_propNodes[node]) ? world * Matrix.Translation(0f, -_droop, 0f) : world;
             moved = true;
         }
 
@@ -861,7 +894,10 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         public PartNode Node { get; }
 
         /// <summary>The node where it was put</summary>
-        protected Matrix Home { get; }
+        protected Matrix Home { get; private set; }
+
+        /// <summary>Its place moved by <paramref name="by"/> (the part hanging further with the wheels), on its way or not</summary>
+        public void Shift(Matrix by) => Home *= by;
 
         public bool HasStarted => _elapsed > _delay;
 
@@ -1146,6 +1182,8 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         var hiddenAtFirst = _prop == null && !_standActive && !IsGhosting;
 
         _prop?.Dispose();
+        _unsprung.RemoveWhere(n => _propNodes.Contains(n));
+        _standIns.Clear();
         _propLeans = !_standActive;
         _propPlacement = placement;
         _prop = kn5 == null ? null : new Kn5RenderableFile(kn5, placement * (_propLeans ? _bodyLean : Matrix.Identity), asyncTexturesLoading: hiddenAtFirst);
@@ -1172,6 +1210,7 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     public void SetCandidates(IKn5? kn5)
     {
         _candidates?.Dispose();
+        _unsprung.RemoveWhere(n => _candidateNodes.Contains(n));
         _candidatesLean = !_standActive;
         _candidates = kn5 == null ? null : new Kn5RenderableFile(kn5, _candidatesLean ? _bodyLean : StandTurn, asyncTexturesLoading: false);
         _candidateNodes = PartNode.Of(_candidates);
@@ -1207,6 +1246,214 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         _benchMeshes = _bench?.GetAllChildren().OfType<IKn5RenderableObject>().ToList() ?? new();
         SetShadowsDirty();
         IsDirty = true;
+    }
+
+    /// <summary>
+    /// The lift (<see cref="Parts.LiftLayout"/>), put where <paramref name="placement"/> says: under the car's middle; null
+    /// takes it away. Its post (<see cref="Parts.LiftLayout.PostNode"/>) rises to <see cref="LiftSaddle"/>. Drawn and in the
+    /// way of what is behind it, never picked nor lit up. Must be called on the thread that draws.
+    /// </summary>
+    public void SetLift(IKn5? kn5, Matrix placement)
+    {
+        _lift?.Dispose();
+        _lift = kn5 == null ? null : new Kn5RenderableFile(kn5, placement, asyncTexturesLoading: false);
+        _liftPost = _lift?.GetDummyByName(Parts.LiftLayout.PostNode);
+        _liftPostHome = _liftPost?.LocalMatrix ?? Matrix.Identity;
+        PlaceLiftPost();
+        SetShadowsDirty();
+        IsDirty = true;
+    }
+
+    /// <summary>The lift under another car: where its middle is</summary>
+    public void MoveLift(Matrix placement)
+    {
+        if (_lift == null || _lift.LocalMatrix == placement) return;
+        _lift.LocalMatrix = placement;
+        _lift.UpdateBoundingBox();
+        SetShadowsDirty();
+        IsDirty = true;
+    }
+
+    /// <summary>
+    /// The nodes of the mounted parts (<see cref="PartLayer.Mounted"/>) or of the places a loose part could go
+    /// (<see cref="PartLayer.Candidate"/>) that hang with the wheels (<see cref="Droop"/>): given once for each model put in,
+    /// right after it, its nodes where the layout has them
+    /// </summary>
+    public void SetUnsprung(PartLayer layer, IEnumerable<int> nodes)
+    {
+        var all = layer == PartLayer.Mounted ? _propNodes : _candidateNodes;
+        var hang = Matrix.Translation(0f, -_droop, 0f);
+        foreach (var index in nodes)
+        {
+            if (index < 0 || index >= all.Count || !_unsprung.Add(all[index])) continue;
+            if (_droop != 0f) all[index].List.LocalMatrix *= hang;
+        }
+
+        if (_droop == 0f) return;
+        if (layer == PartLayer.Mounted) _prop?.UpdateBoundingBox();
+        else _candidates?.UpdateBoundingBox();
+        IsDirty = true;
+    }
+
+    /// <summary>
+    /// How far the parts that hang with the wheels (<see cref="SetUnsprung"/>) are below where the layout puts them, metres:
+    /// the lift taking the body up off its wheels. A part on its way off or on hangs with them.
+    /// </summary>
+    public float Droop
+    {
+        get => _droop;
+        set
+        {
+            if (_droop == value) return;
+            var by = Matrix.Translation(0f, _droop - value, 0f);
+            _droop = value;
+            foreach (var node in _unsprung) node.List.LocalMatrix *= by;
+            foreach (var motion in _motions.Where(m => _unsprung.Contains(m.Node))) motion.Shift(by);
+            _prop?.UpdateBoundingBox();
+            _candidates?.UpdateBoundingBox();
+            SetShadowsDirty();
+            IsDirty = true;
+        }
+    }
+
+    /// <summary>How high the top of the lift's saddle is off the floor, metres (<see cref="Parts.LiftLayout.SaddleTop"/>)</summary>
+    public float LiftSaddle
+    {
+        get => _liftSaddle;
+        set
+        {
+            if (_liftSaddle == value) return;
+            _liftSaddle = value;
+            PlaceLiftPost();
+            IsDirty = true;
+        }
+    }
+
+    private void PlaceLiftPost()
+    {
+        if (_liftPost == null || _lift == null) return;
+        _liftPost.LocalMatrix = _liftPostHome * Matrix.Translation(0f, _liftSaddle - _liftPostHome.M42, 0f);
+        _lift.UpdateBoundingBox();
+    }
+
+    /// <summary>
+    /// The car's own wheels stand in for the mounted parts' nodes at their corners (<paramref name="nodes"/>: a factory rim
+    /// and its tyre, corner 0 front left to 3 right rear): the car's wheel is drawn solid where the part's is, and the
+    /// part's node is still there to be picked, to glow (as the car's wheel) and to be taken off. Given once for each model
+    /// put in, right after it. Must be called on the thread that draws.
+    /// </summary>
+    public void SetStandIns(IEnumerable<(int Node, int Corner)> nodes)
+    {
+        if (CarNode is not { } car || car.RootObject is not { } root) return;
+        var wheels = CarWheelsByName(car);
+        foreach (var (index, corner) in nodes)
+        {
+            if (index < 0 || index >= _propNodes.Count || corner < 0 || corner >= Parts.Cars.WheelFit.WheelNodes.Length) continue;
+            if (!wheels.TryGetValue(Parts.Cars.WheelFit.WheelNodes[corner], out var wheel)) continue;
+
+            var node = _propNodes[index];
+            foreach (var mesh in node.List.GetAllChildren().OfType<IRenderableObject>().Where(o => o is not RenderableList)) mesh.IsEnabled = false;
+            node.IsStandIn = true;
+            _standIns[node] = wheel;
+            if (!_standInPaths.ContainsKey(wheel) && PathTo(root, wheel) is { } path)
+                _standInPaths[wheel] = path.Concat(wheel.GetAllChildren()).Append(wheel).ToHashSet();
+        }
+
+        IsDirty = true;
+    }
+
+    /// <summary>The part's own model back in sight, and the car's wheel no longer standing in for it, nor for the rest of its wheel</summary>
+    private void EndStandIn(PartNode node)
+    {
+        if (!_standIns.TryGetValue(node, out var wheel)) return;
+        foreach (var (other, _) in _standIns.Where(s => ReferenceEquals(s.Value, wheel)).ToList())
+        {
+            foreach (var mesh in other.List.GetAllChildren().OfType<IRenderableObject>().Where(o => o is not RenderableList)) mesh.IsEnabled = true;
+            other.IsStandIn = false;
+            _standIns.Remove(other);
+        }
+    }
+
+    /// <summary>The nodes from <paramref name="from"/> down to <paramref name="target"/>, both in; null when it is not under it</summary>
+    private static List<IRenderableObject>? PathTo(RenderableList from, RenderableList target)
+    {
+        if (ReferenceEquals(from, target)) return [from];
+        foreach (var child in from.OfType<RenderableList>())
+        {
+            if (PathTo(child, target) is { } path)
+            {
+                path.Insert(0, from);
+                return path;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>The car's own wheels standing in for parts, but those whose parts are put out of sight (the wheels' show)</summary>
+    private void DrawStandIns(DeviceContextHolder holder, ICamera camera, SpecialRenderMode mode)
+    {
+        if (_standIns.Count == 0 || CarNode is not { } car) return;
+
+        var shown = _standIns.GroupBy(s => s.Value).Where(g => g.All(s => !s.Key.IsHidden)).Select(g => g.Key).ToList();
+        foreach (var wheel in shown) DrawStandIn(holder, camera, mode, car, wheel);
+    }
+
+    private void DrawStandIn(DeviceContextHolder holder, ICamera camera, SpecialRenderMode mode, Kn5RenderableCar car, RenderableList wheel)
+    {
+        if (_standInPaths.TryGetValue(wheel, out var through)) car.Draw(holder, camera, mode, through.Contains);
+    }
+
+    private Dictionary<string, RenderableList> CarWheelsByName(Kn5RenderableCar car)
+    {
+        if (!ReferenceEquals(_wheelsOf, car))
+        {
+            _wheelsOf = car;
+            _carWheels = new List<RenderableList>();
+            FindWheels(car);
+        }
+
+        return _carWheels.OfType<Kn5RenderableList>().ToDictionary(w => w.OriginalNode.Name, w => (RenderableList)w, StringComparer.OrdinalIgnoreCase);
+
+        void FindWheels(RenderableList list)
+        {
+            foreach (var child in list)
+            {
+                if (child is not RenderableList node) continue;
+                if (node is Kn5RenderableList { OriginalNode.Name: var name } && CarWheel.IsMatch(name)) _carWheels.Add(node);
+                else FindWheels(node);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Draws the car without its own wheels while the car's parts are on show (the wheels are among them), with them
+    /// otherwise: the wheel nodes are switched off for the draw and back as they were after it
+    /// </summary>
+    private void DrawCarWithoutWheels(Action draw)
+    {
+        if (_prop == null || _standActive || CarNode is not { } car)
+        {
+            draw();
+            return;
+        }
+
+        CarWheelsByName(car);
+        var was = new bool[_carWheels.Count];
+        for (var i = 0; i < _carWheels.Count; i++)
+        {
+            was[i] = _carWheels[i].IsEnabled;
+            _carWheels[i].IsEnabled = false;
+        }
+
+        try
+        {
+            draw();
+        }
+        finally
+        {
+            for (var i = 0; i < _carWheels.Count; i++) _carWheels[i].IsEnabled = was[i];
+        }
     }
 
     /// <summary>
@@ -1384,13 +1631,17 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         CarNode != null && MainSlot.GetCarBoundingBox() is { } box && Ray.Intersects(ray, box, out float distance) ? distance : null;
 
     /// <summary>Distance along the ray to the nearest of the meshes; null when it misses them all</summary>
-    private static float? Nearest(Ray ray, IEnumerable<IKn5RenderableObject> meshes)
+    /// <param name="boxes">
+    /// Whether a mesh's box is asked first; not for meshes switched off (a stand-in's): the list's box update leaves
+    /// them out, so theirs stays where they were when it was last worked out
+    /// </param>
+    private static float? Nearest(Ray ray, IEnumerable<IKn5RenderableObject> meshes, bool boxes = true)
     {
         float? nearest = null;
         foreach (var mesh in meshes)
         {
             // Triangle tests run per vertex on the CPU: only for meshes whose box the ray goes through
-            if (mesh.BoundingBox is { } box && !Ray.Intersects(ray, box, out float _)) continue;
+            if (boxes && mesh.BoundingBox is { } box && !Ray.Intersects(ray, box, out float _)) continue;
 
             if (mesh.CheckIntersection(ray) is { } hit && (nearest == null || hit < nearest)) nearest = hit;
         }
@@ -1493,8 +1744,11 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         /// <summary>Put out of sight by the player (its kind's show button): not drawn, not picked</summary>
         public bool IsHidden { get; set; }
 
+        /// <summary>The car's own wheel is drawn for it (<see cref="SetStandIns"/>): its meshes are off, but it is picked</summary>
+        public bool IsStandIn { get; set; }
+
         /// <summary>Distance along the ray to the part's surface; null when the ray misses it</summary>
-        public float? Intersect(Ray ray) => List.IsEnabled && !IsHidden ? Nearest(ray, _meshes) : null;
+        public float? Intersect(Ray ray) => List.IsEnabled && !IsHidden ? Nearest(ray, _meshes, !IsStandIn) : null;
     }
 
     protected override void DrawCars(DeviceContextHolder holder, ICamera camera, SpecialRenderMode mode)
@@ -1502,6 +1756,7 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         _scenery?.Draw(holder, camera, mode);
         _fixture?.Draw(holder, camera, mode);
         _bench?.Draw(holder, camera, mode);
+        _lift?.Draw(holder, camera, mode);
         FollowParts();
 
         // The part on the workbench, once it is all there; on its way in or out it is drawn see-through after the rest
@@ -1516,8 +1771,9 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         }
         else
         {
-            // Shadows, g-buffer (AO, reflections) and the rest see the parts only
+            // Shadows, g-buffer (AO, reflections) and the rest see the parts only, the car's own wheels standing in for some
             _prop?.Draw(holder, camera, mode, _settled);
+            DrawStandIns(holder, camera, mode);
             _candidates?.Draw(holder, camera, mode);
         }
 
@@ -1643,7 +1899,8 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         // Everything comes in with the transition; the stand's parts have none, but the car's outline fades with the
         // car even then, on its way back to solid
         var fade = _standActive ? 1f : Ease(_ghostProgress);
-        if (IsGhosting && CarNode != null) DrawGlow(0, CarGlow, Ease(_ghostProgress), () => base.DrawCars(holder, ActualCamera, SpecialRenderMode.Outline));
+        if (IsGhosting && CarNode != null)
+            DrawGlow(0, CarGlow, Ease(_ghostProgress), () => DrawCarWithoutWheels(() => base.DrawCars(holder, ActualCamera, SpecialRenderMode.Outline)));
 
         if (_candidates != null)
             DrawGlow(1, CandidateGlow, fade, () => _candidates.Draw(holder, ActualCamera, SpecialRenderMode.Outline));
@@ -1656,8 +1913,18 @@ public class GarageRenderer : DarkKn5ObjectRenderer
             DrawGlow(3, HoverGlow, fade, () => DrawNode(hoveredNode));
 
         // The model hands its materials down as it draws, so a single part is drawn by keeping the others out
-        void DrawNode(PartNode node) => node.File.Draw(holder, ActualCamera, SpecialRenderMode.Outline,
-            o => o is not RenderableList list || ReferenceEquals(list, node.List) || !node.Siblings.Contains(list));
+        void DrawNode(PartNode node)
+        {
+            // A part the car's own wheel stands in for glows as that wheel
+            if (_standIns.TryGetValue(node, out var wheel) && CarNode is { } car)
+            {
+                DrawStandIn(holder, ActualCamera, SpecialRenderMode.Outline, car, wheel);
+                return;
+            }
+
+            node.File.Draw(holder, ActualCamera, SpecialRenderMode.Outline,
+                o => o is not RenderableList list || ReferenceEquals(list, node.List) || !node.Siblings.Contains(list));
+        }
     }
 
     private PartNode? NodeOf(PartHit hit)
@@ -1751,9 +2018,13 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         _scenery?.Draw(holder, camera, SpecialRenderMode.Simple);
         _fixture?.Draw(holder, camera, SpecialRenderMode.Simple);
         _bench?.Draw(holder, camera, SpecialRenderMode.Simple);
-        base.DrawCars(holder, camera, SpecialRenderMode.Simple);
-        context.OutputMerger.DepthStencilState = holder.States.ReadOnlyDepthState;
-        base.DrawCars(holder, camera, SpecialRenderMode.SimpleTransparent);
+        _lift?.Draw(holder, camera, SpecialRenderMode.Simple);
+        DrawCarWithoutWheels(() =>
+        {
+            base.DrawCars(holder, camera, SpecialRenderMode.Simple);
+            context.OutputMerger.DepthStencilState = holder.States.ReadOnlyDepthState;
+            base.DrawCars(holder, camera, SpecialRenderMode.SimpleTransparent);
+        });
 
         // Constant-factor blend, so the result does not depend on what the materials wrote to alpha
         _ghostBlend ??= CreateGhostBlend(holder.Device);
@@ -1815,6 +2086,9 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         _fixture = null;
         _bench?.Dispose();
         _bench = null;
+        _lift?.Dispose();
+        _lift = null;
+        _liftPost = null;
         _work?.Dispose();
         _work = null;
         _workGrime?.Dispose();

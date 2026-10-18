@@ -149,7 +149,7 @@ it changes:
 |---|---|
 | `start` | the player's money, the first day, the cars in the garage on that day (`car`: the AC car's folder, `skin`, `condition` 0-1, `mileage` km; a car AC does not have is left out) |
 | `day` | the hours the player's day starts and ends (an `endHour` past 24 is midnight) |
-| `time` | minutes each action takes (`actions`, by the game's action names), each part at the workbench, an engine in or out, the stand, a tick of cruising, the shortest trip |
+| `time` | minutes each action takes (`actions`, by the game's action names), each part at the workbench, an engine in or out, the stand, the lift from one stop to the next, a tick of cruising, the shortest trip |
 | `difficulty` | the New Game screen's presets (`easy`, `normal`, `hard`) and how often pink slips come up at each frequency |
 | `police` | how likely a street race draws them, fines, the impound, cars per race, the AC cars they like best |
 | `rivals` | how many race, their money (`money`, by age band), going broke, trading up, leaving and coming back, selling cars on, a boss's money and record (`king`) |
@@ -224,8 +224,14 @@ anywhere under the folder (a `pack.json` with the parts' `.kn5` models next to i
 - `part_aliases.json` — `{ "old id": "new id" }` for parts the mod renamed; the old id is the mod's own unless written
   in full.
 - Part models are drawn at the size they were made: ship them at AC's scale (metres).
-- `work_order.json` — what comes off an engine before what (see below). Most mods need none: the base game's covers
-  every kind of engine part there is.
+- `models.json` — models of the mod's own for parts of any mod, the base game's too, without replacing the parts (a model
+  pack): `{ "models": { "running_gear/springs_leaf/rear_150": "truck/leaf.kn5", "running_gear/sway_bars/front_*": "bars/front.kn5" } }`.
+  A key is a part's full id, or the start of one ending in `*`; the model is a KN5 under the mod's parts folder, in the
+  part's own space (its origin where it mounts; see parts-system.md, "The running gear's models"). The part's figures,
+  slots and price stay its own; of two mods the later one's model wins. A key that names no part, or a model that is not
+  there, is a line in the log and left out.
+- `work_order.json` — what comes off an engine or a car's running gear before what (see below). Most mods need none:
+  the base game's covers every kind of engine and running gear part there is.
 - `"make"` in a `pack.json` (`"make": "gm"`) says which make the pack's parts are for: every part shop specialising in
   that make stocks them (see `partshops` below). The base game's makes are `mopar`, `ford` and `gm` (the families of
   makes.json); a pack of parts for any make (the universal-fit carburettors and air cleaners) has none.
@@ -255,13 +261,14 @@ place on the build it does the most for (measured once at every start), the hors
 (none: 1). A kind priced `by` a figure of its own costs as much more or less as its figure stands against the middle
 one of its kind, to the power `by_power`: `grip` (a tyre's friction by its width), `brake_torque`, `rim_size`,
 `spring_rate`, `damping`, `carb_mounts` (the carburettors a manifold takes: a dual-quad is a kit no dyno run of the
-manifold alone measures). The `accessories` group takes no classes: it prices the parts no group takes in. A part's
+manifold alone measures), `strength` (what a rear axle part holds), `diff_lock` (how hard a carrier locks). The `accessories` group takes no classes: it prices the parts no group takes in. A part's
 own `value` (the source game's price, kept in `properties`) prices nothing.
 `EngineBench <Content folder> prices [AC cars folder | part id]` lists the prices by kind, every installed car's new
 price, or the power and price of the parts whose id holds what is given. The ids `engine_blocks`, `cylinder_heads`, `camshafts`, `crankshafts`, `connecting_rods`,
-`pistons`, `transmissions`, `air_filters`, `exhaust`, `oil_pans`, `tyres`, `rims`, `brakes`, `springs` and `shocks`
-are the game's own: the engine's internals wear and break, the running gear has a slot on each wheel, the attendant
-looks at the air filter and the exhaust. A mod may change their classes, never their meaning. The base game's groups are
+`pistons`, `transmissions`, `air_filters`, `exhaust`, `oil_pans`, `tyres`, `rims`, `brakes`, `springs`, `shocks`,
+`rear_axles`, `differentials`, `ring_pinions` and `axle_shafts` are the game's own: the engine's internals wear and break,
+the running gear has a slot on each wheel, the rear axle one under the car, the attendant looks at the air filter and the
+exhaust. A mod may change their classes, never their meaning. The base game's groups are
 `Content\streetcorsa\parts\part_groups.json`.
 
 **The shows.** The same file's `shows` are the garage parts view's buttons that put kinds of part out of sight, as the
@@ -299,7 +306,22 @@ coming off, leg by leg, in the engine's own directions: `up`, `down`, `forward` 
 part goes along. A later mod's `"comes_off"` for a kind replaces the earlier one's, and a part's own beats its kind's.
 A kind's `"worked_from"`, `"above"` or `"below"`, is the side of the engine it goes on from: picking one on the stand turns
 the engine that side up (an oil pan turns it over, a cylinder head back). Only looks; a later mod's replaces the earlier
-one's, and a kind without one leaves the engine as it is.
+one's, and a kind without one leaves the engine as it is. A kind's `"tool"`, `"impact"`, has it heard coming off with the
+air gun (the drivetrain's big bolts, the wheels' lug nuts), else a socket wrench; a later mod's replaces the earlier one's.
+
+The running gear (everything on a car that is not its engine: wheels, brakes, springs, the rear axle) has kinds and rules
+in the same file, read the same way with two differences. A rule counts at the part's own corner: the base game's drum
+waits for its own wheel to be off (`{ "kind": "drum", "after": [ "rim" ] }`), not the other three; a part across an axle
+(the rear axle, a sway bar) counts at both its corners. And what is mounted on a part goes along without being in its way,
+so the rear axle drops whole with the brakes and springs it carries; only `"bare"` asks for them off first. `"stand_only"`
+means nothing to the running gear. `"hangs_on"` is the running gear's alone: the kinds a part sits on. On a car that has
+a part of such a kind, or whose factory running gear has one, the part goes on only once every place the car has for the
+kind holds one, and those come off only once the part is off: the base game's rear axle hangs on its leaf springs
+(`{ "kind": "rear_axle", "after": [ "rim" ], "hangs_on": [ "leaf_spring" ] }`), so a coil-sprung car's axle goes on freely.
+`"lifted": true` is the running gear's too: a part of the kind comes off and goes on only with the car up on the garage's
+lift, at either stop (the base game's `{ "kind": "rim", "lifted": true }`); the car comes down only with all four wheels on.
+`"comes_off"` legs are the car's own directions for the running gear: `forward` is the car's nose, `out` the side of the
+car the part is on.
 
 ```json
 {
@@ -343,6 +365,13 @@ one-shot cue `start` played as it begins. The base game's work sounds are `work.
 `work.lap`, `work.air`, `work.grind`, `work.press`, `work.road` and `work.counter`. A job without steps shows its name
 over the bench's sound. A job of the same id as an earlier mod's takes its place, whole;
 `"disabled": true` takes it out. The base game's jobs are in `Content\streetcorsa\parts\rebuilds.json`.
+
+A job with `"becomes": true` turns a part into another, with what is on it, its wear and its damage: the part names what
+in its pack, by the job's id (`"becomes": { "weld_spiders": "running_gear/axles_gm/gm_10bolt_welded_low" }` on the base
+game's open carriers, the welded carrier on the same shelf). It is offered only on parts that name one, and may restore
+nothing (`"restores": 0`): the part is no better, it is something else. Not for a machine shop. A target that is no part,
+or on another shelf, is told as a mod problem and left out. A welded carrier is priced by its own `price_lock` (how hard
+it locks, as the differentials' price reads it) rather than as the spool it acts like.
 
 The player's own work (a kit) lands round what the job can do: `roll` (0 to 0.5) is how far under `restores` it may come
 out, up to a quarter of it over, never worse than the part was; left out, 0.08 for a kit, none for an exchange unit,
@@ -509,6 +538,48 @@ decide. The base game declares neither.
 The base game's reading of every part is held in `tests/StreetCorsa.Tests/Fixtures/part_roles.txt`: a rename that
 changes what a part does fails `PartRolesSnapshotTests`.
 
+**Running gear of data** (step 31). The rear axle's parts are parts of data whose figures are `properties`: a housing
+(`"class_chain": ["RearAxle"]`, `strength` in Nm at the axle, `drag`), a carrier (`["Differential"]`, `diff_power`,
+`diff_coast`, `diff_preload` in Nm, `strength`), a ring and pinion (`["RingPinion"]`, `ratio`, `strength`) and an axle shaft
+(`["AxleShaft"]`, `strength`). The housing goes on the car's axle slot by its slot 1 and carries the carrier on its slot 2
+and the shafts on 3 and 4; the carrier carries the gears on its slot 2. A live axle's housing also has the rear corners'
+slots, by these ids: 5 and 6 the left and right brake, 7 and 8 the springs, 9 and 10 the shocks, 11 the rear sway bar (the
+right side's brake and shock slots turned half round, `"rotation": [3.14159265, 0, 0]`; the game draws them at the
+wheels whatever their positions). Only a car on a live axle (its data's rear suspension `AXLE`) carries them there, and
+never its leaf springs (`["LeafSpring", ...]`: the axle hangs on them, they stay on the car); a housing without them, or a
+car with an independent rear, leaves the rear running gear on the car's own slots. Give them standard fittings of your own family
+(`"takes": ["axle:mymod_banjo"]` on the housing, `"fits"` on the carrier) and `required_slots` with `"enforce": true` for
+what the axle cannot do without. `"came_in"` on a part says which cars it left the factory on, for the guess of a car's
+factory running gear: `{ "families": ["gm"], "makes": ["pontiac"], "torque": [460, null], "years": [1965, null] }` (Nm of
+the car's peak torque, model years; any may be left out, `{}` is any car's). A part without `came_in` (a spool, an alloy
+shaft) is never a factory part while there is one with it. For brakes and springs also `"countries"` (makes.json's: the
+base game's drums `["USA"]`), `"mass"` (the car's kg, `[1600, 2100]`), `"axle"` (`"front"` or `"rear"`), `"suspension"`
+(the axle's suspensions.ini `TYPE`s, `["AXLE"]` for a leaf spring) and `"option": true` (a dealer's option, only for a car
+cars.json picks it for). A corner part no `came_in` names a car for leaves that car on the source game's nearest.
+
+A **drum brake** (`"class_chain": ["DrumBrake", "Brake"]`) has the source game's brake figures (`force`, `friction`,
+`radius`, `number_of_calipers`) and how it heats: `torque_k` (°C per kJ of braking), `cool_transfer`, `cool_speed_factor`
+(Assetto Corsa's brakes.ini `[TEMPS_*]`); its shoes (`["BrakeShoes"]`, on its slot 2 by `shoes:drum`) a `friction` that
+multiplies the drum's and a `perf_curve`, an inline lut of °C to torque (`"(|0=0.9|230=1.0|380=0.55|)"`), and its wheel
+cylinder (`["WheelCylinder"]`, slot 3, `wcyl:drum`) a `force_factor`. A disc that fades says it all itself.
+
+A **leaf spring** (`["LeafSpring", "Spring"]`) has its rate in `force` (N/m at the wheel) and a `wrap` (how much it winds
+up under the axle's torque: the base game's multi-leaf 1); a **traction bar** (`["TractionBar"]`, on the leaf's slot 2 by
+`traction:leaf`) a `wrap_factor`. A **torsion bar** is `["TorsionBar", "Spring"]`. A **sway bar** (`["Swaybar"]`, on the
+car's own slots 402 front and 403 rear) gives its `arb_rate` (N/m, as suspensions.ini `[ARB]` counts it); one without does
+nothing and is not sold. Any running gear part can say the axle it goes on, `"fits_axle": "front"` or `"rear"` (the
+workbench offers it only there), and the suspension it needs, `"fits_suspension": "AXLE"` (the axle's suspensions.ini
+`TYPE`: a car whose data is otherwise cannot race on it). A spring, shock or bar of data without `came_in` is an
+aftermarket part, never a car's factory one.
+
+```json
+{ "id": "running_gear/banjo/housing", "display_name": "Banjo rear axle housing", "class_chain": [ "RearAxle" ], "mass": 60,
+  "came_in": { "makes": [ "mymake" ] }, "properties": { "strength": 3500, "drag": 0.012 },
+  "slots": [ { "id": 1, "name": "mount" }, { "id": 2, "name": "carrier", "takes": [ "axle:banjo" ] },
+             { "id": 3, "name": "left shaft", "takes": [ "shaft:banjo" ] }, { "id": 4, "name": "right shaft", "takes": [ "shaft:banjo" ] } ],
+  "required_slots": [ { "slot": 2, "message": "The rear axle needs its differential carrier.", "enforce": true } ] }
+```
+
 A part mounts by what its slots name (`attaches_to`, `compatible_with`: a part id and a slot, a reference as above)
 or by a standard fitting (`fits`/`takes`, e.g. `carb:4bbl`), which works across mods with no ids at all.
 `tools\SlrrPartsConverter` makes packs from SLRR `.rpk` files.
@@ -530,7 +601,10 @@ naming only that; a list (a make's words) is taken whole. What does not read is 
   nothing about which car or engine it is), for matching a car's name to an engine build's.
 - `cars`, by the AC car's folder name: what is given here is not worked out from the car's data. `engine`, the
   engine build it leaves the factory with (`engine_builds.json`, namespaced); `layout`, `front`, `mid`, `rear`, or `front_transverse` and `mid_transverse` for an engine lying across the car (guessed for a front-wheel-drive car; the garage draws it so);
-  `common`, how often it turns up for sale, 0 to 1; `make`, a make of `makes`. The base game's holds the factory
+  `common`, how often it turns up for sale, 0 to 1; `make`, a make of `makes`; `running_gear`, the factory rear axle as
+  far as it is given: `axle` (a housing's part id), `diff` (a carrier's), `ratio` (the gear set of that ratio that goes on
+  the carrier, the nearest there is), `shafts`, `brakes_front`, `brakes_rear`, `springs_front`, `springs_rear` (part ids); what
+is left out is guessed from the parts' `"came_in"` (see `parts`). The base game's holds the factory
   engines set by hand in the catalog editor (a developer's screen, which saves into the base game's `cars.json`).
   A car's price is never given: it costs its body by its weight (the rules' `cars`) and its factory parts (the
   shelves' `price`). A `price` a mod still gives is told as no longer read.
@@ -571,8 +645,14 @@ its own garage; one without a place in a garage takes it out of that garage. `cr
 the game shows its credits (Settings), as a CC BY licence asks. The published `bushradio` mod has `radio`, the set on the
 welder: clicking it opens the radio. The base game's `workbench` is where a loose part's "Work on it" job is shown; it names
 no model and the game draws its own (a mod's `workbench` may name one, its top 0.9 m up, its front +Z); a garage it has no place in
-has no bench, and a loose part's job is shown there without the part. `tools\Props` makes a prop's KN5: `prepare_prop.py` takes any model with PBR
-materials (a Sketchfab .glb, a .blend) through Blender, `PropBuilder` writes the KN5.
+has no bench, and a loose part's job is shown there without the part. The base game's `lift` is the in-ground post the
+car in the bay goes up on: it names no model and the game draws its own; a mod's may name one, whose rising part is a node
+named `lift_post` with the top of its saddle (where the car rests) at the node's origin. Its place gives the floor's height
+(the post stands under the middle of whatever car is in the bay); a garage it has no place in still lifts the car, with
+no lift drawn. `tools\Props` makes a prop's KN5: `prepare_prop.py` takes any model with PBR
+materials (a Sketchfab .glb, a .blend) through Blender, `PropBuilder` writes the KN5 (`--keep-origin` for a part's model,
+whose origin is where it mounts: see docs/systems/parts-system.md "The running gear's models" for the spaces).
+`tools\RunningGearParts` makes the base game's running gear models out of shapes.
 
 ### dealers
 

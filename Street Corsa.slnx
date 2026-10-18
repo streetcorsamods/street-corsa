@@ -14,5 +14,6 @@
     <Project Path="tools/DinerScene/DinerSceneBuilder/DinerSceneBuilder.csproj" />
     <Project Path="tools/PaintBoothScene/PaintBoothSceneBuilder/PaintBoothSceneBuilder.csproj" />
     <Project Path="tools/Props/PropBuilder/PropBuilder.csproj" />
+    <Project Path="tools/RunningGearParts/RunningGearParts/RunningGearParts.csproj" />
   </Folder>
 </Solution>

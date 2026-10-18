@@ -81,6 +81,7 @@ public sealed class PartsCatalog
         var registry = new ContentRegistry<PartDefinition>("part");
         var builds = new ContentRegistry<EngineBuild>("engine build");
         var aliases = new List<(ModInfo Mod, string Gone, string Current)>();
+        var models = new List<(ModInfo Mod, string Root, string Label, string Part, string Model)>();
 
         foreach (var (mod, root) in roots)
         {
@@ -117,6 +118,7 @@ public sealed class PartsCatalog
             }
 
             ReadAliases(catalog, root, label, mod, aliases);
+            ReadModels(catalog, root, label, mod, models);
             ReadBuilds(catalog, root, label, mod, builds);
         }
 
@@ -153,6 +155,7 @@ public sealed class PartsCatalog
         catalog._problems.AddRange(catalog.Rebuilds.UnknownNames(
             catalog._parts.Values.Select(catalog.WorkOrder.KindOf).OfType<string>(),
             catalog._parts.Values.Select(PartKinds.GroupOf)));
+        catalog.Rebuilds.CheckBecomes(catalog._parts.Values, catalog.Get, catalog._problems);
 
         // What each part does for the cooling, where its kind says: the cooling reads it off the part
         if (catalog.WorkOrder.TellsCooling)
@@ -171,6 +174,29 @@ public sealed class PartsCatalog
             // An alias names a part that was: it has no entry to find, so it is the mod's own unless written in full
             var from = ModIds.IsQualified(gone) ? ModIds.Normalize(gone) : ModIds.Qualify(mod.Id, gone);
             catalog._aliases[from] = Resolve(mod.Id, current);
+        }
+
+        // Models a mod gives other parts, in load order: the latest mod's wins
+        foreach (var (mod, root, label, key, model) in models)
+        {
+            if (!PathNames.TryCombineUnder(root, model, out var file) || !File.Exists(file))
+            {
+                catalog._problems.Add($"{label}{PartPack.ModelsFileName}: {key}: no model {model}; left out");
+                continue;
+            }
+
+            var prefix = key.EndsWith('*') ? key[..^1] : null;
+            var exact = prefix == null ? Resolve(mod.Id, key) : null;
+            var matched = 0;
+            foreach (var part in catalog._parts.Values.Where(p => prefix != null ? p.Id.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+                                                                                 : p.Id.Equals(exact, StringComparison.OrdinalIgnoreCase)))
+            {
+                part.Model = model;
+                part.ModelFolder = root;
+                matched++;
+            }
+
+            if (matched == 0) catalog._problems.Add($"{label}{PartPack.ModelsFileName}: {key} names no part; left out");
         }
 
         // Slots nudged into place in the garage since the last conversion, by full id: the file is the base game's
@@ -225,6 +251,39 @@ public sealed class PartsCatalog
         {
             catalog._problems.Add($"{label}{PartPack.AliasesFileName}: {ex.Message}; parts that changed ids are not found by their old ones");
         }
+    }
+
+    private static void ReadModels(PartsCatalog catalog, string root, string label, ModInfo mod,
+        List<(ModInfo, string, string, string, string)> models)
+    {
+        var modelsFile = Path.Combine(root, PartPack.ModelsFileName);
+        try
+        {
+            if (!File.Exists(modelsFile)) return;
+
+            var read = JsonConvert.DeserializeObject<ModelsFile>(File.ReadAllText(modelsFile));
+            foreach (var (part, model) in read?.Models ?? new())
+            {
+                if (string.IsNullOrWhiteSpace(part) || string.IsNullOrWhiteSpace(model) || part.Trim() == "*")
+                {
+                    catalog._problems.Add($"{label}{PartPack.ModelsFileName}: \"{part}\": \"{model}\" names no part or no model; left out");
+                    continue;
+                }
+
+                models.Add((mod, root, label, part.Trim(), model.Trim()));
+            }
+        }
+        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+        {
+            catalog._problems.Add($"{label}{PartPack.ModelsFileName}: {ex.Message}; the parts keep their own models");
+        }
+    }
+
+    /// <summary>A mod's <see cref="PartPack.ModelsFileName"/>: part id (or the start of one, ending in <c>*</c>) to model</summary>
+    private sealed class ModelsFile
+    {
+        [JsonProperty("models")]
+        public Dictionary<string, string>? Models { get; set; }
     }
 
     private static void ReadBuilds(PartsCatalog catalog, string root, string label, ModInfo mod, ContentRegistry<EngineBuild> builds)
@@ -315,6 +374,22 @@ public sealed class PartsCatalog
         static bool Fits(List<(PartDefinition Part, PartSlot Slot)> from, List<(PartDefinition Part, PartSlot Slot)> to) =>
             from.Any(f => f.Slot.Fits.Any(fitting => to.Any(t => t.Slot.Takes.Contains(fitting, StringComparer.OrdinalIgnoreCase))));
     }
+
+    /// <summary>
+    /// The parts of a group that go on the parent's slot (<see cref="FindMountable"/>), each once whatever the case of its
+    /// id, in the order of their ids; none for a part without the slot
+    /// </summary>
+    public List<PartDefinition> MountableOf(PartDefinition parent, int slotId, string group) =>
+        parent.Slots.FirstOrDefault(s => s.Id == slotId) is { } slot ? MountableOf(parent, slot, group) : [];
+
+    /// <inheritdoc cref="MountableOf(PartDefinition, int, string)"/>
+    public List<PartDefinition> MountableOf(PartDefinition parent, PartSlot slot, string group) =>
+        FindMountable(parent, slot).Select(m => m.Part).Where(p => PartKinds.GroupOf(p) == group)
+            .DistinctBy(p => p.Id, StringComparer.OrdinalIgnoreCase).OrderBy(p => p.Id, StringComparer.Ordinal).ToList();
+
+    /// <summary>The parts of a group, in the order of their ids</summary>
+    public List<PartDefinition> InGroup(string group) =>
+        _parts.Values.Where(p => PartKinds.GroupOf(p) == group).OrderBy(p => p.Id, StringComparer.Ordinal).ToList();
 
     /// <summary>
     /// Every part that goes on a slot, with the slot of its own it goes on by: the same answer as trying
@@ -429,8 +504,8 @@ public sealed class PartsCatalog
     {
         if (part.Model == null) return null;
 
-        if (part.PackFolder != null)
-            return PathNames.TryCombineUnder(part.PackFolder, part.Model, out var own) ? own : null;
+        if ((part.ModelFolder ?? part.PackFolder) is { } folder)
+            return PathNames.TryCombineUnder(folder, part.Model, out var own) ? own : null;
 
         var packEnd = part.Id.LastIndexOf('/');
         if (packEnd <= 0) return null;

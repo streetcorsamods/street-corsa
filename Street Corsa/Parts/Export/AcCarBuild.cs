@@ -1,3 +1,4 @@
+using StreetCorsa.Models.GameState;
 using StreetCorsa.Parts.Cars;
 using StreetCorsa.Parts.Logic;
 
@@ -15,8 +16,17 @@ public sealed class CarBuild
     /// <summary>What is on the wheel slots; null leaves the car's running gear as its data has it</summary>
     public CornerParts[]? RunningGear { get; init; }
 
+    /// <summary>The sway bars on the car, front and rear; null leaves the car's [ARB] as its data has it</summary>
+    public (PartInstance? Front, PartInstance? Rear)? SwayBars { get; init; }
+
     /// <summary>The running gear the car's data describes</summary>
     public (RunningGearFactory.AxleParts Front, RunningGearFactory.AxleParts Rear)? FactoryRunningGear { get; init; }
+
+    /// <summary>What is on the car's rear axle; null leaves the final drive and differential to the gearbox</summary>
+    public RearAxleParts? RearAxle { get; init; }
+
+    /// <summary>The rear axle the car's data describes; null for a car without one (its rear wheels not driven)</summary>
+    public RearAxleChoice? FactoryAxle { get; init; }
 
     /// <summary>The damage the car goes in with; null or none leaves the data as the parts make it</summary>
     public Models.Race.RaceStartState? Damage { get; init; }
@@ -60,7 +70,14 @@ public static class AcCarBuild
         {
             // The running gear reads what the engine left (the mass in car.ini) before the car's own files
             string? Read(string name) => result.Files.GetValueOrDefault(name) ?? readFile(name);
-            foreach (var (name, content) in AcRunningGearData.Generate(catalog, build.RunningGear, factory, Read, result.Problems)) result.Files[name] = content;
+            foreach (var (name, content) in AcRunningGearData.Generate(catalog, build.RunningGear, factory, Read, result.Problems, build.SwayBars)) result.Files[name] = content;
+        }
+
+        // The axle after the engine: its final drive and differential over the gearbox's, its weight over the running gear's
+        if (build.RearAxle != null && build.FactoryAxle is { } axle)
+        {
+            string? Read(string name) => result.Files.GetValueOrDefault(name) ?? readFile(name);
+            foreach (var (name, content) in AcAxleData.Generate(catalog, build.RearAxle, axle, Read, readFile, result.Problems)) result.Files[name] = content;
         }
 
         // Last: the damage goes on top of what the parts made of the files

@@ -160,9 +160,24 @@ namespace StreetCorsa.Screens.Shared
             var playerShown = ShownForRaceAsync(entry.PlayerCar);
             var opponentShown = opponentStart == null ? Task.FromResult<ShownSet?>(null) : ShownForRaceAsync(entry.OpponentCar!);
             await Task.WhenAll(playerShown, opponentShown);
-            intent.PlayerStart = playerStart with { Cooling = playerData?.Cooling, Shown = playerShown.Result };
-            intent.OpponentStart = opponentStart == null ? null : opponentStart with { Cooling = opponentData?.Cooling, Shown = opponentShown.Result };
+            intent.PlayerStart = playerStart with { Cooling = playerData?.Cooling, Shown = playerShown.Result, AxleStrength = AxleStrength(entry.PlayerCar) };
+            intent.OpponentStart = opponentStart == null ? null : opponentStart with { Cooling = opponentData?.Cooling, Shown = opponentShown.Result,
+                AxleStrength = AxleStrength(entry.OpponentCar!) };
             return new RaceSetupResult { Intent = intent };
+        }
+
+        /// <summary>What the car's rear axle holds, for the race mode to break it past that; null without an axle of parts</summary>
+        private double? AxleStrength(Car car)
+        {
+            try
+            {
+                return _parts.IsAvailable && car.HasAxleAssigned ? RearAxle.Weakest(_parts.Catalog, RearAxle.Mounted(car.Parts))?.Strength : null;
+            }
+            catch (Exception ex)
+            {
+                _logger.Warning("{Car}: what its rear axle holds could not be told, nothing on it breaks: {Error}", car.DefinitionId, ex.Message);
+                return null;
+            }
         }
 
         /// <summary>What the car shows in the race, its wear layer's model and its paint's textures written for it</summary>

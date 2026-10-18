@@ -71,7 +71,7 @@ public static class AttendantCheck
 
         if (car.HasRunningGearAssigned)
         {
-            var corners = RunningGear.Mounted(car.Parts);
+            var corners = RunningGear.Mounted(car.Parts, catalog == null ? null : CarCondition.Groups(catalog));
             for (var i = 0; i < corners.Length; i++)
             {
                 // Tread he can see at every corner; a blown tyre is no hint, it is flat
@@ -81,7 +81,7 @@ public static class AttendantCheck
             // The brakes grind on the way in, the shocks bounce when he leans on the fender: an axle's worst
             foreach (var first in new[] { 0, 2 })
             {
-                Worn(hints, "station.hint.brakes", new[] { corners[first].Brake, corners[first + 1].Brake }.OfType<PartInstance>(), RunningGear.AxleName(first));
+                Worn(hints, "station.hint.brakes", new[] { corners[first].Shoes ?? corners[first].Brake, corners[first + 1].Shoes ?? corners[first + 1].Brake }.OfType<PartInstance>(), RunningGear.AxleName(first));
                 Worn(hints, "station.hint.shocks", new[] { corners[first].Shock, corners[first + 1].Shock }.OfType<PartInstance>(), RunningGear.AxleName(first));
             }
         }

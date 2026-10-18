@@ -823,6 +823,10 @@ namespace StreetCorsa.Services.Opponents
             var shelves = _partShops?.RivalPrices(gameState, date);
             Func<StreetCorsa.Parts.PartDefinition, decimal>? newPrice = shelves == null ? null : shelves.PriceOf;
 
+            // Once the engine makes the power for them, a posi and gears go in before more power: one thing a day
+            jobs = jobs.Where(job => !TuneAxle(gameState, job, catalog, newPrice ?? (p => EngineTuner.NewPrice(p, prices)), shelves, date, talk)).ToList();
+            if (jobs.Count == 0) return;
+
             var results = await Task.Run(() => jobs.Select(job =>
             {
                 try
@@ -913,6 +917,30 @@ namespace StreetCorsa.Services.Opponents
             }
         }
 
+        /// <summary>
+        /// Puts the next part on the racer's rear axle when the engine makes the power for it (<see cref="AxleTuner"/>): a
+        /// posi, then shorter gears, from the shops' shelves; what came off goes into the paper. True when it did.
+        /// </summary>
+        private bool TuneAxle(GameState gameState, TuneJob job, StreetCorsa.Parts.PartsCatalog catalog, Func<StreetCorsa.Parts.PartDefinition, decimal> price,
+            RivalPriceList? shelves, DateTime date, List<string> talk)
+        {
+            var (racer, car) = (job.Racer, job.Car);
+            if (AxleTuner.NextPart(catalog, car.Parts, car.PowerHp ?? 0, Math.Min(job.Budget, racer.Money), price) is not { } part) return false;
+
+            var cost = price(part);
+            if (AxleTuner.Fit(catalog, car.Parts, part) is not { } removed) return false;
+
+            racer.Money -= cost;
+            if (shelves != null && _partShops != null && shelves.TryGetShop(part.Id, out var shopId, out _)) _partShops.TakeForRival(gameState, shopId, part.Id);
+            if (RivalPartAds.Post(gameState, catalog, racer, removed, date, _random.NextDouble(), _partShops?.Catalog.All) is null)
+                racer.Money += PartPricing.TradeIn(catalog, removed);
+
+            var name = part.DisplayName ?? part.Name;
+            talk.Add(Say("street.tuned_axle", racer, car, new TextValues { ["change"] = name }));
+            _logger.Information("{Racer} put a {Part} in the {Car}'s rear axle for ${Cost}, ${Money} left", racer.Name, part.Id, car.DefinitionId, cost, racer.Money);
+            return true;
+        }
+
         private sealed record TuneJob(Opponent Racer, Car Car, Guid EngineId, PartInstance Engine, decimal Budget, int Seed, List<UsedPartOffer> Used,
             Func<PartInstance, double, double>? CoolingOf);
 
@@ -923,7 +951,7 @@ namespace StreetCorsa.Services.Opponents
         {
             if (!_parts.IsAvailable) return;
 
-            foreach (var car in AllRivalCars(gameState).Where(c => !c.HasPartsAssigned || !c.HasRunningGearAssigned).ToList())
+            foreach (var car in AllRivalCars(gameState).Where(c => !c.HasPartsAssigned || !c.HasRunningGearAssigned || c.GearVersion < RunningGearFactory.GearVersion).ToList())
             {
                 try
                 {

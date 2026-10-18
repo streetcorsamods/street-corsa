@@ -39,7 +39,8 @@ public sealed record CarAnchors(Vector3 WheelLF, Vector3 WheelRF, Vector3 WheelL
 /// nothing about engine bays or suspension mounts: a longitudinal engine with the gearbox bolted to its back (in the
 /// front or ahead of the rear axle facing forward, behind the rear axle turned around) or one lying across the car,
 /// the wheel and the brake on the
-/// hub, a coil spring and a shock next to every wheel.
+/// hub, a coil spring and a shock next to every wheel, the rear axle on the line between the rear hubs. The wheels are
+/// the AC model's own wheels' places: the view hides those while the parts are on show, so both never show at once.
 /// Part models have their front towards -Z while AC cars face +Z, hence the frames below.
 /// </summary>
 public static class CarPartsLayout
@@ -68,6 +69,15 @@ public static class CarPartsLayout
     private const float BrakeInboard = 0.06f;
     private const float SpringInboard = 0.24f;
     private const float SpringSeatBelowHub = 0.06f;
+    private const float SwayBarAheadOfAxle = 0.15f;
+
+    // The rear axle housing's models end 0.655 m out each side (tools/RunningGearParts); on the car each end goes into
+    // the drum, this far in from the hub, its tubes drawn longer to the car's track and its middle (this far either side
+    // of the centre) its own size. Into the drum, not just to its backing plate: the drum hides an end that goes too far,
+    // a gap shows (the owner's look in game)
+    private const float HousingHalfWidth = 0.655f;
+    private const float HousingEndInsideHub = 0.02f;
+    private const float HousingMiddle = 0.25f;
 
     /// <param name="engine">The car's engine block with everything on it; null for an empty engine bay</param>
     /// <param name="gear">What sits on the car's wheel slots, each with what is on it (the tyre on the rim)</param>
@@ -80,12 +90,15 @@ public static class CarPartsLayout
 
         foreach (var part in gear ?? Array.Empty<CarPart>())
         {
-            // Rims and tyres are not drawn: the Assetto Corsa model brings its own wheels, and the part ones
-            // land on the very same WHEEL_* dummies, so both show at once. They are still parts - mounted,
-            // bought, sold and exported to the car's physics as before - they just have no model here.
-            if (RunningGear.IsWheelSlot(part.CarSlot)) continue;
+            if (part.CarSlot == Cars.RearAxle.CarSlot)
+            {
+                result.AddRange(Axle(anchors, part.Root));
+                continue;
+            }
 
-            if (CornerPlacement(anchors, part.Root.Definition, part.CarSlot) is { } world) result.AddRange(PartAssembler.Assemble(part.Root, world));
+            var world = RunningGear.IsSwayBarSlot(part.CarSlot) ? SwayBarPlacement(anchors, part.Root.Definition, part.CarSlot)
+                : CornerPlacement(anchors, part.Root.Definition, part.CarSlot);
+            if (world is { } placed) result.AddRange(PartAssembler.Assemble(part.Root, placed));
         }
 
         return result;
@@ -96,7 +109,80 @@ public static class CarPartsLayout
     /// (an engine) in the engine's place. Null for a slot of a wheel's corner whose hubs don't tell which way is in.
     /// </summary>
     public static Matrix4x4? CarLevelPlacement(PartsCatalog catalog, CarAnchors anchors, PartDefinition part, int carSlot, EngineLayout layout) =>
-        RunningGear.CornerOf(carSlot) < 0 ? EnginePlacement(catalog, anchors, part, layout) : CornerPlacement(anchors, part, carSlot);
+        carSlot == Cars.RearAxle.CarSlot ? AxlePlacement(anchors, part)
+        : RunningGear.IsSwayBarSlot(carSlot) ? SwayBarPlacement(anchors, part, carSlot)
+        : RunningGear.CornerOf(carSlot) < 0 ? EnginePlacement(catalog, anchors, part, layout) : CornerPlacement(anchors, part, carSlot);
+
+    /// <summary>
+    /// The rear axle housing: its mount (slot 1) in the middle of the rear hubs, facing the way the car does, so its +X
+    /// (the left shaft's side) is the car's left
+    /// </summary>
+    public static Matrix4x4 AxlePlacement(CarAnchors anchors, PartDefinition housing) => BySlot(housing, CarFrame(anchors.Forward), anchors.RearAxle);
+
+    /// <summary>How much longer a housing's tubes are drawn so its ends go into the drums at the car's own track</summary>
+    public static PartStretch AxleStretch(CarAnchors anchors)
+    {
+        var halfTrack = Vector3.Distance(anchors.WheelLR, anchors.WheelRR) / 2f;
+        var factor = halfTrack > 0.3f
+            ? Math.Clamp((halfTrack - HousingEndInsideHub - HousingMiddle) / (HousingHalfWidth - HousingMiddle), 0.5f, 2f)
+            : 1f;
+        return new PartStretch(HousingMiddle, factor);
+    }
+
+    /// <summary>
+    /// The rear axle and what is on it: the housing with its tubes drawn out to the car's track (<see cref="AxleStretch"/>),
+    /// the carrier and gears in its middle as they are, the shafts (inside the tubes) moved out as far as the tubes' ends,
+    /// and the brakes, springs, shocks and sway bar it carries (with what is on them) where they would be on the car's own
+    /// slots they stand for: at the wheel, whatever the car's track
+    /// </summary>
+    private static List<PlacedPart> Axle(CarAnchors anchors, InstalledPart housing)
+    {
+        var world = AxlePlacement(anchors, housing.Definition);
+        var stretch = AxleStretch(anchors);
+        var across = Vector3.Normalize(Vector3.TransformNormal(Vector3.UnitX, world));
+        var outward = stretch.At(HousingHalfWidth) - HousingHalfWidth;
+
+        var placed = PartAssembler.Assemble(housing, world);
+        var at = new Dictionary<InstalledPart, Matrix4x4>(ReferenceEqualityComparer.Instance);
+        foreach (var p in placed.Where(p => p.Source != null)) at[p.Source!] = p.World;
+
+        // What each part on a corner slot of the housing moves by, with everything on it
+        var moved = new Dictionary<InstalledPart, Matrix4x4>(ReferenceEqualityComparer.Instance);
+        foreach (var (slot, child) in housing.Children)
+        {
+            if (RearAxle.CarSlotFor(slot) is not { } carSlot || !at.TryGetValue(child, out var old) || !Matrix4x4.Invert(old, out var undo)) continue;
+            var wanted = RunningGear.IsSwayBarSlot(carSlot) ? SwayBarPlacement(anchors, child.Definition, carSlot) : CornerPlacement(anchors, child.Definition, carSlot);
+            if (wanted is not { } target) continue;
+            foreach (var part in child.SelfAndDescendants()) moved[part] = undo * target;
+        }
+
+        return placed.Select(p =>
+        {
+            if (ReferenceEquals(p.Source, housing)) return p with { Stretch = stretch };
+            if (p.Source != null && moved.TryGetValue(p.Source, out var by)) return p with { World = p.World * by };
+            if (PartKinds.GroupOf(p.Part) != PartKinds.AxleShafts) return p;
+            var side = MathF.Sign(Vector3.Dot(p.World.Translation - world.Translation, across));
+            return p with { World = p.World * Matrix4x4.CreateTranslation(across * (side * outward)) };
+        }).ToList();
+    }
+
+    /// <summary>
+    /// Where a loose part goes on a mounted part's slot: on the rear axle's slot that stands for one of the car's own (a
+    /// rear brake, spring, shock or sway bar), where it would on that car slot; elsewhere where the slot puts it
+    /// </summary>
+    public static Matrix4x4? PlacementOn(PartsCatalog catalog, CarAnchors? anchors, PartDefinition parent, int parentSlot, Matrix4x4 parentWorld,
+        PartDefinition part, int ownSlot, EngineLayout layout) =>
+        anchors != null && PartKinds.GroupOf(parent) == PartKinds.RearAxles && RearAxle.CarSlotFor(parentSlot) is { } carSlot
+            ? CarLevelPlacement(catalog, anchors, part, carSlot, layout)
+            : PartAssembler.ChildWorld(parent, parentSlot, part, ownSlot, parentWorld);
+
+    /// <summary>
+    /// A sway bar across its axle: its mount (slot 1) a little ahead of the middle of the axle's hubs, facing the way the
+    /// car does
+    /// </summary>
+    public static Matrix4x4 SwayBarPlacement(CarAnchors anchors, PartDefinition bar, int carSlot) =>
+        BySlot(bar, CarFrame(anchors.Forward),
+            (carSlot == RunningGear.FrontSwayBarSlot ? anchors.FrontAxle : anchors.RearAxle) + anchors.Forward * SwayBarAheadOfAxle);
 
     /// <summary>A wheel-side part on its hub: the brake on it, a spring or a shock next to it; null for a slot of no corner</summary>
     private static Matrix4x4? CornerPlacement(CarAnchors anchors, PartDefinition part, int carSlot)
@@ -114,8 +200,15 @@ public static class CarPartsLayout
         var side = SideFrame(anchors.Forward, inboard);
         if (carSlot == RunningGear.BrakeSlot(corner)) return BySlot(part, side, hub + inboard * BrakeInboard);
 
+        // A wheel by the middle of its tyre on the hub, where the car's own wheel has its middle (its WHEEL_* dummy): the
+        // rim's tyre seat, else the face it bolts on by. The source game's rims are modelled the other way round from the
+        // running gear: their face is -X (the owner's look in game), so a wheel is turned round
+        if (carSlot == RunningGear.WheelSlot(corner)) return BySlot(part, SideFrame(anchors.Forward, -inboard), hub, RunningGear.TyreSlotOnRim);
+
+        // A spring faces the way the car does on both sides: a leaf spring with its traction bar, a torsion bar, run along
+        // the car and are not the same end to end, which turning them round would swap on the right (a coil is round)
         var springSeat = hub + inboard * SpringInboard - Vector3.UnitY * SpringSeatBelowHub;
-        return BySlot(part, side, springSeat);
+        return BySlot(part, carSlot == RunningGear.SpringSlot(corner) ? CarFrame(anchors.Forward) : side, springSeat);
     }
 
     /// <summary>Where an engine block sits in the car by the car's layout, its model measured through the catalog</summary>
@@ -165,10 +258,13 @@ public static class CarPartsLayout
     /// <summary>Z of the middle of a block's length in its own space</summary>
     private static float MiddleZ((Vector3 Min, Vector3 Max)? bounds) => bounds is { } box ? (box.Min.Z + box.Max.Z) / 2 : 0f;
 
-    /// <summary>Places a part so that its first slot (where it meets the car) lands on a point</summary>
-    private static Matrix4x4 BySlot(PartDefinition part, Matrix4x4 frame, Vector3 target)
+    /// <summary>
+    /// Places a part so that its first slot (where it meets the car) lands on a point, or the slot
+    /// <paramref name="slotId"/> when it has one
+    /// </summary>
+    private static Matrix4x4 BySlot(PartDefinition part, Matrix4x4 frame, Vector3 target, int slotId = 1)
     {
-        var slot = part.Slots.FirstOrDefault(s => s.Id == 1) ?? part.Slots.FirstOrDefault();
+        var slot = part.Slots.FirstOrDefault(s => s.Id == slotId) ?? part.Slots.FirstOrDefault(s => s.Id == 1) ?? part.Slots.FirstOrDefault();
         var slotLocal = slot == null ? Vector3.Zero : new Vector3(slot.Position[0], slot.Position[1], slot.Position[2]);
         var origin = target - Vector3.TransformNormal(slotLocal, frame);
         return frame * Matrix4x4.CreateTranslation(origin);

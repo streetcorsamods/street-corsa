@@ -66,7 +66,7 @@ public static class Rebuilding
         if (!(resaleFactor > 0) || !double.IsFinite(resaleFactor)) return cost;
 
         var after = PartTrees.Clone(part, keepIds: true);
-        Apply(job, after, Best(job));
+        Apply(job, after, Best(job), catalog);
         var gained = PartPricing.WorthOfAssembly(catalog, after) - PartPricing.WorthOfAssembly(catalog, part);
         return gained > 0 ? Math.Max(cost, Math.Ceiling(PartPricing.Round(gained * resaleFactor))) : cost;
     }
@@ -77,7 +77,7 @@ public static class Rebuilding
     {
         var wear = Unit.Clamp01(part.Wear, 1);
         var damaged = job.FixesDamage && Unit.Clamp01(part.Tear, 1) < PartInstance.Undamaged;
-        if (wear >= job.Restores - Enough && !damaged) return PartWords.Say("rebuild.why.no_need");
+        if (wear >= job.Restores - Enough && !damaged && !job.Becomes) return PartWords.Say("rebuild.why.no_need");
         if (wear < job.MinWear) return PartWords.Say("rebuild.why.too_worn");
         if (job.Off && !loose) return PartWords.Say(job.IsExchange ? "rebuild.why.off.exchange" : "rebuild.why.off");
         if (job.Bare && part.Children.Count > 0) return PartWords.Say("rebuild.why.bare");
@@ -97,23 +97,31 @@ public static class Rebuilding
             .ToList();
     }
 
-    /// <summary>Does the job on the part: its mileage up to what the job leaves it in, its damage off for a rebuilt unit</summary>
-    public static void Apply(RebuildJob job, PartInstance part) => Apply(job, part, job.Restores);
+    /// <summary>
+    /// Does the job on the part: its mileage up to what the job leaves it in, its damage off for a rebuilt unit; a job that
+    /// turns it into another (<see cref="RebuildJob.Becomes"/>) makes it the part its pack names, given the catalog
+    /// </summary>
+    public static void Apply(RebuildJob job, PartInstance part, PartsCatalog? catalog = null) => Apply(job, part, job.Restores, catalog);
 
-    private static void Apply(RebuildJob job, PartInstance part, double restores)
+    private static void Apply(RebuildJob job, PartInstance part, double restores, PartsCatalog? catalog)
     {
         part.Wear = Math.Max(Unit.Clamp01(part.Wear, 1), restores);
         if (job.FixesDamage) part.Tear = 1;
+        if (BecomesOf(job, part, catalog) is { } into) part.DefinitionId = into;
     }
+
+    /// <summary>The part the job turns this one into (its pack's <see cref="PartDefinition.Becomes"/>); null for a job that does not</summary>
+    public static string? BecomesOf(RebuildJob job, PartInstance part, PartsCatalog? catalog) =>
+        job.Becomes && catalog?.Get(part.DefinitionId)?.Becomes?.GetValueOrDefault(job.Id) is { } into && catalog.Get(into) is { } definition ? definition.Id : null;
 
     /// <summary>
     /// Does the job on the part as it comes out (<see cref="Landing"/>): the work lands round what it can do, a little
     /// over or under it for the player's own, never worse than the part was
     /// </summary>
-    public static RebuildOutcome Do(RebuildJob job, PartInstance part, Random random)
+    public static RebuildOutcome Do(RebuildJob job, PartInstance part, Random random, PartsCatalog? catalog = null)
     {
         var (lands, quality) = Landing(job, random.NextDouble());
-        Apply(job, part, lands);
+        Apply(job, part, lands, catalog);
         return new RebuildOutcome(Unit.Clamp01(part.Wear, 1), quality);
     }
 

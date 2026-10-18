@@ -30,6 +30,7 @@ internal sealed class CarBodyRock
     private BodyPose _pose = BodyPose.Rest;
     private float _wheelSpin;
     private float _steer;
+    private float _droop;
 
     // Where each front wheel's middle is in the car's own space, by corner ("LF"): its disc and hub steer about it too
     private readonly Dictionary<string, Sx.Vector3> _steerAt = new(StringComparer.OrdinalIgnoreCase);
@@ -159,16 +160,19 @@ internal sealed class CarBodyRock
     /// Puts the body where the pose says, with the wheels turned <paramref name="wheelSpin"/> radians about their
     /// axles (a car rolling along) and the front ones steered <paramref name="steer"/> radians (positive the way the car
     /// turns about +y); false when nothing changed. A car on the move gives where it now stands as
-    /// <paramref name="placement"/>: the car's own matrix is where the lean goes, so it cannot be set apart from it.
+    /// <paramref name="placement"/>: the car's own matrix is where the lean goes, so it cannot be set apart from it. A car
+    /// up on the garage's lift has its wheels, hubs and suspension hanging <paramref name="droop"/> metres below the body.
     /// </summary>
-    public bool Apply(BodyPose pose, float wheelSpin = 0f, Sx.Matrix? placement = null, float steer = 0f)
+    public bool Apply(BodyPose pose, float wheelSpin = 0f, Sx.Matrix? placement = null, float steer = 0f, float droop = 0f)
     {
         var moved = placement is { } p && p != _base;
-        if (pose == _pose && wheelSpin == _wheelSpin && steer == _steer && !moved) return false;
+        if (pose == _pose && wheelSpin == _wheelSpin && steer == _steer && droop == _droop && !moved) return false;
         if (placement is { } place) _base = place;
         _pose = pose;
         _wheelSpin = wheelSpin;
         _steer = steer;
+        _droop = droop;
+        var hang = Sx.Matrix.Translation(0f, -droop, 0f);
         var spin = Sx.Matrix.RotationX(wheelSpin * _frontSign);
 
         var lean = Sx.Matrix.Translation(-_pivot)
@@ -194,6 +198,9 @@ internal sealed class CarBodyRock
                 var at = _steerAt.TryGetValue(held.Corner, out var middle) ? middle : Position(held.Local * held.ToCar);
                 inCar *= Sx.Matrix.Translation(-at) * Sx.Matrix.RotationY(steer) * Sx.Matrix.Translation(at);
             }
+
+            // Hanging off the lifted body: every group as far down, so one nested in another stays where it is in it
+            if (droop != 0f) inCar *= hang;
 
             // Where it goes in the car's space, the body's lean undone; set against its parent group's place when it is
             // nested in one (put there already: parents come first), and the nodes between them, else against the car
@@ -244,6 +251,7 @@ internal sealed class CarBodyRock
         _pose = BodyPose.Rest;
         _wheelSpin = 0f;
         _steer = 0f;
+        _droop = 0f;
         _shadowed = BodyPose.Rest;
         WorldLean = Sx.Matrix.Identity;
     }

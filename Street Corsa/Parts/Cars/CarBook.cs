@@ -272,6 +272,12 @@ public sealed class CarBook
                 problems.Add($"cars.{id}.common {common} is not 0 to 1; worked out from the car");
                 car.Common = null;
             }
+
+            if (car.RunningGear?.Ratio is { } ratio && (!double.IsFinite(ratio) || ratio is < 1 or > 10))
+            {
+                problems.Add($"cars.{id}.running_gear.ratio {ratio} is not 1 to 10; guessed from the car");
+                car.RunningGear.Ratio = null;
+            }
         }
 
         var aliases = new Dictionary<string, string>((words.Aliases ?? []).Where(a => !string.IsNullOrWhiteSpace(a.Value)), StringComparer.OrdinalIgnoreCase);
@@ -380,6 +386,10 @@ public sealed class CarEntry
     [JsonPropertyName("engine_offset")]
     public float[]? EngineOffset { get; set; }
 
+    /// <summary>The running gear it leaves the factory with, as far as it is given: the rest is guessed from its data</summary>
+    [JsonPropertyName("running_gear")]
+    public RunningGearPicks? RunningGear { get; set; }
+
     public EngineLayout? EngineLayout => EngineLayouts.Parse(Layout);
 
     /// <summary>The engine offset; zero when none is given or it is not three numbers within a metre</summary>
@@ -388,4 +398,54 @@ public sealed class CarEntry
 
     /// <summary>The furthest an engine is moved from its place, metres</summary>
     public const float MaxEngineOffset = 1f;
+}
+
+/// <summary>
+/// A car's factory running gear as cars.json gives it (<c>"running_gear"</c>), part ids as engine builds are given; what is
+/// left out, or names no part of the catalog, is guessed (<see cref="RunningGearGuess"/>)
+/// </summary>
+public sealed class RunningGearPicks
+{
+    /// <summary>The rear axle housing</summary>
+    [JsonPropertyName("axle")]
+    public string? Axle { get; set; }
+
+    /// <summary>The differential carrier</summary>
+    [JsonPropertyName("diff")]
+    public string? Diff { get; set; }
+
+    /// <summary>The final drive: the ring and pinion of this ratio that goes on the carrier (the nearest there is)</summary>
+    [JsonPropertyName("ratio")]
+    public double? Ratio { get; set; }
+
+    /// <summary>The axle shafts</summary>
+    [JsonPropertyName("shafts")]
+    public string? Shafts { get; set; }
+
+    /// <summary>The brakes of each axle (a drum brake gets its shoes and wheel cylinder as the guess gives them)</summary>
+    [JsonPropertyName("brakes_front")]
+    public string? BrakesFront { get; set; }
+
+    [JsonPropertyName("brakes_rear")]
+    public string? BrakesRear { get; set; }
+
+    /// <summary>The springs of each axle: a coil, a leaf spring, a torsion bar</summary>
+    [JsonPropertyName("springs_front")]
+    public string? SpringsFront { get; set; }
+
+    [JsonPropertyName("springs_rear")]
+    public string? SpringsRear { get; set; }
+
+    public string? Brakes(bool front) => front ? BrakesFront : BrakesRear;
+
+    public string? Springs(bool front) => front ? SpringsFront : SpringsRear;
+
+    public bool IsEmpty => string.IsNullOrEmpty(Axle) && string.IsNullOrEmpty(Diff) && Ratio == null && string.IsNullOrEmpty(Shafts) &&
+                           string.IsNullOrEmpty(BrakesFront) && string.IsNullOrEmpty(BrakesRear) && string.IsNullOrEmpty(SpringsFront) && string.IsNullOrEmpty(SpringsRear);
+
+    public RunningGearPicks Copy() => new()
+    {
+        Axle = Axle, Diff = Diff, Ratio = Ratio, Shafts = Shafts, BrakesFront = BrakesFront, BrakesRear = BrakesRear,
+        SpringsFront = SpringsFront, SpringsRear = SpringsRear
+    };
 }

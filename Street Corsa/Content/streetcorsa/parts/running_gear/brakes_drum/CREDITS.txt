@@ -1,0 +1,21 @@
+drum_9.kn5 is made from "Low Poly Brakes" by themodel_finder (https://sketchfab.com/themodel_finder),
+licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/):
+https://sketchfab.com/3d-models/low-poly-brakes-08c70a12956f4775bd67de898be343aa
+
+drum_9_5.kn5 is made from "Low Poly Brakes" by themodel_finder (https://sketchfab.com/themodel_finder),
+licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/):
+https://sketchfab.com/3d-models/low-poly-brakes-08c70a12956f4775bd67de898be343aa
+
+drum_10.kn5 is made from "Low Poly Brakes" by themodel_finder (https://sketchfab.com/themodel_finder),
+licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/):
+https://sketchfab.com/3d-models/low-poly-brakes-08c70a12956f4775bd67de898be343aa
+
+drum_11.kn5 is made from "Low Poly Brakes" by themodel_finder (https://sketchfab.com/themodel_finder),
+licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/):
+https://sketchfab.com/3d-models/low-poly-brakes-08c70a12956f4775bd67de898be343aa
+
+shoes.kn5 is made from "Brake Shoe" by Addere Creations (https://sketchfab.com/adderecreations),
+licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/):
+https://sketchfab.com/3d-models/brake-shoe-c2b2e708f2fd4bd297c353776abb39a9
+
+Changes: cut out of the download, decimated, scaled to metres and turned to the part's own space, converted to KN5 (tools/RunningGearParts/prepare_standins.py), textures scaled down.

@@ -134,6 +134,9 @@ public sealed class PartPriceBook
         "spring_rate" => RunningGear.SpringRate(part),
         "damping" => RunningGear.Damping(part).Bump,
         "carb_mounts" => _carbMounts.TryGetValue(part.Id, out var mounts) ? mounts : null,
+        "strength" => RearAxle.Strength(part),
+        "diff_lock" => RearAxle.LockFigure(part),
+        "arb_rate" => RunningGear.SwayBarRate(part),
         _ => null
     };
 

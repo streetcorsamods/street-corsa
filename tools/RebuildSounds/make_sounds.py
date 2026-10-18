@@ -18,6 +18,11 @@ And the machine shop's (the machine jobs' steps, and the shop's own air):
   sfx/work/mill.ogg     a surfacing mill across a head: the cutter's whirr, the bite of each pass
   sfx/ambience/machine_shop.ogg   the shop round the counter: machines running out back, an air hose, a radio far off
 
+And the garage's lift (the parts view's lift button):
+
+  sfx/work/lift.ogg       the lift going up or down: the pump's motor and the oil through the valve (a loop)
+  sfx/work/lift_stop.ogg  the lift at a stop: the valve shutting and the saddle's lock dropping in
+
   python make_sounds.py [<sfx folder>]   (default: the base game's, Street Corsa/Content/streetcorsa/sfx)
 
 Each loop's end is crossfaded into its start, so it goes round without a seam, and levelled as the paint booth's are
@@ -313,8 +318,32 @@ def machine_shop():
 SOUNDS = {"bench": bench, "wash": wash, "hone": hone, "lap": lap, "air": air, "grind": grind, "press": press, "road": road,
           "bore": bore, "crank": crank, "mill": mill}
 
+def lift():
+    """An in-ground lift on the move: the pump's motor humming low, the oil hissing through the valve, a faint whine"""
+    n = total()
+    t = np.arange(n) / RATE
+    hum = (np.sin(2 * np.pi * 58 * t) + 0.5 * np.sin(2 * np.pi * 116 * t) + 0.2 * np.sin(2 * np.pi * 174 * t)) * wander(SECONDS + 1, 2, 0.08)
+    whine = np.sin(2 * np.pi * 410 * t + 3 * np.sin(2 * np.pi * 0.7 * t)) * 0.06
+    oil = band(RNG.standard_normal(n), 300, 2200) * 0.35 * wander(SECONDS + 1, 3, 0.25)
+    return level(seamless(band(hum, 30, 600) + whine + oil, 0.6), LOOP_RMS_DB)
+
+
+def lift_stop():
+    """The lift at its stop: the valve shutting with a hiss let out, and the saddle's lock dropping in with a clunk"""
+    n = int(1.2 * RATE)
+    track = np.zeros(n)
+    t = np.arange(n) / RATE
+    track += band(RNG.standard_normal(n), 800, 5000) * np.exp(-t * 9) * 0.25
+    place(track, thud(0.8, 70, 9), 0.12, 1.0)
+    place(track, ring(0.6, [520, 1310, 2140], 14), 0.12, 0.35)
+    return level(track, -18.0)
+
+
 # Made after the work's, so a sound added here leaves the others as they were (they share one random draw)
 AMBIENCE = {"machine_shop": machine_shop}
+
+# And after those, the lift's
+LIFT = {"lift": lift, "lift_stop": lift_stop}
 
 
 def write(path, x):
@@ -333,6 +362,8 @@ def main(out):
     os.makedirs(ambience, exist_ok=True)
     for name, make in AMBIENCE.items():
         write(os.path.join(ambience, name + ".ogg"), make())
+    for name, make in LIFT.items():
+        write(os.path.join(folder, name + ".ogg"), make())
     print(folder)
 
 

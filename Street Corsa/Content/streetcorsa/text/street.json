@@ -27,6 +27,7 @@
     "street.tuned_block": "{name} dropped {change} into {possessive} {car} ({hpBefore:0} → {hpAfter:0} hp).",
     "street.tuned_cooling": "{name} put a {change} on {possessive} {car} to keep it cool.",
     "street.tuned": "{name} put a {change} on {possessive} {car} ({hpBefore:0} → {hpAfter:0} hp).",
+    "street.tuned_axle": "{name} put a {change} in the rear end of {possessive} {car}.",
     "street.back_in_town": "{name}{nickname} is back in town.",
     "street.new_face_car": "A new face at the diner: {name}{nickname}, in a {car}.",
     "street.new_face": "A new face at the diner: {name}{nickname}.",

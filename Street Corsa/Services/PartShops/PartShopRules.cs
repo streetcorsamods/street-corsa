@@ -136,6 +136,8 @@ namespace StreetCorsa.Services.PartShops
         {
             var group = PartKinds.GroupOf(part);
             if (shop.Groups.Count > 0 && !shop.Groups.Contains(group, StringComparer.OrdinalIgnoreCase)) return false;
+            // The source game's sway bars do nothing in Assetto Corsa: nobody sells them
+            if (group == PartKinds.SwayBars && !StreetCorsa.Parts.Cars.RunningGear.IsWorkingSwayBar(part)) return false;
 
             var runningGear = StreetCorsa.Parts.Cars.RunningGear.IsRunningGear(group);
             var ofItsMakes = shop.Makes.Count == 0 || (part.Make != null && shop.Makes.Contains(part.Make, StringComparer.OrdinalIgnoreCase));

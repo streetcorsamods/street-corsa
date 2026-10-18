@@ -385,3 +385,6 @@ Street Corsa/Assets/Sound/sr2_cover_intro.mp3
 
 # A private mod: the Void Frame Studio radio is CC BY-NC-ND, not to be shared in any adapted form
 Street Corsa/Content/vfsradio/
+
+# A private mod: the truck chassis' running gear is CC BY-NC, local until its author agrees (tools/RunningGearParts/prepare_truck_parts.py)
+Street Corsa/Content/truckparts/

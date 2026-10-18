@@ -45,6 +45,7 @@
                                 StandMode="{Binding Workbench.IsStand}"
                                 StandEngine="{Binding Workbench.StandEngine}"
                                 EngineTurnedOver="{Binding Workbench.IsEngineTurnedOver}"
+                                LiftStop="{Binding Workbench.LiftStop}"
                                 Engine="{Binding Workbench.Engine}"
                                 Gear="{Binding Workbench.Gear}"
                                 Shown="{Binding Workbench.Shown}"
@@ -668,6 +669,24 @@
                                       ToolTip="{t:Text garage.view.turn_over.tip}"
                                       Visibility="{Binding Workbench.CanTurnEngineOver, Converter={StaticResource BooleanToVisibilityConverter}}"
                                       IsChecked="{Binding Workbench.IsEngineTurnedOver, Mode=TwoWay}"/>
+                        <!-- The lift, lit while the car is up: each click takes it to the next stop (the wheels clear,
+                             full height, down), and it waits while the lift is on its way -->
+                        <ToggleButton Tag="{theme:Image icons/car_lifted, Size=128}"
+                                      Content="{Binding Workbench.LiftText}"
+                                      ToolTip="{Binding Workbench.LiftTip}"
+                                      Visibility="{Binding Workbench.CanUseLift, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                      IsEnabled="{Binding IsLiftMoving, ElementName=Viewport3D, Converter={StaticResource InverseBooleanConverter}}"
+                                      IsChecked="{Binding Workbench.IsLifted, Mode=TwoWay}"/>
+                        <!-- While the car is up: a stop down, from either stop -->
+                        <Button Style="{StaticResource RoundIconButtonStyle}"
+                                Margin="0,0,10,0"
+                                Tag="{theme:Image icons/car, Size=128}"
+                                Content="{t:Text garage.view.lift.lower}"
+                                ToolTip="{Binding Workbench.LowerTip}"
+                                ToolTipService.ShowOnDisabled="True"
+                                Command="{Binding Workbench.LowerCommand}"
+                                Visibility="{Binding Workbench.IsLifted, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                IsEnabled="{Binding IsLiftMoving, ElementName=Viewport3D, Converter={StaticResource InverseBooleanConverter}}"/>
                         <!-- With the car's parts on show (not the stand): a button for each kind that can be put
                              out of sight, lit while it is in sight (part_groups.json's shows) -->
                         <ItemsControl ItemsSource="{Binding Workbench.PartShows}"

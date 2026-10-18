@@ -192,8 +192,13 @@ namespace StreetCorsa.Screens.CarCatalogEditor
                     }
 
                     var definition = carDef;
+                    var given = snapshot.Given.GetValueOrDefault(definition.Id);
+                    var parts = _partsService;
+                    var axle = parts is { IsAvailable: true }
+                        ? new AxlePicks(parts.Catalog, picks => parts.AxleFor(definition.Id, picks), given?.RunningGear, picks => parts.RunningGearFor(definition.Id, picks))
+                        : null;
                     var itemVm = new CatalogItemViewModel(definition, profile, snapshot.HasEngines, () => EngineOptionsFor(definition), () => GuessLayout(definition),
-                        snapshot.Given.GetValueOrDefault(definition.Id));
+                        given, axle);
                     itemVm.PropertyChanged += OnItemPropertyChanged;
                     _catalogItems.Add(itemVm);
                 }

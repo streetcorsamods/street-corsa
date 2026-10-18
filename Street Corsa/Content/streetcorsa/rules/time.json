@@ -30,6 +30,7 @@
     "perPart": 5,
     "engineInOut": 120,
     "stand": 20,
+    "lift": 5,
     "cruiseTick": 5,
     "shortestTrip": 15
   }

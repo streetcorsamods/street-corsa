@@ -34,6 +34,7 @@
     "race.result.bracket.broke_out": "Your {et} on a {dial} dial-in: BREAKOUT",
     "race.broke_down.engine": "The engine let go!\nYou're out of the race.",
     "race.broke_down.gearbox": "The gearbox gave out!\nYou're out of the race.",
+    "race.broke_down.axle": "The rear end let go!\nYou're out of the race.",
     "race.broke_down.suspension": "The suspension gave out!\nYou're out of the race.",
     "race.broke_down.tyre": "A tyre blew!\nYou're out of the race.",
     "race.broke_down.overheat": "The engine boiled over and cooked itself!\nYou're out of the race.",

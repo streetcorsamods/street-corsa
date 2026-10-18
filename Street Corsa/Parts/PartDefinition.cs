@@ -17,6 +17,13 @@ public class PartPack
     /// </summary>
     public const string AliasesFileName = "part_aliases.json";
 
+    /// <summary>
+    /// Next to the packs: models for parts of any mod, the base game's too, by full id (or the start of one, ending in
+    /// <c>*</c>), each a KN5 under this parts folder. The parts stay as they are; only how they look changes, the latest
+    /// mod's model winning (a model pack, or a model whose licence keeps it out of the base game).
+    /// </summary>
+    public const string ModelsFileName = "models.json";
+
     /// <summary>Pack id, also its folder under the parts root, e.g. "engines/Mopar"</summary>
     [JsonProperty("id")]
     public string Id { get; set; } = string.Empty;
@@ -71,6 +78,13 @@ public class PartDefinition
     [JsonIgnore]
     public string? PackFolder { get; set; }
 
+    /// <summary>
+    /// Where its <see cref="Model"/> is when another mod's <see cref="PartPack.ModelsFileName"/> gives it one: that mod's
+    /// parts folder; null for the model beside its own pack
+    /// </summary>
+    [JsonIgnore]
+    public string? ModelFolder { get; set; }
+
     /// <summary>The make of the part's pack (<see cref="PartPack.Make"/>); null for a part of no make</summary>
     [JsonIgnore]
     public string? Make { get; set; }
@@ -118,6 +132,21 @@ public class PartDefinition
     /// </summary>
     [JsonProperty("performance", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Performance { get; set; }
+
+    /// <summary>
+    /// What a job turns this part into, by the job's id (a job of <see cref="PartRebuilds"/> with <c>"becomes"</c>): an open
+    /// carrier with its spiders welded is a welded carrier, <c>{ "weld_spiders": "running_gear/axles_gm/gm_10bolt_welded_low" }</c>.
+    /// Null for a part no job turns into another.
+    /// </summary>
+    [JsonProperty("becomes", NullValueHandling = NullValueHandling.Ignore)]
+    public Dictionary<string, string>? Becomes { get; set; }
+
+    /// <summary>
+    /// The cars a running gear part left the factory on (<see cref="Parts.CameIn"/>): what the factory running gear of a car
+    /// is guessed from, where the mods' cars.json picks none. Null for a part no car came with (a spool, an alloy shaft).
+    /// </summary>
+    [JsonProperty("came_in", NullValueHandling = NullValueHandling.Ignore)]
+    public CameIn? CameIn { get; set; }
 
     /// <summary>
     /// What the part does for the engine's cooling as its kind in the work order says (<see cref="Parts.WorkKind.Cooling"/>):

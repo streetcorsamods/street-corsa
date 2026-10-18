@@ -95,9 +95,26 @@ namespace StreetCorsa.Services.Catalog
                     // Prices are the game's own now (the car's body and parts): a price an older editor wrote goes
                     Set(entry, "price", null);
                     Set(entry, "common", fields.Common is { } common ? JsonValue.Create(Math.Round((double)common, 2)) : null);
+                    Set(entry, "running_gear", RunningGear(fields.Gear));
                 });
             }
         });
+
+        /// <summary>The picks as cars.json holds them, only what is picked; null for none</summary>
+        private static JsonObject? RunningGear(RunningGearPicks? picks)
+        {
+            if (picks is not { IsEmpty: false }) return null;
+            var gear = ModMerge.NewObject();
+            if (picks.Axle is { Length: > 0 } axle) gear["axle"] = axle;
+            if (picks.Diff is { Length: > 0 } diff) gear["diff"] = diff;
+            if (picks.Ratio is { } ratio) gear["ratio"] = Math.Round(ratio, 2);
+            if (picks.Shafts is { Length: > 0 } shafts) gear["shafts"] = shafts;
+            if (picks.BrakesFront is { Length: > 0 } brakesFront) gear["brakes_front"] = brakesFront;
+            if (picks.BrakesRear is { Length: > 0 } brakesRear) gear["brakes_rear"] = brakesRear;
+            if (picks.SpringsFront is { Length: > 0 } springsFront) gear["springs_front"] = springsFront;
+            if (picks.SpringsRear is { Length: > 0 } springsRear) gear["springs_rear"] = springsRear;
+            return gear;
+        }
 
         /// <summary>The file's text changed into every copy of it, each in one go; the copies written, the installed one first</summary>
         private static IReadOnlyList<string> SaveAll(Func<string?, string> change)
@@ -176,5 +193,6 @@ namespace StreetCorsa.Services.Catalog
     }
 
     /// <summary>What the editor sets for a car: a null field is not given (worked out from the car)</summary>
-    public sealed record CarFields(string? Engine, StreetCorsa.Parts.EngineLayout? Layout, float? Common);
+    /// <param name="Gear">The factory running gear picked; null or none picked takes it out</param>
+    public sealed record CarFields(string? Engine, StreetCorsa.Parts.EngineLayout? Layout, float? Common, RunningGearPicks? Gear = null);
 }

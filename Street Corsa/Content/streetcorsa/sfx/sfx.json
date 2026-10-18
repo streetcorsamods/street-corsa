@@ -67,6 +67,22 @@
       ],
       "pitch": 0.04
     },
+    "lift.move": {
+      "bus": "effects",
+      "volume": 0.5,
+      "files": [
+        "work/lift.ogg"
+      ],
+      "loop": true
+    },
+    "lift.stop": {
+      "bus": "effects",
+      "volume": 0.55,
+      "files": [
+        "work/lift_stop.ogg"
+      ],
+      "pitch": 0.03
+    },
     "engine.land": {
       "bus": "effects",
       "volume": 0.6,

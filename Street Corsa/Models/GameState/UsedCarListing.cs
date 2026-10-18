@@ -99,6 +99,9 @@ namespace StreetCorsa.Models.GameState
         /// </summary>
         public bool HasRunningGearAssigned { get; set; }
 
+        /// <summary>What the running gear in <see cref="Parts"/> is brought up to, as <see cref="Car.GearVersion"/></summary>
+        public int GearVersion { get; set; }
+
         /// <summary>
         /// The body's damage per zone, as on <see cref="Car.BodyDamageKmh"/>: a relisted car is sold with its dents.
         /// Null on a car a dealer had from new stock, and on listings from before it was kept: a straight body.
