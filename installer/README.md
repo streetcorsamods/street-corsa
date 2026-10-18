@@ -22,6 +22,10 @@ replaces itself). What it does:
 
 ## What the player sees
 
+On anything older than Windows 10 (where .NET 10 does not run, nor does today's Steam) the installer stops at once:
+"Street Corsa needs 64-bit Windows 10 or 11". It reads `CurrentMajorVersionNumber` from the registry, since Windows
+Installer's own `VersionNT` says 8.1 on Windows 10. On 32-bit Windows the x64 MSI does not install at all.
+
 Welcome, licence (`license.txt`, turned into `license.rtf` by `make_license_rtf.py`), install folder
 (`%LocalAppData%\Programs\Street Corsa`, so mods can be dropped into its `Content` folder without admin), then the
 game's three pages (`Dialogs.wxs`):

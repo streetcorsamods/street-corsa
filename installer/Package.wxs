@@ -51,6 +51,16 @@
       <RegistrySearch Id="PreviousAcFolder" Root="HKCU" Key="Software\Street Corsa" Name="AssettoCorsaPath" Type="raw" />
     </Property>
 
+    <!--
+      Windows 10 or later (.NET 10 runs on nothing older, nor does today's Steam). Windows Installer's own VersionNT says
+      603 (8.1) on Windows 10, so the check is the registry value Windows 10 brought in: absent on 8.1 and before, 10 on
+      Windows 10 and 11. 64-bit is the package's own platform: an x64 MSI does not install on 32-bit Windows.
+    -->
+    <Property Id="WINDOWS_MAJOR">
+      <RegistrySearch Id="WindowsMajor" Root="HKLM" Key="SOFTWARE\Microsoft\Windows NT\CurrentVersion" Name="CurrentMajorVersionNumber" Type="raw" Bitness="always64" />
+    </Property>
+    <Launch Condition="Installed OR WINDOWS_MAJOR" Message="Street Corsa needs 64-bit Windows 10 or 11." />
+
     <!-- What the game needs beside AC, for the wizard's checks page: DirectX's June 2010 runtime and VC++ 2015-2022 (SlimDX) -->
     <Property Id="HAS_D3DX">
       <DirectorySearch Id="D3dxSearch" Path="[System64Folder]" Depth="0">
