@@ -31,6 +31,7 @@ Leave(this, "back", gameState, args)     a screen's way out, by name
 GoFrom(this, id, gameState)              a hub's tile: a screen it names itself
 GoHome(gameState, args)                  home
 GoHomeLater(gameState)                   home, once the current navigation is over (for a screen sent home from Enter)
+ScreenReadyLater(screen), EndDayLater    the same for a scripted screen's ready and the day's end, while the asker is on show
 GoToMenu(card)                           the main menu, optionally with a card open
 GoRace(gameState, intent)                the race screen
 NavigateToStart()                        the main menu under the title, at startup
@@ -152,3 +153,7 @@ that lead to it.
 - `Content/streetcorsa/flow/flow.json`
 - `Navigation/BaseScreenViewModel.cs`
 - `Navigation/IScreen.cs`
+
+- The screen-bound `*Later`s run on the UI thread once what runs there now is over, only while the asking screen is
+  still on show. Anything else that has to wait for the UI thread's queue (a property told again after a binding pushed
+  a value the code refused, as Settings does) goes through `Helpers.UiThread.Later`, not the navigation.

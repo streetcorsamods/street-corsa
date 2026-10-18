@@ -225,6 +225,46 @@
         </Style.Triggers>
     </Style>
 
+    <!-- ==================== COUNTER ROWS ==================== -->
+    <!-- A row of a shop's counter (the part shop's offers, the machine shop's pieces and jobs): a line under it, lit
+         under the pointer, a red bar down its left when it is picked in the list and an amber one when the clerk picked
+         it (IsPicked on the row's view model; a row without the property is never the clerk's). -->
+    <ControlTemplate x:Key="CounterRowTemplate" TargetType="ListBoxItem">
+        <Border x:Name="row"
+                Background="Transparent"
+                BorderBrush="{StaticResource Gray30Brush}"
+                BorderThickness="0,0,0,1"
+                Padding="14,7">
+            <ContentPresenter/>
+        </Border>
+        <ControlTemplate.Triggers>
+            <Trigger Property="IsSelected" Value="True">
+                <Setter TargetName="row" Property="Background" Value="{StaticResource Glass14E0Brush}"/>
+                <Setter TargetName="row" Property="BorderBrush" Value="{StaticResource AccentPrimaryBrush}"/>
+                <Setter TargetName="row" Property="BorderThickness" Value="3,0,0,1"/>
+            </Trigger>
+            <DataTrigger Binding="{Binding IsPicked, FallbackValue=False}" Value="True">
+                <Setter TargetName="row" Property="Background" Value="{StaticResource Glass14E0Brush}"/>
+                <Setter TargetName="row" Property="BorderBrush" Value="{StaticResource AmberBrush}"/>
+                <Setter TargetName="row" Property="BorderThickness" Value="3,0,0,1"/>
+            </DataTrigger>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="row" Property="Background" Value="{StaticResource White20Brush}"/>
+            </Trigger>
+        </ControlTemplate.Triggers>
+    </ControlTemplate>
+
+    <!-- A row the player picks in the list -->
+    <Style x:Key="CounterRowStyle" TargetType="ListBoxItem">
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="Template" Value="{StaticResource CounterRowTemplate}"/>
+    </Style>
+
+    <!-- A row with its own button, never picked in the list (not focusable: a click does not select it); the clerk's picks are marked -->
+    <Style x:Key="PickedRowStyle" TargetType="ListBoxItem" BasedOn="{StaticResource CounterRowStyle}">
+        <Setter Property="Focusable" Value="False"/>
+    </Style>
+
     <!-- ==================== DROPDOWN ==================== -->
     <!-- A dropdown's rows are the lists' rows -->
     <Style TargetType="ComboBoxItem" BasedOn="{StaticResource GlassListBoxItemStyle}"/>

@@ -10,6 +10,30 @@ namespace StreetCorsa.Rules;
 /// </summary>
 public sealed class PartShopRules
 {
+    /// <summary>Parts or jobs a shop's clerk (the machinist too) is told about for one ask at most</summary>
+    public int MostPicks { get; set; } = 5;
+
+    /// <summary>
+    /// Parts tried on the dyno for one ask of a part shop's clerk at most: the cheapest that fit and take the place of a
+    /// part on the engine, so an ask is answered in a moment
+    /// </summary>
+    public int MostDynoRuns { get; set; } = 40;
+
+    /// <summary>Whole engines run on the dyno for one ask of the machinist at most (a whole engine's run is the dearer)</summary>
+    public int MachineDynoRuns { get; set; } = 12;
+
+    /// <summary>Other customers' work standing round a machine shop, besides the player's</summary>
+    public int OthersWork { get; set; } = 5;
+
+    /// <summary>Each figure the game loops over or picks by held to what it can play by (<see cref="Figures"/>)</summary>
+    internal void Check(string path, List<string> problems)
+    {
+        Figures.Within(this, path, nameof(MostPicks), 0, 100, problems);
+        Figures.Within(this, path, nameof(MostDynoRuns), 0, 1000, problems);
+        Figures.Within(this, path, nameof(MachineDynoRuns), 0, 1000, problems);
+        Figures.Within(this, path, nameof(OthersWork), 0, 100, problems);
+    }
+
     /// <summary>A junkyard's whole engines: one yard item in so many</summary>
     public double JunkyardEngineChance { get; set; } = 0.15;
 

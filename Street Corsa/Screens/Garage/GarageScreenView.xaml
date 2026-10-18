@@ -671,12 +671,15 @@
                                       IsChecked="{Binding Workbench.IsEngineTurnedOver, Mode=TwoWay}"/>
                         <!-- The lift, lit while the car is up: each click takes it to the next stop (the wheels clear,
                              full height, down), and it waits while the lift is on its way -->
-                        <ToggleButton Tag="{theme:Image icons/car_lifted, Size=128}"
-                                      Content="{Binding Workbench.LiftText}"
-                                      ToolTip="{Binding Workbench.LiftTip}"
-                                      Visibility="{Binding Workbench.CanUseLift, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                      IsEnabled="{Binding IsLiftMoving, ElementName=Viewport3D, Converter={StaticResource InverseBooleanConverter}}"
-                                      IsChecked="{Binding Workbench.IsLifted, Mode=TwoWay}"/>
+                        <Button Style="{StaticResource RoundIconButtonStyle}"
+                                Margin="0,0,10,0"
+                                Tag="{theme:Image icons/car_lifted, Size=128}"
+                                Content="{Binding Workbench.LiftText}"
+                                ToolTip="{Binding Workbench.LiftTip}"
+                                Command="{Binding Workbench.LiftCommand}"
+                                helpers:GlassButton.IsLit="{Binding Workbench.IsLifted, Mode=OneWay}"
+                                Visibility="{Binding Workbench.CanUseLift, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                IsEnabled="{Binding IsLiftMoving, ElementName=Viewport3D, Converter={StaticResource InverseBooleanConverter}}"/>
                         <!-- While the car is up: a stop down, from either stop -->
                         <Button Style="{StaticResource RoundIconButtonStyle}"
                                 Margin="0,0,10,0"

@@ -680,27 +680,10 @@ namespace StreetCorsa.Navigation
         public void EndDayLater(IScreen home, Action endDay) => LaterOn(home, endDay);
 
         /// <summary>
-        /// Runs <paramref name="run"/> on the UI thread once what runs there now is over (a picker done with its pick).
-        /// The app's dispatcher, not the calling thread's: one off the UI thread would never run it.
+        /// Runs <paramref name="run"/> on the UI thread once what runs there now is over (<see cref="Helpers.UiThread.Later"/>),
+        /// only while <paramref name="asker"/> is the screen on show when it comes to it
         /// </summary>
-        public void Later(Action run, System.Windows.Threading.DispatcherPriority priority = System.Windows.Threading.DispatcherPriority.Normal)
-        {
-            var dispatcher = System.Windows.Application.Current?.Dispatcher ?? System.Windows.Threading.Dispatcher.CurrentDispatcher;
-            _ = dispatcher.InvokeAsync(() =>
-            {
-                try
-                {
-                    run();
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error(ex, "What was put off to later failed");
-                }
-            }, priority);
-        }
-
-        /// <summary><see cref="Later"/>, only while <paramref name="asker"/> is the screen on show when it comes to it</summary>
-        private void LaterOn(IScreen asker, Action run) => Later(() =>
+        private void LaterOn(IScreen asker, Action run) => Helpers.UiThread.Later(() =>
         {
             if (ReferenceEquals(CurrentScreen, asker)) run();
         });

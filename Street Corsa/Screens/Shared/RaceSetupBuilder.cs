@@ -19,7 +19,7 @@ namespace StreetCorsa.Screens.Shared
         public string PlayerName { get; init; } = string.Empty;
 
         /// <summary>The player's car, as owned; its folder is its definition id</summary>
-        public Car PlayerCar { get; init; } = null!;
+        public required Car PlayerCar { get; init; }
 
         public string OpponentName { get; init; } = string.Empty;
 

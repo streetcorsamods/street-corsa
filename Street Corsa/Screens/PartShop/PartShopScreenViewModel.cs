@@ -12,7 +12,6 @@ using StreetCorsa.Services.Dealers;
 using StreetCorsa.Services.Parts;
 using StreetCorsa.Services.PartShops;
 using StreetCorsa.Services.Storage;
-using StreetCorsa.Services.Street;
 using StreetCorsa.Services.Talk;
 using StreetCorsa.Services.Text;
 using StreetCorsa.ViewModels;
@@ -43,7 +42,6 @@ namespace StreetCorsa.Screens.PartShop
         private readonly string _shopId;
         private readonly IPartShopService _shops;
         private readonly INewspaperPartsService _paper;
-        private readonly ShopScene? _scene;
 
         // What each part does for the player's engine, worked out once a visit (the engine does not change in a shop): what
         // the engine makes now, the kinds of part on it (the only kinds the dyno can try), each part tried
@@ -82,24 +80,25 @@ namespace StreetCorsa.Screens.PartShop
 
             // A shop the map offered and the files have since lost cannot be shown: the navigation says so and stays put
             Definition = shops.Catalog.Get(shopId) ?? throw new InvalidOperationException($"No part shop \"{shopId}\"");
-            // A mod's scene for this kind of shop (wheels, speed shops) before the one for any
-            _scene = scene ?? ShopScenes.For(Definition.KindOf.ToString().ToLowerInvariant());
+            Clerk = new ClerkTalk(_logger, "clerk");
+            Room = new ShopRoomViewModel(Definition, gameState.Date, Clerk, scene);
 
             BackCommand = new RelayCommand(OnBack);
             ShowTabCommand = new RelayCommand<string>(tab => ShowTab(tab == "Sell"));
             BuyCommand = new RelayCommand<PartOfferViewModel>(OnOfferAction);
             HaggleCommand = new RelayCommand<PartOfferViewModel>(OnHaggle);
-            ToggleCounterCommand = new RelayCommand(() => IsCounterOpen = !IsCounterOpen);
-
-            if (_scene != null)
-            {
-                var look = _scene.LookFor(Definition.Look, Definition.KindOf.ToString().ToLowerInvariant());
-                var dressing = _scene.Dress(look, StreetLights.At(gameState.Date));
-                Dressing = new LotDressing(dressing.Lighting, dressing.Sun, dressing.Pictures, dressing.Glow);
-            }
+            ToggleCounterCommand = new RelayCommand(() => Room.IsCounterOpen = !Room.IsCounterOpen);
         }
 
         public PartShopDefinition Definition { get; }
+
+        /// <summary>The room, its counter and the stock standing in it</summary>
+        public ShopRoomViewModel Room { get; }
+
+        /// <summary>Whoever is behind the counter, talked to while the player's AI is on</summary>
+        public ClerkTalk Clerk { get; }
+
+        private PartsCatalog? Catalog => Room.Catalog;
 
         private PartShopLocation? Shop => PartShopRoster.Find(_gameState, _shopId);
 
@@ -113,46 +112,14 @@ namespace StreetCorsa.Screens.PartShop
         public string BuyTabLabel => GameText.Say(IsJunkyard ? "partshop.tab.yard" : "partshop.tab.shelves");
         public string SellTabLabel => GameText.Say("partshop.tab.sell", ("shop", Definition.Name));
 
-        #region The room
-
-        /// <summary>The shop's room, when a scene is installed; none, and the counter is the screen</summary>
-        public string? SceneKn5 => _scene?.Kn5;
-
-        public bool HasScene => _scene != null;
-
-        public IReadOnlyList<ShopPlace>? Places => _scene?.Places;
-
-        public ShopCamera? View => _scene?.Camera;
-
-        public ShopRoom? Room => _scene?.Room;
-
-        /// <summary>The room dressed for this kind of shop at this hour</summary>
-        public LotDressing? Dressing { get; }
-
-        private PartsCatalog? _catalog;
-
-        /// <summary>The parts catalog, once <c>Enter</c> has loaded it on a worker (never loaded by the view's binding)</summary>
-        public PartsCatalog? Catalog
-        {
-            get => _catalog;
-            private set => SetProperty(ref _catalog, value);
-        }
-
-        private IReadOnlyList<ShopStockPart>? _stockShown;
-
-        /// <summary>What stands in the room: a part of each line on the shelves, every part in the yard</summary>
-        public IReadOnlyList<ShopStockPart>? StockShown
-        {
-            get => _stockShown;
-            private set => SetProperty(ref _stockShown, value);
-        }
+        #region What stands in the room
 
         private void RefreshStockShown()
         {
             // Nothing to show is an empty shop, not one still to be stocked: the room comes up all the same
             if (Shop is not { } shop || Catalog is not { } catalog)
             {
-                StockShown = [];
+                Room.StockShown = [];
                 return;
             }
 
@@ -161,8 +128,8 @@ namespace StreetCorsa.Screens.PartShop
                 : shop.Shelves.Where(s => s.Count > 0 && catalog.Get(s.DefinitionId) != null).Select(s => new ShopStockPart(catalog.Get(s.DefinitionId)!)).ToList();
 
             // One of three on a shelf sold, or a part sold to the shop: the room looks the same and is not built again
-            if (StockShown is { } before && before.SequenceEqual(shown, StockLine.Instance)) return;
-            StockShown = shown;
+            if (Room.StockShown is { } before && before.SequenceEqual(shown, StockLine.Instance)) return;
+            Room.StockShown = shown;
         }
 
         /// <summary>The same thing standing in the room: the same part, the same piece of a yard</summary>
@@ -176,63 +143,15 @@ namespace StreetCorsa.Screens.PartShop
             public int GetHashCode(ShopStockPart obj) => obj.Part.Id.GetHashCode();
         }
 
-        private bool _isCounterOpen;
-
-        /// <summary>The counter is up over the room: the list and the clerk; without a scene it always is</summary>
-        public bool IsCounterOpen
-        {
-            get => _isCounterOpen || !HasScene;
-            set
-            {
-                if (!SetProperty(ref _isCounterOpen, value)) return;
-                OnPropertyChanged(nameof(ShowsCounterButton));
-                if (Talk != null) Talk.IsOpen = value;
-            }
-        }
-
-        /// <summary>The way up to the counter, while it is not open</summary>
-        public bool ShowsCounterButton => HasScene && !IsCounterOpen;
-
         #endregion
 
         #region The clerk
 
-        private TalkViewModel? _talk;
-
-        /// <summary>Whoever is behind the counter, talked to while the player's AI is on</summary>
-        public TalkViewModel? Talk
-        {
-            get => _talk;
-            private set
-            {
-                if (SetProperty(ref _talk, value)) OnPropertyChanged(nameof(HasTalk));
-            }
-        }
-
-        public bool HasTalk => Talk != null;
-
         /// <summary>They look up as the player comes in: greeted before the counter is opened, the tab calls for the player</summary>
         private void StartTalk()
         {
-            if (Talk != null || Shop == null || !TalkDesk.Shared.IsAvailable) return;
-
-            var talk = new TalkViewModel(TalkDesk.Shared.ForShop(_gameState, Definition.Id, Definition.Clerk, this), Definition.Clerk?.PortraitFile)
-            {
-                IsOpen = IsCounterOpen
-            };
-            Talk = talk;
-            _ = OpenTalkAsync(talk);
-        }
-
-        /// <summary>A clerk who never says a word (the AI is on in Settings but not answering): the counter goes on without them</summary>
-        private async Task OpenTalkAsync(TalkViewModel talk)
-        {
-            await talk.OpenAsync();
-            if (Talk != talk || talk.HasAnswered) return;
-
-            _logger.Information("The clerk's AI did not answer: the counter goes on without the talk");
-            talk.End();
-            Talk = null;
+            if (Shop == null) return;
+            Clerk.Start(() => TalkDesk.Shared.ForShop(_gameState, Definition.Id, Definition.Clerk, this), Definition.Clerk?.PortraitFile, Room.IsCounterOpen);
         }
 
         IReadOnlyList<string> IShopCounter.Kinds => BuyOffers().Select(o => o.Group).Distinct().Order(StringComparer.OrdinalIgnoreCase).ToList();
@@ -243,13 +162,7 @@ namespace StreetCorsa.Screens.PartShop
                 ("blurb", Blurb));
             if (Shop is not { } shop) yield break;
 
-            if (shop.Status == DealerStatus.ClosingDown && shop.ClosesOn is { } last)
-                yield return GameText.Say("chat.fact.shop_sale", ("discount", (int)Math.Round(DealerRules.DiscountOn(shop, _gameState.Date) * 100)), ("day", last));
-
-            var regular = PartShopRules.RegularDiscountFor(shop.PlayerSpent);
-            if (regular > 0) yield return GameText.Say("chat.fact.shop_regular", ("discount", (int)Math.Round(regular * 100)));
-            if (shop.PlayerSpent > 0) yield return GameText.Say("chat.fact.shop_spent", ("spent", new Helpers.Money(shop.PlayerSpent)));
-            else yield return GameText.Say("chat.fact.shop_new_customer");
+            foreach (var fact in PartShopNotice.Facts(shop, _gameState.Date)) yield return fact;
 
             var offers = BuyOffers();
             yield return offers.Count == 0
@@ -270,7 +183,7 @@ namespace StreetCorsa.Screens.PartShop
         /// </summary>
         async Task<ClerkFindings> IShopCounter.FindAsync(ClerkSearch search, CancellationToken cancellationToken)
         {
-            IsCounterOpen = true;
+            Room.IsCounterOpen = true;
             ShowTab(sell: false, list: false);
 
             // A name no part has is no filter (the clerk is told nothing goes by it), nor a fit with no car to fit
@@ -365,29 +278,7 @@ namespace StreetCorsa.Screens.PartShop
         #endregion
 
         /// <summary>The closing-down sale, and what the player gets off as a regular: the line under the shop's name</summary>
-        public string Notice
-        {
-            get
-            {
-                if (Shop is not { } shop) return string.Empty;
-
-                var lines = new List<string>();
-                if (shop.Status == DealerStatus.ClosingDown && shop.ClosesOn is { } last)
-                {
-                    var values = new TextValues { ["discount"] = (int)Math.Round(DealerRules.DiscountOn(shop, _gameState.Date) * 100), ["day"] = last };
-                    lines.Add(GameText.Installed.Get(DealerRules.DaysLeft(shop, _gameState.Date) == 0 ? "partshop.lot.sale_last_day" : "partshop.lot.sale", values));
-                }
-
-                var regular = PartShopRules.RegularDiscountFor(shop.PlayerSpent);
-                if (regular > 0)
-                {
-                    var key = regular >= PartShopRules.GoodCustomerDiscount ? "partshop.good_customer" : "partshop.regular";
-                    lines.Add(GameText.Installed.Get(key, new TextValues { ["discount"] = (int)Math.Round(regular * 100) }));
-                }
-
-                return string.Join("   ·   ", lines);
-            }
-        }
+        public string Notice => PartShopNotice.Text(Shop, _gameState.Date);
 
         public bool HasNotice => Notice.Length > 0;
 
@@ -420,15 +311,13 @@ namespace StreetCorsa.Screens.PartShop
             try
             {
                 var car = SelectedCar;
-                if (await Task.Run(() => _shops.IsAvailable))
+                if (await Room.OpenAsync(_shops, _partsService, _gameState))
                 {
                     // A shop the mornings have not got round to yet (a game just begun) is stocked as the player walks in
-                    PartShopRoster.Sync(_gameState, _shops.Catalog);
                     await _shops.RestockAsync(_gameState, _gameState.Date, Random.Shared, firstOnly: true);
 
                     if (car != null) await _partsService.EnsurePartsAsync(car);
                     _fitting = await Task.Run(() => _paper.FindFittingParts(car));
-                    Catalog = await Task.Run(() => _partsService.IsAvailable ? _partsService.Catalog : null);
                     if (car != null && Catalog != null)
                         _carPower = await Task.Run(() => _partsService.Evaluate(car)?.Dyno?.MaxPowerHp);
                 }
@@ -447,7 +336,7 @@ namespace StreetCorsa.Screens.PartShop
             {
                 _logger.Error(ex, "Could not open {Shop}", Definition.Name);
                 StatusText = GameText.Say("partshop.open_failed");
-                StockShown ??= [];
+                Room.StockShown ??= [];
             }
             finally
             {
@@ -458,7 +347,7 @@ namespace StreetCorsa.Screens.PartShop
         public override void Exit()
         {
             base.Exit();
-            Talk?.End();
+            Clerk.End();
         }
 
         protected override bool CanList => _shops.IsAvailable && Shop != null;
@@ -573,15 +462,15 @@ namespace StreetCorsa.Screens.PartShop
             _buyOffers = null;
             base.Refresh();
             // The clerk talks of what is left at its prices now (a regular's discount, a haggled price, the last one sold)
-            Talk?.Talk.StockChanged();
+            Clerk.StockChanged();
         }
 
         private void OnBack()
         {
             // The counter first, then the shop
-            if (_isCounterOpen && HasScene)
+            if (Room.IsCounterOverRoom)
             {
-                IsCounterOpen = false;
+                Room.IsCounterOpen = false;
                 return;
             }
 
