@@ -521,21 +521,34 @@ public static class ShownPartsOnCar
         on.Nodes.Clear();
     }
 
+    /// <summary>
+    /// The car model's node of the wheel at <paramref name="corner"/> (<see cref="WheelFit.WheelNodes"/>, in whatever case
+    /// the model has it), wherever it hangs in the car; null when the car has none, or for no corner. The one way every
+    /// WHEEL_xx node is looked up, so the scenes and the garage's parts view agree on which node is the wheel.
+    /// </summary>
+    public static Kn5RenderableList? WheelNodeOf(Kn5RenderableCar car, int corner) =>
+        corner >= 0 && corner < WheelFit.WheelNodes.Length
+            ? car.RootObject?.GetAllChildren().OfType<Kn5RenderableList>().FirstOrDefault(n => WheelCornerOf(n.OriginalNode.Name) == corner)
+            : null;
+
+    /// <summary>The corner (0 front left to 3 right rear) a car node of this name is the wheel of; -1 for any other node</summary>
+    public static int WheelCornerOf(string? name) =>
+        name == null ? -1 : Array.FindIndex(WheelFit.WheelNodes, w => w.Equals(name, StringComparison.OrdinalIgnoreCase));
+
     private static void SwitchOffMissing(Kn5RenderableCar car, int missing, OnCar on)
     {
         if (missing == 0) return;
         for (var corner = 0; corner < WheelFit.WheelNodes.Length; corner++)
         {
             if ((missing & (1 << corner)) == 0) continue;
-            var name = WheelFit.WheelNodes[corner];
-            if (car.RootObject?.GetAllChildren().OfType<Kn5RenderableList>().FirstOrDefault(n => n.OriginalNode.Name == name) is { } node) on.Switch(node, false);
+            if (WheelNodeOf(car, corner) is { } node) on.Switch(node, false);
         }
     }
 
     private static void Apply(Kn5RenderableCar car, int corner, ShownWheel wheel, Dictionary<string, IKn5> models, OnCar on)
     {
         var name = WheelFit.WheelNodes[corner];
-        if (car.RootObject?.GetAllChildren().OfType<Kn5RenderableList>().FirstOrDefault(n => n.OriginalNode.Name == name) is not { } node)
+        if (WheelNodeOf(car, corner) is not { } node)
         {
             Logger.Information("{Car} has no {Wheel}: its own wheel stays", car.RootObject?.Name, name);
             return;

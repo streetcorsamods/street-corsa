@@ -77,7 +77,6 @@ public class CarViewingViewport3D : D3DViewportBase
     private float _radiusGoal = 6f;
     private float _betaGoal = StartBeta;
     private float? _alphaGoal;
-    private System.Windows.Point? _dragFrom;
     private bool _touched;
     private System.Windows.Threading.DispatcherTimer? _resume;
     private float _turnSpeed;
@@ -153,7 +152,7 @@ public class CarViewingViewport3D : D3DViewportBase
             return;
         }
 
-        var started = DateTime.Now;
+        var started = System.Diagnostics.Stopwatch.GetTimestamp();
 
         // The car's wear is made while the scene and its model load, so it comes with the car
         _ = WearLayer.WarmAsync(stage.CarDirectory, stage.Shown);
@@ -209,7 +208,7 @@ public class CarViewingViewport3D : D3DViewportBase
         OnPoseChanged();
         Invalidate();
 
-        Logger.Information("Car viewing: {Car} up in {Ms} ms", Path.GetFileName(stage.CarDirectory), (int)(DateTime.Now - started).TotalMilliseconds);
+        Logger.Information("Car viewing: {Car} up in {Ms} ms", Path.GetFileName(stage.CarDirectory), (int)System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds);
     }
 
     /// <summary>How far the lowest of the car's tyres is over the ground, as it stands now; null without its wheels</summary>
@@ -362,17 +361,15 @@ public class CarViewingViewport3D : D3DViewportBase
     protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
     {
         base.OnMouseLeftButtonDown(e);
-        _dragFrom = e.GetPosition(this);
-        CaptureMouse();
+        BeginDrag(e);
         e.Handled = true;
     }
 
     protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
     {
         base.OnMouseLeftButtonUp(e);
-        _dragFrom = null;
+        EndDrag();
         ResumeLater();
-        ReleaseMouseCapture();
     }
 
     /// <summary>The walk round picks up again a while after the player lets go, unless they take hold again first</summary>
@@ -386,7 +383,7 @@ public class CarViewingViewport3D : D3DViewportBase
             _resume.Tick += (_, _) =>
             {
                 _resume.Stop();
-                if (_dragFrom != null) return;
+                if (IsDragging) return;
 
                 _touched = false;
                 Invalidate();
@@ -397,24 +394,15 @@ public class CarViewingViewport3D : D3DViewportBase
         _resume.Start();
     }
 
-    protected override void OnLostMouseCapture(System.Windows.Input.MouseEventArgs e)
-    {
-        base.OnLostMouseCapture(e);
-        if (_dragFrom == null) return;
-
-        // Let go somewhere else (another window took the mouse): the walk picks up as after any let-go
-        _dragFrom = null;
-        ResumeLater();
-    }
+    /// <summary>Let go somewhere else (another window took the mouse): the walk picks up as after any let-go</summary>
+    protected override void OnDragLost() => ResumeLater();
 
     protected override void OnMouseMove(System.Windows.Input.MouseEventArgs e)
     {
         base.OnMouseMove(e);
-        if (_dragFrom is not { } from || e.LeftButton != MouseButtonState.Pressed || Renderer?.CameraOrbit is not { } orbit) return;
+        if (DragDelta(e) is not { } moved || Renderer?.CameraOrbit is not { } orbit) return;
 
-        var now = e.GetPosition(this);
-        var (dx, dy) = (now.X - from.X, now.Y - from.Y);
-        _dragFrom = now;
+        var (dx, dy) = (moved.X, moved.Y);
         if (Math.Abs(dx) < 0.01 && Math.Abs(dy) < 0.01) return;
 
         // The player has the camera now: it is no longer brought round to the car, nor walked round it
