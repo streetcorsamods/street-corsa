@@ -55,6 +55,7 @@ public static class Program
         if (args[1] == "layout" && args.Length > 2) return Layout(args[2]);
 
         var catalog = LoadCatalog(args[0]);
+        TemporaryModConstants(catalog);
         Console.WriteLine($"{catalog.Parts.Count} parts, {catalog.EngineBuilds.Count} engine builds");
 
         switch (args[1])
@@ -72,6 +73,9 @@ public static class Program
 
             case "all":
                 return Table(catalog, catalog.EngineBuilds);
+
+            case "snapshot" when args.Length > 2:
+                return Snapshot(catalog, args[2]);
 
             case "inputs":
                 return Inputs(catalog, catalog.EngineBuilds.Where(b => b.RatedPower != null));
@@ -162,6 +166,64 @@ public static class Program
         Console.WriteLine($"\n{failures.Count} rated build(s) do not run or are more than {MaxRatedError:0%} off:");
         foreach (var failure in failures) Console.WriteLine("  " + failure);
         return 1;
+    }
+
+    // TEMPORARY while porting: SC_MOD_CONSTANTS=<json> of script path -> what the mod classes set at run time
+    private static void TemporaryModConstants(PartsCatalog catalog)
+    {
+        var file = Environment.GetEnvironmentVariable("SC_MOD_CONSTANTS");
+        if (string.IsNullOrEmpty(file)) return;
+        var constants = Newtonsoft.Json.Linq.JObject.Parse(File.ReadAllText(file));
+        foreach (var part in catalog.Parts.Values)
+        {
+            if (part.SourceScript == null) continue;
+            if (constants[part.SourceScript.Replace('\\', '/').Replace(".class", "")] is not Newtonsoft.Json.Linq.JObject c) continue;
+            if (c["open_air_flow"] is { } air) part.Properties["open_air_flow"] = (double)air;
+            if (c["drive_at_default"] != null && part.Properties.ContainsKey("default_rpm_turbo_mul")) part.Properties["rpm_turbo_mul"] = part.Number("default_rpm_turbo_mul");
+        }
+    }
+
+    /// <summary>
+    /// Every build's whole report, one JSON object a line, to compare the part logic of two versions of the game by:
+    /// what feeds the dyno, the curve, and everything the car's data is given
+    /// </summary>
+    private static int Snapshot(PartsCatalog catalog, string file)
+    {
+        using var writer = new StreamWriter(file);
+        foreach (var build in catalog.EngineBuilds.OrderBy(b => b.Id, StringComparer.Ordinal))
+        {
+            var tree = PartTreeBuilder.BuildEngine(catalog, build);
+            var report = tree == null ? null : EngineEvaluator.Evaluate(catalog, tree);
+            var dyno = report?.Dyno;
+            writer.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(new
+            {
+                build.Id,
+                report?.Problem,
+                report?.Inputs,
+                report?.IdleRpm,
+                report?.LimiterRpm,
+                report?.Inertia,
+                report?.GearRatios,
+                report?.ReverseRatio,
+                report?.FinalRatio,
+                report?.DriveType,
+                report?.DiffLock,
+                report?.Friction,
+                report?.ClutchCapacity,
+                report?.Turbocharged,
+                report?.Mass,
+                Hp = dyno?.MaxPowerHp,
+                HpRpm = dyno?.MaxPowerRpm,
+                Nm = dyno?.MaxTorque,
+                NmRpm = dyno?.MaxTorqueRpm,
+                dyno?.Displacement,
+                dyno?.Compression,
+                Curve = dyno?.Curve.Select(p => new[] { p.Rpm, Math.Round(p.Torque, 3) }),
+                Unplaced = tree?.Unplaced.Select(p => p.Id)
+            }));
+        }
+
+        return 0;
     }
 
     /// <summary>What the scripts feed the engine model, side by side</summary>

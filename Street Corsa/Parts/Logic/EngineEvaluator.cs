@@ -83,6 +83,9 @@ public static class EngineEvaluator
     private const double MaxRatio = 100;
     private const double MaxFigure = 1e6;
 
+    /// <summary>The car's final drive when no gearbox of the engine gives one</summary>
+    private const double DefaultFinalDrive = 3.3;
+
     /// <remarks>
     /// Never throws for what the content does: a part script that faults is a part left out, and the engine's
     /// problem says so (the scripts are third-party code, one bad class must not take every build down with it).
@@ -101,8 +104,113 @@ public static class EngineEvaluator
         }
     }
 
+    /// <summary>Temporary, while the game's own part logic is checked against the scripts': which one runs</summary>
+    public static bool UseScripts { get; set; } = Environment.GetEnvironmentVariable("SC_PART_SCRIPTS") == "1";
+
+    private static EngineReport RunOwn(PartTree tree)
+    {
+        var root = tree.Root;
+        var figures = PartFigures.Of(root);
+        var fromFigures = root.Definition.SourceScript == null;
+        var assembly = fromFigures ? null : EngineAssembly.Of(root);
+
+        var inputs = fromFigures ? PartFigures.Apply(PartFigures.DataEngineBase, figures) : PartFigures.Apply(assembly!.Inputs, figures);
+        var dyno = EngineDyno.Run(inputs);
+
+        // What the block needs on its slots, in its own order, then the compression its fuel takes
+        var problem = fromFigures ? PartFigures.MissingOf(inputs) : NeedsOf(root, enforcedOnly: false);
+        if (problem == null && assembly != null)
+        {
+            if (dyno.Compression < assembly.MinCompression)
+                problem = $"the static compression is too low in the engine. At least {assembly.MinCompression:0.0}:1 is needed. Try adjusting the air/fuel mixture ratio or lowering the compression by replacing cylinder head(s), connecting rods or pistons.";
+            else if (dyno.Compression > assembly.MaxCompression)
+                problem = $"the static compression is too high in the engine. Not more than {assembly.MaxCompression:0.0}:1 is allowed. Try adjusting the air/fuel mixture ratio or lowering the compression by replacing cylinder head(s), connecting rods or pistons.";
+        }
+
+        problem ??= EmptyRequiredSlot(root);
+
+        if (problem == null && dyno is { Curve.Count: 0 })
+            problem = EngineDyno.Unrunnable(inputs) ?? "the engine makes no power on the dyno.";
+        if (problem == null && !(dyno.MaxPowerHp <= MaxPowerHp && dyno.MaxTorque <= MaxTorqueNm))
+            problem = $"the dyno makes {dyno.MaxPowerHp:0} hp and {dyno.MaxTorque:0} Nm, past any engine: a part's figures are not what they should be.";
+        if (problem != null && inputs is { MaxFuelFlow: <= 0, MaxAirFlow: <= 0 } && problem.Contains("compression", StringComparison.OrdinalIgnoreCase))
+            problem = "nothing feeds the engine: there is no carburettor or injection on the intake.";
+
+        var gearbox = assembly?.Transmission;
+        var gears = gearbox?.Gears ?? 0;
+        double Ratio(int index) => gearbox != null && index < gearbox.Ratios.Count ? Finite(gearbox.Ratios[index], MaxRatio) : 0;
+        var gearRatios = Enumerable.Range(1, Math.Clamp(gears, 0, MaxForwardGears)).Select(Ratio).Where(r => r > 0).ToList();
+        var gearsGiven = PartFigures.GearsOf(figures);
+        if (gearsGiven != null) gearRatios = gearsGiven.Select(r => Finite(r, MaxRatio)).Where(r => r > 0).ToList();
+
+        double Engine(string name, double current, double max, double unit = 1) =>
+            PartFigures.ApplyEngine(figures, name, current * unit) is { } given ? Finite(given, max * unit) / unit : current;
+
+        var diffLock = Engine("diff_lock", Finite(gearbox?.DiffLock, MaxFigure), MaxFigure);
+        double? keptDiffLock = fromFigures || gearsGiven != null
+            ? PartFigures.ApplyEngine(figures, "diff_lock", 0) != null ? diffLock : null
+            : diffLock;
+
+        var parts = root.SelfAndDescendants().ToList();
+        var clutch = parts.FirstOrDefault(p => p.Is("Clutch"));
+        var clutchCapacity = clutch == null ? 0 : Finite(clutch.Spec("maxF", 500), MaxFigure * 100);
+        var friction = assembly == null ? 0 : Finite(assembly.Friction, MaxFigure);
+        var inertia = fromFigures
+            ? dyno.Displacement * 1000 * PartFigures.InertiaPerLitre / PartFigures.KgM2PerInertiaUnit
+            : Finite(assembly!.Inertia, MaxFigure);
+        var limiter = fromFigures || PartFigures.ApplyEngine(figures, "rev_limit", 0) != null ? inputs.RpmLimit : assembly!.RpmLimit;
+
+        var idle = Engine("idle_rpm", fromFigures ? PartFigures.DefaultIdleRpm : Finite(assembly!.IdleRpm, MaxRpm), MaxRpm);
+        if (PartFigures.ApplyEngine(figures, "idle_rpm", 0) != null)
+        {
+            var revsTo = Finite(limiter, MaxRpm) is > 0 and var given ? given : dyno.Curve.Count > 0 ? dyno.Curve[^1].Rpm : MaxRpm;
+            idle = Math.Clamp(idle, PartFigures.MinIdleRpm, Math.Max(PartFigures.MinIdleRpm, revsTo * PartFigures.MostIdleOfLimiter));
+        }
+
+        return new EngineReport
+        {
+            Problem = problem,
+            Inputs = inputs,
+            Dyno = dyno,
+            FromFigures = fromFigures,
+            IdleRpm = idle,
+            LimiterRpm = Finite(limiter, MaxRpm),
+            Inertia = Engine("inertia", inertia, MaxFigure, PartFigures.KgM2PerInertiaUnit),
+            GearRatios = gearRatios,
+            ReverseRatio = Engine("reverse", Math.Abs(Ratio(ReverseGearIndex)), MaxRatio),
+            FinalRatio = Engine("final_drive", gearbox != null ? Finite(gearbox.FinalDrive, MaxRatio) : DefaultFinalDrive, MaxRatio),
+            DriveType = gears > 0 ? (int)Finite(gearbox?.DriveType, MaxFigure) : 0,
+            DiffLock = keptDiffLock,
+            Friction = PartFigures.ApplyEngine(figures, "friction", friction > 0 ? friction / PartFigures.ReferenceFriction : 1) is { } drag
+                ? Finite(drag * PartFigures.ReferenceFriction, MaxFigure)
+                : friction,
+            ClutchCapacity = Engine("clutch_torque", clutchCapacity, MaxFigure * 100, PartFigures.ClutchNmPerUnit),
+            Turbocharged = parts.Any(p => p.Is("TurboCharger") && p.Definition.Properties.ContainsKey("P_turbo_max")),
+            TurboLagUp = LagOf("lag_up", PartFigures.DefaultLagUp),
+            TurboLagDown = LagOf("lag_down", PartFigures.DefaultLagDown),
+            Mass = Finite(parts.Sum(p => (double)p.Definition.Mass), MaxFigure),
+            Unplaced = tree.Unplaced
+        };
+
+        double LagOf(string name, double fallback) => PartFigures.ApplyEngine(figures, name, fallback) is { } lag && lag is > 0 and < 1 ? lag : fallback;
+    }
+
+    /// <summary>The first empty slot the block needs filled, in the rule's words; null when it has all</summary>
+    private static string? NeedsOf(InstalledPart part, bool enforcedOnly)
+    {
+        foreach (var rule in part.Definition.RequiredSlots.Where(r => !enforcedOnly || r.Enforce))
+        {
+            if (part.Definition.Slots.Any(s => s.Id == rule.Slot) && !part.Children.ContainsKey(rule.Slot))
+                return string.IsNullOrWhiteSpace(rule.Message) ? $"{part.Definition.DisplayName ?? part.Definition.Name} is missing a part." : rule.Message;
+        }
+
+        return null;
+    }
+
     private static EngineReport Run(PartsCatalog catalog, PartTree tree)
     {
+        if (!UseScripts) return RunOwn(tree);
+
         var runtime = new PartScriptRuntime(catalog, tree.Root);
         runtime.UpdateCar();
 
