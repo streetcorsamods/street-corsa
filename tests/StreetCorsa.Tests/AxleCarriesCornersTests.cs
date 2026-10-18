@@ -151,4 +151,18 @@ public class AxleCarriesCornersTests
         Assert.Equal(onCar.Translation.Z, onAxle.Translation.Z, 3);
         Assert.Equal(onCar.M11, onAxle.M11, 3);
     }
+
+    /// <summary>The save loaded: what the rear axle carries stays on it (the plates, the shocks, the sway bar came off)</summary>
+    [Fact]
+    public void A_saved_axle_keeps_what_it_carries_when_the_save_is_loaded()
+    {
+        var parts = FactoryParts();
+        var before = parts.SelectMany(p => p.SelfAndDescendants()).Select(p => (p.DefinitionId, p.ParentSlot, p.OwnSlot)).ToList();
+
+        var loose = new List<PartInstance>();
+        foreach (var root in parts) SavedParts.BringUpToDate(Catalog, root, loose);
+
+        Assert.Empty(loose.Select(p => p.DefinitionId));
+        Assert.Equal(before, parts.SelectMany(p => p.SelfAndDescendants()).Select(p => (p.DefinitionId, p.ParentSlot, p.OwnSlot)).ToList());
+    }
 }

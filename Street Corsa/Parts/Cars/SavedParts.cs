@@ -84,7 +84,14 @@ public static class SavedParts
 
         var slot = definition.Slots.FirstOrDefault(s => s.Id == child.ParentSlot);
         var own = childDefinition.Slots.FirstOrDefault(s => s.Id == child.OwnSlot);
-        return slot != null && own != null && slot.Id != part.OwnSlot && catalog.CanMate(childDefinition, own, definition, slot);
+        if (slot == null || own == null || slot.Id == part.OwnSlot) return false;
+
+        // The rear axle's slots for what it carries have no fittings: each stands for one of the car's own rear corner slots,
+        // and a part that goes on that car slot goes on it (a backing plate, a shock, the sway bar)
+        if (PartKinds.GroupOf(definition) == PartKinds.RearAxles && RearAxle.CarSlotFor(slot.Id) is { } carSlot)
+            return RunningGear.CarSlotsFor(childDefinition).Contains(carSlot);
+
+        return catalog.CanMate(childDefinition, own, definition, slot);
     }
 
     private static bool Reseat(PartsCatalog catalog, PartDefinition definition, PartInstance part, PartInstance child)
