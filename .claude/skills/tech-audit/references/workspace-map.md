@@ -53,7 +53,7 @@ Native at runtime: FMOD Studio/Core (from the AC install, `LibraryImport`), d3d9
 
 ## Linked source (audited under the game)
 
-- **EngineBench**: `Parts/*.cs` (14 named), `Parts/Cars/*`, `Parts/Logic/*`, `Parts/Export/*`, `Parts/Sounds/*`, `Models/Race/RaceStartState.cs`, `Models/GameState/PartInstance.cs`, `Helpers/{SafeFile,PathNames,Multiplier,Unit,Conversion}.cs`, `Mods/*` (8 files).
+- **EngineBench**: `Parts/*.cs` (13 named), `Parts/Cars/*`, `Parts/Logic/*`, `Parts/Export/*`, `Parts/Sounds/*`, `Models/Race/RaceStartState.cs`, `Models/GameState/PartInstance.cs`, `Helpers/{SafeFile,PathNames,Multiplier,Unit,Conversion,StableHash}.cs`, `Mods/*` (8 files).
 - **Scene/prop/running gear builders**: `tools/Shared/*` plus 1–2 game files each.
 - **Tests**: `tools/Shared/{Kn5SceneWriter,ObjModel,SceneMesh,BuilderArgs}.cs`.
 

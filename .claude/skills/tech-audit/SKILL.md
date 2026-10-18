@@ -140,7 +140,7 @@ Before reading code, build an inventory per unit. `Grep` for the patterns in `re
 - **Network**: `HttpClient` sites (the planned Ollama/LM Studio integration in `docs/ai-integration.md`) — endpoint source, timeouts, what content leaves the machine
 - **Cross-unit trust boundaries**: Lua app → result JSON → launcher; mods' `Content\<mod>\parts` → runtime catalog; game ↔ AC process
 
-Write the inventory to `references/attack-surface.md` (overwrite each run; in diff mode, list only new/changed surfaces and point to the prior snapshot via `git show <sha>:<path>`). Subsequent code review uses it as the worklist.
+Write the inventory to `references/attack-surface.md` (overwrite each run; in diff mode, list only new/changed surfaces and point to the prior snapshot via `git show <sha>:<path>`, where `<sha>` is the last commit that touched the file — `git log -1 --format=%h -- references/attack-surface.md`, taken before overwriting it, which is the HEAD this run audits. **Not the window's start sha:** the previous audit's inventory was committed after that audit's HEAD, so the window start holds the inventory from one audit earlier). Subsequent code review uses it as the worklist.
 
 ## Phase 4 — Per-unit code review (parallel, bounded)
 
