@@ -81,7 +81,7 @@ public static class AttendantCheck
             // The brakes grind on the way in, the shocks bounce when he leans on the fender: an axle's worst
             foreach (var first in new[] { 0, 2 })
             {
-                Worn(hints, "station.hint.brakes", new[] { corners[first].Brake, corners[first + 1].Brake }.OfType<PartInstance>(), RunningGear.AxleName(first));
+                Worn(hints, "station.hint.brakes", new[] { corners[first].Shoes ?? corners[first].Brake, corners[first + 1].Shoes ?? corners[first + 1].Brake }.OfType<PartInstance>(), RunningGear.AxleName(first));
                 Worn(hints, "station.hint.shocks", new[] { corners[first].Shock, corners[first + 1].Shock }.OfType<PartInstance>(), RunningGear.AxleName(first));
             }
         }
