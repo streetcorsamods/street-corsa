@@ -1936,7 +1936,8 @@ Design (mine, from those answers):
 its own way:
 - The rim is placed by the middle of its tyre (its tyre seat, slot 2) on the hub, where the AC wheel has its middle, not by
   the face it bolts on by (slot 1, up to 0.085 m off the middle on a deep dish). A render of an SLRR rim, tyre and drum at a
-  left hub showed the rims face +X as the drums do: the same side frame.
+  left hub seemed to show the rims face +X as the drums do, but in game they faced the car: the rims' face is -X, and a
+  wheel is turned round from the drums' frame.
 - The AC wheels are left out of the ghost car's draw only (switched off for its passes and back), not hidden for good: the
   scenes' part wheels and the body rock keep their nodes as they are.
 - The lift's prop place gives only the floor's height: the post stands under the middle of whatever car is in the bay. A

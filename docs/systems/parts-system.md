@@ -890,8 +890,8 @@ tools, never by hand:
   until then a clone of the repo draws the base game's own models.
 
 **The wheels and the lift** (step 31 phase 6). The parts view draws the rims and tyres as parts: a rim with the middle of
-its tyre (its slot 2, the tyre's seat) on the hub, the AC model's WHEEL_xx dummy, in the wheel-side frame (+X outboard,
-as the drums: a render of the SLRR rims checked it), the tyre on the rim's slot 2. The car's own wheels (its WHEEL_xx nodes,
+its tyre (its slot 2, the tyre's seat) on the hub, the AC model's WHEEL_xx dummy, turned the other way from the drums: the
+SLRR rims' face is -X (the owner's look in game; a render had seemed to say +X), the tyre on the rim's slot 2. The car's own wheels (its WHEEL_xx nodes,
 with the part wheels the scenes put on them) are left out of the ghost while the parts are on show
 (`GarageRenderer.DrawCarWithoutWheels`), so the two never double; out of the parts view the car is solid with its own. The
 `wheels` show (`part_groups.json`, icon `icons/wheel`) hides them to see the drums.
