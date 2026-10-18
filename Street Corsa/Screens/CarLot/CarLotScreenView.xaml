@@ -47,6 +47,7 @@
                                 SelectedIndex="{Binding SelectedIndex, Mode=TwoWay}"
                                 LotRadius="{Binding LotRadius}"
                                 LotView="{Binding LotView}"
+                                CoveredLeft="340"
                                 Room="{Binding LotRoom}"
                                 Marks="{Binding LotMarks}"
                                 Dressing="{Binding Dressing}"

@@ -53,8 +53,11 @@ public static class ShownPartsOnCar
         /// </summary>
         public readonly Dictionary<IKn5, (ITexturesProvider Textures, int Users)> Textures = [];
 
-        /// <summary>The wear layer on the car: for what look, at what picture size, and its node</summary>
-        public (CarLook Look, int Picture, RenderableList Holder, RenderableList Node)? Wear;
+        /// <summary>
+        /// The wear layer on the car: for what look, at what picture size, its node, and the wear of the parts of the body that
+        /// move (a door's), each in the car's node it moves with
+        /// </summary>
+        public (CarLook Look, int Picture, RenderableList Holder, RenderableList Node, List<(RenderableList Holder, RenderableList Node)> Moving)? Wear;
 
         /// <summary>The colour the car's paint textures were tinted for, and the skin they were tinted in; null in its own colours</summary>
         public (PaintColour Colour, string? Skin)? Paint;
@@ -246,10 +249,43 @@ public static class ShownPartsOnCar
 
         ClearWear(on);
         if (layer == null) return true;
-        var node = new RenderableList("sc_look", SlimDX.Matrix.Identity) { new PartFile(layer, ToSlim(fromRoot), on, loadAtOnce: true) };
+        var file = new PartFile(layer, ToSlim(fromRoot), on, loadAtOnce: true);
+        var node = new RenderableList("sc_look", SlimDX.Matrix.Identity) { file };
+        var moving = PutOnMovers(car, layer, file, on);
         root.Add(node);
-        on.Wear = (look, picture, root, node);
+        on.Wear = (look, picture, root, node, moving);
         return true;
+    }
+
+    /// <summary>
+    /// The wear of the parts of the body the car's animations move (WearLayer.MoverPrefix: a door's, the hood's) into the
+    /// car's node each moves with, so it goes with it as the door opens. Each is a file of its own (its materials are the
+    /// layer's, not the car's), the layer's pictures shared, holding that part's group alone, in the node's space; the group
+    /// is taken out of <paramref name="file"/>. A part whose node the car does not have stays in the layer, where it stands
+    /// at rest.
+    /// </summary>
+    private static List<(RenderableList Holder, RenderableList Node)> PutOnMovers(Kn5RenderableCar car, IKn5 layer, PartFile file, OnCar on)
+    {
+        var moving = new List<(RenderableList Holder, RenderableList Node)>();
+        foreach (var group in file.RootObject.OfType<RenderableList>().Where(g => g.Name?.StartsWith(WearLayer.MoverPrefix, StringComparison.Ordinal) == true).ToList())
+        {
+            if (car.RootObject?.GetDummyByName(group.Name![WearLayer.MoverPrefix.Length..]) is not { } mover) continue;
+
+            var own = new PartFile(layer, SlimDX.Matrix.Identity, on, loadAtOnce: true);
+            foreach (var other in own.RootObject.ToList().Where(o => o is not RenderableList list || list.Name != group.Name))
+            {
+                own.RootObject.Remove(other);
+                other.Dispose();
+            }
+            foreach (var kept in own.RootObject.OfType<RenderableList>()) kept.LocalMatrix = SlimDX.Matrix.Identity;
+
+            var holder = new RenderableList("sc_look_moving", SlimDX.Matrix.Identity) { own };
+            mover.Add(holder);
+            moving.Add((mover, holder));
+            file.RootObject.Remove(group);
+            group.Dispose();
+        }
+        return moving;
     }
 
     /// <summary>
@@ -319,6 +355,11 @@ public static class ShownPartsOnCar
     {
         if (on.Wear is not { } wear) return;
         on.Wear = null;
+        foreach (var (holder, node) in wear.Moving)
+        {
+            holder.Remove(node);
+            node.Dispose();
+        }
         wear.Holder.Remove(wear.Node);
         wear.Node.Dispose();
     }

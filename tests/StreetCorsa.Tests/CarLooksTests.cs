@@ -271,6 +271,65 @@ public sealed class CarLooksTests
         Assert.NotEqual(name, WearLayer.WriteFor(carFolder, look, temp.Combine("looks")));
     }
 
+    /// <summary>The box car with a door on its left side, hung on a node DOOR_L at its hinge</summary>
+    private static IKn5 BoxCarWithDoor()
+    {
+        var kn5 = BoxCar();
+        var paint = (uint)kn5.Materials.Keys.ToList().IndexOf("car_paint");
+        var door = Kn5Node.CreateBaseNode("DOOR_L");
+        door.Transform = Helpers.Matrices.ToMat4x4(Matrix4x4.CreateTranslation(0.95f, 0.75f, 0.6f));
+        door.Children.Add(PlaceholderMesh.Boxes("door_panel", [(new Vector3(0, 0, -0.5f), new Vector3(0.03f, 0.35f, 0.5f))], paint));
+        kn5.RootNode.Children.Add(door);
+        return kn5;
+    }
+
+    [Fact]
+    public void The_wear_of_a_part_an_animation_moves_is_a_mesh_of_its_own_that_names_it()
+    {
+        var shell = BodyShell.Of(BoxCarWithDoor(), 512, new HashSet<string> { "DOOR_L" })!;
+
+        var door = shell.BodyMeshes.Where(m => m.Mover == "DOOR_L").ToList();
+        Assert.NotEmpty(door);
+        Assert.Contains(shell.BodyMeshes, m => m.Mover == null);
+        // Where the door stands at rest, its wear still in the model's space (the painter paints it there)
+        Assert.All(door, m => Assert.Equal(new Vector3(0.95f, 0.75f, 0.6f), m.Rest.Translation));
+        Assert.All(door.SelectMany(m => m.Vertices), v => Assert.True(v.Position.X > 0.9f));
+
+        // A car whose animations move nothing has one body
+        Assert.All(BodyShell.Of(BoxCarWithDoor(), 512)!.BodyMeshes, m => Assert.Null(m.Mover));
+
+        // Kept on disk, the door's wear still names its node
+        using var temp = new TempDir();
+        var path = temp.Combine("door.shell");
+        ShellFile.Write(path, shell);
+        Assert.True(ShellFile.TryRead(path, out var back));
+        Assert.Equal(shell.BodyMeshes.Select(m => (m.Mover, m.Rest)), back!.BodyMeshes.Select(m => (m.Mover, m.Rest)));
+    }
+
+    [Fact]
+    public void A_race_layer_hangs_a_doors_wear_in_a_group_of_its_own_where_the_door_stands()
+    {
+        using var temp = new TempDir();
+        var carFolder = temp.Combine("door_car");
+        Directory.CreateDirectory(Path.Combine(carFolder, "animations"));
+        BoxCarWithDoor().Save(Path.Combine(carFolder, "door_car.kn5"));
+        var still = Helpers.Matrices.ToMat4x4(Matrix4x4.CreateTranslation(0.95f, 0.75f, 0.6f));
+        AcTools.KsAnimFile.KsAnim.FromEntries([new AcTools.KsAnimFile.KsAnimEntryV1 { NodeName = "DOOR_L", Matrices = [still, still] }])
+            .Save(Path.Combine(carFolder, "animations", "car_door_L.ksanim"));
+
+        var name = WearLayer.WriteFor(carFolder, new CarLook(0.8, 0.3, 0, 0, 0, 0, 0, 0, 5), temp.Combine("looks"))!;
+
+        var layer = Kn5.FromFile(temp.Combine("looks", name));
+        var group = Assert.Single(layer.RootNode.Children, n => n.Name == WearLayer.MoverPrefix + "DOOR_L");
+        Assert.Equal(Kn5NodeClass.Base, group.NodeClass);
+        Assert.Equal(0.95f, group.Transform.M41, 4);
+        // Its meshes in the door's space: the door's panel is a hair off its node, not 0.95 m out
+        var corners = group.Children.SelectMany(n => n.Vertices).ToList();
+        Assert.NotEmpty(corners);
+        Assert.All(corners, v => Assert.InRange(v.Position.X, -0.1f, 0.1f));
+        Assert.Contains(layer.RootNode.Children, n => n.NodeClass == Kn5NodeClass.Mesh);
+    }
+
     [Fact]
     public void A_shell_kept_on_disk_comes_back_as_it_was_and_a_bad_file_is_no_file()
     {

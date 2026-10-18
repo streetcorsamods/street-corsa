@@ -23,6 +23,13 @@ public static class WearLayer
 {
     private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger("Looks");
 
+    /// <summary>
+    /// The start of the name of a group in a layer's model that moves with a node of the car (a door): the node's name
+    /// follows. The group stands where the node stands at rest, its meshes in the node's space, so put under the car's node
+    /// of that name it goes where the node goes (ShownPartsOnCar, car_parts.lua); left where it is, it stays put.
+    /// </summary>
+    public const string MoverPrefix = "sc_move_";
+
     /// <summary>The materials and pictures in a layer's model</summary>
     public const string BodyMaterial = "sc_wear";
 
@@ -368,7 +375,9 @@ public static class WearLayer
         try
         {
             var started = Environment.TickCount64;
-            var shell = BodyShell.Of(model);
+            // What of the body the car's animations move, from its folder: a model read without a file moves nothing
+            var movers = name != null && Path.GetDirectoryName(name) is { } car ? BodyShell.MoversOf(car) : null;
+            var shell = BodyShell.Of(model, movers: movers);
             if (shell == null) Logger.Information("{Model}: nothing of it is paint, it shows no wear", Path.GetFileName(name));
             else
                 Logger.Information("{Model}: wear drawn on {Paint} ({Meshes} mesh(es), {Ms} ms)", Path.GetFileName(name), string.Join(", ", shell.Paint),
@@ -440,16 +449,47 @@ public static class WearLayer
 
         var bodyId = Material(kn5, BodyMaterial, Encode(WearPainter.Body(shell, look, picture), picture, picture), shell, race);
         var k = 0;
-        foreach (var mesh in shell.BodyMeshes) kn5.RootNode.Children.Add(Node($"sc_wear_{k++}", mesh, bodyId));
+        foreach (var mesh in shell.BodyMeshes) Add(kn5, Node($"sc_wear_{k++}", mesh, bodyId), mesh);
 
         if (look.Cracks > 0.01 && shell.ScreenMeshes.Count > 0)
         {
             var screenId = Material(kn5, ScreenMaterial, Encode(WearPainter.Screen(look), WearPainter.ScreenWidth, WearPainter.ScreenHeight), shell, race);
             k = 0;
-            foreach (var mesh in shell.ScreenMeshes) kn5.RootNode.Children.Add(Node($"sc_cracks_{k++}", mesh, screenId));
+            foreach (var mesh in shell.ScreenMeshes) Add(kn5, Node($"sc_cracks_{k++}", mesh, screenId), mesh);
         }
         return kn5;
     }
+
+    /// <summary>
+    /// A mesh into the layer's model: under the root, or, for one that moves with a node of the car, into that node's group
+    /// (<see cref="MoverPrefix"/>), which stands where the node stands at rest
+    /// </summary>
+    private static void Add(IKn5 kn5, Kn5Node node, BodyShell.Mesh mesh)
+    {
+        if (mesh.Mover is not { } mover)
+        {
+            kn5.RootNode.Children.Add(node);
+            return;
+        }
+
+        var name = MoverPrefix + mover;
+        var group = kn5.RootNode.Children.FirstOrDefault(n => n.NodeClass == Kn5NodeClass.Base && n.Name == name);
+        if (group == null)
+        {
+            group = Kn5Node.CreateBaseNode(name);
+            group.Transform = ToMat(mesh.Rest);
+            kn5.RootNode.Children.Add(group);
+        }
+        group.Children.Add(node);
+    }
+
+    private static AcTools.Numerics.Mat4x4 ToMat(Matrix4x4 m) => new()
+    {
+        M11 = m.M11, M12 = m.M12, M13 = m.M13, M14 = m.M14,
+        M21 = m.M21, M22 = m.M22, M23 = m.M23, M24 = m.M24,
+        M31 = m.M31, M32 = m.M32, M33 = m.M33, M34 = m.M34,
+        M41 = m.M41, M42 = m.M42, M43 = m.M43, M44 = m.M44
+    };
 
     /// <summary>
     /// A see-through material lit as the car's paint is lit, matt (rust and dirt do not shine), its picture's alpha what
@@ -483,9 +523,25 @@ public static class WearLayer
 
     private static Kn5Node Node(string name, BodyShell.Mesh mesh, uint material)
     {
+        // A moving part's wear in the space of the node it moves with (its group stands where the node stands at rest)
+        var vertices = mesh.Vertices;
+        if (mesh.Mover != null && Matrix4x4.Invert(mesh.Rest, out var toNode))
+        {
+            vertices = new Kn5Node.Vertex[mesh.Vertices.Length];
+            for (var i = 0; i < vertices.Length; i++)
+            {
+                var v = mesh.Vertices[i];
+                var p = Vector3.Transform(new Vector3(v.Position.X, v.Position.Y, v.Position.Z), toNode);
+                var n = Vector3.Normalize(Vector3.TransformNormal(new Vector3(v.Normal.X, v.Normal.Y, v.Normal.Z), toNode));
+                var t = Vector3.Normalize(Vector3.TransformNormal(new Vector3(v.Tangent.X, v.Tangent.Y, v.Tangent.Z), toNode));
+                vertices[i] = new Kn5Node.Vertex(new AcTools.Numerics.Vec3(p.X, p.Y, p.Z), new AcTools.Numerics.Vec3(n.X, n.Y, n.Z), v.Tex,
+                    new AcTools.Numerics.Vec3(t.X, t.Y, t.Z));
+            }
+        }
+
         var min = new Vector3(float.MaxValue);
         var max = new Vector3(float.MinValue);
-        foreach (var v in mesh.Vertices)
+        foreach (var v in vertices)
         {
             var p = new Vector3(v.Position.X, v.Position.Y, v.Position.Z);
             min = Vector3.Min(min, p);
@@ -503,7 +559,7 @@ public static class WearLayer
             IsVisible = true,
             IsRenderable = true,
             IsTransparent = true,
-            Vertices = mesh.Vertices,
+            Vertices = vertices,
             Indices = mesh.Indices,
             MaterialId = material,
             BoundingSphereCenter = new AcTools.Numerics.Vec3(middle.X, middle.Y, middle.Z),

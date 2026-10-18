@@ -274,10 +274,20 @@ public class CarViewingViewport3D : D3DViewportBase
         _turnSpeed = 0f;
 
         orbit.MinY = FloorClearance;
-        orbit.Target = _target;
         orbit.Alpha = alpha + GlideAlpha;
         orbit.Beta = StartBeta + 0.08f;
         orbit.Radius = Math.Min(_radiusGoal * GlideRadius, MaxRadius(stage));
+        LookClearOfPanels(orbit);
+    }
+
+    /// <summary>
+    /// The camera looks a little to its left of the car, whichever way it has come round, so the car stands in the
+    /// middle of what the screen's panels leave (<see cref="D3DViewportBase.CoveredLeft"/>) as it walks round it
+    /// </summary>
+    private void LookClearOfPanels(AcTools.Render.Base.Cameras.CameraOrbit orbit)
+    {
+        var left = PreviewFraming.CameraLeft(orbit.Alpha);
+        orbit.Target = _target + new Sx.Vector3(left.X, left.Y, left.Z) * SideShift(orbit.Radius, orbit.FovY);
     }
 
     private float MaxRadius(CarViewingStage stage) => Math.Max(MinRadius + 0.5f, stage.MaxRadius);
@@ -330,6 +340,8 @@ public class CarViewingViewport3D : D3DViewportBase
             orbit.Radius += (_radiusGoal - orbit.Radius) * k;
             moving = true;
         }
+
+        if (_loaded != null) LookClearOfPanels(orbit);
 
         return moving;
     }

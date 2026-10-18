@@ -2012,6 +2012,37 @@ take it over without moving a price.
   gear × ratio, the tyres' grip and the launch (a spool and slicks load it most); the race mode gets the odds in
   race.ini and breaks it at a hard launch (drive gone, a breakdown in the result, the tow), the part's `Tear` to 0.
 
+## Step 32: tweaks, from `docs/ideas.txt` batch 10 (built 2026-10-18, feature/tweaks-batch-10)
+
+1. **Black screen at start.** The window sat black for ~13 s while start-up read the cars and their profiles (the
+   profiles wait on the dyno pricing the parts). The intro title is now the window's own (`MainWindow.Intro`), up from
+   its first frame; the main screen takes it over (`IntroView.Claim`) and lets it go when its showroom is ready, the least
+   time counted from when the title came up. A first screen that does not take it over sees it fade.
+2. **The shelf turned white.** The workbench panel is disabled while a job runs, and Windows' own list paints itself
+   white when disabled. An implicit `ListBox` style in `Styles/Inputs.xaml` keeps the list's background (the part shop,
+   machine shop and used parts lists had the same trap).
+3. **Camera focus.** The garage camera goes to a part picked in the parts view and turns round it, as SLRR does, from
+   where it looks; back to the car (as near as it was) when nothing is picked or the view closes
+   (`CarViewport3D.FocusSelection`, `GarageRenderer.PartBox`). The lot's car camera stood 50 degrees off the nose, which
+   reads as the side: now 34 degrees off, on the left front unless the room leaves more on the right. A screen says how
+   much of the view its panels cover from the left (`D3DViewportBase.CoveredLeft`: car lot 340, dealer lot and car
+   viewing 410), and the camera looks a little to its left of the car (`PreviewFraming.SideShift`, `CameraLeft`) so the
+   car stands in the middle of what is left, wherever the player swings it.
+4. **Rust.** The drive-in stutter is the first frame that draws a car just put in its scene (45-160 ms in the logs, its
+   textures going to the card), always the first frame of the move: a frame is now drawn unseen with the camera on the
+   car before any scripted move starts (`D3DViewportBase.DrawUnseen`). Rust into the skin's textures (as AC picks up a
+   skin file named as a model texture) was surveyed over the 199 installed cars: 101 have a paint texture laid out once
+   over the body; 78 mirror or share parts of it (rust would show on both sides), 15 tile it, 4 are too coarse. So the
+   layer stays, split by what moves (the owner's pick): the nodes the car's animations move (`BodyShell.MoversOf`, every
+   .ksanim in its animations folder: doors, hood, trunk, pop-up lamps) each get the wear of the body under them as a group
+   `sc_move_<node>` (`WearLayer.MoverPrefix`) standing where the node stands at rest, its meshes in the node's space. The
+   scenes hang each group, as a file of its own (the layer's materials, its pictures shared), in the car's node of that
+   name (`ShownPartsOnCar.PutOnMovers`); the race mode re-parents it there where it stands (`car_parts.lua`
+   `putOnMovers`). Shells are version 4 and keyed on the animations too. Seen in a harness render (the Javelin's door
+   opens with its rust); not seen in the game or in AC.
+5. **Installer art.** `installer/make_art.py` puts the game's icon and its title lettered as the intro letters it (Impact,
+   italic, the intro's chrome) on the wizard's side panel and banner.
+
 ## Epic: total conversion (planned 2026-09-30)
 
 The owner wants the whole game moddable, so the community can add game modes and whole new games (a Tokyo Drift game

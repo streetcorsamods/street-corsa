@@ -140,6 +140,49 @@ public class PreviewsTests
         Assert.True(5.6f / 2f < wagon * MathF.Tan(FovY / 2f) * 16f / 9f);
     }
 
+    [Theory]
+    [InlineData(0f)]
+    [InlineData(1.1f)]
+    [InlineData(-2.4f)]
+    public void The_cameras_left_is_level_and_across_the_way_it_looks(float alpha)
+    {
+        var left = PreviewFraming.CameraLeft(alpha);
+        var forward = -new Vector3(MathF.Cos(alpha), 0f, MathF.Sin(alpha));
+
+        Assert.Equal(0f, left.Y);
+        Assert.Equal(1f, left.Length(), 4);
+        Assert.Equal(0f, Vector3.Dot(left, forward), 4);
+        // Right-handed, as AcTools' cameras are: the picture's right is forward × up, the left its opposite
+        var right = Vector3.Cross(forward, Vector3.UnitY);
+        Assert.Equal(-1f, Vector3.Dot(left, Vector3.Normalize(right)), 4);
+    }
+
+    [Theory]
+    [InlineData(1920, 1080, 410)]
+    [InlineData(1280, 720, 340)]
+    [InlineData(2560, 1080, 410)]
+    public void A_car_stands_in_the_middle_of_what_the_panels_leave(double width, double height, double covered)
+    {
+        const float radius = 6.2f;
+        var shift = PreviewFraming.SideShift(covered, width, height, radius, FovY);
+
+        // Looked at that far to its left, the car is that far right of the middle of the picture: in pixels, from half
+        // the picture's width at its distance
+        var halfWidth = radius * MathF.Tan(FovY / 2f) * (float)(width / height);
+        var pixel = width / 2 + shift / halfWidth * width / 2;
+
+        Assert.Equal(covered + (width - covered) / 2, pixel, 1);
+    }
+
+    [Fact]
+    public void Nothing_covered_or_nothing_laid_out_moves_nothing()
+    {
+        Assert.Equal(0f, PreviewFraming.SideShift(0, 1920, 1080, 6f, FovY));
+        Assert.Equal(0f, PreviewFraming.SideShift(400, 0, 0, 6f, FovY));
+        // Never past half the picture, however much is covered
+        Assert.Equal(PreviewFraming.SideShift(960, 1920, 1080, 6f, FovY), PreviewFraming.SideShift(5000, 1920, 1080, 6f, FovY));
+    }
+
     private static void AssertClose(Vector2 expected, Vector2 actual)
     {
         Assert.Equal(expected.X, actual.X, 4);

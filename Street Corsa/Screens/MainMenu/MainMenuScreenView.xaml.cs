@@ -34,6 +34,7 @@ namespace StreetCorsa.Screens.MainMenu
         private bool _introOver;
         private bool _introLeastPassed;
         private bool _showroomUp;
+        private IntroView? _intro;
 
         private MainMenuScreenViewModel? _viewModel;
         private Window? _window;
@@ -51,10 +52,6 @@ namespace StreetCorsa.Screens.MainMenu
             };
             Loaded += (_, _) =>
             {
-                Attach(DataContext as MainMenuScreenViewModel);
-                if (_viewModel?.ShowIntro == true && !_introStarted) StartIntro();
-                else if (!_introStarted || _introOver) ShowPanel(_viewModel?.CurrentCard);
-
                 // Esc from the window: once a menu badge is clicked it is hidden, and the focus leaves this screen
                 _window = Window.GetWindow(this);
                 if (_window != null)
@@ -62,6 +59,10 @@ namespace StreetCorsa.Screens.MainMenu
                     _window.PreviewKeyDown -= OnWindowKeyDown;
                     _window.PreviewKeyDown += OnWindowKeyDown;
                 }
+
+                Attach(DataContext as MainMenuScreenViewModel);
+                if (_viewModel?.ShowIntro == true && !_introStarted) StartIntro();
+                else if (!_introStarted || _introOver) ShowPanel(_viewModel?.CurrentCard);
             };
             Unloaded += (_, _) =>
             {
@@ -69,6 +70,9 @@ namespace StreetCorsa.Screens.MainMenu
                 if (_window != null) _window.PreviewKeyDown -= OnWindowKeyDown;
                 _window = null;
                 _introTimer?.Stop();
+
+                // Left before the title went: it does not stay over the next screen
+                if (_intro != null && !_introOver) _intro.FadeOut(IntroFade);
             };
 
             // No showroom to show at all: the old picture rather than a black screen
@@ -101,9 +105,24 @@ namespace StreetCorsa.Screens.MainMenu
         private void StartIntro()
         {
             _introStarted = true;
-            Intro.Visibility = Visibility.Visible;
 
-            _introTimer = new DispatcherTimer { Interval = IntroLeast };
+            // The window's title, up since the game started: it stays until the showroom is ready
+            _intro = (_window as MainWindow)?.Intro;
+            if (_intro == null || !_intro.Claim())
+            {
+                _intro = null;
+                EndIntro();
+                return;
+            }
+
+            _intro.MouseDown += Intro_MouseDown;
+
+            // The least time counts from when the title came up, not from when this screen did
+            var shown = DateTime.UtcNow - _intro.ShownAt;
+            var least = IntroLeast - shown;
+            if (least <= TimeSpan.Zero) _introLeastPassed = true;
+
+            _introTimer = new DispatcherTimer { Interval = least > TimeSpan.Zero ? least : IntroMost - IntroLeast };
             _introTimer.Tick += (_, _) =>
             {
                 // The least time is up: go if the showroom is, or give it until the most
@@ -137,10 +156,11 @@ namespace StreetCorsa.Screens.MainMenu
             _introOver = true;
             _introTimer?.Stop();
 
-            var fade = new DoubleAnimation(0, IntroFade);
-            fade.Completed += (_, _) => Intro.Visibility = Visibility.Collapsed;
-            Intro.IsHitTestVisible = false;
-            Intro.BeginAnimation(OpacityProperty, fade);
+            if (_intro != null)
+            {
+                _intro.MouseDown -= Intro_MouseDown;
+                _intro.FadeOut(IntroFade);
+            }
 
             ShowPanel(_viewModel?.CurrentCard);
         }

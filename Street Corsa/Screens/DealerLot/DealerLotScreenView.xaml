@@ -17,6 +17,7 @@
                                       Cars="{Binding LotCars}"
                                       SelectedIndex="{Binding SelectedIndex, Mode=TwoWay}"
                                       LotRadius="{Binding LotRadius}"
+                                      CoveredLeft="410"
                                       RunningEngine="{Binding Runner, ElementName=EnginePanel}"/>
 
         <!-- The lot is covered until every car is standing in it, then the cover fades and the viewport

@@ -13,6 +13,7 @@
         <!-- The car where its seller has it, behind everything -->
         <controls:CarViewingViewport3D x:Name="Viewport"
                                        Stage="{Binding Stage}"
+                                       CoveredLeft="410"
                                        RunningEngine="{Binding Runner, ElementName=EnginePanel}"/>
 
         <!-- Covered until the car stands in its scene -->

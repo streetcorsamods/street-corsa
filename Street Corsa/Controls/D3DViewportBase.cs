@@ -238,6 +238,23 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         private set => SetValue(IsReadyPropertyKey, value);
     }
 
+    public static readonly DependencyProperty CoveredLeftProperty = DependencyProperty.Register(
+        nameof(CoveredLeft), typeof(double), typeof(D3DViewportBase),
+        new PropertyMetadata(0.0, (d, _) => ((D3DViewportBase)d).Invalidate()));
+
+    /// <summary>
+    /// How much of the view the screen covers with its panels, from the left edge (the talk card, a car's details):
+    /// a viewport that frames a car stands it in the middle of what is left (<see cref="PreviewFraming.SideShift"/>)
+    /// </summary>
+    public double CoveredLeft
+    {
+        get => (double)GetValue(CoveredLeftProperty);
+        set => SetValue(CoveredLeftProperty, value);
+    }
+
+    /// <summary>How far to the camera's left it looks, for a car <paramref name="radius"/> away to stand clear of <see cref="CoveredLeft"/></summary>
+    protected float SideShift(float radius, float fovY) => PreviewFraming.SideShift(CoveredLeft, ActualWidth, ActualHeight, radius, fovY);
+
     private static readonly DependencyPropertyKey HasFailedPropertyKey = DependencyProperty.RegisterReadOnly(
         nameof(HasFailed), typeof(bool), typeof(D3DViewportBase), new PropertyMetadata(false));
 
@@ -1054,6 +1071,8 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         var front = _rock.FrontSign;
         var home = new GroundPose(world.M41, world.M43, MathF.Atan2(world.M31 * front, world.M33 * front));
 
+        DrawUnseen(renderer, car);
+
         var scripted = new ScriptedCar(home, scriptEngine, (head, brake) =>
         {
             if (head is { } on) headlights(on);
@@ -1072,6 +1091,46 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         _run = run;
         AnimateFor(SettleWindow);
         return run;
+    }
+
+    /// <summary>How far back the unseen frame (<see cref="DrawUnseen"/>) stands from the car: all of it in the picture</summary>
+    private const float UnseenRadius = 7f;
+
+    /// <summary>
+    /// Draws a frame nobody sees, with the camera on <paramref name="car"/>, before it moves. The first frame that draws a car
+    /// just put in its scene sends its pictures to the graphics card (its wear's among them), and takes a tenth of a second
+    /// or more: the first frame of the car's move came late by that, and a car driving in jerked as it set off. Drawn now,
+    /// while nothing moves, the move starts smooth. The camera goes back as it was; nothing of the frame is shown.
+    /// </summary>
+    private void DrawUnseen(GarageRenderer renderer, Kn5RenderableCar car)
+    {
+        if (renderer.CameraOrbit is not { } orbit) return;
+
+        var (alpha, beta, radius, target, auto) = (orbit.Alpha, orbit.Beta, orbit.Radius, orbit.Target, renderer.AutoAdjustTarget);
+        var started = System.Diagnostics.Stopwatch.GetTimestamp();
+        try
+        {
+            renderer.AutoAdjustTarget = false;
+            var place = car.Matrix;
+            orbit.Target = new SlimDX.Vector3(place.M41, place.M42 + 0.7f, place.M43);
+            orbit.Radius = UnseenRadius;
+            orbit.Beta = 0.25f;
+            orbit.UpdateViewMatrix();
+            renderer.Draw();
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning("The frame drawn ahead of a move failed: {Error}", ex.Message);
+        }
+        finally
+        {
+            (orbit.Alpha, orbit.Beta, orbit.Radius, orbit.Target) = (alpha, beta, radius, target);
+            orbit.UpdateViewMatrix();
+            renderer.AutoAdjustTarget = auto;
+            renderer.IsDirty = true;
+        }
+
+        Logger.Debug("Drew the car once ahead of its move in {Ms:0} ms", System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds);
     }
 
     /// <summary>A script plays for <paramref name="trigger"/> at this moment: a screen that readies itself for one (its camera) asks first</summary>

@@ -70,6 +70,7 @@ namespace StreetCorsa
             ScreenHost.PreviewGotKeyboardFocus += (_, e) => _screenFocus = e.NewFocus is { } focus ? new WeakReference<IInputElement>(focus) : null;
             DialogService.PropertyChanged += OnDialogChanged;
             NavigationService.ScreenChanging += OnScreenChanging;
+            NavigationService.PropertyChanged += OnFirstScreen;
 
             // A dialog that closed stays in the host while it fades out, and goes once the host is gone
             DialogHost.IsVisibleChanged += (_, e) =>
@@ -103,6 +104,21 @@ namespace StreetCorsa
 
             var status = new DispatcherTimer(StatusInterval, DispatcherPriority.Background, (_, _) => UpdateStatus(), Dispatcher);
             status.Start();
+        }
+
+        /// <summary>
+        /// The first screen is up: the title goes unless that screen took it over as it loaded (the main screen does,
+        /// and lets it go when its showroom is ready)
+        /// </summary>
+        private void OnFirstScreen(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName != nameof(NavigationService.CurrentScreen) || NavigationService.CurrentScreen == null) return;
+
+            NavigationService.PropertyChanged -= OnFirstScreen;
+            Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, () =>
+            {
+                if (!Intro.IsClaimed) Intro.FadeOut(new Duration(TimeSpan.FromMilliseconds(900)));
+            });
         }
 
         /// <summary>The money card: shown over a game's screens, with the game's money, time and date</summary>
