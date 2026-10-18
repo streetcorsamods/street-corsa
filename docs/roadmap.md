@@ -1955,8 +1955,10 @@ model's wheel, hub and suspension groups through the body rock, and in the parts
 leaf springs, `GarageRenderer.Droop`); and a wheel taken off no longer shows the car's own wheel out of the parts view
 (`ShownSet.MissingWheels`: the scenes switch that corner's WHEEL_xx off).
 
-Then (2026-10-18): a tyre comes off a mounted wheel no more (`{ "kind": "tyre", "after": [ "rim" ] }`: clicking a wheel
-mostly hits its tyre, which came off with the car down); tyres are changed on the shelf. And a Lower button (icon
+Then (2026-10-18): a tyre on a mounted wheel comes off and goes on only with the car up (`{ "kind": "tyre", "lifted": true }`:
+clicking a wheel mostly hits its tyre, which came off with the car down; "after rim" was tried first, but a tyre goes
+on a rim only on the car, the shelf has no putting together). The car model's own shadow planes stay on the floor while
+it is up (`D3DViewportBase.KeepShadowsOnFloor`: body_shadow moved down, the tyre shadows gone once the wheels hang). And a Lower button (icon
 `icons/car` for now) beside the lift's, while the car is up: a stop down from either stop (`LiftLayout.Below`).
 
 To check in game: the wheels drawn in the parts view on every corner, faces out, no AC wheel doubling them; the wheels

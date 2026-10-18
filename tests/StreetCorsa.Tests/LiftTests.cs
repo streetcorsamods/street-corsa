@@ -92,13 +92,15 @@ public class LiftTests
         Assert.Contains("lift", CarWork.WhyNotOn(Catalog, parts, wheel, place, liveAxle: true, lifted: false));
         Assert.Null(CarWork.WhyNotOn(Catalog, parts, wheel, place, liveAxle: true, lifted: true));
 
-        // A tyre comes off only with its wheel (clicking a wheel mostly hits its tyre), the car up or down; it is changed
-        // on the shelf
+        // A tyre on a wheel on the car the same (clicking a wheel mostly hits its tyre): off and on only with the car up
         var other = Wheel(parts, 1);
         var tyre = other.Children.Single(c => c.ParentSlot == RunningGear.TyreSlotOnRim);
-        Assert.Contains("wheel", CarWork.WhyNotOff(Catalog, parts, tyre, lifted: false));
-        Assert.Contains("wheel", CarWork.WhyNotOff(Catalog, parts, tyre, lifted: true));
-        Assert.NotNull(CarWork.WhyNotOn(Catalog, parts, tyre, new MountPlace(other, RunningGear.TyreSlotOnRim, 1), liveAxle: true, lifted: true));
+        Assert.Contains("lift", CarWork.WhyNotOff(Catalog, parts, tyre, lifted: false));
+        Assert.Null(CarWork.WhyNotOff(Catalog, parts, tyre, lifted: true));
+        Workbench.Remove(parts, tyre);
+        var onRim = new MountPlace(other, RunningGear.TyreSlotOnRim, 1);
+        Assert.Contains("lift", CarWork.WhyNotOn(Catalog, parts, tyre, onRim, liveAxle: true, lifted: false));
+        Assert.Null(CarWork.WhyNotOn(Catalog, parts, tyre, onRim, liveAxle: true, lifted: true));
 
         // What is behind the wheel waits for it as before, up or down: the car up does not take the wheel off
         var drum = RunningGear.Mounted(parts, Catalog)[1].Brake!;

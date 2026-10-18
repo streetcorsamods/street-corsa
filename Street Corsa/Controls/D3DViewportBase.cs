@@ -840,6 +840,23 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     /// </summary>
     protected virtual float LiftHeight => 0f;
 
+    /// <summary>
+    /// The car model's own shadows (AC's body_shadow and tyre_N_shadow planes, under the car in its node) stay on the floor
+    /// as the lift takes the car up: the body's moved down as far as the car is up, the tyres' gone once the wheels hang
+    /// clear of the floor (<see cref="StreetCorsa.Parts.LiftLayout.WheelDrop"/>)
+    /// </summary>
+    private static void KeepShadowsOnFloor(Kn5RenderableCar car, float lift)
+    {
+        if (car.OfType<AcTools.Render.Base.Objects.RenderableList>().FirstOrDefault(l => l.Name == "_shadows") is not { } shadows) return;
+
+        var down = lift == 0f ? SlimDX.Matrix.Identity : SlimDX.Matrix.Translation(0f, -lift, 0f);
+        if (shadows.LocalMatrix != down) shadows.LocalMatrix = down;
+
+        var onFloor = lift <= StreetCorsa.Parts.LiftLayout.WheelDrop;
+        foreach (var tyre in shadows.OfType<AmbientShadow>().Where(s => !ReferenceEquals(s, car.AmbientShadowNode)))
+            tyre.IsEnabled = onFloor;
+    }
+
     /// <summary>How high the lift has <paramref name="node"/> as the rock last put it: what its hubs are up off their places on the floor</summary>
     protected float LiftedBy(Kn5RenderableCar node) => ReferenceEquals(_liftedNode, node) ? _appliedLift : 0f;
 
@@ -966,6 +983,7 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
             : (SlimDX.Matrix?)null;
         _appliedLift = lift;
         _liftedNode = carNode;
+        KeepShadowsOnFloor(carNode, lift);
         if (!_rock.Apply(pose, moved?.WheelSpin ?? 0f, placement, moved?.Steer ?? 0f, StreetCorsa.Parts.LiftLayout.Droop(lift))) return;
 
         if (LeansParts) renderer.BodyLean = _rock.WorldLean * SlimDX.Matrix.Translation(0f, lift, 0f);
