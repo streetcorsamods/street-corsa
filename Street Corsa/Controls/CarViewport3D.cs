@@ -224,6 +224,32 @@ public partial class CarViewport3D : D3DViewportBase
         set => SetValue(ShowroomKn5Property, value);
     }
 
+    public static readonly DependencyProperty RoomProperty = DependencyProperty.Register(
+        nameof(Room), typeof(Services.Garage.GarageRoom), typeof(CarViewport3D),
+        new PropertyMetadata(null, (d, _) => ((CarViewport3D)d).ApplyRoom()));
+
+    /// <summary>
+    /// The garage's room (its scene.json): the walls the camera stays inside and the light at each light of the day. A
+    /// garage that says nothing of it (an Assetto Corsa showroom) is lit as the renderer lights it, the camera held by its
+    /// own limits.
+    /// </summary>
+    public Services.Garage.GarageRoom? Room
+    {
+        get => (Services.Garage.GarageRoom?)GetValue(RoomProperty);
+        set => SetValue(RoomProperty, value);
+    }
+
+    public static readonly DependencyProperty LightProperty = DependencyProperty.Register(
+        nameof(Light), typeof(Services.Street.StreetLight), typeof(CarViewport3D),
+        new PropertyMetadata(Services.Street.StreetLight.Day, (d, _) => ((CarViewport3D)d).ApplyRoom()));
+
+    /// <summary>The light of the day in the garage (<see cref="Services.Street.StreetLights.At"/>): its lights and the sky past its door</summary>
+    public Services.Street.StreetLight Light
+    {
+        get => (Services.Street.StreetLight)GetValue(LightProperty);
+        set => SetValue(LightProperty, value);
+    }
+
     public static readonly DependencyProperty HeadlightsOnProperty = DependencyProperty.Register(
         nameof(HeadlightsOn), typeof(bool), typeof(CarViewport3D),
         new PropertyMetadata(false, (d, _) => ((CarViewport3D)d).ApplyCarState()));
@@ -637,6 +663,8 @@ public partial class CarViewport3D : D3DViewportBase
         ApplyCarState();
         ApplyParts();
         ApplyShown();
+        ApplyRoom();
+        ApplyGarageDressing();
         ApplyScenery();
         ApplyRadio();
         ApplyBench();
@@ -1274,6 +1302,78 @@ public partial class CarViewport3D : D3DViewportBase
 
     // The renderer the radio was put into: once for each renderer, whatever cars come and go in it
     private GarageRenderer? _radioRenderer;
+
+    // The lamps the garage's room hung, taken down before it is lit for another hour
+    private readonly List<AcTools.Render.Kn5SpecificForwardDark.Lights.DarkLightBase> _roomLamps = new();
+
+    /// <summary>
+    /// Lights the garage as its room says for <see cref="Light"/>: the sun, the ambient and the lamps (the ones hung before
+    /// taken down first), its glass glowing, the sky of the hour past its door (where its model has one). A room that
+    /// gives no light leaves the renderer's own.
+    /// </summary>
+    private void ApplyRoom()
+    {
+        var renderer = Renderer;
+        if (renderer == null || Room is not { IsLit: true } room) return;
+
+        var dressing = room.Dress(Light);
+        SceneDressing.Apply(renderer, new LotDressing(dressing.Lighting, dressing.Sun, new Dictionary<string, string>(), dressing.Glow), _roomLamps, Logger);
+        SceneDressing.ShowSky(renderer, Services.Garage.GarageRoom.SkyPrefix, dressing.Sky);
+        Invalidate();
+    }
+
+    // The props the game draws in places of its own: everything else with a place in the garage is its dressing
+    private static readonly string[] OwnPlaceProps = ["radio", WorkbenchLayout.PropId, LiftLayout.PropId, EngineStandLayout.PropId];
+
+    // The renderer the dressing was put into
+    private GarageRenderer? _dressingRenderer;
+
+    /// <summary>
+    /// The garage's dressing, every prop with a place in it (<see cref="Services.Garage.GarageProps.FindAll"/>): the models
+    /// read off the UI thread, each once however many places it has, set into the renderer once. A model that cannot be
+    /// read is logged and left out. The engine stand is put where the garage has it first.
+    /// </summary>
+    private async void ApplyGarageDressing()
+    {
+        var renderer = Renderer;
+        if (renderer == null || ReferenceEquals(renderer, _dressingRenderer)) return;
+        _dressingRenderer = renderer;
+
+        // The engine stand where the garage has it, before the stand is first drawn
+        var problems = new List<string>();
+        EngineStandLayout.PlaceAt(Services.Garage.GarageProps.Find(Mods.ModSet.Installed, EngineStandLayout.PropId, ShowroomKn5, problems, builtIn: true)?.Position);
+
+        var props = Services.Garage.GarageProps.FindAll(Mods.ModSet.Installed, ShowroomKn5, OwnPlaceProps, problems);
+        foreach (var problem in problems) Logger.Warning("Garage props: {Problem}", problem);
+        Mods.ModProblems.Add("Garage props", problems);
+        if (props.Count == 0) return;
+
+        var models = await Task.Run(() =>
+        {
+            var read = new Dictionary<string, AcTools.Kn5File.IKn5>(StringComparer.OrdinalIgnoreCase);
+            foreach (var model in props.Select(p => p.Model).Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    read[model] = AcTools.Kn5File.Kn5.FromFile(model);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warning("A garage prop could not be read from {Model}: {Error}", model, ex.Message);
+                }
+            }
+
+            return read;
+        });
+
+        if (renderer != Renderer) return;
+        renderer.SetDressing(props.Where(p => models.ContainsKey(p.Model)).Select(p => (models[p.Model], ToSlim(DressingPlacement(p, models[p.Model])))));
+        Invalidate();
+    }
+
+    /// <summary>Where a prop of the dressing goes: a laid one stood back on its base (<see cref="Services.Garage.PlacedProp.PlacementOf"/>)</summary>
+    internal static System.Numerics.Matrix4x4 DressingPlacement(Services.Garage.PlacedProp prop, AcTools.Kn5File.IKn5 kn5) =>
+        prop.IsLaid && Services.Garage.GarageProps.BoundsOf(kn5) is { } bounds ? prop.PlacementOf(bounds.Min, bounds.Max) : prop.Placement;
 
     /// <summary>
     /// The radio on its bench, where the garage's props put it (<see cref="Services.Garage.GarageProps"/>): read off the UI

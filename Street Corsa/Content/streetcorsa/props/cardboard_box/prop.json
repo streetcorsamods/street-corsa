@@ -1,0 +1,11 @@
+{
+  "_comment": "Dresses the garage (docs/modding.md, props): its model, made by tools/GarageScene/build_props.py from Poly Haven's cardboard_box_01 (CC0), drawn at each of its places in a garage, by the garage's folder name. A place is a position [x, y, z] in metres from the car's spot (+x the car's left, +z its nose, y up from the floor), a heading in degrees about the vertical, and for a prop laid down or leant against a wall a tilt (tipped forward) and a roll (over to its side): the game stands it back on its base.",
+  "name": "Cardboard box",
+  "credit": "\"Cardboard Box 01\" by Rahul Chaudhary, Poly Haven (CC0)",
+  "places": {
+    "workshop": [
+      { "position": [-6.7, 0, -8.55], "heading": 10 },
+      { "position": [-6.62, 2.25, -7.35], "heading": 80 }
+    ]
+  }
+}

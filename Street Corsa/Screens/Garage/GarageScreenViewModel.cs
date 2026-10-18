@@ -155,6 +155,12 @@ namespace StreetCorsa.Screens.Garage
         /// <summary>Showroom model used as the environment of the 3D viewport</summary>
         public string GarageShowroomKn5 => AppSettings.Instance.GarageShowroomKn5;
 
+        /// <summary>The garage's room: the walls the camera stays in, its light at each light of the day</summary>
+        public Services.Garage.GarageRoom GarageRoom => Services.Garage.GarageRooms.For(AppSettings.Instance.GarageId);
+
+        /// <summary>The light of the day in the garage, by the game's clock</summary>
+        public Services.Street.StreetLight GarageLight => Services.Street.StreetLights.At(_gameState.Date);
+
         public bool SkipEnterAnimation { get; }
 
         /// <summary>The car was just taken out of the lot and drives in under its own power as the garage comes up</summary>
@@ -995,6 +1001,7 @@ namespace StreetCorsa.Screens.Garage
             OnPropertyChanged(nameof(CurrentDay));
             OnPropertyChanged(nameof(CurrentDayOfWeek));
             OnPropertyChanged(nameof(CurrentTimeDisplay));
+            OnPropertyChanged(nameof(GarageLight));
 
             // The grid changes with the day and the pictures with the month: not on every piece of work in the garage
             if (_gameState.Date.Date != _shownCalendarDay)

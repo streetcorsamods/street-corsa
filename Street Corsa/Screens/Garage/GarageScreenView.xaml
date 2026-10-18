@@ -39,6 +39,8 @@
                                 CarDirectory="{Binding SelectedCar.CarDirectory}"
                                 SkinId="{Binding SelectedCar.SkinId}"
                                 ShowroomKn5="{Binding GarageShowroomKn5}"
+                                Room="{Binding GarageRoom}"
+                                Light="{Binding GarageLight}"
                                 PartsCatalog="{Binding Workbench.Catalog}"
                                 PartsVisible="{Binding Workbench.IsOpen}"
                                 PartShows="{Binding Workbench.PartShows}"

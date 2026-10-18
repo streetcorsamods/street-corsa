@@ -74,7 +74,7 @@ The game's own settings: what it is called (the window's title) and the garage i
 
 - `title`: the window's title.
 - `garage`: the garage the game is played from: a mod's `garages\<id>` (see "showcase and garages"), else the AC
-  showroom of that id.
+  showroom of that id. The base game's is its own, `workshop`.
 - `language`: the language the files directly in the mods' `text` folders are written in (`"en"`); see "text".
 - `locale`: how the game writes what the player reads:
   - `culture`: a .NET culture name (`"en-US"`, `"ja-JP"`, `"de-DE"`) for numbers, dates, month and day names.
@@ -694,14 +694,29 @@ folder name), where it stands and which way it faces: `{ "name": "Radio", "model
 { "position": [2.62, 1.29, -8.6], "heading": 67 } }, "credit": "..." }` (metres, the car at the origin; degrees about the vertical). A
 mod's prop of an id the base game has replaces it, so a mod can swap the radio for another set or put it elsewhere in
 its own garage; one without a place in a garage takes it out of that garage. `credit` names the model's maker where
-the game shows its credits (Settings), as a CC BY licence asks. The published `bushradio` mod has `radio`, the set on the
-welder: clicking it opens the radio. The base game's `workbench` is where a loose part's "Work on it" job is shown; it names
+the game shows its credits (Settings), as a CC BY licence asks.
+
+**The garage's dressing.** Every prop with a place in the garage but the four the game draws in places of its own
+(`radio`, `workbench`, `lift`, `engine_stand`) is part of its dressing, drawn where its places say: a garage is
+furnished by its props' places, and a mod adds a can of oil to it with a folder and a line. A place may be a list, for a
+prop that is there more than once: `"workshop": [ { "position": [-4.45, 0, -1.9], "tilt": 90 }, { "position": [-4.45,
+0.17, -1.9], "heading": 55, "tilt": 90 } ]` (a stack of tyres). `tilt` tips the model forward about its own x and `roll`
+over to its side about its own z, in degrees, before the heading turns it: a tyre laid flat is `"tilt": 90`, a ladder
+leant back against a wall `"tilt": -12`. The game stands a tipped prop back on what is now its base, the middle of its
+footprint over the position, its bottom at the position's height. A prop stands on the floor (y 0) or on what is under
+it (a bench top at 0.9: y 0.9); nothing stops two props standing in each other, so a prop is placed by its looks. The
+base game's garage (`workshop`) has some forty, Poly Haven models (CC0) made by `tools\GarageScene\build_props.py`.
+
+The published `bushradio` mod has `radio`, the set on the desk: clicking it opens the radio. The base game's `workbench` is where a loose part's "Work on it" job is shown; it names
 no model and the game draws its own (a mod's `workbench` may name one, its top 0.9 m up, its front +Z); a garage it has no place in
 has no bench, and a loose part's job is shown there without the part. The base game's `lift` is the in-ground post the
 car in the bay goes up on: it names no model and the game draws its own; a mod's may name one, whose rising part is a node
 named `lift_post` with the top of its saddle (where the car rests) at the node's origin. Its place gives the floor's height
 (the post stands under the middle of whatever car is in the bay); a garage it has no place in still lifts the car, with
-no lift drawn. `tools\Props` makes a prop's KN5: `prepare_prop.py` takes any model with PBR
+no lift drawn. The base game's `engine_stand` is where an engine is worked on off the car (the parts view's Stand): it
+names no model and the game draws its own; its place is the middle of its spindle over the floor, `[x, y, z]` with y the
+floor's height, and it always faces the way the car does, whatever its heading. A garage it has no place in has it 3 m to
+the car's left, `[3, 0, 0.3]`. `tools\Props` makes a prop's KN5: `prepare_prop.py` takes any model with PBR
 materials (a Sketchfab .glb, a .blend) through Blender, `PropBuilder` writes the KN5 (`--keep-origin` for a part's model,
 whose origin is where it mounts: see docs/systems/parts-system.md "The running gear's models" for the spaces).
 `tools\RunningGearParts` makes the base game's running gear models out of shapes.
@@ -1037,8 +1052,23 @@ held as a warehouse's is.
 
 `showcase` lists the main screen's rooms: `{ "scenes": [ { "id": "mygarage", "wallRadius": 12 } ] }`. A room is a
 folder of `garages` (a mod's own, `garages\mygarage\mygarage.kn5`; a later mod's room of the same name wins) or an AC
-showroom. The garage the player works in is the room `garage`; its `scene.json` names the marks its car scripts drive by
-(see scripts).
+showroom. The garage the player works in is the room game.json names (`workshop`, the base game's own); its
+`scene.json` names the marks its car scripts drive by (see scripts) and, for a garage of a mod's own, its room:
+
+- `room`: `{ "minX": -5, "maxX": 7, "minZ": -7, "maxZ": 5.5, "height": 2.8 }`, the walls either side of the car's spot
+  (x across, +x the car's left; z along the car, +z its nose) and how high the camera may go: it stays inside, however
+  it is swung or wheeled out. Without one the camera keeps the garage screen's own limits (an AC showroom).
+- `sun`, `lights` (`day`, `dusk`, `night`) and `lamps`: as a warehouse's (the lamps lit at every hour, `lampScale` how
+  bright they are then); the game's clock picks the light. Without `lights` the garage is lit as the renderer lights an
+  AC showroom.
+- `glow`: how bright each self-lit material is at each light of the day, `{ "day": { "gr_window": 1.1 }, "night": {
+  "gr_window": 0.06 } }` (0 to 4).
+- Sky domes named `GARAGE_SKY_DAY`, `GARAGE_SKY_DUSK` and `GARAGE_SKY_NIGHT` in the model are shown at their light and
+  hidden at the others (what is seen through an open door).
+
+`tools\GarageScene` builds the base game's (`prepare_garage.py`, then `GarageSceneBuilder`), and its props
+(`fetch_props.py`, then `build_props.py`); see [screens/garage.md](screens/garage.md). Its props have places in
+`workshop`; a mod's own garage places them, and its own, under its own id.
 
 ### flow
 

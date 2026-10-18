@@ -22,6 +22,9 @@ public partial class GarageRenderer
     private Kn5RenderableFile? _bench;
     private List<IKn5RenderableObject> _benchMeshes = new();
 
+    // The garage's dressing (its props' places): drawn, never picked
+    private List<Kn5RenderableFile> _dressing = new();
+
     // The lift under the car (Parts.LiftLayout): its post, and where that stands with the lift down
     private Kn5RenderableFile? _lift;
     private RenderableList? _liftPost;
@@ -66,6 +69,20 @@ public partial class GarageRenderer
         _bench = kn5 == null ? null : new Kn5RenderableFile(kn5, placement, asyncTexturesLoading: false);
         _bench?.UpdateBoundingBox();
         _benchMeshes = _bench?.GetAllChildren().OfType<IKn5RenderableObject>().ToList() ?? new();
+        SetShadowsDirty();
+        IsDirty = true;
+    }
+
+    /// <summary>
+    /// The garage's dressing (<see cref="Services.Garage.GarageProps.FindAll"/>): each model where its placement says, in
+    /// place of the ones before; none takes them all away. Drawn, casting shadows and in the way of what is behind it,
+    /// never picked nor lit up. Must be called on the thread that draws.
+    /// </summary>
+    public void SetDressing(IEnumerable<(IKn5 Kn5, Matrix Placement)> props)
+    {
+        foreach (var prop in _dressing) prop.Dispose();
+        _dressing = props.Select(p => new Kn5RenderableFile(p.Kn5, p.Placement, asyncTexturesLoading: false)).ToList();
+        foreach (var prop in _dressing) prop.UpdateBoundingBox();
         SetShadowsDirty();
         IsDirty = true;
     }

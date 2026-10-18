@@ -16,11 +16,23 @@ public static class EngineStandLayout
     /// <summary>Height of the crankshaft above the floor</summary>
     public const float CrankHeight = 0.78f;
 
+    /// <summary>The prop's id in the mods' props folders: its place in a garage is where the stand stands there</summary>
+    public const string PropId = "engine_stand";
+
     /// <summary>
-    /// Where the stand stands: on the floor 3 m to the car's left (AC cars face +Z with their left towards +X), the
-    /// engine on it level with the middle of the car
+    /// Where the stand stands in a garage that gives it no place: on the floor 3 m to the car's left (AC cars face +Z with
+    /// their left towards +X), the engine on it level with the middle of the car
     /// </summary>
-    public static readonly Vector3 Spot = new(3f, 0f, 0.3f);
+    public static readonly Vector3 DefaultSpot = new(3f, 0f, 0.3f);
+
+    /// <summary>
+    /// Where the stand stands in the garage played from (<see cref="PlaceAt"/>): the middle of its spindle over the floor
+    /// there. It always faces the way the car does, its engine's front towards +Z.
+    /// </summary>
+    public static Vector3 Spot { get; private set; } = DefaultSpot;
+
+    /// <summary>The stand put where the garage's prop says (<see cref="PropId"/>); <see cref="DefaultSpot"/> when it says nowhere</summary>
+    public static void PlaceAt(Vector3? spot) => Spot = spot is { } at && float.IsFinite(at.X) && float.IsFinite(at.Y) && float.IsFinite(at.Z) ? at : DefaultSpot;
 
     /// <summary>A point on the spindle the engine turns over on, the crankshaft's line: it runs along Z</summary>
     public static Vector3 Spindle => Spot + new Vector3(0f, CrankHeight, 0f);
@@ -117,15 +129,18 @@ public static class EngineStandLayout
         var node = Kn5Node.CreateBaseNode(StandNode);
         node.Children.Add(PlaceholderMesh.Boxes("stand_steel", steel, paint));
         node.Children.Add(PlaceholderMesh.Boxes("stand_casters", casters, PlaceholderMesh.SolidMaterial(kn5, "stand_rubber", 0x1C, 0x1C, 0x1C, 0.4f, 0.55f, 0.05f, 8f)));
-        node.Transform = Translation(Spot.X);
+        node.Transform = Translation(Spot.X, Spot.Y);
         kn5.RootNode.Children.Add(node);
 
         var headNode = Kn5Node.CreateBaseNode(HeadNode);
         headNode.Children.Add(PlaceholderMesh.Boxes("stand_head", head, paint));
-        headNode.Transform = Translation(Spot.X);
+        headNode.Transform = Translation(Spot.X, Spot.Y);
         kn5.RootNode.Children.Add(headNode);
     }
 
-    /// <summary>The stand's boxes are laid out on the car's centre line; the node moves them over to <see cref="Spot"/></summary>
-    private static Mat4x4 Translation(float x) => new(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, 0, 0, 1);
+    /// <summary>
+    /// The stand's boxes are laid out on the car's centre line, on the floor, at the head's Z (which follows the engine):
+    /// the node moves them over to <see cref="Spot"/>, and up to its floor
+    /// </summary>
+    private static Mat4x4 Translation(float x, float y) => new(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, 0, 1);
 }

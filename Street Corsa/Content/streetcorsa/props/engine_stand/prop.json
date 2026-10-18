@@ -1,0 +1,9 @@
+{
+  "_comment": "The engine stand an engine is worked on (the parts view's Stand): the game draws its own from boxes, and a model a mod names is not drawn in its place. Its place says where the stand stands in that garage: the middle of its spindle over the floor at position [x, y, z], y the floor's height; it always faces the way the car does, an engine's front towards +z, whatever the heading. A garage it has no place in has it 3 m to the car's left, at [3, 0, 0.3].",
+  "name": "Engine stand",
+  "places": {
+    "workshop": { "position": [5.4, 0.0, 0.6], "heading": 0 },
+    "garage": { "position": [3.0, 0.0, 0.3], "heading": 0 },
+    "showroom": { "position": [3.0, 0.0, 0.3], "heading": 0 }
+  }
+}

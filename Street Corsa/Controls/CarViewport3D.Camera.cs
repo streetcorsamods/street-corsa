@@ -40,7 +40,7 @@ public partial class CarViewport3D
             // Close in on the engine on the stand, a little above the crankshaft
             Renderer!.AutoAdjustTarget = false;
             var spot = EngineStandLayout.Spot;
-            _targetGoal = new SlimDX.Vector3(spot.X, EngineStandLayout.CrankHeight - 0.05f, spot.Z - 0.1f);
+            _targetGoal = new SlimDX.Vector3(spot.X, EngineStandLayout.Spindle.Y - 0.05f, spot.Z - 0.1f);
             _radiusGoal = StandRadius;
             _alphaGoal = StandAlpha;
             _betaGoal = StandBeta;
@@ -75,6 +75,38 @@ public partial class CarViewport3D
         AnimateFor(AnimationWindow);
     }
 
+    // How far inside the room's walls and under its beams the camera keeps, and how close they may push it in
+    private const float WallMargin = 0.35f;
+    private const float MinRoomRadius = 1.0f;
+
+    /// <summary>
+    /// How far from <paramref name="target"/> the camera can stand, looking from <paramref name="alpha"/> and
+    /// <paramref name="beta"/>, and still be inside the garage's walls and under its beams (<see cref="Room"/>); no limit
+    /// in a garage that gives none. The orbit stands the camera at target + radius * (cos beta cos alpha, sin beta, cos beta sin alpha).
+    /// </summary>
+    private float RoomLimit(float alpha, float beta, SlimDX.Vector3 target)
+    {
+        if (Room?.Walls is not { } walls) return float.MaxValue;
+
+        var level = MathF.Cos(beta);
+        var limit = Math.Min(
+            Reach(target.X, level * MathF.Cos(alpha), walls.MinX, walls.MaxX),
+            Reach(target.Z, level * MathF.Sin(alpha), walls.MinZ, walls.MaxZ));
+
+        var up = MathF.Sin(beta);
+        if (up > 1e-4f) limit = Math.Min(limit, (walls.Height - WallMargin - target.Y) / up);
+
+        return Math.Max(MinRoomRadius, limit);
+
+        // Along one axis, from a point between walls at min and max
+        static float Reach(float from, float step, float min, float max)
+        {
+            if (Math.Abs(step) < 1e-4f) return float.MaxValue;
+            var wall = step > 0f ? max - WallMargin : min + WallMargin;
+            return Math.Max(0f, (wall - from) / step);
+        }
+    }
+
     /// <summary>
     /// Eases the camera toward its framing. Returns true while it is still moving, so the render loop knows
     /// to keep drawing. A share of what is left every second, so it comes out the same at any frame rate.
@@ -87,11 +119,16 @@ public partial class CarViewport3D
         var k = 1f - (float)Math.Exp(-CameraSettleRate * dt);
         var moving = false;
 
-        if (Math.Abs(_radiusGoal - orbit.Radius) > CameraSettled)
+        // Never through a wall, not even for a frame: how far back the camera can stand depends on which way it looks from
+        var limit = RoomLimit(orbit.Alpha, orbit.Beta, orbit.Target);
+        var radiusGoal = Math.Min(_radiusGoal, limit);
+        if (Math.Abs(radiusGoal - orbit.Radius) > CameraSettled)
         {
-            orbit.Radius += (_radiusGoal - orbit.Radius) * k;
+            orbit.Radius += (radiusGoal - orbit.Radius) * k;
             moving = true;
         }
+
+        orbit.Radius = Math.Min(orbit.Radius, limit);
 
         if (Math.Abs(_betaGoal - orbit.Beta) > CameraSettled)
         {

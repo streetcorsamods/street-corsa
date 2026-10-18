@@ -429,7 +429,7 @@ public partial class GarageRenderer : DarkKn5ObjectRenderer
 
         _prop.UpdateBoundingBox();
         var spindle = Spindle;
-        var floor = EngineStandLayout.BaseTop + TurnClearance - spindle.Y;
+        var floor = EngineStandLayout.Spot.Y + EngineStandLayout.BaseTop + TurnClearance - spindle.Y;
         var corners = new List<(float X, float Y)>();
         foreach (var box in _propNodes.Select(n => n.List.BoundingBox).Where(b => b.HasValue).Select(b => b!.Value))
         {
@@ -1270,6 +1270,7 @@ public partial class GarageRenderer : DarkKn5ObjectRenderer
         _fixture?.Draw(holder, camera, mode);
         _bench?.Draw(holder, camera, mode);
         _lift?.Draw(holder, camera, mode);
+        foreach (var prop in _dressing) prop.Draw(holder, camera, mode);
         FollowParts();
 
         // The part on the workbench, once it is all there; on its way in or out it is drawn see-through after the rest
@@ -1445,6 +1446,7 @@ public partial class GarageRenderer : DarkKn5ObjectRenderer
         _fixture?.Draw(holder, camera, SpecialRenderMode.Simple);
         _bench?.Draw(holder, camera, SpecialRenderMode.Simple);
         _lift?.Draw(holder, camera, SpecialRenderMode.Simple);
+        foreach (var prop in _dressing) prop.Draw(holder, camera, SpecialRenderMode.Simple);
         DrawCarWithoutWheels(() =>
         {
             base.DrawCars(holder, camera, SpecialRenderMode.Simple);
@@ -1515,6 +1517,8 @@ public partial class GarageRenderer : DarkKn5ObjectRenderer
         _lift?.Dispose();
         _lift = null;
         _liftPost = null;
+        foreach (var prop in _dressing) prop.Dispose();
+        _dressing.Clear();
         _work?.Dispose();
         _work = null;
         _workGrime?.Dispose();
