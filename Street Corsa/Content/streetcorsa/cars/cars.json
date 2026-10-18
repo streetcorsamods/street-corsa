@@ -84,7 +84,7 @@
     "lm_chevy_cheyenne_v2": { "engine_offset": [0,0,0.355] },
     "lovetrain_impala_67": { "engine": "l79:engines/l79/l79-327-4spd" },
     "lovetrain_impala_67_drift": { "engine": "sbc350:engines/sbc350/sbc-350-th350" },
-    "lovetrain_luv_792": { "engine_offset": [0,0.055,0.17] },
+    "lovetrain_luv_792": { "engine_offset": [0,0.08,0.17] },
     "MRN_Desings_chevy_camaro_SS_396": { "engine": "sbc350:engines/sbc350/sbc-350-th350" },
     "MRN_Desings_oldsmobile_442": { "engine": "l79:engines/l79/olds-400-w30" },
     "oneweek_corvette_c1": { "engine": "l79:engines/l79/283-4bbl-4spd", "engine_offset": [0,0,-0.055] },
