@@ -45,8 +45,8 @@ namespace StreetCorsa.Screens.Shared
         public decimal CashWager { get; init; }
         public bool IsPinkSlip { get; init; }
 
-        /// <summary>AC's damage for the race, in percent: the save's <see cref="GameRules.RaceDamagePercent"/></summary>
-        public int DamagePercent { get; init; } = 100;
+        /// <summary>AC's damage for the race, in percent: the save's <see cref="GameRules.RaceDamagePercent"/>; by default the rules' full rate</summary>
+        public int DamagePercent { get; init; } = Services.Configuration.IniModificationService.RaceDamage;
 
         /// <summary>The event raced for, or null for a street race</summary>
         public string? EventId { get; init; }
@@ -160,8 +160,8 @@ namespace StreetCorsa.Screens.Shared
             var playerShown = ShownForRaceAsync(entry.PlayerCar);
             var opponentShown = opponentStart == null ? Task.FromResult<ShownSet?>(null) : ShownForRaceAsync(entry.OpponentCar!);
             await Task.WhenAll(playerShown, opponentShown);
-            intent.PlayerStart = playerStart with { Cooling = playerData?.Cooling, Shown = playerShown.Result, AxleStrength = AxleStrength(entry.PlayerCar) };
-            intent.OpponentStart = opponentStart == null ? null : opponentStart with { Cooling = opponentData?.Cooling, Shown = opponentShown.Result,
+            intent.Race.PlayerStart = playerStart with { Cooling = playerData?.Cooling, Shown = playerShown.Result, AxleStrength = AxleStrength(entry.PlayerCar) };
+            intent.Race.OpponentStart = opponentStart == null ? null : opponentStart with { Cooling = opponentData?.Cooling, Shown = opponentShown.Result,
                 AxleStrength = AxleStrength(entry.OpponentCar!) };
             return new RaceSetupResult { Intent = intent };
         }
@@ -212,27 +212,30 @@ namespace StreetCorsa.Screens.Shared
         {
             var intent = new DragRaceLaunchIntent
             {
-                PlayerCarId = entry.PlayerCar.DefinitionId,
-                PlayerSkin = entry.PlayerCar.SkinId ?? string.Empty,
-                PlayerName = entry.PlayerName,
+                Race = new DragRaceIntent
+                {
+                    PlayerCarId = entry.PlayerCar.DefinitionId,
+                    PlayerSkin = entry.PlayerCar.SkinId ?? string.Empty,
+                    PlayerName = entry.PlayerName,
+                    OpponentCarId = opponentRacesAs,
+                    OpponentSkin = entry.OpponentSkin ?? string.Empty,
+                    OpponentName = entry.OpponentName,
+                    OpponentAILevel = entry.OpponentAI.AILevel,
+                    OpponentAIAggression = entry.OpponentAI.AIAggression,
+                    TrackId = entry.TrackId,
+                    TrackConfig = entry.TrackConfig,
+                    Format = entry.Format,
+                    Laps = entry.Laps,
+                    DamagePercent = entry.DamagePercent,
+                    Police = entry.Police,
+                    RaceTime = entry.RaceTime,
+                    Bracket = entry.Bracket,
+                    TunePasses = entry.TunePasses
+                },
                 PlayerCarInstanceId = entry.PlayerCar.InstanceId,
-                OpponentCarId = opponentRacesAs,
-                OpponentSkin = entry.OpponentSkin ?? string.Empty,
-                OpponentName = entry.OpponentName,
                 OpponentCarInstanceId = entry.OpponentCar?.InstanceId ?? Guid.Empty,
-                OpponentAILevel = entry.OpponentAI.AILevel,
-                OpponentAIAggression = entry.OpponentAI.AIAggression,
-                TrackId = entry.TrackId,
-                TrackConfig = entry.TrackConfig,
-                Format = entry.Format,
-                Laps = entry.Laps,
                 CashWager = entry.CashWager,
                 IsPinkSlip = entry.IsPinkSlip,
-                DamagePercent = entry.DamagePercent,
-                Police = entry.Police,
-                RaceTime = entry.RaceTime,
-                Bracket = entry.Bracket,
-                TunePasses = entry.TunePasses,
                 CarData = carData
             };
 
@@ -297,7 +300,7 @@ namespace StreetCorsa.Screens.Shared
 
             if (isDrag)
             {
-                var defaults = new DragRaceLaunchIntent();
+                var defaults = new DragRaceIntent();
                 var stock = candidates.FirstOrDefault(c =>
                     string.Equals(c.TrackId, defaults.TrackId, StringComparison.OrdinalIgnoreCase) &&
                     string.Equals(c.TrackConfig, defaults.TrackConfig, StringComparison.OrdinalIgnoreCase));
@@ -332,7 +335,7 @@ namespace StreetCorsa.Screens.Shared
                 if (asked.Count > 0) layouts = asked;
             }
 
-            var defaults = new DragRaceLaunchIntent();
+            var defaults = new DragRaceIntent();
             var stock = layouts.FirstOrDefault(l =>
                 string.Equals(l.TrackId, defaults.TrackId, StringComparison.OrdinalIgnoreCase) &&
                 string.Equals(l.TrackConfig, defaults.TrackConfig, StringComparison.OrdinalIgnoreCase));

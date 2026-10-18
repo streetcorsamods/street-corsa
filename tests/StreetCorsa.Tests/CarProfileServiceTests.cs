@@ -105,7 +105,7 @@ public class CarProfileServiceTests
     }
 
     [Fact]
-    public async Task Every_profile_is_priced_again_at_the_start_and_how_common_a_hand_edited_one_is_left()
+    public async Task Every_profile_is_priced_again_once_the_parts_are_up_and_how_common_a_hand_edited_one_is_left()
     {
         _catalog.UpsertCar(Car("150bhp", "1000kg", id: "generated"));
         _catalog.UpsertCar(Car("150bhp", "1000kg", id: "manual"));
@@ -120,9 +120,15 @@ public class CarProfileServiceTests
 
         await _service.EnsureProfilesExistAsync();
 
+        // Start-up leaves a profile's price alone (the parts are not up yet to price by); the warm-up's repricing moves it
+        Assert.Equal(5000m, _profiles.Profiles["generated"].BasePrice);
+        Assert.Equal(1234m, _profiles.Profiles["manual"].BasePrice);
+        Assert.Equal(0.5f, _profiles.Profiles["generated"].DealerPrecedence, 3);
+
+        await _service.RepriceAsync();
+
         Assert.Equal(4100m, _profiles.Profiles["generated"].BasePrice);
         Assert.Equal(4141m, _profiles.Profiles["generated"].BodyPrice);
-        Assert.Equal(0.5f, _profiles.Profiles["generated"].DealerPrecedence, 3);
         Assert.Equal(4100m, _profiles.Profiles["manual"].BasePrice);
         Assert.Equal(0.1f, _profiles.Profiles["manual"].DealerPrecedence, 3);
         Assert.Equal("hash|specs2", _profiles.Profiles["manual"].DefinitionHash);

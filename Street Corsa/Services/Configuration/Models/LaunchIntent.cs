@@ -104,26 +104,15 @@ namespace StreetCorsa.Services.Configuration.Models
     }
 
     /// <summary>
-    /// Intent to launch a drag race (1v1 quarter mile)
+    /// Intent to launch a race: two cars (or the player alone, a test-and-tune) in the game's race mode. The race as
+    /// race.ini gets it is one record, <see cref="Race"/>, which is the configuration intent itself (no copy between
+    /// the two, so a field added to the race is added once); what is here besides is what the launch means to the
+    /// game and race.ini never sees: the stakes, whose cars they are, where the player comes back to.
     /// </summary>
     public class DragRaceLaunchIntent : LaunchIntent
     {
-        public string PlayerCarId { get; set; } = string.Empty;
-        public string PlayerSkin { get; set; } = string.Empty;
-        public string PlayerName { get; set; } = string.Empty;
-        public string OpponentCarId { get; set; } = string.Empty;
-        public string OpponentSkin { get; set; } = string.Empty;
-        public string OpponentName { get; set; } = string.Empty;
-
-        /// <summary>
-        /// Track folder ID (e.g., "ks_drag")
-        /// </summary>
-        public string TrackId { get; set; } = "ks_drag";
-
-        /// <summary>
-        /// Track configuration/layout (e.g., "drag1000")
-        /// </summary>
-        public string? TrackConfig { get; set; } = "drag1000";
+        /// <summary>The race as race.ini gets it: the cars, the drivers, the track, the format, the AI, the damage, the police</summary>
+        public DragRaceIntent Race { get; init; } = new();
 
         /// <summary>
         /// Player's car instance ID (for result correlation)
@@ -146,49 +135,30 @@ namespace StreetCorsa.Services.Configuration.Models
         public bool IsPinkSlip { get; set; }
 
         /// <summary>
-        /// Opponent AI skill level (90-100)
-        /// Derived from Opponent model at runtime
-        /// </summary>
-        public int OpponentAILevel { get; set; } = 90;
-
-        /// <summary>
-        /// Opponent AI aggression (0-100)
-        /// Derived from Opponent model at runtime
-        /// </summary>
-        public int OpponentAIAggression { get; set; } = 50;
-
-        /// <summary>The race's format id (<see cref="Services.Race.RaceFormats"/>)</summary>
-        public string Format { get; set; } = string.Empty;
-
-        /// <summary>The laps the race is over; null: the format's</summary>
-        public int? Laps { get; set; }
-
-        /// <summary>AC's damage for the race, in percent (the difficulty's; 100 is AC's full rate)</summary>
-        public int DamagePercent { get; set; } = 100;
-
-        /// <summary>The shape the player's car starts in (damage from earlier races); null starts it as AC would</summary>
-        public RaceStartState? PlayerStart { get; set; }
-
-        /// <summary>The shape the opponent's car starts in; null starts it as AC would</summary>
-        public RaceStartState? OpponentStart { get; set; }
-
-        /// <summary>The police sent to the race; null when none come</summary>
-        public RacePolice? Police { get; set; }
-
-        /// <summary>The game's time when the race starts, which AC's sun follows; null races at noon</summary>
-        public DateTime? RaceTime { get; set; }
-
-        /// <summary>A bracket race's dial-ins and how the rival drives; null for a heads-up race</summary>
-        public BracketSetup? Bracket { get; set; }
-
-        /// <summary>Test-and-tune: the player alone on the strip for this many passes; null for a race</summary>
-        public int? TunePasses { get; set; }
-
-        /// <summary>
         /// The flow id of the screen the race was set up from, where the player comes back to after it (or where its
         /// <c>after_race</c> way out leads); none: home
         /// </summary>
         public string? ReturnTo { get; set; }
+
+        // What the launcher and the screens read of the race, off the one record
+        public string PlayerCarId => Race.PlayerCarId;
+        public string PlayerName => Race.PlayerName;
+        public string OpponentCarId => Race.OpponentCarId;
+        public string OpponentName => Race.OpponentName;
+        public string TrackId => Race.TrackId;
+        public string? TrackConfig => Race.TrackConfig;
+
+        /// <summary>The race's format id (<see cref="Services.Race.RaceFormats"/>)</summary>
+        public string Format => Race.Format;
+
+        /// <summary>The shape the player's car starts in (damage from earlier races); null starts it as AC would</summary>
+        public RaceStartState? PlayerStart => Race.PlayerStart;
+
+        /// <summary>The shape the opponent's car starts in; null starts it as AC would</summary>
+        public RaceStartState? OpponentStart => Race.OpponentStart;
+
+        /// <summary>Test-and-tune: the player alone on the strip for this many passes; null for a race</summary>
+        public int? TunePasses => Race.TunePasses;
 
         /// <summary>The time the session takes in the game</summary>
         public Time.GameAction SessionAction => TunePasses != null ? Time.GameAction.TestAndTune
@@ -201,33 +171,13 @@ namespace StreetCorsa.Services.Configuration.Models
             ? $"Launch test-and-tune: {PlayerName} on {TrackId}"
             : $"Launch race: {PlayerName} vs {OpponentName}";
 
+        /// <summary>The race itself, with the context id the launch carries written into it</summary>
         public override IEnumerable<ModificationIntent> GetConfigurationIntents()
         {
-            yield return new DragRaceIntent
-            {
-                PlayerCarId = this.PlayerCarId,
-                PlayerSkin = this.PlayerSkin,
-                PlayerName = this.PlayerName,
-                OpponentCarId = this.OpponentCarId,
-                OpponentSkin = this.OpponentSkin,
-                OpponentName = this.OpponentName,
-                TrackId = this.TrackId,
-                TrackConfig = this.TrackConfig,
-                OpponentAILevel = this.OpponentAILevel,
-                OpponentAIAggression = this.OpponentAIAggression,
-                Format = this.Format,
-                Laps = this.Laps,
-                DamagePercent = this.DamagePercent,
-                PlayerStart = this.PlayerStart,
-                OpponentStart = this.OpponentStart,
-                Police = this.Police,
-                RaceTime = this.RaceTime,
-                Bracket = this.Bracket,
-                TunePasses = this.TunePasses,
-                ContextId = Metadata.TryGetValue("RaceContext", out var context) && context is RaceContext raceContext
-                    ? raceContext.ContextId
-                    : null
-            };
+            Race.ContextId = Metadata.TryGetValue("RaceContext", out var context) && context is RaceContext raceContext
+                ? raceContext.ContextId
+                : null;
+            yield return Race;
         }
     }
 }
