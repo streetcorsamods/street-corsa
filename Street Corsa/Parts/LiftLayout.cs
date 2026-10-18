@@ -58,6 +58,9 @@ public static class LiftLayout
     /// <summary>How far the wheels hang below where they sit on the floor with the car <paramref name="height"/> up (<see cref="WheelDrop"/>)</summary>
     public static float Droop(float height) => Math.Clamp(height, 0f, WheelDrop);
 
+    /// <summary>The stop under this one, as the lift's Lower button takes it: full height to the wheels clear, then down</summary>
+    public static LiftStop Below(LiftStop stop) => stop == LiftStop.Full ? LiftStop.WheelsClear : LiftStop.Down;
+
     /// <summary>The stop after this one as the lift's button steps it: down, the wheels clear, full height, down again</summary>
     public static LiftStop Next(LiftStop stop) => stop switch
     {

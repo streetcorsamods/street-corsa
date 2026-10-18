@@ -92,6 +92,14 @@ public class LiftTests
         Assert.Contains("lift", CarWork.WhyNotOn(Catalog, parts, wheel, place, liveAxle: true, lifted: false));
         Assert.Null(CarWork.WhyNotOn(Catalog, parts, wheel, place, liveAxle: true, lifted: true));
 
+        // A tyre comes off only with its wheel (clicking a wheel mostly hits its tyre), the car up or down; it is changed
+        // on the shelf
+        var other = Wheel(parts, 1);
+        var tyre = other.Children.Single(c => c.ParentSlot == RunningGear.TyreSlotOnRim);
+        Assert.Contains("wheel", CarWork.WhyNotOff(Catalog, parts, tyre, lifted: false));
+        Assert.Contains("wheel", CarWork.WhyNotOff(Catalog, parts, tyre, lifted: true));
+        Assert.NotNull(CarWork.WhyNotOn(Catalog, parts, tyre, new MountPlace(other, RunningGear.TyreSlotOnRim, 1), liveAxle: true, lifted: true));
+
         // What is behind the wheel waits for it as before, up or down: the car up does not take the wheel off
         var drum = RunningGear.Mounted(parts, Catalog)[1].Brake!;
         Assert.NotNull(CarWork.WhyNotOff(Catalog, parts, drum, lifted: true));
@@ -235,9 +243,25 @@ public class LiftTests
         workbench.IsLifted = false;
         Assert.Equal(LiftStop.Full, car.LiftStop);
 
-        // Another car in the bay: this one stays up, its wheel off; the other one, on its wheels, comes down as it goes
+        // Lower takes it a stop down, but not onto its hub
+        workbench.LowerCommand.Execute(null);
+        Assert.Equal(LiftStop.WheelsClear, car.LiftStop);
+        Assert.Contains("wheels back on", workbench.LowerTip);
+        workbench.LowerCommand.Execute(null);
+        Assert.Equal(LiftStop.WheelsClear, car.LiftStop);
+        workbench.IsLifted = true;
+        Assert.Equal(LiftStop.Full, car.LiftStop);
+
+        // Another car in the bay: this one stays up, its wheel off; the other one, on its wheels, comes down from the
+        // lower stop with Lower, and as it goes
         workbench.SetCar(other);
         Assert.Equal(LiftStop.Full, car.LiftStop);
+        workbench.IsLifted = true;
+        Assert.Equal(LiftStop.WheelsClear, other.LiftStop);
+        Assert.True(workbench.LowerCommand.CanExecute(null));
+        workbench.LowerCommand.Execute(null);
+        Assert.Equal(LiftStop.Down, other.LiftStop);
+        Assert.False(workbench.LowerCommand.CanExecute(null));
         workbench.IsLifted = true;
         Assert.Equal(LiftStop.WheelsClear, other.LiftStop);
         workbench.SetCar(car);

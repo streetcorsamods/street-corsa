@@ -114,6 +114,8 @@
     "garage.view.lift.tip.wheels_clear": "Raise the car on the lift until its wheels hang clear of the floor: the wheels come off then",
     "garage.view.lift.tip.full": "Raise the car to full height, to work underneath it",
     "garage.view.lift.tip.down": "Lower the car to the floor",
+    "garage.view.lift.tip.lower": "Lower the car until its wheels just hang clear",
+    "garage.view.lift.lower": "Lower",
     "garage.lifted": "The {car} is up on the lift. Lower it to the floor first.",
     "garage.lifted.title": "On the lift",
     "garage.view.rotate": "Rotate",

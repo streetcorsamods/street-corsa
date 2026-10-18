@@ -61,6 +61,7 @@ namespace StreetCorsa.Screens.Garage
             PutOnStandCommand = new RelayCommand(PutOnStand, () => CanPutOnStand);
             InstallFromStandCommand = new RelayCommand(InstallFromStand, () => CanInstallFromStand);
             RebuildCommand = new RelayCommand<RebuildOfferViewModel>(Rebuild, offer => offer?.CanDo == true && !_isWorking);
+            LowerCommand = new RelayCommand(() => MoveLift(LiftLayout.Below(LiftStop)), () => IsLifted && !_isWorking);
         }
 
         /// <summary>Raised when money or time moved, for the screen around the workbench</summary>
@@ -81,6 +82,9 @@ namespace StreetCorsa.Screens.Garage
         public RelayCommand PutOnStandCommand { get; }
         public RelayCommand InstallFromStandCommand { get; }
         public RelayCommand<RebuildOfferViewModel> RebuildCommand { get; }
+
+        /// <summary>The lift's Lower button: the car a stop down, from either stop (<see cref="LiftLayout.Below"/>)</summary>
+        public RelayCommand LowerCommand { get; }
 
         #region What the 3D view shows
 
@@ -155,6 +159,11 @@ namespace StreetCorsa.Screens.Garage
             _ => "garage.view.lift.down"
         });
 
+        /// <summary>What the Lower button does, or why it does nothing now</summary>
+        public string LowerTip => LiftLayout.Below(LiftStop) == LiftStop.Down && _car != null && WhyNotDown(_car) is { } why
+            ? why
+            : GameText.Say(LiftLayout.Below(LiftStop) == LiftStop.Down ? "garage.view.lift.tip.down" : "garage.view.lift.tip.lower");
+
         /// <summary>What a click on the lift's button does, or why it does nothing now</summary>
         public string LiftTip
         {
@@ -177,13 +186,19 @@ namespace StreetCorsa.Screens.Garage
         /// </summary>
         private void StepLift()
         {
-            if (_car == null || _isWorking || !CanUseLift)
+            if (_car != null) MoveLift(LiftLayout.Next(_car.LiftStop));
+            else NotifyLift();
+        }
+
+        /// <summary>The car to <paramref name="next"/> on the lift; it does not come down while a wheel is off</summary>
+        private void MoveLift(LiftStop next)
+        {
+            if (_car == null || _isWorking || !CanUseLift || next == _car.LiftStop)
             {
                 NotifyLift();
                 return;
             }
 
-            var next = LiftLayout.Next(_car.LiftStop);
             if (next == LiftStop.Down && WhyNotDown(_car) is { } why)
             {
                 _logger.Information("{Car} stays up on the lift: {Why}", _car.DefinitionId, why);
@@ -219,6 +234,7 @@ namespace StreetCorsa.Screens.Garage
             OnPropertyChanged(nameof(IsLifted));
             OnPropertyChanged(nameof(LiftText));
             OnPropertyChanged(nameof(LiftTip));
+            OnPropertyChanged(nameof(LowerTip));
             OnPropertyChanged(nameof(CanUseLift));
             OnPropertyChanged(nameof(SelectedBlockedDisplay));
             OnPropertyChanged(nameof(CanInstallFromStand));

@@ -1955,6 +1955,10 @@ model's wheel, hub and suspension groups through the body rock, and in the parts
 leaf springs, `GarageRenderer.Droop`); and a wheel taken off no longer shows the car's own wheel out of the parts view
 (`ShownSet.MissingWheels`: the scenes switch that corner's WHEEL_xx off).
 
+Then (2026-10-18): a tyre comes off a mounted wheel no more (`{ "kind": "tyre", "after": [ "rim" ] }`: clicking a wheel
+mostly hits its tyre, which came off with the car down); tyres are changed on the shelf. And a Lower button (icon
+`icons/car` for now) beside the lift's, while the car is up: a stop down from either stop (`LiftLayout.Below`).
+
 To check in game: the wheels drawn in the parts view on every corner, faces out, no AC wheel doubling them; the wheels
 show; a wheel refused on the floor ("Raise the car on the lift first."), off and on with the car up; the drums and the
 rear axle then (the bug this phase was for); the lift's two stops, its post, the sounds and the camera under the car;
