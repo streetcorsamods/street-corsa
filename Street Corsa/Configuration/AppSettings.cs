@@ -107,7 +107,7 @@ public class AppSettings
     public const string FallbackShowroomId = "showroom";
 
     /// <summary>
-    /// The base game's converted part packs (see tools/convert-parts.ps1); the catalog reads every mod's
+    /// The base game's part packs (docs/modding.md); the catalog reads every mod's
     /// </summary>
     public string PartsPath => Path.Combine(BaseContentPath, Mods.ContentTypes.Parts);
 

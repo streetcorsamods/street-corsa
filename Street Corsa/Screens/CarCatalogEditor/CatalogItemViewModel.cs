@@ -437,7 +437,7 @@ namespace StreetCorsa.Screens.CarCatalogEditor
         /// </summary>
         private IEnumerable<PickOption> ForAxle(string group, bool front) =>
             _catalog.Parts.Values
-                .Where(p => p.IsScripted && PartKinds.GroupOf(p) == group && Parts.Cars.RunningGear.FitsAxle(p, front)
+                .Where(p => p.IsRealPart && PartKinds.GroupOf(p) == group && Parts.Cars.RunningGear.FitsAxle(p, front)
                             && (p.CameIn?.Axle is not { Length: > 0 } axle || axle.Equals(front ? "front" : "rear", StringComparison.OrdinalIgnoreCase)))
                 .OrderBy(p => p.DisplayName ?? p.Id, StringComparer.OrdinalIgnoreCase)
                 .Select(p => new PickOption(p.Id, p.DisplayName ?? p.Id));

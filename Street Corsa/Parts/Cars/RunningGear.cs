@@ -23,7 +23,7 @@ public sealed class CornerParts
 }
 
 /// <summary>
-/// The running gear of a car: what sits on the car's own wheel slots, numbered as the part scripts number them
+/// The running gear of a car: what sits on the car's own wheel slots, numbered as the game numbers them
 /// (the chassis script reads rim 101+i, brake 111+i, shock 301+i, spring 311+i for wheel i; 0-1 front, 2-3 rear,
 /// even numbers left). The tyre goes on the rim. What each part does to the car is read off its script fields
 /// with the framework's own formulas.
@@ -135,7 +135,7 @@ public static class RunningGear
         if (Math.Abs(tyreRim - rimRadius) > 0.5) return false;
 
         var width = rim.Number("rim_width");
-        var (min, max) = (tyre.Number("minRimWidth"), tyre.Number("maxRimWidth"));
+        var (min, max) = (tyre.Number("min_rim_width"), tyre.Number("max_rim_width"));
         return (min <= 0 || width >= min - 0.01) && (max <= 0 || width <= max + 0.01);
     }
 
@@ -191,12 +191,12 @@ public static class RunningGear
             ? group == PartKinds.BackingPlates
             : part.Children.Any(c => c.ParentSlot == DrumSlot);
 
-    // ----- what the parts come to, in the scripts' formulas -----
+    // ----- what the parts come to -----
 
     /// <summary>Brake torque at full pedal, Nm: clamp force over the calipers times pad on disc at the disc's radius, less with wear</summary>
     public static double BrakeTorque(PartDefinition brake, double wear = 1)
     {
-        var calipers = Math.Max(1, brake.Number("number_of_calipers", 1));
+        var calipers = Math.Max(1, brake.Number("calipers", 1));
         var torque = brake.Number("force") * (1 + (calipers - 1) * 0.333) * brake.Number("friction", 1) * brake.Number("radius");
         return (0.2 + Math.Sqrt(Math.Clamp(wear, 0, 1)) * 0.8) * torque;
     }
@@ -233,7 +233,7 @@ public static class RunningGear
     /// How a brake heats and fades, as Assetto Corsa's brakes.ini [TEMPS_FRONT]/[TEMPS_REAR] has it: °C per kJ of braking
     /// (<c>torque_k</c>), cooling standing (<c>cool_transfer</c>) and with speed (<c>cool_speed_factor</c>), and the lining's
     /// torque by temperature (<c>perf_curve</c>, the shoes', else the brake's own). Null for a brake that says none: the
-    /// source game's discs, which leave the car's own as they are.
+    /// stock discs, which leave the car's own as they are.
     /// </summary>
     public static BrakeHeat? Heat(PartDefinition brake, PartDefinition? shoes)
     {
@@ -251,11 +251,11 @@ public static class RunningGear
 
     /// <summary>A part's <c>perf_curve</c>, an inline lut <c>(|0=0.9|300=1.0|)</c>; null when it has none, or not one of those</summary>
     private static string? Curve(PartDefinition? part) =>
-        part?.Properties.GetValueOrDefault("perf_curve") is string curve && System.Text.RegularExpressions.Regex.IsMatch(curve.Trim(),
+        part?.Specs.GetValueOrDefault("perf_curve") is string curve && System.Text.RegularExpressions.Regex.IsMatch(curve.Trim(),
             @"^\(\|(-?\d+(\.\d+)?=-?\d+(\.\d+)?\|)+\)$") ? curve.Trim() : null;
 
     /// <summary>Whether a spring is a leaf spring: the rear axle hangs on it (<see cref="RearAxle.Carries"/>)</summary>
-    public static bool IsLeafSpring(PartDefinition part) => PartKinds.Is(part, "LeafSpring");
+    public static bool IsLeafSpring(PartDefinition part) => PartKinds.Is(part, PartClasses.LeafSpring);
 
     /// <summary>Wheel rate, N/m</summary>
     public static double SpringRate(PartDefinition spring) => spring.Number("force");
@@ -277,15 +277,15 @@ public static class RunningGear
 
     /// <summary>
     /// A sway bar's roll stiffness, N/m as Assetto Corsa's [ARB] counts it (<c>arb_rate</c>); 0 for one that says none (the
-    /// source game's, which do nothing in it)
+    /// stock ones, which do nothing in it)
     /// </summary>
     public static double SwayBarRate(PartDefinition bar) => bar.Number("arb_rate");
 
-    /// <summary>Whether a part is a sway bar that does something: the source game's have no rate and stay off the shelves</summary>
+    /// <summary>Whether a part is a sway bar that does something: the stock ones have no rate and stay off the shelves</summary>
     public static bool IsWorkingSwayBar(PartDefinition part) => PartKinds.GroupOf(part) == PartKinds.SwayBars && SwayBarRate(part) > 0;
 
     /// <summary>The load the spring was made for, kg on the wheel</summary>
-    public static double SpringDesignLoad(PartDefinition spring) => spring.Number("designedMassOnWheel");
+    public static double SpringDesignLoad(PartDefinition spring) => spring.Number("design_load");
 
     /// <summary>Bump and rebound damping, N per m/s; the shock's rebound follows what is inside it</summary>
     public static (double Bump, double Rebound) Damping(PartDefinition shock)
@@ -306,9 +306,9 @@ public static class RunningGear
     /// <summary>Peak friction the tyre offers, a little less as it wears down to the cords</summary>
     public static double TyreGrip(PartDefinition tyre, double wear = 1) => tyre.Number("friction") * (0.85 + 0.15 * Math.Clamp(wear, 0, 1));
 
-    public static double TyreLoadCapacity(PartDefinition tyre) => tyre.Number("loadcap");
+    public static double TyreLoadCapacity(PartDefinition tyre) => tyre.Number("load_capacity");
 
-    public static double TyreRollingResistance(PartDefinition tyre) => tyre.Number("rollres");
+    public static double TyreRollingResistance(PartDefinition tyre) => tyre.Number("rolling_resistance");
 
     /// <summary>Recommended inflation, bar</summary>
     public static double TyrePressure(PartDefinition tyre) => tyre.Number("optimal_inflation", 2);
@@ -320,5 +320,5 @@ public static class RunningGear
 
     /// <summary>A text property of a part, trimmed; null when it has none</summary>
     private static string? Text(PartDefinition part, string property) =>
-        part.Properties.GetValueOrDefault(property) is string text && text.Trim() is { Length: > 0 } trimmed ? trimmed : null;
+        part.Specs.GetValueOrDefault(property) is string text && text.Trim() is { Length: > 0 } trimmed ? trimmed : null;
 }

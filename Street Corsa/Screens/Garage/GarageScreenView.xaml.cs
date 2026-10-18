@@ -306,7 +306,7 @@ namespace StreetCorsa.Screens.Garage
         }
 
         /// <summary>
-        /// Placement mode (a tool for fitting the converted parts, not gameplay): F5 on a selected part turns it on,
+        /// Placement mode (a tool for fitting parts, not gameplay): F5 on a selected part turns it on,
         /// then the arrows move the part across and fore-aft, PgUp/PgDn up and down, in the engine's axes; Ctrl
         /// steps a millimetre, Shift two centimetres, plain five; Tab moves the pad it sits on instead; R takes the
         /// slot back to where the packs put it; F5 or Esc ends it. Every step is written to the slot shifts.

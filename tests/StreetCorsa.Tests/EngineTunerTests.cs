@@ -2,7 +2,6 @@ using StreetCorsa.Models.GameState;
 using StreetCorsa.Parts;
 using StreetCorsa.Parts.Cars;
 using StreetCorsa.Parts.Logic;
-using StreetCorsa.Parts.Scripting;
 
 namespace StreetCorsa.Tests;
 
@@ -15,8 +14,8 @@ public class EngineTunerTests(ITestOutputHelper output)
     private static RatedBuild Build(string idEnd) => Builds.Value.Runnable.Single(b => b.Build.Id.EndsWith(idEnd, StringComparison.Ordinal));
 
     [Theory]
-    [InlineData("chrysler-v8-pack/chrysler-la-340-275-hp")]
-    [InlineData("script-ford-l6/ford-221-132-hp")]
+    [InlineData("rated/chrysler-la-340-275-hp")]
+    [InlineData("rated/ford-221-132-hp")]
     public void Money_buys_power_that_the_dyno_confirms(string buildId)
     {
         var catalog = Catalog.Value;
@@ -41,7 +40,7 @@ public class EngineTunerTests(ITestOutputHelper output)
     public void No_money_no_upgrade()
     {
         var catalog = Catalog.Value;
-        var stock = EngineFactory.CreateStock(catalog, Build("chrysler-v8-pack/chrysler-la-340-275-hp"), 0.8, new Random(1))!;
+        var stock = EngineFactory.CreateStock(catalog, Build("rated/chrysler-la-340-275-hp"), 0.8, new Random(1))!;
 
         Assert.Null(EngineTuner.TuneUp(catalog, Builds.Value, stock.Root, 0m, 1.0, new Random(7)));
     }
@@ -50,7 +49,7 @@ public class EngineTunerTests(ITestOutputHelper output)
     public void The_upgrades_stay_within_the_budget()
     {
         var catalog = Catalog.Value;
-        var stock = EngineFactory.CreateStock(catalog, Build("chrysler-v8-pack/chrysler-la-340-275-hp"), 0.8, new Random(1))!;
+        var stock = EngineFactory.CreateStock(catalog, Build("rated/chrysler-la-340-275-hp"), 0.8, new Random(1))!;
 
         foreach (var budget in new[] { 50m, 200m, 800m })
         {
@@ -65,7 +64,7 @@ public class EngineTunerTests(ITestOutputHelper output)
     {
         var catalog = Catalog.Value;
         var multiRound = 0;
-        foreach (var buildId in new[] { "chrysler-v8-pack/chrysler-la-340-275-hp", "script-ford-l6/ford-221-132-hp" })
+        foreach (var buildId in new[] { "rated/chrysler-la-340-275-hp", "rated/ford-221-132-hp" })
         {
             var stock = EngineFactory.CreateStock(catalog, Build(buildId), 0.8, new Random(1))!;
             var before = Describe(stock.Root);
@@ -99,29 +98,18 @@ public class EngineTunerTests(ITestOutputHelper output)
     public void A_saved_tuning_key_outside_an_array_is_left_alone()
     {
         var catalog = Catalog.Value;
-        var stock = EngineFactory.CreateStock(catalog, Build("chrysler-v8-pack/chrysler-la-340-275-hp"), 0.8, new Random(1))!;
+        var stock = EngineFactory.CreateStock(catalog, Build("rated/chrysler-la-340-275-hp"), 0.8, new Random(1))!;
         var tree = PartTrees.ToInstalled(catalog, stock.Root)!;
 
-        // The parts whose scripts hold a "ratio" array (the gearbox)
-        var untuned = new PartScriptRuntime(catalog, tree.Root);
-        var withRatios = tree.Root.SelfAndDescendants()
-            .Where(p => untuned.ObjectOf(p)?.Fields.GetValueOrDefault("ratio") is ScriptArray { Length: > 1 })
-            .ToList();
-        Assert.NotEmpty(withRatios);
+        // The gearbox: a tuned gear outside its list is left alone, one in it takes
+        var gearbox = tree.Root.SelfAndDescendants().Single(p => p.Is(PartClasses.Transmission));
+        var gears = EngineEvaluator.Evaluate(catalog, tree.AsPartTree()).GearRatios.Count;
+        gearbox.Tuning["gears[-5]"] = 9;
+        gearbox.Tuning["gears[100000]"] = 9;
+        gearbox.Tuning["gears[0]"] = 3.25;
 
-        foreach (var part in withRatios)
-        {
-            part.Tuning["ratio[-5]"] = 9;
-            part.Tuning["ratio[100000]"] = 9;
-            part.Tuning["ratio[1]"] = 3.25;
-        }
-
-        var tuned = new PartScriptRuntime(catalog, tree.Root);
-        foreach (var part in withRatios)
-        {
-            var ratios = Assert.IsType<ScriptArray>(tuned.ObjectOf(part)!.Fields["ratio"]);
-            Assert.All(ratios.Items.Keys, index => Assert.True(ratios.Holds(index), $"ratio[{index}] of {ratios.Length}"));
-            Assert.Equal(3.25, Assert.IsType<ScriptNumber>(ratios.Get(1)).Amount);
-        }
+        var tuned = EngineEvaluator.Evaluate(catalog, tree.AsPartTree());
+        Assert.Equal(gears, tuned.GearRatios.Count);
+        Assert.Equal(3.25, tuned.GearRatios[0]);
     }
 }

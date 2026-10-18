@@ -78,7 +78,7 @@ internal static class Program
         using var json = JsonDocument.Parse(File.ReadAllText(Path.Combine(root, pack, "pack.json")));
         foreach (var part in json.RootElement.GetProperty("parts").EnumerateArray())
         {
-            if (!part.TryGetProperty("properties", out var properties) || !properties.TryGetProperty("diameter_in", out var diameter)) continue;
+            if (!part.TryGetProperty("specs", out var specs) || !specs.TryGetProperty("diameter_in", out var diameter)) continue;
             var id = part.GetProperty("id").GetString()!;
             yield return (id[(id.LastIndexOf('/') + 1)..], diameter.GetSingle());
         }

@@ -13,7 +13,7 @@ public class PeriodBrakesTests
     private const string Drum = "running_gear/brakes_drum/";
     private const string Disc = "running_gear/brakes_disc/";
 
-    /// <summary>A car whose own data asks for the source game's smallest parts: its brake torque, springs and shocks low</summary>
+    /// <summary>A car whose own data asks for the smallest stock parts: its brake torque, springs and shocks low</summary>
     private static AcCarSpecs Specs(double mass = 1850) => new()
     {
         Traction = "RWD", TotalMass = mass, FrontWeightShare = 0.55,
@@ -62,7 +62,7 @@ public class PeriodBrakesTests
         var corner = new CornerParts { Brake = new PartInstance(drum.Id) { Wear = 1 }, Shoes = new PartInstance(organic.Id) { Wear = 0.3 } };
         Assert.Equal(RunningGear.BrakeTorque(drum, organic, null, 0.3), RunningGear.BrakeTorque(Catalog, corner), 3);
 
-        // Every factory drum is under the source game's smallest disc: a disc is an upgrade
+        // Every factory drum is under the smallest stock disc: a disc is an upgrade
         var smallestDisc = Catalog.Parts.Values.Where(p => PartKinds.GroupOf(p) == PartKinds.Brakes && p.CameIn == null && p.Number("force") > 0).Min(p => RunningGear.BrakeTorque(p));
         Assert.All(Catalog.Parts.Values.Where(p => p.Id.StartsWith(Drum, StringComparison.Ordinal) && PartKinds.GroupOf(p) == PartKinds.Brakes),
             d => Assert.True(RunningGear.BrakeTorque(d, organic, null) < smallestDisc, d.Id));

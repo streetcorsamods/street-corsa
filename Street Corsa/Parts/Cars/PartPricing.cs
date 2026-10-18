@@ -8,8 +8,8 @@ using StreetCorsa.Models.GameState;
 namespace StreetCorsa.Parts.Cars;
 
 /// <summary>
-/// What parts cost. New price is what the part does (<see cref="PartPriceBook"/>), as the source game priced its parts,
-/// and a whole engine what it makes (<see cref="EngineNewPrice"/>); a used part is worth what the source game gave for one: damage scales it, wear
+/// What parts cost. New price is what the part does (<see cref="PartPriceBook"/>), by what it does,
+/// and a whole engine what it makes (<see cref="EngineNewPrice"/>); a used part is worth less: damage scales it, wear
 /// takes up to 70% off.
 /// </summary>
 public static class PartPricing
@@ -26,7 +26,7 @@ public static class PartPricing
     /// Where the figures come from, asked each time a price is worked out. Process-wide on purpose: every price in the
     /// game is one of these, asked for from anywhere without a service at hand. The game points it at the rules of the
     /// game in play (<c>economy</c> in the rules), once, when the parts service is made; the tools that link this file
-    /// (EngineBench) have no rules and leave it null: the scripts' own dollars, at 1, and the base game's shares. A
+    /// (EngineBench) have no rules and leave it null: the parts' own dollars, at 1, and the base game's shares. A
     /// figure that is not a positive number is the base game's.
     /// </summary>
     public static Func<Figures>? Source { get; set; }

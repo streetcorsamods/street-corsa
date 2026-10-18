@@ -25,24 +25,24 @@ public static class PartSpecs
     /// <summary>The slot that takes a role on the part ("crankshaft" → 8); 0 when it has none</summary>
     public static int RoleSlot(this InstalledPart part, string role) => part.Definition.SlotRoles.GetValueOrDefault(role);
 
-    /// <summary>What is mounted on the part's slot of that role, when it is of the class; null otherwise</summary>
-    public static InstalledPart? OnRole(this InstalledPart part, string role, string className) =>
+    /// <summary>What is mounted on the part's slot of that role, when it is of the class (any, for none); null otherwise</summary>
+    public static InstalledPart? OnRole(this InstalledPart part, string role, string? className = null) =>
         part.RoleSlot(role) is > 0 and var slot ? part.OnSlot(slot, className) : null;
 
     /// <summary>
     /// What is on one of the part's slots, when it is of the class: a child, or the parent through the slot the part
     /// hangs by. Null otherwise.
     /// </summary>
-    public static InstalledPart? OnSlot(this InstalledPart part, int slot, string className)
+    public static InstalledPart? OnSlot(this InstalledPart part, int slot, string? className)
     {
         var found = slot == part.OwnSlot && part.Parent != null ? part.Parent : part.Children.GetValueOrDefault(slot);
-        return found != null && found.Is(className) ? found : null;
+        return found != null && (className == null || found.Is(className)) ? found : null;
     }
 
     /// <summary>A number of a list among the part's specs; the fallback for one it does not have</summary>
     public static double Element(this PartDefinition part, string key, int index, double fallback = 0)
     {
-        var list = part.Properties.GetValueOrDefault(key);
+        var list = part.Specs.GetValueOrDefault(key);
         object? item = list switch
         {
             JArray array => index >= 0 && index < array.Count ? (array[index] as JValue)?.Value : null,

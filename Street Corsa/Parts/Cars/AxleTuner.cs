@@ -114,7 +114,7 @@ public static class AxleTuner
         Mountable(catalog, carrier, RearAxle.GearsSlot, PartKinds.RingPinions).Any(g => g.Id.Equals(gears.Id, StringComparison.OrdinalIgnoreCase));
 
     private static IEnumerable<PartDefinition> Mountable(PartsCatalog catalog, PartDefinition parent, int slotId, string group) =>
-        catalog.MountableOf(parent, slotId, group).Where(p => p.IsScripted);
+        catalog.MountableOf(parent, slotId, group).Where(p => p.IsRealPart);
 
     private static PartInstance Loose(PartInstance part)
     {

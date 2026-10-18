@@ -33,7 +33,7 @@ public sealed class RunningGearModelsTests : IDisposable
     [Fact]
     public void The_source_games_coil_springs_are_drawn_with_the_base_games_own_coil()
     {
-        var springs = Catalog.Parts.Values.Where(p => p.Id.StartsWith("suspension/stock/spring", StringComparison.Ordinal)).ToList();
+        var springs = Catalog.Parts.Values.Where(p => p.Id.StartsWith("suspension/stock/409_lb_in_coil_spring_8_5_in", StringComparison.Ordinal)).ToList();
         Assert.NotEmpty(springs);
         Assert.All(springs, s => Assert.EndsWith(Path.Combine("running_gear", "coil_springs", "coil_spring.kn5"), Catalog.GetModelPath(s)));
         Assert.DoesNotContain(Catalog.Problems, p => p.Contains("models.json"));
@@ -73,7 +73,7 @@ public sealed class RunningGearModelsTests : IDisposable
     public void A_mod_gives_other_parts_models_of_its_own_by_id_or_by_the_start_of_one_and_the_parts_stay_as_they_are()
     {
         _temp.File("base/parts/gear/pack.json", """
-            { "id": "gear", "parts": [ { "id": "gear/drum_9", "name": "d", "model": "drum.kn5", "properties": { "force": 1 } },
+            { "id": "gear", "parts": [ { "id": "gear/drum_9", "name": "d", "model": "drum.kn5", "specs": { "force": 1 } },
                                        { "id": "gear/drum_11", "name": "e", "model": "drum.kn5" }, { "id": "gear/leaf", "name": "l", "model": "leaf.kn5" } ] }
             """);
         _temp.File("mod/parts/models.json", """

@@ -30,7 +30,7 @@
   tyre's while the car keeps its tyre; one that is the wheel node itself or holds it (some cars swap the whole wheel at
   speed) is kept shown.
 
-  Part models are SLRR's: the axle along X, the face towards -X, the meshes straight under an unturned root. Only the
+  Rim and tyre models have the axle along X, the face towards -X, the meshes straight under an unturned root. Only the
   car's main model is touched: its far LODs keep their own wheels.
 ]]
 

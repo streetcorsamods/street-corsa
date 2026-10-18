@@ -25,7 +25,7 @@ public sealed class LiveTree
 
 /// <summary>
 /// Goes between the two shapes of a part tree: <see cref="PartInstance"/> is what a save file holds,
-/// <see cref="InstalledPart"/> is what the part scripts and the 3D view work on.
+/// <see cref="InstalledPart"/> is what the engine model and the 3D view work on.
 /// </summary>
 public static class PartTrees
 {

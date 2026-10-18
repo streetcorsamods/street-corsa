@@ -16,11 +16,11 @@
   <ItemGroup>
     <Compile Include="..\..\Street Corsa\Parts\PartDefinition.cs" Link="Parts\PartDefinition.cs" />
     <Compile Include="..\..\Street Corsa\Parts\CameIn.cs" Link="Parts\CameIn.cs" />
-    <Compile Include="..\..\Street Corsa\Parts\PartOverrides.cs" Link="Parts\PartOverrides.cs" />
     <Compile Include="..\..\Street Corsa\Parts\EngineBuild.cs" Link="Parts\EngineBuild.cs" />
     <Compile Include="..\..\Street Corsa\Parts\PartsCatalog.cs" Link="Parts\PartsCatalog.cs" />
     <Compile Include="..\..\Street Corsa\Parts\SlotShifts.cs" Link="Parts\SlotShifts.cs" />
     <Compile Include="..\..\Street Corsa\Parts\PartKinds.cs" Link="Parts\PartKinds.cs" />
+    <Compile Include="..\..\Street Corsa\Parts\PartClasses.cs" Link="Parts\PartClasses.cs" />
     <Compile Include="..\..\Street Corsa\Parts\PartSlots.cs" Link="Parts\PartSlots.cs" />
     <Compile Include="..\..\Street Corsa\Parts\PartGroups.cs" Link="Parts\PartGroups.cs" />
     <Compile Include="..\..\Street Corsa\Parts\WorkOrder.cs" Link="Parts\WorkOrder.cs" />
@@ -29,7 +29,6 @@
     <Compile Include="..\..\Street Corsa\Parts\Cars\*.cs" Exclude="..\..\Street Corsa\Parts\Cars\CarCondition.cs;..\..\Street Corsa\Parts\Cars\RepairShop.cs;..\..\Street Corsa\Parts\Cars\GasStation.cs;..\..\Street Corsa\Parts\Cars\AttendantCheck.cs;..\..\Street Corsa\Parts\Cars\CarLooks.cs" Link="Parts\Cars\%(Filename)%(Extension)" />
     <Compile Include="..\..\Street Corsa\Models\Race\RaceStartState.cs" Link="Models\RaceStartState.cs" />
     <Compile Include="..\..\Street Corsa\Models\GameState\PartInstance.cs" Link="Models\PartInstance.cs" />
-    <Compile Include="..\..\Street Corsa\Parts\Scripting\*.cs" Link="Parts\Scripting\%(Filename)%(Extension)" />
     <Compile Include="..\..\Street Corsa\Parts\Logic\*.cs" Link="Parts\Logic\%(Filename)%(Extension)" />
     <Compile Include="..\..\Street Corsa\Parts\Export\*.cs" Link="Parts\Export\%(Filename)%(Extension)" />
     <Compile Include="..\..\Street Corsa\Parts\Sounds\*.cs" Link="Parts\Sounds\%(Filename)%(Extension)" />

@@ -146,12 +146,12 @@ def models(parts, names):
     for pack in ("springs_leaf", "brakes_drum", "axles_dana", "shocks_period"):
         with open(os.path.join(running, pack, "pack.json"), encoding="utf-8-sig") as fh:
             for part in json.load(fh)["parts"]:
-                cls, pid = part["class_chain"][0], part["id"]
-                if cls == "LeafSpring":
+                cls, pid = part.get("class"), part["id"]
+                if cls == "leaf_spring":
                     found[pid] = "truck/leaf.kn5"
-                elif cls == "DrumBrake":
-                    found[pid] = f"truck/{drum_of[int(part['properties']['diam_mm'])]}.kn5"
-                elif cls == "RearAxle":
+                elif cls == "drum_brake":
+                    found[pid] = f"truck/{drum_of[int(part['specs']['diam_mm'])]}.kn5"
+                elif cls == "rear_axle":
                     found[pid] = "truck/housing.kn5"
                 elif pid.endswith("/gabriel_hd"):
                     found[pid] = "truck/shock.kn5"

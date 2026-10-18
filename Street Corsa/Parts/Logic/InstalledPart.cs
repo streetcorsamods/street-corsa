@@ -26,8 +26,8 @@ public sealed class InstalledPart
     public double Tear { get; set; } = 1.0;
 
     /// <summary>
-    /// Settings changed from the part's defaults, by script field: rpm_idle, RPM_limit, mixture_ratio,
-    /// advance, end_ratio... Array fields take an index: "ratio[2]".
+    /// Settings changed from the part's defaults, by spec: idle_rpm, rev_limit, mixture_ratio, advance,
+    /// final_drive... An element of a list takes an index: "gears[1]".
     /// </summary>
     public Dictionary<string, double> Tuning { get; } = new();
 
@@ -65,7 +65,7 @@ public sealed class InstalledPart
         }
     }
 
-    /// <summary>True when the part's script descends from the class, given by simple name: "Block", "Transmission"</summary>
+    /// <summary>True when the part is of the class or one under it (<see cref="PartClasses"/>): "engine_block", "brake"</summary>
     public bool Is(string className) => PartKinds.Is(Definition, className);
 
     public override string ToString() => Definition.DisplayName ?? Definition.Id;

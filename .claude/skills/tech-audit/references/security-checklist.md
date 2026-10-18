@@ -63,8 +63,8 @@ git grep -nEi '(api[_-]?key|secret|password|token)\s*[:=]' -- ':!*.md'
 | Resource limits (CWE-400)      | No unbounded allocation or loop driven by a file header; huge textures/meshes rejected or capped                                                                |
 | JSON (CWE-502)                 | Newtonsoft `TypeNameHandling` is `None` (default) for any file a mod or the user can edit; `MaxDepth` set where input is external                                |
 | Lua result JSON                | Launcher treats result JSON as untrusted: missing/extra fields, wrong types, stale files from an earlier race, and a partially written file are all handled      |
-| Script VM (`Parts/Scripting`)  | Instruction budget / timeout per call, call-depth limit, bounds on every operand/stack/array access; host functions exposed to scripts cannot touch files or processes |
-| Script VM                      | A script fault is contained (caught, logged, part treated as inert) and cannot crash the app or corrupt the build it was evaluating                              |
+| Engine model (`Parts/Logic`)   | Instruction budget / timeout per call, call-depth limit, bounds on every operand/stack/array access; host functions exposed to scripts cannot touch files or processes |
+| Engine model                   | A script fault is contained (caught, logged, part treated as inert) and cannot crash the app or corrupt the build it was evaluating                              |
 | LiteDB saves                   | Opening a corrupted or foreign save fails gracefully; connection mode suits single-process use; no user-controlled strings concatenated into `BsonExpression`s   |
 | Imported catalog               | Re-import of a changed/removed AC car cannot leave dangling references that throw at runtime                                                                    |
 
@@ -87,14 +87,14 @@ git grep -nEi '(api[_-]?key|secret|password|token)\s*[:=]' -- ':!*.md'
 | `HttpClient` | Endpoint from settings, defaulting to `localhost`; no silent fallback to a remote host; what leaves the machine is documented |
 | LLM output   | Model output is treated as untrusted text: never used as a path, command, or deserialized type; length capped before display |
 
-## CLI tool (`SlrrPartsConverter`, `EngineBench`)
+## CLI tool (`EngineBench`)
 
 | Signal       | Check                                                                                                                         |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| CLI args     | Output paths validated; the converter refuses to write outside the intended output root; `--replace` cannot delete unrelated folders |
+| CLI args     | Output paths validated; a tool refuses to write outside the intended output root                                       |
 | Parsers      | SCX/RPK/cfg readers apply the same bounds rules as the game's parsers (these read community mods)                            |
 | Determinism  | Output is deterministic (the re-run workflow diffs scratch runs) — flag dictionary-order or time-dependent output              |
-| Exit codes   | Non-zero exit on failure so `convert-parts.ps1` can stop                                                                       |
+| Exit codes   | Non-zero exit on failure so `check.ps1` can stop                                                                       |
 
 ## CSP race mode (`apps/new-modes/sc_race`, was the Lua app `apps/lua/sr_race_manager`)
 
@@ -122,8 +122,8 @@ Removed 2026-09-24: no unit exists. If an `apps/python` folder reappears, flag i
 | ------------------------------------- | -------------------------------------------------------------------------------------------------- |
 | CWE-22 Path traversal                 | Content-derived names never escape the intended folder                                             |
 | CWE-78 OS command injection           | `Process.Start` arguments never built from content strings without quoting/validation              |
-| CWE-125/787 Out-of-bounds read/write  | Binary parsers, `unsafe` code, script VM stacks                                                    |
-| CWE-400 Uncontrolled resource use     | Script VM budget; file-header-driven allocations                                                   |
+| CWE-125/787 Out-of-bounds read/write  | Binary parsers, `unsafe` code, engine model lists                                                    |
+| CWE-400 Uncontrolled resource use     | Pack-driven counts and lists; file-header-driven allocations                                                   |
 | CWE-502 Unsafe deserialization        | `TypeNameHandling`, `BinaryFormatter`, custom `BsonMapper`                                         |
 | CWE-667 Improper locking / CWE-362    | Scheduler tasks, audio thread vs UI thread, render loop vs disposal                                |
 | CWE-459 Incomplete cleanup            | AC content overlay and clones left behind after a crash                                            |

@@ -59,12 +59,12 @@ public sealed class DynoResult
 }
 
 /// <summary>
-/// The engine simulation the source game kept in native code: from what the parts add up to (<see cref="DynoInputs"/>)
+/// The engine simulation: from what the parts add up to (<see cref="DynoInputs"/>)
 /// to a torque curve. A mean value model, one operating point per speed: how much air the cylinders trap through
 /// their valves in the time they have, what the fuel system can match, and the share of the heat the ideal cycle
 /// turns into work at this compression.
 ///
-/// The energy side follows the scripts' own figures: their heating values only add up to the power the source
+/// The energy side follows the parts' own figures: the fuels' heating values only add up to the power the original
 /// game showed when the full ideal air cycle efficiency is applied and nothing is taken off for friction (builds
 /// held back by their fuel system land within 5% that way). Breathing is fitted to the builds with a known
 /// power in engine_builds.json; tools/EngineBench "rated" shows how the model does against them.
@@ -99,7 +99,7 @@ public static class EngineDyno
     // A burn that is not centred wastes work; degrees of spark error for the work to drop to zero
     private const double PhasingWidth = 140;
 
-    // Boost in the scripts' units to bar of manifold pressure
+    // Boost in the specs' units to bar of manifold pressure
     private const double BoostScale = 0.25;
 
     public static DynoResult Run(DynoInputs inputs)
@@ -220,7 +220,7 @@ public static class EngineDyno
         return boost;
     }
 
-    /// <summary>Boost of the scripts' charger at this speed, bar of manifold pressure</summary>
+    /// <summary>Boost of the specs' charger at this speed, bar of manifold pressure</summary>
     public static double ScriptBoostBar(DynoInputs inputs, double rpm) => BoostScale * Boost(inputs, rpm);
 
     /// <summary>

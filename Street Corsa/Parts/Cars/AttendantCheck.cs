@@ -90,7 +90,7 @@ public static class AttendantCheck
     }
 
     /// <summary>An air part whose script keeps all its flow however dusty it gets (<c>dusted_efficiency</c> 1): nothing to clean or replace</summary>
-    private static bool NeverClogs(PartDefinition part) => part.Number("dusted_efficiency") >= 1;
+    private static bool NeverClogs(PartDefinition part) => part.Number(Logic.EngineAssembly.Specs.Clogging) >= 1;
 
     /// <summary>The most worn of the parts, when it is worn enough to mention</summary>
     private static void Worn(List<AttendantHint> hints, string key, IEnumerable<PartInstance> parts, string? where = null)

@@ -21,12 +21,12 @@ public sealed class PartsContentTests : IDisposable
     {
         _temp.File("engines/generic/pack.json", """
             {
-              "id": "engines/generic", "source": null,
+              "id": "engines/generic", "make": null,
               "parts": [
-                { "id": "engines/generic/manifold", "name": "manifold", "class_chain": null, "properties": null, "derived": null,
-                  "slot_roles": null, "stock_parts": [null], "required_slots": null, "categories": [null, "intake"], "config": { "x": null },
+                { "id": "engines/generic/manifold", "name": "manifold", "class": null, "specs": null,
+                  "slot_roles": null, "needs": [null],
                   "slots": [ null, { "id": 5, "name": null, "takes": ["carb:4bbl", null], "fits": null, "attaches_to": null, "compatible_with": null } ] },
-                { "id": "engines/generic/carb", "name": null, "class_chain": [null], "properties": null,
+                { "id": "engines/generic/carb", "name": null, "class": null, "specs": null,
                   "slots": [ { "id": 1, "fits": [null, "carb:4bbl"], "takes": null, "attaches_to": [null], "compatible_with": [null] } ] },
                 { "id": "engines/generic/nothing", "slots": null }
               ]
@@ -39,11 +39,7 @@ public sealed class PartsContentTests : IDisposable
 
         Assert.Single(manifold.Slots);
         Assert.Equal(["carb:4bbl"], manifold.Slots[0].Takes);
-        Assert.Empty(manifold.StockParts);
-        Assert.Equal(["intake"], manifold.Categories);
-        Assert.Empty(manifold.Config);
-        Assert.Empty(carb.ClassChain);
-        Assert.Equal(string.Empty, carb.Name);
+        Assert.Equal("carb", carb.Name);
         Assert.Empty(catalog.Get("engines/generic/nothing")!.Slots);
 
         var mountable = catalog.FindMountable(manifold, manifold.Slots[0]);
@@ -61,21 +57,21 @@ public sealed class PartsContentTests : IDisposable
         _temp.File(EngineBuild.FileName, """
             [
               null,
-              { "id": null, "name": "nameless", "parts": [ { "part": "engines/new/block" } ] },
-              { "id": "notes/a", "name": null, "parts": null },
-              { "id": "notes/b", "name": "b", "parts": [ null, { "part": null, "source": "x#0x1" }, { "part": "engines/new/block" } ] }
+              { "id": null, "name": "nameless", "parts": [ "engines/new/block" ] },
+              { "id": "rated/a", "name": null, "parts": null },
+              { "id": "rated/b", "name": "b", "parts": [ null, " ", "engines/new/block", "engines/new/gone" ] }
             ]
             """);
 
         var catalog = PartsCatalog.Load(_temp.Path);
 
-        Assert.Equal(["notes/a", "notes/b"], catalog.EngineBuilds.Select(b => b.Id));
+        Assert.Equal(["rated/a", "rated/b"], catalog.EngineBuilds.Select(b => b.Id));
         Assert.Contains(catalog.Problems, p => p.Contains(EngineBuild.FileName) && p.Contains("without an id"));
         Assert.Empty(catalog.EngineBuilds[0].Parts);
         Assert.Equal(string.Empty, catalog.EngineBuilds[0].Name);
         Assert.Equal(2, catalog.EngineBuilds[1].Parts.Count);
 
-        // Scriptless parts don't run, but nothing throws: the index is empty of runnable builds, not missing
+        // Parts without specs or figures make no engine, but nothing throws: the index is empty of runnable builds, not missing
         var index = EngineBuildIndex.Create(catalog);
         Assert.Empty(index.Runnable);
     }
@@ -90,7 +86,7 @@ public sealed class PartsContentTests : IDisposable
     {
         _temp.File("engines/new/pack.json", """
             {
-              "id": "engines/new", "source": "new.rpk",
+              "id": "engines/new",
               "parts": [
                 { "id": "engines/new/block", "name": "block", "slots": [ { "id": 10, "name": "pan" }, { "id": 20, "name": "head" } ] },
                 { "id": "engines/new/pan", "name": "pan",
@@ -100,7 +96,7 @@ public sealed class PartsContentTests : IDisposable
             """);
         _temp.File("engines/other/pack.json", """
             {
-              "id": "engines/other", "source": "other.rpk",
+              "id": "engines/other",
               "parts": [
                 { "id": "engines/other/head", "name": "head",
                   "slots": [ { "id": 1, "attaches_to": [ { "part": "engines/new/block", "slot": 20, "source": "" } ] } ] }

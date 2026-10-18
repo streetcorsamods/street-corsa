@@ -2,7 +2,7 @@
 Runs the race mode's rims (apps/new-modes/sc_race/car_parts.lua) on a stub car, without Assetto Corsa.
 
 The stub car is the Valiant's wheels as its KN5 has them (atcc_chrysler_valiant_s-series, measured 2026-10-03), the
-part SLRR's E-T mag (rims/mopar/rim_8_5), every node at the car's origin unturned. It checks which meshes go, how
+part rim, the E-T mag (rims/mopar/e_t_mag_wheel_15x5), every node at the car's origin unturned. It checks which meshes go, how
 big the part is made and where its face lands. Not how CSP draws it, which only the game can show.
 
     python tools/sc_race_harness/test_parts.py
@@ -329,12 +329,12 @@ def near(a, b, tolerance=0.0005):
 
 
 def a_corner_not_named_keeps_its_own_rim():
-    _, world = run({'CAR_0_RIM_LF': r'parts\rims_mopar_rim_8_5.kn5'})
+    _, world = run({'CAR_0_RIM_LF': r'parts\rims_mopar_e_t_mag_wheel_15x5.kn5'})
     check('a corner not named keeps its own rim', rim(world, 'RF') is None and all(visible(world, 'RF').values()))
 
 
 def the_rim_goes_and_the_tyre_and_brake_stay():
-    _, world = run({'CAR_0_RIM_LF': r'parts\rims_mopar_rim_8_5.kn5'})
+    _, world = run({'CAR_0_RIM_LF': r'parts\rims_mopar_e_t_mag_wheel_15x5.kn5'})
     shown = visible(world, 'LF')
     stay = ['whitewall_LF', 'tire_tread_LF', 'tire_wall_LF', 'tyre_cap_LF', 'brake_drum_LF']
     go = ['inner_rim_LF', 'rim_centre_LF', 'rim_outer_LF', 'wheel_hub_LF', 'Wheel_Nuts_LF', 'hubcap_S_LF']

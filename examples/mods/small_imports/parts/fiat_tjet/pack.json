@@ -1,197 +1,28 @@
 {
   "id": "engines/fiat_tjet",
-  "source": "small_imports example mod",
   "make": "fiat",
   "parts": [
     {
       "id": "engines/fiat_tjet/block",
-      "name": "T-Jet 1.4 block",
       "display_name": "Fiat 1.4 T-Jet block (Fiat 1.4 T-Jet)",
-      "class_chain": [
-        "Block"
-      ],
+      "class": "engine_block",
       "mass": 85,
-      "properties": {
-        "value": 900
-      },
-      "slots": [
-        {
-          "id": 10,
-          "name": "crankshaft",
-          "position": [
-            0,
-            -0.1,
-            0
-          ],
-          "takes": [
-            "fiat_tjet:crank"
-          ]
-        },
-        {
-          "id": 12,
-          "name": "cylinder head",
-          "position": [
-            0,
-            0.2,
-            0
-          ],
-          "takes": [
-            "fiat_tjet:head"
-          ]
-        },
-        {
-          "id": 13,
-          "name": "camshaft",
-          "position": [
-            0,
-            0.3,
-            0
-          ],
-          "takes": [
-            "fiat_tjet:cam"
-          ]
-        },
-        {
-          "id": 14,
-          "name": "induction",
-          "position": [
-            0.18,
-            0.28,
-            0
-          ],
-          "takes": [
-            "fiat_tjet:intake"
-          ]
-        },
-        {
-          "id": 15,
-          "name": "air cleaner",
-          "position": [
-            0.22,
-            0.4,
-            0
-          ],
-          "takes": [
-            "fiat_tjet:air"
-          ]
-        },
-        {
-          "id": 16,
-          "name": "exhaust",
-          "position": [
-            -0.2,
-            0.12,
-            0
-          ],
-          "takes": [
-            "fiat_tjet:exhaust"
-          ]
-        },
-        {
-          "id": 17,
-          "name": "transmission",
-          "position": [
-            0,
-            -0.1,
-            0.34
-          ],
-          "takes": [
-            "fiat_tjet:gearbox"
-          ]
-        },
-        {
-          "id": 18,
-          "name": "clutch",
-          "position": [
-            0,
-            -0.1,
-            0.26
-          ],
-          "takes": [
-            "fiat_tjet:clutch"
-          ]
-        },
-        {
-          "id": 19,
-          "name": "oil pan",
-          "position": [
-            0,
-            -0.24,
-            0
-          ],
-          "takes": [
-            "fiat_tjet:sump"
-          ]
-        },
-        {
-          "id": 20,
-          "name": "radiator",
-          "position": [
-            0,
-            0.05,
-            -0.55
-          ],
-          "takes": [
-            "fiat_tjet:radiator"
-          ]
-        },
-        {
-          "id": 21,
-          "name": "water pump",
-          "position": [
-            0,
-            0.02,
-            -0.28
-          ],
-          "takes": [
-            "fiat_tjet:pump"
-          ]
-        },
-        {
-          "id": 22,
-          "name": "fan",
-          "position": [
-            0,
-            0.05,
-            -0.42
-          ],
-          "takes": [
-            "fiat_tjet:fan"
-          ]
-        },
-        {
-          "id": 23,
-          "name": "turbo",
-          "position": [
-            -0.26,
-            0.18,
-            -0.08
-          ],
-          "takes": [
-            "fiat_tjet:turbo"
-          ]
-        }
-      ],
-      "required_slots": [
+      "needs": [
         {
           "slot": 10,
-          "message": "The engine needs its crankshaft.",
-          "enforce": true
+          "message": "The engine needs its crankshaft."
         },
         {
           "slot": 12,
-          "message": "The engine needs its cylinder head.",
-          "enforce": true
+          "message": "The engine needs its cylinder head."
         },
         {
           "slot": 13,
-          "message": "The engine needs its camshaft.",
-          "enforce": true
+          "message": "The engine needs its camshaft."
         },
         {
           "slot": 14,
-          "message": "Nothing feeds the engine: it needs its carburettors or its injection.",
-          "enforce": true
+          "message": "Nothing feeds the engine: it needs its carburettors or its injection."
         }
       ],
       "figures": {
@@ -202,222 +33,223 @@
         "max_rpm": 7000,
         "idle_rpm": 800,
         "inertia": 0.08
-      }
+      },
+      "slots": [
+        {
+          "id": 10,
+          "name": "crankshaft",
+          "position": [0, -0.1, 0],
+          "takes": ["fiat_tjet:crank"]
+        },
+        {
+          "id": 12,
+          "name": "cylinder head",
+          "position": [0, 0.2, 0],
+          "takes": ["fiat_tjet:head"]
+        },
+        {
+          "id": 13,
+          "name": "camshaft",
+          "position": [0, 0.3, 0],
+          "takes": ["fiat_tjet:cam"]
+        },
+        {
+          "id": 14,
+          "name": "induction",
+          "position": [0.18, 0.28, 0],
+          "takes": ["fiat_tjet:intake"]
+        },
+        {
+          "id": 15,
+          "name": "air cleaner",
+          "position": [0.22, 0.4, 0],
+          "takes": ["fiat_tjet:air"]
+        },
+        {
+          "id": 16,
+          "name": "exhaust",
+          "position": [-0.2, 0.12, 0],
+          "takes": ["fiat_tjet:exhaust"]
+        },
+        {
+          "id": 17,
+          "name": "transmission",
+          "position": [0, -0.1, 0.34],
+          "takes": ["fiat_tjet:gearbox"]
+        },
+        {
+          "id": 18,
+          "name": "clutch",
+          "position": [0, -0.1, 0.26],
+          "takes": ["fiat_tjet:clutch"]
+        },
+        {
+          "id": 19,
+          "name": "oil pan",
+          "position": [0, -0.24, 0],
+          "takes": ["fiat_tjet:sump"]
+        },
+        {
+          "id": 20,
+          "name": "radiator",
+          "position": [0, 0.05, -0.55],
+          "takes": ["fiat_tjet:radiator"]
+        },
+        {
+          "id": 21,
+          "name": "water pump",
+          "position": [0, 0.02, -0.28],
+          "takes": ["fiat_tjet:pump"]
+        },
+        {
+          "id": 22,
+          "name": "fan",
+          "position": [0, 0.05, -0.42],
+          "takes": ["fiat_tjet:fan"]
+        },
+        {
+          "id": 23,
+          "name": "turbo",
+          "position": [-0.26, 0.18, -0.08],
+          "takes": ["fiat_tjet:turbo"]
+        }
+      ]
     },
     {
       "id": "engines/fiat_tjet/crank",
-      "name": "crankshaft",
       "display_name": "Fiat crankshaft 84 mm (Fiat 1.4 T-Jet)",
-      "class_chain": [
-        "Crankshaft"
-      ],
+      "class": "crankshaft",
       "mass": 12,
-      "properties": {
-        "value": 180
+      "figures": {
+        "stroke": 84
       },
       "slots": [
         {
           "id": 1,
           "name": "mount",
-          "fits": [
-            "fiat_tjet:crank"
-          ]
+          "fits": ["fiat_tjet:crank"]
         }
-      ],
-      "figures": {
-        "stroke": 84
-      }
+      ]
     },
     {
       "id": "engines/fiat_tjet/head",
-      "name": "cylinder head",
       "display_name": "Fiat 16-valve head (Fiat 1.4 T-Jet)",
-      "class_chain": [
-        "CylinderHead"
-      ],
+      "class": "cylinder_head",
       "mass": 11,
-      "properties": {
-        "value": 380
-      },
-      "slots": [
-        {
-          "id": 1,
-          "name": "mount",
-          "fits": [
-            "fiat_tjet:head"
-          ]
-        }
-      ],
       "figures": {
         "intake_flow": 0.72,
         "exhaust_flow": 0.34
-      }
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": ["fiat_tjet:head"]
+        }
+      ]
     },
     {
       "id": "engines/fiat_tjet/cams",
-      "name": "camshafts",
       "display_name": "Fiat camshafts (Fiat 1.4 T-Jet)",
-      "class_chain": [
-        "Camshaft"
-      ],
+      "class": "camshaft",
       "mass": 3,
-      "properties": {
-        "value": 140
-      },
-      "slots": [
-        {
-          "id": 1,
-          "name": "mount",
-          "fits": [
-            "fiat_tjet:cam"
-          ]
-        }
-      ],
       "figures": {
         "intake_duration": 230,
         "exhaust_duration": 230
-      }
-    },
-    {
-      "id": "engines/fiat_tjet/injection",
-      "name": "fuel injection",
-      "display_name": "Fiat multipoint fuel injection (Fiat 1.4 T-Jet)",
-      "class_chain": [
-        "FuelInjectorSystem"
-      ],
-      "mass": 4,
-      "properties": {
-        "value": 320
       },
       "slots": [
         {
           "id": 1,
           "name": "mount",
-          "fits": [
-            "fiat_tjet:intake"
-          ]
+          "fits": ["fiat_tjet:cam"]
         }
-      ],
+      ]
+    },
+    {
+      "id": "engines/fiat_tjet/injection",
+      "display_name": "Fiat multipoint fuel injection (Fiat 1.4 T-Jet)",
+      "class": "fuel_system",
+      "mass": 4,
       "figures": {
         "fuel_flow": 13,
         "air_flow": 210,
         "mixture_ratio": 12.8
-      }
-    },
-    {
-      "id": "engines/fiat_tjet/injection_sport",
-      "name": "fuel injection",
-      "display_name": "Bosch high-flow injectors and map (Fiat 1.4 T-Jet)",
-      "class_chain": [
-        "FuelInjectorSystem"
-      ],
-      "mass": 4,
-      "properties": {
-        "value": 480
       },
       "slots": [
         {
           "id": 1,
           "name": "mount",
-          "fits": [
-            "fiat_tjet:intake"
-          ]
+          "fits": ["fiat_tjet:intake"]
         }
-      ],
+      ]
+    },
+    {
+      "id": "engines/fiat_tjet/injection_sport",
+      "display_name": "Bosch high-flow injectors and map (Fiat 1.4 T-Jet)",
+      "class": "fuel_system",
+      "mass": 4,
       "figures": {
         "fuel_flow": 18,
         "air_flow": 280,
         "mixture_ratio": 12.5
-      }
-    },
-    {
-      "id": "engines/fiat_tjet/air_cleaner",
-      "name": "air cleaner",
-      "display_name": "Fiat air box (Fiat 1.4 T-Jet)",
-      "class_chain": [
-        "AirFilter"
-      ],
-      "mass": 2,
-      "properties": {
-        "value": 30
       },
       "slots": [
         {
           "id": 1,
           "name": "mount",
-          "fits": [
-            "fiat_tjet:air"
-          ]
+          "fits": ["fiat_tjet:intake"]
+        }
+      ]
+    },
+    {
+      "id": "engines/fiat_tjet/air_cleaner",
+      "display_name": "Fiat air box (Fiat 1.4 T-Jet)",
+      "class": "air_cleaner",
+      "mass": 2,
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": ["fiat_tjet:air"]
         }
       ]
     },
     {
       "id": "engines/fiat_tjet/exhaust",
-      "name": "exhaust",
       "display_name": "Fiat exhaust (Fiat 1.4 T-Jet)",
-      "class_chain": [
-        "ExhaustHeader"
-      ],
+      "class": "exhaust_header",
       "mass": 10,
-      "properties": {
-        "value": 120
-      },
       "slots": [
         {
           "id": 1,
           "name": "mount",
-          "fits": [
-            "fiat_tjet:exhaust"
-          ]
+          "fits": ["fiat_tjet:exhaust"]
         }
       ]
     },
     {
       "id": "engines/fiat_tjet/exhaust_monza",
-      "name": "sport exhaust",
       "display_name": "Abarth Record Monza exhaust (Fiat 1.4 T-Jet)",
-      "class_chain": [
-        "ExhaustHeader"
-      ],
+      "class": "exhaust_header",
       "mass": 7,
-      "properties": {
-        "value": 380
-      },
-      "slots": [
-        {
-          "id": 1,
-          "name": "mount",
-          "fits": [
-            "fiat_tjet:exhaust"
-          ]
-        }
-      ],
       "figures": {
         "exhaust_flow": {
           "times": 1.15
         }
-      }
-    },
-    {
-      "id": "engines/fiat_tjet/turbo_ihi",
-      "name": "turbo",
-      "display_name": "IHI RHF3 turbocharger (Fiat 1.4 T-Jet)",
-      "class_chain": [
-        "TurboCharger"
-      ],
-      "mass": 6,
-      "properties": {
-        "value": 520
       },
       "slots": [
         {
           "id": 1,
           "name": "mount",
-          "fits": [
-            "fiat_tjet:turbo"
-          ]
+          "fits": ["fiat_tjet:exhaust"]
         }
-      ],
+      ]
+    },
+    {
+      "id": "engines/fiat_tjet/turbo_ihi",
+      "display_name": "IHI RHF3 turbocharger (Fiat 1.4 T-Jet)",
+      "class": "turbocharger",
+      "mass": 6,
       "figures": {
         "turbo": {
           "boost": 0.9,
@@ -426,28 +258,20 @@
           "lag_up": 0.985,
           "lag_down": 0.98
         }
-      }
-    },
-    {
-      "id": "engines/fiat_tjet/turbo_garrett",
-      "name": "turbo",
-      "display_name": "Garrett GT1446 turbocharger (Fiat 1.4 T-Jet)",
-      "class_chain": [
-        "TurboCharger"
-      ],
-      "mass": 7,
-      "properties": {
-        "value": 900
       },
       "slots": [
         {
           "id": 1,
           "name": "mount",
-          "fits": [
-            "fiat_tjet:turbo"
-          ]
+          "fits": ["fiat_tjet:turbo"]
         }
-      ],
+      ]
+    },
+    {
+      "id": "engines/fiat_tjet/turbo_garrett",
+      "display_name": "Garrett GT1446 turbocharger (Fiat 1.4 T-Jet)",
+      "class": "turbocharger",
+      "mass": 7,
       "figures": {
         "turbo": {
           "boost": 1.3,
@@ -456,137 +280,101 @@
           "lag_up": 0.992,
           "lag_down": 0.982
         }
-      }
+      },
+      "slots": [
+        {
+          "id": 1,
+          "name": "mount",
+          "fits": ["fiat_tjet:turbo"]
+        }
+      ]
     },
     {
       "id": "engines/fiat_tjet/gearbox",
-      "name": "gearbox",
       "display_name": "Fiat C510 5-speed transaxle (Fiat 1.4 T-Jet)",
-      "class_chain": [
-        "Transmission"
-      ],
+      "class": "transmission",
       "mass": 35,
-      "properties": {
-        "value": 600
+      "figures": {
+        "gears": [3.909, 2.157, 1.48, 1.121, 0.921],
+        "reverse": 3.818,
+        "final_drive": 3.353
       },
       "slots": [
         {
           "id": 1,
           "name": "mount",
-          "fits": [
-            "fiat_tjet:gearbox"
-          ]
+          "fits": ["fiat_tjet:gearbox"]
         }
-      ],
-      "figures": {
-        "gears": [
-          3.909,
-          2.157,
-          1.48,
-          1.121,
-          0.921
-        ],
-        "reverse": 3.818,
-        "final_drive": 3.353
-      }
+      ]
     },
     {
       "id": "engines/fiat_tjet/clutch",
-      "name": "clutch",
       "display_name": "Fiat clutch (Fiat 1.4 T-Jet)",
-      "class_chain": [
-        "Clutch"
-      ],
+      "class": "clutch",
       "mass": 5,
-      "properties": {
-        "value": 90
+      "figures": {
+        "clutch_torque": 300
       },
       "slots": [
         {
           "id": 1,
           "name": "mount",
-          "fits": [
-            "fiat_tjet:clutch"
-          ]
+          "fits": ["fiat_tjet:clutch"]
         }
-      ],
-      "figures": {
-        "clutch_torque": 300
-      }
+      ]
     },
     {
       "id": "engines/fiat_tjet/sump",
-      "name": "oil pan",
       "display_name": "Fiat oil pan (Fiat 1.4 T-Jet)",
-      "class_chain": [
-        "OilPan"
-      ],
+      "class": "oil_pan",
       "mass": 3,
-      "properties": {
-        "value": 45,
+      "specs": {
         "capacity": 3.2
       },
       "slots": [
         {
           "id": 1,
           "name": "mount",
-          "fits": [
-            "fiat_tjet:sump"
-          ]
+          "fits": ["fiat_tjet:sump"]
         }
       ]
     },
     {
       "id": "engines/fiat_tjet/radiator",
-      "name": "radiator",
       "display_name": "Fiat radiator (Fiat 1.4 T-Jet)",
+      "class": "part",
       "mass": 6,
-      "properties": {
-        "value": 70
-      },
       "slots": [
         {
           "id": 1,
           "name": "mount",
-          "fits": [
-            "fiat_tjet:radiator"
-          ]
+          "fits": ["fiat_tjet:radiator"]
         }
       ]
     },
     {
       "id": "engines/fiat_tjet/water_pump",
-      "name": "water pump",
       "display_name": "Fiat water pump (Fiat 1.4 T-Jet)",
+      "class": "part",
       "mass": 2,
-      "properties": {
-        "value": 35
-      },
       "slots": [
         {
           "id": 1,
           "name": "mount",
-          "fits": [
-            "fiat_tjet:pump"
-          ]
+          "fits": ["fiat_tjet:pump"]
         }
       ]
     },
     {
       "id": "engines/fiat_tjet/fan",
-      "name": "fan",
       "display_name": "Fiat 4-blade fan (Fiat 1.4 T-Jet)",
+      "class": "part",
       "mass": 1,
-      "properties": {
-        "value": 15
-      },
       "slots": [
         {
           "id": 1,
           "name": "mount",
-          "fits": [
-            "fiat_tjet:fan"
-          ]
+          "fits": ["fiat_tjet:fan"]
         }
       ]
     }

@@ -2,9 +2,8 @@
 # Set default behavior to automatically normalize line endings.
 ###############################################################################
 * text=auto
-# Converted part models and the compiled part scripts they run on (Street Corsa/Content/streetcorsa/parts)
+# Part and scene models (Street Corsa/Content/*/parts and the scenes)
 *.kn5   binary
-*.class binary
 ###############################################################################
 # Set default behavior for command prompt diff.
 #

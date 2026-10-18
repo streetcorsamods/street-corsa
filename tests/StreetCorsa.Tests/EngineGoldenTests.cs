@@ -4,7 +4,7 @@ using StreetCorsa.Parts.Logic;
 namespace StreetCorsa.Tests;
 
 /// <summary>
-/// Real part scripts from Content/streetcorsa/parts/_scripts still evaluate, through the API EngineBench uses. The figures are
+/// The real parts of Content/streetcorsa/parts still make their engines, through the API EngineBench uses. The figures are
 /// what `EngineBench "Street Corsa/Content/streetcorsa/parts" rated` printed for these builds on 2026-09-24 (after the VM fixes).
 /// </summary>
 public class EngineGoldenTests
@@ -13,9 +13,9 @@ public class EngineGoldenTests
 
     [Theory]
     //          build id ends with                               hp   @rpm   Nm  @rpm
-    [InlineData("chrysler-v8-pack/chrysler-la-340-275-hp", 301, 5750, 426, 2750)]
-    [InlineData("chrysler-v8-pack/chrysler-426-hemi-425-hp", 387, 6000, 553, 2750)]
-    [InlineData("script-ford-l6/ford-221-132-hp", 118, 5000, 283, 1000)]
+    [InlineData("rated/chrysler-la-340-275-hp", 301, 5750, 426, 2750)]
+    [InlineData("rated/chrysler-426-hemi-425-hp", 387, 6000, 553, 2750)]
+    [InlineData("rated/ford-221-132-hp", 118, 5000, 283, 1000)]
     public void A_rated_build_runs_with_the_same_dyno_figures(string buildId, int hp, int hpRpm, int nm, int nmRpm)
     {
         var catalog = Catalog.Value;

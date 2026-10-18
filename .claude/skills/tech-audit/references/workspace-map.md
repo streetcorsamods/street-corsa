@@ -9,7 +9,6 @@
 | 1 | Street Corsa | `Street Corsa/Street Corsa.csproj` | WPF desktop app | net10.0-windows | Nullable, WPF + WinForms, x64, AllowUnsafeBlocks |
 | 2 | StreetCorsa.Tests | `tests/StreetCorsa.Tests/StreetCorsa.Tests.csproj` | Test project (xunit.v3 4.0.1, MTP, `OutputType=Exe`) | net10.0-windows | Nullable, WPF, x64, ProjectReference → game, 3 linked files |
 | 3 | EngineBench | `tools/EngineBench/EngineBench.csproj` | CLI tool | net10.0 | Nullable, 29 linked game files |
-| 4 | SlrrPartsConverter | `tools/SlrrPartsConverter/SlrrPartsConverter.csproj` | CLI tool | net10.0 | Nullable, x64, 11 linked |
 | 5 | StationSceneBuilder | `tools/StationScene/StationSceneBuilder/` | CLI tool (KN5 scene builder) | net10.0 | Nullable, x64 |
 | 6 | StreetSceneBuilder | `tools/StreetScene/StreetSceneBuilder/` | CLI tool (KN5 scene builder) | net10.0 | Nullable, x64 |
 | 7 | WarehouseSceneBuilder | `tools/WarehouseScene/WarehouseSceneBuilder/` | CLI tool (KN5 scene builder) | net10.0 | Nullable, x64 |
@@ -19,7 +18,6 @@
 | 11 | PropBuilder | `tools/Props/PropBuilder/` | CLI tool (garage props KN5) — new, no packages | net10.0 | Nullable, x64 |
 | 12 | sc_race | `apps/new-modes/sc_race` (`mode.lua`, `car_parts.lua`, `format_{drag,road,time_attack}.lua`) | CSP new mode | — | installed by `ScRaceMode` |
 | 13 | sc_free | `apps/new-modes/sc_free/mode.lua` | CSP new mode — new | — | installed by `ScRaceMode` |
-| 14 | convert-parts.ps1 | `tools/convert-parts.ps1` | Build/ops script | — | drives SlrrPartsConverter |
 | 15 | check.ps1 | `tools/check.ps1` | Build/ops script | — | build + test gate |
 | 16–25 | Python asset scripts | `tools/{DinerScene,PaintBoothScene,Props,ShopScene,StationScene,StreetScene,WarehouseScene}/*.py`, `tools/SalesmanPortraits/paint_salesmen.py`, `tools/sfx/build_sfx.py`, `tools/siren/make_siren.py` | Build/ops scripts (Python) | — | generate textures, OBJ, sounds; ComfyUI for portraits |
 | 26 | sc_race_harness | `tools/sc_race_harness/test_{chase,heat,parts,strip,time_attack}.py` | Test harness (Python) | — | exercises the Lua offline |
@@ -46,7 +44,7 @@ Vulnerable: 0 · Deprecated: 0 · Outdated: 0. Sources: `nuget.config` (nuget.or
 
 | DLL | Referenced by | Path | Exists |
 | --- | ------------- | ---- | ------ |
-| AcTools.dll | game, tests, converter, 7 scene/prop builders | `actools\AcTools\bin\x64\Release\` (sibling checkout; Release since the 2026-09-29 fixes) | yes |
+| AcTools.dll | game, tests, 7 scene/prop builders | `actools\AcTools\bin\x64\Release\` (sibling checkout; Release since the 2026-09-29 fixes) | yes |
 | AcTools.Render.dll | game | `actools\AcTools.Render\bin\x64\Release\` | yes |
 | SlimDX.dll | game | `actools\Libraries\SlimDX-x64\` | yes |
 
@@ -55,7 +53,6 @@ Native at runtime: FMOD Studio/Core (from the AC install, 53 `LibraryImport`), d
 ## Linked source (audited under the game)
 
 - **EngineBench**: 29 game files (`Parts/**`, `Models/Race/RaceStartState.cs`, `Models/GameState/PartInstance.cs`, `Helpers/*`, `Mods/*`, `Rules/*`).
-- **SlrrPartsConverter**: 11 (`Parts/{PartDefinition,PartOverrides,EngineBuild,SlotShifts,Kn5Bitmap}.cs`, `Parts/Scripting/*`, `Helpers/{SafeFile,PathNames}.cs`, `Mods/ModIds.cs`).
 - **Scene/prop builders**: `tools/Shared/*` plus 0–2 game files each.
 
 ## Game project layout (≈635 .cs + .xaml files, ≈102k lines of C#)

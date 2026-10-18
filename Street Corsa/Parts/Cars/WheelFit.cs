@@ -40,7 +40,7 @@ public sealed record WheelFitting(IReadOnlyList<int> Hidden, Matrix4x4 Placement
 /// where the car's lip was (no further out than the tyre's sidewall), the barrel going in. A tyre makes the whole wheel
 /// the parts', scaled together so the tyre is as big as wanted, centred on the car's tyre. An optional tyre (the factory
 /// one, with another rim) is shown only when the rim alone would come out wider than the car's tyre by more than
-/// <see cref="RimWiderThanTyre"/>: a 15x11 Cragar round a Chevelle's narrow tyre. Part models are SLRR's: the axle along
+/// <see cref="RimWiderThanTyre"/>: a 15x11 Cragar round a Chevelle's narrow tyre. Rim and tyre models have the axle along
 /// X, the face towards -X. A left wheel's outboard side is +X, a right one's -X.
 /// </summary>
 public static class WheelFit

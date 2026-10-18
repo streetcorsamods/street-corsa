@@ -3,7 +3,6 @@ using StreetCorsa.Models.Catalog;
 using StreetCorsa.Mods;
 using StreetCorsa.Parts;
 using StreetCorsa.Parts.Cars;
-using StreetCorsa.Parts.Scripting;
 using StreetCorsa.Rules;
 using StreetCorsa.Services.Catalog;
 
@@ -211,7 +210,7 @@ public class CarsAndMakesTests : IDisposable
         var mods = WithMod(("parts/part_groups.json", """
             {
               "groups": [
-                { "id": "intercoolers", "classes": [ "Intercooler" ], "tune": 4, "speed_shop": true },
+                { "id": "intercoolers", "classes": [ "intercooler" ], "tune": 4, "speed_shop": true },
                 { "id": "air_filters", "tune": 9 }
               ]
             }
@@ -220,12 +219,12 @@ public class CarsAndMakesTests : IDisposable
 
         Assert.Empty(groups.Problems);
         Assert.Equal("intercoolers", groups.All[0].Id);
-        Assert.Equal("intercoolers", groups.GroupOfClass("Turbo_Intercooler"));
+        Assert.Equal("intercoolers", groups.GroupOf("intercooler"));
         Assert.Equal(9, groups.TunePriority(PartGroups.AirFilters));
         Assert.True(groups.IsBoltOn(PartGroups.AirFilters));
-        Assert.Equal(PartGroups.AirFilters, groups.GroupOfClass("AirFilter"));
-        Assert.Equal(PartGroups.Blocks, groups.GroupOfClass("Block_Vee_OHV"));
-        Assert.Equal(PartGroups.Accessories, groups.GroupOfClass("Neon"));
+        Assert.Equal(PartGroups.AirFilters, groups.GroupOf(PartClasses.AirCleaner));
+        Assert.Equal(PartGroups.Blocks, groups.GroupOf(PartClasses.EngineBlock));
+        Assert.Equal(PartGroups.Accessories, groups.GroupOf("neon"));
     }
 
     [Fact]
@@ -244,7 +243,7 @@ public class CarsAndMakesTests : IDisposable
 
         var mods = WithMod(("parts/part_groups.json", """
             {
-              "groups": [ { "id": "differentials", "classes": [ "Differential" ] } ],
+              "groups": [ { "id": "differentials", "classes": [ "differential" ] } ],
               "shows": [ { "id": "brakes", "icon": "icons/brake_drum" }, { "id": "body", "icon": "icons/car", "groups": [ "panels" ] } ]
             }
             """));
@@ -262,7 +261,7 @@ public class CarsAndMakesTests : IDisposable
         try
         {
             PartGroups.Current = PartGroups.Load(WithMod(("parts/part_groups.json", """
-                { "groups": [ { "id": "intercoolers", "name": "Intercoolers", "classes": [ "Intercooler" ] }, { "id": "wings", "classes": [ "Wing" ] } ] }
+                { "groups": [ { "id": "intercoolers", "name": "Intercoolers", "classes": [ "intercooler" ] }, { "id": "wings", "classes": [ "Wing" ] } ] }
                 """)).Folders(ContentTypes.Parts).Select(f => f.Dir));
 
             Assert.Equal("Engine blocks", PartKinds.GroupName(PartGroups.Blocks));
@@ -304,38 +303,6 @@ public class CarsAndMakesTests : IDisposable
         Assert.False(cars["b"]!.AsObject().ContainsKey("engine"));
         Assert.Equal("rear", cars["c"]!["layout"]!.GetValue<string>());
         Assert.True(written.IndexOf("\"b\"", StringComparison.Ordinal) < written.IndexOf("\"c\"", StringComparison.Ordinal));
-    }
-
-    [Fact]
-    public void The_base_games_stand_in_is_data_and_a_bad_file_is_told()
-    {
-        var loader = new ScriptClassLoader(Path.Combine(RepoPaths.PartsFolder, PartScripts.Folder));
-        loader.UseStandIns(Path.Combine(RepoPaths.PartsFolder, ScriptClassLoader.StandInsFile));
-        Assert.Empty(loader.Problems);
-        Assert.NotNull(loader.Find("java.game.parts.enginepart.block.block_inline.Block_Inline_OHV"));
-
-        var bare = new ScriptClassLoader(Path.Combine(RepoPaths.PartsFolder, PartScripts.Folder));
-        Assert.Null(bare.Find("java.game.parts.enginepart.block.block_inline.Block_Inline_OHV"));
-
-        bare.UseStandIns(_temp.File("stand_ins.json", """{ "stand_ins": { "java.game.X": { "copy": "" } } }"""));
-        Assert.Single(bare.Problems);
-    }
-
-    [Fact]
-    public void Stand_ins_that_copy_each_other_are_none_and_no_crash()
-    {
-        var loader = new ScriptClassLoader(Path.Combine(RepoPaths.PartsFolder, PartScripts.Folder));
-        loader.UseStandIns(_temp.File("loop.json", """
-            { "stand_ins": {
-                "java.game.Self": { "copy": "java.game.Self", "extends": "java.game.Base" },
-                "java.game.A": { "copy": "java.game.B", "extends": "java.game.Base" },
-                "java.game.B": { "copy": "java.game.A", "extends": "java.game.Base" } } }
-            """));
-
-        Assert.Empty(loader.Problems);
-        Assert.Null(loader.Find("java.game.Self"));
-        Assert.Null(loader.Find("java.game.A"));
-        Assert.Null(loader.Find("java.game.B"));
     }
 
     [Fact]

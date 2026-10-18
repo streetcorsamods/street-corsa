@@ -12,7 +12,7 @@ namespace StreetCorsa.Services.PartShops
     {
         IPartShopCatalog Catalog { get; }
 
-        /// <summary>False when there are no converted parts: the shops have nothing to sell</summary>
+        /// <summary>False when there are no parts: the shops have nothing to sell</summary>
         bool IsAvailable { get; }
 
         /// <summary>Every part the shop deals in, whether it has it today or not</summary>
@@ -111,8 +111,6 @@ namespace StreetCorsa.Services.PartShops
                 _factoryParts ??= _parts.Catalog.EngineBuilds
                     .Where(b => string.Equals(b.Origin, EngineBuild.OriginCar, StringComparison.OrdinalIgnoreCase))
                     .SelectMany(b => b.Parts)
-                    .Where(p => p.Part != null)
-                    .Select(p => p.Part!)
                     .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
                 var assortment = _paper.Assortment.Where(p => PartShopRules.Deals(shop, p, _factoryParts)).ToList();

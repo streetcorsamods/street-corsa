@@ -16,7 +16,7 @@
     "ac_legends_camaro_1970": { "engine": "l79:engines/l79/302-z28-4spd" },
     "al_pontiac_fire68": { "engine": "sbc350:engines/sbc350/sbc-350-th350" },
     "atcc_60s_chevy_nova": { "engine": "l79:engines/l79/l79-327-4spd" },
-    "atcc_chrysler_valiant_s-series": { "engine": "notes/chrysler-v8-pack/chrysler-la-318-230-hp", "common": 1 },
+    "atcc_chrysler_valiant_s-series": { "engine": "rated/chrysler-la-318-230-hp", "common": 1 },
     "atcc_ford_falcon_xl_grpe": { "common": 1 },
     "batmobile": { "common": 0.2 },
     "buick_gsx": { "engine": "l79:engines/l79/buick-455-stage1" },

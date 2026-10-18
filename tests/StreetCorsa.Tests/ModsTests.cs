@@ -148,7 +148,7 @@ public class ModContentTests : IDisposable
                 { "id": "engines/gm/better_block", "name": "block remade", "replaces": "engines/gm/block" } ] }
             """);
         _temp.File("mymod/parts/part_aliases.json", """{ "engines/gm/old_intake": "engines/gm/intake" }""");
-        _temp.File("mymod/parts/engine_builds.json", """[ { "id": "kits/hot", "name": "Hot", "parts": [ { "part": "engines/gm/block" }, { "part": "engines/gm/intake" } ] } ]""");
+        _temp.File("mymod/parts/engine_builds.json", """[ { "id": "kits/hot", "name": "Hot", "parts": [ "engines/gm/block", "engines/gm/intake" ] } ]""");
 
         var catalog = PartsCatalog.Load(Mods().Folders(ContentTypes.Parts).ToList());
 
@@ -161,8 +161,7 @@ public class ModContentTests : IDisposable
 
         Assert.Equal("block remade", catalog.Get("engines/gm/block")!.Name);
         Assert.Same(intake, catalog.Get("mymod:engines/gm/old_intake"));
-        Assert.Equal(["engines/gm/block", "mymod:engines/gm/intake"], catalog.EngineBuilds.Single(b => b.Id == "mymod:kits/hot").Parts.Select(p => p.Part));
-        Assert.Contains(Path.Combine(_temp.Path, "mymod", "parts", "_scripts"), catalog.Scripts.Roots);
+        Assert.Equal(["engines/gm/block", "mymod:engines/gm/intake"], catalog.EngineBuilds.Single(b => b.Id == "mymod:kits/hot").Parts);
     }
 
     [Fact]

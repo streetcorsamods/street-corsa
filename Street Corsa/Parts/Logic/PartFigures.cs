@@ -4,11 +4,11 @@ using Newtonsoft.Json.Linq;
 namespace StreetCorsa.Parts.Logic;
 
 /// <summary>
-/// The engine figures a part gives in its pack, without a script of the source game: a pack's <c>"figures"</c>.
+/// The engine figures a part gives in its pack, over the engine its specs make: a pack's <c>"figures"</c>.
 /// A number puts the part's own figure, <c>{ "add": n }</c> adds to the engine's and <c>{ "times": n }</c> multiplies
 /// it, so a block says its bore, a header adds to how well the engine breathes out and a carburettor gives the fuel
-/// it can deliver. On an engine of the source game's scripts the figures go over what the scripts worked out, before
-/// the dyno runs, so a data part works on any engine; an engine whose block has no script is made of figures alone
+/// it can deliver. On an engine of specs the figures go over what the specs worked out, before
+/// the dyno runs, so a data part works on any engine; an engine whose block has no specs is made of figures alone
 /// (<see cref="DataEngineBase"/> under them).
 ///
 /// Of the same figure, the parts' own numbers are taken first (the part furthest out from the block wins, sibling
@@ -20,13 +20,13 @@ public static class PartFigures
     /// <summary>Most forward gears a gearbox of figures may have: what Assetto Corsa takes</summary>
     public const int MaxGears = 10;
 
-    /// <summary>The part scripts' inertia figures (mass * 0.09, summed) to kg m2 of a spinning engine</summary>
+    /// <summary>The engine report's inertia figures (the parts' old units) to kg m2 of a spinning engine</summary>
     public const double KgM2PerInertiaUnit = 0.02;
 
-    /// <summary>The scripts' friction figure of a stock oil pan on a stock bottom end (the median of the builds)</summary>
+    /// <summary>The friction figure of a stock oil pan on a stock bottom end (the median of the builds)</summary>
     public const double ReferenceFriction = 0.0002;
 
-    /// <summary>Nm a clutch holds per unit of the scripts' clamp figure (maxF)</summary>
+    /// <summary>Nm a clutch holds per unit of the report's clamp figure</summary>
     public const double ClutchNmPerUnit = 2.6;
 
     /// <summary>Assetto Corsa's turbo lag the game gives a turbo whose part says none</summary>
@@ -54,7 +54,7 @@ public static class PartFigures
 
     /// <summary>
     /// What an engine of figures starts from before its parts' figures go on: a small-block V8's breathing, valve
-    /// timing, spark and mixture as the source game's scripts give them, and no bore, stroke, cylinders, compression
+    /// timing, spark and mixture as the stock parts give them, and no bore, stroke, cylinders, compression
     /// or fuel at all, which its parts have to give.
     /// </summary>
     public static readonly DynoInputs DataEngineBase = new()

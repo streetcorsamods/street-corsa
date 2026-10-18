@@ -377,12 +377,6 @@ Street Corsa/Content/streetcorsa/stations/*/ground.bin
 Street Corsa/Content/streetcorsa/sfx/music/intro.mp3
 Street Corsa/Assets/Sound/sr2_cover_intro.mp3
 
-# The converter builds its output here and swaps it in only when a run completes
-# (a dot in front, then the output's name: .parts.converting, .parts.committing, .parts.old)
-**/.[Pp]arts.converting/
-**/.[Pp]arts.committing
-**/.[Pp]arts.old/
-
 # A private mod: the Void Frame Studio radio is CC BY-NC-ND, not to be shared in any adapted form
 Street Corsa/Content/vfsradio/
 

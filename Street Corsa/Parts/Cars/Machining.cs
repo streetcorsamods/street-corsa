@@ -248,11 +248,11 @@ public static class Machining
     {
         foreach (var build in catalog.EngineBuilds)
         {
-            if (!build.Parts.Any(p => string.Equals(p.Part, blockId, StringComparison.OrdinalIgnoreCase))) continue;
+            if (!build.Parts.Any(p => string.Equals(p, blockId, StringComparison.OrdinalIgnoreCase))) continue;
 
-            foreach (var reference in build.Parts)
+            foreach (var id in build.Parts)
             {
-                if (reference.Part is { } id && catalog.Get(id) is { } definition && string.Equals(catalog.WorkOrder.KindOf(definition), kind, StringComparison.OrdinalIgnoreCase))
+                if (catalog.Get(id) is { } definition && string.Equals(catalog.WorkOrder.KindOf(definition), kind, StringComparison.OrdinalIgnoreCase))
                     return definition;
             }
         }

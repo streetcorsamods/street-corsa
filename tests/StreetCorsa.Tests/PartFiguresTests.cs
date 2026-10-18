@@ -7,7 +7,7 @@ using StreetCorsa.Parts.Logic;
 namespace StreetCorsa.Tests;
 
 /// <summary>
-/// A part's "figures": engine figures in plain metric units, for a part without a script of the source game (an
+/// A part's "figures": engine figures in plain metric units, for a part without specs (an
 /// engine made of them alone) or over what its script works out
 /// </summary>
 public sealed class PartFiguresTests : IDisposable
@@ -19,28 +19,28 @@ public sealed class PartFiguresTests : IDisposable
     // Everything goes straight on the block by a fitting of its own
     private const string Pack = """
         { "id": "engines/data", "parts": [
-          { "id": "engines/data/block", "name": "two litre four block", "class_chain": [ "Block" ], "mass": 120,
+          { "id": "engines/data/block", "name": "two litre four block", "class": "engine_block", "mass": 120,
             "slots": [ { "id": 10, "takes": [ "t:head" ] }, { "id": 11, "takes": [ "t:cam" ] }, { "id": 12, "takes": [ "t:carb" ] },
                        { "id": 13, "takes": [ "t:header" ] }, { "id": 14, "takes": [ "t:gear" ] }, { "id": 15, "takes": [ "t:turbo" ] },
                        { "id": 16, "takes": [ "t:turbo" ] }, { "id": 17, "takes": [ "t:blower" ] } ],
             "figures": { "cylinders": 4, "bore": 86, "stroke": 86, "compression": 9.5, "rev_limit": 6500, "max_rpm": 7000,
                          "idle_rpm": 850, "inertia": 0.12 } },
-          { "id": "engines/data/plain_block", "name": "block of no figures", "class_chain": [ "Block" ], "mass": 110,
+          { "id": "engines/data/plain_block", "name": "block of no figures", "class": "engine_block", "mass": 110,
             "slots": [ { "id": 10, "takes": [ "t:head" ] }, { "id": 11, "takes": [ "t:cam" ] }, { "id": 12, "takes": [ "t:carb" ] },
                        { "id": 18, "takes": [ "t:crank" ] } ] },
           { "id": "engines/data/crank", "name": "crank and pistons", "slots": [ { "id": 1, "fits": [ "t:crank" ] } ],
             "figures": { "cylinders": 4, "bore": 80, "stroke": 80, "compression": 9, "rev_limit": 6000 } },
-          { "id": "engines/data/head", "name": "head", "class_chain": [ "CylinderHead" ], "slots": [ { "id": 1, "fits": [ "t:head" ] }, { "id": 2, "takes": [ "t:headfeed" ] } ],
+          { "id": "engines/data/head", "name": "head", "class": "cylinder_head", "slots": [ { "id": 1, "fits": [ "t:head" ] }, { "id": 2, "takes": [ "t:headfeed" ] } ],
             "figures": { "intake_flow": 0.8, "exhaust_flow": 0.35 } },
           { "id": "engines/data/head_feed", "name": "injection on the head", "slots": [ { "id": 1, "fits": [ "t:headfeed" ] } ],
             "figures": { "fuel_flow": 45 } },
-          { "id": "engines/data/cam", "name": "cam", "class_chain": [ "Camshaft" ], "slots": [ { "id": 1, "fits": [ "t:cam" ] } ],
+          { "id": "engines/data/cam", "name": "cam", "class": "camshaft", "slots": [ { "id": 1, "fits": [ "t:cam" ] } ],
             "figures": { "intake_duration": 240, "exhaust_duration": 240, "spark_advance": 32, "spark_advance_high": 22 } },
           { "id": "engines/data/carb", "name": "carb", "slots": [ { "id": 1, "fits": [ "t:carb" ] } ],
             "figures": { "fuel_flow": 30, "air_flow": 400 } },
           { "id": "engines/data/header", "name": "header", "slots": [ { "id": 1, "fits": [ "t:header" ] } ],
             "figures": { "exhaust_flow": { "times": 1.15 } } },
-          { "id": "engines/data/gearbox", "name": "five speed", "class_chain": [ "Transmission" ], "slots": [ { "id": 1, "fits": [ "t:gear" ] } ],
+          { "id": "engines/data/gearbox", "name": "five speed", "class": "transmission", "slots": [ { "id": 1, "fits": [ "t:gear" ] } ],
             "figures": { "gears": [ 3.4, 2.1, 1.4, 1.0, 0.8 ], "reverse": 3.2, "final_drive": 3.9, "clutch_torque": 450 } },
           { "id": "engines/data/small_turbo", "name": "small turbo", "slots": [ { "id": 1, "fits": [ "t:turbo" ] } ],
             "figures": { "turbo": { "boost": 0.4, "spool_rpm": 1500, "full_boost_rpm": 3000, "lag_up": 0.98 } } },
@@ -63,7 +63,7 @@ public sealed class PartFiguresTests : IDisposable
 
     private static EngineReport Evaluate(PartsCatalog catalog, params string[] parts)
     {
-        var tree = PartTreeBuilder.Build(catalog, parts, "Block")!;
+        var tree = PartTreeBuilder.Build(catalog, parts, PartClasses.EngineBlock)!;
         Assert.Empty(tree.Unplaced);
         return EngineEvaluator.Evaluate(catalog, tree);
     }
@@ -196,14 +196,14 @@ public sealed class PartFiguresTests : IDisposable
     }
 
     [Fact]
-    public void Figures_go_over_what_the_scripts_work_out_on_an_engine_of_the_source_game()
+    public void Figures_go_over_what_the_specs_work_out_on_an_engine_of_specs()
     {
         var catalog = PartsCatalog.Load(RepoPaths.PartsFolder);
-        var build = catalog.EngineBuilds.Single(b => b.Id.EndsWith("chrysler-v8-pack/chrysler-la-340-275-hp", StringComparison.Ordinal));
+        var build = catalog.EngineBuilds.Single(b => b.Id.EndsWith("rated/chrysler-la-340-275-hp", StringComparison.Ordinal));
         var tree = PartTreeBuilder.BuildEngine(catalog, build)!;
         var before = EngineEvaluator.Evaluate(catalog, tree);
 
-        var crank = tree.Root.SelfAndDescendants().First(p => p.Is("Crankshaft")).Definition;
+        var crank = tree.Root.SelfAndDescendants().First(p => p.Is(PartClasses.Crankshaft)).Definition;
         var block = tree.Root.Definition;
         var problems = new List<string>();
         crank.Figures = JsonConvert.DeserializeObject<PartDefinition>("""{ "figures": { "stroke": 76.2 } }""")!.Figures;
@@ -299,7 +299,7 @@ public sealed class PartFiguresTests : IDisposable
     }
 
     [Fact]
-    public void An_engine_without_figures_gives_the_dyno_the_very_inputs_the_scripts_made()
+    public void An_engine_without_figures_gives_the_dyno_the_very_inputs_its_specs_made()
     {
         var inputs = new DynoInputs { Bore = 0.1 };
         Assert.Same(inputs, PartFigures.Apply(inputs, Array.Empty<PartFigureSet>()));

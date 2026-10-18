@@ -104,10 +104,10 @@ the schedule is not saved, a milestone trigger needs code to count it, race type
 | Stock engine, layout and price of an AC car | `cars/cars.json` | **done (E6)** | |
 | Which AC cars are in the game | game.json `cars` | **done (E6)** | |
 | Part groups, bolt-on groups, tuner priorities, performance groups | `parts/part_groups.json` | **done (E6)** | |
-| Stand-in script classes | `parts/stand_ins.json` | **done (E6)** | |
+| Part classes, fuels | `parts/part_classes.json`, `parts/fuels.json` | **done (own part logic, 2026-10-18)** | |
 | Engine figures | a part's `"figures"` (`Parts/Logic/PartFigures.cs`) | **done (E11)** | |
 | Turbo lag, twin turbos | a turbo's `lag_up`/`lag_down`; one AC turbo per turbo | **done (E11)** | |
-| Gears | `"gears"` in figures, up to 10 (an SLRR gearbox stays at 6) | **done (E11)** | |
+| Gears | `"gears"` in figures or a gearbox's specs, up to 10 | **done (E11)** | |
 | Engine drawing | `front_transverse`, `mid_transverse` layouts (`EngineLayout.cs`, `CarPartsLayout.cs`) | **done (E11)** | |
 | Nitrous | `PartKinds.cs:32` | a shelf, no effect in AC | hard |
 | Rotary engines | `EngineDyno.cs` | 4-stroke piston model only | hard (fake piston figures meanwhile) |
@@ -192,8 +192,9 @@ playing exactly as it does now: today's values become the base game's data.
   - the King as data: bosses in the racers' data, so a mod can change the final rival or add more.
 - **E10. Race formats.** Format ids in data, race.ini session templates, mods shipping their own CSP mode, a result
   contract with a score. Drift, time attack and touge become possible: worth it for Street Corsa itself.
-- **E11. Data engines** (done 2026-10-03). The `"figures"` path that skips the SLRR VM, turbo lag and twin turbos per
-  part, more gears, transverse engines. For modders' cars that have no SLRR parts.
+- **E11. Data engines** (done 2026-10-03). The `"figures"` path (an engine of figures alone), turbo lag and twin turbos
+  per part, more gears, transverse engines. Since 2026-10-18 every part is data: the engine is worked out from the parts'
+  specs in C# (docs/systems/parts-system.md), the figures go over it.
 - **E12. The example mod** (done 2026-10-03; was "the proof", changed 2026-10-03). An example add-on, not a separate game: a few cars,
   a parts pack, an event and a race of its own, made only from data, that shows what still breaks and becomes the mod
   modders copy.
@@ -245,6 +246,9 @@ them), part models (the mod's parts are drawn as the placeholder boxes), a portr
 pinned only when the car is installed. Not seen in game.
 
 ### E11: data engines (2026-10-03, branch `feature/data-engines`)
+
+(As built then, when the engines still ran the original packs' compiled scripts; since 2026-10-18 they are worked out
+from the parts' specs, and "scripts" below is what the specs are now.)
 
 The owner's decisions: a part's figures go onto the dyno's inputs (the game's dyno still makes the curve, so tuning
 works and a data part goes on an SLRR engine too), in plain metric units, transverse engines as a layout the garage

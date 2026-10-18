@@ -2,379 +2,57 @@
   {
     "id": "cars/abarth_595ss/stock",
     "name": "Abarth 595 SS twin",
-    "origin": "car",
-    "source": "small_imports example mod",
+    "origin": "factory",
     "rated_power": 32,
-    "parts": [
-      {
-        "part": "engines/fiat_twin/block"
-      },
-      {
-        "part": "engines/fiat_twin/crank"
-      },
-      {
-        "part": "engines/fiat_twin/head"
-      },
-      {
-        "part": "engines/fiat_twin/cam"
-      },
-      {
-        "part": "engines/fiat_twin/carb_solex_28"
-      },
-      {
-        "part": "engines/fiat_twin/air_cleaner"
-      },
-      {
-        "part": "engines/fiat_twin/exhaust"
-      },
-      {
-        "part": "engines/fiat_twin/gearbox"
-      },
-      {
-        "part": "engines/fiat_twin/clutch"
-      },
-      {
-        "part": "engines/fiat_twin/sump"
-      }
-    ]
+    "parts": ["engines/fiat_twin/block", "engines/fiat_twin/crank", "engines/fiat_twin/head", "engines/fiat_twin/cam", "engines/fiat_twin/carb_solex_28", "engines/fiat_twin/air_cleaner", "engines/fiat_twin/exhaust", "engines/fiat_twin/gearbox", "engines/fiat_twin/clutch", "engines/fiat_twin/sump"]
   },
   {
     "id": "kits/abarth_695",
     "name": "Abarth 695 big-bore twin",
     "origin": "kit",
-    "source": "small_imports example mod",
     "aftermarket": true,
-    "parts": [
-      {
-        "part": "engines/fiat_twin/block"
-      },
-      {
-        "part": "engines/fiat_twin/crank"
-      },
-      {
-        "part": "engines/fiat_twin/pistons_695"
-      },
-      {
-        "part": "engines/fiat_twin/head"
-      },
-      {
-        "part": "engines/fiat_twin/cam_abarth"
-      },
-      {
-        "part": "engines/fiat_twin/carb_dellorto_30"
-      },
-      {
-        "part": "engines/fiat_twin/air_cleaner"
-      },
-      {
-        "part": "engines/fiat_twin/exhaust_record_monza"
-      },
-      {
-        "part": "engines/fiat_twin/gearbox"
-      },
-      {
-        "part": "engines/fiat_twin/clutch"
-      },
-      {
-        "part": "engines/fiat_twin/sump"
-      }
-    ]
+    "parts": ["engines/fiat_twin/block", "engines/fiat_twin/crank", "engines/fiat_twin/pistons_695", "engines/fiat_twin/head", "engines/fiat_twin/cam_abarth", "engines/fiat_twin/carb_dellorto_30", "engines/fiat_twin/air_cleaner", "engines/fiat_twin/exhaust_record_monza", "engines/fiat_twin/gearbox", "engines/fiat_twin/clutch", "engines/fiat_twin/sump"]
   },
   {
     "id": "cars/alfa_gta/stock",
     "name": "Alfa Romeo GTA 1570 twin cam",
-    "origin": "car",
-    "source": "small_imports example mod",
+    "origin": "factory",
     "rated_power": 115,
-    "parts": [
-      {
-        "part": "engines/alfa_twincam/block"
-      },
-      {
-        "part": "engines/alfa_twincam/crank"
-      },
-      {
-        "part": "engines/alfa_twincam/head"
-      },
-      {
-        "part": "engines/alfa_twincam/cams"
-      },
-      {
-        "part": "engines/alfa_twincam/webers_45"
-      },
-      {
-        "part": "engines/alfa_twincam/air_cleaner"
-      },
-      {
-        "part": "engines/alfa_twincam/exhaust"
-      },
-      {
-        "part": "engines/alfa_twincam/gearbox"
-      },
-      {
-        "part": "engines/alfa_twincam/clutch"
-      },
-      {
-        "part": "engines/alfa_twincam/sump"
-      },
-      {
-        "part": "engines/alfa_twincam/radiator"
-      },
-      {
-        "part": "engines/alfa_twincam/water_pump"
-      },
-      {
-        "part": "engines/alfa_twincam/fan"
-      }
-    ]
+    "parts": ["engines/alfa_twincam/block", "engines/alfa_twincam/crank", "engines/alfa_twincam/head", "engines/alfa_twincam/cams", "engines/alfa_twincam/webers_45", "engines/alfa_twincam/air_cleaner", "engines/alfa_twincam/exhaust", "engines/alfa_twincam/gearbox", "engines/alfa_twincam/clutch", "engines/alfa_twincam/sump", "engines/alfa_twincam/radiator", "engines/alfa_twincam/water_pump", "engines/alfa_twincam/fan"]
   },
   {
     "id": "kits/alfa_gta_corsa",
     "name": "Alfa Romeo GTA Corsa",
     "origin": "kit",
-    "source": "small_imports example mod",
     "aftermarket": true,
-    "parts": [
-      {
-        "part": "engines/alfa_twincam/block"
-      },
-      {
-        "part": "engines/alfa_twincam/crank"
-      },
-      {
-        "part": "engines/alfa_twincam/head_twin_plug"
-      },
-      {
-        "part": "engines/alfa_twincam/cams_corsa"
-      },
-      {
-        "part": "engines/alfa_twincam/webers_45"
-      },
-      {
-        "part": "engines/alfa_twincam/trumpets"
-      },
-      {
-        "part": "engines/alfa_twincam/header_autodelta"
-      },
-      {
-        "part": "engines/alfa_twincam/gearbox"
-      },
-      {
-        "part": "engines/alfa_twincam/clutch"
-      },
-      {
-        "part": "engines/alfa_twincam/sump"
-      },
-      {
-        "part": "engines/alfa_twincam/radiator"
-      },
-      {
-        "part": "engines/alfa_twincam/water_pump"
-      },
-      {
-        "part": "engines/alfa_twincam/fan"
-      }
-    ]
+    "parts": ["engines/alfa_twincam/block", "engines/alfa_twincam/crank", "engines/alfa_twincam/head_twin_plug", "engines/alfa_twincam/cams_corsa", "engines/alfa_twincam/webers_45", "engines/alfa_twincam/trumpets", "engines/alfa_twincam/header_autodelta", "engines/alfa_twincam/gearbox", "engines/alfa_twincam/clutch", "engines/alfa_twincam/sump", "engines/alfa_twincam/radiator", "engines/alfa_twincam/water_pump", "engines/alfa_twincam/fan"]
   },
   {
     "id": "cars/escort_rs1600/stock",
     "name": "Ford Escort RS1600 BDA",
-    "origin": "car",
-    "source": "small_imports example mod",
+    "origin": "factory",
     "rated_power": 120,
-    "parts": [
-      {
-        "part": "engines/ford_bda/block"
-      },
-      {
-        "part": "engines/ford_bda/crank"
-      },
-      {
-        "part": "engines/ford_bda/head"
-      },
-      {
-        "part": "engines/ford_bda/cams"
-      },
-      {
-        "part": "engines/ford_bda/webers_40"
-      },
-      {
-        "part": "engines/ford_bda/air_cleaner"
-      },
-      {
-        "part": "engines/ford_bda/exhaust"
-      },
-      {
-        "part": "engines/ford_bda/gearbox"
-      },
-      {
-        "part": "engines/ford_bda/clutch"
-      },
-      {
-        "part": "engines/ford_bda/sump"
-      },
-      {
-        "part": "engines/ford_bda/radiator"
-      },
-      {
-        "part": "engines/ford_bda/water_pump"
-      },
-      {
-        "part": "engines/ford_bda/fan"
-      }
-    ]
+    "parts": ["engines/ford_bda/block", "engines/ford_bda/crank", "engines/ford_bda/head", "engines/ford_bda/cams", "engines/ford_bda/webers_40", "engines/ford_bda/air_cleaner", "engines/ford_bda/exhaust", "engines/ford_bda/gearbox", "engines/ford_bda/clutch", "engines/ford_bda/sump", "engines/ford_bda/radiator", "engines/ford_bda/water_pump", "engines/ford_bda/fan"]
   },
   {
     "id": "kits/bda_1800",
     "name": "Ford BDA 1800 race",
     "origin": "kit",
-    "source": "small_imports example mod",
     "aftermarket": true,
-    "parts": [
-      {
-        "part": "engines/ford_bda/block"
-      },
-      {
-        "part": "engines/ford_bda/crank"
-      },
-      {
-        "part": "engines/ford_bda/pistons_1800"
-      },
-      {
-        "part": "engines/ford_bda/head"
-      },
-      {
-        "part": "engines/ford_bda/cams_bd3"
-      },
-      {
-        "part": "engines/ford_bda/webers_45"
-      },
-      {
-        "part": "engines/ford_bda/air_cleaner"
-      },
-      {
-        "part": "engines/ford_bda/header"
-      },
-      {
-        "part": "engines/ford_bda/gearbox_zf"
-      },
-      {
-        "part": "engines/ford_bda/clutch"
-      },
-      {
-        "part": "engines/ford_bda/sump"
-      },
-      {
-        "part": "engines/ford_bda/radiator"
-      },
-      {
-        "part": "engines/ford_bda/water_pump"
-      },
-      {
-        "part": "engines/ford_bda/fan"
-      }
-    ]
+    "parts": ["engines/ford_bda/block", "engines/ford_bda/crank", "engines/ford_bda/pistons_1800", "engines/ford_bda/head", "engines/ford_bda/cams_bd3", "engines/ford_bda/webers_45", "engines/ford_bda/air_cleaner", "engines/ford_bda/header", "engines/ford_bda/gearbox_zf", "engines/ford_bda/clutch", "engines/ford_bda/sump", "engines/ford_bda/radiator", "engines/ford_bda/water_pump", "engines/ford_bda/fan"]
   },
   {
     "id": "cars/abarth_500/stock",
     "name": "Abarth 500 esseesse 1.4 T-Jet",
-    "origin": "car",
-    "source": "small_imports example mod",
+    "origin": "factory",
     "rated_power": 160,
-    "parts": [
-      {
-        "part": "engines/fiat_tjet/block"
-      },
-      {
-        "part": "engines/fiat_tjet/crank"
-      },
-      {
-        "part": "engines/fiat_tjet/head"
-      },
-      {
-        "part": "engines/fiat_tjet/cams"
-      },
-      {
-        "part": "engines/fiat_tjet/injection"
-      },
-      {
-        "part": "engines/fiat_tjet/air_cleaner"
-      },
-      {
-        "part": "engines/fiat_tjet/exhaust"
-      },
-      {
-        "part": "engines/fiat_tjet/turbo_ihi"
-      },
-      {
-        "part": "engines/fiat_tjet/gearbox"
-      },
-      {
-        "part": "engines/fiat_tjet/clutch"
-      },
-      {
-        "part": "engines/fiat_tjet/sump"
-      },
-      {
-        "part": "engines/fiat_tjet/radiator"
-      },
-      {
-        "part": "engines/fiat_tjet/water_pump"
-      },
-      {
-        "part": "engines/fiat_tjet/fan"
-      }
-    ]
+    "parts": ["engines/fiat_tjet/block", "engines/fiat_tjet/crank", "engines/fiat_tjet/head", "engines/fiat_tjet/cams", "engines/fiat_tjet/injection", "engines/fiat_tjet/air_cleaner", "engines/fiat_tjet/exhaust", "engines/fiat_tjet/turbo_ihi", "engines/fiat_tjet/gearbox", "engines/fiat_tjet/clutch", "engines/fiat_tjet/sump", "engines/fiat_tjet/radiator", "engines/fiat_tjet/water_pump", "engines/fiat_tjet/fan"]
   },
   {
     "id": "kits/tjet_garrett",
     "name": "Abarth 500 Garrett kit",
     "origin": "kit",
-    "source": "small_imports example mod",
     "aftermarket": true,
-    "parts": [
-      {
-        "part": "engines/fiat_tjet/block"
-      },
-      {
-        "part": "engines/fiat_tjet/crank"
-      },
-      {
-        "part": "engines/fiat_tjet/head"
-      },
-      {
-        "part": "engines/fiat_tjet/cams"
-      },
-      {
-        "part": "engines/fiat_tjet/injection_sport"
-      },
-      {
-        "part": "engines/fiat_tjet/air_cleaner"
-      },
-      {
-        "part": "engines/fiat_tjet/exhaust_monza"
-      },
-      {
-        "part": "engines/fiat_tjet/turbo_garrett"
-      },
-      {
-        "part": "engines/fiat_tjet/gearbox"
-      },
-      {
-        "part": "engines/fiat_tjet/clutch"
-      },
-      {
-        "part": "engines/fiat_tjet/sump"
-      },
-      {
-        "part": "engines/fiat_tjet/radiator"
-      },
-      {
-        "part": "engines/fiat_tjet/water_pump"
-      },
-      {
-        "part": "engines/fiat_tjet/fan"
-      }
-    ]
+    "parts": ["engines/fiat_tjet/block", "engines/fiat_tjet/crank", "engines/fiat_tjet/head", "engines/fiat_tjet/cams", "engines/fiat_tjet/injection_sport", "engines/fiat_tjet/air_cleaner", "engines/fiat_tjet/exhaust_monza", "engines/fiat_tjet/turbo_garrett", "engines/fiat_tjet/gearbox", "engines/fiat_tjet/clutch", "engines/fiat_tjet/sump", "engines/fiat_tjet/radiator", "engines/fiat_tjet/water_pump", "engines/fiat_tjet/fan"]
   }
 ]

@@ -122,7 +122,7 @@ public static class SoundMatcher
         if (family.Length == 0) family = MakeFamilies.FamilyOf(PackOf(blockId));
 
         var limiter = report?.LimiterRpm ?? 0;
-        if (limiter <= 0 && block != null) limiter = block.Number("RPM_limit");
+        if (limiter <= 0 && block != null) limiter = block.Number(Logic.EngineAssembly.Specs.RevLimit);
 
         return new SoundRequest(blockId, cylinders, family, limiter);
     }

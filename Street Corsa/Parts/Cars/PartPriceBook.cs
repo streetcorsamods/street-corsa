@@ -6,7 +6,7 @@ using System.Text;
 namespace StreetCorsa.Parts.Cars;
 
 /// <summary>
-/// What every part of the catalog costs new, worked out the way the source game's parts were priced: by what they do
+/// What every part of the catalog costs new, worked out by what they do
 /// (<see cref="PartPrice"/> in part_groups.json). The power a part is worth is measured once on the dyno:
 /// <list type="bullet">
 /// <item>an engine block is worth the power of its own engine: the least of its factory builds that run (any of its

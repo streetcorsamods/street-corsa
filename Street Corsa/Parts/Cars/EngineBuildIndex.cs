@@ -25,10 +25,14 @@ public sealed class EngineBuildIndex
     /// <summary>Builds that run, in the order of the catalog</summary>
     public IReadOnlyList<RatedBuild> Runnable { get; private set; } = Array.Empty<RatedBuild>();
 
-    /// <summary>Builds whose part scripts faulted (or that could not be rated at all) while they were rated, one line each, for the log</summary>
-    public IReadOnlyList<string> ScriptFaults { get; private set; } = Array.Empty<string>();
+    /// <summary>Builds whose figures broke the sum (or that could not be rated at all) while they were rated, one line each, for the log</summary>
+    public IReadOnlyList<string> Faults { get; private set; } = Array.Empty<string>();
 
-    public RatedBuild? Get(string? buildId) => buildId == null ? null : _byId.GetValueOrDefault(buildId);
+    /// <summary>A build by its id, or by the id it had before it was renamed (<see cref="EngineBuild.AliasesFileName"/>)</summary>
+    public RatedBuild? Get(string? buildId) =>
+        buildId == null ? null : _byId.GetValueOrDefault(buildId) ?? (_catalog is { } catalog ? _byId.GetValueOrDefault(catalog.CurrentBuildId(buildId)) : null);
+
+    private PartsCatalog? _catalog;
 
     public static EngineBuildIndex Create(PartsCatalog catalog)
     {
@@ -43,9 +47,9 @@ public sealed class EngineBuildIndex
                 var tree = PartTreeBuilder.BuildEngine(catalog, build);
                 if (tree == null) continue;
 
-                // A build whose scripts fault does not run; the others are rated all the same
+                // A build whose figures break the sum does not run; the others are rated all the same
                 var report = EngineEvaluator.Evaluate(catalog, tree);
-                faults.AddRange(report.ScriptFaults.Select(fault => $"{build.Id}: {fault}"));
+                faults.AddRange(report.Faults.Select(fault => $"{build.Id}: {fault}"));
                 if (report.Runs) evaluated.Add((build, tree.Root.Definition.Id, report));
             }
             catch (Exception ex)
@@ -54,7 +58,7 @@ public sealed class EngineBuildIndex
             }
         }
 
-        // An engine belongs to the make whose cars it came in; builds from notes are named after the make
+        // An engine belongs to the make whose cars it came in; rated builds are named after the make
         var familyOfBlock = evaluated
             .GroupBy(e => e.BlockId, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(
@@ -63,7 +67,7 @@ public sealed class EngineBuildIndex
                     .GroupBy(f => f).OrderByDescending(f => f.Count()).Select(f => f.Key).FirstOrDefault() ?? string.Empty,
                 StringComparer.OrdinalIgnoreCase);
 
-        var index = new EngineBuildIndex();
+        var index = new EngineBuildIndex { _catalog = catalog };
         var runnable = new List<RatedBuild>();
         foreach (var (build, blockId, report) in evaluated)
         {
@@ -74,7 +78,7 @@ public sealed class EngineBuildIndex
         }
 
         index.Runnable = runnable;
-        index.ScriptFaults = faults;
+        index.Faults = faults;
         return index;
     }
 }

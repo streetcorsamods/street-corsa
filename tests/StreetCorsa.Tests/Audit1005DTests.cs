@@ -2,7 +2,6 @@ using Newtonsoft.Json;
 using StreetCorsa.Mods;
 using StreetCorsa.Parts;
 using StreetCorsa.Parts.Logic;
-using StreetCorsa.Parts.Scripting;
 using StreetCorsa.Rules;
 using StreetCorsa.Services.Garage;
 using StreetCorsa.Services.PartShops;
@@ -21,13 +20,13 @@ public sealed class Audit1005DTests : IDisposable
     // An engine of figures, and a part on it that gives its idle
     private const string IdlePack = """
         { "id": "engines/data", "parts": [
-          { "id": "engines/data/block", "name": "block", "class_chain": [ "Block" ], "mass": 120,
+          { "id": "engines/data/block", "name": "block", "class": "engine_block", "mass": 120,
             "slots": [ { "id": 10, "takes": [ "t:head" ] }, { "id": 11, "takes": [ "t:cam" ] }, { "id": 12, "takes": [ "t:carb" ] },
                        { "id": 13, "takes": [ "t:idle" ] } ],
             "figures": { "cylinders": 4, "bore": 86, "stroke": 86, "compression": 9.5, "rev_limit": 6500, "max_rpm": 7000, "idle_rpm": 850 } },
-          { "id": "engines/data/head", "name": "head", "class_chain": [ "CylinderHead" ], "slots": [ { "id": 1, "fits": [ "t:head" ] } ],
+          { "id": "engines/data/head", "name": "head", "class": "cylinder_head", "slots": [ { "id": 1, "fits": [ "t:head" ] } ],
             "figures": { "intake_flow": 0.8, "exhaust_flow": 0.35 } },
-          { "id": "engines/data/cam", "name": "cam", "class_chain": [ "Camshaft" ], "slots": [ { "id": 1, "fits": [ "t:cam" ] } ],
+          { "id": "engines/data/cam", "name": "cam", "class": "camshaft", "slots": [ { "id": 1, "fits": [ "t:cam" ] } ],
             "figures": { "intake_duration": 240, "exhaust_duration": 240, "spark_advance": 32 } },
           { "id": "engines/data/carb", "name": "carb", "slots": [ { "id": 1, "fits": [ "t:carb" ] } ],
             "figures": { "fuel_flow": 30, "air_flow": 400 } },
@@ -41,7 +40,7 @@ public sealed class Audit1005DTests : IDisposable
         _temp.File("parts/engines/data/pack.json", IdlePack);
         var catalog = PartsCatalog.Load(_temp.Combine("parts"));
         Assert.Empty(catalog.Problems);
-        var tree = PartTreeBuilder.Build(catalog, ["engines/data/block", "engines/data/head", "engines/data/cam", "engines/data/carb", idlePart], "Block")!;
+        var tree = PartTreeBuilder.Build(catalog, ["engines/data/block", "engines/data/head", "engines/data/cam", "engines/data/carb", idlePart], PartClasses.EngineBlock)!;
         Assert.Empty(tree.Unplaced);
         return EngineEvaluator.Evaluate(catalog, tree);
     }
@@ -91,23 +90,6 @@ public sealed class Audit1005DTests : IDisposable
         Assert.Equal(["king", "joe"], ModSet.RemovesOf(remover, "racers"));
         Assert.Empty(ModSet.RemovesOf(remover, "streets"));
         Assert.True(mods.IsRemoved("racers", "king"));
-    }
-
-    // ----- A stand-in with "drop": null -----
-
-    [Fact]
-    public void A_stand_in_that_drops_nothing_is_made()
-    {
-        var loader = new ScriptClassLoader(Path.Combine(RepoPaths.PartsFolder, PartScripts.Folder));
-        loader.UseStandIns(_temp.File("stand_ins.json", """
-            { "stand_ins": { "java.game.parts.enginepart.block.block_inline.Block_Inline_OHV": {
-                "Copy": "java.game.parts.enginepart.block.block_vee.Block_Vee_OHV",
-                "extends": "java.game.parts.enginepart.block.Block_Inline",
-                "drop": null, } } }
-            """));
-
-        Assert.Empty(loader.Problems);
-        Assert.NotNull(loader.Find("java.game.parts.enginepart.block.block_inline.Block_Inline_OHV"));
     }
 
     // ----- The rules' figures held to what the game can play by -----

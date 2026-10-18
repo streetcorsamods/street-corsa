@@ -474,7 +474,7 @@ namespace StreetCorsa.Screens.Garage
 
         public string MassDisplay => _report == null ? "-" : Measure.Mass(_report.Mass).ToString();
 
-        /// <summary>Why the engine does not run, in the part scripts' own words; empty when it does</summary>
+        /// <summary>Why the engine does not run, in the parts' own words; empty when it does</summary>
         public string StatusDisplay => _engine == null
             ? _isStand ? GameText.Say("workbench.stand_empty") : GameText.Say("workbench.bay_empty")
             : _report == null

@@ -61,7 +61,7 @@ python .claude/skills/tech-audit/scripts/find_duplicates.py --min-tokens 120 --r
 
 The script can't see **semantic duplication** — the same job done with different code. A reviewer covers that by concern, not by text:
 
-- More than one parser/reader for the same format (INI, KN5, `pack.json`, AC `data` folder, SLRR cfg) — between the game and the tools too
+- More than one parser/reader for the same format (INI, KN5, `pack.json`, AC `data` folder) — between the game and the tools too
 - More than one place computing the same number (car value, part price, engine output, condition → price) that could drift apart
 - Parallel class pairs that grew by copying (e.g. two 3D viewports, two base view-models, two dealer/garage flows)
 - Hand-rolled helpers that duplicate a BCL or existing project helper (path sanitizing, clamping, INI access, file copy with backup)
@@ -71,7 +71,7 @@ The script can't see **semantic duplication** — the same job done with differe
 Not every clone deserves a refactor. For each cluster say:
 
 - **Extract**: the copies must change together (logic, parsing, math, restore paths) — divergence would be a bug. Name the target (shared base class, helper, service) and where it lives.
-- **Leave**: the similarity is incidental or the copies are expected to diverge (per-screen layout code, generated-looking tables), or extracting would cross a boundary on purpose (the converter re-implements something so it doesn't depend on WPF). Say why in one line.
+- **Leave**: the similarity is incidental or the copies are expected to diverge (per-screen layout code, generated-looking tables), or extracting would cross a boundary on purpose (a tool re-implements something so it does not depend on WPF). Say why in one line.
 - **Already drifting**: the copies differ in a way that looks accidental — one got a fix the other didn't. These are **BUG** candidates; show the differing lines.
 
 ### Output
@@ -107,7 +107,7 @@ Moved to [`security-checklist.md`](./security-checklist.md).
 ### Prioritization (risk-ranked)
 
 1. `CarDataOverlay` apply/restore and clone cleanup — filesystem tests against a temp "AC install"
-2. `Parts/Scripting` VM — opcode semantics, bounds, budget; golden tests from real part scripts
+2. `Parts/Logic` engine model — the figures it takes from packs, bounds; EngineBench snapshot to compare versions
 3. Engine model / dyno (`EngineDyno`, `AcEngineData`) — golden curves already producible by EngineBench
 4. `IniModificationService` round-trip (modify → restore leaves the file byte-identical)
 5. Save migration (`part_aliases.json`, older save shapes) — load an old save fixture
@@ -145,7 +145,7 @@ Moved to [`security-checklist.md`](./security-checklist.md).
 
 ### Tools
 
-- Converter: only flag performance if it makes the re-run workflow painful (minutes, not seconds)
+- Content tools (scene and part builders): only flag performance if a run takes minutes, not seconds
 
 ## DEPENDENCY HEALTH
 

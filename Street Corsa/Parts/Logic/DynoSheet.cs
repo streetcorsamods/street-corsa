@@ -31,6 +31,13 @@ internal sealed class DynoSheet
 
     public DynoSheet Clone() => (DynoSheet)MemberwiseClone();
 
+    /// <summary>Every figure of <paramref name="other"/> over this sheet's</summary>
+    public void CopyFrom(DynoSheet other)
+    {
+        foreach (var field in typeof(DynoSheet).GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public))
+            field.SetValue(this, field.GetValue(other));
+    }
+
     /// <summary>The engine of two banks: each figure halfway between them, the cylinders and the fuel's limits as they were</summary>
     public void BeAverageOf(DynoSheet one, DynoSheet other)
     {

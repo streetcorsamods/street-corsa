@@ -5,13 +5,11 @@ using StreetCorsa.Mods;
 using StreetCorsa.Parts;
 using StreetCorsa.Parts.Cars;
 using StreetCorsa.Parts.Logic;
-using StreetCorsa.Parts.Scripting;
-using static StreetCorsa.Tests.TestScripts;
 
 namespace StreetCorsa.Tests;
 
 /// <summary>
-/// The 2026-09-29 audit's fixes in the parts and the mods: the tuner's cooling before a block swap, the script VM's
+/// The 2026-09-29 audit's fixes in the parts and the mods: the tuner's cooling before a block swap, the old part logic's
 /// budgets, loops in a work order, cooling said by data instead of names, and what a hostile or broken mod or save
 /// can no longer do.
 /// </summary>
@@ -62,81 +60,6 @@ public sealed class AuditFixesCTests : IDisposable
         }
 
         Assert.True(cooledFirst > 0, "no engine was cooled before its upgrades");
-    }
-
-    // ---- The script VM: budgets a hostile script cannot get round ----
-
-    [Fact]
-    public void The_steps_of_every_entry_on_one_VM_add_up_to_a_budget_that_stays_spent()
-    {
-        // A jump onto itself: every call runs until its own budget is out
-        var type = ClassWith([I(0x14, 0)]);
-        var vm = new ScriptVm(new ScriptClassLoader(_temp.Path), new ScriptHost());
-        var self = vm.Instantiate([type]);
-
-        var clock = Stopwatch.StartNew();
-        for (var i = 0; i < 5; i++) vm.Call(self, "m");
-        Assert.True(vm.BudgetExhausted);
-        Assert.InRange(vm.TotalSteps, 5_000_000, 5_000_010);
-
-        // Spent: the next entry stops at its first step
-        var before = vm.TotalSteps;
-        vm.Call(self, "m");
-        Assert.InRange(vm.TotalSteps - before, 0, 2);
-        Assert.True(clock.Elapsed < TimeSpan.FromSeconds(30), $"took {clock.Elapsed}");
-    }
-
-    /// <summary>A host whose one native charges what the dyno does, and counts the calls</summary>
-    private sealed class ChargingHost(int steps) : ScriptHost
-    {
-        public int Calls { get; private set; }
-
-        public override ScriptValue? CallNative(ScriptVm vm, ScriptObject self, string method, ScriptValue[] arguments, bool uncertain)
-        {
-            if (method != "n") return null;
-
-            Calls++;
-            vm.Charge(steps);
-            return ScriptValue.Of(1);
-        }
-    }
-
-    [Fact]
-    public void A_native_that_charges_steps_runs_out_as_soon_as_its_weight_says()
-    {
-        // loop: n(); jump back
-        var type = ClassWith([I(0x27, 0), I(0x12, 3), I(0x14, -2)], "n");
-        var host = new ChargingHost(PartScriptRuntime.DynoSteps);
-        var vm = new ScriptVm(new ScriptClassLoader(_temp.Path), host);
-        vm.Call(vm.Instantiate([type]), "m");
-
-        Assert.True(vm.BudgetExhausted);
-        Assert.InRange(host.Calls, 1, 1_000_000 / PartScriptRuntime.DynoSteps + 1);
-    }
-
-    [Fact]
-    public void Float_toString_prints_no_more_than_a_script_may_build()
-    {
-        var host = new ScriptHost();
-        var vm = new ScriptVm(new ScriptClassLoader(_temp.Path), host);
-        var format = string.Concat(Enumerable.Repeat("%.20f ", 20_000));
-        var text = host.CallStatic(vm, "java.lang.Float", "toString", [ScriptValue.Of(1e300), ScriptValue.Of(format)]);
-
-        var printed = Assert.IsType<ScriptText>(text).Content;
-        Assert.InRange(printed.Length, 1, ScriptVm.MaxTextLength);
-        Assert.StartsWith("1000000", printed);
-    }
-
-    [Fact]
-    public void A_class_parsed_by_many_threads_at_once_is_one_class()
-    {
-        var loader = new ScriptClassLoader(Path.Combine(RepoPaths.PartsFolder, PartScripts.Folder));
-        var found = new ScriptClass?[32];
-        Parallel.For(0, found.Length, i => found[i] = loader.Find("java.game.parts.bodypart.Chassis"));
-
-        Assert.NotNull(found[0]);
-        Assert.All(found, c => Assert.Same(found[0], c));
-        Assert.Contains(loader.LoadedFiles, f => f.EndsWith("Chassis.class", StringComparison.OrdinalIgnoreCase));
     }
 
     // ---- The work order: loops found in a dense file, cooling said by the mods ----
@@ -215,7 +138,7 @@ public sealed class AuditFixesCTests : IDisposable
         Assert.False(EngineCooling.IsPerformanceFan(Part("f")));
         Assert.Equal(EngineCooling.Kind.Other, EngineCooling.KindOf(Part("h")));
 
-        // A part that says nothing goes by its name, as the source game's do
+        // A part that says nothing goes by its name
         Assert.Equal(EngineCooling.Kind.WaterPump, EngineCooling.KindOf(Part("q")));
         Assert.Contains(catalog.Problems, p => p.Contains("\"heater\"", StringComparison.Ordinal));
     }

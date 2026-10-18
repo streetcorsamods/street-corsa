@@ -5,7 +5,7 @@ using AcTools.Numerics;
 namespace StreetCorsa.Parts;
 
 /// <summary>
-/// A small box for the parts that come without a model (fuel rails and injectors that the source game never
+/// A small box for the parts that come without a model (fuel rails and injectors that their packs never
 /// shows). Parts are picked and mounted by clicking them, so every part needs something to click.
 /// Also builds meshes of boxes and solid-colour materials for anything else drawn from boxes (the engine stand).
 /// </summary>

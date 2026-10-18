@@ -1,197 +1,144 @@
 # Parts System
 
-Car parts come from Street Legal Racing: Redline (SLRR): models, mounting slots **and behaviour**. The game does not
-reimplement SLRR's part logic, it runs it: the compiled part scripts of the SLRR install are executed by a small VM,
-against the player's own assembly of parts. Only what SLRR itself kept in native code is written in C#: the engine
-simulation and, new here, the export to Assetto Corsa physics data.
+Every car carries a tree of parts: models, mounting slots, figures and behaviour. Each part is data (a `pack.json`
+entry and its KN5 model); what the parts do together is the game's own C#. The engine is worked out from the parts'
+specs (`EngineAssembly`), run on the game's dyno (`EngineDyno`) and handed to Assetto Corsa as physics data
+(`Parts/Export`). The running gear is read from its parts' specs the same way. The format, part by part, is in
+[modding.md](../modding.md) ("parts"); this page is how it works inside.
 
-Scope: mechanical parts only: engine, transmission and running gear (tyres, rims, brakes, springs, shocks). Car bodies
-stay Assetto Corsa's.
+Scope: mechanical parts only: engine, transmission and running gear (tyres, rims, brakes, springs, shocks, the rear
+axle). Car bodies stay Assetto Corsa's.
 
 ```
-SLRR install ──SlrrPartsConverter──▶ Content\streetcorsa\parts\                         (one-off, offline)
-                                       <kind>\<pack>\pack.json + *.kn5      part definitions + models
-                                       engine_builds.json                   complete engines as part lists
-                                       script_constants.json                statics of the shared script classes
-                                       _scripts\...\*.class                 the compiled scripts the parts need
+Content\<mod>\parts\                          what the parts are
+   <kind>\<pack>\pack.json + *.kn5            part definitions + models
+   engine_builds.json  build_aliases.json     complete engines as part lists, renamed builds
+   part_aliases.json   models.json            renamed parts, models a mod gives other parts
+   part_classes.json   part_groups.json       what each class is a kind of, the shop shelves
+   work_order.json     rebuilds.json          what comes off before what, the work done on parts
+   fuels.json                                 what a fuel system can run on
 
-Content\streetcorsa\parts ──PartsCatalog──▶ PartTreeBuilder ──▶ PartScriptRuntime ──▶ EngineDyno ──▶ EngineReport ──▶ AcEngineData
-                definitions     build → tree        scripts run on it     torque curve    verdict+figures   AC data files
+PartsCatalog ──▶ PartTreeBuilder ──▶ EngineAssembly ──▶ EngineDyno ──▶ EngineReport ──▶ AcEngineData
+ definitions      build → tree        specs → figures    torque curve    verdict+figures   AC data files
 
 Car.Parts ──RunningGear.Mounted──▶ AcRunningGearData ─┐
                                                        ├──▶ AcCarBuild ──▶ RaceCarDataService ──▶ CarDataOverlay ──▶ acs.exe
 Car.Engine ──EngineEvaluator──▶ AcEngineData ──────────┘     all files      per car of a race     apply, race, restore
 ```
 
-The converted content lives in the repo, `Street Corsa\Content\streetcorsa\parts` (187 MB), and is copied next to the exe at build;
-`AppSettings.PartsPath` reads it from there. It is made from a commercial game and community mods: the repo stays
-private.
+The base game's packs live in the repo, `Street Corsa\Content\streetcorsa\parts`, and are copied next to the exe at
+build; `AppSettings.PartsPath` reads them from there. Many of their models come from community mods of another
+racing game, hand-kept since (credits beside the packs): the repo stays private.
 
-## Why a VM instead of a port
-
-- 242 mod part classes override `updatevariables()` with their own slot-specific logic; a port of the shared classes
-  would ignore them.
-- The install's *shared* classes are modded too (`Part.tHUF2USD` divides by 281 instead of 211, used price factor 0.4
-  instead of 0.7, an extra hydrogen fuel). The released Java sources (2.2.1) are good for reading, not for values.
-- The scripts are simple (field math, slot lookups, a few loops), and the converter needed an interpreter anyway to
-  read part values out of class files that ship without sources.
-
-## Converter (`tools/SlrrPartsConverter`)
-
-`SlrrPartsConverter <SLRR folder> <output folder> [pack filter] [--notes <folder>] [--replace <old pack>=<new pack>] [--drop <part id pattern>,...] [--rename <rpk pack>[:<selector>]=<pack id>,...] [--merge <part id pattern>=<part id>[*<count>],...] [--model <part id pattern>=<part id>,...] [--fit <part id pattern>:<slot>=<fitting>[+<fitting>],...] [--shift <part id pattern>:<slot>=<dx>/<dy>/<dz>,...] [--single <part id pattern>=<count>@<spacing>,...] [--pads <part id pattern>:<slot>=<fitting>*<count>@<spacing>@<dx>/<dy>/<dz>[@<air fitting>],...] [--name <part id pattern>=<display name>,...] [--shifts <slot_shifts.json kept for good>] [--absorb <slot_shifts.json written by the game>]... [--previous <earlier conversion>] [--twin <old part id>=<new part id or ->,...] [--measure <part id pattern>,...]`
-
-The content in use is made with `tools/convert-parts.ps1` (both Chrysler packs are installed in the SLRR folder, see
-"Replacing a pack"). The script takes the SLRR folder and the build notes folder from `-Slrr`/`-Notes` or the
-`SRAC_SLRR`/`SRAC_SLRR_NOTES` environment variables (no machine's paths are built in), stops when either is not there,
-builds the converter (Release) before it runs it, and exits with the converter's code: 0 for a clean run, 1 for a rule
-or folder it refused (nothing written), 2 when parts failed, packs were skipped or rpks could not be read (listed at
-the end of the output). The converter works everything out and writes the models and classes into a folder next to
-the output (`.Parts.converting`) first; only then are the models moved into each pack, `pack.json`, the aliases, the
-constants and `engine_builds.json` written whole (temp file and rename), and `_scripts` swapped for the new one. A run
-that stops before the commit leaves the content as the last run left it. The commit itself goes in an order where what is
-named always lands before what names it (classes, then every pack's models, then every `pack.json`, then constants,
-builds and aliases, stale packs last), with a marker (`Assets\.Parts.committing`) next to the output for its whole
-length: a commit that fails half way is reported ("part this run's, part the last one's"), exits 1, and the next run
-warns until a full run clears it. `_scripts` is parked as `_scripts.old` in the output folder while the new one moves
-in, put back if the move fails, and recovered at the start of the next run after a kill. A pack whose rpk could not be
-read this time is kept exactly as it was (models, `pack.json`, its aliases, the builds that name it, its classes)
-instead of being treated as gone. Mod content paths (an rpk's `sourcefile`, a cfg, a
-script, an external rpk) that lead outside the SLRR folder count as missing and are reported, and a truncated rpk or
-mesh is reported and left out instead of ending the run. It comes out as:
+## The packs
 
 ```
 engines/chrysler, gm, ford, ford_six   the engine packs (GM has Pontiac and Cadillac too; ford_six is the Falcon's engine)
-engines/generic                        universal-fit induction parts out of the engine packs: aftermarket carburettors,
-                                       air cleaners, scoops, roots blowers (see "Parts that fit any engine")
-engines/stock                          the base game's engine bits: batteries, N2O, and the engine-part roots
+engines/generic                        universal-fit induction parts: aftermarket carburettors, air cleaners, scoops,
+                                       roots blowers (see "Parts that fit any engine")
+engines/stock                          batteries, nitrous, and the engine-part fittings the others mount against
 rims/mopar, falcon, hudson, opala, goodyear_eagle, stock
 tyres/mopar, camaro69, goodyear_eagle, stock
 exhaust/mufflers, stock
-suspension/stock                       suspensions, springs, shocks, sway bars (named after SLRR's own cars: the only running gear there is)
-brakes/stock
+suspension/stock                       coil springs, shocks and sway bars
+brakes/stock                           discs
+running_gear/*                         the game's own running gear: rear axles and their gears and shafts, period drums,
+                                       leaf springs, torsion bars, sway bars, traction bars, shocks (step 31)
 ```
 
-`--rename` names a pack after what it holds instead of the mod's file name: the pack id is the folder and the first
-part of every part id, so `engines/chrysler/_Engine_block_340` where the rpk is `Chrysler_V8_pak`. With a selector
-(`wheels:Tyre=tyres/sl_tuners`, `stock:bodypart=body/stock`, `stock:BodyPart*=body/stock`) only the parts it picks
-out go there: those descending from a script class of that name, filed under a category of that name, or named so
-themselves (`*` for anything). Selector rules apply in the order given, first match wins, the rest of the rpk goes
-where its plain rename says. One rpk may so become several packs (rims and tyres out of `wheels.rpk`, six packs out of
-the base game's `parts.rpk`), and several rpks may feed one pack (`engines/generic` takes parts of three engine
-packs; part names must not clash); a replaced or replacing pack takes the whole rpk with it. Every other option names
-packs by their new names. The old ids go into `part_aliases.json` like those of a replaced pack, so saves made before
-keep working (see "Replacing a pack"): a part picked out by a selector is aliased both from the rpk's name and from
-the pack the rest of the rpk goes to (`engines/chrysler/Air_cleaner_HOLLEY` → `engines/generic/Air_cleaner_HOLLEY`).
-A full run removes converted packs it no longer produces (renamed, replaced or dropped whole); the catalog would
-otherwise load both.
+A part's id is its pack and a name made of its display name (`engines/chrysler/chrysler_340_v8_block`). An id never
+changes without an alias: `part_aliases.json` maps every id a part had to the one it has now (followed up to 8 hops),
+and `build_aliases.json` does the same for engine builds, so a save made with any earlier content loads.
+`SavedParts.BringUpToDate` also renames a saved part's tuning to its spec names. Ids before 2026-10-18 were the
+original packs' (`engines/chrysler/_Engine_block_340`); they are all aliased.
 
-`stock` (the base game's `parts.rpk`) holds 96 scriptless entries without a model: the roots that every mod declares
-its fit against (`stock/Wheel` is what every rim and tyre mounts by, `stock/ExhaustTip` every muffler, `stock/Brake`,
-`stock/Spring_0051`... the suspensions). They are routed next to what needs them (`rims/stock`, `tyres/stock`,
-`exhaust/stock`, `brakes/stock`, `suspension/stock`, `engines/stock`) and never go on sale: the shop only lists
-scripted parts, plus what the engine builds use (batteries).
+The `*/stock` packs hold **fittings**: entries without a class, specs or a model that other parts declare their fit
+against (`rims/stock/wheel` is what every rim and tyre mounts by, `exhaust/stock/exhausttip` every muffler). They are
+never sold or fitted on their own (`PartDefinition.IsRealPart`).
 
-`--drop` leaves parts out altogether (`*` matches anything in the id). Engine builds around a dropped part are left out
-as well. A save that holds such a part: see `BringUpToDate` under "Replacing a pack". What is dropped, for a game set
-in 1960s America and mechanical parts only: the fictional and modern engine packs whole (Baiern/Emer OHC sixes,
-Einvagen/Duhen/Ishima fours, the OHC V6 pack, the Buick LC2 turbo V6, SLRR's own MC/Prime/SuperDuty OHC V8s), Dexter's
-Dodge and Chevrolet engines and his drag block (his pack is replaced by the user's Ford V8s, but a replaced pack's parts
-are paired with the new one's, and a Duster with a Ford 292 is no Duster), two 2000s crate blocks (BluePrint 360, GM
-Performance Parts 427), SL Tuners' `wheels.rpk` (142 of its 151 rims are 17"-21"), everything that is body or
-interior: `interior` (seats, steering wheels), `wings`, and the base game's neons, plates, woofers and body-part roots
-(routed to `body/stock`, then dropped), Dexter's 2-bar "Super Blower", and the Ford V8 pack's scriptless dress-up and
-nitrous bits (a part without a script pairs with anything). The Ford V8s (`engines/ford`, rpk `ford_v8s`) are the
-user's own too (Nov 2016, `MODS ENGINES\OTHER MODS ENGINES\ford_v8s`): 260, 292, 302, 312, 332, 351 Boss, 390, 429
-Cobra Jet and 460 with their period boxes (Borg-Warner T10/Super T10/T18, Ford HED/HEG 3-speeds), a Mopar-pack clone
-by mesh (all 283 identical to Chrysler 4.5's) with Ford scripts and 80 Ford textures, and the 2010 Mopar slot
-numbering (carburettor 7, blower pad 9); its aftermarket carburettors and Edelbrock blower are universal-fit like
-the other packs' (see "Parts that fit any engine"), its air filters keep their Ford decals and stay Ford parts. The
-Ford six (`ford_six`, rpk `ford_l6`) is the user's own Ford Falcon 188/221/221 SP
-pack (Dec 2016, `MODS ENGINES\OTHER MODS ENGINES\ford_l6`): a pushrod engine with 47 meshes they modelled (block,
-heads, manifolds, carbs, timing set, pump, distributor, radiator...) and the Baiern/Emer parts it was grown from still
-inside, dropped here. It replaces the Ford 221 pack (`fordi6_data`, Nov 2016, Baiern DOHC meshes with Ford scripts)
-that car scripts and build notes name, see "Replacing a pack"; the 2012 Baiern reskin that stood in before both
-("ford falcon block") is archived next to them, its ids answered through "An earlier conversion". Its blocks extend
-`Block_Inline_OHV`, a class SLRR never shipped: see "Script VM", stand-in classes.
+The packs are hand-kept: a part that is wrong is fixed in its `pack.json`, a part missing is added there (a part a build
+lacks today goes on a list to make).
 
-`--merge` leaves parts out too, but names the part that stands in for each: builds, saves (through
-`part_aliases.json`), stock-part lists and the attach lines of other parts that named a merged part get the stand-in,
-and the stand-in inherits the merged part's fit (its attach and compatible lines are grafted onto the stand-in's slot
-of the same id; a part that mounts by a single slot mounts by it whatever the number, Ford's air cleaners hang by 12
-where Chrysler's hang by 11). Used for the same part twice with the same script values (the Chrysler pack's plain
-Holley 4-bbl next to its "street" one) and for **transmissions from after the 1960s**, which builds and saves swap for
-the period box of the same engine: TKO 500/600 → A833; Tremec T-56 and TKO, Richmond 5- and 6-speeds → Richmond Super
-T-10; TH-700-R4 → TH-400; TH-200-4R → TH-180C; 4L30-E → TH-125C; the Ford V8s' Tremec T45/T56 → Borg-Warner Super
-T10. The Cadillac 500's TH-125C is a 1980s box kept because it is the 500's only one. The converter prints a merge
-whose stand-in lacks a slot the merged part fitted by.
+## How an engine is worked out (`Parts/Logic`)
 
-Carburettors of different packs are **not** merged even when they are the same product: the carburettor script sets
-the engine's mixture (the Chrysler pack runs 8:1 on gasoline, GM's Dominators 9-14:1 on fuel type 3, Dexter's Fords
-ran 12.5-13.5:1) and its fuel cap, and every pack's engines were rated with their own. A trial that merged them re-tuned
-whole engines (the GM 427 fell from 659 to 419 hp). Nor are the two GM Weiand 8-71s merged: same mesh, different
-boost.
+- `InstalledPart`: a part in an assembly: definition, wear/tear, tuning by spec name (`rev_limit`, `mixture_ratio`,
+  `advance`, `gears[1]`...), parent and children by slot.
+- `PartTreeBuilder`: list of parts → tree. Two slots mate when either names the other in `attaches_to`, directly or
+  through a slot it is `compatible_with` (`PartsCatalog.CanMate`), or when one `takes` a fitting the other `fits`.
+  Parts that find no place are reported, not lost.
+- `EngineAssembly`: the engine model, a page of C#. The block is the root; its `slot_roles` say which slot takes the
+  crankshaft, the heads, the camshaft, the intake, the gearbox and the oil pan, and each part's class says what it
+  adds (`PartClasses.IsA`, so a mod's class under `camshaft` works as a camshaft):
+  - the bore, stroke, deck height, rod length, pin height and dome with the head's chamber make the clearance volume
+    and the compression;
+  - each head breathes through its valves' area times the cam's lift over the cylinder volume, times the manifold's
+    and the header's flow (`BreatherFactor` 0.9); the banks of a vee are averaged, an engine with a head missing has
+    no breathing (and does not run);
+  - the cam's durations, lobe separation and advance (held to its range, in its steps) make the valve events;
+  - every part and what hangs on it is gone over, the last slot first: the weakest `max_rpm` is the engine's top
+    speed, a fuel system gives its mixture, its fuel (`fuels.json`) and the least fuel and air of all of them (the air
+    through its air cleaner, else its open horn), a supercharger or a turbocharger its boost;
+  - the moving parts' inertia adds up (a crankshaft carries its flywheel and rods, a rod its pistons, a flywheel its
+    clutch; the heads count twice and the camshaft four times), and what they lose to friction over the oil pan's
+    figure is how hard the engine turns;
+  - the gearbox hands over its gears, reverse, final drive, drive and diff lock.
+- `DynoSheet` holds the figures as they are filled in; `DynoInputs` is what the dyno takes (SI units, valve and spark
+  events as fractions of the 720 degree cycle).
+- `EngineDyno`: mean value model per 250 rpm. Energy: mixture flow × heat per kg of mixture × ideal air cycle
+  efficiency `1 − CR^−0.4`, no friction taken off (builds limited by their fuel system land within 5% of their rated
+  power that way). Breathing is first-order filling/emptying through the valves, fitted to the rated builds. Boost is
+  baked into the curve.
+- `EngineEvaluator` → `EngineReport`: runs or not and why (the parts' own words), curve, idle, limiter, inertia, gears,
+  final, drive type, diff lock, mass. The block's `needs` are asked first, in order, then the compression its fuel
+  takes ("too low", "too high"), then every other part's `needs`; an engine with no fuel system says nothing feeds it.
+- `PartFigures`: a part's own engine figures (pack.json `"figures"`, plain metric; see the modding guide's "An engine
+  of figures") go over what the specs came to before the dyno runs; a block without specs makes an engine of figures
+  alone on `PartFigures.DataEngineBase`. Turbos and blowers of figures are `DynoInputs.Chargers`, their boost added.
+- Numbers in `specs` come back from JSON as `long` or `double`; read them with `PartDefinition.Number` (or
+  `InstalledPart.Spec`, which puts the player's tuning over them).
 
-### Parts that fit any engine (`--fit`, `--model`, `engines/generic`)
+**Fault containment.** A bad part costs that part, never the car's evaluation or the catalog: `EngineEvaluator.Evaluate`
+never throws (a figure that breaks the sum becomes the report's `Faults` and the engine's Problem), report figures are
+sanitized (no NaN, no rpm past 30 000, no ratio past 100, no curve past 20 000 hp or 50 000 Nm reaches AC's data),
+and `PartsCatalog.Load` reads each pack on its own (a pack.json that does not read, null parts or ids, a duplicate id,
+an alias to nothing, a broken aliases or builds file are each one line in `PartsCatalog.Problems`).
+
+The model was checked against the engines' earlier evaluation when it became the game's own (2026-10-18): of 201 builds
+176 came out the same, none changed whether it runs, the Opala blower six makes 3% more (its carburettor's own
+mixture). Model check: `EngineBench <Content> rated` (mean error about −0.3%, mean absolute 10% over the 17 rated builds
+that run); `EngineBench <Content> snapshot <file>` writes every build's whole report, to compare two versions of the
+logic by.
+
+## Parts that fit any engine (`engines/generic`, fittings)
 
 An aftermarket carburettor bolts to a flange pattern, not a brand; an air cleaner sits on the carburettor's air horn;
-a roots blower on a blower manifold. SLRR packs know nothing of each other, so their attach lines lock every such
-part to its own pack (three Holley four-barrels, each fitting one make). `--fit` gives a slot a **standard fitting**
-(`fits` in pack.json): `carb:2bbl`, `carb:4bbl`, `carb:2x4`, `carb:3x2` on carburettor bases, `air:single` and
-`air:inline` (a 2x4 or 3x2 set) on air cleaners and scoops, `blower:roots` on blowers. The slots that **take** a
-fitting (`takes`) are found from the attach lines: every slot a fitted slot attaches to, written on either side, so a
-pack's own carburettors tell which of its manifold pads are 4-bbl pads. The game (`PartsCatalog.CanMate`,
-`FindMountable`) mates two slots by a shared fitting as well as by name, through stand-ins on either side (a blower's
-carburettor pad that stands in for a dual-quad manifold pad takes what that pad takes). A pad no fitted part of its
-own pack names gets its fitting by rule (`takes:air:single` on the Chrysler 2-bbl's air horn, which only knows
-Chrysler's factory cleaners). Slot numbering is the engine framework's (manifold pad 7, carburettor base 10, its air
-horn 11, blower pad 9, drive belt 15).
-
-**Slot conventions differ between packs**, which cancels within a pack and shows where parts of two packs meet.
-Measured on the meshes (`--shift` rules in `convert-parts.ps1`): the Chrysler pack, and Dexter's Ford pads, put the
-carburettor slot 6.5 cm above the carburettor's base and the manifold pad 6 cm above the flange; GM puts both at the
-flange; GM's stock single carburettors are modelled 18 cm ahead of their origin and its single-carburettor pads sit
-18 cm back to match. Untreated, a GM carburettor rode 7 cm above a Chrysler pad and a Chrysler one sank 7 cm into a
-GM manifold. `--shift` moves a slot in its part's space; both sides of a pack's joint move by the same amount, so
-nothing moves within the pack: Chrysler/Ford carburettor slots and pads come down to the flange (borrowed Chrysler
-models carry Chrysler geometry and come down too, and so do the crossram carburettors and manifolds, since the
-crossram pads take any four-barrel), GM's stock single carburettors and pads go forward to the centre. Blowers needed nothing. Checked
-with harness close-ups: a Chrysler Holley and Edelbrock cleaner on a GM 327, GM's stock carburettor with a K&N on a
-340, the Chrysler 2-bbl on GM's 2-bbl manifold, the borrowed-model Dominator with a Summit filter on a Hemi, a
-Summit scoop on a 340, the Chrysler Weiand on a GM 8-71 manifold and the GM one on a 440, Demon dual quads and the
-Holley 650 on Dexter's Ford 302, the GTO Tri-Power filters on the borrowed tri-power; and every pack's own
-carburettor on its own manifold, unchanged.
-
-`--measure <part id pattern>,...` (`convert-parts.ps1 -Measure`) is how a convention is read before a fitting lets
-two packs meet: it converts nothing and prints every matching part's slots next to the bounds of its meshes, in the
-model's space and before any shift. The user's Ford V8 pack (2026-09-22) measured as a 2010 Mopar clone by cfg as
-well as by mesh: its carburettors' slot 7 at the carburettor's centre, its pads 2 cm over the manifold top, its
-Edelbrock blower's pad 9 where Chrysler's is - the same figures on the shared meshes, so the same 6.2 cm down to the
-flange for its carburettors (routed to `engines/generic`, drawn with the Chrysler models: their scripts run 13.5:1
-where Chrysler's run 8:1, so they are parts of their own, not merges), its pads and the blower's pad. Its air filters
-already carried Chrysler's offsets on the shared meshes within 1.5 cm, except three that sat at their mesh centre (the
-K&N and Edelbrock 2x4 ovals, the Motorcraft 2x4 scoop) and got the Chrysler part's offset by `--shift`.
+a roots blower on a blower manifold. Such parts carry a **standard fitting** (`fits` in pack.json): `carb:2bbl`,
+`carb:4bbl`, `carb:2x4`, `carb:3x2` on carburettor bases, `air:single` and `air:inline` on air cleaners and scoops,
+`blower:roots` on blowers; the pads that **take** one say so (`takes`). `PartsCatalog.CanMate` and `FindMountable`
+mate two slots by a shared fitting as well as by name, through stand-in slots on either side. Slot numbering on the
+engine: manifold pad 7, carburettor base 10, its air horn 11, blower pad 9, drive belt 15.
 
 Factory carburettors and air cleaners (Carter AVS, GM's stock 2/4-bbl and Quadrajet-style cleaners, the Mopar pie
 tins, Six Pack cleaners, the Shaker, the GTO Tri-Power and Corvette air boxes) keep their attach lines and stay with
 their brand: a used car tuned by `EngineFactory` gets aftermarket parts of any make, never another make's factory
 part. Kits stay too: the Paxton and Edelbrock E-Force superchargers, the Hemi crossram carburettors. Blowers bring
-their own pack's drive belt (belts are positioned in the blower's frame, and reach the crank pulley of any V8 near
-enough).
+their own pack's drive belt. Carburettors of different packs are **not** one part even when they are the same product:
+the carburettor sets the engine's mixture, and every pack's engines were rated with their own. Several GM and Ford
+carburettors are drawn with a Chrysler part's model (`models.json`, and their slots at the donor's positions).
 
-The universal-fit parts are routed into `engines/generic` (the shop and the catalog never read pack ids, only the
-folder and the ids change). The GM and Ford packs' carburettors are crude blocks next to the Chrysler pack's;
-`--model` draws a part with **another part's model**, its own script untouched: the model is converted again under
-the borrower's name (into the borrower's pack folder) and the borrower's slots take the donor's positions, since slot
-positions are in the model's space (a part that mounts by a single slot takes the donor's mounting slot whatever its
-number: GM carburettors hang by 10, the Carter by 12). The borrowers: GM's Holley 2-bbl, 1050 Dominator,
-"hardcore" 1050, 750 Dominator and blower 2-bbl, the Ford V8 pack's two Holley streets, two Edelbrocks and Holley
-dual-quad set, and GM's factory carburettors, which get the Carter AVS (a factory carburettor's looks rather than
-another Holley's). GM's injection
-(the Weiand methanol stacks, the '63 fuelie rail, the Holley rails) is decent and GM-only and keeps its own models.
+## Every carburettor part is one carburettor (the shared air slot)
 
-### Placement mode in the garage (F5, `SlotShifts`)
+A dual-quad or a Six Pack is that many carburettor parts, one per pad: a manifold's pads are a row along the engine
+axis (pad 7 the middle one, or the rear one of a pair; the others 300, 301...), plus slot **311**
+(`PartSlot.SharedAirSlot`) over the row for an air cleaner that spans the set (`air:2x4`, `air:3x2`). A carburettor in
+a row whose own horn is empty breathes through the cleaner over the row (`EngineAssembly.AirCleanerOf`). The extra pads
+are the manifold's `needs`, so a row runs only with a carburettor on every pad. The flathead mod's Edelbrock 2x2 and
+4x2 intakes follow the same layout; their pads take `carb:97`, which only the Stromberg 97 fits, and the Stromberg's
+horn takes `air:97`.
 
-A tool for fitting the converted parts by eye, not gameplay. With a part picked in the workbench, **F5** turns
+## Placement mode in the garage (F5, `SlotShifts`)
+
+A tool for fitting parts by eye, not gameplay. With a part picked in the workbench, **F5** turns
 placement mode on: the arrows move the part across and fore-aft, PgUp/PgDn up and down, in the *engine's* axes
 (right, up, towards the radiator), whatever the camera does; a step is 5 mm, Ctrl 1 mm, Shift 2 cm. **Tab** switches
 between the part's own slot and the pad the part sits on (a carburettor wrong on one manifold is the pad's fault, one
@@ -204,262 +151,10 @@ pad), `PartsCatalog.ShiftSlot` changes the part in place, and the parts are laid
 model (`GarageRenderer.PlacePart`).
 
 Every step is written to `slot_shifts.json` next to the content the game runs on (part id → slot id → offset, metres,
-the part's axes, the sum of every nudge). The catalog applies the file when it loads, so the fit sticks between runs;
-`convert-parts.ps1` folds such files (from the output folder and the build folders, `--absorb`) into
-**`tools/slot_shifts.json`**, kept for good and applied last on every conversion, and takes the game's files away,
-so the packs stay the truth and nothing is applied twice. The kept file is plain enough to edit by hand.
-`SlotShifts` is written atomically (`SafeFile`) and never throws on load: a file that does not read gives no shifts and
-a `Problem`, and then it is never written over (garage nudges don't save until it is fixed by hand; the next save reads it again and, once it reads, adds its offsets
-to the nudges made since and saves them together). The converter
-stops (exit 1) when the kept file has a Problem, and skips (without deleting) a game-written file that has one.
-
-### Every carburettor part is one carburettor (`--single`, `--pads`, the shared air slot)
-
-SLRR sells a dual-quad or a Six Pack as one part with one model of two or three carburettors, on one manifold pad.
-The user wants one carburettor per part. So:
-
-- **Pads.** `--pads` turns a pad that took a set into one pad per carburettor, in a row along the engine axis about
-  where the pad was (the pad keeps its id for the middle one, or the rear one of a pair - the pad the manifold script
-  reads; the others are 300, 301, ...), plus slot **311** (`PartSlot.SharedAirSlot`) over the row for an air cleaner
-  that spans the set, placed where the set's own air-horn slot was (offset per rule; Chrysler four-barrel sets
-  (-0.043, 0.108, -0.040), Six Packs (0.003, 0.073, -0.006), crossrams (-0.043, 0.146, -0.040); every pack's pads use
-  the Chrysler offsets and GM's ovals are shifted to match). Pads that stood in for a set pad (the GM 427 tunnel ram,
-  the GTO and Corvette Tri-Power intakes, GM blowers) need rules of their own: stand-ins are followed at run time,
-  not by the converter.
-- **Sets.** A set whose single carburettor exists with the same script values is `--merge`d into it `*count` (the
-  Edelbrock and HOLLE Six Pack sets, GM's stock dual quad and tri-power); one with values of its own is kept and its
-  model **sliced** (`--single`, `SlrrKn5Slicer`): every triangle goes with the item whose nominal centre is nearest
-  (items evenly spaced about the model's centre), one item stays and is moved onto the origin; the slots stay as
-  they are, since the Chrysler pack's slot offsets are the same for a set and a single. Sliced: the Dominator and King
-  Demon pairs, the Road Demon Six Pack, the three Hemi crossram sets (which keep their fuel figures and fit only
-  crossram manifolds, by the `carb:crossram` fitting), GM's 750 Dominator pair (14:1 where its 1050 runs 9:1) and
-  blower 2x2, Dexter's dual sets, and two air-filter rows (GM's dual round filter, the GTO Tri-Power box). `--name`
-  gives them names that no longer say 2x4. Either way a build that named the set gets **count** of the single, one
-  per pad (`multiplicity`, keyed by every source id that resolved to the set, twins of the replaced Mopar pack
-  included), and the fit of a merged set is grafted onto its single.
-- **Air cleaners over a row** (ovals, Six Pack cleaners, the Shaker, scoops for pairs) named the set's air-horn slot;
-  the converter moves those lines onto slot 311 of every pad the set sat on (`Repoint`), and the aftermarket ones get
-  `air:2x4`/`air:3x2` fittings that the 311 slots take. Single cleaners still sit on a carburettor's own horn
-  (`air:single`; the carburettors sliced out of sets, whose horns only the set's cleaner named, get it by rule). GM's
-  carburettor scripts *require* a cleaner on their own horn, so `PartScriptRuntime` answers `partOnSlot(horn)` of a
-  carburettor whose horn is empty with the part on its parent's slot 311: a carburettor in a row breathes through the
-  cleaner over the row. Only a horn (a slot that takes an `air:` fitting, `PartSlot.TakesAir`) is answered that way; a
-  nitrous slot stays empty. `SavedParts.BringUpToDate` looks at every joint on load, not only when an id changed (a
-  sliced set keeps its id and loses its horn's fit), and tries a joint one part up when it no longer holds on the
-  same part, so a saved oval on a set moves over the manifold's row; the set itself becomes one carburettor in a
-  save (the other pads wait for the shop).
-
-- **A mod's row by hand.** The flathead mod's Edelbrock 2x2 and polished 4x2 intakes follow the same layout without
-  the converter: pad 7 is the rear of the pair (the rear of the middle pair of four), the others 300-302, all four
-  `enforce`d, and slot 311 takes `air:2x97`/`air:4x97` for a row cleaner a mod may add. Their pads take `carb:97`,
-  which only the Stromberg 97 fits (the flathead Holley's body and linkage run into the next carburettor), and the
-  Stromberg's horn takes `air:97`: the chrome helmet and the velocity stack, never an oil bath or a 14 in cleaner,
-  which would sit on the next carburettor's cleaner.
-
-Checked: every build's power unchanged except the GTO 389 family (348 → 341 hp: GM's tri-power ran 12.5:1, its 2-bbl
-runs 12.0), one GM 427 build whose dual-quad set never found the tunnel ram's stand-in pad now runs (161 → 542 hp);
-`renew` of all engines of the previous content: nothing comes off; `bench` round trips on 10 builds; harness
-close-ups of the Six Pack under its factory cleaner, two Dominators with a round filter each on the 427 tunnel ram,
-the Tri-Power's three filters on three 2-bbls, two King Demons under the Edelbrock oval on a 340, two Dominators and
-a K&N on the Weiand blower, two GM Dominators under a Summit oval on a 283 (runs: the shared cleaner counts for
-both), GM's factory carburettor in Carter clothes on a 327.
-
-Per part, from its compiled script (run with no game around, see `SlrrScriptEvaluator`):
-
-| pack.json field | Meaning |
-|---|---|
-| `class_chain` | Script classes above the part, nearest first (`...Block_Vee_OHV`, `...Block_Vee`, `...Block`, ..., `Part`) |
-| `properties` | Fields after construction, script names and units: `bore`/`stroke` mm, `Vmin` cc, `value` USD, `max_wear` m, `ratio[0..7]` ([7] = reverse), `end_ratio`... |
-| `slot_roles` | From `*_slot_ID` fields: which slot takes what (`crankshaft` → 8) |
-| `required_slots` | Slots that must be filled for the part to work, with the script's own message. Found by running `isDynoable`/`isDriveable` with unknown parts. Left to the script, which may ask a rule only on some cars; a rule a pack writes itself with `"enforce": true` is held by `EngineEvaluator` (the extra pads of a mod's manifold that runs on a stock script, which reads only pad 7) |
-| `stock_parts` | What `addStockParts()` mounts |
-| `derived` | What `updatevariables()` computes on a lone new part; reference values |
-
-`engine_builds.json`: every car chassis script's `stock_parts_list_E` (+ stage 1/2 kits), plus the lists found in the
-text files given with `--notes`. A note title like `MOPAR 340 Six Pack 290 hp` also gives `rated_power`, which the
-engine model is checked against. A title names and rates only the first list under it. Prose inside a list
-(`// heads`) is a comment: after a comment the numbering counts on, after a title it starts over.
-
-**Engine kits** (`origin` "kit", `SlrrEngineBuilds.FromKits`): the `Set` classes a pack's rpk names, whose `build()`
-puts parts in the inventory (`SlrrScriptEvaluator.Kit` runs it against an inventory of no class and notes every
-`insertItem`). Where a mod's author wrote complete engines that way they are builds like the others: the user's Ford
-six (`kit_188`, `kit_221`, `kit_221_SP`) and V8 packs (one kit per displacement), GM's crate engines, Chrysler's
-`Kit_318_block`... A kit without a block is an upgrade (a blower with its manifold), no engine; one whose parts a car
-or notes build already lists (with a battery on top, say) adds nothing and is left out, so a rated notes build wins
-over the kit it was written from.
-
-**Speed-shop builds** (`"aftermarket": true`): an engine as a hot rodder put it together (the flathead mod's
-Edelbrock and Stromberg builds, its hot rod swap). It turns up whole in the paper and at junkyards, but
-`StockEngineMatcher.Best` never gives it to a car as its factory engine (it stays in `Rank`, to be picked by hand),
-and neither `EngineFactory.CreateTuned` nor `EngineTuner`'s block swap takes it for a bigger engine of the family:
-its gain is its parts', which tune-ups buy one at a time.
-
-A run with a pack filter adds that pack's script classes to `_scripts`; only a full run replaces the folder and
-writes `engine_builds.json`, `script_constants.json` and `part_aliases.json`.
-
-### Meshes with too many triangles (`SlrrMeshSimplifier`)
-
-Parts are modelled by hand with a few thousand triangles, the most detailed with some ten thousand. A mesh far
-beyond that (Fireful0's hood scoops and air cleaner in the Chrysler pack: 25,000 to 90,000) came out of a CAD program
-and carries triangles its shape does not need. `SlrrKn5Builder` hands anything above 20,000 to the simplifier, which
-collapses edges in the order of the error they cause (quadric error metric) down to 10,000 or until a vertex would
-end up more than about a millimetre from the surfaces it stands in for. Vertices only ever move onto neighbours, so
-normals and texture coordinates are untouched; a vertex on a texture seam, a material border or a rim only moves along
-it; a triangle that would fold over is left alone; a mesh modelled with both sides is worked on as one side and
-doubled again. Checked with harness screenshots of the scoop and the air cleaner before and after: a few hundred
-pixels differ. The converter prints every mesh it touched.
-
-### Replacing a pack (`--replace`, `SlrrPackTwins`)
-
-A later release of a mod takes the place of the one it grew out of: `engines/Mopar` (MagnumForce, 2010) was replaced
-by `engines/chrysler` (Chrysler V8 Pack 4.5 Reboot, rpk `Chrysler_V8_pak`: the same meshes, 108 more parts, 4 more
-blocks). Car scripts and build notes keep naming the old rpk, so the old pack **stays installed in the SLRR folder**;
-it is read but not converted, and its output folder is removed. The same way, the user's Ford six (`ford_l6`)
-replaced their Ford 221 pack (`fordi6_data`) and their Ford V8s (`ford_v8s`) replaced Dexter's `DEXTERV8s`
-(2026-09-22): three replacements, each with the old pack still installed.
-
-Nothing carries over by id or name: the new release renames the files, renumbers the rpk and some slots (oil pan
-9 → 10, carburettor 7 → 10), rebalances the scripts and says "small/big block" where the old one said "340/440".
-`SlrrPackTwins` pairs every old part with its twin by, in order of weight: **mating** (a twin bolts onto the twins of
-what the old part bolted onto; repeated until it settles, blocks and crankshafts anchor it because they carry their
-displacement in both packs), mesh geometry (hash of positions), words and numbers of the names, slot ids, textures,
-script class. The converter prints the pairs that are in doubt (another candidate as good, or a different mesh).
-
-Every reference to an old part (car builds, notes, stock parts, attach lines of other packs) then resolves to the
-twin, and `part_aliases.json` (old id → new id) is written for the game:
-
-- `PartsCatalog.Get` answers old ids through the aliases; `CurrentId` gives the id a part goes by now.
-- `SavedParts.BringUpToDate` (run over the whole save by `CarPartsService.BringUpToDate` when a game is loaded)
-  gives saved parts their current ids and makes every joint again that the catalog no longer agrees with, the way
-  the workbench would. A part that fits nowhere on its parent any more comes off: onto its owner's shelf, or out
-  of the offer for cars and parts that are for sale. A car whose engine block the catalog no longer has at all
-  (dropped parts) loses the engine and gets its factory engine again the next time it is looked at, worn like the
-  car; loose parts, listings and ads made of such parts leave the save.
-
-Checked with `EngineBench <new parts> renew <old parts>`: all 37 engines of the old pack come up to date and run; the
-only part that comes off is the Hemi fan some 383 builds wore, which 4.5 no longer lets bolt to a 383 pump. The same
-check after the packs were renamed (2026-09-21): all 132 engines of the previous conversion come up to date, nothing
-comes off.
-
-Where the matcher has nothing to go on, `--twin <old part id>=<new part id>` writes the pair by hand, and
-`--twin <old part id>=-` says the new release does without the part. The Ford six needed 16: the old pack was a DOHC
-reskin, the new one is the pushrod engine, so its exhaust camshafts and camshaft bearing bridge have no twin, the
-intake camshafts are the single camshafts, the drive belt is the timing chain, and the Sprint and racing head,
-manifold and header have their look-alikes but the matcher settled for the stock ones. A rule naming a part that is
-not there stops the run. The old builds still do not run on the new pack: its blocks demand a timing cover, fuel pump,
-distributor, coil, water pump, radiator and starter that the old pack never had, so the car builds and old saves of
-the Ford six come up to date but "missing the timing cover" (`renew` says so); the pack's own kits are the builds that
-run, see "Engine builds".
-
-### An earlier conversion (`--previous`, `EarlierConversion`)
-
-A release of a mod that keeps its rpk but renames its files (the Ford six: `Baiern_Kraftwerk_2_5_block.cfg` became
-`Ford_188_Block.cfg`, same resource `0x41`) changes part ids without there being two packs to pair. Part ids are the
-cfg names, but the SLRR game knows a part by its rpk resource id alone, and the converted parts keep it
-(`source_type_id`, the pack's `source` says the rpk). `--previous <folder>` names an earlier conversion, normally the
-content the game runs on: `convert-parts.ps1` passes the repo's `Content\streetcorsa\parts` whatever folder the run writes to, so a
-scratch run sees the same. Read before anything is written, it adds to `part_aliases.json`:
-
-- every part it had whose id the run no longer produces, pointed at the part its resource is now (a pack fed by
-  several rpks is tried against each; two answering differently is nobody's part), unless a rule already aliases it;
-- its own aliases, kept while they still lead to a part through the aliases as they end up (the game follows chains
-  of up to 8).
-
-So the ids ratchet: an alias once written stays as long as its target exists, and a save made with any earlier content
-loads. Checked the way a replaced pack is: `EngineBench <new parts> renew <old parts>` after the Ford six swap brought
-all 12 engines of the old pack up to date, nothing came off.
-
-## Script VM (`Parts/Scripting`)
-
-- `ScriptClass`: the "TUFA" class file. Sections CONS (pool), FILD, MTHD, TREE. Code is postfix expression trees
-  with a source line per node; see the bytecode reference at the end.
-- `ScriptClassLoader`: finds classes under a root laid out like SLRR. The `scripts` folder may sit at any level of the
-  package path; classes next to the referring class win (cars share one package across folders). **Stand-in
-  classes**: a class a mod extends that the game never shipped is made from the one its author copied
-  (`ScriptClass.DerivedAs`: the pool's names swapped, methods that only made sense for the original left out).
-  `Block_Inline_OHV` (the Ford six's blocks) is `Block_Vee_OHV` less the second cylinder head; its author's source sits
-  in the SLRR notes, never compiled, as does their `OHV_CylinderHead` that would accept it - so an object of a stand-in
-  also passes `instanceof` the class it was copied from (`ScriptClass.CopiedFrom`), which is what the stock head asks.
-  A compiled class file, once there, wins over the stand-in.
-- `ScriptVm`: objects, virtual calls, `super`, statics, arrays, casts, `instanceof`, loops, short-circuit logic.
-  Natives go to an `IScriptHost`. What the host does not provide is **unknown**; code behind unknown conditions is
-  walked without taking effect. `partOnSlot(n)` with no game around returns an unknown tagged with slot `n`, which is
-  how `if (!p) return "msg"` turns into a `required_slots` rule.
-  - The uncertain region runs from the undecidable `if` to the end of its branches. A loop around it returns to
-    certain code and decides the `if` anew on every round.
-  - `FirstAlternativeWins` (converter only): part lists filled inside undecidable branches are kept, first one wins.
-    The game leaves it off; there, uncertain code changes nothing.
-- Declared types count (`ScriptTypes`): `int n = maxRPM / 250` drops the fraction, a `float` field, parameter, array
-  element or return value set from an int literal divides as a float from there on, `(int)`/`(float)` casts convert.
-  Unset elements of `new float[n]` read as 0 (null for objects), outside the array as unknown.
-- Statics belong to the class: initializers run once per VM, instances see the values. The holder exists before its
-  initializers run, so `static Foo instance = new Foo()` ends; construction depth carries through initializers.
-- Method parameters are numbered backwards (last parameter = local 1, local 0 = this).
-- One `ScriptClassLoader` per catalog (`PartsCatalog.Scripts`, thread-safe, no lock: two caches, class files by path and
-  classes by name, each a `ConcurrentDictionary`): classes are read and parsed once, outside any lock; two threads
-  parsing the same cold class get the one that was cached first.
-- **Limits.** Class files are mod content, so the VM cannot be driven out of bounds; for valid content nothing changes
-  (EngineBench output identical for all builds).
-  - Call depth 24 (`MaxDepth`); static initializers nest up to 64 classes deep on their own (`MaxStaticsNesting`),
-    apart from the call depth. Past either a static read gets a stand-in that is not cached.
-  - 1 000 000 steps per entry (`MaxSteps`: one `Instantiate` or `Call`; the heaviest catalog entry takes 39 167),
-    and 5 000 000 for all the entries of one VM together (`MaxTotalSteps`: one engine's parts; the heaviest catalog
-    build takes 52 471). A host native counts as the work it does: `calcDyno` is 10 000 steps
-    (`PartScriptRuntime.DynoSteps`, `ScriptVm.Charge`). Running out of either sets the sticky
-    `ScriptVm.BudgetExhausted` (`PartScriptRuntime.BudgetExhausted`); once the total is spent every later entry stops
-    at its first step. The engine does not run, with that as its Problem.
-  - 1 000 000 array elements stored per VM (`MaxArrayElements`, new ones counted): arrays outlive the entry that filled
-    them. Past it no element is stored, and the budget counts as exhausted.
-  - Jump targets are range-checked: one before the start or past the end ends that tree, not the class.
-  - A string built by `+` longer than 64 K characters (`ScriptVm.MaxTextLength`) is unknown, and what
-    `Float.toString` prints is cut there. A negative argument count is clamped. printf precision is clamped to 0..20.
-  - What the scripts hand the report is held to what an engine could be (`EngineEvaluator`): an rpm past 30 000, a
-    ratio past 100 or another figure past a million is no figure (0), and a dyno past 20 000 hp or 50 000 Nm is a
-    Problem, so none of it reaches AC's data.
-  - Class and package names must be safe path segments, and a part's `source_script` must stay under the scripts root;
-    anything else counts as a missing script.
-
-## Runtime (`Parts/Logic`)
-
-- `InstalledPart`: a part in an assembly: definition, wear/tear, tuning overrides by script field
-  (`RPM_limit`, `mixture_ratio`, `advance`, `ratio[2]`...), parent and children by slot.
-- `PartTreeBuilder`: list of parts → tree. Two slots mate when either names the other in an `attach` line, directly
-  or through a slot it is `compatible` with (`PartsCatalog.CanMate`). Parts that find no place are reported, not lost.
-- `PartScriptRuntime`: one script object per installed part on a stand-in `Chassis`; natives (`partOnSlot`,
-  `slotIDOnSlot`, `getSlots`, `getSlotID`, `getWear`, `getTear`, `getCarRef`) answered from the tree. The slot a part
-  hangs by leads back to its parent, as in SLRR. `Chassis.updatevariables()` then runs unchanged: the block collects
-  bore, stroke, chamber volume, valve flow, cam timing, spark, fuel and air limits from its parts into a `DynoData`,
-  the transmission leaves gears, final drive, drive type and diff lock on the chassis.
-- `EngineDyno`: replaces the native `DynoData.calcDyno`. Mean value model per 250 rpm. Energy follows the scripts'
-  figures: mixture flow × `mixture_H` × ideal air cycle efficiency `1 − CR^−0.4`, no friction taken off (builds limited
-  by their fuel system land within 5% of their rated power that way). Breathing is first-order filling/emptying through
-  the valves, fitted to the rated builds. Boost is baked into the curve.
-- `EngineEvaluator` → `EngineReport`: runs or not and why (the scripts' words), curve, idle, limiter, inertia, gears,
-  final, drive type, diff lock, mass, value. A part whose class file is not in `_scripts` is reported as that, since
-  to the other scripts it would just look like a missing part. One verdict of the scripts is put right: with no
-  carburettor or injection the compression limit they derive from the fuel is 0 and they complain about compression
-  ("not more than 0.0:1"); the report says that nothing feeds the engine instead.
-- `PartFigures`: a part's own engine figures (pack.json `"figures"`, plain metric; see the modding guide's "An engine
-  of figures"). `PartScriptRuntime` puts them over the block's `DynoData` before every dyno run; a block without a
-  script makes an engine of figures alone on `PartFigures.DataEngineBase` (`EngineReport.FromFigures`). Turbos and
-  blowers of figures are `DynoInputs.Chargers`, their boost added to the scripts' charger's.
-- After the scripts' verdict, `required_slots` rules marked `enforce` (see the pack.json table): the first empty one
-  is the problem, in its own words ("It's missing the rear carburettor.").
-- Numbers in `properties`/`derived` come back from JSON as `long` or `double`; read them with `PartDefinition.Number`.
-
-**Fault containment.** A bad part costs that part, never the car's evaluation or the catalog:
-- `PartScriptRuntime` catches around the chassis, each part's instantiate/tune, every call and `UpdateCar`; the part
-  goes into `FaultedScripts` and a line into `Faults`. `EngineEvaluator.Evaluate` never throws: faults become the
-  report's `ScriptFaults` and the Problem "a part script failed: ...", and the engine does not run.
-  `CarPartsService.Evaluate` logs each distinct fault once; `EngineBuildIndex.ScriptFaults` does the same for the index.
-- `PartsCatalog.Load` reads each pack on its own: a pack.json that does not read, null parts or ids, a duplicate id
-  (the last read still wins), an alias to nothing, a broken aliases file or `engine_builds.json` are each one line in
-  `PartsCatalog.Problems` (logged), and the rest of the catalog stands.
-- Non-finite numbers never reach AC: report figures are sanitized, `EngineDyno` guards its inputs, prices clamp, and
-  `IniText.Set` leaves a line untouched for NaN or infinity.
-
-Model check: `EngineBench <parts> rated`. Currently mean error +4%, mean absolute 15% over 15 builds
-(Mopar 340 Six Pack: 310 hp @ 5750, 446 Nm @ 2750; factory 290 hp, 468 Nm).
+the part's axes, the sum of every nudge), applied by the catalog on every load. To make a fit part of the packs, add the
+offset to the slot's `position` in the pack.json and take the line out of the file. `SlotShifts` is written atomically
+(`SafeFile`) and never throws on load: a file that does not read gives no shifts and a `Problem`, and then it is never
+written over.
 
 ## Cars and their parts (`Parts/Cars`, `Services/Parts`)
 
@@ -468,7 +163,7 @@ Every car in the game owns a tree of parts; what is on the tree is what the gara
 
 **Save model.** `PartInstance` (in `Models/GameState`) is a part as a save file holds it: catalog id, wear, tear, tuning,
 the slot it is mounted on, the slot it is mounted by, and its children. `Car.Parts` are the parts that sit on the car
-itself, by car slot (`PartInstance.CarEngineSlot` = 1, the scripts' own number; running gear will use 101+). A loose part
+itself, by car slot (`PartInstance.CarEngineSlot` = 1; the running gear uses 101+). A loose part
 keeps whatever was on it, so the player's shelf (`Player.Parts`) and the ads hold sub-assemblies as readily as single
 parts, a complete engine included. `PartTrees` goes between `PartInstance` and the runtime's `InstalledPart`
 (`LiveTree` keeps the way back). `Car.HasPartsAssigned` tells a car that never had parts (an older save) from one whose
@@ -522,7 +217,7 @@ built on first use: slots by the slots they name, and slots by the slots they st
 
 **Garage.** The Parts toggle opens the workbench (`PartsWorkbenchViewModel` + `PartsWorkbenchView` around the 3D view):
 - the engine sheet: block, power, torque, displacement and compression, gearbox, weight, and when it does not run the
-  part scripts' own words for why;
+  parts' own words for why;
 - parts are picked **in the 3D view**: the part under the pointer glows and is named, a click selects it (orange glow,
   card with condition and worth, "Take it off"). Hidden parts are reached the way they are in a workshop: take off what
   is in the way;
@@ -559,9 +254,9 @@ itself, one from above (heads, intake, covers...) back. Only looks: nothing is r
 off the stand, turning back before it goes onto the hoist or into the scenery.
 
 **The work order** (`WorkOrder`, `Content\streetcorsa\parts\work_order.json`, one per mod; see
-[modding.md](../modding.md)). Every part has a kind: its pack's `"kind"`, else a script class (the big parts), else
+[modding.md](../modding.md)). Every part has a kind: its pack's `"kind"`, else its class (the big parts), else
 words of its name (timing covers, dampers, distributors, belts... are plain `EnginePart`/`Part` in every pack, but named
-alike across makes). 1055 of the 1107 engine parts get one (2026-09-26); the rest are SLRR's scriptless root entries, batteries, scoops and
+alike across makes). 1055 of the 1107 engine parts get one (2026-09-26); the rest are the fittings, batteries, scoops and
 bottles. `EngineWork.WhyNotOff`/`WhyNotOn` give the reason in the player's words ("Take off the cylinder heads and the
 oil pan first.", shown on the card and as the shelf hint): the crankshaft, rods, pistons and camshaft only on the stand,
 one at a time with nothing on them, and the peripherals in their order (the belt before the fan, the fan before the
@@ -633,17 +328,17 @@ blend-factor pass, one buffer per glow (car, candidates, selected, hovered).
 mail order (`Screens/UsedParts`, the part shops' map's Mail order button) has two pages: new parts by mail order (the engine packs plus whatever else the builds use: everything there is, at the list price and 20% more,
 `NewspaperPartsService.MailOrderPremium`, paid when ordered and on the shelf three days later: `Player.PartOrders`, brought by
 `PartsAdsRefreshTask` each morning, told of in the garage from `Player.Delivered`), and selling from the shelf. Filters: kind
-(`PartKinds.GroupOf`, from the script classes), name, and "only what fits my car" (`FindFittingParts`: everything that
+(`PartKinds.GroupOf`, from the parts' classes), name, and "only what fits my car" (`FindFittingParts`: everything that
 goes on any slot of the selected car's tree, taken slots included). New price is what the part does
 (`PartPriceBook`, 2026-10-06: its kind's `price` in part_groups.json, a base and dollars per horsepower the part is
-worth on the dyno, measured once a session over every build that runs; the scripts' `value` no longer prices
-anything); a used part is worth `new x tear x (0.3 + 0.7 x wear)` as in SLRR, ads ask around 60% of that, a trade-in
+worth on the dyno, measured once a session over every build that runs; no pack writes a price);
+a used part is worth `new x tear x (0.3 + 0.7 x wear)`, ads ask around 60% of that, a trade-in
 pays 40%. A whole engine that runs is priced by what it makes (`PartPricing.EngineNewPrice`, 2026-10-17): its dyno
 power, measured with every part as new, on the blocks' curve, plus the base price of every other part, and never less than
 its parts loose. Its worth shares that over the parts by their prices, each share in its part's wear. Loose parts price
 their power linearly (a head $4/hp) and a block by the weakest engine it comes in, so an engine carrying its power in its
 speed parts (the '72 Camaro's 327 stroker, 364 hp) came to half the price of one carrying it in its block (the SBC 350,
-327 hp). A car is priced the SLRR way too (`CarPricing`, `CarValuation`): its body by its weight, its engine as above,
+327 hp). A car is priced the same way (`CarPricing`, `CarValuation`): its body by its weight, its engine as above,
 and every other part on it in its wear and damage.
 Every part model is drawn at the size it was made. A `model_scales.json` that drew the ported packs 1.2x (brakes
 1.35x) came in on 2026-09-26 and went out on 2026-09-27: the user checked and the models are well sized. Measured on 2026-09-26, the models are about real size: the GM small blocks 0.74 × 0.54 × 0.34 m, the big
@@ -691,21 +386,21 @@ now take turns through `CatalogDatabase.Open` (a semaphore, given back when the 
 happens while closing; a call must not open the database again while it has it open).
 
 **Running gear** (`Parts/Cars/RunningGear`, `RunningGearFactory`). Every car also carries its wheels: on the car's own
-slots as the chassis script numbers them (rim 101+i, brake 111+i, shock 301+i, spring 311+i for corner i: 0-1 front,
+slots as the game numbers them (rim 101+i, brake 111+i, shock 301+i, spring 311+i for corner i: 0-1 front,
 2-3 rear, even numbers left), the tyre on the rim's slot 2. `Car.HasRunningGearAssigned` works like `HasPartsAssigned`:
 a car without it gets its factory set the first time it is looked at (`EnsureParts`), worn like its tyres. The factory
 set is matched to what the car's own Assetto Corsa data says (`AcCarSpecs`, read from the car's `tyres.ini`,
 `brakes.ini`, `suspensions.ini`, `car.ini`, folder or `data.acd`): the tyre nearest in width (one tyre for the car
 unless it is staggered by 3 cm or more, the plainest compound of that width), the plainest rim that takes it, and the
 brake, spring and shock nearest to the car's figures, which is the smallest the catalog has more often than not, since
-the source game's parts are all stiffer and stronger than a road car of 1970 (so what the shop sells is an upgrade).
+the stock parts are all stiffer and stronger than a road car of 1970 (so what the shop sells is an upgrade).
 The choice is deterministic: it is also the baseline the export measures against. A tyre only goes on a rim of the
-same diameter whose width it takes (`RunningGear.TyreFitsRim`, the tyre script's own rule); rims, brakes, springs and
-shocks go on any free corner (`Workbench.FindPlaces`). What each part does to the car is read off its script fields
+same diameter whose width it takes (`RunningGear.TyreFitsRim`); rims, brakes, springs and
+shocks go on any free corner (`Workbench.FindPlaces`). What each part does to the car is read off its specs
 with the framework's formulas: brake torque = clamp force × calipers × pad-on-disc friction × disc radius, less with
 wear; spring rate; bump damping and rebound (gas, oil, gas-oil); tyre width, radius, rim radius, grip (less as it
 wears), load capacity, rolling resistance, pressure; rim offset and mass. Sway bars and suspension arms are inert in
-the source game (their physics calls are commented out) and stay out of the shop. In the garage the running gear is
+the stock parts and stay out of the shop. In the garage the running gear is
 drawn at the hubs (`CarPartsLayout`, `CarViewport3D.Gear`) and picked, taken off and put back like engine parts.
 Check: `EngineBench <parts> gear <AC cars folder>`.
 
@@ -729,10 +424,10 @@ on the car's slot, whatever the track), and taking the axle off takes them with 
 `axles_gm`, `axles_ford`, `axles_mopar`, `axles_dana`, and the aftermarket's `axle_speed`) and mate by standard
 fittings, so a mod's axle meets the base game's carriers and the other way round: `axle:<family>` for the carrier,
 `gears:<family>` for the gears (the GM 10 and 12-bolts' two carrier series as `_low` and `_high`), `shaft:<family>`. What
-each does is in its `properties`: `strength` (Nm at the axle it holds new; a worn part a quarter less at the end of its
+each does is in its `specs`: `strength` (Nm at the axle it holds new; a worn part a quarter less at the end of its
 mileage, a damaged one down to 30%), `ratio`, `diff_power`/`diff_coast`/`diff_preload` (Assetto Corsa's lock), `drag`
 (the share of the engine's torque the housing's gears take: a 9-inch's 3.5%, the others 1 to 1.5%). The housing's
-`required_slots` (its carrier, both shafts) and the carrier's (its gears) are enforced: an axle short of one keeps the
+`needs` (its carrier, both shafts) and the carrier's (its gears) are held: an axle short of one keeps the
 car home in the pack's words. The garage draws the housing with its slot 1 between the rear hubs, facing the car's way.
 - **The factory axle** comes from cars.json's `running_gear` (`axle`, `diff`, `ratio`, `shafts`; the Car Catalog Editor's
   three pickers write them) and, for what they leave out, from the parts' `"came_in"` against the car: a part naming the
@@ -748,7 +443,7 @@ car home in the pack's words. The garage draws the housing with its slot 1 betwe
   with no axle (its gearbox has the differential).
 - **Assetto Corsa** (`AcAxleData`, after the engine, before the damage): the axle takes `[GEARS] FINAL` and `[DIFFERENTIAL]`
   over from the gearbox. On its factory gears and carrier the car keeps its own figures as written (put back over what
-  the engine's SLRR gearbox wrote, so a stock car's diff and final drive are its author's again); other gears write their
+  the engine's gearbox wrote, so a stock car's diff and final drive are its author's again); other gears write their
   ratio, another carrier its `POWER`, `COAST` and `PRELOAD` (a clutch posi's falling off to 55% as its clutches wear; a
   spool's and a Locker's never). The axle's weight against the factory one moves `TOTALMASS`, and on a live axle (`[REAR]
   TYPE=AXLE`, all of it unsprung) the rear `HUB_MASS`; the housing's drag against the factory one's scales the power
@@ -770,30 +465,30 @@ Check: `EngineBench <parts> axles <AC cars folder>`.
 ones are (phase 5): a **backing plate** (`BackingPlate`, the backing_plates shelf, one per drum size and axle, `fits_axle`)
 on the corner's brake slot (the car's, or the rear axle's housing slot 5/6) carries the shoes (slot 2), the wheel
 cylinder (slot 3) and the drum (slot 4, `takes` `drum:<size>`; the drum's own mount `fits` it, so a drum only goes on a
-plate of its size and never on the corner itself), all three enforced. A front drum or disc takes its **hub** (slot 5,
-`hub:front`, the hubs shelf: enforced on a drum, a hub-and-drum comes off as one). `RunningGear.Mounted` reads the drum
+plate of its size and never on the corner itself), all three its needs. A front drum or disc takes its **hub** (slot 5,
+`hub:front`, the hubs shelf: a drum's need, a hub-and-drum comes off as one). `RunningGear.Mounted` reads the drum
 off its plate (`CornerParts.BackingPlate`, `Brake`, `Shoes`, `WheelCylinder`, `Hub`; told by the part's group when a
 catalog is given, else by a drum on slot 4). The drum gives the size (`force`, `radius`,
-in the source game's units, every drum under its smallest disc so a disc is an upgrade) and how it heats and cools, the
+in the stock discs' units, every drum under the smallest disc so a disc is an upgrade) and how it heats and cools, the
 shoes their friction (organic 1.0, semi-metallic 0.95, sintered 0.9 cold) and their fade curve, the wheel cylinder its
 force (a big bore 1.1). `RunningGear.BrakeTorque(catalog, corner)` puts them together, the lining's wear the shoes'. The
 period discs (Kelsey-Hayes, Delco-Moraine and Budd 4-pistons, dealer's options: `"option": true`, only a car cars.json
 picks them for; a single-piston caliper standard on American cars from 1969) carry their pads' curve themselves. The
-source game's discs carry no fade of their own.
+stock discs carry no fade of their own.
 - **The factory's** (`RunningGearFactory.Choose` with the car's `CarFacts`): a part whose `came_in` fits the axle, the
-  car's country (the drums are American: a Jaguar keeps the source game's disc), its make, family or any car, and its
+  car's country (the drums are American: a Jaguar keeps the stock disc), its make, family or any car, and its
   years, a standard one before an option; then the car's weight (each drum size has its band: a 9-inch under 1250 kg,
   an 11 x 2.75 from 1600 kg) and the torque nearest the car's own. Front drums until 1972, rear drums always: every
   American car of the drum years is on drums (EngineBench `gear` shows each car's with its shoes and fade). No such part:
-  the source game's nearest, as before. cars.json's `brakes_front`/`brakes_rear` pick (the Car Catalog Editor's pickers).
+  the nearest stock part, as before. cars.json's `brakes_front`/`brakes_rear` pick (the Car Catalog Editor's pickers).
 - **Fade in Assetto Corsa** (`AcRunningGearData`): brakes.ini `[TEMPS_FRONT]`/`[TEMPS_REAR]` get `TORQUE_K`, `COOL_TRANSFER`,
   `COOL_SPEED_FACTOR` and `PERF_CURVE` from the brake (`torque_k`, `cool_transfer`, `cool_speed_factor`) and its shoes'
   `perf_curve`. On the factory brakes the car keeps its author's section when there is one; a car whose author wrote none
   gets its factory drums' (the one change a stock car gets: its drums fade, about 300 °C after one hard stop from 80 mph
   at 0.9 °C a kJ, the organic curve down to 55% by 380 °C; to calibrate against the Car Life tests in game). Other brakes
-  write theirs; a source game disc leaves the section as it was.
+  write theirs; a stock disc leaves the section as it was.
 - **Older saves** (`Car.GearVersion`, 0 before step 31): brought up once, the rear axle added and every brake or spring
-  that is what the factory gave the car then (the source game's nearest) swapped for what it gives now, in its wear and
+  that is what the factory gave the car then (the nearest stock part) swapped for what it gives now, in its wear and
   damage, a drum on its plate with its shoes and cylinder (`RunningGearFactory.BringUpToDate`). What the player put on
   stays. A drum of a save from before the backing plates (its shoes and cylinder on itself) goes onto the plate of its
   size with them as the save is read, on every car and every car for sale (`RunningGearFactory.PutDrumsOnPlates`, in
@@ -820,15 +515,15 @@ source game's discs carry no fade of their own.
 - **Torsion bars** (`["TorsionBar", "Spring"]`, the springs group takes the `TorsionBar` class): Chrysler's front springs,
   .85 to .92 inch by the car's weight (`came_in` family mopar, front, `DWB`), rate by the diameter's fourth power;
   heavy-duty 1.00 and Super Stock 1.03 aftermarket. `fits_axle` `"front"`, `fits_suspension` `"DWB"`: a Mopar whose data
-  is a strut front keeps the source game's coil.
+  is a strut front keeps the stock coil.
 - **Sway bars** (class `Swaybar`, the sway_bars shelf, now running gear): on the car's own slots 402 (front) and 403 (rear,
   `RunningGear.SwayBarSlot`), drawn across the axle a little ahead of it. `arb_rate` in N/m as `[ARB]` counts it, by the
   diameter's fourth power, front 11/16 to 1 inch stock, rear 9/16 to 7/8; bigger ones aftermarket. The factory's is the
   stock bar nearest to the car's own `[ARB]`, none on an axle whose data has none (`RunningGearFactory.Choose`, the axle's
-  `SwayBar`). The source game's 48 sway bars have no rate (they did nothing in it either): nobody sells them.
+  `SwayBar`). The 48 stock sway bars have no rate: nobody sells them.
 - **Period shocks** (`ShockAbsorber`, no `came_in`): Gabriel heavy-duty, Koni adjustable, a 90/10 front drag shock (stiff
   bump, a sixth of the rebound: the front comes up easily) and a 50/50 rear drag shock. The factory shock is still the
-  source game's nearest: aftermarket parts of data never count as the factory's (`SourceGame` takes parts of a script).
+  nearest plain part: `aftermarket` parts never count as the factory's (`Plain`).
 - **In Assetto Corsa** (`AcRunningGearData`): the spring rate by mounted over factory as before; the rear springs' wrap
   (each spring's `wrap` times its traction bar's `wrap_factor`, against the factory spring's) scales `[AXLE]
   TORQUE_REACTION`, its sign kept (a ladder bar on a stock leaf: a quarter of it); `[ARB] FRONT`/`REAR` by the mounted
@@ -874,15 +569,15 @@ tools, never by hand:
   The drums and period discs mount 0.08 m outboard of the brake slot (their own slot 1 at `[-0.08, 0, 0]`), their shoes
   and wheel cylinder with them. The middle of an axle (the housing's centre section, cover and nose, the ring and pinion,
   the carrier's case) is drawn 1.1 times its ring gear's size (`Parts.CentreScale`; the truck housing's 1.05).
-- **The source game's coil springs** are drawn with a CC BY coil (`running_gear/coil_springs`, "COIL SPRING" by VR DESIGNER,
-  credited beside it) through the base game's own `parts/models.json` (`suspension/stock/spring*`), so the converter's
-  pack is left as it is. The source game's was 96 mm across and 277 mm tall, small for the cars of the day; this one is
+- **The stock coil springs** are drawn with a CC BY coil (`running_gear/coil_springs`, "COIL SPRING" by VR DESIGNER,
+  credited beside it) through the base game's own `parts/models.json` (every stock coil spring by its id), so the
+  pack is left as it is. The stock model was 96 mm across and 277 mm tall, small for the cars of the day; this one is
   135 mm across and 320 mm tall, standing up from the hub's height (its model's space is theirs: their mount slot 0.4 m
   under the origin).
 - Phase 5's parts (`RunningGearParts build`): a backing plate per drum size (`plate_<size>`, a pressed dish just inboard of
   the drum's open side, its size and place from the stand-in drum's model), the front hub (boss, studs, dust cap, in the
   drum's space).
-- Not modelled: the source game's other parts keep their own; a mod's running gear part without a model is drawn as a small box.
+- Not modelled: the other stock parts keep their own; a mod's running gear part without a model is drawn as a small box.
 - **A private truck mod** (`Content\truckparts`, git-ignored): `tools/RunningGearParts/prepare_truck_parts.py` cuts the
   leaf spring (with its hangers, shackle and clip), the drum (four sizes), the axle housing (for the Dana 44 and 60) and
   a shock (for the Gabriel) out of "Pickup truck chassis" (Sketchfab, CC BY-NC 4.0) and gives them to the base game's
@@ -891,7 +586,7 @@ tools, never by hand:
 
 **The wheels and the lift** (step 31 phase 6). The parts view draws the rims and tyres as parts: a rim with the middle of
 its tyre (its slot 2, the tyre's seat) on the hub, the AC model's WHEEL_xx dummy, turned the other way from the drums: the
-SLRR rims' face is -X (the owner's look in game; a render had seemed to say +X), the tyre on the rim's slot 2. The car's own wheels (its WHEEL_xx nodes,
+The stock rims' face is -X (the owner's look in game; a render had seemed to say +X), the tyre on the rim's slot 2. The car's own wheels (its WHEEL_xx nodes,
 with the part wheels the scenes put on them) are left out of the ghost while the parts are on show
 (`GarageRenderer.DrawCarWithoutWheels`), so the two never double; out of the parts view the car is solid with its own. The
 `wheels` show (`part_groups.json`, icon `icons/wheel`) hides them to see the drums.
@@ -937,7 +632,7 @@ game does it, checked against every packed car of both installs on this machine)
 |---|---|
 | `power.lut` | Flywheel torque, exactly (no drivetrain loss taken off: `DrivetrainEfficiency` = 1) |
 | `engine.ini` | `INERTIA`, `LIMITER`, `MINIMUM`; `COAST_REF` = 12 Nm per litre at the limiter × the build's friction over a stock oil pan's (`engine_friction_fwd`, 0.0002 is the median of the builds, clamped ½..2: a racing pan lets the engine spin freer); `DAMAGE/RPM_THRESHOLD` = what the weakest rotating part survives; the car's own `TURBO_n` removed |
-| `engine.ini [TURBO_n]` | One per turbo, the scripts' first, each with its lag (0.992 up, 0.985 down unless its figures say); with several, the gain at each speed is shared by the boost each makes there. Only with a turbocharger part: the game's own turbo (lag, gauge, boost damage) fitted to how much more the boosted curve makes than the same engine without its charger: `MAX_BOOST` = `WASTEGATE` = the peak gain, `REFERENCE_RPM` where 95% of it is reached, `GAMMA` by least squares on the way up. The lut is divided by the boost the game adds back, so the torque with the throttle open stays the dyno's. A supercharger is crank-driven and has no lag: it stays baked into the curve |
+| `engine.ini [TURBO_n]` | One per turbo, the specs' first, each with its lag (0.992 up, 0.985 down unless its figures say); with several, the gain at each speed is shared by the boost each makes there. Only with a turbocharger part: the game's own turbo (lag, gauge, boost damage) fitted to how much more the boosted curve makes than the same engine without its charger: `MAX_BOOST` = `WASTEGATE` = the peak gain, `REFERENCE_RPM` where 95% of it is reached, `GAMMA` by least squares on the way up. The lut is divided by the boost the game adds back, so the torque with the throttle open stays the dyno's. A supercharger is crank-driven and has no lag: it stays baked into the curve |
 | `drivetrain.ini` | `GEARS` count/ratios/reverse/final, `DIFFERENTIAL` lock; `CLUTCH/MAX_TORQUE` = the clutch part's clamp figure (`maxF`) × 2.6 Nm, set so every factory engine's clutch holds it (the big-block packs put a 300 behind 770 Nm): a built engine outgrows a stock clutch and it slips; `AUTO_SHIFTER` `UP`/`DOWN` when the car has them. `TRACTION` is left alone: the body decides |
 | `ai.ini` | Shift points: `UP` near peak power below the limiter; `DOWN` at most 90% of where the widest gear step lands after an upshift, so wide-ratio boxes do not hunt |
 | `setup.ini` | Gear ratio selectors removed; they would override the transmission |
@@ -946,7 +641,7 @@ game does it, checked against every packed car of both installs on this machine)
 A car without `engine.ini` or `drivetrain.ini` throws (`FileNotFoundException`) instead of producing skeleton files; a
 build without a limiter (`RPM_limit` 0) is limited at the end of its curve.
 
-Blowers: the dyno's boost peaks where the charger script says it works best. The script hands over its working band
+Blowers: the dyno's boost peaks where the blower's specs say it works best. They give its working band
 in engine speeds multiplied by the square of the drive ratio, so `EngineDyno.Boost` compares it with the engine speed
 times that square (it compared it with the speed times the ratio before, which put a 4:1 roots blower's peak at
 10,600 rpm and made it behave like a big turbo: 55% boost at 3,000 rpm and rising). No build of `engine_builds.json`
@@ -966,8 +661,8 @@ weaker (brake torque `0.2 + 0.8 √wear`, grip `0.85 + 0.15 wear`).
 | `car.ini` | `TOTALMASS` by the running gear's mass difference |
 
 What has no lever on either side stays a gate: batteries, alternators, water pumps, radiators, distributors and the
-like are plain `Part`s in the source game (no physics fields) and Assetto Corsa has no battery or cooling model (CSP
-only synthesises gauge channels). They matter through `required_slots`: without them the engine does not run, and a car
+like are plain parts (no figures) and Assetto Corsa has no battery or cooling model (CSP
+only synthesises gauge channels). They matter through the block's `needs`: without them the engine does not run, and a car
 whose engine does not run does not race.
 
 ## Apply and restore (`Services/CarDataOverlay`, `Services/Race/RaceCarDataService`)
@@ -1111,7 +806,7 @@ What the race mode's heat and oil work from (race.ini `CAR_n_COOLING`, see `docs
 mod says so: a work order kind's `"cooling"` (`"radiator"`, `"water_pump"`, `"fan"` or `"none"`, `WorkKind.Cooling`,
 stamped on the parts as `PartDefinition.CoolingRole` when the catalog loads; a radiator kind that `serves` a fan kind has
 its own fan), and a part's `"performance": true|false` in its pack.json (`PartDefinition.Performance`: a performance
-radiator, water pump or fan, a deep race oil pan). Parts that say nothing, the source game's among them, are known by
+radiator, water pump or fan, a deep race oil pan). Parts that say nothing, the stock ones among them, are known by
 the words of their name (`KindOf`), whole words only ("race" is not in "brace"). A car's
 cooling was sized for its engine as it left the factory (`FactoryCooling`, read once per stock build): the car's
 factory power with its own block, or a swapped-in block's least powerful factory build, since the radiator goes with the
@@ -1129,11 +824,12 @@ game does: `EngineBench "Street Corsa/Content" bench mercury-255-race` benches a
 
 ```
 EngineBench <parts folder> list | rated | all | inputs | show <build id>
+EngineBench <parts folder> snapshot <file>             every build's whole report, one JSON line each, to diff two versions by
 EngineBench <parts folder> export <build id> <car data folder> <output folder>
 EngineBench <parts folder> cars <AC cars folder>       factory engine suggested for every car, with the runners-up
 EngineBench <parts folder> tune <build id> [count]     engines a used car of that build may turn up with
 EngineBench <parts folder> bench <build id>            every part comes off and has to find its way back
-EngineBench <parts folder> renew <older parts folder>  engines as a save made with an older conversion holds them, brought up to date
+EngineBench <parts folder> renew <older parts folder>  engines as a save made with older parts holds them, brought up to date
 EngineBench <parts folder> gear <AC cars folder>       factory running gear chosen for every car, against its own data
 EngineBench <parts folder> layout <AC cars folder>     where every car carries its engine, guessed from its weight and driven wheels
 EngineBench <parts folder> car <AC car folder> <build id> [output folder]   every data file the car's parts change
@@ -1160,41 +856,9 @@ manifest was lost, a donor bank that is gone, read-only donors, and the library'
   Mufflers and headers do not change the sound yet; a garage preview through fmodstudio64.dll is not started.
 - Working on an engine outside a car (an engine stand): on the shelf an assembly can be taken apart, but parts only
   go together on a car.
-- Tuning UI (the scripts' `buildTuningMenu` is not used, fields are set directly). Wear from mileage is only the
+- Tuning UI (tuning is kept by spec name and set directly). Wear from mileage is only the
   engine's small per-km share: brakes, clutch and the rest of the running gear do not wear by the km yet.
 - Nitrous: the parts exist and gate on their slots, but neither the dyno nor Assetto Corsa has a model for it.
 - The running gear's placement in the garage is an estimate from the hubs (springs and shocks 24 cm inboard); a
   car-level part cannot be nudged with F5, only parts on a parent.
-- Camber and toe: the suspension arm parts carry them but the source game never applies them, so neither does the export.
-
-## Bytecode reference
-
-Worked out from the install's 7,589 class files (all parse to the last byte) and checked against the 1,402 classes
-that have Java sources: 5,775 constructor values of 886 parts match.
-
-File: `TUFA`, 12 byte header, then sections `tag(4) size(4) payload`: `CONS`, `FILD` (optional), `MTHD`, `CLSS`, `TREE`.
-
-- `CONS`: count, then entries `kind(4)`: 0 string (length, bytes, NUL) · 3 resource (rpk path string, type id) ·
-  4 class (name string) · 5 member (class, name-and-type) · 7 name-and-type (name string, signature string).
-  Entry 0 = class name, entry 2 = base class name. Numbers are inline in the code, not in the pool.
-- `FILD`, `MTHD`: two groups each (static, then instance): count + entries. Field = flags, name, signature,
-  initializer tree (−1 = none). Method = flags, name, signature, tree, locals. Flags: 8 static, 0x40 native.
-- `TREE`: count, then per tree an instruction count and instructions `op(1) line(2) [operand(4)]`.
-  Operand present for: 01 02 03 06 07 08 09 0A 0B 0D 0E 11 12 14 15 16 17 19 1A 1B 1C 25 26 27.
-
-| Op | Meaning |
-|---|---|
-| 01 n | local n (value or assignment target) |
-| 02 n, 06 t, 2C … 2D | declare local n of type t, with initializer between 2C and 2D |
-| 09 / 0A / 0B / 0C / 0E | string / float / int / null / resource constant (each literal is preceded by `07 28`) |
-| 1B m | field (member constant); 19 c = class as a value; 1C s = field named s of the object on the stack |
-| 20 | array element: `[index] [array] 20`; as a target: `[value] [index] [array] 20 [08 35]` |
-| 11 k | an object path of k−1 elements follows, then the member (`11 1` = implicit this) |
-| 27 n, 24, then 1A m / 12 s | call with n arguments: member constant / by name. 25 s = call on the previous result. 26 s = `super.s(...)`. 21 = `new`, 23 = `super(...)`, 22 = `this(...)` |
-| 15 n | if false, jump to index+n. 14 n = jump (negative = loop; the else-jump sits right before an if's target) |
-| 04 / 05 | `&&` / `||` short-circuit guard, followed by the 14 that skips the right operand |
-| 28 / 29 | return value / return. 10 = end of a field initializer. 2A = end of method |
-| 07 k | operator: 1 `\|\|` 2 `&&` 3 `\|` 5 `&` 6 `!=` 7 `==` 8 `>=` 9 `<=` 10 `>` 11 `<` 13 `>>` 14 `<<` 15 `-` 16 `+` 17 `%` 18 `/` 19 `*` 20 `~` 21 `!` 22 negate 23/24 `x++`/`x--` 25/26 `++x`/`--x` 27 call result 28 literal 30 new 31 new array 32 instanceof 33 cast 35 assignment as a value. 30/32/33 are followed by their type (`06` or `19`) |
-| 08 k | statement: 35 `=` 36 `*=` 37 `/=` 39 `+=` 40 `-=` 46 `\|=` 23 `x++` 24 `x--` 27 expression 34 constructor call |
-
-Parameters are numbered from the last one back: last parameter = local 1, local 0 = `this` (static: last = local 0).
+- Camber and toe: the stock suspension arm parts carried them but nothing applies them, so neither does the export.

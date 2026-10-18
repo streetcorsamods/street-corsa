@@ -300,7 +300,7 @@
                                TextWrapping="Wrap"
                                Visibility="{Binding SelectedAttachedDisplay, Converter={StaticResource StringToVisibilityConverter}}"/>
 
-                    <!-- Placement mode (F5): a tool for fitting the converted parts -->
+                    <!-- Placement mode (F5): a tool for fitting parts -->
                     <Border Background="{StaticResource Gold33Brush}" BorderBrush="{StaticResource GoldBrush}" BorderThickness="1" Padding="6" Margin="0,6,0,0"
                             Visibility="{Binding PlacementDisplay, Converter={StaticResource StringToVisibilityConverter}}">
                         <TextBlock Text="{Binding PlacementDisplay}" FontSize="{StaticResource FontSizeCaption}" FontFamily="{StaticResource NumbersFont}" Foreground="{StaticResource PaleYellowBrush}" TextWrapping="Wrap"/>

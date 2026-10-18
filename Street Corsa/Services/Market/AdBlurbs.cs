@@ -169,14 +169,14 @@ namespace StreetCorsa.Services.Market
 
         /// <summary>The sort of standout a part is, by its script's classes; null for one not worth a word</summary>
         private static string? KindOf(PartDefinition part) =>
-            PartKinds.Is(part, "SuperCharger") ? "blower"
-            : PartKinds.Is(part, "TurboCharger") ? "turbo"
-            : PartKinds.Is(part, "NOSInjectorSystem") ? "nitrous"
-            : PartKinds.Is(part, "FuelInjectorSystem") ? "carbs"
-            : PartKinds.Is(part, "CylinderHead") ? "heads"
-            : PartKinds.Is(part, "Camshaft") ? "cam"
-            : PartKinds.Is(part, "IntakeManifold") ? "intake"
-            : PartKinds.Is(part, "ExhaustHeader") ? "headers"
+            PartKinds.Is(part, PartClasses.Supercharger) ? "blower"
+            : PartKinds.Is(part, PartClasses.Turbocharger) ? "turbo"
+            : PartKinds.Is(part, PartClasses.Nitrous) ? "nitrous"
+            : PartKinds.Is(part, PartClasses.FuelSystem) ? "carbs"
+            : PartKinds.Is(part, PartClasses.CylinderHead) ? "heads"
+            : PartKinds.Is(part, PartClasses.Camshaft) ? "cam"
+            : PartKinds.Is(part, PartClasses.IntakeManifold) ? "intake"
+            : PartKinds.Is(part, PartClasses.ExhaustHeader) ? "headers"
             : null;
 
         // ----- the words -----

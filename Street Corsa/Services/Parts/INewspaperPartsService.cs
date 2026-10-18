@@ -10,7 +10,7 @@ namespace StreetCorsa.Services.Parts
     /// </summary>
     public interface INewspaperPartsService
     {
-        /// <summary>False when there are no converted parts: nothing to sell</summary>
+        /// <summary>False when there are no parts: nothing to sell</summary>
         bool IsAvailable { get; }
 
         /// <summary>Every part that can be ordered new, by name</summary>

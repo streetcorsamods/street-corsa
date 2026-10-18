@@ -11,15 +11,15 @@ using StreetCorsa.Parts.Sounds;
 namespace StreetCorsa;
 
 /// <summary>
-/// Puts engine builds of the converted parts on the dyno from the command line:
+/// Puts engine builds on the dyno from the command line:
 /// lists them, shows one in detail, or checks all builds with a known power against the engine model.
 /// </summary>
 public static class Program
 {
     /// <summary>
     /// How far a rated build's modelled power may be off its rated figure before <c>rated</c>/<c>all</c> fail. The model
-    /// is fitted to about 15% mean absolute error (the ratings mix SLRR dyno readings and factory figures); a build
-    /// several times further off has lost a part in a conversion or the model broke
+    /// is fitted to about 15% mean absolute error (the ratings mix old dyno readings and factory figures); a build
+    /// several times further off has lost a part or the model broke
     /// </summary>
     private const double MaxRatedError = 0.5;
 
@@ -38,7 +38,7 @@ public static class Program
             Console.WriteLine("       EngineBench <parts folder> cars <AC cars folder>       factory engine suggested for every car");
             Console.WriteLine("       EngineBench <parts folder> tune <build id> [count]     engines a used car of that build may turn up with");
             Console.WriteLine("       EngineBench <parts folder> bench <build id>            take every part off and find where it goes back");
-            Console.WriteLine("       EngineBench <parts folder> renew <older parts folder>  engines saved with an older conversion, brought up to date");
+            Console.WriteLine("       EngineBench <parts folder> renew <older parts folder>  engines saved with older parts, brought up to date");
             Console.WriteLine("       EngineBench <parts folder> gear <AC cars folder>       factory running gear chosen for every car");
             Console.WriteLine("       EngineBench <parts folder> axles <AC cars folder>      factory rear axle chosen for every car, against its own data");
             Console.WriteLine("       EngineBench <parts folder> prices [AC cars folder]     what the parts cost new by kind, and every car new");
@@ -55,7 +55,6 @@ public static class Program
         if (args[1] == "layout" && args.Length > 2) return Layout(args[2]);
 
         var catalog = LoadCatalog(args[0]);
-        TemporaryModConstants(catalog);
         Console.WriteLine($"{catalog.Parts.Count} parts, {catalog.EngineBuilds.Count} engine builds");
 
         switch (args[1])
@@ -166,21 +165,6 @@ public static class Program
         Console.WriteLine($"\n{failures.Count} rated build(s) do not run or are more than {MaxRatedError:0%} off:");
         foreach (var failure in failures) Console.WriteLine("  " + failure);
         return 1;
-    }
-
-    // TEMPORARY while porting: SC_MOD_CONSTANTS=<json> of script path -> what the mod classes set at run time
-    private static void TemporaryModConstants(PartsCatalog catalog)
-    {
-        var file = Environment.GetEnvironmentVariable("SC_MOD_CONSTANTS");
-        if (string.IsNullOrEmpty(file)) return;
-        var constants = Newtonsoft.Json.Linq.JObject.Parse(File.ReadAllText(file));
-        foreach (var part in catalog.Parts.Values)
-        {
-            if (part.SourceScript == null) continue;
-            if (constants[part.SourceScript.Replace('\\', '/').Replace(".class", "")] is not Newtonsoft.Json.Linq.JObject c) continue;
-            if (c["open_air_flow"] is { } air) part.Properties["open_air_flow"] = (double)air;
-            if (c["drive_at_default"] != null && part.Properties.ContainsKey("default_rpm_turbo_mul")) part.Properties["rpm_turbo_mul"] = part.Number("default_rpm_turbo_mul");
-        }
     }
 
     /// <summary>
@@ -481,7 +465,9 @@ public static class Program
         var folders = mods?.Folders(Mods.ContentTypes.Parts).Select(f => f.Dir).ToList() ?? new List<string>();
         if (partsFolder != null) folders.Add(partsFolder);
         PartGroups.Current = PartGroups.Load(folders);
-        foreach (var problem in CarBook.Current.Problems.Concat(PartGroups.Current.Problems)) Console.WriteLine($"content: {problem}");
+        PartClasses.Current = PartClasses.Load(folders);
+        Fuels.Current = Fuels.Load(folders);
+        foreach (var problem in CarBook.Current.Problems.Concat(PartGroups.Current.Problems).Concat(PartClasses.Current.Problems).Concat(Fuels.Current.Problems)) Console.WriteLine($"content: {problem}");
     }
 
     private static int Tune(PartsCatalog catalog, string id, int count)
@@ -550,7 +536,7 @@ public static class Program
     }
 
     /// <summary>
-    /// What a save made with an older conversion goes through: every engine of the old catalog that holds parts
+    /// What a save made with older parts goes through: every engine of the old catalog that holds parts
     /// the current one knows by another id is brought up to date and has to run again with all its parts on.
     /// </summary>
     private static int Renew(PartsCatalog catalog, string oldPartsFolder)

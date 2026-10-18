@@ -32,38 +32,38 @@ public sealed class EngineStandTests : IDisposable
     public void Every_part_of_a_small_block_has_its_kind()
     {
         var catalog = Catalog.Value;
-        var engine = Engine("camaro_mk2/0006/stock");
+        var engine = Engine("factory/chevrolet-camaro-rs-350-71");
         var parts = engine.SelfAndDescendants().Select(p => catalog.Get(p.DefinitionId)!).DistinctBy(d => d.Id).ToList();
 
         // The part on this engine whose id ends so, in whichever pack it is
         string? Kind(string localId) =>
             catalog.WorkOrder.KindOf(Assert.Single(parts, d => d.Id.EndsWith("/" + localId, StringComparison.Ordinal)));
 
-        Assert.Equal("block", Kind("GM_327_block"));
-        Assert.Equal("crankshaft", Kind("GM_350_crank"));
-        Assert.Equal("connecting_rods", Kind("GM_350_rods"));
-        Assert.Equal("pistons", Kind("GM_327_pistons"));
-        Assert.Equal("damper", Kind("Vette_63_dumper"));
-        Assert.Equal("timing_gear", Kind("GM_small_block_crank_gear"));
-        Assert.Equal("timing_chain", Kind("GM_small_block_chain"));
-        Assert.Equal("timing_cover", Kind("GM_small_block_timing_cover"));
-        Assert.Equal("water_pump", Kind("GM_small_block_pump"));
-        Assert.Equal("fan", Kind("GM_small_block_fan"));
-        Assert.Equal("belt", Kind("GM_small_block_alternator_belt"));
-        Assert.Equal("alternator", Kind("GM_small_block_alternator"));
-        Assert.Equal("distributor", Kind("Stock_ignition_distributor"));
-        Assert.Equal("valve_cover", Kind("MOROSO_L_cover"));
-        Assert.Equal("cylinder_head", Kind("GM_small_block_L_head_2"));
-        Assert.Equal("radiator", Kind("GM_427_radiator"));
-        Assert.Equal("oil_pan", Kind("GM_small_block_oil_pan"));
-        Assert.Equal("transmission", Kind("RG_4spd_plus_tranny"));
+        Assert.Equal("block", Kind("chevy_327_396_v8_block"));
+        Assert.Equal("crankshaft", Kind("chevy_350_stock_crankshaft"));
+        Assert.Equal("connecting_rods", Kind("chevy_350_stock_connecting_rods"));
+        Assert.Equal("pistons", Kind("chevy_327_396_stock_pistons"));
+        Assert.Equal("damper", Kind("corvette_327_stock_harmonic_damper"));
+        Assert.Equal("timing_gear", Kind("chevy_327_396_stock_crankshaft_timing_gear"));
+        Assert.Equal("timing_chain", Kind("chevy_327_396_stock_timing_chain"));
+        Assert.Equal("timing_cover", Kind("chevy_327_396_stock_timing_chain_cover"));
+        Assert.Equal("water_pump", Kind("chevy_327_396_stock_water_pump"));
+        Assert.Equal("fan", Kind("chevy_327_396_stock_fan"));
+        Assert.Equal("belt", Kind("chevy_327_396_stock_alternator_drive_belt"));
+        Assert.Equal("alternator", Kind("chevy_327_396_stock_alternator"));
+        Assert.Equal("distributor", Kind("chevy_283_396_stock_ignition_distributor"));
+        Assert.Equal("valve_cover", Kind("moroso_aluminum_left_valve_cover_chevy_327_396"));
+        Assert.Equal("cylinder_head", Kind("chevy_350_396_stock_left_cylinder_head"));
+        Assert.Equal("radiator", Kind("gm_stock_radiator_late_type"));
+        Assert.Equal("oil_pan", Kind("chevy_327_396_stock_oil_pan"));
+        Assert.Equal("transmission", Kind("richmond_gear_super_t_10_plus_4_speed_chevy_283_396"));
     }
 
     [Fact]
     public void The_internals_stay_in_while_the_engine_is_in_the_car()
     {
         var catalog = Catalog.Value;
-        var engine = Engine("camaro_mk2/0006/stock");
+        var engine = Engine("factory/chevrolet-camaro-rs-350-71");
 
         var crank = Find(engine, "crankshaft");
         Assert.Equal("The crankshaft only comes out on the engine stand: pull the engine first.", EngineWork.WhyNotOff(catalog, engine, crank, onStand: false));
@@ -83,7 +83,7 @@ public sealed class EngineStandTests : IDisposable
     public void On_the_stand_the_crankshaft_waits_for_everything_on_it_and_around_it()
     {
         var catalog = Catalog.Value;
-        var engine = Engine("camaro_mk2/0006/stock");
+        var engine = Engine("factory/chevrolet-camaro-rs-350-71");
         EngineWork.StripForStand(catalog, engine);
 
         var why = EngineWork.WhyNotOff(catalog, engine, Find(engine, "crankshaft"), onStand: true)!;
@@ -98,7 +98,7 @@ public sealed class EngineStandTests : IDisposable
     public void Bolting_an_engine_to_the_stand_takes_the_gearbox_clutch_flywheel_and_radiator_off()
     {
         var catalog = Catalog.Value;
-        var engine = Engine("camaro_mk2/0006/stock");
+        var engine = Engine("factory/chevrolet-camaro-rs-350-71");
 
         var taken = EngineWork.StripForStand(catalog, engine);
 
@@ -117,9 +117,9 @@ public sealed class EngineStandTests : IDisposable
     public void The_ford_six_comes_apart_in_its_own_order()
     {
         var catalog = Catalog.Value;
-        var engine = Engine("script-ford-l6/ford-221-132-hp");
+        var engine = Engine("rated/ford-221-132-hp");
 
-        Assert.Equal("side_distributor", catalog.WorkOrder.KindOf(catalog.Get("engines/ford_six/ford_stock_distributor")!));
+        Assert.Equal("side_distributor", catalog.WorkOrder.KindOf(catalog.Get("engines/ford_six/ford_falcon_six_stock_distributor")!));
         // The intake and the alternator stay of their kinds, rules and all; only the way they come off is their own
         Assert.Null(EngineWork.WhyNotOff(catalog, engine, Find(engine, "intake_manifold"), onStand: false));
         Assert.Equal(new[] { PartWay.Out }, catalog.WorkOrder.WayOf(catalog.Get(Find(engine, "intake_manifold").DefinitionId)!));
@@ -158,7 +158,7 @@ public sealed class EngineStandTests : IDisposable
     public void A_cylinder_head_waits_only_for_its_own_valve_cover_and_header()
     {
         var catalog = Catalog.Value;
-        var engine = Engine("camaro_mk2/0006/stock");
+        var engine = Engine("factory/chevrolet-camaro-rs-350-71");
         string? KindOf(PartInstance p) => catalog.WorkOrder.KindOf(catalog.Get(p.DefinitionId)!);
         void Remove(PartInstance p) => PartTrees.FindParent(engine, p)!.Children.Remove(p);
 
@@ -182,7 +182,7 @@ public sealed class EngineStandTests : IDisposable
     public void The_drive_belt_needs_the_water_pump_and_the_fan()
     {
         var catalog = Catalog.Value;
-        var engine = Engine("script-ford-l6/ford-221-132-hp");
+        var engine = Engine("rated/ford-221-132-hp");
 
         var belt = Find(engine, "belt");
         PartTrees.FindParent(engine, belt)!.Children.Remove(belt);
@@ -210,7 +210,7 @@ public sealed class EngineStandTests : IDisposable
         var catalog = Catalog.Value;
 
         // The build is short of its water pump and fan (on the to-mod list): the belt is left off
-        var engine = Engine("cars/Amazon/0006/stock");
+        var engine = Engine("factory/volvo-amazon-68");
         Assert.Contains(engine.SelfAndDescendants(), p => catalog.WorkOrder.KindOf(catalog.Get(p.DefinitionId)!) == "belt");
         var taken = EngineWork.TakeOffWhatLacksItsNeeds(catalog, engine);
         Assert.Equal("belt", catalog.WorkOrder.KindOf(catalog.Get(Assert.Single(taken).DefinitionId)!));
@@ -218,7 +218,7 @@ public sealed class EngineStandTests : IDisposable
         Assert.Empty(EngineWork.TakeOffWhatLacksItsNeeds(catalog, engine));
 
         // A Charger 383 saved when its build's fan did not fit the pump: the belt goes on the shelf
-        var saved = Engine("charge/0006/stock");
+        var saved = Engine("factory/dodge-charger-383-69");
         var fan = Find(saved, "fan");
         PartTrees.FindParent(saved, fan)!.Children.Remove(fan);
         var loose = new List<PartInstance>();
@@ -248,23 +248,23 @@ public sealed class EngineStandTests : IDisposable
     {
         var catalog = Catalog.Value;
         var order = catalog.WorkOrder;
-        Assert.Equal("steering_belt", order.KindOf(catalog.Get("engines/ford/Ford_stock_steering_pump_belt")!));
-        Assert.Equal("steering_belt", order.KindOf(catalog.Get("engines/chrysler/Belt_Steering_pump")!));
-        Assert.Equal("steering_pump", order.KindOf(catalog.Get("engines/chrysler/Power_Steering_pump")!));
-        Assert.Equal("radiator_fan", order.KindOf(catalog.Get("engines/chrysler/Radiator_big_Paxton_Kit")!));
+        Assert.Equal("steering_belt", order.KindOf(catalog.Get("engines/ford/ford_v8_stock_steering_pump_belt")!));
+        Assert.Equal("steering_belt", order.KindOf(catalog.Get("engines/chrysler/chrysler_power_steering_pump_belt")!));
+        Assert.Equal("steering_pump", order.KindOf(catalog.Get("engines/chrysler/chrysler_power_steering_pump")!));
+        Assert.Equal("radiator_fan", order.KindOf(catalog.Get("engines/chrysler/paxton_kit_radiator_and_electric_fan_mopar_big_block")!));
         Assert.True(order.DoesJobOf("radiator_fan", "fan"));
         Assert.False(order.DoesJobOf("fan", "radiator_fan"));
         Assert.Equal("the radiator, the starter, the transmission, the clutch and the flywheel", EngineWork.StandStripsDisplay(catalog));
 
         // The Charger's 383 with the electric-fan radiator in place of its own: the belt goes on without a fan
-        var engine = Engine("charge/0006/stock");
+        var engine = Engine("factory/dodge-charger-383-69");
         var belt = Find(engine, "belt");
         var fan = Find(engine, "fan");
         var radiator = Find(engine, "radiator");
         foreach (var part in new[] { belt, fan, radiator }) PartTrees.FindParent(engine, part)!.Children.Remove(part);
         Assert.Equal("Put on the fan first.", EngineWork.WhyNotOn(catalog, engine, belt, onStand: false));
 
-        var electric = new PartInstance { DefinitionId = "engines/chrysler/Radiator_big_Paxton_Kit" };
+        var electric = new PartInstance { DefinitionId = "engines/chrysler/paxton_kit_radiator_and_electric_fan_mopar_big_block" };
         Workbench.Mount(new List<PartInstance> { engine }, Workbench.FindPlacesOnStand(catalog, engine, electric).First(), electric);
         Assert.Null(EngineWork.WhyNotOn(catalog, engine, belt, onStand: false));
 
@@ -288,7 +288,7 @@ public sealed class EngineStandTests : IDisposable
         var catalog = PartsCatalog.Load(RepoPaths.PartsFolder);
         catalog.WorkOrder = WorkOrder.Load(new[] { ("streetcorsa", true, Path.Combine(_temp.Path, "base")) }, new List<string>());
 
-        var engine = Engine("charge/0006/stock");
+        var engine = Engine("factory/dodge-charger-383-69");
         var fan = Find(engine, "fan");
         Assert.Equal("Take off the drive belt first.", EngineWork.WhyNotOff(catalog, engine, fan, onStand: false));
         var pump = PartTrees.FindParent(engine, fan)!;
@@ -351,7 +351,7 @@ public sealed class EngineStandTests : IDisposable
     public void A_loose_part_goes_on_only_with_its_way_clear()
     {
         var catalog = Catalog.Value;
-        var engine = Engine("camaro_mk2/0006/stock");
+        var engine = Engine("factory/chevrolet-camaro-rs-350-71");
         EngineWork.StripForStand(catalog, engine);
 
         // Pistons go in on their own, not on their rods, and only with the heads off
@@ -459,7 +459,7 @@ public sealed class EngineStandTests : IDisposable
     {
         var catalog = Catalog.Value;
         var state = new GameState();
-        var engine = Engine("camaro_mk2/0006/stock");
+        var engine = Engine("factory/chevrolet-camaro-rs-350-71");
         var car = new Car { DefinitionId = "camaro", Parts = [engine], HasPartsAssigned = true };
         state.Player.Cars.Add(car);
 
@@ -526,7 +526,7 @@ public sealed class EngineStandTests : IDisposable
     {
         var catalog = Catalog.Value;
         var state = new GameState();
-        var engine = Engine("camaro_mk2/0006/stock");
+        var engine = Engine("factory/chevrolet-camaro-rs-350-71");
         var car = new Car { DefinitionId = "camaro", Parts = [engine], HasPartsAssigned = true };
         state.Player.Cars.Add(car);
 
@@ -562,7 +562,7 @@ public sealed class EngineStandTests : IDisposable
     public void The_stand_turns_the_engine_about_its_crankshaft()
     {
         var catalog = Catalog.Value;
-        var block = catalog.Get(Engine("camaro_mk2/0006/stock").DefinitionId)!;
+        var block = catalog.Get(Engine("factory/chevrolet-camaro-rs-350-71").DefinitionId)!;
         var crank = block.Slots.First(s => s.Name.Contains("crank", StringComparison.OrdinalIgnoreCase));
 
         // The crankshaft's slot lands on the spindle
@@ -576,7 +576,7 @@ public sealed class EngineStandTests : IDisposable
     public void The_engine_turns_over_for_the_parts_worked_on_from_below()
     {
         var order = Catalog.Value.WorkOrder;
-        var engine = Engine("camaro_mk2/0006/stock");
+        var engine = Engine("factory/chevrolet-camaro-rs-350-71");
         EngineSide? SideOf(string kind) => order.SideOf(Catalog.Value.Get(Find(engine, kind).DefinitionId)!);
 
         Assert.Equal(EngineSide.Below, SideOf("crankshaft"));
@@ -639,7 +639,7 @@ public sealed class EngineStandTests : IDisposable
     public void Every_kind_says_which_way_it_comes_off()
     {
         var order = Catalog.Value.WorkOrder;
-        var engine = Engine("camaro_mk2/0006/stock");
+        var engine = Engine("factory/chevrolet-camaro-rs-350-71");
 
         foreach (var part in engine.SelfAndDescendants().Select(p => Catalog.Value.Get(p.DefinitionId)!).Where(d => order.KindOf(d) != null))
             Assert.NotEmpty(order.WayOf(part));

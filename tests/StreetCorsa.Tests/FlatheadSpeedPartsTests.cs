@@ -27,8 +27,8 @@ public class FlatheadSpeedPartsTests
     }
 
     [Theory]
-    [InlineData("mercury-255-race-3spd", "FH_intake_4x97", 4)]
-    [InlineData("mercury-255-edelbrock-3spd", "FH_intake_2x97", 2)]
+    [InlineData("mercury-255-race-3spd", "polished_4x2_bbl_racing_intake_manifold_flathead_no_fuel_pump_stand", 4)]
+    [InlineData("mercury-255-edelbrock-3spd", "edelbrock_2x2_bbl_intake_manifold_linkage_and_fuel_pump_flathead", 2)]
     public void A_row_intake_runs_only_with_a_carburettor_on_every_pad(string build, string intake, int pads)
     {
         var catalog = Catalog.Value;
@@ -47,15 +47,6 @@ public class FlatheadSpeedPartsTests
             Assert.False(report.Runs);
             Assert.Contains("carburettor", report.Problem, StringComparison.OrdinalIgnoreCase);
         }
-    }
-
-    [Fact]
-    public void Rules_read_out_of_scripts_are_left_to_the_scripts()
-    {
-        // The converted packs' required_slots hold rules their scripts ask only on some cars: none is enforced (the parts
-        // of data, the rear axles, say their own)
-        var converted = Catalog.Value.Parts.Values.Where(p => ModIds.IsBase(ModIds.ModOf(p.Id)) && p.SourceScript != null).SelectMany(p => p.RequiredSlots);
-        Assert.DoesNotContain(converted, r => r.Enforce);
     }
 
     [Fact]
@@ -81,9 +72,9 @@ public class FlatheadSpeedPartsTests
     }
 
     [Theory]
-    [InlineData("FH_L_header", "FH_L_manifold")]
-    [InlineData("FH_R_header", "FH_R_manifold")]
-    [InlineData("FH_air_cleaner", "FH_oil_bath")]
+    [InlineData("FH_L_header", "ford_flathead_v8_right_hand_cast_iron_exhaust_manifold_stock")]
+    [InlineData("FH_R_header", "ford_flathead_v8_left_hand_cast_iron_exhaust_manifold_stock")]
+    [InlineData("FH_air_cleaner", "ford_oil_bath_air_cleaner_stock")]
     public void The_old_factory_ids_of_a_save_are_the_stock_parts_now(string old, string stock) =>
         Assert.Equal(Pack + stock, Catalog.Value.CurrentId(Pack + old));
 
@@ -98,17 +89,17 @@ public class FlatheadSpeedPartsTests
             return catalog.CanMate(c, c.Slots.Single(s => s.Id == childSlot), p, p.Slots.Single(s => s.Id == parentSlot));
         }
 
-        Assert.True(Mates("FH_stromberg97", 10, "FH_intake_4x97", 300));
-        Assert.True(Mates("FH_stromberg97", 10, "FH_intake", 7));
-        Assert.False(Mates("FH_carburetor", 10, "FH_intake_2x97", 300));
-        Assert.True(Mates("FH_carburetor", 10, "FH_intake", 7));
+        Assert.True(Mates("stromberg_97_carburetor_2_bbl_150_cfm", 10, "polished_4x2_bbl_racing_intake_manifold_flathead_no_fuel_pump_stand", 300));
+        Assert.True(Mates("stromberg_97_carburetor_2_bbl_150_cfm", 10, "flathead_v8_2_bbl_intake_manifold", 7));
+        Assert.False(Mates("holley_2_bbl_carburetor_flathead", 10, "edelbrock_2x2_bbl_intake_manifold_linkage_and_fuel_pump_flathead", 300));
+        Assert.True(Mates("holley_2_bbl_carburetor_flathead", 10, "flathead_v8_2_bbl_intake_manifold", 7));
 
-        Assert.True(Mates("FH_strom_cleaner", 12, "FH_stromberg97", 11));
-        Assert.True(Mates("FH_elbow_stack", 12, "FH_stromberg97", 11));
-        Assert.False(Mates("FH_oil_bath", 12, "FH_stromberg97", 11));
-        Assert.False(Mates("FH_chrome_cleaner", 12, "FH_stromberg97", 11));
-        Assert.True(Mates("FH_oil_bath", 12, "FH_carburetor", 11));
-        Assert.True(Mates("FH_strom_cleaner", 12, "FH_carburetor", 11));
+        Assert.True(Mates("chrome_helmet_air_cleaner_stromberg_97", 12, "stromberg_97_carburetor_2_bbl_150_cfm", 11));
+        Assert.True(Mates("polished_elbow_velocity_stack_stromberg_97", 12, "stromberg_97_carburetor_2_bbl_150_cfm", 11));
+        Assert.False(Mates("ford_oil_bath_air_cleaner_stock", 12, "stromberg_97_carburetor_2_bbl_150_cfm", 11));
+        Assert.False(Mates("chrome_round_air_cleaner_flathead", 12, "stromberg_97_carburetor_2_bbl_150_cfm", 11));
+        Assert.True(Mates("ford_oil_bath_air_cleaner_stock", 12, "holley_2_bbl_carburetor_flathead", 11));
+        Assert.True(Mates("chrome_helmet_air_cleaner_stromberg_97", 12, "holley_2_bbl_carburetor_flathead", 11));
     }
 
     [Fact]
@@ -123,15 +114,15 @@ public class FlatheadSpeedPartsTests
             return car;
         }
 
-        Assert.DoesNotContain(AttendantCheck.Look(CarWith("mercury-255-race-3spd", "FH_elbow_stack"), catalog), h => h.Key == "station.hint.air_filter");
-        Assert.Contains(AttendantCheck.Look(CarWith("mercury-255-edelbrock-3spd", "FH_strom_cleaner"), catalog), h => h.Key == "station.hint.air_filter");
+        Assert.DoesNotContain(AttendantCheck.Look(CarWith("mercury-255-race-3spd", "polished_elbow_velocity_stack_stromberg_97"), catalog), h => h.Key == "station.hint.air_filter");
+        Assert.Contains(AttendantCheck.Look(CarWith("mercury-255-edelbrock-3spd", "chrome_helmet_air_cleaner_stromberg_97"), catalog), h => h.Key == "station.hint.air_filter");
     }
 
     [Theory]
-    [InlineData("FH_L_head_edel", "FH_L_head")]
-    [InlineData("FH_intake_2x97", "FH_intake")]
-    [InlineData("FH_intake_4x97", "FH_intake_2x97")]
-    [InlineData("FH_L_tube_header", "FH_L_manifold")]
+    [InlineData("edelbrock_aluminium_right_hand_cylinder_head_flathead_65_cc", "flathead_v8_right_hand_cylinder_head_aluminium_red")]
+    [InlineData("edelbrock_2x2_bbl_intake_manifold_linkage_and_fuel_pump_flathead", "flathead_v8_2_bbl_intake_manifold")]
+    [InlineData("polished_4x2_bbl_racing_intake_manifold_flathead_no_fuel_pump_stand", "edelbrock_2x2_bbl_intake_manifold_linkage_and_fuel_pump_flathead")]
+    [InlineData("flathead_v8_right_hand_tube_exhaust_header", "ford_flathead_v8_right_hand_cast_iron_exhaust_manifold_stock")]
     public void A_speed_part_costs_more_than_the_part_it_replaces(string speed, string stock) =>
         Assert.True(PartPricing.NewPrice(Part(speed)) > PartPricing.NewPrice(Part(stock)));
 }

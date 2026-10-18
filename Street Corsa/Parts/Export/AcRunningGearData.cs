@@ -163,11 +163,11 @@ public static class AcRunningGearData
 
     private static PartDefinition? Definition(PartsCatalog catalog, PartInstance? part) => part == null ? null : catalog.Get(part.DefinitionId);
 
-    /// <summary>What a part cannot do without (its pack's enforced <c>required_slots</c>), in its pack's words</summary>
+    /// <summary>What a part cannot do without (its pack's <c>needs</c>), in its pack's words</summary>
     private static void Required(PartsCatalog catalog, PartInstance? part, string corner, string otherwise, List<string> problems)
     {
         if (Definition(catalog, part) is not { } definition) return;
-        foreach (var required in definition.RequiredSlots.Where(r => r.Enforce && part!.Children.All(c => c.ParentSlot != r.Slot)))
+        foreach (var required in definition.Needs.Where(r => part!.Children.All(c => c.ParentSlot != r.Slot)))
             problems.Add($"{Lower(required.Message) ?? otherwise} ({corner})");
     }
 
@@ -217,7 +217,7 @@ public static class AcRunningGearData
     {
         // How each axle's brakes heat and fade: on the factory's, the car's author's if they wrote it, else the factory
         // brakes' (the one change a stock car gets: drums that fade); on others, theirs, or the car's own for a brake that
-        // says none (the source game's discs)
+        // says none (the stock discs)
         foreach (var (section, change) in new[] { ("TEMPS_FRONT", front), ("TEMPS_REAR", rear) })
         {
             var heat = change.FactoryBrakes ? ini.Sections.Contains(section) ? null : change.FactoryHeat : change.Heat;

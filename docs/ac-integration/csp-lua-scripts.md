@@ -355,7 +355,7 @@ limit of 200) and makes them count. The career rates each car for it (`EngineCoo
   more. The cars pull 1 to 1.4 g in corners (Black Cat County, AI and autopilot, 2026-09-26; the longest spell over
   1 g was 2.8 s), so a stock pan runs short only in a long sweeper at the limit.
 
-The radiators, fans and pumps of the source game have no figures: they are known by name (`EngineCooling.KindOf`;
+The stock radiators, fans and pumps have no figures: they are known by name (`EngineCooling.KindOf`;
 mounting hardware, brackets and pulleys are not pumps). The mode takes off only the life it could set: with the physics
 out of reach nothing is counted as cooked or starved. A rival's tuner keeps the engine cool (`EngineTuner`): past its
 radiator it fits a performance radiator or pump with the upgrade, and makes no upgrade that would leave it under 0.85.

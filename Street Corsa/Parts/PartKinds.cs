@@ -3,15 +3,11 @@ using System.Runtime.CompilerServices;
 namespace StreetCorsa.Parts;
 
 /// <summary>
-/// What kind of thing a part is, read off its script classes: the class of the source game's own framework
-/// nearest to the part ("OHV_Camshaft", "Transmission") is the reliable taxonomy, the catalog categories of
-/// the mods are not.
+/// What kind of thing a part is: its class (<see cref="PartClasses"/>), and the shop shelf that class puts it on
 /// </summary>
 public static class PartKinds
 {
     public const string Accessories = PartGroups.Accessories;
-
-    private const string FrameworkPackage = "java.game.parts.";
 
     // The running gear: what goes on the car's own wheel slots, and what goes on it
     public const string Tyres = PartGroups.Tyres;
@@ -37,27 +33,7 @@ public static class PartKinds
     public const string RingPinions = PartGroups.RingPinions;
     public const string AxleShafts = PartGroups.AxleShafts;
 
-    /// <summary>
-    /// Simple name of the framework class nearest to the part (a simple name as the part gives it, for a part of
-    /// figures), "" for parts without a script class.
-    /// Classes of the engine packs and cars sit under java.game.parts.engines / java.game.cars.
-    /// </summary>
-    public static string FrameworkClass(PartDefinition part)
-    {
-        foreach (var name in part.ClassChain)
-        {
-            // A part of figures alone names its classes simply
-            if (!name.Contains('.')) return name;
-            if (!name.StartsWith(FrameworkPackage, StringComparison.Ordinal)) continue;
-            if (name.StartsWith(FrameworkPackage + "engines.", StringComparison.Ordinal)) continue;
-
-            return name[(name.LastIndexOf('.') + 1)..];
-        }
-
-        return string.Empty;
-    }
-
-    // A part's class chain does not change once it is loaded, and shops, the workbench and the engine factory ask
+    // A part's class does not change once it is loaded, and shops, the workbench and the engine factory ask
     // for its group per candidate in their loops: worked out once per part, for the groups in use
     private static readonly ConditionalWeakTable<PartDefinition, Tuple<PartGroups, string>> GroupCache = new();
 
@@ -67,7 +43,7 @@ public static class PartKinds
         var groups = PartGroups.Current;
         if (GroupCache.TryGetValue(part, out var known) && ReferenceEquals(known.Item1, groups)) return known.Item2;
 
-        var group = groups.GroupOfClass(FrameworkClass(part));
+        var group = groups.GroupOf(part.Class);
         GroupCache.AddOrUpdate(part, Tuple.Create(groups, group));
         return group;
     }
@@ -88,12 +64,8 @@ public static class PartKinds
     /// </summary>
     public static bool NeverStacks(string group) => PartGroups.Current.NeverStacks(group);
 
-    public static bool IsBlock(PartDefinition part) => Is(part, "Block");
+    public static bool IsBlock(PartDefinition part) => Is(part, PartClasses.EngineBlock);
 
-    /// <summary>
-    /// True when the part's script descends from the class, given by simple name. A part of figures alone may name its
-    /// classes simply ("class_chain": ["Camshaft"]).
-    /// </summary>
-    public static bool Is(PartDefinition part, string className) =>
-        part.ClassChain.Any(c => c.EndsWith("." + className, StringComparison.Ordinal) || c == className);
+    /// <summary>True when the part is of the class or of one under it (<see cref="PartClasses.IsA"/>): "brake" takes in a disc brake</summary>
+    public static bool Is(PartDefinition part, string className) => PartClasses.Current.IsA(part.Class, className);
 }

@@ -165,7 +165,7 @@ namespace StreetCorsa.Services.Parts
             {
                 if (!IsAvailable)
                 {
-                    _logger.Warning("No converted parts in the mods (base game: {Path}): cars go without part trees", AppSettings.Instance.PartsPath);
+                    _logger.Warning("No parts in the mods (base game: {Path}): cars go without part trees", AppSettings.Instance.PartsPath);
                     return;
                 }
 
@@ -225,7 +225,7 @@ namespace StreetCorsa.Services.Parts
         }
 
         /// <remarks>
-        /// Never throws for what the content does: a part script that faults, or anything else the parts hold, is an
+        /// Never throws for what the content does: figures that break the sum, or anything else the parts hold, is an
         /// engine that does not run, with the reason as its problem and in the log
         /// </remarks>
         public EngineReport? Evaluate(Car car)
@@ -243,7 +243,7 @@ namespace StreetCorsa.Services.Parts
                 return new EngineReport { Problem = GameText.Say("garage.engine.not_evaluated", ("error", ex.Message)) };
             }
 
-            if (report != null) TellFaults(car.DefinitionId, report.ScriptFaults);
+            if (report != null) TellFaults(car.DefinitionId, report.Faults);
             return report;
         }
 
@@ -251,7 +251,7 @@ namespace StreetCorsa.Services.Parts
         {
             foreach (var fault in faults)
             {
-                if (_toldFaults.TryAdd((carId, fault), 0)) _logger.Warning("{Car}: a part script faulted: {Fault}", carId, fault);
+                if (_toldFaults.TryAdd((carId, fault), 0)) _logger.Warning("{Car}: its engine could not be worked out: {Fault}", carId, fault);
             }
         }
 
@@ -488,7 +488,7 @@ namespace StreetCorsa.Services.Parts
         private IReadOnlySet<string>? ReadFactoryEngineParts(string carDefinitionId, string blockId)
         {
             if (_catalogRepo.GetCar(carDefinitionId) is not { } definition || GetStockBuild(definition) is not { } stock) return null;
-            var parts = stock.Build.Parts.Select(p => p.Part is { } id ? Catalog.Get(id)?.Id : null).OfType<string>()
+            var parts = stock.Build.Parts.Select(id => Catalog.Get(id)?.Id).OfType<string>()
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
             return parts.Contains(blockId) ? parts : null;
         }
@@ -779,7 +779,7 @@ namespace StreetCorsa.Services.Parts
                 var index = EngineBuildIndex.Create(Catalog);
                 _logger.Information("{Count} engine builds run, put on the dyno in {Ms} ms", index.Runnable.Count,
                     (int)(DateTime.Now - started).TotalMilliseconds);
-                foreach (var fault in index.ScriptFaults) _logger.Warning("Engine builds: a part script faulted and was left out: {Fault}", fault);
+                foreach (var fault in index.Faults) _logger.Warning("Engine builds: a build could not be worked out and was left out: {Fault}", fault);
                 return index;
             }
             catch (Exception ex)
