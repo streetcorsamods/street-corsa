@@ -89,19 +89,21 @@ public class AppSettings
     {
         get
         {
-            foreach (var (_, dir) in Mods.ModSet.Installed.Folders(Mods.ContentTypes.Garages).Reverse())
-            {
-                var own = Path.Combine(dir, GarageShowroomId, GarageShowroomId + ".kn5");
-                if (File.Exists(own)) return own;
-            }
-
-            var installed = Path.Combine(ShowroomsPath, GarageShowroomId, GarageShowroomId + ".kn5");
-            var fallback = Path.Combine(ShowroomsPath, FallbackShowroomId, FallbackShowroomId + ".kn5");
-            return File.Exists(installed) || !File.Exists(fallback) ? installed : fallback;
+            var garages = Services.Showcase.ShowcaseContent.GaragesOf(Mods.ModSet.Installed);
+            return Services.Showcase.ShowcaseContent.FindKn5(GarageShowroomId, garages, ShowroomsPath)
+                   ?? Services.Showcase.ShowcaseContent.FindKn5(FallbackShowroomId, garages, ShowroomsPath)
+                   ?? Path.Combine(ShowroomsPath, GarageShowroomId, GarageShowroomId + ".kn5");
         }
     }
 
-    /// <summary>The showroom every AC install has (Kunos'), for a garage whose model is nowhere</summary>
+    /// <summary>
+    /// The garage the game is played in: the room folder <see cref="GarageShowroomKn5"/> is in, <see cref="GarageShowroomId"/>
+    /// or <see cref="FallbackShowroomId"/>. What its props (props/&lt;id&gt;/prop.json's places) and its marks
+    /// (garages/&lt;id&gt;/scene.json) are looked up by, so a room keeps the ones laid out for it.
+    /// </summary>
+    public string GarageId => Path.GetFileName(Path.GetDirectoryName(GarageShowroomKn5)) is { Length: > 0 } id ? id : GarageShowroomId;
+
+    /// <summary>The showroom every AC install has (Kunos'), for a garage whose model is nowhere; the base game's props have places in it too</summary>
     public const string FallbackShowroomId = "showroom";
 
     /// <summary>

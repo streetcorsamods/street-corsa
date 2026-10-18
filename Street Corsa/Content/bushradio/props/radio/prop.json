@@ -3,6 +3,7 @@
   "model": "radio.kn5",
   "credit": "\"1950 Bush DAC10 Vintage Radio\" by Fishboe, CC BY 4.0",
   "places": {
-    "garage": { "position": [2.62, 1.29, -8.6], "heading": 67 }
+    "garage": { "position": [2.62, 1.29, -8.6], "heading": 67 },
+    "showroom": { "position": [3.5, 0.9, -1.87], "heading": 90 }
   }
 }

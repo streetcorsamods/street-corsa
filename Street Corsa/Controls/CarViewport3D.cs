@@ -2223,7 +2223,7 @@ public class CarViewport3D : D3DViewportBase
         {
             HeadlightsOn = on;
             AnimateFor(TimeSpan.FromSeconds(1));
-        }, GarageScene.For(AppSettings.Instance.GarageShowroomId), fade);
+        }, GarageScene.For(AppSettings.Instance.GarageId), fade);
     }
 
     #endregion

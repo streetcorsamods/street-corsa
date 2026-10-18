@@ -34,8 +34,10 @@
     <StandardDirectory Id="DesktopFolder" />
 
     <!--
-      Assetto Corsa's folder: nothing is installed in it, it is a directory so the wizard's Browse can set it. The folder
-      picked last time first, else what FindAcFolder finds through Steam; on the command line ACFOLDER=... for a quiet install.
+      Assetto Corsa's folder: nothing is installed in it, it is a directory so the wizard's Browse can set it. FindAcFolder
+      fills it (the game's own folder, the one picked last time, Steam's), each only when it holds AC: a directory is
+      resolved on every run, uninstall too, and one on a drive gone since would stop it (error 1327). On the command line
+      ACFOLDER=... for a quiet install.
     -->
     <!-- Steam's own folder for AC when nothing better is known; the 32-bit Program Files, where Steam installs -->
     <StandardDirectory Id="ProgramFilesFolder">
@@ -47,9 +49,7 @@
         </Directory>
       </Directory>
     </StandardDirectory>
-    <Property Id="ACFOLDER" Secure="yes">
-      <RegistrySearch Id="PreviousAcFolder" Root="HKCU" Key="Software\Street Corsa" Name="AssettoCorsaPath" Type="raw" />
-    </Property>
+    <Property Id="ACFOLDER" Secure="yes" />
 
     <!--
       Windows 10 or later (.NET 10 runs on nothing older, nor does today's Steam). Windows Installer's own VersionNT says
@@ -82,7 +82,10 @@
     <CustomAction Id="OpenOllamaPage" BinaryRef="InstallerActions" DllEntry="OpenOllamaPage" Execute="immediate" Return="ignore" />
     <CustomAction Id="LaunchGame" BinaryRef="InstallerActions" DllEntry="LaunchGame" Execute="immediate" Return="ignore" />
 
-    <!-- Uninstall: the game puts back what races changed in AC and takes its CSP modes out (AcUninstall); not on an upgrade -->
+    <!--
+      Uninstall: the game puts back what races changed in AC and takes its CSP modes out (AcUninstall); not on an upgrade.
+      Before RemoveRegistryValues, while the AC folder the installer kept is still there for the game to find.
+    -->
     <CustomAction Id="RestoreAc" FileRef="GameExe" ExeCommand="--uninstall" Execute="deferred" Impersonate="yes" Return="ignore" />
 
     <InstallUISequence>
@@ -91,8 +94,9 @@
     </InstallUISequence>
     <InstallExecuteSequence>
       <Custom Action="FindAcFolder" After="AppSearch" Condition="NOT Installed" />
-      <Custom Action="CheckAcFolder" After="FindAcFolder" Condition="NOT Installed AND AC_LATER &lt;&gt; &quot;1&quot;" />
-      <Custom Action="RestoreAc" Before="RemoveFiles" Condition="REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE" />
+      <!-- Again here, whatever the wizard set: the folder the game is told about (AC_CHOSEN) is none when it is put off -->
+      <Custom Action="CheckAcFolder" After="FindAcFolder" Condition="NOT Installed" />
+      <Custom Action="RestoreAc" Before="RemoveRegistryValues" Condition="REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE" />
     </InstallExecuteSequence>
 
     <Feature Id="Game" Title="Street Corsa" AllowAbsent="no">

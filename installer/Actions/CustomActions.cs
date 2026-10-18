@@ -20,7 +20,49 @@ namespace StreetCorsa.Installer
     {
         private const string SteamAppId = "244210";
 
-        /// <summary>Fills ACFOLDER when it is empty (no folder picked before, none on the command line): Steam's AC</summary>
+        /// <summary>Where the AC folder picked here is kept for the game (Package.wxs, AcFolderChoice; the game's AcInstallFinder)</summary>
+        private const string InstallerKey = @"Software\Street Corsa";
+        private const string InstallerValue = "AssettoCorsaPath";
+
+        /// <summary>The game's AssettoCorsaPath in its settings (%AppData%\StreetCorsa\settings.json), or null</summary>
+        private static string? GameSettingsFolder()
+        {
+            try
+            {
+                var settings = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "StreetCorsa", "settings.json");
+                if (!File.Exists(settings)) return null;
+
+                var m = Regex.Match(File.ReadAllText(settings), @"""AssettoCorsaPath""\s*:\s*""(?<path>(?:[^""\\]|\\.)*)""");
+                return m.Success ? JsonUnescape(m.Groups["path"].Value) : null;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>A JSON string's escapes undone (a Windows path has \\ for each backslash)</summary>
+        private static string JsonUnescape(string text) =>
+            Regex.Replace(text, @"\\(u[0-9a-fA-F]{4}|.)", m =>
+            {
+                var escape = m.Groups[1].Value;
+                switch (escape[0])
+                {
+                    case 'u': return ((char)Convert.ToInt32(escape.Substring(1), 16)).ToString();
+                    case 'n': return "\n";
+                    case 't': return "\t";
+                    case 'r': return "\r";
+                    case 'b': return "\b";
+                    case 'f': return "\f";
+                    default: return escape;
+                }
+            });
+
+        /// <summary>
+        /// Fills ACFOLDER when the command line left it empty: the folder the game runs on (its settings), else the one
+        /// picked in this wizard last time, else Steam's AC; the first that holds AC, so a folder on a drive gone since is
+        /// never set (ACFOLDER is a directory, which Windows Installer resolves)
+        /// </summary>
         [CustomAction]
         public static ActionResult FindAcFolder(Session session)
         {
@@ -28,7 +70,8 @@ namespace StreetCorsa.Installer
             {
                 if (!string.IsNullOrWhiteSpace(session["ACFOLDER"])) return ActionResult.Success;
 
-                var found = Candidates().FirstOrDefault(IsInstall);
+                var known = new[] { GameSettingsFolder(), Read(RegistryHive.CurrentUser, RegistryView.Default, InstallerKey, InstallerValue) };
+                var found = known.Where(f => !string.IsNullOrWhiteSpace(f)).Select(f => f!.Trim()).Concat(Candidates()).FirstOrDefault(IsInstall);
                 session.Log($"Street Corsa: Assetto Corsa {(found != null ? "found at " + found : "not found")}");
                 if (found != null) session["ACFOLDER"] = WithSlash(found);
             }
@@ -43,13 +86,23 @@ namespace StreetCorsa.Installer
         /// <summary>
         /// The AC page's Next, and the install itself: AC_VALID is 1 when ACFOLDER holds AC (content\cars and
         /// content\tracks), CSP_FOUND is 1 when it has Custom Shaders Patch (its extension folder, what the game checks
-        /// before a race), and AC_CHOSEN is the folder the game is told about (none when it is no AC)
+        /// before a race), and AC_CHOSEN is the folder the game is told about (none when it is no AC, or when the player
+        /// put it off with AC_LATER, for the game's Settings)
         /// </summary>
         [CustomAction]
         public static ActionResult CheckAcFolder(Session session)
         {
+            session["AC_VALID"] = "";
+            session["AC_CHOSEN"] = "";
+            session["CSP_FOUND"] = "";
             try
             {
+                if (session["AC_LATER"] == "1")
+                {
+                    session.Log("Street Corsa: the Assetto Corsa folder is left for the game's Settings");
+                    return ActionResult.Success;
+                }
+
                 var folder = (session["ACFOLDER"] ?? "").Trim().Trim('"');
                 var valid = folder.Length > 0 && IsInstall(folder);
                 session["AC_VALID"] = valid ? "1" : "";
@@ -61,6 +114,8 @@ namespace StreetCorsa.Installer
             {
                 session.Log("Street Corsa: checking the Assetto Corsa folder failed: " + ex);
                 session["AC_VALID"] = "";
+                session["AC_CHOSEN"] = "";
+                session["CSP_FOUND"] = "";
             }
 
             return ActionResult.Success;

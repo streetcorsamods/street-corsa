@@ -24,10 +24,13 @@ namespace StreetCorsa.Services.Settings
         /// <summary>The first install found (<see cref="AppSettings.IsInstall"/>), or null</summary>
         public static string? Find() => Candidates().FirstOrDefault(AppSettings.IsInstall);
 
+        /// <summary>The AC folder the installer was last told about (<see cref="InstallerKey"/>), or null</summary>
+        public static string? InstallerChoice() => Read(Registry.CurrentUser, InstallerKey, InstallerValue);
+
         /// <summary>Where to look, most likely first</summary>
         public static IEnumerable<string> Candidates()
         {
-            if (Read(Registry.CurrentUser, InstallerKey, InstallerValue) is { } chosen)
+            if (InstallerChoice() is { } chosen)
                 yield return chosen;
             // Steam is a 32-bit program: its uninstall entries are in the 32-bit view, which this x64 process reads under WOW6432Node
             foreach (var uninstall in new[] { @"SOFTWARE\WOW6432Node\Microsoft", @"SOFTWARE\Microsoft" })

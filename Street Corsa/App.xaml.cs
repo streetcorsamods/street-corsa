@@ -564,7 +564,7 @@ namespace StreetCorsa
             try
             {
                 // Read here too, off the screens' thread: the first car to move would otherwise wait on every mod's scripts
-                var garage = AppSettings.Instance.GarageShowroomId;
+                var garage = AppSettings.Instance.GarageId;
                 await Task.WhenAll(partsWarmUp, Task.Run(() =>
                 {
                     _ = Mods.ModSet.Installed;

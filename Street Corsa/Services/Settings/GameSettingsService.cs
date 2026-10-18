@@ -24,7 +24,7 @@ namespace StreetCorsa.Services.Settings
         public string SettingsPath => _settingsPath;
 
         public GameSettingsService() : this(Path.Combine(AppSettings.AppDataPath, SettingsFileName),
-            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, SettingsFileName))
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, SettingsFileName), AcInstallFinder.Find, AcInstallFinder.InstallerChoice)
         {
         }
 
@@ -34,11 +34,15 @@ namespace StreetCorsa.Services.Settings
         /// Where AC is when the settings name no folder: the search of the machine (<see cref="AcInstallFinder.Find"/>)
         /// when not given; a test gives its own, so it never depends on what the machine has installed
         /// </param>
-        public GameSettingsService(string settingsPath, string? legacyPath, Func<string?>? findInstall = null)
+        /// <param name="installerChoice">
+        /// The AC folder the installer last set (<see cref="AcInstallFinder.InstallerChoice"/>); none when not given
+        /// </param>
+        public GameSettingsService(string settingsPath, string? legacyPath, Func<string?>? findInstall = null, Func<string?>? installerChoice = null)
         {
             _logger = AppLoggerFactory.CreateLogger("GameSettings");
             _settingsPath = settingsPath;
             _findInstall = findInstall ?? AcInstallFinder.Find;
+            _installerChoice = installerChoice ?? (() => null);
             MigrateLegacy(legacyPath);
             _currentSettings = Load();
             ApplyInstallPath(_currentSettings);
@@ -79,6 +83,7 @@ namespace StreetCorsa.Services.Settings
         /// </summary>
         private void ApplyInstallPath(GameSettings settings)
         {
+            TakeInstallerChoice(settings);
             if (string.IsNullOrWhiteSpace(settings.AssettoCorsaPath)) FindInstall(settings);
 
             var path = string.IsNullOrWhiteSpace(settings.AssettoCorsaPath)
@@ -110,6 +115,29 @@ namespace StreetCorsa.Services.Settings
         }
 
         private readonly Func<string?> _findInstall;
+
+        /// <summary>
+        /// The installer's folder (<see cref="GameSettings.InstallerAcFolder"/>) when it is new to the game: the player
+        /// ran the installer again and picked it, so it wins over the settings' folder; when it holds AC. One the game
+        /// has seen before stays out of the way of a folder set in Settings since.
+        /// </summary>
+        private void TakeInstallerChoice(GameSettings settings)
+        {
+            var chosen = _installerChoice()?.Trim();
+            if (string.IsNullOrEmpty(chosen) || string.Equals(chosen, settings.InstallerAcFolder, StringComparison.OrdinalIgnoreCase)) return;
+
+            settings.InstallerAcFolder = chosen;
+            if (AppSettings.IsInstall(chosen)
+                && !string.Equals(chosen.TrimEnd('\\'), settings.AssettoCorsaPath?.Trim().TrimEnd('\\'),StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.Information("The installer set the Assetto Corsa folder to {ACPath}: kept in the settings (was {Old})", chosen, settings.AssettoCorsaPath);
+                settings.AssettoCorsaPath = chosen;
+            }
+
+            Save(settings);
+        }
+
+        private readonly Func<string?> _installerChoice;
 
         /// <summary>
         /// Load settings from file, or create default if not exists
