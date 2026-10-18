@@ -257,6 +257,8 @@ public class CarViewport3D : D3DViewportBase
         {
             var viewport = (CarViewport3D)d;
             if (viewport.StandMode) viewport.ResetCamera();
+            // Out of the parts view the camera goes back from a part to the car
+            viewport.FocusSelection();
             viewport.QueueApplyParts();
             viewport.QueueApplyScenery();
             viewport.ApplyShown();
@@ -557,6 +559,7 @@ public class CarViewport3D : D3DViewportBase
             var viewport = (CarViewport3D)d;
             viewport.ApplySelection();
             viewport.FollowSelection();
+            viewport.FocusSelection();
         }));
 
     /// <summary>The mounted part that is marked as selected</summary>
@@ -896,6 +899,7 @@ public class CarViewport3D : D3DViewportBase
         _targetGoal = null;
         _autoAdjustWhenSettled = false;
         _followCarry = false;
+        _cameraOnPart = false;
         _cameraWaitsOnStand = false;
 
         if (IsOnStand)
@@ -2099,6 +2103,76 @@ public class CarViewport3D : D3DViewportBase
         }
     }
 
+    // The camera on a part the player picked, as SLRR has it: it turns round the part, near enough to see it, and
+    // goes back to the car (or the stand) as nothing is picked any more, as close as it was before
+    private const float FocusFill = 2.4f;
+    private const float FocusMargin = 0.7f;
+    private const float FocusMaxRadius = 3.6f;
+    private bool _cameraOnPart;
+    private float _radiusBeforeFocus = DefaultRadius;
+
+    /// <summary>
+    /// The camera goes to the selected part in the parts view and turns round it from where it looks now; back to the car
+    /// when none is selected, the view closes or a job takes the camera. Runs from property callbacks, so nothing may
+    /// escape it.
+    /// </summary>
+    private void FocusSelection()
+    {
+        try
+        {
+            if (Renderer is not { CameraOrbit: { } orbit } renderer || _cameraOnWork) return;
+
+            var box = PartsVisible && renderer.SelectedPart is { } node ? renderer.PartBox(node) : null;
+            if (box is { } b && float.IsFinite(b.Minimum.X) && float.IsFinite(b.Maximum.X))
+            {
+                if (!_cameraOnPart) _radiusBeforeFocus = _radiusGoal;
+                _cameraOnPart = true;
+
+                renderer.AutoAdjustTarget = false;
+                _autoAdjustWhenSettled = false;
+                _targetGoal = (b.Minimum + b.Maximum) / 2f;
+                var size = (b.Maximum - b.Minimum).Length();
+                var least = IsOnStand ? StandMinRadius : PartsMinRadius;
+                _radiusGoal = Math.Clamp(size * FocusFill + FocusMargin, least, FocusMaxRadius);
+                _alphaGoal = orbit.Alpha;
+                // Never under the floor, round a part low in the car
+                _betaGoal = Math.Max(orbit.Beta, LowestBeta(_radiusGoal, _targetGoal.Value.Y));
+                AnimateFor(AnimationWindow);
+                return;
+            }
+
+            if (!_cameraOnPart) return;
+            _cameraOnPart = false;
+
+            if (IsOnStand || renderer.CarNode == null)
+            {
+                ResetCamera();
+                return;
+            }
+
+            // Back round the car from where the camera looks now, as near as it was
+            _alphaGoal = orbit.Alpha;
+            _betaGoal = orbit.Beta;
+            _radiusGoal = Math.Clamp(_radiusBeforeFocus, renderer.HasProp ? PartsMinRadius : MinRadius, MaxRadius);
+            if (renderer.MainSlot.GetCarBoundingBox() is { } car)
+            {
+                _targetGoal = renderer.FramedTarget(_alphaGoal, _betaGoal, _radiusGoal, (car.Minimum + car.Maximum) / 2f);
+                _autoAdjustWhenSettled = true;
+            }
+            else
+            {
+                _targetGoal = null;
+                renderer.AutoAdjustTarget = true;
+            }
+
+            AnimateFor(AnimationWindow);
+        }
+        catch (Exception ex)
+        {
+            Logger.Error(ex, "Could not bring the camera to the selected part");
+        }
+    }
+
     /// <summary>The car's hubs where they are with the car on the floor: the lift's height taken off (the parts go up with it)</summary>
     private CarAnchors? GetAnchors(Kn5RenderableCar carNode)
     {
@@ -2433,6 +2507,7 @@ public class CarViewport3D : D3DViewportBase
         _workLeaving = false;
         _workVersion++;
         _cameraOnWork = false;
+        _cameraOnPart = false;
         _benchRenderer = null;
         _liftRenderer = null;
         _liftProp = null;

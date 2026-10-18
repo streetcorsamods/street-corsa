@@ -67,8 +67,9 @@ in `%AppData%\StreetCorsa`.
 
 ## Pictures
 
-`banner.bmp` and `dialog.bmp` come from the main screen background (`make_art.py`, Pillow). Run it again when the
-background changes; the bitmaps are committed, so a build needs no Python.
+`banner.bmp` and `dialog.bmp` carry the game's icon and its title lettered as the intro letters it, over the main screen
+background darkened (`make_art.py`, Pillow, Windows' Impact font). Run it again when any of them changes; the bitmaps are
+committed, so a build needs no Python.
 
 ## Still to do
 

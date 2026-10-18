@@ -133,6 +133,15 @@ function R:getTransformationRaw() return self.items[1].transform end
 function R:getLocalAABB() return self.items[1].min, self.items[1].max end
 function R:setVisible(v) for _, n in ipairs(self.items) do n.visible = v end; return self end
 function R:dispose() end
+function R:getChildrenCount() return #self.items[1].children end
+function R:getChild(i) return ref({ self.items[1].children[i or 1] }) end
+function R:setParent(p)
+  local n = self.items[1]
+  for k, c in ipairs(n.parent.children) do if c == n then table.remove(n.parent.children, k) break end end
+  n.parent = p.items[1]
+  table.insert(n.parent.children, n)
+  return self
+end
 -- The car's surface: world.hood is its height over every point (nil: nothing there), one-sided as most hoods are, its
 -- face up (world.hoodDown: its face down, as a hood drawn from inside). Culling as CSP's (lib_scene.lua): 1, the
 -- default, hits front faces only, 0 back faces only, -1 both; a ray coming down meets the face of a face-up hood
@@ -146,6 +155,15 @@ end
 function R:loadKN5(file)
   local root = node(file, self.items[1])
   world.loaded[#world.loaded + 1] = { file = file, node = root }
+  if file:find('looks') then
+    -- A wear layer: the body's wear, and a door's in a group standing where the door stands at rest (WearLayer.MoverPrefix)
+    mesh('sc_wear_0', root, { -0.9, 0.3, -2.2 }, { 0.9, 1.2, 2.2 })
+    local door = node('sc_move_DOOR_L', root)
+    door.transform[4][1], door.transform[4][2], door.transform[4][3] = 0.95, 0.75, 0.6
+    mesh('sc_wear_1', door, { -0.01, -0.35, -1 }, { 0.01, 0.35, 0 })
+    node('sc_move_TRUNK', root)
+    return ref({ root })
+  end
   if file:find('tyre') then
     -- tyres/mopar/Tyre_15_8 as the converter wrote it
     mesh('Tyre_15_8_0', root, { -0.101, -0.312, -0.313 }, { 0.097, 0.312, 0.312 })
@@ -170,6 +188,9 @@ local carRoot = node('carRoot')
 local car = node('CARNODE', carRoot)
 local body = node('BODYTR', car)
 world.floor = node('FLOOR', body)
+-- The left door, on its hinge in the model (under FLOOR, the model's frame node)
+world.door = node('DOOR_L', world.floor)
+world.door.transform[4][1], world.door.transform[4][2], world.door.transform[4][3] = 0.95, 0.75, 0.6
 local function wheel(name, side, suffix)
   local w = node(name, node('WHEEL_TR', car))
   local function m(n, x0, x1, r)
@@ -448,6 +469,19 @@ def a_wheel_that_names_no_tyre_keeps_the_mesh_well_outside_the_rest_as_its_tyre(
     check('and the part is sized to the rim, not the tyre', group and near(group[1][1], 0.19 / 0.187), list(world.log.values()))
 
 
+def a_doors_wear_goes_into_the_door_where_it_stands():
+    """The wear of what an animation moves goes into the car's node of that name, where it stood: it opens with the door"""
+    lua, world = run({'CAR_0_MODEL_NODE': 'FLOOR', 'CAR_0_MODEL_AT': '1,0,0, 0,1,0, 0,0,1, 0,0,0', 'CAR_0_LOOK': 'looks/car_1.kn5'}, floor_y=-0.35)
+    group = [c for c in world.door.children.values() if c.name == 'sc_move_DOOR_L']
+    world_of = lua.eval('function(n) local w = n.transform; local p = n.parent; while p do w = w:mul(p.transform); p = p.parent end; return w end')
+    check('a door wear goes into the door, where it stood (the model 35 cm down)',
+          group and near(matrix(world_of(group[0]))[3][1], 0.75 - 0.35) and near(matrix(group[0].transform)[3][0], 0), list(world.log.values()))
+    layer = [i for i in world.loaded.values() if i.file == 'looks/car_1.kn5'][0].node
+    check('one whose node the car does not have stays in the layer',
+          any(c.name == 'sc_move_TRUNK' for c in layer.children.values()) and not any(c.name == 'sc_move_DOOR_L' for c in layer.children.values()),
+          list(world.log.values()))
+
+
 def a_car_whose_model_comes_late_gets_its_parts_once_it_is_there():
     _, world = run({'CAR_0_RIM_LF': 'a.kn5'}, late=True)
     check('a car whose model is not there at first gets its parts once it is', rim(world, 'LF') is not None, list(world.log.values()))
@@ -463,6 +497,7 @@ def the_wear_layer_goes_on_the_body_in_the_models_space():
 
 a_wheel_that_names_no_tyre_keeps_the_mesh_well_outside_the_rest_as_its_tyre()
 the_wear_layer_goes_on_the_body_in_the_models_space()
+a_doors_wear_goes_into_the_door_where_it_stands()
 a_car_whose_model_comes_late_gets_its_parts_once_it_is_there()
 a_corner_not_named_keeps_its_own_rim()
 engine_parts_are_placed_and_judged_in_the_models_own_space()

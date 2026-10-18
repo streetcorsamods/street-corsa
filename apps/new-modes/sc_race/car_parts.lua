@@ -23,7 +23,8 @@
 
   Wear: CAR_n_LOOK=looks\....kn5 names the car's wear layer (rust, worn paint, scrapes, a cracked windscreen; the game
   draws it for the car, docs/roadmap.md step 28 ideas 3 and 4): a model over the car's body in the space of its model,
-  loaded into the body node like the engine parts, always.
+  loaded into the body node like the engine parts, always. Its groups named sc_move_<node> are the wear of what the car's
+  animations move (a door, the hood): each goes into the car's node of that name, where it stands, so it opens with it.
 
   Blur: the car's blurred_objects.ini objects of a named corner are hidden (our parts have no blurred model), except a
   tyre's while the car keeps its tyre; one that is the wheel node itself or holds it (some cars swap the whole wheel at
@@ -479,6 +480,40 @@ local function setUpExtras(carIndex, root)
   return loaded
 end
 
+-- The start of the name of a group of the wear layer that moves with a node of the car (WearLayer.MoverPrefix)
+local MOVER_PREFIX = 'sc_move_'
+
+-- The wear of what the car's animations move (a door's, the hood's) into the car's node each moves with: its meshes are in
+-- that node's own space (WearLayer), so the group stands at the node itself, in whatever pose the node is now, and opens
+-- with the door. One whose node the car does not have stays put, where it stands at rest.
+local function putOnMovers(carIndex, root, holder, layer)
+  -- The groups hang off the model's root, which may be the node loaded or the one in it: looked for a few levels down
+  local groups = {}
+  local function collect(at, depth)
+    for k = 1, at:getChildrenCount() do
+      local child = at:getChild(k)
+      local name = child:name()
+      if name and name:sub(1, #MOVER_PREFIX) == MOVER_PREFIX then
+        groups[#groups + 1] = { group = child, node = name:sub(#MOVER_PREFIX + 1) }
+      elseif depth < 2 then
+        collect(child, depth + 1)
+      end
+    end
+  end
+  collect(layer, 1)
+  for _, g in ipairs(groups) do
+    local found = holder:findNodes(g.node)
+    if found:size() == 0 then found = root:findNodes(g.node) end
+    if found:size() > 0 then
+      g.group:setParent(found:at(1))
+      g.group:getTransformationRaw():set(mat4x4.identity())
+      log('car ' .. carIndex .. ': wear of ' .. g.node .. ' moves with it')
+    else
+      log('car ' .. carIndex .. ': no node ' .. g.node .. ' for its wear, it stays put')
+    end
+  end
+end
+
 -- The car's wear layer over its body, where the car's model is
 local function setUpLook(carIndex, root)
   local file = raceText('CAR_' .. carIndex .. '_LOOK')
@@ -492,6 +527,9 @@ local function setUpLook(carIndex, root)
   end
   layer:getTransformationRaw():set(fromCar)
   log('car ' .. carIndex .. ': wear ' .. file .. ' put on in ' .. tostring(holder:name()))
+  -- On its own: the layer is on whatever goes wrong here (a CSP without setParent), the wear of a part not moved at rest
+  local moved, err = pcall(putOnMovers, carIndex, root, holder, layer)
+  if not moved then log('car ' .. carIndex .. ': the wear of its doors and hood stays put: ' .. tostring(err)) end
   return layer
 end
 

@@ -53,8 +53,11 @@ public static class ShownPartsOnCar
         /// </summary>
         public readonly Dictionary<IKn5, (ITexturesProvider Textures, int Users)> Textures = [];
 
-        /// <summary>The wear layer on the car: for what look, at what picture size, and its node</summary>
-        public (CarLook Look, int Picture, RenderableList Holder, RenderableList Node)? Wear;
+        /// <summary>
+        /// The wear layer on the car: for what look, at what picture size, its node, and the wear of the parts of the body that
+        /// move (a door's), each in the car's node it moves with
+        /// </summary>
+        public (CarLook Look, int Picture, RenderableList Holder, RenderableList Node, List<(RenderableList Holder, RenderableList Node)> Moving)? Wear;
 
         /// <summary>The colour the car's paint textures were tinted for, and the skin they were tinted in; null in its own colours</summary>
         public (PaintColour Colour, string? Skin)? Paint;
@@ -65,6 +68,9 @@ public static class ShownPartsOnCar
         public bool Coated;
 
         public int Version;
+
+        /// <summary>How many times something was put on the car (parts, wear, paint): what it is drawn with has changed</summary>
+        public int Changes;
 
         public void Switch(IRenderableObject o, bool on)
         {
@@ -85,18 +91,28 @@ public static class ShownPartsOnCar
     public static CornerHeights? HeightsOf(Kn5RenderableCar? car) =>
         car != null && Cars.TryGetValue(car, out var on) ? on.Shown?.Heights : null;
 
+    /// <summary>
+    /// A count that moves on each time something is put on <paramref name="car"/> (its parts, its wear, its paint): a car
+    /// drawn at one count has nothing new for the graphics card until it moves on
+    /// </summary>
+    public static int ChangesOf(Kn5RenderableCar car) => Cars.TryGetValue(car, out var on) ? on.Changes : 0;
+
     /// <summary>A part model drawn with the car's one set of its textures</summary>
     /// <param name="loadAtOnce">Its pictures loaded as it is first drawn, not on the side: the wear layer's, which are DDS
     /// with their mips (nothing to decode) and must not be drawn a frame without them</param>
-    private sealed class PartFile(IKn5 kn5, SlimDX.Matrix matrix, OnCar on, bool loadAtOnce = false) : Kn5RenderableFile(kn5, matrix)
+    /// <param name="texturesOf">The model whose textures it draws with, when it is a piece of one (the wear layer's
+    /// pieces): the pictures are the car's once, for all its pieces</param>
+    private sealed class PartFile(IKn5 kn5, SlimDX.Matrix matrix, OnCar on, bool loadAtOnce = false, IKn5? texturesOf = null)
+        : Kn5RenderableFile(kn5, matrix)
     {
         protected override ITexturesProvider InitializeTextures(IDeviceContextHolder contextHolder)
         {
+            var model = texturesOf ?? OriginalFile;
             lock (on.Textures)
             {
-                var (textures, users) = on.Textures.TryGetValue(OriginalFile, out var kept) ? kept : (new Kn5TexturesProvider(OriginalFile, !loadAtOnce), 0);
-                on.Textures[OriginalFile] = (textures, users + 1);
-                return new Lent(textures, OriginalFile, on);
+                var (textures, users) = on.Textures.TryGetValue(model, out var kept) ? kept : (new Kn5TexturesProvider(model, !loadAtOnce), 0);
+                on.Textures[model] = (textures, users + 1);
+                return new Lent(textures, model, on);
             }
         }
 
@@ -150,6 +166,7 @@ public static class ShownPartsOnCar
         if (Equals(on.Shown, shown)) return false;
 
         var version = ++on.Version;
+        on.Changes++;
         on.Shown = shown;
         Clear(on);
         var keepWear = on.Wear is { } wear && shown?.Look is { } wanted && wear.Look == wanted && wear.Picture == wearPicture;
@@ -180,6 +197,7 @@ public static class ShownPartsOnCar
         if (Stale(on, version, gone)) return false;
 
         if (models != null && !await PutPartsAsync(car, shown, models, on, version, gone)) return false;
+        on.Changes++;
 
         if (shown.Look is not { } look || keepWear) return true;
         try
@@ -246,10 +264,57 @@ public static class ShownPartsOnCar
 
         ClearWear(on);
         if (layer == null) return true;
-        var node = new RenderableList("sc_look", SlimDX.Matrix.Identity) { new PartFile(layer, ToSlim(fromRoot), on, loadAtOnce: true) };
+
+        // The parts of the body the car's animations move (WearLayer.MoverPrefix: a door's, the hood's) go into the car's
+        // node each moves with, so their wear goes with it as the door opens; a part whose node the car does not have stays
+        // with the rest, where it stands at rest. Each piece is a file of its own (its materials are the layer's, not the
+        // car's) holding only its own meshes, so no mesh is made ready twice; the pictures are shared.
+        var rest = new List<Kn5Node>();
+        var movers = new List<(Kn5Node Group, RenderableList Mover)>();
+        foreach (var child in layer.RootNode.Children)
+        {
+            if (child.NodeClass == Kn5NodeClass.Base && child.Name?.StartsWith(WearLayer.MoverPrefix, StringComparison.Ordinal) == true
+                && root.GetDummyByName(child.Name[WearLayer.MoverPrefix.Length..]) is { } mover)
+            {
+                movers.Add((child, mover));
+            }
+            else
+            {
+                rest.Add(child);
+            }
+        }
+
+        var file = new PartFile(movers.Count == 0 ? layer : Piece(layer, rest, layer.RootNode.Transform), ToSlim(fromRoot), on, loadAtOnce: true, layer);
+        var node = new RenderableList("sc_look", SlimDX.Matrix.Identity) { file };
+        var moving = new List<(RenderableList Holder, RenderableList Node)>();
+        foreach (var (group, mover) in movers)
+        {
+            // In the node's space already: it stands at the node, in whatever pose the node is
+            var own = new PartFile(Piece(layer, group.Children, AcTools.Numerics.Mat4x4.Identity), SlimDX.Matrix.Identity, on, loadAtOnce: true, layer);
+            var holder = new RenderableList("sc_look_moving", SlimDX.Matrix.Identity) { own };
+            mover.Add(holder);
+            moving.Add((mover, holder));
+        }
         root.Add(node);
-        on.Wear = (look, picture, root, node);
+        on.Wear = (look, picture, root, node, moving);
+        on.Changes++;
         return true;
+    }
+
+    /// <summary>
+    /// A model of some of <paramref name="layer"/>'s meshes, under a root at <paramref name="transform"/>, with the layer's
+    /// materials and pictures; the layer, kept for other cars, is not changed
+    /// </summary>
+    private static IKn5 Piece(IKn5 layer, IEnumerable<Kn5Node> nodes, AcTools.Numerics.Mat4x4 transform)
+    {
+        var piece = Kn5.CreateEmpty();
+        piece.RootNode.Name = layer.RootNode.Name;
+        piece.RootNode.Transform = transform;
+        piece.RootNode.Children = nodes.ToList();
+        piece.Materials = layer.Materials;
+        piece.Textures = layer.Textures;
+        piece.TexturesData = layer.TexturesData;
+        return piece;
     }
 
     /// <summary>
@@ -284,6 +349,7 @@ public static class ShownPartsOnCar
         ClearPaint(car, on);
         foreach (var (texture, bytes) in textures) car.OverrideTexture(device, texture, bytes);
         on.Paint = (colour, skin);
+        on.Changes++;
         return true;
     }
 
@@ -309,6 +375,7 @@ public static class ShownPartsOnCar
         // Not the paint it was given: a paint still being made for an earlier set is not put over it, and whatever the
         // car is asked to show next puts its own on afresh
         on.Coats++;
+        on.Changes++;
         on.Coated = true;
         on.Paint = null;
         on.Shown = null;
@@ -319,6 +386,11 @@ public static class ShownPartsOnCar
     {
         if (on.Wear is not { } wear) return;
         on.Wear = null;
+        foreach (var (holder, node) in wear.Moving)
+        {
+            holder.Remove(node);
+            node.Dispose();
+        }
         wear.Holder.Remove(wear.Node);
         wear.Node.Dispose();
     }

@@ -1661,6 +1661,15 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         }
     }
 
+    /// <summary>The box round a mounted part where it is drawn now, in the garage's space; null without that part</summary>
+    public BoundingBox? PartBox(int node)
+    {
+        if (_prop == null || node < 0 || node >= _propNodes.Count) return null;
+
+        _prop.UpdateBoundingBox();
+        return _propNodes[node].List.BoundingBox;
+    }
+
     /// <summary>Node of the mounted part that is selected</summary>
     public int? SelectedPart
     {

@@ -8,7 +8,7 @@
              d:DesignHeight="800" d:DesignWidth="1300">
     <UserControl.Resources>
         <!-- The lists: dark rows, the picked one in the accent -->
-        <Style x:Key="BrowserListStyle" TargetType="ListBox">
+        <Style x:Key="BrowserListStyle" TargetType="ListBox" BasedOn="{StaticResource {x:Type ListBox}}">
             <Setter Property="Background" Value="{StaticResource BgPanelCCBrush}"/>
             <Setter Property="BorderBrush" Value="{StaticResource BorderLightBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>

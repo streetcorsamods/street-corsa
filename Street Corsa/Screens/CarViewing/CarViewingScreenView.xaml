@@ -98,6 +98,7 @@
         <Grid HorizontalAlignment="Left"
               Width="360"
               Margin="20,180,0,20"
+              controls:D3DViewportBase.Covers="{Binding ElementName=Viewport}"
               Visibility="{Binding HasTalk, Converter={StaticResource BooleanToVisibilityConverter}}">
             <controls:TalkCard DataContext="{Binding Talk}"/>
         </Grid>
@@ -107,6 +108,7 @@
                 VerticalAlignment="Top"
                 Width="360"
                 Margin="20,180,0,20"
+                controls:D3DViewportBase.Covers="{Binding ElementName=Viewport}"
                 Background="{StaticResource Glass15E8Brush}"
                 BorderBrush="{StaticResource Cream70Brush}"
                 BorderThickness="1"

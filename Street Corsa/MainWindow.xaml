@@ -8,6 +8,7 @@
         xmlns:controls="clr-namespace:StreetCorsa.Controls"
         xmlns:helpers="clr-namespace:StreetCorsa.Helpers"
         xmlns:t="clr-namespace:StreetCorsa.Services.Text"
+        xmlns:mainMenu="clr-namespace:StreetCorsa.Screens.MainMenu"
         mc:Ignorable="d"
         Title="Street Corsa"
         WindowStyle="None"
@@ -65,6 +66,11 @@
                     Margin="0,8,0,0"
                     Visibility="Collapsed"/>
             </StackPanel>
+
+            <!-- The title the game opens on: up from the window's first frame while the game reads its content, then
+                 taken over by the main screen until its showroom is ready (a first screen that does not take it over
+                 sees it fade away) -->
+            <mainMenu:IntroView x:Name="Intro"/>
 
             <!-- A change of screen: a still of the screen being left, over black. The still fades to black, then the
                  black fades off the new screen (see ScreenTransition). Takes the clicks while it plays. -->

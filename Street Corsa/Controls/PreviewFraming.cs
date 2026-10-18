@@ -86,6 +86,28 @@ public static class PreviewFraming
     public static float CarCameraAlpha(float headingDegrees, float fromSide) => fromSide - headingDegrees * MathF.PI / 180f;
 
     /// <summary>
+    /// The camera's left, level, for an orbit at <paramref name="alpha"/>. AcTools' cameras are right-handed: looking in
+    /// from (cos a, 0, sin a), the picture's right is (sin a, 0, -cos a). Looking a little this way of a car stands the
+    /// car right of the middle.
+    /// </summary>
+    public static Vector3 CameraLeft(float alpha) => new(-MathF.Sin(alpha), 0f, MathF.Cos(alpha));
+
+    /// <summary>
+    /// How far to the camera's left (<see cref="CameraLeft"/>) it looks, for what it looks at, <paramref name="radius"/>
+    /// away, to stand in the middle of what a screen's panels leave of the picture: they cover <paramref name="covered"/>
+    /// of a view <paramref name="width"/> by <paramref name="height"/> from its left edge, through a lens
+    /// <paramref name="fovY"/> radians high. The middle of what is left is covered / width of the half-width right of
+    /// the middle, and half the picture's width at that distance is radius tan(fovY / 2) width / height. Never more
+    /// than half the picture, however much is covered; nothing on a view not laid out yet.
+    /// </summary>
+    public static float SideShift(double covered, double width, double height, float radius, float fovY)
+    {
+        if (covered <= 0 || width < 1 || height < 1) return 0f;
+        var share = Math.Min(covered, width / 2) / width;
+        return (float)(share * width / height) * radius * MathF.Tan(fovY / 2f);
+    }
+
+    /// <summary>
     /// How far back to stand to take in a car <paramref name="length"/> long, with a lens <paramref name="fovY"/> high on
     /// a picture <paramref name="aspect"/> wide: the car about three quarters of the narrower way
     /// </summary>

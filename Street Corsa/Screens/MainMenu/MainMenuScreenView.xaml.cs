@@ -27,13 +27,13 @@ namespace StreetCorsa.Screens.MainMenu
         private static readonly TimeSpan IntroLeast = TimeSpan.FromSeconds(4);
         // A showroom slower than this does not keep the player waiting: the menu comes up and the cars fade in later
         private static readonly TimeSpan IntroMost = TimeSpan.FromSeconds(15);
-        private static readonly Duration IntroFade = new(TimeSpan.FromMilliseconds(900));
 
         private DispatcherTimer? _introTimer;
         private bool _introStarted;
         private bool _introOver;
         private bool _introLeastPassed;
         private bool _showroomUp;
+        private IntroView? _intro;
 
         private MainMenuScreenViewModel? _viewModel;
         private Window? _window;
@@ -51,10 +51,6 @@ namespace StreetCorsa.Screens.MainMenu
             };
             Loaded += (_, _) =>
             {
-                Attach(DataContext as MainMenuScreenViewModel);
-                if (_viewModel?.ShowIntro == true && !_introStarted) StartIntro();
-                else if (!_introStarted || _introOver) ShowPanel(_viewModel?.CurrentCard);
-
                 // Esc from the window: once a menu badge is clicked it is hidden, and the focus leaves this screen
                 _window = Window.GetWindow(this);
                 if (_window != null)
@@ -62,13 +58,19 @@ namespace StreetCorsa.Screens.MainMenu
                     _window.PreviewKeyDown -= OnWindowKeyDown;
                     _window.PreviewKeyDown += OnWindowKeyDown;
                 }
+
+                Attach(DataContext as MainMenuScreenViewModel);
+                if (_viewModel?.ShowIntro == true && !_introStarted) StartIntro();
+                else if (!_introStarted || _introOver) ShowPanel(_viewModel?.CurrentCard);
             };
             Unloaded += (_, _) =>
             {
                 Attach(null);
                 if (_window != null) _window.PreviewKeyDown -= OnWindowKeyDown;
                 _window = null;
-                _introTimer?.Stop();
+
+                // Left before the title went: it does not stay over the next screen, and the view loaded again shows its menu
+                StopIntro();
             };
 
             // No showroom to show at all: the old picture rather than a black screen
@@ -101,9 +103,33 @@ namespace StreetCorsa.Screens.MainMenu
         private void StartIntro()
         {
             _introStarted = true;
-            Intro.Visibility = Visibility.Visible;
 
-            _introTimer = new DispatcherTimer { Interval = IntroLeast };
+            // The window's title, up since the game started: it stays until the showroom is ready
+            _intro = (_window as MainWindow)?.Intro;
+            if (_intro == null || !_intro.Claim())
+            {
+                _intro = null;
+                EndIntro();
+                return;
+            }
+
+            _intro.MouseDown += Intro_MouseDown;
+
+            // The least time counts from when the title came up, not from when this screen did
+            var shown = DateTime.UtcNow - _intro.ShownAt;
+            var least = IntroLeast - shown;
+            if (least <= TimeSpan.Zero)
+            {
+                // The game took its time starting: the title has been up long enough, and the showroom may be too
+                _introLeastPassed = true;
+                if (_showroomUp)
+                {
+                    EndIntro();
+                    return;
+                }
+            }
+
+            _introTimer = new DispatcherTimer { Interval = least > TimeSpan.Zero ? least : IntroMost - IntroLeast };
             _introTimer.Tick += (_, _) =>
             {
                 // The least time is up: go if the showroom is, or give it until the most
@@ -132,17 +158,23 @@ namespace StreetCorsa.Screens.MainMenu
 
         private void EndIntro()
         {
-            if (!_introStarted || _introOver) return;
+            if (StopIntro()) ShowPanel(_viewModel?.CurrentCard);
+        }
+
+        /// <summary>The title goes, and lets go of this view (the window keeps it); false when it was not up</summary>
+        private bool StopIntro()
+        {
+            if (!_introStarted || _introOver) return false;
 
             _introOver = true;
             _introTimer?.Stop();
 
-            var fade = new DoubleAnimation(0, IntroFade);
-            fade.Completed += (_, _) => Intro.Visibility = Visibility.Collapsed;
-            Intro.IsHitTestVisible = false;
-            Intro.BeginAnimation(OpacityProperty, fade);
-
-            ShowPanel(_viewModel?.CurrentCard);
+            if (_intro != null)
+            {
+                _intro.MouseDown -= Intro_MouseDown;
+                _intro.FadeOut();
+            }
+            return true;
         }
 
         #endregion

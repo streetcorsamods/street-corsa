@@ -165,6 +165,7 @@
                 VerticalAlignment="Stretch"
                 Width="280"
                 Margin="20,110,0,24"
+                controls:D3DViewportBase.Covers="{Binding ElementName=Viewport}"
                 Background="{StaticResource Glass12C0Brush}"
                 BorderBrush="{StaticResource Cream50Brush}"
                 BorderThickness="1"

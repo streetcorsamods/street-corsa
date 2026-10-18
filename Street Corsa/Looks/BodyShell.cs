@@ -1,6 +1,8 @@
+using System.IO;
 using System.Numerics;
 using System.Text.RegularExpressions;
 using AcTools.Kn5File;
+using StreetCorsa.Logging;
 using StreetCorsa.Parts.Cars;
 using static StreetCorsa.Helpers.Matrices;
 
@@ -25,7 +27,7 @@ internal sealed class BodyShell
     /// The way a shell is worked out: up by one whenever what <see cref="Of"/> picks changes, so the shells kept on disk
     /// (<see cref="ShellFile"/>) and the races' layers worked out the old way are worked out again
     /// </summary>
-    public const int Version = 3;
+    public const int Version = 4;
 
     /// <summary>How far the layer stands off the body, metres: enough that the two never fight over a pixel</summary>
     public const float StandOff = 0.0025f;
@@ -36,8 +38,13 @@ internal sealed class BodyShell
     /// <summary>Where a view lies in the picture, in pixels, and what in the model it shows (two of x, y, z)</summary>
     public sealed record Panel(Side Side, int X, int Y, int Width, int Height, float MinA, float MaxA, float MinB, float MaxB);
 
-    /// <summary>A mesh of the layer: its vertices already in the model's space with their place in the picture</summary>
-    public sealed record Mesh(Kn5Node.Vertex[] Vertices, ushort[] Indices);
+    /// <summary>
+    /// A mesh of the layer: its vertices already in the model's space with their place in the picture. A mesh of a part of
+    /// the body that a car's animation moves (a door, the hood, the trunk, pop-up lamps) names the node it moves with
+    /// (<paramref name="Mover"/>) and where that node stands at rest in the model's space (<paramref name="Rest"/>), so its
+    /// wear can go with it; null for the body that stays put.
+    /// </summary>
+    public sealed record Mesh(Kn5Node.Vertex[] Vertices, ushort[] Indices, string? Mover = null, Matrix4x4 Rest = default);
 
     public required Vector3 Min { get; init; }
     public required Vector3 Max { get; init; }
@@ -73,6 +80,8 @@ internal sealed class BodyShell
 
     public Vector3 Size => Max - Min;
 
+    private static readonly IAppLogger Logger = AppLoggerFactory.CreateLogger("Looks");
+
     /// <summary>Wheel groups: what is under them turns or steers, and is no body</summary>
     private static readonly Regex WheelGroup = new("^(WHEEL|SUSP|HUB|DISC)_(LF|RF|LR|RR)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
@@ -105,13 +114,16 @@ internal sealed class BodyShell
         public int SeenFrom;
     }
 
-    private sealed record SourceMesh(Kn5Node Node, Matrix4x4 ToModel, bool UnderWheel);
+    private sealed record SourceMesh(Kn5Node Node, Matrix4x4 ToModel, bool UnderWheel, string? Mover, Matrix4x4 MoverRest);
 
-    /// <summary>The shell of <paramref name="kn5"/>; null when nothing of it is paint</summary>
-    public static BodyShell? Of(IKn5 kn5, int pictureSize = 2048)
+    /// <summary>
+    /// The shell of <paramref name="kn5"/>; null when nothing of it is paint. <paramref name="movers"/> are the nodes the
+    /// car's animations move (<see cref="MoversOf"/>): what of the body is under one moves with it.
+    /// </summary>
+    public static BodyShell? Of(IKn5 kn5, int pictureSize = 2048, IReadOnlySet<string>? movers = null)
     {
         var meshes = new List<SourceMesh>();
-        Walk(kn5.RootNode, Matrix4x4.Identity, false, meshes);
+        Walk(kn5.RootNode, Matrix4x4.Identity, false, null, default, movers ?? new HashSet<string>(), meshes);
         var materials = kn5.Materials.Values.ToList();
         Kn5Material? MaterialOf(uint id) => id < materials.Count ? materials[(int)id] : null;
 
@@ -122,7 +134,7 @@ internal sealed class BodyShell
         var positions = new List<Vector3[]>();
         for (var m = 0; m < meshes.Count; m++)
         {
-            var (node, toModel, underWheel) = meshes[m];
+            var (node, toModel, underWheel, _, _) = meshes[m];
             var p = node.Vertices.Select(v => Vector3.Transform(new Vector3(v.Position.X, v.Position.Y, v.Position.Z), toModel)).ToArray();
             positions.Add(p);
             var indices = node.Indices;
@@ -227,18 +239,75 @@ internal sealed class BodyShell
         };
     }
 
-    private static void Walk(Kn5Node node, Matrix4x4 parent, bool underWheel, List<SourceMesh> meshes)
+    private static void Walk(Kn5Node node, Matrix4x4 parent, bool underWheel, string? mover, Matrix4x4 moverRest,
+        IReadOnlySet<string> movers, List<SourceMesh> meshes)
     {
         if (!node.Active) return;
         if (node.NodeClass == Kn5NodeClass.Base)
         {
             var local = ToNumerics(node.Transform) * parent;
             var wheel = underWheel || WheelGroup.IsMatch(node.Name ?? "");
-            foreach (var child in node.Children) Walk(child, local, wheel, meshes);
+            // The nearest node an animation moves is what the meshes under it move with
+            if (node.Name is { } name && movers.Contains(name)) (mover, moverRest) = (name, local);
+            foreach (var child in node.Children) Walk(child, local, wheel, mover, moverRest, movers, meshes);
         }
         else if (node.IsVisible && node.IsRenderable && node.Vertices is { Length: > 0 } && node.Indices is { Length: > 0 })
         {
-            meshes.Add(new SourceMesh(node, parent, underWheel));
+            meshes.Add(new SourceMesh(node, parent, underWheel, mover, moverRest));
+        }
+    }
+
+    /// <summary>
+    /// The nodes the car in <paramref name="carDirectory"/> moves by its animations (its animations folder's .ksanim
+    /// files: doors, hood, trunk, pop-up lamps, wings): empty for a car with none, or none that read, or a folder that
+    /// cannot be listed
+    /// </summary>
+    public static IReadOnlySet<string> MoversOf(string carDirectory)
+    {
+        var movers = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var file in Animations(carDirectory) ?? [])
+        {
+            try
+            {
+                foreach (var name in AcTools.KsAnimFile.KsAnim.FromFile(file).Entries.Keys) movers.Add(name);
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                // An animation that does not read moves nothing here
+            }
+        }
+        return movers;
+    }
+
+    /// <summary>What of the car's animations the shell depends on, for the name of a shell kept on disk: their names and sizes</summary>
+    public static string MoversStamp(string carDirectory)
+    {
+        // A folder that cannot be listed now has a stamp of its own: the shell made without its movers is not taken for
+        // the one made once it lists again
+        if (Animations(carDirectory) is not { } files) return "unlisted";
+        try
+        {
+            return string.Join(";", files.Select(f => new FileInfo(f))
+                .OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase).Select(f => $"{f.Name.ToLowerInvariant()}:{f.Length}"));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return "unlisted";
+        }
+    }
+
+    /// <summary>The car's .ksanim files: none without an animations folder, null when it cannot be listed (its rights, a mod manager replacing it)</summary>
+    private static string[]? Animations(string carDirectory)
+    {
+        var folder = Path.Combine(carDirectory, "animations");
+        try
+        {
+            return Directory.Exists(folder) ? Directory.GetFiles(folder, "*.ksanim") : [];
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Logger.Warning("The animations of {Car} could not be listed, its wear moves with nothing: {Error}", carDirectory, ex.Message);
+            return null;
         }
     }
 
@@ -501,19 +570,27 @@ internal sealed class BodyShell
         var indices = new List<ushort>();
         var map = new Dictionary<(int Mesh, int Index, int Side), ushort>();
 
+        string? mover = null;
+        var rest = Matrix4x4.Identity;
         void Flush()
         {
-            if (indices.Count > 0) result.Add(new Mesh(vertices.ToArray(), indices.ToArray()));
+            if (indices.Count > 0) result.Add(new Mesh(vertices.ToArray(), indices.ToArray(), mover, mover == null ? default : rest));
             vertices.Clear();
             indices.Clear();
             map.Clear();
         }
 
-        foreach (var t in tris)
+        // A mesh for each part that moves, and for the body: one moving part's wear goes with it alone
+        foreach (var t in tris.OrderBy(t => meshes[t.Mesh].Mover, StringComparer.Ordinal))
         {
-            if (vertices.Count > 65000) Flush();
+            var source = meshes[t.Mesh];
+            if (vertices.Count > 65000 || source.Mover != mover)
+            {
+                Flush();
+                (mover, rest) = (source.Mover, source.MoverRest);
+            }
             var face = FaceNormal(t);
-            var (node, toModel, _) = meshes[t.Mesh];
+            var (node, toModel, _, _, _) = source;
             // The way the corners face decides the view, so a smooth panel is laid on one view all over, not split by its facets
             var corners = new[] { t.I0, t.I1, t.I2 };
             var normals = corners.Select(i => NormalOf(node.Vertices[i], toModel, face)).ToArray();

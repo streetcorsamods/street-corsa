@@ -138,10 +138,6 @@
                             Focusable="False"/>
         </ScrollViewer>
 
-        <!-- The title the game opens on, over everything while the showroom loads behind it -->
-        <local:IntroView x:Name="Intro"
-                         Grid.RowSpan="3"
-                         Visibility="Collapsed"
-                         MouseDown="Intro_MouseDown"/>
+        <!-- The title the game opens on is the window's (MainWindow.Intro): up from the first frame, taken over here -->
     </Grid>
 </UserControl>

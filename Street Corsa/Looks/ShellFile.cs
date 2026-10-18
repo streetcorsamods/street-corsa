@@ -22,7 +22,9 @@ internal static class ShellFile
     public static string KeyOf(string model)
     {
         var info = new FileInfo(model);
-        return $"{Path.GetFullPath(model).ToLowerInvariant()}|{info.Length}|{info.LastWriteTimeUtc.Ticks}|{BodyShell.Version}";
+        // The car's animations say what of its body moves (BodyShell.MoversOf): a car given new ones is looked at again
+        var animations = Path.GetDirectoryName(model) is { } car ? BodyShell.MoversStamp(car) : "";
+        return $"{Path.GetFullPath(model).ToLowerInvariant()}|{info.Length}|{info.LastWriteTimeUtc.Ticks}|{BodyShell.Version}|{animations}";
     }
 
     /// <summary>The kept file for the model in <paramref name="model"/>, in <paramref name="folder"/></summary>
@@ -168,7 +170,16 @@ internal static class ShellFile
                     new Vec3(r.ReadSingle(), r.ReadSingle(), r.ReadSingle()));
             var indices = new ushort[Count(r, int.MaxValue, sizeof(ushort))];
             for (var i = 0; i < indices.Length; i++) indices[i] = r.ReadUInt16();
-            meshes.Add(new BodyShell.Mesh(vertices, indices));
+            string? mover = null;
+            var rest = default(System.Numerics.Matrix4x4);
+            if (r.ReadBoolean())
+            {
+                mover = r.ReadString();
+                for (var row = 0; row < 4; row++)
+                for (var column = 0; column < 4; column++)
+                    rest[row, column] = r.ReadSingle();
+            }
+            meshes.Add(new BodyShell.Mesh(vertices, indices, mover, rest));
         }
         return meshes;
     }
@@ -188,6 +199,12 @@ internal static class ShellFile
             }
             w.Write(mesh.Indices.Length);
             foreach (var i in mesh.Indices) w.Write(i);
+            w.Write(mesh.Mover != null);
+            if (mesh.Mover == null) continue;
+            w.Write(mesh.Mover);
+            for (var row = 0; row < 4; row++)
+            for (var column = 0; column < 4; column++)
+                w.Write(mesh.Rest[row, column]);
         }
     }
 }
