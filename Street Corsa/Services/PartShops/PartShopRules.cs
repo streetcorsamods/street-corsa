@@ -61,6 +61,8 @@ namespace StreetCorsa.Services.PartShops
         /// <summary>A machine shop's least price, as a share of what its work adds to the part's worth</summary>
         public static double MachineValueShare => Rules.RuleBook.Current.PartShops.MachineValueShare;
 
+        /// <summary>A delivery tops up this share of the lines it keeps on the shelves</summary>
+        public static double TopUpChance => Rules.RuleBook.Current.PartShops.TopUpChance;
 
         /// <summary>The rules' figures for the shop's kind of shop (<c>partShops.kinds</c>), for what the shop's own file leaves out</summary>
         private static Rules.PartShopKindRules KindRules(PartShopDefinition shop) =>

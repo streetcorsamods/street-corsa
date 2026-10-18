@@ -88,10 +88,6 @@ namespace StreetCorsa.Services.CarLot
         public WarehouseDressing Dress(int number, int round, StreetLight light)
         {
             var look = Looks.Count == 0 ? null : Looks[round % Looks.Count];
-            var lighting = SceneLighting.For(Lights, light);
-            if (look != null)
-                lighting = lighting with { Lamps = lighting.Lamps.Select(lamp => lamp with { Color = look.LampColor }).ToList() };
-
             var pictures = new Dictionary<string, string>(look?.Surfaces ?? new Dictionary<string, string>(), StringComparer.Ordinal);
             if (DigitPicture != null)
             {
@@ -101,10 +97,7 @@ namespace StreetCorsa.Services.CarLot
                 if (UnitsMaterial != null) pictures[UnitsMaterial] = string.Format(DigitPicture, shown % 10);
             }
 
-            var glow = new Dictionary<string, float>(StringComparer.Ordinal);
-            if (Skylight.TryGetValue(light, out var sky)) glow[SkylightMaterial] = sky;
-
-            return new WarehouseDressing(lighting, Sun, pictures, glow);
+            return SceneDressing.Of(Lights, light, look?.LampColor, pictures, Sun, SkylightMaterial, Skylight);
         }
     }
 

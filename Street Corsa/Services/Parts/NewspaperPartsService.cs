@@ -18,8 +18,6 @@ namespace StreetCorsa.Services.Parts
         public static double MailOrderPremium => Rules.RuleBook.Current.Economy.MailOrderPremium;
         public static int MailOrderDays => Rules.RuleBook.Current.Economy.MailOrderDays;
 
-        private const string EnginePacks = "engines/";
-
         private static int MinAds => Rules.RuleBook.Current.Economy.PartAdsLow;
         private static int MaxAds => Rules.RuleBook.Current.Economy.PartAdsHigh;
         private static int AdLifetimeDays => Rules.RuleBook.Current.Economy.PartAdDays;
@@ -221,8 +219,11 @@ namespace StreetCorsa.Services.Parts
                 part = new PartInstance(Assortment[random.Next(Assortment.Count)].Id) { Wear = wear };
             }
 
-            // Private sellers ask around what a shop would, some more, some less, and more in a harder game
-            var asking = PartPricing.WorthOfAssembly(catalog, part) * PartPricing.UsedShopFactor * (0.8 + random.NextDouble() * 0.4)
+            // Private sellers ask around what a shop would, some more, some less (economy.partAdMinAskShare to
+            // partAdMaxAskShare), and more in a harder game
+            var economy = Rules.RuleBook.Current.Economy;
+            var asking = PartPricing.WorthOfAssembly(catalog, part) * PartPricing.UsedShopFactor
+                         * (economy.PartAdMinAskShare + random.NextDouble() * (economy.PartAdMaxAskShare - economy.PartAdMinAskShare))
                          * GameRules.Sane(priceMultiplier);
             var ad = new PartAd(part, UsedAsk(catalog, part, asking, mostPaidFactor), GameText.Installed.Pick("names.part_sellers", random))
             {
@@ -233,21 +234,23 @@ namespace StreetCorsa.Services.Parts
         }
 
         /// <summary>
-        /// What is for sale: the engine packs, whatever else the engine builds use (batteries, mufflers), and
-        /// the running gear: tyres, rims, brakes, springs and shocks. The base game's scriptless entries (the
-        /// roots other parts declare their fit against) are nothing to buy, and neither is what has no say in
-        /// how the car drives (the stock sway bars and suspension arms are inert).
+        /// What is for sale: the parts of the kinds part_groups.json puts up for sale (<see cref="PartGroups.ForSale"/>:
+        /// the engine's parts in the base game), whatever else the engine builds use (batteries, mufflers), and the
+        /// running gear: tyres, rims, brakes, springs and shocks, the rear axle's parts. The fittings (the roots other
+        /// parts declare their fit against, no real parts) are nothing to buy, and neither is what has no say in how the
+        /// car drives (the stock sway bars and suspension arms are inert).
         /// </summary>
         private IReadOnlyList<PartDefinition> FindAssortment()
         {
             var catalog = _parts.Catalog;
+            var groups = PartGroups.Current;
             var usedByBuilds = catalog.EngineBuilds
                 .SelectMany(b => b.Parts)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
             return catalog.Parts.Values
                 .Where(p => usedByBuilds.Contains(p.Id) ||
-                            (p.LocalId.StartsWith(EnginePacks, StringComparison.OrdinalIgnoreCase) && p.IsRealPart) ||
+                            (p.IsRealPart && groups.ForSale(PartKinds.GroupOf(p))) ||
                             (p.IsRealPart && RunningGear.IsRunningGear(PartKinds.GroupOf(p)) && (PartKinds.GroupOf(p) != PartKinds.SwayBars || RunningGear.IsWorkingSwayBar(p))) ||
                             RearAxle.IsAxleGroup(PartKinds.GroupOf(p)))
                 .OrderBy(p => p.DisplayName ?? p.Name, StringComparer.OrdinalIgnoreCase)

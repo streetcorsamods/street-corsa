@@ -337,9 +337,15 @@ mail order (`Screens/UsedParts`, the part shops' map's Mail order button) has tw
 (`PartKinds.GroupOf`, from the parts' classes), name, and "only what fits my car" (`FindFittingParts`: everything that
 goes on any slot of the selected car's tree, taken slots included). New price is what the part does
 (`PartPriceBook`, 2026-10-06: its kind's `price` in part_groups.json, a base and dollars per horsepower the part is
-worth on the dyno, measured once a session over every build that runs; no pack writes a price);
-a used part is worth `new x tear x (0.3 + 0.7 x wear)`, ads ask around 60% of that, a trade-in
-pays 40%. A whole engine that runs is priced by what it makes (`PartPricing.EngineNewPrice`, 2026-10-17): its dyno
+worth on the dyno, measured once a session over every build that runs and kept under `%AppData%\StreetCorsa\part_power.json`
+with a fingerprint of the parts, `PriceBookStore`; no pack writes a price). The process-wide price seams (`PartPricing`,
+`CarPricing`, `EngineRules`) are pointed at the rules and the parts service once, where the app is composed
+(`PartsWiring.Wire`), never by a constructor; the UI thread never waits for the book to be measured (the warm-up does it)
+and prices at the kinds' bases until it is. A used part is worth `new x tear x (floor + (1 - floor) x wear)`
+(`PartPricing.Shape`, `economy.wearFloor` 0.3, the one rule for a part's wear and a car's body), ads ask around 60%
+of that (`economy.partAdMinAskShare` to `partAdMaxAskShare` of a shop's used price), a trade-in pays 40%. What is for
+sale at all is the kinds part_groups.json puts up (`for_sale`: the engine's parts; the running gear is sold by what it is,
+the mufflers are not). A whole engine that runs is priced by what it makes (`PartPricing.EngineNewPrice`, 2026-10-17): its dyno
 power, measured with every part as new, on the blocks' curve, plus the base price of every other part, and never less than
 its parts loose. Its worth shares that over the parts by their prices, each share in its part's wear. Loose parts price
 their power linearly (a head $4/hp) and a block by the weakest engine it comes in, so an engine carrying its power in its
@@ -360,7 +366,7 @@ dealer map with `partShopsMap`, gold square pins and no car lots), driven out to
   `origin: car` build), any make; a *wheel shop* the running gear; a *junkyard* anything, used.
 - **Stock**: the save carries it (`PartShopLocation`, a `DealerLocation` with `Shelves`, `Yard`, `RestockedOn`,
   `PlayerSpent`). A delivery (`PartShopService.Deliver`, every `RestockDays`: 7 days a specialist, 10 a speed shop, 5 a
-  wheel shop) keeps most of what is left, may top each line up, and adds lines up to 40-60 different parts (a speed shop 25-35,
+  wheel shop) keeps most of what is left, tops each line up half the time (`partShops.topUpChance`), and adds lines up to 40-60 different parts (a speed shop 25-35,
   one or two of each, its dear parts rarer). A junkyard's yard holds 20-35 parts (15% of them whole engines of a runnable
   build), 15-75% worn, gone after 21 days; wrecks come in every three days, taken apart off the UI thread. A shop never
   stocked (a game just begun, a shop just opened) is stocked when the map or the shop is opened, whatever the rules.

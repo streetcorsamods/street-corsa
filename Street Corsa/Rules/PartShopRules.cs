@@ -110,6 +110,15 @@ public sealed class PartShopRules
             if (start.Deserialize<PartShopKindRules>(RuleBook.Options) is { } rules) Kinds[kind] = rules;
         }
     }
+
+    /// <summary>A delivery tops up this share of the lines it keeps on the shelves (to a full shelf's count)</summary>
+    public double TopUpChance { get; set; } = 0.5;
+
+    /// <summary>Each figure the game divides by, loops over or pays held to what it can play by (<see cref="Figures"/>)</summary>
+    internal void Check(string path, List<string> problems)
+    {
+        Figures.Within(this, path, nameof(TopUpChance), 0, 1, problems);
+    }
 }
 
 /// <summary>A kind of part shop's figures, where a shop's own file says nothing</summary>

@@ -106,15 +106,14 @@ namespace StreetCorsa.Services.Market
             if (WhyNotSellable(gameState, car) is { } refusal) return refusal;
 
             var quote = QuoteDealer(gameState, car);
+
+            // The dealer sells it on at its worth, marked up or down like every car on the lot; the scrapyard breaks it up.
+            // The listing is made first: a failure in its making (the ad's words) must not leave the car gone and the money paid
+            var listing = quote.LocationId == null ? null
+                : _market.ListCar(car, GameRules.Scale(quote.Value, gameState.Rules.CarPriceMultiplier), quote.LocationId, gameState.Date);
             RemoveFromGarage(gameState, car);
             gameState.Player.Money += quote.Amount;
-
-            // The dealer sells it on at its worth, marked up or down like every car on the lot; the scrapyard breaks it up
-            if (quote.LocationId != null)
-            {
-                gameState.UsedCarMarket.Add(_market.ListCar(car, GameRules.Scale(quote.Value, gameState.Rules.CarPriceMultiplier),
-                    quote.LocationId, gameState.Date));
-            }
+            if (listing != null) gameState.UsedCarMarket.Add(listing);
 
             _logger.Information("Sold {Car} to {Buyer} for ${Amount} (worth ${Value})", car.DefinitionId, quote.BuyerName, quote.Amount, quote.Value);
 
@@ -308,17 +307,19 @@ namespace StreetCorsa.Services.Market
         }
 
         /// <summary>
-        /// The chance a buyer calls on a given day: 60% for a car asked at 90% of its worth or less, and down by 12
-        /// points for every tenth more, to nobody at 140%. A car the player has had fewer than
-        /// <c>market.paperFreshDays</c> days (<paramref name="daysOwned"/>) draws <c>market.paperFreshChanceFactor</c> of that.
+        /// The chance a buyer calls on a given day: <c>market.paperBaseChance</c> (60%) for a car asked at
+        /// <c>market.paperFairShare</c> (90%) of its worth or less, and down by <c>market.paperChanceSlope</c> of a point for
+        /// every whole share more (12 points a tenth), to nobody; <c>market.paperUnpricedChance</c> for a car nobody can put a
+        /// worth on. A car the player has had fewer than <c>market.paperFreshDays</c> days (<paramref name="daysOwned"/>) draws
+        /// <c>market.paperFreshChanceFactor</c> of that.
         /// </summary>
         public static double OfferChance(decimal askingPrice, decimal value, double daysOwned = double.PositiveInfinity)
         {
             var rules = Rules.RuleBook.Current.Market;
             var fresh = daysOwned < rules.PaperFreshDays ? rules.PaperFreshChanceFactor : 1.0;
-            if (value <= 0) return 0.1 * fresh;
+            if (value <= 0) return rules.PaperUnpricedChance * fresh;
             var ratio = (double)(askingPrice / value);
-            return fresh * (ratio <= 0.9 ? 0.6 : Math.Max(0, 0.6 - (ratio - 0.9) * 1.2));
+            return fresh * (ratio <= rules.PaperFairShare ? rules.PaperBaseChance : Math.Max(0, rules.PaperBaseChance - (ratio - rules.PaperFairShare) * rules.PaperChanceSlope));
         }
 
         /// <summary>

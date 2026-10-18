@@ -127,10 +127,7 @@ namespace StreetCorsa.Services.Station
             var station = new StationScene(entry.Id ?? Path.GetFileName(folder), entry.Title ?? entry.Id ?? GameText.Say("station.ui.default_title"), folder,
                 entry.Model ?? "station.kn5", arrive, leave, entry.LookAtPump ?? 72f, entry.Sun is { Length: 3 } sun ? sun : [0.2f, 1f, 0.8f],
                 SceneLighting.Read(entry.Lights, entry.Id ?? Path.GetFileName(folder), Logger), prices);
-            if (station.Kn5.Length == 0)
-                Logger.Warning("The gas station {Id} names a model outside its folder ({Model}): it is shown without its picture", station.Id, station.Model);
-            else if (!station.HasModel)
-                Logger.Warning("The gas station {Id} has no model {Path}: it is shown without its picture", station.Id, station.Kn5);
+            SceneFiles.WarnModel(Logger, "gas station", station.Id, station.Model, station.Kn5, station.HasModel);
             return station;
         }
 

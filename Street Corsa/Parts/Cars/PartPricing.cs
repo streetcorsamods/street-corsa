@@ -10,17 +10,18 @@ namespace StreetCorsa.Parts.Cars;
 /// <summary>
 /// What parts cost. New price is what the part does (<see cref="PartPriceBook"/>), by what it does,
 /// and a whole engine what it makes (<see cref="EngineNewPrice"/>); a used part is worth less: damage scales it, wear
-/// takes up to 70% off.
+/// takes all but <see cref="WearFloor"/> off (<see cref="Shape"/>).
 /// </summary>
 public static class PartPricing
 {
-    private const double WearFloor = 0.3;
-
     // More than anything in the game costs, well inside what a decimal holds
     private const double MaxPrice = 1e12;
 
-    /// <summary>The figures every price is worked out with: <see cref="Scale"/>, <see cref="UsedShopFactor"/>, <see cref="TradeInFactor"/></summary>
-    public readonly record struct Figures(double Scale, double UsedShopFactor, double TradeInFactor);
+    /// <summary>
+    /// The figures every price is worked out with: <see cref="Scale"/>, <see cref="UsedShopFactor"/>, <see cref="TradeInFactor"/>,
+    /// <see cref="WearFloor"/>
+    /// </summary>
+    public readonly record struct Figures(double Scale, double UsedShopFactor, double TradeInFactor, double WearFloor = 0.3);
 
     /// <summary>
     /// Where the figures come from, asked each time a price is worked out. Process-wide on purpose: every price in the
@@ -31,7 +32,7 @@ public static class PartPricing
     /// </summary>
     public static Func<Figures>? Source { get; set; }
 
-    private static Figures Now => Source?.Invoke() ?? new Figures(1.0, 0.6, 0.4);
+    private static Figures Now => Source?.Invoke() ?? new Figures(1.0, 0.6, 0.4, 0.3);
 
     /// <summary>
     /// The price book every new price is read from, asked each time: process-wide like <see cref="Source"/>. The game
@@ -49,7 +50,24 @@ public static class PartPricing
     /// <summary>The economy's factor on every part's price: part_groups.json's prices are the game's dollars at 1</summary>
     public static double Scale => Sane(Now.Scale, 1.0);
 
+    /// <summary>
+    /// How much of its new price a thing worn out is still worth (0 to 1): a part's wear and a car's body in its
+    /// condition take the rest off (<c>economy.wearFloor</c>); a figure that is no share is the base game's
+    /// </summary>
+    public static double WearFloor => Now.WearFloor is var floor && double.IsFinite(floor) && floor is >= 0 and <= 1 ? floor : 0.3;
+
     private static double Sane(double value, double otherwise) => double.IsFinite(value) && value > 0 ? value : otherwise;
+
+    /// <summary>
+    /// How much of its new price a thing in this shape is worth (0 to 1): <see cref="WearFloor"/> with nothing left of it,
+    /// all of it new, in between as <paramref name="condition"/> stands (held to 0..1); a condition that is no number is
+    /// <paramref name="ifNotFinite"/>. The one rule for a part's wear and a car's body alike.
+    /// </summary>
+    public static double Shape(double condition, double ifNotFinite = 0)
+    {
+        var floor = WearFloor;
+        return floor + (1 - floor) * Unit.Clamp01(condition, ifNotFinite);
+    }
 
     public static double NewPrice(PartDefinition part) => (Book?.Invoke() ?? PartPriceBook.Empty).Price(part) * Scale;
 
@@ -59,7 +77,7 @@ public static class PartPricing
     /// for speed work.
     /// </summary>
     public static double Worth(PartDefinition part, PartInstance instance) =>
-        NewPrice(part) * Unit.Clamp01(instance.Tear, 1) * (WearFloor + (1 - WearFloor) * Unit.Clamp01(instance.Wear, 1)) * CutWorth(part, instance);
+        NewPrice(part) * Unit.Clamp01(instance.Tear, 1) * Shape(instance.Wear, ifNotFinite: 1) * CutWorth(part, instance);
 
     /// <summary>
     /// What the cuts on a part do to its worth, against the part as it left the factory: the product of each cut's size's

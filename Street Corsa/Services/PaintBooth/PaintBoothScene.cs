@@ -160,10 +160,7 @@ namespace StreetCorsa.Services.PaintBooth
                 else ModProblems.Add("Paint booths", $"{file}: a colour needs a name and a hex (#RRGGBB); {colour?.Name ?? "one"} left out");
             }
             booth = booth with { Colours = colours };
-            if (booth.Kn5.Length == 0)
-                Logger.Warning("The paint booth {Id} names a model outside its folder ({Model}): it is shown without its picture", booth.Id, booth.Model);
-            else if (!booth.HasModel)
-                Logger.Warning("The paint booth {Id} has no model {Path}: it is shown without its picture", booth.Id, booth.Kn5);
+            SceneFiles.WarnModel(Logger, "paint booth", booth.Id, booth.Model, booth.Kn5, booth.HasModel);
             return booth;
         }
 

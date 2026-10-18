@@ -139,10 +139,7 @@ namespace StreetCorsa.Services.Diner
             {
                 Glow = entry.Glow == null && street != null ? street.Glow : SceneLighting.MaterialGlows(entry.Glow)
             };
-            if (scene.Kn5.Length == 0)
-                Logger.Warning("The diner street {Id} names a model outside its folder ({Model}): it is shown without its picture", scene.Id, scene.Model);
-            else if (!scene.HasModel)
-                Logger.Warning("The diner street {Id} has no model {Path}: it is shown without its picture", scene.Id, scene.Kn5);
+            SceneFiles.WarnModel(Logger, "diner street", scene.Id, scene.Model, scene.Kn5, scene.HasModel);
             return scene;
         }
 

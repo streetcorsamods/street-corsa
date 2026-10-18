@@ -94,6 +94,20 @@ public sealed class RivalRules
 
     public decimal AskReduction { get; set; } = 0.9m;
 
+    /// <summary>At most this many racers tune their engines in a day (each is a few dozen dyno runs)</summary>
+    public int MaxTunersPerDay { get; set; } = 3;
+
+    /// <summary>The chance a racer with money to spare works on the engine on a given day: now and then, not daily</summary>
+    public double TuneChance { get; set; } = 0.15;
+
+    /// <summary>The same while a shop the tuners buy at holds its closing-down sale: the racers go after the bargains</summary>
+    public double SaleTuneChance { get; set; } = 0.3;
+
+    /// <summary>How long the street keeps talking about something, and how much it remembers at once</summary>
+    public int StreetTalkDays { get; set; } = 7;
+
+    public int MaxStreetTalk { get; set; } = 40;
+
     /// <summary>Each figure the game divides by, loops over or pays held to what it can play by (<see cref="Figures"/>)</summary>
     internal void Check(string path, List<string> problems)
     {
@@ -102,6 +116,11 @@ public sealed class RivalRules
         Figures.Within(this, path, nameof(MaxCars), 1, 100, problems);
         Figures.Within(this, path, nameof(MaxBargainsPerDay), 0, 100, problems);
         Figures.Within(this, path, nameof(MaxTimesBroke), 0, 1000, problems);
+        Figures.Within(this, path, nameof(MaxTunersPerDay), 0, 1000, problems);
+        Figures.Within(this, path, nameof(TuneChance), 0, 1, problems);
+        Figures.Within(this, path, nameof(SaleTuneChance), 0, 1, problems);
+        Figures.Within(this, path, nameof(StreetTalkDays), 0, 3650, problems);
+        Figures.Within(this, path, nameof(MaxStreetTalk), 0, 100_000, problems);
         Figures.Money(this, path, problems, 10_000_000, nameof(BankruptFloor), nameof(MinCashInjection), nameof(MaxCashInjection));
         Figures.Within(this, path, nameof(TuningReserveShare), 0, 1, problems);
         Figures.Within(this, path, nameof(TuningShare), 0, 1, problems);

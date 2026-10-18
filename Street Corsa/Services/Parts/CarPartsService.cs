@@ -20,10 +20,6 @@ namespace StreetCorsa.Services.Parts
     /// </summary>
     public class CarPartsService : ICarPartsService
     {
-        // A car nobody has touched is still not a new car
-        private const double UsedCarTuneChance = 0.35;
-        private const double MinTuneLevel = 0.3;
-
         private readonly IContentCatalogRepository _catalogRepo;
         private readonly ICarProfileRepository _profileRepo;
         private readonly IAppLogger _logger = AppLoggerFactory.CreateLogger(LogCategory.Parts);
@@ -31,10 +27,11 @@ namespace StreetCorsa.Services.Parts
         private readonly Lazy<EngineBuildIndex> _builds;
         private readonly Lazy<SoundLibrary> _sounds;
         private readonly Lazy<EngineCooling> _cooling;
-        private readonly Lazy<PartPriceBook> _priceBook;
+        private readonly PriceBookStore _priceBook;
         private readonly ConcurrentDictionary<string, RatedBuild?> _suggestedBuilds = new(StringComparer.OrdinalIgnoreCase);
         private readonly object _assignLock = new();
-        private readonly ConcurrentDictionary<string, AcCarSpecs?> _specs = new();
+        // A car's folder is asked for in whatever case the caller has it (Kept lowers its own key)
+        private readonly ConcurrentDictionary<string, AcCarSpecs?> _specs = new(StringComparer.OrdinalIgnoreCase);
 
         // The parts of a car's factory build on its block, for Shown: a lot page shows car after car, and each would read
         // the catalog twice and gather the build again (ForgetFactoryBuilds when the catalog editor changes one)
@@ -48,8 +45,8 @@ namespace StreetCorsa.Services.Parts
         // Whether a race has the car's data changed right now (CarDataOverlay): what is read then is not the car's own
         private readonly Func<string, bool> _isCarDataApplied;
 
-        // Script faults are told once each per car: the same engine is evaluated again on every screen that shows
-        // it, and the same faulting part on another car is another car to name
+        // The faults in an engine's figures are told once each per car: the same engine is evaluated again on every
+        // screen that shows it, and the same faulting part on another car is another car to name
         private readonly ConcurrentDictionary<(string Car, string Fault), byte> _toldFaults = new();
 
         /// <param name="isCarDataApplied">
@@ -63,95 +60,31 @@ namespace StreetCorsa.Services.Parts
             // A new overlay per ask: it reads the AC and restore paths from the settings when it is made, and those
             // may have changed since this service was
             _isCarDataApplied = isCarDataApplied ?? (id => new CarDataOverlay().IsApplied(id));
-            // Every part price in the game, process-wide (see PartPricing.Source): the rules of the game in play
-            PartPricing.Source = () =>
-            {
-                var economy = Rules.RuleBook.Current.Economy;
-                return new PartPricing.Figures(economy.PartsPriceFactor, economy.UsedShopFactor, economy.TradeInFactor);
-            };
-            // And the engines' figures (cooling, factory, tuners, the engine matcher): the same rules
-            EngineRules.Source = () => Rules.RuleBook.Current.Engines;
-            // But the engine matcher's go into catalog.db, the program's: the installed mods' rules
-            EngineRules.ProgramSource = () => Rules.RuleBook.Installed.Engines;
             _catalog = new Lazy<PartsCatalog>(LoadCatalog);
             _builds = new Lazy<EngineBuildIndex>(CreateIndex);
             _sounds = new Lazy<SoundLibrary>(LoadSounds);
             _cooling = new Lazy<EngineCooling>(() => EngineCooling.Create(Catalog, Builds));
-            _priceBook = new Lazy<PartPriceBook>(CreatePriceBook);
-            // Every new part's price, process-wide like the figures: this catalog's parts measured on its builds
-            PartPricing.Book = () => PriceBook;
-            // And what a machine shop's cuts do to a part's worth: this catalog's jobs, once it is loaded
-            PartPricing.Jobs = () => _catalog.IsValueCreated ? _catalog.Value : null;
+            _priceBook = new PriceBookStore(() => Mods.ModSet.Installed.Folders(Mods.ContentTypes.Parts).Select(f => f.Dir),
+                kept => IsAvailable ? PartPriceBook.Create(Catalog, Builds, kept) : null, PriceBookPath);
+            // The process-wide prices (PartPricing.Book and the rest) are pointed here once, where the app is composed:
+            // PartsWiring, not this constructor, so a second service never takes them over
         }
 
-        public PartPriceBook PriceBook => _priceBook.Value;
+        /// <summary>Every part measured on the dyno, once a session (<see cref="PriceBookStore"/>): several seconds the first time</summary>
+        public PartPriceBook PriceBook => _priceBook.Book;
 
-        /// <summary>The power kept for these parts; null when none is, or it is of other parts, or it does not read</summary>
-        private Dictionary<string, double>? ReadMeasuring(string fingerprint)
-        {
-            try
-            {
-                if (!File.Exists(PriceBookPath)) return null;
-                var kept = System.Text.Json.JsonSerializer.Deserialize<KeptMeasuring>(File.ReadAllText(PriceBookPath));
-                return kept?.Fingerprint == fingerprint ? kept.Power : null;
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
-            {
-                _logger.Warning("The parts' kept measuring could not be read; they are measured again: {Error}", ex.Message);
-                return null;
-            }
-        }
+        /// <summary>
+        /// The book for a price asked now: <see cref="PriceBook"/> when the caller <paramref name="mayWait"/> for it to be
+        /// made, else the book once it is made and null (every part at its kind's base price) until then. The UI thread never
+        /// waits: the warm-up makes the book behind it.
+        /// </summary>
+        internal PartPriceBook? PriceBookFor(bool mayWait) => mayWait ? _priceBook.Book : _priceBook.IfMade;
 
-        private void KeepMeasuring(string fingerprint, PartPriceBook book)
-        {
-            try
-            {
-                Helpers.SafeFile.WriteAllText(PriceBookPath,
-                    System.Text.Json.JsonSerializer.Serialize(new KeptMeasuring(fingerprint, new Dictionary<string, double>(book.Power))));
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                _logger.Warning("The parts' measuring could not be kept; the next start measures them again: {Error}", ex.Message);
-            }
-        }
+        /// <summary>The catalog once it is loaded, null before (a machine shop's cuts change no worth till then)</summary>
+        internal PartsCatalog? CatalogIfLoaded => _catalog.IsValueCreated ? _catalog.Value : null;
 
         /// <summary>Where the measuring of the parts on the dyno is kept, with the fingerprint of the parts it was made from</summary>
         private static string PriceBookPath => Path.Combine(AppSettings.AppDataPath, "part_power.json");
-
-        private sealed record KeptMeasuring(string Fingerprint, Dictionary<string, double> Power);
-
-        /// <summary>
-        /// Every part measured on the dyno, once a session: several seconds, so the measuring is kept on disk and taken
-        /// back while the parts in the mods are the same ones
-        /// </summary>
-        private PartPriceBook CreatePriceBook()
-        {
-            if (!IsAvailable) return PartPriceBook.Empty;
-
-            try
-            {
-                var started = DateTime.Now;
-                var fingerprint = PartPriceBook.Fingerprint(Mods.ModSet.Installed.Folders(Mods.ContentTypes.Parts).Select(f => f.Dir));
-                if (ReadMeasuring(fingerprint) is { } kept)
-                {
-                    var known = PartPriceBook.Create(Catalog, Builds, kept);
-                    _logger.Information("Part prices: {Measured} parts as measured before, in {Ms} ms", known.Measured,
-                        (int)(DateTime.Now - started).TotalMilliseconds);
-                    return known;
-                }
-
-                var book = PartPriceBook.Create(Catalog, Builds);
-                _logger.Information("Part prices: {Measured} parts measured on the dyno in {Ms} ms", book.Measured,
-                    (int)(DateTime.Now - started).TotalMilliseconds);
-                KeepMeasuring(fingerprint, book);
-                return book;
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Could not measure the parts on the dyno: every part at its kind's base price");
-                return PartPriceBook.Empty;
-            }
-        }
 
         public PartsCatalog Catalog => _catalog.Value;
 
@@ -222,6 +155,43 @@ namespace StreetCorsa.Services.Parts
                     needsRenewal ? CreateRenewal(definitionId, tyreCondition) : null)
                 : (null, null, null));
             return Assign(car, engine, gear, renewal);
+        }
+
+        public async Task<int> EnsurePartsAsync(IEnumerable<Car> cars)
+        {
+            // What each car lacks, read on the caller's thread; the parts of all of them put together on one worker
+            var wanted = cars.Where(Lacks)
+                .Select(car => (Car: car, NeedsEngine: !car.HasPartsAssigned, NeedsGear: !car.HasRunningGearAssigned,
+                    NeedsRenewal: car.HasRunningGearAssigned && car.GearVersion < RunningGearFactory.GearVersion,
+                    EngineCondition: car.EngineHealth, TyreCondition: car.TireCondition))
+                .ToList();
+            if (wanted.Count == 0) return 0;
+
+            var made = await Task.Run(() => wanted.Select(w =>
+            {
+                try
+                {
+                    return IsAvailable
+                        ? (Engine: w.NeedsEngine ? CreateFactoryEngine(w.Car.DefinitionId, w.EngineCondition) : null,
+                            Gear: w.NeedsGear ? CreateFactoryRunningGear(w.Car.DefinitionId, w.TyreCondition) : null,
+                            Renewal: w.NeedsRenewal ? CreateRenewal(w.Car.DefinitionId, w.TyreCondition) : null)
+                        : (null, null, null);
+                }
+                catch (Exception ex)
+                {
+                    // One car whose parts cannot be put together is not every car
+                    _logger.Warning("Could not put together the parts of {Car}: {Error}", w.Car.DefinitionId, ex.Message);
+                    return (null, null, null);
+                }
+            }).ToList());
+
+            var changed = 0;
+            for (var i = 0; i < wanted.Count; i++)
+            {
+                if (Assign(wanted[i].Car, made[i].Engine, made[i].Gear, made[i].Renewal)) changed++;
+            }
+
+            return changed;
         }
 
         /// <remarks>
@@ -500,113 +470,18 @@ namespace StreetCorsa.Services.Parts
             _factoryAxles.Clear();
         }
 
-        public bool BringUpToDate(GameState game)
-        {
-            if (!IsAvailable) return false;
-
-            var changed = 0;
-
-            // The engine on the stand as the engines in the cars: one of a mod that is not installed waits on the
-            // shelf, one the catalog has lost for good is gone, and what no longer fits on it comes off to the shelf
-            if (game.Player.EngineStand is { } stand)
-            {
-                if (Catalog.Get(stand.DefinitionId) == null)
-                {
-                    game.Player.EngineStand = null;
-                    changed++;
-                    if (Mods.ModIds.IsQualified(stand.DefinitionId)) game.Player.Parts.Add(stand);
-                    _logger.Information("The {Block} on the engine stand is not in the catalog: {Where}", stand.DefinitionId,
-                        Mods.ModIds.IsQualified(stand.DefinitionId) ? "it waits on the shelf for its mod" : "it is gone");
-                }
-                else
-                {
-                    var off = new List<PartInstance>();
-                    changed += Renew(new[] { stand }, off);
-                    game.Player.Parts.AddRange(off);
-                }
-            }
-
-            var racers = new[] { game.Player }
-                .Concat(game.Racers.Inactive.Values).Concat(game.Racers.Retired.Values).Concat(game.Racers.ReadyToRace.Values);
-            foreach (var racer in racers)
-            {
-                // An engine the catalog no longer knows (its parts were left out of the content) is gone from the
-                // car, which gets its factory engine the next time it is looked at, worn like the car. One of a mod
-                // that is not installed goes on the owner's shelf whole: it is back in the game with the mod.
-                var keep = new List<PartInstance>();
-                foreach (var car in racer.Cars)
-                {
-                    if (car.Engine is not { } engine || Catalog.Get(engine.DefinitionId) != null) continue;
-
-                    car.Parts.Remove(engine);
-                    car.HasPartsAssigned = false;
-                    changed++;
-                    if (!Mods.ModIds.IsQualified(engine.DefinitionId))
-                    {
-                        _logger.Information("{Car} had a {Block} the catalog no longer has: gets its factory engine again", car.DefinitionId, engine.DefinitionId);
-                        continue;
-                    }
-
-                    engine.ParentSlot = 0;
-                    engine.OwnSlot = 0;
-                    keep.Add(engine);
-                    _logger.Information("{Car} had a {Block} of a mod that is not installed: it waits on the shelf, the car gets its factory engine",
-                        car.DefinitionId, engine.DefinitionId);
-                }
-
-                // What comes off a car goes on its owner's shelf, once the shelf itself has been gone through. A mod's
-                // part the catalog does not know stays there (the workbench does not show it) till the mod is back.
-                // A drum of a save of before the backing plates goes onto its plate, its shoes and wheel cylinder with it,
-                // before the joints are checked: they would take those off a drum that has no slot for them now
-                foreach (var car in racer.Cars) changed += RunningGearFactory.PutDrumsOnPlates(Catalog, car.Parts);
-
-                var shelf = new List<PartInstance>();
-                changed += racer.Parts.RemoveAll(part => Catalog.Get(part.DefinitionId) == null && !Mods.ModIds.IsQualified(part.DefinitionId));
-                racer.Parts.AddRange(keep);
-                changed += Renew(racer.Cars.SelectMany(c => c.Parts).Concat(racer.Parts), shelf);
-                racer.Parts.AddRange(shelf);
-            }
-
-            // Cars and parts for sale: what no longer fits is not part of the offer
-            changed += game.UsedCarMarket.RemoveAll(l => l.Parts.Any(p => Catalog.Get(p.DefinitionId) == null));
-            changed += game.NewspaperAds.Parts.RemoveAll(ad => Catalog.Get(ad.Part.DefinitionId) == null);
-
-            foreach (var listing in game.UsedCarMarket) changed += RunningGearFactory.PutDrumsOnPlates(Catalog, listing.Parts);
-            var forSale = game.UsedCarMarket.SelectMany(l => l.Parts)
-                .Concat(game.NewspaperAds.Parts.Select(ad => ad.Part));
-            changed += Renew(forSale, new List<PartInstance>());
-
-            // The part shops' shelves and yards, and what is on its way to the player, under the ids the parts go by now
-            changed += PartShops.PartShopService.RenameShelves(Catalog, game.PartShops);
-            changed += Renew(game.PartShops.SelectMany(shop => shop.Yard.Select(ad => ad.Part)), new List<PartInstance>());
-
-            changed += Renew(game.Player.PartOrders.Select(o => o.Part).Concat(game.Player.MachineWork.Select(o => o.Part)), new List<PartInstance>());
-
-            if (changed > 0) _logger.Information("{Count} change(s) to the save's parts to keep up with the parts catalog", changed);
-            return changed > 0;
-        }
-
-        private int Renew(IEnumerable<PartInstance> roots, List<PartInstance> loose)
-        {
-            var changed = 0;
-            foreach (var root in roots.ToList())
-            {
-                var before = loose.Count;
-                if (!SavedParts.BringUpToDate(Catalog, root, loose)) continue;
-
-                changed++;
-                foreach (var part in loose.Skip(before)) _logger.Information("{Part} no longer fits on {Root} and came off", part.DefinitionId, root.DefinitionId);
-            }
-
-            return changed;
-        }
+        public bool BringUpToDate(GameState game) => IsAvailable && new SavedPartsMigration(Catalog, _logger).BringUpToDate(game);
 
         public BuiltEngine? CreateUsedEngine(CarDefinition car, double condition)
         {
             var build = GetStockBuild(car);
             if (build == null) return null;
 
-            var tuneLevel = Random.Shared.NextDouble() < UsedCarTuneChance ? MinTuneLevel + (1 - MinTuneLevel) * Random.Shared.NextDouble() : 0;
+            // A car nobody has touched is still not a new car (market.usedCarTuneChance, usedCarMinTuneLevel)
+            var market = Rules.RuleBook.Current.Market;
+            var tuneLevel = Random.Shared.NextDouble() < market.UsedCarTuneChance
+                ? market.UsedCarMinTuneLevel + (1 - market.UsedCarMinTuneLevel) * Random.Shared.NextDouble()
+                : 0;
             return tuneLevel > 0
                 ? EngineFactory.CreateTuned(Catalog, Builds, build, condition, tuneLevel, Random.Shared)
                 : EngineFactory.CreateStock(Catalog, build, condition, Random.Shared);
