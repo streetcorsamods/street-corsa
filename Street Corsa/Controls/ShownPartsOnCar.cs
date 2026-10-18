@@ -75,6 +75,9 @@ public static class ShownPartsOnCar
 
     private static readonly ConditionalWeakTable<Kn5RenderableCar, OnCar> Cars = new();
 
+    /// <summary>The node under the car's root the parts shown always go in (<see cref="ShownModelAt.Always"/>)</summary>
+    public const string CornersNode = "sc_corners";
+
     /// <summary>
     /// How the corners of <paramref name="car"/> sit as it was last asked to show (<see cref="ShownSet.Heights"/>): what
     /// the scene's body rock leans its body by (CarBodyRock); null when as its model has them
@@ -352,6 +355,7 @@ public static class ShownPartsOnCar
             var surface = Surface(meshes);
             return shown.Extras.Where(e =>
             {
+                if (e.Always) return true;
                 var stands = ShownEngineParts.StandsOut(e, surface.Above);
                 Logger.Debug("{Part}: {Verdict}", e.Model.Name, stands ? "stands out" : "stays under the hood");
                 return stands;
@@ -359,10 +363,17 @@ public static class ShownPartsOnCar
         });
         if (Stale(on, version, gone)) return false;
 
-        var extras = new RenderableList("sc_parts", SlimDX.Matrix.Identity);
-        foreach (var extra in standing) extras.Add(new PartFile(models[extra.Model.Source], ToSlim(extra.At * fromRoot), on));
-        root.Add(extras);
-        on.Nodes.Add((root, extras));
+        // The parts shown always (a bare corner's brake and suspension) in a node of their own: it hangs with the wheels as
+        // the lift takes the car up (D3DViewportBase)
+        foreach (var (name, group) in new[] { ("sc_parts", standing.Where(e => !e.Always)), (CornersNode, standing.Where(e => e.Always)) })
+        {
+            var list = new RenderableList(name, SlimDX.Matrix.Identity);
+            foreach (var extra in group) list.Add(new PartFile(models[extra.Model.Source], ToSlim(extra.At * fromRoot), on));
+            if (list.Count == 0) continue;
+            root.Add(list);
+            on.Nodes.Add((root, list));
+        }
+
         return true;
     }
 

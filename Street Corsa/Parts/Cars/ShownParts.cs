@@ -105,9 +105,11 @@ public static class ShownParts
 
 /// <summary>
 /// A part's model a car may show, where it sits in the space of the car's model (its main KN5), and the box its model
-/// fills in its own space: what tells whether it stands out of the car (ShownEngineParts.StandsOut)
+/// fills in its own space: what tells whether it stands out of the car (ShownEngineParts.StandsOut). One shown
+/// <paramref name="Always"/> is shown whatever the car's meshes: a corner's brake and suspension with its wheel off
+/// (ShownCornerParts), hanging with the wheels as the garage's lift takes the car up.
 /// </summary>
-public sealed record ShownModelAt(ShownModel Model, Matrix4x4 At, Vector3 Min = default, Vector3 Max = default);
+public sealed record ShownModelAt(ShownModel Model, Matrix4x4 At, Vector3 Min = default, Vector3 Max = default, bool Always = false);
 
 /// <summary>
 /// A node of a car's model that never moves on the car (its floor, say) and where it sits in the model's KN5: how AC's

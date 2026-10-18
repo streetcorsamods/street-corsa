@@ -113,6 +113,12 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     private Kn5RenderableCar? _wheelsOf;
     private List<RenderableList> _carWheels = new();
 
+    // The car's own wheels standing in for the part wheels of the factory's at their corners (SetStandIns): the part's
+    // node, kept to be picked but not drawn, and the car's wheel drawn solid in its place, with what to let through when
+    // the car is drawn for that wheel alone (the wheel, what is in it and the nodes it hangs from)
+    private readonly Dictionary<PartNode, RenderableList> _standIns = new();
+    private readonly Dictionary<RenderableList, HashSet<IRenderableObject>> _standInPaths = new();
+
     // The part a job of the parts view's "Work on it" is being done on: a loose one lying on the workbench (drawn whole,
     // at how far it is in sight), and over it, or over the mounted part itself, its grime, fading as the work goes
     private Kn5RenderableFile? _work;
@@ -599,6 +605,9 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         // over on the stand has its oil pan come off upwards, and out still on the side the part is on
         var toProp = Matrix.Invert(_prop.LocalMatrix);
         var moving = groups.SelectMany(g => g.Nodes).ToHashSet();
+
+        // A wheel on its way is seen as the part it is: the car's own no longer stands in for it
+        foreach (var node in moving) EndStandIn(node);
         var staying = CentreOf(_propNodes.Where(n => !moving.Contains(n)));
         var frame = frameNode is { } f && f >= 0 && f < _propNodes.Count ? _propNodes[f] : null;
 
@@ -1174,6 +1183,7 @@ public class GarageRenderer : DarkKn5ObjectRenderer
 
         _prop?.Dispose();
         _unsprung.RemoveWhere(n => _propNodes.Contains(n));
+        _standIns.Clear();
         _propLeans = !_standActive;
         _propPlacement = placement;
         _prop = kn5 == null ? null : new Kn5RenderableFile(kn5, placement * (_propLeans ? _bodyLean : Matrix.Identity), asyncTexturesLoading: hiddenAtFirst);
@@ -1327,6 +1337,94 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     }
 
     /// <summary>
+    /// The car's own wheels stand in for the mounted parts' nodes at their corners (<paramref name="nodes"/>: a factory rim
+    /// and its tyre, corner 0 front left to 3 right rear): the car's wheel is drawn solid where the part's is, and the
+    /// part's node is still there to be picked, to glow (as the car's wheel) and to be taken off. Given once for each model
+    /// put in, right after it. Must be called on the thread that draws.
+    /// </summary>
+    public void SetStandIns(IEnumerable<(int Node, int Corner)> nodes)
+    {
+        if (CarNode is not { } car || car.RootObject is not { } root) return;
+        var wheels = CarWheelsByName(car);
+        foreach (var (index, corner) in nodes)
+        {
+            if (index < 0 || index >= _propNodes.Count || corner < 0 || corner >= Parts.Cars.WheelFit.WheelNodes.Length) continue;
+            if (!wheels.TryGetValue(Parts.Cars.WheelFit.WheelNodes[corner], out var wheel)) continue;
+
+            var node = _propNodes[index];
+            foreach (var mesh in node.List.GetAllChildren().OfType<IRenderableObject>().Where(o => o is not RenderableList)) mesh.IsEnabled = false;
+            _standIns[node] = wheel;
+            if (!_standInPaths.ContainsKey(wheel) && PathTo(root, wheel) is { } path)
+                _standInPaths[wheel] = path.Concat(wheel.GetAllChildren()).Append(wheel).ToHashSet();
+        }
+
+        IsDirty = true;
+    }
+
+    /// <summary>The part's own model back in sight, and the car's wheel no longer standing in for it, nor for the rest of its wheel</summary>
+    private void EndStandIn(PartNode node)
+    {
+        if (!_standIns.TryGetValue(node, out var wheel)) return;
+        foreach (var (other, _) in _standIns.Where(s => ReferenceEquals(s.Value, wheel)).ToList())
+        {
+            foreach (var mesh in other.List.GetAllChildren().OfType<IRenderableObject>().Where(o => o is not RenderableList)) mesh.IsEnabled = true;
+            _standIns.Remove(other);
+        }
+    }
+
+    /// <summary>The nodes from <paramref name="from"/> down to <paramref name="target"/>, both in; null when it is not under it</summary>
+    private static List<IRenderableObject>? PathTo(RenderableList from, RenderableList target)
+    {
+        if (ReferenceEquals(from, target)) return [from];
+        foreach (var child in from.OfType<RenderableList>())
+        {
+            if (PathTo(child, target) is { } path)
+            {
+                path.Insert(0, from);
+                return path;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>The car's own wheels standing in for parts, but those whose parts are put out of sight (the wheels' show)</summary>
+    private void DrawStandIns(DeviceContextHolder holder, ICamera camera, SpecialRenderMode mode)
+    {
+        if (_standIns.Count == 0 || CarNode is not { } car) return;
+
+        var shown = _standIns.GroupBy(s => s.Value).Where(g => g.All(s => !s.Key.IsHidden)).Select(g => g.Key).ToList();
+        foreach (var wheel in shown) DrawStandIn(holder, camera, mode, car, wheel);
+    }
+
+    private void DrawStandIn(DeviceContextHolder holder, ICamera camera, SpecialRenderMode mode, Kn5RenderableCar car, RenderableList wheel)
+    {
+        if (_standInPaths.TryGetValue(wheel, out var through)) car.Draw(holder, camera, mode, through.Contains);
+    }
+
+    private Dictionary<string, RenderableList> CarWheelsByName(Kn5RenderableCar car)
+    {
+        if (!ReferenceEquals(_wheelsOf, car))
+        {
+            _wheelsOf = car;
+            _carWheels = new List<RenderableList>();
+            FindWheels(car);
+        }
+
+        return _carWheels.OfType<Kn5RenderableList>().ToDictionary(w => w.OriginalNode.Name, w => (RenderableList)w, StringComparer.OrdinalIgnoreCase);
+
+        void FindWheels(RenderableList list)
+        {
+            foreach (var child in list)
+            {
+                if (child is not RenderableList node) continue;
+                if (node is Kn5RenderableList { OriginalNode.Name: var name } && CarWheel.IsMatch(name)) _carWheels.Add(node);
+                else FindWheels(node);
+            }
+        }
+    }
+
+    /// <summary>
     /// Draws the car without its own wheels while the car's parts are on show (the wheels are among them), with them
     /// otherwise: the wheel nodes are switched off for the draw and back as they were after it
     /// </summary>
@@ -1338,13 +1436,7 @@ public class GarageRenderer : DarkKn5ObjectRenderer
             return;
         }
 
-        if (!ReferenceEquals(_wheelsOf, car))
-        {
-            _wheelsOf = car;
-            _carWheels = new List<RenderableList>();
-            FindWheels(car);
-        }
-
+        CarWheelsByName(car);
         var was = new bool[_carWheels.Count];
         for (var i = 0; i < _carWheels.Count; i++)
         {
@@ -1359,16 +1451,6 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         finally
         {
             for (var i = 0; i < _carWheels.Count; i++) _carWheels[i].IsEnabled = was[i];
-        }
-
-        void FindWheels(RenderableList list)
-        {
-            foreach (var child in list)
-            {
-                if (child is not RenderableList node) continue;
-                if (node is Kn5RenderableList { OriginalNode.Name: var name } && CarWheel.IsMatch(name)) _carWheels.Add(node);
-                else FindWheels(node);
-            }
         }
     }
 
@@ -1680,8 +1762,9 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         }
         else
         {
-            // Shadows, g-buffer (AO, reflections) and the rest see the parts only
+            // Shadows, g-buffer (AO, reflections) and the rest see the parts only, the car's own wheels standing in for some
             _prop?.Draw(holder, camera, mode, _settled);
+            DrawStandIns(holder, camera, mode);
             _candidates?.Draw(holder, camera, mode);
         }
 
@@ -1821,8 +1904,18 @@ public class GarageRenderer : DarkKn5ObjectRenderer
             DrawGlow(3, HoverGlow, fade, () => DrawNode(hoveredNode));
 
         // The model hands its materials down as it draws, so a single part is drawn by keeping the others out
-        void DrawNode(PartNode node) => node.File.Draw(holder, ActualCamera, SpecialRenderMode.Outline,
-            o => o is not RenderableList list || ReferenceEquals(list, node.List) || !node.Siblings.Contains(list));
+        void DrawNode(PartNode node)
+        {
+            // A part the car's own wheel stands in for glows as that wheel
+            if (_standIns.TryGetValue(node, out var wheel) && CarNode is { } car)
+            {
+                DrawStandIn(holder, ActualCamera, SpecialRenderMode.Outline, car, wheel);
+                return;
+            }
+
+            node.File.Draw(holder, ActualCamera, SpecialRenderMode.Outline,
+                o => o is not RenderableList list || ReferenceEquals(list, node.List) || !node.Siblings.Contains(list));
+        }
     }
 
     private PartNode? NodeOf(PartHit hit)

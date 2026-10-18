@@ -843,7 +843,8 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
     /// <summary>
     /// The car model's own shadows (AC's body_shadow and tyre_N_shadow planes, under the car in its node) stay on the floor
     /// as the lift takes the car up: the body's moved down as far as the car is up, the tyres' gone once the wheels hang
-    /// clear of the floor (<see cref="StreetCorsa.Parts.LiftLayout.WheelDrop"/>)
+    /// clear of the floor (<see cref="StreetCorsa.Parts.LiftLayout.WheelDrop"/>). A bare corner's parts shown on the car
+    /// (<see cref="ShownPartsOnCar.CornersNode"/>) hang as far as the wheels do.
     /// </summary>
     private static void KeepShadowsOnFloor(Kn5RenderableCar car, float lift)
     {
@@ -855,6 +856,11 @@ public abstract class D3DViewportBase : System.Windows.Controls.Grid
         var onFloor = lift <= StreetCorsa.Parts.LiftLayout.WheelDrop;
         foreach (var tyre in shadows.OfType<AmbientShadow>().Where(s => !ReferenceEquals(s, car.AmbientShadowNode)))
             tyre.IsEnabled = onFloor;
+
+        // A bare corner's brake and suspension shown on the car hang with the wheels
+        var hang = StreetCorsa.Parts.LiftLayout.Droop(lift) is var droop and not 0f ? SlimDX.Matrix.Translation(0f, -droop, 0f) : SlimDX.Matrix.Identity;
+        foreach (var corners in car.RootObject?.OfType<AcTools.Render.Base.Objects.RenderableList>().Where(l => l.Name == ShownPartsOnCar.CornersNode) ?? [])
+            if (corners.LocalMatrix != hang) corners.LocalMatrix = hang;
     }
 
     /// <summary>How high the lift has <paramref name="node"/> as the rock last put it: what its hubs are up off their places on the floor</summary>

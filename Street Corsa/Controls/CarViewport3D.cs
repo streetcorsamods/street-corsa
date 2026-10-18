@@ -1153,6 +1153,7 @@ public class CarViewport3D : D3DViewportBase
             {
                 renderer.SetProp(model.Kn5, SlimDX.Matrix.Identity);
                 renderer.SetUnsprung(PartLayer.Mounted, NodesHanging(model.Nodes, Unsprung(catalog, gear)));
+                renderer.SetStandIns(StandIns(model.Nodes, gear, Shown));
                 propReplaced = true;
 
                 // The engine off the hoist and onto the stand, in the same frame
@@ -2305,6 +2306,27 @@ public class CarViewport3D : D3DViewportBase
         foreach (var part in gear ?? Array.Empty<CarPart>())
             if (HangsOnLift(catalog, part.CarSlot, part.Root.Definition)) hanging.UnionWith(part.Root.SelfAndDescendants());
         return hanging;
+    }
+
+    /// <summary>
+    /// The nodes of the wheels the car's own model stands in for, with their corners: a corner on its factory rim and tyre,
+    /// where the car shows its own wheel (<see cref="ShownSet.Wheels"/> has none there), shows it in the parts view too
+    /// </summary>
+    private static List<(int Node, int Corner)> StandIns(IReadOnlyList<PlacedPart> nodes, IReadOnlyList<CarPart>? gear, ShownSet? shown)
+    {
+        var standIns = new List<(int, int)>();
+        foreach (var part in gear ?? Array.Empty<CarPart>())
+        {
+            if (!RunningGear.IsWheelSlot(part.CarSlot)) continue;
+            var corner = RunningGear.CornerOf(part.CarSlot);
+            if (shown != null && corner < shown.Wheels.Count && shown.Wheels[corner] != null) continue;
+
+            var wheel = new HashSet<InstalledPart>(part.Root.SelfAndDescendants(), ReferenceEqualityComparer.Instance);
+            for (var i = 0; i < nodes.Count; i++)
+                if (nodes[i].Source is { } source && wheel.Contains(source)) standIns.Add((i, corner));
+        }
+
+        return standIns;
     }
 
     private static IEnumerable<int> NodesHanging(IReadOnlyList<PlacedPart> nodes, HashSet<InstalledPart> hanging) =>

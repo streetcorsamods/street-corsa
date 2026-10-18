@@ -1961,6 +1961,13 @@ on a rim only on the car, the shelf has no putting together). The car model's ow
 it is up (`D3DViewportBase.KeepShadowsOnFloor`: body_shadow moved down, the tyre shadows gone once the wheels hang). And a Lower button (icon
 `icons/car` for now) beside the lift's, while the car is up: a stop down from either stop (`LiftLayout.Below`).
 
+And (2026-10-18), the owner's nice-to-haves: a corner with its wheel off shows its brake and suspension on the solid car
+(`ShownCornerParts`, extras shown always, in an `sc_corners` node that hangs with the lift); and in the parts view a
+corner on its factory rim and tyre shows the car model's own wheel, drawn solid, the part's node kept to be picked and
+to glow as that wheel (`GarageRenderer.SetStandIns`); a wheel taken off flies off as the part it is. Also a save bug
+of phase 3 on: loading a save took what the rear axle carries off to the shelf (`SavedParts` now takes a carry slot as
+the car slot it stands for).
+
 To check in game: the wheels drawn in the parts view on every corner, faces out, no AC wheel doubling them; the wheels
 show; a wheel refused on the floor ("Raise the car on the lift first."), off and on with the car up; the drums and the
 rear axle then (the bug this phase was for); the lift's two stops, its post, the sounds and the camera under the car;

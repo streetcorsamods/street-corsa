@@ -445,12 +445,16 @@ namespace StreetCorsa.Services.Parts
                     EngineLayoutOf(carDefinitionId), FactoryEngineParts(carDefinitionId, tree.Root.Definition.Id));
             }
 
+            // A corner with its wheel off shows its brake and suspension in the wheel's place
+            var missing = ShownParts.MissingWheels(parts);
+            if (missing != 0) extras.AddRange(ShownCornerParts.Of(Catalog, parts, CarHubs.Of(directory), missing));
+
             // The model's space, for the parts that stand out and the wear layer: worked out once, when either needs it
             var frame = look != null || extras.Count > 0 ? CarHubs.FrameOf(directory) : null;
             var wheels = Specs(carDefinitionId) is { } specs
                 ? ShownParts.Wheels(parts, Catalog, RunningGearFactory.Choose(Catalog, specs, FactsOf(carDefinitionId), PicksOf(carDefinitionId)))
                 : new ShownWheel?[RunningGear.Corners];
-            return ShownSet.Of(wheels, extras, frame, look, heights, paint, ShownParts.MissingWheels(parts));
+            return ShownSet.Of(wheels, extras, frame, look, heights, paint, missing);
         }
 
         /// <summary>

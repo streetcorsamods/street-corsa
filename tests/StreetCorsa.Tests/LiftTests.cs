@@ -182,6 +182,23 @@ public class LiftTests
     }
 
     [Fact]
+    public void A_bare_corner_shows_its_brake_and_suspension_on_the_car()
+    {
+        var parts = FactoryParts();
+        Assert.Empty(ShownCornerParts.Of(Catalog, parts, Anchors, ShownParts.MissingWheels(parts)));
+
+        // The left rear wheel off: what the rear axle carries on that side shows, always, by the left rear hub; not the axle,
+        // nor the other side's
+        Workbench.Remove(parts, Wheel(parts, 2));
+        var shown = ShownCornerParts.Of(Catalog, parts, Anchors, ShownParts.MissingWheels(parts));
+        Assert.NotEmpty(shown);
+        Assert.All(shown, s => Assert.True(s.Always));
+        Assert.All(shown, s => Assert.True(s.At.Translation.X > 0 && s.At.Translation.Z < 0, $"{s.Model.Name} is not at the left rear"));
+        Assert.Contains(shown, s => s.Model.Name.Contains("plate_rear"));
+        Assert.DoesNotContain(shown, s => s.Model.Name.Contains("axles_gm"));
+    }
+
+    [Fact]
     public void The_lifts_own_model_has_a_post_that_rises()
     {
         var kn5 = LiftLayout.CreateModel();
