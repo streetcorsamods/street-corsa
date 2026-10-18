@@ -1865,6 +1865,31 @@ welding the spiders, the rivals and tuned used cars going for gears and a posi.
 - Older saves: `GearVersion` 5 puts each drum on its factory plate (shoes and cylinder moved onto the plate), gives the
   front drums and discs their hubs and the leaf cars their hangers, shackles and U-bolts, in the car's wear.
 
+**Phase 5 built (2026-10-17)**, all on `feature/running-gear`, not seen in game (see docs/systems/parts-system.md "The
+running gear's work order", "Period brakes", "Springs, traction bars, sway bars, shocks"; docs/opponent-system.md):
+1. The car's work order (`CarWork`, 8782109): running gear kinds and rules in `work_order.json`, per corner, what goes
+   along never in the way, `"hangs_on"` (AxleWork gone), `"tool"` on a kind (the air gun list is data), moves along the
+   car's axes.
+2. The new parts (4891b06): backing plates carrying the shoes, wheel cylinder and drum (a drum fits a plate of its size
+   only), front hubs on drums and discs, the leaf's hanger and shackle (car slots 321/331+corner) and U-bolts (on the
+   leaf); the rules for them (wheel, drum, shoes, cylinder, plate; U-bolts, axle, leaf, hanger and shackle); older saves'
+   drums put on plates as the save is read (`PutDrumsOnPlates`), `GearVersion` 5 for hubs and leaf hardware; generated
+   models checked in Blender renders.
+3. Jobs (298deda): `hub_repack`, `spring_bushings`, `leaf_rearch` (machine shop); `brake_reline` on the shoes (and a
+   disc), not a drum. Step 30's job show already works for running gear (in place, or on the bench).
+4. The Car Catalog Editor's brake and spring pickers per axle (9a6b02f).
+5. Welding the spiders (31b4fec): a job can turn a part into another (`"becomes"`); every open carrier has a welded twin.
+6. Rivals and tuned used cars go for a posi and gears (`AxleTuner`, 5719b3d), rules in `rules/engines.json` `tuner`.
+Also: the station attendant hears the brakes by their shoes.
+**To check in game:** taking a front drum brake apart and back (wheel, hub-and-drum, shoes, cylinder, plate; the hints);
+the rear: U-bolts, axle (drops whole once the rear wheels are off), a leaf, its hanger and shackle; the parts moving off
+along the car's axes and the air gun on wheels and the axle; the new models' places (plates behind the drums, hubs, the
+hanger and shackle at the leaf's eyes, the U-bolts over the tube); an older save's car (drums onto plates, hardware
+added); a job on a hub or a shackle; welding a carrier's spiders and a hard launch on it; the editor's pickers. The
+private truck mod's leaf model has its own hangers and shackle: with the new parts they show twice there.
+**Left, not asked for:** the diff's oil, lowering springs (ride height), a master cylinder/booster (AC has no pedal
+effort). Next: the owner's look in game, then the one PR of step 31.
+
 ### Phase 0 findings and design (2026-10-17)
 
 **Survey** (the 104 installed cars; the "4 ACD cars" of the research are in cars.json but not installed at all): all 104
