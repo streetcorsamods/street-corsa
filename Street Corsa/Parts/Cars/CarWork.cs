@@ -12,7 +12,8 @@ namespace StreetCorsa.Parts.Cars;
 /// front wheel, not for the others; a part across an axle (the rear axle, a sway bar) counts at both of its corners, one
 /// on no corner at all of them. And what goes along with a part (what is mounted on it) never stands in its way, so the
 /// rear axle comes off whole with the brakes and springs it carries; only <see cref="WorkRule.Bare"/> asks for a part's own
-/// parts off it first. <see cref="WorkRule.HangsOn"/> is the car's alone: the rear axle sits on its leaf springs.
+/// parts off it first. <see cref="WorkRule.HangsOn"/> is the car's alone: the rear axle sits on its leaf springs; so is
+/// <see cref="WorkRule.Lifted"/>: a wheel comes off and goes on with the car up on the lift.
 /// </remarks>
 public static class CarWork
 {
@@ -20,10 +21,12 @@ public static class CarWork
 
     /// <summary>Why the part, with what is on it, cannot come off the car now; null when it can, or when it is the engine's</summary>
     /// <param name="carParts">The parts mounted on the car itself (<c>Car.Parts</c>), the engine among them</param>
-    public static string? WhyNotOff(PartsCatalog catalog, List<PartInstance> carParts, PartInstance part)
+    /// <param name="lifted">The car is up on the lift (the car's LiftStop); a caller with no lift to tell of: true</param>
+    public static string? WhyNotOff(PartsCatalog catalog, List<PartInstance> carParts, PartInstance part, bool lifted = true)
     {
         var corners = Corners(carParts);
         if (!corners.ContainsKey(part)) return null;
+        if (!lifted && RuleOf(catalog, part) is { Lifted: true }) return PartWords.Say("work.lift_first");
 
         var leaving = new HashSet<PartInstance>(part.SelfAndDescendants(), ReferenceEqualityComparer.Instance);
         var staying = corners.Keys.Where(p => !leaving.Contains(p)).ToList();
@@ -60,10 +63,12 @@ public static class CarWork
     /// <param name="carParts">The parts mounted on the car itself, the engine among them</param>
     /// <param name="liveAxle">Whether the car's rear is a live axle (where its rear running gear goes: <see cref="Workbench.FindPlaces"/>)</param>
     /// <param name="factory">The car's factory running gear, which tells what the car is sprung on before a part of it is there</param>
+    /// <param name="lifted">The car is up on the lift (the car's LiftStop); a caller with no lift to tell of: true</param>
     public static string? WhyNotOn(PartsCatalog catalog, List<PartInstance> carParts, PartInstance loose, MountPlace place, bool liveAxle,
-        IReadOnlyCollection<PartDefinition>? factory = null)
+        IReadOnlyCollection<PartDefinition>? factory = null, bool lifted = true)
     {
         if (RuleOf(catalog, loose) is not { } rule) return null;
+        if (!lifted && rule.Lifted) return PartWords.Say("work.lift_first");
 
         var order = catalog.WorkOrder;
         var corners = Corners(carParts);
@@ -94,6 +99,16 @@ public static class CarWork
 
         return null;
     }
+
+    /// <summary>
+    /// Why the car cannot come down off the lift now: a wheel is off, and it would stand on its hub; null when it can
+    /// </summary>
+    /// <param name="carParts">The parts mounted on the car itself</param>
+    /// <param name="hasRunningGear">The car has its running gear as parts: one of an older save that has not has no wheels to tell of</param>
+    public static string? WhyNotDown(List<PartInstance> carParts, bool hasRunningGear) =>
+        hasRunningGear && RunningGear.Rims(carParts).Select(p => p.ParentSlot).Distinct().Count() < RunningGear.Corners
+            ? PartWords.Say("work.wheels_first")
+            : null;
 
     /// <summary>Whether a part of the kind could go on the car somewhere now: a free place for one</summary>
     private static bool HasFreePlaceFor(PartsCatalog catalog, List<PartInstance> carParts, string kind, bool liveAxle) =>

@@ -409,6 +409,43 @@ public class CarViewport3D : D3DViewportBase
         AnimateFor(AnimationWindow);
     }
 
+    public static readonly DependencyProperty LiftStopProperty = DependencyProperty.Register(
+        nameof(LiftStop), typeof(Models.GameState.LiftStop), typeof(CarViewport3D),
+        new PropertyMetadata(Models.GameState.LiftStop.Down, (d, _) => ((CarViewport3D)d).OnLiftStopChanged()));
+
+    /// <summary>
+    /// Where the garage's lift has the car (<see cref="Models.GameState.Car.LiftStop"/>): it goes there over a few seconds,
+    /// the whole car with its parts, the lift's post rising under it; a car loaded comes at its stop at once
+    /// </summary>
+    public Models.GameState.LiftStop LiftStop
+    {
+        get => (Models.GameState.LiftStop)GetValue(LiftStopProperty);
+        set => SetValue(LiftStopProperty, value);
+    }
+
+    private static readonly DependencyPropertyKey IsLiftMovingPropertyKey = DependencyProperty.RegisterReadOnly(
+        nameof(IsLiftMoving), typeof(bool), typeof(CarViewport3D), new PropertyMetadata(false));
+
+    public static readonly DependencyProperty IsLiftMovingProperty = IsLiftMovingPropertyKey.DependencyProperty;
+
+    /// <summary>True while the lift is on its way to <see cref="LiftStop"/>: nothing is to be done to the car in the meantime</summary>
+    public bool IsLiftMoving
+    {
+        get => (bool)GetValue(IsLiftMovingProperty);
+        private set => SetValue(IsLiftMovingPropertyKey, value);
+    }
+
+    private void OnLiftStopChanged()
+    {
+        // A car on its way in comes at its stop as it is loaded (LoadAsync); the one going stays as it was
+        if (Renderer?.CarNode == null || RequestedCarDirectory != _loadedCarDirectory) return;
+        if (_liftNow == LiftGoal) return;
+
+        _liftHum ??= Audio.AudioHub.Shared.PlayLoop(Audio.Sfx.LiftMoves);
+        IsLiftMoving = true;
+        AnimateFor(AnimationWindow);
+    }
+
     public static readonly DependencyProperty PartsCatalogProperty = DependencyProperty.Register(
         nameof(PartsCatalog), typeof(PartsCatalog), typeof(CarViewport3D),
         new PropertyMetadata(null, (d, _) =>
@@ -836,6 +873,8 @@ public class CarViewport3D : D3DViewportBase
         ApplyScenery();
         ApplyRadio();
         ApplyBench();
+        ApplyLift();
+        SnapLift();
         Invalidate();
 
         Logger.Information("Loaded {Car} in {Ms} ms", hasCar ? Path.GetFileName(carDirectory) : "(empty garage)",
@@ -1970,10 +2009,6 @@ public class CarViewport3D : D3DViewportBase
                 var ownerOf = new Dictionary<InstalledPart, MountCandidate>();
                 foreach (var candidate in candidates)
                 {
-                    // Rims and tyres are not drawn (see CarPartsLayout.Build), so their ghosts go too. A loose tyre
-                    // drops out on its own: its parent is the rim, which no longer has a world to hang off.
-                    if (candidate.Parent == null && Parts.Cars.RunningGear.IsWheelSlot(candidate.ParentSlot)) continue;
-
                     var world = candidate.Parent == null
                         ? anchors == null ? null : CarPartsLayout.CarLevelPlacement(catalog, anchors, candidate.Part.Definition, candidate.ParentSlot, layout)
                         : worlds.TryGetValue(candidate.Parent, out var parentWorld)
@@ -2059,14 +2094,16 @@ public class CarViewport3D : D3DViewportBase
         }
     }
 
-    private static CarAnchors? GetAnchors(Kn5RenderableCar carNode)
+    /// <summary>The car's hubs where they are with the car on the floor: the lift's height taken off (the parts go up with it)</summary>
+    private CarAnchors? GetAnchors(Kn5RenderableCar carNode)
     {
         var hubs = WheelFit.WheelNodes
             .Select(name => carNode.RootObject.GetDummyByName(name)?.Matrix)
             .ToArray();
         if (hubs.Any(h => h == null)) return null;
 
-        var points = hubs.Select(h => new System.Numerics.Vector3(h!.Value.M41, h.Value.M42, h.Value.M43)).ToArray();
+        var lifted = LiftedBy(carNode);
+        var points = hubs.Select(h => new System.Numerics.Vector3(h!.Value.M41, h.Value.M42 - lifted, h.Value.M43)).ToArray();
         return new CarAnchors(points[0], points[1], points[2], points[3]);
     }
 
@@ -2185,6 +2222,128 @@ public class CarViewport3D : D3DViewportBase
 
     #endregion
 
+    #region Lift
+
+    // How high the lift has the car now, and the pump heard while it goes
+    private float _liftNow;
+    private Audio.PlayingSound? _liftHum;
+
+    // The renderer the lift was put into, and where its prop stands in the garage; null in a garage without one
+    private GarageRenderer? _liftRenderer;
+    private Services.Garage.PlacedProp? _liftProp;
+
+    // The lift slows over its last few centimetres into a stop, and no slower than this share of its speed
+    private const float LiftEaseDistance = 0.06f;
+    private const float LiftSlowest = 0.25f;
+
+    // While the car is up, the camera may look up from under it: this far under level at most, its eye kept off the floor
+    private const float UnderCarBeta = 0.35f;
+    private const float EyeOffFloor = 0.12f;
+
+    private float LiftGoal => LiftLayout.HeightOf(LiftStop);
+
+    protected override float LiftHeight => _liftNow;
+
+    /// <summary>The lowest the camera may look from: under level only while the car is up off its wheels</summary>
+    private float LowestBeta(float radius, float targetY)
+    {
+        if (_liftNow < LiftLayout.WheelsClearHeight / 2f || radius <= 0f) return MinBeta;
+        return -MathF.Asin(Math.Clamp((targetY - EyeOffFloor) / radius, 0f, MathF.Sin(UnderCarBeta)));
+    }
+
+    /// <summary>The lift a step nearer its stop, the car and the post with it; false when it is there</summary>
+    private bool StepLift(GarageRenderer renderer, float dt)
+    {
+        var goal = LiftGoal;
+        if (_liftNow == goal || renderer.CarNode == null) return false;
+
+        var left = goal - _liftNow;
+        var step = LiftLayout.Speed * Math.Min(dt, GarageRenderer.MaxTickSeconds) * Math.Clamp(Math.Abs(left) / LiftEaseDistance, LiftSlowest, 1f);
+        if (step >= Math.Abs(left))
+        {
+            _liftNow = goal;
+            Audio.AudioHub.Shared.StopLoop(_liftHum);
+            _liftHum = null;
+            Audio.Sfx.Play(Audio.Sfx.LiftStops);
+            IsLiftMoving = false;
+
+            // Down on the floor, the camera comes back up out from under it
+            if (_betaGoal < MinBeta) _betaGoal = MinBeta;
+        }
+        else
+        {
+            _liftNow += Math.Sign(left) * step;
+        }
+
+        renderer.LiftSaddle = LiftLayout.SaddleTop(_liftNow);
+        OnPoseChanged();
+        return true;
+    }
+
+    /// <summary>A car just loaded comes at its stop, the lift under it with no move to hear</summary>
+    private void SnapLift()
+    {
+        Audio.AudioHub.Shared.StopLoop(_liftHum);
+        _liftHum = null;
+        IsLiftMoving = false;
+        _liftNow = Renderer?.CarNode == null ? 0f : LiftGoal;
+        if (Renderer is { } renderer)
+        {
+            renderer.LiftSaddle = LiftLayout.SaddleTop(_liftNow);
+            PlaceLift(renderer);
+        }
+
+        if (_liftNow < LiftLayout.WheelsClearHeight / 2f && _betaGoal < MinBeta) _betaGoal = MinBeta;
+        OnPoseChanged();
+    }
+
+    /// <summary>
+    /// The lift, where the garage's props put it (<see cref="LiftLayout.PropId"/>): the game's own model drawn from boxes
+    /// unless a mod names one, set into the renderer once, and under the middle of whatever car is in the bay. A garage
+    /// with no place for it lifts the car with no lift to see.
+    /// </summary>
+    private async void ApplyLift()
+    {
+        var renderer = Renderer;
+        if (renderer == null || ReferenceEquals(renderer, _liftRenderer)) return;
+        _liftRenderer = renderer;
+        _liftProp = null;
+
+        var problems = new List<string>();
+        var lift = Services.Garage.GarageProps.Find(Mods.ModSet.Installed, LiftLayout.PropId, ShowroomKn5, problems, builtIn: true);
+        foreach (var problem in problems) Logger.Warning("Garage props: {Problem}", problem);
+        Mods.ModProblems.Add("Garage props", problems);
+        if (lift == null) return;
+
+        AcTools.Kn5File.IKn5 kn5;
+        try
+        {
+            kn5 = await Task.Run(() => lift.Model.Length > 0 ? AcTools.Kn5File.Kn5.FromFile(lift.Model) : LiftLayout.CreateModel());
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning("The garage's lift could not be read from {Model}: {Error}", lift.Model, ex.Message);
+            return;
+        }
+
+        if (renderer != Renderer) return;
+        _liftProp = lift;
+        renderer.SetLift(kn5, ToSlim(LiftPlacement(renderer, lift)));
+        Invalidate();
+    }
+
+    /// <summary>The lift moved under the car now in the bay</summary>
+    private void PlaceLift(GarageRenderer renderer)
+    {
+        if (_liftProp is { } lift && ReferenceEquals(renderer, _liftRenderer)) renderer.MoveLift(ToSlim(LiftPlacement(renderer, lift)));
+    }
+
+    /// <summary>Under the middle of the car in the bay, at the prop's floor height; where the prop stands with no car</summary>
+    private System.Numerics.Matrix4x4 LiftPlacement(GarageRenderer renderer, Services.Garage.PlacedProp lift) =>
+        renderer.CarNode is { } car && GetAnchors(car) is { } anchors ? LiftLayout.UnderCar(anchors, lift.Placement) : lift.Placement;
+
+    #endregion
+
     #region Rendering
 
     protected override bool StepFrame(GarageRenderer renderer, float dt)
@@ -2200,9 +2359,10 @@ public class CarViewport3D : D3DViewportBase
         }
 
         // The renderer turns the car by itself a little further every tick: it has to keep drawing for that
+        var lifting = StepLift(renderer, dt);
         var cameraMoving = StepCamera(dt);
         var working = StepWork(renderer, dt);
-        return cameraMoving || working || renderer.AutoRotate || renderer.IsTurningEngine;
+        return lifting || cameraMoving || working || renderer.AutoRotate || renderer.IsTurningEngine;
     }
 
     protected override void OnFirstFrame()
@@ -2221,6 +2381,10 @@ public class CarViewport3D : D3DViewportBase
         _workVersion++;
         _cameraOnWork = false;
         _benchRenderer = null;
+        _liftRenderer = null;
+        _liftProp = null;
+        Audio.AudioHub.Shared.StopLoop(_liftHum);
+        _liftHum = null;
         _sceneryRenderer = null;
         _sceneryKey = null;
         _partsOnStand = false;
@@ -2271,7 +2435,7 @@ public class CarViewport3D : D3DViewportBase
         }
 
         orbit.Alpha += (float)(position.X - _lastMouse.X) * 0.01f;
-        orbit.Beta = Math.Clamp(orbit.Beta + (float)(position.Y - _lastMouse.Y) * 0.01f, MinBeta, MaxBeta);
+        orbit.Beta = Math.Clamp(orbit.Beta + (float)(position.Y - _lastMouse.Y) * 0.01f, LowestBeta(orbit.Radius, orbit.Target.Y), MaxBeta);
         _alphaGoal = orbit.Alpha;
         _betaGoal = orbit.Beta;
         _lastMouse = position;
@@ -2425,6 +2589,9 @@ public class CarViewport3D : D3DViewportBase
         var minRadius = IsOnStand ? StandMinRadius : Renderer!.HasProp ? PartsMinRadius : MinRadius;
         orbit.Radius = Math.Clamp(orbit.Radius - e.Delta * 0.002f, minRadius, MaxRadius);
         _radiusGoal = orbit.Radius;
+
+        // Looking up from under the lifted car, the eye goes no lower than the floor further out either
+        if (orbit.Beta < LowestBeta(orbit.Radius, orbit.Target.Y)) _betaGoal = orbit.Beta = LowestBeta(orbit.Radius, orbit.Target.Y);
         Invalidate();
         e.Handled = true;
     }

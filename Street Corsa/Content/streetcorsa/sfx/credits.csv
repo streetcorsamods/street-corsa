@@ -52,6 +52,8 @@ work/lap.ogg,Valve lapping,Street Corsa (synthesised by tools/RebuildSounds/make
 work/press.ogg,Hammer on a drift,Street Corsa (synthesised by tools/RebuildSounds/make_sounds.py),the game's own,
 work/road.ogg,The drive to the parts counter,Street Corsa (synthesised by tools/RebuildSounds/make_sounds.py),the game's own,
 work/wash.ogg,Parts washer brush,Street Corsa (synthesised by tools/RebuildSounds/make_sounds.py),the game's own,
+work/lift.ogg,Garage lift pump,Street Corsa (synthesised by tools/RebuildSounds/make_sounds.py),the game's own,
+work/lift_stop.ogg,Garage lift at its stop,Street Corsa (synthesised by tools/RebuildSounds/make_sounds.py),the game's own,
 work/bore.ogg,Boring bar in a cylinder,Street Corsa (synthesised by tools/RebuildSounds/make_sounds.py),the game's own,
 work/crank.ogg,Crankshaft grinder,Street Corsa (synthesised by tools/RebuildSounds/make_sounds.py),the game's own,
 work/mill.ogg,Surfacing mill on a head,Street Corsa (synthesised by tools/RebuildSounds/make_sounds.py),the game's own,

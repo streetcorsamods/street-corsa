@@ -281,6 +281,7 @@ public sealed class WorkOrder
                 {
                     ruled.StandOnly |= rule.StandOnly;
                     ruled.Bare |= rule.Bare;
+                    ruled.Lifted |= rule.Lifted;
                     ruled.After = ruled.After.Union(rule.After, StringComparer.OrdinalIgnoreCase).ToList();
                     ruled.Needs = ruled.Needs.Union(rule.Needs, StringComparer.OrdinalIgnoreCase).ToList();
                     ruled.HangsOn = ruled.HangsOn.Union(rule.HangsOn, StringComparer.OrdinalIgnoreCase).ToList();
@@ -565,6 +566,13 @@ public sealed class WorkRule
     /// </summary>
     [JsonProperty("hangs_on")]
     public List<string> HangsOn { get; set; } = new();
+
+    /// <summary>
+    /// Only with the car up on the lift, at either of its stops (<see cref="Cars.CarWork"/>; an engine's work has no use
+    /// for it): a wheel comes off and goes on with the car's weight off it
+    /// </summary>
+    [JsonProperty("lifted")]
+    public bool Lifted { get; set; }
 
     /// <summary>A mod taking back some of a rule it did not write: on purpose, or its rule only adds to it</summary>
     [JsonProperty("replace")]

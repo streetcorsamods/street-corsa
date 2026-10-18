@@ -25,6 +25,7 @@ namespace StreetCorsa.Screens.Garage
         private static int MinutesPerPart => Rules.RuleBook.Current.Time.PerPart;
         private static int EngineInOutMinutes => Rules.RuleBook.Current.Time.EngineInOut;
         private static int StandMinutes => Rules.RuleBook.Current.Time.Stand;
+        private static int LiftMinutes => Rules.RuleBook.Current.Time.Lift;
 
         private readonly ICarPartsService _parts;
         private readonly Models.GameState.GameState _gameState;
@@ -123,9 +124,109 @@ namespace StreetCorsa.Screens.Garage
                 OnPropertyChanged(nameof(IsCarView));
                 OnPropertyChanged(nameof(IsStandView));
                 OnPropertyChanged(nameof(CanTurnEngineOver));
+                OnPropertyChanged(nameof(CanUseLift));
                 Refresh();
             }
         }
+
+        #region The lift
+
+        /// <summary>Where the garage's lift has the car in the bay (<see cref="Car.LiftStop"/>); down with no car</summary>
+        public LiftStop LiftStop => _car?.LiftStop ?? LiftStop.Down;
+
+        /// <summary>The lift's button is shown: a car in the bay with parts to work on, the stand not on show</summary>
+        public bool CanUseLift => IsAvailable && _car != null && !_isStand;
+
+        /// <summary>
+        /// The lift's button, lit while the car is up: a click takes it to the next stop (<see cref="LiftLayout.Next"/>),
+        /// whatever the value set
+        /// </summary>
+        public bool IsLifted
+        {
+            get => _car?.IsLifted == true;
+            set => StepLift();
+        }
+
+        /// <summary>The lift's button says where the car is</summary>
+        public string LiftText => GameText.Say(LiftStop switch
+        {
+            LiftStop.WheelsClear => "garage.view.lift.wheels_clear",
+            LiftStop.Full => "garage.view.lift.full",
+            _ => "garage.view.lift.down"
+        });
+
+        /// <summary>What a click on the lift's button does, or why it does nothing now</summary>
+        public string LiftTip
+        {
+            get
+            {
+                var next = LiftLayout.Next(LiftStop);
+                if (next == LiftStop.Down && _car != null && WhyNotDown(_car) is { } why) return why;
+                return GameText.Say(next switch
+                {
+                    LiftStop.WheelsClear => "garage.view.lift.tip.wheels_clear",
+                    LiftStop.Full => "garage.view.lift.tip.full",
+                    _ => "garage.view.lift.tip.down"
+                });
+            }
+        }
+
+        /// <summary>
+        /// The car to the lift's next stop: down, the wheels clear, full height, down again. It does not come down while a
+        /// wheel is off (<see cref="CarWork.WhyNotDown"/>), nor move while a job is being shown.
+        /// </summary>
+        private void StepLift()
+        {
+            if (_car == null || _isWorking || !CanUseLift)
+            {
+                NotifyLift();
+                return;
+            }
+
+            var next = LiftLayout.Next(_car.LiftStop);
+            if (next == LiftStop.Down && WhyNotDown(_car) is { } why)
+            {
+                _logger.Information("{Car} stays up on the lift: {Why}", _car.DefinitionId, why);
+                NotifyLift();
+                return;
+            }
+
+            _car.LiftStop = next;
+            _logger.Information("{Car} on the lift: {Stop}", _car.DefinitionId, next);
+            NotifyLift();
+            Finish(1, LiftMinutes, carChanged: false, refresh: false);
+        }
+
+        /// <summary>
+        /// The car changes for another in the bay: the one going comes down off the lift, unless a wheel is off it (it
+        /// stays up, and comes back up with it)
+        /// </summary>
+        private void LowerLeaving(Car? leaving, Car? coming)
+        {
+            if (leaving == null || ReferenceEquals(leaving, coming) || !leaving.IsLifted || WhyNotDown(leaving) != null) return;
+
+            leaving.LiftStop = LiftStop.Down;
+            _logger.Information("{Car} came down off the lift as it left the bay", leaving.DefinitionId);
+            Save();
+        }
+
+        private static string? WhyNotDown(Car car) => CarWork.WhyNotDown(car.Parts, car.HasRunningGearAssigned);
+
+        /// <summary>The car went up or down, or another took its place: the button, and what the rules allow now</summary>
+        private void NotifyLift()
+        {
+            OnPropertyChanged(nameof(LiftStop));
+            OnPropertyChanged(nameof(IsLifted));
+            OnPropertyChanged(nameof(LiftText));
+            OnPropertyChanged(nameof(LiftTip));
+            OnPropertyChanged(nameof(CanUseLift));
+            OnPropertyChanged(nameof(SelectedBlockedDisplay));
+            OnPropertyChanged(nameof(CanInstallFromStand));
+            UpdateCandidates();
+            RelayCommand.RaiseCanExecuteChanged();
+        }
+
+        #endregion
 
         /// <summary>
         /// The buttons that put kinds of part out of sight while the car's parts are on show (the engine, the gearbox,
@@ -394,8 +495,11 @@ namespace StreetCorsa.Screens.Garage
             get
             {
                 if (_selectedPart == null || Catalog is not { } catalog || SavedOf(_selectedPart) is not { } saved) return string.Empty;
+
+                // The engine hoist swings the engine out over the floor: not from under a car up on the lift
+                if (SelectedIsEngine && !_isStand && _car?.IsLifted == true) return PartWords.Say("work.lift_hoist");
                 if (CurrentEngine is { } engine && engine.SelfAndDescendants().Contains(saved)) return EngineWork.WhyNotOff(catalog, engine, saved, _isStand) ?? string.Empty;
-                return !_isStand && _car != null ? CarWork.WhyNotOff(catalog, _car.Parts, saved) ?? string.Empty : string.Empty;
+                return !_isStand && _car != null ? CarWork.WhyNotOff(catalog, _car.Parts, saved, _car.IsLifted) ?? string.Empty : string.Empty;
             }
         }
 
@@ -468,7 +572,7 @@ namespace StreetCorsa.Screens.Garage
         public bool IsShelfEngine => HasStand && _selectedShelfItem is { IsEngine: true };
 
         /// <summary>The engine on the stand, picked, can go in the car: there is one, with its engine bay empty</summary>
-        public bool CanInstallFromStand => _isStand && SelectedIsEngine && _car != null && _car.Engine == null;
+        public bool CanInstallFromStand => _isStand && SelectedIsEngine && _car != null && _car.Engine == null && !_car.IsLifted;
 
         private string _shelfHint = string.Empty;
 
@@ -775,7 +879,9 @@ namespace StreetCorsa.Screens.Garage
         public async void SetCar(Car? car)
         {
             EndWork();
+            LowerLeaving(_car, car);
             _car = car;
+            NotifyLift();
             SelectedPart = null;
             SelectedShelfItem = null;
 
@@ -1220,7 +1326,8 @@ namespace StreetCorsa.Screens.Garage
                 foreach (var place in places)
                 {
                     if (onEngine != null && Workbench.IsOnEngine(onEngine, place)) free.Add(place);
-                    else if (CarWork.WhyNotOn(catalog, _car!.Parts, item.Part, place, liveAxle, factory) is { } why) blocked ??= why;
+                    else if (place.Parent == null && place.ParentSlot == PartInstance.CarEngineSlot && _car!.IsLifted) blocked ??= PartWords.Say("work.lift_hoist");
+                    else if (CarWork.WhyNotOn(catalog, _car!.Parts, item.Part, place, liveAxle, factory, _car.IsLifted) is { } why) blocked ??= why;
                     else free.Add(place);
                 }
 

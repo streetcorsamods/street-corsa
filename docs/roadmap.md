@@ -1932,6 +1932,28 @@ Design (mine, from those answers):
 - Tests: the wheel placement, the show, the rules with the car up and down, lowering refused with a wheel off, the stop
   saved and lowered on a car switch. Then the owner's look in game, then the one PR of step 31.
 
+**Phase 6 built** (2026-10-17, as designed above; docs/systems/parts-system.md "The wheels and the lift"). Where it went
+its own way:
+- The rim is placed by the middle of its tyre (its tyre seat, slot 2) on the hub, where the AC wheel has its middle, not by
+  the face it bolts on by (slot 1, up to 0.085 m off the middle on a deep dish). A render of an SLRR rim, tyre and drum at a
+  left hub showed the rims face +X as the drums do: the same side frame.
+- The AC wheels are left out of the ghost car's draw only (switched off for its passes and back), not hidden for good: the
+  scenes' part wheels and the body rock keep their nodes as they are.
+- The lift's prop place gives only the floor's height: the post stands under the middle of whatever car is in the bay. A
+  garage without the prop's place lifts the car with no lift drawn. Its saddle comes out of the floor a little faster
+  than the car and catches the body (0.2 m up) by the first stop.
+- A car switched away with a wheel off stays up (it would stand on its hub), and comes back up with it; one on its four
+  wheels comes down as it goes. A car that changes hands leaves the lift (`Car.ClearPlace`).
+- The lift's time is a rule of its own, `time.lift` (5 minutes a move). No schema step: an older save's car reads as down.
+- The lift button waits while the lift moves; the gas station and the paint booth refuse a car up ("On the lift"), so it
+  is never pushed out as a car that will not run is.
+
+To check in game: the wheels drawn in the parts view on every corner, faces out, no AC wheel doubling them; the wheels
+show; a wheel refused on the floor ("Raise the car on the lift first."), off and on with the car up; the drums and the
+rear axle then (the bug this phase was for); the lift's two stops, its post, the sounds and the camera under the car;
+the car refused down with a wheel off; switching cars; Pull the engine refused with the car up; racing and the paint
+booth refused with the car up.
+
 ### Phase 0 findings and design (2026-10-17)
 
 **Survey** (the 104 installed cars; the "4 ACD cars" of the research are in cars.json but not installed at all): all 104

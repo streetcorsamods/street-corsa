@@ -889,6 +889,26 @@ tools, never by hand:
   parts through the mod's `models.json` (docs/modding.md). The owner is asking its author before it can go in the game;
   until then a clone of the repo draws the base game's own models.
 
+**The wheels and the lift** (step 31 phase 6). The parts view draws the rims and tyres as parts: a rim with the middle of
+its tyre (its slot 2, the tyre's seat) on the hub, the AC model's WHEEL_xx dummy, in the wheel-side frame (+X outboard,
+as the drums: a render of the SLRR rims checked it), the tyre on the rim's slot 2. The car's own wheels (its WHEEL_xx nodes,
+with the part wheels the scenes put on them) are left out of the ghost while the parts are on show
+(`GarageRenderer.DrawCarWithoutWheels`), so the two never double; out of the parts view the car is solid with its own. The
+`wheels` show (`part_groups.json`, icon `icons/wheel`) hides them to see the drums.
+A wheel comes off and goes on only with the car up on the garage's lift (the work order's `"lifted": true` on `rim`;
+`CarWork` takes whether the car is up), and what is behind it waits for it as before. The lift is always in the garage:
+`Car.LiftStop` (saved; `Down`, `WheelsClear` 0.3 m, `Full` 1.4 m, `Parts/LiftLayout`), stepped by the parts row's lift
+button (down, the wheels clear, full height, down; the rules' `time.lift` minutes a move). The car comes down only on its
+four wheels (`CarWork.WhyNotDown`); only the car in the bay is up, and another taking its place lowers it, unless a wheel
+is off it (it stays up, and comes back up with it). A car up does not race, drive or get towed out
+(`CarCondition.WhyCannotRace`, the garage's gas station and paint booth exits), and the engine hoist works only with the car
+down. In the 3D view (`CarViewport3D` "Lift") the whole car rises, its wheels hanging with it, through the body rock's
+placement (`D3DViewportBase.LiftHeight`), and the parts with it (`BodyLean`); the hubs the parts are placed by are taken
+with the lift's height off. The lift is a garage prop (`props/lift`, drawn from boxes unless a mod gives a model with a
+`lift_post` node), standing under the middle of the car in the bay, its post rising to catch the body by the first stop
+(`LiftLayout.SaddleTop`). The camera may look up from under the car while it is up. Sounds: `lift.move` (a loop) and
+`lift.stop`, synthesised by `tools/RebuildSounds`.
+
 **Threads.** The game state and the save file belong to the UI thread. Whatever takes long (loading the catalog,
 putting engines together for ads, market listings and cars without parts) runs on a worker thread on objects nobody
 else has yet, and the result goes into the game state back on the calling thread (`RefreshAdsAsync`,

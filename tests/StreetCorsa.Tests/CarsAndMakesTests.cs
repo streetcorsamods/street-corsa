@@ -232,7 +232,8 @@ public class CarsAndMakesTests : IDisposable
     public void The_parts_views_shows_take_their_kinds_the_rest_of_the_engine_and_a_mod_adds_or_changes_one()
     {
         var base_ = PartGroups.Load([Path.Combine(RepoPaths.BaseContent, ContentTypes.Parts)]);
-        Assert.Equal(["engine", "drivetrain", "brakes", "suspension"], base_.Shows.Select(s => s.Id));
+        Assert.Equal(["engine", "drivetrain", "brakes", "suspension", "wheels"], base_.Shows.Select(s => s.Id));
+        Assert.Equal("wheels", base_.ShowOf(PartGroups.Rims, inEngine: false)!.Id);
         Assert.Equal("drivetrain", base_.ShowOf(PartGroups.Transmissions, inEngine: true)!.Id);
         Assert.Equal("engine", base_.ShowOf("flywheels", inEngine: true)!.Id);
         Assert.Equal("engine", base_.ShowOf(PartGroups.CylinderHeads, inEngine: true)!.Id);
@@ -249,7 +250,7 @@ public class CarsAndMakesTests : IDisposable
             """));
         var groups = PartGroups.Load(mods.Folders(ContentTypes.Parts).Select(f => f.Dir));
         Assert.Empty(groups.Problems);
-        Assert.Equal(["engine", "drivetrain", "brakes", "suspension", "body"], groups.Shows.Select(s => s.Id));
+        Assert.Equal(["engine", "drivetrain", "brakes", "suspension", "wheels", "body"], groups.Shows.Select(s => s.Id));
         Assert.Equal("icons/brake_drum", groups.ShowOf(PartGroups.Brakes, inEngine: false)!.Icon);
         Assert.Equal("drivetrain", groups.ShowOf("differentials", inEngine: false)!.Id);
     }

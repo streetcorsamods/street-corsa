@@ -95,6 +95,17 @@ namespace StreetCorsa.Models.GameState
         [LiteDB.BsonIgnore]
         public bool HasSwayBarsAssigned => GearVersion >= 2;
 
+        /// <summary>
+        /// Where the garage's lift has the car: only the car in the bay is ever up, and it comes down as another takes its
+        /// place, unless a wheel is off it (<see cref="StreetCorsa.Parts.Cars.CarWork.WhyNotDown"/>). A car up on the lift goes nowhere: it does not
+        /// race, drive out or go to the paint booth, and its engine stays in it.
+        /// </summary>
+        public LiftStop LiftStop { get; set; }
+
+        /// <summary>The car is up on the lift, at either stop</summary>
+        [LiteDB.BsonIgnore]
+        public bool IsLifted => LiftStop != LiftStop.Down;
+
         [LiteDB.BsonIgnore]
         public PartInstance? Engine => Parts.FirstOrDefault(p => p.ParentSlot == PartInstance.CarEngineSlot);
 
@@ -138,12 +149,13 @@ namespace StreetCorsa.Models.GameState
 
         /// <summary>
         /// The car changes hands, and gives up its place in the warehouses: a car that comes back to the player later
-        /// takes the first free bay like any other, not the one it had before
+        /// takes the first free bay like any other, not the one it had before. It leaves the lift too.
         /// </summary>
         public void ClearPlace()
         {
             Warehouse = null;
             Bay = null;
+            LiftStop = LiftStop.Down;
         }
 
         /// <summary>Who has owned the car and how it has raced; see <see cref="CarHistory"/></summary>
@@ -195,6 +207,7 @@ namespace StreetCorsa.Models.GameState
             HasPartsAssigned = HasPartsAssigned,
             HasRunningGearAssigned = HasRunningGearAssigned,
             GearVersion = GearVersion,
+            LiftStop = LiftStop,
             PowerHp = PowerHp,
             PurchasePrice = PurchasePrice,
             ImpoundedUntil = ImpoundedUntil,

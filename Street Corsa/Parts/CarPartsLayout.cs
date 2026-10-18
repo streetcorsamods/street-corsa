@@ -39,7 +39,8 @@ public sealed record CarAnchors(Vector3 WheelLF, Vector3 WheelRF, Vector3 WheelL
 /// nothing about engine bays or suspension mounts: a longitudinal engine with the gearbox bolted to its back (in the
 /// front or ahead of the rear axle facing forward, behind the rear axle turned around) or one lying across the car,
 /// the wheel and the brake on the
-/// hub, a coil spring and a shock next to every wheel, the rear axle on the line between the rear hubs.
+/// hub, a coil spring and a shock next to every wheel, the rear axle on the line between the rear hubs. The wheels are
+/// the AC model's own wheels' places: the view hides those while the parts are on show, so both never show at once.
 /// Part models have their front towards -Z while AC cars face +Z, hence the frames below.
 /// </summary>
 public static class CarPartsLayout
@@ -89,11 +90,6 @@ public static class CarPartsLayout
 
         foreach (var part in gear ?? Array.Empty<CarPart>())
         {
-            // Rims and tyres are not drawn: the Assetto Corsa model brings its own wheels, and the part ones
-            // land on the very same WHEEL_* dummies, so both show at once. They are still parts - mounted,
-            // bought, sold and exported to the car's physics as before - they just have no model here.
-            if (RunningGear.IsWheelSlot(part.CarSlot)) continue;
-
             if (part.CarSlot == Cars.RearAxle.CarSlot)
             {
                 result.AddRange(Axle(anchors, part.Root));
@@ -204,6 +200,10 @@ public static class CarPartsLayout
         var side = SideFrame(anchors.Forward, inboard);
         if (carSlot == RunningGear.BrakeSlot(corner)) return BySlot(part, side, hub + inboard * BrakeInboard);
 
+        // A wheel by the middle of its tyre on the hub, where the car's own wheel has its middle (its WHEEL_* dummy): the
+        // rim's tyre seat, else the face it bolts on by
+        if (carSlot == RunningGear.WheelSlot(corner)) return BySlot(part, side, hub, RunningGear.TyreSlotOnRim);
+
         // A spring faces the way the car does on both sides: a leaf spring with its traction bar, a torsion bar, run along
         // the car and are not the same end to end, which turning them round would swap on the right (a coil is round)
         var springSeat = hub + inboard * SpringInboard - Vector3.UnitY * SpringSeatBelowHub;
@@ -257,10 +257,13 @@ public static class CarPartsLayout
     /// <summary>Z of the middle of a block's length in its own space</summary>
     private static float MiddleZ((Vector3 Min, Vector3 Max)? bounds) => bounds is { } box ? (box.Min.Z + box.Max.Z) / 2 : 0f;
 
-    /// <summary>Places a part so that its first slot (where it meets the car) lands on a point</summary>
-    private static Matrix4x4 BySlot(PartDefinition part, Matrix4x4 frame, Vector3 target)
+    /// <summary>
+    /// Places a part so that its first slot (where it meets the car) lands on a point, or the slot
+    /// <paramref name="slotId"/> when it has one
+    /// </summary>
+    private static Matrix4x4 BySlot(PartDefinition part, Matrix4x4 frame, Vector3 target, int slotId = 1)
     {
-        var slot = part.Slots.FirstOrDefault(s => s.Id == 1) ?? part.Slots.FirstOrDefault();
+        var slot = part.Slots.FirstOrDefault(s => s.Id == slotId) ?? part.Slots.FirstOrDefault(s => s.Id == 1) ?? part.Slots.FirstOrDefault();
         var slotLocal = slot == null ? Vector3.Zero : new Vector3(slot.Position[0], slot.Position[1], slot.Position[2]);
         var origin = target - Vector3.TransformNormal(slotLocal, frame);
         return frame * Matrix4x4.CreateTranslation(origin);

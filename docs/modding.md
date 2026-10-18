@@ -149,7 +149,7 @@ it changes:
 |---|---|
 | `start` | the player's money, the first day, the cars in the garage on that day (`car`: the AC car's folder, `skin`, `condition` 0-1, `mileage` km; a car AC does not have is left out) |
 | `day` | the hours the player's day starts and ends (an `endHour` past 24 is midnight) |
-| `time` | minutes each action takes (`actions`, by the game's action names), each part at the workbench, an engine in or out, the stand, a tick of cruising, the shortest trip |
+| `time` | minutes each action takes (`actions`, by the game's action names), each part at the workbench, an engine in or out, the stand, the lift from one stop to the next, a tick of cruising, the shortest trip |
 | `difficulty` | the New Game screen's presets (`easy`, `normal`, `hard`) and how often pink slips come up at each frequency |
 | `police` | how likely a street race draws them, fines, the impound, cars per race, the AC cars they like best |
 | `rivals` | how many race, their money (`money`, by age band), going broke, trading up, leaving and coming back, selling cars on, a boss's money and record (`king`) |
@@ -318,6 +318,8 @@ means nothing to the running gear. `"hangs_on"` is the running gear's alone: the
 a part of such a kind, or whose factory running gear has one, the part goes on only once every place the car has for the
 kind holds one, and those come off only once the part is off: the base game's rear axle hangs on its leaf springs
 (`{ "kind": "rear_axle", "after": [ "rim" ], "hangs_on": [ "leaf_spring" ] }`), so a coil-sprung car's axle goes on freely.
+`"lifted": true` is the running gear's too: a part of the kind comes off and goes on only with the car up on the garage's
+lift, at either stop (the base game's `{ "kind": "rim", "lifted": true }`); the car comes down only with all four wheels on.
 `"comes_off"` legs are the car's own directions for the running gear: `forward` is the car's nose, `out` the side of the
 car the part is on.
 
@@ -643,7 +645,11 @@ its own garage; one without a place in a garage takes it out of that garage. `cr
 the game shows its credits (Settings), as a CC BY licence asks. The published `bushradio` mod has `radio`, the set on the
 welder: clicking it opens the radio. The base game's `workbench` is where a loose part's "Work on it" job is shown; it names
 no model and the game draws its own (a mod's `workbench` may name one, its top 0.9 m up, its front +Z); a garage it has no place in
-has no bench, and a loose part's job is shown there without the part. `tools\Props` makes a prop's KN5: `prepare_prop.py` takes any model with PBR
+has no bench, and a loose part's job is shown there without the part. The base game's `lift` is the in-ground post the
+car in the bay goes up on: it names no model and the game draws its own; a mod's may name one, whose rising part is a node
+named `lift_post` with the top of its saddle (where the car rests) at the node's origin. Its place gives the floor's height
+(the post stands under the middle of whatever car is in the bay); a garage it has no place in still lifts the car, with
+no lift drawn. `tools\Props` makes a prop's KN5: `prepare_prop.py` takes any model with PBR
 materials (a Sketchfab .glb, a .blend) through Blender, `PropBuilder` writes the KN5 (`--keep-origin` for a part's model,
 whose origin is where it mounts: see docs/systems/parts-system.md "The running gear's models" for the spaces).
 `tools\RunningGearParts` makes the base game's running gear models out of shapes.

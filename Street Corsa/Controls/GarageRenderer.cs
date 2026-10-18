@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text.RegularExpressions;
 using AcTools.Kn5File;
 using AcTools.Render.Base;
 using AcTools.Render.Base.Cameras;
@@ -94,6 +95,18 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     private bool _fixtureHovered;
     private Kn5RenderableFile? _bench;
     private List<IKn5RenderableObject> _benchMeshes = new();
+
+    // The lift under the car (Parts.LiftLayout): its post, and where that stands with the lift down
+    private Kn5RenderableFile? _lift;
+    private RenderableList? _liftPost;
+    private Matrix _liftPostHome = Matrix.Identity;
+    private float _liftSaddle = Parts.LiftLayout.SaddleDown;
+
+    // The car's own wheels (its model's WHEEL_xx nodes, the part wheels shown on them in the scenes among what they hold),
+    // found once a car: left out of the ghost while the parts are on show, which draw the wheels as parts of their own
+    private static readonly Regex CarWheel = new("^WHEEL_(LF|RF|LR|RR)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    private Kn5RenderableCar? _wheelsOf;
+    private List<RenderableList> _carWheels = new();
 
     // The part a job of the parts view's "Work on it" is being done on: a loose one lying on the workbench (drawn whole,
     // at how far it is in sight), and over it, or over the mounted part itself, its grime, fading as the work goes
@@ -1216,6 +1229,98 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     }
 
     /// <summary>
+    /// The lift (<see cref="Parts.LiftLayout"/>), put where <paramref name="placement"/> says: under the car's middle; null
+    /// takes it away. Its post (<see cref="Parts.LiftLayout.PostNode"/>) rises to <see cref="LiftSaddle"/>. Drawn and in the
+    /// way of what is behind it, never picked nor lit up. Must be called on the thread that draws.
+    /// </summary>
+    public void SetLift(IKn5? kn5, Matrix placement)
+    {
+        _lift?.Dispose();
+        _lift = kn5 == null ? null : new Kn5RenderableFile(kn5, placement, asyncTexturesLoading: false);
+        _liftPost = _lift?.GetDummyByName(Parts.LiftLayout.PostNode);
+        _liftPostHome = _liftPost?.LocalMatrix ?? Matrix.Identity;
+        PlaceLiftPost();
+        SetShadowsDirty();
+        IsDirty = true;
+    }
+
+    /// <summary>The lift under another car: where its middle is</summary>
+    public void MoveLift(Matrix placement)
+    {
+        if (_lift == null || _lift.LocalMatrix == placement) return;
+        _lift.LocalMatrix = placement;
+        _lift.UpdateBoundingBox();
+        SetShadowsDirty();
+        IsDirty = true;
+    }
+
+    /// <summary>How high the top of the lift's saddle is off the floor, metres (<see cref="Parts.LiftLayout.SaddleTop"/>)</summary>
+    public float LiftSaddle
+    {
+        get => _liftSaddle;
+        set
+        {
+            if (_liftSaddle == value) return;
+            _liftSaddle = value;
+            PlaceLiftPost();
+            IsDirty = true;
+        }
+    }
+
+    private void PlaceLiftPost()
+    {
+        if (_liftPost == null || _lift == null) return;
+        _liftPost.LocalMatrix = _liftPostHome * Matrix.Translation(0f, _liftSaddle - _liftPostHome.M42, 0f);
+        _lift.UpdateBoundingBox();
+    }
+
+    /// <summary>
+    /// Draws the car without its own wheels while the car's parts are on show (the wheels are among them), with them
+    /// otherwise: the wheel nodes are switched off for the draw and back as they were after it
+    /// </summary>
+    private void DrawCarWithoutWheels(Action draw)
+    {
+        if (_prop == null || _standActive || CarNode is not { } car)
+        {
+            draw();
+            return;
+        }
+
+        if (!ReferenceEquals(_wheelsOf, car))
+        {
+            _wheelsOf = car;
+            _carWheels = new List<RenderableList>();
+            FindWheels(car);
+        }
+
+        var was = new bool[_carWheels.Count];
+        for (var i = 0; i < _carWheels.Count; i++)
+        {
+            was[i] = _carWheels[i].IsEnabled;
+            _carWheels[i].IsEnabled = false;
+        }
+
+        try
+        {
+            draw();
+        }
+        finally
+        {
+            for (var i = 0; i < _carWheels.Count; i++) _carWheels[i].IsEnabled = was[i];
+        }
+
+        void FindWheels(RenderableList list)
+        {
+            foreach (var child in list)
+            {
+                if (child is not RenderableList node) continue;
+                if (node is Kn5RenderableList { OriginalNode.Name: var name } && CarWheel.IsMatch(name)) _carWheels.Add(node);
+                else FindWheels(node);
+            }
+        }
+    }
+
+    /// <summary>
     /// The part a job is being done on: <paramref name="clean"/> drawn where <paramref name="placement"/> puts it (a loose
     /// part on the workbench; null for a mounted part, which is drawn already), <paramref name="grime"/> over it at
     /// <see cref="WorkGrime"/>. With <paramref name="followsParts"/> both are models of the mounted parts' space and go
@@ -1508,6 +1613,7 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         _scenery?.Draw(holder, camera, mode);
         _fixture?.Draw(holder, camera, mode);
         _bench?.Draw(holder, camera, mode);
+        _lift?.Draw(holder, camera, mode);
         FollowParts();
 
         // The part on the workbench, once it is all there; on its way in or out it is drawn see-through after the rest
@@ -1649,7 +1755,8 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         // Everything comes in with the transition; the stand's parts have none, but the car's outline fades with the
         // car even then, on its way back to solid
         var fade = _standActive ? 1f : Ease(_ghostProgress);
-        if (IsGhosting && CarNode != null) DrawGlow(0, CarGlow, Ease(_ghostProgress), () => base.DrawCars(holder, ActualCamera, SpecialRenderMode.Outline));
+        if (IsGhosting && CarNode != null)
+            DrawGlow(0, CarGlow, Ease(_ghostProgress), () => DrawCarWithoutWheels(() => base.DrawCars(holder, ActualCamera, SpecialRenderMode.Outline)));
 
         if (_candidates != null)
             DrawGlow(1, CandidateGlow, fade, () => _candidates.Draw(holder, ActualCamera, SpecialRenderMode.Outline));
@@ -1757,9 +1864,13 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         _scenery?.Draw(holder, camera, SpecialRenderMode.Simple);
         _fixture?.Draw(holder, camera, SpecialRenderMode.Simple);
         _bench?.Draw(holder, camera, SpecialRenderMode.Simple);
-        base.DrawCars(holder, camera, SpecialRenderMode.Simple);
-        context.OutputMerger.DepthStencilState = holder.States.ReadOnlyDepthState;
-        base.DrawCars(holder, camera, SpecialRenderMode.SimpleTransparent);
+        _lift?.Draw(holder, camera, SpecialRenderMode.Simple);
+        DrawCarWithoutWheels(() =>
+        {
+            base.DrawCars(holder, camera, SpecialRenderMode.Simple);
+            context.OutputMerger.DepthStencilState = holder.States.ReadOnlyDepthState;
+            base.DrawCars(holder, camera, SpecialRenderMode.SimpleTransparent);
+        });
 
         // Constant-factor blend, so the result does not depend on what the materials wrote to alpha
         _ghostBlend ??= CreateGhostBlend(holder.Device);
@@ -1821,6 +1932,9 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         _fixture = null;
         _bench?.Dispose();
         _bench = null;
+        _lift?.Dispose();
+        _lift = null;
+        _liftPost = null;
         _work?.Dispose();
         _work = null;
         _workGrime?.Dispose();

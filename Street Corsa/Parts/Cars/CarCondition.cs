@@ -209,6 +209,7 @@ public static class CarCondition
     {
         var problems = new List<string>();
         if (car.IsImpounded) problems.Add(PartWords.Say("condition.problem.impounded"));
+        if (car.IsLifted) problems.Add(PartWords.Say("condition.problem.lifted"));
         if (IsTotaled(car)) problems.Add(PartWords.Say("condition.problem.totaled"));
         if (counting && FuelLeft(car) is { } fuel && fuel < TooLittleToRaceLitres) problems.Add(PartWords.Say(fuel < EmptyTankLitres ? "condition.problem.tank_empty" : "condition.problem.fuel_low"));
 

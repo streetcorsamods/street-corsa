@@ -546,6 +546,7 @@ namespace StreetCorsa.Screens.Garage
         {
             if (SelectedCar is not { } selected) return;
             var car = selected.CarInstance;
+            if (TellLifted(selected)) return;
 
             try
             {
@@ -586,6 +587,7 @@ namespace StreetCorsa.Screens.Garage
         {
             if (SelectedCar is not { } selected) return;
             var car = selected.CarInstance;
+            if (TellLifted(selected)) return;
 
             // The painter sprays over no rust and no dents: the repair shop's first, and the car stays home
             if (PaintFirst.WhyNot(car) is { } why)
@@ -617,6 +619,19 @@ namespace StreetCorsa.Screens.Garage
                 return;
             }
             await DriveOutTo(booth);
+        }
+
+        /// <summary>
+        /// The car is up on the lift, and goes nowhere: the player is told so, and true. A car on the lift is never pushed
+        /// out of the garage as one that will not run is.
+        /// </summary>
+        private bool TellLifted(CarDisplayViewModel selected)
+        {
+            if (!selected.CarInstance.IsLifted) return false;
+
+            _dialogService.ShowDialog(new Dialogs.Information.InformationDialogViewModel(_dialogService,
+                GameText.Say("garage.lifted", ("car", selected.DisplayName)), GameText.Say("garage.lifted.title")));
+            return true;
         }
 
         /// <summary>The car drives out of the garage as a mod's script has it, and the garage goes to <paramref name="to"/></summary>

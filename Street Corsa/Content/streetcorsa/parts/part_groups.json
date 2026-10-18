@@ -28,7 +28,8 @@
     { "id": "engine", "icon": "icons/engine", "rest_of_engine": true },
     { "id": "drivetrain", "icon": "icons/gears", "groups": [ "transmissions", "rear_axles", "differentials", "ring_pinions", "axle_shafts", "transfer_cases" ] },
     { "id": "brakes", "icon": "icons/disc_brake", "groups": [ "brakes", "backing_plates", "brake_shoes", "wheel_cylinders", "hubs" ] },
-    { "id": "suspension", "icon": "icons/parts_filled", "groups": [ "springs", "traction_bars", "shocks", "sway_bars", "suspension_arms" ] }
+    { "id": "suspension", "icon": "icons/parts_filled", "groups": [ "springs", "traction_bars", "shocks", "sway_bars", "suspension_arms" ] },
+    { "id": "wheels", "icon": "icons/wheel", "groups": [ "rims", "tyres" ] }
   ],
   "groups": [
     {

@@ -93,6 +93,7 @@
     { "kind": "steering_pump", "after": [ "belt", "steering_belt" ] },
     { "kind": "steering_belt", "needs": [ "steering_pump" ] },
 
+    { "kind": "rim", "lifted": true },
     { "kind": "drum", "after": [ "rim" ], "needs": [ "brake_shoes", "wheel_cylinder" ] },
     { "kind": "brake", "after": [ "rim" ] },
     { "kind": "brake_shoes", "after": [ "drum" ], "needs": [ "wheel_cylinder" ] },

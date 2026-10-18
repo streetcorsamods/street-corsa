@@ -20,6 +20,10 @@ public static class Sfx
     public const string EngineLands = "engine.land";
     public const string EngineTurns = "engine.turn";
 
+    // The garage's lift: its pump as it goes up or down (a loop), the clunk as it gets to a stop
+    public const string LiftMoves = "lift.move";
+    public const string LiftStops = "lift.stop";
+
     // The driveway bell as a car rolls over its hose: a step of the station's arrive script, and rung by the game when
     // no script shows the car driving in
     public const string StationBell = "station.bell";
