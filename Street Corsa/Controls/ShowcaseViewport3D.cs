@@ -165,7 +165,7 @@ public class ShowcaseViewport3D : D3DViewportBase
         // Another room is another scene. The D3D9 device the picture goes through stays up for it.
         DisposeRenderer(releaseDevice: false);
 
-        var started = DateTime.Now;
+        var started = System.Diagnostics.Stopwatch.GetTimestamp();
         var renderer = NewRenderer(null, set.Scene.Kn5);
 
         // The cars stand where this control puts them and are seen from where it puts the camera: nothing else may
@@ -219,7 +219,7 @@ public class ShowcaseViewport3D : D3DViewportBase
 
         _failedSets = 0;
         Logger.Information("Main screen scene {Scene} up with {Cars} cars in {Ms} ms",
-            set.Scene.Id, _lineup.Count, (int)(DateTime.Now - started).TotalMilliseconds);
+            set.Scene.Id, _lineup.Count, (int)System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds);
 
         // The cars the camera stays with, in a random order
         _heroes.Clear();

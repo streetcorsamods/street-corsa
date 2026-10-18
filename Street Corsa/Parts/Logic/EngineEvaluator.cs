@@ -96,7 +96,7 @@ public static class EngineEvaluator
         catch (Exception ex)
         {
             var fault = $"evaluating {tree.Root.Definition.Id} failed ({ex.GetType().Name}: {ex.Message})";
-            return new EngineReport { Problem = "the engine could not be evaluated: " + fault, Faults = new[] { fault }, Unplaced = tree.Unplaced };
+            return new EngineReport { Problem = PartWords.Say("engine.problem.not_evaluated", ("fault", fault)), Faults = new[] { fault }, Unplaced = tree.Unplaced };
         }
     }
 
@@ -118,18 +118,18 @@ public static class EngineEvaluator
         if (problem == null && assembly != null && inputs is not { MaxFuelFlow: <= 0, MaxAirFlow: <= 0 })
         {
             if (dyno.Compression < assembly.MinCompression)
-                problem = $"the static compression is too low in the engine. At least {assembly.MinCompression:0.0}:1 is needed. Try another air/fuel mixture ratio, or raise the compression with other cylinder heads, connecting rods or pistons.";
+                problem = PartWords.Say("engine.problem.compression_low", ("compression", EngineDyno.Figure(assembly.MinCompression, "0.0")));
             else if (dyno.Compression > assembly.MaxCompression)
-                problem = $"the static compression is too high in the engine. Not more than {assembly.MaxCompression:0.0}:1 is allowed. Try another air/fuel mixture ratio, or lower the compression with other cylinder heads, connecting rods or pistons.";
+                problem = PartWords.Say("engine.problem.compression_high", ("compression", EngineDyno.Figure(assembly.MaxCompression, "0.0")));
         }
 
         problem ??= root.SelfAndDescendants().Skip(1).Select(NeedOf).FirstOrDefault(n => n != null);
         if (problem == null && inputs is { MaxFuelFlow: <= 0, MaxAirFlow: <= 0 })
-            problem = "nothing feeds the engine: there is no carburettor or injection on the intake.";
+            problem = PartWords.Say(EngineDyno.NotFedKey);
         if (problem == null && dyno is { Curve.Count: 0 })
-            problem = EngineDyno.Unrunnable(inputs) ?? "the engine makes no power on the dyno.";
+            problem = EngineDyno.Unrunnable(inputs) ?? PartWords.Say("engine.problem.no_power");
         if (problem == null && !(dyno.MaxPowerHp <= MaxPowerHp && dyno.MaxTorque <= MaxTorqueNm))
-            problem = $"the dyno makes {dyno.MaxPowerHp:0} hp and {dyno.MaxTorque:0} Nm, past any engine: a part's figures are not what they should be.";
+            problem = PartWords.Say("engine.problem.absurd_power", ("hp", EngineDyno.Figure(dyno.MaxPowerHp, "0")), ("nm", EngineDyno.Figure(dyno.MaxTorque, "0")));
 
         // Figures come out of a sum of a pack's numbers: what is not a number is no figure, so nothing that is not one
         // ever reaches the car's data
@@ -159,13 +159,11 @@ public static class EngineEvaluator
         var limiter = fromFigures || PartFigures.ApplyEngine(figures, "rev_limit", 0) != null ? inputs.RpmLimit : assembly!.RpmLimit;
 
         // A part's idle is held to what an engine ticks over at, below the limiter the car will have (the curve's end
-        // without one): a mod's 9000 or -900 would put the car's least revs over its limiter or under nothing
+        // without one): a mod's 9000 or -900 would put the car's least revs over its limiter or under nothing. Whether
+        // the block's spec or a part's figure gives it: AC gets the idle the same way from both
         var idle = Engine("idle_rpm", fromFigures ? PartFigures.DefaultIdleRpm : Finite(assembly!.IdleRpm, MaxRpm), MaxRpm);
-        if (PartFigures.ApplyEngine(figures, "idle_rpm", 0) != null)
-        {
-            var revsTo = Finite(limiter, MaxRpm) is > 0 and var given ? given : dyno.Curve.Count > 0 ? dyno.Curve[^1].Rpm : MaxRpm;
-            idle = Math.Clamp(idle, PartFigures.MinIdleRpm, Math.Max(PartFigures.MinIdleRpm, revsTo * PartFigures.MostIdleOfLimiter));
-        }
+        var revsTo = Finite(limiter, MaxRpm) is > 0 and var given ? given : dyno.Curve.Count > 0 ? dyno.Curve[^1].Rpm : MaxRpm;
+        idle = Math.Clamp(idle, PartFigures.MinIdleRpm, Math.Max(PartFigures.MinIdleRpm, revsTo * PartFigures.MostIdleOfLimiter));
 
         return new EngineReport
         {
@@ -201,7 +199,7 @@ public static class EngineEvaluator
         foreach (var rule in part.Definition.Needs)
         {
             if (part.Definition.Slots.Any(s => s.Id == rule.Slot) && !part.Children.ContainsKey(rule.Slot))
-                return string.IsNullOrWhiteSpace(rule.Message) ? $"{part.Definition.DisplayName ?? part.Definition.Name} is missing a part." : rule.Message;
+                return string.IsNullOrWhiteSpace(rule.Message) ? PartWords.Say("engine.problem.missing_part", ("part", part.Definition.DisplayName ?? part.Definition.Name)) : rule.Message;
         }
 
         return null;

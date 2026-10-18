@@ -226,7 +226,7 @@ public class ClassifiedsTests
 }
 
 /// <summary>The better writer's seam: alone, since it is the whole app's</summary>
-[Collection(AdWriterCollection.Name)]
+[Collection(GlobalsCollection.Name)]
 public class AdWriterTests
 {
     private sealed class Writer(Func<AdFacts, string, string?> write) : IAdWriter
@@ -289,8 +289,3 @@ public class AdWriterTests
     }
 }
 
-[CollectionDefinition(Name, DisableParallelization = true)]
-public sealed class AdWriterCollection
-{
-    public const string Name = "Ad writer";
-}

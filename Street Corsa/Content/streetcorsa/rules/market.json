@@ -26,6 +26,10 @@
     "minAskingPrice": 100,
     "maxAskingShare": 3,
     "rivalBuyerChance": 0.4,
+    "paperBaseChance": 0.6,
+    "paperFairShare": 0.9,
+    "paperChanceSlope": 1.2,
+    "paperUnpricedChance": 0.1,
     "paperHaggleShare": 0.85,
     "paperFloorShare": 0.8,
     "paperFreshChanceFactor": 0.5,
@@ -54,6 +58,8 @@
     "backLotLow": 0,
     "backLotHigh": 2,
     "backLotMinCondition": 0.25,
-    "backLotMaxCondition": 0.55
+    "backLotMaxCondition": 0.55,
+    "usedCarTuneChance": 0.35,
+    "usedCarMinTuneLevel": 0.3
   }
 }

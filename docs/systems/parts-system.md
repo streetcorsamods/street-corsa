@@ -72,8 +72,9 @@ lacks today goes on a list to make).
   - the bore, stroke, deck height, rod length, pin height and dome with the head's chamber make the clearance volume
     and the compression;
   - each head breathes through its valves' area times the cam's lift over the cylinder volume, times the manifold's
-    and the header's flow (`BreatherFactor` 0.9); the banks of a vee are averaged, an engine with a head missing has
-    no breathing (and does not run);
+    and the header's flow (`BreatherFactor` 0.9); the banks of a vee are averaged (their limits are not: the engine's
+    top speed and its most fuel and air are the tighter of the two banks', and a bank without one leaves the other's
+    standing), an engine with a head missing has no breathing (and does not run);
   - the cam's durations, lobe separation and advance (held to its range, in its steps) make the valve events;
   - every part and what hangs on it is gone over, the last slot first: the weakest `max_rpm` is the engine's top
     speed, a fuel system gives its mixture, its fuel (`fuels.json`) and the least fuel and air of all of them (the air
@@ -91,6 +92,10 @@ lacks today goes on a list to make).
 - `EngineEvaluator` → `EngineReport`: runs or not and why (the parts' own words), curve, idle, limiter, inertia, gears,
   final, drive type, diff lock, mass. The block's `needs` are asked first, in order, then the compression its fuel
   takes ("too low", "too high"), then every other part's `needs`; an engine with no fuel system says nothing feeds it.
+  The reasons that are the game's own, not a pack's (the compression, nothing feeding it, no displacement, no rev
+  range, figures past any engine) are the `engine.problem.*` lines of `text/ui_parts.json` through `PartWords`, their
+  numbers written the same in every locale; the tools, which read no text, show the keys. The idle, from a block's
+  spec or a part's figure alike, is held between 300 rpm and half the limiter.
 - `PartFigures`: a part's own engine figures (pack.json `"figures"`, plain metric; see the modding guide's "An engine
   of figures") go over what the specs came to before the dyno runs; a block without specs makes an engine of figures
   alone on `PartFigures.DataEngineBase`. Turbos and blowers of figures are `DynoInputs.Chargers`, their boost added.
@@ -332,9 +337,15 @@ mail order (`Screens/UsedParts`, the part shops' map's Mail order button) has tw
 (`PartKinds.GroupOf`, from the parts' classes), name, and "only what fits my car" (`FindFittingParts`: everything that
 goes on any slot of the selected car's tree, taken slots included). New price is what the part does
 (`PartPriceBook`, 2026-10-06: its kind's `price` in part_groups.json, a base and dollars per horsepower the part is
-worth on the dyno, measured once a session over every build that runs; no pack writes a price);
-a used part is worth `new x tear x (0.3 + 0.7 x wear)`, ads ask around 60% of that, a trade-in
-pays 40%. A whole engine that runs is priced by what it makes (`PartPricing.EngineNewPrice`, 2026-10-17): its dyno
+worth on the dyno, measured once a session over every build that runs and kept under `%AppData%\StreetCorsa\part_power.json`
+with a fingerprint of the parts, `PriceBookStore`; no pack writes a price). The process-wide price seams (`PartPricing`,
+`CarPricing`, `EngineRules`) are pointed at the rules and the parts service once, where the app is composed
+(`PartsWiring.Wire`), never by a constructor; the UI thread never waits for the book to be measured (the warm-up does it)
+and prices at the kinds' bases until it is. A used part is worth `new x tear x (floor + (1 - floor) x wear)`
+(`PartPricing.Shape`, `economy.wearFloor` 0.3, the one rule for a part's wear and a car's body), ads ask around 60%
+of that (`economy.partAdMinAskShare` to `partAdMaxAskShare` of a shop's used price), a trade-in pays 40%. What is for
+sale at all is the kinds part_groups.json puts up (`for_sale`: the engine's parts; the running gear is sold by what it is,
+the mufflers are not). A whole engine that runs is priced by what it makes (`PartPricing.EngineNewPrice`, 2026-10-17): its dyno
 power, measured with every part as new, on the blocks' curve, plus the base price of every other part, and never less than
 its parts loose. Its worth shares that over the parts by their prices, each share in its part's wear. Loose parts price
 their power linearly (a head $4/hp) and a block by the weakest engine it comes in, so an engine carrying its power in its
@@ -355,7 +366,7 @@ dealer map with `partShopsMap`, gold square pins and no car lots), driven out to
   `origin: car` build), any make; a *wheel shop* the running gear; a *junkyard* anything, used.
 - **Stock**: the save carries it (`PartShopLocation`, a `DealerLocation` with `Shelves`, `Yard`, `RestockedOn`,
   `PlayerSpent`). A delivery (`PartShopService.Deliver`, every `RestockDays`: 7 days a specialist, 10 a speed shop, 5 a
-  wheel shop) keeps most of what is left, may top each line up, and adds lines up to 40-60 different parts (a speed shop 25-35,
+  wheel shop) keeps most of what is left, tops each line up half the time (`partShops.topUpChance`), and adds lines up to 40-60 different parts (a speed shop 25-35,
   one or two of each, its dear parts rarer). A junkyard's yard holds 20-35 parts (15% of them whole engines of a runnable
   build), 15-75% worn, gone after 21 days; wrecks come in every three days, taken apart off the UI thread. A shop never
   stocked (a game just begun, a shop just opened) is stocked when the map or the shop is opened, whatever the rules.
@@ -825,7 +836,8 @@ game does: `EngineBench "Street Corsa/Content" bench mercury-255-race` benches a
 
 ```
 EngineBench <parts folder> list | rated | all | inputs | show <build id>
-EngineBench <parts folder> snapshot <file>             every build's whole report, one JSON line each, to diff two versions by
+EngineBench <parts folder> rated --base-only           the same with the base game's makes, groups, classes and fuels alone (check.ps1's gate; --base-only goes with any command)
+EngineBench <parts folder> snapshot <file>             every build's whole report, one JSON line each, to diff two versions by (written whole or not at all)
 EngineBench <parts folder> export <build id> <car data folder> <output folder>
 EngineBench <parts folder> cars <AC cars folder>       factory engine suggested for every car, with the runners-up
 EngineBench <parts folder> tune <build id> [count]     engines a used car of that build may turn up with

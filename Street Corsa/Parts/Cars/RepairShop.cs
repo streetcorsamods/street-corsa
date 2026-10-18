@@ -116,7 +116,7 @@ public static class RepairShop
     private const double BodyWorth = 0.5;
 
     /// <summary>A part at this or better needs nothing done</summary>
-    private const double Straight = PartInstance.Undamaged;
+    private static double Straight => PartInstance.UndamagedTear;
 
     /// <param name="catalog">Null when there are no parts: only the body can be done</param>
     /// <param name="priceMultiplier">The save's <see cref="GameRules.PartPriceMultiplier"/>, on the whole bill</param>
@@ -192,7 +192,7 @@ public static class RepairShop
             }
         }
 
-        if (gearbox is { Tear: < Straight })
+        if (gearbox != null && gearbox.Tear < Straight)
         {
             var detail = gearbox.Tear < CarCondition.BrokenBelow ? PartWords.Say("repair.job.gearbox.wrecked") : PartWords.Say("repair.job.gearbox.worn", ("left", gearbox.Tear * 100));
             jobs.Add(PartsJob(Gearbox, PartWords.Say("repair.job.gearbox"), detail, new[] { gearbox }, catalog, prices,
@@ -212,11 +212,11 @@ public static class RepairShop
         for (var i = 0; i < corners.Length; i++)
         {
             var name = RunningGear.CornerName(i);
-            var bent = new[] { corners[i].Spring, corners[i].Shock }.Where(p => p is { Tear: < Straight }).Select(p => p!).ToList();
+            var bent = new[] { corners[i].Spring, corners[i].Shock }.Where(p => p != null && p.Tear < Straight).Select(p => p!).ToList();
             if (bent.Count > 0)
                 jobs.Add(PartsJob(Corner(i), PartWords.Say("repair.job.corner", ("corner", name)), PartWords.Say("repair.job.corner.detail"), bent, catalog, prices, GameAction.GarageWorkMinor, Refresh));
 
-            if (corners[i].Tyre is { Tear: < Straight } tyre && catalog.Get(tyre.DefinitionId) is { } tyreDefinition)
+            if (corners[i].Tyre is { } tyre && tyre.Tear < Straight && catalog.Get(tyre.DefinitionId) is { } tyreDefinition)
             {
                 // A blown tyre is not patched: the same tyre, new, goes on
                 jobs.Add(new RepairJob(Tyre(i), PartWords.Say("repair.job.tyre", ("corner", name)), PartWords.Say("repair.job.blown"), LabourAt(prices) + PartPricing.Round(PartPricing.NewPrice(tyreDefinition) * prices),

@@ -269,6 +269,13 @@ os.preciseClock = os.clock
 -- pass or fail by chance: the harness pins the seed, and every run is the same race
 local randomseed = math.randomseed
 math.randomseed = function() randomseed(1970) end
+-- world.random: every roll of math.random() comes up this (a breakdown's chance a frame is then a fact, not a draw);
+-- the draws with a range (a trap's spot) stay the seeded ones
+local random = math.random
+math.random = function(m, n)
+  if world.random ~= nil and m == nil then return world.random end
+  if m == nil then return random() elseif n == nil then return random(m) else return random(m, n) end
+end
 function setInterval(f, t) timers[#timers + 1] = { f = f, every = t, due = t }; return #timers end
 function clearInterval(id) if timers[id] then timers[id].dead = true end end
 function setTimeout(f, t) timers[#timers + 1] = { f = f, due = t, once = true }; return #timers end
@@ -317,6 +324,14 @@ local function step(dt, t)
       car.rpm = want > 0 and 0.6 * car.rpmLimiter or 900
     end
     if world.fuelBurn and sim.isSessionStarted then car.fuel = math.max(0, car.fuel - world.fuelBurn * car.gas * dt) end
+    -- The rear tyres' drive (world.axleForce(i, raceSeconds, car): N each, on the wheels CSP numbers 2 and 3), at a loaded
+    -- radius of 0.3 m; without it the wheels have no fx, as a CSP without the field would leave them
+    if world.axleForce and sim.isSessionStarted then
+      for w = 2, 3 do
+        car.wheels[w].fx = world.axleForce(i, t - 3, car)
+        car.wheels[w].tyreLoadedRadius = 0.3
+      end
+    end
     refresh(car)
   end
   for _, timer in ipairs(timers) do
@@ -347,21 +362,24 @@ end
 
 
 def run(name, cars, ini, player, rival, cop, max_seconds=400, length=2000.0, sides=6.0, strip=None, menu_at=None,
-        place_offset=0.0, engine=None, fuel_burn=None, physics_allowed=True):
+        place_offset=0.0, engine=None, fuel_burn=None, physics_allowed=True, axle_force=None, random=None):
     """strip: a drag strip instead of the loop, strip(world, i, raceSeconds, car) giving each car's acceleration;
     place_offset: metres past the asked spot that setCarPosition leaves a car; engine(i, raceSeconds): each car's
     throttle, revs (a share of the limiter) and g; fuel_burn: litres a second at full throttle; physics_allowed: False
-    for a mode that may not touch the physics"""
+    for a mode that may not touch the physics; axle_force(i, raceSeconds): the N each rear tyre drives with (none: the
+    wheels have no fx at all); random: what every plain math.random() comes up"""
     lua = lupa.LuaRuntime(unpack_returned_tuples=True)
     world = lua.table_from({
         'length': length, 'cars': cars, 'maxSeconds': max_seconds, 'sides': sides,
         'ini': lua.table_from(ini),
         'playerSpeed': player, 'rivalSpeed': rival, 'copSpeed': cop,
         'straight': strip is not None, 'menuAt': menu_at, 'placeOffset': place_offset, 'fuelBurn': fuel_burn,
-        'physicsAllowed': physics_allowed,
+        'physicsAllowed': physics_allowed, 'random': random,
     })
     if engine is not None:
         world['engine'] = lambda i, t, car: engine(i, t)
+    if axle_force is not None:
+        world['axleForce'] = lambda i, t, car: axle_force(i, t)
     if strip is not None:
         world['accel'] = lambda i, t, car: strip(world, i, t, car)
     # The format modules sit next to the mode and are loaded with require, as CSP finds them in the mode's folder; a
@@ -503,8 +521,9 @@ def paths(value, prefix=''):
 def golden_file(write=False):
     # The C# side reads this file as the mode's contract (RaceResultContractTests): a road race with the police,
     # won at the line after getting away. The file must have the shape the mode writes now; --golden writes it again.
+    # With a rear axle, as the career always gives one: the condition's axle fields are part of the shape
     ini = dict(POLICE_INI, **{'STREET_CORSA.CONTEXT_ID': GOLDEN_CONTEXT_ID, 'STREET_CORSA.FORMAT': 'circuit',
-                              'STREET_CORSA.MODULE': 'format_road', 'STREET_CORSA.LAPS': '1'})
+                              'STREET_CORSA.MODULE': 'format_road', 'STREET_CORSA.LAPS': '1', 'STREET_CORSA.CAR_0_AXLE': '2500'})
     result, log, _, _ = run('golden', 4, ini, lambda t: 30, lambda t: 20, lambda t, i: 12)
     if write:
         with open(GOLDEN, 'w', encoding='utf-8', newline='\n') as f:

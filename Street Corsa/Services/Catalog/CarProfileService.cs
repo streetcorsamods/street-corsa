@@ -71,13 +71,8 @@ namespace StreetCorsa.Services.Catalog
             _profileRepo = profileRepo;
             _parts = parts;
             _logger = AppLoggerFactory.CreateLogger(LogCategory.Catalog);
-            // The body's price, process-wide like the parts' (see CarPricing.Source): the catalog's figures, the mods' rules
-            CarPricing.Source = () =>
-            {
-                var cars = Figures;
-                return new CarPricing.Figures(cars.BodyPrice, cars.BodyKg, cars.BodyWeightPower, cars.MinBodyPrice, cars.MaxBodyPrice,
-                    cars.MinPlausibleWeightKg, cars.MaxPlausibleWeightKg);
-            };
+            // The body's price (CarPricing.Source, process-wide) is pointed at the mods' rules once, where the app is
+            // composed (Services.Parts.PartsWiring): not here, so a second service never takes it over
         }
 
         public CarProfile GenerateDefaultProfile(CarDefinition carDefinition)
@@ -86,13 +81,14 @@ namespace StreetCorsa.Services.Catalog
             return Generate(carDefinition, make, DefinitionHashOf(carDefinition, make));
         }
 
-        private CarProfile Generate(CarDefinition carDefinition, string? make, string hash)
+        /// <param name="price">The price to give it; null prices it now, by the parts when they are up</param>
+        private CarProfile Generate(CarDefinition carDefinition, string? make, string hash, NewPrice? price = null)
         {
-            var price = PriceNew(carDefinition);
+            price ??= PriceNew(carDefinition);
             var precedence = Precedence(carDefinition, make);
 
             _logger.Debug("Generated profile for {CarId}: BasePrice=${Price}, Precedence={Precedence}",
-                carDefinition.Id, price.BasePrice, precedence);
+                carDefinition.Id, price.Value.BasePrice, precedence);
 
             var profile = new CarProfile
             {
@@ -104,7 +100,7 @@ namespace StreetCorsa.Services.Catalog
                 LastUpdatedDate = DateTime.Now,
                 IsStreetLegal = true // Default assumption
             };
-            price.Into(profile);
+            price.Value.Into(profile);
             return profile;
         }
 
@@ -131,20 +127,29 @@ namespace StreetCorsa.Services.Catalog
         /// What a car costs new: its body by its weight (AC's own, else its ui_car.json's), and
         /// its factory engine and running gear (the rear axle too) at their parts' new prices. Without the parts, the body alone.
         /// </summary>
-        public NewPrice PriceNew(CarDefinition carDefinition)
+        public NewPrice PriceNew(CarDefinition carDefinition) => Price(carDefinition, _parts is { IsAvailable: true } parts ? parts : null);
+
+        /// <summary>
+        /// What a car costs new by its body alone (its ui_car.json's weight), the parts not asked: a new profile's price at
+        /// start-up, when loading the parts (a dyno run of every build) would hold the first screen back
+        /// </summary>
+        private static NewPrice PriceByBody(CarDefinition carDefinition) => Price(carDefinition, null);
+
+        /// <summary>The price with <paramref name="parts"/> when given, by the body alone when null</summary>
+        private static NewPrice Price(CarDefinition carDefinition, ICarPartsService? parts)
         {
-            var specs = _parts is { IsAvailable: true } parts ? parts.Specs(carDefinition.Id) : null;
+            var specs = parts?.Specs(carDefinition.Id);
             var weight = specs is { TotalMass: > 0 } ? specs.TotalMass : UiWeight(carDefinition);
 
             var car = new CarPricing.NewCar(CarPricing.BodyPrice(weight), 0, 0);
-            if (_parts is { IsAvailable: true } withParts)
+            if (parts != null)
             {
                 var gear = specs == null
                     ? []
-                    : RunningGearFactory.Create(withParts.Catalog, specs, 1, withParts.FactoryAxle(carDefinition.Id), withParts.FactsOf(carDefinition.Id),
+                    : RunningGearFactory.Create(parts.Catalog, specs, 1, parts.FactoryAxle(carDefinition.Id), parts.FactsOf(carDefinition.Id),
                         CarBook.Current.Car(carDefinition.Id)?.RunningGear).SelectMany(p => p.SelfAndDescendants())
-                        .Select(p => withParts.Catalog.Get(p.DefinitionId)).OfType<StreetCorsa.Parts.PartDefinition>().ToList();
-                car = CarPricing.New(withParts.Catalog, weight, withParts.GetStockBuild(carDefinition), gear);
+                        .Select(p => parts.Catalog.Get(p.DefinitionId)).OfType<StreetCorsa.Parts.PartDefinition>().ToList();
+                car = CarPricing.New(parts.Catalog, weight, parts.GetStockBuild(carDefinition), gear);
             }
 
             var figures = Figures;
@@ -185,16 +190,63 @@ namespace StreetCorsa.Services.Catalog
         }
 
         /// <summary>
-        /// Gives every active car a profile, prices every car again (its parts' prices follow the parts in the mods, and
-        /// the rules), and works out how common a Generated profile's car is again when the car's definition changed
-        /// since (its hash moved on). How common a Manual or imported profile's car is is left alone, and so is
-        /// everything else a profile holds (the stock engine picked for it).
+        /// Gives every active car a profile (a new one priced by its body alone, since the parts are not up yet and
+        /// start-up waits for this; <see cref="RepriceAsync"/> prices every car at its parts' prices once they are), and
+        /// works out how common a Generated profile's car is again when the car's definition changed since (its hash
+        /// moved on). How common a Manual or imported profile's car is is left alone, and so is everything else a
+        /// profile holds (the stock engine picked for it).
         ///
         /// Runs on a worker thread, with one read of each collection and one write: start-up waits for it. The write
         /// touches only the fields worked out here, on the profile as stored at that moment: whatever else was saved
         /// since the read (a stock engine suggested, a profile edited by hand) stays.
         /// </summary>
         public Task EnsureProfilesExistAsync() => Task.Run(EnsureProfilesExist);
+
+        public Task RepriceAsync() => Task.Run(Reprice);
+
+        /// <summary>
+        /// Every active car priced again (its parts' prices follow the parts in the mods, and the rules), the profiles
+        /// whose price moved written in one go. The parts are asked here, not at start-up: this runs after their warm-up.
+        /// </summary>
+        private void Reprice()
+        {
+            try
+            {
+                var cars = _catalogRepo.GetCarsByStatus(ContentStatus.Active);
+                var profiles = _profileRepo.GetAllProfiles().ToDictionary(p => p.CarDefinitionId, StringComparer.OrdinalIgnoreCase);
+                var changes = new List<KeyValuePair<string, Func<CarProfile, CarProfile?>>>();
+                foreach (var car in cars)
+                {
+                    if (!profiles.TryGetValue(car.Id, out var profile)) continue;
+                    try
+                    {
+                        var price = PriceNew(car);
+                        if (!price.Into(Copy(profile))) continue;
+                        changes.Add(new(profile.CarDefinitionId, stored => Repriced(stored, price)));
+                    }
+                    catch (Exception ex)
+                    {
+                        // One mod car with figures nobody could price keeps the price it has
+                        _logger.Error(ex, "Could not price {CarId} by its parts", car.Id);
+                    }
+                }
+
+                if (changes.Count > 0) _profileRepo.MergeProfiles([], changes);
+                _logger.Information("Cars priced by their parts: {Changed} of {Total} changed", changes.Count, cars.Count);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Could not price the cars by their parts; their prices stay as they were");
+            }
+        }
+
+        /// <summary>The profile as stored when the write comes, at <paramref name="price"/>; null when it has it already</summary>
+        private static CarProfile? Repriced(CarProfile stored, NewPrice price)
+        {
+            if (!price.Into(stored)) return null;
+            stored.LastUpdatedDate = DateTime.Now;
+            return stored;
+        }
 
         private void EnsureProfilesExist()
         {
@@ -235,7 +287,7 @@ namespace StreetCorsa.Services.Catalog
                 var hash = DefinitionHashOf(car, make);
                 if (!profiles.TryGetValue(car.Id, out var profile))
                 {
-                    fresh.Add(Generate(car, make, hash));
+                    fresh.Add(Generate(car, make, hash, PriceByBody(car)));
                     created++;
                 }
                 else
@@ -247,11 +299,9 @@ namespace StreetCorsa.Services.Catalog
                     var engineToMods = given?.Engine is { Length: > 0 };
                     var layoutToMods = given?.EngineLayout != null;
                     var regenerate = commonToMods || profile.Source == ProfileDataSource.Generated && profile.DefinitionHash != hash;
-                    var price = PriceNew(car);
-                    var repriced = price.Into(Copy(profile));
-                    if (regenerate || repriced || engineToMods || layoutToMods)
-                        changes.Add(new(profile.CarDefinitionId, stored => Rework(car, stored, hash, price, commonToMods, engineToMods, layoutToMods)));
-                    if (regenerate || repriced) regenerated++;
+                    if (regenerate || engineToMods || layoutToMods)
+                        changes.Add(new(profile.CarDefinitionId, stored => Rework(car, stored, hash, commonToMods, engineToMods, layoutToMods)));
+                    if (regenerate) regenerated++;
                     else existing++;
                 }
             }
@@ -267,14 +317,13 @@ namespace StreetCorsa.Services.Catalog
         };
 
         /// <summary>
-        /// The profile as it is stored when the write comes, priced at <paramref name="price"/>, worked out again where it
-        /// is a generated one that has not been worked out by these figures (how common the car is), and handed over to
-        /// what the mods give the car; null when there is nothing to do
+        /// The profile as it is stored when the write comes, worked out again where it is a generated one that has not
+        /// been worked out by these figures (how common the car is), and handed over to what the mods give the car; null
+        /// when there is nothing to do. Its price is not touched here (<see cref="Reprice"/>).
         /// </summary>
-        private CarProfile? Rework(CarDefinition car, CarProfile stored, string hash, NewPrice price, bool commonToMods, bool engineToMods,
-            bool layoutToMods)
+        private CarProfile? Rework(CarDefinition car, CarProfile stored, string hash, bool commonToMods, bool engineToMods, bool layoutToMods)
         {
-            var changed = price.Into(stored);
+            var changed = false;
             if (commonToMods && stored.Source == ProfileDataSource.Manual)
             {
                 stored.Source = ProfileDataSource.Generated;

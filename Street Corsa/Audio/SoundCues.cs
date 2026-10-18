@@ -97,15 +97,32 @@ public sealed class SoundCues
         root = string.IsNullOrEmpty(root) ? dir : root;
         foreach (var (name, json) in parsed?.Cues ?? [])
         {
+            // A cue written as null ("ui.click": null) is no cue, said rather than thrown over the whole file
+            if (json == null)
+            {
+                _problems.Add($"{shownAs}: {name} is empty (null); a cue names its bus and its files");
+                continue;
+            }
+
             if (Parse(name, json, dir, root, shownAs) is { } cue) _cues[name] = cue;
         }
     }
 
+    /// <summary>The buses a cue may name: the engines are Studio events out of AC's banks, never a cue's</summary>
+    public static readonly IReadOnlyList<AudioBus> CueBuses = Enum.GetValues<AudioBus>().Where(b => b != AudioBus.Engine).ToList();
+
+    /// <summary>
+    /// The bus a cue names; null for a name that is no bus. Enum.TryParse alone takes a number ("7", "-1") as a value
+    /// the enum does not have, and would take the engines' bus, which has no group to play into: both are refused here.
+    /// </summary>
+    public static AudioBus? BusOf(string? name) =>
+        Enum.TryParse<AudioBus>(name, ignoreCase: true, out var bus) && Enum.IsDefined(bus) && bus != AudioBus.Engine ? bus : null;
+
     private SoundCue? Parse(string name, CueJson json, string dir, string root, string shownAs)
     {
-        if (!Enum.TryParse<AudioBus>(json.Bus, ignoreCase: true, out var bus))
+        if (BusOf(json.Bus) is not { } bus)
         {
-            _problems.Add($"{shownAs}: {name} has no bus it can play on (\"{json.Bus}\"); one of {string.Join(", ", Enum.GetNames<AudioBus>()).ToLowerInvariant()}");
+            _problems.Add($"{shownAs}: {name} has no bus it can play on (\"{json.Bus}\"); one of {string.Join(", ", CueBuses).ToLowerInvariant()}");
             return null;
         }
 

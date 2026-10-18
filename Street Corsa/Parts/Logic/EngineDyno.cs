@@ -1,3 +1,6 @@
+using System.Globalization;
+using StreetCorsa.Parts.Cars;
+
 namespace StreetCorsa.Parts.Logic;
 
 /// <summary>Torque over engine speed, with the figures people quote</summary>
@@ -73,6 +76,9 @@ public static class EngineDyno
 {
     /// <summary>Fastest an engine the dyno runs may turn: past any engine the game could hold</summary>
     public const double MaxRpm = 30_000;
+
+    /// <summary>Horsepower per kilowatt, the one figure for both the dyno and a car's quoted "150kW" (<see cref="Cars.AcSpecs"/>)</summary>
+    public const double HpPerKw = 1000 / DynoResult.WattsPerHp;
 
     /// <summary>A compression ratio at or below this is none: the dyno runs no engine with it</summary>
     public const double MinCompression = 1.5;
@@ -165,24 +171,31 @@ public static class EngineDyno
     /// <summary>The speed the dyno runs up to: the engine's own top, else a quarter past its rev limit</summary>
     public static double TopRpm(DynoInputs inputs) => inputs.MaxRpm > 0 ? inputs.MaxRpm : inputs.RpmLimit * 1.25;
 
-    /// <summary>Why the dyno runs no curve for these inputs, in words; null when it runs one</summary>
+    /// <summary>The player's words for an engine nothing feeds: said by the evaluator and by the figures alike</summary>
+    public const string NotFedKey = "engine.problem.not_fed";
+
+    /// <summary>Why the dyno runs no curve for these inputs, in the player's words; null when it runs one</summary>
     public static string? Unrunnable(DynoInputs inputs)
     {
         var displacement = CylinderVolume(inputs) * inputs.Cylinders;
         var compression = Compression(inputs);
         var maxRpm = TopRpm(inputs);
 
-        // The inputs are script figures: NaN fails every comparison, so it is ruled out by name
-        if (!double.IsFinite(displacement) || displacement <= 0 || inputs.Cylinders <= 0)
-            return "the engine has no displacement: its cylinders, bore and stroke come to none.";
+        // The inputs are a pack's figures: NaN fails every comparison, so it is ruled out by name; a bore or a stroke of
+        // nothing or less is no engine either, whatever its square comes to
+        if (!double.IsFinite(displacement) || displacement <= 0 || inputs.Cylinders <= 0 || inputs.Bore <= 0 || inputs.Stroke <= 0)
+            return PartWords.Say("engine.problem.no_displacement");
         if (!double.IsFinite(compression) || compression <= MinCompression)
-            return $"the engine has no compression to speak of ({(double.IsFinite(compression) ? compression : 0):0.0}:1).";
+            return PartWords.Say("engine.problem.no_compression", ("compression", Figure(double.IsFinite(compression) ? compression : 0, "0.0")));
         if (!double.IsFinite(maxRpm) || maxRpm <= 0)
-            return "the engine has no rev range: neither \"rev_limit\" nor \"max_rpm\" is above 0.";
+            return PartWords.Say("engine.problem.no_rev_range");
         if (maxRpm > MaxRpm)
-            return $"the engine would rev to {maxRpm:0} rpm, past the {MaxRpm:0} any engine may (\"max_rpm\", or a quarter past \"rev_limit\").";
+            return PartWords.Say("engine.problem.revs_past_any", ("rpm", Figure(maxRpm, "0")), ("most", Figure(MaxRpm, "0")));
         return null;
     }
+
+    /// <summary>A figure as the player's lines take it: the same digits in every locale (a "3,5:1" is no compression)</summary>
+    public static string Figure(double value, string format) => value.ToString(format, CultureInfo.InvariantCulture);
 
     /// <summary>Length of a valve event as a fraction of the cycle; events may wrap around the end of the cycle</summary>
     public static double Span(double open, double close)
@@ -221,13 +234,13 @@ public static class EngineDyno
     }
 
     /// <summary>Boost of the specs' charger at this speed, bar of manifold pressure</summary>
-    public static double ScriptBoostBar(DynoInputs inputs, double rpm) => BoostScale * Boost(inputs, rpm);
+    public static double SpecsBoostBar(DynoInputs inputs, double rpm) => BoostScale * Boost(inputs, rpm);
 
     /// <summary>
     /// Chargers spin with the engine; boost peaks where they work best and the wastegate caps it. A blower's
-    /// script hands over its working band (engine speeds) multiplied by the square of its drive ratio, so the
-    /// speed it is compared with is the engine's times that square: a roots blower geared 4:1 with its band at
-    /// 900-4400 rpm makes its boost there, not at 10,000.
+    /// specs give its working band (engine speeds) multiplied by the square of its drive ratio
+    /// (<see cref="EngineAssembly"/>), so the speed it is compared with is the engine's times that square: a roots
+    /// blower geared 4:1 with its band at 900-4400 rpm makes its boost there, not at 10,000.
     /// </summary>
     public static double Boost(DynoInputs inputs, double rpm)
     {

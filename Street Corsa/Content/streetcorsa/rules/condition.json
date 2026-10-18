@@ -8,6 +8,7 @@
     "totaledKmh": 200,
     "newEngineLife": 1000,
     "brokenBelow": 0.1,
+    "undamagedTear": 0.995,
     "mileageWearPerKm": 2.5E-05,
     "dirtPerKm": 0.01,
     "dealerRust": 0.35,

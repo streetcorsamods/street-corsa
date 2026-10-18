@@ -152,15 +152,15 @@ it changes:
 | `time` | minutes each action takes (`actions`, by the game's action names), each part at the workbench, an engine in or out, the stand, the lift from one stop to the next, a tick of cruising, the shortest trip |
 | `difficulty` | the New Game screen's presets (`easy`, `normal`, `hard`) and how often pink slips come up at each frequency |
 | `police` | how likely a street race draws them, fines, the impound, cars per race, the AC cars they like best |
-| `rivals` | how many race, their money (`money`, by age band), going broke, trading up, leaving and coming back, selling cars on, a boss's money and record (`king`) |
+| `rivals` | how many race, their money (`money`, by age band), going broke, trading up, leaving and coming back, selling cars on, how many tune a day and how often (`maxTunersPerDay`, `tuneChance`, `saleTuneChance`), how long the street talks (`streetTalkDays`, `maxStreetTalk`), a boss's money and record (`king`) |
 | `dealers` | dealers opening and closing, closing-down sales, trade |
-| `partShops` | the junkyard, haggling, the regulars' discount, trade, and each kind of shop's prices and shelves (`kinds`) where a shop's own file says nothing |
-| `economy` | a factor on every part's price (`partsPriceFactor`; the prices themselves are part_groups.json's), used and trade-in shares, mail order, the paper's part ads, a prize camshaft's cash |
-| `market` | the dealers' lots, selling a car, and what a car's looks and history do to its worth |
+| `partShops` | the junkyard, haggling, the regulars' discount, trade, a delivery's top-ups (`topUpChance`), each kind of shop's prices and shelves (`kinds`) where a shop's own file says nothing, and the counters: how many picks a clerk is told of (`mostPicks`), parts and whole engines tried on the dyno for one ask (`mostDynoRuns`, `machineDynoRuns`), other customers' work round a machine shop (`othersWork`) |
+| `economy` | a factor on every part's price (`partsPriceFactor`; the prices themselves are part_groups.json's), used and trade-in shares, what wear leaves of a part's and a body's worth (`wearFloor`), mail order, the paper's part ads (how many, how worn, what the sellers ask: `partAdMinAskShare` to `partAdMaxAskShare`), a prize camshaft's cash |
+| `market` | the dealers' lots, selling a car (the paper's buyers: `paperBaseChance`, `paperFairShare`, `paperChanceSlope`, `paperUnpricedChance`), how often a used car's engine was worked on (`usedCarTuneChance`, `usedCarMinTuneLevel`), and what a car's looks and history do to its worth |
 | `cars` | what a car's bare body costs new (`bodyPrice` at `bodyKg`, more for a lighter one and less for a heavier one as the ratio to `bodyWeightPower`, within `minBodyPrice` and `maxBodyPrice`), the least and most a whole car costs, the rounding, the believable weights, and how common a car is (where cars.json does not say) by year, source and power to weight. A car costs its body and its factory engine's and running gear's parts (see "parts", the shelves' `price`). Unlike the rest these follow the mods next to the game, not the career: the catalog is the program's, priced again at every start |
 | `engines` | how an engine is cooled and oiled by its parts (`cooling`), how the cars on the lots were worked on (`factory`: swaps, bolt-ons), how the rivals' tuners work (`tuner`), and the points an AC car's name and power give an engine build when the game picks its factory engine (`matcher`) |
 | `repairs` | the garage's repairs: parts, labour, body work |
-| `condition` | damage, wear, dirt, fuel and oil, and what a race takes out of a car |
+| `condition` | damage (and how little of it counts as none, `undamagedTear`), wear, dirt, fuel and oil, and what a race takes out of a car |
 | `street` | who comes by while cruising and how soon, drag or road, pink-slip offers, grudge rematches, the diner's talk |
 | `wagers` | the smallest and largest cash wager, night stakes, a fair match |
 | `reputation` | how reputation is worked out: base, wins, pink slips, losing and winning streaks, false starts, escapes |
@@ -249,8 +249,10 @@ game does with it. A part is in the first group with a class its own class count
 `part_groups.json` adds groups, tried before the ones before it, or changes a group of an id already there, naming only
 what it changes (a group keeps its place). `never_stacks`: never mounts on its own kind (a head on a head);
 `bolt_on`: what the cars on the lots were worked on with; `tune`: how much a rival's tuner goes for it (10 the most,
-none: not at all); `speed_shop`: a speed shop sells it. The player reads `part_group.<id>` in the text, else the
-group's `name`, else its id.
+none: not at all); `speed_shop`: a speed shop sells it; `for_sale`: parts of the kind are for sale at all (in the
+paper, by mail order, on the shops' shelves; the running gear is sold by what it is, and a kind without it only as far
+as an engine build uses it: the base game's mufflers, which only dress the tailpipe, are not for sale). The player
+reads `part_group.<id>` in the text, else the group's `name`, else its id.
 
 `price`: what a part of the kind costs new, in the game's dollars, by what it does. `base` for every part, and `per_hp` for every horsepower it is worth on the game's dyno: an engine block the
 power of its own engine (the least of its factory builds), any other part what it makes over the factory part in its
@@ -365,7 +367,7 @@ A job with `"becomes": true` turns a part into another, with what is on it, its 
 in its pack, by the job's id (`"becomes": { "weld_spiders": "running_gear/axles_gm/gm_10bolt_welded_low" }` on the base
 game's open carriers, the welded carrier on the same shelf). It is offered only on parts that name one, and may restore
 nothing (`"restores": 0`): the part is no better, it is something else. Not for a machine shop. A target that is no part,
-or on another shelf, is told as a mod problem and left out. A welded carrier is priced by its own `price_lock` (how hard
+left null or blank, or on another shelf, is told as a mod problem and left out. A welded carrier is priced by its own `price_lock` (how hard
 it locks, as the differentials' price reads it) rather than as the spool it acts like.
 
 The player's own work (a kit) lands round what the job can do: `roll` (0 to 0.5) is how far under `restores` it may come
@@ -420,7 +422,8 @@ with, and each part's class says what it adds (`Parts/Logic/EngineAssembly.cs` i
 - **The bottom end.** The block's `bore` and `cylinders`; the crankshaft's `stroke`; with the block's `deck_height`
   (crank centre to deck), the rods' `rod_length`, the pistons' `pin_height` (pin centre to crown) and `dome` (cc taken
   out of the chamber) and the head's `chamber` (cc), the volume left over the piston, and so the compression.
-- **The heads.** Each head (each bank of a vee, the banks averaged) breathes through its valves (`intake_valve`,
+- **The heads.** Each head (each bank of a vee, the banks averaged; a limit, `max_rpm` or a fuel system's flow, is the
+  tighter bank's, and a bank without one leaves the other's standing) breathes through its valves (`intake_valve`,
   `exhaust_valve` in mm, `intake_valves`, `exhaust_valves` per cylinder) opened by the camshaft's lift (`intake_lift`,
   `exhaust_lift`, mm) over the cylinder's volume, times the intake manifold's and the header's `flow` (0 to 1) and the
   head's own `intake_port`/`exhaust_port` (1 when left out). Worn valves pass a tenth less. `heat_loss` is what the

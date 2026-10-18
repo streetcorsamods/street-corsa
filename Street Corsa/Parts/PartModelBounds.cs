@@ -25,19 +25,7 @@ public static class PartModelBounds
 
                 // Only the vertices are wanted: textures and materials are skipped
                 var model = Kn5.FromFile(file, SkippingTextureLoader.Instance, SkippingMaterialLoader.Instance);
-                var min = new Vector3(float.MaxValue);
-                var max = new Vector3(float.MinValue);
-                foreach (var mesh in model.RootNode.Children.Where(n => n.NodeClass == Kn5NodeClass.Mesh))
-                {
-                    foreach (var vertex in mesh.Vertices)
-                    {
-                        var p = new Vector3(vertex.Position.X, vertex.Position.Y, vertex.Position.Z);
-                        min = Vector3.Min(min, p);
-                        max = Vector3.Max(max, p);
-                    }
-                }
-
-                return min.X <= max.X ? (min, max) : null;
+                return Kn5Bounds.Of(model.RootNode.Children.Where(n => n.NodeClass == Kn5NodeClass.Mesh).SelectMany(n => n.Vertices));
             }
             catch (Exception ex) when (ex is not OutOfMemoryException)
             {

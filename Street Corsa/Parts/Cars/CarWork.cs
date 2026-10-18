@@ -26,32 +26,32 @@ public static class CarWork
     {
         var corners = Corners(carParts);
         if (!corners.ContainsKey(part)) return null;
-        if (!lifted && RuleOf(catalog, part) is { Lifted: true }) return PartWords.Say("work.lift_first");
+        if (!lifted && PartWork.RuleOf(catalog, part) is { Lifted: true }) return PartWords.Say("work.lift_first");
 
         var leaving = new HashSet<PartInstance>(part.SelfAndDescendants(), ReferenceEqualityComparer.Instance);
         var staying = corners.Keys.Where(p => !leaving.Contains(p)).ToList();
         var at = corners[part];
         var blocking = new HashSet<PartInstance>(ReferenceEqualityComparer.Instance);
 
-        if (RuleOf(catalog, part) is { } rule)
+        if (PartWork.RuleOf(catalog, part) is { } rule)
         {
             if (rule.Bare) blocking.UnionWith(part.Children.SelectMany(c => c.SelfAndDescendants()));
-            blocking.UnionWith(staying.Where(p => (corners[p] & at) != 0 && IsOneOf(catalog, p, rule.After)));
+            blocking.UnionWith(staying.Where(p => (corners[p] & at) != 0 && PartWork.IsOneOf(catalog, p, rule.After)));
         }
 
         foreach (var stays in staying)
         {
-            if (RuleOf(catalog, stays) is not { } staysRule) continue;
+            if (PartWork.RuleOf(catalog, stays) is not { } staysRule) continue;
 
             // What stays on and needs a kind at its corner that would leave with the last part doing its job there: the
             // leaf's hanger while the leaf is on
             var near = corners[stays];
-            if (staysRule.Needs.Any(kind => leaving.Any(p => (corners[p] & near) != 0 && DoesJobOf(catalog, p, kind))
-                                            && !staying.Any(p => (corners[p] & near) != 0 && DoesJobOf(catalog, p, kind))))
+            if (staysRule.Needs.Any(kind => leaving.Any(p => (corners[p] & near) != 0 && PartWork.DoesJobOf(catalog, p, kind))
+                                            && !staying.Any(p => (corners[p] & near) != 0 && PartWork.DoesJobOf(catalog, p, kind))))
                 blocking.Add(stays);
 
             // What sits on a part that would leave: the rear axle on its leaves
-            if (staysRule.HangsOn.Count > 0 && leaving.Any(p => (corners[p] & near) != 0 && IsOneOf(catalog, p, staysRule.HangsOn)))
+            if (staysRule.HangsOn.Count > 0 && leaving.Any(p => (corners[p] & near) != 0 && PartWork.IsOneOf(catalog, p, staysRule.HangsOn)))
                 return PartWords.Say("work.hangs_on.off", ("part", EngineWork.List(catalog, [stays])));
         }
 
@@ -67,7 +67,7 @@ public static class CarWork
     public static string? WhyNotOn(PartsCatalog catalog, List<PartInstance> carParts, PartInstance loose, MountPlace place, bool liveAxle,
         IReadOnlyCollection<PartDefinition>? factory = null, bool lifted = true)
     {
-        if (RuleOf(catalog, loose) is not { } rule) return null;
+        if (PartWork.RuleOf(catalog, loose) is not { } rule) return null;
         if (!lifted && rule.Lifted) return PartWords.Say("work.lift_first");
 
         var order = catalog.WorkOrder;
@@ -82,17 +82,17 @@ public static class CarWork
                 ("kind", order.NameOf(rule.Kind)));
 
         var near = corners.Where(c => (c.Value & at) != 0).Select(c => c.Key).ToList();
-        var blockers = near.Where(p => IsOneOf(catalog, p, rule.After)).ToList();
+        var blockers = near.Where(p => PartWork.IsOneOf(catalog, p, rule.After)).ToList();
         if (blockers.Count > 0) return PartWords.Say("work.take_off_first", ("parts", EngineWork.List(catalog, blockers)));
 
         var looseParts = loose.SelfAndDescendants().ToList();
-        var missing = rule.Needs.Where(kind => !near.Concat(looseParts).Any(p => DoesJobOf(catalog, p, kind))).ToList();
+        var missing = rule.Needs.Where(kind => !near.Concat(looseParts).Any(p => PartWork.DoesJobOf(catalog, p, kind))).ToList();
         if (missing.Count > 0) return PartWords.Say("work.put_on_first", ("parts", EngineWork.JoinAnd(missing.Select(k => EngineWork.The(order.NameOf(k))).ToList())));
 
         // What it sits on: every place the car has for it holds one, on a car sprung on that kind
         foreach (var kind in rule.HangsOn)
         {
-            var uses = corners.Keys.Any(p => IsKind(catalog, p, kind)) || factory?.Any(d => KindIs(order.KindOf(d), kind)) == true;
+            var uses = corners.Keys.Any(p => PartWork.IsKind(catalog, p, kind)) || factory?.Any(d => PartWork.KindIs(order.KindOf(d), kind)) == true;
             if (uses && HasFreePlaceFor(catalog, carParts, kind, liveAxle))
                 return PartWords.Say("work.hangs_on.on", ("name", order.NameOf(rule.Kind)), ("kinds", order.NameOf(kind, 2)));
         }
@@ -110,10 +110,19 @@ public static class CarWork
             ? PartWords.Say("work.wheels_first")
             : null;
 
-    /// <summary>Whether a part of the kind could go on the car somewhere now: a free place for one</summary>
+    /// <summary>
+    /// Whether a part of the kind could go on the car somewhere now: a free place for one. Parts that mount the same way
+    /// (the same shelf, axle and slots) find the same places, so one of each is asked, not every leaf spring of the catalog
+    /// </summary>
     private static bool HasFreePlaceFor(PartsCatalog catalog, List<PartInstance> carParts, string kind, bool liveAxle) =>
-        catalog.Parts.Values.Where(d => KindIs(catalog.WorkOrder.KindOf(d), kind))
+        catalog.Parts.Values.Where(d => PartWork.KindIs(catalog.WorkOrder.KindOf(d), kind))
+            .DistinctBy(MountingOf)
             .Any(d => Workbench.FindPlaces(catalog, carParts, new PartInstance(d.Id), liveAxle).Count > 0);
+
+    /// <summary>How a part mounts, as <see cref="Workbench.FindPlaces"/> reads it: its shelf, the axle it fits and its slots' fittings and attach lines</summary>
+    private static string MountingOf(PartDefinition part) =>
+        PartKinds.GroupOf(part) + "|" + RunningGear.Text(part, "fits_axle") + "|" + string.Join(";", part.Slots.Select(s =>
+            $"{s.Id}:{string.Join(",", s.Fits)}:{string.Join(",", s.Takes)}:{string.Join(",", s.AttachesTo.Concat(s.CompatibleWith).Select(r => $"{r.Part}/{r.Slot}"))}"));
 
     /// <summary>
     /// Every part on the car but the engine's, with the corners it works at (bit i for corner i): a wheel's, brake's,
@@ -124,13 +133,14 @@ public static class CarWork
     private static Dictionary<PartInstance, int> Corners(List<PartInstance> carParts)
     {
         var corners = new Dictionary<PartInstance, int>(ReferenceEqualityComparer.Instance);
-        foreach (var root in carParts.Where(p => p.ParentSlot != PartInstance.CarEngineSlot)) Add(root, CornersOfCarSlot(root.ParentSlot));
+        foreach (var root in carParts.Where(p => p.ParentSlot != PartInstance.CarEngineSlot)) Add(root, CornersOfCarSlot(root.ParentSlot), 0);
         return corners;
 
-        void Add(PartInstance part, int at)
+        // No deeper than a save is read (PartInstance.MaxDepth): a save is anyone's file, and a stack overflow cannot be caught
+        void Add(PartInstance part, int at, int depth)
         {
-            if (!corners.TryAdd(part, at)) return;
-            foreach (var child in part.Children) Add(child, ChildCorners(part, child.ParentSlot, at));
+            if (depth >= PartInstance.MaxDepth || !corners.TryAdd(part, at)) return;
+            foreach (var child in part.Children) Add(child, ChildCorners(part, child.ParentSlot, at), depth + 1);
         }
     }
 
@@ -155,18 +165,4 @@ public static class CarWork
         _ => AllCorners
     };
 
-    private static WorkRule? RuleOf(PartsCatalog catalog, PartInstance part) =>
-        catalog.Get(part.DefinitionId) is { } definition ? catalog.WorkOrder.RuleOf(definition) : null;
-
-    private static bool IsKind(PartsCatalog catalog, PartInstance part, string kind) =>
-        catalog.Get(part.DefinitionId) is { } definition && KindIs(catalog.WorkOrder.KindOf(definition), kind);
-
-    private static bool KindIs(string? kind, string wanted) => kind != null && kind.Equals(wanted, StringComparison.OrdinalIgnoreCase);
-
-    private static bool IsOneOf(PartsCatalog catalog, PartInstance part, IReadOnlyCollection<string> kinds) =>
-        kinds.Count > 0 && catalog.Get(part.DefinitionId) is { } definition && catalog.WorkOrder.KindOf(definition) is { } kind
-        && kinds.Contains(kind, StringComparer.OrdinalIgnoreCase);
-
-    private static bool DoesJobOf(PartsCatalog catalog, PartInstance part, string needed) =>
-        catalog.Get(part.DefinitionId) is { } definition && catalog.WorkOrder.KindOf(definition) is { } kind && catalog.WorkOrder.DoesJobOf(kind, needed);
 }

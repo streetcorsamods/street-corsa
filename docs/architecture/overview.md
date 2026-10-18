@@ -44,7 +44,8 @@ The game, the tests and the tools reference AcTools (`AcTools.dll`, `AcTools.Ren
 libraries from [gro-ove/actools](https://github.com/gro-ove/actools), not from a package. Their Release x64 DLLs are
 kept in `lib\actools` (with their licences, Ms-PL and MIT), so a clone builds as it is; every project finds them
 through `$(AcToolsLib)` in `Directory.Build.props`. They were built from actools
-`effa0e131a44ced7bbce24d8953cfc7db09faef7` (2025-10-02, "Update SimuCube.cs"), unmodified. To build them again:
+`effa0e131a44ced7bbce24d8953cfc7db09faef7` (2025-10-02, "Update SimuCube.cs"), unmodified; `lib\actools\BUILD.md` has the
+commit, the build line and a SHA-256 of each file, to check what is there against. To build them again:
 
 ```
 git clone https://github.com/gro-ove/actools ..\actools

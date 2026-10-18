@@ -537,14 +537,7 @@ public static class WearLayer
 
     private static Kn5Node Node(string name, Kn5Node.Vertex[] vertices, ushort[] indices, uint material)
     {
-        var min = new Vector3(float.MaxValue);
-        var max = new Vector3(float.MinValue);
-        foreach (var v in vertices)
-        {
-            var p = new Vector3(v.Position.X, v.Position.Y, v.Position.Z);
-            min = Vector3.Min(min, p);
-            max = Vector3.Max(max, p);
-        }
+        var (min, max) = StreetCorsa.Parts.Kn5Bounds.Of(vertices) ?? (Vector3.Zero, Vector3.Zero);
         var middle = (min + max) / 2;
         return new Kn5Node
         {

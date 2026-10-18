@@ -110,7 +110,6 @@ public class ShopViewport3D : D3DViewportBase
     private float _alphaGoal;
     private float _betaGoal;
     private float _radiusGoal;
-    private System.Windows.Point? _dragFrom;
 
     public ShopViewport3D()
         : base("ShopViewport", new LabelLook(13, 0xD8, 0x90, new Thickness(8, 4, 8, 4), new System.Windows.Vector(16, 16)))
@@ -253,7 +252,7 @@ public class ShopViewport3D : D3DViewportBase
         DisposeRenderer(releaseDevice: false);
         IsShopReady = false;
 
-        var started = DateTime.Now;
+        var started = System.Diagnostics.Stopwatch.GetTimestamp();
         var renderer = NewRenderer(null, scene);
         renderer.LoadCarLights = false;
         renderer.TryToGuessCarLights = false;
@@ -264,7 +263,7 @@ public class ShopViewport3D : D3DViewportBase
         _loadedScene = scene;
         ApplyDressing();
         ResetCamera(immediate: true);
-        Logger.Information("Shop room up in {Ms} ms", (int)(DateTime.Now - started).TotalMilliseconds);
+        Logger.Information("Shop room up in {Ms} ms", (int)System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds);
 
         await StandStockAsync();
     }
@@ -281,7 +280,7 @@ public class ShopViewport3D : D3DViewportBase
         AssemblyModel? model = null;
         if (stock is { Count: > 0 } && catalog != null && places is { Count: > 0 })
         {
-            var started = DateTime.Now;
+            var started = System.Diagnostics.Stopwatch.GetTimestamp();
             try
             {
                 model = await Task.Run(() => ShopStockModel.Build(catalog, stock, places));
@@ -289,10 +288,10 @@ public class ShopViewport3D : D3DViewportBase
             catch (Exception ex)
             {
                 // A shop with bare shelves is still a shop
-                Logger.Warning("The shop's stock could not be stood on its shelves: {Error}", ex.Message);
+                Logger.Warning(ex, "The shop's stock could not be stood on its shelves");
             }
 
-            Logger.Information("Shop stock of {Count} stood in {Ms} ms", stock.Count, (int)(DateTime.Now - started).TotalMilliseconds);
+            Logger.Information("Shop stock of {Count} stood in {Ms} ms", stock.Count, (int)System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds);
         }
 
         if (build != _stockBuild || Renderer is not { } renderer) return;
@@ -400,28 +399,24 @@ public class ShopViewport3D : D3DViewportBase
     {
         base.OnMouseLeftButtonDown(e);
         _touched = true;
-        _dragFrom = e.GetPosition(this);
-        CaptureMouse();
+        BeginDrag(e);
         e.Handled = true;
     }
 
     protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
     {
         base.OnMouseLeftButtonUp(e);
-        _dragFrom = null;
-        ReleaseMouseCapture();
+        EndDrag();
     }
 
     protected override void OnMouseMove(System.Windows.Input.MouseEventArgs e)
     {
         base.OnMouseMove(e);
-        if (_dragFrom is not { } from || e.LeftButton != MouseButtonState.Pressed) return;
+        if (DragDelta(e) is not { } moved) return;
 
         var view = ViewOrDefault;
-        var now = e.GetPosition(this);
-        _alphaGoal = Math.Clamp(_alphaGoal + (float)(now.X - from.X) * DragPerPixel, view.Alpha - MaxSwing, view.Alpha + MaxSwing);
-        _betaGoal = Math.Clamp(_betaGoal + (float)(now.Y - from.Y) * DragPerPixel, MinBeta, MaxBeta);
-        _dragFrom = now;
+        _alphaGoal = Math.Clamp(_alphaGoal + (float)moved.X * DragPerPixel, view.Alpha - MaxSwing, view.Alpha + MaxSwing);
+        _betaGoal = Math.Clamp(_betaGoal + (float)moved.Y * DragPerPixel, MinBeta, MaxBeta);
         Invalidate();
     }
 

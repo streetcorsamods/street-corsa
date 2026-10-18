@@ -1,5 +1,4 @@
 using System.Reflection;
-using System.Text.RegularExpressions;
 using AcTools.Kn5File;
 using AcTools.Render.Base;
 using AcTools.Render.Base.Cameras;
@@ -44,8 +43,10 @@ public sealed record PartMove(IReadOnlyList<int> Nodes, IReadOnlyList<PartWay> W
 /// Dark renderer with one extra model (the car's parts) in the scene, and an x-ray mode for the car.
 /// The base renderer only knows about the showroom and car slots, so the prop rides along with the cars:
 /// every pass that draws them (shadows, g-buffer, opaque, transparent) draws the prop too.
+/// The garage's props (the fixture, the workbench, the lift, the part a job is done on) are in GarageRenderer.Props.cs,
+/// the car's own wheels and the stand-ins in GarageRenderer.Wheels.cs, the parts' fades in GarageRenderer.Fading.cs.
 /// </summary>
-public class GarageRenderer : DarkKn5ObjectRenderer
+public partial class GarageRenderer : DarkKn5ObjectRenderer
 {
     // Dissolving the car also reveals the parts: at full opacity the solid car simply covers them
     private const float GhostTransitionSeconds = 0.8f;
@@ -60,9 +61,6 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     // is gone at the far end
     public const float PartMotionSeconds = 0.7f;
     private const float PartTravel = 0.5f;
-
-    // Opacities a fade is drawn at: fine enough not to be seen stepping
-    private const float FadeSteps = 32f;
 
     // The hoist: slow up and down on the chain, quicker across the floor; the hook is this far above the block, and the
     // load swings on it by this share of what a free pendulum would as it speeds up and slows down
@@ -89,69 +87,16 @@ public class GarageRenderer : DarkKn5ObjectRenderer
     private Kn5RenderableFile? _scenery;
     private List<IKn5RenderableObject> _sceneryMeshes = new();
 
-    // A prop set into the garage for good (the radio on the welder): drawn with the rest, and picked on its own
-    private Kn5RenderableFile? _fixture;
-    private List<IKn5RenderableObject> _fixtureMeshes = new();
-    private bool _fixtureHovered;
-    private Kn5RenderableFile? _bench;
-    private List<IKn5RenderableObject> _benchMeshes = new();
-
-    // The lift under the car (Parts.LiftLayout): its post, and where that stands with the lift down
-    private Kn5RenderableFile? _lift;
-    private RenderableList? _liftPost;
-    private Matrix _liftPostHome = Matrix.Identity;
-    private float _liftSaddle = Parts.LiftLayout.SaddleDown;
-
-    // The parts that hang with the wheels as the lift takes the body up (the wheels, the brakes, the rear axle), in the
-    // mounted parts and the places a loose part could go, and how far they hang now (Parts.LiftLayout.Droop)
-    private readonly HashSet<PartNode> _unsprung = new();
-    private float _droop;
-
-    // The car's own wheels (its model's WHEEL_xx nodes, the part wheels shown on them in the scenes among what they hold),
-    // found once a car: left out of the ghost while the parts are on show, which draw the wheels as parts of their own
-    private static readonly Regex CarWheel = new("^WHEEL_(LF|RF|LR|RR)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-    private Kn5RenderableCar? _wheelsOf;
-    private List<RenderableList> _carWheels = new();
-
-    // The car's own wheels standing in for the part wheels of the factory's at their corners (SetStandIns): the part's
-    // node, kept to be picked but not drawn, and the car's wheel drawn solid in its place, with what to let through when
-    // the car is drawn for that wheel alone (the wheel, what is in it and the nodes it hangs from)
-    private readonly Dictionary<PartNode, RenderableList> _standIns = new();
-    private readonly Dictionary<RenderableList, HashSet<IRenderableObject>> _standInPaths = new();
-
-    // The part a job of the parts view's "Work on it" is being done on: a loose one lying on the workbench (drawn whole,
-    // at how far it is in sight), and over it, or over the mounted part itself, its grime, fading as the work goes
-    private Kn5RenderableFile? _work;
-    private Kn5RenderableFile? _workGrime;
-    private bool _workFollowsParts;
-    private float _workOpacity = 1f;
-    private float _workGrimeAmount;
     private bool _sceneryHovered;
     private bool _carHovered;
     private bool _standActive;
     private Kn5RenderableFile? _candidates;
     private List<PartNode> _propNodes = new();
 
-    // Mounted parts the player has put out of sight by their kind (the parts view's show buttons): not drawn, not picked.
-    // Kept apart from the nodes' own on/off, which the motions own: a part hidden on its way somewhere goes on its way,
-    // out of sight. Those fading out or back in, at how far they are in sight (0 gone, 1 in sight).
-    private HashSet<PartNode> _hiddenNodes = new();
-    private readonly Dictionary<PartNode, float> _hideFades = new();
     private List<PartNode> _candidateNodes = new();
     private PartHit? _hovered;
     private int? _selected;
     private readonly List<Motion> _motions = new();
-
-    // The part nodes drawn see-through over the scene right now, at their step of the fade (0: not drawn at all, a
-    // hidden part), and the filter that leaves them out of every other pass
-    private Dictionary<RenderableList, float>? _fading;
-    private Func<IRenderableObject, bool>? _settled;
-
-    // UpdateFading's working, kept from frame to frame so a fade makes no garbage: the nodes fading as worked out now,
-    // the nodes looked at already, and how far each moving part is in sight on its way (the first motion of a node's)
-    private Dictionary<RenderableList, float> _fadingNow = new();
-    private readonly HashSet<PartNode> _fadeLooked = new();
-    private readonly Dictionary<PartNode, float> _travel = new();
 
     // Whether the prop and the candidates lean with the car's body: not the ones made for the stand
     private bool _propLeans;
@@ -782,100 +727,6 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         IsDirty = true;
     }
 
-    /// <summary>
-    /// Works out which nodes are drawn see-through now, once a frame rather than for every pass. A part that starts to
-    /// fade drops its shadow then, not when it is gone.
-    /// </summary>
-    private void UpdateFading()
-    {
-        _travel.Clear();
-        foreach (var motion in _motions)
-        {
-            if (motion is PartMotion part) _travel.TryAdd(part.Node, part.Opacity);
-        }
-
-        var fading = _fadingNow;
-        fading.Clear();
-        _fadeLooked.Clear();
-        foreach (var motion in _motions) LookAt(motion.Node);
-        foreach (var node in _hiddenNodes) LookAt(node);
-        foreach (var node in _hideFades.Keys) LookAt(node);
-
-        if (fading.Count == 0)
-        {
-            if (_fading == null) return;
-            _fading = null;
-            _settled = null;
-            SetShadowsDirty();
-            return;
-        }
-
-        // The same nodes fading: only how far each is along changes, and the filter on every other pass stays
-        if (_fading != null && _fading.Count == fading.Count && SameKeys(fading, _fading))
-        {
-            foreach (var (list, step) in fading) _fading[list] = step;
-            return;
-        }
-
-        // The worked-out set becomes the one drawn; the one drawn before is the working for the next frame
-        _fadingNow = _fading ?? new();
-        _fading = fading;
-        _settled = LeavingOut(fading);
-        SetShadowsDirty();
-
-        void LookAt(PartNode node)
-        {
-            if (!_fadeLooked.Add(node) || !node.List.IsEnabled) return;
-            var step = (float)Math.Round(OpacityOf(node) * FadeSteps);
-            if (step < FadeSteps) fading[node.List] = step;
-        }
-
-        static bool SameKeys(Dictionary<RenderableList, float> a, Dictionary<RenderableList, float> b)
-        {
-            foreach (var key in a.Keys)
-            {
-                if (!b.ContainsKey(key)) return false;
-            }
-            return true;
-        }
-    }
-
-    /// <summary>The filter that leaves the <paramref name="fading"/> nodes out of every other pass</summary>
-    private static Func<IRenderableObject, bool> LeavingOut(Dictionary<RenderableList, float> fading) =>
-        o => o is not RenderableList list || !fading.ContainsKey(list);
-
-    /// <summary>
-    /// How much of a part node is in sight, drawn see-through over the scene below 1 (<see cref="DrawFading"/>): the way
-    /// it is going (a part fades as it travels, as UpdateFading has found its motion) and whether the player hid it
-    /// </summary>
-    private float OpacityOf(PartNode node)
-    {
-        var travel = _travel.TryGetValue(node, out var opacity) ? opacity : 1f;
-        var shown = _hideFades.TryGetValue(node, out var fade) ? fade : _hiddenNodes.Contains(node) ? 0f : 1f;
-        return travel * shown;
-    }
-
-    /// <summary>The parts going out of sight or coming back, a step further; each is done with once it gets there</summary>
-    private void TickHideFades(float step)
-    {
-        if (_hideFades.Count == 0) return;
-
-        foreach (var node in _hideFades.Keys.ToList())
-        {
-            var to = _hiddenNodes.Contains(node) ? 0f : 1f;
-            var at = _hideFades[node];
-            at = to > at ? Math.Min(to, at + step / PartMotionSeconds) : Math.Max(to, at - step / PartMotionSeconds);
-            if (at == to) _hideFades.Remove(node);
-            else _hideFades[node] = at;
-        }
-
-        if (_motions.Count == 0)
-        {
-            UpdateFading();
-            IsDirty = true;
-        }
-    }
-
     /// <summary>A part node on its way somewhere, once it has waited its turn</summary>
     private abstract class Motion
     {
@@ -1146,33 +997,6 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         IsDirty = true;
     }
 
-    /// <summary>
-    /// The mounted parts out of sight, given by node: those newly hidden fade out wherever they are, those shown again
-    /// fade back in, at once without <paramref name="fade"/>. A part on its way somewhere goes on its way, in sight or
-    /// not. No sound: nothing comes off, they are only not looked at. A new prop shows everything until it is told again.
-    /// </summary>
-    public void SetHiddenParts(IReadOnlyCollection<int> nodes, bool fade)
-    {
-        var hidden = nodes.Where(n => n >= 0 && n < _propNodes.Count).Select(n => _propNodes[n]).ToHashSet();
-        var going = hidden.Where(n => !_hiddenNodes.Contains(n)).ToList();
-        var coming = _hiddenNodes.Where(n => !hidden.Contains(n) && _propNodes.Contains(n)).ToList();
-        _hiddenNodes = hidden;
-        if (going.Count == 0 && coming.Count == 0) return;
-
-        foreach (var node in going.Concat(coming))
-        {
-            node.IsHidden = hidden.Contains(node);
-            if (!fade) _hideFades.Remove(node);
-            else if (!_hideFades.ContainsKey(node)) _hideFades[node] = node.IsHidden ? 1f : 0f;
-        }
-
-        if (_selected is { } selected && selected < _propNodes.Count && hidden.Contains(_propNodes[selected])) _selected = null;
-        _hovered = null;
-        SetShadowsDirty();
-        UpdateFading();
-        IsDirty = true;
-    }
-
     /// <summary>Replaces the prop; pass null to remove it. Must be called on the thread that draws.</summary>
     public void SetProp(IKn5? kn5, Matrix placement)
     {
@@ -1184,6 +1008,7 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         _prop?.Dispose();
         _unsprung.RemoveWhere(n => _propNodes.Contains(n));
         _standIns.Clear();
+        _standInsChanged = true;
         _propLeans = !_standActive;
         _propPlacement = placement;
         _prop = kn5 == null ? null : new Kn5RenderableFile(kn5, placement * (_propLeans ? _bodyLean : Matrix.Identity), asyncTexturesLoading: hiddenAtFirst);
@@ -1219,327 +1044,6 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         IsDirty = true;
     }
 
-    /// <summary>
-    /// A prop that stays in the garage whatever the car and the stand do (the radio), put where
-    /// <paramref name="placement"/> says; null takes it away. Must be called on the thread that draws.
-    /// </summary>
-    public void SetFixture(IKn5? kn5, Matrix placement)
-    {
-        _fixture?.Dispose();
-        _fixture = kn5 == null ? null : new Kn5RenderableFile(kn5, placement, asyncTexturesLoading: false);
-        _fixture?.UpdateBoundingBox();
-        _fixtureMeshes = _fixture?.GetAllChildren().OfType<IKn5RenderableObject>().ToList() ?? new();
-        _fixtureHovered = false;
-        SetShadowsDirty();
-        IsDirty = true;
-    }
-
-    /// <summary>
-    /// The workbench (<see cref="Parts.WorkbenchLayout"/>), put where <paramref name="placement"/> says; null takes it
-    /// away. Drawn and in the way of what is behind it, never picked nor lit up. Must be called on the thread that draws.
-    /// </summary>
-    public void SetBench(IKn5? kn5, Matrix placement)
-    {
-        _bench?.Dispose();
-        _bench = kn5 == null ? null : new Kn5RenderableFile(kn5, placement, asyncTexturesLoading: false);
-        _bench?.UpdateBoundingBox();
-        _benchMeshes = _bench?.GetAllChildren().OfType<IKn5RenderableObject>().ToList() ?? new();
-        SetShadowsDirty();
-        IsDirty = true;
-    }
-
-    /// <summary>
-    /// The lift (<see cref="Parts.LiftLayout"/>), put where <paramref name="placement"/> says: under the car's middle; null
-    /// takes it away. Its post (<see cref="Parts.LiftLayout.PostNode"/>) rises to <see cref="LiftSaddle"/>. Drawn and in the
-    /// way of what is behind it, never picked nor lit up. Must be called on the thread that draws.
-    /// </summary>
-    public void SetLift(IKn5? kn5, Matrix placement)
-    {
-        _lift?.Dispose();
-        _lift = kn5 == null ? null : new Kn5RenderableFile(kn5, placement, asyncTexturesLoading: false);
-        _liftPost = _lift?.GetDummyByName(Parts.LiftLayout.PostNode);
-        _liftPostHome = _liftPost?.LocalMatrix ?? Matrix.Identity;
-        PlaceLiftPost();
-        SetShadowsDirty();
-        IsDirty = true;
-    }
-
-    /// <summary>The lift under another car: where its middle is</summary>
-    public void MoveLift(Matrix placement)
-    {
-        if (_lift == null || _lift.LocalMatrix == placement) return;
-        _lift.LocalMatrix = placement;
-        _lift.UpdateBoundingBox();
-        SetShadowsDirty();
-        IsDirty = true;
-    }
-
-    /// <summary>
-    /// The nodes of the mounted parts (<see cref="PartLayer.Mounted"/>) or of the places a loose part could go
-    /// (<see cref="PartLayer.Candidate"/>) that hang with the wheels (<see cref="Droop"/>): given once for each model put in,
-    /// right after it, its nodes where the layout has them
-    /// </summary>
-    public void SetUnsprung(PartLayer layer, IEnumerable<int> nodes)
-    {
-        var all = layer == PartLayer.Mounted ? _propNodes : _candidateNodes;
-        var hang = Matrix.Translation(0f, -_droop, 0f);
-        foreach (var index in nodes)
-        {
-            if (index < 0 || index >= all.Count || !_unsprung.Add(all[index])) continue;
-            if (_droop != 0f) all[index].List.LocalMatrix *= hang;
-        }
-
-        if (_droop == 0f) return;
-        if (layer == PartLayer.Mounted) _prop?.UpdateBoundingBox();
-        else _candidates?.UpdateBoundingBox();
-        IsDirty = true;
-    }
-
-    /// <summary>
-    /// How far the parts that hang with the wheels (<see cref="SetUnsprung"/>) are below where the layout puts them, metres:
-    /// the lift taking the body up off its wheels. A part on its way off or on hangs with them.
-    /// </summary>
-    public float Droop
-    {
-        get => _droop;
-        set
-        {
-            if (_droop == value) return;
-            var by = Matrix.Translation(0f, _droop - value, 0f);
-            _droop = value;
-            foreach (var node in _unsprung) node.List.LocalMatrix *= by;
-            foreach (var motion in _motions.Where(m => _unsprung.Contains(m.Node))) motion.Shift(by);
-            _prop?.UpdateBoundingBox();
-            _candidates?.UpdateBoundingBox();
-            SetShadowsDirty();
-            IsDirty = true;
-        }
-    }
-
-    /// <summary>How high the top of the lift's saddle is off the floor, metres (<see cref="Parts.LiftLayout.SaddleTop"/>)</summary>
-    public float LiftSaddle
-    {
-        get => _liftSaddle;
-        set
-        {
-            if (_liftSaddle == value) return;
-            _liftSaddle = value;
-            PlaceLiftPost();
-            IsDirty = true;
-        }
-    }
-
-    private void PlaceLiftPost()
-    {
-        if (_liftPost == null || _lift == null) return;
-        _liftPost.LocalMatrix = _liftPostHome * Matrix.Translation(0f, _liftSaddle - _liftPostHome.M42, 0f);
-        _lift.UpdateBoundingBox();
-    }
-
-    /// <summary>
-    /// The car's own wheels stand in for the mounted parts' nodes at their corners (<paramref name="nodes"/>: a factory rim
-    /// and its tyre, corner 0 front left to 3 right rear): the car's wheel is drawn solid where the part's is, and the
-    /// part's node is still there to be picked, to glow (as the car's wheel) and to be taken off. Given once for each model
-    /// put in, right after it. Must be called on the thread that draws.
-    /// </summary>
-    public void SetStandIns(IEnumerable<(int Node, int Corner)> nodes)
-    {
-        if (CarNode is not { } car || car.RootObject is not { } root) return;
-        var wheels = CarWheelsByName(car);
-        foreach (var (index, corner) in nodes)
-        {
-            if (index < 0 || index >= _propNodes.Count || corner < 0 || corner >= Parts.Cars.WheelFit.WheelNodes.Length) continue;
-            if (!wheels.TryGetValue(Parts.Cars.WheelFit.WheelNodes[corner], out var wheel)) continue;
-
-            var node = _propNodes[index];
-            foreach (var mesh in node.List.GetAllChildren().OfType<IRenderableObject>().Where(o => o is not RenderableList)) mesh.IsEnabled = false;
-            node.IsStandIn = true;
-            _standIns[node] = wheel;
-            if (!_standInPaths.ContainsKey(wheel) && PathTo(root, wheel) is { } path)
-                _standInPaths[wheel] = path.Concat(wheel.GetAllChildren()).Append(wheel).ToHashSet();
-        }
-
-        IsDirty = true;
-    }
-
-    /// <summary>The part's own model back in sight, and the car's wheel no longer standing in for it, nor for the rest of its wheel</summary>
-    private void EndStandIn(PartNode node)
-    {
-        if (!_standIns.TryGetValue(node, out var wheel)) return;
-        foreach (var (other, _) in _standIns.Where(s => ReferenceEquals(s.Value, wheel)).ToList())
-        {
-            foreach (var mesh in other.List.GetAllChildren().OfType<IRenderableObject>().Where(o => o is not RenderableList)) mesh.IsEnabled = true;
-            other.IsStandIn = false;
-            _standIns.Remove(other);
-        }
-    }
-
-    /// <summary>The nodes from <paramref name="from"/> down to <paramref name="target"/>, both in; null when it is not under it</summary>
-    private static List<IRenderableObject>? PathTo(RenderableList from, RenderableList target)
-    {
-        if (ReferenceEquals(from, target)) return [from];
-        foreach (var child in from.OfType<RenderableList>())
-        {
-            if (PathTo(child, target) is { } path)
-            {
-                path.Insert(0, from);
-                return path;
-            }
-        }
-
-        return null;
-    }
-
-    /// <summary>The car's own wheels standing in for parts, but those whose parts are put out of sight (the wheels' show)</summary>
-    private void DrawStandIns(DeviceContextHolder holder, ICamera camera, SpecialRenderMode mode)
-    {
-        if (_standIns.Count == 0 || CarNode is not { } car) return;
-
-        var shown = _standIns.GroupBy(s => s.Value).Where(g => g.All(s => !s.Key.IsHidden)).Select(g => g.Key).ToList();
-        foreach (var wheel in shown) DrawStandIn(holder, camera, mode, car, wheel);
-    }
-
-    private void DrawStandIn(DeviceContextHolder holder, ICamera camera, SpecialRenderMode mode, Kn5RenderableCar car, RenderableList wheel)
-    {
-        if (_standInPaths.TryGetValue(wheel, out var through)) car.Draw(holder, camera, mode, through.Contains);
-    }
-
-    private Dictionary<string, RenderableList> CarWheelsByName(Kn5RenderableCar car)
-    {
-        if (!ReferenceEquals(_wheelsOf, car))
-        {
-            _wheelsOf = car;
-            _carWheels = new List<RenderableList>();
-            FindWheels(car);
-        }
-
-        return _carWheels.OfType<Kn5RenderableList>().ToDictionary(w => w.OriginalNode.Name, w => (RenderableList)w, StringComparer.OrdinalIgnoreCase);
-
-        void FindWheels(RenderableList list)
-        {
-            foreach (var child in list)
-            {
-                if (child is not RenderableList node) continue;
-                if (node is Kn5RenderableList { OriginalNode.Name: var name } && CarWheel.IsMatch(name)) _carWheels.Add(node);
-                else FindWheels(node);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Draws the car without its own wheels while the car's parts are on show (the wheels are among them), with them
-    /// otherwise: the wheel nodes are switched off for the draw and back as they were after it
-    /// </summary>
-    private void DrawCarWithoutWheels(Action draw)
-    {
-        if (_prop == null || _standActive || CarNode is not { } car)
-        {
-            draw();
-            return;
-        }
-
-        CarWheelsByName(car);
-        var was = new bool[_carWheels.Count];
-        for (var i = 0; i < _carWheels.Count; i++)
-        {
-            was[i] = _carWheels[i].IsEnabled;
-            _carWheels[i].IsEnabled = false;
-        }
-
-        try
-        {
-            draw();
-        }
-        finally
-        {
-            for (var i = 0; i < _carWheels.Count; i++) _carWheels[i].IsEnabled = was[i];
-        }
-    }
-
-    /// <summary>
-    /// The part a job is being done on: <paramref name="clean"/> drawn where <paramref name="placement"/> puts it (a loose
-    /// part on the workbench; null for a mounted part, which is drawn already), <paramref name="grime"/> over it at
-    /// <see cref="WorkGrime"/>. With <paramref name="followsParts"/> both are models of the mounted parts' space and go
-    /// where the mounted parts go (the body's lean, the stand's turn). Nulls take it away. Must be called on the thread
-    /// that draws.
-    /// </summary>
-    public void SetWork(IKn5? clean, IKn5? grime, Matrix placement, bool followsParts)
-    {
-        _work?.Dispose();
-        _workGrime?.Dispose();
-        _workFollowsParts = followsParts;
-        var where = followsParts && _prop != null ? _prop.LocalMatrix : placement;
-        // The part's own textures come in off the thread that draws, while it fades in; the grime has one small texture
-        _work = clean == null ? null : new Kn5RenderableFile(clean, where, asyncTexturesLoading: true);
-        _workGrime = grime == null ? null : new Kn5RenderableFile(grime, where, asyncTexturesLoading: false);
-        _work?.UpdateBoundingBox();
-        _workGrime?.UpdateBoundingBox();
-        SetShadowsDirty();
-        IsDirty = true;
-    }
-
-    /// <summary>The loose part on the workbench put somewhere else (on its way down to the bench, turning on it)</summary>
-    public void MoveWork(Matrix placement)
-    {
-        if (_workFollowsParts) return;
-
-        foreach (var file in new[] { _work, _workGrime })
-        {
-            if (file == null) continue;
-            file.LocalMatrix = placement;
-            file.UpdateBoundingBox();
-        }
-
-        SetShadowsDirty();
-        IsDirty = true;
-    }
-
-    /// <summary>How far the part on the workbench is in sight, 0 to 1</summary>
-    public float WorkOpacity
-    {
-        get => _workOpacity;
-        set
-        {
-            var clamped = Math.Clamp(value, 0f, 1f);
-            if (clamped == _workOpacity) return;
-            _workOpacity = clamped;
-            SetShadowsDirty();
-            IsDirty = true;
-        }
-    }
-
-    /// <summary>How much of the part's grime is drawn over it, 0 clean to 1</summary>
-    public float WorkGrime
-    {
-        get => _workGrimeAmount;
-        set
-        {
-            var clamped = Math.Clamp(value, 0f, 1f);
-            if (clamped == _workGrimeAmount) return;
-            _workGrimeAmount = clamped;
-            IsDirty = true;
-        }
-    }
-
-    /// <summary>The middle of the part a job is being done on, in the garage's space; null without one</summary>
-    public Vector3? WorkCentre => (_work ?? _workGrime) is { } file ? (file.BoundingBox is { } box ? (box.Minimum + box.Maximum) / 2f : null) : null;
-
-    /// <summary>The fixture as it is drawn, to move its nodes (the paint booth's painter swings his arm); null without one</summary>
-    public Kn5RenderableFile? Fixture => _fixture;
-
-    /// <summary>The fixture stood somewhere else (the paint booth's painter walks round the car). Must be called on the thread that draws.</summary>
-    public void MoveFixture(Matrix placement)
-    {
-        if (_fixture == null) return;
-        _fixture.LocalMatrix = placement;
-
-        // Its box where it stands now: the shadows' cameras leave out what their box is not in
-        _fixture.UpdateBoundingBox();
-        SetShadowsDirty();
-        IsDirty = true;
-    }
-
-    /// <summary>True when a point of the picture is on the fixture, and nothing solid of the car or the stand is in front of it</summary>
     public bool HitsFixture(float x, float y)
     {
         if (_fixture == null || Camera == null) return false;
@@ -1794,93 +1298,6 @@ public class GarageRenderer : DarkKn5ObjectRenderer
         DrawWork(holder, camera);
         if (IsGhosting) DrawGhost(holder, camera);
         holder.DeviceContext.OutputMerger.DepthStencilState = holder.States.ReadOnlyDepthState;
-    }
-
-    /// <summary>
-    /// Parts on their way, at how far gone they are. As with the ghost car, materials force their own blend state:
-    /// the parts go over a copy of the scene, blended back at their opacity. Parts that move together fade together,
-    /// so there is a pass for each step of the fade there is: one mostly, two or three while an engine is stripped for
-    /// the stand, one part starting before the one ahead of it is gone.
-    /// </summary>
-    private void DrawFading(DeviceContextHolder holder, ICamera camera)
-    {
-        if (_prop == null || _fading == null) return;
-
-        var prop = _prop;
-        var siblings = _propNodes.Count > 0 ? _propNodes[0].Siblings : new HashSet<RenderableList>();
-        foreach (var group in _fading.GroupBy(f => f.Value))
-        {
-            var opacity = group.Key / FadeSteps;
-            if (opacity <= 0f) continue;
-
-            var lists = group.Select(f => f.Key).ToHashSet();
-            bool Only(IRenderableObject o) => o is not RenderableList list || !siblings.Contains(list) || lists.Contains(list);
-
-            DrawSeeThrough(holder, opacity, mode => prop.Draw(holder, camera, mode, Only));
-        }
-    }
-
-    /// <summary>The grime over a mounted part goes where the mounted parts go: the car's body leans, the stand turns</summary>
-    private void FollowParts()
-    {
-        if (!_workFollowsParts || _prop == null) return;
-
-        foreach (var file in new[] { _work, _workGrime })
-        {
-            if (file == null || file.LocalMatrix == _prop.LocalMatrix) continue;
-            file.LocalMatrix = _prop.LocalMatrix;
-            file.UpdateBoundingBox();
-        }
-    }
-
-    /// <summary>The part on the workbench on its way in or out, and the grime over the part a job is being done on</summary>
-    private void DrawWork(DeviceContextHolder holder, ICamera camera)
-    {
-        if (_work != null && _workOpacity is > 0f and < 1f) DrawOver(holder, camera, _work, _workOpacity);
-
-        var grime = _workGrimeAmount * (_work != null ? _workOpacity : 1f);
-        if (_workGrime != null && grime > 0.004f) DrawOver(holder, camera, _workGrime, grime);
-    }
-
-    /// <summary>
-    /// A model drawn over the scene see-through, as the parts on their way are (<see cref="DrawFading"/>): over a copy of
-    /// the scene in its depth, blended back at <paramref name="opacity"/>. A surface the scene has at the same depth (the
-    /// mounted part under its grime) is drawn over, not hidden.
-    /// </summary>
-    private void DrawOver(DeviceContextHolder holder, ICamera camera, Kn5RenderableFile file, float opacity) =>
-        DrawSeeThrough(holder, opacity, mode => file.Draw(holder, camera, mode));
-
-    /// <summary>
-    /// One see-through pass: <paramref name="draw"/>'s solid then transparent surfaces over a copy of the scene, in the
-    /// scene's depth so what is in front of them still is, the copy blended back at <paramref name="opacity"/>; the
-    /// output left as the scene pass expects it
-    /// </summary>
-    private void DrawSeeThrough(DeviceContextHolder holder, float opacity, Action<SpecialRenderMode> draw)
-    {
-        var context = holder.DeviceContext;
-        var scene = InnerBuffer;
-        var copy = holder.GetHelper<CopyHelper>();
-        _fadeBuffer ??= TargetResourceTexture.Create(scene.Format);
-        _fadeBuffer.Resize(holder, Width, Height, null);
-        _ghostBlend ??= CreateGhostBlend(holder.Device);
-
-        copy.Draw(holder, scene.View, _fadeBuffer.TargetView);
-        context.OutputMerger.SetTargets(DepthStencilView, _fadeBuffer.TargetView);
-        context.OutputMerger.BlendState = null;
-        context.OutputMerger.DepthStencilState = holder.States.LessEqualDepthState;
-        draw(SpecialRenderMode.Simple);
-        context.OutputMerger.DepthStencilState = holder.States.ReadOnlyDepthState;
-        draw(SpecialRenderMode.SimpleTransparent);
-
-        context.OutputMerger.BlendState = _ghostBlend;
-        context.OutputMerger.BlendFactor = new Color4(opacity, opacity, opacity, opacity);
-        context.OutputMerger.DepthStencilState = holder.States.DisabledDepthState;
-        context.Rasterizer.State = null;
-        copy.Draw(holder, _fadeBuffer.View, scene.TargetView);
-
-        context.OutputMerger.BlendState = null;
-        context.OutputMerger.SetTargets(DepthStencilView, scene.TargetView);
-        context.OutputMerger.DepthStencilState = holder.States.LessEqualDepthState;
     }
 
     protected override void DrawPrepare()

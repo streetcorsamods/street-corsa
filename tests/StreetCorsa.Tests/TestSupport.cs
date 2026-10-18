@@ -39,6 +39,19 @@ internal static class TestLogging
 }
 
 /// <summary>
+/// The one collection for every test that sets a process-wide static (<c>AppSettings.Instance</c>, <c>CarBook.Current</c>,
+/// <c>PartGroups.Current</c>, <c>RaceFormats.Current</c>, <c>RuleBook.Current</c>/<c>PlayBy</c>, <c>ThemeImages.Use</c>,
+/// <c>Locale</c>, <c>AdBlurbs.Writer</c>, a <c>GameSettingsService</c> made (it sets the AC folder in use)): xunit runs
+/// these after every parallel collection and one at a time, so no other test reads a value one of them set. A test
+/// that writes such a static and is not in here races the rest.
+/// </summary>
+[CollectionDefinition(Name, DisableParallelization = true)]
+public sealed class GlobalsCollection
+{
+    public const string Name = "Globals";
+}
+
+/// <summary>
 /// A fresh folder under the system temp folder for one test, deleted with everything in it (read-only files
 /// included) when the test ends. Every filesystem test works in one of these and nowhere else.
 /// </summary>

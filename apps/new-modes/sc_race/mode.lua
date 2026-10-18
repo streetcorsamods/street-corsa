@@ -1040,6 +1040,11 @@ local function findBreakdown(car, data, dt)
       if load > data.axlePeak then data.axlePeak = load end
       local over = load / data.axleStrength - 1
       if over > 0 and math.random() < 1 - math.exp(-AXLE_BREAK_RATE * over * dt) then return 'AXLE' end
+    elseif not ok and not data.axleUnread then
+      -- Said once per car: a wheel field this CSP has not got (or a wrong name here) would otherwise hold the axle
+      -- whole for ever with no word of it in the log
+      data.axleUnread = true
+      ac.log('[Street Corsa] The rear axle load cannot be read, the axle holds: ' .. tostring(load))
     end
   end
   return nil

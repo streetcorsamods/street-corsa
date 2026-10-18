@@ -24,8 +24,15 @@ namespace StreetCorsa.Services.Catalog
         float CalculatePrecedence(CarDefinition carDefinition);
 
         /// <summary>
-        /// Ensures all car definitions have profiles, creating missing ones
+        /// Ensures all car definitions have profiles, creating missing ones (priced by the body alone: the parts are
+        /// not up yet at start-up)
         /// </summary>
         Task EnsureProfilesExistAsync();
+
+        /// <summary>
+        /// Prices every active car again at its parts' prices (its factory engine and running gear; the body alone
+        /// without parts), once the parts are up. Never throws: a failure is logged and the prices stay as they were.
+        /// </summary>
+        Task RepriceAsync();
     }
 }

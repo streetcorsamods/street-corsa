@@ -85,7 +85,7 @@ namespace StreetCorsa.Services.PartShops
             if (!_parts.IsAvailable) return pieces;
 
             var catalog = _parts.Catalog;
-            pieces.AddRange((player.MachineWork ?? []).Where(o => string.Equals(o.ShopId, shop.Id, StringComparison.OrdinalIgnoreCase) && catalog.Get(o.Part.DefinitionId) != null)
+            pieces.AddRange(player.MachineWork.Where(o => string.Equals(o.ShopId, shop.Id, StringComparison.OrdinalIgnoreCase) && catalog.Get(o.Part.DefinitionId) != null)
                 .Select(o => new MachinePiece(o.Part, o, o.FromStand)));
             if (player.EngineStand is { } engine && catalog.Get(engine.DefinitionId) != null) pieces.Add(new MachinePiece(engine, null, FromStand: true));
             pieces.AddRange(player.Parts.Where(p => catalog.Get(p.DefinitionId) != null).Select(p => new MachinePiece(p, null, FromStand: false)));
@@ -152,7 +152,7 @@ namespace StreetCorsa.Services.PartShops
             var piece = work.Piece;
 
             // The piece is still where the counter saw it: at the shop, on the stand, on the shelf
-            var there = piece.Order != null ? (player.MachineWork ?? []).Contains(piece.Order)
+            var there = piece.Order != null ? player.MachineWork.Contains(piece.Order)
                 : piece.FromStand ? ReferenceEquals(player.EngineStand, piece.Part)
                 : player.Parts.Contains(piece.Part);
             if (!there || !piece.Part.SelfAndDescendants().Contains(work.Part)) return null;
@@ -170,7 +170,7 @@ namespace StreetCorsa.Services.PartShops
             shop.Trade += PartShopRules.TradePerSale;
 
             var ready = gameState.Date.Date.AddDays(now.Offer.Days);
-            var away = player.MachineWork ??= [];
+            var away = player.MachineWork;
             var order = piece.Order;
             if (order == null)
             {
@@ -213,7 +213,7 @@ namespace StreetCorsa.Services.PartShops
         public List<MachineOrder> Deliver(GameState gameState, DateTime date)
         {
             var player = gameState.Player;
-            var away = player.MachineWork ??= [];
+            var away = player.MachineWork;
             var ready = away.Where(o => o.ReadyOn.Date <= date.Date).ToList();
             foreach (var order in ready)
             {

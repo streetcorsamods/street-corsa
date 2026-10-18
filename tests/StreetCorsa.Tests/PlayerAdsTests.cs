@@ -315,7 +315,7 @@ public class PlayerAdsTests
 }
 
 /// <summary>The player's own ad gets its words as the others do: alone, since the ad writer is the whole app's</summary>
-[Collection(AdWriterCollection.Name)]
+[Collection(GlobalsCollection.Name)]
 public class PlayerAdWordsTests
 {
     private sealed class Writer : IAdWriter

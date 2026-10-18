@@ -22,6 +22,12 @@ namespace StreetCorsa.Services.Station
         /// <summary>Flat ground at 0: a station without its file</summary>
         public static StationGround Flat { get; } = new(1f, 0, 0, 0f, 0f, []);
 
+        /// <summary>
+        /// The most cells a ground may have (a 2 km square at the metre, 16 MB of heights): a header asking for more is a
+        /// file that makes no sense, however long it is, and nothing that big is made room for
+        /// </summary>
+        public const long MaxCells = 4_000_000;
+
         public StationGround(float cell, int columns, int rows, float minX, float minZ, float[] heights)
         {
             _cell = cell;
@@ -47,6 +53,7 @@ namespace StreetCorsa.Services.Station
                 var minX = reader.ReadSingle();
                 var minZ = reader.ReadSingle();
                 if (!(cell > 0) || columns is <= 0 or > 10000 || rows is <= 0 or > 10000) throw new InvalidDataException("a grid that makes no sense");
+                if ((long)columns * rows > MaxCells) throw new InvalidDataException($"a {columns} x {rows} grid is more than {MaxCells} cells");
 
                 // The heights the header asks for must be what the file holds, before room is made for them: a mod's
                 // 24-byte file can ask for a hundred million

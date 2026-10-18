@@ -41,7 +41,7 @@ namespace StreetCorsa.Services.Market
         List<UsedCarListing> GetListingsByDealer(List<UsedCarListing> allListings, string dealerLocationId);
 
         /// <summary>
-        /// The dealers of the dealer file, or built-in ones when there is none
+        /// The dealers of the mods' dealer files; none (a mod problem, told) is no dealers, and lots that stay empty
         /// </summary>
         List<DealerLocation> GetDefaultDealers();
 

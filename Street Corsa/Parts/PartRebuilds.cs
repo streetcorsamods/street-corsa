@@ -117,7 +117,9 @@ public sealed class PartRebuilds
                 part.Becomes = new Dictionary<string, string>(part.Becomes.DistinctBy(b => b.Key, StringComparer.OrdinalIgnoreCase), StringComparer.OrdinalIgnoreCase);
             foreach (var (jobId, target) in part.Becomes!.ToList())
             {
+                // A target left null or blank (Newtonsoft reads "weld_spiders": null as one) names nothing to become
                 var why = _jobs.FirstOrDefault(j => j.Id.Equals(jobId, StringComparison.OrdinalIgnoreCase)) is not { Becomes: true } ? $"no job {jobId} turns parts into others"
+                    : string.IsNullOrWhiteSpace(target) ? $"{jobId} would make it nothing: \"becomes\" names no part"
                     : get(target) is not { } into ? $"{jobId} would make it {target}, which is no part"
                     : PartKinds.GroupOf(into) != PartKinds.GroupOf(part) ? $"{jobId} would make it {target}, which is on another shelf"
                     : null;

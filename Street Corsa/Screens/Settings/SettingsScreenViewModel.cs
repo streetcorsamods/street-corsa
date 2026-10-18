@@ -172,7 +172,7 @@ namespace StreetCorsa.Screens.Settings
             if (previous == null || save(value)) return;
 
             field = previous;
-            _navigationService.Later(() => OnPropertyChanged(property), DispatcherPriority.Background);
+            UiThread.Later(() => OnPropertyChanged(property), DispatcherPriority.Background);
         }
 
         private static IReadOnlyList<LanguageChoice> MakeLanguages(string? picked, out LanguageChoice? selected)

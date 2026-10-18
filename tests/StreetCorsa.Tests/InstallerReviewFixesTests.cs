@@ -7,6 +7,7 @@ using StreetCorsa.Services.Settings;
 namespace StreetCorsa.Tests;
 
 /// <summary>The installer review's fixes: the AC folder shared with the installer, the uninstall's modes, the fallback garage's props</summary>
+[Collection(GlobalsCollection.Name)]
 public sealed class InstallerReviewFixesTests : IDisposable
 {
     private readonly TempDir _temp = new();

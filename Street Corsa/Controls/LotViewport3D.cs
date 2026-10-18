@@ -109,7 +109,9 @@ public class LotViewport3D : D3DViewportBase
     private static readonly Sx.Vector3 NominalCarSize = new(2.2f, 1.6f, 5.4f);
 
     private const double ClickSlack = 4.0;
-    private static readonly TimeSpan HoverInterval = TimeSpan.FromMilliseconds(40);
+
+    // The pointer is asked which car it is on this often at most (Environment.TickCount64 ms: a clock change never holds the picks up)
+    private const long HoverIntervalMs = 40;
 
     /// <summary>Slot per car, in the same order as <see cref="Cars"/>. Null where a car was not loaded</summary>
     private readonly List<CarSlot?> _slots = [];
@@ -134,7 +136,7 @@ public class LotViewport3D : D3DViewportBase
     private System.Windows.Point _lastMouse;
     private System.Windows.Point _pressedAt;
     private bool _isDragging;
-    private DateTime _lastHoverPick = DateTime.MinValue;
+    private long _lastHoverPick = long.MinValue;
     private int _hovered = -1;
 
     // Where the camera is going. Alpha is only steered until the player takes hold of it
@@ -354,7 +356,7 @@ public class LotViewport3D : D3DViewportBase
         // A new showroom is a new scene; the D3D9 device the picture goes through stays up for it
         DisposeRenderer(releaseDevice: false);
 
-        var started = DateTime.Now;
+        var started = System.Diagnostics.Stopwatch.GetTimestamp();
 
         // The cars go in one at a time afterwards, so the scene starts as the empty showroom
         var renderer = NewRenderer(null, showroom);
@@ -385,7 +387,7 @@ public class LotViewport3D : D3DViewportBase
         if (SelectedIndex >= 0) OnSelectionChanged();
 
         Logger.Information("Lot showroom up in {Ms} ms, {Count} cars to place",
-            (int)(DateTime.Now - started).TotalMilliseconds, cars.Count);
+            (int)System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds, cars.Count);
 
         await LoadCarsAsync(cars);
     }
@@ -939,8 +941,8 @@ public class LotViewport3D : D3DViewportBase
 
     private void UpdateHover(System.Windows.Point position)
     {
-        var now = DateTime.Now;
-        if (now - _lastHoverPick < HoverInterval) return;
+        var now = Environment.TickCount64;
+        if (now - _lastHoverPick < HoverIntervalMs) return;
         _lastHoverPick = now;
 
         // On one car there is nothing to pick out: the whole viewport is that car

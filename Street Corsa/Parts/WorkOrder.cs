@@ -213,83 +213,12 @@ public sealed class WorkOrder
             var kinds = new List<WorkKind>();
             foreach (var kind in read.Kinds ?? new())
             {
-                if (kind == null || string.IsNullOrWhiteSpace(kind.Id))
-                {
-                    problems.Add($"{label}: a kind without an id is left out");
-                    continue;
-                }
-
-                kind.Classes = PartDefinition.NonNull(kind.Classes);
-                kind.Names = PartDefinition.NonNull(kind.Names).Select(n => n.ToLowerInvariant()).ToList();
-                kinds.Add(kind);
-
-                // The first mod to name a kind names it for the player; a later one may only add ways to tell it
-                if (!order._kindsById.ContainsKey(kind.Id)) order._kindsById[kind.Id] = kind;
-
-                // The jobs it does add up: a later mod may find it another
-                kind.Serves = PartDefinition.NonNull(kind.Serves);
-                if (kind.Serves.Count > 0)
-                {
-                    if (!order._serves.TryGetValue(kind.Id, out var serves)) order._serves[kind.Id] = serves = new(StringComparer.OrdinalIgnoreCase);
-                    serves.UnionWith(kind.Serves);
-                }
-
-                // Which way it comes off is only looks: the last mod to say so says so
-                if (kind.ComesOff is { } legs)
-                {
-                    // Not one leg that reads: the way it came off before stands, rather than none at all
-                    if (ReadWay(legs, $"{label}: {kind.Id}", problems) is { } way) order._ways[kind.Id] = way;
-                    else if (order._ways.ContainsKey(kind.Id)) problems.Add($"{label}: {kind.Id} keeps the way it comes off as before");
-                }
-
-                // What it does for the cooling: the last mod to say so says so
-                if (kind.Cooling is { } cooling)
-                {
-                    var role = cooling.Trim().ToLowerInvariant();
-                    if (CoolingRoles.Contains(role)) order._cooling[kind.Id] = role;
-                    else problems.Add($"{label}: {kind.Id} does \"{cooling}\" for the cooling, which is none of {string.Join(", ", CoolingRoles)}; left out");
-                }
-
-                // The tool it is heard to take is only sound: the last mod to say so says so
-                if (kind.Tool is { } tool && tool.Trim() is { Length: > 0 } named) order._tools[kind.Id] = named.ToLowerInvariant();
-
-                // Which side it is worked from is only looks too
-                if (kind.WorkedFrom is { } from)
-                {
-                    if (Named<EngineSide>(from) is { } side) order._sides[kind.Id] = side;
-                    else problems.Add($"{label}: {kind.Id} is worked from \"{from}\", which is neither above nor below; left out");
-                }
+                if (order.ReadKind(kind, label, problems)) kinds.Add(kind!);
             }
 
             kindsByMod.Add(kinds);
 
-            foreach (var rule in read.Rules ?? new())
-            {
-                if (rule == null || string.IsNullOrWhiteSpace(rule.Kind))
-                {
-                    problems.Add($"{label}: a rule without a kind is left out");
-                    continue;
-                }
-
-                rule.After = PartDefinition.NonNull(rule.After);
-                rule.Needs = PartDefinition.NonNull(rule.Needs);
-                rule.HangsOn = PartDefinition.NonNull(rule.HangsOn);
-
-                // A rule for a kind that has one already only adds to it: more to wait for, more it needs. Taking any
-                // of it back is on purpose ("replace"), so a mod written before the base game ruled a kind still counts
-                if (order._rules.TryGetValue(rule.Kind, out var ruled) && !rule.Replace)
-                {
-                    ruled.StandOnly |= rule.StandOnly;
-                    ruled.Bare |= rule.Bare;
-                    ruled.Lifted |= rule.Lifted;
-                    ruled.After = ruled.After.Union(rule.After, StringComparer.OrdinalIgnoreCase).ToList();
-                    ruled.Needs = ruled.Needs.Union(rule.Needs, StringComparer.OrdinalIgnoreCase).ToList();
-                    ruled.HangsOn = ruled.HangsOn.Union(rule.HangsOn, StringComparer.OrdinalIgnoreCase).ToList();
-                    continue;
-                }
-
-                order._rules[rule.Kind] = rule;
-            }
+            foreach (var rule in read.Rules ?? new()) order.ReadRule(rule, label, problems);
 
             // The stand is the stand: the last mod to say what comes off for it says so for every block
             if (read.StandStrips is { } strips)
@@ -302,24 +231,120 @@ public sealed class WorkOrder
         // A later mod's kinds are tried first: it knows its own parts better than the base game's words do
         for (var i = kindsByMod.Count - 1; i >= 0; i--) order._kinds.AddRange(kindsByMod[i]);
 
-        foreach (var rule in order._rules.Values)
+        order.Validate(problems);
+        return order;
+    }
+
+    /// <summary>
+    /// One kind of a mod's file into the order: its name (the first mod to name a kind names it for the player), the
+    /// jobs it does (they add up), and its looks and sound (the way it comes off, the side it is worked from, its cooling
+    /// role, its tool: the last mod to say so says so). False for a kind without an id, which is left out.
+    /// </summary>
+    private bool ReadKind(WorkKind? kind, string label, List<string> problems)
+    {
+        if (kind == null || string.IsNullOrWhiteSpace(kind.Id))
         {
-            foreach (var after in rule.After.Where(a => !order._kindsById.ContainsKey(a)))
+            problems.Add($"{label}: a kind without an id is left out");
+            return false;
+        }
+
+        kind.Classes = PartDefinition.NonNull(kind.Classes);
+        kind.Names = PartDefinition.NonNull(kind.Names).Select(n => n.ToLowerInvariant()).ToList();
+
+        // The first mod to name a kind names it for the player; a later one may only add ways to tell it
+        if (!_kindsById.ContainsKey(kind.Id)) _kindsById[kind.Id] = kind;
+
+        // The jobs it does add up: a later mod may find it another
+        kind.Serves = PartDefinition.NonNull(kind.Serves);
+        if (kind.Serves.Count > 0)
+        {
+            if (!_serves.TryGetValue(kind.Id, out var serves)) _serves[kind.Id] = serves = new(StringComparer.OrdinalIgnoreCase);
+            serves.UnionWith(kind.Serves);
+        }
+
+        // Which way it comes off is only looks: the last mod to say so says so
+        if (kind.ComesOff is { } legs)
+        {
+            // Not one leg that reads: the way it came off before stands, rather than none at all
+            if (ReadWay(legs, $"{label}: {kind.Id}", problems) is { } way) _ways[kind.Id] = way;
+            else if (_ways.ContainsKey(kind.Id)) problems.Add($"{label}: {kind.Id} keeps the way it comes off as before");
+        }
+
+        // What it does for the cooling: the last mod to say so says so
+        if (kind.Cooling is { } cooling)
+        {
+            var role = cooling.Trim().ToLowerInvariant();
+            if (CoolingRoles.Contains(role)) _cooling[kind.Id] = role;
+            else problems.Add($"{label}: {kind.Id} does \"{cooling}\" for the cooling, which is none of {string.Join(", ", CoolingRoles)}; left out");
+        }
+
+        // The tool it is heard to take is only sound: the last mod to say so says so
+        if (kind.Tool is { } tool && tool.Trim() is { Length: > 0 } named) _tools[kind.Id] = named.ToLowerInvariant();
+
+        // Which side it is worked from is only looks too
+        if (kind.WorkedFrom is { } from)
+        {
+            if (Named<EngineSide>(from) is { } side) _sides[kind.Id] = side;
+            else problems.Add($"{label}: {kind.Id} is worked from \"{from}\", which is neither above nor below; left out");
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// One rule of a mod's file into the order. A rule for a kind that has one already only adds to it: more to wait
+    /// for, more it needs. Taking any of it back is on purpose (<see cref="WorkRule.Replace"/>), so a mod written before
+    /// the base game ruled a kind still counts. A rule without a kind is left out.
+    /// </summary>
+    private void ReadRule(WorkRule? rule, string label, List<string> problems)
+    {
+        if (rule == null || string.IsNullOrWhiteSpace(rule.Kind))
+        {
+            problems.Add($"{label}: a rule without a kind is left out");
+            return;
+        }
+
+        rule.After = PartDefinition.NonNull(rule.After);
+        rule.Needs = PartDefinition.NonNull(rule.Needs);
+        rule.HangsOn = PartDefinition.NonNull(rule.HangsOn);
+
+        if (_rules.TryGetValue(rule.Kind, out var ruled) && !rule.Replace)
+        {
+            ruled.StandOnly |= rule.StandOnly;
+            ruled.Bare |= rule.Bare;
+            ruled.Lifted |= rule.Lifted;
+            ruled.After = ruled.After.Union(rule.After, StringComparer.OrdinalIgnoreCase).ToList();
+            ruled.Needs = ruled.Needs.Union(rule.Needs, StringComparer.OrdinalIgnoreCase).ToList();
+            ruled.HangsOn = ruled.HangsOn.Union(rule.HangsOn, StringComparer.OrdinalIgnoreCase).ToList();
+            return;
+        }
+
+        _rules[rule.Kind] = rule;
+    }
+
+    /// <summary>
+    /// What the rules of every mod come to together, once all are read: a rule that names a kind no work order lists, one
+    /// that both needs a kind and waits for it to be off, and kinds whose rules lead round to each other
+    /// (<see cref="Loops"/>), each a line in <paramref name="problems"/>; the order stands as it is
+    /// </summary>
+    private void Validate(List<string> problems)
+    {
+        foreach (var rule in _rules.Values)
+        {
+            foreach (var after in rule.After.Where(a => !_kindsById.ContainsKey(a)))
                 problems.Add($"{FileName}: the rule of {rule.Kind} waits for {after}, a kind no work order lists");
-            foreach (var need in rule.Needs.Where(n => !order._kindsById.ContainsKey(n)))
+            foreach (var need in rule.Needs.Where(n => !_kindsById.ContainsKey(n)))
                 problems.Add($"{FileName}: the rule of {rule.Kind} needs {need}, a kind no work order lists");
-            foreach (var on in rule.HangsOn.Where(h => !order._kindsById.ContainsKey(h)))
+            foreach (var on in rule.HangsOn.Where(h => !_kindsById.ContainsKey(h)))
                 problems.Add($"{FileName}: the rule of {rule.Kind} hangs on {on}, a kind no work order lists");
             foreach (var both in rule.Needs.Intersect(rule.After, StringComparer.OrdinalIgnoreCase))
                 problems.Add($"{FileName}: the rule of {rule.Kind} both needs {both} and waits for it to be off: {rule.Kind} would never go on");
         }
 
-        foreach (var loop in Loops(order._rules.Values, r => r.After, withItself: true))
+        foreach (var loop in Loops(_rules.Values, r => r.After, withItself: true))
             problems.Add($"{FileName}: {string.Join(", ", loop)} wait for each other to be off: none of them would come off");
-        foreach (var loop in Loops(order._rules.Values, r => r.Needs, withItself: false))
+        foreach (var loop in Loops(_rules.Values, r => r.Needs, withItself: false))
             problems.Add($"{FileName}: {string.Join(", ", loop)} need each other on: none of them would go on");
-
-        return order;
     }
 
     /// <summary>
@@ -466,7 +491,7 @@ public sealed class WorkKind
     [JsonProperty("plural")]
     public string? Plural { get; set; }
 
-    /// <summary>Simple names of script classes, any in the part's class chain ("Crankshaft")</summary>
+    /// <summary>Part classes (<see cref="PartClasses"/>), the part's own or one above it ("crankshaft")</summary>
     [JsonProperty("classes")]
     public List<string> Classes { get; set; } = new();
 

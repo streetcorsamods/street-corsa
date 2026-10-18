@@ -67,17 +67,8 @@ public sealed record ShopScene(
         ?? Looks.FirstOrDefault();
 
     /// <summary>The scene dressed for a shop at <paramref name="light"/>: its look's pictures and tubes, the windows' glow</summary>
-    public WarehouseDressing Dress(ShopLook? look, StreetLight light)
-    {
-        var lighting = SceneLighting.For(Lights, light);
-        if (look != null)
-            lighting = lighting with { Lamps = lighting.Lamps.Select(lamp => lamp with { Color = look.LampColor }).ToList() };
-
-        var glow = new Dictionary<string, float>(StringComparer.Ordinal);
-        if (WindowGlow.TryGetValue(light, out var window)) glow[WindowMaterial] = window;
-
-        return new WarehouseDressing(lighting, Sun, new Dictionary<string, string>(look?.Surfaces ?? new Dictionary<string, string>(), StringComparer.Ordinal), glow);
-    }
+    public WarehouseDressing Dress(ShopLook? look, StreetLight light) =>
+        SceneDressing.Of(Lights, light, look?.LampColor, look?.Surfaces, Sun, WindowMaterial, WindowGlow);
 }
 
 public static class ShopScenes

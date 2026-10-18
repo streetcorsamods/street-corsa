@@ -1,5 +1,7 @@
 using System.IO;
-using Newtonsoft.Json;
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using StreetCorsa.Helpers;
 
 namespace StreetCorsa.Audio.Radio;
@@ -10,14 +12,14 @@ public sealed record RadioSong(string Path, string Title, string? Artist, string
     /// <summary>"Title — Artist", or the title alone</summary>
     public string Display => Artist is { Length: > 0 } artist ? $"{Title} — {artist}" : Title;
 
-    public string LengthText => LengthMs == 0 ? "" : TimeSpan.FromMilliseconds(LengthMs).ToString(LengthMs >= 3_600_000 ? @"h\:mm\:ss" : @"m\:ss");
+    public string LengthText => LengthMs == 0 ? "" : RadioTime.Format(LengthMs);
 }
 
 /// <summary>A list of songs the player put together, in their order; songs by path, so a list outlives a rescan</summary>
 public sealed class RadioPlaylist
 {
-    [JsonProperty("name")] public string Name { get; set; } = "";
-    [JsonProperty("songs")] public List<string> Songs { get; set; } = [];
+    [JsonPropertyName("name")] public string Name { get; set; } = "";
+    [JsonPropertyName("songs")] public List<string> Songs { get; set; } = [];
 }
 
 /// <summary>Everything the radio remembers between sessions, in %AppData%\StreetCorsa\radio.json</summary>
@@ -26,18 +28,18 @@ public sealed class RadioState
     public const string FileName = "radio.json";
 
     /// <summary>Where the music is: any folders on the PC, their subfolders too</summary>
-    [JsonProperty("folders")] public List<string> Folders { get; set; } = [];
-    [JsonProperty("playlists")] public List<RadioPlaylist> Playlists { get; set; } = [];
-    [JsonProperty("shuffle")] public bool Shuffle { get; set; } = true;
-    [JsonProperty("repeat"), JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))] public RadioRepeat Repeat { get; set; } = RadioRepeat.All;
+    [JsonPropertyName("folders")] public List<string> Folders { get; set; } = [];
+    [JsonPropertyName("playlists")] public List<RadioPlaylist> Playlists { get; set; } = [];
+    [JsonPropertyName("shuffle")] public bool Shuffle { get; set; } = true;
+    [JsonPropertyName("repeat")] public RadioRepeat Repeat { get; set; } = RadioRepeat.All;
 
     /// <summary>Whether it was on at the end of the last session: it comes back so</summary>
-    [JsonProperty("on")] public bool WasOn { get; set; }
+    [JsonPropertyName("on")] public bool WasOn { get; set; }
 
     /// <summary>The list that was playing (null: every song), the song and how far into it</summary>
-    [JsonProperty("list")] public string? List { get; set; }
-    [JsonProperty("song")] public string? Song { get; set; }
-    [JsonProperty("position_ms")] public uint PositionMs { get; set; }
+    [JsonPropertyName("list")] public string? List { get; set; }
+    [JsonPropertyName("song")] public string? Song { get; set; }
+    [JsonPropertyName("position_ms")] public uint PositionMs { get; set; }
 
     /// <summary>The folder the radio starts with before the player names any: Documents\Street Corsa\Radio</summary>
     public static string DefaultFolder =>
@@ -46,7 +48,7 @@ public sealed class RadioState
     public static RadioState Load(string path)
     {
         RadioState? state = null;
-        if (File.Exists(path)) state = JsonConvert.DeserializeObject<RadioState>(File.ReadAllText(path));
+        if (File.Exists(path)) state = JsonSerializer.Deserialize<RadioState>(File.ReadAllText(path), RadioJson.Indented);
 
         state ??= new RadioState { Folders = [DefaultFolder] };
         state.Folders = state.Folders.Where(f => !string.IsNullOrWhiteSpace(f)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
@@ -54,7 +56,27 @@ public sealed class RadioState
         return state;
     }
 
-    public void Save(string path) => SafeFile.WriteAllText(path, JsonConvert.SerializeObject(this, Formatting.Indented));
+    public void Save(string path) => SafeFile.WriteAllText(path, JsonSerializer.Serialize(this, RadioJson.Indented));
+}
+
+/// <summary>
+/// How the radio's own files (radio.json, radio_songs.json) are read and written: the shape the files have had since
+/// the radio was made (the names given on the properties, the repeat as a word, paths written as they are, nothing
+/// escaped), names read whatever their case
+/// </summary>
+internal static class RadioJson
+{
+    /// <summary>The settings, laid out for a player to read</summary>
+    public static readonly JsonSerializerOptions Indented = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        WriteIndented = true,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        Converters = { new JsonStringEnumConverter() }
+    };
+
+    /// <summary>The tags cache, in one line: thousands of entries</summary>
+    public static readonly JsonSerializerOptions Compact = new(Indented) { WriteIndented = false };
 }
 
 /// <summary>
@@ -70,20 +92,33 @@ public static class RadioLibrary
     /// <summary>Music files the radio cannot play, counted so the player is told why a song is missing</summary>
     public static readonly string[] NotPlayable = [".m4a", ".aac", ".opus", ".wma", ".alac", ".ape", ".mp4"];
 
-    public sealed record ScanResult(IReadOnlyList<RadioSong> Songs, int NotPlayable, IReadOnlyList<string> MissingFolders);
+    /// <summary>
+    /// The most songs a scan lists: more than any player's music, and a bound on what a folder far too wide (a whole
+    /// Documents) costs in memory and time. The player is told the list was cut short (<see cref="ScanResult.Capped"/>).
+    /// </summary>
+    public const int MostSongs = 20_000;
+
+    /// <summary>
+    /// Over this many songs the folders are not watched for changes: a watcher over a tree that size fires on every
+    /// write anywhere in it, and each firing is a rescan of all of it
+    /// </summary>
+    public const int MostWatched = 5_000;
+
+    /// <param name="Capped">The scan stopped at <see cref="MostSongs"/>: there is more music than is listed</param>
+    public sealed record ScanResult(IReadOnlyList<RadioSong> Songs, int NotPlayable, IReadOnlyList<string> MissingFolders, bool Capped = false);
 
     // What the tags are read into: an entry of an older reading is read again
     private const int CacheVersion = 2;
 
     private sealed class CacheEntry
     {
-        [JsonProperty("v")] public int Version { get; set; }
-        [JsonProperty("size")] public long Size { get; set; }
-        [JsonProperty("written")] public long Written { get; set; }
-        [JsonProperty("title")] public string? Title { get; set; }
-        [JsonProperty("artist")] public string? Artist { get; set; }
-        [JsonProperty("album")] public string? Album { get; set; }
-        [JsonProperty("length_ms")] public uint LengthMs { get; set; }
+        [JsonPropertyName("v")] public int Version { get; set; }
+        [JsonPropertyName("size")] public long Size { get; set; }
+        [JsonPropertyName("written")] public long Written { get; set; }
+        [JsonPropertyName("title")] public string? Title { get; set; }
+        [JsonPropertyName("artist")] public string? Artist { get; set; }
+        [JsonPropertyName("album")] public string? Album { get; set; }
+        [JsonPropertyName("length_ms")] public uint LengthMs { get; set; }
     }
 
     /// <summary>
@@ -92,6 +127,17 @@ public static class RadioLibrary
     /// not kept, the file asked about again at the next scan
     /// </summary>
     public readonly record struct SongRead(SongInfo? Info, bool Asked);
+
+    /// <summary>
+    /// A folder the radio will not take as a music folder: the root of a drive (<c>C:\</c>) or of a share
+    /// (<c>\\server\share</c>), which would have the radio list and watch the whole of it. A folder inside one is fine.
+    /// </summary>
+    public static bool IsRoot(string folder)
+    {
+        var full = Path.TrimEndingDirectorySeparator(Path.GetFullPath(folder));
+        var root = Path.GetPathRoot(full);
+        return string.IsNullOrEmpty(root) || string.Equals(Path.TrimEndingDirectorySeparator(root), full, StringComparison.OrdinalIgnoreCase);
+    }
 
     /// <summary>
     /// Every playable song under the folders, with its tags: from the cache when the file has not changed, through
@@ -105,7 +151,8 @@ public static class RadioLibrary
     /// <see cref="Scan(IReadOnlyList{string}, string, Func{string, SongInfo?}, CancellationToken)"/>, a read that may find
     /// nothing to read with. A scan called off keeps what it read so far: the next one starts from there.
     /// </summary>
-    public static ScanResult Scan(IReadOnlyList<string> folders, string cachePath, Func<string, SongRead> read, CancellationToken cancel = default)
+    /// <param name="mostSongs">Where the list is cut short; <see cref="MostSongs"/> unless a test lowers it</param>
+    public static ScanResult Scan(IReadOnlyList<string> folders, string cachePath, Func<string, SongRead> read, CancellationToken cancel = default, int mostSongs = MostSongs)
     {
         var cache = LoadCache(cachePath);
         var fresh = new Dictionary<string, CacheEntry>(StringComparer.OrdinalIgnoreCase);
@@ -114,6 +161,7 @@ public static class RadioLibrary
         var missing = new List<string>();
         var notPlayable = 0;
         var readAny = false;
+        var capped = false;
         var options = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.Hidden | FileAttributes.System };
 
         try
@@ -134,7 +182,7 @@ public static class RadioLibrary
 
         SaveCache(cachePath, fresh);
         songs.Sort((a, b) => string.Compare(a.Display, b.Display, StringComparison.CurrentCultureIgnoreCase));
-        return new ScanResult(songs, notPlayable, missing);
+        return new ScanResult(songs, notPlayable, missing, capped);
 
         void ScanFolders()
         {
@@ -149,6 +197,12 @@ public static class RadioLibrary
                 foreach (var file in Directory.EnumerateFiles(folder, "*", options))
                 {
                     cancel.ThrowIfCancellationRequested();
+                    if (songs.Count >= mostSongs)
+                    {
+                        capped = true;
+                        return;
+                    }
+
                     var extension = Path.GetExtension(file);
                     if (NotPlayable.Contains(extension, StringComparer.OrdinalIgnoreCase)) notPlayable++;
                     if (!Playable.Contains(extension, StringComparer.OrdinalIgnoreCase) || !seen.Add(file)) continue;
@@ -228,7 +282,7 @@ public static class RadioLibrary
     {
         try
         {
-            if (File.Exists(path) && JsonConvert.DeserializeObject<Dictionary<string, CacheEntry>>(File.ReadAllText(path)) is { } cache)
+            if (File.Exists(path) && JsonSerializer.Deserialize<Dictionary<string, CacheEntry>>(File.ReadAllText(path), RadioJson.Compact) is { } cache)
                 return new Dictionary<string, CacheEntry>(cache, StringComparer.OrdinalIgnoreCase);
         }
         catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
@@ -243,7 +297,7 @@ public static class RadioLibrary
     {
         try
         {
-            SafeFile.WriteAllText(path, JsonConvert.SerializeObject(cache));
+            SafeFile.WriteAllText(path, JsonSerializer.Serialize(cache, RadioJson.Compact));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

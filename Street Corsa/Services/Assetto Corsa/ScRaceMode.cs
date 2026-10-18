@@ -78,6 +78,14 @@ namespace StreetCorsa.Services
                         return GameText.Say("launch.mode_missing", ("folder", modeFolder));
 
                     var modeTarget = Path.Combine(acRoot, "extension", "lua", "new-modes", Race.RaceFormats.ModeIdOf(format));
+                    // A folder of that name already there without the game's marker is somebody else's mode: mirroring
+                    // into it would delete their files, so the race does not run until it is moved away
+                    if (IsSomebodyElses(modeTarget))
+                    {
+                        _logger.Error("Race format {Format}'s mode cannot go into {Target}: a mode without the game's marker is installed there, and it is left alone", format.Id, modeTarget);
+                        return GameText.Say("launch.mode_folder_taken", ("folder", modeTarget));
+                    }
+
                     // With the parts and their script: the mod's own files first, so a car_parts.lua of its own wins
                     var partsScript = Path.Combine(sourceFolder, PartsScript);
                     var modeFiles = Directory.GetFiles(modeFolder, "*", SearchOption.AllDirectories)
@@ -182,10 +190,16 @@ namespace StreetCorsa.Services
         /// <summary>The race mode's script that puts the parts on, which the free run's mode runs too</summary>
         private const string PartsScript = "car_parts.lua";
 
+        /// <summary>A mode folder that is there with files in it and without the game's <see cref="Marker"/>: not ours to write into</summary>
+        private static bool IsSomebodyElses(string folder) =>
+            Directory.Exists(folder) && !File.Exists(Path.Combine(folder, Marker)) && Directory.EnumerateFileSystemEntries(folder).Any();
+
         /// <summary>
         /// Makes <paramref name="target"/> hold exactly <paramref name="files"/> (by their names there, which may have
         /// folders in them), each written only when it differs: files no longer wanted go, since the mode would still
         /// load (or read) them. <paramref name="marked"/> keeps the game's <see cref="Marker"/> in it too. Returns how many changed.
+        /// A copy that is the same length and carries the source's write time (set on every write here) is taken as the
+        /// same without reading either: the parts' models are megabytes each, and a race installs them all.
         /// </summary>
         private static int Mirror(IReadOnlyList<(string Name, string Source)> files, string target, bool marked = false)
         {
@@ -208,11 +222,21 @@ namespace StreetCorsa.Services
                 var installed = Path.GetFullPath(Path.Combine(target, name));
                 if (!wanted.Add(installed)) continue;
 
+                var from = new FileInfo(source);
+                var there = new FileInfo(installed);
+                if (there.Exists && there.Length == from.Length && there.LastWriteTimeUtc == from.LastWriteTimeUtc) continue;
+
                 var bytes = File.ReadAllBytes(source);
-                if (File.Exists(installed) && File.ReadAllBytes(installed).AsSpan().SequenceEqual(bytes)) continue;
+                if (there.Exists && File.ReadAllBytes(installed).AsSpan().SequenceEqual(bytes))
+                {
+                    // The same bytes under another stamp (an install from before the stamp was carried): stamped, read no more
+                    File.SetLastWriteTimeUtc(installed, from.LastWriteTimeUtc);
+                    continue;
+                }
 
                 Directory.CreateDirectory(Path.GetDirectoryName(installed)!);
                 SafeFile.WriteAllBytes(installed, bytes);
+                File.SetLastWriteTimeUtc(installed, from.LastWriteTimeUtc);
                 written++;
             }
 

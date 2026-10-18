@@ -85,7 +85,7 @@ public static class AcRunningGearData
         var factoryBrake = factory.BrakeTorque;
         var factoryGrip = RunningGear.TyreGrip(factory.Tyre);
         var (factoryBump, factoryRebound) = RunningGear.Damping(factory.Shock);
-        var factoryMass = factory.Rim.Mass + factory.Tyre.Mass + factory.Brake.Mass + factory.Spring.Mass + factory.Shock.Mass;
+        var factoryMass = AcCarIni.MassOf(factory.Rim) + AcCarIni.MassOf(factory.Tyre) + AcCarIni.MassOf(factory.Brake) + AcCarIni.MassOf(factory.Spring) + AcCarIni.MassOf(factory.Shock);
 
         double tyreWidth = 0, tyreRadius = 0, rimRadius = 0, grip = 0, load = 0, rolling = 0, pressure = 0;
         double brake = 0, spring = 0, bump = 0, rebound = 0, wrap = 0, track = 0, hubMass = 0, mass = 0;
@@ -134,12 +134,15 @@ public static class AcRunningGearData
             bump += Ratio(shockDef == null ? 0 : RunningGear.Damping(shockDef).Bump, factoryBump);
             rebound += Ratio(shockDef == null ? 0 : RunningGear.Damping(shockDef).Rebound, factoryRebound);
 
-            // Offset is where the rim puts the wheel; negative moves it out, and the track grows by twice that
-            if (rim != null) track += -2 * (RunningGear.RimOffset(rim) - RunningGear.RimOffset(factory.Rim));
+            // Offset is where the rim puts the wheel; negative moves it out, and the track grows by twice that. A pack's
+            // absurd offset or weight is no figure: the part counts as the factory one (AcCarIni.Bounded), as the ratios do
+            var factoryOffset = AcCarIni.Bounded(RunningGear.RimOffset(factory.Rim), AcCarIni.MaxRimOffset);
+            if (rim != null) track += -2 * (AcCarIni.Bounded(RunningGear.RimOffset(rim), AcCarIni.MaxRimOffset, factoryOffset) - factoryOffset);
 
-            var unsprung = (rim?.Mass ?? factory.Rim.Mass) + (tyre?.Mass ?? factory.Tyre.Mass) + (brakeDef?.Mass ?? factory.Brake.Mass);
-            hubMass += unsprung - (factory.Rim.Mass + factory.Tyre.Mass + factory.Brake.Mass);
-            mass += unsprung + (springDef?.Mass ?? factory.Spring.Mass) + (shockDef?.Mass ?? factory.Shock.Mass) - factoryMass;
+            var (factoryRim, factoryTyre, factoryBrakeMass) = (AcCarIni.MassOf(factory.Rim), AcCarIni.MassOf(factory.Tyre), AcCarIni.MassOf(factory.Brake));
+            var unsprung = AcCarIni.MassOf(rim, factoryRim) + AcCarIni.MassOf(tyre, factoryTyre) + AcCarIni.MassOf(brakeDef, factoryBrakeMass);
+            hubMass += unsprung - (factoryRim + factoryTyre + factoryBrakeMass);
+            mass += unsprung + AcCarIni.MassOf(springDef, AcCarIni.MassOf(factory.Spring)) + AcCarIni.MassOf(shockDef, AcCarIni.MassOf(factory.Shock)) - factoryMass;
         }
 
         var n = Math.Max(1, corners.Count);

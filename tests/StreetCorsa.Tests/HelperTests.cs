@@ -22,7 +22,7 @@ public class AcSpecsTests
     [InlineData("1.250 hp", 1.25)]
     [InlineData("1,250.5 hp", 1250.5)]
     [InlineData("  90 HP ", 90.0)]
-    [InlineData("150kW", 150 * 1.34102)]
+    [InlineData("150kW", 150 * 1000 / 745.7)]
     [InlineData("150 ps", 150.0)]
     public void Power(string text, double expected) => Assert.Equal(expected, AcSpecs.ParsePower(text)!.Value, 6);
 

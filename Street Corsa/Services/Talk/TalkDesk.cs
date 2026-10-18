@@ -199,18 +199,12 @@ namespace StreetCorsa.Services.Talk
             var language = AiWriter.Language;
             var rules = Rules;
             var date = talk.Date;
+            // What it throws is the background's line in the log, under this name
             Background.Run(async () =>
             {
-                try
-                {
-                    var note = NoteOf(await Text.WriteAsync("chat_memory", values).ConfigureAwait(false));
-                    if (note != null) _onGameThread(() => TalkPeople.Remember(person, date, note, language, rules));
-                }
-                catch (Exception ex)
-                {
-                    _logger.Warning("Could not keep what {Person} makes of the talk: {Error}", person.Name, ex.Message);
-                }
-            });
+                var note = NoteOf(await Text.WriteAsync("chat_memory", values).ConfigureAwait(false));
+                if (note != null) _onGameThread(() => TalkPeople.Remember(person, date, note, language, rules));
+            }, $"Keeping what {person.Name} makes of the talk");
         }
 
         /// <summary>Turns of a talk written out, a line each: "Player: ...", "Walt: ..."</summary>

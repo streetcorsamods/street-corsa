@@ -123,8 +123,11 @@ public sealed partial class AudioHub
     /// <summary>What <paramref name="bus"/> plays at now, the fade in it</summary>
     public float Gain(AudioBus bus) => AudioMix.Gain(_settings, bus, bus == AudioBus.Radio ? _radioFade : _fade);
 
-    /// <summary>The group sounds of <paramref name="bus"/> play into; zero while there is no system, and for the engines</summary>
-    internal IntPtr Group(AudioBus bus) => _system == IntPtr.Zero ? IntPtr.Zero : _groups[(int)bus];
+    /// <summary>
+    /// The group sounds of <paramref name="bus"/> play into; zero while there is no system, for the engines, and for a
+    /// bus the enum does not have (a cue's "7" cast through): nothing is ever indexed by a bus that was not checked
+    /// </summary>
+    internal IntPtr Group(AudioBus bus) => _system == IntPtr.Zero || !Enum.IsDefined(bus) ? IntPtr.Zero : _groups[(int)bus];
 
     /// <summary>The exit has begun: nothing is to touch FMOD's handles any more, the system frees them all</summary>
     internal bool IsShutDown => _shutDown;
@@ -155,7 +158,14 @@ public sealed partial class AudioHub
         var core = _core;
         if (_system == IntPtr.Zero || core == IntPtr.Zero || _shutDown) return null;
 
-        var group = _groups[(int)bus];
+        // No group to play into (a bus that is no bus, the engines'): the sound goes unheard, never a throw into the pump
+        var group = Group(bus);
+        if (group == IntPtr.Zero)
+        {
+            _logger.Warning("No bus {Bus} to play {File} on", bus, Path.GetFileName(path));
+            return null;
+        }
+
         if (!Warn(FMOD_System_CreateSound(core, Utf8(path), ModeLoopNormal | Mode2D | ModeCreateStream, IntPtr.Zero, out var sound), "open " + Path.GetFileName(path)))
             return null;
 

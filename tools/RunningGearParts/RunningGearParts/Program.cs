@@ -41,41 +41,58 @@ internal static class Program
             return 1;
         }
 
+        // Only into a pack that is there: the names are this tool's, and a pack renamed since would otherwise get a new
+        // folder of models no pack.json names (Kn5SceneWriter.Save makes the folder), with nothing said
         void Write(Model model, string pack)
         {
+            var packJson = Path.Combine(root, pack, PackFileName);
+            if (!File.Exists(packJson)) throw new FileNotFoundException($"{pack}: no {PackFileName} names its models at {packJson}; the pack was renamed or moved", packJson);
+
             var path = Path.Combine(root, pack, model.Name + ".kn5");
             model.Save(path);
             Console.WriteLine($"{pack}/{model.Name}.kn5: {model.Triangles} triangles, {new FileInfo(path).Length / 1024} KB");
         }
 
-        foreach (var family in Parts.Families)
+        try
         {
-            Write(Parts.Housing(family), family.Pack);
-            Write(Parts.RingPinion(family), family.Pack);
+            foreach (var family in Parts.Families)
+            {
+                Write(Parts.Housing(family), family.Pack);
+                Write(Parts.RingPinion(family), family.Pack);
+            }
+
+            foreach (var pack in ShaftPacks) Write(Parts.AxleShaft(), pack);
+            Write(Parts.WheelCylinder(), "brakes_drum");
+
+            // A backing plate for each drum size (the stand-in drums' open side and radius, as their models are), the front hub
+            foreach (var (size, innerX, radius) in DrumSizes) Write(Parts.BackingPlate("plate_" + size, innerX, radius), "brakes_drum");
+            Write(Parts.Hub(), "brakes_drum");
+
+            Write(Parts.Shock("gabriel_hd", Finish.CastIron), "shocks_period");
+            Write(Parts.Shock("koni", Finish.Red, collar: true), "shocks_period");
+            Write(Parts.Shock("drag_90_10", Finish.Chrome, collar: true), "shocks_period");
+            Write(Parts.Shock("drag_50_50", Finish.Blue, collar: true), "shocks_period");
+
+            foreach (var (id, inches) in Sized(root, "springs_torsion")) Write(Parts.TorsionBar(id, inches), "springs_torsion");
+            foreach (var (id, inches) in Sized(root, "sway_bars")) Write(Parts.SwayBar(id, inches), "sway_bars");
+            foreach (var id in new[] { "traction_master", "lakewood", "slapper", "ladder" }) Write(Parts.TractionBar(id), "springs_leaf");
+        }
+        catch (FileNotFoundException ex)
+        {
+            // The models written so far stand in packs that are there; the missing pack is told and the run stops
+            Console.Error.WriteLine(ex.Message);
+            return 1;
         }
 
-        foreach (var pack in ShaftPacks) Write(Parts.AxleShaft(), pack);
-        Write(Parts.WheelCylinder(), "brakes_drum");
-
-        // A backing plate for each drum size (the stand-in drums' open side and radius, as their models are), the front hub
-        foreach (var (size, innerX, radius) in DrumSizes) Write(Parts.BackingPlate("plate_" + size, innerX, radius), "brakes_drum");
-        Write(Parts.Hub(), "brakes_drum");
-
-        Write(Parts.Shock("gabriel_hd", Finish.CastIron), "shocks_period");
-        Write(Parts.Shock("koni", Finish.Red, collar: true), "shocks_period");
-        Write(Parts.Shock("drag_90_10", Finish.Chrome, collar: true), "shocks_period");
-        Write(Parts.Shock("drag_50_50", Finish.Blue, collar: true), "shocks_period");
-
-        foreach (var (id, inches) in Sized(root, "springs_torsion")) Write(Parts.TorsionBar(id, inches), "springs_torsion");
-        foreach (var (id, inches) in Sized(root, "sway_bars")) Write(Parts.SwayBar(id, inches), "sway_bars");
-        foreach (var id in new[] { "traction_master", "lakewood", "slapper", "ladder" }) Write(Parts.TractionBar(id), "springs_leaf");
         return 0;
     }
+
+    private const string PackFileName = "pack.json";
 
     /// <summary>A pack's parts that give their size in diameter_in: each one's own id and its diameter</summary>
     private static IEnumerable<(string Id, float Inches)> Sized(string root, string pack)
     {
-        using var json = JsonDocument.Parse(File.ReadAllText(Path.Combine(root, pack, "pack.json")));
+        using var json = JsonDocument.Parse(File.ReadAllText(Path.Combine(root, pack, PackFileName)));
         foreach (var part in json.RootElement.GetProperty("parts").EnumerateArray())
         {
             if (!part.TryGetProperty("specs", out var specs) || !specs.TryGetProperty("diameter_in", out var diameter)) continue;

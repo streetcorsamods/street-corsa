@@ -271,9 +271,11 @@ public sealed class EngineAssembly
         else if (!(step > 0)) advance = low;
         else if ((high - low) / step <= MaxAdvanceSteps)
         {
-            // The cam turns in steps on its gear; a gear of more steps than any is one it turns on smoothly
+            // The cam turns in steps on its gear, to the first step at or past the advance asked for; a gear of more
+            // steps than any is one it turns on smoothly. The steps are counted as well as added: a step too small
+            // for the figure to take in (1e6 plus 2e-13 is 1e6 again) would otherwise never get there
             var at = low;
-            while (at < high && at < advance) at += step;
+            for (var steps = 0; at < high && at < advance && steps <= MaxAdvanceSteps; steps++) at += step;
             advance = at;
         }
 

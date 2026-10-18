@@ -70,6 +70,19 @@ public sealed class MarketRules
     public double RivalBuyerChance { get; set; } = 0.4;
 
     /// <summary>
+    /// The chance a buyer calls on a given day: <see cref="PaperBaseChance"/> for a car asked at <see cref="PaperFairShare"/>
+    /// of its worth or less, and <see cref="PaperChanceSlope"/> less for every whole share more asked (0.12 a tenth at the
+    /// base game's 1.2), down to nobody; <see cref="PaperUnpricedChance"/> for a car nobody can put a worth on
+    /// </summary>
+    public double PaperBaseChance { get; set; } = 0.6;
+
+    public double PaperFairShare { get; set; } = 0.9;
+
+    public double PaperChanceSlope { get; set; } = 1.2;
+
+    public double PaperUnpricedChance { get; set; } = 0.1;
+
+    /// <summary>
     /// A buyer from the paper haggles every ask: the offer is drawn between this share of the asking price and all of it,
     /// so a car bought cheap and put straight back in the paper leaves little over
     /// </summary>
@@ -157,8 +170,16 @@ public sealed class MarketRules
     public float BackLotMaxCondition { get; set; } = 0.55f;
 
     /// <summary>
+    /// A car nobody has touched is still not a new car: the chance a used car for sale had its engine worked on, and how
+    /// far (<see cref="UsedCarMinTuneLevel"/> to 1, 1 the most a tuner does) when it was
+    /// </summary>
+    public double UsedCarTuneChance { get; set; } = 0.35;
+
+    public double UsedCarMinTuneLevel { get; set; } = 0.3;
+
+    /// <summary>
     /// The paper buyers' figures held to what makes sense, told: a share outside 0 to 1 (or not a number) and a negative
-    /// number of days are the base game's
+    /// number of days are the base game's; the used cars' chances the same
     /// </summary>
     public void Check(List<string> problems)
     {
@@ -166,6 +187,12 @@ public sealed class MarketRules
         PaperHaggleShare = Share(PaperHaggleShare, fresh.PaperHaggleShare, "paperHaggleShare", problems);
         PaperFloorShare = Share(PaperFloorShare, fresh.PaperFloorShare, "paperFloorShare", problems);
         PaperFreshChanceFactor = Share(PaperFreshChanceFactor, fresh.PaperFreshChanceFactor, "paperFreshChanceFactor", problems);
+        PaperBaseChance = Share(PaperBaseChance, fresh.PaperBaseChance, "paperBaseChance", problems);
+        PaperUnpricedChance = Share(PaperUnpricedChance, fresh.PaperUnpricedChance, "paperUnpricedChance", problems);
+        Figures.Within(this, "market", nameof(PaperFairShare), 0, 10, problems);
+        Figures.Within(this, "market", nameof(PaperChanceSlope), 0, 100, problems);
+        UsedCarTuneChance = Share(UsedCarTuneChance, fresh.UsedCarTuneChance, "usedCarTuneChance", problems);
+        UsedCarMinTuneLevel = Share(UsedCarMinTuneLevel, fresh.UsedCarMinTuneLevel, "usedCarMinTuneLevel", problems);
         if (PaperFreshDays < 0)
         {
             problems.Add($"market.paperFreshDays ({PaperFreshDays}) is below 0; the base game's {fresh.PaperFreshDays} is kept");

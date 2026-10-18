@@ -83,10 +83,14 @@
     <CustomAction Id="LaunchGame" BinaryRef="InstallerActions" DllEntry="LaunchGame" Execute="immediate" Return="ignore" />
 
     <!--
-      Uninstall: the game puts back what races changed in AC and takes its CSP modes out (AcUninstall); not on an upgrade.
-      Before RemoveRegistryValues, while the AC folder the installer kept is still there for the game to find.
+      Uninstall: the game puts back what races changed in AC and takes its CSP modes out ("Street Corsa.exe" with its
+      uninstall switch, AcUninstall); not on an upgrade. Before RemoveRegistryValues, while the AC folder the installer kept is still there
+      for the game to find. RestoreAc (Actions\CustomActions.cs) runs the exe and reads its exit code: Assetto Corsa still
+      running with a race's changes in it is put to the player (close it and retry, go on without, or keep the game) rather
+      than gone past; a quiet uninstall goes on. Deferred, so the exe's path reaches it as CustomActionData (SetProperty).
     -->
-    <CustomAction Id="RestoreAc" FileRef="GameExe" ExeCommand="--uninstall" Execute="deferred" Impersonate="yes" Return="ignore" />
+    <SetProperty Id="RestoreAc" Value="Exe=[#GameExe]" Before="RestoreAc" Sequence="execute" Condition="REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE" />
+    <CustomAction Id="RestoreAc" BinaryRef="InstallerActions" DllEntry="RestoreAc" Execute="deferred" Impersonate="yes" Return="check" />
 
     <InstallUISequence>
       <Custom Action="FindAcFolder" After="AppSearch" />

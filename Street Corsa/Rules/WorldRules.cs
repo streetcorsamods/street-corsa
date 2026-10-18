@@ -70,4 +70,17 @@ public sealed class RaceRules
     public int PoliceAILevel { get; set; } = 100;
 
     public int PoliceAIAggression { get; set; } = 100;
+
+    /// <summary>
+    /// Each figure held to what goes into AC's files: the damage is a percentage (clamped against it at the launch,
+    /// so below 0 it would throw there), the rates are multipliers, the police's AI is race.ini's level and aggression
+    /// </summary>
+    internal void Check(string path, List<string> problems)
+    {
+        Figures.Within(this, path, nameof(Damage), 0, 200, problems);
+        Figures.Within(this, path, nameof(TyreWear), 0, 100, problems);
+        Figures.Within(this, path, nameof(FuelRate), 0, 100, problems);
+        Figures.Within(this, path, nameof(PoliceAILevel), 0, 200, problems);
+        Figures.Within(this, path, nameof(PoliceAIAggression), 0, 100, problems);
+    }
 }

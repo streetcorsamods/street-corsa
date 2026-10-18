@@ -43,7 +43,7 @@ public sealed record WheelFitting(IReadOnlyList<int> Hidden, Matrix4x4 Placement
 /// <see cref="RimWiderThanTyre"/>: a 15x11 Cragar round a Chevelle's narrow tyre. Rim and tyre models have the axle along
 /// X, the face towards -X. A left wheel's outboard side is +X, a right one's -X.
 /// </summary>
-public static class WheelFit
+public static partial class WheelFit
 {
     private static readonly string[] Tyre = ["tyre", "tire", "tread", "wall"];
     private static readonly string[] Brake = ["brake", "drum", "disc", "disk", "caliper", "rotor"];

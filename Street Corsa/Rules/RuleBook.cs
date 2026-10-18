@@ -317,6 +317,7 @@ public sealed class RuleBook
         Rivals.Check("rivals", problems);
         Dealers.Check("dealers", problems);
         Economy.Check("economy", problems);
+        PartShops.Check("partShops", problems);
         Cars.Check("cars", problems);
         Repairs.Check("repairs", problems);
         Condition.Check("condition", problems);
@@ -324,6 +325,7 @@ public sealed class RuleBook
         Wagers.Check("wagers", problems);
         Events.Check("events", problems);
         News.Check("news", problems);
+        Race.Check("race", problems);
 
         // A bolt-on and each try at one is a run of the engine model for every used car made
         Figures.Within(Engines.Factory, "engines.factory", nameof(Parts.Cars.EngineFactoryRules.MaxBoltOns), 0, 50, problems);
@@ -344,6 +346,7 @@ public sealed class RuleBook
         Range(Street, "street", nameof(StreetRules.ShortestWait), nameof(StreetRules.LongestWait), problems);
         Range(Economy, "economy", nameof(EconomyRules.PartAdsLow), nameof(EconomyRules.PartAdsHigh), problems);
         Range(Economy, "economy", nameof(EconomyRules.PartAdMinWear), nameof(EconomyRules.PartAdMaxWear), problems);
+        Range(Economy, "economy", nameof(EconomyRules.PartAdMinAskShare), nameof(EconomyRules.PartAdMaxAskShare), problems);
         Range(Economy, "economy", nameof(EconomyRules.RivalPartMinAskShare), nameof(EconomyRules.RivalPartMaxAskShare), problems);
         Range(PartShops, "partShops", nameof(PartShopRules.JunkyardMinWear), nameof(PartShopRules.JunkyardMaxWear), problems);
         Range(PartShops, "partShops", nameof(PartShopRules.HaggleMinCut), nameof(PartShopRules.HaggleMaxCut), problems);

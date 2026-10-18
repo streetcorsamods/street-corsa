@@ -45,18 +45,18 @@
 
         <!-- Inside the shop, behind everything: its stock on its shelves -->
         <controls:ShopViewport3D x:Name="Viewport"
-                                 SceneKn5="{Binding SceneKn5}"
-                                 Stock="{Binding StockShown}"
-                                 Catalog="{Binding Catalog}"
-                                 Places="{Binding Places}"
-                                 Dressing="{Binding Dressing}"
-                                 View="{Binding View}"
-                                 Room="{Binding Room}"
-                                 IsCovered="{Binding IsCounterOpen}"/>
+                                 SceneKn5="{Binding Room.SceneKn5}"
+                                 Stock="{Binding Room.StockShown}"
+                                 Catalog="{Binding Room.Catalog}"
+                                 Places="{Binding Room.Places}"
+                                 Dressing="{Binding Room.Dressing}"
+                                 View="{Binding Room.View}"
+                                 Room="{Binding Room.Bounds}"
+                                 IsCovered="{Binding Room.IsCounterOpen}"/>
 
         <!-- Covered until the shop stands with its stock in it -->
         <Grid Background="{StaticResource BgDarkBrush}"
-              Visibility="{Binding HasScene, Converter={StaticResource BooleanToVisibilityConverter}}"
+              Visibility="{Binding Room.HasScene, Converter={StaticResource BooleanToVisibilityConverter}}"
               helpers:Reveal.IsShown="{Binding IsShopReady, ElementName=Viewport, Converter={StaticResource InverseBooleanConverter}}">
             <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"
                        FontSize="{StaticResource FontSizeTitleSmall}"
@@ -121,16 +121,16 @@
                 Style="{StaticResource DialogPrimaryButtonStyle}"
                 FontSize="{StaticResource FontSizeBodyLarge}"
                 Command="{Binding ToggleCounterCommand}"
-                helpers:Reveal.IsShown="{Binding ShowsCounterButton}">
+                helpers:Reveal.IsShown="{Binding Room.ShowsCounterButton}">
             <StackPanel Orientation="Horizontal">
                 <Ellipse Width="10" Height="10" Margin="0,0,10,0" Fill="{StaticResource AmberBrush}" VerticalAlignment="Center"
-                         Visibility="{Binding Talk.HasUnread, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}"/>
+                         Visibility="{Binding Clerk.Talk.HasUnread, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}"/>
                 <TextBlock Text="{t:Text partshop.counter}" VerticalAlignment="Center"/>
             </StackPanel>
         </Button>
 
         <!-- The counter, over the shop: the clerk on the left, the stock on the right -->
-        <Grid helpers:Reveal.IsShown="{Binding IsCounterOpen}" helpers:Reveal.OffsetY="24">
+        <Grid helpers:Reveal.IsShown="{Binding Room.IsCounterOpen}" helpers:Reveal.OffsetY="24">
             <Border Background="{StaticResource OverlayBrush}"/>
             <Border Style="{StaticResource GlassPanelStyle}"
                     Margin="90,120,90,40"
@@ -151,8 +151,8 @@
                             Background="{StaticResource BgPanelCCBrush}"
                             BorderBrush="{StaticResource BorderLightBrush}"
                             BorderThickness="1"
-                            Visibility="{Binding HasTalk, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <controls:TalkPanel DataContext="{Binding Talk}"/>
+                            Visibility="{Binding Clerk.HasTalk, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <controls:TalkPanel DataContext="{Binding Clerk.Talk}"/>
                     </Border>
 
                     <Grid Grid.Column="1">
@@ -243,40 +243,12 @@
                                     BorderThickness="1"
                                     CornerRadius="5">
                                 <ListBox ItemsSource="{Binding Offers}"
+                                         ItemContainerStyle="{StaticResource PickedRowStyle}"
                                          Background="Transparent"
                                          BorderThickness="0"
                                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                          VirtualizingPanel.IsVirtualizing="True"
                                          VirtualizingPanel.VirtualizationMode="Recycling">
-                                    <ListBox.ItemContainerStyle>
-                                        <Style TargetType="ListBoxItem">
-                                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                            <Setter Property="Focusable" Value="False"/>
-                                            <Setter Property="Template">
-                                                <Setter.Value>
-                                                    <ControlTemplate TargetType="ListBoxItem">
-                                                        <Border x:Name="row"
-                                                                Background="Transparent"
-                                                                BorderBrush="{StaticResource Gray30Brush}"
-                                                                BorderThickness="0,0,0,1"
-                                                                Padding="14,7">
-                                                            <ContentPresenter/>
-                                                        </Border>
-                                                        <ControlTemplate.Triggers>
-                                                            <DataTrigger Binding="{Binding IsPicked}" Value="True">
-                                                                <Setter TargetName="row" Property="Background" Value="{StaticResource Glass14E0Brush}"/>
-                                                                <Setter TargetName="row" Property="BorderBrush" Value="{StaticResource AmberBrush}"/>
-                                                                <Setter TargetName="row" Property="BorderThickness" Value="3,0,0,1"/>
-                                                            </DataTrigger>
-                                                            <Trigger Property="IsMouseOver" Value="True">
-                                                                <Setter TargetName="row" Property="Background" Value="{StaticResource White20Brush}"/>
-                                                            </Trigger>
-                                                        </ControlTemplate.Triggers>
-                                                    </ControlTemplate>
-                                                </Setter.Value>
-                                            </Setter>
-                                        </Style>
-                                    </ListBox.ItemContainerStyle>
                                     <ListBox.ItemTemplate>
                                         <DataTemplate>
                                             <Grid>
@@ -383,7 +355,7 @@
                     Tag="{StaticResource CloseIcon}"
                     ToolTip="{t:Text partshop.counter_close}"
                     Command="{Binding ToggleCounterCommand}"
-                    Visibility="{Binding HasScene, Converter={StaticResource BooleanToVisibilityConverter}}"
+                    Visibility="{Binding Room.HasScene, Converter={StaticResource BooleanToVisibilityConverter}}"
                     HorizontalAlignment="Right"
                     VerticalAlignment="Top"
                     Margin="0,96,66,0"/>

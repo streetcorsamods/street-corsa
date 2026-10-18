@@ -33,6 +33,11 @@ public sealed class EconomyRules
     /// <summary>Now and then somebody sells a whole engine instead of its parts: the chance of each ad</summary>
     public double PartAdEngineChance { get; set; } = 0.08;
 
+    /// <summary>What a private seller asks for a part in the paper, as a share of what a used parts shop asks, least to most: some more, some less</summary>
+    public double PartAdMinAskShare { get; set; } = 0.8;
+
+    public double PartAdMaxAskShare { get; set; } = 1.2;
+
     /// <summary>What a rival asks for a part they took off, as a share of what a used parts shop asks, least to most: around the same</summary>
     public double RivalPartMinAskShare { get; set; } = 0.85;
 
@@ -41,12 +46,21 @@ public sealed class EconomyRules
     /// <summary>What a prize camshaft is worth in cash when no better one fits the car that won it</summary>
     public decimal CamshaftPrizeCash { get; set; } = 500m;
 
+    /// <summary>
+    /// How much of its new price a thing worn out is still worth (0 to 1): wear takes the rest off, a part's wear and a
+    /// car's body in its condition alike (<see cref="Parts.Cars.PartPricing.Shape"/>)
+    /// </summary>
+    public double WearFloor { get; set; } = 0.3;
+
     /// <summary>Each figure the game divides by, loops over or pays held to what it can play by (<see cref="Figures"/>)</summary>
     internal void Check(string path, List<string> problems)
     {
         Figures.Above0(this, path, nameof(PartsPriceFactor), 1000, problems);
         Figures.Within(this, path, nameof(UsedShopFactor), 0, 10, problems);
         Figures.Within(this, path, nameof(TradeInFactor), 0, 1, problems);
+        Figures.Within(this, path, nameof(PartAdMinAskShare), 0, 10, problems);
+        Figures.Within(this, path, nameof(PartAdMaxAskShare), 0, 10, problems);
+        Figures.Within(this, path, nameof(WearFloor), 0, 1, problems);
         Figures.Within(this, path, nameof(MailOrderPremium), 0, 100, problems);
         Figures.Within(this, path, nameof(MailOrderDays), 0, 365, problems);
         Figures.Within(this, path, nameof(PartAdsLow), 0, 1000, problems);

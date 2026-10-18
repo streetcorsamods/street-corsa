@@ -103,6 +103,7 @@ internal static class WearPainter
     private static void Cover(byte[] cover, BodyShell shell, int size)
     {
         Array.Clear(cover, 0, size * size);
+        var mark = new Mark(cover, size);
         foreach (var mesh in shell.BodyMeshes)
         {
             var v = mesh.Vertices;
@@ -112,39 +113,15 @@ internal static class WearPainter
                 var a = new Vector2(v[indices[t]].Tex.X * size, v[indices[t]].Tex.Y * size);
                 var b = new Vector2(v[indices[t + 1]].Tex.X * size, v[indices[t + 1]].Tex.Y * size);
                 var c = new Vector2(v[indices[t + 2]].Tex.X * size, v[indices[t + 2]].Tex.Y * size);
-                var minX = Math.Max(0, (int)MathF.Floor(MathF.Min(a.X, MathF.Min(b.X, c.X))) - Margin);
-                var maxX = Math.Min(size - 1, (int)MathF.Ceiling(MathF.Max(a.X, MathF.Max(b.X, c.X))) + Margin);
-                var minY = Math.Max(0, (int)MathF.Floor(MathF.Min(a.Y, MathF.Min(b.Y, c.Y))) - Margin);
-                var maxY = Math.Min(size - 1, (int)MathF.Ceiling(MathF.Max(a.Y, MathF.Max(b.Y, c.Y))) + Margin);
-                var area = (b.X - a.X) * (c.Y - a.Y) - (b.Y - a.Y) * (c.X - a.X);
-                if (MathF.Abs(area) < 1e-9f)
-                {
-                    // A sliver: its box, a few pixels, is near enough
-                    for (var y = minY; y <= maxY; y++)
-                        for (var x = minX; x <= maxX; x++) cover[y * size + x] = 1;
-                    continue;
-                }
-                var inverse = 1 / area;
-                // A pixel within the margin of an edge: the edge functions scaled to pixels
-                var ab = MathF.Max(1e-6f, Vector2.Distance(a, b));
-                var bc = MathF.Max(1e-6f, Vector2.Distance(b, c));
-                var ca = MathF.Max(1e-6f, Vector2.Distance(c, a));
-                var slack = Margin * MathF.Abs(inverse);
-                for (var y = minY; y <= maxY; y++)
-                {
-                    var py = y + 0.5f;
-                    for (var x = minX; x <= maxX; x++)
-                    {
-                        var px = x + 0.5f;
-                        var w0 = ((b.X - px) * (c.Y - py) - (b.Y - py) * (c.X - px)) * inverse;
-                        var w1 = ((c.X - px) * (a.Y - py) - (c.Y - py) * (a.X - px)) * inverse;
-                        var w2 = 1 - w0 - w1;
-                        if (w0 < -slack * bc || w1 < -slack * ca || w2 < -slack * ab) continue;
-                        cover[y * size + x] = 1;
-                    }
-                }
+                TriangleRaster.ForEachPixel(a, b, c, size, Margin, ref mark);
             }
         }
+    }
+
+    /// <summary>The cover's pixel: marked as one the layer's meshes reach</summary>
+    private readonly struct Mark(byte[] cover, int size) : TriangleRaster.IPixel
+    {
+        public void At(int x, int y, float w0, float w1, float w2) => cover[y * size + x] = 1;
     }
 
     private static void PaintPanel(BodyShell shell, BodyShell.Panel panel, CarLook look, Noise noise, Noise detail, byte[] lines, byte[] cover, byte[] pixels, int size)

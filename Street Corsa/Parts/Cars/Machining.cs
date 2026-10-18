@@ -90,7 +90,7 @@ public static class Machining
         }
 
         var wear = Unit.Clamp01(part.Wear, 1);
-        var damaged = job.FixesDamage && Unit.Clamp01(part.Tear, 1) < PartInstance.Undamaged;
+        var damaged = job.FixesDamage && Unit.Clamp01(part.Tear, 1) < PartInstance.UndamagedTear;
         return wear >= job.Restores - Rebuilding.Enough && !damaged ? PartWords.Say("rebuild.why.no_need") : null;
     }
 

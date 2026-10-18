@@ -172,8 +172,8 @@ namespace StreetCorsa
 
             if (uninstall)
             {
-                Services.AcUninstall.Run();
-                Environment.Exit(0);
+                // The exit code is what the installer reads: AcUninstall.ExitAcRunning has it ask the player to close AC and retry
+                Environment.Exit(Services.AcUninstall.Run());
             }
 
             // The last line of defence before anything that can fail: the rename and the log's folder below touch
@@ -258,7 +258,11 @@ namespace StreetCorsa
             CatalogRepository = new ContentCatalogRepository();
             CarImportService = new CarImportService(CatalogRepository);
             ProfileRepository = new CarProfileRepository();
-            CarPartsService = new Services.Parts.CarPartsService(CatalogRepository, ProfileRepository);
+            var carParts = new Services.Parts.CarPartsService(CatalogRepository, ProfileRepository);
+            CarPartsService = carParts;
+            // Every price and engine figure in the game reads the rules and this service's book from here on; the UI
+            // thread never waits for the book to be measured (the warm-up does that): base prices until it is
+            Services.Parts.PartsWiring.Wire(carParts, mayWait: () => Dispatcher.CheckAccess() == false);
             // Cars are priced by their factory engine and running gear: the parts first
             ProfileService = new CarProfileService(CatalogRepository, ProfileRepository, CarPartsService);
             var partShops = new Services.PartShops.PartShopCatalog();
@@ -489,8 +493,9 @@ namespace StreetCorsa
                 logger.Information("Car profiles ready. Total profiles: {ProfileCount}",
                     ProfileRepository.GetProfileCount());
 
-                // Parts catalog and factory engines load in the background; nothing needs them before the garage
-                partsWarmUp = CarPartsService.WarmUpAsync();
+                // Parts catalog and factory engines load in the background; nothing needs them before the garage. The cars
+                // are priced at their parts' prices once they are up (a new car's profile has its body's price until then)
+                partsWarmUp = CarPartsService.WarmUpAsync().ContinueWith(_ => ProfileService.RepriceAsync(), TaskScheduler.Default).Unwrap();
 
                 // Load track content
                 logger.Information("Loading track content");

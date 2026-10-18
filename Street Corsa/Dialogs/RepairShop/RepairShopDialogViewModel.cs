@@ -2,8 +2,9 @@ using System.Collections.ObjectModel;
 using StreetCorsa.Models.GameState;
 using StreetCorsa.Parts;
 using StreetCorsa.Parts.Cars;
+using StreetCorsa.Screens.Shared;
+using StreetCorsa.Services.Station;
 using StreetCorsa.Services.Text;
-using StreetCorsa.Services.Time;
 using StreetCorsa.ViewModels;
 using StreetCorsa.Helpers;
 
@@ -62,9 +63,7 @@ namespace StreetCorsa.Dialogs.RepairShop
         private void Refresh()
         {
             Jobs.Clear();
-            // The can of gas at a gas station's pump price (the mods' first), not a price of its own
-            var gas = Services.Station.StationScenes.Installed is { Count: > 0 } stations ? stations[0].Prices : null;
-            foreach (var job in Parts.Cars.RepairShop.Jobs(_car, _catalog, _priceMultiplier, gas))
+            foreach (var job in Parts.Cars.RepairShop.Jobs(_car, _catalog, _priceMultiplier, PumpPrices()))
             {
                 Jobs.Add(new RepairJobRow(job, new AsyncRelayCommand(() => Do(job), () => !_busy && _money() >= job.Cost, name: "Repair")));
             }
@@ -78,6 +77,20 @@ namespace StreetCorsa.Dialogs.RepairShop
 
             OnPropertyChanged(nameof(HasJobs));
             OnPropertyChanged(nameof(MoneyDisplay));
+        }
+
+        /// <summary>
+        /// What the can of gas is paid at: the pump prices of the town's gas stations taken together (the player drives
+        /// to any of them), never a price of the garage's own nor the first mod's alone; the base game's with no station
+        /// </summary>
+        private static StationPrices? PumpPrices()
+        {
+            var stations = StationScenes.Installed;
+            if (stations.Count == 0) return null;
+
+            return new StationPrices(
+                stations.Average(s => s.Prices.FuelPerLitre), stations.Average(s => s.Prices.OilPerLitre),
+                stations.Average(s => s.Prices.Wash), stations.Average(s => s.Prices.Tow));
         }
 
         private async Task Do(RepairJob job)
@@ -103,24 +116,5 @@ namespace StreetCorsa.Dialogs.RepairShop
             RelayCommand.RaiseCanExecuteChanged();
             foreach (var row in Jobs) row.Command.RaiseCanExecuteChanged();
         }
-    }
-
-    public sealed class RepairJobRow
-    {
-        public RepairJobRow(RepairJob job, AsyncRelayCommand command)
-        {
-            Name = job.Name;
-            Detail = job.Detail;
-            CostDisplay = Money.Text(job.Cost);
-            TimeDisplay = job.Time.GetTimeDescription();
-            Command = command;
-        }
-
-        public string Name { get; }
-        public string Detail { get; }
-
-        public string CostDisplay { get; }
-        public string TimeDisplay { get; }
-        public AsyncRelayCommand Command { get; }
     }
 }

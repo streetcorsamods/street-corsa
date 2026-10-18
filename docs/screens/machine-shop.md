@@ -15,7 +15,16 @@ shops' map (the navigation's `part_shop` screen opens it for that kind). Built i
   the engine on the stand, the shelf); *the work* on the one picked and the parts on it (`IMachineShopService.Offers`):
   the size it cuts to, the days, what it comes back as, the new parts fitted, the price; speed work marked; a job that
   cannot be done says why. "Have it done" pays and leaves the piece (`Order`); work on a piece already there keeps it till
-  the longest job is done. The prices are worked out off the UI thread (a whole engine's go on the dyno).
+  the longest job is done. The prices are worked out off the UI thread (a whole engine's go on the dyno): the list says
+  "pricing" meanwhile and stops saying it whatever fails (a saved tree the catalog can no longer copy is logged, the
+  counter offers nothing for it); a pricing dropped for a newer one, or by leaving, is cancelled and let go of. The
+  pieces and the jobs are listed in one go each (`BulkObservableCollection.ReplaceAll`), the jobs once a refresh.
+  The machinist's picks per ask, the whole engines tried on the dyno for one and the other customers' work standing
+  about are the rules' `partShops.mostPicks`, `machineDynoRuns` and `othersWork`; the other work is drawn by the
+  shop and the day's number, the same on every machine. The room, the counter and the machinist are the pieces the
+  part shop's screen uses too (see `docs/screens/part-shop.md`, "What the two counters share"); the `IShopCounter`
+  half of the view model is `MachineShopScreenViewModel.Counter.cs`. The job just left is shown step by step over its
+  sound through `Screens/Shared/JobShowPlayer`, as the garage's workbench shows its own jobs.
 - **Back home**: `MachineWorkTask` brings what is ready each morning (`Deliver`): on the stand if it came from there and
   the stand is free, else on the shelf; the garage tells of it with the mail order's deliveries. The parts view's shelf
   says what is away and when it is back, and a part's card what has been cut on it.

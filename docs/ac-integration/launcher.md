@@ -131,7 +131,9 @@ opponent's parts into data files (see `docs/systems/parts-system.md`, "Assetto C
 before `acs.exe`: originals kept under `%APPDATA%\StreetCorsa\AcRestore` with a manifest first, then the change.
 A packed car (`data.acd` only) is unpacked for the race and the folder removed after. `RestoreAll` runs in the
 launcher's `finally` and again at start-up (a crash leaves a manifest behind); a manifest that could not be restored is
-put back before that car's data is changed again. The Assetto Corsa folder is a setting (`GameSettings.AssettoCorsaPath`,
+put back before that car's data is changed again. A kept original that is gone (a cleaner emptied the keep folder, the
+car's own data file or its sound bank alike) can never go back: the race's file stays, the player is told
+(`launch.not_put_back.original_gone`), and it is not retried. The Assetto Corsa folder is a setting (`GameSettings.AssettoCorsaPath`,
 the Settings screen; `C:\GAMES\Street Rod AC` when not set), and every manifest records the absolute car folder it
 changed, so a restore goes back to the folder that was changed even after the setting moves.
 

@@ -11,8 +11,10 @@ Dark, minimal, Assetto Corsa-like. Flat UI, no default Windows controls.
 | `Styles/Brushes.xaml` | `SolidColorBrush` for each colour used as a brush (`<Name>Brush`), plus the background and button art |
 | `Styles/Typography.xaml` | Font size scale (`sys:Double`) |
 | `Styles/Buttons.xaml` | Button styles and templates (merges Brushes and Typography itself) |
+| `Styles/Inputs.xaml` | The inputs in the buttons' look: text box, dropdown, list rows, scroll bar, slider, expander, tick box; the shop counters' rows |
 
-All four are merged in `App.xaml` and referenced with `{StaticResource …}`. Views don't use hex colours or
+They are merged in order by `Styles.Theme.Apply` as the app starts (with the mods' theme over them) and referenced with
+`{StaticResource …}`. Views don't use hex colours or
 literal font sizes: a colour or a size that isn't in `Styles/` yet gets a token there first.
 
 ## Colour tokens
@@ -87,9 +89,23 @@ Newspaper.
 - `DialogSecondaryButtonStyle` - No, Cancel, the rest: dark glass (`UiGlass`) on `GlassButtonTemplate`
 - `RoundIconButtonStyle` - A round button with an icon (an `ImageSource` from `Icons.xaml` in `Tag`, what it does in
   `ToolTip`): the garage's buttons. The icon is painted in the ring's colour; ring, icon and a glow turn amber under
-  the pointer. `RoundIconButtonLargeStyle` is a notch bigger (Go race!, Car dealers, Parts dealers, Newspaper).
+  the pointer. `RoundIconButtonLargeStyle` is a notch bigger (Go race!, Car dealers, Parts dealers, Newspaper). A
+  button that shows a state each click moves along (the lift's: lit while the car is up, a click a stop) is lit like a
+  pushed-in toggle with `helpers:GlassButton.IsLit` bound OneWay to the state, and does its work through a command; a
+  `ToggleButton` whose TwoWay `IsChecked` setter ignores the value is not the way.
+- `RoundIconToggleStyle` - The same as a toggle (Parts, Stand, Turn over): pushed in while checked.
 - `GlassPanelStyle` - A panel in the buttons' look (dark glass, outline, rounded)
 - `GameButtonStyle` - Large image buttons with hover labels (Newspaper screen)
+
+## Lists and the counters' rows (`Styles/Inputs.xaml`)
+- The implicit `ListBox` style replaces WPF's template for every list (its background stays as set while it is
+  disabled, `Border.CornerRadius` rounds it). **A keyed `ListBox` style must say `BasedOn="{StaticResource {x:Type
+  ListBox}}"`** (as `GlassListBoxStyle` does and the sound browser's had to), or it falls back to Windows' template and
+  look. Rows without a style of their own stay WPF's; `GlassListBoxItemStyle` is the glass row (dropdowns use it).
+- `CounterRowStyle` - A row of a shop's counter (the machine shop's pieces): a line under it, lit under the pointer,
+  a red bar down its left when picked in the list. `PickedRowStyle` is the same row with its own button, never picked
+  in the list (`Focusable="False"`); the clerk's picks (`IsPicked` on the row's view model) get an amber bar. One
+  template (`CounterRowTemplate`) serves both: the part shop's offers and the machine shop's jobs.
 
 Every tooltip is dark glass in the buttons' outline (an implicit `ToolTip` style in `Buttons.xaml`).
 
@@ -125,4 +141,5 @@ There is one window, `MainWindow.xaml`:
 - `Styles/Brushes.xaml`
 - `Styles/Typography.xaml`
 - `Styles/Buttons.xaml`
-- `App.xaml` - Merged dictionaries and converters
+- `Styles/Inputs.xaml`
+- `App.xaml` - Converters; `Styles/Theme.cs` merges the dictionaries
