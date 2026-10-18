@@ -6,10 +6,11 @@ using AcTools.Kn5File;
 namespace RunningGearParts;
 
 /// <summary>
-/// The running gear's own models (roadmap step 31 phase 4), made here out of lathe profiles, swept rods and boxes and
-/// written as KN5 next to the packs under parts/running_gear that name them: the rear axle housings of every family,
-/// their rings and pinions, the axle shaft, the drum's wheel cylinder, the period shocks, the torsion bars and sway bars
-/// (one each, at the size its pack gives in diameter_in) and the traction bars. The stand-ins made of downloads (the
+/// The running gear's own models (roadmap step 31 phases 4 and 5), made here out of lathe profiles, swept rods and boxes
+/// and written as KN5 next to the packs under parts/running_gear that name them: the rear axle housings of every family,
+/// their rings and pinions, the axle shaft, the drum's wheel cylinder, its backing plates and the front hub, the period
+/// shocks, the torsion bars and sway bars (one each, at the size its pack gives in diameter_in), the traction bars and a
+/// leaf spring's U-bolts, hanger and shackle. The stand-ins made of downloads (the
 /// drums, discs, shoes, leaves and the carrier's case) are prepare_standins.py's.
 ///
 ///   RunningGearParts build &lt;parts folder&gt;
@@ -20,6 +21,10 @@ internal static class Program
     private const string Usage = "RunningGearParts build <parts folder> | obj <model.kn5> <out.obj>";
 
     private static readonly string[] ShaftPacks = ["axles_gm", "axles_ford", "axles_mopar", "axles_dana", "axle_speed"];
+
+    /// <summary>The drums' sizes, each with its model's open side (least X) and outside radius, as prepare_standins.py made them</summary>
+    private static readonly (string Size, float InnerX, float Radius)[] DrumSizes =
+        [("9", -0.092f, 0.127f), ("9_5", -0.097f, 0.134f), ("10", -0.102f, 0.141f), ("11", -0.112f, 0.155f)];
 
     private static int Main(string[] args)
     {
@@ -52,6 +57,13 @@ internal static class Program
 
         foreach (var pack in ShaftPacks) Write(Parts.AxleShaft(), pack);
         Write(Parts.WheelCylinder(), "brakes_drum");
+
+        // A backing plate for each drum size (the stand-in drums' open side and radius, as their models are), the front hub
+        foreach (var (size, innerX, radius) in DrumSizes) Write(Parts.BackingPlate("plate_" + size, innerX, radius), "brakes_drum");
+        Write(Parts.Hub(), "brakes_drum");
+        Write(Parts.UBolts(), "springs_leaf");
+        Write(Parts.Hanger(), "springs_leaf");
+        Write(Parts.Shackle(), "springs_leaf");
 
         Write(Parts.Shock("gabriel_hd", Finish.CastIron), "shocks_period");
         Write(Parts.Shock("koni", Finish.Red, collar: true), "shocks_period");

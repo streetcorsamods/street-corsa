@@ -595,9 +595,11 @@ drops whole with its brakes, coil springs, shocks and bar once the rear wheels a
 parts off it first. A shelf place is told by place: the hint is the first reason, the places that may be taken stay.
 `"hangs_on"` replaced `AxleWork`: on a car that has a leaf spring on it, or whose factory running gear has one
 (`AxleParts.All`), the rear axle goes on once every place for a leaf holds one (`Workbench.FindPlaces` for any part of the
-kind finds none free), and a leaf comes off once the axle is off. The base game's rules: a drum or a disc after the
-wheel; an axle shaft after its drum, and only into a carrier; the carrier and the ring and pinion after both shafts; the
-rear axle after the rear wheels, hanging on its leaves. The running gear comes off along the car's axes, whatever way the
+kind finds none free), and a leaf comes off once the axle is off. The base game's rules, a drum brake coming apart as a
+real one does: a drum or a disc after the wheel, the drum over its shoes and wheel cylinder; the shoes after the drum and
+over the cylinder; the cylinder after the shoes; the backing plate bare (and at the rear after the axle shaft); an axle
+shaft after its drum, and only into a carrier; the carrier and the ring and pinion after both shafts; the rear axle after
+the rear wheels and the U-bolts, hanging on its leaves; the U-bolts over the axle; a leaf on its hanger and shackle. The running gear comes off along the car's axes, whatever way the
 engine sits (`PartMove.CarAxes`); a kind's `"tool"` says whether it is heard with the air gun (`Sfx.ToolFor`).
 
 Nothing pops. The cards and the navigation tiles they replace slide and fade through `Helpers/Reveal`
@@ -759,11 +761,17 @@ car home in the pack's words. The garage draws the housing with its slot 1 betwe
   junkyards whatever comes off a wreck.
 Check: `EngineBench <parts> axles <AC cars folder>`.
 
-**Period brakes** (step 31 phase 2, `parts/running_gear/brakes_drum`, `brakes_disc`). A drum brake on a corner's brake
-slot takes its shoes (slot 2) and its wheel cylinder (slot 3), both enforced: the drum gives the size (`force`, `radius`,
+**Period brakes** (step 31 phase 2, `parts/running_gear/brakes_drum`, `brakes_disc`). A drum brake is built as the real
+ones are (phase 5): a **backing plate** (`BackingPlate`, the backing_plates shelf, one per drum size and axle, `fits_axle`)
+on the corner's brake slot (the car's, or the rear axle's housing slot 5/6) carries the shoes (slot 2), the wheel
+cylinder (slot 3) and the drum (slot 4, `takes` `drum:<size>`; the drum's own mount `fits` it, so a drum only goes on a
+plate of its size and never on the corner itself), all three enforced. A front drum or disc takes its **hub** (slot 5,
+`hub:front`, the hubs shelf: enforced on a drum, a hub-and-drum comes off as one). `RunningGear.Mounted` reads the drum
+off its plate (`CornerParts.BackingPlate`, `Brake`, `Shoes`, `WheelCylinder`, `Hub`; told by the part's group when a
+catalog is given, else by a drum on slot 4). The drum gives the size (`force`, `radius`,
 in the source game's units, every drum under its smallest disc so a disc is an upgrade) and how it heats and cools, the
 shoes their friction (organic 1.0, semi-metallic 0.95, sintered 0.9 cold) and their fade curve, the wheel cylinder its
-force (a big bore 1.1). `RunningGear.BrakeTorque(catalog, brake)` puts them together, the lining's wear the shoes'. The
+force (a big bore 1.1). `RunningGear.BrakeTorque(catalog, corner)` puts them together, the lining's wear the shoes'. The
 period discs (Kelsey-Hayes, Delco-Moraine and Budd 4-pistons, dealer's options: `"option": true`, only a car cars.json
 picks them for; a single-piston caliper standard on American cars from 1969) carry their pads' curve themselves. The
 source game's discs carry no fade of their own.
@@ -781,7 +789,13 @@ source game's discs carry no fade of their own.
   write theirs; a source game disc leaves the section as it was.
 - **Older saves** (`Car.GearVersion`, 0 before step 31): brought up once, the rear axle added and every brake or spring
   that is what the factory gave the car then (the source game's nearest) swapped for what it gives now, in its wear and
-  damage, a drum with its shoes and cylinder (`RunningGearFactory.BringUpToDate`). What the player put on stays.
+  damage, a drum on its plate with its shoes and cylinder (`RunningGearFactory.BringUpToDate`). What the player put on
+  stays. A drum of a save from before the backing plates (its shoes and cylinder on itself) goes onto the plate of its
+  size with them as the save is read, on every car and every car for sale (`RunningGearFactory.PutDrumsOnPlates`, in
+  `CarPartsService.BringUpToDate` before the joints are checked against the catalog, which would take them off a drum
+  with no slot for them); a loose drum on a shelf has them taken off onto the shelf. `GearVersion` 5 then adds a hub to
+  every front drum or disc that takes one and each leaf spring's U-bolts, hanger and shackle, worn like the brake or the
+  leaf.
 - **Work**: `brake_reline` takes the shoes too, `wheel_cylinder_kit`, `drums_turned` at the machine shop.
 - Not done: a master cylinder, a booster and a proportioning valve. Assetto Corsa has no pedal effort: full pedal is the
   brakes' whole torque, so a booster would be a gate that changes nothing, a proportioning valve only `FRONT_SHARE`.
@@ -816,8 +830,14 @@ source game's discs carry no fade of their own.
   soft leaves, less with bars (the timeslip's 60-foot).
 - **Older saves** (`GearVersion` 2): `BringUpToDate` swaps the factory coils that are now leaves or torsion bars and adds
   the factory sway bars, worn like the axle's springs.
-- Not done: lowering springs and blocks (ride height), the leaf's U-bolts, plate and shackles as parts (phase 5),
-  pickers for brakes and springs in the Car Catalog Editor (cars.json by hand meanwhile).
+- **The leaf's hardware** (phase 5, the leaf_hardware shelf): a leaf hangs from a **hanger** at its front eye and a
+  **shackle** at its back (`SpringHanger`, `SpringShackle`, on the car's own slots 321+corner and 331+corner,
+  `RunningGear.HangerSlot`/`ShackleSlot`, rear only), and is clamped to the axle by its **U-bolts and plate** (`UBolts`, on
+  the leaf's slot 3, `ubolts:leaf`, enforced). A leaf short of its U-bolts, hanger or shackle keeps the car home
+  (`AcRunningGearData`). The work order: the U-bolts need the axle, the axle comes off after them, a leaf needs its hanger
+  and shackle (which stay on while it is).
+- Not done: lowering springs and blocks (ride height), pickers for brakes and springs in the Car Catalog Editor
+  (cars.json by hand meanwhile).
 
 **The running gear's models** (step 31 phase 4). Every part under `parts/running_gear` has a KN5 beside its pack, made by
 tools, never by hand:
@@ -852,6 +872,11 @@ tools, never by hand:
   pack is left as it is. The source game's was 96 mm across and 277 mm tall, small for the cars of the day; this one is
   135 mm across and 320 mm tall, standing up from the hub's height (its model's space is theirs: their mount slot 0.4 m
   under the origin).
+- Phase 5's parts (`RunningGearParts build`): a backing plate per drum size (`plate_<size>`, a pressed dish just inboard of
+  the drum's open side, its size and place from the stand-in drum's model), the front hub (boss, studs, dust cap, in the
+  drum's space), and in the leaf's space the U-bolts and plate (over a tube at the hubs' height, 0.06 m above the seat),
+  the hanger and the shackle (at the stand-in leaf's eyes, ±0.67 m, round its middle 18 mm left of its origin).
+  `CarPartsLayout` places the hanger and shackle as it does the leaf (the car's frame at the spring seat).
 - Not modelled: the source game's other parts keep their own; a mod's running gear part without a model is drawn as a small box.
 - **A private truck mod** (`Content\truckparts`, git-ignored): `tools/RunningGearParts/prepare_truck_parts.py` cuts the
   leaf spring (with its hangers, shackle and clip), the drum (four sizes), the axle housing (for the Dana 44 and 60) and

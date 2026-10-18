@@ -96,12 +96,17 @@
     { "kind": "steering_pump", "after": [ "belt", "steering_belt" ] },
     { "kind": "steering_belt", "needs": [ "steering_pump" ] },
 
-    { "kind": "drum", "after": [ "rim" ] },
+    { "kind": "drum", "after": [ "rim" ], "needs": [ "brake_shoes", "wheel_cylinder" ] },
     { "kind": "brake", "after": [ "rim" ] },
+    { "kind": "brake_shoes", "after": [ "drum" ], "needs": [ "wheel_cylinder" ] },
+    { "kind": "wheel_cylinder", "after": [ "drum", "brake_shoes" ] },
+    { "kind": "backing_plate", "bare": true, "after": [ "axle_shaft" ] },
     { "kind": "axle_shaft", "after": [ "drum", "brake" ], "needs": [ "differential" ] },
     { "kind": "differential", "after": [ "axle_shaft" ] },
     { "kind": "ring_pinion", "after": [ "axle_shaft" ] },
-    { "kind": "rear_axle", "after": [ "rim" ], "hangs_on": [ "leaf_spring" ] }
+    { "kind": "rear_axle", "after": [ "rim", "u_bolts" ], "hangs_on": [ "leaf_spring" ] },
+    { "kind": "u_bolts", "needs": [ "rear_axle" ] },
+    { "kind": "leaf_spring", "needs": [ "spring_hanger", "spring_shackle" ] }
   ],
 
   "stand_strips": [ "radiator", "radiator_fan", "starter", "transmission", "clutch", "flywheel" ]

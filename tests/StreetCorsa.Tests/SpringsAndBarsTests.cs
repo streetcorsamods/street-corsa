@@ -166,7 +166,8 @@ public class SpringsAndBarsTests
         var parts = RunningGearFactory.Create(Catalog, specs, 0.7);
         parts.RemoveAll(p => RunningGear.IsSwayBarSlot(p.ParentSlot));
 
-        Assert.Equal(7, RunningGearFactory.BringUpToDate(Catalog, specs, Chevy66, null, parts));
+        // The leaves, the bars, the drums; each leaf's U-bolts, hanger and shackle
+        Assert.Equal(13, RunningGearFactory.BringUpToDate(Catalog, specs, Chevy66, null, parts));
         var bar = parts.Single(p => p.ParentSlot == RunningGear.FrontSwayBarSlot);
         Assert.Equal(Sway + "front_8750", bar.DefinitionId);
         Assert.Equal(0.7, bar.Wear, 6);

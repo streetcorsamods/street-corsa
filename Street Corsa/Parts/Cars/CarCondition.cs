@@ -227,7 +227,7 @@ public static class CarCondition
 
         if (groupOf != null && car.HasRunningGearAssigned)
         {
-            var corners = RunningGear.Mounted(car.Parts);
+            var corners = RunningGear.Mounted(car.Parts, groupOf);
             var bend = SuspensionBend(car);
             for (var i = 0; i < corners.Length; i++)
             {

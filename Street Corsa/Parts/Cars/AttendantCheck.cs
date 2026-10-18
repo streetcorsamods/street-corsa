@@ -71,7 +71,7 @@ public static class AttendantCheck
 
         if (car.HasRunningGearAssigned)
         {
-            var corners = RunningGear.Mounted(car.Parts);
+            var corners = RunningGear.Mounted(car.Parts, catalog == null ? null : CarCondition.Groups(catalog));
             for (var i = 0; i < corners.Length; i++)
             {
                 // Tread he can see at every corner; a blown tyre is no hint, it is flat

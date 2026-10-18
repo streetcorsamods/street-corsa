@@ -208,7 +208,7 @@ public static class RepairShop
                 broken ? GameAction.GarageWorkMajor : GameAction.GarageWorkMinor, Refresh));
         }
 
-        var corners = RunningGear.Mounted(car.Parts);
+        var corners = RunningGear.Mounted(car.Parts, catalog == null ? null : CarCondition.Groups(catalog));
         for (var i = 0; i < corners.Length; i++)
         {
             var name = RunningGear.CornerName(i);

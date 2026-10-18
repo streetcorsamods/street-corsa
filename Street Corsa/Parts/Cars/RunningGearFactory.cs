@@ -17,19 +17,30 @@ public static class RunningGearFactory
     /// What a car's running gear is brought up to once (<see cref="Car.GearVersion"/>): 1 is step 31, the rear axle and the
     /// period brakes and springs; 2 the leaf springs, the torsion bars and the sway bars; 3 the rear brakes, springs, shocks
     /// and sway bar carried on the rear axle's housing; 4 the leaf springs and an independent rear's running gear back on the
-    /// car's own slots
+    /// car's own slots; 5 the front hubs, and a leaf spring's U-bolts, hanger and shackle (the drums go onto their backing
+    /// plates as the save is read: <see cref="PutDrumsOnPlates"/>)
     /// </summary>
-    public const int GearVersion = 4;
+    public const int GearVersion = 5;
 
-    /// <summary>The factory parts of one axle; a drum brake's shoes and wheel cylinder with it, the sway bar across it (none for an axle without)</summary>
+    /// <summary>
+    /// The factory parts of one axle; a drum brake's backing plate, shoes, wheel cylinder and hub with it, a leaf spring's
+    /// U-bolts, hanger and shackle, the sway bar across it (none for an axle without)
+    /// </summary>
     public sealed record AxleParts(PartDefinition Tyre, PartDefinition Rim, PartDefinition Brake, PartDefinition Spring, PartDefinition Shock,
         PartDefinition? Shoes = null, PartDefinition? Cylinder = null, PartDefinition? SwayBar = null)
     {
+        public PartDefinition? Plate { get; init; }
+        public PartDefinition? Hub { get; init; }
+        public PartDefinition? UBolts { get; init; }
+        public PartDefinition? Hanger { get; init; }
+        public PartDefinition? Shackle { get; init; }
+
         /// <summary>The axle's brake torque, its shoes and wheel cylinder in it</summary>
         public double BrakeTorque => RunningGear.BrakeTorque(Brake, Shoes, Cylinder);
 
         /// <summary>Every part of it there is</summary>
-        public IEnumerable<PartDefinition> All => new[] { Tyre, Rim, Brake, Spring, Shock, Shoes, Cylinder, SwayBar }.OfType<PartDefinition>();
+        public IEnumerable<PartDefinition> All =>
+            new[] { Tyre, Rim, Brake, Spring, Shock, Shoes, Cylinder, SwayBar, Plate, Hub, UBolts, Hanger, Shackle }.OfType<PartDefinition>();
     }
 
     /// <param name="car">The car's make, family, country and year, for the parts' <c>came_in</c>; null chooses among the
@@ -79,9 +90,19 @@ public static class RunningGearFactory
                     .ThenBy(s => Math.Abs(RunningGear.SpringDesignLoad(s) - axle.CornerLoad)).ThenBy(s => s.Id, StringComparer.Ordinal).First();
             var shock = shocks.OrderBy(s => Math.Abs(RunningGear.Damping(s).Bump - axle.DampBump))
                 .ThenBy(s => Math.Abs(RunningGear.Damping(s).Rebound - axle.DampRebound)).ThenBy(s => s.Id, StringComparer.Ordinal).First();
+            // A drum on its backing plate, the shoes and wheel cylinder there; a leaf hangs from its hanger and shackle
+            var plate = PlateFor(catalog, brake, front);
+            var leaf = RunningGear.IsLeafSpring(spring);
             return new AxleParts(tyre, rim, brake, spring, shock,
-                OnBrake(catalog, brake, RunningGear.ShoesSlot, PartKinds.BrakeShoes, car), OnBrake(catalog, brake, RunningGear.WheelCylinderSlot, PartKinds.WheelCylinders, car),
-                SwayBar(catalog, front, axle.SwayBarRate));
+                OnSlot(catalog, plate ?? brake, RunningGear.ShoesSlot, PartKinds.BrakeShoes, car), OnSlot(catalog, plate ?? brake, RunningGear.WheelCylinderSlot, PartKinds.WheelCylinders, car),
+                SwayBar(catalog, front, axle.SwayBarRate))
+            {
+                Plate = plate,
+                Hub = OnSlot(catalog, brake, RunningGear.HubSlot, PartKinds.Hubs, car),
+                UBolts = leaf ? OnSlot(catalog, spring, RunningGear.UBoltsSlot, PartKinds.LeafHardware, car) : null,
+                Hanger = leaf ? Hardware(catalog, "SpringHanger", front, car) : null,
+                Shackle = leaf ? Hardware(catalog, "SpringShackle", front, car) : null
+            };
         }
 
         return (Axle(specs.Front, frontTyre, true), Axle(specs.Rear, rearTyre, false));
@@ -123,12 +144,33 @@ public static class RunningGearFactory
         return bars.OrderBy(b => Math.Abs(RunningGear.SwayBarRate(b) - own)).ThenBy(b => b.Id, StringComparer.Ordinal).FirstOrDefault();
     }
 
-    /// <summary>What goes on a brake's slot (a drum's shoes, its wheel cylinder): the factory one of those that fit, else the first</summary>
-    private static PartDefinition? OnBrake(PartsCatalog catalog, PartDefinition brake, int slotId, string group, CarFacts? car)
+    /// <summary>
+    /// What goes on a part's slot (a backing plate's shoes and wheel cylinder, a drum's hub, a leaf's U-bolts): the factory one
+    /// of those that fit, else the first; null for a part without the slot
+    /// </summary>
+    private static PartDefinition? OnSlot(PartsCatalog catalog, PartDefinition part, int slotId, string group, CarFacts? car)
     {
-        if (brake.Slots.FirstOrDefault(s => s.Id == slotId) is not { } slot) return null;
-        var fits = catalog.FindMountable(brake, slot).Select(m => m.Part).Where(p => PartKinds.GroupOf(p) == group)
+        if (part.Slots.FirstOrDefault(s => s.Id == slotId) is not { } slot) return null;
+        var fits = catalog.FindMountable(part, slot).Select(m => m.Part).Where(p => PartKinds.GroupOf(p) == group)
             .DistinctBy(p => p.Id, StringComparer.OrdinalIgnoreCase).OrderBy(p => p.Id, StringComparer.Ordinal).ToList();
+        return RunningGearGuess.Best(fits, car ?? CarFacts.None, 0);
+    }
+
+    /// <summary>The backing plate a drum goes on, for this axle; null for a brake that goes on the corner itself (a disc)</summary>
+    public static PartDefinition? PlateFor(PartsCatalog catalog, PartDefinition brake, bool front)
+    {
+        if (brake.Slots.FirstOrDefault(s => s.Id == 1) is not { Fits.Count: > 0 } mount) return null;
+        return catalog.Parts.Values
+            .Where(p => PartKinds.GroupOf(p) == PartKinds.BackingPlates && RunningGear.FitsAxle(p, front)
+                        && p.Slots.Any(s => s.Id == RunningGear.DrumSlot && catalog.CanMate(brake, mount, p, s)))
+            .OrderBy(p => p.Id, StringComparer.Ordinal).FirstOrDefault();
+    }
+
+    /// <summary>A leaf spring's hanger or shackle (by its class) for this axle: the factory one, else the first</summary>
+    private static PartDefinition? Hardware(PartsCatalog catalog, string className, bool front, CarFacts? car)
+    {
+        var fits = catalog.Parts.Values.Where(p => PartKinds.Is(p, className) && RunningGear.FitsAxle(p, front))
+            .OrderBy(p => p.Id, StringComparer.Ordinal).ToList();
         return RunningGearGuess.Best(fits, car ?? CarFacts.None, 0);
     }
 
@@ -149,8 +191,10 @@ public static class RunningGearFactory
             rim.Children.Add(Instance(axle.Tyre, RunningGear.TyreSlotOnRim, 1, wear));
             parts.Add(rim);
             parts.Add(Brake(axle, RunningGear.BrakeSlot(corner), wear));
-            parts.Add(Instance(axle.Spring, RunningGear.SpringSlot(corner), 1, wear));
+            parts.Add(Spring(axle, RunningGear.SpringSlot(corner), wear));
             parts.Add(Instance(axle.Shock, RunningGear.ShockSlot(corner), 1, wear));
+            if (axle.Hanger != null) parts.Add(Instance(axle.Hanger, RunningGear.HangerSlot(corner), 1, wear));
+            if (axle.Shackle != null) parts.Add(Instance(axle.Shackle, RunningGear.ShackleSlot(corner), 1, wear));
         }
 
         foreach (var (axle, isFront) in new[] { (front, true), (rear, false) })
@@ -162,13 +206,119 @@ public static class RunningGearFactory
         return parts;
     }
 
-    /// <summary>The axle's brake, with its shoes and wheel cylinder when it takes them</summary>
+    /// <summary>
+    /// The axle's brake as it goes on the corner: a drum on its backing plate with the shoes and wheel cylinder, a disc by
+    /// itself; the hub on either when it takes one
+    /// </summary>
     private static PartInstance Brake(AxleParts axle, int carSlot, double wear)
     {
-        var brake = Instance(axle.Brake, carSlot, 1, wear);
-        if (axle.Shoes != null) brake.Children.Add(Instance(axle.Shoes, RunningGear.ShoesSlot, 1, wear));
-        if (axle.Cylinder != null) brake.Children.Add(Instance(axle.Cylinder, RunningGear.WheelCylinderSlot, 1, wear));
-        return brake;
+        var brake = Instance(axle.Brake, axle.Plate != null ? RunningGear.DrumSlot : carSlot, 1, wear);
+        if (axle.Hub != null) brake.Children.Add(Instance(axle.Hub, RunningGear.HubSlot, 1, wear));
+
+        var holder = axle.Plate != null ? Instance(axle.Plate, carSlot, 1, wear) : brake;
+        if (axle.Shoes != null) holder.Children.Add(Instance(axle.Shoes, RunningGear.ShoesSlot, 1, wear));
+        if (axle.Cylinder != null) holder.Children.Add(Instance(axle.Cylinder, RunningGear.WheelCylinderSlot, 1, wear));
+        if (axle.Plate != null) holder.Children.Add(brake);
+        return holder;
+    }
+
+    /// <summary>The axle's spring, a leaf with its U-bolts</summary>
+    private static PartInstance Spring(AxleParts axle, int carSlot, double wear)
+    {
+        var spring = Instance(axle.Spring, carSlot, 1, wear);
+        if (axle.UBolts != null) spring.Children.Add(Instance(axle.UBolts, RunningGear.UBoltsSlot, 1, wear));
+        return spring;
+    }
+
+    /// <summary>
+    /// The drums a save of before step 31's backing plates has on the corners (on the car's brake slots or the rear axle's),
+    /// each with its shoes and wheel cylinder on it, put on the backing plate for it with those on the plate: the shape a
+    /// drum brake has had since. A drum no plate takes stays as it is. For a save as it is read, before its trees are
+    /// checked against the catalog, which would take the shoes off a drum that has no slot for them.
+    /// </summary>
+    /// <returns>How many drums went onto a plate</returns>
+    public static int PutDrumsOnPlates(PartsCatalog catalog, List<PartInstance> carParts)
+    {
+        var moved = 0;
+        foreach (var (drum, carSlot) in carParts.Select(p => (p, p.ParentSlot)).Concat(RearAxle.CornerParts(carParts)).ToList())
+        {
+            var corner = RunningGear.CornerOf(carSlot);
+            if (corner < 0 || carSlot != RunningGear.BrakeSlot(corner) || catalog.Get(drum.DefinitionId) is not { } definition
+                || !PartKinds.Is(definition, "DrumBrake") || PlateFor(catalog, definition, RunningGear.IsFront(corner)) is not { } plateDefinition)
+                continue;
+
+            var plate = new PartInstance(plateDefinition.Id) { ParentSlot = drum.ParentSlot, OwnSlot = 1, Wear = drum.Wear };
+            Replace(carParts, drum, plate);
+
+            // The shoes and the wheel cylinder go where the plate takes them; anything else stays on the drum
+            foreach (var child in drum.Children.ToList())
+            {
+                if (catalog.Get(child.DefinitionId) is not { } childDefinition || childDefinition.Slots.FirstOrDefault(s => s.Id == child.OwnSlot) is not { } own) continue;
+                if (plateDefinition.Slots.FirstOrDefault(s => plate.Children.All(c => c.ParentSlot != s.Id) && catalog.CanMate(childDefinition, own, plateDefinition, s)) is not { } slot)
+                    continue;
+                drum.Children.Remove(child);
+                child.ParentSlot = slot.Id;
+                plate.Children.Add(child);
+            }
+
+            drum.ParentSlot = RunningGear.DrumSlot;
+            drum.OwnSlot = 1;
+            plate.Children.Add(drum);
+            moved++;
+        }
+
+        return moved;
+    }
+
+    /// <summary>
+    /// What step 31's phase 5 added to a car that had its running gear before (<see cref="GearVersion"/> 5): a hub on each
+    /// front drum or disc that takes one, a leaf spring's U-bolts, its hanger and its shackle, worn like the brake or the leaf
+    /// </summary>
+    /// <returns>How many parts were added</returns>
+    private static int AddHardware(PartsCatalog catalog, CarFacts car, List<PartInstance> carParts)
+    {
+        var added = 0;
+        var corners = RunningGear.Mounted(carParts, catalog);
+        for (var corner = 0; corner < RunningGear.Corners; corner++)
+        {
+            var at = corners[corner];
+            if (at.Brake is { } brake && at.Hub == null && catalog.Get(brake.DefinitionId) is { } brakeDefinition
+                && OnSlot(catalog, brakeDefinition, RunningGear.HubSlot, PartKinds.Hubs, car) is { } hub)
+            {
+                brake.Children.Add(Instance(hub, RunningGear.HubSlot, 1, brake.Wear));
+                added++;
+            }
+
+            if (at.Spring is not { } spring || catalog.Get(spring.DefinitionId) is not { } springDefinition || !RunningGear.IsLeafSpring(springDefinition)) continue;
+
+            var front = RunningGear.IsFront(corner);
+            if (at.UBolts == null && OnSlot(catalog, springDefinition, RunningGear.UBoltsSlot, PartKinds.LeafHardware, car) is { } uBolts)
+            {
+                spring.Children.Add(Instance(uBolts, RunningGear.UBoltsSlot, 1, spring.Wear));
+                added++;
+            }
+
+            if (at.Hanger == null && Hardware(catalog, "SpringHanger", front, car) is { } hanger)
+            {
+                carParts.Add(Instance(hanger, RunningGear.HangerSlot(corner), 1, spring.Wear));
+                added++;
+            }
+
+            if (at.Shackle == null && Hardware(catalog, "SpringShackle", front, car) is { } shackle)
+            {
+                carParts.Add(Instance(shackle, RunningGear.ShackleSlot(corner), 1, spring.Wear));
+                added++;
+            }
+        }
+
+        return added;
+    }
+
+    /// <summary>A part on the car, or on one of its parts, swapped for another in the same place</summary>
+    private static void Replace(List<PartInstance> carParts, PartInstance old, PartInstance fresh)
+    {
+        var siblings = carParts.Contains(old) ? carParts : carParts.Select(root => PartTrees.FindParent(root, old)).First(p => p != null)!.Children;
+        siblings[siblings.IndexOf(old)] = fresh;
     }
 
     /// <summary>
@@ -182,7 +332,7 @@ public static class RunningGearFactory
     {
         if (Choose(catalog, specs) is not var (oldFront, oldRear) || Choose(catalog, specs, car, picks) is not var (front, rear)) return 0;
 
-        var changed = 0;
+        var changed = PutDrumsOnPlates(catalog, carParts);
         // On the car's own corner slots, and on the rear axle's that stand for them
         foreach (var (part, carSlot) in carParts.Select(p => (p, p.ParentSlot)).Concat(RearAxle.CornerParts(carParts)).ToList())
         {
@@ -192,10 +342,11 @@ public static class RunningGearFactory
             var (was, now) = RunningGear.IsFront(corner) ? (oldFront, front) : (oldRear, rear);
             if (carSlot == RunningGear.BrakeSlot(corner) && part.DefinitionId == was.Brake.Id && now.Brake.Id != was.Brake.Id)
             {
-                part.DefinitionId = now.Brake.Id;
-                part.Children.Clear();
-                if (now.Shoes != null) part.Children.Add(Instance(now.Shoes, RunningGear.ShoesSlot, 1, part.Wear));
-                if (now.Cylinder != null) part.Children.Add(Instance(now.Cylinder, RunningGear.WheelCylinderSlot, 1, part.Wear));
+                // The new brake as the factory puts it on, the old one's wear and damage on the brake itself
+                var fresh = Brake(now, part.ParentSlot, part.Wear);
+                var brake = now.Plate != null ? fresh.Children.First(c => c.ParentSlot == RunningGear.DrumSlot) : fresh;
+                brake.Tear = part.Tear;
+                Replace(carParts, part, fresh);
                 changed++;
             }
             else if (carSlot == RunningGear.SpringSlot(corner) && part.DefinitionId == was.Spring.Id && now.Spring.Id != was.Spring.Id)
@@ -217,7 +368,7 @@ public static class RunningGearFactory
             changed++;
         }
 
-        return changed + HangOnAxle(catalog, carParts, specs.HasLiveAxle);
+        return changed + AddHardware(catalog, car, carParts) + HangOnAxle(catalog, carParts, specs.HasLiveAxle);
     }
 
     /// <summary>

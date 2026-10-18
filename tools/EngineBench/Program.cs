@@ -713,7 +713,7 @@ public static class Program
         var (facts, picks) = (FactsOf(carFolder), CarBook.Current.Car(Path.GetFileName(Path.TrimEndingDirectorySeparator(carFolder)))?.RunningGear);
         var factory = RunningGearFactory.Choose(catalog, specs, facts, picks);
         var gear = RunningGearFactory.Create(catalog, specs, 1, null, facts, picks);
-        var mounted = RunningGear.Mounted(gear);
+        var mounted = RunningGear.Mounted(gear, catalog);
 
         var report = EngineEvaluator.Evaluate(catalog, tree);
         var result = AcCarBuild.Generate(catalog, new CarBuild

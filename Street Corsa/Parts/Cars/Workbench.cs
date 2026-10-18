@@ -32,10 +32,12 @@ public static class Workbench
         var looseSlots = looseDefinition.Slots.Where(s => loose.Children.All(c => c.ParentSlot != s.Id)).ToList();
         var mountsBy = looseSlots.FirstOrDefault(s => s.Id == 1)?.Id ?? looseSlots.FirstOrDefault()?.Id ?? 0;
 
-        // The running gear goes on the car's own wheel slots: a rim, a brake, a spring or a shock on every free
-        // corner of the axle it is made for, a sway bar across one; a rear one on a live rear axle's housing when it has a
-        // slot for it (the axle carries its brakes, coil springs, shocks and bar; it hangs on its leaf springs, which stay on
-        // the car). A tyre goes on a mounted rim it fits (same diameter, a rim width the tyre takes).
+        // The running gear goes on the car's own wheel slots: a rim, a brake (a disc, or a drum's backing plate), a spring
+        // or a shock on every free corner of the axle it is made for, a leaf's hanger and shackle on their own, a sway bar
+        // across one; a rear one on a live rear axle's housing when it has a slot for it (the axle carries its brakes, coil
+        // springs, shocks and bar; it hangs on its leaf springs, which stay on the car). A tyre goes on a mounted rim it fits
+        // (same diameter, a rim width the tyre takes). A part that goes on another by a fitting (a drum on its plate, a hub,
+        // a leaf's U-bolts) finds it as on any part.
         if (looseGroup == PartKinds.Tyres)
         {
             foreach (var rim in RunningGear.Rims(carParts))
@@ -48,9 +50,10 @@ public static class Workbench
             return places;
         }
 
-        if (RunningGear.IsRunningGear(looseGroup))
+        var carSlots = RunningGear.CarSlotsFor(looseDefinition).ToList();
+        if (carSlots.Count > 0 || RunningGear.IsRunningGear(looseGroup) && looseDefinition.Slots.FirstOrDefault(s => s.Id == 1) is not { Fits.Count: > 0 })
         {
-            foreach (var carSlot in RunningGear.CarSlotsFor(looseDefinition))
+            foreach (var carSlot in carSlots)
             {
                 if (carParts.Any(p => p.ParentSlot == carSlot)) continue;
                 if (RearAxle.HousingFor(catalog, carParts, carSlot, looseDefinition, liveAxle) is var (housing, slot))
@@ -80,7 +83,8 @@ public static class Workbench
         if (catalog.Get(loose.DefinitionId) is not { } looseDefinition || PartKinds.IsBlock(looseDefinition)) return new();
 
         var looseGroup = PartKinds.GroupOf(looseDefinition);
-        if (looseGroup == PartKinds.Tyres || RunningGear.IsRunningGear(looseGroup) || RearAxle.IsAxleGroup(looseGroup)) return new();
+        if (looseGroup == PartKinds.Tyres || RunningGear.IsRunningGear(looseGroup) || RearAxle.IsAxleGroup(looseGroup) || RunningGear.CarSlotsFor(looseDefinition).Any())
+            return new();
 
         var looseSlots = looseDefinition.Slots.Where(s => loose.Children.All(c => c.ParentSlot != s.Id)).ToList();
         return PlacesOn(catalog, new[] { engine }, loose, looseDefinition, looseGroup, looseSlots).ToList();
@@ -115,8 +119,8 @@ public static class Workbench
         foreach (var parent in roots.SelectMany(p => p.SelfAndDescendants()))
         {
             if (catalog.Get(parent.DefinitionId) is not { } definition) continue;
-            // A brake's and a spring's own slots are free for what goes on them (a drum's shoes, a leaf's traction bar); the
-            // rest of the running gear takes nothing
+            // A brake's and a spring's own slots are free for what goes on them (a drum's hub, a leaf's traction bar and
+            // U-bolts; a backing plate's are anyway); the rest of the running gear takes nothing
             var group = PartKinds.GroupOf(definition);
             if (RunningGear.IsRunningGear(group) && group is not (PartKinds.Brakes or PartKinds.Springs)) continue;
 

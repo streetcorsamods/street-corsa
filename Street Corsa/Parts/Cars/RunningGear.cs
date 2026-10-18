@@ -5,13 +5,24 @@ namespace StreetCorsa.Parts.Cars;
 /// <summary>How a brake heats and fades: Assetto Corsa's brakes.ini temperatures (<see cref="RunningGear.Heat(PartDefinition, PartDefinition?)"/>)</summary>
 public sealed record BrakeHeat(double TorqueK, double CoolTransfer, double CoolSpeedFactor, string Curve);
 
-/// <summary>What one corner of a car carries: the rim with its tyre, the brake, the spring and the shock</summary>
+/// <summary>
+/// What one corner of a car carries: the rim with its tyre, the brake (a drum on its backing plate, with the shoes and
+/// wheel cylinder there; a disc on the corner itself), the hub on the brake, the spring (a leaf with its U-bolts, its
+/// hanger and shackle on the car) and the shock
+/// </summary>
 public sealed class CornerParts
 {
     public PartInstance? Rim { get; set; }
     public PartInstance? Tyre { get; set; }
     public PartInstance? Brake { get; set; }
+    public PartInstance? BackingPlate { get; set; }
+    public PartInstance? Shoes { get; set; }
+    public PartInstance? WheelCylinder { get; set; }
+    public PartInstance? Hub { get; set; }
     public PartInstance? Spring { get; set; }
+    public PartInstance? UBolts { get; set; }
+    public PartInstance? Hanger { get; set; }
+    public PartInstance? Shackle { get; set; }
     public PartInstance? Shock { get; set; }
 }
 
@@ -43,6 +54,10 @@ public static class RunningGear
     public static int ShockSlot(int corner) => 301 + corner;
     public static int SpringSlot(int corner) => 311 + corner;
 
+    /// <summary>The car's own slots a leaf spring hangs from (step 31): its hanger at the front eye, its shackle at the back</summary>
+    public static int HangerSlot(int corner) => 321 + corner;
+    public static int ShackleSlot(int corner) => 331 + corner;
+
     public static bool IsFront(int corner) => corner < 2;
 
     /// <summary>The car's own slots of the sway bars (step 31), beside the rear axle's 401: one across each axle</summary>
@@ -69,6 +84,8 @@ public static class RunningGear
         >= 111 and < 111 + Corners => carSlot - 111,
         >= 301 and < 301 + Corners => carSlot - 301,
         >= 311 and < 311 + Corners => carSlot - 311,
+        >= 321 and < 321 + Corners => carSlot - 321,
+        >= 331 and < 331 + Corners => carSlot - 331,
         _ => -1
     };
 
@@ -82,14 +99,25 @@ public static class RunningGear
             PartKinds.Brakes => BrakeSlot,
             PartKinds.Springs => SpringSlot,
             PartKinds.Shocks => ShockSlot,
+            PartKinds.BackingPlates => BrakeSlot,
             _ => null
         };
         return slot == null ? Enumerable.Empty<int>() : Enumerable.Range(0, Corners).Select(slot);
     }
 
-    /// <summary>The car slots a part goes on: its group's, on the axle it is made for (<see cref="FitsAxle"/>)</summary>
-    public static IEnumerable<int> CarSlotsFor(PartDefinition part) =>
-        CarSlotsFor(PartKinds.GroupOf(part)).Where(slot => FitsAxle(part, IsSwayBarSlot(slot) ? slot == FrontSwayBarSlot : IsFront(CornerOf(slot))));
+    /// <summary>
+    /// The car slots a part goes on: its group's (a leaf spring's hanger and shackle their own), on the axle it is made for
+    /// (<see cref="FitsAxle"/>); none for a part that goes on another by a fitting (a drum on its backing plate)
+    /// </summary>
+    public static IEnumerable<int> CarSlotsFor(PartDefinition part)
+    {
+        if (part.Slots.FirstOrDefault(s => s.Id == 1) is { Fits.Count: > 0 }) return [];
+
+        var slots = PartKinds.Is(part, "SpringHanger") ? Enumerable.Range(0, Corners).Select(HangerSlot)
+            : PartKinds.Is(part, "SpringShackle") ? Enumerable.Range(0, Corners).Select(ShackleSlot)
+            : CarSlotsFor(PartKinds.GroupOf(part));
+        return slots.Where(slot => FitsAxle(part, IsSwayBarSlot(slot) ? slot == FrontSwayBarSlot : IsFront(CornerOf(slot))));
+    }
 
     /// <summary>
     /// Whether a part goes on this axle: its <c>fits_axle</c> (<c>"front"</c> or <c>"rear"</c>: a leaf spring the rear, a
@@ -126,9 +154,13 @@ public static class RunningGear
 
     /// <summary>
     /// The parts on the car's wheel slots, by corner; a rear brake, spring or shock on the rear axle's housing
-    /// (<see cref="RearAxle.CornerParts"/>) as if on the car's own slot it stands for (one on the car's own slot first)
+    /// (<see cref="RearAxle.CornerParts"/>) as if on the car's own slot it stands for (one on the car's own slot first). A
+    /// backing plate on a brake slot is read for the drum, shoes and wheel cylinder on it, the hub off the brake, a leaf's
+    /// U-bolts off the leaf.
     /// </summary>
-    public static CornerParts[] Mounted(List<PartInstance> carParts)
+    /// <param name="groupOf">A part's group by its id (<see cref="CarCondition.Groups"/>), to tell a backing plate from a brake;
+    /// without it a part with a drum on it is a backing plate</param>
+    public static CornerParts[] Mounted(List<PartInstance> carParts, Func<string, string?>? groupOf = null)
     {
         var corners = Enumerable.Range(0, Corners).Select(_ => new CornerParts()).ToArray();
         foreach (var (part, carSlot) in RearAxle.CornerParts(carParts).Concat(carParts.Select(p => (p, p.ParentSlot))))
@@ -137,18 +169,47 @@ public static class RunningGear
             if (corner < 0) continue;
 
             var slot = carSlot;
+            var at = corners[corner];
             if (IsWheelSlot(slot))
             {
-                corners[corner].Rim = part;
-                corners[corner].Tyre = part.Children.FirstOrDefault(c => c.ParentSlot == TyreSlotOnRim);
+                at.Rim = part;
+                at.Tyre = part.Children.FirstOrDefault(c => c.ParentSlot == TyreSlotOnRim);
             }
-            else if (slot == BrakeSlot(corner)) corners[corner].Brake = part;
-            else if (slot == SpringSlot(corner)) corners[corner].Spring = part;
-            else if (slot == ShockSlot(corner)) corners[corner].Shock = part;
+            else if (slot == BrakeSlot(corner))
+            {
+                // A backing plate carries the drum, its shoes and wheel cylinder; a brake on the slot itself carries its own
+                var plate = IsBackingPlate(part, groupOf) ? part : null;
+                at.BackingPlate = plate;
+                at.Brake = plate == null ? part : plate.Children.FirstOrDefault(c => c.ParentSlot == DrumSlot);
+                at.Shoes = part.Children.FirstOrDefault(c => c.ParentSlot == ShoesSlot);
+                at.WheelCylinder = part.Children.FirstOrDefault(c => c.ParentSlot == WheelCylinderSlot);
+                at.Hub = at.Brake?.Children.FirstOrDefault(c => c.ParentSlot == HubSlot);
+            }
+            else if (slot == SpringSlot(corner))
+            {
+                at.Spring = part;
+                at.UBolts = part.Children.FirstOrDefault(c => c.ParentSlot == UBoltsSlot);
+            }
+            else if (slot == ShockSlot(corner)) at.Shock = part;
+            else if (slot == HangerSlot(corner)) at.Hanger = part;
+            else if (slot == ShackleSlot(corner)) at.Shackle = part;
         }
 
         return corners;
     }
+
+    /// <inheritdoc cref="Mounted(List{PartInstance}, Func{string, string?}?)"/>
+    public static CornerParts[] Mounted(List<PartInstance> carParts, PartsCatalog catalog) =>
+        Mounted(carParts, id => catalog.Get(id) is { } definition ? PartKinds.GroupOf(definition) : null);
+
+    /// <summary>
+    /// Whether a part on a brake slot is a backing plate: its group, when there is a way to tell it; else a part with a drum
+    /// on it (a plate stripped bare is then read as the brake)
+    /// </summary>
+    private static bool IsBackingPlate(PartInstance part, Func<string, string?>? groupOf) =>
+        groupOf?.Invoke(part.DefinitionId) is { } group
+            ? group == PartKinds.BackingPlates
+            : part.Children.Any(c => c.ParentSlot == DrumSlot);
 
     // ----- what the parts come to, in the scripts' formulas -----
 
@@ -160,9 +221,19 @@ public static class RunningGear
         return (0.2 + Math.Sqrt(Math.Clamp(wear, 0, 1)) * 0.8) * torque;
     }
 
-    /// <summary>The slots of a drum brake: its shoes and its wheel cylinder (step 31)</summary>
+    /// <summary>
+    /// The slots of a drum brake's backing plate (step 31): its shoes, its wheel cylinder and the drum over them. A brake
+    /// on the corner itself (a disc) is read as it is.
+    /// </summary>
     public const int ShoesSlot = 2;
     public const int WheelCylinderSlot = 3;
+    public const int DrumSlot = 4;
+
+    /// <summary>The slot of a front drum or disc its hub goes on</summary>
+    public const int HubSlot = 5;
+
+    /// <summary>The slot of a leaf spring its U-bolts and plate go on</summary>
+    public const int UBoltsSlot = 3;
 
     /// <summary>
     /// A brake's torque as it is put together: its own figures, its shoes' friction (<c>friction</c>, times the drum's)
@@ -172,12 +243,11 @@ public static class RunningGear
     public static double BrakeTorque(PartDefinition brake, PartDefinition? shoes, PartDefinition? cylinder, double wear = 1) =>
         BrakeTorque(brake, wear) * (shoes?.Number("friction", 1) ?? 1) * (cylinder?.Number("force_factor", 1) ?? 1);
 
-    /// <summary>A mounted brake's torque, its shoes and wheel cylinder read off the parts on it</summary>
-    public static double BrakeTorque(PartsCatalog catalog, PartInstance brake)
+    /// <summary>A corner's brake torque, its shoes and wheel cylinder read off its backing plate (<see cref="Mounted"/>); 0 with no brake</summary>
+    public static double BrakeTorque(PartsCatalog catalog, CornerParts corner)
     {
-        if (catalog.Get(brake.DefinitionId) is not { } definition) return 0;
-        var shoes = brake.Children.FirstOrDefault(c => c.ParentSlot == ShoesSlot);
-        var cylinder = brake.Children.FirstOrDefault(c => c.ParentSlot == WheelCylinderSlot);
+        if (corner.Brake is not { } brake || catalog.Get(brake.DefinitionId) is not { } definition) return 0;
+        var (shoes, cylinder) = (corner.Shoes, corner.WheelCylinder);
         return BrakeTorque(definition, shoes == null ? null : catalog.Get(shoes.DefinitionId), cylinder == null ? null : catalog.Get(cylinder.DefinitionId),
             (shoes ?? brake).Wear);
     }
@@ -196,10 +266,10 @@ public static class RunningGear
         return new BrakeHeat(k, Math.Max(0, brake.Number("cool_transfer")), Math.Max(0, brake.Number("cool_speed_factor")), curve);
     }
 
-    /// <summary>A mounted brake's heat, its shoes read off the part on it</summary>
-    public static BrakeHeat? Heat(PartsCatalog catalog, PartInstance brake) =>
-        catalog.Get(brake.DefinitionId) is { } definition
-            ? Heat(definition, brake.Children.FirstOrDefault(c => c.ParentSlot == ShoesSlot) is { } shoes ? catalog.Get(shoes.DefinitionId) : null)
+    /// <summary>A corner's brake heat, its shoes read off its backing plate; null with no brake</summary>
+    public static BrakeHeat? Heat(PartsCatalog catalog, CornerParts corner) =>
+        corner.Brake is { } brake && catalog.Get(brake.DefinitionId) is { } definition
+            ? Heat(definition, corner.Shoes is { } shoes ? catalog.Get(shoes.DefinitionId) : null)
             : null;
 
     /// <summary>A part's <c>perf_curve</c>, an inline lut <c>(|0=0.9|300=1.0|)</c>; null when it has none, or not one of those</summary>

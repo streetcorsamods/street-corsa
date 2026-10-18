@@ -21,12 +21,16 @@ public static class PartKinds
     public const string Shocks = PartGroups.Shocks;
     public const string SwayBars = PartGroups.SwayBars;
 
-    // What goes on a leaf spring
+    // What goes on a leaf spring, and what it hangs from on the car: a hanger and a shackle, the U-bolts on the leaf
     public const string TractionBars = PartGroups.TractionBars;
+    public const string LeafHardware = PartGroups.LeafHardware;
 
-    // What goes on a drum brake
+    // A drum brake: the backing plate on the corner's brake slot, the shoes, the wheel cylinder and the drum on it, the
+    // hub on a front drum or disc
+    public const string BackingPlates = PartGroups.BackingPlates;
     public const string BrakeShoes = PartGroups.BrakeShoes;
     public const string WheelCylinders = PartGroups.WheelCylinders;
+    public const string Hubs = PartGroups.Hubs;
 
     // The rear axle: on the car's own axle slot, with its carrier, gears and shafts on it
     public const string RearAxles = PartGroups.RearAxles;

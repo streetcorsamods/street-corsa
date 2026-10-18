@@ -316,4 +316,138 @@ internal static class Parts
 
         return model;
     }
+
+    /// <summary>
+    /// A drum's backing plate (step 31 phase 5), in its space at the wheel (+X outboard, its origin the corner's brake slot):
+    /// a pressed steel dish just inboard of the drum's open side, as big as the drum and a little over, its middle dished
+    /// in towards the axle with the bolts that hold it, and the boss the wheel cylinder sits against at the top. The drum
+    /// hangs 0.08 m outboard of the slot (its own mount), so the drum's open side is at 0.08 m plus its own inner face.
+    /// </summary>
+    /// <param name="drumInnerX">Where the drum's open side is in its own space (its model's least X)</param>
+    /// <param name="drumRadius">The drum's outside radius</param>
+    public static Model BackingPlate(string id, float drumInnerX, float drumRadius)
+    {
+        var model = new Model(id);
+        var face = 0.08f + drumInnerX - 0.004f;
+        const float thick = 0.003f;
+        var rim = drumRadius + 0.006f;
+        var paint = model[Finish.Paint];
+
+        // The flat face out to the drum, a lip round its edge towards the drum, the middle dished in with a hole for the axle
+        paint.Lathe(X(0), Vec3.UnitX, [(face, 0.085f), (face, rim), (face + 0.009f, rim), (face + 0.009f, rim - thick), (face + thick, rim - thick),
+            (face + thick, 0.085f + thick), (face, 0.085f)], 40);
+        paint.Lathe(X(0), Vec3.UnitX, [(face - 0.014f, 0.034f), (face - 0.014f, 0.062f), (face, 0.085f), (face + thick, 0.085f - thick),
+            (face - 0.014f + thick, 0.062f - thick), (face - 0.014f + thick, 0.034f), (face - 0.014f, 0.034f)], 32);
+
+        // The bolts round the middle, their heads on the inside
+        for (var k = 0; k < 4; k++)
+        {
+            var a = MathF.PI / 4 + k * MathF.PI / 2;
+            var at = V(face - 0.014f, MathF.Cos(a) * 0.048f, MathF.Sin(a) * 0.048f);
+            model[Finish.Steel].Hex(at, at - X(0.008f), 0.008f);
+        }
+
+        // The anchor pin's boss under the wheel cylinder, and the adjuster's slot cover at the bottom
+        model[Finish.CastIron].Block(V(face + 0.006f, 0.085f, 0), Vec3.UnitX, Vec3.UnitY, Vec3.UnitZ, V(0.006f, 0.012f, 0.012f));
+        model[Finish.Rubber].Block(V(face - 0.001f, -drumRadius * 0.7f, 0), Vec3.UnitX, Vec3.UnitY, Vec3.UnitZ, V(0.002f, 0.008f, 0.014f));
+        return model;
+    }
+
+    /// <summary>
+    /// A front hub (step 31 phase 5) in the drum's space at the wheel (+X outboard): the boss through the drum's middle with
+    /// its bearings, five wheel studs out through the drum's face and the dust cap; the same for every drum and disc
+    /// </summary>
+    public static Model Hub()
+    {
+        var model = new Model("hub");
+        model[Finish.CastIron].Lathe(X(0), Vec3.UnitX, [(-0.02f, 0f), (-0.02f, 0.042f), (0.072f, 0.042f), (0.072f, 0f)], 28);
+        model[Finish.Chrome].Lathe(X(0), Vec3.UnitX, [(0.072f, 0f), (0.072f, 0.026f), (0.09f, 0.024f), (0.096f, 0.016f), (0.098f, 0f)], 24);
+        for (var k = 0; k < 5; k++)
+        {
+            var a = k * MathF.Tau / 5;
+            var at = V(0, MathF.Cos(a) * 0.0603f, MathF.Sin(a) * 0.0603f);
+            model[Finish.Steel].Tube(at + X(0.04f), at + X(0.092f), 0.0063f, 10);
+        }
+
+        return model;
+    }
+
+    /// <summary>
+    /// The middle of the leaf spring across the car in its own space: the stand-in leaf's (prepare_standins.py) is a little
+    /// to the left of its origin; a leaf's hardware is put round it
+    /// </summary>
+    private const float LeafX = 0.018f;
+
+    /// <summary>
+    /// A leaf spring's U-bolts and plate (step 31 phase 5), in the leaf's space (+X the car's left, the front -Z, the
+    /// origin the axle seat on top of the leaf): two U-bolts, one each side of the leaf, over the axle tube (its middle at
+    /// the hubs' height, 0.06 m over the seat as CarPartsLayout puts the leaf; as thick as a Dana 60's), down through the
+    /// plate under the leaf pack, their nuts under it
+    /// </summary>
+    public static Model UBolts()
+    {
+        var model = new Model("u_bolts");
+        const float tube = 0.06f, bolt = 0.0075f, bottom = -0.19f;
+        const float around = 0.044f + bolt + 0.002f;
+        foreach (var side in new[] { LeafX - 0.05f, LeafX + 0.05f })
+        {
+            var path = new List<Vec3> { V(side, bottom, -around) };
+            for (var k = 0; k <= 12; k++)
+            {
+                var a = MathF.PI - k * MathF.PI / 12;
+                path.Add(V(side, tube + around * MathF.Sin(a), around * MathF.Cos(a)));
+            }
+
+            path.Add(V(side, bottom, around));
+            model[Finish.Steel].Sweep(path, bolt, 10);
+            foreach (var z in new[] { -around, around }) model[Finish.Steel].Hex(V(side, -0.177f, z), V(side, -0.19f, z), 0.012f);
+        }
+
+        model[Finish.Paint].Block(V(LeafX - 0.07f, -0.177f, -0.075f), V(LeafX + 0.07f, -0.164f, 0.075f));
+        return model;
+    }
+
+    /// <summary>
+    /// A leaf spring's front hanger (step 31 phase 5), in the leaf's space: a bracket riveted under the frame, its two cheeks
+    /// either side of the leaf's front eye, the eye's bolt through them
+    /// </summary>
+    public static Model Hanger()
+    {
+        var model = new Model("hanger");
+        var eye = V(LeafX, 0.13f, -0.67f);
+        var paint = model[Finish.Paint];
+        foreach (var side in new[] { -0.05f, 0.05f })
+            paint.Block(V(LeafX + side, 0.19f, eye.Z), Vec3.UnitX, Vec3.UnitY, Vec3.UnitZ, V(0.004f, 0.09f, 0.032f));
+        paint.Block(V(LeafX - 0.07f, 0.278f, eye.Z - 0.06f), V(LeafX + 0.07f, 0.288f, eye.Z + 0.06f));
+        model[Finish.Steel].Tube(eye - X(0.062f), eye + X(0.062f), 0.008f, 12);
+        model[Finish.Steel].Hex(eye + X(0.054f), eye + X(0.066f), 0.012f);
+        model[Finish.Rubber].Tube(eye - X(0.044f), eye + X(0.044f), 0.019f, 16);
+        return model;
+    }
+
+    /// <summary>
+    /// A leaf spring's rear shackle (step 31 phase 5), in the leaf's space: two links from the leaf's rear eye up and back to
+    /// the pin in a bracket under the frame, so the leaf can grow longer as it flattens
+    /// </summary>
+    public static Model Shackle()
+    {
+        var model = new Model("shackle");
+        var eye = V(LeafX, 0.105f, 0.67f);
+        var pin = V(LeafX, 0.245f, 0.705f);
+        var along = pin - eye;
+        var middle = (eye + pin) * 0.5f;
+        var paint = model[Finish.Paint];
+        foreach (var side in new[] { -0.05f, 0.05f })
+            paint.Block(middle + X(side), Vec3.UnitX, along, Vec3.Cross(Vec3.UnitX, along), V(0.004f, along.Length() / 2 + 0.016f, 0.014f));
+        foreach (var at in new[] { eye, pin })
+        {
+            model[Finish.Steel].Tube(at - X(0.062f), at + X(0.062f), 0.008f, 12);
+            model[Finish.Rubber].Tube(at - X(0.044f), at + X(0.044f), 0.018f, 16);
+        }
+
+        paint.Block(V(LeafX - 0.07f, 0.27f, pin.Z - 0.045f), V(LeafX + 0.07f, 0.282f, pin.Z + 0.045f));
+        foreach (var side in new[] { -0.06f, 0.06f })
+            paint.Block(V(LeafX + side, 0.258f, pin.Z), Vec3.UnitX, Vec3.UnitY, Vec3.UnitZ, V(0.004f, 0.022f, 0.03f));
+        return model;
+    }
 }

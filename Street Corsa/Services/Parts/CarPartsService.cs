@@ -523,6 +523,10 @@ namespace StreetCorsa.Services.Parts
 
                 // What comes off a car goes on its owner's shelf, once the shelf itself has been gone through. A mod's
                 // part the catalog does not know stays there (the workbench does not show it) till the mod is back.
+                // A drum of a save of before the backing plates goes onto its plate, its shoes and wheel cylinder with it,
+                // before the joints are checked: they would take those off a drum that has no slot for them now
+                foreach (var car in racer.Cars) changed += RunningGearFactory.PutDrumsOnPlates(Catalog, car.Parts);
+
                 var shelf = new List<PartInstance>();
                 changed += racer.Parts.RemoveAll(part => Catalog.Get(part.DefinitionId) == null && !Mods.ModIds.IsQualified(part.DefinitionId));
                 racer.Parts.AddRange(keep);
@@ -534,6 +538,7 @@ namespace StreetCorsa.Services.Parts
             changed += game.UsedCarMarket.RemoveAll(l => l.Parts.Any(p => Catalog.Get(p.DefinitionId) == null));
             changed += game.NewspaperAds.Parts.RemoveAll(ad => Catalog.Get(ad.Part.DefinitionId) == null);
 
+            foreach (var listing in game.UsedCarMarket) changed += RunningGearFactory.PutDrumsOnPlates(Catalog, listing.Parts);
             var forSale = game.UsedCarMarket.SelectMany(l => l.Parts)
                 .Concat(game.NewspaperAds.Parts.Select(ad => ad.Part));
             changed += Renew(forSale, new List<PartInstance>());

@@ -104,7 +104,7 @@ namespace StreetCorsa.Services.Race
             {
                 Engine = _parts.Evaluate(car),
                 FactoryEngineMass = _parts.FactoryEngineMass(car),
-                RunningGear = car.HasRunningGearAssigned ? RunningGear.Mounted(car.Parts) : null,
+                RunningGear = car.HasRunningGearAssigned ? RunningGear.Mounted(car.Parts, catalog) : null,
                 SwayBars = car.HasRunningGearAssigned && car.HasSwayBarsAssigned ? RunningGear.SwayBars(car.Parts) : null,
                 FactoryRunningGear = car.HasRunningGearAssigned ? _parts.FactoryRunningGear(car) : null,
                 RearAxle = car.HasAxleAssigned ? RearAxle.Mounted(car.Parts) : null,

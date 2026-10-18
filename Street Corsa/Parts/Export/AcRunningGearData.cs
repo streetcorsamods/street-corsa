@@ -106,17 +106,25 @@ public static class AcRunningGearData
             if (brakeDef == null) problems.Add($"no brake {name}");
             else
             {
-                // What the brake cannot do without (a drum's shoes and wheel cylinder), in its pack's words
-                foreach (var required in brakeDef.RequiredSlots.Where(r => r.Enforce && corner.Brake!.Children.All(c => c.ParentSlot != r.Slot)))
-                    problems.Add($"{Lower(required.Message) ?? "the brake is missing a part"} ({name})");
+                // What the brake cannot do without (a drum's shoes, wheel cylinder and hub, on its backing plate or itself), in
+                // its pack's words
+                Required(catalog, corner.BackingPlate, name, "the brake is missing a part", problems);
+                Required(catalog, corner.Brake, name, "the brake is missing a part", problems);
 
-                change.Heat ??= RunningGear.Heat(catalog, corner.Brake!);
-                var shoes = corner.Brake!.Children.FirstOrDefault(c => c.ParentSlot == RunningGear.ShoesSlot)?.DefinitionId;
+                change.Heat ??= RunningGear.Heat(catalog, corner);
+                var shoes = corner.Shoes?.DefinitionId;
                 if (brakeDef.Id != factory.Brake.Id || !string.Equals(shoes, factory.Shoes?.Id, StringComparison.OrdinalIgnoreCase)) change.FactoryBrakes = false;
             }
             if (springDef == null) problems.Add($"no spring {name}");
             else if (suspension != null && RunningGear.NeedsSuspension(springDef) is { } needs && !string.Equals(needs, suspension, StringComparison.OrdinalIgnoreCase))
                 problems.Add($"the {Lower(springDef.DisplayName ?? springDef.Name) ?? "spring"} does not fit this car's suspension ({name})");
+            else if (RunningGear.IsLeafSpring(springDef))
+            {
+                // A leaf hangs from its hanger and shackle and is bolted to the axle by its U-bolts
+                Required(catalog, corner.Spring, name, "the leaf spring is missing a part", problems);
+                if (corner.Hanger == null) problems.Add($"the leaf spring has no front hanger ({name})");
+                if (corner.Shackle == null) problems.Add($"the leaf spring has no shackle ({name})");
+            }
             if (shockDef == null) problems.Add($"no shock absorber {name}");
 
             // A corner that lacks a part is measured as the factory part, the problem says what is missing
@@ -127,7 +135,7 @@ public static class AcRunningGearData
             load += Ratio(tyre == null ? 0 : RunningGear.TyreLoadCapacity(tyre), RunningGear.TyreLoadCapacity(factory.Tyre));
             rolling += Ratio(tyre == null ? 0 : RunningGear.TyreRollingResistance(tyre), RunningGear.TyreRollingResistance(factory.Tyre));
             pressure += Ratio(tyre == null ? 0 : RunningGear.TyrePressure(tyre), RunningGear.TyrePressure(factory.Tyre));
-            brake += Ratio(brakeDef == null ? 0 : RunningGear.BrakeTorque(catalog, corner.Brake!), factoryBrake);
+            brake += Ratio(brakeDef == null ? 0 : RunningGear.BrakeTorque(catalog, corner), factoryBrake);
             spring += Ratio(springDef == null ? 0 : RunningGear.SpringRate(springDef), RunningGear.SpringRate(factory.Spring));
             wrap += Ratio(springDef == null ? 0 : RunningGear.Wrap(catalog, corner.Spring!), RunningGear.Wrap(factory.Spring));
             bump += Ratio(shockDef == null ? 0 : RunningGear.Damping(shockDef).Bump, factoryBump);
@@ -161,6 +169,14 @@ public static class AcRunningGearData
     }
 
     private static PartDefinition? Definition(PartsCatalog catalog, PartInstance? part) => part == null ? null : catalog.Get(part.DefinitionId);
+
+    /// <summary>What a part cannot do without (its pack's enforced <c>required_slots</c>), in its pack's words</summary>
+    private static void Required(PartsCatalog catalog, PartInstance? part, string corner, string otherwise, List<string> problems)
+    {
+        if (Definition(catalog, part) is not { } definition) return;
+        foreach (var required in definition.RequiredSlots.Where(r => r.Enforce && part!.Children.All(c => c.ParentSlot != r.Slot)))
+            problems.Add($"{Lower(required.Message) ?? otherwise} ({corner})");
+    }
 
     private static double Positive(double value) => value > 0 && double.IsFinite(value) ? value : 0;
 

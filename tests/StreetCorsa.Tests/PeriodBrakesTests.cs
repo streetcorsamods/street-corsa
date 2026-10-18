@@ -59,9 +59,8 @@ public class PeriodBrakesTests
         Assert.True(RunningGear.BrakeTorque(drum, sintered, null) < RunningGear.BrakeTorque(drum, organic, null));
         Assert.Equal(RunningGear.BrakeTorque(drum, organic, null) * 1.1, RunningGear.BrakeTorque(drum, organic, bigBore), 3);
 
-        var mounted = new PartInstance(drum.Id) { Wear = 1 };
-        mounted.Children.Add(new PartInstance(organic.Id) { ParentSlot = RunningGear.ShoesSlot, OwnSlot = 1, Wear = 0.3 });
-        Assert.Equal(RunningGear.BrakeTorque(drum, organic, null, 0.3), RunningGear.BrakeTorque(Catalog, mounted), 3);
+        var corner = new CornerParts { Brake = new PartInstance(drum.Id) { Wear = 1 }, Shoes = new PartInstance(organic.Id) { Wear = 0.3 } };
+        Assert.Equal(RunningGear.BrakeTorque(drum, organic, null, 0.3), RunningGear.BrakeTorque(Catalog, corner), 3);
 
         // Every factory drum is under the source game's smallest disc: a disc is an upgrade
         var smallestDisc = Catalog.Parts.Values.Where(p => PartKinds.GroupOf(p) == PartKinds.Brakes && p.CameIn == null && p.Number("force") > 0).Min(p => RunningGear.BrakeTorque(p));
@@ -70,14 +69,51 @@ public class PeriodBrakesTests
     }
 
     [Fact]
-    public void The_workbench_puts_shoes_and_a_wheel_cylinder_on_a_mounted_drum()
+    public void The_workbench_puts_shoes_a_wheel_cylinder_and_a_drum_of_its_size_on_a_mounted_backing_plate_and_a_hub_on_a_front_drum()
     {
         var car = new Car("car_a") { HasPartsAssigned = true, HasRunningGearAssigned = true, GearVersion = RunningGearFactory.GearVersion };
-        var drum = new PartInstance(Drum + "front_10x2_5") { ParentSlot = RunningGear.BrakeSlot(0), OwnSlot = 1 };
-        car.Parts.Add(drum);
+        var plate = new PartInstance(Drum + "plate_front_10") { ParentSlot = RunningGear.BrakeSlot(0), OwnSlot = 1 };
+        car.Parts.Add(plate);
 
-        Assert.Contains(Workbench.FindPlaces(Catalog, car.Parts, new PartInstance(Drum + "shoes_sintered")), p => p.Parent == drum && p.ParentSlot == RunningGear.ShoesSlot);
-        Assert.Contains(Workbench.FindPlaces(Catalog, car.Parts, new PartInstance(Drum + "wheel_cylinder_big_bore")), p => p.Parent == drum && p.ParentSlot == RunningGear.WheelCylinderSlot);
+        Assert.Contains(Workbench.FindPlaces(Catalog, car.Parts, new PartInstance(Drum + "shoes_sintered")), p => p.Parent == plate && p.ParentSlot == RunningGear.ShoesSlot);
+        Assert.Contains(Workbench.FindPlaces(Catalog, car.Parts, new PartInstance(Drum + "wheel_cylinder_big_bore")), p => p.Parent == plate && p.ParentSlot == RunningGear.WheelCylinderSlot);
+
+        // A drum goes on a plate of its size, never on the corner itself
+        var drum = new PartInstance(Drum + "front_10x2_5");
+        Assert.Equal([new MountPlace(plate, RunningGear.DrumSlot, 1)], Workbench.FindPlaces(Catalog, car.Parts, drum));
+        Assert.Empty(Workbench.FindPlaces(Catalog, car.Parts, new PartInstance(Drum + "front_9x2")));
+
+        // A plate goes on the free corners of its axle only
+        Assert.Equal([RunningGear.BrakeSlot(1)], Workbench.FindPlaces(Catalog, car.Parts, new PartInstance(Drum + "plate_front_9")).Select(p => p.ParentSlot));
+
+        Workbench.Mount(car.Parts, new MountPlace(plate, RunningGear.DrumSlot, 1), drum);
+        Assert.Contains(Workbench.FindPlaces(Catalog, car.Parts, new PartInstance(Drum + "front_hub")), p => p.Parent == drum && p.ParentSlot == RunningGear.HubSlot);
+    }
+
+    [Fact]
+    public void A_drum_of_an_older_save_goes_onto_its_backing_plate_with_its_shoes_and_wheel_cylinder()
+    {
+        var drum = new PartInstance(Drum + "front_10x2_5") { ParentSlot = RunningGear.BrakeSlot(0), OwnSlot = 1, Wear = 0.7 };
+        var shoes = new PartInstance(Drum + "shoes_organic") { ParentSlot = RunningGear.ShoesSlot, OwnSlot = 1, Wear = 0.4 };
+        var cylinder = new PartInstance(Drum + "wheel_cylinder_stock") { ParentSlot = RunningGear.WheelCylinderSlot, OwnSlot = 1 };
+        drum.Children.AddRange([shoes, cylinder]);
+        var parts = new List<PartInstance> { drum };
+
+        Assert.Equal(1, RunningGearFactory.PutDrumsOnPlates(Catalog, parts));
+        var plate = parts.Single();
+        Assert.Equal(Drum + "plate_front_10", plate.DefinitionId);
+        Assert.Equal(RunningGear.BrakeSlot(0), plate.ParentSlot);
+        Assert.Equal(0.7, plate.Wear);
+        Assert.Equal([(RunningGear.ShoesSlot, shoes), (RunningGear.WheelCylinderSlot, cylinder), (RunningGear.DrumSlot, drum)],
+            plate.Children.Select(c => (c.ParentSlot, c)).OrderBy(c => c.ParentSlot));
+        Assert.Empty(drum.Children);
+
+        var corner = RunningGear.Mounted(parts, Catalog)[0];
+        Assert.Same(drum, corner.Brake);
+        Assert.Same(shoes, corner.Shoes);
+
+        // Once is enough
+        Assert.Equal(0, RunningGearFactory.PutDrumsOnPlates(Catalog, parts));
     }
 
     // ----- Assetto Corsa -----
@@ -142,15 +178,23 @@ public class PeriodBrakesTests
         var upgrade = Catalog.Parts.Values.First(p => PartKinds.GroupOf(p) == PartKinds.Brakes && p.CameIn == null && p.Id != oldFront.Brake.Id && p.Number("force") > 0);
         parts.Single(p => p.ParentSlot == RunningGear.BrakeSlot(1)).DefinitionId = upgrade.Id;
 
-        // Three brakes and the two rear coils (leaf springs on a live axle now); the player's brake stays
-        Assert.Equal(5, RunningGearFactory.BringUpToDate(Catalog, specs, Chevy66, null, parts));
+        // Three brakes and the two rear coils (leaf springs on a live axle now), and each leaf's U-bolts, hanger and shackle;
+        // the player's brake stays
+        Assert.Equal(11, RunningGearFactory.BringUpToDate(Catalog, specs, Chevy66, null, parts));
         Assert.All(parts.Where(p => p.ParentSlot == RunningGear.SpringSlot(2) || p.ParentSlot == RunningGear.SpringSlot(3)),
             s => Assert.StartsWith("running_gear/springs_leaf/", s.DefinitionId));
         var left = parts.Single(p => p.ParentSlot == RunningGear.BrakeSlot(0));
-        Assert.Equal(Drum + "front_11x2_75", left.DefinitionId);
+        Assert.Equal(Drum + "plate_front_11", left.DefinitionId);
         Assert.Equal(0.6, left.Wear);
-        Assert.Equal([RunningGear.ShoesSlot, RunningGear.WheelCylinderSlot], left.Children.Select(c => c.ParentSlot).Order());
+        Assert.Equal([RunningGear.ShoesSlot, RunningGear.WheelCylinderSlot, RunningGear.DrumSlot], left.Children.Select(c => c.ParentSlot).Order());
+        var drum = left.Children.Single(c => c.ParentSlot == RunningGear.DrumSlot);
+        Assert.Equal(Drum + "front_11x2_75", drum.DefinitionId);
+        Assert.Equal([RunningGear.HubSlot], drum.Children.Select(c => c.ParentSlot));
         Assert.Equal(upgrade.Id, parts.Single(p => p.ParentSlot == RunningGear.BrakeSlot(1)).DefinitionId);
+        var rearLeft = RunningGear.Mounted(parts, Catalog)[2];
+        Assert.NotNull(rearLeft.UBolts);
+        Assert.NotNull(rearLeft.Hanger);
+        Assert.NotNull(rearLeft.Shackle);
 
         // Brought up once: nothing more to do
         Assert.Equal(0, RunningGearFactory.BringUpToDate(Catalog, specs, Chevy66, null, parts));
