@@ -22,7 +22,7 @@ was built and what waits for a download.
   never drives up to), baked in Blender from Poly Haven's scans (`tools/StationScene/bake_cards.py`: a scanned tree of
   a million triangles becomes two 1024-pixel pictures); the wind as the game leaning the cards' nodes (a shear about
   the foot, `GarageRenderer.Wind`, `WindSway`: a breeze with gusts rolling along the road and a flutter), 12 m cells
-  of grass to a node near the forecourt and every tree its own, 700-odd nodes moved a frame. The cards cast no shadow
+  of grass to a node on the flat land (the verges, the lot's edges) and every tree its own, 700-odd nodes moved a frame. The cards cast no shadow
   (their square would); each tree gets a soft blended shade on the land instead.
 
 ## Models we may give away
@@ -45,9 +45,9 @@ day; all seven are in the scene (the Buick without its "55 Buick" label, the Stu
 the lilac pack's three big bushes beside the trees nearest the lot and behind the fence, since its "single trees"
 are saplings), and a car whose nose comes out backwards is turned with `--turn <id>=180`. The maple and oak packs
 were not downloaded. The owner then added two tow trucks, both CC BY 4.0: -X-ScornGames' [Wrecker](https://sketchfab.com/3d-models/wrecker-id105-645-73-2b594f46dd0e42faab75420dd7015dad)
-(a 500k-triangle scan, brought down to 60k: the station's own, behind the office along the fence) and 3DMODEL's
+(a 500k-triangle scan, brought down to 60k, later 30k: the station's own, behind the office along the fence) and 3DMODEL's
 [Heavy Duty Tow Truck](https://sketchfab.com/3d-models/heavy-duty-tow-truck-3d-model-246fc01e05d6465eadeac4ea0d292e4b)
-(a million triangles made by Tripo, an AI model maker, with one baked picture; brought down to 60k, pulled over on the
+(a million triangles made by Tripo, an AI model maker, with one baked picture; brought down to 60k, later 30k, pulled over on the
 roadside past the way out).
 
 | Role | Model | Maker | Size | Where it goes |

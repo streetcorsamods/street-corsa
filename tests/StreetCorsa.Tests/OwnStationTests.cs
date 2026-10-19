@@ -103,26 +103,37 @@ public class OwnStationTests
         var kn5 = Kn5.FromFile(station.Kn5);
         var sway = kn5.RootNode.Children.Where(n => n.NodeClass == Kn5NodeClass.Base && n.Name.StartsWith(GarageRenderer.SwayPrefix, StringComparison.Ordinal)).ToList();
         Assert.True(sway.Count > 100, $"{sway.Count} swaying nodes");
+        // One node to a swaying object, every material of it under the one (a node to each would pivot a bush's crown at
+        // its own lowest leaf, and a lean would tear it off the trunk)
+        Assert.Equal(sway.Count, sway.Select(n => n.Name).Distinct(StringComparer.Ordinal).Count());
+        var ground = StationGround.Load(station.GroundFile);
         var cutOuts = 0;
+        var materials = 0;
         foreach (var node in sway)
         {
             var meshes = node.Children.Where(c => c.NodeClass == Kn5NodeClass.Mesh).ToList();
             Assert.NotEmpty(meshes);
-            // Pivoted at the foot of what it holds, so a lean keeps its base in the ground
+            materials += meshes.Select(m => m.MaterialId).Distinct().Count();
+            // Pivoted at the foot of all it holds, which stands in the ground: the node itself is at the land's height
+            // there (within the ground grid, ±150 m), never up at a crown's base, and its meshes' lowest point is its own
+            var (x, y, z) = (node.Transform.M41, node.Transform.M42, node.Transform.M43);
+            Assert.True(MathF.Abs(x) <= 170f && MathF.Abs(z) <= 170f);
+            if (MathF.Abs(x) < 148f && MathF.Abs(z) < 148f) Assert.InRange(y - ground.HeightAt(x, z), -1f, 0.3f);
             Assert.InRange(meshes.Min(m => m.Vertices.Min(v => v.Position.Y)), -0.01f, 0.01f);
-            Assert.True(MathF.Abs(node.Transform.M41) <= 170f && MathF.Abs(node.Transform.M43) <= 170f);
             foreach (var mesh in meshes)
             {
-                // A card cut out by its alpha casts no shadow: the shadow pass would draw its whole square. A real
-                // bush's trunk is drawn whole and may cast
+                // Nothing that sways casts a shadow: a card's would be its square (the shadow pass draws every triangle
+                // whole), and a real bush's would stand still while it leans (the shadows are drawn again as the car moves)
+                Assert.False(mesh.CastShadows);
                 var material = kn5.Materials.Values.ElementAt((int)mesh.MaterialId);
                 if (!material.AlphaTested) continue;
                 cutOuts++;
                 Assert.Equal("ksPerPixelAT", material.ShaderName);
-                Assert.False(mesh.CastShadows);
             }
         }
         Assert.True(cutOuts > 100, $"{cutOuts} cut-out meshes sway");
+        // The lilac bushes (leaves and bark) and the grass cells (three cards' pictures) hold several materials each
+        Assert.True(materials > sway.Count + 20, $"{materials} materials under {sway.Count} nodes");
 
         // The shade under a tree is blended over the land, and the land itself is drawn whole
         var shade = kn5.Materials.Values.Single(m => m.Name == "st_shade");

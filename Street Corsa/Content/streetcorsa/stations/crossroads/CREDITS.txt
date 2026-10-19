@@ -29,18 +29,19 @@ station.kn5 is made in part from these models, each licensed under CC BY 4.0 (ht
   https://sketchfab.com/3d-models/free-1950s-american-taxi-based-on-checker-d1b10defaed94a1094419e84ca9b0bf1
 - "Wrecker (I.D.:105-645-73)" by -X-ScornGames, the station's tow truck behind the office:
   https://sketchfab.com/3d-models/wrecker-id105-645-73-2b594f46dd0e42faab75420dd7015dad
-  Changes: brought down to 60000 triangles.
+  Changes: brought down to 30000 triangles.
 - "Heavy Duty Tow Truck 3d Model" by 3DMODEL, the tow truck pulled over past the way out:
   https://sketchfab.com/3d-models/heavy-duty-tow-truck-3d-model-246fc01e05d6465eadeac4ea0d292e4b
-  Changes: brought down to 60000 triangles.
+  Changes: brought down to 30000 triangles.
 - "Lilac bush pack (12 vars, LODs, game ready)" by lolipop_1707, the lilac bushes nearest the lot:
   https://sketchfab.com/3d-models/lilac-bush-pack-12-vars-lods-game-ready-10312697ec994fc99355cb94f1963a2e
   Changes: three of its bushes, at their first level of detail.
 
-The cars are scaled to their length, their paint made less metallic and their pictures brought down to 1024.
-All of them set into the scene, their materials turned into AC's ksPerPixelMultiMap (pictures scaled to 1536 at most,
-the PBR maps turned into txMaps) and converted to KN5 with the rest of the station (tools/StationScene:
-compose_station.py, prepare_prop.py, StationSceneBuilder; build_station.py runs them).
+The cars and trucks are scaled to their length, brought down to 25000 triangles each (the trucks as above), their
+paint made less metallic and their pictures brought down to 512 (the pickup's and the Rancher's to 768). All of them
+set into the scene, their materials turned into AC's ksPerPixelMultiMap (pictures scaled to 1024 at most, the PBR maps
+turned into txMaps) and converted to KN5 with the rest of the station (tools/StationScene: compose_station.py,
+prepare_prop.py, StationSceneBuilder; build_station.py runs them).
 
 The rest of the station: the forecourt, the road, the islands, the canopy, the land, the wires and the trees' shades
 drawn by compose_station.py; the bench, trash can, chalkboard, shelves, oil tins, tyres, rim, barrels, jerrycan,

@@ -14,7 +14,9 @@ internal static class PreparedScene
 {
     /// <summary>
     /// An object of the Blender scene named so (grass, a tree) goes into the KN5 under a node of its own name, pivoted
-    /// at the bottom middle of its box, and the game leans it in the wind (GarageRenderer.Wind's SwayPrefix is this)
+    /// at the bottom middle of its box, and the game leans it in the wind (GarageRenderer.Wind's SwayPrefix is this).
+    /// It casts no shadow: the scene's shadows are drawn again only as the car moves, so a leaning bush's would stand
+    /// still (compose_station.py lays a shade on the land under each)
     /// </summary>
     public const string SwayPrefix = "SWAY_";
 
@@ -38,22 +40,13 @@ internal static class PreparedScene
         // Lit more by the sun than a prop is, so the cars' shadows show on the street
         var materialOf = ObjModel.AddMaterials(scene, prepared, Path.Combine(prepared, "materials.json"), ksAmbient: 0.2f, ksDiffuse: 0.75f);
 
-        if (!castShadows)
-        {
-            // The scene is lit as a whole: nothing of it stands in the light's way
-            ObjModel.AddMeshes(scene, groups, materialOf, fallback: null, castShadows: false);
-        }
-        else
-        {
-            // The ground is lit as a whole; what stands on it casts its shadow on the ground and the car. A cut-out (a
-            // tree on a card, a bush's leaves) casts none: the renderer's shadow pass draws every triangle whole, so a
-            // card's shadow would be its square (compose_station.py lays a shade under each tree instead)
-            var ground = groups.Where(g => materialOf.TryGetValue(ObjModel.MaterialOf(g.Key), out var m) && (IsGround(scene, m, groundMaterials) || IsCutOut(scene, m)))
-                .ToDictionary(g => g.Key, g => g.Value);
-            var standing = groups.Where(g => !ground.ContainsKey(g.Key)).ToDictionary(g => g.Key, g => g.Value);
-            ObjModel.AddMeshes(scene, ground, materialOf, fallback: null, castShadows: false);
-            ObjModel.AddMeshes(scene, standing, materialOf, fallback: null, castShadows: true);
-        }
+        // The ground is lit as a whole; what stands on it casts its shadow on the ground and the car (when the scene
+        // casts at all). A cut-out (a tree on a card, a bush's leaves) casts none: the renderer's shadow pass draws
+        // every triangle whole, so a card's shadow would be its square; nor does anything the wind leans, whose shadow
+        // would stand still (compose_station.py lays a shade on the land under each tree and bush instead)
+        ObjModel.AddMeshes(scene, groups, materialOf, fallback: null, castShadows: key =>
+            castShadows && ObjModel.ObjectOf(key) == null && materialOf.TryGetValue(ObjModel.MaterialOf(key), out var m)
+            && !IsGround(scene, m, groundMaterials) && !IsCutOut(scene, m));
 
         // The ground under the scene's own faces (what sways in the wind stands on it, and is not it), before the sky
         // goes round it; written after the model, so a build that fails leaves the old ground under the old scene

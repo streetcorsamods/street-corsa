@@ -25,33 +25,56 @@ internal static class ObjModel
     /// <summary>The object a group's key names, when it is one kept apart; null for the rest</summary>
     public static string? ObjectOf(string key) => key.IndexOf(Separator) is var at && at >= 0 ? key[(at + 1)..] : null;
 
+    /// <summary>The shader a material is written with unless its caller names another (an actor's skinned one)</summary>
+    public const string MultiMapShader = "ksPerPixelMultiMap";
+
     /// <summary>
     /// A mesh a material, the OBJ's groups of one material together; as long as 16-bit indices reach, in pieces beyond.
     /// A group of a material <paramref name="materialOf"/> leaves out (glass) is dropped unless <paramref name="fallback"/> is given.
-    /// An object <see cref="ReadObj"/> kept apart goes under a dummy node of its own name, at the bottom middle of
-    /// its box, with its mesh relative to it: the game moves the node (grass leaning in the wind)
+    /// An object <see cref="ReadObj"/> kept apart goes under one dummy node of its own name, at the bottom middle of
+    /// the box of the whole of it, with a mesh for each of its materials relative to it: the game moves the node (grass
+    /// leaning in the wind), and a bush's leaves lean with its trunk
     /// </summary>
     public static void AddMeshes(IKn5 kn5, Dictionary<string, (List<Kn5Node.Vertex> Vertices, List<int> Indices)> groups,
-        Dictionary<string, uint> materialOf, uint? fallback, bool castShadows)
+        Dictionary<string, uint> materialOf, uint? fallback, bool castShadows) =>
+        AddMeshes(kn5, groups, materialOf, fallback, _ => castShadows);
+
+    /// <param name="castShadows">Whether a group's meshes stand in the light's way, by the group's key (a scene's ground and its cut-outs never do)</param>
+    public static void AddMeshes(IKn5 kn5, Dictionary<string, (List<Kn5Node.Vertex> Vertices, List<int> Indices)> groups,
+        Dictionary<string, uint> materialOf, uint? fallback, Func<string, bool> castShadows)
     {
         var kept = fallback == null ? groups.Where(g => materialOf.ContainsKey(MaterialOf(g.Key))) : groups;
-        foreach (var byKey in kept.GroupBy(g => (Material: materialOf.TryGetValue(MaterialOf(g.Key), out var m) ? m : fallback!.Value, Object: ObjectOf(g.Key))))
+        uint Material(string key) => materialOf.TryGetValue(MaterialOf(key), out var m) ? m : fallback!.Value;
+
+        foreach (var byObject in kept.GroupBy(g => ObjectOf(g.Key)))
         {
-            var (vertices, indices) = Merge(byKey.Select(g => g.Value));
-            var material = byKey.Key.Material;
-            var mesh = byKey.Key.Object ?? kn5.Materials.Keys.ElementAt((int)material).ToUpperInvariant();
+            // An object kept apart: one node for all of it, pivoted at the foot of every material's triangles together
+            // (a node to each material would pivot a bush's crown at its own lowest leaf, a metre up, and a lean would
+            // tear it off the trunk)
             var parent = kn5.RootNode;
-            if (byKey.Key.Object != null)
+            var pivot = new Vec3(0f, 0f, 0f);
+            if (byObject.Key != null)
             {
-                var pivot = new Vec3((vertices.Min(v => v.Position.X) + vertices.Max(v => v.Position.X)) / 2f, vertices.Min(v => v.Position.Y),
-                    (vertices.Min(v => v.Position.Z) + vertices.Max(v => v.Position.Z)) / 2f);
-                vertices = vertices.Select(v => new Kn5Node.Vertex(new Vec3(v.Position.X - pivot.X, v.Position.Y - pivot.Y, v.Position.Z - pivot.Z), v.Normal, v.Tex, v.Tangent)).ToList();
-                parent = AddDummy(kn5, byKey.Key.Object, pivot);
+                var all = byObject.SelectMany(g => g.Value.Vertices).ToList();
+                pivot = new Vec3((all.Min(v => v.Position.X) + all.Max(v => v.Position.X)) / 2f, all.Min(v => v.Position.Y),
+                    (all.Min(v => v.Position.Z) + all.Max(v => v.Position.Z)) / 2f);
+                parent = AddDummy(kn5, byObject.Key, pivot);
             }
 
-            foreach (var (piece, part) in Split(vertices, indices).Select((p, i) => (p, i)))
-                AddMesh(kn5, part == 0 ? mesh : $"{mesh}_{part}", piece.Vertices, piece.Indices, material,
-                    castShadows: castShadows, parent: parent);
+            foreach (var byMaterial in byObject.GroupBy(g => Material(g.Key)))
+            {
+                var (vertices, indices) = Merge(byMaterial.Select(g => g.Value));
+                var material = byMaterial.Key;
+                var materialName = kn5.Materials.Keys.ElementAt((int)material).ToUpperInvariant();
+                var mesh = byObject.Key == null ? materialName : $"{byObject.Key}_{materialName}";
+                if (byObject.Key != null)
+                    vertices = vertices.Select(v => new Kn5Node.Vertex(new Vec3(v.Position.X - pivot.X, v.Position.Y - pivot.Y, v.Position.Z - pivot.Z), v.Normal, v.Tex, v.Tangent)).ToList();
+
+                var casts = castShadows(byMaterial.First().Key);
+                foreach (var (piece, part) in Split(vertices, indices).Select((p, i) => (p, i)))
+                    AddMesh(kn5, part == 0 ? mesh : $"{mesh}_{part}", piece.Vertices, piece.Indices, material,
+                        castShadows: casts, parent: parent);
+            }
         }
     }
 
@@ -63,7 +86,7 @@ internal static class ObjModel
     /// </summary>
     /// <param name="blend">Seen through by its picture's alpha (a shade on the ground): drawn after the solid things, blended over them</param>
     public static uint AddMultiMapMaterial(IKn5 kn5, string name, string diffuse, string? normal, string maps, float emissive,
-        bool alphaTest = false, float ksAmbient = 0.35f, float ksDiffuse = 0.45f, string shader = "ksPerPixelMultiMap", bool blend = false)
+        bool alphaTest = false, float ksAmbient = 0.35f, float ksDiffuse = 0.45f, string shader = MultiMapShader, bool blend = false)
     {
         var textures = new List<Kn5Material.TextureMapping> { new() { Name = "txDiffuse", Texture = diffuse, Slot = 0 } };
         var specular = 0.4f;
@@ -73,8 +96,10 @@ internal static class ObjModel
             // Cut out by the picture's alpha (a leaf, a clump of grass, a road marking), or blended by it: AC's
             // multi-map shader takes a cut-out's alpha from its normal map, not its picture, so these are drawn by the
             // plain per-pixel shader, which takes the picture's and lights them matt, with no maps or normal map.
-            // Leaves and grass shine nowhere, and a picture of them was lit once already when it was taken
-            shader = alphaTest ? "ksPerPixelAT" : "ksPerPixel";
+            // Leaves and grass shine nowhere, and a picture of them was lit once already when it was taken. A caller's
+            // own shader stays (an actor's skinned one: his hair on cards under any other would stand still in its bind
+            // pose while he talks), cut by the material's alpha test like any
+            if (shader == MultiMapShader) shader = alphaTest ? "ksPerPixelAT" : "ksPerPixel";
             specular = 0.02f;
             specularExp = 10f;
             ksDiffuse *= 0.6f;
@@ -128,7 +153,7 @@ internal static class ObjModel
     /// prepare script left out) is not in the list, and its triangles are dropped
     /// </summary>
     public static Dictionary<string, uint> AddMaterials(IKn5 kn5, string prepared, string manifest, float ksAmbient = 0.35f, float ksDiffuse = 0.45f,
-        string shader = "ksPerPixelMultiMap")
+        string shader = MultiMapShader)
     {
         var json = JsonSerializer.Deserialize<ManifestJson>(File.ReadAllText(manifest), new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
                    ?? throw new InvalidDataException("materials.json is empty");

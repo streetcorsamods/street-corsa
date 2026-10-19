@@ -13,8 +13,10 @@ whose nose comes out the wrong way), out (the .blend to save).
 
 The land beyond the forecourt and the road rolls (the game's ground file follows it, so a car never drives there), with
 a rise behind the station and at the far edge; grass clumps, bushes and trees stand on it as pictures on crossed
-cards (bake_cards.py's), the nearer grass and every tree under a node named SWAY_<n>, which the game leans in the wind
-(GarageRenderer.Wind); poles carry wires along the road and a service drop to the office.
+cards (bake_cards.py's), the grass on the flat land (the road's verges the whole way, the lot's edges, the driveways:
+a 12 m cell of clumps to a node; the clumps on the rolling land beyond stand still) and every tree under a node named
+SWAY_<n>, which the game leans in the wind (GarageRenderer.Wind); poles carry wires along the road and a service drop to
+the office.
 
 Blender's space: x along the road, y away from it (the road at -y), z up; metres; the forecourt's surface at z = 0.
 The game's (AC's) space is x the same, y up, z = -y (the road towards +z): station.json's positions are the game's, and
@@ -36,7 +38,6 @@ import random
 import re
 import sys
 
-import bmesh
 import bpy
 from mathutils import Matrix, Vector
 
@@ -154,34 +155,33 @@ def bounds(o):
 pieces = {}
 
 
-def load_piece(name, path, keep=None, drop=None, scale=1.0, turn=0.0, budget=None, stand=True, centre=True, own_materials=False):
+def names_of(o):
+    """An object's name and its parents', nearest first"""
+    found = []
+    while o is not None:
+        found.append(o.name)
+        o = o.parent
+    return found
+
+
+def import_meshes(name, path, keep=None, drop=None):
     """
-    A model as one mesh in the library, to copy from: its meshes (those matching keep, less those matching drop,
-    regular expressions on a mesh's name or its parents'), scaled, turned about the vertical (degrees), brought down to
-    a triangle budget, stood on its base (its lowest point at z 0) with the middle of its footprint at the origin.
-    own_materials keeps its materials apart from every other model's by naming them after it: two models naming a
-    material "Body" are otherwise taken for one (dedupe), and the second wears the first's
+    A model's meshes imported into the scene, unparented, the rest of the import (its rigs, their shapes, the empties)
+    gone: those matching keep, less those matching drop, regular expressions on a mesh's name or its parents'. Nothing
+    kept raises, with nothing of the import left behind for the export
     """
     before = set(bpy.data.objects)
     bpy.ops.import_scene.gltf(filepath=path)
     added = set(bpy.data.objects) - before
 
-    def names(o):
-        found = []
-        while o is not None:
-            found.append(o.name)
-            o = o.parent
-        return found
-
     def matches(o, patterns):
-        return any(re.search(p, n) for p in patterns for n in names(o))
+        return any(re.search(p, n) for p in patterns for n in names_of(o))
 
     rigs = [o for o in added if o.type == 'ARMATURE']
     shapes = {pb.custom_shape for rig in rigs for pb in rig.pose.bones if pb.custom_shape}
     meshes = [o for o in added if o.type == 'MESH' and o not in shapes and not o.hide_render
               and (keep is None or matches(o, keep)) and not (drop and matches(o, drop))]
     if not meshes:
-        # Nothing of the import stays in the scene: a piece left out is left out of the export too
         for o in added:
             bpy.data.objects.remove(o)
         raise RuntimeError(f"{name}: nothing kept of {path}")
@@ -189,18 +189,49 @@ def load_piece(name, path, keep=None, drop=None, scale=1.0, turn=0.0, budget=Non
     for o in added:
         if o not in meshes:
             bpy.data.objects.remove(o)
+    return meshes
+
+
+def load_piece(name, path, keep=None, drop=None, **how):
+    """
+    A model as one mesh in the library, to copy from: its meshes (those matching keep, less those matching drop,
+    regular expressions on a mesh's name or its parents'), made a piece as make_piece says
+    """
+    return make_piece(name, import_meshes(name, path, keep, drop), path, **how)
+
+
+def make_piece(name, meshes, path, scale=1.0, turn=0.0, budget=None, stand=True, centre=True, own_materials=False):
+    """
+    Imported meshes (import_meshes) as one mesh in the library, to copy from: scaled, turned about the vertical
+    (degrees), brought down to a triangle budget, stood on its base (its lowest point at z 0) with the middle of its
+    footprint at the origin. own_materials keeps its materials and their pictures apart from every other model's by
+    naming them after it: two models naming a material "Body", or a picture "Body_baseColor.png", are otherwise taken
+    for one (dedupe), and the second wears the first's
+    """
     if own_materials:
         for o in meshes:
             for slot in o.material_slots:
-                if slot.material and not slot.material.name.startswith(name + "_"):
-                    slot.material.name = f"{name}_{same_name(slot.material.name)}"
+                material = slot.material
+                if material is None:
+                    continue
+                if not material.name.startswith(name + "_"):
+                    material.name = f"{name}_{same_name(material.name)}"
+                if material.use_nodes:
+                    for node in material.node_tree.nodes:
+                        if node.type == 'TEX_IMAGE' and node.image and not node.image.name.startswith(name + "_"):
+                            node.image.name = f"{name}_{same_name(node.image.name)}"
     # Leaves cut out by their alpha (a Poly Haven model's alpha map put into its picture), never blended:
-    # prepare_prop.py cuts a material whose alpha is its picture's
+    # prepare_prop.py cuts a material whose alpha is its picture's. A blended material with no picture to cut by keeps
+    # its blending: that is how prepare_prop.py tells glass (a car's windows, see-through) from a pane to draw
     attach_alpha(meshes, path)
     for o in meshes:
         for slot in o.material_slots:
-            if slot.material and slot.material.use_nodes:
-                slot.material.surface_render_method = 'DITHERED'
+            material = slot.material
+            if material is None or not material.use_nodes:
+                continue
+            bsdf = next((n for n in material.node_tree.nodes if n.type == 'BSDF_PRINCIPLED'), None)
+            if bsdf is not None and bsdf.inputs['Alpha'].links:
+                material.surface_render_method = 'DITHERED'
     piece = join(meshes, name)
     if piece.data.shape_keys:
         piece.shape_key_clear()
@@ -745,33 +776,41 @@ used_optional = []
 
 def tree_pack(key, path, count):
     """
-    Up to count plants of a pack (lolipop_1707's lilac, maple, oak and pine packs name each one's meshes <name>_LOD<n>):
-    the first LOD of each, grouped by name, those between 3.5 and 13 m tall
+    Up to count plants of a pack (lolipop_1707's lilac, maple, oak and pine packs name each one's meshes <name>_LOD<n>),
+    imported once: each plant's meshes at its first level of detail there, as a piece, those between 3.5 and 13 m tall
     """
-    before = set(bpy.data.objects)
-    bpy.ops.import_scene.gltf(filepath=path)
-    added = set(bpy.data.objects) - before
+    meshes = import_meshes(key, path)
+
+    def plant_of(o):
+        # The name with the level of detail in it, the mesh's or a parent's; a pack without levels names each plant
+        labelled = next((n for n in names_of(o) if "LOD" in n), None)
+        return re.sub(r"_LOD\d.*$", "", labelled) if labelled else same_name(o.name)
+
+    def level_of(o):
+        found = next((re.search(r"_LOD(\d)", n) for n in names_of(o) if "LOD" in n), None)
+        return int(found.group(1)) if found else 0
+
+    plants = {}
+    for o in meshes:
+        plants.setdefault(plant_of(o), []).append(o)
     # The full ones first: a "bush" of the lilac pack is a 4 m shrub, its "single tree" a sapling
-    names = sorted({re.sub(r"_LOD\d.*$", "", o.name) for o in added if o.type == 'MESH' and "LOD" in o.name}
-                   or {same_name(o.name) for o in added if o.type == 'MESH'},
-                   key=lambda n: (0 if "bush" in n.lower() and "small" not in n.lower() else 1 if "tree" in n.lower() else 2, n))
-    for o in added:
-        bpy.data.objects.remove(o)
+    names = sorted(plants, key=lambda n: (0 if "bush" in n.lower() and "small" not in n.lower() else 1 if "tree" in n.lower() else 2, n))
     pieces = []
     for tree_name in names:
-        for lod in (r"_LOD0(_|\.|$)", r"_LOD1(_|\.|$)", r"$"):
-            try:
-                piece = load_piece(f"{key}_{tree_name}", path, keep=[r"^" + re.escape(tree_name) + lod], budget=30000)
-            except RuntimeError:
-                continue
+        group = plants[tree_name]
+        rest = group
+        if len(pieces) < count:
+            first = min(level_of(o) for o in group)
+            chosen = [o for o in group if level_of(o) == first]
+            rest = [o for o in group if o not in chosen]
+            piece = make_piece(f"{key}_{tree_name}", chosen, path, budget=30000)
             lo, hi = bounds(piece)
             if 3.5 <= hi.z - lo.z <= 13.0:
                 pieces.append(piece)
             else:
                 bpy.data.objects.remove(piece)
-            break
-        if len(pieces) >= count:
-            break
+        for o in rest:
+            bpy.data.objects.remove(o)
     return pieces
 
 
@@ -990,6 +1029,9 @@ for k, (tx, tz) in enumerate([(x + 4.5, z + 2.0) for x, z in NEAR_TREES] + [(-21
     shade(tx, tz, max(hi.x - lo.x, hi.y - lo.y) * 0.45)
     sways([put(piece, tx, tz, on_land(tx, tz), heading=rng.uniform(0.0, 360.0), scale=rng.uniform(0.9, 1.15))])
 print(f"OPTIONAL used: {', '.join(used_optional) if used_optional else 'none'}")
+# Which were kept, for build_station.py's credit lines (an unpacked one may be left out: a pack with no plant of a size)
+with open(os.path.join(os.path.dirname(OUT), "optional_used.json"), "w", encoding="utf-8") as fh:
+    json.dump(used_optional, fh)
 
 # The library's pieces go: the copies in the scene keep their meshes, and prepare_prop.py exports what is in the scene
 for o in list(library.objects):

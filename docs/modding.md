@@ -1017,8 +1017,11 @@ materials (the tubes under the canopy, the pumps' globes) as a street's; `credit
 the station charges (`prices`: `fuelPerLitre`, `oilPerLitre`, `wash`, `tow`; left out, the base game's). The garage's
 Gas Station button drives to one of them at random. A station without its model still works, without the picture; one
 without an attendant, or naming one no mod has, has nobody at the pump. A node of the model named `SWAY_<anything>`
-leans in the wind (the base game's grass near the forecourt and its trees): the game shears it about its own origin
-every frame, so put the node's origin at the foot of what it holds, and the model is drawn on while it stands.
+leans in the wind (the base game's grass on the flat land and its trees): the game shears it about its own origin
+every frame, so put the node's origin at the foot of what it holds, and the model is drawn on while it stands. Best
+let nothing under it cast a shadow (the base game's do not, and lay a shade on the ground instead): a mesh under it
+that casts has the scene's shadows drawn again ten times a second while it stands there, a pass over the whole scene
+each time.
 
 ### booths
 

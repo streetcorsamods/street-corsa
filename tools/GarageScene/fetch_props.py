@@ -65,8 +65,9 @@ def download(url, path, md5):
     return True
 
 
-def fetch(out, model_id):
-    files = fetch_json(API.format(id=model_id))
+def fetch(out, model_id, files=None):
+    """The model's glTF and its pictures into out/<id>, unless there already; files is the API's list of its files, fetched when not given"""
+    files = files or fetch_json(API.format(id=model_id))
     gltf = files.get("gltf", {}).get(RESOLUTION, {}).get("gltf")
     if not gltf:
         raise IOError(f"{model_id}: no glTF at {RESOLUTION}")

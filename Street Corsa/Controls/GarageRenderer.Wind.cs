@@ -4,9 +4,10 @@ using SlimDX;
 namespace StreetCorsa.Controls;
 
 /// <summary>
-/// The wind over a scene: what its model keeps under a node named <see cref="SwayPrefix"/> (the grass clumps near the
-/// gas station's forecourt, a cell of them to a node; each tree) leans with the gusts, the node sheared about its
-/// foot so its base stays in the ground and its top moves. tools/Shared/PreparedScene.cs writes the nodes.
+/// The wind over a scene: what its model keeps under a node named <see cref="SwayPrefix"/> (the grass clumps on the flat
+/// land round the gas station, a cell of them to a node; each tree) leans with the gusts, the node sheared about its
+/// foot so its base stays in the ground and its top moves. tools/Shared/PreparedScene.cs writes the nodes, and nothing
+/// under them casts a shadow; a mod's that does has its shadow drawn again as the attendant's is, ten times a second.
 /// </summary>
 public partial class GarageRenderer
 {
@@ -15,6 +16,8 @@ public partial class GarageRenderer
 
     private List<(Kn5RenderableList Node, Matrix Home, float X, float Z)>? _sway;
     private object? _swayOf;
+    private bool _swayCasts;
+    private float _swayShadowAge;
     private float _windSeconds;
 
     /// <summary>The scene has something the wind moves: it is drawn on while it stands</summary>
@@ -29,6 +32,7 @@ public partial class GarageRenderer
                 _swayOf = ShowroomNode;
                 _sway = ShowroomNode?.Dummies.Where(d => d.Name?.StartsWith(SwayPrefix, StringComparison.Ordinal) == true)
                     .Select(d => (d, d.LocalMatrix, d.LocalMatrix.M41, d.LocalMatrix.M43)).ToList() ?? new();
+                _swayCasts = _sway.Any(s => s.Node.GetAllChildren().OfType<Kn5RenderableObject>().Any(m => m.OriginalNode.CastShadows));
             }
 
             return _sway;
@@ -49,6 +53,18 @@ public partial class GarageRenderer
             shear.M21 = leanX;
             shear.M23 = leanZ;
             node.LocalMatrix = shear * home;
+        }
+
+        if (_swayCasts)
+        {
+            // Something leaning casts a shadow (nothing of the game's own scenes does: each redraw is a shadow pass over
+            // the whole scene), which would otherwise stand still until the car moved
+            _swayShadowAge += dt;
+            if (_swayShadowAge >= ActorShadowSeconds)
+            {
+                _swayShadowAge = 0f;
+                SetShadowsDirty();
+            }
         }
 
         IsDirty = true;

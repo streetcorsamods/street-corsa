@@ -45,10 +45,13 @@ out to the edge), 130-odd trees and 70-odd bushes as pictures on crossed cards (
 scanned `island_tree_02`, `searsia_lucida` and `shrub_02` and the `grass_medium_02` clumps in Blender, front and side,
 over nothing; the cards' normals point straight up, so a card is lit as the ground is from any side), weeds, small
 bushes, boulders, a fallen trunk and stumps as real geometry near the lot, nine poles along the far side of the road
-with three wires a span and a service drop over the lot's corner to the office. The wind: the grass near the forecourt
-(a 12 m cell to a node) and every tree are under nodes named `SWAY_<n>`, which `GarageRenderer.Wind` leans every frame
-(a shear about the node's foot, `WindSway.LeanAt`: a breeze with gusts rolling along the road and a flutter), and the
-viewport draws on while the wind blows. Parked cars and plants nearest the lot are Sketchfab downloads the build takes
+with three wires a span and a service drop over the lot's corner to the office. The wind: the grass on the flat land
+(the road's verges the whole way, the lot's edges and the driveways: every clump within `FLAT`, a 12 m cell of them to
+a node; the clumps on the rolling land beyond stand still) and every tree and lilac bush are under nodes named
+`SWAY_<n>`, one node to an object whatever materials it is of, which `GarageRenderer.Wind` leans every frame (a shear
+about the node's foot, `WindSway.LeanAt`: a breeze with gusts rolling along the road and a flutter), and the viewport
+draws on while the wind blows. Nothing under such a node casts a shadow (the shadows are drawn again only as the car
+moves, so a leaning bush's would stand still): each tree and bush has a soft shade on the land instead. Parked cars and plants nearest the lot are Sketchfab downloads the build takes
 when they are there (`build_station.py`'s `OPTIONAL`, see the report): roh3d's 1963 C10 pickup beside the office, a
 Rancher '50 at the far island, robinmikart's 1955 Buick by the way out, a Packard sedan on the far shoulder and a
 1950s taxi past the lot, Allie2k's Studebaker at the west end, -X-ScornGames' wrecker behind the office and 3DMODEL's heavy tow truck on the
@@ -82,12 +85,13 @@ python tools/StationScene/build_station.py "<folder with the Sketchfab zips>" [<
    posts; the land, the cards, the scatter, the wires and the optional models as above; saved as `station.blend` (open
    it to look).
 4. `prepare_prop.py` exports the OBJ and the AC pictures (1024 at most, the cars' 512 and the two nearest 768 through
-   `--cap`: GitHub takes no file over 100 MB; the maps as JPEGs, the materials named as in Blender for `station.json`'s
-   `glow`).
+   `--cap`, the sizes `build_station.py`'s `OPTIONAL` gives each: GitHub takes no file over 100 MB; the maps as JPEGs,
+   the materials named as in Blender for `station.json`'s `glow`).
 5. `StationSceneBuilder` writes the KN5 through `tools/Shared/PreparedScene.cs` (shared with the diner's street): what
    stands on the forecourt casts a shadow (the canopy over the car and the pumps), the ground's materials (`st_grass`,
-   `st_forecourt`, `st_road`, `st_line`) and the cut-outs never do; an object named `SWAY_<n>` goes under a node of
-   its own, pivoted at the foot of its box, for the wind; the ground's height grid; the sky domes.
+   `st_forecourt`, `st_road`, `st_line`) and the cut-outs never do; an object named `SWAY_<n>` goes under one node of
+   its own, pivoted at the foot of the box of the whole of it, with a mesh for each of its materials, for the wind, and
+   casts no shadow; the ground's height grid; the sky domes.
 6. The attendant: see the viewport below.
 
 **The layout** (scene metres, +z towards the road) keeps the Bannochbrae cut's, so the car's ways in and out are the

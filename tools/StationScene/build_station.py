@@ -46,7 +46,7 @@ REPO = os.path.normpath(os.path.join(HERE, "..", ".."))
 sys.path.insert(0, os.path.join(HERE, "..", "Shared"))
 sys.path.insert(0, os.path.join(HERE, "..", "GarageScene"))
 from scene_tools import blender, poly_haven_surface, without_blender_option  # noqa: E402
-from fetch_props import download, fetch, fetch_json  # noqa: E402
+from fetch_props import API, download, fetch, fetch_json  # noqa: E402
 
 CONTENT = os.path.join(REPO, "Street Corsa", "Content", "streetcorsa")
 STATION_OUT = os.path.join(CONTENT, "stations", "crossroads", "station.kn5")
@@ -65,34 +65,34 @@ ZIPS = {
     "speaking_man_with_talking_gestures": "speaking_man*.zip",
 }
 
-# The optional models that are vehicles (compose_station.py's VEHICLES keep their materials apart under their id)
-VEHICLE_KEYS = ("chevrolet_c10_1963", "rancher_50", "buick_1955", "packard_1955", "studebaker_1951", "taxi_1950s", "wrecker", "heavy_tow_truck")
-
-# More Sketchfab zips, taken when there (all CC BY 4.0): the zip's name, the title, the maker and the page, by the id
-# compose_station.py places them by (VEHICLES, the tree packs)
+# More Sketchfab zips, taken when there (all CC BY 4.0): the zip's name, the title, the maker, the page and the size
+# its pictures are held to, by the id compose_station.py places them by (VEHICLES, the tree packs). The station's own
+# pictures are 1024 at most (GitHub takes no file over 100 MB, and the station is near it); a vehicle's are smaller
+# still (prepare_prop.py's --cap on the materials compose_station.py names after it): it stands 10 m and more from the
+# pump, the two nearest a little bigger. None for a pack of plants, whose leaves' pictures stay as the rest
 OPTIONAL = {
     "chevrolet_c10_1963": ("*chevrolet_c10*.zip", "Low Poly Car - Chevrolet C10 Pickup 1963", "roh3d",
-                           "https://sketchfab.com/3d-models/low-poly-car-chevrolet-c10-pickup-1963-679354c151984747bb74310ec5af8995"),
+                           "https://sketchfab.com/3d-models/low-poly-car-chevrolet-c10-pickup-1963-679354c151984747bb74310ec5af8995", 768),
     "rancher_50": ("*rancher*50*.zip", "Rancher '50 Custom - Low Poly model", "DanielZhabotinsky",
-                   "https://sketchfab.com/3d-models/rancher-50-custom-low-poly-model-7f75854aba96417f8279bd9f1b24e6b2"),
+                   "https://sketchfab.com/3d-models/rancher-50-custom-low-poly-model-7f75854aba96417f8279bd9f1b24e6b2", 768),
     "buick_1955": ("*buick*.zip", "1955 Buick Special Downloadable", "robinmikart",
-                   "https://sketchfab.com/3d-models/1955-buick-special-downloadable-1a6d42ef69294498937aab039ececb00"),
+                   "https://sketchfab.com/3d-models/1955-buick-special-downloadable-1a6d42ef69294498937aab039ececb00", 512),
     "packard_1955": ("*packard*.zip", "1955 American Sedan (Packard based) FREE", "robinmikart",
-                     "https://sketchfab.com/3d-models/1955-american-sedan-packard-based-free-28d583f8d4bd4ce39dac2869fb77a197"),
+                     "https://sketchfab.com/3d-models/1955-american-sedan-packard-based-free-28d583f8d4bd4ce39dac2869fb77a197", 512),
     "studebaker_1951": ("*studebaker*.zip", "Studebaker - Car Model", "Allie2k",
-                        "https://sketchfab.com/3d-models/studebaker-car-model-c7578ec0f82043e6b392fcdf9b00c743"),
+                        "https://sketchfab.com/3d-models/studebaker-car-model-c7578ec0f82043e6b392fcdf9b00c743", 512),
     "taxi_1950s": ("*taxi*.zip", "FREE 1950s American Taxi (based on Checker)", "robinmikart",
-                   "https://sketchfab.com/3d-models/free-1950s-american-taxi-based-on-checker-d1b10defaed94a1094419e84ca9b0bf1"),
+                   "https://sketchfab.com/3d-models/free-1950s-american-taxi-based-on-checker-d1b10defaed94a1094419e84ca9b0bf1", 512),
     "wrecker": ("*wrecker*.zip", "Wrecker (I.D.:105-645-73)", "-X-ScornGames",
-                "https://sketchfab.com/3d-models/wrecker-id105-645-73-2b594f46dd0e42faab75420dd7015dad"),
+                "https://sketchfab.com/3d-models/wrecker-id105-645-73-2b594f46dd0e42faab75420dd7015dad", 512),
     "heavy_tow_truck": ("heavy_duty_tow_truck*.zip", "Heavy Duty Tow Truck 3d Model", "3DMODEL",
-                        "https://sketchfab.com/3d-models/heavy-duty-tow-truck-3d-model-246fc01e05d6465eadeac4ea0d292e4b"),
+                        "https://sketchfab.com/3d-models/heavy-duty-tow-truck-3d-model-246fc01e05d6465eadeac4ea0d292e4b", 512),
     "lilac_pack": ("*lilac*.zip", "Lilac bush pack (12 vars, LODs, game ready)", "lolipop_1707",
-                   "https://sketchfab.com/3d-models/lilac-bush-pack-12-vars-lods-game-ready-10312697ec994fc99355cb94f1963a2e"),
+                   "https://sketchfab.com/3d-models/lilac-bush-pack-12-vars-lods-game-ready-10312697ec994fc99355cb94f1963a2e", None),
     "maple_pack": ("*maple*.zip", "Maple trees pack (lowpoly, game ready, LODs)", "lolipop_1707",
-                   "https://sketchfab.com/3d-models/maple-trees-pack-lowpoly-game-ready-lods-b5d2833c258f4054a01ee2b4ef85adf0"),
+                   "https://sketchfab.com/3d-models/maple-trees-pack-lowpoly-game-ready-lods-b5d2833c258f4054a01ee2b4ef85adf0", None),
     "oak_pack": ("*oak_trees*.zip", "Oak trees pack (17var, LODs, seasons, gameready)", "lolipop_1707",
-                 "https://sketchfab.com/3d-models/oak-trees-pack-17var-lods-seasons-gameready-a5e4e64f9f1d4089bdcc6170a9333393"),
+                 "https://sketchfab.com/3d-models/oak-trees-pack-17var-lods-seasons-gameready-a5e4e64f9f1d4089bdcc6170a9333393", None),
 }
 
 # Poly Haven's models (CC0), as compose_station.py places them
@@ -161,14 +161,14 @@ def bake_cards(work, haven, again):
     return cards
 
 
-def fetch_alpha(haven, model_id):
+def fetch_alpha(haven, model_id, files):
     """
     A Poly Haven model's alpha maps (its leaves' cut-outs), which its glTF leaves out (JPEG pictures): each 1k PNG the
-    API lists under a name ending in alpha, into the model's textures as <id>_<name>_1k.png (foliage_alpha.py reads
-    them); how many were downloaded
+    API's list of its files names with a name ending in alpha, into the model's textures as <id>_<name>_1k.png
+    (foliage_alpha.py reads them); how many were downloaded
     """
     got = 0
-    for key, formats in fetch_json(API_FILES.format(id=model_id)).items():
+    for key, formats in files.items():
         if not key.lower().endswith("alpha") or not isinstance(formats, dict):
             continue
         png = formats.get("1k", {}).get("png")
@@ -177,9 +177,6 @@ def fetch_alpha(haven, model_id):
         name = f"{model_id}_{key.lower()}_1k.png"
         got += download(png["url"], os.path.join(haven, model_id, "textures", name), png["md5"])
     return got
-
-
-API_FILES = "https://api.polyhaven.com/files/{id}"
 
 
 def gltf_of(folder):
@@ -218,8 +215,10 @@ def main(downloads, work, bake_again=False, turns=None):
 
     haven = os.path.join(work, "polyhaven")
     for model_id in POLY_HAVEN:
-        got = fetch(haven, model_id)
-        alphas = fetch_alpha(haven, model_id)
+        # The API's list of the model's files once, for the model and its alpha maps both
+        files = fetch_json(API.format(id=model_id))
+        got = fetch(haven, model_id, files)
+        alphas = fetch_alpha(haven, model_id, files)
         print(f"{model_id}: {'downloaded' if got else 'up to date'}{f', {alphas} alpha map(s)' if alphas else ''}", flush=True)
     textures = os.path.join(work, "textures")
     os.makedirs(textures, exist_ok=True)
@@ -238,17 +237,21 @@ def main(downloads, work, bake_again=False, turns=None):
         json.dump({"sketchfab": sketchfab, "polyhaven": {m: gltf_of(os.path.join(haven, m)) for m in POLY_HAVEN},
                    "textures": textures, "cards": cards, "optional": optional, "turns": turns or {}, "out": blend}, fh, indent=1)
     run(blender(), "-b", "--python", os.path.join(HERE, "compose_station.py"), "--", spec, quiet=True)
-    if optional:
+    # The optional models compose_station.py kept (one unpacked may be left out: a pack with no plant of a size)
+    with open(os.path.join(work, "optional_used.json"), encoding="utf-8") as fh:
+        used = json.load(fh)
+    left_out = [key for key in optional if key not in used]
+    if used:
         print("Optional models in the scene: add each to CREDITS.txt and to station.json's credit:")
-        for key in optional:
-            _, title, maker, url = OPTIONAL[key]
+        for key in used:
+            _, title, maker, url, _ = OPTIONAL[key]
             print(f'  - "{title}" by {maker}, CC BY 4.0: {url}')
+    if left_out:
+        print(f"Optional models left out of the scene (compose_station.py says why above): {', '.join(left_out)}")
     prepared = os.path.join(work, "prepared")
     shutil.rmtree(prepared, ignore_errors=True)
-    # The pictures at 1024 at most (GitHub takes no file over 100 MB, and the station is near it), the cars' smaller
-    # still: they stand 10 m and more from the pump, the two nearest a little bigger
-    caps = [f"--cap {key}_={768 if key in ('chevrolet_c10_1963', 'rancher_50') else 512}" for key in optional if key in VEHICLE_KEYS]
-    run(sys.executable, PREPARE, blend, "station", prepared, "1024", "--jpg", "--keep-names", *(c for cap in caps for c in cap.split(" ")))
+    caps = [arg for key in used if OPTIONAL[key][4] for arg in ("--cap", f"{key}_={OPTIONAL[key][4]}")]
+    run(sys.executable, PREPARE, blend, "station", prepared, "1024", "--jpg", "--keep-names", *caps)
     sky = ",".join(f"{light}={os.path.join(SKIES, f'sky_{light}.jpg')}" for light in ("day", "dusk", "night"))
     run(station_builder, prepared, "station", STATION_OUT, "--sky", sky)
 
