@@ -171,8 +171,10 @@ public class OwnGarageTests : IDisposable
         var props = GarageProps.FindAll(mods, Workshop, ["radio", WorkbenchLayout.PropId, LiftLayout.PropId, EngineStandLayout.PropId], problems);
 
         Assert.Empty(problems);
+        // An actor (the station's attendant) is a prop that stands somewhere else
         var ids = Directory.GetDirectories(Path.Combine(RepoPaths.BaseContent, "props")).Select(Path.GetFileName)
-            .Except([WorkbenchLayout.PropId, LiftLayout.PropId, EngineStandLayout.PropId]).ToList();
+            .Except([WorkbenchLayout.PropId, LiftLayout.PropId, EngineStandLayout.PropId])
+            .Where(id => Services.Station.ActorProps.Find(mods, id!)?.Animation == null).ToList();
         Assert.Equal(ids.Order(), props.Select(p => p.Id).Distinct().Order());
         Assert.All(props, p =>
         {

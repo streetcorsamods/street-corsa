@@ -1,0 +1,8 @@
+{
+  "_comment": "The gas station's attendant: a figure with a skin on bones (attendant.kn5, tools/Props/ActorBuilder from tools/StationScene/build_station.py) and his talk, the animation that moves his bones round and round (talk.ksanim, seconds a turn). The station says where he stands (station.json, attendant). He has no place in a garage.",
+  "name": "Attendant",
+  "model": "attendant.kn5",
+  "animation": "talk.ksanim",
+  "seconds": 24.8,
+  "credit": "\"Speaking Man with Talking Gestures\" by LasquetiSpice, CC BY 4.0, https://sketchfab.com/3d-models/speaking-man-with-talking-gestures-c55bcf894e1b4da1adf0cf258fe94c9f; his sweater repainted as a work shirt"
+}

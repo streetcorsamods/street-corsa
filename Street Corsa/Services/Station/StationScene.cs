@@ -11,6 +11,9 @@ namespace StreetCorsa.Services.Station
     /// <summary>A point on the ground of a scene, metres from its middle</summary>
     public readonly record struct GroundPoint(float X, float Z);
 
+    /// <summary>Where the station's attendant stands (x, z on its ground, <see cref="Y"/> up off it: on a pump island; facing <see cref="Heading"/> degrees about the vertical, 0 towards +z) and which actor he is (<see cref="ActorProps"/>, by id)</summary>
+    public sealed record AttendantSpot(float X, float Z, float Y, float Heading, string Prop);
+
     /// <summary>
     /// A gas station, as a mod's stations/&lt;folder&gt;/station.json describes it: its model (with a sky for each light of
     /// the day, <see cref="SkyNode"/>) and ground, the way a car drives in off the road to the pump and out again, where
@@ -54,9 +57,26 @@ namespace StreetCorsa.Services.Station
 
         float IDriveInScene.LookWhileStanding => LookAtPump;
 
-        float IDriveInScene.LookUpWhileStanding => 0f;
+        float IDriveInScene.LookUpWhileStanding => LookUpAtPump;
 
-        IReadOnlyDictionary<string, float> IDriveInScene.GlowAt(StreetLight light) => new Dictionary<string, float>();
+        /// <summary>How far up the driver looks at the pump, degrees over the seat's own look: to the attendant's face</summary>
+        public float LookUpAtPump { get; init; }
+
+        /// <summary>The attendant by the pump; null for a station with none</summary>
+        public AttendantSpot? Attendant { get; init; }
+
+        /// <summary>The actor a station's attendant is when its file names none</summary>
+        public const string DefaultAttendant = "attendant";
+
+        /// <summary>Who made the scene's models, as their licences ask them named in the game's credits (Settings)</summary>
+        public string Credit { get; init; } = string.Empty;
+
+        /// <summary>How bright each self-lit material (the pumps' globes, the canopy's tubes) glows at each light of the day</summary>
+        public IReadOnlyDictionary<StreetLight, IReadOnlyDictionary<string, float>> Glows { get; init; } =
+            new Dictionary<StreetLight, IReadOnlyDictionary<string, float>>();
+
+        IReadOnlyDictionary<string, float> IDriveInScene.GlowAt(StreetLight light) =>
+            Glows.TryGetValue(light, out var glow) ? glow : new Dictionary<string, float>();
 
         public StreetLighting LightingFor(StreetLight light) => SceneLighting.For(Lights, light);
 
@@ -85,8 +105,11 @@ namespace StreetCorsa.Services.Station
 
         private sealed record PricesEntry(decimal? FuelPerLitre, decimal? OilPerLitre, decimal? Wash, decimal? Tow);
 
-        private sealed record SceneEntry(string? Id, string? Title, string? Model, List<float[]>? Arrive, List<float[]>? Leave,
-            float? LookAtPump, float[]? Sun, Dictionary<string, SceneLighting.LightEntry?>? Lights, PricesEntry? Prices);
+        private sealed record AttendantEntry(float? X, float? Z, float? Y, float? Heading, string? Prop);
+
+        private sealed record SceneEntry(string? Id, string? Title, string? Model, string? Credit, List<float[]>? Arrive, List<float[]>? Leave,
+            float? LookAtPump, float? LookUpAtPump, AttendantEntry? Attendant, float[]? Sun, Dictionary<string, SceneLighting.LightEntry?>? Lights,
+            Dictionary<string, Dictionary<string, float>?>? Glow, PricesEntry? Prices);
 
         /// <summary>Every gas station of every mod that loads, by full id (a mod's get its namespace); empty when none does</summary>
         public static IReadOnlyList<StationScene> LoadAll(ModSet mods) =>
@@ -124,11 +147,35 @@ namespace StreetCorsa.Services.Station
                 Price(entry.Prices.FuelPerLitre, defaults.FuelPerLitre), Price(entry.Prices.OilPerLitre, defaults.OilPerLitre),
                 Price(entry.Prices.Wash, defaults.Wash), Price(entry.Prices.Tow, defaults.Tow));
 
-            var station = new StationScene(entry.Id ?? Path.GetFileName(folder), entry.Title ?? entry.Id ?? GameText.Say("station.ui.default_title"), folder,
+            var id = entry.Id ?? Path.GetFileName(folder);
+            var station = new StationScene(id, entry.Title ?? entry.Id ?? GameText.Say("station.ui.default_title"), folder,
                 entry.Model ?? "station.kn5", arrive, leave, entry.LookAtPump ?? 72f, entry.Sun is { Length: 3 } sun ? sun : [0.2f, 1f, 0.8f],
-                SceneLighting.Read(entry.Lights, entry.Id ?? Path.GetFileName(folder), Logger), prices);
+                SceneLighting.Read(entry.Lights, id, Logger), prices)
+            {
+                LookUpAtPump = entry.LookUpAtPump is { } up && float.IsFinite(up) ? Math.Clamp(up, -20f, 20f) : 0f,
+                Attendant = Attendant(entry.Attendant, id, file),
+                Glows = SceneLighting.MaterialGlows(entry.Glow),
+                Credit = entry.Credit ?? string.Empty
+            };
             SceneFiles.WarnModel(Logger, "gas station", station.Id, station.Model, station.Kn5, station.HasModel);
             return station;
+        }
+
+        /// <summary>Where the attendant stands, as the file has it; null for a station with none, or one whose spot is nowhere (logged)</summary>
+        private static AttendantSpot? Attendant(AttendantEntry? entry, string id, string file)
+        {
+            if (entry == null) return null;
+            if (entry.X is not { } x || entry.Z is not { } z || MathF.Abs(x) > Scripting.SceneMarks.MostPoint || MathF.Abs(z) > Scripting.SceneMarks.MostPoint)
+            {
+                Logger.Warning("The gas station {Id} puts its attendant nowhere the game can draw: he is left out", id);
+                ModProblems.Add("Stations", $"{file}: the attendant needs x and z within {Scripting.SceneMarks.MostPoint} m; left out");
+                return null;
+            }
+
+            var heading = entry.Heading is { } h && float.IsFinite(h) ? h : 0f;
+            var y = entry.Y is { } up && float.IsFinite(up) ? Math.Clamp(up, -5f, 5f) : 0f;
+            var prop = string.IsNullOrWhiteSpace(entry.Prop) || !PathNames.IsSafeSegment(entry.Prop) ? StationScene.DefaultAttendant : entry.Prop;
+            return new AttendantSpot(x, z, y, heading, prop);
         }
 
         // A price a mod left out, or one no station would ask, is the base game's

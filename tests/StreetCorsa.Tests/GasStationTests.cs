@@ -237,8 +237,8 @@ public class GasStationTests
     [Fact]
     public void The_base_games_station_loads_even_without_its_model()
     {
-        var station = Assert.Single(StationScenes.LoadAll(ModSet.Installed), s => s.Id == "tomwixon");
-        Assert.Equal("Tomwixon Garages", station.Title);
+        var station = Assert.Single(StationScenes.LoadAll(ModSet.Installed), s => s.Id == "crossroads");
+        Assert.Equal("Crossroads Gas", station.Title);
         Assert.True(station.Arrive.Count >= 2);
         Assert.True(station.Leave.Count >= 2);
         Assert.Equal(station.Arrive[^1], station.Leave[0]);
@@ -353,7 +353,7 @@ public class GasStationTests
     [Fact]
     public void The_base_games_drives_never_swing_the_car_round_faster_than_a_driver_would()
     {
-        var station = StationScenes.LoadAll(ModSet.Installed).Single(s => s.Id == "tomwixon");
+        var station = StationScenes.LoadAll(ModSet.Installed).Single(s => s.Id == "crossroads");
         foreach (var (drive, leaving) in new[] { (Arrive(station.Arrive), false), (Leave(station.Leave), true) })
         {
             const float step = 0.05f;

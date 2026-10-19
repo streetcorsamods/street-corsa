@@ -990,6 +990,7 @@ public partial class GarageRenderer : DarkKn5ObjectRenderer
         base.OnTickOverride(dt);
         TickEngineTurn(dt);
         TickPartMotions(dt);
+        AdvanceActor(dt);
 
         var target = _ghostCar ? 1f : 0f;
         if (_ghostProgress == target) return;
@@ -1285,6 +1286,7 @@ public partial class GarageRenderer : DarkKn5ObjectRenderer
         _bench?.Draw(holder, camera, mode);
         _lift?.Draw(holder, camera, mode);
         foreach (var prop in _dressing) prop.Draw(holder, camera, mode);
+        DrawActor(holder, camera, mode);
         FollowParts();
 
         // The part on the workbench, once it is all there; on its way in or out it is drawn see-through after the rest
@@ -1461,6 +1463,7 @@ public partial class GarageRenderer : DarkKn5ObjectRenderer
         _bench?.Draw(holder, camera, SpecialRenderMode.Simple);
         _lift?.Draw(holder, camera, SpecialRenderMode.Simple);
         foreach (var prop in _dressing) prop.Draw(holder, camera, SpecialRenderMode.Simple);
+        DrawActor(holder, camera, SpecialRenderMode.Simple);
         DrawCarWithoutWheels(() =>
         {
             base.DrawCars(holder, camera, SpecialRenderMode.Simple);
@@ -1533,6 +1536,7 @@ public partial class GarageRenderer : DarkKn5ObjectRenderer
         _liftPost = null;
         foreach (var prop in _dressing) prop.Dispose();
         _dressing.Clear();
+        DisposeActor();
         _work?.Dispose();
         _work = null;
         _workGrime?.Dispose();

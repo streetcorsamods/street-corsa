@@ -1,0 +1,74 @@
+{
+  "_comment": [
+    "The gas station the garage's Gas Station button drives to: our own, built by tools/StationScene (build_station.py:",
+    "compose_station.py in Blender, prepare_prop.py, StationSceneBuilder; see docs/screens/gas-station.md). station.kn5",
+    "holds the forecourt, the road, the office, the pumps under their canopy and the dressing, with a sky dome for each",
+    "light of the day (STATION_SKY_DAY, _DUSK, _NIGHT); ground.bin the ground's height under it. Change the builder, not",
+    "these files; the attendant is a prop of his own (props/attendant).",
+    "",
+    "Positions are metres from the middle of the forecourt, x and z; +z is towards the road, which runs along x at",
+    "z 26.5..34 (the lane nearer the station at 28.4). The canopy's two pump islands run along x at z = 2 and z = 10,",
+    "a pump at each end (x = -1.6 and 1.6); the car stops in the lane between them, its driver's door to the island at",
+    "z = 2, the attendant by it. A car's heading follows the path.",
+    "arrive: the way in, off the road to the pump; the car rolls in at the first point and stops at the last.",
+    "leave: the way out, from the pump (its first point) back onto the road; the screen goes when the car is gone.",
+    "lookAtPump: where the driver looks while the tank fills, degrees from straight ahead, to the left positive;",
+    "lookUpAtPump: how far up, degrees over the seat's own look (to the attendant's face).",
+    "attendant: where he stands (x, z, and y up off the ground: on the island; heading degrees about the vertical, 0 facing +z) and which actor",
+    "prop he is (props/<prop>/prop.json: a model with a skin on bones and its animation).",
+    "sun: the key light's direction by day, towards the sun. lights: as a street's (see streets/mainstreet/street.json);",
+    "lamps are lit at night at x, y, z. glow: how bright each self-lit material glows at a light of the day (0 to 4):",
+    "the tubes under the canopy, the pumps' globes, the office's lights; the materials are named as in",
+    "compose_station.py's Blender scene and the models.",
+    "prices: a litre of gas, a litre of oil, a wash, the tow truck; left out, the base game's."
+  ],
+  "id": "crossroads",
+  "title": "Crossroads Gas",
+  "credit": "\"Vintage Gas Station\" by Wardster (https://sketchfab.com/3d-models/vintage-gas-station-107d8dd7948040e0b8fee2bede0fc2b4), \"Vintage Gas Pump\" by Rescue3D Assets (https://sketchfab.com/3d-models/vintage-gas-pump-0096f206ce1a4381bea58f9f94fc6b1c), \"Gasstation Sign - 2048px²\" by Mark Peters (https://sketchfab.com/3d-models/gasstation-sign-2048px2-11416edc56e941b7b10bcc87a6dc0ee7), \"Old Tire Inflator\" by gorzi (https://sketchfab.com/3d-models/old-tire-inflator-3ab1bef1829b44a0857f0287a670c5f0), \"Vintage Soda Machien\" by Han1993 (https://sketchfab.com/3d-models/vintage-soda-machien-05b7b54f12a74e659a8561614e63aee2), all CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/), scaled, set into the scene and converted to KN5 (see CREDITS.txt); the rest of the models and the surface textures by Poly Haven (CC0); skies by Poly Haven (CC0)",
+  "model": "station.kn5",
+  "arrive": [
+    [ -115, 28.4 ], [ -60, 28.4 ], [ -32, 28.1 ], [ -20, 26.6 ], [ -14.5, 22.5 ], [ -12.6, 16 ], [ -11.6, 10.5 ], [ -9, 7 ], [ -5, 5.1 ], [ 0.6, 4.8 ]
+  ],
+  "leave": [
+    [ 0.6, 4.8 ], [ 6, 4.8 ], [ 12, 4.5 ], [ 22, 4.4 ], [ 30.5, 5.6 ], [ 37.5, 9.5 ], [ 41.5, 15 ], [ 45, 20.8 ], [ 49.5, 25.6 ], [ 56.5, 28.1 ], [ 68, 28.4 ], [ 90, 28.4 ]
+  ],
+  "lookAtPump": 78,
+  "lookUpAtPump": 6,
+  "attendant": { "x": 0.4, "z": 1.55, "y": 0.15, "heading": 0, "prop": "attendant" },
+  "sun": [ -0.45, 0.62, 0.64 ],
+  "lights": {
+    "day": { "brightness": 1.6, "color": [ 225, 210, 190 ], "ambient": 2.0, "ambientUp": [ 150, 180, 215 ], "ambientDown": [ 140, 135, 120 ], "cubemapAmbient": 0.5 },
+    "dusk": {
+      "brightness": 0.8, "color": [ 255, 165, 110 ], "ambient": 1.0, "ambientUp": [ 150, 125, 160 ], "ambientDown": [ 100, 85, 75 ], "cubemapAmbient": 0.0,
+      "lamps": [
+        { "x": -3.6, "y": 4.1, "z": 4.0, "color": [ 255, 245, 225 ], "brightness": 0.5, "range": 10.0 },
+        { "x": 3.6, "y": 4.1, "z": 4.0, "color": [ 255, 245, 225 ], "brightness": 0.5, "range": 10.0 },
+        { "x": -3.6, "y": 4.1, "z": 8.0, "color": [ 255, 245, 225 ], "brightness": 0.5, "range": 10.0 },
+        { "x": 3.6, "y": 4.1, "z": 8.0, "color": [ 255, 245, 225 ], "brightness": 0.5, "range": 10.0 }
+      ]
+    },
+    "night": {
+      "brightness": 0.2, "color": [ 150, 170, 230 ], "ambient": 0.9, "ambientUp": [ 62, 78, 130 ], "ambientDown": [ 58, 52, 46 ], "cubemapAmbient": 0.0,
+      "lamps": [
+        { "x": -3.6, "y": 4.1, "z": 4.0, "color": [ 255, 245, 225 ], "brightness": 0.9, "range": 12.0 },
+        { "x": 0.0, "y": 4.1, "z": 4.0, "color": [ 255, 245, 225 ], "brightness": 0.9, "range": 12.0 },
+        { "x": 3.6, "y": 4.1, "z": 4.0, "color": [ 255, 245, 225 ], "brightness": 0.9, "range": 12.0 },
+        { "x": -3.6, "y": 4.1, "z": 8.0, "color": [ 255, 245, 225 ], "brightness": 0.9, "range": 12.0 },
+        { "x": 0.0, "y": 4.1, "z": 8.0, "color": [ 255, 245, 225 ], "brightness": 0.9, "range": 12.0 },
+        { "x": 3.6, "y": 4.1, "z": 8.0, "color": [ 255, 245, 225 ], "brightness": 0.9, "range": 12.0 },
+        { "x": 0.0, "y": 3.3, "z": -3.6, "color": [ 255, 220, 170 ], "brightness": 0.6, "range": 9.0 },
+        { "x": -5.0, "y": 3.3, "z": -3.6, "color": [ 255, 220, 170 ], "brightness": 0.4, "range": 7.0 },
+        { "x": 5.0, "y": 3.3, "z": -3.6, "color": [ 255, 220, 170 ], "brightness": 0.4, "range": 7.0 },
+        { "x": 33.0, "y": 5.0, "z": 22.5, "color": [ 255, 200, 150 ], "brightness": 0.6, "range": 9.0 },
+        { "x": -28.5, "y": 3.7, "z": 24.0, "color": [ 255, 235, 200 ], "brightness": 0.8, "range": 14.0 },
+        { "x": 63.5, "y": 3.7, "z": 24.0, "color": [ 255, 235, 200 ], "brightness": 0.8, "range": 14.0 }
+      ]
+    }
+  },
+  "glow": {
+    "day": { "st_tube": 0.2, "GasDispenser_Emission": 0.3, "externalLight": 0.0 },
+    "dusk": { "st_tube": 1.2, "GasDispenser_Emission": 0.9, "externalLight": 0.8 },
+    "night": { "st_tube": 1.6, "GasDispenser_Emission": 1.2, "externalLight": 1.2 }
+  },
+  "prices": { "fuelPerLitre": 0.11, "oilPerLitre": 0.65, "wash": 3, "tow": 25 }
+}

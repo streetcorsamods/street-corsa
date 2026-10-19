@@ -370,9 +370,6 @@ tmpclaude-*
 Street Corsa/Content/streetcorsa/garages/garage/*
 # ...but its marks for the car scripts are ours
 !Street Corsa/Content/streetcorsa/garages/garage/scene.json
-# The gas station scene is cut from the player's own AC install (tools/StationScene); only its station.json is ours
-Street Corsa/Content/streetcorsa/stations/*/*.kn5
-Street Corsa/Content/streetcorsa/stations/*/ground.bin
 # The music the game starts to (an SR2 intro cover): local only until its licence is granted; music.json marks it optional
 Street Corsa/Content/streetcorsa/sfx/music/intro.mp3
 Street Corsa/Assets/Sound/sr2_cover_intro.mp3

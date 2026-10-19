@@ -22,10 +22,12 @@
   <!-- What the scene builders share, and the game's atomic writes: a builder stopped half way leaves the shipped scene as it was -->
   <ItemGroup>
     <Compile Include="..\..\Shared\Kn5SceneWriter.cs" Link="Shared\Kn5SceneWriter.cs" />
-    <Compile Include="..\..\Shared\Ground.cs" Link="Shared\Ground.cs" />
+    <Compile Include="..\..\Shared\Ground.cs" Link="Shared\Ground.cs" />
+
     <Compile Include="..\..\..\Street Corsa\Helpers\Triangles.cs" Link="Helpers\Triangles.cs" />
     <Compile Include="..\..\Shared\ObjModel.cs" Link="Shared\ObjModel.cs" />
     <Compile Include="..\..\Shared\BuilderArgs.cs" Link="Shared\BuilderArgs.cs" />
+    <Compile Include="..\..\Shared\PreparedScene.cs" Link="Shared\PreparedScene.cs" />
     <Compile Include="..\..\..\Street Corsa\Helpers\SafeFile.cs" Link="Helpers\SafeFile.cs" />
   </ItemGroup>
 

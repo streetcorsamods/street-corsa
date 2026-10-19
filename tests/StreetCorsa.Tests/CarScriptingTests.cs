@@ -207,7 +207,7 @@ public class CarScriptingTests : IDisposable
     public void The_base_scenes_name_the_marks_and_paths_their_scripts_drive_by()
     {
         var mods = ModSet.Load(RepoPaths.Content);
-        var station = StationScenes.LoadAll(mods).Single(s => s.Id == "tomwixon").ScriptMarks;
+        var station = StationScenes.LoadAll(mods).Single(s => s.Id == "crossroads").ScriptMarks;
         Assert.True(station.Paths.ContainsKey("arrive") && station.Paths.ContainsKey("leave") && station.Marks.ContainsKey("pump"));
 
         var street = StreetScenes.LoadAll(mods).First();
@@ -230,7 +230,7 @@ public class CarScriptingTests : IDisposable
     public void A_cars_place_is_where_the_scripts_bring_it_so_a_mods_own_way_in_moves_both()
     {
         var mods = ModSet.Load(RepoPaths.Content);
-        var station = StationScenes.LoadAll(mods).Single(s => s.Id == "tomwixon");
+        var station = StationScenes.LoadAll(mods).Single(s => s.Id == "crossroads");
         var own = station with
         {
             Marks = SceneMarks.None.With(paths: new Dictionary<string, IReadOnlyList<GroundPoint>> { ["arrive"] = [new(0, 0), new(0, 10)] })

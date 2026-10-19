@@ -1,0 +1,30 @@
+station.kn5 is made in part from these models, each licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/):
+
+- "Vintage Gas Station" by Wardster (https://sketchfab.com/WardsterSAW), the office:
+  https://sketchfab.com/3d-models/vintage-gas-station-107d8dd7948040e0b8fee2bede0fc2b4
+  Changes: its decals of neglect (moss, leaks, damage) left out.
+- "Vintage Gas Pump" by Rescue3D Assets (https://sketchfab.com/rescue3d), the four pumps:
+  https://sketchfab.com/3d-models/vintage-gas-pump-0096f206ce1a4381bea58f9f94fc6b1c
+- "Gasstation Sign - 2048px²" by Mark Peters, the pole sign by the road:
+  https://sketchfab.com/3d-models/gasstation-sign-2048px2-11416edc56e941b7b10bcc87a6dc0ee7
+- "Old Tire Inflator" by gorzi, the air meter at the office's corner:
+  https://sketchfab.com/3d-models/old-tire-inflator-3ab1bef1829b44a0857f0287a670c5f0
+  Changes: one of its two meters kept, scaled to 1.26 m, brought down to 4000 triangles.
+- "Vintage Soda Machien" by Han1993, the soda machine by the door:
+  https://sketchfab.com/3d-models/vintage-soda-machien-05b7b54f12a74e659a8561614e63aee2
+  Changes: scaled from centimetres to metres.
+
+All of them set into the scene, their materials turned into AC's ksPerPixelMultiMap (pictures scaled to 1536 at most,
+the PBR maps turned into txMaps) and converted to KN5 with the rest of the station (tools/StationScene:
+compose_station.py, prepare_prop.py, StationSceneBuilder; build_station.py runs them).
+
+The rest of the station: the forecourt, the road, the islands and the canopy drawn by compose_station.py; the bench,
+trash can, chalkboard, shelves, oil tins, tyres, rim, barrels, jerrycan, crates, hand truck, covered car, utility box,
+picnic table, street lamps, fence, bushes and poles are Poly Haven models and the ground's surfaces Poly Haven textures
+(CC0, https://polyhaven.com/license); the skies are Poly Haven panoramas (CC0).
+
+The attendant is a prop of his own (props/attendant): "Speaking Man with Talking Gestures" by LasquetiSpice, CC BY 4.0,
+https://sketchfab.com/3d-models/speaking-man-with-talking-gestures-c55bcf894e1b4da1adf0cf258fe94c9f. Changes: his
+sweater painted as a work shirt, four unweighted bones (the top of the head, three finger tips) folded into their
+parents so the rig fits AC's 64, his skin and his talk converted to KN5 and ksanim (tools/Props: prepare_actor.py,
+ActorBuilder).
